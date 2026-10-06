@@ -14,30 +14,8 @@ import (
 	policydomain "issueops/internal/domain/policy"
 )
 
-func FakeRunCommand(request policycontract.CommandPolicyRequest) policycontract.CommandFakeRunResult {
-	return (Evaluator{}).FakeRun(request)
-}
-
-func RunReadOnlyCommand(request policycontract.CommandPolicyRequest) policycontract.CommandRunResult {
-	return (Evaluator{}).RunReadOnly(request)
-}
-
-// RunCommand executes argv under the requested write/network permissions.
-// The application always clears shell permission before evaluating the request.
-func RunCommand(request policycontract.CommandPolicyRequest) policycontract.CommandRunResult {
-	return (Evaluator{}).Run(request)
-}
-
-func (e Evaluator) FakeRun(request policycontract.CommandPolicyRequest) policycontract.CommandFakeRunResult {
-	return e.service().FakeRun(request)
-}
-
 func (e Evaluator) RunReadOnly(request policycontract.CommandPolicyRequest) policycontract.CommandRunResult {
 	return e.service().RunReadOnly(request)
-}
-
-func (e Evaluator) Run(request policycontract.CommandPolicyRequest) policycontract.CommandRunResult {
-	return e.service().Run(request)
 }
 
 func (e Evaluator) service() policyapp.Service {

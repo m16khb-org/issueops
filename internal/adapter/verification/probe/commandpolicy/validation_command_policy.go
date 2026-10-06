@@ -55,10 +55,6 @@ func Validate(binary, root string) verifycontract.StepResult {
 	return validateCommandPolicyWithDeps(binary, root, commandPolicyValidationDeps{})
 }
 
-func validateCommandPolicy(binary, root string) verifycontract.StepResult {
-	return Validate(binary, root)
-}
-
 func exists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil

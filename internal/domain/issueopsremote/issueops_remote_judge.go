@@ -6,13 +6,6 @@ import (
 	"issueops/internal/domain/judgement"
 )
 
-func RunIssueOpsRemoteLLMJudge(req IssueOpsRemoteLLMJudgeRequest) (IssueOpsRemoteScoringResult, error) {
-	if _, err := buildIssueOpsRemoteLLMJudgePrompt(req.Request); err != nil {
-		return IssueOpsRemoteScoringResult{}, err
-	}
-	return IssueOpsRemoteScoringResult{}, fmt.Errorf("issueops remote score no longer calls external LLM services; render the prompt with BuildIssueOpsRemoteLLMJudgePrompt and pass the host-agent result through --judge file --judge-file")
-}
-
 func RenderIssueOpsRemoteLLMJudgePrompt(req IssueOpsRemoteLLMJudgeRequest) (string, error) {
 	prompt, err := buildIssueOpsRemoteLLMJudgePrompt(req.Request)
 	if err != nil {

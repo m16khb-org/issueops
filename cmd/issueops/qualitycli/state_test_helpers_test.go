@@ -18,9 +18,9 @@ func init() {
 func configureTestStateStore(t *testing.T) {
 	t.Helper()
 	deps := hostDeps
-	deps.StateRead = statestore.StateRead
+	deps.StateRead = statestore.NewService().Read
 	deps.StateWrite = func(key, content string) (statecontract.StateResult, error) {
-		return statestore.StateWrite(context.Background(), key, content)
+		return statestore.NewService().Write(context.Background(), key, content)
 	}
 	Configure(deps)
 	t.Cleanup(Reset)

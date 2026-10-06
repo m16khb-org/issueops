@@ -1,6 +1,7 @@
 package issueopspreparation
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -84,7 +85,7 @@ func TestDecisionMatrix(t *testing.T) {
 				},
 				Orca: test.orca,
 			})
-			if got := DenialReasonOf(err); got != test.wantDenial {
+			if got := denialReasonOf(err); got != test.wantDenial {
 				t.Fatalf("denial=%q want=%q decision=%+v err=%v", got, test.wantDenial, decision, err)
 			}
 			if test.wantDenial != "" {
@@ -103,7 +104,7 @@ func TestDecisionMatrix(t *testing.T) {
 
 func TestDecisionRejectsUnsupportedMode(t *testing.T) {
 	_, err := Decide(DecisionInput{Command: preparationcontract.Command{Mode: "remote"}})
-	if got := DenialReasonOf(err); got != DenialInvalidMode {
+	if got := denialReasonOf(err); got != DenialInvalidMode {
 		t.Fatalf("denial=%q err=%v", got, err)
 	}
 }
@@ -122,7 +123,7 @@ func TestDecisionSelectionEvidenceAndDirectReason(t *testing.T) {
 	}
 
 	_, err = Decide(DecisionInput{Command: preparationcontract.Command{Mode: "direct"}})
-	if got := DenialReasonOf(err); got != DenialDirectReasonRequired {
+	if got := denialReasonOf(err); got != DenialDirectReasonRequired {
 		t.Fatalf("missing direct reason denial=%q err=%v", got, err)
 	}
 	decision, err = Decide(DecisionInput{Command: preparationcontract.Command{Mode: "direct", DirectReason: "  planned recovery  "}})
@@ -172,4 +173,11 @@ func preparedExecution(mode, status string, holder, pending bool) *leasecontract
 
 func rootClaim() *preparationcontract.RootClaim {
 	return &preparationcontract.RootClaim{LifecycleID: "io-other", Branch: "other", Root: "/repo.worktrees/199-prepare"}
+}
+
+func denialReasonOf(err error) DenialReason {
+	if denial, ok := errors.AsType[*Denial](err); ok {
+		return denial.Reason
+	}
+	return ""
 }

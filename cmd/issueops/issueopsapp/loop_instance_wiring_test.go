@@ -8,10 +8,11 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"issueops/cmd/issueops/loopcli"
 	"issueops/cmd/issueops/mcpcli"
 	loopcontract "issueops/internal/contract/looprun"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func TestLoopMCPInstancesKeepSameIDInSeparateStores(t *testing.T) {

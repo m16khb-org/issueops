@@ -19,14 +19,6 @@ const (
 	riskQAVetTimeout  = 120 * time.Second
 )
 
-func Validate(root string) verifycontract.StepResult {
-	return ValidateWithDeps(root, defaultDeps())
-}
-
-func ValidateForSelfVerify(root string) (verifycontract.StepResult, bool) {
-	return ValidateForSelfVerifyWithScope(root, "")
-}
-
 func ValidateForSelfVerifyWithScope(root, baseRef string) (verifycontract.StepResult, bool) {
 	deps := defaultDeps()
 	plan := PlanWithScope(root, baseRef)

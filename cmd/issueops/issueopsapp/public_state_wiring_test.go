@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"issueops/internal/adapter/outbound/sqlstore"
 	"os"
 	"path/filepath"
@@ -15,10 +14,13 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
+
 	"issueops/cmd/issueops/mcpcli"
 	"issueops/cmd/issueops/statecli"
 	statecontract "issueops/internal/contract/state"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func TestPublicStateInstancesKeepToolsAndResourcesSeparate(t *testing.T) {

@@ -215,7 +215,7 @@ func (f syncBaseFixture) request(mode string) issueops.ExecutionSyncBaseRequest 
 
 func (f syncBaseFixture) run(t *testing.T, req issueops.ExecutionSyncBaseRequest) (issueops.ExecutionSyncBaseResult, error) {
 	t.Helper()
-	return SyncExecutionBase(context.Background(), f.stateRoot, req, issueops.ExecutionSyncBaseDeps{Git: f.git.run})
+	return VerifiedSyncExecutionBase(NativeActorVerifier())(context.Background(), f.stateRoot, req, issueops.ExecutionSyncBaseDeps{Git: f.git.run})
 }
 
 func (f syncBaseFixture) rewrite(t *testing.T, mutate func(*issueops.IssueOpsRecord)) {

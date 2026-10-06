@@ -1,12 +1,15 @@
 package probe
 
 import (
+	"issueops/internal/adapter/verification/probe/invariants"
 	mcpsmoke "issueops/internal/adapter/verification/probe/mcpsmoke"
+	"issueops/internal/adapter/verification/probe/qagate"
 	selfverify "issueops/internal/contract/selfverify"
 
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -28,13 +31,8 @@ func TestValidationMCPMermaidNativeWrappersUseDefaultSurfaces(t *testing.T) {
 			return selfverify.StepResult{Label: "MCP smoke", OK: true, Stdout: validMCPResponses()}
 		},
 	}
-	if step := ValidateMCPWithDeps("fake-harness", root, mcpDeps); !step.OK || !strings.Contains(step.Stdout, "atomic_commit_preflight") {
+	if step := mcpsmoke.ValidateMCPWithDeps("fake-harness", root, mcpDeps); !step.OK || !strings.Contains(step.Stdout, "atomic_commit_preflight") {
 		t.Fatalf("expected MCP wrapper success, got %+v", step)
-	}
-
-	writeFileForWrapperTest(t, filepath.Join(root, "GENIUS_THINK.md"), "# Diagram\n\n```mermaid\ngraph TD\n  A[\"OK\"]\n```\n")
-	if issues := ValidateMermaidDocs(root); len(issues) != 0 {
-		t.Fatalf("expected Mermaid wrapper success, got %v", issues)
 	}
 
 	if step := ValidateNativeIntegration(root); !step.OK || !strings.Contains(step.Stdout, "duplicate_mcp_warning_fixture") {
@@ -44,20 +42,20 @@ func TestValidationMCPMermaidNativeWrappersUseDefaultSurfaces(t *testing.T) {
 
 func TestLintMermaidBlocksEnforcesGeniusThinkRules(t *testing.T) {
 	good := "```mermaid\nflowchart LR\n    A[\"한글 노드<br/>설명\"] --> B[\"Next\"]\n    subgraph \"계획 레이어\"\n    end\n```\n"
-	if issues := lintMermaidBlocks("good.md", good); len(issues) != 0 {
+	if issues := qagate.LintMermaidBlocks("good.md", good); len(issues) != 0 {
 		t.Fatalf("valid mermaid was rejected: %+v", issues)
 	}
 
 	bad := "```mermaid\nflowchart LR\n    A[한글 노드<br>설명] --> B[Next]\n    subgraph 계획 레이어\n    end\n```\n"
-	issues := lintMermaidBlocks("bad.md", bad)
+	issues := qagate.LintMermaidBlocks("bad.md", bad)
 	for _, want := range []string{"bad.md:3 mermaid uses <br>; use <br/>", "bad.md:3 mermaid node text must start with a quote", "bad.md:4 mermaid subgraph title must be quoted"} {
-		if !containsString(issues, want) {
+		if !slices.Contains(issues, want) {
 			t.Fatalf("missing %q in issues: %+v", want, issues)
 		}
 	}
 
 	documentedBadExample := "## 잘못된 예시 (파싱 에러 발생)\n\n```mermaid\nflowchart LR\n    A[한글 노드<br>설명]\n```\n"
-	if issues := lintMermaidBlocks("genius.md", documentedBadExample); len(issues) != 0 {
+	if issues := qagate.LintMermaidBlocks("genius.md", documentedBadExample); len(issues) != 0 {
 		t.Fatalf("documented bad example should be ignored: %+v", issues)
 	}
 }
@@ -88,7 +86,7 @@ func TestForbiddenNameHitsSkipsRuntimeStateDirs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	hits := forbiddenNameHits(root)
+	hits := invariants.ForbiddenNameHits(root)
 	if len(hits) != 1 || hits[0] != "AGENTS.md contains m"+"16kh" {
 		t.Fatalf("expected only source hit, got %+v", hits)
 	}

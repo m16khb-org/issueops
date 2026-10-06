@@ -46,5 +46,3 @@ func ReadGitOriginURL(root string) string {
 	}
 	return ""
 }
-
-func remoteHost(remote string) string { return projectdoc.RemoteHost(remote) }

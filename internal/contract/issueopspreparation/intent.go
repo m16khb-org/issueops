@@ -256,23 +256,8 @@ func (IntentCodec) DecodeSelfIdentified(raw []byte) (Intent, error) {
 	return intent, nil
 }
 
-func (IntentCodec) DecodeShape(operationID string, raw []byte) (Intent, error) {
-	intent, err := decodeShape(raw)
-	if err != nil {
-		return Intent{}, err
-	}
-	if intent.OperationID != operationID {
-		return Intent{}, fmt.Errorf("Orca external intent payload is invalid")
-	}
-	return intent, nil
-}
-
 func (IntentCodec) Validate(intent Intent, operationID string) error {
 	return validateIntent(intent, operationID)
-}
-
-func (IntentCodec) ValidateShape(intent Intent, operationID string) error {
-	return validateShape(intent, operationID)
 }
 
 func (IntentCodec) Encode(intent Intent) ([]byte, error) {
@@ -399,10 +384,6 @@ func (IntentCodec) RenderReadinessMarker(lifecycleID string, issue IssueIdentity
 		markerPrefix, "lifecycle=" + lifecycleID,
 		"provider=" + issue.Provider, "issue=" + strconv.Itoa(issue.Issue),
 	}, " "), nil
-}
-
-func (codec IntentCodec) ParseMarker(marker string) (MarkerIdentity, error) {
-	return parseMarker(marker)
 }
 
 func renderMarker(identity MarkerIdentity) (string, error) {

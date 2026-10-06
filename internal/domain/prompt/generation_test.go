@@ -1,9 +1,6 @@
 package prompt_test
 
 import (
-	benchmarkadapter "issueops/internal/adapter/issueops/benchmark"
-	benchmarkcontract "issueops/internal/contract/issueopsbenchmark"
-
 	"issueops/internal/application/commitsuggest"
 	"issueops/internal/application/lintdiagnose"
 	"issueops/internal/domain/prompt"
@@ -15,9 +12,8 @@ import (
 
 func TestCoreHostJudgementPromptsUseStructuredContract(t *testing.T) {
 	prompts := map[string]string{
-		"commit":         commitsuggest.BuildPrompt("diff --git a/file b/file\n"),
-		"issueops_judge": mustIssueOpsJudgePromptForTest(t),
-		"lint_diagnose":  lintdiagnose.BuildPrompt(1, "failure output"),
+		"commit":        commitsuggest.BuildPrompt("diff --git a/file b/file\n"),
+		"lint_diagnose": lintdiagnose.BuildPrompt(1, "failure output"),
 	}
 	for name, promptText := range prompts {
 		for _, heading := range prompt.StructuredPromptSectionHeadings {
@@ -50,16 +46,4 @@ func TestProjectBootstrapPromptUsesStructuredContract(t *testing.T) {
 			t.Fatalf("project bootstrap prompt missing %q:\n%s", want, promptText)
 		}
 	}
-}
-
-func mustIssueOpsJudgePromptForTest(t *testing.T) string {
-	t.Helper()
-	promptText, err := benchmarkadapter.BuildIssueOpsLLMJudgePrompt(
-		benchmarkcontract.IssueOpsBenchmarkFixture{ID: "fixture", Title: "Fixture", UserPrompt: "prompt", RepoContext: "context", CriticalFailures: []string{"critical"}},
-		benchmarkcontract.IssueOpsBenchmarkArtifact{ProblemSummary: "summary"},
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return promptText
 }

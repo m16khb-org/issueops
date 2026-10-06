@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -72,7 +73,7 @@ func TestIssueOpsClaimProducesOwnerClaimEvidenceFromCommittedLease(t *testing.T)
 		t.Run(host, func(t *testing.T) {
 			stateRoot, record, token, issueDigest, packetDigest := seedOrcaClaimSnapshot(t)
 			record.Execution.Orca.OwnerHost = host
-			if _, err := issueops.WriteIssueOps(context.Background(), stateRoot, record); err != nil {
+			if _, err := (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), record); err != nil {
 				t.Fatal(err)
 			}
 			seedClaimDeliveryObservation(t, stateRoot, record)
@@ -274,7 +275,7 @@ func TestSuccessfulDirectClaimObservesReleasedReseededGeneration(t *testing.T) {
 	if err := os.Remove(oldToken); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := issueops.WriteIssueOps(context.Background(), stateRoot, record); err != nil {
+	if _, err := (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
 
@@ -490,7 +491,7 @@ func seedOrcaClaimSnapshot(t *testing.T) (string, issueopscontract.IssueOpsRecor
 		t.Fatal(err)
 	}
 	issueDigest := claimWiringSHA256(claimWiringIssueBody())
-	packetPath := issueops.SealedOwnerContextPacketPath(record)
+	packetPath := sealedOwnerContextPacketPath(record)
 	packet := map[string]any{
 		"schema_version": 1, "lifecycle_id": record.ID, "mode": "orca", "source_root": source, "worktree_root": worktree,
 		"branch": record.Branch, "base_head": record.Execution.Workspace.BaseHead, "lease_generation": uint64(1), "claim_token_file": tokenPath,
@@ -511,7 +512,7 @@ func seedOrcaClaimSnapshot(t *testing.T) (string, issueopscontract.IssueOpsRecor
 	record.Execution.Orca.IssueBodySHA256 = issueDigest
 	record.Execution.Orca.ContextPacketSHA256 = packetDigest
 	record.Execution.Orca.OwnerPromptSHA256 = strings.Repeat("d", 64)
-	if _, err := issueops.WriteIssueOps(context.Background(), stateRoot, record); err != nil {
+	if _, err := (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
 	return stateRoot, record, tokenPath, issueDigest, packetDigest
@@ -528,6 +529,17 @@ func claimWiringActor(t *testing.T) issueopscontract.NativeActor {
 
 func claimWiringIssueBody() string {
 	return "## acceptance criteria\n\n- [ ] AC-09: resolved snapshot reader\n\n## verification\n\n```bash\ngo test ./cmd/issueops/issueopsapp -run Snapshot -count=1\n```\n"
+}
+
+// sealedOwnerContextPacketPath mirrors the adapter's sealed owner packet
+// layout so fixtures can seed and read the current generation's packet.
+func sealedOwnerContextPacketPath(record issueopscontract.IssueOpsRecord) string {
+	if record.Execution == nil {
+		return ""
+	}
+	key := claimWiringSHA256(record.ID)[:16]
+	generation := "generation-" + strconv.FormatUint(record.Execution.Lease.Generation, 10)
+	return filepath.Join(record.Execution.Workspace.Root, ".issueops", "state", "issueops-v1", key, generation, "context.json")
 }
 
 func claimWiringSHA256(value string) string {

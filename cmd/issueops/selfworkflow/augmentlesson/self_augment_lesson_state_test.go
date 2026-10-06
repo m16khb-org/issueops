@@ -27,7 +27,7 @@ func TestSaveSelfAugmentLesson(t *testing.T) {
 	if !result.OK || result.Kind != augmentcontract.SelfAugmentationLessonKind || result.StateCheckpoint == nil || !result.StateCheckpoint.OK {
 		t.Fatalf("unexpected lesson result: %+v", result)
 	}
-	state, err := statestore.StateRead("self-augment-lesson-test")
+	state, err := statestore.NewService().Read("self-augment-lesson-test")
 	if err != nil {
 		t.Fatalf("StateRead: %v", err)
 	}
@@ -42,10 +42,10 @@ func TestSaveSelfAugmentLesson(t *testing.T) {
 
 func TestSaveSelfAugmentLessonPrunesOldLessonRecords(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	if _, err := statestore.StateWrite(context.Background(), "self-augment-lesson-old", `{"kind":"self_augmentation_lesson"}`); err != nil {
+	if _, err := statestore.NewService().Write(context.Background(), "self-augment-lesson-old", `{"kind":"self_augmentation_lesson"}`); err != nil {
 		t.Fatalf("write old lesson: %v", err)
 	}
-	old, err := statestore.StateRead("self-augment-lesson-old")
+	old, err := statestore.NewService().Read("self-augment-lesson-old")
 	if err != nil {
 		t.Fatalf("read old lesson: %v", err)
 	}
@@ -63,7 +63,7 @@ func TestSaveSelfAugmentLessonPrunesOldLessonRecords(t *testing.T) {
 		t.Fatalf("SaveSelfAugmentLesson: %v", err)
 	}
 
-	if _, err := statestore.StateRead("self-augment-lesson-old"); err == nil {
+	if _, err := statestore.NewService().Read("self-augment-lesson-old"); err == nil {
 		t.Fatalf("old lesson record should be pruned")
 	}
 }

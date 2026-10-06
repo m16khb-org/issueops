@@ -13,7 +13,7 @@ func testCLIExecutionRuntime() executioncmd.ExecutionDeps {
 		ExecuteExecution:             testExecutionService().Execute,
 		ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry,
 		SwitchExecutionMode:          testModeSwitcher(),
-		SyncExecutionBase:            issueopscore.SyncExecutionBase,
+		SyncExecutionBase:            issueopscore.VerifiedSyncExecutionBase(issueopscore.NativeActorVerifier()),
 	}
 }
 func testMCPExecutionDeps() mcpcli.ExecutionDeps {

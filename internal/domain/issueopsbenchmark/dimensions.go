@@ -21,5 +21,3 @@ var dimensions = []string{
 	"pioneer_skill_contribution",
 	"skill_routing_fidelity",
 }
-
-func Dimensions() []string { return append([]string(nil), dimensions...) }

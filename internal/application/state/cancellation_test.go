@@ -11,7 +11,7 @@ import (
 )
 
 func TestCanceledRequestsDoNotOpenStorage(t *testing.T) {
-	for _, action := range []string{"write", "record", "delete", "update", "lock", "prune", "dry-prune"} {
+	for _, action := range []string{"write", "record", "delete", "lock", "prune", "dry-prune"} {
 		t.Run(action, func(t *testing.T) {
 			opens := 0
 			store := &memoryStore{records: map[string][]byte{}}
@@ -31,11 +31,6 @@ func TestCanceledRequestsDoNotOpenStorage(t *testing.T) {
 				_, err = service.WriteRecord(ctx, "/state", "key", statecontract.RecordEnvelope{})
 			case "delete":
 				err = service.Delete(ctx, "key")
-			case "update":
-				_, err = service.Update(ctx, "key", func(statecontract.RecordEnvelope) (statecontract.RecordEnvelope, error) {
-					t.Error("called transform")
-					return statecontract.RecordEnvelope{}, nil
-				})
 			case "lock":
 				err = service.WithKeyLock(ctx, "/state", "key", func(context.Context) error {
 					t.Error("called callback")

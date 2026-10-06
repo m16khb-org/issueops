@@ -49,7 +49,7 @@ func TestCurrentRelayReleasedReseedGeneratedCommandDogfood(t *testing.T) {
 	fixture.Execution.Lease.Status = issueopscontract.LeaseStatusReleased
 	fixture.Execution.Lease.Holder = nil
 	fixture.Execution.Lease.ClaimTokenSHA256 = ""
-	if _, err := issueops.WriteIssueOps(context.Background(), stateRoot, fixture); err != nil {
+	if _, err := (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), fixture); err != nil {
 		t.Fatal(err)
 	}
 

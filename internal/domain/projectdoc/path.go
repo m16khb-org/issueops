@@ -6,15 +6,6 @@ import (
 	"strings"
 )
 
-func PrefixedProjectDocNames() []string {
-	names := ProjectDocNames()
-	out := make([]string, 0, len(names))
-	for _, name := range names {
-		out = append(out, filepath.ToSlash(filepath.Join(ProjectDocsDir, name)))
-	}
-	return out
-}
-
 // PrefixedKnownProjectDocNames returns every required and optional project doc
 // path. Optional docs render only when their condition holds (for example
 // DESIGN.md only for repositories with a client surface), so iteration over

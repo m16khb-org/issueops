@@ -10,11 +10,12 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"issueops/cmd/issueops/mcpcli"
 	"issueops/cmd/issueops/projectcli"
 	docsapp "issueops/internal/application/projectdocs"
 	docscontract "issueops/internal/contract/projectdocs"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func TestProjectDocMCPInstancesKeepDefaultRootsSeparate(t *testing.T) {

@@ -3,7 +3,6 @@ package issueopsapp
 import (
 	"context"
 	"encoding/json"
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"issueops/cmd/issueops/mcpcli"
 	"issueops/internal/adapter/outbound/sqlstore"
 	workercontract "issueops/internal/contract/worker"
@@ -11,6 +10,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func TestWorkerMCPInstancesKeepSameIDInSeparateStores(t *testing.T) {

@@ -90,24 +90,6 @@ func (e *NestedSpanError) Error() string {
 	return fmt.Sprintf("sqlstore nested span: root %q is already active in %v", e.RequestedDir, e.ActiveDirs)
 }
 
-// SchemaObject는 기존 store의 non-internal SQLite schema object 하나다.
-// maintenance 호출자는 state를 삭제하기 전에 이해하지 못하는 레이아웃을
-// 거부하는 데 이를 사용한다.
-type SchemaObject struct {
-	Type  string
-	Name  string
-	Table string
-	SQL   string
-}
-
-// ExistingLayout은 이미 존재하는 sqlstore root 하나의 read-only projection이다.
-// bucket과 schema object는 결정적 순서로 반환된다.
-type ExistingLayout struct {
-	Buckets    []string
-	DataSchema []SchemaObject
-	SpanSchema []SchemaObject
-}
-
 type RawCASError struct {
 	Bucket string
 	ID     string
@@ -167,26 +149,6 @@ func pruneRemovedHandlesLocked() {
 		_ = db.data.Close()
 		_ = db.span.Close()
 	}
-}
-
-// CloseRoot는 dir의 캐시된 핸들을 닫고 축출한다. 의도적으로 좁은 API다:
-// 파괴적 maintenance는 이를 호출하기 전에 먼저 writer를 멈추고 진행 중인
-// span을 끝내야 한다. 캐시되지 않은 root를 닫는 것은 no-op이다.
-func CloseRoot(dir string) error {
-	abs, err := filepath.Abs(dir)
-	if err != nil {
-		return fmt.Errorf("sqlstore close %q: %w", dir, err)
-	}
-	handlesMu.Lock()
-	db, ok := handles[abs]
-	if ok {
-		delete(handles, abs)
-	}
-	handlesMu.Unlock()
-	if !ok {
-		return nil
-	}
-	return errors.Join(db.data.Close(), db.span.Close())
 }
 
 func newDBWithRetry(abs string) (*DB, error) {
@@ -673,83 +635,6 @@ func WalkExisting(ctx context.Context, dir, bucket string, visit func(port.Recor
 		}
 	}
 	return errors.Join(rows.Err(), ctx.Err())
-}
-
-// InspectExisting은 state를 생성하거나 복구하지 않고 기존 store의 bucket과
-// non-internal SQLite schema object를 보고한다.
-func InspectExisting(dir string) (ExistingLayout, error) {
-	data, err := openExistingData(dir)
-	if err != nil {
-		return ExistingLayout{}, err
-	}
-	defer data.Close()
-	abs, err := filepath.Abs(dir)
-	if err != nil {
-		return ExistingLayout{}, fmt.Errorf("sqlstore existing inspect %q: %w", dir, err)
-	}
-	spanPath := filepath.Join(abs, spanDBFile)
-	if _, err := os.Stat(spanPath); err != nil {
-		if os.IsNotExist(err) {
-			return ExistingLayout{}, fmt.Errorf("sqlstore existing span db %s: %w", abs, fs.ErrNotExist)
-		}
-		return ExistingLayout{}, err
-	}
-	span, err := openSQLite(spanPath, "mode=ro&_pragma=busy_timeout(0)&_pragma=query_only(1)")
-	if err != nil {
-		return ExistingLayout{}, err
-	}
-	defer span.Close()
-
-	buckets, err := existingBuckets(data)
-	if err != nil {
-		return ExistingLayout{}, err
-	}
-	dataSchema, err := existingSchema(data)
-	if err != nil {
-		return ExistingLayout{}, err
-	}
-	spanSchema, err := existingSchema(span)
-	if err != nil {
-		return ExistingLayout{}, err
-	}
-	return ExistingLayout{Buckets: buckets, DataSchema: dataSchema, SpanSchema: spanSchema}, nil
-}
-
-func existingBuckets(db *sql.DB) ([]string, error) {
-	rows, err := db.Query(`SELECT DISTINCT bucket FROM records ORDER BY bucket`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	buckets := []string{}
-	for rows.Next() {
-		var bucket string
-		if err := rows.Scan(&bucket); err != nil {
-			return nil, err
-		}
-		buckets = append(buckets, bucket)
-	}
-	return buckets, rows.Err()
-}
-
-func existingSchema(db *sql.DB) ([]SchemaObject, error) {
-	rows, err := db.Query(`SELECT type, name, tbl_name, COALESCE(sql, '')
-		FROM sqlite_schema
-		WHERE name NOT LIKE 'sqlite_%'
-		ORDER BY type, name`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	objects := []SchemaObject{}
-	for rows.Next() {
-		var object SchemaObject
-		if err := rows.Scan(&object.Type, &object.Name, &object.Table, &object.SQL); err != nil {
-			return nil, err
-		}
-		objects = append(objects, object)
-	}
-	return objects, rows.Err()
 }
 
 func openExistingData(dir string) (*sql.DB, error) {

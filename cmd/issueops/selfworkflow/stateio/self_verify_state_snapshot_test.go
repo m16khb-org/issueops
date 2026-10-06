@@ -114,7 +114,7 @@ func TestReadSelfAugmentStateSnapshotNormalizesLegacyFailureCause(t *testing.T) 
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if _, err := statestore.StateWrite(context.Background(), "legacy-"+tc.name, tc.content); err != nil {
+			if _, err := statestore.NewService().Write(context.Background(), "legacy-"+tc.name, tc.content); err != nil {
 				t.Fatalf("write legacy state: %v", err)
 			}
 

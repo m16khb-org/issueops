@@ -1,11 +1,10 @@
 package augmentcatalog
 
 import (
+	"issueops/internal/testsupport"
 	"slices"
 	"strings"
 	"testing"
-
-	"issueops/internal/domain/qualitycatalog"
 )
 
 // Every self-augment candidate (base + refilled quality specs) must carry an
@@ -22,7 +21,7 @@ func TestEverySelfAugmentCandidateVerifyWithIsGrounded(t *testing.T) {
 		if candidate.VerificationKind == "" {
 			t.Fatalf("candidate %q has no verification kind", candidate.ID)
 		}
-		if err := qualitycatalog.VerifyWithGrounded(candidate.VerificationKind, candidate.VerifyWith); err != nil {
+		if err := testsupport.VerifyWithGrounded(candidate.VerificationKind, candidate.VerifyWith); err != nil {
 			t.Fatalf("candidate %q VerifyWith not grounded: %v", candidate.ID, err)
 		}
 	}

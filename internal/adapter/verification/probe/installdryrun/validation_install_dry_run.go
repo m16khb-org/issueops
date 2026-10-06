@@ -17,10 +17,6 @@ func Validate(binary, root string, seed int64) verifycontract.StepResult {
 	return validateInstallDryRunSmokeWithDeps(binary, root, seed, installDryRunValidationDeps{})
 }
 
-func validateInstallDryRunSmoke(binary, root string, seed int64) verifycontract.StepResult {
-	return Validate(binary, root, seed)
-}
-
 func validateInstallDryRunSmokeWithDeps(binary, root string, seed int64, deps installDryRunValidationDeps) verifycontract.StepResult {
 	deps = deps.withDefaults()
 	started := time.Now()

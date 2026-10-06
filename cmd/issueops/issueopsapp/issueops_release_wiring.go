@@ -1,16 +1,14 @@
 package issueopsapp
 
 import (
-	issueopscontract "issueops/internal/contract/issueops"
-)
-
-import (
 	"context"
+	issueopscontract "issueops/internal/contract/issueops"
 
 	leaseinbound "issueops/internal/adapter/inbound/issueopslease"
 
 	leaseoutbound "issueops/internal/adapter/outbound/issueopslease"
 	"issueops/internal/adapter/outbound/sqlstore"
+
 	leaseapp "issueops/internal/application/issueopslease"
 )
 

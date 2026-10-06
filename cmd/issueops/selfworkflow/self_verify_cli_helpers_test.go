@@ -7,9 +7,6 @@ type SelfVerifyCandidatesDeps struct {
 	Save   func(*SelfVerificationCandidateExportResult, string) error
 }
 
-func RunSelfVerifyCandidates(args []string) error {
-	return RunSelfVerifyCandidatesWithDeps(args, SelfVerifyCandidatesDeps{})
-}
 func RunSelfVerifyCandidatesWithDeps(args []string, deps SelfVerifyCandidatesDeps) error {
 	deps = deps.withDefaults()
 	return candidatescmd.Run(args, candidatescmd.Deps{Export: deps.Export, Save: deps.Save, PrintJSON: printJSON})

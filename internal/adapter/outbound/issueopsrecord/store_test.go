@@ -31,7 +31,7 @@ func TestDeleteIfUnchangedRejectsRecordDrift(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := database.Put(Bucket(), id, data); err != nil {
+	if err := database.Put(bucket, id, data); err != nil {
 		t.Fatal(err)
 	}
 	expected, err := store.Read(context.Background(), stateRoot, id)
@@ -76,7 +76,7 @@ func TestDeleteIfUnchangedSerializesNewRelatedState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := database.Put(Bucket(), id, data); err != nil {
+	if err := database.Put(bucket, id, data); err != nil {
 		t.Fatal(err)
 	}
 
@@ -134,7 +134,7 @@ func TestDeleteIfUnchangedSerializesNewRelatedState(t *testing.T) {
 			t.Fatalf("%s did not finish: %v", name, ctx.Err())
 		}
 	}
-	if _, found, getErr := database.Get(Bucket(), id); getErr != nil || found {
+	if _, found, getErr := database.Get(bucket, id); getErr != nil || found {
 		t.Fatalf("record survived serialized delete: found=%v err=%v", found, getErr)
 	}
 	if _, found, getErr := database.Get("artifact_stage_v1", id); getErr != nil || found {
@@ -166,7 +166,7 @@ func TestDeleteIfUnchangedWaitsForOpenRelatedUpdateSpan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := database.Put(Bucket(), id, data); err != nil {
+	if err := database.Put(bucket, id, data); err != nil {
 		t.Fatal(err)
 	}
 
@@ -222,7 +222,7 @@ func TestDeleteIfUnchangedWaitsForOpenRelatedUpdateSpan(t *testing.T) {
 			t.Fatalf("%s did not finish: %v", name, ctx.Err())
 		}
 	}
-	if _, found, getErr := database.Get(Bucket(), id); getErr != nil || found {
+	if _, found, getErr := database.Get(bucket, id); getErr != nil || found {
 		t.Fatalf("record survived the delete: found=%v err=%v", found, getErr)
 	}
 	if _, found, getErr := database.Get("artifact_stage_v1", id); getErr != nil || found {
@@ -245,7 +245,7 @@ func TestStoreReadsUpdatesRelatedDataAndDeletesAtomically(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := database.Put(Bucket(), id, data); err != nil {
+	if err := database.Put(bucket, id, data); err != nil {
 		t.Fatal(err)
 	}
 
@@ -276,7 +276,7 @@ func TestStoreReadsUpdatesRelatedDataAndDeletesAtomically(t *testing.T) {
 	if err := store.Delete(context.Background(), stateRoot, id, "related_v1"); err != nil {
 		t.Fatal(err)
 	}
-	if _, found, err := database.Get(Bucket(), id); err != nil || found {
+	if _, found, err := database.Get(bucket, id); err != nil || found {
 		t.Fatalf("record survived delete: found=%v err=%v", found, err)
 	}
 	if _, found, err := database.Get("related_v1", id); err != nil || found {
@@ -299,10 +299,10 @@ func TestStoreScansValidAndInvalidRowsInOneInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := database.Put(Bucket(), valid.ID, encoded); err != nil {
+	if err := database.Put(bucket, valid.ID, encoded); err != nil {
 		t.Fatal(err)
 	}
-	if err := database.Put(Bucket(), "io-invalid", []byte(`{"schema_version":1,"id":"io-invalid","phase":"unknown"}`)); err != nil {
+	if err := database.Put(bucket, "io-invalid", []byte(`{"schema_version":1,"id":"io-invalid","phase":"unknown"}`)); err != nil {
 		t.Fatal(err)
 	}
 

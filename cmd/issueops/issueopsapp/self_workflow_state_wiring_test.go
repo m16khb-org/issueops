@@ -11,8 +11,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"issueops/cmd/issueops/mcpcli"
 	"issueops/cmd/issueops/selfworkflow/promotecmd"
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
@@ -20,6 +18,9 @@ import (
 	statestore "issueops/internal/adapter/outbound/state"
 	contract "issueops/internal/contract/selfaugment"
 	statecontract "issueops/internal/contract/state"
+
+	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // A shared state root, dropped destination write or bypassed promotion gate must

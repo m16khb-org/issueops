@@ -7,7 +7,7 @@ import (
 )
 
 func historyService() app.HistoryService {
-	return app.HistoryService{StateDir: statestore.StateDir, List: statestore.StateList, Read: statestore.StateRead, Delete: statestore.StateDelete}
+	return app.HistoryService{StateDir: statestore.StateDir, List: statestore.NewService().List, Read: statestore.NewService().Read, Delete: statestore.NewService().Delete}
 }
 
 func SelfAugmentHistory(prefix string, limit int, retentionOptions ...SelfAugmentHistoryRetentionOptions) (SelfAugmentHistoryResult, error) {

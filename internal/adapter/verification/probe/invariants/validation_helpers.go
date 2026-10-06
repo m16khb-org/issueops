@@ -61,10 +61,6 @@ func ValidateHarnessInvariants(root string) verifycontract.StepResult {
 	return verifydomain.AssertionStep("harness invariants", time.Since(started).Milliseconds(), errs)
 }
 
-func validateHarnessInvariants(root string) verifycontract.StepResult {
-	return ValidateHarnessInvariants(root)
-}
-
 func validateSkillShape(skillDir string) error {
 	body, err := os.ReadFile(filepath.Join(skillDir, "SKILL.md"))
 	if err != nil {

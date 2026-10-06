@@ -10,6 +10,6 @@ func PromoteSelfAugmentBaseline(fromKey, baselineKey string, confirm, allowFaile
 		StateDir:      statestore.StateDir,
 		ReadSnapshot:  ReadSelfAugmentStateSnapshot,
 		WriteSnapshot: WriteSelfAugmentSnapshotRecord,
-		ReadState:     statestore.StateRead,
+		ReadState:     statestore.NewService().Read,
 	})
 }

@@ -2,6 +2,7 @@ package issueopsapp
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	core "issueops/internal/adapter/issueops"
@@ -29,7 +30,7 @@ func TestPolicyPullRequestTargetLookupIsWired(t *testing.T) {
 	}
 	record.IssueURL = "https://github.com/acme/repo/issues/79"
 	record.BranchPrepare = &model.IssueOpsBranchPrepare{Provider: "github", IssueURL: record.IssueURL, Branch: record.Branch, BaseBranch: "parent/umbrella-work", LinkVerified: true, CreatedAt: record.CreatedAt}
-	if _, err = core.WriteIssueOps(context.Background(), issueOpsStateRoot(), record); err != nil {
+	if _, err = (core.CycleRecordStore{StateRoot: issueOpsStateRoot()}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
 	service := newPolicyService()
@@ -40,7 +41,7 @@ func TestPolicyPullRequestTargetLookupIsWired(t *testing.T) {
 	}
 	service.PreparedBaseBranch = func(path string) (string, bool) { lookupPath = path; return lookup(path) }
 	result := service.Evaluate(policycontract.CommandPolicyRequest{WorkspaceRoot: root, CWD: root, Argv: []string{"glab", "mr", "create", "--target-branch", "release/stg"}, Timeout: "30s", WriteAllowed: true, NetworkAllowed: true})
-	if lookupPath != root || !containsString(result.DenyReasons, "pr_target_branch_mismatch") {
+	if lookupPath != root || !slices.Contains(result.DenyReasons, "pr_target_branch_mismatch") {
 		t.Fatalf("lookup path = %q, deny reasons = %v", lookupPath, result.DenyReasons)
 	}
 }
@@ -56,16 +57,16 @@ func TestPolicyLookupReadsCurrentStateRootOnEachEvaluation(t *testing.T) {
 		}
 		record.IssueURL = "https://github.com/acme/repo/issues/79"
 		record.BranchPrepare = &model.IssueOpsBranchPrepare{Provider: "github", IssueURL: record.IssueURL, Branch: record.Branch, BaseBranch: base, LinkVerified: true, CreatedAt: record.CreatedAt}
-		if _, err = core.WriteIssueOps(context.Background(), root, record); err != nil {
+		if _, err = (core.CycleRecordStore{StateRoot: root}).Save(context.Background(), record); err != nil {
 			t.Fatal(err)
 		}
 		service := newPolicyService()
 		request := policycontract.CommandPolicyRequest{WorkspaceRoot: repo, CWD: repo, Argv: []string{"glab", "mr", "create", "--target-branch", "main"}, Timeout: "30s", WriteAllowed: true, NetworkAllowed: true}
-		if got := service.Evaluate(request); !containsString(got.DenyReasons, "pr_target_branch_mismatch") {
+		if got := service.Evaluate(request); !slices.Contains(got.DenyReasons, "pr_target_branch_mismatch") {
 			t.Fatalf("current stored parent ignored: %+v", got.DenyReasons)
 		}
 		request.Argv[len(request.Argv)-1] = base
-		if got := service.Evaluate(request); containsString(got.DenyReasons, "pr_target_branch_mismatch") {
+		if got := service.Evaluate(request); slices.Contains(got.DenyReasons, "pr_target_branch_mismatch") {
 			t.Fatalf("current stored parent refused: %+v", got.DenyReasons)
 		}
 	}

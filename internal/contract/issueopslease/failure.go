@@ -27,10 +27,3 @@ func (e *Failure) Unwrap() error { return e.Cause }
 func Fail(code FailureCode, cause error) error {
 	return &Failure{Code: code, Cause: cause}
 }
-
-func FailureCodeOf(err error) FailureCode {
-	if failure, ok := errors.AsType[*Failure](err); ok {
-		return failure.Code
-	}
-	return ""
-}

@@ -59,7 +59,7 @@ func TestReadinessLocalSharesSnapshotAndStrictObservesPathsAfterFetch(t *testing
 		t.Fatalf("local observation performed extra effects: %v %+v", events, changes)
 	}
 	events = nil
-	strict := ready.StrictPR(record)
+	strict := strictPRForTest(ready, record)
 	if !strict.Strict || !reflect.DeepEqual(events, []string{"observe", "fetch", "paths"}) {
 		t.Fatalf("strict ordering=%v", events)
 	}
@@ -109,7 +109,7 @@ func TestPhaseAdvanceAuthorizesBeforePrefetchAndAgainUnderLock(t *testing.T) {
 				},
 				Write: func(_ string, r model.IssueOpsRecord) (model.IssueOpsRecord, error) { writes++; return r, nil },
 			}}
-			_, err := service.Advance("state", record.ID, "pr")
+			_, _, err := service.AdvanceReport("state", record.ID, "pr")
 			if err == nil || writes != 0 {
 				t.Fatalf("incomplete/unauthorized phase must not persist: err=%v writes=%d", err, writes)
 			}

@@ -31,7 +31,7 @@ func TestReadinessFetchBoundariesRefreshBeforePostFetchFacts(t *testing.T) {
 			want := []string{"observe", "clear", "fetch", "clear", "counts", "paths"}
 			switch mode {
 			case "internal":
-				s.StrictPR(record)
+				strictPRForTest(s, record)
 			case "callback":
 				s.StrictPRWithFetch("state", record, func(root string) review.UpstreamFetch {
 					events = append(events, "fetch")

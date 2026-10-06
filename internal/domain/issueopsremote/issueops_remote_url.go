@@ -36,10 +36,6 @@ func ValidateArtifactURL(artifactURL, provider, kind string) error {
 	return nil
 }
 
-func ValidateArtifactMatchesIssue(issueURL, artifactURL, provider, kind string) error {
-	return ValidateArtifactMatchesProject(ProjectKey(issueURL, provider, "issue"), artifactURL, provider, kind)
-}
-
 // ValidProjectKey reports whether a caller-supplied project key has the shape
 // ProjectKey produces: a lowercase host followed by at least one path segment,
 // with no scheme, whitespace, or control characters.

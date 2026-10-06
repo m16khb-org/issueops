@@ -16,7 +16,7 @@ func TestOrcaBranchPrecheckKeepsCapturedGitCapabilities(t *testing.T) {
 		t.Fatal(stderr)
 	}
 	record := model.IssueOpsRecord{OK: true, SchemaVersion: model.IssueOpsSchemaVersion, ID: "io-0123456789ab", Repo: repo, Branch: "occupied", Phase: model.IssueOpsPhaseImplement, CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"}
-	if _, err := core.WriteIssueOps(context.Background(), root, record); err != nil {
+	if _, err := (core.CycleRecordStore{StateRoot: root}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
 	check := newOrcaBranchPrecheck(root)

@@ -10,13 +10,12 @@ import (
 	"issueops/internal/adapter/outbound/sqlstore"
 	model "issueops/internal/contract/issueops"
 	publicationcontract "issueops/internal/contract/issueopspublication"
-	"issueops/internal/port"
 )
 
 func TestFinishAttemptBlocksLegacyWriterEntrypoints(t *testing.T) {
 	for _, cleanupOperation := range []model.CleanupOperation{model.CleanupOperationFinish, model.CleanupOperationRemoteBranch, model.CleanupOperationAbandon} {
 		t.Run(string(cleanupOperation), func(t *testing.T) {
-			for _, operation := range []string{"stale write", "delete", "span", "execution write", "raw execution write", "parent pair write", "child pair write", "publication"} {
+			for _, operation := range []string{"stale write", "span", "execution write", "parent pair write", "child pair write", "publication"} {
 				t.Run(operation, func(t *testing.T) {
 					root := filepath.Join(t.TempDir(), "state")
 					stale := model.IssueOpsRecord{SchemaVersion: 1, ID: "io-finish-fence", Phase: model.IssueOpsPhaseDone}
@@ -49,14 +48,10 @@ func TestFinishAttemptBlocksLegacyWriterEntrypoints(t *testing.T) {
 						_, err = writeIssueOps(context.Background(), root, stale)
 					case "execution write":
 						_, err = persistExecutionTransition(context.Background(), root, stale, nil)
-					case "raw execution write":
-						_, err = persistExecutionTransitionWithRawCAS(context.Background(), root, stale, []port.ExpectedRecord{{Bucket: issueOpsBucket, ID: armed.ID, Data: raw}}, nil)
 					case "parent pair write":
 						_, _, err = (ChildCycleStore{CycleRecordStore{StateRoot: root}}).SavePair(context.Background(), stale, model.IssueOpsRecord{SchemaVersion: 1, ID: "io-new-child", Phase: model.IssueOpsPhaseProblem})
 					case "child pair write":
 						_, _, err = (ChildCycleStore{CycleRecordStore{StateRoot: root}}).SavePair(context.Background(), model.IssueOpsRecord{SchemaVersion: 1, ID: "io-new-parent", Phase: model.IssueOpsPhaseProblem}, stale)
-					case "delete":
-						err = deleteIssueOps(context.Background(), root, armed.ID)
 					case "span":
 						err = withIssueOpsLock(context.Background(), root, armed.ID, callback)
 					}
@@ -91,7 +86,7 @@ func TestFinishAttemptBlocksLegacyWriterEntrypoints(t *testing.T) {
 func TestOrdinaryWritersCannotRestoreDrainedFinishAttempt(t *testing.T) {
 	for _, cleanupOperation := range []model.CleanupOperation{model.CleanupOperationFinish, model.CleanupOperationRemoteBranch, model.CleanupOperationAbandon} {
 		t.Run(string(cleanupOperation), func(t *testing.T) {
-			for _, operation := range []string{"write", "execution", "raw execution", "parent pair", "child pair", "publication"} {
+			for _, operation := range []string{"write", "execution", "parent pair", "child pair", "publication"} {
 				t.Run(operation, func(t *testing.T) {
 					root := filepath.Join(t.TempDir(), "state")
 					current := model.IssueOpsRecord{SchemaVersion: 1, ID: "io-drained", Phase: model.IssueOpsPhaseDone}
@@ -116,8 +111,6 @@ func TestOrdinaryWritersCannotRestoreDrainedFinishAttempt(t *testing.T) {
 						_, err = writeIssueOps(context.Background(), root, stale)
 					case "execution":
 						_, err = persistExecutionTransition(context.Background(), root, stale, nil)
-					case "raw execution":
-						_, err = persistExecutionTransitionWithRawCAS(context.Background(), root, stale, []port.ExpectedRecord{{Bucket: issueOpsBucket, ID: current.ID, Data: raw}}, nil)
 					case "parent pair":
 						_, _, err = (ChildCycleStore{CycleRecordStore{StateRoot: root}}).SavePair(context.Background(), stale, other)
 					case "child pair":

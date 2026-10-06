@@ -34,7 +34,7 @@ func TestIntentWritersRejectFinishInRawOrTypedSnapshot(t *testing.T) {
 				if source != "raw" {
 					state.Progress.Record.Stable.CleanupAttempt = attempt
 				}
-				reconcile := NewReconcileRepository(db, nil)
+				reconcile := NewReconcileRepositoryWithSnapshot(db, nil, nil, nil, nil)
 				rs := leaseapp.ReconcileIntentState{
 					Progress:    leaseapp.ReconcileProgress{Record: state.Progress.Record.Stable, Pending: true, NextStage: state.Stage},
 					OperationID: state.OperationID, Stage: state.Stage, InvocationState: state.InvocationState,

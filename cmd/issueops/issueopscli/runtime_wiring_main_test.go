@@ -74,9 +74,12 @@ func wireIssueOpsRuntimeForTests() {
 		ListCycles: func(ctx context.Context, stateRoot, repo string) (issueopsinventorycontract.ListResult, error) {
 			return listCycles(stateRoot, repo)
 		},
-		ReadRecord:        issueopscore.ReadIssueOps,
-		Completion:        testCycleReadiness().Completion,
-		LocalReadiness:    testCycleReadiness().LocalPR,
+		ReadRecord: issueopscore.ReadIssueOps,
+		Completion: testCycleReadiness().Completion,
+		LocalReadiness: func(record issueopscontract.IssueOpsRecord) issueopscontract.IssueOpsReadiness {
+			ready, _ := testCycleReadiness().ObserveLocalPR(record)
+			return ready
+		},
 		WriterlessCommand: ownerapp.WriterlessCommand,
 		PlannerDefaults:   agentmodel.PlannerDefaults,
 		StagedArtifacts:   artifacts.Names,

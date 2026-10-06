@@ -10,7 +10,7 @@ import (
 
 func TestValidateHarnessInvariantsCoversHealthyMissingAndLegacyHits(t *testing.T) {
 	root := makeValidationIssueOpsRoot(t)
-	healthy := validateHarnessInvariants(root)
+	healthy := ValidateHarnessInvariants(root)
 	if !healthy.OK || healthy.Label != "harness invariants" || healthy.Error != "" {
 		t.Fatalf("expected healthy invariants, got %+v", healthy)
 	}
@@ -19,7 +19,7 @@ func TestValidateHarnessInvariantsCoversHealthyMissingAndLegacyHits(t *testing.T
 	if err := os.Remove(filepath.Join(missingRoot, ".issueops", "COMMIT_POLICY.md")); err != nil {
 		t.Fatal(err)
 	}
-	missing := validateHarnessInvariants(missingRoot)
+	missing := ValidateHarnessInvariants(missingRoot)
 	if missing.OK || !strings.Contains(missing.Error, "missing .issueops/COMMIT_POLICY.md") {
 		t.Fatalf("expected missing doc invariant, got %+v", missing)
 	}
@@ -29,7 +29,7 @@ func TestValidateHarnessInvariantsCoversHealthyMissingAndLegacyHits(t *testing.T
 	if err := os.Remove(filepath.Join(bootstrapRoot, owner)); err != nil {
 		t.Fatal(err)
 	}
-	bootstrapMissing := validateHarnessInvariants(bootstrapRoot)
+	bootstrapMissing := ValidateHarnessInvariants(bootstrapRoot)
 	if bootstrapMissing.OK || !strings.Contains(bootstrapMissing.Error, "missing "+owner) {
 		t.Fatalf("missing application owner accepted: %+v", bootstrapMissing)
 	}
@@ -38,7 +38,7 @@ func TestValidateHarnessInvariantsCoversHealthyMissingAndLegacyHits(t *testing.T
 	if err := os.WriteFile(filepath.Join(legacyRoot, "AGENTS.md"), []byte("legacy m"+"16kh owner\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	legacy := validateHarnessInvariants(legacyRoot)
+	legacy := ValidateHarnessInvariants(legacyRoot)
 	if legacy.OK || !strings.Contains(legacy.Error, "forbidden legacy name hits") {
 		t.Fatalf("expected forbidden legacy invariant, got %+v", legacy)
 	}
@@ -63,7 +63,7 @@ func TestValidateHarnessInvariantsUsesOwnedStatePaths(t *testing.T) {
 		writeValidationFile(t, filepath.Join(root, rel), "ok\n")
 	}
 
-	result := validateHarnessInvariants(root)
+	result := ValidateHarnessInvariants(root)
 	if !result.OK {
 		t.Fatalf("expected owned state files to satisfy invariants, got %+v", result)
 	}
@@ -72,7 +72,7 @@ func TestValidateHarnessInvariantsUsesOwnedStatePaths(t *testing.T) {
 		if err := os.Remove(filepath.Join(missingRoot, rel)); err != nil {
 			t.Fatal(err)
 		}
-		missing := validateHarnessInvariants(missingRoot)
+		missing := ValidateHarnessInvariants(missingRoot)
 		if missing.OK || !strings.Contains(missing.Error, "missing "+rel) {
 			t.Fatalf("expected missing owned state file %s, got %+v", rel, missing)
 		}
@@ -246,4 +246,31 @@ func TestValidateHarnessInvariantsRejectsMissingPreflightHelpers(t *testing.T) {
 	if result.OK || !strings.Contains(result.Error, "missing "+path) {
 		t.Fatalf("missing helper accepted: %+v", result)
 	}
+}
+
+func allowCurrentOwnerHandle(text string) string {
+	return strings.ReplaceAll(text, currentOwnerHandle(), "$CURRENT_OWNER")
+}
+
+func containsForbiddenLegacyOutsideRuntimePaths(text, root string) bool {
+	sanitized := allowCurrentOwnerHandle(text)
+	replacements := []string{}
+	if abs, err := filepath.Abs(root); err == nil {
+		replacements = append(replacements, abs)
+	}
+	if home, err := os.UserHomeDir(); err == nil {
+		replacements = append(replacements, home)
+	}
+	for _, runtimePath := range replacements {
+		if runtimePath == "" || runtimePath == string(filepath.Separator) {
+			continue
+		}
+		sanitized = strings.ReplaceAll(sanitized, runtimePath, "$RUNTIME_PATH")
+	}
+	for _, needle := range forbiddenLegacyNeedles() {
+		if strings.Contains(sanitized, needle) {
+			return true
+		}
+	}
+	return false
 }

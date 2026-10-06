@@ -345,10 +345,6 @@ const gitlabChildVerifyQuery = `query childVerify($childId: WorkItemID!) { workI
 const gitlabWorkItemCloseMutation = `mutation workItemUpdate($childId: WorkItemID!) { workItemUpdate(input: { id: $childId, stateEvent: CLOSE }) { workItem { id iid webUrl state } errors } }`
 const gitlabChildCloseVerifyQuery = `query childCloseVerify($childId: WorkItemID!) { workItem(id: $childId) { id iid webUrl state } }`
 
-func runGlabJSON(args []string, repo string, kind string) (port.IssueProviderCreateIssueResult, error) {
-	return runGlabJSONContext(context.Background(), args, repo, kind)
-}
-
 func runGlabJSONContext(ctx context.Context, args []string, repo string, kind string) (port.IssueProviderCreateIssueResult, error) {
 	out, invoked, err := providerutil.RunBoundedMutationContext(ctx, repo, "glab", args...)
 	url, number := parseGlabOutput(string(out))

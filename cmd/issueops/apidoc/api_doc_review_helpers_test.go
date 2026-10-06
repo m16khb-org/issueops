@@ -40,6 +40,14 @@ func TestAPIDocDiffReadsStagedCandidateDiff(t *testing.T) {
 	}
 }
 
+func mustJSON(value any) []byte {
+	b, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+
 func TestMustJSONReturnsIndentedJSON(t *testing.T) {
 	out := mustJSON(map[string]any{"ok": true, "items": []string{"one"}})
 

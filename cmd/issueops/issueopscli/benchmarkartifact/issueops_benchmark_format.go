@@ -23,10 +23,6 @@ func bullets(items []string) string {
 	return strings.Join(out, "\n")
 }
 
-func Bullets(items []string) string {
-	return bullets(items)
-}
-
 func ownedTasks(items []string) string {
 	if len(items) == 0 {
 		return "- Worker Fixture owns verification that this fixture has no additional task requirements."
@@ -43,8 +39,4 @@ func ownedTasks(items []string) string {
 		return "- Worker Fixture owns verification that this fixture has no additional task requirements."
 	}
 	return strings.Join(out, "\n")
-}
-
-func OwnedTasks(items []string) string {
-	return ownedTasks(items)
 }

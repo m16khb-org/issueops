@@ -27,7 +27,7 @@ func TestArtifactVerificationCompositionRechecksLatestAuthority(t *testing.T) {
 			if mode == "invalid-phase" {
 				record.Phase = model.IssueOpsPhasePlan
 			}
-			if _, err = core.WriteIssueOps(context.Background(), root, record); err != nil {
+			if _, err = (core.CycleRecordStore{StateRoot: root}).Save(context.Background(), record); err != nil {
 				t.Fatal(err)
 			}
 			req := model.IssueOpsRemoteArtifactVerificationRequest{Provider: "github", Kind: "pull_request", URL: "https://github.com/acme/repo/pull/68", TargetBranch: " main ", Labels: []string{" bug ", "bug"}, Assignees: []string{" owner "}}
@@ -53,7 +53,7 @@ func TestArtifactVerificationCompositionRechecksLatestAuthority(t *testing.T) {
 				case "project-change":
 					latest.IssueURL = "https://github.com/other/repo/issues/68"
 				}
-				if _, e = core.WriteIssueOps(context.Background(), root, latest); e != nil {
+				if _, e = (core.CycleRecordStore{StateRoot: root}).Save(context.Background(), latest); e != nil {
 					t.Fatal(e)
 				}
 				return nil

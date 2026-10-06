@@ -177,7 +177,7 @@ func TestSelfWorkflowSummaryAndHistoryWrappers(t *testing.T) {
 	if summary.TotalSteps != 1 {
 		t.Fatalf("summary total steps = %d", summary.TotalSteps)
 	}
-	if len(SelfVerificationFailureClusters(SelfAugmentResult{Runs: []SelfAugmentIteration{{Seed: 1, Steps: []StepResult{{Label: "fail", OK: false}}}}})) != 1 {
+	if len(SummarizeSelfVerification(SelfAugmentResult{Runs: []SelfAugmentIteration{{Seed: 1, Steps: []StepResult{{Label: "fail", OK: false}}}}}, 95).FailureClusters) != 1 {
 		t.Fatal("failure clusters should include failed step")
 	}
 }
@@ -200,27 +200,12 @@ func TestSelfVerifyLLMEvalAndProgressWrappers(t *testing.T) {
 	if err != nil || !config.Enabled || config.Mode != "advisory" {
 		t.Fatalf("ResolveSelfVerifyLLMEvalConfig = %#v err=%v", config, err)
 	}
-	var eval SelfVerifyLLMEvalResult
-	raw := []byte(`prefix {"ok":true,"mode":"gate","execution_class":"foreground_blocking","read_only":true,"score":99,"summary":"ok","evidence_packet_bytes":10}`)
-	if err := DecodeSelfVerifyLLMEval(raw, &eval); err != nil {
-		t.Fatalf("DecodeSelfVerifyLLMEval: %v", err)
-	}
-	if err := DecodeSelfVerifyLLMEvalStrict([]byte(`{"ok":true,"mode":"advisory","execution_class":"foreground_blocking","read_only":true,"score":99,"evidence_packet_bytes":10}`), &eval); err != nil {
-		t.Fatalf("DecodeSelfVerifyLLMEvalStrict: %v", err)
-	}
-	if extracted, ok := ExtractSelfVerifyLLMEvalJSON(raw); !ok || len(extracted) == 0 {
-		t.Fatal("expected embedded JSON extraction")
-	}
 	if BoundedLLMEvalError("prefix", errors.New("boom"), "output") == "" {
 		t.Fatal("bounded error should be non-empty")
 	}
 	result := SelfAugmentResult{OK: true, TerminationEligible: true, Summary: SelfAugmentSummary{TerminationEligible: true}}
 	if out, err := ApplySelfVerifyLLMEval(result, SelfVerifyLLMEvalOptions{}); err != nil || !out.OK {
 		t.Fatalf("disabled LLM eval should preserve result: %#v err=%v", out, err)
-	}
-	result.LLMEval = &SelfVerifyLLMEvalResult{OK: false, Mode: "gate", Score: 50, Blockers: []string{"risk"}}
-	if out, err := ApplySelfVerifyLLMGate(result, 95); err == nil || out.OK || out.TerminationEligible {
-		t.Fatalf("gate should fail closed: %#v err=%v", out, err)
 	}
 	if SelfVerifyLLMResponseSchemaExample() == "" || len(SelfVerifyLLMResponseFieldTypes()) == 0 {
 		t.Fatal("LLM response schema helpers should return content")

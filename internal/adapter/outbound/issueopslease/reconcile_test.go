@@ -28,7 +28,7 @@ func (f *reconcileEffectsFake) PrepareWorktree(context.Context, preparationcontr
 
 func TestReconcileRepositoryPreservesRawCASState(t *testing.T) {
 	_, sealed, store := seededResumeIntent(t)
-	state, err := NewReconcileRepository(store, nil).Canonicalize(context.Background(), sealed.Progress.Record.ID)
+	state, err := NewReconcileRepositoryWithSnapshot(store, nil, nil, nil, nil).Canonicalize(context.Background(), sealed.Progress.Record.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,7 +39,7 @@ func TestReconcileRepositoryPreservesRawCASState(t *testing.T) {
 
 func TestReconcileRepositoryRejectsStaleSnapshotBeforeReadingIntent(t *testing.T) {
 	_, sealed, store := seededResumeIntent(t)
-	repository := NewReconcileRepository(store, nil)
+	repository := NewReconcileRepositoryWithSnapshot(store, nil, nil, nil, nil)
 	snapshot := sealed.Progress.Record.Stable
 	snapshot.Execution = &leasecontract.Execution{}
 	repository.snapshot = &snapshot
@@ -51,7 +51,7 @@ func TestReconcileRepositoryRejectsStaleSnapshotBeforeReadingIntent(t *testing.T
 
 func TestReconcileRepositoryLatestReadsOutboundStore(t *testing.T) {
 	_, store := newResumeRepositoryStore(t, resumeRepositoryRecord(t, 4))
-	repository := NewReconcileRepository(store, &reconcileEffectsFake{})
+	repository := NewReconcileRepositoryWithSnapshot(store, &reconcileEffectsFake{}, nil, nil, nil)
 	record, err := repository.Latest(context.Background(), "io-resume-repository")
 	if err != nil {
 		t.Fatal(err)
@@ -63,7 +63,7 @@ func TestReconcileRepositoryLatestReadsOutboundStore(t *testing.T) {
 
 func TestReconcileRepositoryMarkInvokingUsesRawCAS(t *testing.T) {
 	_, state, store := seededResumeIntent(t)
-	repository := NewReconcileRepository(store, nil)
+	repository := NewReconcileRepositoryWithSnapshot(store, nil, nil, nil, nil)
 	intent := leaseapp.ReconcileIntentState{
 		Progress:    leaseapp.ReconcileProgress{Record: state.Progress.Record.Stable, Pending: true, NextStage: state.Stage},
 		OperationID: state.OperationID, Stage: state.Stage, InvocationState: state.InvocationState,
@@ -83,7 +83,7 @@ func TestReconcileRepositoryMarkInvokingUsesRawCAS(t *testing.T) {
 
 func TestReconcileRepositoryAppliesResumeReceiptWithoutBridge(t *testing.T) {
 	_, sealed, store := seededResumeIntent(t)
-	repository := NewReconcileRepository(store, nil)
+	repository := NewReconcileRepositoryWithSnapshot(store, nil, nil, nil, nil)
 	intent := leaseapp.ReconcileIntentState{
 		Progress:    leaseapp.ReconcileProgress{Record: sealed.Progress.Record.Stable, Pending: true, NextStage: sealed.Stage},
 		OperationID: sealed.OperationID, Stage: sealed.Stage, InvocationState: sealed.InvocationState,
@@ -134,7 +134,7 @@ func TestReconcileRepositoryAdvancesPreparedOwnerReceiptWithoutBridge(t *testing
 	}); err != nil {
 		t.Fatal(err)
 	}
-	repository := NewReconcileRepository(store, nil)
+	repository := NewReconcileRepositoryWithSnapshot(store, nil, nil, nil, nil)
 	state := leaseapp.ReconcileIntentState{
 		Progress:    leaseapp.ReconcileProgress{Record: record, Pending: true, NextStage: string(payload.Stage)},
 		OperationID: payload.OperationID, Stage: string(payload.Stage), InvocationState: payload.InvocationState,
@@ -228,7 +228,7 @@ func TestReconcileRepositoryWorktreeReceiptPersistsPreparedArtifacts(t *testing.
 		ContextPacketPath: "/worktree/context.json", ContextPacketSHA256: strings.Repeat("c", 64),
 		OwnerPromptPath: "/worktree/owner.md", OwnerPromptSHA256: strings.Repeat("d", 64),
 	}}
-	repository := NewReconcileRepository(store, fake)
+	repository := NewReconcileRepositoryWithSnapshot(store, fake, nil, nil, nil)
 	state := leaseapp.ReconcileIntentState{
 		Progress:    leaseapp.ReconcileProgress{Record: record, Pending: true, NextStage: string(payload.Stage)},
 		OperationID: payload.OperationID, Stage: string(payload.Stage), InvocationState: payload.InvocationState,
@@ -295,7 +295,7 @@ func TestReconcileRepositoryWorktreeReceiptPersistsPreparedArtifacts(t *testing.
 
 func TestReconcileRepositoryRecordFailureUsesRawCAS(t *testing.T) {
 	_, state, store := seededResumeIntent(t)
-	repository := NewReconcileRepository(store, nil)
+	repository := NewReconcileRepositoryWithSnapshot(store, nil, nil, nil, nil)
 	repository.now = func() time.Time { return time.Date(2026, time.July, 31, 3, 5, 0, 0, time.UTC) }
 	repository.redact = func(string) string { return "redacted failure" }
 	intent := leaseapp.ReconcileIntentState{
@@ -325,7 +325,7 @@ func TestReconcileRepositoryRecordFailureUsesRawCAS(t *testing.T) {
 
 func TestReconcileRepositoryClearIntentDeletesOnlySealedPendingIntent(t *testing.T) {
 	_, state, store := seededResumeIntent(t)
-	repository := NewReconcileRepository(store, nil)
+	repository := NewReconcileRepositoryWithSnapshot(store, nil, nil, nil, nil)
 	repository.now = func() time.Time { return time.Date(2026, time.July, 31, 3, 10, 0, 0, time.UTC) }
 	repository.redact = func(string) string { return "no resource observed" }
 	intent := leaseapp.ReconcileIntentState{

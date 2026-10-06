@@ -11,10 +11,6 @@ import (
 	statecontract "issueops/internal/contract/state"
 )
 
-func StateDoctor() (statecontract.StateDoctorResult, error) {
-	return Doctor(StateDir())
-}
-
 func Doctor(dir string) (statecontract.StateDoctorResult, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil && !os.IsNotExist(err) {

@@ -41,6 +41,5 @@ func StateRoot() string                                { return testLoopStateRoo
 func RepoGateSummaryFor(repo string) (loopcontract.RepoGateSummary, []string) {
 	return testLoopReader().RepoGateSummaryFor(repo)
 }
-func RepoGateMissing(repo string) ([]string, []string) { return testLoopReader().RepoGateMissing(repo) }
 
 func Status(id string) (loopcontract.StatusResult, error) { return testLoopService().Status(id) }

@@ -40,13 +40,6 @@ func IssueOpsRoot() string {
 	}
 }
 
-func ResolveTarget(target string) string {
-	if target != "" {
-		return target
-	}
-	return IssueOpsRoot()
-}
-
 func ReadHarnessFile(parts ...string) (string, error) {
 	path := filepath.Join(append([]string{IssueOpsRoot()}, parts...)...)
 	b, err := os.ReadFile(path)

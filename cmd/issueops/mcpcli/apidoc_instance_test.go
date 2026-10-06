@@ -7,9 +7,10 @@ import (
 	"strings"
 	"testing"
 
+	app "issueops/internal/application/apidoc"
+
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	app "issueops/internal/application/apidoc"
 )
 
 func apiDocOutcomeDeps(t *testing.T, owner, mode string) MCPDependencies {

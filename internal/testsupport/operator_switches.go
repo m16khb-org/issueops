@@ -1,4 +1,4 @@
-package hookenv
+package testsupport
 
 import "os"
 

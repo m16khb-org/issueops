@@ -7,11 +7,10 @@ import (
 	"time"
 
 	application "issueops/internal/application/selfaugment"
-	domain "issueops/internal/domain/selfaugment"
 )
 
 func snapshotStore() application.SnapshotStore {
-	return application.SnapshotStore{ReadState: statestore.StateRead, NormalizeKey: statestore.NormalizeStateKey, WriteRecord: func(dir, key string, record statecontract.RecordEnvelope) (string, error) {
+	return application.SnapshotStore{ReadState: statestore.NewService().Read, NormalizeKey: statestore.NormalizeStateKey, WriteRecord: func(dir, key string, record statecontract.RecordEnvelope) (string, error) {
 		return statestore.WriteStateRecord(context.Background(), dir, key, record)
 	}, Now: time.Now}
 }
@@ -21,10 +20,4 @@ func ReadSelfAugmentStateSnapshot(key string) (SelfAugmentStateSnapshot, error) 
 }
 func WriteSelfAugmentSnapshotRecord(dir, key string, snapshot SelfAugmentStateSnapshot) error {
 	return snapshotStore().Write(dir, key, snapshot)
-}
-func IsSelfVerificationSummaryKind(kind string) bool {
-	return domain.IsSelfVerificationSummaryKind(kind)
-}
-func NormalizeSelfAugmentSnapshotFailureCause(snapshot *SelfAugmentStateSnapshot) {
-	application.NormalizeSnapshotFailureCause(snapshot)
 }

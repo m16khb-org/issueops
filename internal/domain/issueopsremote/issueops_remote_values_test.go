@@ -63,32 +63,6 @@ func TestInvalidAssignee(t *testing.T) {
 	}
 }
 
-func TestBoundedIssueOpsText(t *testing.T) {
-	tests := []struct {
-		input      string
-		wantSuffix string
-	}{
-		{"short text", ""},
-		{"", ""},
-	}
-	for _, tt := range tests {
-		got := boundedIssueOpsText(tt.input)
-		if tt.input == "short text" && got != "short text" {
-			t.Errorf("expected %q, got %q", tt.input, got)
-		}
-	}
-
-	// Test truncation
-	long := make([]byte, 500)
-	for i := range long {
-		long[i] = 'x'
-	}
-	got := boundedIssueOpsText(string(long))
-	if len(got) != 400+len("...[truncated]") {
-		t.Errorf("expected %d chars, got %d", 400+len("...[truncated]"), len(got))
-	}
-}
-
 func TestIsDecimalString(t *testing.T) {
 	tests := []struct {
 		value string
@@ -175,14 +149,14 @@ func TestProjectKey(t *testing.T) {
 	}
 }
 
-func TestValidateArtifactMatchesIssueRejectsMissingProjectAuthority(t *testing.T) {
+func TestValidateArtifactMatchesProjectRejectsIssueWithoutProjectAuthority(t *testing.T) {
 	for _, tt := range []struct {
 		issueURL, artifactURL, provider, kind string
 	}{
 		{"https://gitlab.example/-/issues/16", "https://gitlab.example/group/repo/-/merge_requests/16", "gitlab", "mr"},
 		{"https://github.com/acme/issues/16", "https://github.com/acme/repo/pull/16", "github", "pr"},
 	} {
-		if err := ValidateArtifactMatchesIssue(tt.issueURL, tt.artifactURL, tt.provider, tt.kind); err == nil {
+		if err := ValidateArtifactMatchesProject(ProjectKey(tt.issueURL, tt.provider, "issue"), tt.artifactURL, tt.provider, tt.kind); err == nil {
 			t.Fatalf("missing project authority matched: issue=%q artifact=%q", tt.issueURL, tt.artifactURL)
 		}
 	}

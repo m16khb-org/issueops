@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	preflightapp "issueops/internal/application/preflight"
 )
 
 func TestGitPreflightDetectsCommitStyleAndSecretLikePath(t *testing.T) {
@@ -31,7 +33,7 @@ func TestGitPreflightDetectsCommitStyleAndSecretLikePath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	result := GitPreflight(repo, root)
+	result := (preflightapp.Service{Observer: GitObserver{}}).Check(repo, root)
 	if !result.OK {
 		t.Fatalf("GitPreflight ok=false: %+v", result)
 	}

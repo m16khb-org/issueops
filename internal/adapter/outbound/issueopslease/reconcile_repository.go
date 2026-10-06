@@ -28,14 +28,6 @@ type ReconcileRepository struct {
 	snapshot *leasecontract.Record
 }
 
-func NewReconcileRepository(store port.TransactionalRecordStore, effects ReconcileEffects) *ReconcileRepository {
-	return NewReconcileRepositoryWithDiagnosticRedactor(store, effects, nil, time.Now)
-}
-
-func NewReconcileRepositoryWithDiagnosticRedactor(store port.TransactionalRecordStore, effects ReconcileEffects, redact func(string) string, now func() time.Time) *ReconcileRepository {
-	return NewReconcileRepositoryWithSnapshot(store, effects, nil, redact, now)
-}
-
 func NewReconcileRepositoryWithSnapshot(store port.TransactionalRecordStore, effects ReconcileEffects, snapshot *leasecontract.Record, redact func(string) string, now func() time.Time) *ReconcileRepository {
 	if now == nil {
 		now = time.Now

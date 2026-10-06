@@ -26,7 +26,7 @@ func writeProjectDoc(t *testing.T, repo, name, content string) {
 func TestBuildProjectDocCatalogContext(t *testing.T) {
 	repo := t.TempDir()
 	writeProjectDoc(t, repo, "ARCHITECTURE.md", "# 아키텍처\n\n## 핵심 경계\n")
-	service := app.CatalogService{Discover: reader.DiscoverProjectDocs, FormatCompact: reader.FormatProjectDocCatalog, FormatUserView: renderer.RenderProjectDocCatalogUserView}
+	service := app.CatalogService{DiscoverReport: reader.DiscoverProjectDocsReport, FormatCompact: reader.FormatProjectDocCatalog, FormatUserView: renderer.RenderProjectDocCatalogUserView}
 	cat := service.Build(repo)
 	if !cat.ShouldInject || len(cat.ProjectDocs) != 1 {
 		t.Fatalf("expected catalog context with one doc: %+v", cat)
@@ -52,21 +52,6 @@ func omissionService(docs []projectdoc.ProjectDocCatalogEntry, omissions project
 		FormatUserView:        renderer.RenderProjectDocCatalogUserView,
 		FormatCompactOmission: reader.FormatProjectDocCatalogOmissions,
 		FormatUserOmission:    renderer.RenderProjectDocCatalogOmissions,
-	}
-}
-
-func TestBuildWithoutOmissionsIsByteIdenticalToDiscoverPath(t *testing.T) {
-	repo := t.TempDir()
-	writeProjectDoc(t, repo, "ARCHITECTURE.md", "# 아키텍처\n")
-	base := app.CatalogService{Discover: reader.DiscoverProjectDocs, FormatCompact: reader.FormatProjectDocCatalog, FormatUserView: renderer.RenderProjectDocCatalogUserView}
-	report := omissionService(nil, projectdoc.CatalogOmissions{})
-	report.DiscoverReport = reader.DiscoverProjectDocsReport
-
-	want, got := base.Build(repo), report.Build(repo)
-	wantJSON, _ := json.Marshal(want)
-	gotJSON, _ := json.Marshal(got)
-	if string(wantJSON) != string(gotJSON) || got.Omitted != nil {
-		t.Fatalf("no-omission output changed:\nwant %s\n got %s", wantJSON, gotJSON)
 	}
 }
 
@@ -117,12 +102,12 @@ func TestCatalogWithoutDocsSkipsRendering(t *testing.T) {
 	for _, docs := range [][]projectdoc.ProjectDocCatalogEntry{nil, {}} {
 		calls := 0
 		service := app.CatalogService{
-			Discover: func(repo string) []projectdoc.ProjectDocCatalogEntry {
+			DiscoverReport: func(repo string) ([]projectdoc.ProjectDocCatalogEntry, projectdoc.CatalogOmissions, projectdoc.CatalogStats) {
 				if repo != "repo" {
 					t.Fatalf("repo=%q", repo)
 				}
 				calls++
-				return docs
+				return docs, projectdoc.CatalogOmissions{}, projectdoc.CatalogStats{}
 			},
 			FormatCompact:  func([]projectdoc.ProjectDocCatalogEntry) string { t.Fatal("empty catalog rendered"); return "" },
 			FormatUserView: func([]projectdoc.ProjectDocCatalogEntry) string { t.Fatal("empty catalog rendered"); return "" },

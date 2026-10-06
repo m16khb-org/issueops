@@ -63,28 +63,6 @@ func TestHasUnquotedControlOperator(t *testing.T) {
 	}
 }
 
-func TestHasUnquotedBackgroundOperator(t *testing.T) {
-	for _, command := range []string{
-		`go test ./... 'clean & foreground'`,
-		`go test ./... "clean & foreground"`,
-		`go test ./... && go vet ./...`,
-		`printf x 2>&1`,
-		`printf x &>out.log`,
-	} {
-		if HasUnquotedBackgroundOperator(command) {
-			t.Fatalf("foreground or quoted ampersand must not be classified as background: %q", command)
-		}
-	}
-	for _, command := range []string{
-		"go test ./... &",
-		"go test ./... & git status --short",
-	} {
-		if !HasUnquotedBackgroundOperator(command) {
-			t.Fatalf("unquoted background operator must be rejected: %q", command)
-		}
-	}
-}
-
 func TestHasActiveCommandSubstitution(t *testing.T) {
 	for _, command := range []string{
 		"orca terminal send --text `touch /tmp/x`",
@@ -125,23 +103,6 @@ func TestHasActiveOutputRedirect(t *testing.T) {
 	} {
 		if HasActiveOutputRedirect(command) {
 			t.Fatalf("quoted or escaped redirect punctuation must remain data: %q", command)
-		}
-	}
-}
-
-func TestHasActiveInputRedirect(t *testing.T) {
-	for _, command := range []string{
-		"kubectl exec pod/api -- cat /etc/resolv.conf < /tmp/input",
-		"kubectl exec pod/api -- cat /etc/resolv.conf 0</tmp/input",
-		"kubectl exec pod/api -- cat /etc/resolv.conf <<<value",
-	} {
-		if !HasActiveInputRedirect(command) {
-			t.Fatalf("active input redirect must be detected: %q", command)
-		}
-	}
-	for _, command := range []string{`printf '%s' '<'`, `printf "%s" "<"`, `printf %s \<`} {
-		if HasActiveInputRedirect(command) {
-			t.Fatalf("quoted or escaped input punctuation must remain data: %q", command)
 		}
 	}
 }
@@ -205,28 +166,6 @@ func TestHasActiveShellSpecialQuoting(t *testing.T) {
 	for _, command := range []string{`printf '%s' '$'`, `printf '%s' '$"git"'`, `printf %s \$'literal'`} {
 		if HasActiveShellSpecialQuoting(command) {
 			t.Fatalf("literal special-quote syntax must remain data: %q", command)
-		}
-	}
-}
-
-func TestHasActiveShellComment(t *testing.T) {
-	for _, command := range []string{
-		"sed -n '1,$p' # 파일 operand가 shell에서 사라진다",
-		"cat README.md\t# comment",
-		`sed -n '1,$p' \
-# line continuation 뒤에도 파일 operand가 사라진다`,
-	} {
-		if !HasActiveShellComment(command) {
-			t.Fatalf("word-start unquoted shell comment must be detected: %q", command)
-		}
-	}
-	for _, command := range []string{
-		"rg -n '# heading' README.md",
-		`cat README.md\#fragment`,
-		"cat README.md#fragment",
-	} {
-		if HasActiveShellComment(command) {
-			t.Fatalf("quoted, escaped, or embedded hash must remain data: %q", command)
 		}
 	}
 }

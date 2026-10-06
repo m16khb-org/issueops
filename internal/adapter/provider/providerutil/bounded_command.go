@@ -18,10 +18,6 @@ const (
 	providerDiagnosticLimit = 4096
 )
 
-func RunBoundedReadback(repo, name string, args ...string) ([]byte, error) {
-	return RunBoundedReadbackContext(context.Background(), repo, name, args...)
-}
-
 func RunBoundedReadbackContext(ctx context.Context, repo, name string, args ...string) ([]byte, error) {
 	stdout, _, err := runBoundedCommandContext(ctx, repo, name, args, providerReadbackTimeout, providerReadbackLimit)
 	return stdout, err
@@ -42,10 +38,6 @@ func DryRunPreview(name string, args ...string) string {
 		value = policy.TruncateBytes(value, providerDiagnosticLimit) + "...[truncated]"
 	}
 	return "[dry-run] would execute: " + value
-}
-
-func runBoundedCommand(repo, name string, args []string, timeout time.Duration, outputLimit int) ([]byte, bool, error) {
-	return runBoundedCommandContext(context.Background(), repo, name, args, timeout, outputLimit)
 }
 
 func runBoundedCommandContext(parent context.Context, repo, name string, args []string, timeout time.Duration, outputLimit int) ([]byte, bool, error) {

@@ -12,7 +12,6 @@ import (
 	"io"
 	"io/fs"
 	"strings"
-	"time"
 
 	"issueops/internal/adapter/outbound/sqlstore"
 	"issueops/internal/contract/issueops"
@@ -99,17 +98,6 @@ func ListIssueOpsIDs(stateRoot string) ([]string, error) {
 	return ids, nil
 }
 
-func ScanIssueOps(stateRoot string) ([]issueops.IssueOpsRecord, error) {
-	records, invalid, err := scanIssueOpsRows(stateRoot)
-	if err != nil {
-		return nil, err
-	}
-	if invalid {
-		return nil, statecontract.ErrInvalidState
-	}
-	return records, nil
-}
-
 func ScanReadableIssueOps(stateRoot string) ([]issueops.IssueOpsRecord, error) {
 	records, _, err := scanIssueOpsRows(stateRoot)
 	return records, err
@@ -136,32 +124,6 @@ func scanIssueOpsRows(stateRoot string) ([]issueops.IssueOpsRecord, bool, error)
 	return records, invalid, nil
 }
 
-// deleteIssueOps removes the cycle record for id; deleting an absent record is
-// not an error.
-func deleteIssueOps(ctx context.Context, stateRoot, id string) error {
-	id, err := normalizeIssueOpsID(id)
-	if err != nil {
-		return err
-	}
-	db, err := sqlstore.Open(stateRoot)
-	if err != nil {
-		return err
-	}
-	raw, found, err := mutableIssueOpsRaw(db, id)
-	if err != nil {
-		return err
-	}
-	if !found {
-		return nil
-	}
-	// 스테이징 artifact는 레코드와 수명을 같이한다 — 레코드 삭제(prune,
-	// cleanup finish)가 스테이지 blob을 고아로 남기지 않는다(C4a-F1 ②).
-	return db.CompareAndApply(ctx, []port.ExpectedRecord{{Bucket: issueOpsBucket, ID: id, Data: raw}}, []port.RecordMutation{
-		{Bucket: artifactStageBucket, ID: id, Delete: true},
-		{Bucket: issueOpsBucket, ID: id, Delete: true},
-	})
-}
-
 func newIssueOpsID(repo, branch string) string {
 	sum := sha256.Sum256([]byte(strings.TrimSpace(repo) + "\x00" + strings.TrimSpace(branch)))
 	return "io-" + hex.EncodeToString(sum[:])[:12]
@@ -175,15 +137,6 @@ func newIndependentIssueOpsID(repo string) (string, error) {
 	seed := append([]byte(strings.TrimSpace(repo)+"\x00"), nonce[:]...)
 	sum := sha256.Sum256(seed)
 	return "io-" + hex.EncodeToString(sum[:])[:12], nil
-}
-
-func NewIssueOpsID(repo, branch string) string {
-	return newIssueOpsID(repo, branch)
-}
-
-func touchAndWriteIssueOps(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord) (issueops.IssueOpsRecord, error) {
-	record.UpdatedAt = time.Now().UTC().Format(time.RFC3339Nano)
-	return writeIssueOps(ctx, stateRoot, record)
 }
 
 func writeIssueOps(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord) (issueops.IssueOpsRecord, error) {
@@ -239,10 +192,6 @@ func encodeIssueOpsRecord(record issueops.IssueOpsRecord) (issueops.IssueOpsReco
 		return record, nil, err
 	}
 	return record, b, nil
-}
-
-func WriteIssueOps(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord) (issueops.IssueOpsRecord, error) {
-	return writeIssueOps(ctx, stateRoot, record)
 }
 
 func normalizeIssueOpsID(id string) (string, error) {

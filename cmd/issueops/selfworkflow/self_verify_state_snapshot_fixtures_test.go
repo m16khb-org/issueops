@@ -11,7 +11,7 @@ import (
 )
 
 func snapshotStore() application.SnapshotStore {
-	return application.SnapshotStore{ReadState: statestore.StateRead, NormalizeKey: statestore.NormalizeStateKey, WriteRecord: func(dir, key string, record statecontract.RecordEnvelope) (string, error) {
+	return application.SnapshotStore{ReadState: statestore.NewService().Read, NormalizeKey: statestore.NormalizeStateKey, WriteRecord: func(dir, key string, record statecontract.RecordEnvelope) (string, error) {
 		return statestore.WriteStateRecord(context.Background(), dir, key, record)
 	}, Now: time.Now}
 }

@@ -53,17 +53,17 @@ func TestFromFixtureForwardsRoutingTrace(t *testing.T) {
 }
 
 func TestListHelpersSkipBlankItems(t *testing.T) {
-	if got := Bullets([]string{" ", "\t"}); got != "- 해당 fixture의 추가 요구사항 없음" {
+	if got := bullets([]string{" ", "\t"}); got != "- 해당 fixture의 추가 요구사항 없음" {
 		t.Fatalf("blank bullet fallback = %q", got)
 	}
-	if got := Bullets([]string{" first ", "", "second"}); got != "- first\n- second" {
+	if got := bullets([]string{" first ", "", "second"}); got != "- first\n- second" {
 		t.Fatalf("trimmed bullets = %q", got)
 	}
-	if got := OwnedTasks([]string{" ", ""}); got != "- Worker Fixture owns verification that this fixture has no additional task requirements." {
+	if got := ownedTasks([]string{" ", ""}); got != "- Worker Fixture owns verification that this fixture has no additional task requirements." {
 		t.Fatalf("blank task fallback = %q", got)
 	}
 	want := "- Worker Fixture-1 owns schema validation and reports test evidence for that task.\n- Worker Fixture-3 owns cli output and reports test evidence for that task."
-	if got := OwnedTasks([]string{"schema validation", "", " cli output "}); got != want {
+	if got := ownedTasks([]string{"schema validation", "", " cli output "}); got != want {
 		t.Fatalf("trimmed owned tasks = %q", got)
 	}
 }

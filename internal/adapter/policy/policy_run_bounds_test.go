@@ -189,7 +189,7 @@ func TestPolicyRunActualOutputAndTimeoutContracts(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(root, "output.txt"), []byte(value), 0600); err != nil {
 			t.Fatal(err)
 		}
-		result := RunReadOnlyCommand(policycontract.CommandPolicyRequest{WorkspaceRoot: root, CWD: root, Argv: []string{"cat", "output.txt"}, Timeout: "5s"})
+		result := runReadOnlyCommand(policycontract.CommandPolicyRequest{WorkspaceRoot: root, CWD: root, Argv: []string{"cat", "output.txt"}, Timeout: "5s"})
 		if !result.OK || result.ExitCode != 0 || !result.Executed || strings.Contains(result.Stdout, "fake-value") || !utf8.ValidString(result.Stdout) || len(result.Stdout) > 32*1024+len("\n<truncated>\n") {
 			t.Fatalf("real output contract failed: exit=%d bytes=%d", result.ExitCode, len(result.Stdout))
 		}
@@ -197,11 +197,11 @@ func TestPolicyRunActualOutputAndTimeoutContracts(t *testing.T) {
 			t.Error("real output lost truncation marker")
 		}
 	}
-	result := RunReadOnlyCommand(policycontract.CommandPolicyRequest{WorkspaceRoot: root, CWD: root, Argv: []string{"awk", "BEGIN { while (1) {} }"}, Timeout: "100ms"})
+	result := runReadOnlyCommand(policycontract.CommandPolicyRequest{WorkspaceRoot: root, CWD: root, Argv: []string{"awk", "BEGIN { while (1) {} }"}, Timeout: "100ms"})
 	if result.OK || !result.Executed || !result.TimedOut || result.ExitCode != 124 || !strings.HasSuffix(result.Stderr, "command timed out\n") {
 		t.Fatalf("real timeout contract: %+v", result)
 	}
-	result = RunReadOnlyCommand(policycontract.CommandPolicyRequest{WorkspaceRoot: root, CWD: root, Argv: []string{"false"}, Timeout: "5s"})
+	result = runReadOnlyCommand(policycontract.CommandPolicyRequest{WorkspaceRoot: root, CWD: root, Argv: []string{"false"}, Timeout: "5s"})
 	if result.OK || !result.Executed || result.ExitCode != 1 || result.TimedOut {
 		t.Fatalf("real nonzero contract: %+v", result)
 	}
@@ -215,7 +215,7 @@ func TestCommandExecutorRejectsExpiredDeadlineBeforeStart(t *testing.T) {
 		t.Fatalf("expired start boundary: timeout=%v error=%v", result.TimedOut, result.Err)
 	}
 	root := t.TempDir()
-	public := RunReadOnlyCommand(policycontract.CommandPolicyRequest{WorkspaceRoot: root, CWD: root, Argv: []string{"true"}, Timeout: "1ns"})
+	public := runReadOnlyCommand(policycontract.CommandPolicyRequest{WorkspaceRoot: root, CWD: root, Argv: []string{"true"}, Timeout: "1ns"})
 	if public.OK || !public.Executed || !public.TimedOut || public.ExitCode != 124 {
 		t.Fatalf("expired public timeout contract: %+v", public)
 	}

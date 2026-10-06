@@ -120,48 +120,6 @@ func persistExecutionTransitionWithMutations(ctx context.Context, stateRoot stri
 	return encoded, nil
 }
 
-// persistExecutionTransitionWithRawCAS는 resume stage가 읽은 record와 intent를
-// 같은 SQLite transaction에서 다시 대조한 뒤 저장한다. resume lease는
-// holderless claimable 상태를 유지하므로 lease-holder reverse index transition을
-// 여기로 옮기지 않는다.
-func persistExecutionTransitionWithRawCAS(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, expected []port.ExpectedRecord, extra []port.RecordMutation) (issueops.IssueOpsRecord, error) {
-	if err := issueopsdomain.RequireNoCleanupAttempt(record.CleanupAttempt); err != nil {
-		return issueops.IssueOpsRecord{OK: false, ID: record.ID}, err
-	}
-	db, err := sqlstore.Open(stateRoot)
-	if err != nil {
-		return issueops.IssueOpsRecord{OK: false, ID: record.ID}, err
-	}
-	raw, found, err := mutableIssueOpsRaw(db, record.ID)
-	if err != nil {
-		return issueops.IssueOpsRecord{OK: false, ID: record.ID}, err
-	}
-	if !found {
-		return issueops.IssueOpsRecord{OK: false, ID: record.ID}, fmt.Errorf("stale raw record snapshot")
-	}
-	expected = append(append([]port.ExpectedRecord(nil), expected...), port.ExpectedRecord{Bucket: issueOpsBucket, ID: record.ID, Data: raw})
-	var encoded issueops.IssueOpsRecord
-	if err := db.CompareAndApplyFunc(ctx, expected, func() ([]port.RecordMutation, error) {
-		var data []byte
-		var encodeErr error
-		encoded, data, encodeErr = encodeIssueOpsRecord(record)
-		if encodeErr != nil {
-			return nil, encodeErr
-		}
-		mutations := append([]port.RecordMutation{{Bucket: issueOpsBucket, ID: encoded.ID, Data: data}}, extra...)
-		return mutations, nil
-	}); err != nil {
-		if stale, ok := errors.AsType[*sqlstore.RawCASError](err); ok {
-			if stale.Bucket == issueOpsBucket {
-				return issueops.IssueOpsRecord{OK: false, ID: record.ID}, fmt.Errorf("stale raw record snapshot")
-			}
-			return issueops.IssueOpsRecord{OK: false, ID: record.ID}, fmt.Errorf("stale raw intent snapshot")
-		}
-		return issueops.IssueOpsRecord{OK: false, ID: record.ID}, err
-	}
-	return encoded, nil
-}
-
 func requireLeaseIndexAvailable(db *sqlstore.DB, lifecycleID string, generation uint64, actor issueops.NativeActor) (bool, error) {
 	data, ok, err := db.Get(leaseHolderBucket, leaseHolderIndexKey(actor))
 	if err != nil {

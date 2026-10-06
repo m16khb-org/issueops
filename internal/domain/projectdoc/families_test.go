@@ -95,11 +95,7 @@ func TestManifestJSONMatchesCheckerSchema(t *testing.T) {
 	}
 }
 
-func TestPrefixedAndStringHelpers(t *testing.T) {
-	prefixed := PrefixedProjectDocNames()
-	if len(prefixed) == 0 || !strings.HasPrefix(prefixed[0], ".issueops/") {
-		t.Fatalf("prefixed names wrong: %v", prefixed)
-	}
+func TestStringHelpers(t *testing.T) {
 	if got := NonEmptyStrings([]string{" a ", "", "b"}); len(got) != 2 || got[0] != "a" {
 		t.Fatalf("NonEmptyStrings wrong: %v", got)
 	}

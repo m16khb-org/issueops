@@ -65,7 +65,7 @@ func TestToolMapsCarryOutputSchemaAndAnnotations(t *testing.T) {
 }
 
 func TestBuildAdvertisesAuthorityFieldsOnWorkspaceToolsOnly(t *testing.T) {
-	workspace := WorkspaceScopedTools()
+	workspace := workspaceScopedToolNames()
 	for _, tool := range Build().Tools {
 		name := tool["name"].(string)
 		properties, _ := tool["inputSchema"].(map[string]any)["properties"].(map[string]any)
@@ -271,4 +271,14 @@ func typeNames(value any) []string {
 		return v
 	}
 	return nil
+}
+
+// workspaceScopedToolNames returns the names of the tools that advertise the
+// request authority inputs.
+func workspaceScopedToolNames() []string {
+	names := make([]string, 0, len(workspaceScopedTools))
+	for name := range workspaceScopedTools {
+		names = append(names, name)
+	}
+	return names
 }

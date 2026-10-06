@@ -8,11 +8,12 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"issueops/cmd/issueops/mcpcli"
 	"issueops/cmd/issueops/projectcli"
 	bootstrapcontract "issueops/internal/contract/projectbootstrap"
 	"strings"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func TestProjectBootstrapMCPInstancesKeepRepositoryAndStateSeparate(t *testing.T) {
@@ -87,7 +88,9 @@ func TestProjectBootstrapCLIPinsStateAndPreservesCuratedDocs(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", otherState)
 	run := func(args ...string) bootstrapcontract.ProjectDocsBootstrapResult {
 		t.Helper()
-		raw := captureStdoutForContract(t, func() error { return projectcli.RunBootstrap(service, args) })
+		raw := captureStdoutForContract(t, func() error {
+			return projectcli.Run(projectcli.Dependencies{Bootstrap: service}, append([]string{"bootstrap"}, args...))
+		})
 		var result bootstrapcontract.ProjectDocsBootstrapResult
 		if err := json.Unmarshal([]byte(raw), &result); err != nil {
 			t.Fatal(err)
@@ -147,7 +150,7 @@ func TestProjectBootstrapCLIPinsStateAndPreservesCuratedDocs(t *testing.T) {
 		t.Fatalf("other state created: %v", err)
 	}
 	missing := filepath.Join(t.TempDir(), "missing")
-	if err := projectcli.RunBootstrap(service, []string{"--repo", missing, "--json"}); err == nil {
+	if err := projectcli.Run(projectcli.Dependencies{Bootstrap: service}, []string{"bootstrap", "--repo", missing, "--json"}); err == nil {
 		t.Fatal("missing repository accepted")
 	}
 	if _, err := os.Stat(missing); !os.IsNotExist(err) {

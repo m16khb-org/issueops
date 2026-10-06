@@ -14,7 +14,7 @@
 | 3 | CAUTIONS §4 Secret leakage | hook 실패 로그에 secret 원문 기록 | ~~hook-failure-log 리댁션~~ → 2026-08-27 hook failure log 제거; context hook은 로그를 남기지 않는다 | retired |
 | 4 | CAUTIONS §14 Codex vs Claude hook rendering drift | host별 hook 명령/JSON 형식 drift | native 설치 계약 golden `TestNativeInstallAdapterContractMatrix` (`internal/adapter/testdata/native_install_contract_matrix.golden.json`) | ✅ golden test |
 | 5 | CAUTIONS §7 MCP schema drift / §18 audit flags | CLI/MCP 응답 계약·docs 인덱스 drift | response-contract golden `TestResponseContractsGolden` (`cmd/issueops/issueopsapp/response_contract_golden_test.go`) | ✅ golden test |
-| 6 | CAUTIONS §10 자기 검증/자가 증강 drift | augment 후보를 모델 자기비판으로 "검증"(외부 신호 없이) | `qualitycatalog.VerifyWithGrounded` + 양 카탈로그 grounding 테스트 (B1, 2026-06-15) | ✅ test |
+| 6 | CAUTIONS §10 자기 검증/자가 증강 drift | augment 후보를 모델 자기비판으로 "검증"(외부 신호 없이) | `testsupport.VerifyWithGrounded` + 양 카탈로그 grounding 테스트 (B1, 2026-06-15) | ✅ test |
 | 7 | (신규 2026-06-15) 편집 후 미포맷 Go | edit가 gofmt 미통과 Go를 남김 | ~~PostToolUse lint-as-gate~~ → 2026-08-27 hook 제거; `gofmt -l` 검증 명령 규약 | retired |
 | 8 | (신규 2026-06-15) untracked .md가 docs-index golden을 drift | llm-wiki 훅의 untracked 연구문서가 self-verify golden을 간헐 flake | hermetic docs-index(`ListDocs` git-tracked 필터) + `TestListDocsExcludesUntrackedInGitRepo` (env-fix) | ✅ test |
 | 9 | CAUTIONS §19 git identity before contributor-sensitive pushes | 잘못된 git identity로 기여자-민감 push | preflight git 점검(`internal/adapter/preflight/git.go`) — 단, push 차단까지의 강제는 부분적 | ○ 부분 |

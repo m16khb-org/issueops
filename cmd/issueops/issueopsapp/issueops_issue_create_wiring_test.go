@@ -158,7 +158,7 @@ func TestIssueCreateCompositionLinksReadyCycleAfterLiveVerification(t *testing.T
 		t.Fatal(err)
 	}
 	record.Intent = &model.IssueOpsIntentContract{IntentClass: "trivial", RawRequest: "create issue", InterpretedIntent: "track work", SuccessCriteria: []string{"issue linked"}}
-	if _, err := issueops.WriteIssueOps(context.Background(), root, record); err != nil {
+	if _, err := (issueops.CycleRecordStore{StateRoot: root}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
 	provider := issueCreateProvider{create: func(context.Context, port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {

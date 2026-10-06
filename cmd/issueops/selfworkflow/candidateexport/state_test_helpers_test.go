@@ -13,6 +13,6 @@ func init() {
 	ObserveSource = verification.CandidateSource
 	StateDir = statestore.StateDir
 	StateWrite = func(key, content string) (statecontract.StateResult, error) {
-		return statestore.StateWrite(context.Background(), key, content)
+		return statestore.NewService().Write(context.Background(), key, content)
 	}
 }

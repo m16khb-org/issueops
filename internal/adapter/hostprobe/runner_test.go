@@ -28,16 +28,6 @@ func TestNewEpisodeRootSurfacesCleanupFailureAfterPermissionFailure(t *testing.T
 	}
 }
 
-func TestObservedModelFromOutputReadsOnlyStructuredModelFields(t *testing.T) {
-	output := []byte("{\"type\":\"system\",\"subtype\":\"init\",\"model\":\"claude-opus-5-5\"}\n{\"model\":\"later\"}\n")
-	if got := observedModelFromOutput(output); got != "claude-opus-5-5" {
-		t.Fatalf("observed model=%q", got)
-	}
-	if got := observedModelFromOutput([]byte(`{"text":"model=secret"}`)); got != "" {
-		t.Fatalf("freeform text produced model=%q", got)
-	}
-}
-
 func TestBoundedBufferReportsTruncationWithoutShortWrite(t *testing.T) {
 	buffer := &boundedBuffer{limit: 4}
 	value := []byte("123456")

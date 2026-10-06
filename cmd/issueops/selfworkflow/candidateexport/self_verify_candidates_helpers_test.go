@@ -24,10 +24,6 @@ func ExportSelfVerificationCandidates(root string) SelfVerificationCandidateExpo
 	return app.ExportCandidates(root, app.ExportCandidatesDeps{Source: ObserveSource, Now: time.Now})
 }
 
-func SelfVerificationCandidateIDsByStatus(candidates []SelfVerificationCandidate, status string) []string {
-	return domain.CandidateIDsByStatus(candidates, status)
-}
-
 func SelectedSelfVerificationCandidateID(candidate *SelfVerificationCandidate) string {
 	return domain.SelectedCandidateID(candidate)
 }

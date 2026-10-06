@@ -49,7 +49,7 @@ func TestSaveSelfVerificationSummaryWritesDefaultKeyAndRejectsInvalidKey(t *test
 		result.StateCheckpoint.Bytes == 0 {
 		t.Fatalf("unexpected successful checkpoint: %+v", result.StateCheckpoint)
 	}
-	state, err := statestore.StateRead("self-verify-latest")
+	state, err := statestore.NewService().Read("self-verify-latest")
 	if err != nil {
 		t.Fatalf("read saved summary: %v", err)
 	}
@@ -100,7 +100,7 @@ func TestSaveSelfAugmentSummary(t *testing.T) {
 	if result.StateCheckpoint.Key != "self-verify-test" || result.StateCheckpoint.Path != filepath.Join(dir, "self-verify-test.json") {
 		t.Fatalf("unexpected checkpoint metadata: %+v", result.StateCheckpoint)
 	}
-	state, err := statestore.StateRead("self-verify-test")
+	state, err := statestore.NewService().Read("self-verify-test")
 	if err != nil {
 		t.Fatalf("StateRead: %v", err)
 	}

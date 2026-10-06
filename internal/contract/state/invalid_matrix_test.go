@@ -36,7 +36,7 @@ func TestStateInvalidMatrix(t *testing.T) {
 			if err := db.Put("state", tc.name, []byte(tc.raw)); err != nil {
 				t.Fatal(err)
 			}
-			_, err := corestate.StateRead(tc.name)
+			_, err := corestate.NewService().Read(tc.name)
 			if !errors.Is(err, statecontract.ErrInvalidState) || err.Error() != "invalid state" {
 				t.Fatalf("error=%v", err)
 			}
@@ -54,12 +54,12 @@ func TestStateAbsentAndCurrentV1(t *testing.T) {
 	if err := db.Put("state", "current_v1", []byte(`{"schema_version":1,"key":"current_v1","content":"x","updated_at":"2026-08-02T00:00:00Z","bytes":1}`)); err != nil {
 		t.Fatal(err)
 	}
-	result, err := corestate.StateRead("current_v1")
+	result, err := corestate.NewService().Read("current_v1")
 	if err != nil || result.Record.Content != "x" || result.Record.SchemaVersion != statecontract.SchemaVersion {
 		t.Fatalf("current v1 result=%+v err=%v", result, err)
 	}
 
-	_, err = corestate.StateRead("absent")
+	_, err = corestate.NewService().Read("absent")
 	if !errors.Is(err, fs.ErrNotExist) || errors.Is(err, statecontract.ErrInvalidState) {
 		t.Fatalf("absent error=%v", err)
 	}

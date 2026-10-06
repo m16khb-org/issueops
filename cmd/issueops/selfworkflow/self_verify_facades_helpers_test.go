@@ -38,32 +38,12 @@ func ParseSelfVerifyLLMEvalEnv(value string) (bool, string, error) {
 	return llmeval.ParseSelfVerifyLLMEvalEnv(value)
 }
 
-func DecodeSelfVerifyLLMEval(out []byte, eval *SelfVerifyLLMEvalResult) error {
-	return llmeval.DecodeSelfVerifyLLMEval(out, eval)
-}
-
-func DecodeSelfVerifyLLMEvalStrict(out []byte, eval *SelfVerifyLLMEvalResult) error {
-	return llmeval.DecodeSelfVerifyLLMEvalStrict(out, eval)
-}
-
-func ExtractSelfVerifyLLMEvalJSON(out []byte) ([]byte, bool) {
-	return llmeval.ExtractSelfVerifyLLMEvalJSON(out)
-}
-
 func BoundedLLMEvalError(prefix string, err error, output string) string {
 	return llmeval.BoundedLLMEvalError(prefix, err, output)
 }
 
 func ApplySelfVerifyLLMEval(result SelfAugmentResult, opts SelfVerifyLLMEvalOptions) (SelfAugmentResult, error) {
 	return llmeval.ApplySelfVerifyLLMEval(result, opts)
-}
-
-func ApplySelfVerifyLLMGate(result SelfAugmentResult, targetScore float64) (SelfAugmentResult, error) {
-	return llmeval.ApplySelfVerifyLLMGate(result, targetScore)
-}
-
-func BuildSelfVerifyLLMEvalPrompt(result SelfAugmentResult) (string, int, error) {
-	return llmeval.BuildSelfVerifyLLMEvalPrompt(result)
 }
 
 func SelfVerifyLLMResponseSchemaExample() string {
@@ -76,14 +56,6 @@ func SelfVerifyLLMResponseFieldTypes() []string {
 
 func NewSelfVerifyProgressReporter(mode string, writer io.Writer) (*SelfVerifyProgressReporter, error) {
 	return progress.NewSelfVerifyProgressReporter(mode, writer)
-}
-
-func PlannedSelfVerifySteps(root string, tempBin string, seed int64, goTestStep *StepResult, deps SelfVerifyStepDeps) []SelfVerifyPlannedStep {
-	return verifyapp.PlannedSteps(root, tempBin, seed, goTestStep, deps)
-}
-
-func CachedContractGoldenStep(goTestStep StepResult, deps SelfVerifyStepDeps) StepResult {
-	return verifyapp.CachedContractGoldenStep(goTestStep, deps)
 }
 
 func selfVerifyRerunCommands(failedStep string, baseSeed int64, targetScore float64) []string {

@@ -126,10 +126,6 @@ func classifySelfVerificationFailure(result SelfAugmentResult, summary SelfAugme
 	return verifyapp.ClassifySelfVerificationFailure(result, summary)
 }
 
-func selfVerificationFailureClusters(result SelfAugmentResult) []SelfVerificationFailureCluster {
-	return verifyapp.SelfVerificationFailureClusters(result)
-}
-
 func selfVerifyRerunCommands(failedStep string, baseSeed int64, targetScore float64) []string {
 	return verifydomain.SelfVerifyRerunCommands(failedStep, baseSeed, targetScore)
 }

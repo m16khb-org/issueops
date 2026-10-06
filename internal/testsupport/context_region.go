@@ -1,4 +1,4 @@
-package contextregion
+package testsupport
 
 import "encoding/json"
 

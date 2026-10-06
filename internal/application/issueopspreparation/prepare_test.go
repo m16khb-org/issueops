@@ -105,8 +105,8 @@ func TestPrepareFingerprintGatePrecedesWorkspaceMutation(t *testing.T) {
 	if err == nil || result.OK || !strings.Contains(err.Error(), "readiness fingerprint") {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
-	if got := preparationdomain.DenialReasonOf(err); got != preparationdomain.DenialReadinessFingerprintChanged {
-		t.Fatalf("denial=%q err=%v", got, err)
+	if denial, ok := errors.AsType[*preparationdomain.Denial](err); !ok || denial.Reason != preparationdomain.DenialReadinessFingerprintChanged {
+		t.Fatalf("denial=%v err=%v", denial, err)
 	}
 	if traceIndex(fixture.trace, "direct.prepare") >= 0 || fixture.repository.commit != nil {
 		t.Fatalf("fingerprint drift reached mutation: %v", fixture.trace)

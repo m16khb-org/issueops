@@ -26,9 +26,6 @@ import (
 
 	issueopscontract "issueops/internal/contract/issueops"
 
-	statecontract "issueops/internal/contract/state"
-	"issueops/internal/port"
-
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -45,30 +42,7 @@ func TestCommandStepFacadeWrappers(t *testing.T) {
 	if !budgetStep.OK || !budgetStep.StdoutTruncated {
 		t.Fatalf("runCommandStepEnvWithBudget = %#v", budgetStep)
 	}
-	if got := mergeEnvOverrides([]string{"A=1", "B=1"}, []string{"A=2"}); !containsString(got, "A=2") || !containsString(got, "B=1") {
-		t.Fatalf("mergeEnvOverrides = %#v", got)
-	}
-	if key, ok := envEntryKey("A=1"); !ok || key != "A" {
-		t.Fatalf("envEntryKey = %q %v", key, ok)
-	}
-	if out, truncated, n := budgetCommandOutput("abcdef", 3); out == "" || !truncated || n != 6 {
-		t.Fatalf("budgetCommandOutput = %q %v %d", out, truncated, n)
-	}
-	started := time.Now()
-	child := failedStep("child", errors.New("boom"))
-	if combined := combineFailedStep("parent", started, child, []string{"out"}, []string{"cmd"}); combined.OK {
-		t.Fatalf("combineFailedStep = %#v", combined)
-	}
-	if assertionStep("assert", started, []string{"bad"}).OK {
-		t.Fatal("assertionStep should fail")
-	}
-	if assertionStepWithOutput("assert", started, []string{"bad"}, []string{"out"}, []string{"cmd"}).OK {
-		t.Fatal("assertionStepWithOutput should fail")
-	}
 	printStep(selfverify.StepResult{Label: "covered", OK: true})
-	if tail("abcdef", 3) == "" {
-		t.Fatal("tail returned empty")
-	}
 	if out, truncated, n := tailWithBudget("abcdef", 3); out == "" || !truncated || n != 6 {
 		t.Fatalf("tailWithBudget = %q %v %d", out, truncated, n)
 	}
@@ -158,20 +132,8 @@ func TestHostAndPathFacadeWrappers(t *testing.T) {
 	if found, ok := findUp(filepath.Join(root, "skills", skillName), "SKILL.md"); !ok || found != filepath.Join(root, "skills", skillName) {
 		t.Fatalf("findUp = %q %v", found, ok)
 	}
-	if resolveTarget(root) != root || !exists(filepath.Join(root, "skills", skillName, "SKILL.md")) {
+	if resolveTarget(root) != root {
 		t.Fatal("path facade wrappers failed")
-	}
-	if lines := splitLines("a\nb\n"); len(lines) != 2 {
-		t.Fatalf("splitLines = %#v", lines)
-	}
-	if csv := splitCSV("a, b,,"); len(csv) != 2 || csv[1] != "b" {
-		t.Fatalf("splitCSV = %#v", csv)
-	}
-	if !containsString([]string{"a"}, "a") {
-		t.Fatal("containsString failed")
-	}
-	if !stateDoctorHasIssueCode([]statecontract.StateDoctorIssue{{Code: "x"}}, "x") {
-		t.Fatal("stateDoctorHasIssueCode failed")
 	}
 
 }
@@ -295,7 +257,6 @@ func TestSelfWorkflowAndLLMFacadeWrappers(t *testing.T) {
 	_ = stepDurationStatsForCompare(summary)
 	verifySummary := summarizeSelfVerification(result, 95)
 	_, _, _ = classifySelfVerificationFailure(result, verifySummary)
-	_ = selfVerificationFailureClusters(result)
 	_ = selfVerifyRerunCommands("go test", 100, 95)
 	_, _ = selfVerifyStepRerunCommand("go test ./...")
 	if formatScore(95.5) == "" {
@@ -324,22 +285,10 @@ func TestSelfWorkflowAndLLMFacadeWrappers(t *testing.T) {
 	if _, err := resolveSelfVerifyLLMEvalConfig(false, false, "", false, func(string) (string, bool) { return "", false }); err != nil {
 		t.Fatal(err)
 	}
-	var eval SelfVerifyLLMEvalResult
-	evalJSON := []byte(`{"ok":true,"mode":"advisory","execution_class":"read_only","read_only":true,"score":100,"summary":"ok","evidence_packet_bytes":10}`)
-	if err := decodeSelfVerifyLLMEval(evalJSON, &eval); err != nil {
-		t.Fatal(err)
-	}
-	if err := decodeSelfVerifyLLMEvalStrict(evalJSON, &eval); err != nil {
-		t.Fatal(err)
-	}
-	if _, ok := extractSelfVerifyLLMEvalJSON(append([]byte("prefix "), evalJSON...)); !ok {
-		t.Fatal("extractSelfVerifyLLMEvalJSON failed")
-	}
 	if boundedLLMEvalError("prefix", errors.New("bad"), strings.Repeat("x", 100)) == "" {
 		t.Fatal("boundedLLMEvalError empty")
 	}
 	_, _ = applySelfVerifyLLMEval(result, SelfVerifyLLMEvalOptions{})
-	_, _ = applySelfVerifyLLMGate(result, 95)
 	_, _, _ = buildSelfVerifyLLMEvalPrompt(result)
 	if selfVerifyLLMResponseSchemaExample() == "" || len(selfVerifyLLMResponseFieldTypes()) == 0 {
 		t.Fatal("LLM response schema wrappers empty")
@@ -360,15 +309,11 @@ func TestRiskMCPAndIssueOpsPolicyFacadeWrappers(t *testing.T) {
 	if !riskStep.OK {
 		t.Fatalf("validateRiskQATierWithDeps = %#v", riskStep)
 	}
-	_ = validateRiskQATier(root)
 	plan := planRiskQATierFromPaths([]string{"cmd/issueops/issueopsapp/mcp_facade.go"})
 	if plan.Tier == "" || riskQATierPlanJSON(plan) == "" {
 		t.Fatalf("risk plan = %#v", plan)
 	}
 	_ = planRiskQATier(root)
-	if parseGitStatusPath(" M cmd/issueops/issueopsapp/mcp_facade.go") == "" {
-		t.Fatal("parseGitStatusPath empty")
-	}
 
 	if err := verifyIssueOpsRemoteArtifactLive(issueopscontract.IssueOpsRemoteArtifactVerificationRequest{Provider: "github", Kind: "pr", URL: "not-a-url"}); err == nil {
 		t.Fatal("invalid remote artifact URL should fail")
@@ -448,30 +393,10 @@ func TestCLIFacadeWrappers(t *testing.T) {
 	_ = runDoctor([]string{"--json"})
 
 	_ = runInstall([]string{"--help"})
-	_ = validateInteractiveInstallInput(nil)
-	printInstallNativeResult(port.NativeInstallResult{OK: true})
-	_ = preferredShellRC(root)
-	if _, err := appendShellPathLinePlan(filepath.Join(root, ".zshrc"), true); err != nil {
-		t.Fatalf("appendShellPathLinePlan: %v", err)
-	}
-	_ = shellRCAlreadyAddsLocalBin(filepath.Join(root, ".zshrc"), root)
 
 	_ = runProject([]string{"unknown"})
-	_ = runProjectBootstrap([]string{"--repo", root, "--dry-run", "--json"})
-	_ = runProjectDocs([]string{"--repo", root, "--json"})
-	_ = runProjectRouteDocs([]string{"--repo", root, "--task", "general", "--json"})
-	_ = runProjectAppend([]string{"--repo", root, "--kind", "note", "--title", "t", "--summary", "s", "--json"})
-	_ = runProjectCommitSuggest([]string{"--repo", root, "--json"})
-	_ = runProjectLintDiagnose([]string{"--repo", root, "--json"})
 
 	_ = runState([]string{"unknown"})
-	if err := runStateWrite([]string{"--key", "k", "--value", "v", "--json"}); err != nil {
-		t.Fatalf("runStateWrite: %v", err)
-	}
-	_ = runStateRead([]string{"--key", "k", "--json"})
-	_ = runStateList([]string{"--json"})
-	_ = runStatePrune([]string{"--dry-run", "--json"})
-	_ = runStateDoctor([]string{"--json"})
 	_ = runStatus([]string{"--repo", root, "--json"})
 	_ = buildHarnessStatus(root)
 	_ = runVerifyWork([]string{"--repo", root, "--json"})

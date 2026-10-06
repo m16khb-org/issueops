@@ -1,12 +1,9 @@
 package mcpcli
 
 import (
-	issueopscontract "issueops/internal/contract/issueops"
-)
-
-import (
 	"context"
 	"io"
+	issueopscontract "issueops/internal/contract/issueops"
 	"net"
 	"testing"
 	"time"

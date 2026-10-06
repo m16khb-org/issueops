@@ -27,7 +27,7 @@ func TestValidateRiskQATierWrapperRunsElevatedDefaultCommands(t *testing.T) {
 	}
 	t.Setenv("PATH", fakeBin+string(os.PathListSeparator)+os.Getenv("PATH"))
 
-	step := Validate(root)
+	step := ValidateWithDeps(root, defaultDeps())
 	if !step.OK || step.Label != "risk QA tier" {
 		t.Fatalf("expected risk QA wrapper success, got %#v", step)
 	}
@@ -106,7 +106,7 @@ func TestRiskQATierHelpersCoverGitWarningsAndJSON(t *testing.T) {
 	if !strings.Contains(nonGitPlan.Scope.Error, "git status unavailable") {
 		t.Fatalf("non-git plan missing warnings: %+v", nonGitPlan.Reasons)
 	}
-	step := Validate(nonGitRoot)
+	step := ValidateWithDeps(nonGitRoot, defaultDeps())
 	if step.OK || step.Label != "risk QA tier" || !strings.Contains(step.Stdout, `"tier":"standard"`) {
 		t.Fatalf("unexpected no-command risk QA step: %+v", step)
 	}

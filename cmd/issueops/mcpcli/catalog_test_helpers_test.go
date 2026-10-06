@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	statestore "issueops/internal/adapter/outbound/state"
 	augmentapp "issueops/internal/application/selfaugment"
@@ -15,6 +13,9 @@ import (
 	statecontract "issueops/internal/contract/state"
 	"testing"
 	"time"
+
+	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func testMCPCatalog() mcpcontract.Catalog { return mcpcatalog.Build() }
@@ -67,14 +68,14 @@ func callSDKTool(t *testing.T, params json.RawMessage, deps MCPDependencies) (an
 }
 
 func historyServiceForTest() augmentapp.HistoryService {
-	return augmentapp.HistoryService{StateDir: statestore.StateDir, List: statestore.StateList, Read: statestore.StateRead, Delete: statestore.StateDelete}
+	return augmentapp.HistoryService{StateDir: statestore.StateDir, List: statestore.NewService().List, Read: statestore.NewService().Read, Delete: statestore.NewService().Delete}
 }
 func testHandleSelfLoopMCPToolCall(call MCPToolCall) MCPToolOutcome {
 	return handleSelfLoopMCPToolCall(context.Background(), call, MCPDependencies{SelfHistory: historyServiceForTest(), SelfState: selfStateForTest(), SelfPlanning: planningForTest(IssueOpsRoot(), statestore.StateDir(), Version)})
 }
 
 func selfStateForTest() SelfStateDependencies {
-	snapshots := augmentapp.SnapshotStore{ReadState: statestore.StateRead, NormalizeKey: statestore.NormalizeStateKey, WriteRecord: func(dir, key string, record statecontract.RecordEnvelope) (string, error) {
+	snapshots := augmentapp.SnapshotStore{ReadState: statestore.NewService().Read, NormalizeKey: statestore.NormalizeStateKey, WriteRecord: func(dir, key string, record statecontract.RecordEnvelope) (string, error) {
 		return statestore.WriteStateRecord(context.Background(), dir, key, record)
 	}, Now: time.Now}
 	return SelfStateDependencies{
@@ -82,18 +83,18 @@ func selfStateForTest() SelfStateDependencies {
 			return augmentapp.SavePlan(result, key, augmentapp.SavePlanDeps{Now: time.Now, Encode: func(snapshot contract.SelfAugmentPlanStateSnapshot) ([]byte, error) {
 				return json.MarshalIndent(snapshot, "", "  ")
 			}, Write: func(key, content string) (statecontract.StateResult, error) {
-				return statestore.StateWrite(context.Background(), key, content)
+				return statestore.NewService().Write(context.Background(), key, content)
 			}, StateDir: statestore.StateDir})
 		},
 		SaveSummary: func(_ context.Context, result *contract.SelfAugmentResult, key string) error {
 			return verifyapp.SaveSummary(result, key, verifyapp.SaveSummaryDeps{Now: time.Now, Encode: func(snapshot contract.SelfAugmentStateSnapshot) ([]byte, error) {
 				return json.MarshalIndent(snapshot, "", "  ")
 			}, Write: func(key, content string) (statecontract.StateResult, error) {
-				return statestore.StateWrite(context.Background(), key, content)
+				return statestore.NewService().Write(context.Background(), key, content)
 			}, StateDir: statestore.StateDir})
 		},
 		Promote: func(_ context.Context, from, to string, confirm, allowFailed bool) (contract.SelfAugmentPromoteResult, error) {
-			return augmentapp.PromoteBaseline(from, to, confirm, allowFailed, augmentapp.PromoteDeps{StateDir: statestore.StateDir, ReadSnapshot: snapshots.Read, WriteSnapshot: snapshots.Write, ReadState: statestore.StateRead})
+			return augmentapp.PromoteBaseline(from, to, confirm, allowFailed, augmentapp.PromoteDeps{StateDir: statestore.StateDir, ReadSnapshot: snapshots.Read, WriteSnapshot: snapshots.Write, ReadState: statestore.NewService().Read})
 		},
 	}
 }

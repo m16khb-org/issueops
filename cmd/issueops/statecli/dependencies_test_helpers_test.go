@@ -3,6 +3,7 @@ package statecli
 import (
 	statestore "issueops/internal/adapter/outbound/state"
 	stateapp "issueops/internal/application/state"
+	statecontract "issueops/internal/contract/state"
 	"os"
 )
 
@@ -11,12 +12,13 @@ import (
 func testDependencies() Dependencies {
 	stores := statestore.NewMaintenanceStores(statestore.StateDir(), os.Getenv("ISSUEOPS_WORKER_DIR"))
 	maintenance := stateapp.NewMaintenanceService(stateapp.MaintenanceDependencies{AllRoots: stores.Roots, StoreExists: stores.Exists, MaintainStore: stores.Maintain})
+	service := statestore.NewService()
 	return Dependencies{
-		Write:    statestore.StateWrite,
-		Read:     statestore.StateRead,
-		List:     statestore.StateList,
-		Prune:    statestore.StatePrune,
-		Doctor:   statestore.StateDoctor,
+		Write:    service.Write,
+		Read:     service.Read,
+		List:     service.List,
+		Prune:    service.Prune,
+		Doctor:   func() (statecontract.StateDoctorResult, error) { return statestore.Doctor(statestore.StateDir()) },
 		Maintain: maintenance.Maintain,
 	}
 }

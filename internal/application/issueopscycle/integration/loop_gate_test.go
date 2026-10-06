@@ -130,7 +130,7 @@ func readyIssueOpsRecordForLoopGateTest(t *testing.T) issueopscontract.IssueOpsR
 	record := issueopscontract.IssueOpsRecord{
 		OK:            true,
 		SchemaVersion: issueopscontract.IssueOpsCurrentSchemaVersion,
-		ID:            issueops.NewIssueOpsID(repo, "main"),
+		ID:            (issueops.CycleStartIdentity{}).StableID(repo, "main"),
 		Repo:          repo,
 		Branch:        "main",
 		Phase:         issueopscontract.IssueOpsPhasePR,
@@ -165,7 +165,7 @@ func readyIssueOpsRecordForLoopGateTest(t *testing.T) issueopscontract.IssueOpsR
 		// publication 게이트는 execution lease가 없는 record에도 걸린다.
 		ProjectDocsReview: &issueopscontract.IssueOpsProjectDocsReview{Verdict: "no-change", ReviewedDocs: []string{".issueops/CAUTIONS.md"}},
 	}
-	if _, err := issueops.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), record); err != nil {
+	if _, err := (issueops.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record); err != nil {
 		t.Fatalf("WriteIssueOps: %v", err)
 	}
 	return record
@@ -219,12 +219,12 @@ func TestAdvancePhaseGuardsPRTransition(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := readyIssueOpsRecordForLoopGateTest(t)
 	stateRoot := issueOpsStateRootForTest()
-	written, err := issueops.WriteIssueOps(context.Background(), stateRoot, record)
+	written, err := (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), record)
 	if err != nil {
 		t.Fatal(err)
 	}
 	written.Phase = issueopscontract.IssueOpsPhaseFeedback
-	written, err = issueops.WriteIssueOps(context.Background(), stateRoot, written)
+	written, err = (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), written)
 	if err != nil {
 		t.Fatal(err)
 	}

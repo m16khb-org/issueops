@@ -14,13 +14,14 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"issueops/cmd/issueops/mcpcli"
 	"issueops/cmd/issueops/qualitycli"
 	catalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"issueops/internal/adapter/outbound/sqlstore"
 	contract "issueops/internal/contract/selfaugment"
 	statecontract "issueops/internal/contract/state"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func TestSelfPlanningInstancesKeepRootsAndLessonStateSeparate(t *testing.T) {

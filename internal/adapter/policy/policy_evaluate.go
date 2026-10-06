@@ -11,20 +11,12 @@ import (
 	"issueops/internal/domain/auditid"
 )
 
-func EvaluateCommandPolicy(req policycontract.CommandPolicyRequest) policycontract.CommandPolicyEvaluation {
-	return (Evaluator{}).Evaluate(req)
-}
-
 type Evaluator struct {
 	lookup policyapp.PreparedBaseBranchLookup
 }
 
 func NewEvaluator(lookup policyapp.PreparedBaseBranchLookup) Evaluator {
 	return Evaluator{lookup: lookup}
-}
-
-func (e Evaluator) Evaluate(req policycontract.CommandPolicyRequest) policycontract.CommandPolicyEvaluation {
-	return e.service().Evaluate(req)
 }
 
 type CommandObserver struct{}

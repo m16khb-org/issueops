@@ -120,8 +120,8 @@ func (service *Service) Write(ctx context.Context, key, content string) (StateRe
 `)
 	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "adapter", "outbound", "state", "state_io.go"), `package state
 
-func StateWrite(ctx context.Context, key, content string) (StateResult, error) {
-	return service().Write(ctx, key, content)
+func NewService() *stateapplication.Service {
+	return stateapplication.NewService(stateapplication.Dependencies{})
 }
 `)
 	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "adapter", "outbound", "state", "state_test.go"), `package state

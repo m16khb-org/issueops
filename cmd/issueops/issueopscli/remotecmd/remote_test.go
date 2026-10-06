@@ -604,7 +604,7 @@ func remoteIssueOpsRecord(t *testing.T) issueopscontract.IssueOpsRecord {
 		t.Fatalf("LinkIssueOpsChild: %v", err)
 	}
 	record.Phase = issueopscontract.IssueOpsPhasePR
-	record, err = issueopscore.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), record)
+	record, err = (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record)
 	if err != nil {
 		t.Fatalf("WriteIssueOps: %v", err)
 	}
@@ -683,7 +683,7 @@ func activateRemoteIssueOpsRecordForCurrentProcess(t *testing.T, record *issueop
 			Holder: &issueopscontract.NativeActor{Host: "codex", SessionID: "session-1", SessionProcess: &process},
 		},
 	}
-	if _, err := issueopscore.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), *record); err != nil {
+	if _, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), *record); err != nil {
 		t.Fatal(err)
 	}
 	return worktree, ancestry
@@ -1027,7 +1027,7 @@ func TestRemoteCompletionApplicationFailsClosed(t *testing.T) {
 			Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/9",
 		}
 		var err error
-		record, err = issueopscore.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), record)
+		record, err = (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record)
 		if err != nil {
 			t.Fatalf("WriteIssueOps: %v", err)
 		}
@@ -1043,7 +1043,7 @@ func TestRemoteCompletionApplicationFailsClosed(t *testing.T) {
 			Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/9",
 		}
 		var err error
-		record, err = issueopscore.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), record)
+		record, err = (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record)
 		if err != nil {
 			t.Fatalf("WriteIssueOps: %v", err)
 		}
@@ -1062,7 +1062,7 @@ func TestRemoteCompletionApplicationFailsClosed(t *testing.T) {
 			Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/9",
 		}
 		var err error
-		record, err = issueopscore.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), record)
+		record, err = (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record)
 		if err != nil {
 			t.Fatalf("WriteIssueOps: %v", err)
 		}
@@ -1097,7 +1097,7 @@ func TestRemoteReflectReviewPreviewAndConfirmUseApplication(t *testing.T) {
 	}
 	record.IssueURL = "https://github.com/acme/repo/issues/64"
 	record.DevilsAdvocateReview = &issueopscontract.IssueOpsDevilsAdvocateReview{Verdict: "stop", Findings: []string{"finding from review"}, RecordedAt: "then"}
-	if _, err := issueopscore.WriteIssueOps(context.Background(), root, record); err != nil {
+	if _, err := (issueopscore.CycleRecordStore{StateRoot: root}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
 	script := `#!/bin/sh

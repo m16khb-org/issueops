@@ -21,7 +21,7 @@ func TestApplyCompletionReleasesLeaseAndStampsDoneLedger(t *testing.T) {
 	if err := ValidateActive(snapshot, command, true); err != nil {
 		t.Fatal(err)
 	}
-	outcome := Apply(snapshot, command, command.VerificationReportPath, now)
+	outcome := ApplyAt(snapshot, command, command.VerificationReportPath, now, now)
 	want := now.Format(time.RFC3339Nano)
 	if outcome.Phase != "done" || outcome.Lease.Status != "released" || outcome.Lease.Holder != nil {
 		t.Fatalf("invalid terminal outcome: %+v", outcome)
@@ -57,7 +57,7 @@ func TestApplyCompletionClearsCompletedReseedStaleNotesFromPRAndDone(t *testing.
 		},
 	}
 	command := Command{Generation: 5, Actor: holder, FinalHead: "ff27b34520e4e253d8ebfd523e4e4352bf93e8d8", VerificationReportPath: "/repo/verified-execution.json", Verification: []string{"new verification"}, RemoteArtifactURL: "https://github.com/example/repo/pull/304"}
-	outcome := Apply(snapshot, command, command.VerificationReportPath, now)
+	outcome := ApplyAt(snapshot, command, command.VerificationReportPath, now, now)
 	if got := outcome.Ledger["pr"].Notes; len(got) != 1 || got[0] != "keep pr" {
 		t.Fatalf("pr notes=%v", got)
 	}

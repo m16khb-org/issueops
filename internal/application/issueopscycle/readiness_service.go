@@ -64,19 +64,9 @@ func (s Readiness) Completion(record model.IssueOpsRecord, phase model.IssueOpsP
 	s = s.scoped()
 	return PhaseCompletion(record, phase, port.PhaseCompletionReadiness{Compatibility: s.Compatibility, AISlopClean: s.AISlopClean, PR: s.PR, RemoteArtifactMissing: domain.RemoteArtifactMissing})
 }
-func (s Readiness) LocalPR(record model.IssueOpsRecord) model.IssueOpsReadiness {
-	s = s.scoped()
-	ready, _ := s.ObserveLocalPR(record)
-	return ready
-}
 func (s Readiness) ObserveLocalPR(record model.IssueOpsRecord) (model.IssueOpsReadiness, review.LocalChangeObservation) {
 	s = s.scoped()
 	return s.observePR(record, nil)
-}
-func (s Readiness) StrictPR(record model.IssueOpsRecord) model.IssueOpsReadiness {
-	s = s.scoped()
-	ready, _ := s.observePR(record, s.Git.Fetch)
-	return ready
 }
 func (s Readiness) StrictPRWithState(root string, record model.IssueOpsRecord) model.IssueOpsReadiness {
 	s = s.scoped()

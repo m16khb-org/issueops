@@ -111,7 +111,7 @@ func TestRunIssueOpsCleanupCloseChildrenRequiresMergedAndConfirmRecordsState(t *
 	t.Setenv("PATH", bin)
 	record := issueopscontract.IssueOpsRecord{
 		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
-		ID:            issueopscore.NewIssueOpsID(repo, "12-child-cleanup"),
+		ID:            (issueopscore.CycleStartIdentity{}).StableID(repo, "12-child-cleanup"),
 		Repo:          repo,
 		Branch:        "12-child-cleanup",
 		Phase:         issueopscontract.IssueOpsPhasePR,
@@ -129,7 +129,7 @@ func TestRunIssueOpsCleanupCloseChildrenRequiresMergedAndConfirmRecordsState(t *
 		Labels:    []string{"issueops"},
 		Assignees: []string{"octocat"},
 	}
-	if _, err := issueopscore.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), record); err != nil {
+	if _, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
 

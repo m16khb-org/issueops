@@ -50,7 +50,7 @@ func TestRunSelfVerifyHistoryTextOutputCoversSkippedAndRetentionActions(t *testi
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
 	writeSelfVerifyCLISnapshotForTest(t, dir, "self-verify-old-cli", 1200, false, 20, 19, "2000-01-01T00:00:00Z")
 	writeSelfVerifyCLISnapshotForTest(t, dir, "self-verify-new-cli", 900, true, 20, 20, "2000-01-02T00:00:00Z")
-	if _, err := statestore.StateWrite(context.Background(), "self-verify-note-cli", "not a summary"); err != nil {
+	if _, err := statestore.NewService().Write(context.Background(), "self-verify-note-cli", "not a summary"); err != nil {
 		t.Fatalf("write non-summary state: %v", err)
 	}
 
@@ -71,7 +71,7 @@ func TestRunSelfVerifyHistoryTextOutputCoversSkippedAndRetentionActions(t *testi
 	if !strings.Contains(dryRun, "retention: retain=1 candidates=1 would delete=0") {
 		t.Fatalf("unexpected dry-run history text:\n%s", dryRun)
 	}
-	if _, err := statestore.StateRead("self-verify-old-cli"); err != nil {
+	if _, err := statestore.NewService().Read("self-verify-old-cli"); err != nil {
 		t.Fatalf("dry-run deleted old summary: %v", err)
 	}
 }

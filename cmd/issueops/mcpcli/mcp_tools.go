@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"issueops/cmd/issueops/mcpcli/resources"
 	apidocapp "issueops/internal/application/apidoc"
 	auditapp "issueops/internal/application/audit"
@@ -33,6 +32,8 @@ import (
 	authorityport "issueops/internal/port/authority"
 	basesyncport "issueops/internal/port/issueopsbasesync"
 	provenanceport "issueops/internal/port/issueopsprovenance"
+
+	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 )
 
 type MCPToolCall struct {
@@ -167,14 +168,6 @@ func validateMCPToolArguments(schema map[string]any, name string, arguments map[
 
 func TextResult(text string) map[string]any {
 	return map[string]any{"content": []map[string]any{{"type": "text", "text": text}}}
-}
-
-// ErrorTextResult is TextResult flagged as an MCP error result (isError:true),
-// the tool-result form for tool-level failures that mirror the CLI body.
-func ErrorTextResult(text string) map[string]any {
-	result := TextResult(text)
-	result["isError"] = true
-	return result
 }
 
 func (deps MCPDependencies) resolveTarget(target string) string {

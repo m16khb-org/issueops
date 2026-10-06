@@ -13,7 +13,6 @@ import (
 const version = "0.1.0"
 const skillName = "atomic-commit-push"
 const selfVerifyCommandOutputBudgetBytes = 32 * 1024
-const selfVerifyAggregateOutputBudgetBytes = 8 * 1024
 
 func usage() {
 	fprintUsage(os.Stderr)

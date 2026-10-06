@@ -9,7 +9,7 @@ import (
 
 func TestCommandPolicyAllowsReadOnlyInsideWorkspace(t *testing.T) {
 	root := t.TempDir()
-	result := EvaluateCommandPolicy(policydomain.CommandPolicyRequest{
+	result := evaluateCommandPolicy(policydomain.CommandPolicyRequest{
 		WorkspaceRoot: root,
 		CWD:           root,
 		Argv:          []string{"git", "status", "--short"},
@@ -23,7 +23,7 @@ func TestCommandPolicyAllowsReadOnlyInsideWorkspace(t *testing.T) {
 func TestCommandPolicyDeniesOutsideWorkspaceAndShell(t *testing.T) {
 	root := t.TempDir()
 	outside := t.TempDir()
-	outsideResult := EvaluateCommandPolicy(policydomain.CommandPolicyRequest{
+	outsideResult := evaluateCommandPolicy(policydomain.CommandPolicyRequest{
 		WorkspaceRoot: root,
 		CWD:           outside,
 		Argv:          []string{"git", "status", "--short"},
@@ -33,7 +33,7 @@ func TestCommandPolicyDeniesOutsideWorkspaceAndShell(t *testing.T) {
 		t.Fatalf("outside cwd not denied: %+v", outsideResult)
 	}
 
-	shellResult := EvaluateCommandPolicy(policydomain.CommandPolicyRequest{
+	shellResult := evaluateCommandPolicy(policydomain.CommandPolicyRequest{
 		WorkspaceRoot: root,
 		CWD:           root,
 		Argv:          []string{"sh", "-c", "echo ok"},
@@ -73,7 +73,7 @@ func TestCommandPolicyDeniesPathArgsOutsideWorkspace(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := EvaluateCommandPolicy(policydomain.CommandPolicyRequest{
+			result := evaluateCommandPolicy(policydomain.CommandPolicyRequest{
 				WorkspaceRoot: root,
 				CWD:           inside,
 				Argv:          tc.argv,
@@ -85,7 +85,7 @@ func TestCommandPolicyDeniesPathArgsOutsideWorkspace(t *testing.T) {
 		})
 	}
 
-	insideResult := EvaluateCommandPolicy(policydomain.CommandPolicyRequest{
+	insideResult := evaluateCommandPolicy(policydomain.CommandPolicyRequest{
 		WorkspaceRoot: root,
 		CWD:           inside,
 		Argv:          []string{"cat", filepath.Join("..", "inside", "local.txt")},
@@ -98,7 +98,7 @@ func TestCommandPolicyDeniesPathArgsOutsideWorkspace(t *testing.T) {
 
 func TestCommandFakeRunDoesNotExecute(t *testing.T) {
 	root := t.TempDir()
-	result := FakeRunCommand(policydomain.CommandPolicyRequest{
+	result := fakeRunCommand(policydomain.CommandPolicyRequest{
 		WorkspaceRoot: root,
 		CWD:           root,
 		Argv:          []string{"touch", "marker"},
@@ -118,7 +118,7 @@ func TestRunReadOnlyCommandExecutesAllowedArgvOnly(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "note.txt"), []byte("hello\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	result := RunReadOnlyCommand(policydomain.CommandPolicyRequest{
+	result := runReadOnlyCommand(policydomain.CommandPolicyRequest{
 		WorkspaceRoot: root,
 		CWD:           root,
 		Argv:          []string{"cat", "note.txt"},
@@ -127,7 +127,7 @@ func TestRunReadOnlyCommandExecutesAllowedArgvOnly(t *testing.T) {
 	if !result.OK || !result.Executed || result.ExitCode != 0 || result.Stdout != "hello\n" {
 		t.Fatalf("read-only run failed: %+v", result)
 	}
-	denied := RunReadOnlyCommand(policydomain.CommandPolicyRequest{
+	denied := runReadOnlyCommand(policydomain.CommandPolicyRequest{
 		WorkspaceRoot: root,
 		CWD:           root,
 		Argv:          []string{"touch", "marker"},
@@ -147,7 +147,7 @@ func TestRunReadOnlyCommandUsesEmptyEnvUnlessAllowlisted(t *testing.T) {
 	t.Setenv("ISSUEOPS_ENV_LEAK_TEST", "leaked")
 	argv := []string{"awk", `BEGIN { print ENVIRON["ISSUEOPS_ENV_LEAK_TEST"] }`}
 
-	defaultEnv := RunReadOnlyCommand(policydomain.CommandPolicyRequest{
+	defaultEnv := runReadOnlyCommand(policydomain.CommandPolicyRequest{
 		WorkspaceRoot: root,
 		CWD:           root,
 		Argv:          argv,
@@ -157,7 +157,7 @@ func TestRunReadOnlyCommandUsesEmptyEnvUnlessAllowlisted(t *testing.T) {
 		t.Fatalf("default read-only env should not inherit parent env: %+v", defaultEnv)
 	}
 
-	allowlisted := RunReadOnlyCommand(policydomain.CommandPolicyRequest{
+	allowlisted := runReadOnlyCommand(policydomain.CommandPolicyRequest{
 		WorkspaceRoot: root,
 		CWD:           root,
 		Argv:          argv,
@@ -176,7 +176,7 @@ func TestPolicyTimeoutContract(t *testing.T) {
 		{"", "30s", "invalid_timeout"}, {"bad", "0s", "invalid_timeout"}, {"0s", "0s", "invalid_timeout"}, {"-1s", "-1s", "invalid_timeout"},
 	} {
 		t.Run(tc.input, func(t *testing.T) {
-			got := EvaluateCommandPolicy(policydomain.CommandPolicyRequest{WorkspaceRoot: root, CWD: root, Argv: []string{"git", "status"}, Timeout: tc.input})
+			got := evaluateCommandPolicy(policydomain.CommandPolicyRequest{WorkspaceRoot: root, CWD: root, Argv: []string{"git", "status"}, Timeout: tc.input})
 			if got.Timeout != tc.duration || got.Allowed != (tc.deny == "") || (tc.deny != "" && !containsString(got.DenyReasons, tc.deny)) {
 				t.Fatalf("timeout %q: %+v", tc.input, got)
 			}

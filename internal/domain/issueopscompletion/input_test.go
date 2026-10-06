@@ -68,51 +68,6 @@ func TestCompletionHeadRequiresFullMatchingHash(t *testing.T) {
 	}
 }
 
-func TestCompletionActorRequiresAncestryAndLiveIdentity(t *testing.T) {
-	process := ProcessReceipt{PID: 7, StartedAt: "start", Executable: "/bin/host"}
-	for _, host := range []string{"codex", "claude", "omo"} {
-		input := Actor{Host: " " + strings.ToUpper(host) + " ", SessionID: " session ", AgentID: " agent ", Process: &ProcessReceipt{PID: 7, StartedAt: " start ", Executable: " /bin/host "}}
-		got, err := NormalizeActor(input, []ProcessReceipt{process})
-		if err != nil || got.Host != host || got.SessionID != "session" || got.AgentID != "agent" || *got.Process != process {
-			t.Fatalf("actor=%+v err=%v", got, err)
-		}
-		if input.Process.StartedAt != " start " {
-			t.Fatal("input receipt mutated")
-		}
-		if err := ValidateLiveActor(got, "live", process); err != nil {
-			t.Fatal(err)
-		}
-		if err := ValidateLiveActor(got, "dead", process); err == nil {
-			t.Fatal("dead process accepted")
-		}
-		other := process
-		other.StartedAt = "reused"
-		if err := ValidateLiveActor(got, "live", other); err == nil {
-			t.Fatal("reused PID accepted")
-		}
-	}
-	for _, tc := range []struct {
-		name     string
-		change   func(*Actor)
-		ancestry []ProcessReceipt
-		want     string
-	}{
-		{"host", func(a *Actor) { a.Host = "unknown" }, nil, "native actor host"},
-		{"session", func(a *Actor) { a.SessionID = " " }, nil, "session_id is required"},
-		{"receipt", func(a *Actor) { a.Process = nil }, nil, "PID reuse-safe"},
-		{"ancestry", func(a *Actor) {}, nil, "not in the local process ancestry"},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			input := Actor{Host: "codex", SessionID: "session", Process: &process}
-			tc.change(&input)
-			_, err := NormalizeActor(input, tc.ancestry)
-			if err == nil || !strings.Contains(err.Error(), tc.want) {
-				t.Fatalf("err=%v", err)
-			}
-		})
-	}
-}
-
 func TestTerminalCompletionRetryRequiresReleasedReceiptAndSameEvidence(t *testing.T) {
 	command := Command{Generation: 3, FinalHead: strings.Repeat("a", 40), Verification: []string{"test"}, RemoteArtifactURL: "https://example.com/pull/1"}
 	base := Snapshot{Phase: "done", Lease: Lease{Generation: 3, Status: "released", ReleasedAt: "then"}, Completion: &Completion{Generation: 3, FinalHead: strings.Repeat("A", 40), CompletedAt: "then", Verification: []string{"test"}, RemoteArtifactURL: command.RemoteArtifactURL}}

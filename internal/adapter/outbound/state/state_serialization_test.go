@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"issueops/internal/adapter/outbound/sqlstore"
 	stateapp "issueops/internal/application/state"
 	statecontract "issueops/internal/contract/state"
 	"issueops/internal/domain/statepath"
@@ -23,11 +22,6 @@ func TestStateDeletionHoldsWriterSpan(t *testing.T) {
 	for _, action := range []string{"delete", "prune", "dry-prune"} {
 		t.Run(action, func(t *testing.T) {
 			dir := t.TempDir()
-			t.Cleanup(func() {
-				if err := sqlstore.CloseRoot(dir); err != nil {
-					t.Error(err)
-				}
-			})
 			store, err := openStateStore(dir)
 			if err != nil {
 				t.Fatal(err)
@@ -121,7 +115,7 @@ func TestCanceledStateWriteDoesNotCreateRoot(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
-	if _, err := StateWrite(ctx, "key", "body"); !errors.Is(err, context.Canceled) {
+	if _, err := NewService().Write(ctx, "key", "body"); !errors.Is(err, context.Canceled) {
 		t.Fatalf("write error=%v", err)
 	}
 	if _, err := os.Stat(dir); !errors.Is(err, fs.ErrNotExist) {

@@ -58,18 +58,6 @@ func TestIssueOpsRemoteJudgeFileParsesFencedJSON(t *testing.T) {
 	}
 }
 
-func TestRunIssueOpsRemoteLLMJudgeReturnsRemovedServiceError(t *testing.T) {
-	_, err := RunIssueOpsRemoteLLMJudge(IssueOpsRemoteLLMJudgeRequest{
-		Request: IssueOpsRemoteScoringRequest{
-			Provider: "github",
-			Issue:    IssueOpsRemoteArtifact{Title: "IssueOps remote scoring"},
-		},
-	})
-	if err == nil || !strings.Contains(err.Error(), "no longer calls external LLM services") {
-		t.Fatalf("expected removed service error, got %v", err)
-	}
-}
-
 func TestIssueOpsRemoteJudgeFileRejectsFencedUnknownField(t *testing.T) {
 	output := "```json\n" + `{"ok":true,"provider":"github","threshold":0.7,"selected_related_issues":[],"selected_labels":[],"apply_instructions":[],"unexpected":true}` + "\n```"
 

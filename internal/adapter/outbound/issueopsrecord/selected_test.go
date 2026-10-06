@@ -17,11 +17,6 @@ func TestReadSelectedStrictlyReadsOnlySelectedRow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
-		if err := sqlstore.CloseRoot(root); err != nil {
-			t.Error(err)
-		}
-	})
 	valid, err := Encode(issueopscontract.IssueOpsRecord{
 		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
 		ID:            "io-valid", Repo: "/repo", Phase: issueopscontract.IssueOpsPhaseProblem,
@@ -33,7 +28,7 @@ func TestReadSelectedStrictlyReadsOnlySelectedRow(t *testing.T) {
 		"io-valid":   valid,
 		"io-corrupt": []byte(`{"id":"io-corrupt","schema_version":1,"unknown":true}`),
 	} {
-		if err := db.Put(Bucket(), id, data); err != nil {
+		if err := db.Put(bucket, id, data); err != nil {
 			t.Fatal(err)
 		}
 	}

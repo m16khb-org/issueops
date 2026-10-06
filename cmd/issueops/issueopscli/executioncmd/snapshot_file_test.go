@@ -1,20 +1,16 @@
 package executioncmd
 
 import (
-	issueopsport "issueops/internal/port"
-)
-
-import (
 	"context"
 	"fmt"
+	issueopsport "issueops/internal/port"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	issueopscontract "issueops/internal/contract/issueops"
-
 	"issueops/internal/adapter/issueops"
+	issueopscontract "issueops/internal/contract/issueops"
 )
 
 func TestReadExecutionIssueSnapshotFileAcceptsPrivateBoundedJSON(t *testing.T) {
@@ -134,7 +130,7 @@ func executionSnapshotCLIRecord(t *testing.T) (string, string, string) {
 	record := issueopscontract.IssueOpsRecord{
 		OK:            true,
 		SchemaVersion: issueopscontract.IssueOpsCurrentSchemaVersion,
-		ID:            issueops.NewIssueOpsID(repo, branch),
+		ID:            (issueops.CycleStartIdentity{}).StableID(repo, branch),
 		Repo:          repo,
 		Branch:        branch,
 		Phase:         issueopscontract.IssueOpsPhasePlan,
@@ -148,7 +144,7 @@ func executionSnapshotCLIRecord(t *testing.T) (string, string, string) {
 		CreatedAt: "2026-07-28T00:00:00Z",
 		UpdatedAt: "2026-07-28T00:00:00Z",
 	}
-	written, err := issueops.WriteIssueOps(context.Background(), stateRoot, record)
+	written, err := (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), record)
 	if err != nil {
 		t.Fatal(err)
 	}

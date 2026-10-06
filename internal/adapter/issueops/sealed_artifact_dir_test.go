@@ -47,7 +47,7 @@ func TestMaterializeStagedArtifactsWritesIntoRecordedArtifactDir(t *testing.T) {
 	record.Execution.Workspace.BaseHead = record.BranchPrepare.BaseSHA
 	record.Execution.Workspace.LinkedAt = "2026-08-27T00:00:00Z"
 	record.Execution.Workspace.ArtifactDir = ".issueops/issues/480/artifact"
-	if _, err := WriteIssueOps(context.Background(), stateRoot, record); err != nil {
+	if _, err := writeIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := stageIssueOpsArtifactForTest(stateRoot, record.ID, "plan", []byte("# plan\n")); err != nil {

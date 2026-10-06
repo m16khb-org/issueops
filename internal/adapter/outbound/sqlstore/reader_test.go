@@ -19,7 +19,7 @@ func TestWalkExistingOrderedRowsAndEarlyExit(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		if err := CloseRoot(root); err != nil {
+		if err := closeRoot(root); err != nil {
 			t.Error(err)
 		}
 	})
@@ -114,7 +114,7 @@ func TestWalkExistingReportsQueryFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		if err := CloseRoot(root); err != nil {
+		if err := closeRoot(root); err != nil {
 			t.Error(err)
 		}
 	})

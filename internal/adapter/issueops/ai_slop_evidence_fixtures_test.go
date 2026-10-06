@@ -13,10 +13,6 @@ func RecordIssueOpsAISlopCleanEvidence(stateRoot, id string, categories, verific
 	return recordIssueOpsAISlopCleanEvidence(stateRoot, id, categories, verification, nil)
 }
 
-func RecordIssueOpsAISlopCleanEvidenceWithActor(stateRoot, id string, categories, verification []string, actor issueops.IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	return recordIssueOpsAISlopCleanEvidence(stateRoot, id, categories, verification, &actor)
-}
-
 func recordIssueOpsAISlopCleanEvidence(stateRoot, id string, categories, verification []string, actor *issueops.IssueOpsActor) (issueops.IssueOpsRecord, error) {
 	return reviewapp.RecordAISlopCleanEvidence(reviewport.AISlopCleanStore{
 		ReviewMutationStore: NewReviewMutationStore(actor),

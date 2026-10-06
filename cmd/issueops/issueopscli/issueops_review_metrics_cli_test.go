@@ -27,7 +27,7 @@ func TestCLIIssueOpsReviewMetricsReadsRoundsAndRejectsAmbiguousScope(t *testing.
 			{Verdict: "revise", RecordedAt: "2026-09-08T00:00:00Z"},
 		},
 	}
-	if _, err := issueopscore.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), record); err != nil {
+	if _, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
 

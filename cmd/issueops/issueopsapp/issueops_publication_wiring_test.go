@@ -50,7 +50,7 @@ func TestIssueOpsPublicationCompositionBuildsBothServicesAndCreatesPreview(t *te
 	branch := "195-publication-composition"
 	record := issueopscontract.IssueOpsRecord{
 		OK: true, SchemaVersion: issueopscontract.IssueOpsCurrentSchemaVersion,
-		ID: issueops.NewIssueOpsID(repo, branch), Repo: repo, Branch: branch, Phase: issueopscontract.IssueOpsPhasePR,
+		ID: (issueops.CycleStartIdentity{}).StableID(repo, branch), Repo: repo, Branch: branch, Phase: issueopscontract.IssueOpsPhasePR,
 		IssueURL: "https://github.com/acme/repo/issues/195",
 		BranchPrepare: &issueopscontract.IssueOpsBranchPrepare{
 			Provider: "github", IssueURL: "https://github.com/acme/repo/issues/195",
@@ -58,7 +58,7 @@ func TestIssueOpsPublicationCompositionBuildsBothServicesAndCreatesPreview(t *te
 		},
 		CreatedAt: "2026-08-01T00:00:00Z", UpdatedAt: "2026-08-01T00:00:00Z",
 	}
-	if _, err := issueops.WriteIssueOps(context.Background(), stateRoot, record); err != nil {
+	if _, err := (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
 	fake := &publicationProviderFake{}

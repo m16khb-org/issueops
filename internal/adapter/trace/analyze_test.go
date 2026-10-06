@@ -291,7 +291,7 @@ func TestTraceAnalyzeRedactsFailureCauseEvidence(t *testing.T) {
 }
 func TestTraceAnalyzeReadsStateKey(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	if _, err := corestate.StateWrite(context.Background(), "trace-fixture", `{"failed_steps":1,"failure_class":"intermittent","failed_step":"go test"}`); err != nil {
+	if _, err := corestate.NewService().Write(context.Background(), "trace-fixture", `{"failed_steps":1,"failure_class":"intermittent","failed_step":"go test"}`); err != nil {
 		t.Fatal(err)
 	}
 	result, err := TraceAnalyze(tracecontract.TraceAnalyzeRequest{Input: "trace-fixture"})

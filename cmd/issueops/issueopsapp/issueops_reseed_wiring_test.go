@@ -81,7 +81,7 @@ func TestExecutionReseedCLIDogfoodDirectAndOrca(t *testing.T) {
 				record.Execution.Mode = model.ExecutionModeDirect
 				record.Execution.Workspace.Driver = "git"
 				record.Execution.Orca = nil
-				if _, err := issueops.WriteIssueOps(context.Background(), stateRoot, record); err != nil {
+				if _, err := (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), record); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -168,7 +168,7 @@ func TestExecutionReseedCompletedStatusExposesReopenContract(t *testing.T) {
 		model.IssueOpsPhasePR:          {Phase: model.IssueOpsPhasePR, CompletedAt: "old"},
 		model.IssueOpsPhaseDone:        {Phase: model.IssueOpsPhaseDone, CompletedAt: "old"},
 	}
-	if _, err := issueops.WriteIssueOps(context.Background(), stateRoot, record); err != nil {
+	if _, err := (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
 	actor := claimWiringActor(t)
@@ -257,7 +257,7 @@ func TestCompletedReplacementPreviewKeepsNoDriftReseed(t *testing.T) {
 func TestCompletedReplacementPreviewRejectsMissingStampedCompletionGeneration(t *testing.T) {
 	stateRoot, record, actor, owner := completedReplacementPreviewFixture(t, false)
 	record.Execution.Completion.Generation = 0
-	if _, err := issueops.WriteIssueOps(context.Background(), stateRoot, record); err != nil {
+	if _, err := (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
 	_, err := newIssueOpsReplacementHandler()(context.Background(), stateRoot, replacementmodel.ExecutionReplaceRequest{
@@ -292,7 +292,7 @@ func completedReplacementPreviewFixture(t *testing.T, drift bool) (string, model
 		Generation: 1, FinalHead: finalHead, VerificationReportPath: ".issueops/verified-execution/old.json",
 		Verification: []string{"old verification"}, RemoteArtifactURL: "https://gitlab.example.com/acme/repo/-/merge_requests/1", CompletedAt: "2026-08-03T00:00:00Z",
 	}
-	if _, err := issueops.WriteIssueOps(context.Background(), stateRoot, record); err != nil {
+	if _, err := (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
 	return stateRoot, record, claimWiringActor(t), reseedWiringOwner{}

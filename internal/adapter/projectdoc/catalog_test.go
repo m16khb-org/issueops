@@ -19,7 +19,7 @@ func TestDiscoverProjectDocsUsesFrontmatterThenCanonicalMeta(t *testing.T) {
 	}
 	writeProjectDoc(t, repo, "notes.txt", "ignored")
 
-	catalog := DiscoverProjectDocs(repo)
+	catalog := discoverProjectDocEntries(repo)
 	if len(catalog) != 2 {
 		t.Fatalf("expected 2 project docs, got %d: %+v", len(catalog), catalog)
 	}
@@ -39,10 +39,10 @@ func TestDiscoverProjectDocsUsesFrontmatterThenCanonicalMeta(t *testing.T) {
 }
 
 func TestDiscoverProjectDocsEmptyWhenNoAgentHarness(t *testing.T) {
-	if got := DiscoverProjectDocs(t.TempDir()); got != nil {
+	if got := discoverProjectDocEntries(t.TempDir()); got != nil {
 		t.Fatalf("expected nil catalog for repo without .issueops, got %+v", got)
 	}
-	if got := DiscoverProjectDocs(""); got != nil {
+	if got := discoverProjectDocEntries(""); got != nil {
 		t.Fatalf("expected nil catalog for empty repo root, got %+v", got)
 	}
 }
@@ -62,7 +62,7 @@ func TestDiscoverProjectDocsSkipsSymlinkAndNonRegularMarkdown(t *testing.T) {
 	}
 	writeProjectDoc(t, repo, "inside.md", "# Inside\n")
 
-	catalog := DiscoverProjectDocs(repo)
+	catalog := discoverProjectDocEntries(repo)
 	if len(catalog) != 1 || catalog[0].RelPath != ".issueops/inside.md" {
 		t.Fatalf("catalog must exclude symlinked and non-regular markdown: %+v", catalog)
 	}
@@ -78,7 +78,7 @@ func TestDiscoverProjectDocsRejectsSymlinkedAgentHarnessDirectory(t *testing.T) 
 		t.Fatal(err)
 	}
 
-	if got := DiscoverProjectDocs(repo); got != nil {
+	if got := discoverProjectDocEntries(repo); got != nil {
 		t.Fatalf("symlinked .issueops directory must be ignored: %+v", got)
 	}
 }
@@ -88,13 +88,13 @@ func TestDiscoverProjectDocsBoundsEntriesAndContent(t *testing.T) {
 	for index := 0; index < projectDocCatalogMaxEntries+1; index++ {
 		writeProjectDoc(t, repo, fmt.Sprintf("entry-%02d.md", index), "# Entry\n")
 	}
-	if got := DiscoverProjectDocs(repo); len(got) != projectDocCatalogMaxEntries {
+	if got := discoverProjectDocEntries(repo); len(got) != projectDocCatalogMaxEntries {
 		t.Fatalf("catalog entries = %d, want %d", len(got), projectDocCatalogMaxEntries)
 	}
 
 	perFileRepo := t.TempDir()
 	writeProjectDoc(t, perFileRepo, "oversize.md", strings.Repeat("x", projectDocCatalogMaxFileBytes+1))
-	if got := DiscoverProjectDocs(perFileRepo); len(got) != 0 {
+	if got := discoverProjectDocEntries(perFileRepo); len(got) != 0 {
 		t.Fatalf("oversize document must be skipped: %+v", got)
 	}
 
@@ -374,4 +374,9 @@ func writeProjectDoc(t *testing.T, repo, name, content string) {
 	if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func discoverProjectDocEntries(repoRoot string) []projectdocdomain.ProjectDocCatalogEntry {
+	entries, _, _ := DiscoverProjectDocsReport(repoRoot)
+	return entries
 }

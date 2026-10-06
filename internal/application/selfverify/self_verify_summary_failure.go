@@ -9,7 +9,3 @@ import (
 func ClassifySelfVerificationFailure(result augment.SelfAugmentResult, summary augment.SelfAugmentSummary) (string, string, []verify.SelfVerificationFailureCluster) {
 	return domain.ClassifyFailure(summary.FailedSteps, summary.TotalRuns, projectRuns(result))
 }
-
-func SelfVerificationFailureClusters(result augment.SelfAugmentResult) []verify.SelfVerificationFailureCluster {
-	return domain.FailureClusters(projectRuns(result))
-}

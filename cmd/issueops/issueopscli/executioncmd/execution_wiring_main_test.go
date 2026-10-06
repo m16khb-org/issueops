@@ -3,7 +3,7 @@ package executioncmd
 import core "issueops/internal/adapter/issueops"
 
 func testExecutionRuntime() ExecutionDeps {
-	return ExecutionDeps{ExecuteExecution: testExecutionService().Execute, ObserveNativeProcessAncestry: core.ObserveNativeProcessAncestry, SwitchExecutionMode: testModeSwitcher(), SyncExecutionBase: core.SyncExecutionBase}
+	return ExecutionDeps{ExecuteExecution: testExecutionService().Execute, ObserveNativeProcessAncestry: core.ObserveNativeProcessAncestry, SwitchExecutionMode: testModeSwitcher(), SyncExecutionBase: core.VerifiedSyncExecutionBase(core.NativeActorVerifier())}
 }
 func runExecutionForTest(args []string, deps Deps) error {
 	defaults := testExecutionRuntime()

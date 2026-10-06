@@ -66,7 +66,7 @@ func TestStoreScopesSpanObservationByCapability(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := database.Put(Bucket(), id, data); err != nil {
+	if err := database.Put(bucket, id, data); err != nil {
 		t.Fatal(err)
 	}
 
@@ -109,7 +109,7 @@ func seedObservedRecord(t testing.TB, id string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := database.Put(Bucket(), id, data); err != nil {
+	if err := database.Put(bucket, id, data); err != nil {
 		t.Fatal(err)
 	}
 	return stateRoot

@@ -51,7 +51,7 @@ func TestSQLiteRepositoryLeavesRecordUnchangedWhenApplyFailsAfterClock(t *testin
 		Ancestry: []leasedomain.ProcessReceipt{{PID: actor.SessionProcess.PID, StartedAt: actor.SessionProcess.StartedAt, Executable: actor.SessionProcess.Executable}},
 		CWD:      "/canonical",
 	})
-	if leasecontract.FailureCodeOf(err) != leasecontract.FailurePersistence {
+	if failure, ok := errors.AsType[*leasecontract.Failure](err); !ok || failure.Code != leasecontract.FailurePersistence {
 		t.Fatalf("apply failure=%v", err)
 	}
 	if clock.calls != 1 {

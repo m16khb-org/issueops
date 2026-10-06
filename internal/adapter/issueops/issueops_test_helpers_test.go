@@ -434,7 +434,7 @@ func executionPrepareRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
 	}
 	record := issueops.IssueOpsRecord{
 		OK: true, SchemaVersion: issueops.IssueOpsCurrentSchemaVersion,
-		ID: NewIssueOpsID(repo, branch), Repo: repo, Branch: branch, Phase: issueops.IssueOpsPhasePlan,
+		ID: newIssueOpsID(repo, branch), Repo: repo, Branch: branch, Phase: issueops.IssueOpsPhasePlan,
 		IssueURL:     "https://github.com/acme/repo/issues/16",
 		DesignReview: &issueops.IssueOpsDesignReview{Approved: true, ReviewedAt: "2026-07-11T00:00:00Z"},
 		BranchPrepare: &issueops.IssueOpsBranchPrepare{
@@ -443,7 +443,7 @@ func executionPrepareRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
 		},
 		CreatedAt: "2026-07-11T00:00:00Z", UpdatedAt: "2026-07-11T00:00:00Z",
 	}
-	written, err := WriteIssueOps(context.Background(), stateRoot, record)
+	written, err := writeIssueOps(context.Background(), stateRoot, record)
 	if err != nil {
 		t.Fatal(err)
 	}

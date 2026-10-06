@@ -1,16 +1,15 @@
 package issueopsapp
 
 import (
-	issueopscontract "issueops/internal/contract/issueops"
-	issueopsport "issueops/internal/port"
-)
-
-import (
 	"issueops/cmd/issueops/issueopscli"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
+	issueopscontract "issueops/internal/contract/issueops"
+	issueopsport "issueops/internal/port"
+
 	clicatalog "issueops/internal/adapter/inbound/catalog/cli"
 
 	basesyncoutbound "issueops/internal/adapter/outbound/issueopsbasesync"
+
 	provenanceadapter "issueops/internal/adapter/outbound/issueopsprovenance"
 )
 

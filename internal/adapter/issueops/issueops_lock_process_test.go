@@ -18,8 +18,8 @@ import (
 // while distinct roots remain composable.
 func TestWithIssueOpsLockRejectsSameRootReentry(t *testing.T) {
 	stateRoot := t.TempDir()
-	outer := NewIssueOpsID(stateRoot, "outer")
-	inner := NewIssueOpsID(stateRoot, "inner")
+	outer := newIssueOpsID(stateRoot, "outer")
+	inner := newIssueOpsID(stateRoot, "inner")
 
 	err := withIssueOpsLock(context.Background(), stateRoot, outer, func(ctx context.Context) error {
 		return withIssueOpsLock(ctx, stateRoot, inner, func(context.Context) error { return nil })
@@ -61,7 +61,7 @@ func TestWithIssueOpsLockProcessHelper(t *testing.T) {
 	}
 	root := os.Getenv(lockHelperRootEnv)
 	marker := os.Getenv(lockHelperMarkerEnv)
-	id := NewIssueOpsID(root, mode)
+	id := newIssueOpsID(root, mode)
 	switch mode {
 	case "holder":
 		if err := withIssueOpsLock(context.Background(), root, id, func(context.Context) error {

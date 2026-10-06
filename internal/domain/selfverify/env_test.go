@@ -1,4 +1,4 @@
-package commandstep
+package selfverify
 
 import "testing"
 

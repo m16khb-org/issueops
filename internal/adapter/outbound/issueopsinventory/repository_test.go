@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"issueops/internal/adapter/outbound/issueopsrecord"
 	"issueops/internal/adapter/outbound/sqlstore"
 	issueopscontract "issueops/internal/contract/issueops"
 )
@@ -30,10 +29,10 @@ func TestRepositoryListsAndStrictlyReadsRecords(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := database.Put(issueopsrecord.Bucket(), record.ID, encoded); err != nil {
+	if err := database.Put("issueops_v1", record.ID, encoded); err != nil {
 		t.Fatal(err)
 	}
-	if err := database.Put(issueopsrecord.Bucket(), "io-invalid", []byte(`{"schema_version":1,"id":"io-invalid","phase":"problem","unknown":true}`)); err != nil {
+	if err := database.Put("issueops_v1", "io-invalid", []byte(`{"schema_version":1,"id":"io-invalid","phase":"problem","unknown":true}`)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -79,7 +78,7 @@ func TestRepositoryListIDsAndReadUnchecked(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := database.Put(issueopsrecord.Bucket(), record.ID, encoded); err != nil {
+	if err := database.Put("issueops_v1", record.ID, encoded); err != nil {
 		t.Fatal(err)
 	}
 	repository := Repository{}

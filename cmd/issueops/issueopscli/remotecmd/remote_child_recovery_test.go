@@ -23,7 +23,7 @@ func childCLIRecoveryFixture(t *testing.T, provider string) (model.IssueOpsRecor
 		record.BranchPrepare.Provider = "gitlab"
 		record.BranchPrepare.IssueURL = record.IssueURL
 		var err error
-		record, err = core.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), record)
+		record, err = (core.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -131,7 +131,7 @@ func TestChildCLIStaleOperationRequiresCurrentHolderReconcile(t *testing.T) {
 	}
 	operation := record.ChildCreateOperations[0]
 	record.Execution.Lease.Generation++
-	record, err = core.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), record)
+	record, err = (core.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record)
 	if err != nil {
 		t.Fatal(err)
 	}

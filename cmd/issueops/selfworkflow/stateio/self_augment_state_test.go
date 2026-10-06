@@ -34,7 +34,7 @@ func TestSaveSelfAugmentPlan(t *testing.T) {
 	if result.StateCheckpoint.Key != "self-augment-plan-test" || result.StateCheckpoint.Path != filepath.Join(dir, "self-augment-plan-test.json") {
 		t.Fatalf("unexpected plan checkpoint metadata: %+v", result.StateCheckpoint)
 	}
-	state, err := statestore.StateRead("self-augment-plan-test")
+	state, err := statestore.NewService().Read("self-augment-plan-test")
 	if err != nil {
 		t.Fatalf("StateRead: %v", err)
 	}
@@ -62,5 +62,5 @@ func TestSaveSelfAugmentPlanRejectsInvalidStateKey(t *testing.T) {
 }
 
 func planForStateTest(req augmentcontract.SelfAugmentPlanRequest, root, version string) augmentcontract.SelfAugmentPlanResult {
-	return (app.Planner{Repository: augmentation.Repository{ListDocs: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).List}, DocsIndex: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).Index, ListSkillNames: install.ListSkillNames, StateList: statestore.StateList, StateRead: statestore.StateRead, Now: time.Now}).Plan(req, root, version)
+	return (app.Planner{Repository: augmentation.Repository{ListDocs: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).List}, DocsIndex: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).Index, ListSkillNames: install.ListSkillNames, StateList: statestore.NewService().List, StateRead: statestore.NewService().Read, Now: time.Now}).Plan(req, root, version)
 }

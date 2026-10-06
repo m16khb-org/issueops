@@ -190,11 +190,6 @@
     "role": "error"
   },
   {
-    "path": "internal/contract/issueopslease/failure.go",
-    "symbol": "func FailureCodeOf",
-    "role": "error"
-  },
-  {
     "path": "internal/contract/issueopslease/record.go",
     "symbol": "func Decode",
     "role": "codec"
@@ -221,17 +216,7 @@
   },
   {
     "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func IntentCodec.DecodeShape",
-    "role": "codec"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
     "symbol": "func IntentCodec.Encode",
-    "role": "codec"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func IntentCodec.ParseMarker",
     "role": "codec"
   },
   {
@@ -247,11 +232,6 @@
   {
     "path": "internal/contract/issueopspreparation/intent.go",
     "symbol": "func IntentCodec.Validate",
-    "role": "shape"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func IntentCodec.ValidateShape",
     "role": "shape"
   },
   {

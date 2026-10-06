@@ -17,9 +17,6 @@ func issueLinkerForTest(root string) branchapp.Linker {
 func LinkIssueOpsChildForTest(root, id, childURL, title string) (model.IssueOpsRecord, error) {
 	return issueLinkerForTest(root).Child(context.Background(), id, childURL, title, nil)
 }
-func LinkIssueOpsChildWithActorForTest(root, id, childURL, title string, actor model.IssueOpsActor) (model.IssueOpsRecord, error) {
-	return issueLinkerForTest(root).Child(context.Background(), id, childURL, title, &actor)
-}
 func LinkIssueOpsIssueForTest(root, id, issueURL string) (model.IssueOpsRecord, error) {
 	return issueLinkerForTest(root).Issue(context.Background(), id, issueURL, nil)
 }

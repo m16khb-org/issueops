@@ -1,13 +1,10 @@
 package mcpcli
 
 import (
-	issueopscontract "issueops/internal/contract/issueops"
-)
-
-import (
 	"context"
 	"encoding/json"
 	"fmt"
+	issueopscontract "issueops/internal/contract/issueops"
 	"strings"
 	"sync"
 	"testing"

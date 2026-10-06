@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"issueops/cmd/issueops/mcpcli/resources"
 	commitapp "issueops/internal/application/commitsuggest"
 	lintapp "issueops/internal/application/lintdiagnose"
@@ -17,6 +16,8 @@ import (
 	model "issueops/internal/contract/issueops"
 	webmodel "issueops/internal/contract/webfetch"
 	"issueops/internal/port"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 type instanceAssistantEffects struct{ owner string }

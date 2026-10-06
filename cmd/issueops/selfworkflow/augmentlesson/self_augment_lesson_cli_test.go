@@ -35,7 +35,7 @@ func captureStdout(t *testing.T, fn func() error) string {
 
 func assertStateRecordContains(t *testing.T, key string, want string) {
 	t.Helper()
-	state, err := statestore.StateRead(key)
+	state, err := statestore.NewService().Read(key)
 	if err != nil {
 		t.Fatalf("read state %q: %v", key, err)
 	}

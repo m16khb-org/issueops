@@ -11,14 +11,14 @@ import (
 func TestStateDoctorDetectsCorruptRecords(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
-	if _, err := StateWrite(context.Background(), "good", "good content"); err != nil {
-		t.Fatalf("StateWrite good: %v", err)
+	if _, err := NewService().Write(context.Background(), "good", "good content"); err != nil {
+		t.Fatalf("NewService().Write good: %v", err)
 	}
 	writeRawStateRow(t, dir, "corrupt", "{not json\n")
 	writeRawStateRow(t, dir, "badbytes", `{"key":"badbytes","content":"abc","updated_at":"2000-01-01T00:00:00Z","bytes":999}`+"\n")
 	writeRawStateRow(t, dir, "badtime", `{"key":"badtime","content":"abc","updated_at":"not-a-time","bytes":3}`+"\n")
 
-	result, err := StateDoctor()
+	result, err := Doctor(StateDir())
 	if err != nil {
 		t.Fatalf("StateDoctor: %v", err)
 	}
@@ -40,7 +40,7 @@ func TestStateDoctorDetectsCorruptRecords(t *testing.T) {
 
 func TestStateDoctorEmptyDirIsHealthy(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	result, err := StateDoctor()
+	result, err := Doctor(StateDir())
 	if err != nil {
 		t.Fatalf("StateDoctor: %v", err)
 	}
@@ -61,7 +61,7 @@ func TestStateDoctorProjectsInvalidExistingRecords(t *testing.T) {
 	} {
 		writeRawStateRow(t, dir, name, raw)
 	}
-	result, err := StateDoctor()
+	result, err := Doctor(StateDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func TestStateDoctorAcceptsCurrentIssueOpsDirectory(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result, err := StateDoctor()
+	result, err := Doctor(StateDir())
 	if err != nil {
 		t.Fatalf("StateDoctor: %v", err)
 	}
@@ -97,8 +97,8 @@ func TestStateDoctorAcceptsCurrentIssueOpsDirectory(t *testing.T) {
 func TestStateDoctorAllowsHarnessOwnedAuxiliaryState(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
-	if _, err := StateWrite(context.Background(), "good", "good content"); err != nil {
-		t.Fatalf("StateWrite good: %v", err)
+	if _, err := NewService().Write(context.Background(), "good", "good content"); err != nil {
+		t.Fatalf("NewService().Write good: %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "hook-failures.jsonl"), []byte(`{"hook":"pre-tool-use","error":"failed"}`+"\n"), 0o600); err != nil {
 		t.Fatal(err)
@@ -119,7 +119,7 @@ func TestStateDoctorAllowsHarnessOwnedAuxiliaryState(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result, err := StateDoctor()
+	result, err := Doctor(StateDir())
 	if err != nil {
 		t.Fatalf("StateDoctor: %v", err)
 	}

@@ -3,13 +3,15 @@ package issueopsapp
 import (
 	"context"
 	"encoding/json"
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"issueops/cmd/issueops/mcpcli"
 	core "issueops/internal/adapter/issueops"
 	model "issueops/internal/contract/issueops"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	auditcontract "issueops/internal/contract/audit"
 	policycontract "issueops/internal/contract/policy"
@@ -83,7 +85,7 @@ func TestPolicyMCPInstancesKeepStateAndReloadOverrides(t *testing.T) {
 		}
 		record.IssueURL = "https://github.com/acme/repo/issues/79"
 		record.BranchPrepare = &model.IssueOpsBranchPrepare{Provider: "github", IssueURL: record.IssueURL, Branch: record.Branch, BaseBranch: base, LinkVerified: true, CreatedAt: record.CreatedAt}
-		if _, err = core.WriteIssueOps(context.Background(), issueOpsStateRoot(), record); err != nil {
+		if _, err = (core.CycleRecordStore{StateRoot: issueOpsStateRoot()}).Save(context.Background(), record); err != nil {
 			t.Fatal(err)
 		}
 		deps[i] = issueOpsMCPDependencies()
@@ -142,7 +144,7 @@ func TestPolicyMCPInstancesKeepStateAndReloadOverrides(t *testing.T) {
 						t.Fatalf("wrong audit path: %+v", envelope)
 					}
 				}
-				mismatch := containsString(policy.DenyReasons, "pr_target_branch_mismatch")
+				mismatch := slices.Contains(policy.DenyReasons, "pr_target_branch_mismatch")
 				if mismatch != (i == 1) || policy.Allowed != (i == 0) {
 					t.Fatalf("captured state lost: sdk=%v instance=%d tool=%s result=%+v", sdk, i, name, policy)
 				}

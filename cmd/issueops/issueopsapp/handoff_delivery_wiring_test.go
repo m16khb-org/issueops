@@ -672,7 +672,7 @@ func seedReleasedDirectHandoffRecord(t *testing.T, stateRoot string) issueopscon
 		},
 		Lease: issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusReleased},
 	}
-	written, err := issueopsadapter.WriteIssueOps(context.Background(), stateRoot, record)
+	written, err := (issueopsadapter.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), record)
 	if err != nil {
 		t.Fatal(err)
 	}

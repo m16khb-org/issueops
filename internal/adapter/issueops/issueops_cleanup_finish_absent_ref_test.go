@@ -140,32 +140,6 @@ func (g *realErrorFinishGit) run(_ string, args ...string) (int, string) {
 	return 0, ""
 }
 
-// TestCleanupAbandonConvergesWhenWorktreeRemovalAlreadyDroppedTheBranchRef는
-// finish와 같은 순서 결함이 abandon 경로에도 있었음을 고정한다(#291).
-func TestCleanupAbandonConvergesWhenWorktreeRemovalAlreadyDroppedTheBranchRef(t *testing.T) {
-	git := &absentRefFinishGit{branchOID: "abc123"}
-	// worktree 제거가 ref를 회수한 뒤의 상태를 직접 만든다.
-	git.refRemoved = true
-
-	if branchRefPresent(git.run, "/repo", "80-finish") {
-		t.Fatal("전제 확인 실패: ref가 회수된 뒤에는 부재로 관측돼야 한다")
-	}
-	if code, _ := git.run("/repo", "update-ref", "-d", "refs/heads/80-finish", "abc123"); code == 0 {
-		t.Fatal("전제 확인 실패: 부재 ref에 대한 update-ref는 실패해야 한다")
-	}
-
-	present := &realErrorFinishGit{branchOID: "abc123"}
-	if !branchRefPresent(present.run, "/repo", "80-finish") {
-		t.Fatal("ref가 남아 있으면 존재로 관측돼야 한다 — 진짜 오류를 삼키면 안 된다")
-	}
-	if branchRefPresent(nil, "/repo", "80-finish") != true {
-		t.Fatal("관측이 불가능하면 fail-closed로 존재 취급해야 한다")
-	}
-	if branchRefPresent(present.run, "/repo", "  ") != true {
-		t.Fatal("branch 이름이 비면 fail-closed로 존재 취급해야 한다")
-	}
-}
-
 // TestCleanupFinishAcceptsAVerifiedSupersedingArtifact는 #283의 통과 경로를
 // 고정한다. 원 artifact가 unmerged여도 후속 artifact가 provider readback으로
 // merged·같은 프로젝트·명시적 supersede를 만족하면 정리할 수 있어야 한다.

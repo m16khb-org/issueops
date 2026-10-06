@@ -186,7 +186,7 @@ func seedHTTPLeaseRecord(t *testing.T, repo, worktree string, holder model.Nativ
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	record := model.IssueOpsRecord{
 		OK: true, SchemaVersion: model.IssueOpsCurrentSchemaVersion,
-		ID: issueopscore.NewIssueOpsID(repo, "300-http-lease"), Repo: repo, Branch: "300-http-lease",
+		ID: (issueopscore.CycleStartIdentity{}).StableID(repo, "300-http-lease"), Repo: repo, Branch: "300-http-lease",
 		Phase: model.IssueOpsPhaseImplement, WorktreePath: worktree,
 		Execution: &model.Execution{
 			Mode:      model.ExecutionModeDirect,
@@ -195,7 +195,7 @@ func seedHTTPLeaseRecord(t *testing.T, repo, worktree string, holder model.Nativ
 		},
 		CreatedAt: now, UpdatedAt: now,
 	}
-	written, err := issueopscore.WriteIssueOps(context.Background(), issueOpsStateRoot(), record)
+	written, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRoot()}).Save(context.Background(), record)
 	if err != nil {
 		t.Fatal(err)
 	}

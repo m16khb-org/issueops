@@ -17,10 +17,6 @@ import (
 	mcpcontract "issueops/internal/contract/mcp"
 )
 
-func initSDKServer(deps MCPDependencies) *mcp.Server {
-	return initSDKServerWithDiagnostics(deps, io.Discard)
-}
-
 func initSDKServerWithDiagnostics(deps MCPDependencies, diagnostics io.Writer) *mcp.Server {
 	if diagnostics == nil {
 		diagnostics = io.Discard
@@ -29,16 +25,6 @@ func initSDKServerWithDiagnostics(deps MCPDependencies, diagnostics io.Writer) *
 }
 
 const httpServerInstructions = "This MCP endpoint is the shared local service used by every host session, not a per-host process. Workspace tools need an authority_file issued by 'issueops mcp authorize'. Use harness tools for shared Codex/Claude inspection, atomic commit preflight, state checkpoints, self-verification, self-augmentation, and commit policy context. External wiki or knowledge-base workflows belong to their own separately installed servers, not issueops."
-
-func newSDKServer(deps MCPDependencies, options *mcp.ServerOptions, transport serverTransport, access *slog.Logger) *mcp.Server {
-	if transport == transportHTTP {
-		options.Instructions = httpServerInstructions
-	}
-	server := mcp.NewServer(&mcp.Implementation{Name: "issueops", Version: deps.Resources.Version}, options)
-	registerAllTools(server, deps, transport, access)
-	registerAllResources(server, deps)
-	return server
-}
 
 // initSDKServerWithLogger는 진단 writer 대신 로거를 직접 받는 변형이다.
 // 데몬 경로가 세션 루틴 이벤트를 DEBUG로 강등하는 필터 로거를 넘긴다.
@@ -49,8 +35,14 @@ func initSDKServerWithLogger(deps MCPDependencies, logger *slog.Logger) *mcp.Ser
 	return newSDKServer(deps, sdkServerOptionsWithLogger(logger), transportStdio, nil)
 }
 
-func sdkServerOptions() *mcp.ServerOptions {
-	return sdkServerOptionsWithDiagnostics(io.Discard)
+func newSDKServer(deps MCPDependencies, options *mcp.ServerOptions, transport serverTransport, access *slog.Logger) *mcp.Server {
+	if transport == transportHTTP {
+		options.Instructions = httpServerInstructions
+	}
+	server := mcp.NewServer(&mcp.Implementation{Name: "issueops", Version: deps.Resources.Version}, options)
+	registerAllTools(server, deps, transport, access)
+	registerAllResources(server, deps)
+	return server
 }
 
 func sdkServerOptionsWithDiagnostics(diagnostics io.Writer) *mcp.ServerOptions {

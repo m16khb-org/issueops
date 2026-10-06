@@ -62,7 +62,7 @@ func benchmarkInventoryStateRoot(b *testing.B, count int) string {
 		if err != nil {
 			b.Fatal(err)
 		}
-		if err := database.Put(Bucket(), id, encoded); err != nil {
+		if err := database.Put(bucket, id, encoded); err != nil {
 			b.Fatal(err)
 		}
 	}

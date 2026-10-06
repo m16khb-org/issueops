@@ -40,10 +40,3 @@ func tailWithBudget(s string, originalBytes, max int) (string, bool, int) {
 		tailBudget = tailBudgetNext
 	}
 }
-
-func BudgetCommandOutput(s string, budget int) (string, bool, int) {
-	if budget <= 0 {
-		return s, false, len(s)
-	}
-	return TailWithBudget(s, budget)
-}

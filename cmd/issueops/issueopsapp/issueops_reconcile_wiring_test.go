@@ -362,13 +362,13 @@ func reconcilePendingFixtureForHost(t *testing.T, failStage port.ExecutionOrcaIn
 	baseHead := strings.TrimSpace(claimWiringGit(t, repo, "rev-parse", "HEAD"))
 	const branch = "194-reconcile"
 	record := issueopscontract.IssueOpsRecord{
-		OK: true, SchemaVersion: issueopscontract.IssueOpsCurrentSchemaVersion, ID: issueops.NewIssueOpsID(repo, branch),
+		OK: true, SchemaVersion: issueopscontract.IssueOpsCurrentSchemaVersion, ID: (issueops.CycleStartIdentity{}).StableID(repo, branch),
 		Repo: repo, Branch: branch, Phase: issueopscontract.IssueOpsPhasePlan, IssueURL: "https://github.com/acme/repo/issues/194",
 		DesignReview:  &issueopscontract.IssueOpsDesignReview{Approved: true, ReviewedAt: "2026-08-01T00:00:00Z"},
 		BranchPrepare: &issueopscontract.IssueOpsBranchPrepare{Provider: "github", IssueURL: "https://github.com/acme/repo/issues/194", Branch: branch, BaseBranch: "main", BaseSHA: baseHead, LinkVerified: true, CreatedAt: "2026-08-01T00:00:00Z"},
 		CreatedAt:     "2026-08-01T00:00:00Z", UpdatedAt: "2026-08-01T00:00:00Z",
 	}
-	if _, err := issueops.WriteIssueOps(context.Background(), stateRoot, record); err != nil {
+	if _, err := (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := stageIssueOpsArtifact(stateRoot, record.ID, "plan", []byte("# Reconcile plan\n")); err != nil {

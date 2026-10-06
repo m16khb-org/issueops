@@ -7,5 +7,5 @@ import (
 )
 
 func testCatalogService() app.CatalogService {
-	return app.CatalogService{Discover: reader.DiscoverProjectDocs, FormatCompact: reader.FormatProjectDocCatalog, FormatUserView: renderer.RenderProjectDocCatalogUserView}
+	return app.CatalogService{DiscoverReport: reader.DiscoverProjectDocsReport, FormatCompact: reader.FormatProjectDocCatalog, FormatUserView: renderer.RenderProjectDocCatalogUserView}
 }

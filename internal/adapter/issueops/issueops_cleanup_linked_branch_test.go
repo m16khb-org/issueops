@@ -28,7 +28,7 @@ func lbFixture(t *testing.T) (string, issueopscontract.IssueOpsRecord) {
 			BaseBranch: "main", BaseSHA: lbSealedBase, CreatedAt: "2026-08-08T00:00:00Z",
 		},
 	}
-	written, err := WriteIssueOps(context.Background(), root, record)
+	written, err := writeIssueOps(context.Background(), root, record)
 	if err != nil {
 		t.Fatalf("fixture record: %v", err)
 	}
@@ -235,7 +235,7 @@ func TestCleanupLinkedBranchRecordsEveryDispositionInTheAudit(t *testing.T) {
 func TestCleanupLinkedBranchRefusesNonGitHubProviders(t *testing.T) {
 	root, record := lbFixture(t)
 	record.BranchPrepare.Provider = "gitlab"
-	if _, err := WriteIssueOps(context.Background(), root, record); err != nil {
+	if _, err := writeIssueOps(context.Background(), root, record); err != nil {
 		t.Fatal(err)
 	}
 	deps := &lbDeps{nodes: []linkedbranch.Node{{ID: lbOrphanID}}}

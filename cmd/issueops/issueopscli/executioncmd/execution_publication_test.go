@@ -81,7 +81,7 @@ func publicationReconcileCLIRecord(t *testing.T) (string, issueopscontract.Issue
 	actor := issueopscontract.NativeActor{Host: "codex", SessionID: "publication-cli-session", SessionProcess: &receipt}
 	record := issueopscontract.IssueOpsRecord{
 		OK: true, SchemaVersion: issueopscontract.IssueOpsCurrentSchemaVersion,
-		ID: issueops.NewIssueOpsID(repo, "195-publication-cli"), Repo: repo, Branch: "195-publication-cli",
+		ID: (issueops.CycleStartIdentity{}).StableID(repo, "195-publication-cli"), Repo: repo, Branch: "195-publication-cli",
 		Phase: issueopscontract.IssueOpsPhasePR, WorktreePath: worktree,
 		Execution: &issueopscontract.Execution{
 			Mode:      issueopscontract.ExecutionModeDirect,
@@ -92,7 +92,7 @@ func publicationReconcileCLIRecord(t *testing.T) (string, issueopscontract.Issue
 		CreatedAt: "2026-08-01T00:00:00Z",
 		UpdatedAt: "2026-08-01T00:00:00Z",
 	}
-	written, err := issueops.WriteIssueOps(context.Background(), stateRoot, record)
+	written, err := (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), record)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -13,7 +13,7 @@ func TestPrepareManagedCommandPathRefusesRegularFileWithoutApproval(t *testing.T
 	target := writeCommandFixture(t, root, "target", "new", 0o755)
 	command := writeCommandFixture(t, root, "issueops", "old", 0o751)
 
-	_, plan, err := prepareManagedCommandPathWithDeps(target, command, false, false, validCommandDeps())
+	_, plan, err := prepareManagedCommandPathCandidateWithDeps(target, target, command, false, false, validCommandDeps())
 	if err == nil || !strings.Contains(err.Error(), "refusing to adopt regular command file without --adopt-command-file") {
 		t.Fatalf("error = %v, plan = %+v", err, plan)
 	}
@@ -25,7 +25,7 @@ func TestPrepareManagedCommandPathDryRunReportsAdoptionWithoutWriting(t *testing
 	target := writeCommandFixture(t, root, "target", "new", 0o755)
 	command := writeCommandFixture(t, root, "issueops", "old", 0o751)
 
-	transaction, plan, err := prepareManagedCommandPathWithDeps(target, command, true, true, validCommandDeps())
+	transaction, plan, err := prepareManagedCommandPathCandidateWithDeps(target, target, command, true, true, validCommandDeps())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +43,7 @@ func TestManagedCommandPathApplyFinalizeAtomicallyAdoptsRegularFile(t *testing.T
 	target := writeCommandFixture(t, root, "target", "new", 0o755)
 	command := writeCommandFixture(t, root, "issueops", "old", 0o751)
 
-	transaction, _, err := prepareManagedCommandPathWithDeps(target, command, true, false, validCommandDeps())
+	transaction, _, err := prepareManagedCommandPathCandidateWithDeps(target, target, command, true, false, validCommandDeps())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +76,7 @@ func TestManagedCommandPathRollbackRestoresOriginalBytesAndMode(t *testing.T) {
 	target := writeCommandFixture(t, root, "target", "new", 0o755)
 	command := writeCommandFixture(t, root, "issueops", "old", 0o751)
 
-	transaction, _, err := prepareManagedCommandPathWithDeps(target, command, true, false, validCommandDeps())
+	transaction, _, err := prepareManagedCommandPathCandidateWithDeps(target, target, command, true, false, validCommandDeps())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +105,7 @@ func TestPrepareManagedCommandPathRejectsInvalidIdentityBeforeMutation(t *testin
 		}
 		return managedBuildInfo{MainPath: managedCommandMainPath, ModulePath: managedCommandModulePath}, nil
 	}
-	if _, _, err := prepareManagedCommandPathWithDeps(target, command, true, false, invalidBuild); err == nil || !strings.Contains(err.Error(), "managed issueops build identity") {
+	if _, _, err := prepareManagedCommandPathCandidateWithDeps(target, target, command, true, false, invalidBuild); err == nil || !strings.Contains(err.Error(), "managed issueops build identity") {
 		t.Fatalf("wrong build identity error = %v", err)
 	}
 	assertRegularCommand(t, command, "old", 0o751)
@@ -116,7 +116,7 @@ func TestPrepareManagedCommandPathRejectsInvalidIdentityBeforeMutation(t *testin
 		}
 		return managedBuildInfo{MainPath: managedCommandMainPath, ModulePath: managedCommandModulePath}, nil
 	}
-	if _, _, err := prepareManagedCommandPathWithDeps(target, command, true, false, invalidCandidate); err == nil || !strings.Contains(err.Error(), "command candidate") {
+	if _, _, err := prepareManagedCommandPathCandidateWithDeps(target, target, command, true, false, invalidCandidate); err == nil || !strings.Contains(err.Error(), "command candidate") {
 		t.Fatalf("wrong candidate build identity error = %v", err)
 	}
 
@@ -127,7 +127,7 @@ func TestPrepareManagedCommandPathRejectsInvalidIdentityBeforeMutation(t *testin
 		t.Run(name, func(t *testing.T) {
 			candidate := writeCommandFixture(t, root, strings.ReplaceAll(name, " ", "-"), "old", 0o751)
 			mutate(candidate)
-			if _, _, err := prepareManagedCommandPathWithDeps(target, candidate, true, false, validCommandDeps()); err == nil {
+			if _, _, err := prepareManagedCommandPathCandidateWithDeps(target, target, candidate, true, false, validCommandDeps()); err == nil {
 				t.Fatalf("invalid command accepted")
 			}
 		})
@@ -145,7 +145,7 @@ func TestPrepareManagedCommandPathRejectsUnmanagedBinaryAndInvalidFileMatrix(t *
 	if err := os.WriteFile(echoCopy, body, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := PrepareManagedCommandPath(target, echoCopy, true, true); err == nil || !strings.Contains(err.Error(), "managed issueops build identity") {
+	if _, _, err := PrepareManagedCommandPathCandidate(target, target, echoCopy, true, true); err == nil || !strings.Contains(err.Error(), "managed issueops build identity") {
 		t.Fatalf("/bin/echo copy error = %v", err)
 	}
 
@@ -163,7 +163,7 @@ func TestPrepareManagedCommandPathRejectsUnmanagedBinaryAndInvalidFileMatrix(t *
 	}
 	for name, path := range map[string]string{"directory": directory, "symlink": link, "multiple hard links": multi} {
 		t.Run(name, func(t *testing.T) {
-			if _, _, err := prepareManagedCommandPathWithDeps(target, path, true, true, validCommandDeps()); err == nil {
+			if _, _, err := prepareManagedCommandPathCandidateWithDeps(target, target, path, true, true, validCommandDeps()); err == nil {
 				t.Fatalf("invalid path was accepted: %s", path)
 			}
 		})
@@ -177,14 +177,14 @@ func TestPrepareManagedCommandPathEnforcesExactSizeBoundary(t *testing.T) {
 	if err := os.Truncate(boundary, managedCommandMaxSize); err != nil {
 		t.Fatal(err)
 	}
-	if _, plan, err := prepareManagedCommandPathWithDeps(target, boundary, true, true, validCommandDeps()); err != nil || !plan.WouldAdopt {
+	if _, plan, err := prepareManagedCommandPathCandidateWithDeps(target, target, boundary, true, true, validCommandDeps()); err != nil || !plan.WouldAdopt {
 		t.Fatalf("boundary plan=%+v err=%v", plan, err)
 	}
 	oversized := writeCommandFixture(t, root, "oversized", "x", 0o755)
 	if err := os.Truncate(oversized, managedCommandMaxSize+1); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := prepareManagedCommandPathWithDeps(target, oversized, true, true, validCommandDeps()); err == nil {
+	if _, _, err := prepareManagedCommandPathCandidateWithDeps(target, target, oversized, true, true, validCommandDeps()); err == nil {
 		t.Fatal("oversized command was accepted")
 	}
 }
@@ -193,7 +193,7 @@ func TestManagedCommandPathApplyRejectsIdentityDrift(t *testing.T) {
 	root := t.TempDir()
 	target := writeCommandFixture(t, root, "target", "new", 0o755)
 	command := writeCommandFixture(t, root, "issueops", "old", 0o751)
-	transaction, plan, err := prepareManagedCommandPathWithDeps(target, command, true, false, validCommandDeps())
+	transaction, plan, err := prepareManagedCommandPathCandidateWithDeps(target, target, command, true, false, validCommandDeps())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -212,7 +212,7 @@ func TestManagedCommandPathApplyRejectsCandidateIdentityDrift(t *testing.T) {
 	root := t.TempDir()
 	target := writeCommandFixture(t, root, "target", "new", 0o755)
 	command := writeCommandFixture(t, root, "issueops", "old", 0o751)
-	transaction, plan, err := prepareManagedCommandPathWithDeps(target, command, true, false, validCommandDeps())
+	transaction, plan, err := prepareManagedCommandPathCandidateWithDeps(target, target, command, true, false, validCommandDeps())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -244,7 +244,7 @@ func TestManagedCommandPathApplyDoesNotOverwriteReplacementAtExchange(t *testing
 		}
 		return exchangePaths(left, right)
 	}
-	transaction, _, err := prepareManagedCommandPathWithDeps(target, command, true, false, deps)
+	transaction, _, err := prepareManagedCommandPathCandidateWithDeps(target, target, command, true, false, deps)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -276,7 +276,7 @@ func TestManagedCommandPathRollbackDoesNotOverwriteReplacementAtExchange(t *test
 		}
 		return exchangePaths(left, right)
 	}
-	transaction, _, err := prepareManagedCommandPathWithDeps(target, command, true, false, deps)
+	transaction, _, err := prepareManagedCommandPathCandidateWithDeps(target, target, command, true, false, deps)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -307,7 +307,7 @@ func TestManagedCommandPathApplyKeepsRecoveryBackupWhenDirectorySyncFails(t *tes
 		}
 		return nil
 	}
-	transaction, _, err := prepareManagedCommandPathWithDeps(target, command, true, false, deps)
+	transaction, _, err := prepareManagedCommandPathCandidateWithDeps(target, target, command, true, false, deps)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -325,7 +325,7 @@ func TestManagedCommandPathFinalizeKeepsCommittedRecoveryBackupOnCleanupFailure(
 	root := t.TempDir()
 	target := writeCommandFixture(t, root, "target", "new", 0o755)
 	command := writeCommandFixture(t, root, "issueops", "old", 0o751)
-	transaction, _, err := prepareManagedCommandPathWithDeps(target, command, true, false, validCommandDeps())
+	transaction, _, err := prepareManagedCommandPathCandidateWithDeps(target, target, command, true, false, validCommandDeps())
 	if err != nil {
 		t.Fatal(err)
 	}

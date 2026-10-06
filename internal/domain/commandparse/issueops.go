@@ -487,14 +487,3 @@ func IssueOpsCommandSpec(path string) (map[string]bool, map[string]bool, map[str
 	}
 	return toBoolMap(spec.values), toBoolMap(spec.booleans), toBoolMap(spec.repeatable), true
 }
-
-// ContainsASCIITerminalControl은 value에 ASCII C0 control이나 DEL 문자(PTY를
-// 조종하거나 comment marker를 지울 수 있음)가 들어 있는지 보고한다.
-func ContainsASCIITerminalControl(value string) bool {
-	for _, r := range value {
-		if r < 0x20 || r == 0x7f {
-			return true
-		}
-	}
-	return false
-}

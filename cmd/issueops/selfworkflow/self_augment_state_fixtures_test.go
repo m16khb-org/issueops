@@ -17,7 +17,7 @@ func SaveSelfAugmentPlan(result *SelfAugmentPlanResult, key string) error {
 			return json.MarshalIndent(snapshot, "", "  ")
 		},
 		Write: func(key, content string) (statecontract.StateResult, error) {
-			return statestore.StateWrite(context.Background(), key, content)
+			return statestore.NewService().Write(context.Background(), key, content)
 		},
 		StateDir: statestore.StateDir,
 	})

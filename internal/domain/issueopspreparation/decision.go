@@ -83,13 +83,6 @@ func (denial *Denial) IssueOpsErrorFields() map[string]any {
 	return fields
 }
 
-func DenialReasonOf(err error) DenialReason {
-	if denial, ok := errors.AsType[*Denial](err); ok {
-		return denial.Reason
-	}
-	return ""
-}
-
 func Decide(input DecisionInput) (Decision, error) {
 	requested, err := NormalizeMode(input.Command.Mode)
 	if err != nil {

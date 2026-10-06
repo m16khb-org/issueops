@@ -18,7 +18,7 @@ func TestValidateCommandPolicyWrapperUsesExecutableSurface(t *testing.T) {
 	root := t.TempDir()
 	binary := writeCommandPolicyFakeBinary(t, root)
 
-	step := validateCommandPolicy(binary, root)
+	step := Validate(binary, root)
 	if !step.OK || !strings.Contains(step.Command, "policy check") || !strings.Contains(step.Command, "policy fake-run") {
 		t.Fatalf("expected wrapper success, got %+v", step)
 	}

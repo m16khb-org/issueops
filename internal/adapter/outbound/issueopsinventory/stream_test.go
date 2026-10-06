@@ -35,11 +35,6 @@ func seedFilteredInventory(tb testing.TB, count int) string {
 	if err != nil {
 		tb.Fatal(err)
 	}
-	tb.Cleanup(func() {
-		if err := sqlstore.CloseRoot(root); err != nil {
-			tb.Error(err)
-		}
-	})
 	mutations := make([]port.RecordMutation, 0, count)
 	for index := range count {
 		repo := "/foreign"
@@ -55,7 +50,7 @@ func seedFilteredInventory(tb testing.TB, count int) string {
 			tb.Fatal(err)
 		}
 		mutations = append(mutations, port.RecordMutation{
-			Bucket: issueopsrecord.Bucket(), ID: id, Data: data,
+			Bucket: "issueops_v1", ID: id, Data: data,
 		})
 	}
 	if err := database.Apply(context.Background(), mutations); err != nil {
@@ -88,7 +83,7 @@ func TestFilteredPersistedInventoryRetainsForeignDiagnosticsAndSorting(t *testin
 	}
 	for _, id := range []string{"io-00002", "io-00001"} {
 		data := fmt.Appendf(nil, `{"schema_version":1,"id":%q,"repo":"/foreign","phase":"problem","unknown":true}`, id)
-		if err := db.Put(issueopsrecord.Bucket(), id, data); err != nil {
+		if err := db.Put("issueops_v1", id, data); err != nil {
 			t.Fatal(err)
 		}
 	}

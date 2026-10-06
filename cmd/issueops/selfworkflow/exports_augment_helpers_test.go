@@ -21,10 +21,6 @@ func BuildStepDurationStats(durationsByLabel map[string][]int64) []SelfAugmentSt
 	return buildStepDurationStats(durationsByLabel)
 }
 
-func ClassifySelfVerificationFailure(result SelfAugmentResult, summary SelfAugmentSummary) (string, string, []SelfVerificationFailureCluster) {
-	return classifySelfVerificationFailure(result, summary)
-}
-
 func CollectSelfAugmentRepoSignals(root string, docsIndexed int, skills []string, geniusText string) SelfAugmentRepoSignals {
 	return collectSelfAugmentRepoSignals(root, docsIndexed, skills, geniusText)
 }
@@ -81,18 +77,6 @@ func scoreBool(ok bool) float64 {
 	return domain.ScoreBool(ok)
 }
 
-func ScoreSelfVerificationGoals(result SelfAugmentResult, targetScore float64) []SelfVerificationGoalScore {
-	return scoreSelfVerificationGoals(result, targetScore)
-}
-
-func SelectGeniusFormulas(text string) []string {
-	return selectGeniusFormulas(text)
-}
-
-func selectGeniusFormulas(text string) []string {
-	return domain.SelectGeniusFormulas(text)
-}
-
 func SelectedCandidateID(candidate *SelfAugmentCandidate) string {
 	return selectedCandidateID(candidate)
 }
@@ -131,14 +115,6 @@ func selfAugmentResearchInfluences() []SelfAugmentInfluence {
 
 func StepDurationStatByLabel(stats []SelfAugmentStepDurationStat) map[string]SelfAugmentStepDurationStat {
 	return stepDurationStatByLabel(stats)
-}
-
-func StepDurationStatsForCompare(summary SelfAugmentSummary) []SelfAugmentStepDurationStat {
-	return stepDurationStatsForCompare(summary)
-}
-
-func SummarizeSelfAugment(result SelfAugmentResult) SelfAugmentSummary {
-	return summarizeSelfAugment(result)
 }
 
 func SummarizeSelfVerification(result SelfAugmentResult, targetScore float64) SelfAugmentSummary {

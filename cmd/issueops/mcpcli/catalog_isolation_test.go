@@ -7,9 +7,10 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 	issueops "issueops/internal/contract/issueops"
 	mcpcontract "issueops/internal/contract/mcp"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // If either transport ignores its catalog or validates after dispatch, invalid

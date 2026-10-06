@@ -7,7 +7,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"issueops/cmd/issueops/mcpcli"
 	"issueops/cmd/issueops/selfworkflow/verifycmd"
 	catalog "issueops/internal/adapter/inbound/catalog/mcp"
@@ -15,6 +14,8 @@ import (
 	app "issueops/internal/application/selfverify"
 	contract "issueops/internal/contract/selfaugment"
 	statecontract "issueops/internal/contract/state"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func TestSelfVerificationInstancesKeepActualFailuresAndSavedRootsSeparate(t *testing.T) {

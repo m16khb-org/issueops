@@ -34,10 +34,6 @@ type RelatedMutation func(
 	bool,
 ) ([]byte, bool, error)
 
-func Bucket() string {
-	return bucket
-}
-
 func (Store) Read(
 	ctx context.Context,
 	stateRoot string,

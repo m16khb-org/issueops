@@ -18,12 +18,12 @@ func TestRunStateMaintainReportsRoots(t *testing.T) {
 	t.Setenv("ISSUEOPS_WORKER_DIR", "")
 	// Materialize the root store and the IssueOps v1 store; worker and loop stay
 	// absent and must be reported as skipped, not created.
-	if _, err := statestore.StateWrite(context.Background(), "maintain-smoke", "content"); err != nil {
+	if _, err := statestore.NewService().Write(context.Background(), "maintain-smoke", "content"); err != nil {
 		t.Fatalf("seed state: %v", err)
 	}
-	if _, err := issueopscore.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), issueopscontract.IssueOpsRecord{
+	if _, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), issueopscontract.IssueOpsRecord{
 		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
-		ID:            issueopscore.NewIssueOpsID("/repo/maintain", "1-maintain"),
+		ID:            (issueopscore.CycleStartIdentity{}).StableID("/repo/maintain", "1-maintain"),
 		Repo:          "/repo/maintain",
 		Phase:         issueopscontract.IssueOpsPhaseProblem,
 	}); err != nil {

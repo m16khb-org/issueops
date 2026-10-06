@@ -10,7 +10,6 @@ import (
 
 	completioncontract "issueops/internal/contract/issueopscompletion"
 	leasecontract "issueops/internal/contract/issueopslease"
-	completiondomain "issueops/internal/domain/issueopscompletion"
 )
 
 var fixedCompletionTime = time.Date(2026, 8, 2, 1, 2, 3, 4, time.UTC)
@@ -223,9 +222,9 @@ type fixedClock struct{ at time.Time }
 func (c fixedClock) Now() time.Time { return c.at }
 
 func tracedLiveInspector(trace *[]string) ActorVerifier {
-	return func(_ context.Context, actor completioncontract.Actor, ancestry []completioncontract.ProcessReceipt) (completioncontract.Actor, error) {
+	return func(_ context.Context, actor completioncontract.Actor, _ []completioncontract.ProcessReceipt) (completioncontract.Actor, error) {
 		*trace = append(*trace, "process")
-		return completiondomain.NormalizeActor(actor, ancestry)
+		return actor, nil
 	}
 }
 

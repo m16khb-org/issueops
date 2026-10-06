@@ -26,7 +26,7 @@ func TestBuildHarnessStatusReportsStateWorkerAndSelfVerify(t *testing.T) {
 	workerDir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
 	t.Setenv("ISSUEOPS_WORKER_DIR", workerDir)
-	if _, err := statestore.StateWrite(context.Background(), "self-verify-latest", `{"schema_version":1,"kind":"self_verification_summary","generated_at":"2026-09-30T00:00:00Z","ok":true}`); err != nil {
+	if _, err := statestore.NewService().Write(context.Background(), "self-verify-latest", `{"schema_version":1,"kind":"self_verification_summary","generated_at":"2026-09-30T00:00:00Z","ok":true}`); err != nil {
 		t.Fatalf("write self verify state: %v", err)
 	}
 	if _, err := testWorkerService().Enqueue(context.Background(), "smoke", "payload"); err != nil {
@@ -249,31 +249,31 @@ func TestRunStatusSelectsProductionSummaryWithoutChangingState(t *testing.T) {
 			Now:    func() time.Time { return fixture.at },
 			Encode: func(snapshot selfcontract.SelfAugmentStateSnapshot) ([]byte, error) { return json.Marshal(snapshot) },
 			Write: func(key, content string) (statecontract.StateResult, error) {
-				return statestore.StateWrite(context.Background(), key, content)
+				return statestore.NewService().Write(context.Background(), key, content)
 			}, StateDir: statestore.StateDir,
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
-	if _, err := statestore.StateWrite(context.Background(), "self-verify-candidates", `{"schema_version":1,"kind":"self_verification_candidate_export","generated_at":"2030-01-01T00:00:00Z"}`); err != nil {
+	if _, err := statestore.NewService().Write(context.Background(), "self-verify-candidates", `{"schema_version":1,"kind":"self_verification_candidate_export","generated_at":"2030-01-01T00:00:00Z"}`); err != nil {
 		t.Fatal(err)
 	}
 	// Re-saving an old baseline must not make it newer than the failed execution.
-	baseline, err := statestore.StateRead("self-verify-baseline")
+	baseline, err := statestore.NewService().Read("self-verify-baseline")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := statestore.StateWrite(context.Background(), "self-verify-baseline", baseline.Record.Content); err != nil {
+	if _, err := statestore.NewService().Write(context.Background(), "self-verify-baseline", baseline.Record.Content); err != nil {
 		t.Fatal(err)
 	}
-	before, err := statestore.StateList()
+	before, err := statestore.NewService().List()
 	if err != nil {
 		t.Fatal(err)
 	}
 	contents := map[string]statecontract.RecordEnvelope{}
 	for _, record := range before.Records {
-		r, err := statestore.StateRead(record.Key)
+		r, err := statestore.NewService().Read(record.Key)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -290,7 +290,7 @@ func TestRunStatusSelectsProductionSummaryWithoutChangingState(t *testing.T) {
 	if !got.SelfVerify.Found || got.SelfVerify.LatestKey != expected.Key || got.SelfVerify.UpdatedAt != expected.UpdatedAt || got.SelfVerify.Bytes != expected.Bytes {
 		t.Fatalf("selfverify: %+v", got.SelfVerify)
 	}
-	after, err := statestore.StateList()
+	after, err := statestore.NewService().List()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -298,7 +298,7 @@ func TestRunStatusSelectsProductionSummaryWithoutChangingState(t *testing.T) {
 		t.Fatal("status changed state metadata")
 	}
 	for _, record := range after.Records {
-		r, err := statestore.StateRead(record.Key)
+		r, err := statestore.NewService().Read(record.Key)
 		if err != nil {
 			t.Fatal(err)
 		}

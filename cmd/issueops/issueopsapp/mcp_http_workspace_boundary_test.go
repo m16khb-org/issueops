@@ -205,7 +205,7 @@ func TestMCPHTTPCompletedReplacePreviewUsesProductionBaseSync(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if _, err := issueopscore.WriteIssueOps(context.Background(), issueOpsStateRoot(), stored); err != nil {
+			if _, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRoot()}).Save(context.Background(), stored); err != nil {
 				t.Fatal(err)
 			}
 			self, err := issueopscore.ObserveNativeProcessReceipt(os.Getpid())

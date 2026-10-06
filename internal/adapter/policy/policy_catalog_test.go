@@ -10,7 +10,7 @@ import (
 
 func TestCommandPolicyRedactsAndDeniesSecretLikeArgs(t *testing.T) {
 	root := t.TempDir()
-	result := EvaluateCommandPolicy(policycontract.CommandPolicyRequest{
+	result := evaluateCommandPolicy(policycontract.CommandPolicyRequest{
 		WorkspaceRoot: root,
 		CWD:           root,
 		Argv:          []string{"cat", ".env"},
@@ -77,7 +77,7 @@ func TestCommandPolicyCatalogDrivesAllowAndDenyDecisions(t *testing.T) {
 			if tc.flags != nil {
 				tc.flags(&req)
 			}
-			result := EvaluateCommandPolicy(req)
+			result := evaluateCommandPolicy(req)
 			if tc.reason == "" {
 				if !result.Allowed {
 					t.Fatalf("policy denied %v: %+v", tc.argv, result)
@@ -124,7 +124,7 @@ func TestPolicyOverridesLoadPerEvaluation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result := EvaluateCommandPolicy(policycontract.CommandPolicyRequest{
+	result := evaluateCommandPolicy(policycontract.CommandPolicyRequest{
 		WorkspaceRoot: repoRoot,
 		CWD:           repoRoot,
 		Argv:          []string{"echo", "ok"},
@@ -134,7 +134,7 @@ func TestPolicyOverridesLoadPerEvaluation(t *testing.T) {
 		t.Fatalf("expected additional read-only command to be allowed: %+v", result)
 	}
 
-	network := EvaluateCommandPolicy(policycontract.CommandPolicyRequest{
+	network := evaluateCommandPolicy(policycontract.CommandPolicyRequest{
 		WorkspaceRoot:  repoRoot,
 		CWD:            repoRoot,
 		Argv:           []string{"nc", "example.invalid", "80"},
@@ -146,7 +146,7 @@ func TestPolicyOverridesLoadPerEvaluation(t *testing.T) {
 		t.Fatalf("expected additional network command to be recognized and allowed with flags: %+v", network)
 	}
 
-	shell := EvaluateCommandPolicy(policycontract.CommandPolicyRequest{
+	shell := evaluateCommandPolicy(policycontract.CommandPolicyRequest{
 		WorkspaceRoot: repoRoot,
 		CWD:           repoRoot,
 		Argv:          []string{"bash", "-c", "true"},
@@ -159,7 +159,7 @@ func TestPolicyOverridesLoadPerEvaluation(t *testing.T) {
 
 func TestLoadPolicyOverridesNoFileIsBackwardCompatible(t *testing.T) {
 	repoRoot := t.TempDir()
-	result := EvaluateCommandPolicy(policycontract.CommandPolicyRequest{
+	result := evaluateCommandPolicy(policycontract.CommandPolicyRequest{
 		WorkspaceRoot: repoRoot,
 		CWD:           repoRoot,
 		Argv:          []string{"git", "status", "--short"},
@@ -180,7 +180,7 @@ func TestPolicyOverridesInvalidJSONWarnsAndUsesBuiltins(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result := EvaluateCommandPolicy(policycontract.CommandPolicyRequest{
+	result := evaluateCommandPolicy(policycontract.CommandPolicyRequest{
 		WorkspaceRoot: repoRoot,
 		CWD:           repoRoot,
 		Argv:          []string{"git", "status", "--short"},
@@ -205,7 +205,7 @@ func TestPolicyOverrideAffectsEvaluation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result := EvaluateCommandPolicy(policycontract.CommandPolicyRequest{
+	result := evaluateCommandPolicy(policycontract.CommandPolicyRequest{
 		WorkspaceRoot: repoRoot,
 		CWD:           repoRoot,
 		Argv:          []string{"my-readonly-tool", "arg"},
@@ -227,7 +227,7 @@ func TestPolicyOverridesDoNotLeakAcrossWorkspaceRoots(t *testing.T) {
 	}
 	rootWithoutOverride := t.TempDir()
 
-	allowed := EvaluateCommandPolicy(policycontract.CommandPolicyRequest{
+	allowed := evaluateCommandPolicy(policycontract.CommandPolicyRequest{
 		WorkspaceRoot: rootWithOverride,
 		CWD:           rootWithOverride,
 		Argv:          []string{"repo-tool"},
@@ -237,7 +237,7 @@ func TestPolicyOverridesDoNotLeakAcrossWorkspaceRoots(t *testing.T) {
 		t.Fatalf("root with override should allow repo-tool: %+v", allowed)
 	}
 
-	denied := EvaluateCommandPolicy(policycontract.CommandPolicyRequest{
+	denied := evaluateCommandPolicy(policycontract.CommandPolicyRequest{
 		WorkspaceRoot: rootWithoutOverride,
 		CWD:           rootWithoutOverride,
 		Argv:          []string{"repo-tool"},
@@ -267,7 +267,7 @@ func TestPolicyTierClassifiesEveryFlagCombination(t *testing.T) {
 		{true, true, true, policycontract.PolicyTierShellException, []string{"network", "shell", "write"}},
 	}
 	for _, tc := range cases {
-		result := EvaluateCommandPolicy(policycontract.CommandPolicyRequest{
+		result := evaluateCommandPolicy(policycontract.CommandPolicyRequest{
 			WorkspaceRoot:  root,
 			CWD:            root,
 			Argv:           []string{"git", "status", "--short"},

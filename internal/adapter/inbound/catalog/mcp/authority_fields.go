@@ -40,16 +40,6 @@ var workspaceScopedTools = map[string]bool{
 	"worker_run_read_only":        true,
 }
 
-// WorkspaceScopedTools returns the names of the tools that advertise the
-// request authority inputs.
-func WorkspaceScopedTools() []string {
-	names := make([]string, 0, len(workspaceScopedTools))
-	for name := range workspaceScopedTools {
-		names = append(names, name)
-	}
-	return names
-}
-
 var authorityFieldDescriptions = map[string]string{
 	authorityFileField: "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
 	workspaceRootField: "Absolute workspace root for this request. Must agree with repo/path and the stored record.",

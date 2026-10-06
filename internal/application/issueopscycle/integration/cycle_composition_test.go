@@ -35,9 +35,7 @@ func testCyclePhaseService(actor *model.IssueOpsActor) cycle.PhaseService {
 	return cycle.PhaseService{Store: cycleport.PhaseStore{Read: store.Read, WithLock: store.WithLock, ValidateMutation: store.ValidateMutation, Write: store.Write, Now: store.Now}, Readiness: testCycleReadiness(), Transitions: cycleport.PhaseTransitionObservations{Head: testReadinessGit().Head, Fingerprint: testChangeReader().ChangeFingerprint}}
 }
 
-func advancePhaseWithActorForTest(root, id, to string, actor model.IssueOpsActor) (model.IssueOpsRecord, error) {
-	return testCyclePhaseService(&actor).Advance(root, id, to)
-}
 func advancePhaseForTest(root, id, to string) (model.IssueOpsRecord, error) {
-	return testCyclePhaseService(nil).Advance(root, id, to)
+	record, _, err := testCyclePhaseService(nil).AdvanceReport(root, id, to)
+	return record, err
 }

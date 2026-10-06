@@ -9,7 +9,7 @@ import (
 	stateport "issueops/internal/port/state"
 )
 
-func TestServiceOwnsStateReadWriteAndUpdateOrchestration(t *testing.T) {
+func TestServiceOwnsStateReadWriteOrchestration(t *testing.T) {
 	store := &memoryStore{records: map[string][]byte{}}
 	service := NewService(Dependencies{
 		StateDir:        func() string { return "/state" },
@@ -23,16 +23,8 @@ func TestServiceOwnsStateReadWriteAndUpdateOrchestration(t *testing.T) {
 	if err != nil || !written.OK || written.Record.UpdatedAt != "2026-08-04T01:02:03Z" {
 		t.Fatalf("Write() = %+v, %v", written, err)
 	}
-	updated, err := service.Update(context.Background(), "counter", func(current statecontract.RecordEnvelope) (statecontract.RecordEnvelope, error) {
-		current.Content = "12"
-		current.Bytes = 2
-		return current, nil
-	})
-	if err != nil || updated.Record.Content != "12" || store.spanCalls != 2 {
-		t.Fatalf("Update() = %+v, %v; spans=%d", updated, err, store.spanCalls)
-	}
 	read, err := service.Read("counter")
-	if err != nil || read.Record.Content != "12" {
+	if err != nil || read.Record.Content != "1" || store.spanCalls != 1 {
 		t.Fatalf("Read() = %+v, %v", read, err)
 	}
 }

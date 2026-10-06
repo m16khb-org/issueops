@@ -31,11 +31,6 @@ func GrillReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
 	return ReadinessFromMissing(record, issueopsdomain.GrillReadinessMissing(record))
 }
 
-func (s PhaseService) Advance(stateRoot, id, to string) (issueops.IssueOpsRecord, error) {
-	record, _, err := s.AdvanceReport(stateRoot, id, to)
-	return record, err
-}
-
 func (s PhaseService) AdvanceReport(stateRoot, id, to string) (issueops.IssueOpsRecord, issueops.IssueOpsTrackedMaterials, error) {
 	var materials issueops.IssueOpsTrackedMaterials
 	upstream, err := s.prefetchForPhase(stateRoot, id, to)

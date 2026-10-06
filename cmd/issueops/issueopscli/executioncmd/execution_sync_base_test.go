@@ -1,11 +1,8 @@
 package executioncmd
 
 import (
-	issueopscontract "issueops/internal/contract/issueops"
-)
-
-import (
 	"context"
+	issueopscontract "issueops/internal/contract/issueops"
 	"strings"
 	"testing"
 )

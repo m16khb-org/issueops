@@ -8,11 +8,10 @@ import (
 // CatalogService reads the project documents and prepares both host views.
 // Renderers own presentation; discovering documents is the only I/O here.
 //
-// DiscoverReport, when set, replaces Discover and also reports what discovery
-// omitted; the Format*Omission renderers append that to each view only when
-// something was omitted, so a catalog without omissions renders unchanged.
+// DiscoverReport also reports what discovery omitted; the Format*Omission
+// renderers append that to each view only when something was omitted, so a
+// catalog without omissions renders unchanged.
 type CatalogService struct {
-	Discover              func(string) []projectdoc.ProjectDocCatalogEntry
 	DiscoverReport        func(string) ([]projectdoc.ProjectDocCatalogEntry, projectdoc.CatalogOmissions, projectdoc.CatalogStats)
 	FormatCompact         func([]projectdoc.ProjectDocCatalogEntry) string
 	FormatUserView        func([]projectdoc.ProjectDocCatalogEntry) string
@@ -21,13 +20,7 @@ type CatalogService struct {
 }
 
 func (s CatalogService) Build(repo string) hookcontract.ProjectDocCatalogContext {
-	var docs []projectdoc.ProjectDocCatalogEntry
-	var omissions projectdoc.CatalogOmissions
-	if s.DiscoverReport != nil {
-		docs, omissions, _ = s.DiscoverReport(repo)
-	} else {
-		docs = s.Discover(repo)
-	}
+	docs, omissions, _ := s.DiscoverReport(repo)
 	var omitted *projectdoc.CatalogOmissions
 	if omissions.Any() {
 		omitted = &omissions

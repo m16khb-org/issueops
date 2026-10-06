@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -78,22 +77,4 @@ func riskGit(root string, args ...string) ([]byte, error) {
 		return nil, fmt.Errorf("git observation timed out: %w", ctx.Err())
 	}
 	return out, err
-}
-
-func ParseGitStatusPath(line string) string {
-	line = strings.TrimRight(line, "\r")
-	if strings.TrimSpace(line) == "" {
-		return ""
-	}
-	if len(line) > 3 {
-		line = line[3:]
-	} else {
-		line = strings.TrimSpace(line)
-	}
-	if strings.Contains(line, " -> ") {
-		parts := strings.Split(line, " -> ")
-		line = parts[len(parts)-1]
-	}
-	line = strings.Trim(line, ` "`)
-	return filepath.ToSlash(line)
 }

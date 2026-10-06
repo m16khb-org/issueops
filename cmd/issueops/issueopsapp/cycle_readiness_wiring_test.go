@@ -39,7 +39,8 @@ func TestCycleReadinessSameInstanceMatchesUnsharedResultsAcrossGitChanges(t *tes
 	baseline.Cleanup = func(record model.IssueOpsRecord) model.IssueOpsCleanupStatus {
 		return (cleanup.StructuralStatus{Environment: core.CleanupStatusEnvironment{RunGit: preflight.GitCmd, ReadGit: preflight.GitOut}}).ForRecord(record, model.IssueOpsCleanupStatusRequest{})
 	}
-	first, want := readiness.LocalPR(record), baseline.LocalPR(record)
+	first, _ := readiness.ObserveLocalPR(record)
+	want, _ := baseline.ObserveLocalPR(record)
 	if !reflect.DeepEqual(first, want) || slices.Contains(first.Missing, "branch_match") || slices.Contains(first.Missing, "worktree_clean") {
 		t.Fatalf("initial result changed: got=%+v want=%+v", first, want)
 	}
@@ -49,7 +50,8 @@ func TestCycleReadinessSameInstanceMatchesUnsharedResultsAcrossGitChanges(t *tes
 	if err := os.WriteFile(filepath.Join(repo, "untracked.go"), []byte("package fixture\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	second, want := readiness.LocalPR(record), baseline.LocalPR(record)
+	second, _ := readiness.ObserveLocalPR(record)
+	want, _ = baseline.ObserveLocalPR(record)
 	if !reflect.DeepEqual(second, want) || !slices.Contains(second.Missing, "branch_match") || !slices.Contains(second.Missing, "worktree_clean") || !slices.Contains(second.CleanupMissing, "branch_match") || !slices.Contains(second.CleanupMissing, "worktree_clean") {
 		t.Fatalf("same readiness instance reused prior Git state: got=%+v want=%+v", second, want)
 	}

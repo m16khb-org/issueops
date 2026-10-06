@@ -22,7 +22,7 @@ func TestBodySyncCommandCompositionValidatesBeforeProviderEffects(t *testing.T) 
 		t.Fatal(err)
 	}
 	record.IssueURL = "https://github.com/acme/repo/issues/69"
-	if _, err = core.WriteIssueOps(context.Background(), root, record); err != nil {
+	if _, err = (core.CycleRecordStore{StateRoot: root}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
 	for _, mode := range []string{"provider-error", "empty-body", "secret-body", "ancestry-error", "preview"} {
@@ -85,7 +85,7 @@ func TestPublicationCommandCompositionPreservesDefaultsAndActor(t *testing.T) {
 	}
 	record.IssueURL = "https://github.com/acme/repo/issues/70"
 	record.BranchPrepare = &model.IssueOpsBranchPrepare{Provider: "github", IssueURL: record.IssueURL, Branch: record.Branch, BaseBranch: "release", LinkVerified: true}
-	if _, err = core.WriteIssueOps(context.Background(), root, record); err != nil {
+	if _, err = (core.CycleRecordStore{StateRoot: root}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
 	path := filepath.Join(t.TempDir(), "body.md")

@@ -134,7 +134,7 @@ func publicationReconcileMCPRecord(t *testing.T, stateRoot string) (issueopscont
 	actor := issueopscontract.NativeActor{Host: "codex", SessionID: "publication-mcp-session", SessionProcess: &receipt}
 	record := issueopscontract.IssueOpsRecord{
 		OK: true, SchemaVersion: issueopscontract.IssueOpsCurrentSchemaVersion,
-		ID: issueops.NewIssueOpsID(repo, "195-publication-mcp"), Repo: repo, Branch: "195-publication-mcp",
+		ID: (issueops.CycleStartIdentity{}).StableID(repo, "195-publication-mcp"), Repo: repo, Branch: "195-publication-mcp",
 		Phase: issueopscontract.IssueOpsPhasePR, WorktreePath: worktree,
 		Execution: &issueopscontract.Execution{
 			Mode:      issueopscontract.ExecutionModeDirect,
@@ -145,7 +145,7 @@ func publicationReconcileMCPRecord(t *testing.T, stateRoot string) (issueopscont
 		CreatedAt: "2026-08-01T00:00:00Z",
 		UpdatedAt: "2026-08-01T00:00:00Z",
 	}
-	written, err := issueops.WriteIssueOps(context.Background(), stateRoot, record)
+	written, err := (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), record)
 	if err != nil {
 		t.Fatal(err)
 	}

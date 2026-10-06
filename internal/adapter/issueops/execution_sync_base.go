@@ -53,16 +53,12 @@ type executionSyncBaseInventory struct {
 	Root string `json:"-"`
 }
 
-// SyncExecutionBase는 게이트 10종을 fail-closed로 평가하고, 모드별 절차를
+// VerifiedSyncExecutionBase는 게이트 10종을 fail-closed로 평가하고, 모드별 절차를
 // 실행한다. preview는 워크트리를 오염시키지 않는 관측 전용이며(merge-tree는
 // ODB에만 객체를 쓴다), 변형 3모드는 활성 holder 또는 generation이 일치하는
-// released current completion의 권위를 요구한다.
-func SyncExecutionBase(ctx context.Context, stateRoot string, req issueops.ExecutionSyncBaseRequest, deps issueops.ExecutionSyncBaseDeps) (issueops.ExecutionSyncBaseResult, error) {
-	return syncExecutionBase(ctx, stateRoot, req, deps, NativeActorVerifier())
-}
-
-// VerifiedSyncExecutionBase binds sync-base to the composed actor verifier so a
-// request-bound capability proves the caller instead of server ancestry.
+// released current completion의 권위를 요구한다. 조립된 actor verifier에
+// 묶여 있으므로 서버 프로세스 계보 대신 요청에 묶인 capability가 호출자를
+// 증명한다.
 func VerifiedSyncExecutionBase(verifier authorityport.ActorVerifier) func(context.Context, string, issueops.ExecutionSyncBaseRequest, issueops.ExecutionSyncBaseDeps) (issueops.ExecutionSyncBaseResult, error) {
 	return func(ctx context.Context, stateRoot string, req issueops.ExecutionSyncBaseRequest, deps issueops.ExecutionSyncBaseDeps) (issueops.ExecutionSyncBaseResult, error) {
 		return syncExecutionBase(ctx, stateRoot, req, deps, verifier)

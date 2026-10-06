@@ -277,7 +277,7 @@ func newOrcaRepositoryFixture(t *testing.T) (*preparationStore, *SQLiteRepositor
 	record.IssueURL = "https://github.com/example/repo/issues/199"
 	record.BranchPrepare = json.RawMessage(`{"provider":"github","issue_url":"https://github.com/example/repo/issues/199","branch":"199-orca","base_branch":"main","base_sha":"base","link_verified":true}`)
 	store.seedRecord(t, record)
-	repository := NewSQLiteRepository(store)
+	repository := NewSQLiteRepositoryWithDiagnosticRedactor(store, nil)
 	snapshot, err := repository.Load(context.Background(), record.ID)
 	if err != nil {
 		t.Fatal(err)

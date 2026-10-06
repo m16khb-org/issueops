@@ -5,12 +5,7 @@ import (
 	"strings"
 
 	preflightapp "issueops/internal/application/preflight"
-	preflightcontract "issueops/internal/contract/preflight"
 )
-
-func GitPreflight(target, issueOpsRoot string) preflightcontract.PreflightResult {
-	return (preflightapp.Service{Observer: GitObserver{}}).Check(target, issueOpsRoot)
-}
 
 // GitObserver reads one preflight observation. Run defaults to GitCmd.
 type GitObserver struct {

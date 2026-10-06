@@ -66,3 +66,11 @@ func assertStringSlice(t *testing.T, got, want []string) {
 		}
 	}
 }
+
+func Set(args map[string]any, key string) bool {
+	if args == nil {
+		return false
+	}
+	_, ok := args[key]
+	return ok
+}

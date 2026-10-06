@@ -7,9 +7,10 @@ import (
 	"sync/atomic"
 	"testing"
 
+	mcpcontract "issueops/internal/contract/mcp"
+
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	mcpcontract "issueops/internal/contract/mcp"
 )
 
 func inputValidationCatalog() mcpcontract.Catalog {

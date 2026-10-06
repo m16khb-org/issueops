@@ -20,7 +20,7 @@ func BenchmarkOpenCachedRoots(b *testing.B) {
 					b.Fatal(err)
 				}
 				b.Cleanup(func() {
-					if err := CloseRoot(dir); err != nil {
+					if err := closeRoot(dir); err != nil {
 						b.Error(err)
 					}
 				})
@@ -52,8 +52,8 @@ func TestOpenPrunesRemovedRootsOnCacheHit(t *testing.T) {
 				t.Fatal(err)
 			}
 			t.Cleanup(func() {
-				_ = CloseRoot(removed)
-				_ = CloseRoot(live)
+				_ = closeRoot(removed)
+				_ = closeRoot(live)
 			})
 			if err := old.Put("resource", "old", []byte("old")); err != nil {
 				t.Fatal(err)
@@ -155,7 +155,7 @@ func TestConcurrentCachedOpenAcrossRoots(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		t.Cleanup(func() { _ = CloseRoot(dir) })
+		t.Cleanup(func() { _ = closeRoot(dir) })
 		go func() {
 			<-start
 			for range 20 {
@@ -205,8 +205,8 @@ func TestOpenPrunesCachedHandlesForRemovedRoots(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		_ = CloseRoot(live)
-		_ = CloseRoot(removed)
+		_ = closeRoot(live)
+		_ = closeRoot(removed)
 	})
 
 	removedAbs, err := filepath.Abs(removed)

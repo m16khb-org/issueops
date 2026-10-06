@@ -63,7 +63,7 @@ func TestRunIssueOpsChildLifecycle(t *testing.T) {
 
 	child := started.Child
 	child.Phase = issueopscontract.IssueOpsPhaseDone
-	if _, err := issueopscore.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), child); err != nil {
+	if _, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), child); err != nil {
 		t.Fatal(err)
 	}
 	acceptOut := captureStdoutForContract(t, func() error {
@@ -122,7 +122,7 @@ func TestCLIIssueOpsPhaseAdvanceToPRBlockedByChildren(t *testing.T) {
 
 	child := started.Child
 	child.Phase = issueopscontract.IssueOpsPhaseDone
-	if _, err := issueopscore.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), child); err != nil {
+	if _, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), child); err != nil {
 		t.Fatal(err)
 	}
 	_ = captureStdoutForContract(t, func() error {

@@ -19,7 +19,7 @@ import (
 
 func planningForTest(root, dir, version string) mcpcli.SelfPlanningDependencies {
 
-	planner := augmentapp.Planner{Repository: augmentation.Repository{ListDocs: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).List}, DocsIndex: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).Index, ListSkillNames: install.ListSkillNames, StateList: statestore.StateList, StateRead: statestore.StateRead, Now: time.Now}
+	planner := augmentapp.Planner{Repository: augmentation.Repository{ListDocs: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).List}, DocsIndex: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).Index, ListSkillNames: install.ListSkillNames, StateList: statestore.NewService().List, StateRead: statestore.NewService().Read, Now: time.Now}
 	plan := func(req contract.SelfAugmentPlanRequest) contract.SelfAugmentPlanResult {
 		return planner.Plan(req, root, version)
 	}
@@ -32,7 +32,7 @@ func planningForTest(root, dir, version string) mcpcli.SelfPlanningDependencies 
 			return verifyapp.SaveCandidateExport(result, key, verifyapp.SaveCandidateExportDeps{Now: time.Now, Encode: func(snapshot contract.SelfVerificationCandidateExportStateSnapshot) ([]byte, error) {
 				return json.MarshalIndent(snapshot, "", "  ")
 			}, Write: func(key, content string) (statecontract.StateResult, error) {
-				return statestore.StateWrite(context.Background(), key, content)
+				return statestore.NewService().Write(context.Background(), key, content)
 			}, StateDir: func() string { return dir }})
 		},
 		SaveLesson: func(_ context.Context, req contract.SelfAugmentLessonRequest) (contract.SelfAugmentLessonResult, error) {
@@ -41,9 +41,9 @@ func planningForTest(root, dir, version string) mcpcli.SelfPlanningDependencies 
 			}, Now: time.Now, Encode: func(snapshot contract.SelfAugmentLessonStateSnapshot) ([]byte, error) {
 				return json.MarshalIndent(snapshot, "", "  ")
 			}, Write: func(key, content string) (statecontract.StateResult, error) {
-				return statestore.StateWrite(context.Background(), key, content)
+				return statestore.NewService().Write(context.Background(), key, content)
 			}, StateDir: func() string { return dir }, Prune: func(prefix string, maxAge time.Duration, maxRecords int, confirm bool) (statecontract.StatePruneResult, error) {
-				return statestore.StatePrunePrefix(context.Background(), prefix, maxAge, maxRecords, confirm)
+				return statestore.NewService().PrunePrefix(context.Background(), prefix, maxAge, maxRecords, confirm)
 			}})
 		},
 	}

@@ -24,10 +24,10 @@ func TestRunBoundedReadbackRejectsOversizedOutputAndRedactsFailure(t *testing.T)
 	if err := os.WriteFile(script, []byte(body), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := RunBoundedReadback(t.TempDir(), script, "large"); err == nil || !strings.Contains(err.Error(), "exceeds") {
+	if _, err := RunBoundedReadbackContext(context.Background(), t.TempDir(), script, "large"); err == nil || !strings.Contains(err.Error(), "exceeds") {
 		t.Fatalf("oversized readback error = %v", err)
 	}
-	if _, err := RunBoundedReadback(t.TempDir(), script, "secret"); err == nil || strings.Contains(err.Error(), "abcdefghijklmnopqrstuvwxyz123456") || len(err.Error()) > providerDiagnosticLimit+128 {
+	if _, err := RunBoundedReadbackContext(context.Background(), t.TempDir(), script, "secret"); err == nil || strings.Contains(err.Error(), "abcdefghijklmnopqrstuvwxyz123456") || len(err.Error()) > providerDiagnosticLimit+128 {
 		t.Fatalf("secret readback diagnostic was not bounded/redacted: %v", err)
 	}
 }
@@ -74,7 +74,7 @@ func TestRunBoundedCommandReportsPostStartTimeoutWithoutRetryAuthority(t *testin
 		t.Fatal(err)
 	}
 	started := time.Now()
-	_, invoked, err := runBoundedCommand(t.TempDir(), script, nil, 20*time.Millisecond, 1024)
+	_, invoked, err := runBoundedCommandContext(context.Background(), t.TempDir(), script, nil, 20*time.Millisecond, 1024)
 	if err == nil || !invoked || time.Since(started) > time.Second {
 		t.Fatalf("timeout classification invoked=%v elapsed=%s err=%v", invoked, time.Since(started), err)
 	}

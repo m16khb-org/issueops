@@ -1,7 +1,6 @@
 package issueopsinventory
 
 import (
-	"strings"
 	"testing"
 
 	issueopscontract "issueops/internal/contract/issueops"
@@ -106,18 +105,5 @@ func TestProjectEntryProjectsCleanupFailuresAndIssueIntent(t *testing.T) {
 	record.IssueCreateIntent.Status = "completed"
 	if entry := ProjectEntry(record); entry.IssueCreateStatus != "" {
 		t.Fatalf("completed intent must not surface: %+v", entry)
-	}
-}
-
-func TestNormalizeID(t *testing.T) {
-	for _, ok := range []string{"io-123", "  io-123  "} {
-		if got, err := NormalizeID(ok); err != nil || got != "io-123" {
-			t.Fatalf("NormalizeID(%q) = %q, %v", ok, got, err)
-		}
-	}
-	for _, bad := range []string{"", "  ", "../etc", "a/b", "a\\b"} {
-		if _, err := NormalizeID(bad); err == nil || !strings.Contains(err.Error(), "invalid issueops id") {
-			t.Fatalf("NormalizeID(%q) must fail closed: %v", bad, err)
-		}
 	}
 }

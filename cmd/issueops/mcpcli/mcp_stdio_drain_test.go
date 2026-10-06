@@ -92,3 +92,9 @@ func TestInflightRequestsWaitIdleStopsAtTheLimit(t *testing.T) {
 		t.Fatal("waitIdle must return once the drain limit passes")
 	}
 }
+
+func (inflight *inflightRequests) idle() bool {
+	inflight.mu.Lock()
+	defer inflight.mu.Unlock()
+	return len(inflight.pending) == 0
+}

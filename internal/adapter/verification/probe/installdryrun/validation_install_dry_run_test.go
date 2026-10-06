@@ -16,7 +16,7 @@ func TestValidateInstallDryRunSmokeWrapperUsesExecutableSurface(t *testing.T) {
 	root := t.TempDir()
 	binary := writeInstallDryRunFakeBinary(t, root)
 
-	step := validateInstallDryRunSmoke(binary, root, 404)
+	step := Validate(binary, root, 404)
 	if !step.OK || !strings.Contains(step.Command, "install --dry-run --project-local --json") {
 		t.Fatalf("expected wrapper success, got %+v", step)
 	}

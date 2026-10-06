@@ -41,10 +41,13 @@ func IssueOpsPRReadiness(record model.IssueOpsRecord) model.IssueOpsReadiness {
 	return testCycleReadiness().PR(record)
 }
 func IssueOpsLocalPRReadiness(record model.IssueOpsRecord) model.IssueOpsReadiness {
-	return testCycleReadiness().LocalPR(record)
+	ready, _ := testCycleReadiness().ObserveLocalPR(record)
+	return ready
 }
 func IssueOpsStrictPRReadiness(record model.IssueOpsRecord) model.IssueOpsReadiness {
-	return testCycleReadiness().StrictPR(record)
+	readiness := testCycleReadiness()
+	readiness.ChildMissing = func(string, model.IssueOpsRecord) ([]string, []string) { return nil, nil }
+	return readiness.StrictPRWithState("", record)
 }
 func IssueOpsStrictPRReadinessWithState(root string, record model.IssueOpsRecord) model.IssueOpsReadiness {
 	return testCycleReadiness().StrictPRWithState(root, record)
@@ -59,10 +62,12 @@ func IssueOpsGrillReadiness(record model.IssueOpsRecord) model.IssueOpsReadiness
 	return cycle.GrillReadiness(record)
 }
 func AdvanceIssueOpsPhase(root, id, to string) (model.IssueOpsRecord, error) {
-	return testCyclePhaseService(nil).Advance(root, id, to)
+	record, _, err := testCyclePhaseService(nil).AdvanceReport(root, id, to)
+	return record, err
 }
 func AdvanceIssueOpsPhaseWithActor(root, id, to string, actor model.IssueOpsActor) (model.IssueOpsRecord, error) {
-	return testCyclePhaseService(&actor).Advance(root, id, to)
+	record, _, err := testCyclePhaseService(&actor).AdvanceReport(root, id, to)
+	return record, err
 }
 
 func ObserveIssueOpsLocalPRReadiness(record model.IssueOpsRecord) (model.IssueOpsReadiness, reviewcontract.LocalChangeObservation) {

@@ -15,14 +15,6 @@ func String(args map[string]any, key string) string {
 	return ""
 }
 
-func Set(args map[string]any, key string) bool {
-	if args == nil {
-		return false
-	}
-	_, ok := args[key]
-	return ok
-}
-
 func StringDefault(args map[string]any, key, fallback string) string {
 	if v := String(args, key); v != "" {
 		return v

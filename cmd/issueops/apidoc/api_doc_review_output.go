@@ -1,18 +1,9 @@
 package apidoc
 
 import (
-	"encoding/json"
 	"fmt"
 	contract "issueops/internal/contract/apidoc"
 )
-
-func mustJSON(value any) []byte {
-	b, err := json.MarshalIndent(value, "", "  ")
-	if err != nil {
-		panic(err)
-	}
-	return b
-}
 
 func printAPIDocReview(result contract.ReviewResult) {
 	fmt.Printf("API doc review verdict: %s\n", result.Verdict)

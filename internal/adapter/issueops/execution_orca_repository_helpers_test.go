@@ -24,7 +24,7 @@ func beginOrcaIntentViaRepository(stateRoot string, record issueops.IssueOpsReco
 	if err != nil {
 		return record, preparationcontract.Intent{}, err
 	}
-	repository := preparationoutbound.NewSQLiteRepository(store)
+	repository := preparationoutbound.NewSQLiteRepositoryWithDiagnosticRedactor(store, nil)
 	snapshot, err := repository.Load(context.Background(), record.ID)
 	if err != nil {
 		return record, preparationcontract.Intent{}, err
@@ -107,7 +107,7 @@ func advanceOrcaIntentReceiptViaRepository(ctx context.Context, stateRoot string
 	if err != nil {
 		return record, expected, err
 	}
-	repository := leaseoutbound.NewReconcileRepository(store, reconcileWorktreeTestEffects{stateRoot: stateRoot, readIssue: readIssue})
+	repository := leaseoutbound.NewReconcileRepositoryWithSnapshot(store, reconcileWorktreeTestEffects{stateRoot: stateRoot, readIssue: readIssue}, nil, nil, nil)
 	state, err := repository.Canonicalize(ctx, record.ID)
 	if err != nil {
 		return record, expected, err

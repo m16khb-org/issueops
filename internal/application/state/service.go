@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -196,43 +195,6 @@ func (service *Service) Delete(ctx context.Context, key string) error {
 	return store.WithSpan(ctx, func(spanCtx context.Context) error {
 		return store.Mutate(spanCtx, []stateport.Mutation{{Bucket: stateBucket, ID: key, Delete: true}})
 	})
-}
-
-func (service *Service) Update(ctx context.Context, key string, transform func(statecontract.RecordEnvelope) (statecontract.RecordEnvelope, error)) (statecontract.StateResult, error) {
-	key, err := statepath.NormalizeKey(key)
-	if err != nil {
-		return statecontract.StateResult{OK: false, StateDir: service.stateDir()}, err
-	}
-	dir := service.stateDir()
-	if err := ctx.Err(); err != nil {
-		return statecontract.StateResult{OK: false, StateDir: dir}, err
-	}
-	store, err := service.dependencies.OpenStore(dir)
-	if err != nil {
-		return statecontract.StateResult{OK: false, StateDir: dir}, err
-	}
-	var result statecontract.StateResult
-	err = store.WithSpan(ctx, func(spanCtx context.Context) error {
-		current, readErr := service.read(dir, key)
-		if readErr != nil && !errors.Is(readErr, fs.ErrNotExist) {
-			return readErr
-		}
-		next, transformErr := transform(current.Record)
-		if transformErr != nil {
-			return transformErr
-		}
-		if next.Key == "" && next.SchemaVersion == 0 && next.Content == "" {
-			result = statecontract.StateResult{OK: true, StateDir: dir}
-			return nil
-		}
-		path, writeErr := service.writeRecord(spanCtx, store, dir, key, next)
-		result = statecontract.StateResult{OK: writeErr == nil, StateDir: dir, Path: path, Record: next}
-		return writeErr
-	})
-	if result.OK || result.StateDir != "" {
-		return result, err
-	}
-	return statecontract.StateResult{OK: false, StateDir: dir}, err
 }
 
 func (service *Service) WithKeyLock(ctx context.Context, dir, key string, fn func(context.Context) error) error {

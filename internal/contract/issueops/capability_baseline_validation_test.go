@@ -1,11 +1,11 @@
-package issueops
+package issueops_test
 
 import (
 	"fmt"
 	model "issueops/internal/contract/issueops"
 )
 
-func ValidateCapabilityBaseline(baseline model.Baseline) error {
+func validateCapabilityBaseline(baseline model.Baseline) error {
 	if baseline.SchemaVersion != model.CapabilityBaselineSchemaVersion {
 		return fmt.Errorf("schema_version must be %d", model.CapabilityBaselineSchemaVersion)
 	}

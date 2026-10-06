@@ -39,7 +39,7 @@ func TestReconcileReceiptRechecksRequestGuardAfterGrantChange(t *testing.T) {
 				}
 				return ctx, nil
 			})
-			repository := NewReconcileRepository(db, nil)
+			repository := NewReconcileRepositoryWithSnapshot(db, nil, nil, nil, nil)
 			id := seed.Progress.Record.ID
 			intent, err := repository.Canonicalize(ctx, id)
 			if err != nil || checks == 0 {

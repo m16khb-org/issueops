@@ -8,7 +8,6 @@ import (
 	"issueops/internal/adapter/outbound/apidoc/reviewfiles"
 	app "issueops/internal/application/apidoc"
 	contract "issueops/internal/contract/apidoc"
-	statecontract "issueops/internal/contract/state"
 	domain "issueops/internal/domain/apidoc"
 )
 
@@ -22,22 +21,6 @@ func isAPIDocStaticGateError(err error) bool {
 
 func findUp(start, marker string) (string, bool) {
 	return pathutil.FindUp(start, marker)
-}
-
-func splitLines(s string) []string {
-	return pathutil.SplitLines(s)
-}
-
-func splitCSV(s string) []string {
-	return pathutil.SplitCSV(s)
-}
-
-func containsString(items []string, want string) bool {
-	return pathutil.ContainsString(items, want)
-}
-
-func stateDoctorHasIssueCode(issues []statecontract.StateDoctorIssue, want string) bool {
-	return pathutil.StateDoctorHasIssueCode(issues, want)
 }
 
 func checkNestControllerStatic(file, text string) []apiDocStaticViolation {

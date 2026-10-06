@@ -225,7 +225,7 @@ func TestReflectCompletionRequiresReadableResult(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := remoteIssueOpsRecord(t)
 	record.RemoteArtifact = &issueopscontract.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/7"}
-	if _, err := issueopscore.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), record); err != nil {
+	if _, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", t.TempDir())

@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"io"
 	"net"
 	"os"
@@ -14,6 +12,9 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"issueops/cmd/issueops/mcpcli"
 	"issueops/cmd/issueops/selfworkflow/historycompare"

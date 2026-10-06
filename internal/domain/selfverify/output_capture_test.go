@@ -40,7 +40,10 @@ func TestCommandOutputMatchesOriginalFormatterAcrossChunks(t *testing.T) {
 					if got != want || gotTruncated != truncated || gotTotal != total {
 						t.Fatalf("TailWithBudget=%q,%v,%d want=%q,%v,%d", got, gotTruncated, gotTotal, want, truncated, total)
 					}
-					want, truncated, total = BudgetCommandOutput(input, budget)
+					want, truncated, total = input, false, len(input)
+					if budget > 0 {
+						want, truncated, total = TailWithBudget(input, budget)
+					}
 					got, gotTruncated, gotTotal = output.Result()
 					if got != want || gotTruncated != truncated || gotTotal != total {
 						t.Fatalf("Result=%q,%v,%d want=%q,%v,%d", got, gotTruncated, gotTotal, want, truncated, total)

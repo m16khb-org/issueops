@@ -75,12 +75,6 @@ func (inflight *inflightRequests) forget(key string) {
 	inflight.changed = make(chan struct{})
 }
 
-func (inflight *inflightRequests) idle() bool {
-	inflight.mu.Lock()
-	defer inflight.mu.Unlock()
-	return len(inflight.pending) == 0
-}
-
 func (inflight *inflightRequests) waitIdle(limit time.Duration) {
 	deadline := time.NewTimer(limit)
 	defer deadline.Stop()

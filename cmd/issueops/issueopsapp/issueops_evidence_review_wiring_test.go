@@ -24,7 +24,7 @@ func TestEvidenceReviewRuntimePersistsObservedChangeSet(t *testing.T) {
 		t.Fatal(err)
 	}
 	record.Phase = model.IssueOpsPhaseImplement
-	if _, err = core.WriteIssueOps(context.Background(), root, record); err != nil {
+	if _, err = (core.CycleRecordStore{StateRoot: root}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
 	actor := model.IssueOpsActor{}

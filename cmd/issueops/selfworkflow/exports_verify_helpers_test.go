@@ -34,10 +34,6 @@ func SelfVerificationCoverageDefinitions() []SelfVerificationCoverageDefinition 
 	return out
 }
 
-func SelfVerificationFailureClusters(result SelfAugmentResult) []SelfVerificationFailureCluster {
-	return selfVerificationFailureClusters(result)
-}
-
 func SelfVerificationGoalDefinitions() []SelfVerificationGoalDefinition {
 	definitions := selfVerificationGoalDefinitions()
 	out := make([]SelfVerificationGoalDefinition, 0, len(definitions))

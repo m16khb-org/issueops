@@ -1,6 +1,9 @@
 package state
 
-import statecontract "issueops/internal/contract/state"
+import (
+	"issueops/internal/adapter/outbound/sqlstore"
+	statecontract "issueops/internal/contract/state"
+)
 
 func containsString(items []string, want string) bool {
 	for _, item := range items {
@@ -21,13 +24,13 @@ func stateDoctorHasIssue(issues []statecontract.StateDoctorIssue, code string) b
 }
 
 // writeRawStateRow inserts raw record bytes directly into the state store,
-// bypassing StateWrite normalization, to simulate corrupt or legacy rows.
+// bypassing NewService().Write normalization, to simulate corrupt or legacy rows.
 func writeRawStateRow(t interface {
 	Helper()
 	Fatal(args ...any)
 }, dir, key, raw string) {
 	t.Helper()
-	db, err := openStateDB(dir)
+	db, err := sqlstore.Open(dir)
 	if err != nil {
 		t.Fatal(err)
 	}

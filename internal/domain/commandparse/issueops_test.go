@@ -446,17 +446,6 @@ func TestPlanPrepRecordRejectsNonExactCommands(t *testing.T) {
 	}
 }
 
-func TestContainsASCIITerminalControlCorpus(t *testing.T) {
-	if ContainsASCIITerminalControl("plain guidance text") {
-		t.Fatal("plain text must not flag")
-	}
-	for _, s := range []string{"a\x1bb", "a\tb", "a\x7f", "a\nb", "a\rb"} {
-		if !ContainsASCIITerminalControl(s) {
-			t.Fatalf("control char not detected in %q", s)
-		}
-	}
-}
-
 func TestExactIssueOpsFlagsAcceptGeneratedBinaryProvenanceEnvelope(t *testing.T) {
 	command, ok := ParseExactIssueOpsCommand("issueops execution resume --id io-1 --expected-generation 7 --confirm --generated-by-executable /repo/bin/issueops --generated-by-sha256 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa --generated-for-generation 7")
 	if !ok {

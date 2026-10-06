@@ -28,7 +28,7 @@ func TestExecutionCLIInstancesReadTheirCapturedGeneration(t *testing.T) {
 			t.Fatal(err)
 		}
 		record.Execution = &model.Execution{Mode: model.ExecutionModeDirect, Workspace: model.Workspace{SourceRoot: repo, Root: t.TempDir(), Branch: "7-fixture", BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "2026-08-01T00:00:00Z"}, Lease: model.WriteLease{Generation: generation, Status: model.LeaseStatusReleased}, Completion: &model.ExecutionCompletion{Generation: generation, FinalHead: strings.Repeat("a", 40), VerificationReportPath: "verification.json", Verification: []string{"fixture"}, RemoteArtifactURL: "https://github.com/acme/repo/pull/7", CompletedAt: "2026-08-01T00:00:00Z"}}
-		if _, err = core.WriteIssueOps(context.Background(), root, record); err != nil {
+		if _, err = (core.CycleRecordStore{StateRoot: root}).Save(context.Background(), record); err != nil {
 			t.Fatal(err)
 		}
 		instances = append(instances, instance{issueOpsCLIDependencies(), record.ID, generation})

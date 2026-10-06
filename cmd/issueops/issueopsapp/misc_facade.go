@@ -32,10 +32,6 @@ func resolveTarget(arg string) string {
 	return pathutil.ResolveTarget(arg)
 }
 
-func exists(path string) bool {
-	return pathutil.Exists(path)
-}
-
 func runAPIDoc(args []string) error {
 	return newAPIDocCommand().Run(args)
 }

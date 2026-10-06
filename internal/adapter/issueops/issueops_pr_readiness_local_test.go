@@ -157,7 +157,7 @@ func TestIssueOpsLocalPRReadinessSharesOneVerifiedChangeObservationWithSchemaGat
 		return preflightadapter.GitCmdRaw(dir, args...)
 	}
 
-	ready := testCycleReadinessWithChanges(reader).LocalPR(record)
+	ready, _ := testCycleReadinessWithChanges(reader).ObserveLocalPR(record)
 
 	if !containsString(ready.Missing, "schema_evidence") {
 		t.Fatalf("schema change must keep the schema evidence gate: %v", ready.Missing)

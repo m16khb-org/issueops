@@ -125,8 +125,8 @@ func TestValidateSmokeWrappersUseExecutableSurface(t *testing.T) {
 		name string
 		run  func() selfverify.StepResult
 	}{
-		{name: "inspect", run: func() selfverify.StepResult { return validateInspect(binary, root) }},
-		{name: "docs index", run: func() selfverify.StepResult { return validateDocsIndex(binary, root) }},
+		{name: "inspect", run: func() selfverify.StepResult { return ValidateInspect(binary, root) }},
+		{name: "docs index", run: func() selfverify.StepResult { return ValidateDocsIndex(binary, root) }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if step := tc.run(); !step.OK {

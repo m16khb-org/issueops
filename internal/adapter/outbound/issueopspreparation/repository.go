@@ -33,10 +33,6 @@ type SQLiteRepository struct {
 	redact DiagnosticRedactor
 }
 
-func NewSQLiteRepository(store port.RecordInventoryStore) *SQLiteRepository {
-	return NewSQLiteRepositoryWithDiagnosticRedactor(store, nil)
-}
-
 func NewSQLiteRepositoryWithDiagnosticRedactor(store port.RecordInventoryStore, redact DiagnosticRedactor) *SQLiteRepository {
 	return &SQLiteRepository{store: store, redact: redact}
 }

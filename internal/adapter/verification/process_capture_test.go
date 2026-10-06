@@ -68,7 +68,10 @@ func TestRunCaptureMatchesBudgetOnFailureAndUnlimitedOutput(t *testing.T) {
 				{step.Stderr, step.StderrTruncated, step.StderrBytes, "stderr-tail"},
 			} {
 				input := strings.Repeat("x", size-len(stream.tail)) + stream.tail
-				want, truncated, total := domain.BudgetCommandOutput(input, budget)
+				want, truncated, total := input, false, len(input)
+				if budget > 0 {
+					want, truncated, total = domain.TailWithBudget(input, budget)
+				}
 				if stream.got != want || stream.truncated != truncated || stream.bytes != total {
 					t.Fatalf("stream differs from formatter: bytes=%d truncated=%v", stream.bytes, stream.truncated)
 				}

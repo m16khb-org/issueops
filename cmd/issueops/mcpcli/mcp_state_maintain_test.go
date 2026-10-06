@@ -10,7 +10,7 @@ import (
 func TestMCPStateMaintain(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	t.Setenv("ISSUEOPS_WORKER_DIR", "")
-	if _, err := statestore.StateWrite(context.Background(), "mcp-maintain-smoke", "content"); err != nil {
+	if _, err := statestore.NewService().Write(context.Background(), "mcp-maintain-smoke", "content"); err != nil {
 		t.Fatalf("seed state: %v", err)
 	}
 

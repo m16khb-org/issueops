@@ -1,10 +1,10 @@
-package contextregion_test
+package testsupport_test
 
 import (
 	"encoding/json"
 	docs "issueops/internal/adapter/docs"
 	docsapp "issueops/internal/application/docs"
-	"issueops/internal/domain/contextregion"
+	"issueops/internal/testsupport"
 	"os"
 	"path/filepath"
 	"testing"
@@ -46,7 +46,7 @@ func TestStableProjectionStripsVolatileFieldsWithoutMutatingInput(t *testing.T) 
 		},
 	}
 
-	got := contextregion.StableProjection(input)
+	got := testsupport.StableProjection(input)
 	gotMap, ok := got.(map[string]any)
 	if !ok {
 		t.Fatalf("expected map projection, got %T", got)
@@ -79,7 +79,7 @@ func TestStableProjectionStripsVolatileFieldsWithoutMutatingInput(t *testing.T) 
 
 func TestContextSerializationStableDistinguishesDriftFromVolatile(t *testing.T) {
 	// Deterministic builder: identical stable content every call.
-	stable, _, err := contextregion.ContextSerializationStable(func() any {
+	stable, _, err := testsupport.ContextSerializationStable(func() any {
 		return map[string]any{"title": "fixed", "generated_at": "ignored"}
 	})
 	if err != nil {
@@ -92,7 +92,7 @@ func TestContextSerializationStableDistinguishesDriftFromVolatile(t *testing.T) 
 	// Volatile-only drift: only a volatile field changes, so the stable
 	// projection stays identical and the builder is still stable.
 	volatileCalls := 0
-	volatileStable, _, err := contextregion.ContextSerializationStable(func() any {
+	volatileStable, _, err := testsupport.ContextSerializationStable(func() any {
 		volatileCalls++
 		return map[string]any{"title": "fixed", "generated_at": volatileCalls}
 	})
@@ -106,7 +106,7 @@ func TestContextSerializationStableDistinguishesDriftFromVolatile(t *testing.T) 
 	// Non-volatile drift: a stable field changes between builds, which must
 	// be reported as unstable.
 	driftCalls := 0
-	drifted, _, err := contextregion.ContextSerializationStable(func() any {
+	drifted, _, err := testsupport.ContextSerializationStable(func() any {
 		driftCalls++
 		return map[string]any{"title": driftCalls, "generated_at": "ignored"}
 	})
@@ -137,8 +137,8 @@ func TestDocsIndexImmutablePrefixIsByteDeterministic(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	first := contextMarshal(t, contextregion.StableProjection(contextToAny(t, (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).Index(root, "0.1.0"))))
-	second := contextMarshal(t, contextregion.StableProjection(contextToAny(t, (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).Index(root, "0.1.0"))))
+	first := contextMarshal(t, testsupport.StableProjection(contextToAny(t, (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).Index(root, "0.1.0"))))
+	second := contextMarshal(t, testsupport.StableProjection(contextToAny(t, (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).Index(root, "0.1.0"))))
 	if first != second {
 		t.Fatalf("docs_index immutable prefix drifted across builds:\nfirst=%s\nsecond=%s", first, second)
 	}
@@ -150,7 +150,7 @@ func TestDocsIndexImmutablePrefixIsByteDeterministic(t *testing.T) {
 	if _, present := raw["generated_at"]; !present {
 		t.Fatalf("expected volatile generated_at field in raw docs_index")
 	}
-	if _, present := contextregion.StableProjection(raw).(map[string]any)["generated_at"]; present {
+	if _, present := testsupport.StableProjection(raw).(map[string]any)["generated_at"]; present {
 		t.Fatalf("stable projection must exclude generated_at")
 	}
 }

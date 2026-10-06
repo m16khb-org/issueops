@@ -33,7 +33,7 @@ func TestOrcaIntentMarkerRoundTripsProviderAndPurposeIdentity(t *testing.T) {
 			if err != nil || got != test.want {
 				t.Fatalf("render = %q err=%v, want %q", got, err, test.want)
 			}
-			parsed, err := (IntentCodec{}).ParseMarker(got)
+			parsed, err := parseMarker(got)
 			if err != nil || parsed != test.identity {
 				t.Fatalf("parse = %#v err=%v, want %#v", parsed, err, test.identity)
 			}
@@ -50,7 +50,7 @@ func TestOrcaIntentMarkerRejectsPartialDuplicateAndUnknownIdentity(t *testing.T)
 		"issueops-v1 lifecycle=io-aaaaaaaaaaaa operation=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb provider=bitbucket issue=69",
 		"issueops-v1 lifecycle=io-aaaaaaaaaaaa operation=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb provider=github issue=69 extra=value",
 	} {
-		if _, err := (IntentCodec{}).ParseMarker(marker); err == nil {
+		if _, err := parseMarker(marker); err == nil {
 			t.Fatalf("invalid marker was accepted: %q", marker)
 		}
 	}

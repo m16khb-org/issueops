@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
-	benchmarkcontract "issueops/internal/contract/issueopsbenchmark"
 	"strings"
 	"testing"
 
@@ -59,26 +58,6 @@ func TestIssueOpsPublicationCreateRequiresComposedDependencies(t *testing.T) {
 	}}})
 	if err != nil || handlerCalls != 1 {
 		t.Fatalf("handlerCalls=%d err=%v", handlerCalls, err)
-	}
-}
-
-func TestIssueOpsBenchmarkArtifactFacades(t *testing.T) {
-	fixture := benchmarkcontract.IssueOpsBenchmarkFixture{
-		Title:         "Fix quality gate",
-		UserPrompt:    "raise coverage",
-		RepoContext:   "issueops",
-		ExpectedIssue: []string{"quality label"},
-		ExpectedTasks: []string{"add tests"},
-	}
-	artifact := benchmarkArtifactFromFixture(fixture)
-	if !strings.Contains(artifact.ProblemSummary, "raise coverage") || !strings.Contains(artifact.IssueDraft, "quality label") {
-		t.Fatalf("artifact = %#v", artifact)
-	}
-	if bullets := issueOpsBenchmarkBullets([]string{"one", "two"}); !strings.Contains(bullets, "- one") || !strings.Contains(bullets, "- two") {
-		t.Fatalf("bullets = %q", bullets)
-	}
-	if tasks := issueOpsBenchmarkOwnedTasks([]string{"add tests"}); !strings.Contains(tasks, "owns add tests") {
-		t.Fatalf("owned tasks = %q", tasks)
 	}
 }
 

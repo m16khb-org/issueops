@@ -35,10 +35,6 @@ func ValidateInspect(binary, root string) verifycontract.StepResult {
 	return validateInspectWithDeps(binary, root, runCommandStep)
 }
 
-func validateInspect(binary, root string) verifycontract.StepResult {
-	return ValidateInspect(binary, root)
-}
-
 func validateInspectWithDeps(binary, root string, run validationCommandRunner) verifycontract.StepResult {
 	step := run(root, "inspect smoke", 30*time.Second, "", binary, "inspect", "--json")
 	if !step.OK {
@@ -63,10 +59,6 @@ func validateInspectWithDeps(binary, root string, run validationCommandRunner) v
 
 func ValidateDocsIndex(binary, root string) verifycontract.StepResult {
 	return validateDocsIndexWithDeps(binary, root, runCommandStep)
-}
-
-func validateDocsIndex(binary, root string) verifycontract.StepResult {
-	return ValidateDocsIndex(binary, root)
 }
 
 func validateDocsIndexWithDeps(binary, root string, run validationCommandRunner) verifycontract.StepResult {

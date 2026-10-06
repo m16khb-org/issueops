@@ -22,14 +22,14 @@ func TestWriteTextPlanCoversDryRunWriteAndNoop(t *testing.T) {
 		t.Fatalf("dry-run should not create file, stat err = %v", err)
 	}
 
-	written, err := WriteText(path, "config", "hello\n", 0o644)
+	written, err := WriteTextPlan(path, "config", "hello\n", 0o644, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !written.Written || written.WouldWrite {
 		t.Fatalf("write result = %+v, want written only", written)
 	}
-	noOp, err := WriteText(path, "config", "hello\n", 0o644)
+	noOp, err := WriteTextPlan(path, "config", "hello\n", 0o644, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +42,7 @@ func TestWriteJSONPlanCoversMarshalAndInvalidValue(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, "settings.json")
 
-	written, err := WriteJSON(path, "settings", map[string]string{"name": "agent"}, 0o644)
+	written, err := WriteJSONPlan(path, "settings", map[string]string{"name": "agent"}, 0o644, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,21 +79,21 @@ func TestEnsureSymlinkPlanCoversCreateReplaceAndRefusal(t *testing.T) {
 	if !planned.WouldCreate || planned.Created {
 		t.Fatalf("dry-run symlink plan = %+v, want would_create only", planned)
 	}
-	created, err := EnsureSymlink(targetA, linkPath)
+	created, err := EnsureSymlinkPlan(targetA, linkPath, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !created.Created {
 		t.Fatalf("created symlink result = %+v, want created", created)
 	}
-	unchanged, err := EnsureSymlink(targetA, linkPath)
+	unchanged, err := EnsureSymlinkPlan(targetA, linkPath, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if unchanged.Created || unchanged.WouldCreate {
 		t.Fatalf("same symlink should be no-op: %+v", unchanged)
 	}
-	replaced, err := EnsureSymlink(targetB, linkPath)
+	replaced, err := EnsureSymlinkPlan(targetB, linkPath, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +105,7 @@ func TestEnsureSymlinkPlanCoversCreateReplaceAndRefusal(t *testing.T) {
 	if err := os.WriteFile(regular, []byte("not a symlink"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := EnsureSymlink(targetA, regular); err == nil || !strings.Contains(err.Error(), "refusing to replace non-symlink path") {
+	if _, err := EnsureSymlinkPlan(targetA, regular, false); err == nil || !strings.Contains(err.Error(), "refusing to replace non-symlink path") {
 		t.Fatalf("regular path error = %v", err)
 	}
 }

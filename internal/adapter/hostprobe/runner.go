@@ -857,24 +857,6 @@ func jsonString(value string) string {
 	return string(encoded)
 }
 
-func observedModelFromOutput(data []byte) string {
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	for {
-		var value map[string]any
-		if err := decoder.Decode(&value); err != nil {
-			return ""
-		}
-		if model, ok := value["model"].(string); ok && strings.TrimSpace(model) != "" {
-			return boundedVersion(model)
-		}
-		if message, ok := value["message"].(map[string]any); ok {
-			if model, ok := message["model"].(string); ok && strings.TrimSpace(model) != "" {
-				return boundedVersion(model)
-			}
-		}
-	}
-}
-
 func normalizedProcessFailure(err error, defaultCode string) (string, string) {
 	switch err.Error() {
 	case "command_timeout", "command_cancelled":

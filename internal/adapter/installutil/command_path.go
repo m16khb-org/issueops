@@ -76,16 +76,8 @@ func defaultManagedCommandPathDeps() managedCommandPathDeps {
 	}
 }
 
-func PrepareManagedCommandPath(target, path string, adopt, dryRun bool) (*ManagedCommandPathTransaction, install.ManagedCommandPathPlan, error) {
-	return PrepareManagedCommandPathCandidate(target, target, path, adopt, dryRun)
-}
-
 func PrepareManagedCommandPathCandidate(target, candidate, path string, adopt, dryRun bool) (*ManagedCommandPathTransaction, install.ManagedCommandPathPlan, error) {
 	return prepareManagedCommandPathCandidateWithDeps(target, candidate, path, adopt, dryRun, defaultManagedCommandPathDeps())
-}
-
-func prepareManagedCommandPathWithDeps(target, path string, adopt, dryRun bool, deps managedCommandPathDeps) (*ManagedCommandPathTransaction, install.ManagedCommandPathPlan, error) {
-	return prepareManagedCommandPathCandidateWithDeps(target, target, path, adopt, dryRun, deps)
 }
 
 func prepareManagedCommandPathCandidateWithDeps(target, candidatePath, path string, adopt, dryRun bool, deps managedCommandPathDeps) (*ManagedCommandPathTransaction, install.ManagedCommandPathPlan, error) {

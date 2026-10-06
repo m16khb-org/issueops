@@ -27,8 +27,8 @@ func TestAnalyzeRenderRouteAndProfile(t *testing.T) {
 	if len(signals.GitHubWorkflows) != 1 || len(signals.TestCommands) == 0 || len(signals.BuildCommands) == 0 || len(signals.LintCommands) == 0 {
 		t.Fatalf("unexpected signals: %#v", signals)
 	}
-	if remoteHost("git@gitlab.example.com:team/repo.git") != "gitlab.example.com" || remoteHost("") != "" {
-		t.Fatal("unexpected remoteHost parsing")
+	if projectdoc.RemoteHost("git@gitlab.example.com:team/repo.git") != "gitlab.example.com" || projectdoc.RemoteHost("") != "" {
+		t.Fatal("unexpected RemoteHost parsing")
 	}
 	docs := RenderProjectDocs(root, signals)
 	// 11 root docs + 6 family module starters.
@@ -340,8 +340,8 @@ func TestProjectDocsHelpers(t *testing.T) {
 	if rel, err := normalizeProjectDocRelPath(filepath.ToSlash(filepath.Join(projectdoc.ProjectDocsDir, "ADR.md"))); err != nil || rel == "" {
 		t.Fatalf("normalize rel = %q, %v", rel, err)
 	}
-	if got := nonEmptyStrings([]string{"", " a ", "b"}); len(got) != 2 || got[0] != "a" || got[1] != "b" {
-		t.Fatalf("nonEmptyStrings = %#v", got)
+	if got := projectdoc.NonEmptyStrings([]string{"", " a ", "b"}); len(got) != 2 || got[0] != "a" || got[1] != "b" {
+		t.Fatalf("NonEmptyStrings = %#v", got)
 	}
 	if got := appendUnique([]string{"a"}, "a"); len(got) != 1 {
 		t.Fatalf("appendUnique duplicate = %#v", got)
@@ -360,7 +360,7 @@ func TestProjectDocsHelpers(t *testing.T) {
 	if plannedFileAction(path, "x") != "unchanged" || plannedFileAction(path, "y") != "update" {
 		t.Fatal("unexpected planned file action")
 	}
-	if sha256Hex("x") == "" || !strings.Contains(ensureDocMetaFrontmatter("ADR.md", "# ADR"), "# ADR") {
+	if projectdoc.SHA256Hex("x") == "" || !strings.Contains(ensureDocMetaFrontmatter("ADR.md", "# ADR"), "# ADR") {
 		t.Fatal("unexpected primitive helpers")
 	}
 	if !isProjectSignalFile("go.mod") || isProjectSignalFile("random.txt") {

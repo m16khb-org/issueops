@@ -72,10 +72,10 @@ func TestBranchPrepareUsesItsExplicitStateRootForUmbrella(t *testing.T) {
 	}
 	child.IssueURL = "https://github.com/acme/repo/issues/79"
 	parent.IssueLinks = []model.IssueOpsIssueLink{{Type: "child", URL: child.IssueURL, CreatedAt: parent.CreatedAt}}
-	if _, err = core.WriteIssueOps(context.Background(), root, parent); err != nil {
+	if _, err = (core.CycleRecordStore{StateRoot: root}).Save(context.Background(), parent); err != nil {
 		t.Fatal(err)
 	}
-	child, err = core.WriteIssueOps(context.Background(), root, child)
+	child, err = (core.CycleRecordStore{StateRoot: root}).Save(context.Background(), child)
 	if err != nil {
 		t.Fatal(err)
 	}

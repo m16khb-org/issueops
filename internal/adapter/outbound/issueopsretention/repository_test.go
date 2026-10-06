@@ -32,7 +32,7 @@ func TestRepositoryReadsListsAndDeletesRecordWithStagedArtifact(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := database.Apply(context.Background(), []port.RecordMutation{
-		{Bucket: issueopsrecord.Bucket(), ID: id, Data: data},
+		{Bucket: "issueops_v1", ID: id, Data: data},
 		{Bucket: artifactStageBucket, ID: id, Data: []byte("staged")},
 	}); err != nil {
 		t.Fatal(err)
@@ -50,7 +50,7 @@ func TestRepositoryReadsListsAndDeletesRecordWithStagedArtifact(t *testing.T) {
 	if err := repository.DeleteIfUnchanged(context.Background(), stateRoot, id, got); err != nil {
 		t.Fatal(err)
 	}
-	if _, ok, err := database.Get(issueopsrecord.Bucket(), id); err != nil || ok {
+	if _, ok, err := database.Get("issueops_v1", id); err != nil || ok {
 		t.Fatalf("record survived delete: ok=%v err=%v", ok, err)
 	}
 	if _, ok, err := database.Get(artifactStageBucket, id); err != nil || ok {

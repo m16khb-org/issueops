@@ -96,7 +96,7 @@ func TestStartIssueOpsChildFailClosedPreconditions(t *testing.T) {
 			if err == nil || !strings.Contains(err.Error(), tc.missing) {
 				t.Fatalf("expected missing key %q, got %v", tc.missing, err)
 			}
-			childID := NewIssueOpsID(parent.Repo, tc.childBranch)
+			childID := newIssueOpsID(parent.Repo, tc.childBranch)
 			if childID != parent.ID {
 				if _, readErr := ReadIssueOps(stateRoot, childID); readErr == nil {
 					t.Fatalf("blocked child start must not create child record %s", childID)
@@ -289,7 +289,7 @@ func TestStartIssueOpsChildPerConditionRemedy(t *testing.T) {
 			if _, err := startIssueOpsChildForTest(stateRoot, parent, req); err == nil || !strings.Contains(err.Error(), tc.missing) {
 				t.Fatalf("expected %s precondition failure, got %v", tc.missing, err)
 			}
-			childID := NewIssueOpsID(parent.Repo, req.Branch)
+			childID := newIssueOpsID(parent.Repo, req.Branch)
 			if childID != parent.ID {
 				if _, readErr := ReadIssueOps(stateRoot, childID); readErr == nil {
 					t.Fatalf("blocked child start must not create child record %s", childID)
@@ -699,7 +699,7 @@ func TestStartIssueOpsChildConcurrentSameBranch(t *testing.T) {
 			t.Fatalf("same-branch result ref should match the child record: %#v", outcome.result.ParentRef)
 		}
 	}
-	childID := NewIssueOpsID(parent.Repo, "123-child-same")
+	childID := newIssueOpsID(parent.Repo, "123-child-same")
 	if _, err := ReadIssueOps(stateRoot, childID); err != nil {
 		t.Fatalf("expected one child record: %v", err)
 	}
@@ -766,7 +766,7 @@ func TestStartIssueOpsChildConcurrentSiblings(t *testing.T) {
 	}
 	for i := 0; i < workers; i++ {
 		branch := fmt.Sprintf("12%d-child-sibling", i)
-		childID := NewIssueOpsID(parent.Repo, branch)
+		childID := newIssueOpsID(parent.Repo, branch)
 		ref, ok := childRefByID(parentAfter.ChildCycles, childID)
 		if !ok {
 			t.Fatalf("missing child ref for %s (%s): %#v", branch, childID, parentAfter.ChildCycles)

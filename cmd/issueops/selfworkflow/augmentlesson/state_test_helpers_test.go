@@ -12,9 +12,9 @@ import (
 func init() {
 	StateDir = statestore.StateDir
 	StatePrunePrefix = func(prefix string, maxAge time.Duration, maxRecords int, confirm bool) (statecontract.StatePruneResult, error) {
-		return statestore.StatePrunePrefix(context.Background(), prefix, maxAge, maxRecords, confirm)
+		return statestore.NewService().PrunePrefix(context.Background(), prefix, maxAge, maxRecords, confirm)
 	}
 	StateWrite = func(key, content string) (statecontract.StateResult, error) {
-		return statestore.StateWrite(context.Background(), key, content)
+		return statestore.NewService().Write(context.Background(), key, content)
 	}
 }

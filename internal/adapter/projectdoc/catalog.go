@@ -33,15 +33,6 @@ const (
 // canonical metadata (from the doc's frontmatter or the name-keyed table), not a
 // summary of the doc's current contents.
 
-// DiscoverProjectDocs returns the catalog of <repoRoot>/.issueops/*.md for
-// the repo currently being worked in. See DiscoverProjectDocsReport for the
-// selection, read bounds, and omission accounting. Returns nil when repoRoot is
-// empty or has no .issueops docs.
-func DiscoverProjectDocs(repoRoot string) []projectdocdomain.ProjectDocCatalogEntry {
-	entries, _, _ := DiscoverProjectDocsReport(repoRoot)
-	return entries
-}
-
 // DiscoverProjectDocsReport lists the TARGET repo's <repoRoot>/.issueops/*.md
 // project docs (not the harness's own documentation, not nested directories).
 //

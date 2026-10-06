@@ -1,12 +1,12 @@
 package mcp
 
 import (
-	contextregion "issueops/internal/domain/contextregion"
+	"issueops/internal/testsupport"
 	"testing"
 )
 
 func TestToolsContextIsByteDeterministic(t *testing.T) {
-	stable, _, err := contextregion.ContextSerializationStable(func() any { return Build().Tools })
+	stable, _, err := testsupport.ContextSerializationStable(func() any { return Build().Tools })
 	if err != nil {
 		t.Fatal(err)
 	}

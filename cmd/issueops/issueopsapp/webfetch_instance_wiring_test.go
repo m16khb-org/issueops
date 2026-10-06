@@ -10,9 +10,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"issueops/cmd/issueops/mcpcli"
 	"issueops/cmd/issueops/webfetchcli"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 type webFetchRoundTripper func(*http.Request) (*http.Response, error)

@@ -30,28 +30,3 @@ func TestValidateJudgeProvenanceFailsClosed(t *testing.T) {
 		t.Fatalf("distinct + resolvable source must pass: %v", err)
 	}
 }
-
-func TestJudgeDownwardOverrideRate(t *testing.T) {
-	deterministic := IssueOpsBenchmarkScore{DimensionScores: []IssueOpsDimensionScore{
-		{Dimension: "a", Score: 100},
-		{Dimension: "b", Score: 100},
-		{Dimension: "c", Score: 0, NotApplicable: true}, // N/A: excluded
-		{Dimension: "d", Score: 100},                    // judge does not score: excluded
-	}}
-	judge := IssueOpsBenchmarkScore{DimensionScores: []IssueOpsDimensionScore{
-		{Dimension: "a", Score: 100}, // not lowered
-		{Dimension: "b", Score: 60},  // lowered
-		{Dimension: "c", Score: 100}, // N/A in deterministic: excluded
-	}}
-	rate, comparable := JudgeDownwardOverrideRate(deterministic, judge)
-	if comparable != 2 {
-		t.Fatalf("comparable = %d, want 2 (a,b; c is N/A, d unscored)", comparable)
-	}
-	if rate != 0.5 {
-		t.Fatalf("downward-override rate = %v, want 0.5 (1 of 2 lowered)", rate)
-	}
-
-	if r, c := JudgeDownwardOverrideRate(IssueOpsBenchmarkScore{}, IssueOpsBenchmarkScore{}); r != 0 || c != 0 {
-		t.Fatalf("no comparable dimensions = %v/%d, want 0/0", r, c)
-	}
-}

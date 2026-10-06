@@ -33,7 +33,7 @@ func TestHandleResourceReadReturnsJSONResources(t *testing.T) {
 		CommandPolicySummary: policy.CommandPolicySummary,
 		IssueOpsRoot:         issueOpsRoot,
 		Version:              "test-version",
-		StateList:            statestore.StateList,
+		StateList:            statestore.NewService().List,
 		DocsIndex:            (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).Index,
 	}
 	for _, uri := range []string{

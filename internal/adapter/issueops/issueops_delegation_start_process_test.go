@@ -88,7 +88,7 @@ func TestStartIssueOpsChildConcurrentSiblingsAcrossProcesses(t *testing.T) {
 	}
 	for i := 0; i < workers; i++ {
 		branch := fmt.Sprintf("12%d-child-process-sibling", i)
-		childID := NewIssueOpsID(parent.Repo, branch)
+		childID := newIssueOpsID(parent.Repo, branch)
 		ref, ok := childRefByID(parentAfter.ChildCycles, childID)
 		if !ok {
 			t.Fatalf("missing process sibling child ref for %s (%s): %#v", branch, childID, parentAfter.ChildCycles)
@@ -194,7 +194,7 @@ func seedChildStartParentRefsForTest(t *testing.T, stateRoot string, parent issu
 	for i := 0; i < count; i++ {
 		branch := fmt.Sprintf("90%d-existing-child-ref", i)
 		parent.ChildCycles = append(parent.ChildCycles, issueops.IssueOpsChildCycleRef{
-			CycleID:   NewIssueOpsID(parent.Repo, branch),
+			CycleID:   newIssueOpsID(parent.Repo, branch),
 			Branch:    branch,
 			Title:     fmt.Sprintf("existing child ref %d", i),
 			CreatedAt: "2026-08-02T00:00:00Z",

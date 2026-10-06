@@ -20,28 +20,3 @@ func ValidateJudgeMetadata(judge contract.IssueOpsJudgeMap, scoredRunID string) 
 	}
 	return sourceID, nil
 }
-
-func JudgeDownwardOverrideRate(deterministic, judge contract.IssueOpsBenchmarkScore) (rate float64, comparable int) {
-	judgeByDimension := make(map[string]float64, len(judge.DimensionScores))
-	for _, dim := range judge.DimensionScores {
-		judgeByDimension[dim.Dimension] = dim.Score
-	}
-	lowered := 0
-	for _, dim := range deterministic.DimensionScores {
-		if dim.NotApplicable {
-			continue
-		}
-		judgeScore, ok := judgeByDimension[dim.Dimension]
-		if !ok {
-			continue
-		}
-		comparable++
-		if judgeScore < dim.Score {
-			lowered++
-		}
-	}
-	if comparable == 0 {
-		return 0, 0
-	}
-	return Round4(float64(lowered) / float64(comparable)), comparable
-}

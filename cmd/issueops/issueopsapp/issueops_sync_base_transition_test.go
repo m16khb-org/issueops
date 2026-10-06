@@ -1,18 +1,15 @@
 package issueopsapp
 
 import (
-	issueopsport "issueops/internal/port"
-)
-
-import (
 	"context"
+	"issueops/internal/adapter/issueops"
+	issueopsport "issueops/internal/port"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 
-	"issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
@@ -64,7 +61,7 @@ func TestReleasedSyncBaseReachableThroughProductionClaimCompleteTransitions(t *t
 	phaseBefore := before.Phase
 	git := newTransitionSyncBaseGit(t, record.Branch, finalHead)
 
-	preview, err := issueops.SyncExecutionBase(context.Background(), stateRoot, issueopscontract.ExecutionSyncBaseRequest{
+	preview, err := issueops.VerifiedSyncExecutionBase(issueops.NativeActorVerifier())(context.Background(), stateRoot, issueopscontract.ExecutionSyncBaseRequest{
 		ID: record.ID, Mode: issueopscontract.ExecutionSyncBasePreview, CompletionGeneration: 1,
 		CWD: record.Execution.Workspace.Root,
 	}, issueopscontract.ExecutionSyncBaseDeps{Git: git.run})
@@ -72,7 +69,7 @@ func TestReleasedSyncBaseReachableThroughProductionClaimCompleteTransitions(t *t
 		t.Fatalf("released preview result=%+v err=%v", preview, err)
 	}
 
-	apply, err := issueops.SyncExecutionBase(context.Background(), stateRoot, issueopscontract.ExecutionSyncBaseRequest{
+	apply, err := issueops.VerifiedSyncExecutionBase(issueops.NativeActorVerifier())(context.Background(), stateRoot, issueopscontract.ExecutionSyncBaseRequest{
 		ID: record.ID, Mode: issueopscontract.ExecutionSyncBaseApply, CompletionGeneration: 1,
 		Actor: actor, CWD: record.Execution.Workspace.Root, Confirm: true, Fingerprint: preview.Fingerprint,
 	}, issueopscontract.ExecutionSyncBaseDeps{Git: git.run})
@@ -80,7 +77,7 @@ func TestReleasedSyncBaseReachableThroughProductionClaimCompleteTransitions(t *t
 		t.Fatalf("released conflict apply result=%+v err=%v", apply, err)
 	}
 
-	finalized, err := issueops.SyncExecutionBase(context.Background(), stateRoot, issueopscontract.ExecutionSyncBaseRequest{
+	finalized, err := issueops.VerifiedSyncExecutionBase(issueops.NativeActorVerifier())(context.Background(), stateRoot, issueopscontract.ExecutionSyncBaseRequest{
 		ID: record.ID, Mode: issueopscontract.ExecutionSyncBaseFinalize, CompletionGeneration: 1,
 		Actor: actor, CWD: record.Execution.Workspace.Root,
 	}, issueopscontract.ExecutionSyncBaseDeps{Git: git.run})
@@ -146,7 +143,7 @@ func seedSyncBaseTransition(t *testing.T) (string, issueopscontract.IssueOpsReco
 	if err := os.WriteFile(tokenPath, []byte(token+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := issueops.WriteIssueOps(context.Background(), stateRoot, record); err != nil {
+	if _, err := (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
 	return stateRoot, record, tokenPath

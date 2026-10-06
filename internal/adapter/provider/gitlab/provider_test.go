@@ -685,7 +685,7 @@ func TestParseGlabOutput(t *testing.T) {
 
 func TestRunGlabJSONReportsMissingCLI(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
-	_, err := runGlabJSON([]string{"issue", "create"}, "", "issue")
+	_, err := runGlabJSONContext(context.Background(), []string{"issue", "create"}, "", "issue")
 	if err == nil || !strings.Contains(err.Error(), "glab CLI is not installed") {
 		t.Fatalf("error=%v, want missing glab CLI", err)
 	}
@@ -758,7 +758,7 @@ printf 'https://gitlab.com/g/p/-/issues/9\n'
 `)
 	t.Setenv("PATH", binDir)
 
-	got, err := runGlabJSON([]string{"issue", "create", "--title", "Fix"}, repo, "issue")
+	got, err := runGlabJSONContext(context.Background(), []string{"issue", "create", "--title", "Fix"}, repo, "issue")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -797,7 +797,7 @@ exit 2
 		t.Fatalf("mr result=%+v", mr)
 	}
 
-	_, issueErr := runGlabJSON([]string{"issue", "create"}, "", "issue")
+	_, issueErr := runGlabJSONContext(context.Background(), []string{"issue", "create"}, "", "issue")
 	if issueErr == nil || !strings.Contains(issueErr.Error(), "glab issue create failed: provider rejected request") {
 		t.Fatalf("issue error=%v, want stderr failure", issueErr)
 	}

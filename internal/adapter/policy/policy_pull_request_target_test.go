@@ -10,13 +10,13 @@ func preparedBaseBranch(base string, found bool) func(string) (string, bool) {
 	return func(string) (string, bool) { return base, found }
 }
 
-// EvaluateCommandPolicy를 통과시켜, 호출부가 지워지면 실패하게 한다.
+// 정책 평가 전체를 통과시켜, 호출부가 지워지면 실패하게 한다.
 // pullRequestTargetDeny 단위 테스트만 있으면 평가 본문에서 호출을 빼도 그대로
 // 초록이라, 2026-08-27과 같은 방식으로 가드가 조용히 사라질 수 있다.
 func TestEvaluateCommandPolicyDeniesMistargetedPullRequest(t *testing.T) {
 	root := t.TempDir()
 
-	result := NewEvaluator(preparedBaseBranch("parent/umbrella-work", true)).Evaluate(policydomain.CommandPolicyRequest{
+	result := NewEvaluator(preparedBaseBranch("parent/umbrella-work", true)).service().Evaluate(policydomain.CommandPolicyRequest{
 		WorkspaceRoot:  root,
 		CWD:            root,
 		Argv:           []string{"glab", "mr", "create", "--target-branch", "release/stg"},
@@ -39,7 +39,7 @@ func TestEvaluateCommandPolicyDeniesMistargetedPullRequest(t *testing.T) {
 func TestEvaluateCommandPolicyAllowsCorrectlyTargetedPullRequest(t *testing.T) {
 	root := t.TempDir()
 
-	result := NewEvaluator(preparedBaseBranch("parent/umbrella-work", true)).Evaluate(policydomain.CommandPolicyRequest{
+	result := NewEvaluator(preparedBaseBranch("parent/umbrella-work", true)).service().Evaluate(policydomain.CommandPolicyRequest{
 		WorkspaceRoot:  root,
 		CWD:            root,
 		Argv:           []string{"glab", "mr", "create", "--target-branch", "parent/umbrella-work"},
@@ -64,10 +64,10 @@ func TestPolicyEvaluatorsKeepPreparedBasesIsolated(t *testing.T) {
 	}
 	one := NewEvaluator(preparedBaseBranch("parent/one", true))
 	two := NewEvaluator(preparedBaseBranch("parent/two", true))
-	if result := one.Evaluate(request); containsString(result.DenyReasons, "pr_target_branch_mismatch") {
+	if result := one.service().Evaluate(request); containsString(result.DenyReasons, "pr_target_branch_mismatch") {
 		t.Fatalf("first evaluator denied its own prepared base: %v", result.DenyReasons)
 	}
-	if result := two.Evaluate(request); !containsString(result.DenyReasons, "pr_target_branch_mismatch") {
+	if result := two.service().Evaluate(request); !containsString(result.DenyReasons, "pr_target_branch_mismatch") {
 		t.Fatalf("second evaluator accepted another prepared base: %v", result.DenyReasons)
 	}
 }

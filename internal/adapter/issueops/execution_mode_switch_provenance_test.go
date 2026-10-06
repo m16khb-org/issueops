@@ -26,7 +26,7 @@ func TestSwitchExecutionModeApplyReturnsNonCommandNextActionAfterExecutionRemova
 	}
 	record.WorktreePath = record.Execution.Workspace.Root
 	record.PlanPath = filepath.Join(record.WorktreePath, filepath.FromSlash(IssueOpsArtifactDir), "plan.md")
-	if _, err := WriteIssueOps(context.Background(), stateRoot, record); err != nil {
+	if _, err := writeIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
 	git := func(string, ...string) (int, string) { return 1, "" }

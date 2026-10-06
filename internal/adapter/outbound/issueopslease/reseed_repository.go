@@ -9,17 +9,10 @@ import (
 	leaseapp "issueops/internal/application/issueopslease"
 	leasecontract "issueops/internal/contract/issueopslease"
 	issueopsdomain "issueops/internal/domain/issueops"
-	leasedomain "issueops/internal/domain/issueopslease"
 	"issueops/internal/port"
 )
 
 type ReseedRepository struct{ store port.TransactionalRecordStore }
-
-type ReseedInventoryFunc func(context.Context, leasecontract.Record, leasedomain.Actor) (leaseapp.ReseedInventoryReceipt, error)
-
-func (f ReseedInventoryFunc) Observe(ctx context.Context, record leasecontract.Record, actor leasedomain.Actor) (leaseapp.ReseedInventoryReceipt, error) {
-	return f(ctx, record, actor)
-}
 
 func NewReseedRepository(store port.TransactionalRecordStore) *ReseedRepository {
 	return &ReseedRepository{store: store}

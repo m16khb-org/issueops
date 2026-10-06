@@ -27,11 +27,6 @@ func TestNextPersistedCLISelectionAndRootConflict(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
-		if err := sqlstore.CloseRoot(root); err != nil {
-			t.Error(err)
-		}
-	})
 	selected := issueopscontract.IssueOpsRecord{
 		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
 		ID:            "io-selected", Repo: repo, Branch: "topic/one", Phase: issueopscontract.IssueOpsPhasePlan,
@@ -58,12 +53,12 @@ func TestNextPersistedCLISelectionAndRootConflict(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := db.Put(issueopsrecord.Bucket(), record.ID, data); err != nil {
+		if err := db.Put("issueops_v1", record.ID, data); err != nil {
 			t.Fatal(err)
 		}
 	}
 	// A would-be first claimant must not count before strict validation.
-	if err := db.Put(issueopsrecord.Bucket(), "io-aaa-corrupt", []byte(`{"schema_version":0,"id":"io-aaa-corrupt","repo":"`+repo+`","execution":{"workspace":{"root":"`+repo+`.worktrees/topic-one"}}}`)); err != nil {
+	if err := db.Put("issueops_v1", "io-aaa-corrupt", []byte(`{"schema_version":0,"id":"io-aaa-corrupt","repo":"`+repo+`","execution":{"workspace":{"root":"`+repo+`.worktrees/topic-one"}}}`)); err != nil {
 		t.Fatal(err)
 	}
 	duplicate, err := issueopsrecord.Encode(claim("io-aab-duplicate", repo))
@@ -77,7 +72,7 @@ func TestNextPersistedCLISelectionAndRootConflict(t *testing.T) {
 	}
 	duplicate = []byte(strings.Replace(string(duplicate), `"root": `+string(rootField),
 		`"root": `+string(rootField)+`, "root": "/elsewhere"`, 1))
-	if err := db.Put(issueopsrecord.Bucket(), "io-aab-duplicate", duplicate); err != nil {
+	if err := db.Put("issueops_v1", "io-aab-duplicate", duplicate); err != nil {
 		t.Fatal(err)
 	}
 	for _, scenario := range []struct {

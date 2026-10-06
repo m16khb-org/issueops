@@ -82,7 +82,7 @@ func TestCleanupLinkedBranchGateBlocksBeforeAnyProviderCall(t *testing.T) {
 		OK: true, SchemaVersion: 1, ID: "io-lbgate", Repo: t.TempDir(), Phase: issueopscontract.IssueOpsPhaseImplement,
 		CreatedAt: "2026-08-09T00:00:00Z", UpdatedAt: "2026-08-09T00:00:00Z",
 	}
-	if _, err := WriteIssueOps(context.Background(), root, record); err != nil {
+	if _, err := writeIssueOps(context.Background(), root, record); err != nil {
 		t.Fatal(err)
 	}
 	invoked := false

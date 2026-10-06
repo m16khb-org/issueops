@@ -223,7 +223,13 @@ func TestWorkspaceAuthorityClassificationMatchesCatalogAuthorityFields(t *testin
 			classified = append(classified, name)
 		}
 	}
-	advertised := mcpcatalog.WorkspaceScopedTools()
+	var advertised []string
+	for _, tool := range mcpcatalog.Build().Tools {
+		properties, _ := tool["inputSchema"].(map[string]any)["properties"].(map[string]any)
+		if _, ok := properties["authority_file"]; ok {
+			advertised = append(advertised, tool["name"].(string))
+		}
+	}
 	slices.Sort(classified)
 	slices.Sort(advertised)
 	if !slices.Equal(classified, advertised) {

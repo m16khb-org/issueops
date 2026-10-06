@@ -1,8 +1,7 @@
 package mcp
 
-import contract "issueops/internal/contract/mcp"
-
 import (
+	contract "issueops/internal/contract/mcp"
 	"strings"
 	"testing"
 )
@@ -117,10 +116,14 @@ func TestCatalogOmitsRetiredPoolTools(t *testing.T) {
 }
 
 // collectAllCatalogTools gathers every tool declared across all catalog
-// functions. It delegates to AllTools so the test stays bound to the
+// sections, advertised or not, so the test stays bound to the
 // catalogSections single source of truth and cannot drift from it.
 func collectAllCatalogTools() []contract.Tool {
-	return AllTools()
+	var out []contract.Tool
+	for _, s := range catalogSections() {
+		out = append(out, s.tools()...)
+	}
+	return out
 }
 
 func TestResourceMapsPreserveDescriptorShape(t *testing.T) {

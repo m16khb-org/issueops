@@ -45,15 +45,6 @@ func AdvertisedTools() []contract.Tool {
 	return out
 }
 
-// AllTools returns every MCP tool known to the catalog, advertised or not.
-func AllTools() []contract.Tool {
-	var out []contract.Tool
-	for _, s := range catalogSections() {
-		out = append(out, s.tools()...)
-	}
-	return out
-}
-
 // DispatchMap returns a map from every MCP tool name to its handler group.
 // It derives from catalogSections so routing can never drift from the catalog:
 // adding a tool to a section makes it both routable and (if advertised) listed.

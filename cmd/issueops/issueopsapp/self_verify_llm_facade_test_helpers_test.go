@@ -26,24 +26,8 @@ func parseSelfVerifyLLMEvalEnv(value string) (bool, string, error) {
 	return llmeval.ParseSelfVerifyLLMEvalEnv(value)
 }
 
-func decodeSelfVerifyLLMEval(out []byte, eval *SelfVerifyLLMEvalResult) error {
-	return llmeval.DecodeSelfVerifyLLMEval(out, eval)
-}
-
-func decodeSelfVerifyLLMEvalStrict(out []byte, eval *SelfVerifyLLMEvalResult) error {
-	return llmeval.DecodeSelfVerifyLLMEvalStrict(out, eval)
-}
-
-func extractSelfVerifyLLMEvalJSON(out []byte) ([]byte, bool) {
-	return llmeval.ExtractSelfVerifyLLMEvalJSON(out)
-}
-
 func boundedLLMEvalError(prefix string, err error, output string) string {
 	return llmeval.BoundedLLMEvalError(prefix, err, output)
-}
-
-func applySelfVerifyLLMGate(result SelfAugmentResult, targetScore float64) (SelfAugmentResult, error) {
-	return llmeval.ApplySelfVerifyLLMGate(result, targetScore)
 }
 
 func buildSelfVerifyLLMEvalPrompt(result SelfAugmentResult) (string, int, error) {

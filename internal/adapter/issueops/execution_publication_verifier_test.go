@@ -22,7 +22,7 @@ func TestPublicationVerifierUsesLatestProjectAndPhaseBeforeLiveReadback(t *testi
 	record.IssueURL = "https://github.com/stale/repo/issues/1"
 	rawRecord, _ := json.Marshal(record)
 	record.IssueURL = "https://github.com/acme/repo/issues/1"
-	if _, err := WriteIssueOps(context.Background(), root, record); err != nil {
+	if _, err := writeIssueOps(context.Background(), root, record); err != nil {
 		t.Fatal(err)
 	}
 	payload := contract.IntentPayload{SchemaVersion: 1, OperationID: "operation", Generation: 1, Provider: "github", Kind: "pr", Request: contract.ProviderCreateRequest{ProjectKey: "acme/repo", Title: "Fix", Body: "body", HeadBranch: "work", BaseBranch: "main", ExpectedHeadSHA: strings.Repeat("a", 40), Labels: []string{"backend"}, Assignees: []string{"owner"}, Draft: true}}
@@ -61,14 +61,14 @@ func TestPublicationVerifierUsesLatestProjectAndPhaseBeforeLiveReadback(t *testi
 		t.Fatal(err)
 	}
 	record.Phase = model.IssueOpsPhasePlan
-	if _, err := WriteIssueOps(context.Background(), root, record); err != nil {
+	if _, err := writeIssueOps(context.Background(), root, record); err != nil {
 		t.Fatal(err)
 	}
 	if err := verifier.VerifyLive(context.Background(), intent, candidate.URL); err == nil || calls != 0 {
 		t.Fatalf("premature readback calls=%d err=%v", calls, err)
 	}
 	record.Phase = model.IssueOpsPhasePR
-	if _, err := WriteIssueOps(context.Background(), root, record); err != nil {
+	if _, err := writeIssueOps(context.Background(), root, record); err != nil {
 		t.Fatal(err)
 	}
 	if err := verifier.VerifyLive(context.Background(), intent, " "+candidate.URL+" "); err != nil || calls != 1 {

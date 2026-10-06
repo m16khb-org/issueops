@@ -7,5 +7,5 @@ import (
 )
 
 func TraceAnalyze(req tracecontract.TraceAnalyzeRequest) (tracecontract.TraceAnalyzeResult, error) {
-	return (traceapp.Service{Effects: Source{ReadState: statestore.StateRead}}).Analyze(req)
+	return (traceapp.Service{Effects: Source{ReadState: statestore.NewService().Read}}).Analyze(req)
 }

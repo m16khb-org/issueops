@@ -26,7 +26,7 @@ func TestArmedFinishRefusesOrdinaryRecordMutations(t *testing.T) {
 					if err != nil {
 						t.Fatal(err)
 					}
-					if err := db.Put(Bucket(), record.ID, raw); err != nil {
+					if err := db.Put(bucket, record.ID, raw); err != nil {
 						t.Fatal(err)
 					}
 					related := []byte(`{"evidence":"keep"}`)
@@ -56,7 +56,7 @@ func TestArmedFinishRefusesOrdinaryRecordMutations(t *testing.T) {
 					if err == nil || !strings.Contains(err.Error(), "cleanup "+string(cleanupOperation)) || called {
 						t.Fatalf("armed record reached ordinary mutation: called=%v err=%v", called, err)
 					}
-					got, exists, err := db.Get(Bucket(), record.ID)
+					got, exists, err := db.Get(bucket, record.ID)
 					if err != nil || !exists || !bytes.Equal(got, raw) {
 						t.Fatalf("record changed: exists=%v err=%v", exists, err)
 					}
@@ -84,7 +84,7 @@ func TestUpdateCannotRestoreDrainedFinishAttempt(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err := db.Put(Bucket(), record.ID, raw); err != nil {
+			if err := db.Put(bucket, record.ID, raw); err != nil {
 				t.Fatal(err)
 			}
 			_, err = (Store{}).Update(context.Background(), root, record.ID, func(r model.IssueOpsRecord) (model.IssueOpsRecord, bool, error) {
@@ -94,7 +94,7 @@ func TestUpdateCannotRestoreDrainedFinishAttempt(t *testing.T) {
 			if err == nil || !strings.Contains(err.Error(), "cleanup "+string(cleanupOperation)) {
 				t.Fatalf("restored stale attempt: %v", err)
 			}
-			got, exists, err := db.Get(Bucket(), record.ID)
+			got, exists, err := db.Get(bucket, record.ID)
 			if err != nil || !exists || !bytes.Equal(got, raw) {
 				t.Fatalf("changed current: %v", err)
 			}

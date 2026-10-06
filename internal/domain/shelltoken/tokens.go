@@ -92,51 +92,6 @@ func HasActiveShellSpecialQuoting(command string) bool {
 	return false
 }
 
-// HasActiveShellComment는 shell이 word 시작의 unquoted `#` 뒤 argv를 버리는
-// 경우를 보고한다. parser가 comment를 파일 operand로 오인하면 실제 명령은
-// stdin을 읽을 수 있으므로 exact reader에서는 거부한다.
-func HasActiveShellComment(command string) bool {
-	var quote rune
-	escaped := false
-	wordStart := true
-	for _, r := range command {
-		if escaped {
-			escaped = false
-			// backslash-newline은 shell에서 제거되므로 continuation 전의
-			// word-start 상태를 그대로 유지해야 한다.
-			if r != '\n' && r != '\r' {
-				wordStart = false
-			}
-			continue
-		}
-		if r == '\\' && quote != '\'' {
-			escaped = true
-			continue
-		}
-		if quote != 0 {
-			if r == quote {
-				quote = 0
-			}
-			wordStart = false
-			continue
-		}
-		if r == '\'' || r == '"' {
-			quote = r
-			wordStart = false
-			continue
-		}
-		if r == ' ' || r == '\t' || r == '\n' || r == '\r' {
-			wordStart = true
-			continue
-		}
-		if wordStart && r == '#' {
-			return true
-		}
-		wordStart = false
-	}
-	return false
-}
-
 // HasActiveZshEqualsExpansion은 zsh의 unquoted 단어 선두 =name command-path
 // expansion과 =(...) 임시 파일 process substitution을 보고한다. quote되거나
 // backslash로 escape된 등호와 평범한 NAME=value shell 대입은 이 검사에서
@@ -208,48 +163,6 @@ func HasUnquotedControlOperator(command string) bool {
 		case ';', '&', '|', '\n', '\r':
 			return true
 		}
-	}
-	return false
-}
-
-// HasUnquotedBackgroundOperator는 supervising session보다 오래 살아남을 수
-// 있는 단독 shell ampersand를 보고한다. 논리 연산자 &&와 2>&1, &>file 같은
-// redirection 형태는 이 검사에서 foreground 문법으로 남는다.
-func HasUnquotedBackgroundOperator(command string) bool {
-	runes := []rune(command)
-	var quote rune
-	escaped := false
-	for i := 0; i < len(runes); i++ {
-		r := runes[i]
-		if escaped {
-			escaped = false
-			continue
-		}
-		if r == '\\' && quote != '\'' {
-			escaped = true
-			continue
-		}
-		if quote != 0 {
-			if r == quote {
-				quote = 0
-			}
-			continue
-		}
-		if r == '\'' || r == '"' {
-			quote = r
-			continue
-		}
-		if r != '&' {
-			continue
-		}
-		if i+1 < len(runes) && runes[i+1] == '&' {
-			i++
-			continue
-		}
-		if i+1 < len(runes) && runes[i+1] == '>' || i > 0 && runes[i-1] == '>' {
-			continue
-		}
-		return true
 	}
 	return false
 }
@@ -328,38 +241,6 @@ func HasActiveOutputRedirect(command string) bool {
 			continue
 		}
 		if r == '>' {
-			return true
-		}
-	}
-	return false
-}
-
-// HasActiveInputRedirect는 quote되거나 escape된 리터럴 데이터 밖의 shell
-// input redirection을 보고한다. unquoted '<'는 fd 접두, heredoc, here-string
-// 형태를 포함해 전부 활성으로 본다.
-func HasActiveInputRedirect(command string) bool {
-	var quote rune
-	escaped := false
-	for _, r := range command {
-		if escaped {
-			escaped = false
-			continue
-		}
-		if r == '\\' && quote != '\'' {
-			escaped = true
-			continue
-		}
-		if quote != 0 {
-			if r == quote {
-				quote = 0
-			}
-			continue
-		}
-		if r == '\'' || r == '"' {
-			quote = r
-			continue
-		}
-		if r == '<' {
 			return true
 		}
 	}

@@ -3,9 +3,6 @@ package summary
 import domain "issueops/internal/domain/selfverify"
 
 func SelfVerificationContractValue() SelfVerificationContract { return domain.ContractValue() }
-func SelfVerificationGoalDefinitions() []SelfVerificationGoalDefinition {
-	return domain.GoalDefinitions()
-}
 func SelfVerificationCoverageDefinitions() []SelfVerificationCoverageDefinition {
 	return domain.CoverageDefinitions()
 }

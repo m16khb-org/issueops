@@ -3,7 +3,6 @@ package issueopsapp
 import (
 	"context"
 	"encoding/json"
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"issueops/cmd/issueops/mcpcli"
 	"issueops/cmd/issueops/selfworkflow/verifycmd"
 	catalog "issueops/internal/adapter/inbound/catalog/mcp"
@@ -16,6 +15,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func TestSelfVerifyProductionWiringPreservesCommittedScopeFailure(t *testing.T) {

@@ -1,6 +1,7 @@
 package llmeval
 
 import (
+	"errors"
 	selfverifyx "issueops/internal/contract/selfverify"
 	selfverify "issueops/internal/domain/selfverify"
 
@@ -81,46 +82,8 @@ func TestParseSelfVerifyLLMEvalEnvParsesDisabledAliasesAndRejectsUnknown(t *test
 	}
 }
 
-func TestDecodeSelfVerifyLLMEvalStrictRejectsExtraJSONValue(t *testing.T) {
-	var eval augmentcontract.SelfVerifyLLMEvalResult
-	err := DecodeSelfVerifyLLMEvalStrict([]byte(`{"ok":true,"mode":"advisory","execution_class":"foreground_blocking","read_only":true,"score":99,"blockers":[],"risks":[],"recommended_next_actions":[],"evidence_packet_bytes":10} {"ok":false}`), &eval)
-	if err == nil || !strings.Contains(err.Error(), "unexpected extra JSON value") {
-		t.Fatalf("expected extra JSON value error, got %v", err)
-	}
-}
-
-func TestDecodeSelfVerifyLLMEvalReadsHostJudgementJSON(t *testing.T) {
-	var eval augmentcontract.SelfVerifyLLMEvalResult
-	err := DecodeSelfVerifyLLMEval([]byte(`{"ok":true,"score":99,"summary":"looks safe","risks":["watch flakes"],"recommended_next_actions":["ship"]}`), &eval)
-	if err != nil {
-		t.Fatalf("decode host judgement result: %v", err)
-	}
-	if !eval.OK || eval.Score != 99 || eval.Summary != "looks safe" {
-		t.Fatalf("unexpected host judgement result: %+v", eval)
-	}
-	if len(eval.Risks) != 1 || len(eval.RecommendedNextActions) != 1 {
-		t.Fatalf("host judgement should keep structured review fields: %+v", eval)
-	}
-}
-
-func TestDecodeSelfVerifyLLMEvalExtractsNoisyHostJudgementJSON(t *testing.T) {
-	var eval augmentcontract.SelfVerifyLLMEvalResult
-	err := DecodeSelfVerifyLLMEval([]byte("review note\n"+`{"ok":true,"score":99,"summary":"looks safe","blockers":[],"risks":[],"recommended_next_actions":[]}`), &eval)
-	if err != nil {
-		t.Fatalf("decode noisy host judgement result: %v", err)
-	}
-	if !eval.OK || eval.Score != 99 || eval.Error != "" {
-		t.Fatalf("noisy host judgement output should extract strict JSON object: %+v", eval)
-	}
-}
-
-func TestDecodeSelfVerifyLLMEvalRejectsMalformedOutput(t *testing.T) {
-	var eval augmentcontract.SelfVerifyLLMEvalResult
-	err := DecodeSelfVerifyLLMEval([]byte(`not-json`), &eval)
-	if err == nil {
-		t.Fatal("expected malformed host judgement output error")
-	}
-	bounded := BoundedLLMEvalError("parse host judgement JSON", err, strings.Repeat("x", 2048))
+func TestBoundedLLMEvalErrorStaysWithinBudget(t *testing.T) {
+	bounded := BoundedLLMEvalError("parse host judgement JSON", errors.New("bad"), strings.Repeat("x", 2048))
 	if len(bounded) > 512 {
 		t.Fatalf("host judgement error should be bounded, got %d bytes", len(bounded))
 	}

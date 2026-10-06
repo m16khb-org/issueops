@@ -37,7 +37,7 @@ func seedIssueOpsExecutionContract(t *testing.T, repo, branch string) string {
 			Generation: 1, Status: issueopscontract.LeaseStatusClaimable, ClaimTokenSHA256: strings.Repeat("b", 64),
 		},
 	}
-	if _, err := issueops.WriteIssueOps(context.Background(), issueOpsStateRoot(), record); err != nil {
+	if _, err := (issueops.CycleRecordStore{StateRoot: issueOpsStateRoot()}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
 	return record.ID

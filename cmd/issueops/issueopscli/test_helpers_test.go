@@ -129,7 +129,7 @@ func seedIssueOpsCLIExecution(t *testing.T, record issueopscontract.IssueOpsReco
 			},
 		},
 	}
-	written, err := issueopscore.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), record)
+	written, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record)
 	if err != nil {
 		t.Fatal(err)
 	}

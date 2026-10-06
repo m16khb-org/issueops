@@ -2,13 +2,13 @@ package invariants
 
 import (
 	"bytes"
-	"golang.org/x/sync/errgroup"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"sync"
+
+	"golang.org/x/sync/errgroup"
 )
 
 func ForbiddenNameHits(root string) []string {
@@ -110,35 +110,4 @@ func forbiddenLegacyNeedles() []string {
 
 func currentOwnerHandle() string {
 	return "m" + "16khb"
-}
-
-func allowCurrentOwnerHandle(text string) string {
-	return strings.ReplaceAll(text, currentOwnerHandle(), "$CURRENT_OWNER")
-}
-
-func ContainsForbiddenLegacyOutsideRuntimePaths(text, root string) bool {
-	sanitized := allowCurrentOwnerHandle(text)
-	replacements := []string{}
-	if abs, err := filepath.Abs(root); err == nil {
-		replacements = append(replacements, abs)
-	}
-	if home, err := os.UserHomeDir(); err == nil {
-		replacements = append(replacements, home)
-	}
-	for _, runtimePath := range replacements {
-		if runtimePath == "" || runtimePath == string(filepath.Separator) {
-			continue
-		}
-		sanitized = strings.ReplaceAll(sanitized, runtimePath, "$RUNTIME_PATH")
-	}
-	for _, needle := range forbiddenLegacyNeedles() {
-		if strings.Contains(sanitized, needle) {
-			return true
-		}
-	}
-	return false
-}
-
-func containsForbiddenLegacyOutsideRuntimePaths(text, root string) bool {
-	return ContainsForbiddenLegacyOutsideRuntimePaths(text, root)
 }

@@ -35,7 +35,7 @@ func TestIssueOpsPrepareWiringRunsRealDirectPreviewWithoutPersistence(t *testing
 		Provider: "github", IssueURL: record.IssueURL, Branch: record.Branch,
 		BaseBranch: "main", BaseSHA: baseHead, LinkVerified: true,
 	}
-	if _, err := issueopscore.WriteIssueOps(context.Background(), stateRoot, record); err != nil {
+	if _, err := (issueopscore.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
 	direct := &preparationWiringDirectFake{}
@@ -80,7 +80,7 @@ func TestIssueOpsPrepareWiringUsesRequestScopedIssueSnapshot(t *testing.T) {
 		Provider: "gitlab", IssueURL: record.IssueURL, Branch: record.Branch,
 		BaseBranch: "main", BaseSHA: baseHead, LinkVerified: true,
 	}
-	if _, err := issueopscore.WriteIssueOps(context.Background(), stateRoot, record); err != nil {
+	if _, err := (issueopscore.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
 	fallbackCalls := 0

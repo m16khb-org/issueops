@@ -22,7 +22,7 @@ func TestDirectRepositoryCommitWritesRecordAndHolderAtomically(t *testing.T) {
 	record := repositoryRecord("io-prepare", "/repo", "199-prepare")
 	record.Decisions = json.RawMessage(`[{"kind":"preserved"}]`)
 	store.seedRecord(t, record)
-	repository := NewSQLiteRepository(store)
+	repository := NewSQLiteRepositoryWithDiagnosticRedactor(store, nil)
 
 	snapshot, err := repository.Load(context.Background(), record.ID)
 	if err != nil {
@@ -66,7 +66,7 @@ func TestDirectRepositoryHolderConflictRollsBackRecord(t *testing.T) {
 	store.seedRecord(t, record)
 	commit := directRepositoryCommit(preparationcontract.Snapshot{Record: record, RecordRaw: store.mustGet(recordBucket, record.ID)})
 	store.rows[holderBucket] = map[string][]byte{holderIndexKey(commit.Command.Actor): []byte(`{"occupied":true}`)}
-	repository := NewSQLiteRepository(store)
+	repository := NewSQLiteRepositoryWithDiagnosticRedactor(store, nil)
 	before := append([]byte(nil), store.mustGet(recordBucket, record.ID)...)
 
 	if _, err := repository.CommitDirect(context.Background(), commit); err == nil || !strings.Contains(err.Error(), "already exists") {
@@ -96,7 +96,7 @@ func TestRepositoryRootScanRejectsClaimAndCorruption(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			store := newPreparationStore()
 			test.seed(t, store)
-			repository := NewSQLiteRepository(store)
+			repository := NewSQLiteRepositoryWithDiagnosticRedactor(store, nil)
 			err := repository.EnsureRootUnclaimed(context.Background(), "io-self", "/repo.worktrees/199-prepare")
 			if err == nil || !strings.Contains(err.Error(), test.want) {
 				t.Fatalf("err=%v", err)
@@ -217,7 +217,7 @@ func TestPreparationRefusesExistingFinishAttempt(t *testing.T) {
 	record.CleanupAttempt = &model.IssueOpsCleanupAttempt{Operation: "finish", Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
 	store.seedRecord(t, record)
 	before := append([]byte(nil), store.mustGet(recordBucket, record.ID)...)
-	repository := NewSQLiteRepository(store)
+	repository := NewSQLiteRepositoryWithDiagnosticRedactor(store, nil)
 	if _, err := repository.Load(context.Background(), record.ID); err == nil || !strings.Contains(err.Error(), "cleanup finish") {
 		t.Errorf("loaded armed preparation: %v", err)
 	}

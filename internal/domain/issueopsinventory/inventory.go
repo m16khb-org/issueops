@@ -1,19 +1,8 @@
 package issueopsinventory
 
 import (
-	"fmt"
-	"strings"
-
 	issueopsinventorycontract "issueops/internal/contract/issueopsinventory"
 )
-
-func NormalizeID(id string) (string, error) {
-	id = strings.TrimSpace(id)
-	if id == "" || strings.Contains(id, "..") || strings.ContainsAny(id, `/\`) {
-		return "", fmt.Errorf("invalid issueops id %q", id)
-	}
-	return id, nil
-}
 
 func ProjectEntry(record issueopsinventorycontract.Record) issueopsinventorycontract.ListEntry {
 	entry := issueopsinventorycontract.ListEntry{

@@ -49,6 +49,3 @@ func (r testRunReader) Save(run IssueOpsBenchmarkRunResult) error          { pan
 func validateJudgeProvenance(judge IssueOpsJudgeMap, scored, root string, read func(string, string) (IssueOpsBenchmarkRunResult, error)) error {
 	return (app.Service{Runs: testRunReader{read: func(id string) (IssueOpsBenchmarkRunResult, error) { return read(root, id) }}}).ValidateJudgeProvenance(judge, scored)
 }
-func JudgeDownwardOverrideRate(deterministic, judge IssueOpsBenchmarkScore) (float64, int) {
-	return domain.JudgeDownwardOverrideRate(deterministic, judge)
-}

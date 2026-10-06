@@ -36,7 +36,7 @@ func TestPromoteRefusesFailedSourceWithoutOverride(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "did not pass") {
 		t.Fatalf("confirmed promote of a failing snapshot must refuse, got err=%v", err)
 	}
-	if _, err := statestore.StateRead("baseline"); err == nil {
+	if _, err := statestore.NewService().Read("baseline"); err == nil {
 		t.Fatal("refused promote must not write the baseline")
 	}
 }

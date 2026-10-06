@@ -82,10 +82,10 @@ func TestRunStateWriteReadAndPruneErrorsStaySurfaced(t *testing.T) {
 func TestRunStatePruneAndDoctorTextBranches(t *testing.T) {
 	stateDir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
-	if _, err := statestore.StateWrite(context.Background(), "old", "old content"); err != nil {
+	if _, err := statestore.NewService().Write(context.Background(), "old", "old content"); err != nil {
 		t.Fatalf("write old state: %v", err)
 	}
-	old, err := statestore.StateRead("old")
+	old, err := statestore.NewService().Read("old")
 	if err != nil {
 		t.Fatalf("read old state: %v", err)
 	}
@@ -112,7 +112,7 @@ func TestRunStatePruneAndDoctorTextBranches(t *testing.T) {
 	if !strings.Contains(doctorOut, "state doctor found 1 issues") || !strings.Contains(doctorOut, "error invalid_state") {
 		t.Fatalf("unexpected doctor text:\n%s", doctorOut)
 	}
-	doctor, err := statestore.StateDoctor()
+	doctor, err := statestore.Doctor(statestore.StateDir())
 	if err != nil {
 		t.Fatalf("state doctor: %v", err)
 	}

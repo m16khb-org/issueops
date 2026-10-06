@@ -22,9 +22,8 @@ func TestReadinessPublicOperationsCreateOneScope(t *testing.T) {
 		{"clean", func(s Readiness, r model.IssueOpsRecord) { s.AISlopClean(r) }},
 		{"pr", func(s Readiness, r model.IssueOpsRecord) { s.PR(r) }},
 		{"completion", func(s Readiness, r model.IssueOpsRecord) { s.Completion(r, model.IssueOpsPhasePR) }},
-		{"local", func(s Readiness, r model.IssueOpsRecord) { s.LocalPR(r) }},
 		{"observe", func(s Readiness, r model.IssueOpsRecord) { s.ObserveLocalPR(r) }},
-		{"strict", func(s Readiness, r model.IssueOpsRecord) { s.StrictPR(r) }},
+		{"strict", func(s Readiness, r model.IssueOpsRecord) { strictPRForTest(s, r) }},
 		{"state", func(s Readiness, r model.IssueOpsRecord) { s.StrictPRWithState("state", r) }},
 		{"callback", func(s Readiness, r model.IssueOpsRecord) {
 			s.StrictPRWithFetch("state", r, func(root string) review.UpstreamFetch { return review.UpstreamFetch{Root: root} })
@@ -81,9 +80,9 @@ func TestReadinessSameInstanceReobservesChangedState(t *testing.T) {
 		return copy
 	}
 	record := model.IssueOpsRecord{Repo: "/repo", Branch: "feature"}
-	first := s.LocalPR(record)
+	first := localPRForTest(s, record)
 	head = "second"
-	second := s.LocalPR(record)
+	second := localPRForTest(s, record)
 	if scopes != 2 || first.CurrentHead != "first" || second.CurrentHead != "second" || first.CleanupMissing[0] != "first" || second.CleanupMissing[0] != "second" {
 		t.Fatalf("stale operation state: scopes=%d first=%+v second=%+v", scopes, first, second)
 	}
@@ -114,7 +113,7 @@ func TestReadinessConcurrentOperationsHaveIndependentScopes(t *testing.T) {
 		return copy
 	}
 	for range 2 {
-		go func() { done <- s.LocalPR(model.IssueOpsRecord{Repo: "/repo", Branch: "feature"}) }()
+		go func() { done <- localPRForTest(s, model.IssueOpsRecord{Repo: "/repo", Branch: "feature"}) }()
 	}
 	for range 2 {
 		select {

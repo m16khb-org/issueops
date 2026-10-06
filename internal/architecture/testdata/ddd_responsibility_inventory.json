@@ -23,7 +23,6 @@
       "owner": "inbound",
       "task": "T16",
       "symbols": [
-        "func mustJSON",
         "func printAPIDocReview"
       ]
     },
@@ -49,19 +48,6 @@
       "task": "T16",
       "symbols": [
         "func printJSON"
-      ]
-    },
-    {
-      "path": "cmd/issueops/apidoc/dogfood/fixture.go",
-      "owner": "inbound",
-      "task": "T16",
-      "symbols": [
-        "func CleanFiles",
-        "func DirtyFiles",
-        "func GroundTruth",
-        "func Materialize",
-        "type ExpectedFinding",
-        "type File"
       ]
     },
     {
@@ -176,27 +162,13 @@
       ]
     },
     {
-      "path": "cmd/issueops/commandstep/env.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func EnvEntryKey",
-        "func MergeEnvOverrides"
-      ]
-    },
-    {
       "path": "cmd/issueops/commandstep/result.go",
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func AssertionStep",
-        "func AssertionStepWithOutput",
-        "func BudgetCommandOutput",
-        "func CombineFailedStep",
         "func FailedStep",
         "func IndentLines",
         "func PrintStep",
-        "func Tail",
         "func TailWithBudget",
         "func splitLines"
       ]
@@ -386,14 +358,6 @@
       ]
     },
     {
-      "path": "cmd/issueops/hookcli/hookenv/operator_switches.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func ClearInheritedOperatorSwitches"
-      ]
-    },
-    {
       "path": "cmd/issueops/hookcli/hookinput/hook_input.go",
       "owner": "inbound",
       "task": "T20",
@@ -425,12 +389,7 @@
       "owner": "inbound",
       "task": "T11",
       "symbols": [
-        "func AppendShellPathLinePlan",
-        "func Command.RunInstall",
-        "func PreferredShellRC",
-        "func PrintNativeResult",
-        "func ShellRCAlreadyAddsLocalBin",
-        "func ValidateInteractiveInput"
+        "func Command.RunInstall"
       ]
     },
     {
@@ -1264,7 +1223,6 @@
       "task": "T20",
       "symbols": [
         "func compatibilityContract",
-        "func exists",
         "func issueOpsRoot",
         "func printJSONTo",
         "func resolveTarget",
@@ -1621,8 +1579,6 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func Bullets",
-        "func OwnedTasks",
         "func bullets",
         "func ownedTasks"
       ]
@@ -1806,16 +1762,6 @@
         "func command.addIssueOpsActorFlags",
         "func issueOpsActorFlags.actor",
         "type issueOpsActorFlags"
-      ]
-    },
-    {
-      "path": "cmd/issueops/issueopscli/issueops_benchmark_artifact_facade.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func benchmarkArtifactFromFixture",
-        "func issueOpsBenchmarkBullets",
-        "func issueOpsBenchmarkOwnedTasks"
       ]
     },
     {
@@ -2144,7 +2090,6 @@
         "func Float",
         "func Int",
         "func Int64",
-        "func Set",
         "func String",
         "func StringDefault",
         "func StringSlice",
@@ -2261,7 +2206,6 @@
       "symbols": [
         "func HandleResourceRead",
         "func compileToolOutputSchema",
-        "func initSDKServer",
         "func initSDKServerWithDiagnostics",
         "func initSDKServerWithLogger",
         "func newSDKServer",
@@ -2270,7 +2214,6 @@
         "func resolveHandlerGroup",
         "func sdkReadResourceResult",
         "func sdkResourceHandler",
-        "func sdkServerOptions",
         "func sdkServerOptionsWithDiagnostics",
         "func sdkServerOptionsWithLogger",
         "func sdkToolAnnotations",
@@ -2290,7 +2233,6 @@
         "func drainingReader.Close",
         "func drainingReader.Read",
         "func inflightRequests.forget",
-        "func inflightRequests.idle",
         "func inflightRequests.observeInbound",
         "func inflightRequests.observeOutbound",
         "func inflightRequests.waitIdle",
@@ -2414,7 +2356,6 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func ErrorTextResult",
         "func MCPDependencies.resolveTarget",
         "func TextResult",
         "func mcpToolDirect",
@@ -2490,15 +2431,11 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func ContainsString",
         "func Exists",
         "func FindUp",
         "func IssueOpsRoot",
         "func ReadHarnessFile",
         "func ResolveTarget",
-        "func SplitCSV",
-        "func SplitLines",
-        "func StateDoctorHasIssueCode",
         "func issueOpsRootFrom"
       ]
     },
@@ -2549,12 +2486,6 @@
       "task": "T20",
       "symbols": [
         "func Run",
-        "func RunBootstrap",
-        "func RunCommitSuggest",
-        "func RunDocs",
-        "func RunLintDiagnose",
-        "func RunRecord",
-        "func RunRouteDocs",
         "type Dependencies"
       ]
     },
@@ -2689,18 +2620,7 @@
       "owner": "inbound",
       "task": "T18",
       "symbols": [
-        "func BoundedLLMEvalError",
-        "func DecodeSelfVerifyLLMEval",
-        "func DecodeSelfVerifyLLMEvalStrict",
-        "func ExtractSelfVerifyLLMEvalJSON"
-      ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/llmeval/self_verify_llm_eval_gate.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func ApplySelfVerifyLLMGate"
+        "func BoundedLLMEvalError"
       ]
     },
     {
@@ -2768,12 +2688,7 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func Run",
-        "func RunDoctor",
-        "func RunList",
-        "func RunPrune",
-        "func RunRead",
-        "func RunWrite"
+        "func Run"
       ]
     },
     {
@@ -3776,7 +3691,6 @@
         "func observeToolCalls",
         "func observedClaudeProbeResults",
         "func observedMCPResult",
-        "func observedModelFromOutput",
         "func persistChildSmokeObservation",
         "func preflight",
         "func projectSemanticToolContent",
@@ -3850,7 +3764,6 @@
       "owner": "adapter",
       "task": "T19",
       "symbols": [
-        "func WorkspaceScopedTools",
         "func withAuthorityFields"
       ]
     },
@@ -3860,7 +3773,6 @@
       "task": "T19",
       "symbols": [
         "func AdvertisedTools",
-        "func AllTools",
         "func Build",
         "func DispatchMap",
         "func ResourceMaps",
@@ -4181,9 +4093,7 @@
       "owner": "adapter",
       "task": "T11",
       "symbols": [
-        "func absClean",
-        "func expandHomeWithHome",
-        "func homeRelativePath"
+        "func absClean"
       ]
     },
     {
@@ -4220,14 +4130,12 @@
         "func ManagedCommandPathTransaction.restoreRollbackDisplacement",
         "func ManagedCommandPathTransaction.revalidate",
         "func ManagedCommandPathTransaction.temporaryRegularPath",
-        "func PrepareManagedCommandPath",
         "func PrepareManagedCommandPathCandidate",
         "func copyManagedCommandFile",
         "func defaultManagedCommandPathDeps",
         "func hashManagedCommand",
         "func inspectManagedCommand",
         "func prepareManagedCommandPathCandidateWithDeps",
-        "func prepareManagedCommandPathWithDeps",
         "func sameManagedCommandIdentity",
         "func sameManagedCommandSnapshot",
         "func syncManagedCommandDirectory",
@@ -4320,15 +4228,12 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func EnsureSymlink",
         "func EnsureSymlinkPlan",
         "func PlanHostSkillLinks",
         "func PlanSkillLinks",
         "func PruneStaleSkillLinks",
         "func TOMLString",
-        "func WriteJSON",
         "func WriteJSONPlan",
-        "func WriteText",
         "func WriteTextPlan"
       ]
     },
@@ -4378,16 +4283,6 @@
       "task": "T17",
       "symbols": [
         "func DecodeJudgeScore"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/benchmark/issueops_benchmark_judge_prompt.go",
-      "owner": "adapter",
-      "task": "T17",
-      "symbols": [
-        "func BuildIssueOpsLLMJudgePrompt",
-        "func issueOpsBenchmarkScoreFieldTypes",
-        "func issueOpsBenchmarkScoreResponseSchemaExample"
       ]
     },
     {
@@ -4453,14 +4348,6 @@
         "func CleanupRecordStore.ArmAbandon",
         "func CleanupRecordStore.DeleteAbandoned",
         "func CleanupRecordStore.FailAbandon"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/cleanup_branch_ref.go",
-      "owner": "adapter",
-      "task": "T08",
-      "symbols": [
-        "func branchRefPresent"
       ]
     },
     {
@@ -4680,7 +4567,6 @@
       "task": "T20",
       "symbols": [
         "func ExecutionOwnerPromptTemplate",
-        "func SealedOwnerContextPacketPath",
         "func digestExecutionOwnerBytes",
         "func ensureExecutionOwnerArtifactDirectory",
         "func ensureExecutionOwnerArtifactIgnore",
@@ -4809,7 +4695,6 @@
         "func leaseIndexDeleteMutation",
         "func persistExecutionTransition",
         "func persistExecutionTransitionWithMutations",
-        "func persistExecutionTransitionWithRawCAS",
         "func requireLeaseIndexAvailable"
       ]
     },
@@ -4818,7 +4703,6 @@
       "owner": "adapter",
       "task": "T06",
       "symbols": [
-        "func SyncExecutionBase",
         "func VerifiedSyncExecutionBase",
         "func abortExecutionSyncBase",
         "func appendExecutionSyncBaseEvent",
@@ -5054,14 +4938,10 @@
       "task": "T20",
       "symbols": [
         "func ListIssueOpsIDs",
-        "func NewIssueOpsID",
         "func ReadIssueOps",
         "func ReadIssueOpsExisting",
-        "func ScanIssueOps",
         "func ScanReadableIssueOps",
-        "func WriteIssueOps",
         "func decodeIssueOpsRecord",
-        "func deleteIssueOps",
         "func encodeIssueOpsRecord",
         "func mutableIssueOpsRaw",
         "func newIndependentIssueOpsID",
@@ -5069,7 +4949,6 @@
         "func normalizeIssueOpsID",
         "func readIssueOpsUnchecked",
         "func scanIssueOpsRows",
-        "func touchAndWriteIssueOps",
         "func validateIssueOpsRecord",
         "func writeIssueOps"
       ]
@@ -6146,8 +6025,6 @@
       "owner": "adapter",
       "task": "T06",
       "symbols": [
-        "func NewReconcileRepository",
-        "func NewReconcileRepositoryWithDiagnosticRedactor",
         "func NewReconcileRepositoryWithSnapshot",
         "func ReconcileRepository.ApplyReceipt",
         "func ReconcileRepository.Canonicalize",
@@ -6216,10 +6093,8 @@
       "task": "T06",
       "symbols": [
         "func NewReseedRepository",
-        "func ReseedInventoryFunc.Observe",
         "func ReseedRepository.CommitReseed",
         "func ReseedRepository.LoadSnapshot",
-        "type ReseedInventoryFunc",
         "type ReseedRepository"
       ]
     },
@@ -6326,7 +6201,6 @@
       "owner": "adapter",
       "task": "T05",
       "symbols": [
-        "func NewSQLiteRepository",
         "func NewSQLiteRepositoryWithDiagnosticRedactor",
         "func SQLiteRepository.ApplyReceipt",
         "func SQLiteRepository.BeginIntent",
@@ -6449,7 +6323,6 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func Bucket",
         "func Store.Delete",
         "func Store.DeleteIfUnchanged",
         "func Store.ListIDs",
@@ -6749,7 +6622,6 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func CloseRoot",
         "func DB.Apply",
         "func DB.CompareAndApply",
         "func DB.CompareAndApplyFunc",
@@ -6769,7 +6641,6 @@
         "func DB.withSpan",
         "func GetAllExisting",
         "func GetExisting",
-        "func InspectExisting",
         "func ListExisting",
         "func NestedSpanError.Error",
         "func Open",
@@ -6778,8 +6649,6 @@
         "func WalkExisting",
         "func applyMutationsTx",
         "func ensurePrivateRoot",
-        "func existingBuckets",
-        "func existingSchema",
         "func isNestedSpanError",
         "func isSQLiteLockContention",
         "func newDB",
@@ -6794,10 +6663,8 @@
         "func touchPrivate",
         "func validateMutations",
         "type DB",
-        "type ExistingLayout",
         "type NestedSpanError",
         "type RawCASError",
-        "type SchemaObject",
         "type dbTestHooks",
         "type spanChainKey"
       ]
@@ -6832,7 +6699,6 @@
       "task": "T20",
       "symbols": [
         "func Doctor",
-        "func StateDoctor",
         "func failedDoctorResult"
       ]
     },
@@ -6842,16 +6708,11 @@
       "task": "T20",
       "symbols": [
         "func ExistingRecords.GetExisting",
+        "func NewService",
         "func NormalizeStateKey",
-        "func StateDelete",
         "func StateDir",
-        "func StateList",
-        "func StateRead",
-        "func StateWrite",
         "func WriteStateRecord",
-        "func openStateDB",
         "func openStateStore",
-        "func service",
         "func statePath",
         "type ExistingRecords"
       ]
@@ -6861,9 +6722,7 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func StateUpdate",
-        "func WithKeyLock",
-        "func withStateLock"
+        "func WithKeyLock"
       ]
     },
     {
@@ -6877,15 +6736,6 @@
         "func MaintenanceStores.projectRoots",
         "func NewMaintenanceStores",
         "type MaintenanceStores"
-      ]
-    },
-    {
-      "path": "internal/adapter/outbound/state/state_prune.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func StatePrune",
-        "func StatePrunePrefix"
       ]
     },
     {
@@ -6987,8 +6837,6 @@
       "task": "T09",
       "symbols": [
         "func CommandObserver.Observe",
-        "func EvaluateCommandPolicy",
-        "func Evaluator.Evaluate",
         "func NewEvaluator",
         "func isDirectory",
         "type CommandObserver",
@@ -7014,13 +6862,8 @@
       "symbols": [
         "func Clock.Now",
         "func CommandExecutor.Execute",
-        "func Evaluator.FakeRun",
-        "func Evaluator.Run",
         "func Evaluator.RunReadOnly",
         "func Evaluator.service",
-        "func FakeRunCommand",
-        "func RunCommand",
-        "func RunReadOnlyCommand",
         "func boundedOutput.String",
         "func boundedOutput.Write",
         "type Clock",
@@ -7088,7 +6931,6 @@
       "task": "T09",
       "symbols": [
         "func GitObserver.Observe",
-        "func GitPreflight",
         "type GitObserver"
       ]
     },
@@ -7122,7 +6964,6 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func DiscoverProjectDocs",
         "func DiscoverProjectDocsReport",
         "func FormatProjectDocCatalog",
         "func FormatProjectDocCatalogOmissions",
@@ -7176,9 +7017,7 @@
       "task": "T13",
       "symbols": [
         "func appendUnique",
-        "func ensureDocMetaFrontmatter",
-        "func nonEmptyStrings",
-        "func sha256Hex"
+        "func ensureDocMetaFrontmatter"
       ]
     },
     {
@@ -7240,8 +7079,7 @@
       "symbols": [
         "func ReadGitOriginURL",
         "func inferProjectProfile",
-        "func inferProjectVCS",
-        "func remoteHost"
+        "func inferProjectVCS"
       ]
     },
     {
@@ -7534,7 +7372,6 @@
         "func resolveGitLabTaskTypeID",
         "func runGlabGraphQL",
         "func runGlabGraphQLContext",
-        "func runGlabJSON",
         "func runGlabJSONContext",
         "func runGlabMRJSON",
         "func splitGitLabIssueURL",
@@ -7577,12 +7414,10 @@
         "func DryRunPreview",
         "func RunBoundedMutationContext",
         "func RunBoundedMutationWithOutputLimitContext",
-        "func RunBoundedReadback",
         "func RunBoundedReadbackContext",
         "func boundedBuffer.String",
         "func boundedBuffer.Write",
         "func boundedDiagnostic",
-        "func runBoundedCommand",
         "func runBoundedCommandContext",
         "type boundedBuffer"
       ]
@@ -7611,9 +7446,7 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func ExpandLeadingTilde",
-        "func NormalizeRoot",
-        "func ResolveFile"
+        "func NormalizeRoot"
       ]
     },
     {
@@ -7774,7 +7607,6 @@
         "func Validate",
         "func commandPolicyValidationDeps.withDefaults",
         "func exists",
-        "func validateCommandPolicy",
         "func validateCommandPolicyWithDeps",
         "type commandPolicyCommandRunner",
         "type commandPolicyValidationDeps"
@@ -7858,55 +7690,17 @@
       ]
     },
     {
-      "path": "internal/adapter/verification/probe/dependencies.go",
-      "owner": "adapter",
-      "task": "T18",
-      "symbols": [
-        "func assertionStep",
-        "func assertionStepWithOutput",
-        "func combineFailedStep",
-        "func containsString",
-        "func exists",
-        "func failedStep",
-        "func runCommandStep",
-        "func runCommandStepEnv",
-        "func runCommandStepEnvWithBudget",
-        "func splitLines",
-        "func tailWithBudget"
-      ]
-    },
-    {
       "path": "internal/adapter/verification/probe/exports.go",
       "owner": "adapter",
       "task": "T18",
       "symbols": [
-        "func ClaudeMCPDuplicateWarningFixture",
-        "func ContainsForbiddenLegacyOutsideRuntimePaths",
-        "func DetectClaudeMCPDuplicateWarnings",
-        "func FindUnredactedSecretLike",
-        "func ForbiddenNameHits",
-        "func LintMermaidBlocks",
         "func ValidateCommandPolicy",
-        "func ValidateContractCheckSmoke",
         "func ValidateDaemonRestartResilience",
         "func ValidateDocsIndex",
-        "func ValidateGoFormat",
         "func ValidateHarnessInvariants",
         "func ValidateInspect",
         "func ValidateInstallDryRunSmoke",
-        "func ValidateParallelTempIsolation",
-        "func ValidateWorkerLifecycleSmoke"
-      ]
-    },
-    {
-      "path": "internal/adapter/verification/probe/goformat/validation_go_format.go",
-      "owner": "adapter",
-      "task": "T18",
-      "symbols": [
-        "func Deps.withDefaults",
-        "func Validate",
-        "func ValidateWithDeps",
-        "type Deps"
+        "func ValidateParallelTempIsolation"
       ]
     },
     {
@@ -7915,7 +7709,6 @@
       "task": "T18",
       "symbols": [
         "func Validate",
-        "func validateInstallDryRunSmoke",
         "func validateInstallDryRunSmokeWithDeps"
       ]
     },
@@ -7957,7 +7750,6 @@
       "symbols": [
         "func ValidateHarnessInvariants",
         "func exists",
-        "func validateHarnessInvariants",
         "func validateSkillShape"
       ]
     },
@@ -7966,10 +7758,7 @@
       "owner": "adapter",
       "task": "T18",
       "symbols": [
-        "func ContainsForbiddenLegacyOutsideRuntimePaths",
         "func ForbiddenNameHits",
-        "func allowCurrentOwnerHandle",
-        "func containsForbiddenLegacyOutsideRuntimePaths",
         "func currentOwnerHandle",
         "func firstForbiddenLegacyNeedle",
         "func forbiddenLegacyNeedles",
@@ -8150,7 +7939,6 @@
       "owner": "adapter",
       "task": "T18",
       "symbols": [
-        "func Validator.MermaidDocs",
         "func Validator.RedactionAudit",
         "func Validator.Validate",
         "type Validator"
@@ -8214,9 +8002,7 @@
         "func ValidateInspect",
         "func rejectTruncatedCapture",
         "func runCommandStep",
-        "func validateDocsIndex",
         "func validateDocsIndexWithDeps",
-        "func validateInspect",
         "func validateInspectWithDeps",
         "type validationCommandRunner"
       ]
@@ -8359,9 +8145,7 @@
       "owner": "adapter",
       "task": "T18",
       "symbols": [
-        "func CandidateExportValidationErrors",
-        "func ValidateSelfVerifyCandidateExport",
-        "func ValidateSelfVerifyCandidateExportWithDeps"
+        "func ValidateSelfVerifyCandidateExport"
       ]
     },
     {
@@ -8378,13 +8162,9 @@
       "task": "T18",
       "symbols": [
         "func ValidateCommandAudit",
-        "func ValidateCommandAuditWithDeps",
         "func ValidateContractCheck",
-        "func ValidateContractCheckWithDeps",
         "func ValidateToolConformance",
-        "func ValidateToolConformanceWithDeps",
-        "func ValidateWorkerLifecycle",
-        "func ValidateWorkerLifecycleWithDeps"
+        "func ValidateWorkerLifecycle"
       ]
     },
     {
@@ -8408,8 +8188,6 @@
       "owner": "adapter",
       "task": "T18",
       "symbols": [
-        "func containsForbiddenLegacyOutsideRuntimePaths",
-        "func forbiddenNameHits",
         "func validateHarnessInvariants"
       ]
     },
@@ -8418,11 +8196,7 @@
       "owner": "adapter",
       "task": "T18",
       "symbols": [
-        "func MCPSmokeExpectedMarkers",
-        "func MCPSmokeHasExpectedMarkers",
-        "func ValidateMCP",
-        "func ValidateMCPSmokeContract",
-        "func ValidateMCPWithDeps"
+        "func ValidateMCP"
       ]
     },
     {
@@ -8431,15 +8205,6 @@
       "task": "T18",
       "symbols": [
         "func validateParallelTempIsolation"
-      ]
-    },
-    {
-      "path": "internal/adapter/verification/probe/validation_qa_facade.go",
-      "owner": "adapter",
-      "task": "T18",
-      "symbols": [
-        "func findUnredactedSecretLike",
-        "func lintMermaidBlocks"
       ]
     },
     {
@@ -8481,8 +8246,6 @@
       "owner": "adapter",
       "task": "T16",
       "symbols": [
-        "func Validate",
-        "func ValidateForSelfVerify",
         "func ValidateForSelfVerifyWithScope",
         "func ValidateWithDeps",
         "func defaultDeps"
@@ -8493,7 +8256,6 @@
       "owner": "adapter",
       "task": "T16",
       "symbols": [
-        "func ParseGitStatusPath",
         "func gitScopedPaths",
         "func riskGit"
       ]
@@ -9404,7 +9166,6 @@
       "task": "T20",
       "symbols": [
         "func GateService.AdvancePhaseReport",
-        "func GateService.AdvancePhaseWithActor",
         "func GateService.StrictPRReadinessWithState",
         "func GateService.apply",
         "type GateService"
@@ -9431,15 +9192,6 @@
         "func NewMutationAuthority",
         "func verifyHolderCaller",
         "type MutationAuthority"
-      ]
-    },
-    {
-      "path": "internal/application/issueopscycle/native_actor.go",
-      "owner": "application",
-      "task": "T05",
-      "symbols": [
-        "func NormalizeNativeActor",
-        "type NativeProcessInspector"
       ]
     },
     {
@@ -9474,7 +9226,6 @@
       "task": "T20",
       "symbols": [
         "func GrillReadiness",
-        "func PhaseService.Advance",
         "func PhaseService.AdvanceReport",
         "func PhaseService.Refresh",
         "func PhaseService.advanceLocked",
@@ -9529,12 +9280,10 @@
         "func Readiness.Compatibility",
         "func Readiness.Completion",
         "func Readiness.Implementation",
-        "func Readiness.LocalPR",
         "func Readiness.ObserveLocalPR",
         "func Readiness.PR",
         "func Readiness.Plan",
         "func Readiness.PrefetchUpstream",
-        "func Readiness.StrictPR",
         "func Readiness.StrictPRWithFetch",
         "func Readiness.StrictPRWithState",
         "func Readiness.observePR",
@@ -10912,7 +10661,6 @@
       "owner": "application",
       "task": "T20",
       "symbols": [
-        "func Service.Plan",
         "func Service.PlanWithScope",
         "type Service"
       ]
@@ -11096,8 +10844,7 @@
       "owner": "application",
       "task": "T18",
       "symbols": [
-        "func ClassifySelfVerificationFailure",
-        "func SelfVerificationFailureClusters"
+        "func ClassifySelfVerificationFailure"
       ]
     },
     {
@@ -11173,7 +10920,6 @@
         "func Service.Delete",
         "func Service.List",
         "func Service.Read",
-        "func Service.Update",
         "func Service.WithKeyLock",
         "func Service.Write",
         "func Service.WriteRecord",
@@ -12198,7 +11944,6 @@
         "func Fail",
         "func Failure.Error",
         "func Failure.Unwrap",
-        "func FailureCodeOf",
         "type Failure",
         "type FailureCode"
       ]
@@ -12291,13 +12036,10 @@
         "func DecodeIssueLinkEvidence",
         "func IntentCodec.Decode",
         "func IntentCodec.DecodeSelfIdentified",
-        "func IntentCodec.DecodeShape",
         "func IntentCodec.Encode",
-        "func IntentCodec.ParseMarker",
         "func IntentCodec.RenderMarker",
         "func IntentCodec.RenderReadinessMarker",
         "func IntentCodec.Validate",
-        "func IntentCodec.ValidateShape",
         "func IntentError.Error",
         "func IntentError.IssueOpsErrorFields",
         "func InvocationError.Error",
@@ -13417,7 +13159,6 @@
       "owner": "domain",
       "task": "T20",
       "symbols": [
-        "func ContainsASCIITerminalControl",
         "func ExactFlags",
         "func ExactIssueOpsOwnerMutation",
         "func IssueOpsCommandSpec",
@@ -13448,16 +13189,6 @@
       "task": "T20",
       "symbols": [
         "func NeedsSuggestion"
-      ]
-    },
-    {
-      "path": "internal/domain/contextregion/context_region.go",
-      "owner": "domain",
-      "task": "T20",
-      "symbols": [
-        "func ContextSerializationStable",
-        "func StableProjection",
-        "func StableProjectionJSON"
       ]
     },
     {
@@ -13848,26 +13579,6 @@
         "func ValidateRetargetRecord",
         "func ValidateRetargetRequest",
         "func ValidateRetargetTarget"
-      ]
-    },
-    {
-      "path": "internal/domain/issueops/capability_baseline.go",
-      "owner": "domain",
-      "task": "T20",
-      "symbols": [
-        "func ValidateCapabilityBaseline",
-        "func sameFailures",
-        "func sameSteps",
-        "func validClaim",
-        "func validHost",
-        "func validLauncher",
-        "func validObservationResult",
-        "func validStatus",
-        "func validateCells",
-        "func validateEvidence",
-        "func validateHandOffs",
-        "func validateObservation",
-        "func validateRecovery"
       ]
     },
     {
@@ -14612,7 +14323,6 @@
       "task": "T20",
       "symbols": [
         "func IssueOpsPhaseRank",
-        "func IssueOpsPhaseResettableOnStaleWorktree",
         "func KnownIssueOpsPhase"
       ]
     },
@@ -14982,9 +14692,7 @@
       "path": "internal/domain/issueopsbenchmark/dimensions.go",
       "owner": "domain",
       "task": "T20",
-      "symbols": [
-        "func Dimensions"
-      ]
+      "symbols": []
     },
     {
       "path": "internal/domain/issueopsbenchmark/gate.go",
@@ -15113,7 +14821,6 @@
       "owner": "domain",
       "task": "T20",
       "symbols": [
-        "func JudgeDownwardOverrideRate",
         "func ValidateJudgeMetadata"
       ]
     },
@@ -15195,15 +14902,6 @@
       ]
     },
     {
-      "path": "internal/domain/issueopscompletion/actor.go",
-      "owner": "domain",
-      "task": "T20",
-      "symbols": [
-        "func NormalizeActor",
-        "func ValidateLiveActor"
-      ]
-    },
-    {
       "path": "internal/domain/issueopscompletion/artifact.go",
       "owner": "domain",
       "task": "T20",
@@ -15223,7 +14921,6 @@
       "owner": "domain",
       "task": "T20",
       "symbols": [
-        "func Apply",
         "func ApplyAt",
         "func CodeOf",
         "func Denial.Error",
@@ -15324,7 +15021,6 @@
       "owner": "domain",
       "task": "T20",
       "symbols": [
-        "func NormalizeID",
         "func ProjectEntry"
       ]
     },
@@ -15584,7 +15280,6 @@
         "func Denial.Error",
         "func Denial.IssueOpsErrorFields",
         "func Denial.Unwrap",
-        "func DenialReasonOf",
         "func Fingerprint",
         "func NormalizeDirectReason",
         "func NormalizeMode",
@@ -15890,7 +15585,6 @@
         "func DecodeIssueOpsRemoteJudgeJSON",
         "func RenderIssueOpsRemoteJudgePrompt",
         "func RenderIssueOpsRemoteLLMJudgePrompt",
-        "func RunIssueOpsRemoteLLMJudge",
         "func decodeStrictIssueOpsRemoteScoringResult"
       ]
     },
@@ -15962,7 +15656,6 @@
       "symbols": [
         "func EffectiveProjectKey",
         "func ValidProjectKey",
-        "func ValidateArtifactMatchesIssue",
         "func ValidateArtifactMatchesProject",
         "func ValidateArtifactURL",
         "func isDecimalString"
@@ -15976,14 +15669,6 @@
         "func CleanValues",
         "func InvalidAssignee",
         "func SplitURLPath"
-      ]
-    },
-    {
-      "path": "internal/domain/issueopsremote/issueops_text_bound.go",
-      "owner": "domain",
-      "task": "T20",
-      "symbols": [
-        "func boundedIssueOpsText"
       ]
     },
     {
@@ -16657,8 +16342,7 @@
         "func AppendUnique",
         "func NonEmptyStrings",
         "func NormalizeRelPath",
-        "func PrefixedKnownProjectDocNames",
-        "func PrefixedProjectDocNames"
+        "func PrefixedKnownProjectDocNames"
       ]
     },
     {
@@ -16760,8 +16444,6 @@
         "func CandidateSpecs",
         "func Candidates",
         "func Score",
-        "func VerifyWithGrounded",
-        "func verifyWithNamesAny",
         "type Candidate",
         "type CandidateSpec",
         "type VerificationKind"
@@ -17146,7 +16828,6 @@
       "owner": "domain",
       "task": "T18",
       "symbols": [
-        "func BudgetCommandOutput",
         "func TailWithBudget",
         "func tailWithBudget"
       ]
@@ -17197,14 +16878,11 @@
       "task": "T20",
       "symbols": [
         "func HasActiveCommandSubstitution",
-        "func HasActiveInputRedirect",
         "func HasActiveOutputRedirect",
         "func HasActiveParameterOrTildeExpansion",
         "func HasActivePathnameExpansion",
-        "func HasActiveShellComment",
         "func HasActiveShellSpecialQuoting",
         "func HasActiveZshEqualsExpansion",
-        "func HasUnquotedBackgroundOperator",
         "func HasUnquotedControlOperator",
         "func SplitCommandTokens",
         "func shellAssignmentName",
@@ -18151,6 +17829,33 @@
         "func CaptureStdoutAndError",
         "func captureFile"
       ]
+    },
+    {
+      "path": "internal/testsupport/context_region.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func ContextSerializationStable",
+        "func StableProjection",
+        "func StableProjectionJSON"
+      ]
+    },
+    {
+      "path": "internal/testsupport/operator_switches.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func ClearInheritedOperatorSwitches"
+      ]
+    },
+    {
+      "path": "internal/testsupport/verify_with.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func VerifyWithGrounded",
+        "func verifyWithNamesAny"
+      ]
     }
   ],
   "artifacts": [
@@ -18843,7 +18548,7 @@
     {
       "id": "command-policy",
       "source_path": "internal/adapter/policy/policy_evaluate.go",
-      "source_symbol": "func EvaluateCommandPolicy",
+      "source_symbol": "func CommandObserver.Observe",
       "responsibility": "observe workspace and command facts then delegate permit or deny decision",
       "target": "internal/domain/policy",
       "target_symbol": "func EvaluateCommandDecision",
@@ -19345,23 +19050,6 @@
       "evidence_tests": [
         "internal/domain/issueops.TestValidateRecordInvariantsRejectsPlanPrepEvidenceAndWaiverConflict",
         "internal/adapter/outbound/issueopsrecord.TestEncodeRejectsRecordInvariantViolationsAsInvalidState"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "capability-baseline-invariants",
-      "source_path": "internal/contract/issueops/capability_baseline.go",
-      "source_symbol": "func Validate",
-      "responsibility": "Cross-host support evidence and recovery chain acceptance rules belong to the cycle domain.",
-      "target": "internal/domain/issueops",
-      "target_symbol": "func ValidateCapabilityBaseline",
-      "task": "T02",
-      "entrypoints": [
-        "internal/domain/issueops.ValidateCapabilityBaseline"
-      ],
-      "evidence_tests": [
-        "internal/contract/issueops_test.TestValidateStatusEvidenceRelationships",
-        "internal/contract/issueops_test.TestValidateRecoveryModeInvariants"
       ],
       "status": "migrated"
     },
@@ -21445,10 +21133,10 @@
     },
     {
       "id": "execution-completion-actor-identity",
-      "source_path": "internal/domain/issueopscompletion/actor.go",
-      "source_symbol": "func NormalizeActor",
+      "source_path": "internal/domain/issueops/native_actor.go",
+      "source_symbol": "func NormalizeNativeActor",
       "responsibility": "normalize native identity and require a reuse-safe receipt in observed ancestry before inspecting the process",
-      "target": "internal/domain/issueopscompletion",
+      "target": "internal/domain/issueops",
       "task": "T07",
       "entrypoints": [
         "issueops execution complete"
@@ -21461,10 +21149,10 @@
     },
     {
       "id": "execution-completion-live-identity",
-      "source_path": "internal/domain/issueopscompletion/actor.go",
-      "source_symbol": "func ValidateLiveActor",
+      "source_path": "internal/domain/issueops/native_actor.go",
+      "source_symbol": "func ValidateObservedNativeProcess",
       "responsibility": "reject a non-live or reused native process identity",
-      "target": "internal/domain/issueopscompletion",
+      "target": "internal/domain/issueops",
       "task": "T07",
       "entrypoints": [
         "issueops execution complete"
@@ -21706,7 +21394,7 @@
       "source_path": "internal/adapter/issueops/execution_lease_identity.go",
       "source_symbol": "func normalizeNativeActor",
       "responsibility": "normalize and validate native identity and ancestry before live process observation",
-      "target": "internal/application/issueopscycle",
+      "target": "internal/domain/issueops",
       "target_symbol": "func NormalizeNativeActor",
       "task": "T05",
       "entrypoints": [
@@ -21714,7 +21402,7 @@
         "issueops remote create-pr"
       ],
       "evidence_tests": [
-        "internal/application/issueopscycle/native_actor_test.go"
+        "internal/domain/issueops/native_actor_test.go"
       ],
       "status": "migrated"
     },
@@ -26261,7 +25949,7 @@
       "source_symbol": "func advanceIssueOpsPhaseWithActor",
       "responsibility": "Authorize before upstream prefetch, authorize again under lock, and persist only after readiness and transition rules",
       "target": "internal/application/issueopscycle",
-      "target_symbol": "func PhaseService.Advance",
+      "target_symbol": "func PhaseService.AdvanceReport",
       "task": "T20",
       "entrypoints": [
         "issueops next",

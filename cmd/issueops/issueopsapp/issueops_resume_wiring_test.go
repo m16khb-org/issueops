@@ -1,13 +1,11 @@
 package issueopsapp
 
 import (
-	issueopscontract "issueops/internal/contract/issueops"
-)
-
-import (
 	"bytes"
 	"context"
 	"encoding/json"
+	issueopscontract "issueops/internal/contract/issueops"
+
 	ownerdomain "issueops/internal/domain/issueops"
 	"os"
 	"path/filepath"
@@ -17,10 +15,14 @@ import (
 
 	leaseinbound "issueops/internal/adapter/inbound/issueopslease"
 	"issueops/internal/adapter/issueops"
+
 	leaseoutbound "issueops/internal/adapter/outbound/issueopslease"
 	"issueops/internal/adapter/outbound/sqlstore"
+
 	leaseapp "issueops/internal/application/issueopslease"
+
 	leasecontract "issueops/internal/contract/issueopslease"
+
 	leasedomain "issueops/internal/domain/issueopslease"
 	"issueops/internal/port"
 )
@@ -44,7 +46,7 @@ type resumeCoreState struct {
 func TestResumePlanIdentityFailureStopsBeforeOperationAndOrcaMutation(t *testing.T) {
 	stateRoot, record, _, _, _ := seedOrcaClaimSnapshot(t)
 	record.PlanPath = filepath.Join(record.Execution.Workspace.Root, "plans", "missing.md")
-	if _, err := issueops.WriteIssueOps(context.Background(), stateRoot, record); err != nil {
+	if _, err := (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
 	fake := &resumePlanMutationFake{}
@@ -98,7 +100,7 @@ func TestIssueOpsResumeProductionWiringObservesDispatch(t *testing.T) {
 	record.WorktreePath = canonicalRoot
 	record.Execution.Workspace.Root = canonicalRoot
 	record.PlanPath = strings.Replace(record.PlanPath, oldRoot, canonicalRoot, 1)
-	packetPath := issueops.SealedOwnerContextPacketPath(record)
+	packetPath := sealedOwnerContextPacketPath(record)
 	packetData, err := os.ReadFile(packetPath)
 	if err != nil {
 		t.Fatal(err)
@@ -125,7 +127,7 @@ func TestIssueOpsResumeProductionWiringObservesDispatch(t *testing.T) {
 	}
 	record.Execution.Orca.ContextPacketSHA256 = claimWiringSHA256(string(packetData))
 	record.Execution.Orca.OwnerPromptSHA256 = claimWiringSHA256(string(prompt))
-	if _, err := issueops.WriteIssueOps(context.Background(), stateRoot, record); err != nil {
+	if _, err := (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
 	fake := &resumePlanMutationFake{}
@@ -273,7 +275,7 @@ func TestResumePersistenceRejectsRawSnapshotDriftWithoutAdditionalMutation(t *te
 			canonicalRoot := coreRecord.Repo + ".worktrees/" + coreRecord.Branch
 			coreRecord.WorktreePath = canonicalRoot
 			coreRecord.Execution.Workspace.Root = canonicalRoot
-			if _, err := issueops.WriteIssueOps(context.Background(), stateRoot, coreRecord); err != nil {
+			if _, err := (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), coreRecord); err != nil {
 				t.Fatal(err)
 			}
 			db, err := sqlstore.Open(stateRoot)
@@ -290,8 +292,8 @@ func TestResumePersistenceRejectsRawSnapshotDriftWithoutAdditionalMutation(t *te
 			}
 			artifacts := leasecontract.ResumeArtifacts{
 				ClaimTokenPath: tokenPath, IssueBodySHA256: issueDigest,
-				ContextPacketPath: issueops.SealedOwnerContextPacketPath(coreRecord), ContextPacketSHA256: packetDigest,
-				OwnerPromptPath:   strings.TrimSuffix(issueops.SealedOwnerContextPacketPath(coreRecord), "context.json") + "owner-prompt.txt",
+				ContextPacketPath: sealedOwnerContextPacketPath(coreRecord), ContextPacketSHA256: packetDigest,
+				OwnerPromptPath:   strings.TrimSuffix(sealedOwnerContextPacketPath(coreRecord), "context.json") + "owner-prompt.txt",
 				OwnerPromptSHA256: strings.Repeat("d", 64),
 			}
 			effects := &resumeHostAdapter{stateRoot: stateRoot}
@@ -404,7 +406,7 @@ func resumeWiringDriftRecord(t *testing.T, stateRoot, id string) {
 		t.Fatal(err)
 	}
 	record.UpdatedAt += "-drift"
-	if _, err := issueops.WriteIssueOps(context.Background(), stateRoot, record); err != nil {
+	if _, err := (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
 }

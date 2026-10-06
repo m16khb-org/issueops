@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"issueops/internal/adapter/outbound/issueopsrecord"
 	"issueops/internal/adapter/outbound/sqlstore"
 	issueopscontract "issueops/internal/contract/issueops"
 )
@@ -26,7 +25,7 @@ func TestRepositoryUpdatesAndDeletesStagedArtifactMap(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := database.Put(issueopsrecord.Bucket(), id, data); err != nil {
+	if err := database.Put("issueops_v1", id, data); err != nil {
 		t.Fatal(err)
 	}
 
