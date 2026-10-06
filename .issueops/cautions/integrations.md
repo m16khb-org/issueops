@@ -68,9 +68,9 @@ Codex용 skill과 Claude용 skill을 복사본으로 따로 두면 금방 내용
 - **외부 CLI를 통한 관찰은 쓰기다.** dry-run·preview·readiness 경로는 외부 프로세스를 spawn하지 않는다(`exec.LookPath` 수준의 존재 확인만 허용). 외부 CLI는 기동만으로 자기 상태 파일을 만들 수 있어(`claude`는 `$HOME/.claude`·`$HOME/.claude.json`), inventory를 읽는 호출도 부작용을 남긴다([2026-08-28 lesson](lessons/2026-08-28-install-dry-run-spawned-the-claude-cli.md)).
 - 선택적 외부 바이너리에 의존하는 게이트는 그 바이너리가 없는 CI에서 항상 통과한다. CI 초록을 그 게이트의 증거로 삼지 말고 도구가 설치된 환경에서 재현한다.
 
-draft-wiki는 별도 staging/export area다. `.issueops/draft-wiki/**`에는 사용자가 검토할 후보 Markdown만 둔다. `issueops project draft-wiki promote --confirm`은 승인된 draft를 repo-local `exported/` 디렉토리로 이동하고 `export.log`를 append할 뿐, 외부 wiki ingest/lint/index/query-pack을 완료한 것으로 보고하지 않는다.
+draft-wiki staging area(`.issueops/draft-wiki/`)와 `issueops project draft-wiki ...`(queue/list/suggest/approve/reject/promote/prune), draft-wiki worker는 모두 제거됐다. `issueops docs`/`docs_index`는 `.issueops/evidence/**`만 색인에서 제외한다. 정식 갱신은 `project_docs_append` 또는 SHA-guarded `project_docs_revise`를 쓴다.
 
-draft-wiki queue는 hook 휴리스틱이 자동 생성하지 않는다. UserPromptSubmit은 메인 에이전트에게 장기 재사용 가치 판단 책임과 명시 queue 명령만 알려주고, 메인 에이전트가 의미 있는 후보라고 판단한 경우에만 `issueops project draft-wiki queue --stdin`(heredoc 권장) 또는 `--input`으로 적재한다. 적재된 후보의 검토·승격은 `issueops project draft-wiki list|suggest|approve|reject|promote|prune`이 담당하며 별도 worker 명령은 없다. hook stdout에는 host-compatible no-op shape를 유지하고, queue/draft 생성 여부는 명시 queue command, queue file, draft file, worker result로 검증한다.
+hook은 draft-wiki 후보를 자동 생성하거나 queue에 적재하지 않으며, 존재하지 않는 queue 명령을 안내해서도 안 된다.
 
 ## 14. Codex vs Claude Code hook rendering drift
 

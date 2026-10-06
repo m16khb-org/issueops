@@ -107,24 +107,6 @@ func TestDocsIndexIncludesAgentDocs(t *testing.T) {
 	}
 }
 
-func TestDocsIndexExcludesDraftWiki(t *testing.T) {
-	root := t.TempDir()
-	mustWrite(t, filepath.Join(root, "AGENTS.md"), "# Rules\n")
-	mustWrite(t, filepath.Join(root, ".issueops", "CAUTIONS.md"), "# Cautions\n")
-	mustWrite(t, filepath.Join(root, ".issueops", "draft-wiki", "draft", "candidate.md"), "# Draft candidate\n")
-
-	index := (docsapp.Service{Observer: Observer{}, Now: time.Now}).Index(root, "test")
-	if !docIndexContains(index.Docs, "AGENTS.md") {
-		t.Fatalf("DocsIndex missing AGENTS.md: %+v", index.Docs)
-	}
-	if !docIndexContains(index.Docs, ".issueops/CAUTIONS.md") {
-		t.Fatalf("DocsIndex missing CAUTIONS.md: %+v", index.Docs)
-	}
-	if docIndexContains(index.Docs, ".issueops/draft-wiki/draft/candidate.md") {
-		t.Fatalf("DocsIndex included draft-wiki candidate: %+v", index.Docs)
-	}
-}
-
 func TestDocsIndexExcludesEvidence(t *testing.T) {
 	root := t.TempDir()
 	mustWrite(t, filepath.Join(root, "AGENTS.md"), "# Rules\n")

@@ -69,6 +69,6 @@ Dry-run/default-write rules:
 
 ## Standalone Docs Policy
 
-Project docs, docs routing, and draft-wiki staging must not depend on an external wiki, memory provider, graph index, or companion MCP server. Do not make external-tool-specific harness CLI commands, MCP tools, resources, or SessionStart hooks prerequisites for project documentation workflows.
+Project docs and docs routing must not depend on an external wiki, memory provider, graph index, or companion MCP server. Do not make external-tool-specific harness CLI commands, MCP tools, resources, or SessionStart hooks prerequisites for project documentation workflows.
 
-Repo-local draft-wiki staging is separate from source-of-truth `.issueops/*.md`. Candidates live under `.issueops/draft-wiki/`, and `issueops docs`/MCP `docs_index` must not index them as canonical project docs. Hooks never decide or queue this material. The public CLI does not currently have a working `project draft-wiki queue` surface. Use `project_docs_append` or SHA-guarded `project_docs_revise` for canonical updates; do not prescribe a nonexistent queue command.
+The repo-local draft-wiki staging area (`.issueops/draft-wiki/`) and its `project draft-wiki` commands were removed. Hooks never decide or queue documentation material. Use `project_docs_append` or SHA-guarded `project_docs_revise` for canonical updates; do not prescribe a staging directory or queue command.
