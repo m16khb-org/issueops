@@ -13,11 +13,3 @@ Claude Code에서 이 저장소를 열면 먼저 `AGENTS.md`를 읽고 동일한
 
 - Endpoint/DTO/OpenAPI 변경 시 `.issueops/OPEN_API_SPEC.md`를 프롬프트로 포함하고, user-scope MCP 서버 `issueops`의 `api_doc_static_check` 후 `api_doc_review` 또는 `issueops api-doc check --json`을 사용한다.
 - 대상 repo에 `npm run swagger:check`가 있으면 그 wrapper를 우선 실행한다.
-
-<!-- OPENWIKI:START -->
-
-## OpenWiki
-
-See [AGENTS.md](AGENTS.md) for OpenWiki agent instructions.
-
-<!-- OPENWIKI:END -->

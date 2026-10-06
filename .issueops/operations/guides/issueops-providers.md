@@ -230,4 +230,4 @@ GitLab issue snapshot은 다음 순서로 준비한다.
 GitHub가 함께 들어갈 수 있는 provider-neutral 문서이며, GitHub CLI recipe는
 검증된 `gh issue view <url> --json url,body,state`를 사용한다. 실제로 관찰하지
 않은 MCP 이름, 개인 wrapper 경로, token/profile/server namespace는 기록하지
-않고 OpenWiki 자동 update도 실행하지 않는다.
+않는다.

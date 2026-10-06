@@ -51,8 +51,7 @@ IssueOps execution이 GitLab issue 본문을 봉인해야 할 때는 다음 순�
    최신 content/SHA를 다시 읽고 `project_docs_revise`의 SHA-CAS로
    `.issueops/VCS.md`에 기록한다. tool leaf, 관찰한 schema, endpoint/필드,
    CLI fallback만 남기고 secret과 개인 server namespace는 남기지 않는다.
-   canonical worktree가 아직 없으면 생성 뒤로 기록을 미룬다. OpenWiki 자동 update를
-   실행하지 않는다.
+   canonical worktree가 아직 없으면 생성 뒤로 기록을 미룬다.
 8. `.issueops/VCS.md`는 provider-neutral하다. GitHub repo에서는 검증된
    `gh issue view <url> --json url,body,state`를 기록하거나 실제로 관찰한 MCP
    schema만 기록한다. 존재하지 않는 GitHub MCP 이름을 추측해서 만들지 않는다.
