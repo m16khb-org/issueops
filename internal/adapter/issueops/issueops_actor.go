@@ -26,10 +26,3 @@ func ValidateIssueOpsMutationActor(ctx context.Context, stateRoot, id string, ac
 	}
 	return validateWorkspacePreparationMutation(ctx, record, &actor, verifier)
 }
-
-// validatePostTransferMutation keeps current-contract durable writes bound to the
-// owner even when callers bypass lifecycle hooks through a direct CLI or MCP
-// request. Legacy cycles retain their existing actor-optional behavior.
-func validatePostTransferMutation(ctx context.Context, record issueops.IssueOpsRecord, actor *issueops.IssueOpsActor, verifier authorityport.ActorVerifier) error {
-	return validateExecutionMutation(ctx, record, actor, verifier)
-}

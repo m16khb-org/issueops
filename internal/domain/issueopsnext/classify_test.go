@@ -309,7 +309,7 @@ func TestOwnerCommandCoversGateMap(t *testing.T) {
 		"schema_evidence", "schema_evidence_stale",
 		"feedback_classification", "feedback_resolution", "contract_feedback_issue_update",
 		"remote_artifact", "child_incomplete", "child_unvalidated", "child_rejected_unresolved",
-		"gates_incomplete:.issueops/gates.md", "duplicate_issue_artifact:https://example.com/1",
+		"gates_incomplete:.issueops/gates.md",
 		"worktree_clean", "upstream", "upstream_fetch", "upstream_synced", "branch_match",
 	}
 	for _, key := range keys {

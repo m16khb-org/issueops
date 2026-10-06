@@ -62,7 +62,7 @@ func gatesUsage() {
   issueops gates check [--file PATH]... [--workspace-root PATH] [--cwd PATH] [--timeout-seconds N] [--env NAME,NAME] [--write] [--network] [--json]
   issueops gates status [--file PATH]... [--workspace-root PATH] [--cwd PATH] [--json]
   issueops gates report [--file PATH]... [--workspace-root PATH] [--cwd PATH] [--json]
-  issueops gates abandon --gate ID --reason TEXT [--file PATH] [--json]
+  issueops gates abandon --file PATH --gate ID --reason TEXT [--json]
 
 Exit codes: 0 all gates met or honestly abandoned, 1 unmet gates remain, 2 usage error.
 `)
@@ -175,7 +175,7 @@ func runInit(deps Dependencies, args []string) error {
 
 func runAbandon(deps Dependencies, args []string) error {
 	fs := flag.NewFlagSet("gates abandon", flag.ContinueOnError)
-	file := fs.String("file", "GATES.md", "gate ledger file (pass namespaced .issueops/gates/<name>.md explicitly)")
+	file := fs.String("file", "", "gate ledger file (required: .issueops/issues/<n>/gates.md or .issueops/gates/<scope>.md)")
 	gateID := fs.String("gate", "", "gate id to abandon (e.g. G2)")
 	reason := fs.String("reason", "", "honest abandon reason")
 	jsonOut := fs.Bool("json", false, "print JSON")

@@ -35,7 +35,7 @@ lesson으로 분리됐고, 여기서는 핵심 한 줄과 탐색 링크만 둔�
   (#486; 비영 종료가 정상인 도구는 `python3 -c`로 감싸 0으로 끝낸다).
 - IssueOps gate ledger는 root `GATES.md`가 아니라 이슈 폴더
   `.issueops/issues/<provider-issue-number>/gates.md`로 namespacing한다(#480;
-  옛 `.issueops/gates/*.md`는 읽기 호환)
+  root `GATES.md`·`gates/*.md`는 더 이상 탐색하지 않는다)
   ([2026-08-26 lesson](cautions/lessons/2026-08-26-gates-root-ledger-worktree-conflicts.md)).
 - self-verify는 외부 검증 메커니즘을 명시해야 하고 문서만 통과하는 가짜 안정성을 경계한다.
 - Omo MCP catalog는 server config hash로 장기 cache되므로 installer가

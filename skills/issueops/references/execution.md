@@ -421,8 +421,9 @@ issueops artifact stage --id "$ISSUEOPS_ID" --name verified-execution-loop --fil
   regular file이어야 하고 staged bytes와 SHA-256이 정확히 같아야 한다.
 - After the worktree receipt, prepare materializes each artifact as a `0600` file under
   `execution.workspace.artifact_dir`. For an issue-linked cycle, the canonical path is
-  `<worktree>/.issueops/issues/<provider-issue-number>/artifact/<name>.md`; only a
-  legacy record with an empty `artifact_dir` uses `<worktree>/.issueops/artifact/`.
+  `<worktree>/.issueops/issues/<provider-issue-number>/artifact/<name>.md`. Prepare
+  rejects a linked issue URL without an issue number, and a record with an empty
+  `artifact_dir` is rejected instead of guessing a sealed path.
   For a fresh Orca plan, prepare records that path as durable `plan_path` in the same
   CAS and seals the same SHA-256 in `artifact_manifest.plan` before creating the
   terminal/Run/task/dispatch. The temporary source may be deleted after successful

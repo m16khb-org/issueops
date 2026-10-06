@@ -12,6 +12,9 @@ import (
 type ResumeReader struct{ Files port.OwnerResumeFiles }
 
 func (s ResumeReader) Read(record issueops.IssueOpsRecord) (issueops.OwnerResumeArtifacts, error) {
+	if err := domain.RequireSealedArtifactDir(record); err != nil {
+		return issueops.OwnerResumeArtifacts{}, err
+	}
 	tokenPath := s.Files.TokenPath(record)
 	token, err := s.readToken(record, tokenPath)
 	if err != nil {

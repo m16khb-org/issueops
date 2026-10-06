@@ -88,6 +88,9 @@ type Snapshot struct {
 	CanonicalRoot  string
 	ClaimTokenPath string
 	RootConflict   *RootClaim
+	// ArtifactDir is the sealed-artifact directory derived from the linked
+	// issue URL; empty when the URL carries no issue number.
+	ArtifactDir string
 }
 
 type AccessResult struct {

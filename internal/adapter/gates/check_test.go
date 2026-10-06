@@ -164,23 +164,20 @@ func TestCheckNetworkDeniedByDefault(t *testing.T) {
 	}
 }
 
-func TestCheckDiscoversDefaultFiles(t *testing.T) {
+func TestCheckDiscoversScopeLedgersOnly(t *testing.T) {
 	dir := t.TempDir()
 	writeTestGateFile(t, dir, "GATES.md", "- [ ] G1: top\n  EVIDENCE: pending\n")
 	writeTestGateFile(t, dir, ".issueops/gates/b-leaf.md", "- [ ] G2: leaf b\n  EVIDENCE: pending\n")
 	writeTestGateFile(t, dir, ".issueops/gates/a-leaf.md", "- [ ] G3: leaf a\n  EVIDENCE: pending\n")
-	writeTestGateFile(t, dir, "gates/legacy.md", "- [ ] G4: legacy leaf\n  EVIDENCE: pending\n")
+	writeTestGateFile(t, dir, "gates/retired.md", "- [ ] G4: retired leaf\n  EVIDENCE: pending\n")
 	result, err := Check(gatescontract.CheckRequest{WorkspaceRoot: dir, CWD: dir, StatusOnly: true})
 	if err != nil {
 		t.Fatalf("Check returned error: %v", err)
 	}
-	if len(result.Files) != 4 {
-		t.Fatalf("discovered %d files, want 4 canonical and compatible ledgers: %+v", len(result.Files), result.Files)
-	}
-	if result.Files[1].File != filepath.Join(dir, ".issueops", "gates", "a-leaf.md") ||
-		result.Files[2].File != filepath.Join(dir, ".issueops", "gates", "b-leaf.md") ||
-		result.Files[3].File != filepath.Join(dir, "gates", "legacy.md") {
-		t.Fatalf("canonical files must precede compatible files, each sorted by name: %+v", result.Files)
+	if len(result.Files) != 2 ||
+		result.Files[0].File != filepath.Join(dir, ".issueops", "gates", "a-leaf.md") ||
+		result.Files[1].File != filepath.Join(dir, ".issueops", "gates", "b-leaf.md") {
+		t.Fatalf("only .issueops/gates scope ledgers are discovered, sorted by name: %+v", result.Files)
 	}
 }
 
@@ -190,8 +187,7 @@ func TestCheckDiscoversIssueFolderLedgers(t *testing.T) {
 	writeTestGateFile(t, dir, ".issueops/issues/97/gates.md", "- [ ] G2: issue 97\n  EVIDENCE: pending\n")
 	writeTestGateFile(t, dir, ".issueops/issues/480/plan.md", "not a ledger\n")
 	writeTestGateFile(t, dir, ".issueops/issues/_unnumbered/gates.md", "- [ ] G3: unnumbered\n  EVIDENCE: pending\n")
-	writeTestGateFile(t, dir, ".issueops/gates/legacy.md", "- [ ] G4: legacy\n  EVIDENCE: pending\n")
-	writeTestGateFile(t, dir, "GATES.md", "- [ ] G5: top\n  EVIDENCE: pending\n")
+	writeTestGateFile(t, dir, ".issueops/gates/scope.md", "- [ ] G4: scope\n  EVIDENCE: pending\n")
 	result, err := Check(gatescontract.CheckRequest{WorkspaceRoot: dir, CWD: dir, StatusOnly: true})
 	if err != nil {
 		t.Fatalf("Check returned error: %v", err)
@@ -200,15 +196,14 @@ func TestCheckDiscoversIssueFolderLedgers(t *testing.T) {
 		filepath.Join(dir, ".issueops", "issues", "97", "gates.md"),
 		filepath.Join(dir, ".issueops", "issues", "480", "gates.md"),
 		filepath.Join(dir, ".issueops", "issues", "_unnumbered", "gates.md"),
-		filepath.Join(dir, "GATES.md"),
-		filepath.Join(dir, ".issueops", "gates", "legacy.md"),
+		filepath.Join(dir, ".issueops", "gates", "scope.md"),
 	}
 	if len(result.Files) != len(want) {
 		t.Fatalf("discovered %d files, want %d: %+v", len(result.Files), len(want), result.Files)
 	}
 	for i, file := range result.Files {
 		if file.File != want[i] {
-			t.Fatalf("file %d = %s, want %s (issue folders first, numeric ascending, then non-numeric, then compatible): %+v", i, file.File, want[i], result.Files)
+			t.Fatalf("file %d = %s, want %s (issue folders first, numeric ascending, then non-numeric, then scope ledgers): %+v", i, file.File, want[i], result.Files)
 		}
 	}
 }

@@ -198,6 +198,7 @@ func rolloverExecutionFixture(t *testing.T) (string, contractissueops.IssueOpsRe
 	record.BranchPrepare.IssueURL = record.IssueURL
 	record.Execution.Mode = contractissueops.ExecutionModeOrca
 	record.Execution.Workspace.Driver = "orca"
+	record.Execution.Workspace.ArtifactDir = issueArtifactDirFor(record)
 	record.Execution.Orca = &contractissueops.OrcaBinding{
 		RuntimeID: "runtime-sealed", RepoID: "repo", WorktreeID: "worktree",
 		WorktreeInstanceID: "instance", RunID: "run", TaskID: "task",

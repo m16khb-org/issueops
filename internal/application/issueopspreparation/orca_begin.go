@@ -20,6 +20,9 @@ func EnsureOrcaBeginUnprepared(record leasecontract.Record) error {
 }
 
 func ApplyOrcaBegin(current leasecontract.Record, begin OrcaBegin, artifactDir string) (leasecontract.Record, preparationcontract.Intent, error) {
+	if err := requireArtifactDir(artifactDir); err != nil {
+		return current, preparationcontract.Intent{}, err
+	}
 	issue, err := preparationdomain.PrepareIssueIdentity(current.IssueURL, preparationcontract.DecodeIssueLinkEvidence(current.BranchPrepare))
 	if err != nil {
 		return current, preparationcontract.Intent{}, err

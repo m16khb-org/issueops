@@ -77,3 +77,16 @@ func missingTemplateTitles(content, path string, kind IssueOpsArtifactKind, temp
 	}
 	return missing
 }
+
+// RequiredSectionTitles reports the required section titles for
+// kind/template, in contract order.
+func RequiredSectionTitles(kind IssueOpsArtifactKind, template IssueOpsTemplateKind) []string {
+	input := normalizeInput(IssueOpsTemplateInput{Kind: kind, Template: template})
+	var titles []string
+	for _, spec := range sectionsFor(input.Kind, input.Template) {
+		if spec.Required {
+			titles = append(titles, spec.Title)
+		}
+	}
+	return titles
+}

@@ -235,7 +235,7 @@ func newOrcaApplicationFixture() *orcaApplicationFixture {
 		DesignReview:         []byte(`{"problem_summary":"p","proposed_design":"d","verification":["v"],"approved":true}`),
 		DevilsAdvocateReview: []byte(`{"verdict":"pass","findings":["fixture"],"reviewer_context":"subagent","reviewed_plan_digest":"fixture-digest","recorded_at":"2026-08-09T00:00:00Z"}`),
 	}
-	fixture.repository = &orcaApplicationRepositoryFake{trace: &fixture.trace, snapshot: preparationcontract.Snapshot{Record: record, RecordRaw: []byte("raw")}, beginIndex: -1}
+	fixture.repository = &orcaApplicationRepositoryFake{trace: &fixture.trace, snapshot: preparationcontract.Snapshot{Record: record, RecordRaw: []byte("raw"), ArtifactDir: ".issueops/issues/199/artifact"}, beginIndex: -1}
 	fixture.gateway = &orcaApplicationGatewayFake{trace: &fixture.trace, probe: preparationcontract.ProbeResult{Available: true, Ready: true}, firstEffectIndex: -1}
 	fixture.evidence = &orcaApplicationEvidenceFake{
 		trace:     &fixture.trace,

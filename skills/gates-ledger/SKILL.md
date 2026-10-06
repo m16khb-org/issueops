@@ -23,8 +23,8 @@ description: Create, check, and report task gate ledgers with the issueops gates
 - 같은 폴더의 `plan.md`, `intent.md`, `spec.md`, `plan-review.md`는 구현 자료의 추적
   사본이다. 경로를 제한하는 게이트를 쓸 때 `.issueops/issues/<n>/` 전체를 허용 경로에
   넣는다. 봉인 원본이 있는 `artifact/` 하위는 계속 무시된다.
-- 같은 번호의 canonical 원장과 legacy 원장이 함께 있으면 pr 진입이
-  `duplicate_issue_artifact:<n>`으로 막힌다. 옛 경로의 원장은 옮기고 지운다.
+- root `GATES.md`와 `gates/*.md`는 더 이상 찾지 않는다. `gates abandon`은 `--file`을
+  반드시 받는다.
 
 ## 만들기
 

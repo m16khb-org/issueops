@@ -73,8 +73,8 @@ This reference keeps only shared provider rules. The CLI contract is:
   canonical sections.
 - confirmed writes fail closed on critical validation, missing label/assignee,
   Korean artifact, or PR/MR target/base mismatch.
-- `--field` aliases are defined by the renderer code and its tests; do not
-  copy a second alias table into a skill.
+- `--field` keys are the section keys the renderer defines; there are no
+  aliases, and a key no section renders surfaces as `unrendered_field:<key>`.
 
 Never add `## Plan Link`, `## Plan`, or a `TBD` placeholder to an Issue body.
 Plan tracking belongs in IssueOps state and, when needed, the PR/MR body.

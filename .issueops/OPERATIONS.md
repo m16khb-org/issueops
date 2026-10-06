@@ -85,7 +85,7 @@ instead of duplicating their content here or in a guide.
    verification commands.
 5. Task gate ledgers: `issueops gates init/check/status/report/abandon`
    discovers per-issue `.issueops/issues/<n>/gates.md` first, then generic
-   `.issueops/gates/*.md` and compatible `GATES.md`/`gates/*.md` ledgers.
+   `.issueops/gates/*.md` ledgers.
    Generic `gates init` still defaults to `.issueops/gates/<scope-slug>.md`;
    IssueOps owns `.issueops/issues/<provider-issue-number>/gates.md` and
    judges only its own or anonymous ledgers for strict PR readiness.

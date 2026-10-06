@@ -141,9 +141,8 @@ Orca-capable prepare 전에 승인된 child plan을 source checkout 밖의 coord
 stage한다. 이 command에는 actor flag가 없다. 새 Orca prepare는 worktree receipt
 직후 레코드의 `execution.workspace.artifact_dir` 아래에 권한이 `0600`인 artifact를
 materialize한다. 이슈에 연결된 cycle의 canonical 경로는
-`.issueops/issues/<provider-issue-number>/artifact/plan.md`이며,
-`artifact_dir`가 비어 있는 legacy 레코드만
-`.issueops/artifact/plan.md`를 fallback 경로로 사용한다. Prepare는 이 경로를
+`.issueops/issues/<provider-issue-number>/artifact/plan.md`다. 이슈 번호를 알 수
+없는 연결 URL이면 prepare가 거부한다. Prepare는 이 경로를
 durable `plan_path`로 같은 CAS에 기록하고, 동일 digest를 sealed packet에 넣은
 뒤에만 owner를 띄운다. `parent_plan_path`만으로는 readiness를 충족하지 못한다.
 

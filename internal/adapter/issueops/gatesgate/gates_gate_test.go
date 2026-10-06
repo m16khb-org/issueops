@@ -10,7 +10,6 @@ import (
 
 	"issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
-	issueopsdomain "issueops/internal/domain/issueops"
 )
 
 func initGatesGateRepo(t *testing.T) string {
@@ -94,17 +93,15 @@ func readyGatesGateRecord(t *testing.T) issueopscontract.IssueOpsRecord {
 	return record
 }
 
+// cycleLedger is the linked issue 21's canonical gate ledger.
+const cycleLedger = ".issueops/issues/21/gates.md"
+
+// writeGatesLedger commits the cycle ledger. 게이트 ledger는 worktree 콘텐츠의
+// 일부다. 커밋하지 않으면 strict readiness의 worktree_clean/fingerprint 검사에
+// 걸린다 — 실제 사이클에서도 ledger는 PR 전에 커밋된다.
 func writeGatesLedger(t *testing.T, root, content string) {
 	t.Helper()
-	if err := os.WriteFile(filepath.Join(root, "GATES.md"), []byte(content), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	// 게이트 ledger는 worktree 콘텐츠의 일부다. 커밋하지 않으면 strict
-	// readiness의 worktree_clean/fingerprint 검사에 걸린다 — 실제 사이클에서도
-	// ledger는 PR 전에 커밋된다.
-	runGatesGateGit(t, root, "git", "add", "GATES.md")
-	runGatesGateGit(t, root, "git", "commit", "-m", "add gates ledger")
-	runGatesGateGit(t, root, "git", "push", "origin", "main")
+	writeGatesLedgerAt(t, root, cycleLedger, content)
 }
 
 func TestStrictPRReadinessWithoutLedgerStaysReady(t *testing.T) {
@@ -124,7 +121,7 @@ func TestStrictPRReadinessBlocksOnUnmetGates(t *testing.T) {
 	if ready.Ready {
 		t.Fatalf("unmet gates must block readiness: %+v", ready)
 	}
-	if !containsMissing(ready.Missing, "gates_incomplete:GATES.md") {
+	if !containsMissing(ready.Missing, "gates_incomplete:"+cycleLedger) {
 		t.Fatalf("gates_incomplete missing entry absent: %+v", ready.Missing)
 	}
 	if !hasWarning(ready.Warnings, "G1") || !hasWarning(ready.Warnings, "G2") {
@@ -147,7 +144,7 @@ func TestStrictPRReadinessBlocksOnEvidencePendingOnly(t *testing.T) {
 	record := readyGatesGateRecord(t)
 	writeGatesLedger(t, record.Repo, "- [x] G1: claimed done\n  EVIDENCE: pending\n")
 	ready := StrictPRReadinessWithState(issueOpsStateRootForTest(), record)
-	if ready.Ready || !containsMissing(ready.Missing, "gates_incomplete:GATES.md") {
+	if ready.Ready || !containsMissing(ready.Missing, "gates_incomplete:"+cycleLedger) {
 		t.Fatalf("checked-but-pending must block readiness: %+v", ready)
 	}
 }
@@ -235,52 +232,7 @@ func TestStrictPRReadinessReadsIssueFolderLedger(t *testing.T) {
 	}
 }
 
-func TestStrictPRReadinessDuplicateIssueArtifactFailsClosed(t *testing.T) {
-	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	record := readyGatesGateRecord(t) // linked issue 21
-	writeGatesLedgerAt(t, record.Repo, ".issueops/issues/21/gates.md", metLedger)
-	writeGatesLedgerAt(t, record.Repo, ".issueops/gates/issue-21.md", metLedger)
-	// 다른 이슈의 중복은 이 사이클을 막지 않는다.
-	writeGatesLedgerAt(t, record.Repo, ".issueops/issues/248/gates.md", metLedger)
-	writeGatesLedgerAt(t, record.Repo, ".issueops/gates/248-other.md", metLedger)
-	ready := StrictPRReadinessWithState(issueOpsStateRootForTest(), record)
-	if ready.Ready || !containsMissing(ready.Missing, "duplicate_issue_artifact:21") {
-		t.Fatalf("same issue in both ledger paths must fail closed: %+v", ready)
-	}
-	if containsMissing(ready.Missing, "duplicate_issue_artifact:248") {
-		t.Fatalf("other issues' duplicates must not block this cycle: %+v", ready.Missing)
-	}
-}
-
-func TestStrictPRReadinessDuplicateIssueArtifactLegacyNumberPrefix(t *testing.T) {
-	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	record := readyGatesGateRecord(t)
-	writeGatesLedgerAt(t, record.Repo, ".issueops/issues/21/gates.md", metLedger)
-	writeGatesLedgerAt(t, record.Repo, ".issueops/gates/21-cleanup.md", metLedger)
-	// 210-*는 21이 아니다.
-	writeGatesLedgerAt(t, record.Repo, ".issueops/gates/210-other.md", metLedger)
-	ready := StrictPRReadinessWithState(issueOpsStateRootForTest(), record)
-	if !containsMissing(ready.Missing, "duplicate_issue_artifact:21") {
-		t.Fatalf("<n>-slug legacy name must count as duplicate: %+v", ready.Missing)
-	}
-}
-
-func TestStrictPRReadinessDuplicateSkippedWithoutIssueNumber(t *testing.T) {
-	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	record := readyGatesGateRecord(t)
-	record.IssueURL = ""
-	record.BranchPrepare.IssueURL = ""
-	writeGatesLedgerAt(t, record.Repo, ".issueops/issues/21/gates.md", metLedger)
-	writeGatesLedgerAt(t, record.Repo, ".issueops/gates/issue-21.md", metLedger)
-	ready := StrictPRReadinessWithState(issueOpsStateRootForTest(), record)
-	for _, m := range ready.Missing {
-		if strings.HasPrefix(m, "duplicate_issue_artifact:") {
-			t.Fatalf("no linked issue number must skip the duplicate check: %+v", ready.Missing)
-		}
-	}
-}
-
-func TestStrictPRReadinessSingleIssueFolderLedgerIsNotDuplicate(t *testing.T) {
+func TestStrictPRReadinessMetIssueFolderLedgerStaysReady(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := readyGatesGateRecord(t)
 	writeGatesLedgerAt(t, record.Repo, ".issueops/issues/21/gates.md", metLedger)
@@ -290,59 +242,17 @@ func TestStrictPRReadinessSingleIssueFolderLedgerIsNotDuplicate(t *testing.T) {
 	}
 }
 
-func TestScopeLedgersJudgesOwnAndAnonymousOnly(t *testing.T) {
-	root := "/repo"
-	files := []string{
-		"/repo/.issueops/issues/21/gates.md",
-		"/repo/.issueops/issues/021/gates.md",
-		"/repo/.issueops/issues/210/gates.md",
-		"/repo/.issueops/issues/_unnumbered/gates.md",
-		"/repo/GATES.md",
-		"/repo/.issueops/gates/issue-21.md",
-		"/repo/.issueops/gates/21-cleanup.md",
-		"/repo/.issueops/gates/248-other.md",
-		"/repo/.issueops/gates/notes.md",
-		"/repo/gates/legacy.md",
-	}
-	judged, skipped := issueopsdomain.ScopeGateLedgers(root, files, "21")
-	wantJudged := []string{
-		"/repo/.issueops/issues/21/gates.md",
-		"/repo/.issueops/issues/_unnumbered/gates.md",
-		"/repo/GATES.md",
-		"/repo/.issueops/gates/issue-21.md",
-		"/repo/.issueops/gates/21-cleanup.md",
-		"/repo/.issueops/gates/notes.md",
-		"/repo/gates/legacy.md",
-	}
-	wantSkipped := []string{
-		"/repo/.issueops/issues/021/gates.md",
-		"/repo/.issueops/issues/210/gates.md",
-		"/repo/.issueops/gates/248-other.md",
-	}
-	if strings.Join(judged, ",") != strings.Join(wantJudged, ",") {
-		t.Fatalf("judged = %v, want %v", judged, wantJudged)
-	}
-	if strings.Join(skipped, ",") != strings.Join(wantSkipped, ",") {
-		t.Fatalf("skipped = %v, want %v", skipped, wantSkipped)
-	}
-	allJudged, none := issueopsdomain.ScopeGateLedgers(root, files, "")
-	if len(allJudged) != len(files) || len(none) != 0 {
-		t.Fatalf("no issue number must judge every ledger: %v / %v", allJudged, none)
-	}
-}
-
 func TestStrictPRReadinessSkipsOtherIssuesLedgers(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := readyGatesGateRecord(t) // linked issue 21
 	writeGatesLedgerAt(t, record.Repo, ".issueops/issues/21/gates.md", metLedger)
 	writeGatesLedgerAt(t, record.Repo, ".issueops/issues/248/gates.md", "# Gates: other\n\n- [ ] G1: open elsewhere\n  EVIDENCE: pending\n")
-	writeGatesLedgerAt(t, record.Repo, ".issueops/gates/250-other.md", "# Gates: other\n\n- [ ] G1: open elsewhere\n  EVIDENCE: pending\n")
 	ready := StrictPRReadinessWithState(issueOpsStateRootForTest(), record)
 	if !ready.Ready {
 		t.Fatalf("other issues' unmet ledgers must not block this cycle: %+v", ready)
 	}
 	joined := strings.Join(ready.Warnings, "\n")
-	if !strings.Contains(joined, "gates_skipped:2 (") || !strings.Contains(joined, ".issueops/issues/248/gates.md") || !strings.Contains(joined, ".issueops/gates/250-other.md") || strings.Count(joined, "gates_skipped:") != 1 {
+	if !strings.Contains(joined, "gates_skipped:1 (") || !strings.Contains(joined, ".issueops/issues/248/gates.md") || strings.Count(joined, "gates_skipped:") != 1 {
 		t.Fatalf("skipped ledgers must be aggregated into one warning: %+v", ready.Warnings)
 	}
 }
@@ -367,14 +277,5 @@ func TestStrictPRReadinessWithoutIssueNumberJudgesEverything(t *testing.T) {
 	ready := StrictPRReadinessWithState(issueOpsStateRootForTest(), record)
 	if !containsMissing(ready.Missing, "gates_incomplete:.issueops/issues/248/gates.md") {
 		t.Fatalf("no linked issue number must keep judging every ledger: %+v", ready.Missing)
-	}
-}
-
-func TestLegacyLedgerCompatibilityExpiresAfterSchemaV1(t *testing.T) {
-	if got := issueopsdomain.LegacyGateLedgerIssueNumber("issue-21-old.md", 1); got != "21" {
-		t.Fatalf("schema v1 legacy ledger issue=%q, want 21", got)
-	}
-	if got := issueopsdomain.LegacyGateLedgerIssueNumber("issue-21-old.md", 2); got != "" {
-		t.Fatalf("schema v2 accepted legacy ledger issue=%q", got)
 	}
 }

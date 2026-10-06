@@ -186,7 +186,7 @@ func TestExecutionOwnerPlanMaterializationRequiresDurableIdentity(t *testing.T) 
 			record.WorktreePath = worktree
 			record.Execution = &issueopscontract.Execution{
 				Mode:      issueopscontract.ExecutionModeOrca,
-				Workspace: issueopscontract.Workspace{Root: worktree},
+				Workspace: issueopscontract.Workspace{Root: worktree, ArtifactDir: issueArtifactDirFor(record)},
 				Lease:     issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusReleased},
 			}
 			if test.prelinked != "" {
@@ -210,7 +210,7 @@ func TestExecutionOwnerPlanMaterializationRequiresDurableIdentity(t *testing.T) 
 			}
 			wantPath := record.PlanPath
 			if wantPath == "" {
-				wantPath = filepath.Join(worktree, filepath.FromSlash(IssueOpsArtifactDir), "plan.md")
+				wantPath = filepath.Join(worktree, filepath.FromSlash(sealedArtifactDir(record)), "plan.md")
 			}
 			wantDigest := digestExecutionOwnerBytes([]byte(plan))
 			if identity.Path != wantPath || identity.Digest != wantDigest || manifest["plan"] != wantDigest {
@@ -368,6 +368,7 @@ func artifactRecoveryExecution(mode issueopscontract.ExecutionMode, status issue
 		Workspace: issueopscontract.Workspace{
 			SourceRoot: "/source", Root: "/worktree", Branch: "262-plan-readiness",
 			BaseHead: strings.Repeat("a", 40), Driver: driver, LinkedAt: "2026-08-03T00:00:00Z",
+			ArtifactDir: ".issueops/issues/262/artifact",
 		},
 		Lease: issueopscontract.WriteLease{Generation: 3, Status: status},
 	}

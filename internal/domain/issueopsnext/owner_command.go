@@ -22,8 +22,6 @@ func OwnerCommand(id, missingKey string) string {
 		return aiSlopCleanCommand(id)
 	case strings.HasPrefix(key, "gates_incomplete:"):
 		return "issueops gates check --cwd <worktree> --workspace-root <worktree> --json"
-	case strings.HasPrefix(key, "duplicate_issue_artifact:"):
-		return "issueops remote reconcile-issue --id " + id
 	}
 	switch key {
 	case "intent_contract", "raw_request", "interpreted_intent", "success_criteria":

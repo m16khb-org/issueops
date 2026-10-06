@@ -57,6 +57,7 @@ func (repository *SQLiteRepository) Load(_ context.Context, id string) (preparat
 	}
 	return preparationcontract.Snapshot{
 		Record: record, RecordRaw: append([]byte(nil), data...), ClaimTokenPath: currentClaimTokenPath(record),
+		ArtifactDir: remote.IssueArtifactDir(record.IssueURL),
 	}, nil
 }
 

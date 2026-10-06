@@ -65,19 +65,20 @@ func TestMCPHTTPGatesDefaultFilesResolveAgainstRequestCWD(t *testing.T) {
 		t.Fatalf("default ledger is not in the request workspace: %v (payload=%v)", err, payload)
 	}
 
-	ledger := "# Gates: abandon\n\n- [ ] G1: probe\n  CHECK: true\n  EXPECT: ok\n  EVIDENCE: pending\n"
-	if err := os.WriteFile(filepath.Join(repoA, "GATES.md"), []byte(ledger), 0o644); err != nil {
+	ledgerPath := filepath.Join(repoA, ".issueops", "gates", "default-probe.md")
+	ledger, err := os.ReadFile(ledgerPath)
+	if err != nil {
 		t.Fatal(err)
 	}
 	payload, isError = callHTTPTool(t, client, "gates_abandon", map[string]any{
-		"authority_file": grantA, "workspace_root": repoA, "gate_id": "G1", "reason": "probe",
+		"authority_file": grantA, "workspace_root": repoA, "file": ".issueops/gates/default-probe.md", "gate_id": "G1", "reason": "probe",
 	})
 	if isError {
-		t.Fatalf("gates_abandon without file payload=%v", payload)
+		t.Fatalf("gates_abandon with a relative file payload=%v", payload)
 	}
-	data, err := os.ReadFile(filepath.Join(repoA, "GATES.md"))
-	if err != nil || string(data) == ledger {
-		t.Fatalf("request GATES.md not updated: %v %q", err, data)
+	data, err := os.ReadFile(ledgerPath)
+	if err != nil || string(data) == string(ledger) {
+		t.Fatalf("request ledger not updated: %v %q", err, data)
 	}
 	requireEmptyDir(t, serverCWD)
 }

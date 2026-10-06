@@ -46,6 +46,7 @@ func resumeFixture(t *testing.T) (ResumeReader, *resumeFiles, model.IssueOpsReco
 	f.data["/wt/token"] = []byte("token\n")
 	f.data["/wt/plan.md"] = []byte(f.plan)
 	r.PlanPath = out.PlanPath
+	r.Execution.Workspace.ArtifactDir = ".issueops/issues/199/artifact"
 	r.Execution.Lease.ClaimTokenSHA256 = digest([]byte("token"))
 	r.Execution.Orca = &model.OrcaBinding{ArtifactIdentityVersion: model.OrcaArtifactIdentityVersion, IssueBodySHA256: intent.IssueBodySHA256, ContextPacketSHA256: out.ContextPacketSHA256, OwnerPromptSHA256: out.OwnerPromptSHA256, OwnerHost: "codex", OwnerModel: "gpt-6-sol", OwnerEffort: "high"}
 	f.events = nil

@@ -129,14 +129,13 @@ agent가 즉시 알아야 할 canonical 요약이다.
   먼저 적용한다. 봉인 원본 bytes·mode·digest와 owner resume 입력은 바꾸지 않는다(#527).
 - 이슈가 없는 작업의 플랜은 `.issueops/plans/<slug>.md`, 리뷰 작업 파일은
   `.issueops/tmp/`에 둔다. 둘 다 이슈 번호를 알 수 없을 때만 쓰는 fallback이다.
-- PR readiness는 현재 사이클의 이슈 원장(`issues/<번호>/gates.md`, 같은 번호의 옛 파일)과
+- PR readiness는 현재 사이클의 이슈 원장(`issues/<번호>/gates.md`)과
   번호를 특정할 수 없는 원장만 판정하고, 다른 번호의 원장은 `gates_skipped:<개수> (…)`
   warning 한 줄로 남긴다(#483). `gates check` CLI는 계속 전부 보고한다.
-- 옛 원장 경로(`.issueops/gates/*.md`, root `GATES.md`, `gates/*.md`)는 읽기 호환으로
-  남지만, 현재 사이클의 이슈가 canonical과 호환 경로 양쪽에 원장을 두면 PR readiness가
-  `duplicate_issue_artifact:<번호>`로 fail-closed된다.
-- 봉인 디렉터리는 레코드 필드로만 결정한다. `artifact_dir`가 비어 있는 옛 레코드는
-  legacy `.issueops/artifact/`를 그대로 읽는다.
+- 원장 탐색은 `issues/<번호>/gates.md`와 이슈 없는 scope 원장 `.issueops/gates/*.md`만
+  읽는다. root `GATES.md`와 `gates/*.md`는 읽지 않는다.
+- 봉인 디렉터리는 레코드 필드로만 결정한다. `artifact_dir`가 비어 있는 레코드는 봉인
+  아티팩트를 읽고 쓰지 않고 거부되며, 그런 사이클은 abandon 후 다시 prepare한다.
 - 이 표가 유일한 규정이다. 스킬(`issueops`, `implementation-planning`, `pr-review`, `review-agent-feedback`)과
   `CAUTIONS.md`는 여기를 가리킨다.
 

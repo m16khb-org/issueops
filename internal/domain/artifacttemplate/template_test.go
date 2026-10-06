@@ -176,60 +176,6 @@ func TestChildTaskContractRequiresMergeCondition(t *testing.T) {
 	}
 }
 
-func TestRenderTemplateAcceptsLegacyFieldAliases(t *testing.T) {
-	pr := Render(IssueOpsTemplateInput{
-		Kind:     IssueOpsArtifactPR,
-		Template: IssueOpsTemplatePullRequest,
-		Provider: "gitlab",
-		Title:    "MR",
-		Fields: map[string]string{
-			"intent":         "원격 템플릿 계약을 고정합니다.",
-			"changes":        "core renderer와 CLI/MCP를 추가합니다.",
-			"verified":       "go test ./...",
-			"reviewer_focus": "template validation boundary",
-			"risks":          "기능 flag 없이 dry-run 기본 유지",
-			"breaking":       "- [x] 없음",
-			"user_impact":    "원격 artifact 품질 일관성 개선",
-			"documentation":  "IssueOps 문서 갱신",
-			"scope":          "provider adapter는 thin 유지",
-			"cleanup":        "cleanup status 확인",
-			"automation":     "AI 생성 본문은 renderer 결과로 검증",
-		},
-	})
-	if !pr.OK {
-		t.Fatalf("pr template should accept legacy field aliases: %+v", pr)
-	}
-	if !strings.Contains(pr.Body, "## 위험과 되돌리기") {
-		t.Fatalf("pr body missing risk_rollback alias target:\n%s", pr.Body)
-	}
-	if !strings.Contains(pr.Body, "## 호환성과 마이그레이션") {
-		t.Fatalf("pr body missing compatibility_migration alias target:\n%s", pr.Body)
-	}
-	if strings.Contains(pr.Body, "## 범위") || strings.Contains(pr.Body, "## 워크트리 정리") || strings.Contains(pr.Body, "## 자동화") {
-		t.Fatalf("pr body must not render unrendered-field sections:\n%s", pr.Body)
-	}
-
-	child := Render(IssueOpsTemplateInput{
-		Kind:     IssueOpsArtifactChild,
-		Template: IssueOpsTemplateChildTask,
-		Provider: "github",
-		Title:    "하위 작업",
-		Fields: map[string]string{
-			"parent_issue":    "https://github.com/acme/repo/issues/1",
-			"task_goal":       "템플릿 렌더러 구현",
-			"acceptance":      "렌더러 테스트 통과",
-			"scope":           "provider 정책 복제 제외",
-			"merge_condition": "부모 브랜치에 병합된 뒤 close-children 실행",
-		},
-	})
-	if !child.OK {
-		t.Fatalf("child template should accept parent_issue/task_goal aliases folded into summary: %+v", child)
-	}
-	if !strings.Contains(child.Body, "https://github.com/acme/repo/issues/1") || !strings.Contains(child.Body, "템플릿 렌더러 구현") {
-		t.Fatalf("child summary section missing folded parent_issue/task_goal content:\n%s", child.Body)
-	}
-}
-
 func TestValidateWarnsOnUnrenderedFields(t *testing.T) {
 	validation := Validate(IssueOpsTemplateInput{
 		Kind:     IssueOpsArtifactPR,
@@ -251,6 +197,27 @@ func TestValidateWarnsOnUnrenderedFields(t *testing.T) {
 	}
 	if !contains(validation.Warnings, "unrendered_field:worktree_cleanup") {
 		t.Fatalf("warnings %v missing unrendered_field:worktree_cleanup", validation.Warnings)
+	}
+}
+
+func TestRenderTemplateDoesNotFoldRetiredFieldKeys(t *testing.T) {
+	pr := Render(IssueOpsTemplateInput{
+		Kind:     IssueOpsArtifactPR,
+		Template: IssueOpsTemplatePullRequest,
+		Provider: "github",
+		Title:    "PR",
+		Fields: map[string]string{
+			"intent":         "본문 계약을 요약이 먼저 오는 형태로 바꿨습니다.",
+			"changes":        "artifacttemplate 패키지를 바꿨습니다.",
+			"verified":       "go test로 확인했습니다.",
+			"reviewer_focus": "필수 절이 맞는지 봐 주세요.",
+		},
+	})
+	if pr.OK || !contains(pr.MissingRequiredFields, "summary") {
+		t.Fatalf("retired key intent must not satisfy summary: %+v", pr)
+	}
+	if !contains(pr.Warnings, "unrendered_field:intent") {
+		t.Fatalf("retired key intent must surface as unrendered: %v", pr.Warnings)
 	}
 }
 
@@ -347,71 +314,6 @@ func TestValidateRejectsUnsupportedArtifactKindAndTemplate(t *testing.T) {
 
 func contains(items []string, want string) bool {
 	return slices.Contains(items, want)
-}
-
-func TestRenderTemplateKeepsEveryLegacyRequiredFieldKey(t *testing.T) {
-	pr := Render(IssueOpsTemplateInput{
-		Kind:     IssueOpsArtifactPR,
-		Template: IssueOpsTemplatePullRequest,
-		Provider: "github",
-		Title:    "PR",
-		Fields: map[string]string{
-			"intent":         "본문 계약을 요약이 먼저 오는 형태로 바꿨습니다.",
-			"issue":          "Closes #513",
-			"changes":        "artifacttemplate 패키지를 바꿨습니다.",
-			"verification":   "go test로 확인했습니다.",
-			"reviewer_focus": "별칭이 맞는지 봐 주세요.",
-		},
-	})
-	if !pr.OK {
-		t.Fatalf("legacy PR keys intent/issue/verification must still satisfy the contract: %+v", pr)
-	}
-	summary, _ := sectionContentFromBody(pr.Body, "요약")
-	if !strings.Contains(summary, "Closes #513") {
-		t.Fatalf("legacy PR issue field should fold into the summary:\n%s", pr.Body)
-	}
-	if verified, _ := sectionContentFromBody(pr.Body, "확인한 것"); !strings.Contains(verified, "go test") {
-		t.Fatalf("legacy PR verification field should render under 확인한 것:\n%s", pr.Body)
-	}
-
-	child := Render(IssueOpsTemplateInput{
-		Kind:     IssueOpsArtifactChild,
-		Template: IssueOpsTemplateChildTask,
-		Provider: "github",
-		Title:    "하위 작업",
-		Fields: map[string]string{
-			"parent_issue": "https://github.com/acme/repo/issues/1",
-			"goal":         "템플릿 렌더러 구현",
-			"acceptance":   "렌더러 테스트 통과",
-			"non_goals":    "provider 정책 복제 제외",
-			"parent_merge": "부모 브랜치에 병합된 뒤 close-children 실행",
-			"cleanup":      "child 워크트리만 정리",
-		},
-	})
-	if !child.OK {
-		t.Fatalf("legacy child keys goal/parent_merge must still satisfy the contract: %+v", child)
-	}
-	if !contains(child.Warnings, "unrendered_field:worktree_cleanup") {
-		t.Fatalf("legacy child cleanup field should surface as an unrendered warning: %v", child.Warnings)
-	}
-
-	issue := Render(IssueOpsTemplateInput{
-		Kind:     IssueOpsArtifactIssue,
-		Template: IssueOpsTemplateImplementationTask,
-		Provider: "github",
-		Title:    "이슈",
-		Fields: map[string]string{
-			"summary":      "요약입니다.",
-			"background":   "배경입니다.",
-			"acceptance":   "완료 기준입니다.",
-			"scope":        "범위입니다.",
-			"verification": "검증입니다.",
-			"rollback":     "커밋을 되돌립니다.",
-		},
-	})
-	if risks, ok := sectionContentFromBody(issue.Body, "위험"); !ok || !strings.Contains(risks, "커밋을 되돌립니다.") {
-		t.Fatalf("issue rollback field should render under 위험:\n%s", issue.Body)
-	}
 }
 
 func TestValidateIgnoresHeadingsInsideCodeFences(t *testing.T) {

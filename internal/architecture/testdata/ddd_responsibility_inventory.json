@@ -4573,15 +4573,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/gatesgate/gates_gate.go",
-      "owner": "adapter",
-      "task": "T04",
-      "symbols": [
-        "func Observer.DuplicateFiles",
-        "type Observer"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/implementation/evidence.go",
       "owner": "adapter",
       "task": "T20",
@@ -4652,7 +4643,6 @@
       "symbols": [
         "func ValidateIssueOpsMutationActor",
         "func validateExecutionMutation",
-        "func validatePostTransferMutation",
         "func validateWorkspacePreparationMutation"
       ]
     },
@@ -5764,7 +5754,6 @@
         "func NewClaimContextReader",
         "func claimContextPacketPath",
         "func readClaimOwnerArtifact",
-        "func sealedClaimArtifactPath",
         "type ClaimContextReader"
       ]
     },
@@ -9514,6 +9503,14 @@
       ]
     },
     {
+      "path": "internal/application/issueopspreparation/artifact_dir.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func requireArtifactDir"
+      ]
+    },
+    {
       "path": "internal/application/issueopspreparation/direct_commit.go",
       "owner": "application",
       "task": "T20",
@@ -9946,6 +9943,7 @@
         "func TrackedMaterials.Write",
         "func TrackedMaterials.contents",
         "func TrackedMaterials.planSource",
+        "func TrackedMaterials.readSealed",
         "func trackedMaterialsDir",
         "type MaterialFiles",
         "type TrackedMaterials",
@@ -11368,8 +11366,6 @@
       "owner": "contract",
       "task": "T02",
       "symbols": [
-        "type IssueOpsHandoffCurrent",
-        "type IssueOpsHandoffDecision",
         "type IssueOpsHandoffDeliveryDecision",
         "type IssueOpsHandoffDeliveryEndpointIncarnation",
         "type IssueOpsHandoffDeliveryLauncher",
@@ -11379,17 +11375,7 @@
         "type IssueOpsHandoffDeliveryRequest",
         "type IssueOpsHandoffDeliveryState",
         "type IssueOpsHandoffDeliveryTarget",
-        "type IssueOpsHandoffDeliveryTiming",
-        "type IssueOpsHandoffEvidence",
-        "type IssueOpsHandoffExecution",
-        "type IssueOpsHandoffLateResult",
-        "type IssueOpsHandoffMaterial",
-        "type IssueOpsHandoffSealed",
-        "type IssueOpsHandoffSession",
-        "type IssueOpsHandoffSnapshot",
-        "type IssueOpsHandoffTask",
-        "type IssueOpsHandoffUserDirective",
-        "type IssueOpsHandoffVerification"
+        "type IssueOpsHandoffDeliveryTiming"
       ]
     },
     {
@@ -12807,7 +12793,6 @@
         "func OptionalSectionTitles",
         "func ParseFieldAssignments",
         "func Render",
-        "func RequiredSectionTitles",
         "func SectionContent",
         "func SummarySection",
         "func SupportsTemplate",
@@ -12829,9 +12814,11 @@
         "func renderSections",
         "func requiredFieldNames",
         "func sectionContentFromBody",
+        "func sectionFieldNames",
         "func sectionsFor",
         "func supportedArtifactKind",
         "func uniqueSorted",
+        "func unrenderedFields",
         "type IssueOpsArtifactKind",
         "type IssueOpsTemplateInput",
         "type IssueOpsTemplateKind",
@@ -13566,14 +13553,6 @@
       ]
     },
     {
-      "path": "internal/domain/issueops/duplicate_gate_ledger.go",
-      "owner": "domain",
-      "task": "T20",
-      "symbols": [
-        "func ApplyDuplicateGateLedger"
-      ]
-    },
-    {
       "path": "internal/domain/issueops/early_phase_readiness.go",
       "owner": "domain",
       "task": "T20",
@@ -13649,16 +13628,6 @@
       ]
     },
     {
-      "path": "internal/domain/issueops/gate_ledger_duplicate.go",
-      "owner": "domain",
-      "task": "T20",
-      "symbols": [
-        "func DuplicateGateLedgerMissing",
-        "func DuplicateGateLedgerProbe",
-        "type GateLedgerFile"
-      ]
-    },
-    {
       "path": "internal/domain/issueops/gate_ledger_readiness.go",
       "owner": "domain",
       "task": "T20",
@@ -13673,28 +13642,8 @@
       "owner": "domain",
       "task": "T20",
       "symbols": [
-        "func LegacyGateLedgerIssueNumber",
         "func ScopeGateLedgers",
         "func gateLedgerAllDigits"
-      ]
-    },
-    {
-      "path": "internal/domain/issueops/handoff.go",
-      "owner": "domain",
-      "task": "T20",
-      "symbols": [
-        "func EvaluateHandoff",
-        "func appendIfMissing",
-        "func containsAnyReason",
-        "func handoffEvidenceIdentityRejectReasons",
-        "func handoffEvidenceMap",
-        "func handoffEvidenceRejectReasons",
-        "func handoffExecutionBeforeReleaseRejectReasons",
-        "func handoffFatalRejectReasons",
-        "func handoffHasBlankString",
-        "func handoffSessionEmpty",
-        "func handoffTaskIsWriter",
-        "func uniqueSorted"
       ]
     },
     {
@@ -14242,6 +14191,14 @@
         "func PlanReviewRounds",
         "func ValidateReviewReflection",
         "func ValidateReviewReflectionStamp"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/sealed_artifact_dir.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func RequireSealedArtifactDir"
       ]
     },
     {
@@ -19316,24 +19273,6 @@
       "status": "migrated"
     },
     {
-      "id": "legacy-gate-ledger-number",
-      "source_path": "internal/adapter/issueops/gatesgate/gates_gate.go",
-      "source_symbol": "func legacyLedgerIssueNumberForSchema",
-      "responsibility": "schema v1 compatibility ledger filenames identify their owning issue",
-      "target": "internal/domain/issueops",
-      "target_symbol": "func LegacyGateLedgerIssueNumber",
-      "task": "T04",
-      "entrypoints": [
-        "issueops advance --to pr",
-        "issueops remote create-pr"
-      ],
-      "evidence_tests": [
-        "internal/domain/issueops/gate_ledger_scope_test.go",
-        "internal/adapter/issueops/gatesgate/gates_gate_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
       "id": "gate-ledger-linked-issue",
       "source_path": "internal/adapter/issueops/gatesgate/gates_gate.go",
       "source_symbol": "func linkedIssueNumber",
@@ -19364,25 +19303,6 @@
       ],
       "evidence_tests": [
         "internal/domain/issueops/worktree_plan_readiness_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "duplicate-gate-ledger",
-      "source_path": "internal/adapter/issueops/gatesgate/gates_gate.go",
-      "source_symbol": "func withDuplicateIssueArtifactGate",
-      "responsibility": "domain selects duplicate-ledger fail-closed keys from observed file facts",
-      "target": "internal/domain/issueops",
-      "target_symbol": "func DuplicateGateLedgerMissing",
-      "task": "T04",
-      "entrypoints": [
-        "issueops advance --to pr",
-        "issueops remote create-pr"
-      ],
-      "evidence_tests": [
-        "internal/domain/issueops/gate_ledger_duplicate_test.go",
-        "internal/domain/issueops/duplicate_gate_ledger_test.go",
-        "internal/adapter/issueops/gatesgate/gates_gate_test.go"
       ],
       "status": "migrated"
     },
@@ -24581,24 +24501,6 @@
       ],
       "evidence_tests": [
         "internal/adapter/gates/check_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "gate-duplicate-readiness",
-      "source_path": "internal/application/issueopscycle/duplicate_gate_ledger.go",
-      "source_symbol": "func ApplyDuplicateGateLedger",
-      "responsibility": "duplicate ledger evidence adds sorted fail-closed readiness key",
-      "target": "internal/domain/issueops",
-      "target_symbol": "func ApplyDuplicateGateLedger",
-      "task": "T20",
-      "entrypoints": [
-        "issueops gates",
-        "MCP gates_*",
-        "issueops advance --to pr"
-      ],
-      "evidence_tests": [
-        "internal/domain/issueops/duplicate_gate_ledger_test.go"
       ],
       "status": "migrated"
     },

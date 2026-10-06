@@ -21,11 +21,12 @@ func TestSwitchExecutionModeApplyReturnsNonCommandNextActionAfterExecutionRemova
 		Workspace: issueopscontract.Workspace{
 			SourceRoot: repo, Root: filepath.Join(repo+".worktrees", record.Branch), Branch: record.Branch,
 			BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "2026-08-04T00:00:00Z",
+			ArtifactDir: ".issueops/issues/1/artifact",
 		},
 		Lease: issueopscontract.WriteLease{Generation: 6, Status: issueopscontract.LeaseStatusReleased},
 	}
 	record.WorktreePath = record.Execution.Workspace.Root
-	record.PlanPath = filepath.Join(record.WorktreePath, filepath.FromSlash(IssueOpsArtifactDir), "plan.md")
+	record.PlanPath = filepath.Join(record.WorktreePath, filepath.FromSlash(sealedArtifactDir(record)), "plan.md")
 	if _, err := writeIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}

@@ -12,11 +12,11 @@ func GatesTools() []Tool {
 	return []Tool{
 		{
 			Name:        "gates_check",
-			Description: "Evaluate task gate ledgers (.issueops/gates/*.md; compatible GATES.md and gates/*.md). Runs CHECK commands for unmet gates through the command policy engine (workspace boundary, env allowlist, timeout, audit), matches EXPECT, flips checkboxes, and records evidence. Complete means zero unmet gates; ABANDON gates count as resolved.",
+			Description: "Evaluate task gate ledgers (.issueops/issues/<n>/gates.md and .issueops/gates/*.md). Runs CHECK commands for unmet gates through the command policy engine (workspace boundary, env allowlist, timeout, audit), matches EXPECT, flips checkboxes, and records evidence. Complete means zero unmet gates; ABANDON gates count as resolved.",
 			InputSchema: map[string]any{"type": "object", "properties": map[string]any{
 				"workspace_root":  stringProp("Workspace root boundary for CHECK execution. Defaults to cwd."),
-				"cwd":             stringProp("Directory holding .issueops/gates/*.md or compatible gate ledgers, and the CHECK working directory. Defaults to the agent project directory."),
-				"files":           map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Explicit gate ledger files. Omit to discover .issueops/gates/*.md plus compatible GATES.md and gates/*.md under cwd."},
+				"cwd":             stringProp("Directory holding .issueops/issues/<n>/gates.md or .issueops/gates/*.md ledgers, and the CHECK working directory. Defaults to the agent project directory."),
+				"files":           map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Explicit gate ledger files. Omit to discover .issueops/issues/<n>/gates.md and .issueops/gates/*.md under cwd."},
 				"timeout_seconds": map[string]any{"type": "integer", "description": "Per-CHECK timeout in seconds. Defaults to 120."},
 				"env_allowlist":   map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Environment variable allowlist for CHECK commands. Defaults to HOME,PATH."},
 				"write_allowed":   boolProp("Allow workspace-write commands for CHECK execution. Default true."),
@@ -28,8 +28,8 @@ func GatesTools() []Tool {
 			Description: "Report gate ledger state without executing anything or modifying files. Flags unchecked gates and checked-but-EVIDENCE-pending gates (a checkbox is a claim; evidence is the proof).",
 			InputSchema: map[string]any{"type": "object", "properties": map[string]any{
 				"workspace_root": stringProp("Workspace root. Defaults to cwd."),
-				"cwd":            stringProp("Directory holding .issueops/gates/*.md or compatible gate ledgers. Defaults to the agent project directory."),
-				"files":          map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Explicit gate ledger files. Omit to discover .issueops/gates/*.md plus compatible GATES.md and gates/*.md under cwd."},
+				"cwd":            stringProp("Directory holding .issueops/issues/<n>/gates.md or .issueops/gates/*.md ledgers. Defaults to the agent project directory."),
+				"files":          map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Explicit gate ledger files. Omit to discover .issueops/issues/<n>/gates.md and .issueops/gates/*.md under cwd."},
 			}},
 		},
 		{
@@ -37,15 +37,15 @@ func GatesTools() []Tool {
 			Description: "Render the final-report ledger paste: per-file N-of-N gate counts, per-gate state, evidence, and abandon reasons. Re-measures counts at report time instead of trusting memory.",
 			InputSchema: map[string]any{"type": "object", "properties": map[string]any{
 				"workspace_root": stringProp("Workspace root. Defaults to cwd."),
-				"cwd":            stringProp("Directory holding .issueops/gates/*.md or compatible gate ledgers. Defaults to the agent project directory."),
-				"files":          map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Explicit gate ledger files. Omit to discover .issueops/gates/*.md plus compatible GATES.md and gates/*.md under cwd."},
+				"cwd":            stringProp("Directory holding .issueops/issues/<n>/gates.md or .issueops/gates/*.md ledgers. Defaults to the agent project directory."),
+				"files":          map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Explicit gate ledger files. Omit to discover .issueops/issues/<n>/gates.md and .issueops/gates/*.md under cwd."},
 			}},
 		},
 		{
 			Name:        "gates_abandon",
 			Description: "Record an honest ABANDON line for one gate in a ledger file. Abandoned gates count as resolved but stay visible in reports; use instead of silently dropping a gate.",
-			InputSchema: map[string]any{"type": "object", "required": []string{"gate_id", "reason"}, "properties": map[string]any{
-				"file":    stringProp("Gate ledger file. Legacy default is GATES.md; pass namespaced .issueops/gates/<name>.md explicitly."),
+			InputSchema: map[string]any{"type": "object", "required": []string{"file", "gate_id", "reason"}, "properties": map[string]any{
+				"file":    stringProp("Gate ledger file: .issueops/issues/<n>/gates.md or .issueops/gates/<scope>.md."),
 				"gate_id": stringProp("Gate id to abandon, for example G2."),
 				"reason":  stringProp("Honest reason the gate cannot be met."),
 			}},

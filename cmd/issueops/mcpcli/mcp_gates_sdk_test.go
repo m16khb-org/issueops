@@ -115,7 +115,7 @@ func TestGatesSDKServersKeepTheirOwnPolicyRunner(t *testing.T) {
 			calls[i]++
 			return policy.CommandRunResult{Stdout: "ok"}
 		}}
-		_, err := service.Init(model.InitRequest{File: filepath.Join(root, "GATES.md"), Scope: "scope", Gates: []string{"G1: proof | CHECK: printf ok | EXPECT: ok"}})
+		_, err := service.Init(model.InitRequest{File: filepath.Join(root, ".issueops", "gates", "scope.md"), Scope: "scope", Gates: []string{"G1: proof | CHECK: printf ok | EXPECT: ok"}})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -133,7 +133,7 @@ func TestGatesSDKServersKeepTheirOwnPolicyRunner(t *testing.T) {
 		if check.Complete != (i == 1) || len(check.Files) != 1 || len(check.Files[0].Gates) != 1 || check.Files[0].Gates[0].PolicyDenied != (i == 0) {
 			t.Fatalf("server %d result=%+v", i, check)
 		}
-		data, err := os.ReadFile(filepath.Join(roots[i], "GATES.md"))
+		data, err := os.ReadFile(filepath.Join(roots[i], ".issueops", "gates", "scope.md"))
 		if err != nil {
 			t.Fatal(err)
 		}

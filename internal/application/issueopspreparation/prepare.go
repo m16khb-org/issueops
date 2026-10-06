@@ -295,6 +295,11 @@ func (service *Service) prepareDirect(ctx context.Context, snapshot preparationc
 	}
 	command.Actor = actor
 	workspace.CWD = command.CWD
+	// Reject before provisioning so a URL without an issue number cannot leave
+	// a worktree behind that CommitDirect would refuse.
+	if err := requireArtifactDir(snapshot.ArtifactDir); err != nil {
+		return failedResult(command.ID), err
+	}
 	if service.direct == nil {
 		return failedResult(command.ID), fmt.Errorf("direct Git worktree provisioner is unavailable")
 	}

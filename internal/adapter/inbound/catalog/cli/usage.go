@@ -57,7 +57,7 @@ Usage:
   issueops gates check [--file PATH]... [--workspace-root PATH] [--cwd PATH] [--timeout-seconds N] [--env NAME,NAME] [--write] [--network] [--json]
   issueops gates status [--file PATH]... [--workspace-root PATH] [--cwd PATH] [--json]
   issueops gates report [--file PATH]... [--workspace-root PATH] [--cwd PATH] [--json]
-  issueops gates abandon --gate ID --reason TEXT [--file PATH] [--json]
+  issueops gates abandon --file PATH --gate ID --reason TEXT [--json]
   issueops channel send --channel NAME --from SESSION --message TEXT [--json]
   issueops channel recv --channel NAME [--since MSG_ID] [--wait] [--timeout-seconds N] [--limit N] [--json]
   issueops web-fetch fetch --url URL [--timeout 30s] [--max-chars N] [--json]

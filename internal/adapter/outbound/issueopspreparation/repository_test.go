@@ -124,7 +124,7 @@ func directRepositoryCommit(snapshot preparationcontract.Snapshot) preparationap
 }
 
 func repositoryRecord(id, repo, branch string) leasecontract.Record {
-	return leasecontract.Record{OK: true, SchemaVersion: 1, ID: id, Repo: repo, Branch: branch, Phase: "implement", CreatedAt: "2026-08-01T00:00:00Z", UpdatedAt: "2026-08-01T00:00:00Z"}
+	return leasecontract.Record{OK: true, SchemaVersion: 1, ID: id, Repo: repo, Branch: branch, Phase: "implement", IssueURL: "https://github.com/acme/repo/issues/199", CreatedAt: "2026-08-01T00:00:00Z", UpdatedAt: "2026-08-01T00:00:00Z"}
 }
 
 type preparationStore struct {

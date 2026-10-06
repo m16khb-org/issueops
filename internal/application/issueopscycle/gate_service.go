@@ -8,12 +8,11 @@ import (
 )
 
 type GateService struct {
-	BaseReadiness  func(string, model.IssueOpsRecord) model.IssueOpsReadiness
-	LoopReadiness  func(string) model.IssueOpsReadiness
-	ReadRecord     func(string, string) (model.IssueOpsRecord, error)
-	AdvanceRecord  func(string, string, string, model.IssueOpsActor) (model.IssueOpsRecord, model.IssueOpsTrackedMaterials, error)
-	Ledger         cycleport.GateLedgerReadiness
-	DuplicateFiles func(string, string) (bool, []domain.GateLedgerFile)
+	BaseReadiness func(string, model.IssueOpsRecord) model.IssueOpsReadiness
+	LoopReadiness func(string) model.IssueOpsReadiness
+	ReadRecord    func(string, string) (model.IssueOpsRecord, error)
+	AdvanceRecord func(string, string, string, model.IssueOpsActor) (model.IssueOpsRecord, model.IssueOpsTrackedMaterials, error)
+	Ledger        cycleport.GateLedgerReadiness
 }
 
 func (service GateService) StrictPRReadinessWithState(stateRoot string, record model.IssueOpsRecord) model.IssueOpsReadiness {
@@ -34,11 +33,5 @@ func (service GateService) apply(ready model.IssueOpsReadiness, record model.Iss
 		preparedURL = record.BranchPrepare.IssueURL
 	}
 	root, number := domain.PlanExistenceRoot(record), remote.GateLedgerIssueNumber(record.IssueURL, preparedURL)
-	ready = ApplyGateLedgers(ready, root, number, service.Ledger)
-	root, number, inspect := domain.DuplicateGateLedgerProbe(root, number)
-	if !inspect {
-		return ready
-	}
-	exists, entries := service.DuplicateFiles(root, number)
-	return domain.ApplyDuplicateGateLedger(ready, number, exists, entries)
+	return ApplyGateLedgers(ready, root, number, service.Ledger)
 }

@@ -46,8 +46,8 @@ func (Clock) Now() time.Time { return time.Now() }
 const IssueFolderDir = ".issueops/issues"
 
 // DiscoverGateFiles는 canonical .issueops/issues/<n>/gates.md를 먼저
-// 찾고(번호 오름차순, 그다음 비숫자 폴더), 기존 root GATES.md,
-// .issueops/gates/*.md, gates/*.md도 읽기 호환 경로로 반환한다.
+// 찾고(번호 오름차순, 그다음 비숫자 폴더), 이슈가 없는 scope 원장인
+// .issueops/gates/*.md를 그 뒤에 반환한다.
 func DiscoverGateFiles(root string) ([]string, error) {
 	if strings.TrimSpace(root) == "" {
 		return nil, nil
@@ -60,12 +60,7 @@ func DiscoverGateFiles(root string) ([]string, error) {
 func discoverGateFiles(fsys fs.FS, dir, prefix string) []string {
 	scan := gateFileScan{fsys: fsys, dir: dir, prefix: prefix}
 	files := scan.appendIssueFolderGateFiles([]string{}, IssueFolderDir)
-	if info, err := fs.Stat(fsys, path.Join(dir, "GATES.md")); err == nil && !info.IsDir() {
-		files = append(files, scan.output("GATES.md"))
-	}
-	files = scan.appendMarkdownGateFiles(files, ".issueops/gates")
-	files = scan.appendMarkdownGateFiles(files, "gates")
-	return files
+	return scan.appendMarkdownGateFiles(files, ".issueops/gates")
 }
 
 type gateFileScan struct {

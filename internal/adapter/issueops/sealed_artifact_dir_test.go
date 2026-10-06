@@ -4,19 +4,16 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"issueops/internal/contract/issueops"
 )
 
-func TestSealedArtifactDirUsesRecordFieldOrLegacy(t *testing.T) {
-	legacy := issueops.IssueOpsRecord{IssueURL: "https://github.com/acme/repo/issues/21"}
-	if got := sealedArtifactDir(legacy); got != IssueOpsArtifactDir {
-		t.Fatalf("no execution must resolve to legacy dir, got %s", got)
-	}
+func TestSealedArtifactDirUsesOnlyRecordField(t *testing.T) {
 	empty := issueops.IssueOpsRecord{IssueURL: "https://github.com/acme/repo/issues/21", Execution: &issueops.Execution{}}
-	if got := sealedArtifactDir(empty); got != IssueOpsArtifactDir {
-		t.Fatalf("empty artifact_dir must resolve to legacy dir even with an issue number (old records), got %s", got)
+	if got := sealedArtifactDir(empty); got != "" {
+		t.Fatalf("empty artifact_dir must not be inferred from the issue URL, got %s", got)
 	}
 	filled := issueops.IssueOpsRecord{Execution: &issueops.Execution{Workspace: issueops.Workspace{ArtifactDir: ".issueops/issues/21/artifact"}}}
 	if got := sealedArtifactPath(filled, "/wt", "plan"); got != filepath.Join("/wt", ".issueops", "issues", "21", "artifact", "plan.md") {
@@ -32,7 +29,7 @@ func TestIssueArtifactDirForUsesLinkedIssueNumber(t *testing.T) {
 		t.Fatalf("branch prepare issue URL must be a fallback, got %q", got)
 	}
 	if got := issueArtifactDirFor(issueops.IssueOpsRecord{}); got != "" {
-		t.Fatalf("no issue number must leave artifact_dir empty (legacy), got %q", got)
+		t.Fatalf("no issue number must leave artifact_dir empty, got %q", got)
 	}
 }
 
@@ -65,11 +62,18 @@ func TestMaterializeStagedArtifactsWritesIntoRecordedArtifactDir(t *testing.T) {
 	if _, ok := manifest["plan"]; !ok {
 		t.Fatalf("manifest must carry plan: %+v", manifest)
 	}
-	if _, err := os.Stat(filepath.Join(root, ".issueops", "artifact")); !os.IsNotExist(err) {
-		t.Fatalf("legacy dir must not be created when artifact_dir is recorded")
-	}
 	// 재-materialize는 같은 내용이면 통과하고(불변 계약), 파일은 그대로다.
 	if _, err := materializeStagedArtifacts(stateRoot, record); err != nil {
 		t.Fatalf("idempotent re-materialize must pass: %v", err)
+	}
+}
+
+func TestMaterializeStagedArtifactsRejectsMissingArtifactDir(t *testing.T) {
+	stateRoot, record := executionPrepareRecord(t)
+	record.Execution = artifactRecoveryExecution(issueops.ExecutionModeOrca, issueops.LeaseStatusReleased)
+	record.Execution.Workspace.Root = t.TempDir()
+	record.Execution.Workspace.ArtifactDir = ""
+	if _, err := materializeStagedArtifacts(stateRoot, record); err == nil || !strings.Contains(err.Error(), "artifact_dir is missing") {
+		t.Fatalf("missing artifact_dir must be rejected, err=%v", err)
 	}
 }

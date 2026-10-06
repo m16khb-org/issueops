@@ -466,7 +466,8 @@ func seedOrcaClaimSnapshot(t *testing.T) (string, issueopscontract.IssueOpsRecor
 	if err := os.WriteFile(record.PlanPath, []byte(plan), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	sealedPlanPath := filepath.Join(worktree, filepath.FromSlash(issueops.IssueOpsArtifactDir), "plan.md")
+	const artifactDir = ".issueops/issues/16/artifact"
+	sealedPlanPath := filepath.Join(worktree, filepath.FromSlash(artifactDir), "plan.md")
 	if err := os.MkdirAll(filepath.Dir(sealedPlanPath), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -475,7 +476,7 @@ func seedOrcaClaimSnapshot(t *testing.T) (string, issueopscontract.IssueOpsRecor
 	}
 	record.Execution = &issueopscontract.Execution{
 		Mode:      issueopscontract.ExecutionModeOrca,
-		Workspace: issueopscontract.Workspace{SourceRoot: source, Root: worktree, Branch: record.Branch, BaseHead: baseHead, Driver: "orca", LinkedAt: "2026-07-30T09:00:00Z"},
+		Workspace: issueopscontract.Workspace{SourceRoot: source, Root: worktree, Branch: record.Branch, BaseHead: baseHead, Driver: "orca", LinkedAt: "2026-07-30T09:00:00Z", ArtifactDir: artifactDir},
 		Lease:     issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusClaimable},
 		Orca:      &issueopscontract.OrcaBinding{RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", LeaseGeneration: 1, OwnerHost: "codex", OwnerModel: "model", TaskID: "task", DispatchID: "dispatch"},
 	}

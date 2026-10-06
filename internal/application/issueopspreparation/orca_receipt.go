@@ -17,6 +17,9 @@ type OrcaReceiptDecision struct {
 }
 
 func ApplyOrcaReceipt(state IntentState, receipt preparationcontract.IntentReceipt, artifactDir string, validateDelivery func() error) (OrcaReceiptDecision, error) {
+	if err := requireArtifactDir(artifactDir); err != nil {
+		return OrcaReceiptDecision{}, err
+	}
 	intent := state.Intent
 	nextStage, _, err := preparationdomain.NextOrcaReceiptStage(intent.Stage)
 	if err != nil {

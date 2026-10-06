@@ -55,7 +55,7 @@ type Input struct {
 	Template artifacttemplate.IssueOpsTemplateKind `json:"template,omitempty"`
 	Title    string                                `json:"title"`
 	Body     string                                `json:"body"`
-	// Fields is optional. When set, unrendered legacy `--field` keys surface
+	// Fields is optional. When set, `--field` keys no section renders surface
 	// as warnings the same way artifacttemplate.Validate reports them, so a
 	// single readability response covers both structural and field-level
 	// feedback.

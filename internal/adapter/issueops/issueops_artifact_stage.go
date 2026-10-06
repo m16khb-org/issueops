@@ -10,6 +10,7 @@ import (
 	"issueops/internal/adapter/outbound/sqlstore"
 	intentapp "issueops/internal/application/issueopsintent"
 	"issueops/internal/contract/issueops"
+	ownerdomain "issueops/internal/domain/issueops"
 	"issueops/internal/domain/issueopsintent"
 	"issueops/internal/domain/secretdetection"
 )
@@ -19,20 +20,14 @@ import (
 // 없다(설계 v5 WS2).
 const artifactStageBucket = "artifact_stage_v1"
 
-// IssueOpsArtifactDir은 execution.workspace.artifact_dir이 비어 있을 때의
-// legacy 봉인 디렉터리다. `.gitignore` 대상이며 보존은 completion 섹션이
-// 담당한다. 새 prepare는 application의 OwnerArtifactDir로 이슈 폴더 아래를 고른다(#482).
-const IssueOpsArtifactDir = ".issueops/artifact"
-
 // sealedArtifactDir은 레코드가 봉인 아티팩트를 두는 워크트리 상대 디렉터리다.
 // 레코드 필드만 본다 — 파일시스템 상태나 PlanPath 파싱으로 추론하지 않는다.
+// 값이 없는 레코드는 진입점에서 RequireSealedArtifactDir로 거부한다.
 func sealedArtifactDir(record issueops.IssueOpsRecord) string {
-	if record.Execution != nil {
-		if dir := strings.TrimSpace(record.Execution.Workspace.ArtifactDir); dir != "" {
-			return dir
-		}
+	if record.Execution == nil {
+		return ""
 	}
-	return IssueOpsArtifactDir
+	return strings.TrimSpace(record.Execution.Workspace.ArtifactDir)
 }
 
 // sealedArtifactPath는 워크트리 root 아래 봉인 아티팩트 name.md의 절대 경로다.
@@ -93,7 +88,7 @@ func readStagedArtifacts(stateRoot, id string) (map[string]string, error) {
 }
 
 // materializeStagedArtifacts는 스테이징된 artifact를 워크트리의
-// IssueOpsArtifactDir로 0600 파일로 옮기고 name→sha256 manifest를 돌려준다.
+// 봉인 아티팩트 디렉터리로 0600 파일로 옮기고 name→sha256 manifest를 돌려준다.
 // writeExecutionOwnerArtifact의 immutable 계약을 재사용하므로 재실행은
 // 동일 내용일 때만 통과한다. generic helper는 스테이징이 없으면 빈 manifest를
 // 반환하지만 Orca owner 경로는 application의 MaterializePlan에서 plan을
@@ -102,6 +97,9 @@ func readStagedArtifacts(stateRoot, id string) (map[string]string, error) {
 func materializeStagedArtifacts(stateRoot string, record issueops.IssueOpsRecord) (map[string]string, error) {
 	if record.Execution == nil || strings.TrimSpace(record.Execution.Workspace.Root) == "" {
 		return nil, fmt.Errorf("cannot materialize artifacts without a canonical worktree")
+	}
+	if err := ownerdomain.RequireSealedArtifactDir(record); err != nil {
+		return nil, err
 	}
 	staged, err := readStagedArtifacts(stateRoot, record.ID)
 	if err != nil {

@@ -69,12 +69,12 @@ func TestResumePlanIdentityRejectsUnsealedOrDriftedPlan(t *testing.T) {
 			mutateResumePacket(t, record, func(packet *executionOwnerContextPacket) { packet.ArtifactManifest["plan"] = "invalid" })
 		}},
 		{name: "sealed plan artifact missing", mutate: func(t *testing.T, record *issueops.IssueOpsRecord) {
-			if err := os.Remove(filepath.Join(record.Execution.Workspace.Root, filepath.FromSlash(IssueOpsArtifactDir), "plan.md")); err != nil {
+			if err := os.Remove(filepath.Join(record.Execution.Workspace.Root, filepath.FromSlash(sealedArtifactDir(*record)), "plan.md")); err != nil {
 				t.Fatal(err)
 			}
 		}},
 		{name: "sealed plan artifact digest mismatch", mutate: func(t *testing.T, record *issueops.IssueOpsRecord) {
-			writePrivateResumeFixture(t, filepath.Join(record.Execution.Workspace.Root, filepath.FromSlash(IssueOpsArtifactDir), "plan.md"), []byte("# Tampered sealed plan\n"))
+			writePrivateResumeFixture(t, filepath.Join(record.Execution.Workspace.Root, filepath.FromSlash(sealedArtifactDir(*record)), "plan.md"), []byte("# Tampered sealed plan\n"))
 		}},
 		{name: "durable plan missing", mutate: func(t *testing.T, record *issueops.IssueOpsRecord) {
 			record.PlanPath = filepath.Join(record.Execution.Workspace.Root, "plans", "missing.md")
@@ -186,14 +186,14 @@ func sealedResumeIdentityFixture(t *testing.T) (issueops.IssueOpsRecord, executi
 		BranchPrepare: &issueops.IssueOpsBranchPrepare{Provider: "github", IssueURL: "https://github.com/example/issueops/issues/254", Branch: "254-resume", BaseBranch: "main", BaseSHA: strings.Repeat("a", 40), LinkVerified: true},
 		Execution: &issueops.Execution{
 			Mode:      issueops.ExecutionModeOrca,
-			Workspace: issueops.Workspace{SourceRoot: filepath.Join(t.TempDir(), "source"), Root: worktree, Branch: "254-resume", BaseHead: strings.Repeat("a", 40), Driver: "orca", LinkedAt: "2026-08-03T00:00:00Z"},
+			Workspace: issueops.Workspace{SourceRoot: filepath.Join(t.TempDir(), "source"), Root: worktree, Branch: "254-resume", BaseHead: strings.Repeat("a", 40), Driver: "orca", LinkedAt: "2026-08-03T00:00:00Z", ArtifactDir: ".issueops/issues/254/artifact"},
 			Lease:     issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusClaimable},
 			Orca:      &issueops.OrcaBinding{RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", LeaseGeneration: 1, OwnerHost: "codex", OwnerModel: "gpt-6-sol", OwnerEffort: "high", TaskID: "task", DispatchID: "dispatch"},
 		},
 	}
 	const plan = "# Resume plan\n"
 	writePlanArtifactTestFile(t, record.PlanPath, plan)
-	sealedPlanPath := filepath.Join(worktree, filepath.FromSlash(IssueOpsArtifactDir), "plan.md")
+	sealedPlanPath := filepath.Join(worktree, filepath.FromSlash(sealedArtifactDir(record)), "plan.md")
 	if err := os.MkdirAll(filepath.Dir(sealedPlanPath), 0o700); err != nil {
 		t.Fatal(err)
 	}

@@ -81,12 +81,13 @@ func (s TrackedMaterials) contents(record issueops.IssueOpsRecord, root string) 
 			materials = append(materials, trackedMaterial{trackedPlan, content})
 		}
 	}
-	if content, err := s.Files.ReadFile(s.Files.ArtifactPath(record, root, "intent")); err == nil {
+	sealed := domain.RequireSealedArtifactDir(record) == nil
+	if content, err := s.readSealed(sealed, record, root, "intent"); err == nil {
 		materials = append(materials, trackedMaterial{trackedIntent, content})
 	} else if record.Intent != nil {
 		materials = append(materials, trackedMaterial{trackedIntent, []byte(issueopsintent.Render(intentapp.IntentDocument(record)))})
 	}
-	if content, err := s.Files.ReadFile(s.Files.ArtifactPath(record, root, "spec")); err == nil {
+	if content, err := s.readSealed(sealed, record, root, "spec"); err == nil {
 		materials = append(materials, trackedMaterial{trackedSpec, content})
 	}
 	if review := record.DevilsAdvocateReview; review != nil {
@@ -98,11 +99,23 @@ func (s TrackedMaterials) contents(record issueops.IssueOpsRecord, root string) 
 	return materials
 }
 
+// readSealed reads a sealed artifact only when the record names its sealed
+// directory; a record without one has no sealed files to copy.
+func (s TrackedMaterials) readSealed(sealed bool, record issueops.IssueOpsRecord, root, name string) ([]byte, error) {
+	if !sealed {
+		return nil, domain.ErrSealedArtifactDirMissing
+	}
+	return s.Files.ReadFile(s.Files.ArtifactPath(record, root, name))
+}
+
 // trackedPlanSource is the plan file the tracked copy is made from: the
 // linked plan when it lives in the sealed artifact directory, or the sealed
 // plan when no plan is linked. A linked plan outside the sealed directory is
 // already a tracked file, so it is not copied over the tracked plan.md.
 func (s TrackedMaterials) planSource(record issueops.IssueOpsRecord, root string) (string, bool) {
+	if domain.RequireSealedArtifactDir(record) != nil {
+		return "", false
+	}
 	sealedDir := s.Files.Parent(s.Files.ArtifactPath(record, root, "plan"))
 	planPath := strings.TrimSpace(record.PlanPath)
 	if planPath == "" {

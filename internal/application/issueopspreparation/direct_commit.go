@@ -16,6 +16,9 @@ func ApplyDirectCommit(current leasecontract.Record, commit DirectCommit) (lease
 	if current.Execution != nil {
 		return current, preparationcontract.Result{}, fmt.Errorf("IssueOps execution is already prepared")
 	}
+	if err := requireArtifactDir(commit.ArtifactDir); err != nil {
+		return current, preparationcontract.Result{}, err
+	}
 	record := current
 	record.WorktreePath = commit.Workspace.Root
 	actor := commit.Command.Clone().Actor

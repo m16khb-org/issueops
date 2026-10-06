@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	leasecontract "issueops/internal/contract/issueopslease"
+	ownerdomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
 
@@ -45,18 +46,12 @@ func (*ClaimContextReader) DecodePacket(data []byte) (leasecontract.ClaimContext
 	return packet, err
 }
 func (*ClaimContextReader) ReadArtifact(record leasecontract.Record, name string) ([]byte, error) {
-	return readClaimOwnerArtifact(record.Execution.Workspace.Root, sealedClaimArtifactPath(record.Execution, record.Execution.Workspace.Root, name))
-}
-
-// sealedClaimArtifactPath는 record가 기록한 artifact_dir 아래의 봉인 아티팩트 경로다.
-// execution prepare의 materialize와 같은 규칙을 써야 claim이 같은 파일을 읽는다. 빈 값은
-// legacy `.issueops/artifact`를 뜻한다(contract/issueops/execution.go:71-74).
-func sealedClaimArtifactPath(execution *leasecontract.Execution, root, name string) string {
-	dir := strings.TrimSpace(execution.Workspace.ArtifactDir)
+	dir := strings.TrimSpace(record.Execution.Workspace.ArtifactDir)
 	if dir == "" {
-		dir = ".issueops/artifact"
+		return nil, ownerdomain.ErrSealedArtifactDirMissing
 	}
-	return filepath.Join(root, filepath.FromSlash(dir), name+".md")
+	root := record.Execution.Workspace.Root
+	return readClaimOwnerArtifact(root, filepath.Join(root, filepath.FromSlash(dir), name+".md"))
 }
 
 func claimContextPacketPath(record leasecontract.Record) string {

@@ -66,7 +66,7 @@ func TestOrcaIntentRepositoryCASCompletesClaimableAuthority(t *testing.T) {
 		}
 		if stage == preparationcontract.IntentStageWorktree {
 			state.OwnerArtifacts = preparationcontract.OwnerArtifacts{
-				PlanPath:       "/repo.worktrees/199-orca/.issueops/artifact/plan.md",
+				PlanPath:       "/repo.worktrees/199-orca/.issueops/issues/199/artifact/plan.md",
 				ClaimTokenPath: "/repo.worktrees/199-orca/.issueops/state/claim", ClaimTokenSHA256: strings.Repeat("d", 64),
 				ContextPacketPath: "/repo.worktrees/199-orca/.issueops/context.json", ContextPacketSHA256: strings.Repeat("c", 64),
 				OwnerPromptPath: "/repo.worktrees/199-orca/.issueops/owner.md", OwnerPromptSHA256: strings.Repeat("b", 64),
@@ -162,7 +162,7 @@ func TestOrcaIntentRepositoryRequiresBaselinePresenceBeforeFreshClaimable(t *tes
 				}
 				if stage == preparationcontract.IntentStageWorktree {
 					state.OwnerArtifacts = preparationcontract.OwnerArtifacts{
-						PlanPath:       "/repo.worktrees/199-orca/.issueops/artifact/plan.md",
+						PlanPath:       "/repo.worktrees/199-orca/.issueops/issues/199/artifact/plan.md",
 						ClaimTokenPath: "/repo.worktrees/199-orca/.issueops/state/claim", ClaimTokenSHA256: strings.Repeat("d", 64),
 						ContextPacketPath: "/repo.worktrees/199-orca/.issueops/context.json", ContextPacketSHA256: strings.Repeat("c", 64),
 						OwnerPromptPath: "/repo.worktrees/199-orca/.issueops/owner.md", OwnerPromptSHA256: strings.Repeat("b", 64),
@@ -336,7 +336,7 @@ func TestPreparationIntentWritersRejectFinishSnapshots(t *testing.T) {
 				}
 				state.FailureAt = "2026-09-29T00:00:00Z"
 				state.OwnerArtifacts = preparationcontract.OwnerArtifacts{
-					PlanPath:       "/repo.worktrees/199-orca/.issueops/artifact/plan.md",
+					PlanPath:       "/repo.worktrees/199-orca/.issueops/issues/199/artifact/plan.md",
 					ClaimTokenPath: "/repo.worktrees/199-orca/.issueops/state/claim", ClaimTokenSHA256: strings.Repeat("d", 64),
 					ContextPacketPath: "/repo.worktrees/199-orca/.issueops/context.json", ContextPacketSHA256: strings.Repeat("c", 64),
 					OwnerPromptPath: "/repo.worktrees/199-orca/.issueops/owner.md", OwnerPromptSHA256: strings.Repeat("b", 64),

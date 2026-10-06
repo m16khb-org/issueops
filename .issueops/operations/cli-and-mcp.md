@@ -100,12 +100,11 @@ issueops gates init [--file PATH] --scope TEXT --gate "G1: outcome | CHECK: cmd 
 issueops gates check [--file PATH]... [--workspace-root PATH] [--cwd PATH] [--timeout-seconds N] [--env NAME,NAME] [--write] [--network] [--json]
 issueops gates status [--file PATH]... [--workspace-root PATH] [--cwd PATH] [--json]
 issueops gates report [--file PATH]... [--workspace-root PATH] [--cwd PATH] [--json]
-issueops gates abandon --gate ID --reason TEXT [--file PATH] [--json]
+issueops gates abandon --file PATH --gate ID --reason TEXT [--json]
 ```
 
 `gates` discovers per-issue ledgers (`.issueops/issues/<n>/gates.md`)
-first, then generic task ledgers (`.issueops/gates/*.md`) and compatible
-unlazy ledgers (`GATES.md` plus `gates/*.md`). The format is the
+first, then generic task ledgers (`.issueops/gates/*.md`). The format is the
 unlazy v2 contract: one checkbox per outcome,
 `CHECK:` command plus `EXPECT:` substring-or-`/regex/` match, and `EVIDENCE:`
 recorded from the deciding output tail. A checkbox is a claim; evidence is the
@@ -123,9 +122,10 @@ it derives generic `.issueops/gates/<scope-slug>.md` from the required
 `--scope`. IssueOps uses the stable convention
 `.issueops/issues/<provider-issue-number>/gates.md` and passes that path to
 `gates abandon`. Distinct issue folders let concurrent worktrees merge without
-sharing root `GATES.md` and keep tracked plan/spec/gate artifacts together.
-Existing `.issueops/gates/*.md`, `GATES.md`, and `gates/*.md` files remain
-read-compatible, but new IssueOps cycles use the per-issue path.
+sharing one ledger file and keep tracked plan/spec/gate artifacts together.
+Discovery reads only `.issueops/issues/<n>/gates.md` and `.issueops/gates/*.md`;
+root `GATES.md` and `gates/*.md` are not read, and `gates abandon` requires
+`--file`.
 
 MCP exposes the same operations as `gates_init`, `gates_check`, `gates_status`,
 `gates_report`, and `gates_abandon` sharing one contract DTO (schema version 1).
@@ -148,10 +148,8 @@ order. `recv --wait` returns exit 0 with messages or exit 1 on timeout
 sessions sharing the same issueops state — no cross-machine semantics.
 
 IssueOps integration is opt-in through file presence. A linked cycle judges
-its own `.issueops/issues/<n>/gates.md`, anonymous ledgers, and compatible
-legacy paths; other numbered issue ledgers are skipped with one warning. A
-canonical and legacy ledger for the same issue fails closed as
-`duplicate_issue_artifact:<n>`. Unmet gates add `gates_incomplete:<file>` and
+its own `.issueops/issues/<n>/gates.md` and anonymous ledgers; other numbered
+issue ledgers are skipped with one warning. Unmet gates add `gates_incomplete:<file>` and
 block entering `pr` until every gate has evidence or an honest `ABANDON`.
 Because the ledger lives in the worktree, real cycles commit it before strict
 readiness checks `worktree_clean`.

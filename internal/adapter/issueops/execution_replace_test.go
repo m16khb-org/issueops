@@ -44,7 +44,7 @@ func TestReplacementResealRequiresExistingPlanIdentity(t *testing.T) {
 				Mode: issueops.ExecutionModeOrca,
 				Workspace: issueops.Workspace{
 					SourceRoot: record.Repo, Root: worktree, Branch: record.Branch,
-					BaseHead: record.BranchPrepare.BaseSHA, Driver: "orca",
+					BaseHead: record.BranchPrepare.BaseSHA, Driver: "orca", ArtifactDir: issueArtifactDirFor(record),
 				},
 				Lease: issueops.WriteLease{Generation: 2, Status: issueops.LeaseStatusClaimable},
 				Orca: &issueops.OrcaBinding{
@@ -76,7 +76,7 @@ func TestReplacementResealRequiresExistingPlanIdentity(t *testing.T) {
 					t.Fatalf("error=%T %v want orca_plan_artifact_required", err, err)
 				}
 				if record.PlanPath == "" {
-					invented := filepath.Join(worktree, filepath.FromSlash(IssueOpsArtifactDir), "plan.md")
+					invented := filepath.Join(worktree, filepath.FromSlash(sealedArtifactDir(record)), "plan.md")
 					if _, statErr := os.Lstat(invented); !os.IsNotExist(statErr) {
 						t.Fatalf("replacement invented durable plan %q: %v", invented, statErr)
 					}

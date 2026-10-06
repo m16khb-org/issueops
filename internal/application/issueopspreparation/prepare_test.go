@@ -97,6 +97,18 @@ func TestDirectPreparationFailureStopsBeforeLaterEffects(t *testing.T) {
 	}
 }
 
+func TestDirectPreparationRejectsIssueURLWithoutNumberBeforeProvisioning(t *testing.T) {
+	fixture := newDirectServiceFixture()
+	fixture.repository.snapshot.ArtifactDir = ""
+	result, err := fixture.service.Prepare(context.Background(), directCommand(true))
+	if err == nil || result.OK || !strings.Contains(err.Error(), "no issue number") {
+		t.Fatalf("result=%+v err=%v", result, err)
+	}
+	if traceIndex(fixture.trace, "direct.prepare") >= 0 || fixture.repository.commit != nil {
+		t.Fatalf("issue URL without number reached provisioning: %v", fixture.trace)
+	}
+}
+
 func TestPrepareFingerprintGatePrecedesWorkspaceMutation(t *testing.T) {
 	fixture := newDirectServiceFixture()
 	command := directCommand(true)
@@ -165,7 +177,7 @@ type directServiceFixture struct {
 func newDirectServiceFixture() *directServiceFixture {
 	fixture := &directServiceFixture{}
 	record := leasecontract.Record{ID: "io-prepare", Repo: "/repo", Branch: "199-prepare"}
-	fixture.repository = &applicationRepositoryFake{trace: &fixture.trace, snapshot: preparationcontract.Snapshot{Record: record, RecordRaw: []byte("raw")}}
+	fixture.repository = &applicationRepositoryFake{trace: &fixture.trace, snapshot: preparationcontract.Snapshot{Record: record, RecordRaw: []byte("raw"), ArtifactDir: ".issueops/issues/199/artifact"}}
 	fixture.direct = &applicationDirectFake{trace: &fixture.trace, access: preparationcontract.AccessResult{Allowed: true}, receipt: preparationcontract.WorkspaceReceipt{SourceRoot: "/repo", Root: "/repo.worktrees/199-prepare", Branch: "199-prepare", BaseHead: "base", Driver: "git", Exists: true}}
 	fixture.evidence = &applicationEvidenceFake{trace: &fixture.trace, workspace: preparationcontract.WorkspaceRequest{LifecycleID: record.ID, SourceRoot: record.Repo, Root: "/repo.worktrees/199-prepare", Branch: record.Branch, BaseBranch: "117-parent", BaseHead: "base", Confirm: true}}
 	fixture.service = NewService(fixture.repository, &applicationClockFake{trace: &fixture.trace}, applicationOperationIDFake{}, fixture.direct, applicationOrcaFake{}, fixture.evidence)

@@ -20,7 +20,7 @@ import (
 	"issueops/internal/port"
 )
 
-// 현재 schema는 legacy row를 해석하지 않도록 물리 namespace까지 분리한다.
+// 레코드는 schema 버전별 물리 namespace에만 읽고 쓴다.
 // namespace 이름은 issueops.IssueOpsSchemaVersion에서 파생된다.
 var issueOpsBucket = fmt.Sprintf("issueops_v%d", issueops.IssueOpsSchemaVersion)
 

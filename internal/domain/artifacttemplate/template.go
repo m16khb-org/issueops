@@ -144,10 +144,8 @@ func Validate(input IssueOpsTemplateInput) IssueOpsTemplateValidation {
 			v.Critical = append(v.Critical, "required_section_missing")
 		}
 	}
-	for _, key := range unrenderedFieldKeys {
-		if strings.TrimSpace(input.Fields[key]) != "" {
-			v.Warnings = append(v.Warnings, "unrendered_field:"+key)
-		}
+	for _, key := range unrenderedFields(input) {
+		v.Warnings = append(v.Warnings, "unrendered_field:"+key)
 	}
 	if len(v.MissingRequiredFields) > 0 {
 		v.Critical = append(v.Critical, "missing_required_fields")
@@ -196,7 +194,7 @@ func normalizeInput(input IssueOpsTemplateInput) IssueOpsTemplateInput {
 	if input.Fields == nil {
 		input.Fields = map[string]string{}
 	}
-	input.Fields = normalizeFields(input.Kind, input.Fields)
+	input.Fields = normalizeFields(input.Fields)
 	if input.Kind == "" {
 		input.Kind = IssueOpsArtifactIssue
 	}
@@ -213,74 +211,26 @@ func normalizeInput(input IssueOpsTemplateInput) IssueOpsTemplateInput {
 	return input
 }
 
-// fieldAliases maps legacy `--field` keys onto the canonical field keys that
-// the reader-first body contract renders. Applied regardless of artifact kind.
-var fieldAliases = map[string]string{
-	"problem":              "background",
-	"current_evidence":     "background",
-	"non_goals":            "scope",
-	"implementation_scope": "scope",
-	"intent":               "summary",
-	"acceptance_criteria":  "acceptance",
-	"logs_output":          "logs",
-	"goal":                 "task_goal",
-	"parent_merge":         "merge_condition",
+// unrenderedFields lists the non-empty fields that no section of the
+// kind/template renders. They are accepted (never rejected), and Validate
+// warns `unrendered_field:<key>` for each so authors know it was dropped.
+func unrenderedFields(input IssueOpsTemplateInput) []string {
+	rendered := map[string]bool{}
+	for _, spec := range sectionsFor(input.Kind, input.Template) {
+		for _, key := range sectionFieldNames(spec.Key) {
+			rendered[key] = true
+		}
+	}
+	var keys []string
+	for key, value := range input.Fields {
+		if !rendered[key] && strings.TrimSpace(value) != "" {
+			keys = append(keys, key)
+		}
+	}
+	return keys
 }
 
-// kindFieldAliases apply after fieldAliases, per artifact kind. They fold the
-// pre-2026-09 field surface onto the reader-first sections; fields that no
-// longer render carry a fixed key so Validate can warn once instead of
-// silently dropping them (unrenderedFieldKeys).
-var kindFieldAliases = map[IssueOpsArtifactKind]map[string]string{
-	IssueOpsArtifactIssue: {
-		"risk":          "risks",
-		"rollback":      "risks",
-		"risk_rollback": "risks",
-	},
-	// The child summary folds the parent-issue link and task goal that the
-	// old contract split across two required fields.
-	IssueOpsArtifactChild: {
-		"task_goal":    "summary",
-		"parent_issue": "summary",
-		"cleanup":      "worktree_cleanup",
-	},
-	// The PR summary ends with the closing reference the old contract kept
-	// in its own 이슈 section.
-	IssueOpsArtifactPR: {
-		"issue":            "summary",
-		"verification":     "verified",
-		"risk":             "risk_rollback",
-		"risks":            "risk_rollback",
-		"rollback":         "risk_rollback",
-		"breaking":         "compatibility_migration",
-		"breakage":         "compatibility_migration",
-		"breaking_changes": "compatibility_migration",
-		"docs":             "compatibility_migration",
-		"document":         "compatibility_migration",
-		"documents":        "compatibility_migration",
-		"documentation":    "compatibility_migration",
-		"docs_migration":   "compatibility_migration",
-		"user_impact":      "compatibility_migration",
-		"scope":            "scope_management",
-		"cleanup":          "worktree_cleanup",
-		"automation":       "automation_evidence",
-		"type":             "change_type",
-		"change_kind":      "change_type",
-	},
-}
-
-// unrenderedFieldKeys are accepted (never rejected) but never rendered into
-// the body. Validate emits a warning `unrendered_field:<key>` for each one
-// that carries a non-empty value so authors know it was dropped.
-var unrenderedFieldKeys = []string{
-	"worktree_cleanup",
-	"scope_management",
-	"change_type",
-	"automation_evidence",
-	"feedback_log",
-}
-
-func normalizeFields(kind IssueOpsArtifactKind, fields map[string]string) map[string]string {
+func normalizeFields(fields map[string]string) map[string]string {
 	if len(fields) == 0 {
 		return map[string]string{}
 	}
@@ -292,12 +242,6 @@ func normalizeFields(kind IssueOpsArtifactKind, fields map[string]string) map[st
 	sort.Strings(keys)
 	for _, key := range keys {
 		normalized := normalizeFieldKey(key)
-		if canonical, ok := fieldAliases[normalized]; ok {
-			normalized = canonical
-		}
-		if canonical, ok := kindFieldAliases[kind][normalized]; ok {
-			normalized = canonical
-		}
 		value := strings.TrimSpace(fields[key])
 		if value == "" {
 			if _, exists := out[normalized]; !exists {
@@ -432,8 +376,8 @@ func sectionsFor(kind IssueOpsArtifactKind, template IssueOpsTemplateKind) []sec
 
 // combinedField resolves a section's content. Most sections map to a single
 // field key, but bug's 기대 동작과 실제 동작 and 환경과 로그 each fold two
-// legacy fields (expected_behavior/actual_behavior, environment/logs) into
-// one rendered section.
+// fields (expected_behavior/actual_behavior, environment/logs) into one
+// rendered section.
 func combinedField(input IssueOpsTemplateInput, key string) string {
 	switch key {
 	case "expected_actual":
@@ -476,12 +420,18 @@ func missingFields(input IssueOpsTemplateInput) []string {
 // supply for a combined section, so CLI error messages point at an actual
 // flag instead of an internal section key.
 func requiredFieldNames(sectionKey string) []string {
-	switch sectionKey {
-	case "expected_actual":
+	if sectionKey == "expected_actual" {
 		return []string{"expected_behavior", "actual_behavior"}
-	default:
-		return []string{sectionKey}
 	}
+	return []string{sectionKey}
+}
+
+// sectionFieldNames reports every --field key a section renders.
+func sectionFieldNames(sectionKey string) []string {
+	if sectionKey == "environment_logs" {
+		return []string{"environment", "logs"}
+	}
+	return requiredFieldNames(sectionKey)
 }
 
 func fieldSatisfiedByBody(body, sectionKey string) bool {
@@ -634,19 +584,6 @@ func uniqueSorted(items []string) []string {
 	}
 	sort.Strings(out)
 	return out
-}
-
-// RequiredSectionTitles reports the required section titles for
-// kind/template, in contract order.
-func RequiredSectionTitles(kind IssueOpsArtifactKind, template IssueOpsTemplateKind) []string {
-	input := normalizeInput(IssueOpsTemplateInput{Kind: kind, Template: template})
-	var titles []string
-	for _, spec := range sectionsFor(input.Kind, input.Template) {
-		if spec.Required {
-			titles = append(titles, spec.Title)
-		}
-	}
-	return titles
 }
 
 // OptionalSectionTitles reports the optional section titles for kind/template,

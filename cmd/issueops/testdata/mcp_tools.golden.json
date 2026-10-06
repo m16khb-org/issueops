@@ -1255,7 +1255,7 @@
     "name": "loop_stop"
   },
   {
-    "description": "Evaluate task gate ledgers (.issueops/gates/*.md; compatible GATES.md and gates/*.md). Runs CHECK commands for unmet gates through the command policy engine (workspace boundary, env allowlist, timeout, audit), matches EXPECT, flips checkboxes, and records evidence. Complete means zero unmet gates; ABANDON gates count as resolved.",
+    "description": "Evaluate task gate ledgers (.issueops/issues/\u003cn\u003e/gates.md and .issueops/gates/*.md). Runs CHECK commands for unmet gates through the command policy engine (workspace boundary, env allowlist, timeout, audit), matches EXPECT, flips checkboxes, and records evidence. Complete means zero unmet gates; ABANDON gates count as resolved.",
     "inputSchema": {
       "properties": {
         "authority_file": {
@@ -1263,7 +1263,7 @@
           "type": "string"
         },
         "cwd": {
-          "description": "Directory holding .issueops/gates/*.md or compatible gate ledgers, and the CHECK working directory. Defaults to the agent project directory.",
+          "description": "Directory holding .issueops/issues/\u003cn\u003e/gates.md or .issueops/gates/*.md ledgers, and the CHECK working directory. Defaults to the agent project directory.",
           "type": "string"
         },
         "env_allowlist": {
@@ -1274,7 +1274,7 @@
           "type": "array"
         },
         "files": {
-          "description": "Explicit gate ledger files. Omit to discover .issueops/gates/*.md plus compatible GATES.md and gates/*.md under cwd.",
+          "description": "Explicit gate ledger files. Omit to discover .issueops/issues/\u003cn\u003e/gates.md and .issueops/gates/*.md under cwd.",
           "items": {
             "type": "string"
           },
@@ -1310,11 +1310,11 @@
           "type": "string"
         },
         "cwd": {
-          "description": "Directory holding .issueops/gates/*.md or compatible gate ledgers. Defaults to the agent project directory.",
+          "description": "Directory holding .issueops/issues/\u003cn\u003e/gates.md or .issueops/gates/*.md ledgers. Defaults to the agent project directory.",
           "type": "string"
         },
         "files": {
-          "description": "Explicit gate ledger files. Omit to discover .issueops/gates/*.md plus compatible GATES.md and gates/*.md under cwd.",
+          "description": "Explicit gate ledger files. Omit to discover .issueops/issues/\u003cn\u003e/gates.md and .issueops/gates/*.md under cwd.",
           "items": {
             "type": "string"
           },
@@ -1338,11 +1338,11 @@
           "type": "string"
         },
         "cwd": {
-          "description": "Directory holding .issueops/gates/*.md or compatible gate ledgers. Defaults to the agent project directory.",
+          "description": "Directory holding .issueops/issues/\u003cn\u003e/gates.md or .issueops/gates/*.md ledgers. Defaults to the agent project directory.",
           "type": "string"
         },
         "files": {
-          "description": "Explicit gate ledger files. Omit to discover .issueops/gates/*.md plus compatible GATES.md and gates/*.md under cwd.",
+          "description": "Explicit gate ledger files. Omit to discover .issueops/issues/\u003cn\u003e/gates.md and .issueops/gates/*.md under cwd.",
           "items": {
             "type": "string"
           },
@@ -1370,7 +1370,7 @@
           "type": "string"
         },
         "file": {
-          "description": "Gate ledger file. Legacy default is GATES.md; pass namespaced .issueops/gates/\u003cname\u003e.md explicitly.",
+          "description": "Gate ledger file: .issueops/issues/\u003cn\u003e/gates.md or .issueops/gates/\u003cscope\u003e.md.",
           "type": "string"
         },
         "gate_id": {
@@ -1387,6 +1387,7 @@
         }
       },
       "required": [
+        "file",
         "gate_id",
         "reason"
       ],

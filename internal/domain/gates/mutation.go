@@ -58,8 +58,7 @@ func CreatedLedger(result model.InitResult, body string) model.InitResult {
 func PrepareAbandon(req model.AbandonRequest) (model.AbandonRequest, model.AbandonResult, error) {
 	result := model.AbandonResult{SchemaVersion: model.SchemaVersion, File: req.File, GateID: req.GateID}
 	if strings.TrimSpace(req.File) == "" {
-		req.File = "GATES.md"
-		result.File = req.File
+		return req, result, fmt.Errorf("--file is required")
 	}
 	if strings.TrimSpace(req.GateID) == "" {
 		return req, result, fmt.Errorf("--gate is required")

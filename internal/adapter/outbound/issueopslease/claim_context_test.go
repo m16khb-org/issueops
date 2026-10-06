@@ -27,7 +27,7 @@ func TestClaimContextPreflight(t *testing.T) {
 
 func TestClaimContextPreflightRejectsSealedArtifactDrift(t *testing.T) {
 	issueBody := "## acceptance criteria\n\n- [ ] AC-01: packet artifact\n"
-	fixture := newSealedClaimContext(t, "https://github.com/example/issueops/issues/197", issueBody, "", []byte("sealed plan\n"))
+	fixture := newSealedClaimContext(t, "https://github.com/example/issueops/issues/197", issueBody, ".issueops/issues/197/artifact", []byte("sealed plan\n"))
 	if _, err := fixture.preflight.Preflight(context.Background(), fixture.request); err != nil {
 		t.Fatalf("sealed artifact preflight: %v", err)
 	}
@@ -41,17 +41,17 @@ func TestClaimContextPreflightRejectsSealedArtifactDrift(t *testing.T) {
 
 func TestClaimContextPreflightAcceptsSealed98163ByteArtifact(t *testing.T) {
 	issueBody := "## acceptance criteria\n\n- [ ] AC-04: claim the sealed plan\n"
-	fixture := newSealedClaimContext(t, "https://github.com/example/issueops/issues/237", issueBody, "", make([]byte, 98_163))
+	fixture := newSealedClaimContext(t, "https://github.com/example/issueops/issues/237", issueBody, ".issueops/issues/237/artifact", make([]byte, 98_163))
 	if _, err := fixture.preflight.Preflight(context.Background(), fixture.request); err != nil {
 		t.Fatalf("98,163-byte sealed artifact preflight: %v", err)
 	}
 }
 
-func TestClaimContextPreflightReadsSealedArtifactFromRecordedArtifactDir(t *testing.T) {
+func TestClaimContextPreflightRejectsRecordWithoutArtifactDir(t *testing.T) {
 	issueBody := "## acceptance criteria\n\n- [ ] AC-01: recorded artifact dir\n"
-	fixture := newSealedClaimContext(t, "https://github.com/example/issueops/issues/508", issueBody, ".issueops/issues/508/artifact", []byte("sealed plan\n"))
-	if _, err := fixture.preflight.Preflight(context.Background(), fixture.request); err != nil {
-		t.Fatalf("recorded artifact_dir preflight: %v", err)
+	fixture := newSealedClaimContext(t, "https://github.com/example/issueops/issues/508", issueBody, "", []byte("sealed plan\n"))
+	if _, err := fixture.preflight.Preflight(context.Background(), fixture.request); err == nil || !strings.Contains(err.Error(), "artifact_dir is missing") {
+		t.Fatalf("missing artifact_dir preflight error=%v", err)
 	}
 }
 
@@ -71,11 +71,7 @@ func newSealedClaimContext(t *testing.T, issueURL, issueBody, artifactDir string
 	record.Execution.Workspace.Driver = "orca"
 	record.IssueURL = issueURL
 	record.Execution.Workspace.ArtifactDir = artifactDir
-	sealedDir := artifactDir
-	if sealedDir == "" {
-		sealedDir = ".issueops/artifact"
-	}
-	artifactPath := filepath.Join(record.Execution.Workspace.Root, filepath.FromSlash(sealedDir), "plan.md")
+	artifactPath := filepath.Join(record.Execution.Workspace.Root, filepath.FromSlash(artifactDir), "plan.md")
 	if err := os.MkdirAll(filepath.Dir(artifactPath), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -176,7 +172,7 @@ func TestReadClaimOwnerArtifactRejectsUnsafeFiles(t *testing.T) {
 
 // Dropping the locked re-read would accept artifact edits after the remote preflight.
 func TestClaimContextPreflightRechecksSealedFilesInsideClaim(t *testing.T) {
-	fixture := newSealedClaimContext(t, "https://github.com/example/issueops/issues/197", "sealed body", "", []byte("sealed plan"))
+	fixture := newSealedClaimContext(t, "https://github.com/example/issueops/issues/197", "sealed body", ".issueops/issues/197/artifact", []byte("sealed plan"))
 	validate, err := fixture.preflight.Preflight(context.Background(), fixture.request)
 	if err != nil {
 		t.Fatal(err)
@@ -190,7 +186,7 @@ func TestClaimContextPreflightRechecksSealedFilesInsideClaim(t *testing.T) {
 }
 
 func TestClaimContextPreflightRejectsPacketDigestBeforeParsing(t *testing.T) {
-	fixture := newSealedClaimContext(t, "https://github.com/example/issueops/issues/197", "sealed body", "", []byte("sealed plan"))
+	fixture := newSealedClaimContext(t, "https://github.com/example/issueops/issues/197", "sealed body", ".issueops/issues/197/artifact", []byte("sealed plan"))
 	if err := os.WriteFile(fixture.packetPath, []byte("malformed json"), 0o600); err != nil {
 		t.Fatal(err)
 	}

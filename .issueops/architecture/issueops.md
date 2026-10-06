@@ -16,11 +16,10 @@
 - 태스크 게이트 ledger는 PR readiness에 파일 존재 기반 opt-in으로 합성된다.
   신규 IssueOps cycle의 canonical ledger는
   `.issueops/issues/<provider-issue-number>/gates.md`다. 전역 `gates`
-  capability는 이 경로를 먼저 찾고 generic `.issueops/gates/*.md`,
-  root `GATES.md`, `gates/*.md`를 호환 경로로 읽는다. Linked issue 번호가 있는
+  capability는 이 경로를 먼저 찾고 이슈가 없는 scope ledger인
+  `.issueops/gates/*.md`를 그 뒤에 읽는다. Linked issue 번호가 있는
   readiness는 자기 번호와 anonymous ledger만 판정하고 다른 번호는 warning으로
-  건너뛰며, 같은 번호의 canonical·legacy ledger가 함께 있으면
-  `duplicate_issue_artifact:<n>`으로 fail-closed한다. 미충족 게이트(unchecked 또는
+  건너뛴다. 미충족 게이트(unchecked 또는
   checked-but-EVIDENCE-pending)는 `gates_incomplete:<file>`로 pr 진입을 막고,
   ledger가 없으면 요구를 추가하지 않는다. 조회·평가는 함수 변수로 주입되고
   composition root만 배선한다(`loopgate`와 같은 구조). 상세 계약은

@@ -29,7 +29,6 @@ GOOD_PROMPT_EXAMPLE.md
 
 # Local, non-portable skill background
 skills/*/background.local.md
-.issueops/artifact/
 # Per-issue artifact folder: review working files and tmp are never committed (#480)
 .issueops/issues/*/review/
 .issueops/tmp/

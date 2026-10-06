@@ -62,8 +62,8 @@ type Workspace struct {
 	Driver         string `json:"driver"`
 	LinkedAt       string `json:"linked_at"`
 	// ArtifactDir은 봉인 아티팩트(plan/spec/verified-execution-loop)를 materialize·재검증·
-	// 게시할 워크트리 상대 디렉터리다(slash 구분, #482). 비어 있으면 legacy
-	// `.issueops/artifact`를 뜻한다.
+	// 게시할 워크트리 상대 디렉터리다(slash 구분, #482). execution prepare가 항상
+	// 채우며, 비어 있는 레코드는 봉인 아티팩트 접근에서 거부된다.
 	ArtifactDir string `json:"artifact_dir,omitempty"`
 }
 
