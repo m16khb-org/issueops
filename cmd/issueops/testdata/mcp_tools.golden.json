@@ -611,7 +611,7 @@
     "name": "project_docs_append"
   },
   {
-    "description": "Render the API documentation host-agent review prompt/schema, or record a supplied JSON review result for staged or explicit controller/DTO/handler/OpenAPI files. By default it scopes to git staged API candidate files and does not fail unrelated legacy Swagger/OpenAPI debt.",
+    "description": "Render the API documentation host-agent review prompt/schema, or record a supplied JSON review result for staged or explicit controller/DTO/handler/OpenAPI files. By default it scopes to git staged API candidate files and does not fail unrelated pre-existing Swagger/OpenAPI debt.",
     "inputSchema": {
       "properties": {
         "all": {

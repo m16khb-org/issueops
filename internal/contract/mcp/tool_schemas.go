@@ -87,7 +87,7 @@ func CoreProjectTools() []Tool {
 		},
 		{
 			Name:        "api_doc_review",
-			Description: "Render the API documentation host-agent review prompt/schema, or record a supplied JSON review result for staged or explicit controller/DTO/handler/OpenAPI files. By default it scopes to git staged API candidate files and does not fail unrelated legacy Swagger/OpenAPI debt.",
+			Description: "Render the API documentation host-agent review prompt/schema, or record a supplied JSON review result for staged or explicit controller/DTO/handler/OpenAPI files. By default it scopes to git staged API candidate files and does not fail unrelated pre-existing Swagger/OpenAPI debt.",
 			InputSchema: map[string]any{"type": "object", "properties": map[string]any{
 				"repo":        map[string]any{"type": "string", "description": "Target git repository path. Defaults to current directory."},
 				"files":       map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Explicit API candidate files. Omit to use staged controller/DTO/handler/OpenAPI files."},
