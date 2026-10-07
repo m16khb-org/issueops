@@ -361,6 +361,9 @@ func TestRiskMCPAndIssueOpsPolicyHelpers(t *testing.T) {
 }
 
 func TestCLIHelpers(t *testing.T) {
+	// status and doctor probe every loopback MCP gateway in ~/.claude.json, so
+	// a real HOME made this test slow and machine-dependent.
+	t.Setenv("HOME", t.TempDir())
 	root := t.TempDir()
 	writeValidZeroAudit(t, root)
 	stateDir := t.TempDir()

@@ -2,6 +2,7 @@ package mcpcli
 
 import (
 	"encoding/json"
+	"issueops/internal/testsupport"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -19,6 +20,7 @@ func mustMarshalMCPTest(t *testing.T, value any) json.RawMessage {
 
 func makeGitRepoForContract(t *testing.T) string {
 	t.Helper()
+	testsupport.IsolateGitConfig(t)
 	dir := t.TempDir()
 	runGitForContract(t, dir, "init", "-q", "-b", "main")
 	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte("# contract fixture\n"), 0o644); err != nil {

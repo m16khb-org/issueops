@@ -13,6 +13,7 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
+	"issueops/internal/testsupport"
 )
 
 func TestHandoffDeliveryRequestShowRecoveryStatesAndIdentity(t *testing.T) {
@@ -646,6 +647,7 @@ func manualCmuxHandoffObservation(lifecycleID string, generation uint64) issueop
 
 func seedReleasedDirectHandoffRecord(t *testing.T, stateRoot string) issueopscontract.IssueOpsRecord {
 	t.Helper()
+	testsupport.IsolateGitConfig(t)
 	repo := t.TempDir()
 	claimWiringGit(t, repo, "init", "-q", "-b", "main")
 	claimWiringGit(t, repo, "-c", "user.name=IssueOps Test", "-c", "user.email=issueops@example.invalid", "commit", "--allow-empty", "-q", "-m", "initial")

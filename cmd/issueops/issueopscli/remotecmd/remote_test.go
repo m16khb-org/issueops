@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	executionissue "issueops/internal/contract/executionissue"
+	"issueops/internal/testsupport"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -638,6 +639,7 @@ func remoteIssueOpsRecordWithoutChild(t *testing.T) issueopscontract.IssueOpsRec
 
 func remoteIssueOpsRecordForCreate(t *testing.T) issueopscontract.IssueOpsRecord {
 	t.Helper()
+	testsupport.IsolateGitConfig(t)
 	repo := t.TempDir()
 	for _, args := range [][]string{
 		{"init"},

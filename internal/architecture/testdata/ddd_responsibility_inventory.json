@@ -16958,6 +16958,14 @@
       ]
     },
     {
+      "path": "internal/testsupport/git_config.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func IsolateGitConfig"
+      ]
+    },
+    {
       "path": "internal/testsupport/operator_switches.go",
       "owner": "inbound",
       "task": "T20",

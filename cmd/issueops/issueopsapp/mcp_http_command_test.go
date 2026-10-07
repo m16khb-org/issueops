@@ -27,6 +27,7 @@ import (
 	authorityapp "issueops/internal/application/authority"
 	authoritycontract "issueops/internal/contract/authority"
 	model "issueops/internal/contract/issueops"
+	"issueops/internal/testsupport"
 )
 
 type lockedBuffer struct {
@@ -143,6 +144,7 @@ func callHTTPTool(t *testing.T, session *mcp.ClientSession, name string, args ma
 
 func gitRepoForHTTPTest(t *testing.T) string {
 	t.Helper()
+	testsupport.IsolateGitConfig(t)
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)

@@ -2,6 +2,7 @@ package issueopsapp
 
 import (
 	augmentcontract "issueops/internal/contract/selfaugment"
+	"issueops/internal/testsupport"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 
 func makeGitRepoForContract(t *testing.T) string {
 	t.Helper()
+	testsupport.IsolateGitConfig(t)
 	dir := t.TempDir()
 	runGitForContract(t, dir, "init", "-q", "-b", "main")
 	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte("# contract fixture\n"), 0o644); err != nil {
@@ -34,6 +36,7 @@ func makeGitRepoForContract(t *testing.T) string {
 
 func makeRecordlessOrphanGitRepoForContract(t *testing.T) (string, string, string) {
 	t.Helper()
+	testsupport.IsolateGitConfig(t)
 	repo := filepath.Join(t.TempDir(), "repo")
 	remote := filepath.Join(t.TempDir(), "remote.git")
 	worktree := filepath.Join(t.TempDir(), "merged-orphan")

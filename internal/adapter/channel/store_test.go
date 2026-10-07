@@ -6,7 +6,6 @@ import (
 	statestore "issueops/internal/adapter/outbound/state"
 	channelapp "issueops/internal/application/channel"
 	channelcontract "issueops/internal/contract/channel"
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -250,7 +249,6 @@ func TestMessageIDsSortChronologically(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	_ = filepath.Join(dir)
 	recv, err := service.Recv(channelcontract.RecvRequest{Channel: "sort"})
 	if err != nil {
 		t.Fatal(err)
@@ -258,5 +256,4 @@ func TestMessageIDsSortChronologically(t *testing.T) {
 	if len(recv.Messages) != 3 || recv.Messages[0].ID != ids[0] || recv.Messages[2].ID != ids[2] {
 		t.Fatalf("chronological order broken: %+v", recv.Messages)
 	}
-	_ = os.Setenv("ISSUEOPS_STATE_DIR", dir)
 }

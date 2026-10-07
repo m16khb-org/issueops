@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	model "issueops/internal/contract/issueops"
+	"issueops/internal/testsupport"
 )
 
 func TestPorcelainPath(t *testing.T) {
@@ -274,6 +275,7 @@ func TestHasEvidenceIgnoresTrackedPlanAsFirstPorcelainEntry(t *testing.T) {
 
 func newImplementationGitRepo(t *testing.T) string {
 	t.Helper()
+	testsupport.IsolateGitConfig(t)
 	repo := t.TempDir()
 	runGit(t, repo, "init", "-b", "main")
 	runGit(t, repo, "config", "user.name", "Test User")

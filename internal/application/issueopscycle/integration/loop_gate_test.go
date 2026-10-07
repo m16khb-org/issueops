@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	reviewcontract "issueops/internal/contract/issueopsreview"
+	"issueops/internal/testsupport"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -174,6 +175,7 @@ func readyIssueOpsRecordForLoopGateTest(t *testing.T) issueopscontract.IssueOpsR
 
 func initCoreLoopGateRepo(t *testing.T) string {
 	t.Helper()
+	testsupport.IsolateGitConfig(t)
 	root := t.TempDir()
 	repo := filepath.Join(root, "repo")
 	remote := filepath.Join(root, "remote.git")
