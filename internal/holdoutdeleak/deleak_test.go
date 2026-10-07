@@ -6,6 +6,7 @@
 package holdoutdeleak
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -81,21 +82,30 @@ func TestHoldoutFixturesContainInputsOnly(t *testing.T) {
 }
 
 func TestEvidenceAnswerTreeStaysUntracked(t *testing.T) {
-	// The raw result.yaml answers live under .issueops/evidence, which is
-	// blanket-gitignored by the bare "evidence" line in .gitignore. This guards
-	// that A6's testdata route did not weaken that ignore and start tracking the
-	// answer tree.
+	// The raw result.yaml answers live under .issueops/evidence. Ask git whether
+	// the repository's own ignore rules cover that tree, so the guard follows the
+	// rule's effect rather than one spelling of the .gitignore line.
 	root := repoRoot(t)
-	gi, err := os.ReadFile(filepath.Join(root, ".gitignore"))
+	git, err := exec.LookPath("git")
 	if err != nil {
-		t.Fatalf("read .gitignore: %v", err)
+		t.Skip("git not available")
 	}
-	for line := range strings.SplitSeq(string(gi), "\n") {
-		if strings.TrimSpace(line) == "evidence" {
-			return
-		}
+	answer := ".issueops/evidence/pioneer-skills-quality/reruns/sample/result.yaml"
+	cmd := exec.Command(git, "check-ignore", "-q", "--no-index", "--", answer)
+	cmd.Dir = root
+	// Only the repository's rules count: a developer's global excludesFile
+	// must not make an unignored tree look ignored.
+	cmd.Env = append(os.Environ(), "GIT_CONFIG_GLOBAL="+os.DevNull, "GIT_CONFIG_NOSYSTEM=1")
+	err = cmd.Run()
+	var exitErr *exec.ExitError
+	switch {
+	case err == nil:
+		return
+	case errors.As(err, &exitErr) && exitErr.ExitCode() == 1:
+		t.Errorf(".gitignore no longer ignores %s — the holdout answer tree may now be tracked; A6 keeps answers OUT of git", answer)
+	default:
+		t.Skipf("git check-ignore unavailable (not a work tree?): %v", err)
 	}
-	t.Error(".gitignore no longer blanket-ignores 'evidence' — the holdout answer tree (result.yaml) may now be tracked; A6 keeps answers OUT of git")
 }
 
 func TestEvidenceAnswerFilesNotForceTracked(t *testing.T) {
