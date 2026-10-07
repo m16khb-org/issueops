@@ -796,7 +796,7 @@ fail_after_mutation() {
   finish fail 1
 }
 
-# shellcheck disable=SC2329 # invoked by the EXIT trap below
+# shellcheck disable=SC2317,SC2329 # invoked by the EXIT trap below
 on_exit() {
   local status=$?
   if ((finalized == 0 && mutation_started == 1)); then
@@ -806,7 +806,7 @@ on_exit() {
   trap - EXIT
   exit "$status"
 }
-# shellcheck disable=SC2329 # invoked by the INT and TERM traps below
+# shellcheck disable=SC2317,SC2329 # invoked by the INT and TERM traps below
 on_signal() {
   local signal_status="$1"
   if ((restoring == 1)); then
