@@ -23,6 +23,9 @@ class Manifest:
     max_module_lines: int
     families: tuple[Family, ...]
     single_owner_topics: dict[str, str]
+    directories: dict[str, str]
+    root_documents: tuple[str, ...]
+    fixed_documents: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,6 +71,16 @@ def _require_positive_int(
     if not isinstance(value, int) or isinstance(value, bool) or value < 1:
         raise ValueError(f"{label}.{key} must be a positive integer")
     return value
+
+
+def _optional_paths(raw: dict[str, object], key: str) -> tuple[str, ...]:
+    value = raw.get(key, [])
+    if not isinstance(value, list) or not all(
+        isinstance(item, str) and item.strip()
+        for item in cast("list[object]", value)
+    ):
+        raise ValueError(f"manifest.{key} must be an array of paths")
+    return tuple(cast("list[str]", value))
 
 
 def load_manifest(path: Path) -> Manifest:
@@ -116,6 +129,14 @@ def load_manifest(path: Path) -> Manifest:
         )
         for topic in raw_topics
     }
+    raw_directories = raw.get("directories", {})
+    directory_map = _require_mapping(raw_directories, "manifest.directories")
+    directories = {
+        str(path): _require_string(directory_map, str(path), "directories")
+        for path in directory_map
+    }
+    root_documents = _optional_paths(raw, "root_documents")
+    fixed_documents = _optional_paths(raw, "fixed_documents")
     return Manifest(
         max_root_lines=_require_positive_int(
             raw,
@@ -129,6 +150,9 @@ def load_manifest(path: Path) -> Manifest:
         ),
         families=tuple(families),
         single_owner_topics=topics,
+        directories=directories,
+        root_documents=root_documents,
+        fixed_documents=fixed_documents,
     )
 
 
