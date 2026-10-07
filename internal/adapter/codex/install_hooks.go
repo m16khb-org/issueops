@@ -142,6 +142,9 @@ func (installer Installer) mergeHookConfig(config map[string]any, binPath string
 	return config
 }
 
+// codexLifecycleHookEvents lists every event an earlier install may have
+// registered an issueops hook under, so an upgrade strips those groups; the
+// installer itself only adds SessionStart (codexLifecycleHookSpecs).
 var codexLifecycleHookEvents = []string{
 	"SessionStart",
 	"UserPromptSubmit",
