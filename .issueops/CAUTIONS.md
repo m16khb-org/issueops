@@ -69,20 +69,38 @@ lesson으로 분리됐고, 여기서는 핵심 한 줄과 탐색 링크만 둔�
 
 ## Dated incident lessons
 
-One file per incident under `cautions/lessons/`. Each carries the full
+One file per incident under `cautions/lessons/` or, for newer records, directly under `cautions/`. Each carries the full
 Kind/Source/Summary/Context/Resolution/Evidence record and a historical-evidence
 footer; older notes also live in `archive/cautions-incidents.md`.
 
 | Date | Lesson |
 |---|---|
+| 2026-10-06 | [Removal commits leave stale help text, orphan fixtures, and doc claims behind](cautions/2026-10-06-removal-commits-leave-stale-help-text-orphan-fixtures-and-do.md) |
 | 2026-10-03 | [공용 HTTP 경계와 검증 증거: capability 파일 인자 이탈, 문자열만 보는 receipt, 고정 deadline 테스트 세션](cautions/2026-10-03-http.md) |
 | 2026-10-03 | [HTTP 설치 검증과 린터 toolchain 일치](cautions/lessons/2026-10-03-native-http-validation-and-lint-toolchain.md) |
 | 2026-10-02 | [실제 host QA의 함정: Claude tool-results 파일, Codex service_tier, AMFI, 정확 치환 편집](cautions/lessons/2026-10-02-real-host-qa-tool-results-service-tier-amfi-exact-edits.md) |
+| 2026-10-01 | [정책 출력의 불완전한 tail과 상속 pipe를 완료로 취급하지 않는다](cautions/2026-10-01-tail-pipe.md) |
+| 2026-09-25 | [UTF-8 safe byte-bounded truncation](cautions/2026-09-25-utf-8-safe-byte-bounded-truncation.md) |
+| 2026-09-25 | [Gate CHECK 15-minute cap under host load](cautions/2026-09-25-gate-check-15-minute-cap-under-host-load.md) |
+| 2026-09-24 | [구현 진입 sync-base 뒤 계획을 고치면 계획 리뷰가 stale이 된다](cautions/2026-09-24-sync-base-stale.md) |
+| 2026-09-23 | [전역 span 안에서 네트워크 호출을 하지 않는다](cautions/2026-09-23-no-network-inside-state-root-span.md) |
+| 2026-09-23 | [gates init spec은 따옴표 안의 pipe(`\|`)도 segment 구분자로 자른다](cautions/2026-09-23-gates-init-spec-pipe-segment.md) |
+| 2026-09-23 | [actor flag를 파싱하고 버리면 lease fence가 조용히 빠진다](cautions/2026-09-23-actor-flag-lease-fence.md) |
+| 2026-09-23 | [IssueOpsRecord에 최상위 field를 추가하면 lease Record에도 추가한다](cautions/2026-09-23-issueopsrecord-field-lease-record.md) |
+| 2026-09-20 | [장기 실행 MCP proxy가 시작한 daemon은 Wait로 회수한다 (daemon 제거 뒤 기록용)](cautions/2026-09-20-mcp-proxy-daemon-wait.md) |
+| 2026-09-20 | [Native host probe evidence and bounded output](cautions/2026-09-20-native-host-probe-evidence-and-bounded-output.md) |
+| 2026-09-20 | [Manual handoff state root and next-generation claim](cautions/2026-09-20-manual-handoff-state-root-and-next-generation-claim.md) |
+| 2026-09-08 | [issueops regress is refused while the devil's-advocate verdict is revise](cautions/2026-09-08-issueops-regress-is-refused-while-the-devil-s-advocate-verdi.md) |
+| 2026-09-08 | [Review CHECKs enter the ledger at stage-4 entry, never during verify](cautions/2026-09-08-review-checks-enter-the-ledger-at-stage-4-entry-never-during.md) |
 | 2026-09-02 | [fingerprint를 봉인하는 게이트는 수정 뒤에 기록한다](cautions/lessons/2026-09-02-fingerprint-sealing-gates-recorded-after-edit.md) |
 | 2026-09-01 | [전진한 원격 브랜치가 cleanup을 교착시켰다; finish가 --keep-remote-branch를 받는다](cautions/lessons/2026-09-01-cleanup-deadlock-advanced-remote-branch.md) |
 | 2026-08-29 | [Omo PR Review verdict는 최종 텍스트가 아니라 schema tool로 받아야 한다](cautions/lessons/2026-08-29-omo-pr-review-structured-output-tool.md) |
 | 2026-08-28 | [dry-run이 외부 CLI를 실행해 홈 디렉터리를 변경했다](cautions/lessons/2026-08-28-install-dry-run-spawned-the-claude-cli.md) |
 | 2026-08-28 | [devil's-advocate 기록이 플랜에 묶이지 않아 게이트가 연극 가능했다](cautions/lessons/2026-08-28-devils-advocate-record-was-unbound.md) |
+| 2026-08-28 | [배선 파일이 지워지면 가드는 테스트만 남기고 사라진다](cautions/2026-08-28-record.md) |
+| 2026-08-28 | [lease quiescence 테스트가 시스템 전역 lsof 프로브에 묶여 전체 스위트에서 확률적으로 깨졌다](cautions/2026-08-28-lease-quiescence-lsof.md) |
+| 2026-08-28 | [Verify host CLI flags against the installed version](cautions/2026-08-28-verify-host-cli-flags-against-the-installed-version.md) |
+| 2026-08-28 | [GitLab WorkItem 직속 labels/assignees selection이 create-child를 막았고 가짜 glab 스텁이 그 오류를 감췄다](cautions/2026-08-28-gitlab-workitem-labels-assignees-selection-create-child-glab.md) |
 | 2026-07-02 | [Re-verify stale memory observations against HEAD](cautions/lessons/2026-07-02-reverify-stale-memory-observations-against-head.md) |
 | 2026-07-07 | [IssueOps orchestration locks, additive fields, worker leases](cautions/lessons/2026-07-07-issueops-orchestration-locks-additive-fields-worker-leases.md) |
 | 2026-07-07 | [SQLite sqlstore span discipline: active-root chain, fresh start](cautions/lessons/2026-07-07-sqlite-sqlstore-span-discipline.md) |

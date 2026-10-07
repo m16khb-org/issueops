@@ -55,7 +55,7 @@ The script builds the current binary and immediately runs the existing top-level
      - `./bin/issueops install --dry-run --json`
      - `./bin/issueops install --json` only for full install tasks.
      - `codex mcp get issueops`
-     - `claude mcp list` and check for duplicate/conflicting `issueops` scopes. Exception: in the issueops repo itself, user-scope `issueops` plus project-scope `issueops_project` is the intended dogfood setup (`.mcp.json` template), not a conflict.
+     - `claude mcp list` and check for duplicate/conflicting `issueops` scopes. In the issueops repo itself, `.mcp.json` is empty; `issueops_project` appears only while a worktree build is being dogfooded through `.claude/settings.local.json` `enabledMcpjsonServers`, and the duplicated tools are expected for that session only.
 
 3. **Hook contract sweep**
    - Invoke every configured `~/.codex/hooks.json` event with representative JSON.

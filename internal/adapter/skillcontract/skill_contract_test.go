@@ -196,7 +196,7 @@ func TestStabilityAuditSkillPinsSafetyModelContract(t *testing.T) {
 		// Operational-measurement fixes (STA-O findings).
 		"`./bin/issueops install --dry-run --json`",
 		"`./bin/issueops install --json` only for full install tasks",
-		"intended dogfood setup",
+		"`.mcp.json` is empty",
 		"exact current-v1 state write/read/doctor",
 	})
 	body := readSkillForTest(t, "stability-audit")

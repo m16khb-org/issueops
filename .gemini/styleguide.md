@@ -11,12 +11,12 @@ Use this guide when reviewing `issueops` pull requests. Focus on concrete correc
 ## Hook And MCP Contracts
 
 - Hook stdout schema compatibility matters. Review changes to `cmd/issueops/hookcli/**`, `configs/codex/**`, and `configs/claude/**` for Codex/Claude differences before suggesting a shared output shape.
-- PreToolUse hooks are on the critical path. They should be cheap, deterministic, and no-op by default unless an explicit policy gate is enabled.
+- SessionStart is the only installed hook and runs at every session start. Keep it cheap, deterministic, and free of state mutation; flag suggestions that reintroduce PreToolUse, PostToolUse, UserPromptSubmit, or Stop enforcement hooks.
 - MCP and CLI JSON fields should stay aligned with the same core DTOs. If a response contract changes, require matching golden/schema updates.
 
 ## State, Logs, And Secrets
 
-- User state, queue, audit, worker, and hook failure records must be redacted before writing. Secret-like tokens, env assignments, local config contents, and private paths should not appear in logs, prompts, issue bodies, PR bodies, or test output.
+- User state, queue, audit, and worker records must be redacted before writing. Secret-like tokens, env assignments, local config contents, and private paths should not appear in logs, prompts, issue bodies, PR bodies, or test output.
 - Runtime state belongs under the harness user state directory or ignored runtime paths, not tracked source files.
 - Treat `.env`, `.mcp.json`, `dbhub.toml`, credentials, and local-only config as sensitive unless the PR proves they are safe and required.
 

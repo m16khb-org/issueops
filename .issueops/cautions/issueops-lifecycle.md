@@ -1,12 +1,12 @@
 ---
 name: cautions/issueops-lifecycle.md
-description: Cautions for IssueOps branches, worktree edits, numbered-choice hooks, domain vocabulary, readiness gates, and response-contract goldens.
+description: Cautions for IssueOps branches, worktree edits, numbered-choice replies, domain vocabulary, readiness gates, and response-contract goldens.
 ---
 
 # IssueOps lifecycle cautions
 
 Family index: [CAUTIONS.md](../CAUTIONS.md). Evergreen hazards for IssueOps
-branches, worktree isolation, numbered-choice Stop hooks, hooks-as-workers
+branches, worktree isolation, numbered-choice replies, hooks-as-workers
 boundary, CLI domain vocabulary, artifact URL parsing, response-contract
 golden drift, and readiness-gate blast radius. Orca supervised-handoff
 operations live in [issueops-orchestration.md](issueops-orchestration.md);
@@ -136,7 +136,7 @@ IssueOps worktree 세션에서도 host cwd, MCP root, file-edit tool root가 원
 - `issueops execution prepare`가 반환한 canonical path를 `ISSUEOPS_EXPECTED_WORKTREE`에 반영하고, 편집 전 cwd와 절대경로가 그 worktree를 가리키는지 확인한다.
 - Worktree 세션에서는 file tool에 worktree 절대경로를 넘기고, shell은 `git -C "$ISSUEOPS_EXPECTED_WORKTREE"` 또는 `rg "$pattern" "$ISSUEOPS_EXPECTED_WORKTREE"`처럼 명시 root로 실행한다.
 - Guard는 source checkout의 모든 edit를 막지 않는다. §21의 multi-path deadlock 방지 때문에 non-cycle branch에서 source checkout에 새 파일을 만드는 정상 작업은 허용되어야 한다.
-- 방어층은 세 겹이다: PostToolUse source-checkout warning, PreToolUse mirror-file `ask`, SessionStart/UserPrompt worktree reminder. Host가 `ask`를 지원하지 않으면 Codex처럼 `block`으로 degrade될 수 있다.
+- 2026-08-27까지는 PostToolUse source-checkout warning, PreToolUse mirror-file `ask`, SessionStart/UserPrompt worktree reminder 세 hook이 이 실수를 막았다. 그 hook들은 제거됐으므로(§15) 지금은 위의 절대경로 확인과 `issueops execution status`가 남은 방어층이다.
 - 선택된 cycle의 구현은 canonical worktree로 이동한다. Holder 교체가 필요하면 source에서 구현을 계속하지 말고 `issueops execution status`가 안내하는 generation-CAS replacement 절차를 따른다. Source checkout은 unrelated work에 계속 사용할 수 있다.
 
 ## 31. GitLab 이슈 URL의 `/-/issues/`·`/-/work_items/`는 같은 identity — 경로로 타입을 판별하지 말 것
