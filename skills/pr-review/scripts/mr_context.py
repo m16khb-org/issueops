@@ -562,8 +562,16 @@ def _codegraph_symbol(checkout: str, sym: str) -> list[str]:
 
 def _rg_symbol(checkout: str, sym: str) -> list[str]:
     cmd = ["rg", "-n", "--no-heading", "--color", "never", "-m", "3", "--glob", "!node_modules", "--glob", "!dist", "--glob", "!*lock*", "--glob", "!*.min.*", rf"\b{re.escape(sym)}\b", "."]
+    # rg 가 없는 머신(GitHub runner 등)에서도 정의를 놓치지 않도록 grep 으로 찾는다. 명시 glob 과
+    # .git·바이너리 제외는 rg 와 맞추고, .gitignore 와 숨김 경로 규칙은 맞추지 않는다.
+    grep = ["grep", "-rnwFI", "-m", "3", "--exclude-dir=.git", "--exclude-dir=node_modules", "--exclude-dir=dist", "--exclude=*lock*", "--exclude=*.min.*", "-e", sym, "."]
     try:
         p = subprocess.run(cmd, cwd=checkout, capture_output=True, text=True, timeout=30)
+    except FileNotFoundError:
+        try:
+            p = subprocess.run(grep, cwd=checkout, capture_output=True, text=True, timeout=30)
+        except (OSError, subprocess.TimeoutExpired):
+            return []
     except (OSError, subprocess.TimeoutExpired):
         return []
     lines = [l for l in p.stdout.splitlines() if l.strip()][:15]
