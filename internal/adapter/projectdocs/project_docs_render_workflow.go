@@ -54,9 +54,10 @@ func renderOperations(signals projectdoc.ProjectSignals) string {
 	b.WriteString("- `issueops project bootstrap --repo . --json` creates docs and user-state repo metadata; `--sync` refreshes them from current evidence.\n")
 	b.WriteString("- After initial setup, agents should read repo evidence and keep `.issueops` docs current through MCP `project_docs_route` → `project_docs_read` → `project_docs_revise`.\n")
 	b.WriteString("- Append resolved false cases and decisions to CAUTIONS/ADR with `project_docs_append` instead of rewriting full documents.\n")
-	b.WriteString("\n## UserPromptSubmit hook\n\n")
-	b.WriteString("- When the host supports it, connect `issueops hook user-prompt` to UserPromptSubmit to inject short issueops MCP candidates for each user prompt.\n")
-	b.WriteString("- The hook does not execute work; it only performs static keyword routing. It does not use the network or read large files.\n")
+	b.WriteString("\n## SessionStart hook\n\n")
+	b.WriteString("- The issueops installer connects `issueops hook session-start` to the host SessionStart event; it renders the static project-doc catalog, including after compaction.\n")
+	b.WriteString("- Hosts without a SessionStart re-run after compaction use `issueops hook post-compact` for the same catalog. `ISSUEOPS_DISABLE_HOOKS=1` turns both into a no-op.\n")
+	b.WriteString("- The hook does not execute work, use the network, or read large files.\n")
 	return b.String()
 }
 
@@ -72,7 +73,7 @@ func renderAgentWorkflow() string {
 
 ## MCP usage rule
 
-- When the host supports it, issueops hook user-prompt injects MCP candidate hints for each user instruction. The hint is a reminder for judgment, not an auto-execution command.
+- At session start the installed SessionStart hook (issueops hook session-start) injects the project-doc catalog. It is context for judgment, not an auto-execution command.
 - Use MCP when the task needs current state, repo-specific doc routing, policy decisions, state checkpoints, or durable records that the model should not rely on from memory.
 - Do not use MCP for simple reasoning or summarizing already opened files.
 - Avoid exposing many tools at once; narrowly use route/read/revise/append/check tools that match the task.

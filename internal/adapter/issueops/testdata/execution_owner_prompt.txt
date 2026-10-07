@@ -59,12 +59,6 @@ canonical isolated worktree만 구현한다. coordinator의 응답이나 생존�
 Required docs:
 {REQUIRED_DOCS}
 
-이 issue를 구현하는 동안 현재 checkout의 legacy `worktree prepare`, `handoff start/claim/acknowledge`,
-coordinator-bound owner 규칙은 현행 동작을 설명하는 조사 증거일 뿐 실행 지시가 아니다. 이 issue의
-IssueOps execution v1 계약과 충돌하면 사용자 지시와 원격 issue를 우선하고 deviation에 충돌한
-문서·명령을 기록한다. Task 7에서 active IssueOps 문서와 command catalog가 v1으로 교체되고 adapter가
-exact v1 surface를 확인하기 전에는 이 packet으로 production owner를 dispatch하지 않는다.
-
 Required skills:
 {REQUIRED_SKILLS}
 
