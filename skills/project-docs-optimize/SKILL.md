@@ -132,8 +132,9 @@ go test ./internal/adapter/projectdocs/... ./internal/domain/projectdoc/... ./in
 go test ./cmd/issueops/issueopsapp -run TestResponseContractsGolden
 ```
 
-If the golden test fails only on `docs_index` bytes, headings, or titles,
-regenerate it with `-update` and confirm the diff contains nothing else.
+Moving or editing `.issueops` documents does not change the golden. It fails
+when a skill description or the required-doc set changes; then regenerate it
+with `-update` and confirm the diff contains nothing else.
 
 ## Completion evidence
 

@@ -104,7 +104,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - `.issueops/OPEN_API_SPEC.md`: endpoint/DTO/OpenAPI 변경 시 정적+에이전트 문서화 게이트 프롬프트
 - `.issueops/CAUTIONS.md`: 반복 실수와 운영 주의사항
 - `.issueops/TECH_STACK.md`: 선택한 기술 스택과 예정 명령어
-- `.issueops/ADR.md`: 구현 로드맵과 완료 기준
+- `.issueops/ADR.md`: accepted decision 색인(구현 로드맵은 `.issueops/adr/roadmap.md`)
 - `.issueops/OPERATIONS.md`: Codex/Claude/Omo native skill, MCP, CLI 사용법
 - `.issueops/AGENT_WORKFLOW.md`: 에이전트 시작·작업·검증·완료 흐름과 MCP/문서 사용 규칙
 - `skills/self-verify/SKILL.md`: 자기 검증 루프 실행 계약
@@ -131,7 +131,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 | 경로 | 목적 |
 |------|------|
-| `cmd/issueops/` | composition root와 inbound CLI/MCP(stdio·Streamable HTTP)/hook adapter. `mcp`는 `--http`, `service start\|stop\|status`, `authorize`, `cleanup` 하위 명령을 갖는다. top-level 명령(정규 목록은 `issueops --help`): `api-doc`, `bootstrap`, `channel`, `contract`, `docs`, `doctor`, `gates`, `guard`, `hook`, `inspect`, `install`, `issueops`, `loop`, `mcp`, `policy`, `preflight`, `project`, `quality`, `self-augment`, `self-verify`, `state`, `status`, `trace`, `update`, `verify-work`, `version`, `web-fetch`, `worker` |
+| `cmd/issueops/` | composition root와 inbound CLI/MCP(stdio·Streamable HTTP)/hook adapter. `mcp`는 `--http`, `service start\|stop\|status`, `authorize`, `cleanup` 하위 명령을 갖는다. top-level 명령(정규 목록은 `internal/contract/cli/commands.go`와 `issueops --help`): `api-doc`, `bootstrap`, `channel`, `contract`, `docs`, `doctor`, `gates`, `guard`, `hook`, `inspect`, `install`, `loop`, `mcp`, `policy`, `preflight`, `project`, `quality`, `self-augment`, `self-verify`, `state`, `system-status`, `trace`, `update`, `verify-work`, `version`, `web-fetch`, `worker`. IssueOps 사이클 명령(`start`, `status`, `next`, `execution`, `remote`, `cleanup` 등)도 top-level에서 바로 실행한다 |
 | `internal/contract/` | CLI, MCP, state가 공유하는 versioned DTO와 response contract |
 | `internal/domain/` | filesystem, process, DB를 모르는 순수 규칙, reducer, classifier |
 | `internal/application/` | domain과 좁은 port를 조합하는 capability use case |
@@ -209,14 +209,14 @@ go build -o bin/issueops ./cmd/issueops
 
 ## 11. Manual Notes
 
-- 반복 실수나 운영 주의는 `.issueops/CAUTIONS.md`에 추가한다.
+- 반복 실수나 운영 주의는 `project_docs_append(kind=caution)`로 `.issueops/cautions/YYYY-MM-DD-<slug>.md`에 남기고 `.issueops/CAUTIONS.md` 색인에 링크한다.
 - 구현 규칙은 `.issueops/CONVENTIONS.md`, 테스트 규칙은 `.issueops/TESTING.md`, 기술 선택은 `.issueops/TECH_STACK.md`에 반영한다.
-- 큰 설계 변경은 `.issueops/ADR.md`의 결정·로드맵을 함께 갱신한다.
+- 큰 설계 변경은 `project_docs_append(kind=adr)`로 `.issueops/adr/YYYY-MM-DD-<slug>.md` 결정을 남기고 `.issueops/ADR.md` 색인에 링크한다.
+- `.issueops` 폴더나 문서를 옮기거나 새 최상위 폴더를 만들면 `project-docs-optimize` 스킬의 checker로 배치 계약을 확인한다.
 
 ## 12. API Documentation Gate
 
 - Endpoint/controller/DTO/schema/OpenAPI 변경 시 `issueops api-doc static-check --json` 또는 MCP `api_doc_static_check` 후 `api_doc_review`로 host-agent prompt/schema를 렌더하고, 리뷰 결과 JSON을 `--result`/`result_file`로 기록한다.
 - 대상 Node/Nest repo에 `npm run swagger:check`가 있으면 그 wrapper를 우선 사용한다.
-- 기본 검사는 git 변경분의 API candidate files로 제한하고, 기존 레거시 전체 Swagger 부채를 이번 변경의 실패 원인으로 삼지 않는다.
-
+- 기본 검사는 git 변경분의 API candidate files로 제한하고, 변경 전부터 있던 Swagger 부채를 이번 변경의 실패 원인으로 삼지 않는다.
 - API 문서 검사는 decorator/comment 존재 여부만 보지 말고 변경 endpoint가 호출하는 business logic의 public error contract(404/403/409 등)도 OpenAPI 응답에 반영됐는지 확인한다.

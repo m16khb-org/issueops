@@ -107,13 +107,13 @@ IssueOps state is durable because `issueops ...` commands record intent, issue l
 - 새 아티팩트 종류의 라이브 검증을 배선할 때는 실제 도달 경로(`VerifyRemoteArtifactLive` switch + fetcher)를 확장하고, "이미 라우팅된다"는 주석은 도달 경로를 실증한 뒤에만 쓴다.
 - 게이트 배선은 prod에서 CLI `issueOpsRemoteDeps`(`VerifyLive`)와 MCP `issueopsapp/mcp_facade`(`VerifyIssueOpsRemoteArtifactLive`)가 주입한다. 미배선 기본값은 "dependency is not configured"를 반환하므로 게이트가 실제로 살아있는지 이 배선을 확인한다.
 
-## 27. `.issueops/*.md` 편집은 response-contract 골든을 드리프트시킨다
+## 27. 스킬 description과 필수 문서 목록이 response-contract 골든을 드리프트시킨다
 
-`cmd/issueops/testdata/response_contracts.golden.json`은 `.issueops/*.md` 문서의 `docs_index`(byte 수 + heading + title)를 캡처한다. 문서 본문을 고치거나 heading을 바꾸면 `TestResponseContractsGolden`이 실패한다. 문서 커밋이 골든을 재생성하지 않으면 pre-existing red로 남아 무관한 변경이 오인 reject된다.
+`cmd/issueops/testdata/response_contracts.golden.json`은 `inspect.skills[].description`(스킬 frontmatter)과 `docs_index.required_docs`(필수 문서의 존재 여부)를 고정한다. `docs_count`·`docs_indexed`는 정규화되므로 `.issueops` 문서 본문이나 heading을 고치고 파일을 옮겨도 골든은 바뀌지 않는다(2026-10-07 재배치 225개 파일에서 확인). 스킬 description을 바꾸거나 필수 문서를 더하거나 빼면 `TestResponseContractsGolden`이 실패한다.
 
 주의:
-- `.issueops/*.md`를 편집하면 `go test ./cmd/issueops/issueopsapp -run TestResponseContractsGolden -update`로 골든을 재생성하고, diff가 `docs_index`(bytes/headings/title)만인지 확인한다(tool schema/response 계약 변화가 섞이면 안 된다).
-- 골든 재생성은 같은 문서 편집 커밋에 포함하거나 바로 뒤의 `chore(contract)` 커밋으로 남겨 red를 남기지 않는다.
+- 스킬 description이나 필수 문서 목록을 바꾸면 `go test ./cmd/issueops/issueopsapp -run TestResponseContractsGolden -update`로 골든을 재생성하고, diff가 그 description 또는 `required_docs`만인지 확인한다(tool schema/response 계약 변화가 섞이면 안 된다).
+- 골든 재생성은 원인이 된 변경과 같은 커밋에 넣어 red를 남기지 않는다.
 - 골든이 이미 red라면 무관한 변경 탓으로 오인하기 전에 clean HEAD에서 재현해 pre-existing 드리프트인지 먼저 확인한다.
 
 ## 28. 새 fail-closed readiness 게이트는 모든 전진 테스트/공유 픽스처로 파급된다
