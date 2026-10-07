@@ -2,7 +2,9 @@ package policy
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,7 +28,7 @@ func readPolicyOverrides(repoRoot string) (*policycontract.PolicyOverrides, erro
 	path := filepath.Join(repoRoot, ".issueops", "policy.json")
 	data, err := os.ReadFile(path)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("policy_override_read_failed: %w", err)

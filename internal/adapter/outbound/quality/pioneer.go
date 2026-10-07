@@ -4,7 +4,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -69,7 +71,7 @@ type pioneerEvaluationCounts struct {
 func collectPioneerEvaluationManifest(root string, names []string) (pioneerEvaluationCounts, error) {
 	path := filepath.Join(root, "testdata", "pioneer-holdouts", "evaluation-manifest.json")
 	raw, err := os.ReadFile(path)
-	if os.IsNotExist(err) {
+	if errors.Is(err, fs.ErrNotExist) {
 		return pioneerEvaluationCounts{}, nil
 	}
 	if err != nil {
@@ -270,7 +272,7 @@ func regularFileExists(path string) (bool, error) {
 	if err == nil {
 		return info.Mode().IsRegular(), nil
 	}
-	if os.IsNotExist(err) {
+	if errors.Is(err, fs.ErrNotExist) {
 		return false, nil
 	}
 	return false, err

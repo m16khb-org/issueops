@@ -2,7 +2,9 @@ package codex
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,7 +19,7 @@ func (installer Installer) writeCodexHooks(path string, req port.NativeInstallRe
 		if err := json.Unmarshal(b, &config); err != nil {
 			return file, nil, err
 		}
-	} else if err != nil && !os.IsNotExist(err) && !req.DryRun {
+	} else if err != nil && !errors.Is(err, fs.ErrNotExist) && !req.DryRun {
 		return file, nil, err
 	}
 	if err := installer.deps.ValidateHookConfigForMerge(config, codexLifecycleHookEvents); err != nil {

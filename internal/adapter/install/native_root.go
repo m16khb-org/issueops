@@ -1,7 +1,9 @@
 package install
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,7 +21,7 @@ func ResolveStableNativeRoot(root string) (string, error) {
 	gitPath := filepath.Join(root, ".git")
 	info, err := os.Lstat(gitPath)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return root, nil
 		}
 		return "", fmt.Errorf("resolve native install root %s: %w", root, err)

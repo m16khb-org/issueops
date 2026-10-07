@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -187,7 +188,7 @@ func writeRecord(path string, record Record) error {
 func ReadBearer(stateDir string) (string, error) {
 	path := filepath.Join(httpDir(stateDir), bearerFileName)
 	info, err := os.Lstat(path)
-	if os.IsNotExist(err) {
+	if errors.Is(err, fs.ErrNotExist) {
 		return "", nil
 	}
 	if err != nil {

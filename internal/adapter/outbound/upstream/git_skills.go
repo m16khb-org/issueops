@@ -2,7 +2,9 @@ package upstream
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -26,7 +28,7 @@ type GitSkillStore struct {
 func (s GitSkillStore) InstalledSkills() ([]string, error) {
 	entries, err := os.ReadDir(s.SkillsDir)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return nil, nil
 		}
 		return nil, err
@@ -108,7 +110,7 @@ func (s GitSkillStore) link(target, path string) error {
 		if err := os.Remove(path); err != nil {
 			return err
 		}
-	} else if !os.IsNotExist(err) {
+	} else if !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {

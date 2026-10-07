@@ -3,7 +3,9 @@ package hostprobe
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -283,7 +285,7 @@ func linkCodexSmokeAuth(runtimeHome, sourceHome string) error {
 	authPath := filepath.Join(sourceHome, "auth.json")
 	info, err := os.Lstat(authPath)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return nil
 		}
 		return err

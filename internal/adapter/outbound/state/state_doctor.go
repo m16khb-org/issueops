@@ -15,7 +15,7 @@ import (
 
 func Doctor(dir string) (statecontract.StateDoctorResult, error) {
 	entries, err := os.ReadDir(dir)
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return failedDoctorResult(dir), err
 	}
 	entrySnapshots := make([]statedomain.DoctorEntry, 0, len(entries))

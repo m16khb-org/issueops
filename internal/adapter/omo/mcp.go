@@ -1,7 +1,9 @@
 package omo
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 
 	"issueops/internal/port"
@@ -25,7 +27,7 @@ func (installer Installer) writeOmoUserMCP(path string, req port.NativeInstallRe
 		return file, err
 	}
 	if req.MCPTransport == mcpTransportHTTP && !req.DryRun {
-		if err := os.Chmod(path, 0o600); err != nil && !os.IsNotExist(err) {
+		if err := os.Chmod(path, 0o600); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return file, err
 		}
 	}

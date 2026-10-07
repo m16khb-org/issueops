@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -182,7 +183,7 @@ func removeReseedRuntimeFile(root, path string) error {
 			break
 		}
 		info, err := os.Lstat(current)
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return nil
 		}
 		if err != nil {
@@ -193,7 +194,7 @@ func removeReseedRuntimeFile(root, path string) error {
 		}
 	}
 	info, err := os.Lstat(target)
-	if os.IsNotExist(err) {
+	if errors.Is(err, fs.ErrNotExist) {
 		return nil
 	}
 	if err != nil {
@@ -232,7 +233,7 @@ func reseedMkdirAll(root, target string) error {
 		}
 		current = filepath.Join(current, part)
 		info, err := os.Lstat(current)
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			if err := os.Mkdir(current, 0o700); err != nil {
 				return err
 			}

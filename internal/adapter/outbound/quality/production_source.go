@@ -2,6 +2,7 @@ package quality
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -137,7 +138,7 @@ func hasGitWorkspace(root string) (string, error) {
 		if err == nil {
 			return directory, nil
 		}
-		if !os.IsNotExist(err) {
+		if !errors.Is(err, fs.ErrNotExist) {
 			return "", err
 		}
 		if filepath.Dir(directory) == directory {
@@ -152,7 +153,7 @@ func regularSourcePath(root, relative string) (bool, error) {
 	for index, component := range components {
 		path = filepath.Join(path, component)
 		info, err := os.Lstat(path)
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return false, nil
 		} // Deleted tracked files are absent.
 		if err != nil {

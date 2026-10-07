@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"net/url"
 	"os"
@@ -81,7 +82,7 @@ type mcpGatewayEndpoint struct {
 
 func loopbackMCPEndpoints(configPath string) ([]mcpGatewayEndpoint, error) {
 	raw, err := os.ReadFile(configPath)
-	if os.IsNotExist(err) {
+	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
 	}
 	if err != nil {

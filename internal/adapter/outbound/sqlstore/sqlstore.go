@@ -237,7 +237,7 @@ func touchPrivate(path string) error {
 		if !info.Mode().IsRegular() {
 			return fmt.Errorf("refusing non-regular SQLite file %s", path)
 		}
-	} else if !os.IsNotExist(err) {
+	} else if !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)
@@ -280,7 +280,7 @@ func repairPrivateSQLiteFiles(dir string) ([]string, error) {
 			name := base + suffix
 			path := filepath.Join(dir, name)
 			info, err := os.Lstat(path)
-			if os.IsNotExist(err) {
+			if errors.Is(err, fs.ErrNotExist) {
 				continue
 			}
 			if err != nil {
@@ -293,7 +293,7 @@ func repairPrivateSQLiteFiles(dir string) ([]string, error) {
 				continue
 			}
 			if err := os.Chmod(path, 0o600); err != nil {
-				if os.IsNotExist(err) {
+				if errors.Is(err, fs.ErrNotExist) {
 					continue
 				}
 				return nil, fmt.Errorf("sqlstore chmod %s: %w", path, err)
@@ -644,7 +644,7 @@ func openExistingData(dir string) (*sql.DB, error) {
 	}
 	dataPath := filepath.Join(abs, dataDBFile)
 	if _, err := os.Stat(dataPath); err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return nil, fmt.Errorf("sqlstore existing data db %s: %w", abs, fs.ErrNotExist)
 		}
 		return nil, err

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net"
 	"net/http"
 	"os"
@@ -317,7 +318,7 @@ func (s *Service) Start(ctx context.Context) (mcpservice.Status, error) {
 		if observed.holder != 0 {
 			return observed.status, observed.err
 		}
-		if err := os.Remove(s.recordPath()); err != nil && !os.IsNotExist(err) {
+		if err := os.Remove(s.recordPath()); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return s.fail(observed.status, CodeStateUnreadable, err)
 		}
 	case mcpservice.StatusStopped:
@@ -372,7 +373,7 @@ func (s *Service) Stop(ctx context.Context) (mcpservice.Status, error) {
 		if observed.holder != 0 {
 			return observed.status, observed.err
 		}
-		if err := os.Remove(s.recordPath()); err != nil && !os.IsNotExist(err) {
+		if err := os.Remove(s.recordPath()); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return s.fail(observed.status, CodeStateUnreadable, err)
 		}
 		return s.unloadIdle(ctx, s.result(mcpservice.StatusStopped, 0, "", ""))
