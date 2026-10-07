@@ -42,6 +42,14 @@ package set listed in [issueops-execution.md](issueops-execution.md).
 선례: execution replace의 quiescence fingerprint 워크스페이스 점유 관측(당시 `executionQuiescenceFingerprint`, 현재 `internal/application/issueopsreplacement`의 `Service.quiescence`가 `Workspace.WorkspaceProcesses` 시임으로 lsof 관측을 받는다)
 ([2026-08-28 caution](../cautions/2026-08-28-lease-quiescence-lsof.md)).
 
+### 개발자 설정과 HOME을 격리한다
+
+- 저장소 fixture를 만드는 헬퍼(`git init` 후 commit하는 헬퍼)는 처음에 `testsupport.IsolateGitConfig(t)`를 부른다. 개발자 전역 git 설정(`commit.gpgsign`, `core.hooksPath`, `init.defaultBranch`)이 fixture 동작을 바꾸지 못하게 하고, 테스트 identity를 준다. `t.Setenv`를 쓰므로 병렬 테스트에서는 부르지 않는다.
+- doctor·status처럼 HOME 아래 설정을 읽어 외부를 probe하는 경로를 실행하는 테스트는 HOME을 임시 디렉터리로 둔다. 실제 `~/.claude.json`의 MCP gateway probe와 lsof가 호출마다 수 초를 쓰고 결과를 머신에 묶는다.
+- 테스트 바이너리를 재실행하는 helper가 env를 비우는 executor를 거치면, 커버리지 빌드에서는 `GOCOVERDIR`을 함께 넘겨 stderr 경고가 비교 대상에 섞이지 않게 한다.
+
+선례: [2026-10-07 caution](../cautions/2026-10-07-helper-cover-home.md).
+
 ## Process and lock substrate
 
 - MCP service test는 격리 state, 테스트 전용 supervisor label, start/status/stop smoke, stale record 복구를 포함한다.

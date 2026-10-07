@@ -75,6 +75,8 @@ footer; older notes also live in `archive/cautions-incidents.md`.
 
 | Date | Lesson |
 |---|---|
+| 2026-10-07 | [테스트 helper 프로세스와 호스트 상태가 -cover·부하·실제 HOME에서 결론을 바꾼다](cautions/2026-10-07-helper-cover-home.md) |
+| 2026-10-07 | [게이트 원장 CHECK·EXPECT 작성 함정: escape, RE2, 글자 대리 검사](cautions/2026-10-07-check-expect-escape-re2.md) |
 | 2026-10-06 | [Removal commits leave stale help text, orphan fixtures, and doc claims behind](cautions/2026-10-06-removal-commits-leave-stale-help-text-orphan-fixtures-and-do.md) |
 | 2026-10-03 | [공용 HTTP 경계와 검증 증거: capability 파일 인자 이탈, 문자열만 보는 receipt, 고정 deadline 테스트 세션](cautions/2026-10-03-http.md) |
 | 2026-10-03 | [HTTP 설치 검증과 린터 toolchain 일치](cautions/2026-10-03-native-http-validation-and-lint-toolchain.md) |

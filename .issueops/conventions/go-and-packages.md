@@ -16,6 +16,7 @@
 - 파일명은 snake_case를 사용한다.
 - Go 패키지명은 짧은 소문자 단어를 사용한다.
 - 테스트 파일은 대상 파일 가까이에 `*_test.go`로 둔다.
+- CLI 명령의 들여쓴 JSON 출력은 leaf 패키지 `cmd/issueops/jsonout`(`Print`, `PrintTo`)을 쓴다. 명령 패키지마다 `json.Encoder`를 다시 만들지 않는다.
 
 현재 구조(대표 경로):
 
