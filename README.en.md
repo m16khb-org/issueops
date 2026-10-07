@@ -44,7 +44,7 @@ up gets the same answer.
 
 ## Quick start
 
-You need Git, Go 1.26.3, and at least one host you plan to use (Codex, Claude Code, or Omo).
+You need Git, Go 1.26.6, and at least one host you plan to use (Codex, Claude Code, or Omo).
 
 ```bash
 ./install.sh --dry-run --json

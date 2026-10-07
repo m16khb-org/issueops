@@ -1,9 +1,9 @@
 package artifactreadability
 
 import (
+	"runtime"
 	"strings"
 	"testing"
-	"time"
 
 	reportcontract "issueops/internal/contract/artifactreadability"
 	"issueops/internal/domain/artifacttemplate"
@@ -279,20 +279,44 @@ func TestCheckRejectsRequiredSectionMissingAndPlaceholderSection(t *testing.T) {
 	}
 }
 
-func TestCheckLargeBodyIsFast(t *testing.T) {
-	body := validPRBody() + "\n\n## 남은 일\n\n" + strings.Repeat("성능 측정을 위한 문장입니다. ", 2000)
-	if len(body) < 50*1024 {
-		t.Fatalf("fixture body should be around 50KB, got %d bytes", len(body))
+// TestCheckLargeBodyScalesLinearly guards the O(n) scan without a wall-clock
+// budget: bytes allocated per Check must grow in proportion to the body, so a
+// quadratic regression shows up regardless of host load.
+func TestCheckLargeBodyScalesLinearly(t *testing.T) {
+	const baseRepeat, factor = 2000, 4
+	small := largeReadabilityBody(baseRepeat)
+	large := largeReadabilityBody(baseRepeat * factor)
+	if len(small) < 50*1024 {
+		t.Fatalf("fixture body should be around 50KB, got %d bytes", len(small))
 	}
-	start := time.Now()
-	report := Check(Input{Kind: KindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "성능 측정", Body: body})
-	elapsed := time.Since(start)
-	if elapsed > 200*time.Millisecond {
-		t.Fatalf("50KB body check took %s, want well under 200ms (no network/file I/O, O(n) scan)", elapsed)
-	}
+	report := Check(Input{Kind: KindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "성능 측정", Body: small})
 	if !report.OK {
 		t.Fatalf("large repetitive body should still pass readability: %+v", report)
 	}
+	smallBytes := allocatedBytesPerCheck(small)
+	largeBytes := allocatedBytesPerCheck(large)
+	sizeRatio := float64(len(large)) / float64(len(small))
+	allocRatio := float64(largeBytes) / float64(smallBytes)
+	if allocRatio > sizeRatio*1.5 {
+		t.Fatalf("Check allocations grew %.1fx for a %.1fx larger body (small=%dB large=%dB), want linear growth", allocRatio, sizeRatio, smallBytes, largeBytes)
+	}
+}
+
+func largeReadabilityBody(repeat int) string {
+	return validPRBody() + "\n\n## 남은 일\n\n" + strings.Repeat("성능 측정을 위한 문장입니다. ", repeat)
+}
+
+func allocatedBytesPerCheck(body string) uint64 {
+	const runs = 3
+	input := Input{Kind: KindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "성능 측정", Body: body}
+	Check(input)
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	for range runs {
+		Check(input)
+	}
+	runtime.ReadMemStats(&after)
+	return (after.TotalAlloc - before.TotalAlloc) / runs
 }
 
 func TestCheckLineNumbersSurviveCodeFencesAndManagedRegions(t *testing.T) {

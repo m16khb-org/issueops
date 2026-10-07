@@ -10034,6 +10034,7 @@
       "task": "T20",
       "symbols": [
         "func Inspect",
+        "func coverageWarning",
         "type InspectDeps"
       ]
     },
@@ -15586,6 +15587,7 @@
         "func BranchEvidence",
         "func CollectQualityFindings",
         "func CoverageEvidence",
+        "func FailedTestPackages",
         "func FirstQualityWarning",
         "func ParseCoveragePackages",
         "func PioneerIsolatedEvidence",

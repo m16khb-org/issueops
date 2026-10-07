@@ -1,6 +1,9 @@
 package quality
 
 import (
+	"fmt"
+	"strings"
+
 	contract "issueops/internal/contract/quality"
 	catalog "issueops/internal/contract/qualitycatalog"
 	policy "issueops/internal/domain/quality"
@@ -76,7 +79,7 @@ func Inspect(root string, deps InspectDeps) contract.InspectResult {
 	pioneer := <-pioneerResults
 	warnings := []string{}
 	if coverage.err != nil {
-		warnings = append(warnings, "coverage: "+coverage.err.Error())
+		warnings = append(warnings, coverageWarning(coverage.err, coverage.value))
 	}
 	lowCoverage := policy.ParseCoveragePackages(coverage.value, 60)
 	branchFunctions := branches.value
@@ -141,4 +144,23 @@ func Inspect(root string, deps InspectDeps) contract.InspectResult {
 		Candidates:      candidates,
 		Warnings:        warnings,
 	}
+}
+
+// failedCoveragePackageLimit keeps the collector warning readable when many
+// packages fail at once.
+const failedCoveragePackageLimit = 10
+
+// coverageWarning names the packages `go test -cover` reported as failing, so
+// a collection error points at its cause instead of a bare exit status.
+func coverageWarning(err error, output string) string {
+	warning := "coverage: " + err.Error()
+	packages, omitted := policy.FailedTestPackages(output, failedCoveragePackageLimit)
+	if len(packages) == 0 {
+		return warning
+	}
+	list := strings.Join(packages, ", ")
+	if omitted > 0 {
+		list += fmt.Sprintf(" and %d more", omitted)
+	}
+	return warning + " (failed packages: " + list + ")"
 }

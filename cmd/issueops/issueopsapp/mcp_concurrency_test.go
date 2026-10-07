@@ -44,6 +44,10 @@ func TestConcurrentMCPStreamsShareImmutableConfiguration(t *testing.T) {
 	const sessionCount = 80
 
 	wireDependencies()
+	// Concurrent sessions share the CPU, so each session's latency grows with
+	// host and package-level load. Bound the whole run by the test binary's own
+	// deadline instead of per-session wall-clock timers.
+	ctx := concurrencyTestContext(t)
 	ready := make(chan struct{}, sessionCount)
 	release := make(chan struct{})
 	results := make(chan mcpStreamResult, sessionCount)
@@ -52,24 +56,20 @@ func TestConcurrentMCPStreamsShareImmutableConfiguration(t *testing.T) {
 		go func() {
 			ready <- struct{}{}
 			<-release
-			results <- exerciseMCPStream()
+			results <- exerciseMCPStream(ctx)
 		}()
 	}
 
-	readyTimeout := time.NewTimer(5 * time.Second)
-	defer readyTimeout.Stop()
 	for range sessionCount {
 		select {
 		case <-ready:
-		case <-readyTimeout.C:
-			t.Fatal("MCP sessions did not reach the fenced start")
+		case <-ctx.Done():
+			t.Fatalf("MCP sessions did not reach the fenced start: %v", ctx.Err())
 		}
 	}
 	close(release)
 
 	var expected []string
-	completionTimeout := time.NewTimer(20 * time.Second)
-	defer completionTimeout.Stop()
 	for range sessionCount {
 		select {
 		case result := <-results:
@@ -83,10 +83,24 @@ func TestConcurrentMCPStreamsShareImmutableConfiguration(t *testing.T) {
 			if !slices.Equal(result.tools, expected) {
 				t.Fatalf("MCP tool catalogs differ: got=%v want=%v", result.tools, expected)
 			}
-		case <-completionTimeout.C:
-			t.Fatal("MCP sessions did not complete")
+		case <-ctx.Done():
+			t.Fatalf("MCP sessions did not complete: %v", ctx.Err())
 		}
 	}
+}
+
+// concurrencyTestContext ends shortly before the test binary's deadline so a
+// stuck session fails with a test error rather than the binary's panic dump.
+func concurrencyTestContext(t *testing.T) context.Context {
+	t.Helper()
+	deadline, ok := t.Deadline()
+	if !ok {
+		return t.Context()
+	}
+	const teardownMargin = 30 * time.Second
+	ctx, cancel := context.WithDeadline(t.Context(), deadline.Add(-teardownMargin))
+	t.Cleanup(cancel)
+	return ctx
 }
 
 type mcpStreamResult struct {
@@ -94,10 +108,10 @@ type mcpStreamResult struct {
 	err   error
 }
 
-func exerciseMCPStream() mcpStreamResult {
+func exerciseMCPStream(parent context.Context) mcpStreamResult {
 	serverConn, clientConn := net.Pipe()
 	defer serverConn.Close()
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithCancel(parent)
 	defer cancel()
 	serverDone := make(chan error, 1)
 	go func() {
@@ -111,9 +125,10 @@ func exerciseMCPStream() mcpStreamResult {
 		_ = serverConn.Close()
 		return mcpStreamResult{err: err}
 	}
+	var names []string
 	tools, listErr := session.ListTools(ctx, nil)
-	names := make([]string, 0, len(tools.Tools))
 	if listErr == nil {
+		names = make([]string, 0, len(tools.Tools))
 		for _, tool := range tools.Tools {
 			names = append(names, tool.Name)
 		}

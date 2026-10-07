@@ -73,7 +73,14 @@ func TestPolicyExecutionHelper(t *testing.T) {
 func helperRequest(t *testing.T, mode string, args ...string) policycontract.CommandPolicyRequest {
 	t.Helper()
 	argv := []string{os.Args[0], "-test.run=^TestPolicyExecutionHelper$", "policy-execution-helper", mode}
-	return policycontract.CommandPolicyRequest{CWD: t.TempDir(), Argv: append(argv, args...)}
+	request := policycontract.CommandPolicyRequest{CWD: t.TempDir(), Argv: append(argv, args...)}
+	if testing.CoverMode() != "" {
+		// A coverage-built helper warns on stderr when GOCOVERDIR is absent,
+		// and the executor clears env, so pass a scratch directory through.
+		t.Setenv("GOCOVERDIR", t.TempDir())
+		request.EnvAllowlist = []string{"GOCOVERDIR"}
+	}
+	return request
 }
 
 func TestCommandExecutorTimeoutStopsInheritedPipesAndChildren(t *testing.T) {
