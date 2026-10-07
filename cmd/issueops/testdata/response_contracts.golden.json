@@ -4593,7 +4593,7 @@
         {
           "blocking": false,
           "evidence": [
-            "issueops/internal/core/commandguard 54.3%"
+            "issueops/internal/adapter/guard 54.3%"
           ],
           "id": "low-coverage-packages",
           "remediation": "Add behavior-focused boundary tests to the highest-risk packages before promotion.",
@@ -4644,7 +4644,7 @@
         {
           "category": "coverage",
           "evidence": [
-            "issueops/internal/core/commandguard 54.3%"
+            "issueops/internal/adapter/guard 54.3%"
           ],
           "id": "low-coverage-packages",
           "status": "needs_attention",
@@ -5497,7 +5497,7 @@
             "go test -race ./internal/application/state ./internal/adapter/outbound/state ./internal/adapter/outbound/sqlstore -count=1"
           ],
           "why_now": [
-            ".issueops/PROJECT_AUDIT.md flags S1 P1 no write locking",
+            ".issueops/PROJECT_AUDIT.md S1 (P1, resolved): no write locking",
             "Already satisfied; do not select in the next self-augmentation cycle"
           ]
         },
@@ -5547,7 +5547,7 @@
             "go test ./internal/adapter/worker ./cmd/issueops/workercli -count=1"
           ],
           "why_now": [
-            ".issueops/PROJECT_AUDIT.md flags W1 P1 stuck running jobs",
+            ".issueops/PROJECT_AUDIT.md W1 (P1, resolved): stuck running jobs",
             "Already satisfied; do not select in the next self-augmentation cycle"
           ]
         }
@@ -9021,7 +9021,7 @@
                   "go test -race ./internal/application/state ./internal/adapter/outbound/state ./internal/adapter/outbound/sqlstore -count=1"
                 ],
                 "why_now": [
-                  ".issueops/PROJECT_AUDIT.md flags S1 P1 no write locking",
+                  ".issueops/PROJECT_AUDIT.md S1 (P1, resolved): no write locking",
                   "Already satisfied; do not select in the next self-augmentation cycle"
                 ]
               },
@@ -9071,7 +9071,7 @@
                   "go test ./internal/adapter/worker ./cmd/issueops/workercli -count=1"
                 ],
                 "why_now": [
-                  ".issueops/PROJECT_AUDIT.md flags W1 P1 stuck running jobs",
+                  ".issueops/PROJECT_AUDIT.md W1 (P1, resolved): stuck running jobs",
                   "Already satisfied; do not select in the next self-augmentation cycle"
                 ]
               }

@@ -299,7 +299,7 @@ func sdkReadResourceResult(content map[string]any) *mcp.ReadResourceResult {
 	}
 }
 
-// serveMCPStreamSDK runs both split stdio and a bidirectional stream connection
+// ServeMCPStreamContextWithDependencies runs both split stdio and a bidirectional stream connection
 // through the official go-sdk IOTransport.
 func ServeMCPStreamContextWithDependencies(ctx context.Context, input io.Reader, output io.Writer, diagnostics io.Writer, deps MCPDependencies) error {
 	server := initSDKServerWithDiagnostics(deps, diagnostics)

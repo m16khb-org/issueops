@@ -1,7 +1,7 @@
 // Package provider selects a concrete remote issue provider by name. It lives in
-// the adapter layer so internal/core never imports concrete provider
-// implementations, preserving the hexagonal boundary: core depends only on the
-// port.IssueProvider abstraction and receives a resolved provider from callers.
+// the adapter layer so the domain and application layers never import concrete
+// provider implementations, preserving the hexagonal boundary: they depend only
+// on the port.IssueProvider abstraction and receive a resolved provider from callers.
 package provider
 
 import (
