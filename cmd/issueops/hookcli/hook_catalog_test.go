@@ -177,9 +177,9 @@ func TestRunHookJSONOutputUsesSnakeCaseFields(t *testing.T) {
 		if compact, _ := obj["compact"].(string); !strings.Contains(compact, "ARCHITECTURE.md=") {
 			t.Fatalf("%s --json must expose the compact catalog: %+v", event, obj)
 		}
-		for _, legacy := range []string{"ShouldInject", "Compact", "UserView", "ProjectDocs"} {
-			if _, ok := obj[legacy]; ok {
-				t.Fatalf("%s --json must not expose PascalCase field %s: %+v", event, legacy, obj)
+		for _, field := range []string{"ShouldInject", "Compact", "UserView", "ProjectDocs"} {
+			if _, ok := obj[field]; ok {
+				t.Fatalf("%s --json must not expose PascalCase field %s: %+v", event, field, obj)
 			}
 		}
 	}

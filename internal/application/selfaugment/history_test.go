@@ -114,7 +114,7 @@ func TestComparisonAdmissionAndReadOrder(t *testing.T) {
 			if key == tc.failKey {
 				return state.StateResult{}, failure
 			}
-			return state.StateResult{Record: state.RecordEnvelope{Content: `{"schema_version":1,"kind":"self_verification_summary"}`}}, nil
+			return state.StateResult{Record: state.RecordEnvelope{Content: `{"schema_version":1,"kind":"self_verification_summary","summary":{"failure_cause":"none","failure_cause_reason":"no_failed_steps","failure_cause_evidence":[]}}`}}, nil
 		}}
 		result, err := service.Compare(tc.base, tc.candidate, tc.threshold)
 		if err == nil || !strings.Contains(err.Error(), tc.want) || result.OK || !reflect.DeepEqual(calls, tc.calls) {

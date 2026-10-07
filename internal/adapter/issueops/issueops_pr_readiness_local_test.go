@@ -105,7 +105,7 @@ func TestIssueOpsStrictPRReadinessReobservesSchemaPathsAfterFetch(t *testing.T) 
 	record.Branch = branch
 	record.BranchPrepare.Branch = branch
 	record.BranchPrepare.BaseSHA = strings.Repeat("f", 40)
-	record.Execution = &issueops.Execution{Mode: issueops.ExecutionModeDirect}
+	record.Execution = &issueops.Execution{Mode: issueops.ExecutionModeDirect, Selection: selectionFixture(issueops.ExecutionModeDirect)}
 	before := testCycleReadiness().ObserveChanges(record, repo)
 	if !before.Verified || !reflect.DeepEqual(before.Paths, []string{"feature.go"}) || before.Fingerprint == "" {
 		t.Fatalf("pre-fetch fallback observation = %+v", before)
@@ -143,7 +143,7 @@ func TestIssueOpsLocalPRReadinessSharesOneVerifiedChangeObservationWithSchemaGat
 		ID: "io-local-observation", Repo: repo, WorktreePath: repo, Branch: branch,
 		Phase: issueops.IssueOpsPhaseAISlopClean, PlanPath: filepath.Join(repo, ".issueops", "ADR.md"),
 		BranchPrepare: &issueops.IssueOpsBranchPrepare{BaseBranch: branch, BaseSHA: baseSHA, LinkVerified: true},
-		Execution:     &issueops.Execution{Mode: issueops.ExecutionModeDirect},
+		Execution:     &issueops.Execution{Mode: issueops.ExecutionModeDirect, Selection: selectionFixture(issueops.ExecutionModeDirect)},
 		AISlopCleanAt: "2026-01-01T00:00:00Z",
 	}
 	reader := testChangeReader()
@@ -189,7 +189,7 @@ func TestObserveIssueOpsLocalPRReadinessReturnsTheReadinessChangeSet(t *testing.
 			BaseBranch: strings.TrimSpace(preflightadapter.GitOut(repo, "branch", "--show-current")),
 			BaseSHA:    strings.TrimSpace(preflightadapter.GitOut(repo, "rev-parse", "HEAD")),
 		},
-		Execution: &issueops.Execution{Mode: issueops.ExecutionModeDirect},
+		Execution: &issueops.Execution{Mode: issueops.ExecutionModeDirect, Selection: selectionFixture(issueops.ExecutionModeDirect)},
 	}
 
 	ready, observation := ObserveIssueOpsLocalPRReadiness(record)

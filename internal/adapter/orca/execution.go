@@ -51,7 +51,6 @@ type executionDeliveryIdentityClient interface {
 
 type executionInventoryClient interface {
 	listTerminalsInventory(context.Context, string) (executionTerminalInventory, error)
-	listAllTasksInventory(context.Context) (executionTaskInventory, error)
 	listRunTasksInventory(context.Context, string, ...string) (executionTaskInventory, error)
 	showDispatchInventory(context.Context, string) (executionDispatchInventory, error)
 }
@@ -578,14 +577,7 @@ func (p *ExecutionProvisioner) InspectOwner(ctx context.Context, req port.Execut
 		// terminal show의 음수 paneRuntimeId는 현재 렌더러에 실제 pane이 없다는 증거다.
 		result.TerminalLive = detail.Terminal.Connected && detail.Terminal.Writable && *detail.PaneRuntimeID >= 0
 	}
-	var tasks executionTaskInventory
-	if strings.TrimSpace(req.RunID) == "" {
-		// Run 도입 전 binding은 task ID만 봉인했다. 전역 current Run을
-		// 추론하지 않고 모든 명시적 Run의 완전 목록에서 유일한 task만 찾는다.
-		tasks, err = client.listAllTasksInventory(ctx)
-	} else {
-		tasks, err = client.listRunTasksInventory(ctx, req.RunID, "--brief")
-	}
+	tasks, err := client.listRunTasksInventory(ctx, req.RunID, "--brief")
 	if err != nil {
 		return port.ExecutionOrcaOwnerInventory{}, err
 	}

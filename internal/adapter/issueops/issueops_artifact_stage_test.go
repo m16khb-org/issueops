@@ -189,6 +189,7 @@ func TestExecutionOwnerPlanMaterializationRequiresDurableIdentity(t *testing.T) 
 				Mode:      issueopscontract.ExecutionModeOrca,
 				Workspace: issueopscontract.Workspace{Root: worktree, ArtifactDir: app.OwnerArtifactDir(record)},
 				Lease:     issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusReleased},
+				Selection: selectionFixture(issueopscontract.ExecutionModeOrca),
 			}
 			if test.prelinked != "" {
 				record.PlanPath = filepath.Join(worktree, "plans", "linked.md")
@@ -371,7 +372,8 @@ func artifactRecoveryExecution(mode issueopscontract.ExecutionMode, status issue
 			BaseHead: strings.Repeat("a", 40), Driver: driver, LinkedAt: "2026-08-03T00:00:00Z",
 			ArtifactDir: ".issueops/issues/262/artifact",
 		},
-		Lease: issueopscontract.WriteLease{Generation: 3, Status: status},
+		Lease:     issueopscontract.WriteLease{Generation: 3, Status: status},
+		Selection: selectionFixture(mode),
 	}
 	switch status {
 	case issueopscontract.LeaseStatusClaimable:

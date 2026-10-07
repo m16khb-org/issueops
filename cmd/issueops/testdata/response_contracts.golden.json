@@ -394,7 +394,7 @@
           "name": "status"
         }
       ],
-      "hash": "3cf7398e5ed80d5dd8bf00c052b062dec128fe3b14b9ecd77062c4cfdc6f6b76",
+      "hash": "d500853d0896402a1645c93a93915c330776a61b597aa123f650e850b1cb479e",
       "mcp_tools": [
         "api_doc_review",
         "api_doc_static_check",
@@ -790,7 +790,6 @@
           "preflight",
           "guard",
           "command",
-          "evidence",
           "evidence_matrix",
           "suggested_commands",
           "warnings"
@@ -2087,6 +2086,16 @@
           "status": "claimable"
         },
         "mode": "direct",
+        "selection": {
+          "explicit_direct_reason": "test fixture",
+          "probe_attempted": false,
+          "probe_available": false,
+          "probe_ready": false,
+          "readiness_fingerprint": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "requested_mode": "direct",
+          "resolved_mode": "direct",
+          "selected_at": "$TIMESTAMP"
+        },
         "workspace": {
           "base_head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           "branch": "69-cli-execution-contract",
@@ -6517,11 +6526,6 @@
         "stdout": "?? .env\n",
         "timed_out": false
       },
-      "evidence": [
-        "git preflight completed",
-        "guard check passed (staged, 0 files)",
-        "read-only verification command passed"
-      ],
       "evidence_matrix": [
         {
           "name": "git_preflight",
@@ -7139,7 +7143,7 @@
                 "name": "status"
               }
             ],
-            "hash": "3cf7398e5ed80d5dd8bf00c052b062dec128fe3b14b9ecd77062c4cfdc6f6b76",
+            "hash": "d500853d0896402a1645c93a93915c330776a61b597aa123f650e850b1cb479e",
             "mcp_tools": [
               "api_doc_review",
               "api_doc_static_check",
@@ -7535,7 +7539,6 @@
                 "preflight",
                 "guard",
                 "command",
-                "evidence",
                 "evidence_matrix",
                 "suggested_commands",
                 "warnings"
@@ -8239,6 +8242,16 @@
                 "status": "claimable"
               },
               "mode": "direct",
+              "selection": {
+                "explicit_direct_reason": "test fixture",
+                "probe_attempted": false,
+                "probe_available": false,
+                "probe_ready": false,
+                "readiness_fingerprint": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+                "requested_mode": "direct",
+                "resolved_mode": "direct",
+                "selected_at": "$TIMESTAMP"
+              },
               "workspace": {
                 "base_head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 "branch": "69-mcp-execution-contract",

@@ -2,6 +2,7 @@ package augmentplan
 
 import (
 	"encoding/json"
+	augmentapp "issueops/internal/application/selfaugment"
 	contract "issueops/internal/contract/selfaugment"
 	state "issueops/internal/contract/state"
 	verifydomain "issueops/internal/domain/selfverify"
@@ -68,7 +69,9 @@ func TestVerificationGoalRequiresCurrentSummaryKindAndSchema(t *testing.T) {
 
 func currentSummaryFixture(t *testing.T, ok bool) string {
 	t.Helper()
-	data, err := json.Marshal(contract.SelfAugmentStateSnapshot{SchemaVersion: 1, Kind: "self_verification_summary", OK: ok, Summary: contract.SelfAugmentSummary{TerminationEligible: ok, Contract: verifydomain.ContractValue()}})
+	snapshot := contract.SelfAugmentStateSnapshot{SchemaVersion: 1, Kind: "self_verification_summary", OK: ok, Summary: contract.SelfAugmentSummary{TerminationEligible: ok, Contract: verifydomain.ContractValue()}}
+	augmentapp.NormalizeSnapshotFailureCause(&snapshot)
+	data, err := json.Marshal(snapshot)
 	if err != nil {
 		t.Fatal(err)
 	}

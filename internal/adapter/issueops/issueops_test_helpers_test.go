@@ -59,7 +59,8 @@ func newClaimableExecutionFixture(t *testing.T, stateRoot, branch string) claima
 			SourceRoot: repo, Root: worktree, Branch: branch, BaseHead: baseHead,
 			Driver: "git", LinkedAt: "2026-07-22T00:00:00Z",
 		},
-		Lease: issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusClaimable},
+		Lease:     issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusClaimable},
+		Selection: selectionFixture(issueops.ExecutionModeDirect),
 	}
 	token, tokenPath, err := createClaimToken(record)
 	if err != nil {
@@ -128,7 +129,12 @@ func resumeIntentFixtureWithLinkVerified(t *testing.T, provider string, issue in
 			WorktreeInstanceID: "instance-current", LeaseGeneration: 1,
 			OwnerHost: "codex", OwnerModel: "gpt-6-astra", OwnerEffort: "xhigh",
 			RunID: "run-current", TaskID: "task-current", DispatchID: "dispatch-current", TerminalPTYID: "pty-current",
+			ArtifactIdentityVersion: 1,
+			IssueBodySHA256:         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			ContextPacketSHA256:     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+			OwnerPromptSHA256:       "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
 		},
+		Selection: selectionFixture(issueops.ExecutionModeOrca),
 	}
 	record, err := writeIssueOps(context.Background(), stateRoot, record)
 	if err != nil {
@@ -259,7 +265,7 @@ func setIssueOpsPlanPrepForTest(t *testing.T, stateRoot, id string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	waived := issueops.IssueOpsPlanPrepItem{Status: "waived", WaiveReason: "legacy lifecycle test"}
+	waived := issueops.IssueOpsPlanPrepItem{Status: "waived", WaiveReason: "lifecycle fixture"}
 	rec.PlanPrep = &issueops.IssueOpsPlanPrep{
 		PriorDecisions: waived,
 		RelatedIssues:  waived,
@@ -272,7 +278,7 @@ func setIssueOpsPlanPrepForTest(t *testing.T, stateRoot, id string) {
 }
 
 // recordIssueOpsGrillArtifactsForTest satisfies the grill completion gate
-// (split_decision + domain_review) so legacy tests can still advance past the
+// (split_decision + domain_review) so lifecycle tests can still advance past the
 // grill->plan boundary. split_decision is recorded as a no-split scope decision.
 func recordIssueOpsGrillArtifactsForTest(t *testing.T, stateRoot, id string) {
 	t.Helper()
@@ -301,7 +307,7 @@ func recordIssueOpsApprovedDesignForTest(t *testing.T, stateRoot, id string) {
 		ProposedDesign: "Gate implementation on a reviewed design contract",
 		RefactorPlan:   "Keep IssueOps state and adapter changes scoped to the active cycle",
 		Alternatives:   []string{"documentation-only guidance"},
-		Risks:          []string{"legacy tests must create explicit design evidence"},
+		Risks:          []string{"existing tests must create explicit design evidence"},
 		Verification:   []string{"design review checked alternatives and risks", "go test ./internal/core/issueops"},
 		Approved:       true,
 	}); err != nil {
@@ -398,6 +404,7 @@ func issueOpsExecutionForTest(repo, worktree, branch string) *issueops.Execution
 			},
 			ClaimedAt: "2026-07-22T00:00:00Z",
 		},
+		Selection: selectionFixture(issueops.ExecutionModeDirect),
 	}
 }
 
@@ -457,7 +464,7 @@ func issueOpsDesignReviewForTest() *reviewcontract.DesignReview {
 		ProposedDesign: "Gate implementation on a reviewed design contract",
 		RefactorPlan:   "Keep IssueOps state and adapter changes scoped to the active cycle",
 		Alternatives:   []string{"documentation-only guidance"},
-		Risks:          []string{"legacy tests must create explicit design evidence"},
+		Risks:          []string{"existing tests must create explicit design evidence"},
 		Verification:   []string{"design review checked alternatives and risks", "go test ./internal/core/issueops"},
 		Approved:       true,
 		ReviewedAt:     "2026-06-05T00:00:00Z",

@@ -10,15 +10,12 @@ const (
 	RecoveryFinalizePreview WriterlessRecoveryAction = "finalize_preview"
 )
 
-func DecideWriterlessRecovery(status, mode string, orcaIdentityComplete bool) WriterlessRecoveryAction {
+func DecideWriterlessRecovery(status, mode string) WriterlessRecoveryAction {
 	switch status {
 	case "claimable":
 		switch mode {
 		case "orca":
-			if orcaIdentityComplete {
-				return RecoveryResume
-			}
-			return RecoveryReplacePreview
+			return RecoveryResume
 		case "direct":
 			return RecoveryDirectClaim
 		}

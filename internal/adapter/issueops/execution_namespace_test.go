@@ -33,7 +33,7 @@ func TestIssueOpsUsesOnlySchemaOneAndDedicatedNamespace(t *testing.T) {
 		t.Fatalf("v1 row missing from issueops_v1: ok=%t err=%v", ok, err)
 	}
 	if _, ok, err := db.Get("issueops", record.ID); err != nil || ok {
-		t.Fatalf("v1 writer touched legacy issueops namespace: ok=%t err=%v", ok, err)
+		t.Fatalf("v1 writer touched retired issueops namespace: ok=%t err=%v", ok, err)
 	}
 }
 
@@ -43,13 +43,13 @@ func TestIssueOpsReaderIgnoresRetiredBucketAndRejectsNonCurrentSchemas(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	legacyID := "io-legacy"
-	legacy := []byte(`{"schema_version":9,"id":"io-legacy","repo":"/repo","phase":"problem"}`)
-	if err := db.Put("issueops", legacyID, legacy); err != nil {
+	retiredID := "io-retired"
+	retired := []byte(`{"schema_version":9,"id":"io-retired","repo":"/repo","phase":"problem"}`)
+	if err := db.Put("issueops", retiredID, retired); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := ReadIssueOps(stateRoot, legacyID); !errors.Is(err, fs.ErrNotExist) {
-		t.Fatalf("v1 reader must ignore legacy bucket, got %v", err)
+	if _, err := ReadIssueOps(stateRoot, retiredID); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("v1 reader must ignore retired bucket, got %v", err)
 	}
 	for _, version := range []int{2, 9} {
 		id := "io-schema-" + strings.Repeat("x", version+1)
@@ -73,7 +73,7 @@ func TestIssueOpsReaderRejectsMissingAndZeroSchema(t *testing.T) {
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
 			stateRoot := t.TempDir()
-			record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "901-legacy-schema-" + testCase.name})
+			record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "901-noncurrent-schema-" + testCase.name})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -109,22 +109,22 @@ func TestIssueOpsReaderRejectsMissingAndZeroSchema(t *testing.T) {
 	}
 }
 
-func TestIssueOpsRejectsLegacyExecutionAuthorityPayload(t *testing.T) {
+func TestIssueOpsRejectsRetiredExecutionAuthorityPayload(t *testing.T) {
 	stateRoot := t.TempDir()
 	db, err := sqlstore.Open(stateRoot)
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, field := range []string{"execution_handoff", "execution_workspace", "ownership", "remote_create_claim"} {
-		id := "io-legacy-" + strings.ReplaceAll(field, "_", "-")
+		id := "io-retired-" + strings.ReplaceAll(field, "_", "-")
 		raw, _ := json.Marshal(map[string]any{
-			"schema_version": 1, "id": id, "repo": "/repo", "phase": "problem", field: map[string]any{"legacy": true},
+			"schema_version": 1, "id": id, "repo": "/repo", "phase": "problem", field: map[string]any{"retired": true},
 		})
 		if err := db.Put("issueops_v1", id, raw); err != nil {
 			t.Fatal(err)
 		}
 		if _, err := ReadIssueOps(stateRoot, id); !errors.Is(err, statecontract.ErrInvalidState) || err.Error() != "invalid state" {
-			t.Fatalf("legacy field %s must fail closed, got %v", field, err)
+			t.Fatalf("retired field %s must fail closed, got %v", field, err)
 		}
 	}
 }

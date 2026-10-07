@@ -80,6 +80,7 @@ func TestExecutionReseedCLIDogfoodDirectAndOrca(t *testing.T) {
 			stateRoot, record, oldToken, _, _ := seedOrcaClaimSnapshot(t)
 			if mode == model.ExecutionModeDirect {
 				record.Execution.Mode = model.ExecutionModeDirect
+				record.Execution.Selection = selectionFixture(model.ExecutionModeDirect)
 				record.Execution.Workspace.Driver = "git"
 				record.Execution.Orca = nil
 				if _, err := (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), record); err != nil {
@@ -255,18 +256,11 @@ func TestCompletedReplacementPreviewKeepsNoDriftReseed(t *testing.T) {
 	}
 }
 
-func TestCompletedReplacementPreviewRejectsMissingStampedCompletionGeneration(t *testing.T) {
-	stateRoot, record, actor, owner := completedReplacementPreviewFixture(t, false)
+func TestCompletedReplacementRejectsPersistingUnstampedCompletionGeneration(t *testing.T) {
+	stateRoot, record, _, _ := completedReplacementPreviewFixture(t, false)
 	record.Execution.Completion.Generation = 0
-	if _, err := (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), record); err != nil {
-		t.Fatal(err)
-	}
-	_, err := newIssueOpsReplacementHandler()(context.Background(), stateRoot, replacementmodel.ExecutionReplaceRequest{
-		ID: record.ID, Action: model.ExecutionReplacePreview, ExpectedGeneration: 1, CompletionGeneration: 1,
-		Actor: actor, CWD: record.Execution.Workspace.Root,
-	}, port.ReplacementInvocation{OrcaOwner: owner, BaseSync: basesyncoutbound.NewInspector(basesyncoutbound.RunGit)})
-	if err == nil || err.Error() != "invalid or missing stamped completion generation" {
-		t.Fatalf("zero-generation preview error=%v", err)
+	if _, err := (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), record); err == nil {
+		t.Fatal("a completion without its generation must not be persisted")
 	}
 }
 

@@ -56,7 +56,7 @@ func TestServicePreservesCheckOrderAndFailureEvidence(t *testing.T) {
 			if !reflect.DeepEqual(calls, wantCalls) || !reflect.DeepEqual(result.Warnings, wantWarnings) {
 				t.Fatalf("calls=%v warnings=%v", calls, result.Warnings)
 			}
-			if result.OK || result.Repo != "." || result.GitStatus != "?? draft\n" || result.SuggestedCommands == nil || result.Evidence == nil {
+			if result.OK || result.Repo != "." || result.GitStatus != "?? draft\n" || result.SuggestedCommands == nil || result.EvidenceMatrix == nil {
 				t.Fatalf("result: %+v", result)
 			}
 			last := result.EvidenceMatrix[2]

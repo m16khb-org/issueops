@@ -16,7 +16,8 @@ func TestMissingAuthorityKeepsActiveHolderAndReleasedCompletionRules(t *testing.
 		{name: "active holder", facts: AuthorityFacts{Mode: "apply", LeaseStatus: "active", HolderMatches: true}},
 		{name: "claimable", facts: AuthorityFacts{Mode: "apply", LeaseStatus: "claimable"}, want: []string{"released_completion_authority"}},
 		{name: "released without completion", facts: AuthorityFacts{Mode: "apply", LeaseStatus: "released"}, want: []string{"released_completion_authority"}},
-		{name: "legacy completion", facts: AuthorityFacts{Mode: "apply", LeaseStatus: "released", CompletionPresent: true}},
+		// 생성 번호가 없는 completion은 MissingRecordGates가 거부하므로 여기서는 중복 보고하지 않는다.
+		{name: "unstamped completion left to record gates", facts: AuthorityFacts{Mode: "apply", LeaseStatus: "released", CompletionPresent: true}},
 		{name: "missing generation", facts: AuthorityFacts{Mode: "apply", LeaseStatus: "released", CompletionPresent: true, CompletionGeneration: 3}, want: []string{"completion_generation_present"}},
 		{name: "stale generation", facts: AuthorityFacts{Mode: "apply", LeaseStatus: "released", CompletionPresent: true, CompletionGeneration: 3, RequestedGeneration: 2}, want: []string{"completion_generation_current"}},
 		{name: "released apply", facts: AuthorityFacts{Mode: "apply", LeaseStatus: "released", CompletionPresent: true, CompletionGeneration: 3, RequestedGeneration: 3}},

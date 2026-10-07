@@ -1638,11 +1638,6 @@ func (f *executionFake) showTerminalInventory(_ context.Context, handle string) 
 	return executionTerminalDetailInventory{}, fmt.Errorf("terminal detail not found")
 }
 
-func (f *executionFake) listAllTasksInventory(context.Context) (executionTaskInventory, error) {
-	f.calls = append(f.calls, "list-all-tasks-inventory")
-	return executionTaskInventory{RuntimeID: executionFakeRuntime(f.taskInventoryRuntime), Rows: append([]port.OrcaTask(nil), f.tasks...)}, nil
-}
-
 func (f *executionFake) listRunTasksInventory(_ context.Context, runID string, _ ...string) (executionTaskInventory, error) {
 	f.calls = append(f.calls, "list-run-tasks-inventory")
 	rows := append([]port.OrcaTask(nil), f.tasks...)

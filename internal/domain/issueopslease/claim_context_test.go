@@ -8,7 +8,7 @@ import (
 )
 
 func TestSealedClaimContextRejectsIdentityAndBodyDrift(t *testing.T) {
-	record := leasecontract.Record{ID: "cycle", IssueURL: "https://example.test/issues/1", Execution: &leasecontract.Execution{Mode: "orca"}}
+	record := leasecontract.Record{ID: "cycle", IssueURL: "https://example.test/issues/1", Execution: &leasecontract.Execution{Mode: "orca", Selection: leaseSelectionFixture("orca")}}
 	record.Execution.Lease.Generation = 2
 	record.Execution.Workspace.Branch = "feature"
 	record.Execution.Workspace.BaseHead = "base"

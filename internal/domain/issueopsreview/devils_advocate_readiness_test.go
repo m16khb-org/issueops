@@ -25,7 +25,7 @@ func TestDevilsAdvocateReviewMissingPreservesVerdictAndPlanBinding(t *testing.T)
 	}
 	review.ReviewedPlanDigest = ""
 	if got := DevilsAdvocateReviewMissing(review, true, true, "", nil); !reflect.DeepEqual(got, []string{"devils_advocate_review_stale"}) {
-		t.Fatalf("legacy review=%v", got)
+		t.Fatalf("undigested review=%v", got)
 	}
 	review.ReviewerPattern = ParentReviewPattern
 	if got := DevilsAdvocateReviewMissing(review, true, true, "", nil); len(got) != 0 {
@@ -48,7 +48,7 @@ func TestDevilsAdvocatePlanDigestRequiredOnlyWhenObserved(t *testing.T) {
 		{"blank timestamp", &reviewcontract.DevilsAdvocateReview{}, true, true},
 		{"clean stage", review, false, true},
 		{"no plan", review, true, false},
-		{"legacy digest", &reviewcontract.DevilsAdvocateReview{RecordedAt: "now"}, true, true},
+		{"undigested review", &reviewcontract.DevilsAdvocateReview{RecordedAt: "now"}, true, true},
 		{"inherited parent", &reviewcontract.DevilsAdvocateReview{RecordedAt: "now", ReviewedPlanDigest: "abc", ReviewerPattern: ParentReviewPattern}, true, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

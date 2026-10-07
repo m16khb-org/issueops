@@ -155,34 +155,34 @@ func TestCurrentIssueOpsVerticalOnly(t *testing.T) {
 	}
 }
 
-func TestLegacyEdgesClassifyConcreteAdapterOutsideCompositionRoot(t *testing.T) {
+func TestForbiddenEdgesClassifyConcreteAdapterOutsideCompositionRoot(t *testing.T) {
 	edge := dependencyEdge{"cmd/issueops/issueopscli", "internal/adapter/provider"}
-	if got := legacyEdges([]dependencyEdge{edge}); !reflect.DeepEqual(got, []dependencyEdge{edge}) {
-		t.Fatalf("expected legacy concrete-adapter edge %s, got %v", formatEdge(edge), got)
+	if got := forbiddenEdges([]dependencyEdge{edge}); !reflect.DeepEqual(got, []dependencyEdge{edge}) {
+		t.Fatalf("expected forbidden concrete-adapter edge %s, got %v", formatEdge(edge), got)
 	}
 	compositionRootEdge := dependencyEdge{"cmd/issueops/issueopsapp", "internal/adapter/provider"}
-	if got := legacyEdges([]dependencyEdge{compositionRootEdge}); len(got) != 0 {
-		t.Fatalf("expected composition-root edge to stay outside legacy baseline, got %v", got)
+	if got := forbiddenEdges([]dependencyEdge{compositionRootEdge}); len(got) != 0 {
+		t.Fatalf("expected composition-root edge to stay outside forbidden baseline, got %v", got)
 	}
 	adapterEdge := dependencyEdge{"internal/adapter/cli", "internal/adapter/provider"}
-	if got := legacyEdges([]dependencyEdge{adapterEdge}); !reflect.DeepEqual(got, []dependencyEdge{adapterEdge}) {
-		t.Fatalf("expected non-composition adapter edge %s in legacy baseline, got %v", formatEdge(adapterEdge), got)
+	if got := forbiddenEdges([]dependencyEdge{adapterEdge}); !reflect.DeepEqual(got, []dependencyEdge{adapterEdge}) {
+		t.Fatalf("expected non-composition adapter edge %s in forbidden baseline, got %v", formatEdge(adapterEdge), got)
 	}
 }
 
-func TestLegacyEdgesExcludeSameCapabilityAdapterPackages(t *testing.T) {
+func TestForbiddenEdgesExcludeSameCapabilityAdapterPackages(t *testing.T) {
 	inside := []dependencyEdge{
 		{"internal/adapter/issueops", "internal/adapter/issueops/readinesspaths"},
 		{"internal/adapter/issueops/readinesspaths", "internal/adapter/issueops/pathutil"},
 		{"internal/adapter/lifecycle/compact", "internal/adapter/lifecycle/model"},
 	}
 	for _, edge := range inside {
-		if got := legacyEdges([]dependencyEdge{edge}); len(got) != 0 {
-			t.Fatalf("same-capability adapter edge %s must stay outside the legacy baseline, got %v", formatEdge(edge), got)
+		if got := forbiddenEdges([]dependencyEdge{edge}); len(got) != 0 {
+			t.Fatalf("same-capability adapter edge %s must stay outside the forbidden baseline, got %v", formatEdge(edge), got)
 		}
 	}
 
-	// capability 경계를 넘으면 여전히 legacy다. outbound/inbound는 방향 분류이므로
+	// capability 경계를 넘으면 여전히 금지 edge다. outbound/inbound는 방향 분류이므로
 	// 그 아래 서로 다른 capability는 같은 것으로 묶이지 않는다.
 	crossing := []dependencyEdge{
 		{"internal/adapter/trace", "internal/adapter/policy"},
@@ -190,22 +190,22 @@ func TestLegacyEdgesExcludeSameCapabilityAdapterPackages(t *testing.T) {
 		{"internal/adapter/lifecycle", "internal/adapter/projectdoc"},
 	}
 	for _, edge := range crossing {
-		if got := legacyEdges([]dependencyEdge{edge}); !reflect.DeepEqual(got, []dependencyEdge{edge}) {
-			t.Fatalf("cross-capability adapter edge %s must stay in the legacy baseline, got %v", formatEdge(edge), got)
+		if got := forbiddenEdges([]dependencyEdge{edge}); !reflect.DeepEqual(got, []dependencyEdge{edge}) {
+			t.Fatalf("cross-capability adapter edge %s must stay in the forbidden baseline, got %v", formatEdge(edge), got)
 		}
 	}
 }
 
-func TestLegacyEdgesExcludeMigratedInboundAdapters(t *testing.T) {
+func TestForbiddenEdgesExcludeMigratedInboundAdapters(t *testing.T) {
 	for _, importer := range []string{"internal/adapter/inbound/issueopslease", "internal/adapter/inbound/issueopspublication", "internal/adapter/inbound/issueopscompletion", "internal/adapter/inbound/issueopspreparation"} {
 		edge := dependencyEdge{importer, "internal/core/issueops"}
-		if got := legacyEdges([]dependencyEdge{edge}); len(got) != 0 {
-			t.Fatalf("migrated inbound edge %s must stay outside the legacy baseline, got %v", formatEdge(edge), got)
+		if got := forbiddenEdges([]dependencyEdge{edge}); len(got) != 0 {
+			t.Fatalf("migrated inbound edge %s must stay outside the forbidden baseline, got %v", formatEdge(edge), got)
 		}
 	}
 }
 
-func TestLegacyInfrastructureIncludesNetAndSyscall(t *testing.T) {
+func TestForbiddenInfrastructureIncludesNetAndSyscall(t *testing.T) {
 	edges := []dependencyEdge{
 		{"internal/core/issueops", "syscall"},
 		{"internal/core/issueops", "net"},
@@ -214,12 +214,12 @@ func TestLegacyInfrastructureIncludesNetAndSyscall(t *testing.T) {
 		{"internal/core/issueops", "net"},
 		{"internal/core/issueops", "syscall"},
 	}
-	if got := legacyEdges(edges); !reflect.DeepEqual(got, want) {
-		t.Fatalf("expected net and syscall legacy infrastructure edges, got %v", got)
+	if got := forbiddenEdges(edges); !reflect.DeepEqual(got, want) {
+		t.Fatalf("expected net and syscall forbidden infrastructure edges, got %v", got)
 	}
 }
 
-func TestProductionGraphHasNoLegacyAdapterEdges(t *testing.T) {
+func TestProductionGraphHasNoForbiddenAdapterEdges(t *testing.T) {
 	assertPackageInventoryCacheUsesOneSharedReadAndOneFreshStabilityRead(t)
 	assertPackageInventoryCacheReturnsDefensiveViews(t)
 	assertPackageInventorySeparatesProductionAndTestImports(t)
@@ -236,11 +236,11 @@ func TestProductionGraphHasNoLegacyAdapterEdges(t *testing.T) {
 		t.Fatalf("production import inventory is not byte-stable")
 	}
 
-	// legacy baseline은 비었다. 전환이 끝났으므로 래칫은 "남은 edge가 0"이라는
-	// 불변식으로 대체한다 — 새 legacy edge는 baseline에 등록하는 것이 아니라
+	// forbidden baseline은 비었다. 전환이 끝났으므로 래칫은 "남은 edge가 0"이라는
+	// 불변식으로 대체한다 — 새 retired edge는 baseline에 등록하는 것이 아니라
 	// 애초에 들어올 수 없다.
-	if remaining := legacyEdges(edges); len(remaining) != 0 {
-		t.Fatalf("legacy adapter edges are no longer allowed; the transition is complete:\n%s", formatEdges(remaining))
+	if remaining := forbiddenEdges(edges); len(remaining) != 0 {
+		t.Fatalf("forbidden adapter edges are no longer allowed; the transition is complete:\n%s", formatEdges(remaining))
 	}
 }
 
@@ -309,7 +309,7 @@ func isStateSQLNetworkCapability(path string) bool {
 	return false
 }
 
-func TestProductionReseedRoutingHasNoLegacyFallback(t *testing.T) {
+func TestProductionReseedRoutingHasNoRetiredFallback(t *testing.T) {
 	violations, err := productionReseedRoutingViolations(findRepoRoot(t))
 	if err != nil {
 		t.Fatalf("inspect production reseed routing: %v", err)
@@ -319,7 +319,7 @@ func TestProductionReseedRoutingHasNoLegacyFallback(t *testing.T) {
 	}
 }
 
-func TestProductionResumeRoutingHasNoLegacyFallback(t *testing.T) {
+func TestProductionResumeRoutingHasNoRetiredFallback(t *testing.T) {
 	violations, err := productionResumeRoutingViolations(findRepoRoot(t))
 	if err != nil {
 		t.Fatalf("inspect production resume routing: %v", err)
@@ -329,7 +329,7 @@ func TestProductionResumeRoutingHasNoLegacyFallback(t *testing.T) {
 	}
 }
 
-func TestDependencyProductionReconcileRoutingHasNoLegacyFallback(t *testing.T) {
+func TestDependencyProductionReconcileRoutingHasNoRetiredFallback(t *testing.T) {
 	violations, err := productionReconcileRoutingViolations(findRepoRoot(t))
 	if err != nil {
 		t.Fatalf("inspect production reconcile routing: %v", err)
@@ -349,8 +349,8 @@ func TestDependencyProductionPublicationCallersHaveNoConcreteProviderResolver(t 
 	}
 }
 
-func TestDependencyProductionPublicationCoreHasNoLegacyOrchestration(t *testing.T) {
-	violations, err := productionPublicationLegacyOrchestrationViolations(findRepoRoot(t))
+func TestDependencyProductionPublicationCoreHasNoRetiredOrchestration(t *testing.T) {
+	violations, err := productionPublicationRetiredOrchestrationViolations(findRepoRoot(t))
 	if err != nil {
 		t.Fatalf("inspect production publication orchestration: %v", err)
 	}
@@ -359,7 +359,7 @@ func TestDependencyProductionPublicationCoreHasNoLegacyOrchestration(t *testing.
 	}
 }
 
-func TestDependencyProductionPreparationHasNoLegacyFallbackOrConcreteCaller(t *testing.T) {
+func TestDependencyProductionPreparationHasNoRetiredFallbackOrConcreteCaller(t *testing.T) {
 	violations, err := productionPreparationRoutingViolations(findRepoRoot(t))
 	if err != nil {
 		t.Fatalf("inspect production preparation routing: %v", err)
@@ -369,7 +369,7 @@ func TestDependencyProductionPreparationHasNoLegacyFallbackOrConcreteCaller(t *t
 	}
 }
 
-func TestDependencyPreparationRoutingViolationsRejectLegacyFallback(t *testing.T) {
+func TestDependencyPreparationRoutingViolationsRejectRetiredFallback(t *testing.T) {
 	file, err := parser.ParseFile(token.NewFileSet(), "router.go", `package issueops
 func route(req request, deps dependencies) {
 	switch req.Action {
@@ -385,8 +385,8 @@ func route(req request, deps dependencies) {
 	}
 	violations := preparationRoutingViolations(file, true)
 	joined := strings.Join(violations, "; ")
-	if !strings.Contains(joined, "does not invoke injected prepare handler exactly once") || !strings.Contains(joined, "calls legacy PrepareExecution") {
-		t.Fatalf("legacy preparation fallback violations=%v", violations)
+	if !strings.Contains(joined, "does not invoke injected prepare handler exactly once") || !strings.Contains(joined, "calls retired PrepareExecution") {
+		t.Fatalf("retired preparation fallback violations=%v", violations)
 	}
 }
 
@@ -408,7 +408,7 @@ func unrelatedCleanup() { _ = orca.NewExecution() }
 	}
 }
 
-func TestDependencyPublicationLegacyOrchestrationViolationsRejectDefinitionsAndCalls(t *testing.T) {
+func TestDependencyPublicationRetiredOrchestrationViolationsRejectDefinitionsAndCalls(t *testing.T) {
 	file, err := parser.ParseFile(token.NewFileSet(), "remote.go", `package issueops
 func createRemotePullRequestLegacy() {}
 func route() { reconcileRemotePullRequest() }
@@ -416,10 +416,10 @@ func route() { reconcileRemotePullRequest() }
 	if err != nil {
 		t.Fatal(err)
 	}
-	violations := publicationLegacyOrchestrationViolations(file, "remote.go")
+	violations := publicationRetiredOrchestrationViolations(file, "remote.go")
 	joined := strings.Join(violations, "; ")
 	if !strings.Contains(joined, "createRemotePullRequestLegacy") || !strings.Contains(joined, "reconcileRemotePullRequest") {
-		t.Fatalf("publication legacy orchestration violations=%v", violations)
+		t.Fatalf("publication retired orchestration violations=%v", violations)
 	}
 }
 
@@ -438,7 +438,7 @@ func createPullRequest() { provider.Resolve("github") }
 	}
 }
 
-func TestDependencyReconcileRoutingViolationsRejectLegacyFallback(t *testing.T) {
+func TestDependencyReconcileRoutingViolationsRejectRetiredFallback(t *testing.T) {
 	file, err := parser.ParseFile(token.NewFileSet(), "router.go", `package issueops
 func route(deps dependencies) {
 	reconcileOrcaExecutionIntent()
@@ -449,12 +449,12 @@ func route(deps dependencies) {
 	}
 	violations := reconcileRoutingViolations(file, true)
 	joined := strings.Join(violations, "; ")
-	if !strings.Contains(joined, "does not invoke injected Handler") || !strings.Contains(joined, "calls legacy reconcileOrcaExecutionIntent") {
-		t.Fatalf("legacy fallback violations=%v", violations)
+	if !strings.Contains(joined, "does not invoke injected Handler") || !strings.Contains(joined, "calls retired reconcileOrcaExecutionIntent") {
+		t.Fatalf("retired fallback violations=%v", violations)
 	}
 }
 
-func TestResumeRoutingViolationsRejectLegacyFallback(t *testing.T) {
+func TestResumeRoutingViolationsRejectRetiredFallback(t *testing.T) {
 	file, err := parser.ParseFile(token.NewFileSet(), "router.go", `package issueops
 func route(req request, deps dependencies) {
 	switch req.Action {
@@ -467,8 +467,8 @@ func route(req request, deps dependencies) {
 		t.Fatal(err)
 	}
 	violations := resumeRoutingViolations(file, true)
-	if len(violations) == 0 || !strings.Contains(strings.Join(violations, "; "), "does not invoke injected Resume handler") || !strings.Contains(strings.Join(violations, "; "), "calls legacy ResumeExecutionWithDependencies") {
-		t.Fatalf("legacy fallback violations=%v", violations)
+	if len(violations) == 0 || !strings.Contains(strings.Join(violations, "; "), "does not invoke injected Resume handler") || !strings.Contains(strings.Join(violations, "; "), "calls retired ResumeExecutionWithDependencies") {
+		t.Fatalf("retired fallback violations=%v", violations)
 	}
 }
 
@@ -501,7 +501,7 @@ func TestProductionReseedWiringUsesOutboundInventory(t *testing.T) {
 	}
 }
 
-func TestReseedRoutingViolationsRejectLegacyFallback(t *testing.T) {
+func TestReseedRoutingViolationsRejectRetiredFallback(t *testing.T) {
 	file, err := parser.ParseFile(token.NewFileSet(), "router.go", `package issueops
 func route(req request, deps dependencies) {
 	if req.ReplaceAction == ExecutionReplaceReseed {
@@ -513,8 +513,8 @@ func route(req request, deps dependencies) {
 		t.Fatal(err)
 	}
 	violations := reseedRoutingViolations(file, true)
-	if len(violations) == 0 || !strings.Contains(strings.Join(violations, "; "), "does not invoke injected Reseed handler") || !strings.Contains(strings.Join(violations, "; "), "calls legacy ReplaceExecutionWithDependencies") {
-		t.Fatalf("legacy fallback violations=%v", violations)
+	if len(violations) == 0 || !strings.Contains(strings.Join(violations, "; "), "does not invoke injected Reseed handler") || !strings.Contains(strings.Join(violations, "; "), "calls retired ReplaceExecutionWithDependencies") {
+		t.Fatalf("retired fallback violations=%v", violations)
 	}
 }
 
@@ -572,7 +572,7 @@ func productionResumeRoutingViolations(repoRoot string) ([]string, error) {
 			return nil, err
 		}
 		if sourceHasIdentifier(file, "ResumeExecutionWithDependencies") {
-			violations = append(violations, name+" retains legacy resume orchestration")
+			violations = append(violations, name+" retains retired resume orchestration")
 		}
 		violations = append(violations, resumeRoutingViolations(file, name == "execution_api.go")...)
 	}
@@ -626,7 +626,7 @@ func productionReconcileRoutingViolations(repoRoot string) ([]string, error) {
 			return nil, err
 		}
 		if sourceHasIdentifier(file, "reconcileOrcaExecutionIntent") {
-			violations = append(violations, name+" retains legacy Orca reconcile orchestration")
+			violations = append(violations, name+" retains retired Orca reconcile orchestration")
 		}
 		if name == "execution_reconcile.go" {
 			violations = append(violations, reconcileRoutingViolations(file, true)...)
@@ -654,7 +654,7 @@ func productionPublicationCallerViolations(repoRoot string) ([]string, error) {
 			if walkErr != nil {
 				return walkErr
 			}
-			if info.IsDir() || !strings.HasSuffix(info.Name(), ".go") || strings.HasSuffix(info.Name(), "_test.go") || info.Name() == "issueops_reset_legacy_cli.go" {
+			if info.IsDir() || !strings.HasSuffix(info.Name(), ".go") || strings.HasSuffix(info.Name(), "_test.go") {
 				return nil
 			}
 			contents, err := os.ReadFile(path)
@@ -699,7 +699,7 @@ func productionPreparationRoutingViolations(repoRoot string) ([]string, error) {
 		}
 		for _, identifier := range []string{"PrepareExecution", "prepareDirectExecution", "prepareOrcaExecution", "ExecutionPrepareDependencies"} {
 			if sourceHasIdentifier(file, identifier) {
-				violations = append(violations, name+" retains legacy preparation orchestration "+identifier)
+				violations = append(violations, name+" retains retired preparation orchestration "+identifier)
 			}
 		}
 		violations = append(violations, preparationRoutingViolations(file, name == "execution_api.go")...)
@@ -777,9 +777,9 @@ func preparationRoutingViolations(file *ast.File, requireInjectedHandler bool) [
 		if requireInjectedHandler && calls["invokeExecutionPrepareHandler"] != 1 {
 			violations = append(violations, "prepare route does not invoke injected prepare handler exactly once")
 		}
-		for _, legacy := range []string{"PrepareExecution", "prepareDirectExecution", "prepareOrcaExecution"} {
-			if calls[legacy] != 0 {
-				violations = append(violations, "prepare route calls legacy "+legacy)
+		for _, retired := range []string{"PrepareExecution", "prepareDirectExecution", "prepareOrcaExecution"} {
+			if calls[retired] != 0 {
+				violations = append(violations, "prepare route calls retired "+retired)
 			}
 		}
 		return true
@@ -849,7 +849,7 @@ func functionCallCount(file *ast.File, functionName, callName string) int {
 	return 0
 }
 
-func productionPublicationLegacyOrchestrationViolations(repoRoot string) ([]string, error) {
+func productionPublicationRetiredOrchestrationViolations(repoRoot string) ([]string, error) {
 	coreDir := filepath.Join(repoRoot, "internal", "adapter", "issueops")
 	entries, err := os.ReadDir(coreDir)
 	if err != nil {
@@ -870,17 +870,17 @@ func productionPublicationLegacyOrchestrationViolations(repoRoot string) ([]stri
 		if err != nil {
 			return nil, err
 		}
-		violations = append(violations, publicationLegacyOrchestrationViolations(file, name)...)
+		violations = append(violations, publicationRetiredOrchestrationViolations(file, name)...)
 	}
 	sort.Strings(violations)
 	return violations, nil
 }
 
-func publicationLegacyOrchestrationViolations(file *ast.File, name string) []string {
+func publicationRetiredOrchestrationViolations(file *ast.File, name string) []string {
 	var violations []string
 	for _, identifier := range []string{"createRemotePullRequestLegacy", "reconcileRemotePullRequest"} {
 		if sourceHasIdentifier(file, identifier) {
-			violations = append(violations, name+" retains legacy publication orchestration "+identifier)
+			violations = append(violations, name+" retains retired publication orchestration "+identifier)
 		}
 	}
 	return violations
@@ -977,7 +977,7 @@ func reseedRoutingViolations(file *ast.File, requireInjectedHandler bool) []stri
 			violations = append(violations, "reseed route does not invoke injected Reseed handler")
 		}
 		if calls["ReplaceExecutionWithDependencies"] {
-			violations = append(violations, "reseed route calls legacy ReplaceExecutionWithDependencies")
+			violations = append(violations, "reseed route calls retired ReplaceExecutionWithDependencies")
 		}
 		return true
 	})
@@ -1001,7 +1001,7 @@ func resumeRoutingViolations(file *ast.File, requireInjectedHandler bool) []stri
 			violations = append(violations, "resume route does not invoke injected Resume handler exactly once")
 		}
 		if calls["ResumeExecutionWithDependencies"] != 0 {
-			violations = append(violations, "resume route calls legacy ResumeExecutionWithDependencies")
+			violations = append(violations, "resume route calls retired ResumeExecutionWithDependencies")
 		}
 		return true
 	})
@@ -1018,7 +1018,7 @@ func reconcileRoutingViolations(file *ast.File, requireInjectedHandler bool) []s
 		violations = append(violations, "reconcile route does not invoke injected Handler exactly once")
 	}
 	if counts["reconcileOrcaExecutionIntent"] != 0 {
-		violations = append(violations, "reconcile route calls legacy reconcileOrcaExecutionIntent")
+		violations = append(violations, "reconcile route calls retired reconcileOrcaExecutionIntent")
 	}
 	return violations
 }
@@ -1311,17 +1311,17 @@ func findRepoRoot(t *testing.T) string {
 	}
 }
 
-func legacyEdges(edges []dependencyEdge) []dependencyEdge {
-	var legacy []dependencyEdge
+func forbiddenEdges(edges []dependencyEdge) []dependencyEdge {
+	var forbidden []dependencyEdge
 	for _, edge := range edges {
-		if (isCore(edge.importer) && isLegacyInfrastructure(edge.imported)) ||
+		if (isCore(edge.importer) && isForbiddenCoreInfrastructure(edge.imported)) ||
 			(isAdapter(edge.importer) && isCore(edge.imported) && !isMigratedInboundAdapter(edge.importer)) ||
 			(isAdapter(edge.imported) && !isCompositionRoot(edge.importer) && !isSameCapabilityAdapter(edge.importer, edge.imported) &&
 				!isSharedStorageEngineEdge(edge.importer, edge.imported) && !isProcessLifetimeEdge(edge.importer, edge.imported)) {
-			legacy = append(legacy, edge)
+			forbidden = append(forbidden, edge)
 		}
 	}
-	return sortedEdges(legacy)
+	return sortedEdges(forbidden)
 }
 
 func normalizeImport(path string) string {
@@ -1394,7 +1394,7 @@ func adapterCapability(path string) string {
 //
 // 하나의 adapter를 하위 package로 나누는 것은 계층 위반이 아니라 구현 정리다.
 // 이를 adapter 간 결합으로 세면 package를 잘게 나눌수록 벌점이 되어, 커다란
-// package를 유지할 유인이 생긴다. capability 경계를 넘는 의존만 legacy로 센다.
+// package를 유지할 유인이 생긴다. capability 경계를 넘는 의존만 금지 edge로 센다.
 func isSameCapabilityAdapter(importer, imported string) bool {
 	if !isAdapter(importer) || !isAdapter(imported) {
 		return false
@@ -1468,6 +1468,6 @@ func isMigratedInboundAdapter(path string) bool {
 	return path == "internal/adapter/inbound/issueopslease" || path == "internal/adapter/inbound/issueopspublication" || path == "internal/adapter/inbound/issueopscompletion" || path == "internal/adapter/inbound/issueopspreparation"
 }
 
-func isLegacyInfrastructure(path string) bool {
+func isForbiddenCoreInfrastructure(path string) bool {
 	return path == "os" || path == "os/exec" || path == "net" || path == "net/http" || path == "database/sql" || path == "syscall" || strings.Contains(path, "sqlite")
 }

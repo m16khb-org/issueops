@@ -14,8 +14,9 @@ func TestCleanupFinishExcludesConcurrentApplyAndOrdinaryWriters(t *testing.T) {
 	root, record, worktree := finishTestRecord(t, true)
 	mutateFinishRecord(t, root, record.ID, func(rec *model.IssueOpsRecord) {
 		rec.Execution.Mode = model.ExecutionModeOrca
+		rec.Execution.Selection = selectionFixture(model.ExecutionModeOrca)
 		rec.Execution.Workspace.Driver = "orca"
-		rec.Execution.Orca = &model.OrcaBinding{RuntimeID: "rt", RepoID: "repo", WorktreeID: "wt-1", OwnerHost: "codex", OwnerModel: "m", TaskID: "t", DispatchID: "d"}
+		rec.Execution.Orca = &model.OrcaBinding{RuntimeID: "rt", RepoID: "repo", WorktreeID: "wt-1", OwnerHost: "codex", OwnerModel: "m", TaskID: "t", DispatchID: "d", RunID: "run_issueops_1", LeaseGeneration: 1, ArtifactIdentityVersion: 1, IssueBodySHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", ContextPacketSHA256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", OwnerPromptSHA256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}
 	})
 	git := &fakeFinishGit{branchOID: "abc123"}
 	deps := finishDeps(git)

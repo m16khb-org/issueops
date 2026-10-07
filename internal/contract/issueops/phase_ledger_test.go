@@ -7,7 +7,7 @@ import (
 )
 
 // Layer 1 of the phase-ledger design: the model carries an additive phase_ledger
-// plus the net-new source-of-truth fields, all omitempty so legacy records and
+// plus the net-new source-of-truth fields, all omitempty so records without a ledger and
 // golden fixtures stay byte-compatible.
 
 func TestIssueOpsPhaseLedgerEntryRoundTrip(t *testing.T) {

@@ -4875,7 +4875,7 @@
         "func decodeLoop",
         "func newLoopID",
         "func normalizeLoopID",
-        "func normalizeLoopSchemaVersion",
+        "func validateLoopSchemaVersion",
         "type Store"
       ]
     },
@@ -5183,11 +5183,9 @@
         "func Client.currentRunInventory",
         "func Client.dispatchInventoryResult",
         "func Client.dispatchResult",
-        "func Client.listAllTasksInventory",
         "func Client.listRunGatesInventory",
         "func Client.listRunTasksInventory",
         "func Client.listRunsInventory",
-        "func Client.listTasksAcrossRunsInventory",
         "func Client.listTasksFromRuns",
         "func Client.runMutation",
         "func Client.showDispatchInventory",
@@ -10096,7 +10094,6 @@
       "owner": "application",
       "task": "T18",
       "symbols": [
-        "func CompareSnapshots",
         "func HistoryService.ApplyRetention",
         "func HistoryService.Compare",
         "func HistoryService.History",
@@ -10157,6 +10154,7 @@
         "func NormalizeSnapshotFailureCause",
         "func SnapshotStore.Read",
         "func SnapshotStore.Write",
+        "func validateSnapshotFailureCause",
         "type SnapshotStore"
       ]
     },
@@ -11368,7 +11366,6 @@
         "func decodeShape",
         "func invalidMarker",
         "func markerField",
-        "func normalizedPurpose",
         "func parseMarker",
         "func renderMarker",
         "func sameOptionalPath",
@@ -14513,7 +14510,6 @@
         "func bindingsEqual",
         "func contractError",
         "func leasesEqual",
-        "func normalizedPurpose",
         "func providerIssueURLMatches",
         "func validProvider"
       ]
@@ -17759,7 +17755,7 @@
       "id": "verified-issue-link",
       "source_path": "internal/contract/issueopspreparation/intent.go",
       "source_symbol": "func parseIssueIdentity",
-      "responsibility": "GitLab preparation requires verified issue link; GitHub legacy exception",
+      "responsibility": "GitLab preparation requires verified issue link; GitHub pre-link window exception",
       "target": "internal/domain/issueopspreparation",
       "target_symbol": "func PrepareIssueIdentity",
       "task": "T02",
@@ -21617,7 +21613,7 @@
       "id": "T20-cleanup-orca-error",
       "source_path": "cmd/issueops/issueopsapp/cleanup_runtime_wiring.go",
       "source_symbol": "func normalizeOrcaRemoveWorktreeErr",
-      "responsibility": "normalize typed missing-resource and legacy CLI prose for idempotent cleanup",
+      "responsibility": "normalize typed missing-resource and Orca CLI prose fallback for idempotent cleanup",
       "target": "internal/adapter/orca",
       "target_symbol": "func NormalizeRemoveWorktreeError",
       "task": "T20",

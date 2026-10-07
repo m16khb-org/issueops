@@ -17,8 +17,8 @@ func TestCompareSnapshotsSeparatesDurationContracts(t *testing.T) {
 		compareDurations bool
 	}{
 		{"matching", 7, 7, "same", true},
-		{"legacy to current", 6, 7, "same", false},
-		{"current to legacy", 7, 6, "same", false},
+		{"older to current", 6, 7, "same", false},
+		{"current to older", 7, 6, "same", false},
 		{"different hash", 7, 7, "different", false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

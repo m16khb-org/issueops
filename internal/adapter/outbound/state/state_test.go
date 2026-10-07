@@ -24,7 +24,7 @@ func TestStateReadUsesGenericInvalidStateAndPreservesAbsent(t *testing.T) {
 		"future-schema":  `{"schema_version":2,"key":"future-schema","content":"x","bytes":1}`,
 		"key-mismatch":   `{"schema_version":1,"key":"other","content":"x","bytes":1}`,
 		"byte-mismatch":  `{"schema_version":1,"key":"byte-mismatch","content":"x","bytes":2}`,
-		"legacy-field":   `{"schema_version":1,"key":"legacy-field","content":"x","updated_at":"2000-01-01T00:00:00Z","bytes":1,"legacy_field":"x"}`,
+		"unknown-field":  `{"schema_version":1,"key":"unknown-field","content":"x","updated_at":"2000-01-01T00:00:00Z","bytes":1,"unknown_field":"x"}`,
 		"trailing-json":  `{"schema_version":1,"key":"trailing-json","content":"x","updated_at":"2000-01-01T00:00:00Z","bytes":1}{}`,
 	} {
 		t.Run(name, func(t *testing.T) {

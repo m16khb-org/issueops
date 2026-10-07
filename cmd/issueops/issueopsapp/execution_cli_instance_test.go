@@ -27,7 +27,7 @@ func TestExecutionCLIInstancesReadTheirCapturedGeneration(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		record.Execution = &model.Execution{Mode: model.ExecutionModeDirect, Workspace: model.Workspace{SourceRoot: repo, Root: t.TempDir(), Branch: "7-fixture", BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "2026-08-01T00:00:00Z"}, Lease: model.WriteLease{Generation: generation, Status: model.LeaseStatusReleased}, Completion: &model.ExecutionCompletion{Generation: generation, FinalHead: strings.Repeat("a", 40), VerificationReportPath: "verification.json", Verification: []string{"fixture"}, RemoteArtifactURL: "https://github.com/acme/repo/pull/7", CompletedAt: "2026-08-01T00:00:00Z"}}
+		record.Execution = &model.Execution{Mode: model.ExecutionModeDirect, Workspace: model.Workspace{SourceRoot: repo, Root: t.TempDir(), Branch: "7-fixture", BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "2026-08-01T00:00:00Z"}, Lease: model.WriteLease{Generation: generation, Status: model.LeaseStatusReleased}, Completion: &model.ExecutionCompletion{Generation: generation, FinalHead: strings.Repeat("a", 40), VerificationReportPath: "verification.json", Verification: []string{"fixture"}, RemoteArtifactURL: "https://github.com/acme/repo/pull/7", CompletedAt: "2026-08-01T00:00:00Z"}, Selection: selectionFixture(model.ExecutionModeDirect)}
 		if _, err = (core.CycleRecordStore{StateRoot: root}).Save(context.Background(), record); err != nil {
 			t.Fatal(err)
 		}

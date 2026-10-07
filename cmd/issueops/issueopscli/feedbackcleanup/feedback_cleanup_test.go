@@ -485,7 +485,8 @@ func cleanupStatusRecord(t *testing.T, done, withArtifact bool) issueopscontract
 			SourceRoot: record.Repo, Root: worktree, Branch: record.Branch,
 			BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "2026-08-04T00:00:00Z",
 		},
-		Lease: issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusReleased},
+		Lease:     issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusReleased},
+		Selection: selectionFixture(issueopscontract.ExecutionModeDirect),
 	}
 	written, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record)
 	if err != nil {

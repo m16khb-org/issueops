@@ -276,11 +276,6 @@
   },
   {
     "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func normalizedPurpose",
-    "role": "shape"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
     "symbol": "func parseMarker",
     "role": "codec"
   },

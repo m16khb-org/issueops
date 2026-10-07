@@ -7,7 +7,7 @@ import (
 	leasedomain "issueops/internal/domain/issueopslease"
 )
 
-func TestReleaseKeepsLegacyNativeActorValidationErrorsPublic(t *testing.T) {
+func TestReleaseKeepsNativeActorValidationErrorsPublic(t *testing.T) {
 	service := NewReleaseService(nil, nil, leaseVerifier(func(_ context.Context, receipt leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
 		return "live", receipt, nil
 	}), nil)

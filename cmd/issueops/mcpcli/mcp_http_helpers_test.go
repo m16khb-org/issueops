@@ -26,9 +26,12 @@ import (
 	authoritydomain "issueops/internal/domain/authority"
 )
 
+// revisionInitialize는 initialize 핸드셰이크를 쓰는 2025 revision이다. ADR
+// 2026-10-02 실측에서 Omo가 2025-11-25, Codex가 2025-06-18로 연결했으므로
+// 현행 host 경로다.
 const (
-	revisionLegacy = "2025-11-25"
-	revisionNew    = "2026-07-28"
+	revisionInitialize = "2025-11-25"
+	revisionNew        = "2026-07-28"
 )
 
 type syncBuffer struct {

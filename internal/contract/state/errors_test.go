@@ -12,7 +12,7 @@ func TestInvalidExistingStateUsesOnePublicIdentity(t *testing.T) {
 		state.Invalid("missing_schema"),
 		state.Invalid("future_schema"),
 		state.Invalid("malformed_json"),
-		state.Invalid("legacy_field"),
+		state.Invalid("unknown_field"),
 		state.Invalid("key_mismatch"),
 		state.Invalid("byte_mismatch"),
 	}

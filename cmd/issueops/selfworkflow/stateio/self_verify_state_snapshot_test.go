@@ -93,40 +93,37 @@ func TestReadSelfAugmentStateSnapshotRejectsBadSchemaAndRetiredKinds(t *testing.
 		t.Fatalf("expected retired kind rejection, got %v", err)
 	}
 }
-func TestReadSelfAugmentStateSnapshotNormalizesLegacyFailureCause(t *testing.T) {
+
+// TestReadSelfAugmentStateSnapshotRejectsMissingFailureCause는 failure cause
+// 필드가 없는 snapshot을 읽기 경로가 보정하지 않고 거부하는지 확인한다.
+func TestReadSelfAugmentStateSnapshotRejectsMissingFailureCause(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
 
 	for _, tc := range []struct {
 		name    string
 		content string
-		cause   failurecause.Cause
 	}{
 		{
 			name:    "success",
 			content: `{"schema_version":1,"kind":"self_verification_summary","ok":true,"summary":{"total_steps":1,"passed_steps":1,"failed_steps":0}}`,
-			cause:   failurecause.None,
 		},
 		{
 			name:    "failure",
 			content: `{"schema_version":1,"kind":"self_verification_summary","ok":false,"summary":{"total_steps":1,"failed_steps":1}}`,
-			cause:   failurecause.Unknown,
+		},
+		{
+			name:    "mismatched",
+			content: `{"schema_version":1,"kind":"self_verification_summary","ok":false,"summary":{"total_steps":1,"failed_steps":1,"failure_cause":"none","failure_cause_reason":"no_failed_steps","failure_cause_evidence":[]}}`,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if _, err := statestore.NewService().Write(context.Background(), "legacy-"+tc.name, tc.content); err != nil {
-				t.Fatalf("write legacy state: %v", err)
+			if _, err := statestore.NewService().Write(context.Background(), "no-cause-"+tc.name, tc.content); err != nil {
+				t.Fatalf("write state: %v", err)
 			}
 
-			snapshot, err := ReadSelfAugmentStateSnapshot("legacy-" + tc.name)
-			if err != nil {
-				t.Fatalf("read legacy state: %v", err)
-			}
-			if snapshot.Summary.FailureCause != tc.cause {
-				t.Fatalf("failure cause = %q, want %q", snapshot.Summary.FailureCause, tc.cause)
-			}
-			if snapshot.Summary.FailureCauseEvidence == nil || len(snapshot.Summary.FailureCauseEvidence) != 0 {
-				t.Fatalf("failure cause evidence = %#v, want empty slice", snapshot.Summary.FailureCauseEvidence)
+			if _, err := ReadSelfAugmentStateSnapshot("no-cause-" + tc.name); err == nil || !strings.Contains(err.Error(), "has failure cause") {
+				t.Fatalf("snapshot without a matching failure cause must be rejected, got %v", err)
 			}
 		})
 	}

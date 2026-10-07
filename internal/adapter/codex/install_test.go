@@ -109,7 +109,7 @@ func TestMergeHookConfigPreservesCoResidentHookPositions(t *testing.T) {
 	}
 	command := groups[0].(map[string]any)["hooks"].([]any)[0].(map[string]any)["command"].(string)
 	if command != "/bin/sh /Users/example/.orca/agent-hooks/codex-hook.sh" {
-		t.Fatalf("legacy issueops group must be removed while third-party group is preserved: %q", command)
+		t.Fatalf("old issueops group must be removed while third-party group is preserved: %q", command)
 	}
 	for _, event := range []string{"SessionStart"} {
 		if len(merged["hooks"].(map[string]any)[event].([]any)) != 1 {

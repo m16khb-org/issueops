@@ -182,6 +182,7 @@ func claimableRecord(t *testing.T, actor leasecontract.Actor, token string) leas
 			Mode:      "direct",
 			Workspace: leasecontract.Workspace{SourceRoot: "/source", Root: root, Branch: "claim", BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "2026-07-30T00:00:00Z"},
 			Lease:     leasecontract.Lease{Generation: 3, Status: "claimable", ClaimTokenSHA256: claimTokenSHA256(token)},
+			Selection: leaseSelectionFixture("direct"),
 		},
 	}
 }

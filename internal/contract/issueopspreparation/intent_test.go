@@ -117,6 +117,7 @@ func TestIntentCodecRejectsIdentityAndAuthorityDrift(t *testing.T) {
 		{name: "resume authority", operationID: resumeOperationID, raw: strings.Replace(resumeIntentJSON, `,"resume_lease":{"generation":2,"status":"claimable","claim_token_sha256":"`+digestB+`"}`, "", 1), want: "Orca resume intent payload is invalid"},
 		{name: "marker issue", operationID: prepareOperationID, raw: strings.ReplaceAll(prepareIntentJSON, "provider=github issue=199", "provider=github issue=200"), want: "intent_identity_mismatch"},
 		{name: "attempt bound", operationID: prepareOperationID, raw: strings.Replace(prepareIntentJSON, `"invocation_attempts":0`, `"invocation_attempts":3`, 1), want: "Orca external intent payload is invalid"},
+		{name: "missing purpose", operationID: prepareOperationID, raw: strings.Replace(prepareIntentJSON, `"purpose":"prepare",`, "", 1), want: "unsupported Orca external intent purpose"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

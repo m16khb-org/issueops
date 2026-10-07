@@ -8,7 +8,7 @@ import (
 
 func TestResumeReceiptJSONKeepsOnlySealedArtifactReferences(t *testing.T) {
 	want := ResumeReceipt{
-		Execution: Execution{Mode: "orca"},
+		Execution: Execution{Mode: "orca", Selection: leaseSelectionFixture("orca")},
 		Artifacts: ResumeArtifacts{
 			ClaimTokenPath:      "/worktree/lease-1.token",
 			IssueBodySHA256:     "issue-sha",

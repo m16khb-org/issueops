@@ -89,9 +89,6 @@ func TestBuildVerifyWorkIncludesEvidenceMatrixAndSuggestions(t *testing.T) {
 	assertEvidenceItem(t, result.EvidenceMatrix, "guard_check", "passed")
 	assertEvidenceItem(t, result.EvidenceMatrix, "read_only_command", "passed")
 
-	if len(result.Evidence) == 0 {
-		t.Fatalf("expected legacy evidence strings to remain populated")
-	}
 	assertSuggestedCommand(t, result.SuggestedCommands, []string{"go", "test", "./..."})
 	assertSuggestedCommand(t, result.SuggestedCommands, []string{"go", "build", "./..."})
 	assertSuggestedCommand(t, result.SuggestedCommands, []string{"go", "vet", "./..."})

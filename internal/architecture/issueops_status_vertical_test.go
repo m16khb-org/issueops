@@ -25,7 +25,7 @@ func TestIssueOpsStatusVerticalOwnsStatusProjection(t *testing.T) {
 		}
 	}
 
-	// Check the entire adapter package so a removed legacy file cannot hide a
+	// Check the entire adapter package so a removed retired file cannot hide a
 	// projection copied into a sibling file.
 	paths, err := filepath.Glob(filepath.Join(findRepoRoot(t), "internal", "adapter", "issueops", "*.go"))
 	if err != nil || len(paths) == 0 {
@@ -46,7 +46,7 @@ func TestIssueOpsStatusVerticalOwnsStatusProjection(t *testing.T) {
 			}
 			switch function.Name.Name {
 			case "IssueOpsStatus", "DeriveIssueOpsPhaseLedger", "issueOpsPhaseArtifactKeys":
-				t.Errorf("legacy status projection symbol remains in %s: %s", path, function.Name.Name)
+				t.Errorf("retired status projection symbol remains in %s: %s", path, function.Name.Name)
 			}
 		}
 	}
@@ -57,7 +57,7 @@ func TestIssueOpsStatusVerticalOwnsStatusProjection(t *testing.T) {
 		}
 		if edge.imported == "internal/adapter/issueops" ||
 			strings.HasPrefix(edge.imported, "internal/adapter/issueops/") {
-			t.Errorf("issueops status vertical imports legacy adapter: %s", formatEdge(edge))
+			t.Errorf("issueops status vertical imports the retired adapter package: %s", formatEdge(edge))
 		}
 	}
 }

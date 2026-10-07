@@ -18,7 +18,7 @@ var orphanPackageAllowlist = map[string]string{
 //
 // 배선 파일이 지워지면서 구현만 남으면 그 패키지는 유령이 된다. 패키지의
 // 테스트는 계속 초록이라 CI는 가드가 살아 있다고 보고하지만 런타임에서는
-// 아무것도 강제되지 않는다. 2026-08-27 legacy hook 제거(2e810e13)가
+// 아무것도 강제되지 않는다. 2026-08-27 retired hook 제거(2e810e13)가
 // internal/adapter/remoteartifact를 정확히 그 상태로 만들었고, PR/MR target
 // 브랜치 가드가 조용히 사라진 뒤 잘못된 타겟의 MR이 실제로 열렸다.
 //

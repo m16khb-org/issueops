@@ -157,7 +157,7 @@ func TestPolicyOverridesLoadPerEvaluation(t *testing.T) {
 	}
 }
 
-func TestLoadPolicyOverridesNoFileIsBackwardCompatible(t *testing.T) {
+func TestLoadPolicyOverridesNoFileUsesDefaults(t *testing.T) {
 	repoRoot := t.TempDir()
 	result := evaluateCommandPolicy(policycontract.CommandPolicyRequest{
 		WorkspaceRoot: repoRoot,

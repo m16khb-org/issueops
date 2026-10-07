@@ -37,7 +37,7 @@ func compareSelfAugmentSummaries(baselineKey, candidateKey string, maxElapsedReg
 }
 
 func compareSelfAugmentSummariesFromSnapshots(baselineKey, candidateKey string, maxElapsedRegressionPct float64, baseline, candidate augmentcontract.SelfAugmentStateSnapshot) augmentcontract.SelfAugmentCompareResult {
-	return app.CompareSnapshots(baselineKey, candidateKey, maxElapsedRegressionPct, baseline, candidate, statestore.StateDir())
+	return domain.CompareSnapshots(baselineKey, candidateKey, maxElapsedRegressionPct, baseline, candidate, statestore.StateDir())
 }
 
 func newSelfAugmentCompareResult(baselineKey, candidateKey string, maxElapsedRegressionPct float64) augmentcontract.SelfAugmentCompareResult {

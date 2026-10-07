@@ -101,7 +101,7 @@ func (p *revisionStdio) initialize(revision string) mcp.InitializeResult {
 	return result
 }
 
-func TestMCPRevisionStdioLegacyNegotiation(t *testing.T) {
+func TestMCPRevisionStdioInitializeNegotiation(t *testing.T) {
 	for _, tc := range []struct{ requested, negotiated string }{
 		{"2025-06-18", "2025-06-18"},
 		{"2025-11-25", "2025-11-25"},
@@ -111,7 +111,7 @@ func TestMCPRevisionStdioLegacyNegotiation(t *testing.T) {
 		t.Run(tc.requested, func(t *testing.T) {
 			// Given: the production split stdio entry point.
 			peer := startRevisionStdio(t, testTransportServices())
-			// When: a legacy client negotiates a revision.
+			// When: an initialize-based client negotiates a revision.
 			result := peer.initialize(tc.requested)
 			// Then: initialize never negotiates into the sessionless protocol.
 			if result.ProtocolVersion != tc.negotiated {
@@ -135,7 +135,7 @@ func TestMCPRevisionStdioRequestMetadata(t *testing.T) {
 		{"unsupported_revision", "tools/list", `{"_meta":{"io.modelcontextprotocol/protocolVersion":"2099-01-01","io.modelcontextprotocol/clientCapabilities":{}}}`, -32022},
 		{"missing_capabilities", "tools/list", `{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28"}}`, -32602},
 		{"invalid_client_info", "tools/list", `{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{},"io.modelcontextprotocol/clientInfo":7}}`, -32602},
-		{"legacy_discover", "server/discover", `{}`, -32601},
+		{"discover_without_metadata", "server/discover", `{}`, -32601},
 		{"removed_ping", "ping", `{` + revisionMeta + `}`, -32601},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

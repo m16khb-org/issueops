@@ -10,18 +10,20 @@ import (
 	"issueops/internal/adapter/outbound/sqlstore"
 )
 
-func TestReadLoopRefusesFutureSchema(t *testing.T) {
+func TestReadLoopRefusesNonCurrentSchema(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	loop := startLoopForTest(t, "future-schema", 2)
+	loop := startLoopForTest(t, "non-current-schema", 2)
 	db, err := sqlstore.Open(testLoopStateRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.Put(loopBucket, loop.ID, []byte(`{"ok":true,"schema_version":99,"id":"`+loop.ID+`"}`+"\n")); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := ReadLoop(loop.ID); err == nil || !strings.Contains(err.Error(), "unsupported loop schema_version") {
-		t.Fatalf("ReadLoop err=%v, want future schema refusal", err)
+	for _, schema := range []string{`"schema_version":99,`, `"schema_version":0,`, ``} {
+		if err := db.Put(loopBucket, loop.ID, []byte(`{"ok":true,`+schema+`"id":"`+loop.ID+`"}`+"\n")); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := ReadLoop(loop.ID); err == nil || !strings.Contains(err.Error(), "unsupported loop schema_version") {
+			t.Fatalf("ReadLoop(%s) err=%v, want schema refusal", schema, err)
+		}
 	}
 }
 

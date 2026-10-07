@@ -21,8 +21,8 @@ func RunVerifyWork(service verifyworkapp.Service, args []string) error {
 		}
 	} else {
 		fmt.Printf("verify-work ok=%v repo=%s\n", result.OK, result.Repo)
-		for _, evidence := range result.Evidence {
-			fmt.Printf("- %s\n", evidence)
+		for _, item := range result.EvidenceMatrix {
+			fmt.Printf("- %s: %s (%s)\n", item.Name, item.Status, item.Summary)
 		}
 		for _, warning := range result.Warnings {
 			fmt.Printf("warning: %s\n", warning)

@@ -124,8 +124,8 @@ func TestRunVerifyArtifactAndRemoteCreateDryRuns(t *testing.T) {
 			t.Fatalf("create-issue response missing %q: %s", key, createPayload)
 		}
 	}
-	if _, legacy := createShape["url"]; legacy {
-		t.Fatalf("create-issue response exposes legacy url key: %s", createPayload)
+	if _, retired := createShape["url"]; retired {
+		t.Fatalf("create-issue response exposes retired url key: %s", createPayload)
 	}
 }
 
@@ -683,6 +683,7 @@ func activateRemoteIssueOpsRecordForCurrentProcess(t *testing.T, record *issueop
 			Generation: 1, Status: issueopscontract.LeaseStatusActive, ClaimedAt: "2026-08-02T00:00:00Z",
 			Holder: &issueopscontract.NativeActor{Host: "codex", SessionID: "session-1", SessionProcess: &process},
 		},
+		Selection: selectionFixture(issueopscontract.ExecutionModeDirect),
 	}
 	if _, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), *record); err != nil {
 		t.Fatal(err)

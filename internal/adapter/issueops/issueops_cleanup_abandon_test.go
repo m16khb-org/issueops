@@ -121,7 +121,8 @@ func abandonExecution(repo, root string, lease issueops.WriteLease) *issueops.Ex
 			SourceRoot: repo, Root: root, Branch: "106-abandon",
 			BaseHead: "deadbeef", Driver: "orca", LinkedAt: "2026-07-24T00:00:00Z",
 		},
-		Lease: lease,
+		Lease:     lease,
+		Selection: selectionFixture(issueops.ExecutionModeOrca),
 	}
 }
 
@@ -148,7 +149,7 @@ func abandonOrcaPendingRecord(t *testing.T, kind string, writeRow bool) (string,
 	}
 	if writeRow {
 		writeAbandonIntentRow(t, stateRoot, operationID, preparationcontract.Intent{
-			SchemaVersion: issueops.IssueOpsSchemaVersion, OperationID: operationID, LifecycleID: record.ID,
+			SchemaVersion: issueops.IssueOpsSchemaVersion, Purpose: preparationcontract.PurposePrepare, OperationID: operationID, LifecycleID: record.ID,
 			Generation: 1, Stage: intentContractStage(port.ExecutionOrcaIntentWorktree), Marker: marker,
 			StartedAt: "2026-07-24T00:00:00Z", InvocationState: preparationcontract.InvocationNotInvoked,
 			Workspace: intentContractWorkspaceRequest(port.ExecutionWorkspaceRequest{

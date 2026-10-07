@@ -137,10 +137,17 @@ func abandonSettledOrcaRecord(t *testing.T, taskStatus string) (string, issueops
 			RuntimeID: "runtime-136", RepoID: "repo-136", WorktreeID: "worktree-136",
 			OwnerHost: "claude", OwnerModel: "claude-opus-5-5", TerminalPTYID: "pty-136",
 			TaskID: "task-136", DispatchID: "dispatch-136",
+			RunID:                   "run_issueops_1",
+			LeaseGeneration:         1,
+			ArtifactIdentityVersion: 1,
+			IssueBodySHA256:         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			ContextPacketSHA256:     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+			OwnerPromptSHA256:       "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
 		},
 		Lease: issueops.WriteLease{
 			Generation: 1, Status: issueops.LeaseStatusReleased, ReleasedAt: "2026-07-25T00:00:01Z",
 		},
+		Selection: selectionFixture(issueops.ExecutionModeOrca),
 	}
 	written, err := writeIssueOps(context.Background(), stateRoot, record)
 	if err != nil {

@@ -26,24 +26,24 @@ func TestPythonContractDistinguishesHistoricalEvidenceWithoutChangingSnapshotSch
 	if incomplete.TerminationEligible || len(incomplete.CoverageGaps) != 1 || !strings.Contains(incomplete.CoverageGaps[0], "Python script tests") {
 		t.Fatal(incomplete)
 	}
-	legacyContract := domain.ContractValue()
-	legacyContract.Version = 4
-	legacyContract.Hash = ""
-	bytes, err := json.Marshal(legacyContract)
+	olderContract := domain.ContractValue()
+	olderContract.Version = 4
+	olderContract.Hash = ""
+	bytes, err := json.Marshal(olderContract)
 	if err != nil {
 		t.Fatal(err)
 	}
 	hash := sha256.Sum256(bytes)
-	legacyContract.Hash = hex.EncodeToString(hash[:])
+	olderContract.Hash = hex.EncodeToString(hash[:])
 	current := domain.ContractValue()
-	if current.Version != 8 || current.Hash == legacyContract.Hash || !reflect.DeepEqual(current.RequiredFields, legacyContract.RequiredFields) {
-		t.Fatal(current, legacyContract)
+	if current.Version != 8 || current.Hash == olderContract.Hash || !reflect.DeepEqual(current.RequiredFields, olderContract.RequiredFields) {
+		t.Fatal(current, olderContract)
 	}
 	old := augment.SelfAugmentStateSnapshot{SchemaVersion: 1, Kind: "self_verification_summary", OK: true, Summary: incomplete}
-	old.Summary.Contract = legacyContract
+	old.Summary.Contract = olderContract
 	old.Summary.TerminationEligible = true
 	if err := history.ValidateSummarySnapshot("old", old); err != nil {
-		t.Fatalf("historical snapshots must remain readable: %v", err)
+		t.Fatalf("older-contract snapshots must stay comparable: %v", err)
 	}
 	steps = append(steps, contract.StepResult{Label: "Python script tests", OK: true})
 	newInput := augment.SelfAugmentResult{OK: true, Iterations: 1, Runs: []augment.SelfAugmentIteration{{Iteration: 1, Steps: steps}}}
@@ -56,5 +56,5 @@ func TestPythonContractDistinguishesHistoricalEvidenceWithoutChangingSnapshotSch
 	if !reverse.Regressed || !reflect.DeepEqual(reverse.MissingStepLabels, []string{"Python script tests"}) {
 		t.Fatal(reverse)
 	}
-	t.Logf("v4 hash=%s; v5 hash=%s; added=%v; reverse regression=%v", legacyContract.Hash, current.Hash, comparison.AddedStepLabels, reverse.Regressions)
+	t.Logf("v4 hash=%s; v5 hash=%s; added=%v; reverse regression=%v", olderContract.Hash, current.Hash, comparison.AddedStepLabels, reverse.Regressions)
 }

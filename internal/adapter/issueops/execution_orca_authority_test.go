@@ -24,10 +24,11 @@ func TestOrcaIntentExpectedRecordDelegatesAuthorityAndKeepsIdentity(t *testing.T
 			Pending: &issueops.ExternalIntent{
 				OperationID: "op-1", Marker: "marker", Kind: "worktree_create",
 			},
+			Selection: selectionFixture(issueops.ExecutionModeOrca),
 		},
 	}
 	intent := preparationcontract.Intent{
-		LifecycleID: "io-1", OperationID: "op-1", Generation: 1,
+		Purpose: preparationcontract.PurposePrepare, LifecycleID: "io-1", OperationID: "op-1", Generation: 1,
 		Stage: preparationcontract.IntentStageWorktree, Marker: "marker",
 		Workspace: preparationcontract.WorkspaceRequest{
 			SourceRoot: "/repo", Root: "/repo.wt", Branch: "work", BaseHead: "base",

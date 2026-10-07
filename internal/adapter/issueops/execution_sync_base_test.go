@@ -669,7 +669,6 @@ func TestExecutionSyncBaseReleasedCompletionAuthorityRejectsInvalidState(t *test
 	}{
 		{name: "missing completion generation", request: func(req *issueops.ExecutionSyncBaseRequest) { req.CompletionGeneration = 0 }, missing: "completion_generation_present"},
 		{name: "wrong completion generation", request: func(req *issueops.ExecutionSyncBaseRequest) { req.CompletionGeneration = 2 }, missing: "completion_generation_current"},
-		{name: "missing stamped completion generation", mutate: func(record *issueops.IssueOpsRecord) { record.Execution.Completion.Generation = 0 }, missing: "current_completion_generation_present"},
 		{name: "history only", mutate: func(record *issueops.IssueOpsRecord) {
 			record.Execution.Lease.Generation = 2
 			record.Execution.CompletionHistory = []issueops.ExecutionCompletionHistory{{

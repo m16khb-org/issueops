@@ -14,7 +14,7 @@ func BenchmarkStoreInventory(b *testing.B) {
 		b.Run(fmt.Sprintf("records_%d", count), func(b *testing.B) {
 			stateRoot := benchmarkInventoryStateRoot(b, count)
 			store := Store{}
-			b.Run("legacy_list_plus_reads", func(b *testing.B) {
+			b.Run("list_plus_reads", func(b *testing.B) {
 				b.ReportAllocs()
 				for b.Loop() {
 					ids, err := store.ListIDs(context.Background(), stateRoot)

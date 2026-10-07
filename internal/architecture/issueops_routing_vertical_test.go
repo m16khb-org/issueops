@@ -24,17 +24,17 @@ func TestIssueOpsRoutingVerticalOwnsLiveRouting(t *testing.T) {
 		}
 	}
 
-	legacyPath := filepath.Join(
+	retiredPath := filepath.Join(
 		findRepoRoot(t),
 		"internal",
 		"adapter",
 		"issueops",
 		"issueops_routing.go",
 	)
-	if _, err := os.Stat(legacyPath); err == nil {
-		t.Errorf("legacy routing implementation must be deleted: %s", legacyPath)
+	if _, err := os.Stat(retiredPath); err == nil {
+		t.Errorf("retired routing implementation must be deleted: %s", retiredPath)
 	} else if !errors.Is(err, os.ErrNotExist) {
-		t.Fatalf("inspect legacy routing implementation: %v", err)
+		t.Fatalf("inspect retired routing implementation: %v", err)
 	}
 
 	for _, edge := range loadProductionEdges(t) {
@@ -43,7 +43,7 @@ func TestIssueOpsRoutingVerticalOwnsLiveRouting(t *testing.T) {
 		}
 		if edge.imported == "internal/adapter/issueops" ||
 			strings.HasPrefix(edge.imported, "internal/adapter/issueops/") {
-			t.Errorf("issueops routing vertical imports legacy adapter: %s", formatEdge(edge))
+			t.Errorf("issueops routing vertical imports the retired adapter package: %s", formatEdge(edge))
 		}
 	}
 }

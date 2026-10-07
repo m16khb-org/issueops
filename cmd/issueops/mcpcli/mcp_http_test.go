@@ -41,7 +41,7 @@ func TestHTTPGuardEnforcesBearerHostOriginPathAndBodyLimit(t *testing.T) {
 			if tc.path != "" {
 				target.url = "http://" + server.address + tc.path
 			}
-			response, err := target.post(t.Context(), revisionLegacy, tc.body, tc.header)
+			response, err := target.post(t.Context(), revisionInitialize, tc.body, tc.header)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -99,7 +99,7 @@ func TestHTTPWorkspaceToolsRequireCapabilityAndRejectActorFields(t *testing.T) {
 		{name: "record conflict", tool: "issueops_execution", args: map[string]any{"action": "status", "id": "io-a", "authority_file": "/grants/a", "workspace_root": repoB}, code: "authority_invalid"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			payload, isError, rpcErr, err := server.callTool(t.Context(), revisionLegacy, tc.tool, tc.args, nil)
+			payload, isError, rpcErr, err := server.callTool(t.Context(), revisionInitialize, tc.tool, tc.args, nil)
 			if err != nil || rpcErr != nil {
 				t.Fatalf("err=%v rpc=%v", err, rpcErr)
 			}
@@ -111,7 +111,7 @@ func TestHTTPWorkspaceToolsRequireCapabilityAndRejectActorFields(t *testing.T) {
 	if executed.Load() != 0 {
 		t.Fatalf("rejected execution requests reached the handler %d times", executed.Load())
 	}
-	payload, isError, rpcErr, err := server.callTool(t.Context(), revisionLegacy, "contract_schema", map[string]any{}, nil)
+	payload, isError, rpcErr, err := server.callTool(t.Context(), revisionInitialize, "contract_schema", map[string]any{}, nil)
 	if err != nil || rpcErr != nil || isError || payload["ok"] != true {
 		t.Fatalf("server-scoped tool payload=%v isError=%v rpc=%v err=%v", payload, isError, rpcErr, err)
 	}
@@ -250,7 +250,7 @@ func TestHTTPInvalidTraceparentWarnsWithoutEchoingIt(t *testing.T) {
 	deps.BindTrace = func(ctx context.Context, raw string) (context.Context, bool) { return ctx, raw == "" }
 	server := startHTTPTestServer(t, deps, nil)
 	const private = "private-trace-header-value"
-	if _, _, _, err := server.callTool(t.Context(), revisionLegacy, "contract_schema", map[string]any{}, map[string]string{"traceparent": private}); err != nil {
+	if _, _, _, err := server.callTool(t.Context(), revisionInitialize, "contract_schema", map[string]any{}, map[string]string{"traceparent": private}); err != nil {
 		t.Fatal(err)
 	}
 	log := server.access.String()
@@ -263,7 +263,7 @@ func TestHTTPDisconnectCancellationFollowsNegotiatedRevision(t *testing.T) {
 	for _, tc := range []struct {
 		revision  string
 		cancelled bool
-	}{{revisionNew, true}, {revisionLegacy, false}} {
+	}{{revisionNew, true}, {revisionInitialize, false}} {
 		t.Run(tc.revision, func(t *testing.T) {
 			repo := canonicalTempDir(t)
 			deps := testTransportServices()

@@ -188,7 +188,7 @@ func TestHasThinCodexContextHooksPermitsThirdPartyLifecycleEvents(t *testing.T) 
 	}
 }
 
-func TestHasThinCodexContextHooksRejectsLegacyManagedEvent(t *testing.T) {
+func TestHasThinCodexContextHooksRejectsRetiredManagedEvent(t *testing.T) {
 	config := `{
 		"hooks": {
 			"SessionStart": [{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook session-start --host codex", "timeout": 5}]}],
@@ -196,7 +196,7 @@ func TestHasThinCodexContextHooksRejectsLegacyManagedEvent(t *testing.T) {
 		}
 	}`
 	if (nativeIntegrationValidationDeps{Validator: testNativeValidator()}).hasThinCodexContextHooks(config, "/source/bin/issueops") {
-		t.Fatal("legacy issueops enforcement event must invalidate the managed context-hook surface")
+		t.Fatal("retired issueops enforcement event must invalidate the managed context-hook surface")
 	}
 }
 
@@ -207,7 +207,7 @@ func TestHasThinCodexContextHooksUsesCanonicalGroupsForManagedCommands(t *testin
 				"SessionStart": [{"hooks": [{"type": "command", "command": "'/source with spaces/bin/issueops' hook session-start --host codex", "timeout": 5}]}]
 			}
 		}`,
-		"legacy no-host event": `{
+		"retired no-host event": `{
 			"hooks": {
 				"SessionStart": [{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook session-start --host codex", "timeout": 5}]}],
 				"UserPromptSubmit": [{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook user-prompt", "timeout": 5}]}]
@@ -225,7 +225,7 @@ func TestHasThinCodexContextHooksUsesCanonicalGroupsForManagedCommands(t *testin
 			"hooks": {
 				"SessionStart": [
 					{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook session-start --host codex", "timeout": 5}]},
-					{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook session-start --host codex --legacy", "timeout": 5}]}
+					{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook session-start --host codex --retired", "timeout": 5}]}
 				]
 			}
 		}`,

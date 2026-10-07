@@ -131,8 +131,9 @@ func TestReseedInventoryFingerprintIncludesRawOwnerEvidence(t *testing.T) {
 			Workspace: leasecontract.Workspace{
 				SourceRoot: root, Root: root, Branch: "holderless-reseed", BaseHead: head, Driver: "orca", LinkedAt: "2026-08-03T00:00:00Z",
 			},
-			Lease: leasecontract.Lease{Generation: 3, Status: "claimable", ClaimTokenSHA256: strings.Repeat("a", 64)},
-			Orca:  &leasecontract.OrcaBinding{RuntimeID: "runtime-old", WorktreeID: "worktree", RunID: "run", TaskID: "task", DispatchID: "dispatch", TerminalPTYID: "pty-old"},
+			Lease:     leasecontract.Lease{Generation: 3, Status: "claimable", ClaimTokenSHA256: strings.Repeat("a", 64)},
+			Orca:      &leasecontract.OrcaBinding{RuntimeID: "runtime-old", WorktreeID: "worktree", RunID: "run", TaskID: "task", DispatchID: "dispatch", TerminalPTYID: "pty-old", LeaseGeneration: 1, ArtifactIdentityVersion: 1, IssueBodySHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", ContextPacketSHA256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", OwnerPromptSHA256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"},
+			Selection: leaseSelectionFixture("orca"),
 		},
 	}
 	owner := &reseedInventoryOwnerStub{inventory: port.ExecutionOrcaOwnerInventory{

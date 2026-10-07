@@ -55,7 +55,7 @@ func recordIssueOpsCLIDesignForTest(t *testing.T, id string) {
 			"--proposed-design", "Gate implementation on a reviewed design contract",
 			"--refactor-plan", "Keep IssueOps state and adapter changes scoped to the active cycle",
 			"--alternative", "documentation-only guidance",
-			"--risk", "legacy tests must create explicit design evidence",
+			"--risk", "existing tests must create explicit design evidence",
 			"--verification", "design review checked alternatives and risks",
 			"--verification", "go test ./cmd/issueops/issueopscli",
 			"--approved",
@@ -95,7 +95,7 @@ func recordIssueOpsCoreDesignForCLITest(t *testing.T, id string) {
 		ProposedDesign: "Gate implementation on a reviewed design contract",
 		RefactorPlan:   "Keep IssueOps state and adapter changes scoped to the active cycle",
 		Alternatives:   []string{"documentation-only guidance"},
-		Risks:          []string{"legacy tests must create explicit design evidence"},
+		Risks:          []string{"existing tests must create explicit design evidence"},
 		Verification:   []string{"design review checked alternatives and risks", "go test ./cmd/issueops/issueopscli"},
 		Approved:       true,
 	}); err != nil {
@@ -129,6 +129,7 @@ func seedIssueOpsCLIExecution(t *testing.T, record issueopscontract.IssueOpsReco
 				SessionProcess: &receipt,
 			},
 		},
+		Selection: selectionFixture(issueopscontract.ExecutionModeDirect),
 	}
 	written, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record)
 	if err != nil {

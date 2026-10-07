@@ -238,7 +238,7 @@ func TestWorkspaceAuthorityClassificationMatchesCatalogAuthorityFields(t *testin
 }
 
 func TestHTTPToolsListAndCallCarryStructuredOutput(t *testing.T) {
-	for _, revision := range []string{revisionLegacy, revisionNew} {
+	for _, revision := range []string{revisionInitialize, revisionNew} {
 		t.Run(revision, func(t *testing.T) {
 			server := startHTTPTestServer(t, withFakeAuthority(structuredToolDeps(nilSliceInspect), nil, nil), nil)
 			listed := httpResult(t, server, revision, "tools/list", map[string]any{}, "")

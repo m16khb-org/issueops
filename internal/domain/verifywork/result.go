@@ -22,7 +22,6 @@ type Observation struct {
 
 type Decision struct {
 	OK                bool
-	Evidence          []string
 	EvidenceMatrix    []verifyworkcontract.EvidenceItem
 	SuggestedCommands []verifyworkcontract.SuggestedCommand
 	Warnings          []string
@@ -30,27 +29,20 @@ type Decision struct {
 
 func Evaluate(facts Observation) Decision {
 	warnings := []string{}
-	evidence := []string{}
 	evidenceMatrix := []verifyworkcontract.EvidenceItem{}
 	if facts.GitFailed {
 		warnings = append(warnings, "git status: "+facts.GitError)
 	}
-	if facts.PreflightOK {
-		evidence = append(evidence, "git preflight completed")
-	} else {
+	if !facts.PreflightOK {
 		warnings = append(warnings, "git preflight reported issues")
 	}
 	evidenceMatrix = append(evidenceMatrix, verifyWorkEvidenceItem("git_preflight", facts.PreflightOK, "git repository preflight completed"))
-	if facts.GuardOK {
-		evidence = append(evidence, fmt.Sprintf("guard check passed (%s, %d files)", facts.GuardMode, facts.GuardFileCount))
-	} else {
+	if !facts.GuardOK {
 		warnings = append(warnings, "guard check has blocking findings")
 	}
 	evidenceMatrix = append(evidenceMatrix, verifyWorkEvidenceItem("guard_check", facts.GuardOK, fmt.Sprintf("guard check completed in %s mode for %d file(s)", facts.GuardMode, facts.GuardFileCount)))
 	if facts.CommandPresent {
-		if facts.CommandOK {
-			evidence = append(evidence, "read-only verification command passed")
-		} else {
+		if !facts.CommandOK {
 			warnings = append(warnings, "read-only verification command failed or was denied")
 		}
 		evidenceMatrix = append(evidenceMatrix, verifyWorkEvidenceItemWithCommand("read_only_command", facts.CommandOK, "read-only verification command completed", strings.Join(facts.Argv, " ")))
@@ -61,7 +53,7 @@ func Evaluate(facts Observation) Decision {
 	if facts.CommandPresent {
 		ok = ok && facts.CommandOK
 	}
-	return Decision{OK: ok, Evidence: evidence, EvidenceMatrix: evidenceMatrix, SuggestedCommands: suggestedCommands(facts.Signals), Warnings: warnings}
+	return Decision{OK: ok, EvidenceMatrix: evidenceMatrix, SuggestedCommands: suggestedCommands(facts.Signals), Warnings: warnings}
 }
 
 func verifyWorkEvidenceItem(name string, ok bool, summary string) verifyworkcontract.EvidenceItem {

@@ -87,7 +87,7 @@ func TestAbandonCLIObservesOnlyAfterOwnershipAndBindsLoadedArtifact(t *testing.T
 				}, PrintError: func(error) error { return nil },
 				Provider: func(string) (port.IssueProvider, error) { providers++; return provider, nil },
 				ObserveArtifactMerged: func(model.IssueOpsRemoteArtifactVerification) (bool, error) {
-					t.Error("legacy transport observation called")
+					t.Error("abandon must read the artifact through the provider, not the merged-state transport")
 					return false, nil
 				},
 				CleanupFinishGit: func(_ string, args ...string) (int, string) {

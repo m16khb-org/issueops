@@ -20,7 +20,7 @@ func TestHookTargetDriftMessages(t *testing.T) {
 			want: []string{"codex native hook target is stale: observed=/source.worktrees/completed/bin/issueops expected=/source/bin/issueops; reinstall hooks and restart the codex session"},
 		},
 		{
-			name:   "relative legacy target",
+			name:   "relative target",
 			config: hookTargetTestConfig("./bin/issueops hook pre-tool-use --host codex"),
 			want:   []string{"codex native hook target is stale: observed=./bin/issueops expected=/source/bin/issueops; reinstall hooks and restart the codex session"},
 		},

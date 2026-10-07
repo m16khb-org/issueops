@@ -23,7 +23,8 @@ func TestSwitchExecutionModeApplyReturnsNonCommandNextActionAfterExecutionRemova
 			BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "2026-08-04T00:00:00Z",
 			ArtifactDir: ".issueops/issues/1/artifact",
 		},
-		Lease: issueopscontract.WriteLease{Generation: 6, Status: issueopscontract.LeaseStatusReleased},
+		Lease:     issueopscontract.WriteLease{Generation: 6, Status: issueopscontract.LeaseStatusReleased},
+		Selection: selectionFixture(issueopscontract.ExecutionModeDirect),
 	}
 	record.WorktreePath = record.Execution.Workspace.Root
 	record.PlanPath = filepath.Join(record.WorktreePath, filepath.FromSlash(sealedArtifactDir(record)), "plan.md")

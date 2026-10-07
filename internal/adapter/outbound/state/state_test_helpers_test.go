@@ -24,7 +24,7 @@ func stateDoctorHasIssue(issues []statecontract.StateDoctorIssue, code string) b
 }
 
 // writeRawStateRow inserts raw record bytes directly into the state store,
-// bypassing NewService().Write normalization, to simulate corrupt or legacy rows.
+// bypassing NewService().Write normalization, to simulate corrupt or foreign rows.
 func writeRawStateRow(t interface {
 	Helper()
 	Fatal(args ...any)

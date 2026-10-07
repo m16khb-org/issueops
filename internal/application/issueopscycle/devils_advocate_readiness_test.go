@@ -20,7 +20,7 @@ func TestDevilsAdvocateReviewMissingObservesDigestOnlyWhenRequired(t *testing.T)
 	}
 	record.DevilsAdvocateReview = &model.IssueOpsDevilsAdvocateReview{RecordedAt: "now"}
 	if got := DevilsAdvocateReviewMissing(record, true, resolve); !reflect.DeepEqual(got, []string{"devils_advocate_review_stale"}) || called != 0 {
-		t.Fatalf("legacy digest=%v calls=%d", got, called)
+		t.Fatalf("undigested review=%v calls=%d", got, called)
 	}
 	record.DevilsAdvocateReview.ReviewedPlanDigest = "ABC"
 	if got := DevilsAdvocateReviewMissing(record, false, resolve); len(got) != 0 || called != 0 {

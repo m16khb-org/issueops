@@ -158,8 +158,9 @@ func TestSuccessfulDirectClaimAttachesOnlyToExactManualReceiverProcess(t *testin
 			}
 			claimedAt := time.Now().UTC().Format(time.RFC3339Nano)
 			result := issueopscontract.ExecutionResult{OK: true, ID: request.Workspace.LifecycleID, Execution: issueopscontract.Execution{
-				Mode:  issueopscontract.ExecutionModeDirect,
-				Lease: issueopscontract.WriteLease{Generation: test.claimGeneration, Status: issueopscontract.LeaseStatusActive, Holder: &actor, ClaimedAt: claimedAt},
+				Mode:      issueopscontract.ExecutionModeDirect,
+				Lease:     issueopscontract.WriteLease{Generation: test.claimGeneration, Status: issueopscontract.LeaseStatusActive, Holder: &actor, ClaimedAt: claimedAt},
+				Selection: selectionFixture(issueopscontract.ExecutionModeDirect),
 			}}
 			if err := newHandoffDeliveryService(stateRoot).ObserveClaim(result); err != nil {
 				t.Fatal(err)
@@ -214,8 +215,9 @@ func TestSuccessfulDirectClaimUsesCmuxOnlyAfterRawInputAndExactReceiverCorrelati
 			}
 			claimedAt := time.Now().UTC().Format(time.RFC3339Nano)
 			result := issueopscontract.ExecutionResult{OK: true, ID: observation.LifecycleID, Execution: issueopscontract.Execution{
-				Mode:  issueopscontract.ExecutionModeDirect,
-				Lease: issueopscontract.WriteLease{Generation: 2, Status: issueopscontract.LeaseStatusActive, Holder: &actor, ClaimedAt: claimedAt},
+				Mode:      issueopscontract.ExecutionModeDirect,
+				Lease:     issueopscontract.WriteLease{Generation: 2, Status: issueopscontract.LeaseStatusActive, Holder: &actor, ClaimedAt: claimedAt},
+				Selection: selectionFixture(issueopscontract.ExecutionModeDirect),
 			}}
 			if err := newHandoffDeliveryService(stateRoot).ObserveClaim(result); err != nil {
 				t.Fatal(err)
@@ -259,6 +261,7 @@ func TestSuccessfulDirectClaimRejectsAmbiguousManualLineages(t *testing.T) {
 			Generation: 2, Status: issueopscontract.LeaseStatusActive, Holder: &actor,
 			ClaimedAt: time.Now().UTC().Format(time.RFC3339Nano),
 		},
+		Selection: selectionFixture(issueopscontract.ExecutionModeDirect),
 	}}
 	if err := newHandoffDeliveryService(stateRoot).ObserveClaim(result); err == nil || !strings.Contains(err.Error(), "ambiguous") {
 		t.Fatalf("ambiguous manual lineages were accepted: %v", err)
@@ -268,6 +271,7 @@ func TestSuccessfulDirectClaimRejectsAmbiguousManualLineages(t *testing.T) {
 func TestSuccessfulDirectClaimObservesReleasedReseededGeneration(t *testing.T) {
 	stateRoot, record, oldToken, _, _ := seedOrcaClaimSnapshot(t)
 	record.Execution.Mode = issueopscontract.ExecutionModeDirect
+	record.Execution.Selection = selectionFixture(issueopscontract.ExecutionModeDirect)
 	record.Execution.Workspace.Driver = "git"
 	record.Execution.Orca = nil
 	record.Execution.Lease.Status = issueopscontract.LeaseStatusReleased
@@ -479,7 +483,8 @@ func seedOrcaClaimSnapshot(t *testing.T) (string, issueopscontract.IssueOpsRecor
 		Mode:      issueopscontract.ExecutionModeOrca,
 		Workspace: issueopscontract.Workspace{SourceRoot: source, Root: worktree, Branch: record.Branch, BaseHead: baseHead, Driver: "orca", LinkedAt: "2026-07-30T09:00:00Z", ArtifactDir: artifactDir},
 		Lease:     issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusClaimable},
-		Orca:      &issueopscontract.OrcaBinding{RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", LeaseGeneration: 1, OwnerHost: "codex", OwnerModel: "model", TaskID: "task", DispatchID: "dispatch"},
+		Orca:      &issueopscontract.OrcaBinding{RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", LeaseGeneration: 1, OwnerHost: "codex", OwnerModel: "model", TaskID: "task", DispatchID: "dispatch", RunID: "run_issueops_1", ArtifactIdentityVersion: 1, IssueBodySHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", ContextPacketSHA256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", OwnerPromptSHA256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"},
+		Selection: selectionFixture(issueopscontract.ExecutionModeOrca),
 	}
 	token := "snapshot-claim-token"
 	tokenDigest := claimWiringSHA256(token)

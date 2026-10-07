@@ -67,6 +67,7 @@ func newSealedClaimContext(t *testing.T, issueURL, issueBody, artifactDir string
 	t.Helper()
 	record := claimableRecord(t, leasecontract.Actor{}, "token")
 	record.Execution.Mode = "orca"
+	record.Execution.Selection = leaseSelectionFixture("orca")
 	record.Execution.Workspace.SourceRoot = filepath.Dir(record.Execution.Workspace.Root)
 	record.Execution.Workspace.Driver = "orca"
 	record.IssueURL = issueURL

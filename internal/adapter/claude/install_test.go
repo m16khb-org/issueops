@@ -149,7 +149,7 @@ func TestClaudeInstallerMergesLifecycleHooksIdempotently(t *testing.T) {
 	}
 	for _, removed := range []string{"PreToolUse", "PostToolUse", "PreCompact", "PostCompact", "Stop"} {
 		if _, ok := hooks[removed]; ok {
-			t.Fatalf("legacy managed event %s must be removed: %+v", removed, hooks)
+			t.Fatalf("retired managed event %s must be removed: %+v", removed, hooks)
 		}
 	}
 }

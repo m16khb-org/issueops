@@ -81,14 +81,14 @@ func TestIssueOpsExecutionSnapshotSchemaIsClosedAndPortable(t *testing.T) {
 	}
 }
 
-func TestIssueOpsDispatchContainsNoLegacyTools(t *testing.T) {
+func TestIssueOpsDispatchContainsNoRetiredTools(t *testing.T) {
 	dispatch := DispatchMap()
 	if got := dispatch["issueops_execution"]; got != contract.DispatchIssueOps {
 		t.Fatalf("issueops_execution dispatch = %q", got)
 	}
 	for name := range dispatch {
 		if name != "issueops_execution" && len(name) >= len("issueops_") && name[:len("issueops_")] == "issueops_" {
-			t.Fatalf("legacy IssueOps MCP tool remains advertised: %s", name)
+			t.Fatalf("retired IssueOps MCP tool remains advertised: %s", name)
 		}
 	}
 }

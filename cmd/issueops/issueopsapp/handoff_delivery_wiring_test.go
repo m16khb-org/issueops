@@ -484,7 +484,7 @@ func TestManualHandoffDeliveryRejectsClaimForgeryAndUsesIsolatedLineage(t *testi
 	observation.CallStaged = handoffDeliveryObserved(eventNow, "external_call_staged")
 	record := issueopscontract.IssueOpsRecord{
 		ID:        request.Workspace.LifecycleID,
-		Execution: &issueopscontract.Execution{Mode: issueopscontract.ExecutionModeDirect, Lease: issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusReleased}},
+		Execution: &issueopscontract.Execution{Mode: issueopscontract.ExecutionModeDirect, Lease: issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusReleased}, Selection: selectionFixture(issueopscontract.ExecutionModeDirect)},
 	}
 	if err := issueopsdomain.ValidateManualHandoffDeliveryObservation(record, observation); err != nil {
 		t.Fatal(err)
@@ -520,8 +520,9 @@ func TestManualCmuxHandoffDeliveryAllowsOnlyReleasedDirectStaging(t *testing.T) 
 	record := issueopscontract.IssueOpsRecord{
 		ID: "io-cmux-manual",
 		Execution: &issueopscontract.Execution{
-			Mode:  issueopscontract.ExecutionModeDirect,
-			Lease: issueopscontract.WriteLease{Generation: 3, Status: issueopscontract.LeaseStatusReleased},
+			Mode:      issueopscontract.ExecutionModeDirect,
+			Lease:     issueopscontract.WriteLease{Generation: 3, Status: issueopscontract.LeaseStatusReleased},
+			Selection: selectionFixture(issueopscontract.ExecutionModeDirect),
 		},
 	}
 	observation := manualCmuxHandoffObservation(record.ID, 3)
@@ -535,7 +536,7 @@ func TestManualCmuxHandoffDeliveryAllowsOnlyReleasedDirectStaging(t *testing.T) 
 		t.Fatalf("wrong generation accepted: %v", err)
 	}
 	active := record
-	active.Execution = &issueopscontract.Execution{Mode: issueopscontract.ExecutionModeDirect, Lease: issueopscontract.WriteLease{Generation: 3, Status: issueopscontract.LeaseStatusActive}}
+	active.Execution = &issueopscontract.Execution{Mode: issueopscontract.ExecutionModeDirect, Lease: issueopscontract.WriteLease{Generation: 3, Status: issueopscontract.LeaseStatusActive}, Selection: selectionFixture(issueopscontract.ExecutionModeDirect)}
 	if err := issueopsdomain.ValidateManualHandoffDeliveryObservation(active, observation); err == nil || !strings.Contains(err.Error(), "exact released direct execution generation") {
 		t.Fatalf("active generation accepted: %v", err)
 	}
@@ -670,7 +671,8 @@ func seedReleasedDirectHandoffRecord(t *testing.T, stateRoot string) issueopscon
 			SourceRoot: repo, Root: worktree, Branch: record.Branch, BaseHead: baseHead,
 			Driver: "git", LinkedAt: time.Now().UTC().Format(time.RFC3339Nano),
 		},
-		Lease: issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusReleased},
+		Lease:     issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusReleased},
+		Selection: selectionFixture(issueopscontract.ExecutionModeDirect),
 	}
 	written, err := (issueopsadapter.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), record)
 	if err != nil {

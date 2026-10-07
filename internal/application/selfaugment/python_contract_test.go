@@ -23,6 +23,7 @@ func TestPlannerRejectsHistoricalPythonIncompleteEvidence(t *testing.T) {
 			case "failed":
 				snapshot.OK = false
 			}
+			NormalizeSnapshotFailureCause(&snapshot)
 			bytes, err := json.Marshal(snapshot)
 			if err != nil {
 				t.Fatal(err)

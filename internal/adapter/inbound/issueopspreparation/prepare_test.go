@@ -107,7 +107,7 @@ func fullContractExecution() leasecontract.Execution {
 			Holder:           &leasecontract.Actor{Host: "claude", SessionID: "owner", AgentID: "agent", SessionProcess: &leasecontract.ProcessReceipt{PID: 200, StartedAt: "2026-08-02T02:03:05Z", Executable: "/bin/claude"}},
 			ClaimTokenSHA256: "claim-sha", ClaimedAt: "claimed", ReleasedAt: "released", ReplacedAt: "replaced", ReplacementReason: "reason",
 		},
-		Orca:       &leasecontract.OrcaBinding{RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", RunID: "run", WorktreeInstanceID: "instance", LeaseGeneration: 3, OwnerHost: "claude", OwnerModel: "model", OwnerEffort: "high", TaskID: "task", DispatchID: "dispatch", TerminalPTYID: "pty"},
+		Orca:       &leasecontract.OrcaBinding{RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", RunID: "run", WorktreeInstanceID: "instance", LeaseGeneration: 3, OwnerHost: "claude", OwnerModel: "model", OwnerEffort: "high", TaskID: "task", DispatchID: "dispatch", TerminalPTYID: "pty", ArtifactIdentityVersion: 1, IssueBodySHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", ContextPacketSHA256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", OwnerPromptSHA256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"},
 		Pending:    &leasecontract.ExternalIntent{OperationID: "operation", Kind: "orca_prepare", Marker: "marker", StartedAt: "started"},
 		Completion: &leasecontract.Completion{FinalHead: "head", VerificationReportPath: "/report", Verification: []string{"go test ./..."}, RemoteArtifactURL: "https://example.test/pr/199", CompletedAt: "completed"},
 		CompletionHistory: []leasecontract.CompletionHistoryEntry{{

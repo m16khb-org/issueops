@@ -56,7 +56,7 @@ func TestRunContractSchemaPrintsTextAndJSON(t *testing.T) {
 		t.Fatalf("issueops execution response fields = %v, want %v", got, wantExecutionFields)
 	}
 	if _, exists := contract.ResponseFields["issueops_handoff_claim"]; exists {
-		t.Fatal("legacy issueops handoff response contract remains advertised")
+		t.Fatal("retired issueops handoff response contract remains advertised")
 	}
 	issueOpsTools := []string{}
 	for _, name := range contract.MCPTools {

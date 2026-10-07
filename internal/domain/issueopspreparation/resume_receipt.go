@@ -20,7 +20,7 @@ func ApplyResumeReceipt(record preparationcontract.Record, intent preparationcon
 	if err := ValidateReconcileIntentIssueIdentity(record, intent); err != nil {
 		return ResumeReceiptDecision{}, err
 	}
-	if normalizedPurpose(intent) != preparationcontract.PurposeResume {
+	if intent.Purpose != preparationcontract.PurposeResume {
 		return ResumeReceiptDecision{}, fmt.Errorf("Orca resume intent is required")
 	}
 	nextStage, complete, err := NextOrcaReceiptStage(intent.Stage)

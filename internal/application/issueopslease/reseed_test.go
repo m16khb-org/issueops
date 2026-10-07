@@ -409,6 +409,11 @@ func TestReseedServicePersistsOrcaArtifactIdentityBeforeCommit(t *testing.T) {
 	record.Stable.Execution.Orca = &leasecontract.OrcaBinding{
 		RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", LeaseGeneration: 3,
 		OwnerHost: "codex", OwnerModel: "model", TaskID: "task", DispatchID: "dispatch",
+		RunID:                   "run_issueops_1",
+		ArtifactIdentityVersion: 1,
+		IssueBodySHA256:         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		ContextPacketSHA256:     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+		OwnerPromptSHA256:       "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
 	}
 	var committed leasecontract.OrcaBinding
 	service := newReseedServiceForTest(
@@ -450,6 +455,11 @@ func TestReseedServicePersistsSettledHolderlessRuntimeRollover(t *testing.T) {
 	record.Stable.Execution.Orca = &leasecontract.OrcaBinding{
 		RuntimeID: "runtime-old", RepoID: "repo", WorktreeID: "worktree", LeaseGeneration: 3,
 		OwnerHost: "codex", OwnerModel: "model", TaskID: "task", DispatchID: "dispatch",
+		RunID:                   "run_issueops_1",
+		ArtifactIdentityVersion: 1,
+		IssueBodySHA256:         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		ContextPacketSHA256:     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+		OwnerPromptSHA256:       "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
 	}
 	var committed leasecontract.OrcaBinding
 	service := NewReseedService(
@@ -490,7 +500,7 @@ func TestReseedServiceRejectsChangedOwnerEvidenceFingerprintBeforePrepare(t *tes
 	record := reseedTestRecord("claimable", 3)
 	record.Stable.Execution.Mode = "orca"
 	record.Stable.Execution.Workspace.Driver = "orca"
-	record.Stable.Execution.Orca = &leasecontract.OrcaBinding{RuntimeID: "runtime-old", WorktreeID: "worktree", TaskID: "task", DispatchID: "dispatch"}
+	record.Stable.Execution.Orca = &leasecontract.OrcaBinding{RuntimeID: "runtime-old", WorktreeID: "worktree", TaskID: "task", DispatchID: "dispatch", RunID: "run_issueops_1", LeaseGeneration: 1, ArtifactIdentityVersion: 1, IssueBodySHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", ContextPacketSHA256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", OwnerPromptSHA256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}
 	prepares := 0
 	service := NewReseedService(
 		reseedFenceFunc(func(_ context.Context, _ string, fn func(context.Context) error) error {
@@ -532,7 +542,7 @@ func TestReseedServiceRejectsUnsettledRolloverAfterFingerprintMatch(t *testing.T
 	record := reseedTestRecord("claimable", 3)
 	record.Stable.Execution.Mode = "orca"
 	record.Stable.Execution.Workspace.Driver = "orca"
-	record.Stable.Execution.Orca = &leasecontract.OrcaBinding{RuntimeID: "runtime-old", WorktreeID: "worktree", TaskID: "task", DispatchID: "dispatch"}
+	record.Stable.Execution.Orca = &leasecontract.OrcaBinding{RuntimeID: "runtime-old", WorktreeID: "worktree", TaskID: "task", DispatchID: "dispatch", RunID: "run_issueops_1", LeaseGeneration: 1, ArtifactIdentityVersion: 1, IssueBodySHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", ContextPacketSHA256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", OwnerPromptSHA256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}
 	prepares := 0
 	service := NewReseedService(
 		reseedFenceFunc(func(_ context.Context, _ string, fn func(context.Context) error) error {
@@ -625,7 +635,7 @@ func TestReseedServiceCompensatedCommitFailureAllowsRetry(t *testing.T) {
 	}
 }
 
-func TestReseedServiceValidatesActorBeforeConfirmForLegacyErrorPriority(t *testing.T) {
+func TestReseedServiceValidatesActorBeforeConfirm(t *testing.T) {
 	service := newReseedServiceForTest(&serializedReseedFence{locks: map[string]*sync.Mutex{}}, &serializedReseedRepository{record: reseedTestRecord("released", 3)}, reseedArtifactsFake{prepare: func(context.Context, leasecontract.Record) (ReseedArtifactReceipt, error) {
 		return ReseedArtifactReceipt{}, nil
 	}, cleanup: func(context.Context, leasecontract.Record) error { return nil }})

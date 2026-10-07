@@ -132,11 +132,5 @@ func (service HistoryService) Compare(baselineKey, candidateKey string, maxElaps
 	if err != nil {
 		return result, fmt.Errorf("read candidate summary: %w", err)
 	}
-	return CompareSnapshots(baselineKey, candidateKey, maxElapsedRegressionPct, baseline, candidate, service.StateDir()), nil
-}
-
-func CompareSnapshots(baselineKey, candidateKey string, maxElapsedRegressionPct float64, baseline, candidate contract.SelfAugmentStateSnapshot, stateDir string) contract.SelfAugmentCompareResult {
-	NormalizeSnapshotFailureCause(&baseline)
-	NormalizeSnapshotFailureCause(&candidate)
-	return domain.CompareSnapshots(baselineKey, candidateKey, maxElapsedRegressionPct, baseline, candidate, stateDir)
+	return domain.CompareSnapshots(baselineKey, candidateKey, maxElapsedRegressionPct, baseline, candidate, service.StateDir()), nil
 }

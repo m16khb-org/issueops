@@ -21,22 +21,29 @@ func validOrcaExecutionForTest() Execution {
 		},
 		Lease: WriteLease{Generation: 2, Status: LeaseStatusReleased},
 		Orca: &OrcaBinding{
-			RuntimeID:  "runtime-1",
-			RepoID:     "repo-1",
-			WorktreeID: "worktree-1",
-			OwnerHost:  "codex",
-			OwnerModel: "gpt-6-astra",
-			TaskID:     "task-1",
-			DispatchID: "dispatch-1",
+			RuntimeID:               "runtime-1",
+			RepoID:                  "repo-1",
+			WorktreeID:              "worktree-1",
+			RunID:                   "run_issueops_1",
+			LeaseGeneration:         2,
+			ArtifactIdentityVersion: OrcaArtifactIdentityVersion,
+			IssueBodySHA256:         strings.Repeat("a", 64),
+			ContextPacketSHA256:     strings.Repeat("b", 64),
+			OwnerPromptSHA256:       strings.Repeat("c", 64),
+			OwnerHost:               "codex",
+			OwnerModel:              "gpt-6-astra",
+			TaskID:                  "task-1",
+			DispatchID:              "dispatch-1",
 		},
+		Selection: selectionFixture(ExecutionModeOrca),
 	}
 }
 
-func TestValidateExecutionAcceptsOptionalOrcaLeaseGeneration(t *testing.T) {
+func TestValidateExecutionRejectsMissingOrcaLeaseGeneration(t *testing.T) {
 	execution := validOrcaExecutionForTest()
 	execution.Orca.LeaseGeneration = 0
-	if err := issueopsdomain.ValidateExecution(execution); err != nil {
-		t.Fatalf("optional Orca lease generation must remain valid: %v", err)
+	if err := issueopsdomain.ValidateExecution(execution); err == nil || !strings.Contains(err.Error(), "lease_generation is required") {
+		t.Fatalf("Orca binding without lease generation must fail closed: %v", err)
 	}
 }
 
@@ -62,11 +69,11 @@ func TestValidateExecutionAcceptsOmoOrcaOwner(t *testing.T) {
 	}
 }
 
-func TestValidateExecutionAcceptsOptionalOrcaRunID(t *testing.T) {
+func TestValidateExecutionRejectsMissingOrcaRunID(t *testing.T) {
 	execution := validOrcaExecutionForTest()
 	execution.Orca.RunID = ""
-	if err := issueopsdomain.ValidateExecution(execution); err != nil {
-		t.Fatalf("optional Orca run id must remain valid: %v", err)
+	if err := issueopsdomain.ValidateExecution(execution); err == nil || !strings.Contains(err.Error(), "run_id must be one canonical explicit Run identity") {
+		t.Fatalf("Orca binding without run id must fail closed: %v", err)
 	}
 }
 
@@ -80,7 +87,7 @@ func TestValidateExecutionAcceptsSealedOrcaRunID(t *testing.T) {
 
 func TestValidateExecutionAcceptsOpaqueOrcaRunID(t *testing.T) {
 	execution := validOrcaExecutionForTest()
-	execution.Orca.RunID = "run_legacy_local"
+	execution.Orca.RunID = "run_other_local"
 
 	if err := issueopsdomain.ValidateExecution(execution); err != nil {
 		t.Fatalf("syntactically valid opaque Orca Run identity must be valid: %v", err)
@@ -96,44 +103,39 @@ func TestValidateExecutionRejectsBindingFromFutureLeaseGeneration(t *testing.T) 
 	}
 }
 
-func TestValidateExecutionAcceptsCompleteOrEmptyOrcaArtifactIdentity(t *testing.T) {
-	execution := validOrcaExecutionForTest()
-	if err := issueopsdomain.ValidateExecution(execution); err != nil {
-		t.Fatalf("legacy empty artifact identity must remain readable: %v", err)
-	}
-	execution.Orca.ArtifactIdentityVersion = OrcaArtifactIdentityVersion
-	execution.Orca.IssueBodySHA256 = strings.Repeat("a", 64)
-	execution.Orca.ContextPacketSHA256 = strings.Repeat("b", 64)
-	execution.Orca.OwnerPromptSHA256 = strings.Repeat("c", 64)
-	if err := issueopsdomain.ValidateExecution(execution); err != nil {
+func TestValidateExecutionRequiresVersionedCompleteOrcaArtifactIdentity(t *testing.T) {
+	if err := issueopsdomain.ValidateExecution(validOrcaExecutionForTest()); err != nil {
 		t.Fatalf("complete artifact identity must be valid: %v", err)
 	}
-}
-
-func TestValidateExecutionRejectsPostUpgradeEmptyOrcaArtifactIdentity(t *testing.T) {
-	execution := validOrcaExecutionForTest()
-	execution.Orca.ArtifactIdentityVersion = OrcaArtifactIdentityVersion
-	if err := issueopsdomain.ValidateExecution(execution); err == nil || !strings.Contains(err.Error(), "version requires a complete sealed artifact identity") {
-		t.Fatalf("post-upgrade empty artifact identity must fail as an invariant violation: %v", err)
-	}
-}
-
-func TestValidateExecutionRejectsUnversionedCurrentOrcaArtifactIdentity(t *testing.T) {
-	execution := validOrcaExecutionForTest()
-	execution.Orca.IssueBodySHA256 = strings.Repeat("a", 64)
-	execution.Orca.ContextPacketSHA256 = strings.Repeat("b", 64)
-	execution.Orca.OwnerPromptSHA256 = strings.Repeat("c", 64)
-	if err := issueopsdomain.ValidateExecution(execution); err == nil || !strings.Contains(err.Error(), "requires artifact identity version") {
-		t.Fatalf("unversioned current artifact identity must fail as an invariant violation: %v", err)
-	}
-}
-
-func TestValidateExecutionRejectsPartialOrcaArtifactIdentity(t *testing.T) {
-	execution := validOrcaExecutionForTest()
-	execution.Orca.ArtifactIdentityVersion = OrcaArtifactIdentityVersion
-	execution.Orca.OwnerPromptSHA256 = strings.Repeat("c", 64)
-	if err := issueopsdomain.ValidateExecution(execution); err == nil || !strings.Contains(err.Error(), "complete sealed artifact identity") {
-		t.Fatalf("partial artifact identity error=%v", err)
+	for _, tc := range []struct {
+		name   string
+		mutate func(*OrcaBinding)
+		want   string
+	}{
+		{name: "unversioned empty", want: "unsupported Orca artifact identity version 0", mutate: func(binding *OrcaBinding) {
+			binding.ArtifactIdentityVersion = 0
+			binding.IssueBodySHA256, binding.ContextPacketSHA256, binding.OwnerPromptSHA256 = "", "", ""
+		}},
+		{name: "unversioned complete", want: "unsupported Orca artifact identity version 0", mutate: func(binding *OrcaBinding) {
+			binding.ArtifactIdentityVersion = 0
+		}},
+		{name: "versioned empty", want: "version requires a complete sealed artifact identity", mutate: func(binding *OrcaBinding) {
+			binding.IssueBodySHA256, binding.ContextPacketSHA256, binding.OwnerPromptSHA256 = "", "", ""
+		}},
+		{name: "versioned partial", want: "complete sealed artifact identity", mutate: func(binding *OrcaBinding) {
+			binding.IssueBodySHA256, binding.ContextPacketSHA256 = "", ""
+		}},
+		{name: "not a digest", want: "must contain SHA-256 digests", mutate: func(binding *OrcaBinding) {
+			binding.OwnerPromptSHA256 = "not-a-digest"
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			execution := validOrcaExecutionForTest()
+			tc.mutate(execution.Orca)
+			if err := issueopsdomain.ValidateExecution(execution); err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("artifact identity error=%v want %q", err, tc.want)
+			}
+		})
 	}
 }
 
