@@ -15,7 +15,6 @@ import (
 // Runner executes one supervisor CLI command and returns its combined output.
 type Runner func(ctx context.Context, name string, args ...string) ([]byte, error)
 
-// loadOutputLimit bounds the supervisor output a load error carries.
 const loadOutputLimit = 2048
 
 // runLoadStep runs one load command and, on failure, names the command and
