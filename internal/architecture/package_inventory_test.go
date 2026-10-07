@@ -16,12 +16,14 @@ import (
 const modulePrefix = "issueops/"
 
 type modulePackage struct {
-	ImportPath   string
-	Name         string
-	GoFiles      []string
-	Imports      []string
-	TestImports  []string
-	XTestImports []string
+	ImportPath     string
+	Name           string
+	Dir            string
+	GoFiles        []string
+	IgnoredGoFiles []string
+	Imports        []string
+	TestImports    []string
+	XTestImports   []string
 }
 
 func (p modulePackage) allImports() []string {

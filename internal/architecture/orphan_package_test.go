@@ -1,6 +1,11 @@
 package architecture
 
 import (
+	"go/ast"
+	"go/build/constraint"
+	"go/parser"
+	"go/token"
+	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
@@ -29,7 +34,7 @@ func TestProductionPackagesHaveImporters(t *testing.T) {
 
 	importers := map[string][]string{}
 	for _, pkg := range packages {
-		for _, imported := range pkg.allImports() {
+		for _, imported := range append(pkg.allImports(), constrainedImports(t, pkg)...) {
 			if !strings.HasPrefix(imported, modulePrefix) {
 				continue
 			}
@@ -64,6 +69,62 @@ func TestProductionPackagesHaveImporters(t *testing.T) {
 			"배선을 되살리거나 패키지를 지운다. 테스트 지원 전용이라면 이유와 함께 orphanPackageAllowlist에 넣는다.",
 			strings.Join(orphans, ", "))
 	}
+}
+
+// constrainedImports는 현재 GOOS/GOARCH의 빌드 제약으로 빠진 프로덕션 파일의
+// import를 돌려준다. go list는 현재 플랫폼에서 빌드되는 파일의 import만
+// 보고하므로, 다른 플랫폼에서만 쓰이는 패키지(예: !linux 파일만 import하는
+// processidentity)가 그 플랫폼 밖에서 고아로 오판되지 않게 한다.
+// `//go:build ignore` 생성기 파일은 어떤 빌드에도 들어가지 않으므로 세지 않는다.
+func constrainedImports(t *testing.T, pkg modulePackage) []string {
+	t.Helper()
+	var imports []string
+	for _, name := range pkg.IgnoredGoFiles {
+		if strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		file, err := parser.ParseFile(token.NewFileSet(), filepath.Join(pkg.Dir, name), nil, parser.ImportsOnly|parser.ParseComments)
+		if err != nil {
+			t.Fatalf("parse %s: %v", filepath.Join(pkg.Dir, name), err)
+		}
+		if buildIgnored(file.Comments) {
+			continue
+		}
+		for _, spec := range file.Imports {
+			imports = append(imports, strings.Trim(spec.Path.Value, "\"`"))
+		}
+	}
+	return imports
+}
+
+func buildIgnored(groups []*ast.CommentGroup) bool {
+	for _, group := range groups {
+		for _, comment := range group.List {
+			if !constraint.IsGoBuild(comment.Text) {
+				continue
+			}
+			expr, err := constraint.Parse(comment.Text)
+			if err != nil {
+				return false
+			}
+			return mentionsTag(expr, "ignore")
+		}
+	}
+	return false
+}
+
+func mentionsTag(expr constraint.Expr, tag string) bool {
+	switch e := expr.(type) {
+	case *constraint.TagExpr:
+		return e.Tag == tag
+	case *constraint.NotExpr:
+		return mentionsTag(e.X, tag)
+	case *constraint.AndExpr:
+		return mentionsTag(e.X, tag) || mentionsTag(e.Y, tag)
+	case *constraint.OrExpr:
+		return mentionsTag(e.X, tag) || mentionsTag(e.Y, tag)
+	}
+	return false
 }
 
 // TestOrphanPackageAllowlistHasNoStaleEntries는 allowlist가 실제로 고아인
