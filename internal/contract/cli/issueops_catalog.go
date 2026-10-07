@@ -93,7 +93,9 @@ const IssueOpsUsageCatalog = `  issueops start --repo PATH [--branch NAME | --ne
   issueops remote close-issue --id ID [--provider github|gitlab] [--confirm] [--json]
   issueops benchmark run --fixtures PATH [--judge none|file] [--judge-file PATH] [--json]
   issueops benchmark compare --baseline KEY --candidate KEY [--json]
-  issueops benchmark gate --baseline KEY --candidate KEY --candidate-file PATH [--changed-path PATH]... [--json]`
+  issueops benchmark gate --baseline KEY --candidate KEY --candidate-file PATH [--changed-path PATH]... [--json]
+  issueops benchmark reliability [--outcomes PATH] [--alpha N] [--json]
+  issueops benchmark consensus [--samples PATH] [--json]`
 
 // IssueOpsActorFlagLegend는 두 usage 출력이 공유하는 actor 축약 정의다. 축약을 쓰는
 // 출력은 같은 출력 안에서 그것을 정의해야 한다(#184).

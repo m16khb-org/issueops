@@ -4,9 +4,9 @@
 package channelcli
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
+	"issueops/cmd/issueops/jsonout"
 	channelcontract "issueops/internal/contract/channel"
 	"os"
 )
@@ -114,8 +114,4 @@ func printRecvText(result channelcontract.RecvResult) {
 	}
 }
 
-func printJSON(value any) error {
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	return enc.Encode(value)
-}
+var printJSON = jsonout.Print

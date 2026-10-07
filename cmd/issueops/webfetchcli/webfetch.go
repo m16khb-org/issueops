@@ -11,6 +11,7 @@ import (
 	"sort"
 	"time"
 
+	"issueops/cmd/issueops/jsonout"
 	webfetchcontract "issueops/internal/contract/webfetch"
 )
 
@@ -108,11 +109,7 @@ func runBenchmark(args []string, deps Deps) error {
 	return nil
 }
 
-func printJSON(stdout io.Writer, value any) error {
-	encoder := json.NewEncoder(stdout)
-	encoder.SetIndent("", "  ")
-	return encoder.Encode(value)
-}
+var printJSON = jsonout.PrintTo
 
 func loadFixtures(path string, builtin func() []webfetchcontract.BenchmarkFixture) ([]webfetchcontract.BenchmarkFixture, error) {
 	if path == "builtin" {

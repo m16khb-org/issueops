@@ -58,8 +58,9 @@ The script builds the current binary and immediately runs the existing top-level
      - `claude mcp list` and check for duplicate/conflicting `issueops` scopes. In the issueops repo itself, `.mcp.json` is empty; `issueops_project` appears only while a worktree build is being dogfooded through `.claude/settings.local.json` `enabledMcpjsonServers`, and the duplicated tools are expected for that session only.
 
 3. **Hook contract sweep**
-   - Invoke every configured `~/.codex/hooks.json` event with representative JSON.
-   - Fail on non-zero exit, invalid JSON, unsupported `suppressOutput`, Stop hook keys outside the emitted stop-control set (`continue`/`decision`/`reason`/`systemMessage`), or noisy multi-line `UserPromptSubmit` context.
+   - Read the registered issueops hooks from `configs/codex/hooks.json` and `configs/claude/hooks.settings.json` (today both register only `SessionStart`) and invoke each from the repo root with representative JSON, so the fresh `./bin/issueops` build answers.
+   - Fail on non-zero exit, invalid JSON, or unsupported `suppressOutput`.
+   - Compare the issueops hooks installed in `~/.codex/hooks.json` with the Codex template: a registered event that is missing, or a leftover issueops hook on an event the template no longer registers (such as an old `Stop`, `SubagentStop`, or `UserPromptSubmit` hook), fails. Third-party hooks in that file are never executed.
 
 4. **MCP sweep**
    - Run standalone JSON-RPC through `./bin/issueops mcp` with a temp state dir.

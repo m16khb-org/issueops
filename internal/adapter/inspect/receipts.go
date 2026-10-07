@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -167,7 +168,7 @@ func (vetter *receiptVetter) vet(observed inspectcontract.Observation, requiredF
 	if observed.Status != inspectcontract.ObservationVerified {
 		return result
 	}
-	if requiredFeature != "" && !contains(observed.Features, requiredFeature) {
+	if requiredFeature != "" && !slices.Contains(observed.Features, requiredFeature) {
 		return demote(result, "receipt_missing_"+strings.ReplaceAll(requiredFeature, "/", "_"))
 	}
 	if requiredFeature == "" && observed.RequestedRevision == "" && observed.NegotiatedRevision == "" {
@@ -509,15 +510,6 @@ func demote(observed inspectcontract.Observation, reason string) inspectcontract
 	observed.Status = inspectcontract.ObservationUnknown
 	observed.Reason = reason
 	return observed
-}
-
-func contains(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
 }
 
 func normalizeVersion(raw string) string {

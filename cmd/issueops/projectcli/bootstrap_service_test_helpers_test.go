@@ -1,6 +1,10 @@
 package projectcli
 
 import (
+	"fmt"
+	"os"
+	"testing"
+
 	lifecyclefiles "issueops/internal/adapter/lifecycle"
 	"issueops/internal/adapter/lifecycle/fingerprint"
 	lifecyclemodel "issueops/internal/adapter/lifecycle/model"
@@ -13,6 +17,23 @@ import (
 	bootstrapapp "issueops/internal/application/projectbootstrap"
 	lifecyclecontract "issueops/internal/contract/lifecycle"
 )
+
+// TestMain points the lifecycle state root at a scratch directory, so the
+// bootstrap tests never read or write the developer's ~/.local/state.
+func TestMain(m *testing.M) {
+	stateDir, err := os.MkdirTemp("", "issueops-projectcli-state-")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	if err := os.Setenv("ISSUEOPS_STATE_DIR", stateDir); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	code := m.Run()
+	_ = os.RemoveAll(stateDir)
+	os.Exit(code)
+}
 
 func testLifecycleService() lifecycleapp.Service {
 	return lifecycleapp.Service{SchemaVersion: lifecyclemodel.ProjectLifecycleSchemaVersion, Effects: lifecyclefiles.ProfileFiles{

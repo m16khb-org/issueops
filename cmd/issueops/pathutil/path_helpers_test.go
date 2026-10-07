@@ -60,20 +60,7 @@ func TestResolveTargetUsesEnvironmentFallbacksWhenArgumentIsEmpty(t *testing.T) 
 }
 
 func TestResolveTargetUsesCurrentDirectoryWhenEnvironmentFallbacksAreEmpty(t *testing.T) {
-	oldCWD, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("get cwd: %v", err)
-	}
-	t.Cleanup(func() {
-		if chdirErr := os.Chdir(oldCWD); chdirErr != nil {
-			t.Fatalf("restore cwd: %v", chdirErr)
-		}
-	})
-
-	cwd := t.TempDir()
-	if err := os.Chdir(cwd); err != nil {
-		t.Fatalf("chdir temp cwd: %v", err)
-	}
+	t.Chdir(t.TempDir())
 	t.Setenv("CLAUDE_PROJECT_DIR", "")
 	t.Setenv("PWD", "")
 

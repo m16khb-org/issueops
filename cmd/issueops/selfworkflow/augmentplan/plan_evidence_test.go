@@ -1,6 +1,7 @@
 package augmentplan
 
 import (
+	"issueops/internal/testsupport"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -34,6 +35,7 @@ func TestHasImplementationDeltaDetectsUncommittedWork(t *testing.T) {
 
 func initGitRepoForEvidenceTest(t *testing.T) string {
 	t.Helper()
+	testsupport.IsolateGitConfig(t)
 	root := t.TempDir()
 	cmd := exec.Command("git", "init", "-q")
 	cmd.Dir = root

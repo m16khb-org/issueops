@@ -10,10 +10,10 @@
 
 ## 5. Worker 컨벤션
 
-- worker는 로컬 전용으로 시작한다. 원격 API는 별도 요구가 생기기 전까지 만들지 않는다.
-- Unix socket 또는 localhost binding을 사용하고, 권한을 제한한다.
-- job은 idempotency key, timeout, cancellation을 갖는다.
-- worker 시작/종료는 stale lock과 orphan process를 처리한다.
+- worker는 로컬 전용이다. 원격 API는 별도 요구가 생기기 전까지 만들지 않는다.
+- 상주 worker 프로세스나 socket은 없다. `issueops worker`(MCP `worker_*`)는 one-shot 명령으로 job record(`internal/contract/worker.WorkerJob`)를 user state의 sqlstore `worker` bucket(`ISSUEOPS_WORKER_DIR` 또는 `<state>/worker`)에 기록한다.
+- job 상태는 `queued → running → succeeded|failed`, `queued → cancelled`이다(`internal/domain/worker`). 취소는 `queued`에서만 되고, 상태 전이는 job별 span lock(`WithLock`) 안에서 read-modify-write한다. 셸은 실행하지 않으며(`no_shell`), 명령 실행은 command policy를 거치는 `run --read-only`만 허용한다.
+- `running`인데 기록된 PID가 죽은 job은 `cleanup-stuck`이 `failed`로 표시한다(`MarkStuck`).
 - 장기 작업 상태와 project lifecycle queue/profile은 user state dir에 저장하고, repo에 secret/state 원문을 쓰지 않는다. lifecycle state는 `projects/<repo-id>/` namespace로 격리해 같은 머신의 여러 repo가 섞이지 않게 한다.
 
 ---
@@ -60,7 +60,7 @@
 
 ## Policy tier 컨벤션
 
-- `PolicyTier`는 흩어진 capability 플래그(write/network/shell)를 host-neutral 명명 envelope로 *합성하는 분류*다. tier 계산(`resolvePolicyTier`)에 deny 판정 로직을 넣지 않는다. 명령 허용 여부는 `deny_reasons`가, 권한 envelope 이름은 `tier`가 책임진다.
+- `PolicyTier`는 흩어진 capability 플래그(write/network/shell)를 host-neutral 명명 envelope로 *합성하는 분류*다. tier 계산(`internal/domain/policy.ResolveTier`)에 deny 판정 로직을 넣지 않는다. 명령 허용 여부는 `deny_reasons`가, 권한 envelope 이름은 `tier`가 책임진다.
 - tier ladder는 `read_only` → `workspace_write` → `network_access` → `shell_exception` 순이며 most-privileged 차원이 이름을 정한다. 1회 승인이 세션 전체 등급을 올리는 YOLO/AUTO류 자동 승격 tier는 추가하지 않는다.
 - tier를 추가/변경하면 `TestPolicyTierClassifiesEveryFlagCombination` table과 `command_policy` contract ResponseFields, response-contract golden을 함께 갱신한다.
 

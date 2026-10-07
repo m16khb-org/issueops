@@ -66,8 +66,9 @@ agent가 즉시 알아야 할 canonical 요약이다.
 
 ### State / policy / guard / hook / lifecycle
 
-- worker는 로컬 전용, Unix socket/localhost binding. job은 idempotency
-  key·timeout·cancellation을 갖는다. lifecycle state는 user state dir의
+- worker는 로컬 전용 one-shot이다. 상주 프로세스·socket 없이 job record를
+  user state의 `worker` bucket에 쓰고, 취소는 `queued`에서만, 명령 실행은
+  policy-gated `run --read-only`만 허용한다. lifecycle state는 user state dir의
   `projects/<repo-id>/` namespace에 격리한다.
 - config 우선순위: `flag → env → workspace config → user config → default`.
   secret 원문 저장 금지.

@@ -2,6 +2,7 @@ package contractcli
 
 import (
 	"encoding/json"
+	"slices"
 	"strings"
 	"testing"
 
@@ -84,7 +85,7 @@ func TestRunContractCheckPrintsTextAndJSON(t *testing.T) {
 	if err := json.Unmarshal([]byte(jsonOut), &contract); err != nil {
 		t.Fatalf("decode contract check JSON: %v\n%s", err, jsonOut)
 	}
-	if !contract.OK || contract.Hash == "" || !containsString(contract.MCPTools, "contract_schema") {
+	if !contract.OK || contract.Hash == "" || !slices.Contains(contract.MCPTools, "contract_schema") {
 		t.Fatalf("unexpected contract check: %#v", contract)
 	}
 }

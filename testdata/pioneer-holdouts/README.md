@@ -30,7 +30,7 @@ scenario can be re-run, but it is no longer a blind holdout.
 - **NOT committed (answer):** root-cause analysis, exact fix, evaluator prose,
   and answer artifacts. Those live in
   `.issueops/evidence/pioneer-skills-quality/reruns/<skill>/result.yaml`,
-  which stays blanket-gitignored (`.gitignore: evidence`). A Go test
+  which stays gitignored (`.gitignore: .issueops/evidence/`). A Go test
   (`internal/holdoutdeleak`) mechanically asserts no file here leaks an answer
   token and that the evidence tree stays untracked.
 

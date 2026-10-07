@@ -78,7 +78,7 @@ func Render(input IssueOpsTemplateInput) IssueOpsTemplateResult {
 			Title:    input.Title,
 			Fields:   input.Fields,
 		}))
-		if len(validation.MissingRequiredFields) > 0 && !containsString(validation.Critical, "missing_required_fields") {
+		if len(validation.MissingRequiredFields) > 0 && !slices.Contains(validation.Critical, "missing_required_fields") {
 			validation.Critical = uniqueSorted(append(validation.Critical, "missing_required_fields"))
 		}
 		validation.OK = len(validation.Critical) == 0
@@ -94,10 +94,6 @@ func Render(input IssueOpsTemplateInput) IssueOpsTemplateResult {
 		MissingRequiredFields: validation.MissingRequiredFields,
 		Validation:            validation,
 	}
-}
-
-func containsString(items []string, want string) bool {
-	return slices.Contains(items, want)
 }
 
 func Validate(input IssueOpsTemplateInput) IssueOpsTemplateValidation {

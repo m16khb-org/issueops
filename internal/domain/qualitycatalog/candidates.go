@@ -99,18 +99,18 @@ func CandidateSpecs() []CandidateSpec {
 		{
 			ID: "worker-stuck-running-detection", Title: "Detect worker jobs stuck running after process crash", Category: "audit-risk",
 			Impact: 88, Feasibility: 74, Novelty: 58, Risk: 24,
-			WhyNow:       []string{".issueops/PROJECT_AUDIT.md flags W1 P1 stuck running jobs"},
+			WhyNow:       []string{".issueops/PROJECT_AUDIT.md W1 (P1, resolved): stuck running jobs"},
 			ExpectedGain: []string{"worker status can classify stale running records"},
 			VerifyWith:   []string{"go test ./internal/adapter/worker ./cmd/issueops/workercli -count=1"},
-			Evidence:     []string{"PROJECT_AUDIT W1 P1"},
+			Evidence:     []string{"PROJECT_AUDIT W1 resolved"},
 		},
 		{
 			ID: "state-write-locking", Title: "Add write locking around state file updates", Category: "audit-risk",
 			Impact: 91, Feasibility: 76, Novelty: 56, Risk: 28,
-			WhyNow:       []string{".issueops/PROJECT_AUDIT.md flags S1 P1 no write locking"},
+			WhyNow:       []string{".issueops/PROJECT_AUDIT.md S1 (P1, resolved): no write locking"},
 			ExpectedGain: []string{"concurrent state writes stop risking lost updates"},
 			VerifyWith:   []string{"go test ./internal/application/state ./internal/adapter/outbound/state ./internal/adapter/outbound/sqlstore -count=1", "go test -race ./internal/application/state ./internal/adapter/outbound/state ./internal/adapter/outbound/sqlstore -count=1"},
-			Evidence:     []string{"PROJECT_AUDIT S1 P1"},
+			Evidence:     []string{"PROJECT_AUDIT S1 resolved"},
 		},
 	}
 	// Quality specs are all code/correctness candidates; default them to

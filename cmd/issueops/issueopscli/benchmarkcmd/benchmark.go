@@ -1,12 +1,11 @@
 package benchmarkcmd
 
 import (
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"issueops/cmd/issueops/jsonout"
 	app "issueops/internal/application/issueopsbenchmark"
-	"os"
 	"strings"
 )
 
@@ -38,11 +37,7 @@ func parseFlags(fs *flag.FlagSet, args []string) (bool, error) {
 	return false, nil
 }
 
-func printJSON(v any) error {
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	return enc.Encode(v)
-}
+var printJSON = jsonout.Print
 
 type repeatedFlag []string
 

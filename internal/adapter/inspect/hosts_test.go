@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -355,7 +356,7 @@ func TestHostsReceiptVerifiesDiscoveredConnectedProtocolFromRealArtifact(t *test
 	requireStatus(t, "connected", codex.Connected, "verified", "")
 	requireStatus(t, "protocol", codex.Protocol, "verified", "")
 	if codex.Connected.Source != receipts.artifact || codex.Connected.HostVersion != "0.128.0" || codex.Protocol.NegotiatedRevision != "2025-11-25" ||
-		!contains(codex.Connected.Features, "docs_index") {
+		!slices.Contains(codex.Connected.Features, "docs_index") {
 		t.Fatalf("evidence was not preserved: %+v", codex.Connected)
 	}
 	requireStatus(t, "claude has no receipt", hosts["claude"].Connected, "not_checked", "no_receipt_for_host")

@@ -44,7 +44,7 @@ up gets the same answer.
 
 ## Quick start
 
-You need Git, Go 1.26.3, and at least one host you plan to use (Codex, Claude Code, or Omo).
+You need Git, Go 1.26.6, and at least one host you plan to use (Codex, Claude Code, or Omo).
 
 ```bash
 ./install.sh --dry-run --json
@@ -248,15 +248,16 @@ Five boundaries hold:
 | Area | Representative commands | Role |
 |---|---|---|
 | Install and update | `install`, `update`, `bootstrap`, `version` | Refresh the binary, skills, hooks, and MCP wiring; check the version |
-| Diagnostics | `inspect`, `status`, `doctor`, `docs` | Inspect install, state, and project docs |
+| Diagnostics | `inspect`, `system-status`, `doctor`, `docs` | Inspect install, state, and project docs |
 | Safety and quality | `policy`, `guard`, `quality`, `verify-work`, `trace`, `contract`, `api-doc`, `preflight` | Execution policy, change quality, evidence and public contract, pre-commit repository checks |
-| Workflow | `issueops`, `loop`, `gates`, `channel` | Durable workflow, completion gate ledgers, cross-session message channels |
+| Workflow | `start`, `next`, `status`, `execution`, `loop`, `gates`, `channel` | Durable IssueOps cycle (its lifecycle commands sit at the top level), completion gate ledgers, cross-session message channels |
 | Docs and hooks | `project`, `hook` | Project doc creation, routing, and refresh; the `SessionStart` context hook entry point |
 | State and runtime | `state`, `mcp`, `worker` | User state, MCP server, limited local jobs |
 | Improvement and research | `self-verify`, `self-augment`, `web-fetch`, `review-metrics` | Harness verification, improvement candidates, resilient public web fetches, adversarial-review round and verdict metrics |
 
-The full command and MCP tool contract comes from the built binary. The current
-checkout's response contract defines 64 CLI commands and 51 MCP tools.
+The full command and MCP tool contract comes from the built binary. In the current
+checkout, `contract schema` lists 63 CLI commands (26 harness commands, `version`,
+and 36 IssueOps lifecycle commands) and 50 MCP tools.
 
 ```bash
 issueops --help

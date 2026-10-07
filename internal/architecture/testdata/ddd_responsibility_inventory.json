@@ -46,9 +46,7 @@
       "path": "cmd/issueops/apidoc/dependencies.go",
       "owner": "inbound",
       "task": "T16",
-      "symbols": [
-        "func printJSON"
-      ]
+      "symbols": []
     },
     {
       "path": "cmd/issueops/apidoc/exports.go",
@@ -122,9 +120,7 @@
       "path": "cmd/issueops/basiccli/json.go",
       "owner": "inbound",
       "task": "T20",
-      "symbols": [
-        "func printJSON"
-      ]
+      "symbols": []
     },
     {
       "path": "cmd/issueops/basiccli/preflight_cli.go",
@@ -153,7 +149,6 @@
         "func Run",
         "func TimedOutError.Error",
         "func channelUsage",
-        "func printJSON",
         "func printRecvText",
         "func runRecv",
         "func runSend",
@@ -215,9 +210,7 @@
       "symbols": [
         "func BuildCompatibilityContract",
         "func Run",
-        "func containsString",
         "func contractUsage",
-        "func printJSON",
         "func runContractCheck",
         "func runContractSchema",
         "type CompatibilityContract"
@@ -235,7 +228,6 @@
         "func gatesUsage",
         "func parseCheckFlags",
         "func printCheckText",
-        "func printJSON",
         "func printReportText",
         "func printSimpleResult",
         "func printSummaryText",
@@ -316,7 +308,6 @@
       "owner": "inbound",
       "task": "T11",
       "symbols": [
-        "func printJSON",
         "type Command",
         "type Deps"
       ]
@@ -455,7 +446,6 @@
         "func harnessInspectorWithDefault",
         "func newHarnessHostInspector",
         "func newHarnessInspector",
-        "func printJSON",
         "func scopedHarnessInspector",
         "func usage"
       ]
@@ -1145,7 +1135,6 @@
       "symbols": [
         "func compatibilityContract",
         "func issueOpsRoot",
-        "func printJSONTo",
         "func runAPIDoc",
         "func runContract"
       ]
@@ -1479,7 +1468,6 @@
       "symbols": [
         "func Command.Run",
         "func parseFlags",
-        "func printJSON",
         "func repeatedFlag.Set",
         "func repeatedFlag.String",
         "type Command",
@@ -1812,9 +1800,7 @@
       "path": "cmd/issueops/issueopscli/output.go",
       "owner": "inbound",
       "task": "T20",
-      "symbols": [
-        "func printJSON"
-      ]
+      "symbols": []
     },
     {
       "path": "cmd/issueops/issueopscli/remotecmd/publication_handlers.go",
@@ -1936,6 +1922,15 @@
       ]
     },
     {
+      "path": "cmd/issueops/jsonout/jsonout.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func Print",
+        "func PrintTo"
+      ]
+    },
+    {
       "path": "cmd/issueops/loopcli/dependencies.go",
       "owner": "inbound",
       "task": "T20",
@@ -1950,7 +1945,6 @@
       "symbols": [
         "func Run",
         "func loopUsage",
-        "func printJSON",
         "func printLoopResult",
         "func repeatedFlag.Set",
         "func repeatedFlag.String",
@@ -2318,7 +2312,6 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func printJSON",
         "func splitCSV",
         "type Command"
       ]
@@ -2350,9 +2343,7 @@
       "path": "cmd/issueops/projectcli/dependencies.go",
       "owner": "inbound",
       "task": "T20",
-      "symbols": [
-        "func printJSON"
-      ]
+      "symbols": []
     },
     {
       "path": "cmd/issueops/projectcli/exports.go",
@@ -2549,7 +2540,6 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func printJSON",
         "type Dependencies"
       ]
     },
@@ -2587,9 +2577,7 @@
       "path": "cmd/issueops/statuscli/dependencies.go",
       "owner": "inbound",
       "task": "T20",
-      "symbols": [
-        "func printJSON"
-      ]
+      "symbols": []
     },
     {
       "path": "cmd/issueops/statuscli/status_verify.go",
@@ -2614,7 +2602,6 @@
       "task": "T12",
       "symbols": [
         "func CleanupCommand.Run",
-        "func printJSON",
         "type CleanupCommand"
       ]
     },
@@ -2635,7 +2622,6 @@
         "func RunWithDeps",
         "func loadFixtureFile",
         "func loadFixtures",
-        "func printJSON",
         "func runBenchmark",
         "func runFetch",
         "type Deps"
@@ -2646,7 +2632,6 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func printJSON",
         "func splitCSV",
         "type Command"
       ]
@@ -3708,7 +3693,6 @@
         "func artifactScan.consumeCodexWire",
         "func artifactScan.consumeJSONRPCResponse",
         "func artifactScan.consumeOmoTransport",
-        "func contains",
         "func demote",
         "func isDocsIndexTool",
         "func listsDocsIndex",
@@ -7186,7 +7170,6 @@
         "func CandidateExportValidationErrors",
         "func ValidateSelfVerifyCandidateExport",
         "func ValidateSelfVerifyCandidateExportWithDeps",
-        "func containsString",
         "type CandidateExportCommandRunner",
         "type CandidateExportValidationDeps"
       ]
@@ -7210,7 +7193,6 @@
       "task": "T18",
       "symbols": [
         "func commandPolicyChecks",
-        "func containsString",
         "type commandPolicyValidationCheck"
       ]
     },
@@ -7273,7 +7255,6 @@
       "owner": "adapter",
       "task": "T18",
       "symbols": [
-        "func containsString",
         "func installDryRunValidationErrors"
       ]
     },
@@ -7500,7 +7481,6 @@
       "task": "T18",
       "symbols": [
         "func assertionStep",
-        "func containsString",
         "func docsValidationDeps.withDefaults",
         "func exists",
         "type docsValidationDeps"
@@ -7601,7 +7581,6 @@
       "symbols": [
         "func assertionStepWithOutput",
         "func combineFailedStep",
-        "func containsString",
         "func runCommandStepEnv",
         "func stateRoundtripValidationDeps.withDefaults",
         "type stateRoundtripCommandRunner",
@@ -7680,7 +7659,6 @@
         "func StepBudgetValidationDeps.withDefaults",
         "func StepBudgetValidationErrors",
         "func ValidateStepBudgetBaselineWithDeps",
-        "func containsString",
         "type StepBudgetCommandRunner",
         "type StepBudgetSnapshotWriter",
         "type StepBudgetValidationDeps"
@@ -10034,6 +10012,7 @@
       "task": "T20",
       "symbols": [
         "func Inspect",
+        "func coverageWarning",
         "type InspectDeps"
       ]
     },
@@ -12360,7 +12339,6 @@
         "func bodySections",
         "func combinedField",
         "func containsHangul",
-        "func containsString",
         "func field",
         "func fieldSatisfiedByBody",
         "func hasNonEmptySummarySection",
@@ -14398,7 +14376,6 @@
         "func classifyImplementation",
         "func classifyPreparation",
         "func classifyPublication",
-        "func contains",
         "func devilsAdvocateCommand",
         "func devilsAdvocateGate",
         "func exits",
@@ -15586,6 +15563,7 @@
         "func BranchEvidence",
         "func CollectQualityFindings",
         "func CoverageEvidence",
+        "func FailedTestPackages",
         "func FirstQualityWarning",
         "func ParseCoveragePackages",
         "func PioneerIsolatedEvidence",
@@ -16977,6 +16955,14 @@
         "func ContextSerializationStable",
         "func StableProjection",
         "func StableProjectionJSON"
+      ]
+    },
+    {
+      "path": "internal/testsupport/git_config.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func IsolateGitConfig"
       ]
     },
     {

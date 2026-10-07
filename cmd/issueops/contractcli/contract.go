@@ -7,9 +7,11 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 
+	"issueops/cmd/issueops/jsonout"
 	clicontract "issueops/internal/contract/cli"
 	mcpcontract "issueops/internal/contract/mcp"
 	verifydomain "issueops/internal/domain/selfverify"
@@ -143,7 +145,7 @@ func BuildCompatibilityContract(commands []clicontract.Command, tools []map[stri
 		Verification: []string{"go test ./... -count=1", "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden -count=1", "issueops contract conformance baseline --json", "issueops contract check --json"},
 	}
 	for _, want := range []string{"contract_schema", "worker_enqueue", "command_fake_run"} {
-		if !containsString(toolNames, want) {
+		if !slices.Contains(toolNames, want) {
 			contract.OK = false
 			contract.Warnings = append(contract.Warnings, "missing_mcp_tool:"+want)
 		}
@@ -170,17 +172,4 @@ func BuildCompatibilityContract(commands []clicontract.Command, tools []map[stri
 	return contract
 }
 
-func printJSON(v any) error {
-	encoder := json.NewEncoder(os.Stdout)
-	encoder.SetIndent("", "  ")
-	return encoder.Encode(v)
-}
-
-func containsString(items []string, want string) bool {
-	for _, item := range items {
-		if item == want {
-			return true
-		}
-	}
-	return false
-}
+var printJSON = jsonout.Print

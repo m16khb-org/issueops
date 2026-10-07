@@ -1,9 +1,8 @@
 package workercli
 
 import (
-	"encoding/json"
+	"issueops/cmd/issueops/jsonout"
 	workerapp "issueops/internal/application/worker"
-	"os"
 	"strings"
 )
 
@@ -12,11 +11,7 @@ type Command struct {
 	ResolveTarget func(string) string
 }
 
-func printJSON(value any) error {
-	encoder := json.NewEncoder(os.Stdout)
-	encoder.SetIndent("", "  ")
-	return encoder.Encode(value)
-}
+var printJSON = jsonout.Print
 
 func splitCSV(s string) []string {
 	if strings.TrimSpace(s) == "" {

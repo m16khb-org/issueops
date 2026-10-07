@@ -90,20 +90,12 @@ func TestConformanceReplayUsesFakeHandlerAndUnchangedTemporaryStateDigest(t *tes
 }
 
 func TestConformanceLiveRequiresExplicitOptInBeforeInjectedProcess(t *testing.T) {
-	old, had := os.LookupEnv("ISSUEOPS_TOOL_CONFORMANCE_LIVE")
-	defer func() {
-		if had {
-			_ = os.Setenv("ISSUEOPS_TOOL_CONFORMANCE_LIVE", old)
-		} else {
-			_ = os.Unsetenv("ISSUEOPS_TOOL_CONFORMANCE_LIVE")
-		}
-	}()
+	t.Setenv("ISSUEOPS_TOOL_CONFORMANCE_LIVE", "")
 	processCalls := 0
 	runtime := newTestConformance(ConformanceDependencies{RunProcess: func(context.Context, LiveRequest) (fixturecontract.BenchmarkReport, error) {
 		processCalls++
 		return fixturecontract.BenchmarkReport{}, nil
 	}})
-	_ = os.Unsetenv("ISSUEOPS_TOOL_CONFORMANCE_LIVE")
 	if err := runtime.runConformanceLive([]string{"--hosts", "codex", "--model", "codex=default", "--profile", "clean", "--target-completed", "1", "--max-attempts-per-case", "3"}); err == nil || err.Error() != "live_opt_in_required" {
 		t.Fatalf("err=%v", err)
 	}
@@ -113,15 +105,7 @@ func TestConformanceLiveRequiresExplicitOptInBeforeInjectedProcess(t *testing.T)
 }
 
 func TestConformanceLivePassesFullyParsedFlagsToInjectedProcessAfterOptIn(t *testing.T) {
-	old, had := os.LookupEnv("ISSUEOPS_TOOL_CONFORMANCE_LIVE")
-	defer func() {
-		if had {
-			_ = os.Setenv("ISSUEOPS_TOOL_CONFORMANCE_LIVE", old)
-		} else {
-			_ = os.Unsetenv("ISSUEOPS_TOOL_CONFORMANCE_LIVE")
-		}
-	}()
-	_ = os.Setenv("ISSUEOPS_TOOL_CONFORMANCE_LIVE", "1")
+	t.Setenv("ISSUEOPS_TOOL_CONFORMANCE_LIVE", "1")
 	root := t.TempDir()
 	prior := fixturecontract.BenchmarkReport{
 		OK: true, SchemaVersion: fixturecontract.ReportSchemaVersion, RunID: "prior",
@@ -155,15 +139,7 @@ func TestConformanceLivePassesFullyParsedFlagsToInjectedProcessAfterOptIn(t *tes
 }
 
 func TestConformanceLiveDefaultsExcludeOmoAndExplicitSelectionIncludesIt(t *testing.T) {
-	old, had := os.LookupEnv("ISSUEOPS_TOOL_CONFORMANCE_LIVE")
-	defer func() {
-		if had {
-			_ = os.Setenv("ISSUEOPS_TOOL_CONFORMANCE_LIVE", old)
-		} else {
-			_ = os.Unsetenv("ISSUEOPS_TOOL_CONFORMANCE_LIVE")
-		}
-	}()
-	_ = os.Setenv("ISSUEOPS_TOOL_CONFORMANCE_LIVE", "1")
+	t.Setenv("ISSUEOPS_TOOL_CONFORMANCE_LIVE", "1")
 	root := t.TempDir()
 	requests := []LiveRequest{}
 	runtime := newTestConformance(ConformanceDependencies{

@@ -229,6 +229,28 @@ func ParseCoveragePackages(output string, threshold float64) []contract.Coverage
 	return packages
 }
 
+// FailedTestPackages returns the distinct packages named by `go test`'s
+// "FAIL\t<pkg>" summary lines, in output order, keeping at most limit and
+// reporting how many more were omitted.
+func FailedTestPackages(output string, limit int) ([]string, int) {
+	packages := []string{}
+	seen := map[string]bool{}
+	omitted := 0
+	for _, line := range strings.Split(output, "\n") {
+		fields := strings.Fields(line)
+		if len(fields) < 2 || fields[0] != "FAIL" || seen[fields[1]] {
+			continue
+		}
+		seen[fields[1]] = true
+		if len(packages) < limit {
+			packages = append(packages, fields[1])
+		} else {
+			omitted++
+		}
+	}
+	return packages, omitted
+}
+
 func StatusForCount(count int) string {
 	if count > 0 {
 		return "needs_attention"

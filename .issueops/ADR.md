@@ -92,23 +92,23 @@ and supersession rules live in [adr/README.md](adr/README.md).
 | 2026-07-08 | SQLite store maintenance policy | [record](adr/2026-07-08-sqlite-store-maintenance-policy.md) |
 | 2026-07-07 | State storage moves from JSON files + flock to SQLite (sqlstore) | [record](adr/2026-07-07-sqlite-state-storage-migration.md) |
 | 2026-07-07 | Standalone issueops policy; broad upstream wiring removed; blanket prohibition partially superseded on 2026-08-28 | [record](adr/2026-07-07-standalone-harness-policy.md) |
-| 2026-07-03 | Codex PreToolUse ask fallback | [record](adr/2026-07-03-codex-pretooluse-ask-fallback.md) |
-| 2026-07-02 | External LLM calls emit per-call usage observation records | [record](adr/2026-07-02-external-llm-usage-observation.md) |
+| 2026-07-03 | Codex PreToolUse ask fallback; superseded — `pre-tool-use` hook was unregistered on 2026-08-10 and deleted by [2026-08-27](adr/2026-08-27-session-start-owns-compaction-context.md) | [record](adr/2026-07-03-codex-pretooluse-ask-fallback.md) |
+| 2026-07-02 | External LLM calls emit per-call usage observation records; superseded — the externalllm client and usage recorder were deleted on 2026-07-07 under the [standalone policy](adr/2026-07-07-standalone-harness-policy.md) | [record](adr/2026-07-02-external-llm-usage-observation.md) |
 | 2026-07-02 | IssueOps regress rounds are capped with a human-decision escalation | [record](adr/2026-07-02-issueops-regress-round-cap.md) |
 | 2026-07-02 | Self-augment planner consumes Reflexion lessons as score penalty | [record](adr/2026-07-02-self-augment-reflexion-lessons.md) |
-| 2026-07-02 | External LLM stays Z.AI-only until a second provider is real | [record](adr/2026-07-02-external-llm-zai-only.md) |
+| 2026-07-02 | External LLM stays Z.AI-only until a second provider is real; superseded — the harness no longer calls an external LLM; host agents use prompt/result-file contracts ([standalone policy](adr/2026-07-07-standalone-harness-policy.md)) | [record](adr/2026-07-02-external-llm-zai-only.md) |
 | 2026-07-01 | Defer harness-side tool-error context injection | [record](adr/2026-07-01-defer-tool-error-context-injection.md) |
 | 2026-07-01 | IssueOps phase transition is a pure reducer over the record | [record](adr/2026-07-01-issueops-phase-transition-pure-reducer.md) |
 | 2026-07-01 | IssueOps devil's-advocate is a fail-closed loop, not just skill prose | [record](adr/2026-07-01-issueops-devils-advocate-fail-closed-loop.md) |
-| 2026-07-01 | MCP transport: adopt go-sdk with a retained legacy JSON-RPC path | [record](adr/2026-07-01-mcp-transport-go-sdk-legacy-jsonrpc.md) |
+| 2026-07-01 | MCP transport: adopt go-sdk with a retained legacy JSON-RPC path; superseded in part — the legacy JSON-RPC path was removed on 2026-08-03, go-sdk remains ([2026-10-02 transport](adr/2026-10-02-shared-streamable-http-mcp-and-caller-capability.md)) | [record](adr/2026-07-01-mcp-transport-go-sdk-legacy-jsonrpc.md) |
 | 2026-06-29 | IssueOps phase ledger, grill gate, and Design Review devil's-advocate regression | [record](adr/2026-06-29-issueops-phase-ledger-grill-gate-design-review.md) |
 | 2026-06-26 | IssueOps compatibility review phase | [record](adr/2026-06-26-issueops-compatibility-review-phase.md) |
 | 2026-06-24 | Skill local background separation | [record](adr/2026-06-24-skill-local-background-separation.md) |
 | 2026-06-23 | IssueOps execution decision gate | [record](adr/2026-06-23-issueops-execution-decision-gate.md) |
 | 2026-06-23 | IssueOps hook and state-machine boundary | [record](adr/2026-06-23-issueops-hook-state-machine-boundary.md) |
 | 2026-06-18 | IssueOps plan-prep evidence gate | [record](adr/2026-06-18-issueops-plan-prep-evidence-gate.md) |
-| 2026-06-18 | IssueOps implementation requires durable worktree tool preparation | [record](adr/2026-06-18-issueops-worktree-tool-preparation.md) |
-| 2026-06-16 | internal/core *_facade.go is the intended public surface | [record](adr/2026-06-16-core-facades-intended-public-surface.md) |
+| 2026-06-18 | IssueOps implementation requires durable worktree tool preparation; superseded — `worktree prepare-tools` was removed with the v1 write lease (2026-07-23); `execution prepare` provisions worktrees ([2026-09-05](adr/2026-09-05-issueops-ten-stage-skills-with-auto-execution-mode.md)) | [record](adr/2026-06-18-issueops-worktree-tool-preparation.md) |
+| 2026-06-16 | internal/core *_facade.go is the intended public surface; superseded — `internal/core` was removed; see [DDD ownership](adr/2026-09-30-ddd-responsibility-ownership-across-the-harness.md) and [re-export shim removal](adr/2026-10-06-delete-re-export-shims-and-stop-naming-live-code-legacy.md) | [record](adr/2026-06-16-core-facades-intended-public-surface.md) |
 | 2026-06-13 | Distribution decision gate | [record](adr/2026-06-13-distribution-decision-gate.md) |
 | 2026-06-09 | Expose IssueOps gate contracts through MCP and skills | [record](adr/2026-06-09-expose-issueops-gate-contracts.md) |
 | 2026-05-25 | Go language selection | [record](adr/2026-05-25-go-language-selection.md) |

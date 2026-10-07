@@ -42,6 +42,37 @@ later dated record says so explicitly. Current supersessions include:
   `claude-sonnet-5`/high, and Fable 5 only on explicit manual request. The dual
   planner/implementer structure itself is unchanged.
 
+The following records are marked superseded because the code they describe was
+removed. No later record names them explicitly, so each entry names the removing
+change and the decision that now governs. The record bodies are unchanged.
+
+- 2026-07-02 "External LLM stays Z.AI-only" and 2026-07-02 "External LLM usage
+  observation": commit 2b429005 (2026-07-07) deleted the `externalllm` client and
+  the usage recorder and moved every caller to host-agent prompt/result-file
+  contracts, under the [2026-07-07 standalone policy](2026-07-07-standalone-harness-policy.md).
+- 2026-06-16 "internal/core *_facade.go is the intended public surface": the
+  facade moved out of `internal/core` on 2026-08-08 (54c5c52d) and was later
+  deleted; `internal/core` no longer exists. Ownership follows the
+  [2026-09-30 DDD decision](2026-09-30-ddd-responsibility-ownership-across-the-harness.md),
+  which rejects keeping old functions as facades, and the
+  [2026-10-06 re-export shim removal](2026-10-06-delete-re-export-shims-and-stop-naming-live-code-legacy.md).
+- 2026-07-01 "MCP transport: adopt go-sdk with a retained legacy JSON-RPC path":
+  the go-sdk adoption stands, but commit 034bda93 (2026-08-03) routed stdio
+  through the SDK transport and removed the hand-rolled JSON-RPC path. The daemon
+  socket it names was removed on 2026-10-06; the current transport is the
+  [2026-10-02 shared Streamable HTTP decision](2026-10-02-shared-streamable-http-mcp-and-caller-capability.md)
+  plus the stdio compatibility path.
+- 2026-07-03 "Codex PreToolUse ask fallback": the
+  [2026-08-10 thin-hook decision](2026-08-10-default-hooks-thin-static-context.md)
+  stopped registering `pre-tool-use`, and the
+  [2026-08-27 SessionStart decision](2026-08-27-session-start-owns-compaction-context.md)
+  deleted the subcommand and its lifecycle guard chain.
+- 2026-06-18 "IssueOps implementation requires durable worktree tool
+  preparation": commit a875a16a (2026-07-23) replaced the handoff authority with
+  the v1 write lease and removed `worktree prepare-tools` and its `worktree_tools`
+  gates. Worktree provisioning belongs to `issueops execution prepare --mode auto`
+  under the [2026-09-05 ten-stage decision](2026-09-05-issueops-ten-stage-skills-with-auto-execution-mode.md).
+
 Historical host, schema, and command names inside dated records preserve the
 rationale at the time of writing. They are not current support contracts. The
 current operating surface is set by root `AGENTS.md`, `ARCHITECTURE.md`,

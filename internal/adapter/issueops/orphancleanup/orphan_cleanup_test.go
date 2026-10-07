@@ -5,6 +5,7 @@ import (
 	"errors"
 	contract "issueops/internal/contract/issueopsorphancleanup"
 	operationalhealthcontract "issueops/internal/contract/operationalhealth"
+	"issueops/internal/testsupport"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -239,6 +240,7 @@ type orphanCleanupGitFixture struct {
 
 func newOrphanCleanupGitFixture(t *testing.T) orphanCleanupGitFixture {
 	t.Helper()
+	testsupport.IsolateGitConfig(t)
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := filepath.Join(t.TempDir(), "repo")
 	remote := filepath.Join(t.TempDir(), "remote.git")

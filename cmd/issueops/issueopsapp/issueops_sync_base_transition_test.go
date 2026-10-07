@@ -4,6 +4,7 @@ import (
 	"context"
 	"issueops/internal/adapter/issueops"
 	issueopsport "issueops/internal/port"
+	"issueops/internal/testsupport"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -99,6 +100,7 @@ func TestReleasedSyncBaseReachableThroughProductionClaimCompleteTransitions(t *t
 
 func seedSyncBaseTransition(t *testing.T) (string, issueopscontract.IssueOpsRecord, string) {
 	t.Helper()
+	testsupport.IsolateGitConfig(t)
 	stateRoot := t.TempDir()
 	source := filepath.Join(t.TempDir(), "source")
 	worktree := filepath.Join(t.TempDir(), "worktree")

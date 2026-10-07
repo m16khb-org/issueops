@@ -1,20 +1,17 @@
 package updatecli
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
+	"issueops/cmd/issueops/jsonout"
 	updateapp "issueops/internal/application/update"
 	"os"
 )
 
 type CleanupCommand struct{ Effects updateapp.MCPProxyEffects }
 
-func printJSON(v any) error {
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	return enc.Encode(v)
-}
+var printJSON = jsonout.Print
+
 func (command CleanupCommand) Run(args []string) error {
 	fs := flag.NewFlagSet("mcp cleanup", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)

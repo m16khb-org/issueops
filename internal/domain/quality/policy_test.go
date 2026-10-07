@@ -31,3 +31,20 @@ func TestCollectorFailureDoesNotClaimHealth(t *testing.T) {
 		t.Fatalf("duplicate collector finding: %+v", result.Findings)
 	}
 }
+
+func TestFailedTestPackagesListsFailLinesWithinLimit(t *testing.T) {
+	output := "ok  \tissueops/a\t0.1s\tcoverage: 70.0% of statements\n" +
+		"--- FAIL: TestX (0.04s)\nFAIL\ncoverage: 87.5% of statements\n" +
+		"FAIL\tissueops/b\t5.812s\n" +
+		"FAIL\tissueops/c [build failed]\n" +
+		"FAIL\tissueops/b\t1.0s\n" +
+		"FAIL\tissueops/d [setup failed]\n" +
+		"FAIL\n"
+	packages, omitted := FailedTestPackages(output, 2)
+	if len(packages) != 2 || packages[0] != "issueops/b" || packages[1] != "issueops/c" || omitted != 1 {
+		t.Fatalf("packages=%v omitted=%d", packages, omitted)
+	}
+	if packages, omitted := FailedTestPackages("ok  \tissueops/a\t0.1s\n", 2); len(packages) != 0 || omitted != 0 {
+		t.Fatalf("passing output: packages=%v omitted=%d", packages, omitted)
+	}
+}

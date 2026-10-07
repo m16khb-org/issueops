@@ -2,9 +2,8 @@ package installcli
 
 import (
 	"context"
-	"encoding/json"
-	"os"
 
+	"issueops/cmd/issueops/jsonout"
 	installcontract "issueops/internal/contract/install"
 	upstreamcontract "issueops/internal/contract/upstream"
 	"issueops/internal/port"
@@ -45,8 +44,4 @@ type Deps struct {
 	MCPService          MCPServiceSetup
 }
 
-func printJSON(value any) error {
-	encoder := json.NewEncoder(os.Stdout)
-	encoder.SetIndent("", "  ")
-	return encoder.Encode(value)
-}
+var printJSON = jsonout.Print

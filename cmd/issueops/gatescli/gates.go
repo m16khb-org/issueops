@@ -4,10 +4,10 @@
 package gatescli
 
 import (
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"issueops/cmd/issueops/jsonout"
 	gatescontract "issueops/internal/contract/gates"
 	"os"
 	"strings"
@@ -312,8 +312,4 @@ func splitCSV(s string) []string {
 	return out
 }
 
-func printJSON(value any) error {
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	return enc.Encode(value)
-}
+var printJSON = jsonout.Print

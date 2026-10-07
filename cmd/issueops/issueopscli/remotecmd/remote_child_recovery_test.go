@@ -251,6 +251,11 @@ func TestChildCLIFollowUpStartFailurePersistsKnownURL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The fault rewrites this file and the test restores it below, so it must be
+	// the fixture's fake, never a real glab found later on PATH.
+	if !strings.HasSuffix(string(original), childCLIFake) {
+		t.Fatalf("glab resolved to %s, not the fixture fake; refusing to modify it", executable)
+	}
 	t.Setenv("CHILD_FAULT", "follow-up-start")
 	var failure app.ChildCreateResult
 	err = testRemoteCommand().Run(args, Deps{PrintJSON: func(v any) error { b, _ := json.Marshal(v); return json.Unmarshal(b, &failure) }})

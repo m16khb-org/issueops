@@ -16,6 +16,7 @@
 - 파일명은 snake_case를 사용한다.
 - Go 패키지명은 짧은 소문자 단어를 사용한다.
 - 테스트 파일은 대상 파일 가까이에 `*_test.go`로 둔다.
+- CLI 명령의 들여쓴 JSON 출력은 leaf 패키지 `cmd/issueops/jsonout`(`Print`, `PrintTo`)을 쓴다. 명령 패키지마다 `json.Encoder`를 다시 만들지 않는다.
 
 현재 구조(대표 경로):
 
@@ -75,7 +76,7 @@ skills/
 ### Dependency fitness ratchet
 
 - `internal/architecture/dependency_test.go`는 direct production import만 검사한다. edge 표기는 항상 `importer -> imported`이며 정렬 순서를 바꾸지 않는다.
-- legacy baseline은 없다. 전환이 끝났으므로 `internal/adapter/*`를 composition root 밖에서 import하는 edge는 새로 추가할 수 없다. `TestProductionGraphHasNoLegacyAdapterEdges`가 즉시 실패한다. 어댑터 기능이 필요하면 세 갈래 처방(순수 규칙은 domain, 타입은 contract, I/O는 주입)을 따른다.
+- legacy baseline은 없다. 전환이 끝났으므로 `internal/adapter/*`를 composition root 밖에서 import하는 edge는 새로 추가할 수 없다. `TestProductionGraphHasNoForbiddenAdapterEdges`가 즉시 실패한다. 어댑터 기능이 필요하면 세 갈래 처방(순수 규칙은 domain, 타입은 contract, I/O는 주입)을 따른다.
 - composition root 예외는 `cmd/issueops/issueopsapp` 하나로 제한한다. 새 concrete-adapter import가 그 밖에 필요하다면 먼저 boundary를 재검토한다.
 - production 진입점에서 호출하지 않는 테스트용 위임 함수·타입·상수는 `*_test.go`에 둔다. 기존 테스트를 유지하려고 production facade를 남기지 않는다. 구성 루트에서 실제로 쓰는 DTO는 정규 contract를 직접 참조한다.
 - IssueOps 수직 마이그레이션은 capability별 contract/domain/application/inbound/outbound 패키지를 사용한다. domain은 JSON·filesystem·process·SQLite·clock을 import하지 않고, application port는 해당 capability가 실제로 쓰는 좁은 연산만 선언한다. persisted bytes가 공개 계약이면 legacy facade와 새 vertical의 differential 및 race evidence를 함께 유지한다.

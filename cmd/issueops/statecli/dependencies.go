@@ -2,10 +2,9 @@ package statecli
 
 import (
 	"context"
-	"encoding/json"
-	"os"
 	"time"
 
+	"issueops/cmd/issueops/jsonout"
 	statecontract "issueops/internal/contract/state"
 )
 
@@ -22,8 +21,4 @@ type Dependencies struct {
 	Maintain func() (statecontract.StateMaintainResult, error)
 }
 
-func printJSON(value any) error {
-	encoder := json.NewEncoder(os.Stdout)
-	encoder.SetIndent("", "  ")
-	return encoder.Encode(value)
-}
+var printJSON = jsonout.Print

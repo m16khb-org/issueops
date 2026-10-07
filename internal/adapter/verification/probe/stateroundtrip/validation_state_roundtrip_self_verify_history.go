@@ -3,6 +3,7 @@ package stateroundtrip
 import (
 	selfaugment "issueops/internal/contract/selfaugment"
 	selfverify "issueops/internal/contract/selfverify"
+	"slices"
 
 	"encoding/json"
 
@@ -24,7 +25,7 @@ func (s *stateRoundtripSelfVerifySession) validateHistoryAndRetention(baselineCo
 	for _, entry := range historyResult.Entries {
 		historyKeys = append(historyKeys, entry.Key)
 	}
-	if !historyResult.OK || historyResult.TotalMatches < 3 || !containsString(historyKeys, baselineCompareKey) || !containsString(historyKeys, candidateCompareKey) || !containsString(historyKeys, promotedBaselineKey) {
+	if !historyResult.OK || historyResult.TotalMatches < 3 || !slices.Contains(historyKeys, baselineCompareKey) || !slices.Contains(historyKeys, candidateCompareKey) || !slices.Contains(historyKeys, promotedBaselineKey) {
 		return s.fail("self-verify history did not list saved baseline/candidate/promoted summaries")
 	}
 
@@ -79,7 +80,7 @@ func (s *stateRoundtripSelfVerifySession) validateHistoryAndRetention(baselineCo
 	if err := json.Unmarshal([]byte(doctor.Stdout), &doctorResult); err != nil {
 		return s.fail(err.Error())
 	}
-	if !doctorResult.OK || doctorResult.Healthy || !containsString(doctorResult.ValidKeys, key) || !stateDoctorHasIssueCode(doctorResult.Issues, "invalid_state") {
+	if !doctorResult.OK || doctorResult.Healthy || !slices.Contains(doctorResult.ValidKeys, key) || !stateDoctorHasIssueCode(doctorResult.Issues, "invalid_state") {
 		return s.fail("state doctor did not report corrupt fixture and preserve valid key")
 	}
 	return selfverify.StepResult{OK: true}

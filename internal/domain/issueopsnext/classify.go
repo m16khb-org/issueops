@@ -5,6 +5,7 @@
 package issueopsnext
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 
@@ -488,7 +489,7 @@ func devilsAdvocateGate(in Input) string {
 	}
 	missing := in.Completion(issueopsnextcontract.PhaseImplement).Missing
 	for _, key := range []string{"devils_advocate_review", "devils_advocate_review_stale"} {
-		if contains(missing, key) {
+		if slices.Contains(missing, key) {
 			return key
 		}
 	}
@@ -503,19 +504,10 @@ func devilsAdvocateCommand(in Input) string {
 	return OwnerCommand(in.Record.ID, "devils_advocate_review")
 }
 
-func contains(list []string, want string) bool {
-	for _, item := range list {
-		if item == want {
-			return true
-		}
-	}
-	return false
-}
-
 func intersect(list, keys []string) []string {
 	var out []string
 	for _, key := range keys {
-		if contains(list, key) {
+		if slices.Contains(list, key) {
 			out = append(out, key)
 		}
 	}
@@ -534,7 +526,7 @@ func prefixed(list []string, prefix string) []string {
 
 func subset(list, allowed []string) bool {
 	for _, item := range list {
-		if !contains(allowed, item) {
+		if !slices.Contains(allowed, item) {
 			return false
 		}
 	}

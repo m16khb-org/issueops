@@ -61,12 +61,3 @@ func assertionStepWithOutput(label string, started time.Time, errs []string, std
 func combineFailedStep(label string, started time.Time, child verifycontract.StepResult, stdoutParts []string, commands []string) verifycontract.StepResult {
 	return verifydomain.CombineFailedStep(label, time.Since(started).Milliseconds(), child, stdoutParts, commands, aggregateOutputBudgetBytes)
 }
-
-func containsString(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
-}

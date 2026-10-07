@@ -179,10 +179,6 @@ func TestUpdateAndAPIDocHelpers(t *testing.T) {
 		t.Fatalf("proxy parse %+v %v", parsed, ok)
 	}
 
-	var buf bytes.Buffer
-	if err := printJSONTo(&buf, map[string]any{"ok": true}); err != nil || !strings.Contains(buf.String(), `"ok"`) {
-		t.Fatalf("printJSONTo = %q err=%v", buf.String(), err)
-	}
 	if !isAPIDocReviewGateError(app.ErrReviewGateFailed) || !isAPIDocStaticGateError(app.ErrStaticGateFailed) {
 		t.Fatal("gate error wrappers failed")
 	}
@@ -365,6 +361,9 @@ func TestRiskMCPAndIssueOpsPolicyHelpers(t *testing.T) {
 }
 
 func TestCLIHelpers(t *testing.T) {
+	// status and doctor probe every loopback MCP gateway in ~/.claude.json, so
+	// a real HOME made this test slow and machine-dependent.
+	t.Setenv("HOME", t.TempDir())
 	root := t.TempDir()
 	writeValidZeroAudit(t, root)
 	stateDir := t.TempDir()

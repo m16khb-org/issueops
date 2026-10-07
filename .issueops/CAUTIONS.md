@@ -75,6 +75,8 @@ footer; older notes also live in `archive/cautions-incidents.md`.
 
 | Date | Lesson |
 |---|---|
+| 2026-10-07 | [테스트 helper 프로세스와 호스트 상태가 -cover·부하·실제 HOME에서 결론을 바꾼다](cautions/2026-10-07-helper-cover-home.md) |
+| 2026-10-07 | [게이트 원장 CHECK·EXPECT 작성 함정: escape, RE2, 글자 대리 검사](cautions/2026-10-07-check-expect-escape-re2.md) |
 | 2026-10-06 | [Removal commits leave stale help text, orphan fixtures, and doc claims behind](cautions/2026-10-06-removal-commits-leave-stale-help-text-orphan-fixtures-and-do.md) |
 | 2026-10-03 | [공용 HTTP 경계와 검증 증거: capability 파일 인자 이탈, 문자열만 보는 receipt, 고정 deadline 테스트 세션](cautions/2026-10-03-http.md) |
 | 2026-10-03 | [HTTP 설치 검증과 린터 toolchain 일치](cautions/2026-10-03-native-http-validation-and-lint-toolchain.md) |
@@ -103,7 +105,7 @@ footer; older notes also live in `archive/cautions-incidents.md`.
 | 2026-08-28 | [GitLab WorkItem 직속 labels/assignees selection이 create-child를 막았고 가짜 glab 스텁이 그 오류를 감췄다](cautions/2026-08-28-gitlab-workitem-labels-assignees-selection-create-child-glab.md) |
 | 2026-08-27 | [Skill added without agents/openai.yaml broke the self-verify QA gate on main](cautions/2026-08-27-skill-without-openai-yaml-self-verify-qa-gate.md) |
 | 2026-08-27 | [cleanup finish blocked on one Orca terminal shell; cleanup now stops worktree processes and terminals itself](cautions/2026-08-27-cleanup-stops-worktree-processes.md) |
-| 2026-08-27 | [Daemon accept-loop burst dial exceeded the unix backlog](cautions/2026-08-27-daemon-accept-loop-burst-dial-backlog.md) |
+| 2026-08-27 | [Daemon accept-loop burst dial exceeded the unix backlog](cautions/2026-08-27-daemon-accept-loop-burst-dial-backlog.md) (daemon 제거됨, 2026-10-06) |
 | 2026-08-27 | [Record delete bypassed the sqlstore span gate and orphaned related state](cautions/2026-08-27-record-delete-bypassed-the-span-gate.md) |
 | 2026-08-26 | [CI gofmt gate drifted from the local battery; golden captured a dirty working tree](cautions/2026-08-26-ci-gofmt-gate-local-battery-drift.md) |
 | 2026-08-26 | [Merged-without-execution cycle had no typed cleanup exit; abandon accepts record-linked residue](cautions/2026-08-26-abandon-record-linked-residue-without-execution.md) |
@@ -129,7 +131,7 @@ footer; older notes also live in `archive/cautions-incidents.md`.
 | 2026-07-09 | [macOS pipe KVA exhaustion blocks stdout-capture CLI tests](cautions/2026-07-09-macos-pipe-kva-exhaustion.md) |
 | 2026-07-08 | [Codex "invalid JSON output" was co-resident hook pipe truncation](cautions/2026-07-08-codex-invalid-json-output-pipe-truncation.md) |
 | 2026-07-07 | [IssueOps orchestration locks, additive fields, worker leases](cautions/2026-07-07-issueops-orchestration-locks-additive-fields-worker-leases.md) |
-| 2026-07-07 | [SQLite sqlstore span discipline: active-root chain, fresh start](cautions/2026-07-07-sqlite-sqlstore-span-discipline.md) |
+| 2026-07-07 | [SQLite sqlstore span discipline: active-root chain, fresh start](cautions/2026-07-07-sqlite-sqlstore-span-discipline.md) (경로 이동: `internal/core/sqlstore` → `internal/adapter/outbound/sqlstore`) |
 | 2026-07-02 | [Re-verify stale memory observations against HEAD](cautions/2026-07-02-reverify-stale-memory-observations-against-head.md) |
 
 ## Removed CLI modes (historical only)

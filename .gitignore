@@ -16,7 +16,13 @@ cache/
 .antigravitycli/
 .omo/
 .agents/
-evidence
+# Local workflow evidence (root, .issueops, and the verified-execution roots
+# under skills/verified-execution). A bare name would also hide any source
+# directory or file called "evidence".
+/evidence/
+.issueops/evidence/
+.issueops/verified-execution/evidence/
+/.verified-execution/evidence/
 .issueops/state/
 
 # Language/tool caches

@@ -3,6 +3,7 @@ package gatesgate
 import (
 	"context"
 	reviewcontract "issueops/internal/contract/issueopsreview"
+	"issueops/internal/testsupport"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,6 +16,7 @@ import (
 
 func initGatesGateRepo(t *testing.T) string {
 	t.Helper()
+	testsupport.IsolateGitConfig(t)
 	root := t.TempDir()
 	repo := filepath.Join(root, "repo")
 	remote := filepath.Join(root, "remote.git")

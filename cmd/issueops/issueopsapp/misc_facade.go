@@ -1,8 +1,6 @@
 package issueopsapp
 
 import (
-	"encoding/json"
-	"io"
 	"path/filepath"
 
 	"issueops/cmd/issueops/contractcli"
@@ -16,12 +14,6 @@ func runContract(args []string) error {
 
 func compatibilityContract() contractcli.CompatibilityContract {
 	return contractcli.BuildCompatibilityContract(clicatalog.Commands(), mcpTools())
-}
-
-func printJSONTo(w io.Writer, v any) error {
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	return enc.Encode(v)
 }
 
 func issueOpsRoot() string {

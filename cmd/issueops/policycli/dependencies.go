@@ -1,10 +1,9 @@
 package policycli
 
 import (
-	"encoding/json"
+	"issueops/cmd/issueops/jsonout"
 	auditapp "issueops/internal/application/audit"
 	policyapp "issueops/internal/application/policy"
-	"os"
 	"strings"
 )
 
@@ -15,11 +14,7 @@ type Command struct {
 	Audit       auditapp.Service
 }
 
-func printJSON(value any) error {
-	encoder := json.NewEncoder(os.Stdout)
-	encoder.SetIndent("", "  ")
-	return encoder.Encode(value)
-}
+var printJSON = jsonout.Print
 
 func splitCSV(s string) []string {
 	if strings.TrimSpace(s) == "" {

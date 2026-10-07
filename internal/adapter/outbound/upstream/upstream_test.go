@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	upstreamcontract "issueops/internal/contract/upstream"
+	"issueops/internal/testsupport"
 )
 
 func TestReadConfigTreatsAMissingDeclarationAsEmpty(t *testing.T) {
@@ -145,6 +146,7 @@ func requireGit(t *testing.T) {
 // an unrelated file, so sparse fetching is observable.
 func newSkillRepo(t *testing.T, skillPath, skillBody string) string {
 	t.Helper()
+	testsupport.IsolateGitConfig(t)
 	repo := t.TempDir()
 	writeFile(t, filepath.Join(repo, "unrelated.txt"), "not a skill")
 	if skillBody != "" {

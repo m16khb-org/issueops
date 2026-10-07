@@ -98,14 +98,7 @@ func TestRunUpdateUsesResolvedIssueOpsRootOutsideCheckout(t *testing.T) {
 	if err := os.WriteFile(script, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	oldCWD, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chdir(outside); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.Chdir(oldCWD) })
+	t.Chdir(outside)
 	Configure(Deps{IssueOpsRoot: func() string { return root }})
 	t.Cleanup(Reset)
 
