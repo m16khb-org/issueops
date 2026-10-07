@@ -2,6 +2,7 @@ package issueopsremote
 
 import (
 	"context"
+	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -236,4 +237,34 @@ type artifactAuthorityForTest struct{}
 
 func (artifactAuthorityForTest) Authorize(context.Context, model.IssueOpsRecord, model.IssueOpsActor) error {
 	return nil
+}
+
+// cancellationAwareArtifactStore mirrors sqlstore's span: a canceled context
+// fails before the transaction body runs.
+type cancellationAwareArtifactStore struct {
+	*artifactStoreForTest
+	reads int
+}
+
+func (s *cancellationAwareArtifactStore) WithinTransaction(ctx context.Context, id string, fn func(context.Context) error) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return s.artifactStoreForTest.WithinTransaction(ctx, id, fn)
+}
+
+func (s *cancellationAwareArtifactStore) Read(ctx context.Context, id string) (model.IssueOpsRecord, error) {
+	s.reads++
+	return s.artifactStoreForTest.Read(ctx, id)
+}
+
+func TestValidateHonorsCallerCancellation(t *testing.T) {
+	store := &cancellationAwareArtifactStore{artifactStoreForTest: &artifactStoreForTest{records: map[string]model.IssueOpsRecord{"io-1": {ID: "io-1"}}}}
+	service := NewArtifactVerificationService(store, artifactAuthorityForTest{}, nil, nil, time.Now)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := service.Validate(ctx, "io-1", model.IssueOpsRemoteArtifactVerificationRequest{})
+	if !errors.Is(err, context.Canceled) || store.reads != 0 {
+		t.Fatalf("Validate err=%v reads=%d, want context.Canceled before any read", err, store.reads)
+	}
 }

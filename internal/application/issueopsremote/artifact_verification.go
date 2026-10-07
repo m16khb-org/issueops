@@ -47,9 +47,11 @@ func (s *ArtifactVerificationService) Verify(ctx context.Context, id string, req
 	return s.Record(ctx, id, req, actor)
 }
 
-func (s *ArtifactVerificationService) Validate(_ context.Context, id string, req model.IssueOpsRemoteArtifactVerificationRequest) (model.IssueOpsRecord, error) {
+func (s *ArtifactVerificationService) Validate(ctx context.Context, id string, req model.IssueOpsRemoteArtifactVerificationRequest) (model.IssueOpsRecord, error) {
 	var record model.IssueOpsRecord
-	err := s.store.WithinTransaction(context.Background(), id, func(ctx context.Context) error {
+	// Validation only reads, so it follows the caller's cancellation; Record
+	// is the durable write that outlives it.
+	err := s.store.WithinTransaction(ctx, id, func(ctx context.Context) error {
 		var err error
 		record, err = s.store.Read(ctx, id)
 		if err != nil {
