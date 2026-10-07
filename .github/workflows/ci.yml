@@ -123,6 +123,9 @@ jobs:
 
       # Owns Python discovery and the normal Go suite (including golden tests)
       # once, in the same temporary HOME as native integration. Race stays above.
+      # The runner's user systemd manager looks for units under its own HOME, so
+      # the HTTP MCP unit written under the temporary HOME never loads; ADR
+      # 2026-10-02 forbids falling back to stdio silently, so CI picks it here.
       - name: Deterministic self-verify gate (seed-pinned, --judge none)
         run: |
           tmp_home="$(mktemp -d)"
@@ -131,5 +134,5 @@ jobs:
             rm -rf "$tmp_home"
           }
           trap cleanup EXIT
-          HOME="$tmp_home" CODEX_HOME="$tmp_home/.codex" ./scripts/install-native.sh --skip-build --path-mode=skip
+          HOME="$tmp_home" CODEX_HOME="$tmp_home/.codex" ./scripts/install-native.sh --skip-build --path-mode=skip --mcp-transport=stdio
           HOME="$tmp_home" CODEX_HOME="$tmp_home/.codex" ./bin/issueops self-verify --seed=100 --target-score=95 --llm-eval=false --json

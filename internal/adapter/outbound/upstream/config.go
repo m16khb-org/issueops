@@ -5,7 +5,9 @@ package upstream
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 
 	upstreamcontract "issueops/internal/contract/upstream"
@@ -16,7 +18,7 @@ import (
 func ReadConfig(path string) (upstreamcontract.Config, error) {
 	body, err := os.ReadFile(path)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return upstreamcontract.Config{}, nil
 		}
 		return upstreamcontract.Config{}, err

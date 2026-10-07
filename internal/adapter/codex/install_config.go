@@ -1,7 +1,9 @@
 package codex
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,13 +18,13 @@ func (installer Installer) writeGlobalConfig(path string, req port.NativeInstall
 		text = string(b)
 		if !req.DryRun {
 			backup := path + ".harness.bak"
-			if _, statErr := os.Stat(backup); os.IsNotExist(statErr) {
+			if _, statErr := os.Stat(backup); errors.Is(statErr, fs.ErrNotExist) {
 				if writeErr := os.WriteFile(backup, []byte(text), 0o600); writeErr != nil {
 					return file, writeErr
 				}
 			}
 		}
-	} else if !os.IsNotExist(err) && !req.DryRun {
+	} else if !errors.Is(err, fs.ErrNotExist) && !req.DryRun {
 		return file, err
 	}
 	for _, section := range []string{"mcp_servers.issueops", "mcp_servers.issueops.env", "mcp_servers.issueops.http_headers"} {
@@ -79,7 +81,7 @@ func restrictToOwner(path string, req port.NativeInstallRequest) error {
 	if req.MCPTransport != mcpTransportHTTP || req.DryRun {
 		return nil
 	}
-	if err := os.Chmod(path, 0o600); err != nil && !os.IsNotExist(err) {
+	if err := os.Chmod(path, 0o600); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
 	return nil

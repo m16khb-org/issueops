@@ -98,9 +98,9 @@ func FromFixture(fixture benchmark.IssueOpsBenchmarkFixture) benchmark.IssueOpsB
 			"- 예상 실패를 확인한 뒤 최소 구현을 적용하고 `go test ./... -count=1`로 통과를 확인한다.",
 		}, "\n"),
 		TaskBreakdown: strings.Join([]string{
-			"Worker A owns internal/core/issueops_benchmark.go and fixture scoring rules.",
+			"Worker A owns internal/domain/issueopsbenchmark/issueops_benchmark_score.go and fixture scoring rules.",
 			"Worker A also owns fixture schema validation, deterministic scoring, and benchmark fixture failure coverage.",
-			"Worker B owns cmd/issueops/issueops.go and CLI artifact generation.",
+			"Worker B owns cmd/issueops/issueopscli/benchmarkartifact/issueops_benchmark_artifact.go and CLI artifact generation.",
 			"Worker B also owns judge adapter wiring, benchmark result JSON output, and issueops CLI integration.",
 			"Worker C owns skills/issueops/SKILL.md and .issueops documentation if docs need updates.",
 			"Each worker owns a non-overlapping task and reports expected output, touched files, tests, and remaining risk.",

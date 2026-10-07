@@ -5,6 +5,7 @@ package mcpservice
 import (
 	"errors"
 	"io"
+	"io/fs"
 	"os"
 
 	"golang.org/x/sys/unix"
@@ -26,7 +27,7 @@ func tryLock(f *os.File) error {
 // A process can not observe its own fcntl lock this way.
 func LockHolder(path string) (int, error) {
 	f, err := os.OpenFile(path, os.O_RDWR, 0)
-	if os.IsNotExist(err) {
+	if errors.Is(err, fs.ErrNotExist) {
 		return 0, nil
 	}
 	if err != nil {

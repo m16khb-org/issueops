@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -209,12 +210,12 @@ func (transaction *ManagedCommandPathTransaction) Rollback() (install.ManagedCom
 	transaction.plan.RollbackAvailable = false
 	transaction.closed = true
 	if transaction.displaced != "" {
-		if err := os.Remove(transaction.displaced); err != nil && !os.IsNotExist(err) {
+		if err := os.Remove(transaction.displaced); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return transaction.plan, fmt.Errorf("remove retained displaced command after rollback: %w", err)
 		}
 		transaction.displaced = ""
 	}
-	if err := os.Remove(transaction.plan.BackupPath); err != nil && !os.IsNotExist(err) {
+	if err := os.Remove(transaction.plan.BackupPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return transaction.plan, fmt.Errorf("remove command backup after rollback: %w", err)
 	}
 	transaction.plan.BackupRetained = false
@@ -268,7 +269,7 @@ func (transaction *ManagedCommandPathTransaction) Finalize() (install.ManagedCom
 	transaction.plan.Committed = true
 	transaction.plan.RollbackAvailable = false
 	transaction.closed = true
-	if err := os.Remove(transaction.plan.BackupPath); err != nil && !os.IsNotExist(err) {
+	if err := os.Remove(transaction.plan.BackupPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return transaction.plan, fmt.Errorf("remove committed command backup: %w", err)
 	}
 	transaction.plan.BackupRetained = false

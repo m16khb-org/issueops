@@ -3,7 +3,9 @@ package verification
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -25,7 +27,7 @@ func ListTrackedGoFiles(ctx context.Context, root string) ([]string, error) {
 			continue
 		}
 		if _, err := os.Lstat(filepath.Join(root, file)); err != nil {
-			if os.IsNotExist(err) {
+			if errors.Is(err, fs.ErrNotExist) {
 				continue
 			}
 			return nil, err

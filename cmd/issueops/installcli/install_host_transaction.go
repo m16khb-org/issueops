@@ -3,6 +3,7 @@ package installcli
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -92,7 +93,7 @@ func prepareInstallHostTransaction(plan port.NativeInstallResult) (*installHostT
 func captureInstallHostParent(path string) (installHostPathSnapshot, error) {
 	snapshot := installHostPathSnapshot{path: path}
 	info, err := os.Stat(path)
-	if os.IsNotExist(err) {
+	if errors.Is(err, fs.ErrNotExist) {
 		return snapshot, nil
 	}
 	if err != nil {
@@ -108,7 +109,7 @@ func captureInstallHostParent(path string) (installHostPathSnapshot, error) {
 func captureInstallHostPath(path string, kind installHostPathKind) (installHostPathSnapshot, error) {
 	snapshot := installHostPathSnapshot{path: path, kind: kind}
 	info, err := os.Lstat(path)
-	if os.IsNotExist(err) {
+	if errors.Is(err, fs.ErrNotExist) {
 		return snapshot, nil
 	}
 	if err != nil {
@@ -168,7 +169,7 @@ func (transaction *installHostTransaction) RollbackHosts() error {
 
 func restoreInstallHostPath(snapshot installHostPathSnapshot) error {
 	if !snapshot.existed {
-		if err := os.Remove(snapshot.path); err != nil && !os.IsNotExist(err) {
+		if err := os.Remove(snapshot.path); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return err
 		}
 		return nil
@@ -177,13 +178,13 @@ func restoreInstallHostPath(snapshot installHostPathSnapshot) error {
 		return err
 	}
 	if snapshot.kind == installHostLink {
-		if err := os.Remove(snapshot.path); err != nil && !os.IsNotExist(err) {
+		if err := os.Remove(snapshot.path); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return err
 		}
 		return os.Symlink(snapshot.linkTarget, snapshot.path)
 	}
 	if snapshot.wasSymlink {
-		if err := os.Remove(snapshot.path); err != nil && !os.IsNotExist(err) {
+		if err := os.Remove(snapshot.path); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return err
 		}
 		if err := os.Symlink(snapshot.linkTarget, snapshot.path); err != nil {
@@ -199,7 +200,7 @@ func restoreInstallHostPath(snapshot installHostPathSnapshot) error {
 		if err := os.Remove(snapshot.path); err != nil {
 			return err
 		}
-	} else if err != nil && !os.IsNotExist(err) {
+	} else if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
 	if err := os.WriteFile(snapshot.path, snapshot.content, snapshot.mode.Perm()); err != nil {
@@ -223,7 +224,7 @@ func pathDepth(path string) int {
 
 func removeInstallDirectoryIfEmpty(path string) error {
 	info, err := os.Lstat(path)
-	if os.IsNotExist(err) {
+	if errors.Is(err, fs.ErrNotExist) {
 		return nil
 	}
 	if err != nil {

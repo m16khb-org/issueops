@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"regexp"
 	"strconv"
@@ -31,7 +32,7 @@ type hostEntry struct {
 func readJSONEntry(path string) (hostEntry, error) {
 	body, err := os.ReadFile(path)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return hostEntry{}, configReadError{"config_missing"}
 		}
 		return hostEntry{}, configReadError{"config_unreadable"}
@@ -125,7 +126,7 @@ func jsonObjectFields(body []byte) ([]jsonField, error) {
 func readCodexEntry(path string) (hostEntry, error) {
 	body, err := os.ReadFile(path)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return hostEntry{}, configReadError{"config_missing"}
 		}
 		return hostEntry{}, configReadError{"config_unreadable"}

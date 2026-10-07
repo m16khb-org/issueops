@@ -5,9 +5,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	toolconformancecontract "issueops/internal/contract/toolconformance"
 	toolconformancedomain "issueops/internal/domain/toolconformance"
 	"os"
@@ -222,7 +224,7 @@ func regressionDirectory(root string) string {
 
 func regressionFixtures(dir string) ([]string, error) {
 	entries, err := os.ReadDir(dir)
-	if os.IsNotExist(err) {
+	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
 	}
 	if err != nil {

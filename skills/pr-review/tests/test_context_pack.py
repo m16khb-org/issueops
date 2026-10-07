@@ -6,6 +6,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 SCRIPTS = Path(__file__).parents[1] / "scripts"
 spec = importlib.util.spec_from_file_location("mr_context", SCRIPTS / "mr_context.py")
@@ -77,6 +78,29 @@ class DefsFallbackTest(unittest.TestCase):
             self.assertIn("## findMasked", md)
             self.assertIn("svc.ts:1", md)
             self.assertIn("ctl.ts:2", md)
+
+    def test_grep_fallback_when_rg_is_not_installed(self) -> None:
+        real_run = subprocess.run
+
+        def without_rg(cmd, *args, **kwargs):
+            if cmd[0] == "rg":
+                raise FileNotFoundError(2, "No such file or directory", "rg")
+            return real_run(cmd, *args, **kwargs)
+
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(mr_context.subprocess, "run", without_rg):
+            root = Path(d)
+            (root / "svc.ts").write_text("export function findMasked(id) { return id }\n")
+            (root / "ctl.ts").write_text("import { findMasked } from './svc'\nfindMasked('x')\n")
+            (root / "node_modules").mkdir()
+            (root / "node_modules" / "dep.ts").write_text("findMasked()\n")
+            (root / ".git").mkdir()
+            (root / ".git" / "COMMIT_EDITMSG").write_text("add findMasked\n")
+            (root / "blob.dat").write_bytes(b"findMasked\0")
+            md = mr_context.build_defs(str(root), ["findMasked"], codegraph=False)
+            self.assertIn("svc.ts:1", md)
+            self.assertIn("ctl.ts:2", md)
+            for noise in ("node_modules", ".git/", "blob.dat", "Binary"):
+                self.assertNotIn(noise, md)
 
     def test_empty_symbols_yields_note(self) -> None:
         md = mr_context.build_defs("/nonexistent", [], codegraph=False)

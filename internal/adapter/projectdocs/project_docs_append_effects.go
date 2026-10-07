@@ -1,6 +1,8 @@
 package projectdocs
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"time"
@@ -15,7 +17,7 @@ func (AppendFiles) Path(root, rel string) string {
 }
 func (AppendFiles) Exists(path string) bool {
 	_, err := os.Stat(path)
-	return !os.IsNotExist(err)
+	return !errors.Is(err, fs.ErrNotExist)
 }
 func (AppendFiles) EnsureDir(path string) error { return os.MkdirAll(path, 0o755) }
 func (AppendFiles) Write(path, content string) error {

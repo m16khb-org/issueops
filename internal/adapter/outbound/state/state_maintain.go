@@ -1,7 +1,9 @@
 package state
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -28,7 +30,7 @@ func (stores MaintenanceStores) projectRoots() ([]string, error) {
 	projectsDir := filepath.Join(stores.base, "projects")
 	entries, err := os.ReadDir(projectsDir)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("discover project stores %s: %w", projectsDir, err)
@@ -41,7 +43,7 @@ func (stores MaintenanceStores) projectRoots() ([]string, error) {
 		dir := filepath.Join(projectsDir, entry.Name())
 		info, err := os.Lstat(filepath.Join(dir, "issueops.db"))
 		if err != nil {
-			if os.IsNotExist(err) {
+			if errors.Is(err, fs.ErrNotExist) {
 				continue
 			}
 			return nil, fmt.Errorf("discover project store %s: %w", dir, err)

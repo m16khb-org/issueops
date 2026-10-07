@@ -1,6 +1,8 @@
 package projectdocs
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"time"
@@ -10,7 +12,7 @@ type RevisionFiles struct{}
 
 func (RevisionFiles) Read(path string) (string, bool, error) {
 	content, err := os.ReadFile(path)
-	if os.IsNotExist(err) {
+	if errors.Is(err, fs.ErrNotExist) {
 		return "", false, nil
 	}
 	if err != nil {

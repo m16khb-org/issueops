@@ -27,18 +27,22 @@ func TestValidateReviewRequiresEvidenceAndKeepsInjectedTime(t *testing.T) {
 }
 
 func TestApplyReviewEnforcesReviseRoundCapAndPreservesHistory(t *testing.T) {
-	previous := &reviewcontract.DevilsAdvocateReview{
-		Verdict: "revise", RecordedAt: "third", History: []reviewcontract.DevilsAdvocateRound{
-			{Verdict: "revise", RecordedAt: "first"}, {Verdict: "revise", RecordedAt: "second"},
+	fourth := &reviewcontract.DevilsAdvocateReview{
+		Verdict: "revise", RecordedAt: "fourth", History: []reviewcontract.DevilsAdvocateRound{
+			{Verdict: "revise", RecordedAt: "first"}, {Verdict: "revise", RecordedAt: "second"}, {Verdict: "revise", RecordedAt: "third"},
 		},
 	}
-	_, err := ApplyReview(previous, reviewcontract.DevilsAdvocateReview{Verdict: "revise"})
-	capErr, ok := errors.AsType[*ReviseRoundCapError](err)
-	if !ok || capErr.Count != 3 {
-		t.Fatalf("fourth revise should hit cap: %T %v", err, err)
+	fifth, err := ApplyReview(fourth, reviewcontract.DevilsAdvocateReview{Verdict: "revise", RecordedAt: "fifth"})
+	if err != nil || len(fifth.History) != 4 {
+		t.Fatalf("fifth revise should be allowed: %+v %v", fifth, err)
 	}
-	next, err := ApplyReview(previous, reviewcontract.DevilsAdvocateReview{Verdict: "pass", RecordedAt: "fourth"})
-	if err != nil || len(next.History) != 3 || next.History[2].RecordedAt != "third" {
+	_, err = ApplyReview(&fifth, reviewcontract.DevilsAdvocateReview{Verdict: "revise"})
+	capErr, ok := errors.AsType[*ReviseRoundCapError](err)
+	if !ok || capErr.Count != 5 {
+		t.Fatalf("sixth revise should hit cap: %T %v", err, err)
+	}
+	next, err := ApplyReview(&fifth, reviewcontract.DevilsAdvocateReview{Verdict: "pass", RecordedAt: "sixth"})
+	if err != nil || len(next.History) != 5 || next.History[4].RecordedAt != "fifth" {
 		t.Fatalf("history lost: %+v %v", next, err)
 	}
 }

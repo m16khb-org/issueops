@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -550,7 +551,7 @@ func observeRecordedHookEvents(observationPath string) (hostStreamObservation, e
 	markerPath := observationPath + ".hooks"
 	info, err := os.Lstat(markerPath)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return hostStreamObservation{}, nil
 		}
 		return hostStreamObservation{}, fmt.Errorf("hook_observation_invalid")
@@ -655,7 +656,7 @@ func serveArgv(request port.HostProbeRequest, resultPath string) []string {
 func decodeEpisodeCapture(resultPath string, request port.HostProbeRequest) (episodeCapture, error) {
 	data, err := readBoundedEvidenceFile(resultPath)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return episodeCapture{}, fmt.Errorf("probe_result_missing")
 		}
 		if err.Error() == "evidence_file_too_large" {
@@ -696,7 +697,7 @@ func decodeEpisodeCapture(resultPath string, request port.HostProbeRequest) (epi
 		capture.AdvertisedValid = false
 		capture.CanonicalValid = false
 		capture.Diagnostics = []toolconformancecontract.Diagnostic{}
-	} else if !os.IsNotExist(markerErr) {
+	} else if !errors.Is(markerErr, fs.ErrNotExist) {
 		if markerErr.Error() == "evidence_file_too_large" {
 			return episodeCapture{}, fmt.Errorf("multiple_call_marker_too_large")
 		}
@@ -788,7 +789,7 @@ func persistChildSmokeObservation(deps Dependencies, result port.HostProbeResult
 	if err != nil || !parentInfo.IsDir() || parentInfo.Mode()&os.ModeSymlink != 0 || parentInfo.Mode().Perm() != 0o700 {
 		return fmt.Errorf("child_smoke_observation_path_invalid")
 	}
-	if _, err := os.Lstat(path); !os.IsNotExist(err) {
+	if _, err := os.Lstat(path); !errors.Is(err, fs.ErrNotExist) {
 		return fmt.Errorf("child_smoke_observation_path_invalid")
 	}
 	observation := hostStreamObservation{

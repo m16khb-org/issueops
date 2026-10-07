@@ -111,6 +111,9 @@ CI의 clean checkout에서는 다음 소유 관계로 각 검사를 한 번 실�
 임시 HOME 설치와 self-verify는 한 CI 블록에서 실행하며, 설치 실패와 Python·Go
 검사 실패는 블록의 비영 종료 코드로 CI에 전파한다. EXIT trap은 성공·실패 모두에서
 임시 HOME을 정리한다. race 실패도 독립 단계의 비영 종료 코드로 전파한다.
+임시 HOME 설치는 `--mcp-transport=stdio`를 명시한다. 이미 실행 중인 runner의 user systemd
+manager가 임시 HOME 아래의 HTTP MCP unit을 찾지 못하기 때문이다
+([install.md](../operations/install.md), #550).
 
 runner 기본 HOME과 임시 HOME의 결과를 서로 재사용하지 않는다. CI 밖에서 실행하는
 standalone self-verify도 Python·Go·golden·native integration 검사를 그대로 수행하며,

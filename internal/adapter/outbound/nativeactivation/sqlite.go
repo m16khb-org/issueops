@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -271,7 +272,7 @@ func validatePaths(stateRoot, issueOpsRoot, targetBinary string) error {
 	}
 	if info, err := os.Lstat(targetBinary); err == nil && info.Mode()&os.ModeSymlink != 0 {
 		return fmt.Errorf("native activation target must not be a symbolic link")
-	} else if err != nil && !os.IsNotExist(err) {
+	} else if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
 	return nil

@@ -134,7 +134,7 @@ issueops implementation-review record --id "$ISSUEOPS_ID" \
 
 `--reviewer-model`과 `--reviewer-effort`에는 실제 리뷰 실행에 넘긴 값을 shell-quote해
 넣는다. 생성 owner command의 `<REVIEWER_MODEL>`·`<REVIEWER_EFFORT>`도 같은 값으로
-채운다. 기본 티어 선택과 아래 3라운드 상승은 구분하고, 상승 이유는 finding에 남긴다.
+채운다. 기본 티어 선택과 아래 3라운드부터의 상승은 구분하고, 상승 이유는 finding에 남긴다.
 준비 자료의 고정값이나 상승 전 값을 감사 필드에 기록하지 않는다.
 
 finding은 이슈의 `## 계획 검토` 구간과 `.issueops/issues/<n>/plan-review.md`로 팀에 보인다.
@@ -156,23 +156,23 @@ contract_change`로 기록한다([`issueops-plan`](../issueops-plan/SKILL.md)의
   입력이지 호출자가 `pass`를 정할 근거가 아니다.
 - 구조나 범위가 바뀌면 전체 리뷰를 다시 띄운다. 필수 검증 공백은 그 확인 결과와
   영향받은 계약을 delta 리뷰에 포함한다. CHECK 형식이 없다는 이유만으로 전체를 반복하지 않는다.
-- 같은 대상의 수정·재리뷰는 최대 3라운드다. 3라운드는 `next.review.model`과 다른 모델
-  또는 한 단계 높은 effort로 띄우고, 그 사실을 `--reviewer-model`·`--reviewer-effort`
+- 같은 대상의 수정·재리뷰는 최대 5라운드다. 3라운드부터 5라운드까지는 `next.review.model`과
+  다른 모델 또는 한 단계 높은 effort로 띄우고, 그 사실을 `--reviewer-model`·`--reviewer-effort`
   (diff) 또는 finding 첫 줄(plan)에 적는다. 그 안에 통과하지 못하면 남은 결함과 시도한
   수정을 보고한다.
   - Claude에서 "다른 모델"은 사용자가 이름으로 지정한 모델만 쓴다. Fable 5는 명시적
-    수동 지정 전용이므로(`internal/contract/issueopspreparation/prepare.go`) 3라운드용으로
+    수동 지정 전용이므로(`internal/contract/issueopspreparation/prepare.go`) 3~5라운드용으로
     고르지 않는다. codex와 omo는 이 항목의 적용을 받지 않는다.
-  - Claude는 3라운드에도 `next.review.model`을 쓰고, effort는 `next.review.effort`에서
+  - Claude는 3~5라운드에도 `next.review.model`을 쓰고, effort는 `next.review.effort`에서
     한 단계 올린다. claude CLI의 단계는 `low`→`medium`→`high`→`xhigh`→`max`다.
     서브에이전트 도구는 effort를 받지 않으므로, 프롬프트를 표준 입력으로 넘겨
-    `claude -p --model "$REVIEW_MODEL" --effort "$ROUND3_EFFORT" --allowedTools
+    `claude -p --model "$REVIEW_MODEL" --effort "$ESCALATED_EFFORT" --allowedTools
     "Bash Read Grep Glob Skill"`로 빈 컨텍스트 세션을 띄운다. 출력 파일은 ignored 영역
     `.issueops/issues/<n>/review/`나 워크트리 밖에 둔다. 워크트리 안 미추적 파일은
     fingerprint에 들어가 봉인을 깬다.
     `--reviewer-model`·`--reviewer-effort`와 finding 첫 줄에는 실제로 넘긴 두 값을 적는다.
-- 같은 plan phase의 비-waived `revise`는 세 번까지다. 네 번째는 CLI가
-  `revise round cap reached`로 거부한다. 그때의 탈출은 `stop`을 기록하고
+- 같은 plan phase의 비-waived `revise`는 다섯 번까지다. 여섯 번째는 CLI가
+  `revise round cap reached`로 거부한다. stop 판정 뒤의 `regress` 재계획도 사이클당 다섯 번까지다. 그때의 탈출은 `stop`을 기록하고
   `issueops remote reflect-devils-advocate --confirm`으로 반영한 뒤 `regress`로
   재계획하거나, 근거를 적은 `--waive --waiver-rationale`로 넘어가는 것이다. `revise`
   상태에서 `regress`를 직접 부르면 거부된다.
@@ -221,7 +221,7 @@ issueops remote reflect-devils-advocate --id "$ISSUEOPS_ID" --confirm --json
   기록이지 증명이 아니다.
 - `--target diff` 리뷰에 plan을 주지 않는다. 무엇을 하기로 했는지 모르는 리뷰어는
   구현이 계획에서 벗어났는지 판정할 수 없다.
-- 3라운드에서 '다른 모델'로 Fable 5를 고른다. Fable 5는 사용자가 이름으로 지정할 때만 쓴다.
+- 3~5라운드에서 '다른 모델'로 Fable 5를 고른다. Fable 5는 사용자가 이름으로 지정할 때만 쓴다.
 
 ## 검증
 

@@ -1,7 +1,9 @@
 package issueops
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 
 	"issueops/internal/adapter/issueops/pathutil"
@@ -16,7 +18,7 @@ func (e CleanupFinishEnvironment) Git(dir string, args ...string) (int, string) 
 }
 func (CleanupFinishEnvironment) Directory(path string) (bool, error) {
 	info, err := os.Lstat(path)
-	if os.IsNotExist(err) {
+	if errors.Is(err, fs.ErrNotExist) {
 		return false, nil
 	}
 	if err != nil {

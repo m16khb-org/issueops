@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -125,7 +126,7 @@ func reseedWorkspaceSnapshot(workspace leasecontract.Workspace) (string, error) 
 		indexPath = filepath.Join(workspace.Root, indexPath)
 	}
 	indexBytes, err := os.ReadFile(indexPath)
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return "", err
 	}
 	code, tracked, stderr := reseedGitRaw(workspace.Root, "diff", "--binary", "--no-ext-diff", "--")

@@ -3,7 +3,9 @@ package installutil
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -41,7 +43,7 @@ func PlanHostSkillLinks(root, destRoot string, skillNames []string, host string,
 func PruneStaleSkillLinks(root, destRoot string, dryRun bool) ([]port.InstallLink, []error) {
 	entries, err := os.ReadDir(destRoot)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return nil, nil
 		}
 		return nil, []error{err}
@@ -68,7 +70,7 @@ func PruneStaleSkillLinks(root, destRoot string, dryRun bool) ([]port.InstallLin
 		}
 		if _, err := os.Stat(resolved); err == nil {
 			continue
-		} else if !os.IsNotExist(err) {
+		} else if !errors.Is(err, fs.ErrNotExist) {
 			errs = append(errs, err)
 			continue
 		}
@@ -103,7 +105,7 @@ func WriteTextPlan(path, kind, content string, perm os.FileMode, dryRun bool) (p
 	file := port.InstallFile{Path: path, Kind: kind}
 	if existing, err := os.ReadFile(path); err == nil && bytes.Equal(existing, []byte(content)) {
 		return file, nil
-	} else if err != nil && !os.IsNotExist(err) && !dryRun {
+	} else if err != nil && !errors.Is(err, fs.ErrNotExist) && !dryRun {
 		return file, err
 	}
 	if dryRun {
@@ -146,7 +148,7 @@ func EnsureSymlinkPlan(target, path string, dryRun bool) (port.InstallLink, erro
 		if err := os.Remove(path); err != nil {
 			return link, err
 		}
-	} else if !os.IsNotExist(err) {
+	} else if !errors.Is(err, fs.ErrNotExist) {
 		return link, err
 	}
 	if dryRun {

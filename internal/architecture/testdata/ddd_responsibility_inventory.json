@@ -4973,6 +4973,7 @@
         "func launchd.target",
         "func launchd.unitPath",
         "func launchd.unload",
+        "func runLoadStep",
         "func systemd.command",
         "func systemd.load",
         "func systemd.renderUnit",

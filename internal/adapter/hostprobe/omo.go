@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -320,7 +321,7 @@ func resolveOmoAuth(deps Dependencies) (omoAuthSnapshot, error) {
 	source := filepath.Join(sourceAgentDir, "auth.json")
 	data, err := readOmoAuthFile(source, MaxOutputBytes)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return omoAuthSnapshot{}, nil
 		}
 		return omoAuthSnapshot{}, err

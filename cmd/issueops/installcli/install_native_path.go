@@ -3,6 +3,7 @@ package installcli
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -59,7 +60,7 @@ func (c Command) prepareInstallPathPlanForCandidate(result *port.NativeInstallRe
 		transaction.command = managed
 		transaction.managed = true
 	} else {
-		if statErr != nil && !os.IsNotExist(statErr) {
+		if statErr != nil && !errors.Is(statErr, fs.ErrNotExist) {
 			return nil, statErr
 		}
 		link, err := c.EnsureSymlinkPlan(req.BinPath, commandPath, true)
@@ -115,14 +116,14 @@ func (transaction *installPathTransaction) Apply(result *port.NativeInstallResul
 func (transaction *installPathTransaction) rollback(result *port.NativeInstallResult) error {
 	var errs []error
 	if transaction.shortCreated {
-		if err := os.Remove(transaction.shortPath); err != nil && !os.IsNotExist(err) {
+		if err := os.Remove(transaction.shortPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			errs = append(errs, err)
 		} else {
 			transaction.shortCreated = false
 		}
 	}
 	if transaction.commandExisted && !transaction.managed {
-		if err := os.Remove(transaction.path); err != nil && !os.IsNotExist(err) {
+		if err := os.Remove(transaction.path); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			errs = append(errs, err)
 		} else {
 			transaction.commandCreated = false
@@ -131,7 +132,7 @@ func (transaction *installPathTransaction) rollback(result *port.NativeInstallRe
 			}
 		}
 	} else if transaction.commandCreated {
-		if err := os.Remove(transaction.path); err != nil && !os.IsNotExist(err) {
+		if err := os.Remove(transaction.path); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			errs = append(errs, err)
 		} else {
 			transaction.commandCreated = false
@@ -231,7 +232,7 @@ func planShellPath(result *port.NativeInstallResult, req port.NativeInstallReque
 func ensureShortCommandShimPlan(target, path string, dryRun bool, ensureSymlinkPlan func(string, string, bool) (port.InstallLink, error)) (port.InstallLink, error) {
 	link := port.InstallLink{Path: path, Target: target}
 	info, err := os.Lstat(path)
-	if os.IsNotExist(err) {
+	if errors.Is(err, fs.ErrNotExist) {
 		return ensureSymlinkPlan(target, path, dryRun)
 	}
 	if err != nil {

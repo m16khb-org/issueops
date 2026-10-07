@@ -1,6 +1,8 @@
 package claude
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 
 	"issueops/internal/port"
@@ -17,7 +19,7 @@ func (installer Installer) writeClaudeUserMCP(path string, req port.NativeInstal
 		return file, err
 	}
 	if req.MCPTransport == mcpTransportHTTP && !req.DryRun {
-		if err := os.Chmod(path, 0o600); err != nil && !os.IsNotExist(err) {
+		if err := os.Chmod(path, 0o600); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return file, err
 		}
 	}

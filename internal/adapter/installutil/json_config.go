@@ -2,7 +2,9 @@ package installutil
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"strings"
 )
@@ -18,7 +20,7 @@ func MergeJSONMapFile(path, parent, entry string, dryRun bool, value func() (map
 		if config == nil {
 			return nil, fmt.Errorf("JSON config must be an object")
 		}
-	} else if err != nil && !os.IsNotExist(err) && !dryRun {
+	} else if err != nil && !errors.Is(err, fs.ErrNotExist) && !dryRun {
 		return nil, err
 	}
 	entries, _ := config[parent].(map[string]any)
@@ -38,7 +40,7 @@ func MergeJSONMapFile(path, parent, entry string, dryRun bool, value func() (map
 // false when the file or entry is absent, so callers leave the file untouched.
 func RemoveJSONMapEntry(path, parent, entry string) (map[string]any, bool, error) {
 	raw, err := os.ReadFile(path)
-	if os.IsNotExist(err) {
+	if errors.Is(err, fs.ErrNotExist) {
 		return nil, false, nil
 	}
 	if err != nil {

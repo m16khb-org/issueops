@@ -1,6 +1,8 @@
 package doctor
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,7 +14,7 @@ import (
 func ObserveProjectDocs(root string) doctordomain.ProjectDocsObservation {
 	observation := doctordomain.ProjectDocsObservation{Directory: filepath.Join(root, projectdoc.ProjectDocsDir)}
 	for _, name := range projectdoc.ProjectDocNames() {
-		if _, err := os.Stat(filepath.Join(observation.Directory, name)); os.IsNotExist(err) {
+		if _, err := os.Stat(filepath.Join(observation.Directory, name)); errors.Is(err, fs.ErrNotExist) {
 			observation.Missing = append(observation.Missing, name)
 		}
 	}
@@ -65,7 +67,7 @@ func ObserveNativeIntegrations(home string) doctordomain.NativeObservation {
 	}
 	observation.HooksPath = filepath.Join(home, ".codex", "hooks.json")
 	_, err := os.Stat(observation.HooksPath)
-	observation.HooksMissing = os.IsNotExist(err)
+	observation.HooksMissing = errors.Is(err, fs.ErrNotExist)
 	return observation
 }
 

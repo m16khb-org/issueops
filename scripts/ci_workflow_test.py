@@ -38,6 +38,8 @@ class CIWorkflowTests(unittest.TestCase):
         self.assertEqual(sum("./bin/issueops self-verify" in body for _, body in blocks), 1)
         selfverify = next(body for _, body in blocks if "./bin/issueops self-verify" in body)
         self.assertIn("--llm-eval=false", selfverify)
+        install = next(line for line in selfverify.splitlines() if "./scripts/install-native.sh" in line)
+        self.assertIn("--mcp-transport=stdio", install)
 
     def test_blocks_propagate_failures_and_isolate_native_home(self):
         for fail_at in ("", "python", "go", "race", "install"):

@@ -59,6 +59,12 @@ darwin/linux의 기본 `--mcp-transport=http` 설치는 세 host의 issueops ent
 catalog가 바뀌면 두 transport 모두 다음 세션이 새 `tools/list`를 조회한다. 서버는 이 헤더를 읽지 않는다
 (`internal/adapter/omo/mcp.go`의 `omoMCPCatalogHeader`, `TestOmoHTTPEntryChangesWithTheAdvertisedCatalog`).
 
+Linux에서 HOME을 임시 디렉터리로 바꿔 설치하면(CI 등) HTTP 설치가 `supervisor_failed`로 실패한다. installer는 unit을
+그 HOME의 `~/.config/systemd/user/`에 쓰지만, 이미 실행 중인 user systemd manager는 자기 HOME 기준 경로에서 unit을 찾기
+때문이다(`systemctl --user enable`이 `Unit file issueops-mcp.service does not exist`로 끝난다). 이런 환경에서는
+`--mcp-transport=stdio`를 명시한다. supervisor를 쓸 수 없어도 installer가 stdio로 자동 전환하지 않는 것은 의도된 동작이다
+([ADR 2026-10-02](../adr/2026-10-02-shared-streamable-http-mcp-and-caller-capability.md)). CI의 self-verify 단계가 이 선택을 쓴다.
+
 stdio `issueops mcp`는 host 세션 안에서 in-process로 실행된다. `io update`는 host가 소유한 stdio MCP 프로세스를 열거하거나 종료하지 않으므로, 새 binary의 MCP 동작은 host에서 서버를 재연결(reconnect)할 때 적용된다. 실행 모드의 정규 설명은 [runtime 문서](../architecture/runtime.md)를 따른다.
 
 Omo는 MCP tool catalog를 server config hash 기준으로 최대 7일 재사용하므로, 같은
