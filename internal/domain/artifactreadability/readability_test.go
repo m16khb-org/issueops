@@ -302,8 +302,10 @@ func TestCheckLargeBodyScalesLinearly(t *testing.T) {
 	}
 }
 
+// largeReadabilityBody ends each sentence with a newline so the per-line pass
+// (addLineFindings) also runs once per repeat, not once for the whole tail.
 func largeReadabilityBody(repeat int) string {
-	return validPRBody() + "\n\n## 남은 일\n\n" + strings.Repeat("성능 측정을 위한 문장입니다. ", repeat)
+	return validPRBody() + "\n\n## 남은 일\n\n" + strings.Repeat("성능 측정을 위한 문장입니다.\n", repeat)
 }
 
 func allocatedBytesPerCheck(body string) uint64 {
