@@ -17,4 +17,4 @@ install: mcp http service is not ready (status=stopped error_code=supervisor_fai
 ## 결과
 
 - CI는 ADR 2026-10-02(supervisor를 쓸 수 없을 때 stdio로 자동 전환하지 않음)에 따라 install에 `--mcp-transport=stdio`를 명시한다.
-- 후속: HOME을 바꿔 설치하는 모든 Linux 환경에서 같은 결함이 난다. user manager의 unit 검색 경로와 installer가 쓰는 경로가 갈리기 때문이다. 이번 범위에서는 고치지 않고 PR과 완료 기록에 후속으로 남긴다.
+- 후속: 이미 실행 중인 user systemd manager와 다른 HOME으로 설치하는 Linux 환경에서는 같은 결함이 난다. user manager의 unit 검색 경로와 installer가 쓰는 경로가 갈리기 때문이다. 이번 범위에서는 고치지 않고 PR과 완료 기록에 후속으로 남긴다.
