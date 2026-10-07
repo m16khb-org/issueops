@@ -45,8 +45,6 @@ func TestEvaluateIssueOpsAutoresearchGateKeepsPassingCandidate(t *testing.T) {
 		Hypothesis:       "A candidate with bounded files and no benchmark regression should be kept.",
 		TargetDimensions: []string{"issue_quality", "plan_quality"},
 		EditSurface:      []string{"skills/issueops/**", "internal/core/issueops_benchmark.go"},
-		KeepCriteria:     "no regressions and no critical failures",
-		DiscardCriteria:  "discard on benchmark regression or edit-surface violation",
 	}
 	baseline := issueOpsBenchmarkRunForGateTest("baseline", 100, 100, 0)
 	next := issueOpsBenchmarkRunForGateTest("candidate", 100, 100, 0)

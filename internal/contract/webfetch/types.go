@@ -126,7 +126,6 @@ type LiveParityReport struct {
 	SafetyFailures       int      `json:"safety_failures"`
 	FalseStrongOK        int      `json:"false_strong_ok"`
 	BaselineAvailable    bool     `json:"baseline_available"`
-	BaselineCommit       string   `json:"baseline_commit,omitempty"`
 	BaselineSuccessRate  float64  `json:"baseline_success_rate,omitempty"`
 	BaselineLatencyP50MS int64    `json:"baseline_latency_p50_ms,omitempty"`
 	BaselineLatencyP95MS int64    `json:"baseline_latency_p95_ms,omitempty"`

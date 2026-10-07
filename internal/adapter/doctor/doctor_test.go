@@ -63,7 +63,7 @@ func TestHarnessDoctorProjectsOperationalFinding(t *testing.T) {
 		t.Fatalf("operational check projection = %#v", result.Checks)
 	}
 	issue, ok := harnessDoctorIssue(result.Issues, operationalhealthcontract.FindingGateResidue)
-	if !ok || issue.Severity != "warning" || !strings.Contains(issue.Summary, "gate-1") || issue.Fix == nil || issue.Fix.Destructive || issue.Fix.Command != "" {
+	if !ok || issue.Severity != "warning" || !strings.Contains(issue.Summary, "gate-1") || issue.Fix == nil || issue.Fix.Command != "" {
 		t.Fatalf("operational issue projection = %#v", issue)
 	}
 }

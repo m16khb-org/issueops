@@ -104,13 +104,9 @@ type ExecutionOrcaIntentRequest struct {
 	Prepared                         *ExecutionOrcaWorkspaceReceipt `json:"prepared,omitempty"`
 	Launch                           *ExecutionOrcaLaunchRequest    `json:"launch,omitempty"`
 	TerminalPTYID                    string                         `json:"terminal_pty_id,omitempty"`
-	// TerminalHandle is a transient observation only. Adapters must re-resolve
-	// the current handle from Prepared.WorktreeID + TerminalPTYID and must not
-	// use this value as authority. The core never persists it.
-	TerminalHandle string `json:"terminal_handle,omitempty"`
-	RunID          string `json:"run_id,omitempty"`
-	RunBound       bool   `json:"run_bound,omitempty"`
-	TaskID         string `json:"task_id,omitempty"`
+	RunID                            string                         `json:"run_id,omitempty"`
+	RunBound                         bool                           `json:"run_bound,omitempty"`
+	TaskID                           string                         `json:"task_id,omitempty"`
 }
 
 type ExecutionOrcaIntentReceipt struct {

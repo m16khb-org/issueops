@@ -58,7 +58,7 @@ func TestCmuxHandoffDeliveryMonotonicallyEnrichesExactTargetAndTiming(t *testing
 	accepted.Receipt = issueopscontract.IssueOpsHandoffDeliveryReceipt{Location: "audit/cmux/input.json", Digest: strings.Repeat("c", 64)}
 
 	merged, decision := MergeHandoffDeliveryObservation(resolved, accepted)
-	if !decision.Accepted || decision.OwnerAuthorized || decision.RetryAuthorized {
+	if !decision.Accepted {
 		t.Fatalf("input receipt must remain non-authoritative: %+v", decision)
 	}
 	if !reflect.DeepEqual(merged.Target, accepted.Target) || !reflect.DeepEqual(merged.Timing, accepted.Timing) {

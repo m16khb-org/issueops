@@ -124,8 +124,6 @@ type IssueOpsHandoffDeliveryOwnerClaim struct {
 }
 
 type IssueOpsHandoffDeliveryDecision struct {
-	Accepted        bool     `json:"accepted"`
-	OwnerAuthorized bool     `json:"owner_authorized"`
-	RetryAuthorized bool     `json:"retry_authorized"`
-	RejectReasons   []string `json:"reject_reasons,omitempty"`
+	Accepted      bool     `json:"accepted"`
+	RejectReasons []string `json:"reject_reasons,omitempty"`
 }

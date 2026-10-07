@@ -43,10 +43,6 @@ type IssueOpsAutoresearchCandidate struct {
 	Hypothesis       string   `json:"hypothesis"`
 	TargetDimensions []string `json:"target_dimensions"`
 	EditSurface      []string `json:"edit_surface"`
-	BaselineCommand  string   `json:"baseline_command,omitempty"`
-	CandidateCommand string   `json:"candidate_command,omitempty"`
-	KeepCriteria     string   `json:"keep_criteria,omitempty"`
-	DiscardCriteria  string   `json:"discard_criteria,omitempty"`
 }
 type IssueOpsAutoresearchGateRequest struct {
 	Candidate    IssueOpsAutoresearchCandidate

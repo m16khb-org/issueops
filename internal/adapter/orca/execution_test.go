@@ -275,7 +275,7 @@ func TestExecutionInspectDeliveryDispatchRequiresDurableRequestAndCurrentAssigne
 	const requestID = "11111111-1111-4111-8111-111111111111"
 	baseRequest := port.ExecutionOrcaIntentRequest{
 		Stage: port.ExecutionOrcaIntentDispatch, Marker: probe.Marker, Workspace: workspace, Probe: probe,
-		Prepared: &prepared, Launch: &launch, TerminalPTYID: "pty-69", TerminalHandle: "term-stale",
+		Prepared: &prepared, Launch: &launch, TerminalPTYID: "pty-69",
 		RunID: "run-69", RunBound: true, TaskID: "task-69", RetryRequestID: requestID,
 	}
 	tests := []struct {
@@ -537,7 +537,6 @@ func TestExecutionIntentStagesAreIndividuallyInspectableAndInvoked(t *testing.T)
 	taskRequest := bindRequest
 	taskRequest.Stage = port.ExecutionOrcaIntentTask
 	taskRequest.RunBound = true
-	taskRequest.TerminalHandle = terminalReceipt.TerminalHandle
 	assertExecutionIntentZero(t, provisioner, taskRequest)
 	taskReceipt, err := provisioner.InvokeIntent(context.Background(), taskRequest)
 	if err != nil || taskReceipt.TaskID != "task-69" {
@@ -718,7 +717,7 @@ func TestExecutionIntentInventoryRejectsRetiredTaskTitle(t *testing.T) {
 	launch := executionLaunchFixture(t, workspace.Root)
 	request := port.ExecutionOrcaIntentRequest{
 		Stage: port.ExecutionOrcaIntentTask, Marker: probe.Marker, Workspace: workspace, Probe: probe,
-		Prepared: &prepared, Launch: &launch, TerminalPTYID: "pty-69", TerminalHandle: "term-stale",
+		Prepared: &prepared, Launch: &launch, TerminalPTYID: "pty-69",
 		RunID: "run-69", RunBound: true,
 	}
 	retiredTitle := probe.Marker + " prompt=" + strings.ToLower(launch.PromptSHA256[:16])
@@ -1124,7 +1123,7 @@ func TestExecutionIntentReResolvesRotatedTerminalHandle(t *testing.T) {
 	launch := executionLaunchFixture(t, workspace.Root)
 	request := port.ExecutionOrcaIntentRequest{
 		Stage: port.ExecutionOrcaIntentDispatch, Marker: probe.Marker, Workspace: workspace, Probe: probe,
-		Prepared: &prepared, Launch: &launch, TerminalPTYID: "pty-69", TerminalHandle: "term-stale",
+		Prepared: &prepared, Launch: &launch, TerminalPTYID: "pty-69",
 		RunID: "run-69", RunBound: true, TaskID: "task-69",
 	}
 	client := &executionFake{terminals: []port.OrcaTerminal{{
@@ -1343,7 +1342,6 @@ func TestExecutionIntentRejectsUnsealedRuntimeReceipts(t *testing.T) {
 			request := port.ExecutionOrcaIntentRequest{Stage: tc.stage, Marker: probe.Marker, Workspace: workspace, Probe: probe, Prepared: &prepared, Launch: &launch}
 			if tc.stage == port.ExecutionOrcaIntentTask || tc.stage == port.ExecutionOrcaIntentDispatch {
 				request.TerminalPTYID = "pty-69"
-				request.TerminalHandle = "term-stale"
 				request.RunID = "run-69"
 				request.RunBound = true
 			}
@@ -1378,7 +1376,7 @@ func TestExecutionTaskCreateValidatesTheSealedReceipt(t *testing.T) {
 			client := &executionFake{createdTask: &tc.task}
 			request := port.ExecutionOrcaIntentRequest{
 				Stage: port.ExecutionOrcaIntentTask, Marker: probe.Marker, Workspace: workspace, Probe: probe,
-				Prepared: &prepared, Launch: &launch, TerminalPTYID: "pty-69", TerminalHandle: "term-stale",
+				Prepared: &prepared, Launch: &launch, TerminalPTYID: "pty-69",
 				RunID: "run-69", RunBound: true,
 			}
 			if _, err := NewExecutionClient(client).InvokeIntent(context.Background(), request); err == nil {

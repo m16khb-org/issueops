@@ -50,6 +50,5 @@ type HarnessDoctorIssue struct {
 
 type HarnessDoctorFix struct {
 	Command     string `json:"command,omitempty"`
-	Destructive bool   `json:"destructive"`
 	Description string `json:"description"`
 }

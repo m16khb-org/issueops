@@ -75,7 +75,7 @@ func TestMergeHandoffDeliveryObservationKeepsStatesIndependentAndNonAuthoritativ
 	turnOnly := base
 	turnOnly.NativeTurnObserved = deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateObserved, issueopscontract.IssueOpsHandoffDeliveryEvidenceNativeReceipt)
 	merged, decision := MergeHandoffDeliveryObservation(base, turnOnly)
-	if !decision.Accepted || decision.OwnerAuthorized || decision.RetryAuthorized {
+	if !decision.Accepted {
 		t.Fatalf("turn observation must be evidence only: %+v", decision)
 	}
 	if merged.OwnerClaimed.Status != issueopscontract.IssueOpsHandoffDeliveryStateNotObserved ||
@@ -93,7 +93,7 @@ func TestMergeHandoffDeliveryObservationKeepsStatesIndependentAndNonAuthoritativ
 		ClaimedAt:  "2026-09-20T10:02:00Z",
 	}
 	claimed, decision := MergeHandoffDeliveryObservation(merged, exactClaim)
-	if !decision.Accepted || decision.OwnerAuthorized || decision.RetryAuthorized {
+	if !decision.Accepted {
 		t.Fatalf("claim observation must not grant authority or retry: %+v", decision)
 	}
 	if claimed.OwnerClaimed.Status != issueopscontract.IssueOpsHandoffDeliveryStateObserved {
@@ -233,7 +233,7 @@ func TestMergeHandoffDeliveryObservationModeSpecificRecoveryEvidence(t *testing.
 			update := test.update(base)
 			merged, decision := MergeHandoffDeliveryObservation(base, update)
 			if test.wantOK {
-				if !decision.Accepted || decision.OwnerAuthorized || decision.RetryAuthorized {
+				if !decision.Accepted {
 					t.Fatalf("decision=%+v", decision)
 				}
 				if merged.OwnerClaimed.Status == issueopscontract.IssueOpsHandoffDeliveryStateObserved {
@@ -352,7 +352,7 @@ func TestHandoffDeliveryObservationUsesDurableRequestForRetryWithoutRetryAuthori
 	next.Ambiguous = deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateObserved, issueopscontract.IssueOpsHandoffDeliveryEvidenceAcceptedResponseLost)
 
 	merged, decision := MergeHandoffDeliveryObservation(current, next)
-	if !decision.Accepted || decision.RetryAuthorized || decision.OwnerAuthorized {
+	if !decision.Accepted {
 		t.Fatalf("retry identity must be evidence only: %+v", decision)
 	}
 	if merged.Request.DurableID != current.Request.DurableID {
@@ -381,11 +381,11 @@ func TestHandoffDeliveryExactClaimIsIdempotentAndOtherOwnerRejected(t *testing.T
 		ClaimedAt:  "2026-09-20T10:02:00Z",
 	}
 	merged, decision := MergeHandoffDeliveryObservation(base, claimed)
-	if !decision.Accepted || decision.OwnerAuthorized {
+	if !decision.Accepted {
 		t.Fatalf("exact claim observation must be evidence only: %+v", decision)
 	}
 	_, decision = MergeHandoffDeliveryObservation(merged, claimed)
-	if !decision.Accepted || decision.OwnerAuthorized {
+	if !decision.Accepted {
 		t.Fatalf("duplicate exact claim should be idempotent evidence: %+v", decision)
 	}
 
