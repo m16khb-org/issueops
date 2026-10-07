@@ -38,7 +38,7 @@ description: System structure, component boundaries, and responsibilities.
   `cmd/...`를 import하지 않는다.
 - `internal/port`는 contract 외 `internal/...` concrete 구현에 의존하지 않는다.
 - `internal/adapter/*`는 composition root(`cmd/issueops/issueopsapp`)에서만
-  조립되고 legacy adapter edge는 0이다. 좁은 outbound 예외의 canonical 목록은
+  조립되고 금지 adapter edge는 0이다. 좁은 outbound 예외의 canonical 목록은
   [hexagonal-core.md](architecture/hexagonal-core.md)와
   `internal/architecture/dependency_test.go`가 함께 소유한다. 이 요약에는 이를
   중복해 나열하지 않으며, 새 package는 기존 예외를 일반 우회로 재사용하지 않는다.

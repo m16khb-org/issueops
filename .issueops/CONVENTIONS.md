@@ -45,7 +45,7 @@ agent가 즉시 알아야 할 canonical 요약이다.
   `cmd/...`를 import하지 않는다.
 - `internal/port`는 contract 외 `internal/...` concrete 구현에 의존하지 않는다.
 - `internal/adapter/*`는 composition root(`cmd/issueops/issueopsapp`)에서만
-  조립된다. legacy adapter edge는 0이다.
+  조립된다. 금지 adapter edge는 0이다.
 - `cmd/issueops/*cli`는 transport parse/render/dispatch를 소유하고 공통 DTO,
   catalog, 판정은 contract/domain/application에서 가져온다.
 - 상세 layer 책임표, boundary ratchet, concrete-adapter 제거 순서, SOLID
