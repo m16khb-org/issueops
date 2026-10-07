@@ -26,7 +26,7 @@ func TestStateInvalidMatrix(t *testing.T) {
 		{name: "schema_zero", raw: `{"schema_version":0,"key":"schema_zero","content":"x","bytes":1}`},
 		{name: "future_schema", raw: `{"schema_version":2,"key":"future_schema","content":"x","bytes":1}`},
 		{name: "malformed_json", raw: `{`},
-		{name: "legacy_field", raw: `{"schema_version":1,"key":"legacy_field","content":"x","bytes":1,"legacy_authority":"x"}`},
+		{name: "unknown_field", raw: `{"schema_version":1,"key":"unknown_field","content":"x","bytes":1,"unknown_authority":"x"}`},
 		{name: "key_mismatch", raw: `{"schema_version":1,"key":"other","content":"x","bytes":1}`},
 		{name: "byte_mismatch", raw: `{"schema_version":1,"key":"byte_mismatch","content":"x","bytes":2}`},
 	}

@@ -12,7 +12,7 @@ import (
 	publicationcontract "issueops/internal/contract/issueopspublication"
 )
 
-func TestFinishAttemptBlocksLegacyWriterEntrypoints(t *testing.T) {
+func TestFinishAttemptBlocksGenericWriterEntrypoints(t *testing.T) {
 	for _, cleanupOperation := range []model.CleanupOperation{model.CleanupOperationFinish, model.CleanupOperationRemoteBranch, model.CleanupOperationAbandon} {
 		t.Run(string(cleanupOperation), func(t *testing.T) {
 			for _, operation := range []string{"stale write", "span", "execution write", "parent pair write", "child pair write", "publication"} {
@@ -56,7 +56,7 @@ func TestFinishAttemptBlocksLegacyWriterEntrypoints(t *testing.T) {
 						err = withIssueOpsLock(context.Background(), root, armed.ID, callback)
 					}
 					if err == nil || !strings.Contains(err.Error(), "cleanup "+string(cleanupOperation)) || called {
-						t.Fatalf("armed record reached legacy writer: called=%v err=%v", called, err)
+						t.Fatalf("armed record reached a generic writer: called=%v err=%v", called, err)
 					}
 					if operation == "child pair write" || operation == "parent pair write" {
 						for _, id := range []string{"io-new-parent", "io-new-child"} {

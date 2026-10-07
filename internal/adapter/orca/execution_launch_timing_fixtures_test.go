@@ -211,10 +211,6 @@ func (f *executionLaunchTimingFake) listTerminalsInventory(context.Context, stri
 	}, nil
 }
 
-func (f *executionLaunchTimingFake) listAllTasksInventory(context.Context) (executionTaskInventory, error) {
-	return executionTaskInventory{RuntimeID: executionLaunchRuntimeID}, nil
-}
-
 func (f *executionLaunchTimingFake) listRunTasksInventory(context.Context, string, ...string) (executionTaskInventory, error) {
 	return executionTaskInventory{RuntimeID: executionLaunchRuntimeID}, nil
 }

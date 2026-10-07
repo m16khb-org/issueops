@@ -44,7 +44,7 @@ func (service Service) Run(repo string, all bool, argv []string) verifyworkcontr
 	return verifyworkcontract.Result{
 		OK: decision.OK, Kind: "verify_work", Repo: root, GitStatus: status,
 		Preflight: preflight, Guard: guard, Command: command,
-		Evidence: decision.Evidence, EvidenceMatrix: decision.EvidenceMatrix,
+		EvidenceMatrix:    decision.EvidenceMatrix,
 		SuggestedCommands: decision.SuggestedCommands, Warnings: decision.Warnings,
 	}
 }

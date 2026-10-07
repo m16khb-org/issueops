@@ -137,7 +137,7 @@ func TestReviewLensesForTierNarrowsDocsOnlyAndLeadsWithCompat(t *testing.T) {
 func TestPathIsFrontendChangeMatchesExtensionsAndSegments(t *testing.T) {
 	for _, path := range []string{
 		"app/Home.tsx", "src/Button.jsx", "web/App.vue", "ui/Card.svelte", "site/index.astro",
-		"styles/main.css", "theme/app.scss", "legacy/old.less", "public/index.html",
+		"styles/main.css", "theme/app.scss", "vendor/old.less", "public/index.html",
 		"components/Button.go", "pages/api.go", "styles/tokens.json",
 	} {
 		if !PathIsFrontendChange(path) {

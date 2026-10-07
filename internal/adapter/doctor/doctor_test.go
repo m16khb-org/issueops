@@ -91,11 +91,11 @@ func TestHarnessDoctorOperationalInventoryProblemIsError(t *testing.T) {
 	}
 }
 
-func TestHarnessDoctorProjectsStateArtifactsWithoutLegacyDuplicates(t *testing.T) {
+func TestHarnessDoctorProjectsStateArtifactsWithoutStateDoctorDuplicates(t *testing.T) {
 	stateRoot := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", stateRoot)
 	unexpectedFile := filepath.Join(stateRoot, "recovery.patch")
-	unexpectedDirectory := filepath.Join(stateRoot, "legacy-recovery")
+	unexpectedDirectory := filepath.Join(stateRoot, "stray-recovery")
 	mustWrite(t, unexpectedFile, "recovery evidence")
 	if err := os.MkdirAll(unexpectedDirectory, 0o700); err != nil {
 		t.Fatal(err)
@@ -119,14 +119,14 @@ func TestHarnessDoctorProjectsStateArtifactsWithoutLegacyDuplicates(t *testing.T
 		t.Fatalf("doctor mutated injected snapshot: before=%#v after=%#v", before, snapshot.StateArtifacts)
 	}
 	if hasHarnessDoctorIssue(result.Issues, "state_unexpected_file") || hasHarnessDoctorIssue(result.Issues, "state_unexpected_directory") {
-		t.Fatalf("legacy state issues duplicated operational residue: %#v", result.Issues)
+		t.Fatalf("state doctor issues duplicated operational residue: %#v", result.Issues)
 	}
 	if countHarnessDoctorIssues(result.Issues, operationalhealthcontract.FindingStateArtifactResidue) != 2 {
 		t.Fatalf("state artifact projection = %#v", result.Issues)
 	}
 }
 
-func TestHarnessDoctorNilOperationalSnapshotPreservesLegacyStateIssues(t *testing.T) {
+func TestHarnessDoctorStaticOnlyKeepsStateDoctorIssues(t *testing.T) {
 	stateRoot := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", stateRoot)
 	mustWrite(t, filepath.Join(stateRoot, "recovery.patch"), "recovery evidence")
@@ -138,7 +138,7 @@ func TestHarnessDoctorNilOperationalSnapshotPreservesLegacyStateIssues(t *testin
 	}
 
 	if !hasHarnessDoctorIssue(result.Issues, "state_unexpected_file") || harnessDoctorCheckCount(result.Checks, "operational_state") != 0 {
-		t.Fatalf("nil operational snapshot changed legacy behavior: checks=%#v issues=%#v", result.Checks, result.Issues)
+		t.Fatalf("static-only doctor lost state doctor issues: checks=%#v issues=%#v", result.Checks, result.Issues)
 	}
 }
 

@@ -57,7 +57,7 @@ func TestStateDoctorProjectsInvalidExistingRecords(t *testing.T) {
 		"zero":    `{"schema_version":0,"key":"zero","content":"x","updated_at":"2000-01-01T00:00:00Z","bytes":1}`,
 		"future":  `{"schema_version":2,"key":"future","content":"x","updated_at":"2000-01-01T00:00:00Z","bytes":1}`,
 		"broken":  `{`,
-		"legacy":  `{"schema_version":1,"key":"legacy","content":"x","updated_at":"2000-01-01T00:00:00Z","bytes":1,"legacy_authority":"x"}`,
+		"unknown": `{"schema_version":1,"key":"unknown","content":"x","updated_at":"2000-01-01T00:00:00Z","bytes":1,"unknown_authority":"x"}`,
 	} {
 		writeRawStateRow(t, dir, name, raw)
 	}

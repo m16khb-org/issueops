@@ -51,11 +51,18 @@ func TestAbandonRejectsLeaseWithHolder(t *testing.T) {
 func TestAbandonClaimableStillRespectsOrcaResidueGate(t *testing.T) {
 	stateRoot, record := abandonLeaseRecord(t, issueops.LeaseStatusClaimable)
 	record.Execution.Mode = issueops.ExecutionModeOrca
+	record.Execution.Selection = selectionFixture(issueops.ExecutionModeOrca)
 	record.Execution.Workspace.Driver = "orca"
 	record.Execution.Orca = &issueops.OrcaBinding{
 		RuntimeID: "runtime-140", RepoID: "repo-140", WorktreeID: "worktree-140",
 		OwnerHost: "claude", OwnerModel: "claude-opus-5-5", TerminalPTYID: "pty-140",
 		TaskID: "task-140", DispatchID: "dispatch-140",
+		RunID:                   "run_issueops_1",
+		LeaseGeneration:         1,
+		ArtifactIdentityVersion: 1,
+		IssueBodySHA256:         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		ContextPacketSHA256:     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+		OwnerPromptSHA256:       "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
 	}
 	if _, err := writeIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
@@ -111,7 +118,8 @@ func abandonLeaseRecord(t *testing.T, status issueops.LeaseStatus) (string, issu
 			Branch: record.Branch, BaseHead: "0000000000000000000000000000000000000000",
 			Driver: "git", LinkedAt: "2026-07-26T00:00:00Z",
 		},
-		Lease: lease,
+		Lease:     lease,
+		Selection: selectionFixture(issueops.ExecutionModeDirect),
 	}
 	written, err := writeIssueOps(context.Background(), stateRoot, record)
 	if err != nil {

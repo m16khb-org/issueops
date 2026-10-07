@@ -43,9 +43,8 @@ current Run을 권한으로 추론하지 않는다. `run_bind`만 수렴 가능�
 불명확한 결과 뒤에도 동일 Run으로 유한 재시도할 수 있고, 자원을 만드는 다른
 단계는 종전처럼 불명확한 mutation을 반복하지 않는다.
 
-Run 도입 전 binding의 빈 `run_id`는 읽을 수 있다. 이 경우 task 소유권과 완료
-처리는 모든 명시적 Run의 `task-list --run` 결과에서 정확히 하나가 일치할 때만
-복구한다. `run_legacy_local`이나 여러 Run의 동명 task는 권한으로 채택하지 않는다.
+binding의 `run_id`는 필수다. owner 검사는 그 Run의 `task-list --run` 결과만 읽고,
+다른 Run의 동명 task는 권한으로 채택하지 않는다.
 
 ## GitLab Issue Snapshot
 
@@ -257,14 +256,11 @@ Resume observes the current native Codex/Claude/Omo session, host process receip
 and canonical cwd when actor flags are absent. A complete explicit
 `ACTOR_FLAGS` receipt remains valid; a partial receipt is rejected.
 
-A legacy v1 Orca binding with neither an artifact identity version marker nor
-stored digests remains readable but cannot resume directly. New prepare and
-reseed bindings carry identity version 1 plus all three digests; a versioned
-all-empty, unversioned-complete, partial, or future-version binding is an
-invariant violation, not a legacy recovery candidate. Legacy claimable status emits `execution replace
---preview`; follow the returned inventory-fenced `--reseed` command and then
-the returned resume command. Partial identities are invalid, and neither the
-prompt file nor a freshly computed digest is an accepted fallback trust root.
+Every Orca binding carries artifact identity version 1, all three digests, a
+nonzero `lease_generation`, and an explicit `run_id`. A record whose binding
+lacks any of them fails validation when it is read; there is no recovery chain
+for such a record. Partial identities are invalid, and neither the prompt file
+nor a freshly computed digest is an accepted fallback trust root.
 
 Resume never recreates or reparents the worktree. Its public response includes
 `resume_disposition`: `existing_binding`, `reuse_terminal`, or
@@ -302,14 +298,6 @@ execution status $ACTOR_FLAGS
 Do not skip the preview or invent the fingerprint. A completed cycle does not
 render this recovery chain.
 
-A claimable legacy Orca cycle uses the analogous explicit chain:
-
-```text
-execution status $ACTOR_FLAGS
-  -> execution replace --preview $ACTOR_FLAGS
-  -> execution replace --reseed --inventory-fingerprint <preview fingerprint> --confirm $ACTOR_FLAGS
-  -> execution resume --expected-generation <replacement generation> --confirm $ACTOR_FLAGS
-```
 
 
 When workspace provisioning or remote publication may have mutated external
@@ -363,11 +351,9 @@ prepare recorder를 함께 제공한다. owner는 이 reader를 한 번 실행�
 연결을 확인한 뒤에만 recorder를 실행하며, 대체 GraphQL이나 다른 provider reader를
 추론하지 않는다.
 
-Orca가 worker prompt에 주입하는 현재 제어 명령은 legacy `--to` 대신
+Orca가 worker prompt에 주입하는 현재 제어 명령은 `--to` 대신
 `--dispatch-capability`를 사용할 수 있다. capability 경로는 exact `--from`을 함께
-전달하고, `worker_done`은 `--outcome succeeded|failed`를 반드시 포함한다. hook은
-legacy recipient와 capability recipient 중 정확히 하나만 admit하며 둘을 섞거나
-알 수 없는 flag·outcome을 붙인 명령은 fail-closed한다.
+전달하고, `worker_done`은 `--outcome succeeded|failed`를 반드시 포함한다.
 
 ## Host-Aware Owner Model Defaults
 

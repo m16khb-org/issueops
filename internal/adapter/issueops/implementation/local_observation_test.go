@@ -65,7 +65,7 @@ func TestObserveLocalChangesPreservesChangeSetContracts(t *testing.T) {
 			if test.mutate != nil {
 				test.mutate(t, repo)
 			}
-			legacyFingerprint := testReader().ChangeFingerprint(record)
+			readerFingerprint := testReader().ChangeFingerprint(record)
 
 			observation := ObserveLocalChangesAt(record, repo)
 
@@ -75,8 +75,8 @@ func TestObserveLocalChangesPreservesChangeSetContracts(t *testing.T) {
 			if !reflect.DeepEqual(observation.Paths, test.wantPaths) {
 				t.Fatalf("paths = %#v, want %#v", observation.Paths, test.wantPaths)
 			}
-			if observation.Fingerprint != legacyFingerprint {
-				t.Fatalf("fingerprint bytes changed: observed=%q legacy=%q", observation.Fingerprint, legacyFingerprint)
+			if observation.Fingerprint != readerFingerprint {
+				t.Fatalf("fingerprint bytes changed: observed=%q reader=%q", observation.Fingerprint, readerFingerprint)
 			}
 			if len(test.wantPaths) == 0 && observation.Fingerprint != "" {
 				t.Fatalf("clean change set fingerprint = %q", observation.Fingerprint)
@@ -104,7 +104,7 @@ func TestObserveLocalChangesUsesFallbackBaseForCommittedDiff(t *testing.T) {
 		t.Fatalf("fallback observation = %+v", observation)
 	}
 	if observation.Fingerprint == "" || observation.Fingerprint != testReader().ChangeFingerprint(record) {
-		t.Fatalf("fallback fingerprint was not preserved: observation=%q legacy=%q", observation.Fingerprint, testReader().ChangeFingerprint(record))
+		t.Fatalf("fallback fingerprint was not preserved: observation=%q reader=%q", observation.Fingerprint, testReader().ChangeFingerprint(record))
 	}
 }
 
@@ -122,10 +122,10 @@ func TestObserveLocalChangesPreservesEmptySnapshotWhenAllFallbackRefsFail(t *tes
 	observation := ObserveLocalChangesAt(record, repo)
 
 	if !observation.Verified || len(observation.Paths) != 0 || observation.Fingerprint != "" {
-		t.Fatalf("failed fallbacks must preserve the legacy empty snapshot: %+v", observation)
+		t.Fatalf("failed fallbacks must keep the empty snapshot: %+v", observation)
 	}
 	if fingerprint := testReader().ChangeFingerprint(record); fingerprint != "" {
-		t.Fatalf("legacy fingerprint with no usable base = %q, want empty", fingerprint)
+		t.Fatalf("reader fingerprint with no usable base = %q, want empty", fingerprint)
 	}
 }
 

@@ -18,7 +18,7 @@ func TestRepositoryAtomicallyPersistsCompletionAndDeletesHolderIndex(t *testing.
 	record, actor := completionRepositoryRecord(t)
 	record.Execution.CompletionHistory = []leasecontract.CompletionHistoryEntry{{
 		Generation: 4,
-		Completion: leasecontract.Completion{FinalHead: "d6d8c6a5a98fcca6bca33edf9e7965636429ce28", VerificationReportPath: ".issueops/verified-execution/old.json", Verification: []string{"old verification"}, RemoteArtifactURL: "https://github.com/acme/repo/pull/198", CompletedAt: "2026-08-01T00:00:00Z"},
+		Completion: leasecontract.Completion{Generation: 4, FinalHead: "d6d8c6a5a98fcca6bca33edf9e7965636429ce28", VerificationReportPath: ".issueops/verified-execution/old.json", Verification: []string{"old verification"}, RemoteArtifactURL: "https://github.com/acme/repo/pull/198", CompletedAt: "2026-08-01T00:00:00Z"},
 		Reason:     "functional HEAD moved",
 		ReopenedAt: "2026-08-02T00:00:00Z",
 	}}
@@ -100,7 +100,7 @@ func completionRepositoryRecord(t *testing.T) (leasecontract.Record, leasecontra
 	branchPrepare, _ := json.Marshal(map[string]any{"provider": "github", "issue_url": "https://github.com/acme/repo/issues/198", "branch": "198", "base_branch": "main", "link_verified": true, "steps": []any{}, "created_at": "2026-08-02T00:00:00Z"})
 	artifact, _ := json.Marshal(map[string]any{"provider": "github", "kind": "pr", "url": "https://github.com/acme/repo/pull/198", "labels": []string{"enhancement"}, "assignees": []string{"m16khb"}, "verified_at": "2026-08-02T00:00:02Z", "target_branch": "main"})
 	ledger, _ := json.Marshal(map[string]any{"pr": map[string]any{"phase": "pr", "entered_at": "2026-08-02T00:00:03Z"}})
-	return leasecontract.Record{OK: true, SchemaVersion: 1, ID: "io-198", Repo: "/source", Branch: "198", Phase: "pr", IssueURL: "https://github.com/acme/repo/issues/198", BranchPrepare: branchPrepare, RemoteArtifact: artifact, PhaseLedger: ledger, CreatedAt: "2026-08-02T00:00:00Z", UpdatedAt: "2026-08-02T00:00:00Z", Execution: &leasecontract.Execution{Mode: "direct", Workspace: leasecontract.Workspace{SourceRoot: "/source", Root: "/worktree", Branch: "198", BaseHead: strings.Repeat("b", 40), Driver: "git", LinkedAt: "2026-08-02T00:00:01Z"}, Lease: leasecontract.Lease{Generation: 1, Status: "active", Holder: &actor, ClaimedAt: "2026-08-02T00:00:01Z"}}}, actor
+	return leasecontract.Record{OK: true, SchemaVersion: 1, ID: "io-198", Repo: "/source", Branch: "198", Phase: "pr", IssueURL: "https://github.com/acme/repo/issues/198", BranchPrepare: branchPrepare, RemoteArtifact: artifact, PhaseLedger: ledger, CreatedAt: "2026-08-02T00:00:00Z", UpdatedAt: "2026-08-02T00:00:00Z", Execution: &leasecontract.Execution{Mode: "direct", Workspace: leasecontract.Workspace{SourceRoot: "/source", Root: "/worktree", Branch: "198", BaseHead: strings.Repeat("b", 40), Driver: "git", LinkedAt: "2026-08-02T00:00:01Z"}, Lease: leasecontract.Lease{Generation: 1, Status: "active", Holder: &actor, ClaimedAt: "2026-08-02T00:00:01Z"}, Selection: leaseSelectionFixture("direct")}}, actor
 }
 
 type memoryStore struct {

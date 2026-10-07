@@ -14,7 +14,6 @@ type Result struct {
 	Preflight         preflightcontract.PreflightResult `json:"preflight"`
 	Guard             guardcontract.GuardCheckResult    `json:"guard"`
 	Command           *policydomain.CommandRunResult    `json:"command,omitempty"`
-	Evidence          []string                          `json:"evidence"`
 	EvidenceMatrix    []EvidenceItem                    `json:"evidence_matrix"`
 	SuggestedCommands []SuggestedCommand                `json:"suggested_commands"`
 	Warnings          []string                          `json:"warnings"`

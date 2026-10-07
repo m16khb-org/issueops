@@ -25,11 +25,11 @@ func TestIssueOpsRetentionVerticalOwnsPruning(t *testing.T) {
 		}
 	}
 
-	legacyFile := filepath.Join(root, "internal", "adapter", "issueops", "issueops_prune.go")
-	if _, err := os.Stat(legacyFile); err == nil {
-		t.Errorf("legacy prune implementation must be deleted: %s", legacyFile)
+	retiredFile := filepath.Join(root, "internal", "adapter", "issueops", "issueops_prune.go")
+	if _, err := os.Stat(retiredFile); err == nil {
+		t.Errorf("retired prune implementation must be deleted: %s", retiredFile)
 	} else if !errors.Is(err, os.ErrNotExist) {
-		t.Fatalf("inspect legacy prune implementation: %v", err)
+		t.Fatalf("inspect retired prune implementation: %v", err)
 	}
 
 	for _, edge := range loadProductionEdges(t) {
@@ -38,7 +38,7 @@ func TestIssueOpsRetentionVerticalOwnsPruning(t *testing.T) {
 		}
 		if edge.imported == "internal/adapter/issueops" ||
 			strings.HasPrefix(edge.imported, "internal/adapter/issueops/") {
-			t.Errorf("issueops retention vertical imports legacy adapter: %s", formatEdge(edge))
+			t.Errorf("issueops retention vertical imports the retired adapter package: %s", formatEdge(edge))
 		}
 	}
 }

@@ -335,7 +335,7 @@ func TestCleanupFinishRequesterGatesRefuse(t *testing.T) {
 func TestCleanupFinishRequesterGatesRefuseSourceCheckout(t *testing.T) {
 	stateRoot, record, _ := finishTestRecord(t, true)
 	// codec은 Execution.Workspace.Root == SourceRoot를 저장 단계에서 거부하므로,
-	// 이 게이트에 닿는 것은 legacy WorktreePath만 가진 레코드다.
+	// 이 게이트에 닿는 것은 execution 없이 WorktreePath만 연결된 레코드다.
 	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
 		rec.Execution = nil
 		rec.WorktreePath = rec.Repo
@@ -400,10 +400,12 @@ func TestCleanupFinishOrcaTerminalsGates(t *testing.T) {
 		mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
 			if bound {
 				rec.Execution.Mode = issueops.ExecutionModeOrca
+				rec.Execution.Selection = selectionFixture(issueops.ExecutionModeOrca)
 				rec.Execution.Workspace.Driver = "orca"
-				rec.Execution.Orca = &issueops.OrcaBinding{RuntimeID: "rt", RepoID: "repo", WorktreeID: "wt-1", OwnerHost: "codex", OwnerModel: "m", TaskID: "t", DispatchID: "d"}
+				rec.Execution.Orca = &issueops.OrcaBinding{RuntimeID: "rt", RepoID: "repo", WorktreeID: "wt-1", OwnerHost: "codex", OwnerModel: "m", TaskID: "t", DispatchID: "d", RunID: "run_issueops_1", LeaseGeneration: 1, ArtifactIdentityVersion: 1, IssueBodySHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", ContextPacketSHA256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", OwnerPromptSHA256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}
 			} else {
 				rec.Execution.Mode = issueops.ExecutionModeDirect
+				rec.Execution.Selection = selectionFixture(issueops.ExecutionModeDirect)
 				rec.Execution.Workspace.Driver = "git"
 				rec.Execution.Orca = nil
 			}
@@ -423,8 +425,9 @@ func TestCleanupFinishOrcaTerminalsGates(t *testing.T) {
 	t.Run("bound cycle needs the runtime without native occupants", func(t *testing.T) {
 		mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
 			rec.Execution.Mode = issueops.ExecutionModeOrca
+			rec.Execution.Selection = selectionFixture(issueops.ExecutionModeOrca)
 			rec.Execution.Workspace.Driver = "orca"
-			rec.Execution.Orca = &issueops.OrcaBinding{RuntimeID: "rt", RepoID: "repo", WorktreeID: "wt-1", OwnerHost: "codex", OwnerModel: "m", TaskID: "t", DispatchID: "d"}
+			rec.Execution.Orca = &issueops.OrcaBinding{RuntimeID: "rt", RepoID: "repo", WorktreeID: "wt-1", OwnerHost: "codex", OwnerModel: "m", TaskID: "t", DispatchID: "d", RunID: "run_issueops_1", LeaseGeneration: 1, ArtifactIdentityVersion: 1, IssueBodySHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", ContextPacketSHA256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", OwnerPromptSHA256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}
 		})
 		deps := finishDeps(&fakeFinishGit{branchOID: "abc123"})
 		deps.Processes = quietCleanupProcesses()
@@ -605,6 +608,7 @@ func TestCleanupFinishListsAndStopsOrcaTerminalsWithoutOccupants(t *testing.T) {
 	stateRoot, record, worktree := finishTestRecord(t, true)
 	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
 		rec.Execution.Mode = issueops.ExecutionModeDirect
+		rec.Execution.Selection = selectionFixture(issueops.ExecutionModeDirect)
 		rec.Execution.Workspace.Driver = "git"
 		rec.Execution.Orca = nil
 	})
@@ -631,6 +635,7 @@ func TestCleanupFinishFinalTerminalObservationBlocksLateTerminal(t *testing.T) {
 	stateRoot, record, worktree := finishTestRecord(t, true)
 	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
 		rec.Execution.Mode = issueops.ExecutionModeDirect
+		rec.Execution.Selection = selectionFixture(issueops.ExecutionModeDirect)
 		rec.Execution.Workspace.Driver = "git"
 		rec.Execution.Orca = nil
 	})

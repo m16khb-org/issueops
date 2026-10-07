@@ -25,11 +25,11 @@ func TestIssueOpsInventoryVerticalOwnsCycleListing(t *testing.T) {
 		}
 	}
 
-	legacyPath := filepath.Join(repoRoot, "internal", "adapter", "issueops", "issueops_list.go")
-	if _, err := os.Stat(legacyPath); err == nil {
-		t.Errorf("legacy issueops cycle listing remains at %s", legacyPath)
+	retiredPath := filepath.Join(repoRoot, "internal", "adapter", "issueops", "issueops_list.go")
+	if _, err := os.Stat(retiredPath); err == nil {
+		t.Errorf("retired issueops cycle listing remains at %s", retiredPath)
 	} else if !errors.Is(err, os.ErrNotExist) {
-		t.Fatalf("inspect legacy issueops cycle listing: %v", err)
+		t.Fatalf("inspect retired issueops cycle listing: %v", err)
 	}
 
 	for _, edge := range loadProductionEdges(t) {
@@ -38,7 +38,7 @@ func TestIssueOpsInventoryVerticalOwnsCycleListing(t *testing.T) {
 		}
 		if edge.imported == "internal/adapter/issueops" ||
 			strings.HasPrefix(edge.imported, "internal/adapter/issueops/") {
-			t.Errorf("issueops inventory vertical imports legacy adapter: %s", formatEdge(edge))
+			t.Errorf("issueops inventory vertical imports the retired adapter package: %s", formatEdge(edge))
 		}
 	}
 }

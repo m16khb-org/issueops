@@ -17,7 +17,6 @@ func TestExecutionStatusProjectsRecoveryWithoutChangingRecord(t *testing.T) {
 	}{
 		{"direct claim", model.LeaseStatusClaimable, model.ExecutionModeDirect, false, "execution claim"},
 		{"orca resume", model.LeaseStatusClaimable, model.ExecutionModeOrca, true, "execution resume"},
-		{"orca incomplete", model.LeaseStatusClaimable, model.ExecutionModeOrca, false, "--preview"},
 		{"released", model.LeaseStatusReleased, model.ExecutionModeDirect, false, "--preview"},
 		{"revoking", model.LeaseStatusRevoking, model.ExecutionModeOrca, true, "--finalize-preview"},
 		{"active", model.LeaseStatusActive, model.ExecutionModeDirect, false, ""},

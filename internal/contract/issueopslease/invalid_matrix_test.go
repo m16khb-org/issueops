@@ -17,7 +17,7 @@ func TestIssueOpsLeaseInvalidMatrix(t *testing.T) {
 		{name: "schema_zero", id: "io-zero", raw: `{"schema_version":0,"id":"io-zero"}`},
 		{name: "future_schema", id: "io-future", raw: `{"schema_version":2,"id":"io-future"}`},
 		{name: "malformed_json", id: "io-malformed", raw: `{`},
-		{name: "legacy_authority", id: "io-legacy", raw: `{"schema_version":1,"id":"io-legacy","execution_handoff":{"legacy":true}}`},
+		{name: "retired_authority", id: "io-retired", raw: `{"schema_version":1,"id":"io-retired","execution_handoff":{"retired":true}}`},
 		{name: "id_mismatch", id: "io-expected", raw: `{"schema_version":1,"id":"io-other"}`},
 	}
 

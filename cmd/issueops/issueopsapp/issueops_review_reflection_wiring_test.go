@@ -20,7 +20,7 @@ func TestReviewReflectionCompositionRechecksHolderBeforeStamp(t *testing.T) {
 	process := liveFixtureReceipt(t)
 	record.IssueURL = "https://github.com/acme/repo/issues/63"
 	record.DevilsAdvocateReview = &model.IssueOpsDevilsAdvocateReview{Verdict: "stop", Findings: []string{"review finding"}, RecordedAt: "then"}
-	record.Execution = &model.Execution{Mode: model.ExecutionModeDirect, Workspace: model.Workspace{SourceRoot: repo, Root: worktree, Branch: record.Branch, BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "then"}, Lease: model.WriteLease{Generation: 1, Status: model.LeaseStatusActive, Holder: &model.NativeActor{Host: "codex", SessionID: "holder", SessionProcess: &process}, ClaimedAt: "then"}}
+	record.Execution = &model.Execution{Mode: model.ExecutionModeDirect, Workspace: model.Workspace{SourceRoot: repo, Root: worktree, Branch: record.Branch, BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "then"}, Lease: model.WriteLease{Generation: 1, Status: model.LeaseStatusActive, Holder: &model.NativeActor{Host: "codex", SessionID: "holder", SessionProcess: &process}, ClaimedAt: "then"}, Selection: selectionFixture(model.ExecutionModeDirect)}
 	if _, err := (core.CycleRecordStore{StateRoot: root}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}

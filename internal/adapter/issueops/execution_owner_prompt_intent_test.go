@@ -21,6 +21,6 @@ func TestExecutionOwnerPromptReadsSealedIntentBeforeImplementing(t *testing.T) {
 		}
 	}
 	if strings.Contains(executionOwnerPromptTemplate, "{WORKTREE_ROOT}/.issueops/artifact/") {
-		t.Fatal("owner prompt template must not point at the legacy artifact directory")
+		t.Fatal("owner prompt template must not point at the retired artifact directory")
 	}
 }

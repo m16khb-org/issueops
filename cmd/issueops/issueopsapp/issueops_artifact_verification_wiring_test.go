@@ -23,7 +23,7 @@ func TestArtifactVerificationCompositionRechecksLatestAuthority(t *testing.T) {
 			process := liveFixtureReceipt(t)
 			record.Phase = model.IssueOpsPhasePR
 			record.IssueURL = "https://github.com/acme/repo/issues/68"
-			record.Execution = &model.Execution{Mode: model.ExecutionModeDirect, Workspace: model.Workspace{SourceRoot: repo, Root: worktree, Branch: record.Branch, BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "then"}, Lease: model.WriteLease{Generation: 1, Status: model.LeaseStatusActive, Holder: &model.NativeActor{Host: "codex", SessionID: "holder", SessionProcess: &process}, ClaimedAt: "then"}}
+			record.Execution = &model.Execution{Mode: model.ExecutionModeDirect, Workspace: model.Workspace{SourceRoot: repo, Root: worktree, Branch: record.Branch, BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "then"}, Lease: model.WriteLease{Generation: 1, Status: model.LeaseStatusActive, Holder: &model.NativeActor{Host: "codex", SessionID: "holder", SessionProcess: &process}, ClaimedAt: "then"}, Selection: selectionFixture(model.ExecutionModeDirect)}
 			if mode == "invalid-phase" {
 				record.Phase = model.IssueOpsPhasePlan
 			}

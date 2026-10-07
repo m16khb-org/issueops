@@ -30,13 +30,6 @@ func CanonicalizeIntent(record preparationcontract.Record, raw []byte) (preparat
 	return intent, append([]byte(nil), raw...), nil
 }
 
-func normalizedPurpose(intent preparationcontract.Intent) string {
-	if strings.TrimSpace(intent.Purpose) == "" {
-		return preparationcontract.PurposePrepare
-	}
-	return strings.TrimSpace(intent.Purpose)
-}
-
 func contractError(code, detail string) error {
 	return &preparationcontract.IntentError{Code: code, Detail: detail}
 }
@@ -48,7 +41,7 @@ func ValidateIntentRecordAuthority(record preparationcontract.Record, intent pre
 		record.Execution.Pending.Kind != PendingKind(intent.Stage) || record.Execution.Lease.Generation != intent.Generation {
 		return fmt.Errorf("Orca intent authority changed before CAS")
 	}
-	switch normalizedPurpose(intent) {
+	switch intent.Purpose {
 	case preparationcontract.PurposePrepare:
 		if record.Execution.Lease.Status != "released" || record.Execution.Orca != nil {
 			return fmt.Errorf("Orca prepare intent authority changed before CAS")
@@ -99,7 +92,7 @@ func SealIntent(intent preparationcontract.Intent, issue preparationcontract.Iss
 	intent.Probe.Issue = issue.Issue
 	codec := preparationcontract.IntentCodec{}
 	marker, err := codec.RenderMarker(preparationcontract.MarkerIdentity{
-		Purpose: normalizedPurpose(intent), LifecycleID: intent.LifecycleID,
+		Purpose: intent.Purpose, LifecycleID: intent.LifecycleID,
 		Generation: intent.Generation, OperationID: intent.OperationID,
 		Provider: intent.Probe.Provider, Issue: intent.Probe.Issue,
 	})

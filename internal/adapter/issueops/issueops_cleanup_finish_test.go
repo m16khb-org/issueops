@@ -104,6 +104,7 @@ func finishTestRecord(t *testing.T, withWorktree bool) (string, issueops.IssueOp
 			Mode:      issueops.ExecutionModeDirect,
 			Workspace: issueops.Workspace{SourceRoot: repo, Root: worktree, Branch: "80-finish", BaseHead: "deadbeef", Driver: "git", LinkedAt: "2026-07-24T00:00:00Z"},
 			Lease:     issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased},
+			Selection: selectionFixture(issueops.ExecutionModeDirect),
 		}
 	}
 	if err := withIssueOpsLock(context.Background(), stateRoot, record.ID, func(context.Context) error {
@@ -350,8 +351,9 @@ func TestCleanupFinishOrcaRemovalRunsFirstAndFailureKeepsRecord(t *testing.T) {
 	stateRoot, record, worktree := finishTestRecord(t, true)
 	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
 		rec.Execution.Mode = issueops.ExecutionModeOrca
+		rec.Execution.Selection = selectionFixture(issueops.ExecutionModeOrca)
 		rec.Execution.Workspace.Driver = "orca"
-		rec.Execution.Orca = &issueops.OrcaBinding{RuntimeID: "rt", RepoID: "repo", WorktreeID: "wt-1", OwnerHost: "codex", OwnerModel: "m", TaskID: "t", DispatchID: "d"}
+		rec.Execution.Orca = &issueops.OrcaBinding{RuntimeID: "rt", RepoID: "repo", WorktreeID: "wt-1", OwnerHost: "codex", OwnerModel: "m", TaskID: "t", DispatchID: "d", RunID: "run_issueops_1", LeaseGeneration: 1, ArtifactIdentityVersion: 1, IssueBodySHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", ContextPacketSHA256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", OwnerPromptSHA256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}
 	})
 	git := &fakeFinishGit{branchOID: "abc123"}
 	deps := finishDeps(git)
@@ -387,8 +389,9 @@ func TestCleanupFinishSkipsGitRemovalWhenOrcaAlreadyRemovedWorktree(t *testing.T
 	stateRoot, record, worktree := finishTestRecord(t, true)
 	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
 		rec.Execution.Mode = issueops.ExecutionModeOrca
+		rec.Execution.Selection = selectionFixture(issueops.ExecutionModeOrca)
 		rec.Execution.Workspace.Driver = "orca"
-		rec.Execution.Orca = &issueops.OrcaBinding{RuntimeID: "rt", RepoID: "repo", WorktreeID: "wt-1", OwnerHost: "codex", OwnerModel: "m", TaskID: "t", DispatchID: "d"}
+		rec.Execution.Orca = &issueops.OrcaBinding{RuntimeID: "rt", RepoID: "repo", WorktreeID: "wt-1", OwnerHost: "codex", OwnerModel: "m", TaskID: "t", DispatchID: "d", RunID: "run_issueops_1", LeaseGeneration: 1, ArtifactIdentityVersion: 1, IssueBodySHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", ContextPacketSHA256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", OwnerPromptSHA256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}
 	})
 	git := &fakeFinishGit{branchOID: "abc123"}
 	deps := finishDeps(git)

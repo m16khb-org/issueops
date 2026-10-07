@@ -24,17 +24,17 @@ func TestIssueOpsDecisionVerticalOwnsDecisionRecording(t *testing.T) {
 		}
 	}
 
-	legacyPath := filepath.Join(
+	retiredPath := filepath.Join(
 		findRepoRoot(t),
 		"internal",
 		"adapter",
 		"issueops",
 		"issueops_decision.go",
 	)
-	if _, err := os.Stat(legacyPath); err == nil {
-		t.Errorf("legacy decision implementation must be deleted: %s", legacyPath)
+	if _, err := os.Stat(retiredPath); err == nil {
+		t.Errorf("retired decision implementation must be deleted: %s", retiredPath)
 	} else if !errors.Is(err, os.ErrNotExist) {
-		t.Fatalf("inspect legacy decision implementation: %v", err)
+		t.Fatalf("inspect retired decision implementation: %v", err)
 	}
 
 	for _, edge := range loadProductionEdges(t) {
@@ -43,7 +43,7 @@ func TestIssueOpsDecisionVerticalOwnsDecisionRecording(t *testing.T) {
 		}
 		if edge.imported == "internal/adapter/issueops" ||
 			strings.HasPrefix(edge.imported, "internal/adapter/issueops/") {
-			t.Errorf("issueops decision vertical imports legacy adapter: %s", formatEdge(edge))
+			t.Errorf("issueops decision vertical imports the retired adapter package: %s", formatEdge(edge))
 		}
 	}
 }

@@ -34,10 +34,11 @@ func ValidatePersistedRecord(record leasecontract.Record) error {
 	if err := validateLease(execution.Lease); err != nil {
 		return err
 	}
-	if execution.Selection != nil {
-		if err := ValidatePersistedSelection(*execution.Selection, execution.Mode); err != nil {
-			return err
-		}
+	if execution.Selection == nil {
+		return fmt.Errorf("execution selection receipt is required")
+	}
+	if err := ValidatePersistedSelection(*execution.Selection, execution.Mode); err != nil {
+		return err
 	}
 	if err := ValidatePersistedSidecars(*execution); err != nil {
 		return err
@@ -144,38 +145,23 @@ func ValidatePersistedSidecars(execution leasecontract.Execution) error {
 		return fmt.Errorf("direct execution must not contain an Orca binding")
 	}
 	if execution.Orca != nil {
-		for name, value := range map[string]string{"runtime_id": execution.Orca.RuntimeID, "repo_id": execution.Orca.RepoID, "worktree_id": execution.Orca.WorktreeID, "owner_host": execution.Orca.OwnerHost, "owner_model": execution.Orca.OwnerModel, "task_id": execution.Orca.TaskID, "dispatch_id": execution.Orca.DispatchID} {
+		for name, value := range map[string]string{"runtime_id": execution.Orca.RuntimeID, "repo_id": execution.Orca.RepoID, "worktree_id": execution.Orca.WorktreeID, "owner_host": execution.Orca.OwnerHost, "owner_model": execution.Orca.OwnerModel, "task_id": execution.Orca.TaskID, "dispatch_id": execution.Orca.DispatchID, "run_id": execution.Orca.RunID} {
 			if strings.TrimSpace(value) == "" {
 				return fmt.Errorf("Orca binding %s is required", name)
 			}
 		}
-		digests := []string{execution.Orca.IssueBodySHA256, execution.Orca.ContextPacketSHA256, execution.Orca.OwnerPromptSHA256}
-		present := 0
-		for _, digest := range digests {
-			if digest != "" {
-				present++
-			}
+		if execution.Orca.LeaseGeneration == 0 {
+			return fmt.Errorf("Orca binding lease_generation is required")
 		}
-		if present != 0 && present != len(digests) {
-			return fmt.Errorf("Orca binding requires a complete sealed artifact identity")
-		}
-		switch execution.Orca.ArtifactIdentityVersion {
-		case 0:
-			if present != 0 {
-				return fmt.Errorf("Orca binding sealed artifact identity requires artifact identity version")
-			}
-		case leasecontract.OrcaArtifactIdentityVersion:
-			if present != len(digests) {
-				return fmt.Errorf("Orca binding artifact identity version requires a complete sealed artifact identity")
-			}
-		default:
+		if execution.Orca.ArtifactIdentityVersion != leasecontract.OrcaArtifactIdentityVersion {
 			return fmt.Errorf("unsupported Orca artifact identity version %d", execution.Orca.ArtifactIdentityVersion)
 		}
-		if present == len(digests) {
-			for _, digest := range digests {
-				if !validHexDigest(digest, 64) {
-					return fmt.Errorf("Orca binding sealed artifact identity must contain SHA-256 digests")
-				}
+		for _, digest := range []string{execution.Orca.IssueBodySHA256, execution.Orca.ContextPacketSHA256, execution.Orca.OwnerPromptSHA256} {
+			if digest == "" {
+				return fmt.Errorf("Orca binding artifact identity version requires a complete sealed artifact identity")
+			}
+			if !validHexDigest(digest, 64) {
+				return fmt.Errorf("Orca binding sealed artifact identity must contain SHA-256 digests")
 			}
 		}
 	}
@@ -200,7 +186,7 @@ func ValidatePersistedSidecars(execution leasecontract.Execution) error {
 		if err := validateCompletion(entry.Completion); err != nil {
 			return fmt.Errorf("execution completion history: %w", err)
 		}
-		if entry.Completion.Generation != 0 && entry.Completion.Generation != entry.Generation {
+		if entry.Completion.Generation != entry.Generation {
 			return fmt.Errorf("execution completion history generation conflicts with its completion")
 		}
 	}
@@ -245,7 +231,7 @@ func ValidatePersistedSidecars(execution leasecontract.Execution) error {
 }
 
 func validateCompletion(completion leasecontract.Completion) error {
-	if !validHexDigest(completion.FinalHead, 40, 64) || strings.TrimSpace(completion.VerificationReportPath) == "" || len(completion.Verification) == 0 || strings.TrimSpace(completion.RemoteArtifactURL) == "" || strings.TrimSpace(completion.CompletedAt) == "" {
+	if completion.Generation == 0 || !validHexDigest(completion.FinalHead, 40, 64) || strings.TrimSpace(completion.VerificationReportPath) == "" || len(completion.Verification) == 0 || strings.TrimSpace(completion.RemoteArtifactURL) == "" || strings.TrimSpace(completion.CompletedAt) == "" {
 		return fmt.Errorf("execution completion is incomplete")
 	}
 	for _, evidence := range completion.Verification {

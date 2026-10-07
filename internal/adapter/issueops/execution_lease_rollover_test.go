@@ -199,6 +199,7 @@ func rolloverExecutionFixture(t *testing.T) (string, contractissueops.IssueOpsRe
 	record.IssueURL = "https://github.com/example/issueops/issues/270"
 	record.BranchPrepare.IssueURL = record.IssueURL
 	record.Execution.Mode = contractissueops.ExecutionModeOrca
+	record.Execution.Selection = selectionFixture(contractissueops.ExecutionModeOrca)
 	record.Execution.Workspace.Driver = "orca"
 	record.Execution.Workspace.ArtifactDir = app.OwnerArtifactDir(record)
 	record.Execution.Orca = &contractissueops.OrcaBinding{
@@ -206,6 +207,10 @@ func rolloverExecutionFixture(t *testing.T) (string, contractissueops.IssueOpsRe
 		WorktreeInstanceID: "instance", RunID: "run", TaskID: "task",
 		DispatchID: "dispatch", TerminalPTYID: "pty-old", LeaseGeneration: 1,
 		OwnerHost: "codex", OwnerModel: "gpt-6-sol", OwnerEffort: "high",
+		ArtifactIdentityVersion: 1,
+		IssueBodySHA256:         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		ContextPacketSHA256:     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+		OwnerPromptSHA256:       "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
 	}
 	// Orca 실행은 sealed plan readiness를 요구한다. 실제 수명주기에서 plan은 owner가
 	// 활성화되기 전 released generation에서 link-plan + artifact stage로 봉인되므로,

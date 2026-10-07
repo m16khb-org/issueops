@@ -11,7 +11,7 @@ import (
 	leasedomain "issueops/internal/domain/issueopslease"
 )
 
-func TestValidateActorRetainsLegacyText(t *testing.T) {
+func TestValidateActorKeepsPublicText(t *testing.T) {
 	for _, tc := range []struct {
 		name  string
 		actor leasecontract.Actor
@@ -42,19 +42,19 @@ func TestValidateActorAcceptsOmo(t *testing.T) {
 	}
 }
 
-func TestValidateSidecarsDistinguishesLegacyAndPostUpgradeArtifactIdentity(t *testing.T) {
+func TestValidateSidecarsRequiresVersionedOrcaArtifactIdentity(t *testing.T) {
 	binding := leasecontract.OrcaBinding{
-		RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree",
+		RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", RunID: "run_issueops_1", LeaseGeneration: 1,
 		OwnerHost: "codex", OwnerModel: "model", TaskID: "task", DispatchID: "dispatch",
 	}
-	execution := leasecontract.Execution{Mode: "orca", Orca: &binding}
-	if err := leasedomain.ValidatePersistedSidecars(execution); err != nil {
-		t.Fatalf("unmarked legacy all-empty identity must remain readable: %v", err)
+	execution := leasecontract.Execution{Mode: "orca", Orca: &binding, Selection: leaseSelectionFixture("orca")}
+	if err := leasedomain.ValidatePersistedSidecars(execution); err == nil || !strings.Contains(err.Error(), "unsupported Orca artifact identity version 0") {
+		t.Fatalf("unversioned all-empty identity must fail closed: %v", err)
 	}
 
 	execution.Orca.ArtifactIdentityVersion = leasecontract.OrcaArtifactIdentityVersion
 	if err := leasedomain.ValidatePersistedSidecars(execution); err == nil || !strings.Contains(err.Error(), "version requires a complete sealed artifact identity") {
-		t.Fatalf("post-upgrade all-empty identity must fail as an invariant violation: %v", err)
+		t.Fatalf("versioned all-empty identity must fail as an invariant violation: %v", err)
 	}
 
 	execution.Orca.IssueBodySHA256 = strings.Repeat("a", 64)
@@ -63,9 +63,19 @@ func TestValidateSidecarsDistinguishesLegacyAndPostUpgradeArtifactIdentity(t *te
 	if err := leasedomain.ValidatePersistedSidecars(execution); err != nil {
 		t.Fatalf("versioned complete identity must be valid: %v", err)
 	}
+	for name, mutate := range map[string]func(*leasecontract.OrcaBinding){
+		"run_id":           func(binding *leasecontract.OrcaBinding) { binding.RunID = "" },
+		"lease_generation": func(binding *leasecontract.OrcaBinding) { binding.LeaseGeneration = 0 },
+	} {
+		missing := *execution.Orca
+		mutate(&missing)
+		if err := leasedomain.ValidatePersistedSidecars(leasecontract.Execution{Mode: "orca", Orca: &missing, Selection: leaseSelectionFixture("orca")}); err == nil || !strings.Contains(err.Error(), name) {
+			t.Fatalf("binding without %s must fail closed: %v", name, err)
+		}
+	}
 }
 
-func TestCompletionHistoryStrictRoundTripAndLegacyRead(t *testing.T) {
+func TestCompletionHistoryStrictRoundTripAndRejectsUnstampedCompletion(t *testing.T) {
 	record := completionHistoryRecord()
 	encoded, err := leasecodec.EncodeLease(record)
 	if err != nil {
@@ -82,22 +92,22 @@ func TestCompletionHistoryStrictRoundTripAndLegacyRead(t *testing.T) {
 		t.Fatalf("completion generation did not round trip: %+v", decoded.Execution.CompletionHistory[0])
 	}
 
-	var legacy map[string]any
-	if err := json.Unmarshal(encoded, &legacy); err != nil {
+	var unstamped map[string]any
+	if err := json.Unmarshal(encoded, &unstamped); err != nil {
 		t.Fatal(err)
 	}
-	execution := legacy["execution"].(map[string]any)
+	execution := unstamped["execution"].(map[string]any)
 	delete(execution, "completion_history")
 	execution["completion"] = map[string]any{
-		"final_head": strings.Repeat("c", 40), "verification_report_path": ".issueops/verified-execution/legacy.json",
+		"final_head": strings.Repeat("c", 40), "verification_report_path": ".issueops/verified-execution/unstamped.json",
 		"verification": []any{"go test ./... -count=1"}, "remote_artifact_url": "https://github.com/acme/repo/pull/1", "completed_at": "2026-08-02T00:00:00Z",
 	}
-	legacyBytes, err := json.Marshal(legacy)
+	unstampedBytes, err := json.Marshal(unstamped)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := leasecodec.DecodeLease(record.ID, legacyBytes); err != nil {
-		t.Fatalf("schema v1 record without completion_history must remain readable: %v", err)
+	if _, err := leasecodec.DecodeLease(record.ID, unstampedBytes); err == nil {
+		t.Fatal("a completion without its generation must fail closed")
 	}
 }
 
@@ -173,6 +183,7 @@ func completionHistoryRecord() leasecontract.Record {
 				Completion: leasecontract.Completion{Generation: 1, FinalHead: strings.Repeat("b", 40), VerificationReportPath: ".issueops/verified-execution/report.json", Verification: []string{"go test ./... -count=1"}, RemoteArtifactURL: "https://github.com/acme/repo/pull/1", CompletedAt: "2026-08-03T00:00:00Z"},
 				Reason:     "new verified HEAD", ReopenedAt: "2026-08-04T00:00:00Z",
 			}},
+			Selection: leaseSelectionFixture("direct"),
 		},
 	}
 }
@@ -249,7 +260,7 @@ func dereferenceJSONType(typ reflect.Type) reflect.Type {
 	}
 	return typ
 }
-func TestSelectionReceiptRoundTripsAndRemainsOptionalInCurrentV1(t *testing.T) {
+func TestSelectionReceiptRoundTripsAndIsRequiredInCurrentV1(t *testing.T) {
 	record := leasecontract.Record{
 		SchemaVersion: leasecontract.SchemaVersion,
 		ID:            "io-selection",
@@ -262,13 +273,15 @@ func TestSelectionReceiptRoundTripsAndRemainsOptionalInCurrentV1(t *testing.T) {
 			Lease: leasecontract.Lease{Generation: 1, Status: "released"},
 		},
 	}
-	encoded, err := leasecodec.EncodeLease(record)
+	if _, err := leasecodec.EncodeLease(record); err == nil || !strings.Contains(err.Error(), "invalid state") && !strings.Contains(err.Error(), "selection receipt is required") {
+		t.Fatalf("an execution without a selection receipt must not be encoded: %v", err)
+	}
+	unvalidated, err := json.Marshal(record)
 	if err != nil {
 		t.Fatal(err)
 	}
-	decoded, err := leasecodec.DecodeLease(record.ID, encoded)
-	if err != nil || decoded.Execution.Selection != nil {
-		t.Fatalf("legacy current-v1 record lost nil selection compatibility: record=%+v err=%v", decoded, err)
+	if _, err := leasecodec.DecodeLease(record.ID, unvalidated); err == nil {
+		t.Fatal("an execution without a selection receipt must not be decoded")
 	}
 
 	record.Execution.Selection = &leasecontract.Selection{
@@ -276,11 +289,11 @@ func TestSelectionReceiptRoundTripsAndRemainsOptionalInCurrentV1(t *testing.T) {
 		ReadinessFingerprint: strings.Repeat("b", 64), SelectedAt: "2026-08-03T00:00:01Z",
 		ExplicitDirectReason: "manual recovery",
 	}
-	encoded, err = leasecodec.EncodeLease(record)
+	encoded, err := leasecodec.EncodeLease(record)
 	if err != nil {
 		t.Fatal(err)
 	}
-	decoded, err = leasecodec.DecodeLease(record.ID, encoded)
+	decoded, err := leasecodec.DecodeLease(record.ID, encoded)
 	if err != nil || !reflect.DeepEqual(decoded.Execution.Selection, record.Execution.Selection) {
 		t.Fatalf("selection receipt changed across current-v1 round trip: got=%+v want=%+v err=%v", decoded.Execution.Selection, record.Execution.Selection, err)
 	}

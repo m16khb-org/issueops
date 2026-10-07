@@ -90,26 +90,26 @@ func TestSummarySeparatesMeasuredDurationsFromReusedEvidence(t *testing.T) {
 	}
 }
 
-func TestSummarySnapshotKeepsV1AndReadsLegacyDurationEvidence(t *testing.T) {
+func TestSummarySnapshotKeepsV1AndReadsOlderContractDurationEvidence(t *testing.T) {
 	// Given
-	var legacy contract.SelfAugmentStateSnapshot
+	var older contract.SelfAugmentStateSnapshot
 	if err := json.Unmarshal([]byte(`{"schema_version":1,"kind":"self_verification_summary","summary":{
-		"contract":{"name":"self_verification_summary","version":6,"hash":"legacy"},
+		"contract":{"name":"self_verification_summary","version":6,"hash":"older"},
 		"step_duration_stats":[{"label":"go test","count":2,"p95_duration_ms":137}]
-	}}`), &legacy); err != nil {
+	}}`), &older); err != nil {
 		t.Fatal(err)
 	}
 
 	// When
-	err := ValidateSummarySnapshot("legacy", legacy)
+	err := ValidateSummarySnapshot("older", older)
 	current := NewSelfVerificationSummarySnapshot(contract.SelfAugmentResult{}, time.Time{})
 
 	// Then: no inference of old reuse or migration of the envelope.
 	if err != nil || current.SchemaVersion != 1 {
 		t.Fatalf("snapshot compatibility: current=%+v err=%v", current, err)
 	}
-	stats := StepDurationStatsForCompare(legacy.Summary)
-	if len(stats) != 1 || stats[0].Count != 2 || stats[0].P95DurationMS != 137 || legacy.Summary.Contract.Version != 6 {
-		t.Fatalf("legacy evidence changed: %+v", legacy)
+	stats := StepDurationStatsForCompare(older.Summary)
+	if len(stats) != 1 || stats[0].Count != 2 || stats[0].P95DurationMS != 137 || older.Summary.Contract.Version != 6 {
+		t.Fatalf("older evidence changed: %+v", older)
 	}
 }

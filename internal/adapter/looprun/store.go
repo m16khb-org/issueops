@@ -68,7 +68,7 @@ func decodeLoop(loopID string, data []byte) (loopruncontract.LoopRun, error) {
 	if loop.ID != loopID {
 		return loopruncontract.LoopRun{OK: false, ID: loopID}, fmt.Errorf("loop id mismatch: record has %q", loop.ID)
 	}
-	if err := normalizeLoopSchemaVersion(&loop); err != nil {
+	if err := validateLoopSchemaVersion(loop); err != nil {
 		return loopruncontract.LoopRun{OK: false, ID: loopID}, err
 	}
 	loop.OK = true
@@ -80,7 +80,7 @@ func (store Store) Write(ctx context.Context, loop loopruncontract.LoopRun) (loo
 		loop.OK = false
 		return loop, err
 	}
-	if err := normalizeLoopSchemaVersion(&loop); err != nil {
+	if err := validateLoopSchemaVersion(loop); err != nil {
 		loop.OK = false
 		return loop, err
 	}
@@ -129,16 +129,9 @@ func normalizeLoopID(id string) (string, error) {
 	return id, nil
 }
 
-func normalizeLoopSchemaVersion(loop *loopruncontract.LoopRun) error {
-	switch {
-	case loop.SchemaVersion == 0:
-		loop.SchemaVersion = LoopRunCurrentSchemaVersion
-		return nil
-	case loop.SchemaVersion == LoopRunCurrentSchemaVersion:
-		return nil
-	case loop.SchemaVersion > LoopRunCurrentSchemaVersion:
+func validateLoopSchemaVersion(loop loopruncontract.LoopRun) error {
+	if loop.SchemaVersion != LoopRunCurrentSchemaVersion {
 		return fmt.Errorf("unsupported loop schema_version %d; current is %d", loop.SchemaVersion, LoopRunCurrentSchemaVersion)
-	default:
-		return fmt.Errorf("unsupported loop schema_version %d", loop.SchemaVersion)
 	}
+	return nil
 }

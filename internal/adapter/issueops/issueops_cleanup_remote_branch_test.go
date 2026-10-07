@@ -93,7 +93,8 @@ func remoteBranchTestRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
 			SourceRoot: repo, Root: filepath.Join(repo, "wt"), Branch: remoteBranchTestBranch,
 			BaseHead: "deadbeef", Driver: "git", LinkedAt: "2026-07-25T00:00:00Z",
 		},
-		Lease: issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased},
+		Lease:     issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased},
+		Selection: selectionFixture(issueops.ExecutionModeDirect),
 	}
 	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { *rec = record })
 	return stateRoot, record

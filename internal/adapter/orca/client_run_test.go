@@ -94,7 +94,7 @@ func TestClientProbeTreatsUnrelatedOpaqueRunAsValidInventory(t *testing.T) {
 	runner.responses["orca orchestration run-list --json"] = CommandOutput{Stdout: []byte(`{
 		"ok":true,
 		"result":{"runs":[
-			{"id":"run_legacy_local","objective":"Legacy orchestration state (inspect only)","legacy":1}
+			{"id":"run_other_local","objective":"unrelated orchestration state (inspect only)","inspect_only":1}
 		],"nextCursor":null},
 		"_meta":{"runtimeId":"runtime-1"}
 	}`)}
@@ -183,12 +183,12 @@ func TestClientTaskInventoryReadsOpaqueRunRowsUniformly(t *testing.T) {
 	runner.responses["orca orchestration run-list --json"] = CommandOutput{Stdout: []byte(`{
 		"ok":true,
 		"result":{"runs":[
-			{"id":"run_legacy_local","objective":"retired orchestration state"},
+			{"id":"run_other_local","objective":"unrelated orchestration state"},
 			{"id":"run_a","objective":"issueops-v1 lifecycle=io-a"}
 		],"nextCursor":null},
 		"_meta":{"runtimeId":"runtime-1"}
 	}`)}
-	for _, runID := range []string{"run_a", "run_legacy_local"} {
+	for _, runID := range []string{"run_a", "run_other_local"} {
 		command := "orca orchestration task-list --brief --run " + runID + " --json"
 		runner.responses[command] = CommandOutput{Stdout: []byte(`{"ok":true,"result":{"runId":"` + runID + `","tasks":[],"count":0},"_meta":{"runtimeId":"runtime-1"}}`)}
 	}

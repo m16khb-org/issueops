@@ -100,7 +100,7 @@ func TestReseedRepositoryPersistsCompletedReseedHistoryFixtures(t *testing.T) {
 			record.Phase = "done"
 			record.Execution.Lease.Generation = test.leaseGeneration
 			record.Execution.Lease.ReplacedAt = test.replacedAt
-			record.Execution.Completion = &leasecontract.Completion{FinalHead: test.oldHead, VerificationReportPath: ".issueops/verified-execution/old.json", Verification: []string{"old verification"}, RemoteArtifactURL: "https://github.com/acme/repo/pull/1", CompletedAt: test.completedAt}
+			record.Execution.Completion = &leasecontract.Completion{Generation: test.completionGeneration, FinalHead: test.oldHead, VerificationReportPath: ".issueops/verified-execution/old.json", Verification: []string{"old verification"}, RemoteArtifactURL: "https://github.com/acme/repo/pull/1", CompletedAt: test.completedAt}
 			record.Execution.SyncBaseEvents = []leasecontract.SyncBaseEvent{{Mode: "apply", BaseBranch: "main", BaseOID: strings.Repeat("a", 40), MergeCommit: strings.Repeat("b", 40), Actor: "codex", At: "2026-08-03T01:00:00Z"}}
 			record.PhaseLedger = json.RawMessage(`{"implement":{"phase":"implement","completed_at":"old"}}`)
 			data, err := leasecontract.Encode(record)
@@ -203,7 +203,7 @@ func TestReseedRepositoryRejectedCASLeavesRecordAndHolderIndexUntouched(t *testi
 }
 
 func reseedRepositoryRecord() leasecontract.Record {
-	return leasecontract.Record{SchemaVersion: leasecontract.SchemaVersion, ID: "io-reseed-repository", Execution: &leasecontract.Execution{Mode: "direct", Workspace: leasecontract.Workspace{SourceRoot: "/source", Root: "/worktree", Branch: "branch", BaseHead: "base", Driver: "git", LinkedAt: "2026-07-30T09:00:00Z"}, Lease: leasecontract.Lease{Generation: 1, Status: "released"}}}
+	return leasecontract.Record{SchemaVersion: leasecontract.SchemaVersion, ID: "io-reseed-repository", Execution: &leasecontract.Execution{Mode: "direct", Workspace: leasecontract.Workspace{SourceRoot: "/source", Root: "/worktree", Branch: "branch", BaseHead: "base", Driver: "git", LinkedAt: "2026-07-30T09:00:00Z"}, Lease: leasecontract.Lease{Generation: 1, Status: "released"}, Selection: leaseSelectionFixture("direct")}}
 }
 
 var _ leaseapp.ReseedRepository = (*ReseedRepository)(nil)

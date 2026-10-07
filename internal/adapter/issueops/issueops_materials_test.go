@@ -116,6 +116,7 @@ func TestPhaseTransitionWritesTrackedMaterials(t *testing.T) {
 		t.Fatal(err)
 	}
 	orca.Execution.Mode = issueops.ExecutionModeOrca
+	orca.Execution.Selection = selectionFixture(issueops.ExecutionModeOrca)
 	orcaRoot := t.TempDir()
 	orca.Execution.Workspace.Root = orcaRoot
 	orca.PlanPath = filepath.Join(orcaRoot, ".issueops", "issues", "13", "artifact", "plan.md")
@@ -172,6 +173,7 @@ func TestTrackedMaterialsMissingWarning(t *testing.T) {
 			Mode:      issueops.ExecutionModeDirect,
 			Workspace: issueops.Workspace{SourceRoot: rec.Repo, Root: root, Branch: "81-completion", BaseHead: "deadbeef", Driver: "git", LinkedAt: "2026-07-24T00:00:00Z", ArtifactDir: ".issueops/issues/81/artifact"},
 			Lease:     issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased},
+			Selection: selectionFixture(issueops.ExecutionModeDirect),
 		}
 	})
 	writeIssueOpsFile(t, root, ".issueops/issues/81/artifact/plan.md", "봉인 계획\n")
@@ -267,7 +269,7 @@ func TestTrackedMaterialsFallbackAndReviewPaths(t *testing.T) {
 			record := issueops.IssueOpsRecord{
 				Repo: source, IssueURL: "https://github.com/example/repo/issues/13",
 				Intent:               &issueops.IssueOpsIntentContract{RawRequest: "source `" + source + "/a` home `/home/synthetic/.config` work `" + root + "/b`"},
-				Execution:            &issueops.Execution{Mode: mode, Workspace: issueops.Workspace{Root: root, ArtifactDir: ".issueops/issues/13/artifact"}},
+				Execution:            &issueops.Execution{Mode: mode, Workspace: issueops.Workspace{Root: root, ArtifactDir: ".issueops/issues/13/artifact"}, Selection: selectionFixture(mode)},
 				DevilsAdvocateReview: &issueops.IssueOpsDevilsAdvocateReview{Verdict: "pass", Findings: []string{"source `" + source + "/a` work `" + root + "/b` URL https://host.test/home/synthetic/a"}},
 			}
 			files := materialapp.TrackedMaterials{Files: MaterialFiles{}}
@@ -278,7 +280,7 @@ func TestTrackedMaterialsFallbackAndReviewPaths(t *testing.T) {
 			if !strings.Contains(intent, "source `$SOURCE_ROOT/a`") || !strings.Contains(intent, "work `$WORKTREE/b`") {
 				t.Fatalf("record fallback: %q", intent)
 			}
-			// The legacy renderer masks URL home paths before normalization.
+			// The plan-review renderer masks URL home paths before normalization.
 			want := strings.ReplaceAll(strings.ReplaceAll(domain.RenderTrackedPlanReview(record.DevilsAdvocateReview), source, "$SOURCE_ROOT"), root, "$WORKTREE")
 			if got := trackedCopy(t, root, "13", "plan-review.md"); got != want || !strings.Contains(got, "https://host.test[로컬 경로 생략]") {
 				t.Fatalf("review policy changed: %q want %q", got, want)

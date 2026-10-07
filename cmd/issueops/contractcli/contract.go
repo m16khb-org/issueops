@@ -135,7 +135,7 @@ func BuildCompatibilityContract(commands []clicontract.Command, tools []map[stri
 			"issueops_benchmark_compare":      {"ok", "improved", "baseline_id", "candidate_id", "average_score_delta", "minimum_score_delta", "critical_failure_delta", "regressions"},
 			"issueops_benchmark_gate":         {"ok", "keep_candidate", "candidate_id", "benchmark_compare", "edit_surface_violations", "target_dimension_regressions", "discard_reasons"},
 			"command_audit":                   {"ok", "kind", "audit_log_id", "log_path", "policy"},
-			"verify_work":                     {"ok", "kind", "repo", "git_status", "preflight", "guard", "command", "evidence", "evidence_matrix", "suggested_commands", "warnings"},
+			"verify_work":                     {"ok", "kind", "repo", "git_status", "preflight", "guard", "command", "evidence_matrix", "suggested_commands", "warnings"},
 			"web_fetch":                       {"ok", "url", "final_url", "category", "stop_reason", "grid_exhausted", "attempted_routes", "untried_routes", "content", "metadata", "warnings", "retrieved_at", "duration_ms"},
 		},
 		Warnings:     []string{},

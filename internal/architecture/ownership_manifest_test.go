@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestOwnershipManifestRejectsLegacyAndInvertedEdges(t *testing.T) {
+func TestOwnershipManifestRejectsForbiddenAndInvertedEdges(t *testing.T) {
 	tests := []struct {
 		name string
 		edge dependencyEdge
@@ -131,7 +131,7 @@ func TestProcessLifetimePrimitiveHasNarrowConsumers(t *testing.T) {
 		"internal/adapter/outbound/sqlstore",
 	} {
 		edge := dependencyEdge{importer, primitive}
-		if got := legacyEdges([]dependencyEdge{edge}); len(got) != 0 {
+		if got := forbiddenEdges([]dependencyEdge{edge}); len(got) != 0 {
 			t.Errorf("command runner cannot share process lifetime: %s", formatEdge(edge))
 		}
 	}
@@ -147,7 +147,7 @@ func TestProcessLifetimePrimitiveHasNarrowConsumers(t *testing.T) {
 		"cmd/issueops/issueopscli/feedbackcleanup",
 	} {
 		edge := dependencyEdge{importer, primitive}
-		if got := legacyEdges([]dependencyEdge{edge}); len(got) != 1 {
+		if got := forbiddenEdges([]dependencyEdge{edge}); len(got) != 1 {
 			t.Errorf("non-runner gained concrete process lifetime access: %s", formatEdge(edge))
 		}
 	}

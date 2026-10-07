@@ -106,11 +106,12 @@ func TestRecordIssueOpsProjectDocsReviewRejectsPreImplementPhase(t *testing.T) {
 
 // project-docs 게이트는 implementation review와 달리 direct/orca 양쪽에 걸린다.
 func TestProjectDocsReviewMissingAppliesToBothModes(t *testing.T) {
-	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{Mode: issueops.ExecutionModeDirect}}
+	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{Mode: issueops.ExecutionModeDirect, Selection: selectionFixture(issueops.ExecutionModeDirect)}}
 	if got := cycleapp.ProjectDocsReviewMissing(record, ""); got != "project_docs_review" {
 		t.Fatalf("direct mode must also be gated: %q", got)
 	}
 	record.Execution.Mode = issueops.ExecutionModeOrca
+	record.Execution.Selection = selectionFixture(issueops.ExecutionModeOrca)
 	if got := cycleapp.ProjectDocsReviewMissing(record, ""); got != "project_docs_review" {
 		t.Fatalf("orca mode must be gated: %q", got)
 	}
@@ -129,7 +130,7 @@ func TestProjectDocsReviewMissingAppliesToBothModes(t *testing.T) {
 }
 
 func TestPRReadinessSurfacesProjectDocsReview(t *testing.T) {
-	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{Mode: issueops.ExecutionModeDirect}}
+	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{Mode: issueops.ExecutionModeDirect, Selection: selectionFixture(issueops.ExecutionModeDirect)}}
 	if ready := IssueOpsPRReadiness(record); !containsString(ready.Missing, "project_docs_review") {
 		t.Fatalf("PR readiness must surface the project docs gate: %+v", ready.Missing)
 	}

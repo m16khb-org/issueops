@@ -185,7 +185,7 @@ func TestRunIssueOpsIntentAndDesignFailuresWithJSONEmitStructuredErrors(t *testi
 				"--proposed-design", "Require approved design before implementation",
 				"--refactor-plan", "Keep changes scoped to IssueOps core and adapters",
 				"--alternative", "docs-only guidance",
-				"--risk", "legacy tests need explicit setup",
+				"--risk", "existing tests need explicit setup",
 				"--verification", "go test ./cmd/issueops/issueopscli",
 				"--approved",
 				"--json",

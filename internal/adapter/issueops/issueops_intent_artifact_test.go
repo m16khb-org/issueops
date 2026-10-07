@@ -26,6 +26,7 @@ func intentArtifactRecord(t *testing.T, intent *issueopscontract.IssueOpsIntentC
 		Mode:      issueopscontract.ExecutionModeDirect,
 		Workspace: issueopscontract.Workspace{Root: worktree, ArtifactDir: app.OwnerArtifactDir(record)},
 		Lease:     issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusActive},
+		Selection: selectionFixture(issueopscontract.ExecutionModeDirect),
 	}
 	return stateRoot, record, worktree
 }

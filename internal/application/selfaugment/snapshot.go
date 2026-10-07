@@ -2,6 +2,8 @@ package selfaugment
 
 import (
 	"encoding/json"
+	"fmt"
+	"reflect"
 	"time"
 
 	contract "issueops/internal/contract/selfaugment"
@@ -29,8 +31,23 @@ func (store SnapshotStore) Read(key string) (contract.SelfAugmentStateSnapshot, 
 	if err := domain.ValidateSummarySnapshot(key, snapshot); err != nil {
 		return contract.SelfAugmentStateSnapshot{}, err
 	}
-	NormalizeSnapshotFailureCause(&snapshot)
+	if err := validateSnapshotFailureCause(key, snapshot); err != nil {
+		return contract.SelfAugmentStateSnapshot{}, err
+	}
 	return snapshot, nil
+}
+
+// validateSnapshotFailureCause는 저장된 failure cause가 Write가 기록하는
+// 분류 결과와 정확히 같은지 확인한다. 읽기 경로는 값을 다시 계산해 덮어쓰지
+// 않으므로, 분류 필드가 없거나 어긋난 레코드는 거부된다.
+func validateSnapshotFailureCause(key string, snapshot contract.SelfAugmentStateSnapshot) error {
+	want := failurecause.Classify(snapshot.Summary.FailedSteps > 0, snapshot.Summary.FailureCauseEvidence)
+	if snapshot.Summary.FailureCause != want.Cause || snapshot.Summary.FailureCauseReason != want.Reason ||
+		snapshot.Summary.FailureCauseEvidence == nil || !reflect.DeepEqual(snapshot.Summary.FailureCauseEvidence, want.Evidence) {
+		return fmt.Errorf("state key %q has failure cause %q (%q), want %q (%q)", key,
+			snapshot.Summary.FailureCause, snapshot.Summary.FailureCauseReason, want.Cause, want.Reason)
+	}
+	return nil
 }
 
 func NormalizeSnapshotFailureCause(snapshot *contract.SelfAugmentStateSnapshot) {

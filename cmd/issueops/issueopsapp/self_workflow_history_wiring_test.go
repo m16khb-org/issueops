@@ -21,6 +21,7 @@ import (
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	statestore "issueops/internal/adapter/outbound/state"
 	augmentapp "issueops/internal/application/selfaugment"
+	failurecause "issueops/internal/contract/failurecause"
 	contract "issueops/internal/contract/selfaugment"
 	statecontract "issueops/internal/contract/state"
 )
@@ -33,7 +34,7 @@ func TestSelfWorkflowHistoryInstancesKeepCLIAndMCPStateSeparate(t *testing.T) {
 	sessions := make([]*mcp.ClientSession, 2)
 	for i, dir := range dirs {
 		for j, key := range []string{"self-verify-old", "self-verify-new"} {
-			snapshot := contract.SelfAugmentStateSnapshot{SchemaVersion: 1, Kind: "self_verification_summary", OK: true, GeneratedAt: fmt.Sprintf("2026-01-0%dT00:00:00Z", j+1), IssueOpsRoot: fmt.Sprintf("repo-%d", i), ElapsedMS: int64(100*(i+1) + j), Summary: contract.SelfAugmentSummary{TotalRuns: 1, TotalSteps: 1, PassedSteps: 1}}
+			snapshot := contract.SelfAugmentStateSnapshot{SchemaVersion: 1, Kind: "self_verification_summary", OK: true, GeneratedAt: fmt.Sprintf("2026-01-0%dT00:00:00Z", j+1), IssueOpsRoot: fmt.Sprintf("repo-%d", i), ElapsedMS: int64(100*(i+1) + j), Summary: contract.SelfAugmentSummary{TotalRuns: 1, TotalSteps: 1, PassedSteps: 1, FailureCause: "none", FailureCauseReason: "no_failed_steps", FailureCauseEvidence: []failurecause.Evidence{}}}
 			b, err := json.Marshal(snapshot)
 			if err != nil {
 				t.Fatal(err)

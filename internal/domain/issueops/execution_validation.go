@@ -19,10 +19,11 @@ func ValidateExecution(execution issueopscontract.Execution) error {
 	if err := validateWriteLease(execution.Lease); err != nil {
 		return err
 	}
-	if execution.Selection != nil {
-		if err := validateExecutionSelection(*execution.Selection, execution.Mode); err != nil {
-			return err
-		}
+	if execution.Selection == nil {
+		return fmt.Errorf("execution selection receipt is required")
+	}
+	if err := validateExecutionSelection(*execution.Selection, execution.Mode); err != nil {
+		return err
 	}
 	if execution.Mode == issueopscontract.ExecutionModeDirect && execution.Orca != nil {
 		return fmt.Errorf("direct execution must not contain an Orca binding")
@@ -30,6 +31,9 @@ func ValidateExecution(execution issueopscontract.Execution) error {
 	if execution.Orca != nil {
 		if err := validateOrcaBinding(*execution.Orca); err != nil {
 			return err
+		}
+		if execution.Orca.LeaseGeneration == 0 {
+			return fmt.Errorf("Orca binding lease_generation is required")
 		}
 		if execution.Orca.LeaseGeneration > execution.Lease.Generation {
 			return fmt.Errorf("Orca binding lease_generation exceeds the lease generation")
@@ -58,7 +62,7 @@ func ValidateExecution(execution issueopscontract.Execution) error {
 		if err := validateExecutionCompletion(entry.Completion); err != nil {
 			return fmt.Errorf("execution completion history: %w", err)
 		}
-		if entry.Completion.Generation != 0 && entry.Completion.Generation != entry.Generation {
+		if entry.Completion.Generation != entry.Generation {
 			return fmt.Errorf("execution completion history generation conflicts with its completion")
 		}
 	}
@@ -104,7 +108,7 @@ func validateExecutionSyncBaseResolution(execution issueopscontract.Execution, r
 }
 
 func validateExecutionCompletion(completion issueopscontract.ExecutionCompletion) error {
-	if !validCommitSHA(completion.FinalHead) || strings.TrimSpace(completion.VerificationReportPath) == "" ||
+	if completion.Generation == 0 || !validCommitSHA(completion.FinalHead) || strings.TrimSpace(completion.VerificationReportPath) == "" ||
 		len(completion.Verification) == 0 || strings.TrimSpace(completion.RemoteArtifactURL) == "" || strings.TrimSpace(completion.CompletedAt) == "" {
 		return fmt.Errorf("execution completion is incomplete")
 	}
@@ -260,36 +264,18 @@ func validateOrcaBinding(binding issueopscontract.OrcaBinding) error {
 	if binding.OwnerHost != "codex" && binding.OwnerHost != "claude" && binding.OwnerHost != "omo" {
 		return fmt.Errorf("Orca owner_host must be codex, claude, or omo")
 	}
-	if binding.RunID != "" && (binding.RunID != strings.TrimSpace(binding.RunID) || len(binding.RunID) > 1024) {
+	if binding.RunID == "" || binding.RunID != strings.TrimSpace(binding.RunID) || len(binding.RunID) > 1024 {
 		return fmt.Errorf("Orca binding run_id must be one canonical explicit Run identity")
 	}
-	digests := []string{binding.IssueBodySHA256, binding.ContextPacketSHA256, binding.OwnerPromptSHA256}
-	present := 0
-	for _, digest := range digests {
-		if digest != "" {
-			present++
-		}
-	}
-	if present != 0 && present != len(digests) {
-		return fmt.Errorf("Orca binding requires a complete sealed artifact identity")
-	}
-	switch binding.ArtifactIdentityVersion {
-	case 0:
-		if present != 0 {
-			return fmt.Errorf("Orca binding sealed artifact identity requires artifact identity version")
-		}
-	case issueopscontract.OrcaArtifactIdentityVersion:
-		if present != len(digests) {
-			return fmt.Errorf("Orca binding artifact identity version requires a complete sealed artifact identity")
-		}
-	default:
+	if binding.ArtifactIdentityVersion != issueopscontract.OrcaArtifactIdentityVersion {
 		return fmt.Errorf("unsupported Orca artifact identity version %d", binding.ArtifactIdentityVersion)
 	}
-	if present == len(digests) {
-		for _, digest := range digests {
-			if !validSHA256(digest) {
-				return fmt.Errorf("Orca binding sealed artifact identity must contain SHA-256 digests")
-			}
+	for _, digest := range []string{binding.IssueBodySHA256, binding.ContextPacketSHA256, binding.OwnerPromptSHA256} {
+		if digest == "" {
+			return fmt.Errorf("Orca binding artifact identity version requires a complete sealed artifact identity")
+		}
+		if !validSHA256(digest) {
+			return fmt.Errorf("Orca binding sealed artifact identity must contain SHA-256 digests")
 		}
 	}
 	return nil

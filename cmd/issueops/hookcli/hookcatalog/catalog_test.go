@@ -39,7 +39,7 @@ func TestRunCatalogHooksWithInjectedPrinter(t *testing.T) {
 	}
 }
 
-func TestRunCatalogHooksIgnoreLegacyRuntimeDependencies(t *testing.T) {
+func TestRunSessionStartRendersWithoutRuntimeDependencies(t *testing.T) {
 	for _, host := range []string{"codex", "claude"} {
 		t.Run(host, func(t *testing.T) {
 			var printed map[string]any

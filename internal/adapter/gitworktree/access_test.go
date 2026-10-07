@@ -83,7 +83,7 @@ func TestWorkspaceRelaunchCommandLandsInExistingCanonicalWorktree(t *testing.T) 
 }
 
 // 워크트리가 아직 없으면 cd가 실패해 host가 아예 뜨지 않는다. 그 사이클(orca
-// 대안 경로, worktree를 prepare가 만드는 legacy direct)은 source root로 되돌린다.
+// 대안 경로, worktree를 prepare가 만드는 direct)은 source root로 되돌린다.
 func TestWorkspaceRelaunchCommandFallsBackToSourceRootWhenWorktreeMissing(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, "69-absent")

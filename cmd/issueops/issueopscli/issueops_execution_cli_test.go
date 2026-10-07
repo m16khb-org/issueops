@@ -131,7 +131,9 @@ func TestIssueOpsExecutionStatusProjectsActorFreeResumeCommand(t *testing.T) {
 			ArtifactIdentityVersion: issueopscontract.OrcaArtifactIdentityVersion,
 			IssueBodySHA256:         strings.Repeat("b", 64), ContextPacketSHA256: strings.Repeat("c", 64), OwnerPromptSHA256: strings.Repeat("d", 64),
 			TaskID: "task-1", DispatchID: "dispatch-1", TerminalPTYID: "pty-1",
+			RunID: "run_issueops_1",
 		},
+		Selection: selectionFixture(issueopscontract.ExecutionModeOrca),
 	}
 	if _, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
@@ -156,18 +158,8 @@ func TestIssueOpsExecutionStatusProjectsActorFreeResumeCommand(t *testing.T) {
 	record.Execution.Orca.ContextPacketSHA256 = ""
 	record.Execution.Orca.OwnerPromptSHA256 = ""
 	record.Execution.Orca.ArtifactIdentityVersion = 0
-	if _, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record); err != nil {
-		t.Fatal(err)
-	}
-	legacyJSON := captureStdoutForContract(t, func() error {
-		return runIssueOpsForTest([]string{"execution", "status", "--id", id, "--json"}, deps)
-	})
-	if err := json.Unmarshal([]byte(legacyJSON), &status); err != nil {
-		t.Fatalf("legacy execution status should return JSON: %v\n%s", err, legacyJSON)
-	}
-	want = "issueops execution replace --id '" + id + "' --expected-generation 3 --preview"
-	if !sameGeneratedExecutionCommand(status.NextCommand, want, 3) {
-		t.Fatalf("legacy status next command = %q, want %q", status.NextCommand, want)
+	if _, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record); err == nil {
+		t.Fatal("an unversioned Orca binding must not be persisted")
 	}
 }
 
@@ -184,9 +176,9 @@ func sameGeneratedExecutionCommand(got, raw string, generation uint64) bool {
 	return len(want) > 1 && strings.Join(clean, "\x00") == strings.Join(want[1:], "\x00")
 }
 
-func TestIssueOpsExecutionCLIRejectsLegacyDecideAndAmbiguousReplace(t *testing.T) {
+func TestIssueOpsExecutionCLIRejectsRetiredDecideAndAmbiguousReplace(t *testing.T) {
 	if err := runIssueOps([]string{"execution", "decide"}); err == nil || !strings.Contains(err.Error(), "unknown issueops execution subcommand") {
-		t.Fatalf("legacy execution decide must be absent, got %v", err)
+		t.Fatalf("retired execution decide must be absent, got %v", err)
 	}
 
 	_, err := captureStdoutAndErrorForIssueOps(t, func() error {
@@ -295,6 +287,7 @@ func executionCLIPrepareHandler(t *testing.T) issueopscontract.ExecutionPrepareH
 				Holder:     &actor,
 				ClaimedAt:  workspace.LinkedAt,
 			},
+			Selection: selectionFixture(issueopscontract.ExecutionModeDirect),
 		}
 		record.WorktreePath = workspace.Root
 		record.Execution = execution

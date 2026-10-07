@@ -53,7 +53,8 @@ func TestPrepareExecutionOwnerMaterializesPlanAndSealsManifest(t *testing.T) {
 			SourceRoot: record.Repo, Root: worktree, Branch: record.Branch,
 			BaseHead: record.BranchPrepare.BaseSHA, Driver: "orca",
 		},
-		Lease: issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased},
+		Lease:     issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased},
+		Selection: selectionFixture(issueops.ExecutionModeOrca),
 	}
 	raw, err := json.Marshal(record)
 	if err != nil {
@@ -141,7 +142,7 @@ func TestExecutionOwnerPacketUsesOnlyExecutionCommands(t *testing.T) {
 		"issueops execution decide",
 	} {
 		if strings.Contains(packet, forbidden) {
-			t.Fatalf("owner packet selected legacy command %q", forbidden)
+			t.Fatalf("owner packet selected retired command %q", forbidden)
 		}
 	}
 	for _, required := range []string{
@@ -324,6 +325,7 @@ func TestExecutionOwnerReviewCommandRecordsTheActualVerdict(t *testing.T) {
 func TestExecutionDirectOwnerPromptUsesNoClaimCommand(t *testing.T) {
 	record, req := ownerPacketFixture()
 	record.Execution.Mode = issueops.ExecutionModeDirect
+	record.Execution.Selection = selectionFixture(issueops.ExecutionModeDirect)
 	record.Execution.Lease = issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusActive, Holder: &issueops.NativeActor{Host: "codex", SessionID: "direct"}}
 	req.Mode = "direct"
 	prompt := executionOwnerPromptFixture(t, record, req)
@@ -469,7 +471,8 @@ func ownerPacketFixture() (issueops.IssueOpsRecord, issueops.ExecutionPrepareReq
 				Driver:     "orca",
 				LinkedAt:   "2026-07-22T00:00:00Z",
 			},
-			Lease: issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusClaimable},
+			Lease:     issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusClaimable},
+			Selection: selectionFixture(issueops.ExecutionModeOrca),
 		},
 	}
 	req := issueops.ExecutionPrepareRequest{

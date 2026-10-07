@@ -14,6 +14,7 @@ func TestLeaseCodecPreservesStrictShapeAndDomainRejection(t *testing.T) {
 		Mode:      "direct",
 		Workspace: leasecontract.Workspace{SourceRoot: "/source", Root: "/worktree", Branch: "branch", BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "2026-08-03T00:00:00Z"},
 		Lease:     leasecontract.Lease{Generation: 1, Status: "released"},
+		Selection: leaseSelectionFixture("direct"),
 	}}
 	encoded, err := EncodeLease(valid)
 	if err != nil {

@@ -52,7 +52,13 @@ func TestReplacementResealRequiresExistingPlanIdentity(t *testing.T) {
 					RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", LeaseGeneration: 1,
 					OwnerHost: "codex", OwnerModel: "gpt-6-astra", OwnerEffort: "xhigh",
 					TaskID: "task", DispatchID: "dispatch",
+					RunID:                   "run_issueops_1",
+					ArtifactIdentityVersion: 1,
+					IssueBodySHA256:         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+					ContextPacketSHA256:     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+					OwnerPromptSHA256:       "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
 				},
+				Selection: selectionFixture(issueops.ExecutionModeOrca),
 			}
 			if test.configure != nil {
 				test.configure(t, &record, plan)

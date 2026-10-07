@@ -30,11 +30,7 @@ func WriterlessCommand(record issueops.IssueOpsRecord) string {
 		return ""
 	}
 	lease := record.Execution.Lease
-	identityComplete := false
-	if lease.Status == issueops.LeaseStatusClaimable && record.Execution.Mode == issueops.ExecutionModeOrca {
-		identityComplete = domain.CompleteOwnerArtifactIdentity(record.Execution.Orca)
-	}
-	switch leasedomain.DecideWriterlessRecovery(string(lease.Status), string(record.Execution.Mode), identityComplete) {
+	switch leasedomain.DecideWriterlessRecovery(string(lease.Status), string(record.Execution.Mode)) {
 	case leasedomain.RecoveryReplacePreview:
 		return domain.ReplacementPreviewCommand(record.ID, lease.Generation)
 	case leasedomain.RecoveryResume:

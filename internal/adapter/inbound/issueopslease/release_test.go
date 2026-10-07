@@ -27,7 +27,7 @@ func TestReleaseHandlerReturnsCommittedProjectionWithoutStatusReadback(t *testin
 			Mode:           "orca",
 			Workspace:      leasecontract.Workspace{SourceRoot: "/source", Root: "/canonical", Branch: "196-release", BaseHead: strings.Repeat("a", 40), Driver: "orca", LinkedAt: "2026-07-29T00:00:00Z"},
 			Lease:          leasecontract.Lease{Generation: 1, Status: "active", Holder: &actor, ClaimedAt: "2026-07-29T00:00:01Z"},
-			Orca:           &leasecontract.OrcaBinding{RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", RunID: "run", OwnerHost: "codex", OwnerModel: "gpt-6-astra", TaskID: "task", DispatchID: "dispatch"},
+			Orca:           &leasecontract.OrcaBinding{RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", RunID: "run", OwnerHost: "codex", OwnerModel: "gpt-6-astra", TaskID: "task", DispatchID: "dispatch", LeaseGeneration: 1, ArtifactIdentityVersion: 1, IssueBodySHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", ContextPacketSHA256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", OwnerPromptSHA256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"},
 			Pending:        &leasecontract.ExternalIntent{OperationID: "pending", Kind: "pr_create", Marker: "marker", StartedAt: "2026-07-29T00:00:02Z"},
 			Completion:     &leasecontract.Completion{FinalHead: strings.Repeat("b", 40), VerificationReportPath: ".issueops/verified-execution/196.json", Verification: []string{"focused"}, RemoteArtifactURL: "https://example.test/pull/196", CompletedAt: "2026-07-29T00:00:03Z"},
 			Failure:        &leasecontract.FailureDetail{OperationID: "failed-operation", Code: "transient", Message: "retry", At: "2026-07-29T00:00:04Z"},
@@ -117,7 +117,7 @@ func TestReleaseHandlerPreservesNotPreparedCompatibilityText(t *testing.T) {
 	}
 }
 
-func TestReleaseHandlerPreservesLegacyNativeActorValidationText(t *testing.T) {
+func TestReleaseHandlerKeepsPublicNativeActorValidationText(t *testing.T) {
 	handler := NewReleaseHandler(leaseapp.NewReleaseService(nil, nil, leaseVerifier(func(_ context.Context, receipt leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
 		return "live", receipt, nil
 	}), nil))
@@ -139,7 +139,7 @@ func TestReleaseHandlerPreservesLegacyNativeActorValidationText(t *testing.T) {
 	}
 }
 
-func TestReleaseHandlerPreservesLegacyContractAndPersistenceText(t *testing.T) {
+func TestReleaseHandlerKeepsPublicContractAndPersistenceText(t *testing.T) {
 	actor := issueopscontract.NativeActor{
 		Host:      "codex",
 		SessionID: "public-error-session",

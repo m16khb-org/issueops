@@ -523,14 +523,14 @@ func TestLiveGateRejectsSchemaV1ResumeWithoutAdditiveMigration(t *testing.T) {
 	}
 }
 
-func TestLiveGateRejectsLegacyShapedAndIdentityDriftedSchemaV2Episodes(t *testing.T) {
+func TestLiveGateRejectsUnprovenAndIdentityDriftedSchemaV2Episodes(t *testing.T) {
 	fixtures := benchmarkFixtures(t)
 	baseline := certifiedPreviousReport(t, fixtures)
 	tests := []struct {
 		name   string
 		mutate func(*fixturecontract.BenchmarkReport)
 	}{
-		{name: "legacy shaped runtime proof", mutate: func(report *fixturecontract.BenchmarkReport) {
+		{name: "missing runtime proof", mutate: func(report *fixturecontract.BenchmarkReport) {
 			episode := &report.Hosts[0].Cases[0]
 			episode.ObservedModel = ""
 			episode.DurationMS = 0

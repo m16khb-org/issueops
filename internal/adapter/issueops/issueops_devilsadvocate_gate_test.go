@@ -114,7 +114,7 @@ func TestImplementationReadinessRejectsStaleDevilsAdvocateReview(t *testing.T) {
 		t.Fatal(err)
 	}
 	writeIssueOpsFile(t, record.WorktreePath, "plans/bound.md", "# plan v2\n")
-	// A legacy review with no digest is stale as well (fail closed).
+	// A review with no plan digest is stale as well (fail closed).
 	record.DevilsAdvocateReview.ReviewedPlanDigest = ""
 	if ready := IssueOpsImplementationReadiness(record); !containsString(ready.Missing, "devils_advocate_review_stale") {
 		t.Fatalf("review without a plan digest must be stale: %+v", ready.Missing)

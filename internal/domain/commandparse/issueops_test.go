@@ -249,9 +249,9 @@ func TestExecutionClaimSupportsCurrentOrExplicitTokenSelector(t *testing.T) {
 			}
 		})
 	}
-	legacy, _ := ParseExactIssueOpsCommand("issueops execution claim --id io-1 --generation 1 --token-file /tmp/token")
-	if flags, accepted := ExactFlags(legacy, values, booleans, repeatable); accepted || flags != nil {
-		t.Fatalf("legacy token-file flag was accepted: flags=%#v ok=%v", flags, accepted)
+	retired, _ := ParseExactIssueOpsCommand("issueops execution claim --id io-1 --generation 1 --token-file /tmp/token")
+	if flags, accepted := ExactFlags(retired, values, booleans, repeatable); accepted || flags != nil {
+		t.Fatalf("retired token-file flag was accepted: flags=%#v ok=%v", flags, accepted)
 	}
 }
 

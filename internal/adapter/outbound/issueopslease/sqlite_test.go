@@ -25,6 +25,7 @@ func TestSQLiteRepositoryLeavesRecordUnchangedWhenApplyFailsAfterClock(t *testin
 			Mode:      "direct",
 			Workspace: leasecontract.Workspace{SourceRoot: "/source", Root: "/canonical", Branch: "196-release", BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "2026-07-29T00:00:00Z"},
 			Lease:     leasecontract.Lease{Generation: 1, Status: "active", Holder: &actor, ClaimedAt: "2026-07-29T00:00:01Z"},
+			Selection: leaseSelectionFixture("direct"),
 		},
 	}
 	data, err := leasecontract.Encode(record)

@@ -42,6 +42,7 @@ func TestGeneratedCommandRejectsStaleInstalledBinaryBeforeMutation(t *testing.T)
 				PID: 42, StartedAt: "2026-08-04T00:00:00Z", Executable: "/bin/codex",
 			}},
 		},
+		Selection: selectionFixture(issueopscontract.ExecutionModeDirect),
 	}
 	if _, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
@@ -97,6 +98,7 @@ func TestGeneratedCommandRunsExactObservedBinaryEnvelopeWithoutCallerRepair(t *t
 				PID: 42, StartedAt: "2026-08-04T00:00:00Z", Executable: "/bin/codex",
 			}},
 		},
+		Selection: selectionFixture(issueopscontract.ExecutionModeDirect),
 	}
 	if _, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)

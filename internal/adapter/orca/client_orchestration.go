@@ -285,40 +285,6 @@ func validateRunID(runID string) (string, error) {
 	return runID, nil
 }
 
-func (c *Client) listAllTasksInventory(ctx context.Context) (executionTaskInventory, error) {
-	return c.listTasksAcrossRunsInventory(ctx, "--brief")
-}
-
-func (c *Client) listTasksAcrossRunsInventory(ctx context.Context, flags ...string) (executionTaskInventory, error) {
-	runs, err := c.ListRuns(ctx)
-	if err != nil {
-		return executionTaskInventory{}, err
-	}
-	result := executionTaskInventory{}
-	seen := make(map[string]struct{})
-	for _, run := range runs {
-		inventory, err := c.listRunTasksInventory(ctx, run.ID, flags...)
-		if err != nil {
-			return executionTaskInventory{}, err
-		}
-		if result.RuntimeID == "" {
-			result.RuntimeID = run.RuntimeID
-		}
-		if err := validateExecutionInventoryRuntime(inventory.RuntimeID, run.RuntimeID); err != nil {
-			return executionTaskInventory{}, err
-		}
-		for _, task := range inventory.Rows {
-			key := task.RunID + "\x00" + task.ID
-			if _, duplicate := seen[key]; duplicate {
-				return executionTaskInventory{}, &port.OrcaError{Code: "task_inventory_ambiguous", Detail: "Orca returned a duplicate task identity in one Run", Invoked: true}
-			}
-			seen[key] = struct{}{}
-			result.Rows = append(result.Rows, task)
-		}
-	}
-	return result, nil
-}
-
 func (c *Client) listRunTasksInventory(ctx context.Context, runID string, flags ...string) (executionTaskInventory, error) {
 	runID, err := validateRunID(runID)
 	if err != nil {

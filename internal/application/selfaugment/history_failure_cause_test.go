@@ -10,7 +10,9 @@ import (
 	state "issueops/internal/contract/state"
 )
 
-func TestStoredSummaryComparisonPreservesFailureEvidenceBoundary(t *testing.T) {
+// TestStoredSummaryComparisonRejectsUnclassifiedFailureEvidence는 비교가 저장된
+// 원시 evidence를 다시 정규화하지 않고, 분류 결과와 다른 snapshot을 거부하는지 확인한다.
+func TestStoredSummaryComparisonRejectsUnclassifiedFailureEvidence(t *testing.T) {
 	raw := strings.Repeat("a", 95) + " b"
 	snapshot := contract.SelfAugmentStateSnapshot{SchemaVersion: 1, Kind: "self_verification_summary", Summary: contract.SelfAugmentSummary{FailedSteps: 1, FailureCauseEvidence: []failure.Evidence{{Cause: failure.Model, Code: raw, Source: raw}}}}
 	body, err := json.Marshal(snapshot)
@@ -20,14 +22,7 @@ func TestStoredSummaryComparisonPreservesFailureEvidenceBoundary(t *testing.T) {
 	service := HistoryService{StateDir: func() string { return "/state" }, Read: func(string) (state.StateResult, error) {
 		return state.StateResult{Record: state.RecordEnvelope{Content: string(body)}}, nil
 	}}
-	result, err := service.Compare("base", "candidate", 20)
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := strings.Repeat("a", 95)
-	for _, summary := range []contract.SelfAugmentSummary{result.BaselineSummary, result.CandidateSummary} {
-		if len(summary.FailureCauseEvidence) != 1 || summary.FailureCauseEvidence[0].Code != want || summary.FailureCauseEvidence[0].Source != want || summary.FailureCauseReason != "model:"+want {
-			t.Fatalf("stored summary comparison changed failure normalization: %+v", summary)
-		}
+	if _, err := service.Compare("base", "candidate", 20); err == nil || !strings.Contains(err.Error(), "has failure cause") {
+		t.Fatalf("unclassified stored evidence must be rejected, got %v", err)
 	}
 }

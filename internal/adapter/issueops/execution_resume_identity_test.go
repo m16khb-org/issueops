@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"issueops/internal/contract/issueops"
+	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
 
@@ -116,15 +117,14 @@ func TestResumePlanIdentityAcceptsMatchingSealedAndDurablePlan(t *testing.T) {
 	}
 }
 
-func TestExecutionWriterAbsentRecoveryRoutesUnversionedOrcaThroughReseed(t *testing.T) {
-	legacy, _ := sealedResumeIdentityFixture(t)
-	legacy.Execution.Orca.ArtifactIdentityVersion = 0
-	legacy.Execution.Orca.IssueBodySHA256 = ""
-	legacy.Execution.Orca.ContextPacketSHA256 = ""
-	legacy.Execution.Orca.OwnerPromptSHA256 = ""
-	legacyCommand := app.WriterlessCommand(legacy)
-	if !strings.Contains(legacyCommand, "execution replace") || !strings.Contains(legacyCommand, "--preview") || strings.Contains(legacyCommand, "execution resume") {
-		t.Fatalf("legacy recovery command=%q", legacyCommand)
+func TestExecutionWriterAbsentRecoveryResumesSealedOrca(t *testing.T) {
+	unversioned, _ := sealedResumeIdentityFixture(t)
+	unversioned.Execution.Orca.ArtifactIdentityVersion = 0
+	unversioned.Execution.Orca.IssueBodySHA256 = ""
+	unversioned.Execution.Orca.ContextPacketSHA256 = ""
+	unversioned.Execution.Orca.OwnerPromptSHA256 = ""
+	if err := issueopsdomain.ValidateExecution(*unversioned.Execution); err == nil || !strings.Contains(err.Error(), "unsupported Orca artifact identity version 0") {
+		t.Fatalf("an unversioned Orca binding must be rejected before recovery is planned: %v", err)
 	}
 	current, _ := sealedResumeIdentityFixture(t)
 	currentCommand := app.WriterlessCommand(current)
@@ -189,7 +189,8 @@ func sealedResumeIdentityFixture(t *testing.T) (issueops.IssueOpsRecord, executi
 			Mode:      issueops.ExecutionModeOrca,
 			Workspace: issueops.Workspace{SourceRoot: filepath.Join(t.TempDir(), "source"), Root: worktree, Branch: "254-resume", BaseHead: strings.Repeat("a", 40), Driver: "orca", LinkedAt: "2026-08-03T00:00:00Z", ArtifactDir: ".issueops/issues/254/artifact"},
 			Lease:     issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusClaimable},
-			Orca:      &issueops.OrcaBinding{RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", LeaseGeneration: 1, OwnerHost: "codex", OwnerModel: "gpt-6-sol", OwnerEffort: "high", TaskID: "task", DispatchID: "dispatch"},
+			Orca:      &issueops.OrcaBinding{RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", LeaseGeneration: 1, OwnerHost: "codex", OwnerModel: "gpt-6-sol", OwnerEffort: "high", TaskID: "task", DispatchID: "dispatch", RunID: "run_issueops_1", ArtifactIdentityVersion: 1, IssueBodySHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", ContextPacketSHA256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", OwnerPromptSHA256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"},
+			Selection: selectionFixture(issueops.ExecutionModeOrca),
 		},
 	}
 	const plan = "# Resume plan\n"

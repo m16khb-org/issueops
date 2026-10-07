@@ -103,7 +103,7 @@ func TestRunIssueOpsBenchmarkJudgeFileRejectsNoisyScore(t *testing.T) {
 	}
 }
 
-// 감싼 형식만 유일하게 허용되는 형태다. legacy flat judge map과 source_run_id가
+// 감싼 형식만 유일하게 허용되는 형태다. retired flat judge map과 source_run_id가
 // 빠진 wrapper는 둘 다 거부되어야 하며, 그래야 형식 선택으로 provenance를 몰래
 // 우회할 수 없다.
 func TestRunIssueOpsBenchmarkJudgeFileRejectsUnprovenancedMaps(t *testing.T) {
@@ -112,7 +112,7 @@ func TestRunIssueOpsBenchmarkJudgeFileRejectsUnprovenancedMaps(t *testing.T) {
 
 	flat := writeJudgeMapForTest(t, `{"judge-file-fixture": `+judgeFileValidScore+`}`)
 	if err := runIssueOps([]string{"benchmark", "run", "--fixtures", fixtures, "--judge", "file", "--judge-file", flat, "--json"}); err == nil {
-		t.Fatal("legacy flat judge map must be rejected (no silent provenance bypass)")
+		t.Fatal("retired flat judge map must be rejected (no silent provenance bypass)")
 	}
 
 	noSource := writeJudgeMapForTest(t, `{"provenance":"x","scores":{"judge-file-fixture": `+judgeFileValidScore+`}}`)

@@ -58,7 +58,8 @@ func TestReseedArtifactsCompensatesPartialOwnerWriteAndAllowsRetry(t *testing.T)
 	root := t.TempDir()
 	record := reseedArtifactRecord(root, 2)
 	record.Execution.Mode = "orca"
-	record.Execution.Orca = &leasecontract.OrcaBinding{RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", OwnerHost: "codex", OwnerModel: "model", TaskID: "task", DispatchID: "dispatch"}
+	record.Execution.Selection = leaseSelectionFixture("orca")
+	record.Execution.Orca = &leasecontract.OrcaBinding{RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", OwnerHost: "codex", OwnerModel: "model", TaskID: "task", DispatchID: "dispatch", RunID: "run_issueops_1", LeaseGeneration: 1, ArtifactIdentityVersion: 1, IssueBodySHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", ContextPacketSHA256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", OwnerPromptSHA256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}
 	paths := reseedOwnerArtifactPaths(record)
 	partial := NewReseedArtifacts(func(_ context.Context, _ leasecontract.Record) (leasecontract.ReseedReceipt, error) {
 		if err := os.MkdirAll(filepath.Dir(paths[0]), 0o700); err != nil {
@@ -89,7 +90,8 @@ func TestReseedArtifactsPartialOwnerCleanupAttemptsEveryOwnedTarget(t *testing.T
 	root := t.TempDir()
 	record := reseedArtifactRecord(root, 2)
 	record.Execution.Mode = "orca"
-	record.Execution.Orca = &leasecontract.OrcaBinding{RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", OwnerHost: "codex", OwnerModel: "model", TaskID: "task", DispatchID: "dispatch"}
+	record.Execution.Selection = leaseSelectionFixture("orca")
+	record.Execution.Orca = &leasecontract.OrcaBinding{RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", OwnerHost: "codex", OwnerModel: "model", TaskID: "task", DispatchID: "dispatch", RunID: "run_issueops_1", LeaseGeneration: 1, ArtifactIdentityVersion: 1, IssueBodySHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", ContextPacketSHA256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", OwnerPromptSHA256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}
 	paths := reseedOwnerArtifactPaths(record)
 	artifacts := NewReseedArtifacts(func(_ context.Context, _ leasecontract.Record) (leasecontract.ReseedReceipt, error) {
 		token := reseedTokenPath(record)
@@ -164,7 +166,8 @@ func TestReseedArtifactsPartialOwnerCleanupRejectsAncestorSymlink(t *testing.T) 
 	root := t.TempDir()
 	record := reseedArtifactRecord(root, 2)
 	record.Execution.Mode = "orca"
-	record.Execution.Orca = &leasecontract.OrcaBinding{RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", OwnerHost: "codex", OwnerModel: "model", TaskID: "task", DispatchID: "dispatch"}
+	record.Execution.Selection = leaseSelectionFixture("orca")
+	record.Execution.Orca = &leasecontract.OrcaBinding{RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", OwnerHost: "codex", OwnerModel: "model", TaskID: "task", DispatchID: "dispatch", RunID: "run_issueops_1", LeaseGeneration: 1, ArtifactIdentityVersion: 1, IssueBodySHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", ContextPacketSHA256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", OwnerPromptSHA256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}
 	paths := reseedArtifactTargetPaths(record)
 	var outsideTargets []string
 	artifacts := NewReseedArtifacts(func(_ context.Context, _ leasecontract.Record) (leasecontract.ReseedReceipt, error) {
@@ -226,5 +229,5 @@ func reseedReplaceArtifactDirectoryWithSymlink(t *testing.T, root, outside strin
 }
 
 func reseedArtifactRecord(root string, generation uint64) leasecontract.Record {
-	return leasecontract.Record{SchemaVersion: leasecontract.SchemaVersion, ID: "io-reseed-artifact", Execution: &leasecontract.Execution{Mode: "direct", Workspace: leasecontract.Workspace{SourceRoot: root + "/source", Root: root, Branch: "branch", BaseHead: "base", Driver: "git", LinkedAt: "2026-07-30T09:00:00Z"}, Lease: leasecontract.Lease{Generation: generation, Status: "claimable"}}}
+	return leasecontract.Record{SchemaVersion: leasecontract.SchemaVersion, ID: "io-reseed-artifact", Execution: &leasecontract.Execution{Mode: "direct", Workspace: leasecontract.Workspace{SourceRoot: root + "/source", Root: root, Branch: "branch", BaseHead: "base", Driver: "git", LinkedAt: "2026-07-30T09:00:00Z"}, Lease: leasecontract.Lease{Generation: generation, Status: "claimable"}, Selection: leaseSelectionFixture("direct")}}
 }

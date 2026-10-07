@@ -286,7 +286,7 @@ func validateIntent(intent Intent, operationID string) error {
 	if err != nil {
 		return err
 	}
-	if identity.Purpose != normalizedPurpose(intent) || identity.LifecycleID != intent.LifecycleID ||
+	if identity.Purpose != intent.Purpose || identity.LifecycleID != intent.LifecycleID ||
 		identity.Generation != intent.Generation || identity.OperationID != intent.OperationID ||
 		identity.Provider != intent.Probe.Provider || identity.Issue != intent.Probe.Issue {
 		return contractError("intent_identity_mismatch", "Orca intent marker does not match the sealed payload identity")
@@ -295,7 +295,7 @@ func validateIntent(intent Intent, operationID string) error {
 }
 
 func validateShape(intent Intent, operationID string) error {
-	purpose := normalizedPurpose(intent)
+	purpose := intent.Purpose
 	if intent.SchemaVersion != leasecontract.SchemaVersion || intent.OperationID != operationID ||
 		intent.LifecycleID == "" || intent.Generation == 0 || intent.Marker == "" || intent.StartedAt == "" ||
 		intent.Workspace.LifecycleID != intent.LifecycleID || intent.Probe.Marker != intent.Marker ||
@@ -458,13 +458,6 @@ func markerField(field, name string) (string, error) {
 		return "", invalidMarker()
 	}
 	return strings.TrimPrefix(field, prefix), nil
-}
-
-func normalizedPurpose(intent Intent) string {
-	if strings.TrimSpace(intent.Purpose) == "" {
-		return PurposePrepare
-	}
-	return strings.TrimSpace(intent.Purpose)
 }
 
 func samePath(left, right string) bool {

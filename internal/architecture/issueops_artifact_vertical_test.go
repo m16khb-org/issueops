@@ -25,14 +25,14 @@ func TestIssueOpsArtifactVerticalOwnsStaging(t *testing.T) {
 		}
 	}
 
-	legacyPath := filepath.Join(
+	retiredPath := filepath.Join(
 		findRepoRoot(t),
 		"internal",
 		"adapter",
 		"issueops",
 		"issueops_artifact_stage.go",
 	)
-	file, err := parser.ParseFile(token.NewFileSet(), legacyPath, nil, 0)
+	file, err := parser.ParseFile(token.NewFileSet(), retiredPath, nil, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,7 +47,7 @@ func TestIssueOpsArtifactVerticalOwnsStaging(t *testing.T) {
 			"StagedIssueOpsArtifactNames",
 			"canStageIssueOpsArtifact",
 			"rejectSecretLikeContent":
-			t.Errorf("legacy artifact staging symbol remains: %s", function.Name.Name)
+			t.Errorf("retired artifact staging symbol remains: %s", function.Name.Name)
 		}
 	}
 
@@ -57,7 +57,7 @@ func TestIssueOpsArtifactVerticalOwnsStaging(t *testing.T) {
 		}
 		if edge.imported == "internal/adapter/issueops" ||
 			strings.HasPrefix(edge.imported, "internal/adapter/issueops/") {
-			t.Errorf("issueops artifact vertical imports legacy adapter: %s", formatEdge(edge))
+			t.Errorf("issueops artifact vertical imports the retired adapter package: %s", formatEdge(edge))
 		}
 	}
 }

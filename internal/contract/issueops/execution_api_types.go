@@ -25,15 +25,11 @@ type ExecutionCompleteRequest struct {
 	Confirm                bool        `json:"confirm"`
 }
 type ExecutionResult struct {
-	OK        bool      `json:"ok"`
-	ID        string    `json:"id"`
-	Execution Execution `json:"execution"`
-	// OrcaTaskSettled와 OrcaTaskError는 기존 JSON 소비자 호환을 위해 남긴다.
-	// completion은 Orca task를 종료하지 않으므로 새 completion 응답에서는 생략된다.
-	OrcaTaskSettled     bool   `json:"orca_task_settled,omitempty"`
-	OrcaTaskError       string `json:"orca_task_error,omitempty"`
-	IssueSnapshotSource string `json:"issue_snapshot_source,omitempty"`
-	NextCommand         string `json:"next_command,omitempty"`
+	OK                  bool      `json:"ok"`
+	ID                  string    `json:"id"`
+	Execution           Execution `json:"execution"`
+	IssueSnapshotSource string    `json:"issue_snapshot_source,omitempty"`
+	NextCommand         string    `json:"next_command,omitempty"`
 }
 type ExecutionClaimRequest struct {
 	ID                  string      `json:"id"`

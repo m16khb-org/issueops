@@ -113,7 +113,7 @@ func TestMissingPlannerGatesRequiresAPlanBoundDevilsAdvocateReview(t *testing.T)
 	record.DevilsAdvocateReview = []byte(`{"verdict":"pass","findings":["f"],"reviewer_context":"subagent","recorded_at":"2026-08-28T00:00:00Z"}`)
 	gates := missingPlannerGateKeys(record)
 	if keys := gates; len(keys) != 1 || keys[0] != "devils_advocate_review" {
-		t.Fatalf("an unbound review (legacy record) must gate before an owner is launched: %v", keys)
+		t.Fatalf("an unbound review (no plan digest) must gate before an owner is launched: %v", keys)
 	}
 
 	record.DevilsAdvocateReview = []byte(`{"verdict":"pass","findings":["f"],"reviewer_context":"subagent","reviewed_plan_digest":"abc","recorded_at":"2026-08-28T00:00:00Z"}`)

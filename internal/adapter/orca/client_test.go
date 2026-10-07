@@ -1245,7 +1245,7 @@ func TestClientExecutionInventoryPreservesRuntimeForEmptyRows(t *testing.T) {
 	if err != nil || terminals.RuntimeID != "runtime-1" || len(terminals.Rows) != 0 {
 		t.Fatalf("empty terminal inventory lost its runtime envelope: inventory=%#v err=%v", terminals, err)
 	}
-	tasks, err := client.listAllTasksInventory(context.Background())
+	tasks, err := client.listRunTasksInventory(context.Background(), "run_issueops_1", "--brief")
 	if err != nil || tasks.RuntimeID != "runtime-1" || len(tasks.Rows) != 0 {
 		t.Fatalf("empty task inventory lost its runtime envelope: inventory=%#v err=%v", tasks, err)
 	}
@@ -1398,6 +1398,9 @@ func addCompleteProbeLeafHelp(runner *fakeRunner) {
 }
 
 func listAllTaskRows(client *Client) ([]port.OrcaTask, error) {
-	inventory, err := client.listAllTasksInventory(context.Background())
-	return inventory.Rows, err
+	runs, err := client.listRunsInventory(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return client.ListAllTasksFromRuns(context.Background(), port.OrcaRunInventory{RuntimeID: runs.RuntimeID, Runs: runs.Rows})
 }

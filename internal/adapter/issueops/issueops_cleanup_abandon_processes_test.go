@@ -118,7 +118,7 @@ func TestCleanupAbandonOrcaTerminalsGates(t *testing.T) {
 		root := filepath.Join(t.TempDir(), "absent-worktree")
 		mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
 			rec.Execution = abandonExecution(rec.Repo, root, issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased})
-			rec.Execution.Orca = &issueops.OrcaBinding{RuntimeID: "rt", RepoID: "repo", WorktreeID: "wt-1", OwnerHost: "codex", OwnerModel: "m", TaskID: "task-1", DispatchID: "d"}
+			rec.Execution.Orca = &issueops.OrcaBinding{RuntimeID: "rt", RepoID: "repo", WorktreeID: "wt-1", OwnerHost: "codex", OwnerModel: "m", TaskID: "task-1", DispatchID: "d", RunID: "run_issueops_1", LeaseGeneration: 1, ArtifactIdentityVersion: 1, IssueBodySHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", ContextPacketSHA256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", OwnerPromptSHA256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}
 		})
 		deps := abandonDeps(&fakeAbandonGit{}, authoritativeZeroOrca())
 		deps.OrcaOwner = &fakeOwnerInspector{inventory: owner}
@@ -175,7 +175,7 @@ func TestCleanupAbandonStopFailureInWorktreeOnlyResidueIsRePreviewable(t *testin
 // 살아 있는 터미널은 소유자 없는 자원으로 남으므로 orca_resources_absent로 거부한다.
 func TestCleanupAbandonLiveTerminalPassesOnlyWhenStopReachesIt(t *testing.T) {
 	liveTerminal := &fakeOwnerInspector{inventory: port.ExecutionOrcaOwnerInventory{TerminalLive: true, TerminalInventoryComplete: true}}
-	binding := &issueops.OrcaBinding{RuntimeID: "rt", RepoID: "repo", WorktreeID: "wt-1", OwnerHost: "codex", OwnerModel: "m", TaskID: "task-1", DispatchID: "d"}
+	binding := &issueops.OrcaBinding{RuntimeID: "rt", RepoID: "repo", WorktreeID: "wt-1", OwnerHost: "codex", OwnerModel: "m", TaskID: "task-1", DispatchID: "d", RunID: "run_issueops_1", LeaseGeneration: 1, ArtifactIdentityVersion: 1, IssueBodySHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", ContextPacketSHA256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", OwnerPromptSHA256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}
 	boundFixture := func(t *testing.T) (string, issueops.IssueOpsRecord, string) {
 		stateRoot := filepath.Join(t.TempDir(), "state")
 		fixture := newClaimableExecutionFixture(t, stateRoot, "477-f4-terminal")
@@ -184,6 +184,7 @@ func TestCleanupAbandonLiveTerminalPassesOnlyWhenStopReachesIt(t *testing.T) {
 		}
 		mutateFinishRecord(t, stateRoot, fixture.record.ID, func(rec *issueops.IssueOpsRecord) {
 			rec.Execution.Mode = issueops.ExecutionModeOrca
+			rec.Execution.Selection = selectionFixture(issueops.ExecutionModeOrca)
 			rec.Execution.Workspace.Driver = "orca"
 			rec.Execution.Orca = binding
 		})
