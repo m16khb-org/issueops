@@ -774,8 +774,7 @@ finish() {
     verdict="fail"
     return_code=1
   fi
-  emit_receipt "$verdict"
-  if (($? != 0)); then
+  if ! emit_receipt "$verdict"; then
     return_code=1
   fi
   if ((pending_signal != 0)); then
@@ -797,6 +796,7 @@ fail_after_mutation() {
   finish fail 1
 }
 
+# shellcheck disable=SC2329 # invoked by the EXIT trap below
 on_exit() {
   local status=$?
   if ((finalized == 0 && mutation_started == 1)); then
@@ -806,6 +806,7 @@ on_exit() {
   trap - EXIT
   exit "$status"
 }
+# shellcheck disable=SC2329 # invoked by the INT and TERM traps below
 on_signal() {
   local signal_status="$1"
   if ((restoring == 1)); then
