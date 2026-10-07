@@ -8,10 +8,31 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"issueops/internal/domain/policy"
 )
 
 // Runner executes one supervisor CLI command and returns its combined output.
 type Runner func(ctx context.Context, name string, args ...string) ([]byte, error)
+
+// loadOutputLimit bounds the supervisor output a load error carries.
+const loadOutputLimit = 2048
+
+// runLoadStep runs one load command and, on failure, names the command and
+// keeps the tail of its output: the exit status alone does not say why the
+// supervisor refused the job.
+func runLoadStep(ctx context.Context, run Runner, name string, args ...string) error {
+	out, err := run(ctx, name, args...)
+	if err == nil {
+		return nil
+	}
+	command := strings.Join(append([]string{name}, args...), " ")
+	output := policy.TailBytes(strings.TrimSpace(string(out)), loadOutputLimit)
+	if output == "" {
+		return fmt.Errorf("%s: %w", command, err)
+	}
+	return fmt.Errorf("%s: %w: %s", command, err, output)
+}
 
 type supervisor interface {
 	command() string
@@ -84,8 +105,7 @@ func (l launchd) renderUnit(spec unitSpec) string {
 }
 
 func (l launchd) load(ctx context.Context) error {
-	_, err := l.run(ctx, "launchctl", "bootstrap", l.domain(), l.unitPath())
-	return err
+	return runLoadStep(ctx, l.run, "launchctl", "bootstrap", l.domain(), l.unitPath())
 }
 
 func (l launchd) unload(ctx context.Context) error {
@@ -136,7 +156,7 @@ func (s systemd) renderUnit(spec unitSpec) string {
 
 func (s systemd) load(ctx context.Context) error {
 	for _, args := range [][]string{{"--user", "daemon-reload"}, {"--user", "enable", s.unit}, {"--user", "start", s.unit}} {
-		if _, err := s.run(ctx, "systemctl", args...); err != nil {
+		if err := runLoadStep(ctx, s.run, "systemctl", args...); err != nil {
 			return err
 		}
 	}
