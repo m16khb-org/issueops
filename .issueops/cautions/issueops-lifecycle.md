@@ -109,7 +109,7 @@ IssueOps state is durable because `issueops ...` commands record intent, issue l
 
 ## 27. 스킬 description과 필수 문서 목록이 response-contract 골든을 드리프트시킨다
 
-`cmd/issueops/testdata/response_contracts.golden.json`은 `inspect.skills[].description`(스킬 frontmatter)과 `docs_index.required_docs`(필수 문서의 존재 여부)를 고정한다. `docs_count`·`docs_indexed`는 정규화되므로 `.issueops` 문서 본문이나 heading을 고치고 파일을 옮겨도 골든은 바뀌지 않는다(2026-10-07 재배치 225개 파일에서 확인). 스킬 description을 바꾸거나 필수 문서를 더하거나 빼면 `TestResponseContractsGolden`이 실패한다.
+`cmd/issueops/testdata/response_contracts.golden.json`은 `inspect.skills[].description`(스킬 frontmatter), `inspect.docs`(AGENTS.md, CLAUDE.md, 루트 문서 등 경로 목록), `docs_index.required_docs`(필수 문서의 존재 여부)를 고정한다. `docs_count`·`docs_indexed`는 정규화되므로 `.issueops` 문서 본문이나 heading을 고치고 파일을 옮겨도 골든은 바뀌지 않는다(2026-10-07 재배치 225개 파일에서 확인). 스킬 description을 바꾸거나, `inspect.docs`에 나오는 문서나 필수 문서를 더하거나 빼거나 옮기면 `TestResponseContractsGolden`이 실패한다.
 
 주의:
 - 스킬 description이나 필수 문서 목록을 바꾸면 `go test ./cmd/issueops/issueopsapp -run TestResponseContractsGolden -update`로 골든을 재생성하고, diff가 그 description 또는 `required_docs`만인지 확인한다(tool schema/response 계약 변화가 섞이면 안 된다).

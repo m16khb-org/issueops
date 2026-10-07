@@ -236,6 +236,8 @@ def validate(root: Path, manifest: Manifest) -> Report:
                     f"root index exceeds {manifest.max_root_lines} lines",
                 ),
             )
+        if all_ignored:
+            continue
         if not module_dir.is_dir():
             violations.append(
                 Violation(

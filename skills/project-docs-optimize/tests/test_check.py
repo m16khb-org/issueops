@@ -177,7 +177,9 @@ class DocumentationCheckTest(unittest.TestCase):
             result = self._run(root, "check")
 
             self.assertEqual(result.returncode, 1, result.stderr)
-            self.assertIn(("docs_tree_ignored", ".issueops"), self._violations(result))
+            violations = self._violations(result)
+            self.assertIn(("docs_tree_ignored", ".issueops"), violations)
+            self.assertNotIn("empty_module_dir", {code for code, _ in violations})
 
     def _violations(
         self,

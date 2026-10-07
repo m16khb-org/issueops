@@ -48,7 +48,7 @@ Git-ignored files are not checked; a tree git ignores entirely is
 | Document | Destination |
 |---|---|
 | Procedure an operator follows today | the family module (`operations/guides/`, `testing/`, ...) |
-| Report, plan, or PR body for issue `<n>` | `issues/<n>/`, named `verified-execution-report.md`, `pr-body.md`, or `plan-archive.md`. Never use `plan.md`, `intent.md`, `spec.md`, or `plan-review.md`: the runtime rewrites those for an active cycle. |
+| Report, plan, or PR body for issue `<n>` | `issues/<n>/`, named `verified-execution-report.md`, `pr-body.md`, `plan-archive.md`, or another descriptive name. Never use `plan.md`, `intent.md`, `spec.md`, or `plan-review.md`: the runtime rewrites those for an active cycle. |
 | Plan without an issue number | `plans/` |
 | Evaluation, benchmark, scorecard, dogfood or research result | `research/` (a subfolder per topic) |
 | Snapshot that no longer describes the system but is still cited | `archive/` |
@@ -132,8 +132,9 @@ go test ./internal/adapter/projectdocs/... ./internal/domain/projectdoc/... ./in
 go test ./cmd/issueops/issueopsapp -run TestResponseContractsGolden
 ```
 
-Moving or editing `.issueops` documents does not change the golden. It fails
-when a skill description or the required-doc set changes; then regenerate it
+Moving or editing `.issueops` module documents does not change the golden. It
+fails when a skill description, the required-doc set, or a path listed in
+`inspect.docs` (AGENTS.md, CLAUDE.md, root documents) changes; then regenerate it
 with `-update` and confirm the diff contains nothing else.
 
 ## Completion evidence
