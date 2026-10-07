@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -97,15 +98,6 @@ func ValidateStepBudgetBaselineWithDeps(binary, root string, seed int64, deps St
 	}
 }
 
-func containsString(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
-}
-
 func StepBudgetBaselineSummaries(seed int64) (augmentcontract.SelfAugmentSummary, augmentcontract.SelfAugmentSummary) {
 	baselineSummary := augmentcontract.SelfAugmentSummary{
 		TotalRuns:   10,
@@ -161,7 +153,7 @@ func StepBudgetValidationErrors(result augmentcontract.SelfAugmentCompareResult)
 			errs = append(errs, "step budget regression details mismatch")
 		}
 	}
-	if !containsString(result.Regressions, "step_budget:docs index smoke_p95_increased_by_30.00_pct") {
+	if !slices.Contains(result.Regressions, "step_budget:docs index smoke_p95_increased_by_30.00_pct") {
 		errs = append(errs, "step budget regression marker missing")
 	}
 	return errs

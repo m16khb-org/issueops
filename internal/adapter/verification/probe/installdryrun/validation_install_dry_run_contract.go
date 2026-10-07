@@ -1,6 +1,9 @@
 package installdryrun
 
-import "path/filepath"
+import (
+	"path/filepath"
+	"slices"
+)
 
 var requiredInstallDryRunHosts = []string{"codex", "claude", "omo", "agy"}
 
@@ -20,7 +23,7 @@ func installDryRunValidationErrors(result installDryRunSmokeResult, tempHome, te
 			errs = append(errs, "install dry-run host order mismatch:"+host.Host)
 		}
 	}
-	if !containsString(result.SkillNames, skillName) {
+	if !slices.Contains(result.SkillNames, skillName) {
 		errs = append(errs, "install dry-run did not discover smoke skill")
 	}
 	plannedWrite := false
@@ -60,13 +63,4 @@ func installDryRunValidationErrors(result installDryRunSmokeResult, tempHome, te
 		}
 	}
 	return errs
-}
-
-func containsString(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
 }

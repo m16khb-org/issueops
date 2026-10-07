@@ -2,9 +2,9 @@ package loopcli
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
+	"issueops/cmd/issueops/jsonout"
 	loopruncontract "issueops/internal/contract/looprun"
 	"os"
 )
@@ -141,8 +141,4 @@ func printLoopResult(result any, err error, jsonOut bool) error {
 	return nil
 }
 
-func printJSON(value any) error {
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	return enc.Encode(value)
-}
+var printJSON = jsonout.Print

@@ -2,6 +2,7 @@ package installdryrun
 
 import (
 	selfverify "issueops/internal/contract/selfverify"
+	"slices"
 
 	"encoding/json"
 	"errors"
@@ -64,7 +65,7 @@ func TestValidateInstallDryRunSmokeWithDepsCoversSuccessAndSetupFailures(t *test
 			if dir != root || label != "install dry-run smoke" || timeout != 30*time.Second || stdin != "" {
 				t.Fatalf("unexpected command envelope: dir=%q label=%q timeout=%s stdin=%q", dir, label, timeout, stdin)
 			}
-			if !containsString(env, "HOME="+tempHome) || !containsString(env, "CODEX_HOME="+filepath.Join(tempHome, ".codex")) || !containsString(env, "ISSUEOPS_ROOT="+tempRoot) {
+			if !slices.Contains(env, "HOME="+tempHome) || !slices.Contains(env, "CODEX_HOME="+filepath.Join(tempHome, ".codex")) || !slices.Contains(env, "ISSUEOPS_ROOT="+tempRoot) {
 				t.Fatalf("unexpected env: %v", env)
 			}
 			command := strings.Join(append([]string{name}, args...), " ")

@@ -179,10 +179,6 @@ func TestUpdateAndAPIDocHelpers(t *testing.T) {
 		t.Fatalf("proxy parse %+v %v", parsed, ok)
 	}
 
-	var buf bytes.Buffer
-	if err := printJSONTo(&buf, map[string]any{"ok": true}); err != nil || !strings.Contains(buf.String(), `"ok"`) {
-		t.Fatalf("printJSONTo = %q err=%v", buf.String(), err)
-	}
 	if !isAPIDocReviewGateError(app.ErrReviewGateFailed) || !isAPIDocStaticGateError(app.ErrStaticGateFailed) {
 		t.Fatal("gate error wrappers failed")
 	}

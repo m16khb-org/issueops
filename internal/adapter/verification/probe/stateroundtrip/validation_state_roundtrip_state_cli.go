@@ -2,6 +2,7 @@ package stateroundtrip
 
 import (
 	selfverify "issueops/internal/contract/selfverify"
+	"slices"
 
 	"encoding/json"
 	"time"
@@ -95,7 +96,7 @@ func (s *stateRoundtripStateSession) validateWriteReadList() selfverify.StepResu
 	if err := json.Unmarshal([]byte(list.Stdout), &listResult); err != nil {
 		return s.fail(err.Error())
 	}
-	if !listResult.OK || !containsString(listResult.Keys, s.input.key) {
+	if !listResult.OK || !slices.Contains(listResult.Keys, s.input.key) {
 		return s.fail("state list did not include roundtrip key")
 	}
 	return selfverify.StepResult{OK: true}

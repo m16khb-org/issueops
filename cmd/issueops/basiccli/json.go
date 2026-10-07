@@ -1,12 +1,5 @@
 package basiccli
 
-import (
-	"encoding/json"
-	"os"
-)
+import "issueops/cmd/issueops/jsonout"
 
-func printJSON(value any) error {
-	encoder := json.NewEncoder(os.Stdout)
-	encoder.SetIndent("", "  ")
-	return encoder.Encode(value)
-}
+var printJSON = jsonout.Print

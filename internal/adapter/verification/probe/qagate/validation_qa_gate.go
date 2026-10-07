@@ -2,6 +2,7 @@ package qagate
 
 import (
 	selfverify "issueops/internal/contract/selfverify"
+	"slices"
 
 	"fmt"
 	"path/filepath"
@@ -41,7 +42,7 @@ func validateQAGateWithDeps(root string, deps docsValidationDeps) selfverify.Ste
 		errs = append(errs, "list skills: "+err.Error())
 	}
 	for _, want := range []string{"atomic-commit-push", "self-augment"} {
-		if !containsString(skills, want) {
+		if !slices.Contains(skills, want) {
 			errs = append(errs, "missing shared skill "+want)
 		}
 	}

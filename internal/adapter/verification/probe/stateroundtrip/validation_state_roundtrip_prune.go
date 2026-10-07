@@ -2,6 +2,7 @@ package stateroundtrip
 
 import (
 	selfverify "issueops/internal/contract/selfverify"
+	"slices"
 
 	"encoding/json"
 
@@ -31,7 +32,7 @@ func (s *stateRoundtripStateSession) validatePrune() selfverify.StepResult {
 	if err := json.Unmarshal([]byte(pruneDry.Stdout), &pruneDryResult); err != nil {
 		return s.fail(err.Error())
 	}
-	if !pruneDryResult.OK || !pruneDryResult.DryRun || !containsString(pruneDryResult.DeletedKeys, oldKey) || !containsString(pruneDryResult.KeptKeys, s.input.key) {
+	if !pruneDryResult.OK || !pruneDryResult.DryRun || !slices.Contains(pruneDryResult.DeletedKeys, oldKey) || !slices.Contains(pruneDryResult.KeptKeys, s.input.key) {
 		return s.fail("state prune dry-run did not classify old/fresh keys")
 	}
 
@@ -43,7 +44,7 @@ func (s *stateRoundtripStateSession) validatePrune() selfverify.StepResult {
 	if err := json.Unmarshal([]byte(pruneConfirm.Stdout), &pruneConfirmResult); err != nil {
 		return s.fail(err.Error())
 	}
-	if !pruneConfirmResult.OK || pruneConfirmResult.DryRun || !pruneConfirmResult.Confirm || !containsString(pruneConfirmResult.DeletedKeys, oldKey) {
+	if !pruneConfirmResult.OK || pruneConfirmResult.DryRun || !pruneConfirmResult.Confirm || !slices.Contains(pruneConfirmResult.DeletedKeys, oldKey) {
 		return s.fail("state prune confirm did not delete old key")
 	}
 
@@ -55,7 +56,7 @@ func (s *stateRoundtripStateSession) validatePrune() selfverify.StepResult {
 	if err := json.Unmarshal([]byte(listAfterPrune.Stdout), &listAfterPruneResult); err != nil {
 		return s.fail(err.Error())
 	}
-	if !containsString(listAfterPruneResult.Keys, s.input.key) || containsString(listAfterPruneResult.Keys, oldKey) {
+	if !slices.Contains(listAfterPruneResult.Keys, s.input.key) || slices.Contains(listAfterPruneResult.Keys, oldKey) {
 		return s.fail("state prune did not preserve fresh key and remove old key")
 	}
 	return selfverify.StepResult{OK: true}

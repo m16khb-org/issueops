@@ -3,6 +3,7 @@ package commandpolicy
 import (
 	"encoding/json"
 	"path/filepath"
+	"slices"
 
 	policy "issueops/internal/contract/policy"
 )
@@ -12,15 +13,6 @@ type commandPolicyValidationCheck struct {
 	name     string
 	args     []string
 	validate func(stdout string) []string
-}
-
-func containsString(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
 }
 
 func commandPolicyChecks(binary, tempWorkspace, outside string) []commandPolicyValidationCheck {
@@ -49,7 +41,7 @@ func commandPolicyChecks(binary, tempWorkspace, outside string) []commandPolicyV
 				if err := json.Unmarshal([]byte(stdout), &outsideEval); err != nil {
 					return []string{err.Error()}
 				}
-				if outsideEval.Allowed || !containsString(outsideEval.DenyReasons, "cwd_outside_workspace") {
+				if outsideEval.Allowed || !slices.Contains(outsideEval.DenyReasons, "cwd_outside_workspace") {
 					return []string{"outside cwd was not denied"}
 				}
 				return nil
@@ -64,7 +56,7 @@ func commandPolicyChecks(binary, tempWorkspace, outside string) []commandPolicyV
 				if err := json.Unmarshal([]byte(stdout), &outsidePathEval); err != nil {
 					return []string{err.Error()}
 				}
-				if outsidePathEval.Allowed || !containsString(outsidePathEval.DenyReasons, "path_outside_workspace") {
+				if outsidePathEval.Allowed || !slices.Contains(outsidePathEval.DenyReasons, "path_outside_workspace") {
 					return []string{"outside path arg was not denied"}
 				}
 				return nil
@@ -79,7 +71,7 @@ func commandPolicyChecks(binary, tempWorkspace, outside string) []commandPolicyV
 				if err := json.Unmarshal([]byte(stdout), &shellEval); err != nil {
 					return []string{err.Error()}
 				}
-				if shellEval.Allowed || !containsString(shellEval.DenyReasons, "shell_interpreter_not_allowed") {
+				if shellEval.Allowed || !slices.Contains(shellEval.DenyReasons, "shell_interpreter_not_allowed") {
 					return []string{"shell command was not denied"}
 				}
 				return nil

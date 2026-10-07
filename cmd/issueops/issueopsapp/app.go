@@ -3,6 +3,7 @@ package issueopsapp
 import (
 	"fmt"
 	"io"
+	"issueops/cmd/issueops/jsonout"
 	pathutil "issueops/cmd/issueops/pathutil"
 	"os"
 
@@ -58,6 +59,4 @@ func harnessInspectorWithDefault(defaultTarget, receiptRoot string) func(string,
 	}
 }
 
-func printJSON(v any) error {
-	return printJSONTo(os.Stdout, v)
-}
+var printJSON = jsonout.Print
