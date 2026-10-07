@@ -8,7 +8,7 @@ import (
 	"issueops/internal/domain/policy"
 )
 
-const reviseRoundCap = 3
+const reviseRoundCap = 5
 
 // ValidateReview decides whether the supplied evidence supports its verdict.
 // The caller supplies recordedAt so this rule has no clock dependency.
@@ -61,7 +61,7 @@ type ReviseRoundCapError struct{ Count int }
 
 func (e *ReviseRoundCapError) Error() string { return "revise round cap reached" }
 
-// ApplyReview preserves prior rounds oldest-first and rejects a fourth
+// ApplyReview preserves prior rounds oldest-first and rejects a sixth
 // unwaived revise in the current plan phase.
 func ApplyReview(previous *reviewcontract.DevilsAdvocateReview, next reviewcontract.DevilsAdvocateReview) (reviewcontract.DevilsAdvocateReview, error) {
 	if previous == nil {

@@ -37,6 +37,7 @@ and supersession rules live in [adr/README.md](adr/README.md).
 
 | Date | Decision | Record |
 |---|---|---|
+| 2026-10-07 | Review revise and regress rounds are capped at five; supersedes the cap number of 2026-07-02 and 2026-09-08 Decision (4) | [record](adr/2026-10-07-review-revise-and-regress-rounds-are-capped-at-five.md) |
 | 2026-10-07 | `.issueops` 폴더 구조를 append와 runtime이 쓰는 경로에 맞추고 checker가 강제한다 | [record](adr/2026-10-07-issueops-docs-layout-matches-the-append-and-runtime-paths.md) |
 | 2026-10-07 | Readers accept only the current record shape | [record](adr/2026-10-07-readers-accept-only-the-current-record-shape.md) |
 | 2026-10-06 | Remove the last legacy compatibility paths and non-release platform code | [record](adr/2026-10-06-remove-the-last-legacy-compatibility-paths-and-non-release-p.md) |
@@ -56,7 +57,7 @@ and supersession rules live in [adr/README.md](adr/README.md).
 | 2026-09-23 | The lease contract decodes persisted records through the production record contract; supersedes 2026-07-28 | [record](adr/2026-09-23-the-lease-contract-decodes-persisted-records-through-the-pro.md) |
 | 2026-09-09 | IssueOps seals the requester intent as a derived artifact next to the plan | [record](adr/2026-09-09-issueops-seals-the-requester-intent-as-a-derived-artifact.md) |
 | 2026-09-08 | Pipeline skill routing: companion skills called by name, base drift as a three-surface model, frontend as a next flag | [record](adr/2026-09-08-pipeline-skill-routing-companion-skills-called-by-name-base.md) |
-| 2026-09-08 | Adversarial review throughput: executable findings, change tiers, and concurrent read-only verification | [record](adr/2026-09-08-adversarial-review-throughput-executable-findings-change-tie.md) |
+| 2026-09-08 | Adversarial review throughput: executable findings, change tiers, and concurrent read-only verification; superseded in part — the revise cap is five since [2026-10-07](adr/2026-10-07-review-revise-and-regress-rounds-are-capped-at-five.md) | [record](adr/2026-09-08-adversarial-review-throughput-executable-findings-change-tie.md) |
 | 2026-09-08 | IssueOps project-doc gates: link-plan checks the four plan sections and no-change needs reviewed docs | [record](adr/2026-09-08-issueops-project-doc-gates-link-plan-checks-the-four-plan-se.md) |
 | 2026-09-02 | IssueOps binds artifacts to the code project, not the issue project | [record](adr/2026-09-02-issueops-binds-artifacts-to-the-code-project-not-the-issue-p.md) |
 | 2026-09-05 | IssueOps v0.1.0 이름 전환 | [record](adr/2026-09-05-issueops-v0-1-0.md) |
@@ -94,7 +95,7 @@ and supersession rules live in [adr/README.md](adr/README.md).
 | 2026-07-07 | Standalone issueops policy; broad upstream wiring removed; blanket prohibition partially superseded on 2026-08-28 | [record](adr/2026-07-07-standalone-harness-policy.md) |
 | 2026-07-03 | Codex PreToolUse ask fallback; superseded — `pre-tool-use` hook was unregistered on 2026-08-10 and deleted by [2026-08-27](adr/2026-08-27-session-start-owns-compaction-context.md) | [record](adr/2026-07-03-codex-pretooluse-ask-fallback.md) |
 | 2026-07-02 | External LLM calls emit per-call usage observation records; superseded — the externalllm client and usage recorder were deleted on 2026-07-07 under the [standalone policy](adr/2026-07-07-standalone-harness-policy.md) | [record](adr/2026-07-02-external-llm-usage-observation.md) |
-| 2026-07-02 | IssueOps regress rounds are capped with a human-decision escalation | [record](adr/2026-07-02-issueops-regress-round-cap.md) |
+| 2026-07-02 | IssueOps regress rounds are capped with a human-decision escalation; superseded in part — the cap is five since [2026-10-07](adr/2026-10-07-review-revise-and-regress-rounds-are-capped-at-five.md) | [record](adr/2026-07-02-issueops-regress-round-cap.md) |
 | 2026-07-02 | Self-augment planner consumes Reflexion lessons as score penalty | [record](adr/2026-07-02-self-augment-reflexion-lessons.md) |
 | 2026-07-02 | External LLM stays Z.AI-only until a second provider is real; superseded — the harness no longer calls an external LLM; host agents use prompt/result-file contracts ([standalone policy](adr/2026-07-07-standalone-harness-policy.md)) | [record](adr/2026-07-02-external-llm-zai-only.md) |
 | 2026-07-01 | Defer harness-side tool-error context injection | [record](adr/2026-07-01-defer-tool-error-context-injection.md) |

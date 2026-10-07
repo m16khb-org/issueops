@@ -7,7 +7,7 @@ import (
 	reviewcontract "issueops/internal/contract/issueopsreview"
 )
 
-const regressCap = 3
+const regressCap = 5
 
 func NormalizeRegressionReason(reason string) (string, error) {
 	reason = strings.TrimSpace(reason)

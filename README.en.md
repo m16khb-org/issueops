@@ -196,8 +196,8 @@ These gates exist in the CLI for the operating docs:
   `next` returns the cycle to stage 6.
 - The gate applies to every record from implement onward, with or without an
   execution lease.
-- `issueops devils-advocate review` accepts at most three unwaived `revise` verdicts
-  per plan phase. The fourth is refused, and the error names the exits that are
+- `issueops devils-advocate review` accepts at most five unwaived `revise` verdicts
+  per plan phase. The sixth is refused, and the error names the exits that are
   actually open: record `stop`, reflect it, then `regress`, or take the round with
   an explicit waiver.
 

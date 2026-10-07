@@ -14,6 +14,11 @@ func TestRegressionPreconditionsPreserveFailureOrder(t *testing.T) {
 	if err := CheckRegression(base); err != nil {
 		t.Fatal(err)
 	}
+	belowCap := base
+	belowCap.RegressCount = 4
+	if err := CheckRegression(belowCap); err != nil {
+		t.Fatalf("a fifth regress must be allowed: %v", err)
+	}
 	for _, test := range []struct {
 		name string
 		set  func(*reviewcontract.RegressionPreconditions)
@@ -26,7 +31,7 @@ func TestRegressionPreconditionsPreserveFailureOrder(t *testing.T) {
 		}, want: "revise verdict must be resolved in place"},
 		{name: "stop required", set: func(s *reviewcontract.RegressionPreconditions) { s.Review = nil }, want: "requires a recorded devil's-advocate stop"},
 		{name: "reflection required", set: func(s *reviewcontract.RegressionPreconditions) { s.Review.IssueReflectedAt = "" }, want: "reflect the devil's-advocate findings"},
-		{name: "cap", set: func(s *reviewcontract.RegressionPreconditions) { s.RegressCount = 3 }, want: "regress cap reached: cycle io-1"},
+		{name: "cap", set: func(s *reviewcontract.RegressionPreconditions) { s.RegressCount = 5 }, want: "regress cap reached: cycle io-1"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			snapshot := base
