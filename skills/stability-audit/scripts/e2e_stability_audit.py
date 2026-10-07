@@ -12,6 +12,7 @@ import json
 import os
 import queue
 import re
+import shlex
 import shutil
 import signal
 import subprocess
@@ -33,6 +34,11 @@ DOCTOR_CODE_LIMIT = 96
 DOCTOR_SUMMARY_LIMIT = 320
 TERMINAL_HANDLE_MAX_BYTES = 256
 TERMINAL_HANDLE_RE = re.compile(r"^term_[A-Za-z0-9_-]+$")
+HOOK_TEMPLATES = {
+    "codex": ROOT / "configs" / "codex" / "hooks.json",
+    "claude": ROOT / "configs" / "claude" / "hooks.settings.json",
+}
+HOOK_PAYLOADS = {"SessionStart": {"source": "startup", "cwd": str(ROOT)}}
 
 
 def run(cmd: list[str], *, env: dict[str, str] | None = None, input_text: str | None = None, timeout: float = 60) -> dict[str, Any]:
@@ -87,10 +93,6 @@ def parse_json_output(text: str) -> Any:
     if start < 0:
         raise ValueError("no JSON object in output")
     return json.loads(text[start:])
-
-
-def is_noisy_user_prompt_context(ctx: str) -> bool:
-    return "Required project docs" in ctx or "필수 프롬프트 주입중" in ctx
 
 
 def run_mcp_jsonrpc_process(
@@ -393,62 +395,97 @@ def install_checks(report: dict[str, Any], full_install: bool) -> None:
         add_step(report, "install_real_json", ok, parsed=parsed, stderr=res["stderr"][-1000:])
 
 
+def is_issueops_hook_command(command: Any) -> bool:
+    """Mirror installutil.isAgentHarnessHookCommand: `<.../issueops> hook ...`."""
+    if not isinstance(command, str):
+        return False
+    try:
+        words = shlex.split(command)
+    except ValueError:
+        return False
+    return len(words) >= 2 and Path(words[0]).name == "issueops" and words[1] == "hook"
+
+
+def issueops_hooks(config: Any) -> list[dict[str, Any]]:
+    """List the issueops hook commands in a host hook config, skipping third-party hooks."""
+    found: list[dict[str, Any]] = []
+    events = config.get("hooks") if isinstance(config, dict) else None
+    if not isinstance(events, dict):
+        return found
+    for event, groups in events.items():
+        if not isinstance(groups, list):
+            continue
+        for matcher_index, group in enumerate(groups):
+            hooks = group.get("hooks") if isinstance(group, dict) else None
+            if not isinstance(hooks, list):
+                continue
+            for hook_index, hook in enumerate(hooks):
+                command = hook.get("command") if isinstance(hook, dict) else None
+                if is_issueops_hook_command(command):
+                    found.append({"event": event, "matcher": matcher_index, "hook": hook_index, "command": command})
+    return found
+
+
+def hook_output_error(stdout: str) -> str:
+    if not stdout.strip():
+        return ""
+    try:
+        obj = json.loads(stdout)
+    except ValueError as exc:
+        return f"invalid_json:{exc}"
+    if isinstance(obj, dict) and "suppressOutput" in obj:
+        return "unsupported_suppressOutput"
+    return ""
+
+
 def hook_smoke(report: dict[str, Any]) -> None:
-    hooks_path = Path(os.environ.get("CODEX_HOME", str(Path.home() / ".codex"))) / "hooks.json"
-    if not hooks_path.exists():
-        add_step(report, "hook_smoke", False, message=f"missing {hooks_path}")
-        return
-    hooks = json.loads(hooks_path.read_text())
-    payloads = {
-        "UserPromptSubmit": {"prompt": "stability audit smoke", "cwd": str(ROOT)},
-        "PreToolUse": {"tool_name": "shell", "tool_input": {"command": "git status"}, "cwd": str(ROOT)},
-        "PostToolUse": {"tool_name": "shell", "tool_input": {"command": "git status"}, "tool_response": {"exit_code": 0}, "cwd": str(ROOT)},
-        "Notification": {"message": "smoke", "cwd": str(ROOT)},
-        "Stop": {"stop_hook_active": False, "cwd": str(ROOT)},
-        "SubagentStop": {"stop_hook_active": False, "cwd": str(ROOT)},
-        "SessionStart": {"source": "startup", "cwd": str(ROOT)},
-        "SessionEnd": {"reason": "smoke", "cwd": str(ROOT)},
-        "PreCompact": {"trigger": "manual", "cwd": str(ROOT)},
-        "PostCompact": {"cwd": str(ROOT)},
-    }
-    results = []
+    """Run only the hooks the repo templates register, then check the installed Codex copy."""
+    results: list[dict[str, Any]] = []
+    registered: dict[str, list[str]] = {}
     ok = True
-    for event, matchers in hooks.get("hooks", {}).items():
-        for matcher_index, matcher in enumerate(matchers):
-            for hook_index, hook in enumerate(matcher.get("hooks", [])):
-                cmd = hook.get("command")
-                res = subprocess.run(
-                    cmd,
-                    input=json.dumps(payloads.get(event, {"cwd": str(ROOT)})),
-                    text=True,
-                    shell=True,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    timeout=8,
-                )
-                item: dict[str, Any] = {"event": event, "matcher": matcher_index, "hook": hook_index, "returncode": res.returncode, "stdout_head": res.stdout[:240], "stderr_head": res.stderr[:240]}
-                if res.returncode != 0:
-                    ok = False
-                    item["error"] = "non_zero_exit"
-                elif res.stdout.strip():
-                    try:
-                        obj = json.loads(res.stdout)
-                        if "suppressOutput" in obj:
-                            ok = False
-                            item["error"] = "unsupported_suppressOutput"
-                        if event in ("Stop", "SubagentStop") and set(obj) - {"decision", "reason"}:
-                            ok = False
-                            item["error"] = "invalid_stop_json_keys"
-                        if event == "UserPromptSubmit":
-                            ctx = obj.get("hookSpecificOutput", {}).get("additionalContext", "")
-                            if is_noisy_user_prompt_context(ctx):
-                                ok = False
-                                item["error"] = "noisy_user_prompt_context"
-                    except Exception as exc:
-                        ok = False
-                        item["error"] = f"invalid_json:{exc}"
-                results.append(item)
-    add_step(report, "hook_smoke", ok, results=results)
+    for host, path in HOOK_TEMPLATES.items():
+        try:
+            entries = issueops_hooks(json.loads(path.read_text()))
+        except (OSError, ValueError) as exc:
+            ok = False
+            results.append({"host": host, "error": f"unreadable_template:{path}:{exc}"})
+            continue
+        registered[host] = sorted({entry["event"] for entry in entries})
+        for entry in entries:
+            event = entry["event"]
+            # Template commands name ./bin/issueops, so running from ROOT exercises the fresh build.
+            res = subprocess.run(
+                entry["command"],
+                input=json.dumps(HOOK_PAYLOADS.get(event, {"cwd": str(ROOT)})),
+                text=True,
+                shell=True,
+                cwd=str(ROOT),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=8,
+            )
+            item: dict[str, Any] = {"host": host, "event": event, "matcher": entry["matcher"], "hook": entry["hook"], "returncode": res.returncode, "stdout_head": res.stdout[:240], "stderr_head": res.stderr[:240]}
+            error = "non_zero_exit" if res.returncode != 0 else hook_output_error(res.stdout)
+            if error:
+                ok = False
+                item["error"] = error
+            results.append(item)
+
+    installed_path = Path(os.environ.get("CODEX_HOME", str(Path.home() / ".codex"))) / "hooks.json"
+    installed: dict[str, Any] = {"path": str(installed_path)}
+    try:
+        installed_events = sorted({entry["event"] for entry in issueops_hooks(json.loads(installed_path.read_text()))})
+    except (OSError, ValueError) as exc:
+        ok = False
+        installed["error"] = f"unreadable:{exc}"
+    else:
+        want = set(registered.get("codex", []))
+        installed["events"] = installed_events
+        installed["missing_events"] = sorted(want - set(installed_events))
+        installed["unregistered_events"] = sorted(set(installed_events) - want)
+        if installed["missing_events"] or installed["unregistered_events"]:
+            ok = False
+    add_step(report, "hook_smoke", ok, registered=registered, results=results, installed_codex=installed)
 
 
 def temp_state_worker_policy(report: dict[str, Any]) -> None:
