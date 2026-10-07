@@ -53,7 +53,8 @@ Skill-quality scorecards and dogfood evaluations are research records under
    `issueops-implement`, `issueops-slop-clean`, `issueops-docs`, `issueops-verify`,
    `issueops-create-pr`, `issueops-complete`, `issueops-cleanup`, and
    `issueops-abandon`; the shared ones are `issueops-review`, `gates-ledger`,
-   and `issueops-remote-write`. `issueops next` decides which stage
+   and `issueops-remote-write`; `issueops-sync-issue` and `issueops-sync-pr`
+   refresh an already published issue or PR/MR body. `issueops next` decides which stage
    a cycle is in and which command advances it.
 2. MCP: on darwin/linux, `install`/`update`/`bootstrap` default to
    `--mcp-transport=http`. Codex, Claude Code, and Omo then connect directly to
@@ -79,12 +80,14 @@ Skill-quality scorecards and dogfood evaluations are research records under
    `host_version_unobservable`. The SDK also advertises `idempotentHint:false`
    on the two read-only tools (`harness_inspect`, `docs_index`), next to the
    catalog's `readOnlyHint:true`/`openWorldHint:false`.
-3. CLI: 28 top-level commands (`install/update/bootstrap/version`,
-   `inspect/preflight/status/doctor/docs`,
+3. CLI: 26 harness top-level commands (`install/update/bootstrap`,
+   `inspect/preflight/system-status/doctor/docs`,
    `policy/guard/quality/verify-work/trace/contract/api-doc`, `project/hook`,
-   `state/mcp/worker`, `issueops/loop/gates/channel`,
-   `self-verify/self-augment/web-fetch`); `issueops --help` is the
-   canonical list.
+   `state/mcp/worker`, `loop/gates/channel`,
+   `self-verify/self-augment/web-fetch`), plus 36 IssueOps lifecycle commands
+   registered flat at the top level (`start`, `status`, `next`, `execution`,
+   `remote`, `cleanup`, ...; `internal/contract/cli.LifecycleCommands`) and the
+   built-in `help`/`version`. `issueops --help` is the canonical list.
 4. Loop contracts: `issueops loop start/record-attempt/status/stop` records
    verify-until-done state and strict readiness gates without executing
    verification commands.

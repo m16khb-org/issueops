@@ -12,6 +12,8 @@ the [ADR index](../ADR.md).
 
 ## 목표 아키텍처
 
+> 역사 기록: 아래 그림의 `issueops daemon`과 `internal/core`는 제거됐다(daemon 2026-10-06, `internal/core`는 `internal/domain`·`internal/application`·`internal/adapter`와 composition root `cmd/issueops/issueopsapp`로 분해). 현재 MCP는 공용 Streamable HTTP 서비스와 stdio 호환 경로다([2026-10-02 ADR](2026-10-02-shared-streamable-http-mcp-and-caller-capability.md)).
+
 ```text
 Codex / Claude Code / Human
         │
@@ -105,6 +107,8 @@ Acceptance criteria:
 
 ### Phase 3 — MCP stdio proxy/server
 
+> 역사 기록: daemon-backed proxy는 2026-09-23 in-process 결정으로 대체됐고 daemon은 2026-10-06에 제거됐다. 아래 상태·deliverable은 당시 스냅샷이다.
+
 상태: `issueops mcp`가 shared `issueops daemon`을 자동 시작하고 stdio를 Unix socket으로 proxy한다. llm-wiki 전용 tools/resources는 별도 upstream CLI/MCP 서버 사용 원칙에 따라 제거됐다.
 
 Deliverables:
@@ -124,6 +128,8 @@ Acceptance criteria:
 - Claude Code/Codex MCP config template 문서화
 
 ### Phase 4 — Local job worker daemon
+
+> 역사 기록: MCP backend daemon은 제거됐다. 현재 worker는 상주 프로세스 없는 one-shot job record와 policy-gated `run --read-only`다.
 
 상태: MCP backend daemon은 Phase 3에서 구현됨. Phase 4는 별도 job queue/watch worker를 도입할 때만 진행한다.
 

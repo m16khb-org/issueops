@@ -124,7 +124,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - MCP tool schema와 CLI JSON 출력은 호스트별로 다르게 만들지 않는다.
 - command policy는 built-in catalog를 기본으로 하되 workspace별 `.issueops/policy.json` override를 매 평가마다 로드한다. load/parse 문제는 기존 `warnings` 필드로 노출하고, 전역 first-root cache를 만들지 않는다.
 - IssueOps record JSON에는 `schema_version`이 포함된다. 현재 쓰기 버전은 1이며, missing/zero/future/unsupported schema는 모두 generic `invalid state`로 fail-safe 거부한다(`TestIssueOpsReaderRejectsMissingAndZeroSchema`). 자동 승격이나 변환 명령은 없다.
-- local job worker는 workspace 경계, command policy, secret redaction, audit log가 준비된 뒤 도입한다.
+- worker(`internal/contract/worker`)는 상주 프로세스 없이 one-shot으로 job lifecycle record(`queued/running/succeeded/failed/cancelled`)를 user state에 기록하고, 명령은 command policy를 거치는 `run --read-only`로만 실행한다. payload는 저장 전에 redaction한다. 장기 실행 job worker는 필요성이 확인된 뒤 도입한다.
 - 에이전트 state는 repo 소스와 분리한다. 추적해야 할 지식은 `.issueops/`에, 런타임 캐시/로그는 user state 또는 ignored workspace state에 둔다.
 
 ## 8. Current Directory Map

@@ -39,7 +39,7 @@ package set listed in [issueops-execution.md](issueops-execution.md).
   한 줄로만 보인다. 어느 프로브가 터졌는지는 메시지로 구분되지 않으므로,
   상한을 하나씩 축소해 실패를 재현하는 방식으로 원인을 가른다.
 
-선례: `executionQuiescenceFingerprint`의 워크스페이스 점유 관측
+선례: execution replace의 quiescence fingerprint 워크스페이스 점유 관측(당시 `executionQuiescenceFingerprint`, 현재 `internal/application/issueopsreplacement`의 `Service.quiescence`가 `Workspace.WorkspaceProcesses` 시임으로 lsof 관측을 받는다)
 ([2026-08-28 caution](../cautions/2026-08-28-lease-quiescence-lsof.md)).
 
 ## Process and lock substrate

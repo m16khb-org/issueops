@@ -95,8 +95,8 @@ Two dated audit snapshots are records, not operating documents.
 `PROJECT_AUDIT.md` stays at its root path because `quality inspect` parses it
 in place (`internal/adapter/outbound/quality/source.go`, `CollectAuditItems`)
 for the `audit-p0-p1-p2-items` signal and quality-catalog candidates cite it
-as evidence. `archive/issueops-audit.md` is the retired IssueOps audit kept
-verbatim under `archive/`.
+as evidence. `archive/issueops-audit.md` keeps the retired IssueOps audit
+verbatim and, as Appendix C, the closed `PROJECT_AUDIT.md` detail sections.
 
 ## Size and structure budgets
 
@@ -203,7 +203,8 @@ Retired dated snapshots moved verbatim from living documents:
 - `adr-history.md`: superseded ADR history
 - `cautions-incidents.md`: superseded incident ledger
 - `issueops-audit.md`: retired IssueOps audit snapshot (moved from
-  `.issueops/ISSUEOPS_AUDIT.md` on 2026-08-20)
+  `.issueops/ISSUEOPS_AUDIT.md` on 2026-08-20) and the closed
+  `PROJECT_AUDIT.md` detail sections (Appendix C)
 - `incident-to-hook-map.md`: incident-to-hook map for hooks removed on 2026-08-27
 
 ### Declared directories

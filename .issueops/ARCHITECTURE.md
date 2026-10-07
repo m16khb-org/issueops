@@ -90,7 +90,8 @@ branch name·source cwd·generic session binding·terminal handle·stable diff�
 
 상세 capability vertical(`execution release`/`reconcile`,
 `issueopspublication`), operational surface, generated `next_command` 권위,
-actor model, Orca 경계, 전체 threat model과 invariants, execution boundary와
+actor model, Orca 경계, 전체 threat model과 invariants는
+[issueops.md](architecture/issueops.md)가, execution boundary와
 post-merge cleanup 순서 계약은
 [issueops-cleanup.md](architecture/issueops-cleanup.md)가 소유한다.
 

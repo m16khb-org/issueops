@@ -42,7 +42,7 @@ Python 검증은 stdlib suite runner와 스킬에 이미 선언된 Pydantic/Type
 
 `issueops` core는 외부 companion 도구에 의존하지 않는다. Native install, readiness, self-verify, CLI/MCP 계약은 외부 계정·키·도구 없이 재현되어야 하며, 전문 기능은 core에 복제하지 않는다.
 
-다만 `configs/upstream.json`은 native activation 후 실행하는 **선택적** provisioning catalog다. 현재 v0는 Claude Code용 plugin 4개와 Git skill 1개를 선언하며, 없는 항목만 Claude CLI 또는 shallow sparse clone으로 준비한다. dry-run에는 이 계획을 표시한다. network·host CLI 실패는 `upstream ...` 메시지로 보고하지만 native install은 실패시키지 않는다. 이 제한된 adapter는 외부 도구를 core/readiness dependency로 만들지 않는다.
+다만 `configs/upstream.json`은 native activation 후 실행하는 **선택적** provisioning catalog다. 현재 v0는 Claude Code용 plugin 4개(`eli5`, `open-code-review`, `fluent-korean`, `diagram-design`)와 Git skill 2개(`cua-driver`, `archify`)를 선언하며, 없는 항목만 Claude CLI 또는 shallow sparse clone으로 준비한다. dry-run에는 이 계획을 표시한다. network·host CLI 실패는 `upstream ...` 메시지로 보고하지만 native install은 실패시키지 않는다. 이 제한된 adapter는 외부 도구를 core/readiness dependency로 만들지 않는다.
 
 위키, 코드 인텔리전스, 세션 메모리, 서드파티 toolchain은 사용자가 각 도구의 공식 경로로 별도 설치한다. `issueops`는 명시적 파일, command output, 이미 구성된 MCP처럼 검증 가능한 경계만 소비한다.
 
@@ -73,12 +73,12 @@ source of truth다. 목록·개수는 `issueops inspect --json`의 `skills` 배�
 | CLI | 표준 `flag` | `cmd/issueops` CLI와 command package에서 stdlib `flag` 사용; Cobra는 도입하지 않음 |
 | Config/State 직렬화 | 표준 `encoding/json` | 설정·상태는 JSON으로 직렬화; 외부 config 라이브러리(yaml.v3/toml)는 의존성에 없음 |
 | Logging | 표준 `log/slog` | secret redaction은 host 어댑터 계층에서 처리 |
-| MCP | `github.com/modelcontextprotocol/go-sdk` v1.8.0, `github.com/google/jsonschema-go` v0.4.3 | stateless Streamable HTTP(2025 initialize와 2026-07-28 request metadata 동시 지원), stdio server가 함께 쓰는 SDK. jsonschema-go는 `harness_inspect`·`docs_index`의 outputSchema를 컴파일해 structuredContent를 검사하는 데 쓴다. hand-rolled JSON-RPC 경로는 2026-08-03에 제거됐다(ADR "MCP go-sdk 채택" 참조) |
+| MCP | `github.com/modelcontextprotocol/go-sdk` v1.8.0, `github.com/google/jsonschema-go` v0.4.3 | stateless Streamable HTTP(2025 initialize와 2026-07-28 request metadata 동시 지원), stdio server가 함께 쓰는 SDK. jsonschema-go는 `harness_inspect`·`docs_index`의 outputSchema를 컴파일해 structuredContent를 검사하는 데 쓴다. hand-rolled JSON-RPC 경로는 2026-08-03에 제거됐다([2026-07-01 go-sdk ADR](adr/2026-07-01-mcp-transport-go-sdk-legacy-jsonrpc.md)의 legacy 경로 유지 부분은 superseded) |
 | IPC | loopback HTTP, stdio | 세 host는 기본으로 `http://127.0.0.1:47831/mcp`에 bearer 헤더로 연결한다(2026-10-02 ADR). `--mcp-transport=stdio` 설치와 agy는 stdio를 쓴다 |
 | State 저장 | SQLite (`modernc.org/sqlite`, pure Go) | `ISSUEOPS_STATE_DIR` 또는 `~/.local/state/issueops/`; state root마다 `issueops.db`(WAL, records(bucket,id,data) JSON blob) + `issueops.lock.db`(BEGIN IMMEDIATE span lock). 동시성은 per-root sqlstore span으로 직렬화 |
 | Testing | 표준 `testing`, golden file, `net/http/httptest` | 외부 agent host 없이 core contract를 검증하며 HTTP boundary 격리에만 `httptest` 사용 |
 
-직접 의존성(`go.mod`): `golang.org/x/term` v0.43.0, `golang.org/x/sys` v0.44.0, `modernc.org/sqlite` v1.53.0, `github.com/modelcontextprotocol/go-sdk` v1.8.0, `github.com/google/jsonschema-go` v0.4.3.
+직접 의존성(`go.mod`, Go 1.26.6): `golang.org/x/sync` v0.23.0, `golang.org/x/term` v0.46.0, `golang.org/x/sys` v0.48.0, `modernc.org/sqlite` v1.60.1, `github.com/google/uuid` v1.6.0, `github.com/modelcontextprotocol/go-sdk` v1.8.0, `github.com/google/jsonschema-go` v0.4.3, `github.com/dop251/goja` v0.0.0-20261006212518-44620e89763c(Omo extension JS를 실행하는 테스트 전용).
 
 ---
 
@@ -109,7 +109,7 @@ go build -o bin/issueops ./cmd/issueops
 ./bin/issueops install --dry-run --json
 ```
 
-예정 사용 예:
+설치된 바이너리(PATH의 `issueops`) 사용 예:
 
 ```bash
 issueops inspect --json

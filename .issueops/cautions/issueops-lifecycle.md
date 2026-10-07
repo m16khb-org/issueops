@@ -100,12 +100,12 @@ IssueOps state is durable because `issueops ...` commands record intent, issue l
 
 ## 26. `ValidateArtifactURL`은 verify-artifact(pr/mr) 전용 — issue 케이스 추가 금지
 
-`remote.ValidateArtifactURL`의 유일한 prod 호출자는 `artifactverify.verificationFromRequest`이고, 이 함수는 호출 전에 `kind != pr/mr`을 하드 거부한다(이슈는 사이클의 remote-artifact가 아니다 — 사이클의 RemoteArtifact는 PR/MR이다). `create-issue --confirm`의 라이브 검증 게이트는 이 계층을 **거치지 않고** `VerifyRemoteArtifactLive` → `fetchGitHubIssueArtifact`/`fetchGitLabIssueArtifact`로 직행하며, fetcher가 자체 URL 파싱(GitLab은 `SplitGitLabIssuePath`로 project/IID만 요구하고 `issues`·`work_items` 별칭을 모두 받는다 — §31, GitHub은 `gh issue view`)을 한다.
+`issueopsremote.ValidateArtifactURL`(`internal/domain/issueopsremote`)의 prod 호출자는 `issueopsremote.ProjectArtifact`와 `PublicationVerifier.VerifyCandidate`(`internal/application/issueopsremote`)이다. `ProjectArtifact`는 호출 전에 `kind != pr/mr`을 하드 거부하고, `ValidateArtifactURL` 자체도 `github:pr`·`gitlab:mr` 외 조합을 거부한다(이슈는 사이클의 remote-artifact가 아니다 — 사이클의 RemoteArtifact는 PR/MR이다). `create-issue --confirm`의 라이브 검증 게이트는 이 계층을 **거치지 않고** `remoteverification.Service.Verify`(`internal/application/remoteverification`) → `Reader.Artifact` switch → `fetchGitHubIssueArtifactContext`/`fetchGitLabIssueArtifactContext`(`internal/adapter/outbound/remoteverification`)로 직행하며, fetcher가 자체 URL 파싱(GitLab은 `remoteparse.SplitGitLabIssuePath`로 project/IID만 요구하고 `issues`·`work_items` 별칭을 모두 받는다 — §31, GitHub은 `gh issue view`)을 한다.
 
 주의:
-- `ValidateArtifactURL`/`verificationFromRequest`에 `github:issue`/`gitlab:issue` 분기를 추가하면 죽은 코드가 된다(116ebef 리뷰에서 지적·제거).
-- 새 아티팩트 종류의 라이브 검증을 배선할 때는 실제 도달 경로(`VerifyRemoteArtifactLive` switch + fetcher)를 확장하고, "이미 라우팅된다"는 주석은 도달 경로를 실증한 뒤에만 쓴다.
-- 게이트 배선은 prod에서 CLI `issueOpsRemoteDeps`(`VerifyLive`)와 MCP `issueopsapp/mcp_facade`(`VerifyIssueOpsRemoteArtifactLive`)가 주입한다. 미배선 기본값은 "dependency is not configured"를 반환하므로 게이트가 실제로 살아있는지 이 배선을 확인한다.
+- `ValidateArtifactURL`/`ProjectArtifact`에 `github:issue`/`gitlab:issue` 분기를 추가하면 죽은 코드가 된다(116ebef 리뷰에서 지적·제거).
+- 새 아티팩트 종류의 라이브 검증을 배선할 때는 실제 도달 경로(`Reader.Artifact` switch + fetcher)를 확장하고, "이미 라우팅된다"는 주석은 도달 경로를 실증한 뒤에만 쓴다.
+- 게이트 배선은 prod에서 composition root `cmd/issueops/issueopsapp/remote_verification_wiring.go`의 `newRemoteVerificationHandlers`가 만들어 CLI `issueOpsRemoteDepsWithPublication`(`VerifyLive`/`VerifyLiveContext`)에 주입한다. 미배선 기본값은 "live remote artifact verifier is not configured"를 반환하므로 게이트가 실제로 살아있는지 이 배선을 확인한다.
 
 ## 27. 스킬 description과 필수 문서 목록이 response-contract 골든을 드리프트시킨다
 
@@ -123,7 +123,7 @@ IssueOps에 새 implement-entry(또는 임의 phase) fail-closed 게이트를 �
 주의:
 - 게이트를 추가하면 `Readiness.Implementation`(또는 대상 readiness)을 단언하거나 그 phase로 `PhaseService.AdvanceReport`하는 테스트를 **넓게 grep**한다: `grep -rn 'IssueOpsImplementationReadiness\|to.*implement\|ai-slop-clean' --include='*_test.go'`.
 - 새 아티팩트를 **공유 픽스처 헬퍼**(예: `recordIssueOpsCompatibilityReviewForTest`, lifecycle/hook의 implement-ready seeder)에 seed하면 다수 테스트가 한 번에 통과한다. 직접 필드-set하는 readiness 단언 테스트는 개별 수정한다.
-- MCP 도구를 추가하면 catalog count 테스트(`IssueOpsBasicTools`/`IssueOpsLifecycleTools`의 exhaustive `wantNames`)와 `mcp_tools.golden.json`을 함께 갱신한다.
+- MCP 도구를 추가하면 해당 section의 catalog count 테스트(`internal/adapter/inbound/catalog/mcp/*_catalog_test.go`, 예: IssueOps는 `IssueOpsBasicTools`가 `issueops_execution` 하나만 노출하는지 보는 `TestIssueOpsAdvertisesOnlyExecutionActionTool`)와 `mcp_tools.golden.json`(`cmd/issueops/contractgolden`)을 함께 갱신한다.
 - 게이트가 derived phase-ledger에 나타나면 `response_contracts.golden.json` 스냅샷도 드리프트한다(§27). 스냅샷이 그 phase로 전진하면 전제조건을 실제로 충족(fake CLI 포함)시켜야 한다.
 - 증분 검증만 믿지 말고 커밋 전 `go test ./...` 전체를 한 번 돌려 미검출 패키지 파급을 잡는다.
 - `implement`·`ai-slop-clean` 전이는 `.issueops/issues/<n>/`에 추적 사본(plan·intent·spec·plan-review)을 쓴다(#513). 특정 파일만 `git add`하는 테스트 fixture는 사본이 미커밋으로 남아 pr 진입이 `worktree_clean`에 걸린다. 전이 뒤 `.issueops/issues`를 함께 커밋한다. 사본만 바뀐 상태는 `implementation_changes`를 충족하지 않는다.
