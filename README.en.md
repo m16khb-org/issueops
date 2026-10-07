@@ -375,7 +375,7 @@ first. The README carries no destructive rollback commands.
 | [`.issueops/ADR.md`](.issueops/ADR.md) | Structural decisions, rationale, and rejected alternatives |
 
 Install and operations procedures are split into [install](.issueops/operations/install.md),
-[hosts](.issueops/operations/hosts.md), [CLI/MCP](.issueops/operations/cli-and-mcp.md), and
+[hosts](.issueops/operations/guides/hosts.md), [CLI/MCP](.issueops/operations/guides/cli-and-mcp.md), and
 [verification](.issueops/operations/verification.md).
 
 ## License

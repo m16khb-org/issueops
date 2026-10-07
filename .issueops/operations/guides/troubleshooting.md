@@ -25,7 +25,7 @@ The approved one-time full reconciliation uses an external mode-`0700` bundle at
 
 ## Related references
 
-- [operations/stability-baseline.md](../stability-baseline.md): stability audit
+- [operations/guides/stability-baseline.md](stability-baseline.md): stability audit
   baseline that builds the binary then delegates to `doctor`.
 - [issueops-execution.md](issueops-execution.md): generation-CAS replacement and
   recovery for failed execution holders.

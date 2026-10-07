@@ -23,7 +23,7 @@
   checked-but-EVIDENCE-pending)는 `gates_incomplete:<file>`로 pr 진입을 막고,
   ledger가 없으면 요구를 추가하지 않는다. 조회·평가는 함수 변수로 주입되고
   composition root만 배선한다(`loopgate`와 같은 구조). 상세 계약은
-  [ADR 2026-08-22](../adr/decisions/2026-08-22-task-gate-ledger.md)를 참조한다.
+  [ADR 2026-08-22](../adr/2026-08-22-task-gate-ledger.md)를 참조한다.
 
 - `execution release`는 첫 production vertical이다. CLI/MCP transport facade는 injected release handler만 호출하고, `internal/contract/issueopslease` decode → pure `internal/domain/issueopslease` → capability-local `internal/application/issueopslease` → inbound/outbound adapter 순서로 흐른다. decode는 persisted record를 production record contract(`internal/contract/issueops`)로 엄격하게 읽어 모르는 field를 거부하고, execution만 typed로 다루며 나머지 sidecar는 원문 그대로 보존한다(ADR 2026-09-23). `cmd/issueops/issueopsapp`만 SQLite store, process observation, clock, filesystem path matcher를 조립한다. two-argument `ReleaseExecution` facade는 제거됐고 `TestCurrentIssueOpsVerticalOnly`가 재도입을 막는다.
 - `execution reconcile`의 Orca `worktree_create`·`owner_launch`·`dispatch` confirm도 같은 vertical 경계를 사용한다. kind-local router가 injected handler로 보내고, application은 호출당 현재 durable stage 하나만 inventory/adopt 또는 bounded retry/CAS한다. preview와 no-pending은 side effect가 없는 compatibility router에 남는다.

@@ -1,6 +1,6 @@
 # IDD Implementation Needs
 
-> **Historical snapshot (written around commit `f5bdd28`).** This document is not current. Several items marked "Delivered" below were later removed (`issueops worktree prepare|prepare-tools|verify|cleanup-readiness`, `force-release`/`force-done`, the legacy daemon), and the `internal/core/*`, `worktreecmd/worktree.go`, and `internal/adapter/cli/usage.go` paths no longer exist (code now lives under `internal/domain`, `internal/application`, `internal/contract`, `internal/port`, `internal/adapter`, `cmd/issueops/*cli`). For the current command surface read [`.issueops/OPERATIONS.md`](../.issueops/OPERATIONS.md) and [`.issueops/operations/cli-and-mcp.md`](../.issueops/operations/cli-and-mcp.md).
+> **Historical snapshot (written around commit `f5bdd28`).** This document is not current. Several items marked "Delivered" below were later removed (`issueops worktree prepare|prepare-tools|verify|cleanup-readiness`, `force-release`/`force-done`, the legacy daemon), and the `internal/core/*`, `worktreecmd/worktree.go`, and `internal/adapter/cli/usage.go` paths no longer exist (code now lives under `internal/domain`, `internal/application`, `internal/contract`, `internal/port`, `internal/adapter`, `cmd/issueops/*cli`). For the current command surface read [`.issueops/OPERATIONS.md`](../.issueops/OPERATIONS.md) and [`.issueops/operations/cli-and-mcp.md`](../.issueops/operations/guides/cli-and-mcp.md).
 
 ## Scope
 

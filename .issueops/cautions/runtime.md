@@ -7,7 +7,7 @@ description: Cautions for process, MCP service, worker, lock, state store, and i
 
 Family index: [CAUTIONS.md](../CAUTIONS.md). Evergreen hazards for process,
 MCP service, worker, lock, SQLite state store, and build/install temp-artifact
-hygiene. Dated incident lessons live under [lessons/](lessons/).
+hygiene. Dated incident lessons are listed in [CAUTIONS.md](../CAUTIONS.md#dated-incident-lessons).
 
 ## 5. Worker lifecycle 문제
 
@@ -73,7 +73,7 @@ SQLite 전환 후 checkpoint 뒤에도 WAL이 truncate되지 않고 고수위로
 
 `sqlstore`의 직렬화 게이트(`spanGate`)는 `WithSpan`만 획득한다. `Apply`/`CompareAndApply`는 게이트 밖에서 커밋하므로, 게이트를 지나지 않는 삭제는 열려 있는 related-update span과 순서를 맺지 못하고 삭제 뒤 related row가 되살아난다. CAS는 대상 레코드의 drift만 막는다.
 
-- 레코드와 related bucket을 함께 지우는 경로는 `WithSpan` 안에서 실행한다 ([2026-08-27 lesson](lessons/2026-08-27-record-delete-bypassed-the-span-gate.md)).
+- 레코드와 related bucket을 함께 지우는 경로는 `WithSpan` 안에서 실행한다 ([2026-08-27 lesson](2026-08-27-record-delete-bypassed-the-span-gate.md)).
 - 게이트를 `Apply` 계열 안으로 내리지 않는다. span 안에서 호출되는 write가 자기 자신과 교착한다.
 
 ## SQLite state root 최초 초기화도 cross-process 경합으로 취급할 것

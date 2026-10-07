@@ -36,7 +36,7 @@ lesson으로 분리됐고, 여기서는 핵심 한 줄과 탐색 링크만 둔�
 - IssueOps gate ledger는 root `GATES.md`가 아니라 이슈 폴더
   `.issueops/issues/<provider-issue-number>/gates.md`로 namespacing한다(#480;
   root `GATES.md`·`gates/*.md`는 더 이상 탐색하지 않는다)
-  ([2026-08-26 lesson](cautions/lessons/2026-08-26-gates-root-ledger-worktree-conflicts.md)).
+  ([2026-08-26 lesson](cautions/2026-08-26-gates-root-ledger-worktree-conflicts.md)).
 - self-verify는 외부 검증 메커니즘을 명시해야 하고 문서만 통과하는 가짜 안정성을 경계한다.
 - Omo MCP catalog는 server config hash로 장기 cache되므로 installer가
   advertised catalog SHA를 config env에 포함해 binary-only schema update도
@@ -44,12 +44,12 @@ lesson으로 분리됐고, 여기서는 핵심 한 줄과 탐색 링크만 둔�
   ([install.md](operations/install.md)).
 - Omo PR Review 결과는 final text JSON이 아니라 permission-allowed strict schema
   `submit_pr_review_*` tool arguments로 받고, 마지막 턴에는 submit tool만 남긴다
-  ([2026-08-29 lesson](cautions/lessons/2026-08-29-omo-pr-review-structured-output-tool.md)).
+  ([2026-08-29 lesson](cautions/2026-08-29-omo-pr-review-structured-output-tool.md)).
 - `.issueops/*.md` 편집은 response-contract golden을 드리프트시킨다.
 - 로컬 검증 배터리의 게이트 집합은 CI와 같아야 한다. CI가 첫 게이트(gofmt)에서 끊기면 뒤의
   test/golden 실패는 관측되지 않고, 환경 관측값(working tree, 로컬 심링크)을 그대로 박은
   golden/검증기는 clean checkout에서 깨진다
-  ([2026-08-26 lesson](cautions/lessons/2026-08-26-ci-gofmt-gate-local-battery-drift.md)).
+  ([2026-08-26 lesson](cautions/2026-08-26-ci-gofmt-gate-local-battery-drift.md)).
 - Dated 기록의 IssueOps 명령·필드·상태는 사고 당시 증거일 뿐 실행 지시가 아니다.
   현재 실행 계약은 `skills/issueops/references/execution.md`와
   `.issueops/OPERATIONS.md`를 따른다.
@@ -69,7 +69,7 @@ lesson으로 분리됐고, 여기서는 핵심 한 줄과 탐색 링크만 둔�
 
 ## Dated incident lessons
 
-One file per incident under `cautions/lessons/` or, for newer records, directly under `cautions/`. Each carries the full
+One file per incident directly under `cautions/`. Each carries the full
 Kind/Source/Summary/Context/Resolution/Evidence record and a historical-evidence
 footer; older notes also live in `archive/cautions-incidents.md`.
 
@@ -77,8 +77,8 @@ footer; older notes also live in `archive/cautions-incidents.md`.
 |---|---|
 | 2026-10-06 | [Removal commits leave stale help text, orphan fixtures, and doc claims behind](cautions/2026-10-06-removal-commits-leave-stale-help-text-orphan-fixtures-and-do.md) |
 | 2026-10-03 | [공용 HTTP 경계와 검증 증거: capability 파일 인자 이탈, 문자열만 보는 receipt, 고정 deadline 테스트 세션](cautions/2026-10-03-http.md) |
-| 2026-10-03 | [HTTP 설치 검증과 린터 toolchain 일치](cautions/lessons/2026-10-03-native-http-validation-and-lint-toolchain.md) |
-| 2026-10-02 | [실제 host QA의 함정: Claude tool-results 파일, Codex service_tier, AMFI, 정확 치환 편집](cautions/lessons/2026-10-02-real-host-qa-tool-results-service-tier-amfi-exact-edits.md) |
+| 2026-10-03 | [HTTP 설치 검증과 린터 toolchain 일치](cautions/2026-10-03-native-http-validation-and-lint-toolchain.md) |
+| 2026-10-02 | [실제 host QA의 함정: Claude tool-results 파일, Codex service_tier, AMFI, 정확 치환 편집](cautions/2026-10-02-real-host-qa-tool-results-service-tier-amfi-exact-edits.md) |
 | 2026-10-01 | [정책 출력의 불완전한 tail과 상속 pipe를 완료로 취급하지 않는다](cautions/2026-10-01-tail-pipe.md) |
 | 2026-09-25 | [UTF-8 safe byte-bounded truncation](cautions/2026-09-25-utf-8-safe-byte-bounded-truncation.md) |
 | 2026-09-25 | [Gate CHECK 15-minute cap under host load](cautions/2026-09-25-gate-check-15-minute-cap-under-host-load.md) |
@@ -92,58 +92,60 @@ footer; older notes also live in `archive/cautions-incidents.md`.
 | 2026-09-20 | [Manual handoff state root and next-generation claim](cautions/2026-09-20-manual-handoff-state-root-and-next-generation-claim.md) |
 | 2026-09-08 | [issueops regress is refused while the devil's-advocate verdict is revise](cautions/2026-09-08-issueops-regress-is-refused-while-the-devil-s-advocate-verdi.md) |
 | 2026-09-08 | [Review CHECKs enter the ledger at stage-4 entry, never during verify](cautions/2026-09-08-review-checks-enter-the-ledger-at-stage-4-entry-never-during.md) |
-| 2026-09-02 | [fingerprint를 봉인하는 게이트는 수정 뒤에 기록한다](cautions/lessons/2026-09-02-fingerprint-sealing-gates-recorded-after-edit.md) |
-| 2026-09-01 | [전진한 원격 브랜치가 cleanup을 교착시켰다; finish가 --keep-remote-branch를 받는다](cautions/lessons/2026-09-01-cleanup-deadlock-advanced-remote-branch.md) |
-| 2026-08-29 | [Omo PR Review verdict는 최종 텍스트가 아니라 schema tool로 받아야 한다](cautions/lessons/2026-08-29-omo-pr-review-structured-output-tool.md) |
-| 2026-08-28 | [dry-run이 외부 CLI를 실행해 홈 디렉터리를 변경했다](cautions/lessons/2026-08-28-install-dry-run-spawned-the-claude-cli.md) |
-| 2026-08-28 | [devil's-advocate 기록이 플랜에 묶이지 않아 게이트가 연극 가능했다](cautions/lessons/2026-08-28-devils-advocate-record-was-unbound.md) |
+| 2026-09-02 | [fingerprint를 봉인하는 게이트는 수정 뒤에 기록한다](cautions/2026-09-02-fingerprint-sealing-gates-recorded-after-edit.md) |
+| 2026-09-01 | [전진한 원격 브랜치가 cleanup을 교착시켰다; finish가 --keep-remote-branch를 받는다](cautions/2026-09-01-cleanup-deadlock-advanced-remote-branch.md) |
+| 2026-08-29 | [Omo PR Review verdict는 최종 텍스트가 아니라 schema tool로 받아야 한다](cautions/2026-08-29-omo-pr-review-structured-output-tool.md) |
+| 2026-08-28 | [dry-run이 외부 CLI를 실행해 홈 디렉터리를 변경했다](cautions/2026-08-28-install-dry-run-spawned-the-claude-cli.md) |
+| 2026-08-28 | [devil's-advocate 기록이 플랜에 묶이지 않아 게이트가 연극 가능했다](cautions/2026-08-28-devils-advocate-record-was-unbound.md) |
 | 2026-08-28 | [배선 파일이 지워지면 가드는 테스트만 남기고 사라진다](cautions/2026-08-28-record.md) |
 | 2026-08-28 | [lease quiescence 테스트가 시스템 전역 lsof 프로브에 묶여 전체 스위트에서 확률적으로 깨졌다](cautions/2026-08-28-lease-quiescence-lsof.md) |
 | 2026-08-28 | [Verify host CLI flags against the installed version](cautions/2026-08-28-verify-host-cli-flags-against-the-installed-version.md) |
 | 2026-08-28 | [GitLab WorkItem 직속 labels/assignees selection이 create-child를 막았고 가짜 glab 스텁이 그 오류를 감췄다](cautions/2026-08-28-gitlab-workitem-labels-assignees-selection-create-child-glab.md) |
-| 2026-07-02 | [Re-verify stale memory observations against HEAD](cautions/lessons/2026-07-02-reverify-stale-memory-observations-against-head.md) |
-| 2026-07-07 | [IssueOps orchestration locks, additive fields, worker leases](cautions/lessons/2026-07-07-issueops-orchestration-locks-additive-fields-worker-leases.md) |
-| 2026-07-07 | [SQLite sqlstore span discipline: active-root chain, fresh start](cautions/lessons/2026-07-07-sqlite-sqlstore-span-discipline.md) |
-| 2026-07-08 | [Codex "invalid JSON output" was co-resident hook pipe truncation](cautions/lessons/2026-07-08-codex-invalid-json-output-pipe-truncation.md) |
-| 2026-07-09 | [macOS pipe KVA exhaustion blocks stdout-capture CLI tests](cautions/lessons/2026-07-09-macos-pipe-kva-exhaustion.md) |
-| 2026-07-10 | [Local MCP gateway FD exhaustion resets all loopback MCP connections](cautions/lessons/2026-07-10-local-mcp-gateway-fd-exhaustion.md) |
-| 2026-07-28 | [update does not own host MCP; pending requests are not replayed](cautions/lessons/2026-07-28-update-mcp-lifetime-host-owned.md) |
-| 2026-07-31 | [Released direct lease recovery needs a finite next_command chain](cautions/lessons/2026-07-31-released-direct-lease-recovery.md) |
-| 2026-07-31 | [Orca task mutation seals explicit Run + coordinator consumer](cautions/lessons/2026-07-31-orca-task-mutation-explicit-run-coordinator-consumer.md) |
-| 2026-08-03 | [Orca resume must not use current prompt template as trust root](cautions/lessons/2026-08-03-orca-resume-prompt-template-trust-root.md) |
-| 2026-08-04 | [Resolve parent drift before completing reseed](cautions/lessons/2026-08-04-completed-reseed-parent-drift.md) |
-| 2026-08-04 | [Do not trust generated IssueOps command PATH token alone](cautions/lessons/2026-08-04-generated-issueops-command-path-token.md) |
-| 2026-08-04 | [Codex command-only payload omits workdir; cwd is turn cwd](cautions/lessons/2026-08-04-codex-command-only-hook-payload-workdir.md) |
-| 2026-08-04 | [Released sync-base conflict needs scoped resolution writer](cautions/lessons/2026-08-04-released-sync-base-conflict-write-lease.md) |
-| 2026-08-08 | [Command-only payload exempts cwd fence only for self-describing commands](cautions/lessons/2026-08-08-command-only-payload-cwd-fence-exemption.md) |
-| 2026-08-11 | [self-verify `--full`/`--iterations` modes removed](cautions/lessons/2026-08-11-self-verify-iterations-full-modes-removed.md) |
-| 2026-08-21 | [api-doc dogfood: multiline-decorator routes bypassed static checks; review input lacked error evidence](cautions/lessons/2026-08-21-api-doc-route-block-assembly-and-evidence-bundling.md) |
-| 2026-08-21 | [issueops lifecycle dogfood: whoami was claim-flags-only; branch errors cited foreign issues](cautions/lessons/2026-08-21-issueops-whoami-record-flags-and-branch-examples.md) |
-| 2026-08-22 | [underused-surface dogfood: shipped benchmark panic, mcpsmoke data race, hook help noise](cautions/lessons/2026-08-22-underused-surface-dogfood-defects.md) |
-| 2026-08-22 | [Kordoc install unblocks requirements-analysis pioneer; child tasks need CLI+handshake probe](cautions/lessons/2026-08-22-kordoc-install-unblocks-requirements-analysis-pioneer.md) |
-| 2026-08-26 | [CI gofmt gate drifted from the local battery; golden captured a dirty working tree](cautions/lessons/2026-08-26-ci-gofmt-gate-local-battery-drift.md) |
-| 2026-08-26 | [Merged-without-execution cycle had no typed cleanup exit; abandon accepts record-linked residue](cautions/lessons/2026-08-26-abandon-record-linked-residue-without-execution.md) |
-| 2026-08-26 | [Root GATES.md caused add/add conflicts across IssueOps worktrees](cautions/lessons/2026-08-26-gates-root-ledger-worktree-conflicts.md) |
-| 2026-08-26 | [GitLab work_items issue URL alias rejected by the provider parser and the create-issue live gate](cautions/lessons/2026-08-26-gitlab-work-items-url-provider-create-issue.md) |
-| 2026-08-27 | [Skill added without agents/openai.yaml broke the self-verify QA gate on main](cautions/lessons/2026-08-27-skill-without-openai-yaml-self-verify-qa-gate.md) |
-| 2026-08-27 | [cleanup finish blocked on one Orca terminal shell; cleanup now stops worktree processes and terminals itself](cautions/lessons/2026-08-27-cleanup-stops-worktree-processes.md) |
-| 2026-08-27 | [Daemon accept-loop burst dial exceeded the unix backlog](cautions/lessons/2026-08-27-daemon-accept-loop-burst-dial-backlog.md) |
-| 2026-08-27 | [Record delete bypassed the sqlstore span gate and orphaned related state](cautions/lessons/2026-08-27-record-delete-bypassed-the-span-gate.md) |
+| 2026-08-27 | [Skill added without agents/openai.yaml broke the self-verify QA gate on main](cautions/2026-08-27-skill-without-openai-yaml-self-verify-qa-gate.md) |
+| 2026-08-27 | [cleanup finish blocked on one Orca terminal shell; cleanup now stops worktree processes and terminals itself](cautions/2026-08-27-cleanup-stops-worktree-processes.md) |
+| 2026-08-27 | [Daemon accept-loop burst dial exceeded the unix backlog](cautions/2026-08-27-daemon-accept-loop-burst-dial-backlog.md) |
+| 2026-08-27 | [Record delete bypassed the sqlstore span gate and orphaned related state](cautions/2026-08-27-record-delete-bypassed-the-span-gate.md) |
+| 2026-08-26 | [CI gofmt gate drifted from the local battery; golden captured a dirty working tree](cautions/2026-08-26-ci-gofmt-gate-local-battery-drift.md) |
+| 2026-08-26 | [Merged-without-execution cycle had no typed cleanup exit; abandon accepts record-linked residue](cautions/2026-08-26-abandon-record-linked-residue-without-execution.md) |
+| 2026-08-26 | [Root GATES.md caused add/add conflicts across IssueOps worktrees](cautions/2026-08-26-gates-root-ledger-worktree-conflicts.md) |
+| 2026-08-26 | [GitLab work_items issue URL alias rejected by the provider parser and the create-issue live gate](cautions/2026-08-26-gitlab-work-items-url-provider-create-issue.md) |
+| 2026-08-22 | [underused-surface dogfood: shipped benchmark panic, mcpsmoke data race, hook help noise](cautions/2026-08-22-underused-surface-dogfood-defects.md) |
+| 2026-08-22 | [Kordoc install unblocks requirements-analysis pioneer; child tasks need CLI+handshake probe](cautions/2026-08-22-kordoc-install-unblocks-requirements-analysis-pioneer.md) |
+| 2026-08-21 | [api-doc dogfood: multiline-decorator routes bypassed static checks; review input lacked error evidence](cautions/2026-08-21-api-doc-route-block-assembly-and-evidence-bundling.md) |
+| 2026-08-21 | [issueops lifecycle dogfood: whoami was claim-flags-only; branch errors cited foreign issues](cautions/2026-08-21-issueops-whoami-record-flags-and-branch-examples.md) |
+| 2026-08-21 | [aside-qa dogfood: snapshot shape, invocation economics, localhost liveness](cautions/2026-08-21-aside-qa-dogfood-batch-and-snapshot-tree.md) |
+| 2026-08-21 | [aside-qa round 2: UI/UX element probes and measurement pitfalls](cautions/2026-08-21-aside-qa-ux-probe-round.md) |
+| 2026-08-11 | [self-verify `--full`/`--iterations` modes removed](cautions/2026-08-11-self-verify-iterations-full-modes-removed.md) |
+| 2026-08-08 | [Command-only payload exempts cwd fence only for self-describing commands](cautions/2026-08-08-command-only-payload-cwd-fence-exemption.md) |
+| 2026-08-04 | [Resolve parent drift before completing reseed](cautions/2026-08-04-completed-reseed-parent-drift.md) |
+| 2026-08-04 | [Do not trust generated IssueOps command PATH token alone](cautions/2026-08-04-generated-issueops-command-path-token.md) |
+| 2026-08-04 | [Codex command-only payload omits workdir; cwd is turn cwd](cautions/2026-08-04-codex-command-only-hook-payload-workdir.md) |
+| 2026-08-04 | [Released sync-base conflict needs scoped resolution writer](cautions/2026-08-04-released-sync-base-conflict-write-lease.md) |
+| 2026-08-03 | [Orca resume must not use current prompt template as trust root](cautions/2026-08-03-orca-resume-prompt-template-trust-root.md) |
+| 2026-07-31 | [Released direct lease recovery needs a finite next_command chain](cautions/2026-07-31-released-direct-lease-recovery.md) |
+| 2026-07-31 | [Orca task mutation seals explicit Run + coordinator consumer](cautions/2026-07-31-orca-task-mutation-explicit-run-coordinator-consumer.md) |
+| 2026-07-28 | [update does not own host MCP; pending requests are not replayed](cautions/2026-07-28-update-mcp-lifetime-host-owned.md) |
+| 2026-07-10 | [Local MCP gateway FD exhaustion resets all loopback MCP connections](cautions/2026-07-10-local-mcp-gateway-fd-exhaustion.md) |
+| 2026-07-09 | [macOS pipe KVA exhaustion blocks stdout-capture CLI tests](cautions/2026-07-09-macos-pipe-kva-exhaustion.md) |
+| 2026-07-08 | [Codex "invalid JSON output" was co-resident hook pipe truncation](cautions/2026-07-08-codex-invalid-json-output-pipe-truncation.md) |
+| 2026-07-07 | [IssueOps orchestration locks, additive fields, worker leases](cautions/2026-07-07-issueops-orchestration-locks-additive-fields-worker-leases.md) |
+| 2026-07-07 | [SQLite sqlstore span discipline: active-root chain, fresh start](cautions/2026-07-07-sqlite-sqlstore-span-discipline.md) |
+| 2026-07-02 | [Re-verify stale memory observations against HEAD](cautions/2026-07-02-reverify-stale-memory-observations-against-head.md) |
 
 ## Removed CLI modes (historical only)
 
 `self-verify --iterations=N requires --full` and `self-verify --full --iterations=10`
 (10 seeded deterministic iterations; ~180s / ~3712s / 5400s budgets) were removed
 **2026-08-11**. They are not current operational commands. Full historical record:
-[2026-08-11 lesson](cautions/lessons/2026-08-11-self-verify-iterations-full-modes-removed.md).
+[2026-08-11 lesson](cautions/2026-08-11-self-verify-iterations-full-modes-removed.md).
 Current `self-verify` behavior: testing family's `testing/self-verification.md`.
 
 ## Update workflow
 
 1. Pick the canonical owner above; add a new module section only when a new
    responsibility class appears.
-2. For a new incident lesson, create `cautions/lessons/YYYY-MM-DD-<slug>.md`
-   with the full record and a back-link to this index.
+2. For a new incident lesson, run `project_docs_append(kind=caution)`; it writes
+   `cautions/YYYY-MM-DD-<slug>.md`. Add the row to the table above.
 3. Update a module in place for evergreen guidance; never summarize away a
    command, constraint, failure mode, or date.
 4. Keep this index and every module within the manifest line budget (250).

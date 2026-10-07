@@ -22,22 +22,27 @@ guide that matches the task.
 | Health gate, diagnosis, one-time reconciliation | [troubleshooting.md](operations/guides/troubleshooting.md) |
 | IssueOps provider publication, branch linkage, issue snapshots | [issueops-providers.md](operations/guides/issueops-providers.md) |
 | IssueOps execution lifecycle, recovery, sync-base, owner sequence, ten-stage operation | [issueops-execution.md](operations/guides/issueops-execution.md) |
+| Direct CLI, policy, guard, state, loop, MCP cleanup, worker, audit | [cli-and-mcp.md](operations/guides/cli-and-mcp.md) |
+| Codex/Claude/Omo native skills, MCP registration, lifecycle hooks | [hosts.md](operations/guides/hosts.md) |
+| Project bootstrap, project-doc routing, MCP document updates | [project-docs.md](operations/guides/project-docs.md) |
+| Web-fetch deterministic benchmark and opt-in live parity | [web-fetch-live-parity.md](operations/guides/web-fetch-live-parity.md) |
+| Stability audit baseline and child-host smoke | [stability-baseline.md](operations/guides/stability-baseline.md), [child-host-smoke.md](operations/guides/child-host-smoke.md) |
 
-## Detailed references owned under `operations/`
+## References read by code at fixed paths
 
-These sibling references own their topics normatively. Link to them directly
-instead of duplicating their content here or in a guide.
+These references stay directly under `operations/` because code or contract
+tests read their exact paths. Do not move or rename them.
 
 | Topic | Owner |
 |-------|-------|
 | First-run install, `io update`, command shims, MCP refresh | [operations/install.md](operations/install.md) |
-| Direct CLI, policy, guard, state, loop, MCP cleanup, worker, audit | [operations/cli-and-mcp.md](operations/cli-and-mcp.md) |
-| Codex/Claude/Omo native skills, MCP registration, lifecycle hooks | [operations/hosts.md](operations/hosts.md) |
 | self-verify, self-augment, api-doc gate, general smoke | [operations/verification.md](operations/verification.md) |
-| Project bootstrap, project-doc routing, MCP document updates | [operations/project-docs.md](operations/project-docs.md) |
 | Release checklist, clean-machine smoke, build matrix, rollback | [operations/release-reproducibility.md](operations/release-reproducibility.md) |
 | Release dogfood transcripts | [operations/release-dogfood-notes.md](operations/release-dogfood-notes.md) |
-| Web-fetch deterministic benchmark and opt-in live parity | [operations/web-fetch-live-parity.md](operations/web-fetch-live-parity.md) |
+| Quality dashboard and score inputs | [operations/quality-dashboard.md](operations/quality-dashboard.md) |
+
+Skill-quality scorecards and dogfood evaluations are research records under
+[research/skill-quality/](research/skill-quality/).
 
 ## Core Surfaces
 
@@ -91,7 +96,7 @@ instead of duplicating their content here or in a guide.
    judges only its own or anonymous ledgers for strict PR readiness.
    CHECK commands run through the command policy engine (never a raw shell),
    and unmet gates add `gates_incomplete:<file>`. See
-   [operations/cli-and-mcp.md](operations/cli-and-mcp.md).
+   [operations/guides/cli-and-mcp.md](operations/guides/cli-and-mcp.md).
 6. Cross-session channels: `issueops channel send/recv` gives Codex,
    Claude Code, and Omo sessions a durable shared mailbox over issueops state —
    the transport for front/server-style multi-session coordination.

@@ -29,5 +29,5 @@ export ISSUEOPS_DISABLE_HOOKS=1    # 셸 세션 전체에 적용
 
 ## Related references
 
-- [operations/hosts.md](../hosts.md): Codex/Claude/Omo native skills, MCP
+- [operations/guides/hosts.md](hosts.md): Codex/Claude/Omo native skills, MCP
   registration, lifecycle hook behavior, and the IssueOps host authority rule.

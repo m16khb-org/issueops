@@ -30,7 +30,7 @@ IssueOps 이슈 브랜치를 `git worktree add -b`로 바로 만들면 GitHub/Gi
 
 ## 15. IssueOps worktree edits are the agent's own discipline
 
-IssueOps worktree isolation cannot rely on the model remembering `pwd` or shell `workdir`. Some edit tools can apply relative paths from a different checkout than the shell command just verified. Until 2026-08-27 an installed PreToolUse hook (`--enforce-worktree`, `--enforce-gitops-kubectl`, `--enforce-staged-checks`) blocked such events; that hook surface was removed ([ADR](../adr/decisions/2026-08-27-session-start-owns-compaction-context.md)), so the rules below are enforced by the main agent, by `issueops execution status/claim`, and by review, not by a host hook.
+IssueOps worktree isolation cannot rely on the model remembering `pwd` or shell `workdir`. Some edit tools can apply relative paths from a different checkout than the shell command just verified. Until 2026-08-27 an installed PreToolUse hook (`--enforce-worktree`, `--enforce-gitops-kubectl`, `--enforce-staged-checks`) blocked such events; that hook surface was removed ([ADR](../adr/2026-08-27-session-start-owns-compaction-context.md)), so the rules below are enforced by the main agent, by `issueops execution status/claim`, and by review, not by a host hook.
 
 주의:
 - IssueOps sessions set `ISSUEOPS_SOURCE_CHECKOUT` and `ISSUEOPS_EXPECTED_WORKTREE` before implementation and root every mutating command at `ISSUEOPS_EXPECTED_WORKTREE`.

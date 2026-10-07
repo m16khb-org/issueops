@@ -192,4 +192,4 @@ Keep fixtures for external-tool data as plain local input and verify only the ha
 
 ## Web-Fetch Live Parity
 
-The default web-fetch battery is deterministic and must not require network access. Opt-in live parity uses `ISSUEOPS_WEBFETCH_LIVE=1` with `testdata/webfetch/live/public-fixtures.json`; follow `.issueops/operations/web-fetch-live-parity.md` before interpreting live results or comparing them with a generic baseline executable.
+The default web-fetch battery is deterministic and must not require network access. Opt-in live parity uses `ISSUEOPS_WEBFETCH_LIVE=1` with `testdata/webfetch/live/public-fixtures.json`; follow `.issueops/operations/guides/web-fetch-live-parity.md` before interpreting live results or comparing them with a generic baseline executable.

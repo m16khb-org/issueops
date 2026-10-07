@@ -65,7 +65,7 @@ Codex용 skill과 Claude용 skill을 복사본으로 따로 두면 금방 내용
 - 외부 도구가 없거나 깨졌다는 이유로 core contract를 약화하거나 readiness gate를 통과시켜서는 안 된다.
 - 외부 plugin cache를 하네스가 수정하는 shim을 추가하지 않는다. 문제는 해당 도구의 설치/문서/사용 경로에서 해결한다.
 - 외부 도구의 vault, memory store, graph index, query-pack, lifecycle hook 의미를 issueops core에 복제하지 않는다.
-- **외부 CLI를 통한 관찰은 쓰기다.** dry-run·preview·readiness 경로는 외부 프로세스를 spawn하지 않는다(`exec.LookPath` 수준의 존재 확인만 허용). 외부 CLI는 기동만으로 자기 상태 파일을 만들 수 있어(`claude`는 `$HOME/.claude`·`$HOME/.claude.json`), inventory를 읽는 호출도 부작용을 남긴다([2026-08-28 lesson](lessons/2026-08-28-install-dry-run-spawned-the-claude-cli.md)).
+- **외부 CLI를 통한 관찰은 쓰기다.** dry-run·preview·readiness 경로는 외부 프로세스를 spawn하지 않는다(`exec.LookPath` 수준의 존재 확인만 허용). 외부 CLI는 기동만으로 자기 상태 파일을 만들 수 있어(`claude`는 `$HOME/.claude`·`$HOME/.claude.json`), inventory를 읽는 호출도 부작용을 남긴다([2026-08-28 lesson](2026-08-28-install-dry-run-spawned-the-claude-cli.md)).
 - 선택적 외부 바이너리에 의존하는 게이트는 그 바이너리가 없는 CI에서 항상 통과한다. CI 초록을 그 게이트의 증거로 삼지 말고 도구가 설치된 환경에서 재현한다.
 
 draft-wiki staging area(`.issueops/draft-wiki/`)와 `issueops project draft-wiki ...`(queue/list/suggest/approve/reject/promote/prune), draft-wiki worker는 모두 제거됐다. `issueops docs`/`docs_index`는 `.issueops/evidence/**`만 색인에서 제외한다. 정식 갱신은 `project_docs_append` 또는 SHA-guarded `project_docs_revise`를 쓴다.
@@ -94,7 +94,7 @@ Codex and Claude Code accept similar UserPromptSubmit JSON, but they do not rend
 
 ## 20. Stop hook output: `continue:false` hard-stops; use `decision:block` + `reason` to continue in-turn
 
-> 2026-08-27: issueops는 더 이상 Stop hook을 설치하거나 제공하지 않는다([ADR](../adr/decisions/2026-08-27-session-start-owns-compaction-context.md)). 아래는 host Stop hook 스키마에 대한 검증된 사실이며, 새 Stop hook을 만들 때만 참고한다.
+> 2026-08-27: issueops는 더 이상 Stop hook을 설치하거나 제공하지 않는다([ADR](../adr/2026-08-27-session-start-owns-compaction-context.md)). 아래는 host Stop hook 스키마에 대한 검증된 사실이며, 새 Stop hook을 만들 때만 참고한다.
 
 A Stop hook that wants the agent to *recover and keep going* (for example, to present the missing numbered choices) must NOT set `continue:false`. Doing so halts the agent and surfaces the reason to the user, instead of letting the agent act on it in-turn.
 

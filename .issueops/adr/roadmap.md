@@ -7,7 +7,7 @@ architecture, phase-by-phase deliverables and acceptance criteria, MVP scope,
 risk register, and next-work candidates. Phase status lines are historical
 snapshots from when each phase was written; the current implementation surface
 lives in root `ARCHITECTURE.md` and `OPERATIONS.md`. Foundational decisions
-behind this plan are immutable records under `decisions/` and are linked from
+behind this plan are immutable dated records in this folder and are linked from
 the [ADR index](../ADR.md).
 
 ## 목표 아키텍처
@@ -193,12 +193,12 @@ Acceptance criteria:
 Decisions recorded against this phase plan now live as immutable records and
 are linked from the [ADR index](../ADR.md):
 
-- [2026-06-13 — Distribution decision gate](./decisions/2026-06-13-distribution-decision-gate.md)
-- [2026-06-23 — IssueOps hook and state-machine boundary](./decisions/2026-06-23-issueops-hook-state-machine-boundary.md)
-- [2026-06-23 — IssueOps execution decision gate](./decisions/2026-06-23-issueops-execution-decision-gate.md)
-- [2026-06-24 — Skill local background separation](./decisions/2026-06-24-skill-local-background-separation.md)
-- [2026-07-03 — Codex PreToolUse ask fallback](./decisions/2026-07-03-codex-pretooluse-ask-fallback.md)
-- [2026-07-26 — Linked branches are pinned to the sealed base SHA](./decisions/2026-07-26-linked-branches-pinned-to-sealed-base-sha.md)
+- [2026-06-13 — Distribution decision gate](2026-06-13-distribution-decision-gate.md)
+- [2026-06-23 — IssueOps hook and state-machine boundary](2026-06-23-issueops-hook-state-machine-boundary.md)
+- [2026-06-23 — IssueOps execution decision gate](2026-06-23-issueops-execution-decision-gate.md)
+- [2026-06-24 — Skill local background separation](2026-06-24-skill-local-background-separation.md)
+- [2026-07-03 — Codex PreToolUse ask fallback](2026-07-03-codex-pretooluse-ask-fallback.md)
+- [2026-07-26 — Linked branches are pinned to the sealed base SHA](2026-07-26-linked-branches-pinned-to-sealed-base-sha.md)
 
 ## MVP 범위
 

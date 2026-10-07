@@ -22,25 +22,39 @@ The current cross-skill/project-doc review is
 ## Navigation model
 
 Required root documents remain at their existing paths because the runtime
-project-doc contract discovers those exact filenames:
+project-doc contract discovers those exact filenames. Every top-level directory
+has one of four owners, and the project-docs-optimize checker rejects anything
+else (`undeclared_directory`, `undeclared_root_document`, `nested_record`):
 
 ```text
 .issueops/
-├── ADR.md
-├── ARCHITECTURE.md
-├── CAUTIONS.md
-├── CONVENTIONS.md
-├── OPERATIONS.md
-├── TESTING.md
-├── adr/
-├── architecture/
-├── archive/
-├── cautions/
-├── conventions/
-├── operations/guides/
-├── testing/
-└── documentation/
+├── <required and declared root documents>.md
+├── adr/ architecture/ cautions/ conventions/ testing/   family modules
+├── operations/guides/                                   family module
+├── operations/<fixed_documents>.md                     read by code; never move
+├── issues/ gates/ verified-execution/                   runtime artifacts (tracked)
+├── state/ evidence/ tmp/                                runtime artifacts (git-ignored)
+├── plans/ research/ prompt-engineering/ archive/        declared in manifest.json `directories`
+└── documentation/                                       this contract
 ```
+
+- **Family modules** follow `manifest.json` `families`. Dated records
+  (`YYYY-MM-DD-<slug>.md`) sit directly in the module directory because
+  `project_docs_append` writes them there; subfolders hold evergreen modules
+  only.
+- **Runtime directories** are written by issueops itself (`issues/<n>/plan.md`,
+  `intent.md`, `spec.md`, `plan-review.md`, `gates.md`; `gates/<scope>.md`;
+  `verified-execution/issueops-v1-<key>.json`). Per-issue reports and PR bodies
+  also live in `issues/<n>/`. Never move or rename these paths.
+- **Declared directories** carry a purpose in `manifest.json` `directories`.
+- **Fixed documents** beside a nested module (`operations/*.md`) are listed in
+  `fixed_documents` because code reads their exact paths.
+- **Historical records** (dated ADR and caution records, `issues/`, `plans/`,
+  `research/`, `archive/`) keep their wording when files move. Only Markdown
+  link targets are rewritten; commands, evidence, and recorded paths stay as
+  written.
+- **Root documents** are the standard project docs, family roots,
+  `single_owner_topics` owners, or entries in `root_documents`.
 
 Each family root listed in the manifest is a canonical index. It owns:
 
@@ -58,11 +72,11 @@ contract; do not replace them with thin redirects merely to match this layout.
 
 | Topic | Canonical owner |
 |---|---|
-| accepted architecture decisions | `ADR.md` and `adr/decisions/` |
+| accepted architecture decisions | `ADR.md` and `adr/` |
 | dependency direction and runtime topology | `ARCHITECTURE.md` and `architecture/` |
 | known risks and incident lessons | `CAUTIONS.md` and `cautions/` |
 | implementation and interface conventions | `CONVENTIONS.md` and `conventions/` |
-| installation and runtime operation | `OPERATIONS.md` and `operations/` |
+| installation and runtime operation | `OPERATIONS.md`, `operations/guides/`, and the fixed-path `operations/*.md` references |
 | test strategy and verification gates | `TESTING.md` and `testing/` |
 | commit formatting | `COMMIT_POLICY.md` |
 | OpenAPI requirements | `OPEN_API_SPEC.md` |
@@ -71,13 +85,15 @@ contract; do not replace them with thin redirects merely to match this layout.
 | constitutional priority and safety | `CONSTITUTION.md` |
 | issueops historical audit | `archive/issueops-audit.md` |
 | whole-project audit snapshot | `PROJECT_AUDIT.md` (root-retained exception) |
+| sub-agent delegation patterns | `SUB_AGENT_PATTERNS.md` (declared root document) |
+| pioneer evaluator policy | `research/skill-quality/pioneer-skill-quality-rubric.md` |
 
 References outside the canonical owner carry only a link plus
 workflow-specific context.
 
 Two dated audit snapshots are records, not operating documents.
 `PROJECT_AUDIT.md` stays at its root path because `quality inspect` parses it
-in place (`cmd/issueops/qualitycli/quality_inspect.go`, `collectAuditItems`)
+in place (`internal/adapter/outbound/quality/source.go`, `CollectAuditItems`)
 for the `audit-p0-p1-p2-items` signal and quality-catalog candidates cite it
 as evidence. `archive/issueops-audit.md` is the retired IssueOps audit kept
 verbatim under `archive/`.
@@ -123,7 +139,7 @@ does not certify every Markdown file in the repository.
 
 - `README.md`: decision statuses, naming, and index
 - `roadmap.md`: implementation roadmap that remains current
-- `decisions/YYYY-MM-DD-<slug>.md`: immutable accepted decision record
+- `YYYY-MM-DD-<slug>.md`: immutable accepted decision record, directly in `adr/`
 
 ### `architecture/`
 
@@ -131,6 +147,8 @@ does not certify every Markdown file in the repository.
 - `runtime.md`: MCP, state, process, and lock topology
 - `host-integration.md`: Codex and Claude thin-adapter design
 - `issueops.md`: IssueOps capability verticals and ownership
+- `domain-responsibilities.md`: capability-by-capability responsibilities (DDD)
+- `issueops-cleanup.md`: execution and cleanup effect order
 
 ### `cautions/`
 
@@ -141,7 +159,8 @@ does not certify every Markdown file in the repository.
 - `issueops-lifecycle.md`: IssueOps state and lifecycle risks
 - `issueops-orchestration.md`: IssueOps coordination and provider risks
 - `issueops-execution.md`: IssueOps execution and cleanup risks
-- `lessons/YYYY-MM-DD-<slug>.md`: dated incident lesson
+- `issueops-stages.md`: IssueOps stage-skill risks
+- `YYYY-MM-DD-<slug>.md`: dated incident lesson, directly in `cautions/`
 
 ### `conventions/`
 
@@ -157,9 +176,16 @@ does not certify every Markdown file in the repository.
 - `operations/guides/troubleshooting.md`: diagnosis and recovery
 - `operations/guides/issueops-providers.md`: IssueOps preparation and provider contracts
 - `operations/guides/issueops-execution.md`: IssueOps execution and recovery
+- `operations/guides/cli-and-mcp.md`: direct CLI, policy, state, MCP, worker
+- `operations/guides/hosts.md`: Codex/Claude/Omo skills, MCP registration, hooks
+- `operations/guides/project-docs.md`: bootstrap, routing, MCP document updates
+- `operations/guides/web-fetch-live-parity.md`: web-fetch benchmark and live parity
+- `operations/guides/stability-baseline.md`, `child-host-smoke.md`: stability audit
 
-Existing canonical siblings under `operations/` continue to own MCP,
-host, release, and installation procedures linked by `OPERATIONS.md`.
+Five references stay directly under `operations/` because code or contract
+tests read their exact paths: `install.md`, `verification.md`,
+`release-reproducibility.md`, `release-dogfood-notes.md`, and
+`quality-dashboard.md`.
 
 ### `testing/`
 
@@ -178,6 +204,24 @@ Retired dated snapshots moved verbatim from living documents:
 - `cautions-incidents.md`: superseded incident ledger
 - `issueops-audit.md`: retired IssueOps audit snapshot (moved from
   `.issueops/ISSUEOPS_AUDIT.md` on 2026-08-20)
+- `incident-to-hook-map.md`: incident-to-hook map for hooks removed on 2026-08-27
+
+### Declared directories
+
+- `plans/`: plans without an issue number (implementation-planning)
+- `research/`: research results (web-research), `skill-quality/` scorecards and
+  evaluator policy, and dated dogfood reports
+- `prompt-engineering/prompts/`: versioned prompts; parity tests read them
+
+### `issues/<n>/`
+
+Runtime-owned per-issue materials: `plan.md`, `intent.md`, `spec.md`,
+`plan-review.md`, and `gates.md`. Reports kept from earlier cycles sit next to
+them as `verified-execution-report.md`, `pr-body.md`, or `plan-archive.md`;
+they never take a runtime name, because `issueops remote` rewrites
+`plan.md`, `intent.md`, `spec.md`, and `plan-review.md` for an active cycle.
+`artifact/` and `review/` are git-ignored. Plans without an issue number belong
+in `plans/`, not in a non-numeric `issues/` folder.
 
 ## Link rules
 
@@ -198,9 +242,3 @@ Retired dated snapshots moved verbatim from living documents:
 4. Run the documentation-optimization skill validator.
 5. Run `issueops docs --json` and the documented command smoke checks.
 6. Review the diff for accidental duplication or information loss.
-
-## DDD 책임 문서 분리 (2026-09-30)
-
-[domain-responsibilities.md](../architecture/domain-responsibilities.md)는 capability별 책임을,
-[issueops-cleanup.md](../architecture/issueops-cleanup.md)는 실행과 정리의 효과 순서를 소유한다.
-공통 의존 방향과 사이클 권한은 기존 architecture 모듈에 유지한다.

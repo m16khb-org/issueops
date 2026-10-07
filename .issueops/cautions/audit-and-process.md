@@ -8,7 +8,7 @@ description: Cautions for self-verify/augment loops, stability-audit CLI contrac
 Family index: [CAUTIONS.md](../CAUTIONS.md). Evergreen hazards for self-verify
 and self-augment loops, stability-audit CLI contracts, JSON/QA process
 discipline, and cross-process test helpers. Removed self-verify CLI modes are
-preserved as dated history under [lessons/](lessons/).
+preserved as dated records listed in [CAUTIONS.md](../CAUTIONS.md#dated-incident-lessons).
 
 ## 10. 자기 검증/자가 증강 drift
 
@@ -25,7 +25,7 @@ preserved as dated history under [lessons/](lessons/).
 A stability-audit failure is not automatically a harness defect; the audit framework itself can call the CLI with invalid flags.
 
 주의:
-- `self-verify --iterations=N requires --full` 및 `self-verify --full --iterations=10`(10개 seeded deterministic iteration, >=180s/~3712s budget): **해당 CLI mode는 2026-08-11에 제거됐다.** 현재 operational command로 쓰지 않는다. 역사적 기록과 관측치는 [2026-08-11 — self-verify `--full`/`--iterations` modes removed](lessons/2026-08-11-self-verify-iterations-full-modes-removed.md)에, 현재 `self-verify` 동작은 testing family의 self-verification module(`testing/self-verification.md`)을 본다.
+- `self-verify --iterations=N requires --full` 및 `self-verify --full --iterations=10`(10개 seeded deterministic iteration, >=180s/~3712s budget): **해당 CLI mode는 2026-08-11에 제거됐다.** 현재 operational command로 쓰지 않는다. 역사적 기록과 관측치는 [2026-08-11 — self-verify `--full`/`--iterations` modes removed](2026-08-11-self-verify-iterations-full-modes-removed.md)에, 현재 `self-verify` 동작은 testing family의 self-verification module(`testing/self-verification.md`)을 본다.
 - When an audit step fails suspiciously fast, reproduce the exact invocation directly and compare against the documented commands in `.issueops/OPERATIONS.md` / root `AGENTS.md` before concluding the harness is unstable.
 - `ISSUEOPS_SELF_VERIFY_LLM_EVAL=gate` is a valid ambient runtime configuration, but the current self-verify implementation only renders the read-only evaluator prompt. It sends no Z.AI request and ingests no external verdict, so `gate` intentionally returns a non-passing `llm_eval` result. Do not diagnose that result as environment drift or claim an external judgment occurred. Repository completion gates must use explicit `--llm-eval=false`, record the override, and restart from the first gate after any interrupted or prompt-only run.
 - Handoff focused tests must use `./cmd/issueops/hookcli/hookinput`; the plausible-looking `./internal/core/hookinput` path does not exist and causes a command-spec failure after other packages have already started. Pin the full focused command in `.issueops/TESTING.md` and restart the sequence rather than reusing partial results.
@@ -46,7 +46,7 @@ The stability audit can false-fail when its smoke assumptions lag the issueops c
 - top-level install audit에 과거 `bootstrap --sync`를 남기지 않는다. 현재 install 표면은 `bootstrap`/`install-native`; docs sync는 `project bootstrap --sync`다.
 - live 정합성 gate인 `operational_doctor`는 상위 live harness 환경을 그대로 사용해야 한다. 반대로 audit 내부 ordinary/race `go test`는 `ISSUEOPS_ROOT`를 exact audited source checkout으로 고정하고 `ISSUEOPS_STATE_DIR`, `ISSUEOPS_WORKER_DIR`를 audit 전용 임시 루트로 격리한다. live 환경으로 회귀 테스트를 실행하면 성공한 테스트가 IssueOps session row를 다시 만들어 최종 정리가 영구히 종료되지 않으며, `ISSUEOPS_ROOT`를 빈 임시 경로로 바꾸면 source identity를 잃어 정상 회귀 검사가 실패한다.
 - full repository test timeout은 가장 느린 정상 package와 race의 관측 상한보다 커야 한다. 현재 regression timeout은 300초다.
-- `self-verify --full --iterations=10` 매 seed test/race 실행 및 3712초/5400초 audit timeout: **해당 CLI mode는 2026-08-11에 제거됐다.** 현재 operational command로 쓰지 않는다. 역사적 기록은 [2026-08-11 — self-verify `--full`/`--iterations` modes removed](lessons/2026-08-11-self-verify-iterations-full-modes-removed.md), 현재 동작은 testing family의 `testing/self-verification.md`를 본다.
+- `self-verify --full --iterations=10` 매 seed test/race 실행 및 3712초/5400초 audit timeout: **해당 CLI mode는 2026-08-11에 제거됐다.** 현재 operational command로 쓰지 않는다. 역사적 기록은 [2026-08-11 — self-verify `--full`/`--iterations` modes removed](2026-08-11-self-verify-iterations-full-modes-removed.md), 현재 동작은 testing family의 `testing/self-verification.md`를 본다.
 - timeout 실패는 마지막 성공 package, elapsed time, 살아 있는 child command를 확인해 hang과 짧은 wrapper 상한을 구분한다.
 - 장기 self-verify가 nonzero 또는 JSON parse 실패하면 audit report에 exit code, timeout 여부, parse error, parsed 종료 필드, bounded stdout/stderr tail을 남긴다. `summary: null`만 남기면 제품 실패와 audit 해석 실패를 구분할 수 없다.
 - JSON parse를 `returncode == 0` 분기 안에 두지 않는다. nonzero가 바로 구조화된 실패 summary를 보존해야 하는 경우이며, parse와 성공 판정은 별도 단계다.

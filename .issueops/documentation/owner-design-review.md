@@ -15,16 +15,16 @@ This accepts a little repeated framing to preserve standalone use; copying the e
 - `skills/implementation-planning/SKILL.md:25-37` exempts unwarranted planning; `:435-452` distinguishes stage invocation from standalone use and forbids adding a new approval gate.
 - `skills/verified-execution/SKILL.md:26-48` couples evidence to risk, execution ownership, canonical-worktree boundaries, and the narrower report-only mode. These are not generic benchmark boilerplate.
 - `skills/code-quality-metrics/SKILL.md:365-374,473-484` owns baseline-before-cleanup and gate-after-cleanup timing. `skills/algorithm-optimization/SKILL.md:559-569` owns performance invocation and algorithm/invariant reporting.
-- `.issueops/operations/pioneer-skill-quality-rubric.md:88-124` explicitly evaluates a fresh actor given only the target skill body and case request; the evaluator, not the actor, scores it.
-- Current rubric consumers name it directly: `.issueops/operations/pioneer-skill-quality-cases.md:5`, `pioneer-skill-quality-scorecard.md:3`, `pioneer-skill-rerun-fixtures.md:5`, and `harness-skill-quality-scorecard.md:4` in that same directory.
-- `.issueops/operations/pioneer-skill-quality-rubric.md:126-145` documents the labeled signature proxy; `internal/domain/issueopsbenchmark/dimensions.go:21` and `issueops_benchmark_score.go:154` in that directory identify the separate runtime dimension consumer.
+- `.issueops/research/skill-quality/pioneer-skill-quality-rubric.md:88-124` explicitly evaluates a fresh actor given only the target skill body and case request; the evaluator, not the actor, scores it.
+- Current rubric consumers name it directly: `.issueops/research/skill-quality/pioneer-skill-quality-cases.md:5`, `pioneer-skill-quality-scorecard.md:3`, `pioneer-skill-rerun-fixtures.md:5`, and `harness-skill-quality-scorecard.md:4` in that same directory.
+- `.issueops/research/skill-quality/pioneer-skill-quality-rubric.md:126-145` documents the labeled signature proxy; `internal/domain/issueopsbenchmark/dimensions.go:21` and `issueops_benchmark_score.go:154` in that directory identify the separate runtime dimension consumer.
 - `skills/issueops/SKILL.md:8-10,21-27,58-74` already owns shared routing and authorization boundaries and identifies the stage consumers of pioneer skills.
 
 ## Bounded ownership proposal
 
 | Owner | Owns | Does not own |
 |---|---|---|
-| `.issueops/operations/pioneer-skill-quality-rubric.md` | Evaluator protocol: cases, calibration, evidence grades, scoring version, holdouts, result records and quality gates. | Mandatory instructions for ordinary skill invocation; CLI availability. |
+| `.issueops/research/skill-quality/pioneer-skill-quality-rubric.md` | Evaluator protocol: cases, calibration, evidence grades, scoring version, holdouts, result records and quality gates. | Mandatory instructions for ordinary skill invocation; CLI availability. |
 | Each existing pioneer `skills/<name>/SKILL.md` | Activation, local evidence labels, refusal/no-input exceptions, proportionality, domain-specific integration timing and artifacts. | A copied scoring rubric or generic evaluation ceremony. |
 | `skills/issueops/SKILL.md` and its routed stages | Common cycle routing, authorization and stage-owned recording/publication workflow. | Replacing the domain skill's method or imposing an IssueOps cycle on standalone use. |
 | Current Go dispatch/contracts | Executable commands, accepted flags and runtime schemas. | Treating a prose evaluation proposal as implemented behavior. |
@@ -39,7 +39,7 @@ No new shared runtime file or installer change is needed for this ownership spli
 
 - The invocation may supply only `SKILL.md` text: such a skill must still know its required outputs and stopping rules without filesystem access.
 - For optional evaluator navigation, resolve a link from the real, symlink-resolved `SKILL.md` location, never from the target repository's working directory.
-- From a source-backed `skills/<name>/SKILL.md`, `../../.issueops/operations/pioneer-skill-quality-rubric.md` reaches the rubric; resolving that path from a host's unresolved skill-link directory can reach the wrong tree.
+- From a source-backed `skills/<name>/SKILL.md`, `../../.issueops/research/skill-quality/pioneer-skill-quality-rubric.md` reaches the rubric; resolving that path from a host's unresolved skill-link directory can reach the wrong tree.
 - A separately copied skill may have no sibling skills or `.issueops` tree. Missing optional evaluation material must not block ordinary execution or justify an install.
 - A full quality evaluation does require the evaluator's rubric. If it is absent, supply it to the evaluator or report evaluation incomplete; do not silently substitute the actor's summary.
 - Preserve the current body-only evaluation protocol. Requiring injected reference bundles would be a separate protocol change, not a line-count cleanup.

@@ -70,7 +70,7 @@ python3 -m unittest discover -s scripts -p meeting_notes_skill_contract_test.py
 ```
 
 운영 규칙은 [테스트 문서](../../testing/unit-and-contract.md)에,
-재발 방지 근거는 [주의사항](../../cautions/lessons/2026-10-03-native-http-validation-and-lint-toolchain.md)에
+재발 방지 근거는 [주의사항](../../cautions/2026-10-03-native-http-validation-and-lint-toolchain.md)에
 반영했다. 문서 수정은 읽은 소스와 실행 근거를 기준으로 `apply_patch`를 사용했다.
 커밋·푸시는 하지 않았다.
 

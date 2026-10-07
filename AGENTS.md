@@ -145,7 +145,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 | `.mcp.json` | 이 하네스 repo의 project Claude MCP 설정. 기본값은 빈 `{"mcpServers": {}}`(user-scope MCP 사용). `issueops_project` stdio 템플릿은 `configs/claude/mcp.project.json`이며 `--project-local --mcp-transport=stdio`일 때만 `.mcp.json`에 쓰임 |
 | `bin/issueops` | 빌드된 로컬 하네스 CLI/MCP 바이너리 |
 | `skills/` | Codex/Claude/Omo가 공유하는 스킬 source of truth |
-| `.issueops/` | 에이전트용 프로젝트 지식 베이스 |
+| `.issueops/` | 에이전트용 프로젝트 지식 베이스. 폴더 배치 계약은 `.issueops/documentation/README.md` |
 
 문서·설정·실행 코드가 함께 존재하므로, 작업 전 실제 tree와 설치 상태를 다시 확인한다.
 

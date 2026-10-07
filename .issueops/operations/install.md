@@ -83,7 +83,7 @@ Default user-level install updates:
 - Omo skill symlinks: `~/.omo/agent/skills/* -> <issueops>/skills/*`
 - Omo MCP config: `~/.omo/mcp.json`
 - Omo lifecycle extension: `~/.omo/extensions/issueops.js`
-- Optional Claude Code plugins and Git skills declared in `configs/upstream.json` (currently Claude-scoped): entries already present are skipped, and upstream failures are reported as `upstream ...` messages without failing native installation. See [hosts.md](hosts.md#upstream-plugins-and-skills).
+- Optional Claude Code plugins and Git skills declared in `configs/upstream.json` (currently Claude-scoped): entries already present are skipped, and upstream failures are reported as `upstream ...` messages without failing native installation. See [hosts.md](guides/hosts.md#upstream-plugins-and-skills).
 
 Default install does not create target-repo `.claude/settings.json`,
 `.mcp.json`, `.omo/mcp.json`, or `.agents/mcp_config.json`. Use explicit

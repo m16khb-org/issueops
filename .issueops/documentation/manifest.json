@@ -46,6 +46,22 @@
     "issueops execution cleanup boundary": ".issueops/architecture/issueops-cleanup.md",
     "skill discovery and source inventory": ".issueops/TECH_STACK.md",
     "documentation structure and quality": ".issueops/documentation/README.md",
-    "pioneer evaluator policy": ".issueops/operations/pioneer-skill-quality-rubric.md"
-  }
+    "pioneer evaluator policy": ".issueops/research/skill-quality/pioneer-skill-quality-rubric.md"
+  },
+  "root_documents": [
+    ".issueops/SUB_AGENT_PATTERNS.md"
+  ],
+  "directories": {
+    ".issueops/plans": "plans without an issue number, written by implementation-planning (including the former issues/_unnumbered plans); ADRs cite them as decision sources",
+    ".issueops/research": "research and evaluation results written by web-research and quality reviews, including the skill-quality evaluator rubric, scorecards, and dated dogfood reports",
+    ".issueops/prompt-engineering": "versioned prompts owned by the prompt-engineering skill; owner-prompt parity tests read prompts/ by exact path",
+    ".issueops/archive": "historical snapshots that no longer describe the current system but are still cited"
+  },
+  "fixed_documents": [
+    ".issueops/operations/install.md",
+    ".issueops/operations/verification.md",
+    ".issueops/operations/release-reproducibility.md",
+    ".issueops/operations/release-dogfood-notes.md",
+    ".issueops/operations/quality-dashboard.md"
+  ]
 }

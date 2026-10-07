@@ -9,8 +9,7 @@ implementation roadmap lives in [roadmap.md](roadmap.md).
 
 ## Status model
 
-Legacy records under `decisions/` and append-generated records directly under
-`adr/` are `accepted` when published. A record becomes `superseded` only when a
+Records directly under `adr/` are `accepted` when published. A record becomes `superseded` only when a
 later dated record says so explicitly. Current supersessions include:
 
 - 2026-05-29 "upstream companion tools were opt-in dependencies" is superseded
@@ -50,8 +49,8 @@ current operating surface is set by root `AGENTS.md`, `ARCHITECTURE.md`,
 
 ## Naming and authoring
 
-- Keep existing immutable records at `decisions/YYYY-MM-DD-<kebab-slug>.md`; do
-  not move them.
+- Every record lives at `YYYY-MM-DD-<kebab-slug>.md` directly under this module.
+  The former `decisions/` subfolder was merged here on 2026-10-07.
 - Create new decisions with `project_docs_append(kind=adr)` at
   `YYYY-MM-DD-<kebab-slug>.md` directly under this module.
 - Decisions are append-only. Supersede a decision with a later dated record that
