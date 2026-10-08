@@ -560,38 +560,45 @@ def _codegraph_symbol(checkout: str, sym: str) -> list[str]:
     return out[:25]
 
 
-def _rg_symbol(checkout: str, sym: str) -> list[str]:
+def _rg_symbol(checkout: str, sym: str) -> tuple[list[str], str]:
+    """Returns the hits and the tool that produced them: rg or grep."""
     cmd = ["rg", "-n", "--no-heading", "--color", "never", "-m", "3", "--glob", "!node_modules", "--glob", "!dist", "--glob", "!*lock*", "--glob", "!*.min.*", rf"\b{re.escape(sym)}\b", "."]
     # rg 가 없는 머신(GitHub runner 등)에서도 정의를 놓치지 않도록 grep 으로 찾는다. 명시 glob 과
     # .git·바이너리 제외는 rg 와 맞추고, .gitignore 와 숨김 경로 규칙은 맞추지 않는다.
     grep = ["grep", "-rnwFI", "-m", "3", "--exclude-dir=.git", "--exclude-dir=node_modules", "--exclude-dir=dist", "--exclude=*lock*", "--exclude=*.min.*", "-e", sym, "."]
     try:
-        p = subprocess.run(cmd, cwd=checkout, capture_output=True, text=True, timeout=30)
+        return _hits(subprocess.run(cmd, cwd=checkout, capture_output=True, text=True, timeout=30)), "rg"
     except FileNotFoundError:
-        try:
-            p = subprocess.run(grep, cwd=checkout, capture_output=True, text=True, timeout=30)
-        except (OSError, subprocess.TimeoutExpired):
-            return []
+        pass
     except (OSError, subprocess.TimeoutExpired):
-        return []
+        return [], "rg"
+    try:
+        return _hits(subprocess.run(grep, cwd=checkout, capture_output=True, text=True, timeout=30)), "grep"
+    except (OSError, subprocess.TimeoutExpired):
+        return [], "grep"
+
+
+def _hits(p: subprocess.CompletedProcess) -> list[str]:
     lines = [l for l in p.stdout.splitlines() if l.strip()][:15]
     return [f"- {l[2:] if l.startswith('./') else l}" for l in lines]
 
 
 def collect_defs(checkout: str, symbols: list[tuple[str, str]], codegraph: bool) -> dict[str, dict]:
-    """symbol → {file, rows}: where it is defined, who calls it, what it calls (one hop each way)."""
+    """symbol → {file, rows, source}: where it is defined, who calls it, what it calls (one hop each way)."""
     out: dict[str, dict] = {}
     for sym, path in symbols:
         rows = _codegraph_symbol(checkout, sym) if codegraph else []
+        source = "codegraph explore"
         if not rows:
-            rows = _rg_symbol(checkout, sym)
-        out[sym] = {"file": path, "rows": rows or ["- (not found in checkout — external or dynamic; cap confidence at 50 if a claim depends on it)"]}
+            rows, source = _rg_symbol(checkout, sym)
+        out[sym] = {"file": path, "source": source, "rows": rows or ["- (not found in checkout — external or dynamic; cap confidence at 50 if a claim depends on it)"]}
     return out
 
 
-def render_defs(checkout: str, defs: dict[str, dict], codegraph: bool) -> str:
+def render_defs(checkout: str, defs: dict[str, dict]) -> str:
+    sources = ", ".join(dict.fromkeys(d["source"] for d in defs.values())) or "none"
     L = ["# Definitions and one-hop neighbours of changed symbols", "",
-         f"source: {'codegraph explore' if codegraph else 'rg'} over {checkout}",
+         f"source: {sources} over {checkout}",
          "Read this before opening files: it names the definition and the callers/callees you must trace. Open a file only for a hop listed here or for a symbol missing here.", ""]
     if not defs:
         L.append("(no symbols detected in the diff — trace from diff.patch directly)")
@@ -602,7 +609,7 @@ def render_defs(checkout: str, defs: dict[str, dict], codegraph: bool) -> str:
 
 
 def build_defs(checkout: str, symbols: list[str], codegraph: bool) -> str:
-    return render_defs(checkout, collect_defs(checkout, [(s, "?") for s in symbols], codegraph), codegraph)
+    return render_defs(checkout, collect_defs(checkout, [(s, "?") for s in symbols], codegraph))
 
 
 # ----------------------------------------------------------------------------- context pack: per-lens packs
@@ -974,7 +981,7 @@ def main() -> None:
     full_patch = "\n".join(patch_parts)
     sym_pairs = changed_symbols(full_patch, with_files=True)
     defs = collect_defs(checkout, sym_pairs, ctx["verification"]["codegraph"])
-    (out_dir / "defs.md").write_text(render_defs(checkout, defs, ctx["verification"]["codegraph"]))
+    (out_dir / "defs.md").write_text(render_defs(checkout, defs))
     symbols = [n for n, _ in sym_pairs]
     # 조사 근거 컨텍스트: hunk 를 감싸는 정의 헤더(PR-Agent dynamic_context) 와 co-change 파일(CodeRabbit).
     changed_paths = {f["path"] for f in files}
