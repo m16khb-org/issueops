@@ -14,7 +14,7 @@ import (
 
 func testLoopStateRoot() string { return filepath.Join(statestore.StateDir(), "loop") }
 func testLoopStore() Store {
-	return Store{Directory: testLoopStateRoot(), OpenDatabase: func(dir string) (StateDatabase, error) { return sqlstore.Open(dir) }, GetExisting: sqlstore.GetExisting, ListExisting: sqlstore.ListExisting}
+	return Store{Directory: testLoopStateRoot(), OpenDatabase: func(dir string) (StateDatabase, error) { return sqlstore.Open(dir) }, GetExisting: sqlstore.GetExisting, GetAllExisting: sqlstore.GetAllExisting}
 }
 func testLoopIdentity() Identity {
 	cwd, err := os.Getwd()

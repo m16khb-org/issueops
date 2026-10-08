@@ -1,6 +1,7 @@
 package channel
 
 import (
+	"context"
 	"errors"
 	"io/fs"
 	"time"
@@ -11,15 +12,17 @@ import (
 
 type Writer interface {
 	Write(channelcontract.Message) error
+	PruneBefore(time.Time) error
 }
 
 type Effects interface {
 	Open() (Writer, error)
 	NewID() string
 	Now() time.Time
-	Wait(time.Duration)
-	ListIDs() ([]string, error)
-	Get(string) (channelcontract.Message, bool, error)
+	Wait(context.Context, time.Duration) error
+	// MessagesAfter returns decodable stored messages in id order after the
+	// range start that channeldomain.RangeStart resolves for since.
+	MessagesAfter(ctx context.Context, since string) ([]channelcontract.Message, error)
 }
 
 type Service struct{ Effects Effects }
@@ -36,17 +39,21 @@ func (service Service) Send(req channelcontract.SendRequest) (channelcontract.Se
 		result.Error = err.Error()
 		return result, err
 	}
-	msg := channeldomain.SentMessage(req, service.Effects.NewID(), service.Effects.Now())
+	now := service.Effects.Now()
+	msg := channeldomain.SentMessage(req, service.Effects.NewID(), now)
 	if err := writer.Write(msg); err != nil {
 		result.Error = err.Error()
 		return result, err
 	}
+	// Retention is housekeeping after a durable write: a failed prune must not
+	// report the stored message as unsent, and the next send retries it.
+	_ = writer.PruneBefore(channeldomain.RetentionCutoff(now))
 	result.OK = true
 	result.Message = msg
 	return result, nil
 }
 
-func (service Service) Recv(req channelcontract.RecvRequest) (channelcontract.RecvResult, error) {
+func (service Service) Recv(ctx context.Context, req channelcontract.RecvRequest) (channelcontract.RecvResult, error) {
 	req, err := channeldomain.NormalizeRecv(req)
 	result := channelcontract.RecvResult{SchemaVersion: channelcontract.SchemaVersion, Channel: req.Channel}
 	if err != nil {
@@ -54,7 +61,7 @@ func (service Service) Recv(req channelcontract.RecvRequest) (channelcontract.Re
 		return result, err
 	}
 	if !req.Wait {
-		messages, err := service.read(req, nil)
+		messages, err := service.read(ctx, req)
 		if err != nil {
 			result.Error = err.Error()
 			return result, err
@@ -64,9 +71,8 @@ func (service Service) Recv(req channelcontract.RecvRequest) (channelcontract.Re
 	}
 	result.Waited = true
 	deadline := service.Effects.Now().Add(channeldomain.WaitTimeout(req.TimeoutSeconds))
-	observed := map[string]struct{}{}
 	for {
-		messages, err := service.read(req, observed)
+		messages, err := service.read(ctx, req)
 		if err != nil {
 			result.Error = err.Error()
 			return result, err
@@ -82,13 +88,16 @@ func (service Service) Recv(req channelcontract.RecvRequest) (channelcontract.Re
 		}
 		poll := channeldomain.PollDelay(deadline, service.Effects.Now())
 		if poll > 0 {
-			service.Effects.Wait(poll)
+			if err := service.Effects.Wait(ctx, poll); err != nil {
+				result.Error = err.Error()
+				return result, err
+			}
 		}
 	}
 }
 
-func (service Service) read(req channelcontract.RecvRequest, observed map[string]struct{}) ([]channelcontract.Message, error) {
-	ids, err := service.Effects.ListIDs()
+func (service Service) read(ctx context.Context, req channelcontract.RecvRequest) ([]channelcontract.Message, error) {
+	stored, err := service.Effects.MessagesAfter(ctx, req.SinceID)
 	if errors.Is(err, fs.ErrNotExist) {
 		return []channelcontract.Message{}, nil
 	}
@@ -96,17 +105,7 @@ func (service Service) read(req channelcontract.RecvRequest, observed map[string
 		return nil, err
 	}
 	messages := []channelcontract.Message{}
-	for _, id := range channeldomain.IDsAfter(ids, req.SinceID) {
-		if _, seen := observed[id]; seen {
-			continue
-		}
-		msg, ok, err := service.Effects.Get(id)
-		if err != nil || !ok {
-			continue
-		}
-		if observed != nil {
-			observed[id] = struct{}{}
-		}
+	for _, msg := range stored {
 		include, stop := channeldomain.SelectReceived(req, len(messages), msg)
 		if stop {
 			break

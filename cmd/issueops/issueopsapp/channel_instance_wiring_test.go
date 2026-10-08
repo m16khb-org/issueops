@@ -1,6 +1,7 @@
 package issueopsapp
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"sync"
@@ -34,12 +35,12 @@ func TestChannelCLIAndMCPKeepCapturedStores(t *testing.T) {
 		})
 	}
 	wg.Wait()
-	explicit, err := newChannelService(firstRoot).Recv(model.RecvRequest{Channel: "same"})
+	explicit, err := newChannelService(firstRoot).Recv(context.Background(), model.RecvRequest{Channel: "same"})
 	if err != nil || len(explicit.Messages) != 4 {
 		t.Fatalf("explicit root ignored: %+v %v", explicit, err)
 	}
-	for i, receive := range []func(model.RecvRequest) (model.RecvResult, error){firstCLI.Recv, secondCLI.Recv} {
-		result, err := receive(model.RecvRequest{Channel: "same"})
+	for i, receive := range []func(context.Context, model.RecvRequest) (model.RecvResult, error){firstCLI.Recv, secondCLI.Recv} {
+		result, err := receive(context.Background(), model.RecvRequest{Channel: "same"})
 		if err != nil || len(result.Messages) != 4 {
 			t.Fatalf("store=%d result=%+v err=%v", i, result, err)
 		}
@@ -49,7 +50,7 @@ func TestChannelCLIAndMCPKeepCapturedStores(t *testing.T) {
 			}
 		}
 	}
-	result, err := newChannelService(ambient).Recv(model.RecvRequest{Channel: "same"})
+	result, err := newChannelService(ambient).Recv(context.Background(), model.RecvRequest{Channel: "same"})
 	if err != nil || len(result.Messages) != 0 {
 		t.Fatalf("ambient state was touched: %+v %v", result, err)
 	}

@@ -81,17 +81,27 @@ func decodeIssueOpsRecord(id string, b []byte) (issueops.IssueOpsRecord, error) 
 	return record, nil
 }
 
-// ListIssueOpsIDs returns every cycle id stored under stateRoot in ascending
-// order.
-func ListIssueOpsIDs(stateRoot string) ([]string, error) {
-	ids, err := sqlstore.ListExisting(stateRoot, issueOpsBucket)
+// VisitIssueOpsExisting visits every stored cycle in id order from one
+// read-only scan without creating or repairing state. A row whose id or record
+// is invalid reaches visit with its error. A missing store has no rows.
+func VisitIssueOpsExisting(stateRoot string, visit func(id string, record issueops.IssueOpsRecord, err error)) error {
+	rows, err := sqlstore.GetAllExisting(stateRoot, issueOpsBucket)
 	if errors.Is(err, fs.ErrNotExist) {
-		return []string{}, nil
+		return nil
 	}
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return ids, nil
+	for _, row := range rows {
+		id, err := normalizeIssueOpsID(row.ID)
+		if err != nil {
+			visit(row.ID, issueops.IssueOpsRecord{OK: false}, err)
+			continue
+		}
+		record, err := decodeIssueOpsRecord(id, row.Data)
+		visit(id, record, err)
+	}
+	return nil
 }
 
 func ScanReadableIssueOps(stateRoot string) ([]issueops.IssueOpsRecord, error) {

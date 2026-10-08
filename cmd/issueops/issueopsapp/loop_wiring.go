@@ -15,7 +15,7 @@ import (
 func newLoopStore() adapter.Store {
 	return adapter.Store{Directory: filepath.Join(statestore.StateDir(), "loop"),
 		OpenDatabase: func(dir string) (adapter.StateDatabase, error) { return sqlstore.Open(dir) },
-		GetExisting:  sqlstore.GetExisting, ListExisting: sqlstore.ListExisting}
+		GetExisting:  sqlstore.GetExisting, GetAllExisting: sqlstore.GetAllExisting}
 }
 func newLoopIdentity() adapter.Identity {
 	cwd, err := os.Getwd()

@@ -66,7 +66,8 @@ func TestOrphanEffectsExcludeNewOwnersAndCompetingCleanup(t *testing.T) {
 	if err != nil || !result.Applied || !observed {
 		t.Fatalf("apply=%+v err=%v observed=%t", result, err, observed)
 	}
-	ids, err := adapter.ListIssueOpsIDs(root)
+	ids := []string{}
+	err = adapter.VisitIssueOpsExisting(root, func(id string, _ model.IssueOpsRecord, _ error) { ids = append(ids, id) })
 	if err != nil || len(ids) != 0 {
 		t.Fatalf("cleanup manufactured or admitted owner: %v %v", ids, err)
 	}

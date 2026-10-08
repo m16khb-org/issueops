@@ -1,18 +1,21 @@
 package channel
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"issueops/internal/adapter/outbound/sqlstore"
 	statestore "issueops/internal/adapter/outbound/state"
 	channelapp "issueops/internal/application/channel"
 	channelcontract "issueops/internal/contract/channel"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 )
 
 func storeForTest() Store {
-	return Store{Root: filepath.Join(statestore.StateDir(), "channel"), Clock: time.Now, Sleep: time.Sleep, GetExisting: sqlstore.GetExisting, ListExisting: sqlstore.ListExisting, OpenDatabase: func(dir string) (StateDatabase, error) { return sqlstore.Open(dir) }}
+	return Store{Root: filepath.Join(statestore.StateDir(), "channel"), Clock: time.Now, Sleep: func(ctx context.Context, d time.Duration) error { time.Sleep(d); return ctx.Err() }, WalkExistingAfter: sqlstore.WalkExistingAfter, OpenDatabase: func(dir string) (StateDatabase, error) { return sqlstore.Open(dir) }}
 }
 
 func TestSendRecvRoundTripAcrossChannelIsolation(t *testing.T) {
@@ -29,7 +32,7 @@ func TestSendRecvRoundTripAcrossChannelIsolation(t *testing.T) {
 	if _, err := service.Send(channelcontract.SendRequest{Channel: "other", From: "server", Body: "noise"}); err != nil {
 		t.Fatalf("send 3: %v", err)
 	}
-	recv, err := service.Recv(channelcontract.RecvRequest{Channel: "contract"})
+	recv, err := service.Recv(context.Background(), channelcontract.RecvRequest{Channel: "contract"})
 	if err != nil {
 		t.Fatalf("recv: %v", err)
 	}
@@ -58,7 +61,7 @@ func TestRecvSinceIDReturnsOnlyNewMessages(t *testing.T) {
 	if _, err := service.Send(channelcontract.SendRequest{Channel: "c", From: "a", Body: "2"}); err != nil {
 		t.Fatal(err)
 	}
-	recv, err := service.Recv(channelcontract.RecvRequest{Channel: "c", SinceID: first.Message.ID})
+	recv, err := service.Recv(context.Background(), channelcontract.RecvRequest{Channel: "c", SinceID: first.Message.ID})
 	if err != nil {
 		t.Fatalf("recv since: %v", err)
 	}
@@ -66,7 +69,7 @@ func TestRecvSinceIDReturnsOnlyNewMessages(t *testing.T) {
 		t.Fatalf("since filter wrong: %+v", recv.Messages)
 	}
 	// 사라진 sinceID는 "처음부터"로 해석한다(위치를 알 근거가 없음).
-	all, err := service.Recv(channelcontract.RecvRequest{Channel: "c", SinceID: "msg-does-not-exist"})
+	all, err := service.Recv(context.Background(), channelcontract.RecvRequest{Channel: "c", SinceID: "msg-does-not-exist"})
 	if err != nil {
 		t.Fatalf("recv missing-since: %v", err)
 	}
@@ -85,7 +88,7 @@ func TestRecvLimitBoundsResult(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	recv, err := service.Recv(channelcontract.RecvRequest{Channel: "c", Limit: 2})
+	recv, err := service.Recv(context.Background(), channelcontract.RecvRequest{Channel: "c", Limit: 2})
 	if err != nil {
 		t.Fatalf("recv limit: %v", err)
 	}
@@ -103,7 +106,7 @@ func TestRecvWaitReturnsImmediatelyWhenMessageExists(t *testing.T) {
 		t.Fatal(err)
 	}
 	started := time.Now()
-	recv, err := service.Recv(channelcontract.RecvRequest{Channel: "c", Wait: true, TimeoutSeconds: 5})
+	recv, err := service.Recv(context.Background(), channelcontract.RecvRequest{Channel: "c", Wait: true, TimeoutSeconds: 5})
 	if err != nil {
 		t.Fatalf("recv wait: %v", err)
 	}
@@ -122,8 +125,8 @@ func TestRecvWaitTimesOutEmpty(t *testing.T) {
 	service := channelapp.Service{Effects: &effects}
 	now := time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC)
 	effects.Clock = func() time.Time { return now }
-	effects.Sleep = func(duration time.Duration) { now = now.Add(duration) }
-	recv, err := service.Recv(channelcontract.RecvRequest{Channel: "c", Wait: true, TimeoutSeconds: 1})
+	effects.Sleep = func(_ context.Context, duration time.Duration) error { now = now.Add(duration); return nil }
+	recv, err := service.Recv(context.Background(), channelcontract.RecvRequest{Channel: "c", Wait: true, TimeoutSeconds: 1})
 	if err != nil {
 		t.Fatalf("recv wait timeout: %v", err)
 	}
@@ -139,13 +142,14 @@ func TestRecvWaitBlocksUntilConcurrentSend(t *testing.T) {
 	service := channelapp.Service{Effects: &effects}
 	waitStarted := make(chan struct{}, 1)
 	resume := make(chan struct{})
-	effects.Sleep = func(time.Duration) {
+	effects.Sleep = func(context.Context, time.Duration) error {
 		waitStarted <- struct{}{}
 		<-resume
+		return nil
 	}
 	arrived := make(chan channelcontract.RecvResult, 1)
 	go func() {
-		recv, err := service.Recv(channelcontract.RecvRequest{Channel: "contract", Wait: true, TimeoutSeconds: 15})
+		recv, err := service.Recv(context.Background(), channelcontract.RecvRequest{Channel: "contract", Wait: true, TimeoutSeconds: 15})
 		if err != nil {
 			t.Errorf("wait recv: %v", err)
 		}
@@ -170,37 +174,67 @@ func TestRecvWaitBlocksUntilConcurrentSend(t *testing.T) {
 	}
 }
 
-func TestRecvWaitDoesNotRereadObservedRecords(t *testing.T) {
-	effects := storeForTest()
-	service := channelapp.Service{Effects: &effects}
-
-	ids := []string{"msg-old"}
-	records := map[string]channelcontract.Message{
-		"msg-old": {OK: true, SchemaVersion: channelcontract.SchemaVersion, ID: "msg-old", Channel: "other", From: "a", Body: "old"},
-		"msg-new": {OK: true, SchemaVersion: channelcontract.SchemaVersion, ID: "msg-new", Channel: "target", From: "b", Body: "new"},
-	}
-	reads := map[string]int{}
-	effects.ListExisting = func(string, string) ([]string, error) {
-		return append([]string(nil), ids...), nil
-	}
-	effects.GetExisting = func(_, _, id string) ([]byte, bool, error) {
-		reads[id]++
-		data, err := json.Marshal(records[id])
-		return data, err == nil, err
-	}
-	now := time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC)
-	effects.Clock = func() time.Time { return now }
-	effects.Sleep = func(time.Duration) { ids = append(ids, "msg-new") }
-
-	recv, err := service.Recv(channelcontract.RecvRequest{Channel: "target", Wait: true, TimeoutSeconds: 1})
+func TestMessagesAfterUsesExactCursorAndRestartsOnMissingCursor(t *testing.T) {
+	effects := Store{Root: t.TempDir(), WalkExistingAfter: sqlstore.WalkExistingAfter, OpenDatabase: func(dir string) (StateDatabase, error) { return sqlstore.Open(dir) }}
+	db, err := effects.OpenDatabase(effects.Root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(recv.Messages) != 1 || recv.Messages[0].ID != "msg-new" {
-		t.Fatalf("recv=%+v", recv)
+	ids := []string{"msg-000000000000000a-01", "msg-000000000000000b-01", "msg-000000000000000c-01"}
+	for _, id := range ids {
+		data, _ := jsonMarshal(channelcontract.Message{OK: true, SchemaVersion: channelcontract.SchemaVersion, ID: id, Channel: "c"})
+		if err := db.Put(channelBucket, id, data); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if reads["msg-old"] != 1 || reads["msg-new"] != 1 {
-		t.Fatalf("record reads=%v, want one read per observed record", reads)
+	if err := db.Put(channelBucket, "msg-000000000000000d-01", []byte("{not json")); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		since string
+		want  []string
+	}{
+		{"", ids}, {ids[0], ids[1:]}, {ids[2], []string{}}, {"msg-000000000000000a-00", ids},
+	} {
+		messages, err := effects.MessagesAfter(context.Background(), tc.since)
+		got := []string{}
+		for _, message := range messages {
+			got = append(got, message.ID)
+		}
+		if err != nil || !slices.Equal(got, tc.want) {
+			t.Fatalf("since=%q got=%v want=%v err=%v", tc.since, got, tc.want, err)
+		}
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := effects.MessagesAfter(ctx, ""); !errors.Is(err, context.Canceled) {
+		t.Fatalf("cancelled read error = %v", err)
+	}
+}
+
+func TestSendPrunesMessagesPastRetention(t *testing.T) {
+	now := time.Date(2026, 10, 8, 12, 0, 0, 0, time.UTC)
+	effects := Store{Root: t.TempDir(), Clock: func() time.Time { return now }, WalkExistingAfter: sqlstore.WalkExistingAfter, OpenDatabase: func(dir string) (StateDatabase, error) { return sqlstore.Open(dir) }}
+	service := channelapp.Service{Effects: effects}
+	old := now.Add(-7*24*time.Hour - time.Nanosecond)
+	boundary := now.Add(-7 * 24 * time.Hour)
+	db, err := effects.OpenDatabase(effects.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, at := range []time.Time{old, boundary} {
+		id := newMessageID(at)
+		data, _ := jsonMarshal(channelcontract.Message{OK: true, SchemaVersion: channelcontract.SchemaVersion, ID: id, Channel: "c", Body: at.String()})
+		if err := db.Put(channelBucket, id, data); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := service.Send(channelcontract.SendRequest{Channel: "c", From: "a", Body: "now"}); err != nil {
+		t.Fatal(err)
+	}
+	recv, err := service.Recv(context.Background(), channelcontract.RecvRequest{Channel: "c"})
+	if err != nil || len(recv.Messages) != 2 || recv.Messages[0].Body != boundary.String() || recv.Messages[1].Body != "now" {
+		t.Fatalf("recv=%+v err=%v", recv, err)
 	}
 }
 
@@ -223,7 +257,7 @@ func TestSendValidation(t *testing.T) {
 			t.Fatalf("%s must fail: %+v %v", tc.name, result, err)
 		}
 	}
-	if _, err := service.Recv(channelcontract.RecvRequest{}); err == nil {
+	if _, err := service.Recv(context.Background(), channelcontract.RecvRequest{}); err == nil {
 		t.Fatal("recv without channel must fail")
 	}
 }
@@ -249,7 +283,7 @@ func TestMessageIDsSortChronologically(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	recv, err := service.Recv(channelcontract.RecvRequest{Channel: "sort"})
+	recv, err := service.Recv(context.Background(), channelcontract.RecvRequest{Channel: "sort"})
 	if err != nil {
 		t.Fatal(err)
 	}

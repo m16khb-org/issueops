@@ -147,6 +147,17 @@ order. `recv --wait` returns exit 0 with messages or exit 1 on timeout
 (`timed_out: true` in JSON). Channels are a trust boundary only between
 sessions sharing the same issueops state — no cross-machine semantics.
 
+Each `send` deletes messages older than seven days with one key-range delete
+after it stores the new message; a failed delete does not fail the send and
+the next send retries it. A `--since` cursor whose message was deleted is
+treated like any missing cursor and reads from the oldest kept message.
+`recv --wait` stops as soon as its context ends: Ctrl-C or SIGTERM for the
+CLI, and request cancellation for MCP. Over the shared HTTP service only
+clients on protocol 2026-07-28 or later propagate a disconnect, because
+go-sdk v1.8.0 binds the handler context to the HTTP request only for those
+revisions; an older-protocol client that disconnects leaves the server-side
+wait running until `timeout_seconds` (default 300).
+
 IssueOps integration is opt-in through file presence. A linked cycle judges
 its own `.issueops/issues/<n>/gates.md` and anonymous ledgers; other numbered
 issue ledgers are skipped with one warning. Unmet gates add `gates_incomplete:<file>` and

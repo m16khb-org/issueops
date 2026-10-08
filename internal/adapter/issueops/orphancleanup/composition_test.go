@@ -17,7 +17,7 @@ type Dependencies struct {
 
 func cleaner(deps Dependencies) app.OrphanCleaner {
 	environment := adapter.OrphanEnvironment{StateRoot: issueOpsStateRootForTest()}
-	collector := healthadapter.Collector{Git: environment, IssueOps: healthadapter.IssueOpsReader{StateRoot: environment.StateRoot, ListIDs: adapter.ListIssueOpsIDs, ListLeaseHolders: adapter.ListLeaseHolderIndexes, Read: adapter.ReadIssueOpsExisting}, InspectNativeProcess: adapter.InspectNativeProcessReceipt}
+	collector := healthadapter.Collector{Git: environment, IssueOps: healthadapter.IssueOpsReader{StateRoot: environment.StateRoot, Scan: adapter.VisitIssueOpsExisting, ListLeaseHolders: adapter.ListLeaseHolderIndexes}, InspectNativeProcess: adapter.InspectNativeProcessReceipt}
 	environment.LocalInventory = func(ctx context.Context, repo string) (health.Snapshot, error) {
 		return collector.CollectLocal(ctx, repo), nil
 	}

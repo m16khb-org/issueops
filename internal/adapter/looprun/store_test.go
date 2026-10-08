@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"issueops/internal/adapter/outbound/sqlstore"
+	"issueops/internal/port"
 )
 
 func TestReadLoopRefusesNonCurrentSchema(t *testing.T) {
@@ -65,5 +66,44 @@ func TestRepoGateSummaryDoesNotRepairExistingLoopStore(t *testing.T) {
 		if got := info.Mode().Perm(); got != want {
 			t.Fatalf("loop diagnostic repaired %s mode to %o, want unchanged %o", path, got, want)
 		}
+	}
+}
+
+func TestReadAllExistingDecodesEveryLoopInOneScan(t *testing.T) {
+	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
+	good := startLoopForTest(t, "scan-good", 2)
+	db, err := sqlstore.Open(testLoopStateRoot())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Put(loopBucket, "loop-broken", []byte("{not json")); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Put(loopBucket, "not-a-loop", []byte("{}")); err != nil {
+		t.Fatal(err)
+	}
+	scans := 0
+	store := testLoopStore()
+	store.GetAllExisting = func(dir, bucket string) ([]port.RecordRow, error) {
+		scans++
+		return sqlstore.GetAllExisting(dir, bucket)
+	}
+	observations, err := store.ReadAllExisting()
+	if err != nil || scans != 1 || len(observations) != 3 {
+		t.Fatalf("observations=%+v scans=%d err=%v", observations, scans, err)
+	}
+	byID := map[string]error{}
+	for _, observation := range observations {
+		byID[observation.ID] = observation.Error
+		if observation.ID == good.ID && (!observation.Loop.OK || observation.Loop.ID != good.ID) {
+			t.Fatalf("good loop = %+v", observation.Loop)
+		}
+	}
+	if byID[good.ID] != nil || byID["loop-broken"] == nil || byID["not-a-loop"] == nil {
+		t.Fatalf("per-row errors = %v", byID)
+	}
+	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
+	if observations, err := testLoopStore().ReadAllExisting(); err != nil || len(observations) != 0 {
+		t.Fatalf("missing store observations=%v err=%v", observations, err)
 	}
 }

@@ -608,7 +608,15 @@ func GetAllExisting(dir, bucket string) ([]port.RecordRow, error) {
 
 // WalkExisting visits ordered rows without creating state or retaining the bucket.
 // Each callback completes before the next row is read.
-func WalkExisting(ctx context.Context, dir, bucket string, visit func(port.RecordRow) error) (err error) {
+func WalkExisting(ctx context.Context, dir, bucket string, visit func(port.RecordRow) error) error {
+	return WalkExistingAfter(ctx, dir, bucket, "", func(bool) string { return "" }, visit)
+}
+
+// WalkExistingAfter visits ordered rows whose id sorts after start(cursorExists)
+// on one read-only connection. cursorExists reports whether bucket stores a row
+// with id cursor; an empty cursor is not looked up. The caller owns the rule
+// that maps the cursor to the range start.
+func WalkExistingAfter(ctx context.Context, dir, bucket, cursor string, start func(cursorExists bool) string, visit func(port.RecordRow) error) (err error) {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -617,7 +625,17 @@ func WalkExisting(ctx context.Context, dir, bucket string, visit func(port.Recor
 		return err
 	}
 	defer func() { err = errors.Join(err, data.Close()) }()
-	rows, err := data.QueryContext(ctx, `SELECT id, data FROM records WHERE bucket = ? ORDER BY id`, bucket)
+	cursorExists := false
+	if cursor != "" {
+		var present int
+		switch err := data.QueryRowContext(ctx, `SELECT 1 FROM records WHERE bucket = ? AND id = ?`, bucket, cursor).Scan(&present); {
+		case err == nil:
+			cursorExists = true
+		case !errors.Is(err, sql.ErrNoRows):
+			return err
+		}
+	}
+	rows, err := data.QueryContext(ctx, `SELECT id, data FROM records WHERE bucket = ? AND id > ? ORDER BY id`, bucket, start(cursorExists))
 	if err != nil {
 		return err
 	}
@@ -817,6 +835,23 @@ func (d *DB) Delete(bucket, id string) error {
 	defer release()
 	return d.unattributedWrite(func() error {
 		_, err := d.data.Exec(`DELETE FROM records WHERE bucket = ? AND id = ?`, bucket, id)
+		return err
+	})
+}
+
+// DeleteBefore removes every bucket row whose id sorts before beforeID. Callers
+// with time-ordered ids use it as a single primary-key range delete.
+func (d *DB) DeleteBefore(ctx context.Context, bucket, beforeID string) error {
+	if bucket == "" || beforeID == "" {
+		return fmt.Errorf("sqlstore delete-before bucket and id are required")
+	}
+	release, err := d.acquireRecordWriter(ctx)
+	if err != nil {
+		return err
+	}
+	defer release()
+	return d.unattributedWrite(func() error {
+		_, err := d.data.ExecContext(ctx, `DELETE FROM records WHERE bucket = ? AND id < ?`, bucket, beforeID)
 		return err
 	})
 }

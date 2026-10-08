@@ -2,6 +2,7 @@
 package channel
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -10,21 +11,23 @@ import (
 
 	channelapp "issueops/internal/application/channel"
 	channelcontract "issueops/internal/contract/channel"
+	channeldomain "issueops/internal/domain/channel"
+	"issueops/internal/port"
 )
 
 const channelBucket = "channel_v1"
 
 type StateDatabase interface {
 	Put(bucket, id string, data []byte) error
+	DeleteBefore(ctx context.Context, bucket, beforeID string) error
 }
 
 type Store struct {
-	Root         string
-	OpenDatabase func(string) (StateDatabase, error)
-	GetExisting  func(string, string, string) ([]byte, bool, error)
-	ListExisting func(string, string) ([]string, error)
-	Clock        func() time.Time
-	Sleep        func(time.Duration)
+	Root              string
+	OpenDatabase      func(string) (StateDatabase, error)
+	WalkExistingAfter func(ctx context.Context, dir, bucket, cursor string, start func(bool) string, visit func(port.RecordRow) error) error
+	Clock             func() time.Time
+	Sleep             func(context.Context, time.Duration) error
 }
 
 func (store Store) Open() (channelapp.Writer, error) {
@@ -45,20 +48,35 @@ func (writer messageWriter) Write(message channelcontract.Message) error {
 	return writer.db.Put(channelBucket, message.ID, data)
 }
 
-func (store Store) NewID() string               { return newMessageID(store.Clock()) }
-func (store Store) Now() time.Time              { return store.Clock() }
-func (store Store) Wait(duration time.Duration) { store.Sleep(duration) }
-func (store Store) ListIDs() ([]string, error)  { return store.ListExisting(store.Root, channelBucket) }
-func (store Store) Get(id string) (channelcontract.Message, bool, error) {
-	data, ok, err := store.GetExisting(store.Root, channelBucket, id)
-	if err != nil || !ok {
-		return channelcontract.Message{}, false, err
+// PruneBefore deletes messages created before cutoff. Message IDs start with
+// the creation time, so the bare time prefix bounds every older ID.
+func (writer messageWriter) PruneBefore(cutoff time.Time) error {
+	return writer.db.DeleteBefore(context.Background(), channelBucket, messageIDPrefix(cutoff))
+}
+
+func (store Store) NewID() string  { return newMessageID(store.Clock()) }
+func (store Store) Now() time.Time { return store.Clock() }
+func (store Store) Wait(ctx context.Context, duration time.Duration) error {
+	return store.Sleep(ctx, duration)
+}
+
+// MessagesAfter reads every message after the domain-resolved cursor on one
+// read-only connection. Rows that do not decode are skipped and read again on
+// the next call.
+func (store Store) MessagesAfter(ctx context.Context, since string) ([]channelcontract.Message, error) {
+	messages := []channelcontract.Message{}
+	start := func(sinceExists bool) string { return channeldomain.RangeStart(since, sinceExists) }
+	err := store.WalkExistingAfter(ctx, store.Root, channelBucket, since, start, func(row port.RecordRow) error {
+		var message channelcontract.Message
+		if json.Unmarshal(row.Data, &message) == nil {
+			messages = append(messages, message)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
-	var message channelcontract.Message
-	if err := json.Unmarshal(data, &message); err != nil {
-		return channelcontract.Message{}, false, err
-	}
-	return message, true, nil
+	return messages, nil
 }
 
 // Message IDs sort by creation time and use a nonce to distinguish same-nanosecond writes.
@@ -70,5 +88,9 @@ func newMessageID(timestamp time.Time) string {
 			nonce[i] = byte(now >> (i * 8))
 		}
 	}
-	return fmt.Sprintf("msg-%016x-%s", now, hex.EncodeToString(nonce[:]))
+	return messageIDPrefix(timestamp) + "-" + hex.EncodeToString(nonce[:])
+}
+
+func messageIDPrefix(timestamp time.Time) string {
+	return fmt.Sprintf("msg-%016x", timestamp.UTC().UnixNano())
 }

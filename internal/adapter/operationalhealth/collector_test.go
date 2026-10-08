@@ -312,7 +312,7 @@ func (git *overlapGit) Run(_ context.Context, _ string, _ ...string) ([]byte, er
 
 func emptyIssueOpsReader(t *testing.T) IssueOpsReader {
 	t.Helper()
-	return IssueOpsReader{StateRoot: t.TempDir(), ListIDs: func(string) ([]string, error) { return nil, nil }, ListLeaseHolders: func(string) ([]issueopscontract.LeaseHolderIndex, error) { return nil, nil }}
+	return IssueOpsReader{StateRoot: t.TempDir(), Scan: func(string, func(string, issueopscontract.IssueOpsRecord, error)) error { return nil }, ListLeaseHolders: func(string) ([]issueopscontract.LeaseHolderIndex, error) { return nil, nil }}
 }
 
 // collectOrca의 자원 identity 필터와 resolve 경계를 잠근다. 자원 rows는
@@ -425,4 +425,28 @@ func TestCollectOrcaFiltersResourceIdentityAndReportsResolveProblems(t *testing.
 			t.Fatalf("inbox presence projection wrong: %#v", snapshot.Messages)
 		}
 	})
+}
+
+func TestCollectIssueOpsScansRecordsAndReportsUnreadableRows(t *testing.T) {
+	scans := 0
+	reader := emptyIssueOpsReader(t)
+	reader.Scan = func(string, func(string, issueopscontract.IssueOpsRecord, error)) error { return errors.New("locked") }
+	snapshot := corehealth.Snapshot{}
+	if records, _ := (Collector{IssueOps: reader}).collectIssueOps(&snapshot); len(records) != 0 || !hasProblemCode(snapshot.InventoryProblems, "issueops_list_failed") {
+		t.Fatalf("scan failure records=%v problems=%#v", records, snapshot.InventoryProblems)
+	}
+	reader.Scan = func(_ string, visit func(string, issueopscontract.IssueOpsRecord, error)) error {
+		scans++
+		visit("io-a", issueopscontract.IssueOpsRecord{OK: true, ID: "io-a", Repo: "/repo", Branch: "a"}, nil)
+		visit("io-b", issueopscontract.IssueOpsRecord{}, errors.New("invalid state"))
+		return nil
+	}
+	snapshot = corehealth.Snapshot{}
+	records, _ := (Collector{IssueOps: reader}).collectIssueOps(&snapshot)
+	if scans != 1 || len(records) != 1 || records[0].ID != "io-a" || len(snapshot.Cycles) != 1 {
+		t.Fatalf("scans=%d records=%v cycles=%v", scans, records, snapshot.Cycles)
+	}
+	if len(snapshot.InventoryProblems) != 1 || snapshot.InventoryProblems[0].Code != "issueops_read_failed" || snapshot.InventoryProblems[0].Detail != "could not read IssueOps record io-b" {
+		t.Fatalf("problems=%#v", snapshot.InventoryProblems)
+	}
 }

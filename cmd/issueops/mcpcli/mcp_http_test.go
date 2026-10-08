@@ -2,16 +2,22 @@ package mcpcli
 
 import (
 	"context"
+	"errors"
 	"io"
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"issueops/internal/adapter/channel"
+	issueopsadapter "issueops/internal/adapter/issueops"
+	"issueops/internal/adapter/outbound/sqlstore"
+	channelapp "issueops/internal/application/channel"
 	issueopscontract "issueops/internal/contract/issueops"
 	"issueops/internal/port"
 )
@@ -317,6 +323,46 @@ func TestHTTPDisconnectCancellationFollowsNegotiatedRevision(t *testing.T) {
 				t.Fatal("handler did not finish")
 			}
 		})
+	}
+}
+
+func TestChannelRecvWaitStopsWhenHTTPRequestIsCancelled(t *testing.T) {
+	deps := testTransportServices()
+	entered, stopped := make(chan struct{}), make(chan error, 1)
+	var enter sync.Once
+	deps.Channel = channelapp.Service{Effects: channel.Store{
+		Root: filepath.Join(t.TempDir(), "channel"), Clock: time.Now,
+		OpenDatabase:      func(dir string) (channel.StateDatabase, error) { return sqlstore.Open(dir) },
+		WalkExistingAfter: sqlstore.WalkExistingAfter,
+		Sleep: func(ctx context.Context, duration time.Duration) error {
+			enter.Do(func() { close(entered) })
+			err := issueopsadapter.SleepWithContext(ctx, duration)
+			if err != nil {
+				stopped <- err
+			}
+			return err
+		},
+	}}
+	server := startHTTPTestServer(t, deps, nil)
+	bound, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+	client, disconnect := context.WithCancel(bound)
+	go func() {
+		_, _, _, _ = server.callTool(client, revisionNew, "channel_recv", map[string]any{"channel": "c", "wait": true, "timeout_seconds": 300}, nil)
+	}()
+	select {
+	case <-entered:
+	case <-bound.Done():
+		t.Fatal("recv did not start waiting")
+	}
+	disconnect()
+	select {
+	case err := <-stopped:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("wait error = %v", err)
+		}
+	case <-bound.Done():
+		t.Fatal("recv kept waiting after the HTTP request was cancelled")
 	}
 }
 
