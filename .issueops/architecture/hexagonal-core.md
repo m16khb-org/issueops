@@ -10,12 +10,12 @@
 
 | 선택지 | 장점 | 단점 | 판단 |
 |--------|------|------|------|
-| Codex plugin/skill 중심 | Codex 경험에 깊게 통합 가능, 설치 UX가 좋음 | Claude Code/Omo와 공유가 어렵고, plugin API 변화에 core가 종속됨 | 단독 core로 부적절 |
-| Claude Code command/hook 중심 | Claude 사용성이 좋고 MCP와 맞음 | Codex/Omo에서 같은 동작을 재사용하기 어렵고, hook에 정책이 흩어짐 | 단독 core로 부적절 |
+| Codex plugin/skill 중심 | Codex 경험에 깊게 통합 가능, 설치 UX가 좋음 | Claude Code/Omo/omp와 공유가 어렵고, plugin API 변화에 core가 종속됨 | 단독 core로 부적절 |
+| Claude Code command/hook 중심 | Claude 사용성이 좋고 MCP와 맞음 | Codex/Omo/omp에서 같은 동작을 재사용하기 어렵고, hook에 정책이 흩어짐 | 단독 core로 부적절 |
 | 외부 CLI/MCP/worker 중심 | 세 host에서 같은 binary와 schema를 호출, 테스트 가능, 상태 관리 일관 | 초기 설치/IPC/보안 설계 필요 | **채택** |
 | Hybrid | 외부 core + host별 얇은 래퍼 | adapter 관리 비용이 있음 | **최종 구조** |
 
-결론: **Go로 작성한 외부 하네스 코어를 만들고, Codex·Claude Code·Omo 설정은 core를 호출하는 얇은 adapter로 둔다.**
+결론: **Go로 작성한 외부 하네스 코어를 만들고, Codex·Claude Code·Omo·omp 설정은 core를 호출하는 얇은 adapter로 둔다.**
 
 ## Target architecture
 
@@ -24,6 +24,7 @@ flowchart LR
     Codex["Codex<br/>AGENTS.md · native skills · MCP config"] --> MCP["issueops mcp --http<br/>shared Streamable HTTP service"]
     Claude["Claude Code<br/>CLAUDE.md · skills · hooks · MCP config"] --> MCP
     Omo["Omo native<br/>AGENTS.md · skills · MCP · extension"] --> MCP
+    Omp["omp<br/>AGENTS.md · skills · MCP · extension"] --> MCP
     Codex -. stdio option .-> Stdio["issueops mcp<br/>in-process stdio server"]
     Human["Human shell"] --> CLI["CLI: issueops"]
     Hook["SessionStart context hook"] --> CLI
@@ -52,6 +53,7 @@ Mermaid는 보조 자료다. 규칙·경계·검증 명령은 아래 텍스트�
 - `internal/adapter/codex`: Codex 구현체. user skill symlink, `~/.codex/config.toml` MCP 등록, `~/.codex/hooks.json` lifecycle hook을 기본 갱신한다.
 - `internal/adapter/claude`: Claude Code 구현체. user skill symlink, user-scope MCP 등록 경로, `~/.claude/settings.json`의 `SessionStart`·`SubagentStart` context hook만 기본 갱신한다.
 - `internal/adapter/omo`: Omo native 구현체. user skill/MCP/extension 설정을 갱신하고 대상 repo에는 명시적 opt-in 없이 파일을 쓰지 않는다.
+- `internal/adapter/omp`: omp 구현체. `~/.omp/agent` 아래 user skill/MCP/extension 설정을 갱신하고 대상 repo에는 명시적 opt-in 없이 파일을 쓰지 않는다.
 - `cmd/issueops/issueopsapp`: concrete adapter를 조립하는 유일한 composition root다.
 - repo-local `.claude/skills`, `.claude/settings.json`, `.mcp.json`은 적용 대상 repo에 커밋될 수 있으므로 `--project-local` 같은 명시적 opt-in에서만 생성한다.
 
@@ -76,7 +78,7 @@ Mermaid는 보조 자료다. 규칙·경계·검증 명령은 아래 텍스트�
 | `internal/adapter/toolconformance` | fixture I/O와 behavioral replay 실행 | domain 판정 복제 금지 |
 | `internal/domain/failurecause` | typed causal evidence의 cause 우선순위·reason 정규화 판정 | stderr 문자열만으로 model blame 금지 |
 | `internal/domain/operationalhealth` | normalized snapshot과 주입된 clock/preserve set을 판정하는 pure classifier | filesystem/process/SQLite I/O, cleanup mutation, host별 정책 금지 |
-| `internal/adapter/hostprobe` | Codex/Claude/Omo의 격리된 live probe 실행과 증거 정규화 | 사용자 host 설정·credential DB 수정 금지 |
+| `internal/adapter/hostprobe` | Codex/Claude/Omo/omp의 격리된 live probe 실행과 증거 정규화 | 사용자 host 설정·credential DB 수정 금지 |
 | `internal/adapter/orca` | 설치된 Orca CLI의 bounded argv/timeout/envelope projection | IssueOps 상태·복구 정책 복제, generic driver registry, 설치 대행 금지 |
 | `internal/adapter/operationalhealth` | Git, 전체 IssueOps record/binding, 선택적 Orca inventory를 read-only snapshot으로 수집 | health 판정 복제, state 생성, cleanup mutation 금지 |
 | `internal/adapter/codex` | Codex user skill symlink와 user MCP config 설치 | 대상 repo 파일 쓰기 금지 |
@@ -89,7 +91,7 @@ Mermaid는 보조 자료다. 규칙·경계·검증 명령은 아래 텍스트�
 | `internal/contract/channel` | 세션 간 메시지 채널 DTO(schema v1) | 판정 로직과 I/O 금지 |
 | `internal/adapter/channel` | 채널 메시지 append/읽기/대기 원시(issueops state 위) | 크로스 케퍼빌리티 adapter import 금지, 인증 경계 아님 |
 | `configs/codex` | Codex plugin/skill 템플릿 | core 로직 금지 |
-| `skills` | Codex/Claude/Omo 공용 skill source of truth | host별 복사본을 만들어 drift 유발 금지 |
+| `skills` | Codex/Claude/Omo/omp 공용 skill source of truth | host별 복사본을 만들어 drift 유발 금지 |
 | `.mcp.json` | 이 하네스 repo의 dogfood/project-local MCP server 설정 | 기본 설치는 user-scope MCP를 사용하므로 대상 repo에 복사 금지 |
 | `scripts/install-native.sh` | native skill/MCP 설치 및 갱신 | 사용자 홈 skill symlink만 기본 생성. repo-local 파일은 `--project-local` 명시 때만 생성 |
 

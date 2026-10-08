@@ -1,6 +1,6 @@
 # issueops-v1-owner-execution-v1
 
-대상: Codex, Claude Code 또는 Omo native owner session
+대상: Codex, Claude Code, Omo native 또는 omp owner session
 용도: IssueOps schema v1의 `direct|orca` execution owner에게 한 lifecycle/worktree 구현을 인계  
 상태: 설계 검토용 v1  
 작성일: 2026-07-22
@@ -26,7 +26,7 @@ adapter는 아래 placeholder를 모두 결정적 문자열로 치환한 뒤 pro
 | `{ISSUE_BODY_SHA256}` | sealed issue body digest |
 | `{PACKET_PATH}` | worktree 안의 bounded context snapshot path |
 | `{PACKET_SHA256}` | packet digest |
-| `{OWNER_HOST}` | `codex`, `claude` 또는 `omo` |
+| `{OWNER_HOST}` | `codex`, `claude`, `omo` 또는 `omp` |
 | `{OWNER_MODEL}` | coordinator가 명시한 실제 launch model; direct이면 현재 model 설명 |
 | `{OWNER_EFFORT}` | host-supported effort 또는 빈 문자열 |
 | `{REVIEWER_MODEL}` | 구현 diff design-review 리뷰 모델(`diff-review` 역할을 agent model 설정으로 해석한 값) |

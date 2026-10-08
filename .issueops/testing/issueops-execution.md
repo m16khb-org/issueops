@@ -44,7 +44,7 @@ Execution tests must cover:
   root identity immediately before Preflight, CreateWorkspace, and Send. Tests
   must replace state or the root namespace after the preceding call and prove
   that the next call is not made. They must also cover Codex,
-  Claude, and native Omo argv; multiline/quoted shell input; missing/denied
+  Claude, native Omo, and omp argv; multiline/quoted shell input; missing/denied
   sockets; malformed and duplicate responses; wrong cwd/target; runtime
   endpoint replacement; create and send response loss; same-generation
   duplicate attempts across changed targets or payloads; actual process cwd

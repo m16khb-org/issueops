@@ -1,6 +1,6 @@
 ---
 name: hosts.md
-description: Codex, Claude, and Omo native skills, MCP registration, and lifecycle hook operations.
+description: Codex, Claude, Omo native, and omp skills, MCP registration, and lifecycle hook operations.
 ---
 
 # Host Operations
@@ -42,7 +42,7 @@ Codex lifecycle hooks live in `~/.codex/hooks.json`. Default installation owns `
 Hook behavior:
 
 - `SessionStart` reads the static project-doc catalog and emits host-compatible context for every source, including the `compact` re-run Codex performs after compaction (verified against codex-cli 0.150.1: `post-compact.command.output` carries no `hookSpecificOutput`, so `PostCompact` is not registered). It does not read IssueOps, emit lifecycle reminders, inspect runtime state, write telemetry, maintain SQLite, recover workers, or mutate state.
-- `hook post-compact` stays available for Omo (`session_compact` has no SessionStart re-run there) and for diagnosis; installer upgrade removes any managed `PostCompact` group while preserving non-harness groups.
+- `hook post-compact` stays available for Omo and omp (`session_compact` has no SessionStart re-run there) and for diagnosis; installer upgrade removes any managed `PostCompact` group while preserving non-harness groups.
 - `SubagentStart` gives each starting subagent the same model-facing catalog, except agents whose `agent_type` is `explore`, `explorer`, or `fork` (case-insensitive), and emits no `systemMessage` (codex-cli 0.161.0 accepts `additionalContext` there). There is no other hook subcommand. `ISSUEOPS_DISABLE_HOOKS=1` turns the context hooks into a silent no-op.
 
 Hook smoke:
@@ -88,7 +88,7 @@ Claude project-local hooks can be committed, so do not create `.claude/settings.
 
 `configs/upstream.json` declares optional third-party plugins and Git skills
 that `issueops install` (and therefore `update`) provisions for Claude Code
-when missing. Codex and Omo receive only the first-party `skills/` links from
+when missing. Codex, Omo, and omp receive only the first-party `skills/` links from
 this installer path. Existing upstream entries are skipped, never reinstalled
 or overwritten. The object below shows the schema; the complete catalog
 currently contains four plugins and one skill.
@@ -168,6 +168,41 @@ test -f ~/.omo/extensions/issueops.js
 
 Agent-harness does not install or gate the external Omo runtime itself; install
 Omo through its official distribution path.
+
+## omp
+
+omp (oh-my-pi) keeps user configuration under `~/.omp/agent`:
+
+- User skills: `~/.omp/agent/skills/<skill>/SKILL.md` (symlinks)
+- User MCP: `~/.omp/agent/mcp.json`, entry `mcpServers.issueops` (mode `0600`;
+  HTTP with bearer and `X-Issueops-Mcp-Catalog-Sha256` header, or stdio with
+  `ISSUEOPS_MCP_CATALOG_SHA256` env, because omp caches MCP tool lists by
+  config hash like Omo)
+- User lifecycle extension: `~/.omp/agent/extensions/issueops.js`
+- Project MCP: `.omp/mcp.json` (stdio `issueops_project`, removed under HTTP
+  transport) only with explicit `--project-local`; no project skill links.
+
+Tracked templates are `configs/omp/mcp.json` and `configs/omp/issueops.js`.
+The managed extension maps omp `session_start` and `session_switch` to
+`issueops hook session-start --json` and `session_compact` to
+`issueops hook post-compact --json`. None is accepted-only: omp emits
+`session_compact` only after a compaction and its payload has no `accepted`
+field. On `session_start` and `session_switch` the extension exports
+`ISSUEOPS_OMP_SESSION_ID` from the main session (`ctx.agent.kind === "main"`);
+subagents never write it, so their shells carry the parent session id.
+`execution whoami` accepts that id with a live `omp` or `bun` ancestor receipt
+for `host=omp` only. Install/update strict readback seals both the MCP file
+and extension bytes before activation commits.
+
+Checks:
+
+```bash
+test -f ~/.omp/agent/skills/atomic-commit-push/SKILL.md
+test -f ~/.omp/agent/mcp.json
+test -f ~/.omp/agent/extensions/issueops.js
+```
+
+Agent-harness does not install or gate the omp runtime itself.
 
 Omo tool-conformance live verification is an explicit, potentially billable
 operation. It requires both the live opt-in and an explicit Omo model; the

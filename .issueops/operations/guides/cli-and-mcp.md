@@ -19,7 +19,7 @@ issueops verify-work --json -- git status --short
 issueops quality inspect --json
 ```
 
-`inspect --json`의 `integration.hosts`는 Codex·Claude·Omo마다 installed/linked/configured와
+`inspect --json`의 `integration.hosts`는 Codex·Claude·Omo·omp마다 installed/linked/configured와
 discovered/connected/protocol 여섯 관측을 verified/failed/unknown/not_checked로 보고한다.
 기본 inspect는 파일과 설정만 읽으므로 뒤 세 관측은 `not_checked/host_receipt_required`다.
 `inspect --host-receipts FILE`(MCP `harness_inspect`의 `host_receipts`)은 실제 host 실행 artifact를
@@ -138,7 +138,7 @@ issueops channel recv --channel NAME [--since MSG_ID] [--wait] [--timeout-second
 ```
 
 `channel` is a durable shared mailbox over issueops state: Codex, Claude Code,
-and Omo sessions sharing the same state exchange messages through it. In the
+Omo, and omp sessions sharing the same state exchange messages through it. In the
 front/server coordination pattern, the server session `send`s the API
 contract, the front session `recv --wait` blocks for it, and both sides keep
 a `--since <msg-id>` cursor from the last seen message to continue the dialog.
@@ -162,7 +162,7 @@ issueops mcp cleanup --json
 issueops mcp cleanup --apply --json
 ```
 
-기본 HTTP 설치에서 세 host는 `issueops mcp --http`(서비스 제어는 `issueops mcp service start|stop|status --json`)에
+기본 HTTP 설치에서 네 host는 `issueops mcp --http`(서비스 제어는 `issueops mcp service start|stop|status --json`)에
 연결하고, HTTP로 workspace 도구를 부르기 전에 native 세션에서 `issueops mcp authorize`를 실행해
 `authority_file`을 받는다. stdio `issueops mcp`는 host 세션 안에서 in-process로 동작한다.
 

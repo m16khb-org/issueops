@@ -46,7 +46,7 @@
 
 - 자기 검증의 state roundtrip은 `stateroundtrip.Validator`에 조회·record 저장·snapshot 저장·DB 열기를 명시적으로 받으며, step budget도 snapshot writer를 직접 받는다. root는 이 인스턴스와 `qagate.Validator`의 문서·스킬 reader를 검증 실행에 연결한다. QA·Mermaid·redaction 검사는 같은 문서 의존성을 사용하고, 전역 state·문서·DB 초기화와 해당 중계 facade는 제거했다. dry-run 무변경 검사는 부모 프로세스의 기본 state가 아니라 해당 probe의 임시 state를 다시 읽는다. 임시 저장소에 실제로 생긴 쓰기는 거부하고, 다른 저장소의 같은 key는 검사 결과에 영향을 주지 않는다. health의 경로 정리는 외부 초기화 없이 기술 adapter 안에서 처리하며, coverage 실행기도 교체 가능한 전역 변수 대신 명시적 함수 인자로 전달한다.
 
-- native 설치 검증은 root가 구성한 `nativeintegration.Validator`를 사용한다. 스킬 목록·호스트별 선택·stable root·Codex hook·Omo extension·hook 활성화 검증 함수를 인스턴스에 보관하며, 전역 setter와 중계 검증 함수는 제거했다. 서로 다른 저장소의 검증기를 준비해도 앞선 검증기의 경로와 설정 비교 기준을 유지한다. 기존 파일 누락·canonical 설정·타사 hook 허용·legacy managed hook 거부·중복 MCP 경고 검사는 그대로 수행한다.
+- native 설치 검증은 root가 구성한 `nativeintegration.Validator`를 사용한다. 스킬 목록·호스트별 선택·stable root·Codex hook·Omo/omp extension·hook 활성화 검증 함수를 인스턴스에 보관하며, 전역 setter와 중계 검증 함수는 제거했다. 서로 다른 저장소의 검증기를 준비해도 앞선 검증기의 경로와 설정 비교 기준을 유지한다. 기존 파일 누락·canonical 설정·타사 hook 허용·legacy managed hook 거부·중복 MCP 경고 검사는 그대로 수행한다.
 
 - 웹 조회의 URL·IP 허용 규칙과 벤치마크의 live 사전 조건·fixture 수락·오판 우선순위·채점은 `domain/webfetch`가 소유한다. 주소 판정은 네트워크 실행 기능이 없는 `net/netip`을 사용하며 IPv4-mapped 주소와 zone 주소의 기존 처리를 유지한다. `application/webfetch.URLValidator`는 DNS 조회 후 주소 판정을 적용하고, `Benchmark`는 fixture 재생·live 조회·비교 프로그램 호출과 부분 실패 집계를 조율한다. outbound에는 HTTP·DNS·fixture 서버·비교 프로그램 실행만 둔다. root가 조회 application과 벤치마크를 CLI·MCP·자기 검증에 명시적으로 연결하며, 기존 전역 웹 조회 setter와 outbound 조립 facade를 제거했다. CLI·MCP 직접 호출·SDK는 각각 준비한 HTTP client를 유지한다.
 

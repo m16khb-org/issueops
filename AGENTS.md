@@ -66,7 +66,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ---
 
-`issueops`는 Codex, Claude Code, Omo native 세 호스트에서 같은 방식으로 사용할 수 있는 개인 에이전트 하네스 프로젝트다.
+`issueops`는 Codex, Claude Code, Omo native, omp 네 호스트에서 같은 방식으로 사용할 수 있는 개인 에이전트 하네스 프로젝트다.
 이 문서는 에이전트가 이 저장소에서 작업할 때 먼저 읽어야 하는 루트 규칙이다.
 
 <!-- project rules -->
@@ -85,8 +85,8 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 | 항목 | 결정 | 이유 |
 |------|------|------|
-| 하네스 방식 | **외부 Go 하네스 코어 + 얇은 호스트 어댑터** | 특정 host 전용 구현은 다른 host와 공유하기 어렵다. 외부 CLI/MCP/worker 코어를 두면 Codex, Claude Code, Omo에서 같은 동작을 재사용할 수 있다. |
-| Plugin의 역할 | 핵심 로직이 아니라 **설치·문서·명령 호출 래퍼** | Codex/Claude/Omo별 확장점 차이를 어댑터에 격리한다. |
+| 하네스 방식 | **외부 Go 하네스 코어 + 얇은 호스트 어댑터** | 특정 host 전용 구현은 다른 host와 공유하기 어렵다. 외부 CLI/MCP/worker 코어를 두면 Codex, Claude Code, Omo, omp에서 같은 동작을 재사용할 수 있다. |
+| Plugin의 역할 | 핵심 로직이 아니라 **설치·문서·명령 호출 래퍼** | Codex/Claude/Omo/omp별 확장점 차이를 어댑터에 격리한다. |
 | 통합 표면 | 1차 CLI, 2차 공용 로컬 Streamable HTTP MCP 서비스(stdio는 호환 표면), 3차 local job worker | 모든 에이전트는 shell/CLI를 다룰 수 있고, Claude Code는 MCP 연동이 자연스럽다. 세 host는 사용자당 하나인 `127.0.0.1:47831/mcp` 서비스에 직접 연결하고, 요청 권한은 native CLI(`issueops mcp authorize`)가 발급한 caller capability로 정한다. stdio `issueops mcp`는 host 세션 프로세스 안에서 native actor 계보를 보존한다. 공통 state는 SQLite가 맡는다. 장기 job worker는 필요성이 확인된 뒤 도입한다(2026-10-02 ADR). |
 | 구현 언어 | **Go** | 단일 바이너리·동시성·CLI/MCP 구현 생산성이 Rust보다 유리하다. 요구 toolchain은 `go.mod`를 기준으로 확인한다. |
 
@@ -97,7 +97,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 작업 시작 전 다음 문서를 범위에 맞게 확인한다.
 
 - `.issueops/CONSTITUTION.md`: 문서 우선순위, 안전·정확성·아키텍처 원칙
-- `.issueops/ARCHITECTURE.md`: Codex/Claude/Omo 공용 하네스 구조, plugin vs worker 판단, 경계
+- `.issueops/ARCHITECTURE.md`: Codex/Claude/Omo/omp 공용 하네스 구조, plugin vs worker 판단, 경계
 - `.issueops/CONVENTIONS.md`: Go 패키지 구조, CLI/MCP/worker 구현 컨벤션
 - `.issueops/COMMIT_POLICY.md`: Conventional Commit + Lore body 하이브리드 커밋 규칙
 - `.issueops/TESTING.md`: 문서/코드 변경 검증 기준
@@ -105,7 +105,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - `.issueops/CAUTIONS.md`: 반복 실수와 운영 주의사항
 - `.issueops/TECH_STACK.md`: 선택한 기술 스택과 예정 명령어
 - `.issueops/ADR.md`: accepted decision 색인(구현 로드맵은 `.issueops/adr/roadmap.md`)
-- `.issueops/OPERATIONS.md`: Codex/Claude/Omo native skill, MCP, CLI 사용법
+- `.issueops/OPERATIONS.md`: Codex/Claude/Omo/omp native skill, MCP, CLI 사용법
 - `.issueops/AGENT_WORKFLOW.md`: 에이전트 시작·작업·검증·완료 흐름과 MCP/문서 사용 규칙
 - `skills/self-verify/SKILL.md`: 자기 검증 루프 실행 계약
 - `skills/self-augment/SELF_AUGMENTATION.md`: 자가 증강 루프의 95점 종료 게이트, 테스트/QA/개선 실행 계약
@@ -116,8 +116,8 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 - 핵심 동작은 host-specific plugin에 넣지 말고 Go core/port에 둔다.
 - **Sub-agent 사용 원칙:** 메인 에이전트가 직접 작업을 수행한다. Sub-agent는 12가지 검증된 net-positive 패턴(악마의 변호인, 대량 탐색, 병렬 독립 연구, 격리 작업 등 — `.issueops/SUB_AGENT_PATTERNS.md` 참조)에만 예외적으로 사용한다. 단일 파일 편집, 전체 컨텍스트가 필요한 작업, 교차 아키텍처 판단은 sub-agent로 위임하지 않는다.
-- Codex용 plugin/skill, Claude Code용 slash command/hook/MCP 설정, Omo용 native skill/MCP/extension 설정은 core 호출을 위한 얇은 어댑터로 둔다.
-- 공용 스킬은 `skills/<skill-name>/`을 source of truth로 두고, 스킬 링크는 항상 사용자 홈의 Codex/Claude/Omo/agy skill 경로에만 만든다. `--project-local`은 project MCP 설정만 추가로 쓰며 repo-local 스킬 링크는 만들지 않는다(user-scope와 대상이 같아 중복이다). 적용 대상 레포에는 명시적 `--project-local` 없이는 파일을 쓰지 않는다.
+- Codex용 plugin/skill, Claude Code용 slash command/hook/MCP 설정, Omo·omp용 native skill/MCP/extension 설정은 core 호출을 위한 얇은 어댑터로 둔다.
+- 공용 스킬은 `skills/<skill-name>/`을 source of truth로 두고, 스킬 링크는 항상 사용자 홈의 Codex/Claude/Omo/omp/agy skill 경로에만 만든다. `--project-local`은 project MCP 설정만 추가로 쓰며 repo-local 스킬 링크는 만들지 않는다(user-scope와 대상이 같아 중복이다). 적용 대상 레포에는 명시적 `--project-local` 없이는 파일을 쓰지 않는다.
 - 원격에 남는 한국어 텍스트는 write 직전에 `fluent-korean` 스킬을 호출해 다듬는다. 대상은 issue와 PR/MR의 제목·본문, issue 댓글, review thread 답글이다. 한국어 게이트는 한글 비율만 검사하므로 AI가 쓴 티는 이 호출로만 걸러진다.
 - 커밋 메시지는 `.issueops/COMMIT_POLICY.md`의 **Conventional Commit subject + Lore body** 형식을 따른다.
 - CLI는 사람이 직접 실행해도 이해 가능한 JSON/text 출력을 제공해야 한다.
@@ -138,13 +138,13 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 | `internal/port/` | 외부 capability interface와 error contract. contract DTO 참조만 허용 |
 | `internal/adapter/inbound/` | capability별 inbound request adapter |
 | `internal/adapter/outbound/` | state, SQL, webfetch, IssueOps persistence 등 outbound 구현 |
-| `internal/adapter/` | Codex/Claude/Omo, process, Git, provider, worker 등 concrete boundary 구현 |
+| `internal/adapter/` | Codex/Claude/Omo/omp, process, Git, provider, worker 등 concrete boundary 구현 |
 | `internal/architecture/` | production import graph와 layer dependency fitness test |
-| `configs/` | Codex/Claude/Omo/MCP 설정 템플릿 |
-| `.omo/mcp.json`, `.agents/mcp_config.json` | 명시적 `--project-local` 때만 생성되는 Omo/agy project MCP 설정. 스킬 링크는 어떤 경우에도 repo-local로 만들지 않으며 git 추적 금지 |
+| `configs/` | Codex/Claude/Omo/omp/MCP 설정 템플릿 |
+| `.omo/mcp.json`, `.omp/mcp.json`, `.agents/mcp_config.json` | 명시적 `--project-local` 때만 생성되는 Omo/omp/agy project MCP 설정. 스킬 링크는 어떤 경우에도 repo-local로 만들지 않으며 git 추적 금지 |
 | `.mcp.json` | 이 하네스 repo의 project Claude MCP 설정. 기본값은 빈 `{"mcpServers": {}}`(user-scope MCP 사용). `issueops_project` stdio 템플릿은 `configs/claude/mcp.project.json`이며 `--project-local --mcp-transport=stdio`일 때만 `.mcp.json`에 쓰임 |
 | `bin/issueops` | 빌드된 로컬 하네스 CLI/MCP 바이너리 |
-| `skills/` | Codex/Claude/Omo가 공유하는 스킬 source of truth |
+| `skills/` | Codex/Claude/Omo/omp가 공유하는 스킬 source of truth |
 | `.issueops/` | 에이전트용 프로젝트 지식 베이스. 폴더 배치 계약은 `.issueops/documentation/README.md` |
 
 문서·설정·실행 코드가 함께 존재하므로, 작업 전 실제 tree와 설치 상태를 다시 확인한다.
@@ -180,6 +180,8 @@ codex mcp get issueops
 claude mcp list
 test -f ~/.omo/mcp.json
 test -f ~/.omo/extensions/issueops.js
+test -f ~/.omp/agent/mcp.json
+test -f ~/.omp/agent/extensions/issueops.js
 ```
 
 Go 코드 변경의 표준 검증 예시(실제 self-verify step 증거가 없는 필수 vet/race는 별도 실행):
@@ -195,7 +197,7 @@ go build -o bin/issueops ./cmd/issueops
 
 ## 10. Critical Invariants
 
-- Codex, Claude Code, Omo native에서 관찰되는 하네스 결과가 같아야 하며 `issueops update`가 세 호스트를 함께 갱신한다.
+- Codex, Claude Code, Omo native, omp에서 관찰되는 하네스 결과가 같아야 하며 `issueops update`가 네 호스트를 함께 갱신한다.
 - 같은 스킬을 host별로 복사해 중복 관리하지 않는다. `skills/`의 단일 원본을 사용자 홈 skill 경로에서 참조한다. 적용 대상 repo에는 기본 설치가 파일을 남기지 않는다.
 - 하네스 설치·업데이트·검증 경로는 독립 실행 가능해야 한다. 외부 도구가 필요하면 사용자가 해당 도구의 공식 경로로 별도 설치하고, issueops는 그 설치를 대행하거나 readiness gate로 요구하지 않는다.
 - 외부 도구의 전문 기능은 issueops core에 복제하지 않는다. 필요한 통합은 파일/프로세스/문서처럼 검증 가능한 일반 경계로만 다룬다.

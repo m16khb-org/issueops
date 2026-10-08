@@ -38,7 +38,7 @@ lesson으로 분리됐고, 여기서는 핵심 한 줄과 탐색 링크만 둔�
   root `GATES.md`·`gates/*.md`는 더 이상 탐색하지 않는다)
   ([2026-08-26 lesson](cautions/2026-08-26-gates-root-ledger-worktree-conflicts.md)).
 - self-verify는 외부 검증 메커니즘을 명시해야 하고 문서만 통과하는 가짜 안정성을 경계한다.
-- Omo MCP catalog는 server config hash로 장기 cache되므로 installer가
+- Omo·omp MCP catalog는 server config hash로 장기 cache되므로 installer가
   advertised catalog SHA를 config env에 포함해 binary-only schema update도
   fresh session에서 재조회되게 한다
   ([install.md](operations/install.md)).

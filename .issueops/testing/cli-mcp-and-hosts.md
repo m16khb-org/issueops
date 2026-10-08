@@ -1,10 +1,10 @@
-# CLI, MCP, Codex, Claude, and Omo host parity
+# CLI, MCP, Codex, Claude, Omo, and omp host parity
 
 [← TESTING.md](../TESTING.md) owns the test-strategy index. This module owns
-CLI/MCP/Codex/Claude/Omo host parity: GitLab snapshot contracts, cross-host tool
+CLI/MCP/Codex/Claude/Omo/omp host parity: GitLab snapshot contracts, cross-host tool
 conformance, reversible child-host smoke, and native integration parity. The
 single-pass verification battery that exercises these commands lives in
-[self-verification.md](self-verification.md); IssueOps CLI/MCP/Codex/Claude/Omo
+[self-verification.md](self-verification.md); IssueOps CLI/MCP/Codex/Claude/Omo/omp
 adapter parity is owned by
 [issueops-execution.md](issueops-execution.md).
 
@@ -32,7 +32,7 @@ go test ./cmd/issueops/issueopsapp -run TestResponseContractsGolden -count=1
 go build -o bin/issueops ./cmd/issueops
 ```
 
-설치 갱신 뒤에는 installed Codex/Claude/Omo MCP schema에 `issue_snapshot`의 exact
+설치 갱신 뒤에는 installed Codex/Claude/Omo/omp MCP schema에 `issue_snapshot`의 exact
 다섯 필드만 있는지 확인하고, GitLab-linked lifecycle preview에서
 `resolved_mode=orca`와 `issue_snapshot_source=glab_mcp|glab_cli`를 확인한다.
 이 smoke는 worktree나 lease를 만들지 않는 preview로 제한한다.
@@ -47,7 +47,7 @@ go build -o bin/issueops ./cmd/issueops
 
 baseline은 representative schema 3개와 `valid`, `unknown_key`, `coercible_type_drift`, `noncoercible_type_drift` payload class의 preregistered 10 cases를 정확히 판정하고, 승격된 behavioral regression fixture가 있으면 handler 호출 0회·동일한 state digest·정규화된 final result를 재생한다.
 
-Live 측정은 CI와 기본 self-verify에 포함하지 않는다. 기본 `contract conformance live` host 목록은 Codex/Claude로 유지한다. Omo native episode는 `ISSUEOPS_TOOL_CONFORMANCE_LIVE=1`, `--hosts omo`, explicit `--model omo=provider/model`을 모두 지정한 경우에만 시작하며 OpenCode/OMP로 대체하지 않는다. 세 host parity를 측정할 때는 각 host/model을 명시해 clean-context `3 hosts × 3 fixtures = 9 completed episodes`를 수집한다. environment/transport/no-call attempt는 model denominator에서 제외하며, case당 최대 3회 retry 후 9 episodes를 채우지 못하면 `inconclusive`다. invalid raw call은 동일 host/schema/diagnostic signature가 2회 이상 재현되어야 regression fixture와 canonical production enforcement 후보가 된다. 한 번뿐인 관측은 승격하지 않는다.
+Live 측정은 CI와 기본 self-verify에 포함하지 않는다. 기본 `contract conformance live` host 목록은 Codex/Claude로 유지한다. Omo native와 omp episode는 각각 `ISSUEOPS_TOOL_CONFORMANCE_LIVE=1`, `--hosts omo` 또는 `--hosts omp`, explicit `--model omo=provider/model` 또는 `--model omp=provider/model`을 모두 지정한 경우에만 시작하며 서로 대체하지 않는다. 네 host parity를 측정할 때는 각 host/model을 명시해 clean-context `4 hosts × 3 fixtures = 12 completed episodes`를 수집한다. environment/transport/no-call attempt는 model denominator에서 제외하며, case당 최대 3회 retry 후 12 episodes를 채우지 못하면 `inconclusive`다. invalid raw call은 동일 host/schema/diagnostic signature가 2회 이상 재현되어야 regression fixture와 canonical production enforcement 후보가 된다. 한 번뿐인 관측은 승격하지 않는다.
 
 ```bash
 ISSUEOPS_TOOL_CONFORMANCE_LIVE=1 ./bin/issueops contract conformance live \
@@ -74,9 +74,9 @@ managed regular command adoption 테스트는 기본 refusal과 승인 dry-run �
 ## Native integration parity
 
 Native integration smoke는 single-pass verification battery의 일부로
-[self-verification.md](self-verification.md)가 실행한다. Codex/Claude/Omo
+[self-verification.md](self-verification.md)가 실행한다. Codex/Claude/Omo/omp
 user-level skill 파일 존재, Codex/Claude MCP registration, Omo
-`~/.omo/mcp.json`, 그리고 managed Omo lifecycle extension을 확인한다.
+`~/.omo/mcp.json`과 omp `~/.omp/agent/mcp.json`, 그리고 managed Omo·omp lifecycle extension을 확인한다.
 The deterministic battery does not require the external Omo runtime: it checks
 installed Omo skill paths, exact MCP semantics, exact generated extension
 bytes, and executes that generated JavaScript module against a mock pi with a

@@ -58,11 +58,11 @@ skills/
 | `cmd/issueops/<cli>` | flag/stdout/stderr/JSON-RPC와 command dispatch | contract, domain, application, 주입된 dependency | host별 정책 복제, domain 판정 재구현 |
 | `adapter/codex` | Codex user skill/MCP 설치 구현 | contract, port, 표준 라이브러리 | 적용 대상 repo 파일 쓰기 |
 | `adapter/claude` | Claude user skill/hook/MCP 설치 구현 | contract, port, 표준 라이브러리 | 기본 설치에서 `.claude/skills` 같은 repo-local 파일 쓰기 |
-| `adapter/hostprotocol` | host별 hook JSON, 실행 인자, Omo extension 코드 생성 | contract, domain의 순수 helper, 표준 라이브러리 | 비즈니스 판정, filesystem/process I/O |
+| `adapter/hostprotocol` | host별 hook JSON, 실행 인자, Omo/omp extension 코드 생성 | contract, domain의 순수 helper, 표준 라이브러리 | 비즈니스 판정, filesystem/process I/O |
 | `adapter/provider` | github/gitlab issue·PR/MR·child 생성/검증(gh·glab CLI) | contract, port, os/exec | 정책 복제, root 밖 접근 |
 
 > `cmd/issueops/issueopsapp`가 concrete adapter를 조립하는 유일한 composition root다. command별 CLI와 MCP transport 구현은 현재 `cmd/issueops/*cli`에 있고, 순수 판정·명령 해석은 `internal/domain`, DTO와 CLI/MCP 정적 descriptor·schema는 `internal/contract`가 소유한다. CLI/MCP 목록 조합과 도움말 렌더링은 `internal/adapter/inbound/catalog/{cli,mcp}`에 두고 root가 완성한 목록과 도움말을 호출·서버별 dependency로 전달한다.
-> host protocol builder는 root에서 hook CLI, Omo installer·activation verifier·host probe, cmux launcher에 주입한다. concrete adapter 사이에서 builder를 직접 import하지 않는다.
+> host protocol builder는 root에서 hook CLI, Omo/omp installer·activation verifier·host probe, cmux launcher에 주입한다. concrete adapter 사이에서 builder를 직접 import하지 않는다.
 > filesystem/git/process 구현은 하나의 범용 fs adapter에 모으지 않고 capability별 outbound adapter로 둔다. `internal/adapter/install`처럼 아직 application orchestration을 함께 가진 기존 package는 새 의존을 확대하지 않고 capability vertical로 점진 이동한다.
 
 ---

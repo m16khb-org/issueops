@@ -17,10 +17,10 @@ description: Accepted structural decisions and their rationale; read before reve
 - **아키텍처:** 외부 하네스 코어(CLI/MCP/worker)에 얇은 host adapter를 얹는
   hybrid 구조. 근거는 [plugin vs external worker](adr/2026-05-25-plugin-vs-external-worker.md)
   와 [Go 언어 선택](adr/2026-05-25-go-language-selection.md) 결정에 있다.
-- **First-party hosts:** Codex, Claude Code, Omo native가 같은 shared skill,
+- **First-party hosts:** Codex, Claude Code, Omo native, omp가 같은 shared skill,
   MCP, lifecycle activation contract를 사용한다. 근거는
-  [Omo native first-party host](adr/2026-08-12-omo-native-first-party-host.md)
-  결정에 있다.
+  [Omo native first-party host](adr/2026-08-12-omo-native-first-party-host.md)와
+  [omp first-party host](adr/2026-10-08-omp-first-party-host.md) 결정에 있다.
 - **External integrations:** native activation, readiness, self-verification은
   standalone으로 유지한다. Native activation 뒤 Claude-scoped declarative catalog를
   non-fatal로 provision할 수 있는 좁은 예외는
@@ -37,6 +37,7 @@ and supersession rules live in [adr/README.md](adr/README.md).
 
 | Date | Decision | Record |
 |---|---|---|
+| 2026-10-08 | omp (oh-my-pi) is the fourth first-party host; its lifecycle extension exports the main session id as `ISSUEOPS_OMP_SESSION_ID` | [record](adr/2026-10-08-omp-first-party-host.md) |
 | 2026-10-08 | SubagentStart carries the project-doc catalog, and every host gets the same model text; supersedes the "SessionStart only" clause of 2026-08-27 | [record](adr/2026-10-08-subagent-start-catalog-and-unified-model-text.md) |
 | 2026-10-08 | Role models resolve from flag, main-worktree local, and XDG global settings and are injected into Orca·cmux owner sessions; supersedes the Claude implement default of 2026-09-24 | [record](adr/2026-10-08-role-models-resolve-from-global-and-local-settings-and-are-i.md) |
 | 2026-10-07 | Review revise and regress rounds are capped at five; supersedes the cap number of 2026-07-02 and 2026-09-08 Decision (4) | [record](adr/2026-10-07-review-revise-and-regress-rounds-are-capped-at-five.md) |

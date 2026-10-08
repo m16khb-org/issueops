@@ -10,7 +10,7 @@ description: System structure and component boundaries; read before adding a com
 연결한다. 각 module은 다시 이 index로 돌아온다.
 
 > **핵심 판단**: Go로 작성한 외부 하네스 코어를 두고, Codex plugin, Claude
-> Code 설정, Omo native extension은 core를 호출하는 얇은 adapter로 둔다(Hybrid 최종 구조). 자세한
+> Code 설정, Omo native·omp extension은 core를 호출하는 얇은 adapter로 둔다(Hybrid 최종 구조). 자세한
 > 선택지 비교와 판단 근거는
 > [`architecture/hexagonal-core.md`](architecture/hexagonal-core.md)가
 > 정규 소유자다.
@@ -23,7 +23,7 @@ description: System structure and component boundaries; read before adding a com
 | [`architecture/domain-responsibilities.md`](architecture/domain-responsibilities.md) | capability별 domain·application·adapter 책임과 production wiring |
 | [`architecture/issueops-cleanup.md`](architecture/issueops-cleanup.md) | 실행·정리 소유권, 외부 효과 순서, CAS·drain 경계 |
 | [`architecture/runtime.md`](architecture/runtime.md) | 실행 모드(CLI/MCP/issueops/loop/worker), docs/state/config/log 토폴로지, lock 직렬화, command/policy model, MCP tool 설계, standalone runtime policy |
-| [`architecture/host-integration.md`](architecture/host-integration.md) | Codex/Claude/Omo 통합 map, pioneer skills layer(host-neutral), host-adapter 변경 체크리스트 |
+| [`architecture/host-integration.md`](architecture/host-integration.md) | Codex/Claude/Omo/omp 통합 map, pioneer skills layer(host-neutral), host-adapter 변경 체크리스트 |
 | [`architecture/issueops.md`](architecture/issueops.md) | IssueOps v1 execution 상태·schema 권위, capability vertical, operational surface, next_command 권위, actor model, Orca 경계, execution threat model |
 
 ## 의존 방향 불변식 (canonical)
@@ -52,7 +52,7 @@ description: System structure and component boundaries; read before adding a com
 CLI one-shot, 세 host가 직접 연결하는 사용자당 하나의 로컬 Streamable HTTP MCP
 서비스(`mcp --http`, `mcp service`), 호환 표면으로 남은 host 세션 안의 `mcp` stdio
 server, `issueops`, `loop`, `worker` 부분 구현, 그리고 Phase 5/6의
-Codex/Claude/Omo UX adapter. 각 모드의 도입 단계·용도·원칙 표와 MCP schema/descriptor
+Codex/Claude/Omo/omp UX adapter. 각 모드의 도입 단계·용도·원칙 표와 MCP schema/descriptor
 설계, command-policy catalog와 기본 거부/허용 범주, standalone runtime policy는
 [`architecture/runtime.md`](architecture/runtime.md)가 소유한다.
 
@@ -97,7 +97,7 @@ post-merge cleanup 순서 계약은
 
 ## Host integration (요약)
 
-Codex/Claude/Omo는 repo 지침과 `issueops` 실행이 최소 통합,
+Codex/Claude/Omo/omp는 repo 지침과 `issueops` 실행이 최소 통합,
 user-scope native skill symlink + MCP server + `SessionStart`·`SubagentStart` context hook이
 권장 통합. plugin이나 hook에 core logic/위험 명령을 넣지 않고,
 repo-local 파일은 `--project-local` 명시 opt-in에서만 생성한다. pioneer

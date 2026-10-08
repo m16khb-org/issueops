@@ -5,7 +5,7 @@
 <h1 align="center">IssueOps</h1>
 
 <p align="center">
-  Codex, Claude Code, Omo native가 같은 실행 계약으로 일하게 하고,<br />
+  Codex, Claude Code, Omo native, omp가 같은 실행 계약으로 일하게 하고,<br />
   작업 상태와 검증 근거를 호스트 밖 로컬 저장소에 남기는 에이전트 하네스
 </p>
 
@@ -27,7 +27,7 @@ Omo native는 공통 CLI·MCP·스킬을 사용하고, 작업 상태와 검증 �
 - **세션을 바꿔도 이어서 작업:** 연결된 이슈·브랜치·worktree·계획과 다음 단계를 조회합니다.
 - **검증한 변경만 발행:** 리뷰와 문서 판정을 변경 집합의 fingerprint에 묶어, 수정 뒤에는 다시 검증하게 합니다.
 - **중복 실행과 원격 생성 방지:** 실행 권한(lease), 세대 번호, CAS로 변경 주체를 확인하고 응답이 불분명하면 복구 절차로 안내합니다.
-- **호스트 간 규칙 공유:** `skills/` 원본과 `.issueops/` 운영 문서를 Codex·Claude Code·Omo에서 함께 사용합니다.
+- **호스트 간 규칙 공유:** `skills/` 원본과 `.issueops/` 운영 문서를 Codex·Claude Code·Omo·omp에서 함께 사용합니다.
 
 PR/MR 발행 완료, 머지, 정리는 별도 단계입니다. 에이전트는 사용자가 요청한 범위까지
 진행하며, 발행만 요청한 작업을 임의로 머지하거나 삭제하지 않습니다.
@@ -64,7 +64,8 @@ cd issueops
 | Codex | `~/.codex/skills/`, MCP 설정, `SessionStart`·`SubagentStart` hook |
 | Claude Code | `~/.claude/skills/`, user-scope MCP, `SessionStart`·`SubagentStart` hook |
 | Omo native | `~/.omo/agent/skills/`, `~/.omo/mcp.json`, lifecycle extension |
-| MCP 서비스 | macOS LaunchAgent `io.issueops.mcp` 또는 Linux systemd user `issueops-mcp.service`. `http://127.0.0.1:47831/mcp` 하나를 세 호스트가 함께 씁니다 |
+| omp | `~/.omp/agent/skills/`, `~/.omp/agent/mcp.json`, `~/.omp/agent/extensions/issueops.js` |
+| MCP 서비스 | macOS LaunchAgent `io.issueops.mcp` 또는 Linux systemd user `issueops-mcp.service`. `http://127.0.0.1:47831/mcp` 하나를 네 호스트가 함께 씁니다 |
 | 실행 상태 | `~/.local/state/issueops/` 아래 SQLite 저장소. `ISSUEOPS_STATE_DIR`로 격리 가능 |
 | 프로젝트 지식 | 대상 저장소의 `AGENTS.md`·`.issueops/`. 명시적인 project bootstrap으로 생성 |
 
@@ -73,7 +74,7 @@ cd issueops
 MCP 설정을 추가하지만 스킬 링크는 사용자 홈에만 둡니다. agy용 통합도 설치기에 포함되어 있습니다.
 
 macOS와 Linux의 기본 MCP 연결은 공용 HTTP 서비스입니다(`--mcp-transport=http`). 설치기는
-`~/.local/state/issueops/mcp-http/bearer`에 인증 토큰을 만들고, 세 호스트 설정의 issueops 항목만
+`~/.local/state/issueops/mcp-http/bearer`에 인증 토큰을 만들고, 네 호스트 설정의 issueops 항목만
 URL과 `Authorization` 헤더로 바꾼 뒤 파일 권한을 0600으로 둡니다. 예전처럼 호스트 세션마다
 `issueops mcp`를 띄우려면 `./install.sh --mcp-transport=stdio`로 설치합니다. 서비스 상태는
 `io mcp service status --json`으로 확인합니다. HTTP로 workspace 도구를 부르는 세션은 먼저
@@ -180,6 +181,7 @@ Orca가 준비되어 있으면 같은 worktree의 새 세션으로 인계하고,
 | Codex | `gpt-6.1-sol` / `high` | `gpt-6-astra` / `high` | `gpt-6-luna` / `medium` | `gpt-6-luna` / `low` |
 | Claude Code | `claude-opus-5-5` / `high` | `claude-opus-5-5` / `high` | `claude-sonnet-5-5` / `medium` | `claude-haiku-5-5` / `medium` |
 | Omo native | `chatgpt-subscription/gpt-6-sol` / `max` | `chatgpt-subscription/gpt-6-astra` / `max` | `chatgpt-subscription/gpt-6-luna` / `medium` | 없음 |
+| omp | `anthropic/claude-opus-5-5` / `high` | `anthropic/claude-opus-5-5` / `high` | `anthropic/claude-sonnet-5-5` / `medium` | `anthropic/claude-haiku-5-5` / `medium` |
 
 위 표는 내장 기본값입니다. Claude Code와 Codex는 역할별 model·effort를 사용자 전체(global)나
 저장소 하나(local)로 바꿀 수 있습니다. 우선순위는 필드마다 명시 플래그 > local > global > 기본값입니다.
@@ -199,7 +201,7 @@ IssueOps가 Orca·cmux로 띄우는 owner 세션에는 리뷰·조사·독자 �
 Codex 호스트 이름을 바꾸는 설정이 아닙니다.
 
 자동 인계 명령은 Claude Code에 `--dangerously-skip-permissions`, Codex에
-`--dangerously-bypass-approvals-and-sandbox`를 전달합니다. 호스트의 권한 확인을 생략하는
+`--dangerously-bypass-approvals-and-sandbox`, omp에 `--auto-approve`를 전달합니다. 호스트의 권한 확인을 생략하는
 옵션이므로 인계할 작업 범위를 먼저 정하세요. IssueOps 자체의 실행 권한·세대·workspace·원격 쓰기
 검사는 유지됩니다. 인계 명령의 수락과 실제 owner claim·작업 완료는 각각 다른 증거로 기록합니다.
 
@@ -210,6 +212,7 @@ flowchart LR
     Codex["Codex"] --> Host["얇은 host adapter<br/>skills · hooks · MCP wiring"]
     Claude["Claude Code"] --> Host
     Omo["Omo native"] --> Host
+    Omp["omp"] --> Host
     Shell["Human shell"] --> Surface["issueops<br/>CLI · 공용 HTTP MCP · stdio MCP"]
     Host --> Surface
     Surface --> Core["Host-neutral Go core"]

@@ -5,7 +5,7 @@ description: Install, runtime, and operating procedures; read before running, de
 
 # Operations Map
 
-`issueops` gives Codex, Claude Code, and Omo native the same Go binary, MCP schema,
+`issueops` gives Codex, Claude Code, Omo native, and omp the same Go binary, MCP schema,
 command policy, state store, shared skills, lifecycle hooks, and project-doc
 workflow.
 
@@ -23,7 +23,7 @@ guide that matches the task.
 | IssueOps provider publication, branch linkage, issue snapshots | [issueops-providers.md](operations/guides/issueops-providers.md) |
 | IssueOps execution lifecycle, recovery, sync-base, owner sequence, ten-stage operation | [issueops-execution.md](operations/guides/issueops-execution.md) |
 | Direct CLI, policy, guard, state, loop, MCP cleanup, worker, audit | [cli-and-mcp.md](operations/guides/cli-and-mcp.md) |
-| Codex/Claude/Omo native skills, MCP registration, lifecycle hooks | [hosts.md](operations/guides/hosts.md) |
+| Codex/Claude/Omo/omp native skills, MCP registration, lifecycle hooks | [hosts.md](operations/guides/hosts.md) |
 | Project bootstrap, project-doc routing, MCP document updates | [project-docs.md](operations/guides/project-docs.md) |
 | Web-fetch deterministic benchmark and opt-in live parity | [web-fetch-live-parity.md](operations/guides/web-fetch-live-parity.md) |
 | Stability audit baseline and child-host smoke | [stability-baseline.md](operations/guides/stability-baseline.md), [child-host-smoke.md](operations/guides/child-host-smoke.md) |
@@ -57,7 +57,7 @@ Skill-quality scorecards and dogfood evaluations are research records under
    refresh an already published issue or PR/MR body. `issueops next` decides which stage
    a cycle is in and which command advances it.
 2. MCP: on darwin/linux, `install`/`update`/`bootstrap` default to
-   `--mcp-transport=http`. Codex, Claude Code, and Omo then connect directly to
+   `--mcp-transport=http`. Codex, Claude Code, Omo, and omp then connect directly to
    one shared Streamable HTTP service at `http://127.0.0.1:47831/mcp`, sending the
    bearer from `<state>/mcp-http/bearer` (0600). Each host config holds only the
    issueops entry (`url` + `Authorization` header), written 0600. `issueops mcp
@@ -101,7 +101,7 @@ Skill-quality scorecards and dogfood evaluations are research records under
    and unmet gates add `gates_incomplete:<file>`. See
    [operations/guides/cli-and-mcp.md](operations/guides/cli-and-mcp.md).
 6. Cross-session channels: `issueops channel send/recv` gives Codex,
-   Claude Code, and Omo sessions a durable shared mailbox over issueops state —
+   Claude Code, Omo, and omp sessions a durable shared mailbox over issueops state —
    the transport for front/server-style multi-session coordination.
    `recv --wait --since <id>` is the blocking consumer; MCP exposes
    `channel_send`/`channel_recv` with the same contract.

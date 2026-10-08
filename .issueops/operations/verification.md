@@ -30,7 +30,7 @@ The deterministic project gate pins `--llm-eval=false`. An ambient `ISSUEOPS_SEL
 go test ./internal/domain/issueops/... ./internal/adapter/orca ./internal/domain/commandparse ./internal/adapter/skillcontract ./cmd/issueops/hookcli ./cmd/issueops/hookcli/hookinput ./cmd/issueops/issueopscli ./cmd/issueops/issueopsapp -count=1
 ```
 
-The hook-input package is `./cmd/issueops/hookcli/hookinput`; there is no domain-level hook-input package. It only reads the repo/cwd the context hooks need; Codex, Claude, and Omo fixtures go through the same reader and the same catalog shape.
+The hook-input package is `./cmd/issueops/hookcli/hookinput`; there is no domain-level hook-input package. It only reads the repo/cwd the context hooks need; Codex, Claude, Omo, and omp fixtures go through the same reader and the same catalog shape.
 
 Checkpoint commands:
 
