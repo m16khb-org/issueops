@@ -1,6 +1,6 @@
 ---
 name: TECH_STACK.md
-description: Chosen languages, runtimes, tools, and rationale.
+description: Chosen languages, runtimes, and tools; read before adding a dependency or tool.
 ---
 
 # 기술 스택

@@ -1,6 +1,6 @@
 ---
 name: ARCHITECTURE.md
-description: System structure, component boundaries, and responsibilities.
+description: System structure and component boundaries; read before adding a component or moving a responsibility.
 ---
 
 # issueops 아키텍처
@@ -98,7 +98,7 @@ post-merge cleanup 순서 계약은
 ## Host integration (요약)
 
 Codex/Claude/Omo는 repo 지침과 `issueops` 실행이 최소 통합,
-user-scope native skill symlink + MCP server + `SessionStart` context hook이
+user-scope native skill symlink + MCP server + `SessionStart`·`SubagentStart` context hook이
 권장 통합. plugin이나 hook에 core logic/위험 명령을 넣지 않고,
 repo-local 파일은 `--project-local` 명시 opt-in에서만 생성한다. pioneer
 skills는 `skills/` 원본 하나로 host-neutral이며 hub-and-spoke cross-reference를

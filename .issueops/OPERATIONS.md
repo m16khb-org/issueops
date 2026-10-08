@@ -1,6 +1,6 @@
 ---
 name: OPERATIONS.md
-description: Install, sync, runtime, and operational procedures.
+description: Install, runtime, and operating procedures; read before running, deploying, or troubleshooting.
 ---
 
 # Operations Map

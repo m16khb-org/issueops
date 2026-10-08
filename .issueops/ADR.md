@@ -1,6 +1,6 @@
 ---
 name: ADR.md
-description: Architecture decision record index and accepted baseline.
+description: Accepted structural decisions and their rationale; read before reversing or extending a design choice.
 ---
 # Architecture Decision Records
 
@@ -37,6 +37,7 @@ and supersession rules live in [adr/README.md](adr/README.md).
 
 | Date | Decision | Record |
 |---|---|---|
+| 2026-10-08 | SubagentStart carries the project-doc catalog, and every host gets the same model text; supersedes the "SessionStart only" clause of 2026-08-27 | [record](adr/2026-10-08-subagent-start-catalog-and-unified-model-text.md) |
 | 2026-10-07 | Review revise and regress rounds are capped at five; supersedes the cap number of 2026-07-02 and 2026-09-08 Decision (4) | [record](adr/2026-10-07-review-revise-and-regress-rounds-are-capped-at-five.md) |
 | 2026-10-07 | `.issueops` 폴더 구조를 append와 runtime이 쓰는 경로에 맞추고 checker가 강제한다 | [record](adr/2026-10-07-issueops-docs-layout-matches-the-append-and-runtime-paths.md) |
 | 2026-10-07 | Readers accept only the current record shape | [record](adr/2026-10-07-readers-accept-only-the-current-record-shape.md) |
@@ -65,7 +66,7 @@ and supersession rules live in [adr/README.md](adr/README.md).
 | 2026-09-02 | IssueOps publication evidence gates: project-doc reflection and conditional schema measurement | [record](adr/2026-09-02-issueops-publication-evidence-gates-project-doc-reflection-a.md) |
 | 2026-08-28 | IssueOps devil's-advocate verdicts are bound to the reviewed plan digest | [record](adr/2026-08-28-issueops-devils-advocate-plan-binding.md) |
 | 2026-08-28 | Optional upstream provisioning preserves the standalone core; partially supersedes the 2026-07-07 blanket prohibition | [record](adr/2026-08-28-optional-upstream-provisioning-preserves-the-standalone-core.md) |
-| 2026-08-27 | SessionStart owns compaction context; legacy hook surface removed | [record](adr/2026-08-27-session-start-owns-compaction-context.md) |
+| 2026-08-27 | SessionStart owns compaction context; legacy hook surface removed; superseded in part — default installs also register `SubagentStart` since [2026-10-08](adr/2026-10-08-subagent-start-catalog-and-unified-model-text.md) | [record](adr/2026-08-27-session-start-owns-compaction-context.md) |
 | 2026-08-22 | Cross-session channel capability | [record](adr/2026-08-22-cross-session-channel.md) |
 | 2026-08-22 | Task gate ledger (unlazy-compatible gates capability) | [record](adr/2026-08-22-task-gate-ledger.md) |
 | 2026-08-21 | Bootstrap preserves in-progress repos and transparent plans | [record](adr/2026-08-21-bootstrap-respects-inprogress-repos.md) |

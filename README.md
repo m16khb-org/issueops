@@ -61,8 +61,8 @@ cd issueops
 
 | 대상 | 기본 위치와 역할 |
 |---|---|
-| Codex | `~/.codex/skills/`, MCP 설정, `SessionStart` hook |
-| Claude Code | `~/.claude/skills/`, user-scope MCP, `SessionStart` hook |
+| Codex | `~/.codex/skills/`, MCP 설정, `SessionStart`·`SubagentStart` hook |
+| Claude Code | `~/.claude/skills/`, user-scope MCP, `SessionStart`·`SubagentStart` hook |
 | Omo native | `~/.omo/agent/skills/`, `~/.omo/mcp.json`, lifecycle extension |
 | MCP 서비스 | macOS LaunchAgent `io.issueops.mcp` 또는 Linux systemd user `issueops-mcp.service`. `http://127.0.0.1:47831/mcp` 하나를 세 호스트가 함께 씁니다 |
 | 실행 상태 | `~/.local/state/issueops/` 아래 SQLite 저장소. `ISSUEOPS_STATE_DIR`로 격리 가능 |

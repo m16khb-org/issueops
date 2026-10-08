@@ -17,8 +17,8 @@
 | IssueOps 사이클 명령(`start`/`next`/`execution` 등) | 구현됨 | issue-driven 루프의 durable 상태와 direct/Orca execution v1 lease | IssueOps가 단일 authority다. Orca는 readiness, workspace, native owner launch/inventory만 제공하고 generation/actor/CWD fence는 core가 소유한다. |
 | `issueops loop` | 구현됨 | verify-until-done 루프 계약의 durable 상태와 PR readiness 게이트 | 하네스는 검증 명령을 실행하지 않고 `verify_argv`, 시도 evidence, stop 상태를 기록·게이트한다. |
 | `issueops worker` one-shot jobs | 구현됨 | lifecycle job record(`enqueue/status/list/cancel/cleanup-stuck`)와 policy-gated `run --read-only`(MCP `worker_run_read_only`) | 장기 상주 job 프로세스는 없다. |
-| Codex native integration | 구현됨 | user skills, MCP config, `SessionStart` context hook | core 로직 금지, CLI/MCP 호출 래퍼만 허용 |
-| Claude Code native integration | 구현됨 | user skills, user-scope MCP, `SessionStart` context hook | core 정책 우회 금지 |
+| Codex native integration | 구현됨 | user skills, MCP config, `SessionStart`·`SubagentStart` context hook | core 로직 금지, CLI/MCP 호출 래퍼만 허용 |
+| Claude Code native integration | 구현됨 | user skills, user-scope MCP, `SessionStart`·`SubagentStart` context hook | core 정책 우회 금지 |
 | Omo native integration | 구현됨 | user skills, MCP config, `session_start`/`session_compact` extension | core 정책 우회 금지 |
 
 MCP composition은 서버 시작 전에 MCP dependency를 한 번 구성하고 immutable
