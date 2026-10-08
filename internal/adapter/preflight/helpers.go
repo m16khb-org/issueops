@@ -7,8 +7,8 @@ import (
 	"strings"
 )
 
-func listRemotes(read func(string, ...string) string, root string) []preflightcontract.RemoteInfo {
-	lines := splitLines(read(root, "remote", "-v"))
+func listRemotes(remoteV string) []preflightcontract.RemoteInfo {
+	lines := splitLines(remoteV)
 	var out []preflightcontract.RemoteInfo
 	for _, line := range lines {
 		fields := strings.Fields(line)

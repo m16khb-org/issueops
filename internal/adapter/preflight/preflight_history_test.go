@@ -6,12 +6,14 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 
 	preflightcontract "issueops/internal/contract/preflight"
 )
 
 type recordingGit struct {
+	mu      sync.Mutex
 	calls   []string
 	outputs map[string]recordedGitResult
 }
@@ -23,7 +25,9 @@ type recordedGitResult struct {
 
 func (git *recordingGit) run(dir string, args ...string) (int, string, string) {
 	command := strings.Join(args, " ")
+	git.mu.Lock()
 	git.calls = append(git.calls, dir+"|"+command)
+	git.mu.Unlock()
 	if result, ok := git.outputs[command]; ok {
 		return result.code, result.out, result.stderr
 	}
@@ -88,8 +92,8 @@ func TestGitPreflightReadsHistoryOnce(t *testing.T) {
 	if got := git.count("log"); got != 1 {
 		t.Fatalf("history invocations = %d, want 1; calls=%v", got, git.calls)
 	}
-	if want := "/repo|" + historyCommand; !containsString(git.calls, want) {
-		t.Fatalf("history was not read once at the repository root: %v", git.calls)
+	if want := "/repo/sub|" + historyCommand; !containsString(git.calls, want) {
+		t.Fatalf("history was not read once from the target: %v", git.calls)
 	}
 	if !facts.GitOK || facts.RepoRoot != "/repo" || facts.Branch != "topic" || facts.Head != "abc1234" {
 		t.Fatalf("non-history facts changed: %+v", facts)
@@ -158,13 +162,46 @@ func TestGitPreflightHistoryHandlesShortEmptyAndMalformedOutput(t *testing.T) {
 	}
 }
 
-func TestGitPreflightNotGitRepositoryDoesNotReadHistory(t *testing.T) {
+func TestGitPreflightNotGitRepositoryReportsDiscoveryError(t *testing.T) {
 	git := &recordingGit{outputs: map[string]recordedGitResult{
 		"rev-parse --show-toplevel": {code: 128, stderr: "fatal: not a git repository"},
 	}}
 	facts := GitObserver{Run: git.run}.Observe("/elsewhere", "/issueops")
-	if facts.GitOK || facts.ErrorDetail != "fatal: not a git repository" || len(git.calls) != 1 {
+	if facts.GitOK || facts.ErrorDetail != "fatal: not a git repository" || facts.RepoRoot != "" || facts.StatusLines != nil || facts.RecentCommits != nil {
 		t.Fatalf("facts=%+v calls=%v", facts, git.calls)
+	}
+}
+
+func TestGitPreflightFromSubdirectoryMatchesRepositoryRoot(t *testing.T) {
+	repo := t.TempDir()
+	sub := filepath.Join(repo, "nested", "dir")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if code, _, stderr := GitCmd(repo, "init", "-q"); code != 0 {
+		t.Fatalf("git init: %s", stderr)
+	}
+	for _, file := range []string{filepath.Join(repo, "root.txt"), filepath.Join(sub, "deep.txt")} {
+		if err := os.WriteFile(file, []byte("x\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if code, _, stderr := GitCmd(repo, "add", "root.txt"); code != 0 {
+		t.Fatalf("git add: %s", stderr)
+	}
+	if code, _, stderr := GitCmd(repo, "-c", "user.name=Test", "-c", "user.email=test@example.invalid", "commit", "-q", "-m", "fix: root"); code != 0 {
+		t.Fatalf("git commit: %s", stderr)
+	}
+	if err := os.WriteFile(filepath.Join(repo, "root.txt"), []byte("changed\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	fromRoot := GitObserver{}.Observe(repo, "/issueops")
+	fromSub := GitObserver{}.Observe(sub, "/issueops")
+	if !fromRoot.GitOK || !reflect.DeepEqual(fromRoot, fromSub) {
+		t.Fatalf("subdirectory observation differs:\nroot=%+v\nsub =%+v", fromRoot, fromSub)
+	}
+	if want := []string{" M root.txt", "?? nested/"}; !reflect.DeepEqual(fromRoot.StatusLines[1:], want) {
+		t.Fatalf("status lines = %q, want root-relative %q", fromRoot.StatusLines, want)
 	}
 }
 
@@ -192,9 +229,14 @@ func TestGitPreflightHistoryProjectionsMatchRealGit(t *testing.T) {
 	for i := 1; i <= 12; i++ {
 		commit(i)
 	}
-	var runs []string
+	var (
+		runsMu sync.Mutex
+		runs   []string
+	)
 	facts := GitObserver{Run: func(dir string, args ...string) (int, string, string) {
+		runsMu.Lock()
 		runs = append(runs, strings.Join(args, " "))
+		runsMu.Unlock()
 		return GitCmd(dir, args...)
 	}}.Observe(repo, "/issueops")
 
