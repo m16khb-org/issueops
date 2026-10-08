@@ -431,6 +431,24 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/agent_model_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func agentModelService",
+        "func loadAgentModelSettings",
+        "func memoizedReviewModel",
+        "func modelDependencies",
+        "func preparationAgentModels.OwnerDefaults",
+        "func preparationAgentModels.RoleAgentArgs",
+        "func resolveAgentModel",
+        "func roleAgentArgs",
+        "func runModel",
+        "func stateRoleAgentArgs",
+        "type preparationAgentModels"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/apidoc_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -840,7 +858,8 @@
       "task": "T20",
       "symbols": [
         "func issueOpsExecutionStatusHandler",
-        "func newIssueOpsOwnerContext"
+        "func newIssueOpsOwnerContext",
+        "func resolveOwnerRoleModel"
       ]
     },
     {
@@ -2299,6 +2318,37 @@
       ]
     },
     {
+      "path": "cmd/issueops/modelcli/model.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func Run",
+        "func UsageError.Error",
+        "func cloneConfig",
+        "func hostSection",
+        "func newFlagSet",
+        "func orNone",
+        "func parse",
+        "func parseTarget",
+        "func putLayer",
+        "func removeField",
+        "func repoOrCwd",
+        "func runResolve",
+        "func runSet",
+        "func runShow",
+        "func runUnset",
+        "func scopeConfig",
+        "func writeScope",
+        "type Dependencies",
+        "type UsageError",
+        "type resolveResult",
+        "type setResult",
+        "type showResult",
+        "type target",
+        "type unsetResult"
+      ]
+    },
+    {
       "path": "cmd/issueops/pathutil/path_helpers.go",
       "owner": "inbound",
       "task": "T20",
@@ -3403,6 +3453,20 @@
         "type contract",
         "type message",
         "type rule"
+      ]
+    },
+    {
+      "path": "internal/adapter/hostprotocol/role_agents.go",
+      "owner": "adapter",
+      "task": "T19",
+      "symbols": [
+        "func BuildPrintArgv",
+        "func ClaudeAgentsJSON",
+        "func CodexRoleFile",
+        "func RoleAgentArgs",
+        "func roleAgentName",
+        "func tomlString",
+        "type RoleAgent"
       ]
     },
     {
@@ -5132,6 +5196,7 @@
         "func hostCommand",
         "func idSelector",
         "func orcaIssueProvider",
+        "func ownerAgentBaseCommand",
         "func ownerAgentCommand",
         "func pathSelector",
         "func requireCompleteList",
@@ -5301,6 +5366,26 @@
         "type ExecRunner",
         "type Runner",
         "type boundedStreamBuffer"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/agentmodelconfig/config.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func CodexCatalog",
+        "func EnsureExcluded",
+        "func GlobalPath",
+        "func Load",
+        "func LocalPath",
+        "func Read",
+        "func Write",
+        "func WriteLocal",
+        "func WriteRoleFile",
+        "func withoutGitEnvironment",
+        "func writeAtomic",
+        "type Files",
+        "type Local"
       ]
     },
     {
@@ -7777,6 +7862,17 @@
       ]
     },
     {
+      "path": "internal/application/agentmodel/service.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.Resolve",
+        "func Service.RoleAgents",
+        "type Service",
+        "type Settings"
+      ]
+    },
+    {
       "path": "internal/application/apidoc/check.go",
       "owner": "application",
       "task": "T20",
@@ -8919,7 +9015,8 @@
         "type ResumeProgress",
         "type ResumeRepository",
         "type ResumeSnapshot",
-        "type ResumeStageExecutor"
+        "type ResumeStageExecutor",
+        "type RoleAgentArgs"
       ]
     },
     {
@@ -8931,6 +9028,7 @@
         "func ReconcileService.Reconcile",
         "func ReconcileService.executePlan",
         "func ReconcileService.failed",
+        "func ReconcileService.terminalRoleAgentArgs",
         "func reconcileClearCause",
         "func reconcilePreserveCause",
         "type ReconcileRequest",
@@ -8979,6 +9077,8 @@
       "symbols": [
         "func NewResumeService",
         "func ResumeService.Resume",
+        "func ResumeService.terminalRoleAgentArgs",
+        "func argsForStage",
         "func resumeDomainRequest",
         "func resumeInvocationFailureState",
         "func resumeReconcileRequired",
@@ -9035,6 +9135,7 @@
       "symbols": [
         "func NewService",
         "func Service.Next",
+        "func Service.applyReviewModel",
         "func Service.applyReviewTier",
         "func Service.buildInput",
         "func applyDecision",
@@ -9070,7 +9171,8 @@
       "symbols": [
         "func OwnerArtifactDir",
         "func PolicyContext",
-        "func ValidateOwnerCatalog"
+        "func ValidateOwnerCatalog",
+        "type ResolveModelFunc"
       ]
     },
     {
@@ -9208,6 +9310,7 @@
       "owner": "application",
       "task": "T20",
       "symbols": [
+        "type AgentModels",
         "type Clock",
         "type DirectCommit",
         "type DirectWorkspace",
@@ -9229,17 +9332,19 @@
         "func Service.Prepare",
         "func Service.advanceOrca",
         "func Service.applyOrcaReceipt",
+        "func Service.normalizeOwnerDefaults",
         "func Service.prepareDirect",
         "func Service.prepareOrca",
         "func Service.recordOrcaFailure",
         "func Service.resolveExisting",
+        "func Service.terminalRoleAgentArgs",
         "func applySelectionResult",
         "func cloneExecution",
+        "func delegated",
         "func failedResult",
         "func formatTime",
         "func intentRequest",
         "func normalizeActor",
-        "func normalizeOwnerDefaults",
         "func plannerEvidence",
         "func plannerGateError",
         "func plannerGateHints",
@@ -10479,6 +10584,17 @@
         "func Service.RunReadOnly",
         "type Effects",
         "type Service"
+      ]
+    },
+    {
+      "path": "internal/contract/agentmodel/types.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type Config",
+        "type Layer",
+        "type Resolution",
+        "type Role"
       ]
     },
     {
@@ -12243,10 +12359,37 @@
       "owner": "domain",
       "task": "T20",
       "symbols": [
-        "func ImplementerDefaults",
-        "func PlannerDefaults",
-        "func ResearchDefaults",
-        "func ReviewEffortForTier"
+        "func KnownHost",
+        "func Roles",
+        "func SupportsEffort",
+        "func builtinLayer",
+        "func knownRole",
+        "func stepEffort"
+      ]
+    },
+    {
+      "path": "internal/domain/agentmodel/resolve.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func Resolve",
+        "func configured",
+        "func hostLayers",
+        "func joinRoles",
+        "func resolveRole",
+        "type ResolveInput",
+        "type field"
+      ]
+    },
+    {
+      "path": "internal/domain/agentmodel/validate.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ValidateConfig",
+        "func ValidateSetting",
+        "func modelWarnings",
+        "func validateLayer"
       ]
     },
     {
@@ -17214,6 +17357,11 @@
       "task": "T21"
     },
     {
+      "path": "skills/io-model/SKILL.md",
+      "owner": "skill-contract",
+      "task": "T21"
+    },
+    {
       "path": "skills/io-update/SKILL.md",
       "owner": "skill-contract",
       "task": "T21"
@@ -17681,13 +17829,13 @@
       "source_symbol": "func ImplementerDefaults",
       "responsibility": "host implementer model and effort defaults",
       "target": "internal/domain/agentmodel",
-      "target_symbol": "func ImplementerDefaults",
+      "target_symbol": "func Resolve",
       "task": "T02",
       "entrypoints": [
         "issueops execution prepare"
       ],
       "evidence_tests": [
-        "internal/domain/agentmodel/defaults_test.go",
+        "internal/domain/agentmodel/resolve_test.go",
         "internal/application/issueopspreparation/orca_test.go"
       ],
       "status": "migrated"
@@ -19679,7 +19827,7 @@
       "source_symbol": "func IssueOpsPlannerDefaults",
       "responsibility": "host planner and independent gate-review model and effort defaults",
       "target": "internal/domain/agentmodel",
-      "target_symbol": "func PlannerDefaults",
+      "target_symbol": "func Resolve",
       "task": "T20",
       "entrypoints": [
         "issueops next",
@@ -19697,14 +19845,14 @@
       "source_symbol": "func IssueOpsReviewEffortForTier",
       "responsibility": "documentation-only review effort reduction with other tiers retaining planner effort",
       "target": "internal/domain/agentmodel",
-      "target_symbol": "func ReviewEffortForTier",
+      "target_symbol": "func Resolve",
       "task": "T20",
       "entrypoints": [
         "issueops next",
         "issueops execution prepare"
       ],
       "evidence_tests": [
-        "internal/domain/agentmodel/review_effort_test.go"
+        "internal/domain/agentmodel/resolve_test.go"
       ],
       "status": "migrated"
     },

@@ -20,8 +20,10 @@
 
 ## 6. Config / env
 
-- 현재 runtime 입력은 command flag, `ISSUEOPS_*` env, installer가 관리하는 host JSON/TOML config다.
-- `~/.config/issueops/config.yaml`과 `.issueops-runtime/config.yaml`은 reserved 경로다. 현재 loader는 구현되지 않았으므로 이 경로를 읽거나 만들지 않는다.
+- 현재 runtime 입력은 command flag, `ISSUEOPS_*` env, installer가 관리하는 host JSON/TOML config, 역할별 agent model 설정 파일 두 개다.
+- 역할별 agent model 설정은 `issueops model`이 읽고 쓰는 JSON이다. user config는 `$XDG_CONFIG_HOME/issueops/agent-models.json`(변수가 비면 `~/.config/issueops/agent-models.json`), workspace config는 메인 워크트리의 `.issueops/agent-models.local.json`이다. 연결 워크트리도 메인 워크트리의 파일 하나를 읽는다. workspace 파일은 커밋하지 않으며 처음 쓸 때 `<git-common-dir>/info/exclude`에 등록한다.
+- 이 설정은 아래 우선순위에서 env 층을 비워 둔 채 필드(model, effort)마다 `flag → workspace config → user config → default`로 해석한다. 파일이 없으면 내장 기본값만 쓰므로 install·readiness·self-verify는 설정 파일을 요구하지 않는다. 형식이 깨진 파일은 기본값으로 조용히 대체하지 않는다: `execution prepare`와 `issueops model`은 상태를 바꾸기 전에 파일 경로가 담긴 에러로 끝나고, `issueops next`는 경고를 남기고 `review.model`·`review.effort`를 비운다.
+- `~/.config/issueops/config.yaml`과 `.issueops-runtime/config.yaml`은 여전히 reserved 경로다. generic loader는 구현되지 않았으므로 이 경로를 읽거나 만들지 않는다.
 - 향후 generic config loader의 우선순위는 `flag → env → workspace config → user config → default`로 고정한다.
 - secret 원문은 저장하지 않는다.
 

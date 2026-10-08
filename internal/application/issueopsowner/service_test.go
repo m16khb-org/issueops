@@ -77,7 +77,7 @@ func ownerFixture(t *testing.T) (Service, *ownerFiles, model.IssueOpsRecord, pre
 	s := Service{Files: f, Template: "Owner {LIFECYCLE_ID}\n{PACKET_SHA256}\n", ReadIssue: func(context.Context, string, remote.ExecutionIssueSnapshotRequest) (remote.ExecutionIssueSnapshot, error) {
 		f.events = append(f.events, "remote")
 		return remote.ExecutionIssueSnapshot{URL: r.IssueURL, Body: body}, nil
-	}}
+	}, ResolveModel: fixedRoleModel}
 	return s, f, r, snapshot, intent, receipt
 }
 

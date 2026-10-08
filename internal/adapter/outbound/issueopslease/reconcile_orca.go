@@ -9,7 +9,7 @@ import (
 )
 
 type ReconcileStageInspector func(context.Context, leaseapp.ReconcileIntentState) (leasecontract.ReconcileStageInventory, bool, error)
-type ReconcileStageInvoker func(context.Context, leaseapp.ReconcileIntentState) (leasecontract.ReconcileStageReceipt, string, error)
+type ReconcileStageInvoker func(context.Context, leaseapp.ReconcileIntentState, []string) (leasecontract.ReconcileStageReceipt, string, error)
 
 type ReconcileStageExecutor struct {
 	inspect ReconcileStageInspector
@@ -27,9 +27,9 @@ func (a *ReconcileStageExecutor) Inspect(ctx context.Context, intent leaseapp.Re
 	return a.inspect(ctx, intent)
 }
 
-func (a *ReconcileStageExecutor) Invoke(ctx context.Context, intent leaseapp.ReconcileIntentState) (leasecontract.ReconcileStageReceipt, string, error) {
+func (a *ReconcileStageExecutor) Invoke(ctx context.Context, intent leaseapp.ReconcileIntentState, roleAgentArgs []string) (leasecontract.ReconcileStageReceipt, string, error) {
 	if a == nil || a.invoke == nil {
 		return leasecontract.ReconcileStageReceipt{}, "unknown", fmt.Errorf("reconcile stage invoker is required")
 	}
-	return a.invoke(ctx, intent)
+	return a.invoke(ctx, intent, roleAgentArgs)
 }

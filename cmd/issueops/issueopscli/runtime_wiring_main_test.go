@@ -30,6 +30,7 @@ import (
 	issueopsretentionapplication "issueops/internal/application/issueopsretention"
 	issueopsroutingapplication "issueops/internal/application/issueopsrouting"
 	issueopsstatusapplication "issueops/internal/application/issueopsstatus"
+	agentmodelcontract "issueops/internal/contract/agentmodel"
 	"issueops/internal/domain/agentmodel"
 	issueopsstatusdomain "issueops/internal/domain/issueopsstatus"
 
@@ -82,8 +83,11 @@ func wireIssueOpsRuntimeForTests() {
 			return ready
 		},
 		WriterlessCommand: ownerapp.WriterlessCommand,
-		PlannerDefaults:   agentmodel.PlannerDefaults,
-		StagedArtifacts:   artifacts.Names,
+		ReviewModel: func(host string, role agentmodelcontract.Role, tier, _ string) (string, string, error) {
+			resolution, err := agentmodel.Resolve(agentmodel.ResolveInput{Host: host, Role: role, Tier: tier})
+			return resolution.Model, resolution.Effort, err
+		},
+		StagedArtifacts: artifacts.Names,
 		Actor: func() (string, string, error) {
 			host, sessionID, _, err := executioncmd.ResolveNativeSessionIdentity(os.Getenv)
 			return host, sessionID, err

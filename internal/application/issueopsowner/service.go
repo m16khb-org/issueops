@@ -18,6 +18,8 @@ type Service struct {
 	ReadIssue  executionissue.ExecutionIssueSnapshotReadFunc
 	Template   string
 	ReadRecord func(string) (issueops.IssueOpsRecord, error)
+	// ResolveModel resolves the reviewer, research, and reader-check roles.
+	ResolveModel ResolveModelFunc
 }
 
 func (s Service) ReadSnapshot(ctx context.Context, record issueops.IssueOpsRecord) (issueops.OwnerSnapshot, error) {
@@ -51,7 +53,11 @@ func (s Service) Build(record issueops.IssueOpsRecord, req issueops.ExecutionPre
 	}
 	paths := s.Files.Paths(record)
 	packetPath, promptPath := paths.Packet, paths.Prompt
-	packet := domain.OwnerPacket(record, req, snapshot, artifactManifest, paths, PolicyContext(record, req))
+	policy, err := PolicyContext(record, req, s.ResolveModel)
+	if err != nil {
+		return issueops.OwnerArtifacts{}, err
+	}
+	packet := domain.OwnerPacket(record, req, snapshot, artifactManifest, paths, policy)
 	packetBytes, err := json.MarshalIndent(packet, "", "  ")
 	if err != nil {
 		return issueops.OwnerArtifacts{}, err

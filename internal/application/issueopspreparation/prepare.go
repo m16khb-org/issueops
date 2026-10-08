@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
+	agentmodelcontract "issueops/internal/contract/agentmodel"
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
-	"issueops/internal/domain/agentmodel"
 	preparationdomain "issueops/internal/domain/issueopspreparation"
 )
 
@@ -22,10 +22,11 @@ type Service struct {
 	direct     DirectWorkspace
 	orca       OrcaGateway
 	evidence   PreparationEvidence
+	models     AgentModels
 }
 
-func NewService(repository Repository, clock Clock, operation OperationID, direct DirectWorkspace, orca OrcaGateway, evidence PreparationEvidence) *Service {
-	return &Service{repository: repository, clock: clock, operation: operation, direct: direct, orca: orca, evidence: evidence}
+func NewService(repository Repository, clock Clock, operation OperationID, direct DirectWorkspace, orca OrcaGateway, evidence PreparationEvidence, models AgentModels) *Service {
+	return &Service{repository: repository, clock: clock, operation: operation, direct: direct, orca: orca, evidence: evidence, models: models}
 }
 
 func (service *Service) Prepare(ctx context.Context, command preparationcontract.Command) (preparationcontract.Result, error) {
@@ -36,7 +37,10 @@ func (service *Service) Prepare(ctx context.Context, command preparationcontract
 	if err != nil {
 		return failedResult(command.ID), err
 	}
-	command = normalizeOwnerDefaults(command)
+	command, err = service.normalizeOwnerDefaults(ctx, snapshot, command)
+	if err != nil {
+		return failedResult(command.ID), err
+	}
 	requested, err := preparationdomain.NormalizeMode(command.Mode)
 	if err != nil {
 		return failedResult(command.ID), err
@@ -230,6 +234,9 @@ func (service *Service) advanceOrca(ctx context.Context, state IntentState) (Int
 		_ = service.recordOrcaFailure(ctx, state, state.Intent.InvocationState, cause)
 		return IntentProgress{State: state, Pending: true}, cause
 	}
+	if request.RoleAgentArgs, err = service.terminalRoleAgentArgs(ctx, state.Intent); err != nil {
+		return IntentProgress{State: state, Pending: true}, err
+	}
 	marked, err := service.repository.MarkInvoking(ctx, state)
 	if err != nil {
 		return IntentProgress{State: state, Pending: true}, err
@@ -261,6 +268,23 @@ func (service *Service) applyOrcaReceipt(ctx context.Context, state IntentState,
 		return IntentProgress{State: state, Pending: true}, err
 	}
 	return progress, nil
+}
+
+// terminalRoleAgentArgs resolves the role-agent launch arguments for the
+// terminal stage. It runs before MarkInvoking: a settings error leaves the
+// intent not_invoked_proven, so the same command retries after the fix.
+func (service *Service) terminalRoleAgentArgs(ctx context.Context, intent preparationcontract.Intent) ([]string, error) {
+	if intent.Stage != preparationcontract.IntentStageTerminal {
+		return nil, nil
+	}
+	if service.models == nil {
+		return nil, fmt.Errorf("agent model resolver is unavailable")
+	}
+	args, err := service.models.RoleAgentArgs(ctx, intent.Probe.Host, intent.Probe.Repo)
+	if err != nil {
+		return nil, fmt.Errorf("resolve role agents before the Orca terminal launch: %w", err)
+	}
+	return args, nil
 }
 
 func (service *Service) recordOrcaFailure(ctx context.Context, state IntentState, invocation string, cause error) error {
@@ -370,19 +394,45 @@ func (service *Service) resolveExisting(snapshot preparationcontract.Snapshot, c
 	}
 }
 
-func normalizeOwnerDefaults(command preparationcontract.Command) preparationcontract.Command {
+// normalizeOwnerDefaults fills a missing owner model or effort from the
+// implement role, or child-implement for a delegated child cycle. Explicit
+// flags win, and a broken settings file fails before any state changes.
+func (service *Service) normalizeOwnerDefaults(ctx context.Context, snapshot preparationcontract.Snapshot, command preparationcontract.Command) (preparationcontract.Command, error) {
 	command.OwnerHost = strings.ToLower(strings.TrimSpace(command.OwnerHost))
 	command.OwnerModel = strings.TrimSpace(command.OwnerModel)
 	command.OwnerEffort = strings.TrimSpace(command.OwnerEffort)
-	if model, effort, ok := agentmodel.ImplementerDefaults(command.OwnerHost); ok {
-		if command.OwnerModel == "" {
-			command.OwnerModel = model
-		}
-		if command.OwnerEffort == "" {
-			command.OwnerEffort = effort
-		}
+	if command.OwnerHost != "codex" && command.OwnerHost != "claude" && command.OwnerHost != "omo" {
+		return command, nil
 	}
-	return command
+	// 플래그를 둘 다 명시해도 같은 설정 파일이 owner packet의 리뷰·조사·독자 검토
+	// 모델을 정한다. 그 파일이 깨졌으면 Orca worktree를 만든 뒤가 아니라 여기서 멈춘다.
+	// omo는 설정 파일을 읽지 않는다.
+	if command.OwnerModel != "" && command.OwnerEffort != "" && command.OwnerHost == "omo" {
+		return command, nil
+	}
+	if service.models == nil {
+		return command, fmt.Errorf("agent model resolver is unavailable")
+	}
+	role := agentmodelcontract.RoleImplement
+	if delegated(snapshot.Record.Delegation) {
+		role = agentmodelcontract.RoleChildImplement
+	}
+	model, effort, err := service.models.OwnerDefaults(ctx, command.OwnerHost, role, snapshot.Record.Repo)
+	if err != nil {
+		return command, fmt.Errorf("resolve owner model: %w", err)
+	}
+	if command.OwnerModel == "" {
+		command.OwnerModel = model
+	}
+	if command.OwnerEffort == "" {
+		command.OwnerEffort = effort
+	}
+	return command, nil
+}
+
+func delegated(raw json.RawMessage) bool {
+	trimmed := strings.TrimSpace(string(raw))
+	return trimmed != "" && trimmed != "null"
 }
 
 func normalizeActor(actor leasecontract.Actor) (leasecontract.Actor, error) {

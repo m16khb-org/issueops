@@ -3,9 +3,11 @@ package issueopsnext
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
+	agentmodelcontract "issueops/internal/contract/agentmodel"
 	issueopscontract "issueops/internal/contract/issueops"
 	issueopsinventorycontract "issueops/internal/contract/issueopsinventory"
 	issueopsnextcontract "issueops/internal/contract/issueopsnext"
@@ -48,11 +50,7 @@ func (service *Service) Next(ctx context.Context, stateRoot, cwd, id string) (is
 			actorHost, actorSession = host, session
 		}
 	}
-	if ports.PlannerDefaults != nil && actorHost != "" {
-		if model, effort, ok := ports.PlannerDefaults(actorHost); ok {
-			result.Review = issueopsnextcontract.Review{Model: model, Effort: effort}
-		}
-	}
+	result = service.applyReviewModel(result, actorHost, agentmodelcontract.RolePlanReview, "", cwd)
 
 	// 저장소 밖에서는 고를 사이클이 없다. repo 필터가 빈 값이면 목록이 모든
 	// 사이클을 돌려주므로, 여기서 먼저 끊어야 무관한 사이클을 고르지 않는다.
@@ -128,11 +126,30 @@ func (service *Service) applyReviewTier(
 	}
 	result.Review.Tier = string(tier)
 	result.Review.Lenses = issueopsdomain.ReviewLensesForTier(tier)
-	if ports.ReviewEffortForTier != nil && actorHost != "" {
-		if effort := ports.ReviewEffortForTier(actorHost, string(tier)); effort != "" {
-			result.Review.Effort = effort
-		}
+	role := agentmodelcontract.RolePlanReview
+	if issueopsdomain.IssueOpsPhaseRank(record.Phase) >= implementRank {
+		role = agentmodelcontract.RoleDiffReview
 	}
+	return service.applyReviewModel(result, actorHost, role, string(tier), result.CWD)
+}
+
+// applyReviewModel fills review.model and review.effort from the agent model
+// settings. A broken settings file leaves both empty with a warning instead
+// of silently falling back to built-in defaults.
+func (service *Service) applyReviewModel(result issueopsnextcontract.Result, actorHost string, role agentmodelcontract.Role, tier, repo string) issueopsnextcontract.Result {
+	if service.ports.ReviewModel == nil || actorHost == "" {
+		return result
+	}
+	model, effort, err := service.ports.ReviewModel(actorHost, role, tier, repo)
+	if err != nil {
+		result.Review.Model, result.Review.Effort = "", ""
+		warning := "agent model settings are invalid: " + err.Error()
+		if !slices.Contains(result.Warnings, warning) {
+			result.Warnings = append(result.Warnings, warning)
+		}
+		return result
+	}
+	result.Review.Model, result.Review.Effort = model, effort
 	return result
 }
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "IO Model"
+  short_description: "Show and change IssueOps per-role agent models"
+  default_prompt: "Use $io-model to read the current IssueOps role models with issueops model show, apply the requested change with issueops model set or unset in the right scope, and read the result back."

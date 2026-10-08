@@ -84,6 +84,10 @@ Usage:
   issueops mcp --http [--addr 127.0.0.1:47831]
   issueops mcp service start|stop|status [--json]
   issueops mcp authorize --workspace-root PATH --host codex|claude|omo --session-id ID [--agent-id ID] --session-pid PID --session-started-at RFC3339 --session-executable PATH [--cwd PATH] [--json]
+  issueops model show [--host claude|codex|omo] [--repo PATH] [--json]
+  issueops model set --scope global|local --host claude|codex --role ROLE [--model MODEL] [--effort EFFORT] [--repo PATH] [--json]
+  issueops model unset --scope global|local --host claude|codex --role ROLE [--field model|effort] [--repo PATH] [--json]
+  issueops model resolve --host claude|codex|omo --role ROLE [--tier TIER] [--round N] [--model MODEL] [--effort EFFORT] [--agents] [--repo PATH] [--json]
   issueops version
 %s
 

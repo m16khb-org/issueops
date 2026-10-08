@@ -112,12 +112,13 @@ actor model live in [`issueops.md`](issueops.md).
 | 종류 | 권장 위치 | 추적 여부 |
 |------|-----------|----------|
 | 프로젝트 지식 | `.issueops/`, `AGENTS.md`, `CLAUDE.md` | git 추적 |
-| 사용자 전역 설정 | `ISSUEOPS_*` env와 generated host config는 현재 구현이며, `~/.config/issueops/config.yaml` loader는 계획 상태 | git 비추적 |
-| 사용자 전역 state/log | `~/.local/state/issueops/` 또는 OS별 state dir | git 비추적 |
+| 사용자 전역 설정 | `ISSUEOPS_*` env, generated host config, 역할별 agent model 설정 `$XDG_CONFIG_HOME/issueops/agent-models.json`(없으면 `~/.config/issueops/`)이 현재 구현이다. generic `~/.config/issueops/config.yaml` loader는 계획 상태 | git 비추적 |
+| 저장소별 agent model 설정 | 메인 워크트리 `.issueops/agent-models.local.json`. 연결 워크트리도 같은 파일을 읽는다 | `info/exclude`로 비추적 |
+| 사용자 전역 state/log | `~/.local/state/issueops/` 또는 OS별 state dir. owner 세션에 주입하는 Codex 역할 파일은 그 아래 `agent-roles/<sha256>.toml`이다 | git 비추적 |
 | workspace local cache | `.issueops-runtime/`는 예약 경로이며 현재 생성하거나 불러오지 않는다 | 도입 시 `.gitignore` 대상 |
 | secret | OS keychain 또는 env reference | 원문 저장 금지 |
 
-구현 시 XDG base directory를 우선 검토하고, macOS에서도 예측 가능한 fallback을 둔다.
+사용자 설정은 XDG base directory를 따르고, 변수가 없으면 macOS에서도 `~/.config`로 fallback한다.
 
 ## Command / policy model
 

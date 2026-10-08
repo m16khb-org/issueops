@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	agentmodelcontract "issueops/internal/contract/agentmodel"
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
 )
@@ -19,6 +20,13 @@ type Repository interface {
 }
 
 type Clock interface{ Now() time.Time }
+
+// AgentModels resolves owner defaults and role-agent launch arguments from
+// the repository's agent model settings. Errors name the broken file.
+type AgentModels interface {
+	OwnerDefaults(ctx context.Context, host string, role agentmodelcontract.Role, repo string) (model, effort string, err error)
+	RoleAgentArgs(ctx context.Context, host, repo string) ([]string, error)
+}
 
 type OperationID interface{ New() (string, error) }
 

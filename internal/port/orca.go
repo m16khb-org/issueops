@@ -149,6 +149,8 @@ type OrcaCreateTerminalRequest struct {
 	ReasoningEffort           string `json:"reasoning_effort,omitempty"`
 	Title                     string `json:"title,omitempty"`
 	AllowCodexHookTrustBypass bool   `json:"allow_codex_hook_trust_bypass,omitempty"`
+	// ExtraArgs are role-agent launch arguments appended to the owner command.
+	ExtraArgs []string `json:"extra_args,omitempty"`
 }
 
 type OrcaTask struct {

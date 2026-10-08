@@ -175,17 +175,28 @@ base 변경을 반영합니다.
 Orca가 준비되어 있으면 같은 worktree의 새 세션으로 인계하고, 사용할 수 없으면
 현재 세션에서 이어갑니다. 사용자가 지정한 세션·보류·종료점이 이 자동 선택보다 우선합니다.
 
-| 호스트 | 구현 기본값 | 계획·리뷰 기본값 | 읽기 전용 조사 |
-|---|---|---|---|
-| Codex | `gpt-6.1-sol` / `high` | `gpt-6-astra` / `xhigh` | `gpt-6-luna` / `medium` |
-| Claude Code | `claude-sonnet-5-5` / `high` | **`claude-opus-5-5` / `high`** | 별도 자동 기본값 없음 |
-| Omo native | `chatgpt-subscription/gpt-6-sol` / `max` | `chatgpt-subscription/gpt-6-astra` / `max` | `chatgpt-subscription/gpt-6-luna` / `medium` |
+| 호스트 | 구현 | 계획·리뷰 | 읽기 전용 조사 | 본문 독자 검토 |
+|---|---|---|---|---|
+| Codex | `gpt-6.1-sol` / `high` | `gpt-6-astra` / `high` | `gpt-6-luna` / `medium` | `gpt-6-luna` / `low` |
+| Claude Code | `claude-opus-5-5` / `high` | `claude-opus-5-5` / `high` | `claude-sonnet-5-5` / `medium` | `claude-haiku-5-5` / `medium` |
+| Omo native | `chatgpt-subscription/gpt-6-sol` / `max` | `chatgpt-subscription/gpt-6-astra` / `max` | `chatgpt-subscription/gpt-6-luna` / `medium` | 없음 |
 
-정규 기본값은 [`internal/domain/agentmodel/defaults.go`](internal/domain/agentmodel/defaults.go)에 있습니다.
-`execution prepare`의 `--owner-model`·`--owner-effort` 명시값이 기본값보다 우선합니다.
-리뷰 스킬은 변경 종류와 재리뷰 라운드에 따라 effort를 조정합니다. 자세한 규칙은
-[`issueops-review`](skills/issueops-review/SKILL.md)를 따릅니다. `chatgpt-subscription/`은 Omo의
-provider 식별자이며 Codex 호스트 이름을 바꾸는 설정이 아닙니다.
+위 표는 내장 기본값입니다. Claude Code와 Codex는 역할별 model·effort를 사용자 전체(global)나
+저장소 하나(local)로 바꿀 수 있습니다. 우선순위는 필드마다 명시 플래그 > local > global > 기본값입니다.
+
+```bash
+issueops model show --json                                   # 현재 값과 출처
+issueops model set --scope local --host codex --role diff-review --effort xhigh --json
+issueops model resolve --host claude --role research --json  # 최종 값과 빈 컨텍스트 실행 argv
+```
+
+local 설정은 메인 워크트리의 `.issueops/agent-models.local.json` 하나이며 커밋하지 않습니다.
+연결 워크트리에서도 같은 파일을 읽습니다. global은 `$XDG_CONFIG_HOME/issueops/agent-models.json`
+(없으면 `~/.config/issueops/`)입니다. 대화로 바꾸려면 [`io-model`](skills/io-model/SKILL.md) 스킬을 씁니다.
+IssueOps가 Orca·cmux로 띄우는 owner 세션에는 리뷰·조사·독자 검토 역할이 서브에이전트로 주입됩니다.
+리뷰 3~5라운드는 `issueops model resolve --round N`이 돌려주는 상향 값을 씁니다. Fable은 기본값이나
+상향에 쓰지 않고 이름으로 지정할 때만 씁니다. `chatgpt-subscription/`은 Omo의 provider 식별자이며
+Codex 호스트 이름을 바꾸는 설정이 아닙니다.
 
 자동 인계 명령은 Claude Code에 `--dangerously-skip-permissions`, Codex에
 `--dangerously-bypass-approvals-and-sandbox`를 전달합니다. 호스트의 권한 확인을 생략하는

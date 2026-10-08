@@ -2,6 +2,7 @@ package issueopsapp
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -39,7 +40,13 @@ func newCmuxHandoffService(stateRoot string, deps cmuxHandoffDependencies) app.S
 	}
 	if deps.Prepare == nil {
 		deps.Prepare = func(req cmuxcontract.ArtifactRequest) (cmuxcontract.PreparedLauncher, error) {
-			return cmuxadapter.PrepareLauncher(req, hostprotocol.BuildInteractiveArgv)
+			extra, err := roleAgentArgs(context.Background(), stateRoot, req.Host, req.CWD)
+			if err != nil {
+				return cmuxcontract.PreparedLauncher{}, fmt.Errorf("resolve role agents for the cmux owner session: %w", err)
+			}
+			return cmuxadapter.PrepareLauncher(req, func(host, executable, model, effort, prompt string) ([]string, error) {
+				return hostprotocol.BuildInteractiveArgv(host, executable, model, effort, prompt, extra)
+			})
 		}
 	}
 	if deps.AwaitReceipt == nil {
@@ -52,7 +59,7 @@ func newCmuxHandoffService(stateRoot string, deps cmuxHandoffDependencies) app.S
 	}
 	return app.Service{Client: deps.Client, Now: deps.Now, Roots: port.RootEnvironment{Read: issueopsadapter.ReadIssueOps, Directory: cmuxadapter.ObserveDirectory, Getwd: deps.Getwd, GitTop: deps.GitTop}, ReadPrompt: deps.ReadPrompt, ValidateHostExecutable: deps.ValidateHostExecutable,
 		ValidateHostProfile: func(host, executable, model, effort string) error {
-			_, err := hostprotocol.BuildInteractiveArgv(host, executable, model, effort, "")
+			_, err := hostprotocol.BuildInteractiveArgv(host, executable, model, effort, "", nil)
 			return err
 		},
 		Prepare: deps.Prepare, AwaitReceipt: deps.AwaitReceipt, Cleanup: deps.Cleanup, ArtifactRoot: filepath.Join(stateRoot, "cmux-handoff"), SamePath: cmuxadapter.SamePath, ReadAudit: newHandoffDeliveryAudit(stateRoot).Read, Observe: newHandoffDeliveryService(stateRoot).ObserveManualSnapshot}

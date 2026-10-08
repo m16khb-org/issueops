@@ -38,6 +38,7 @@ and supersession rules live in [adr/README.md](adr/README.md).
 | Date | Decision | Record |
 |---|---|---|
 | 2026-10-08 | SubagentStart carries the project-doc catalog, and every host gets the same model text; supersedes the "SessionStart only" clause of 2026-08-27 | [record](adr/2026-10-08-subagent-start-catalog-and-unified-model-text.md) |
+| 2026-10-08 | Role models resolve from flag, main-worktree local, and XDG global settings and are injected into Orca·cmux owner sessions; supersedes the Claude implement default of 2026-09-24 | [record](adr/2026-10-08-role-models-resolve-from-global-and-local-settings-and-are-i.md) |
 | 2026-10-07 | Review revise and regress rounds are capped at five; supersedes the cap number of 2026-07-02 and 2026-09-08 Decision (4) | [record](adr/2026-10-07-review-revise-and-regress-rounds-are-capped-at-five.md) |
 | 2026-10-07 | `.issueops` 폴더 구조를 append와 runtime이 쓰는 경로에 맞추고 checker가 강제한다 | [record](adr/2026-10-07-issueops-docs-layout-matches-the-append-and-runtime-paths.md) |
 | 2026-10-07 | Readers accept only the current record shape | [record](adr/2026-10-07-readers-accept-only-the-current-record-shape.md) |
@@ -52,7 +53,7 @@ and supersession rules live in [adr/README.md](adr/README.md).
 | 2026-09-29 | Cleanup ownership binds the operation and exact record revision; supersedes the draft finish-only field | [record](adr/2026-09-29-cleanup-ownership-binds-the-operation-and-exact-record-revis.md) |
 | 2026-09-29 | Cleanup finish executor owns observation and attempt-bound finalization | [record](adr/2026-09-29-cleanup-finish-executor-owns-observation-and-attempt-bound-f.md) |
 | 2026-09-29 | Cleanup finish ownership is an optional record field with guarded writers | [record](adr/2026-09-29-cleanup-finish-ownership-is-an-optional-record-field-with-gu.md) |
-| 2026-09-24 | Claude role models: Opus 5 plans and reviews, Sonnet 5 implements, Fable 5 is manual-only; supersedes the 2026-07-24 Claude defaults | [record](adr/2026-09-24-claude-role-models-opus-5-plans-and-reviews-sonnet-5-impleme.md) |
+| 2026-09-24 | Claude role models: Opus 5 plans and reviews, Sonnet 5 implements, Fable 5 is manual-only; supersedes the 2026-07-24 Claude defaults; superseded in part — defaults come from the role resolver and Claude implements with Opus since [2026-10-08](adr/2026-10-08-role-models-resolve-from-global-and-local-settings-and-are-i.md) | [record](adr/2026-09-24-claude-role-models-opus-5-plans-and-reviews-sonnet-5-impleme.md) |
 | 2026-09-24 | Issue and PR bodies are human documents; implementation materials stay in .issueops/issues/<n>/; partially supersedes 2026-09-09 | [record](adr/2026-09-24-issue-and-pr-bodies-are-human-documents.md) |
 | 2026-09-23 | issueops mcp serves in-process; the shared daemon leaves the MCP path (stdio 경로로 축소: 2026-10-02 공용 HTTP 결정; daemon 제거 완료: 2026-10-06) | [record](adr/2026-09-23-issueops-mcp-serves-in-process-the-shared-daemon-leaves-the.md) |
 | 2026-09-23 | The lease contract decodes persisted records through the production record contract; supersedes 2026-07-28 | [record](adr/2026-09-23-the-lease-contract-decodes-persisted-records-through-the-pro.md) |
