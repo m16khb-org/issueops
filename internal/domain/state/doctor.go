@@ -75,7 +75,7 @@ func inspectDoctorEntry(entry DoctorEntry) (statecontract.StateDoctorIssue, bool
 
 func harnessOwnedStateDirectory(name string) bool {
 	switch name {
-	case "projects", "worker", "loop", "issueops-benchmarks", "issueops_v1", "native-activation", "audit", "mcp-http":
+	case "projects", "worker", "loop", "issueops-benchmarks", "issueops_v1", "native-activation", "audit", "mcp-http", "agent-roles":
 		return true
 	default:
 		return false
