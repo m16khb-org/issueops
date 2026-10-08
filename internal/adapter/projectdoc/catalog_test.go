@@ -342,20 +342,27 @@ func TestScanProjectDocNamesMarksReadErrorAsTruncated(t *testing.T) {
 	}
 }
 
-func TestFormatProjectDocCatalogUsesDescription(t *testing.T) {
+func TestFormatProjectDocCatalogListsPathsWithDescriptions(t *testing.T) {
 	catalog := []projectdocdomain.ProjectDocCatalogEntry{
 		{RelPath: ".issueops/ADR.md", Title: "구현 계획", Description: "Structural decisions, rationale, and rejected alternatives."},
 		{RelPath: ".issueops/X.md", Title: "엑스", Description: ""},
+		{RelPath: ".issueops/BARE.md"},
 	}
-	got := FormatProjectDocCatalog(catalog)
-	if !strings.HasPrefix(got, "project docs (read what's relevant): ") {
-		t.Fatalf("unexpected catalog prefix: %q", got)
+	want := "Project docs under .issueops/ (read the ones relevant to the task before acting):\n" +
+		"- .issueops/ADR.md: Structural decisions, rationale, and rejected alternatives.\n" +
+		"- .issueops/X.md: 엑스\n" +
+		"- .issueops/BARE.md"
+	if got := FormatProjectDocCatalog(catalog); got != want {
+		t.Fatalf("catalog =\n%s\nwant\n%s", got, want)
 	}
-	if !strings.Contains(got, "ADR.md=Structural decisions, rationale, and rejected alternatives.") {
-		t.Fatalf("catalog should use description: %s", got)
+}
+
+func TestFormatProjectDocCatalogOmissionsIsALastLine(t *testing.T) {
+	if got := FormatProjectDocCatalogOmissions(projectdocdomain.CatalogOmissions{}); got != "" {
+		t.Fatalf("no omissions must render nothing, got %q", got)
 	}
-	if !strings.Contains(got, "X.md=엑스") {
-		t.Fatalf("catalog should fall back to title when no description: %s", got)
+	if got := FormatProjectDocCatalogOmissions(projectdocdomain.CatalogOmissions{Oversize: 1}); got != "\nomitted: oversize=1" {
+		t.Fatalf("omissions line = %q", got)
 	}
 }
 

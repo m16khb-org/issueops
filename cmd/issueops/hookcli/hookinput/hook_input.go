@@ -2,6 +2,7 @@
 // need. Hosts send the current working directory as cwd; the repo, workspace,
 // workspace_root, and project_dir keys and a nested hook_input envelope are
 // read too, so the same reader serves Codex, Claude Code, and direct CLI use.
+// SubagentStart input also names the starting agent as agent_type.
 package hookinput
 
 import (
@@ -12,6 +13,14 @@ import (
 var repoKeys = []string{"repo", "cwd", "workspace", "workspace_root", "project_dir"}
 
 func RepoFromHookInput(input []byte) string {
+	return firstValue(input, repoKeys)
+}
+
+func AgentTypeFromHookInput(input []byte) string {
+	return firstValue(input, []string{"agent_type"})
+}
+
+func firstValue(input []byte, keys []string) string {
 	if len(strings.TrimSpace(string(input))) == 0 {
 		return ""
 	}
@@ -19,17 +28,17 @@ func RepoFromHookInput(input []byte) string {
 	if err := json.Unmarshal(input, &obj); err != nil {
 		return ""
 	}
-	if repo := firstRepoKey(obj); repo != "" {
-		return repo
+	if value := firstKey(obj, keys); value != "" {
+		return value
 	}
 	if nested, ok := obj["hook_input"].(map[string]any); ok {
-		return firstRepoKey(nested)
+		return firstKey(nested, keys)
 	}
 	return ""
 }
 
-func firstRepoKey(obj map[string]any) string {
-	for _, key := range repoKeys {
+func firstKey(obj map[string]any, keys []string) string {
+	for _, key := range keys {
 		if value, ok := obj[key].(string); ok && strings.TrimSpace(value) != "" {
 			return strings.TrimSpace(value)
 		}

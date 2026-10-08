@@ -7,9 +7,10 @@ package hookprompt
 import projectdoc "issueops/internal/domain/projectdoc"
 
 // ProjectDocCatalogContext is the static project-doc catalog a context hook
-// injects: Compact is the model-facing one-line menu, UserView the readable
-// list hosts may show to the user. --json prints this shape verbatim, which
-// is what the Omo lifecycle extension reads.
+// injects: Compact is the model-facing list of document paths and
+// descriptions, UserView the one-line notice hosts may show to the user.
+// --json prints this shape verbatim, which is what the Omo lifecycle
+// extension reads.
 type ProjectDocCatalogContext struct {
 	ShouldInject bool                                `json:"should_inject"`
 	ProjectDocs  []projectdoc.ProjectDocCatalogEntry `json:"project_docs,omitempty"`

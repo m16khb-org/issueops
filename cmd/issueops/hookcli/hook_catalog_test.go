@@ -71,11 +71,11 @@ func TestRunHookSessionStartInjectsCatalogClaude(t *testing.T) {
 	if hso, _ := obj["hookSpecificOutput"].(map[string]any); hso["hookEventName"] != "SessionStart" {
 		t.Fatalf("SessionStart must name its event: %+v", obj)
 	}
-	if ctx := hookAdditionalContext(obj); !strings.Contains(ctx, "project docs (read what's relevant):") || !strings.Contains(ctx, "ARCHITECTURE.md=") {
+	if ctx := hookAdditionalContext(obj); !strings.Contains(ctx, "Project docs under .issueops/") || !strings.Contains(ctx, "- .issueops/ARCHITECTURE.md: ") {
 		t.Fatalf("SessionStart must inject the compact catalog: %q", ctx)
 	}
-	if sysMsg, _ := obj["systemMessage"].(string); !strings.Contains(sysMsg, "📚") || !strings.Contains(sysMsg, "• ARCHITECTURE.md") {
-		t.Fatalf("Claude SessionStart should show the readable catalog via systemMessage: %v", obj["systemMessage"])
+	if sysMsg, _ := obj["systemMessage"].(string); !strings.HasPrefix(sysMsg, "📚 project docs 1개") || strings.Contains(sysMsg, "\n") {
+		t.Fatalf("Claude SessionStart should show a one-line catalog notice via systemMessage: %v", obj["systemMessage"])
 	}
 }
 
@@ -117,21 +117,22 @@ func TestRunHookSessionStartInjectsCatalogOnCompactSource(t *testing.T) {
 	repo := hookTempRepoWithDoc(t)
 	for _, source := range []string{"compact", "resume", "clear"} {
 		obj := runHookCapture(t, `{"cwd":"`+repo+`","source":"`+source+`"}`, func() error { return runHook([]string{"session-start", "--host", "claude"}) })
-		if ctx := hookAdditionalContext(obj); !strings.Contains(ctx, "project docs (read what's relevant):") {
+		if ctx := hookAdditionalContext(obj); !strings.Contains(ctx, "Project docs under .issueops/") {
 			t.Fatalf("source %s must re-establish the catalog: %+v", source, obj)
 		}
 	}
 }
 
-func TestRunHookSessionStartCodexOmitsSystemMessage(t *testing.T) {
+func TestRunHookSessionStartCodexGetsTheClaudeModelTextWithoutSystemMessage(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := hookTempRepoWithDoc(t)
-	obj := runHookCapture(t, `{"cwd":"`+repo+`","source":"startup"}`, func() error { return runHook([]string{"session-start", "--host", "codex"}) })
-	if _, ok := obj["systemMessage"]; ok {
-		t.Fatalf("Codex SessionStart must omit systemMessage: %+v", obj)
+	codex := runHookCapture(t, `{"cwd":"`+repo+`","source":"startup"}`, func() error { return runHook([]string{"session-start", "--host", "codex"}) })
+	claude := runHookCapture(t, `{"cwd":"`+repo+`","source":"startup"}`, func() error { return runHook([]string{"session-start", "--host", "claude"}) })
+	if _, ok := codex["systemMessage"]; ok {
+		t.Fatalf("Codex SessionStart must omit systemMessage: %+v", codex)
 	}
-	if ctx := hookAdditionalContext(obj); !strings.Contains(ctx, "• ARCHITECTURE.md") || strings.Contains(ctx, "project docs (read what's relevant):") {
-		t.Fatalf("Codex SessionStart additionalContext should be the readable catalog view: %q", ctx)
+	if ctx := hookAdditionalContext(codex); ctx == "" || ctx != hookAdditionalContext(claude) {
+		t.Fatalf("Codex and Claude must receive the same model text:\ncodex=%q\nclaude=%q", ctx, hookAdditionalContext(claude))
 	}
 }
 
@@ -139,7 +140,7 @@ func TestRunHookContextEventsEmitNoopWithoutProjectDocs(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := t.TempDir()
 	for _, host := range []string{"codex", "claude"} {
-		for _, event := range []string{"session-start", "post-compact"} {
+		for _, event := range []string{"session-start", "subagent-start", "post-compact"} {
 			obj := runHookCapture(t, `{"cwd":"`+repo+`","source":"startup"}`, func() error { return runHook([]string{event, "--host", host}) })
 			if len(obj) != 0 {
 				t.Fatalf("%s/%s without docs must be an empty object, got %+v", host, event, obj)
@@ -160,8 +161,8 @@ func TestRunHookPostCompactCarriesOnlyUserFacingCatalog(t *testing.T) {
 		if _, ok := obj["hookSpecificOutput"]; ok {
 			t.Fatalf("PostCompact must not emit hookSpecificOutput (%q): %+v", host, obj)
 		}
-		if sysMsg, _ := obj["systemMessage"].(string); !strings.Contains(sysMsg, "📚") || !strings.Contains(sysMsg, "ARCHITECTURE.md") {
-			t.Fatalf("PostCompact (%q) should carry the readable catalog via systemMessage: %+v", host, obj)
+		if sysMsg, _ := obj["systemMessage"].(string); !strings.HasPrefix(sysMsg, "📚 project docs 1개") {
+			t.Fatalf("PostCompact (%q) should carry the catalog notice via systemMessage: %+v", host, obj)
 		}
 	}
 }
@@ -174,7 +175,7 @@ func TestRunHookJSONOutputUsesSnakeCaseFields(t *testing.T) {
 		if obj["should_inject"] != true {
 			t.Fatalf("%s --json must expose should_inject: %+v", event, obj)
 		}
-		if compact, _ := obj["compact"].(string); !strings.Contains(compact, "ARCHITECTURE.md=") {
+		if compact, _ := obj["compact"].(string); !strings.Contains(compact, "- .issueops/ARCHITECTURE.md: ") {
 			t.Fatalf("%s --json must expose the compact catalog: %+v", event, obj)
 		}
 		for _, field := range []string{"ShouldInject", "Compact", "UserView", "ProjectDocs"} {
@@ -190,7 +191,7 @@ func TestRunHookContextEventsAcrossIsolatedWorktreesDoNotCreateHarnessState(t *t
 	t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
 	for _, host := range []string{"codex", "claude"} {
 		for _, repo := range []string{hookTempRepoWithDoc(t), hookTempRepoWithDoc(t)} {
-			for _, event := range []string{"session-start", "post-compact"} {
+			for _, event := range []string{"session-start", "subagent-start", "post-compact"} {
 				event := event
 				runHookCapture(t, `{"cwd":"`+repo+`","source":"startup"}`, func() error {
 					return runHook([]string{event, "--host", host})
@@ -213,11 +214,44 @@ func TestDisableHooksTurnsContextEventIntoSilentNoop(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	t.Setenv("ISSUEOPS_DISABLE_HOOKS", "1")
 	repo := hookTempRepoWithDoc(t)
-	out := runHookRawCapture(t, `{"cwd":"`+repo+`","source":"startup"}`, func() error {
-		return runHook([]string{"session-start", "--host", "claude"})
-	})
-	if strings.TrimSpace(out) != "" {
-		t.Fatalf("disabled hooks must emit nothing: %q", out)
+	for _, event := range []string{"session-start", "subagent-start"} {
+		out := runHookRawCapture(t, `{"cwd":"`+repo+`","source":"startup","agent_type":"general-purpose"}`, func() error {
+			return runHook([]string{event, "--host", "claude"})
+		})
+		if strings.TrimSpace(out) != "" {
+			t.Fatalf("disabled %s must emit nothing: %q", event, out)
+		}
+	}
+}
+
+// A subagent starts with an empty context, so it gets the model-facing catalog
+// the main session got, under its own event name and without a systemMessage.
+func TestRunHookSubagentStartInjectsTheSessionCatalogWithoutANotice(t *testing.T) {
+	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
+	repo := hookTempRepoWithDoc(t)
+	for _, tc := range []struct{ host, agentType string }{{"claude", "general-purpose"}, {"codex", "worker"}, {"claude", ""}} {
+		session := runHookCapture(t, `{"cwd":"`+repo+`","source":"startup"}`, func() error { return runHook([]string{"session-start", "--host", tc.host}) })
+		obj := runHookCapture(t, `{"cwd":"`+repo+`","agent_type":"`+tc.agentType+`"}`, func() error { return runHook([]string{"subagent-start", "--host", tc.host}) })
+		if hso, _ := obj["hookSpecificOutput"].(map[string]any); hso["hookEventName"] != "SubagentStart" {
+			t.Fatalf("%s SubagentStart must name its event: %+v", tc.host, obj)
+		}
+		if ctx := hookAdditionalContext(obj); ctx == "" || ctx != hookAdditionalContext(session) {
+			t.Fatalf("%s subagent catalog must equal the session catalog:\n%q\n%q", tc.host, ctx, hookAdditionalContext(session))
+		}
+		if _, ok := obj["systemMessage"]; ok {
+			t.Fatalf("%s SubagentStart must not show a notice: %+v", tc.host, obj)
+		}
+	}
+}
+
+func TestRunHookSubagentStartSkipsExploreAndForkAgents(t *testing.T) {
+	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
+	repo := hookTempRepoWithDoc(t)
+	for _, agentType := range []string{"Explore", "explorer", "FORK", " fork "} {
+		obj := runHookCapture(t, `{"cwd":"`+repo+`","agent_type":"`+agentType+`"}`, func() error { return runHook([]string{"subagent-start", "--host", "claude"}) })
+		if len(obj) != 0 {
+			t.Fatalf("agent %q must get an empty object, got %+v", agentType, obj)
+		}
 	}
 }
 

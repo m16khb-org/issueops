@@ -18,3 +18,20 @@ func TestRepoFromHookInputUsesTopLevelAndNestedValues(t *testing.T) {
 		}
 	}
 }
+
+func TestAgentTypeFromHookInputUsesTopLevelAndNestedValues(t *testing.T) {
+	cases := map[string]string{
+		`{"agent_type":" Explore "}`:                           "Explore",
+		`{"hook_input":{"agent_type":"worker"}}`:               "worker",
+		`{"agent_type":"","hook_input":{"agent_type":"fork"}}`: "fork",
+		`{"agent_type":7}`:                                     "",
+		`{}`:                                                   "",
+		``:                                                     "",
+		`not json`:                                             "",
+	}
+	for input, want := range cases {
+		if got := AgentTypeFromHookInput([]byte(input)); got != want {
+			t.Fatalf("AgentTypeFromHookInput(%s) = %q, want %q", input, got, want)
+		}
+	}
+}

@@ -543,3 +543,12 @@ func TestRouteCompoundImplementationKeepsEditingContracts(t *testing.T) {
 		}
 	}
 }
+
+func TestRenderedOperationsNamesEveryContextHook(t *testing.T) {
+	got := renderOperations(projectdoc.ProjectSignals{})
+	for _, want := range []string{"`issueops hook session-start`", "`issueops hook subagent-start`", "`issueops hook post-compact`", "`ISSUEOPS_DISABLE_HOOKS=1` turns every hook into a no-op."} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("rendered OPERATIONS.md misses %q:\n%s", want, got)
+		}
+	}
+}
