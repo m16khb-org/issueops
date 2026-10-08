@@ -246,6 +246,10 @@
           "name": "mcp"
         },
         {
+          "description": "show, set, and resolve per-role agent models for claude and codex",
+          "name": "model"
+        },
+        {
           "description": "print issueops version",
           "name": "version"
         },
@@ -394,7 +398,7 @@
           "name": "status"
         }
       ],
-      "hash": "d500853d0896402a1645c93a93915c330776a61b597aa123f650e850b1cb479e",
+      "hash": "0ed9b456b65fc78d4f5bc0d97851d9b750896ae64b26cbf59c48779a21a6e99e",
       "mcp_tools": [
         "api_doc_review",
         "api_doc_static_check",
@@ -1200,6 +1204,13 @@
           "has_skill_md": true,
           "name": "implementation-planning",
           "path": "$ISSUEOPS_ROOT/skills/implementation-planning"
+        },
+        {
+          "description": "Use when the user wants to see or change which model and effort IssueOps uses per role (implement, child-implement, plan-review, diff-review, review-escalate, research, reader-check) for Claude Code or Codex, globally or for one repository. Triggers include io model, issueops model, 역할별 모델 설정, 리뷰 모델 바꿔줘, 서브에이전트 모델, global·local 모델 설정.",
+          "has_openai_yaml": true,
+          "has_skill_md": true,
+          "name": "io-model",
+          "path": "$ISSUEOPS_ROOT/skills/io-model"
         },
         {
           "description": "Use when the user requests io update, issueops update, native skill refresh, or reinstalling the current IssueOps source checkout. Updates the binary and Codex, Claude, and Omo integration without fetching source or changing Git history.",
@@ -5668,6 +5679,7 @@
           "git-operations",
           "gitlab-usecase",
           "implementation-planning",
+          "io-model",
           "io-update",
           "issueops",
           "issueops-abandon",
@@ -6995,6 +7007,10 @@
                 "name": "mcp"
               },
               {
+                "description": "show, set, and resolve per-role agent models for claude and codex",
+                "name": "model"
+              },
+              {
                 "description": "print issueops version",
                 "name": "version"
               },
@@ -7143,7 +7159,7 @@
                 "name": "status"
               }
             ],
-            "hash": "d500853d0896402a1645c93a93915c330776a61b597aa123f650e850b1cb479e",
+            "hash": "0ed9b456b65fc78d4f5bc0d97851d9b750896ae64b26cbf59c48779a21a6e99e",
             "mcp_tools": [
               "api_doc_review",
               "api_doc_static_check",
@@ -7963,6 +7979,13 @@
                 "has_skill_md": true,
                 "name": "implementation-planning",
                 "path": "$ISSUEOPS_ROOT/skills/implementation-planning"
+              },
+              {
+                "description": "Use when the user wants to see or change which model and effort IssueOps uses per role (implement, child-implement, plan-review, diff-review, review-escalate, research, reader-check) for Claude Code or Codex, globally or for one repository. Triggers include io model, issueops model, 역할별 모델 설정, 리뷰 모델 바꿔줘, 서브에이전트 모델, global·local 모델 설정.",
+                "has_openai_yaml": true,
+                "has_skill_md": true,
+                "name": "io-model",
+                "path": "$ISSUEOPS_ROOT/skills/io-model"
               },
               {
                 "description": "Use when the user requests io update, issueops update, native skill refresh, or reinstalling the current IssueOps source checkout. Updates the binary and Codex, Claude, and Omo integration without fetching source or changing Git history.",
@@ -9192,6 +9215,7 @@
                 "git-operations",
                 "gitlab-usecase",
                 "implementation-planning",
+                "io-model",
                 "io-update",
                 "issueops",
                 "issueops-abandon",

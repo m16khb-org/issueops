@@ -357,27 +357,20 @@ Orca가 worker prompt에 주입하는 현재 제어 명령은 `--to` 대신
 
 ## Host-Aware Owner Model Defaults
 
-`--owner-model`/`--owner-effort`를 생략하면 prepare가 host별 implementer
-기본값을 적용해 packet과 OrcaBinding에 기록한다. 명시 플래그가 항상 우선한다.
+`--owner-model`/`--owner-effort`를 생략하면 prepare가 `implement` 역할(delegated child
+cycle은 `child-implement`)을 `issueops model` 설정으로 해석해 packet과 OrcaBinding에
+기록한다. 명시 플래그가 항상 우선하고, 이미 봉인된 binding은 설정을 바꿔도 그대로다.
+현재 값은 표로 옮겨 적지 않고 `issueops model show --json`으로 읽는다.
 
-| host | implementer(하위 세션) | planner(리뷰 서브에이전트) |
-|---|---|---|
-| codex | `gpt-6.1-sol` / `high` | `gpt-6-astra` / `xhigh` |
-| claude | `claude-sonnet-5-5` / `high` | `claude-opus-5-5` / `high` |
-| omo | `chatgpt-subscription/gpt-6-sol` / `max` | `chatgpt-subscription/gpt-6-astra` / `max` |
+owner 프롬프트의 `{REVIEWER_MODEL}`(`diff-review`), `{RESEARCH_MODEL}`(`research`),
+`{READER_CHECK_MODEL}`(`reader-check`)도 같은 해석기에서 나온다. Orca·cmux가 띄우는
+owner 세션에는 리뷰·조사·독자 검토 역할이 서브에이전트로 주입된다(Claude `--agents`,
+Codex `-c agents.issueops-<role>.config_file=…`). 조사 모델은 위임이 이미 허용된 범위의
+읽기 전용 탐색·자료 요약에만 쓰고, 구현·계획 확정·리뷰 게이트 판정에는 쓰지 않는다.
+모델·effort 해석 규칙의 정규 소유자는 `internal/domain/agentmodel`이다.
 
-planner 값은 owner 프롬프트의 `{REVIEWER_MODEL}`/`{REVIEWER_EFFORT}`로
-렌더되어, 하위 세션이 구현 diff의 design-review 적대 리뷰 서브에이전트를 planner급
-모델로 띄우는 실행 계약이 된다.
-
-Codex와 Omo의 조사 모델은 `gpt-6-luna` / `medium`이며, Omo는 같은
-`chatgpt-subscription/` prefix를 사용한다. 위임이 이미 허용된 범위에서만 읽기 전용
-탐색·자료 요약에 사용하고, 구현·계획 확정·리뷰 게이트 판정에는 사용하지 않는다.
-모델·effort 기본값의 정규 소유자는 `internal/domain/agentmodel`이다.
-
-Claude Code의 자동 실행 경로는 `Opus 5.5 → Sonnet 5.5`다. Fable 5는 자동
-기본값이나 폴백으로 사용하지 않으며, 필요한 경우에만
-`--owner-model claude-fable-5`로 명시해 수동 실행한다.
+Fable 5는 자동 기본값·폴백·리뷰 상향에 쓰지 않는다. 필요한 경우에만
+`--owner-model claude-fable-5`나 `issueops model set`으로 명시한다.
 
 ## Artifact Staging And Sealing
 

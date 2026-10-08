@@ -143,7 +143,10 @@ Closes #510
 
 ## 독자 검토(권장)
 
-맥락이 없는 subagent에게 제목과 본문만 주고 네 질문에 답하게 한다.
+맥락이 없는 subagent에게 제목과 본문만 주고 네 질문에 답하게 한다. 모델과 effort는
+`issueops model resolve --host "$HOST" --role reader-check --json`의 결과를 쓴다. Orca가 띄운
+세션이면 같은 값으로 주입된 `issueops-reader-check` 서브에이전트를 쓰고, 그 밖에는 결과의
+`argv`로 빈 컨텍스트 세션을 띄운다.
 
 1. 무엇이 문제이고 무엇이 바뀌는가?
 2. 왜 지금 필요한가?
