@@ -334,7 +334,7 @@ func snapshotOmpAuth(ctx context.Context, source, destination string) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	rows, err := tx.QueryContext(ctx, "SELECT sql FROM source.sqlite_master WHERE type = 'table' AND name IN ('auth_schema_version', 'auth_credentials')")
 	if err != nil {
 		return err
