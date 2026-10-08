@@ -4,12 +4,11 @@ import (
 	agyadapter "issueops/internal/adapter/agy"
 	claudeadapter "issueops/internal/adapter/claude"
 	codexadapter "issueops/internal/adapter/codex"
+	"issueops/internal/adapter/extensionhost"
 	"issueops/internal/adapter/hostprotocol"
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	installadapter "issueops/internal/adapter/install"
 	"issueops/internal/adapter/installutil"
-	omoadapter "issueops/internal/adapter/omo"
-	ompadapter "issueops/internal/adapter/omp"
 	"issueops/internal/port"
 )
 
@@ -65,8 +64,8 @@ func testCodexInstaller() codexadapter.Installer {
 		WriteTextPlan:                installutil.WriteTextPlan,
 	})
 }
-func testOmoInstaller() omoadapter.Installer {
-	return omoadapter.NewInstaller(omoadapter.Dependencies{
+func testOmoInstaller() extensionhost.Installer {
+	return extensionhost.NewInstaller(extensionhost.Omo, extensionhost.Dependencies{
 		MergeJSONMapFile:                installutil.MergeJSONMapFile,
 		VerifyJSONMapEntry:              installutil.VerifyJSONMapEntry,
 		CaptureNativeActivationEvidence: installutil.CaptureNativeActivationEvidence,
@@ -78,8 +77,8 @@ func testOmoInstaller() omoadapter.Installer {
 		WriteTextPlan:                   installutil.WriteTextPlan,
 	}, hostprotocol.OmoLifecycleExtension)
 }
-func testOmpInstaller() ompadapter.Installer {
-	return ompadapter.NewInstaller(ompadapter.Dependencies{
+func testOmpInstaller() extensionhost.Installer {
+	return extensionhost.NewInstaller(extensionhost.Omp, extensionhost.Dependencies{
 		MergeJSONMapFile:                installutil.MergeJSONMapFile,
 		RemoveJSONMapEntry:              installutil.RemoveJSONMapEntry,
 		VerifyJSONMapEntry:              installutil.VerifyJSONMapEntry,

@@ -194,3 +194,12 @@ func stringSlicesEqual(a, b []string) bool {
 	}
 	return true
 }
+
+func TestQuoteWord(t *testing.T) {
+	if got := QuoteWord(""); got != "''" {
+		t.Fatalf("empty QuoteWord = %q", got)
+	}
+	if got := QuoteWord("it's/bin"); got != `'it'"'"'s/bin'` {
+		t.Fatalf("quoted QuoteWord = %q", got)
+	}
+}

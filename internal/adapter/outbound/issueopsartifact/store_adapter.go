@@ -6,9 +6,10 @@ import (
 
 	"issueops/internal/adapter/outbound/issueopsrecord"
 	issueopsartifactcontract "issueops/internal/contract/issueopsartifact"
+	"issueops/internal/port"
 )
 
-const artifactStageBucket = "artifact_stage_v1"
+const artifactStageBucket = port.ArtifactStageBucket
 
 type Repository struct {
 	Store issueopsrecord.Store

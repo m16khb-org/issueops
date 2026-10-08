@@ -2,7 +2,6 @@ package claude
 
 import (
 	"path/filepath"
-	"strings"
 
 	"issueops/internal/port"
 )
@@ -59,11 +58,4 @@ func claudeProjectMCPConfig() map[string]any {
 			},
 		},
 	}
-}
-
-func shellQuote(value string) string {
-	if value == "" {
-		return "''"
-	}
-	return "'" + strings.ReplaceAll(value, "'", "'\"'\"'") + "'"
 }

@@ -17,8 +17,8 @@ import (
 )
 
 const (
-	recordBucket = "issueops_v1"
-	holderBucket = "lease_holder_v1"
+	recordBucket = port.IssueOpsRecordBucket
+	holderBucket = port.LeaseHolderBucket
 )
 
 type Repository struct{ store port.TransactionalRecordStore }

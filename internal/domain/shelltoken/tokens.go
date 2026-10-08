@@ -460,3 +460,12 @@ func unquotedBraceExpansion(runes []rune, start int) bool {
 func shellParameterStart(r rune) bool {
 	return r == '{' || r == '(' || r == '_' || r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || strings.ContainsRune("*@#?-$!", r)
 }
+
+// QuoteWord quotes value as one POSIX shell word using single quotes; empty
+// input yields an empty quoted word.
+func QuoteWord(value string) string {
+	if value == "" {
+		return "''"
+	}
+	return "'" + strings.ReplaceAll(value, "'", "'\"'\"'") + "'"
+}

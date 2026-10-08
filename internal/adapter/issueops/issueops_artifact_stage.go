@@ -14,12 +14,13 @@ import (
 	ownerdomain "issueops/internal/domain/issueops"
 	"issueops/internal/domain/issueopsintent"
 	"issueops/internal/domain/secretdetection"
+	"issueops/internal/port"
 )
 
 // artifactStageBucket은 prepare 이전에 코디네이터가 스테이징한 artifact를
 // 담는다. issueops bucket과 분리되어 있어 훅의 레코드 스캔 비용에 영향이
 // 없다(설계 v5 WS2).
-const artifactStageBucket = "artifact_stage_v1"
+const artifactStageBucket = port.ArtifactStageBucket
 
 // sealedArtifactDir은 레코드가 봉인 아티팩트를 두는 워크트리 상대 디렉터리다.
 // 레코드 필드만 본다 — 파일시스템 상태나 PlanPath 파싱으로 추론하지 않는다.

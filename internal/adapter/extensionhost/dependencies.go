@@ -1,4 +1,4 @@
-package omp
+package extensionhost
 
 import (
 	"issueops/internal/port"

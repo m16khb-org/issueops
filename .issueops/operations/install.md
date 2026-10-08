@@ -59,7 +59,7 @@ darwin/linux의 기본 `--mcp-transport=http` 설치는 네 host의 issueops ent
 `env.ISSUEOPS_MCP_CATALOG_SHA256`으로, HTTP entry에서는 `headers.X-Issueops-Mcp-Catalog-Sha256`으로
 들어간다. Omo는 server config 전체(헤더 포함)를 `hashConfig`로 해싱해 catalog cache 키로 쓰므로,
 catalog가 바뀌면 두 transport 모두 다음 세션이 새 `tools/list`를 조회한다. 서버는 이 헤더를 읽지 않는다
-(`internal/adapter/omo/mcp.go`의 `omoMCPCatalogHeader`, `TestOmoHTTPEntryChangesWithTheAdvertisedCatalog`).
+(`internal/adapter/extensionhost/mcp.go`의 `mcpCatalogHeader`, `TestHTTPEntryChangesWithTheAdvertisedCatalog`).
 
 Linux에서 HOME을 임시 디렉터리로 바꿔 설치하면(CI 등) HTTP 설치가 실패한다. installer는 unit을 그 HOME의
 `~/.config/systemd/user/`에 쓰지만, 이미 실행 중인 user systemd manager는 자기 HOME 기준 경로에서 unit을 찾기 때문이다.

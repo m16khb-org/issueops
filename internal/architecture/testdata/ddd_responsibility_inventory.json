@@ -632,6 +632,7 @@
         "func newAgyInstaller",
         "func newClaudeInstaller",
         "func newCodexInstaller",
+        "func newExtensionHostInstaller",
         "func newOmoInstaller",
         "func newOmpInstaller"
       ]
@@ -2897,7 +2898,6 @@
         "func Installer.Name",
         "func NewInstaller",
         "func claudeProjectMCPConfig",
-        "func shellQuote",
         "type Installer"
       ]
     },
@@ -3088,14 +3088,6 @@
       ]
     },
     {
-      "path": "internal/adapter/codex/install_helpers.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func shellQuote"
-      ]
-    },
-    {
       "path": "internal/adapter/codex/install_hooks.go",
       "owner": "adapter",
       "task": "T20",
@@ -3166,6 +3158,49 @@
         "func ObserveProjectDocs",
         "func ObserveRuntimeState",
         "type Gateways"
+      ]
+    },
+    {
+      "path": "internal/adapter/extensionhost/activation.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Installer.VerifyActivation"
+      ]
+    },
+    {
+      "path": "internal/adapter/extensionhost/dependencies.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "type Dependencies"
+      ]
+    },
+    {
+      "path": "internal/adapter/extensionhost/install.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Installer.Install",
+        "func Installer.Name",
+        "func Installer.configRoot",
+        "func NewInstaller",
+        "type Installer",
+        "type Spec"
+      ]
+    },
+    {
+      "path": "internal/adapter/extensionhost/mcp.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Installer.catalogSHA256",
+        "func Installer.mcpServer",
+        "func Installer.projectMCPConfig",
+        "func Installer.removeProjectMCP",
+        "func Installer.userMCPServer",
+        "func Installer.writeProjectMCP",
+        "func Installer.writeUserMCP"
       ]
     },
     {
@@ -5093,89 +5128,6 @@
         "type supervisor",
         "type systemd",
         "type unitSpec"
-      ]
-    },
-    {
-      "path": "internal/adapter/omo/activation.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func Installer.VerifyActivation"
-      ]
-    },
-    {
-      "path": "internal/adapter/omo/dependencies.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "type Dependencies"
-      ]
-    },
-    {
-      "path": "internal/adapter/omo/install.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func Installer.Install",
-        "func Installer.Name",
-        "func NewInstaller",
-        "type Installer"
-      ]
-    },
-    {
-      "path": "internal/adapter/omo/mcp.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func Installer.catalogSHA256",
-        "func Installer.omoMCPServer",
-        "func Installer.omoProjectMCPConfig",
-        "func Installer.omoUserMCPServer",
-        "func Installer.removeOmoProjectMCP",
-        "func Installer.writeOmoProjectMCP",
-        "func Installer.writeOmoUserMCP"
-      ]
-    },
-    {
-      "path": "internal/adapter/omp/activation.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func Installer.VerifyActivation"
-      ]
-    },
-    {
-      "path": "internal/adapter/omp/dependencies.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "type Dependencies"
-      ]
-    },
-    {
-      "path": "internal/adapter/omp/install.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func Installer.Install",
-        "func Installer.Name",
-        "func NewInstaller",
-        "func ompAgentRoot",
-        "type Installer"
-      ]
-    },
-    {
-      "path": "internal/adapter/omp/mcp.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func Installer.catalogSHA256",
-        "func Installer.ompMCPServer",
-        "func Installer.ompProjectMCPConfig",
-        "func Installer.ompUserMCPServer",
-        "func Installer.removeOmpProjectMCP",
-        "func Installer.writeOmpProjectMCP",
-        "func Installer.writeOmpUserMCP"
       ]
     },
     {
@@ -16252,6 +16204,7 @@
         "func HasActiveShellSpecialQuoting",
         "func HasActiveZshEqualsExpansion",
         "func HasUnquotedControlOperator",
+        "func QuoteWord",
         "func SplitCommandTokens",
         "func shellAssignmentName",
         "func shellAssignmentTildeStart",
@@ -17072,6 +17025,12 @@
         "type IssueProviderUpdateIssueBodySectionRequest",
         "type IssueProviderUpdateIssueBodySectionResult"
       ]
+    },
+    {
+      "path": "internal/port/record_buckets.go",
+      "owner": "port",
+      "task": "T20",
+      "symbols": []
     },
     {
       "path": "internal/port/remoteverification/reader.go",
