@@ -24,7 +24,7 @@ type hostCollector struct {
 }
 
 func isHostFormat(format string) bool {
-	return format == tracecontract.InputFormatClaudeJSON || format == tracecontract.InputFormatCodexExec || format == tracecontract.InputFormatOmoJSON
+	return format == tracecontract.InputFormatClaudeJSON || format == tracecontract.InputFormatCodexExec || format == tracecontract.InputFormatOmoJSON || format == tracecontract.InputFormatOmpJSON
 }
 
 func decodeHostUsage(body []byte, format string) tracedomain.Input {
@@ -44,7 +44,10 @@ func decodeHostUsage(body []byte, format string) tracedomain.Input {
 	case tracecontract.InputFormatCodexExec:
 		collector.codex(events)
 	case tracecontract.InputFormatOmoJSON:
-		collector.omo(events)
+		collector.omo("omo", events)
+	case tracecontract.InputFormatOmpJSON:
+		// omp emits the same pi agent event stream and usage shape as Omo.
+		collector.omo("omp", events)
 	}
 	warnings := append([]string{}, input.Warnings...)
 	for code := range collector.codes {
@@ -297,14 +300,14 @@ func (c *hostCollector) codex(events []hostEvent) {
 	}
 }
 
-func (c *hostCollector) omo(events []hostEvent) {
+func (c *hostCollector) omo(host string, events []hostEvent) {
 	session := ""
 	for _, event := range events {
 		switch kind := text(event, "type"); kind {
 		case "session":
 			session = c.identity(text(event, "id"))
 		case "message_end":
-			c.omoMessageEnd(session, event)
+			c.omoMessageEnd(host, session, event)
 		case "message_update":
 			c.intermediate = c.intermediate || event["usage"] != nil
 		case "turn_end":
@@ -321,7 +324,7 @@ func (c *hostCollector) omo(events []hostEvent) {
 	}
 }
 
-func (c *hostCollector) omoMessageEnd(session string, event hostEvent) {
+func (c *hostCollector) omoMessageEnd(host, session string, event hostEvent) {
 	message := object(event, "message")
 	if text(message, "role") != "assistant" {
 		return
@@ -343,7 +346,7 @@ func (c *hostCollector) omoMessageEnd(session string, event hostEvent) {
 		finality = tracecontract.UsageFinalityPartial
 	}
 	c.add(tracedomain.UsageObservation{
-		Host: "omo", Provider: label(text(message, "provider")), Model: label(text(message, "model")),
+		Host: host, Provider: label(text(message, "provider")), Model: label(text(message, "model")),
 		SessionID: session, MessageID: c.identity(id),
 		Finality: finality, Temporality: tracecontract.UsageTemporalityDelta,
 		Input: c.metric(usage, "input"), Output: c.metric(usage, "output"),

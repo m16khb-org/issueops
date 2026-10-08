@@ -23,6 +23,7 @@ func TestHostJSONAdapterMatrix(t *testing.T) {
 	}{
 		{"agy", ".gemini/config/mcp_config.json", ".agents/mcp_config.json", newAgyInstaller()},
 		{"omo", ".omo/mcp.json", ".omo/mcp.json", newOmoInstaller()},
+		{"omp", ".omp/agent/mcp.json", ".omp/mcp.json", newOmpInstaller()},
 		{"claude", ".claude.json", ".mcp.json", newClaudeInstaller()},
 	} {
 		for _, scenario := range []string{"install", "dry-run", "malformed"} {
@@ -72,9 +73,10 @@ func TestHostJSONAdapterMatrix(t *testing.T) {
 					t.Fatalf("unrelated config lost: %#v", config)
 				}
 				want := map[string]any{"command": req.BinPath, "args": []string{"mcp"}, "env": map[string]any{"ISSUEOPS_ROOT": req.Root}}
-				if host.name == "claude" {
+				if host.name == "claude" || host.name == "omp" {
 					want["type"] = "stdio"
-				} else {
+				}
+				if host.name != "claude" {
 					catalog, err := installutil.SemanticSHA256(mcpcatalog.AdvertisedTools())
 					if err != nil {
 						t.Fatal(err)

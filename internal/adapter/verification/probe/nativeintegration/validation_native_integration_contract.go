@@ -11,13 +11,15 @@ import (
 	"strings"
 )
 
-func nativeIntegrationRequiredPaths(root, home string, codexSkills, claudeSkills, omoSkills []string) []string {
+func nativeIntegrationRequiredPaths(root, home string, codexSkills, claudeSkills, omoSkills, ompSkills []string) []string {
 	paths := []string{
 		filepath.Join(root, "configs", "codex", "mcp.config.toml"),
 		filepath.Join(root, "configs", "codex", "hooks.json"),
 		filepath.Join(root, "configs", "claude", "mcp.project.json"),
 		filepath.Join(root, "configs", "omo", "mcp.json"),
 		filepath.Join(root, "configs", "omo", "issueops.js"),
+		filepath.Join(root, "configs", "omp", "mcp.json"),
+		filepath.Join(root, "configs", "omp", "issueops.js"),
 	}
 	for _, nativeSkill := range codexSkills {
 		paths = append(paths, filepath.Join(home, ".codex", "skills", nativeSkill, "SKILL.md"))
@@ -27,6 +29,9 @@ func nativeIntegrationRequiredPaths(root, home string, codexSkills, claudeSkills
 	}
 	for _, nativeSkill := range omoSkills {
 		paths = append(paths, filepath.Join(home, ".omo", "agent", "skills", nativeSkill, "SKILL.md"))
+	}
+	for _, nativeSkill := range ompSkills {
+		paths = append(paths, filepath.Join(home, ".omp", "agent", "skills", nativeSkill, "SKILL.md"))
 	}
 	return paths
 }
@@ -69,27 +74,55 @@ func (deps nativeIntegrationValidationDeps) hasThinCodexContextHooks(config, exp
 	return err == nil
 }
 
+// lifecycleHost names one pi-style host whose MCP config and lifecycle
+// extension module are installed under the user's home.
+type lifecycleHost struct {
+	label         string
+	mcpPath       string
+	extensionPath string
+	render        func(string) string
+	events        string
+}
+
 func nativeIntegrationOmoConfigErrors(root, home string, deps nativeIntegrationValidationDeps) []string {
+	return nativeIntegrationLifecycleHostErrors(root, deps, lifecycleHost{
+		label:         "Omo",
+		mcpPath:       filepath.Join(home, ".omo", "mcp.json"),
+		extensionPath: filepath.Join(home, ".omo", "extensions", "issueops.js"),
+		render:        deps.OmoLifecycleExtension,
+		events:        "session_start/session_compact",
+	})
+}
+
+func nativeIntegrationOmpConfigErrors(root, home string, deps nativeIntegrationValidationDeps) []string {
+	return nativeIntegrationLifecycleHostErrors(root, deps, lifecycleHost{
+		label:         "omp",
+		mcpPath:       filepath.Join(home, ".omp", "agent", "mcp.json"),
+		extensionPath: filepath.Join(home, ".omp", "agent", "extensions", "issueops.js"),
+		render:        deps.OmpLifecycleExtension,
+		events:        "session_start/session_switch/session_compact",
+	})
+}
+
+func nativeIntegrationLifecycleHostErrors(root string, deps nativeIntegrationValidationDeps, host lifecycleHost) []string {
 	stableRoot, err := deps.canonicalStableNativeRoot(root)
 	if err != nil {
-		return []string{"resolve stable native root for Omo: " + err.Error()}
+		return []string{"resolve stable native root for " + host.label + ": " + err.Error()}
 	}
 	expectedBinary := filepath.Join(stableRoot, "bin", "issueops")
 	errs := []string{}
-	mcpPath := filepath.Join(home, ".omo", "mcp.json")
-	if body, readErr := deps.readFile(mcpPath); readErr != nil || !hasCanonicalOmoMCP(body, expectedBinary, stableRoot) {
-		errs = append(errs, "Omo MCP config missing canonical issueops server")
+	if body, readErr := deps.readFile(host.mcpPath); readErr != nil || !hasCanonicalLifecycleHostMCP(body, expectedBinary, stableRoot) {
+		errs = append(errs, host.label+" MCP config missing canonical issueops server")
 	}
-	extensionPath := filepath.Join(home, ".omo", "extensions", "issueops.js")
-	if deps.OmoLifecycleExtension == nil {
-		errs = append(errs, "Omo lifecycle extension renderer is unavailable")
-	} else if body, readErr := deps.readFile(extensionPath); readErr != nil || string(body) != deps.OmoLifecycleExtension(expectedBinary) {
-		errs = append(errs, "Omo lifecycle extension missing canonical session_start/session_compact surface")
+	if host.render == nil {
+		errs = append(errs, host.label+" lifecycle extension renderer is unavailable")
+	} else if body, readErr := deps.readFile(host.extensionPath); readErr != nil || string(body) != host.render(expectedBinary) {
+		errs = append(errs, host.label+" lifecycle extension missing canonical "+host.events+" surface")
 	}
 	return errs
 }
 
-func hasCanonicalOmoMCP(body []byte, expectedBinary, root string) bool {
+func hasCanonicalLifecycleHostMCP(body []byte, expectedBinary, root string) bool {
 	var config map[string]any
 	if json.Unmarshal(body, &config) != nil {
 		return false

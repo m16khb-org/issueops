@@ -79,11 +79,12 @@ func TestNativeInstallAdapterContractMatrix(t *testing.T) {
 			writeContractSkill(t, root, "codex-only", "codex")
 			writeContractSkill(t, root, "claude-only", "claude")
 			writeContractSkill(t, root, "omo-only", "omo")
+			writeContractSkill(t, root, "omp-only", "omp")
 			writeContractSkill(t, root, "agy-only", "agy")
 
 			req := install.DefaultNativeInstallRequest(root, home, codexHome, binPath)
 			req.ProjectLocal = tc.projectLocal
-			result, err := installNativeForTest(req, testCodexInstaller(), testClaudeInstaller(), testOmoInstaller(), testAgyInstaller())
+			result, err := installNativeForTest(req, testCodexInstaller(), testClaudeInstaller(), testOmoInstaller(), testOmpInstaller(), testAgyInstaller())
 			if err != nil {
 				t.Fatalf("InstallNative returned error: %v\n%+v", err, result)
 			}
@@ -105,7 +106,7 @@ func TestNativeInstallDryRunDoesNotWrite(t *testing.T) {
 	req := install.DefaultNativeInstallRequest(root, home, codexHome, binPath)
 	req.ProjectLocal = true
 	req.DryRun = true
-	result, err := installNativeForTest(req, testCodexInstaller(), testClaudeInstaller(), testOmoInstaller(), testAgyInstaller())
+	result, err := installNativeForTest(req, testCodexInstaller(), testClaudeInstaller(), testOmoInstaller(), testOmpInstaller(), testAgyInstaller())
 	if err != nil {
 		t.Fatalf("dry-run InstallNative returned error: %v\n%+v", err, result)
 	}
@@ -117,10 +118,12 @@ func TestNativeInstallDryRunDoesNotWrite(t *testing.T) {
 		filepath.Join(codexHome, "config.toml"),
 		filepath.Join(home, ".claude", "skills", "alpha"),
 		filepath.Join(home, ".omo"),
+		filepath.Join(home, ".omp"),
 		filepath.Join(home, ".gemini"),
 		filepath.Join(root, ".mcp.json"),
 		filepath.Join(root, ".claude"),
 		filepath.Join(root, ".omo"),
+		filepath.Join(root, ".omp"),
 		filepath.Join(root, ".agents"),
 		filepath.Join(root, "configs"),
 	} {
@@ -659,10 +662,10 @@ func assertInstallContractSemantics(t *testing.T, req port.NativeInstallRequest,
 	if !result.OK {
 		t.Fatalf("install result ok=false: %+v", result)
 	}
-	if len(result.Hosts) != 4 || result.Hosts[0].Host != "codex" || result.Hosts[1].Host != "claude" || result.Hosts[2].Host != "omo" || result.Hosts[3].Host != "agy" {
+	if len(result.Hosts) != 5 || result.Hosts[0].Host != "codex" || result.Hosts[1].Host != "claude" || result.Hosts[2].Host != "omo" || result.Hosts[3].Host != "omp" || result.Hosts[4].Host != "agy" {
 		t.Fatalf("host order/coverage drifted: %+v", result.Hosts)
 	}
-	if got := strings.Join(result.SkillNames, ","); got != "agy-only,alpha,beta,claude-only,codex-only,omo-only" {
+	if got := strings.Join(result.SkillNames, ","); got != "agy-only,alpha,beta,claude-only,codex-only,omo-only,omp-only" {
 		t.Fatalf("skill discovery must be deterministic and sorted, got %q", got)
 	}
 	for _, skill := range []string{"alpha", "beta", "codex-only"} {
@@ -670,12 +673,14 @@ func assertInstallContractSemantics(t *testing.T, req port.NativeInstallRequest,
 	}
 	assertPathMissing(t, filepath.Join(req.CodexHome, "skills", "claude-only"))
 	assertPathMissing(t, filepath.Join(req.CodexHome, "skills", "omo-only"))
+	assertPathMissing(t, filepath.Join(req.CodexHome, "skills", "omp-only"))
 	assertPathMissing(t, filepath.Join(req.CodexHome, "skills", "agy-only"))
 	for _, skill := range []string{"alpha", "beta", "claude-only"} {
 		assertRootSkillSymlink(t, filepath.Join(req.Home, ".claude", "skills", skill), filepath.Join(req.Root, "skills", skill))
 	}
 	assertPathMissing(t, filepath.Join(req.Home, ".claude", "skills", "codex-only"))
 	assertPathMissing(t, filepath.Join(req.Home, ".claude", "skills", "omo-only"))
+	assertPathMissing(t, filepath.Join(req.Home, ".claude", "skills", "omp-only"))
 	assertPathMissing(t, filepath.Join(req.Home, ".claude", "skills", "agy-only"))
 	for _, skill := range []string{"alpha", "beta", "omo-only"} {
 		assertRootSkillSymlink(t, filepath.Join(req.Home, ".omo", "agent", "skills", skill), filepath.Join(req.Root, "skills", skill))
@@ -683,23 +688,33 @@ func assertInstallContractSemantics(t *testing.T, req port.NativeInstallRequest,
 	assertPathMissing(t, filepath.Join(req.Home, ".omo", "agent", "skills", "codex-only"))
 	assertPathMissing(t, filepath.Join(req.Home, ".omo", "agent", "skills", "claude-only"))
 	assertPathMissing(t, filepath.Join(req.Home, ".omo", "agent", "skills", "agy-only"))
+	assertPathMissing(t, filepath.Join(req.Home, ".omo", "agent", "skills", "omp-only"))
+	for _, skill := range []string{"alpha", "beta", "omp-only"} {
+		assertRootSkillSymlink(t, filepath.Join(req.Home, ".omp", "agent", "skills", skill), filepath.Join(req.Root, "skills", skill))
+	}
+	assertPathMissing(t, filepath.Join(req.Home, ".omp", "agent", "skills", "codex-only"))
+	assertPathMissing(t, filepath.Join(req.Home, ".omp", "agent", "skills", "claude-only"))
+	assertPathMissing(t, filepath.Join(req.Home, ".omp", "agent", "skills", "omo-only"))
+	assertPathMissing(t, filepath.Join(req.Home, ".omp", "agent", "skills", "agy-only"))
 	for _, skill := range []string{"alpha", "beta", "agy-only"} {
 		assertRootSkillSymlink(t, filepath.Join(req.Home, ".gemini", "config", "skills", skill), filepath.Join(req.Root, "skills", skill))
 	}
 	assertPathMissing(t, filepath.Join(req.Home, ".gemini", "config", "skills", "codex-only"))
 	assertPathMissing(t, filepath.Join(req.Home, ".gemini", "config", "skills", "claude-only"))
 	assertPathMissing(t, filepath.Join(req.Home, ".gemini", "config", "skills", "omo-only"))
+	assertPathMissing(t, filepath.Join(req.Home, ".gemini", "config", "skills", "omp-only"))
 	if req.ProjectLocal {
 		assertPathMissing(t, filepath.Join(req.Root, ".claude"))
 		assertPathMissing(t, filepath.Join(req.Root, ".omo", "skills"))
+		assertPathMissing(t, filepath.Join(req.Root, ".omp", "skills"))
 		assertPathMissing(t, filepath.Join(req.Root, ".agents", "skills"))
-		for _, path := range []string{filepath.Join(req.Root, ".mcp.json"), filepath.Join(req.Root, ".omo", "mcp.json"), filepath.Join(req.Root, ".agents", "mcp_config.json")} {
+		for _, path := range []string{filepath.Join(req.Root, ".mcp.json"), filepath.Join(req.Root, ".omo", "mcp.json"), filepath.Join(req.Root, ".omp", "mcp.json"), filepath.Join(req.Root, ".agents", "mcp_config.json")} {
 			if !exists(path) {
 				t.Fatalf("project-local opt-in did not write %s", path)
 			}
 		}
 	} else {
-		for _, path := range []string{filepath.Join(req.Root, ".mcp.json"), filepath.Join(req.Root, ".claude"), filepath.Join(req.Root, ".omo"), filepath.Join(req.Root, ".agents")} {
+		for _, path := range []string{filepath.Join(req.Root, ".mcp.json"), filepath.Join(req.Root, ".claude"), filepath.Join(req.Root, ".omo"), filepath.Join(req.Root, ".omp"), filepath.Join(req.Root, ".agents")} {
 			if exists(path) {
 				t.Fatalf("default install must not create repo-local path %s", path)
 			}
@@ -742,6 +757,16 @@ func assertInstallContractSemantics(t *testing.T, req port.NativeInstallRequest,
 	omoExtension := readFile(t, filepath.Join(req.Home, ".omo", "extensions", "issueops.js"))
 	if want := hostprotocol.OmoLifecycleExtension(req.BinPath); omoExtension != want {
 		t.Fatalf("installed Omo lifecycle extension differs from generated contract:\n%s", omoExtension)
+	}
+	ompMCP := readFile(t, filepath.Join(req.Home, ".omp", "agent", "mcp.json"))
+	for _, needle := range []string{`"issueops"`, req.BinPath, req.Root} {
+		if !strings.Contains(ompMCP, needle) {
+			t.Fatalf("omp MCP config missing %q:\n%s", needle, ompMCP)
+		}
+	}
+	ompExtension := readFile(t, filepath.Join(req.Home, ".omp", "agent", "extensions", "issueops.js"))
+	if want := hostprotocol.OmpLifecycleExtension(req.BinPath); ompExtension != want {
+		t.Fatalf("installed omp lifecycle extension differs from generated contract:\n%s", ompExtension)
 	}
 	agyMCP := readFile(t, filepath.Join(req.Home, ".gemini", "config", "mcp_config.json"))
 	for _, needle := range []string{`"issueops"`, req.BinPath, req.Root} {
@@ -790,9 +815,9 @@ func normalizeInstallContractCase(t *testing.T, name string, req port.NativeInst
 		Hosts:        []installContractHostSnapshot{},
 		Assertions: []string{
 			"core discovers shared skills once and passes sorted names to all host adapters",
-			"Codex, Claude, and Omo user skill installs are symlinks resolving to $ROOT/skills/*",
-			"Codex, Claude, and Omo user-level lifecycle hooks route through the same issueops hook CLI",
-			"default install writes no repo-local .claude, .omo, or .mcp.json paths",
+			"Codex, Claude, Omo, and omp user skill installs are symlinks resolving to $ROOT/skills/*",
+			"Codex, Claude, Omo, and omp user-level lifecycle hooks route through the same issueops hook CLI",
+			"default install writes no repo-local .claude, .omo, .omp, or .mcp.json paths",
 			"project-local repo files are created only when project_local=true",
 		},
 	}
@@ -804,7 +829,7 @@ func normalizeInstallContractCase(t *testing.T, name string, req port.NativeInst
 				content = normalizeInstallContractString(readFile(t, file.Path), req)
 			}
 			snapshotContent := content
-			if host.Host == "omo" || host.Host == "agy" {
+			if host.Host == "omo" || host.Host == "omp" || host.Host == "agy" {
 				snapshotContent = ""
 			}
 			hostSnapshot.Files = append(hostSnapshot.Files, installContractFileSnapshot{

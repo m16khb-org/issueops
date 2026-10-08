@@ -175,6 +175,7 @@ func validInstallDryRunResult() installDryRunSmokeResult {
 			{Host: "codex", OK: true, DryRun: true},
 			{Host: "claude", OK: true, DryRun: true},
 			{Host: "omo", OK: true, DryRun: true},
+			{Host: "omp", OK: true, DryRun: true},
 			{Host: "agy", OK: true, DryRun: true},
 		},
 		Files: []installDryRunSmokeFile{

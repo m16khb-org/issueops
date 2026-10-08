@@ -124,7 +124,7 @@ readiness fingerprint in `readiness_fingerprint`, and renders the exact confirm 
 `ACTOR_FLAGS` are the exact native process identity and cwd:
 
 ```text
---host codex|claude|omo --session-id ID [--agent-id ID]
+--host codex|claude|omo|omp --session-id ID [--agent-id ID]
 --session-pid PID --session-started-at RFC3339
 --session-executable PATH --cwd PATH
 ```
@@ -136,10 +136,17 @@ equivalent of the launcher receipt and is accepted only for `--host omo`.
 `issueops execution whoami --json` resolves the runtime receipt
 from the local ancestry automatically. It never falls back to the session ID
 alone.
-`--owner-host` accepts `codex|claude|omo`, so Orca can own and display any of
+omp sessions use `ISSUEOPS_OMP_SESSION_ID`, which the issueops omp extension
+exports from the main session, and a live receipt from the nearest `omp` or
+`bun` ancestor (omp runs as a bun script); that receipt is accepted only for
+`--host omp`. Omo and omp session ids together are ambiguous and fail closed.
+`--owner-host` accepts `codex|claude|omo|omp`, so Orca can own and display any of
 those host sessions. For Omo, IssueOps launches the UI-visible terminal with
 `omo --model '<provider/model>:<thinking>'`; the default is
-`chatgpt-subscription/gpt-6-sol:max`.
+`chatgpt-subscription/gpt-6-sol:max`. For omp, IssueOps launches
+`omp --model '<model>' --thinking '<effort>' --auto-approve` and delivers the
+preamble through the same injected dispatch path as Codex and Claude; a
+terminal-send prompt receipt is rejected for omp.
 If Orca does not recognize that TUI for native `--inject`, IssueOps creates a
 non-inject dispatch with the official preamble, validates the sealed task and
 terminal identities, and sends the whole preamble to that exact terminal as one
@@ -252,7 +259,7 @@ issueops execution resume \
   --id "$ISSUEOPS_ID" --expected-generation "$GENERATION" --confirm
 ```
 
-Resume observes the current native Codex/Claude/Omo session, host process receipt,
+Resume observes the current native Codex/Claude/Omo/omp session, host process receipt,
 and canonical cwd when actor flags are absent. A complete explicit
 `ACTOR_FLAGS` receipt remains valid; a partial receipt is rejected.
 

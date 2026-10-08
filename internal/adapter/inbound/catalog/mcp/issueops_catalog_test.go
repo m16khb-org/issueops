@@ -36,14 +36,14 @@ func TestIssueOpsAdvertisesOnlyExecutionActionTool(t *testing.T) {
 	if !ok {
 		t.Fatalf("host schema = %#v", properties["host"])
 	}
-	if got, want := host["enum"], []string{"codex", "claude", "omo"}; !reflect.DeepEqual(got, want) {
+	if got, want := host["enum"], []string{"codex", "claude", "omo", "omp"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("host enum = %#v, want %#v", got, want)
 	}
 	ownerHost, ok := properties["owner_host"].(map[string]any)
 	if !ok {
 		t.Fatalf("owner_host schema = %#v", properties["owner_host"])
 	}
-	if got, want := ownerHost["enum"], []string{"codex", "claude", "omo"}; !reflect.DeepEqual(got, want) {
+	if got, want := ownerHost["enum"], []string{"codex", "claude", "omo", "omp"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("owner_host enum = %#v, want %#v", got, want)
 	}
 	claimCurrentToken, ok := properties["claim_current_token"].(map[string]any)

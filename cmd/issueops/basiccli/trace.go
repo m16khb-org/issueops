@@ -29,7 +29,7 @@ func (command Command) RunTrace(args []string) error {
 
 func traceUsage() {
 	fmt.Fprintf(os.Stderr, `Usage:
-  issueops trace analyze --input <jsonl|state-key|-> [--input-format issueops|claude-stream|codex-exec|omo-json] [--json]
+  issueops trace analyze --input <jsonl|state-key|-> [--input-format issueops|claude-stream|codex-exec|omo-json|omp-json] [--json]
   issueops trace handoff-delivery --input <observation.json|-> [--json]
 `)
 }
@@ -90,7 +90,7 @@ func (command Command) runTraceHandoffDeliveryObserve(args []string) error {
 func (command Command) runTraceAnalyze(args []string) error {
 	fs := flag.NewFlagSet("trace analyze", flag.ContinueOnError)
 	input := fs.String("input", "", "trace input path, '-' for stdin, or issueops state key (host formats accept only a file or '-')")
-	inputFormat := fs.String("input-format", tracecontract.InputFormatIssueOps, "input format: issueops, claude-stream, codex-exec or omo-json")
+	inputFormat := fs.String("input-format", tracecontract.InputFormatIssueOps, "input format: issueops, claude-stream, codex-exec, omo-json or omp-json")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if err := fs.Parse(args); err != nil {
 		return err

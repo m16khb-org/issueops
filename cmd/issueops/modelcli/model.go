@@ -36,10 +36,10 @@ type Dependencies struct {
 }
 
 const usage = `Usage:
-  issueops model show [--host claude|codex|omo] [--repo PATH] [--json]
+  issueops model show [--host claude|codex|omo|omp] [--repo PATH] [--json]
   issueops model set --scope global|local --host claude|codex --role ROLE [--model MODEL] [--effort EFFORT] [--repo PATH] [--json]
   issueops model unset --scope global|local --host claude|codex --role ROLE [--field model|effort] [--repo PATH] [--json]
-  issueops model resolve --host claude|codex|omo --role ROLE [--tier TIER] [--round N] [--model MODEL] [--effort EFFORT] [--agents] [--repo PATH] [--json]
+  issueops model resolve --host claude|codex|omo|omp --role ROLE [--tier TIER] [--round N] [--model MODEL] [--effort EFFORT] [--agents] [--repo PATH] [--json]
 
 Roles: implement, child-implement, plan-review, diff-review, review-escalate, research, reader-check.
 Precedence per field: flag > local > global > built-in default.
@@ -107,7 +107,7 @@ func runShow(ctx context.Context, deps Dependencies, args []string) error {
 	hosts := []string{"claude", "codex"}
 	if *host != "" {
 		if !domain.KnownHost(*host) {
-			return UsageError{Message: fmt.Sprintf("unknown host %q (use claude, codex, or omo)", *host)}
+			return UsageError{Message: fmt.Sprintf("unknown host %q (use claude, codex, omo, or omp)", *host)}
 		}
 		hosts = []string{*host}
 	}
@@ -286,7 +286,7 @@ type resolveResult struct {
 
 func runResolve(ctx context.Context, deps Dependencies, args []string) error {
 	fs := newFlagSet("resolve")
-	host := fs.String("host", "", "claude, codex, or omo")
+	host := fs.String("host", "", "claude, codex, omo, or omp")
 	role := fs.String("role", "", "role")
 	tier := fs.String("tier", "", "review tier (docs-only lowers a built-in review effort)")
 	round := fs.Int("round", 0, "review round (3 and later escalate)")

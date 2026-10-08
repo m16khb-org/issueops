@@ -968,7 +968,8 @@
           "enum": [
             "codex",
             "claude",
-            "omo"
+            "omo",
+            "omp"
           ],
           "type": "string"
         },
@@ -1036,7 +1037,8 @@
           "enum": [
             "codex",
             "claude",
-            "omo"
+            "omo",
+            "omp"
           ],
           "type": "string"
         },
@@ -1436,7 +1438,7 @@
     "name": "gates_init"
   },
   {
-    "description": "Append a durable message to a named session-to-session channel backed by the shared issueops state. Codex, Claude Code, and Omo sessions sharing the state see it. Use for cross-session coordination such as front/server contract negotiation.",
+    "description": "Append a durable message to a named session-to-session channel backed by the shared issueops state. Codex, Claude Code, Omo, and omp sessions sharing the state see it. Use for cross-session coordination such as front/server contract negotiation.",
     "inputSchema": {
       "properties": {
         "body": {

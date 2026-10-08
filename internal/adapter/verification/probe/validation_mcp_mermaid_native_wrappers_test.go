@@ -97,10 +97,13 @@ func writeNativeIntegrationFixture(t *testing.T, root, home string) {
 		filepath.Join(root, "configs", "claude", "mcp.project.json"),
 		filepath.Join(root, "configs", "omo", "mcp.json"),
 		filepath.Join(root, "configs", "omo", "issueops.js"),
+		filepath.Join(root, "configs", "omp", "mcp.json"),
+		filepath.Join(root, "configs", "omp", "issueops.js"),
 		filepath.Join(root, "skills", "shared", "SKILL.md"),
 		filepath.Join(home, ".codex", "skills", "shared", "SKILL.md"),
 		filepath.Join(home, ".claude", "skills", "shared", "SKILL.md"),
 		filepath.Join(home, ".omo", "agent", "skills", "shared", "SKILL.md"),
+		filepath.Join(home, ".omp", "agent", "skills", "shared", "SKILL.md"),
 	} {
 		writeFileForWrapperTest(t, path, "ok\n")
 	}
@@ -108,6 +111,8 @@ func writeNativeIntegrationFixture(t *testing.T, root, home string) {
 	writeFileForWrapperTest(t, filepath.Join(home, ".codex", "hooks.json"), fmt.Sprintf(`{"hooks":{"SessionStart":[{"hooks":[{"command":"'%[1]s' hook session-start --host codex","timeout":5,"type":"command"}]}],"SubagentStart":[{"hooks":[{"command":"'%[1]s' hook subagent-start --host codex","timeout":5,"type":"command"}]}]}}`, filepath.Join(root, "bin", "issueops")))
 	writeFileForWrapperTest(t, filepath.Join(home, ".omo", "mcp.json"), fmt.Sprintf(`{"mcpServers":{"issueops":{"command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, filepath.Join(root, "bin", "issueops"), root))
 	writeFileForWrapperTest(t, filepath.Join(home, ".omo", "extensions", "issueops.js"), hostprotocol.OmoLifecycleExtension(filepath.Join(root, "bin", "issueops")))
+	writeFileForWrapperTest(t, filepath.Join(home, ".omp", "agent", "mcp.json"), fmt.Sprintf(`{"mcpServers":{"issueops":{"type":"stdio","command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, filepath.Join(root, "bin", "issueops"), root))
+	writeFileForWrapperTest(t, filepath.Join(home, ".omp", "agent", "extensions", "issueops.js"), hostprotocol.OmpLifecycleExtension(filepath.Join(root, "bin", "issueops")))
 }
 
 func writeFileForWrapperTest(t *testing.T, path, body string) {

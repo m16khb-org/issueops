@@ -14,7 +14,7 @@ func ValidatePlanCoordinator(actor *model.Actor, verified *model.VerifiedActor, 
 	if actor != nil {
 		host = strings.ToLower(strings.TrimSpace(actor.Host))
 	}
-	if actor == nil || (host != "codex" && host != "claude" && host != "omo") || strings.TrimSpace(actor.SessionID) == "" ||
+	if actor == nil || (host != "codex" && host != "claude" && host != "omo" && host != "omp") || strings.TrimSpace(actor.SessionID) == "" ||
 		!(len(actor.NativeProcessAncestry) > 0 || verifiedCoordinator(actor, host, verified)) || !canonicalWorkspace {
 		return fmt.Errorf("released Orca plan linking requires a native coordinator in the canonical worktree")
 	}

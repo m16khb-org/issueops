@@ -288,7 +288,7 @@ func TestGitLabSnapshotSkillsPinPortableVCSContract(t *testing.T) {
 func TestSelfVerifySkillPinsGateContract(t *testing.T) {
 	body := readSkillForTest(t, "self-verify")
 	for _, want := range []string{
-		"First-party hosts are exactly Codex, Claude Code, and Omo native.",
+		"First-party hosts are exactly Codex, Claude Code, Omo native, and omp.",
 		// QA-gate boundary: this loop does not pick improvements itself.
 		"This skill is a QA gate; it does not choose improvements by itself.",
 		// Promote safety: confirmed promote refuses a failed source snapshot.
@@ -396,9 +396,9 @@ func TestVerificationDocsPinHandoffProbeCommands(t *testing.T) {
 	}
 }
 
-func TestTuringSkillPinsThreeHostExecutionContract(t *testing.T) {
+func TestTuringSkillPinsFourHostExecutionContract(t *testing.T) {
 	body := readSkillForTest(t, "verified-execution")
-	if !strings.Contains(body, "First-party hosts are exactly Codex, Claude Code, and Omo native.") {
+	if !strings.Contains(body, "First-party hosts are exactly Codex, Claude Code, Omo native, and omp.") {
 		t.Fatal("verified-execution SKILL.md must state the exact first-party host set")
 	}
 	assertRetiredHostsAbsent(t, "verified-execution SKILL.md", body)

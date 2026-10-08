@@ -11,7 +11,7 @@ Both loops use concrete goal scores. The default exit condition is that every go
 
 ### Purpose
 
-Verify that the harness produces consistent results across Codex, Claude Code, and Omo native, and that CLI, MCP, native integration, state, policy, docs, and skills behave as intended. This loop is a QA gate; it does not choose improvements by itself.
+Verify that the harness produces consistent results across Codex, Claude Code, Omo native, and omp, and that CLI, MCP, native integration, state, policy, docs, and skills behave as intended. This loop is a QA gate; it does not choose improvements by itself.
 
 ### CLI/MCP surface
 

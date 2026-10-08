@@ -62,6 +62,10 @@ func TestResolve(t *testing.T) {
 			res("omo", contract.RoleImplement, "chatgpt-subscription/gpt-6-sol", "max", "default", "default")},
 		{"omo has no reader-check default", ResolveInput{Host: "omo", Role: contract.RoleReaderCheck},
 			res("omo", contract.RoleReaderCheck, "", "", "", "")},
+		{"omp ignores settings", ResolveInput{Host: "omp", Role: contract.RoleImplement, Local: local, Global: global},
+			res("omp", contract.RoleImplement, "anthropic/claude-opus-5-5", "high", "default", "default")},
+		{"omp reader-check", ResolveInput{Host: "omp", Role: contract.RoleReaderCheck},
+			res("omp", contract.RoleReaderCheck, "anthropic/claude-haiku-5-5", "medium", "default", "default")},
 		{"claude reader-check", ResolveInput{Host: "claude", Role: contract.RoleReaderCheck},
 			res("claude", contract.RoleReaderCheck, "claude-haiku-5-5", "medium", "default", "default")},
 		{"codex reader-check", ResolveInput{Host: "codex", Role: contract.RoleReaderCheck},
@@ -154,7 +158,7 @@ func TestValidateConfig(t *testing.T) {
 // Fable is a manual-only choice: no default, inheritance, tier, or round may
 // produce it.
 func TestBuiltinNeverFable(t *testing.T) {
-	for _, host := range []string{"claude", "codex", "omo"} {
+	for _, host := range []string{"claude", "codex", "omo", "omp"} {
 		for _, role := range Roles() {
 			for _, tier := range []string{"", "default", "docs-only", "contract"} {
 				for round := 0; round <= 5; round++ {
@@ -172,7 +176,7 @@ func TestBuiltinNeverFable(t *testing.T) {
 }
 
 func TestSupportsEffort(t *testing.T) {
-	if !SupportsEffort("claude", "") || !SupportsEffort("omo", "off") || SupportsEffort("claude", "minimal") || SupportsEffort("gemini", "") {
+	if !SupportsEffort("claude", "") || !SupportsEffort("omo", "off") || !SupportsEffort("omp", "off") || SupportsEffort("omp", "auto") || SupportsEffort("claude", "minimal") || SupportsEffort("gemini", "") {
 		t.Fatal("effort ladder changed")
 	}
 }

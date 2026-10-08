@@ -71,6 +71,7 @@ func TestWorkspaceRelaunchCommandLandsInExistingCanonicalWorktree(t *testing.T) 
 		{"codex", "codex --cd " + quotedRoot + " --add-dir " + quotedBase + " --dangerously-bypass-approvals-and-sandbox"},
 		{"claude", "cd " + quotedRoot + " && claude --add-dir " + quotedBase + " --dangerously-skip-permissions"},
 		{"omo", "cd " + quotedRoot + " && omo"},
+		{"omp", "cd " + quotedRoot + " && omp"},
 	} {
 		got, err := workspaceRelaunchCommand(tt.host, "/unused/source", root, base)
 		if err != nil {
@@ -92,6 +93,7 @@ func TestWorkspaceRelaunchCommandFallsBackToSourceRootWhenWorktreeMissing(t *tes
 		{"codex", "codex --cd " + quotedSource + " --add-dir " + quotedBase + " --dangerously-bypass-approvals-and-sandbox"},
 		{"claude", "cd " + quotedSource + " && claude --add-dir " + quotedBase + " --dangerously-skip-permissions"},
 		{"omo", "cd " + quotedSource + " && omo"},
+		{"omp", "cd " + quotedSource + " && omp"},
 	} {
 		got, err := workspaceRelaunchCommand(tt.host, "/repo/source", root, base)
 		if err != nil {

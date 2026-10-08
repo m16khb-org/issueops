@@ -40,7 +40,7 @@ func (command mcpAuthorizeCommand) Run(args []string) error {
 	fs := flag.NewFlagSet("issueops mcp authorize", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	workspaceRoot := fs.String("workspace-root", "", "absolute repository or workspace root to authorize")
-	host := fs.String("host", "", "native host: codex, claude, or omo")
+	host := fs.String("host", "", "native host: codex, claude, omo, or omp")
 	sessionID := fs.String("session-id", "", "native session id")
 	agentID := fs.String("agent-id", "", "optional native agent id")
 	sessionPID := fs.Int("session-pid", 0, "native session process id")

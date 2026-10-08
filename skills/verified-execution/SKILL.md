@@ -21,7 +21,7 @@ the cycle-only fences and use State and criteria → Per-Criterion Loop → Stan
 
 For repository-local symbol discovery, use CodeGraph first when `.codegraph/` exists; otherwise use local `rg` and direct reads only. Never use web search for local repository symbols. Run verification and inspection commands as separate calls; never chain them with `echo` or `printf` banner markers.
 
-First-party hosts are exactly Codex, Claude Code, and Omo native.
+First-party hosts are exactly Codex, Claude Code, Omo native, and omp.
 
 ## IssueOps Benchmark Artifact Contract
 
@@ -390,7 +390,7 @@ reviewed reports; code-quality metrics add SNR/entropy/redundancy; self-verify
 health scores feed evidence coverage; repeated failures yield recorded lessons
 (with self-augment if available). Authorized code/evidence commits stay atomic.
 Use current file/patch/search/shell/async tools with explicit cwd on Codex, Claude
-Code and Omo; never name unavailable host tools as executable.
+Code, Omo, and omp; never name unavailable host tools as executable.
 
 ## Stop Rules
 

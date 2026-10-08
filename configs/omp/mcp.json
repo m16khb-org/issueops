@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "issueops_project": {
+      "args": [
+        "mcp"
+      ],
+      "command": "./bin/issueops",
+      "env": {
+        "ISSUEOPS_MCP_CATALOG_SHA256": "572e2f3bb02eaefe24a434c739e11fe69a7d8cec1bbd76a51f52d3a6428f4864",
+        "ISSUEOPS_ROOT": "."
+      },
+      "type": "stdio"
+    }
+  }
+}

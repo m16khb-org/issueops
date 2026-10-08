@@ -32,7 +32,7 @@ var injectedRoles = []contract.Role{
 }
 
 // Resolve fills in.Local and in.Global from repo's settings and resolves.
-// omo has no settings section, so its resolution never reads the files.
+// omo and omp have no settings section, so their resolution never reads the files.
 func (s Service) Resolve(ctx context.Context, repo string, in domain.ResolveInput) (contract.Resolution, error) {
 	if in.Host == "claude" || in.Host == "codex" {
 		if s.Load == nil {
@@ -47,7 +47,7 @@ func (s Service) Resolve(ctx context.Context, repo string, in domain.ResolveInpu
 	return domain.Resolve(in)
 }
 
-// RoleAgents resolves every injected role for host. omo gets none.
+// RoleAgents resolves every injected role for host. omo and omp get none.
 func (s Service) RoleAgents(ctx context.Context, host, repo string) ([]contract.Resolution, error) {
 	if host != "claude" && host != "codex" {
 		return nil, nil

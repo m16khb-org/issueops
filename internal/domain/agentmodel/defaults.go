@@ -22,8 +22,8 @@ func Roles() []contract.Role { return slices.Clone(roles) }
 
 func knownRole(role contract.Role) bool { return slices.Contains(roles, role) }
 
-// configurableHosts are the hosts a settings file may configure. omo keeps
-// its built-in defaults.
+// configurableHosts are the hosts a settings file may configure. omo and omp
+// keep their built-in defaults.
 var configurableHosts = []string{"claude", "codex"}
 
 // Effort ladders, lowest first. The empty effort means "do not pass one".
@@ -31,6 +31,7 @@ var effortLadders = map[string][]string{
 	"claude": {"low", "medium", "high", "xhigh", "max"},
 	"codex":  {"minimal", "low", "medium", "high", "xhigh", "max"},
 	"omo":    {"off", "minimal", "low", "medium", "high", "xhigh", "max"},
+	"omp":    {"off", "minimal", "low", "medium", "high", "xhigh", "max"},
 }
 
 // KnownHost reports whether host has an effort ladder and built-in defaults.
@@ -76,6 +77,13 @@ var builtins = map[string]map[contract.Role]contract.Layer{
 		contract.RolePlanReview: {Model: "chatgpt-subscription/gpt-6-astra", Effort: "max"},
 		contract.RoleDiffReview: {Model: "chatgpt-subscription/gpt-6-astra", Effort: "max"},
 		contract.RoleResearch:   {Model: "chatgpt-subscription/gpt-6-luna", Effort: "medium"},
+	},
+	"omp": {
+		contract.RoleImplement:   {Model: "anthropic/claude-opus-5-5", Effort: "high"},
+		contract.RolePlanReview:  {Model: "anthropic/claude-opus-5-5", Effort: "high"},
+		contract.RoleDiffReview:  {Model: "anthropic/claude-opus-5-5", Effort: "high"},
+		contract.RoleResearch:    {Model: "anthropic/claude-sonnet-5-5", Effort: "medium"},
+		contract.RoleReaderCheck: {Model: "anthropic/claude-haiku-5-5", Effort: "medium"},
 	},
 }
 

@@ -45,6 +45,7 @@ func ReadbackOrder(catalogSHA256 string, evidence []activationcontract.Evidence)
 		"codex\x00mcp": true, "codex\x00hooks": true,
 		"claude\x00mcp": true, "claude\x00hooks": true,
 		"omo\x00mcp": true, "omo\x00hooks": true,
+		"omp\x00mcp": true, "omp\x00hooks": true,
 		"agy\x00mcp": true,
 	}
 	paths := map[string]bool{}
@@ -58,8 +59,8 @@ func ReadbackOrder(catalogSHA256 string, evidence []activationcontract.Evidence)
 		delete(expected, key)
 		paths[item.Path] = true
 	}
-	if len(expected) != 0 || len(evidence) != 7 {
-		return nil, fmt.Errorf("native activation requires exactly seven first-party MCP/hook readbacks")
+	if len(expected) != 0 || len(evidence) != 9 {
+		return nil, fmt.Errorf("native activation requires exactly nine first-party MCP/hook readbacks")
 	}
 	order := make([]int, len(evidence))
 	for i := range order {

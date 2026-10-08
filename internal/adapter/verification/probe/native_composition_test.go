@@ -11,6 +11,6 @@ import (
 )
 
 func ValidateNativeIntegration(root string) selfverify.StepResult {
-	v := nativeintegration.Validator{ListSkillNames: install.ListSkillNames, SkillNamesForHost: installutil.SkillNamesForHost, ResolveStableNativeRoot: install.ResolveStableNativeRoot, CodexHooksConfig: codex.HooksConfig, OmoLifecycleExtension: hostprotocol.OmoLifecycleExtension, VerifyHookConfigActivation: installutil.VerifyHookConfigActivation}
+	v := nativeintegration.Validator{ListSkillNames: install.ListSkillNames, SkillNamesForHost: installutil.SkillNamesForHost, ResolveStableNativeRoot: install.ResolveStableNativeRoot, CodexHooksConfig: codex.HooksConfig, OmoLifecycleExtension: hostprotocol.OmoLifecycleExtension, OmpLifecycleExtension: hostprotocol.OmpLifecycleExtension, VerifyHookConfigActivation: installutil.VerifyHookConfigActivation}
 	return v.Validate(root)
 }

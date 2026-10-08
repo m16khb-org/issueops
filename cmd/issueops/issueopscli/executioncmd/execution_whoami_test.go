@@ -117,6 +117,32 @@ func TestReusableNativeProcessAncestryDoesNotUseSenpiForAnotherHost(t *testing.T
 	}
 }
 
+func TestReusableNativeProcessAncestryRecognizesBunOmpRuntime(t *testing.T) {
+	ancestry := []model.NativeProcessReceipt{
+		{PID: 101, StartedAt: "2026-10-08T00:00:02Z", Executable: "issueops"},
+		{PID: 150, StartedAt: "2026-10-08T00:00:01Z", Executable: "zsh"},
+		{PID: 202, StartedAt: "2026-10-08T00:00:00Z", Executable: "bun"},
+		{PID: 303, StartedAt: "2026-10-07T00:00:00Z", Executable: "launchd"},
+	}
+	got, err := reusableNativeProcessAncestry("omp", 101, ancestry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 || got[0].PID != 202 || got[1].PID != 303 {
+		t.Fatalf("reusable bun omp ancestry = %+v", got)
+	}
+}
+
+func TestReusableNativeProcessAncestryDoesNotUseBunForAnotherHost(t *testing.T) {
+	_, err := reusableNativeProcessAncestry("omo", 101, []model.NativeProcessReceipt{
+		{PID: 101, StartedAt: "2026-10-08T00:00:01Z", Executable: "issueops"},
+		{PID: 202, StartedAt: "2026-10-08T00:00:00Z", Executable: "bun"},
+	})
+	if err == nil {
+		t.Fatal("bun process was accepted as an Omo host")
+	}
+}
+
 func TestReusableNativeProcessAncestryRejectsMissingNativeHost(t *testing.T) {
 	_, err := reusableNativeProcessAncestry("codex", 101, []model.NativeProcessReceipt{
 		{PID: 101, Executable: "issueops"},
@@ -155,6 +181,32 @@ func TestNativeSessionIdentityFromEnvSupportsOmo(t *testing.T) {
 	if identity.Host != "omo" || identity.SessionID != values["PI_SESSION_ID"] ||
 		identity.Source != "PI_SESSION_ID" {
 		t.Fatalf("unexpected Omo identity: %+v", identity)
+	}
+}
+
+func TestNativeSessionIdentityFromEnvSupportsOmp(t *testing.T) {
+	values := map[string]string{
+		"PI_SESSION_ID":           "",
+		"ISSUEOPS_OMP_SESSION_ID": "01a11a63-e541-71c7-bdd9-3de4a706de29",
+	}
+	identity, err := nativeSessionIdentityFromEnv(func(key string) string { return values[key] })
+	if err != nil {
+		t.Fatalf("omp identity must be detected: %v", err)
+	}
+	if identity.Host != "omp" || identity.SessionID != values["ISSUEOPS_OMP_SESSION_ID"] ||
+		identity.Source != "ISSUEOPS_OMP_SESSION_ID" {
+		t.Fatalf("unexpected omp identity: %+v", identity)
+	}
+}
+
+func TestNativeSessionIdentityFromEnvRejectsOmoAndOmpTogether(t *testing.T) {
+	values := map[string]string{
+		"PI_SESSION_ID":           "omo-session",
+		"ISSUEOPS_OMP_SESSION_ID": "omp-session",
+	}
+	_, err := nativeSessionIdentityFromEnv(func(key string) string { return values[key] })
+	if err == nil || !strings.Contains(err.Error(), "ambiguous") {
+		t.Fatalf("a nested omo/omp identity must fail closed: %v", err)
 	}
 }
 

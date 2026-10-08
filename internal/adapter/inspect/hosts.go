@@ -31,6 +31,7 @@ func (observer Observer) observeHosts(root, home, skillName string, options insp
 		{inspectcontract.HostCodex, filepath.Join(codexHome, "config.toml"), filepath.Join(codexHome, "skills", skillName), readCodexEntry},
 		{inspectcontract.HostClaude, filepath.Join(home, ".claude.json"), filepath.Join(home, ".claude", "skills", skillName), readJSONEntry},
 		{inspectcontract.HostOmo, filepath.Join(home, ".omo", "mcp.json"), filepath.Join(home, ".omo", "agent", "skills", skillName), readJSONEntry},
+		{inspectcontract.HostOmp, filepath.Join(home, ".omp", "agent", "mcp.json"), filepath.Join(home, ".omp", "agent", "skills", skillName), readJSONEntry},
 	}
 	observedAt := observer.now().Format(time.RFC3339)
 	hosts := make([]inspectcontract.HostIntegration, 0, len(specs))

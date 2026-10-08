@@ -261,8 +261,8 @@ func validateOrcaBinding(binding issueopscontract.OrcaBinding) error {
 			return fmt.Errorf("Orca binding %s is required", name)
 		}
 	}
-	if binding.OwnerHost != "codex" && binding.OwnerHost != "claude" && binding.OwnerHost != "omo" {
-		return fmt.Errorf("Orca owner_host must be codex, claude, or omo")
+	if binding.OwnerHost != "codex" && binding.OwnerHost != "claude" && binding.OwnerHost != "omo" && binding.OwnerHost != "omp" {
+		return fmt.Errorf("Orca owner_host must be codex, claude, omo, or omp")
 	}
 	if binding.RunID == "" || binding.RunID != strings.TrimSpace(binding.RunID) || len(binding.RunID) > 1024 {
 		return fmt.Errorf("Orca binding run_id must be one canonical explicit Run identity")

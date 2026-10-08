@@ -87,6 +87,7 @@ func TestProbeRequiresInstalledHandoffPermissionBypassFlag(t *testing.T) {
 	for _, tt := range []struct{ agent, help string }{
 		{agent: "codex", help: "--model --config --dangerously-bypass-hook-trust"},
 		{agent: "claude", help: "--model"},
+		{agent: "omp", help: "--model=<value> --thinking=<value>"},
 	} {
 		t.Run(tt.agent, func(t *testing.T) {
 			runner := newFakeRunner(t)
@@ -119,6 +120,8 @@ func TestProbeRequiresHostModelSelectionCapability(t *testing.T) {
 		{name: "codex", agent: "codex", help: "--dangerously-bypass-hook-trust --dangerously-bypass-approvals-and-sandbox"},
 		{name: "claude", agent: "claude", help: "Usage: claude"},
 		{name: "omo", agent: "omo", help: "Usage: omo"},
+		{name: "omp", agent: "omp", help: "Usage: omp"},
+		{name: "omp without thinking", agent: "omp", help: "--model=<value> --auto-approve"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			runner := newFakeRunner(t)
@@ -147,7 +150,7 @@ func TestProbeRequiresHostModelSelectionCapability(t *testing.T) {
 }
 
 func TestProbeDoesNotApplyCodexBypassRequirementToOtherHosts(t *testing.T) {
-	for _, agent := range []string{"claude", "omo"} {
+	for _, agent := range []string{"claude", "omo", "omp"} {
 		t.Run(agent, func(t *testing.T) {
 			runner := newFakeRunner(t)
 			runner.lookPaths["orca"] = "/usr/local/bin/orca"
@@ -681,6 +684,10 @@ func TestClientCreateTerminalUsesCallerSelectedHostLaunchProfile(t *testing.T) {
 		{
 			name: "Omo Sol max", agent: "omo", model: "chatgpt-subscription/gpt-6-sol", effort: "max",
 			command: "omo --model 'chatgpt-subscription/gpt-6-sol:max'",
+		},
+		{
+			name: "omp Opus high", agent: "omp", model: "anthropic/claude-opus-5-5", effort: "high",
+			command: "omp --model 'anthropic/claude-opus-5-5' --thinking 'high' --auto-approve",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1395,6 +1402,7 @@ func addCompleteProbeLeafHelp(runner *fakeRunner) {
 	runner.responses["codex --help"] = CommandOutput{Stdout: []byte("--model --config --dangerously-bypass-hook-trust --dangerously-bypass-approvals-and-sandbox")}
 	runner.responses["claude --help"] = CommandOutput{Stdout: []byte("--model --dangerously-skip-permissions --agents")}
 	runner.responses["omo --help"] = CommandOutput{Stdout: []byte("--model")}
+	runner.responses["omp --help"] = CommandOutput{Stdout: []byte("--model=<value> --thinking=<value> --auto-approve")}
 }
 
 func listAllTaskRows(client *Client) ([]port.OrcaTask, error) {

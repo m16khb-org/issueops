@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestCanonicalOmoMCPAcceptsHTTPAndRejectsUnsafeConfigurations(t *testing.T) {
+func TestCanonicalLifecycleHostMCPAcceptsHTTPAndRejectsUnsafeConfigurations(t *testing.T) {
 	bearer := base64.RawURLEncoding.EncodeToString([]byte(strings.Repeat("x", 32)))
 	for _, test := range []struct {
 		name   string
@@ -42,7 +42,31 @@ func TestCanonicalOmoMCPAcceptsHTTPAndRejectsUnsafeConfigurations(t *testing.T) 
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got := hasCanonicalOmoMCP(body, "/harness/bin/issueops", "/harness"); got != test.want {
+			if got := hasCanonicalLifecycleHostMCP(body, "/harness/bin/issueops", "/harness"); got != test.want {
+				t.Fatalf("canonical=%v, want %v", got, test.want)
+			}
+		})
+	}
+}
+
+// omp writes an explicit stdio type on its stdio entry; Omo omits it.
+func TestCanonicalLifecycleHostMCPAcceptsTypedAndUntypedStdio(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		server map[string]any
+		want   bool
+	}{
+		{"untyped", map[string]any{"command": "/harness/bin/issueops", "args": []any{"mcp"}, "env": map[string]any{"ISSUEOPS_ROOT": "/harness"}}, true},
+		{"typed", map[string]any{"type": "stdio", "command": "/harness/bin/issueops", "args": []any{"mcp"}, "env": map[string]any{"ISSUEOPS_ROOT": "/harness"}}, true},
+		{"stale-binary", map[string]any{"type": "stdio", "command": "/old/bin/issueops", "args": []any{"mcp"}, "env": map[string]any{"ISSUEOPS_ROOT": "/harness"}}, false},
+		{"stale-root", map[string]any{"type": "stdio", "command": "/harness/bin/issueops", "args": []any{"mcp"}, "env": map[string]any{"ISSUEOPS_ROOT": "/old"}}, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			body, err := json.Marshal(map[string]any{"mcpServers": map[string]any{"issueops": test.server}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := hasCanonicalLifecycleHostMCP(body, "/harness/bin/issueops", "/harness"); got != test.want {
 				t.Fatalf("canonical=%v, want %v", got, test.want)
 			}
 		})

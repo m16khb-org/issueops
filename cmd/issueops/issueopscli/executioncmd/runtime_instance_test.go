@@ -12,7 +12,7 @@ import (
 )
 
 func TestExecutionCommandsKeepRunnerAndActorOwnership(t *testing.T) {
-	for key, value := range map[string]string{"CODEX_THREAD_ID": "session", "CLAUDE_CODE_SESSION_ID": "", "PI_SESSION_ID": ""} {
+	for key, value := range map[string]string{"CODEX_THREAD_ID": "session", "CLAUDE_CODE_SESSION_ID": "", "PI_SESSION_ID": "", "ISSUEOPS_OMP_SESSION_ID": ""} {
 		t.Setenv(key, value)
 	}
 	var events []string
@@ -96,7 +96,7 @@ func executionRunnerForIsolation(runtime ExecutionDeps, deps Deps) func([]string
 }
 
 func TestExecutionWithoutRunnersFailsClosed(t *testing.T) {
-	for key, value := range map[string]string{"CODEX_THREAD_ID": "session", "CLAUDE_CODE_SESSION_ID": "", "PI_SESSION_ID": ""} {
+	for key, value := range map[string]string{"CODEX_THREAD_ID": "session", "CLAUDE_CODE_SESSION_ID": "", "PI_SESSION_ID": "", "ISSUEOPS_OMP_SESSION_ID": ""} {
 		t.Setenv(key, value)
 	}
 	for _, args := range [][]string{{"status", "--id", "cycle"}, {"sync-base", "--id", "cycle", "--preview"}, {"switch-mode", "--id", "cycle", "--mode", "direct"}, {"whoami"}} {

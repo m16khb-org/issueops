@@ -14,15 +14,15 @@ func TestConformanceModelOverridesRejectMalformedAndDuplicateValues(t *testing.T
 	}
 }
 
-func TestToolConformanceRunnersIncludeNativeOmo(t *testing.T) {
+func TestToolConformanceRunnersIncludeNativeOmoAndOmp(t *testing.T) {
 	runners := toolConformanceRunners("/private/bin/issueops")
-	for _, host := range []string{"codex", "claude", "omo"} {
+	for _, host := range []string{"codex", "claude", "omo", "omp"} {
 		runner := runners[host]
 		if runner == nil || runner.Name() != host {
 			t.Fatalf("runner %q = %#v", host, runner)
 		}
 	}
-	if len(runners) != 3 {
+	if len(runners) != 4 {
 		t.Fatalf("runners = %#v", runners)
 	}
 }

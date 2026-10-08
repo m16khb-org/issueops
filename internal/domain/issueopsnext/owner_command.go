@@ -49,7 +49,7 @@ func OwnerCommand(id, missingKey string) string {
 	case "plan_path", "plan_exists", "plan_in_worktree":
 		return "issueops link-plan --id " + id + " --plan-path <PATH>"
 	case "worktree_path", "worktree_exists":
-		return "issueops execution prepare --id " + id + " --mode auto --owner-host <codex|claude|omo> $ACTOR_FLAGS"
+		return "issueops execution prepare --id " + id + " --mode auto --owner-host <codex|claude|omo|omp> $ACTOR_FLAGS"
 	case "execution", "execution_valid", "execution_worktree_match", "execution_write_lease":
 		return executionStatusCommand(id)
 	case "implementation_changes":

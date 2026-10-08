@@ -232,6 +232,44 @@ func TestHostUsageOmoMessageEndIsFinalAuthority(t *testing.T) {
 	}
 }
 
+func TestHostUsageOmpCountsEachAssistantMessageEndOfAToolTurn(t *testing.T) {
+	// Given a recorded-shape omp --mode json stream with a tool-use message and a final answer
+	input, usage := decodeHost(t, tracecontract.InputFormatOmpJSON, fixture(t, "omp-tool-turn.jsonl"))
+	// Then each assistant message_end is one omp delta sample and nothing else is counted
+	if len(usage.Samples) != 2 || input.Incomplete || usage.Coverage != tracecontract.UsageCoverageComplete || len(usage.Warnings) != 0 {
+		t.Fatalf("usage = %+v incomplete=%v", usage, input.Incomplete)
+	}
+	want := map[string]struct {
+		input, output int64
+		cost          float64
+	}{
+		digest("message", "resp-omp-1"): {100, 40, 0.0003},
+		digest("message", "resp-omp-2"): {150, 20, 0.00025},
+	}
+	for _, sample := range usage.Samples {
+		expected, ok := want[sample.MessageID]
+		if !ok {
+			t.Fatalf("unexpected sample %+v", sample)
+		}
+		delete(want, sample.MessageID)
+		requireMetrics(t, sample, i64(expected.input), i64(expected.output), i64(0), i64(0))
+		if sample.Host != "omp" || sample.Provider != "anthropic" || sample.Model != "claude-haiku-4-5" || sample.SessionID != digest("session", "sess-omp-1") ||
+			sample.Finality != tracecontract.UsageFinalityFinal || sample.Temporality != tracecontract.UsageTemporalityDelta {
+			t.Errorf("sample = %+v", sample)
+		}
+		if sample.CostUSD == nil || *sample.CostUSD != expected.cost || sample.CostBasis != tracecontract.UsageCostBasisHostEstimate {
+			t.Errorf("cost = %v basis=%q", sample.CostUSD, sample.CostBasis)
+		}
+	}
+	encoded, err := json.Marshal(usage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(encoded), "SECRET") || strings.Contains(string(encoded), "sess-omp-1") || strings.Contains(string(encoded), "resp-omp") {
+		t.Errorf("usage leaked payload or raw identity: %s", encoded)
+	}
+}
+
 func TestHostUsageOmoRepeatedMessageEndWithSameIdentityCountsOnce(t *testing.T) {
 	line := omoEnd("resp-1", `{"input":4,"output":1,"cacheRead":0,"cacheWrite":0}`)
 	_, usage := decodeHost(t, tracecontract.InputFormatOmoJSON, []byte(line+"\n"+line+"\n"))

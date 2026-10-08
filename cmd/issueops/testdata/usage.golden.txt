@@ -13,7 +13,7 @@ Usage:
   issueops guard check [--repo PATH] [--staged] [--all] [--json] [--] [FILES...]
   issueops quality inspect [--repo PATH] [--json]
   issueops verify-work [--repo PATH] [--all] [--json] [--] [READ_ONLY_ARGV...]
-  issueops trace analyze --input <jsonl|state-key|-> [--input-format issueops|claude-stream|codex-exec|omo-json] [--json]
+  issueops trace analyze --input <jsonl|state-key|-> [--input-format issueops|claude-stream|codex-exec|omo-json|omp-json] [--json]
   issueops trace handoff-delivery --input <observation.json|-> [--json]
   issueops contract schema [--json]
   issueops contract check [--json]
@@ -55,7 +55,7 @@ Usage:
   issueops link-plan --id ID --plan-path PATH RECORD_ACTOR_FLAGS [--json]
   issueops artifact stage --id ID --name plan|spec|verified-execution-loop --file PATH [--json]
   issueops artifact unstage --id ID --name plan|spec|verified-execution-loop [--json]
-  issueops execution prepare --id ID --mode auto|direct|orca --owner-host codex|claude|omo [--owner-model MODEL] [--owner-effort EFFORT] [--direct-reason REASON] [--expected-readiness-fingerprint SHA256] [--issue-snapshot-file PATH] ACTOR_FLAGS [--confirm] [--json]
+  issueops execution prepare --id ID --mode auto|direct|orca --owner-host codex|claude|omo|omp [--owner-model MODEL] [--owner-effort EFFORT] [--direct-reason REASON] [--expected-readiness-fingerprint SHA256] [--issue-snapshot-file PATH] ACTOR_FLAGS [--confirm] [--json]
   issueops execution status --id ID [--json]
   issueops execution whoami [--json]
   issueops execution claim --id ID --generation N (--claim-current-token|--claim-token-file PATH) [--issue-body-sha256 SHA256 --context-packet-sha256 SHA256] [--issue-snapshot-file PATH] [ACTOR_FLAGS] [--json]
@@ -66,10 +66,10 @@ Usage:
   issueops execution complete --id ID --generation N --final-head SHA --verification-report PATH --remote-artifact-url URL --verification TEXT... ACTOR_FLAGS --confirm [--json]
   issueops execution sync-base --id ID [--completion-generation N] (--preview | --apply --confirm --fingerprint SHA256 | --finalize | --abort) ACTOR_FLAGS [--json]
   issueops execution switch-mode --id ID --mode direct|orca [--apply --confirm --fingerprint SHA256] ACTOR_FLAGS [--json]
-  issueops execution handoff-cmux --id ID --generation N --cmux-executable ABS --cmux-version VERSION --cmux-build-identity IDENTITY --socket ABS --window UUID --cwd ABS --host codex|claude|omo --host-executable ABS --model MODEL [--effort EFFORT] --prompt-file ABS --prompt-sha256 HEX --material-sha256 HEX [--json]
+  issueops execution handoff-cmux --id ID --generation N --cmux-executable ABS --cmux-version VERSION --cmux-build-identity IDENTITY --socket ABS --window UUID --cwd ABS --host codex|claude|omo|omp --host-executable ABS --model MODEL [--effort EFFORT] --prompt-file ABS --prompt-sha256 HEX --material-sha256 HEX [--json]
   issueops phase --id ID --to problem|grill|plan|compatibility-review|implement|ai-slop-clean|feedback|pr RECORD_ACTOR_FLAGS [--json]
   issueops ai-slop-clean record --id ID --category TEXT --verification TEXT RECORD_ACTOR_FLAGS [--json]
-  issueops implementation-review record --id ID --verdict pass|revise|stop --finding TEXT... --evidence TEXT... [--reviewer-host codex|claude|omo] [--reviewer-model MODEL] [--reviewer-effort EFFORT] RECORD_ACTOR_FLAGS [--json]
+  issueops implementation-review record --id ID --verdict pass|revise|stop --finding TEXT... --evidence TEXT... [--reviewer-host codex|claude|omo|omp] [--reviewer-model MODEL] [--reviewer-effort EFFORT] RECORD_ACTOR_FLAGS [--json]
   issueops project-docs-review record --id ID --verdict updated|no-change [--doc PATH...] [--reviewed-doc PATH...] --evidence TEXT... RECORD_ACTOR_FLAGS [--json]
   issueops schema-evidence record --id ID --measurement TEXT... --source TEXT... [--waive --waiver-rationale TEXT] RECORD_ACTOR_FLAGS [--json]
   issueops regress --id ID --reason TEXT RECORD_ACTOR_FLAGS [--json]
@@ -96,7 +96,7 @@ Usage:
   issueops remote sync-graph --id ID [--confirm] [--json]
   issueops remote sync-issue --id ID [--provider github|gitlab] [--url CHILD_URL] [--body TEXT|--body-file PATH] [--template KIND] [--expected-body-sha256 SHA] [--accept-remote-edits] RECORD_ACTOR_FLAGS [--confirm] [--json]
   issueops remote sync-pr --id ID --expected-generation N [--provider github|gitlab] [--url ARTIFACT_URL] [--body TEXT|--body-file PATH] [--template KIND] [--expected-body-sha256 SHA] [--accept-remote-edits] RECORD_ACTOR_FLAGS [--confirm] [--json]
-  issueops remote create-child --id ID [--operation-id HEX] --title TEXT [--provider github|gitlab] [--score-file PATH] [--body TEXT|--body-file PATH] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... --host codex|claude|omo --session-id SESSION [--agent-id ID] --cwd WORKER_PATH [--confirm] [--json]
+  issueops remote create-child --id ID [--operation-id HEX] --title TEXT [--provider github|gitlab] [--score-file PATH] [--body TEXT|--body-file PATH] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... --host codex|claude|omo|omp --session-id SESSION [--agent-id ID] --cwd WORKER_PATH [--confirm] [--json]
   issueops remote create-pr --id ID --expected-generation N --title TEXT --head BRANCH --base BRANCH [--provider github|gitlab] [--score-file PATH] [--body TEXT|--body-file PATH] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... ACTOR_FLAGS [--confirm] [--json]
   issueops remote verify-artifact --id ID --provider github|gitlab --kind pr|mr --url URL --target-branch BRANCH --label LABEL --assignee USER RECORD_ACTOR_FLAGS [--json]
   issueops remote reflect-devils-advocate --id ID [--provider github|gitlab] RECORD_ACTOR_FLAGS [--confirm] [--json]
@@ -147,16 +147,16 @@ Usage:
   issueops mcp [cleanup [--dry-run|--apply] [--json]]
   issueops mcp --http [--addr 127.0.0.1:47831]
   issueops mcp service start|stop|status [--json]
-  issueops mcp authorize --workspace-root PATH --host codex|claude|omo --session-id ID [--agent-id ID] --session-pid PID --session-started-at RFC3339 --session-executable PATH [--cwd PATH] [--json]
-  issueops model show [--host claude|codex|omo] [--repo PATH] [--json]
+  issueops mcp authorize --workspace-root PATH --host codex|claude|omo|omp --session-id ID [--agent-id ID] --session-pid PID --session-started-at RFC3339 --session-executable PATH [--cwd PATH] [--json]
+  issueops model show [--host claude|codex|omo|omp] [--repo PATH] [--json]
   issueops model set --scope global|local --host claude|codex --role ROLE [--model MODEL] [--effort EFFORT] [--repo PATH] [--json]
   issueops model unset --scope global|local --host claude|codex --role ROLE [--field model|effort] [--repo PATH] [--json]
-  issueops model resolve --host claude|codex|omo --role ROLE [--tier TIER] [--round N] [--model MODEL] [--effort EFFORT] [--agents] [--repo PATH] [--json]
+  issueops model resolve --host claude|codex|omo|omp --role ROLE [--tier TIER] [--round N] [--model MODEL] [--effort EFFORT] [--agents] [--repo PATH] [--json]
   issueops version
 
 
-RECORD_ACTOR_FLAGS: --host codex|claude|omo --session-id ID [--agent-id ID] --cwd PATH
-ACTOR_FLAGS: --host codex|claude|omo --session-id ID [--agent-id ID] --session-pid PID --session-started-at RFC3339 --session-executable PATH --cwd PATH
+RECORD_ACTOR_FLAGS: --host codex|claude|omo|omp --session-id ID [--agent-id ID] --cwd PATH
+ACTOR_FLAGS: --host codex|claude|omo|omp --session-id ID [--agent-id ID] --session-pid PID --session-started-at RFC3339 --session-executable PATH --cwd PATH
 
 Durable-record mutations take RECORD_ACTOR_FLAGS; without them an active execution rejects the
 call as a non-holder. execution claim accepts either no actor flags and observes the current

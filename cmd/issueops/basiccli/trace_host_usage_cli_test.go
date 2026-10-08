@@ -13,6 +13,7 @@ const (
 	hostClaudeResult = `{"type":"result","subtype":"success","is_error":false,"session_id":"cli-sess","uuid":"cli-res","modelUsage":{"model-x":{"inputTokens":12,"outputTokens":3,"cacheReadInputTokens":0,"cacheCreationInputTokens":0,"costUSD":0.5}}}` + "\n"
 	hostCodexTurn    = `{"type":"thread.started","thread_id":"cli-thread"}` + "\n" + `{"type":"turn.completed","usage":{"input_tokens":8,"cached_input_tokens":2,"output_tokens":1}}` + "\n"
 	hostOmoMessage   = `{"type":"session","id":"cli-omo"}` + "\n" + `{"type":"message_end","message":{"role":"assistant","responseId":"cli-msg","stopReason":"stop","usage":{"input":5,"output":2,"cacheRead":0,"cacheWrite":1}}}` + "\n"
+	hostOmpMessage   = `{"type":"session","version":3,"id":"cli-omp"}` + "\n" + `{"type":"message_end","message":{"role":"assistant","provider":"anthropic","model":"claude-haiku-4-5","responseId":"cli-msg","stopReason":"toolUse","usage":{"input":6,"output":2,"cacheRead":0,"cacheWrite":0,"totalTokens":8,"cost":{"total":0.001}}}}` + "\n"
 )
 
 func runTraceAnalyzeJSON(t *testing.T, args ...string) (trace.TraceAnalyzeResult, string, error) {
@@ -38,6 +39,7 @@ func TestRunTraceAnalyzeHostFormatsReportUsageThroughTheCLI(t *testing.T) {
 		{trace.InputFormatClaudeJSON, hostClaudeResult, "claude", 12, trace.UsageCoverageComplete},
 		{trace.InputFormatCodexExec, hostCodexTurn, "codex", 8, trace.UsageCoverageUnknown},
 		{trace.InputFormatOmoJSON, hostOmoMessage, "omo", 5, trace.UsageCoverageComplete},
+		{trace.InputFormatOmpJSON, hostOmpMessage, "omp", 6, trace.UsageCoverageComplete},
 	}
 	for _, tc := range cases {
 		t.Run(tc.format, func(t *testing.T) {

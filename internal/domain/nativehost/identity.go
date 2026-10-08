@@ -18,6 +18,8 @@ func ExecutableMatchesHost(host, executable string) bool {
 		return base == "claude" || strings.Contains(normalized, "/claude/versions/")
 	case "omo":
 		return base == "omo"
+	case "omp":
+		return base == "omp"
 	default:
 		return false
 	}

@@ -5,6 +5,7 @@ const (
 	InputFormatClaudeJSON = "claude-stream"
 	InputFormatCodexExec  = "codex-exec"
 	InputFormatOmoJSON    = "omo-json"
+	InputFormatOmpJSON    = "omp-json"
 )
 
 const (

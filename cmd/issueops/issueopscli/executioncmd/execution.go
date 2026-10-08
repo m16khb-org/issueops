@@ -66,7 +66,7 @@ func execute(req model.ExecutionActionRequest, deps Deps) (any, error) {
 }
 
 const Usage = `Usage:
-  issueops execution prepare --id ID --mode auto|direct|orca --owner-host codex|claude|omo [--owner-model MODEL] [--owner-effort EFFORT] [--direct-reason REASON] [--expected-readiness-fingerprint SHA256] [--issue-snapshot-file PATH] ACTOR_FLAGS [--confirm] [--json]
+  issueops execution prepare --id ID --mode auto|direct|orca --owner-host codex|claude|omo|omp [--owner-model MODEL] [--owner-effort EFFORT] [--direct-reason REASON] [--expected-readiness-fingerprint SHA256] [--issue-snapshot-file PATH] ACTOR_FLAGS [--confirm] [--json]
   issueops execution status --id ID [--json]
   issueops execution whoami [--json]
   issueops execution claim --id ID --generation N (--claim-current-token|--claim-token-file PATH) [--issue-body-sha256 HEX --context-packet-sha256 HEX] [--issue-snapshot-file PATH] [ACTOR_FLAGS] [--json]
@@ -77,9 +77,9 @@ const Usage = `Usage:
   issueops execution complete --id ID --generation N --final-head SHA --verification-report PATH --remote-artifact-url URL --verification TEXT... ACTOR_FLAGS --confirm [--json]
   issueops execution sync-base --id ID --completion-generation N (--preview | --apply --confirm --fingerprint SHA256 | --finalize | --abort) ACTOR_FLAGS [--json]
   issueops execution switch-mode --id ID --mode direct|orca [--apply --confirm --fingerprint SHA256] ACTOR_FLAGS [--json]
-  issueops execution handoff-cmux --id ID --generation N --cmux-executable ABS --cmux-version VERSION --cmux-build-identity IDENTITY --socket ABS --window UUID --cwd ABS --host codex|claude|omo --host-executable ABS --model MODEL [--effort EFFORT] --prompt-file ABS --prompt-sha256 HEX --material-sha256 HEX [--json]
+  issueops execution handoff-cmux --id ID --generation N --cmux-executable ABS --cmux-version VERSION --cmux-build-identity IDENTITY --socket ABS --window UUID --cwd ABS --host codex|claude|omo|omp --host-executable ABS --model MODEL [--effort EFFORT] --prompt-file ABS --prompt-sha256 HEX --material-sha256 HEX [--json]
 
-ACTOR_FLAGS: --host codex|claude|omo --session-id ID [--agent-id ID] --session-pid PID --session-started-at RFC3339 --session-executable PATH --cwd PATH`
+ACTOR_FLAGS: --host codex|claude|omo|omp --session-id ID [--agent-id ID] --session-pid PID --session-started-at RFC3339 --session-executable PATH --cwd PATH`
 
 func Run(args []string, deps Deps) error {
 	if len(args) == 0 || isHelp(args[0]) {
@@ -126,7 +126,7 @@ func runHandoffCmux(args []string, deps Deps) error {
 	socketPath := fs.String("socket", "", "absolute cmux Unix socket path")
 	windowID := fs.String("window", "", "exact cmux window UUID")
 	cwd := fs.String("cwd", "", "canonical worktree and actual process cwd")
-	host := fs.String("host", "", "native host: codex, claude, or omo")
+	host := fs.String("host", "", "native host: codex, claude, omo, or omp")
 	hostExecutable := fs.String("host-executable", "", "absolute native host executable")
 	modelName := fs.String("model", "", "native host model")
 	effort := fs.String("effort", "", "native host effort")
@@ -164,7 +164,7 @@ type actorFlags struct {
 func addActorFlags(fs *flag.FlagSet, deps Deps) actorFlags {
 	return actorFlags{
 		observe:    deps.Runtime.ObserveNativeProcessAncestry,
-		host:       fs.String("host", "", "native host: codex, claude, or omo"),
+		host:       fs.String("host", "", "native host: codex, claude, omo, or omp"),
 		sessionID:  fs.String("session-id", "", "native session id"),
 		agentID:    fs.String("agent-id", "", "optional native agent id"),
 		pid:        fs.Int("session-pid", 0, "native session process id"),
@@ -326,6 +326,9 @@ func nativeSessionIdentityFromEnv(getenv func(string) string) (nativeSessionIden
 		{Host: "codex", SessionID: getenv("CODEX_THREAD_ID"), Source: "CODEX_THREAD_ID"},
 		{Host: "claude", SessionID: getenv("CLAUDE_CODE_SESSION_ID"), Source: "CLAUDE_CODE_SESSION_ID"},
 		{Host: "omo", SessionID: getenv("PI_SESSION_ID"), Source: "PI_SESSION_ID"},
+		// omp exports no session id to its shells; the issueops lifecycle
+		// extension sets this one from the main session it runs in.
+		{Host: "omp", SessionID: getenv("ISSUEOPS_OMP_SESSION_ID"), Source: "ISSUEOPS_OMP_SESSION_ID"},
 	} {
 		if candidate.SessionID == "" {
 			continue
@@ -372,6 +375,10 @@ func nativeHostProcessExecutable(host, executable string) bool {
 		// persistent host that owns the session is consequently named
 		// `senpi`, so its live receipt is the reusable Omo identity.
 		return base == "omo" || base == "senpi"
+	case "omp":
+		// omp ships as a `#!/usr/bin/env bun` script, so the OS reports its
+		// session process as `bun`; a compiled omp reports `omp`.
+		return base == "omp" || base == "bun"
 	default:
 		return false
 	}

@@ -16,6 +16,13 @@ type generatedLifecycleContract struct {
 	Events        map[string]generatedLifecycleRule `json:"events"`
 	Message       generatedLifecycleMessage         `json:"message"`
 	Warning       string                            `json:"warning"`
+	SessionEnv    *generatedLifecycleSessionEnv     `json:"session_env"`
+}
+
+type generatedLifecycleSessionEnv struct {
+	Variable  string   `json:"variable"`
+	AgentKind string   `json:"agent_kind"`
+	Events    []string `json:"events"`
 }
 
 type generatedLifecycleRule struct {
@@ -51,12 +58,16 @@ type lifecycleNotification struct {
 	Level   string
 }
 
+const mockLifecycleSessionID = "omp-session-1"
+
 type lifecycleModuleObservation struct {
 	ExecCalls     []lifecycleExecCall
+	ExecEnv       []map[string]any
 	Messages      []lifecycleMessageCall
 	Notifications []lifecycleNotification
 	HandlerState  goja.PromiseState
 	HandlerResult any
+	ProcessEnv    map[string]any
 }
 
 func TestGeneratedLifecycleExtensionExecutesActualMockPiModule(t *testing.T) {
@@ -92,7 +103,7 @@ func TestGeneratedLifecycleExtensionExecutesActualMockPiModule(t *testing.T) {
 	contract := parseGeneratedLifecycleContract(t, source)
 	if contract.Events["session_start"] != (generatedLifecycleRule{Subcommand: "session-start"}) ||
 		contract.Events["session_compact"] != (generatedLifecycleRule{Subcommand: "post-compact", AcceptedOnly: true}) ||
-		contract.Message != (generatedLifecycleMessage{CustomType: "issueops:project-docs"}) {
+		contract.Message != (generatedLifecycleMessage{CustomType: "issueops:project-docs"}) || contract.SessionEnv != nil {
 		t.Fatalf("unexpected Omo lifecycle contract: %+v", contract)
 	}
 	for _, test := range tests {
@@ -195,6 +206,12 @@ func verifyLifecycleModule(source string) error {
 }
 
 func executeLifecycleModule(source, eventName string, accepted bool, execResult mockLifecycleExec) (lifecycleModuleObservation, error) {
+	return executeLifecycleModuleAs(source, eventName, map[string]any{"accepted": accepted}, "", execResult)
+}
+
+// executeLifecycleModuleAs invokes the handler as an agent of agentKind (empty
+// leaves ctx.agent unset) with a mock process.env and session manager.
+func executeLifecycleModuleAs(source, eventName string, eventPayload map[string]any, agentKind string, execResult mockLifecycleExec) (lifecycleModuleObservation, error) {
 	const declaration = "export default function agentHarness(pi)"
 	if strings.Count(source, declaration) != 1 {
 		return lifecycleModuleObservation{}, fmt.Errorf("generated module default export drifted")
@@ -203,6 +220,15 @@ func executeLifecycleModule(source, eventName string, accepted bool, execResult 
 	runtime := goja.New()
 	observation := lifecycleModuleObservation{}
 	handlers := map[string]goja.Callable{}
+
+	processEnv := runtime.NewObject()
+	process := runtime.NewObject()
+	if err := process.Set("env", processEnv); err != nil {
+		return lifecycleModuleObservation{}, err
+	}
+	if err := runtime.Set("process", process); err != nil {
+		return lifecycleModuleObservation{}, err
+	}
 
 	pi := runtime.NewObject()
 	if err := pi.Set("on", func(call goja.FunctionCall) goja.Value {
@@ -226,6 +252,7 @@ func executeLifecycleModule(source, eventName string, accepted bool, execResult 
 			panic(runtime.NewTypeError(err.Error()))
 		}
 		observation.ExecCalls = append(observation.ExecCalls, lifecycleExecCall{Binary: call.Argument(0).String(), Argv: argv, Options: options})
+		observation.ExecEnv = append(observation.ExecEnv, processEnv.Export().(map[string]any))
 		promise, resolve, reject := runtime.NewPromise()
 		if execResult.Err != nil {
 			if err := reject(runtime.NewGoError(execResult.Err)); err != nil {
@@ -281,7 +308,19 @@ func executeLifecycleModule(source, eventName string, accepted bool, execResult 
 	if err := ctx.Set("ui", ui); err != nil {
 		return lifecycleModuleObservation{}, err
 	}
-	event := runtime.ToValue(map[string]any{"accepted": accepted})
+	if agentKind != "" {
+		if err := ctx.Set("agent", map[string]any{"kind": agentKind}); err != nil {
+			return lifecycleModuleObservation{}, err
+		}
+	}
+	sessionManager := runtime.NewObject()
+	if err := sessionManager.Set("getSessionId", func(goja.FunctionCall) goja.Value { return runtime.ToValue(mockLifecycleSessionID) }); err != nil {
+		return lifecycleModuleObservation{}, err
+	}
+	if err := ctx.Set("sessionManager", sessionManager); err != nil {
+		return lifecycleModuleObservation{}, err
+	}
+	event := runtime.ToValue(eventPayload)
 	returned, err := handler(goja.Undefined(), event, ctx)
 	if err != nil {
 		return lifecycleModuleObservation{}, fmt.Errorf("invoke %s: %w", eventName, err)
@@ -299,6 +338,7 @@ func executeLifecycleModule(source, eventName string, accepted bool, execResult 
 			observation.HandlerResult = result.Export()
 		}
 	}
+	observation.ProcessEnv = processEnv.Export().(map[string]any)
 	return observation, nil
 }
 

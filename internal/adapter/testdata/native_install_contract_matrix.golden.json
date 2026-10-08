@@ -10,7 +10,8 @@
         "beta",
         "claude-only",
         "codex-only",
-        "omo-only"
+        "omo-only",
+        "omp-only"
       ],
       "hosts": [
         {
@@ -21,21 +22,21 @@
               "kind": "agy_project_mcp_config",
               "path": "$ROOT/.agents/mcp_config.json",
               "written": true,
-              "content_sha256": "e7b8040e7c642017bfa8da8b92e95254b4f4546ec2c98b903f8496b8ae478dd9",
+              "content_sha256": "02196d32efc6daabbdec858018942ba64d149a761eb2b34be9fc716d64c11aac",
               "content": ""
             },
             {
               "kind": "agy_project_mcp_template",
               "path": "$ROOT/configs/agy/mcp_config.json",
               "written": true,
-              "content_sha256": "e7b8040e7c642017bfa8da8b92e95254b4f4546ec2c98b903f8496b8ae478dd9",
+              "content_sha256": "02196d32efc6daabbdec858018942ba64d149a761eb2b34be9fc716d64c11aac",
               "content": ""
             },
             {
               "kind": "agy_user_mcp_config",
               "path": "$HOME/.gemini/config/mcp_config.json",
               "written": true,
-              "content_sha256": "16dc7e59095b720d149c1c701f1ac01dcdbecb089dffdabf5e702f06239e3a32",
+              "content_sha256": "f32b925c9a5fc0ffc455dbbad21da85ef6bc597d03edffeffd57fae9fdf19835",
               "content": ""
             }
           ],
@@ -62,7 +63,8 @@
           "messages": [
             "skip skill for agy: claude-only",
             "skip skill for agy: codex-only",
-            "skip skill for agy: omo-only"
+            "skip skill for agy: omo-only",
+            "skip skill for agy: omp-only"
           ]
         },
         {
@@ -128,7 +130,8 @@
           "messages": [
             "skip skill for claude: agy-only",
             "skip skill for claude: codex-only",
-            "skip skill for claude: omo-only"
+            "skip skill for claude: omo-only",
+            "skip skill for claude: omp-only"
           ]
         },
         {
@@ -187,7 +190,8 @@
           "messages": [
             "skip skill for codex: agy-only",
             "skip skill for codex: claude-only",
-            "skip skill for codex: omo-only"
+            "skip skill for codex: omo-only",
+            "skip skill for codex: omp-only"
           ]
         },
         {
@@ -205,14 +209,14 @@
               "kind": "omo_project_mcp_config",
               "path": "$ROOT/.omo/mcp.json",
               "written": true,
-              "content_sha256": "e7b8040e7c642017bfa8da8b92e95254b4f4546ec2c98b903f8496b8ae478dd9",
+              "content_sha256": "02196d32efc6daabbdec858018942ba64d149a761eb2b34be9fc716d64c11aac",
               "content": ""
             },
             {
               "kind": "omo_project_mcp_template",
               "path": "$ROOT/configs/omo/mcp.json",
               "written": true,
-              "content_sha256": "e7b8040e7c642017bfa8da8b92e95254b4f4546ec2c98b903f8496b8ae478dd9",
+              "content_sha256": "02196d32efc6daabbdec858018942ba64d149a761eb2b34be9fc716d64c11aac",
               "content": ""
             },
             {
@@ -226,7 +230,7 @@
               "kind": "omo_user_mcp_config",
               "path": "$HOME/.omo/mcp.json",
               "written": true,
-              "content_sha256": "16dc7e59095b720d149c1c701f1ac01dcdbecb089dffdabf5e702f06239e3a32",
+              "content_sha256": "f32b925c9a5fc0ffc455dbbad21da85ef6bc597d03edffeffd57fae9fdf19835",
               "content": ""
             }
           ],
@@ -253,15 +257,83 @@
           "messages": [
             "skip skill for omo: agy-only",
             "skip skill for omo: claude-only",
-            "skip skill for omo: codex-only"
+            "skip skill for omo: codex-only",
+            "skip skill for omo: omp-only"
+          ]
+        },
+        {
+          "host": "omp",
+          "ok": true,
+          "files": [
+            {
+              "kind": "omp_lifecycle_extension_template",
+              "path": "$ROOT/configs/omp/issueops.js",
+              "written": true,
+              "content_sha256": "3cb4595a5977c391d543d915dc376f97dbb456147cdf7fc80816d848a30ee5c4",
+              "content": ""
+            },
+            {
+              "kind": "omp_project_mcp_config",
+              "path": "$ROOT/.omp/mcp.json",
+              "written": true,
+              "content_sha256": "45119fbef8107f07d2ca7a22e7cd84e76b5689d784a4bdd7b1bae7ee3ea1b4c0",
+              "content": ""
+            },
+            {
+              "kind": "omp_project_mcp_template",
+              "path": "$ROOT/configs/omp/mcp.json",
+              "written": true,
+              "content_sha256": "45119fbef8107f07d2ca7a22e7cd84e76b5689d784a4bdd7b1bae7ee3ea1b4c0",
+              "content": ""
+            },
+            {
+              "kind": "omp_user_lifecycle_extension",
+              "path": "$HOME/.omp/agent/extensions/issueops.js",
+              "written": true,
+              "content_sha256": "0ebb8f35a86b8fe3c30cead198ff765b7fabc9ffa28b3252d26f66be457e2a0e",
+              "content": ""
+            },
+            {
+              "kind": "omp_user_mcp_config",
+              "path": "$HOME/.omp/agent/mcp.json",
+              "written": true,
+              "content_sha256": "501c9132915cf566fcd2da425daa5f7f7a16af18c257deda85534ee94b80986b",
+              "content": ""
+            }
+          ],
+          "links": [
+            {
+              "path": "$HOME/.omp/agent/skills/alpha",
+              "target": "$ROOT/skills/alpha",
+              "created": true,
+              "resolves_to_root_skill": true
+            },
+            {
+              "path": "$HOME/.omp/agent/skills/beta",
+              "target": "$ROOT/skills/beta",
+              "created": true,
+              "resolves_to_root_skill": true
+            },
+            {
+              "path": "$HOME/.omp/agent/skills/omp-only",
+              "target": "$ROOT/skills/omp-only",
+              "created": true,
+              "resolves_to_root_skill": true
+            }
+          ],
+          "messages": [
+            "skip skill for omp: agy-only",
+            "skip skill for omp: claude-only",
+            "skip skill for omp: codex-only",
+            "skip skill for omp: omo-only"
           ]
         }
       ],
       "assertions": [
         "core discovers shared skills once and passes sorted names to all host adapters",
-        "Codex, Claude, and Omo user skill installs are symlinks resolving to $ROOT/skills/*",
-        "Codex, Claude, and Omo user-level lifecycle hooks route through the same issueops hook CLI",
-        "default install writes no repo-local .claude, .omo, or .mcp.json paths",
+        "Codex, Claude, Omo, and omp user skill installs are symlinks resolving to $ROOT/skills/*",
+        "Codex, Claude, Omo, and omp user-level lifecycle hooks route through the same issueops hook CLI",
+        "default install writes no repo-local .claude, .omo, .omp, or .mcp.json paths",
         "project-local repo files are created only when project_local=true"
       ]
     },
@@ -275,7 +347,8 @@
         "beta",
         "claude-only",
         "codex-only",
-        "omo-only"
+        "omo-only",
+        "omp-only"
       ],
       "hosts": [
         {
@@ -286,14 +359,14 @@
               "kind": "agy_project_mcp_template",
               "path": "$ROOT/configs/agy/mcp_config.json",
               "written": true,
-              "content_sha256": "e7b8040e7c642017bfa8da8b92e95254b4f4546ec2c98b903f8496b8ae478dd9",
+              "content_sha256": "02196d32efc6daabbdec858018942ba64d149a761eb2b34be9fc716d64c11aac",
               "content": ""
             },
             {
               "kind": "agy_user_mcp_config",
               "path": "$HOME/.gemini/config/mcp_config.json",
               "written": true,
-              "content_sha256": "16dc7e59095b720d149c1c701f1ac01dcdbecb089dffdabf5e702f06239e3a32",
+              "content_sha256": "f32b925c9a5fc0ffc455dbbad21da85ef6bc597d03edffeffd57fae9fdf19835",
               "content": ""
             }
           ],
@@ -320,7 +393,8 @@
           "messages": [
             "skip skill for agy: claude-only",
             "skip skill for agy: codex-only",
-            "skip skill for agy: omo-only"
+            "skip skill for agy: omo-only",
+            "skip skill for agy: omp-only"
           ]
         },
         {
@@ -379,7 +453,8 @@
           "messages": [
             "skip skill for claude: agy-only",
             "skip skill for claude: codex-only",
-            "skip skill for claude: omo-only"
+            "skip skill for claude: omo-only",
+            "skip skill for claude: omp-only"
           ]
         },
         {
@@ -438,7 +513,8 @@
           "messages": [
             "skip skill for codex: agy-only",
             "skip skill for codex: claude-only",
-            "skip skill for codex: omo-only"
+            "skip skill for codex: omo-only",
+            "skip skill for codex: omp-only"
           ]
         },
         {
@@ -456,7 +532,7 @@
               "kind": "omo_project_mcp_template",
               "path": "$ROOT/configs/omo/mcp.json",
               "written": true,
-              "content_sha256": "e7b8040e7c642017bfa8da8b92e95254b4f4546ec2c98b903f8496b8ae478dd9",
+              "content_sha256": "02196d32efc6daabbdec858018942ba64d149a761eb2b34be9fc716d64c11aac",
               "content": ""
             },
             {
@@ -470,7 +546,7 @@
               "kind": "omo_user_mcp_config",
               "path": "$HOME/.omo/mcp.json",
               "written": true,
-              "content_sha256": "16dc7e59095b720d149c1c701f1ac01dcdbecb089dffdabf5e702f06239e3a32",
+              "content_sha256": "f32b925c9a5fc0ffc455dbbad21da85ef6bc597d03edffeffd57fae9fdf19835",
               "content": ""
             }
           ],
@@ -497,15 +573,76 @@
           "messages": [
             "skip skill for omo: agy-only",
             "skip skill for omo: claude-only",
-            "skip skill for omo: codex-only"
+            "skip skill for omo: codex-only",
+            "skip skill for omo: omp-only"
+          ]
+        },
+        {
+          "host": "omp",
+          "ok": true,
+          "files": [
+            {
+              "kind": "omp_lifecycle_extension_template",
+              "path": "$ROOT/configs/omp/issueops.js",
+              "written": true,
+              "content_sha256": "3cb4595a5977c391d543d915dc376f97dbb456147cdf7fc80816d848a30ee5c4",
+              "content": ""
+            },
+            {
+              "kind": "omp_project_mcp_template",
+              "path": "$ROOT/configs/omp/mcp.json",
+              "written": true,
+              "content_sha256": "45119fbef8107f07d2ca7a22e7cd84e76b5689d784a4bdd7b1bae7ee3ea1b4c0",
+              "content": ""
+            },
+            {
+              "kind": "omp_user_lifecycle_extension",
+              "path": "$HOME/.omp/agent/extensions/issueops.js",
+              "written": true,
+              "content_sha256": "0ebb8f35a86b8fe3c30cead198ff765b7fabc9ffa28b3252d26f66be457e2a0e",
+              "content": ""
+            },
+            {
+              "kind": "omp_user_mcp_config",
+              "path": "$HOME/.omp/agent/mcp.json",
+              "written": true,
+              "content_sha256": "501c9132915cf566fcd2da425daa5f7f7a16af18c257deda85534ee94b80986b",
+              "content": ""
+            }
+          ],
+          "links": [
+            {
+              "path": "$HOME/.omp/agent/skills/alpha",
+              "target": "$ROOT/skills/alpha",
+              "created": true,
+              "resolves_to_root_skill": true
+            },
+            {
+              "path": "$HOME/.omp/agent/skills/beta",
+              "target": "$ROOT/skills/beta",
+              "created": true,
+              "resolves_to_root_skill": true
+            },
+            {
+              "path": "$HOME/.omp/agent/skills/omp-only",
+              "target": "$ROOT/skills/omp-only",
+              "created": true,
+              "resolves_to_root_skill": true
+            }
+          ],
+          "messages": [
+            "skip skill for omp: agy-only",
+            "skip skill for omp: claude-only",
+            "skip skill for omp: codex-only",
+            "skip skill for omp: omo-only"
           ]
         }
       ],
       "assertions": [
         "core discovers shared skills once and passes sorted names to all host adapters",
-        "Codex, Claude, and Omo user skill installs are symlinks resolving to $ROOT/skills/*",
-        "Codex, Claude, and Omo user-level lifecycle hooks route through the same issueops hook CLI",
-        "default install writes no repo-local .claude, .omo, or .mcp.json paths",
+        "Codex, Claude, Omo, and omp user skill installs are symlinks resolving to $ROOT/skills/*",
+        "Codex, Claude, Omo, and omp user-level lifecycle hooks route through the same issueops hook CLI",
+        "default install writes no repo-local .claude, .omo, .omp, or .mcp.json paths",
         "project-local repo files are created only when project_local=true"
       ]
     }

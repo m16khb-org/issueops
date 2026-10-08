@@ -22,7 +22,7 @@ func (c Command) runInstall(args []string) error {
 	pathMode := fs.String("path-mode", "auto", "manage ~/.local/bin PATH setup: auto, manual, or skip")
 	interactive := fs.Bool("interactive", false, "ask for install choices before applying the plan")
 	adoptCommandFile := fs.Bool("adopt-command-file", false, "replace an existing managed issueops command file with rollback protection")
-	mcpTransportFlag := fs.String("mcp-transport", "", "Codex/Claude/Omo MCP transport: http (shared service) or stdio; default http on darwin/linux")
+	mcpTransportFlag := fs.String("mcp-transport", "", "Codex/Claude/Omo/omp MCP transport: http (shared service) or stdio; default http on darwin/linux")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if err := fs.Parse(args); err != nil {
 		return err

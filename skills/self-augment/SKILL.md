@@ -43,7 +43,7 @@ Completion requires all goals below to exceed `target_score`. The default target
 3. **Select and implement**
    - Choose one candidate whose expected score can exceed 95 after implementation.
    - Make small, reviewable diffs. Do not add dependencies unless the user explicitly asked or evidence shows they are necessary.
-   - Preserve host-neutral core boundaries: shared behavior in Go contract/domain/application/ports, host-specific details in Codex/Claude/Omo adapters.
+   - Preserve host-neutral core boundaries: shared behavior in Go contract/domain/application/ports, host-specific details in Codex/Claude/Omo/omp adapters.
 
 4. **Feedback and retry**
    - Convert every failing test, QA issue, or design concern into a short Reflexion-style lesson.

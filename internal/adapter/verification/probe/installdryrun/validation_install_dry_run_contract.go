@@ -5,7 +5,7 @@ import (
 	"slices"
 )
 
-var requiredInstallDryRunHosts = []string{"codex", "claude", "omo", "agy"}
+var requiredInstallDryRunHosts = []string{"codex", "claude", "omo", "omp", "agy"}
 
 func installDryRunValidationErrors(result installDryRunSmokeResult, tempHome, tempRoot string, pathExists func(string) bool) []string {
 	errs := []string{}
@@ -51,11 +51,13 @@ func installDryRunValidationErrors(result installDryRunSmokeResult, tempHome, te
 		filepath.Join(tempHome, ".codex"),
 		filepath.Join(tempHome, ".claude"),
 		filepath.Join(tempHome, ".omo"),
+		filepath.Join(tempHome, ".omp"),
 		filepath.Join(tempHome, ".gemini"),
 		filepath.Join(tempRoot, "configs"),
 		filepath.Join(tempRoot, ".mcp.json"),
 		filepath.Join(tempRoot, ".claude"),
 		filepath.Join(tempRoot, ".omo"),
+		filepath.Join(tempRoot, ".omp"),
 		filepath.Join(tempRoot, ".agents"),
 	} {
 		if pathExists(path) {

@@ -218,6 +218,8 @@ func hostCommand(agent string) (string, bool) {
 		return "claude", true
 	case "omo":
 		return "omo", true
+	case "omp":
+		return "omp", true
 	default:
 		return "", false
 	}
@@ -270,6 +272,12 @@ func ownerAgentBaseCommand(agent, model, reasoningEffort string, allowCodexHookT
 			model += ":" + reasoningEffort
 		}
 		return "omo --model " + shellSingleQuote(model), true
+	case "omp":
+		command := "omp --model " + shellSingleQuote(model)
+		if reasoningEffort != "" {
+			command += " --thinking " + shellSingleQuote(reasoningEffort)
+		}
+		return command + " --auto-approve", true
 	default:
 		return "", false
 	}

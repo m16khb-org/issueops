@@ -31,6 +31,7 @@ var (
 		inspectcontract.HostCodex:  "codex",
 		inspectcontract.HostClaude: "claude",
 		inspectcontract.HostOmo:    "omo",
+		inspectcontract.HostOmp:    "omp",
 	}
 )
 

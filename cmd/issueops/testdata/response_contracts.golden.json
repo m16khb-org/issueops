@@ -1090,6 +1090,78 @@
             },
             "skill_path": "$HOME/.omo/agent/skills/atomic-commit-push",
             "transport": ""
+          },
+          {
+            "config_path": "$HOME/.omp/agent/mcp.json",
+            "configured": {
+              "config_sha256": "",
+              "features": [],
+              "host_version": "",
+              "negotiated_revision": "",
+              "observed_at": "$TIMESTAMP",
+              "reason": "config_missing",
+              "requested_revision": "",
+              "source": "$HOME/.omp/agent/mcp.json",
+              "status": "failed"
+            },
+            "connected": {
+              "config_sha256": "",
+              "features": [],
+              "host_version": "",
+              "negotiated_revision": "",
+              "observed_at": "",
+              "reason": "host_receipt_required",
+              "requested_revision": "",
+              "source": "",
+              "status": "not_checked"
+            },
+            "discovered": {
+              "config_sha256": "",
+              "features": [],
+              "host_version": "",
+              "negotiated_revision": "",
+              "observed_at": "",
+              "reason": "host_receipt_required",
+              "requested_revision": "",
+              "source": "",
+              "status": "not_checked"
+            },
+            "host": "omp",
+            "installed": {
+              "config_sha256": "",
+              "features": [],
+              "host_version": "",
+              "negotiated_revision": "",
+              "observed_at": "$TIMESTAMP",
+              "reason": "skill_missing",
+              "requested_revision": "",
+              "source": "$HOME/.omp/agent/skills/atomic-commit-push",
+              "status": "failed"
+            },
+            "linked": {
+              "config_sha256": "",
+              "features": [],
+              "host_version": "",
+              "negotiated_revision": "",
+              "observed_at": "$TIMESTAMP",
+              "reason": "skill_missing",
+              "requested_revision": "",
+              "source": "$HOME/.omp/agent/skills/atomic-commit-push",
+              "status": "failed"
+            },
+            "protocol": {
+              "config_sha256": "",
+              "features": [],
+              "host_version": "",
+              "negotiated_revision": "",
+              "observed_at": "",
+              "reason": "host_receipt_required",
+              "requested_revision": "",
+              "source": "",
+              "status": "not_checked"
+            },
+            "skill_path": "$HOME/.omp/agent/skills/atomic-commit-push",
+            "transport": ""
           }
         ],
         "mcp_binary_path": "$ISSUEOPS_ROOT/bin/issueops",
@@ -1213,7 +1285,7 @@
           "path": "$ISSUEOPS_ROOT/skills/io-model"
         },
         {
-          "description": "Use when the user requests io update, issueops update, native skill refresh, or reinstalling the current IssueOps source checkout. Updates the binary and Codex, Claude, and Omo integration without fetching source or changing Git history.",
+          "description": "Use when the user requests io update, issueops update, native skill refresh, or reinstalling the current IssueOps source checkout. Updates the binary and Codex, Claude, Omo, and omp integration without fetching source or changing Git history.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "io-update",
@@ -7865,6 +7937,78 @@
                   },
                   "skill_path": "$HOME/.omo/agent/skills/atomic-commit-push",
                   "transport": ""
+                },
+                {
+                  "config_path": "$HOME/.omp/agent/mcp.json",
+                  "configured": {
+                    "config_sha256": "",
+                    "features": [],
+                    "host_version": "",
+                    "negotiated_revision": "",
+                    "observed_at": "$TIMESTAMP",
+                    "reason": "config_missing",
+                    "requested_revision": "",
+                    "source": "$HOME/.omp/agent/mcp.json",
+                    "status": "failed"
+                  },
+                  "connected": {
+                    "config_sha256": "",
+                    "features": [],
+                    "host_version": "",
+                    "negotiated_revision": "",
+                    "observed_at": "",
+                    "reason": "host_receipt_required",
+                    "requested_revision": "",
+                    "source": "",
+                    "status": "not_checked"
+                  },
+                  "discovered": {
+                    "config_sha256": "",
+                    "features": [],
+                    "host_version": "",
+                    "negotiated_revision": "",
+                    "observed_at": "",
+                    "reason": "host_receipt_required",
+                    "requested_revision": "",
+                    "source": "",
+                    "status": "not_checked"
+                  },
+                  "host": "omp",
+                  "installed": {
+                    "config_sha256": "",
+                    "features": [],
+                    "host_version": "",
+                    "negotiated_revision": "",
+                    "observed_at": "$TIMESTAMP",
+                    "reason": "skill_missing",
+                    "requested_revision": "",
+                    "source": "$HOME/.omp/agent/skills/atomic-commit-push",
+                    "status": "failed"
+                  },
+                  "linked": {
+                    "config_sha256": "",
+                    "features": [],
+                    "host_version": "",
+                    "negotiated_revision": "",
+                    "observed_at": "$TIMESTAMP",
+                    "reason": "skill_missing",
+                    "requested_revision": "",
+                    "source": "$HOME/.omp/agent/skills/atomic-commit-push",
+                    "status": "failed"
+                  },
+                  "protocol": {
+                    "config_sha256": "",
+                    "features": [],
+                    "host_version": "",
+                    "negotiated_revision": "",
+                    "observed_at": "",
+                    "reason": "host_receipt_required",
+                    "requested_revision": "",
+                    "source": "",
+                    "status": "not_checked"
+                  },
+                  "skill_path": "$HOME/.omp/agent/skills/atomic-commit-push",
+                  "transport": ""
                 }
               ],
               "mcp_binary_path": "$ISSUEOPS_ROOT/bin/issueops",
@@ -7988,7 +8132,7 @@
                 "path": "$ISSUEOPS_ROOT/skills/io-model"
               },
               {
-                "description": "Use when the user requests io update, issueops update, native skill refresh, or reinstalling the current IssueOps source checkout. Updates the binary and Codex, Claude, and Omo integration without fetching source or changing Git history.",
+                "description": "Use when the user requests io update, issueops update, native skill refresh, or reinstalling the current IssueOps source checkout. Updates the binary and Codex, Claude, Omo, and omp integration without fetching source or changing Git history.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "io-update",

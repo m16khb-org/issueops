@@ -224,8 +224,8 @@ func validateExecutionPrepare(workspace port.ExecutionWorkspaceRequest, req port
 	if strings.TrimSpace(workspace.LifecycleID) == "" || !filepath.IsAbs(workspace.SourceRoot) || !filepath.IsAbs(workspace.Root) || strings.TrimSpace(workspace.Branch) == "" || strings.TrimSpace(workspace.BaseHead) == "" {
 		return fmt.Errorf("Orca prepare requires an exact lifecycle and workspace identity")
 	}
-	if req.Host != "codex" && req.Host != "claude" && req.Host != "omo" || strings.TrimSpace(req.Model) == "" || strings.TrimSpace(req.Marker) == "" {
-		return fmt.Errorf("Orca prepare requires codex, claude, or omo with explicit model and marker")
+	if req.Host != "codex" && req.Host != "claude" && req.Host != "omo" && req.Host != "omp" || strings.TrimSpace(req.Model) == "" || strings.TrimSpace(req.Marker) == "" {
+		return fmt.Errorf("Orca prepare requires codex, claude, omo, or omp with explicit model and marker")
 	}
 	provider := strings.ToLower(strings.TrimSpace(req.Provider))
 	if provider != "github" && provider != "gitlab" {
@@ -309,7 +309,7 @@ func validateExecutionOwnerLaunch(prepared port.ExecutionOrcaWorkspaceReceipt, r
 	if strings.TrimSpace(prepared.WorktreeID) == "" || strings.TrimSpace(prepared.RuntimeID) == "" || strings.TrimSpace(prepared.RepoID) == "" {
 		return fmt.Errorf("Orca workspace receipt is incomplete")
 	}
-	if req.Host != "codex" && req.Host != "claude" && req.Host != "omo" || strings.TrimSpace(req.Model) == "" {
+	if req.Host != "codex" && req.Host != "claude" && req.Host != "omo" && req.Host != "omp" || strings.TrimSpace(req.Model) == "" {
 		return fmt.Errorf("Orca owner launch requires an explicit first-party owner profile")
 	}
 	packet, err := readExecutionSealedFile(prepared.Workspace.Root, launch.ContextPacketPath)

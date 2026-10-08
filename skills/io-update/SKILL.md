@@ -1,6 +1,6 @@
 ---
 name: io-update
-description: "Use when the user requests io update, issueops update, native skill refresh, or reinstalling the current IssueOps source checkout. Updates the binary and Codex, Claude, and Omo integration without fetching source or changing Git history."
+description: "Use when the user requests io update, issueops update, native skill refresh, or reinstalling the current IssueOps source checkout. Updates the binary and Codex, Claude, Omo, and omp integration without fetching source or changing Git history."
 ---
 
 # IO Update
@@ -51,7 +51,7 @@ io update --dry-run --json
 
 - top-level `ok`가 `true`다.
 - `root`가 의도한 issueops checkout이다.
-- `hosts`의 Codex, Claude, Omo 항목이 모두 성공한다.
+- `hosts`의 Codex, Claude, Omo, omp 항목이 모두 성공한다.
 - 새 link와 제거될 stale link가 요청 범위에 맞다.
 - dry-run은 binary와 host 설정을 변경하지 않는다.
 
@@ -73,7 +73,7 @@ io update --json
 update는 다음을 하나의 transaction으로 처리한다.
 
 1. 현재 checkout에서 `bin/issueops`를 build한다.
-2. Codex, Claude, Omo user-scope skill link와 MCP·lifecycle 설정을 갱신한다.
+2. Codex, Claude, Omo, omp user-scope skill link와 MCP·lifecycle 설정을 갱신한다.
 3. stale harness-owned link를 제거한다.
 4. native activation receipt를 readback해 봉인한다.
 
@@ -117,7 +117,7 @@ io docs --json
 |---|---|
 | source | update 출력의 `root` |
 | 결과 | exit code, `ok`, `committed`, `transition_id` |
-| host | Codex·Claude·Omo `hosts[].ok` |
+| host | Codex·Claude·Omo·omp `hosts[].ok` |
 | runtime | `inspect`, `docs` readback |
 | 선택 flag | `--skip-build`, `--project-local`, `--path-mode` 사용 여부 |
 | 미실행 | 생략한 검증과 이유 |

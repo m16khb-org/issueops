@@ -135,7 +135,7 @@ func validateRecord(record contract.Record, key string) error {
 		return contract.ErrInvalidState
 	}
 	actor := record.Actor
-	if (actor.Host != "codex" && actor.Host != "claude" && actor.Host != "omo") || actor.SessionID == "" ||
+	if (actor.Host != "codex" && actor.Host != "claude" && actor.Host != "omo" && actor.Host != "omp") || actor.SessionID == "" ||
 		actor.SessionProcess == nil || actor.SessionProcess.PID <= 0 || actor.SessionProcess.StartedAt == "" ||
 		actor.SessionProcess.Executable == "" || len(actor.ProcessAncestry) != 0 {
 		return contract.ErrInvalidState

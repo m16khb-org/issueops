@@ -14,7 +14,7 @@ IssueOps가 역할별로 띄우는 세션과 서브에이전트의 model·effort
 
 | 항목 | 의미 |
 |---|---|
-| host | `claude`, `codex`. `omo`는 조회만 하며 설정 대상이 아니다 |
+| host | `claude`, `codex`. `omo`·`omp`는 조회(`show`·`resolve`, 내장 기본값)만 하며 설정 대상이 아니다 |
 | role | `implement`, `child-implement`, `plan-review`, `diff-review`, `review-escalate`, `research`, `reader-check` |
 | scope | `global`(사용자 전체), `local`(이 저장소의 메인 워크트리 하나) |
 | 우선순위 | 필드(model, effort)마다 명시 플래그 > local > global > 내장 기본값 |

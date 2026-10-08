@@ -10,6 +10,7 @@ type contract struct {
 	Events        map[string]rule `json:"events"`
 	Message       message         `json:"message"`
 	Warning       string          `json:"warning"`
+	SessionEnv    *sessionEnv     `json:"session_env,omitempty"`
 }
 
 type rule struct {
@@ -23,10 +24,17 @@ type message struct {
 	TriggerTurn bool   `json:"trigger_turn"`
 }
 
+// sessionEnv exports the host session id into the host process environment so
+// shell children spawned by the agent inherit it.
+type sessionEnv struct {
+	Variable  string   `json:"variable"`
+	AgentKind string   `json:"agent_kind"`
+	Events    []string `json:"events"`
+}
+
 // OmoLifecycleExtension returns the one canonical Omo lifecycle module for a harness binary.
 func OmoLifecycleExtension(binPath string) string {
-	encodedBin, _ := json.Marshal(binPath)
-	encodedContract, _ := json.Marshal(contract{
+	return lifecycleExtension(binPath, contract{
 		SchemaVersion: 1,
 		Events: map[string]rule{
 			"session_start":   {Subcommand: "session-start"},
@@ -35,6 +43,29 @@ func OmoLifecycleExtension(binPath string) string {
 		Message: message{CustomType: "issueops:project-docs", Display: false, TriggerTurn: false},
 		Warning: "issueops lifecycle hook failed",
 	})
+}
+
+// sessionEnvHandlerLine runs before the lifecycle hook so the export does not
+// depend on the hook outcome.
+const sessionEnvHandlerLine = `      exportIssueopsSessionEnv(eventName, ctx)
+`
+
+const sessionEnvFunction = `function exportIssueopsSessionEnv(eventName, ctx) {
+  const sessionEnv = issueopsLifecycleContract.session_env
+  if (!sessionEnv.events.includes(eventName)) return
+  if (ctx.agent?.kind !== sessionEnv.agent_kind) return
+  process.env[sessionEnv.variable] = ctx.sessionManager.getSessionId()
+}
+
+`
+
+func lifecycleExtension(binPath string, lifecycle contract) string {
+	encodedBin, _ := json.Marshal(binPath)
+	encodedContract, _ := json.Marshal(lifecycle)
+	sessionEnvDecl, sessionEnvCall := "", ""
+	if lifecycle.SessionEnv != nil {
+		sessionEnvDecl, sessionEnvCall = sessionEnvFunction, sessionEnvHandlerLine
+	}
 	return fmt.Sprintf(`const harnessBin = %s
 const issueopsLifecycleContract = %s
 
@@ -65,13 +96,13 @@ async function runIssueopsLifecycle(pi, rule, ctx) {
   }
 }
 
-export default function agentHarness(pi) {
+%sexport default function agentHarness(pi) {
   for (const [eventName, rule] of Object.entries(issueopsLifecycleContract.events)) {
     pi.on(eventName, (event, ctx) => {
       if (rule.accepted_only && !event.accepted) return
-      return runIssueopsLifecycle(pi, rule, ctx)
+%s      return runIssueopsLifecycle(pi, rule, ctx)
     })
   }
 }
-`, encodedBin, encodedContract)
+`, encodedBin, encodedContract, sessionEnvDecl, sessionEnvCall)
 }

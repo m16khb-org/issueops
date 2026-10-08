@@ -52,7 +52,8 @@ cmux는 위 자동 선택에 참여하지 않는다. 사용자가 cmux 사용을
 execution이 정확한 generation에서 released이며 canonical worktree가 이미 있을 때만 다음
 명령을 실행한다. bare `cmux <path>`는 앱을 자동으로 시작할 수 있으므로 실행하지 않는다.
 Omo도 generic terminal 안에서 native Omo 실행 파일을 직접 실행하며 `cmux omo`를 호출하지
-않는다.
+않는다. omp는 bun script로 실행되어 cmux receiver 검사에서 `bun`으로 관측되므로 cmux로 omp에
+인계하면 그 검사에서 fail closed 된다.
 
 prompt 파일은 canonical worktree 안의 absolute regular file로 만들고 mode 0600, 현재
 프로세스의 effective UID 소유, 최대 64 KiB, SHA-256 조건을 모두 충족해야 한다. prompt는
@@ -63,7 +64,7 @@ no-follow handle traversal과 namespace identity 검사가 보호하므로 이 l
 실행 파일, socket, window UUID, model을 실측한 exact 값으로 채우고, 해당 host가 지원하는
 effort만 전달한다. cmux의 private launcher는 Claude Code에
 `--dangerously-skip-permissions`, Codex에
-`--dangerously-bypass-approvals-and-sandbox`, Omo에 `--permission-preset full-access`를 붙인다.
+`--dangerously-bypass-approvals-and-sandbox`, Omo에 `--permission-preset full-access`, omp에 `--auto-approve`를 붙인다.
 
 ```bash
 issueops execution handoff-cmux \
@@ -189,7 +190,7 @@ release한 준비 세션이 `status`의 replace/reseed/resume 체인을 따른�
    현재 native host를 유지하고 현재 모델·effort는 해당 launch가 지원하는 값만 전달한다.
    Claude Code를 여는 명령에는 `--dangerously-skip-permissions`, Codex를 여는
    명령에는 `--dangerously-bypass-approvals-and-sandbox`, Omo를 여는 명령에는
-   `--permission-preset full-access`를 붙인다. 설치된 host의
+   `--permission-preset full-access`, omp를 여는 명령에는 `--auto-approve`를 붙인다. 설치된 host의
    `--help`에서 플래그 지원을 확인한 뒤 호출한다.
    사용자가 직접 세션을 열겠다고 명시한 경우에만 경로와 인계문을 제공하고 종료한다.
    Orca에서는 설치된 `orca-cli` 안내로 exact worktree 경로를 확인한 뒤 `terminal create`와
@@ -248,7 +249,7 @@ runtime ID를 복사한 server ID 같은 대체값을 만들지 않는다.
   "request": {"durable_id": ""},
   "launcher": {"name": "<orca|herdr>", "version": "<observed>", "path": "<absolute observed path>", "runtime_id": "<observed>", "machine_id": "<observed>", "server_id": "<observed target identity>"},
   "target": {"terminal_id": "<observed>", "pane_id": "<observed>"},
-  "expected_owner_host": "<codex|claude|omo>",
+  "expected_owner_host": "<codex|claude|omo|omp>",
   "source_generation": <generation>,
   "created_at": "<RFC3339Nano>",
   "updated_at": "<same RFC3339Nano>",

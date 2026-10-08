@@ -138,7 +138,7 @@ func TestConformanceLivePassesFullyParsedFlagsToInjectedProcessAfterOptIn(t *tes
 	}
 }
 
-func TestConformanceLiveDefaultsExcludeOmoAndExplicitSelectionIncludesIt(t *testing.T) {
+func TestConformanceLiveDefaultsExcludeOmoAndOmpAndExplicitSelectionIncludesThem(t *testing.T) {
 	t.Setenv("ISSUEOPS_TOOL_CONFORMANCE_LIVE", "1")
 	root := t.TempDir()
 	requests := []LiveRequest{}
@@ -161,7 +161,10 @@ func TestConformanceLiveDefaultsExcludeOmoAndExplicitSelectionIncludesIt(t *test
 	if err := runtime.runConformanceLive([]string{"--hosts", "omo", "--model", "omo=google/gemini-2.5-pro"}); err != nil {
 		t.Fatal(err)
 	}
-	if len(requests) != 2 || !reflect.DeepEqual(requests[0].Hosts, []string{"codex", "claude"}) || !reflect.DeepEqual(requests[1].Hosts, []string{"omo"}) {
+	if err := runtime.runConformanceLive([]string{"--hosts", "omp", "--model", "omp=anthropic/claude-haiku-4-5"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(requests) != 3 || !reflect.DeepEqual(requests[0].Hosts, []string{"codex", "claude"}) || !reflect.DeepEqual(requests[1].Hosts, []string{"omo"}) || !reflect.DeepEqual(requests[2].Hosts, []string{"omp"}) {
 		t.Fatalf("live host selections = %#v", requests)
 	}
 }

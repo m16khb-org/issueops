@@ -28,7 +28,7 @@ type field struct{ value, source string }
 func Resolve(in ResolveInput) (contract.Resolution, error) {
 	host := strings.ToLower(strings.TrimSpace(in.Host))
 	if !KnownHost(host) {
-		return contract.Resolution{}, fmt.Errorf("unknown host %q (use claude, codex, or omo)", in.Host)
+		return contract.Resolution{}, fmt.Errorf("unknown host %q (use claude, codex, omo, or omp)", in.Host)
 	}
 	if !knownRole(in.Role) {
 		return contract.Resolution{}, fmt.Errorf("unknown role %q (use %s)", in.Role, joinRoles())
@@ -89,8 +89,8 @@ func resolveRole(host string, role contract.Role, in ResolveInput) (field, field
 	return model, effort
 }
 
-// configured merges the local and global layers of one role. omo has no
-// settings file section, so it always falls through to built-ins.
+// configured merges the local and global layers of one role. omo and omp have
+// no settings file section, so they always fall through to built-ins.
 func configured(host string, role contract.Role, in ResolveInput) (model, effort field) {
 	for _, layer := range []struct {
 		cfg    contract.Config

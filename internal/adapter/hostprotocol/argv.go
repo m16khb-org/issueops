@@ -51,6 +51,11 @@ func BuildInteractiveArgv(host, executable, model, effort, prompt string, extra 
 			argv[2] += ":" + effort
 		}
 		argv = append(argv, "--permission-preset", "full-access")
+	case "omp":
+		if effort != "" {
+			argv = append(argv, "--thinking", effort)
+		}
+		argv = append(argv, "--auto-approve")
 	}
 	if slices.ContainsFunc(extra, func(argument string) bool { return argument == "" || strings.ContainsRune(argument, 0) }) {
 		return nil, fmt.Errorf("native host launch argument is empty or contains NUL")

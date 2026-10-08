@@ -33,7 +33,7 @@ Harness flags are passed to `issueops install`, for example:
   --json
   --adopt-command-file   Explicitly adopt a managed regular command file.
   --mcp-transport=http|stdio
-                         Codex/Claude/Omo MCP transport (default http on darwin/linux).
+                         Codex/Claude/Omo/omp MCP transport (default http on darwin/linux).
                          http stops the shared service before the binary swap,
                          starts it after, and merges host configs only once the
                          new build answers an authenticated MCP request.

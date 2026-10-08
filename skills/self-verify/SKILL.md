@@ -7,8 +7,8 @@ description: Run or interpret the issueops self-verification loop. Use when the 
 
 ## Goal
 
-First-party hosts are exactly Codex, Claude Code, and Omo native. Verify that
-the harness behaves consistently across all three hosts and that CLI, MCP,
+First-party hosts are exactly Codex, Claude Code, Omo native, and omp. Verify that
+the harness behaves consistently across all four hosts and that CLI, MCP,
 native integration, state, policy, docs, and skills work as intended.
 This skill is a QA gate; it does not choose improvements by itself.
 

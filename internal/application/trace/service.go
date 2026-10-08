@@ -34,7 +34,7 @@ func (service Service) Analyze(req tracecontract.TraceAnalyzeRequest) (tracecont
 	}
 	if !supportedInputFormat(format) {
 		result.Warnings = append(result.Warnings, "unsupported_input_format")
-		return result, fmt.Errorf("unsupported trace input format %q (want issueops, claude-stream, codex-exec or omo-json)", format)
+		return result, fmt.Errorf("unsupported trace input format %q (want issueops, claude-stream, codex-exec, omo-json or omp-json)", format)
 	}
 	source, body, truncated, err := service.Effects.Load(input, format)
 	result.InputSource = source
@@ -86,7 +86,7 @@ func (service Service) Analyze(req tracecontract.TraceAnalyzeRequest) (tracecont
 
 func supportedInputFormat(format string) bool {
 	switch format {
-	case tracecontract.InputFormatIssueOps, tracecontract.InputFormatClaudeJSON, tracecontract.InputFormatCodexExec, tracecontract.InputFormatOmoJSON:
+	case tracecontract.InputFormatIssueOps, tracecontract.InputFormatClaudeJSON, tracecontract.InputFormatCodexExec, tracecontract.InputFormatOmoJSON, tracecontract.InputFormatOmpJSON:
 		return true
 	}
 	return false

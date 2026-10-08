@@ -34,6 +34,7 @@ func newHostFixture(t *testing.T) hostFixture {
 		filepath.Join(fixture.codexHome, "skills"),
 		filepath.Join(fixture.home, ".claude", "skills"),
 		filepath.Join(fixture.home, ".omo", "agent", "skills"),
+		filepath.Join(fixture.home, ".omp", "agent", "skills"),
 	} {
 		if err := os.MkdirAll(skills, 0o755); err != nil {
 			t.Fatal(err)
@@ -53,6 +54,7 @@ func (fixture hostFixture) writeHTTPConfigs(t *testing.T, url, bearer string) {
 	entry := `{"type":"http","url":"` + url + `","headers":{"Authorization":"Bearer ` + bearer + `"}}`
 	writeTestFile(t, filepath.Join(fixture.home, ".claude.json"), `{"numStartups":3,"mcpServers":{"other":{"command":"other"},"issueops":`+entry+`}}`)
 	writeTestFile(t, filepath.Join(fixture.home, ".omo", "mcp.json"), `{"mcpServers":{"issueops":`+entry+`}}`)
+	writeTestFile(t, filepath.Join(fixture.home, ".omp", "agent", "mcp.json"), `{"mcpServers":{"issueops":`+entry+`}}`)
 }
 
 func (fixture hostFixture) observer(root string) Observer {
@@ -75,8 +77,8 @@ func (fixture hostFixture) inspect(t *testing.T, options inspectcontract.Options
 	for _, host := range info.Integration.Hosts {
 		hosts[host.Host] = host
 	}
-	if len(hosts) != 3 || len(info.Integration.Hosts) != 3 {
-		t.Fatalf("expected codex, claude, omo exactly once: %+v", info.Integration.Hosts)
+	if len(hosts) != 4 || len(info.Integration.Hosts) != 4 {
+		t.Fatalf("expected codex, claude, omo, omp exactly once: %+v", info.Integration.Hosts)
 	}
 	return hosts
 }
@@ -115,7 +117,9 @@ func TestHostsDefaultChecksFilesOnlyAndLeavesLiveObservationsNotChecked(t *testi
 	}
 	if hosts["codex"].ConfigPath != filepath.Join(fixture.codexHome, "config.toml") ||
 		hosts["claude"].ConfigPath != filepath.Join(fixture.home, ".claude.json") ||
-		hosts["omo"].SkillPath != filepath.Join(fixture.home, ".omo", "agent", "skills", testSkill) {
+		hosts["omo"].SkillPath != filepath.Join(fixture.home, ".omo", "agent", "skills", testSkill) ||
+		hosts["omp"].ConfigPath != filepath.Join(fixture.home, ".omp", "agent", "mcp.json") ||
+		hosts["omp"].SkillPath != filepath.Join(fixture.home, ".omp", "agent", "skills", testSkill) {
 		t.Fatalf("unexpected host paths: %+v", hosts)
 	}
 }
@@ -162,7 +166,7 @@ func TestHostsConfigHashIgnoresSecretsButTracksEndpoint(t *testing.T) {
 	fixture.writeHTTPConfigs(t, "http://127.0.0.1:47999/mcp", "rotated-secret")
 	moved := fixture.inspect(t, inspectcontract.Options{})
 
-	for _, name := range []string{"codex", "claude", "omo"} {
+	for _, name := range []string{"codex", "claude", "omo", "omp"} {
 		if before[name].Configured.ConfigSHA256 != rotated[name].Configured.ConfigSHA256 {
 			t.Fatalf("%s: bearer rotation changed the hash", name)
 		}
@@ -227,8 +231,13 @@ func TestHostsDistinguishCopiedWrongTargetAndMissingSkill(t *testing.T) {
 	if err := os.Symlink(other, claudeLink); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Remove(filepath.Join(fixture.home, ".omo", "agent", "skills", testSkill)); err != nil {
-		t.Fatal(err)
+	for _, path := range []string{
+		filepath.Join(fixture.home, ".omo", "agent", "skills", testSkill),
+		filepath.Join(fixture.home, ".omp", "agent", "skills", testSkill),
+	} {
+		if err := os.Remove(path); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	hosts := fixture.inspect(t, inspectcontract.Options{})
@@ -239,6 +248,8 @@ func TestHostsDistinguishCopiedWrongTargetAndMissingSkill(t *testing.T) {
 	requireStatus(t, "claude linked", hosts["claude"].Linked, "failed", "link_target_mismatch")
 	requireStatus(t, "omo installed", hosts["omo"].Installed, "failed", "skill_missing")
 	requireStatus(t, "omo linked", hosts["omo"].Linked, "failed", "skill_missing")
+	requireStatus(t, "omp installed", hosts["omp"].Installed, "failed", "skill_missing")
+	requireStatus(t, "omp linked", hosts["omp"].Linked, "failed", "skill_missing")
 }
 
 func TestHostsConfigFailuresCarryDistinctReasons(t *testing.T) {
@@ -261,7 +272,7 @@ func TestHostsConfigFailuresCarryDistinctReasons(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			fixture := newHostFixture(t)
 			if tc.name == "missing file" {
-				for _, path := range []string{filepath.Join(fixture.codexHome, "config.toml"), filepath.Join(fixture.home, ".claude.json"), filepath.Join(fixture.home, ".omo", "mcp.json")} {
+				for _, path := range []string{filepath.Join(fixture.codexHome, "config.toml"), filepath.Join(fixture.home, ".claude.json"), filepath.Join(fixture.home, ".omo", "mcp.json"), filepath.Join(fixture.home, ".omp", "agent", "mcp.json")} {
 					if err := os.Remove(path); err != nil {
 						t.Fatal(err)
 					}
@@ -270,6 +281,7 @@ func TestHostsConfigFailuresCarryDistinctReasons(t *testing.T) {
 				writeTestFile(t, filepath.Join(fixture.codexHome, "config.toml"), tc.codex)
 				writeTestFile(t, filepath.Join(fixture.home, ".claude.json"), tc.json)
 				writeTestFile(t, filepath.Join(fixture.home, ".omo", "mcp.json"), tc.json)
+				writeTestFile(t, filepath.Join(fixture.home, ".omp", "agent", "mcp.json"), tc.json)
 			}
 
 			hosts := fixture.inspect(t, inspectcontract.Options{})
@@ -281,6 +293,7 @@ func TestHostsConfigFailuresCarryDistinctReasons(t *testing.T) {
 			requireStatus(t, "codex configured", hosts["codex"].Configured, "failed", wantCodex)
 			requireStatus(t, "claude configured", hosts["claude"].Configured, "failed", wantJSON)
 			requireStatus(t, "omo configured", hosts["omo"].Configured, "failed", wantJSON)
+			requireStatus(t, "omp configured", hosts["omp"].Configured, "failed", wantJSON)
 			requireStatus(t, "claude installed", hosts["claude"].Installed, "verified", "")
 			if hosts["codex"].Configured.ConfigSHA256 != "" {
 				t.Fatalf("failed configuration must not carry a hash: %+v", hosts["codex"].Configured)
@@ -574,6 +587,7 @@ func TestNormalizeVersionExtractsHostVersionFromBanner(t *testing.T) {
 		"codex-cli 0.128.0\n":        "0.128.0",
 		"2.1.287 (Claude Code)":      "2.1.287",
 		"omo 1.4.2-beta.1+build7 ok": "1.4.2-beta.1+build7",
+		"omp/18.8.4\n":               "18.8.4",
 		"  dev  ":                    "dev",
 		"":                           "",
 	} {
@@ -595,13 +609,17 @@ func TestCommandHostVersionRejectsUnknownHostsAndMissingBinaries(t *testing.T) {
 
 func TestCommandHostVersionReadsVersionFromAllowedBinary(t *testing.T) {
 	bin := t.TempDir()
-	writeTestFile(t, filepath.Join(bin, "codex"), "#!/bin/sh\necho 'codex-cli 9.8.7'\n")
-	if err := os.Chmod(filepath.Join(bin, "codex"), 0o755); err != nil {
-		t.Fatal(err)
+	for name, banner := range map[string]string{"codex": "codex-cli 9.8.7", "omp": "omp/9.8.7"} {
+		writeTestFile(t, filepath.Join(bin, name), "#!/bin/sh\necho '"+banner+"'\n")
+		if err := os.Chmod(filepath.Join(bin, name), 0o755); err != nil {
+			t.Fatal(err)
+		}
 	}
 	t.Setenv("PATH", bin)
 
-	if got := CommandHostVersion("codex"); got != "9.8.7" {
-		t.Fatalf("version = %q, want 9.8.7", got)
+	for _, host := range []string{"codex", "omp"} {
+		if got := CommandHostVersion(host); got != "9.8.7" {
+			t.Fatalf("%s version = %q, want 9.8.7", host, got)
+		}
 	}
 }

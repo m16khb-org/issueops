@@ -9,6 +9,7 @@ import (
 	installadapter "issueops/internal/adapter/install"
 	"issueops/internal/adapter/installutil"
 	omoadapter "issueops/internal/adapter/omo"
+	ompadapter "issueops/internal/adapter/omp"
 	"issueops/internal/port"
 )
 
@@ -76,4 +77,18 @@ func testOmoInstaller() omoadapter.Installer {
 		WriteJSONPlan:                   installutil.WriteJSONPlan,
 		WriteTextPlan:                   installutil.WriteTextPlan,
 	}, hostprotocol.OmoLifecycleExtension)
+}
+func testOmpInstaller() ompadapter.Installer {
+	return ompadapter.NewInstaller(ompadapter.Dependencies{
+		MergeJSONMapFile:                installutil.MergeJSONMapFile,
+		RemoveJSONMapEntry:              installutil.RemoveJSONMapEntry,
+		VerifyJSONMapEntry:              installutil.VerifyJSONMapEntry,
+		CaptureNativeActivationEvidence: installutil.CaptureNativeActivationEvidence,
+		MCPCatalogSHA256:                func() (string, error) { return installutil.SemanticSHA256(mcpcatalog.AdvertisedTools()) },
+		NewInstallPlan:                  func(host string, dry bool) port.InstallPlan { return installutil.NewPlan(host, dry) },
+		PlanHostSkillLinks:              installutil.PlanHostSkillLinks,
+		SemanticSHA256:                  installutil.SemanticSHA256,
+		WriteJSONPlan:                   installutil.WriteJSONPlan,
+		WriteTextPlan:                   installutil.WriteTextPlan,
+	}, hostprotocol.OmpLifecycleExtension)
 }

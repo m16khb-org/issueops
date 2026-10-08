@@ -234,13 +234,21 @@ func (c *Client) Probe(ctx context.Context, req port.OrcaProbeRequest) (port.Orc
 			return result, nil
 		}
 	}
-	if agent == "claude" || agent == "omo" {
+	if agent == "claude" || agent == "omo" || agent == "omp" {
 		help, err := c.runText(ctx, "", readTimeout, []string{agent, "--help"})
 		if err != nil || !containsAllHelpFlags(help, []string{"--model"}) {
 			result.Code = "host_model_selection_unsupported"
 			return result, nil
 		}
 		if agent == "claude" && !containsAllHelpFlags(help, []string{"--dangerously-skip-permissions"}) {
+			result.Code = "host_permission_bypass_unsupported"
+			return result, nil
+		}
+		if agent == "omp" && !containsAllHelpFlags(help, []string{"--thinking"}) {
+			result.Code = "host_model_selection_unsupported"
+			return result, nil
+		}
+		if agent == "omp" && !containsAllHelpFlags(help, []string{"--auto-approve"}) {
 			result.Code = "host_permission_bypass_unsupported"
 			return result, nil
 		}

@@ -632,7 +632,8 @@
         "func newAgyInstaller",
         "func newClaudeInstaller",
         "func newCodexInstaller",
-        "func newOmoInstaller"
+        "func newOmoInstaller",
+        "func newOmpInstaller"
       ]
     },
     {
@@ -3369,6 +3370,30 @@
       ]
     },
     {
+      "path": "internal/adapter/hostprobe/omp.go",
+      "owner": "adapter",
+      "task": "T15",
+      "symbols": [
+        "func NewOmpRunner",
+        "func OmpRunner.Name",
+        "func OmpRunner.Preflight",
+        "func OmpRunner.Run",
+        "func OmpRunner.resolveExecutable",
+        "func OmpRunner.validLifecycleExtension",
+        "func isolatedOmpEnv",
+        "func ompArgv",
+        "func ompProbeToolName",
+        "func prepareOmpEpisode",
+        "func prepareOmpPrivateState",
+        "func resolveOmpAuth",
+        "func sanitizeOmpToolName",
+        "func snapshotOmpAuth",
+        "type OmpRunner",
+        "type ompMCPConfig",
+        "type ompMCPServer"
+      ]
+    },
+    {
       "path": "internal/adapter/hostprobe/process_group_unix.go",
       "owner": "adapter",
       "task": "T15",
@@ -3450,9 +3475,19 @@
       "task": "T19",
       "symbols": [
         "func OmoLifecycleExtension",
+        "func lifecycleExtension",
         "type contract",
         "type message",
-        "type rule"
+        "type rule",
+        "type sessionEnv"
+      ]
+    },
+    {
+      "path": "internal/adapter/hostprotocol/omp.go",
+      "owner": "adapter",
+      "task": "T19",
+      "symbols": [
+        "func OmpLifecycleExtension"
       ]
     },
     {
@@ -5099,6 +5134,48 @@
         "func Installer.removeOmoProjectMCP",
         "func Installer.writeOmoProjectMCP",
         "func Installer.writeOmoUserMCP"
+      ]
+    },
+    {
+      "path": "internal/adapter/omp/activation.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Installer.VerifyActivation"
+      ]
+    },
+    {
+      "path": "internal/adapter/omp/dependencies.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "type Dependencies"
+      ]
+    },
+    {
+      "path": "internal/adapter/omp/install.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Installer.Install",
+        "func Installer.Name",
+        "func NewInstaller",
+        "func ompAgentRoot",
+        "type Installer"
+      ]
+    },
+    {
+      "path": "internal/adapter/omp/mcp.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Installer.catalogSHA256",
+        "func Installer.ompMCPServer",
+        "func Installer.ompProjectMCPConfig",
+        "func Installer.ompUserMCPServer",
+        "func Installer.removeOmpProjectMCP",
+        "func Installer.writeOmpProjectMCP",
+        "func Installer.writeOmpUserMCP"
       ]
     },
     {
@@ -7455,15 +7532,18 @@
       "owner": "adapter",
       "task": "T18",
       "symbols": [
-        "func hasCanonicalOmoMCP",
+        "func hasCanonicalLifecycleHostMCP",
         "func nativeIntegrationCodexConfigErrors",
         "func nativeIntegrationDuplicateWarningOutput",
+        "func nativeIntegrationLifecycleHostErrors",
         "func nativeIntegrationOmoConfigErrors",
+        "func nativeIntegrationOmpConfigErrors",
         "func nativeIntegrationPathErrors",
         "func nativeIntegrationRequiredPaths",
         "func nativeIntegrationValidationDeps.canonicalHarnessBinary",
         "func nativeIntegrationValidationDeps.canonicalStableNativeRoot",
-        "func nativeIntegrationValidationDeps.hasThinCodexContextHooks"
+        "func nativeIntegrationValidationDeps.hasThinCodexContextHooks",
+        "type lifecycleHost"
       ]
     },
     {
@@ -17183,6 +17263,16 @@
     },
     {
       "path": "configs/omo/mcp.json",
+      "owner": "host-configuration",
+      "task": "T19"
+    },
+    {
+      "path": "configs/omp/issueops.js",
+      "owner": "host-configuration",
+      "task": "T19"
+    },
+    {
+      "path": "configs/omp/mcp.json",
       "owner": "host-configuration",
       "task": "T19"
     },

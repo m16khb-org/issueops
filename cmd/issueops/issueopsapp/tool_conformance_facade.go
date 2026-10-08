@@ -45,6 +45,7 @@ func toolConformanceRunners(binary string) map[string]port.HostProbeRunner {
 		"codex":  hostprobe.NewCodexRunner(binary, hostprobe.Dependencies{}),
 		"claude": hostprobe.NewClaudeRunner(binary, hostprobe.Dependencies{}),
 		"omo":    hostprobe.NewOmoRunner(binary, hostprotocol.OmoLifecycleExtension(binary), hostprobe.Dependencies{}, hostprotocol.OmoLifecycleExtension),
+		"omp":    hostprobe.NewOmpRunner(binary, hostprotocol.OmpLifecycleExtension(binary), hostprobe.Dependencies{}, hostprotocol.OmpLifecycleExtension),
 	}
 }
 

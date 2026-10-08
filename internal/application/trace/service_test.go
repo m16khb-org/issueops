@@ -78,7 +78,7 @@ func TestAnalyzeDefaultsAndValidatesInputFormat(t *testing.T) {
 	if _, err := (Service{Effects: f}).Analyze(tracecontract.TraceAnalyzeRequest{Input: "key"}); err != nil || f.loadFormat != tracecontract.InputFormatIssueOps {
 		t.Errorf("default format = %q err=%v", f.loadFormat, err)
 	}
-	for _, format := range []string{tracecontract.InputFormatClaudeJSON, tracecontract.InputFormatCodexExec, tracecontract.InputFormatOmoJSON} {
+	for _, format := range []string{tracecontract.InputFormatClaudeJSON, tracecontract.InputFormatCodexExec, tracecontract.InputFormatOmoJSON, tracecontract.InputFormatOmpJSON} {
 		f := &fakeEffects{}
 		if _, err := (Service{Effects: f}).Analyze(tracecontract.TraceAnalyzeRequest{Input: "key", InputFormat: " " + format + " "}); err != nil || f.loadFormat != format {
 			t.Errorf("format %q forwarded as %q err=%v", format, f.loadFormat, err)

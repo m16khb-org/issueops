@@ -15,6 +15,8 @@ func TestExecutableMatchesHost(t *testing.T) {
 		{"claude", "/usr/bin/node", false},
 		{"omo", "/opt/omo/bin/omo", true},
 		{"omo", "/opt/omo/bin/codex", false},
+		{"omp", "/Users/u/.bun/bin/omp", true},
+		{"omp", "/Users/u/.bun/bin/omo", false},
 		{"gemini", "/usr/bin/gemini", false},
 		{"", "codex", false},
 	} {

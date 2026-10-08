@@ -28,7 +28,7 @@ Usage:
   issueops guard check [--repo PATH] [--staged] [--all] [--json] [--] [FILES...]
   issueops quality inspect [--repo PATH] [--json]
   issueops verify-work [--repo PATH] [--all] [--json] [--] [READ_ONLY_ARGV...]
-  issueops trace analyze --input <jsonl|state-key|-> [--input-format issueops|claude-stream|codex-exec|omo-json] [--json]
+  issueops trace analyze --input <jsonl|state-key|-> [--input-format issueops|claude-stream|codex-exec|omo-json|omp-json] [--json]
   issueops trace handoff-delivery --input <observation.json|-> [--json]
   issueops contract schema [--json]
   issueops contract check [--json]
@@ -83,11 +83,11 @@ Usage:
   issueops mcp [cleanup [--dry-run|--apply] [--json]]
   issueops mcp --http [--addr 127.0.0.1:47831]
   issueops mcp service start|stop|status [--json]
-  issueops mcp authorize --workspace-root PATH --host codex|claude|omo --session-id ID [--agent-id ID] --session-pid PID --session-started-at RFC3339 --session-executable PATH [--cwd PATH] [--json]
-  issueops model show [--host claude|codex|omo] [--repo PATH] [--json]
+  issueops mcp authorize --workspace-root PATH --host codex|claude|omo|omp --session-id ID [--agent-id ID] --session-pid PID --session-started-at RFC3339 --session-executable PATH [--cwd PATH] [--json]
+  issueops model show [--host claude|codex|omo|omp] [--repo PATH] [--json]
   issueops model set --scope global|local --host claude|codex --role ROLE [--model MODEL] [--effort EFFORT] [--repo PATH] [--json]
   issueops model unset --scope global|local --host claude|codex --role ROLE [--field model|effort] [--repo PATH] [--json]
-  issueops model resolve --host claude|codex|omo --role ROLE [--tier TIER] [--round N] [--model MODEL] [--effort EFFORT] [--agents] [--repo PATH] [--json]
+  issueops model resolve --host claude|codex|omo|omp --role ROLE [--tier TIER] [--round N] [--model MODEL] [--effort EFFORT] [--agents] [--repo PATH] [--json]
   issueops version
 %s
 

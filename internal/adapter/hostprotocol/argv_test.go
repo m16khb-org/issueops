@@ -31,6 +31,10 @@ func TestBuildInteractiveArgvPinsInstalledNativeHostContracts(t *testing.T) {
 			host: "omo", executable: "/opt/native/omo", model: "chatgpt-subscription/gpt-6-sol", effort: "xhigh",
 			want: []string{"/opt/native/omo", "--model", "chatgpt-subscription/gpt-6-sol:xhigh", "--permission-preset", "full-access", "--", prompt},
 		},
+		{
+			host: "omp", executable: "/Users/u/.bun/bin/omp", model: "anthropic/claude-opus-5-5", effort: "high",
+			want: []string{"/Users/u/.bun/bin/omp", "--model", "anthropic/claude-opus-5-5", "--thinking", "high", "--auto-approve", "--", prompt},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.host, func(t *testing.T) {
@@ -58,6 +62,7 @@ func TestBuildInteractiveArgvRejectsUnsupportedOrAmbiguousInputs(t *testing.T) {
 		{name: "missing model", host: "codex", executable: "/opt/native/codex"},
 		{name: "effort injection", host: "claude", executable: "/opt/native/claude", model: "model", effort: "high\n--danger"},
 		{name: "model option injection", host: "omo", executable: "/opt/native/omo", model: "--help"},
+		{name: "unsupported omp effort", host: "omp", executable: "/opt/native/omp", model: "model", effort: "auto"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

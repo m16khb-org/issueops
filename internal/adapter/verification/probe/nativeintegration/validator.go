@@ -11,6 +11,7 @@ type Validator struct {
 	ResolveStableNativeRoot    func(string) (string, error)
 	CodexHooksConfig           func(string) map[string]any
 	OmoLifecycleExtension      func(string) string
+	OmpLifecycleExtension      func(string) string
 	VerifyHookConfigActivation func(map[string]any, map[string]any) (string, error)
 }
 

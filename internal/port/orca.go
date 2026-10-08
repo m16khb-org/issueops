@@ -287,7 +287,7 @@ func ValidateExecutionOrcaDeliveryReceipt(receipt ExecutionOrcaIntentReceipt, ex
 		return err
 	}
 	switch strings.TrimSpace(expected.Host) {
-	case "codex", "claude":
+	case "codex", "claude", "omp":
 		if receipt.PromptReceipt != nil {
 			return fmt.Errorf("Orca injected dispatch unexpectedly carried a prompt receipt")
 		}

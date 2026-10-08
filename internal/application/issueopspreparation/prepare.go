@@ -70,8 +70,8 @@ func (service *Service) Prepare(ctx context.Context, command preparationcontract
 		if service.orca == nil {
 			readiness.Code = "orca_adapter_unavailable"
 		} else {
-			if command.OwnerHost != "codex" && command.OwnerHost != "claude" && command.OwnerHost != "omo" {
-				return failedResult(command.ID), fmt.Errorf("Orca owner_host must be codex, claude, or omo")
+			if command.OwnerHost != "codex" && command.OwnerHost != "claude" && command.OwnerHost != "omo" && command.OwnerHost != "omp" {
+				return failedResult(command.ID), fmt.Errorf("Orca owner_host must be codex, claude, omo, or omp")
 			}
 			// owner가 보충할 수 없는 planner 전제가 빠져 있으면 띄우지 않는다.
 			// 띄우면 owner는 claim까지 완주한 뒤 채울 수 없는 게이트에 부딪혀
@@ -401,13 +401,13 @@ func (service *Service) normalizeOwnerDefaults(ctx context.Context, snapshot pre
 	command.OwnerHost = strings.ToLower(strings.TrimSpace(command.OwnerHost))
 	command.OwnerModel = strings.TrimSpace(command.OwnerModel)
 	command.OwnerEffort = strings.TrimSpace(command.OwnerEffort)
-	if command.OwnerHost != "codex" && command.OwnerHost != "claude" && command.OwnerHost != "omo" {
+	if command.OwnerHost != "codex" && command.OwnerHost != "claude" && command.OwnerHost != "omo" && command.OwnerHost != "omp" {
 		return command, nil
 	}
 	// 플래그를 둘 다 명시해도 같은 설정 파일이 owner packet의 리뷰·조사·독자 검토
 	// 모델을 정한다. 그 파일이 깨졌으면 Orca worktree를 만든 뒤가 아니라 여기서 멈춘다.
-	// omo는 설정 파일을 읽지 않는다.
-	if command.OwnerModel != "" && command.OwnerEffort != "" && command.OwnerHost == "omo" {
+	// omo와 omp는 설정 파일을 읽지 않는다.
+	if command.OwnerModel != "" && command.OwnerEffort != "" && (command.OwnerHost == "omo" || command.OwnerHost == "omp") {
 		return command, nil
 	}
 	if service.models == nil {
@@ -445,8 +445,8 @@ func normalizeActor(actor leasecontract.Actor) (leasecontract.Actor, error) {
 		process.Executable = strings.TrimSpace(process.Executable)
 		actor.SessionProcess = &process
 	}
-	if actor.Host != "codex" && actor.Host != "claude" && actor.Host != "omo" {
-		return actor, fmt.Errorf("native actor host must be codex, claude, or omo")
+	if actor.Host != "codex" && actor.Host != "claude" && actor.Host != "omo" && actor.Host != "omp" {
+		return actor, fmt.Errorf("native actor host must be codex, claude, omo, or omp")
 	}
 	if actor.SessionID == "" {
 		return actor, fmt.Errorf("native actor session_id is required")

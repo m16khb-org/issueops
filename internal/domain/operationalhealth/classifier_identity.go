@@ -125,12 +125,12 @@ func holderIdentityComplete(cycle operationalhealthcontract.Cycle) bool {
 
 func validNativeHost(host string) bool {
 	host = strings.TrimSpace(host)
-	return host == "codex" || host == "claude" || host == "omo"
+	return host == "codex" || host == "claude" || host == "omo" || host == "omp"
 }
 
 func validOrcaOwnerHost(host string) bool {
 	host = strings.TrimSpace(host)
-	return host == "codex" || host == "claude" || host == "omo"
+	return host == "codex" || host == "claude" || host == "omo" || host == "omp"
 }
 
 func holderIdentityEmpty(cycle operationalhealthcontract.Cycle) bool {

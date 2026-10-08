@@ -197,8 +197,10 @@ func workspaceRelaunchCommand(host, sourceRoot, root, base string) (string, erro
 		return "cd " + landing + " && claude --add-dir " + base + " --dangerously-skip-permissions", nil
 	case "omo":
 		return "cd " + landing + " && omo", nil
+	case "omp":
+		return "cd " + landing + " && omp", nil
 	default:
-		return "", fmt.Errorf("native actor host must be codex, claude, or omo")
+		return "", fmt.Errorf("native actor host must be codex, claude, omo, or omp")
 	}
 }
 

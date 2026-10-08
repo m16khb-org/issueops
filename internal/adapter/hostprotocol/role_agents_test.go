@@ -81,6 +81,9 @@ func TestRoleAgentArgs(t *testing.T) {
 	if omo, err := RoleAgentArgs("omo", agents, nil); err != nil || omo != nil {
 		t.Fatalf("omo RoleAgentArgs = %q, %v", omo, err)
 	}
+	if omp, err := RoleAgentArgs("omp", agents, nil); err != nil || omp != nil {
+		t.Fatalf("omp RoleAgentArgs = %q, %v", omp, err)
+	}
 	if none, err := RoleAgentArgs("claude", nil, nil); err != nil || none != nil {
 		t.Fatalf("no agents = %q, %v", none, err)
 	}
@@ -98,5 +101,8 @@ func TestBuildPrintArgv(t *testing.T) {
 	}
 	if got := BuildPrintArgv("omo", "x", "max"); got != nil {
 		t.Fatalf("omo = %q", got)
+	}
+	if got := BuildPrintArgv("omp", "anthropic/claude-haiku-5-5", "medium"); !reflect.DeepEqual(got, []string{"omp", "-p", "--model", "anthropic/claude-haiku-5-5", "--thinking", "medium"}) {
+		t.Fatalf("omp = %q", got)
 	}
 }

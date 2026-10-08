@@ -89,7 +89,7 @@ func ValidateHandoffDeliveryObservation(observation issueopscontract.IssueOpsHan
 			return err
 		}
 	}
-	if observation.ExpectedOwnerHost != "" && observation.ExpectedOwnerHost != "codex" && observation.ExpectedOwnerHost != "claude" && observation.ExpectedOwnerHost != "omo" {
+	if observation.ExpectedOwnerHost != "" && observation.ExpectedOwnerHost != "codex" && observation.ExpectedOwnerHost != "claude" && observation.ExpectedOwnerHost != "omo" && observation.ExpectedOwnerHost != "omp" {
 		return fmt.Errorf("delivery observation expected owner host is invalid")
 	}
 	if err := validateHandoffDeliveryClaimConsistency(observation); err != nil {

@@ -90,7 +90,7 @@ func CodexRoleFile(agent RoleAgent) (string, error) {
 
 // RoleAgentArgs renders the launch arguments that inject agents into a host
 // session: claude gets one --agents JSON, codex gets one -c override per role
-// file that writeRoleFile stores. omo gets none.
+// file that writeRoleFile stores. omo and omp get none.
 func RoleAgentArgs(host string, agents []RoleAgent, writeRoleFile func(content string) (string, error)) ([]string, error) {
 	if len(agents) == 0 {
 		return nil, nil
@@ -138,6 +138,12 @@ func BuildPrintArgv(host, model, effort string) []string {
 		argv := []string{"codex", "exec", "-m", model}
 		if effort != "" {
 			argv = append(argv, "-c", "model_reasoning_effort="+effort)
+		}
+		return argv
+	case "omp":
+		argv := []string{"omp", "-p", "--model", model}
+		if effort != "" {
+			argv = append(argv, "--thinking", effort)
 		}
 		return argv
 	default:
