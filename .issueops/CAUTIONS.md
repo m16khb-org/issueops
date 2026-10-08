@@ -75,6 +75,7 @@ footer; older notes also live in `archive/cautions-incidents.md`.
 
 | Date | Lesson |
 |---|---|
+| 2026-10-08 | [추적 intent 사본은 요청 원문을 그대로 담고, 커밋 전 로컬 self-verify는 추적 파일 검사를 보지 못한다](cautions/2026-10-08-tracked-intent-copies-quote-the-raw-request-and-local-self-v.md) |
 | 2026-10-08 | [표준 문서 설명을 바꿔도 frontmatter가 있는 레포의 catalog는 `--sync` 전까지 그대로다](cautions/2026-10-08-changing-a-standard-doc-description-does-not-change-the-cata.md) |
 | 2026-10-08 | [user systemd manager 경로 조회와 base 커밋에서 거짓 통과하는 CI 게이트](cautions/2026-10-08-user-systemd-manager-base-ci.md) |
 | 2026-10-07 | [CI 임시 HOME 설치, runner의 rg 부재, worktree 간 lint cache, 상한 변경 중의 옛 binary](cautions/2026-10-07-ci-home-runner-rg-worktree-lint-cache-binary.md) |

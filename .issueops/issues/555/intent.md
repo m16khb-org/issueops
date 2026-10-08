@@ -5,7 +5,7 @@
 - intent_class: standard
 
 ## 원문 요청
-현재 세션 스타트훅에 (SessionStart:clear says: 📚 issueops · 이 레포 project docs (관련된 것을 읽고 작업하세요) • ADR.md — ... • CONSTITUTION.md — Standalone instruction priority, safety, and accuracy principles for api-servers. ...) 이런식으로 힌트가들어가고 있는데 품질 최적화 및 개선, 추가 훅 지정 등등 개선사항등에 대해서 조사해줘 claude code와 codex에 훅을 다르게 관리해야할지도 / 조사된 내용을 바탕으로 issue화를 해주고 /issueops 로 진행 / 다른 훅에는 추가될만한게 없을지도 더 조사해봐 / 하나의 이슈로 묶어서 작업하고 compact hook이나 tool use 훅에도 처리해야할게 있는지도 확인해줘
+현재 세션 스타트훅에 (SessionStart:clear says: 📚 issueops · 이 레포 project docs (관련된 것을 읽고 작업하세요) • ADR.md — ... • CONSTITUTION.md — Standalone instruction priority, safety, and accuracy principles for <다른 레포>. ...) 이런식으로 힌트가들어가고 있는데 품질 최적화 및 개선, 추가 훅 지정 등등 개선사항등에 대해서 조사해줘 claude code와 codex에 훅을 다르게 관리해야할지도 / 조사된 내용을 바탕으로 issue화를 해주고 /issueops 로 진행 / 다른 훅에는 추가될만한게 없을지도 더 조사해봐 / 하나의 이슈로 묶어서 작업하고 compact hook이나 tool use 훅에도 처리해야할게 있는지도 확인해줘
 
 ## 해석
 SessionStart project-doc 카탈로그의 품질을 개선하고(모델 텍스트에 .issueops/ 경로 포함, Claude·Codex 모델 텍스트 통일, 화면 헤더에 레포 이름 표시, Claude systemMessage를 한 줄 요약으로 축소, meta.go 표준 설명을 '언제 읽는지' 형태로 개정), SubagentStart 훅을 Claude·Codex 기본 설치에 추가해 새 컨텍스트로 시작하는 서브에이전트에도 같은 카탈로그를 준다(Claude는 Explore 제외 matcher). ADR 2026-08-27을 대체하는 ADR을 남긴다. Compact·tool use 훅은 조사 결과 추가 처리 없음으로 기록한다.
