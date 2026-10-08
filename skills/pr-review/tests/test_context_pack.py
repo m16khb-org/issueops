@@ -68,6 +68,24 @@ class PerLensCapTest(unittest.TestCase):
         self.assertEqual(mr_context.per_lens_cap(12, 0), 3)
 
 
+_real_run = subprocess.run
+
+
+def _without_rg(cmd, *args, **kwargs):
+    if cmd[0] == "rg":
+        raise FileNotFoundError(2, "No such file or directory", "rg")
+    return _real_run(cmd, *args, **kwargs)
+
+
+def _git_checkout(root: Path, files: dict[str, str]) -> Path:
+    for name, text in files.items():
+        (root / name).parent.mkdir(parents=True, exist_ok=True)
+        (root / name).write_text(text)
+    _real_run(["git", "init", "-q"], cwd=root, check=True)
+    _real_run(["git", "add", "-A"], cwd=root, check=True)
+    return root
+
+
 class DefsFallbackTest(unittest.TestCase):
     def test_rg_fallback_lists_definition_and_callers(self) -> None:
         with tempfile.TemporaryDirectory() as d:
@@ -80,14 +98,7 @@ class DefsFallbackTest(unittest.TestCase):
             self.assertIn("ctl.ts:2", md)
 
     def test_grep_fallback_when_rg_is_not_installed(self) -> None:
-        real_run = subprocess.run
-
-        def without_rg(cmd, *args, **kwargs):
-            if cmd[0] == "rg":
-                raise FileNotFoundError(2, "No such file or directory", "rg")
-            return real_run(cmd, *args, **kwargs)
-
-        with tempfile.TemporaryDirectory() as d, mock.patch.object(mr_context.subprocess, "run", without_rg):
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(mr_context.subprocess, "run", _without_rg):
             root = Path(d)
             (root / "svc.ts").write_text("export function findMasked(id) { return id }\n")
             (root / "ctl.ts").write_text("import { findMasked } from './svc'\nfindMasked('x')\n")
@@ -99,8 +110,69 @@ class DefsFallbackTest(unittest.TestCase):
             md = mr_context.build_defs(str(root), ["findMasked"], codegraph=False)
             self.assertIn("svc.ts:1", md)
             self.assertIn("ctl.ts:2", md)
+            self.assertIn(f"source: grep over {root}\n", md)
             for noise in ("node_modules", ".git/", "blob.dat", "Binary"):
                 self.assertNotIn(noise, md)
+
+    def test_source_line_names_the_tool_that_ran(self) -> None:
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(mr_context.subprocess, "run", _without_rg):
+            root = Path(d)
+            (root / "svc.ts").write_text("export function findMasked(id) { return id }\n")
+            md = mr_context.build_defs(str(root), ["findMasked"], codegraph=False)
+            source = next(line for line in md.splitlines() if line.startswith("source: "))
+            self.assertEqual(source, f"source: grep over {root}")
+
+    def test_source_line_lists_codegraph_and_its_fallback(self) -> None:
+        found = {"findMasked": ["- def svc.ts:1 — function"], "maskRows": []}
+
+        def rg_hit(cmd, *args, **kwargs):
+            return subprocess.CompletedProcess(cmd, 0, stdout="./svc.ts:3:maskRows()\n", stderr="")
+
+        with mock.patch.object(mr_context, "_codegraph_symbol", lambda checkout, sym: found[sym]), \
+                mock.patch.object(mr_context.subprocess, "run", rg_hit):
+            md = mr_context.build_defs("/repo", ["findMasked", "maskRows"], codegraph=True)
+        self.assertIn("source: codegraph explore, rg over /repo\n", md)
+        self.assertIn("- svc.ts:3:maskRows()", md)
+
+    def test_git_grep_skips_ignored_files(self) -> None:
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(mr_context.subprocess, "run", _without_rg):
+            root = _git_checkout(Path(d), {
+                ".gitignore": "build/\n",
+                "svc.ts": "export function findMasked(id) { return id }\n",
+                "build/svc.js": "function findMasked(id) { return id }\n",
+            })
+            (root / "new.ts").write_text("findMasked('x')\n")
+            md = mr_context.build_defs(str(root), ["findMasked"], codegraph=False)
+            self.assertIn(f"source: git grep over {root}\n", md)
+            self.assertIn("- svc.ts:1:", md)
+            self.assertIn("- new.ts:1:", md)
+            self.assertNotIn("build/", md)
+
+    def test_git_grep_finds_definitions_under_lock_named_directories(self) -> None:
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(mr_context.subprocess, "run", _without_rg):
+            root = _git_checkout(Path(d), {
+                "blocks/svc.ts": "export function findMasked(id) { return id }\n",
+                "yarn.lock": "findMasked\n",
+                "web/app.min.js": "findMasked()\n",
+                "node_modules/dep/index.ts": "findMasked()\n",
+            })
+            md = mr_context.build_defs(str(root), ["findMasked"], codegraph=False)
+            self.assertIn(f"source: git grep over {root}\n", md)
+            self.assertIn("- blocks/svc.ts:1:", md)
+            for noise in ("yarn.lock", "app.min.js", "node_modules"):
+                self.assertNotIn(noise, md)
+
+    def test_failing_git_grep_falls_back_to_grep(self) -> None:
+        def old_git(cmd, *args, **kwargs):
+            if cmd[:2] == ["git", "grep"]:
+                return subprocess.CompletedProcess(cmd, 129, stdout="", stderr="error: unknown option `max-count'")
+            return _without_rg(cmd, *args, **kwargs)
+
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(mr_context.subprocess, "run", old_git):
+            root = _git_checkout(Path(d), {"svc.ts": "export function findMasked(id) { return id }\n"})
+            md = mr_context.build_defs(str(root), ["findMasked"], codegraph=False)
+            self.assertIn(f"source: grep over {root}\n", md)
+            self.assertIn("svc.ts:1", md)
 
     def test_empty_symbols_yields_note(self) -> None:
         md = mr_context.build_defs("/nonexistent", [], codegraph=False)

@@ -75,6 +75,7 @@ footer; older notes also live in `archive/cautions-incidents.md`.
 
 | Date | Lesson |
 |---|---|
+| 2026-10-08 | [user systemd manager 경로 조회와 base 커밋에서 거짓 통과하는 CI 게이트](cautions/2026-10-08-user-systemd-manager-base-ci.md) |
 | 2026-10-07 | [CI 임시 HOME 설치, runner의 rg 부재, worktree 간 lint cache, 상한 변경 중의 옛 binary](cautions/2026-10-07-ci-home-runner-rg-worktree-lint-cache-binary.md) |
 | 2026-10-07 | [테스트 helper 프로세스와 호스트 상태가 -cover·부하·실제 HOME에서 결론을 바꾼다](cautions/2026-10-07-helper-cover-home.md) |
 | 2026-10-07 | [게이트 원장 CHECK·EXPECT 작성 함정: escape, RE2, 글자 대리 검사](cautions/2026-10-07-check-expect-escape-re2.md) |
