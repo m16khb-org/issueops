@@ -2,10 +2,12 @@ package issueopsnext
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"strings"
 	"testing"
 
+	agentmodelcontract "issueops/internal/contract/agentmodel"
 	issueopscontract "issueops/internal/contract/issueops"
 	issueopsinventorycontract "issueops/internal/contract/issueopsinventory"
 )
@@ -16,12 +18,11 @@ func reviewTierPorts(record issueopscontract.IssueOpsRecord, paths []string, obs
 	entries := []issueopsinventorycontract.ListEntry{{ID: record.ID, Phase: record.Phase, Branch: record.Branch}}
 	ports := testPorts(entries, map[string]issueopscontract.IssueOpsRecord{record.ID: record})
 	ports.Actor = func() (string, string, error) { return "claude", "session-1", nil }
-	ports.PlannerDefaults = func(string) (string, string, bool) { return "planner-model", "high", true }
-	ports.ReviewEffortForTier = func(host, tier string) string {
+	ports.ReviewModel = func(host string, role agentmodelcontract.Role, tier, repo string) (string, string, error) {
 		if tier == "docs-only" {
-			return "medium"
+			return "planner-model", "medium", nil
 		}
-		return "high"
+		return "planner-model", "high", nil
 	}
 	ports.ChangedPaths = func(issueopscontract.IssueOpsRecord) ([]string, bool) {
 		*calls++
@@ -151,5 +152,58 @@ func TestNextFlagsFrontendChangeSetsWithoutChangingTier(t *testing.T) {
 	}
 	if unobservedResult.Review.Frontend {
 		t.Fatal("an unobservable change set must not raise a signal it did not see")
+	}
+}
+
+// plan 이전에는 plan-review, implement 이후에는 diff-review 역할로 해석한다.
+func TestNextResolvesTheReviewRoleByPhase(t *testing.T) {
+	for phase, want := range map[issueopscontract.IssueOpsPhase]agentmodelcontract.Role{
+		issueopscontract.IssueOpsPhasePlan:        agentmodelcontract.RolePlanReview,
+		issueopscontract.IssueOpsPhaseImplement:   agentmodelcontract.RoleDiffReview,
+		issueopscontract.IssueOpsPhaseAISlopClean: agentmodelcontract.RoleDiffReview,
+	} {
+		calls := 0
+		record := implementRecordForTier()
+		record.Phase = phase
+		ports := reviewTierPorts(record, []string{"internal/x.go"}, true, &calls)
+		var roles []agentmodelcontract.Role
+		var repos []string
+		ports.ReviewModel = func(host string, role agentmodelcontract.Role, tier, repo string) (string, string, error) {
+			roles, repos = append(roles, role), append(repos, repo)
+			return "m-" + string(role), "xhigh", nil
+		}
+		result, err := NewService(ports).Next(context.Background(), "/state", "/repo", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.Review.Model != "m-"+string(want) || result.Review.Effort != "xhigh" || roles[len(roles)-1] != want || repos[len(repos)-1] != "/repo" {
+			t.Fatalf("%s: review = %+v roles=%v repos=%v", phase, result.Review, roles, repos)
+		}
+	}
+}
+
+// 깨진 설정 파일은 기본값으로 조용히 대체하지 않는다. 경고를 한 번 남기고
+// review 값을 비우며, tier와 lenses는 그대로 계산한다.
+func TestNextWarnsOnceAndBlanksReviewWhenSettingsAreBroken(t *testing.T) {
+	calls := 0
+	ports := reviewTierPorts(implementRecordForTier(), []string{"README.md"}, true, &calls)
+	ports.ReviewModel = func(string, agentmodelcontract.Role, string, string) (string, string, error) {
+		return "", "", errors.New("/cfg/issueops/agent-models.json: json: unknown field \"modle\"")
+	}
+	result, err := NewService(ports).Next(context.Background(), "/state", "/repo", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Review.Model != "" || result.Review.Effort != "" || result.Review.Tier != "docs-only" || len(result.Review.Lenses) == 0 {
+		t.Fatalf("review = %+v", result.Review)
+	}
+	count := 0
+	for _, warning := range result.Warnings {
+		if strings.Contains(warning, "agent model settings are invalid: /cfg/issueops/agent-models.json") {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Fatalf("warnings = %v", result.Warnings)
 	}
 }

@@ -107,6 +107,9 @@ type ExecutionOrcaIntentRequest struct {
 	RunID                            string                         `json:"run_id,omitempty"`
 	RunBound                         bool                           `json:"run_bound,omitempty"`
 	TaskID                           string                         `json:"task_id,omitempty"`
+	// RoleAgentArgs are resolved before the invocation is marked and are
+	// never persisted with the intent.
+	RoleAgentArgs []string `json:"-"`
 }
 
 type ExecutionOrcaIntentReceipt struct {

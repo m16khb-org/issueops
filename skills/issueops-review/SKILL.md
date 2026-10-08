@@ -32,10 +32,12 @@ issueops next --id "$ISSUEOPS_ID" --json
 # .review.model, .review.effort, .review.tier, .review.lenses
 ```
 
-이 값은 코드가 소유하는 host별 planner 모델과 현재 변경 집합 티어에 맞춘 effort다. 스킬 본문에 모델 이름 표를
-복사하지 않는다. 조회에 실패하거나 review의 model/effort/tier/lenses가 누락되면
-진행하지 않고 조회 실패나 누락 필드를 보고한다. `review.model`이 비어 있으면 이
-호스트의 기본값이 정의돼 있지 않으므로 어떤 모델로 리뷰할지 사용자에게 묻는다.
+이 값은 리뷰 역할(implement 전은 `plan-review`, 이후는 `diff-review`)을 `issueops model`
+설정(local > global > 내장 기본값)으로 해석한 model·effort와 현재 변경 집합 티어다. 스킬 본문에
+모델 이름 표를 복사하지 않는다. 조회에 실패하거나 review의 model/effort/tier/lenses가 누락되면
+진행하지 않고 조회 실패나 누락 필드를 보고한다. `review.model`이 비어 있고 `warnings`에
+`agent model settings are invalid`가 있으면 그 파일 경로를 보고하고 멈춘다. 경고 없이 비어
+있으면 이 호스트의 기본값이 없으므로 어떤 모델로 리뷰할지 사용자에게 묻는다.
 사용자가 reviewer 모델이나 effort를 명시했다면 해당 값에만 그 지시를 우선하고,
 지정하지 않은 값은 현재 출력을 따른다. owner-model/owner-effort override는 구현자
 선택이며 reviewer 지정으로 해석하지 않는다.
@@ -156,21 +158,26 @@ contract_change`로 기록한다([`issueops-plan`](../issueops-plan/SKILL.md)의
   입력이지 호출자가 `pass`를 정할 근거가 아니다.
 - 구조나 범위가 바뀌면 전체 리뷰를 다시 띄운다. 필수 검증 공백은 그 확인 결과와
   영향받은 계약을 delta 리뷰에 포함한다. CHECK 형식이 없다는 이유만으로 전체를 반복하지 않는다.
-- 같은 대상의 수정·재리뷰는 최대 5라운드다. 3라운드부터 5라운드까지는 `next.review.model`과
-  다른 모델 또는 한 단계 높은 effort로 띄우고, 그 사실을 `--reviewer-model`·`--reviewer-effort`
-  (diff) 또는 finding 첫 줄(plan)에 적는다. 그 안에 통과하지 못하면 남은 결함과 시도한
-  수정을 보고한다.
-  - Claude에서 "다른 모델"은 사용자가 이름으로 지정한 모델만 쓴다. Fable 5는 명시적
-    수동 지정 전용이므로(`internal/contract/issueopspreparation/prepare.go`) 3~5라운드용으로
-    고르지 않는다. codex와 omo는 이 항목의 적용을 받지 않는다.
-  - Claude는 3~5라운드에도 `next.review.model`을 쓰고, effort는 `next.review.effort`에서
-    한 단계 올린다. claude CLI의 단계는 `low`→`medium`→`high`→`xhigh`→`max`다.
-    서브에이전트 도구는 effort를 받지 않으므로, 프롬프트를 표준 입력으로 넘겨
-    `claude -p --model "$REVIEW_MODEL" --effort "$ESCALATED_EFFORT" --allowedTools
-    "Bash Read Grep Glob Skill"`로 빈 컨텍스트 세션을 띄운다. 출력 파일은 ignored 영역
+- 같은 대상의 수정·재리뷰는 최대 5라운드다. 3라운드부터 5라운드까지는 상향된 리뷰 모델로
+  띄운다. model과 effort는 다음 명령의 결과를 그대로 쓴다. `review-escalate` 설정이 있으면 그
+  값이, 없으면 원래 리뷰 모델에 effort 한 단계 상향이 나온다. plan 대상이면 `--role plan-review`다.
+
+  ```bash
+  issueops model resolve --host "$HOST" --role diff-review --tier "$TIER" --round "$ROUND" --json
+  # .model, .effort, .argv
+  ```
+
+  사용자가 reviewer 모델을 이름으로 지정했으면 그 값을 `--model`로 함께 넘긴다. 실제로 넘긴 두
+  값을 `--reviewer-model`·`--reviewer-effort`(diff) 또는 finding 첫 줄(plan)에 적는다. 그 안에
+  통과하지 못하면 남은 결함과 시도한 수정을 보고한다.
+  - 서브에이전트 도구는 effort를 받지 않는다. Orca가 띄운 세션에는 `issueops-review-escalate`
+    서브에이전트가 주입돼 있으므로 그 에이전트의 model·effort가 위 결과와 같을 때 쓸 수 있다.
+    그 밖에는 `.argv`로 빈 컨텍스트 세션을 띄운다. Claude는 `.argv`에 `--allowedTools
+    "Bash Read Grep Glob Skill"`을 붙이고 프롬프트를 표준 입력으로 넘긴다. 출력 파일은 ignored 영역
     `.issueops/issues/<n>/review/`나 워크트리 밖에 둔다. 워크트리 안 미추적 파일은
     fingerprint에 들어가 봉인을 깬다.
-    `--reviewer-model`·`--reviewer-effort`와 finding 첫 줄에는 실제로 넘긴 두 값을 적는다.
+  - Fable 5는 명시적 수동 지정 전용이다(`.issueops/adr/2026-09-24-claude-role-models-opus-5-plans-and-reviews-sonnet-5-impleme.md`).
+    해석기는 Fable을 기본값이나 상향 결과로 내지 않으므로 3~5라운드용으로 고르지 않는다.
 - 같은 plan phase의 비-waived `revise`는 다섯 번까지다. 여섯 번째는 CLI가
   `revise round cap reached`로 거부한다. stop 판정 뒤의 `regress` 재계획도 사이클당 다섯 번까지다. 그때의 탈출은 `stop`을 기록하고
   `issueops remote reflect-devils-advocate --confirm`으로 반영한 뒤 `regress`로

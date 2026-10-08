@@ -36,17 +36,18 @@ type ResumeService struct {
 	operationIDs ResumeOperationIDs
 	verifier     authorityport.ActorVerifier
 	paths        CanonicalPathMatcher
+	roleAgents   RoleAgentArgs
 }
 
-func NewResumeService(fence ResumeFence, repository ResumeRepository, artifacts ResumeArtifacts, owners ResumeOwnerInventory, stages ResumeStageExecutor, operationIDs ResumeOperationIDs, verifier authorityport.ActorVerifier, paths CanonicalPathMatcher) *ResumeService {
-	return &ResumeService{fence: fence, repository: repository, artifacts: artifacts, owners: owners, stages: stages, operationIDs: operationIDs, verifier: verifier, paths: paths}
+func NewResumeService(fence ResumeFence, repository ResumeRepository, artifacts ResumeArtifacts, owners ResumeOwnerInventory, stages ResumeStageExecutor, operationIDs ResumeOperationIDs, verifier authorityport.ActorVerifier, paths CanonicalPathMatcher, roleAgents RoleAgentArgs) *ResumeService {
+	return &ResumeService{fence: fence, repository: repository, artifacts: artifacts, owners: owners, stages: stages, operationIDs: operationIDs, verifier: verifier, paths: paths, roleAgents: roleAgents}
 }
 
 func (s *ResumeService) Resume(ctx context.Context, request ResumeRequest) (ResumeResult, error) {
 	if !request.Confirm {
 		return ResumeResult{ID: request.ID}, fmt.Errorf("execution resume requires confirm")
 	}
-	if s.fence == nil || s.repository == nil || s.artifacts == nil || s.owners == nil || s.stages == nil || s.operationIDs == nil || s.paths == nil {
+	if s.fence == nil || s.repository == nil || s.artifacts == nil || s.owners == nil || s.stages == nil || s.operationIDs == nil || s.paths == nil || s.roleAgents == nil {
 		return ResumeResult{ID: request.ID}, fmt.Errorf("resume service dependencies are required")
 	}
 	var result ResumeResult
@@ -80,6 +81,10 @@ func (s *ResumeService) Resume(ctx context.Context, request ResumeRequest) (Resu
 		if plan.Disposition == leasedomain.ResumeExistingBinding {
 			result = ResumeResult{OK: true, ID: request.ID, Disposition: plan.Disposition, Receipt: leasecontract.ResumeReceipt{Execution: *snapshot.Record.Stable.Execution, Artifacts: artifacts}}
 			return nil
+		}
+		roleAgentArgs, err := s.terminalRoleAgentArgs(fenceCtx, snapshot.Record.Stable, plan)
+		if err != nil {
+			return err
 		}
 		operationID, err := s.operationIDs.New()
 		if err != nil {
@@ -116,7 +121,7 @@ func (s *ResumeService) Resume(ctx context.Context, request ResumeRequest) (Resu
 				if err != nil {
 					return err
 				}
-				receipt, err = s.stages.Invoke(fenceCtx, receiptIntent)
+				receipt, err = s.stages.Invoke(fenceCtx, receiptIntent, argsForStage(intent.Stage, roleAgentArgs))
 				if err != nil {
 					_ = s.repository.RecordFailure(fenceCtx, receiptIntent, resumeInvocationFailureState(err), err)
 					return resumeReconcileRequired(err)
@@ -184,4 +189,26 @@ func resumeInvocationFailureState(err error) string {
 		return "not_invoked_proven"
 	}
 	return "unknown"
+}
+
+// terminalRoleAgentArgs resolves the role agents before BeginIntent, which
+// leaves a pending intent that cannot be rolled back. A settings error then
+// stops resume without that intent, so the same resume retries after the fix.
+func (s *ResumeService) terminalRoleAgentArgs(ctx context.Context, record leasecontract.Record, plan leasedomain.ResumePlan) ([]string, error) {
+	if plan.ReusedTerminalPTYID != "" {
+		return nil, nil
+	}
+	args, err := s.roleAgents(ctx, record.Execution.Orca.OwnerHost, record.Repo)
+	if err != nil {
+		return nil, fmt.Errorf("resolve role agents before the Orca terminal launch: %w", err)
+	}
+	return args, nil
+}
+
+// argsForStage passes role-agent arguments only to the terminal stage.
+func argsForStage(stage string, roleAgentArgs []string) []string {
+	if stage != terminalStage {
+		return nil
+	}
+	return roleAgentArgs
 }

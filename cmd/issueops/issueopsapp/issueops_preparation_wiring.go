@@ -27,6 +27,7 @@ type issueOpsPreparationCompositionDeps struct {
 	Now            func() time.Time
 	NewOperationID func() (string, error)
 	ValidateActor  func(context.Context, issueopscontract.NativeActor) error
+	AgentModels    preparationapp.AgentModels
 }
 
 type issueOpsExecutionCompositionDeps struct {
@@ -118,7 +119,11 @@ func newIssueOpsPreparationService(stateRoot, id string, deps issueOpsPreparatio
 	if operationID == nil {
 		operationID = issueops.NewExecutionOperationID
 	}
-	return preparationapp.NewService(repository, preparationClock{now}, preparationOperationIDs{operationID}, direct, gateway, evidence), nil
+	models := deps.AgentModels
+	if models == nil {
+		models = preparationAgentModels{stateRoot: stateRoot}
+	}
+	return preparationapp.NewService(repository, preparationClock{now}, preparationOperationIDs{operationID}, direct, gateway, evidence, models), nil
 }
 
 type preparationClock struct{ now func() time.Time }

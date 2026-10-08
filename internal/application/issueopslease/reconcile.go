@@ -25,15 +25,16 @@ type ReconcileResult struct {
 type ReconcileService struct {
 	repository ReconcileRepository
 	stages     ReconcileStageExecutor
+	roleAgents RoleAgentArgs
 }
 
-func NewReconcileService(repository ReconcileRepository, stages ReconcileStageExecutor) *ReconcileService {
-	return &ReconcileService{repository: repository, stages: stages}
+func NewReconcileService(repository ReconcileRepository, stages ReconcileStageExecutor, roleAgents RoleAgentArgs) *ReconcileService {
+	return &ReconcileService{repository: repository, stages: stages, roleAgents: roleAgents}
 }
 
 func (s *ReconcileService) Reconcile(ctx context.Context, request ReconcileRequest) (ReconcileResult, error) {
 	base := ReconcileResult{ID: request.ID}
-	if s == nil || s.repository == nil || s.stages == nil {
+	if s == nil || s.repository == nil || s.stages == nil || s.roleAgents == nil {
 		return base, fmt.Errorf("reconcile service dependencies are required")
 	}
 	intent, err := s.repository.Canonicalize(ctx, request.ID)
@@ -95,11 +96,15 @@ func (s *ReconcileService) executePlan(ctx context.Context, intent ReconcileInte
 	case leasedomain.ReconcileStageAdopt:
 		return intent, inventory.Candidates[plan.CandidateIndex], nil
 	case leasedomain.ReconcileStageInvoke:
+		roleAgentArgs, err := s.terminalRoleAgentArgs(ctx, intent)
+		if err != nil {
+			return intent, leasecontract.ReconcileStageReceipt{}, err
+		}
 		invoking, err := s.repository.MarkInvoking(ctx, intent)
 		if err != nil {
 			return intent, leasecontract.ReconcileStageReceipt{}, err
 		}
-		receipt, failureState, err := s.stages.Invoke(ctx, invoking)
+		receipt, failureState, err := s.stages.Invoke(ctx, invoking, roleAgentArgs)
 		if err == nil {
 			return invoking, receipt, nil
 		}
@@ -119,6 +124,20 @@ func (s *ReconcileService) executePlan(ctx context.Context, intent ReconcileInte
 	default:
 		return intent, leasecontract.ReconcileStageReceipt{}, fmt.Errorf("unsupported reconcile stage action %q", plan.Action)
 	}
+}
+
+// terminalRoleAgentArgs runs before MarkInvoking. A settings error leaves the
+// intent not_invoked_proven, so the same reconcile retries after the fix.
+// A prepare intent has no Orca binding yet, so the sealed probe names the host.
+func (s *ReconcileService) terminalRoleAgentArgs(ctx context.Context, intent ReconcileIntentState) ([]string, error) {
+	if intent.Stage != terminalStage {
+		return nil, nil
+	}
+	args, err := s.roleAgents(ctx, intent.ProbeHost, intent.ProbeRepo)
+	if err != nil {
+		return nil, fmt.Errorf("resolve role agents before the Orca terminal launch: %w", err)
+	}
+	return args, nil
 }
 
 func (s *ReconcileService) failed(ctx context.Context, result ReconcileResult, cause error) (ReconcileResult, error) {

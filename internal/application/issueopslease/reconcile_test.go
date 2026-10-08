@@ -59,13 +59,14 @@ func (f *reconcileRepositoryFake) Latest(context.Context, string) (leasecontract
 }
 
 type reconcileStageExecutorFake struct {
-	inventory    leasecontract.ReconcileStageInventory
-	attempted    bool
-	inspectErr   error
-	invokeErr    error
-	failureState string
-	inspectCalls int
-	invokeCalls  int
+	inventory     leasecontract.ReconcileStageInventory
+	attempted     bool
+	inspectErr    error
+	invokeErr     error
+	failureState  string
+	inspectCalls  int
+	invokeCalls   int
+	roleAgentArgs []string
 }
 
 func (f *reconcileStageExecutorFake) Inspect(context.Context, ReconcileIntentState) (leasecontract.ReconcileStageInventory, bool, error) {
@@ -73,15 +74,16 @@ func (f *reconcileStageExecutorFake) Inspect(context.Context, ReconcileIntentSta
 	return f.inventory, f.attempted, f.inspectErr
 }
 
-func (f *reconcileStageExecutorFake) Invoke(context.Context, ReconcileIntentState) (leasecontract.ReconcileStageReceipt, string, error) {
+func (f *reconcileStageExecutorFake) Invoke(_ context.Context, _ ReconcileIntentState, roleAgentArgs []string) (leasecontract.ReconcileStageReceipt, string, error) {
 	f.invokeCalls++
+	f.roleAgentArgs = roleAgentArgs
 	return leasecontract.ReconcileStageReceipt{TaskID: "task-1"}, f.failureState, f.invokeErr
 }
 
 func TestReconcileServiceAdoptsOneCandidateAndAdvancesOneStage(t *testing.T) {
 	repository := reconcileRepositoryFixture("run_bind", "unknown", 1)
 	stages := &reconcileStageExecutorFake{attempted: true, inventory: leasecontract.ReconcileStageInventory{Candidates: []leasecontract.ReconcileStageReceipt{{RunID: "run-1", RunBound: true}}}}
-	result, err := NewReconcileService(repository, stages).Reconcile(context.Background(), ReconcileRequest{ID: "io-1"})
+	result, err := NewReconcileService(repository, stages, noRoleAgents).Reconcile(context.Background(), ReconcileRequest{ID: "io-1"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +98,7 @@ func TestReconcileServiceAdoptsOneCandidateAndAdvancesOneStage(t *testing.T) {
 func TestReconcileServiceInvokesOnlyProvenSafeZero(t *testing.T) {
 	repository := reconcileRepositoryFixture("task_create", "not_invoked_proven", 1)
 	stages := &reconcileStageExecutorFake{attempted: true, inventory: leasecontract.ReconcileStageInventory{AuthoritativeZero: true}}
-	result, err := NewReconcileService(repository, stages).Reconcile(context.Background(), ReconcileRequest{ID: "io-1"})
+	result, err := NewReconcileService(repository, stages, noRoleAgents).Reconcile(context.Background(), ReconcileRequest{ID: "io-1"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +115,7 @@ func TestReconcileServiceInvokesOnlyProvenSafeZero(t *testing.T) {
 func TestReconcileServiceClearsAnUnknownOutcomeWithNoResource(t *testing.T) {
 	repository := reconcileRepositoryFixture("task_create", "unknown", 1)
 	stages := &reconcileStageExecutorFake{attempted: true, inventory: leasecontract.ReconcileStageInventory{AuthoritativeZero: true}}
-	result, err := NewReconcileService(repository, stages).Reconcile(context.Background(), ReconcileRequest{ID: "io-1"})
+	result, err := NewReconcileService(repository, stages, noRoleAgents).Reconcile(context.Background(), ReconcileRequest{ID: "io-1"})
 	if err != nil {
 		t.Fatalf("자원이 없음이 확정된 intent는 수렴해야 한다: %v", err)
 	}
@@ -140,7 +142,7 @@ func TestReconcileServiceClearsAnUnknownOutcomeWithNoResource(t *testing.T) {
 func TestReconcileServiceStillPreservesANonAuthoritativeZero(t *testing.T) {
 	repository := reconcileRepositoryFixture("task_create", "unknown", 1)
 	stages := &reconcileStageExecutorFake{attempted: true, inventory: leasecontract.ReconcileStageInventory{AuthoritativeZero: false}}
-	result, err := NewReconcileService(repository, stages).Reconcile(context.Background(), ReconcileRequest{ID: "io-1"})
+	result, err := NewReconcileService(repository, stages, noRoleAgents).Reconcile(context.Background(), ReconcileRequest{ID: "io-1"})
 	if err == nil || !strings.Contains(err.Error(), "non-authoritative zero") {
 		t.Fatalf("비authoritative zero는 계속 보존돼야 한다: %v", err)
 	}
@@ -155,7 +157,7 @@ func TestReconcileServiceSurfacesAFailedClear(t *testing.T) {
 	repository := reconcileRepositoryFixture("task_create", "unknown", 1)
 	repository.clearErr = errors.New("state moved under the clear")
 	stages := &reconcileStageExecutorFake{attempted: true, inventory: leasecontract.ReconcileStageInventory{AuthoritativeZero: true}}
-	result, err := NewReconcileService(repository, stages).Reconcile(context.Background(), ReconcileRequest{ID: "io-1"})
+	result, err := NewReconcileService(repository, stages, noRoleAgents).Reconcile(context.Background(), ReconcileRequest{ID: "io-1"})
 	if err == nil || !strings.Contains(err.Error(), "state moved under the clear") {
 		t.Fatalf("제거 실패는 표면화돼야 한다: %v", err)
 	}
@@ -175,7 +177,7 @@ func TestReconcileServiceDisclosesOnlyActualInspectionAttempt(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			repository := reconcileRepositoryFixture("task_create", "not_invoked_proven", 0)
 			stages := &reconcileStageExecutorFake{attempted: test.attempted, inspectErr: errors.New("inspect failed")}
-			result, err := NewReconcileService(repository, stages).Reconcile(context.Background(), ReconcileRequest{ID: "io-1"})
+			result, err := NewReconcileService(repository, stages, noRoleAgents).Reconcile(context.Background(), ReconcileRequest{ID: "io-1"})
 			if err == nil || result.ExternalStateInspected != test.attempted {
 				t.Fatalf("result=%#v err=%v", result, err)
 			}
@@ -194,7 +196,7 @@ func TestReconcileServiceCanonicalizationFailsBeforeInspection(t *testing.T) {
 	repository := reconcileRepositoryFixture("task_create", "not_invoked_proven", 0)
 	repository.canonicalErr = errors.New("unsafe marker")
 	stages := &reconcileStageExecutorFake{}
-	result, err := NewReconcileService(repository, stages).Reconcile(context.Background(), ReconcileRequest{ID: "io-1"})
+	result, err := NewReconcileService(repository, stages, noRoleAgents).Reconcile(context.Background(), ReconcileRequest{ID: "io-1"})
 	if err == nil || result.Code != "orca_intent_invalid" || result.ExternalStateInspected || stages.inspectCalls != 0 {
 		t.Fatalf("result=%#v inspect=%d err=%v", result, stages.inspectCalls, err)
 	}

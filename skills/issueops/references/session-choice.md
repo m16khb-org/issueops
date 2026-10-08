@@ -377,6 +377,10 @@ IssueOps lease나 `direct|orca` mode를 소유하지 않는다. 실제 Herdr 호
      호스트의 설치된 help에서 확인한 경우에만 같은 `--` 뒤에 추가한다.
      성공 후에도 `herdr agent read "$AGENT_NAME" --source visible`로 입력창을 확인한 뒤
      `herdr agent prompt "$AGENT_NAME" "$HANDOFF"`로 한 번 전달한다.
+   - Claude Code와 Codex의 모델·effort는 `issueops model resolve --host "$HOST" --role implement
+     --agents --json`의 `model`·`effort`를 쓴다(child cycle은 `--role child-implement`). 역할
+     서브에이전트는 같은 응답의 `agent_args`를 같은 `--` 뒤에 원소 그대로 붙인다. Orca·cmux 인계와
+     같은 인자이며, 다시 인용하거나 합치지 않는다.
    - Omo: Herdr 0.9.0의 kind 목록에는 `omo`가 없다. `pi`나 `omp`, Claude로 대체하지
      않는다. `omo --model … --thinking … --permission-preset full-access -- "$HANDOFF"`처럼 설치된 CLI가 지원하는
      **새 interactive 세션과 초기 프롬프트**를 하나의 shell 명령으로 구성하여

@@ -80,6 +80,7 @@ func (r *ReconcileRepository) Canonicalize(ctx context.Context, id string) (leas
 			OperationID: operationID, Stage: string(intent.Stage), InvocationState: intent.InvocationState,
 			InvocationAttempts: intent.InvocationAttempts,
 			RecordRaw:          append([]byte(nil), recordRaw...), IntentRaw: append([]byte(nil), intentRaw...),
+			ProbeHost: intent.Probe.Host, ProbeRepo: intent.Probe.Repo,
 		}
 		return nil
 	})

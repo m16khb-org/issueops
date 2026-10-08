@@ -1,73 +1,86 @@
+// Package agentmodel resolves which model and effort each IssueOps role runs
+// with, per native host.
 package agentmodel
 
-import "strings"
+import (
+	"slices"
 
-const (
-	// IssueOps implementer(하위 세션 execution owner)의 host별 기본 모델.
-	// execution prepare가 --owner-model/--owner-effort 미지정 호출에 적용한다.
-	ImplementerModelCodex  = "gpt-6.1-sol"
-	ImplementerEffortCodex = "high"
-	// Claude Code 자동 체인은 Opus 5.5 planner가 계획·리뷰하고 Sonnet 5.5
-	// implementer가 실행한다.
-	ImplementerModelClaude = "claude-sonnet-5-5"
-	// claude CLI의 --effort <level> 플래그 실지원을 확인함(2026-07-24).
-	// 플래그가 제거되면 ownerAgentCommand(adapter/orca/client.go)의 claude
-	// 분기에서 effort 인자를 조건부 생략으로 되돌린다.
-	ImplementerEffortClaude = "high"
-	ImplementerModelOmo     = "chatgpt-subscription/gpt-6-sol"
-	ImplementerEffortOmo    = "max"
+	contract "issueops/internal/contract/agentmodel"
 )
 
-func ImplementerDefaults(host string) (model string, effort string, ok bool) {
-	switch host {
-	case "codex":
-		return ImplementerModelCodex, ImplementerEffortCodex, true
-	case "claude":
-		return ImplementerModelClaude, ImplementerEffortClaude, true
-	case "omo":
-		return ImplementerModelOmo, ImplementerEffortOmo, true
-	default:
-		return "", "", false
-	}
+// docsOnlyReviewEffort is the review effort for documentation-only changes
+// when the user has not configured one.
+const docsOnlyReviewEffort = "medium"
+
+var roles = []contract.Role{
+	contract.RoleImplement, contract.RoleChildImplement, contract.RolePlanReview, contract.RoleDiffReview,
+	contract.RoleReviewEscalate, contract.RoleResearch, contract.RoleReaderCheck,
 }
 
-// PlannerDefaults selects the model for planning and independent gate reviews.
-func PlannerDefaults(host string) (model, effort string, ok bool) {
-	switch host {
-	case "codex":
-		return "gpt-6-astra", "xhigh", true
-	case "claude":
-		return "claude-opus-5-5", "high", true
-	case "omo":
-		return "chatgpt-subscription/gpt-6-astra", "max", true
-	default:
-		return "", "", false
-	}
+// Roles returns every role in display order.
+func Roles() []contract.Role { return slices.Clone(roles) }
+
+func knownRole(role contract.Role) bool { return slices.Contains(roles, role) }
+
+// configurableHosts are the hosts a settings file may configure. omo keeps
+// its built-in defaults.
+var configurableHosts = []string{"claude", "codex"}
+
+// Effort ladders, lowest first. The empty effort means "do not pass one".
+var effortLadders = map[string][]string{
+	"claude": {"low", "medium", "high", "xhigh", "max"},
+	"codex":  {"minimal", "low", "medium", "high", "xhigh", "max"},
+	"omo":    {"off", "minimal", "low", "medium", "high", "xhigh", "max"},
 }
 
-const ReviewEffortDocsOnly = "medium"
+// KnownHost reports whether host has an effort ladder and built-in defaults.
+func KnownHost(host string) bool { return effortLadders[host] != nil }
 
-// ReviewEffortForTier lowers effort only for documentation-only changes.
-func ReviewEffortForTier(host, tier string) string {
-	_, effort, ok := PlannerDefaults(host)
-	if !ok {
-		return ""
-	}
-	if strings.TrimSpace(tier) == "docs-only" {
-		return ReviewEffortDocsOnly
-	}
-	return effort
+// SupportsEffort reports whether host accepts effort. The empty effort is
+// accepted for every known host.
+func SupportsEffort(host, effort string) bool {
+	ladder := effortLadders[host]
+	return ladder != nil && (effort == "" || slices.Contains(ladder, effort))
 }
 
-// ResearchDefaults is for bounded, read-only research, never gate reviews.
-// Returning a model does not authorize delegating work to another agent.
-func ResearchDefaults(host string) (model, effort string, ok bool) {
-	switch host {
-	case "codex":
-		return "gpt-6-luna", "medium", true
-	case "omo":
-		return "chatgpt-subscription/gpt-6-luna", "medium", true
-	default:
-		return "", "", false
+// stepEffort raises effort one rung and stops at the top of the ladder.
+func stepEffort(host, effort string) string {
+	ladder := effortLadders[host]
+	i := slices.Index(ladder, effort)
+	if i < 0 || i == len(ladder)-1 {
+		return effort
 	}
+	return ladder[i+1]
+}
+
+// builtins holds the roles with their own defaults. child-implement and
+// review-escalate are derived from implement and diff-review. Fable never
+// appears here: it is a manual-only choice.
+var builtins = map[string]map[contract.Role]contract.Layer{
+	"claude": {
+		contract.RoleImplement:   {Model: "claude-opus-5-5", Effort: "high"},
+		contract.RolePlanReview:  {Model: "claude-opus-5-5", Effort: "high"},
+		contract.RoleDiffReview:  {Model: "claude-opus-5-5", Effort: "high"},
+		contract.RoleResearch:    {Model: "claude-sonnet-5-5", Effort: "medium"},
+		contract.RoleReaderCheck: {Model: "claude-haiku-5-5", Effort: "medium"},
+	},
+	"codex": {
+		contract.RoleImplement:   {Model: "gpt-6.1-sol", Effort: "high"},
+		contract.RolePlanReview:  {Model: "gpt-6-astra", Effort: "high"},
+		contract.RoleDiffReview:  {Model: "gpt-6-astra", Effort: "high"},
+		contract.RoleResearch:    {Model: "gpt-6-luna", Effort: "medium"},
+		contract.RoleReaderCheck: {Model: "gpt-6-luna", Effort: "low"},
+	},
+	"omo": {
+		contract.RoleImplement:  {Model: "chatgpt-subscription/gpt-6-sol", Effort: "max"},
+		contract.RolePlanReview: {Model: "chatgpt-subscription/gpt-6-astra", Effort: "max"},
+		contract.RoleDiffReview: {Model: "chatgpt-subscription/gpt-6-astra", Effort: "max"},
+		contract.RoleResearch:   {Model: "chatgpt-subscription/gpt-6-luna", Effort: "medium"},
+	},
+}
+
+// builtinLayer returns the built-in layer of a role that has its own default.
+func builtinLayer(host string, role contract.Role) (contract.Layer, bool) {
+	layer, ok := builtins[host][role]
+	return layer, ok
 }

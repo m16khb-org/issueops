@@ -1393,7 +1393,7 @@ func addCompleteProbeLeafHelp(runner *fakeRunner) {
 	runner.responses["orca orchestration run-current --json"] = CommandOutput{Stdout: []byte(`{"ok":true,"result":{"run":null},"_meta":{"runtimeId":"runtime-1"}}`)}
 	runner.responses["orca orchestration run-list --json"] = fixtureOutput(runner.t, "run_list.json")
 	runner.responses["codex --help"] = CommandOutput{Stdout: []byte("--model --config --dangerously-bypass-hook-trust --dangerously-bypass-approvals-and-sandbox")}
-	runner.responses["claude --help"] = CommandOutput{Stdout: []byte("--model --dangerously-skip-permissions")}
+	runner.responses["claude --help"] = CommandOutput{Stdout: []byte("--model --dangerously-skip-permissions --agents")}
 	runner.responses["omo --help"] = CommandOutput{Stdout: []byte("--model")}
 }
 

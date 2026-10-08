@@ -387,6 +387,7 @@ func (p *ExecutionProvisioner) invokeIntent(ctx context.Context, req port.Execut
 		created, err := p.client.CreateTerminal(ctx, port.OrcaCreateTerminalRequest{
 			WorktreeID: req.Prepared.WorktreeID, Agent: req.Probe.Host, Model: req.Probe.Model, ReasoningEffort: req.Probe.Effort,
 			Title: req.Marker, AllowCodexHookTrustBypass: req.Probe.Host == "codex",
+			ExtraArgs: req.RoleAgentArgs,
 		})
 		if err != nil {
 			return port.ExecutionOrcaIntentReceipt{}, err

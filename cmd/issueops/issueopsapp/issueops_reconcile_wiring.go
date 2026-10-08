@@ -48,6 +48,7 @@ func newIssueOpsReconcileService(stateRoot string, provisioner port.ExecutionOrc
 	return leaseapp.NewReconcileService(
 		leaseoutbound.NewReconcileRepositoryWithSnapshot(db, effects, expected, policy.RedactDiagnostic, now),
 		leaseoutbound.NewReconcileStageExecutor(effects.inspectStage, effects.invokeStage),
+		stateRoleAgentArgs(stateRoot),
 	), nil
 }
 
@@ -84,7 +85,7 @@ func (e *coreReconcileEffects) inspectStage(ctx context.Context, intent leaseapp
 	return result, true, nil
 }
 
-func (e *coreReconcileEffects) invokeStage(ctx context.Context, intent leaseapp.ReconcileIntentState) (leasecontract.ReconcileStageReceipt, string, error) {
+func (e *coreReconcileEffects) invokeStage(ctx context.Context, intent leaseapp.ReconcileIntentState, roleAgentArgs []string) (leasecontract.ReconcileStageReceipt, string, error) {
 	if e.provisioner == nil {
 		return leasecontract.ReconcileStageReceipt{}, "unknown", fmt.Errorf("Orca intent reconciliation is unavailable")
 	}
@@ -92,6 +93,7 @@ func (e *coreReconcileEffects) invokeStage(ctx context.Context, intent leaseapp.
 	if err != nil {
 		return leasecontract.ReconcileStageReceipt{}, "unknown", err
 	}
+	request.RoleAgentArgs = roleAgentArgs
 	receipt, err := e.provisioner.InvokeIntent(ctx, request)
 	if err != nil {
 		invocation := "unknown"

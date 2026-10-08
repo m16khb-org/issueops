@@ -47,6 +47,8 @@ issueops remote render-template --kind issue --template implementation_task \
 # 2. 작성. references/readable-body.md의 구조·용어 변환표를 따라 골격을 채운다.
 # 3. 본문 초안에 fluent-korean 스킬을 호출해 다듬는다(Skill 도구).
 # 4. 독자 검토(권장). 맥락 없는 subagent에게 제목과 본문만 주고 네 질문에 답하게 한다.
+#    모델은 reader-check 역할이다. Orca가 띄운 세션이면 issueops-reader-check 서브에이전트를 쓴다.
+issueops model resolve --host "$HOST" --role reader-check --json   # .model, .effort, .argv
 
 # 5. preview. 응답의 readability.critical이 비어 있어야 confirm이 통과한다.
 issueops remote <verb> --id "$ISSUEOPS_ID" ... --body-file "$BODY_FILE" --json

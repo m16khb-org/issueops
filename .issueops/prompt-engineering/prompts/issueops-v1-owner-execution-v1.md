@@ -29,10 +29,12 @@ adapter는 아래 placeholder를 모두 결정적 문자열로 치환한 뒤 pro
 | `{OWNER_HOST}` | `codex`, `claude` 또는 `omo` |
 | `{OWNER_MODEL}` | coordinator가 명시한 실제 launch model; direct이면 현재 model 설명 |
 | `{OWNER_EFFORT}` | host-supported effort 또는 빈 문자열 |
-| `{REVIEWER_MODEL}` | 구현 diff design-review 리뷰 전용 planner급 모델(host별 기본값) |
+| `{REVIEWER_MODEL}` | 구현 diff design-review 리뷰 모델(`diff-review` 역할을 agent model 설정으로 해석한 값) |
 | `{REVIEWER_EFFORT}` | planner급 리뷰 effort 또는 빈 문자열 |
 | `{RESEARCH_MODEL}` | 허용된 읽기 전용 조사 모델 또는 빈 문자열. 구현·계획 확정·게이트 판정에 사용하지 않음 |
 | `{RESEARCH_EFFORT}` | 조사 모델 effort 또는 빈 문자열 |
+| `{READER_CHECK_MODEL}` | 본문 독자 검토 모델 또는 빈 문자열 |
+| `{READER_CHECK_EFFORT}` | 독자 검토 모델 effort 또는 빈 문자열 |
 | `{VERIFY_BRANCH_LINK_COMMAND}` | provider branch link 확인 후 봉인 topology를 보존하며 link_verified를 기록하는 exact governed command |
 | `{LINK_PLAN_COMMAND}` | staged plan을 lifecycle에 연결하는 exact governed command |
 | `{COMPATIBILITY_REVIEW_COMMAND}` | 구현 전 backward compatibility, side effect, rollback, verification을 기록하는 exact governed command |
@@ -94,6 +96,7 @@ canonical isolated worktree만 구현한다. coordinator의 응답이나 생존�
 - reviewer_effort={REVIEWER_EFFORT} (준비 당시 기본값)
 - research_model={RESEARCH_MODEL}
 - research_effort={RESEARCH_EFFORT}
+- reader_check_model={READER_CHECK_MODEL} ({READER_CHECK_EFFORT})
 - source_root={SOURCE_ROOT}
 - worktree_root={WORKTREE_ROOT}
 - observable_worktree_base={WORKTREE_BASE}
@@ -108,6 +111,7 @@ canonical isolated worktree만 구현한다. coordinator의 응답이나 생존�
   독립적인 읽기 전용 탐색·자료 요약에 해당 모델과 research_effort를 사용한다.
 - 조사 모델에 구현, 계획 확정, 승인·리뷰 게이트 판정을 맡기지 않는다. 조사 결과는 owner가
   근거를 확인한 뒤 사용한다. 모델 기본값 자체가 서브에이전트 실행을 승인하지는 않는다.
+- reader_check_model은 issue·PR/MR 본문을 처음 읽는 독자로 검토할 때만 쓴다.
 
 시작 절차:
 1. cwd와 `git rev-parse --show-toplevel`, `git branch --show-current`, `git rev-parse HEAD`,
@@ -220,8 +224,10 @@ publication과 종료:
    `issueops next --id {LIFECYCLE_ID} --json`을 읽는다. 현재 `.review.model`, `.review.effort`,
    `.review.tier`, `.review.lenses`를 `issueops-review`에 전달해 fresh 컨텍스트에서 구현 diff의
    design-review 적대 리뷰를 수행한다. 조회 실패나 review 값 누락은 준비 당시 기본값으로
-   대체하지 않고 `issueops-review`의 중단 규칙을 따른다. 명시적 reviewer 지정과 라운드 상승도
-   그 스킬을 따르며 owner_model/owner_effort 지정은 reviewer override가 아니다.
+   대체하지 않고 `issueops-review`의 중단 규칙을 따른다. 3~5라운드 상승은
+   `issueops model resolve --host {OWNER_HOST} --role diff-review --round <N> --json`이 돌려준
+   model과 effort를 쓰고, 명시적 reviewer 지정은 그 스킬을 따른다. owner_model/owner_effort
+   지정은 reviewer override가 아니다.
    실제 verdict와 findings/evidence를 다음 command로 기록한다. `<REVIEWER_MODEL>`과
    `<REVIEWER_EFFORT>`는 라운드 상승을 적용한 뒤 실제 리뷰 실행에 넘긴 값으로 shell-quote해
    채운다. 실행값과 기록값이 같아야 한다. verdict가 `revise`면 지적을 수정하고,

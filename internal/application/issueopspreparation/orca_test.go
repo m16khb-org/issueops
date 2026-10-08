@@ -9,7 +9,6 @@ import (
 
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
-	"issueops/internal/domain/agentmodel"
 	preparationdomain "issueops/internal/domain/issueopspreparation"
 )
 
@@ -59,8 +58,8 @@ func TestOrcaPreviewAcceptsOmoOwner(t *testing.T) {
 	fixture := newOrcaApplicationFixture()
 	command := orcaCommand(false, preparationcontract.ModeOrca)
 	command.OwnerHost = "omo"
-	command.OwnerModel = agentmodel.ImplementerModelOmo
-	command.OwnerEffort = agentmodel.ImplementerEffortOmo
+	command.OwnerModel = "chatgpt-subscription/gpt-6-sol"
+	command.OwnerEffort = "max"
 
 	result, err := fixture.service.Prepare(context.Background(), command)
 	if err != nil {
@@ -220,11 +219,12 @@ type orcaApplicationFixture struct {
 	repository *orcaApplicationRepositoryFake
 	gateway    *orcaApplicationGatewayFake
 	evidence   *orcaApplicationEvidenceFake
+	models     *agentModelsFake
 	service    *Service
 }
 
 func newOrcaApplicationFixture() *orcaApplicationFixture {
-	fixture := &orcaApplicationFixture{}
+	fixture := &orcaApplicationFixture{models: &agentModelsFake{}}
 	record := leasecontract.Record{
 		SchemaVersion: 1, ID: "io-orca", Repo: "/repo", Branch: "199-orca", Phase: "implement",
 		IssueURL:      "https://github.com/example/repo/issues/199",
@@ -243,13 +243,13 @@ func newOrcaApplicationFixture() *orcaApplicationFixture {
 		owner:     preparationcontract.OwnerEvidence{IssueURL: record.IssueURL, IssueBody: "body", BodySHA256: strings.Repeat("a", 64), Source: "github"},
 	}
 	direct := &applicationDirectFake{trace: &fixture.trace, access: preparationcontract.AccessResult{Allowed: true}, receipt: preparationcontract.WorkspaceReceipt{SourceRoot: "/repo", Root: "/repo.worktrees/199-orca", Branch: "199-orca", BaseHead: "base", Driver: "git"}}
-	fixture.service = NewService(fixture.repository, &applicationClockFake{trace: &fixture.trace}, &orcaOperationIDFake{trace: &fixture.trace}, direct, fixture.gateway, fixture.evidence)
+	fixture.service = NewService(fixture.repository, &applicationClockFake{trace: &fixture.trace}, &orcaOperationIDFake{trace: &fixture.trace}, direct, fixture.gateway, fixture.evidence, fixture.models)
 	return fixture
 }
 
 func orcaCommand(confirm bool, mode string) preparationcontract.Command {
 	command := preparationcontract.Command{
-		ID: "io-orca", Mode: mode, CWD: "/repo", OwnerHost: "codex", OwnerModel: agentmodel.ImplementerModelCodex, OwnerEffort: agentmodel.ImplementerEffortCodex, Confirm: confirm,
+		ID: "io-orca", Mode: mode, CWD: "/repo", OwnerHost: "codex", OwnerModel: "gpt-6.1-sol", OwnerEffort: "high", Confirm: confirm,
 		Actor: leasecontract.Actor{Host: "codex", SessionID: "session", SessionProcess: &leasecontract.ProcessReceipt{PID: 42, StartedAt: "start", Executable: "/bin/codex"}},
 	}
 	if confirm {
@@ -358,6 +358,7 @@ type orcaApplicationGatewayFake struct {
 	candidateStage   preparationcontract.IntentStage
 	firstEffectIndex int
 	probeErr         error
+	invoked          []preparationcontract.IntentRequest
 }
 
 func (fake *orcaApplicationGatewayFake) Probe(context.Context, preparationcontract.ProbeRequest) (preparationcontract.ProbeResult, error) {
@@ -376,6 +377,7 @@ func (fake *orcaApplicationGatewayFake) Inspect(_ context.Context, request prepa
 }
 func (fake *orcaApplicationGatewayFake) Invoke(_ context.Context, request preparationcontract.IntentRequest) (preparationcontract.IntentReceipt, error) {
 	*fake.trace = append(*fake.trace, "invoke:"+string(request.Stage))
+	fake.invoked = append(fake.invoked, request)
 	if fake.firstEffectIndex < 0 {
 		fake.firstEffectIndex = len(*fake.trace) - 1
 	}
@@ -473,7 +475,7 @@ func countTracePrefix(trace []string, prefix string) int {
 func TestPreparationPreviewPinsModelDefaultsAndPreservesOverrides(t *testing.T) {
 	for _, tc := range []struct{ host, model, effort, inputModel, inputEffort string }{
 		{" Codex ", "gpt-6.1-sol", "high", "", ""},
-		{"claude", "claude-sonnet-5-5", "high", "", ""},
+		{"claude", "claude-opus-5-5", "high", "", ""},
 		{"omo", "chatgpt-subscription/gpt-6-sol", "max", "", ""},
 		{"codex", "explicit-model", "low", " explicit-model ", " low "},
 		{"codex", "explicit-model", "high", "explicit-model", ""},

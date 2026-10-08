@@ -497,10 +497,10 @@ func executionOwnerReportLabels(report string) []string {
 
 // Prepare metadata preserves model roles; the review command receives runtime values.
 func TestOwnerArtifactsRouteModelRoles(t *testing.T) {
-	for _, tc := range []struct{ host, reviewer, effort, research, researchEffort string }{
-		{"codex", "gpt-6-astra", "xhigh", "gpt-6-luna", "medium"},
-		{"claude", "claude-opus-5-5", "high", "", ""},
-		{"omo", "chatgpt-subscription/gpt-6-astra", "max", "chatgpt-subscription/gpt-6-luna", "medium"},
+	for _, tc := range []struct{ host, reviewer, effort, research, researchEffort, reader, readerEffort string }{
+		{"codex", "gpt-6-astra", "high", "gpt-6-luna", "medium", "gpt-6-luna", "low"},
+		{"claude", "claude-opus-5-5", "high", "claude-sonnet-5-5", "medium", "claude-haiku-5-5", "medium"},
+		{"omo", "chatgpt-subscription/gpt-6-astra", "max", "chatgpt-subscription/gpt-6-luna", "medium", "", ""},
 	} {
 		t.Run(tc.host, func(t *testing.T) {
 			record, req := ownerPacketFixture()
@@ -536,6 +536,17 @@ func TestOwnerArtifactsRouteModelRoles(t *testing.T) {
 				if !strings.Contains(artifacts.prompt, key+"="+want) {
 					t.Errorf("prompt lost %s=%s", key, want)
 				}
+			}
+			for key, want := range map[string]string{"reader_check_model": tc.reader, "reader_check_effort": tc.readerEffort} {
+				if got, _ := packet[key].(string); got != want {
+					t.Errorf("packet %s=%q want %q", key, got, want)
+				}
+			}
+			if line := "reader_check_model=" + tc.reader + " (" + tc.readerEffort + ")"; !strings.Contains(artifacts.prompt, line) {
+				t.Errorf("prompt lost %s", line)
+			}
+			if !strings.Contains(artifacts.prompt, "issueops model resolve --host "+tc.host+" --role diff-review --round <N> --json") {
+				t.Error("prompt must route review rounds 3 to 5 through issueops model resolve --round")
 			}
 			commands := packet["commands"].(map[string]any)
 			if !strings.Contains(commands["implementation_review"].(string), "--reviewer-model <REVIEWER_MODEL> --reviewer-effort <REVIEWER_EFFORT>") {

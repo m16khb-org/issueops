@@ -180,7 +180,7 @@ func newDirectServiceFixture() *directServiceFixture {
 	fixture.repository = &applicationRepositoryFake{trace: &fixture.trace, snapshot: preparationcontract.Snapshot{Record: record, RecordRaw: []byte("raw"), ArtifactDir: ".issueops/issues/199/artifact"}}
 	fixture.direct = &applicationDirectFake{trace: &fixture.trace, access: preparationcontract.AccessResult{Allowed: true}, receipt: preparationcontract.WorkspaceReceipt{SourceRoot: "/repo", Root: "/repo.worktrees/199-prepare", Branch: "199-prepare", BaseHead: "base", Driver: "git", Exists: true}}
 	fixture.evidence = &applicationEvidenceFake{trace: &fixture.trace, workspace: preparationcontract.WorkspaceRequest{LifecycleID: record.ID, SourceRoot: record.Repo, Root: "/repo.worktrees/199-prepare", Branch: record.Branch, BaseBranch: "117-parent", BaseHead: "base", Confirm: true}}
-	fixture.service = NewService(fixture.repository, &applicationClockFake{trace: &fixture.trace}, applicationOperationIDFake{}, fixture.direct, applicationOrcaFake{}, fixture.evidence)
+	fixture.service = NewService(fixture.repository, &applicationClockFake{trace: &fixture.trace}, applicationOperationIDFake{}, fixture.direct, applicationOrcaFake{}, fixture.evidence, &agentModelsFake{})
 	return fixture
 }
 

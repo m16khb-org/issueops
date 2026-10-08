@@ -2,26 +2,23 @@ package hostprotocol
 
 import (
 	"fmt"
+	"issueops/internal/domain/agentmodel"
 	"issueops/internal/domain/nativehost"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
-var supportedEfforts = map[string]map[string]bool{
-	"codex":  {"": true, "minimal": true, "low": true, "medium": true, "high": true, "xhigh": true, "max": true},
-	"claude": {"": true, "low": true, "medium": true, "high": true, "xhigh": true, "max": true},
-	"omo":    {"": true, "off": true, "minimal": true, "low": true, "medium": true, "high": true, "xhigh": true, "max": true},
-}
-
 // BuildInteractiveArgv returns the exact native host argv used by terminal
 // launchers. The executable stays caller-supplied and absolute; this function
-// never substitutes cmux's host-specific convenience commands.
-func BuildInteractiveArgv(host, executable, model, effort, prompt string) ([]string, error) {
+// never substitutes cmux's host-specific convenience commands. extra holds
+// launch arguments such as role agents and goes right before "--".
+func BuildInteractiveArgv(host, executable, model, effort, prompt string, extra []string) ([]string, error) {
 	host = strings.ToLower(strings.TrimSpace(host))
 	executable = strings.TrimSpace(executable)
 	model = strings.TrimSpace(model)
 	effort = strings.ToLower(strings.TrimSpace(effort))
-	if supportedEfforts[host] == nil {
+	if !agentmodel.KnownHost(host) {
 		return nil, fmt.Errorf("unsupported native host %q", host)
 	}
 	if !filepath.IsAbs(executable) || filepath.Clean(executable) != executable || strings.ContainsAny(executable, "\x00\r\n") {
@@ -33,7 +30,7 @@ func BuildInteractiveArgv(host, executable, model, effort, prompt string) ([]str
 	if model == "" || strings.HasPrefix(model, "-") || strings.ContainsAny(model, "\x00\r\n") {
 		return nil, fmt.Errorf("native host model is invalid")
 	}
-	if !supportedEfforts[host][effort] {
+	if !agentmodel.SupportsEffort(host, effort) {
 		return nil, fmt.Errorf("native host effort %q is unsupported for %s", effort, host)
 	}
 
@@ -55,5 +52,9 @@ func BuildInteractiveArgv(host, executable, model, effort, prompt string) ([]str
 		}
 		argv = append(argv, "--permission-preset", "full-access")
 	}
+	if slices.ContainsFunc(extra, func(argument string) bool { return argument == "" || strings.ContainsRune(argument, 0) }) {
+		return nil, fmt.Errorf("native host launch argument is empty or contains NUL")
+	}
+	argv = append(argv, extra...)
 	return append(argv, "--", prompt), nil
 }

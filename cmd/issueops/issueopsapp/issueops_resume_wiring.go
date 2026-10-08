@@ -53,6 +53,7 @@ func newIssueOpsResumeService(stateRoot string, provisioner port.ExecutionOrcaPr
 		resumeOperationIDs{},
 		issueOpsActorVerifier(),
 		leaseoutbound.FilesystemPathMatcher{},
+		stateRoleAgentArgs(stateRoot),
 	), nil
 }
 
@@ -113,7 +114,7 @@ func (e *resumeHostAdapter) inspectStage(ctx context.Context, intent leaseapp.Re
 	return result, nil
 }
 
-func (e *resumeHostAdapter) invokeStage(ctx context.Context, intent leaseapp.ResumeIntentState) (leasecontract.ResumeStageReceipt, error) {
+func (e *resumeHostAdapter) invokeStage(ctx context.Context, intent leaseapp.ResumeIntentState, roleAgentArgs []string) (leasecontract.ResumeStageReceipt, error) {
 	if e.provisioner == nil {
 		return leasecontract.ResumeStageReceipt{}, fmt.Errorf("resume Orca provisioner is required")
 	}
@@ -121,6 +122,7 @@ func (e *resumeHostAdapter) invokeStage(ctx context.Context, intent leaseapp.Res
 	if err != nil {
 		return leasecontract.ResumeStageReceipt{}, err
 	}
+	request.RoleAgentArgs = roleAgentArgs
 	receipt, err := e.provisioner.InvokeIntent(ctx, request)
 	if err != nil {
 		return leasecontract.ResumeStageReceipt{}, err

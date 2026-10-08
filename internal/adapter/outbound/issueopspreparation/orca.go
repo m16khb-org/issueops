@@ -106,6 +106,7 @@ func OrcaIntentRequest(request preparationcontract.IntentRequest) port.Execution
 		},
 		TerminalPTYID: request.TerminalPTYID, RunID: request.RunID,
 		RunBound: request.RunBound, TaskID: request.TaskID,
+		RoleAgentArgs: request.RoleAgentArgs,
 	}
 	if request.Prepared != nil {
 		result.Prepared = &port.ExecutionOrcaWorkspaceReceipt{

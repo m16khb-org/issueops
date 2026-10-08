@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	app "issueops/internal/application/issueopsowner"
+	agentmodelcontract "issueops/internal/contract/agentmodel"
 	executionissue "issueops/internal/contract/executionissue"
 	model "issueops/internal/contract/issueops"
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
+	"issueops/internal/domain/agentmodel"
 	domain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
@@ -19,7 +21,14 @@ type executionOwnerSnapshot struct {
 type executionOwnerArtifacts struct{ packetPath, packetSHA256, promptPath, promptSHA256, prompt string }
 
 func ownerContextForTest(root string, read executionissue.ExecutionIssueSnapshotReadFunc) app.Service {
-	return app.Service{Files: OwnerContextFiles{StateRoot: root}, ReadIssue: read, Template: executionOwnerPromptTemplate, ReadRecord: (CycleRecordStore{StateRoot: root}).Load}
+	return app.Service{Files: OwnerContextFiles{StateRoot: root}, ReadIssue: read, Template: executionOwnerPromptTemplate, ReadRecord: (CycleRecordStore{StateRoot: root}).Load, ResolveModel: builtinRoleModel}
+}
+
+// builtinRoleModel resolves roles from built-in defaults only, so owner
+// packet tests never read the developer's settings files.
+func builtinRoleModel(host string, role agentmodelcontract.Role, _ string) (string, string, error) {
+	resolution, err := agentmodel.Resolve(agentmodel.ResolveInput{Host: host, Role: role})
+	return resolution.Model, resolution.Effort, err
 }
 func ReadExecutionPreparationOwnerEvidence(ctx context.Context, root string, snapshot preparationcontract.Snapshot, read executionissue.ExecutionIssueSnapshotReadFunc) (preparationcontract.OwnerEvidence, error) {
 	return ownerContextForTest(root, read).ReadPreparationEvidence(ctx, snapshot)
@@ -32,7 +41,8 @@ func buildExecutionOwnerArtifacts(record model.IssueOpsRecord, req model.Executi
 	return executionOwnerArtifacts{packetPath: out.PacketPath, packetSHA256: out.PacketSHA256, promptPath: out.PromptPath, promptSHA256: out.PromptSHA256, prompt: out.Prompt}, err
 }
 func executionOwnerCommandsFor(record model.IssueOpsRecord, req model.ExecutionPrepareRequest, digest string) model.OwnerCommands {
-	return domain.OwnerCommandsFor(record, req, digest, (OwnerContextFiles{}).Paths(record), app.PolicyContext(record, req))
+	policy, _ := app.PolicyContext(record, req, builtinRoleModel)
+	return domain.OwnerCommandsFor(record, req, digest, (OwnerContextFiles{}).Paths(record), policy)
 }
 func renderExecutionOwnerPrompt(packet model.OwnerContextPacket, path, digest string) (string, error) {
 	return domain.RenderOwnerPrompt(packet, path, digest, executionOwnerPromptTemplate, leasecontract.OwnerArtifactMaxBytes)

@@ -8,6 +8,7 @@ import (
 
 	"issueops/cmd/issueops/channelcli"
 	"issueops/cmd/issueops/gatescli"
+	"issueops/cmd/issueops/modelcli"
 	"issueops/cmd/issueops/rootcmd"
 	clicontract "issueops/internal/contract/cli"
 	guard "issueops/internal/contract/guard"
@@ -63,6 +64,7 @@ func rootCommand() rootcmd.Command {
 			"channel":       runChannel,
 			"web-fetch":     runWebFetch,
 			"mcp":           runMCPCommand,
+			"model":         runModel,
 		},
 		ErrorExitCode: rootSubcommandErrorExitCode,
 	}
@@ -90,6 +92,10 @@ func rootSubcommandErrorExitCode(name string, err error) int {
 	case "channel":
 		if _, ok := errors.AsType[channelcli.TimedOutError](err); ok {
 			return 1
+		}
+	case "model":
+		if _, ok := errors.AsType[modelcli.UsageError](err); ok {
+			return 2
 		}
 	}
 	return 1
