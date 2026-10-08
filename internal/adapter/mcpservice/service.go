@@ -267,8 +267,11 @@ func (s *Service) Status(ctx context.Context) (mcpservice.Status, error) {
 
 // Prepare installs the credential and the supervisor unit without loading it.
 // It returns the bearer so the installer can merge host configs afterwards.
-func (s *Service) Prepare(context.Context) (string, error) {
+func (s *Service) Prepare(ctx context.Context) (string, error) {
 	if _, err := s.requireSupervisor(); err != nil {
+		return "", err
+	}
+	if err := s.supervisor.checkUnitPath(ctx); err != nil {
 		return "", err
 	}
 	bearer, err := s.cfg.EnsureBearer()
@@ -326,7 +329,11 @@ func (s *Service) Start(ctx context.Context) (mcpservice.Status, error) {
 		return observed.status, observed.err
 	}
 	if _, err := s.Prepare(ctx); err != nil {
-		return s.fail(s.result(mcpservice.StatusStopped, 0, "", ""), CodeCredentialFailed, err)
+		code := CodeCredentialFailed
+		if errors.Is(err, errUnitPathNotSearched) {
+			code = CodeSupervisorFailed
+		}
+		return s.fail(s.result(mcpservice.StatusStopped, 0, "", ""), code, err)
 	}
 	if loaded, _, err := s.supervisor.supervised(ctx); err != nil {
 		return s.fail(s.result(mcpservice.StatusStopped, 0, "", ""), CodeSupervisorFailed, err)

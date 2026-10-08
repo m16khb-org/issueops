@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -436,5 +437,114 @@ func TestReadBearerIsReadOnlyAndRejectsSharedFiles(t *testing.T) {
 	}
 	if _, err := ReadBearer(state); err == nil {
 		t.Fatal("group-readable bearer accepted")
+	}
+}
+
+func TestPrepareChecksTheUserManagerUnitSearchPath(t *testing.T) {
+	refused := errors.New("exit status 1")
+	for _, tc := range []struct {
+		name     string
+		goos     string
+		env      func(home string) (string, error)
+		unitPath func(home string) string
+		refuse   bool
+	}{
+		{name: "refuses a HOME the manager does not search", goos: "linux",
+			env: func(string) (string, error) { return "HOME=/home/runner\nPATH=/usr/bin\n", nil }, unitPath: func(string) string { return "/home/runner/.config/systemd/user /etc/systemd/user" }, refuse: true},
+		{name: "writes on a first install from the manager HOME", goos: "linux",
+			env: func(home string) (string, error) { return "HOME=" + home + "\n", nil }},
+		{name: "XDG_CONFIG_HOME decides the expected directory", goos: "linux",
+			env: func(home string) (string, error) {
+				return "HOME=/home/runner\nXDG_CONFIG_HOME=" + filepath.Join(home, ".config") + "\n", nil
+			}},
+		{name: "UnitPath that lists the unit directory passes", goos: "linux",
+			env: func(string) (string, error) { return "HOME=/home/runner\n", nil },
+			unitPath: func(home string) string {
+				return "/home/runner/.config/systemd/user " + filepath.Join(home, ".config", "systemd", "user") + "/ /etc/systemd/user"
+			}},
+		{name: "unreadable manager environment keeps the existing flow", goos: "linux",
+			env: func(string) (string, error) { return "Failed to connect to bus: No medium found", refused }},
+		{name: "manager environment without HOME keeps the existing flow", goos: "linux",
+			env: func(string) (string, error) { return "PATH=/usr/bin\n", nil }},
+		{name: "shell-escaped manager paths keep the existing flow", goos: "linux",
+			env: func(string) (string, error) { return "HOME=$'/home/run ner'\n", nil }},
+		{name: "launchd does not query a user manager", goos: "darwin"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			home, state := t.TempDir(), t.TempDir()
+			var commands []string
+			bearerCalls := 0
+			run := func(_ context.Context, name string, args ...string) ([]byte, error) {
+				command := name + " " + strings.Join(args, " ")
+				commands = append(commands, command)
+				switch command {
+				case "systemctl --user show-environment":
+					out, err := tc.env(home)
+					return []byte(out), err
+				case "systemctl --user show -p UnitPath --value":
+					if tc.unitPath == nil {
+						return []byte("\n"), nil
+					}
+					return []byte(tc.unitPath(home) + "\n"), nil
+				}
+				return nil, fmt.Errorf("unexpected command %q", command)
+			}
+			service := New(Config{
+				GOOS: tc.goos, Home: home, StateDir: state, Root: "/src/issueops", Binary: "/src/issueops/bin/issueops",
+				Address: "127.0.0.1:1", Path: "/mcp", Label: "io.issueops.test", UnitName: "issueops-mcp.service", UID: 501,
+				Run:      run,
+				LookPath: func(name string) (string, error) { return "/bin/" + name, nil },
+				EnsureBearer: func() (string, error) {
+					bearerCalls++
+					return testBearer, os.MkdirAll(httpDir(state), 0o700)
+				},
+			})
+			bearer, err := service.Prepare(t.Context())
+			unit := service.supervisor.unitPath()
+			_, unitErr := os.Stat(unit)
+			_, logErr := os.Stat(filepath.Join(httpDir(state), "server.log"))
+			if tc.refuse {
+				if err == nil {
+					t.Fatalf("Prepare succeeded; commands=%v", commands)
+				}
+				for _, want := range []string{filepath.Dir(unit), "HOME=/home/runner", "/home/runner/.config/systemd/user", "--mcp-transport=stdio"} {
+					if !strings.Contains(err.Error(), want) {
+						t.Fatalf("Prepare error %q missing %q", err, want)
+					}
+				}
+				if bearerCalls != 0 || !errors.Is(unitErr, fs.ErrNotExist) || !errors.Is(logErr, fs.ErrNotExist) {
+					t.Fatalf("refused Prepare wrote state: bearer calls=%d unit=%v log=%v", bearerCalls, unitErr, logErr)
+				}
+				return
+			}
+			if err != nil || bearer != testBearer || unitErr != nil {
+				t.Fatalf("Prepare bearer=%q err=%v unit=%v commands=%v", bearer, err, unitErr, commands)
+			}
+			if tc.goos == "darwin" && len(commands) != 0 {
+				t.Fatalf("launchd Prepare ran %v", commands)
+			}
+		})
+	}
+}
+
+func TestStartReportsUnitPathRefusalAsSupervisorFailed(t *testing.T) {
+	w := newFakeWorld(t)
+	bearerCalls := 0
+	service := New(Config{
+		GOOS: "linux", Home: t.TempDir(), StateDir: w.stateDir, Root: "/src/issueops", Binary: w.binary,
+		Address: freeAddress(t), Path: "/mcp", UnitName: "issueops-mcp.service",
+		Run: func(_ context.Context, name string, args ...string) ([]byte, error) {
+			if command := name + " " + strings.Join(args, " "); command == "systemctl --user show-environment" {
+				return []byte("HOME=/home/runner\n"), nil
+			}
+			return nil, nil
+		},
+		LookPath:     func(name string) (string, error) { return "/bin/" + name, nil },
+		EnsureBearer: func() (string, error) { bearerCalls++; return testBearer, nil },
+		LockHolder:   func(string) (int, error) { return 0, nil },
+	})
+	status, err := service.Start(t.Context())
+	if err == nil || status.Status != mcpservice.StatusStopped || status.ErrorCode != CodeSupervisorFailed || bearerCalls != 0 {
+		t.Fatalf("status=%+v err=%v bearer calls=%d", status, err, bearerCalls)
 	}
 }

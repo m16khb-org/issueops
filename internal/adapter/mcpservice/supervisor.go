@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strconv"
@@ -16,6 +17,10 @@ import (
 type Runner func(ctx context.Context, name string, args ...string) ([]byte, error)
 
 const loadOutputLimit = 2048
+
+// errUnitPathNotSearched marks a supervisor that cannot find the unit it would
+// be given; Start reports it as a supervisor failure, not a credential one.
+var errUnitPathNotSearched = errors.New("is not searched by the running systemd user manager")
 
 // runLoadStep runs one load command and, on failure, names the command and
 // keeps the tail of its output: the exit status alone does not say why the
@@ -36,6 +41,9 @@ func runLoadStep(ctx context.Context, run Runner, name string, args ...string) e
 type supervisor interface {
 	command() string
 	unitPath() string
+	// checkUnitPath fails before anything is written when the supervisor
+	// cannot find unitPath; it stays silent when it cannot tell.
+	checkUnitPath(ctx context.Context) error
 	renderUnit(unit unitSpec) string
 	load(ctx context.Context) error
 	unload(ctx context.Context) error
@@ -64,6 +72,9 @@ func (l launchd) unitPath() string {
 }
 func (l launchd) domain() string { return "gui/" + strconv.Itoa(l.uid) }
 func (l launchd) target() string { return l.domain() + "/" + l.label }
+
+// launchctl bootstrap takes the plist path itself, so any HOME works.
+func (l launchd) checkUnitPath(context.Context) error { return nil }
 
 func (l launchd) renderUnit(spec unitSpec) string {
 	var b strings.Builder
@@ -140,6 +151,44 @@ type systemd struct {
 func (s systemd) command() string { return "systemctl" }
 func (s systemd) unitPath() string {
 	return filepath.Join(s.home, ".config", "systemd", "user", s.unit)
+}
+
+// checkUnitPath compares the unit directory with the search path of the
+// already running user manager, which resolves it from its own HOME rather
+// than the installer's (#550). Only the manager's answer counts: a
+// systemd-analyze run would compute the path from this process's HOME.
+func (s systemd) checkUnitPath(ctx context.Context) error {
+	out, err := s.run(ctx, "systemctl", "--user", "show-environment")
+	if err != nil {
+		return nil
+	}
+	env := map[string]string{}
+	for _, line := range strings.Split(string(out), "\n") {
+		if key, value, ok := strings.Cut(line, "="); ok {
+			env[key] = value
+		}
+	}
+	home, config := env["HOME"], env["XDG_CONFIG_HOME"]
+	// show-environment prints values with special characters as $'...'.
+	if home == "" || strings.HasPrefix(home, "$'") || strings.HasPrefix(config, "$'") {
+		return nil
+	}
+	if config == "" {
+		config = filepath.Join(home, ".config")
+	}
+	dir := filepath.Clean(filepath.Dir(s.unitPath()))
+	if filepath.Join(config, "systemd", "user") == dir {
+		return nil
+	}
+	// UnitPath omits directories that do not exist yet, so it can only
+	// confirm a match, never prove the first install from the same HOME wrong.
+	paths, _ := s.run(ctx, "systemctl", "--user", "show", "-p", "UnitPath", "--value")
+	for _, path := range strings.Fields(string(paths)) {
+		if filepath.Clean(path) == dir {
+			return nil
+		}
+	}
+	return fmt.Errorf("unit directory %s %w (manager HOME=%s, UnitPath=%s); install with the same HOME as the user manager or use --mcp-transport=stdio", dir, errUnitPathNotSearched, home, strings.TrimSpace(string(paths)))
 }
 
 func (s systemd) renderUnit(spec unitSpec) string {
