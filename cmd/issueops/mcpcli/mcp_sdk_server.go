@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"sync"
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
@@ -53,7 +54,11 @@ func sdkToolHandlerWithContext(
 	groupHandler func(context.Context, MCPToolCall) MCPToolOutcome,
 	toolName string,
 ) mcp.ToolHandler {
-	output, outputErr := compileToolOutputSchema(catalog, toolName)
+	// Only structured tools have an output schema; compile it on first use so a
+	// short-lived stdio server does not resolve schemas it never calls.
+	outputSchema := sync.OnceValues(func() (*jsonschema.Resolved, error) {
+		return compileToolOutputSchema(catalog, toolName)
+	})
 	input, inputErr := prepareMCPToolInputSchema(catalog, toolName)
 	return func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var args map[string]any
@@ -103,16 +108,16 @@ func sdkToolHandlerWithContext(
 			b, _ := json.MarshalIndent(outcome.Result, "", "  ")
 			return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: string(b)}}}, nil
 		}
-		b, _ := json.MarshalIndent(outcome.Payload, "", "  ")
+		b, marshalErr := json.MarshalIndent(outcome.Payload, "", "  ")
 		result := &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: string(b)}},
 			IsError: outcome.IsError,
 		}
-		if output != nil || outputErr != nil {
+		if output, outputErr := outputSchema(); output != nil || outputErr != nil {
 			if outcome.IsError {
 				return result, nil
 			}
-			structured, err := validatedStructuredContent(output, outputErr, outcome.Payload)
+			structured, err := validatedStructuredContent(output, outputErr, b, marshalErr)
 			if err != nil {
 				return nil, newProtocolError(-32603, "Invalid tool output", toolName)
 			}
@@ -147,16 +152,15 @@ func compileToolOutputSchema(catalog mcpcontract.Catalog, name string) (*jsonsch
 	return nil, nil
 }
 
-// validatedStructuredContent returns the payload as the JSON object that
-// structuredContent carries, after checking it against the tool's outputSchema.
-// Errors never include the payload.
-func validatedStructuredContent(schema *jsonschema.Resolved, schemaErr error, payload any) (any, error) {
+// validatedStructuredContent returns the payload, already encoded as the text
+// content, as the JSON object that structuredContent carries, after checking it
+// against the tool's outputSchema. Errors never include the payload.
+func validatedStructuredContent(schema *jsonschema.Resolved, schemaErr error, encoded []byte, encodeErr error) (any, error) {
 	if schemaErr != nil {
 		return nil, schemaErr
 	}
-	encoded, err := json.Marshal(payload)
-	if err != nil {
-		return nil, err
+	if encodeErr != nil {
+		return nil, encodeErr
 	}
 	var structured any
 	if err := json.Unmarshal(encoded, &structured); err != nil {
