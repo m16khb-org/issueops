@@ -25,7 +25,7 @@ func (a *ResumeOwnerInventory) Observe(ctx context.Context, record leasecontract
 }
 
 type ResumeStageInspector func(context.Context, leaseapp.ResumeIntentState) (leasecontract.ResumeStageInventory, error)
-type ResumeStageInvoker func(context.Context, leaseapp.ResumeIntentState) (leasecontract.ResumeStageReceipt, error)
+type ResumeStageInvoker func(context.Context, leaseapp.ResumeIntentState, []string) (leasecontract.ResumeStageReceipt, error)
 
 type ResumeStageExecutor struct {
 	inspect ResumeStageInspector
@@ -43,9 +43,9 @@ func (a *ResumeStageExecutor) Inspect(ctx context.Context, intent leaseapp.Resum
 	return a.inspect(ctx, intent)
 }
 
-func (a *ResumeStageExecutor) Invoke(ctx context.Context, intent leaseapp.ResumeIntentState) (leasecontract.ResumeStageReceipt, error) {
+func (a *ResumeStageExecutor) Invoke(ctx context.Context, intent leaseapp.ResumeIntentState, roleAgentArgs []string) (leasecontract.ResumeStageReceipt, error) {
 	if a == nil || a.invoke == nil {
 		return leasecontract.ResumeStageReceipt{}, fmt.Errorf("resume stage invoker is required")
 	}
-	return a.invoke(ctx, intent)
+	return a.invoke(ctx, intent, roleAgentArgs)
 }

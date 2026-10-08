@@ -151,8 +151,16 @@ type ResumeOwnerInventory interface {
 
 type ResumeStageExecutor interface {
 	Inspect(context.Context, ResumeIntentState) (leasecontract.ResumeStageInventory, error)
-	Invoke(context.Context, ResumeIntentState) (leasecontract.ResumeStageReceipt, error)
+	// Invoke runs one stage. roleAgentArgs are set only for the terminal stage.
+	Invoke(ctx context.Context, intent ResumeIntentState, roleAgentArgs []string) (leasecontract.ResumeStageReceipt, error)
 }
+
+// RoleAgentArgs renders the role-agent launch arguments for an owner host
+// from repo's agent model settings. Errors name the broken settings file.
+type RoleAgentArgs func(ctx context.Context, host, repo string) ([]string, error)
+
+// terminalStage is the Orca intent stage that launches the owner session.
+const terminalStage = "terminal_create"
 
 type ResumeOperationIDs interface {
 	New() (string, error)
@@ -172,6 +180,10 @@ type ReconcileIntentState struct {
 	InvocationAttempts int
 	RecordRaw          []byte
 	IntentRaw          []byte
+	// ProbeHost and ProbeRepo come from the sealed intent probe. A prepare
+	// intent has no Orca binding until dispatch, so reconcile reads these.
+	ProbeHost string
+	ProbeRepo string
 }
 
 type ReconcileRepository interface {
@@ -187,5 +199,6 @@ type ReconcileRepository interface {
 
 type ReconcileStageExecutor interface {
 	Inspect(context.Context, ReconcileIntentState) (leasecontract.ReconcileStageInventory, bool, error)
-	Invoke(context.Context, ReconcileIntentState) (leasecontract.ReconcileStageReceipt, string, error)
+	// Invoke runs one stage. roleAgentArgs are set only for the terminal stage.
+	Invoke(ctx context.Context, intent ReconcileIntentState, roleAgentArgs []string) (leasecontract.ReconcileStageReceipt, string, error)
 }

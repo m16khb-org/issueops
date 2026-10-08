@@ -244,6 +244,12 @@ func (c *Client) Probe(ctx context.Context, req port.OrcaProbeRequest) (port.Orc
 			result.Code = "host_permission_bypass_unsupported"
 			return result, nil
 		}
+		// 역할 에이전트는 --agents로 주입한다. 지원하지 않는 claude면 terminal을
+		// 만들기 전에 멈춘다.
+		if agent == "claude" && !containsAllHelpFlags(help, []string{"--agents"}) {
+			result.Code = "host_role_agents_unsupported"
+			return result, nil
+		}
 	}
 	currentRun, err := c.currentRunInventory(ctx)
 	if err == nil {
@@ -552,7 +558,7 @@ func (c *Client) showTerminalInventory(ctx context.Context, handle string) (exec
 }
 
 func (c *Client) CreateTerminal(ctx context.Context, req port.OrcaCreateTerminalRequest) (port.OrcaTerminal, error) {
-	command, ok := ownerAgentCommand(req.Agent, req.Model, req.ReasoningEffort, req.AllowCodexHookTrustBypass)
+	command, ok := ownerAgentCommand(req.Agent, req.Model, req.ReasoningEffort, req.AllowCodexHookTrustBypass, req.ExtraArgs)
 	if !ok {
 		return port.OrcaTerminal{}, &port.OrcaError{Code: "unsupported_agent_profile", Detail: strings.TrimSpace(req.Agent)}
 	}

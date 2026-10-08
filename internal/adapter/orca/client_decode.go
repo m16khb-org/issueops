@@ -223,7 +223,25 @@ func hostCommand(agent string) (string, bool) {
 	}
 }
 
-func ownerAgentCommand(agent, model, reasoningEffort string, allowCodexHookTrustBypass bool) (string, bool) {
+// ownerAgentCommand renders the owner launch command. extraArgs (role agents)
+// are appended after the host flags, each single-quoted exactly once.
+func ownerAgentCommand(agent, model, reasoningEffort string, allowCodexHookTrustBypass bool, extraArgs []string) (string, bool) {
+	command, ok := ownerAgentBaseCommand(agent, model, reasoningEffort, allowCodexHookTrustBypass)
+	if !ok {
+		return "", false
+	}
+	for _, argument := range extraArgs {
+		if strings.IndexByte(argument, 0) >= 0 {
+			return "", false
+		}
+		if argument != "" {
+			command += " " + shellSingleQuote(argument)
+		}
+	}
+	return command, true
+}
+
+func ownerAgentBaseCommand(agent, model, reasoningEffort string, allowCodexHookTrustBypass bool) (string, bool) {
 	model = strings.TrimSpace(model)
 	reasoningEffort = strings.TrimSpace(reasoningEffort)
 	if model == "" || strings.IndexByte(model, 0) >= 0 || strings.IndexByte(reasoningEffort, 0) >= 0 {

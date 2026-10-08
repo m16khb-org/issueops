@@ -334,5 +334,7 @@ func canonicalTempDir(t *testing.T) string {
 }
 
 func prepareTestLauncher(request cmuxcontract.ArtifactRequest) (cmuxcontract.PreparedLauncher, error) {
-	return PrepareLauncher(request, hostprotocol.BuildInteractiveArgv)
+	return PrepareLauncher(request, func(host, executable, model, effort, prompt string) ([]string, error) {
+		return hostprotocol.BuildInteractiveArgv(host, executable, model, effort, prompt, nil)
+	})
 }

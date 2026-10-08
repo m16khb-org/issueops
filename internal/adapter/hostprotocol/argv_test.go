@@ -34,7 +34,7 @@ func TestBuildInteractiveArgvPinsInstalledNativeHostContracts(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.host, func(t *testing.T) {
-			got, err := BuildInteractiveArgv(test.host, test.executable, test.model, test.effort, prompt)
+			got, err := BuildInteractiveArgv(test.host, test.executable, test.model, test.effort, prompt, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -61,7 +61,7 @@ func TestBuildInteractiveArgvRejectsUnsupportedOrAmbiguousInputs(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if _, err := BuildInteractiveArgv(test.host, test.executable, test.model, test.effort, "prompt"); err == nil {
+			if _, err := BuildInteractiveArgv(test.host, test.executable, test.model, test.effort, "prompt", nil); err == nil {
 				t.Fatal("unsafe argv accepted")
 			}
 		})
@@ -69,11 +69,23 @@ func TestBuildInteractiveArgvRejectsUnsupportedOrAmbiguousInputs(t *testing.T) {
 }
 
 func TestBuildInteractiveArgvPreservesEmptyPrompt(t *testing.T) {
-	argv, err := BuildInteractiveArgv("codex", "/opt/native/codex", "model", "", "")
+	argv, err := BuildInteractiveArgv("codex", "/opt/native/codex", "model", "", "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(argv) == 0 || argv[len(argv)-1] != "" || strings.Join(argv, " ") == "" {
 		t.Fatalf("empty prompt argument was lost: %#v", argv)
+	}
+}
+
+func TestBuildInteractiveArgvExtraArgs(t *testing.T) {
+	extra := []string{"--agents", `{"issueops-research":{"model":"claude-sonnet-5-5"}}`}
+	got, err := BuildInteractiveArgv("claude", "/opt/native/claude", "claude-opus-5-5", "high", "go", extra)
+	want := []string{"/opt/native/claude", "--model", "claude-opus-5-5", "--effort", "high", "--dangerously-skip-permissions", "--agents", `{"issueops-research":{"model":"claude-sonnet-5-5"}}`, "--", "go"}
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Fatalf("argv=%q err=%v", got, err)
+	}
+	if _, err := BuildInteractiveArgv("claude", "/opt/native/claude", "m", "", "go", []string{"a\x00b"}); err == nil {
+		t.Fatal("a NUL launch argument must be rejected")
 	}
 }

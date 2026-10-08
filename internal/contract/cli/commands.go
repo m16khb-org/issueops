@@ -34,6 +34,7 @@ func RootCommands() []Command {
 		{Name: "self-verify", Description: "run harness verification gates"},
 		{Name: "self-augment", Description: "plan self-augmentation candidates and lessons"},
 		{Name: "mcp", Description: "serve the MCP stdio proxy and clean up proxy processes"},
+		{Name: "model", Description: "show, set, and resolve per-role agent models for claude and codex"},
 		{Name: "version", Description: "print issueops version"},
 	}
 	return commands

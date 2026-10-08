@@ -16,6 +16,7 @@ func OwnerPacket(record issueops.IssueOpsRecord, req issueops.ExecutionPrepareRe
 		OwnerHost: strings.ToLower(strings.TrimSpace(req.OwnerHost)), OwnerModel: strings.TrimSpace(req.OwnerModel), OwnerEffort: strings.TrimSpace(req.OwnerEffort),
 		ReviewerModel: policy.ReviewerModel, ReviewerEffort: policy.ReviewerEffort,
 		ResearchModel: policy.ResearchModel, ResearchEffort: policy.ResearchEffort,
+		ReaderCheckModel: policy.ReaderCheckModel, ReaderCheckEffort: policy.ReaderCheckEffort,
 		RequiredDocs: snapshot.RequiredDocs, RequiredSkills: snapshot.RequiredSkills, AcceptanceIDs: snapshot.AcceptanceIDs,
 		Verification: snapshot.VerificationCommands, VerificationReportPath: paths.Report, Commands: commands,
 		ArtifactManifest: artifactManifest,

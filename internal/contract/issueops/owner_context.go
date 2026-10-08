@@ -45,6 +45,8 @@ type OwnerContextPacket struct {
 	ReviewerEffort         string            `json:"reviewer_effort,omitempty"`
 	ResearchModel          string            `json:"research_model,omitempty"`
 	ResearchEffort         string            `json:"research_effort,omitempty"`
+	ReaderCheckModel       string            `json:"reader_check_model,omitempty"`
+	ReaderCheckEffort      string            `json:"reader_check_effort,omitempty"`
 	RequiredDocs           []string          `json:"required_docs"`
 	RequiredSkills         []string          `json:"required_skills"`
 	AcceptanceIDs          []string          `json:"acceptance_ids"`
@@ -85,6 +87,7 @@ type OwnerPlanIdentity struct {
 // OwnerPolicyContext carries decisions from the model and remote identity domains.
 type OwnerPolicyContext struct {
 	ReviewerModel, ReviewerEffort, ResearchModel, ResearchEffort string
+	ReaderCheckModel, ReaderCheckEffort                          string
 	ProjectKey, IssueNumber                                      string
 }
 

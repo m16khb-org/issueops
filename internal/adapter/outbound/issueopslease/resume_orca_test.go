@@ -20,7 +20,7 @@ func TestResumeOwnerAndStageAdaptersDelegateOnce(t *testing.T) {
 			inspectCalls++
 			return leasecontract.ResumeStageInventory{AuthoritativeZero: true}, nil
 		},
-		func(context.Context, leaseapp.ResumeIntentState) (leasecontract.ResumeStageReceipt, error) {
+		func(context.Context, leaseapp.ResumeIntentState, []string) (leasecontract.ResumeStageReceipt, error) {
 			invokeCalls++
 			return leasecontract.ResumeStageReceipt{TerminalPTYID: "pty"}, nil
 		},
@@ -31,7 +31,7 @@ func TestResumeOwnerAndStageAdaptersDelegateOnce(t *testing.T) {
 	if _, err := stages.Inspect(context.Background(), leaseapp.ResumeIntentState{}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := stages.Invoke(context.Background(), leaseapp.ResumeIntentState{}); err != nil {
+	if _, err := stages.Invoke(context.Background(), leaseapp.ResumeIntentState{}, nil); err != nil {
 		t.Fatal(err)
 	}
 	if ownerCalls != 1 || inspectCalls != 1 || invokeCalls != 1 {

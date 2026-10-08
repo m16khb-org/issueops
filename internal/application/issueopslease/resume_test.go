@@ -33,6 +33,7 @@ func TestResumeRejectsBeforeArtifactsAndInventory(t *testing.T) {
 			return "live", *resumeApplicationActor().Process, nil
 		}),
 		reseedPathMatcher{},
+		noRoleAgents,
 	)
 	_, err := service.Resume(context.Background(), ResumeRequest{
 		ID: record.ID, ExpectedGeneration: 2, Actor: resumeApplicationActor(),
@@ -69,6 +70,7 @@ func TestResumeReturnsExistingBindingWithoutAllocatingAnotherLaunch(t *testing.T
 			return "live", *resumeApplicationActor().Process, nil
 		}),
 		reseedPathMatcher{},
+		noRoleAgents,
 	)
 
 	result, err := service.Resume(context.Background(), ResumeRequest{
@@ -114,6 +116,7 @@ func TestResumeReplacesSettledGhostTerminalInApplicationOrder(t *testing.T) {
 			return "live", *resumeApplicationActor().Process, nil
 		}),
 		reseedPathMatcher{},
+		noRoleAgents,
 	)
 	result, err := service.Resume(context.Background(), ResumeRequest{ID: record.ID, ExpectedGeneration: 4, Actor: resumeApplicationActor(), Ancestry: []leasedomain.ProcessReceipt{*resumeApplicationActor().Process}, CWD: "/worktree", Confirm: true})
 	if err != nil {
@@ -162,6 +165,7 @@ func TestResumeCreatesOneOwnerForSettledHolderlessRuntimeRollover(t *testing.T) 
 			return "live", *resumeApplicationActor().Process, nil
 		}),
 		reseedPathMatcher{},
+		noRoleAgents,
 	)
 
 	result, err := service.Resume(context.Background(), ResumeRequest{
@@ -213,6 +217,10 @@ func TestResumeKeepsPublicInspectionAndReconcileErrors(t *testing.T) {
 }
 
 func resumeApplicationStageService(record Record, repository ResumeRepository, stages ResumeStageExecutor) *ResumeService {
+	return resumeApplicationStageServiceWith(record, repository, stages, noRoleAgents)
+}
+
+func resumeApplicationStageServiceWith(record Record, repository ResumeRepository, stages ResumeStageExecutor, roleAgents RoleAgentArgs) *ResumeService {
 	return NewResumeService(
 		resumeFenceFunc(func(_ context.Context, _ string, fn func(context.Context) error) error {
 			return fn(context.Background())
@@ -230,6 +238,7 @@ func resumeApplicationStageService(record Record, repository ResumeRepository, s
 			return "live", *resumeApplicationActor().Process, nil
 		}),
 		reseedPathMatcher{},
+		roleAgents,
 	)
 }
 
@@ -291,7 +300,7 @@ type resumeStagesFake struct{}
 func (resumeStagesFake) Inspect(context.Context, ResumeIntentState) (leasecontract.ResumeStageInventory, error) {
 	return leasecontract.ResumeStageInventory{}, nil
 }
-func (resumeStagesFake) Invoke(context.Context, ResumeIntentState) (leasecontract.ResumeStageReceipt, error) {
+func (resumeStagesFake) Invoke(context.Context, ResumeIntentState, []string) (leasecontract.ResumeStageReceipt, error) {
 	return leasecontract.ResumeStageReceipt{}, nil
 }
 
@@ -360,7 +369,7 @@ func (s resumeTraceStages) Inspect(_ context.Context, intent ResumeIntentState) 
 	}
 	return leasecontract.ResumeStageInventory{AuthoritativeZero: true}, nil
 }
-func (s resumeTraceStages) Invoke(_ context.Context, intent ResumeIntentState) (leasecontract.ResumeStageReceipt, error) {
+func (s resumeTraceStages) Invoke(_ context.Context, intent ResumeIntentState, _ []string) (leasecontract.ResumeStageReceipt, error) {
 	if s.trace != nil {
 		*s.trace = append(*s.trace, "invoke_"+intent.Stage)
 	}

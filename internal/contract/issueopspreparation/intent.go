@@ -112,6 +112,9 @@ type IntentRequest struct {
 	RunID               string                `json:"run_id,omitempty"`
 	RunBound            bool                  `json:"run_bound,omitempty"`
 	TaskID              string                `json:"task_id,omitempty"`
+	// RoleAgentArgs are the role-agent launch arguments for the terminal
+	// stage. They are resolved before MarkInvoking and never sealed.
+	RoleAgentArgs []string `json:"-"`
 }
 
 type IntentReceipt struct {

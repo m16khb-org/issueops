@@ -2,8 +2,8 @@ package issueopsowner
 
 import (
 	"fmt"
+	agentmodelcontract "issueops/internal/contract/agentmodel"
 	"issueops/internal/contract/issueops"
-	"issueops/internal/domain/agentmodel"
 	"issueops/internal/domain/commandparse"
 	remote "issueops/internal/domain/issueopsremote"
 	"regexp"
@@ -12,16 +12,37 @@ import (
 
 var executionCommandValue = regexp.MustCompile(`<[A-Z][A-Z0-9_-]*>`)
 
-func PolicyContext(record issueops.IssueOpsRecord, req issueops.ExecutionPrepareRequest) issueops.OwnerPolicyContext {
+// ResolveModelFunc resolves a role for host from repo's agent model settings.
+type ResolveModelFunc func(host string, role agentmodelcontract.Role, repo string) (model, effort string, err error)
+
+// PolicyContext resolves the reviewer, research, and reader-check models the
+// owner prompt names. A broken settings file fails the build instead of
+// falling back to built-in defaults.
+func PolicyContext(record issueops.IssueOpsRecord, req issueops.ExecutionPrepareRequest, resolve ResolveModelFunc) (issueops.OwnerPolicyContext, error) {
+	if resolve == nil {
+		return issueops.OwnerPolicyContext{}, fmt.Errorf("agent model resolver is not configured")
+	}
 	host := strings.ToLower(strings.TrimSpace(req.OwnerHost))
-	reviewer, reviewerEffort, _ := agentmodel.PlannerDefaults(host)
-	research, researchEffort, _ := agentmodel.ResearchDefaults(host)
-	policy := issueops.OwnerPolicyContext{ReviewerModel: reviewer, ReviewerEffort: reviewerEffort, ResearchModel: research, ResearchEffort: researchEffort}
+	var policy issueops.OwnerPolicyContext
+	for _, role := range []struct {
+		role          agentmodelcontract.Role
+		model, effort *string
+	}{
+		{agentmodelcontract.RoleDiffReview, &policy.ReviewerModel, &policy.ReviewerEffort},
+		{agentmodelcontract.RoleResearch, &policy.ResearchModel, &policy.ResearchEffort},
+		{agentmodelcontract.RoleReaderCheck, &policy.ReaderCheckModel, &policy.ReaderCheckEffort},
+	} {
+		model, effort, err := resolve(host, role.role, record.Repo)
+		if err != nil {
+			return issueops.OwnerPolicyContext{}, fmt.Errorf("resolve %s model: %w", role.role, err)
+		}
+		*role.model, *role.effort = model, effort
+	}
 	if record.BranchPrepare != nil {
 		policy.ProjectKey = remote.ProjectKey(record.BranchPrepare.IssueURL, "github", "issue")
 		policy.IssueNumber = remote.IssueNumber(record.BranchPrepare.IssueURL)
 	}
-	return policy
+	return policy, nil
 }
 
 func ValidateOwnerCatalog(commands issueops.OwnerCommands) error {
