@@ -278,7 +278,7 @@ func (s *Service) Prepare(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("prepare mcp http credential: %w", err)
 	}
-	logPath := filepath.Join(s.dir(), "server.log")
+	logPath := ServiceLogPath(s.cfg.StateDir)
 	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
 		return "", fmt.Errorf("prepare mcp http log: %w", err)

@@ -5071,6 +5071,21 @@
       ]
     },
     {
+      "path": "internal/adapter/mcpservice/server_log.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func ServiceLogPath",
+        "func ServiceLogWriter",
+        "func cappedLogWriter.Write",
+        "func cappedLogWriter.rotate",
+        "func ensureAppend",
+        "func sameFile",
+        "func serviceLogWriter",
+        "type cappedLogWriter"
+      ]
+    },
+    {
       "path": "internal/adapter/mcpservice/service.go",
       "owner": "adapter",
       "task": "T20",

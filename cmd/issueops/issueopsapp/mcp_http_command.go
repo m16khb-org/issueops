@@ -35,7 +35,8 @@ func runMCPHTTP(args []string) error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	return serveMCPHTTP(ctx, *address, statestore.StateDir(), issueOpsMCPHTTPDependencies(), os.Stderr)
+	stateDir := statestore.StateDir()
+	return serveMCPHTTP(ctx, *address, stateDir, issueOpsMCPHTTPDependencies(), mcpserviceadapter.ServiceLogWriter(os.Stdout, os.Stderr, stateDir))
 }
 
 func serveMCPHTTP(ctx context.Context, address, stateDir string, deps mcpcli.MCPDependencies, diagnostics io.Writer) (resultErr error) {

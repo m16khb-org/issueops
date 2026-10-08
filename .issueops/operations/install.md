@@ -55,6 +55,9 @@ darwin/linux의 기본 `--mcp-transport=http` 설치는 네 host의 issueops ent
 `http://127.0.0.1:47831/mcp`와 bearer 헤더로 바꾼다. 설치기는 host plan을 dry-run으로 먼저 검증하고,
 서비스를 새 build로 띄운 뒤 `build_id`와 인증된 MCP 응답을 확인해야 host 설정을 merge한다.
 `update`/`bootstrap`도 같은 순서로 서비스를 교체한다. 실패하면 host 설정을 바꾸지 않는다.
+서비스 stdout/stderr는 unit이 `<state>/mcp-http/server.log`에 append한다. 서버는 그 파일에 쓸 때 크기를 8MiB로
+제한한다. 한 줄을 쓴 뒤 8MiB를 넘으면 내용을 `server.log.1`로 복사하고 원본을 그 자리에서 비운다(copytruncate).
+그래서 로그는 두 파일을 합쳐 약 16MiB를 넘지 않는다. unit 형식은 바뀌지 않는다.
 `--mcp-transport=stdio`는 이전 stdio entry를 설치한다. 아래 Omo·omp catalog cache token은 stdio entry에서는
 `env.ISSUEOPS_MCP_CATALOG_SHA256`으로, HTTP entry에서는 `headers.X-Issueops-Mcp-Catalog-Sha256`으로
 들어간다. Omo는 server config 전체(헤더 포함)를 `hashConfig`로 해싱해 catalog cache 키로 쓰므로,
