@@ -104,6 +104,7 @@ Default user-level install updates:
 - omp MCP config: `~/.omp/agent/mcp.json` key `mcpServers.issueops` (mode `0600`)
 - omp lifecycle extension: `~/.omp/agent/extensions/issueops.js` (`session_start`/`session_switch` -> `hook session-start`, `session_compact` -> `hook post-compact`, no accepted filter; exports `ISSUEOPS_OMP_SESSION_ID` from the main session)
 - Optional Claude Code plugins and Git skills declared in `configs/upstream.json` (currently Claude-scoped): entries already present are skipped, and upstream failures are reported as `upstream ...` messages without failing native installation. See [hosts.md](guides/hosts.md#upstream-plugins-and-skills).
+- Retired state paths: after the native activation commits, install/update deletes state-root entries that only removed subsystems wrote (`daemon/`, `hook-failures.jsonl`, `hook-metrics.jsonl`, `.last-store-maintain`, `issueops-migration-receipt.json`) and reports each one as a `removed retired state path ...` message; `--dry-run` lists them as `would remove ...`. It matches exact names directly under the state directory, leaves symlinks and unexpected file kinds in place, and keeps `daemon/` while the legacy daemon still answers on `daemon/issueops.sock` or its recorded PID is alive. A removal failure stays a message and does not fail the install.
 
 Default install does not create target-repo `.claude/settings.json`,
 `.mcp.json`, `.omo/mcp.json`, `.omp/mcp.json`, or `.agents/mcp_config.json`. Use explicit

@@ -100,8 +100,10 @@ func TestStateDoctorAllowsHarnessOwnedAuxiliaryState(t *testing.T) {
 	if _, err := NewService().Write(context.Background(), "good", "good content"); err != nil {
 		t.Fatalf("NewService().Write good: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "hook-failures.jsonl"), []byte(`{"hook":"pre-tool-use","error":"failed"}`+"\n"), 0o600); err != nil {
-		t.Fatal(err)
+	for _, live := range []string{"channel", "upstream"} {
+		if err := os.MkdirAll(filepath.Join(dir, live), 0o700); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if err := os.WriteFile(filepath.Join(dir, "good.state-lock"), []byte{}, 0o600); err != nil {
 		t.Fatal(err)
@@ -133,7 +135,7 @@ func TestStateDoctorAllowsHarnessOwnedAuxiliaryState(t *testing.T) {
 		t.Fatalf("unknown auxiliary state should still keep doctor unhealthy: %+v", result)
 	}
 	for _, issue := range result.Issues {
-		if strings.Contains(issue.Path, "hook-failures.jsonl") || strings.Contains(issue.Path, "issueops-benchmarks") || strings.Contains(issue.Path, "audit") || strings.Contains(issue.Path, "mcp-http") || strings.Contains(issue.Path, "agent-roles") {
+		if strings.Contains(issue.Path, "channel") || strings.Contains(issue.Path, "upstream") || strings.Contains(issue.Path, "issueops-benchmarks") || strings.Contains(issue.Path, "audit") || strings.Contains(issue.Path, "mcp-http") || strings.Contains(issue.Path, "agent-roles") {
 			t.Fatalf("harness-owned auxiliary state should not warn: %+v", result.Issues)
 		}
 	}

@@ -60,7 +60,39 @@ func InspectDoctor(dir string, entries []DoctorEntry, rows []DoctorRecord) state
 	return result
 }
 
+// RetiredStateEntry is a state-root entry written only by a removed subsystem.
+type RetiredStateEntry struct {
+	Name  string
+	IsDir bool
+}
+
+// RetiredStateEntries lists, in name order, what removed subsystems (the
+// legacy daemon, hook failure and metrics logs, store maintenance stamp, and
+// JSON migration receipt) left in the state root. issueops install/update
+// removes these entries.
+func RetiredStateEntries() []RetiredStateEntry {
+	return []RetiredStateEntry{
+		{Name: ".last-store-maintain"},
+		{Name: "daemon", IsDir: true},
+		{Name: "hook-failures.jsonl"},
+		{Name: "hook-metrics.jsonl"},
+		{Name: "issueops-migration-receipt.json"},
+	}
+}
+
+func retiredStateEntry(name string) bool {
+	for _, entry := range RetiredStateEntries() {
+		if entry.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
 func inspectDoctorEntry(entry DoctorEntry) (statecontract.StateDoctorIssue, bool) {
+	if retiredStateEntry(entry.Name) {
+		return statecontract.StateDoctorIssue{Path: entry.Path, Severity: "warning", Code: "retired_path", Message: "state directory contains a path left by a removed subsystem; issueops update removes it"}, true
+	}
 	if entry.IsDir {
 		if harnessOwnedStateDirectory(entry.Name) {
 			return statecontract.StateDoctorIssue{}, false
@@ -75,7 +107,7 @@ func inspectDoctorEntry(entry DoctorEntry) (statecontract.StateDoctorIssue, bool
 
 func harnessOwnedStateDirectory(name string) bool {
 	switch name {
-	case "projects", "worker", "loop", "issueops-benchmarks", "issueops_v1", "native-activation", "audit", "mcp-http", "agent-roles":
+	case "projects", "worker", "loop", "issueops-benchmarks", "issueops_v1", "native-activation", "audit", "mcp-http", "agent-roles", "channel", "upstream":
 		return true
 	default:
 		return false
@@ -88,10 +120,5 @@ func harnessOwnedStateFile(name string) bool {
 			return true
 		}
 	}
-	switch name {
-	case statecontract.HookFailureLogFile, statecontract.RecordWriteLeaseFile, "hook-metrics.jsonl", ".last-store-maintain":
-		return true
-	default:
-		return false
-	}
+	return name == statecontract.RecordWriteLeaseFile
 }

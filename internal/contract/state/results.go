@@ -1,7 +1,5 @@
 package state
 
-const HookFailureLogFile = "hook-failures.jsonl"
-
 type StateResult struct {
 	OK       bool           `json:"ok"`
 	StateDir string         `json:"state_dir"`

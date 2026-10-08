@@ -50,6 +50,7 @@ func installDependencies() installcli.Deps {
 			return hostActivationReadback{request: req, codex: codex, claude: claude, omo: omo, omp: omp, agy: agy}
 		},
 		SyncUpstream:        syncUpstream,
+		RemoveRetiredState:  install.RemoveRetiredState,
 		DefaultMCPTransport: defaultMCPTransport(runtime.GOOS),
 		MCPURL:              "http://" + mcpcli.DefaultHTTPAddress + mcpcli.HTTPEndpointPath,
 		MCPService:          installMCPService{service: newSupervisorMCPService(), stateDir: mcpServiceStateDir()},

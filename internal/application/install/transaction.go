@@ -25,6 +25,9 @@ type TransactionEffects interface {
 	PlanShell(*port.NativeInstallResult, port.NativeInstallRequest, string) error
 	PrepareHost(port.NativeInstallResult) (HostTransaction, error)
 	AppendUpstream(*port.NativeInstallResult, string, bool)
+	// RemoveRetiredState runs only after the install committed because the
+	// deletion cannot be rolled back; dry runs list what it would remove.
+	RemoveRetiredState(*port.NativeInstallResult, bool)
 }
 
 type Activation interface {
@@ -68,6 +71,7 @@ func RunTransaction(ctx context.Context, request TransactionRequest, effects Tra
 		result.Messages = append(preflight.Messages, result.Messages...)
 		result.CommandPath = preflight.CommandPath
 		effects.AppendUpstream(&result, request.Install.Root, true)
+		effects.RemoveRetiredState(&result, true)
 		return TransactionOutcome{Install: &result}, installErr
 	}
 	hostPlanReq := request.Install
@@ -130,6 +134,7 @@ func RunTransaction(ctx context.Context, request TransactionRequest, effects Tra
 			result.CommandPath.BackupRetained = true
 		}
 	}
+	effects.RemoveRetiredState(&result, false)
 	return TransactionOutcome{Install: &result}, nil
 }
 

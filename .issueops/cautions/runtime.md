@@ -43,7 +43,7 @@ stdio `issueops mcp`는 host 세션 안에서 in-process로 동작하므로 새 
 - 테스트는 `ISSUEOPS_STATE_DIR=$(mktemp -d)`로 실제 user state와 분리한다.
 - 장기 실행 parent가 자식 프로세스를 띄우면 `Process.Release`만 호출하지 말고 `Wait`로 종료 상태를 회수한다. unreaped zombie는 `kill(pid, 0)`에 살아 있는 것으로 보여 생존 판정을 오탐한다. 모든 QA는 `defer`/`finally` 정리 후 임시 binary, state root, PID가 0개인지 확인한다.
 - MCP service record와 log는 user state dir에 두고 repo나 wiki vault에 쓰지 않는다.
-- 2026-10-06 이전에 설치한 환경에는 `~/.local/state/issueops/daemon/`(또는 `$ISSUEOPS_STATE_DIR/daemon/`)이 남아 있을 수 있다. legacy daemon은 제거됐으므로 `state doctor`가 이 디렉터리를 `unexpected_directory`로 보고하면 안에 실행 중인 프로세스가 없는지 확인한 뒤 지운다.
+- 2026-10-06 이전에 설치한 환경에는 `~/.local/state/issueops/daemon/`(또는 `$ISSUEOPS_STATE_DIR/daemon/`)이 남아 있을 수 있다. `state doctor`는 이 디렉터리를 `retired_path`로 보고하고 `issueops update`가 commit 뒤 지운다. 다만 legacy daemon이 아직 `daemon/issueops.sock`에 응답하거나 `daemon/issueops.pid`의 PID가 살아 있으면 update는 디렉터리를 남기고 안내 message를 낸다. 실행 중인 daemon이 log fd를 잡고 있으면 지워도 용량이 회수되지 않으므로, 그 프로세스를 먼저 멈춘 뒤 update를 다시 실행한다.
 
 ## 20. /tmp/issueops-* build artifact cleanup
 

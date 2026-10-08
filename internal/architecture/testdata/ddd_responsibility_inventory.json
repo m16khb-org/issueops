@@ -418,6 +418,7 @@
         "func installTransactionEffects.PlanShell",
         "func installTransactionEffects.PrepareHost",
         "func installTransactionEffects.PreparePath",
+        "func installTransactionEffects.RemoveRetiredState",
         "type installTransactionEffects"
       ]
     },
@@ -3893,6 +3894,15 @@
       "task": "T11",
       "symbols": [
         "func absClean"
+      ]
+    },
+    {
+      "path": "internal/adapter/install/retired_state.go",
+      "owner": "adapter",
+      "task": "T11",
+      "symbols": [
+        "func RemoveRetiredState",
+        "func legacyDaemonRunning"
       ]
     },
     {
@@ -16239,11 +16249,14 @@
       "task": "T20",
       "symbols": [
         "func InspectDoctor",
+        "func RetiredStateEntries",
         "func harnessOwnedStateDirectory",
         "func harnessOwnedStateFile",
         "func inspectDoctorEntry",
+        "func retiredStateEntry",
         "type DoctorEntry",
-        "type DoctorRecord"
+        "type DoctorRecord",
+        "type RetiredStateEntry"
       ]
     },
     {
