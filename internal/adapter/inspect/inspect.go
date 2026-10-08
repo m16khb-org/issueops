@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -24,13 +25,22 @@ func (observer Observer) Inspect(root, target, home, version, skillName string, 
 	claudeSkill := filepath.Join(home, ".claude", "skills", skillName)
 	projectClaudeSkill := filepath.Join(root, ".claude", "skills", skillName)
 	mcpBinary := filepath.Join(root, "bin", "issueops")
+	// The docs listing waits on git; observe the rest of the install meanwhile.
+	var (
+		docs []string
+		wg   sync.WaitGroup
+	)
+	wg.Go(func() { docs = observer.ListDocs(root) })
+	skills := ListSkills(root, skillName)
+	hosts := observer.observeHosts(root, home, skillName, options)
+	wg.Wait()
 	return inspectcontract.InspectInfo{
 		OK:           true,
 		Version:      version,
 		IssueOpsRoot: root,
 		TargetRepo:   target,
-		Skills:       ListSkills(root, skillName),
-		Docs:         observer.ListDocs(root),
+		Skills:       skills,
+		Docs:         docs,
 		Integration: inspectcontract.IntegrationStatus{
 			CodexSkillPath:         codexSkill,
 			CodexSkillInstalled:    Exists(filepath.Join(codexSkill, "SKILL.md")),
@@ -41,7 +51,7 @@ func (observer Observer) Inspect(root, target, home, version, skillName string, 
 			ProjectClaudeSkill:     Exists(filepath.Join(projectClaudeSkill, "SKILL.md")),
 			ProjectClaudeMCPConfig: Exists(filepath.Join(root, ".mcp.json")),
 			MCPBinaryPath:          mcpBinary,
-			Hosts:                  observer.observeHosts(root, home, skillName, options),
+			Hosts:                  hosts,
 		},
 		GeneratedAt: observer.now().Format(time.RFC3339),
 	}
