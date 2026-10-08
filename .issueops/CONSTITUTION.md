@@ -1,6 +1,6 @@
 ---
 name: CONSTITUTION.md
-description: Instruction priority, safety, and accuracy principles.
+description: Instruction priority, safety, and accuracy principles; read when rules conflict or an action is risky.
 ---
 
 # 프로젝트 헌법

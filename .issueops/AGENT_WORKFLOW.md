@@ -1,6 +1,6 @@
 ---
 name: AGENT_WORKFLOW.md
-description: Agent start, execution, verification, and completion flow.
+description: Agent start, execution, verification, and completion flow; read when starting or handing off a task.
 ---
 
 # Agent Workflow

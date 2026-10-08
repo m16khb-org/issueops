@@ -1,6 +1,6 @@
 ---
 name: CAUTIONS.md
-description: Recurring mistakes, operational cautions, and avoidance guidance.
+description: Recurring mistakes and operational pitfalls; read before a risky change or when a failure repeats.
 ---
 
 # 주의사항 모음
@@ -26,7 +26,7 @@ lesson으로 분리됐고, 여기서는 핵심 한 줄과 탐색 링크만 둔�
   provider가 보여주는 target과 origin 존재를 모두 관측해야 받아들이며 이력은
   `branch_prepare.retargets[]`에 남는다(2026-08-28).
 - IssueOps 상태 전이·lease·publication은 durable `issueops` 명령이 소유한다. hook은
-  `SessionStart` project-doc catalog 주입뿐이며 아무것도 차단하지 않는다(2026-08-27).
+  `SessionStart`·`SubagentStart` project-doc catalog 주입만 하며 아무것도 차단하지 않는다(2026-08-27, 2026-10-08).
 - IssueOps worktree 밖 mutation은 절대경로 + `issueops execution status` 재확인으로 막는다.
 - 게이트 원장 `CHECK:`는 argv 한 줄이다. 따옴표 밖 `&& || ; |`는 셸이 아니라 첫 명령의
   인자가 되어 거짓 met을 만들었고(#484), 이제 `gates init`이 거부하고 `gates check`는
@@ -75,6 +75,8 @@ footer; older notes also live in `archive/cautions-incidents.md`.
 
 | Date | Lesson |
 |---|---|
+| 2026-10-08 | [추적 intent 사본은 요청 원문을 그대로 담고, 커밋 전 로컬 self-verify는 추적 파일 검사를 보지 못한다](cautions/2026-10-08-tracked-intent-copies-quote-the-raw-request-and-local-self-v.md) |
+| 2026-10-08 | [표준 문서 설명을 바꿔도 frontmatter가 있는 레포의 catalog는 `--sync` 전까지 그대로다](cautions/2026-10-08-changing-a-standard-doc-description-does-not-change-the-cata.md) |
 | 2026-10-08 | [claude --agents 위치 인자 흡수, 새 스킬의 로컬 self-verify, 증거 문서의 홈 경로, met 게이트 재실행](cautions/2026-10-08-claude-agents-self-verify-met.md) |
 | 2026-10-08 | [user systemd manager 경로 조회와 base 커밋에서 거짓 통과하는 CI 게이트](cautions/2026-10-08-user-systemd-manager-base-ci.md) |
 | 2026-10-07 | [CI 임시 HOME 설치, runner의 rg 부재, worktree 간 lint cache, 상한 변경 중의 옛 binary](cautions/2026-10-07-ci-home-runner-rg-worktree-lint-cache-binary.md) |

@@ -105,7 +105,7 @@ func writeNativeIntegrationFixture(t *testing.T, root, home string) {
 		writeFileForWrapperTest(t, path, "ok\n")
 	}
 	writeFileForWrapperTest(t, filepath.Join(home, ".codex", "config.toml"), "[mcp_servers.issueops]\ncommand = \"issueops\"\n")
-	writeFileForWrapperTest(t, filepath.Join(home, ".codex", "hooks.json"), fmt.Sprintf(`{"hooks":{"SessionStart":[{"hooks":[{"command":"'%s' hook session-start --host codex","timeout":5,"type":"command"}]}]}}`, filepath.Join(root, "bin", "issueops")))
+	writeFileForWrapperTest(t, filepath.Join(home, ".codex", "hooks.json"), fmt.Sprintf(`{"hooks":{"SessionStart":[{"hooks":[{"command":"'%[1]s' hook session-start --host codex","timeout":5,"type":"command"}]}],"SubagentStart":[{"hooks":[{"command":"'%[1]s' hook subagent-start --host codex","timeout":5,"type":"command"}]}]}}`, filepath.Join(root, "bin", "issueops")))
 	writeFileForWrapperTest(t, filepath.Join(home, ".omo", "mcp.json"), fmt.Sprintf(`{"mcpServers":{"issueops":{"command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, filepath.Join(root, "bin", "issueops"), root))
 	writeFileForWrapperTest(t, filepath.Join(home, ".omo", "extensions", "issueops.js"), hostprotocol.OmoLifecycleExtension(filepath.Join(root, "bin", "issueops")))
 }

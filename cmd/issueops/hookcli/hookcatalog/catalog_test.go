@@ -105,4 +105,7 @@ func TestCatalogHookFlagErrors(t *testing.T) {
 	if err := RunSessionStart([]string{"--bad"}, config); err == nil {
 		t.Fatal("expected session-start flag error")
 	}
+	if err := RunSubagentStart([]string{"--bad"}, config); err == nil {
+		t.Fatal("expected subagent-start flag error")
+	}
 }

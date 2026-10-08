@@ -3,25 +3,26 @@ package projectdoc
 import "strings"
 
 // docMetaDescriptions is the canonical, name-keyed metadata for standard project
-// docs: a fixed one-line description of WHAT CATEGORY of information each doc
-// holds (not a summary of its current content). Same doc name => same
-// description in every repo, and it stays fixed across bootstrap and
-// bootstrap --sync. It is rendered as SKILL.md-style YAML frontmatter at the top
-// of each doc so both humans and the project-doc catalog read the same source.
+// docs: one short sentence naming WHAT CATEGORY of information each doc holds
+// (not a summary of its current content) and WHEN an agent should read it, as
+// "<what>; read <when>.". Same doc name => same description in every repo, and
+// it stays fixed across bootstrap and bootstrap --sync. It is rendered as
+// SKILL.md-style YAML frontmatter at the top of each doc so both humans and the
+// project-doc catalog read the same source.
 var docMetaDescriptions = map[string]string{
-	"ARCHITECTURE.md":   "System structure, component boundaries, and responsibilities.",
-	"ADR.md":            "Structural decisions, rationale, and rejected alternatives.",
-	"CONSTITUTION.md":   "Instruction priority, safety, and accuracy principles.",
-	"CONVENTIONS.md":    "Coding conventions, package structure, and layer boundaries.",
-	"TECH_STACK.md":     "Chosen languages, runtimes, tools, and rationale.",
-	"TESTING.md":        "Verification standards, test practices, and required checks.",
-	"COMMIT_POLICY.md":  "Commit message format, scope, and decision-record rules.",
-	"CAUTIONS.md":       "Recurring mistakes, operational cautions, and avoidance guidance.",
-	"OPERATIONS.md":     "Operations quick-start, reference map, and runtime procedures.",
-	"OPEN_API_SPEC.md":  "Endpoint, DTO, and OpenAPI documentation gate rules.",
-	"AGENT_WORKFLOW.md": "Agent start, execution, verification, and completion flow.",
-	"VCS.md":            "Verified VCS provider capabilities, request recipes, identity checks, and CLI fallbacks.",
-	"DESIGN.md":         "Client design system: palette, typography, spacing, motion, accessibility, and component states.",
+	"ARCHITECTURE.md":   "System structure and component boundaries; read before adding a component or moving a responsibility.",
+	"ADR.md":            "Accepted structural decisions and their rationale; read before reversing or extending a design choice.",
+	"CONSTITUTION.md":   "Instruction priority, safety, and accuracy principles; read when rules conflict or an action is risky.",
+	"CONVENTIONS.md":    "Coding conventions and layer boundaries; read before writing or restructuring code.",
+	"TECH_STACK.md":     "Chosen languages, runtimes, and tools; read before adding a dependency or tool.",
+	"TESTING.md":        "Verification standards and required checks; read before writing tests or claiming work is verified.",
+	"COMMIT_POLICY.md":  "Commit message format and scope rules; read before committing.",
+	"CAUTIONS.md":       "Recurring mistakes and operational pitfalls; read before a risky change or when a failure repeats.",
+	"OPERATIONS.md":     "Install, runtime, and operating procedures; read before running, deploying, or troubleshooting.",
+	"OPEN_API_SPEC.md":  "Endpoint, DTO, and OpenAPI documentation gates; read before changing an API contract.",
+	"AGENT_WORKFLOW.md": "Agent start, execution, verification, and completion flow; read when starting or handing off a task.",
+	"VCS.md":            "Verified VCS provider capabilities and CLI recipes; read before issue, PR, MR, or branch operations.",
+	"DESIGN.md":         "Client design system tokens and component states; read before changing UI.",
 }
 
 // DocMetaDescription returns the canonical metadata description for a standard

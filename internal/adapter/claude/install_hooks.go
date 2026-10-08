@@ -81,16 +81,20 @@ type claudeLifecycleHookSpec struct {
 }
 
 func claudeLifecycleHookSpecs(binPath string) []claudeLifecycleHookSpec {
-	// SessionStart alone carries the catalog: Claude re-runs it with
-	// source "compact" after compaction, while PostCompact output is only a
+	// SessionStart carries the catalog for the main session: Claude re-runs it
+	// with source "compact" after compaction, while PostCompact output is only a
 	// user display string there (verified against Claude Code 2.1.247).
+	// SubagentStart gives each subagent the same catalog; it has no matcher
+	// because the hook itself skips Explore and fork agents.
 	return []claudeLifecycleHookSpec{
 		{BinPath: binPath, Event: "SessionStart", Subcommand: "session-start", Timeout: 5},
+		{BinPath: binPath, Event: "SubagentStart", Subcommand: "subagent-start", Timeout: 5},
 	}
 }
 
 var claudeLifecycleHookEvents = []string{
 	"SessionStart",
+	"SubagentStart",
 	"UserPromptSubmit",
 	"PreToolUse",
 	"PostToolUse",
@@ -117,7 +121,7 @@ func claudeHookGroup(spec claudeLifecycleHookSpec) map[string]any {
 
 func claudeHookCommand(binPath, subcommand string) string {
 	cmd := fmt.Sprintf("%s hook %s", shellQuote(binPath), subcommand)
-	if subcommand == "session-start" || subcommand == "post-compact" {
+	if subcommand == "session-start" || subcommand == "subagent-start" || subcommand == "post-compact" {
 		cmd += " --host claude"
 	}
 	return cmd

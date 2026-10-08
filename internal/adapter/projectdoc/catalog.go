@@ -239,36 +239,37 @@ func buildProjectDocCatalogEntry(name, header string, truncated bool) (projectdo
 	}, truncated && (title == "" || unclosedFrontmatter)
 }
 
-// FormatProjectDocCatalog renders a compact one-line menu of the project docs,
-// describing each by its canonical metadata so the main agent can judge which to
-// read. Returns "" when there is nothing to present.
+// FormatProjectDocCatalog renders the model-facing catalog every host receives:
+// a header line, then one "- <path>: <description>" line per document, so the
+// agent can open a document by its path once it judges the document relevant.
+// Returns "" when there is nothing to present.
 func FormatProjectDocCatalog(entries []projectdocdomain.ProjectDocCatalogEntry) string {
 	if len(entries) == 0 {
 		return ""
 	}
-	items := make([]string, 0, len(entries))
+	lines := make([]string, 0, len(entries)+1)
+	lines = append(lines, "Project docs under .issueops/ (read the ones relevant to the task before acting):")
 	for _, entry := range entries {
-		name := strings.TrimPrefix(entry.RelPath, ".issueops/")
 		meta := entry.Description
 		if meta == "" {
 			meta = entry.Title
 		}
 		if meta == "" {
-			items = append(items, name)
+			lines = append(lines, "- "+entry.RelPath)
 			continue
 		}
-		items = append(items, name+"="+meta)
+		lines = append(lines, "- "+entry.RelPath+": "+meta)
 	}
-	return "project docs (read what's relevant): " + strings.Join(items, "; ")
+	return strings.Join(lines, "\n")
 }
 
-// FormatProjectDocCatalogOmissions returns the suffix appended to the compact
-// menu with the exact omission counts, or "" when nothing was omitted.
+// FormatProjectDocCatalogOmissions returns the last catalog line with the exact
+// omission counts, or "" when nothing was omitted.
 func FormatProjectDocCatalogOmissions(omissions projectdocdomain.CatalogOmissions) string {
 	if !omissions.Any() {
 		return ""
 	}
-	return "; omitted: " + omissions.Summary()
+	return "\nomitted: " + omissions.Summary()
 }
 
 // firstMarkdownHeading returns the first level-1 heading in a document body

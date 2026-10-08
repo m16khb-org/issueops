@@ -1,6 +1,6 @@
 ---
 name: COMMIT_POLICY.md
-description: Commit message format, scope, and decision-record rules.
+description: Commit message format and scope rules; read before committing.
 ---
 
 # 커밋 메시지 정책: Conventional + Lore Hybrid

@@ -265,6 +265,7 @@
       "symbols": [
         "func RunPostCompact",
         "func RunSessionStart",
+        "func RunSubagentStart",
         "func hostOf",
         "func resolveRepo",
         "type Config"
@@ -291,8 +292,10 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
+        "func AgentTypeFromHookInput",
         "func RepoFromHookInput",
-        "func firstRepoKey"
+        "func firstKey",
+        "func firstValue"
       ]
     },
     {
@@ -616,6 +619,7 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
+        "func hookRepoName",
         "func newHookConfig",
         "func runHook"
       ]

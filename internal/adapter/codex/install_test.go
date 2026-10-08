@@ -43,7 +43,7 @@ func TestCodexInstallerWritesOnlyUserAndHarnessTemplatePaths(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, subcommand := range []string{"hook session-start --host codex"} {
+	for _, subcommand := range []string{"hook session-start --host codex", "hook subagent-start --host codex"} {
 		if !strings.Contains(string(hooks), subcommand) || !strings.Contains(string(hooks), req.BinPath) {
 			t.Fatalf("codex hooks missing context-only command %q:\n%s", subcommand, string(hooks))
 		}
@@ -81,7 +81,7 @@ func TestCodexInstallerMergesLifecycleHooksIdempotently(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, subcommand := range []string{"hook session-start --host codex"} {
+	for _, subcommand := range []string{"hook session-start --host codex", "hook subagent-start --host codex"} {
 		if count := strings.Count(string(hooks), subcommand); count != 1 {
 			t.Fatalf("%s appears %d times, want 1:\n%s", subcommand, count, string(hooks))
 		}
@@ -111,7 +111,7 @@ func TestMergeHookConfigPreservesCoResidentHookPositions(t *testing.T) {
 	if command != "/bin/sh /Users/example/.orca/agent-hooks/codex-hook.sh" {
 		t.Fatalf("old issueops group must be removed while third-party group is preserved: %q", command)
 	}
-	for _, event := range []string{"SessionStart"} {
+	for _, event := range []string{"SessionStart", "SubagentStart"} {
 		if len(merged["hooks"].(map[string]any)[event].([]any)) != 1 {
 			t.Fatalf("%s must contain one replacement context hook: %#v", event, merged)
 		}
@@ -158,6 +158,20 @@ func TestMergeHookConfigReplacesManagedContextGroupsInPlace(t *testing.T) {
 				t.Fatalf("canonical managed group count = %d, want 1: %#v", count, got)
 			}
 		})
+	}
+}
+
+func TestMergeHookConfigKeepsThirdPartySubagentStartGroups(t *testing.T) {
+	orca := map[string]any{"hooks": []any{map[string]any{
+		"type": "command", "command": "/bin/sh /Users/example/.orca/agent-hooks/codex-hook.sh", "timeout": float64(10),
+	}}}
+	merged := testInstaller().mergeHookConfig(map[string]any{"hooks": map[string]any{"SubagentStart": []any{orca}}}, "/new/bin/issueops")
+	groups := merged["hooks"].(map[string]any)["SubagentStart"].([]any)
+	if len(groups) != 2 || fmt.Sprint(groups[0]) != fmt.Sprint(orca) {
+		t.Fatalf("third-party SubagentStart group must stay first and unchanged: %#v", groups)
+	}
+	if count := strings.Count(fmt.Sprint(groups), "'/new/bin/issueops' hook subagent-start --host codex"); count != 1 {
+		t.Fatalf("managed SubagentStart group count = %d, want 1: %#v", count, groups)
 	}
 }
 

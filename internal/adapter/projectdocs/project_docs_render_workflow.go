@@ -54,9 +54,10 @@ func renderOperations(signals projectdoc.ProjectSignals) string {
 	b.WriteString("- `issueops project bootstrap --repo . --json` creates docs and user-state repo metadata; `--sync` refreshes them from current evidence.\n")
 	b.WriteString("- After initial setup, agents should read repo evidence and keep `.issueops` docs current through MCP `project_docs_route` → `project_docs_read` → `project_docs_revise`.\n")
 	b.WriteString("- Append resolved false cases and decisions to CAUTIONS/ADR with `project_docs_append` instead of rewriting full documents.\n")
-	b.WriteString("\n## SessionStart hook\n\n")
+	b.WriteString("\n## Context hooks\n\n")
 	b.WriteString("- The issueops installer connects `issueops hook session-start` to the host SessionStart event; it renders the static project-doc catalog, including after compaction.\n")
-	b.WriteString("- Hosts without a SessionStart re-run after compaction use `issueops hook post-compact` for the same catalog. `ISSUEOPS_DISABLE_HOOKS=1` turns both into a no-op.\n")
+	b.WriteString("- `issueops hook subagent-start` gives each starting subagent the same catalog, except Explore, explorer, and fork agents.\n")
+	b.WriteString("- Hosts without a SessionStart re-run after compaction use `issueops hook post-compact` for the same catalog. `ISSUEOPS_DISABLE_HOOKS=1` turns every hook into a no-op.\n")
 	b.WriteString("- The hook does not execute work, use the network, or read large files.\n")
 	return b.String()
 }

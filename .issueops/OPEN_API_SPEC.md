@@ -1,6 +1,6 @@
 ---
 name: OPEN_API_SPEC.md
-description: Endpoint, DTO, and OpenAPI documentation gate rules.
+description: Endpoint, DTO, and OpenAPI documentation gates; read before changing an API contract.
 ---
 
 # OpenAPI Spec Guidance

@@ -52,3 +52,21 @@ func TestEnsureDocMetaFrontmatterLeavesUnknownDocsUnchanged(t *testing.T) {
 		t.Fatalf("unknown doc must be unchanged, got:\n%s", got)
 	}
 }
+
+func TestStandardDocDescriptionsSayWhatAndWhenToRead(t *testing.T) {
+	if len(docMetaDescriptions) != 13 {
+		t.Fatalf("standard doc count = %d, want 13", len(docMetaDescriptions))
+	}
+	for name, desc := range docMetaDescriptions {
+		what, when, found := strings.Cut(desc, "; read ")
+		if !found || what == "" || when == "" || strings.Contains(when, "; read ") {
+			t.Errorf("%s description must be \"<what>; read <when>.\": %q", name, desc)
+		}
+		if !strings.HasSuffix(desc, ".") || strings.ContainsAny(desc, "\n=") || len(desc) > 120 {
+			t.Errorf("%s description must be one short sentence: %q", name, desc)
+		}
+	}
+	if got, _ := DocMetaDescription("CONVENTIONS.md"); got != "Coding conventions and layer boundaries; read before writing or restructuring code." {
+		t.Fatalf("CONVENTIONS.md description = %q", got)
+	}
+}

@@ -16,15 +16,18 @@ func TestRenderProjectDocCatalogOmissions(t *testing.T) {
 	}
 }
 
-func TestRenderProjectDocCatalogUserViewFallsBackToTitle(t *testing.T) {
-	view := RenderProjectDocCatalogUserView([]projectdoc.ProjectDocCatalogEntry{
+func TestRenderProjectDocCatalogUserViewIsOneLineNamingTheRepository(t *testing.T) {
+	docs := []projectdoc.ProjectDocCatalogEntry{
 		{RelPath: ".issueops/ADR.md", Title: "Decisions", Description: "Structural decisions."},
 		{RelPath: ".issueops/NOTES.md", Title: "Notes only"},
-	})
-	if !strings.Contains(view, "• ADR.md — Structural decisions.") || !strings.Contains(view, "• NOTES.md — Notes only") {
-		t.Fatalf("user view = %q", view)
 	}
-	if RenderProjectDocCatalogUserView(nil) != "" {
+	if got := RenderProjectDocCatalogUserView("issueops", docs); got != "📚 issueops · project docs 2개 (.issueops/)" {
+		t.Fatalf("user view = %q", got)
+	}
+	if got := RenderProjectDocCatalogUserView("", docs); got != "📚 project docs 2개 (.issueops/)" {
+		t.Fatalf("user view without a repository name = %q", got)
+	}
+	if RenderProjectDocCatalogUserView("issueops", nil) != "" {
 		t.Fatal("empty catalog must render nothing")
 	}
 }

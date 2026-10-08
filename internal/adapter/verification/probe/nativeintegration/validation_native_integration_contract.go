@@ -52,7 +52,7 @@ func nativeIntegrationCodexConfigErrors(root, home string, deps nativeIntegratio
 		return errs
 	}
 	if b, err := deps.readFile(filepath.Join(home, ".codex", "hooks.json")); err != nil || !deps.hasThinCodexContextHooks(string(b), expectedBinary) {
-		errs = append(errs, "Codex thin context hooks missing issueops SessionStart surface")
+		errs = append(errs, "Codex thin context hooks missing issueops context hook surface")
 	}
 	return errs
 }

@@ -2,12 +2,12 @@ package hostprotocol
 
 import "testing"
 
-func TestHookContextKeepsHostChannelsAndDefault(t *testing.T) {
+func TestHookContextSendsOneModelTextToEveryHost(t *testing.T) {
 	for _, tc := range []struct {
 		host, user, context, message string
 		hasMessage                   bool
 	}{
-		{"codex", "readable", "readable", "", false},
+		{"codex", "readable", "compact", "", false},
 		{"codex", "", "compact", "", false},
 		{"claude", "readable", "compact", "readable", true},
 		{"claude", "", "compact", "", false},

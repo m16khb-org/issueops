@@ -2,7 +2,7 @@ package hookprompt
 
 import (
 	"issueops/internal/domain/projectdoc"
-	"strings"
+	"strconv"
 )
 
 // RenderProjectDocCatalogOmissions returns a trailing user-view line naming the
@@ -14,22 +14,15 @@ func RenderProjectDocCatalogOmissions(omissions projectdoc.CatalogOmissions) str
 	return "\n⚠ 일부 문서가 목록에서 생략됨: " + omissions.Summary()
 }
 
-func RenderProjectDocCatalogUserView(docs []projectdoc.ProjectDocCatalogEntry) string {
+// RenderProjectDocCatalogUserView returns the one-line notice the user sees
+// when the catalog is injected. The document list itself is model-facing only.
+func RenderProjectDocCatalogUserView(repoName string, docs []projectdoc.ProjectDocCatalogEntry) string {
 	if len(docs) == 0 {
 		return ""
 	}
-	var b strings.Builder
-	b.WriteString("📚 issueops · 이 레포 project docs (관련된 것을 읽고 작업하세요)")
-	for _, doc := range docs {
-		name := strings.TrimPrefix(doc.RelPath, ".issueops/")
-		desc := doc.Description
-		if desc == "" {
-			desc = doc.Title
-		}
-		b.WriteString("\n• " + name)
-		if desc != "" {
-			b.WriteString(" — " + desc)
-		}
+	prefix := "📚 "
+	if repoName != "" {
+		prefix += repoName + " · "
 	}
-	return b.String()
+	return prefix + "project docs " + strconv.Itoa(len(docs)) + "개 (.issueops/)"
 }

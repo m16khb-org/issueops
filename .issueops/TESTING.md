@@ -1,6 +1,6 @@
 ---
 name: TESTING.md
-description: Verification standards, test practices, and required checks.
+description: Verification standards and required checks; read before writing tests or claiming work is verified.
 ---
 
 # 테스트 컨벤션

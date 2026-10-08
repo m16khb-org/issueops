@@ -37,13 +37,13 @@ must use `python3 scripts/validate-skill.py skills/<skill-name>` so local
 verification does not depend on upstream Codex system-skill changes or local
 PyYAML installation.
 
-Codex lifecycle hooks live in `~/.codex/hooks.json`. Default installation owns exactly `SessionStart`, invoking the shared context CLI with `--host codex`.
+Codex lifecycle hooks live in `~/.codex/hooks.json`. Default installation owns `SessionStart` and `SubagentStart`, invoking the shared context CLI with `--host codex`. Codex runs a new hook entry only after the user trusts it once (`[hooks.state]` in `config.toml`); the installer does not write that trust, so approve the new `SubagentStart` entry the first time Codex asks.
 
 Hook behavior:
 
 - `SessionStart` reads the static project-doc catalog and emits host-compatible context for every source, including the `compact` re-run Codex performs after compaction (verified against codex-cli 0.150.1: `post-compact.command.output` carries no `hookSpecificOutput`, so `PostCompact` is not registered). It does not read IssueOps, emit lifecycle reminders, inspect runtime state, write telemetry, maintain SQLite, recover workers, or mutate state.
 - `hook post-compact` stays available for Omo (`session_compact` has no SessionStart re-run there) and for diagnosis; installer upgrade removes any managed `PostCompact` group while preserving non-harness groups.
-- There is no other hook subcommand. `ISSUEOPS_DISABLE_HOOKS=1` turns the context hooks into a silent no-op.
+- `SubagentStart` gives each starting subagent the same model-facing catalog, except agents whose `agent_type` is `explore`, `explorer`, or `fork` (case-insensitive), and emits no `systemMessage` (codex-cli 0.161.0 accepts `additionalContext` there). There is no other hook subcommand. `ISSUEOPS_DISABLE_HOOKS=1` turns the context hooks into a silent no-op.
 
 Hook smoke:
 
@@ -80,7 +80,7 @@ Inside Claude Code:
 
 Default install registers user-scope MCP server `issueops`. This repo's `.mcp.json` is intentionally empty (`{"mcpServers": {}}`); the project stdio entry `issueops_project` is only a template in `configs/claude/mcp.project.json` and is written to `.mcp.json` only by `--project-local --mcp-transport=stdio` (with the default HTTP transport, `--project-local` removes any stale entry instead).
 
-Claude hooks live in `~/.claude/settings.json`. Default installation owns exactly `SessionStart`, calling the same context CLI/core as Codex with `--host claude`; Claude separates the readable `systemMessage` from the model-facing `hookSpecificOutput.additionalContext`. Claude Code 2.1.247 re-runs `SessionStart` with `source:"compact"` after compaction and treats `PostCompact` stdout as a user display string only, so the catalog is re-established through `SessionStart` and `PostCompact` is not registered.
+Claude hooks live in `~/.claude/settings.json`. Default installation owns `SessionStart` and `SubagentStart`, calling the same context CLI/core as Codex with `--host claude`. Both hosts get the same model-facing `hookSpecificOutput.additionalContext`; Claude `SessionStart` adds a one-line `systemMessage` naming the repository and the document count, and `SubagentStart` adds none. `SubagentStart` has no matcher: the hook itself returns `{}` for Explore and fork agents (Claude Code 2.1.293 accepts `additionalContext` there). Claude Code 2.1.247 re-runs `SessionStart` with `source:"compact"` after compaction and treats `PostCompact` stdout as a user display string only, so the catalog is re-established through `SessionStart` and `PostCompact` is not registered.
 
 Claude project-local hooks can be committed, so do not create `.claude/settings.json` in target repos without explicit opt-in.
 

@@ -32,11 +32,20 @@ func TestBuildProjectDocCatalogContext(t *testing.T) {
 		t.Fatalf("expected catalog context with one doc: %+v", cat)
 	}
 	canonical, _ := projectdoc.DocMetaDescription("ARCHITECTURE.md")
-	if !strings.Contains(cat.Compact, "project docs (read what's relevant):") || !strings.Contains(cat.Compact, "ARCHITECTURE.md="+canonical) {
+	if !strings.HasPrefix(cat.Compact, "Project docs under .issueops/") || !strings.Contains(cat.Compact, "\n- .issueops/ARCHITECTURE.md: "+canonical) {
 		t.Fatalf("compact catalog missing canonical meta: %q", cat.Compact)
 	}
-	if !strings.Contains(cat.UserView, "📚") || !strings.Contains(cat.UserView, "ARCHITECTURE.md") {
-		t.Fatalf("user view missing catalog: %q", cat.UserView)
+	if cat.UserView != "📚 project docs 1개 (.issueops/)" {
+		t.Fatalf("user view without RepoName = %q", cat.UserView)
+	}
+	service.RepoName = func(got string) string {
+		if got != repo {
+			t.Fatalf("RepoName received %q, want %q", got, repo)
+		}
+		return "named"
+	}
+	if got := service.Build(repo).UserView; got != "📚 named · project docs 1개 (.issueops/)" {
+		t.Fatalf("user view with RepoName = %q", got)
 	}
 	if got := service.Build(t.TempDir()); got.ShouldInject {
 		t.Fatalf("expected no injection without docs: %+v", got)
@@ -64,7 +73,7 @@ func TestBuildReportsExactOmissionCounts(t *testing.T) {
 		t.Fatalf("omitted = %+v, want %+v", got.Omitted, omissions)
 	}
 	counts := "oversize=2 unreadable=1 over_cap=3 header_truncated=4 scan_truncated"
-	if !strings.HasSuffix(got.Compact, "; omitted: "+counts) || !strings.Contains(got.UserView, counts) {
+	if !strings.HasSuffix(got.Compact, "\nomitted: "+counts) || !strings.Contains(got.UserView, counts) {
 		t.Fatalf("omission counts not visible:\ncompact=%q\nuser=%q", got.Compact, got.UserView)
 	}
 	encoded, err := json.Marshal(got)
@@ -110,7 +119,8 @@ func TestCatalogWithoutDocsSkipsRendering(t *testing.T) {
 				return docs, projectdoc.CatalogOmissions{}, projectdoc.CatalogStats{}
 			},
 			FormatCompact:  func([]projectdoc.ProjectDocCatalogEntry) string { t.Fatal("empty catalog rendered"); return "" },
-			FormatUserView: func([]projectdoc.ProjectDocCatalogEntry) string { t.Fatal("empty catalog rendered"); return "" },
+			FormatUserView: func(string, []projectdoc.ProjectDocCatalogEntry) string { t.Fatal("empty catalog rendered"); return "" },
+			RepoName:       func(string) string { t.Fatal("empty catalog named its repository"); return "" },
 		}
 		got := service.Build("repo")
 		if calls != 1 || got.ShouldInject || got.ProjectDocs != nil || got.Compact != "" || got.UserView != "" {

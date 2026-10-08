@@ -179,7 +179,7 @@ mistake would cost.
 
 | Layer | What lives here | Example |
 |---|---|---|
-| Context (hook) | Static information a session needs. Reads and writes no state | `SessionStart` injects the `.issueops/` document catalog |
+| Context (hook) | Static information a session needs. Reads and writes no state | `SessionStart` and `SubagentStart` inject the `.issueops/` document catalog |
 | Procedure (skill) | Ordering and criteria that need judgment. Review catches violations | Read CONSTITUTION, CAUTIONS, and ADR before planning and record them under `## 적용되는 결정과 주의사항` |
 | Gate (CLI) | Violations block the next stage. Sealed into the record by fingerprint | The required-section check in `link-plan`, the `project_docs_review` publication gate |
 
@@ -212,8 +212,8 @@ The default installer wires three host adapters into the same execution contract
 
 | Host | Default user-level integration |
 |---|---|
-| Codex | `~/.codex/skills/`, MCP config, `SessionStart` hook |
-| Claude Code | `~/.claude/skills/`, user-scope MCP, `SessionStart` hook |
+| Codex | `~/.codex/skills/`, MCP config, `SessionStart` and `SubagentStart` hooks |
+| Claude Code | `~/.claude/skills/`, user-scope MCP, `SessionStart` and `SubagentStart` hooks |
 | Omo native | `~/.omo/agent/skills/`, `~/.omo/mcp.json`, lifecycle extension |
 
 The default install changes only the user's home. An explicit `--project-local`
@@ -240,7 +240,7 @@ Five boundaries hold:
 1. Core behavior lives in the Go core, never in a host plugin or hook.
 2. CLI JSON and MCP responses keep the same meaning.
 3. Host adapters never bypass authentication, command policy, or workspace boundaries.
-4. Hooks provide only `SessionStart` project-doc context; they block no tool call and do no work on the agent's behalf.
+4. Hooks only inject project-doc context at `SessionStart` and `SubagentStart`; they block no tool call and do no work on the agent's behalf.
 5. The worker handles lifecycle jobs and policy-gated read-only evidence commands only.
 
 ## Command areas
@@ -251,7 +251,7 @@ Five boundaries hold:
 | Diagnostics | `inspect`, `system-status`, `doctor`, `docs` | Inspect install, state, and project docs |
 | Safety and quality | `policy`, `guard`, `quality`, `verify-work`, `trace`, `contract`, `api-doc`, `preflight` | Execution policy, change quality, evidence and public contract, pre-commit repository checks |
 | Workflow | `start`, `next`, `status`, `execution`, `loop`, `gates`, `channel` | Durable IssueOps cycle (its lifecycle commands sit at the top level), completion gate ledgers, cross-session message channels |
-| Docs and hooks | `project`, `hook` | Project doc creation, routing, and refresh; the `SessionStart` context hook entry point |
+| Docs and hooks | `project`, `hook` | Project doc creation, routing, and refresh; the `SessionStart` and `SubagentStart` context hook entry points |
 | State and runtime | `state`, `mcp`, `worker` | User state, MCP server, limited local jobs |
 | Improvement and research | `self-verify`, `self-augment`, `web-fetch`, `review-metrics` | Harness verification, improvement candidates, resilient public web fetches, adversarial-review round and verdict metrics |
 

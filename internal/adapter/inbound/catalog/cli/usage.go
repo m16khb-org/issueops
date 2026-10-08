@@ -44,7 +44,7 @@ Usage:
   issueops state maintain [--json]
 %s
   issueops api-doc check|static-check|review [--repo PATH] [--all] [--json] [--] [FILES...]
-  issueops hook session-start|post-compact [--repo PATH] [--host codex|claude] [--json]
+  issueops hook session-start|subagent-start|post-compact [--repo PATH] [--host codex|claude] [--json]
   issueops project bootstrap [--repo PATH] [--sync] [--dry-run] [--json]
   issueops project docs [--repo PATH] [--json]
   issueops project route-docs [--repo PATH] [--task TEXT] [--json]

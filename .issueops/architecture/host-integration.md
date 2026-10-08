@@ -10,8 +10,8 @@
 
 | Host | 최소 통합 | 권장 통합 | 주의 |
 |------|----------|----------|------|
-| Codex | `AGENTS.md`와 shell에서 `issueops` 실행 | `~/.codex/skills/*` native skills + `~/.codex/config.toml` MCP server + `~/.codex/hooks.json` SessionStart context hook | plugin에는 core logic을 넣지 않고, 대상 repo 파일도 기본으로 생성하지 않는다 |
-| Claude Code | `CLAUDE.md`와 shell에서 `issueops` 실행 | `~/.claude/skills/*` native skills + user-scope MCP server + `~/.claude/settings.json` SessionStart context hook | hook에서 위험 명령을 직접 실행하지 않는다. `.claude/skills`/`.claude/settings.json`/`.mcp.json` repo-local 파일은 project-local opt-in을 명시한 경우에만 사용한다 |
+| Codex | `AGENTS.md`와 shell에서 `issueops` 실행 | `~/.codex/skills/*` native skills + `~/.codex/config.toml` MCP server + `~/.codex/hooks.json` SessionStart·SubagentStart context hook | plugin에는 core logic을 넣지 않고, 대상 repo 파일도 기본으로 생성하지 않는다 |
+| Claude Code | `CLAUDE.md`와 shell에서 `issueops` 실행 | `~/.claude/skills/*` native skills + user-scope MCP server + `~/.claude/settings.json` SessionStart·SubagentStart context hook | hook에서 위험 명령을 직접 실행하지 않는다. `.claude/skills`/`.claude/settings.json`/`.mcp.json` repo-local 파일은 project-local opt-in을 명시한 경우에만 사용한다 |
 | Omo native | shell에서 `issueops` 실행 | `~/.omo/agent/skills/*` native skills + `~/.omo/mcp.json` MCP server + `~/.omo/extensions/issueops.js` (`session_start`, `session_compact`) | Omo 설치를 대행하지 않으며 readiness gate도 만들지 않는다. `.omo/skills`/`.omo/mcp.json` repo-local 파일은 project-local opt-in을 명시한 경우에만 사용한다 |
 
 `configs/upstream.json`의 선언형 upstream catalog는 shared skill layer와 분리되어 있다. Native activation 후 Claude Code에만 없는 plugin/Git skill을 선택적으로 provision한다. Provision 실패는 install/readiness 성공에 영향을 주지 않는다. Codex와 Omo에는 `skills/`의 first-party 원본만 기본으로 연결한다.

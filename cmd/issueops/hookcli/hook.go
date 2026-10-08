@@ -16,10 +16,11 @@ func hookDisabled() bool {
 	return hookenv.Bool("ISSUEOPS_DISABLE_HOOKS")
 }
 
-// RunHook dispatches the host lifecycle context hooks. Only SessionStart and
-// PostCompact exist: both read the static project-doc catalog and emit a
-// host-compatible context payload. They never touch durable issueops state,
-// telemetry, or IssueOps authority (ADR 2026-08-10, 2026-08-27).
+// RunHook dispatches the host lifecycle context hooks. Only SessionStart,
+// SubagentStart, and PostCompact exist: each reads the static project-doc
+// catalog and emits a host-compatible context payload. They never touch durable
+// issueops state, telemetry, or IssueOps authority (ADR 2026-08-10, 2026-08-27,
+// 2026-10-08).
 func RunHook(args []string, config hookcatalog.Config) error {
 	if hookDisabled() {
 		return nil
@@ -34,6 +35,8 @@ func RunHook(args []string, config hookcatalog.Config) error {
 		return flag.ErrHelp
 	case "session-start":
 		return hookcatalog.RunSessionStart(args[1:], config)
+	case "subagent-start":
+		return hookcatalog.RunSubagentStart(args[1:], config)
 	case "post-compact":
 		return hookcatalog.RunPostCompact(args[1:], config)
 	default:
@@ -45,11 +48,14 @@ func RunHook(args []string, config hookcatalog.Config) error {
 func hookUsage() {
 	fmt.Fprintf(os.Stderr, `Usage:
   issueops hook session-start [--repo PATH] [--host codex|claude] [--json]
+  issueops hook subagent-start [--repo PATH] [--host codex|claude] [--json]
   issueops hook post-compact [--repo PATH] [--host codex|claude] [--json]
 
 session-start renders the static project-doc catalog for every SessionStart
-source, including the post-compaction re-run. post-compact keeps the same
-catalog reachable for hosts without a SessionStart re-run (Omo) and for
-diagnosis. ISSUEOPS_DISABLE_HOOKS=1 turns both into a no-op.
+source, including the post-compaction re-run. subagent-start gives a starting
+subagent the same model-facing catalog, except Explore, explorer, and fork
+agents. post-compact keeps the catalog reachable for hosts without a
+SessionStart re-run (Omo) and for diagnosis. ISSUEOPS_DISABLE_HOOKS=1 turns
+every hook into a no-op.
 `)
 }
