@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	deliverycontract "issueops/internal/contract/issueops"
 	preparationdomain "issueops/internal/domain/issueopspreparation"
@@ -303,7 +304,7 @@ func executionMarkerField(marker, name string) (string, bool) {
 	return value, seen
 }
 
-var executionPromptPlaceholder = regexp.MustCompile(`\{[A-Z][A-Z0-9_]*\}`)
+var executionPromptPlaceholder = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`\{[A-Z][A-Z0-9_]*\}`) })
 
 func validateExecutionOwnerLaunch(prepared port.ExecutionOrcaWorkspaceReceipt, req port.ExecutionOrcaProbeRequest, launch port.ExecutionOrcaLaunchRequest) error {
 	if strings.TrimSpace(prepared.WorktreeID) == "" || strings.TrimSpace(prepared.RuntimeID) == "" || strings.TrimSpace(prepared.RepoID) == "" {
@@ -326,7 +327,7 @@ func validateExecutionOwnerLaunch(prepared port.ExecutionOrcaWorkspaceReceipt, r
 	if string(prompt) != launch.Prompt || digestExecutionBytes(prompt) != strings.ToLower(strings.TrimSpace(launch.PromptSHA256)) {
 		return fmt.Errorf("sealed owner prompt digest mismatch")
 	}
-	if executionPromptPlaceholder.MatchString(launch.Prompt) || !strings.Contains(launch.Prompt, launch.ContextPacketPath) || !strings.Contains(launch.Prompt, launch.ContextPacketSHA256) {
+	if executionPromptPlaceholder().MatchString(launch.Prompt) || !strings.Contains(launch.Prompt, launch.ContextPacketPath) || !strings.Contains(launch.Prompt, launch.ContextPacketSHA256) {
 		return fmt.Errorf("owner prompt is unresolved or does not bind the sealed packet")
 	}
 	return nil

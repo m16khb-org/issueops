@@ -4,10 +4,13 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 )
 
 // URLs are opaque at this boundary, including their path, query, and fragment.
-var publicMaterialURL = regexp.MustCompile("(^|[\\s`'\"(<\\[=:])([A-Za-z][A-Za-z0-9+.-]*:[^\\s<>\"`]+|//[^\\s<>\"`]+)")
+var publicMaterialURL = sync.OnceValue(func() *regexp.Regexp {
+	return regexp.MustCompile("(^|[\\s`'\"(<\\[=:])([A-Za-z][A-Za-z0-9+.-]*:[^\\s<>\"`]+|//[^\\s<>\"`]+)")
+})
 
 // NormalizePublicMaterialPaths changes only public copies. Roots come from the
 // record, so the rule neither observes the filesystem nor guesses other homes.
@@ -29,7 +32,7 @@ func NormalizePublicMaterialPaths(content []byte, sourceRoot, worktreeRoot strin
 	text := string(content)
 	var out strings.Builder
 	out.Grow(len(text))
-	urls := publicMaterialURL.FindAllStringIndex(text, -1)
+	urls := publicMaterialURL().FindAllStringIndex(text, -1)
 	urlIndex := 0
 	for i := 0; i < len(text); {
 		for urlIndex < len(urls) && urls[urlIndex][0] < i {

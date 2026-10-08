@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 )
 
-var mermaidUnquotedBracketTextRe = regexp.MustCompile(`\[[^"\]]`)
+var mermaidUnquotedBracketTextRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`\[[^"\]]`) })
 
 func LintMermaidBlocks(relPath, text string) []string {
 	errs := []string{}
@@ -43,7 +44,7 @@ func LintMermaidBlocks(relPath, text string) []string {
 		if strings.Contains(line, "<br>") {
 			errs = append(errs, fmt.Sprintf("%s:%d mermaid uses <br>; use <br/>", relPath, lineNo))
 		}
-		if mermaidUnquotedBracketTextRe.MatchString(line) {
+		if mermaidUnquotedBracketTextRe().MatchString(line) {
 			errs = append(errs, fmt.Sprintf("%s:%d mermaid node text must start with a quote", relPath, lineNo))
 		}
 		if strings.HasPrefix(trimmed, "subgraph ") {

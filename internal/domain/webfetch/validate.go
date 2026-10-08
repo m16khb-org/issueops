@@ -7,12 +7,13 @@ import (
 	"io"
 	"regexp"
 	"strings"
+	"sync"
 
 	webfetchcontract "issueops/internal/contract/webfetch"
 	"issueops/internal/domain/policy"
 )
 
-var tagRE = regexp.MustCompile(`(?s)<[^>]+>`)
+var tagRE = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`(?s)<[^>]+>`) })
 
 func ValidateResponse(input webfetchcontract.ResponseValidationInput) webfetchcontract.ResponseValidation {
 	body := decodeBody(input.Header, input.Body)
@@ -130,7 +131,7 @@ func looksLikeEmptySPA(lower, stripped string) bool {
 }
 
 func stripTags(s string) string {
-	return strings.Join(strings.Fields(tagRE.ReplaceAllString(s, " ")), " ")
+	return strings.Join(strings.Fields(tagRE().ReplaceAllString(s, " ")), " ")
 }
 
 func metadataFromResponse(header map[string][]string, text string) map[string]any {

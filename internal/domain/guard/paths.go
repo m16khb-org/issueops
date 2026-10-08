@@ -5,11 +5,14 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 )
 
-var secretPathRe = regexp.MustCompile(`(?i)(^|/)(\.env(\.|$)|id_rsa|id_dsa|id_ecdsa|id_ed25519|.*\.pem$|.*\.key$|.*\.p12$|.*\.pfx$|.*credentials.*|.*secret.*)`)
+var secretPathRe = sync.OnceValue(func() *regexp.Regexp {
+	return regexp.MustCompile(`(?i)(^|/)(\.env(\.|$)|id_rsa|id_dsa|id_ecdsa|id_ed25519|.*\.pem$|.*\.key$|.*\.p12$|.*\.pfx$|.*credentials.*|.*secret.*)`)
+})
 
-func SecretLikePath(rel string) bool { return secretPathRe.MatchString(filepath.ToSlash(rel)) }
+func SecretLikePath(rel string) bool { return secretPathRe().MatchString(filepath.ToSlash(rel)) }
 
 func RelevantPath(rel string) bool {
 	if SecretLikePath(rel) {

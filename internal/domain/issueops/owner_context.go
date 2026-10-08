@@ -6,15 +6,16 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 var (
-	executionPromptPlaceholder = regexp.MustCompile(`\{[A-Z][A-Z0-9_]*\}`)
-	ownerAcceptanceID          = regexp.MustCompile(`\bAC-[0-9]{2,}\b`)
+	executionPromptPlaceholder = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`\{[A-Z][A-Z0-9_]*\}`) })
+	ownerAcceptanceID          = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`\bAC-[0-9]{2,}\b`) })
 )
 
 func OwnerAcceptanceIDs(body string) []string {
-	return uniqueExecutionOwnerValues(ownerAcceptanceID.FindAllString(body, -1))
+	return uniqueExecutionOwnerValues(ownerAcceptanceID().FindAllString(body, -1))
 }
 func OwnerIssueProvider(record issueops.IssueOpsRecord) string {
 	if record.BranchPrepare != nil {
@@ -65,7 +66,7 @@ func RenderOwnerPrompt(packet issueops.OwnerContextPacket, packetPath, packetDig
 		"TURING_REPORT_PATH": packet.VerificationReportPath, "REMOTE_CREATE_COMMAND": packet.Commands.RemoteCreate, "COMPLETE_COMMAND": packet.Commands.Complete,
 	}
 	missing := ""
-	prompt := executionPromptPlaceholder.ReplaceAllStringFunc(template, func(token string) string {
+	prompt := executionPromptPlaceholder().ReplaceAllStringFunc(template, func(token string) string {
 		key := strings.TrimSuffix(strings.TrimPrefix(token, "{"), "}")
 		value, ok := values[key]
 		if !ok && missing == "" {
@@ -76,7 +77,7 @@ func RenderOwnerPrompt(packet issueops.OwnerContextPacket, packetPath, packetDig
 	if missing != "" {
 		return "", fmt.Errorf("owner prompt placeholder %s has no renderer", missing)
 	}
-	if unresolved := executionPromptPlaceholder.FindString(prompt); unresolved != "" {
+	if unresolved := executionPromptPlaceholder().FindString(prompt); unresolved != "" {
 		return "", fmt.Errorf("owner prompt value introduced unresolved placeholder %s", unresolved)
 	}
 	if len(prompt) > maxBytes {
@@ -108,7 +109,7 @@ func validateExecutionOwnerPromptInputs(packet issueops.OwnerContextPacket, pack
 		{"enter_pr_command", packet.Commands.EnterPR},
 	}
 	for _, scalar := range scalars {
-		if strings.ContainsAny(scalar.value, "\r\n") || executionPromptPlaceholder.MatchString(scalar.value) {
+		if strings.ContainsAny(scalar.value, "\r\n") || executionPromptPlaceholder().MatchString(scalar.value) {
 			return fmt.Errorf("owner prompt %s contains a line break or placeholder token", scalar.name)
 		}
 	}
@@ -121,7 +122,7 @@ func validateExecutionOwnerPromptInputs(packet issueops.OwnerContextPacket, pack
 	}
 	for _, list := range lists {
 		for _, value := range list.values {
-			if strings.TrimSpace(value) == "" || strings.ContainsAny(value, "\r\n") || executionPromptPlaceholder.MatchString(value) {
+			if strings.TrimSpace(value) == "" || strings.ContainsAny(value, "\r\n") || executionPromptPlaceholder().MatchString(value) {
 				return fmt.Errorf("owner prompt %s contains an empty, multiline, or placeholder value", list.name)
 			}
 		}

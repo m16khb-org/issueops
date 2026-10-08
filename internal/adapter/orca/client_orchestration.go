@@ -270,7 +270,7 @@ func (c *Client) runMutation(ctx context.Context, argv []string) (port.OrcaRun, 
 func currentCoordinatorHandle() (string, error) {
 	raw := os.Getenv("ORCA_TERMINAL_HANDLE")
 	handle := strings.TrimSpace(raw)
-	if raw != handle || !concreteTerminalHandlePattern.MatchString(handle) || len(handle) > 256 {
+	if raw != handle || !concreteTerminalHandlePattern().MatchString(handle) || len(handle) > 256 {
 		return "", &port.OrcaError{Code: "coordinator_identity_unavailable", Detail: "ORCA_TERMINAL_HANDLE must identify the current concrete coordinator terminal"}
 	}
 	return handle, nil

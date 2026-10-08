@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 
 	"issueops/internal/port"
 
@@ -21,8 +22,8 @@ import (
 const ompToolNameLimit = 64
 
 var (
-	ompToolNameInvalid    = regexp.MustCompile(`[^a-z0-9_]+`)
-	ompToolNameUnderscore = regexp.MustCompile(`_+`)
+	ompToolNameInvalid    = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`[^a-z0-9_]+`) })
+	ompToolNameUnderscore = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`_+`) })
 )
 
 // OmpRunner runs one capture-only MCP episode in an isolated oh-my-pi session.
@@ -413,8 +414,8 @@ func ompProbeToolName(tool string) (string, bool) {
 }
 
 func sanitizeOmpToolName(value, fallback string) string {
-	value = ompToolNameInvalid.ReplaceAllString(strings.ToLower(value), "_")
-	value = strings.Trim(ompToolNameUnderscore.ReplaceAllString(value, "_"), "_")
+	value = ompToolNameInvalid().ReplaceAllString(strings.ToLower(value), "_")
+	value = strings.Trim(ompToolNameUnderscore().ReplaceAllString(value, "_"), "_")
 	if value == "" {
 		return fallback
 	}

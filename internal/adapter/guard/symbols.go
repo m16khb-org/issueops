@@ -36,7 +36,7 @@ func guardExistingSymbols(root string, targetFiles []string) map[string][]string
 			return nil
 		}
 		for _, line := range strings.Split(string(b), "\n") {
-			if m := pattern.NewSymbol.FindStringSubmatch(line); len(m) == 2 {
+			if m := pattern.NewSymbol().FindStringSubmatch(line); len(m) == 2 {
 				key := guarddomain.NormalizeSymbol(m[1])
 				if key != "" {
 					symbols[key] = append(symbols[key], rel)

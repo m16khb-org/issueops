@@ -8,9 +8,10 @@ import (
 	remote "issueops/internal/domain/issueopsremote"
 	"regexp"
 	"strings"
+	"sync"
 )
 
-var executionCommandValue = regexp.MustCompile(`<[A-Z][A-Z0-9_-]*>`)
+var executionCommandValue = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`<[A-Z][A-Z0-9_-]*>`) })
 
 // ResolveModelFunc resolves a role for host from repo's agent model settings.
 type ResolveModelFunc func(host string, role agentmodelcontract.Role, repo string) (model, effort string, err error)
@@ -75,7 +76,7 @@ func ValidateOwnerCatalog(commands issueops.OwnerCommands) error {
 		if check.command == "none" {
 			continue
 		}
-		command := executionCommandValue.ReplaceAllString(check.command, "VALUE")
+		command := executionCommandValue().ReplaceAllString(check.command, "VALUE")
 		parsed, ok := commandparse.ParseExactIssueOpsCommand(command)
 		if !ok || parsed.Path != check.path {
 			return fmt.Errorf("IssueOps v1 owner command does not match catalog path %s", check.path)

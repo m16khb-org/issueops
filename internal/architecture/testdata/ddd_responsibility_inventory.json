@@ -16304,7 +16304,9 @@
       "owner": "domain",
       "task": "T20",
       "symbols": [
-        "func NormalizeKey"
+        "func NormalizeKey",
+        "func isAlnum",
+        "func validKey"
       ]
     },
     {

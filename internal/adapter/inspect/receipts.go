@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	inspectcontract "issueops/internal/contract/inspect"
@@ -25,8 +26,8 @@ const (
 )
 
 var (
-	versionPattern  = regexp.MustCompile(`\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.+-]*)?`)
-	schemePattern   = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*:`)
+	versionPattern  = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.+-]*)?`) })
+	schemePattern   = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*:`) })
 	hostBinaryNames = map[string]string{
 		inspectcontract.HostCodex:  "codex",
 		inspectcontract.HostClaude: "claude",
@@ -490,7 +491,7 @@ func (vetter *receiptVetter) hostVersion() string {
 
 func (vetter *receiptVetter) artifact(source string) (string, string) {
 	trimmed := strings.TrimSpace(source)
-	if trimmed == "" || schemePattern.MatchString(trimmed) {
+	if trimmed == "" || schemePattern().MatchString(trimmed) {
 		return source, "receipt_source_not_artifact"
 	}
 	if strings.Contains(strings.ToLower(filepath.Base(trimmed)), "synthetic") {
@@ -514,7 +515,7 @@ func demote(observed inspectcontract.Observation, reason string) inspectcontract
 }
 
 func normalizeVersion(raw string) string {
-	if match := versionPattern.FindString(raw); match != "" {
+	if match := versionPattern().FindString(raw); match != "" {
 		return match
 	}
 	return strings.TrimSpace(raw)

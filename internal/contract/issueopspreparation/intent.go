@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"unicode"
 
 	leasecontract "issueops/internal/contract/issueopslease"
@@ -26,8 +27,10 @@ const (
 )
 
 var (
-	sha256Pattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
-	uuidPattern   = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+	sha256Pattern = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^[0-9a-f]{64}$`) })
+	uuidPattern   = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+	})
 )
 
 type LaunchIdentity struct {
@@ -305,9 +308,9 @@ func validateShape(intent Intent, operationID string) error {
 		!samePath(intent.Probe.Repo, intent.Workspace.SourceRoot) || strings.TrimSpace(intent.Probe.Model) == "" ||
 		(intent.Probe.Host != "codex" && intent.Probe.Host != "claude" && intent.Probe.Host != "omo" && intent.Probe.Host != "omp") ||
 		(intent.InvocationState != InvocationNotInvoked && intent.InvocationState != InvocationUnknown) ||
-		intent.InvocationAttempts < 0 || intent.InvocationAttempts > MaxInvocationAttempts || !sha256Pattern.MatchString(intent.IssueBodySHA256) ||
-		(intent.OrcaRequestID != "" && !uuidPattern.MatchString(intent.OrcaRequestID)) ||
-		(intent.OrcaPromptRequestID != "" && !uuidPattern.MatchString(intent.OrcaPromptRequestID)) {
+		intent.InvocationAttempts < 0 || intent.InvocationAttempts > MaxInvocationAttempts || !sha256Pattern().MatchString(intent.IssueBodySHA256) ||
+		(intent.OrcaRequestID != "" && !uuidPattern().MatchString(intent.OrcaRequestID)) ||
+		(intent.OrcaPromptRequestID != "" && !uuidPattern().MatchString(intent.OrcaPromptRequestID)) {
 		return fmt.Errorf("Orca external intent payload is invalid")
 	}
 	switch purpose {
@@ -319,7 +322,7 @@ func validateShape(intent Intent, operationID string) error {
 		if intent.Stage == IntentStageWorktree || intent.PriorBinding == nil || intent.ResumeLease == nil ||
 			intent.ResumeLease.Generation != intent.Generation || intent.ResumeLease.Status != "claimable" ||
 			intent.ResumeLease.Holder != nil || intent.ResumeLease.ClaimTokenSHA256 != intent.ClaimTokenSHA256 ||
-			!sha256Pattern.MatchString(intent.ResumeLease.ClaimTokenSHA256) {
+			!sha256Pattern().MatchString(intent.ResumeLease.ClaimTokenSHA256) {
 			return fmt.Errorf("Orca resume intent payload is invalid")
 		}
 	default:
@@ -331,8 +334,8 @@ func validateShape(intent Intent, operationID string) error {
 			return fmt.Errorf("Orca worktree intent payload contains later-stage receipts")
 		}
 	case IntentStageTerminal, IntentStageRun, IntentStageRunBind, IntentStageTask, IntentStageDispatch:
-		if intent.Prepared == nil || intent.Launch == nil || !sha256Pattern.MatchString(intent.ClaimTokenSHA256) ||
-			!sha256Pattern.MatchString(intent.Launch.PromptSHA256) || !sha256Pattern.MatchString(intent.Launch.ContextPacketSHA256) ||
+		if intent.Prepared == nil || intent.Launch == nil || !sha256Pattern().MatchString(intent.ClaimTokenSHA256) ||
+			!sha256Pattern().MatchString(intent.Launch.PromptSHA256) || !sha256Pattern().MatchString(intent.Launch.ContextPacketSHA256) ||
 			strings.TrimSpace(intent.Launch.PromptPath) == "" || strings.TrimSpace(intent.Launch.ContextPacketPath) == "" ||
 			validateWorkspaceReceipt(intent.Workspace, *intent.Prepared) != nil {
 			return fmt.Errorf("Orca owner intent payload is missing sealed launch receipts")

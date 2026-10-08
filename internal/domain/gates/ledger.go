@@ -19,15 +19,16 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 var (
 	// gateLineRe는 unlazy의 /^- \[( |x|X)\] (.*)$/와 같다.
-	gateLineRe = regexp.MustCompile(`^- \[( |x|X)\] (.*)$`)
+	gateLineRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^- \[( |x|X)\] (.*)$`) })
 	// attrLineRe는 게이트 라인 아래 들여쓴 CHECK/EXPECT/EVIDENCE 속성 라인.
-	attrLineRe = regexp.MustCompile(`^[ \t]+(CHECK|EXPECT|EVIDENCE):[ \t]?(.*)$`)
+	attrLineRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^[ \t]+(CHECK|EXPECT|EVIDENCE):[ \t]?(.*)$`) })
 	// abandonLineRe는 /^ABANDON:\s*(\S+)\s*(.*)$/.
-	abandonLineRe = regexp.MustCompile(`^ABANDON:[ \t]*(\S+)[ \t]*(.*)$`)
+	abandonLineRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^ABANDON:[ \t]*(\S+)[ \t]*(.*)$`) })
 )
 
 // Gate는 게이트 하나의 파싱 결과와 파일 내 위치다.
@@ -66,7 +67,7 @@ func Parse(text string) Ledger {
 	current := -1 // index into ledger.Gates; -1 = no open gate
 	abandons := map[string]string{}
 	for i, line := range lines {
-		if m := gateLineRe.FindStringSubmatch(line); m != nil {
+		if m := gateLineRe().FindStringSubmatch(line); m != nil {
 			title := strings.TrimSpace(m[2])
 			id := gateID(title, i)
 			ledger.Gates = append(ledger.Gates, Gate{
@@ -79,7 +80,7 @@ func Parse(text string) Ledger {
 			current = len(ledger.Gates) - 1
 			continue
 		}
-		if m := attrLineRe.FindStringSubmatch(line); m != nil && current >= 0 {
+		if m := attrLineRe().FindStringSubmatch(line); m != nil && current >= 0 {
 			gate := &ledger.Gates[current]
 			value := strings.TrimSpace(m[2])
 			switch m[1] {
@@ -93,7 +94,7 @@ func Parse(text string) Ledger {
 			}
 			continue
 		}
-		if m := abandonLineRe.FindStringSubmatch(line); m != nil {
+		if m := abandonLineRe().FindStringSubmatch(line); m != nil {
 			abandons[strings.TrimSuffix(m[1], ":")] = abandonReason(m[2])
 			continue
 		}
@@ -190,10 +191,10 @@ func indentOf(line string) string {
 
 func attrIndent(lines []string, checkboxLine int) string {
 	for i := checkboxLine + 1; i < len(lines); i++ {
-		if attrLineRe.MatchString(lines[i]) {
+		if attrLineRe().MatchString(lines[i]) {
 			return indentOf(lines[i])
 		}
-		if gateLineRe.MatchString(lines[i]) {
+		if gateLineRe().MatchString(lines[i]) {
 			break
 		}
 		if trimmed := strings.TrimRight(lines[i], "\r"); trimmed != "" && !strings.HasPrefix(trimmed, "#") {

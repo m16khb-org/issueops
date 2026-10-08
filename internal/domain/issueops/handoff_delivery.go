@@ -6,12 +6,13 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
-var handoffDeliveryDigest = regexp.MustCompile(`^[a-f0-9]{64}$`)
+var handoffDeliveryDigest = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^[a-f0-9]{64}$`) })
 
 const handoffDeliveryFieldLimit = 1024
 
@@ -30,10 +31,10 @@ func ValidateHandoffDeliveryObservation(observation issueopscontract.IssueOpsHan
 	if strings.TrimSpace(observation.LifecycleID) == "" || len(observation.LifecycleID) > handoffDeliveryFieldLimit {
 		return fmt.Errorf("delivery observation lifecycle_id is required")
 	}
-	if !handoffDeliveryDigest.MatchString(strings.TrimSpace(observation.PromptSHA256)) {
+	if !handoffDeliveryDigest().MatchString(strings.TrimSpace(observation.PromptSHA256)) {
 		return fmt.Errorf("delivery observation prompt digest is invalid")
 	}
-	if !handoffDeliveryDigest.MatchString(strings.TrimSpace(observation.MaterialSHA256)) {
+	if !handoffDeliveryDigest().MatchString(strings.TrimSpace(observation.MaterialSHA256)) {
 		return fmt.Errorf("delivery observation material digest is invalid")
 	}
 	if err := validateHandoffDeliveryRequest(observation.Request); err != nil {
@@ -46,7 +47,7 @@ func ValidateHandoffDeliveryObservation(observation issueopscontract.IssueOpsHan
 	if err != nil {
 		return err
 	}
-	if strings.TrimSpace(observation.Receipt.Location) == "" || !handoffDeliveryDigest.MatchString(strings.TrimSpace(observation.Receipt.Digest)) {
+	if strings.TrimSpace(observation.Receipt.Location) == "" || !handoffDeliveryDigest().MatchString(strings.TrimSpace(observation.Receipt.Digest)) {
 		return fmt.Errorf("delivery observation receipt is invalid")
 	}
 	if len(observation.Receipt.Location) > handoffDeliveryFieldLimit {

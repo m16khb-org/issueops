@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 
 	"issueops/internal/domain/policy"
 )
@@ -72,14 +73,26 @@ func (e *evidenceExtractor) entry(key string) *evidenceEntry {
 }
 
 var (
-	injectionRe   = regexp.MustCompile(`(?:private|public|protected)\s+(?:readonly\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([A-Za-z_][A-Za-z0-9_]*)`)
-	methodNameRe2 = regexp.MustCompile(`^\s*(?:public\s+|private\s+|protected\s+|async\s+|static\s+)*([A-Za-z_][A-Za-z0-9_]*)\s*\(`)
-	serviceCallRe = regexp.MustCompile(`this\.([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\s*\(`)
-	throwRe       = regexp.MustCompile(`throw\s+new\s+([A-Za-z_][A-Za-z0-9_]*)\s*(\([^;]*)?`)
-	patternArgRe  = regexp.MustCompile(`\.(?:send|emit)\s*\(\s*(\{[^}]*\}|['"\x60][^'"\x60]+['"\x60])`)
-	classDeclRe   = regexp.MustCompile(`\b(?:export\s+)?(?:abstract\s+)?class\s+([A-Za-z_][A-Za-z0-9_]*)`)
-	catchRe       = regexp.MustCompile(`@Catch\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)`)
-	httpStatusRe  = regexp.MustCompile(`HttpStatus\.([A-Z_]+)|\.status\s*\(\s*(\d{3})`)
+	injectionRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?:private|public|protected)\s+(?:readonly\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([A-Za-z_][A-Za-z0-9_]*)`)
+	})
+	methodNameRe2 = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`^\s*(?:public\s+|private\s+|protected\s+|async\s+|static\s+)*([A-Za-z_][A-Za-z0-9_]*)\s*\(`)
+	})
+	serviceCallRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`this\.([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\s*\(`)
+	})
+	throwRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`throw\s+new\s+([A-Za-z_][A-Za-z0-9_]*)\s*(\([^;]*)?`)
+	})
+	patternArgRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`\.(?:send|emit)\s*\(\s*(\{[^}]*\}|['"\x60][^'"\x60]+['"\x60])`)
+	})
+	classDeclRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`\b(?:export\s+)?(?:abstract\s+)?class\s+([A-Za-z_][A-Za-z0-9_]*)`)
+	})
+	catchRe      = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`@Catch\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)`) })
+	httpStatusRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`HttpStatus\.([A-Z_]+)|\.status\s*\(\s*(\d{3})`) })
 )
 
 func isControllerLike(file string) bool {
@@ -105,7 +118,7 @@ func (e *evidenceExtractor) extractController(file, text string) {
 	injections := parseInjections(text)
 	lines := strings.Split(text, "\n")
 	for i := 0; i < len(lines); i++ {
-		m := methodNameRe2.FindStringSubmatch(lines[i])
+		m := methodNameRe2().FindStringSubmatch(lines[i])
 		if m == nil {
 			continue
 		}
@@ -118,7 +131,7 @@ func (e *evidenceExtractor) extractController(file, text string) {
 			continue
 		}
 		key := file + "#" + method
-		for _, call := range serviceCallRe.FindAllStringSubmatch(body, -1) {
+		for _, call := range serviceCallRe().FindAllStringSubmatch(body, -1) {
 			className, known := injections[call[1]]
 			if !known {
 				continue
@@ -132,7 +145,7 @@ func (e *evidenceExtractor) extractController(file, text string) {
 			}
 			e.addThrows(key, servicePath, serviceText, call[2], 0)
 		}
-		for _, send := range patternArgRe.FindAllStringSubmatch(body, -1) {
+		for _, send := range patternArgRe().FindAllStringSubmatch(body, -1) {
 			e.addMicroserviceHop(key, send[1])
 		}
 		_ = bodyStart
@@ -157,7 +170,7 @@ func parseInjections(text string) map[string]string {
 					depth--
 				}
 			}
-			for _, m := range injectionRe.FindAllStringSubmatch(lines[j], -1) {
+			for _, m := range injectionRe().FindAllStringSubmatch(lines[j], -1) {
 				injections[m[1]] = m[2]
 			}
 			if j > i && depth <= 0 {
@@ -254,7 +267,7 @@ func (e *evidenceExtractor) buildClassIndex() {
 		rel = filepath.ToSlash(rel)
 		text := string(b)
 		e.fileText[rel] = text
-		for _, m := range classDeclRe.FindAllStringSubmatch(text, -1) {
+		for _, m := range classDeclRe().FindAllStringSubmatch(text, -1) {
 			if _, exists := e.classPath[m[1]]; !exists {
 				e.classPath[m[1]] = rel
 				e.classText[m[1]] = text
@@ -272,7 +285,7 @@ func (e *evidenceExtractor) addThrows(key, servicePath, serviceText, method stri
 	}
 	lines := strings.Split(serviceText, "\n")
 	for i := 0; i < len(lines); i++ {
-		m := methodNameRe2.FindStringSubmatch(lines[i])
+		m := methodNameRe2().FindStringSubmatch(lines[i])
 		if m == nil || m[1] != method {
 			continue
 		}
@@ -281,13 +294,13 @@ func (e *evidenceExtractor) addThrows(key, servicePath, serviceText, method stri
 			return
 		}
 		for j, line := range strings.Split(body, "\n") {
-			if t := throwRe.FindStringSubmatch(line); t != nil {
+			if t := throwRe().FindStringSubmatch(line); t != nil {
 				e.entry(key).lines = append(e.entry(key).lines, fmt.Sprintf("%s: throw new %s%s (%s:%d)", method, t[1], throwDetail(t[2]), filepath.Base(servicePath), i+j+1))
 				e.collected++
 			}
 		}
 		if depth == 0 {
-			for _, call := range thisMethodCallRe.FindAllStringSubmatch(body, -1) {
+			for _, call := range thisMethodCallRe().FindAllStringSubmatch(body, -1) {
 				e.addThrows(key, servicePath, serviceText, call[1], depth+1)
 			}
 		}
@@ -295,7 +308,7 @@ func (e *evidenceExtractor) addThrows(key, servicePath, serviceText, method stri
 	}
 }
 
-var thisMethodCallRe = regexp.MustCompile(`this\.([A-Za-z_][A-Za-z0-9_]*)\s*\(`)
+var thisMethodCallRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`this\.([A-Za-z_][A-Za-z0-9_]*)\s*\(`) })
 
 func throwDetail(arg string) string {
 	arg = strings.TrimSpace(arg)
@@ -387,7 +400,7 @@ func (e *evidenceExtractor) addMicroserviceHop(key, patternArg string) {
 			if !ok {
 				continue
 			}
-			for _, call := range serviceCallRe.FindAllStringSubmatch(body, -1) {
+			for _, call := range serviceCallRe().FindAllStringSubmatch(body, -1) {
 				className, known := injections[call[1]]
 				if !known || isClientProxyType(className) {
 					continue
@@ -414,12 +427,12 @@ func (e *evidenceExtractor) addExceptionFilters(key string) {
 	e.buildClassIndex()
 	for _, path := range sortedPaths(e.fileText) {
 		text := e.fileText[path]
-		catch := catchRe.FindStringSubmatch(text)
+		catch := catchRe().FindStringSubmatch(text)
 		if catch == nil {
 			continue
 		}
 		var mappings []string
-		for _, m := range httpStatusRe.FindAllStringSubmatch(text, -1) {
+		for _, m := range httpStatusRe().FindAllStringSubmatch(text, -1) {
 			if m[1] != "" {
 				mappings = append(mappings, "HttpStatus."+m[1])
 			} else if m[2] != "" {
@@ -435,7 +448,7 @@ func (e *evidenceExtractor) addExceptionFilters(key string) {
 
 func nextMethodName(lines []string, from int) string {
 	for i := from; i < len(lines) && i < from+12; i++ {
-		if m := methodNameRe2.FindStringSubmatch(lines[i]); m != nil && m[1] != "constructor" {
+		if m := methodNameRe2().FindStringSubmatch(lines[i]); m != nil && m[1] != "constructor" {
 			return m[1]
 		}
 	}
@@ -444,7 +457,7 @@ func nextMethodName(lines []string, from int) string {
 
 func handlerBody(lines []string, from int, handler string) (int, string, bool) {
 	for i := from; i < len(lines) && i < from+12; i++ {
-		m := methodNameRe2.FindStringSubmatch(lines[i])
+		m := methodNameRe2().FindStringSubmatch(lines[i])
 		if m == nil || m[1] != handler {
 			continue
 		}

@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	"issueops/internal/adapter/provider/providerutil"
 	"issueops/internal/domain/remoteparse"
@@ -21,7 +22,7 @@ import (
 // Provider adapts GitLab via the `glab` CLI.
 type Provider struct{}
 
-var glabCapabilityVersionPattern = regexp.MustCompile(`(?:^|\s)v?(\d+)\.(\d+)\.(\d+)(?:\s|$)`)
+var glabCapabilityVersionPattern = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`(?:^|\s)v?(\d+)\.(\d+)\.(\d+)(?:\s|$)`) })
 
 func NewProvider() Provider { return Provider{} }
 
@@ -320,7 +321,7 @@ func gitLabProjectRequiresGlab182(projectURL string) bool {
 }
 
 func glabCapabilityAtLeast182(value string) bool {
-	match := glabCapabilityVersionPattern.FindStringSubmatch(strings.TrimSpace(value))
+	match := glabCapabilityVersionPattern().FindStringSubmatch(strings.TrimSpace(value))
 	if len(match) != 4 {
 		return false
 	}

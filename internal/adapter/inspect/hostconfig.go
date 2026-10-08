@@ -13,11 +13,14 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 const redactedValue = "<redacted>"
 
-var secretKeyPattern = regexp.MustCompile(`(?i)token|secret|password|authorization|api[_-]?key`)
+var secretKeyPattern = sync.OnceValue(func() *regexp.Regexp {
+	return regexp.MustCompile(`(?i)token|secret|password|authorization|api[_-]?key`)
+})
 
 type configReadError struct{ code string }
 
@@ -188,7 +191,7 @@ func stripSecrets(value any) any {
 				out[key] = redactValues(item)
 				continue
 			}
-			if secretKeyPattern.MatchString(key) {
+			if secretKeyPattern().MatchString(key) {
 				out[key] = redactedValue
 				continue
 			}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 
 	loopcontract "issueops/internal/contract/looprun"
 )
@@ -25,7 +26,9 @@ type Attempt struct {
 	evidence []string
 }
 
-var secretAssignmentPattern = regexp.MustCompile(`(?i)\b(token|secret|password|api[_-]?key|access[_-]?key)\s*[:=]\s*["']?([^\s"',}]+)`)
+var secretAssignmentPattern = sync.OnceValue(func() *regexp.Regexp {
+	return regexp.MustCompile(`(?i)\b(token|secret|password|api[_-]?key|access[_-]?key)\s*[:=]\s*["']?([^\s"',}]+)`)
+})
 
 func PrepareStart(request loopcontract.StartLoopRequest) (Start, error) {
 	name := strings.TrimSpace(request.Name)
@@ -148,5 +151,5 @@ func cleanStrings(values []string) []string {
 }
 
 func redactFreeform(value string) string {
-	return strings.TrimSpace(secretAssignmentPattern.ReplaceAllString(value, "$1=<redacted>"))
+	return strings.TrimSpace(secretAssignmentPattern().ReplaceAllString(value, "$1=<redacted>"))
 }

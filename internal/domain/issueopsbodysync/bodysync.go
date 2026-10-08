@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 
 	contract "issueops/internal/contract/issueopsbodysync"
 )
@@ -45,7 +46,7 @@ const (
 // issueCreateMarker matches the durable marker that reconcile-issue uses to
 // re-find an issue whose creation outcome was unclear. It is a single comment
 // line rather than a delimited block.
-var issueCreateMarker = regexp.MustCompile(`<!-- issueops:issue-create:[0-9a-f]{32} -->`)
+var issueCreateMarker = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`<!-- issueops:issue-create:[0-9a-f]{32} -->`) })
 
 // NormalizeBody folds the transformations a provider applies to a body it
 // stores, so that a plain round trip through the provider does not read as a
@@ -94,7 +95,7 @@ func ManagedRegions(live string) []contract.Region {
 			region: contract.Region{Name: delimited.name, Block: live[s : e+len(delimited.end)]},
 		})
 	}
-	if at := issueCreateMarker.FindStringIndex(live); at != nil {
+	if at := issueCreateMarker().FindStringIndex(live); at != nil {
 		found = append(found, located{
 			at:     at[0],
 			region: contract.Region{Name: RegionIssueCreate, Block: live[at[0]:at[1]]},
@@ -148,7 +149,7 @@ func containsManagedMarker(body string) bool {
 			return true
 		}
 	}
-	return issueCreateMarker.MatchString(body)
+	return issueCreateMarker().MatchString(body)
 }
 
 // ClassifyDrift compares the body the harness last recorded, the body living on

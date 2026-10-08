@@ -4,10 +4,15 @@ import (
 	contract "issueops/internal/contract/apidoc"
 	"regexp"
 	"strings"
+	"sync"
 )
 
-var dtoPropertyRe = regexp.MustCompile(`^\s*(?:readonly\s+)?([A-Za-z_][A-Za-z0-9_]*)\??\s*[!:?]?\s*:`)
-var dtoClassDeclarationRe = regexp.MustCompile(`\b(?:export\s+)?(?:abstract\s+)?class\s+[A-Za-z_][A-Za-z0-9_]*\b`)
+var dtoPropertyRe = sync.OnceValue(func() *regexp.Regexp {
+	return regexp.MustCompile(`^\s*(?:readonly\s+)?([A-Za-z_][A-Za-z0-9_]*)\??\s*[!:?]?\s*:`)
+})
+var dtoClassDeclarationRe = sync.OnceValue(func() *regexp.Regexp {
+	return regexp.MustCompile(`\b(?:export\s+)?(?:abstract\s+)?class\s+[A-Za-z_][A-Za-z0-9_]*\b`)
+})
 
 func CheckNestDTO(file, text string) []contract.Violation {
 	lines := strings.Split(text, "\n")
@@ -19,7 +24,7 @@ func CheckNestDTO(file, text string) []contract.Violation {
 	for i, line := range lines {
 		trimmed := strings.TrimSpace(line)
 		if !inClass {
-			if dtoClassDeclarationRe.MatchString(trimmed) {
+			if dtoClassDeclarationRe().MatchString(trimmed) {
 				pendingClassBody = true
 			}
 			if pendingClassBody && strings.Contains(trimmed, "{") {
@@ -43,7 +48,7 @@ func CheckNestDTO(file, text string) []contract.Violation {
 			classDepth += BraceDepthDelta(line)
 			continue
 		}
-		m := dtoPropertyRe.FindStringSubmatch(line)
+		m := dtoPropertyRe().FindStringSubmatch(line)
 		if m == nil || strings.Contains(trimmed, "(") || strings.HasPrefix(trimmed, "private ") || strings.HasPrefix(trimmed, "static ") {
 			if trimmed != "" && !strings.HasPrefix(trimmed, ".") && !strings.HasPrefix(trimmed, "}") {
 				decorators = nil
@@ -97,7 +102,7 @@ func BraceDepthDelta(line string) int {
 	return delta
 }
 
-var apiPropertyObjectValueRe = regexp.MustCompile(`required\s*:\s*(true|false)`)
+var apiPropertyObjectValueRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`required\s*:\s*(true|false)`) })
 
 // apiPropertyObjectFlag reports whether a @ApiProperty(...) decorator object
 // sets the required key to the given boolean. Plain string search stays
@@ -107,7 +112,7 @@ func apiPropertyObjectFlag(deco, key, want string) bool {
 	if !strings.Contains(deco, "@ApiProperty") || strings.Contains(deco, "@ApiPropertyOptional") {
 		return false
 	}
-	for _, m := range apiPropertyObjectValueRe.FindAllStringSubmatch(deco, -1) {
+	for _, m := range apiPropertyObjectValueRe().FindAllStringSubmatch(deco, -1) {
 		if m[1] == want {
 			return true
 		}
@@ -119,5 +124,5 @@ func apiPropertyHasRequiredKey(deco string) bool {
 	if !strings.Contains(deco, "@ApiProperty") || strings.Contains(deco, "@ApiPropertyOptional") {
 		return false
 	}
-	return apiPropertyObjectValueRe.MatchString(deco)
+	return apiPropertyObjectValueRe().MatchString(deco)
 }

@@ -12,6 +12,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 	"unicode"
 	"unicode/utf8"
 
@@ -69,28 +70,30 @@ var harnessTerms = []string{
 
 // harnessTermRes match each harness term as a whole word, so "release" never
 // reads as "lease". Korean terms have no ASCII boundary and match as-is.
-var harnessTermRes = func() []*regexp.Regexp {
-	res := make([]*regexp.Regexp, 0, len(harnessTerms))
-	for _, term := range harnessTerms {
-		pattern := regexp.QuoteMeta(term)
-		if isASCII(term) {
-			pattern = `\b` + pattern + `\b`
+var harnessTermRes = sync.OnceValue(func() []*regexp.Regexp {
+	return func() []*regexp.Regexp {
+		res := make([]*regexp.Regexp, 0, len(harnessTerms))
+		for _, term := range harnessTerms {
+			pattern := regexp.QuoteMeta(term)
+			if isASCII(term) {
+				pattern = `\b` + pattern + `\b`
+			}
+			res = append(res, regexp.MustCompile(`(?i)`+pattern))
 		}
-		res = append(res, regexp.MustCompile(`(?i)`+pattern))
-	}
-	return res
-}()
+		return res
+	}()
+})
 
 var slopHedgePatterns = []string{"고 할 수 있습니다", "것으로 보입니다"}
 var slopIntroPatterns = []string{"살펴보겠습니다", "하고자 합니다"}
 
 var (
-	codeFenceRe  = regexp.MustCompile("(?s)```.*?```")
-	inlineCodeRe = regexp.MustCompile("`[^`]*`")
-	urlRe        = regexp.MustCompile(`https?://\S+`)
-	pathLikeRe   = regexp.MustCompile(`(?:^|\s)[./~]?[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)+`)
-	localPathRe  = regexp.MustCompile(`(?:/Users/|/home/)[^\s\x60]*`)
-	resultOnlyRe = regexp.MustCompile(`(?i)^\s*[-*]?\s*(pass|통과|ok)\.?\s*$`)
+	codeFenceRe  = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile("(?s)```.*?```") })
+	inlineCodeRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile("`[^`]*`") })
+	urlRe        = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`https?://\S+`) })
+	pathLikeRe   = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`(?:^|\s)[./~]?[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)+`) })
+	localPathRe  = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`(?:/Users/|/home/)[^\s\x60]*`) })
+	resultOnlyRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`(?i)^\s*[-*]?\s*(pass|통과|ok)\.?\s*$`) })
 )
 
 // Check judges body against Kind's rules and, for Issue/Child/PR, the
@@ -182,7 +185,7 @@ func addLineFindings(report *reportcontract.Report, code string, completion bool
 		if hasSHA256 {
 			report.Critical = append(report.Critical, reportcontract.Finding{Code: "sha256_hex", Line: lineNo, Message: "코드 밖에 64자리 hex가 있습니다."})
 		}
-		if (strings.Contains(line, "/Users/") || strings.Contains(line, "/home/")) && localPathRe.MatchString(line) {
+		if (strings.Contains(line, "/Users/") || strings.Contains(line, "/home/")) && localPathRe().MatchString(line) {
 			pathOrSHA(reportcontract.Finding{Code: "local_path", Line: lineNo, Message: "로컬 절대 경로가 있습니다."})
 		}
 		if hasCommitSHA {
@@ -190,7 +193,7 @@ func addLineFindings(report *reportcontract.Report, code string, completion bool
 		}
 		lower := strings.ToLower(line)
 		for j, term := range harnessTerms {
-			if strings.Contains(lower, term) && harnessTermRes[j].MatchString(line) {
+			if strings.Contains(lower, term) && harnessTermRes()[j].MatchString(line) {
 				report.Warnings = append(report.Warnings, reportcontract.Finding{Code: "harness_term", Line: lineNo, Message: "하네스 용어가 나옵니다: " + term})
 			}
 		}
@@ -209,7 +212,7 @@ func addSectionWarnings(report *reportcontract.Report, input Input, prose string
 		}
 	}
 	for _, verifyTitle := range []string{"확인한 것", "검증"} {
-		if content, ok := artifacttemplate.SectionContent(prose, verifyTitle); ok && slices.ContainsFunc(strings.Split(content, "\n"), resultOnlyRe.MatchString) {
+		if content, ok := artifacttemplate.SectionContent(prose, verifyTitle); ok && slices.ContainsFunc(strings.Split(content, "\n"), resultOnlyRe().MatchString) {
 			report.Warnings = append(report.Warnings, reportcontract.Finding{Code: "result_only_pass", Message: verifyTitle + " 절에 결과만 있는 줄이 있습니다."})
 		}
 	}
@@ -274,8 +277,8 @@ func blankCode(text string) string {
 			return ' '
 		}, match)
 	}
-	text = codeFenceRe.ReplaceAllStringFunc(text, blank)
-	return inlineCodeRe.ReplaceAllStringFunc(text, blank)
+	text = codeFenceRe().ReplaceAllStringFunc(text, blank)
+	return inlineCodeRe().ReplaceAllStringFunc(text, blank)
 }
 
 // scoreLanguage counts Hangul syllables and English words in prose the same
@@ -283,10 +286,10 @@ func blankCode(text string) string {
 // first, and an English word only counts when Unicode word boundaries
 // surround it, so "PR을" is not an English word.
 func scoreLanguage(text string) (hangul int, englishWords int) {
-	prose := codeFenceRe.ReplaceAllString(text, " ")
-	prose = inlineCodeRe.ReplaceAllString(prose, " ")
-	prose = urlRe.ReplaceAllString(prose, " ")
-	prose = pathLikeRe.ReplaceAllString(prose, " ")
+	prose := codeFenceRe().ReplaceAllString(text, " ")
+	prose = inlineCodeRe().ReplaceAllString(prose, " ")
+	prose = urlRe().ReplaceAllString(prose, " ")
+	prose = pathLikeRe().ReplaceAllString(prose, " ")
 	runes := []rune(prose)
 	for _, r := range runes {
 		if r >= '가' && r <= '힣' {

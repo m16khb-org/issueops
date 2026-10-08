@@ -6,9 +6,12 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 )
 
-var candidateRe = regexp.MustCompile(`(?i)(controller|dto|route|router|handler|endpoint|openapi|swagger|api|schema|proto)`)
+var candidateRe = sync.OnceValue(func() *regexp.Regexp {
+	return regexp.MustCompile(`(?i)(controller|dto|route|router|handler|endpoint|openapi|swagger|api|schema|proto)`)
+})
 
 func IsCandidate(file string) bool {
 	base := filepath.Base(file)
@@ -19,7 +22,7 @@ func IsCandidate(file string) bool {
 	if base == "package.json" || strings.HasSuffix(base, "lock") {
 		return false
 	}
-	return candidateRe.MatchString(file)
+	return candidateRe().MatchString(file)
 }
 
 func ValidReviewVerdict(verdict string) bool { return verdict == "pass" || verdict == "fail" }

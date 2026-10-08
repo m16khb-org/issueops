@@ -2,6 +2,7 @@ package cmux
 
 import (
 	issueops "issueops/internal/contract/issueops"
+	"sync"
 
 	"bytes"
 	"context"
@@ -32,7 +33,7 @@ const (
 )
 
 var (
-	cmuxWorkspaceRefPattern = regexp.MustCompile(`^workspace:[0-9]+$`)
+	cmuxWorkspaceRefPattern = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^workspace:[0-9]+$`) })
 )
 
 type CommandRequest struct {
@@ -244,7 +245,7 @@ func (client Client) resolveCreatedTarget(ctx context.Context, name, createdHand
 func parseCreatedWorkspaceHandle(data []byte) (string, error) {
 	fields := strings.Fields(strings.TrimSpace(string(data)))
 	if len(fields) != 2 || fields[0] != "OK" ||
-		(!cmuxWorkspaceRefPattern.MatchString(fields[1]) && !validUUID(fields[1])) {
+		(!cmuxWorkspaceRefPattern().MatchString(fields[1]) && !validUUID(fields[1])) {
 		return "", fmt.Errorf("cmux create response is malformed")
 	}
 	return fields[1], nil

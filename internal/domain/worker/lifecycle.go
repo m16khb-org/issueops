@@ -4,16 +4,26 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 
 	workercontract "issueops/internal/contract/worker"
 )
 
-var workerIDPattern = regexp.MustCompile(`^[A-Za-z0-9._-]{1,128}$`)
-
-func ValidID(id string) bool { return workerIDPattern.MatchString(id) && !strings.Contains(id, "..") }
+// ValidID matches ^[A-Za-z0-9._-]{1,128}$ by hand (the counted repetition
+// compiles to a large regexp program at every process start) and rejects "..".
+func ValidID(id string) bool {
+	if len(id) == 0 || len(id) > 128 || strings.Contains(id, "..") {
+		return false
+	}
+	for i := range len(id) {
+		c := id[i]
+		if !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '.' || c == '_' || c == '-') {
+			return false
+		}
+	}
+	return true
+}
 
 func MakeID(kind, payload string, at time.Time) string {
 	sum := sha256.Sum256([]byte(kind + "\x00" + payload + "\x00" + at.Format(time.RFC3339Nano)))

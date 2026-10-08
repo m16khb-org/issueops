@@ -5,9 +5,10 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"sync"
 )
 
-var scpRemotePattern = regexp.MustCompile(`^[^@/:]+@([^/:[\]]+):(.+)$`)
+var scpRemotePattern = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^[^@/:]+@([^/:[\]]+):(.+)$`) })
 
 func ValidateChildMatchesParent(parentURL, childURL string) error {
 	provider := ProviderFromURL(parentURL)
@@ -83,7 +84,7 @@ func ProjectKeyFromGitRemoteURL(rawURL, provider string) (string, error) {
 			host = strings.ToLower(parsed.Hostname())
 		}
 		remotePath = strings.TrimPrefix(parsed.EscapedPath(), "/")
-	} else if match := scpRemotePattern.FindStringSubmatch(rawURL); len(match) == 3 {
+	} else if match := scpRemotePattern().FindStringSubmatch(rawURL); len(match) == 3 {
 		host, remotePath = strings.ToLower(match[1]), match[2]
 	} else {
 		return "", fmt.Errorf("git remote URL must be HTTPS, SSH, or SCP syntax")

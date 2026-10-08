@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	deliverycontract "issueops/internal/contract/issueops"
@@ -21,8 +22,8 @@ const (
 )
 
 var (
-	concreteTerminalHandlePattern = regexp.MustCompile(`^term_[A-Za-z0-9_-]+$`)
-	exactGitObjectIDPattern       = regexp.MustCompile(`^(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$`)
+	concreteTerminalHandlePattern = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^term_[A-Za-z0-9_-]+$`) })
+	exactGitObjectIDPattern       = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$`) })
 )
 
 type Client struct {
@@ -340,7 +341,7 @@ func (c *Client) CreateWorktree(ctx context.Context, req port.OrcaCreateWorktree
 		return port.OrcaWorktree{}, &port.OrcaError{Code: "unsupported_provider", Detail: strings.ToLower(strings.TrimSpace(req.Provider))}
 	}
 	preparedRemote := ""
-	if provider == "gitlab" && exactGitObjectIDPattern.MatchString(strings.TrimSpace(req.BaseBranch)) {
+	if provider == "gitlab" && exactGitObjectIDPattern().MatchString(strings.TrimSpace(req.BaseBranch)) {
 		candidate := "refs/remotes/origin/" + strings.TrimSpace(req.Name)
 		if c.gitRefMatches(ctx, req.Repo, candidate, req.BaseBranch) {
 			preparedRemote = candidate
@@ -380,7 +381,7 @@ func (c *Client) CreateWorktree(ctx context.Context, req port.OrcaCreateWorktree
 		upstream = preparedRemote
 		allowNumericSuffix = true
 	}
-	if upstream == "" && !exactGitObjectIDPattern.MatchString(strings.TrimSpace(req.BaseBranch)) {
+	if upstream == "" && !exactGitObjectIDPattern().MatchString(strings.TrimSpace(req.BaseBranch)) {
 		upstream = strings.TrimSpace(req.BaseBranch)
 	}
 	return c.canonicalizeWorktreeBranch(ctx, created, requestedBranch, upstream, allowNumericSuffix)
@@ -472,7 +473,7 @@ const closeTerminalTimeout = 15 * time.Second
 // PTY 종료를 확인한 receipt를 돌려준 경우에만 성공한다.
 func (c *Client) CloseTerminal(ctx context.Context, handle string) error {
 	handle = strings.TrimSpace(handle)
-	if !concreteTerminalHandlePattern.MatchString(handle) {
+	if !concreteTerminalHandlePattern().MatchString(handle) {
 		return fmt.Errorf("invalid Orca terminal handle %q", handle)
 	}
 	var payload struct {
@@ -548,7 +549,7 @@ func (c *Client) listTerminalsBySelector(ctx context.Context, selector string) (
 
 func (c *Client) showTerminalInventory(ctx context.Context, handle string) (executionTerminalDetailInventory, error) {
 	handle = strings.TrimSpace(handle)
-	if !concreteTerminalHandlePattern.MatchString(handle) {
+	if !concreteTerminalHandlePattern().MatchString(handle) {
 		return executionTerminalDetailInventory{}, &port.OrcaError{Code: "terminal_handle_invalid", Detail: "a concrete terminal handle is required"}
 	}
 	var payload struct {
@@ -599,7 +600,7 @@ func (c *Client) CreateTerminal(ctx context.Context, req port.OrcaCreateTerminal
 
 func (c *Client) SendTerminalPrompt(ctx context.Context, handle, prompt, requestID string) (port.OrcaPromptReceipt, error) {
 	handle = strings.TrimSpace(handle)
-	if !concreteTerminalHandlePattern.MatchString(handle) || strings.TrimSpace(prompt) == "" ||
+	if !concreteTerminalHandlePattern().MatchString(handle) || strings.TrimSpace(prompt) == "" ||
 		strings.ContainsAny(prompt, "\x00\x1b") {
 		return port.OrcaPromptReceipt{}, &port.OrcaError{Code: "terminal_prompt_invalid"}
 	}

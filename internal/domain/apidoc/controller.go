@@ -5,12 +5,15 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 )
 
-var nestRouteRe = regexp.MustCompile(`@(Get|Post|Put|Patch|Delete|All|Head|Options)\s*\(\s*(?:["'\x60]([^"'\x60]*)["'\x60])?`)
-var nestPathParamRe = regexp.MustCompile(`:([A-Za-z0-9_]+)`)
-var apiResponseStatusRe = regexp.MustCompile(`@ApiResponses?\s*\(`)
-var apiResponseStatusValueRe = regexp.MustCompile(`status\s*:\s*(?:HttpStatus\.)?([0-9]+|[A-Z_]+)`)
+var nestRouteRe = sync.OnceValue(func() *regexp.Regexp {
+	return regexp.MustCompile(`@(Get|Post|Put|Patch|Delete|All|Head|Options)\s*\(\s*(?:["'\x60]([^"'\x60]*)["'\x60])?`)
+})
+var nestPathParamRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`:([A-Za-z0-9_]+)`) })
+var apiResponseStatusRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`@ApiResponses?\s*\(`) })
+var apiResponseStatusValueRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`status\s*:\s*(?:HttpStatus\.)?([0-9]+|[A-Z_]+)`) })
 
 var nestHttpStatusNames = map[string]int{
 	"OK":                    200,
@@ -33,15 +36,15 @@ var nestHttpStatusNames = map[string]int{
 	"SERVICE_UNAVAILABLE":   503,
 	"GATEWAY_TIMEOUT":       504,
 }
-var methodNameRe = regexp.MustCompile(`^\s*(?:async\s+)?[A-Za-z_][A-Za-z0-9_]*\s*\(`)
-var queryNamedRe = regexp.MustCompile(`@Query\s*\(\s*["'\x60]([^"'\x60]+)["'\x60]`)
-var bodyNamedRe = regexp.MustCompile(`@Body\s*\(\s*["'\x60]([^"'\x60]+)["'\x60]`)
+var methodNameRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^\s*(?:async\s+)?[A-Za-z_][A-Za-z0-9_]*\s*\(`) })
+var queryNamedRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`@Query\s*\(\s*["'\x60]([^"'\x60]+)["'\x60]`) })
+var bodyNamedRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`@Body\s*\(\s*["'\x60]([^"'\x60]+)["'\x60]`) })
 
 func CheckNestController(file, text string) []contract.Violation {
 	lines := strings.Split(text, "\n")
 	var violations []contract.Violation
 	for i := 0; i < len(lines); i++ {
-		if !methodNameRe.MatchString(lines[i]) {
+		if !methodNameRe().MatchString(lines[i]) {
 			continue
 		}
 		start := controllerDecoratorStart(lines, i)
@@ -50,7 +53,7 @@ func CheckNestController(file, text string) []contract.Violation {
 			end++
 		}
 		block := strings.Join(lines[start:min(end+1, len(lines))], "\n")
-		route := nestRouteRe.FindStringSubmatch(block)
+		route := nestRouteRe().FindStringSubmatch(block)
 		if route == nil {
 			continue
 		}
@@ -62,7 +65,7 @@ func CheckNestController(file, text string) []contract.Violation {
 		} else if !strings.Contains(block, "### ") {
 			violations = append(violations, contract.Violation{File: file, Line: line, Code: "invalid_api_operation_description_format", Message: "@ApiOperation.description must use the project sectioned Markdown format"})
 		}
-		for _, m := range nestPathParamRe.FindAllStringSubmatch(route[2], -1) {
+		for _, m := range nestPathParamRe().FindAllStringSubmatch(route[2], -1) {
 			if !regexp.MustCompile(`@ApiParam\s*\(\s*\{[^}]*name\s*:\s*["'\x60]` + regexp.QuoteMeta(m[1]) + `["'\x60]`).MatchString(block) {
 				violations = append(violations, contract.Violation{File: file, Line: line, Code: "missing_api_param", Message: "path parameter :" + m[1] + " is missing @ApiParam documentation"})
 			}
@@ -70,12 +73,12 @@ func CheckNestController(file, text string) []contract.Violation {
 		if strings.Contains(block, "@Headers") && !strings.Contains(block, "@ApiHeader") {
 			violations = append(violations, contract.Violation{File: file, Line: line, Code: "missing_api_header", Message: "@Headers usage is missing @ApiHeader documentation"})
 		}
-		for _, m := range queryNamedRe.FindAllStringSubmatch(block, -1) {
+		for _, m := range queryNamedRe().FindAllStringSubmatch(block, -1) {
 			if !regexp.MustCompile(`@ApiQuery\s*\(\s*\{[^}]*name\s*:\s*["'\x60]` + regexp.QuoteMeta(m[1]) + `["'\x60]`).MatchString(block) {
 				violations = append(violations, contract.Violation{File: file, Line: line, Code: "missing_api_query", Message: "named query parameter " + m[1] + " is missing @ApiQuery documentation"})
 			}
 		}
-		if bodyNamedRe.MatchString(block) && !strings.Contains(block, "@ApiBody") {
+		if bodyNamedRe().MatchString(block) && !strings.Contains(block, "@ApiBody") {
 			violations = append(violations, contract.Violation{File: file, Line: line, Code: "missing_api_body", Message: "named @Body usage is missing @ApiBody documentation"})
 		}
 		if (strings.Contains(block, "@Body") || strings.Contains(block, "@Query") || strings.Contains(block, "@Headers")) && !HasNestResponseStatus(block, 400) {
@@ -138,7 +141,7 @@ func HasNestResponseStatus(block string, status int) bool {
 		return true
 	}
 	for _, span := range apiResponseDecoratorSpans(block) {
-		for _, m := range apiResponseStatusValueRe.FindAllStringSubmatch(span, -1) {
+		for _, m := range apiResponseStatusValueRe().FindAllStringSubmatch(span, -1) {
 			code, err := strconv.Atoi(m[1])
 			if err != nil {
 				code = nestHttpStatusNames[m[1]]
@@ -156,7 +159,7 @@ func HasNestResponseStatus(block string, status int) bool {
 // ({ status: 404 }) and array form ([{ status: 404 }, ...]) are scanned.
 func apiResponseDecoratorSpans(block string) []string {
 	var spans []string
-	for _, loc := range apiResponseStatusRe.FindAllStringIndex(block, -1) {
+	for _, loc := range apiResponseStatusRe().FindAllStringIndex(block, -1) {
 		depth := 0
 		started := false
 		for i := loc[1] - 1; i < len(block); i++ {

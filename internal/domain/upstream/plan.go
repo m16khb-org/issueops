@@ -7,6 +7,7 @@ package upstream
 import (
 	"regexp"
 	"strings"
+	"sync"
 
 	upstreamcontract "issueops/internal/contract/upstream"
 )
@@ -18,7 +19,7 @@ const (
 	ReasonPluginHostUnavailable  = "host plugin CLI is unavailable"
 )
 
-var skillNamePattern = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
+var skillNamePattern = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`) })
 
 // Plan decides what one sync pass should do, given the declaration and what the
 // host already has. Plugins come first, then skills; both keep declaration order.
@@ -91,7 +92,7 @@ func normalizeSkill(entry upstreamcontract.SkillEntry) (upstreamcontract.SkillEn
 	entry.Repo = strings.TrimSpace(entry.Repo)
 	entry.Path = strings.Trim(strings.TrimSpace(entry.Path), "/")
 	entry.Ref = strings.TrimSpace(entry.Ref)
-	if !skillNamePattern.MatchString(entry.Name) || entry.Repo == "" {
+	if !skillNamePattern().MatchString(entry.Name) || entry.Repo == "" {
 		return entry, false
 	}
 	if entry.Path != "" && (strings.Contains(entry.Path, "..") || strings.HasPrefix(entry.Path, "/")) {

@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 )
 
 type Status struct {
@@ -15,7 +16,9 @@ type Status struct {
 	IsClean    bool
 }
 
-var secretPathRe = regexp.MustCompile(`(?i)(^|/)(\.env(\.|$)|id_rsa|id_dsa|id_ecdsa|id_ed25519|.*\.pem$|.*\.key$|.*\.p12$|.*\.pfx$|.*credentials.*|.*secret.*)`)
+var secretPathRe = sync.OnceValue(func() *regexp.Regexp {
+	return regexp.MustCompile(`(?i)(^|/)(\.env(\.|$)|id_rsa|id_dsa|id_ecdsa|id_ed25519|.*\.pem$|.*\.key$|.*\.p12$|.*\.pfx$|.*credentials.*|.*secret.*)`)
+})
 
 func AnalyzeStatus(lines []string) Status {
 	var status Status
@@ -39,7 +42,7 @@ func AnalyzeStatus(lines []string) Status {
 				status.Unstaged = append(status.Unstaged, path)
 			}
 		}
-		if secretPathRe.MatchString(filepath.ToSlash(path)) {
+		if secretPathRe().MatchString(filepath.ToSlash(path)) {
 			status.SecretLike = append(status.SecretLike, path)
 		}
 	}

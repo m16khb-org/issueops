@@ -4,14 +4,17 @@ import (
 	preflightcontract "issueops/internal/contract/preflight"
 	"regexp"
 	"strings"
+	"sync"
 )
 
-var conventionalSubjectRe = regexp.MustCompile(`^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^)]+\))?!?: .+`)
+var conventionalSubjectRe = sync.OnceValue(func() *regexp.Regexp {
+	return regexp.MustCompile(`^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^)]+\))?!?: .+`)
+})
 
 func CommitStyleHints(recent []preflightcontract.CommitInfo, bodies []string, policyPath string) map[string]any {
 	conv := 0
 	for _, c := range recent {
-		if conventionalSubjectRe.MatchString(c.Subject) {
+		if conventionalSubjectRe().MatchString(c.Subject) {
 			conv++
 		}
 	}

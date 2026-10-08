@@ -2,6 +2,7 @@ package qagate
 
 import (
 	selfverify "issueops/internal/contract/selfverify"
+	"sync"
 
 	"fmt"
 	"path/filepath"
@@ -11,16 +12,21 @@ import (
 	"time"
 )
 
-var secretMaterialPatterns = []struct {
+var secretMaterialPatterns = sync.OnceValue(func() []struct {
 	name string
 	re   *regexp.Regexp
-}{
-	{name: "private_key", re: regexp.MustCompile(`-----BEGIN [A-Z ]*PRIVATE KEY-----`)},
-	{name: "aws_access_key_id", re: regexp.MustCompile(`AKIA[0-9A-Z]{16}`)},
-	{name: "github_token", re: regexp.MustCompile(`ghp_[A-Za-z0-9]{20,}`)},
-	{name: "openai_token", re: regexp.MustCompile(`\bsk-[A-Za-z0-9_-]{20,}`)},
-	{name: "secret_assignment", re: regexp.MustCompile(`(?i)\b(token|secret|password|api[_-]?key|access[_-]?key)\s*[:=]\s*["']?([^\s"',}]+)`)},
-}
+} {
+	return []struct {
+		name string
+		re   *regexp.Regexp
+	}{
+		{name: "private_key", re: regexp.MustCompile(`-----BEGIN [A-Z ]*PRIVATE KEY-----`)},
+		{name: "aws_access_key_id", re: regexp.MustCompile(`AKIA[0-9A-Z]{16}`)},
+		{name: "github_token", re: regexp.MustCompile(`ghp_[A-Za-z0-9]{20,}`)},
+		{name: "openai_token", re: regexp.MustCompile(`\bsk-[A-Za-z0-9_-]{20,}`)},
+		{name: "secret_assignment", re: regexp.MustCompile(`(?i)\b(token|secret|password|api[_-]?key|access[_-]?key)\s*[:=]\s*["']?([^\s"',}]+)`)},
+	}
+})
 
 func validateRedactionAuditWithDeps(root string, deps docsValidationDeps) selfverify.StepResult {
 	deps = deps.withDefaults()
@@ -78,7 +84,7 @@ func FindUnredactedSecretLike(text string) []string {
 		if strings.TrimSpace(line) == "" || lineContainsAllowedSecretPlaceholder(line) {
 			continue
 		}
-		for _, pattern := range secretMaterialPatterns {
+		for _, pattern := range secretMaterialPatterns() {
 			if pattern.re.MatchString(line) {
 				findings = append(findings, fmt.Sprintf("line %d contains %s", lineNo+1, pattern.name))
 			}
