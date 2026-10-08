@@ -13,6 +13,8 @@ import (
 )
 
 func TestExecuteExecutionCompleteRequiresHandler(t *testing.T) {
+	t.Parallel()
+
 	result, err := testExecutionService().Execute(context.Background(), t.TempDir(), issueopscontract.ExecutionActionRequest{Action: issueopscontract.ExecutionActionComplete, ID: "io-complete"}, issueopsport.ExecutionActionDependencies{})
 	if !errors.Is(err, issueopscontract.ErrCompleteHandlerUnavailable) {
 		t.Fatalf("error = %v", err)
@@ -23,6 +25,8 @@ func TestExecuteExecutionCompleteRequiresHandler(t *testing.T) {
 }
 
 func TestExecuteExecutionCompleteDelegatesExactRequest(t *testing.T) {
+	t.Parallel()
+
 	request := issueopscontract.ExecutionActionRequest{Action: issueopscontract.ExecutionActionComplete, ID: "io-complete", Generation: 7, CWD: "/canonical", FinalHead: "head", VerificationReportPath: "/canonical/report", Verification: []string{"test"}, RemoteArtifactURL: "https://github.com/acme/repo/pull/7", Confirm: true}
 	var gotRoot string
 	var got issueopscontract.ExecutionCompleteRequest

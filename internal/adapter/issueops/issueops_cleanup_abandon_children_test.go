@@ -32,6 +32,8 @@ func childRefs(ids ...string) []issueops.IssueOpsChildCycleRef {
 // 실측: io-c26802f00c2b(#228)는 자식 23개가 **전부 CLOSED**인데도
 // no_children으로 막혔고, finish는 epic 자신의 artifact가 없어 도달 불가였다.
 func TestAbandonChildGateCountsOnlyUnresolvedChildren(t *testing.T) {
+	t.Parallel()
+
 	resolved := func(ids ...string) map[string]bool {
 		set := map[string]bool{}
 		for _, id := range ids {
@@ -98,6 +100,8 @@ func TestAbandonChildGateCountsOnlyUnresolvedChildren(t *testing.T) {
 // 부재한 자식을 정리하려면 그 사실이 부모 record에 남아야 한다.
 // IssueLinks의 CloseVerifiedAt이 그 자리다.
 func TestAbandonResolvedChildrenRefusesToInferFromAbsence(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	record := issueops.IssueOpsRecord{ChildCycles: childRefs("io-gone1", "io-gone2")}
 
@@ -112,6 +116,8 @@ func TestAbandonResolvedChildrenRefusesToInferFromAbsence(t *testing.T) {
 // TestAbandonResolvedChildrenRequiresDoneForLiveRecords는 완화가 "부재"와
 // "done"에만 적용됨을 고정한다. 살아 있는 미완 자식은 계속 차단해야 한다.
 func TestAbandonResolvedChildrenRequiresDoneForLiveRecords(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	for id, phase := range map[string]issueops.IssueOpsPhase{
 		"io-live1": issueops.IssueOpsPhaseImplement,

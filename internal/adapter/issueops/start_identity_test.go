@@ -8,6 +8,8 @@ import (
 )
 
 func TestIssueOpsStartLockIDTreatsLinkedWorktreeAsSourceCheckout(t *testing.T) {
+	t.Parallel()
+
 	source := filepath.Join(t.TempDir(), "repo")
 	runIdentityGit(t, "", "init", "-b", "main", source)
 	runIdentityGit(t, source, "config", "user.email", "issueops@example.test")

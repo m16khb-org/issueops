@@ -75,6 +75,8 @@ func (d *lbDeps) build() CleanupLinkedBranchDeps {
 // 경계를 고정한다. preview는 관측만 하고 아무것도 지우지 않으며, 확정한 노드
 // id가 결속된 fingerprint와 정확한 다음 명령을 돌려준다.
 func TestCleanupLinkedBranchPreviewSealsTheNodeAndRefusesToDelete(t *testing.T) {
+	t.Parallel()
+
 	root, _ := lbFixture(t)
 	deps := &lbDeps{nodes: []linkedbranch.Node{{ID: lbOrphanID}}}
 
@@ -97,6 +99,8 @@ func TestCleanupLinkedBranchPreviewSealsTheNodeAndRefusesToDelete(t *testing.T) 
 // TestCleanupLinkedBranchApplyDeletesOnlyTheSealedNode는 삭제가 확정된 노드
 // 하나에만 닿는지 고정한다.
 func TestCleanupLinkedBranchApplyDeletesOnlyTheSealedNode(t *testing.T) {
+	t.Parallel()
+
 	root, _ := lbFixture(t)
 	deps := &lbDeps{nodes: []linkedbranch.Node{{ID: lbOrphanID}}}
 	built := deps.build()
@@ -126,6 +130,8 @@ func TestCleanupLinkedBranchApplyDeletesOnlyTheSealedNode(t *testing.T) {
 
 // TestCleanupLinkedBranchApplyRequiresConfirm는 confirm 없는 apply를 막는다.
 func TestCleanupLinkedBranchApplyRequiresConfirm(t *testing.T) {
+	t.Parallel()
+
 	root, _ := lbFixture(t)
 	deps := &lbDeps{nodes: []linkedbranch.Node{{ID: lbOrphanID}}}
 	_, err := CleanupLinkedBranch(context.Background(), root,
@@ -142,6 +148,8 @@ func TestCleanupLinkedBranchApplyRequiresConfirm(t *testing.T) {
 // 고정한다. preview 이후 링크가 수렴해 브랜치가 생기면 apply는 멈춰야 하고,
 // 어떤 링크도 건드리면 안 된다.
 func TestCleanupLinkedBranchFailsClosedWhenTheObservationMoved(t *testing.T) {
+	t.Parallel()
+
 	root, _ := lbFixture(t)
 	deps := &lbDeps{nodes: []linkedbranch.Node{{ID: lbOrphanID}}}
 	built := deps.build()
@@ -166,6 +174,8 @@ func TestCleanupLinkedBranchFailsClosedWhenTheObservationMoved(t *testing.T) {
 // TestCleanupLinkedBranchRejectsAStaleFingerprint는 원격 브랜치가 생겨
 // fingerprint 입력이 달라진 경우를 고정한다.
 func TestCleanupLinkedBranchRejectsAStaleFingerprint(t *testing.T) {
+	t.Parallel()
+
 	root, _ := lbFixture(t)
 	deps := &lbDeps{nodes: []linkedbranch.Node{{ID: lbOrphanID}}}
 	built := deps.build()
@@ -188,6 +198,8 @@ func TestCleanupLinkedBranchRejectsAStaleFingerprint(t *testing.T) {
 // 재실행이 stale로 막히지 않음을 고정한다. 멱등성과 TOCTOU 방어가 서로를
 // 무효화하면 사용자는 이미 끝난 정리를 끝났다고 확인할 방법이 없다.
 func TestCleanupLinkedBranchIsIdempotentWhenAlreadyAbsent(t *testing.T) {
+	t.Parallel()
+
 	root, _ := lbFixture(t)
 	deps := &lbDeps{}
 	result, err := CleanupLinkedBranch(context.Background(), root, issueopscontract.CleanupLinkedBranchRequest{
@@ -200,6 +212,8 @@ func TestCleanupLinkedBranchIsIdempotentWhenAlreadyAbsent(t *testing.T) {
 // TestCleanupLinkedBranchRecordsEveryDispositionInTheAudit는 AC-06을
 // 고정한다. 성공·이미 부재·모호성이 모두 durable record에 남아야 한다.
 func TestCleanupLinkedBranchRecordsEveryDispositionInTheAudit(t *testing.T) {
+	t.Parallel()
+
 	for _, tc := range []struct {
 		name      string
 		nodes     []linkedbranch.Node
@@ -233,6 +247,8 @@ func TestCleanupLinkedBranchRecordsEveryDispositionInTheAudit(t *testing.T) {
 // LinkedBranch는 GitHub의 개념이고, 다른 provider에서는 무엇을 지울지가
 // 정의되지 않는다.
 func TestCleanupLinkedBranchRefusesNonGitHubProviders(t *testing.T) {
+	t.Parallel()
+
 	root, record := lbFixture(t)
 	record.BranchPrepare.Provider = "gitlab"
 	if _, err := writeIssueOps(context.Background(), root, record); err != nil {

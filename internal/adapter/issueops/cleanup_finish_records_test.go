@@ -11,6 +11,8 @@ import (
 )
 
 func TestFinishRecordsBindArmToObservedRevision(t *testing.T) {
+	t.Parallel()
+
 	root := t.TempDir()
 	record, err := writeIssueOps(context.Background(), root, model.IssueOpsRecord{SchemaVersion: 1, ID: "io-finish-records", Phase: model.IssueOpsPhaseDone})
 	if err != nil {
@@ -61,6 +63,8 @@ func TestFinishRecordsBindArmToObservedRevision(t *testing.T) {
 }
 
 func TestFinishRecordsPreserveReplacementAcrossAllFinalizers(t *testing.T) {
+	t.Parallel()
+
 	for _, operation := range []string{"check", "fail", "delete"} {
 		t.Run(operation, func(t *testing.T) {
 			root := t.TempDir()
@@ -114,6 +118,8 @@ func TestFinishRecordsPreserveReplacementAcrossAllFinalizers(t *testing.T) {
 }
 
 func TestFinishRecordsDrainFailureRearmAndAtomicDelete(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	root := t.TempDir()
 	record, err := writeIssueOps(context.Background(), root, model.IssueOpsRecord{SchemaVersion: 1, ID: "io-finish-drain", Phase: model.IssueOpsPhaseDone, RemoteCompletion: &model.IssueOpsRemoteCompletion{IssueClosedAt: "first"}})
@@ -189,6 +195,8 @@ func finishRecordsFailure() model.IssueOpsCleanupFinishFailure {
 }
 
 func TestFinishRecordsRejectForgedAttemptProjection(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	root := t.TempDir()
 	record, err := writeIssueOps(context.Background(), root, model.IssueOpsRecord{SchemaVersion: 1, ID: "io-finish-forged", Phase: model.IssueOpsPhaseDone})

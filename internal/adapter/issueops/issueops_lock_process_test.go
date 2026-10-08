@@ -17,6 +17,8 @@ import (
 // active span is rejected with NestedSpanError (self-deadlock prevention),
 // while distinct roots remain composable.
 func TestWithIssueOpsLockRejectsSameRootReentry(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	outer := newIssueOpsID(stateRoot, "outer")
 	inner := newIssueOpsID(stateRoot, "inner")
@@ -55,6 +57,8 @@ func appendLockMarker(path, line string) error {
 // TestWithIssueOpsLockProcessHelper is the subprocess body for the cross-process
 // mutual-exclusion test.
 func TestWithIssueOpsLockProcessHelper(t *testing.T) {
+	t.Parallel()
+
 	mode := os.Getenv(lockHelperModeEnv)
 	if mode == "" {
 		t.Skip("subprocess helper only")
@@ -122,6 +126,8 @@ func readLockMarkers(path string) []string {
 // state root: the contender process can only acquire after the holder process
 // releases, regardless of the different cycle ids.
 func TestWithIssueOpsLockSerializesAcrossProcesses(t *testing.T) {
+	t.Parallel()
+
 	if testing.Short() {
 		t.Skip("cross-process issueops lock test skipped in -short")
 	}

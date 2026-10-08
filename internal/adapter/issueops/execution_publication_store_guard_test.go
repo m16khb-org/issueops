@@ -9,6 +9,8 @@ import (
 )
 
 func TestRemotePublicationTransactionKeepsRequestGuardButIgnoresCancellation(t *testing.T) {
+	t.Parallel()
+
 	type marker struct{}
 	guarded := 0
 	stateRoot := t.TempDir()

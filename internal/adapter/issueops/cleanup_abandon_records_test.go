@@ -9,6 +9,8 @@ import (
 )
 
 func TestAbandonRecordFinalizersRejectReplacementAndForeignOperations(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	for _, operation := range []model.CleanupOperation{model.CleanupOperationFinish, model.CleanupOperationRemoteBranch, model.CleanupOperationAbandon} {
 		t.Run(string(operation), func(t *testing.T) {

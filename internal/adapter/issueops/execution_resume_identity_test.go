@@ -30,6 +30,8 @@ func TestReadExecutionResumeArtifactsUsesDurableIdentityAcrossTemplateUpgrade(t 
 }
 
 func TestReadExecutionResumeArtifactsRejectsSealedIdentityDrift(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name   string
 		mutate func(t *testing.T, record *issueops.IssueOpsRecord, artifacts executionResumeArtifacts)
@@ -60,6 +62,8 @@ func TestReadExecutionResumeArtifactsRejectsSealedIdentityDrift(t *testing.T) {
 }
 
 func TestResumePlanIdentityRejectsUnsealedOrDriftedPlan(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name   string
 		mutate func(t *testing.T, record *issueops.IssueOpsRecord)
@@ -111,6 +115,8 @@ func TestResumePlanIdentityRejectsUnsealedOrDriftedPlan(t *testing.T) {
 }
 
 func TestResumePlanIdentityAcceptsMatchingSealedAndDurablePlan(t *testing.T) {
+	t.Parallel()
+
 	record, _ := sealedResumeIdentityFixture(t)
 	if _, err := readExecutionResumeArtifacts(record); err != nil {
 		t.Fatal(err)
@@ -118,6 +124,8 @@ func TestResumePlanIdentityAcceptsMatchingSealedAndDurablePlan(t *testing.T) {
 }
 
 func TestExecutionWriterAbsentRecoveryResumesSealedOrca(t *testing.T) {
+	t.Parallel()
+
 	unversioned, _ := sealedResumeIdentityFixture(t)
 	unversioned.Execution.Orca.ArtifactIdentityVersion = 0
 	unversioned.Execution.Orca.IssueBodySHA256 = ""
@@ -139,6 +147,8 @@ func TestExecutionWriterAbsentRecoveryResumesSealedOrca(t *testing.T) {
 }
 
 func TestResumeDispatchRetainsDurableArtifactIdentity(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record, payload := resumeIntentFixture(t, "gitlab", 2646)
 	wantIssue := payload.IssueBodySHA256
 	wantPacket := payload.Launch.ContextPacketSHA256
@@ -167,6 +177,8 @@ func TestResumeDispatchRetainsDurableArtifactIdentity(t *testing.T) {
 }
 
 func TestResumeRepositoryAllowsUnverifiedGitHubLaunch(t *testing.T) {
+	t.Parallel()
+
 	_, record, payload := resumeIntentFixtureWithLinkVerified(t, "github", 16, false)
 	if payload.Probe.Provider != "github" || payload.Probe.Issue != 16 {
 		t.Fatalf("resume identity = provider:%q issue:%d", payload.Probe.Provider, payload.Probe.Issue)

@@ -10,6 +10,8 @@ import (
 )
 
 func TestSwitchExecutionModeApplyReturnsNonCommandNextActionAfterExecutionRemoval(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	repo := t.TempDir()
 	record, err := startIssueOpsFixture(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "303-switch-provenance"})

@@ -16,6 +16,8 @@ import (
 // the DIRECT advance-to-implement boundary specifically, and that recording an
 // approved design review clears the design_approval block.
 func TestAdvanceToImplementGatesOnDesignApproval(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
 	branch := "1-demo"

@@ -15,6 +15,8 @@ import (
 )
 
 func TestExecutionPreparationPlanArtifactGatePrecedesRemoteOwnerRead(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record := executionPrepareRecord(t)
 	record.Delegation = &issueops.IssueOpsDelegationContract{ParentPlanPath: filepath.Join(t.TempDir(), "parent-plan.md")}
 	raw, err := json.Marshal(record)
@@ -41,6 +43,8 @@ func TestExecutionPreparationPlanArtifactGatePrecedesRemoteOwnerRead(t *testing.
 }
 
 func TestPrepareExecutionOwnerMaterializesPlanAndSealsManifest(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record := executionPrepareRecord(t)
 	const plan = "# Sealed owner plan\n"
 	if _, err := stageIssueOpsArtifactForTest(stateRoot, record.ID, "plan", []byte(plan)); err != nil {
@@ -108,6 +112,8 @@ func TestPrepareExecutionOwnerMaterializesPlanAndSealsManifest(t *testing.T) {
 }
 
 func TestExecutionOwnerReportContractGolden(t *testing.T) {
+	t.Parallel()
+
 	record, req := ownerPacketFixture()
 	prompt := executionOwnerPromptFixture(t, record, req)
 	_, report, found := strings.Cut(prompt, "## IssueOps v1 Owner Report\n")
@@ -132,6 +138,8 @@ func TestExecutionOwnerReportContractGolden(t *testing.T) {
 }
 
 func TestExecutionOwnerPacketUsesOnlyExecutionCommands(t *testing.T) {
+	t.Parallel()
+
 	record, req := ownerPacketFixture()
 	packet := executionOwnerPromptFixture(t, record, req)
 	for _, forbidden := range []string{
@@ -171,6 +179,8 @@ func TestExecutionOwnerPacketUsesOnlyExecutionCommands(t *testing.T) {
 }
 
 func TestExecutionOwnerPromptSeparatesSealedClaimFromRecoveryResume(t *testing.T) {
+	t.Parallel()
+
 	record, req := ownerPacketFixture()
 	prompt := executionOwnerPromptFixture(t, record, req)
 	for _, required := range []string{
@@ -190,6 +200,8 @@ func TestExecutionOwnerPromptSeparatesSealedClaimFromRecoveryResume(t *testing.T
 }
 
 func TestExecutionOwnerPromptFiltersStaleHandoffEvidence(t *testing.T) {
+	t.Parallel()
+
 	record, req := ownerPacketFixture()
 	prompt := strings.ToLower(executionOwnerPromptFixture(t, record, req))
 	for _, required := range []string{
@@ -208,6 +220,8 @@ func TestExecutionOwnerPromptFiltersStaleHandoffEvidence(t *testing.T) {
 }
 
 func TestExecutionOwnerPromptOrdersLifecycleMutationsBeforePublication(t *testing.T) {
+	t.Parallel()
+
 	record, req := ownerPacketFixture()
 	prompt := executionOwnerPromptFixture(t, record, req)
 	ordered := []string{
@@ -235,6 +249,8 @@ func TestExecutionOwnerPromptOrdersLifecycleMutationsBeforePublication(t *testin
 }
 
 func TestExecutionOwnerBranchLinkCommandPreservesSealedTopology(t *testing.T) {
+	t.Parallel()
+
 	record, req := ownerPacketFixture()
 	record.BranchPrepare.LinkVerified = false
 	record.BranchPrepare.ParentWorktree = "/repo/example.worktrees/117-umbrella"
@@ -267,6 +283,8 @@ func TestExecutionOwnerBranchLinkCommandPreservesSealedTopology(t *testing.T) {
 }
 
 func TestExecutionOwnerPromptUsesOnlyTheGeneratedBranchLinkReader(t *testing.T) {
+	t.Parallel()
+
 	record, req := ownerPacketFixture()
 	record.BranchPrepare.LinkVerified = false
 	prompt := executionOwnerPromptFixture(t, record, req)
@@ -281,6 +299,8 @@ func TestExecutionOwnerPromptUsesOnlyTheGeneratedBranchLinkReader(t *testing.T) 
 }
 
 func TestExecutionOwnerCompatibilityCommandRequiresExplicitApprovalEvidence(t *testing.T) {
+	t.Parallel()
+
 	record, req := ownerPacketFixture()
 	commands := executionOwnerCommandsFor(record, req, strings.Repeat("a", 64))
 	for _, required := range []string{
@@ -297,6 +317,8 @@ func TestExecutionOwnerCompatibilityCommandRequiresExplicitApprovalEvidence(t *t
 }
 
 func TestExecutionOwnerCommandsDoNotOverwriteLinkedPlan(t *testing.T) {
+	t.Parallel()
+
 	record, req := ownerPacketFixture()
 	record.PlanPath = filepath.Join(record.Execution.Workspace.Root, "plans", "linked.md")
 	commands := executionOwnerCommandsFor(record, req, strings.Repeat("a", 64))
@@ -306,6 +328,8 @@ func TestExecutionOwnerCommandsDoNotOverwriteLinkedPlan(t *testing.T) {
 }
 
 func TestExecutionOwnerReviewCommandRecordsTheActualVerdict(t *testing.T) {
+	t.Parallel()
+
 	record, req := ownerPacketFixture()
 	commands := executionOwnerCommandsFor(record, req, strings.Repeat("a", 64))
 	if !strings.Contains(commands.ImplementationReview, "--verdict <VERDICT>") {
@@ -323,6 +347,8 @@ func TestExecutionOwnerReviewCommandRecordsTheActualVerdict(t *testing.T) {
 }
 
 func TestExecutionDirectOwnerPromptUsesNoClaimCommand(t *testing.T) {
+	t.Parallel()
+
 	record, req := ownerPacketFixture()
 	record.Execution.Mode = issueops.ExecutionModeDirect
 	record.Execution.Selection = selectionFixture(issueops.ExecutionModeDirect)
@@ -335,6 +361,8 @@ func TestExecutionDirectOwnerPromptUsesNoClaimCommand(t *testing.T) {
 }
 
 func TestExecutionOwnerPromptTemplateMatchesKarpathyArtifactByteForByte(t *testing.T) {
+	t.Parallel()
+
 	doc, err := os.ReadFile(filepath.Join("..", "..", "..", ".issueops", "prompt-engineering", "prompts", "issueops-v1-owner-execution-v1.md"))
 	if err != nil {
 		t.Fatal(err)
@@ -356,6 +384,8 @@ func TestExecutionOwnerPromptTemplateMatchesKarpathyArtifactByteForByte(t *testi
 }
 
 func TestExecutionOwnerClaimCommandUsesCurrentGenerationTokenWithoutPath(t *testing.T) {
+	t.Parallel()
+
 	record, req := ownerPacketFixture()
 	command := executionOwnerCommandsFor(record, req, strings.Repeat("a", 64)).Claim
 	if !strings.Contains(command, "--claim-current-token") {
@@ -367,6 +397,8 @@ func TestExecutionOwnerClaimCommandUsesCurrentGenerationTokenWithoutPath(t *test
 }
 
 func TestExecutionOwnerReleaseCommandIncludesPIDReuseSafeActorReceipt(t *testing.T) {
+	t.Parallel()
+
 	record, req := ownerPacketFixture()
 	command := executionOwnerCommandsFor(record, req, strings.Repeat("a", 64)).Release
 	for _, required := range []string{
@@ -381,6 +413,8 @@ func TestExecutionOwnerReleaseCommandIncludesPIDReuseSafeActorReceipt(t *testing
 }
 
 func TestExecutionOwnerResumePastImplementSkipsBackwardPhaseTransition(t *testing.T) {
+	t.Parallel()
+
 	record, req := ownerPacketFixture()
 	record.Phase = issueops.IssueOpsPhaseAISlopClean
 	commands := executionOwnerCommandsFor(record, req, strings.Repeat("a", 64))
@@ -402,6 +436,8 @@ func TestExecutionOwnerResumePastImplementSkipsBackwardPhaseTransition(t *testin
 }
 
 func TestExecutionOwnerPromptRenderingRejectsPlaceholderAndLineInjectionDeterministically(t *testing.T) {
+	t.Parallel()
+
 	record, req := ownerPacketFixture()
 	commands := executionOwnerCommandsFor(record, req, strings.Repeat("a", 64))
 	packet := issueops.OwnerContextPacket{
@@ -497,6 +533,8 @@ func executionOwnerReportLabels(report string) []string {
 
 // Prepare metadata preserves model roles; the review command receives runtime values.
 func TestOwnerArtifactsRouteModelRoles(t *testing.T) {
+	t.Parallel()
+
 	for _, tc := range []struct{ host, reviewer, effort, research, researchEffort, reader, readerEffort string }{
 		{"codex", "gpt-6-astra", "high", "gpt-6-luna", "medium", "gpt-6-luna", "low"},
 		{"claude", "claude-opus-5-5", "high", "claude-sonnet-5-5", "medium", "claude-haiku-5-5", "medium"},
@@ -599,6 +637,8 @@ var issueOpsOwnerReportLabels = []string{
 }
 
 func TestExecutionOwnerPromptConsumesRuntimeReview(t *testing.T) {
+	t.Parallel()
+
 	record, req := ownerPacketFixture()
 	prompt := executionOwnerPromptFixture(t, record, req)
 	for _, required := range []string{

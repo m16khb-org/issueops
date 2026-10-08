@@ -15,6 +15,8 @@ import (
 )
 
 func TestIssueCreateIntentPersistsBeforeMutationAndBlocksConcurrentBegin(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	record, err := startIssueOpsFixture(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "42-durable-issue"})
 	if err != nil {
@@ -47,6 +49,8 @@ func TestIssueCreateIntentPersistsBeforeMutationAndBlocksConcurrentBegin(t *test
 }
 
 func TestIssueCreateIntentRetriesOnlyProvenNonInvocation(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	record, err := startIssueOpsFixture(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "43-retry-issue"})
 	if err != nil {
@@ -97,6 +101,8 @@ func TestIssueCreateIntentRetriesOnlyProvenNonInvocation(t *testing.T) {
 }
 
 func TestCompleteIssueCreateIntentLinksCanonicalURLAtomically(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	record, err := startIssueOpsFixture(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "44-complete-issue"})
 	if err != nil {
@@ -135,6 +141,8 @@ func TestCompleteIssueCreateIntentLinksCanonicalURLAtomically(t *testing.T) {
 }
 
 func TestCompleteIssueCreateIntentRejectsDifferentProjectAuthority(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	record, err := startIssueOpsFixture(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "45-authority-mismatch"})
 	if err != nil {
@@ -171,6 +179,8 @@ func newIssueCreateIntentsForTest(root string) *remoteapp.IssueCreateIntents {
 }
 
 func TestIssueCreateIntentRejectedRetryPreservesRawState(t *testing.T) {
+	t.Parallel()
+
 	root := t.TempDir()
 	record, err := startIssueOpsFixture(root, issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "46-sealed-retry"})
 	if err != nil {
@@ -206,6 +216,8 @@ func TestIssueCreateIntentRejectedRetryPreservesRawState(t *testing.T) {
 }
 
 func TestIssueCreateIntentConcurrentBeginsPersistOnlyOneAttempt(t *testing.T) {
+	t.Parallel()
+
 	root := t.TempDir()
 	record, err := startIssueOpsFixture(root, issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "47-concurrent-intents"})
 	if err != nil {
@@ -243,6 +255,8 @@ func TestIssueCreateIntentConcurrentBeginsPersistOnlyOneAttempt(t *testing.T) {
 }
 
 func TestIssueCreateIntentFailedCompletionDoesNotPartiallyLink(t *testing.T) {
+	t.Parallel()
+
 	root := t.TempDir()
 	record, err := startIssueOpsFixture(root, issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "47-concurrent-intents"})
 	if err != nil {

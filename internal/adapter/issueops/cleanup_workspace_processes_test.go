@@ -22,6 +22,8 @@ func cleanupSnapshotEntry(pid, ppid int, exe string) nativeProcessSnapshotEntry 
 // 점유 관측은 lsof 점유자와 같은 ps 스냅샷의 receipt·계보를 join한다. 자손 수와
 // 워크트리 밖 자손(부수 피해 후보) 수는 공유 서버(tmux)를 알아보는 근거다(#477).
 func TestBuildCleanupOccupancyJoinsReceiptsAndCountsDescendants(t *testing.T) {
+	t.Parallel()
+
 	snapshot := map[int]nativeProcessSnapshotEntry{
 		1:     cleanupSnapshotEntry(1, 0, "launchd"),
 		903:   cleanupSnapshotEntry(903, 1, "Orca"),
@@ -66,6 +68,8 @@ func TestBuildCleanupOccupancyJoinsReceiptsAndCountsDescendants(t *testing.T) {
 }
 
 func TestBuildCleanupOccupancyFailsClosedWhenSelfAncestryMissing(t *testing.T) {
+	t.Parallel()
+
 	snapshot := map[int]nativeProcessSnapshotEntry{1: cleanupSnapshotEntry(1, 0, "launchd"), 501: cleanupSnapshotEntry(501, 1, "zsh")}
 	if _, err := buildCleanupOccupancy([]workspaceProcess{{PID: 501, Command: "zsh", FD: "cwd"}}, snapshot, 777); err == nil {
 		t.Fatal("requester pid missing from the snapshot must be an observation failure, not an exclusion of nothing")
@@ -106,6 +110,8 @@ func (w *fakeCleanupProcessWorld) signal(pid int, sig syscall.Signal) error {
 }
 
 func TestStopWorkspaceProcessesStopsOccupantsHupTermKill(t *testing.T) {
+	t.Parallel()
+
 	a := issueops.CleanupWorkspaceProcess{PID: 501, Command: "zsh", StartedAt: "s1", Executable: "zsh"}
 	b := issueops.CleanupWorkspaceProcess{PID: 600, Command: "node", StartedAt: "s2", Executable: "node"}
 	world := &fakeCleanupProcessWorld{t: t,
@@ -138,6 +144,8 @@ func TestStopWorkspaceProcessesStopsOccupantsHupTermKill(t *testing.T) {
 }
 
 func TestStopWorkspaceProcessesRefusesReceiptMismatchAndRequester(t *testing.T) {
+	t.Parallel()
+
 	a := issueops.CleanupWorkspaceProcess{PID: 501, Command: "zsh", StartedAt: "s1", Executable: "zsh"}
 	t.Run("pid reuse", func(t *testing.T) {
 		reused := a

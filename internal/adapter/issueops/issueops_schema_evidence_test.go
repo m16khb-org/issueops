@@ -12,6 +12,8 @@ import (
 )
 
 func TestSchemaChangeDetection(t *testing.T) {
+	t.Parallel()
+
 	for _, path := range []string{
 		"src/migrations/1730000000-add-index.ts",
 		"db/migration/V3__add_column.sql",
@@ -38,6 +40,8 @@ func TestSchemaChangeDetection(t *testing.T) {
 
 // 스키마 변경이 없는 사이클에서는 게이트 자체가 활성화되지 않는다.
 func TestSchemaEvidenceGateInactiveWithoutSchemaChange(t *testing.T) {
+	t.Parallel()
+
 	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{Mode: issueops.ExecutionModeDirect, Selection: selectionFixture(issueops.ExecutionModeDirect)}}
 	if got := cycleapp.SchemaEvidenceMissingForPaths(record, []string{"main.go", "README.md"}, ""); got != "" {
 		t.Fatalf("non-schema change set must not activate the gate: %q", got)
@@ -45,6 +49,8 @@ func TestSchemaEvidenceGateInactiveWithoutSchemaChange(t *testing.T) {
 }
 
 func TestSchemaEvidenceGateActivatesOnSchemaChange(t *testing.T) {
+	t.Parallel()
+
 	paths := []string{"main.go", "src/migrations/1730000000-add-index.ts"}
 	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{Mode: issueops.ExecutionModeDirect, Selection: selectionFixture(issueops.ExecutionModeDirect)}}
 	if got := cycleapp.SchemaEvidenceMissingForPaths(record, paths, ""); got != "schema_evidence" {
@@ -72,6 +78,8 @@ func TestSchemaEvidenceGateActivatesOnSchemaChange(t *testing.T) {
 }
 
 func TestRecordIssueOpsSchemaEvidenceValidation(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := gitRepoWithProjectDocsForTest(t)
 	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "92-schema"})
@@ -106,6 +114,8 @@ func TestRecordIssueOpsSchemaEvidenceValidation(t *testing.T) {
 // 경량 readiness는 record만 읽는다 — 변경 집합 조회가 필요한 schema 게이트는
 // strict가 소유한다. 이 경계가 무너지면 status ledger 파생이 git을 돌린다.
 func TestPRReadinessSurfacesDocsGateButNotSchemaGate(t *testing.T) {
+	t.Parallel()
+
 	repo := gitRepoWithSchemaChangeForTest(t)
 	record := issueops.IssueOpsRecord{
 		Repo:      repo,

@@ -12,6 +12,8 @@ import (
 )
 
 func TestLinkedBranchAuditPreservesConcurrentCycleChanges(t *testing.T) {
+	t.Parallel()
+
 	for _, name := range []string{"metadata", "applying fence", "changed target", "deleted cycle"} {
 		t.Run(name, func(t *testing.T) {
 			root, record := lbFixture(t)

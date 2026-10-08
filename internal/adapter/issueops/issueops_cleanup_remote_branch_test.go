@@ -310,6 +310,8 @@ func TestCleanupRemoteBranchFailsClosed(t *testing.T) {
 // 저장된 픽스처로는 도달할 수 없다. 판정 함수를 직접 호출해 고정한다 — 그렇지
 // 않으면 이 방어를 삭제해도 어떤 테스트도 깨지지 않는다.
 func TestCleanupRemoteBranchGatesRejectUnrecordedBranch(t *testing.T) {
+	t.Parallel()
+
 	git := remoteBranchGit()
 	_, result := remoteBranchPreviewer(remoteBranchDeps(git)).Plan(context.Background(), issueops.IssueOpsRecord{
 		ID: "io-test", Repo: t.TempDir(), Phase: issueops.IssueOpsPhaseDone,

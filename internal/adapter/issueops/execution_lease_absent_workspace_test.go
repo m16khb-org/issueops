@@ -14,6 +14,8 @@ import (
 )
 
 func TestWriteFingerprintFileRejectsChangedUntrackedFile(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name   string
 		change func(t *testing.T, path string)
@@ -96,6 +98,8 @@ func TestWorkspaceSnapshotStreamsLargeUntrackedFiles(t *testing.T) {
 }
 
 func TestWorkspaceSnapshotAllowsSuccessfulGitDiffWarnings(t *testing.T) {
+	t.Parallel()
+
 	root := t.TempDir()
 	if code, _, stderr := GitCmd(root, "init", "-b", "main"); code != 0 {
 		t.Fatalf("git init: %s", stderr)
@@ -139,6 +143,8 @@ func TestWorkspaceSnapshotAllowsSuccessfulGitDiffWarnings(t *testing.T) {
 // 실측: io-2ffbd9a6739c와 io-c26802f00c2b가 holder 프로세스도 worktree도 없이
 // lease만 active로 남아 영구히 회수 불가였다.
 func TestWorkspaceSnapshotAcceptsAnAbsentWorktree(t *testing.T) {
+	t.Parallel()
+
 	absent := filepath.Join(t.TempDir(), "reclaimed-worktree")
 	workspace := issueops.Workspace{Root: absent, Branch: "293-cleanup", BaseHead: "abc123"}
 
@@ -165,6 +171,8 @@ func TestWorkspaceSnapshotAcceptsAnAbsentWorktree(t *testing.T) {
 // 적용됨을 고정한다. symlink나 파일이 그 경로를 차지한 것은 부재가 아니라
 // 정체 불명이며, 그것을 quiescence로 인정하면 안 된다.
 func TestWorkspaceSnapshotStillRefusesAnUnidentifiedPath(t *testing.T) {
+	t.Parallel()
+
 	root := t.TempDir()
 
 	file := filepath.Join(root, "not-a-directory")
@@ -188,6 +196,8 @@ func TestWorkspaceSnapshotStillRefusesAnUnidentifiedPath(t *testing.T) {
 // fingerprint를 내지 않음을 고정한다. 그러지 않으면 다른 lifecycle의 부재
 // 증거를 재사용할 수 있다.
 func TestWorkspaceSnapshotAbsenceIsBoundToTheExactPath(t *testing.T) {
+	t.Parallel()
+
 	base := t.TempDir()
 	first, err := workspaceSnapshot(issueops.Workspace{Root: filepath.Join(base, "one"), Branch: "b"})
 	if err != nil {
@@ -214,6 +224,8 @@ func TestWorkspaceSnapshotAbsenceIsBoundToTheExactPath(t *testing.T) {
 // 실패해 lease가 revoking에 갇혔다. abandon은 claimable/released만 받으므로
 // 그 지점에서 다시 막다른 길이 된다.
 func TestReplacementResidueCleanupSkipsAnAbsentWorkspace(t *testing.T) {
+	t.Parallel()
+
 	absent := filepath.Join(t.TempDir(), "reclaimed-worktree")
 	if err := removeReplacementRuntimeFile(absent, filepath.Join(absent, ".issueops", "lease-3.token")); err != nil {
 		t.Fatalf("없는 worktree에는 지울 잔여물도 없다: %v", err)
@@ -226,6 +238,8 @@ func TestReplacementResidueCleanupSkipsAnAbsentWorkspace(t *testing.T) {
 // TestReplacementResidueCleanupStillRemovesRealFiles는 완화가 실제 정리를
 // 건너뛰지 않음을 고정한다.
 func TestReplacementResidueCleanupStillRemovesRealFiles(t *testing.T) {
+	t.Parallel()
+
 	root := t.TempDir()
 	target := filepath.Join(root, ".issueops", "lease-3.token")
 	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
@@ -252,6 +266,8 @@ func TestReplacementResidueCleanupStillRemovesRealFiles(t *testing.T) {
 // 넘겨줄 workspace가 없으면 claimable은 사실이 아니다 — 아무도 claim할 수
 // 없다. terminal 상태인 released가 정확하고, 그것이 abandon 경로를 연다.
 func TestFinalizeReleasesInsteadOfClaimableWhenTheWorkspaceIsGone(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record := rolloverExecutionFixture(t)
 	requester := executionActor("codex", "replacement-owner")
 	inspector := &rolloverOwnerInspector{inventory: port.ExecutionOrcaOwnerInventory{RuntimeID: "runtime-sealed"}}

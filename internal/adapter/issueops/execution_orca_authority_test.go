@@ -11,6 +11,8 @@ import (
 )
 
 func TestOrcaIntentExpectedRecordDelegatesAuthorityAndKeepsIdentity(t *testing.T) {
+	t.Parallel()
+
 	const issueURL = "https://github.com/example/repo/issues/199"
 	record := issueops.IssueOpsRecord{
 		ID: "io-1", IssueURL: issueURL,

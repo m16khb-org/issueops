@@ -18,6 +18,8 @@ import (
 // 원격 이슈 반영은 provider 호출 전에 현재 holder identity를 검증해야 한다.
 // 훅을 거치지 않는 CLI/MCP 직접 호출도 같은 core fence를 공유한다.
 func TestReflectDevilsAdvocateFindingsRequiresCurrentHolderBeforeProviderCall(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := t.TempDir()
 	worktree := filepath.Join(repo+".worktrees", "2626-vertex-breaker-observability")

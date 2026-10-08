@@ -31,6 +31,8 @@ func spanPersisters(stateRoot string) []spanPersist {
 }
 
 func TestSpanPersistRefusesCommitAfterRequestCancellation(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	fixture := newClaimableExecutionFixture(t, stateRoot, "901-persist-precommit")
 	for _, store := range spanPersisters(stateRoot) {
@@ -57,6 +59,8 @@ func TestSpanPersistRefusesCommitAfterRequestCancellation(t *testing.T) {
 }
 
 func TestSpanPersistKeepsCommittedWriteWhenCancelledAfterCommit(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	fixture := newClaimableExecutionFixture(t, stateRoot, "902-persist-postcommit")
 	for index, store := range spanPersisters(stateRoot) {

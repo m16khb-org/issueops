@@ -44,6 +44,8 @@ func writeRepoFileForTest(t *testing.T, repo, rel, body string) {
 }
 
 func TestRecordIssueOpsProjectDocsReviewValidation(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := gitRepoWithProjectDocsForTest(t)
 	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "90-docs"})
@@ -90,6 +92,8 @@ func TestRecordIssueOpsProjectDocsReviewValidation(t *testing.T) {
 }
 
 func TestRecordIssueOpsProjectDocsReviewRejectsPreImplementPhase(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := gitRepoWithProjectDocsForTest(t)
 	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "91-docs"})
@@ -106,6 +110,8 @@ func TestRecordIssueOpsProjectDocsReviewRejectsPreImplementPhase(t *testing.T) {
 
 // project-docs 게이트는 implementation review와 달리 direct/orca 양쪽에 걸린다.
 func TestProjectDocsReviewMissingAppliesToBothModes(t *testing.T) {
+	t.Parallel()
+
 	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{Mode: issueops.ExecutionModeDirect, Selection: selectionFixture(issueops.ExecutionModeDirect)}}
 	if got := cycleapp.ProjectDocsReviewMissing(record, ""); got != "project_docs_review" {
 		t.Fatalf("direct mode must also be gated: %q", got)
@@ -130,6 +136,8 @@ func TestProjectDocsReviewMissingAppliesToBothModes(t *testing.T) {
 }
 
 func TestPRReadinessSurfacesProjectDocsReview(t *testing.T) {
+	t.Parallel()
+
 	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{Mode: issueops.ExecutionModeDirect, Selection: selectionFixture(issueops.ExecutionModeDirect)}}
 	if ready := IssueOpsPRReadiness(record); !containsString(ready.Missing, "project_docs_review") {
 		t.Fatalf("PR readiness must surface the project docs gate: %+v", ready.Missing)
@@ -139,6 +147,8 @@ func TestPRReadinessSurfacesProjectDocsReview(t *testing.T) {
 // no-change 판정은 "무엇을 읽었는가"를 경로로 남겨야 한다. 자유 텍스트 evidence만으로는
 // "대조했으나 없음"과 "대조하지 않음"을 코드가 구분할 수 없기 때문이다.
 func TestRecordIssueOpsProjectDocsReviewNoChangeRequiresReviewedDocs(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := gitRepoWithProjectDocsForTest(t)
 	writeRepoFileForTest(t, repo, "AGENTS.md", "# agents\n")
@@ -180,6 +190,8 @@ func TestRecordIssueOpsProjectDocsReviewNoChangeRequiresReviewedDocs(t *testing.
 
 // updated 판정도 읽은 문서를 함께 남길 수 있고, 같은 경로 규칙을 따른다.
 func TestRecordIssueOpsProjectDocsReviewUpdatedAcceptsReviewedDocs(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := gitRepoWithProjectDocsForTest(t)
 	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "93-docs"})
@@ -202,6 +214,8 @@ func TestRecordIssueOpsProjectDocsReviewUpdatedAcceptsReviewedDocs(t *testing.T)
 // 문서 반영 게이트는 execution lease 유무와 무관하다. lease 없이 implement 이후
 // phase에 도달한 record도 publication 전에 판정을 남겨야 한다.
 func TestProjectDocsReviewMissingGatesRecordsWithoutExecution(t *testing.T) {
+	t.Parallel()
+
 	record := issueops.IssueOpsRecord{}
 	if got := cycleapp.ProjectDocsReviewMissing(record, ""); got != "project_docs_review" {
 		t.Fatalf("record without execution must still be gated: %q", got)

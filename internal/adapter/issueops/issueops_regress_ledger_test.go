@@ -16,6 +16,8 @@ import (
 // partial persisted ledger, so status still shows every phase (problem..pr)
 // without persisting a derived ledger.
 func TestRegressIssueOpsForReplanStatusBackfillsAllPhases(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
 	rec, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-empty-ledger"})

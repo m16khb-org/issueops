@@ -13,6 +13,8 @@ import (
 )
 
 func TestBuildCleanupOccupancyAncestryComputedOncePerPID(t *testing.T) {
+	t.Parallel()
+
 	for _, n := range []int{100, 1000} {
 		t.Run(fmt.Sprint(n), func(t *testing.T) {
 			snapshot := map[int]nativeProcessSnapshotEntry{1: cleanupSnapshotEntry(1, 0, "root")}
@@ -78,6 +80,8 @@ func TestBuildCleanupOccupancyAncestryComputedOncePerPID(t *testing.T) {
 }
 
 func TestCleanupAncestryLookupReusesSlicesAndErrors(t *testing.T) {
+	t.Parallel()
+
 	failure := errors.New("broken ancestry")
 	ancestry := []int{2, 1}
 	calls := map[int]int{}
@@ -104,6 +108,8 @@ func TestCleanupAncestryLookupReusesSlicesAndErrors(t *testing.T) {
 }
 
 func TestBuildCleanupOccupancyAncestryBrokenChains(t *testing.T) {
+	t.Parallel()
+
 	for _, kind := range []string{"missing parent", "cycle", "128 entries", "129 entries"} {
 		t.Run(kind, func(t *testing.T) {
 			snapshot := map[int]nativeProcessSnapshotEntry{
@@ -151,6 +157,8 @@ func TestBuildCleanupOccupancyAncestryBrokenChains(t *testing.T) {
 }
 
 func TestBuildCleanupOccupancyAncestryRefreshesBetweenInvocations(t *testing.T) {
+	t.Parallel()
+
 	snapshot := map[int]nativeProcessSnapshotEntry{
 		1: cleanupSnapshotEntry(1, 0, "root"),
 		2: cleanupSnapshotEntry(2, 1, "parent"),

@@ -12,6 +12,8 @@ import (
 )
 
 func TestSealedArtifactDirUsesOnlyRecordField(t *testing.T) {
+	t.Parallel()
+
 	empty := issueops.IssueOpsRecord{IssueURL: "https://github.com/acme/repo/issues/21", Execution: &issueops.Execution{}}
 	if got := sealedArtifactDir(empty); got != "" {
 		t.Fatalf("empty artifact_dir must not be inferred from the issue URL, got %s", got)
@@ -23,6 +25,8 @@ func TestSealedArtifactDirUsesOnlyRecordField(t *testing.T) {
 }
 
 func TestIssueArtifactDirForUsesLinkedIssueNumber(t *testing.T) {
+	t.Parallel()
+
 	if got := app.OwnerArtifactDir(issueops.IssueOpsRecord{IssueURL: "https://github.com/acme/repo/issues/21"}); got != ".issueops/issues/21/artifact" {
 		t.Fatalf("linked issue must pick the issue folder, got %q", got)
 	}
@@ -35,6 +39,8 @@ func TestIssueArtifactDirForUsesLinkedIssueNumber(t *testing.T) {
 }
 
 func TestMaterializeStagedArtifactsWritesIntoRecordedArtifactDir(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record := executionPrepareRecord(t)
 	root := t.TempDir()
 	record.WorktreePath = root
@@ -70,6 +76,8 @@ func TestMaterializeStagedArtifactsWritesIntoRecordedArtifactDir(t *testing.T) {
 }
 
 func TestMaterializeStagedArtifactsRejectsMissingArtifactDir(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record := executionPrepareRecord(t)
 	record.Execution = artifactRecoveryExecution(issueops.ExecutionModeOrca, issueops.LeaseStatusReleased)
 	record.Execution.Workspace.Root = t.TempDir()

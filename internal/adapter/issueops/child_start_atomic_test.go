@@ -17,6 +17,8 @@ import (
 )
 
 func TestChildStartRollsBackParentAndChildWhenSecondWriteFails(t *testing.T) {
+	t.Parallel()
+
 	root := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, root)
 	req := model.IssueOpsChildStartRequest{ParentID: parent.ID, Branch: "124-atomic-child", Title: "atomic", TaskScope: "atomic parent and child", AcceptanceCriteria: []string{"no partial graph"}}
@@ -60,6 +62,8 @@ func TestChildStartRollsBackParentAndChildWhenSecondWriteFails(t *testing.T) {
 // These cases protect the second record now that child creation uses the parent's
 // span instead of entering a separate child lock.
 func TestChildStartRefusalPreservesBothRows(t *testing.T) {
+	t.Parallel()
+
 	for _, scenario := range []string{"parent fence", "child fence", "corrupt child", "wrong actor"} {
 		t.Run(scenario, func(t *testing.T) {
 			root := t.TempDir()

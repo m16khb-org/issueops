@@ -215,6 +215,8 @@ func TestCleanupAbandonApplyingReceiptForOriginallyAbsentExecutionIsRetryable(t 
 }
 
 func TestSwitchExecutionModeRejectsCleanupAbandonFence(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record := executionPrepareRecord(t)
 	if code, _, stderr := preflight.GitCmd(record.Repo, "update-ref", "-d", "refs/remotes/origin/"+record.Branch); code != 0 {
 		t.Fatalf("remove remote branch fixture: %s", stderr)

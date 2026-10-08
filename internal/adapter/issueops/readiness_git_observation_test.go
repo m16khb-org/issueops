@@ -10,6 +10,8 @@ import (
 )
 
 func TestGitObservationPreservesTuplesAndOutput(t *testing.T) {
+	t.Parallel()
+
 	for _, tc := range []struct {
 		name        string
 		code        int
@@ -45,6 +47,8 @@ func TestGitObservationPreservesTuplesAndOutput(t *testing.T) {
 }
 
 func TestGitObservationSharesCleanupWithoutChangingResults(t *testing.T) {
+	t.Parallel()
+
 	for _, code := range []int{0, 23} {
 		t.Run(string(rune('a'+code)), func(t *testing.T) {
 			calls := map[string]int{}
@@ -87,6 +91,8 @@ func TestGitObservationSharesCleanupWithoutChangingResults(t *testing.T) {
 }
 
 func TestGitObservationExactRootsArgumentsAndFetchBoundaries(t *testing.T) {
+	t.Parallel()
+
 	calls := map[string]int{}
 	phase := "before"
 	run := func(root string, args ...string) (int, string, string) {
@@ -121,6 +127,8 @@ func TestGitObservationExactRootsArgumentsAndFetchBoundaries(t *testing.T) {
 }
 
 func TestGitObservationKeepsRefAndHeadProbesFresh(t *testing.T) {
+	t.Parallel()
+
 	calls := map[string]int{}
 	run := func(root string, args ...string) (int, string, string) {
 		calls[root+" "+strings.Join(args, " ")]++

@@ -14,6 +14,8 @@ import (
 )
 
 func TestReadIssueOpsAcceptsValidRecord(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	database, err := sqlstore.Open(stateRoot)
 	if err != nil {
@@ -53,6 +55,8 @@ func TestReadIssueOpsAcceptsValidRecord(t *testing.T) {
 }
 
 func TestReadIssueOpsMissingRecordPreservesErrorIdentity(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	if _, err := sqlstore.Open(stateRoot); err != nil {
 		t.Fatal(err)
@@ -68,6 +72,8 @@ func TestReadIssueOpsMissingRecordPreservesErrorIdentity(t *testing.T) {
 }
 
 func TestReadIssueOpsRejectsRecordInvariantViolations(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	database, err := sqlstore.Open(stateRoot)
 	if err != nil {
@@ -122,6 +128,8 @@ func TestReadIssueOpsRejectsRecordInvariantViolations(t *testing.T) {
 }
 
 func TestReadIssueOpsRejectsInvalidStateMatrix(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	database, err := sqlstore.Open(stateRoot)
 	if err != nil {

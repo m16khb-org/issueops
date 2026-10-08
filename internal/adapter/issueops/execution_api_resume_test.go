@@ -15,6 +15,8 @@ import (
 )
 
 func TestExecutionActionResumeFailsClosedWithoutHandler(t *testing.T) {
+	t.Parallel()
+
 	result, err := testExecutionService().Execute(context.Background(), t.TempDir(), issueops.ExecutionActionRequest{Action: issueops.ExecutionActionResume, ID: "io-resume", Confirm: true}, issueopsport.ExecutionActionDependencies{})
 	if !errors.Is(err, issueops.ErrResumeHandlerUnavailable) {
 		t.Fatalf("result=%#v err=%v", result, err)
@@ -22,6 +24,8 @@ func TestExecutionActionResumeFailsClosedWithoutHandler(t *testing.T) {
 }
 
 func TestExecutionActionResumePrioritizesConfirmBeforeMissingHandler(t *testing.T) {
+	t.Parallel()
+
 	result, err := testExecutionService().Execute(context.Background(), t.TempDir(), issueops.ExecutionActionRequest{Action: issueops.ExecutionActionResume, ID: "io-resume"}, issueopsport.ExecutionActionDependencies{})
 	if err == nil || err.Error() != "execution resume requires confirm" {
 		t.Fatalf("result=%#v err=%v", result, err)
@@ -29,6 +33,8 @@ func TestExecutionActionResumePrioritizesConfirmBeforeMissingHandler(t *testing.
 }
 
 func TestExecutionActionResumeUsesInjectedHandlerExactlyOnce(t *testing.T) {
+	t.Parallel()
+
 	calls := 0
 	request := issueops.ExecutionActionRequest{Action: issueops.ExecutionActionResume, ID: "io-resume", ExpectedGeneration: 5, CWD: "/repo.worktrees/193", Confirm: true}
 	want := issueops.ExecutionResumeResult{OK: true, ID: request.ID, ClaimTokenPath: "token", IssueBodySHA256: "issue", ContextPacketPath: "packet", ContextPacketSHA256: "packet-sha", OwnerPromptPath: "prompt", OwnerPromptSHA256: "prompt-sha", NextCommand: "claim"}
@@ -48,6 +54,8 @@ func TestExecutionActionResumeUsesInjectedHandlerExactlyOnce(t *testing.T) {
 }
 
 func TestExecutionActionResumePrioritizesConfirmBeforeMutationGuardAndInvalidActor(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 
 	calls := 0

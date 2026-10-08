@@ -38,6 +38,8 @@ func (p *publicationCreateProvider) Inspect(context.Context, contract.Intent) (c
 }
 
 func TestPublicationCreateUsesPreparedDomainRulesBeforePersistence(t *testing.T) {
+	t.Parallel()
+
 	for _, scenario := range []string{"success", "wrong holder", "wrong cwd", "wrong branch", "placeholder assignee", "stale review", "operation collision"} {
 		t.Run(scenario, func(t *testing.T) {
 			root := t.TempDir()

@@ -198,6 +198,8 @@ func newReleasedSyncBaseFixture(t *testing.T, branch string) syncBaseFixture {
 }
 
 func TestReleasedSyncBaseFixtureRepresentsCurrentCompletion(t *testing.T) {
+	t.Parallel()
+
 	fixture := newReleasedSyncBaseFixture(t, "318-released-fixture")
 	record, err := ReadIssueOps(fixture.stateRoot, fixture.record.ID)
 	if err != nil {
@@ -246,6 +248,8 @@ func (f syncBaseFixture) sealResolution(t *testing.T, conflicts ...string) {
 // 각 전제의 거부 코드를 검증한다. execution/worktree 부재나 확정 blocker의
 // missing은 부분 진단이며, 관측하지 않은 원격 게이트까지 나열하지 않는다.
 func TestExecutionSyncBaseGatesRejectEveryMissingPrecondition(t *testing.T) {
+	t.Parallel()
+
 	baseline := newReleasedSyncBaseFixture(t, "114-gates")
 	cases := []struct {
 		name    string
@@ -326,6 +330,8 @@ func TestExecutionSyncBaseGatesRejectEveryMissingPrecondition(t *testing.T) {
 // preview는 released·비-holder에서도 진단 채널로 열려 있어야 하고, 예상 충돌
 // 파일과 fingerprint를 함께 발급해야 한다.
 func TestExecutionSyncBasePreviewReportsConflictsAndIssuesFingerprint(t *testing.T) {
+	t.Parallel()
+
 	fixture := newReleasedSyncBaseFixture(t, "114-preview")
 	fixture.rewrite(t, func(r *issueops.IssueOpsRecord) {
 		r.Execution.Lease.Status = issueops.LeaseStatusReleased
@@ -360,6 +366,8 @@ func TestExecutionSyncBasePreviewReportsConflictsAndIssuesFingerprint(t *testing
 
 // 무충돌 fast 경로: fetch→merge-tree→merge→push 순서와 인자를 전수 검증한다.
 func TestExecutionSyncBaseApplyRunsFetchMergePushInOrder(t *testing.T) {
+	t.Parallel()
+
 	fixture := newReleasedSyncBaseFixture(t, "114-apply")
 	preview, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBasePreview))
 	if err != nil {
@@ -400,6 +408,8 @@ func TestExecutionSyncBaseApplyRunsFetchMergePushInOrder(t *testing.T) {
 
 // 충돌은 merge-in-progress를 남기고 정지한다 — push도 이벤트도 없다.
 func TestExecutionSyncBaseApplyStopsAtConflictWithoutPush(t *testing.T) {
+	t.Parallel()
+
 	fixture := newReleasedSyncBaseFixture(t, "114-conflict")
 	preview, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBasePreview))
 	if err != nil {
@@ -440,6 +450,8 @@ func TestExecutionSyncBaseApplyStopsAtConflictWithoutPush(t *testing.T) {
 // push 실패는 로컬 merge commit을 남기고, 재실행은 merge 없이 push만 수행해
 // 멱등 수렴한다(설계 v2 push 계약).
 func TestExecutionSyncBaseApplyPushFailureConvergesIdempotently(t *testing.T) {
+	t.Parallel()
+
 	fixture := newReleasedSyncBaseFixture(t, "114-push-retry")
 	preview, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBasePreview))
 	if err != nil {
@@ -493,6 +505,8 @@ func TestExecutionSyncBaseApplyPushFailureConvergesIdempotently(t *testing.T) {
 
 // 성공한 apply는 durable 이벤트를 남기고 Completion.FinalHead는 불변이다.
 func TestExecutionSyncBaseRecordsDurableEventAndKeepsFinalHeadImmutable(t *testing.T) {
+	t.Parallel()
+
 	fixture := newReleasedSyncBaseFixture(t, "114-durable")
 	preview, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBasePreview))
 	if err != nil {
@@ -525,6 +539,8 @@ func TestExecutionSyncBaseRecordsDurableEventAndKeepsFinalHeadImmutable(t *testi
 
 // finalize는 미해소 인덱스와 잔존 충돌 마커를 각각 거부한다.
 func TestExecutionSyncBaseFinalizeRejectsUnresolvedConflictsAndMarkers(t *testing.T) {
+	t.Parallel()
+
 	t.Run("unmerged index", func(t *testing.T) {
 		fixture := newReleasedSyncBaseFixture(t, "114-finalize-unmerged")
 		fixture.git.mergeHead = true
@@ -593,6 +609,8 @@ func TestExecutionSyncBaseFinalizeRejectsUnresolvedConflictsAndMarkers(t *testin
 }
 
 func TestExecutionSyncBaseAbortWithdrawsTheMergeWithoutEvent(t *testing.T) {
+	t.Parallel()
+
 	fixture := newReleasedSyncBaseFixture(t, "114-abort")
 	fixture.git.mergeHead = true
 	fixture.sealResolution(t)
@@ -625,6 +643,8 @@ func TestExecutionSyncBaseAbortWithdrawsTheMergeWithoutEvent(t *testing.T) {
 
 // fingerprint TOCTOU: preview 발급 이후 상태가 바뀌면 apply가 멈춘다.
 func TestExecutionSyncBaseApplyRejectsStaleFingerprint(t *testing.T) {
+	t.Parallel()
+
 	fixture := newReleasedSyncBaseFixture(t, "114-toctou")
 	preview, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBasePreview))
 	if err != nil {
@@ -652,6 +672,8 @@ func TestExecutionSyncBaseApplyRejectsStaleFingerprint(t *testing.T) {
 
 // git 2.38 미만 등으로 merge-tree --write-tree가 없으면 fail-closed다.
 func TestExecutionSyncBaseFailsClosedWhenMergeTreeIsUnavailable(t *testing.T) {
+	t.Parallel()
+
 	fixture := newReleasedSyncBaseFixture(t, "114-mergetree")
 	fixture.git.mergeTreeCode, fixture.git.mergeTreeOut = 129, "unknown option `write-tree'"
 	result, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBasePreview))
@@ -661,6 +683,8 @@ func TestExecutionSyncBaseFailsClosedWhenMergeTreeIsUnavailable(t *testing.T) {
 }
 
 func TestExecutionSyncBaseReleasedCompletionAuthorityRejectsInvalidState(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name    string
 		mutate  func(*issueops.IssueOpsRecord)
@@ -710,6 +734,8 @@ func TestExecutionSyncBaseReleasedCompletionAuthorityRejectsInvalidState(t *test
 }
 
 func TestExecutionSyncBaseBlockersKeepLocalDiagnosticsWithoutNetwork(t *testing.T) {
+	t.Parallel()
+
 	for _, mode := range []string{issueops.ExecutionSyncBasePreview, issueops.ExecutionSyncBaseApply} {
 		t.Run(mode, func(t *testing.T) {
 			fixture := newReleasedSyncBaseFixture(t, "318-efficiency-blocked-"+mode)
@@ -764,6 +790,8 @@ func TestExecutionSyncBaseBlockersKeepLocalDiagnosticsWithoutNetwork(t *testing.
 }
 
 func TestExecutionSyncBaseActiveHolderMismatchSkipsNetwork(t *testing.T) {
+	t.Parallel()
+
 	fixture := newReleasedSyncBaseFixture(t, "318-efficiency-foreign-holder")
 	fixture.rewrite(t, func(record *issueops.IssueOpsRecord) {
 		record.Execution.Lease.Status = issueops.LeaseStatusActive
@@ -785,6 +813,8 @@ func TestExecutionSyncBaseActiveHolderMismatchSkipsNetwork(t *testing.T) {
 }
 
 func TestExecutionSyncBaseReleasedCompletionAuthorityRejectsInvalidProcessReceipt(t *testing.T) {
+	t.Parallel()
+
 	fixture := newReleasedSyncBaseFixture(t, "318-dead-process")
 	req := fixture.request(issueops.ExecutionSyncBaseApply)
 	req.Actor.SessionProcess = &issueops.NativeProcessReceipt{PID: 999999, StartedAt: "2026-01-01T00:00:00Z", Executable: "/missing/codex"}
@@ -804,6 +834,8 @@ func TestExecutionSyncBaseReleasedCompletionAuthorityRejectsInvalidProcessReceip
 }
 
 func TestExecutionSyncBaseActiveHolderAuthorityRemainsSupported(t *testing.T) {
+	t.Parallel()
+
 	fixture := newReleasedSyncBaseFixture(t, "318-active-holder")
 	fixture.rewrite(t, func(record *issueops.IssueOpsRecord) {
 		record.Execution.Lease.Status = issueops.LeaseStatusActive
@@ -857,6 +889,8 @@ func assertReleasedSyncBaseCommand(t *testing.T, text string, fixture syncBaseFi
 }
 
 func TestExecutionSyncBaseRejectsUnknownMode(t *testing.T) {
+	t.Parallel()
+
 	fixture := newReleasedSyncBaseFixture(t, "114-mode")
 	if _, err := fixture.run(t, fixture.request("rebase")); err == nil {
 		t.Fatal("unsupported mode must be rejected; rebase is explicitly out of scope")

@@ -67,6 +67,8 @@ func completionTestRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
 }
 
 func TestReflectIssueCompletionGates(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record := completionTestRecord(t)
 	prov := &fakeCompletionProvider{}
 
@@ -106,6 +108,8 @@ const readableResult = "두 이슈를 서로 다른 세션에서 동시에 진�
 // 진행 결과는 사람이 쓴 원고로만 반영한다. 원고가 없거나, 커밋 SHA 전문이나
 // 로컬 경로가 있거나, 2,000자를 넘으면 provider를 부르기 전에 거부한다(#513).
 func TestReflectCompletionRequiresReadableResult(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record := completionTestRecord(t)
 	prov := &fakeCompletionProvider{updateRes: port.IssueProviderUpdateIssueBodySectionResult{OK: true, Updated: true, URL: record.IssueURL}}
 	for _, tc := range []struct {
@@ -138,6 +142,8 @@ func TestReflectCompletionRequiresReadableResult(t *testing.T) {
 }
 
 func TestCloseIssueOpsRemoteIssueGatesAndStamps(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record := completionTestRecord(t)
 	prov := &fakeCompletionProvider{}
 

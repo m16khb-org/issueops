@@ -27,6 +27,8 @@ func issueOpsGrillGateBaseRecord(t *testing.T, stateRoot, repo, branch string) s
 }
 
 func TestEnterPlanRequiresDomainReview(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
 	id := issueOpsGrillGateBaseRecord(t, stateRoot, repo, "1-gate")
@@ -47,6 +49,8 @@ func TestEnterPlanRequiresDomainReview(t *testing.T) {
 }
 
 func TestEnterPlanRequiresSplitDecision(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
 	id := issueOpsGrillGateBaseRecord(t, stateRoot, repo, "2-gate")

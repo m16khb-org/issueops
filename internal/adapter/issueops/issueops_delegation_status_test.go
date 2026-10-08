@@ -10,6 +10,8 @@ import (
 )
 
 func TestIssueOpsChildStatusAggregatesAndRepairs(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
 	first, err := startIssueOpsChildForTest(stateRoot, parent, issueops.IssueOpsChildStartRequest{
@@ -78,6 +80,8 @@ func TestIssueOpsChildStatusAggregatesAndRepairs(t *testing.T) {
 }
 
 func TestAcceptIssueOpsChildRequiresDonePhaseAndEvidence(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
 	started, err := startIssueOpsChildForTest(stateRoot, parent, issueops.IssueOpsChildStartRequest{
@@ -135,6 +139,8 @@ func TestAcceptIssueOpsChildRequiresDonePhaseAndEvidence(t *testing.T) {
 }
 
 func TestAcceptIssueOpsChildAfterCleanupUsesIndexedParentRef(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
 	started, err := startIssueOpsChildForTest(stateRoot, parent, issueops.IssueOpsChildStartRequest{
@@ -172,6 +178,8 @@ func TestAcceptIssueOpsChildAfterCleanupUsesIndexedParentRef(t *testing.T) {
 }
 
 func TestAcceptIssueOpsChildAfterCleanupRejectsUnindexedID(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
 
@@ -182,6 +190,8 @@ func TestAcceptIssueOpsChildAfterCleanupRejectsUnindexedID(t *testing.T) {
 }
 
 func TestRejectIssueOpsChildRecordsVerdictOnValidReason(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
 	started, err := startIssueOpsChildForTest(stateRoot, parent, issueops.IssueOpsChildStartRequest{
@@ -207,6 +217,8 @@ func TestRejectIssueOpsChildRecordsVerdictOnValidReason(t *testing.T) {
 }
 
 func TestDropIssueOpsChildRecordsAuditTrail(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
 	started, err := startIssueOpsChildForTest(stateRoot, parent, issueops.IssueOpsChildStartRequest{
@@ -232,6 +244,8 @@ func TestDropIssueOpsChildRecordsAuditTrail(t *testing.T) {
 }
 
 func TestDropIssueOpsChildAfterCleanupUsesIndexedParentRef(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
 	started, err := startIssueOpsChildForTest(stateRoot, parent, issueops.IssueOpsChildStartRequest{
@@ -278,6 +292,8 @@ func TestDropIssueOpsChildAfterCleanupUsesIndexedParentRef(t *testing.T) {
 }
 
 func TestDroppedCleanupReceiptWithShortReasonRemainsOrphaned(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
 	started, err := startIssueOpsChildForTest(stateRoot, parent, issueops.IssueOpsChildStartRequest{

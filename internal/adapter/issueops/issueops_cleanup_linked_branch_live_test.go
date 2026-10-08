@@ -25,6 +25,8 @@ import (
 //
 //	ISSUEOPS_GH_LIVE=1 go test ./internal/adapter/issueops -run LiveIssue -count=1 -v
 func TestCleanupLinkedBranchObservesTheLiveIssue(t *testing.T) {
+	t.Parallel()
+
 	if os.Getenv("ISSUEOPS_GH_LIVE") != "1" {
 		t.Skip("실물 GitHub이 필요하다: ISSUEOPS_GH_LIVE=1로 실행한다")
 	}
@@ -60,6 +62,8 @@ func TestCleanupLinkedBranchObservesTheLiveIssue(t *testing.T) {
 // 호출 **이전에** 막는지 고정한다. 잘못된 좌표로 남의 이슈를 읽는 일이
 // 없어야 하고, 그 방어는 네트워크에 닿기 전에 끝나야 한다.
 func TestCleanupLinkedBranchLiveGraphQLRejectsABadSelector(t *testing.T) {
+	t.Parallel()
+
 	invoked := false
 	observe := ObserveGitHubLinkedBranches(func(context.Context, string, ...string) (string, error) {
 		invoked = true
@@ -77,6 +81,8 @@ func TestCleanupLinkedBranchLiveGraphQLRejectsABadSelector(t *testing.T) {
 // 호출 이전임을 한 번 더 고정한다. 준비되지 않은 record로 GitHub을 읽으면
 // 안 된다.
 func TestCleanupLinkedBranchGateBlocksBeforeAnyProviderCall(t *testing.T) {
+	t.Parallel()
+
 	root := t.TempDir()
 	record := issueopscontract.IssueOpsRecord{
 		OK: true, SchemaVersion: 1, ID: "io-lbgate", Repo: t.TempDir(), Phase: issueopscontract.IssueOpsPhaseImplement,

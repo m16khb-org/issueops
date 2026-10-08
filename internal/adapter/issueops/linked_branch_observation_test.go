@@ -9,6 +9,8 @@ import (
 )
 
 func TestCleanupLinkedBranchRejectsUnknownRemoteRef(t *testing.T) {
+	t.Parallel()
+
 	for _, apply := range []bool{false, true} {
 		name := "preview"
 		if apply {
@@ -40,6 +42,8 @@ func TestCleanupLinkedBranchRejectsUnknownRemoteRef(t *testing.T) {
 }
 
 func TestAwaitBranchLinkRetriesUnknownRemoteRef(t *testing.T) {
+	t.Parallel()
+
 	root := awaitFixture(t, false)
 	d := &awaitDeps{rounds: [][]linkedbranch.Node{healthyNodes(), healthyNodes()}, remote: []string{lbSealedBase, lbSealedBase}}
 	deps := d.build()

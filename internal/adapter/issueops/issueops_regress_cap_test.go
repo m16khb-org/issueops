@@ -9,6 +9,8 @@ import (
 )
 
 func TestRegressIssueOpsForReplanRecordsRegressEvent(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, id := recordAtPhaseForRegressTest(t, issueops.IssueOpsPhasePlan)
 
 	out, err := RegressIssueOpsForReplan(stateRoot, id, "first stop: scope too broad")
@@ -31,6 +33,8 @@ func TestRegressIssueOpsForReplanRecordsRegressEvent(t *testing.T) {
 }
 
 func TestRegressIssueOpsForReplanCapsRepeatedRegressions(t *testing.T) {
+	t.Parallel()
+
 	// One below the cap: the regress is still allowed and appends its event.
 	stateRoot, id := seedRegressEvents(t, 4)
 	out, err := RegressIssueOpsForReplan(stateRoot, id, "still within cap")
@@ -60,6 +64,8 @@ func TestRegressIssueOpsForReplanCapsRepeatedRegressions(t *testing.T) {
 }
 
 func TestRegressCapErrorReportsActualEventCount(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, id := seedRegressEvents(t, 7)
 
 	_, err := RegressIssueOpsForReplan(stateRoot, id, "too many stops")

@@ -36,6 +36,8 @@ func hasBaseAdvancedWarning(ready issueops.IssueOpsReadiness) bool {
 // origin/<base>가 HEAD의 조상이 아니면 base가 앞서 나간 것이다. 이것은 경고이지
 // 차단 키가 아니다 — PR 게이트 정책은 이 관측으로 바뀌지 않는다.
 func TestStrictReadinessWarnsWhenPreparedBaseAdvanced(t *testing.T) {
+	t.Parallel()
+
 	repo := initIssueOpsRepo(t)
 	record := baseAdvancedRecord(repo, "main")
 
@@ -67,6 +69,8 @@ func TestStrictReadinessWarnsWhenPreparedBaseAdvanced(t *testing.T) {
 
 // BaseBranch는 그대로 저장되므로 refs/heads/·origin/ 접두가 올 수 있다.
 func TestStrictReadinessNormalizesBaseBranchPrefixes(t *testing.T) {
+	t.Parallel()
+
 	repo := initIssueOpsRepo(t)
 	if code, _, stderr := preflight.GitCmd(repo, "commit", "-q", "--allow-empty", "-m", "upstream moves"); code != 0 {
 		t.Fatalf("empty commit failed: %s", stderr)
@@ -86,6 +90,8 @@ func TestStrictReadinessNormalizesBaseBranchPrefixes(t *testing.T) {
 
 // 비교할 것이 없으면 추정하지 않는다. 둘 다 조용히 건너뛴다.
 func TestStrictReadinessSkipsBaseObservationWithoutAComparableRef(t *testing.T) {
+	t.Parallel()
+
 	repo := initIssueOpsRepo(t)
 	noPrepare := baseAdvancedRecord(repo, "main")
 	noPrepare.BranchPrepare = nil

@@ -7,6 +7,8 @@ import (
 )
 
 func TestBranchGitUsesExplicitRunnerAndPreservesObservations(t *testing.T) {
+	t.Parallel()
+
 	var calls [][]string
 	git := BranchGit{Run: func(root string, args ...string) (int, string, string) {
 		if root != "repo" {

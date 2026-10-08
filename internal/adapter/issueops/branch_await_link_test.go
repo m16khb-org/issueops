@@ -81,6 +81,8 @@ func healthyNodes() []linkedbranch.Node {
 // 오기 때문이다. 시작 시점의 부재를 terminal 실패로 다루면 이 경로는 구조적으로
 // 완주할 수 없다. 실측된 실패가 정확히 그것이었다(task_e3946ef93086).
 func TestAwaitBranchLinkWaitsThroughTheCoordinatorStartupWindow(t *testing.T) {
+	t.Parallel()
+
 	root := awaitFixture(t, false)
 	deps := &awaitDeps{
 		rounds: [][]linkedbranch.Node{nil, nil, healthyNodes()},
@@ -102,6 +104,8 @@ func TestAwaitBranchLinkWaitsThroughTheCoordinatorStartupWindow(t *testing.T) {
 // TestAwaitBranchLinkIsBounded는 무한 대기를 막는다. coordinator가 멈췄으면
 // owner도 멈춰야 하고, 그 사실이 진단으로 남아야 한다.
 func TestAwaitBranchLinkIsBounded(t *testing.T) {
+	t.Parallel()
+
 	root := awaitFixture(t, false)
 	deps := &awaitDeps{rounds: [][]linkedbranch.Node{nil}}
 	result, err := AwaitBranchLink(context.Background(), root,
@@ -124,6 +128,8 @@ func TestAwaitBranchLinkIsBounded(t *testing.T) {
 // 상태를 구분한다. 링크는 있는데 봉인값과 다르면 사람이 봐야 하고, 기다리면
 // 진단만 늦어진다.
 func TestAwaitBranchLinkStopsOnAMismatchInsteadOfWaiting(t *testing.T) {
+	t.Parallel()
+
 	root := awaitFixture(t, false)
 	deps := &awaitDeps{
 		rounds: [][]linkedbranch.Node{{{ID: "LB_live", RefName: lbBranch, RefOID: "deadbeef"}}},
@@ -142,6 +148,8 @@ func TestAwaitBranchLinkStopsOnAMismatchInsteadOfWaiting(t *testing.T) {
 // TestAwaitBranchLinkTreatsAReadFailureAsNotYet는 관측 실패를 부재로도
 // 종료로도 다루지 않음을 고정한다. 네트워크 오류는 다음 주기에 다시 읽는다.
 func TestAwaitBranchLinkTreatsAReadFailureAsNotYet(t *testing.T) {
+	t.Parallel()
+
 	root := awaitFixture(t, false)
 	deps := &awaitDeps{
 		rounds: [][]linkedbranch.Node{nil, healthyNodes()},
@@ -158,6 +166,8 @@ func TestAwaitBranchLinkTreatsAReadFailureAsNotYet(t *testing.T) {
 // TestAwaitBranchLinkIsIdempotentWhenAlreadyRecorded는 이미 기록된 경우
 // 기다리지 않음을 고정한다.
 func TestAwaitBranchLinkIsIdempotentWhenAlreadyRecorded(t *testing.T) {
+	t.Parallel()
+
 	root := awaitFixture(t, true)
 	deps := &awaitDeps{rounds: [][]linkedbranch.Node{nil}}
 	result, err := AwaitBranchLink(context.Background(), root,
@@ -173,6 +183,8 @@ func TestAwaitBranchLinkIsIdempotentWhenAlreadyRecorded(t *testing.T) {
 // TestAwaitBranchLinkRejectsAnUnboundedTimeout는 상한을 고정한다. 이보다
 // 오래 기다려야 한다면 그것은 대기 문제가 아니라 coordinator가 멈춘 것이다.
 func TestAwaitBranchLinkRejectsAnUnboundedTimeout(t *testing.T) {
+	t.Parallel()
+
 	root := awaitFixture(t, false)
 	for _, raw := range []string{"0s", "-1m", "31m", "forever"} {
 		deps := &awaitDeps{rounds: [][]linkedbranch.Node{nil}}
@@ -187,6 +199,8 @@ func TestAwaitBranchLinkRejectsAnUnboundedTimeout(t *testing.T) {
 // TestAwaitBranchLinkIsGitHubOnly는 표면 경계를 고정한다. GitLab은 prepare
 // 시점에 이미 link_verified를 요구하므로 이 시작 창 자체가 없다.
 func TestAwaitBranchLinkIsGitHubOnly(t *testing.T) {
+	t.Parallel()
+
 	root := awaitFixture(t, false)
 	record, err := ReadIssueOps(root, "io-await1")
 	if err != nil {

@@ -10,6 +10,8 @@ import (
 // complete (completed_at + artifacts), the phase being entered gets entered_at.
 // Real (observed) timestamps, unlike derived entries.
 func TestAdvanceStampsPhaseLedgerOnTransition(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
 	rec, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-stamp"})

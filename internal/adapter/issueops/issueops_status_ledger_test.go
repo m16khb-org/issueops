@@ -9,6 +9,8 @@ import (
 // Status display fills in a derived phase ledger when none was stamped, so old
 // records still show phase progress. It is read-only (does not persist).
 func TestIssueOpsStatusDerivesLedgerWhenAbsent(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
 	rec, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-status"})

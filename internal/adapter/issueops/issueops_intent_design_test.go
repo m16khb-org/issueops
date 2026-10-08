@@ -13,6 +13,8 @@ import (
 )
 
 func TestIssueOpsIntentAndDesignGatePhaseProgression(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
 	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-intent-design"})
@@ -203,6 +205,8 @@ func TestIssueOpsIntentAndDesignGatePhaseProgression(t *testing.T) {
 }
 
 func TestIssueOpsIntentAndDesignRedactSecretLikeFreeform(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
 	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-redaction"})

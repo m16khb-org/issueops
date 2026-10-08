@@ -20,6 +20,8 @@ func newLedgerRecorderRecord(t *testing.T) (string, string) {
 }
 
 func TestRecordIssueOpsDomainReview(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, id := newLedgerRecorderRecord(t)
 
 	if _, err := RecordIssueOpsDomainReview(stateRoot, id, issueops.IssueOpsDomainReviewRequest{}); err == nil {
@@ -56,6 +58,8 @@ func issueOpsDomainReviewMissingForTest(r issueops.IssueOpsReadiness) bool {
 }
 
 func TestRecordIssueOpsAISlopCleanEvidence(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, id := newLedgerRecorderRecord(t)
 
 	if _, err := RecordIssueOpsAISlopCleanEvidence(stateRoot, id, nil, []string{"go test"}); err == nil {
@@ -78,6 +82,8 @@ func TestRecordIssueOpsAISlopCleanEvidence(t *testing.T) {
 }
 
 func TestResolveIssueOpsFeedback(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, id := newLedgerRecorderRecord(t)
 	if _, err := AddIssueOpsFeedback(stateRoot, id, "review", "fix the bug", "defect"); err != nil {
 		t.Fatalf("add feedback: %v", err)

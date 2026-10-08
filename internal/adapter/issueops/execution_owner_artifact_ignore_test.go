@@ -25,6 +25,8 @@ import (
 // 자기 무시 `.gitignore`로 자기 흔적만 지운다. 사용자의 다른 미추적 파일은
 // 그대로 보여야 한다.
 func TestOwnerArtifactDirectoryIsInvisibleToGitStatus(t *testing.T) {
+	t.Parallel()
+
 	repo := initIssueOpsRepo(t)
 	artifactDir := filepath.Join(repo, ".issueops", "issues", "1", "artifact")
 
