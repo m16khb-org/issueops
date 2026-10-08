@@ -59,11 +59,16 @@ darwin/linux의 기본 `--mcp-transport=http` 설치는 세 host의 issueops ent
 catalog가 바뀌면 두 transport 모두 다음 세션이 새 `tools/list`를 조회한다. 서버는 이 헤더를 읽지 않는다
 (`internal/adapter/omo/mcp.go`의 `omoMCPCatalogHeader`, `TestOmoHTTPEntryChangesWithTheAdvertisedCatalog`).
 
-Linux에서 HOME을 임시 디렉터리로 바꿔 설치하면(CI 등) HTTP 설치가 `supervisor_failed`로 실패한다. installer는 unit을
-그 HOME의 `~/.config/systemd/user/`에 쓰지만, 이미 실행 중인 user systemd manager는 자기 HOME 기준 경로에서 unit을 찾기
-때문이다(`systemctl --user enable`이 `Unit file issueops-mcp.service does not exist`로 끝난다). 이런 환경에서는
-`--mcp-transport=stdio`를 명시한다. supervisor를 쓸 수 없어도 installer가 stdio로 자동 전환하지 않는 것은 의도된 동작이다
-([ADR 2026-10-02](../adr/2026-10-02-shared-streamable-http-mcp-and-caller-capability.md)). CI의 self-verify 단계가 이 선택을 쓴다.
+Linux에서 HOME을 임시 디렉터리로 바꿔 설치하면(CI 등) HTTP 설치가 실패한다. installer는 unit을 그 HOME의
+`~/.config/systemd/user/`에 쓰지만, 이미 실행 중인 user systemd manager는 자기 HOME 기준 경로에서 unit을 찾기 때문이다.
+그래서 HTTP 설치는 credential·log·unit을 쓰기 전에 `systemctl --user show-environment`로 manager의 `HOME`과
+`XDG_CONFIG_HOME`을 읽고, unit 디렉터리가 manager의 기대 디렉터리와도 `systemctl --user show -p UnitPath --value`
+목록과도 맞지 않으면 아무것도 쓰지 않고 `unit directory ... is not searched by the running systemd user manager`
+오류로 멈춘다. 조회가 실패하거나 HOME이 없거나 값이 `$'...'`로 이스케이프돼 판정할 수 없으면 막지 않고, 기존 load 단계가
+실패한 명령과 출력을 담아 실패한다. 이런 환경에서는 manager와 같은 HOME에서 설치하거나 `--mcp-transport=stdio`를 명시한다.
+supervisor를 쓸 수 없어도 installer가 stdio로 자동 전환하지 않는 것은 의도된 동작이다
+([ADR 2026-10-02](../adr/2026-10-02-shared-streamable-http-mcp-and-caller-capability.md)). CI의 self-verify 단계는 stdio를
+쓰고, 별도 단계가 임시 HOME HTTP 설치가 쓰기 전에 이 오류로 멈추는지 확인한다.
 
 stdio `issueops mcp`는 host 세션 안에서 in-process로 실행된다. `io update`는 host가 소유한 stdio MCP 프로세스를 열거하거나 종료하지 않으므로, 새 binary의 MCP 동작은 host에서 서버를 재연결(reconnect)할 때 적용된다. 실행 모드의 정규 설명은 [runtime 문서](../architecture/runtime.md)를 따른다.
 

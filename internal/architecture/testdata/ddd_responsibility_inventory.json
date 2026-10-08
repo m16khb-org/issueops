@@ -5029,6 +5029,7 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
+        "func launchd.checkUnitPath",
         "func launchd.command",
         "func launchd.domain",
         "func launchd.load",
@@ -5038,6 +5039,7 @@
         "func launchd.unitPath",
         "func launchd.unload",
         "func runLoadStep",
+        "func systemd.checkUnitPath",
         "func systemd.command",
         "func systemd.load",
         "func systemd.renderUnit",

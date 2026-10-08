@@ -18,6 +18,14 @@ func TestSupervisorUnitRunsAbsoluteBinaryWithExplicitRootAndState(t *testing.T) 
 		unitPath = filepath.Join(home, "Library", "LaunchAgents", "io.issueops.unit-test.plist")
 	case "linux":
 		unitPath = filepath.Join(home, ".config", "systemd", "user", "io.issueops.unit-test.service")
+		// A running user manager answers from its own HOME and refuses this
+		// temporary one before writing; a systemctl that reaches no manager
+		// leaves that check undecided, so Prepare writes the unit.
+		bin := t.TempDir()
+		if err := os.WriteFile(filepath.Join(bin, "systemctl"), []byte("#!/bin/sh\nexit 1\n"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	default:
 		t.Skip("no supervisor on " + runtime.GOOS)
 	}
