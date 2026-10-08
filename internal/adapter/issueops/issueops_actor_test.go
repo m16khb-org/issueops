@@ -12,6 +12,8 @@ import (
 )
 
 func TestExecutionMutationRequiresCurrentLeaseHolderInCanonicalWorktree(t *testing.T) {
+	t.Parallel()
+
 	source := t.TempDir()
 	root := filepath.Join(source+".worktrees", "issue-69")
 	if err := os.MkdirAll(root, 0o755); err != nil {
@@ -56,6 +58,8 @@ func TestExecutionMutationRequiresCurrentLeaseHolderInCanonicalWorktree(t *testi
 }
 
 func TestExecutionMutationAllowsPreExecutionPlanningButFencesNonActiveLease(t *testing.T) {
+	t.Parallel()
+
 	if err := validateExecutionMutation(context.Background(), issueops.IssueOpsRecord{}, nil, liveTestVerifier()); err != nil {
 		t.Fatalf("pre-execution planning rejected: %v", err)
 	}
@@ -75,6 +79,8 @@ func TestExecutionMutationAllowsPreExecutionPlanningButFencesNonActiveLease(t *t
 }
 
 func TestReleasedOrcaPlanLinkAllowsOmoCoordinatorInCanonicalWorktree(t *testing.T) {
+	t.Parallel()
+
 	root := filepath.Join(t.TempDir(), "issue.worktree")
 	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{
 		Mode: issueops.ExecutionModeOrca,

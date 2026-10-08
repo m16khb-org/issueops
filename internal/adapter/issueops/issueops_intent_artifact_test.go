@@ -43,6 +43,8 @@ func sampleIntentContract() *issueopscontract.IssueOpsIntentContract {
 }
 
 func TestMaterializeStagedArtifactsSealsDerivedIntent(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record, worktree := intentArtifactRecord(t, sampleIntentContract())
 	manifest, err := materializeStagedArtifacts(stateRoot, record)
 	if err != nil {
@@ -69,6 +71,8 @@ func TestMaterializeStagedArtifactsSealsDerivedIntent(t *testing.T) {
 }
 
 func TestMaterializeStagedArtifactsWithoutIntentKeepsManifest(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record, worktree := intentArtifactRecord(t, nil)
 	manifest, err := materializeStagedArtifacts(stateRoot, record)
 	if err != nil {
@@ -83,6 +87,8 @@ func TestMaterializeStagedArtifactsWithoutIntentKeepsManifest(t *testing.T) {
 }
 
 func TestMaterializeStagedArtifactsRejectsSecretLikeIntentWithRecordHint(t *testing.T) {
+	t.Parallel()
+
 	intent := sampleIntentContract()
 	intent.Constraints = []string{"claim token: abc123 를 로그에 남기지 않는다"}
 	stateRoot, record, _ := intentArtifactRecord(t, intent)
@@ -93,6 +99,8 @@ func TestMaterializeStagedArtifactsRejectsSecretLikeIntentWithRecordHint(t *test
 }
 
 func TestMaterializeStagedArtifactsIntentIsImmutableAcrossRerecords(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record, _ := intentArtifactRecord(t, sampleIntentContract())
 	first, err := materializeStagedArtifacts(stateRoot, record)
 	if err != nil {

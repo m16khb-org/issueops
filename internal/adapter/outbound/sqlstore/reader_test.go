@@ -128,3 +128,79 @@ func TestWalkExistingReportsQueryFailure(t *testing.T) {
 		t.Fatal("missing records table accepted")
 	}
 }
+
+func TestWalkExistingAfterStartsAfterResolvedCursor(t *testing.T) {
+	root := t.TempDir()
+	db, err := Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := closeRoot(root); err != nil {
+			t.Error(err)
+		}
+	})
+	for _, id := range []string{"c", "a", "b"} {
+		if err := db.Put("b", id, []byte(id)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := db.Put("other", "z", []byte("z")); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		cursor     string
+		wantExists bool
+		start      string
+		want       []string
+	}{
+		{cursor: "", start: "", want: []string{"a", "b", "c"}},
+		{cursor: "a", wantExists: true, start: "a", want: []string{"b", "c"}},
+		{cursor: "z", start: "", want: []string{"a", "b", "c"}},
+		{cursor: "bb", start: "bb", want: []string{"c"}},
+	} {
+		var lookedUp []bool
+		ids := []string{}
+		err := WalkExistingAfter(context.Background(), root, "b", tc.cursor, func(exists bool) string {
+			lookedUp = append(lookedUp, exists)
+			return tc.start
+		}, func(row port.RecordRow) error {
+			ids = append(ids, row.ID)
+			return nil
+		})
+		if err != nil || !slices.Equal(ids, tc.want) || len(lookedUp) != 1 || lookedUp[0] != tc.wantExists {
+			t.Fatalf("cursor=%q ids=%v exists=%v err=%v", tc.cursor, ids, lookedUp, err)
+		}
+	}
+	missing := filepath.Join(t.TempDir(), "missing")
+	if err := WalkExistingAfter(context.Background(), missing, "b", "a", func(bool) string { return "" }, func(port.RecordRow) error { return nil }); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("missing store error = %v", err)
+	}
+	if _, err := os.Stat(missing); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("missing store created: %v", err)
+	}
+}
+
+func TestDeleteBeforeRemovesOnlyOlderRowsInBucket(t *testing.T) {
+	db := openTestDB(t)
+	for _, id := range []string{"msg-1", "msg-2", "msg-3"} {
+		if err := db.Put("b", id, []byte(id)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := db.Put("other", "msg-1", []byte("keep")); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.DeleteBefore(context.Background(), "b", "msg-2"); err != nil {
+		t.Fatal(err)
+	}
+	if ids, err := db.List("b"); err != nil || !slices.Equal(ids, []string{"msg-2", "msg-3"}) {
+		t.Fatalf("bucket ids=%v err=%v", ids, err)
+	}
+	if ids, err := db.List("other"); err != nil || !slices.Equal(ids, []string{"msg-1"}) {
+		t.Fatalf("other bucket ids=%v err=%v", ids, err)
+	}
+	if err := db.DeleteBefore(context.Background(), "b", ""); err == nil {
+		t.Fatal("empty boundary accepted")
+	}
+}

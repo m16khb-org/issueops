@@ -7,6 +7,8 @@ import (
 )
 
 func TestCleanupFinishEnvironmentDistinguishesAbsenceFromWrongFileType(t *testing.T) {
+	t.Parallel()
+
 	root := t.TempDir()
 	file := filepath.Join(root, "file")
 	if err := os.WriteFile(file, []byte("not a worktree"), 0600); err != nil {

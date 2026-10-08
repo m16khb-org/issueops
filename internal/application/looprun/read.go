@@ -9,8 +9,7 @@ import (
 )
 
 type ReadStore interface {
-	ListIDs() ([]string, error)
-	ReadExisting(string) (contract.LoopRun, error)
+	ReadAllExisting() ([]domain.LoopObservation, error)
 }
 type Reader struct {
 	Store    ReadStore
@@ -28,15 +27,12 @@ func (reader Reader) observeRepo(repo string) domain.RepoObservation {
 		return observation
 	}
 	observation.Repo = normalized
-	ids, err := reader.Store.ListIDs()
+	loops, err := reader.Store.ReadAllExisting()
 	if err != nil {
 		observation.ListError = err
 		return observation
 	}
-	for _, id := range ids {
-		loop, err := reader.Store.ReadExisting(id)
-		observation.Loops = append(observation.Loops, domain.LoopObservation{ID: id, Loop: loop, Error: err})
-	}
+	observation.Loops = loops
 	return observation
 }
 func (reader Reader) RepoGateMissing(repo string) ([]string, []string) {

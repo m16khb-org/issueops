@@ -349,6 +349,8 @@ func TestCleanupFinishRequesterGatesRefuseSourceCheckout(t *testing.T) {
 }
 
 func TestCleanupWorkspaceGatesRejectSourceCheckoutSymlinkAlias(t *testing.T) {
+	t.Parallel()
+
 	sourceParent := t.TempDir()
 	source := filepath.Join(sourceParent, "source")
 	if err := os.Mkdir(source, 0o755); err != nil {
@@ -374,6 +376,8 @@ func TestCleanupWorkspaceGatesRejectSourceCheckoutSymlinkAlias(t *testing.T) {
 }
 
 func TestCleanupWorkspaceGatesRejectUnresolvedSourceIdentity(t *testing.T) {
+	t.Parallel()
+
 	source := t.TempDir()
 	loop := filepath.Join(t.TempDir(), "loop")
 	if err := os.Symlink("loop", loop); err != nil {

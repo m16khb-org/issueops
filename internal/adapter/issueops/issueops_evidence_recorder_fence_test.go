@@ -15,6 +15,8 @@ import (
 // (architecture/issueops.md "Every mutating transition requires the active
 // generation and matching native actor/cwd"). hook은 이 경계를 대신 막지 않는다.
 func TestEvidenceRecordersRequireTheActiveLeaseHolder(t *testing.T) {
+	t.Parallel()
+
 	recorders := []struct {
 		name   string
 		record func(stateRoot, id string, actor *issueops.IssueOpsActor) error
@@ -86,6 +88,8 @@ func TestEvidenceRecordersRequireTheActiveLeaseHolder(t *testing.T) {
 // execution이 아직 없는 레코드(준비 전)는 다른 owner mutation처럼 actor 없이도
 // 기록할 수 있다. fence는 execution이 생긴 뒤의 쓰기 권한을 다룬다.
 func TestEvidenceRecordersStayOpenBeforeExecutionPreparation(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
 	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "995-pre-execution"})

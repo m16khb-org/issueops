@@ -31,6 +31,8 @@ func planPrepHasMissing(missing []string, key string) bool {
 }
 
 func TestPlanReadinessRequiresPlanPrepForNonTrivial(t *testing.T) {
+	t.Parallel()
+
 	ready := (cycleapp.Readiness{}).Plan(baseIntentRecord("standard"))
 	for _, key := range []string{"plan_prep_decisions", "plan_prep_related_issues", "plan_prep_web_research", "plan_prep_codebase_survey"} {
 		if !planPrepHasMissing(ready.Missing, key) {
@@ -43,6 +45,8 @@ func TestPlanReadinessRequiresPlanPrepForNonTrivial(t *testing.T) {
 }
 
 func TestPlanReadinessSkipsPlanPrepForTrivial(t *testing.T) {
+	t.Parallel()
+
 	ready := (cycleapp.Readiness{}).Plan(baseIntentRecord("trivial"))
 	if !ready.Ready {
 		t.Fatalf("trivial cycle should be ready without plan_prep: %#v", ready.Missing)
@@ -50,6 +54,8 @@ func TestPlanReadinessSkipsPlanPrepForTrivial(t *testing.T) {
 }
 
 func TestPlanReadinessAcceptsEvidenceAndWaive(t *testing.T) {
+	t.Parallel()
+
 	rec := baseIntentRecord("standard")
 	rec.PlanPrep = &issueops.IssueOpsPlanPrep{
 		PriorDecisions: issueops.IssueOpsPlanPrepItem{Status: "evidence", Evidence: []string{".issueops/ADR.md#gate"}},
@@ -64,6 +70,8 @@ func TestPlanReadinessAcceptsEvidenceAndWaive(t *testing.T) {
 }
 
 func TestPlanReadinessRequiresCodebaseSurvey(t *testing.T) {
+	t.Parallel()
+
 	rec := baseIntentRecord("standard")
 	rec.PlanPrep = &issueops.IssueOpsPlanPrep{
 		PriorDecisions: issueops.IssueOpsPlanPrepItem{Status: "evidence", Evidence: []string{"adr"}},
@@ -77,6 +85,8 @@ func TestPlanReadinessRequiresCodebaseSurvey(t *testing.T) {
 }
 
 func TestPlanReadinessRejectsEmptyStatusItem(t *testing.T) {
+	t.Parallel()
+
 	rec := baseIntentRecord("standard")
 	rec.PlanPrep = &issueops.IssueOpsPlanPrep{
 		PriorDecisions: issueops.IssueOpsPlanPrepItem{Status: "evidence", Evidence: []string{"adr"}},
@@ -93,6 +103,8 @@ func TestPlanReadinessRejectsEmptyStatusItem(t *testing.T) {
 }
 
 func TestImplementationReadinessRequiresExecutionLease(t *testing.T) {
+	t.Parallel()
+
 	repo := t.TempDir()
 	worktree := makeIssueOpsWorktreeDirForTest(t, repo, "1-demo")
 	planPath := filepath.Join(worktree, "plans/demo.md")

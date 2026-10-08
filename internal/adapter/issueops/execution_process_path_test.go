@@ -10,6 +10,8 @@ import (
 )
 
 func TestParseWorkspaceProcessesResolvesEachEligiblePathOnce(t *testing.T) {
+	t.Parallel()
+
 	root, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
@@ -44,6 +46,8 @@ func TestParseWorkspaceProcessesResolvesEachEligiblePathOnce(t *testing.T) {
 }
 
 func TestParseWorkspaceProcessesPreservesResolvedBoundaries(t *testing.T) {
+	t.Parallel()
+
 	base, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
@@ -91,6 +95,8 @@ func TestParseWorkspaceProcessesPreservesResolvedBoundaries(t *testing.T) {
 }
 
 func TestParseWorkspaceProcessesDoesNotReusePreviousContainment(t *testing.T) {
+	t.Parallel()
+
 	base := t.TempDir()
 	root := filepath.Join(base, "workspace")
 	outside := filepath.Join(base, "outside")
@@ -123,6 +129,8 @@ func TestParseWorkspaceProcessesDoesNotReusePreviousContainment(t *testing.T) {
 }
 
 func TestParseWorkspaceProcessesRejectsMalformedInput(t *testing.T) {
+	t.Parallel()
+
 	for name, output := range map[string]string{
 		"invalid pid": "pnot-a-pid\n",
 		"long row":    "n" + strings.Repeat("x", 70*1024),

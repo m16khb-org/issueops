@@ -14,11 +14,10 @@ import (
 	agyadapter "issueops/internal/adapter/agy"
 	claudeadapter "issueops/internal/adapter/claude"
 	codexadapter "issueops/internal/adapter/codex"
+	"issueops/internal/adapter/extensionhost"
 	"issueops/internal/adapter/install"
 	"issueops/internal/adapter/installutil"
 	mcpserviceadapter "issueops/internal/adapter/mcpservice"
-	omoadapter "issueops/internal/adapter/omo"
-	ompadapter "issueops/internal/adapter/omp"
 	mcpcontract "issueops/internal/contract/mcp"
 	"issueops/internal/contract/mcpservice"
 	"issueops/internal/port"
@@ -51,6 +50,7 @@ func installDependencies() installcli.Deps {
 			return hostActivationReadback{request: req, codex: codex, claude: claude, omo: omo, omp: omp, agy: agy}
 		},
 		SyncUpstream:        syncUpstream,
+		RemoveRetiredState:  install.RemoveRetiredState,
 		DefaultMCPTransport: defaultMCPTransport(runtime.GOOS),
 		MCPURL:              "http://" + mcpcli.DefaultHTTPAddress + mcpcli.HTTPEndpointPath,
 		MCPService:          installMCPService{service: newSupervisorMCPService(), stateDir: mcpServiceStateDir()},
@@ -85,8 +85,8 @@ type hostActivationReadback struct {
 	request port.NativeInstallRequest
 	codex   codexadapter.Installer
 	claude  claudeadapter.Installer
-	omo     omoadapter.Installer
-	omp     ompadapter.Installer
+	omo     extensionhost.Installer
+	omp     extensionhost.Installer
 	agy     agyadapter.Installer
 }
 

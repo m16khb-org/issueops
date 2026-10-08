@@ -52,6 +52,14 @@ issueops state maintain --json
 `state maintain` is read-only (checkpoint + chmod); it does not delete rows or
 recover IssueOps v1 leases.
 
+`state doctor` reports `retired_path` (severity `warning`) for state-root
+entries that only removed subsystems wrote: `daemon/`, `hook-failures.jsonl`,
+`hook-metrics.jsonl`, `.last-store-maintain`, and
+`issueops-migration-receipt.json`. `state maintain` leaves them alone;
+`issueops install`/`update` deletes them after the install commits (see
+[operations/install.md](../install.md)). The `channel/` and `upstream/`
+directories belong to live features and are not reported.
+
 ## Quick Smoke
 
 ```bash

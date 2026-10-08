@@ -34,6 +34,8 @@ func sealedIntentFilesFixture(t *testing.T) (model.IssueOpsRecord, contract.Inte
 }
 
 func TestIntentInspectionDoesNotRequireArtifactsButInvocationDoes(t *testing.T) {
+	t.Parallel()
+
 	record, intent := sealedIntentFilesFixture(t)
 	builder := app.IntentRequestBuilder{Files: OrcaIntentFiles{}}
 	request, err := builder.Build(preparationRecordForTest(t, record), intent)
@@ -53,6 +55,8 @@ func TestIntentInspectionDoesNotRequireArtifactsButInvocationDoes(t *testing.T) 
 }
 
 func TestIntentBuilderRejectsArtifactAndWorkspaceDrift(t *testing.T) {
+	t.Parallel()
+
 	for _, kind := range []string{"token", "prompt", "packet", "prompt path", "workspace root", "prepared record root", "parent", "generation"} {
 		t.Run(kind, func(t *testing.T) {
 			record, intent := sealedIntentFilesFixture(t)
@@ -101,6 +105,8 @@ func TestIntentBuilderRejectsArtifactAndWorkspaceDrift(t *testing.T) {
 }
 
 func TestLaunchHydratorUsesCurrentIdentityAndPreservesRequest(t *testing.T) {
+	t.Parallel()
+
 	record, intent := sealedIntentFilesFixture(t)
 	request := contract.IntentRequest{Stage: intent.Stage, Marker: intent.Marker, Launch: &contract.LaunchRequest{
 		PromptPath: intent.Launch.PromptPath, PromptSHA256: intent.Launch.PromptSHA256,

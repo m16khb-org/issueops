@@ -13,6 +13,8 @@ import (
 // active lease에서 next_command가 비어 있으면 그 체인이 첫 걸음에서 끊긴다 —
 // 죽은 홀더를 인수하려던 세션이 다음 명령을 스스로 지어내야 한다.
 func TestReplacePreviewRendersTheRevokeStepForAnActiveLease(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record := rolloverExecutionFixture(t)
 	requester := executionActor("codex", "replacement-owner")
 	deps := ExecutionReplaceDependencies{

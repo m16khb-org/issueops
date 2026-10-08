@@ -12,6 +12,8 @@ import (
 )
 
 func TestIssueOpsDoneRequiresPRPhase(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: "1-demo"})
 	if err != nil {
@@ -23,6 +25,8 @@ func TestIssueOpsDoneRequiresPRPhase(t *testing.T) {
 }
 
 func TestIssueOpsImplementationReadinessRejectsPersistedWeakDesignReview(t *testing.T) {
+	t.Parallel()
+
 	record := issueops.IssueOpsRecord{
 		OK:            true,
 		Repo:          "/repo/example",
@@ -47,6 +51,8 @@ func TestIssueOpsImplementationReadinessRejectsPersistedWeakDesignReview(t *test
 }
 
 func TestImplementGateDoesNotRequireCodeGraph(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	repo := t.TempDir()
 	worktree := makeIssueOpsWorktreeDirForTest(t, repo, "1-demo")
@@ -101,6 +107,8 @@ func TestImplementGateDoesNotRequireCodeGraph(t *testing.T) {
 }
 
 func TestIssueOpsStrictPRReadinessRequiresCleanSyncedRepo(t *testing.T) {
+	t.Parallel()
+
 	repo := initIssueOpsRepo(t)
 	record := issueops.IssueOpsRecord{
 		OK:            true,
@@ -132,6 +140,8 @@ func TestIssueOpsStrictPRReadinessRequiresCleanSyncedRepo(t *testing.T) {
 }
 
 func TestIssueOpsStrictPRReadinessUsesLinkedWorktree(t *testing.T) {
+	t.Parallel()
+
 	repo := initIssueOpsRepo(t)
 	branch := "12-issue-worktree"
 	if code, _, stderr := preflight.GitCmd(repo, "checkout", "-q", "-b", branch); code != 0 {
@@ -172,6 +182,8 @@ func TestIssueOpsStrictPRReadinessUsesLinkedWorktree(t *testing.T) {
 }
 
 func TestIssueOpsStrictPRReadinessDetectsStaleAISlopCleanAfterImplementationChange(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
 	branch := "12-stale-ai-slop"
@@ -261,6 +273,8 @@ func TestIssueOpsStrictPRReadinessDetectsStaleAISlopCleanAfterImplementationChan
 }
 
 func TestIssueOpsImplementationEvidenceHelpersParsePorcelainAndIgnorePlanPath(t *testing.T) {
+	t.Parallel()
+
 	worktree := t.TempDir()
 	plan := filepath.Join(worktree, "plans", "demo.md")
 	record := issueops.IssueOpsRecord{PlanPath: plan}

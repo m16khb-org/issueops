@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"issueops/internal/domain/shelltoken"
 	"issueops/internal/port"
 )
 
@@ -55,7 +56,7 @@ func (installer Installer) mergeClaudeHookConfig(config map[string]any, binPath 
 		groups := []any{}
 		if existing, ok := hooks[event].([]any); ok {
 			for _, group := range existing {
-				if !installer.deps.HookGroupContainsAgentHarness(group) && !installer.deps.HookGroupContainsCommand(group, shellQuote(binPath)+" hook ") {
+				if !installer.deps.HookGroupContainsAgentHarness(group) && !installer.deps.HookGroupContainsCommand(group, shelltoken.QuoteWord(binPath)+" hook ") {
 					groups = append(groups, group)
 				}
 			}
@@ -120,7 +121,7 @@ func claudeHookGroup(spec claudeLifecycleHookSpec) map[string]any {
 }
 
 func claudeHookCommand(binPath, subcommand string) string {
-	cmd := fmt.Sprintf("%s hook %s", shellQuote(binPath), subcommand)
+	cmd := fmt.Sprintf("%s hook %s", shelltoken.QuoteWord(binPath), subcommand)
 	if subcommand == "session-start" || subcommand == "subagent-start" || subcommand == "post-compact" {
 		cmd += " --host claude"
 	}

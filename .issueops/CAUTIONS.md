@@ -75,6 +75,7 @@ footer; older notes also live in `archive/cautions-incidents.md`.
 
 | Date | Lesson |
 |---|---|
+| 2026-10-08 | [LOCK_NB flock lease에 닿는 테스트를 t.Parallel로 돌리면 다른 테스트의 fork/exec가 fd를 복제해 확률적으로 실패한다](cautions/2026-10-08-parallel-tests-and-non-blocking-flock-leases.md) |
 | 2026-10-08 | [추적 intent 사본은 요청 원문을 그대로 담고, 커밋 전 로컬 self-verify는 추적 파일 검사를 보지 못한다](cautions/2026-10-08-tracked-intent-copies-quote-the-raw-request-and-local-self-v.md) |
 | 2026-10-08 | [표준 문서 설명을 바꿔도 frontmatter가 있는 레포의 catalog는 `--sync` 전까지 그대로다](cautions/2026-10-08-changing-a-standard-doc-description-does-not-change-the-cata.md) |
 | 2026-10-08 | [claude --agents 위치 인자 흡수, 새 스킬의 로컬 self-verify, 증거 문서의 홈 경로, met 게이트 재실행](cautions/2026-10-08-claude-agents-self-verify-met.md) |

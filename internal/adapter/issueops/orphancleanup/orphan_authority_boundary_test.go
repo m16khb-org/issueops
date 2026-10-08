@@ -2,6 +2,7 @@ package orphancleanup
 
 import (
 	"context"
+	"errors"
 	contract "issueops/internal/contract/issueopsorphancleanup"
 	operationalhealthcontract "issueops/internal/contract/operationalhealth"
 	"os"
@@ -22,18 +23,15 @@ func TestOrphanApplyPreservesOwnerCreatedDuringMergeObservation(t *testing.T) {
 	request := fixture.request()
 	collect := func(context.Context, string) (corehealth.Snapshot, error) {
 		snapshot := fixture.snapshot()
-		ids, err := coreissueops.ListIssueOpsIDs(stateRoot)
-		if err != nil {
-			return snapshot, err
-		}
-		for _, id := range ids {
-			record, err := coreissueops.ReadIssueOpsExisting(stateRoot, id)
+		var readErr error
+		err := coreissueops.VisitIssueOpsExisting(stateRoot, func(_ string, record model.IssueOpsRecord, err error) {
 			if err != nil {
-				return snapshot, err
+				readErr = errors.Join(readErr, err)
+				return
 			}
 			snapshot.Cycles = append(snapshot.Cycles, operationalhealthcontract.Cycle{ID: record.ID, Repo: record.Repo, Branch: record.Branch, WorktreePath: record.WorktreePath, Phase: string(record.Phase)})
-		}
-		return snapshot, nil
+		})
+		return snapshot, errors.Join(err, readErr)
 	}
 	deps := fixture.deps(collect, nil)
 	preview, err := Preview(context.Background(), request, deps)

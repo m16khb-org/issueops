@@ -15,6 +15,8 @@ import (
 // when the ledger is entirely empty — while preserving the real persisted
 // entries rather than overwriting them with derived ones.
 func TestIssueOpsStatusBackfillsPartialLedger(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
 	rec, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-partial"})
@@ -50,6 +52,8 @@ func TestIssueOpsStatusBackfillsPartialLedger(t *testing.T) {
 // A forward transition that re-completes a previously-regressed phase must clear
 // the stale-regression note so status no longer shows the phase as stale forever.
 func TestStampForwardTransitionClearsStaleNote(t *testing.T) {
+	t.Parallel()
+
 	ledger := issueopsdomain.MarkLedgerStale(issueops.IssueOpsPhaseLedger{}, "stale: design-review regression (second-system effect)", issueops.IssueOpsPhasePlan)
 	if len(ledger[issueops.IssueOpsPhasePlan].Notes) == 0 {
 		t.Fatal("precondition: plan must carry a stale note before re-completion")

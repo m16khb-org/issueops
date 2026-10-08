@@ -1,6 +1,8 @@
 package installcli
 
 import (
+	"path/filepath"
+
 	installapp "issueops/internal/application/install"
 	"issueops/internal/port"
 )
@@ -26,4 +28,11 @@ func (effects installTransactionEffects) PrepareHost(plan port.NativeInstallResu
 
 func (effects installTransactionEffects) AppendUpstream(result *port.NativeInstallResult, root string, dryRun bool) {
 	effects.command.appendUpstreamMessages(result, root, dryRun)
+}
+
+func (effects installTransactionEffects) RemoveRetiredState(result *port.NativeInstallResult, dryRun bool) {
+	if effects.command.RemoveRetiredState == nil {
+		return
+	}
+	result.Messages = append(result.Messages, effects.command.RemoveRetiredState(filepath.Dir(effects.command.StateRoot), dryRun)...)
 }

@@ -14,6 +14,8 @@ import (
 )
 
 func TestOrcaIntentWorktreeReceiptPersistsPlanBeforeNextIntent(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record := orcaPrepareRecord(t)
 	const plan = "# Intent owner plan\n"
 	if _, err := stageIssueOpsArtifactForTest(stateRoot, record.ID, "plan", []byte(plan)); err != nil {
@@ -80,6 +82,8 @@ func TestOrcaIntentWorktreeReceiptPersistsPlanBeforeNextIntent(t *testing.T) {
 }
 
 func TestRecordOrcaIntentTerminalSendFailurePreservesDispatchAndPromptRequestIDs(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record, payload := resumeIntentFixture(t, "github", 16)
 	var err error
 	for payload.Stage != preparationcontract.IntentStageDispatch {
@@ -128,6 +132,8 @@ func TestRecordOrcaIntentTerminalSendFailurePreservesDispatchAndPromptRequestIDs
 }
 
 func TestRecordOrcaIntentFailureRejectsMalformedOrMismatchedResponseIDs(t *testing.T) {
+	t.Parallel()
+
 	const (
 		dispatchA = "11111111-1111-4111-8111-111111111111"
 		dispatchB = "99999999-9999-4999-8999-999999999999"

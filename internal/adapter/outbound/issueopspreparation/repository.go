@@ -21,8 +21,8 @@ import (
 )
 
 const (
-	recordBucket = "issueops_v1"
-	holderBucket = "lease_holder_v1"
+	recordBucket = port.IssueOpsRecordBucket
+	holderBucket = port.LeaseHolderBucket
 	intentBucket = "external_intent_v1"
 )
 

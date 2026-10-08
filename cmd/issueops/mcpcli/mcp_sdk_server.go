@@ -218,8 +218,8 @@ func resolveHandlerGroup(deps MCPDependencies, name string) func(context.Context
 			return handleGatesMCPToolCall(call, deps.Gates)
 		}
 	case mcpcontract.DispatchChannel:
-		return func(_ context.Context, call MCPToolCall) MCPToolOutcome {
-			return handleChannelMCPToolCall(call, deps.Channel)
+		return func(ctx context.Context, call MCPToolCall) MCPToolOutcome {
+			return handleChannelMCPToolCall(ctx, call, deps.Channel)
 		}
 	case mcpcontract.DispatchLoop:
 		return func(ctx context.Context, call MCPToolCall) MCPToolOutcome {

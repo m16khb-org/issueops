@@ -12,6 +12,8 @@ import (
 )
 
 func TestOrcaIntentMarkerLiteralHasOneProductionOwner(t *testing.T) {
+	t.Parallel()
+
 	err := filepath.WalkDir(".", func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr

@@ -13,6 +13,8 @@ import (
 )
 
 func TestOrcaIntentIssueIdentityAllowsOnlyUnverifiedGitHubForResumeLaunch(t *testing.T) {
+	t.Parallel()
+
 	record := issueops.IssueOpsRecord{
 		ID:       "io-aaaaaaaaaaaa",
 		IssueURL: "https://github.com/acme/repo/issues/194",
@@ -41,6 +43,8 @@ func TestOrcaIntentIssueIdentityAllowsOnlyUnverifiedGitHubForResumeLaunch(t *tes
 }
 
 func TestSealExternalOrcaIntentPayloadUsesTheVerifiedRecordIdentity(t *testing.T) {
+	t.Parallel()
+
 	_, record := executionPrepareRecord(t)
 	workspace, err := executionWorkspaceRequest(record, true)
 	if err != nil {
@@ -81,6 +85,8 @@ func TestSealExternalOrcaIntentPayloadUsesTheVerifiedRecordIdentity(t *testing.T
 }
 
 func TestPreparationRepositoryRejectsRecordIdentityDriftBeforePersistence(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record := orcaPrepareRecord(t)
 	workspace, err := executionWorkspaceRequest(record, true)
 	if err != nil {

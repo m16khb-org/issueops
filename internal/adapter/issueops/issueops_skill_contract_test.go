@@ -11,6 +11,8 @@ import (
 // 두 축을 각각 고정해 명령이 라우터로 되돌아오는 것과 스킬에서 사라지는 것을
 // 함께 막는다.
 func TestIssueOpsSkillKeepsCoreWorkflowContract(t *testing.T) {
+	t.Parallel()
+
 	skill := readIssueOpsContractFile(t, "skills", "issueops", "SKILL.md")
 	for _, want := range []string{
 		"problem", "grill", "issue", "plan", "compatibility-review", "implement",
@@ -34,6 +36,8 @@ func TestIssueOpsSkillKeepsCoreWorkflowContract(t *testing.T) {
 }
 
 func TestIssueOpsExecutionDocumentationHasOneCurrentContract(t *testing.T) {
+	t.Parallel()
+
 	documents := map[string]string{
 		"skill":        readIssueOpsContractFile(t, "skills", "issueops", "SKILL.md"),
 		"execution":    readIssueOpsContractFile(t, "skills", "issueops", "references", "execution.md"),
@@ -72,6 +76,8 @@ func TestIssueOpsExecutionDocumentationHasOneCurrentContract(t *testing.T) {
 }
 
 func TestIssueOpsDocumentationPreservesGitHubOrcaBranchOrdering(t *testing.T) {
+	t.Parallel()
+
 	operationsIndex := readIssueOpsContractFile(t, ".issueops", "OPERATIONS.md")
 	if !strings.Contains(operationsIndex, "operations/guides/issueops-providers.md") {
 		t.Fatal("OPERATIONS.md must route provider ordering to operations/guides/issueops-providers.md")
@@ -94,6 +100,8 @@ func TestIssueOpsDocumentationPreservesGitHubOrcaBranchOrdering(t *testing.T) {
 }
 
 func TestIssueOpsExecutionDocumentationPreservesParallelIndependence(t *testing.T) {
+	t.Parallel()
+
 	all := strings.ToLower(joinIssueOpsContractDocuments(map[string]string{
 		"execution": readIssueOpsContractFile(t, "skills", "issueops", "references", "execution.md"),
 		"router":    readIssueOpsContractFile(t, "skills", "issueops", "SKILL.md"),
@@ -113,6 +121,8 @@ func TestIssueOpsExecutionDocumentationPreservesParallelIndependence(t *testing.
 }
 
 func TestIssueOpsHandoffDocsRouteToDrainAndFreshnessModel(t *testing.T) {
+	t.Parallel()
+
 	sessionChoice := readIssueOpsContractFile(t, "skills", "issueops", "references", "session-choice.md")
 	planSkill := readIssueOpsContractFile(t, "skills", "issueops-plan", "SKILL.md")
 	implementSkill := readIssueOpsContractFile(t, "skills", "issueops-implement", "SKILL.md")
@@ -138,6 +148,8 @@ func TestIssueOpsHandoffDocsRouteToDrainAndFreshnessModel(t *testing.T) {
 }
 
 func TestIssueOpsHandoffRoutesEveryNewSessionThroughProductionObservation(t *testing.T) {
+	t.Parallel()
+
 	sessionChoice := strings.Join(strings.Fields(strings.ToLower(readIssueOpsContractFile(t, "skills", "issueops", "references", "session-choice.md"))), " ")
 	for _, want := range []string{
 		"prepare·resume·reconcile에 연결된 production observer",
@@ -160,6 +172,8 @@ func TestIssueOpsHandoffRoutesEveryNewSessionThroughProductionObservation(t *tes
 }
 
 func TestIssueOpsHandoffPrefersHerdrInsideHerdrSession(t *testing.T) {
+	t.Parallel()
+
 	normalize := func(text string) string {
 		return strings.Join(strings.Fields(strings.ToLower(text)), " ")
 	}
@@ -193,6 +207,8 @@ func TestIssueOpsHandoffPrefersHerdrInsideHerdrSession(t *testing.T) {
 }
 
 func TestIssueOpsHandoffLaunchesEveryNativeHostWithPermissionBypass(t *testing.T) {
+	t.Parallel()
+
 	sessionChoice := readIssueOpsContractFile(t, "skills", "issueops", "references", "session-choice.md")
 	for _, flag := range []string{
 		"--dangerously-skip-permissions",
@@ -206,6 +222,8 @@ func TestIssueOpsHandoffLaunchesEveryNativeHostWithPermissionBypass(t *testing.T
 }
 
 func TestIssueOpsCmuxHandoffIsExplicitAndFollowsTheDefaultFallback(t *testing.T) {
+	t.Parallel()
+
 	sessionChoice := strings.Join(strings.Fields(strings.ToLower(readIssueOpsContractFile(t, "skills", "issueops", "references", "session-choice.md"))), " ")
 	fallback := strings.Index(sessionChoice, "둘 다 없거나 사용 불가")
 	explicit := strings.Index(sessionChoice, "사용자가 명시한 cmux")
@@ -235,6 +253,8 @@ func TestIssueOpsCmuxHandoffIsExplicitAndFollowsTheDefaultFallback(t *testing.T)
 }
 
 func TestIssueOpsOrchestrationBindsOmoAgentsToCanonicalWorktrees(t *testing.T) {
+	t.Parallel()
+
 	all := strings.ToLower(joinIssueOpsContractDocuments(map[string]string{
 		"orchestration": readIssueOpsContractFile(t, "skills", "issueops", "references", "orchestration.md"),
 		"host-testing":  readIssueOpsContractFile(t, ".issueops", "testing", "cli-mcp-and-hosts.md"),
@@ -254,6 +274,8 @@ func TestIssueOpsOrchestrationBindsOmoAgentsToCanonicalWorktrees(t *testing.T) {
 }
 
 func TestIssueOpsCurrentSurfacesDoNotNameRemovedCommands(t *testing.T) {
+	t.Parallel()
+
 	for _, parts := range [][]string{
 		{"internal", "adapter", "inbound", "catalog", "cli", "usage.go"},
 		{"cmd", "issueops", "issueopscli", "issueops_cli_support.go"},
@@ -273,6 +295,8 @@ func TestIssueOpsCurrentSurfacesDoNotNameRemovedCommands(t *testing.T) {
 // sub-agent decision contract, so it must not resurrect removed decision
 // commands or MCP tools either.
 func TestSubAgentPatternsDocDoesNotNameRemovedIssueOpsSurfaces(t *testing.T) {
+	t.Parallel()
+
 	content := strings.ToLower(readIssueOpsContractFile(t, ".issueops", "SUB_AGENT_PATTERNS.md"))
 	for _, removed := range removedIssueOpsExecutionTerms() {
 		if strings.Contains(content, removed) {

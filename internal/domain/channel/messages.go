@@ -2,7 +2,6 @@ package channel
 
 import (
 	"errors"
-	"sort"
 	"strings"
 	"time"
 
@@ -24,6 +23,7 @@ func NormalizeSend(req model.SendRequest) (model.SendRequest, error) {
 }
 func NormalizeRecv(req model.RecvRequest) (model.RecvRequest, error) {
 	req.Channel = strings.TrimSpace(req.Channel)
+	req.SinceID = strings.TrimSpace(req.SinceID)
 	if req.Channel == "" {
 		return req, errors.New("channel_required")
 	}
@@ -53,19 +53,20 @@ func Received(result model.RecvResult, messages []model.Message) model.RecvResul
 	}
 	return result
 }
-func IDsAfter(ids []string, since string) []string {
-	sort.Strings(ids)
-	start := 0
-	if trimmed := strings.TrimSpace(since); trimmed != "" {
-		for i, id := range ids {
-			if id == trimmed {
-				start = i + 1
-				break
-			}
-		}
+
+// RangeStart returns the id after which recv reads. A cursor that is no longer
+// stored has no known position, so recv restarts from the beginning.
+func RangeStart(since string, sinceExists bool) string {
+	if !sinceExists {
+		return ""
 	}
-	return ids[start:]
+	return since
 }
+
+// RetentionPeriod is how long a sent message stays readable before send prunes it.
+const RetentionPeriod = 7 * 24 * time.Hour
+
+func RetentionCutoff(now time.Time) time.Time { return now.Add(-RetentionPeriod) }
 
 // SelectReceived checks channel membership before applying the result limit.
 func SelectReceived(req model.RecvRequest, count int, message model.Message) (include, stop bool) {

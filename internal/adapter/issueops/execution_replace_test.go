@@ -12,6 +12,8 @@ import (
 )
 
 func TestReplacementResealRequiresExistingPlanIdentity(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name      string
 		configure func(*testing.T, *issueops.IssueOpsRecord, string)

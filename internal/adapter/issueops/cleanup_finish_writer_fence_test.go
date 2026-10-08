@@ -13,6 +13,8 @@ import (
 )
 
 func TestFinishAttemptBlocksGenericWriterEntrypoints(t *testing.T) {
+	t.Parallel()
+
 	for _, cleanupOperation := range []model.CleanupOperation{model.CleanupOperationFinish, model.CleanupOperationRemoteBranch, model.CleanupOperationAbandon} {
 		t.Run(string(cleanupOperation), func(t *testing.T) {
 			for _, operation := range []string{"stale write", "span", "execution write", "parent pair write", "child pair write", "publication"} {
@@ -84,6 +86,8 @@ func TestFinishAttemptBlocksGenericWriterEntrypoints(t *testing.T) {
 }
 
 func TestOrdinaryWritersCannotRestoreDrainedFinishAttempt(t *testing.T) {
+	t.Parallel()
+
 	for _, cleanupOperation := range []model.CleanupOperation{model.CleanupOperationFinish, model.CleanupOperationRemoteBranch, model.CleanupOperationAbandon} {
 		t.Run(string(cleanupOperation), func(t *testing.T) {
 			for _, operation := range []string{"write", "execution", "parent pair", "child pair", "publication"} {

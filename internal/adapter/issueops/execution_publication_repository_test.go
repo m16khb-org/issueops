@@ -18,6 +18,8 @@ import (
 )
 
 func TestPublicationRepositoryPreservesStoredSnapshots(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	fixture := newClaimableExecutionFixture(t, stateRoot, "195-publication-repository")
 	operationID := "0123456789abcdef0123456789abcdef"
@@ -119,6 +121,8 @@ func newPendingPublicationFixture(t *testing.T) (string, *remoteapp.PublicationJ
 }
 
 func TestPublicationRepositoryReceiptPreservesActiveLease(t *testing.T) {
+	t.Parallel()
+
 	root, repository, before, payload := newPendingPublicationFixture(t)
 	intent, err := repository.LoadIntent(context.Background(), before.ID)
 	if err != nil {
@@ -152,6 +156,8 @@ func TestPublicationRepositoryReceiptPreservesActiveLease(t *testing.T) {
 }
 
 func TestPublicationRepositoryRejectsStaleReceiptWithoutWrites(t *testing.T) {
+	t.Parallel()
+
 	for _, mutation := range []string{"generation", "payload"} {
 		t.Run(mutation, func(t *testing.T) {
 			root, repository, record, payload := newPendingPublicationFixture(t)
@@ -208,6 +214,8 @@ func TestPublicationRepositoryRejectsStaleReceiptWithoutWrites(t *testing.T) {
 }
 
 func TestPublicationRepositoryRejectsInvalidArtifactWithoutWrites(t *testing.T) {
+	t.Parallel()
+
 	for _, tc := range []struct{ name, url, assignee, want string }{
 		{"wrong project", "https://github.com/other/project/pull/196", "maintainer", "match linked issue project"},
 		{"placeholder assignee", "https://github.com/example/issueops/pull/196", "@me", "not placeholder"},
@@ -254,6 +262,8 @@ func newPublicationJournalForTest(root string, now func() time.Time, operationID
 }
 
 func TestPublicationJournalRechecksHolderBeforeIntentWrite(t *testing.T) {
+	t.Parallel()
+
 	root, journal, record, _ := newPendingPublicationFixture(t)
 	record.Execution.Pending = nil
 	if _, err := writeIssueOps(context.Background(), root, record); err != nil {
@@ -283,6 +293,8 @@ func TestPublicationJournalRechecksHolderBeforeIntentWrite(t *testing.T) {
 }
 
 func TestPublicationJournalRejectsAbsentOrOtherPendingIntent(t *testing.T) {
+	t.Parallel()
+
 	for _, mode := range []string{"unprepared", "no-intent", "other-kind"} {
 		t.Run(mode, func(t *testing.T) {
 			root, journal, record, _ := newPendingPublicationFixture(t)
@@ -314,6 +326,8 @@ func TestPublicationJournalRejectsAbsentOrOtherPendingIntent(t *testing.T) {
 }
 
 func TestPublicationJournalRetryAndTerminalFailureAreAtomic(t *testing.T) {
+	t.Parallel()
+
 	root, journal, record, payload := newPendingPublicationFixture(t)
 	original, err := journal.LoadIntent(context.Background(), record.ID)
 	if err != nil {

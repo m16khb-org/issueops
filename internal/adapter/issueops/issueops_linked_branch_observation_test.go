@@ -10,6 +10,8 @@ import (
 // 응답 해석을 고정한다. `ref:null`은 이름도 OID도 없는 노드로 읽혀야 하고,
 // 그 부재가 곧 분류기가 고아를 알아보는 표식이다.
 func TestObserveGitHubLinkedBranchesReadsANullRefAsAnOrphanShape(t *testing.T) {
+	t.Parallel()
+
 	var seen []string
 	observe := ObserveGitHubLinkedBranches(func(_ context.Context, name string, args ...string) (string, error) {
 		seen = append([]string{name}, args...)
@@ -43,6 +45,8 @@ func TestObserveGitHubLinkedBranchesReadsANullRefAsAnOrphanShape(t *testing.T) {
 // TestGitHubIssueSelectorRefusesAnythingButAnIssuePath는 좌표 추출이 추측하지
 // 않음을 고정한다. 잘못된 좌표는 남의 이슈를 읽거나 지우는 경로가 된다.
 func TestGitHubIssueSelectorRefusesAnythingButAnIssuePath(t *testing.T) {
+	t.Parallel()
+
 	for _, url := range []string{
 		"", "https://github.com/m16khb/issueops",
 		"https://github.com/m16khb/issueops/pull/304",
@@ -62,6 +66,8 @@ func TestGitHubIssueSelectorRefusesAnythingButAnIssuePath(t *testing.T) {
 // TestDeleteGitHubLinkedBranchTakesOnlyANodeID는 삭제 표면이 이름을 받지
 // 않음을 고정한다. 이름으로 지울 수 있으면 ref 있는 링크도 지울 수 있게 된다.
 func TestDeleteGitHubLinkedBranchTakesOnlyANodeID(t *testing.T) {
+	t.Parallel()
+
 	var argv []string
 	del := DeleteGitHubLinkedBranch(func(_ context.Context, name string, args ...string) (string, error) {
 		argv = append([]string{name}, args...)

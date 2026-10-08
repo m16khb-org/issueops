@@ -4,12 +4,11 @@ import (
 	agyadapter "issueops/internal/adapter/agy"
 	claudeadapter "issueops/internal/adapter/claude"
 	codexadapter "issueops/internal/adapter/codex"
+	"issueops/internal/adapter/extensionhost"
 	"issueops/internal/adapter/hostprotocol"
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	installadapter "issueops/internal/adapter/install"
 	"issueops/internal/adapter/installutil"
-	omoadapter "issueops/internal/adapter/omo"
-	ompadapter "issueops/internal/adapter/omp"
 	"issueops/internal/port"
 )
 
@@ -66,22 +65,14 @@ func newCodexInstaller() codexadapter.Installer {
 		WriteTextPlan:                installutil.WriteTextPlan,
 	})
 }
-func newOmoInstaller() omoadapter.Installer {
-	return omoadapter.NewInstaller(omoadapter.Dependencies{
-		MergeJSONMapFile:                installutil.MergeJSONMapFile,
-		RemoveJSONMapEntry:              installutil.RemoveJSONMapEntry,
-		VerifyJSONMapEntry:              installutil.VerifyJSONMapEntry,
-		CaptureNativeActivationEvidence: installutil.CaptureNativeActivationEvidence,
-		MCPCatalogSHA256:                func() (string, error) { return installutil.SemanticSHA256(mcpcatalog.AdvertisedTools()) },
-		NewInstallPlan:                  func(host string, dry bool) port.InstallPlan { return installutil.NewPlan(host, dry) },
-		PlanHostSkillLinks:              installutil.PlanHostSkillLinks,
-		SemanticSHA256:                  installutil.SemanticSHA256,
-		WriteJSONPlan:                   installutil.WriteJSONPlan,
-		WriteTextPlan:                   installutil.WriteTextPlan,
-	}, hostprotocol.OmoLifecycleExtension)
+func newOmoInstaller() extensionhost.Installer {
+	return newExtensionHostInstaller(extensionhost.Omo, hostprotocol.OmoLifecycleExtension)
 }
-func newOmpInstaller() ompadapter.Installer {
-	return ompadapter.NewInstaller(ompadapter.Dependencies{
+func newOmpInstaller() extensionhost.Installer {
+	return newExtensionHostInstaller(extensionhost.Omp, hostprotocol.OmpLifecycleExtension)
+}
+func newExtensionHostInstaller(spec extensionhost.Spec, lifecycleExtension func(string) string) extensionhost.Installer {
+	return extensionhost.NewInstaller(spec, extensionhost.Dependencies{
 		MergeJSONMapFile:                installutil.MergeJSONMapFile,
 		RemoveJSONMapEntry:              installutil.RemoveJSONMapEntry,
 		VerifyJSONMapEntry:              installutil.VerifyJSONMapEntry,
@@ -92,5 +83,5 @@ func newOmpInstaller() ompadapter.Installer {
 		SemanticSHA256:                  installutil.SemanticSHA256,
 		WriteJSONPlan:                   installutil.WriteJSONPlan,
 		WriteTextPlan:                   installutil.WriteTextPlan,
-	}, hostprotocol.OmpLifecycleExtension)
+	}, lifecycleExtension)
 }

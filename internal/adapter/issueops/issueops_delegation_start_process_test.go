@@ -25,6 +25,8 @@ const (
 )
 
 func TestStartIssueOpsChildConcurrentSiblingsAcrossProcesses(t *testing.T) {
+	t.Parallel()
+
 	if testing.Short() {
 		t.Skip("cross-process IssueOps child-start test skipped in -short")
 	}
@@ -100,6 +102,8 @@ func TestStartIssueOpsChildConcurrentSiblingsAcrossProcesses(t *testing.T) {
 }
 
 func TestIssueOpsDelegationStartProcessHelper(t *testing.T) {
+	t.Parallel()
+
 	if os.Getenv(childStartProcessHelperEnv) != "1" {
 		t.Skip("subprocess helper only")
 	}

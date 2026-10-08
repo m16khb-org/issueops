@@ -38,6 +38,10 @@ type Deps struct {
 	// 미주입이면 install은 upstream을 건드리지 않고 그대로 진행한다.
 	SyncUpstream func(ctx context.Context, root string, dryRun bool) (upstreamcontract.Report, error)
 
+	// RemoveRetiredState deletes, or with dryRun lists, the state-root paths of
+	// removed subsystems and returns one install message per path.
+	RemoveRetiredState func(stateDir string, dryRun bool) []string
+
 	// DefaultMCPTransport applies when --mcp-transport is omitted; empty means stdio.
 	DefaultMCPTransport string
 	MCPURL              string

@@ -1,6 +1,7 @@
 package channel
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -8,66 +9,47 @@ import (
 	channelcontract "issueops/internal/contract/channel"
 )
 
-type fakeWriter struct{ messages *[]channelcontract.Message }
+type fakeWriter struct{ effects *fakeEffects }
 
 func (w fakeWriter) Write(message channelcontract.Message) error {
-	*w.messages = append(*w.messages, message)
+	w.effects.events = append(w.effects.events, "write")
+	w.effects.messages = append(w.effects.messages, message)
 	return nil
+}
+
+func (w fakeWriter) PruneBefore(cutoff time.Time) error {
+	w.effects.events = append(w.effects.events, "prune")
+	w.effects.pruneCutoffs = append(w.effects.pruneCutoffs, cutoff)
+	return w.effects.pruneErr
 }
 
 type fakeEffects struct {
 	opens        int
+	events       []string
 	messages     []channelcontract.Message
-	reads        map[string]int
-	readFailures map[string]int
+	pruneCutoffs []time.Time
+	pruneErr     error
+	sinceSeen    []string
 	now          time.Time
-	wait         func(time.Duration)
+	wait         func(context.Context, time.Duration) error
 }
 
-func (f *fakeEffects) Open() (Writer, error) { f.opens++; return fakeWriter{&f.messages}, nil }
+func (f *fakeEffects) Open() (Writer, error) { f.opens++; return fakeWriter{f}, nil }
 func (f *fakeEffects) NewID() string         { return "msg-new" }
 func (f *fakeEffects) Now() time.Time        { return f.now }
-func (f *fakeEffects) Wait(d time.Duration)  { f.wait(d) }
-func (f *fakeEffects) ListIDs() ([]string, error) {
-	ids := make([]string, 0, len(f.messages))
-	for _, message := range f.messages {
-		ids = append(ids, message.ID)
-	}
-	return ids, nil
+func (f *fakeEffects) Wait(ctx context.Context, d time.Duration) error {
+	return f.wait(ctx, d)
 }
-func (f *fakeEffects) Get(id string) (channelcontract.Message, bool, error) {
-	f.reads[id]++
-	if f.readFailures[id] > 0 {
-		f.readFailures[id]--
-		return channelcontract.Message{}, false, errors.New("transient read")
+func (f *fakeEffects) MessagesAfter(ctx context.Context, since string) ([]channelcontract.Message, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
-	for _, message := range f.messages {
-		if message.ID == id {
-			return message, true, nil
-		}
-	}
-	return channelcontract.Message{}, false, nil
-}
-
-func TestRecvWaitKeepsObservedMessagesLocalToCall(t *testing.T) {
-	f := &fakeEffects{reads: map[string]int{}, now: time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC)}
-	f.messages = []channelcontract.Message{{ID: "msg-old", Channel: "other"}}
-	f.wait = func(time.Duration) {
-		f.messages = append(f.messages, channelcontract.Message{ID: "msg-new", Channel: "target"})
-	}
-	service := Service{Effects: f}
-	result, err := service.Recv(channelcontract.RecvRequest{Channel: "target", Wait: true, TimeoutSeconds: 1})
-	if err != nil || len(result.Messages) != 1 || result.Messages[0].ID != "msg-new" || f.reads["msg-old"] != 1 {
-		t.Fatalf("recv=%+v reads=%v err=%v", result, f.reads, err)
-	}
-	_, _ = service.Recv(channelcontract.RecvRequest{Channel: "target"})
-	if f.reads["msg-old"] != 2 {
-		t.Fatalf("observed messages leaked across calls: %v", f.reads)
-	}
+	f.sinceSeen = append(f.sinceSeen, since)
+	return append([]channelcontract.Message(nil), f.messages...), nil
 }
 
 func TestSendValidatesBeforeOpeningStore(t *testing.T) {
-	f := &fakeEffects{reads: map[string]int{}}
+	f := &fakeEffects{}
 	service := Service{Effects: f}
 	result, err := service.Send(channelcontract.SendRequest{Channel: " c ", Body: "x"})
 	if !errors.Is(err, channelcontract.ErrFromRequired) || result.Channel != "c" || len(f.messages) != 0 || f.opens != 0 {
@@ -75,12 +57,55 @@ func TestSendValidatesBeforeOpeningStore(t *testing.T) {
 	}
 }
 
-func TestRecvRetriesUnreadableRecordsWithoutRevisitingObserved(t *testing.T) {
-	f := &fakeEffects{reads: map[string]int{}, readFailures: map[string]int{"msg-target": 1}, now: time.Date(2026, 9, 29, 0, 0, 0, 0, time.UTC)}
-	f.messages = []channelcontract.Message{{ID: "msg-noise", Channel: "other"}, {ID: "msg-target", Channel: "target"}}
-	f.wait = func(d time.Duration) { f.now = f.now.Add(d) }
-	result, err := (Service{Effects: f}).Recv(channelcontract.RecvRequest{Channel: "target", Wait: true, TimeoutSeconds: 1})
-	if err != nil || len(result.Messages) != 1 || result.Messages[0].ID != "msg-target" || f.reads["msg-target"] != 2 || f.reads["msg-noise"] != 1 {
-		t.Fatalf("result=%+v reads=%v err=%v", result, f.reads, err)
+func TestSendPrunesAtRetentionCutoffAfterWrite(t *testing.T) {
+	now := time.Date(2026, 10, 8, 12, 0, 0, 0, time.UTC)
+	f := &fakeEffects{now: now, pruneErr: errors.New("busy")}
+	result, err := (Service{Effects: f}).Send(channelcontract.SendRequest{Channel: "c", From: "a", Body: "x"})
+	if err != nil || !result.OK || result.Message.ID != "msg-new" {
+		t.Fatalf("prune failure changed send result: result=%+v err=%v", result, err)
+	}
+	if len(f.events) != 2 || f.events[0] != "write" || f.events[1] != "prune" {
+		t.Fatalf("events=%v", f.events)
+	}
+	if want := now.Add(-7 * 24 * time.Hour); len(f.pruneCutoffs) != 1 || !f.pruneCutoffs[0].Equal(want) {
+		t.Fatalf("cutoffs=%v want=%v", f.pruneCutoffs, want)
+	}
+}
+
+func TestRecvSelectsTargetChannelAfterTrimmedCursor(t *testing.T) {
+	f := &fakeEffects{messages: []channelcontract.Message{{ID: "msg-1", Channel: "other"}, {ID: "msg-2", Channel: "target"}, {ID: "msg-3", Channel: "target"}}}
+	result, err := (Service{Effects: f}).Recv(context.Background(), channelcontract.RecvRequest{Channel: "target", SinceID: " msg-0 ", Limit: 1})
+	if err != nil || len(result.Messages) != 1 || result.Messages[0].ID != "msg-2" || result.LastID != "msg-2" {
+		t.Fatalf("result=%+v err=%v", result, err)
+	}
+	if len(f.sinceSeen) != 1 || f.sinceSeen[0] != "msg-0" {
+		t.Fatalf("since=%v", f.sinceSeen)
+	}
+}
+
+func TestRecvWaitPollsUntilTargetMessageArrives(t *testing.T) {
+	f := &fakeEffects{now: time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC)}
+	f.messages = []channelcontract.Message{{ID: "msg-old", Channel: "other"}}
+	f.wait = func(context.Context, time.Duration) error {
+		f.messages = append(f.messages, channelcontract.Message{ID: "msg-new", Channel: "target"})
+		return nil
+	}
+	result, err := (Service{Effects: f}).Recv(context.Background(), channelcontract.RecvRequest{Channel: "target", Wait: true, TimeoutSeconds: 1})
+	if err != nil || !result.Waited || len(result.Messages) != 1 || result.Messages[0].ID != "msg-new" || len(f.sinceSeen) != 2 {
+		t.Fatalf("recv=%+v polls=%d err=%v", result, len(f.sinceSeen), err)
+	}
+}
+
+func TestRecvWaitReturnsWhenContextCancelled(t *testing.T) {
+	f := &fakeEffects{now: time.Date(2026, 10, 8, 0, 0, 0, 0, time.UTC)}
+	ctx, cancel := context.WithCancel(context.Background())
+	f.wait = func(ctx context.Context, d time.Duration) error {
+		cancel()
+		<-ctx.Done()
+		return ctx.Err()
+	}
+	result, err := (Service{Effects: f}).Recv(ctx, channelcontract.RecvRequest{Channel: "target", Wait: true, TimeoutSeconds: 300})
+	if !errors.Is(err, context.Canceled) || result.OK || result.TimedOut || result.Error == "" || len(f.sinceSeen) != 1 {
+		t.Fatalf("result=%+v polls=%d err=%v", result, len(f.sinceSeen), err)
 	}
 }

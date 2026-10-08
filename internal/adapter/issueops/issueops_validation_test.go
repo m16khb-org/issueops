@@ -9,6 +9,8 @@ import (
 )
 
 func TestIssueOpsStartRequiresIssueBranch(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	for _, branch := range []string{"main", "development", "feature/2387-fix-grpc-ai-dmm-tag-replication-lag"} {
 		if _, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: branch}); err == nil || !strings.Contains(err.Error(), "issue number") {
@@ -21,6 +23,8 @@ func TestIssueOpsStartRequiresIssueBranch(t *testing.T) {
 }
 
 func TestIssueOpsImplementationLinksRequireBranchEvidence(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: "1-demo"})
 	if err != nil {
@@ -66,6 +70,8 @@ func TestIssueOpsImplementationLinksRequireBranchEvidence(t *testing.T) {
 }
 
 func TestIssueOpsBranchPrepareRequiresLinkedIssue(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: "1-demo"})
 	if err != nil {
@@ -83,6 +89,8 @@ func TestIssueOpsBranchPrepareRequiresLinkedIssue(t *testing.T) {
 }
 
 func TestIssueOpsBranchPrepareRequiresResolvableLocalBaseCommit(t *testing.T) {
+	t.Parallel()
+
 	repo := t.TempDir()
 	if code, _, stderr := preflight.GitCmd(repo, "init", "-q"); code != 0 {
 		t.Fatalf("git init: %s", stderr)
@@ -143,6 +151,8 @@ func TestIssueOpsBranchPrepareRequiresResolvableLocalBaseCommit(t *testing.T) {
 }
 
 func TestIssueOpsBranchPrepareRequiresLinkedIssueNumberPrefix(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: "123-provider-linked-branch"})
 	if err != nil {
@@ -189,6 +199,8 @@ func TestIssueOpsBranchPrepareRequiresLinkedIssueNumberPrefix(t *testing.T) {
 }
 
 func TestIssueOpsChildLinkRequiresLinkedParentIssue(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: "1-demo"})
 	if err != nil {
@@ -208,6 +220,8 @@ func TestIssueOpsChildLinkRequiresLinkedParentIssue(t *testing.T) {
 }
 
 func TestIssueOpsRejectsUnsafeInputs(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	if _, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{}); err == nil || !strings.Contains(err.Error(), "repo") {
 		t.Fatalf("expected repo validation error, got %v", err)

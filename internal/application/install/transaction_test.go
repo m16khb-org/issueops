@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"slices"
+	"strings"
 	"testing"
 
 	activationcontract "issueops/internal/contract/nativeactivation"
@@ -39,6 +41,10 @@ func (effects transactionEffects) PrepareHost(port.NativeInstallResult) (HostTra
 }
 func (effects transactionEffects) AppendUpstream(*port.NativeInstallResult, string, bool) {
 	effects.event("upstream")
+}
+func (effects transactionEffects) RemoveRetiredState(result *port.NativeInstallResult, dryRun bool) {
+	effects.event("retired-state")
+	result.Messages = append(result.Messages, map[bool]string{true: "would remove retired", false: "removed retired"}[dryRun])
 }
 func (effects transactionEffects) Apply(*port.NativeInstallResult) error {
 	effects.event("apply-path")
@@ -77,8 +83,8 @@ func TestRunTransactionPreservesActivationAndRollbackOrder(t *testing.T) {
 		want    []string
 		wantErr bool
 	}{
-		{name: "dry run", request: TransactionRequest{Install: port.NativeInstallRequest{DryRun: true}}, want: []string{"prepare-path", "plan-hosts", "upstream"}},
-		{name: "commit", request: TransactionRequest{}, want: []string{"prepare-path", "plan-hosts", "plan-shell", "snapshot-hosts", "begin", "apply-path", "install-hosts", "plan-shell", "seal", "upstream", "finalize-path"}},
+		{name: "dry run", request: TransactionRequest{Install: port.NativeInstallRequest{DryRun: true}}, want: []string{"prepare-path", "plan-hosts", "upstream", "retired-state"}},
+		{name: "commit", request: TransactionRequest{}, want: []string{"prepare-path", "plan-hosts", "plan-shell", "snapshot-hosts", "begin", "apply-path", "install-hosts", "plan-shell", "seal", "upstream", "finalize-path", "retired-state"}},
 		{name: "seal failure", request: TransactionRequest{}, sealErr: errors.New("seal failed"), wantErr: true, want: []string{"prepare-path", "plan-hosts", "plan-shell", "snapshot-hosts", "begin", "apply-path", "install-hosts", "plan-shell", "seal", "rollback-hosts", "rollback-path", "abort"}},
 		{name: "begin only", request: TransactionRequest{Step: "begin"}, want: []string{"prepare-path", "plan-hosts", "plan-shell", "snapshot-hosts", "begin"}},
 	} {
@@ -100,6 +106,42 @@ func TestRunTransactionPreservesActivationAndRollbackOrder(t *testing.T) {
 			}
 			if tc.name == "begin only" && outcome.Activation == nil {
 				t.Fatalf("begin outcome = %+v", outcome)
+			}
+		})
+	}
+}
+
+func TestRunTransactionRemovesRetiredStateOnlyAfterFinalize(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		request     TransactionRequest
+		sealErr     error
+		wantMessage string
+	}{
+		{name: "dry run plans", request: TransactionRequest{Install: port.NativeInstallRequest{DryRun: true}}, wantMessage: "would remove retired"},
+		{name: "commit removes", request: TransactionRequest{}, wantMessage: "removed retired"},
+		{name: "failed seal keeps", request: TransactionRequest{}, sealErr: errors.New("seal failed")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var events []string
+			effects := transactionEffects{events: &events, sealErr: tc.sealErr}
+			outcome, _ := RunTransaction(context.Background(), tc.request, effects, effects)
+			messages := []string{}
+			if outcome.Install != nil {
+				messages = outcome.Install.Messages
+			}
+			removed := slices.Index(events, "retired-state")
+			if tc.wantMessage == "" {
+				if removed >= 0 || slices.ContainsFunc(messages, func(m string) bool { return strings.Contains(m, "retired") }) {
+					t.Fatalf("retired state touched after failed install: events=%v messages=%v", events, messages)
+				}
+				return
+			}
+			if removed != len(events)-1 || !slices.Contains(messages, tc.wantMessage) {
+				t.Fatalf("events=%v messages=%v", events, messages)
+			}
+			if finalized := slices.Index(events, "finalize-path"); !tc.request.Install.DryRun && finalized > removed {
+				t.Fatalf("retired state removed before finalize: %v", events)
 			}
 		})
 	}

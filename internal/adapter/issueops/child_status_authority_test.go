@@ -22,6 +22,8 @@ func (s childStatusScanTransition) Scan() ([]model.IssueOpsRecord, error) {
 }
 
 func TestChildIndexRepairReauthorizesParentAfterScan(t *testing.T) {
+	t.Parallel()
+
 	root := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, root)
 	started, err := startIssueOpsChildForTest(root, parent, model.IssueOpsChildStartRequest{ParentID: parent.ID, Branch: "124-repair-child", TaskScope: "repair with current authority", AcceptanceCriteria: []string{"stale actor cannot repair"}})

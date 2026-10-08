@@ -3,7 +3,6 @@ package channel
 import (
 	"errors"
 	model "issueops/internal/contract/channel"
-	"reflect"
 	"testing"
 	"time"
 )
@@ -31,17 +30,25 @@ func TestSendAdmissionPreservesBodyAndErrorPrecedence(t *testing.T) {
 	}
 }
 
-func TestIDsAfterPreserveMissingCursor(t *testing.T) {
+func TestRangeStartPreservesMissingCursor(t *testing.T) {
+	req, err := NormalizeRecv(model.RecvRequest{Channel: "c", SinceID: " msg-b "})
+	if err != nil || req.SinceID != "msg-b" {
+		t.Fatalf("request=%+v error=%v", req, err)
+	}
 	for _, tc := range []struct {
-		since string
-		want  []string
+		since  string
+		exists bool
+		want   string
 	}{
-		{" msg-b ", []string{"msg-c"}}, {"missing", []string{"msg-a", "msg-b", "msg-c"}},
+		{"msg-b", true, "msg-b"}, {"missing", false, ""}, {"", false, ""},
 	} {
-		got := IDsAfter([]string{"msg-c", "msg-a", "msg-b"}, tc.since)
-		if !reflect.DeepEqual(got, tc.want) {
-			t.Fatalf("since=%q got=%v want=%v", tc.since, got, tc.want)
+		if got := RangeStart(tc.since, tc.exists); got != tc.want {
+			t.Fatalf("since=%q exists=%v got=%q want=%q", tc.since, tc.exists, got, tc.want)
 		}
+	}
+	now := time.Date(2026, 10, 8, 0, 0, 0, 0, time.UTC)
+	if got := RetentionCutoff(now); !got.Equal(now.Add(-7 * 24 * time.Hour)) {
+		t.Fatalf("retention cutoff=%v", got)
 	}
 }
 

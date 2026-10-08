@@ -55,11 +55,14 @@ darwin/linux의 기본 `--mcp-transport=http` 설치는 네 host의 issueops ent
 `http://127.0.0.1:47831/mcp`와 bearer 헤더로 바꾼다. 설치기는 host plan을 dry-run으로 먼저 검증하고,
 서비스를 새 build로 띄운 뒤 `build_id`와 인증된 MCP 응답을 확인해야 host 설정을 merge한다.
 `update`/`bootstrap`도 같은 순서로 서비스를 교체한다. 실패하면 host 설정을 바꾸지 않는다.
+서비스 stdout/stderr는 unit이 `<state>/mcp-http/server.log`에 append한다. 서버는 그 파일에 쓸 때 크기를 8MiB로
+제한한다. 한 줄을 쓴 뒤 8MiB를 넘으면 내용을 `server.log.1`로 복사하고 원본을 그 자리에서 비운다(copytruncate).
+그래서 로그는 두 파일을 합쳐 약 16MiB를 넘지 않는다. unit 형식은 바뀌지 않는다.
 `--mcp-transport=stdio`는 이전 stdio entry를 설치한다. 아래 Omo·omp catalog cache token은 stdio entry에서는
 `env.ISSUEOPS_MCP_CATALOG_SHA256`으로, HTTP entry에서는 `headers.X-Issueops-Mcp-Catalog-Sha256`으로
 들어간다. Omo는 server config 전체(헤더 포함)를 `hashConfig`로 해싱해 catalog cache 키로 쓰므로,
 catalog가 바뀌면 두 transport 모두 다음 세션이 새 `tools/list`를 조회한다. 서버는 이 헤더를 읽지 않는다
-(`internal/adapter/omo/mcp.go`의 `omoMCPCatalogHeader`, `TestOmoHTTPEntryChangesWithTheAdvertisedCatalog`).
+(`internal/adapter/extensionhost/mcp.go`의 `mcpCatalogHeader`, `TestHTTPEntryChangesWithTheAdvertisedCatalog`).
 
 Linux에서 HOME을 임시 디렉터리로 바꿔 설치하면(CI 등) HTTP 설치가 실패한다. installer는 unit을 그 HOME의
 `~/.config/systemd/user/`에 쓰지만, 이미 실행 중인 user systemd manager는 자기 HOME 기준 경로에서 unit을 찾기 때문이다.
@@ -101,6 +104,7 @@ Default user-level install updates:
 - omp MCP config: `~/.omp/agent/mcp.json` key `mcpServers.issueops` (mode `0600`)
 - omp lifecycle extension: `~/.omp/agent/extensions/issueops.js` (`session_start`/`session_switch` -> `hook session-start`, `session_compact` -> `hook post-compact`, no accepted filter; exports `ISSUEOPS_OMP_SESSION_ID` from the main session)
 - Optional Claude Code plugins and Git skills declared in `configs/upstream.json` (currently Claude-scoped): entries already present are skipped, and upstream failures are reported as `upstream ...` messages without failing native installation. See [hosts.md](guides/hosts.md#upstream-plugins-and-skills).
+- Retired state paths: after the native activation commits, install/update deletes state-root entries that only removed subsystems wrote (`daemon/`, `hook-failures.jsonl`, `hook-metrics.jsonl`, `.last-store-maintain`, `issueops-migration-receipt.json`) and reports each one as a `removed retired state path ...` message; `--dry-run` lists them as `would remove ...`. It matches exact names directly under the state directory, leaves symlinks and unexpected file kinds in place, and keeps `daemon/` while the legacy daemon still answers on `daemon/issueops.sock` or its recorded PID is alive. A removal failure stays a message and does not fail the install.
 
 Default install does not create target-repo `.claude/settings.json`,
 `.mcp.json`, `.omo/mcp.json`, `.omp/mcp.json`, or `.agents/mcp_config.json`. Use explicit

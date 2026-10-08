@@ -23,6 +23,8 @@ func waivedPlanPrep() *issueops.IssueOpsPlanPrep {
 }
 
 func TestIssueOpsProblemReadinessNeedsOnlyIntent(t *testing.T) {
+	t.Parallel()
+
 	if r := cycle.ProblemReadiness(issueops.IssueOpsRecord{}); r.Ready {
 		t.Fatalf("empty record should not complete problem: %#v", r)
 	} else if !containsLedgerKey(r.Missing, "intent_contract") {
@@ -35,6 +37,8 @@ func TestIssueOpsProblemReadinessNeedsOnlyIntent(t *testing.T) {
 }
 
 func TestIssueOpsGrillReadinessRequiresArtifacts(t *testing.T) {
+	t.Parallel()
+
 	rec := issueops.IssueOpsRecord{Intent: fullIntentForLedger()}
 	r := cycle.GrillReadiness(rec)
 	if r.Ready {
@@ -63,6 +67,8 @@ func TestIssueOpsGrillReadinessRequiresArtifacts(t *testing.T) {
 }
 
 func TestIssueOpsGrillSplitDecisionAcceptsChildLink(t *testing.T) {
+	t.Parallel()
+
 	rec := issueops.IssueOpsRecord{
 		Intent:       fullIntentForLedger(),
 		IssueURL:     "https://example/issues/1",
@@ -77,6 +83,8 @@ func TestIssueOpsGrillSplitDecisionAcceptsChildLink(t *testing.T) {
 }
 
 func TestIssueOpsPhaseCompletionDispatches(t *testing.T) {
+	t.Parallel()
+
 	rec := issueops.IssueOpsRecord{Intent: fullIntentForLedger()}
 	if r := IssueOpsPhaseCompletion(rec, issueops.IssueOpsPhaseProblem); !r.Ready {
 		t.Fatalf("problem completion should be ready for intent-only record: %#v", r)

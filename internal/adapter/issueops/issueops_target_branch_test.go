@@ -7,6 +7,8 @@ import (
 )
 
 func TestStrictPRReadinessFlagsTargetBranchMismatch(t *testing.T) {
+	t.Parallel()
+
 	repo := initIssueOpsRepo(t)
 	base := issueops.IssueOpsRecord{
 		OK:            true,

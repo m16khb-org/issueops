@@ -14,6 +14,8 @@ import (
 )
 
 func TestIssueOpsCleanupStatusRequiresMergedCleanWorktreeAndDeletedRemoteBranch(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
 	branch := "2-cleanup"
@@ -122,6 +124,8 @@ func TestIssueOpsCleanupStatusRequiresMergedCleanWorktreeAndDeletedRemoteBranch(
 }
 
 func TestIssueOpsCleanupStatusBlocksWhenRemoteBranchCheckUnavailable(t *testing.T) {
+	t.Parallel()
+
 	repo := initIssueOpsRepo(t)
 	branch := "2-cleanup"
 	if code, _, stderr := preflight.GitCmd(repo, "checkout", "-q", "-b", branch); code != 0 {

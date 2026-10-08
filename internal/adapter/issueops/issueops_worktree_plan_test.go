@@ -11,6 +11,8 @@ import (
 )
 
 func TestIssueOpsLinkPlanResolvesRelativePathInsideLinkedWorktree(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	repo := filepath.Join(t.TempDir(), "example")
 	if err := os.MkdirAll(filepath.Join(repo, "docs", "plans"), 0o755); err != nil {
@@ -71,6 +73,8 @@ func TestIssueOpsLinkPlanResolvesRelativePathInsideLinkedWorktree(t *testing.T) 
 }
 
 func TestIssueOpsWorktreeLinkRequiresExistingDirectory(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: "1-demo"})
 	if err != nil {
@@ -97,6 +101,8 @@ func TestIssueOpsWorktreeLinkRequiresExistingDirectory(t *testing.T) {
 }
 
 func TestIssueOpsWorktreeLinkRequiresSiblingIsolation(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	repo := filepath.Join(t.TempDir(), "example")
 	if err := os.MkdirAll(repo, 0o755); err != nil {
@@ -148,6 +154,8 @@ func TestIssueOpsWorktreeLinkRequiresSiblingIsolation(t *testing.T) {
 }
 
 func TestIssueOpsWorktreeLinkRequiresIssueBranch(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
 	branch := "1-demo"
@@ -188,6 +196,8 @@ func TestIssueOpsWorktreeLinkRequiresIssueBranch(t *testing.T) {
 }
 
 func TestIssueOpsPlanMustStayInsideLinkedWorktree(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
 	branch := "12-issue-worktree"

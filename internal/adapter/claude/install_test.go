@@ -247,12 +247,3 @@ func countClaudeMessage(messages []string, want string) int {
 	}
 	return count
 }
-
-func TestClaudeInstallHelpersCoverQuoting(t *testing.T) {
-	if got := shellQuote(""); got != "''" {
-		t.Fatalf("empty shellQuote = %q", got)
-	}
-	if got := shellQuote("it's/bin"); got != `'it'"'"'s/bin'` {
-		t.Fatalf("quoted shellQuote = %q", got)
-	}
-}

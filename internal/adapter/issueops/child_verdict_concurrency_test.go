@@ -27,6 +27,8 @@ func (s childChangedBeforeParentSpan) WithinLock(ctx context.Context, id string,
 }
 
 func TestChildAcceptanceRechecksStateUnderParentSpan(t *testing.T) {
+	t.Parallel()
+
 	for _, scenario := range []string{"reopened", "reparented", "cleanup applying", "other repo"} {
 		t.Run(scenario, func(t *testing.T) {
 			root := t.TempDir()
@@ -75,6 +77,8 @@ func TestChildAcceptanceRechecksStateUnderParentSpan(t *testing.T) {
 }
 
 func TestChildAcceptancePreservesConcurrentSiblingReceipts(t *testing.T) {
+	t.Parallel()
+
 	root := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, root)
 	var ids []string

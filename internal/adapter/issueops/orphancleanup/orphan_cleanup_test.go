@@ -197,7 +197,8 @@ func TestPreviewAndApplyRemoveOnlyConfirmedRecordlessLocalArtifacts(t *testing.T
 	if got := gitOutput(t, fixture.repo, "ls-remote", "--heads", "origin", fixture.branch); strings.TrimSpace(got) == "" {
 		t.Fatal("remote branch was removed or unavailable; orphan cleanup must not delete it")
 	}
-	ids, err := coreissueops.ListIssueOpsIDs(issueOpsStateRootForTest())
+	ids := []string{}
+	err = coreissueops.VisitIssueOpsExisting(issueOpsStateRootForTest(), func(id string, _ model.IssueOpsRecord, _ error) { ids = append(ids, id) })
 	if err != nil {
 		t.Fatal(err)
 	}

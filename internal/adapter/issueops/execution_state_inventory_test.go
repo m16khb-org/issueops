@@ -11,6 +11,8 @@ import (
 )
 
 func TestListLeaseHolderIndexesReadsAndValidatesExistingRows(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	db, err := sqlstore.Open(stateRoot)
 	if err != nil {
@@ -36,6 +38,8 @@ func TestListLeaseHolderIndexesReadsAndValidatesExistingRows(t *testing.T) {
 }
 
 func TestListLeaseHolderIndexesAcceptsOmoHolder(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	db, err := sqlstore.Open(stateRoot)
 	if err != nil {
@@ -66,6 +70,8 @@ func TestListLeaseHolderIndexesAcceptsOmoHolder(t *testing.T) {
 }
 
 func TestListLeaseHolderIndexesMissingStoreIsEmpty(t *testing.T) {
+	t.Parallel()
+
 	rows, err := ListLeaseHolderIndexes(t.TempDir() + "/absent")
 	if err != nil || len(rows) != 0 {
 		t.Fatalf("rows, err = %#v, %v", rows, err)
@@ -73,6 +79,8 @@ func TestListLeaseHolderIndexesMissingStoreIsEmpty(t *testing.T) {
 }
 
 func TestListLeaseHolderIndexesRejectsMalformedOrMismatchedRows(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name string
 		key  string

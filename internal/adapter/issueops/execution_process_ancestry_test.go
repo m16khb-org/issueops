@@ -6,6 +6,8 @@ import (
 )
 
 func TestNativeProcessAncestryFromSnapshotWalksExactParentChain(t *testing.T) {
+	t.Parallel()
+
 	snapshot, err := parseNativeProcessSnapshot(`
 100 50 Tue Jul 22 09:10:11 2026 /usr/local/bin/issueops
 50 1 Tue Jul 22 09:00:00 2026 /Applications/Codex.app/Contents/MacOS/Codex
@@ -33,6 +35,8 @@ func TestNativeProcessAncestryFromSnapshotWalksExactParentChain(t *testing.T) {
 }
 
 func TestQuiescenceProcessOwnershipReusesOneSnapshot(t *testing.T) {
+	t.Parallel()
+
 	snapshot, err := parseNativeProcessSnapshot(`
 200 100 Tue Jul 22 09:11:00 2026 /usr/bin/child
 100 50 Tue Jul 22 09:10:11 2026 /usr/local/bin/issueops
@@ -55,6 +59,8 @@ func TestQuiescenceProcessOwnershipReusesOneSnapshot(t *testing.T) {
 }
 
 func TestObserveNativeProcessAncestryIncludesCurrentExactReceipt(t *testing.T) {
+	t.Parallel()
+
 	want, err := ObserveNativeProcessReceipt(os.Getpid())
 	if err != nil {
 		t.Fatal(err)

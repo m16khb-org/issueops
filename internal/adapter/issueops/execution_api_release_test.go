@@ -12,6 +12,8 @@ import (
 )
 
 func TestExecuteExecutionReleaseRequiresInjectedHandler(t *testing.T) {
+	t.Parallel()
+
 	_, err := testExecutionService().Execute(context.Background(), t.TempDir(), issueopscontract.ExecutionActionRequest{
 		Action: issueopscontract.ExecutionActionRelease,
 		ID:     "io-release-handler",
@@ -22,6 +24,8 @@ func TestExecuteExecutionReleaseRequiresInjectedHandler(t *testing.T) {
 }
 
 func TestExecuteExecutionReleaseUsesInjectedHandlerOnce(t *testing.T) {
+	t.Parallel()
+
 	called := 0
 	result, err := testExecutionService().Execute(context.Background(), t.TempDir(), issueopscontract.ExecutionActionRequest{
 		Action:     issueopscontract.ExecutionActionRelease,

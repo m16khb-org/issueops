@@ -6,6 +6,8 @@ import (
 )
 
 func TestBranchPreparationEnvironmentsKeepTheirGitRunner(t *testing.T) {
+	t.Parallel()
+
 	makeEnvironment := func(repo, oid string) BranchPreparationEnvironment {
 		return BranchPreparationEnvironment{RunGit: func(dir string, args ...string) (int, string, string) {
 			if dir != repo {

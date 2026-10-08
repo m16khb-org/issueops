@@ -78,6 +78,8 @@ func materialsCycleForTest(t *testing.T) (string, issueops.IssueOpsRecord, strin
 }
 
 func TestPhaseTransitionWritesTrackedMaterials(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record, worktree := materialsCycleForTest(t)
 	_, materials, err := testCyclePhaseService(issueOpsActorPointerForMaterialsTest(worktree)).AdvanceReport(stateRoot, record.ID, string(issueops.IssueOpsPhaseImplement))
 	if err != nil {
@@ -132,6 +134,8 @@ func TestPhaseTransitionWritesTrackedMaterials(t *testing.T) {
 // 구현 메모 A: plan_path가 봉인 디렉터리 밖(이미 추적되는 파일)이면 plan.md 사본을
 // 만들지 않는다. 추적 중인 plan.md를 덮어쓰지 않기 위해서다.
 func TestTrackedPlanCopySkipsAPlanOutsideTheSealedDirectory(t *testing.T) {
+	t.Parallel()
+
 	root := t.TempDir()
 	record := issueops.IssueOpsRecord{
 		IssueURL:  "https://github.com/example/repo/issues/13",
@@ -192,6 +196,8 @@ func issueOpsActorPointerForMaterialsTest(root string) *issueops.IssueOpsActor {
 }
 
 func TestPhaseTransitionNormalizesPublicMaterials(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record, worktree := materialsCycleForTest(t)
 	body := "source `" + record.Repo + "/src.go:12` work `" + worktree + "/test.go` URL https://example.test" + record.Repo + "/src.go\n"
 	originals := map[string][]byte{}
@@ -262,6 +268,8 @@ func TestPhaseTransitionNormalizesPublicMaterials(t *testing.T) {
 }
 
 func TestTrackedMaterialsFallbackAndReviewPaths(t *testing.T) {
+	t.Parallel()
+
 	root := t.TempDir()
 	const source = "/workspace/source"
 	for _, mode := range []issueops.ExecutionMode{issueops.ExecutionModeDirect, issueops.ExecutionModeOrca} {

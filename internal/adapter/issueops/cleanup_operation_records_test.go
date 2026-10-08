@@ -9,6 +9,8 @@ import (
 )
 
 func TestCleanupRecordsBindOperationAndReplacementAcrossFinalizers(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	for _, operation := range []model.CleanupOperation{model.CleanupOperationFinish, model.CleanupOperationRemoteBranch} {
 		t.Run(string(operation), func(t *testing.T) {

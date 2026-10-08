@@ -7,6 +7,8 @@ import (
 )
 
 func TestInspectNativeProcessReceiptUsesCapturedSnapshot(t *testing.T) {
+	t.Parallel()
+
 	receipt := issueopscontract.NativeProcessReceipt{
 		PID:        42,
 		StartedAt:  "2026-08-14T00:00:00Z",

@@ -139,6 +139,8 @@ func saveBodySyncRecord(t *testing.T, stateRoot string, record issueops.IssueOps
 }
 
 func TestSyncIssueBodyPreviewReportsDriftAndDoesNotWrite(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record, actor := bodySyncFixture(t)
 	live := "## 문제\n옛 본문\n\n" + syncCompletionBlock
 	record.IssueCreateIntent = bodySyncCreateIntent(record.IssueURL, bodysync.SHA256Body(live))
@@ -169,6 +171,8 @@ func TestSyncIssueBodyPreviewReportsDriftAndDoesNotWrite(t *testing.T) {
 }
 
 func TestSyncIssueBodyConfirmIsFailClosed(t *testing.T) {
+	t.Parallel()
+
 	live := "## 문제\n옛 본문\n"
 	tests := []struct {
 		name        string
@@ -212,6 +216,8 @@ func TestSyncIssueBodyConfirmIsFailClosed(t *testing.T) {
 }
 
 func TestSyncIssueBodyConfirmWritesPreservesAndRecordsBaseline(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record, actor := bodySyncFixture(t)
 	live := "## 문제\n옛 본문\n\n" + syncCompletionBlock
 	record.IssueCreateIntent = bodySyncCreateIntent(record.IssueURL, bodysync.SHA256Body(live))
@@ -251,6 +257,8 @@ func TestSyncIssueBodyConfirmWritesPreservesAndRecordsBaseline(t *testing.T) {
 }
 
 func TestSyncChildBodyRequiresVerifiedHierarchy(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record, actor := bodySyncFixture(t)
 	saveBodySyncRecord(t, stateRoot, record)
 	child := "https://github.com/acme/repo/issues/500"
@@ -279,6 +287,8 @@ func TestSyncChildBodyRequiresVerifiedHierarchy(t *testing.T) {
 }
 
 func TestSyncChildBodyRefusedWhenProviderCannotVerifyHierarchy(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record, actor := bodySyncFixture(t)
 	saveBodySyncRecord(t, stateRoot, record)
 	prov := &fakeBodySyncProvider{body: "본문", state: "OPEN"}
@@ -292,6 +302,8 @@ func TestSyncChildBodyRefusedWhenProviderCannotVerifyHierarchy(t *testing.T) {
 }
 
 func TestSyncPullRequestBodyFencesGenerationAndLifecycle(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name       string
 		state      string
@@ -327,6 +339,8 @@ func TestSyncPullRequestBodyFencesGenerationAndLifecycle(t *testing.T) {
 }
 
 func TestSyncPullRequestBodyRejectsForeignURL(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record, actor := bodySyncFixture(t)
 	record.RemoteArtifact = &issueops.IssueOpsRemoteArtifactVerification{
 		Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/9", VerifiedAt: "2026-07-01T00:00:00Z",
@@ -344,6 +358,8 @@ func TestSyncPullRequestBodyRejectsForeignURL(t *testing.T) {
 }
 
 func TestSyncBodyRequiresCurrentLeaseHolder(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record, _ := bodySyncFixture(t)
 	saveBodySyncRecord(t, stateRoot, record)
 	prov := &fakeBodySyncProvider{body: "본문", state: "OPEN"}
@@ -362,6 +378,8 @@ func TestSyncBodyRequiresCurrentLeaseHolder(t *testing.T) {
 }
 
 func TestSyncBodyRejectsManagedMarkersBeforeAnyProviderCall(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record, actor := bodySyncFixture(t)
 	saveBodySyncRecord(t, stateRoot, record)
 	prov := &fakeBodySyncProvider{body: "## 문제\n옛 본문\n", state: "OPEN"}
@@ -401,6 +419,8 @@ const readableSyncBody = `## 요약
 어댑터 테스트로 교체 결과를 확인합니다.`
 
 func TestRemoteSyncRefusesCriticalAndReportsLiveReadability(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record, actor := bodySyncFixture(t)
 	live := "## 문제\n옛 본문\n\n" + syncCompletionBlock
 	record.IssueCreateIntent = bodySyncCreateIntent(record.IssueURL, bodysync.SHA256Body(live))
@@ -474,6 +494,8 @@ func (p bodySyncConcurrentProvider) ReplaceArtifactBody(ctx context.Context, req
 }
 
 func TestSyncBodyBaselineUsesLatestRecordAndRechecksHolder(t *testing.T) {
+	t.Parallel()
+
 	for _, changeHolder := range []bool{false, true} {
 		t.Run(fmt.Sprintf("change holder=%v", changeHolder), func(t *testing.T) {
 			root, record, actor := bodySyncFixture(t)

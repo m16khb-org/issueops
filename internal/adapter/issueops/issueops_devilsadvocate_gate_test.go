@@ -12,6 +12,8 @@ import (
 )
 
 func TestImplementationReadinessRequiresDevilsAdvocateVerdict(t *testing.T) {
+	t.Parallel()
+
 	repo := filepath.Join(t.TempDir(), "example")
 	worktree := makeIssueOpsWorktreeDirForTest(t, repo, "1-demo")
 	record := issueops.IssueOpsRecord{
@@ -75,6 +77,8 @@ func issueOpsPlanBoundRecordForTest(t *testing.T) (issueops.IssueOpsRecord, stri
 }
 
 func TestImplementationReadinessRejectsStaleDevilsAdvocateReview(t *testing.T) {
+	t.Parallel()
+
 	record, planPath := issueOpsPlanBoundRecordForTest(t)
 	record.DevilsAdvocateReview = &issueops.IssueOpsDevilsAdvocateReview{
 		Verdict: "pass", Findings: []string{"attacked gate 3"}, ReviewerContext: "subagent",
@@ -127,6 +131,8 @@ func TestImplementationReadinessRejectsStaleDevilsAdvocateReview(t *testing.T) {
 }
 
 func TestAISlopCleanReadinessDoesNotCheckPlanBinding(t *testing.T) {
+	t.Parallel()
+
 	record, planPath := issueOpsPlanBoundRecordForTest(t)
 	record.DevilsAdvocateReview = &issueops.IssueOpsDevilsAdvocateReview{
 		Verdict: "pass", Findings: []string{"attacked gate 3"}, ReviewerContext: "subagent",
@@ -141,6 +147,8 @@ func TestAISlopCleanReadinessDoesNotCheckPlanBinding(t *testing.T) {
 }
 
 func TestRecordDevilsAdvocateReviewBindsStagedPlanWhenNoFileIsLinked(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record := executionPrepareRecord(t)
 	request := reviewcontract.DevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"attacked gate 3"}}
 	if _, err := RecordIssueOpsDevilsAdvocateReview(stateRoot, record.ID, request); err == nil || !strings.Contains(err.Error(), "link-plan") {
@@ -162,6 +170,8 @@ func TestRecordDevilsAdvocateReviewBindsStagedPlanWhenNoFileIsLinked(t *testing.
 }
 
 func TestReviewPlanBindingDoesNotMaskBrokenLinkedPlanWithStagedContent(t *testing.T) {
+	t.Parallel()
+
 	root, record := executionPrepareRecord(t)
 	if _, err := stageIssueOpsArtifactForTest(root, record.ID, "plan", []byte("abc")); err != nil {
 		t.Fatal(err)

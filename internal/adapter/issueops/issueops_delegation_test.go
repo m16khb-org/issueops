@@ -14,6 +14,8 @@ import (
 )
 
 func TestStartIssueOpsChildFailClosedPreconditions(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		name        string
 		childBranch string
@@ -107,6 +109,8 @@ func TestStartIssueOpsChildFailClosedPreconditions(t *testing.T) {
 }
 
 func TestStartIssueOpsChildCreatesDelegatedProfile(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
 	result, err := startIssueOpsChildForTest(stateRoot, parent, issueops.IssueOpsChildStartRequest{
@@ -179,6 +183,8 @@ func TestStartIssueOpsChildCreatesDelegatedProfile(t *testing.T) {
 }
 
 func TestStartIssueOpsChildPerConditionRemedy(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		name          string
 		childBranch   string
@@ -304,6 +310,8 @@ func TestStartIssueOpsChildPerConditionRemedy(t *testing.T) {
 }
 
 func TestStartIssueOpsChildLinkFailureReturnsWarning(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
 	result, err := startIssueOpsChildForTest(stateRoot, parent, issueops.IssueOpsChildStartRequest{
@@ -333,6 +341,8 @@ func TestStartIssueOpsChildLinkFailureReturnsWarning(t *testing.T) {
 }
 
 func TestStaleResetPreservesDelegationGraph(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
 	result, err := startIssueOpsChildForTest(stateRoot, parent, issueops.IssueOpsChildStartRequest{
@@ -379,6 +389,8 @@ func TestStaleResetPreservesDelegationGraph(t *testing.T) {
 }
 
 func TestStartIssueOpsChildAppendsParentRef(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
 	req := issueops.IssueOpsChildStartRequest{
@@ -419,6 +431,8 @@ func TestStartIssueOpsChildAppendsParentRef(t *testing.T) {
 }
 
 func TestAppendIssueOpsChildRefResetsTerminalReceiptOnlyForNewerIncarnation(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		name             string
 		childCreatedAt   func(time.Time, string) string
@@ -523,6 +537,8 @@ func TestAppendIssueOpsChildRefResetsTerminalReceiptOnlyForNewerIncarnation(t *t
 }
 
 func TestArchivedIssueOpsChildDoesNotOverwriteReappearedIncarnation(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		name     string
 		archived func(string, string, string, *issueops.IssueOpsActor) error
@@ -609,6 +625,8 @@ func TestArchivedIssueOpsChildDoesNotOverwriteReappearedIncarnation(t *testing.T
 }
 
 func TestArchivedIssueOpsChildRecordsReceiptWhenChildRemainsAbsent(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		name     string
 		verdict  string
@@ -662,6 +680,8 @@ func TestArchivedIssueOpsChildRecordsReceiptWhenChildRemainsAbsent(t *testing.T)
 }
 
 func TestStartIssueOpsChildConcurrentSameBranch(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
 	const workers = 2
@@ -717,6 +737,8 @@ func TestStartIssueOpsChildConcurrentSameBranch(t *testing.T) {
 }
 
 func TestStartIssueOpsChildConcurrentSiblings(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
 	const workers = 5

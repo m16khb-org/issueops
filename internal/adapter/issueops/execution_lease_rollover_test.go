@@ -27,6 +27,8 @@ func (inspector *rolloverOwnerInspector) InspectOwner(_ context.Context, request
 }
 
 func TestExecutionReplacementRecoversDeadOwnerAfterOrcaRuntimeRollover(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record := rolloverExecutionFixture(t)
 	requester := executionActor("codex", "replacement-owner")
 	inspector := &rolloverOwnerInspector{inventory: port.ExecutionOrcaOwnerInventory{
@@ -121,6 +123,8 @@ func TestExecutionReplacementRecoversDeadOwnerAfterOrcaRuntimeRollover(t *testin
 }
 
 func TestExecutionReplacementRuntimeRolloverSafetyBoundaries(t *testing.T) {
+	t.Parallel()
+
 	t.Run("live owner", func(t *testing.T) {
 		stateRoot, record := rolloverExecutionFixture(t)
 		liveOwner := executionActor("codex", "live-owner")
@@ -248,6 +252,8 @@ func rolloverExecutionFixture(t *testing.T) (string, contractissueops.IssueOpsRe
 // 테스트가 호스트의 열린 파일 목록과 그 프로브 상한에 묶이면 부하에서 깨지므로,
 // finalize 경로는 주입된 관측자를 써야 한다.
 func TestExecutionFinalizePreviewUsesInjectedWorkspaceInspector(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record := rolloverExecutionFixture(t)
 	requester := executionActor("codex", "replacement-owner")
 	inspector := &rolloverOwnerInspector{inventory: port.ExecutionOrcaOwnerInventory{

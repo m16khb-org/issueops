@@ -13,6 +13,8 @@ import (
 )
 
 func TestPublicationVerifierUsesLatestProjectAndPhaseBeforeLiveReadback(t *testing.T) {
+	t.Parallel()
+
 	root := t.TempDir()
 	record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "66-verification"})
 	if err != nil {

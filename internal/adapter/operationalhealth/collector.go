@@ -253,20 +253,24 @@ func (collector Collector) collectGit(ctx context.Context, snapshot *corehealth.
 
 func (collector Collector) collectIssueOps(snapshot *corehealth.Snapshot) ([]issueopscontract.IssueOpsRecord, bool) {
 	stateRoot := collector.IssueOps.StateRoot
-	ids, err := collector.IssueOps.ListIDs(stateRoot)
+	records := []issueopscontract.IssueOpsRecord{}
+	orcaOwned := false
+	unreadable := []string{}
+	err := collector.IssueOps.Scan(stateRoot, func(id string, record issueopscontract.IssueOpsRecord, err error) {
+		if err != nil {
+			unreadable = append(unreadable, id)
+			return
+		}
+		records = append(records, record)
+	})
 	if err != nil {
 		addProblem(snapshot, "issueops", "issueops_list_failed", "IssueOps ID inventory failed")
 		return nil, false
 	}
-	records := make([]issueopscontract.IssueOpsRecord, 0, len(ids))
-	orcaOwned := false
-	for _, id := range ids {
-		record, err := collector.IssueOps.Read(stateRoot, id)
-		if err != nil {
-			addProblem(snapshot, "issueops_record", "issueops_read_failed", "could not read IssueOps record "+strings.TrimSpace(id))
-			continue
-		}
-		records = append(records, record)
+	for _, id := range unreadable {
+		addProblem(snapshot, "issueops_record", "issueops_read_failed", "could not read IssueOps record "+strings.TrimSpace(id))
+	}
+	for _, record := range records {
 		cycle, problems := cycleFromRecord(record, collector.InspectNativeProcess)
 		snapshot.Cycles = append(snapshot.Cycles, cycle)
 		snapshot.InventoryProblems = append(snapshot.InventoryProblems, problems...)

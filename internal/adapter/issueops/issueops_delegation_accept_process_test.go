@@ -23,6 +23,8 @@ const (
 )
 
 func TestAcceptIssueOpsChildrenConcurrentlyAcrossProcesses(t *testing.T) {
+	t.Parallel()
+
 	if testing.Short() {
 		t.Skip("cross-process IssueOps delegation accept test skipped in -short")
 	}
@@ -143,6 +145,8 @@ func waitForAcceptProcessReadyMarkers(t *testing.T, markers []string, timeout ti
 }
 
 func TestIssueOpsDelegationAcceptProcessHelper(t *testing.T) {
+	t.Parallel()
+
 	if os.Getenv(acceptProcessHelperModeEnv) == "" {
 		t.Skip("subprocess helper only")
 	}

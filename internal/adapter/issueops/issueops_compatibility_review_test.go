@@ -10,6 +10,8 @@ import (
 )
 
 func TestIssueOpsImplementationReadinessRequiresCompatibilityReview(t *testing.T) {
+	t.Parallel()
+
 	repo := filepath.Join(t.TempDir(), "example")
 	worktree := makeIssueOpsWorktreeDirForTest(t, repo, "1-demo")
 	record := issueops.IssueOpsRecord{
@@ -44,6 +46,8 @@ func TestIssueOpsImplementationReadinessRequiresCompatibilityReview(t *testing.T
 }
 
 func TestIssueOpsPhaseImplementRequiresCompatibilityReviewPhase(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
 	branch := "123-compatibility-review"

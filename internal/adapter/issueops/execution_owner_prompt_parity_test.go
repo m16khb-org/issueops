@@ -11,6 +11,8 @@ import (
 // 일치해야 한다. 이 parity가 없으면 문서와 실제 dispatch prompt가 조용히
 // 갈라진다(design-review 1차 리뷰가 지적한 drift 리스크).
 func TestExecutionOwnerPromptMatchesKarpathyDoc(t *testing.T) {
+	t.Parallel()
+
 	docPath := filepath.Join("..", "..", "..", ".issueops", "prompt-engineering", "prompts", "issueops-v1-owner-execution-v1.md")
 	doc, err := os.ReadFile(docPath)
 	if err != nil {

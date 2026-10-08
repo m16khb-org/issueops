@@ -14,6 +14,8 @@ import (
 )
 
 func TestExecuteExecutionReseedRequiresInjectedHandler(t *testing.T) {
+	t.Parallel()
+
 	_, err := testExecutionService().Execute(context.Background(), t.TempDir(), issueopscontract.ExecutionActionRequest{
 		Action:        issueopscontract.ExecutionActionReplace,
 		ReplaceAction: issueopscontract.ExecutionReplaceReseed,
@@ -25,6 +27,8 @@ func TestExecuteExecutionReseedRequiresInjectedHandler(t *testing.T) {
 }
 
 func TestExecuteExecutionReseedUsesInjectedHandlerOnce(t *testing.T) {
+	t.Parallel()
+
 	called := 0
 	result, err := testExecutionService().Execute(context.Background(), t.TempDir(), issueopscontract.ExecutionActionRequest{
 		Action:               issueopscontract.ExecutionActionReplace,
@@ -53,6 +57,8 @@ func TestExecuteExecutionReseedUsesInjectedHandlerOnce(t *testing.T) {
 }
 
 func TestExecutionReseedNextCommandRendersModeSpecificRecovery(t *testing.T) {
+	t.Parallel()
+
 	direct := ownerdomain.OwnerReseedNextCommand("io-direct", 2, "direct", "/tmp/lease-2.token")
 	for _, want := range []string{"execution claim", "--generation 2", "--claim-current-token"} {
 		if !strings.Contains(direct, want) {

@@ -34,6 +34,8 @@ func recordAtPhaseForRegressTest(t *testing.T, phase issueops.IssueOpsPhase) (st
 }
 
 func TestRegressIssueOpsForReplanFromPlan(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, id := recordAtPhaseForRegressTest(t, issueops.IssueOpsPhasePlan)
 
 	if _, err := RegressIssueOpsForReplan(stateRoot, id, "  "); err == nil {
@@ -80,6 +82,8 @@ func TestRegressIssueOpsForReplanFromPlan(t *testing.T) {
 }
 
 func TestRegressIssueOpsForReplanRejectedOutsidePlanCompat(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, id := recordAtPhaseForRegressTest(t, issueops.IssueOpsPhaseProblem)
 	if _, err := RegressIssueOpsForReplan(stateRoot, id, "too early"); err == nil {
 		t.Fatal("regression from problem phase must be rejected")
@@ -87,6 +91,8 @@ func TestRegressIssueOpsForReplanRejectedOutsidePlanCompat(t *testing.T) {
 }
 
 func TestRegressRefusedForImplementPhaseParentWithChildren(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
 	if _, err := startIssueOpsChildForTest(stateRoot, parent, issueops.IssueOpsChildStartRequest{
@@ -104,6 +110,8 @@ func TestRegressRefusedForImplementPhaseParentWithChildren(t *testing.T) {
 }
 
 func TestRegressIssueOpsForReplanBlockedByActiveChildren(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
 	started, err := startIssueOpsChildForTest(stateRoot, parent, issueops.IssueOpsChildStartRequest{
@@ -140,6 +148,8 @@ func TestRegressIssueOpsForReplanBlockedByActiveChildren(t *testing.T) {
 }
 
 func TestRegressIssueOpsForReplanRequiresReflectedStop(t *testing.T) {
+	t.Parallel()
+
 	// No devil's-advocate stop verdict → rejected.
 	stateRoot, id := recordAtPhaseForRegressTest(t, issueops.IssueOpsPhasePlan)
 	rec, err := ReadIssueOps(stateRoot, id)
@@ -170,6 +180,8 @@ func TestRegressIssueOpsForReplanRequiresReflectedStop(t *testing.T) {
 }
 
 func TestRegressIssueOpsForReplanExplainsReviseRecovery(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, id := recordAtPhaseForRegressTest(t, issueops.IssueOpsPhaseCompatibilityReview)
 	rec, err := ReadIssueOps(stateRoot, id)
 	if err != nil {
@@ -196,6 +208,8 @@ func TestRegressIssueOpsForReplanExplainsReviseRecovery(t *testing.T) {
 // 계획 검토 구간은 렌더만 바뀌고 거부 규칙이 없다(#513). 한글 20자에 못 미치는
 // 짧은 중단 지적도 반영되고, 반영 뒤 regress가 통과해야 한다.
 func TestShortKoreanStopReflectsAndRegresses(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, id := recordAtPhaseForRegressTest(t, issueops.IssueOpsPhasePlan)
 	rec, err := ReadIssueOps(stateRoot, id)
 	if err != nil {

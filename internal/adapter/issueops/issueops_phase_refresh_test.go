@@ -9,6 +9,8 @@ import (
 )
 
 func TestIssueOpsRefreshesAISlopCleanEvidenceFromFeedback(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
 	branch := "13-refresh-cleanup"

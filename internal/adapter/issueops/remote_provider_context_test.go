@@ -22,6 +22,8 @@ func (provider *contextPullRequestProvider) CreatePullRequestContext(
 }
 
 func TestCreateRemotePullRequestViaProviderPropagatesContext(t *testing.T) {
+	t.Parallel()
+
 	type contextKey struct{}
 	ctx := context.WithValue(context.Background(), contextKey{}, "request")
 	provider := &contextPullRequestProvider{fakeCompletionProvider: &fakeCompletionProvider{}}

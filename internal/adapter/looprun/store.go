@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/fs"
 	loopruncontract "issueops/internal/contract/looprun"
+	loopdomain "issueops/internal/domain/looprun"
 	"issueops/internal/port"
 	"strings"
 )
@@ -16,10 +17,10 @@ import (
 const loopBucket = "loop"
 
 type Store struct {
-	Directory    string
-	OpenDatabase func(string) (StateDatabase, error)
-	GetExisting  func(dir, bucket, id string) ([]byte, bool, error)
-	ListExisting func(dir, bucket string) ([]string, error)
+	Directory      string
+	OpenDatabase   func(string) (StateDatabase, error)
+	GetExisting    func(dir, bucket, id string) ([]byte, bool, error)
+	GetAllExisting func(dir, bucket string) ([]port.RecordRow, error)
 }
 
 func (store Store) open() (StateDatabase, error) { return store.OpenDatabase(store.Directory) }
@@ -56,6 +57,14 @@ func (store Store) ReadExisting(loopID string) (loopruncontract.LoopRun, error) 
 	}
 	if !ok {
 		return loopruncontract.LoopRun{OK: false, ID: loopID}, fmt.Errorf("loop %s: %w", loopID, fs.ErrNotExist)
+	}
+	return decodeLoop(loopID, data)
+}
+
+func decodeExistingLoop(id string, data []byte) (loopruncontract.LoopRun, error) {
+	loopID, err := normalizeLoopID(id)
+	if err != nil {
+		return loopruncontract.LoopRun{OK: false}, err
 	}
 	return decodeLoop(loopID, data)
 }
@@ -102,15 +111,23 @@ func (store Store) Write(ctx context.Context, loop loopruncontract.LoopRun) (loo
 	return loop, nil
 }
 
-func (store Store) ListIDs() ([]string, error) {
-	ids, err := store.ListExisting(store.Directory, loopBucket)
+// ReadAllExisting decodes every stored loop from one read-only scan without
+// creating, repairing, or changing permissions on the loop store. A row that
+// does not decode keeps its error in the observation.
+func (store Store) ReadAllExisting() ([]loopdomain.LoopObservation, error) {
+	rows, err := store.GetAllExisting(store.Directory, loopBucket)
 	if errors.Is(err, fs.ErrNotExist) {
-		return []string{}, nil
+		return []loopdomain.LoopObservation{}, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	return ids, nil
+	observations := make([]loopdomain.LoopObservation, 0, len(rows))
+	for _, row := range rows {
+		loop, err := decodeExistingLoop(row.ID, row.Data)
+		observations = append(observations, loopdomain.LoopObservation{ID: row.ID, Loop: loop, Error: err})
+	}
+	return observations, nil
 }
 
 func newLoopID(repo, name string) string {

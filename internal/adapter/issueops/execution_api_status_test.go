@@ -11,6 +11,8 @@ import (
 )
 
 func TestExecutionStatusUsesConfiguredHandler(t *testing.T) {
+	t.Parallel()
+
 	calls := 0
 	out, err := testExecutionService().Execute(t.Context(), "isolated-state", model.ExecutionActionRequest{Action: model.ExecutionActionStatus, ID: "io-status"}, issueopsport.ExecutionActionDependencies{Status: func(_ context.Context, root, id string) (model.ExecutionResult, error) {
 		calls++

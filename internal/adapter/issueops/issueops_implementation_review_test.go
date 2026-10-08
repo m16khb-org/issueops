@@ -13,6 +13,8 @@ import (
 )
 
 func TestRecordIssueOpsImplementationReviewValidation(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := gitInitedRepoForReviewTest(t)
 	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "83-review"})
@@ -68,6 +70,8 @@ func gitInitedRepoForReviewTest(t *testing.T) string {
 // AC-05: execution이 있는 모든 모드에 fail-closed로 적용된다. execution이 없는
 // 레코드(execution을 준비하기 전)만 면제다.
 func TestImplementationReviewMissingAppliesToEveryExecutionMode(t *testing.T) {
+	t.Parallel()
+
 	record := issueops.IssueOpsRecord{}
 	if got := cycleapp.ImplementationReviewMissing(record, ""); got != "" {
 		t.Fatalf("record without execution must not be gated: %q", got)
@@ -100,6 +104,8 @@ func TestImplementationReviewMissingAppliesToEveryExecutionMode(t *testing.T) {
 }
 
 func TestStrictPRReadinessSurfacesImplementationReview(t *testing.T) {
+	t.Parallel()
+
 	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{Mode: issueops.ExecutionModeOrca, Selection: selectionFixture(issueops.ExecutionModeOrca)}}
 	ready := IssueOpsPRReadiness(record)
 	if !containsString(ready.Missing, "implementation_review") {
@@ -110,6 +116,8 @@ func TestStrictPRReadinessSurfacesImplementationReview(t *testing.T) {
 // 9단계 재편에서 direct가 기본 경로가 됐다. 검증 단계가 이 기록을 만들므로
 // direct 사이클의 pr readiness도 리뷰 없이는 열리지 않아야 한다.
 func TestDirectModeRequiresImplementationReviewForPR(t *testing.T) {
+	t.Parallel()
+
 	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{Mode: issueops.ExecutionModeDirect, Selection: selectionFixture(issueops.ExecutionModeDirect)}}
 	if ready := IssueOpsPRReadiness(record); !containsString(ready.Missing, "implementation_review") {
 		t.Fatalf("direct mode must surface the implementation review gate: %+v", ready.Missing)
@@ -121,6 +129,8 @@ func TestDirectModeRequiresImplementationReviewForPR(t *testing.T) {
 }
 
 func TestOwnerCommandsIncludeImplementationReviewWithRuntimeInputs(t *testing.T) {
+	t.Parallel()
+
 	repo := t.TempDir()
 	worktree := filepath.Join(t.TempDir(), "83-review")
 	record := issueops.IssueOpsRecord{
@@ -151,6 +161,8 @@ func TestOwnerCommandsIncludeImplementationReviewWithRuntimeInputs(t *testing.T)
 // fingerprint가 생기는 순간 stale로 잡힌다. project_docs_review와 같은 관용이며,
 // 게이트를 모든 모드로 넓힌 뒤 탈출구 없는 교착을 만들지 않기 위한 것이다.
 func TestImplementationReviewSealsAnEmptyFingerprintAndCatchesItLater(t *testing.T) {
+	t.Parallel()
+
 	record := issueops.IssueOpsRecord{
 		Execution:            &issueops.Execution{Mode: issueops.ExecutionModeDirect, Selection: selectionFixture(issueops.ExecutionModeDirect)},
 		ImplementationReview: &issueops.IssueOpsImplementationReview{Verdict: "pass", ReviewedFingerprint: ""},

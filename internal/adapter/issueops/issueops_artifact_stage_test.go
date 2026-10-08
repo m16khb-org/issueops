@@ -14,6 +14,8 @@ import (
 )
 
 func TestRequireStagedExecutionOwnerPlanArtifact(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name          string
 		stage         map[string]string
@@ -162,6 +164,8 @@ func TestRequireStagedExecutionOwnerPlanArtifact(t *testing.T) {
 }
 
 func TestExecutionOwnerPlanMaterializationRequiresDurableIdentity(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name      string
 		stagePlan bool
@@ -227,6 +231,8 @@ func TestExecutionOwnerPlanMaterializationRequiresDurableIdentity(t *testing.T) 
 }
 
 func TestArtifactStagingReleasedRecoveryPredicate(t *testing.T) {
+	t.Parallel()
+
 	holder := executionActor("codex", "artifact-holder")
 	tests := []struct {
 		name      string
@@ -266,6 +272,8 @@ func TestArtifactStagingReleasedRecoveryPredicate(t *testing.T) {
 }
 
 func TestReleasedArtifactStagingChangesOnlyNextResealInput(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record := executionPrepareRecord(t)
 	worktree := t.TempDir()
 	record.WorktreePath = worktree
@@ -301,6 +309,8 @@ func TestReleasedArtifactStagingChangesOnlyNextResealInput(t *testing.T) {
 }
 
 func TestReleasedArtifactRecoveryLinksPlanBeforeStaging(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record := executionPrepareRecord(t)
 	worktree := t.TempDir()
 	record.WorktreePath = worktree
@@ -334,6 +344,8 @@ func TestReleasedArtifactRecoveryLinksPlanBeforeStaging(t *testing.T) {
 }
 
 func TestArtifactReleasedNearMissRequiresReseedBeforeResume(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record := executionPrepareRecord(t)
 	worktree := t.TempDir()
 	record.WorktreePath = worktree
@@ -399,6 +411,8 @@ func writePlanArtifactTestFile(t *testing.T, path, content string) {
 }
 
 func TestRequireStagedExecutionOwnerPlanRejectsStaleDevilsAdvocateReview(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record := executionPrepareRecord(t)
 	record.WorktreePath = t.TempDir()
 	record.PlanPath = filepath.Join(record.WorktreePath, "plan.md")
@@ -437,6 +451,8 @@ func TestRequireStagedExecutionOwnerPlanRejectsStaleDevilsAdvocateReview(t *test
 }
 
 func TestRequireStagedExecutionOwnerPlanSkipsPlanBindingAfterImplementEntry(t *testing.T) {
+	t.Parallel()
+
 	stateRoot, record := executionPrepareRecord(t)
 	if _, err := stageIssueOpsArtifactForTest(stateRoot, record.ID, "plan", []byte("# Plan edited during implementation\n")); err != nil {
 		t.Fatal(err)

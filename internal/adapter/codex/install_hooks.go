@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"issueops/internal/domain/shelltoken"
 	"issueops/internal/port"
 )
 
@@ -94,7 +95,7 @@ func codexHookGroup(spec codexLifecycleHookSpec) map[string]any {
 }
 
 func codexHookCommand(binPath, subcommand string) string {
-	cmd := fmt.Sprintf("%s hook %s", shellQuote(binPath), subcommand)
+	cmd := fmt.Sprintf("%s hook %s", shelltoken.QuoteWord(binPath), subcommand)
 	// additionalContext가 Codex TUI에 렌더링되는 이벤트는 --host codex를 넘겨
 	// systemMessage를 생략한다.
 	switch subcommand {
@@ -125,7 +126,7 @@ func (installer Installer) mergeHookConfig(config map[string]any, binPath string
 				if !hookGroupHasHooks(group) {
 					continue
 				}
-				if installer.deps.HookGroupContainsAgentHarness(group) || installer.deps.HookGroupContainsCommand(group, shellQuote(binPath)+" hook ") {
+				if installer.deps.HookGroupContainsAgentHarness(group) || installer.deps.HookGroupContainsCommand(group, shelltoken.QuoteWord(binPath)+" hook ") {
 					if spec, desiredEvent := desired[event]; desiredEvent && !replaced {
 						groups = append(groups, codexHookGroup(spec))
 						replaced = true

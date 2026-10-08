@@ -7,6 +7,8 @@ import (
 )
 
 func TestIssueOpsStrictPRReadinessBlocksIncompleteChildren(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
 	started, err := startIssueOpsChildForTest(stateRoot, parent, issueops.IssueOpsChildStartRequest{
@@ -47,6 +49,8 @@ func TestIssueOpsStrictPRReadinessBlocksIncompleteChildren(t *testing.T) {
 }
 
 func TestIssueOpsStrictPRReadinessRejectedAndDroppedVerdicts(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
 	started, err := startIssueOpsChildForTest(stateRoot, parent, issueops.IssueOpsChildStartRequest{
@@ -88,6 +92,8 @@ func TestIssueOpsStrictPRReadinessRejectedAndDroppedVerdicts(t *testing.T) {
 }
 
 func TestIssueOpsParentWithoutChildrenUnaffected(t *testing.T) {
+	t.Parallel()
+
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
 	ready := IssueOpsStrictPRReadinessWithState(stateRoot, parent)

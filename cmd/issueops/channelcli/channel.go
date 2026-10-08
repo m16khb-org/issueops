@@ -4,17 +4,20 @@
 package channelcli
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"issueops/cmd/issueops/jsonout"
 	channelcontract "issueops/internal/contract/channel"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 // Dependencies는 channel CLI가 필요한 연산을 함수로 받는다.
 type Dependencies struct {
 	Send func(channelcontract.SendRequest) (channelcontract.SendResult, error)
-	Recv func(channelcontract.RecvRequest) (channelcontract.RecvResult, error)
+	Recv func(context.Context, channelcontract.RecvRequest) (channelcontract.RecvResult, error)
 }
 
 // TimedOutError는 recv --wait가 시간 안에 메시지를 못 본 종료 오류이다(exit 1).
@@ -80,7 +83,9 @@ func runRecv(deps Dependencies, args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	result, err := deps.Recv(channelcontract.RecvRequest{
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	result, err := deps.Recv(ctx, channelcontract.RecvRequest{
 		Channel:        *channelName,
 		SinceID:        *since,
 		Wait:           *wait,

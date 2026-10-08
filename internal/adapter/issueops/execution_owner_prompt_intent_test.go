@@ -8,6 +8,8 @@ import (
 // AC-04: owner prompt 시작 절차 3은 봉인된 intent.md를 요청자 의도 계약으로 먼저 읽고,
 // issue body와 충돌하면 mutation 없이 blocker를 보고하라고 지시한다.
 func TestExecutionOwnerPromptReadsSealedIntentBeforeImplementing(t *testing.T) {
+	t.Parallel()
+
 	for _, want := range []string{
 		"manifest에 intent가 있으면",
 		"intent.md",
