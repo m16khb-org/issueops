@@ -2,13 +2,9 @@
 
 ← [ADR index](../ADR.md)
 
-This module retains the original issueops implementation plan: target
-architecture, phase-by-phase deliverables and acceptance criteria, MVP scope,
-risk register, and next-work candidates. Phase status lines are historical
-snapshots from when each phase was written; the current implementation surface
-lives in root `ARCHITECTURE.md` and `OPERATIONS.md`. Foundational decisions
-behind this plan are immutable dated records in this folder and are linked from
-the [ADR index](../ADR.md).
+This module retains the original issueops implementation plan: target architecture, phase-by-phase deliverables and acceptance criteria, MVP scope, risk register, and next-work candidates.
+Phase status lines are historical snapshots from when each phase was written; the current implementation surface lives in root `ARCHITECTURE.md` and `OPERATIONS.md`.
+Foundational decisions behind this plan are immutable dated records in this folder and are linked from the [ADR index](../ADR.md).
 
 ## 목표 아키텍처
 

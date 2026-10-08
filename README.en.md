@@ -279,7 +279,7 @@ host's user-level skill path at this directory.
 - Project docs: `project-bootstrap`, `project-docs-bootstrap`, `project-docs-update`, `project-docs-optimize`
 - UI/UX and browser QA: `ui-ux-craft`, `aside-functional-qa`, `aside-visual-qa`, `aside-web-qa`, `read-public-artifact`. Of these, `ui-ux-craft` and `aside-web-qa` are reached from stages 4 and 7 when `next.review.frontend` is set; the other two QA skills are driven by that orchestrator, never called by the cycle directly
 - Code review: `pr-review`, `review-agent-feedback`
-- Operational improvement: `io-update`, `self-verify`, `self-augment`, `stability-audit`
+- Operational improvement: `io-update`, `io-model`, `self-verify`, `self-augment`, `stability-audit`
 - Korean writing and diagrams: `fluent-korean`, `diagram-design`
 
 Each skill's contract lives in its `SKILL.md`. The twelve pioneer skills are

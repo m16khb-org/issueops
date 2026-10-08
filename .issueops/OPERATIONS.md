@@ -46,7 +46,7 @@ Skill-quality scorecards and dogfood evaluations are research records under
 
 ## Core Surfaces
 
-1. Native skills: `io-update`, `atomic-commit-push`, `issueops`, `self-augment`,
+1. Native skills: `io-update`, `io-model`, `atomic-commit-push`, `issueops`, `self-augment`,
    `project-bootstrap`, `self-verify`, `stability-audit`, plus the named
    specialist skills in `skills/`. The IssueOps stage skills are
    `issueops-create-issue`, `issueops-prepare`, `issueops-plan`,
