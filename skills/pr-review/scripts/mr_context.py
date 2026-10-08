@@ -560,11 +560,21 @@ def _codegraph_symbol(checkout: str, sym: str) -> list[str]:
     return out[:25]
 
 
+def _git_work_tree(checkout: str) -> bool:
+    try:
+        p = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"], cwd=checkout, capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return p.returncode == 0 and p.stdout.strip() == "true"
+
+
 def _rg_symbol(checkout: str, sym: str) -> tuple[list[str], str]:
-    """Returns the hits and the tool that produced them: rg or grep."""
+    """Returns the hits and the tool that produced them: rg, git grep, or grep."""
     cmd = ["rg", "-n", "--no-heading", "--color", "never", "-m", "3", "--glob", "!node_modules", "--glob", "!dist", "--glob", "!*lock*", "--glob", "!*.min.*", rf"\b{re.escape(sym)}\b", "."]
-    # rg 가 없는 머신(GitHub runner 등)에서도 정의를 놓치지 않도록 grep 으로 찾는다. 명시 glob 과
-    # .git·바이너리 제외는 rg 와 맞추고, .gitignore 와 숨김 경로 규칙은 맞추지 않는다.
+    # rg 가 없는 머신(GitHub runner 등)에서는 git 작업 트리면 git grep 으로 .gitignore 를 따르고, 아니면 grep 으로 찾는다.
+    # git pathspec 의 magic 없는 * 는 / 까지 맞으므로 glob magic 으로 rg 의 제외 규칙을 맞춘다.
+    git_grep = ["git", "grep", "--untracked", "-n", "-w", "-F", "-I", "--max-count", "3", "-e", sym, "--", ".",
+                ":(exclude,glob)**/*lock*", ":(exclude,glob)**/*.min.*", ":(exclude,glob)**/node_modules/**", ":(exclude,glob)**/dist/**"]
     grep = ["grep", "-rnwFI", "-m", "3", "--exclude-dir=.git", "--exclude-dir=node_modules", "--exclude-dir=dist", "--exclude=*lock*", "--exclude=*.min.*", "-e", sym, "."]
     try:
         return _hits(subprocess.run(cmd, cwd=checkout, capture_output=True, text=True, timeout=30)), "rg"
@@ -572,6 +582,14 @@ def _rg_symbol(checkout: str, sym: str) -> tuple[list[str], str]:
         pass
     except (OSError, subprocess.TimeoutExpired):
         return [], "rg"
+    if _git_work_tree(checkout):
+        try:
+            p = subprocess.run(git_grep, cwd=checkout, capture_output=True, text=True, timeout=30)
+            # 종료 코드 1 은 결과 없음이다. 그보다 크면 git grep 이 실패한 것이므로(예: --max-count 가 없는 2.38 미만) grep 으로 찾는다.
+            if p.returncode <= 1:
+                return _hits(p), "git grep"
+        except (OSError, subprocess.TimeoutExpired):
+            pass
     try:
         return _hits(subprocess.run(grep, cwd=checkout, capture_output=True, text=True, timeout=30)), "grep"
     except (OSError, subprocess.TimeoutExpired):
