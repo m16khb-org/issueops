@@ -37,6 +37,17 @@ func Select(candidates []docscontract.Candidate, tracked map[string]bool, gitAva
 	return selected
 }
 
+// Eligible drops runtime evidence; Select only ever returns eligible paths.
+func Eligible(candidates []docscontract.Candidate) []docscontract.Candidate {
+	out := make([]docscontract.Candidate, 0, len(candidates))
+	for _, candidate := range candidates {
+		if !excluded(candidate.RelPath) {
+			out = append(out, candidate)
+		}
+	}
+	return out
+}
+
 func excluded(relativePath string) bool {
 	const evidenceDir = ".issueops/evidence"
 	return relativePath == evidenceDir || strings.HasPrefix(relativePath, evidenceDir+"/")

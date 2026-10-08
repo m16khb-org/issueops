@@ -8059,6 +8059,7 @@
       "symbols": [
         "func Service.Index",
         "func Service.List",
+        "func Service.startList",
         "type Service"
       ]
     },
@@ -12704,6 +12705,7 @@
       "owner": "domain",
       "task": "T20",
       "symbols": [
+        "func Eligible",
         "func Roots",
         "func Select",
         "func authoringScope.includes",
