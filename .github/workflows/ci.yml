@@ -136,3 +136,32 @@ jobs:
           trap cleanup EXIT
           HOME="$tmp_home" CODEX_HOME="$tmp_home/.codex" ./scripts/install-native.sh --skip-build --path-mode=skip --mcp-transport=stdio
           HOME="$tmp_home" CODEX_HOME="$tmp_home/.codex" ./bin/issueops self-verify --seed=100 --target-score=95 --llm-eval=false --json
+
+      # The same temporary HOME with the HTTP transport: the runner's user
+      # manager searches units under its own HOME, so the install must refuse
+      # before it writes the credential or the unit instead of failing at
+      # `systemctl --user enable` after writing both (#550).
+      - name: HTTP MCP install refuses a HOME the user systemd manager does not search
+        run: |
+          tmp_home="$(mktemp -d)"
+          cleanup() {
+            chmod -R u+w "$tmp_home" 2>/dev/null || true
+            rm -rf "$tmp_home"
+          }
+          trap cleanup EXIT
+          if out="$(HOME="$tmp_home" CODEX_HOME="$tmp_home/.codex" ./scripts/install-native.sh --skip-build --path-mode=skip --mcp-transport=http 2>&1)"; then
+            echo "$out"
+            echo "::error::HTTP install from a temporary HOME succeeded"
+            exit 1
+          fi
+          echo "$out"
+          if ! grep -qF "is not searched by the running systemd user manager" <<<"$out"; then
+            echo "::error::HTTP install failed without the unit search path error"
+            exit 1
+          fi
+          for written in "$tmp_home/.local/state/issueops/mcp-http/bearer" "$tmp_home/.config/systemd/user/issueops-mcp.service"; do
+            if [ -e "$written" ]; then
+              echo "::error::refused HTTP install wrote $written"
+              exit 1
+            fi
+          done

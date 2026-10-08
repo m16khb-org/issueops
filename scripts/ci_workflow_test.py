@@ -40,6 +40,9 @@ class CIWorkflowTests(unittest.TestCase):
         self.assertIn("--llm-eval=false", selfverify)
         install = next(line for line in selfverify.splitlines() if "./scripts/install-native.sh" in line)
         self.assertIn("--mcp-transport=stdio", install)
+        http = [body for _, body in blocks if "--mcp-transport=http" in body]
+        self.assertEqual(len(http), 1)
+        self.assertNotIn("self-verify", http[0])
 
     def test_blocks_propagate_failures_and_isolate_native_home(self):
         for fail_at in ("", "python", "go", "race", "install"):
@@ -107,6 +110,43 @@ class CIWorkflowTests(unittest.TestCase):
                     self.assertFalse(Path(isolated_home).exists(), 'EXIT trap must clean up on success and failure')
                 self.assertEqual((ambient_home / 'sentinel').read_text(), 'preserved')
                 self.assertEqual(list(ambient_home.iterdir()), [ambient_home / 'sentinel'])
+
+    def test_http_home_mismatch_block_requires_refusal_before_writes(self):
+        body = next(body for _, body in run_blocks() if "--mcp-transport=http" in body)
+        refusal = "unit directory /tmp/x is not searched by the running systemd user manager"
+        for mode, expected in (("refuse", 0), ("succeed", 1), ("other", 1), ("unit", 1), ("credential", 1)):
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / "scripts").mkdir()
+                install = root / "scripts/install-native.sh"
+                install.write_text("#!" + sys.executable + "\n" + textwrap.dedent('''\
+                    import json, os, pathlib, sys
+                    home = pathlib.Path(os.environ['HOME'])
+                    with open(os.environ['EVENTS'], 'a') as log:
+                        log.write(json.dumps({'home': str(home), 'args': sys.argv[1:]}) + '\\n')
+                    mode = os.environ['HTTP_MODE']
+                    written = {'unit': '.config/systemd/user/issueops-mcp.service', 'credential': '.local/state/issueops/mcp-http/bearer'}
+                    if mode in written:
+                        (home / written[mode]).parent.mkdir(parents=True)
+                        (home / written[mode]).write_text('x')
+                    if mode == 'succeed':
+                        sys.exit(0)
+                    print('other failure' if mode == 'other' else os.environ['REFUSAL'], file=sys.stderr)
+                    sys.exit(1)
+                    '''))
+                install.chmod(0o755)
+                events = root / "events.jsonl"
+                ambient_home = root / "ambient-home"
+                ambient_home.mkdir()
+                env = dict(os.environ, HOME=str(ambient_home), EVENTS=str(events), HTTP_MODE=mode, REFUSAL=refusal)
+                result = subprocess.run(["bash", "--noprofile", "--norc", "-e", "-o", "pipefail", "-c", body],
+                                        cwd=root, env=env, capture_output=True, text=True, timeout=10)
+                self.assertEqual(result.returncode, expected, result.stdout + result.stderr)
+                [event] = [json.loads(line) for line in events.read_text().splitlines()]
+                self.assertIn("--mcp-transport=http", event["args"])
+                self.assertNotEqual(event["home"], str(ambient_home))
+                self.assertFalse(Path(event["home"]).exists(), 'EXIT trap must clean up on success and failure')
+                self.assertEqual(list(ambient_home.iterdir()), [])
 
 
 if __name__ == '__main__':
