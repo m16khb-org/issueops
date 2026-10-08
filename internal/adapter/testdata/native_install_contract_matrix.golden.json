@@ -73,8 +73,8 @@
               "kind": "claude_hooks_template",
               "path": "$ROOT/configs/claude/hooks.settings.json",
               "written": true,
-              "content_sha256": "11902a6be568837ec98a082cb3fc7b46d1f3c8b96c7a98bd1bb65d74741aae2d",
-              "content": "{\n  \"hooks\": {\n    \"SessionStart\": [\n      {\n        \"hooks\": [\n          {\n            \"command\": \"'./bin/issueops' hook session-start --host claude\",\n            \"timeout\": 5,\n            \"type\": \"command\"\n          }\n        ]\n      }\n    ]\n  }\n}\n"
+              "content_sha256": "1de272ade0ad75e28c6e285e4b21cb948873d17bc73e35f7241783aacbeaf77c",
+              "content": "{\n  \"hooks\": {\n    \"SessionStart\": [\n      {\n        \"hooks\": [\n          {\n            \"command\": \"'./bin/issueops' hook session-start --host claude\",\n            \"timeout\": 5,\n            \"type\": \"command\"\n          }\n        ]\n      }\n    ],\n    \"SubagentStart\": [\n      {\n        \"hooks\": [\n          {\n            \"command\": \"'./bin/issueops' hook subagent-start --host claude\",\n            \"timeout\": 5,\n            \"type\": \"command\"\n          }\n        ]\n      }\n    ]\n  }\n}\n"
             },
             {
               "kind": "claude_project_mcp_config",
@@ -101,8 +101,8 @@
               "kind": "claude_user_settings",
               "path": "$HOME/.claude/settings.json",
               "written": true,
-              "content_sha256": "83e41b2d807ea0605ff012c3bad6ead81cf70541c0e119298a3589deadd1201b",
-              "content": "{\n  \"hooks\": {\n    \"SessionStart\": [\n      {\n        \"hooks\": [\n          {\n            \"command\": \"'$BIN' hook session-start --host claude\",\n            \"timeout\": 5,\n            \"type\": \"command\"\n          }\n        ]\n      }\n    ]\n  }\n}\n"
+              "content_sha256": "fb1da6faa42eb0ae4d4c20982ade84a86363ad61f18a40ee06a1d2d541977eed",
+              "content": "{\n  \"hooks\": {\n    \"SessionStart\": [\n      {\n        \"hooks\": [\n          {\n            \"command\": \"'$BIN' hook session-start --host claude\",\n            \"timeout\": 5,\n            \"type\": \"command\"\n          }\n        ]\n      }\n    ],\n    \"SubagentStart\": [\n      {\n        \"hooks\": [\n          {\n            \"command\": \"'$BIN' hook subagent-start --host claude\",\n            \"timeout\": 5,\n            \"type\": \"command\"\n          }\n        ]\n      }\n    ]\n  }\n}\n"
             }
           ],
           "links": [
@@ -139,8 +139,8 @@
               "kind": "codex_hooks_template",
               "path": "$ROOT/configs/codex/hooks.json",
               "written": true,
-              "content_sha256": "8059275c1747031c22d4c236f3803d705ca77ecfa0bfc152cef97ae376e0018f",
-              "content": "{\n  \"hooks\": {\n    \"SessionStart\": [\n      {\n        \"hooks\": [\n          {\n            \"command\": \"'./bin/issueops' hook session-start --host codex\",\n            \"timeout\": 5,\n            \"type\": \"command\"\n          }\n        ]\n      }\n    ]\n  }\n}\n"
+              "content_sha256": "ed4671dc52dcbdbb6cef919fb0e24b49119f33f4577a06d14c0debc355b50b6c",
+              "content": "{\n  \"hooks\": {\n    \"SessionStart\": [\n      {\n        \"hooks\": [\n          {\n            \"command\": \"'./bin/issueops' hook session-start --host codex\",\n            \"timeout\": 5,\n            \"type\": \"command\"\n          }\n        ]\n      }\n    ],\n    \"SubagentStart\": [\n      {\n        \"hooks\": [\n          {\n            \"command\": \"'./bin/issueops' hook subagent-start --host codex\",\n            \"timeout\": 5,\n            \"type\": \"command\"\n          }\n        ]\n      }\n    ]\n  }\n}\n"
             },
             {
               "kind": "codex_mcp_template",
@@ -153,8 +153,8 @@
               "kind": "codex_user_hooks_config",
               "path": "$CODEX_HOME/hooks.json",
               "written": true,
-              "content_sha256": "15d1e711f5592554ae877e649db23bb2eb0082f67eece5bb61943e2d2e61ef02",
-              "content": "{\n  \"hooks\": {\n    \"SessionStart\": [\n      {\n        \"hooks\": [\n          {\n            \"command\": \"'$BIN' hook session-start --host codex\",\n            \"timeout\": 5,\n            \"type\": \"command\"\n          }\n        ]\n      }\n    ]\n  }\n}\n"
+              "content_sha256": "ed8606b10ab644d972b4711978fce382a9505a1e5b555c4fae1cccfde874183b",
+              "content": "{\n  \"hooks\": {\n    \"SessionStart\": [\n      {\n        \"hooks\": [\n          {\n            \"command\": \"'$BIN' hook session-start --host codex\",\n            \"timeout\": 5,\n            \"type\": \"command\"\n          }\n        ]\n      }\n    ],\n    \"SubagentStart\": [\n      {\n        \"hooks\": [\n          {\n            \"command\": \"'$BIN' hook subagent-start --host codex\",\n            \"timeout\": 5,\n            \"type\": \"command\"\n          }\n        ]\n      }\n    ]\n  }\n}\n"
             },
             {
               "kind": "codex_user_mcp_config",
@@ -331,8 +331,8 @@
               "kind": "claude_hooks_template",
               "path": "$ROOT/configs/claude/hooks.settings.json",
               "written": true,
-              "content_sha256": "11902a6be568837ec98a082cb3fc7b46d1f3c8b96c7a98bd1bb65d74741aae2d",
-              "content": "{\n  \"hooks\": {\n    \"SessionStart\": [\n      {\n        \"hooks\": [\n          {\n            \"command\": \"'./bin/issueops' hook session-start --host claude\",\n            \"timeout\": 5,\n            \"type\": \"command\"\n          }\n        ]\n      }\n    ]\n  }\n}\n"
+              "content_sha256": "1de272ade0ad75e28c6e285e4b21cb948873d17bc73e35f7241783aacbeaf77c",
+              "content": "{\n  \"hooks\": {\n    \"SessionStart\": [\n      {\n        \"hooks\": [\n          {\n            \"command\": \"'./bin/issueops' hook session-start --host claude\",\n            \"timeout\": 5,\n            \"type\": \"command\"\n          }\n        ]\n      }\n    ],\n    \"SubagentStart\": [\n      {\n        \"hooks\": [\n          {\n            \"command\": \"'./bin/issueops' hook subagent-start --host claude\",\n            \"timeout\": 5,\n            \"type\": \"command\"\n          }\n        ]\n      }\n    ]\n  }\n}\n"
             },
             {
               "kind": "claude_project_mcp_template",
@@ -352,8 +352,8 @@
               "kind": "claude_user_settings",
               "path": "$HOME/.claude/settings.json",
               "written": true,
-              "content_sha256": "83e41b2d807ea0605ff012c3bad6ead81cf70541c0e119298a3589deadd1201b",
-              "content": "{\n  \"hooks\": {\n    \"SessionStart\": [\n      {\n        \"hooks\": [\n          {\n            \"command\": \"'$BIN' hook session-start --host claude\",\n            \"timeout\": 5,\n            \"type\": \"command\"\n          }\n        ]\n      }\n    ]\n  }\n}\n"
+              "content_sha256": "fb1da6faa42eb0ae4d4c20982ade84a86363ad61f18a40ee06a1d2d541977eed",
+              "content": "{\n  \"hooks\": {\n    \"SessionStart\": [\n      {\n        \"hooks\": [\n          {\n            \"command\": \"'$BIN' hook session-start --host claude\",\n            \"timeout\": 5,\n            \"type\": \"command\"\n          }\n        ]\n      }\n    ],\n    \"SubagentStart\": [\n      {\n        \"hooks\": [\n          {\n            \"command\": \"'$BIN' hook subagent-start --host claude\",\n            \"timeout\": 5,\n            \"type\": \"command\"\n          }\n        ]\n      }\n    ]\n  }\n}\n"
             }
           ],
           "links": [
@@ -390,8 +390,8 @@
               "kind": "codex_hooks_template",
               "path": "$ROOT/configs/codex/hooks.json",
               "written": true,
-              "content_sha256": "8059275c1747031c22d4c236f3803d705ca77ecfa0bfc152cef97ae376e0018f",
-              "content": "{\n  \"hooks\": {\n    \"SessionStart\": [\n      {\n        \"hooks\": [\n          {\n            \"command\": \"'./bin/issueops' hook session-start --host codex\",\n            \"timeout\": 5,\n            \"type\": \"command\"\n          }\n        ]\n      }\n    ]\n  }\n}\n"
+              "content_sha256": "ed4671dc52dcbdbb6cef919fb0e24b49119f33f4577a06d14c0debc355b50b6c",
+              "content": "{\n  \"hooks\": {\n    \"SessionStart\": [\n      {\n        \"hooks\": [\n          {\n            \"command\": \"'./bin/issueops' hook session-start --host codex\",\n            \"timeout\": 5,\n            \"type\": \"command\"\n          }\n        ]\n      }\n    ],\n    \"SubagentStart\": [\n      {\n        \"hooks\": [\n          {\n            \"command\": \"'./bin/issueops' hook subagent-start --host codex\",\n            \"timeout\": 5,\n            \"type\": \"command\"\n          }\n        ]\n      }\n    ]\n  }\n}\n"
             },
             {
               "kind": "codex_mcp_template",
@@ -404,8 +404,8 @@
               "kind": "codex_user_hooks_config",
               "path": "$CODEX_HOME/hooks.json",
               "written": true,
-              "content_sha256": "15d1e711f5592554ae877e649db23bb2eb0082f67eece5bb61943e2d2e61ef02",
-              "content": "{\n  \"hooks\": {\n    \"SessionStart\": [\n      {\n        \"hooks\": [\n          {\n            \"command\": \"'$BIN' hook session-start --host codex\",\n            \"timeout\": 5,\n            \"type\": \"command\"\n          }\n        ]\n      }\n    ]\n  }\n}\n"
+              "content_sha256": "ed8606b10ab644d972b4711978fce382a9505a1e5b555c4fae1cccfde874183b",
+              "content": "{\n  \"hooks\": {\n    \"SessionStart\": [\n      {\n        \"hooks\": [\n          {\n            \"command\": \"'$BIN' hook session-start --host codex\",\n            \"timeout\": 5,\n            \"type\": \"command\"\n          }\n        ]\n      }\n    ],\n    \"SubagentStart\": [\n      {\n        \"hooks\": [\n          {\n            \"command\": \"'$BIN' hook subagent-start --host codex\",\n            \"timeout\": 5,\n            \"type\": \"command\"\n          }\n        ]\n      }\n    ]\n  }\n}\n"
             },
             {
               "kind": "codex_user_mcp_config",

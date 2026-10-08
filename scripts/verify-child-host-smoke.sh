@@ -426,11 +426,14 @@ def event_commands(document, event):
 contracts = (
     (codex_hooks, {
         "SessionStart": f"'{binary}' hook session-start --host codex",
+        "SubagentStart": f"'{binary}' hook subagent-start --host codex",
     }),
     (claude_hooks, {
         "SessionStart": f"'{binary}' hook session-start --host claude",
+        "SubagentStart": f"'{binary}' hook subagent-start --host claude",
     }),
 )
+subcommands = {"SessionStart": "session-start", "SubagentStart": "subagent-start"}
 for document, expected_by_event in contracts:
     managed_events = set()
     for event, groups in document.get("hooks", {}).items():
@@ -442,7 +445,7 @@ for document, expected_by_event in contracts:
     if managed_events != set(expected_by_event):
         raise SystemExit(1)
     for event, expected in expected_by_event.items():
-        subcommand = "session-start"
+        subcommand = subcommands[event]
         managed_prefix = f"'{binary}' hook {subcommand}"
         managed = []
         for hook in event_commands(document, event):

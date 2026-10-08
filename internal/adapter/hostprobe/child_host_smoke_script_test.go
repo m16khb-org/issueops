@@ -712,12 +712,12 @@ func writeManagedSurfaceFixture(t *testing.T, home, codexHome, root string) {
 	binary := filepath.Join(root, "bin", "issueops")
 	files := map[string]string{
 		filepath.Join(codexHome, "config.toml"): fmt.Sprintf("[mcp_servers.issueops]\ncommand = %q\nargs = [\"mcp\"]\n[mcp_servers.issueops.env]\nISSUEOPS_ROOT = %q\n", binary, root),
-		filepath.Join(codexHome, "hooks.json"): fmt.Sprintf(`{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":%q,"timeout":5}]}]}}
-`, "'"+binary+"' hook session-start --host codex"),
+		filepath.Join(codexHome, "hooks.json"): fmt.Sprintf(`{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":%q,"timeout":5}]}],"SubagentStart":[{"hooks":[{"type":"command","command":%q,"timeout":5}]}]}}
+`, "'"+binary+"' hook session-start --host codex", "'"+binary+"' hook subagent-start --host codex"),
 		filepath.Join(home, ".claude.json"): fmt.Sprintf(`{"mcpServers":{"issueops":{"type":"stdio","command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}
 `, binary, root),
-		filepath.Join(home, ".claude", "settings.json"): fmt.Sprintf(`{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":%q,"timeout":5}]}]}}
-`, "'"+binary+"' hook session-start --host claude"),
+		filepath.Join(home, ".claude", "settings.json"): fmt.Sprintf(`{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":%q,"timeout":5}]}],"SubagentStart":[{"hooks":[{"type":"command","command":%q,"timeout":5}]}]}}
+`, "'"+binary+"' hook session-start --host claude", "'"+binary+"' hook subagent-start --host claude"),
 	}
 	for path, content := range files {
 		if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
@@ -765,6 +765,7 @@ with open(os.path.join(codex_home, "config.toml"), "w", encoding="utf-8") as han
     handle.write(f'[mcp_servers.issueops]\ncommand = "{binary}"\nargs = ["mcp"]\n[mcp_servers.issueops.env]\nISSUEOPS_ROOT = "{root}"\n')
 hooks = {"hooks": {
     "SessionStart": [{"hooks": [{"type": "command", "command": f"'{binary}' hook session-start --host codex", "timeout": 5}]}],
+    "SubagentStart": [{"hooks": [{"type": "command", "command": f"'{binary}' hook subagent-start --host codex", "timeout": 5}]}],
 }}
 with open(os.path.join(codex_home, "hooks.json"), "w", encoding="utf-8") as handle:
     json.dump(hooks, handle, separators=(",", ":"))
@@ -774,6 +775,7 @@ with open(os.path.join(home, ".claude.json"), "w", encoding="utf-8") as handle:
     handle.write("\n")
 claude_hooks = {"hooks": {
     "SessionStart": [{"hooks": [{"type": "command", "command": f"'{binary}' hook session-start --host claude", "timeout": 5}]}],
+    "SubagentStart": [{"hooks": [{"type": "command", "command": f"'{binary}' hook subagent-start --host claude", "timeout": 5}]}],
 }}
 with open(os.path.join(home, ".claude", "settings.json"), "w", encoding="utf-8") as handle:
     json.dump(claude_hooks, handle, separators=(",", ":"))

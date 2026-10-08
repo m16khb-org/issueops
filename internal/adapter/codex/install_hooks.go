@@ -70,11 +70,14 @@ type codexLifecycleHookSpec struct {
 }
 
 func codexLifecycleHookSpecs(binPath string) []codexLifecycleHookSpec {
-	// SessionStart alone carries the catalog: Codex re-runs it with
-	// source "compact" after compaction, and its post-compact.command.output
+	// SessionStart carries the catalog for the main session: Codex re-runs it
+	// with source "compact" after compaction, and its post-compact.command.output
 	// schema has no hookSpecificOutput (verified against codex-cli 0.150.1).
+	// SubagentStart gives each subagent the same catalog (subagent-start output
+	// accepts additionalContext in codex-cli 0.161.0).
 	return []codexLifecycleHookSpec{
 		{BinPath: binPath, Event: "SessionStart", Subcommand: "session-start", Timeout: 5},
+		{BinPath: binPath, Event: "SubagentStart", Subcommand: "subagent-start", Timeout: 5},
 	}
 }
 
@@ -93,9 +96,9 @@ func codexHookGroup(spec codexLifecycleHookSpec) map[string]any {
 func codexHookCommand(binPath, subcommand string) string {
 	cmd := fmt.Sprintf("%s hook %s", shellQuote(binPath), subcommand)
 	// additionalContext가 Codex TUI에 렌더링되는 이벤트는 --host codex를 넘겨
-	// 읽기 쉬운 catalog 뷰를 쓰고 systemMessage는 생략한다.
+	// systemMessage를 생략한다.
 	switch subcommand {
-	case "session-start", "post-compact":
+	case "session-start", "subagent-start", "post-compact":
 		cmd += " --host codex"
 	}
 	return cmd
@@ -146,9 +149,10 @@ func (installer Installer) mergeHookConfig(config map[string]any, binPath string
 
 // codexLifecycleHookEvents lists every event an earlier install may have
 // registered an issueops hook under, so an upgrade strips those groups; the
-// installer itself only adds SessionStart (codexLifecycleHookSpecs).
+// installer itself adds only the codexLifecycleHookSpecs events.
 var codexLifecycleHookEvents = []string{
 	"SessionStart",
+	"SubagentStart",
 	"UserPromptSubmit",
 	"PreToolUse",
 	"PostToolUse",

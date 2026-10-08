@@ -46,7 +46,7 @@ func TestValidateNativeIntegrationWithDepsCoversSuccessAndMissingPaths(t *testin
 			case "config.toml":
 				return []byte("[mcp_servers.issueops]\ncommand = \"issueops\"\n"), nil
 			case "hooks.json":
-				return []byte(fmt.Sprintf(`{"hooks":{"SessionStart":[{"hooks":[{"command":"'%s' hook session-start --host codex","timeout":5,"type":"command"}]}]}}`, filepath.Join(root, "bin", "issueops"))), nil
+				return []byte(fmt.Sprintf(`{"hooks":{"SessionStart":[{"hooks":[{"command":"'%[1]s' hook session-start --host codex","timeout":5,"type":"command"}]}],"SubagentStart":[{"hooks":[{"command":"'%[1]s' hook subagent-start --host codex","timeout":5,"type":"command"}]}]}}`, filepath.Join(root, "bin", "issueops"))), nil
 			default:
 				return nil, errors.New("unexpected read")
 			}
@@ -123,7 +123,7 @@ func TestValidateNativeIntegrationWithDepsCoversSkillConfigAndWarningFailures(t 
 	for _, want := range []string{
 		"list native skills: skill list failed",
 		"Codex MCP config missing issueops",
-		"Codex thin context hooks missing issueops SessionStart surface",
+		"Codex thin context hooks missing issueops context hook surface",
 		"Omo MCP config missing canonical issueops server",
 		"Omo lifecycle extension missing canonical session_start/session_compact surface",
 		"Claude duplicate MCP warning fixture was not classified",
@@ -156,7 +156,7 @@ func TestValidateNativeIntegrationReportsStableRootResolutionError(t *testing.T)
 			case "config.toml":
 				return []byte("[mcp_servers.issueops]\n"), nil
 			case "hooks.json":
-				return []byte(fmt.Sprintf(`{"hooks":{"SessionStart":[{"hooks":[{"command":"'%s' hook session-start --host codex","timeout":5,"type":"command"}]}]}}`, filepath.Join(root, "bin", "issueops"))), nil
+				return []byte(fmt.Sprintf(`{"hooks":{"SessionStart":[{"hooks":[{"command":"'%[1]s' hook session-start --host codex","timeout":5,"type":"command"}]}],"SubagentStart":[{"hooks":[{"command":"'%[1]s' hook subagent-start --host codex","timeout":5,"type":"command"}]}]}}`, filepath.Join(root, "bin", "issueops"))), nil
 			default:
 				return nil, errors.New("unexpected read")
 			}
@@ -173,6 +173,10 @@ func TestValidateNativeIntegrationReportsStableRootResolutionError(t *testing.T)
 func TestHasThinCodexContextHooksPermitsThirdPartyLifecycleEvents(t *testing.T) {
 	config := `{
 		"hooks": {
+			"SubagentStart": [
+				{"hooks": [{"type": "command", "command": "'/Users/example/.orca/agent-hooks/codex-hook.sh' observe", "timeout": 10}]},
+				{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook subagent-start --host codex", "timeout": 5}]}
+			],
 			"SessionStart": [
 				{"hooks": [{"type": "command", "command": "'/Users/example/.orca/agent-hooks/codex-hook.sh' observe", "timeout": 10}]},
 				{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook session-start --host codex", "timeout": 5}]}
@@ -191,6 +195,7 @@ func TestHasThinCodexContextHooksPermitsThirdPartyLifecycleEvents(t *testing.T) 
 func TestHasThinCodexContextHooksRejectsRetiredManagedEvent(t *testing.T) {
 	config := `{
 		"hooks": {
+			"SubagentStart": [{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook subagent-start --host codex", "timeout": 5}]}],
 			"SessionStart": [{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook session-start --host codex", "timeout": 5}]}],
 			"PreToolUse": [{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook pre-tool-use --host codex --enforce-worktree", "timeout": 5}]}]
 		}
@@ -204,17 +209,20 @@ func TestHasThinCodexContextHooksUsesCanonicalGroupsForManagedCommands(t *testin
 	for name, config := range map[string]string{
 		"quoted canonical path with spaces": `{
 			"hooks": {
+				"SubagentStart": [{"hooks": [{"type": "command", "command": "'/source with spaces/bin/issueops' hook subagent-start --host codex", "timeout": 5}]}],
 				"SessionStart": [{"hooks": [{"type": "command", "command": "'/source with spaces/bin/issueops' hook session-start --host codex", "timeout": 5}]}]
 			}
 		}`,
 		"retired no-host event": `{
 			"hooks": {
+				"SubagentStart": [{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook subagent-start --host codex", "timeout": 5}]}],
 				"SessionStart": [{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook session-start --host codex", "timeout": 5}]}],
 				"UserPromptSubmit": [{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook user-prompt", "timeout": 5}]}]
 			}
 		}`,
 		"wrong host alongside required hooks": `{
 			"hooks": {
+				"SubagentStart": [{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook subagent-start --host codex", "timeout": 5}]}],
 				"SessionStart": [
 					{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook session-start --host codex", "timeout": 5}]},
 					{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook session-start --host claude", "timeout": 5}]}
@@ -223,6 +231,7 @@ func TestHasThinCodexContextHooksUsesCanonicalGroupsForManagedCommands(t *testin
 		}`,
 		"extra argument alongside required hooks": `{
 			"hooks": {
+				"SubagentStart": [{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook subagent-start --host codex", "timeout": 5}]}],
 				"SessionStart": [
 					{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook session-start --host codex", "timeout": 5}]},
 					{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook session-start --host codex --retired", "timeout": 5}]}
@@ -231,7 +240,13 @@ func TestHasThinCodexContextHooksUsesCanonicalGroupsForManagedCommands(t *testin
 		}`,
 		"wrong binary path": `{
 			"hooks": {
+				"SubagentStart": [{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook subagent-start --host codex", "timeout": 5}]}],
 				"SessionStart": [{"hooks": [{"type": "command", "command": "'/other/bin/issueops' hook session-start --host codex", "timeout": 5}]}]
+			}
+		}`,
+		"SessionStart without SubagentStart": `{
+			"hooks": {
+				"SessionStart": [{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook session-start --host codex", "timeout": 5}]}]
 			}
 		}`,
 		"malformed JSON": `{"hooks":`,

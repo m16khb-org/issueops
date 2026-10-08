@@ -29,7 +29,7 @@ func TestClaudeInstallerDefaultsToUserScopeOnly(t *testing.T) {
 		t.Fatalf("claude user skill link missing")
 	}
 	settings := readClaudeTestFile(t, filepath.Join(home, ".claude", "settings.json"))
-	for _, needle := range []string{"SessionStart", "hook session-start --host claude", req.BinPath} {
+	for _, needle := range []string{"SessionStart", "hook session-start --host claude", "SubagentStart", "hook subagent-start --host claude", req.BinPath} {
 		if !strings.Contains(settings, needle) {
 			t.Fatalf("claude settings missing %q:\n%s", needle, settings)
 		}
@@ -104,6 +104,16 @@ func TestClaudeInstallerMergesLifecycleHooksIdempotently(t *testing.T) {
           }
         ]
       }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "orca subagent observe"
+          }
+        ]
+      }
     ]
   }
 }
@@ -124,7 +134,7 @@ func TestClaudeInstallerMergesLifecycleHooksIdempotently(t *testing.T) {
 		t.Fatalf("existing setting was not preserved: %+v", settings)
 	}
 	hooks := settings["hooks"].(map[string]any)
-	for _, event := range []string{"SessionStart"} {
+	for _, event := range []string{"SessionStart", "SubagentStart"} {
 		groups := hooks[event].([]any)
 		count := 0
 		for _, group := range groups {
@@ -146,6 +156,10 @@ func TestClaudeInstallerMergesLifecycleHooksIdempotently(t *testing.T) {
 	command := userPromptGroups[0].(map[string]any)["hooks"].([]any)[0].(map[string]any)["command"].(string)
 	if command != "echo keep" {
 		t.Fatalf("unexpected UserPromptSubmit group after managed-hook cleanup: %q", command)
+	}
+	subagentGroups := hooks["SubagentStart"].([]any)
+	if first := subagentGroups[0].(map[string]any)["hooks"].([]any)[0].(map[string]any)["command"]; len(subagentGroups) != 2 || first != "orca subagent observe" {
+		t.Fatalf("third-party SubagentStart group must stay first: %+v", subagentGroups)
 	}
 	for _, removed := range []string{"PreToolUse", "PostToolUse", "PreCompact", "PostCompact", "Stop"} {
 		if _, ok := hooks[removed]; ok {

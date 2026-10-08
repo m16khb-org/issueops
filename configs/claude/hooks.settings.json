@@ -10,6 +10,17 @@
           }
         ]
       }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "command": "'./bin/issueops' hook subagent-start --host claude",
+            "timeout": 5,
+            "type": "command"
+          }
+        ]
+      }
     ]
   }
 }
