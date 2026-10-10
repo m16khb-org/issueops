@@ -1,6 +1,6 @@
 ---
 name: issueops-docs
-description: Reflect a finished IssueOps implementation into the project's operating documents. Route the diff to the .issueops documents it touches, check both directions (did the change break a documented rule, and did it create a decision, pitfall, command, or convention the documents do not know yet), update ADR, CAUTIONS, CONVENTIONS, or ARCHITECTURE through the project_docs MCP contract, re-seal the ai-slop-clean fingerprint, and record the project-docs-review verdict. Use when "issueops next" reports docs, or when the user says "문서 반영", "ADR 남겨줘", "주의사항 기록", "update the project docs".
+description: Reflect a finished IssueOps implementation into the project's operating documents. Route the diff to the .issueops documents it touches, check both directions (did the change break a documented rule, and did it create a decision, pitfall, command, or convention the documents do not know yet), update ADR, CAUTIONS, CONVENTIONS, ARCHITECTURE, TESTING, OPERATIONS, TECH_STACK, OPEN_API_SPEC, or DESIGN through the project_docs MCP contract, re-seal the ai-slop-clean fingerprint, and record the project-docs-review verdict. Use when "issueops next" reports docs, or when the user says "문서 반영", "ADR 남겨줘", "주의사항 기록", "update the project docs".
 ---
 
 # IssueOps Docs
@@ -40,7 +40,8 @@ append는 이 단계의 재봉인이 흡수한다. 7단계 이후의 append는 �
 ## 1 라우팅
 
 구현 diff 요약을 만들어 읽을 문서를 고른다. 요약에는 변경 파일 목록, 새로 생긴
-명령·플래그·구조, 작업 중 만난 함정을 넣는다.
+명령·플래그·구조, 작업 중 만난 함정을 넣는다. UI·스타일을 바꿨으면 그 사실도 적는다.
+`project_docs_route`는 요약에 `ux`·`style`·`css`·`theme` 같은 단어가 있어야 `DESIGN.md`를 고른다.
 
 ```bash
 git -C "$WORKTREE" diff --stat "$BASE_SHA"
@@ -50,7 +51,8 @@ git -C "$WORKTREE" diff --stat "$BASE_SHA"
 
 MCP를 쓸 수 없으면 `issueops docs --json`의 required-doc 목록에서 `CONSTITUTION.md`,
 `ARCHITECTURE.md`(해당 모듈), `CONVENTIONS.md`, `CAUTIONS.md`(색인과 해당 모듈),
-`ADR.md`, `TESTING.md`를 읽는다.
+`ADR.md`, `TESTING.md`를 읽는다. 변경이 닿았으면 `OPERATIONS.md`, `TECH_STACK.md`,
+`OPEN_API_SPEC.md`, `DESIGN.md`(있을 때)도 읽는다.
 
 ## 2 양방향 대조
 
@@ -67,6 +69,11 @@ diff가 어겼는가. 어겼으면 **문서가 아니라 구현을 고친다.** 
 - 다시 밟을 함정이나 재발한 문제를 해결했다 → CAUTIONS
 - 새 명령·플래그·컨벤션·모듈 경계가 생겼다 → CONVENTIONS 또는 ARCHITECTURE
 - 검증 방식이 바뀌었다 → TESTING
+- 설치·실행·배포·운영 절차가 바뀌었다 → OPERATIONS
+- 의존성·런타임·도구 버전이 바뀌었다 → TECH_STACK
+- API 문서화 게이트나 endpoint·DTO 문서 규칙이 바뀌었다 → OPEN_API_SPEC
+- UI·디자인 토큰·컴포넌트 상태가 바뀌었다 → DESIGN(`.issueops/DESIGN.md`가 있는
+  클라이언트 저장소만). 루트 `DESIGN.md`가 원본이면 토큰을 복제하지 않고 그 문서를 가리킨다.
 
 계획의 `## 적용되는 결정과 주의사항` 절과 대조한다. 계획 때 몰랐던 항목이 이 단계에서
 찾은 것이고, 그것을 evidence에 적는다.
