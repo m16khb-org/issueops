@@ -32,6 +32,7 @@ type ListEntry struct {
 	HolderSession         string                         `json:"holder_session,omitempty"`
 	OwnerModel            string                         `json:"owner_model,omitempty"`
 	WorkspaceRoot         string                         `json:"workspace_root,omitempty"`
+	IssueURL              string                         `json:"issue_url,omitempty"`
 	RemoteArtifactURL     string                         `json:"remote_artifact_url,omitempty"`
 	UpdatedAt             string                         `json:"updated_at,omitempty"`
 	PendingKind           string                         `json:"pending_kind,omitempty"`

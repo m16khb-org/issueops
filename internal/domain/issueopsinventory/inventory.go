@@ -10,6 +10,7 @@ func ProjectEntry(record issueopsinventorycontract.Record) issueopsinventorycont
 		Repo:      record.Repo,
 		Branch:    record.Branch,
 		Phase:     record.Phase,
+		IssueURL:  record.IssueURL,
 		UpdatedAt: record.UpdatedAt,
 		Invalid:   record.Invalid,
 	}
