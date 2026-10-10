@@ -6898,6 +6898,8 @@
         "func RouteFiles.Exists",
         "func RouteFiles.Now",
         "func RouteFiles.Path",
+        "func RouteFiles.ReadDir",
+        "func RouteFiles.ReadFile",
         "type RouteFiles"
       ]
     },
@@ -10194,6 +10196,7 @@
       "task": "T20",
       "symbols": [
         "func Route",
+        "func readRecords",
         "type RouteEffects"
       ]
     },
@@ -15784,6 +15787,22 @@
         "func BuildProfile",
         "func ClassifyVCS",
         "func RemoteHost"
+      ]
+    },
+    {
+      "path": "internal/domain/projectdoc/records.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func IsRecordFile",
+        "func MatchRecords",
+        "func ParseRecord",
+        "func RecordModuleDirs",
+        "func addHangulTerms",
+        "func latinTerm",
+        "func routeTerms",
+        "func stripLeadingDate",
+        "type Record"
       ]
     },
     {

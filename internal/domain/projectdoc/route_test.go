@@ -14,6 +14,7 @@ func TestRouteDocsForTaskPreservesSpecificAndDefaultGuidance(t *testing.T) {
 		{"OpenAPI controller DTO test", []string{"AGENTS.md", ".issueops/OPEN_API_SPEC.md", ".issueops/TESTING.md"}},
 		{"gitlab pull request", []string{"AGENTS.md", ".issueops/VCS.md"}},
 		{"구현", []string{"AGENTS.md", ".issueops/CONSTITUTION.md", ".issueops/AGENT_WORKFLOW.md"}},
+		{"운영 서버에 재배포한다", []string{"AGENTS.md", ".issueops/OPERATIONS.md", ".issueops/CAUTIONS.md"}},
 		{"", []string{"AGENTS.md", ".issueops/CONSTITUTION.md", ".issueops/TESTING.md"}},
 	} {
 		t.Run(test.task, func(t *testing.T) {

@@ -81,7 +81,7 @@ func RouteDocsForTask(task string) []RouteDoc {
 		p("ARCHITECTURE.md", "system structure and boundaries"), p("DESIGN.md", "client design system contract when present"), p("ADR.md", "past structure decisions and rejected alternatives"), p("CONSTITUTION.md", "decision priority and invariants"), p("CONVENTIONS.md", "editing and structure conventions"))
 	add(strings.Contains(task, "dependency") || strings.Contains(task, "package") || strings.Contains(task, "upgrade") || strings.Contains(task, "stack"),
 		p("TECH_STACK.md", "detected stack and package manager evidence"), p("CONVENTIONS.md", "dependency addition rules"), p("TESTING.md", "test design rules and checks after dependency changes"))
-	strongOperations := strings.Contains(task, "deploy") || strings.Contains(task, "env") || strings.Contains(task, "operate")
+	strongOperations := strings.Contains(task, "deploy") || strings.Contains(task, "env") || strings.Contains(task, "operate") || strings.Contains(task, "배포")
 	weakOperations := strings.Contains(task, "run") || strings.Contains(task, "local")
 	add(strongOperations || (!matched && weakOperations),
 		p("OPERATIONS.md", "local development, environment, and deployment guidance"), p("TECH_STACK.md", "toolchain evidence"), p("CAUTIONS.md", "operational risks"))

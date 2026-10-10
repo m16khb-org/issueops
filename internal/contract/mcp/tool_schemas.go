@@ -36,7 +36,7 @@ func CoreProjectTools() []Tool {
 		},
 		{
 			Name:        "project_docs_route",
-			Description: "Given a task, return the project AGENTS.md and .issueops documents an agent should read before working.",
+			Description: "Given a task, return the project AGENTS.md and .issueops documents an agent should read before working, plus up to five dated .issueops/cautions/ and .issueops/adr/ records whose title, summary, or source share terms with the task.",
 			InputSchema: map[string]any{"type": "object", "properties": map[string]any{
 				"repo": map[string]any{"type": "string", "description": "Target repository path. Defaults to current directory."},
 				"task": map[string]any{"type": "string", "description": "Task description such as commit, test, architecture, dependency, deploy, or general."},

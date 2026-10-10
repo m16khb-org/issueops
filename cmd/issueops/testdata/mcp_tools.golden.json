@@ -392,7 +392,7 @@
     }
   },
   {
-    "description": "Given a task, return the project AGENTS.md and .issueops documents an agent should read before working.",
+    "description": "Given a task, return the project AGENTS.md and .issueops documents an agent should read before working, plus up to five dated .issueops/cautions/ and .issueops/adr/ records whose title, summary, or source share terms with the task.",
     "inputSchema": {
       "properties": {
         "authority_file": {
