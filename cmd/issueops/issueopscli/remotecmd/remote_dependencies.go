@@ -17,6 +17,7 @@ type RemoteDeps struct {
 	VerifyRemoteArtifact         func(context.Context, string, string, issueopscontract.IssueOpsRemoteArtifactVerificationRequest, issueopscontract.IssueOpsActor, remoteapp.ArtifactLiveVerifier, remoteapp.AncestryObserver) (issueopscontract.IssueOpsRecord, error)
 	CloseRemoteIssue             func(context.Context, string, string, string, bool, remoteapp.MergeVerifier) (issueopscontract.IssueOpsRecord, port.IssueProviderCloseIssueResult, error)
 	ReflectRemoteCompletion      func(context.Context, string, string, string, string, bool, remoteapp.MergeVerifier) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, reportcontract.Report, error)
+	MergeRemotePullRequest       func(ctx context.Context, stateRoot, id, method string, confirm bool) (issueopscontract.RemoteMergeResult, error)
 	CreateIssue                  func(context.Context, string, remoteapp.IssueCreateCommand, remoteapp.IssueLiveVerifier) (remoteapp.IssueCreateResult, error)
 	ReadScoreSummaryFile         func(string) (string, error)
 	ReconcileIssueCreate         func(context.Context, string, string, bool, remoteapp.IssueLiveVerifier) (issueopscontract.IssueOpsIssueCreateReconcileResult, error)

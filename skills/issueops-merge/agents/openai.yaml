@@ -1,0 +1,4 @@
+interface:
+  display_name: "IssueOps Merge"
+  short_description: "Merge a completed cycle's PR or MR and hand off to cleanup"
+  default_prompt: "Use $issueops-merge after the worktree session completed a cycle and the developer reviewed its PR or MR. Resolve the IssueOps ID from the issue or PR number, require issueops next to report done, preview with issueops remote merge-pr, and route any blocker through its recovery path: wait for pending checks, rerun flaky jobs, or reopen the cycle with execution replace --reseed for failing checks, new commits, or conflicts. With one explicit confirmation, squash-merge pinned to the completed head, delete the remote branch through cleanup remote-branch, then continue with $issueops-cleanup. Never call gh pr merge or glab mr merge directly and never bypass protection."

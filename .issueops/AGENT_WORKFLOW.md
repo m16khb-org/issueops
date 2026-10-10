@@ -164,7 +164,8 @@ Herdr 세션이면 Herdr를 먼저, 그 밖에는 Orca, Herdr 순서로 사용 �
 명시적으로 요청한 Orca execution과 기존 사이클은 해당 core 경로를 유지한다.
 4단계부터는 구현 세션이 canonical worktree에서 `issueops-implement` → `issueops-slop-clean` →
 `issueops-docs` → `issueops-verify` → `atomic-commit-push` → `issueops-create-pr` →
-`issueops-complete`를 지나 완료한다. 휴먼 머지 뒤 정리는 `issueops-cleanup`이며
+`issueops-complete`를 지나 완료한다. 개발자가 PR을 확인하면 메인 세션의 `issueops-merge`가
+`remote merge-pr`로 머지하고 원격 브랜치를 지운다. 그 뒤 정리는 `issueops-cleanup`이며
 reflect-completion(사람이 쓴 진행 결과를 `--body-file`로 넘긴다)→close-issue→cleanup finish
 순서를 지킨다(OPERATIONS.md 참조).
 어느 단계든 `issueops next`가 현재 단계를 판별하고, `issueops-abandon`이

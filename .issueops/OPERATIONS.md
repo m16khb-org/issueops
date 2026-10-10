@@ -51,11 +51,17 @@ Skill-quality scorecards and dogfood evaluations are research records under
    specialist skills in `skills/`. The IssueOps stage skills are
    `issueops-create-issue`, `issueops-prepare`, `issueops-plan`,
    `issueops-implement`, `issueops-slop-clean`, `issueops-docs`, `issueops-verify`,
-   `issueops-create-pr`, `issueops-complete`, `issueops-cleanup`, and
+   `issueops-create-pr`, `issueops-complete`, `issueops-merge`, `issueops-cleanup`, and
    `issueops-abandon`; the shared ones are `issueops-review`, `gates-ledger`,
    and `issueops-remote-write`; `issueops-sync-issue` and `issueops-sync-pr`
    refresh an already published issue or PR/MR body. `issueops next` decides which stage
-   a cycle is in and which command advances it.
+   a cycle is in and which command advances it. `issueops-merge` runs in the main
+   session after the developer reviewed a completed cycle's PR/MR: `issueops remote
+   merge-pr --id ID [--method squash|merge|rebase] [--confirm] --json` previews draft,
+   checks, head and mergeability, refuses any blocker, and squash-merges by default
+   pinned to the completion `final_head` without deleting the branch or bypassing
+   protection. Failed checks, new commits, or conflicts reopen the cycle through
+   `execution replace --reseed` (conflicts first through `execution sync-base`).
 2. MCP: on darwin/linux, `install`/`update`/`bootstrap` default to
    `--mcp-transport=http`. Codex, Claude Code, Omo, and omp then connect directly to
    one shared Streamable HTTP service at `http://127.0.0.1:47831/mcp`, sending the

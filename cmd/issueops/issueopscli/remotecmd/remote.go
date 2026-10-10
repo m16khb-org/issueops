@@ -44,6 +44,7 @@ func (command Command) Run(args []string, deps Deps) error {
 		fmt.Println("  issueops remote reflect-devils-advocate --id ID [--provider github|gitlab] --host codex|claude|omo|omp --session-id SESSION [--agent-id ID] --cwd WORKER_PATH [--confirm] [--json]")
 		fmt.Println("  issueops remote reflect-completion --id ID [--provider github|gitlab] [--confirm] [--json]")
 		fmt.Println("  issueops remote close-issue --id ID [--provider github|gitlab] [--confirm] [--json]")
+		fmt.Println("  issueops remote merge-pr --id ID [--method squash|merge|rebase] [--confirm] [--json]")
 		return nil
 	}
 	if args[0] == "remote-score" {
@@ -172,6 +173,8 @@ func (command Command) Run(args []string, deps Deps) error {
 		return command.runRemoteReflectCompletion(args[1:], deps)
 	case "close-issue":
 		return command.runRemoteCloseIssue(args[1:], deps)
+	case "merge-pr":
+		return command.runRemoteMergePR(args[1:], deps)
 	default:
 		return fmt.Errorf("unknown issueops remote subcommand %q", args[0])
 	}

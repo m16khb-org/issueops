@@ -73,7 +73,9 @@ recording belongs to this stage. `quality inspect` is not a semantic skill runne
    `ls-remote --symref`, which the command policy rejects.
 
 Unmerged retirement (draft PR/MR, issue and remote branch closure) belongs to
-`issueops-abandon`/typed `cleanup abandon`, not this path.
+`issueops-abandon`/typed `cleanup abandon`, not this path. An unmerged PR/MR the
+developer approved is merged first by `issueops-merge` (`issueops remote merge-pr`),
+which also deletes the remote branch before handing off here.
 
 ## Preview the exact targets
 

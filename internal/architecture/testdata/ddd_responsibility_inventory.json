@@ -971,6 +971,7 @@
       "task": "T20",
       "symbols": [
         "func closeRemoteIssue",
+        "func mergeRemotePullRequest",
         "func newRemoteCompletionService",
         "func reflectRemoteCompletion"
       ]
@@ -1929,6 +1930,15 @@
       "task": "T20",
       "symbols": [
         "func Command.runRemoteReconcileIssue"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopscli/remotecmd/remote_merge.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func Command.runRemoteMergePR",
+        "func printRemoteMergeResult"
       ]
     },
     {
@@ -6943,6 +6953,18 @@
       ]
     },
     {
+      "path": "internal/adapter/provider/github/merge_pull_request.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Provider.MergePullRequest",
+        "func Provider.ReadPullRequestMergeState",
+        "func ghCheckOutcome",
+        "func parseGhMergeState",
+        "type ghCheck"
+      ]
+    },
+    {
       "path": "internal/adapter/provider/github/provider.go",
       "owner": "adapter",
       "task": "T20",
@@ -7036,6 +7058,17 @@
         "func Provider.ReadIssueSnapshot",
         "func gitLabSnapshotAuthority",
         "func sameGitLabIssueSnapshotIdentity"
+      ]
+    },
+    {
+      "path": "internal/adapter/provider/gitlab/merge_merge_request.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Provider.MergePullRequest",
+        "func Provider.ReadPullRequestMergeState",
+        "func gitLabMergeRequestEndpoint",
+        "func parseGlabMergeState"
       ]
     },
     {
@@ -7168,7 +7201,8 @@
       "task": "T20",
       "symbols": [
         "func ReadExecutionIssueSnapshot",
-        "func Resolve"
+        "func Resolve",
+        "func ResolvePullRequestMerger"
       ]
     },
     {
@@ -9702,6 +9736,20 @@
       ]
     },
     {
+      "path": "internal/application/issueopsremote/remote_merge.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func NewRemoteMergeService",
+        "func RemoteMergeService.Merge",
+        "func blockerCodes",
+        "func cleanupStatusCommand",
+        "func projectMergeResult",
+        "type MergeProviderResolver",
+        "type RemoteMergeService"
+      ]
+    },
+    {
       "path": "internal/application/issueopsremote/review_reflection.go",
       "owner": "application",
       "task": "T07",
@@ -11211,6 +11259,16 @@
       "symbols": [
         "type PlanReviewRound",
         "type RemoteCompletionSection"
+      ]
+    },
+    {
+      "path": "internal/contract/issueops/remote_merge.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type RemoteMergeBlocker",
+        "type RemoteMergeResult",
+        "type RemotePullRequestMergeState"
       ]
     },
     {
@@ -13868,6 +13926,17 @@
         "func ValidateCloseIssue",
         "func ValidateCompletionMerge",
         "func ValidateReflectCompletion"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/remote_merge.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func MergeBlockers",
+        "func NormalizeMergeMethod",
+        "func ResolveMergeTarget",
+        "type MergeTarget"
       ]
     },
     {
@@ -17053,6 +17122,8 @@
         "type IssueProviderIssueCreateCandidate",
         "type IssueProviderIssueCreateReconciler",
         "type IssueProviderPullRequestCloser",
+        "type IssueProviderPullRequestMergeRequest",
+        "type IssueProviderPullRequestMerger",
         "type IssueProviderReconcilePullRequestCandidate",
         "type IssueProviderReconcilePullRequestRequest",
         "type IssueProviderReconcilePullRequestResult",
@@ -17489,6 +17560,11 @@
     },
     {
       "path": "skills/issueops-implement/SKILL.md",
+      "owner": "skill-contract",
+      "task": "T21"
+    },
+    {
+      "path": "skills/issueops-merge/SKILL.md",
       "owner": "skill-contract",
       "task": "T21"
     },

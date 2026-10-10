@@ -13,7 +13,8 @@ PR/MR을 만들지 않고, 머지하지 않으며, 워크트리·브랜치·이�
   `issueops next --id "$ISSUEOPS_ID" --json`의 `stage.key`가
   `pr.complete`인지 확인한다
 - 직전 단계(PR/MR publication): [`issueops-create-pr`](../issueops-create-pr/SKILL.md)
-- 직후 단계(머지 후 정리): [`issueops-cleanup`](../issueops-cleanup/SKILL.md)
+- 직후 단계(머지): [`issueops-merge`](../issueops-merge/SKILL.md). 개발자가 PR을 확인한 뒤
+  메인 세션에서 실행하고, 머지가 끝나면 [`issueops-cleanup`](../issueops-cleanup/SKILL.md)으로 넘긴다
 - lease 회복 체인 전문: [`execution.md`](../issueops/references/execution.md)
 
 ## 흐름
@@ -139,7 +140,7 @@ Flow evidence
 Cleanup/readiness
   pr-readiness --strict: ready
   cleanup 대기: pr_phase 통과, remote_artifact 확인됨
-  남은 조건: MR merge → issueops-cleanup (워크트리·브랜치·이슈 정리)
+  남은 조건: PR 확인 → issueops-merge(머지) → issueops-cleanup(워크트리·브랜치·이슈 정리)
 
 MR: https://gitlab.example.com/group/project/-/merge_requests/5657
 
@@ -171,8 +172,8 @@ MR: https://gitlab.example.com/group/project/-/merge_requests/5657
 
 completion은 generation을 반납하고 record를 `done`으로 옮긴다. 그것이 전부다.
 
-- **머지하지 않는다.** `remote create-pr`이 만드는 것은 draft다. 머지 전에
-  사람이 draft를 ready로 바꾸고 머지 결정을 내린다.
+- **머지하지 않는다.** `remote create-pr`이 만드는 것은 draft다. 개발자가 PR을 확인한 뒤
+  메인 세션에서 [`issueops-merge`](../issueops-merge/SKILL.md)가 draft 해제와 머지를 맡는다.
 - **정리하지 않는다.** 이후 갈래는 둘이다. 머지가 확인되면
   [`issueops-cleanup`](../issueops-cleanup/SKILL.md)이 워크트리·로컬 브랜치 삭제와 이슈
   종료를 소유하고, 머지하지 않고 사이클을 버리기로 하면

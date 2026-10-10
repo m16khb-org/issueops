@@ -27,6 +27,19 @@ func Resolve(name string) (port.IssueProvider, error) {
 	}
 }
 
+// ResolvePullRequestMerger returns the merge capability of the named provider.
+func ResolvePullRequestMerger(name string) (port.IssueProviderPullRequestMerger, error) {
+	resolved, err := Resolve(name)
+	if err != nil {
+		return nil, err
+	}
+	merger, ok := resolved.(port.IssueProviderPullRequestMerger)
+	if !ok {
+		return nil, fmt.Errorf("provider %q cannot merge pull requests", name)
+	}
+	return merger, nil
+}
+
 func ReadExecutionIssueSnapshot(ctx context.Context, name string, req executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
 	resolved, err := Resolve(name)
 	if err != nil {

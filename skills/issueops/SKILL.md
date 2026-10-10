@@ -197,7 +197,7 @@ done을 기록한다. hook은 SessionStart의 project-doc context만 제공한�
 | `commit-push` | `atomic-commit-push` | 커밋·푸시 |
 | `pr.create` | `issueops-create-pr` | PR/MR 발행·완료 |
 | `pr.complete` | `issueops-complete` | PR/MR 발행·완료 |
-| `done` | `issueops-cleanup` | 머지 후 정리 |
+| `done` | 머지 전이면 `issueops-merge`, 머지 뒤면 `issueops-cleanup`. 구분은 `issueops remote merge-pr --id ID --json`의 `already_merged`로 한다 | 머지·정리 |
 | `takeover` | 스킬 없음. `next_command`를 실행하고 결과가 돌려주는 `next_command`를 따라간다. 죽은 홀더 인수는 `issueops-abandon`이 설명한다 | 현재 index의 label |
 | `blocked.pending`, `blocked.holder_live` | 없음. `next_command`로 상태를 다시 읽는다 | 현재 index의 label |
 | `blocked.root_conflict` | 충돌 사이클을 `issueops-cleanup`(머지됨) 또는 `issueops-abandon`(미머지)으로 먼저 정리한다 | 현재 index의 label |

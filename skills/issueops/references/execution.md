@@ -302,8 +302,11 @@ execution status $ACTOR_FLAGS
   -> execution claim --claim-current-token $ACTOR_FLAGS
 ```
 
-Do not skip the preview or invent the fingerprint. A completed cycle does not
-render this recovery chain.
+Do not skip the preview or invent the fingerprint. For a completed cycle,
+`execution status` does not render this chain; start at `execution replace
+--preview`, which still renders the reseed command (after any base sync it
+requires). `issueops-merge` uses this entry to reopen a completed cycle whose
+PR/MR cannot merge.
 
 
 

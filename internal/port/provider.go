@@ -252,6 +252,25 @@ type IssueProviderPullRequestCloser interface {
 	ClosePullRequest(context.Context, IssueProviderClosePullRequestRequest) (IssueProviderClosePullRequestResult, error)
 }
 
+// IssueProviderPullRequestMergeRequest merges one PR/MR whose readback the
+// caller already judged mergeable. HeadOID pins the merge to that readback's
+// head; MarkReady clears draft state first.
+type IssueProviderPullRequestMergeRequest struct {
+	Repo      string
+	URL       string
+	Method    string
+	HeadOID   string
+	MarkReady bool
+}
+
+// IssueProviderPullRequestMerger is optional for the same reason as
+// IssueProviderPullRequestCloser. MergePullRequest returns the readback taken
+// after the merge so the caller verifies the merged state itself.
+type IssueProviderPullRequestMerger interface {
+	ReadPullRequestMergeState(ctx context.Context, repo, url string) (completionmodel.RemotePullRequestMergeState, error)
+	MergePullRequest(context.Context, IssueProviderPullRequestMergeRequest) (completionmodel.RemotePullRequestMergeState, error)
+}
+
 // IssueProvider is implemented by provider-specific adapters such as GitHub and GitLab.
 // Every mutating operation requires Confirm=true; without it, only a dry-run preview
 // is returned.

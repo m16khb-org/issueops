@@ -17,6 +17,15 @@ the remaining gates, implementation, publication, and completion in its
 canonical worktree. Completion records `done` and releases the generation;
 later merge and cleanup require separate current evidence and authority.
 
+The merge itself is a separate, record-read-only step: `remote merge-pr` admits
+only a `done` record with a released lease and a completion, reads the PR/MR once
+(draft, head, checks, mergeability), refuses every blocker before mutation, and
+merges pinned to the completion `final_head` (`gh pr merge --match-head-commit`,
+GitLab `PUT .../merge` with `sha`). It never passes branch deletion, admin bypass,
+or auto-merge, so the remote branch still flows through `cleanup remote-branch`
+and an unverified merge is reported instead of assumed. It writes no record field;
+cleanup re-reads the merged state from the provider.
+
 Post-merge cleanup ordering is a contract: `reflect-completion`(사람이 쓴
 진행 결과를 completion 구간에 반영. 해시·plan 원문은 record와 `.issueops/issues/<n>/`에
 남는다) → `close-issue` →

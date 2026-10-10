@@ -24,3 +24,7 @@ func reflectRemoteCompletion(ctx context.Context, root, id, providerOverride, re
 func closeRemoteIssue(ctx context.Context, root, id, providerOverride string, confirm bool, verify application.MergeVerifier) (model.IssueOpsRecord, port.IssueProviderCloseIssueResult, error) {
 	return newRemoteCompletionService(root, provider.Resolve, verify, time.Now).Close(ctx, id, providerOverride, confirm)
 }
+
+func mergeRemotePullRequest(ctx context.Context, root, id, method string, confirm bool) (model.RemoteMergeResult, error) {
+	return application.NewRemoteMergeService(issueops.RemoteRecordStore{StateRoot: root}, provider.ResolvePullRequestMerger).Merge(ctx, id, method, confirm)
+}

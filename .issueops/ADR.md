@@ -37,6 +37,7 @@ and supersession rules live in [adr/README.md](adr/README.md).
 
 | Date | Decision | Record |
 |---|---|---|
+| 2026-10-10 | Completed cycles merge through typed `remote merge-pr` (squash default, head pinned to completion, no branch deletion/admin/auto-merge); blockers reopen the cycle via reseed | [record](adr/2026-10-10-issueops-merges-completed-cycles-through-a-typed-remote-merg.md) |
 | 2026-10-08 | State cleanup runs on the write path that owns it: `channel send` prunes 7-day-old messages, install/update removes retired state paths after commit, and the MCP HTTP log is capped in-process | [record](adr/2026-10-08-state-cleanup-runs-on-the-write-path-that-owns-it.md) |
 | 2026-10-08 | omp (oh-my-pi) is the fourth first-party host; its lifecycle extension exports the main session id as `ISSUEOPS_OMP_SESSION_ID` | [record](adr/2026-10-08-omp-first-party-host.md) |
 | 2026-10-08 | SubagentStart carries the project-doc catalog, and every host gets the same model text; supersedes the "SessionStart only" clause of 2026-08-27 | [record](adr/2026-10-08-subagent-start-catalog-and-unified-model-text.md) |

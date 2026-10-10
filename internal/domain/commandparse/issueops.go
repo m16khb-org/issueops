@@ -454,6 +454,10 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 		values:   []string{"--id", "--provider"},
 		booleans: []string{"--confirm", "--json"},
 	},
+	"remote merge-pr": {
+		values:   []string{"--id", "--method"},
+		booleans: []string{"--confirm", "--json"},
+	},
 	"remote sync-issue": {
 		values:   []string{"--id", "--provider", "--url", "--body", "--body-file", "--template", "--expected-body-sha256", "--host", "--session-id", "--agent-id", "--cwd"},
 		booleans: []string{"--accept-remote-edits", "--confirm", "--json"},

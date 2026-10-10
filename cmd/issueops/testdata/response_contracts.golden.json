@@ -1355,6 +1355,13 @@
           "path": "$ISSUEOPS_ROOT/skills/issueops-implement"
         },
         {
+          "description": "Merge the PR or MR of a completed IssueOps cycle from the main session after the developer reviewed it, then hand off to issueops-cleanup. Resolves the cycle from an issue or PR number, previews draft, checks, head and mergeability through `issueops remote merge-pr`, squash-merges by default pinned to the completed head, deletes the merged remote branch through the typed cleanup flow, and routes failed checks, new commits, or conflicts back to the worktree session through reseed. Use when the user says \"머지해줘\", \"PR 머지하고 정리\", \"#123 머지\", \"merge the PR\", \"land this cycle\".",
+          "has_openai_yaml": true,
+          "has_skill_md": true,
+          "name": "issueops-merge",
+          "path": "$ISSUEOPS_ROOT/skills/issueops-merge"
+        },
+        {
           "description": "Prepare the plan, reviews, and canonical worktree for an IssueOps cycle, then hand off through Orca or Herdr when available, otherwise continue in the current session. Use when \"issueops next\" reports plan.write, plan.design, plan.review, or plan.handoff, or when the user says \"계획 세워줘\", \"계획 검토해줘\", \"구현 인계\".",
           "has_openai_yaml": true,
           "has_skill_md": true,
@@ -5762,6 +5769,7 @@
           "issueops-debugging",
           "issueops-docs",
           "issueops-implement",
+          "issueops-merge",
           "issueops-plan",
           "issueops-prepare",
           "issueops-remote-write",
@@ -8202,6 +8210,13 @@
                 "path": "$ISSUEOPS_ROOT/skills/issueops-implement"
               },
               {
+                "description": "Merge the PR or MR of a completed IssueOps cycle from the main session after the developer reviewed it, then hand off to issueops-cleanup. Resolves the cycle from an issue or PR number, previews draft, checks, head and mergeability through `issueops remote merge-pr`, squash-merges by default pinned to the completed head, deletes the merged remote branch through the typed cleanup flow, and routes failed checks, new commits, or conflicts back to the worktree session through reseed. Use when the user says \"머지해줘\", \"PR 머지하고 정리\", \"#123 머지\", \"merge the PR\", \"land this cycle\".",
+                "has_openai_yaml": true,
+                "has_skill_md": true,
+                "name": "issueops-merge",
+                "path": "$ISSUEOPS_ROOT/skills/issueops-merge"
+              },
+              {
                 "description": "Prepare the plan, reviews, and canonical worktree for an IssueOps cycle, then hand off through Orca or Herdr when available, otherwise continue in the current session. Use when \"issueops next\" reports plan.write, plan.design, plan.review, or plan.handoff, or when the user says \"계획 세워줘\", \"계획 검토해줘\", \"구현 인계\".",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
@@ -9370,6 +9385,7 @@
                 "issueops-debugging",
                 "issueops-docs",
                 "issueops-implement",
+                "issueops-merge",
                 "issueops-plan",
                 "issueops-prepare",
                 "issueops-remote-write",

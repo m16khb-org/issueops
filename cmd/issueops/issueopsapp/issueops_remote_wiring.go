@@ -23,6 +23,7 @@ func newIssueOpsRemote(root string) remotecmd.Command {
 		VerifyRemoteArtifact:    verifyRemoteArtifact,
 		ReflectRemoteCompletion: reflectRemoteCompletion,
 		CloseRemoteIssue:        closeRemoteIssue,
+		MergeRemotePullRequest:  mergeRemotePullRequest,
 
 		CreateIssue:                  createIssue,
 		ReadScoreSummaryFile:         remoteapp.NewTemplateBodyResolver(os.ReadFile).ScoreSummary,
