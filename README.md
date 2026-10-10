@@ -159,7 +159,7 @@ io next --id "반환된-ID" --json
 | 7. 검증 | `issueops-verify` | 실행 증거·독립 리뷰·발행 준비 확인 |
 | 8. 커밋·푸시 | `atomic-commit-push` | 검증한 변경의 커밋과 원격 브랜치 |
 | 9. PR/MR 발행·완료 | `issueops-create-pr`, `issueops-complete` | Draft PR/MR과 완료 증거 |
-| 10. 머지 후 정리 | `issueops-cleanup` | 연결 이슈·worktree·브랜치 정리 |
+| 10. 머지·정리 | `issueops-merge`, `issueops-cleanup` | 머지한 PR/MR과 연결 이슈·worktree·브랜치 정리 |
 
 이 표는 사용자용 단계입니다. 내부 저장 상태와의 대응은
 [실행 가이드](.issueops/operations/guides/issueops-execution.md)가 설명합니다.
