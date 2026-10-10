@@ -49,11 +49,20 @@ issueops project route-docs --repo . --task "<task kind>" --json
 
 In a modular repository (`documentation/manifest.json` present),
 `project_docs_append` writes one dated record file under the family module
-directory (`adr/2026-08-20-slug.md`, `cautions/...`) and never touches the
-root index — read/revise on record files is allowed. There is no flat-layout
+directory (`adr/2026-08-20-slug.md`, `cautions/...`), adds a
+`- [<title>](<file>)` line to that family's `overview.md` when the overview
+exists, and never touches the root index — read/revise on record files is
+allowed. When the overview is missing, the result carries a warning and the
+record must be linked by hand from the family index. There is no flat-layout
 fallback: every repository gets the same record-file routing, and a repo
 whose family roots do not exist yet is flagged by the checker and repaired
 by `project-docs-bootstrap`.
+
+`project_docs_route` also returns up to five dated `cautions/` and `adr/`
+records whose title, summary, or `Source:` line shares at least two terms with
+the task (Korean task words such as 배포·빌드·이미지 map to their English
+terms). Put the files and the operation you are about to touch in the task text
+so past lessons about them surface.
 
 Trigger this skill when a completed unit of work produced one of the left-side
 outcomes. Do not batch updates speculatively for hypothetical future work.
