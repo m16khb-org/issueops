@@ -70,7 +70,7 @@ func CoreProjectTools() []Tool {
 		},
 		{
 			Name:        "project_docs_append",
-			Description: "Append one dated record file under .issueops/cautions/ (kind=caution) or .issueops/adr/ (kind=adr) without modifying the family root index. Use only when there is a concrete issue resolved or decision made; this tool writes files.",
+			Description: "Append one dated record file under .issueops/cautions/ (kind=caution) or .issueops/adr/ (kind=adr) and link it from the family module overview (cautions/overview.md or adr/overview.md) when that file exists; the family root index is not modified. Use only when there is a concrete issue resolved or decision made; this tool writes files.",
 			InputSchema: map[string]any{"type": "object", "required": []string{"kind", "title", "summary"}, "properties": map[string]any{
 				"repo":         map[string]any{"type": "string", "description": "Target repository path. Defaults to current directory."},
 				"kind":         map[string]any{"type": "string", "description": "caution for solved problems/false cases; adr for decisions."},

@@ -6778,6 +6778,7 @@
       "owner": "adapter",
       "task": "T13",
       "symbols": [
+        "func AppendFiles.AppendLine",
         "func AppendFiles.EnsureDir",
         "func AppendFiles.Exists",
         "func AppendFiles.Now",
@@ -10169,6 +10170,7 @@
       "task": "T20",
       "symbols": [
         "func Append",
+        "func linkFromOverview",
         "type AppendEffects"
       ]
     },
@@ -15797,6 +15799,7 @@
         "func IsRecordFile",
         "func MatchRecords",
         "func ParseRecord",
+        "func RecordIndexLine",
         "func RecordModuleDirs",
         "func addHangulTerms",
         "func latinTerm",

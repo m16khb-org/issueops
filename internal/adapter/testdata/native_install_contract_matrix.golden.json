@@ -22,21 +22,21 @@
               "kind": "agy_project_mcp_config",
               "path": "$ROOT/.agents/mcp_config.json",
               "written": true,
-              "content_sha256": "5c22475d8cd1bf4c16c034dcd85132f26280bfac88cf9ccc9e68936b9fa2102c",
+              "content_sha256": "c06607d8f0739aaa0ca822057d67f229bc7516f710bdb013a03dde4dc084a378",
               "content": ""
             },
             {
               "kind": "agy_project_mcp_template",
               "path": "$ROOT/configs/agy/mcp_config.json",
               "written": true,
-              "content_sha256": "5c22475d8cd1bf4c16c034dcd85132f26280bfac88cf9ccc9e68936b9fa2102c",
+              "content_sha256": "c06607d8f0739aaa0ca822057d67f229bc7516f710bdb013a03dde4dc084a378",
               "content": ""
             },
             {
               "kind": "agy_user_mcp_config",
               "path": "$HOME/.gemini/config/mcp_config.json",
               "written": true,
-              "content_sha256": "99f810e19b27bae2b3cab2e83c726a0fe5c599296412700ec55776bbae6cee48",
+              "content_sha256": "71c717ed1ab5d8b69f32c727284fbd61b9a54ad32a99ed9f466fd54464341590",
               "content": ""
             }
           ],
@@ -209,14 +209,14 @@
               "kind": "omo_project_mcp_config",
               "path": "$ROOT/.omo/mcp.json",
               "written": true,
-              "content_sha256": "5c22475d8cd1bf4c16c034dcd85132f26280bfac88cf9ccc9e68936b9fa2102c",
+              "content_sha256": "c06607d8f0739aaa0ca822057d67f229bc7516f710bdb013a03dde4dc084a378",
               "content": ""
             },
             {
               "kind": "omo_project_mcp_template",
               "path": "$ROOT/configs/omo/mcp.json",
               "written": true,
-              "content_sha256": "5c22475d8cd1bf4c16c034dcd85132f26280bfac88cf9ccc9e68936b9fa2102c",
+              "content_sha256": "c06607d8f0739aaa0ca822057d67f229bc7516f710bdb013a03dde4dc084a378",
               "content": ""
             },
             {
@@ -230,7 +230,7 @@
               "kind": "omo_user_mcp_config",
               "path": "$HOME/.omo/mcp.json",
               "written": true,
-              "content_sha256": "99f810e19b27bae2b3cab2e83c726a0fe5c599296412700ec55776bbae6cee48",
+              "content_sha256": "71c717ed1ab5d8b69f32c727284fbd61b9a54ad32a99ed9f466fd54464341590",
               "content": ""
             }
           ],
@@ -276,14 +276,14 @@
               "kind": "omp_project_mcp_config",
               "path": "$ROOT/.omp/mcp.json",
               "written": true,
-              "content_sha256": "fd9861f3c7ffa77f5feab7f1625c2e2cfbe26afd4691b00aaa39a3e33f322d4c",
+              "content_sha256": "5a475de9e7bca63a9213baebe3f770421fc280d4d698b880aa9f5b1d71ccd50d",
               "content": ""
             },
             {
               "kind": "omp_project_mcp_template",
               "path": "$ROOT/configs/omp/mcp.json",
               "written": true,
-              "content_sha256": "fd9861f3c7ffa77f5feab7f1625c2e2cfbe26afd4691b00aaa39a3e33f322d4c",
+              "content_sha256": "5a475de9e7bca63a9213baebe3f770421fc280d4d698b880aa9f5b1d71ccd50d",
               "content": ""
             },
             {
@@ -297,7 +297,7 @@
               "kind": "omp_user_mcp_config",
               "path": "$HOME/.omp/agent/mcp.json",
               "written": true,
-              "content_sha256": "a3edaf767530dfdce9d9fd7185c1f00aa72b5fb958b02267898294b0970fc6cf",
+              "content_sha256": "b2e10a392c57ecd0494ccb74b1f19e3e5b12db1d6cacd3c5f0f3ddff524a2a84",
               "content": ""
             }
           ],
@@ -359,14 +359,14 @@
               "kind": "agy_project_mcp_template",
               "path": "$ROOT/configs/agy/mcp_config.json",
               "written": true,
-              "content_sha256": "5c22475d8cd1bf4c16c034dcd85132f26280bfac88cf9ccc9e68936b9fa2102c",
+              "content_sha256": "c06607d8f0739aaa0ca822057d67f229bc7516f710bdb013a03dde4dc084a378",
               "content": ""
             },
             {
               "kind": "agy_user_mcp_config",
               "path": "$HOME/.gemini/config/mcp_config.json",
               "written": true,
-              "content_sha256": "99f810e19b27bae2b3cab2e83c726a0fe5c599296412700ec55776bbae6cee48",
+              "content_sha256": "71c717ed1ab5d8b69f32c727284fbd61b9a54ad32a99ed9f466fd54464341590",
               "content": ""
             }
           ],
@@ -532,7 +532,7 @@
               "kind": "omo_project_mcp_template",
               "path": "$ROOT/configs/omo/mcp.json",
               "written": true,
-              "content_sha256": "5c22475d8cd1bf4c16c034dcd85132f26280bfac88cf9ccc9e68936b9fa2102c",
+              "content_sha256": "c06607d8f0739aaa0ca822057d67f229bc7516f710bdb013a03dde4dc084a378",
               "content": ""
             },
             {
@@ -546,7 +546,7 @@
               "kind": "omo_user_mcp_config",
               "path": "$HOME/.omo/mcp.json",
               "written": true,
-              "content_sha256": "99f810e19b27bae2b3cab2e83c726a0fe5c599296412700ec55776bbae6cee48",
+              "content_sha256": "71c717ed1ab5d8b69f32c727284fbd61b9a54ad32a99ed9f466fd54464341590",
               "content": ""
             }
           ],
@@ -592,7 +592,7 @@
               "kind": "omp_project_mcp_template",
               "path": "$ROOT/configs/omp/mcp.json",
               "written": true,
-              "content_sha256": "fd9861f3c7ffa77f5feab7f1625c2e2cfbe26afd4691b00aaa39a3e33f322d4c",
+              "content_sha256": "5a475de9e7bca63a9213baebe3f770421fc280d4d698b880aa9f5b1d71ccd50d",
               "content": ""
             },
             {
@@ -606,7 +606,7 @@
               "kind": "omp_user_mcp_config",
               "path": "$HOME/.omp/agent/mcp.json",
               "written": true,
-              "content_sha256": "a3edaf767530dfdce9d9fd7185c1f00aa72b5fb958b02267898294b0970fc6cf",
+              "content_sha256": "b2e10a392c57ecd0494ccb74b1f19e3e5b12db1d6cacd3c5f0f3ddff524a2a84",
               "content": ""
             }
           ],

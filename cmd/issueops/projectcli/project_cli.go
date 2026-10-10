@@ -7,6 +7,7 @@ import (
 	docsapp "issueops/internal/application/projectdocs"
 	projectbootstrapcontract "issueops/internal/contract/projectbootstrap"
 	projectdocscontract "issueops/internal/contract/projectdocs"
+	"os"
 	"strings"
 )
 
@@ -129,5 +130,8 @@ func runProjectAppend(docs docsapp.Service, args []string) error {
 		return printJSON(result)
 	}
 	fmt.Printf("appended %s in %s (%d bytes)\n", result.RecordKind, result.RelPath, result.BytesAppended)
+	for _, warning := range result.Warnings {
+		fmt.Fprintf(os.Stderr, "warning: %s\n", warning)
+	}
 	return nil
 }

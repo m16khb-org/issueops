@@ -63,6 +63,12 @@ func stripLeadingDate(title string) string {
 	return strings.TrimLeft(title[10:], " —–-:")
 }
 
+// RecordIndexLine is the one-line link append adds to a family module overview.
+func RecordIndexLine(title, fileName string) string {
+	title = strings.NewReplacer("[", `\[`, "]", `\]`).Replace(strings.TrimSpace(title))
+	return fmt.Sprintf("- [%s](%s)", title, fileName)
+}
+
 // MatchRecords returns up to limit records that share at least two distinct
 // terms with the task, strongest first and newest first on ties. A shared term
 // weighs ln(N/df) over the given records, so words most records use barely

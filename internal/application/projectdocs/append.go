@@ -15,6 +15,8 @@ type AppendEffects interface {
 	Exists(path string) bool
 	EnsureDir(path string) error
 	Write(path, content string) error
+	// AppendLine adds line as the last line of an existing file.
+	AppendLine(path, line string) error
 	Render(kind, name, description string, request projectdocscontract.ProjectDocsAppendRequest, now time.Time) string
 	Now() time.Time
 }
@@ -49,5 +51,21 @@ func Append(root string, request projectdocscontract.ProjectDocsAppendRequest, e
 		OK: true, Kind: "project_docs_append", RecordKind: plan.Kind, RepoRoot: root,
 		RelPath: rel, Path: filePath, GeneratedAt: effects.Now().Format(time.RFC3339),
 		BytesAppended: len([]byte(content)), SHA256: projectdocdomain.SHA256Hex(content),
+		Warnings: linkFromOverview(root, family, request.Title, rel, effects),
 	}, nil
+}
+
+// linkFromOverview lists the new record in its family module overview so a
+// reader of the index can reach it. The root index stays untouched. The record
+// is already written, so a failure here is a warning, not an error.
+func linkFromOverview(root string, family projectdocdomain.DocFamily, title, rel string, effects AppendEffects) []string {
+	overviewRel := path.Join(projectdocdomain.ProjectDocsDir, family.OverviewRel())
+	overviewPath := effects.Path(root, overviewRel)
+	if !effects.Exists(overviewPath) {
+		return []string{overviewRel + " is missing, so no family index links " + rel + "; link it by hand"}
+	}
+	if err := effects.AppendLine(overviewPath, projectdocdomain.RecordIndexLine(title, path.Base(rel))); err != nil {
+		return []string{"could not link " + rel + " from " + overviewRel + ": " + err.Error()}
+	}
+	return nil
 }

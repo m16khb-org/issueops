@@ -535,7 +535,7 @@
     "name": "project_docs_revise"
   },
   {
-    "description": "Append one dated record file under .issueops/cautions/ (kind=caution) or .issueops/adr/ (kind=adr) without modifying the family root index. Use only when there is a concrete issue resolved or decision made; this tool writes files.",
+    "description": "Append one dated record file under .issueops/cautions/ (kind=caution) or .issueops/adr/ (kind=adr) and link it from the family module overview (cautions/overview.md or adr/overview.md) when that file exists; the family root index is not modified. Use only when there is a concrete issue resolved or decision made; this tool writes files.",
     "inputSchema": {
       "properties": {
         "alternatives": {
