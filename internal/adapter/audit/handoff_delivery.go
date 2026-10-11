@@ -32,7 +32,7 @@ type handoffDeliveryOpenHooks struct {
 func boundedHandoffDeliveryField(value string) string {
 	value = strings.TrimSpace(value)
 	if len(value) > handoffDeliveryFieldLimit {
-		return value[:handoffDeliveryFieldLimit] + "..."
+		return policy.TruncateBytes(value, handoffDeliveryFieldLimit) + "..."
 	}
 	return value
 }
