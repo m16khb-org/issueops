@@ -209,6 +209,10 @@ func shellQuotePath(value string) string {
 }
 
 func sameResolvedPath(left, right string) bool {
+	// filepath.Abs("") is the process cwd; an empty path (e.g. failed git output) never matches.
+	if strings.TrimSpace(left) == "" || strings.TrimSpace(right) == "" {
+		return false
+	}
 	left, leftErr := filepath.Abs(left)
 	right, rightErr := filepath.Abs(right)
 	if leftErr != nil || rightErr != nil {
