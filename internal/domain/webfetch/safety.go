@@ -35,7 +35,13 @@ func IsUnsafeHost(host string, allowPrivate bool) bool {
 	}
 	ip := parseIPAddress(lower)
 	if !ip.IsValid() {
-		return false
+		// A zoned literal such as fe80::1%eth0 is not a public hostname: classify the
+		// address without its zone instead of letting it pass as a name.
+		zoned, err := netip.ParseAddr(lower)
+		if err != nil || zoned.Zone() == "" {
+			return false
+		}
+		ip = zoned.WithZone("").Unmap()
 	}
 	if isMetadataIP(ip) {
 		return true
