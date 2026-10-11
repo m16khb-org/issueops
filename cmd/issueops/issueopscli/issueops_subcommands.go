@@ -267,7 +267,9 @@ func (cli command) runIssueOpsRoutingScore(args []string) error {
 	)
 	if err != nil {
 		if *jsonOut {
-			return printIssueOpsErrorJSON(err)
+			if printErr := printIssueOpsErrorJSON(err); printErr != nil {
+				return printErr
+			}
 		}
 		return err
 	}
