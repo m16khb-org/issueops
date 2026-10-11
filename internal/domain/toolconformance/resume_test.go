@@ -1,6 +1,7 @@
 package toolconformance
 
 import (
+	"strings"
 	"testing"
 
 	contract "issueops/internal/contract/toolconformance"
@@ -214,5 +215,29 @@ func TestResumeHostReportRejectsUnknownEpisodeStatus(t *testing.T) {
 	host.Cases = []contract.EpisodeReport{episode}
 	if got, err := resume(&report, 1); got != nil || err == nil || err.Error() != "invalid_previous_episode_evidence" {
 		t.Fatalf("unknown status accepted: %v %v", got, err)
+	}
+}
+
+func TestResumeHostReportAcceptsObservedModelAtMaximumLength(t *testing.T) {
+	report := completedHostReport()
+	host := &report.Hosts[0]
+	model := strings.Repeat("m", 256)
+	host.ObservedModel = model
+	host.Cases[0].ObservedModel = model
+	if got, err := resume(&report, 1); err != nil || got == nil {
+		t.Fatalf("256-byte observed model rejected: %v", err)
+	}
+}
+
+func TestResumeHostReportRejectsEmptyCaseListEvenWhenLiveAttemptIsClaimed(t *testing.T) {
+	report := completedHostReport()
+	host := &report.Hosts[0]
+	host.Cases, host.AttemptCount, host.CompletedEpisodes = nil, 0, 0
+	host.Status = contract.HostStatusUnavailable
+	host.ObservedModel = ""
+	host.Evidence.LiveAttempted, host.Evidence.LiveVerified = true, false
+	host.Evidence.StatusReason = "live_probe_incomplete"
+	if got, err := resume(&report, 1); got != nil || err == nil {
+		t.Fatalf("claimed live attempt without cases accepted: %v", err)
 	}
 }

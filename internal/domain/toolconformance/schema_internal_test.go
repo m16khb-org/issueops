@@ -189,3 +189,34 @@ func TestReportEnumsRejectUnknownJSONValues(t *testing.T) {
 		})
 	}
 }
+
+func TestClassifyReportsAdvertisedAndCanonicalValidity(t *testing.T) {
+	schema := map[string]any{"type": "object", "properties": map[string]any{"a": map[string]any{"type": "string"}}}
+	for _, tt := range []struct {
+		name                         string
+		raw                          string
+		advertisedValid, canonicalOK bool
+	}{
+		{"valid", `{"a":"x"}`, true, true},
+		{"unknown key only canonical invalid", `{"a":"x","b":1}`, true, false},
+		{"wrong type invalid in both", `{"a":1}`, false, false},
+	} {
+		got, err := Classify(toolconformancecontract.CallObservation{RawArguments: []byte(tt.raw), CallCount: 1}, schema, map[string]any{"a": "x"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.AdvertisedValid != tt.advertisedValid || got.CanonicalValid != tt.canonicalOK {
+			t.Errorf("%s: advertised=%v canonical=%v", tt.name, got.AdvertisedValid, got.CanonicalValid)
+		}
+	}
+}
+
+func TestValidatorAcceptsBoundaryValuesForMinimumAndMaxLength(t *testing.T) {
+	schema := map[string]any{"type": "object", "properties": map[string]any{
+		"n": map[string]any{"type": "integer", "minimum": 1},
+		"s": map[string]any{"type": "string", "maxLength": 0},
+	}}
+	if diagnostics, err := Validate(ClosedProjection(schema), map[string]any{"n": float64(1), "s": ""}); err != nil || len(diagnostics) != 0 {
+		t.Fatalf("boundary values rejected: %#v err=%v", diagnostics, err)
+	}
+}

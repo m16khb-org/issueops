@@ -326,3 +326,222 @@ func TestOwnerCommandCoversGateMap(t *testing.T) {
 		t.Fatalf("an unknown gate must fall back to status, got %q", got)
 	}
 }
+
+func TestClassifyRootConflictBlocksOnlyExecutionlessCyclesFromPlanOnward(t *testing.T) {
+	const blockedRoot = "blocked.root_conflict"
+	cases := []struct {
+		name string
+		in   Input
+		want bool
+	}{
+		{"plan without execution", withIssue(baseRecord(issueopsnextcontract.PhasePlan)), true},
+		{"implement without execution", withIssue(baseRecord(issueopsnextcontract.PhaseImplement)), true},
+		{"grill is earlier than plan", withIssue(baseRecord(issueopsnextcontract.PhaseGrill)), false},
+		{"problem is earlier than plan", baseRecord(issueopsnextcontract.PhaseProblem), false},
+		{"execution already owns the root", withSelfHolder(baseRecord(issueopsnextcontract.PhaseImplement)), false},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			in := testCase.in
+			in.RootConflictID = " io-other "
+			got := Classify(in)
+			if (got.Stage.Key == blockedRoot) != testCase.want {
+				t.Fatalf("stage %s, blocked.root_conflict want %v", got.Stage.Key, testCase.want)
+			}
+			if !testCase.want {
+				return
+			}
+			if got.Stage.Index != 3 {
+				t.Fatalf("root conflict index %d want 3", got.Stage.Index)
+			}
+			if got.NextCommand != "issueops list --repo /repo --json" {
+				t.Fatalf("next command %q", got.NextCommand)
+			}
+			if len(got.Warnings) != 1 || got.Warnings[0] != "canonical worktree root is already claimed by cycle io-other" {
+				t.Fatalf("warnings %v", got.Warnings)
+			}
+		})
+	}
+	blank := withIssue(baseRecord(issueopsnextcontract.PhasePlan))
+	blank.RootConflictID = "  "
+	if got := Classify(blank); got.Stage.Key == blockedRoot {
+		t.Fatal("a blank root conflict id must not block")
+	}
+}
+
+func TestClassifyUnknownReportsUnmatchedLocalGates(t *testing.T) {
+	got := Classify(withLocal(withSelfHolder(baseRecord(issueopsnextcontract.PhaseFeedback)), "branch_match", "other"))
+	if got.Stage.Key != "unknown" {
+		t.Fatalf("stage %s want unknown", got.Stage.Key)
+	}
+	if strings.Join(got.Missing, ",") != "branch_match,other" {
+		t.Fatalf("missing %v", got.Missing)
+	}
+	if len(got.Warnings) != 1 || got.Warnings[0] != "unmatched readiness gates: branch_match, other" {
+		t.Fatalf("warnings %v", got.Warnings)
+	}
+
+	for name, in := range map[string]Input{
+		"no local readiness":    withIssue(baseRecord(issueopsnextcontract.PhasePR)),
+		"empty local readiness": withLocal(withIssue(baseRecord(issueopsnextcontract.PhasePR))),
+	} {
+		got := Classify(in)
+		if got.Stage.Key != "unknown" {
+			t.Fatalf("%s: stage %s want unknown", name, got.Stage.Key)
+		}
+		if len(got.Missing) != 0 || len(got.Warnings) != 0 {
+			t.Fatalf("%s: unknown without gates must not report missing %v / warnings %v", name, got.Missing, got.Warnings)
+		}
+	}
+}
+
+func TestClassifyMissingIssueURLOnlyClassifiesProblemAndGrill(t *testing.T) {
+	for _, phase := range []issueopsnextcontract.Phase{issueopsnextcontract.PhaseProblem, issueopsnextcontract.PhaseGrill} {
+		got := Classify(baseRecord(phase))
+		if got.Stage.Key != "issue" || got.Stage.Index != 1 {
+			t.Fatalf("%s without issue: got %s/%d want issue/1", phase, got.Stage.Key, got.Stage.Index)
+		}
+	}
+	got := Classify(baseRecord(issueopsnextcontract.PhasePlan))
+	if got.Stage.Key != "unknown" {
+		t.Fatalf("plan without issue url must not be treated as stage 1, got %s", got.Stage.Key)
+	}
+}
+
+func TestClassifyBranchPrepareCommandDependsOnPhase(t *testing.T) {
+	problem := Classify(withIssue(baseRecord(issueopsnextcontract.PhaseProblem)))
+	if problem.Stage.Key != "prepare" || problem.NextCommand != "issueops phase --id io-test --to grill --json" {
+		t.Fatalf("problem with issue: got %s %q", problem.Stage.Key, problem.NextCommand)
+	}
+	if len(problem.Missing) != 1 || problem.Missing[0] != "intent_contract" {
+		t.Fatalf("problem with issue must surface stage-one gates, got %v", problem.Missing)
+	}
+	grill := Classify(withIssue(baseRecord(issueopsnextcontract.PhaseGrill)))
+	if grill.Stage.Key != "prepare" || strings.Contains(grill.NextCommand, "--to grill") {
+		t.Fatalf("grill with issue must not re-advance to grill, got %s %q", grill.Stage.Key, grill.NextCommand)
+	}
+	if grill.NextCommand != OwnerCommand("io-test", "branch_prepare") {
+		t.Fatalf("grill next command %q want owner command for branch_prepare", grill.NextCommand)
+	}
+	if len(grill.Missing) != 1 || grill.Missing[0] != "branch_prepare" {
+		t.Fatalf("grill missing %v", grill.Missing)
+	}
+}
+
+func TestClassifyRevokingLeaseOffersTakeover(t *testing.T) {
+	revoking := withExecution(baseRecord(issueopsnextcontract.PhaseImplement), issueopscontract.WriteLease{
+		Generation: 4, Status: issueopsnextcontract.LeaseStatusRevoking,
+	})
+	got := Classify(revoking)
+	if got.Stage.Key != "takeover" {
+		t.Fatalf("revoking lease stage %s want takeover", got.Stage.Key)
+	}
+	const replace = "issueops execution replace --id io-test --expected-generation 4 --preview"
+	if got.NextCommand != replace || got.Exits.TakeoverCommand != replace {
+		t.Fatalf("next %q takeover exit %q want %q", got.NextCommand, got.Exits.TakeoverCommand, replace)
+	}
+	if got.Exits.PauseCommand != "" {
+		t.Fatalf("a revoking lease cannot be paused, got %q", got.Exits.PauseCommand)
+	}
+
+	self := Classify(withSelfHolder(baseRecord(issueopsnextcontract.PhaseImplement)))
+	if self.Exits.TakeoverCommand != "" {
+		t.Fatalf("an active self holder must not be offered takeover, got %q", self.Exits.TakeoverCommand)
+	}
+	live := Classify(withHolder(baseRecord(issueopsnextcontract.PhaseImplement), "codex", "s-2", true))
+	if live.Exits.TakeoverCommand != "" {
+		t.Fatalf("a live foreign holder must not be offered takeover, got %q", live.Exits.TakeoverCommand)
+	}
+}
+
+func TestClassifyTakeoverPrefersWriterlessRecovery(t *testing.T) {
+	in := withHolder(baseRecord(issueopsnextcontract.PhaseImplement), "codex", "s-2", false)
+	in.WriterlessRecovery = "  issueops execution recover --id io-test  "
+	if got := Classify(in); got.NextCommand != "issueops execution recover --id io-test" {
+		t.Fatalf("writerless recovery must win, got %q", got.NextCommand)
+	}
+	in.WriterlessRecovery = "   "
+	if got := Classify(in); got.NextCommand != "issueops execution replace --id io-test --expected-generation 1 --preview" {
+		t.Fatalf("blank recovery must fall back to replace, got %q", got.NextCommand)
+	}
+}
+
+func TestClassifyRendersGenerationInTakeoverCommands(t *testing.T) {
+	revoking := func(generation uint64) Input {
+		return withExecution(baseRecord(issueopsnextcontract.PhaseImplement), issueopscontract.WriteLease{
+			Generation: generation, Status: issueopsnextcontract.LeaseStatusRevoking,
+		})
+	}
+	if got := Classify(revoking(12)); !strings.Contains(got.NextCommand, "--expected-generation 12 ") ||
+		!strings.Contains(got.Exits.TakeoverCommand, "--expected-generation 12 ") {
+		t.Fatalf("generation 12 must render, got next %q exit %q", got.NextCommand, got.Exits.TakeoverCommand)
+	}
+	if got := Classify(revoking(0)); !strings.Contains(got.NextCommand, "--expected-generation <N> ") ||
+		!strings.Contains(got.Exits.TakeoverCommand, "--expected-generation <N> ") {
+		t.Fatalf("unknown generation must render a placeholder, got next %q exit %q", got.NextCommand, got.Exits.TakeoverCommand)
+	}
+}
+
+func TestClassifyIssueStageFallsBackToIntentContractWithoutMissingGates(t *testing.T) {
+	in := baseRecord(issueopsnextcontract.PhaseGrill)
+	in.Completion = func(issueopsnextcontract.Phase) Readiness { return Readiness{Ready: true} }
+	got := Classify(in)
+	if got.Stage.Key != "issue" {
+		t.Fatalf("stage %s want issue", got.Stage.Key)
+	}
+	if got.NextCommand != OwnerCommand("io-test", "intent_contract") {
+		t.Fatalf("next command %q want owner command for intent_contract", got.NextCommand)
+	}
+}
+
+func TestClassifyWarningsPassThroughLocalAndWorktreeObservations(t *testing.T) {
+	const missingRoot = "canonical worktree is missing at /repo.worktrees/12-test"
+	withHead := func(finalHead, observed string) Input {
+		in := withSelfHolder(baseRecord(issueopsnextcontract.PhaseImplement))
+		in.Record.Execution.Completion = &issueopscontract.ExecutionCompletion{FinalHead: finalHead}
+		in.WorktreeHead = observed
+		return in
+	}
+	noCompletion := withSelfHolder(baseRecord(issueopsnextcontract.PhaseImplement))
+	noCompletion.WorktreeHead = "def"
+	missing := withSelfHolder(baseRecord(issueopsnextcontract.PhaseImplement))
+	missing.WorktreePresent = false
+	cases := []struct {
+		name string
+		in   Input
+		want []string
+	}{
+		{"worktree missing", missing, []string{missingRoot}},
+		{"worktree present", withSelfHolder(baseRecord(issueopsnextcontract.PhaseImplement)), nil},
+		{"head differs", withHead("abc", "def"), []string{"worktree head def differs from the recorded completion head abc"}},
+		{"head differs after trimming", withHead(" abc ", " def "), []string{"worktree head def differs from the recorded completion head abc"}},
+		{"head matches after trimming", withHead(" abc ", "abc "), nil},
+		{"observed head blank", withHead("abc", "  "), nil},
+		{"recorded head blank", withHead("  ", "def"), nil},
+		{"no completion recorded", noCompletion, nil},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			got := Classify(testCase.in).Warnings
+			if strings.Join(got, "|") != strings.Join(testCase.want, "|") {
+				t.Fatalf("warnings %q want %q", got, testCase.want)
+			}
+		})
+	}
+
+	local := withSelfHolder(baseRecord(issueopsnextcontract.PhaseImplement))
+	local.Local = &Readiness{Warnings: []string{"base drift"}}
+	if got := Classify(local).Warnings; len(got) != 1 || got[0] != "base drift" {
+		t.Fatalf("local warnings must pass through, got %q", got)
+	}
+	local.WorktreePresent = false
+	if got := Classify(local).Warnings; len(got) != 2 || got[0] != "base drift" || got[1] != missingRoot {
+		t.Fatalf("local warnings must precede worktree warnings, got %q", got)
+	}
+	blankRoot := withSelfHolder(baseRecord(issueopsnextcontract.PhaseImplement))
+	blankRoot.Record.Execution.Workspace.Root = "  "
+	blankRoot.WorktreePresent = false
+	if got := Classify(blankRoot).Warnings; len(got) != 0 {
+		t.Fatalf("a blank workspace root has no worktree to miss, got %q", got)
+	}
+}

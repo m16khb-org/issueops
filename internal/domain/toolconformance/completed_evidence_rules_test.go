@@ -186,3 +186,25 @@ func TestValidCompletedEpisodeRejectsDisallowedClassificationsWithOtherwiseConsi
 		}
 	}
 }
+
+func TestValidCompletedEpisodeAcceptsFieldsAtDocumentedLimits(t *testing.T) {
+	expected := testExpectation()
+	atLimit := validEpisode()
+	atLimit.ObservedModel = strings.Repeat("m", 256)
+	if !ValidCompletedEpisode(atLimit, expected) {
+		t.Error("observed model of exactly 256 bytes rejected")
+	}
+	for name, d := range map[string]contract.Diagnostic{
+		"path 512":      {Path: strings.Repeat("p", 512), Code: "c"},
+		"code 128":      {Path: "/x", Code: strings.Repeat("c", 128)},
+		"expected 1024": {Path: "/x", Code: "c", Expected: strings.Repeat("e", 1024)},
+		"actual 1024":   {Path: "/x", Code: "c", Actual: strings.Repeat("a", 1024)},
+	} {
+		e := failedEpisode(false, false, failurecausecontract.Model)
+		e.Diagnostics = []contract.Diagnostic{d}
+		e.DiagnosticSignature = DiagnosticSignature(e.Classification, e.Diagnostics)
+		if !ValidCompletedEpisode(e, expected) {
+			t.Errorf("diagnostic %s rejected", name)
+		}
+	}
+}

@@ -176,7 +176,8 @@ func TestEnsureMetaFrontmatterEdgeCases(t *testing.T) {
 		t.Fatalf("stale frontmatter not replaced cleanly: %q", replaced)
 	}
 	// An unterminated block is not frontmatter, so it stays in the body.
-	if _, _, body, ok := ParseFrontmatter("---\nname: x\n# no close\n"); ok || !strings.Contains(body, "no close") {
+	const unterminated = "---\nname: x\n# no close\n"
+	if _, _, body, ok := ParseFrontmatter(unterminated); ok || body != unterminated {
 		t.Fatalf("unterminated block ok=%v body=%q", ok, body)
 	}
 }

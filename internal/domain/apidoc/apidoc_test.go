@@ -168,3 +168,49 @@ func TestCheckNestDTO(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckNestControllerDecoratorBlockBoundaries(t *testing.T) {
+	stray := "// @ApiOperation({ description: '### stray' })\n"
+	cases := []struct {
+		name, text string
+		want       []string
+	}{
+		{"comment line above decorators is not part of the block", stray + "@Get()\nasync m() {}", []string{"missing_api_operation"}},
+		{"comment above multiline decorator is not part of the block", stray + "@ApiResponse({\n status: 404,\n})\n@Get()\nasync m() {}", []string{"missing_api_operation"}},
+		{"blank line between decorators keeps the block", goodOp + "\n@Get()\nasync m() {}", []string{}},
+		{"two path params both reported", goodOp + "@Get('a/:x/b/:y')\nasync m() {}", []string{"missing_api_param", "missing_api_param"}},
+		{"two named queries both reported", goodOp + "@ApiBadRequestResponse()\n@Get()\nasync m(@Query('a') a, @Query('b') b) {}", []string{"missing_api_query", "missing_api_query"}},
+		{"signature without opening brace at end of file", goodOp + "@Get()\nasync m(", []string{}},
+		{"multiline signature parameters belong to the block", goodOp + "@Post()\nasync m(\n @Body() b,\n) {}", []string{"missing_400_response"}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := codes(CheckNestController("f.ts", c.text)); !reflect.DeepEqual(got, c.want) {
+				t.Fatalf("got %v want %v", got, c.want)
+			}
+		})
+	}
+}
+
+func TestHasNestResponseStatusMultipleDecorators(t *testing.T) {
+	block := "@ApiResponse({ status: 200 })\n@ApiResponse({ status: 404 })"
+	if !HasNestResponseStatus(block, 404) {
+		t.Fatal("status from the second @ApiResponse must be found")
+	}
+	_ = HasNestResponseStatus("@ApiResponse({ status: 400 }", 400) // truncated source must not panic
+}
+
+func TestCheckNestDTOMultipleClassesAndLines(t *testing.T) {
+	text := "class A {\n@ApiProperty()\nok: string;\n}\nclass B {\n@IsString()\nbad: string;\n}\n"
+	vs := CheckNestDTO("d.ts", text)
+	if len(vs) != 1 || vs[0].Code != "missing_api_property" || vs[0].Line != 7 || vs[0].File != "d.ts" {
+		t.Fatalf("got %+v", vs)
+	}
+}
+
+func TestCheckNestDTOIgnoresBlocksAfterClassCloses(t *testing.T) {
+	text := "class A {\n}\n{\nbad: string;\n}\n"
+	if vs := CheckNestDTO("d.ts", text); len(vs) != 0 {
+		t.Fatalf("properties outside a class must be ignored, got %+v", vs)
+	}
+}
