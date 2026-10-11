@@ -66,3 +66,15 @@ func TestCycleForWorkspaceRejectsEmptyPath(t *testing.T) {
 		t.Fatal("CycleForWorkspace(blank) ok = true, want false")
 	}
 }
+
+func TestPreparedBaseBranchForWorkspaceReportsNoBaseWhenCycleMissingOrUnprepared(t *testing.T) {
+	store := newActiveTestStore(t)
+	repo := t.TempDir()
+	if base, ok := store.reader().PreparedBaseBranchForWorkspace(repo); ok || base != "" {
+		t.Fatalf("no cycle: base=%q ok=%v", base, ok)
+	}
+	store.writeRecord(t, model.IssueOpsRecord{ID: "io-unprepared", Repo: repo, Phase: model.IssueOpsPhasePlan})
+	if base, ok := store.reader().PreparedBaseBranchForWorkspace(repo); ok || base != "" {
+		t.Fatalf("unprepared cycle: base=%q ok=%v", base, ok)
+	}
+}

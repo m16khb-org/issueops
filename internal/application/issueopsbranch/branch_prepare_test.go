@@ -207,3 +207,57 @@ func TestPrepareRejectsInvalidURLBeforeAdoption(t *testing.T) {
 		t.Fatalf("invalid URL accepted: error=%v record=%+v", err, store.record)
 	}
 }
+
+func TestPrepareRejectsBaseSHAResolvingToBlankOID(t *testing.T) {
+	store := newBranchPrepareTestStore(model.IssueOpsRecord{
+		ID: "io-blank-oid", OK: true, Repo: "/repo/example", Branch: "123-blank-oid",
+		IssueURL: "https://github.com/example/repo/issues/123",
+	})
+	deps := store.issueOpsStore()
+	deps.ResolveBaseCommit = func(string, string) (string, error) { return "  \n", nil }
+	_, err := prepareForTest(deps, t.TempDir(), "io-blank-oid", model.IssueOpsBranchPrepareRequest{
+		Provider: "github", IssueURL: "https://github.com/example/repo/issues/123",
+		Branch: "123-blank-oid", BaseBranch: "main", BaseSHA: "abc123",
+	})
+	if err == nil || !strings.Contains(err.Error(), "empty commit OID") {
+		t.Fatalf("blank resolved OID must fail closed: %v", err)
+	}
+	if store.record.BranchPrepare != nil {
+		t.Fatalf("record mutated: %+v", store.record.BranchPrepare)
+	}
+}
+
+func TestPrepareFailsClosedWhenBaseSHAResolverUnavailable(t *testing.T) {
+	store := newBranchPrepareTestStore(model.IssueOpsRecord{
+		ID: "io-no-resolver", OK: true, Repo: "/repo/example", Branch: "123-no-resolver",
+		IssueURL: "https://github.com/example/repo/issues/123",
+	})
+	deps := store.issueOpsStore()
+	deps.ResolveBaseCommit = nil
+	_, err := prepareForTest(deps, t.TempDir(), "io-no-resolver", model.IssueOpsBranchPrepareRequest{
+		Provider: "github", IssueURL: "https://github.com/example/repo/issues/123",
+		Branch: "123-no-resolver", BaseBranch: "main", BaseSHA: "abc123",
+	})
+	if err == nil || !strings.Contains(err.Error(), "base_sha validation is unavailable") {
+		t.Fatalf("missing resolver must reject base_sha: %v", err)
+	}
+}
+
+func TestPrepareStoresTrimmedResolvedBaseSHA(t *testing.T) {
+	store := newBranchPrepareTestStore(model.IssueOpsRecord{
+		ID: "io-trim-oid", OK: true, Repo: "/repo/example", Branch: "123-trim-oid",
+		IssueURL: "https://github.com/example/repo/issues/123",
+	})
+	deps := store.issueOpsStore()
+	deps.ResolveBaseCommit = func(string, string) (string, error) { return " 0123abcd\n", nil }
+	record, err := prepareForTest(deps, t.TempDir(), "io-trim-oid", model.IssueOpsBranchPrepareRequest{
+		Provider: "github", IssueURL: "https://github.com/example/repo/issues/123",
+		Branch: "123-trim-oid", BaseBranch: "main", BaseSHA: "abc",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if record.BranchPrepare == nil || record.BranchPrepare.BaseSHA != "0123abcd" {
+		t.Fatalf("BranchPrepare=%+v", record.BranchPrepare)
+	}
+}

@@ -406,6 +406,7 @@ func TestIdentityHeadersOnlyOnSuccessfulResponses(t *testing.T) {
 			return
 		}
 		rw.(http.Flusher).Flush()
+		_, _ = rw.Write([]byte("body"))
 	}), record)
 	denied := httptest.NewRecorder()
 	handler.ServeHTTP(denied, httptest.NewRequest(http.MethodPost, "/mcp", nil))
@@ -416,7 +417,7 @@ func TestIdentityHeadersOnlyOnSuccessfulResponses(t *testing.T) {
 	request.Header.Set("Authorization", "Bearer x")
 	allowed := httptest.NewRecorder()
 	handler.ServeHTTP(allowed, request)
-	if !allowed.Flushed || allowed.Header().Get(HeaderPID) != "7" || allowed.Header().Get(HeaderBuildID) != "abc" {
+	if !allowed.Flushed || allowed.Body.String() != "body" || allowed.Header().Get(HeaderPID) != "7" || allowed.Header().Get(HeaderBuildID) != "abc" {
 		t.Fatalf("allowed response headers = %v flushed=%v", allowed.Header(), allowed.Flushed)
 	}
 }

@@ -85,3 +85,20 @@ func TestInstanceLockIsExclusiveAcrossProcessesAndObservable(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestLockHolderIsZeroForMissingFileAndErrorsOnUnopenableOne(t *testing.T) {
+	dir := t.TempDir()
+	if pid, err := LockHolder(filepath.Join(dir, "absent.lock")); err != nil || pid != 0 {
+		t.Fatalf("missing lock file: pid=%d err=%v", pid, err)
+	}
+	blocker := filepath.Join(dir, "plain")
+	if err := os.WriteFile(blocker, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LockHolder(filepath.Join(blocker, "server.lock")); err == nil {
+		t.Fatal("a lock path under a regular file did not error")
+	}
+	if pid, err := LockHolder(blocker); err != nil || pid != 0 {
+		t.Fatalf("unlocked existing file: pid=%d err=%v", pid, err)
+	}
+}

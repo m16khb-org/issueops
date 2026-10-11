@@ -6,6 +6,7 @@ import (
 	review "issueops/internal/contract/issueopsreview"
 	port "issueops/internal/port/issueopscycle"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -127,5 +128,22 @@ func TestPhaseAdvanceAuthorizesBeforePrefetchAndAgainUnderLock(t *testing.T) {
 				t.Fatalf("authority error lost: %v", err)
 			}
 		})
+	}
+}
+
+func TestStrictPRWithFetchMergesChildGateMissingAndWarnings(t *testing.T) {
+	locked := false
+	events := []string{}
+	ready, _ := readinessForEffects(t, &locked, &events)
+	ready.ChildMissing = func(root string, _ model.IssueOpsRecord) ([]string, []string) {
+		if root != "state" {
+			t.Fatalf("child gate root=%q", root)
+		}
+		return []string{"child_pr_open"}, []string{"child #4 still open"}
+	}
+	record := model.IssueOpsRecord{Repo: "/repo", Branch: "feature", Phase: model.IssueOpsPhaseFeedback, Execution: &model.Execution{Mode: model.ExecutionModeDirect}}
+	got := ready.StrictPRWithFetch("state", record, ready.Git.Fetch)
+	if got.Ready || !strings.Contains(strings.Join(got.Missing, ","), "child_pr_open") || !slices.Contains(got.Warnings, "child #4 still open") {
+		t.Fatalf("child gate not merged: %+v", got)
 	}
 }

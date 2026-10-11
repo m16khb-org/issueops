@@ -97,3 +97,112 @@ func TestLoadFailureBoundsLongOutputOnARuneBoundary(t *testing.T) {
 		t.Fatalf("load error is %d bytes or not valid UTF-8", len(msg))
 	}
 }
+
+func TestLaunchdSupervisedDistinguishesNotLoadedIdleAndRunning(t *testing.T) {
+	boom := errors.New("exit status 113")
+	for _, tc := range []struct {
+		name       string
+		out        string
+		err        error
+		wantLoaded bool
+		wantPID    int
+		wantErr    bool
+	}{
+		{name: "job unknown", err: boom},
+		{name: "loaded without a pid line", out: "state = waiting\n", wantLoaded: true},
+		{name: "running", out: "gui/501/x = {\n\tstate = running\n\tpid = 88\n}\n", wantLoaded: true, wantPID: 88},
+		{name: "unparsable pid", out: "pid = soon\n", wantLoaded: true, wantErr: true},
+		{name: "other keys ending in pid are ignored", out: "last pid = 5\nstate = waiting\n", wantLoaded: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			run := func(context.Context, string, ...string) ([]byte, error) { return []byte(tc.out), tc.err }
+			loaded, pid, err := launchd{run: run, label: "l", uid: 501}.supervised(t.Context())
+			if loaded != tc.wantLoaded || pid != tc.wantPID || (err != nil) != tc.wantErr {
+				t.Fatalf("loaded=%v pid=%d err=%v", loaded, pid, err)
+			}
+		})
+	}
+}
+
+func TestSystemdSupervisedDistinguishesStatesAndBadMainPID(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		out        string
+		err        error
+		wantLoaded bool
+		wantPID    int
+		wantErr    bool
+	}{
+		{name: "unit unknown", err: errors.New("exit status 4")},
+		{name: "inactive", out: "ActiveState=inactive\nMainPID=0\n"},
+		{name: "activating counts as loaded", out: "ActiveState=activating\nMainPID=12\n", wantLoaded: true, wantPID: 12},
+		{name: "reloading counts as loaded", out: "ActiveState=reloading\nMainPID=13\n", wantLoaded: true, wantPID: 13},
+		{name: "failed is not loaded", out: "ActiveState=failed\nMainPID=0\n"},
+		{name: "unparsable MainPID", out: "ActiveState=active\nMainPID=x\n", wantLoaded: true, wantErr: true},
+		{name: "lines without a value are skipped", out: "garbage\nActiveState=active\nMainPID=4\n", wantLoaded: true, wantPID: 4},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			run := func(context.Context, string, ...string) ([]byte, error) { return []byte(tc.out), tc.err }
+			loaded, pid, err := systemd{run: run, unit: "u"}.supervised(t.Context())
+			if loaded != tc.wantLoaded || pid != tc.wantPID || (err != nil) != tc.wantErr {
+				t.Fatalf("loaded=%v pid=%d err=%v", loaded, pid, err)
+			}
+		})
+	}
+}
+
+func TestUnloadTargetsTheJobAndPropagatesFailure(t *testing.T) {
+	boom := errors.New("boom")
+	var commands []string
+	run := func(err error) Runner {
+		return func(_ context.Context, name string, args ...string) ([]byte, error) {
+			commands = append(commands, name+" "+strings.Join(args, " "))
+			return nil, err
+		}
+	}
+	if err := (launchd{run: run(nil), label: "io.x", uid: 7}).unload(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	if err := (systemd{run: run(nil), unit: "x.service"}).unload(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"launchctl bootout gui/7/io.x", "systemctl --user stop x.service"}
+	if strings.Join(commands, "|") != strings.Join(want, "|") {
+		t.Fatalf("commands = %v, want %v", commands, want)
+	}
+	if err := (launchd{run: run(boom)}).unload(t.Context()); !errors.Is(err, boom) {
+		t.Fatalf("launchd unload err = %v", err)
+	}
+	if err := (systemd{run: run(boom)}).unload(t.Context()); !errors.Is(err, boom) {
+		t.Fatalf("systemd unload err = %v", err)
+	}
+}
+
+func TestSystemdLoadStopsAtTheFirstFailingStep(t *testing.T) {
+	var commands []string
+	run := func(_ context.Context, name string, args ...string) ([]byte, error) {
+		commands = append(commands, strings.Join(args, " "))
+		if args[1] == "enable" {
+			return []byte("unit not found"), errors.New("exit status 1")
+		}
+		return nil, nil
+	}
+	err := systemd{run: run, unit: "x.service"}.load(t.Context())
+	if err == nil || !strings.Contains(err.Error(), "systemctl --user enable x.service") {
+		t.Fatalf("err = %v", err)
+	}
+	if strings.Join(commands, "|") != "--user daemon-reload|--user enable x.service" {
+		t.Fatalf("commands = %v; start must not run after a failed enable", commands)
+	}
+}
+
+func TestRunLoadStepOmitsEmptyOutputAndSucceedsQuietly(t *testing.T) {
+	exit := errors.New("exit status 2")
+	err := runLoadStep(t.Context(), func(context.Context, string, ...string) ([]byte, error) { return []byte(" \n"), exit }, "tool", "a", "b")
+	if !errors.Is(err, exit) || err.Error() != "tool a b: exit status 2" {
+		t.Fatalf("err = %v", err)
+	}
+	if err := runLoadStep(t.Context(), func(context.Context, string, ...string) ([]byte, error) { return []byte("noise"), nil }, "tool"); err != nil {
+		t.Fatalf("err = %v", err)
+	}
+}

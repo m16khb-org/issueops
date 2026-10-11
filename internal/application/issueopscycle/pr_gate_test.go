@@ -1,6 +1,7 @@
 package issueopscycle
 
 import (
+	"errors"
 	"reflect"
 	"strings"
 	"testing"
@@ -39,5 +40,17 @@ func TestGuardPRPhaseSkipsReadWhenUnrelatedOrAlreadyPR(t *testing.T) {
 	current = model.IssueOpsPhaseFeedback
 	if err := GuardPRPhase("state", "id", "pr", ports); err == nil || !strings.Contains(err.Error(), "cannot enter pr phase: missing loop_active") || reads != 2 || gates != 1 {
 		t.Fatalf("new PR err=%v reads=%d gates=%d", err, reads, gates)
+	}
+}
+
+func TestGuardPRPhaseReturnsReadErrorWithoutEvaluatingGate(t *testing.T) {
+	boom := errors.New("record unreadable")
+	gates := 0
+	err := GuardPRPhase("state", "id", " pr ", cycleport.PRPhaseGuard{
+		Read: func(string, string) (model.IssueOpsRecord, error) { return model.IssueOpsRecord{}, boom },
+		Gate: func(model.IssueOpsRecord) model.IssueOpsReadiness { gates++; return model.IssueOpsReadiness{} },
+	})
+	if !errors.Is(err, boom) || gates != 0 {
+		t.Fatalf("err=%v gates=%d", err, gates)
 	}
 }

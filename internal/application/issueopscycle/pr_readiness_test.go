@@ -2,6 +2,7 @@ package issueopscycle
 
 import (
 	"reflect"
+	"slices"
 	"testing"
 
 	model "issueops/internal/contract/issueops"
@@ -29,5 +30,31 @@ func TestReviewGateMissingMapsRecordEvidence(t *testing.T) {
 	record.Execution = &model.Execution{}
 	if got := ImplementationReviewMissing(record, ""); got != "implementation_review" {
 		t.Fatalf("prepared implementation review=%q", got)
+	}
+}
+
+func TestLocalPRReadinessMissingReportsPlanAndFeedbackDefects(t *testing.T) {
+	record := model.IssueOpsRecord{
+		WorktreePath: "/wt", PlanPath: ".issueops/plans/p.md", AISlopCleanAt: "t",
+		Feedback: []model.IssueOpsFeedbackItem{{Classification: "contract_change"}},
+	}
+	var rootSeen, pathSeen string
+	observations := cycleport.ReadinessObservations{
+		PlanPathExists:       func(root, path string) bool { rootSeen, pathSeen = root, path; return false },
+		PlanInLinkedWorktree: func(model.IssueOpsRecord) bool { return false },
+	}
+	got := LocalPRReadinessMissing(record, observations)
+	for _, want := range []string{"plan_exists", "plan_in_worktree", "contract_feedback_issue_update"} {
+		if !slices.Contains(got, want) {
+			t.Fatalf("missing %q from %v", want, got)
+		}
+	}
+	for _, absent := range []string{"worktree_path", "plan_path", "ai_slop_clean"} {
+		if slices.Contains(got, absent) {
+			t.Fatalf("%q reported although the record has it: %v", absent, got)
+		}
+	}
+	if rootSeen != "/wt" || pathSeen != ".issueops/plans/p.md" {
+		t.Fatalf("plan existence must be observed under the worktree: root=%q path=%q", rootSeen, pathSeen)
 	}
 }
