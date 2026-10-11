@@ -3,10 +3,12 @@ package issueopsremote
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	model "issueops/internal/contract/issueops"
 	contract "issueops/internal/contract/issueopspublication"
+	publicationdomain "issueops/internal/domain/issueopspublication"
 )
 
 type verifierReader struct {
@@ -63,5 +65,65 @@ func TestPublicationVerifierPropagatesSnapshotDecodeFailure(t *testing.T) {
 	}
 	if err := verifier.VerifyCandidate(t.Context(), contract.Intent{}, contract.Candidate{}); !errors.Is(err, boom) {
 		t.Fatalf("candidate err=%v", err)
+	}
+}
+
+type knownURLReader struct {
+	record   model.IssueOpsRecord
+	knownURL string
+}
+
+func (r knownURLReader) DecodeSnapshot(contract.Intent) (model.IssueOpsRecord, contract.IntentPayload, error) {
+	return r.record, contract.IntentPayload{Provider: "github", Kind: "pr", KnownURL: r.knownURL, Request: contract.ProviderCreateRequest{
+		Labels: []string{"bug"}, Assignees: []string{"octocat"}, BaseBranch: "main", Title: "제목", HeadBranch: "7-demo", Body: "본문"}}, nil
+}
+func (r knownURLReader) Read(context.Context, string) (model.IssueOpsRecord, error) {
+	return r.record, nil
+}
+
+func matchingCandidate(url string) contract.Candidate {
+	return contract.Candidate{URL: url, Title: "제목", HeadBranch: "7-demo", BaseBranch: "main", BodySHA256: publicationdomain.BodySHA256("본문"),
+		Labels: []string{"bug"}, Assignees: []string{"octocat"}}
+}
+
+func TestPublicationVerifierCandidateMustMatchIntentAndLinkedProject(t *testing.T) {
+	const inProject = "https://github.com/acme/app/pull/3"
+	codeElsewhere := journalRecord()
+	codeElsewhere.BranchPrepare = &model.IssueOpsBranchPrepare{CodeProjectKey: "github.com/fork/app"}
+	for _, tc := range []struct {
+		name      string
+		record    model.IssueOpsRecord
+		known     string
+		candidate func() contract.Candidate
+		wantErr   string
+	}{
+		{"exact match", journalRecord(), "", func() contract.Candidate { return matchingCandidate(inProject) }, ""},
+		{"known URL equal", journalRecord(), inProject, func() contract.Candidate { return matchingCandidate(inProject) }, ""},
+		{"known URL differs", journalRecord(), "https://github.com/acme/app/pull/9", func() contract.Candidate { return matchingCandidate(inProject) }, "differs from the durable known URL"},
+		{"title drift", journalRecord(), "", func() contract.Candidate { c := matchingCandidate(inProject); c.Title = "다른 제목"; return c }, "does not match the exact durable intent"},
+		{"body drift", journalRecord(), "", func() contract.Candidate {
+			c := matchingCandidate(inProject)
+			c.BodySHA256 = publicationdomain.BodySHA256("수정")
+			return c
+		}, "does not match the exact durable intent"},
+		{"label drift", journalRecord(), "", func() contract.Candidate { c := matchingCandidate(inProject); c.Labels = nil; return c }, "does not match the exact durable intent"},
+		{"non-canonical URL", journalRecord(), "", func() contract.Candidate { return matchingCandidate("http://github.com/acme/app/pull/3") }, "canonical HTTPS URL"},
+		{"issue URL is not a PR", journalRecord(), "", func() contract.Candidate { return matchingCandidate("https://github.com/acme/app/issues/3") }, "pull request URL"},
+		{"foreign project", journalRecord(), "", func() contract.Candidate { return matchingCandidate("https://github.com/other/repo/pull/3") }, "match linked issue project"},
+		{"code project overrides issue project", codeElsewhere, "", func() contract.Candidate { return matchingCandidate("https://github.com/fork/app/pull/3") }, ""},
+		{"issue project rejected when code lives elsewhere", codeElsewhere, "", func() contract.Candidate { return matchingCandidate(inProject) }, "match linked issue project"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := NewPublicationVerifier(knownURLReader{record: tc.record, knownURL: tc.known}, nil).VerifyCandidate(t.Context(), contract.Intent{}, tc.candidate())
+			if tc.wantErr == "" {
+				if err != nil {
+					t.Fatalf("err = %v", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+				t.Fatalf("err = %v, want %q", err, tc.wantErr)
+			}
+		})
 	}
 }

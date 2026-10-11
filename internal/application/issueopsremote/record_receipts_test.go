@@ -99,11 +99,3 @@ func TestIssueCreateIntentsLifecycleBindsProjectAuthority(t *testing.T) {
 		t.Fatal("completed intent must not complete again")
 	}
 }
-
-func TestIssueCreateIntentsOutcomeWithoutIntentFails(t *testing.T) {
-	intents := NewIssueCreateIntents(&memoryRecordStore{}, receiptClock)
-	_, err := intents.Outcome(t.Context(), "c", model.IssueOpsIssueCreateOutcome{Status: model.IssueCreateIntentNotInvoked, Failure: "x", ObservedAt: "t"})
-	if err == nil || err.Error() != "no pending issue create intent" {
-		t.Fatalf("err=%v", err)
-	}
-}

@@ -268,3 +268,83 @@ func TestValidateHonorsCallerCancellation(t *testing.T) {
 		t.Fatalf("Validate err=%v reads=%d, want context.Canceled before any read", err, store.reads)
 	}
 }
+
+type verifyFlowAuthority struct{ err error }
+
+func (a verifyFlowAuthority) Authorize(context.Context, model.IssueOpsRecord, model.IssueOpsActor) error {
+	return a.err
+}
+
+func verifyFlowRecord() model.IssueOpsRecord {
+	return model.IssueOpsRecord{ID: "io-verify", Phase: model.IssueOpsPhasePR, IssueURL: "https://github.com/acme/repo/issues/1"}
+}
+
+func verifyFlowRequest() model.IssueOpsRemoteArtifactVerificationRequest {
+	return model.IssueOpsRemoteArtifactVerificationRequest{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/7", Labels: []string{"issueops"}, Assignees: []string{"octocat"}}
+}
+
+func TestArtifactVerifyChecksLiveStateThenPersistsReceiptWithObservedAncestry(t *testing.T) {
+	store := &artifactStoreForTest{records: map[string]model.IssueOpsRecord{"io-verify": verifyFlowRecord()}}
+	var live []model.IssueOpsRemoteArtifactVerificationRequest
+	var authorized model.IssueOpsActor
+	service := NewArtifactVerificationService(store, authorityRecorder{&authorized}, func(_ context.Context, req model.IssueOpsRemoteArtifactVerificationRequest) error {
+		live = append(live, req)
+		return nil
+	}, func() ([]model.NativeProcessReceipt, error) { return []model.NativeProcessReceipt{{PID: 99}}, nil }, func() time.Time { return time.Date(2026, 5, 6, 7, 8, 9, 0, time.UTC) })
+	record, err := service.Verify(context.Background(), "io-verify", verifyFlowRequest(), model.IssueOpsActor{Host: "codex"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(live) != 1 || live[0].URL != "https://github.com/acme/repo/pull/7" {
+		t.Fatalf("live checks = %+v", live)
+	}
+	if authorized.Host != "codex" || len(authorized.NativeProcessAncestry) != 1 || authorized.NativeProcessAncestry[0].PID != 99 {
+		t.Fatalf("authority must see the observed ancestry: %+v", authorized)
+	}
+	if record.RemoteArtifact == nil || record.RemoteArtifact.VerifiedAt != "2026-05-06T07:08:09Z" || record.RemoteArtifact.URL != "https://github.com/acme/repo/pull/7" || store.records["io-verify"].RemoteArtifact == nil {
+		t.Fatalf("receipt = %+v", record.RemoteArtifact)
+	}
+}
+
+type authorityRecorder struct{ got *model.IssueOpsActor }
+
+func (a authorityRecorder) Authorize(_ context.Context, _ model.IssueOpsRecord, actor model.IssueOpsActor) error {
+	*a.got = actor
+	return nil
+}
+
+func TestArtifactVerifyStopsBeforePersistingWhenAnyStageFails(t *testing.T) {
+	boom := errors.New("boom")
+	for _, tc := range []struct {
+		name      string
+		phase     model.IssueOpsPhase
+		liveErr   error
+		observe   error
+		authErr   error
+		wantLive  int
+		wantError string
+	}{
+		{"phase not ready skips live check", model.IssueOpsPhaseFeedback, nil, nil, nil, 0, "before pr phase"},
+		{"live check fails", model.IssueOpsPhasePR, boom, nil, nil, 1, "boom"},
+		{"ancestry observation fails", model.IssueOpsPhasePR, nil, boom, nil, 1, "boom"},
+		{"authority denies", model.IssueOpsPhasePR, nil, nil, boom, 1, "boom"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			record := verifyFlowRecord()
+			record.Phase = tc.phase
+			store := &artifactStoreForTest{records: map[string]model.IssueOpsRecord{"io-verify": record}}
+			live := 0
+			service := NewArtifactVerificationService(store, verifyFlowAuthority{tc.authErr}, func(context.Context, model.IssueOpsRemoteArtifactVerificationRequest) error {
+				live++
+				return tc.liveErr
+			}, func() ([]model.NativeProcessReceipt, error) { return nil, tc.observe }, time.Now)
+			got, err := service.Verify(context.Background(), "io-verify", verifyFlowRequest(), model.IssueOpsActor{})
+			if err == nil || !strings.Contains(err.Error(), tc.wantError) || live != tc.wantLive {
+				t.Fatalf("err=%v live=%d", err, live)
+			}
+			if got.RemoteArtifact != nil || store.records["io-verify"].RemoteArtifact != nil {
+				t.Fatalf("no receipt may be stored: %+v", store.records["io-verify"].RemoteArtifact)
+			}
+		})
+	}
+}

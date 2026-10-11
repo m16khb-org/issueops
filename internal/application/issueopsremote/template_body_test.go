@@ -3,7 +3,10 @@ package issueopsremote
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"issueops/internal/domain/artifacttemplate"
 )
 
 func TestTemplateScoreSummaryReadsJSONOrAuthoredText(t *testing.T) {
@@ -30,5 +33,39 @@ func TestTemplateScoreSummaryReadsJSONOrAuthoredText(t *testing.T) {
 	}
 	if _, err := resolver.ScoreSummary(filepath.Join(t.TempDir(), "missing")); !os.IsNotExist(err) {
 		t.Fatalf("missing file = %v", err)
+	}
+}
+
+func TestTemplateResolveRefusesBadInputsBeforeRendering(t *testing.T) {
+	resolver := NewTemplateBodyResolver(os.ReadFile)
+	for _, tc := range []struct {
+		name string
+		req  TemplateBodyRequest
+		want string
+	}{
+		{"body and file", TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, Body: "a", BodyFile: "b"}, "mutually exclusive"},
+		{"confirm without issue template", TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, Confirm: true}, "--template is required"},
+		{"malformed field", TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, Fields: []string{"no-equals"}}, "key=value"},
+		{"missing score file", TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, ScoreFile: "/definitely/missing/score.json"}, "no such file"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := resolver.Resolve(tc.req); err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("err = %v, want %q", err, tc.want)
+			}
+		})
+	}
+}
+
+func TestTemplateResolveEmptyIssuePreviewReportsFindingsButConfirmRefuses(t *testing.T) {
+	resolver := NewTemplateBodyResolver(os.ReadFile)
+	req := TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, Template: "implementation_task", Title: "제목"}
+	preview, err := resolver.Resolve(req)
+	if err != nil || preview.Body != "" || preview.Readability.OK {
+		t.Fatalf("an empty authored body is judged as empty, not replaced by the skeleton: %+v err=%v", preview, err)
+	}
+	req.Confirm = true
+	refused, err := resolver.Resolve(req)
+	if err == nil || !strings.Contains(err.Error(), "readability check failed") || refused.Readability.OK {
+		t.Fatalf("confirm must refuse an unreadable body: %+v err=%v", refused, err)
 	}
 }
