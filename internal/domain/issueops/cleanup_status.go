@@ -114,6 +114,15 @@ func BuildCleanupStatus(record model.IssueOpsRecord, req model.IssueOpsCleanupSt
 		status.Missing = append(status.Missing, "worktree_exists")
 		return FinalizeCleanupStatus(status)
 	}
+	appendWorktreeStatusMissing(&status, facts)
+	actualBranch := strings.TrimSpace(facts.Branch)
+	appendBranchMissing(&status, record, actualBranch)
+	appendRemoteBranchMissing(&status, facts, actualBranch)
+	return FinalizeCleanupStatus(status)
+}
+
+// appendWorktreeStatusMissing는 `git status` 관측 결과를 missing/warnings에 반영한다.
+func appendWorktreeStatusMissing(status *model.IssueOpsCleanupStatus, facts CleanupStatusObservation) {
 	if code, out, stderr := facts.StatusCode, facts.StatusOutput, facts.StatusError; code != 0 {
 		status.Missing = append(status.Missing, "worktree_git_status")
 		if strings.TrimSpace(stderr) != "" {
@@ -126,33 +135,42 @@ func BuildCleanupStatus(record model.IssueOpsRecord, req model.IssueOpsCleanupSt
 		// 같은 극성을 쓴다.
 		status.Missing = append(status.Missing, "worktree_clean")
 	}
-	actualBranch := strings.TrimSpace(facts.Branch)
+}
+
+// appendBranchMissing는 실제 체크아웃 브랜치가 비었거나 기록된 브랜치와 다른 경우를 missing에 반영한다.
+func appendBranchMissing(status *model.IssueOpsCleanupStatus, record model.IssueOpsRecord, actualBranch string) {
 	if actualBranch == "" {
 		status.Missing = append(status.Missing, "branch")
 	} else if strings.TrimSpace(record.Branch) != "" && actualBranch != strings.TrimSpace(record.Branch) {
 		status.Missing = append(status.Missing, "branch_match")
 	}
+}
+
+// appendRemoteBranchMissing는 원격 브랜치 점검 관측 결과를 missing/warnings에 반영한다.
+func appendRemoteBranchMissing(status *model.IssueOpsCleanupStatus, facts CleanupStatusObservation, actualBranch string) {
 	remote := strings.TrimSpace(facts.Remote)
 	if remote == "" {
 		status.Missing = append(status.Missing, "remote_branch_check_unavailable")
-	} else if actualBranch != "" {
-		if code, out, stderr := facts.RemoteCode, facts.RemoteOutput, facts.RemoteError; code != 0 {
-			status.Missing = append(status.Missing, "remote_branch_check_failed")
-			if strings.TrimSpace(stderr) != "" {
-				status.Warnings = append(status.Warnings, strings.TrimSpace(stderr))
-			}
-		} else if strings.TrimSpace(out) != "" {
-			// remote_branch_absent: cleanup finish가 같은 상태에 쓰는 슬러그다.
-			// 여기서 `remote_branch_present`를 쓰면 두 명령이 같은 상태를 반대로
-			// 읽히게 보고하고, 운영자는 브랜치가 이미 없다고 판단해
-			// `cleanup remote-branch`를 건너뛴다(#185, #181 정리에서 실측).
-			//
-			// execution sync-base의 동명 슬러그는 브랜치가 **있어야** 한다는 진짜
-			// 요구이므로 별개다.
-			status.Missing = append(status.Missing, "remote_branch_absent")
-		}
+		return
 	}
-	return FinalizeCleanupStatus(status)
+	if actualBranch == "" {
+		return
+	}
+	if code, out, stderr := facts.RemoteCode, facts.RemoteOutput, facts.RemoteError; code != 0 {
+		status.Missing = append(status.Missing, "remote_branch_check_failed")
+		if strings.TrimSpace(stderr) != "" {
+			status.Warnings = append(status.Warnings, strings.TrimSpace(stderr))
+		}
+	} else if strings.TrimSpace(out) != "" {
+		// remote_branch_absent: cleanup finish가 같은 상태에 쓰는 슬러그다.
+		// 여기서 `remote_branch_present`를 쓰면 두 명령이 같은 상태를 반대로
+		// 읽히게 보고하고, 운영자는 브랜치가 이미 없다고 판단해
+		// `cleanup remote-branch`를 건너뛴다(#185, #181 정리에서 실측).
+		//
+		// execution sync-base의 동명 슬러그는 브랜치가 **있어야** 한다는 진짜
+		// 요구이므로 별개다.
+		status.Missing = append(status.Missing, "remote_branch_absent")
+	}
 }
 
 func hasUnverifiedChildClose(record model.IssueOpsRecord) bool {

@@ -31,28 +31,15 @@ func ProjectArtifact(authority ArtifactAuthority, candidate Artifact) (Artifact,
 	if issueProvider := ProviderFromURL(authority.IssueURL); issueProvider != "" && provider != issueProvider {
 		return Artifact{}, fmt.Errorf("remote artifact provider must match linked issue provider")
 	}
-	kind := strings.ToLower(strings.TrimSpace(candidate.Kind))
-	switch kind {
-	case "pull_request":
-		kind = "pr"
-	case "merge_request":
-		kind = "mr"
-	}
-	if kind != "pr" && kind != "mr" {
-		return Artifact{}, fmt.Errorf("remote artifact kind must be pr or mr")
-	}
-	if provider == "github" && kind != "pr" {
-		return Artifact{}, fmt.Errorf("github remote artifact kind must be pr")
-	}
-	if provider == "gitlab" && kind != "mr" {
-		return Artifact{}, fmt.Errorf("gitlab remote artifact kind must be mr")
+	kind, err := normalizeArtifactKind(provider, candidate.Kind)
+	if err != nil {
+		return Artifact{}, err
 	}
 	artifactURL := strings.TrimSpace(candidate.URL)
 	if err := ValidateArtifactURL(artifactURL, provider, kind); err != nil {
 		return Artifact{}, err
 	}
-	codeProjectKey := authority.CodeProjectKey
-	expectedProject := EffectiveProjectKey(codeProjectKey, authority.IssueURL, provider)
+	expectedProject := EffectiveProjectKey(authority.CodeProjectKey, authority.IssueURL, provider)
 	if err := ValidateArtifactMatchesProject(expectedProject, artifactURL, provider, kind); err != nil {
 		return Artifact{}, err
 	}
@@ -75,4 +62,25 @@ func ProjectArtifact(authority ArtifactAuthority, candidate Artifact) (Artifact,
 		Assignees:    assignees,
 		TargetBranch: strings.TrimSpace(candidate.TargetBranch),
 	}, nil
+}
+
+// normalizeArtifactKind는 kind 별칭을 pr/mr로 정규화하고 provider와 맞는지 검증한다.
+func normalizeArtifactKind(provider, rawKind string) (string, error) {
+	kind := strings.ToLower(strings.TrimSpace(rawKind))
+	switch kind {
+	case "pull_request":
+		kind = "pr"
+	case "merge_request":
+		kind = "mr"
+	}
+	if kind != "pr" && kind != "mr" {
+		return "", fmt.Errorf("remote artifact kind must be pr or mr")
+	}
+	if provider == "github" && kind != "pr" {
+		return "", fmt.Errorf("github remote artifact kind must be pr")
+	}
+	if provider == "gitlab" && kind != "mr" {
+		return "", fmt.Errorf("gitlab remote artifact kind must be mr")
+	}
+	return kind, nil
 }

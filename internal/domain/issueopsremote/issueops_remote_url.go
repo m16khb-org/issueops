@@ -14,20 +14,18 @@ func ValidateArtifactURL(artifactURL, provider, kind string) error {
 		return fmt.Errorf("remote artifact url must not contain whitespace or control characters")
 	}
 	parsed, err := url.Parse(artifactURL)
-	if err != nil || parsed.Host == "" || parsed.Scheme != "https" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" || parsed.String() != artifactURL {
+	if err != nil || !isCanonicalWebURL(parsed) || parsed.String() != artifactURL {
 		return fmt.Errorf("remote artifact url must be a canonical HTTPS URL")
 	}
-	host := strings.ToLower(parsed.Hostname())
-	path := strings.ToLower(parsed.EscapedPath())
+	hostname := strings.ToLower(parsed.Hostname())
+	parts := SplitURLPath(strings.ToLower(parsed.EscapedPath()))
 	switch provider + ":" + kind {
 	case "github:pr":
-		parts := SplitURLPath(path)
-		if len(parts) != 4 || parts[2] != "pull" || !isDecimalString(parts[3]) {
+		if !isGitHubItemPath(parts, "pull") {
 			return fmt.Errorf("remote artifact url must be a GitHub pull request URL")
 		}
 	case "gitlab:mr":
-		parts := SplitURLPath(path)
-		if host == "github.com" || len(parts) < 5 || parts[len(parts)-3] != "-" || parts[len(parts)-2] != "merge_requests" || !isDecimalString(parts[len(parts)-1]) {
+		if !isGitLabItemPath(parts, hostname, isGitLabMergeRequestPath) {
 			return fmt.Errorf("remote artifact url must be a GitLab merge request URL")
 		}
 	default:

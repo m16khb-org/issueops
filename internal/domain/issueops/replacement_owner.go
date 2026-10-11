@@ -51,17 +51,21 @@ func ValidateReplacementRuntimeRollover(record issueops.IssueOpsRecord, processS
 	if DeadReplacementOwnerRuntimeRollover(record, processStatus, inventory) {
 		return nil
 	}
-	lease := record.Execution.Lease
-	holderless := lease.Holder == nil && (lease.Status == issueops.LeaseStatusReleased || lease.Status == issueops.LeaseStatusClaimable)
-	taskSettled := inventory.TaskStatus == "completed" || inventory.TaskStatus == "failed"
-	dispatchSettled := inventory.DispatchStatus == "completed" || inventory.DispatchStatus == "failed" || inventory.DispatchStatus == "circuit_broken"
-	if !holderless || inventory.TerminalID != "" || inventory.TerminalLive || inventory.TaskLive || !taskSettled || !dispatchSettled {
+	if !replacementRolloverQuiescent(record.Execution.Lease, inventory) {
 		return fmt.Errorf(
 			"Orca runtime rollover owner is not quiescent: terminal_id=%s terminal_live=%t task_live=%t task_status=%s dispatch_status=%s",
 			inventory.TerminalID, inventory.TerminalLive, inventory.TaskLive, inventory.TaskStatus, inventory.DispatchStatus,
 		)
 	}
 	return nil
+}
+
+// replacementRolloverQuiescent는 holder가 없는 lease와 종료·정산된 task/dispatch/terminal 상태만 quiescent로 본다.
+func replacementRolloverQuiescent(lease issueops.WriteLease, inventory ReplacementRuntimeFacts) bool {
+	holderless := lease.Holder == nil && (lease.Status == issueops.LeaseStatusReleased || lease.Status == issueops.LeaseStatusClaimable)
+	taskSettled := inventory.TaskStatus == "completed" || inventory.TaskStatus == "failed"
+	dispatchSettled := inventory.DispatchStatus == "completed" || inventory.DispatchStatus == "failed" || inventory.DispatchStatus == "circuit_broken"
+	return holderless && inventory.TerminalID == "" && !inventory.TerminalLive && !inventory.TaskLive && taskSettled && dispatchSettled
 }
 
 func ReplacementSelfHolder(lease issueops.WriteLease, requester issueops.NativeActor) bool {

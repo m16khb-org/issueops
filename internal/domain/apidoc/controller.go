@@ -57,38 +57,71 @@ func CheckNestController(file, text string) []contract.Violation {
 		if route == nil {
 			continue
 		}
-		line := i + 1
-		if !strings.Contains(block, "@ApiOperation") {
-			violations = append(violations, contract.Violation{File: file, Line: line, Code: "missing_api_operation", Message: "route method is missing @ApiOperation"})
-		} else if !strings.Contains(block, "description") {
-			violations = append(violations, contract.Violation{File: file, Line: line, Code: "missing_api_operation_description", Message: "@ApiOperation is missing description"})
-		} else if !strings.Contains(block, "### ") {
-			violations = append(violations, contract.Violation{File: file, Line: line, Code: "invalid_api_operation_description_format", Message: "@ApiOperation.description must use the project sectioned Markdown format"})
-		}
-		for _, m := range nestPathParamRe().FindAllStringSubmatch(route[2], -1) {
-			if !regexp.MustCompile(`@ApiParam\s*\(\s*\{[^}]*name\s*:\s*["'\x60]` + regexp.QuoteMeta(m[1]) + `["'\x60]`).MatchString(block) {
-				violations = append(violations, contract.Violation{File: file, Line: line, Code: "missing_api_param", Message: "path parameter :" + m[1] + " is missing @ApiParam documentation"})
-			}
-		}
-		if strings.Contains(block, "@Headers") && !strings.Contains(block, "@ApiHeader") {
-			violations = append(violations, contract.Violation{File: file, Line: line, Code: "missing_api_header", Message: "@Headers usage is missing @ApiHeader documentation"})
-		}
-		for _, m := range queryNamedRe().FindAllStringSubmatch(block, -1) {
-			if !regexp.MustCompile(`@ApiQuery\s*\(\s*\{[^}]*name\s*:\s*["'\x60]` + regexp.QuoteMeta(m[1]) + `["'\x60]`).MatchString(block) {
-				violations = append(violations, contract.Violation{File: file, Line: line, Code: "missing_api_query", Message: "named query parameter " + m[1] + " is missing @ApiQuery documentation"})
-			}
-		}
-		if bodyNamedRe().MatchString(block) && !strings.Contains(block, "@ApiBody") {
-			violations = append(violations, contract.Violation{File: file, Line: line, Code: "missing_api_body", Message: "named @Body usage is missing @ApiBody documentation"})
-		}
-		if (strings.Contains(block, "@Body") || strings.Contains(block, "@Query") || strings.Contains(block, "@Headers")) && !HasNestResponseStatus(block, 400) {
-			violations = append(violations, contract.Violation{File: file, Line: line, Code: "missing_400_response", Message: "body/query/header validation surface is missing a 400 Swagger response"})
-		}
-		if IsNestPrivateRoute(block, text) && !HasNestResponseStatus(block, 401) {
-			violations = append(violations, contract.Violation{File: file, Line: line, Code: "missing_401_response", Message: "private/auth route is missing a 401 Swagger response"})
-		}
+		violations = append(violations, nestRouteViolations(file, i+1, block, route[2], text)...)
 	}
 	return violations
+}
+
+// nestRouteViolations은 한 라우트 블록에 대한 문서화 위반을 검사 순서대로 모은다.
+func nestRouteViolations(file string, line int, block, routePath, text string) []contract.Violation {
+	var violations []contract.Violation
+	add := func(code, message string) {
+		violations = append(violations, contract.Violation{File: file, Line: line, Code: code, Message: message})
+	}
+	if code, message, ok := apiOperationViolation(block); ok {
+		add(code, message)
+	}
+	for _, m := range nestPathParamRe().FindAllStringSubmatch(routePath, -1) {
+		if !hasNamedDecorator(block, "ApiParam", m[1]) {
+			add("missing_api_param", "path parameter :"+m[1]+" is missing @ApiParam documentation")
+		}
+	}
+	if strings.Contains(block, "@Headers") && !strings.Contains(block, "@ApiHeader") {
+		add("missing_api_header", "@Headers usage is missing @ApiHeader documentation")
+	}
+	for _, m := range queryNamedRe().FindAllStringSubmatch(block, -1) {
+		if !hasNamedDecorator(block, "ApiQuery", m[1]) {
+			add("missing_api_query", "named query parameter "+m[1]+" is missing @ApiQuery documentation")
+		}
+	}
+	violations = append(violations, nestBodyAndResponseViolations(file, line, block, text)...)
+	return violations
+}
+
+// nestBodyAndResponseViolations는 @Body 문서화와 400/401 응답 위반을 검사한다.
+func nestBodyAndResponseViolations(file string, line int, block, text string) []contract.Violation {
+	var violations []contract.Violation
+	add := func(code, message string) {
+		violations = append(violations, contract.Violation{File: file, Line: line, Code: code, Message: message})
+	}
+	if bodyNamedRe().MatchString(block) && !strings.Contains(block, "@ApiBody") {
+		add("missing_api_body", "named @Body usage is missing @ApiBody documentation")
+	}
+	if (strings.Contains(block, "@Body") || strings.Contains(block, "@Query") || strings.Contains(block, "@Headers")) && !HasNestResponseStatus(block, 400) {
+		add("missing_400_response", "body/query/header validation surface is missing a 400 Swagger response")
+	}
+	if IsNestPrivateRoute(block, text) && !HasNestResponseStatus(block, 401) {
+		add("missing_401_response", "private/auth route is missing a 401 Swagger response")
+	}
+	return violations
+}
+
+// apiOperationViolation은 @ApiOperation 관련 첫 번째 위반만 반환한다.
+func apiOperationViolation(block string) (code, message string, found bool) {
+	switch {
+	case !strings.Contains(block, "@ApiOperation"):
+		return "missing_api_operation", "route method is missing @ApiOperation", true
+	case !strings.Contains(block, "description"):
+		return "missing_api_operation_description", "@ApiOperation is missing description", true
+	case !strings.Contains(block, "### "):
+		return "invalid_api_operation_description_format", "@ApiOperation.description must use the project sectioned Markdown format", true
+	}
+	return "", "", false
+}
+
+// hasNamedDecorator는 block에 @<decorator>({ name: '<name>' }) 형태가 있는지 확인한다.
+func hasNamedDecorator(block, decorator, name string) bool {
+	return regexp.MustCompile(`@` + decorator + `\s*\(\s*\{[^}]*name\s*:\s*["'\x60]` + regexp.QuoteMeta(name) + `["'\x60]`).MatchString(block)
 }
 
 // controllerDecoratorStart returns the first line of the decorator block for

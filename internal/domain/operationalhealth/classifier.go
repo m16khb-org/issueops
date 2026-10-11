@@ -10,32 +10,17 @@ import (
 func EvaluateCycleAuthority(cycle operationalhealthcontract.Cycle, opts Options) operationalhealthcontract.CycleAuthority {
 	phase := strings.TrimSpace(cycle.Phase)
 	status := strings.TrimSpace(cycle.LeaseStatus)
-	if !knownPhase(phase) || strings.TrimSpace(cycle.ID) == "" || strings.TrimSpace(cycle.Repo) == "" {
-		return AuthorityUnknown
-	}
-	if !knownLeaseStatus(status) {
+	if !cycleIdentityKnown(cycle, phase, status) {
 		return AuthorityUnknown
 	}
 	if status == "" {
-		if phase == "done" {
-			return AuthorityUnknown
-		}
-		if hasExecutionProjection(cycle) {
-			return AuthorityUnknown
-		}
-		if preserveContains(opts.PreserveCycleIDs, cycle.ID) && !preservableIdentityComplete(cycle) {
-			return AuthorityUnknown
-		}
-		return AuthorityPreserved
+		return evaluateLeaselessCycleAuthority(cycle, phase, opts)
 	}
 	if !executionIdentityComplete(cycle) {
 		return AuthorityUnknown
 	}
 	if phase == "done" {
-		if status == "released" && cycle.CompletionPresent && retainedLeaseIdentityComplete(cycle) {
-			return operationalhealthcontract.AuthorityDead
-		}
-		return AuthorityUnknown
+		return evaluateDoneCycleAuthority(cycle, status)
 	}
 	if cycle.CompletionPresent {
 		return AuthorityUnknown
@@ -47,22 +32,52 @@ func EvaluateCycleAuthority(cycle operationalhealthcontract.Cycle, opts Options)
 		return AuthorityPreserved
 	}
 	if status == "active" {
-		if !activeHolderIdentityComplete(cycle) {
-			return AuthorityUnknown
-		}
-		switch strings.TrimSpace(cycle.HolderProcessStatus) {
-		case operationalhealthcontract.ProcessStatusLive:
-			return AuthorityLive
-		case operationalhealthcontract.ProcessStatusDead, operationalhealthcontract.ProcessStatusIdentityMismatch:
-			return operationalhealthcontract.AuthorityDead
-		default:
-			return AuthorityUnknown
-		}
+		return evaluateActiveHolderAuthority(cycle)
 	}
 	if retainedLeaseIdentityComplete(cycle) {
 		return AuthorityPreserved
 	}
 	return AuthorityUnknown
+}
+
+// cycleIdentityKnown은 phase, ID, repo, lease 상태가 모두 알려진 값인지 판단한다.
+func cycleIdentityKnown(cycle operationalhealthcontract.Cycle, phase, status string) bool {
+	if !knownPhase(phase) || strings.TrimSpace(cycle.ID) == "" || strings.TrimSpace(cycle.Repo) == "" {
+		return false
+	}
+	return knownLeaseStatus(status)
+}
+
+// evaluateDoneCycleAuthority는 done phase 사이클이 완료 기록과 함께 해제된 경우에만 dead로 판정한다.
+func evaluateDoneCycleAuthority(cycle operationalhealthcontract.Cycle, status string) operationalhealthcontract.CycleAuthority {
+	if status == "released" && cycle.CompletionPresent && retainedLeaseIdentityComplete(cycle) {
+		return operationalhealthcontract.AuthorityDead
+	}
+	return AuthorityUnknown
+}
+
+func evaluateLeaselessCycleAuthority(cycle operationalhealthcontract.Cycle, phase string, opts Options) operationalhealthcontract.CycleAuthority {
+	if phase == "done" || hasExecutionProjection(cycle) {
+		return AuthorityUnknown
+	}
+	if preserveContains(opts.PreserveCycleIDs, cycle.ID) && !preservableIdentityComplete(cycle) {
+		return AuthorityUnknown
+	}
+	return AuthorityPreserved
+}
+
+func evaluateActiveHolderAuthority(cycle operationalhealthcontract.Cycle) operationalhealthcontract.CycleAuthority {
+	if !activeHolderIdentityComplete(cycle) {
+		return AuthorityUnknown
+	}
+	switch strings.TrimSpace(cycle.HolderProcessStatus) {
+	case operationalhealthcontract.ProcessStatusLive:
+		return AuthorityLive
+	case operationalhealthcontract.ProcessStatusDead, operationalhealthcontract.ProcessStatusIdentityMismatch:
+		return operationalhealthcontract.AuthorityDead
+	default:
+		return AuthorityUnknown
+	}
 }
 
 func validateOrcaInventoryIdentity(builder *findingBuilder, snapshot Snapshot) {

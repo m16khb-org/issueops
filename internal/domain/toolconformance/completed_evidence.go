@@ -39,22 +39,54 @@ func DiagnosticSignature(classification contract.Classification, diagnostics []c
 }
 
 func ValidCompletedEpisode(episode contract.EpisodeReport, expected CompletedEpisodeExpectation) bool {
-	if episode.Status != contract.EpisodeCompleted || episode.Host != expected.Host || episode.HostVersion != expected.HostVersion ||
-		episode.RequestedModel != expected.RequestedModel || strings.TrimSpace(episode.ObservedModel) == "" || strings.TrimSpace(episode.ObservedModel) != episode.ObservedModel ||
-		len(episode.ObservedModel) > 256 || strings.ContainsAny(episode.ObservedModel, "\r\n") ||
-		episode.FixtureID != expected.Fixture.ID || episode.SchemaSHA256 != expected.Fixture.SchemaSHA256 ||
-		episode.Profile != expected.Profile || episode.Attempt != expected.Attempt || episode.Attempt < 1 {
+	if !completedEpisodeIdentityMatches(episode, expected) ||
+		!completedEpisodeRunObserved(episode) ||
+		!completedEpisodeEvidenceIDsValid(episode) ||
+		!completedEpisodeClassificationAllowed(episode) ||
+		!completedEpisodeDiagnosticsValid(episode) ||
+		!completedEpisodeValidityConsistent(episode) {
 		return false
 	}
-	if episode.DurationMS <= 0 || !episode.SessionStartObserved || episode.PreToolUseObserved || episode.ExitCode != 0 || episode.AmbientToolCount != 1 || episode.CallCount != 1 {
+	failed := episode.Classification != contract.Classification(contract.ExactValid)
+	if !completedEpisodeFailureEvidenceValid(episode, failed) {
 		return false
 	}
-	if !ValidEvidenceID(episode.EvidenceID) || !ValidEvidenceID(episode.RawArgumentsSHA256) || !ValidEvidenceID(episode.ResponseSHA256) || episode.CanonicalArguments == nil {
+	cause := failurecausedomain.Classify(failed, episode.FailureCauseEvidence)
+	return episode.FailureCause == cause.Cause && episode.FailureCauseReason == cause.Reason && reflect.DeepEqual(episode.FailureCauseEvidence, cause.Evidence)
+}
+
+func completedEpisodeIdentityMatches(episode contract.EpisodeReport, expected CompletedEpisodeExpectation) bool {
+	return episode.Status == contract.EpisodeCompleted && episode.Host == expected.Host && episode.HostVersion == expected.HostVersion &&
+		episode.RequestedModel == expected.RequestedModel && validObservedModel(episode.ObservedModel) &&
+		episode.FixtureID == expected.Fixture.ID && episode.SchemaSHA256 == expected.Fixture.SchemaSHA256 &&
+		episode.Profile == expected.Profile && episode.Attempt == expected.Attempt && episode.Attempt >= 1
+}
+
+func validObservedModel(model string) bool {
+	return strings.TrimSpace(model) != "" && strings.TrimSpace(model) == model &&
+		len(model) <= 256 && !strings.ContainsAny(model, "\r\n")
+}
+
+func completedEpisodeRunObserved(episode contract.EpisodeReport) bool {
+	return episode.DurationMS > 0 && episode.SessionStartObserved && !episode.PreToolUseObserved &&
+		episode.ExitCode == 0 && episode.AmbientToolCount == 1 && episode.CallCount == 1
+}
+
+func completedEpisodeEvidenceIDsValid(episode contract.EpisodeReport) bool {
+	return ValidEvidenceID(episode.EvidenceID) && ValidEvidenceID(episode.RawArgumentsSHA256) &&
+		ValidEvidenceID(episode.ResponseSHA256) && episode.CanonicalArguments != nil
+}
+
+func completedEpisodeClassificationAllowed(episode contract.EpisodeReport) bool {
+	if _, err := contract.ParseClassification(string(episode.Classification)); err != nil {
 		return false
 	}
-	if _, err := contract.ParseClassification(string(episode.Classification)); err != nil || episode.Classification == contract.Classification(contract.NoCall) || episode.Classification == contract.Classification(contract.MultipleCalls) || episode.Classification == contract.Classification(contract.InvalidJSON) {
-		return false
-	}
+	return episode.Classification != contract.Classification(contract.NoCall) &&
+		episode.Classification != contract.Classification(contract.MultipleCalls) &&
+		episode.Classification != contract.Classification(contract.InvalidJSON)
+}
+
+func completedEpisodeDiagnosticsValid(episode contract.EpisodeReport) bool {
 	orderedDiagnostics := append([]contract.Diagnostic{}, episode.Diagnostics...)
 	SortDiagnostics(orderedDiagnostics)
 	if !reflect.DeepEqual(orderedDiagnostics, episode.Diagnostics) || !ValidEvidenceID(episode.DiagnosticSignature) || episode.DiagnosticSignature != DiagnosticSignature(episode.Classification, episode.Diagnostics) {
@@ -65,26 +97,25 @@ func ValidCompletedEpisode(episode contract.EpisodeReport, expected CompletedEpi
 			return false
 		}
 	}
+	return true
+}
+
+func completedEpisodeValidityConsistent(episode contract.EpisodeReport) bool {
 	validClassification := episode.Classification == contract.Classification(contract.ExactValid) || episode.Classification == contract.Classification(contract.ValidButSemanticallyDifferent)
 	if validClassification && (!episode.AdvertisedValid || !episode.CanonicalValid || len(episode.Diagnostics) != 0) {
 		return false
 	}
-	if SchemaDriftClassification(episode.Classification) && episode.CanonicalValid {
-		return false
+	return !(SchemaDriftClassification(episode.Classification) && episode.CanonicalValid)
+}
+
+func completedEpisodeFailureEvidenceValid(episode contract.EpisodeReport, failed bool) bool {
+	if !failed {
+		return episode.FailureCauseEvidence != nil && len(episode.FailureCauseEvidence) == 0
 	}
-	failed := episode.Classification != contract.Classification(contract.ExactValid)
-	if failed {
-		wantCause := "model"
-		if episode.AdvertisedValid && !episode.CanonicalValid {
-			wantCause = "contract_input"
-		}
-		if len(episode.FailureCauseEvidence) != 1 || string(episode.FailureCauseEvidence[0].Cause) != wantCause ||
-			episode.FailureCauseEvidence[0].Code != string(episode.Classification) || episode.FailureCauseEvidence[0].Source != "tool_conformance" {
-			return false
-		}
-	} else if episode.FailureCauseEvidence == nil || len(episode.FailureCauseEvidence) != 0 {
-		return false
+	wantCause := "model"
+	if episode.AdvertisedValid && !episode.CanonicalValid {
+		wantCause = "contract_input"
 	}
-	cause := failurecausedomain.Classify(failed, episode.FailureCauseEvidence)
-	return episode.FailureCause == cause.Cause && episode.FailureCauseReason == cause.Reason && reflect.DeepEqual(episode.FailureCauseEvidence, cause.Evidence)
+	return len(episode.FailureCauseEvidence) == 1 && string(episode.FailureCauseEvidence[0].Cause) == wantCause &&
+		episode.FailureCauseEvidence[0].Code == string(episode.Classification) && episode.FailureCauseEvidence[0].Source == "tool_conformance"
 }

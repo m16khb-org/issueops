@@ -132,100 +132,112 @@ func (r *ReconcileRepository) ApplyReceipt(ctx context.Context, intent leaseapp.
 		DispatchID: receipt.DispatchID, RequestID: receipt.RequestID, PromptReceipt: receipt.PromptReceipt,
 	}
 	if payload.Purpose == preparationcontract.PurposeResume {
-		if intent.Progress.Record.Execution == nil {
-			return leaseapp.ReconcileProgress{}, fmt.Errorf("reconcile execution is required")
-		}
-		nextStage, complete, err := preparationdomain.NextOrcaReceiptStage(payload.Stage)
-		if err != nil {
-			return leaseapp.ReconcileProgress{}, err
-		}
-		resume := leaseapp.ResumeIntentState{
-			Progress: leaseapp.ResumeProgress{
-				Record: toApplicationRecord(intent.Progress.Record), Execution: *intent.Progress.Record.Execution,
-				Pending: intent.Progress.Pending,
-			},
-			OperationID: intent.OperationID, Stage: intent.Stage, InvocationState: intent.InvocationState,
-			InvocationAttempts: intent.InvocationAttempts, RecordRaw: intent.RecordRaw, IntentRaw: intent.IntentRaw,
-		}
-		progress, err := NewResumeRepository(r.store).ApplyReceipt(ctx, resume, stageReceipt)
-		if err != nil {
-			return leaseapp.ReconcileProgress{}, err
-		}
-		result := leaseapp.ReconcileProgress{Record: progress.Record.Stable, Pending: progress.Pending}
-		if !complete {
-			result.NextStage = string(nextStage)
-		}
-		return result, nil
+		return r.applyResumeReceipt(ctx, intent, payload, stageReceipt)
 	}
 	if payload.Purpose == preparationcontract.PurposePrepare || payload.Purpose == "" {
-		store, ok := r.store.(port.RecordRawCASStore)
-		if !ok {
-			return leaseapp.ReconcileProgress{}, fmt.Errorf("reconcile record store does not support raw CAS")
-		}
-		state := preparationapp.IntentState{
-			Snapshot: preparationcontract.Snapshot{Record: intent.Progress.Record, RecordRaw: intent.RecordRaw},
-			Command: preparationcontract.Command{
-				ID: intent.Progress.Record.ID, Mode: preparationcontract.ModeOrca,
-				OwnerHost: payload.Probe.Host, OwnerModel: payload.Probe.Model, OwnerEffort: payload.Probe.Effort,
-			},
-			Intent: payload, IntentRaw: intent.IntentRaw, Pending: true,
-		}
-		if err := preparationapp.ValidateIntentState(state); err != nil {
-			return leaseapp.ReconcileProgress{}, err
-		}
-		preparedReceipt := reconcilePreparationReceipt(receipt, stageReceipt)
-		if payload.Stage == preparationcontract.IntentStageWorktree {
-			if r.effects == nil {
-				return leaseapp.ReconcileProgress{}, fmt.Errorf("reconcile worktree preparer is required")
-			}
-			state.OwnerArtifacts, err = r.effects.PrepareWorktree(ctx, state.Snapshot, state.Command, payload, preparedReceipt)
-			if err != nil {
-				return leaseapp.ReconcileProgress{}, err
-			}
-		}
-		decision, err := preparationapp.ApplyOrcaReceipt(state, preparedReceipt, remote.IssueArtifactDir(state.Snapshot.Record.IssueURL), func() error {
-			return port.ValidateExecutionOrcaDeliveryReceipt(resumePortReceipt(stageReceipt), port.OrcaDeliveryReceiptExpectation{
-				Host: payload.Probe.Host, TaskID: payload.TaskID, TerminalPTYID: payload.TerminalPTYID,
-				DispatchRequestID: payload.OrcaRequestID, PromptRequestID: payload.OrcaPromptRequestID,
-			})
-		})
-		if err != nil {
-			return leaseapp.ReconcileProgress{}, err
-		}
-		recordData, err := recordcodec.EncodeLease(decision.Record)
-		if err != nil {
-			return leaseapp.ReconcileProgress{}, err
-		}
-		mutations := []port.RecordMutation{{Bucket: recordBucket, ID: decision.Record.ID, Data: recordData}}
-		if decision.Complete {
-			mutations = append(mutations, port.RecordMutation{Bucket: "external_intent_v1", ID: intent.OperationID, Delete: true})
-		} else {
-			intentData, err := (preparationcontract.IntentCodec{}).Encode(decision.Intent)
-			if err != nil {
-				return leaseapp.ReconcileProgress{}, err
-			}
-			mutations = append(mutations, port.RecordMutation{Bucket: "external_intent_v1", ID: intent.OperationID, Data: intentData})
-		}
-		err = store.CompareAndApply(ctx, []port.ExpectedRecord{
-			{Bucket: recordBucket, ID: decision.Record.ID, Data: intent.RecordRaw},
-			{Bucket: "external_intent_v1", ID: intent.OperationID, Data: intent.IntentRaw},
-		}, mutations)
-		if stale, ok := errors.AsType[port.RawCASFailure](err); ok {
-			if stale.FailedBucket() == recordBucket {
-				return leaseapp.ReconcileProgress{}, fmt.Errorf("stale raw record snapshot")
-			}
-			return leaseapp.ReconcileProgress{}, fmt.Errorf("stale raw intent snapshot")
-		}
-		if err != nil {
-			return leaseapp.ReconcileProgress{}, err
-		}
-		result := leaseapp.ReconcileProgress{Record: decision.Record, Pending: !decision.Complete}
-		if !decision.Complete {
-			result.NextStage = string(decision.Intent.Stage)
-		}
-		return result, nil
+		return r.applyPrepareReceipt(ctx, intent, payload, receipt, stageReceipt)
 	}
 	return leaseapp.ReconcileProgress{}, fmt.Errorf("unsupported Orca intent purpose %q", payload.Purpose)
+}
+
+// applyResumeReceipt는 resume 목적 intent의 단계 영수증을 ResumeRepository에 위임해 적용한다.
+func (r *ReconcileRepository) applyResumeReceipt(ctx context.Context, intent leaseapp.ReconcileIntentState, payload preparationcontract.Intent, stageReceipt leasecontract.ResumeStageReceipt) (leaseapp.ReconcileProgress, error) {
+	if intent.Progress.Record.Execution == nil {
+		return leaseapp.ReconcileProgress{}, fmt.Errorf("reconcile execution is required")
+	}
+	nextStage, complete, err := preparationdomain.NextOrcaReceiptStage(payload.Stage)
+	if err != nil {
+		return leaseapp.ReconcileProgress{}, err
+	}
+	resume := leaseapp.ResumeIntentState{
+		Progress: leaseapp.ResumeProgress{
+			Record: toApplicationRecord(intent.Progress.Record), Execution: *intent.Progress.Record.Execution,
+			Pending: intent.Progress.Pending,
+		},
+		OperationID: intent.OperationID, Stage: intent.Stage, InvocationState: intent.InvocationState,
+		InvocationAttempts: intent.InvocationAttempts, RecordRaw: intent.RecordRaw, IntentRaw: intent.IntentRaw,
+	}
+	progress, err := NewResumeRepository(r.store).ApplyReceipt(ctx, resume, stageReceipt)
+	if err != nil {
+		return leaseapp.ReconcileProgress{}, err
+	}
+	result := leaseapp.ReconcileProgress{Record: progress.Record.Stable, Pending: progress.Pending}
+	if !complete {
+		result.NextStage = string(nextStage)
+	}
+	return result, nil
+}
+
+// applyPrepareReceipt는 prepare 목적 intent의 단계 영수증을 검증하고 레코드와 intent를 한 번의 CAS로 갱신한다.
+func (r *ReconcileRepository) applyPrepareReceipt(ctx context.Context, intent leaseapp.ReconcileIntentState, payload preparationcontract.Intent, receipt leasecontract.ReconcileStageReceipt, stageReceipt leasecontract.ResumeStageReceipt) (leaseapp.ReconcileProgress, error) {
+	store, ok := r.store.(port.RecordRawCASStore)
+	if !ok {
+		return leaseapp.ReconcileProgress{}, fmt.Errorf("reconcile record store does not support raw CAS")
+	}
+	state := preparationapp.IntentState{
+		Snapshot: preparationcontract.Snapshot{Record: intent.Progress.Record, RecordRaw: intent.RecordRaw},
+		Command: preparationcontract.Command{
+			ID: intent.Progress.Record.ID, Mode: preparationcontract.ModeOrca,
+			OwnerHost: payload.Probe.Host, OwnerModel: payload.Probe.Model, OwnerEffort: payload.Probe.Effort,
+		},
+		Intent: payload, IntentRaw: intent.IntentRaw, Pending: true,
+	}
+	if err := preparationapp.ValidateIntentState(state); err != nil {
+		return leaseapp.ReconcileProgress{}, err
+	}
+	preparedReceipt := reconcilePreparationReceipt(receipt, stageReceipt)
+	if payload.Stage == preparationcontract.IntentStageWorktree {
+		if r.effects == nil {
+			return leaseapp.ReconcileProgress{}, fmt.Errorf("reconcile worktree preparer is required")
+		}
+		artifacts, err := r.effects.PrepareWorktree(ctx, state.Snapshot, state.Command, payload, preparedReceipt)
+		state.OwnerArtifacts = artifacts
+		if err != nil {
+			return leaseapp.ReconcileProgress{}, err
+		}
+	}
+	decision, err := preparationapp.ApplyOrcaReceipt(state, preparedReceipt, remote.IssueArtifactDir(state.Snapshot.Record.IssueURL), func() error {
+		return port.ValidateExecutionOrcaDeliveryReceipt(resumePortReceipt(stageReceipt), port.OrcaDeliveryReceiptExpectation{
+			Host: payload.Probe.Host, TaskID: payload.TaskID, TerminalPTYID: payload.TerminalPTYID,
+			DispatchRequestID: payload.OrcaRequestID, PromptRequestID: payload.OrcaPromptRequestID,
+		})
+	})
+	if err != nil {
+		return leaseapp.ReconcileProgress{}, err
+	}
+	mutations, err := prepareReceiptMutations(intent.OperationID, decision)
+	if err != nil {
+		return leaseapp.ReconcileProgress{}, err
+	}
+	err = store.CompareAndApply(ctx, []port.ExpectedRecord{
+		{Bucket: recordBucket, ID: decision.Record.ID, Data: intent.RecordRaw},
+		{Bucket: "external_intent_v1", ID: intent.OperationID, Data: intent.IntentRaw},
+	}, mutations)
+	if err := translateRawCASFailure(err); err != nil {
+		return leaseapp.ReconcileProgress{}, err
+	}
+	result := leaseapp.ReconcileProgress{Record: decision.Record, Pending: !decision.Complete}
+	if !decision.Complete {
+		result.NextStage = string(decision.Intent.Stage)
+	}
+	return result, nil
+}
+
+// prepareReceiptMutations는 결정된 레코드 갱신과, 완료 시 intent 삭제 또는 미완료 시 intent 갱신을 mutation 목록으로 만든다.
+func prepareReceiptMutations(operationID string, decision preparationapp.OrcaReceiptDecision) ([]port.RecordMutation, error) {
+	recordData, err := recordcodec.EncodeLease(decision.Record)
+	if err != nil {
+		return nil, err
+	}
+	mutations := []port.RecordMutation{{Bucket: recordBucket, ID: decision.Record.ID, Data: recordData}}
+	if decision.Complete {
+		return append(mutations, port.RecordMutation{Bucket: "external_intent_v1", ID: operationID, Delete: true}), nil
+	}
+	intentData, err := (preparationcontract.IntentCodec{}).Encode(decision.Intent)
+	if err != nil {
+		return nil, err
+	}
+	return append(mutations, port.RecordMutation{Bucket: "external_intent_v1", ID: operationID, Data: intentData}), nil
 }
 
 func (r *ReconcileRepository) Latest(_ context.Context, id string) (leasecontract.Record, error) {

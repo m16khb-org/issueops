@@ -23,6 +23,14 @@ func commandPolicyRequestFromArgs(args map[string]any) policydomain.CommandPolic
 	}
 }
 
+// mcpToolResult는 err가 없으면 결과를 payload로, 있으면 주어진 코드와 메시지의 실패로 변환한다.
+func mcpToolResult(result any, err error, code int64, message string) MCPToolOutcome {
+	if err != nil {
+		return mcpToolFailure(newProtocolError(code, message, err.Error()))
+	}
+	return mcpToolPayload(result)
+}
+
 func handlePolicyStateMCPToolCall(ctx context.Context, call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
 	state := deps.State
 	switch call.Name {
@@ -32,50 +40,29 @@ func handlePolicyStateMCPToolCall(ctx context.Context, call MCPToolCall, deps MC
 		return mcpToolPayload(deps.Policy.FakeRun(commandPolicyRequestFromArgs(call.Arguments)))
 	case "command_policy_audit":
 		result, err := deps.Audit.Audit(commandPolicyRequestFromArgs(call.Arguments))
-		if err != nil {
-			return mcpToolFailure(newProtocolError(-32000, "command_policy_audit failed", err.Error()))
-		}
-		return mcpToolPayload(result)
+		return mcpToolResult(result, err, -32000, "command_policy_audit failed")
 	case "state_write":
 		result, err := state.Write(ctx, argmap.String(call.Arguments, "key"), argmap.String(call.Arguments, "content"))
-		if err != nil {
-			return mcpToolFailure(newProtocolError(-32602, "State write failed", err.Error()))
-		}
-		return mcpToolPayload(result)
+		return mcpToolResult(result, err, -32602, "State write failed")
 	case "state_read":
 		result, err := state.Read(argmap.String(call.Arguments, "key"))
-		if err != nil {
-			return mcpToolFailure(newProtocolError(-32602, "State read failed", err.Error()))
-		}
-		return mcpToolPayload(result)
+		return mcpToolResult(result, err, -32602, "State read failed")
 	case "state_list":
 		result, err := state.List()
-		if err != nil {
-			return mcpToolFailure(newProtocolError(-32000, "State list failed", err.Error()))
-		}
-		return mcpToolPayload(result)
+		return mcpToolResult(result, err, -32000, "State list failed")
 	case "state_prune":
 		maxAge, err := time.ParseDuration(argmap.String(call.Arguments, "max_age"))
 		if err != nil {
 			return mcpToolFailure(newProtocolError(-32602, "State prune failed", "invalid max_age: "+err.Error()))
 		}
 		result, err := state.Prune(ctx, maxAge, argmap.Bool(call.Arguments, "confirm"))
-		if err != nil {
-			return mcpToolFailure(newProtocolError(-32602, "State prune failed", err.Error()))
-		}
-		return mcpToolPayload(result)
+		return mcpToolResult(result, err, -32602, "State prune failed")
 	case "state_doctor":
 		result, err := state.Doctor()
-		if err != nil {
-			return mcpToolFailure(newProtocolError(-32000, "State doctor failed", err.Error()))
-		}
-		return mcpToolPayload(result)
+		return mcpToolResult(result, err, -32000, "State doctor failed")
 	case "state_maintain":
 		result, err := state.Maintain()
-		if err != nil {
-			return mcpToolFailure(newProtocolError(-32000, "State maintain failed", err.Error()))
-		}
-		return mcpToolPayload(result)
+		return mcpToolResult(result, err, -32000, "State maintain failed")
 	default:
 		return MCPToolOutcome{}
 	}

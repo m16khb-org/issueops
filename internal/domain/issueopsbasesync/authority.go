@@ -38,6 +38,11 @@ func MissingAuthority(facts AuthorityFacts) []string {
 	if facts.RequestedGeneration != facts.CompletionGeneration {
 		return []string{"completion_generation_current"}
 	}
+	return missingResolutionAuthority(facts)
+}
+
+// missingResolutionAuthority는 모드별로 sync-base resolution 기록이 요구 조건을 만족하는지 확인한다.
+func missingResolutionAuthority(facts AuthorityFacts) []string {
 	switch facts.Mode {
 	case "apply":
 		if facts.Resolution.Present {

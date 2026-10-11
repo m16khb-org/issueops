@@ -52,12 +52,7 @@ type TransactionOutcome struct {
 
 func RunTransaction(ctx context.Context, request TransactionRequest, effects TransactionEffects, activation Activation) (TransactionOutcome, error) {
 	if request.Step == "abort" {
-		request.Activation.TransitionID = request.TransitionID
-		aborted, err := activation.Abort(ctx, request.Activation)
-		if err != nil {
-			return TransactionOutcome{}, fmt.Errorf("abort native activation: %w", err)
-		}
-		return TransactionOutcome{Activation: &aborted}, nil
+		return abortActivation(ctx, request, activation)
 	}
 	preflight := port.NativeInstallResult{OK: true, Root: request.Install.Root, Home: request.Install.Home, CodexHome: request.Install.CodexHome, BinPath: request.Install.BinPath}
 	pathTransaction, err := effects.PreparePath(&preflight, request.Install, request.CandidatePath, request.PathMode)
@@ -65,15 +60,41 @@ func RunTransaction(ctx context.Context, request TransactionRequest, effects Tra
 		return TransactionOutcome{}, err
 	}
 	if request.Install.DryRun {
-		result, installErr := effects.Install(request.Install)
-		result.Links = append(preflight.Links, result.Links...)
-		result.Files = append(preflight.Files, result.Files...)
-		result.Messages = append(preflight.Messages, result.Messages...)
-		result.CommandPath = preflight.CommandPath
-		effects.AppendUpstream(&result, request.Install.Root, true)
-		effects.RemoveRetiredState(&result, true)
-		return TransactionOutcome{Install: &result}, installErr
+		return dryRunInstall(request, effects, preflight)
 	}
+	hostTransaction, failedPlan, hostErr := prepareHostTransaction(request, effects)
+	if hostErr != nil {
+		return hostPreflightFailure(failedPlan, hostErr, preflight, request)
+	}
+	if outcome, done, err := advanceActivation(ctx, &request, activation); done {
+		return outcome, err
+	}
+	return applyAndCommit(ctx, request, effects, activation, preflight, pathTransaction, hostTransaction)
+}
+
+func abortActivation(ctx context.Context, request TransactionRequest, activation Activation) (TransactionOutcome, error) {
+	request.Activation.TransitionID = request.TransitionID
+	aborted, err := activation.Abort(ctx, request.Activation)
+	if err != nil {
+		return TransactionOutcome{}, fmt.Errorf("abort native activation: %w", err)
+	}
+	return TransactionOutcome{Activation: &aborted}, nil
+}
+
+func dryRunInstall(request TransactionRequest, effects TransactionEffects, preflight port.NativeInstallResult) (TransactionOutcome, error) {
+	result, installErr := effects.Install(request.Install)
+	result.Links = append(preflight.Links, result.Links...)
+	result.Files = append(preflight.Files, result.Files...)
+	result.Messages = append(preflight.Messages, result.Messages...)
+	result.CommandPath = preflight.CommandPath
+	effects.AppendUpstream(&result, request.Install.Root, true)
+	effects.RemoveRetiredState(&result, true)
+	return TransactionOutcome{Install: &result}, installErr
+}
+
+// prepareHostTransaction runs the host dry-run preflight. A non-nil error means the
+// preflight failed and the returned plan is the (possibly partial) result to report.
+func prepareHostTransaction(request TransactionRequest, effects TransactionEffects) (HostTransaction, port.NativeInstallResult, error) {
 	hostPlanReq := request.Install
 	hostPlanReq.DryRun = true
 	hostPlan, hostPlanErr := effects.Install(hostPlanReq)
@@ -81,27 +102,37 @@ func RunTransaction(ctx context.Context, request TransactionRequest, effects Tra
 		if hostPlanErr == nil {
 			hostPlanErr = fmt.Errorf("native installer dry-run preflight reported ok=false")
 		}
-		return hostPreflightFailure(hostPlan, hostPlanErr, preflight, request)
+		return nil, hostPlan, hostPlanErr
 	}
 	if hostPlanErr = effects.PlanShell(&hostPlan, hostPlanReq, request.PathMode); hostPlanErr != nil {
-		return hostPreflightFailure(hostPlan, hostPlanErr, preflight, request)
+		return nil, hostPlan, hostPlanErr
 	}
 	hostTransaction, hostTransactionErr := effects.PrepareHost(hostPlan)
 	if hostTransactionErr != nil {
-		return hostPreflightFailure(hostPlan, hostTransactionErr, preflight, request)
+		return nil, hostPlan, hostTransactionErr
 	}
+	return hostTransaction, hostPlan, nil
+}
+
+// advanceActivation sets the transition id on request (seal reuses the caller's id,
+// other steps begin a new one). done reports that the step ends here with outcome/err.
+func advanceActivation(ctx context.Context, request *TransactionRequest, activation Activation) (outcome TransactionOutcome, done bool, err error) {
 	if request.Step == "seal" {
 		request.Activation.TransitionID = request.TransitionID
-	} else {
-		pending, beginErr := activation.Begin(ctx, request.Activation)
-		if beginErr != nil {
-			return TransactionOutcome{}, fmt.Errorf("begin native activation: %w", beginErr)
-		}
-		request.Activation.TransitionID = pending.TransitionID
-		if request.Step == "begin" {
-			return TransactionOutcome{Activation: &pending}, nil
-		}
+		return TransactionOutcome{}, false, nil
 	}
+	pending, beginErr := activation.Begin(ctx, request.Activation)
+	if beginErr != nil {
+		return TransactionOutcome{}, true, fmt.Errorf("begin native activation: %w", beginErr)
+	}
+	request.Activation.TransitionID = pending.TransitionID
+	if request.Step == "begin" {
+		return TransactionOutcome{Activation: &pending}, true, nil
+	}
+	return TransactionOutcome{}, false, nil
+}
+
+func applyAndCommit(ctx context.Context, request TransactionRequest, effects TransactionEffects, activation Activation, preflight port.NativeInstallResult, pathTransaction PathTransaction, hostTransaction HostTransaction) (TransactionOutcome, error) {
 	result := preflight
 	result.TransitionID = request.Activation.TransitionID
 	if applyErr := pathTransaction.Apply(&result); applyErr != nil {
@@ -125,17 +156,23 @@ func RunTransaction(ctx context.Context, request TransactionRequest, effects Tra
 		}
 		return failedInstall(ctx, result, sealErr, request, pathTransaction, hostTransaction, activation)
 	}
+	finalizeCommitted(&result, request, effects, pathTransaction)
+	return TransactionOutcome{Install: &result}, nil
+}
+
+// finalizeCommitted records the committed install; failures after the seal are
+// reported as messages because the activation can no longer be rolled back.
+func finalizeCommitted(result *port.NativeInstallResult, request TransactionRequest, effects TransactionEffects, pathTransaction PathTransaction) {
 	result.Committed = true
 	result.Messages = append(result.Messages, "native activation receipt sealed after strict Codex/Claude/Omo/omp MCP and lifecycle readback")
-	effects.AppendUpstream(&result, request.Install.Root, false)
-	if finalizeErr := pathTransaction.Finalize(&result); finalizeErr != nil {
+	effects.AppendUpstream(result, request.Install.Root, false)
+	if finalizeErr := pathTransaction.Finalize(result); finalizeErr != nil {
 		result.Messages = append(result.Messages, "native activation is committed; command backup cleanup requires manual recovery: "+finalizeErr.Error())
 		if result.CommandPath != nil {
 			result.CommandPath.BackupRetained = true
 		}
 	}
-	effects.RemoveRetiredState(&result, false)
-	return TransactionOutcome{Install: &result}, nil
+	effects.RemoveRetiredState(result, false)
 }
 
 func hostPreflightFailure(result port.NativeInstallResult, cause error, preflight port.NativeInstallResult, request TransactionRequest) (TransactionOutcome, error) {

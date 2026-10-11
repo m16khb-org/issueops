@@ -17,9 +17,16 @@ func ValidatePersistedRecord(record leasecontract.Record) error {
 	if execution.Mode != "direct" && execution.Mode != "orca" {
 		return fmt.Errorf("execution mode must be direct or orca")
 	}
-	for name, value := range map[string]string{"source_root": execution.Workspace.SourceRoot, "root": execution.Workspace.Root, "branch": execution.Workspace.Branch, "base_head": execution.Workspace.BaseHead, "driver": execution.Workspace.Driver, "linked_at": execution.Workspace.LinkedAt} {
-		if strings.TrimSpace(value) == "" {
-			return fmt.Errorf("workspace %s is required", name)
+	for _, field := range []struct{ name, value string }{
+		{"source_root", execution.Workspace.SourceRoot},
+		{"root", execution.Workspace.Root},
+		{"branch", execution.Workspace.Branch},
+		{"base_head", execution.Workspace.BaseHead},
+		{"driver", execution.Workspace.Driver},
+		{"linked_at", execution.Workspace.LinkedAt},
+	} {
+		if strings.TrimSpace(field.value) == "" {
+			return fmt.Errorf("workspace %s is required", field.name)
 		}
 	}
 	if execution.Workspace.SourceRoot == execution.Workspace.Root {
@@ -53,6 +60,25 @@ func ValidatePersistedSelection(selection leasecontract.Selection, mode string) 
 	if selection.ResolvedMode != mode {
 		return fmt.Errorf("selection resolved_mode must equal execution mode")
 	}
+	if err := validateSelectionProbeFlags(selection); err != nil {
+		return err
+	}
+	if err := validateSelectionModeAgreement(selection, mode); err != nil {
+		return err
+	}
+	if err := validateSelectionFallback(selection, mode); err != nil {
+		return err
+	}
+	if err := validateSelectionDirectReason(selection); err != nil {
+		return err
+	}
+	if !validHexDigest(selection.ReadinessFingerprint, 64) || strings.TrimSpace(selection.SelectedAt) == "" {
+		return fmt.Errorf("selection receipt requires fingerprint and selected_at")
+	}
+	return nil
+}
+
+func validateSelectionProbeFlags(selection leasecontract.Selection) error {
 	if selection.ProbeAvailable && !selection.ProbeAttempted {
 		return fmt.Errorf("selection probe_available requires probe_attempted")
 	}
@@ -65,6 +91,10 @@ func ValidatePersistedSelection(selection leasecontract.Selection, mode string) 
 	if selection.RequestedMode != "direct" && !selection.ProbeAttempted {
 		return fmt.Errorf("auto and Orca selections require a readiness probe")
 	}
+	return nil
+}
+
+func validateSelectionModeAgreement(selection leasecontract.Selection, mode string) error {
 	if (selection.RequestedMode == "direct" && mode != "direct") ||
 		(selection.RequestedMode == "orca" && mode != "orca") {
 		return fmt.Errorf("explicit selection mode must equal execution mode")
@@ -72,6 +102,10 @@ func ValidatePersistedSelection(selection leasecontract.Selection, mode string) 
 	if mode == "orca" && !selection.ProbeReady {
 		return fmt.Errorf("Orca selection requires a ready probe")
 	}
+	return nil
+}
+
+func validateSelectionFallback(selection leasecontract.Selection, mode string) error {
 	if selection.RequestedMode == "auto" && mode == "direct" {
 		probeCode := strings.TrimSpace(selection.ProbeCode)
 		fallbackCode := strings.TrimSpace(selection.FallbackCode)
@@ -82,18 +116,21 @@ func ValidatePersistedSelection(selection leasecontract.Selection, mode string) 
 	if mode == "orca" && strings.TrimSpace(selection.FallbackCode) != "" {
 		return fmt.Errorf("Orca selection must not contain fallback_code")
 	}
-	if selection.RequestedMode == "direct" {
-		if selection.ProbeAttempted || strings.TrimSpace(selection.ExplicitDirectReason) == "" {
-			return fmt.Errorf("explicit direct selection requires a reason and no probe")
+	return nil
+}
+
+func validateSelectionDirectReason(selection leasecontract.Selection) error {
+	if selection.RequestedMode != "direct" {
+		if strings.TrimSpace(selection.ExplicitDirectReason) != "" {
+			return fmt.Errorf("non-direct selection must not contain explicit_direct_reason")
 		}
-		if selection.FallbackCode != "" {
-			return fmt.Errorf("explicit direct selection must not contain fallback_code")
-		}
-	} else if strings.TrimSpace(selection.ExplicitDirectReason) != "" {
-		return fmt.Errorf("non-direct selection must not contain explicit_direct_reason")
+		return nil
 	}
-	if !validHexDigest(selection.ReadinessFingerprint, 64) || strings.TrimSpace(selection.SelectedAt) == "" {
-		return fmt.Errorf("selection receipt requires fingerprint and selected_at")
+	if selection.ProbeAttempted || strings.TrimSpace(selection.ExplicitDirectReason) == "" {
+		return fmt.Errorf("explicit direct selection requires a reason and no probe")
+	}
+	if selection.FallbackCode != "" {
+		return fmt.Errorf("explicit direct selection must not contain fallback_code")
 	}
 	return nil
 }
@@ -145,29 +182,79 @@ func ValidatePersistedSidecars(execution leasecontract.Execution) error {
 		return fmt.Errorf("direct execution must not contain an Orca binding")
 	}
 	if execution.Orca != nil {
-		for name, value := range map[string]string{"runtime_id": execution.Orca.RuntimeID, "repo_id": execution.Orca.RepoID, "worktree_id": execution.Orca.WorktreeID, "owner_host": execution.Orca.OwnerHost, "owner_model": execution.Orca.OwnerModel, "task_id": execution.Orca.TaskID, "dispatch_id": execution.Orca.DispatchID, "run_id": execution.Orca.RunID} {
-			if strings.TrimSpace(value) == "" {
-				return fmt.Errorf("Orca binding %s is required", name)
-			}
-		}
-		if execution.Orca.LeaseGeneration == 0 {
-			return fmt.Errorf("Orca binding lease_generation is required")
-		}
-		if execution.Orca.ArtifactIdentityVersion != leasecontract.OrcaArtifactIdentityVersion {
-			return fmt.Errorf("unsupported Orca artifact identity version %d", execution.Orca.ArtifactIdentityVersion)
-		}
-		for _, digest := range []string{execution.Orca.IssueBodySHA256, execution.Orca.ContextPacketSHA256, execution.Orca.OwnerPromptSHA256} {
-			if digest == "" {
-				return fmt.Errorf("Orca binding artifact identity version requires a complete sealed artifact identity")
-			}
-			if !validHexDigest(digest, 64) {
-				return fmt.Errorf("Orca binding sealed artifact identity must contain SHA-256 digests")
-			}
+		if err := validateOrcaBinding(execution.Orca); err != nil {
+			return err
 		}
 	}
-	if execution.Pending != nil && (execution.Pending.OperationID == "" || execution.Pending.Kind == "" || execution.Pending.Marker == "" || execution.Pending.StartedAt == "") {
+	if err := validatePendingIntent(execution.Pending); err != nil {
+		return err
+	}
+	if err := validateExecutionCompletionSidecars(execution); err != nil {
+		return err
+	}
+	if err := validateFailureDetail(execution.Failure); err != nil {
+		return err
+	}
+	if execution.SyncBaseResolution != nil {
+		if err := validateSyncBaseResolution(execution, execution.SyncBaseResolution); err != nil {
+			return err
+		}
+	}
+	for _, event := range execution.SyncBaseEvents {
+		if err := validateSyncBaseEvent(event); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validatePendingIntent(pending *leasecontract.ExternalIntent) error {
+	if pending != nil && (pending.OperationID == "" || pending.Kind == "" || pending.Marker == "" || pending.StartedAt == "") {
 		return fmt.Errorf("pending external intent is incomplete")
 	}
+	return nil
+}
+
+func validateFailureDetail(failure *leasecontract.FailureDetail) error {
+	if failure != nil && (failure.Code == "" || failure.At == "" || len(failure.Message) > 4096) {
+		return fmt.Errorf("execution failure is invalid")
+	}
+	return nil
+}
+
+func validateOrcaBinding(orca *leasecontract.OrcaBinding) error {
+	for _, field := range []struct{ name, value string }{
+		{"runtime_id", orca.RuntimeID},
+		{"repo_id", orca.RepoID},
+		{"worktree_id", orca.WorktreeID},
+		{"owner_host", orca.OwnerHost},
+		{"owner_model", orca.OwnerModel},
+		{"task_id", orca.TaskID},
+		{"dispatch_id", orca.DispatchID},
+		{"run_id", orca.RunID},
+	} {
+		if strings.TrimSpace(field.value) == "" {
+			return fmt.Errorf("Orca binding %s is required", field.name)
+		}
+	}
+	if orca.LeaseGeneration == 0 {
+		return fmt.Errorf("Orca binding lease_generation is required")
+	}
+	if orca.ArtifactIdentityVersion != leasecontract.OrcaArtifactIdentityVersion {
+		return fmt.Errorf("unsupported Orca artifact identity version %d", orca.ArtifactIdentityVersion)
+	}
+	for _, digest := range []string{orca.IssueBodySHA256, orca.ContextPacketSHA256, orca.OwnerPromptSHA256} {
+		if digest == "" {
+			return fmt.Errorf("Orca binding artifact identity version requires a complete sealed artifact identity")
+		}
+		if !validHexDigest(digest, 64) {
+			return fmt.Errorf("Orca binding sealed artifact identity must contain SHA-256 digests")
+		}
+	}
+	return nil
+}
+
+func validateExecutionCompletionSidecars(execution leasecontract.Execution) error {
 	if execution.Completion != nil {
 		if err := validateCompletion(*execution.Completion); err != nil {
 			return err
@@ -177,55 +264,70 @@ func ValidatePersistedSidecars(execution leasecontract.Execution) error {
 		}
 	}
 	for _, entry := range execution.CompletionHistory {
-		if entry.Generation == 0 || strings.TrimSpace(entry.Reason) == "" || strings.TrimSpace(entry.ReopenedAt) == "" {
-			return fmt.Errorf("execution completion history entry is incomplete")
-		}
-		if entry.Generation >= execution.Lease.Generation {
-			return fmt.Errorf("execution completion history generation must precede the lease generation")
-		}
-		if err := validateCompletion(entry.Completion); err != nil {
-			return fmt.Errorf("execution completion history: %w", err)
-		}
-		if entry.Completion.Generation != entry.Generation {
-			return fmt.Errorf("execution completion history generation conflicts with its completion")
-		}
-	}
-	if execution.Failure != nil && (execution.Failure.Code == "" || execution.Failure.At == "" || len(execution.Failure.Message) > 4096) {
-		return fmt.Errorf("execution failure is invalid")
-	}
-	if execution.SyncBaseResolution != nil {
-		resolution := execution.SyncBaseResolution
-		if execution.Lease.Status != "released" || execution.Completion == nil ||
-			resolution.Generation == 0 || resolution.Generation != execution.Lease.Generation ||
-			resolution.CompletionGeneration == 0 || resolution.CompletionGeneration != execution.Completion.Generation ||
-			!validHexDigest(resolution.BaseOID, 40, 64) || strings.TrimSpace(resolution.StartedAt) == "" || len(resolution.ConflictFiles) == 0 {
-			return fmt.Errorf("execution sync-base resolution is invalid")
-		}
-		if err := ValidatePersistedActor(resolution.Actor); err != nil {
+		if err := validateCompletionHistoryEntry(entry, execution.Lease.Generation); err != nil {
 			return err
 		}
-		seen := map[string]bool{}
-		for _, path := range resolution.ConflictFiles {
-			clean := filepath.Clean(path)
-			if path == "" || path != clean || filepath.IsAbs(path) || clean == "." || clean == ".." || strings.HasPrefix(clean, ".."+string(filepath.Separator)) || seen[clean] {
-				return fmt.Errorf("execution sync-base resolution conflict path is invalid")
-			}
-			seen[clean] = true
-		}
 	}
-	for _, event := range execution.SyncBaseEvents {
-		if event.Mode != "apply" && event.Mode != "finalize" {
-			return fmt.Errorf("execution sync-base event mode must be apply or finalize")
+	return nil
+}
+
+func validateCompletionHistoryEntry(entry leasecontract.CompletionHistoryEntry, leaseGeneration uint64) error {
+	if entry.Generation == 0 || strings.TrimSpace(entry.Reason) == "" || strings.TrimSpace(entry.ReopenedAt) == "" {
+		return fmt.Errorf("execution completion history entry is incomplete")
+	}
+	if entry.Generation >= leaseGeneration {
+		return fmt.Errorf("execution completion history generation must precede the lease generation")
+	}
+	if err := validateCompletion(entry.Completion); err != nil {
+		return fmt.Errorf("execution completion history: %w", err)
+	}
+	if entry.Completion.Generation != entry.Generation {
+		return fmt.Errorf("execution completion history generation conflicts with its completion")
+	}
+	return nil
+}
+
+func validateSyncBaseResolution(execution leasecontract.Execution, resolution *leasecontract.SyncBaseResolution) error {
+	if !syncBaseResolutionMatchesExecution(execution, resolution) ||
+		!validHexDigest(resolution.BaseOID, 40, 64) || strings.TrimSpace(resolution.StartedAt) == "" || len(resolution.ConflictFiles) == 0 {
+		return fmt.Errorf("execution sync-base resolution is invalid")
+	}
+	if err := ValidatePersistedActor(resolution.Actor); err != nil {
+		return err
+	}
+	seen := map[string]bool{}
+	for _, path := range resolution.ConflictFiles {
+		clean := filepath.Clean(path)
+		if !validSyncBaseConflictPath(path, clean) || seen[clean] {
+			return fmt.Errorf("execution sync-base resolution conflict path is invalid")
 		}
-		if !validHexDigest(event.BaseOID, 40, 64) || !validHexDigest(event.MergeCommit, 40, 64) {
-			return fmt.Errorf("execution sync-base event requires full base and merge commit OIDs")
-		}
-		if strings.TrimSpace(event.BaseBranch) == "" || strings.TrimSpace(event.Actor) == "" || strings.TrimSpace(event.At) == "" {
-			return fmt.Errorf("execution sync-base event is incomplete")
-		}
-		if event.ConflictFiles < 0 {
-			return fmt.Errorf("execution sync-base event conflict count must not be negative")
-		}
+		seen[clean] = true
+	}
+	return nil
+}
+
+func syncBaseResolutionMatchesExecution(execution leasecontract.Execution, resolution *leasecontract.SyncBaseResolution) bool {
+	return execution.Lease.Status == "released" && execution.Completion != nil &&
+		resolution.Generation != 0 && resolution.Generation == execution.Lease.Generation &&
+		resolution.CompletionGeneration != 0 && resolution.CompletionGeneration == execution.Completion.Generation
+}
+
+func validSyncBaseConflictPath(path, clean string) bool {
+	return path != "" && path == clean && !filepath.IsAbs(path) && clean != "." && clean != ".." && !strings.HasPrefix(clean, ".."+string(filepath.Separator))
+}
+
+func validateSyncBaseEvent(event leasecontract.SyncBaseEvent) error {
+	if event.Mode != "apply" && event.Mode != "finalize" {
+		return fmt.Errorf("execution sync-base event mode must be apply or finalize")
+	}
+	if !validHexDigest(event.BaseOID, 40, 64) || !validHexDigest(event.MergeCommit, 40, 64) {
+		return fmt.Errorf("execution sync-base event requires full base and merge commit OIDs")
+	}
+	if strings.TrimSpace(event.BaseBranch) == "" || strings.TrimSpace(event.Actor) == "" || strings.TrimSpace(event.At) == "" {
+		return fmt.Errorf("execution sync-base event is incomplete")
+	}
+	if event.ConflictFiles < 0 {
+		return fmt.Errorf("execution sync-base event conflict count must not be negative")
 	}
 	return nil
 }

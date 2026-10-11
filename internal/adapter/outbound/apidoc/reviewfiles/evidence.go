@@ -238,11 +238,8 @@ func (e *evidenceExtractor) buildClassIndex() {
 			return nil
 		}
 		if d.IsDir() {
-			name := d.Name()
-			if name == "node_modules" || name == "dist" || name == ".git" || name == "coverage" || name == "build" || name == ".next" || strings.HasPrefix(name, ".") {
-				if path != e.repo {
-					return fs.SkipDir
-				}
+			if isSkippedIndexDir(d.Name()) && path != e.repo {
+				return fs.SkipDir
 			}
 			return nil
 		}
@@ -252,20 +249,10 @@ func (e *evidenceExtractor) buildClassIndex() {
 		if !strings.HasSuffix(path, ".ts") {
 			return nil
 		}
-		info, err := d.Info()
-		if err != nil || info.Size() > evidenceMaxFileLen {
+		rel, text, ok := e.readIndexableFile(path, d)
+		if !ok {
 			return nil
 		}
-		b, err := os.ReadFile(path)
-		if err != nil {
-			return nil
-		}
-		rel, err := filepath.Rel(e.repo, path)
-		if err != nil {
-			return nil
-		}
-		rel = filepath.ToSlash(rel)
-		text := string(b)
 		e.fileText[rel] = text
 		for _, m := range classDeclRe().FindAllStringSubmatch(text, -1) {
 			if _, exists := e.classPath[m[1]]; !exists {
@@ -275,6 +262,32 @@ func (e *evidenceExtractor) buildClassIndex() {
 		}
 		return nil
 	})
+}
+
+func isSkippedIndexDir(name string) bool {
+	switch name {
+	case "node_modules", "dist", ".git", "coverage", "build", ".next":
+		return true
+	}
+	return strings.HasPrefix(name, ".")
+}
+
+// readIndexableFile returns the repo-relative slash path and text of a file
+// that is small enough to index; ok is false when it cannot be read.
+func (e *evidenceExtractor) readIndexableFile(path string, d fs.DirEntry) (rel, text string, ok bool) {
+	info, err := d.Info()
+	if err != nil || info.Size() > evidenceMaxFileLen {
+		return "", "", false
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return "", "", false
+	}
+	rel, err = filepath.Rel(e.repo, path)
+	if err != nil {
+		return "", "", false
+	}
+	return filepath.ToSlash(rel), string(b), true
 }
 
 // addThrows appends the exceptions thrown by serviceClass#method (plus one
@@ -375,42 +388,16 @@ func (e *evidenceExtractor) addMicroserviceHop(key, patternArg string) {
 	matched := 0
 	for _, path := range sortedPaths(e.fileText) {
 		text := e.fileText[path]
-		if !strings.Contains(text, "@MessagePattern") && !strings.Contains(text, "@EventPattern") {
-			continue
-		}
-		if !fileContainsAny(text, literals) {
+		if !hasMessageOrEventPattern(text) || !fileContainsAny(text, literals) {
 			continue
 		}
 		matched++
 		e.entry(key).lines = append(e.entry(key).lines, fmt.Sprintf("microservice hop %s matched @MessagePattern/@EventPattern in %s", patternArg, path))
 		injections := parseInjections(text)
 		lines := strings.Split(text, "\n")
-		for i := 0; i < len(lines); i++ {
-			if !strings.Contains(lines[i], "@MessagePattern") && !strings.Contains(lines[i], "@EventPattern") {
-				continue
-			}
-			if !fileContainsAny(patternWindow(lines, i), literals) {
-				continue
-			}
-			handler := nextMethodName(lines, i)
-			if handler == "" {
-				continue
-			}
-			_, body, ok := handlerBody(lines, i, handler)
-			if !ok {
-				continue
-			}
-			for _, call := range serviceCallRe().FindAllStringSubmatch(body, -1) {
-				className, known := injections[call[1]]
-				if !known || isClientProxyType(className) {
-					continue
-				}
-				serviceText, servicePath, ok := e.resolveClass(className)
-				if !ok {
-					continue
-				}
-				e.entry(key).lines = append(e.entry(key).lines, fmt.Sprintf("  handler %s -> %s.%s (%s)", handler, className, call[2], servicePath))
-				e.addThrows(key, servicePath, serviceText, call[2], 0)
+		for i := range lines {
+			if hasMessageOrEventPattern(lines[i]) {
+				e.addPatternHandlerEvidence(key, lines, i, literals, injections)
 			}
 		}
 		if matched >= 4 {
@@ -421,6 +408,38 @@ func (e *evidenceExtractor) addMicroserviceHop(key, patternArg string) {
 		e.entry(key).lines = append(e.entry(key).lines, fmt.Sprintf("microservice hop %s: no @MessagePattern/@EventPattern handler found in repo (remote service)", patternArg))
 	}
 	e.addExceptionFilters(key)
+}
+
+func hasMessageOrEventPattern(s string) bool {
+	return strings.Contains(s, "@MessagePattern") || strings.Contains(s, "@EventPattern")
+}
+
+// addPatternHandlerEvidence records the service calls (and their throws) of the
+// handler whose pattern decorator at lines[i] shares a literal with the hop.
+func (e *evidenceExtractor) addPatternHandlerEvidence(key string, lines []string, i int, literals []string, injections map[string]string) {
+	if !fileContainsAny(patternWindow(lines, i), literals) {
+		return
+	}
+	handler := nextMethodName(lines, i)
+	if handler == "" {
+		return
+	}
+	_, body, ok := handlerBody(lines, i, handler)
+	if !ok {
+		return
+	}
+	for _, call := range serviceCallRe().FindAllStringSubmatch(body, -1) {
+		className, known := injections[call[1]]
+		if !known || isClientProxyType(className) {
+			continue
+		}
+		serviceText, servicePath, ok := e.resolveClass(className)
+		if !ok {
+			continue
+		}
+		e.entry(key).lines = append(e.entry(key).lines, fmt.Sprintf("  handler %s -> %s.%s (%s)", handler, className, call[2], servicePath))
+		e.addThrows(key, servicePath, serviceText, call[2], 0)
+	}
 }
 
 func (e *evidenceExtractor) addExceptionFilters(key string) {

@@ -69,37 +69,55 @@ func CollectQualityFindings(
 	pioneer contract.PioneerCoverage,
 ) []contract.Finding {
 	findings := make([]contract.Finding, 0, 5)
-	if len(warnings) > 0 {
-		findings = append(findings, contract.Finding{
-			ID:            "quality-collector-error",
-			Severity:      "p0",
-			Title:         "Quality evidence collection failed",
-			Blocking:      true,
-			Evidence:      append([]string(nil), warnings...),
-			Remediation:   "Repair the failing collector before relying on repository health.",
-			VerifyCommand: "./bin/issueops quality inspect --json",
-		})
+	findings = appendCollectorFinding(findings, warnings)
+	findings = appendPioneerSkillFinding(findings, pioneer)
+	findings = appendPioneerIsolatedFinding(findings, pioneer)
+	findings = appendLowCoverageFinding(findings, lowCoverage)
+	findings = appendHighBranchFinding(findings, branchFunctions)
+	findings = appendAuditFinding(findings, auditItems)
+	return findings
+}
+
+func appendCollectorFinding(findings []contract.Finding, warnings []string) []contract.Finding {
+	if len(warnings) == 0 {
+		return findings
 	}
-	if len(pioneer.BenchmarkMissing) > 0 || len(pioneer.ReproductionMissing) > 0 {
-		evidence := make([]string, 0, len(pioneer.BenchmarkMissing)+len(pioneer.ReproductionMissing))
-		for _, name := range pioneer.BenchmarkMissing {
-			evidence = append(evidence, "benchmark missing: "+name)
-		}
-		for _, name := range pioneer.ReproductionMissing {
-			evidence = append(evidence, "reproduction missing: "+name)
-		}
-		findings = append(findings, contract.Finding{
-			ID:            "pioneer-skill-coverage",
-			Severity:      "p1",
-			Title:         "Canonical pioneer skill evaluation is incomplete",
-			Evidence:      evidence,
-			Remediation:   "Add one benchmark fixture and one honest reproduction case for every canonical pioneer skill.",
-			VerifyCommand: "./bin/issueops benchmark run --fixtures testdata/issueops/fixtures --judge none --json",
-		})
+	return append(findings, contract.Finding{
+		ID:            "quality-collector-error",
+		Severity:      "p0",
+		Title:         "Quality evidence collection failed",
+		Blocking:      true,
+		Evidence:      append([]string(nil), warnings...),
+		Remediation:   "Repair the failing collector before relying on repository health.",
+		VerifyCommand: "./bin/issueops quality inspect --json",
+	})
+}
+
+func appendPioneerSkillFinding(findings []contract.Finding, pioneer contract.PioneerCoverage) []contract.Finding {
+	if len(pioneer.BenchmarkMissing) == 0 && len(pioneer.ReproductionMissing) == 0 {
+		return findings
 	}
+	evidence := make([]string, 0, len(pioneer.BenchmarkMissing)+len(pioneer.ReproductionMissing))
+	for _, name := range pioneer.BenchmarkMissing {
+		evidence = append(evidence, "benchmark missing: "+name)
+	}
+	for _, name := range pioneer.ReproductionMissing {
+		evidence = append(evidence, "reproduction missing: "+name)
+	}
+	return append(findings, contract.Finding{
+		ID:            "pioneer-skill-coverage",
+		Severity:      "p1",
+		Title:         "Canonical pioneer skill evaluation is incomplete",
+		Evidence:      evidence,
+		Remediation:   "Add one benchmark fixture and one honest reproduction case for every canonical pioneer skill.",
+		VerifyCommand: "./bin/issueops benchmark run --fixtures testdata/issueops/fixtures --judge none --json",
+	})
+}
+
+func appendPioneerIsolatedFinding(findings []contract.Finding, pioneer contract.PioneerCoverage) []contract.Finding {
 	if pioneer.IsolatedExpected > 0 &&
 		(pioneer.IsolatedObserved != pioneer.IsolatedExpected || pioneer.IsolatedFailed > 0) {
-		findings = append(findings, contract.Finding{
+		return append(findings, contract.Finding{
 			ID:            "pioneer-isolated-evaluation-incomplete",
 			Severity:      "p0",
 			Title:         "Fresh-context pioneer evaluation evidence is incomplete or failed",
@@ -108,8 +126,9 @@ func CollectQualityFindings(
 			Remediation:   "Run every canonical pioneer fixture in an isolated context and record hashes and verdicts in the evaluation manifest.",
 			VerifyCommand: "./bin/issueops quality inspect --json",
 		})
-	} else if pioneer.IsolatedBlocked > 0 {
-		findings = append(findings, contract.Finding{
+	}
+	if pioneer.IsolatedBlocked > 0 {
+		return append(findings, contract.Finding{
 			ID:            "pioneer-isolated-evaluation-blocked",
 			Severity:      "p1",
 			Title:         "Fresh-context pioneer evaluation has capability-blocked cases",
@@ -118,53 +137,65 @@ func CollectQualityFindings(
 			VerifyCommand: "./bin/issueops quality inspect --json",
 		})
 	}
-	if len(lowCoverage) > 0 {
-		findings = append(findings, contract.Finding{
-			ID:            "low-coverage-packages",
-			Severity:      "p2",
-			Title:         "Packages remain below the coverage observation threshold",
-			Evidence:      BoundedEvidence(CoverageEvidence(lowCoverage), 50),
-			Remediation:   "Add behavior-focused boundary tests to the highest-risk packages before promotion.",
-			VerifyCommand: "go test -cover ./... -count=1",
-		})
+	return findings
+}
+
+func appendLowCoverageFinding(findings []contract.Finding, lowCoverage []contract.CoveragePackage) []contract.Finding {
+	if len(lowCoverage) == 0 {
+		return findings
 	}
+	return append(findings, contract.Finding{
+		ID:            "low-coverage-packages",
+		Severity:      "p2",
+		Title:         "Packages remain below the coverage observation threshold",
+		Evidence:      BoundedEvidence(CoverageEvidence(lowCoverage), 50),
+		Remediation:   "Add behavior-focused boundary tests to the highest-risk packages before promotion.",
+		VerifyCommand: "go test -cover ./... -count=1",
+	})
+}
+
+func appendHighBranchFinding(findings []contract.Finding, branchFunctions []contract.BranchFunction) []contract.Finding {
 	highBranchCount := 0
 	for _, function := range branchFunctions {
 		if function.Branches > 12 {
 			highBranchCount++
 		}
 	}
-	if highBranchCount > 0 {
-		findings = append(findings, contract.Finding{
-			ID:            "high-branch-functions",
-			Severity:      "p2",
-			Title:         "High-branch production functions need targeted review",
-			Evidence:      BranchEvidence(branchFunctions, 12),
-			Remediation:   "Review the listed functions for missing invariants and add focused regression tests.",
-			VerifyCommand: "./bin/issueops quality inspect --json",
-		})
+	if highBranchCount == 0 {
+		return findings
 	}
-	if len(auditItems) > 0 {
-		severity := "p1"
-		blocking := false
-		for _, item := range auditItems {
-			if item.Priority == "P0" {
-				severity = "p0"
-				blocking = true
-				break
-			}
+	return append(findings, contract.Finding{
+		ID:            "high-branch-functions",
+		Severity:      "p2",
+		Title:         "High-branch production functions need targeted review",
+		Evidence:      BranchEvidence(branchFunctions, 12),
+		Remediation:   "Review the listed functions for missing invariants and add focused regression tests.",
+		VerifyCommand: "./bin/issueops quality inspect --json",
+	})
+}
+
+func appendAuditFinding(findings []contract.Finding, auditItems []contract.AuditItem) []contract.Finding {
+	if len(auditItems) == 0 {
+		return findings
+	}
+	severity := "p1"
+	blocking := false
+	for _, item := range auditItems {
+		if item.Priority == "P0" {
+			severity = "p0"
+			blocking = true
+			break
 		}
-		findings = append(findings, contract.Finding{
-			ID:            "project-audit-items",
-			Severity:      severity,
-			Title:         "P0, P1, or P2 project audit items remain open",
-			Blocking:      blocking,
-			Evidence:      AuditEvidence(auditItems),
-			Remediation:   "Resolve or explicitly reclassify the referenced project audit items.",
-			VerifyCommand: "./bin/issueops quality inspect --json",
-		})
 	}
-	return findings
+	return append(findings, contract.Finding{
+		ID:            "project-audit-items",
+		Severity:      severity,
+		Title:         "P0, P1, or P2 project audit items remain open",
+		Blocking:      blocking,
+		Evidence:      AuditEvidence(auditItems),
+		Remediation:   "Resolve or explicitly reclassify the referenced project audit items.",
+		VerifyCommand: "./bin/issueops quality inspect --json",
+	})
 }
 
 func BoundedEvidence(evidence []string, limit int) []string {

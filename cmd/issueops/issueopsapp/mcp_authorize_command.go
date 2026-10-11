@@ -54,9 +54,15 @@ func (command mcpAuthorizeCommand) Run(args []string) error {
 	if fs.NArg() > 0 {
 		return fmt.Errorf("unexpected mcp authorize argument %q", fs.Arg(0))
 	}
-	for name, value := range map[string]string{"workspace-root": *workspaceRoot, "host": *host, "session-id": *sessionID, "session-started-at": *startedAt, "session-executable": *executable} {
-		if strings.TrimSpace(value) == "" {
-			return fmt.Errorf("mcp authorize requires --%s", name)
+	for _, field := range []struct{ name, value string }{
+		{"workspace-root", *workspaceRoot},
+		{"host", *host},
+		{"session-id", *sessionID},
+		{"session-started-at", *startedAt},
+		{"session-executable", *executable},
+	} {
+		if strings.TrimSpace(field.value) == "" {
+			return fmt.Errorf("mcp authorize requires --%s", field.name)
 		}
 	}
 	if *sessionPID <= 0 {

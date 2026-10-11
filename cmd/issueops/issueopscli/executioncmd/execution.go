@@ -142,9 +142,7 @@ func runHandoffCmux(args []string, deps Deps) error {
 		SocketPath: *socketPath, WindowID: *windowID, CWD: *cwd, Host: *host, HostExecutable: *hostExecutable,
 		Model: *modelName, Effort: *effort, PromptFile: *promptFile, PromptSHA256: *promptDigest, MaterialSHA256: *materialDigest,
 	}
-	if request.ID == "" || request.Generation == 0 || request.CmuxExecutable == "" || request.CmuxVersion == "" || request.CmuxBuild == "" ||
-		request.SocketPath == "" || request.WindowID == "" || request.CWD == "" || request.Host == "" || request.HostExecutable == "" ||
-		request.Model == "" || request.PromptFile == "" || request.PromptSHA256 == "" || request.MaterialSHA256 == "" {
+	if !cmuxHandoffHasEveryIdentityFence(request) {
 		return output(nil, *jsonOut, fmt.Errorf("execution handoff-cmux requires every explicit identity fence"), deps)
 	}
 	handler := deps.HandoffCmux
@@ -153,6 +151,22 @@ func runHandoffCmux(args []string, deps Deps) error {
 	}
 	result, err := handler(context.Background(), deps.StateRoot(), request)
 	return output(result, *jsonOut, err, deps)
+}
+
+// cmuxHandoffHasEveryIdentityFence는 필수 신원 fence 필드가 모두 채워졌는지 확인한다(Effort 제외).
+func cmuxHandoffHasEveryIdentityFence(request model.ExecutionCmuxHandoffRequest) bool {
+	if request.Generation == 0 {
+		return false
+	}
+	for _, value := range []string{
+		request.ID, request.CmuxExecutable, request.CmuxVersion, request.CmuxBuild, request.SocketPath, request.WindowID,
+		request.CWD, request.Host, request.HostExecutable, request.Model, request.PromptFile, request.PromptSHA256, request.MaterialSHA256,
+	} {
+		if value == "" {
+			return false
+		}
+	}
+	return true
 }
 
 type actorFlags struct {

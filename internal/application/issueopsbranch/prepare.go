@@ -33,57 +33,20 @@ func (s Preparer) Prepare(ctx context.Context, id string, req model.IssueOpsBran
 		if err := s.Authority.Validate(ctx, record, actor); err != nil {
 			return err
 		}
-		req.Provider = strings.ToLower(strings.TrimSpace(req.Provider))
-		req.IssueURL = strings.TrimSpace(req.IssueURL)
-		if req.IssueURL == "" {
-			req.IssueURL = strings.TrimSpace(record.IssueURL)
-		}
-		if err := domain.ValidateIssueURL(req.IssueURL); err != nil {
-			return err
-		}
-		req.Provider, err = remote.PreparationProvider(req.Provider, req.IssueURL)
+		req, err = s.normalizeRequest(record, req)
 		if err != nil {
-			return err
-		}
-		req.Branch, req.BaseBranch = strings.TrimSpace(req.Branch), strings.TrimSpace(req.BaseBranch)
-		if err := domain.ValidatePreparationNames(req.Branch, req.BaseBranch); err != nil {
-			return err
-		}
-		req.ParentWorktree = strings.TrimSpace(req.ParentWorktree)
-		if req.ParentWorktree != "" {
-			var absolute bool
-			req.ParentWorktree, absolute = s.CleanParentPath(req.ParentWorktree)
-			if err := domain.ValidatePreparationParentPath(absolute); err != nil {
-				return err
-			}
-		}
-		if err := remote.ValidatePreparationIssueNumber(req.IssueURL, req.Branch); err != nil {
 			return err
 		}
 		record, err = domain.AdoptPreparedBranch(record, req.IssueURL, req.Branch)
 		if err != nil {
 			return err
 		}
-		if s.UmbrellaForChildIssue != nil {
-			if umbrella, found := s.UmbrellaForChildIssue(record.Repo, record.IssueURL); found {
-				if err := domain.ValidatePreparationUmbrella(umbrella, req.Branch, req.BaseBranch); err != nil {
-					return err
-				}
-			}
+		if err := s.validateUmbrella(record, req); err != nil {
+			return err
 		}
-		req.BaseSHA = strings.TrimSpace(req.BaseSHA)
-		if req.BaseSHA != "" {
-			if s.ResolveBaseCommit == nil {
-				return fmt.Errorf("base_sha validation is unavailable")
-			}
-			resolved, err := s.ResolveBaseCommit(record.Repo, req.BaseSHA)
-			if err != nil {
-				return fmt.Errorf("base_sha %q does not resolve to a local commit: %w", req.BaseSHA, err)
-			}
-			if strings.TrimSpace(resolved) == "" {
-				return fmt.Errorf("base_sha %q resolved to an empty commit OID", req.BaseSHA)
-			}
-			req.BaseSHA = strings.TrimSpace(resolved)
+		req.BaseSHA, err = s.resolveBaseSHA(record.Repo, req.BaseSHA)
+		if err != nil {
+			return err
 		}
 		var observed string
 		var observationErr error
@@ -100,4 +63,68 @@ func (s Preparer) Prepare(ctx context.Context, id string, req model.IssueOpsBran
 		return err
 	})
 	return result, err
+}
+
+// normalizeRequest trims/lowercases request fields, fills the issue URL from the record, and validates them.
+func (s Preparer) normalizeRequest(record model.IssueOpsRecord, req model.IssueOpsBranchPrepareRequest) (model.IssueOpsBranchPrepareRequest, error) {
+	var err error
+	req.Provider = strings.ToLower(strings.TrimSpace(req.Provider))
+	req.IssueURL = strings.TrimSpace(req.IssueURL)
+	if req.IssueURL == "" {
+		req.IssueURL = strings.TrimSpace(record.IssueURL)
+	}
+	if err := domain.ValidateIssueURL(req.IssueURL); err != nil {
+		return req, err
+	}
+	req.Provider, err = remote.PreparationProvider(req.Provider, req.IssueURL)
+	if err != nil {
+		return req, err
+	}
+	req.Branch, req.BaseBranch = strings.TrimSpace(req.Branch), strings.TrimSpace(req.BaseBranch)
+	if err := domain.ValidatePreparationNames(req.Branch, req.BaseBranch); err != nil {
+		return req, err
+	}
+	req.ParentWorktree = strings.TrimSpace(req.ParentWorktree)
+	if req.ParentWorktree != "" {
+		var absolute bool
+		req.ParentWorktree, absolute = s.CleanParentPath(req.ParentWorktree)
+		if err := domain.ValidatePreparationParentPath(absolute); err != nil {
+			return req, err
+		}
+	}
+	if err := remote.ValidatePreparationIssueNumber(req.IssueURL, req.Branch); err != nil {
+		return req, err
+	}
+	return req, nil
+}
+
+// validateUmbrella checks the branch names against the umbrella issue of a child issue, when one exists.
+func (s Preparer) validateUmbrella(record model.IssueOpsRecord, req model.IssueOpsBranchPrepareRequest) error {
+	if s.UmbrellaForChildIssue == nil {
+		return nil
+	}
+	umbrella, found := s.UmbrellaForChildIssue(record.Repo, record.IssueURL)
+	if !found {
+		return nil
+	}
+	return domain.ValidatePreparationUmbrella(umbrella, req.Branch, req.BaseBranch)
+}
+
+// resolveBaseSHA trims baseSHA and resolves it to a local commit OID; empty input stays empty.
+func (s Preparer) resolveBaseSHA(repo, baseSHA string) (string, error) {
+	baseSHA = strings.TrimSpace(baseSHA)
+	if baseSHA == "" {
+		return baseSHA, nil
+	}
+	if s.ResolveBaseCommit == nil {
+		return "", fmt.Errorf("base_sha validation is unavailable")
+	}
+	resolved, err := s.ResolveBaseCommit(repo, baseSHA)
+	if err != nil {
+		return "", fmt.Errorf("base_sha %q does not resolve to a local commit: %w", baseSHA, err)
+	}
+	if strings.TrimSpace(resolved) == "" {
+		return "", fmt.Errorf("base_sha %q resolved to an empty commit OID", baseSHA)
+	}
+	return strings.TrimSpace(resolved), nil
 }

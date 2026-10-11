@@ -353,9 +353,12 @@ func parseWorkspaceProcessesWithPathPredicate(output, root string, excluded map[
 	if resolved, resolveErr := filepath.EvalSymlinks(root); resolveErr == nil {
 		root = resolved
 	}
-	var pid int
-	var command, fd, access string
-	containment := make(map[string]bool)
+	parser := &lsofFieldParser{
+		root:        root,
+		excluded:    excluded,
+		pathWithin:  pathWithin,
+		containment: make(map[string]bool),
+	}
 	result := []workspaceProcess{}
 	scanner := bufio.NewScanner(strings.NewReader(output))
 	for scanner.Scan() {
@@ -363,47 +366,80 @@ func parseWorkspaceProcessesWithPathPredicate(output, root string, excluded map[
 		if line == "" {
 			continue
 		}
-		tag, value := line[0], strings.TrimSpace(line[1:])
-		switch tag {
-		case 'p':
-			pid, err = strconv.Atoi(value)
-			if err != nil {
-				return nil, fmt.Errorf("invalid lsof process id %q", value)
-			}
-			command, fd, access = "", "", ""
-		case 'c':
-			command = value
-		case 'f':
-			fd, access = value, ""
-		case 'a':
-			access = value
-		case 'n':
-			path := strings.TrimSuffix(value, " (deleted)")
-			// lsof의 name 필드는 파일 경로만이 아니라 소켓/파이프/kqueue 표기
-			// ("->0x...", "count=..." 등)도 담는다. 절대 경로가 아닌 값은 워크트리
-			// 점유 판정 대상이 아니다 — filepath.Abs가 그런 값을 probe 프로세스의
-			// cwd 기준으로 해석하면 무관한 프로세스가 워크트리 점유로 오판된다.
-			if !filepath.IsAbs(path) {
-				continue
-			}
-			if pid <= 0 || excluded[pid] || (fd != "cwd" && access != "w" && access != "u") {
-				continue
-			}
-			within, ok := containment[path]
-			if !ok {
-				within = pathWithin(path, root)
-				containment[path] = within
-			}
-			if !within {
-				continue
-			}
-			result = append(result, workspaceProcess{PID: pid, Command: command, FD: fd, Access: access, Path: path})
+		process, matched, err := parser.consume(line[0], strings.TrimSpace(line[1:]))
+		if err != nil {
+			return nil, err
+		}
+		if matched {
+			result = append(result, process)
 		}
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
 	return result, nil
+}
+
+// lsofFieldParser는 lsof -F 출력의 필드 줄을 순서대로 받아 현재 프로세스/파일
+// 기술자 상태를 누적한다.
+type lsofFieldParser struct {
+	root        string
+	excluded    map[int]bool
+	pathWithin  func(string, string) bool
+	containment map[string]bool
+
+	pid     int
+	command string
+	fd      string
+	access  string
+}
+
+// consume은 필드 줄 하나를 반영하고, 'n' 줄이 워크트리 점유로 판정되면 그
+// workspaceProcess를 반환한다.
+func (p *lsofFieldParser) consume(tag byte, value string) (workspaceProcess, bool, error) {
+	switch tag {
+	case 'p':
+		pid, err := strconv.Atoi(value)
+		p.pid = pid
+		if err != nil {
+			return workspaceProcess{}, false, fmt.Errorf("invalid lsof process id %q", value)
+		}
+		p.command, p.fd, p.access = "", "", ""
+	case 'c':
+		p.command = value
+	case 'f':
+		p.fd, p.access = value, ""
+	case 'a':
+		p.access = value
+	case 'n':
+		process, matched := p.occupyingProcess(value)
+		return process, matched, nil
+	}
+	return workspaceProcess{}, false, nil
+}
+
+// occupyingProcess는 name 필드 값이 현재 프로세스의 워크트리 점유인지 판정한다.
+func (p *lsofFieldParser) occupyingProcess(value string) (workspaceProcess, bool) {
+	path := strings.TrimSuffix(value, " (deleted)")
+	// lsof의 name 필드는 파일 경로만이 아니라 소켓/파이프/kqueue 표기
+	// ("->0x...", "count=..." 등)도 담는다. 절대 경로가 아닌 값은 워크트리
+	// 점유 판정 대상이 아니다 — filepath.Abs가 그런 값을 probe 프로세스의
+	// cwd 기준으로 해석하면 무관한 프로세스가 워크트리 점유로 오판된다.
+	if !filepath.IsAbs(path) {
+		return workspaceProcess{}, false
+	}
+	if p.pid <= 0 || p.excluded[p.pid] || (p.fd != "cwd" && p.access != "w" && p.access != "u") {
+		return workspaceProcess{}, false
+	}
+	within, ok := p.containment[path]
+	if !ok {
+		within = p.pathWithin(path, p.root)
+		p.containment[path] = within
+	}
+	if !within {
+		return workspaceProcess{}, false
+	}
+	return workspaceProcess{PID: p.pid, Command: p.command, FD: p.fd, Access: p.access, Path: path}, true
 }
 
 func pathWithinResolved(path, root string) bool {

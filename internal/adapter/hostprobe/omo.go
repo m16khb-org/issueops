@@ -209,47 +209,10 @@ func (r OmoRunner) Run(ctx context.Context, request port.HostProbeRequest) (resu
 		Timeout:  EpisodeTimeout,
 		OmoJSONL: true,
 	})
-	if err != nil {
-		cause, code := normalizedProcessFailure(err, "host_process_failed")
-		result := failedResult(r.Name(), "", request, started, r.deps, cause, code)
-		result.ExitCode = output.ExitCode
-		return result
-	}
-	if output.ExitCode != 0 {
-		result := failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "host_process_failed")
-		result.ExitCode = output.ExitCode
-		return result
-	}
-	observation, err := observeOmoStream(output.Stdout, targetTool)
-	if err != nil {
-		cause, code := omoStreamFailure(err)
-		result := failedResult(r.Name(), "", request, started, r.deps, cause, code)
-		result.ExitCode = output.ExitCode
-		result.AmbientToolCount = observation.AmbientToolCount
-		result.CallCount = observation.MCPCallCount
-		return result
-	}
-	capture, err := decodeEpisodeCapture(resultPath, request)
-	if err != nil {
-		cause, code := normalizedCaptureFailure(err)
-		result := failedResult(r.Name(), "", request, started, r.deps, cause, code)
-		result.ExitCode = output.ExitCode
-		return result
-	}
-	if capture.CallCount != 1 || observation.MCPCallCount != 1 {
-		result := failedResult(r.Name(), "", request, started, r.deps, "transport", "probe_call_cardinality_invalid")
-		result.ExitCode = output.ExitCode
-		return result
-	}
-	result = completedResult(r.Name(), "", request, started, r.deps, capture)
-	result.ObservedModel = observation.Model
-	// The private guard extension blocks this exact MCP tool unless the managed
-	// lifecycle extension injected one hidden project-doc message first.
-	result.SessionStartObserved = true
-	result.ResponseSHA256 = observation.ResponseSHA256
-	result.AmbientToolCount = observation.AmbientToolCount
-	result.ExitCode = output.ExitCode
-	return result
+	return omoEpisodeFinish{
+		name: r.Name(), request: request, started: started, deps: r.deps,
+		resultPath: resultPath, targetTool: targetTool,
+	}.finish(output, err)
 }
 
 func (r OmoRunner) validLifecycleExtension() bool {
@@ -409,106 +372,146 @@ func ellipsizeMiddle(value string, limit int) string {
 	return policy.TruncateBytes(value, prefix) + "..." + policy.TailBytes(value, suffix)
 }
 
+type omoStreamState struct {
+	targetTool  string
+	executions  map[string]*omoToolExecution
+	results     []any
+	observation omoStreamObservation
+	events      int
+	sessions    int
+}
+
 func observeOmoStream(data []byte, targetTool string) (omoStreamObservation, error) {
 	if len(data) == 0 || len(data) > MaxOutputBytes {
 		return omoStreamObservation{}, fmt.Errorf("host_stream_invalid")
 	}
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.UseNumber()
-	executions := map[string]*omoToolExecution{}
-	results := make([]any, 0, 1)
-	observation := omoStreamObservation{}
-	events := 0
-	sessions := 0
+	state := &omoStreamState{
+		targetTool: targetTool,
+		executions: map[string]*omoToolExecution{},
+		results:    make([]any, 0, 1),
+	}
 	for {
 		var event map[string]any
 		if err := decoder.Decode(&event); err != nil {
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			return observation, fmt.Errorf("host_stream_invalid")
+			return state.observation, fmt.Errorf("host_stream_invalid")
 		}
-		events++
-		typeName, _ := event["type"].(string)
-		switch typeName {
-		case "session":
-			sessions++
-		case "message_start", "message_end":
-			message, _ := event["message"].(map[string]any)
-			if message["role"] == "assistant" && observation.Model == "" {
-				if model, ok := message["model"].(string); ok && strings.TrimSpace(model) != "" {
-					observation.Model = boundedVersion(model)
-				}
-			}
-		case "tool_execution_start":
-			toolName, _ := event["toolName"].(string)
-			id, _ := event["toolCallId"].(string)
-			if id == "" || toolName == "" {
-				return observation, fmt.Errorf("host_stream_invalid")
-			}
-			observation.AmbientToolCount++
-			if _, exists := executions[id]; exists {
-				return observation, fmt.Errorf("host_stream_multiple_calls")
-			}
-			executions[id] = &omoToolExecution{name: toolName}
-			if toolName == targetTool {
-				observation.MCPCallCount++
-			}
-		case "tool_execution_end":
-			toolName, _ := event["toolName"].(string)
-			id, _ := event["toolCallId"].(string)
-			execution := executions[id]
-			if id == "" || toolName == "" || execution == nil || execution.name != toolName || execution.ended {
-				return observation, fmt.Errorf("host_stream_invalid")
-			}
-			execution.ended = true
-			if isError, ok := event["isError"].(bool); !ok || isError {
-				if toolName == targetTool {
-					return observation, fmt.Errorf("host_stream_tool_error")
-				}
-				return observation, fmt.Errorf("host_stream_non_target_call")
-			}
-			result, ok := event["result"]
-			if !ok || result == nil {
-				return observation, fmt.Errorf("host_stream_invalid")
-			}
-			if toolName == targetTool {
-				results = append(results, result)
-			}
+		if err := state.consume(event); err != nil {
+			return state.observation, err
 		}
 	}
-	if events == 0 || sessions != 1 {
-		return observation, fmt.Errorf("host_stream_invalid")
+	if err := state.finish(); err != nil {
+		return state.observation, err
 	}
-	if len(executions) == 0 {
-		return observation, fmt.Errorf("host_stream_no_call")
+	return state.observation, nil
+}
+
+func (s *omoStreamState) consume(event map[string]any) error {
+	s.events++
+	typeName, _ := event["type"].(string)
+	switch typeName {
+	case "session":
+		s.sessions++
+	case "message_start", "message_end":
+		s.observeMessage(event)
+	case "tool_execution_start":
+		return s.observeToolStart(event)
+	case "tool_execution_end":
+		return s.observeToolEnd(event)
 	}
-	for _, execution := range executions {
+	return nil
+}
+
+func (s *omoStreamState) observeMessage(event map[string]any) {
+	message, _ := event["message"].(map[string]any)
+	if message["role"] != "assistant" || s.observation.Model != "" {
+		return
+	}
+	if model, ok := message["model"].(string); ok && strings.TrimSpace(model) != "" {
+		s.observation.Model = boundedVersion(model)
+	}
+}
+
+func (s *omoStreamState) observeToolStart(event map[string]any) error {
+	toolName, _ := event["toolName"].(string)
+	id, _ := event["toolCallId"].(string)
+	if id == "" || toolName == "" {
+		return fmt.Errorf("host_stream_invalid")
+	}
+	s.observation.AmbientToolCount++
+	if _, exists := s.executions[id]; exists {
+		return fmt.Errorf("host_stream_multiple_calls")
+	}
+	s.executions[id] = &omoToolExecution{name: toolName}
+	if toolName == s.targetTool {
+		s.observation.MCPCallCount++
+	}
+	return nil
+}
+
+func (s *omoStreamState) observeToolEnd(event map[string]any) error {
+	toolName, _ := event["toolName"].(string)
+	id, _ := event["toolCallId"].(string)
+	execution := s.executions[id]
+	if id == "" || toolName == "" || execution == nil || execution.name != toolName || execution.ended {
+		return fmt.Errorf("host_stream_invalid")
+	}
+	execution.ended = true
+	if isError, ok := event["isError"].(bool); !ok || isError {
+		if toolName == s.targetTool {
+			return fmt.Errorf("host_stream_tool_error")
+		}
+		return fmt.Errorf("host_stream_non_target_call")
+	}
+	result, ok := event["result"]
+	if !ok || result == nil {
+		return fmt.Errorf("host_stream_invalid")
+	}
+	if toolName == s.targetTool {
+		s.results = append(s.results, result)
+	}
+	return nil
+}
+
+// finish validates the whole stream once every event has been consumed and
+// records the target response digest on success.
+func (s *omoStreamState) finish() error {
+	if s.events == 0 || s.sessions != 1 {
+		return fmt.Errorf("host_stream_invalid")
+	}
+	if len(s.executions) == 0 {
+		return fmt.Errorf("host_stream_no_call")
+	}
+	for _, execution := range s.executions {
 		if !execution.ended {
-			return observation, fmt.Errorf("host_stream_invalid")
+			return fmt.Errorf("host_stream_invalid")
 		}
 	}
-	if observation.AmbientToolCount != 1 {
-		return observation, fmt.Errorf("host_stream_multiple_calls")
+	if s.observation.AmbientToolCount != 1 {
+		return fmt.Errorf("host_stream_multiple_calls")
 	}
-	for _, execution := range executions {
-		if execution.name != targetTool {
-			return observation, fmt.Errorf("host_stream_non_target_call")
+	for _, execution := range s.executions {
+		if execution.name != s.targetTool {
+			return fmt.Errorf("host_stream_non_target_call")
 		}
 	}
-	if observation.MCPCallCount != 1 || len(results) != 1 {
-		return observation, fmt.Errorf("host_stream_invalid")
+	if s.observation.MCPCallCount != 1 || len(s.results) != 1 {
+		return fmt.Errorf("host_stream_invalid")
 	}
-	if observation.Model == "" {
-		return observation, fmt.Errorf("host_stream_model_missing")
+	if s.observation.Model == "" {
+		return fmt.Errorf("host_stream_model_missing")
 	}
-	digest, err := semanticResponseDigest(results)
+	digest, err := semanticResponseDigest(s.results)
 	if err != nil {
-		return observation, fmt.Errorf("host_stream_invalid")
+		return fmt.Errorf("host_stream_invalid")
 	}
-	observation.MCPCallCount = 1
-	observation.ResponseSHA256 = digest
-	return observation, nil
+	s.observation.MCPCallCount = 1
+	s.observation.ResponseSHA256 = digest
+	return nil
 }
 
 func omoStreamFailure(err error) (string, string) {

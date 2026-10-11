@@ -61,14 +61,9 @@ func sdkToolHandlerWithContext(
 	})
 	input, inputErr := prepareMCPToolInputSchema(catalog, toolName)
 	return func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		var args map[string]any
-		if req.Params.Arguments != nil {
-			if err := json.Unmarshal(req.Params.Arguments, &args); err != nil {
-				return nil, newProtocolError(-32602, "invalid arguments", err.Error())
-			}
-		}
-		if args == nil {
-			args = map[string]any{}
+		args, err := decodeSDKToolArguments(req.Params.Arguments)
+		if err != nil {
+			return nil, err
 		}
 		if inputErr != nil {
 			return nil, inputErr
@@ -81,32 +76,7 @@ func sdkToolHandlerWithContext(
 			return nil, outcome.Err
 		}
 		if outcome.Direct {
-			if dm, ok := outcome.Result.(map[string]any); ok {
-				var content []map[string]any
-				switch items := dm["content"].(type) {
-				case []map[string]any:
-					content = items
-				case []any:
-					content = make([]map[string]any, 0, len(items))
-					for _, item := range items {
-						if cm, ok := item.(map[string]any); ok {
-							content = append(content, cm)
-						}
-					}
-				}
-				if content != nil {
-					isError, _ := dm["isError"].(bool)
-					result := &mcp.CallToolResult{IsError: isError}
-					for _, cm := range content {
-						if text, ok := cm["text"].(string); ok && cm["type"] == "text" {
-							result.Content = append(result.Content, &mcp.TextContent{Text: text})
-						}
-					}
-					return result, nil
-				}
-			}
-			b, _ := json.MarshalIndent(outcome.Result, "", "  ")
-			return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: string(b)}}}, nil
+			return sdkDirectToolResult(outcome.Result), nil
 		}
 		b, marshalErr := json.MarshalIndent(outcome.Payload, "", "  ")
 		result := &mcp.CallToolResult{
@@ -125,6 +95,59 @@ func sdkToolHandlerWithContext(
 		}
 		return result, nil
 	}
+}
+
+// decodeSDKToolArguments decodes the raw call arguments; absent or null
+// arguments become an empty map.
+func decodeSDKToolArguments(raw json.RawMessage) (map[string]any, error) {
+	var args map[string]any
+	if raw != nil {
+		if err := json.Unmarshal(raw, &args); err != nil {
+			return nil, newProtocolError(-32602, "invalid arguments", err.Error())
+		}
+	}
+	if args == nil {
+		args = map[string]any{}
+	}
+	return args, nil
+}
+
+// sdkDirectToolContent extracts the content items of a direct result map;
+// nil means the result is not a content-bearing map.
+func sdkDirectToolContent(dm map[string]any) []map[string]any {
+	switch items := dm["content"].(type) {
+	case []map[string]any:
+		return items
+	case []any:
+		content := make([]map[string]any, 0, len(items))
+		for _, item := range items {
+			if cm, ok := item.(map[string]any); ok {
+				content = append(content, cm)
+			}
+		}
+		return content
+	}
+	return nil
+}
+
+// sdkDirectToolResult converts a Direct outcome result into an SDK result:
+// content maps keep their text items and isError flag; anything else is
+// rendered as indented JSON text.
+func sdkDirectToolResult(direct any) *mcp.CallToolResult {
+	if dm, ok := direct.(map[string]any); ok {
+		if content := sdkDirectToolContent(dm); content != nil {
+			isError, _ := dm["isError"].(bool)
+			result := &mcp.CallToolResult{IsError: isError}
+			for _, cm := range content {
+				if text, ok := cm["text"].(string); ok && cm["type"] == "text" {
+					result.Content = append(result.Content, &mcp.TextContent{Text: text})
+				}
+			}
+			return result
+		}
+	}
+	b, _ := json.MarshalIndent(direct, "", "  ")
+	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: string(b)}}}
 }
 
 // compileToolOutputSchema resolves the catalog outputSchema of a tool once, so

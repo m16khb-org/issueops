@@ -57,55 +57,105 @@ func CleanupAbandonPartialBranchRetry(record issueops.IssueOpsRecord, inventory 
 }
 
 func CleanupAbandonFailureInventoryMatches(record issueops.IssueOpsRecord, inventory issueops.CleanupAbandonInventory, evidence CleanupAbandonFailureEvidence) bool {
-	branchPresent := inventory.BranchOID != ""
 	failure := record.CleanupAbandonFailure
 	if failure == nil {
 		return true
 	}
-	if !cleanupAbandonValidFingerprint(failure.Fingerprint) || !cleanupAbandonValidFingerprint(failure.RecordSHA) ||
-		!cleanupAbandonValidFingerprint(failure.InventorySHA256) ||
-		!evidence.SealMatches || failure.Branch != inventory.Branch ||
-		!evidence.SameWorktree {
+	if !cleanupAbandonReceiptSealed(failure, inventory, evidence) {
 		return false
 	}
-	// receipt는 arm 시점의 자원 모양을 담는다: paired(둘 다), worktree-only,
-	// branch-only(#433 비대칭 잔여), absent. 둘 다 있었다면 같은 OID여야 한다.
-	origWorktree := failure.WorktreeHead != ""
-	origBranch := failure.BranchOID != ""
-	if origWorktree && origBranch && failure.WorktreeHead != failure.BranchOID {
+	m := newCleanupAbandonReceiptMatcher(failure, inventory)
+	if !m.pairedOIDsAgree() {
 		return false
-	}
-	// 남아 있는 자원은 receipt의 OID와 같아야 하고, 사라진 자원은 원래 없었거나
-	// apply가 그 단계까지 갔을 때만 사라질 수 있다. 삭제 순서는 worktree → branch다.
-	worktreeMatches := func(mayBeRemoved bool) bool {
-		if inventory.WorktreePresent {
-			return origWorktree && inventory.WorktreeHead == failure.WorktreeHead
-		}
-		return !origWorktree || mayBeRemoved
-	}
-	branchMatches := func(mayBeRemoved bool) bool {
-		if branchPresent {
-			return origBranch && inventory.BranchOID == failure.BranchOID
-		}
-		return !origBranch || mayBeRemoved
 	}
 	switch failure.Step {
 	case "applying":
-		branchRemoved := origBranch && !branchPresent
-		return worktreeMatches(true) && branchMatches(true) && !(branchRemoved && inventory.WorktreePresent)
+		return m.applyingMatches()
 	case "close_pr", "close_issue", "remote_branch_delete":
-		// Remote effects run before any local removal. Only unchanged local resources may retry.
-		return worktreeMatches(false) && branchMatches(false)
+		return m.remoteStepMatches()
 	case "workspace_processes_stop", "worktree_remove":
-		// ①′/③ 실패는 아직 아무것도 지우지 않은 상태다.
-		return origWorktree && inventory.WorktreePresent && worktreeMatches(false) && branchMatches(false)
+		return m.worktreeStepMatches()
 	case "branch_delete":
-		// ④ 실패는 worktree 제거 뒤다. 다시 나타난 worktree는 외부 변경이므로 거부한다.
-		return origBranch && branchPresent && !inventory.WorktreePresent && branchMatches(false)
+		return m.branchDeleteMatches()
 	case "record_delete":
-		return !inventory.WorktreePresent && !branchPresent && worktreeMatches(true) && branchMatches(true)
+		return m.recordDeleteMatches()
 	}
 	return false
+}
+
+// cleanupAbandonReceiptSealed는 receipt의 지문들이 형식에 맞고 봉인·worktree
+// 증거와 branch 이름이 현재 inventory와 일치하는지 확인한다.
+func cleanupAbandonReceiptSealed(failure *issueops.IssueOpsCleanupAbandonFailure, inventory issueops.CleanupAbandonInventory, evidence CleanupAbandonFailureEvidence) bool {
+	return cleanupAbandonValidFingerprint(failure.Fingerprint) &&
+		cleanupAbandonValidFingerprint(failure.RecordSHA) &&
+		cleanupAbandonValidFingerprint(failure.InventorySHA256) &&
+		evidence.SealMatches && failure.Branch == inventory.Branch &&
+		evidence.SameWorktree
+}
+
+// cleanupAbandonReceiptMatcher는 receipt가 기록한 원래 자원 모양과 현재
+// inventory를 비교한다.
+type cleanupAbandonReceiptMatcher struct {
+	failure       *issueops.IssueOpsCleanupAbandonFailure
+	inventory     issueops.CleanupAbandonInventory
+	origWorktree  bool
+	origBranch    bool
+	branchPresent bool
+}
+
+func newCleanupAbandonReceiptMatcher(failure *issueops.IssueOpsCleanupAbandonFailure, inventory issueops.CleanupAbandonInventory) cleanupAbandonReceiptMatcher {
+	return cleanupAbandonReceiptMatcher{
+		failure: failure, inventory: inventory,
+		origWorktree:  failure.WorktreeHead != "",
+		origBranch:    failure.BranchOID != "",
+		branchPresent: inventory.BranchOID != "",
+	}
+}
+
+// 남아 있는 자원은 receipt의 OID와 같아야 하고, 사라진 자원은 원래 없었거나
+// apply가 그 단계까지 갔을 때만 사라질 수 있다. 삭제 순서는 worktree → branch다.
+func (m cleanupAbandonReceiptMatcher) worktreeMatches(mayBeRemoved bool) bool {
+	if m.inventory.WorktreePresent {
+		return m.origWorktree && m.inventory.WorktreeHead == m.failure.WorktreeHead
+	}
+	return !m.origWorktree || mayBeRemoved
+}
+
+func (m cleanupAbandonReceiptMatcher) branchMatches(mayBeRemoved bool) bool {
+	if m.branchPresent {
+		return m.origBranch && m.inventory.BranchOID == m.failure.BranchOID
+	}
+	return !m.origBranch || mayBeRemoved
+}
+
+// receipt는 arm 시점의 자원 모양을 담는다: paired(둘 다), worktree-only,
+// branch-only(#433 비대칭 잔여), absent. 둘 다 있었다면 같은 OID여야 한다.
+func (m cleanupAbandonReceiptMatcher) pairedOIDsAgree() bool {
+	return !(m.origWorktree && m.origBranch && m.failure.WorktreeHead != m.failure.BranchOID)
+}
+
+func (m cleanupAbandonReceiptMatcher) applyingMatches() bool {
+	branchRemoved := m.origBranch && !m.branchPresent
+	return m.worktreeMatches(true) && m.branchMatches(true) && !(branchRemoved && m.inventory.WorktreePresent)
+}
+
+// Remote effects run before any local removal. Only unchanged local resources may retry.
+func (m cleanupAbandonReceiptMatcher) remoteStepMatches() bool {
+	return m.worktreeMatches(false) && m.branchMatches(false)
+}
+
+// ①′/③ 실패는 아직 아무것도 지우지 않은 상태다.
+func (m cleanupAbandonReceiptMatcher) worktreeStepMatches() bool {
+	return m.origWorktree && m.inventory.WorktreePresent && m.worktreeMatches(false) && m.branchMatches(false)
+}
+
+// ④ 실패는 worktree 제거 뒤다. 다시 나타난 worktree는 외부 변경이므로 거부한다.
+func (m cleanupAbandonReceiptMatcher) branchDeleteMatches() bool {
+	return m.origBranch && m.branchPresent && !m.inventory.WorktreePresent && m.branchMatches(false)
+}
+
+func (m cleanupAbandonReceiptMatcher) recordDeleteMatches() bool {
+	return !m.inventory.WorktreePresent && !m.branchPresent && m.worktreeMatches(true) && m.branchMatches(true)
 }
 
 func cleanupAbandonValidFingerprint(value string) bool {

@@ -23,67 +23,37 @@ type ChildReconciler struct {
 	Intents *ChildCreateIntents
 }
 
+// childRecoveryRun은 Reconcile 한 번 동안 고정되는 기록·작업·행위자·자식 URL이다.
+type childRecoveryRun struct {
+	record   model.IssueOpsRecord
+	op       model.ChildCreateOperation
+	actor    model.IssueOpsActor
+	childURL string
+	confirm  bool
+}
+
 func (s ChildReconciler) Reconcile(ctx context.Context, cmd ChildReconcileCommand, observe AncestryObserver) (model.ChildReconcileResult, error) {
 	result := model.ChildReconcileResult{OperationID: cmd.OperationID, RecoveryCommand: ChildRecoveryCommand(cmd.ID, cmd.OperationID, cmd.Actor)}
-	record, err := s.Records.Read(ctx, cmd.ID)
+	run, err := s.beginChildRecovery(ctx, cmd, observe, &result)
 	if err != nil {
 		return result, err
 	}
-	op, found := domain.FindChildOperation(record, cmd.OperationID, "")
-	if !found || cmd.OperationID == "" {
-		return result, fmt.Errorf("child operation not found")
-	}
-	result.ChildURL = op.CanonicalURL
-	if record.IssueURL != op.ParentURL {
-		return result, fmt.Errorf("child operation parent changed")
-	}
-	actor := cmd.Actor
-	if record.Execution != nil {
-		ancestry, err := observe()
-		if err != nil {
-			return result, err
-		}
-		actor.NativeProcessAncestry = ancestry
-	}
-	// Preview authorizes the reader but never records a replacement or receipt.
-	if err := s.Intents.Authority.Authorize(ctx, record, actor); err != nil {
-		return result, err
-	}
-	provider, err := s.Resolve(op.Provider)
+	provider, err := s.Resolve(run.op.Provider)
 	if err != nil {
 		return result, err
 	}
-	childURL := op.CanonicalURL
-	if childURL == "" {
-		candidates, err := provider.FindChildCreateCandidates(ctx, port.IssueProviderFindIssueCreateCandidatesRequest{Repo: record.Repo, ProjectAuthority: op.ProjectAuthority, Marker: op.Marker})
-		if err != nil {
-			return result, err
-		}
-		result.CandidateCount = len(candidates.Candidates)
-		if err := domain.ValidateIssueReconcileSearch(candidates.Truncated, len(candidates.Candidates)); err != nil {
-			return result, err
-		}
-		candidate := candidates.Candidates[0]
-		if err := validateChildSnapshot(op, port.ChildSnapshot{URL: candidate.URL, Title: candidate.Title, Body: candidate.Body}, false); err != nil {
-			return result, err
-		}
-		childURL = candidate.URL
-	} else {
-		result.CandidateCount = 1
+	run.childURL, err = s.locateRecoveryChild(ctx, provider, run, &result)
+	if err != nil {
+		return result, err
 	}
+	record, op, childURL := run.record, run.op, run.childURL
 	result.ChildURL = childURL
-	failure := func(cause error, status string) error {
-		if !cmd.Confirm {
-			return cause
-		}
-		return errors.Join(cause, s.Intents.RecoveryFailure(context.WithoutCancel(ctx), record, op, childURL, status, remote.IssueCreateFailure(cause), actor))
-	}
 	snapshot, err := provider.ReadChild(ctx, record.Repo, op.ParentURL, childURL)
 	if err != nil {
-		return result, failure(err, model.IssueCreateIntentVerificationFailed)
+		return result, s.recoveryFailure(ctx, run, err, model.IssueCreateIntentVerificationFailed)
 	}
 	if err := validateChildSnapshot(op, snapshot, true); err != nil {
-		return result, failure(err, model.IssueCreateIntentVerificationFailed)
+		return result, s.recoveryFailure(ctx, run, err, model.IssueCreateIntentVerificationFailed)
 	}
 	result.HierarchyVerified = snapshot.HierarchyVerified
 	if !cmd.Confirm {
@@ -91,37 +61,112 @@ func (s ChildReconciler) Reconcile(ctx context.Context, cmd ChildReconcileComman
 		result.WouldAdopt = true
 		return result, nil
 	}
-	// Re-read before the only remote write: observations cannot grant a changed holder authority.
-	current, err := s.Records.Read(ctx, cmd.ID)
-	if err != nil {
+	if err := s.reauthorizeChildRecovery(ctx, cmd.ID, run); err != nil {
 		return result, err
-	}
-	if err := s.Intents.Authority.Authorize(ctx, current, actor); err != nil {
-		return result, err
-	}
-	if !sameChildRecoveryAuthority(record, current) {
-		return result, fmt.Errorf("child recovery authority changed")
 	}
 	if !snapshot.HierarchyVerified {
-		if err := provider.AttachChild(ctx, record.Repo, op.ParentURL, childURL); err != nil {
-			return result, failure(err, model.IssueCreateIntentVerificationFailed)
-		}
-		snapshot, err = provider.ReadChild(ctx, record.Repo, op.ParentURL, childURL)
-		if err != nil {
-			return result, failure(err, model.IssueCreateIntentVerificationFailed)
-		}
-		if err := validateChildSnapshot(op, snapshot, true); err != nil {
-			return result, failure(err, model.IssueCreateIntentVerificationFailed)
-		}
-		if !snapshot.HierarchyVerified {
-			return result, failure(fmt.Errorf("child hierarchy verification failed"), model.IssueCreateIntentVerificationFailed)
+		if err := s.attachRecoveredChild(ctx, provider, run); err != nil {
+			return result, err
 		}
 	}
-	if err := s.Intents.Complete(ctx, record, op, childURL, actor, true); err != nil {
-		return result, failure(err, model.IssueCreateIntentReceiptFailed)
+	if err := s.Intents.Complete(ctx, record, op, childURL, run.actor, true); err != nil {
+		return result, s.recoveryFailure(ctx, run, err, model.IssueCreateIntentReceiptFailed)
 	}
 	result.OK, result.HierarchyVerified, result.RecoveryCommand = true, true, ""
 	return result, nil
+}
+
+// beginChildRecovery는 기록과 작업을 읽어 부모 일치를 확인하고 미리보기 권한을 검증한다.
+func (s ChildReconciler) beginChildRecovery(ctx context.Context, cmd ChildReconcileCommand, observe AncestryObserver, result *model.ChildReconcileResult) (childRecoveryRun, error) {
+	run := childRecoveryRun{confirm: cmd.Confirm}
+	record, err := s.Records.Read(ctx, cmd.ID)
+	if err != nil {
+		return run, err
+	}
+	run.record = record
+	op, found := domain.FindChildOperation(record, cmd.OperationID, "")
+	if !found || cmd.OperationID == "" {
+		return run, fmt.Errorf("child operation not found")
+	}
+	run.op = op
+	result.ChildURL = op.CanonicalURL
+	if record.IssueURL != op.ParentURL {
+		return run, fmt.Errorf("child operation parent changed")
+	}
+	run.actor = cmd.Actor
+	if record.Execution != nil {
+		ancestry, err := observe()
+		if err != nil {
+			return run, err
+		}
+		run.actor.NativeProcessAncestry = ancestry
+	}
+	// Preview authorizes the reader but never records a replacement or receipt.
+	return run, s.Intents.Authority.Authorize(ctx, record, run.actor)
+}
+
+// locateRecoveryChild는 작업에 기록된 자식 URL을 쓰거나, 없으면 marker 후보 검색으로 찾는다.
+func (s ChildReconciler) locateRecoveryChild(ctx context.Context, provider port.IssueProviderChildCreateRecovery, run childRecoveryRun, result *model.ChildReconcileResult) (string, error) {
+	op := run.op
+	if op.CanonicalURL != "" {
+		result.CandidateCount = 1
+		return op.CanonicalURL, nil
+	}
+	candidates, err := provider.FindChildCreateCandidates(ctx, port.IssueProviderFindIssueCreateCandidatesRequest{Repo: run.record.Repo, ProjectAuthority: op.ProjectAuthority, Marker: op.Marker})
+	if err != nil {
+		return "", err
+	}
+	result.CandidateCount = len(candidates.Candidates)
+	if err := domain.ValidateIssueReconcileSearch(candidates.Truncated, len(candidates.Candidates)); err != nil {
+		return "", err
+	}
+	candidate := candidates.Candidates[0]
+	if err := validateChildSnapshot(op, port.ChildSnapshot{URL: candidate.URL, Title: candidate.Title, Body: candidate.Body}, false); err != nil {
+		return "", err
+	}
+	return candidate.URL, nil
+}
+
+// recoveryFailure는 확정 모드에서만 복구 실패를 durable 저장소에 남기고 오류를 합친다.
+func (s ChildReconciler) recoveryFailure(ctx context.Context, run childRecoveryRun, cause error, status string) error {
+	if !run.confirm {
+		return cause
+	}
+	return errors.Join(cause, s.Intents.RecoveryFailure(context.WithoutCancel(ctx), run.record, run.op, run.childURL, status, remote.IssueCreateFailure(cause), run.actor))
+}
+
+// reauthorizeChildRecovery는 유일한 원격 쓰기 전에 기록을 다시 읽는다: 관찰만으로는 바뀐 holder에게 권한을 줄 수 없다.
+func (s ChildReconciler) reauthorizeChildRecovery(ctx context.Context, id string, run childRecoveryRun) error {
+	current, err := s.Records.Read(ctx, id)
+	if err != nil {
+		return err
+	}
+	if err := s.Intents.Authority.Authorize(ctx, current, run.actor); err != nil {
+		return err
+	}
+	if !sameChildRecoveryAuthority(run.record, current) {
+		return fmt.Errorf("child recovery authority changed")
+	}
+	return nil
+}
+
+// attachRecoveredChild는 계층이 빠진 자식을 부모에 연결하고 다시 읽어 계층을 검증한다.
+func (s ChildReconciler) attachRecoveredChild(ctx context.Context, provider port.IssueProviderChildCreateRecovery, run childRecoveryRun) error {
+	record, op, childURL := run.record, run.op, run.childURL
+	if err := provider.AttachChild(ctx, record.Repo, op.ParentURL, childURL); err != nil {
+		return s.recoveryFailure(ctx, run, err, model.IssueCreateIntentVerificationFailed)
+	}
+	snapshot, err := provider.ReadChild(ctx, record.Repo, op.ParentURL, childURL)
+	if err != nil {
+		return s.recoveryFailure(ctx, run, err, model.IssueCreateIntentVerificationFailed)
+	}
+	if err := validateChildSnapshot(op, snapshot, true); err != nil {
+		return s.recoveryFailure(ctx, run, err, model.IssueCreateIntentVerificationFailed)
+	}
+	if !snapshot.HierarchyVerified {
+		return s.recoveryFailure(ctx, run, fmt.Errorf("child hierarchy verification failed"), model.IssueCreateIntentVerificationFailed)
+	}
+	return nil
 }
 
 func validateChildSnapshot(op model.ChildCreateOperation, snapshot port.ChildSnapshot, metadata bool) error {

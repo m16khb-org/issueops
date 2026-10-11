@@ -32,109 +32,157 @@ func Bootstrap(request projectbootstrapcontract.ProjectDocsBootstrapRequest, eff
 	if err != nil {
 		return projectbootstrapcontract.ProjectDocsBootstrapResult{}, err
 	}
-	files := []projectdoccontract.ProjectDocsPlannedFile{}
-	warnings := append([]string{}, lifecycleState.Warnings...)
-	contents := effects.Render(root, signals)
-	contents["AGENTS.md"] = effects.RenderAgents(root, contents["AGENTS.md"])
-	manifestPath := effects.JoinPath(root, projectdoc.ManifestRelPath())
-	manifestExisted := effects.Exists(manifestPath)
-	familyPreserved := false
+	run := &bootstrapRun{
+		request:  request,
+		effects:  effects,
+		root:     root,
+		files:    []projectdoccontract.ProjectDocsPlannedFile{},
+		warnings: append([]string{}, lifecycleState.Warnings...),
+	}
+	run.contents = effects.Render(root, signals)
+	run.contents["AGENTS.md"] = effects.RenderAgents(root, run.contents["AGENTS.md"])
+	run.manifestPath = effects.JoinPath(root, projectdoc.ManifestRelPath())
+	manifestExisted := effects.Exists(run.manifestPath)
+	if err := run.planRootDocs(); err != nil {
+		return projectbootstrapcontract.ProjectDocsBootstrapResult{}, err
+	}
+	if err := run.planFamilyOverviews(); err != nil {
+		return projectbootstrapcontract.ProjectDocsBootstrapResult{}, err
+	}
+	if err := run.planManifest(); err != nil {
+		return projectbootstrapcontract.ProjectDocsBootstrapResult{}, err
+	}
+	run.appendSummaryWarnings(manifestExisted)
+	if request.Write {
+		if err := run.ensureMetaFrontmatter(); err != nil {
+			return projectbootstrapcontract.ProjectDocsBootstrapResult{}, err
+		}
+	}
+	if !request.Write {
+		run.warnings = append(run.warnings, "dry_run_only: rerun without --dry-run to create missing AGENTS.md/.issueops docs and repo metadata; add --sync to refresh existing docs")
+	}
+	return projectbootstrapcontract.ProjectDocsBootstrapResult{
+		OK: true, Kind: "project_docs_bootstrap", RepoRoot: root, DocsDir: effects.JoinPath(root, projectdoc.ProjectDocsDir),
+		Write: request.Write, Sync: request.Sync, DryRun: !request.Write, GeneratedAt: effects.Now().Format(time.RFC3339),
+		Signals: signals, Files: run.files, LifecycleState: lifecycleState, Warnings: run.warnings,
+	}, nil
+}
+
+// bootstrapRun accumulates the planned files and warnings of one Bootstrap call.
+type bootstrapRun struct {
+	request         projectbootstrapcontract.ProjectDocsBootstrapRequest
+	effects         Effects
+	root            string
+	contents        map[string]string
+	manifestPath    string
+	files           []projectdoccontract.ProjectDocsPlannedFile
+	warnings        []string
+	familyPreserved bool
+}
+
+func (r *bootstrapRun) decide(kind projectdoc.BootstrapFileKind, rel, action string) projectdoc.BootstrapFileDecision {
+	return projectdoc.DecideBootstrapFile(projectdoc.BootstrapFileInput{
+		Kind: kind, Rel: rel, Action: action, Write: r.request.Write, Sync: r.request.Sync,
+	})
+}
+
+func (r *bootstrapRun) planRootDocs() error {
 	for _, rel := range append([]string{"AGENTS.md"}, projectdoc.PrefixedKnownProjectDocNames()...) {
-		content := contents[rel]
+		content := r.contents[rel]
 		if content == "" {
 			continue
 		}
-		path := effects.JoinPath(root, rel)
-		action := effects.Action(path, content)
-		decision := projectdoc.DecideBootstrapFile(projectdoc.BootstrapFileInput{
-			Kind: projectdoc.BootstrapRootFile, Rel: rel, Action: action, Write: request.Write, Sync: request.Sync,
-		})
+		path := r.effects.JoinPath(r.root, rel)
+		action := r.effects.Action(path, content)
+		decision := r.decide(projectdoc.BootstrapRootFile, rel, action)
 		if decision.FamilyPreserved {
-			familyPreserved = true
+			r.familyPreserved = true
 		}
 		if decision.Write {
-			if err := effects.Write(path, content); err != nil {
-				return projectbootstrapcontract.ProjectDocsBootstrapResult{}, err
+			if err := r.effects.Write(path, content); err != nil {
+				return err
 			}
 		} else if decision.SyncWarning {
-			warnings = projectdoc.AppendUnique(warnings, "sync_available: existing project docs were preserved; pass --sync to refresh them from current templates and repo evidence")
+			r.warnings = projectdoc.AppendUnique(r.warnings, "sync_available: existing project docs were preserved; pass --sync to refresh them from current templates and repo evidence")
 		}
-		files = append(files, projectdoccontract.ProjectDocsPlannedFile{
-			RelPath: effects.ToSlash(rel), Path: path, Action: action, Bytes: len([]byte(content)),
+		r.files = append(r.files, projectdoccontract.ProjectDocsPlannedFile{
+			RelPath: r.effects.ToSlash(rel), Path: path, Action: action, Bytes: len([]byte(content)),
 			SHA256: projectdoc.SHA256Hex(content), Reason: projectDocReason(rel), Preserved: decision.Preserved,
 		})
 	}
+	return nil
+}
+
+func (r *bootstrapRun) planFamilyOverviews() error {
 	for _, family := range projectdoc.DocFamilies() {
 		rel := pathpkg.Join(projectdoc.ProjectDocsDir, family.OverviewRel())
-		content := contents[rel]
+		content := r.contents[rel]
 		if content == "" {
 			continue
 		}
-		path := effects.JoinPath(root, rel)
-		action := effects.Action(path, content)
-		decision := projectdoc.DecideBootstrapFile(projectdoc.BootstrapFileInput{
-			Kind: projectdoc.BootstrapModuleFile, Rel: rel, Action: action, Write: request.Write, Sync: request.Sync,
-		})
+		path := r.effects.JoinPath(r.root, rel)
+		action := r.effects.Action(path, content)
+		decision := r.decide(projectdoc.BootstrapModuleFile, rel, action)
 		if decision.Write {
-			if err := effects.Write(path, content); err != nil {
-				return projectbootstrapcontract.ProjectDocsBootstrapResult{}, err
+			if err := r.effects.Write(path, content); err != nil {
+				return err
 			}
 		} else if decision.FamilyPreserved {
-			familyPreserved = true
+			r.familyPreserved = true
 		}
 		if decision.Report {
-			files = append(files, projectdoccontract.ProjectDocsPlannedFile{
+			r.files = append(r.files, projectdoccontract.ProjectDocsPlannedFile{
 				RelPath: rel, Path: path, Action: action, Bytes: len([]byte(content)),
 				SHA256: projectdoc.SHA256Hex(content), Reason: projectDocReason(rel), Preserved: decision.Preserved,
 			})
 		}
 	}
+	return nil
+}
+
+func (r *bootstrapRun) planManifest() error {
 	manifestContent := projectdoc.ManifestJSON()
-	manifestAction := effects.Action(manifestPath, manifestContent)
-	manifestDecision := projectdoc.DecideBootstrapFile(projectdoc.BootstrapFileInput{
-		Kind: projectdoc.BootstrapManifestFile, Rel: projectdoc.ManifestRelPath(), Action: manifestAction,
-		Write: request.Write, Sync: request.Sync,
-	})
+	manifestAction := r.effects.Action(r.manifestPath, manifestContent)
+	manifestDecision := r.decide(projectdoc.BootstrapManifestFile, projectdoc.ManifestRelPath(), manifestAction)
 	if manifestDecision.Write {
-		if err := effects.Write(manifestPath, manifestContent); err != nil {
-			return projectbootstrapcontract.ProjectDocsBootstrapResult{}, err
+		if err := r.effects.Write(r.manifestPath, manifestContent); err != nil {
+			return err
 		}
 	}
 	if manifestDecision.Report {
-		files = append(files, projectdoccontract.ProjectDocsPlannedFile{
-			RelPath: projectdoc.ManifestRelPath(), Path: manifestPath, Action: manifestAction,
+		r.files = append(r.files, projectdoccontract.ProjectDocsPlannedFile{
+			RelPath: projectdoc.ManifestRelPath(), Path: r.manifestPath, Action: manifestAction,
 			Bytes: len([]byte(manifestContent)), SHA256: projectdoc.SHA256Hex(manifestContent), Reason: "modular documentation contract manifest",
 		})
 	}
-	if familyPreserved {
-		warnings = projectdoc.AppendUnique(warnings, "family_docs_preserved: modular family roots and module starters are never overwritten; revise them with project_docs_revise or reorganize with project-docs-optimize")
+	return nil
+}
+
+func (r *bootstrapRun) appendSummaryWarnings(manifestExisted bool) {
+	if r.familyPreserved {
+		r.warnings = projectdoc.AppendUnique(r.warnings, "family_docs_preserved: modular family roots and module starters are never overwritten; revise them with project_docs_revise or reorganize with project-docs-optimize")
 	}
-	if manifestExisted && request.Write && request.Sync {
-		warnings = projectdoc.AppendUnique(warnings, "manifest_preserved: documentation/manifest.json budgets are repo-owned; --sync does not reset them")
+	if manifestExisted && r.request.Write && r.request.Sync {
+		r.warnings = projectdoc.AppendUnique(r.warnings, "manifest_preserved: documentation/manifest.json budgets are repo-owned; --sync does not reset them")
 	}
-	if request.Write {
-		for _, rel := range projectdoc.PrefixedKnownProjectDocNames() {
-			path := effects.JoinPath(root, rel)
-			existing, err := effects.Read(path)
-			if err != nil {
-				continue
-			}
-			ensured := projectdoc.EnsureMetaFrontmatter(pathpkg.Base(effects.ToSlash(rel)), existing)
-			if ensured != existing {
-				if err := effects.Write(path, ensured); err != nil {
-					return projectbootstrapcontract.ProjectDocsBootstrapResult{}, err
-				}
+}
+
+// ensureMetaFrontmatter rewrites existing project docs whose meta frontmatter is missing or stale.
+func (r *bootstrapRun) ensureMetaFrontmatter() error {
+	for _, rel := range projectdoc.PrefixedKnownProjectDocNames() {
+		path := r.effects.JoinPath(r.root, rel)
+		existing, err := r.effects.Read(path)
+		if err != nil {
+			continue
+		}
+		ensured := projectdoc.EnsureMetaFrontmatter(pathpkg.Base(r.effects.ToSlash(rel)), existing)
+		if ensured != existing {
+			if err := r.effects.Write(path, ensured); err != nil {
+				return err
 			}
 		}
 	}
-	if !request.Write {
-		warnings = append(warnings, "dry_run_only: rerun without --dry-run to create missing AGENTS.md/.issueops docs and repo metadata; add --sync to refresh existing docs")
-	}
-	return projectbootstrapcontract.ProjectDocsBootstrapResult{
-		OK: true, Kind: "project_docs_bootstrap", RepoRoot: root, DocsDir: effects.JoinPath(root, projectdoc.ProjectDocsDir),
-		Write: request.Write, Sync: request.Sync, DryRun: !request.Write, GeneratedAt: effects.Now().Format(time.RFC3339),
-		Signals: signals, Files: files, LifecycleState: lifecycleState, Warnings: warnings,
-	}, nil
+	return nil
 }
 
 func projectDocReason(rel string) string {

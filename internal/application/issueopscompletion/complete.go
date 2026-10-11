@@ -39,7 +39,7 @@ func NewService(repository Repository, environment Environment, clock Clock, ver
 }
 
 func (s *Service) Complete(ctx context.Context, request Request) (Result, error) {
-	if s == nil || s.repository == nil || s.environment == nil || s.clock == nil || s.verify == nil {
+	if !s.ready() {
 		return Result{ID: request.ID}, fmt.Errorf("completion dependencies are required")
 	}
 	actor, err := s.verify(ctx, request.Actor, request.Ancestry)
@@ -56,48 +56,62 @@ func (s *Service) Complete(ctx context.Context, request Request) (Result, error)
 		RemoteArtifactURL: request.RemoteArtifactURL,
 	}
 	persisted, err := s.repository.Update(ctx, request.ID, func(before completioncontract.RecordSnapshot) (completioncontract.RecordSnapshot, bool, error) {
-		if err := completiondomain.ValidatePrepared(before.Prepared); err != nil {
-			return before, false, err
-		}
-		if before.Completion != nil {
-			if completiondomain.CanRetryCompletion(toDomainSnapshot(before), command) {
-				pathsMatch := s.environment.PathsMatch(before.Completion.VerificationReportPath, command.VerificationReportPath)
-				if completiondomain.MatchesRetryEvidence(*before.Completion, command, pathsMatch) && completiondomain.ValidateArtifact(before, request.RemoteArtifactURL) == nil {
-					return before, false, nil
-				}
-			}
-			return before, false, fmt.Errorf("execution completion already exists with different evidence")
-		}
-		if err := completiondomain.ValidatePhase(before.Phase); err != nil {
-			return before, false, err
-		}
-		if err := completiondomain.ValidateArtifact(before, request.RemoteArtifactURL); err != nil {
-			return before, false, err
-		}
-		canonicalCWD := s.environment.PathsMatch(request.CWD, before.CanonicalRoot)
-		if err := completiondomain.ValidateActive(toDomainSnapshot(before), command, canonicalCWD); err != nil {
-			return before, false, publicDomainError(err, request.Generation)
-		}
-		head, err := s.environment.CurrentHead(ctx, before.CanonicalRoot)
-		if err != nil {
-			return before, false, err
-		}
-		if err := completiondomain.ValidateFinalHead(request.FinalHead, head); err != nil {
-			return before, false, err
-		}
-		report, err := s.environment.VerifyReport(before.CanonicalRoot, request.VerificationReportPath)
-		if err != nil {
-			return before, false, err
-		}
-		completedAt := s.clock.Now()
-		transitionedAt := s.clock.Now()
-		outcome := completiondomain.ApplyAt(toDomainSnapshot(before), command, report, completedAt, transitionedAt)
-		return fromDomainOutcome(before, outcome), true, nil
+		return s.completeRecord(ctx, request, command, before)
 	})
 	if err != nil {
 		return Result{ID: request.ID}, err
 	}
 	return Result{OK: true, ID: request.ID, Execution: persisted.Execution}, nil
+}
+
+func (s *Service) ready() bool {
+	return s != nil && s.repository != nil && s.environment != nil && s.clock != nil && s.verify != nil
+}
+
+// retryIsIdempotent reports whether an existing completion matches the retried command evidence.
+func (s *Service) retryIsIdempotent(before completioncontract.RecordSnapshot, command completioncontract.Command, remoteArtifactURL string) bool {
+	if !completiondomain.CanRetryCompletion(toDomainSnapshot(before), command) {
+		return false
+	}
+	pathsMatch := s.environment.PathsMatch(before.Completion.VerificationReportPath, command.VerificationReportPath)
+	return completiondomain.MatchesRetryEvidence(*before.Completion, command, pathsMatch) && completiondomain.ValidateArtifact(before, remoteArtifactURL) == nil
+}
+
+func (s *Service) completeRecord(ctx context.Context, request Request, command completioncontract.Command, before completioncontract.RecordSnapshot) (completioncontract.RecordSnapshot, bool, error) {
+	if err := completiondomain.ValidatePrepared(before.Prepared); err != nil {
+		return before, false, err
+	}
+	if before.Completion != nil {
+		if s.retryIsIdempotent(before, command, request.RemoteArtifactURL) {
+			return before, false, nil
+		}
+		return before, false, fmt.Errorf("execution completion already exists with different evidence")
+	}
+	if err := completiondomain.ValidatePhase(before.Phase); err != nil {
+		return before, false, err
+	}
+	if err := completiondomain.ValidateArtifact(before, request.RemoteArtifactURL); err != nil {
+		return before, false, err
+	}
+	canonicalCWD := s.environment.PathsMatch(request.CWD, before.CanonicalRoot)
+	if err := completiondomain.ValidateActive(toDomainSnapshot(before), command, canonicalCWD); err != nil {
+		return before, false, publicDomainError(err, request.Generation)
+	}
+	head, err := s.environment.CurrentHead(ctx, before.CanonicalRoot)
+	if err != nil {
+		return before, false, err
+	}
+	if err := completiondomain.ValidateFinalHead(request.FinalHead, head); err != nil {
+		return before, false, err
+	}
+	report, err := s.environment.VerifyReport(before.CanonicalRoot, request.VerificationReportPath)
+	if err != nil {
+		return before, false, err
+	}
+	completedAt := s.clock.Now()
+	transitionedAt := s.clock.Now()
+	outcome := completiondomain.ApplyAt(toDomainSnapshot(before), command, report, completedAt, transitionedAt)
+	return fromDomainOutcome(before, outcome), true, nil
 }
 
 func toDomainSnapshot(record completioncontract.RecordSnapshot) completiondomain.Snapshot {

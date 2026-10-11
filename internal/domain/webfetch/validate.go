@@ -22,21 +22,8 @@ func ValidateResponse(input webfetchcontract.ResponseValidationInput) webfetchco
 	metadata := metadataFromResponse(input.Header, text)
 	contentType := strings.ToLower(HeaderValue(input.Header, "Content-Type"))
 
-	switch input.StatusCode {
-	case 404:
-		return webfetchcontract.ResponseValidation{Category: webfetchcontract.CategoryNotFound, StopReason: webfetchcontract.StopReasonNotFound, Metadata: metadata}
-	case 429:
-		return webfetchcontract.ResponseValidation{Category: webfetchcontract.CategoryRateLimited, StopReason: webfetchcontract.StopReasonRateLimited, Metadata: metadata}
-	case 401:
-		return webfetchcontract.ResponseValidation{Category: webfetchcontract.CategoryAuthRequired, StopReason: webfetchcontract.StopReasonGridExhausted, Metadata: metadata}
-	case 403:
-		return webfetchcontract.ResponseValidation{Category: webfetchcontract.CategoryBlocked, StopReason: webfetchcontract.StopReasonGridExhausted, Metadata: metadata}
-	}
-	if input.StatusCode >= 500 {
-		return webfetchcontract.ResponseValidation{Category: webfetchcontract.CategoryBlocked, StopReason: webfetchcontract.StopReasonGridExhausted, Metadata: metadata}
-	}
-	if input.StatusCode < 200 || input.StatusCode >= 300 {
-		return webfetchcontract.ResponseValidation{Category: webfetchcontract.CategoryUnknown, StopReason: webfetchcontract.StopReasonGridExhausted, Metadata: metadata}
+	if result, done := validateStatus(input.StatusCode, metadata); done {
+		return result
 	}
 
 	if looksLikeChallenge(lower) {
@@ -49,35 +36,70 @@ func ValidateResponse(input webfetchcontract.ResponseValidationInput) webfetchco
 		return webfetchcontract.ResponseValidation{Category: webfetchcontract.CategoryPaywalled, StopReason: webfetchcontract.StopReasonGridExhausted, Metadata: metadata}
 	}
 	if strings.Contains(contentType, "json") {
-		var value any
-		if err := json.Unmarshal(body, &value); err == nil {
-			metadata["json_valid"] = true
-			return webfetchcontract.ResponseValidation{Category: webfetchcontract.CategoryStrongOK, StopReason: webfetchcontract.StopReasonAccepted, Strong: true, Content: TruncateContent(text, 0), Metadata: metadata}
-		}
-		return webfetchcontract.ResponseValidation{Category: webfetchcontract.CategorySuspectOK, StopReason: webfetchcontract.StopReasonGridExhausted, Metadata: metadata, Warnings: []string{"malformed_json"}}
+		return validateJSONBody(body, text, metadata)
 	}
-	if strings.Contains(contentType, "rss") || strings.Contains(contentType, "atom") || strings.Contains(lower, "<rss") || strings.Contains(lower, "<feed") {
-		entries := strings.Count(lower, "<item")
-		if entries == 0 {
-			entries = strings.Count(lower, "<entry")
-		}
-		metadata["entries"] = entries
-		if entries > 0 {
-			return webfetchcontract.ResponseValidation{Category: webfetchcontract.CategoryWeakOK, StopReason: webfetchcontract.StopReasonAccepted, Content: stripTags(text), Metadata: metadata}
-		}
+	if result, done := validateFeed(contentType, lower, text, metadata); done {
+		return result
 	}
 
 	stripped := stripTags(text)
 	if looksLikeEmptySPA(lower, stripped) {
 		return webfetchcontract.ResponseValidation{Category: webfetchcontract.CategorySuspectOK, StopReason: webfetchcontract.StopReasonGridExhausted, Metadata: metadata, Warnings: []string{"empty_spa_shell"}}
 	}
-	if len(stripped) >= 500 {
+	return validateStrippedLength(stripped, metadata)
+}
+
+func validateStatus(status int, metadata map[string]any) (webfetchcontract.ResponseValidation, bool) {
+	var category, stop string
+	switch {
+	case status == 404:
+		category, stop = webfetchcontract.CategoryNotFound, webfetchcontract.StopReasonNotFound
+	case status == 429:
+		category, stop = webfetchcontract.CategoryRateLimited, webfetchcontract.StopReasonRateLimited
+	case status == 401:
+		category, stop = webfetchcontract.CategoryAuthRequired, webfetchcontract.StopReasonGridExhausted
+	case status == 403 || status >= 500:
+		category, stop = webfetchcontract.CategoryBlocked, webfetchcontract.StopReasonGridExhausted
+	case status < 200 || status >= 300:
+		category, stop = webfetchcontract.CategoryUnknown, webfetchcontract.StopReasonGridExhausted
+	default:
+		return webfetchcontract.ResponseValidation{}, false
+	}
+	return webfetchcontract.ResponseValidation{Category: category, StopReason: stop, Metadata: metadata}, true
+}
+
+func validateJSONBody(body []byte, text string, metadata map[string]any) webfetchcontract.ResponseValidation {
+	var value any
+	if err := json.Unmarshal(body, &value); err == nil {
+		metadata["json_valid"] = true
+		return webfetchcontract.ResponseValidation{Category: webfetchcontract.CategoryStrongOK, StopReason: webfetchcontract.StopReasonAccepted, Strong: true, Content: TruncateContent(text, 0), Metadata: metadata}
+	}
+	return webfetchcontract.ResponseValidation{Category: webfetchcontract.CategorySuspectOK, StopReason: webfetchcontract.StopReasonGridExhausted, Metadata: metadata, Warnings: []string{"malformed_json"}}
+}
+
+// validateFeed는 RSS/Atom 응답을 감지해 entries 메타데이터를 기록한다. 항목이 있을 때만 done=true.
+func validateFeed(contentType, lower, text string, metadata map[string]any) (webfetchcontract.ResponseValidation, bool) {
+	if !(strings.Contains(contentType, "rss") || strings.Contains(contentType, "atom") || strings.Contains(lower, "<rss") || strings.Contains(lower, "<feed")) {
+		return webfetchcontract.ResponseValidation{}, false
+	}
+	entries := strings.Count(lower, "<item")
+	if entries == 0 {
+		entries = strings.Count(lower, "<entry")
+	}
+	metadata["entries"] = entries
+	if entries == 0 {
+		return webfetchcontract.ResponseValidation{}, false
+	}
+	return webfetchcontract.ResponseValidation{Category: webfetchcontract.CategoryWeakOK, StopReason: webfetchcontract.StopReasonAccepted, Content: stripTags(text), Metadata: metadata}, true
+}
+
+func validateStrippedLength(stripped string, metadata map[string]any) webfetchcontract.ResponseValidation {
+	switch {
+	case len(stripped) >= 500:
 		return webfetchcontract.ResponseValidation{Category: webfetchcontract.CategoryStrongOK, StopReason: webfetchcontract.StopReasonAccepted, Strong: true, Content: stripped, Metadata: metadata}
-	}
-	if len(stripped) >= 80 {
+	case len(stripped) >= 80:
 		return webfetchcontract.ResponseValidation{Category: webfetchcontract.CategoryWeakOK, StopReason: webfetchcontract.StopReasonAccepted, Content: stripped, Metadata: metadata}
-	}
-	if len(stripped) > 0 {
+	case len(stripped) > 0:
 		return webfetchcontract.ResponseValidation{Category: webfetchcontract.CategorySuspectOK, StopReason: webfetchcontract.StopReasonGridExhausted, Content: stripped, Metadata: metadata}
 	}
 	return webfetchcontract.ResponseValidation{Category: webfetchcontract.CategoryUnknown, StopReason: webfetchcontract.StopReasonGridExhausted, Metadata: metadata, Warnings: []string{"empty_content"}}

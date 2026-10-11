@@ -103,12 +103,16 @@ func CompleteIssueCreateIntent(record model.IssueOpsRecord, issueURL, completedA
 }
 
 func validateIssueCreateIntentRequest(request model.IssueOpsIssueCreateIntentRequest) error {
-	for field, value := range map[string]string{
-		"operation_id": request.OperationID, "provider": request.Provider, "project_authority": request.ProjectAuthority,
-		"title": request.Title, "body_sha256": request.BodySHA256, "started_at": request.StartedAt,
+	for _, field := range []struct{ name, value string }{
+		{"operation_id", request.OperationID},
+		{"provider", request.Provider},
+		{"project_authority", request.ProjectAuthority},
+		{"title", request.Title},
+		{"body_sha256", request.BodySHA256},
+		{"started_at", request.StartedAt},
 	} {
-		if strings.TrimSpace(value) == "" {
-			return fmt.Errorf("%s is required", field)
+		if strings.TrimSpace(field.value) == "" {
+			return fmt.Errorf("%s is required", field.name)
 		}
 	}
 	if len(strings.TrimSpace(request.BodySHA256)) != 64 {

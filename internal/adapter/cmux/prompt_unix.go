@@ -20,6 +20,42 @@ type promptOpenedComponent struct {
 }
 
 func readPromptPlatform(root, path, expectedDigest string, afterOpen func()) ([]byte, error) {
+	parts, err := promptRelativeParts(root, path, expectedDigest)
+	if err != nil {
+		return nil, err
+	}
+
+	rootFD, err := unix.Open(root, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
+	if err != nil {
+		return nil, fmt.Errorf("open cmux prompt root: %w", err)
+	}
+	defer unix.Close(rootFD)
+	var rootStat unix.Stat_t
+	if err := unix.Fstat(rootFD, &rootStat); err != nil {
+		return nil, fmt.Errorf("stat cmux prompt root: %w", err)
+	}
+
+	components, currentFD, err := openPromptDirectories(rootFD, parts[:len(parts)-1])
+	if err != nil {
+		return nil, err
+	}
+	defer closePromptComponents(components)
+
+	walk := promptWalk{root: root, rootFD: rootFD, rootStat: rootStat, components: components, parentFD: currentFD}
+	return walk.readLeaf(path, parts[len(parts)-1], expectedDigest, afterOpen)
+}
+
+// promptWalk은 루트에서 leaf 부모 디렉터리까지 열어 둔 경로 상태를 담는다.
+type promptWalk struct {
+	root       string
+	rootFD     int
+	rootStat   unix.Stat_t
+	components []promptOpenedComponent
+	parentFD   int
+}
+
+// promptRelativeParts는 경로 입력을 검증하고 root 기준 상대 경로 구성요소를 반환한다.
+func promptRelativeParts(root, path, expectedDigest string) ([]string, error) {
 	if !filepath.IsAbs(root) || filepath.Clean(root) != root || !filepath.IsAbs(path) || filepath.Clean(path) != path ||
 		strings.ContainsRune(root+path, 0) || !validDigest(expectedDigest) {
 		return nil, fmt.Errorf("cmux prompt file must be a clean path inside the canonical worktree")
@@ -34,38 +70,35 @@ func readPromptPlatform(root, path, expectedDigest string, afterOpen func()) ([]
 			return nil, fmt.Errorf("cmux prompt file path is unsafe")
 		}
 	}
+	return parts, nil
+}
 
-	rootFD, err := unix.Open(root, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
-	if err != nil {
-		return nil, fmt.Errorf("open cmux prompt root: %w", err)
-	}
-	defer unix.Close(rootFD)
-	var rootStat unix.Stat_t
-	if err := unix.Fstat(rootFD, &rootStat); err != nil {
-		return nil, fmt.Errorf("stat cmux prompt root: %w", err)
-	}
-
-	components := make([]promptOpenedComponent, 0, len(parts))
+// openPromptDirectories는 rootFD 아래 디렉터리를 순서대로 열고 마지막 디렉터리 fd를 반환한다.
+// 실패하면 이미 연 구성요소를 닫고 반환한다.
+func openPromptDirectories(rootFD int, names []string) ([]promptOpenedComponent, int, error) {
+	components := make([]promptOpenedComponent, 0, len(names)+1)
 	currentFD := rootFD
-	for _, name := range parts[:len(parts)-1] {
+	for _, name := range names {
 		fd, openErr := unix.Openat(currentFD, name, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
 		if openErr != nil {
 			closePromptComponents(components)
-			return nil, fmt.Errorf("open cmux prompt directory: %w", openErr)
+			return nil, 0, fmt.Errorf("open cmux prompt directory: %w", openErr)
 		}
 		var stat unix.Stat_t
 		if statErr := unix.Fstat(fd, &stat); statErr != nil || stat.Mode&unix.S_IFMT != unix.S_IFDIR {
 			unix.Close(fd)
 			closePromptComponents(components)
-			return nil, fmt.Errorf("cmux prompt directory identity is unsafe")
+			return nil, 0, fmt.Errorf("cmux prompt directory identity is unsafe")
 		}
 		components = append(components, promptOpenedComponent{parentFD: currentFD, name: name, fd: fd, stat: stat})
 		currentFD = fd
 	}
-	defer closePromptComponents(components)
+	return components, currentFD, nil
+}
 
-	leafName := parts[len(parts)-1]
-	leafFD, err := unix.Openat(currentFD, leafName, unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
+// readLeaf는 leaf 파일을 열어 읽고, 읽는 동안 파일 신원과 경로 네임스페이스가 바뀌지 않았는지 확인한다.
+func (walk *promptWalk) readLeaf(path, leafName, expectedDigest string, afterOpen func()) ([]byte, error) {
+	leafFD, err := unix.Openat(walk.parentFD, leafName, unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
 	if err != nil {
 		return nil, fmt.Errorf("open cmux prompt file: %w", err)
 	}
@@ -100,8 +133,8 @@ func readPromptPlatform(root, path, expectedDigest string, afterOpen func()) ([]
 	if err := validatePromptLeafStat(after, expectedUID); err != nil || !samePromptStat(before, after) {
 		return nil, fmt.Errorf("cmux prompt file identity changed while reading")
 	}
-	leaf := promptOpenedComponent{parentFD: currentFD, name: leafName, fd: leafFD, stat: before}
-	if !promptNamespaceStable(root, rootFD, rootStat, append(append([]promptOpenedComponent(nil), components...), leaf)) {
+	leaf := promptOpenedComponent{parentFD: walk.parentFD, name: leafName, fd: leafFD, stat: before}
+	if !promptNamespaceStable(walk.root, walk.rootFD, walk.rootStat, append(append([]promptOpenedComponent(nil), walk.components...), leaf)) {
 		return nil, fmt.Errorf("cmux prompt namespace changed while reading")
 	}
 	if err := validatePromptBytes(value, expectedDigest); err != nil {

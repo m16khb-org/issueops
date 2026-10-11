@@ -31,21 +31,9 @@ func (c Command) runInstall(args []string) error {
 	if err != nil {
 		return err
 	}
-	codexHome := os.Getenv("CODEX_HOME")
-	if codexHome == "" {
-		codexHome = filepath.Join(home, ".codex")
-	}
-	if *interactive {
-		if err := validateInteractiveInstallInput(os.Stdin); err != nil {
-			return err
-		}
-		choices, err := promptInstallChoices(*projectLocal, *dryRun, *pathMode, os.Stdin, os.Stderr)
-		if err != nil {
-			return err
-		}
-		*projectLocal = choices.ProjectLocal
-		*dryRun = choices.DryRun
-		*pathMode = choices.PathMode
+	codexHome := codexHomeDir(home)
+	if err := applyInteractiveInstallChoices(*interactive, projectLocal, dryRun, pathMode); err != nil {
+		return err
 	}
 	if !installdomain.ValidPathMode(*pathMode) {
 		return fmt.Errorf("invalid --path-mode %q: expected auto, manual, or skip", *pathMode)
@@ -84,6 +72,32 @@ func (c Command) runInstall(args []string) error {
 	readback := c.ActivationReadback(req)
 	activationService := activationapp.NewService(c.ActivationBackend, readback)
 	return c.executeInstall(req, candidatePath, *pathMode, activationStep, *jsonOut, activationService, activationRequest)
+}
+
+func codexHomeDir(home string) string {
+	if codexHome := os.Getenv("CODEX_HOME"); codexHome != "" {
+		return codexHome
+	}
+	return filepath.Join(home, ".codex")
+}
+
+// applyInteractiveInstallChoices overwrites the install flags with the user's
+// answers when --interactive is set; otherwise it leaves them untouched.
+func applyInteractiveInstallChoices(interactive bool, projectLocal, dryRun *bool, pathMode *string) error {
+	if !interactive {
+		return nil
+	}
+	if err := validateInteractiveInstallInput(os.Stdin); err != nil {
+		return err
+	}
+	choices, err := promptInstallChoices(*projectLocal, *dryRun, *pathMode, os.Stdin, os.Stderr)
+	if err != nil {
+		return err
+	}
+	*projectLocal = choices.ProjectLocal
+	*dryRun = choices.DryRun
+	*pathMode = choices.PathMode
+	return nil
 }
 
 func (c Command) executeInstall(req port.NativeInstallRequest, candidatePath, pathMode, activationStep string, jsonOut bool, activationService *activationapp.Service, activationRequest activationcontract.Request) error {

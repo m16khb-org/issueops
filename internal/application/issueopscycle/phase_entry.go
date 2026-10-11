@@ -13,52 +13,59 @@ func ValidatePhaseEntry(ready cycleport.PhaseEntryReadiness, record model.IssueO
 	if err := cycledomain.ValidatePhaseProgression(record.Phase, phase); err != nil {
 		return err
 	}
-	if phase == model.IssueOpsPhaseGrill {
-		if result := ready.Problem(record); !result.Ready {
-			return fmt.Errorf("cannot enter grill phase: missing %s", strings.Join(result.Missing, ", "))
-		}
+	if err := validateReadinessForPhase(ready, record, phase); err != nil {
+		return err
 	}
-	if phase == model.IssueOpsPhasePlan {
-		if result := ready.Plan(record); !result.Ready {
-			return fmt.Errorf("cannot enter plan phase: missing %s", strings.Join(result.Missing, ", "))
+	switch phase {
+	case model.IssueOpsPhaseFeedback:
+		if strings.TrimSpace(record.AISlopCleanAt) == "" {
+			return fmt.Errorf("cannot enter feedback phase before ai-slop-clean phase")
+		}
+	case model.IssueOpsPhaseDone:
+		return validateDoneEntry(ready, record)
+	}
+	return nil
+}
+
+// validateReadinessForPhase checks the readiness probes that gate entering phase.
+func validateReadinessForPhase(ready cycleport.PhaseEntryReadiness, record model.IssueOpsRecord, phase model.IssueOpsPhase) error {
+	missing := func(label string, probe func(model.IssueOpsRecord) model.IssueOpsReadiness) error {
+		if result := probe(record); !result.Ready {
+			return fmt.Errorf("cannot enter %s phase: missing %s", label, strings.Join(result.Missing, ", "))
+		}
+		return nil
+	}
+	switch phase {
+	case model.IssueOpsPhaseGrill:
+		return missing("grill", ready.Problem)
+	case model.IssueOpsPhasePlan:
+		if err := missing("plan", ready.Plan); err != nil {
+			return err
 		}
 		if result := ready.Grill(record); !result.Ready {
 			return fmt.Errorf("cannot enter plan phase: grill incomplete: missing %s", strings.Join(result.Missing, ", "))
 		}
+	case model.IssueOpsPhaseCompatibilityReview:
+		return missing("compatibility-review", ready.Compatibility)
+	case model.IssueOpsPhaseImplement:
+		return missing("implement", ready.Implement)
+	case model.IssueOpsPhaseAISlopClean:
+		return missing("ai-slop-clean", ready.AISlopClean)
+	case model.IssueOpsPhasePR:
+		return missing("pr", ready.StrictPR)
 	}
-	if phase == model.IssueOpsPhaseCompatibilityReview {
-		if result := ready.Compatibility(record); !result.Ready {
-			return fmt.Errorf("cannot enter compatibility-review phase: missing %s", strings.Join(result.Missing, ", "))
-		}
-	}
-	if phase == model.IssueOpsPhaseImplement {
-		if result := ready.Implement(record); !result.Ready {
-			return fmt.Errorf("cannot enter implement phase: missing %s", strings.Join(result.Missing, ", "))
-		}
-	}
-	if phase == model.IssueOpsPhaseAISlopClean {
-		if result := ready.AISlopClean(record); !result.Ready {
-			return fmt.Errorf("cannot enter ai-slop-clean phase: missing %s", strings.Join(result.Missing, ", "))
-		}
-	}
-	if phase == model.IssueOpsPhaseFeedback && strings.TrimSpace(record.AISlopCleanAt) == "" {
-		return fmt.Errorf("cannot enter feedback phase before ai-slop-clean phase")
-	}
-	if phase == model.IssueOpsPhasePR {
-		if result := ready.StrictPR(record); !result.Ready {
-			return fmt.Errorf("cannot enter pr phase: missing %s", strings.Join(result.Missing, ", "))
-		}
-	}
-	if phase == model.IssueOpsPhaseDone && record.Phase != model.IssueOpsPhasePR {
+	return nil
+}
+
+func validateDoneEntry(ready cycleport.PhaseEntryReadiness, record model.IssueOpsRecord) error {
+	if record.Phase != model.IssueOpsPhasePR {
 		return fmt.Errorf("cannot enter done phase before pr phase")
 	}
-	if phase == model.IssueOpsPhaseDone {
-		if missing := ready.RemoteArtifactMissing(record); len(missing) > 0 {
-			return fmt.Errorf("cannot enter done phase before remote artifact verification: missing %s", strings.Join(missing, ", "))
-		}
-		if record.Execution == nil || record.Execution.Completion == nil || record.Execution.Lease.Status != model.LeaseStatusReleased {
-			return fmt.Errorf("cannot enter done phase before issueops execution completion")
-		}
+	if missing := ready.RemoteArtifactMissing(record); len(missing) > 0 {
+		return fmt.Errorf("cannot enter done phase before remote artifact verification: missing %s", strings.Join(missing, ", "))
+	}
+	if record.Execution == nil || record.Execution.Completion == nil || record.Execution.Lease.Status != model.LeaseStatusReleased {
+		return fmt.Errorf("cannot enter done phase before issueops execution completion")
 	}
 	return nil
 }

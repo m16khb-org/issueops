@@ -48,49 +48,62 @@ func (cli command) prepareGeneratedCommandInvocation(args []string, deps Depende
 	return clean, true, nil
 }
 
-func (cli command) generatedDelegatedBootstrapAuthority(args []string, child issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, error) {
-	invalid := func(message string) (issueopscontract.IssueOpsRecord, error) {
-		return issueopscontract.IssueOpsRecord{}, &commandparsecontract.GeneratedCommandProvenanceError{
-			Code: "generated_command_provenance_invalid", Message: message,
-		}
+func generatedProvenanceInvalid(message string) (issueopscontract.IssueOpsRecord, error) {
+	return issueopscontract.IssueOpsRecord{}, &commandparsecontract.GeneratedCommandProvenanceError{
+		Code: "generated_command_provenance_invalid", Message: message,
 	}
+}
+
+func (cli command) generatedDelegatedBootstrapAuthority(args []string, child issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, error) {
 	command, ok := commandparse.ParseExactIssueOpsArgs(args)
 	if !ok || command.Path != "branch prepare" && command.Path != "execution prepare" || child.Delegation == nil {
-		return invalid("generated command provenance requires IssueOps execution state")
+		return generatedProvenanceInvalid("generated command provenance requires IssueOps execution state")
 	}
 	values, booleans, repeatable, ok := commandparse.IssueOpsCommandSpec(command.Path)
 	if !ok {
-		return invalid("generated delegated child bootstrap command is unsupported")
+		return generatedProvenanceInvalid("generated delegated child bootstrap command is unsupported")
 	}
 	flags, ok := commandparse.ExactFlags(command, values, booleans, repeatable)
 	if !ok {
-		return invalid("generated delegated child bootstrap command is malformed")
+		return generatedProvenanceInvalid("generated delegated child bootstrap command is malformed")
 	}
 	parentID := strings.TrimSpace(child.Delegation.ParentCycleID)
 	parent, err := cli.Runtime.ReadIssueOps(cli.Runtime.IssueOpsStateRoot(), parentID)
 	if err != nil || parent.Execution == nil || parent.Execution.Lease.Status != issueopscontract.LeaseStatusActive ||
 		!generatedParentReferencesChild(parent, child.ID) {
-		return invalid("generated delegated child bootstrap requires an active referenced parent execution")
+		return generatedProvenanceInvalid("generated delegated child bootstrap requires an active referenced parent execution")
 	}
 	switch command.Path {
 	case "branch prepare":
-		branch, branchOK := oneGeneratedFlag(flags, "--branch")
-		baseBranch, baseOK := oneGeneratedFlag(flags, "--base-branch")
-		parentWorktree, worktreeOK := oneGeneratedFlag(flags, "--parent-worktree")
-		if !branchOK || !baseOK || !worktreeOK || strings.TrimSpace(branch) != strings.TrimSpace(child.Branch) ||
-			strings.TrimSpace(baseBranch) != strings.TrimSpace(parent.Branch) ||
-			!sameExistingIssueOpsPath(parentWorktree, parent.Execution.Workspace.Root) {
-			return invalid("generated delegated child branch preparation does not match parent topology")
+		if !generatedBranchPrepareMatchesParent(flags, child, parent) {
+			return generatedProvenanceInvalid("generated delegated child branch preparation does not match parent topology")
 		}
 	case "execution prepare":
-		prepared := child.BranchPrepare
-		if prepared == nil || strings.TrimSpace(prepared.Branch) != strings.TrimSpace(child.Branch) ||
-			strings.TrimSpace(prepared.BaseBranch) != strings.TrimSpace(parent.Branch) ||
-			!sameExistingIssueOpsPath(prepared.ParentWorktree, parent.Execution.Workspace.Root) {
-			return invalid("generated delegated child execution preparation does not match parent topology")
+		if !generatedExecutionPrepareMatchesParent(child, parent) {
+			return generatedProvenanceInvalid("generated delegated child execution preparation does not match parent topology")
 		}
 	}
 	return parent, nil
+}
+
+// generatedBranchPrepareMatchesParent는 branch prepare 플래그가 자식 브랜치와 부모 토폴로지에 일치하는지 확인한다.
+func generatedBranchPrepareMatchesParent(flags map[string][]string, child, parent issueopscontract.IssueOpsRecord) bool {
+	branch, branchOK := oneGeneratedFlag(flags, "--branch")
+	baseBranch, baseOK := oneGeneratedFlag(flags, "--base-branch")
+	parentWorktree, worktreeOK := oneGeneratedFlag(flags, "--parent-worktree")
+	return branchOK && baseOK && worktreeOK &&
+		strings.TrimSpace(branch) == strings.TrimSpace(child.Branch) &&
+		strings.TrimSpace(baseBranch) == strings.TrimSpace(parent.Branch) &&
+		sameExistingIssueOpsPath(parentWorktree, parent.Execution.Workspace.Root)
+}
+
+// generatedExecutionPrepareMatchesParent는 기록된 브랜치 준비 결과가 부모 토폴로지에 일치하는지 확인한다.
+func generatedExecutionPrepareMatchesParent(child, parent issueopscontract.IssueOpsRecord) bool {
+	prepared := child.BranchPrepare
+	return prepared != nil &&
+		strings.TrimSpace(prepared.Branch) == strings.TrimSpace(child.Branch) &&
+		strings.TrimSpace(prepared.BaseBranch) == strings.TrimSpace(parent.Branch) &&
+		sameExistingIssueOpsPath(prepared.ParentWorktree, parent.Execution.Workspace.Root)
 }
 
 func generatedParentReferencesChild(parent issueopscontract.IssueOpsRecord, childID string) bool {

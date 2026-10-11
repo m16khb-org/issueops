@@ -40,19 +40,9 @@ type ReviewEffects struct {
 type ReviewService struct{ Effects ReviewEffects }
 
 func (service ReviewService) Review(options ReviewOptions) (contract.ReviewResult, error) {
-	files := service.Effects.NormalizeFiles(options.Repo, options.Files)
-	if len(files) == 0 && options.All && options.DiffFile == "" {
-		files = service.Effects.TrackedFiles(options.Repo)
-	}
-	if len(files) == 0 && !options.All && options.DiffFile == "" {
-		files = service.Effects.StagedFiles(options.Repo)
-	}
+	files := service.candidateFiles(options)
 	if len(files) == 0 && options.DiffFile == "" {
-		summary, reason := "No staged API documentation candidate files.", "no_api_doc_candidate_files"
-		if options.All {
-			summary, reason = "No tracked API documentation candidate files.", "no_tracked_api_doc_candidate_files"
-		}
-		return contract.ReviewResult{OK: true, Verdict: "pass", Summary: summary, Findings: []contract.ReviewFinding{}, Files: []string{}, Skipped: true, Reason: reason}, nil
+		return noCandidateFilesResult(options.All), nil
 	}
 	diff, err := service.Effects.Input(options.Repo, files, options.DiffFile, options.All)
 	if err != nil {
@@ -85,6 +75,31 @@ func (service ReviewService) Review(options ReviewOptions) (contract.ReviewResul
 	if err != nil {
 		return contract.ReviewResult{OK: false, Verdict: "fail", Summary: err.Error(), Files: files, ResultFile: resultPath}, err
 	}
+	return hostReviewOutcome(files, resultPath, data)
+}
+
+// candidateFiles normalizes the requested files and falls back to tracked (all) or staged files when none are given and no diff file is used.
+func (service ReviewService) candidateFiles(options ReviewOptions) []string {
+	files := service.Effects.NormalizeFiles(options.Repo, options.Files)
+	if len(files) == 0 && options.All && options.DiffFile == "" {
+		files = service.Effects.TrackedFiles(options.Repo)
+	}
+	if len(files) == 0 && !options.All && options.DiffFile == "" {
+		files = service.Effects.StagedFiles(options.Repo)
+	}
+	return files
+}
+
+func noCandidateFilesResult(all bool) contract.ReviewResult {
+	summary, reason := "No staged API documentation candidate files.", "no_api_doc_candidate_files"
+	if all {
+		summary, reason = "No tracked API documentation candidate files.", "no_tracked_api_doc_candidate_files"
+	}
+	return contract.ReviewResult{OK: true, Verdict: "pass", Summary: summary, Findings: []contract.ReviewFinding{}, Files: []string{}, Skipped: true, Reason: reason}
+}
+
+// hostReviewOutcome decodes and validates the host-agent result and applies the pass/fail gate.
+func hostReviewOutcome(files []string, resultPath string, data []byte) (contract.ReviewResult, error) {
 	var result contract.ReviewResult
 	if err := json.Unmarshal(data, &result); err != nil {
 		return contract.ReviewResult{OK: false, Verdict: "fail", Summary: err.Error(), Files: files, ResultFile: resultPath}, err

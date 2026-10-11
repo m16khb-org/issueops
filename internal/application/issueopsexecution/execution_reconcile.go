@@ -60,6 +60,11 @@ func (s Service) Reconcile(ctx context.Context, stateRoot string, req issueops.E
 		result.Code = decision.PreviewCode
 		return result, nil
 	}
+	return dispatchReconcileRoute(ctx, stateRoot, req, deps, record, decision, result)
+}
+
+// dispatchReconcileRoute는 결정된 경로에 맞는 reconcile 핸들러를 호출한다.
+func dispatchReconcileRoute(ctx context.Context, stateRoot string, req issueops.ExecutionReconcileRequest, deps issueopsport.ExecutionReconcileDependencies, record issueops.IssueOpsRecord, decision reconciledomain.Decision, result issueops.ExecutionReconcileResult) (issueops.ExecutionReconcileResult, error) {
 	switch decision.Route {
 	case reconciledomain.RouteRemotePR:
 		if deps.RemoteReconcile == nil {

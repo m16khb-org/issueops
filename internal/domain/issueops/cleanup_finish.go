@@ -47,7 +47,30 @@ func BuildCleanupFinishPreview(record model.IssueOpsRecord, req model.CleanupFin
 		OrcaWorktreeID: inventory.OrcaWorktreeID, WorkspaceProcesses: observed.Occupants,
 		OrcaTerminals: inventory.OrcaTerminals, SupersededBy: inventory.SupersededBy, SupersedeError: observed.SupersedeError,
 	}
-	missing := result.Missing
+	missing := cleanupFinishLifecycleMissing(result.Missing, record, req, inventory, observed)
+	missing = cleanupFinishBaseMissing(missing, &result, record, req, inventory, observed)
+	if hasUnclosedChildTask(record.IssueLinks) {
+		missing = append(missing, "child_tasks_closed")
+	}
+	if observed.WorktreeIdentityConflict {
+		missing = append(missing, "worktree_identity_conflict")
+	}
+	if observed.WorktreeUnobservable {
+		missing = append(missing, "worktree_observable")
+	}
+	if inventory.WorktreePresent {
+		missing = cleanupFinishWorktreeMissing(missing, req, observed)
+	}
+	if inventory.Branch != "" {
+		missing = cleanupFinishBranchMissing(missing, &result, req, inventory, observed)
+	}
+	result.Missing = missing
+	result.OK = len(missing) == 0
+	return result
+}
+
+// cleanupFinishLifecycleMissing checks phase, lease, merge, completion, and issue-closed gates.
+func cleanupFinishLifecycleMissing(missing []string, record model.IssueOpsRecord, req model.CleanupFinishRequest, inventory model.CleanupFinishInventory, observed CleanupFinishObservation) []string {
 	if record.Phase != model.IssueOpsPhaseDone {
 		missing = append(missing, "phase_done")
 	}
@@ -63,60 +86,69 @@ func BuildCleanupFinishPreview(record model.IssueOpsRecord, req model.CleanupFin
 	if !req.IssueClosed {
 		missing = append(missing, "issue_closed")
 	}
-	if prepared := PreparedBaseBranch(record); prepared != "" {
-		base := strings.TrimSpace(req.MergedBaseBranch)
-		switch {
-		case base == "":
-			missing = append(missing, "merged_base_branch_unobserved")
-		case inventory.SupersededBy != "":
-		default:
-			if slugs := ClassifyCleanupMergedBase(prepared, base, observed.DefaultBranch, observed.PreparedBasePresent, observed.BaseObserved); len(slugs) > 0 {
-				missing = append(missing, slugs...)
-			} else if base != prepared {
-				result.RetargetedBase = &model.CleanupRetargetedBase{PreparedBase: prepared, ObservedBase: base, DefaultBranch: observed.DefaultBranch, PreparedBaseRemoteAbsent: true}
-			}
+	return missing
+}
+
+// cleanupFinishBaseMissing classifies the merged base branch and records a retargeted base when permitted.
+func cleanupFinishBaseMissing(missing []string, result *model.CleanupFinishResult, record model.IssueOpsRecord, req model.CleanupFinishRequest, inventory model.CleanupFinishInventory, observed CleanupFinishObservation) []string {
+	prepared := PreparedBaseBranch(record)
+	if prepared == "" {
+		return missing
+	}
+	base := strings.TrimSpace(req.MergedBaseBranch)
+	switch {
+	case base == "":
+		missing = append(missing, "merged_base_branch_unobserved")
+	case inventory.SupersededBy != "":
+	default:
+		if slugs := ClassifyCleanupMergedBase(prepared, base, observed.DefaultBranch, observed.PreparedBasePresent, observed.BaseObserved); len(slugs) > 0 {
+			missing = append(missing, slugs...)
+		} else if base != prepared {
+			result.RetargetedBase = &model.CleanupRetargetedBase{PreparedBase: prepared, ObservedBase: base, DefaultBranch: observed.DefaultBranch, PreparedBaseRemoteAbsent: true}
 		}
 	}
-	for _, link := range record.IssueLinks {
+	return missing
+}
+
+// hasUnclosedChildTask reports whether any child link lacks close verification.
+func hasUnclosedChildTask(links []model.IssueOpsIssueLink) bool {
+	for _, link := range links {
 		if link.Type == "child" && strings.TrimSpace(link.CloseVerifiedAt) == "" {
-			missing = append(missing, "child_tasks_closed")
-			break
+			return true
 		}
 	}
-	if observed.WorktreeIdentityConflict {
-		missing = append(missing, "worktree_identity_conflict")
+	return false
+}
+
+// cleanupFinishWorktreeMissing checks cwd placement, workspace leftovers, and cleanliness of a present worktree.
+func cleanupFinishWorktreeMissing(missing []string, req model.CleanupFinishRequest, observed CleanupFinishObservation) []string {
+	if strings.TrimSpace(req.CWD) == "" {
+		missing = append(missing, "cwd_unresolved")
+	} else if observed.CWDWithin {
+		missing = append(missing, "cwd_outside_worktree")
 	}
-	if observed.WorktreeUnobservable {
-		missing = append(missing, "worktree_observable")
+	missing = append(missing, observed.WorkspaceMissing...)
+	if !observed.WorktreeClean {
+		missing = append(missing, "worktree_clean")
 	}
-	if inventory.WorktreePresent {
-		if strings.TrimSpace(req.CWD) == "" {
-			missing = append(missing, "cwd_unresolved")
-		} else if observed.CWDWithin {
-			missing = append(missing, "cwd_outside_worktree")
-		}
-		missing = append(missing, observed.WorkspaceMissing...)
-		if !observed.WorktreeClean {
-			missing = append(missing, "worktree_clean")
-		}
+	return missing
+}
+
+// cleanupFinishBranchMissing checks local branch observability and remote branch absence or keep-state.
+func cleanupFinishBranchMissing(missing []string, result *model.CleanupFinishResult, req model.CleanupFinishRequest, inventory model.CleanupFinishInventory, observed CleanupFinishObservation) []string {
+	if !observed.BranchObservable {
+		missing = append(missing, "local_branch_observable")
 	}
-	if inventory.Branch != "" {
-		if !observed.BranchObservable {
-			missing = append(missing, "local_branch_observable")
-		}
-		switch {
-		case observed.RemoteReadable && observed.RemoteOID == "":
-		case !req.KeepRemoteBranch:
-			missing = append(missing, "remote_branch_absent")
-		case observed.RemoteReadable:
-			result.KeptRemoteBranch = &model.CleanupKeptRemoteBranch{Branch: inventory.Branch, RemoteOID: observed.RemoteOID, State: model.CleanupKeptRemoteBranchPresent}
-		default:
-			result.KeptRemoteBranch = &model.CleanupKeptRemoteBranch{Branch: inventory.Branch, State: model.CleanupKeptRemoteBranchUnreadable}
-		}
+	switch {
+	case observed.RemoteReadable && observed.RemoteOID == "":
+	case !req.KeepRemoteBranch:
+		missing = append(missing, "remote_branch_absent")
+	case observed.RemoteReadable:
+		result.KeptRemoteBranch = &model.CleanupKeptRemoteBranch{Branch: inventory.Branch, RemoteOID: observed.RemoteOID, State: model.CleanupKeptRemoteBranchPresent}
+	default:
+		result.KeptRemoteBranch = &model.CleanupKeptRemoteBranch{Branch: inventory.Branch, State: model.CleanupKeptRemoteBranchUnreadable}
 	}
-	result.Missing = missing
-	result.OK = len(missing) == 0
-	return result
+	return missing
 }
 
 // A missing prepared parent permits only a provider retarget to the observed

@@ -15,23 +15,14 @@ import (
 
 func (installer Installer) writeCodexHooks(path string, req port.NativeInstallRequest) (port.InstallFile, []string, error) {
 	file := port.InstallFile{Path: path, Kind: "codex_user_hooks_config"}
-	config := map[string]any{}
-	if b, err := os.ReadFile(path); err == nil && len(strings.TrimSpace(string(b))) > 0 {
-		if err := json.Unmarshal(b, &config); err != nil {
-			return file, nil, err
-		}
-	} else if err != nil && !errors.Is(err, fs.ErrNotExist) && !req.DryRun {
+	config, err := readCodexHooksConfig(path, req)
+	if err != nil {
 		return file, nil, err
 	}
 	if err := installer.deps.ValidateHookConfigForMerge(config, codexLifecycleHookEvents); err != nil {
 		return file, nil, err
 	}
-	messages := installer.deps.HookTargetDriftMessages(config, "codex", req.BinPath)
-	// 경로가 같아도 빌드 세대가 갈리면 이전 세대 hook이 새 typed command를
-	// 모른 채 차단해 복구가 교착된다(#328). 그 축을 여기서 함께 보고한다.
-	if installer.deps.HookTargetGenerationMessages != nil && installer.deps.RunningBuildGenerationString != nil && installer.deps.FileBuildGenerationString != nil {
-		messages = append(messages, installer.deps.HookTargetGenerationMessages(config, "codex", req.BinPath, installer.deps.RunningBuildGenerationString(), installer.deps.FileBuildGenerationString)...)
-	}
+	messages := installer.hookDriftMessages(config, req.BinPath)
 	merged := installer.mergeHookConfig(config, req.BinPath)
 	b, err := json.MarshalIndent(merged, "", "  ")
 	if err != nil {
@@ -53,6 +44,30 @@ func (installer Installer) writeCodexHooks(path string, req port.NativeInstallRe
 	}
 	file.Written = true
 	return file, messages, nil
+}
+
+// readCodexHooksConfig parses the existing hooks.json; a missing or blank file
+// yields an empty config, and read errors are tolerated during a dry run.
+func readCodexHooksConfig(path string, req port.NativeInstallRequest) (map[string]any, error) {
+	config := map[string]any{}
+	if b, err := os.ReadFile(path); err == nil && len(strings.TrimSpace(string(b))) > 0 {
+		if err := json.Unmarshal(b, &config); err != nil {
+			return nil, err
+		}
+	} else if err != nil && !errors.Is(err, fs.ErrNotExist) && !req.DryRun {
+		return nil, err
+	}
+	return config, nil
+}
+
+func (installer Installer) hookDriftMessages(config map[string]any, binPath string) []string {
+	messages := installer.deps.HookTargetDriftMessages(config, "codex", binPath)
+	// 경로가 같아도 빌드 세대가 갈리면 이전 세대 hook이 새 typed command를
+	// 모른 채 차단해 복구가 교착된다(#328). 그 축을 여기서 함께 보고한다.
+	if installer.deps.HookTargetGenerationMessages != nil && installer.deps.RunningBuildGenerationString != nil && installer.deps.FileBuildGenerationString != nil {
+		messages = append(messages, installer.deps.HookTargetGenerationMessages(config, "codex", binPath, installer.deps.RunningBuildGenerationString(), installer.deps.FileBuildGenerationString)...)
+	}
+	return messages
 }
 
 func HooksConfig(binPath string) map[string]any {

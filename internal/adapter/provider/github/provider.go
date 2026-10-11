@@ -134,23 +134,7 @@ func (Provider) CreatePullRequestContext(ctx context.Context, req port.IssueProv
 	if err != nil {
 		return executionissue.IssueProviderCreatePullRequestResult{OK: false}, err
 	}
-	args := []string{"pr", "create", "--title", title, "--head", head, "--base", base}
-	if projectSelector != "" {
-		args = append(args, "--repo", projectSelector)
-	}
-	if req.Draft {
-		args = append(args, "--draft")
-	}
-	body := strings.TrimSpace(req.Body)
-	if body != "" {
-		args = append(args, "--body", body)
-	}
-	for _, label := range req.Labels {
-		args = append(args, "--label", label)
-	}
-	for _, assignee := range req.Assignees {
-		args = append(args, "--assignee", assignee)
-	}
+	args := githubPRCreateArgs(req, title, head, base, projectSelector)
 	if !req.Confirm {
 		return executionissue.IssueProviderCreatePullRequestResult{
 			OK:      true,
@@ -161,8 +145,7 @@ func (Provider) CreatePullRequestContext(ctx context.Context, req port.IssueProv
 	if err != nil {
 		return executionissue.IssueProviderCreatePullRequestResult{OK: false, URL: result.URL}, err
 	}
-	resultProject := githubPullRequestProjectKey(result.URL)
-	if !validCanonicalGitHubPullRequestURL(result.URL) || projectSelector != "" && resultProject != projectSelector || projectSelector == "" && !strings.HasPrefix(resultProject, "github.com/") {
+	if !createdGitHubPullRequestURLMatches(result.URL, projectSelector) {
 		return executionissue.IssueProviderCreatePullRequestResult{OK: false}, fmt.Errorf("created artifact URL unavailable; needs reconciliation; not retried")
 	}
 	if err := verifyCreatedGitHubPullRequest(ctx, req, result.URL); err != nil {
@@ -178,6 +161,39 @@ func (Provider) CreatePullRequestContext(ctx context.Context, req port.IssueProv
 		URL:    result.URL,
 		Number: number,
 	}, nil
+}
+
+// githubPRCreateArgs는 gh pr create 인자를 기존 순서대로 조립한다.
+func githubPRCreateArgs(req port.IssueProviderCreatePullRequestRequest, title, head, base, projectSelector string) []string {
+	args := []string{"pr", "create", "--title", title, "--head", head, "--base", base}
+	if projectSelector != "" {
+		args = append(args, "--repo", projectSelector)
+	}
+	if req.Draft {
+		args = append(args, "--draft")
+	}
+	if body := strings.TrimSpace(req.Body); body != "" {
+		args = append(args, "--body", body)
+	}
+	for _, label := range req.Labels {
+		args = append(args, "--label", label)
+	}
+	for _, assignee := range req.Assignees {
+		args = append(args, "--assignee", assignee)
+	}
+	return args
+}
+
+// createdGitHubPullRequestURLMatches는 생성 결과 URL이 정규 PR URL이며 요청 프로젝트(없으면 github.com)에 속하는지 확인한다.
+func createdGitHubPullRequestURLMatches(rawURL, projectSelector string) bool {
+	if !validCanonicalGitHubPullRequestURL(rawURL) {
+		return false
+	}
+	resultProject := githubPullRequestProjectKey(rawURL)
+	if projectSelector != "" {
+		return resultProject == projectSelector
+	}
+	return strings.HasPrefix(resultProject, "github.com/")
 }
 
 func runGhPRCreate(ctx context.Context, args []string, repo string) (ghResult, error) {
@@ -280,11 +296,25 @@ func verifyCreatedGitHubPullRequest(ctx context.Context, req port.IssueProviderC
 	if err := json.Unmarshal(out, &got); err != nil {
 		return fmt.Errorf("parse created pull request readback: %w", err)
 	}
+	if err := checkCreatedGitHubPullRequestFields(req, got, createdURL); err != nil {
+		return err
+	}
+	wantedAssignees, err := githubReadbackAssignees(ctx, req.Repo, req.Assignees)
+	if err != nil {
+		return err
+	}
+	if !providerutil.SameStrings(wantedAssignees, githubAssigneeLogins(got.Assignees)) {
+		return fmt.Errorf("created pull request assignees do not exactly match the request")
+	}
+	return nil
+}
+
+// checkCreatedGitHubPullRequestFields는 assignee를 제외한 readback 필드를 요청과 순서대로 대조한다.
+func checkCreatedGitHubPullRequestFields(req port.IssueProviderCreatePullRequestRequest, got githubPullRequestProjection, createdURL string) error {
 	labels := make([]string, 0, len(got.Labels))
 	for _, label := range got.Labels {
 		labels = append(labels, label.Name)
 	}
-	assignees := githubAssigneeLogins(got.Assignees)
 	if strings.TrimSpace(got.URL) != createdURL || strings.TrimSpace(got.HeadRefName) != strings.TrimSpace(req.HeadBranch) || strings.TrimSpace(got.BaseRefName) != strings.TrimSpace(req.BaseBranch) || got.IsDraft != req.Draft {
 		return fmt.Errorf("created pull request identity or draft status does not match the request")
 	}
@@ -299,13 +329,6 @@ func verifyCreatedGitHubPullRequest(ctx context.Context, req port.IssueProviderC
 	}
 	if !providerutil.SameStrings(req.Labels, labels) {
 		return fmt.Errorf("created pull request labels do not exactly match the request")
-	}
-	wantedAssignees, err := githubReadbackAssignees(ctx, req.Repo, req.Assignees)
-	if err != nil {
-		return err
-	}
-	if !providerutil.SameStrings(wantedAssignees, assignees) {
-		return fmt.Errorf("created pull request assignees do not exactly match the request")
 	}
 	return nil
 }
@@ -373,195 +396,8 @@ func githubCreatedPullRequestError(_ string, err error) error {
 	return fmt.Errorf("created pull request has unknown state with a canonical URL returned separately and needs reconciliation; creation was not retried: %s", policy.BoundedDiagnostic(err.Error(), 384))
 }
 
-func (Provider) CreateChild(req port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
-	title := strings.TrimSpace(req.Title)
-	if title == "" {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "github"}, fmt.Errorf("child title is required")
-	}
-	owner, repoName, parentNumber, err := parseGitHubIssueURL(req.ParentIssueURL)
-	if err != nil {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "github"}, err
-	}
-	createArgs := []string{"issue", "create", "--title", title}
-	body := strings.TrimSpace(req.Body)
-	if body != "" {
-		createArgs = append(createArgs, "--body", body)
-	}
-	for _, label := range req.Labels {
-		createArgs = append(createArgs, "--label", label)
-	}
-	for _, assignee := range req.Assignees {
-		createArgs = append(createArgs, "--assignee", assignee)
-	}
-	createArgs = append(createArgs, "--repo", owner+"/"+repoName)
-	if !req.Confirm {
-		preferred := append(append([]string{}, createArgs...), "--parent", parentNumber)
-		preview := strings.Join([]string{
-			providerutil.DryRunPreview("gh", "issue", "create", "--help"),
-			"if parent flag is supported: " + providerutil.DryRunPreview("gh", preferred...),
-			providerutil.DryRunPreview("gh", "api", "repos/"+owner+"/"+repoName+"/issues/"+parentNumber+"/sub_issues"),
-			"if parent flag is absent from valid help: " + providerutil.DryRunPreview("gh", createArgs...),
-			providerutil.DryRunPreview("gh", "api", "-X", "POST", "repos/"+owner+"/"+repoName+"/issues/"+parentNumber+"/sub_issues", "-f", "sub_issue_id={child_database_id}"),
-		}, "; ") + "; choose one create path before mutation; never retry a failed create"
-		return port.IssueProviderCreateChildResult{OK: true, Provider: "github", Preview: preview}, nil
-	}
-	help, err := providerutil.RunBoundedReadbackContext(context.Background(), req.Repo, "gh", "issue", "create", "--help")
-	if err != nil {
-		return port.IssueProviderCreateChildResult{Provider: "github"}, &port.IssueProviderCreateError{Invoked: false, Err: err}
-	}
-	usedParentFlag, knownCreateHelp := false, false
-	for _, line := range strings.Split(string(help), "\n") {
-		fields := strings.Fields(line)
-		if len(fields) > 0 && strings.HasPrefix(fields[0], "-") {
-			for _, field := range fields {
-				if field == "--parent" {
-					usedParentFlag = true
-				}
-				if field == "--title" {
-					knownCreateHelp = true
-				}
-			}
-		}
-	}
-	if !usedParentFlag && !knownCreateHelp {
-		return port.IssueProviderCreateChildResult{Provider: "github"}, &port.IssueProviderCreateError{Invoked: false, Err: fmt.Errorf("cannot determine gh issue create parent capability")}
-	}
-	if usedParentFlag {
-		createArgs = append(createArgs, "--parent", parentNumber)
-	}
-	child, err := runGhJSON(createArgs, req.Repo, "issue")
-	if err != nil {
-		return port.IssueProviderCreateChildResult{Provider: "github", ChildURL: strings.TrimSpace(child.URL)}, err
-	}
-	childURL := strings.TrimSpace(child.URL)
-	_, _, childNumber, err := parseGitHubIssueURL(childURL)
-	if err != nil {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "github", ChildURL: childURL}, githubCreatedChildError(childURL, fmt.Errorf("parse created child issue URL: %w", err))
-	}
-	childIssue, err := runGhAPIJSON[githubIssue](req.Repo, []string{"repos/" + owner + "/" + repoName + "/issues/" + childNumber}, "issue lookup")
-	if err != nil {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "github", ChildURL: childURL}, githubCreatedChildError(childURL, err)
-	}
-	if childIssue.ID == 0 {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "github", ChildURL: childURL}, githubCreatedChildError(childURL, fmt.Errorf("created child issue is missing database id"))
-	}
-	if !usedParentFlag {
-		_, err = runGhAPIJSON[map[string]any](req.Repo, []string{"-X", "POST", "repos/" + owner + "/" + repoName + "/issues/" + parentNumber + "/sub_issues", "-f", "sub_issue_id=" + strconv.FormatInt(childIssue.ID, 10)}, "sub-issue attach")
-		if err != nil {
-			return port.IssueProviderCreateChildResult{OK: false, Provider: "github", ChildURL: childURL}, githubCreatedChildError(childURL, err)
-		}
-	}
-	children, err := runGhAPIJSON[[]githubIssue](req.Repo, []string{"repos/" + owner + "/" + repoName + "/issues/" + parentNumber + "/sub_issues"}, "sub-issue verification")
-	if err != nil {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "github", ChildURL: childURL}, githubCreatedChildError(childURL, err)
-	}
-	if !githubIssueListContains(children, childIssue.ID, childNumber) {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "github", ChildURL: childURL}, githubCreatedChildError(childURL, fmt.Errorf("github sub-issue hierarchy verification failed"))
-	}
-	labels := githubLabelNames(childIssue.Labels)
-	assignees := githubAssigneeLogins(childIssue.Assignees)
-	if missing := providerutil.MissingStrings(req.Labels, labels); len(missing) > 0 {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "github", ChildURL: childURL}, githubCreatedChildError(childURL, fmt.Errorf("github child issue missing labels: %s", strings.Join(missing, ", ")))
-	}
-	if missing := providerutil.MissingStrings(req.Assignees, assignees); len(missing) > 0 {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "github", ChildURL: childURL}, githubCreatedChildError(childURL, fmt.Errorf("github child issue missing assignees: %s", strings.Join(missing, ", ")))
-	}
-	return port.IssueProviderCreateChildResult{
-		OK:                true,
-		Provider:          "github",
-		ChildURL:          providerutil.FirstNonEmpty(childIssue.HTMLURL, childURL),
-		ChildNumber:       childNumber,
-		HierarchyVerified: true,
-		Labels:            labels,
-		Assignees:         assignees,
-	}, nil
-}
-
-func (Provider) CloseChild(req port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
-	owner, repoName, parentNumber, err := parseGitHubIssueURL(req.ParentIssueURL)
-	if err != nil {
-		return port.IssueProviderCloseChildResult{OK: false, Provider: "github"}, err
-	}
-	childOwner, childRepo, childNumber, err := parseGitHubIssueURL(req.ChildURL)
-	if err != nil {
-		return port.IssueProviderCloseChildResult{OK: false, Provider: "github"}, err
-	}
-	if childOwner != owner || childRepo != repoName {
-		return port.IssueProviderCloseChildResult{OK: false, Provider: "github"}, fmt.Errorf("child issue url must match linked parent issue project")
-	}
-	if !req.Confirm {
-		preview := fmt.Sprintf("[dry-run] would execute: gh api repos/%s/%s/issues/%s/sub_issues; gh api -X PATCH repos/%s/%s/issues/%s -f state=closed -f state_reason=completed; gh api repos/%s/%s/issues/%s",
-			owner, repoName, parentNumber, owner, repoName, childNumber, owner, repoName, childNumber)
-		result := port.IssueProviderCloseChildResult{OK: true, Provider: "github", ChildURL: strings.TrimSpace(req.ChildURL), Preview: preview}
-		// preview는 무엇을 할지 보여주는 것에 더해 지금 상태가 무엇인지도
-		// 관측한다. cleanup close-children이 부모 머지 증거 없이 정리해도
-		// 되는지 판정하려면 자식이 원격에서 이미 닫혔는지를 알아야 한다(#129).
-		//
-		// 읽기 전용이며 best-effort다. gh가 없거나 조회가 실패하면 상태를 비워
-		// 두고 성공을 돌려준다 — 여기서 오류를 내면 provider 없는 환경의
-		// dry-run이 통째로 깨지고, core는 어차피 미상을 통과 근거로 인정하지
-		// 않는다.
-		if children, err := runGhAPIJSON[[]githubIssue](req.Repo, []string{"repos/" + owner + "/" + repoName + "/issues/" + parentNumber + "/sub_issues"}, "sub-issue observation"); err == nil {
-			if childIssue := githubIssueByNumber(children, childNumber); childIssue.Number != 0 {
-				result.HierarchyVerified = true
-				result.State = childIssue.State
-				result.AlreadyClosed = strings.EqualFold(childIssue.State, "closed")
-				result.ChildURL = providerutil.FirstNonEmpty(childIssue.HTMLURL, result.ChildURL)
-			}
-		}
-		return result, nil
-	}
-	children, err := runGhAPIJSON[[]githubIssue](req.Repo, []string{"repos/" + owner + "/" + repoName + "/issues/" + parentNumber + "/sub_issues"}, "sub-issue verification")
-	if err != nil {
-		return port.IssueProviderCloseChildResult{OK: false, Provider: "github"}, err
-	}
-	childIssue := githubIssueByNumber(children, childNumber)
-	if childIssue.Number == 0 {
-		return port.IssueProviderCloseChildResult{OK: false, Provider: "github"}, fmt.Errorf("github sub-issue hierarchy verification failed")
-	}
-	alreadyClosed := strings.EqualFold(childIssue.State, "closed")
-	if !alreadyClosed {
-		if _, err := runGhAPIJSON[githubIssue](req.Repo, []string{"-X", "PATCH", "repos/" + owner + "/" + repoName + "/issues/" + childNumber, "-f", "state=closed", "-f", "state_reason=completed"}, "issue close"); err != nil {
-			return port.IssueProviderCloseChildResult{OK: false, Provider: "github"}, err
-		}
-	}
-	verified, err := runGhAPIJSON[githubIssue](req.Repo, []string{"repos/" + owner + "/" + repoName + "/issues/" + childNumber}, "issue close verification")
-	if err != nil {
-		return port.IssueProviderCloseChildResult{OK: false, Provider: "github"}, err
-	}
-	if !strings.EqualFold(verified.State, "closed") {
-		return port.IssueProviderCloseChildResult{OK: false, Provider: "github"}, fmt.Errorf("github child issue close verification failed: state=%s", verified.State)
-	}
-	return port.IssueProviderCloseChildResult{
-		OK:                true,
-		Provider:          "github",
-		ChildURL:          providerutil.FirstNonEmpty(verified.HTMLURL, childIssue.HTMLURL, req.ChildURL),
-		HierarchyVerified: true,
-		Closed:            true,
-		AlreadyClosed:     alreadyClosed,
-		State:             verified.State,
-	}, nil
-}
-
 type ghResult struct {
 	URL string `json:"url"`
-}
-
-type githubIssue struct {
-	ID        int64            `json:"id"`
-	Number    int              `json:"number"`
-	HTMLURL   string           `json:"html_url"`
-	State     string           `json:"state"`
-	Labels    []githubLabel    `json:"labels"`
-	Assignees []githubAssignee `json:"assignees"`
-}
-
-type githubLabel struct {
-	Name string `json:"name"`
-}
-
-type githubAssignee struct {
-	Login string `json:"login"`
 }
 
 func runGhJSON(args []string, repo string, kind string) (ghResult, error) {
@@ -617,69 +453,6 @@ func runGhAPIJSON[T any](repo string, args []string, kind string) (T, error) {
 		return zero, fmt.Errorf("parse gh api %s response: %w", kind, err)
 	}
 	return zero, nil
-}
-
-func githubCreatedChildError(childURL string, err error) error {
-	childURL = strings.TrimSpace(childURL)
-	if childURL != "" {
-		err = fmt.Errorf("created child %s but follow-up failed: %w", childURL, err)
-	}
-	return &port.IssueProviderCreateError{Invoked: true, Err: err}
-}
-
-func parseGitHubIssueURL(raw string) (owner, repo, number string, err error) {
-	raw = strings.TrimSpace(raw)
-	parts := strings.Split(raw, "/")
-	for i := 0; i+4 < len(parts); i++ {
-		if parts[i] == "github.com" && parts[i+3] == "issues" {
-			if parts[i+1] == "" || parts[i+2] == "" || parts[i+4] == "" {
-				break
-			}
-			return parts[i+1], parts[i+2], parts[i+4], nil
-		}
-	}
-	return "", "", "", fmt.Errorf("parent_issue_url must be a GitHub issue URL")
-}
-
-func githubIssueListContains(issues []githubIssue, id int64, number string) bool {
-	for _, issue := range issues {
-		if id != 0 && issue.ID == id {
-			return true
-		}
-		if number != "" && strconv.Itoa(issue.Number) == number {
-			return true
-		}
-	}
-	return false
-}
-
-func githubIssueByNumber(issues []githubIssue, number string) githubIssue {
-	for _, issue := range issues {
-		if number != "" && strconv.Itoa(issue.Number) == number {
-			return issue
-		}
-	}
-	return githubIssue{}
-}
-
-func githubLabelNames(labels []githubLabel) []string {
-	out := make([]string, 0, len(labels))
-	for _, label := range labels {
-		if strings.TrimSpace(label.Name) != "" {
-			out = append(out, label.Name)
-		}
-	}
-	return out
-}
-
-func githubAssigneeLogins(assignees []githubAssignee) []string {
-	out := make([]string, 0, len(assignees))
-	for _, assignee := range assignees {
-		if strings.TrimSpace(assignee.Login) != "" {
-			out = append(out, assignee.Login)
-		}
-	}
-	return out
 }
 
 // gitHubIssueBodyLimit is GitHub's documented issue-body size ceiling. The

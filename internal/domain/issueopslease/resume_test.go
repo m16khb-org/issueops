@@ -167,3 +167,46 @@ func TestPlanResumeStageDecisionTable(t *testing.T) {
 		})
 	}
 }
+
+func TestPlanResumeRejectsUnmetPreconditionsInOrder(t *testing.T) {
+	base := ResumeRequest{
+		ExpectedGeneration: 3,
+		Lease:              Lease{Generation: 3, Status: "claimable", ClaimTokenSHA256: strings.Repeat("a", 64)},
+		BindingRuntimeID:   "runtime",
+		CanonicalCWD:       true,
+		ModeOrca:           true,
+		BindingPresent:     true,
+		PendingAbsent:      true,
+		Inventory:          ResumeInventory{RuntimeID: "runtime"},
+	}
+	for _, test := range []struct {
+		name string
+		edit func(*ResumeRequest)
+		deny DenyCode
+		want string
+	}{
+		{"direct mode", func(r *ResumeRequest) { r.ModeOrca = false }, DenyResumeLease, "existing Orca binding"},
+		{"missing binding", func(r *ResumeRequest) { r.BindingPresent = false }, DenyResumeLease, "existing Orca binding"},
+		{"pending intent", func(r *ResumeRequest) { r.PendingAbsent = false }, DenyResumeLease, "pending external intent"},
+		{"generation mismatch", func(r *ResumeRequest) { r.ExpectedGeneration = 2 }, DenyResumeLease, "holderless claimable lease"},
+		{"active lease", func(r *ResumeRequest) { r.Lease.Status = "active" }, DenyResumeLease, "holderless claimable lease"},
+		{"lease with holder", func(r *ResumeRequest) { r.Lease.Holder = &Actor{Host: "omp", SessionID: "s"} }, DenyResumeLease, "holderless claimable lease"},
+		{"blank claim token hash", func(r *ResumeRequest) { r.Lease.ClaimTokenSHA256 = "  " }, DenyResumeLease, "holderless claimable lease"},
+		{"non-canonical cwd", func(r *ResumeRequest) { r.CanonicalCWD = false }, DenyCanonicalCWD, "canonical worktree"},
+		{"mode precedes pending intent", func(r *ResumeRequest) { r.ModeOrca = false; r.PendingAbsent = false }, DenyResumeLease, "existing Orca binding"},
+		{"pending intent precedes lease", func(r *ResumeRequest) { r.PendingAbsent = false; r.Lease.Status = "active" }, DenyResumeLease, "pending external intent"},
+		{"lease precedes cwd", func(r *ResumeRequest) { r.Lease.Status = "active"; r.CanonicalCWD = false }, DenyResumeLease, "holderless claimable lease"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			request := base
+			test.edit(&request)
+			plan, err := PlanResume(request)
+			if DenyCodeOf(err) != test.deny || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("err=%v code=%q, want code %q containing %q", err, DenyCodeOf(err), test.deny, test.want)
+			}
+			if plan != (ResumePlan{}) {
+				t.Fatalf("denied resume must return the zero plan, got %#v", plan)
+			}
+		})
+	}
+}

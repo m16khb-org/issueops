@@ -321,29 +321,15 @@ func (s *Service) Start(ctx context.Context) (mcpservice.Status, error) {
 		if observed.holder != 0 {
 			return observed.status, observed.err
 		}
-		if err := os.Remove(s.recordPath()); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		if err := s.removeStaleRecord(); err != nil {
 			return s.fail(observed.status, CodeStateUnreadable, err)
 		}
 	case mcpservice.StatusStopped:
 	default:
 		return observed.status, observed.err
 	}
-	if _, err := s.Prepare(ctx); err != nil {
-		code := CodeCredentialFailed
-		if errors.Is(err, errUnitPathNotSearched) {
-			code = CodeSupervisorFailed
-		}
-		return s.fail(s.result(mcpservice.StatusStopped, 0, "", ""), code, err)
-	}
-	if loaded, _, err := s.supervisor.supervised(ctx); err != nil {
-		return s.fail(s.result(mcpservice.StatusStopped, 0, "", ""), CodeSupervisorFailed, err)
-	} else if loaded {
-		if err := s.supervisor.unload(ctx); err != nil {
-			return s.fail(s.result(mcpservice.StatusStopped, 0, "", ""), CodeSupervisorFailed, fmt.Errorf("unload idle mcp service job: %w", err))
-		}
-	}
-	if err := s.supervisor.load(ctx); err != nil {
-		return s.fail(s.result(mcpservice.StatusStopped, 0, "", ""), CodeSupervisorFailed, fmt.Errorf("load mcp service job: %w", err))
+	if status, err := s.loadFreshJob(ctx); err != nil {
+		return status, err
 	}
 	status, err := s.awaitRunning(ctx, want)
 	if err != nil {
@@ -380,7 +366,7 @@ func (s *Service) Stop(ctx context.Context) (mcpservice.Status, error) {
 		if observed.holder != 0 {
 			return observed.status, observed.err
 		}
-		if err := os.Remove(s.recordPath()); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		if err := s.removeStaleRecord(); err != nil {
 			return s.fail(observed.status, CodeStateUnreadable, err)
 		}
 		return s.unloadIdle(ctx, s.result(mcpservice.StatusStopped, 0, "", ""))
@@ -398,24 +384,62 @@ func (s *Service) Stop(ctx context.Context) (mcpservice.Status, error) {
 	if err := s.supervisor.unload(ctx); err != nil {
 		return s.fail(observed.status, CodeSupervisorFailed, fmt.Errorf("unload mcp service job: %w", err))
 	}
-	deadline, cancel := context.WithTimeout(ctx, s.cfg.StopTimeout)
-	defer cancel()
-	for {
-		holder, err := s.cfg.LockHolder(s.lockPath())
-		if err != nil {
-			return s.fail(observed.status, CodeStateUnreadable, err)
-		}
-		if holder == 0 {
-			break
-		}
-		if err := s.cfg.Wait(deadline, s.cfg.PollInterval); err != nil {
-			return s.fail(observed.status, CodeStopTimeout, fmt.Errorf("mcp http instance %d still holds the service lock: %w", holder, err))
-		}
+	if status, err := s.awaitLockReleased(ctx, observed.status); err != nil {
+		return status, err
 	}
 	if record, err := readRecord(s.recordPath()); err == nil && record.PID == observed.status.PID {
 		_ = os.Remove(s.recordPath())
 	}
 	return s.result(mcpservice.StatusStopped, 0, "", ""), nil
+}
+
+// awaitLockReleased는 StopTimeout 안에서 서비스 락 보유자가 사라질 때까지 기다린다.
+func (s *Service) awaitLockReleased(ctx context.Context, observed mcpservice.Status) (mcpservice.Status, error) {
+	deadline, cancel := context.WithTimeout(ctx, s.cfg.StopTimeout)
+	defer cancel()
+	for {
+		holder, err := s.cfg.LockHolder(s.lockPath())
+		if err != nil {
+			return s.fail(observed, CodeStateUnreadable, err)
+		}
+		if holder == 0 {
+			return observed, nil
+		}
+		if err := s.cfg.Wait(deadline, s.cfg.PollInterval); err != nil {
+			return s.fail(observed, CodeStopTimeout, fmt.Errorf("mcp http instance %d still holds the service lock: %w", holder, err))
+		}
+	}
+}
+
+// removeStaleRecord는 stale 레코드 파일을 지우며 이미 없는 경우는 무시한다.
+func (s *Service) removeStaleRecord() error {
+	if err := os.Remove(s.recordPath()); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	return nil
+}
+
+// loadFreshJob은 유닛을 준비하고 유휴 job을 내린 뒤 새로 load한다.
+func (s *Service) loadFreshJob(ctx context.Context) (mcpservice.Status, error) {
+	stopped := func() mcpservice.Status { return s.result(mcpservice.StatusStopped, 0, "", "") }
+	if _, err := s.Prepare(ctx); err != nil {
+		code := CodeCredentialFailed
+		if errors.Is(err, errUnitPathNotSearched) {
+			code = CodeSupervisorFailed
+		}
+		return s.fail(stopped(), code, err)
+	}
+	if loaded, _, err := s.supervisor.supervised(ctx); err != nil {
+		return s.fail(stopped(), CodeSupervisorFailed, err)
+	} else if loaded {
+		if err := s.supervisor.unload(ctx); err != nil {
+			return s.fail(stopped(), CodeSupervisorFailed, fmt.Errorf("unload idle mcp service job: %w", err))
+		}
+	}
+	if err := s.supervisor.load(ctx); err != nil {
+		return s.fail(stopped(), CodeSupervisorFailed, fmt.Errorf("load mcp service job: %w", err))
+	}
+	return mcpservice.Status{}, nil
 }
 
 func (s *Service) unloadIdle(ctx context.Context, status mcpservice.Status) (mcpservice.Status, error) {

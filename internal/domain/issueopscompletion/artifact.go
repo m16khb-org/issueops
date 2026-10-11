@@ -11,27 +11,11 @@ import (
 
 func ValidateArtifact(record completioncontract.RecordSnapshot, requestedURL string) error {
 	artifact := record.Artifact
-	if artifact == nil {
-		return fmt.Errorf("execution completion requires a durable verified remote artifact")
+	if err := validateArtifactVerified(record, artifact); err != nil {
+		return err
 	}
-	if strings.TrimSpace(artifact.VerifiedAt) == "" {
-		return fmt.Errorf("execution completion requires remote artifact verification")
-	}
-	baseBranch := strings.TrimSpace(record.BaseBranch)
-	if baseBranch == "" {
-		return fmt.Errorf("execution completion requires a prepared target branch")
-	}
-	if artifact.TargetBranch != baseBranch {
-		return fmt.Errorf("remote artifact target branch must match prepared base branch")
-	}
-	if artifact.Provider != "github" && artifact.Provider != "gitlab" {
-		return fmt.Errorf("remote artifact provider must be github or gitlab")
-	}
-	if (artifact.Provider == "github" && artifact.Kind != "pr") || (artifact.Provider == "gitlab" && artifact.Kind != "mr") {
-		return fmt.Errorf("remote artifact kind must match its provider")
-	}
-	if linkedProvider := recognizableIssueProvider(record.IssueURL); linkedProvider != "" && linkedProvider != artifact.Provider {
-		return fmt.Errorf("remote artifact provider must match linked issue provider")
+	if err := validateArtifactProvider(record, artifact); err != nil {
+		return err
 	}
 	if err := validateArtifactURL(artifact.URL, artifact.Provider, artifact.Kind); err != nil {
 		return err
@@ -45,6 +29,46 @@ func ValidateArtifact(record completioncontract.RecordSnapshot, requestedURL str
 	if artifactProjectKey(artifact.URL, artifact.Provider, artifact.Kind) != expectedProjectKey {
 		return fmt.Errorf("remote artifact url must match linked issue project")
 	}
+	if err := validateArtifactLabelsAndAssignees(artifact); err != nil {
+		return err
+	}
+	if artifact.URL != strings.TrimSpace(requestedURL) {
+		return fmt.Errorf("completion remote_artifact_url must match the durable verified artifact")
+	}
+	return nil
+}
+
+func validateArtifactVerified(record completioncontract.RecordSnapshot, artifact *completioncontract.RemoteArtifact) error {
+	if artifact == nil {
+		return fmt.Errorf("execution completion requires a durable verified remote artifact")
+	}
+	if strings.TrimSpace(artifact.VerifiedAt) == "" {
+		return fmt.Errorf("execution completion requires remote artifact verification")
+	}
+	baseBranch := strings.TrimSpace(record.BaseBranch)
+	if baseBranch == "" {
+		return fmt.Errorf("execution completion requires a prepared target branch")
+	}
+	if artifact.TargetBranch != baseBranch {
+		return fmt.Errorf("remote artifact target branch must match prepared base branch")
+	}
+	return nil
+}
+
+func validateArtifactProvider(record completioncontract.RecordSnapshot, artifact *completioncontract.RemoteArtifact) error {
+	if artifact.Provider != "github" && artifact.Provider != "gitlab" {
+		return fmt.Errorf("remote artifact provider must be github or gitlab")
+	}
+	if (artifact.Provider == "github" && artifact.Kind != "pr") || (artifact.Provider == "gitlab" && artifact.Kind != "mr") {
+		return fmt.Errorf("remote artifact kind must match its provider")
+	}
+	if linkedProvider := recognizableIssueProvider(record.IssueURL); linkedProvider != "" && linkedProvider != artifact.Provider {
+		return fmt.Errorf("remote artifact provider must match linked issue provider")
+	}
+	return nil
+}
+
+func validateArtifactLabelsAndAssignees(artifact *completioncontract.RemoteArtifact) error {
 	if !slices.Equal(canonicalValues(artifact.Labels), artifact.Labels) || len(artifact.Labels) == 0 {
 		return fmt.Errorf("remote artifact labels are not canonical")
 	}
@@ -56,9 +80,6 @@ func ValidateArtifact(record completioncontract.RecordSnapshot, requestedURL str
 		case "@me", "me", "self", "@self", "current_user", "current-user":
 			return fmt.Errorf("remote artifact assignee must be a verified provider user")
 		}
-	}
-	if artifact.URL != strings.TrimSpace(requestedURL) {
-		return fmt.Errorf("completion remote_artifact_url must match the durable verified artifact")
 	}
 	return nil
 }
@@ -84,7 +105,7 @@ func validateArtifactURL(raw, provider, kind string) error {
 		return fmt.Errorf("remote artifact url must be a canonical HTTPS URL")
 	}
 	parsed, err := url.Parse(raw)
-	if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" || parsed.String() != raw {
+	if err != nil || !isPlainHTTPSURL(parsed) || parsed.String() != raw {
 		return fmt.Errorf("remote artifact url must be a canonical HTTPS URL")
 	}
 	parts := splitPath(parsed.EscapedPath())
@@ -94,7 +115,7 @@ func validateArtifactURL(raw, provider, kind string) error {
 			return fmt.Errorf("remote artifact url must be a GitHub pull request URL")
 		}
 	case "gitlab:mr":
-		if strings.EqualFold(parsed.Hostname(), "github.com") || len(parts) < 5 || parts[len(parts)-3] != "-" || parts[len(parts)-2] != "merge_requests" || !decimal(parts[len(parts)-1]) {
+		if strings.EqualFold(parsed.Hostname(), "github.com") || !isGitLabKindPath(parts, "merge_requests") {
 			return fmt.Errorf("remote artifact url must be a GitLab merge request URL")
 		}
 	default:
@@ -103,30 +124,50 @@ func validateArtifactURL(raw, provider, kind string) error {
 	return nil
 }
 
+// isPlainHTTPSURL: https 스킴, 호스트 존재, userinfo/query/fragment 없음.
+func isPlainHTTPSURL(parsed *url.URL) bool {
+	return parsed.Scheme == "https" && parsed.Host != "" && parsed.User == nil && parsed.RawQuery == "" && parsed.Fragment == ""
+}
+
+// isGitLabKindPath: 경로가 .../-/<segment>/<number> 형태인지 검사한다 (len >= 5).
+func isGitLabKindPath(parts []string, segment string) bool {
+	return len(parts) >= 5 && parts[len(parts)-3] == "-" && parts[len(parts)-2] == segment && decimal(parts[len(parts)-1])
+}
+
 func artifactProjectKey(raw, provider, kind string) string {
 	parsed, err := url.Parse(strings.TrimSpace(raw))
-	if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+	if err != nil || !isPlainHTTPSURL(parsed) {
 		return ""
 	}
 	parts := splitPath(parsed.EscapedPath())
 	host := normalizedWebHost(parsed)
 	switch provider {
 	case "github":
-		if len(parts) != 4 || (kind == "issue" && parts[2] != "issues") || (kind == "pr" && parts[2] != "pull") || !decimal(parts[3]) {
-			return ""
-		}
-		return host + "/" + parts[0] + "/" + parts[1]
+		return githubProjectKey(host, parts, kind)
 	case "gitlab":
-		separator := slices.Index(parts, "-")
-		if separator < 2 || separator != len(parts)-3 || !decimal(parts[len(parts)-1]) ||
-			(kind == "issue" && parts[len(parts)-2] != "issues" && parts[len(parts)-2] != "work_items") ||
-			(kind == "mr" && parts[len(parts)-2] != "merge_requests") {
-			return ""
-		}
-		return host + "/" + strings.Join(parts[:separator], "/")
+		return gitlabProjectKey(host, parts, kind)
 	default:
 		return ""
 	}
+}
+
+func githubProjectKey(host string, parts []string, kind string) string {
+	if len(parts) != 4 || (kind == "issue" && parts[2] != "issues") || (kind == "pr" && parts[2] != "pull") || !decimal(parts[3]) {
+		return ""
+	}
+	return host + "/" + parts[0] + "/" + parts[1]
+}
+
+func gitlabProjectKey(host string, parts []string, kind string) string {
+	separator := slices.Index(parts, "-")
+	if separator < 2 || separator != len(parts)-3 || !decimal(parts[len(parts)-1]) {
+		return ""
+	}
+	segment := parts[len(parts)-2]
+	if (kind == "issue" && segment != "issues" && segment != "work_items") || (kind == "mr" && segment != "merge_requests") {
+		return ""
+	}
+	return host + "/" + strings.Join(parts[:separator], "/")
 }
 
 func normalizedWebHost(parsed *url.URL) string {

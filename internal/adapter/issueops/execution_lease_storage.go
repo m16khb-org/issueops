@@ -41,19 +41,7 @@ func (reader LeaseWorkspaceSnapshot) Snapshot(workspace issueops.Workspace) (str
 		// symlink나 파일이 그 경로를 차지한 것은 부재가 아니라 정체 불명이다.
 		return "", fmt.Errorf("canonical worktree must be a real directory")
 	}
-	top, err := reader.gitOutput(workspace.Root, "rev-parse", "--show-toplevel")
-	if err != nil || !samePath(top, workspace.Root) {
-		return "", fmt.Errorf("canonical worktree root does not match Git top-level")
-	}
-	branch, err := reader.gitOutput(workspace.Root, "branch", "--show-current")
-	if err != nil || branch != workspace.Branch {
-		return "", fmt.Errorf("canonical worktree branch mismatch")
-	}
-	head, err := reader.gitOutput(workspace.Root, "rev-parse", "HEAD")
-	if err != nil {
-		return "", err
-	}
-	commonDir, err := reader.gitOutput(workspace.Root, "rev-parse", "--git-common-dir")
+	identity, err := reader.workspaceGitIdentity(workspace)
 	if err != nil {
 		return "", err
 	}
@@ -68,47 +56,84 @@ func (reader LeaseWorkspaceSnapshot) Snapshot(workspace issueops.Workspace) (str
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return "", err
 	}
-	code, tracked, stderr := reader.GitCmdRaw(workspace.Root, "diff", "--binary", "--no-ext-diff", "--")
-	if code != 0 {
-		return "", fmt.Errorf("read tracked diff: %s", strings.TrimSpace(stderr))
+	tracked, staged, untracked, err := reader.workspaceDiffs(workspace.Root)
+	if err != nil {
+		return "", err
 	}
-	code, staged, stderr := reader.GitCmdRaw(workspace.Root, "diff", "--cached", "--binary", "--no-ext-diff", "--")
-	if code != 0 {
-		return "", fmt.Errorf("read staged diff: %s", strings.TrimSpace(stderr))
-	}
-	code, untrackedRaw, stderr := reader.GitCmdRaw(workspace.Root, "ls-files", "--others", "--exclude-standard", "-z")
-	if code != 0 {
-		return "", fmt.Errorf("list untracked files: %s", strings.TrimSpace(stderr))
-	}
-	untracked := strings.Split(strings.TrimSuffix(untrackedRaw, "\x00"), "\x00")
-	if len(untracked) == 1 && untracked[0] == "" {
-		untracked = nil
-	}
-	sort.Strings(untracked)
 	hash := sha256.New()
 	writeFingerprintPart(hash, workspace.Root)
-	writeFingerprintPart(hash, commonDir)
-	writeFingerprintPart(hash, branch)
-	writeFingerprintPart(hash, head)
+	writeFingerprintPart(hash, identity.commonDir)
+	writeFingerprintPart(hash, identity.branch)
+	writeFingerprintPart(hash, identity.head)
 	writeFingerprintBytes(hash, indexBytes)
 	writeFingerprintPart(hash, tracked)
 	writeFingerprintPart(hash, staged)
 	for _, relative := range untracked {
-		if filepath.IsAbs(relative) || strings.HasPrefix(filepath.Clean(relative), ".."+string(filepath.Separator)) {
-			return "", fmt.Errorf("unsafe untracked path %q", relative)
-		}
-		path := filepath.Join(workspace.Root, filepath.FromSlash(relative))
-		entry, err := os.Lstat(path)
-		if err != nil || entry.Mode()&os.ModeSymlink != 0 || !entry.Mode().IsRegular() {
-			return "", fmt.Errorf("untracked path must be a regular file: %s", relative)
-		}
-		writeFingerprintPart(hash, relative)
-		writeFingerprintPart(hash, entry.Mode().String())
-		if err := writeFingerprintFile(hash, path, entry); err != nil {
+		if err := writeUntrackedFingerprint(hash, workspace.Root, relative); err != nil {
 			return "", err
 		}
 	}
 	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+type workspaceGitIdentity struct{ branch, head, commonDir string }
+
+// workspaceGitIdentity는 top-level/branch를 검증하고 head·common-dir를 읽는다.
+func (reader LeaseWorkspaceSnapshot) workspaceGitIdentity(workspace issueops.Workspace) (workspaceGitIdentity, error) {
+	top, err := reader.gitOutput(workspace.Root, "rev-parse", "--show-toplevel")
+	if err != nil || !samePath(top, workspace.Root) {
+		return workspaceGitIdentity{}, fmt.Errorf("canonical worktree root does not match Git top-level")
+	}
+	branch, err := reader.gitOutput(workspace.Root, "branch", "--show-current")
+	if err != nil || branch != workspace.Branch {
+		return workspaceGitIdentity{}, fmt.Errorf("canonical worktree branch mismatch")
+	}
+	head, err := reader.gitOutput(workspace.Root, "rev-parse", "HEAD")
+	if err != nil {
+		return workspaceGitIdentity{}, err
+	}
+	commonDir, err := reader.gitOutput(workspace.Root, "rev-parse", "--git-common-dir")
+	if err != nil {
+		return workspaceGitIdentity{}, err
+	}
+	return workspaceGitIdentity{branch: branch, head: head, commonDir: commonDir}, nil
+}
+
+// workspaceDiffs는 tracked/staged diff와 정렬된 untracked 파일 목록을 읽는다.
+func (reader LeaseWorkspaceSnapshot) workspaceDiffs(root string) (tracked, staged string, untracked []string, err error) {
+	code, tracked, stderr := reader.GitCmdRaw(root, "diff", "--binary", "--no-ext-diff", "--")
+	if code != 0 {
+		return "", "", nil, fmt.Errorf("read tracked diff: %s", strings.TrimSpace(stderr))
+	}
+	code, staged, stderr = reader.GitCmdRaw(root, "diff", "--cached", "--binary", "--no-ext-diff", "--")
+	if code != 0 {
+		return "", "", nil, fmt.Errorf("read staged diff: %s", strings.TrimSpace(stderr))
+	}
+	code, untrackedRaw, stderr := reader.GitCmdRaw(root, "ls-files", "--others", "--exclude-standard", "-z")
+	if code != 0 {
+		return "", "", nil, fmt.Errorf("list untracked files: %s", strings.TrimSpace(stderr))
+	}
+	untracked = strings.Split(strings.TrimSuffix(untrackedRaw, "\x00"), "\x00")
+	if len(untracked) == 1 && untracked[0] == "" {
+		untracked = nil
+	}
+	sort.Strings(untracked)
+	return tracked, staged, untracked, nil
+}
+
+// writeUntrackedFingerprint는 안전한 일반 파일 하나를 fingerprint에 반영한다.
+func writeUntrackedFingerprint(hash fingerprintWriter, root, relative string) error {
+	if filepath.IsAbs(relative) || strings.HasPrefix(filepath.Clean(relative), ".."+string(filepath.Separator)) {
+		return fmt.Errorf("unsafe untracked path %q", relative)
+	}
+	path := filepath.Join(root, filepath.FromSlash(relative))
+	entry, err := os.Lstat(path)
+	if err != nil || entry.Mode()&os.ModeSymlink != 0 || !entry.Mode().IsRegular() {
+		return fmt.Errorf("untracked path must be a regular file: %s", relative)
+	}
+	writeFingerprintPart(hash, relative)
+	writeFingerprintPart(hash, entry.Mode().String())
+	return writeFingerprintFile(hash, path, entry)
 }
 
 func (reader LeaseWorkspaceSnapshot) gitOutput(root string, args ...string) (string, error) {

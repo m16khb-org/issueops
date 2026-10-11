@@ -5,6 +5,54 @@ import (
 	"strings"
 )
 
+// frameworkConfigFiles maps config file base names to the framework they imply.
+var frameworkConfigFiles = map[string]string{
+	"next.config.js":          "Next.js",
+	"next.config.mjs":         "Next.js",
+	"next.config.ts":          "Next.js",
+	"vite.config.js":          "Vite",
+	"vite.config.mjs":         "Vite",
+	"vite.config.ts":          "Vite",
+	"nuxt.config.js":          "Nuxt",
+	"nuxt.config.ts":          "Nuxt",
+	"astro.config.js":         "Astro",
+	"astro.config.mjs":        "Astro",
+	"astro.config.ts":         "Astro",
+	"nest-cli.json":           "NestJS",
+	"tauri.conf.json":         "Tauri",
+	"tauri.conf.json5":        "Tauri",
+	"electron-builder.yml":    "Electron",
+	"electron-builder.yaml":   "Electron",
+	"electron.vite.config.ts": "Electron",
+}
+
+// goModuleFrameworks lists Go module path fragments in match priority order:
+// the first fragment contained in a module wins.
+var goModuleFrameworks = []struct{ fragment, framework string }{
+	{"github.com/spf13/cobra", "Cobra"},
+	{"github.com/gin-gonic/gin", "Gin"},
+	{"github.com/go-chi/chi", "chi"},
+	{"github.com/labstack/echo", "Echo"},
+}
+
+// packageDependencyFrameworks maps package.json dependency names to frameworks.
+var packageDependencyFrameworks = map[string]string{
+	"react":           "React",
+	"next":            "Next.js",
+	"vite":            "Vite",
+	"vue":             "Vue",
+	"svelte":          "Svelte",
+	"@angular/core":   "Angular",
+	"express":         "Express",
+	"@nestjs/core":    "NestJS",
+	"fastify":         "Fastify",
+	"prisma":          "Prisma",
+	"@prisma/client":  "Prisma",
+	"electron":        "Electron",
+	"@tauri-apps/api": "Tauri",
+	"@tauri-apps/cli": "Tauri",
+}
+
 func Frameworks(root string, files []string, addEvidence func(string)) []string {
 	frameworks := []string{}
 	addFramework := func(name, evidence string) {
@@ -14,69 +62,36 @@ func Frameworks(root string, files []string, addEvidence func(string)) []string 
 		}
 	}
 	for _, rel := range files {
-		base := filepath.Base(rel)
-		switch base {
-		case "next.config.js", "next.config.mjs", "next.config.ts":
-			addFramework("Next.js", rel)
-		case "vite.config.js", "vite.config.mjs", "vite.config.ts":
-			addFramework("Vite", rel)
-		case "nuxt.config.js", "nuxt.config.ts":
-			addFramework("Nuxt", rel)
-		case "astro.config.js", "astro.config.mjs", "astro.config.ts":
-			addFramework("Astro", rel)
-		case "nest-cli.json":
-			addFramework("NestJS", rel)
-		case "tauri.conf.json", "tauri.conf.json5":
-			addFramework("Tauri", rel)
-		case "electron-builder.yml", "electron-builder.yaml", "electron.vite.config.ts":
-			addFramework("Electron", rel)
+		if name, ok := frameworkConfigFiles[filepath.Base(rel)]; ok {
+			addFramework(name, rel)
 		}
 		if rel == "go.mod" {
-			for _, mod := range readGoModules(root) {
-				switch {
-				case strings.Contains(mod, "github.com/spf13/cobra"):
-					addFramework("Cobra", "go.mod:github.com/spf13/cobra")
-				case strings.Contains(mod, "github.com/gin-gonic/gin"):
-					addFramework("Gin", "go.mod:github.com/gin-gonic/gin")
-				case strings.Contains(mod, "github.com/go-chi/chi"):
-					addFramework("chi", "go.mod:github.com/go-chi/chi")
-				case strings.Contains(mod, "github.com/labstack/echo"):
-					addFramework("Echo", "go.mod:github.com/labstack/echo")
-				}
-			}
+			addGoModuleFrameworks(readGoModules(root), addFramework)
 		}
 		if rel == "package.json" {
-			for dep := range readPackageDependencies(filepath.Join(root, rel)) {
-				switch dep {
-				case "react":
-					addFramework("React", "package.json:react")
-				case "next":
-					addFramework("Next.js", "package.json:next")
-				case "vite":
-					addFramework("Vite", "package.json:vite")
-				case "vue":
-					addFramework("Vue", "package.json:vue")
-				case "svelte":
-					addFramework("Svelte", "package.json:svelte")
-				case "@angular/core":
-					addFramework("Angular", "package.json:@angular/core")
-				case "express":
-					addFramework("Express", "package.json:express")
-				case "@nestjs/core":
-					addFramework("NestJS", "package.json:@nestjs/core")
-				case "fastify":
-					addFramework("Fastify", "package.json:fastify")
-				case "prisma", "@prisma/client":
-					addFramework("Prisma", "package.json:"+dep)
-				case "electron":
-					addFramework("Electron", "package.json:electron")
-				case "@tauri-apps/api", "@tauri-apps/cli":
-					addFramework("Tauri", "package.json:"+dep)
-				}
-			}
+			addPackageDependencyFrameworks(readPackageDependencies(filepath.Join(root, rel)), addFramework)
 		}
 	}
 	return frameworks
+}
+
+func addGoModuleFrameworks(mods []string, addFramework func(name, evidence string)) {
+	for _, mod := range mods {
+		for _, candidate := range goModuleFrameworks {
+			if strings.Contains(mod, candidate.fragment) {
+				addFramework(candidate.framework, "go.mod:"+candidate.fragment)
+				break
+			}
+		}
+	}
+}
+
+func addPackageDependencyFrameworks(deps map[string]bool, addFramework func(name, evidence string)) {
+	for dep := range deps {
+		if name, ok := packageDependencyFrameworks[dep]; ok {
+			addFramework(name, "package.json:"+dep)
+		}
+	}
 }
 
 func Monorepo(root string, files []string, addEvidence func(string)) bool {

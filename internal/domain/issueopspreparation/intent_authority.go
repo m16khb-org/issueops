@@ -36,9 +36,7 @@ func contractError(code, detail string) error {
 func validProvider(value string) bool { return value == "github" || value == "gitlab" }
 
 func ValidateIntentRecordAuthority(record preparationcontract.Record, intent preparationcontract.Intent) error {
-	if record.ID != intent.LifecycleID || record.Execution == nil || record.Execution.Pending == nil ||
-		record.Execution.Pending.OperationID != intent.OperationID || record.Execution.Pending.Marker != intent.Marker ||
-		record.Execution.Pending.Kind != PendingKind(intent.Stage) || record.Execution.Lease.Generation != intent.Generation {
+	if !pendingAuthorityMatches(record, intent) {
 		return fmt.Errorf("Orca intent authority changed before CAS")
 	}
 	switch intent.Purpose {
@@ -55,6 +53,12 @@ func ValidateIntentRecordAuthority(record preparationcontract.Record, intent pre
 		return fmt.Errorf("unsupported Orca intent purpose")
 	}
 	return nil
+}
+
+func pendingAuthorityMatches(record preparationcontract.Record, intent preparationcontract.Intent) bool {
+	return record.ID == intent.LifecycleID && record.Execution != nil && record.Execution.Pending != nil &&
+		record.Execution.Pending.OperationID == intent.OperationID && record.Execution.Pending.Marker == intent.Marker &&
+		record.Execution.Pending.Kind == PendingKind(intent.Stage) && record.Execution.Lease.Generation == intent.Generation
 }
 
 func PrepareIssueIdentity(recordIssueURL string, prepared *preparationcontract.IssueLinkEvidence) (preparationcontract.IssueIdentity, error) {

@@ -7,36 +7,64 @@ import (
 	issueopscontract "issueops/internal/contract/issueopsbenchmark"
 )
 
+// issueOpsCriticalFailureRule은 fixture의 critical failure 문구(소문자)에 marker가
+// 포함될 때 artifact가 그 실패 조건을 만족하는지 판정한다. rule 순서대로 평가하며
+// 하나라도 일치하면 해당 문구를 한 번만 보고한다.
+type issueOpsCriticalFailureRule struct {
+	marker    string
+	triggered func(ruleText string, artifact issueopscontract.IssueOpsBenchmarkArtifact) bool
+}
+
+var issueOpsCriticalFailureRules = []issueOpsCriticalFailureRule{
+	{"works in source repo", func(_ string, a issueopscontract.IssueOpsBenchmarkArtifact) bool { return !implementationInWorktree(a) }},
+	{"skips branch prompt", func(_ string, a issueopscontract.IssueOpsBenchmarkArtifact) bool {
+		return strings.TrimSpace(a.BranchName) == ""
+	}},
+	{"worker starts without context check", func(_ string, a issueopscontract.IssueOpsBenchmarkArtifact) bool {
+		return !workerPromptHasContextGate(a)
+	}},
+	{"unbounded code-reviewer", func(_ string, a issueopscontract.IssueOpsBenchmarkArtifact) bool { return !reviewPromptIsBounded(a) }},
+	{"removes dirty worktree", func(_ string, a issueopscontract.IssueOpsBenchmarkArtifact) bool {
+		return containsAllFold(a.WorktreeCleanup, "dirty", "remove")
+	}},
+	{"not written in korean", func(_ string, a issueopscontract.IssueOpsBenchmarkArtifact) bool {
+		return !containsHangul(a.IssueDraft) || !containsHangul(a.PRDraft)
+	}},
+	{"missing issue/pr guideline reference", func(_ string, a issueopscontract.IssueOpsBenchmarkArtifact) bool { return !hasIssueOpsGuidelineRef(a) }},
+	{"excessive emoji", func(_ string, a issueopscontract.IssueOpsBenchmarkArtifact) bool {
+		return hasExcessiveEmoji(a.IssueDraft + "\n" + a.PRDraft)
+	}},
+	{"domain contract", func(_ string, a issueopscontract.IssueOpsBenchmarkArtifact) bool {
+		return !issueOpsDomainContractEvidenceComplete(a)
+	}},
+	{"api doc", func(_ string, a issueopscontract.IssueOpsBenchmarkArtifact) bool {
+		return !issueOpsAPIDocGateEvidenceComplete(a)
+	}},
+	{"live evidence", func(_ string, a issueopscontract.IssueOpsBenchmarkArtifact) bool {
+		return !issueOpsLiveEvidenceMatrixComplete(a)
+	}},
+	{"review feedback", func(ruleText string, a issueopscontract.IssueOpsBenchmarkArtifact) bool {
+		return !strings.Contains(ruleText, "review-agent threads") && !issueOpsReviewFeedbackEvidenceComplete(a)
+	}},
+	{"completion hygiene", func(_ string, a issueopscontract.IssueOpsBenchmarkArtifact) bool {
+		return !issueOpsCompletionHygieneComplete(a)
+	}},
+}
+
+// issueOpsCriticalFailureTriggered는 소문자 rule 문구가 등록된 rule 중 하나라도 만족하는지 반환한다.
+func issueOpsCriticalFailureTriggered(ruleText string, artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+	for _, r := range issueOpsCriticalFailureRules {
+		if strings.Contains(ruleText, r.marker) && r.triggered(ruleText, artifact) {
+			return true
+		}
+	}
+	return false
+}
+
 func detectIssueOpsCriticalFailures(fixture issueopscontract.IssueOpsBenchmarkFixture, artifact issueopscontract.IssueOpsBenchmarkArtifact, routingComplete bool) []string {
 	var failures []string
 	for _, rule := range fixture.CriticalFailures {
-		ruleText := strings.ToLower(rule)
-		switch {
-		case strings.Contains(ruleText, "works in source repo") && !implementationInWorktree(artifact):
-			failures = append(failures, rule)
-		case strings.Contains(ruleText, "skips branch prompt") && strings.TrimSpace(artifact.BranchName) == "":
-			failures = append(failures, rule)
-		case strings.Contains(ruleText, "worker starts without context check") && !workerPromptHasContextGate(artifact):
-			failures = append(failures, rule)
-		case strings.Contains(ruleText, "unbounded code-reviewer") && !reviewPromptIsBounded(artifact):
-			failures = append(failures, rule)
-		case strings.Contains(ruleText, "removes dirty worktree") && containsAllFold(artifact.WorktreeCleanup, "dirty", "remove"):
-			failures = append(failures, rule)
-		case strings.Contains(ruleText, "not written in korean") && (!containsHangul(artifact.IssueDraft) || !containsHangul(artifact.PRDraft)):
-			failures = append(failures, rule)
-		case strings.Contains(ruleText, "missing issue/pr guideline reference") && !hasIssueOpsGuidelineRef(artifact):
-			failures = append(failures, rule)
-		case strings.Contains(ruleText, "excessive emoji") && hasExcessiveEmoji(artifact.IssueDraft+"\n"+artifact.PRDraft):
-			failures = append(failures, rule)
-		case strings.Contains(ruleText, "domain contract") && !issueOpsDomainContractEvidenceComplete(artifact):
-			failures = append(failures, rule)
-		case strings.Contains(ruleText, "api doc") && !issueOpsAPIDocGateEvidenceComplete(artifact):
-			failures = append(failures, rule)
-		case strings.Contains(ruleText, "live evidence") && !issueOpsLiveEvidenceMatrixComplete(artifact):
-			failures = append(failures, rule)
-		case strings.Contains(ruleText, "review feedback") && !strings.Contains(ruleText, "review-agent threads") && !issueOpsReviewFeedbackEvidenceComplete(artifact):
-			failures = append(failures, rule)
-		case strings.Contains(ruleText, "completion hygiene") && !issueOpsCompletionHygieneComplete(artifact):
+		if issueOpsCriticalFailureTriggered(strings.ToLower(rule), artifact) {
 			failures = append(failures, rule)
 		}
 	}

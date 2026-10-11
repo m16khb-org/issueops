@@ -47,32 +47,46 @@ func MeasurePipeCapacity() (int, error) {
 		select {
 		case n := <-progress:
 			total += n
-			if !idle.Stop() {
-				select {
-				case <-idle.C:
-				default:
-				}
-			}
-			idle.Reset(100 * time.Millisecond)
+			resetIdleTimer(idle)
 		case err := <-done:
-			if errors.Is(err, os.ErrClosed) || errors.Is(err, syscall.EPIPE) {
+			if isPipeClosedError(err) {
 				return total, nil
 			}
 			return total, err
 		case <-idle.C:
 			_ = r.Close()
 			_ = w.Close()
-			select {
-			case err := <-done:
-				if err != nil && !errors.Is(err, os.ErrClosed) && !errors.Is(err, syscall.EPIPE) {
-					return total, err
-				}
-			case <-time.After(time.Second):
-			}
-			return total, nil
+			return total, awaitWriterAfterClose(done)
 		}
 	}
 	return total, nil
+}
+
+func isPipeClosedError(err error) bool {
+	return errors.Is(err, os.ErrClosed) || errors.Is(err, syscall.EPIPE)
+}
+
+func resetIdleTimer(idle *time.Timer) {
+	if !idle.Stop() {
+		select {
+		case <-idle.C:
+		default:
+		}
+	}
+	idle.Reset(100 * time.Millisecond)
+}
+
+// awaitWriterAfterClose waits up to a second for the writer goroutine to report
+// after the pipe ends were closed; a benign close error is not a failure.
+func awaitWriterAfterClose(done <-chan error) error {
+	select {
+	case err := <-done:
+		if err != nil && !isPipeClosedError(err) {
+			return err
+		}
+	case <-time.After(time.Second):
+	}
+	return nil
 }
 
 type mcpGatewayEndpoint struct {

@@ -165,6 +165,18 @@ func removeReseedRuntimeFile(root, path string) error {
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return fmt.Errorf("reseed artifact path escapes the canonical worktree")
 	}
+	if err := requireReseedRealRoot(canonicalRoot); err != nil {
+		return err
+	}
+	parentsExist, err := reseedParentsAreRealDirs(canonicalRoot, rel)
+	if err != nil || !parentsExist {
+		return err
+	}
+	return removeReseedRegularFile(target)
+}
+
+// requireReseedRealRoot는 root가 symlink가 아닌 실제 디렉터리인지 확인한다.
+func requireReseedRealRoot(canonicalRoot string) error {
 	rootInfo, err := os.Lstat(canonicalRoot)
 	if err != nil {
 		return err
@@ -172,6 +184,12 @@ func removeReseedRuntimeFile(root, path string) error {
 	if rootInfo.Mode()&os.ModeSymlink != 0 || !rootInfo.IsDir() {
 		return fmt.Errorf("reseed artifact directory must contain only real directories")
 	}
+	return nil
+}
+
+// reseedParentsAreRealDirs는 rel의 마지막 요소를 제외한 모든 상위 경로가 실제
+// 디렉터리인지 확인한다. 상위 경로가 없으면 (false, nil)을 돌려준다.
+func reseedParentsAreRealDirs(canonicalRoot, rel string) (bool, error) {
 	current := canonicalRoot
 	parts := strings.Split(rel, string(filepath.Separator))
 	for index, part := range parts {
@@ -184,15 +202,20 @@ func removeReseedRuntimeFile(root, path string) error {
 		}
 		info, err := os.Lstat(current)
 		if errors.Is(err, fs.ErrNotExist) {
-			return nil
+			return false, nil
 		}
 		if err != nil {
-			return err
+			return false, err
 		}
 		if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
-			return fmt.Errorf("reseed artifact directory must contain only real directories")
+			return false, fmt.Errorf("reseed artifact directory must contain only real directories")
 		}
 	}
+	return true, nil
+}
+
+// removeReseedRegularFile은 target이 일반 파일일 때만 지우고, 없으면 무시한다.
+func removeReseedRegularFile(target string) error {
 	info, err := os.Lstat(target)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil
@@ -226,6 +249,12 @@ func reseedMkdirAll(root, target string) error {
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return fmt.Errorf("reseed artifact directory escapes the canonical worktree")
 	}
+	return reseedMkdirWalk(root, rel)
+}
+
+// reseedMkdirWalk는 root에서 rel의 각 구성요소를 따라 내려가며 없는 디렉터리만 0700으로 만들고,
+// 이미 있는 구성요소는 symlink가 아닌 실제 디렉터리인지 확인한다.
+func reseedMkdirWalk(root, rel string) error {
 	current := root
 	for _, part := range strings.Split(rel, string(filepath.Separator)) {
 		if part == "" || part == "." {

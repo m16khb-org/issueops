@@ -286,6 +286,10 @@ func ValidateExecutionOrcaDeliveryReceipt(receipt ExecutionOrcaIntentReceipt, ex
 	if err := ValidateOrcaDurableRequestID(receipt.RequestID, expected.DispatchRequestID); err != nil {
 		return err
 	}
+	return validateOrcaDeliveryHostReceipt(receipt, expected)
+}
+
+func validateOrcaDeliveryHostReceipt(receipt ExecutionOrcaIntentReceipt, expected OrcaDeliveryReceiptExpectation) error {
 	switch strings.TrimSpace(expected.Host) {
 	case "codex", "claude", "omp":
 		if receipt.PromptReceipt != nil {
@@ -295,9 +299,7 @@ func ValidateExecutionOrcaDeliveryReceipt(receipt ExecutionOrcaIntentReceipt, ex
 		if receipt.PromptReceipt == nil {
 			return fmt.Errorf("Orca Omo delivery is missing its prompt receipt")
 		}
-		if err := ValidateOrcaPromptReceipt(*receipt.PromptReceipt, expected.PromptRequestID, expected.PromptProcessIncarnation); err != nil {
-			return err
-		}
+		return ValidateOrcaPromptReceipt(*receipt.PromptReceipt, expected.PromptRequestID, expected.PromptProcessIncarnation)
 	default:
 		return fmt.Errorf("Orca delivery receipt host is invalid")
 	}

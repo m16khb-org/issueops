@@ -38,26 +38,9 @@ func sealedArtifactPath(record issueops.IssueOpsRecord, root, name string) strin
 }
 
 func readLinkedPlanIdentity(record issueops.IssueOpsRecord) (issueops.OwnerPlanIdentity, error) {
-	worktree := strings.TrimSpace(record.WorktreePath)
-	planPath := strings.TrimSpace(record.PlanPath)
-	if worktree == "" || planPath == "" || strings.Contains(worktree, "\x00") || strings.Contains(planPath, "\x00") {
-		return issueops.OwnerPlanIdentity{}, fmt.Errorf("durable plan path is unavailable")
-	}
-	if !filepath.IsAbs(planPath) {
-		planPath = filepath.Join(worktree, planPath)
-	}
-	worktree, err := filepath.Abs(worktree)
+	planPath, err := resolveLinkedPlanPath(record)
 	if err != nil {
 		return issueops.OwnerPlanIdentity{}, err
-	}
-	planPath, err = filepath.Abs(planPath)
-	if err != nil {
-		return issueops.OwnerPlanIdentity{}, err
-	}
-	worktree, planPath = filepath.Clean(worktree), filepath.Clean(planPath)
-	worktreeInfo, err := os.Stat(worktree)
-	if err != nil || !worktreeInfo.IsDir() || !readinesspaths.PlanPathInsideWorktree(worktree, planPath) {
-		return issueops.OwnerPlanIdentity{}, fmt.Errorf("durable plan path is outside the canonical worktree")
 	}
 	info, err := os.Lstat(planPath)
 	if err != nil || !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
@@ -68,6 +51,32 @@ func readLinkedPlanIdentity(record issueops.IssueOpsRecord) (issueops.OwnerPlanI
 		return issueops.OwnerPlanIdentity{}, fmt.Errorf("durable plan is empty or unreadable")
 	}
 	return issueops.OwnerPlanIdentity{Path: planPath, Digest: digestExecutionOwnerBytes(content)}, nil
+}
+
+// resolveLinkedPlanPath는 기록된 plan 경로를 절대·정규화하고 캐노니컬 워크트리 안에 있는지 확인한다.
+func resolveLinkedPlanPath(record issueops.IssueOpsRecord) (string, error) {
+	worktree := strings.TrimSpace(record.WorktreePath)
+	planPath := strings.TrimSpace(record.PlanPath)
+	if worktree == "" || planPath == "" || strings.Contains(worktree, "\x00") || strings.Contains(planPath, "\x00") {
+		return "", fmt.Errorf("durable plan path is unavailable")
+	}
+	if !filepath.IsAbs(planPath) {
+		planPath = filepath.Join(worktree, planPath)
+	}
+	worktree, err := filepath.Abs(worktree)
+	if err != nil {
+		return "", err
+	}
+	planPath, err = filepath.Abs(planPath)
+	if err != nil {
+		return "", err
+	}
+	worktree, planPath = filepath.Clean(worktree), filepath.Clean(planPath)
+	worktreeInfo, err := os.Stat(worktree)
+	if err != nil || !worktreeInfo.IsDir() || !readinesspaths.PlanPathInsideWorktree(worktree, planPath) {
+		return "", fmt.Errorf("durable plan path is outside the canonical worktree")
+	}
+	return planPath, nil
 }
 
 func readStagedArtifacts(stateRoot, id string) (map[string]string, error) {

@@ -48,24 +48,33 @@ func requirePrivateRegularFile(root, path string, maxSize int64) error {
 	if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return fmt.Errorf("claim token file must be inside the canonical worktree")
 	}
+	parts := strings.Split(rel, string(filepath.Separator))
+	last := len(parts) - 1
 	current := root
-	for index, part := range strings.Split(rel, string(filepath.Separator)) {
+	for index, part := range parts {
 		current = filepath.Join(current, part)
 		info, statErr := os.Lstat(current)
 		if statErr != nil || info.Mode()&os.ModeSymlink != 0 {
 			return fmt.Errorf("claim token file must be a 0600 regular file")
 		}
-		if index < len(strings.Split(rel, string(filepath.Separator)))-1 && !info.IsDir() {
-			return fmt.Errorf("claim token file must be a 0600 regular file")
-		}
-		if index == len(strings.Split(rel, string(filepath.Separator)))-1 {
-			if !info.Mode().IsRegular() || info.Mode().Perm() != 0o600 {
+		if index < last {
+			if !info.IsDir() {
 				return fmt.Errorf("claim token file must be a 0600 regular file")
 			}
-			if info.Size() > maxSize {
-				return fmt.Errorf("claim token file is oversized")
-			}
+			continue
 		}
+		return requirePrivateTokenLeaf(info, maxSize)
+	}
+	return nil
+}
+
+// requirePrivateTokenLeaf는 경로의 마지막 구성요소가 크기 제한 안의 0600 일반 파일인지 확인한다.
+func requirePrivateTokenLeaf(info os.FileInfo, maxSize int64) error {
+	if !info.Mode().IsRegular() || info.Mode().Perm() != 0o600 {
+		return fmt.Errorf("claim token file must be a 0600 regular file")
+	}
+	if info.Size() > maxSize {
+		return fmt.Errorf("claim token file is oversized")
 	}
 	return nil
 }

@@ -136,28 +136,9 @@ func scanHandoffDeliveryAudit(file *os.File, lifecycleID, lineageID string, acce
 		if err := json.Unmarshal(line, &record); err != nil {
 			return err
 		}
-		if !record.OK || record.Kind != "handoff_delivery_observation" || record.SchemaVersion != 1 {
+		if invalid := validateHandoffDeliveryAuditRecord(record); invalid != nil {
 			if handoffDeliveryAuditErrorAffects(record, lifecycleID, lineageID) {
-				return errors.New("handoff delivery audit record has invalid kind")
-			}
-			continue
-		}
-		if record.RecordDigest == "" || record.RecordDigest != handoffDeliveryRecordDigest(record) {
-			if handoffDeliveryAuditErrorAffects(record, lifecycleID, lineageID) {
-				return errors.New("handoff delivery audit record digest mismatch")
-			}
-			continue
-		}
-		if record.Observation.Receipt.Location != "audit/handoff-delivery.jsonl#audit_log_id="+record.AuditLogID ||
-			record.Observation.Receipt.Digest != handoffDeliveryReceiptDigest(record.AuditLogID, record.Observation) {
-			if handoffDeliveryAuditErrorAffects(record, lifecycleID, lineageID) {
-				return errors.New("handoff delivery audit receipt mismatch")
-			}
-			continue
-		}
-		if err := issueopsdomain.ValidateHandoffDeliveryObservation(record.Observation); err != nil {
-			if handoffDeliveryAuditErrorAffects(record, lifecycleID, lineageID) {
-				return err
+				return invalid
 			}
 			continue
 		}
@@ -166,6 +147,21 @@ func scanHandoffDeliveryAudit(file *os.File, lifecycleID, lineageID string, acce
 		}
 		accept(record.Observation)
 	}
+}
+
+// validateHandoffDeliveryAuditRecord returns the first integrity failure of a decoded audit record, or nil when it is valid.
+func validateHandoffDeliveryAuditRecord(record auditcontract.HandoffDeliveryAuditRecord) error {
+	if !record.OK || record.Kind != "handoff_delivery_observation" || record.SchemaVersion != 1 {
+		return errors.New("handoff delivery audit record has invalid kind")
+	}
+	if record.RecordDigest == "" || record.RecordDigest != handoffDeliveryRecordDigest(record) {
+		return errors.New("handoff delivery audit record digest mismatch")
+	}
+	if record.Observation.Receipt.Location != "audit/handoff-delivery.jsonl#audit_log_id="+record.AuditLogID ||
+		record.Observation.Receipt.Digest != handoffDeliveryReceiptDigest(record.AuditLogID, record.Observation) {
+		return errors.New("handoff delivery audit receipt mismatch")
+	}
+	return issueopsdomain.ValidateHandoffDeliveryObservation(record.Observation)
 }
 
 func handoffDeliveryAuditErrorAffects(record auditcontract.HandoffDeliveryAuditRecord, lifecycleID, lineageID string) bool {

@@ -11,23 +11,8 @@ import (
 // ValidateRecordInvariants checks relationships between fields of a persisted cycle.
 func ValidateRecordInvariants(record issueopscontract.IssueOpsRecord) error {
 	for _, op := range record.ChildCreateOperations {
-		if err := ValidateIssueCreateIntentInvariants(op.IssueOpsIssueCreateIntent); err != nil {
+		if err := validateChildCreateOperationInvariants(op); err != nil {
 			return err
-		}
-		project, err := childProjectAuthority(op.ParentURL, op.Provider)
-		if err != nil || project != op.ProjectAuthority {
-			return fmt.Errorf("child operation project mismatch")
-		}
-		if op.CanonicalURL != "" {
-			childProject, err := childProjectAuthority(op.CanonicalURL, op.Provider)
-			if err != nil || childProject != project || op.CanonicalURL == op.ParentURL {
-				return fmt.Errorf("child operation canonical project mismatch")
-			}
-		}
-		if op.Holder != nil {
-			if err := ValidateNativeActor(*op.Holder); err != nil {
-				return err
-			}
 		}
 	}
 	if record.Execution != nil {
@@ -36,18 +21,8 @@ func ValidateRecordInvariants(record issueopscontract.IssueOpsRecord) error {
 		}
 	}
 	if record.PlanPrep != nil {
-		for _, item := range []struct {
-			name  string
-			value issueopscontract.IssueOpsPlanPrepItem
-		}{
-			{name: "prior_decisions", value: record.PlanPrep.PriorDecisions},
-			{name: "related_issues", value: record.PlanPrep.RelatedIssues},
-			{name: "web_research", value: record.PlanPrep.WebResearch},
-			{name: "codebase_survey", value: record.PlanPrep.CodebaseSurvey},
-		} {
-			if err := validatePlanPrepItem(item.name, item.value); err != nil {
-				return err
-			}
+		if err := validatePlanPrepInvariants(*record.PlanPrep); err != nil {
+			return err
 		}
 	}
 	if record.IssueCreateIntent != nil {
@@ -59,6 +34,43 @@ func ValidateRecordInvariants(record issueopscontract.IssueOpsRecord) error {
 		record.IssueCreateIntent.Status == issueopscontract.IssueCreateIntentCompleted &&
 		strings.TrimSpace(record.IssueURL) != strings.TrimSpace(record.IssueCreateIntent.CanonicalURL) {
 		return fmt.Errorf("completed issue create intent canonical_url must match issue_url")
+	}
+	return nil
+}
+
+func validateChildCreateOperationInvariants(op issueopscontract.ChildCreateOperation) error {
+	if err := ValidateIssueCreateIntentInvariants(op.IssueOpsIssueCreateIntent); err != nil {
+		return err
+	}
+	project, err := childProjectAuthority(op.ParentURL, op.Provider)
+	if err != nil || project != op.ProjectAuthority {
+		return fmt.Errorf("child operation project mismatch")
+	}
+	if op.CanonicalURL != "" {
+		childProject, err := childProjectAuthority(op.CanonicalURL, op.Provider)
+		if err != nil || childProject != project || op.CanonicalURL == op.ParentURL {
+			return fmt.Errorf("child operation canonical project mismatch")
+		}
+	}
+	if op.Holder != nil {
+		return ValidateNativeActor(*op.Holder)
+	}
+	return nil
+}
+
+func validatePlanPrepInvariants(prep issueopscontract.IssueOpsPlanPrep) error {
+	for _, item := range []struct {
+		name  string
+		value issueopscontract.IssueOpsPlanPrepItem
+	}{
+		{name: "prior_decisions", value: prep.PriorDecisions},
+		{name: "related_issues", value: prep.RelatedIssues},
+		{name: "web_research", value: prep.WebResearch},
+		{name: "codebase_survey", value: prep.CodebaseSurvey},
+	} {
+		if err := validatePlanPrepItem(item.name, item.value); err != nil {
+			return err
+		}
 	}
 	return nil
 }

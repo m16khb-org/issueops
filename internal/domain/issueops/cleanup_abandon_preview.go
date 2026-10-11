@@ -23,7 +23,8 @@ type CleanupAbandonObservation struct {
 }
 
 func BuildCleanupAbandonPreview(record model.IssueOpsRecord, req model.CleanupAbandonRequest, inventory model.CleanupAbandonInventory, observed CleanupAbandonObservation) (model.CleanupAbandonInventory, model.CleanupAbandonResult) {
-	result := model.CleanupAbandonResult{
+	b := &cleanupAbandonPreviewBuilder{record: &record, req: &req, inventory: inventory, observed: &observed}
+	b.result = model.CleanupAbandonResult{
 		OK: true, ID: record.ID, Preview: !req.Apply, Reason: strings.TrimSpace(req.Reason),
 		RemoteBranchDeletion: "not_planned", Missing: []string{},
 		WorktreePath: inventory.WorktreeRoot, Branch: inventory.Branch,
@@ -35,80 +36,126 @@ func BuildCleanupAbandonPreview(record model.IssueOpsRecord, req model.CleanupAb
 		RemoteBranchOID: inventory.RemoteBranchOID, RemoteArtifactState: observed.RemoteArtifactState, IssueState: observed.IssueState,
 		RemoteEffects: observed.RemoteEffects,
 	}
-	missing := result.Missing
-	if err := ValidateCleanupAbandonReason(req.Reason); err != nil {
-		missing = append(missing, "reason_required")
-		result.ReasonError = err.Error()
+	b.missing = b.result.Missing
+	b.checkReason()
+	b.checkLeaseArtifactAndChildren()
+	b.checkWorktreeObservation()
+	b.checkBranchObservation()
+	b.checkFailureReceipt()
+	b.checkLocalResidue()
+	b.checkPendingIntentOrcaAndRemote()
+	b.result.Missing = b.missing
+	b.result.OK = len(b.missing) == 0
+	return b.inventory, b.result
+}
+
+// cleanupAbandonPreviewBuilder accumulates the missing-gate list in the order
+// the preview checks run; the order is part of the observable result.
+type cleanupAbandonPreviewBuilder struct {
+	record    *model.IssueOpsRecord
+	req       *model.CleanupAbandonRequest
+	inventory model.CleanupAbandonInventory
+	observed  *CleanupAbandonObservation
+	result    model.CleanupAbandonResult
+	missing   []string
+}
+
+func (b *cleanupAbandonPreviewBuilder) add(gate string) {
+	b.missing = append(b.missing, gate)
+}
+
+func (b *cleanupAbandonPreviewBuilder) checkReason() {
+	if err := ValidateCleanupAbandonReason(b.req.Reason); err != nil {
+		b.add("reason_required")
+		b.result.ReasonError = err.Error()
 	}
+}
+
+func (b *cleanupAbandonPreviewBuilder) checkLeaseArtifactAndChildren() {
 	// A done phase without merged evidence can still be abandoned. Writer and
 	// artifact evidence, rather than phase names, determine eligibility.
-	if record.Execution != nil && !observed.LeaseHolderless {
-		missing = append(missing, "lease_terminal")
+	if b.record.Execution != nil && !b.observed.LeaseHolderless {
+		b.add("lease_terminal")
 	}
-	if record.RemoteArtifact != nil && !req.ArtifactUnmerged {
-		missing = append(missing, "remote_artifact_unmerged")
+	if b.record.RemoteArtifact != nil && !b.req.ArtifactUnmerged {
+		b.add("remote_artifact_unmerged")
 	}
-	if unresolved := CleanupAbandonUnresolvedChildren(record, observed.ResolvedChildren); len(unresolved) > 0 {
-		missing = append(missing, "no_children")
-		result.UnresolvedChildren = unresolved
+	if unresolved := CleanupAbandonUnresolvedChildren(*b.record, b.observed.ResolvedChildren); len(unresolved) > 0 {
+		b.add("no_children")
+		b.result.UnresolvedChildren = unresolved
 	}
-	if observed.WorktreeIdentityConflict {
-		missing = append(missing, "worktree_identity_conflict")
+}
+
+func (b *cleanupAbandonPreviewBuilder) checkWorktreeObservation() {
+	if b.observed.WorktreeIdentityConflict {
+		b.add("worktree_identity_conflict")
 	}
-	if observed.WorktreeUnobservable {
-		missing = append(missing, "worktree_observable")
+	if b.observed.WorktreeUnobservable {
+		b.add("worktree_observable")
 	}
-	if inventory.WorktreePresent {
-		if !inventory.WorktreeCanonical {
-			missing = append(missing, "worktree_canonical")
-		}
-		if inventory.WorktreeBranch != inventory.Branch {
-			missing = append(missing, "worktree_branch_match")
-		}
-		if !observed.WorktreeHeadObservable {
-			missing = append(missing, "worktree_head")
-		}
-		if !inventory.WorktreeClean {
-			missing = append(missing, "worktree_clean")
-		}
-		missing = append(missing, observed.WorkspaceMissing...)
+	if !b.inventory.WorktreePresent {
+		return
 	}
-	if inventory.Branch != "" && !observed.BranchObservable {
-		missing = append(missing, "local_branch_observable")
-	}
-	if result.BranchPresent {
-		if !observed.RegistryObservable {
-			missing = append(missing, "worktree_registry_observable")
-		} else if observed.BranchCheckedOutElsewhere {
-			missing = append(missing, "branch_checked_out_elsewhere")
+	for _, check := range []struct {
+		failed bool
+		gate   string
+	}{
+		{!b.inventory.WorktreeCanonical, "worktree_canonical"},
+		{b.inventory.WorktreeBranch != b.inventory.Branch, "worktree_branch_match"},
+		{!b.observed.WorktreeHeadObservable, "worktree_head"},
+		{!b.inventory.WorktreeClean, "worktree_clean"},
+	} {
+		if check.failed {
+			b.add(check.gate)
 		}
 	}
-	receiptMatches := CleanupAbandonFailureInventoryMatches(record, inventory, observed.FailureEvidence)
-	if record.CleanupAbandonFailure != nil && !receiptMatches {
-		missing = append(missing, "cleanup_failure_inventory")
+	b.missing = append(b.missing, b.observed.WorkspaceMissing...)
+}
+
+func (b *cleanupAbandonPreviewBuilder) checkBranchObservation() {
+	if b.inventory.Branch != "" && !b.observed.BranchObservable {
+		b.add("local_branch_observable")
 	}
-	if receiptMatches && CleanupAbandonPartialBranchRetry(record, inventory, observed.FailureEvidence) {
-		inventory.WorktreeHead = record.CleanupAbandonFailure.WorktreeHead
-		result.WorktreeHead = inventory.WorktreeHead
+	if !b.result.BranchPresent {
+		return
 	}
-	if (inventory.WorktreePresent || result.BranchPresent) && record.Execution == nil && strings.TrimSpace(record.WorktreePath) == "" {
-		missing = append(missing, "local_residue_execution")
+	if !b.observed.RegistryObservable {
+		b.add("worktree_registry_observable")
+	} else if b.observed.BranchCheckedOutElsewhere {
+		b.add("branch_checked_out_elsewhere")
+	}
+}
+
+func (b *cleanupAbandonPreviewBuilder) checkFailureReceipt() {
+	receiptMatches := CleanupAbandonFailureInventoryMatches(*b.record, b.inventory, b.observed.FailureEvidence)
+	if b.record.CleanupAbandonFailure != nil && !receiptMatches {
+		b.add("cleanup_failure_inventory")
+	}
+	if receiptMatches && CleanupAbandonPartialBranchRetry(*b.record, b.inventory, b.observed.FailureEvidence) {
+		b.inventory.WorktreeHead = b.record.CleanupAbandonFailure.WorktreeHead
+		b.result.WorktreeHead = b.inventory.WorktreeHead
+	}
+}
+
+func (b *cleanupAbandonPreviewBuilder) checkLocalResidue() {
+	if (b.inventory.WorktreePresent || b.result.BranchPresent) && b.record.Execution == nil && strings.TrimSpace(b.record.WorktreePath) == "" {
+		b.add("local_residue_execution")
 	}
 	// Asymmetric residue is allowed; when both remain they must identify the
 	// same commit. The fingerprint binds the two observed resource axes.
-	if inventory.WorktreePresent && result.BranchPresent && inventory.WorktreeHead != inventory.BranchOID {
-		missing = append(missing, "local_branch_head")
+	if b.inventory.WorktreePresent && b.result.BranchPresent && b.inventory.WorktreeHead != b.inventory.BranchOID {
+		b.add("local_branch_head")
 	}
-	if observed.PendingIntentError != "" {
-		missing = append(missing, "pending_intent_safe")
-		result.PendingIntentError = observed.PendingIntentError
+}
+
+func (b *cleanupAbandonPreviewBuilder) checkPendingIntentOrcaAndRemote() {
+	if b.observed.PendingIntentError != "" {
+		b.add("pending_intent_safe")
+		b.result.PendingIntentError = b.observed.PendingIntentError
 	}
-	if observed.OrcaResidueError != "" {
-		missing = append(missing, "orca_resources_absent")
-		result.OrcaResidueError = observed.OrcaResidueError
+	if b.observed.OrcaResidueError != "" {
+		b.add("orca_resources_absent")
+		b.result.OrcaResidueError = b.observed.OrcaResidueError
 	}
-	missing = append(missing, observed.RemoteMissing...)
-	result.Missing = missing
-	result.OK = len(missing) == 0
-	return inventory, result
+	b.missing = append(b.missing, b.observed.RemoteMissing...)
 }

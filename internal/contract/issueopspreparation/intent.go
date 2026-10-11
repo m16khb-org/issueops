@@ -301,62 +301,110 @@ func validateIntent(intent Intent, operationID string) error {
 }
 
 func validateShape(intent Intent, operationID string) error {
-	purpose := intent.Purpose
-	if intent.SchemaVersion != leasecontract.SchemaVersion || intent.OperationID != operationID ||
-		intent.LifecycleID == "" || intent.Generation == 0 || intent.Marker == "" || intent.StartedAt == "" ||
-		intent.Workspace.LifecycleID != intent.LifecycleID || intent.Probe.Marker != intent.Marker ||
-		!samePath(intent.Probe.Repo, intent.Workspace.SourceRoot) || strings.TrimSpace(intent.Probe.Model) == "" ||
-		(intent.Probe.Host != "codex" && intent.Probe.Host != "claude" && intent.Probe.Host != "omo" && intent.Probe.Host != "omp") ||
-		(intent.InvocationState != InvocationNotInvoked && intent.InvocationState != InvocationUnknown) ||
-		intent.InvocationAttempts < 0 || intent.InvocationAttempts > MaxInvocationAttempts || !sha256Pattern().MatchString(intent.IssueBodySHA256) ||
-		(intent.OrcaRequestID != "" && !uuidPattern().MatchString(intent.OrcaRequestID)) ||
-		(intent.OrcaPromptRequestID != "" && !uuidPattern().MatchString(intent.OrcaPromptRequestID)) {
+	if !intentEnvelopeValid(intent, operationID) || !intentProbeValid(intent) || !intentInvocationValid(intent) {
 		return fmt.Errorf("Orca external intent payload is invalid")
 	}
-	switch purpose {
+	if err := validatePurposeShape(intent); err != nil {
+		return err
+	}
+	return validateStageShape(intent)
+}
+
+func intentEnvelopeValid(intent Intent, operationID string) bool {
+	return intent.SchemaVersion == leasecontract.SchemaVersion && intent.OperationID == operationID &&
+		intent.LifecycleID != "" && intent.Generation != 0 && intent.Marker != "" && intent.StartedAt != "" &&
+		intent.Workspace.LifecycleID == intent.LifecycleID
+}
+
+func intentProbeValid(intent Intent) bool {
+	host := intent.Probe.Host
+	return intent.Probe.Marker == intent.Marker &&
+		samePath(intent.Probe.Repo, intent.Workspace.SourceRoot) && strings.TrimSpace(intent.Probe.Model) != "" &&
+		(host == "codex" || host == "claude" || host == "omo" || host == "omp")
+}
+
+func intentInvocationValid(intent Intent) bool {
+	return (intent.InvocationState == InvocationNotInvoked || intent.InvocationState == InvocationUnknown) &&
+		intent.InvocationAttempts >= 0 && intent.InvocationAttempts <= MaxInvocationAttempts &&
+		sha256Pattern().MatchString(intent.IssueBodySHA256) &&
+		(intent.OrcaRequestID == "" || uuidPattern().MatchString(intent.OrcaRequestID)) &&
+		(intent.OrcaPromptRequestID == "" || uuidPattern().MatchString(intent.OrcaPromptRequestID))
+}
+
+func validatePurposeShape(intent Intent) error {
+	switch intent.Purpose {
 	case PurposePrepare:
 		if intent.Generation != 1 || intent.PriorBinding != nil || intent.ResumeLease != nil {
 			return fmt.Errorf("Orca prepare intent payload is invalid")
 		}
 	case PurposeResume:
-		if intent.Stage == IntentStageWorktree || intent.PriorBinding == nil || intent.ResumeLease == nil ||
-			intent.ResumeLease.Generation != intent.Generation || intent.ResumeLease.Status != "claimable" ||
-			intent.ResumeLease.Holder != nil || intent.ResumeLease.ClaimTokenSHA256 != intent.ClaimTokenSHA256 ||
-			!sha256Pattern().MatchString(intent.ResumeLease.ClaimTokenSHA256) {
+		if !resumeShapeValid(intent) {
 			return fmt.Errorf("Orca resume intent payload is invalid")
 		}
 	default:
 		return fmt.Errorf("unsupported Orca external intent purpose %q", intent.Purpose)
 	}
+	return nil
+}
+
+func resumeShapeValid(intent Intent) bool {
+	lease := intent.ResumeLease
+	if intent.Stage == IntentStageWorktree || intent.PriorBinding == nil || lease == nil {
+		return false
+	}
+	return lease.Generation == intent.Generation && lease.Status == "claimable" &&
+		lease.Holder == nil && lease.ClaimTokenSHA256 == intent.ClaimTokenSHA256 &&
+		sha256Pattern().MatchString(lease.ClaimTokenSHA256)
+}
+
+func validateStageShape(intent Intent) error {
 	switch intent.Stage {
 	case IntentStageWorktree:
 		if intent.Prepared != nil || intent.Launch != nil || intent.ClaimTokenSHA256 != "" || intent.TerminalPTYID != "" || intent.RunID != "" || intent.RunBound || intent.TaskID != "" {
 			return fmt.Errorf("Orca worktree intent payload contains later-stage receipts")
 		}
 	case IntentStageTerminal, IntentStageRun, IntentStageRunBind, IntentStageTask, IntentStageDispatch:
-		if intent.Prepared == nil || intent.Launch == nil || !sha256Pattern().MatchString(intent.ClaimTokenSHA256) ||
-			!sha256Pattern().MatchString(intent.Launch.PromptSHA256) || !sha256Pattern().MatchString(intent.Launch.ContextPacketSHA256) ||
-			strings.TrimSpace(intent.Launch.PromptPath) == "" || strings.TrimSpace(intent.Launch.ContextPacketPath) == "" ||
-			validateWorkspaceReceipt(intent.Workspace, *intent.Prepared) != nil {
+		if !ownerLaunchReceiptsValid(intent) {
 			return fmt.Errorf("Orca owner intent payload is missing sealed launch receipts")
 		}
-		if intent.Stage == IntentStageTerminal && (intent.TerminalPTYID != "" || intent.RunID != "" || intent.RunBound || intent.TaskID != "") {
-			return fmt.Errorf("Orca terminal intent payload contains later-stage receipts")
-		}
-		if intent.Stage == IntentStageRun && (intent.TerminalPTYID == "" || intent.RunID != "" || intent.RunBound || intent.TaskID != "") {
-			return fmt.Errorf("Orca Run intent payload is incomplete")
-		}
-		if intent.Stage == IntentStageRunBind && (intent.TerminalPTYID == "" || intent.RunID == "" || intent.RunBound || intent.TaskID != "") {
-			return fmt.Errorf("Orca Run bind intent payload is incomplete")
-		}
-		if intent.Stage == IntentStageTask && (intent.TerminalPTYID == "" || intent.RunID == "" || !intent.RunBound || intent.TaskID != "") {
-			return fmt.Errorf("Orca task intent payload is incomplete")
-		}
-		if intent.Stage == IntentStageDispatch && (intent.TerminalPTYID == "" || intent.RunID == "" || !intent.RunBound || intent.TaskID == "") {
-			return fmt.Errorf("Orca dispatch intent payload is incomplete")
-		}
+		return validateOwnerStageProgress(intent)
 	default:
 		return fmt.Errorf("unsupported Orca external intent stage %q", intent.Stage)
+	}
+	return nil
+}
+
+func ownerLaunchReceiptsValid(intent Intent) bool {
+	if intent.Prepared == nil || intent.Launch == nil || !sha256Pattern().MatchString(intent.ClaimTokenSHA256) {
+		return false
+	}
+	launch := intent.Launch
+	return sha256Pattern().MatchString(launch.PromptSHA256) && sha256Pattern().MatchString(launch.ContextPacketSHA256) &&
+		strings.TrimSpace(launch.PromptPath) != "" && strings.TrimSpace(launch.ContextPacketPath) != "" &&
+		validateWorkspaceReceipt(intent.Workspace, *intent.Prepared) == nil
+}
+
+type ownerStageProgress struct{ pty, run, bound, task bool }
+
+var ownerStageProgressRules = map[IntentStage]struct {
+	want    ownerStageProgress
+	message string
+}{
+	IntentStageTerminal: {ownerStageProgress{}, "Orca terminal intent payload contains later-stage receipts"},
+	IntentStageRun:      {ownerStageProgress{pty: true}, "Orca Run intent payload is incomplete"},
+	IntentStageRunBind:  {ownerStageProgress{pty: true, run: true}, "Orca Run bind intent payload is incomplete"},
+	IntentStageTask:     {ownerStageProgress{pty: true, run: true, bound: true}, "Orca task intent payload is incomplete"},
+	IntentStageDispatch: {ownerStageProgress{pty: true, run: true, bound: true, task: true}, "Orca dispatch intent payload is incomplete"},
+}
+
+func validateOwnerStageProgress(intent Intent) error {
+	rule, ok := ownerStageProgressRules[intent.Stage]
+	if !ok {
+		return nil
+	}
+	got := ownerStageProgress{pty: intent.TerminalPTYID != "", run: intent.RunID != "", bound: intent.RunBound, task: intent.TaskID != ""}
+	if got != rule.want {
+		return fmt.Errorf("%s", rule.message)
 	}
 	return nil
 }
@@ -437,25 +485,34 @@ func parseMarker(marker string) (MarkerIdentity, error) {
 		}
 		offset++
 	}
-	if identity.OperationID, err = markerField(fields[offset+1], "operation"); err != nil {
+	if err := parseMarkerTail(&identity, fields[offset+1:]); err != nil {
 		return MarkerIdentity{}, err
-	}
-	if identity.Provider, err = markerField(fields[offset+2], "provider"); err != nil {
-		return MarkerIdentity{}, err
-	}
-	rawIssue, err := markerField(fields[offset+3], "issue")
-	if err != nil {
-		return MarkerIdentity{}, err
-	}
-	identity.Issue, err = strconv.Atoi(rawIssue)
-	if err != nil {
-		return MarkerIdentity{}, invalidMarker()
 	}
 	rendered, err := renderMarker(identity)
 	if err != nil || rendered != marker {
 		return MarkerIdentity{}, invalidMarker()
 	}
 	return identity, nil
+}
+
+// parseMarkerTail은 operation/provider/issue 세 필드를 순서대로 읽는다.
+func parseMarkerTail(identity *MarkerIdentity, fields []string) error {
+	var err error
+	if identity.OperationID, err = markerField(fields[0], "operation"); err != nil {
+		return err
+	}
+	if identity.Provider, err = markerField(fields[1], "provider"); err != nil {
+		return err
+	}
+	rawIssue, err := markerField(fields[2], "issue")
+	if err != nil {
+		return err
+	}
+	identity.Issue, err = strconv.Atoi(rawIssue)
+	if err != nil {
+		return invalidMarker()
+	}
+	return nil
 }
 
 func markerField(field, name string) (string, error) {

@@ -10,79 +10,131 @@ import "strings"
 // next_command_kind=template이다. 알 수 없는 키는 추측하지 않고 status로 보낸다.
 func OwnerCommand(id, missingKey string) string {
 	key := strings.TrimSpace(missingKey)
+	for _, lookup := range ownerCommandLookups {
+		if command, ok := lookup(id, key); ok {
+			return command
+		}
+	}
+	return statusCommand(id)
+}
+
+// ownerCommandLookups는 위에서 아래로 본다. 접두사 군이 정확 일치 키보다 먼저다.
+var ownerCommandLookups = []func(id, key string) (string, bool){
+	prefixOwnerCommand,
+	intakeOwnerCommand,
+	planningOwnerCommand,
+	executionOwnerCommand,
+	reviewOwnerCommand,
+	publicationOwnerCommand,
+}
+
+// prefixOwnerCommand는 접두사로 묶이는 missing 키 군의 명령이다.
+func prefixOwnerCommand(id, key string) (string, bool) {
 	switch {
 	case strings.HasPrefix(key, "plan_prep_"):
 		return "issueops plan-prep record --id " + id +
-			" --decisions-evidence <TEXT> --related-score-ref <TEXT> --web-research-evidence <TEXT> --codebase-survey-evidence <TEXT>"
+			" --decisions-evidence <TEXT> --related-score-ref <TEXT> --web-research-evidence <TEXT> --codebase-survey-evidence <TEXT>", true
 	case strings.HasPrefix(key, "design_"):
-		return designReviewCommand(id)
+		return designReviewCommand(id), true
 	case strings.HasPrefix(key, "compatibility_"):
-		return compatibilityReviewCommand(id)
+		return compatibilityReviewCommand(id), true
 	case strings.HasPrefix(key, "ai_slop_clean_"):
-		return aiSlopCleanCommand(id)
+		return aiSlopCleanCommand(id), true
 	case strings.HasPrefix(key, "gates_incomplete:"):
-		return "issueops gates check --cwd <worktree> --workspace-root <worktree> --json"
+		return "issueops gates check --cwd <worktree> --workspace-root <worktree> --json", true
 	}
+	return "", false
+}
+
+// intakeOwnerCommand는 1단계(의도·도메인·분할·이슈·브랜치) 키의 명령이다.
+func intakeOwnerCommand(id, key string) (string, bool) {
 	switch key {
 	case "intent_contract", "raw_request", "interpreted_intent", "success_criteria":
 		return "issueops intent record --id " + id +
-			" --raw-request <TEXT> --interpreted-intent <TEXT> --success-criteria <TEXT>"
+			" --raw-request <TEXT> --interpreted-intent <TEXT> --success-criteria <TEXT>", true
 	case "domain_review":
-		return "issueops domain-review record --id " + id + " --model-fit <TEXT>"
+		return "issueops domain-review record --id " + id + " --model-fit <TEXT>", true
 	case "split_decision":
 		return "issueops decision add --id " + id +
-			" --kind scope --title <TEXT> --body <TEXT>"
+			" --kind scope --title <TEXT> --body <TEXT>", true
 	case "issue_url":
-		return "issueops link-issue --id " + id + " --issue-url <URL>"
+		return "issueops link-issue --id " + id + " --issue-url <URL>", true
 	case "branch", "branch_prepare":
 		return "issueops branch prepare --id " + id +
-			" --provider <github|gitlab> --issue-url <URL> --branch <NAME> --base-branch <REF> --base-sha <SHA> --link-verified"
+			" --provider <github|gitlab> --issue-url <URL> --branch <NAME> --base-branch <REF> --base-sha <SHA> --link-verified", true
+	}
+	return "", false
+}
+
+// planningOwnerCommand는 2~3단계(설계·호환성·반론·계획) 키의 명령이다.
+func planningOwnerCommand(id, key string) (string, bool) {
+	switch key {
 	case "design_review":
-		return designReviewCommand(id)
+		return designReviewCommand(id), true
 	case "compatibility_review":
-		return compatibilityReviewCommand(id)
+		return compatibilityReviewCommand(id), true
 	case "devils_advocate_review", "devils_advocate_review_stale":
 		return "issueops devils-advocate review --id " + id +
-			" --reviewer-context subagent --verdict <pass|revise|stop> --finding <TEXT>"
+			" --reviewer-context subagent --verdict <pass|revise|stop> --finding <TEXT>", true
 	case "plan_artifact":
-		return "issueops artifact stage --id " + id + " --name plan --file <PATH>"
+		return "issueops artifact stage --id " + id + " --name plan --file <PATH>", true
 	case "plan_path", "plan_exists", "plan_in_worktree":
-		return "issueops link-plan --id " + id + " --plan-path <PATH>"
+		return "issueops link-plan --id " + id + " --plan-path <PATH>", true
+	}
+	return "", false
+}
+
+// executionOwnerCommand는 실행 준비·상태·정리 증거 키의 명령이다.
+func executionOwnerCommand(id, key string) (string, bool) {
+	switch key {
 	case "worktree_path", "worktree_exists":
-		return "issueops execution prepare --id " + id + " --mode auto --owner-host <codex|claude|omo|omp> $ACTOR_FLAGS"
+		return "issueops execution prepare --id " + id + " --mode auto --owner-host <codex|claude|omo|omp> $ACTOR_FLAGS", true
 	case "execution", "execution_valid", "execution_worktree_match", "execution_write_lease":
-		return executionStatusCommand(id)
+		return executionStatusCommand(id), true
 	case "implementation_changes":
-		return statusCommand(id)
+		return statusCommand(id), true
 	case "cleanup_evidence", "verification_evidence", "current_fingerprint":
-		return aiSlopCleanCommand(id)
+		return aiSlopCleanCommand(id), true
+	}
+	return "", false
+}
+
+// reviewOwnerCommand는 검토·문서·스키마·피드백 증거 키의 명령이다.
+func reviewOwnerCommand(id, key string) (string, bool) {
+	switch key {
 	case "implementation_review", "implementation_review_stale":
 		return "issueops implementation-review record --id " + id +
-			" --verdict <pass|revise|stop> --finding <TEXT> --evidence <TEXT>"
+			" --verdict <pass|revise|stop> --finding <TEXT> --evidence <TEXT>", true
 	case "project_docs_review", "project_docs_review_stale":
 		return "issueops project-docs-review record --id " + id +
-			" --verdict <updated|no-change> --reviewed-doc <PATH> --evidence <TEXT>"
+			" --verdict <updated|no-change> --reviewed-doc <PATH> --evidence <TEXT>", true
 	case "schema_evidence", "schema_evidence_stale":
 		return "issueops schema-evidence record --id " + id +
-			" --measurement <TEXT> --source <TEXT>"
+			" --measurement <TEXT> --source <TEXT>", true
 	case "feedback_classification":
 		return "issueops feedback add --id " + id +
-			" --source <TEXT> --body <TEXT> --classification <TEXT>"
+			" --source <TEXT> --body <TEXT> --classification <TEXT>", true
 	case "feedback_resolution":
 		return "issueops feedback resolve --id " + id +
-			" --index <N> --resolution <valid-defect|question-answered|noise-dismissed>"
+			" --index <N> --resolution <valid-defect|question-answered|noise-dismissed>", true
 	case "contract_feedback_issue_update":
-		return "issueops feedback mark-issue-updated --id " + id
+		return "issueops feedback mark-issue-updated --id " + id, true
+	}
+	return "", false
+}
+
+// publicationOwnerCommand는 원격 산출물·자식·PR 준비 키의 명령이다.
+func publicationOwnerCommand(id, key string) (string, bool) {
+	switch key {
 	case "remote_artifact":
 		return "issueops remote verify-artifact --id " + id +
-			" --provider <github|gitlab> --kind <pr|mr> --url <URL> --target-branch <BRANCH> --label <LABEL> --assignee <USER>"
+			" --provider <github|gitlab> --kind <pr|mr> --url <URL> --target-branch <BRANCH> --label <LABEL> --assignee <USER>", true
 	case "child_incomplete", "child_unvalidated", "child_rejected_unresolved":
-		return "issueops child status --parent " + id + " --json"
+		return "issueops child status --parent " + id + " --json", true
 	case "worktree_clean", "upstream", "upstream_fetch", "upstream_synced", "branch_match":
-		return "issueops pr-readiness --id " + id + " --strict --json"
-	default:
-		return statusCommand(id)
+		return "issueops pr-readiness --id " + id + " --strict --json", true
 	}
+	return "", false
 }
 
 func designReviewCommand(id string) string {

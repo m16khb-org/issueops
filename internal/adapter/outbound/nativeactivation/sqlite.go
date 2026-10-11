@@ -156,49 +156,59 @@ func (backend Backend) Seal(ctx context.Context, request activationport.SealRequ
 			return err
 		}
 		if !ok {
-			receiptData, receiptOK, readErr := store.Get(storeBucket, receiptID)
-			if readErr != nil {
-				return readErr
-			}
-			if !receiptOK {
-				return fmt.Errorf("native activation pending record is missing")
-			}
-			receipt, decodeErr := decodeExact[receiptRecord](receiptData)
-			if decodeErr != nil || !sameReceipt(receipt, request, active) {
-				return fmt.Errorf("invalid native activation state")
-			}
-			result = sealedResult(receipt)
-			return nil
-		}
-		pending, err := decodeExact[pendingRecord](pendingData)
-		if err != nil || !samePending(pending, request, active) {
-			return fmt.Errorf("invalid native activation state")
-		}
-		if backend.now == nil {
-			return fmt.Errorf("native activation clock is unavailable")
-		}
-		sealedAt := backend.now().UTC().Format(time.RFC3339Nano)
-		receipt := receiptRecord{
-			SchemaVersion: activationdomain.RecordSchemaVersion, StateRoot: request.StateRoot, IssueOpsRoot: request.IssueOpsRoot,
-			TargetBinary: request.TargetBinary, Binary: active, CatalogSHA256: request.CatalogSHA256,
-			Evidence: append([]activationport.Evidence(nil), request.Evidence...), TransitionID: request.TransitionID, SealedAt: sealedAt,
-		}
-		data, err := json.Marshal(receipt)
-		if err != nil {
+			result, err = existingSealReceipt(store, request, active)
 			return err
 		}
-		if err := store.Apply(spanCtx, []port.RecordMutation{
-			{Bucket: storeBucket, ID: receiptID, Data: data},
-			{Bucket: storeBucket, ID: pendingID, Delete: true},
-		}); err != nil {
-			return err
-		}
-		result = sealedResult(receipt)
-		return nil
+		result, err = backend.sealPending(spanCtx, store, request, active, pendingData)
+		return err
 	}); err != nil {
 		return activationport.Result{}, err
 	}
 	return result, nil
+}
+
+// existingSealReceipt는 pending 기록이 없을 때 이미 봉인된 receipt가 요청과 일치하는지 확인한다.
+func existingSealReceipt(store port.TransactionalRecordStore, request activationport.SealRequest, active binaryIdentity) (activationport.Result, error) {
+	receiptData, receiptOK, readErr := store.Get(storeBucket, receiptID)
+	if readErr != nil {
+		return activationport.Result{}, readErr
+	}
+	if !receiptOK {
+		return activationport.Result{}, fmt.Errorf("native activation pending record is missing")
+	}
+	receipt, decodeErr := decodeExact[receiptRecord](receiptData)
+	if decodeErr != nil || !sameReceipt(receipt, request, active) {
+		return activationport.Result{}, fmt.Errorf("invalid native activation state")
+	}
+	return sealedResult(receipt), nil
+}
+
+// sealPending은 pending 기록을 검증한 뒤 receipt로 교체한다.
+func (backend Backend) sealPending(spanCtx context.Context, store port.TransactionalRecordStore, request activationport.SealRequest, active binaryIdentity, pendingData []byte) (activationport.Result, error) {
+	pending, err := decodeExact[pendingRecord](pendingData)
+	if err != nil || !samePending(pending, request, active) {
+		return activationport.Result{}, fmt.Errorf("invalid native activation state")
+	}
+	if backend.now == nil {
+		return activationport.Result{}, fmt.Errorf("native activation clock is unavailable")
+	}
+	sealedAt := backend.now().UTC().Format(time.RFC3339Nano)
+	receipt := receiptRecord{
+		SchemaVersion: activationdomain.RecordSchemaVersion, StateRoot: request.StateRoot, IssueOpsRoot: request.IssueOpsRoot,
+		TargetBinary: request.TargetBinary, Binary: active, CatalogSHA256: request.CatalogSHA256,
+		Evidence: append([]activationport.Evidence(nil), request.Evidence...), TransitionID: request.TransitionID, SealedAt: sealedAt,
+	}
+	data, err := json.Marshal(receipt)
+	if err != nil {
+		return activationport.Result{}, err
+	}
+	if err := store.Apply(spanCtx, []port.RecordMutation{
+		{Bucket: storeBucket, ID: receiptID, Data: data},
+		{Bucket: storeBucket, ID: pendingID, Delete: true},
+	}); err != nil {
+		return activationport.Result{}, err
+	}
+	return sealedResult(receipt), nil
 }
 
 func (backend Backend) Abort(ctx context.Context, request activationport.AbortRequest) (activationport.Result, error) {

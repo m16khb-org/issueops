@@ -18,23 +18,41 @@ func BuildInteractiveArgv(host, executable, model, effort, prompt string, extra 
 	executable = strings.TrimSpace(executable)
 	model = strings.TrimSpace(model)
 	effort = strings.ToLower(strings.TrimSpace(effort))
-	if !agentmodel.KnownHost(host) {
-		return nil, fmt.Errorf("unsupported native host %q", host)
-	}
-	if !filepath.IsAbs(executable) || filepath.Clean(executable) != executable || strings.ContainsAny(executable, "\x00\r\n") {
-		return nil, fmt.Errorf("native host executable must be an absolute literal path")
-	}
-	if !nativehost.ExecutableMatchesHost(host, executable) {
-		return nil, fmt.Errorf("native host executable does not match %s", host)
-	}
-	if model == "" || strings.HasPrefix(model, "-") || strings.ContainsAny(model, "\x00\r\n") {
-		return nil, fmt.Errorf("native host model is invalid")
-	}
-	if !agentmodel.SupportsEffort(host, effort) {
-		return nil, fmt.Errorf("native host effort %q is unsupported for %s", effort, host)
+	if err := validateInteractiveHost(host, executable, model, effort); err != nil {
+		return nil, err
 	}
 
 	argv := []string{executable, "--model", model}
+	argv = appendHostLaunchFlags(argv, host, effort)
+	if slices.ContainsFunc(extra, func(argument string) bool { return argument == "" || strings.ContainsRune(argument, 0) }) {
+		return nil, fmt.Errorf("native host launch argument is empty or contains NUL")
+	}
+	argv = append(argv, extra...)
+	return append(argv, "--", prompt), nil
+}
+
+func validateInteractiveHost(host, executable, model, effort string) error {
+	if !agentmodel.KnownHost(host) {
+		return fmt.Errorf("unsupported native host %q", host)
+	}
+	if !filepath.IsAbs(executable) || filepath.Clean(executable) != executable || strings.ContainsAny(executable, "\x00\r\n") {
+		return fmt.Errorf("native host executable must be an absolute literal path")
+	}
+	if !nativehost.ExecutableMatchesHost(host, executable) {
+		return fmt.Errorf("native host executable does not match %s", host)
+	}
+	if model == "" || strings.HasPrefix(model, "-") || strings.ContainsAny(model, "\x00\r\n") {
+		return fmt.Errorf("native host model is invalid")
+	}
+	if !agentmodel.SupportsEffort(host, effort) {
+		return fmt.Errorf("native host effort %q is unsupported for %s", effort, host)
+	}
+	return nil
+}
+
+// appendHostLaunchFlags adds the host-specific effort and permission flags.
+// argv must already hold {executable, "--model", model}; omo folds effort into the model.
+func appendHostLaunchFlags(argv []string, host, effort string) []string {
 	switch host {
 	case "codex":
 		if effort != "" {
@@ -57,9 +75,5 @@ func BuildInteractiveArgv(host, executable, model, effort, prompt string, extra 
 		}
 		argv = append(argv, "--auto-approve")
 	}
-	if slices.ContainsFunc(extra, func(argument string) bool { return argument == "" || strings.ContainsRune(argument, 0) }) {
-		return nil, fmt.Errorf("native host launch argument is empty or contains NUL")
-	}
-	argv = append(argv, extra...)
-	return append(argv, "--", prompt), nil
+	return argv
 }

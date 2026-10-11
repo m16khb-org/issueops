@@ -58,12 +58,19 @@ func (CommandExecutor) Execute(request policycontract.CommandPolicyRequest, time
 	}
 	_ = outWrite.Close()
 	_ = errWrite.Close()
+	return superviseCommand(ctx, cmd, outRead, errRead)
+}
+
+// superviseCommand drains both pipes while waiting for the process, enforcing
+// the context deadline by terminating the process group.
+func superviseCommand(ctx context.Context, cmd *exec.Cmd, outRead, errRead *os.File) policyapp.Execution {
 	var stdout, stderr boundedOutput
 	copied := make(chan struct{}, 2)
 	go func() { _, _ = io.Copy(&stdout, outRead); copied <- struct{}{} }()
 	go func() { _, _ = io.Copy(&stderr, errRead); copied <- struct{}{} }()
 	waited := make(chan error, 1)
 	go func() { waited <- cmd.Wait() }()
+	var err error
 	var processDone bool
 	streamsDone := 0
 	timedOut := false

@@ -72,20 +72,43 @@ type IssueOpsIssueCreateReconcileResult struct {
 }
 
 func ValidateIssueCreateIntent(intent IssueOpsIssueCreateIntent) error {
-	for field, value := range map[string]string{
-		"operation_id":      intent.OperationID,
-		"marker":            intent.Marker,
-		"provider":          intent.Provider,
-		"project_authority": intent.ProjectAuthority,
-		"title":             intent.Title,
-		"body_sha256":       intent.BodySHA256,
-		"started_at":        intent.StartedAt,
-		"updated_at":        intent.UpdatedAt,
+	if err := validateIssueCreateRequiredFields(intent); err != nil {
+		return err
+	}
+	if err := validateIssueCreateDigestsAndProvider(intent); err != nil {
+		return err
+	}
+	if err := validateIssueCreateFieldSizes(intent); err != nil {
+		return err
+	}
+	if err := validateIssueCreateValues("labels", intent.Labels); err != nil {
+		return err
+	}
+	if err := validateIssueCreateValues("assignees", intent.Assignees); err != nil {
+		return err
+	}
+	return validateIssueCreateMarkerAttemptStatus(intent)
+}
+
+func validateIssueCreateRequiredFields(intent IssueOpsIssueCreateIntent) error {
+	for _, field := range []struct{ name, value string }{
+		{"operation_id", intent.OperationID},
+		{"marker", intent.Marker},
+		{"provider", intent.Provider},
+		{"project_authority", intent.ProjectAuthority},
+		{"title", intent.Title},
+		{"body_sha256", intent.BodySHA256},
+		{"started_at", intent.StartedAt},
+		{"updated_at", intent.UpdatedAt},
 	} {
-		if strings.TrimSpace(value) == "" {
-			return fmt.Errorf("issue create intent %s is required", field)
+		if strings.TrimSpace(field.value) == "" {
+			return fmt.Errorf("issue create intent %s is required", field.name)
 		}
 	}
+	return nil
+}
+
+func validateIssueCreateDigestsAndProvider(intent IssueOpsIssueCreateIntent) error {
 	if len(intent.BodySHA256) != 64 {
 		return fmt.Errorf("issue create intent body_sha256 must be 64 hex characters")
 	}
@@ -105,6 +128,10 @@ func ValidateIssueCreateIntent(intent IssueOpsIssueCreateIntent) error {
 	if intent.Provider != "github" && intent.Provider != "gitlab" {
 		return fmt.Errorf("issue create intent provider is invalid")
 	}
+	return nil
+}
+
+func validateIssueCreateFieldSizes(intent IssueOpsIssueCreateIntent) error {
 	if len(intent.ProjectAuthority) > MaxIssueCreateAuthorityBytes {
 		return fmt.Errorf("issue create intent project_authority exceeds %d bytes", MaxIssueCreateAuthorityBytes)
 	}
@@ -120,12 +147,10 @@ func ValidateIssueCreateIntent(intent IssueOpsIssueCreateIntent) error {
 	if len(intent.StartedAt) > 64 || len(intent.UpdatedAt) > 64 {
 		return fmt.Errorf("issue create intent timestamps exceed 64 bytes")
 	}
-	if err := validateIssueCreateValues("labels", intent.Labels); err != nil {
-		return err
-	}
-	if err := validateIssueCreateValues("assignees", intent.Assignees); err != nil {
-		return err
-	}
+	return nil
+}
+
+func validateIssueCreateMarkerAttemptStatus(intent IssueOpsIssueCreateIntent) error {
 	if intent.Marker != "<!-- issueops:issue-create:"+intent.OperationID+" -->" {
 		return fmt.Errorf("issue create intent marker does not match operation_id")
 	}

@@ -11,8 +11,7 @@ import (
 )
 
 func ValidateManualHandoffDeliveryObservation(record issueopscontract.IssueOpsRecord, observation issueopscontract.IssueOpsHandoffDeliveryObservation) error {
-	if record.Execution == nil || record.Execution.Mode != issueopscontract.ExecutionModeDirect || record.Execution.Lease.Status != issueopscontract.LeaseStatusReleased ||
-		record.Execution.Lease.Generation != observation.SourceGeneration || record.ID != observation.LifecycleID {
+	if !manualHandoffReleasedDirectGeneration(record, observation) {
 		return fmt.Errorf("manual handoff delivery observation requires the exact released direct execution generation")
 	}
 	if !strings.HasPrefix(observation.AttemptID, handoffDeliveryManualLineagePrefix+record.ID+":") ||
@@ -24,13 +23,23 @@ func ValidateManualHandoffDeliveryObservation(record issueopscontract.IssueOpsRe
 		observation.Launcher.Name != issueopscontract.IssueOpsHandoffDeliveryLauncherCmux {
 		return fmt.Errorf("manual handoff delivery observation launcher must be Orca, Herdr, or cmux")
 	}
-	if observation.OwnerActor != nil || observation.OwnerClaimed.Status != issueopscontract.IssueOpsHandoffDeliveryStateNotObserved ||
-		observation.OwnerClaim.Claimed || observation.OwnerClaim.Generation != 0 || observation.OwnerClaim.ClaimedAt != "" ||
-		observation.OwnerClaim.Actor.Host != "" || observation.OwnerClaim.Actor.SessionID != "" || observation.OwnerClaim.Actor.AgentID != "" ||
-		observation.OwnerClaim.Actor.SessionProcess != nil || len(observation.OwnerClaim.Actor.ProcessAncestry) != 0 {
+	if manualHandoffHasOwnerClaimEvidence(observation) {
 		return fmt.Errorf("manual handoff delivery observation cannot produce owner claim evidence")
 	}
 	return nil
+}
+
+func manualHandoffReleasedDirectGeneration(record issueopscontract.IssueOpsRecord, observation issueopscontract.IssueOpsHandoffDeliveryObservation) bool {
+	return record.Execution != nil && record.Execution.Mode == issueopscontract.ExecutionModeDirect && record.Execution.Lease.Status == issueopscontract.LeaseStatusReleased &&
+		record.Execution.Lease.Generation == observation.SourceGeneration && record.ID == observation.LifecycleID
+}
+
+func manualHandoffHasOwnerClaimEvidence(observation issueopscontract.IssueOpsHandoffDeliveryObservation) bool {
+	claim := observation.OwnerClaim
+	return observation.OwnerActor != nil || observation.OwnerClaimed.Status != issueopscontract.IssueOpsHandoffDeliveryStateNotObserved ||
+		claim.Claimed || claim.Generation != 0 || claim.ClaimedAt != "" ||
+		claim.Actor.Host != "" || claim.Actor.SessionID != "" || claim.Actor.AgentID != "" ||
+		claim.Actor.SessionProcess != nil || len(claim.Actor.ProcessAncestry) != 0
 }
 
 func ManualCmuxHandoffIDs(request issueopscontract.ExecutionCmuxHandoffRequest) (string, string) {

@@ -86,38 +86,52 @@ func persistExecutionTransitionWithMutations(ctx context.Context, stateRoot stri
 			mutations = append(mutations, *mutation)
 		}
 	}
-	if encoded.Execution != nil && encoded.Execution.Lease.Status == issueops.LeaseStatusActive {
-		holder := encoded.Execution.Lease.Holder
-		if holder == nil {
-			return issueops.IssueOpsRecord{OK: false, ID: encoded.ID}, fmt.Errorf("active execution lease is missing its holder")
-		}
-		alreadyCurrent, err := requireLeaseIndexAvailable(db, encoded.ID, encoded.Execution.Lease.Generation, *holder)
-		if err != nil {
-			return issueops.IssueOpsRecord{OK: false, ID: encoded.ID}, err
-		}
-		index := issueopscontract.LeaseHolderIndex{
-			SchemaVersion: issueops.IssueOpsSchemaVersion,
-			LifecycleID:   encoded.ID,
-			Generation:    encoded.Execution.Lease.Generation,
-			Host:          holder.Host,
-			SessionID:     holder.SessionID,
-			AgentID:       holder.AgentID,
-		}
-		indexData, err := json.Marshal(index)
-		if err != nil {
-			return issueops.IssueOpsRecord{OK: false, ID: encoded.ID}, err
-		}
-		if !alreadyCurrent {
-			mutations = append(mutations, port.RecordMutation{
-				Bucket: leaseHolderBucket, ID: leaseHolderIndexKey(*holder), Data: indexData, RequireAbsent: true,
-			})
-		}
+	indexMutation, err := activeLeaseIndexMutation(db, encoded)
+	if err != nil {
+		return issueops.IssueOpsRecord{OK: false, ID: encoded.ID}, err
+	}
+	if indexMutation != nil {
+		mutations = append(mutations, *indexMutation)
 	}
 	mutations = append(mutations, extra...)
 	if err := db.CompareAndApply(ctx, expected, mutations); err != nil {
 		return issueops.IssueOpsRecord{OK: false, ID: encoded.ID}, err
 	}
 	return encoded, nil
+}
+
+// activeLeaseIndexMutation은 활성 lease 홀더 인덱스를 새로 써야 할 때 그 변경을 돌려준다.
+// 활성 lease가 아니거나 같은 lifecycle/generation 인덱스가 이미 있으면 nil이다.
+func activeLeaseIndexMutation(db *sqlstore.DB, encoded issueops.IssueOpsRecord) (*port.RecordMutation, error) {
+	if encoded.Execution == nil || encoded.Execution.Lease.Status != issueops.LeaseStatusActive {
+		return nil, nil
+	}
+	holder := encoded.Execution.Lease.Holder
+	if holder == nil {
+		return nil, fmt.Errorf("active execution lease is missing its holder")
+	}
+	alreadyCurrent, err := requireLeaseIndexAvailable(db, encoded.ID, encoded.Execution.Lease.Generation, *holder)
+	if err != nil {
+		return nil, err
+	}
+	index := issueopscontract.LeaseHolderIndex{
+		SchemaVersion: issueops.IssueOpsSchemaVersion,
+		LifecycleID:   encoded.ID,
+		Generation:    encoded.Execution.Lease.Generation,
+		Host:          holder.Host,
+		SessionID:     holder.SessionID,
+		AgentID:       holder.AgentID,
+	}
+	indexData, err := json.Marshal(index)
+	if err != nil {
+		return nil, err
+	}
+	if alreadyCurrent {
+		return nil, nil
+	}
+	return &port.RecordMutation{
+		Bucket: leaseHolderBucket, ID: leaseHolderIndexKey(*holder), Data: indexData, RequireAbsent: true,
+	}, nil
 }
 
 func requireLeaseIndexAvailable(db *sqlstore.DB, lifecycleID string, generation uint64, actor issueops.NativeActor) (bool, error) {

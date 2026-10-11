@@ -23,20 +23,26 @@ func ValidateIntentRecordIdentity(record preparationcontract.Record, payload pre
 	if err := ValidateIntentIssueIdentity(record, payload); err != nil {
 		return err
 	}
-	if record.ID != payload.LifecycleID || record.Execution == nil || record.Execution.Mode != "orca" ||
-		!paths.Source || !paths.Root ||
-		record.Execution.Workspace.Branch != payload.Workspace.Branch || record.Execution.Workspace.BaseHead != payload.Workspace.BaseHead ||
-		!paths.Parent ||
-		record.Execution.Workspace.Driver != "orca" {
+	if !recordIdentityMatches(record, payload, paths) {
 		return fmt.Errorf("Orca intent record identity changed")
 	}
-	if payload.Prepared != nil && (!paths.PreparedRecordedRoot ||
-		!paths.PreparedRoot || record.Execution.Workspace.Branch != payload.Prepared.Workspace.Branch ||
-		record.Execution.Workspace.BaseHead != payload.Prepared.Workspace.BaseHead ||
-		!paths.PreparedParent) {
+	if payload.Prepared != nil && !preparedIdentityMatches(record, payload, paths) {
 		return fmt.Errorf("Orca prepared workspace identity changed")
 	}
 	return nil
+}
+
+func recordIdentityMatches(record preparationcontract.Record, payload preparationcontract.Intent, paths IntentIdentityPaths) bool {
+	return record.ID == payload.LifecycleID && record.Execution != nil && record.Execution.Mode == "orca" &&
+		paths.Source && paths.Root && paths.Parent &&
+		record.Execution.Workspace.Branch == payload.Workspace.Branch && record.Execution.Workspace.BaseHead == payload.Workspace.BaseHead &&
+		record.Execution.Workspace.Driver == "orca"
+}
+
+func preparedIdentityMatches(record preparationcontract.Record, payload preparationcontract.Intent, paths IntentIdentityPaths) bool {
+	return paths.PreparedRecordedRoot && paths.PreparedRoot && paths.PreparedParent &&
+		record.Execution.Workspace.Branch == payload.Prepared.Workspace.Branch &&
+		record.Execution.Workspace.BaseHead == payload.Prepared.Workspace.BaseHead
 }
 
 func ValidateLaunchRequest(request preparationcontract.IntentRequest, intent preparationcontract.Intent) error {

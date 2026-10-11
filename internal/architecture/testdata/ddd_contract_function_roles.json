@@ -75,6 +75,21 @@
     "role": "shape"
   },
   {
+    "path": "internal/contract/issueops/child_create.go",
+    "symbol": "func validateChildCreateCanonicalAndAuthority",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/child_create.go",
+    "symbol": "func validateChildCreateIdentity",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/child_create.go",
+    "symbol": "func validateChildRequestDigest",
+    "role": "shape"
+  },
+  {
     "path": "internal/contract/issueops/cleanup_attempt.go",
     "symbol": "func ValidateCleanupAttempt",
     "role": "shape"
@@ -102,6 +117,26 @@
   {
     "path": "internal/contract/issueops/issue_create.go",
     "symbol": "func ValidateIssueCreateIntent",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/issue_create.go",
+    "symbol": "func validateIssueCreateDigestsAndProvider",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/issue_create.go",
+    "symbol": "func validateIssueCreateFieldSizes",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/issue_create.go",
+    "symbol": "func validateIssueCreateMarkerAttemptStatus",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/issue_create.go",
+    "symbol": "func validateIssueCreateRequiredFields",
     "role": "shape"
   },
   {
@@ -157,6 +192,76 @@
   {
     "path": "internal/contract/issueops/record_validation.go",
     "symbol": "func knownRemoteArtifactIdentity",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/record_validation.go",
+    "symbol": "func validateRecordBranchPrepare",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/record_validation.go",
+    "symbol": "func validateRecordChildCreateOperations",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/record_validation.go",
+    "symbol": "func validateRecordChildCycles",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/record_validation.go",
+    "symbol": "func validateRecordCleanupAbandonFailure",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/record_validation.go",
+    "symbol": "func validateRecordCleanupAttempt",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/record_validation.go",
+    "symbol": "func validateRecordCleanupFinishFailure",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/record_validation.go",
+    "symbol": "func validateRecordFeedback",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/record_validation.go",
+    "symbol": "func validateRecordHeader",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/record_validation.go",
+    "symbol": "func validateRecordIntent",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/record_validation.go",
+    "symbol": "func validateRecordIssueCreateIntent",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/record_validation.go",
+    "symbol": "func validateRecordPhaseLedger",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/record_validation.go",
+    "symbol": "func validateRecordRegressEvents",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/record_validation.go",
+    "symbol": "func validateRecordRemoteArtifact",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/record_validation.go",
+    "symbol": "func validateRecordRoutingTrace",
     "role": "shape"
   },
   {
@@ -266,6 +371,21 @@
   },
   {
     "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func intentEnvelopeValid",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func intentInvocationValid",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func intentProbeValid",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
     "symbol": "func invalidMarker",
     "role": "error"
   },
@@ -276,13 +396,28 @@
   },
   {
     "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func ownerLaunchReceiptsValid",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
     "symbol": "func parseMarker",
+    "role": "codec"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func parseMarkerTail",
     "role": "codec"
   },
   {
     "path": "internal/contract/issueopspreparation/intent.go",
     "symbol": "func renderMarker",
     "role": "codec"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func resumeShapeValid",
+    "role": "shape"
   },
   {
     "path": "internal/contract/issueopspreparation/intent.go",
@@ -311,7 +446,22 @@
   },
   {
     "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func validateOwnerStageProgress",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func validatePurposeShape",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
     "symbol": "func validateShape",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func validateStageShape",
     "role": "shape"
   },
   {

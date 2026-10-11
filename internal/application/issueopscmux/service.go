@@ -30,6 +30,26 @@ type Service struct {
 	Cleanup                func(cmuxcontract.PreparedLauncher) error
 }
 
+// handoffRun carries the state shared by the ordered phases of one cmux handoff.
+// Each phase records the result it would have returned on failure in run.result.
+type handoffRun struct {
+	deps        Service
+	ctx         context.Context
+	request     issueopscontract.ExecutionCmuxHandoffRequest
+	fence       *rootFence
+	record      issueopscontract.IssueOpsRecord
+	root        string
+	attemptID   string
+	lineageID   string
+	prompt      []byte
+	result      issueopscontract.ExecutionCmuxHandoffResult
+	preflight   cmuxcontract.PreflightResult
+	preflightMS uint64
+	observation issueopscontract.IssueOpsHandoffDeliveryObservation
+	created     cmuxcontract.CreatedWorkspace
+	prepared    cmuxcontract.PreparedLauncher
+}
+
 func (deps Service) Handoff(ctx context.Context, stateRoot string, request issueopscontract.ExecutionCmuxHandoffRequest) (issueopscontract.ExecutionCmuxHandoffResult, error) {
 	result := issueopscontract.ExecutionCmuxHandoffResult{ID: request.ID, Generation: request.Generation, Status: "rejected"}
 	if deps.Client == nil || deps.Now == nil || deps.Roots.GitTop == nil || deps.ValidateHostExecutable == nil {
@@ -43,179 +63,230 @@ func (deps Service) Handoff(ctx context.Context, stateRoot string, request issue
 		return result, err
 	}
 	defer fence.Close()
-	root := fence.canonicalRoot
-	attemptID, lineageID := issueopsdomain.ManualCmuxHandoffIDs(request)
-	observations, err := deps.ReadAudit()
+	run := &handoffRun{deps: deps, ctx: ctx, request: request, fence: fence, record: record, root: fence.canonicalRoot, result: result}
+	run.attemptID, run.lineageID = issueopsdomain.ManualCmuxHandoffIDs(request)
+	for _, phase := range []func() error{
+		run.validateRequest, run.runPreflight, run.stageObservation, run.createWorkspace, run.prepareLauncher, run.sendLauncher,
+	} {
+		if err := phase(); err != nil {
+			return run.result, err
+		}
+	}
+	return run.confirmReceipt()
+}
+
+func (run *handoffRun) nowRFC3339() string {
+	return run.deps.Now().UTC().Format(time.RFC3339Nano)
+}
+
+// validateRequest checks the attempt history, prompt, digests, and host profile before any external call.
+func (run *handoffRun) validateRequest() error {
+	request := run.request
+	observations, err := run.deps.ReadAudit()
 	if err != nil {
-		return result, err
+		return err
 	}
 	if err := issueopsdomain.ValidateCmuxAttempt(request, observations); err != nil {
-		return result, err
+		return err
 	}
-	promptPath, err := issueopsdomain.CmuxCanonicalPromptPath(root, request.PromptFile, record.Execution.Workspace.Root, record.WorktreePath)
+	promptPath, err := issueopsdomain.CmuxCanonicalPromptPath(run.root, request.PromptFile, run.record.Execution.Workspace.Root, run.record.WorktreePath)
 	if err != nil {
-		return result, err
+		return err
 	}
-	prompt, err := deps.ReadPrompt(root, promptPath, request.PromptSHA256)
+	run.prompt, err = run.deps.ReadPrompt(run.root, promptPath, request.PromptSHA256)
 	if err != nil {
-		return result, err
+		return err
 	}
 	if !issueopsdomain.ValidCmuxDigest(request.MaterialSHA256) {
-		return result, fmt.Errorf("cmux handoff material digest is invalid")
+		return fmt.Errorf("cmux handoff material digest is invalid")
 	}
-	if err := deps.ValidateHostExecutable(request.HostExecutable); err != nil {
-		return result, err
+	if err := run.deps.ValidateHostExecutable(request.HostExecutable); err != nil {
+		return err
 	}
-	if err := deps.ValidateHostProfile(request.Host, request.HostExecutable, request.Model, request.Effort); err != nil {
-		return result, err
-	}
+	return run.deps.ValidateHostProfile(request.Host, request.HostExecutable, request.Model, request.Effort)
+}
 
+func (run *handoffRun) runPreflight() error {
+	request := run.request
 	preflightRequest := cmuxcontract.PreflightRequest{
 		Executable: request.CmuxExecutable, ExpectedVersion: request.CmuxVersion, ExpectedBuild: request.CmuxBuild,
 		SocketPath: request.SocketPath, WindowID: request.WindowID,
 	}
-	if record, err = fence.Check(); err != nil {
-		return result, err
+	var err error
+	if run.record, err = run.fence.Check(); err != nil {
+		return err
 	}
 	preflightStarted := time.Now()
-	preflight, err := deps.Client.Preflight(ctx, preflightRequest)
+	run.preflight, err = run.deps.Client.Preflight(run.ctx, preflightRequest)
 	if err != nil {
-		result.Status = "unavailable"
-		return result, err
+		run.result.Status = "unavailable"
+		return err
 	}
-	preflightMS := cmuxElapsedMS(preflightStarted)
-	endpoint := preflight.Endpoint
-	createdAt := deps.Now().UTC().Format(time.RFC3339Nano)
+	run.preflightMS = cmuxElapsedMS(preflightStarted)
+	return nil
+}
+
+// stageObservation records the external-call-staged audit entry.
+func (run *handoffRun) stageObservation() error {
+	request := run.request
+	endpoint := run.preflight.Endpoint
+	createdAt := run.nowRFC3339()
 	observation := issueopscontract.IssueOpsHandoffDeliveryObservation{
 		SchemaVersion: issueopscontract.IssueOpsHandoffDeliverySchemaVersion,
-		AttemptID:     attemptID, LineageID: lineageID, LifecycleID: request.ID,
+		AttemptID:     run.attemptID, LineageID: run.lineageID, LifecycleID: request.ID,
 		PromptSHA256: request.PromptSHA256, MaterialSHA256: request.MaterialSHA256,
 		Launcher: issueopscontract.IssueOpsHandoffDeliveryLauncher{
-			Name: issueopscontract.IssueOpsHandoffDeliveryLauncherCmux, Version: preflight.Build,
-			Path: preflight.Executable, EndpointIncarnation: &endpoint,
+			Name: issueopscontract.IssueOpsHandoffDeliveryLauncherCmux, Version: run.preflight.Build,
+			Path: run.preflight.Executable, EndpointIncarnation: &endpoint,
 		},
-		Target:            issueopscontract.IssueOpsHandoffDeliveryTarget{WindowID: request.WindowID, CWD: root},
+		Target:            issueopscontract.IssueOpsHandoffDeliveryTarget{WindowID: request.WindowID, CWD: run.root},
 		ExpectedOwnerHost: request.Host, SourceGeneration: request.Generation,
 		CreatedAt: createdAt, UpdatedAt: createdAt,
 		CallStaged:    issueopsdomain.CmuxObserved(createdAt, issueopscontract.IssueOpsHandoffDeliveryEvidenceExternalCallStaged),
 		InputAccepted: issueopsdomain.CmuxNotObserved(), NativeTurnObserved: issueopsdomain.CmuxNotObserved(), OwnerClaimed: issueopsdomain.CmuxNotObserved(), Ambiguous: issueopsdomain.CmuxNotObserved(),
-		Timing: &issueopscontract.IssueOpsHandoffDeliveryTiming{PreflightMS: preflightMS},
+		Timing: &issueopscontract.IssueOpsHandoffDeliveryTiming{PreflightMS: run.preflightMS},
 	}
-	audited, err := deps.Observe(record, observation)
+	audited, err := run.deps.Observe(run.record, observation)
 	if err != nil {
-		return result, err
+		return err
 	}
-	observation = audited.Observation
-	result = issueopsdomain.CmuxResult(request, observation, "staged", "")
+	run.observation = audited.Observation
+	run.result = issueopsdomain.CmuxResult(request, run.observation, "staged", "")
+	return nil
+}
 
-	createRequest := cmuxcontract.CreateRequest{Preflight: preflight, AttemptID: attemptID, CWD: root}
-	if record, err = fence.Check(); err != nil {
-		return result, err
+// observe audits the current observation and adopts the audited copy.
+func (run *handoffRun) observe() error {
+	audited, err := run.deps.Observe(run.record, run.observation)
+	if err != nil {
+		return err
 	}
-	created, createErr := deps.Client.CreateWorkspace(ctx, createRequest)
-	if created.CWD != "" && !deps.SamePath(created.CWD, root) {
+	run.observation = audited.Observation
+	return nil
+}
+
+// markAmbiguousIfLost flags the observation when a mutation may have been accepted without a response.
+func (run *handoffRun) markAmbiguousIfLost(err error) {
+	if cmuxMutationAmbiguous(err) {
+		run.observation.Ambiguous = issueopsdomain.CmuxObserved(run.observation.UpdatedAt, issueopscontract.IssueOpsHandoffDeliveryEvidenceAcceptedResponseLost)
+	}
+}
+
+func cmuxMutationFailureStatus(err error) string {
+	if cmuxMutationAmbiguous(err) {
+		return "ambiguous"
+	}
+	return "failed"
+}
+
+// failWithAudit audits the current observation, sets the failure result, and returns cause joined with any audit error.
+func (run *handoffRun) failWithAudit(status, recovery string, cause error) error {
+	audited, auditErr := run.deps.Observe(run.record, run.observation)
+	run.result = issueopsdomain.CmuxResult(run.request, audited.Observation, status, recovery)
+	return errors.Join(cause, auditErr)
+}
+
+func (run *handoffRun) createWorkspace() error {
+	var err error
+	if run.record, err = run.fence.Check(); err != nil {
+		return err
+	}
+	created, createErr := run.deps.Client.CreateWorkspace(run.ctx, cmuxcontract.CreateRequest{Preflight: run.preflight, AttemptID: run.attemptID, CWD: run.root})
+	if created.CWD != "" && !run.deps.SamePath(created.CWD, run.root) {
 		createErr = errors.Join(createErr, fmt.Errorf("cmux created workspace cwd target mismatch"))
 	}
-	observation.UpdatedAt = deps.Now().UTC().Format(time.RFC3339Nano)
+	run.created = created
+	run.observation.UpdatedAt = run.nowRFC3339()
 	if created.WorkspaceID != "" {
-		observation.Target.WorkspaceID = created.WorkspaceID
+		run.observation.Target.WorkspaceID = created.WorkspaceID
 	}
 	if created.SurfaceID != "" {
-		observation.Target.SurfaceID = created.SurfaceID
+		run.observation.Target.SurfaceID = created.SurfaceID
 	}
-	observation.Timing.WorkspaceCreateMS = created.CreateMS
-	observation.Timing.TargetResolveMS = created.ResolveMS
+	run.observation.Timing.WorkspaceCreateMS = created.CreateMS
+	run.observation.Timing.TargetResolveMS = created.ResolveMS
 	if createErr != nil {
-		if cmuxMutationAmbiguous(createErr) {
-			observation.Ambiguous = issueopsdomain.CmuxObserved(observation.UpdatedAt, issueopscontract.IssueOpsHandoffDeliveryEvidenceAcceptedResponseLost)
-		}
-		audited, auditErr := deps.Observe(record, observation)
+		run.markAmbiguousIfLost(createErr)
+		audited, auditErr := run.deps.Observe(run.record, run.observation)
 		if auditErr != nil {
-			return result, errors.Join(createErr, auditErr)
+			return errors.Join(createErr, auditErr)
 		}
-		status := "failed"
-		if cmuxMutationAmbiguous(createErr) {
-			status = "ambiguous"
-		}
-		return issueopsdomain.CmuxResult(request, audited.Observation, status, ""), createErr
+		run.result = issueopsdomain.CmuxResult(run.request, audited.Observation, cmuxMutationFailureStatus(createErr), "")
+		return createErr
 	}
-	if observation.Target.WorkspaceID == "" || observation.Target.SurfaceID == "" {
-		terminal, auditErr := deps.Observe(record, observation)
-		return issueopsdomain.CmuxResult(request, terminal.Observation, "failed", ""), errors.Join(fmt.Errorf("cmux created target identity is incomplete"), auditErr)
+	if run.observation.Target.WorkspaceID == "" || run.observation.Target.SurfaceID == "" {
+		return run.failWithAudit("failed", "", fmt.Errorf("cmux created target identity is incomplete"))
 	}
-	audited, err = deps.Observe(record, observation)
-	if err != nil {
-		return result, err
-	}
-	observation = audited.Observation
+	return run.observe()
+}
 
-	artifactRoot := deps.ArtifactRoot
-	prepared, err := deps.Prepare(cmuxcontract.ArtifactRequest{
-		Root: artifactRoot, CWD: root, WindowID: request.WindowID, WorkspaceID: created.WorkspaceID,
-		SurfaceID: created.SurfaceID, SocketPath: request.SocketPath, Host: request.Host,
+func (run *handoffRun) prepareLauncher() error {
+	request := run.request
+	prepared, err := run.deps.Prepare(cmuxcontract.ArtifactRequest{
+		Root: run.deps.ArtifactRoot, CWD: run.root, WindowID: request.WindowID, WorkspaceID: run.created.WorkspaceID,
+		SurfaceID: run.created.SurfaceID, SocketPath: request.SocketPath, Host: request.Host,
 		HostExecutable: request.HostExecutable, Model: request.Model, Effort: request.Effort,
-		Prompt: prompt, PromptSHA256: request.PromptSHA256, MaterialSHA256: request.MaterialSHA256,
+		Prompt: run.prompt, PromptSHA256: request.PromptSHA256, MaterialSHA256: request.MaterialSHA256,
 	})
 	if err != nil {
-		observation.UpdatedAt = deps.Now().UTC().Format(time.RFC3339Nano)
-		audited, auditErr := deps.Observe(record, observation)
-		return issueopsdomain.CmuxResult(request, audited.Observation, "pre_send_failed", ""), errors.Join(err, auditErr)
+		run.observation.UpdatedAt = run.nowRFC3339()
+		return run.failWithAudit("pre_send_failed", "", err)
 	}
-	sendRequest := cmuxcontract.SendRequest{Created: created, Command: prepared.Command}
-	checkedRecord, fenceErr := fence.Check()
+	run.prepared = prepared
+	return nil
+}
+
+// sendLauncher sends the prepared launcher command and records whether the input was accepted.
+func (run *handoffRun) sendLauncher() error {
+	checkedRecord, fenceErr := run.fence.Check()
 	if fenceErr != nil {
-		observation.UpdatedAt = deps.Now().UTC().Format(time.RFC3339Nano)
-		audited, auditErr := deps.Observe(record, observation)
-		return issueopsdomain.CmuxResult(request, audited.Observation, "pre_send_failed", prepared.Directory), errors.Join(fenceErr, auditErr)
+		run.observation.UpdatedAt = run.nowRFC3339()
+		return run.failWithAudit("pre_send_failed", run.prepared.Directory, fenceErr)
 	}
-	record = checkedRecord
-	sendReceipt, sendErr := deps.Client.Send(ctx, sendRequest)
-	observation.UpdatedAt = deps.Now().UTC().Format(time.RFC3339Nano)
-	observation.Timing.InputSendMS = sendReceipt.SendMS
+	run.record = checkedRecord
+	sendReceipt, sendErr := run.deps.Client.Send(run.ctx, cmuxcontract.SendRequest{Created: run.created, Command: run.prepared.Command})
+	run.observation.UpdatedAt = run.nowRFC3339()
+	run.observation.Timing.InputSendMS = sendReceipt.SendMS
 	if sendErr != nil {
-		if cmuxMutationAmbiguous(sendErr) {
-			observation.Ambiguous = issueopsdomain.CmuxObserved(observation.UpdatedAt, issueopscontract.IssueOpsHandoffDeliveryEvidenceAcceptedResponseLost)
-		}
-		audited, auditErr := deps.Observe(record, observation)
-		status := "failed"
-		if cmuxMutationAmbiguous(sendErr) {
-			status = "ambiguous"
-		}
-		return issueopsdomain.CmuxResult(request, audited.Observation, status, prepared.Directory), errors.Join(sendErr, auditErr)
+		run.markAmbiguousIfLost(sendErr)
+		return run.failWithAudit(cmuxMutationFailureStatus(sendErr), run.prepared.Directory, sendErr)
 	}
 	if !sendReceipt.Accepted {
-		audited, auditErr := deps.Observe(record, observation)
-		return issueopsdomain.CmuxResult(request, audited.Observation, "failed", prepared.Directory), errors.Join(fmt.Errorf("cmux send returned no accepted receipt"), auditErr)
+		return run.failWithAudit("failed", run.prepared.Directory, fmt.Errorf("cmux send returned no accepted receipt"))
 	}
-	observation.InputAccepted = issueopsdomain.CmuxObserved(observation.UpdatedAt, issueopscontract.IssueOpsHandoffDeliveryEvidenceRawInput)
-	audited, err = deps.Observe(record, observation)
-	if err != nil {
-		return issueopsdomain.CmuxResult(request, observation, "input_accepted", prepared.Directory), err
+	run.observation.InputAccepted = issueopsdomain.CmuxObserved(run.observation.UpdatedAt, issueopscontract.IssueOpsHandoffDeliveryEvidenceRawInput)
+	if err := run.observe(); err != nil {
+		run.result = issueopsdomain.CmuxResult(run.request, run.observation, "input_accepted", run.prepared.Directory)
+		return err
 	}
-	observation = audited.Observation
+	return nil
+}
 
+// confirmReceipt waits for the launcher's bootstrap receipt, records the process, and cleans up the recovery artifact.
+func (run *handoffRun) confirmReceipt() (issueopscontract.ExecutionCmuxHandoffResult, error) {
+	request, created, prepared := run.request, run.created, run.prepared
 	receiptStarted := time.Now()
-	process, receiptErr := deps.AwaitReceipt(ctx, prepared, cmuxcontract.BootstrapExpectation{
-		CWD: root, WindowID: created.WindowID, WorkspaceID: created.WorkspaceID, SurfaceID: created.SurfaceID, SocketPath: request.SocketPath,
+	process, receiptErr := run.deps.AwaitReceipt(run.ctx, prepared, cmuxcontract.BootstrapExpectation{
+		CWD: run.root, WindowID: created.WindowID, WorkspaceID: created.WorkspaceID, SurfaceID: created.SurfaceID, SocketPath: request.SocketPath,
 		HostExecutable: request.HostExecutable, HostArgvSHA256: prepared.HostArgvSHA256,
 		PromptSHA256: request.PromptSHA256, MaterialSHA256: request.MaterialSHA256,
 	})
-	observation.UpdatedAt = deps.Now().UTC().Format(time.RFC3339Nano)
+	run.observation.UpdatedAt = run.nowRFC3339()
 	if receiptErr != nil {
-		audited, auditErr := deps.Observe(record, observation)
+		audited, auditErr := run.deps.Observe(run.record, run.observation)
 		if auditErr != nil {
-			return issueopsdomain.CmuxResult(request, observation, "input_accepted_receiver_unverified", prepared.Directory), auditErr
+			return issueopsdomain.CmuxResult(request, run.observation, "input_accepted_receiver_unverified", prepared.Directory), auditErr
 		}
 		return issueopsdomain.CmuxResult(request, audited.Observation, "input_accepted_receiver_unverified", prepared.Directory), nil
 	}
-	observation.Target.Process = &process
-	observation.Target.ProcessIncarnation = strconv.Itoa(process.PID) + ":" + process.StartedAt + ":" + process.Executable
-	observation.Timing.ReceiverReceiptMS = cmuxElapsedMS(receiptStarted)
-	audited, err = deps.Observe(record, observation)
+	run.observation.Target.Process = &process
+	run.observation.Target.ProcessIncarnation = strconv.Itoa(process.PID) + ":" + process.StartedAt + ":" + process.Executable
+	run.observation.Timing.ReceiverReceiptMS = cmuxElapsedMS(receiptStarted)
+	audited, err := run.deps.Observe(run.record, run.observation)
 	if err != nil {
-		return issueopsdomain.CmuxResult(request, observation, "input_accepted", prepared.Directory), err
+		return issueopsdomain.CmuxResult(request, run.observation, "input_accepted", prepared.Directory), err
 	}
-	if cleanupErr := deps.Cleanup(prepared); cleanupErr != nil {
+	if cleanupErr := run.deps.Cleanup(prepared); cleanupErr != nil {
 		return issueopsdomain.CmuxResult(request, audited.Observation, "input_accepted_cleanup_failed", prepared.Directory), fmt.Errorf("cleanup cmux recovery artifact: %w", cleanupErr)
 	}
 	return issueopsdomain.CmuxResult(request, audited.Observation, "input_accepted", ""), nil

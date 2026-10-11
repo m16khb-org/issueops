@@ -223,10 +223,7 @@ func redactValues(value any) any {
 // parseCodexIssueOpsTable은 Codex config.toml에서 [mcp_servers.issueops] 표와 그
 // 하위 표만 해석한다. 다른 표는 헤더 형식만 확인한다.
 func parseCodexIssueOpsTable(text string) (map[string]any, int, error) {
-	const table = "mcp_servers.issueops"
-	entry := map[string]any{}
-	count := 0
-	current := ""
+	p := &codexIssueOpsTableParser{entry: map[string]any{}}
 	lines := strings.Split(text, "\n")
 	for i := 0; i < len(lines); i++ {
 		line := strings.TrimSpace(stripTOMLComment(lines[i]))
@@ -234,65 +231,91 @@ func parseCodexIssueOpsTable(text string) (map[string]any, int, error) {
 			continue
 		}
 		if strings.HasPrefix(line, "[") {
-			if !strings.HasSuffix(line, "]") {
-				return nil, 0, errors.New("unterminated table header")
-			}
-			inner := strings.TrimSpace(strings.Trim(line, "[]"))
-			current = strings.ReplaceAll(strings.ReplaceAll(inner, " ", ""), `"`, "")
-			if strings.HasPrefix(line, "[[") {
-				current = ""
-			}
-			if current == table {
-				count++
+			if err := p.enterHeader(line); err != nil {
+				return nil, 0, err
 			}
 			continue
 		}
-		inTable := current == table
-		inSub := strings.HasPrefix(current, table+".")
-		inParent := current == "mcp_servers"
-		if !inTable && !inSub && !inParent {
-			continue
-		}
-		key, rawValue, ok := strings.Cut(line, "=")
-		if !ok {
-			return nil, 0, errors.New("expected key = value")
-		}
-		key = strings.Trim(strings.TrimSpace(key), `"'`)
-		rawValue = strings.TrimSpace(rawValue)
-		for bracketDepth(rawValue) > 0 && i+1 < len(lines) {
-			i++
-			rawValue += " " + strings.TrimSpace(stripTOMLComment(lines[i]))
-		}
-		if inParent && key != "issueops" {
-			continue
-		}
-		value, err := parseTOMLValue(rawValue)
+		next, err := p.consumeKeyValue(line, lines, i)
 		if err != nil {
 			return nil, 0, err
 		}
-		switch {
-		case inParent:
-			inline, ok := value.(map[string]any)
-			if !ok {
-				return nil, 0, errors.New("issueops must be a table")
-			}
-			count++
-			for k, v := range inline {
-				entry[k] = v
-			}
-		case inTable:
-			entry[key] = value
-		default:
-			sub := strings.TrimPrefix(current, table+".")
-			nested, _ := entry[sub].(map[string]any)
-			if nested == nil {
-				nested = map[string]any{}
-				entry[sub] = nested
-			}
-			nested[key] = value
-		}
+		i = next
 	}
-	return entry, count, nil
+	return p.entry, p.count, nil
+}
+
+const codexIssueOpsTable = "mcp_servers.issueops"
+
+// codexIssueOpsTableParser는 줄 단위로 읽으면서 현재 표 위치와 issueops 표 누적 상태를 유지한다.
+type codexIssueOpsTableParser struct {
+	entry   map[string]any
+	count   int
+	current string
+}
+
+func (p *codexIssueOpsTableParser) enterHeader(line string) error {
+	if !strings.HasSuffix(line, "]") {
+		return errors.New("unterminated table header")
+	}
+	inner := strings.TrimSpace(strings.Trim(line, "[]"))
+	p.current = strings.ReplaceAll(strings.ReplaceAll(inner, " ", ""), `"`, "")
+	if strings.HasPrefix(line, "[[") {
+		p.current = ""
+	}
+	if p.current == codexIssueOpsTable {
+		p.count++
+	}
+	return nil
+}
+
+// consumeKeyValue는 현재 표 안의 key = value 줄을 처리하고, 여러 줄 값을 읽은 뒤의 마지막 줄 인덱스를 반환한다.
+func (p *codexIssueOpsTableParser) consumeKeyValue(line string, lines []string, i int) (int, error) {
+	inTable := p.current == codexIssueOpsTable
+	inSub := strings.HasPrefix(p.current, codexIssueOpsTable+".")
+	inParent := p.current == "mcp_servers"
+	if !inTable && !inSub && !inParent {
+		return i, nil
+	}
+	key, rawValue, ok := strings.Cut(line, "=")
+	if !ok {
+		return i, errors.New("expected key = value")
+	}
+	key = strings.Trim(strings.TrimSpace(key), `"'`)
+	rawValue = strings.TrimSpace(rawValue)
+	for bracketDepth(rawValue) > 0 && i+1 < len(lines) {
+		i++
+		rawValue += " " + strings.TrimSpace(stripTOMLComment(lines[i]))
+	}
+	if inParent && key != "issueops" {
+		return i, nil
+	}
+	value, err := parseTOMLValue(rawValue)
+	if err != nil {
+		return i, err
+	}
+	switch {
+	case inParent:
+		inline, ok := value.(map[string]any)
+		if !ok {
+			return i, errors.New("issueops must be a table")
+		}
+		p.count++
+		for k, v := range inline {
+			p.entry[k] = v
+		}
+	case inTable:
+		p.entry[key] = value
+	default:
+		sub := strings.TrimPrefix(p.current, codexIssueOpsTable+".")
+		nested, _ := p.entry[sub].(map[string]any)
+		if nested == nil {
+			nested = map[string]any{}
+			p.entry[sub] = nested
+		}
+		nested[key] = value
+	}
+	return i, nil
 }
 
 func stripTOMLComment(line string) string {

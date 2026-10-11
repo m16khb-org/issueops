@@ -212,22 +212,27 @@ func recordRequestRoot(ctx context.Context, records RecordRoots, kind RecordKind
 		return "", authorityInvalid("workspace root conflicts with record " + id)
 	}
 	if filepath.IsAbs(cwd) {
-		canonicalCWD, err := canonicalRequestPath(cwd)
-		if err != nil {
-			return "", authorityInvalid(fmt.Sprintf("cwd: %v", err))
-		}
-		best := ""
-		for _, root := range roots {
-			if pathWithin(canonicalCWD, root) && len(root) > len(best) {
-				best = root
-			}
-		}
-		if best == "" {
-			return "", authorityInvalid("cwd is outside the workspace of record " + id)
-		}
-		return best, nil
+		return deepestRootHoldingCWD(roots, cwd, id)
 	}
 	return roots[0], nil
+}
+
+// deepestRootHoldingCWD returns the longest record root that contains cwd.
+func deepestRootHoldingCWD(roots []string, cwd, id string) (string, error) {
+	canonicalCWD, err := canonicalRequestPath(cwd)
+	if err != nil {
+		return "", authorityInvalid(fmt.Sprintf("cwd: %v", err))
+	}
+	best := ""
+	for _, root := range roots {
+		if pathWithin(canonicalCWD, root) && len(root) > len(best) {
+			best = root
+		}
+	}
+	if best == "" {
+		return "", authorityInvalid("cwd is outside the workspace of record " + id)
+	}
+	return best, nil
 }
 
 func canonicalRequestPath(path string) (string, error) {

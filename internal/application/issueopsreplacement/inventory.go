@@ -61,34 +61,8 @@ func (s Service) quiescence(ctx context.Context, record issueops.IssueOpsRecord,
 	if err := domain.ValidateReplacementOwnerQuiescence(record, processStatus, runtimeFacts(orcaInventory)); err != nil {
 		return "", err
 	}
-	inventoryOwners := map[int]bool{s.PID: true}
-	requesterOwners := map[int]bool{}
-	if requester.SessionProcess != nil {
-		inventoryOwners[requester.SessionProcess.PID] = true
-		requesterOwners[requester.SessionProcess.PID] = true
-	}
-	excluded := map[int]bool{}
-	for pid := range inventoryOwners {
-		for ancestor := range processSnapshot.AncestryPIDs(pid) {
-			excluded[ancestor] = true
-		}
-	}
-	workspaceProcesses, err := s.Workspace.WorkspaceProcesses(record.Execution.Workspace.Root, excluded)
-	if err != nil {
+	if err := s.requireQuiescentWorkspaceProcesses(record, processSnapshot, requester); err != nil {
 		return "", err
-	}
-	if len(requesterOwners) > 0 {
-		kept := make([]issueops.ReplacementWorkspaceProcess, 0, len(workspaceProcesses))
-		for _, process := range workspaceProcesses {
-			if !processSnapshot.HasAncestor(process.PID, requesterOwners) {
-				kept = append(kept, process)
-			}
-		}
-		workspaceProcesses = kept
-	}
-	if len(workspaceProcesses) > 0 {
-		process := workspaceProcesses[0]
-		return "", fmt.Errorf("workspace process is not quiescent: pid=%d command=%s fd=%s access=%s path=%s", process.PID, process.Command, process.FD, process.Access, process.Path)
 	}
 	snapshot, err := s.Workspace.WorkspaceSnapshot(record.Execution.Workspace)
 	if err != nil {
@@ -104,6 +78,40 @@ func (s Service) quiescence(ctx context.Context, record issueops.IssueOpsRecord,
 		Snapshot   string                           `json:"snapshot"`
 	}{record.ID, record.Execution.Lease.Generation, *holder, requester, *holder.SessionProcess, orcaInventory, snapshot}
 	return hashJSON(payload)
+}
+
+// requireQuiescentWorkspaceProcesses는 요청자 조상 체인을 제외한 워크스페이스 프로세스가 남아 있으면 오류를 돌려준다.
+func (s Service) requireQuiescentWorkspaceProcesses(record issueops.IssueOpsRecord, processSnapshot port.ReplacementProcessSnapshot, requester issueops.NativeActor) error {
+	inventoryOwners := map[int]bool{s.PID: true}
+	requesterOwners := map[int]bool{}
+	if requester.SessionProcess != nil {
+		inventoryOwners[requester.SessionProcess.PID] = true
+		requesterOwners[requester.SessionProcess.PID] = true
+	}
+	excluded := map[int]bool{}
+	for pid := range inventoryOwners {
+		for ancestor := range processSnapshot.AncestryPIDs(pid) {
+			excluded[ancestor] = true
+		}
+	}
+	workspaceProcesses, err := s.Workspace.WorkspaceProcesses(record.Execution.Workspace.Root, excluded)
+	if err != nil {
+		return err
+	}
+	if len(requesterOwners) > 0 {
+		kept := make([]issueops.ReplacementWorkspaceProcess, 0, len(workspaceProcesses))
+		for _, process := range workspaceProcesses {
+			if !processSnapshot.HasAncestor(process.PID, requesterOwners) {
+				kept = append(kept, process)
+			}
+		}
+		workspaceProcesses = kept
+	}
+	if len(workspaceProcesses) > 0 {
+		process := workspaceProcesses[0]
+		return fmt.Errorf("workspace process is not quiescent: pid=%d command=%s fd=%s access=%s path=%s", process.PID, process.Command, process.FD, process.Access, process.Path)
+	}
+	return nil
 }
 
 func (s Service) ownerInventory(

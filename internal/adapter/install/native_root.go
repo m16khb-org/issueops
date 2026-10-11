@@ -32,7 +32,12 @@ func ResolveStableNativeRoot(root string) (string, error) {
 	if !info.Mode().IsRegular() {
 		return "", fmt.Errorf("native install git metadata must be a directory or regular gitdir file: %s", gitPath)
 	}
+	return resolveLinkedWorktreeRoot(root, gitPath)
+}
 
+// resolveLinkedWorktreeRoot follows a worktree's gitdir file and commondir to
+// the source checkout that owns the common .git directory.
+func resolveLinkedWorktreeRoot(root, gitPath string) (string, error) {
 	gitdirValue, err := readSingleMetadataValue(gitPath, "gitdir:")
 	if err != nil {
 		return "", err

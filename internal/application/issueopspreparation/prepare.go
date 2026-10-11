@@ -30,22 +30,10 @@ func NewService(repository Repository, clock Clock, operation OperationID, direc
 }
 
 func (service *Service) Prepare(ctx context.Context, command preparationcontract.Command) (preparationcontract.Result, error) {
-	if service.repository == nil {
-		return failedResult(command.ID), fmt.Errorf("preparation repository is unavailable")
-	}
-	snapshot, err := service.repository.Load(ctx, command.ID)
+	snapshot, command, requested, err := service.loadPrepareCommand(ctx, command)
 	if err != nil {
 		return failedResult(command.ID), err
 	}
-	command, err = service.normalizeOwnerDefaults(ctx, snapshot, command)
-	if err != nil {
-		return failedResult(command.ID), err
-	}
-	requested, err := preparationdomain.NormalizeMode(command.Mode)
-	if err != nil {
-		return failedResult(command.ID), err
-	}
-	command.Mode = requested
 	if snapshot.Record.Execution != nil {
 		decision, decideErr := preparationdomain.Decide(preparationdomain.DecisionInput{Command: command, Snapshot: snapshot})
 		if decideErr != nil {
@@ -64,49 +52,9 @@ func (service *Service) Prepare(ctx context.Context, command preparationcontract
 	if err := service.repository.EnsureRootUnclaimed(ctx, command.ID, workspace.Root); err != nil {
 		return preparationcontract.Result{ID: command.ID, RequestedMode: requested}, err
 	}
-	readiness := preparationdomain.OrcaReadiness{}
-	probeRequest := preparationcontract.ProbeRequest{}
-	if requested != preparationcontract.ModeDirect {
-		if service.orca == nil {
-			readiness.Code = "orca_adapter_unavailable"
-		} else {
-			if command.OwnerHost != "codex" && command.OwnerHost != "claude" && command.OwnerHost != "omo" && command.OwnerHost != "omp" {
-				return failedResult(command.ID), fmt.Errorf("Orca owner_host must be codex, claude, omo, or omp")
-			}
-			// owner가 보충할 수 없는 planner 전제가 빠져 있으면 띄우지 않는다.
-			// 띄우면 owner는 claim까지 완주한 뒤 채울 수 없는 게이트에 부딪혀
-			// 반드시 실패한다 — 실측으로 그랬다(#319, io-cb83a79e1bfd).
-			if keys := preparationdomain.MissingPlannerGateKeys(plannerEvidence(snapshot.Record)); len(keys) > 0 {
-				gates := plannerGateHints(snapshot.Record.ID, keys)
-				return failedResult(command.ID), plannerGateError(gates)
-			}
-			codec := preparationcontract.IntentCodec{}
-			issue, issueErr := preparationdomain.PrepareIssueIdentity(snapshot.Record.IssueURL, preparationcontract.DecodeIssueLinkEvidence(snapshot.Record.BranchPrepare))
-			if issueErr != nil {
-				return failedResult(command.ID), issueErr
-			}
-			marker, markerErr := codec.RenderReadinessMarker(snapshot.Record.ID, issue)
-			if markerErr != nil {
-				return failedResult(command.ID), markerErr
-			}
-			probeRequest = preparationcontract.ProbeRequest{
-				Repo: snapshot.Record.Repo, Host: strings.ToLower(strings.TrimSpace(command.OwnerHost)),
-				Model: strings.TrimSpace(command.OwnerModel), Effort: strings.TrimSpace(command.OwnerEffort),
-				Provider: issue.Provider, Issue: issue.Issue, Marker: marker, Workspace: workspace,
-			}
-			readiness.Provider = probeRequest.Provider
-			readiness.Issue = probeRequest.Issue
-			probe, probeErr := service.orca.Probe(ctx, probeRequest)
-			readiness.Available = probe.Available
-			readiness.Ready = probeErr == nil && probe.Available && probe.Ready
-			readiness.Code = strings.TrimSpace(probe.Code)
-			if probeErr != nil && readiness.Code == "" {
-				readiness.Code = "orca_probe_failed"
-			}
-			if probeErr != nil && requested == preparationcontract.ModeOrca {
-				return preparationcontract.Result{ID: command.ID, RequestedMode: requested}, probeErr
-			}
-		}
+	readiness, probeRequest, failure, err := service.probeOrcaReadiness(ctx, snapshot, command, requested, workspace)
+	if err != nil {
+		return failure, err
 	}
 	decision, err := preparationdomain.Decide(preparationdomain.DecisionInput{Command: command, Snapshot: snapshot, Orca: readiness})
 	if err != nil {
@@ -122,6 +70,90 @@ func (service *Service) Prepare(ctx context.Context, command preparationcontract
 		return service.prepareOrca(ctx, snapshot, command, workspace, probeRequest, decision)
 	}
 	return service.prepareDirect(ctx, snapshot, command, workspace, probeRequest, decision)
+}
+
+// loadPrepareCommand loads the record snapshot and normalizes the owner
+// defaults and requested mode of the command. The returned command always
+// carries the original ID, so callers can build a failed result from it.
+func (service *Service) loadPrepareCommand(ctx context.Context, command preparationcontract.Command) (preparationcontract.Snapshot, preparationcontract.Command, string, error) {
+	if service.repository == nil {
+		return preparationcontract.Snapshot{}, command, "", fmt.Errorf("preparation repository is unavailable")
+	}
+	snapshot, err := service.repository.Load(ctx, command.ID)
+	if err != nil {
+		return snapshot, command, "", err
+	}
+	command, err = service.normalizeOwnerDefaults(ctx, snapshot, command)
+	if err != nil {
+		return snapshot, command, "", err
+	}
+	requested, err := preparationdomain.NormalizeMode(command.Mode)
+	if err != nil {
+		return snapshot, command, "", err
+	}
+	command.Mode = requested
+	return snapshot, command, requested, nil
+}
+
+func isOrcaOwnerHost(host string) bool {
+	return host == "codex" || host == "claude" || host == "omo" || host == "omp"
+}
+
+// probeOrcaReadiness observes Orca readiness for a non-direct request. When it
+// returns an error, failure is the result Prepare must return with it.
+func (service *Service) probeOrcaReadiness(
+	ctx context.Context,
+	snapshot preparationcontract.Snapshot,
+	command preparationcontract.Command,
+	requested string,
+	workspace preparationcontract.WorkspaceRequest,
+) (preparationdomain.OrcaReadiness, preparationcontract.ProbeRequest, preparationcontract.Result, error) {
+	readiness := preparationdomain.OrcaReadiness{}
+	probeRequest := preparationcontract.ProbeRequest{}
+	if requested == preparationcontract.ModeDirect {
+		return readiness, probeRequest, preparationcontract.Result{}, nil
+	}
+	if service.orca == nil {
+		readiness.Code = "orca_adapter_unavailable"
+		return readiness, probeRequest, preparationcontract.Result{}, nil
+	}
+	if !isOrcaOwnerHost(command.OwnerHost) {
+		return readiness, probeRequest, failedResult(command.ID), fmt.Errorf("Orca owner_host must be codex, claude, omo, or omp")
+	}
+	// owner가 보충할 수 없는 planner 전제가 빠져 있으면 띄우지 않는다.
+	// 띄우면 owner는 claim까지 완주한 뒤 채울 수 없는 게이트에 부딪혀
+	// 반드시 실패한다 — 실측으로 그랬다(#319, io-cb83a79e1bfd).
+	if keys := preparationdomain.MissingPlannerGateKeys(plannerEvidence(snapshot.Record)); len(keys) > 0 {
+		gates := plannerGateHints(snapshot.Record.ID, keys)
+		return readiness, probeRequest, failedResult(command.ID), plannerGateError(gates)
+	}
+	codec := preparationcontract.IntentCodec{}
+	issue, issueErr := preparationdomain.PrepareIssueIdentity(snapshot.Record.IssueURL, preparationcontract.DecodeIssueLinkEvidence(snapshot.Record.BranchPrepare))
+	if issueErr != nil {
+		return readiness, probeRequest, failedResult(command.ID), issueErr
+	}
+	marker, markerErr := codec.RenderReadinessMarker(snapshot.Record.ID, issue)
+	if markerErr != nil {
+		return readiness, probeRequest, failedResult(command.ID), markerErr
+	}
+	probeRequest = preparationcontract.ProbeRequest{
+		Repo: snapshot.Record.Repo, Host: strings.ToLower(strings.TrimSpace(command.OwnerHost)),
+		Model: strings.TrimSpace(command.OwnerModel), Effort: strings.TrimSpace(command.OwnerEffort),
+		Provider: issue.Provider, Issue: issue.Issue, Marker: marker, Workspace: workspace,
+	}
+	readiness.Provider = probeRequest.Provider
+	readiness.Issue = probeRequest.Issue
+	probe, probeErr := service.orca.Probe(ctx, probeRequest)
+	readiness.Available = probe.Available
+	readiness.Ready = probeErr == nil && probe.Available && probe.Ready
+	readiness.Code = strings.TrimSpace(probe.Code)
+	if probeErr != nil && readiness.Code == "" {
+		readiness.Code = "orca_probe_failed"
+	}
+	if probeErr != nil && requested == preparationcontract.ModeOrca {
+		return readiness, probeRequest, preparationcontract.Result{ID: command.ID, RequestedMode: requested}, probeErr
+	}
+	return readiness, probeRequest, preparationcontract.Result{}, nil
 }
 
 func (service *Service) prepareOrca(
@@ -144,18 +176,9 @@ func (service *Service) prepareOrca(
 		}
 		command.Actor = actor
 	}
-	owner, err := service.evidence.ReadOwner(ctx, snapshot, command)
+	owner, err := service.resolveOrcaOwner(ctx, snapshot, command, probe)
 	if err != nil {
 		return failedResult(command.ID), err
-	}
-	if owner.Provider == "" {
-		owner.Provider = probe.Provider
-	}
-	if owner.Issue == 0 {
-		owner.Issue = probe.Issue
-	}
-	if owner.Provider != probe.Provider || owner.Issue != probe.Issue {
-		return failedResult(command.ID), fmt.Errorf("owner issue identity changed before Orca intent persistence")
 	}
 	preview := preparationcontract.Result{
 		OK: true, ID: command.ID, Preview: !command.Confirm,
@@ -186,15 +209,9 @@ func (service *Service) prepareOrca(
 		return failedResult(command.ID), err
 	}
 	state.Command, state.Owner, state.Pending = command.Clone(), owner, true
-	progress := IntentProgress{State: state, Pending: state.Pending}
-	for step := 0; progress.Pending; step++ {
-		if step >= 6 {
-			return failedResult(command.ID), fmt.Errorf("Orca prepare exceeded the fixed external intent stage count")
-		}
-		progress, err = service.advanceOrca(ctx, progress.State)
-		if err != nil {
-			return failedResult(command.ID), err
-		}
+	progress, err := service.driveOrcaIntent(ctx, state)
+	if err != nil {
+		return failedResult(command.ID), err
 	}
 	result := progress.Result.Clone()
 	result.RequestedMode = decision.RequestedMode
@@ -202,6 +219,42 @@ func (service *Service) prepareOrca(
 	result.FallbackCode = decision.FallbackCode
 	applySelectionResult(&result, decision)
 	return result, nil
+}
+
+// resolveOrcaOwner reads the owner evidence and fills its missing issue
+// identity from the probe; the identity must match the probed issue.
+func (service *Service) resolveOrcaOwner(ctx context.Context, snapshot preparationcontract.Snapshot, command preparationcontract.Command, probe preparationcontract.ProbeRequest) (preparationcontract.OwnerEvidence, error) {
+	owner, err := service.evidence.ReadOwner(ctx, snapshot, command)
+	if err != nil {
+		return owner, err
+	}
+	if owner.Provider == "" {
+		owner.Provider = probe.Provider
+	}
+	if owner.Issue == 0 {
+		owner.Issue = probe.Issue
+	}
+	if owner.Provider != probe.Provider || owner.Issue != probe.Issue {
+		return owner, fmt.Errorf("owner issue identity changed before Orca intent persistence")
+	}
+	return owner, nil
+}
+
+// driveOrcaIntent advances the external Orca intent until no stage is pending,
+// bounded by a fixed stage count.
+func (service *Service) driveOrcaIntent(ctx context.Context, state IntentState) (IntentProgress, error) {
+	progress := IntentProgress{State: state, Pending: state.Pending}
+	for step := 0; progress.Pending; step++ {
+		if step >= 6 {
+			return progress, fmt.Errorf("Orca prepare exceeded the fixed external intent stage count")
+		}
+		var err error
+		progress, err = service.advanceOrca(ctx, progress.State)
+		if err != nil {
+			return progress, err
+		}
+	}
+	return progress, nil
 }
 
 func (service *Service) advanceOrca(ctx context.Context, state IntentState) (IntentProgress, error) {
@@ -401,7 +454,7 @@ func (service *Service) normalizeOwnerDefaults(ctx context.Context, snapshot pre
 	command.OwnerHost = strings.ToLower(strings.TrimSpace(command.OwnerHost))
 	command.OwnerModel = strings.TrimSpace(command.OwnerModel)
 	command.OwnerEffort = strings.TrimSpace(command.OwnerEffort)
-	if command.OwnerHost != "codex" && command.OwnerHost != "claude" && command.OwnerHost != "omo" && command.OwnerHost != "omp" {
+	if !isOrcaOwnerHost(command.OwnerHost) {
 		return command, nil
 	}
 	// 플래그를 둘 다 명시해도 같은 설정 파일이 owner packet의 리뷰·조사·독자 검토

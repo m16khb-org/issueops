@@ -46,54 +46,59 @@ func (s *ReconcileService) Reconcile(ctx context.Context, id string) (contract.R
 
 	switch decision.Action {
 	case domain.ActionAdopt:
-		candidate := inventory.Candidates[decision.CandidateIndex]
-		if err := s.verifier.VerifyCandidate(ctx, intent, candidate); err != nil {
-			_ = s.repository.RecordFailure(ctx, intent, contract.InvocationUnknown, intent.KnownURL, err)
-			return s.failed(ctx, intent, "remote_reconcile_candidate_mismatch", attempted, err)
-		}
-		if err := s.verifier.VerifyLive(ctx, intent, candidate.URL); err != nil {
-			_ = s.repository.RecordFailure(ctx, intent, contract.InvocationUnknown, candidate.URL, err)
-			return s.failed(ctx, intent, "remote_reconcile_verification_failed", attempted, err)
-		}
-		record, err := s.repository.Complete(ctx, intent, candidate.URL, false)
-		if err != nil {
-			return s.failed(ctx, intent, "remote_reconcile_receipt_failed", attempted, err)
-		}
-		return reconciledResult(record, "remote_reconcile_adopted", attempted), nil
-
+		return s.adopt(ctx, intent, inventory.Candidates[decision.CandidateIndex], attempted)
 	case domain.ActionRetry:
-		invoking, err := s.repository.MarkRetry(ctx, intent)
-		if err != nil {
-			return s.failed(ctx, intent, "remote_reconcile_retry_cas_failed", attempted, err)
-		}
-		created, invocation, createErr := s.provider.Create(ctx, invoking.Provider, invoking.Request)
-		switch domain.DecideRetryOutcome(domain.RetryOutcomeFacts{Invocation: invocation, CallFailed: createErr != nil}) {
-		case domain.RetryOutcomeTerminalNotInvoked:
-			record, finishErr := s.repository.CompleteNotInvoked(ctx, invoking, createErr)
-			if finishErr != nil {
-				return s.failed(ctx, invoking, "remote_reconcile_retry_receipt_failed", attempted, finishErr)
-			}
-			return reconciledResult(record, "remote_reconcile_retry_not_invoked", attempted), createErr
-		case domain.RetryOutcomePreserve:
-			_ = s.repository.RecordFailure(ctx, invoking, contract.InvocationUnknown, created.URL, createErr)
-			cause := fmt.Errorf("remote retry outcome is ambiguous; creation was not retried again: %w", createErr)
-			return s.failed(ctx, invoking, "remote_reconcile_retry_ambiguous", attempted, cause)
-		}
-		if err := s.verifier.VerifyLive(ctx, invoking, created.URL); err != nil {
-			_ = s.repository.RecordFailure(ctx, invoking, contract.InvocationUnknown, created.URL, err)
-			return s.failed(ctx, invoking, "remote_reconcile_retry_verification_failed", attempted, err)
-		}
-		record, err := s.repository.Complete(ctx, invoking, created.URL, false)
-		if err != nil {
-			return s.failed(ctx, invoking, "remote_reconcile_retry_receipt_failed", attempted, err)
-		}
-		return reconciledResult(record, "remote_reconcile_retry_succeeded", attempted), nil
-
+		return s.retry(ctx, intent, attempted)
 	case domain.ActionPreserve:
 		return s.preserve(ctx, intent, decision.Reason, attempted)
 	default:
 		return s.failed(ctx, intent, "remote_reconcile_ambiguous", attempted, fmt.Errorf("unsupported publication reconcile action %q", decision.Action))
 	}
+}
+
+func (s *ReconcileService) adopt(ctx context.Context, intent contract.Intent, candidate contract.Candidate, attempted bool) (contract.ReconcileResult, error) {
+	if err := s.verifier.VerifyCandidate(ctx, intent, candidate); err != nil {
+		_ = s.repository.RecordFailure(ctx, intent, contract.InvocationUnknown, intent.KnownURL, err)
+		return s.failed(ctx, intent, "remote_reconcile_candidate_mismatch", attempted, err)
+	}
+	if err := s.verifier.VerifyLive(ctx, intent, candidate.URL); err != nil {
+		_ = s.repository.RecordFailure(ctx, intent, contract.InvocationUnknown, candidate.URL, err)
+		return s.failed(ctx, intent, "remote_reconcile_verification_failed", attempted, err)
+	}
+	record, err := s.repository.Complete(ctx, intent, candidate.URL, false)
+	if err != nil {
+		return s.failed(ctx, intent, "remote_reconcile_receipt_failed", attempted, err)
+	}
+	return reconciledResult(record, "remote_reconcile_adopted", attempted), nil
+}
+
+func (s *ReconcileService) retry(ctx context.Context, intent contract.Intent, attempted bool) (contract.ReconcileResult, error) {
+	invoking, err := s.repository.MarkRetry(ctx, intent)
+	if err != nil {
+		return s.failed(ctx, intent, "remote_reconcile_retry_cas_failed", attempted, err)
+	}
+	created, invocation, createErr := s.provider.Create(ctx, invoking.Provider, invoking.Request)
+	switch domain.DecideRetryOutcome(domain.RetryOutcomeFacts{Invocation: invocation, CallFailed: createErr != nil}) {
+	case domain.RetryOutcomeTerminalNotInvoked:
+		record, finishErr := s.repository.CompleteNotInvoked(ctx, invoking, createErr)
+		if finishErr != nil {
+			return s.failed(ctx, invoking, "remote_reconcile_retry_receipt_failed", attempted, finishErr)
+		}
+		return reconciledResult(record, "remote_reconcile_retry_not_invoked", attempted), createErr
+	case domain.RetryOutcomePreserve:
+		_ = s.repository.RecordFailure(ctx, invoking, contract.InvocationUnknown, created.URL, createErr)
+		cause := fmt.Errorf("remote retry outcome is ambiguous; creation was not retried again: %w", createErr)
+		return s.failed(ctx, invoking, "remote_reconcile_retry_ambiguous", attempted, cause)
+	}
+	if err := s.verifier.VerifyLive(ctx, invoking, created.URL); err != nil {
+		_ = s.repository.RecordFailure(ctx, invoking, contract.InvocationUnknown, created.URL, err)
+		return s.failed(ctx, invoking, "remote_reconcile_retry_verification_failed", attempted, err)
+	}
+	record, err := s.repository.Complete(ctx, invoking, created.URL, false)
+	if err != nil {
+		return s.failed(ctx, invoking, "remote_reconcile_retry_receipt_failed", attempted, err)
+	}
+	return reconciledResult(record, "remote_reconcile_retry_succeeded", attempted), nil
 }
 
 func (s *ReconcileService) preserve(ctx context.Context, intent contract.Intent, reason string, attempted bool) (contract.ReconcileResult, error) {

@@ -106,36 +106,7 @@ func (command Command) RunCleanup(args []string, deps Deps) error {
 	}
 	switch args[0] {
 	case "status":
-		fs := flag.NewFlagSet("issueops cleanup status", flag.ContinueOnError)
-		id := fs.String("id", "", "issueops id")
-		merged := fs.Bool("merged", false, "confirm the remote PR/MR was verified merged before cleanup")
-		jsonOut := fs.Bool("json", false, "print JSON")
-		if help, err := deps.ParseFlags(fs, args[1:]); help || err != nil {
-			return err
-		}
-		status, err := command.Operations.Status(context.Background(), command.Operations.IssueOpsStateRoot(), *id, *merged, deps)
-		if err != nil {
-			if *jsonOut {
-				if printErr := deps.PrintError(err); printErr != nil {
-					return printErr
-				}
-			}
-			return err
-		}
-		if *jsonOut {
-			return deps.PrintJSON(status)
-		}
-		fmt.Printf("ready: %v\n", status.Ready)
-		for _, missing := range status.Missing {
-			fmt.Printf("- missing: %s\n", missing)
-		}
-		if len(status.Choices) > 0 {
-			fmt.Println("선택지:")
-			for _, choice := range status.Choices {
-				fmt.Println(choice)
-			}
-		}
-		return nil
+		return command.runCleanupStatus(args[1:], deps)
 	case "remote-branch":
 		return command.runCleanupRemoteBranch(args[1:], deps)
 	case "linked-branch":
@@ -145,43 +116,81 @@ func (command Command) RunCleanup(args []string, deps Deps) error {
 	case "abandon":
 		return command.runCleanupAbandon(args[1:], deps)
 	case "close-children":
-		fs := flag.NewFlagSet("issueops cleanup close-children", flag.ContinueOnError)
-		id := fs.String("id", "", "issueops id")
-		merged := fs.Bool("merged", false, "confirm child PR/MR merge into the parent work branch before closing child tasks")
-		confirm := fs.Bool("confirm", false, "execute remote child close and record verification; without this, dry-run preview only")
-		jsonOut := fs.Bool("json", false, "print JSON")
-		if help, err := deps.ParseFlags(fs, args[1:]); help || err != nil {
-			return err
-		}
-		result, err := command.Operations.CloseIssueOpsChildren(command.Operations.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsCloseChildrenRequest{
-			MergeEvidenceRequested: *merged,
-			Confirm:                *confirm,
-		}, deps)
-		if err != nil {
-			if *jsonOut {
-				if printErr := deps.PrintError(err); printErr != nil {
-					return printErr
-				}
-			}
-			return err
-		}
-		if *jsonOut {
-			return deps.PrintJSON(result)
-		}
-		fmt.Printf("closed children: %d\n", result.ClosedCount)
-		for _, child := range result.Children {
-			if child.Preview != "" {
-				fmt.Println(child.Preview)
-			} else {
-				fmt.Printf("- %s closed=%t state=%s\n", child.URL, child.Closed, child.State)
-			}
-		}
-		return nil
+		return command.runCleanupCloseChildren(args[1:], deps)
 	case "orphan":
 		return runOrphanCleanup(args[1:], deps)
 	default:
 		return fmt.Errorf("unknown issueops cleanup subcommand")
 	}
+}
+
+// printCleanupError는 --json일 때 오류를 JSON으로 먼저 출력하고, 원래 오류를
+// 그대로 돌려준다. JSON 출력 자체가 실패하면 그 오류가 우선한다.
+func printCleanupError(deps Deps, jsonOut bool, err error) error {
+	if jsonOut {
+		if printErr := deps.PrintError(err); printErr != nil {
+			return printErr
+		}
+	}
+	return err
+}
+
+func (command Command) runCleanupStatus(args []string, deps Deps) error {
+	fs := flag.NewFlagSet("issueops cleanup status", flag.ContinueOnError)
+	id := fs.String("id", "", "issueops id")
+	merged := fs.Bool("merged", false, "confirm the remote PR/MR was verified merged before cleanup")
+	jsonOut := fs.Bool("json", false, "print JSON")
+	if help, err := deps.ParseFlags(fs, args); help || err != nil {
+		return err
+	}
+	status, err := command.Operations.Status(context.Background(), command.Operations.IssueOpsStateRoot(), *id, *merged, deps)
+	if err != nil {
+		return printCleanupError(deps, *jsonOut, err)
+	}
+	if *jsonOut {
+		return deps.PrintJSON(status)
+	}
+	fmt.Printf("ready: %v\n", status.Ready)
+	for _, missing := range status.Missing {
+		fmt.Printf("- missing: %s\n", missing)
+	}
+	if len(status.Choices) > 0 {
+		fmt.Println("선택지:")
+		for _, choice := range status.Choices {
+			fmt.Println(choice)
+		}
+	}
+	return nil
+}
+
+func (command Command) runCleanupCloseChildren(args []string, deps Deps) error {
+	fs := flag.NewFlagSet("issueops cleanup close-children", flag.ContinueOnError)
+	id := fs.String("id", "", "issueops id")
+	merged := fs.Bool("merged", false, "confirm child PR/MR merge into the parent work branch before closing child tasks")
+	confirm := fs.Bool("confirm", false, "execute remote child close and record verification; without this, dry-run preview only")
+	jsonOut := fs.Bool("json", false, "print JSON")
+	if help, err := deps.ParseFlags(fs, args); help || err != nil {
+		return err
+	}
+	result, err := command.Operations.CloseIssueOpsChildren(command.Operations.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsCloseChildrenRequest{
+		MergeEvidenceRequested: *merged,
+		Confirm:                *confirm,
+	}, deps)
+	if err != nil {
+		return printCleanupError(deps, *jsonOut, err)
+	}
+	if *jsonOut {
+		return deps.PrintJSON(result)
+	}
+	fmt.Printf("closed children: %d\n", result.ClosedCount)
+	for _, child := range result.Children {
+		if child.Preview != "" {
+			fmt.Println(child.Preview)
+		} else {
+			fmt.Printf("- %s closed=%t state=%s\n", child.URL, child.Closed, child.State)
+		}
+	}
+	return nil
 }
 
 func runOrphanCleanup(args []string, deps Deps) error {

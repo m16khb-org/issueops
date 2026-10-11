@@ -222,10 +222,10 @@ func validateExecutionInventoryRuntime(observed, sealed string) error {
 }
 
 func validateExecutionPrepare(workspace port.ExecutionWorkspaceRequest, req port.ExecutionOrcaProbeRequest) error {
-	if strings.TrimSpace(workspace.LifecycleID) == "" || !filepath.IsAbs(workspace.SourceRoot) || !filepath.IsAbs(workspace.Root) || strings.TrimSpace(workspace.Branch) == "" || strings.TrimSpace(workspace.BaseHead) == "" {
+	if !executionWorkspaceIdentityComplete(workspace) {
 		return fmt.Errorf("Orca prepare requires an exact lifecycle and workspace identity")
 	}
-	if req.Host != "codex" && req.Host != "claude" && req.Host != "omo" && req.Host != "omp" || strings.TrimSpace(req.Model) == "" || strings.TrimSpace(req.Marker) == "" {
+	if !executionPrepareHostComplete(req) {
 		return fmt.Errorf("Orca prepare requires codex, claude, omo, or omp with explicit model and marker")
 	}
 	provider := strings.ToLower(strings.TrimSpace(req.Provider))
@@ -235,16 +235,40 @@ func validateExecutionPrepare(workspace port.ExecutionWorkspaceRequest, req port
 	if req.Issue <= 0 {
 		return fmt.Errorf("Orca %s prepare requires a positive issue number", provider)
 	}
-	markerProvider, providerOK := executionMarkerField(req.Marker, "provider")
-	markerIssue, issueOK := executionMarkerField(req.Marker, "issue")
-	if !providerOK || markerProvider != provider || !issueOK || markerIssue != strconv.Itoa(req.Issue) {
+	if !executionMarkerSealsIssue(req.Marker, provider, req.Issue) {
 		return fmt.Errorf("Orca %s prepare marker does not seal the exact provider and issue number", provider)
 	}
-	if parent := strings.TrimSpace(workspace.ParentWorktree); parent != "" &&
-		(!filepath.IsAbs(parent) || samePath(parent, workspace.SourceRoot) || samePath(parent, workspace.Root)) {
+	if !executionParentWorktreeIsolated(workspace) {
 		return fmt.Errorf("Orca parent worktree must be an isolated absolute path")
 	}
 	return nil
+}
+
+func executionWorkspaceIdentityComplete(workspace port.ExecutionWorkspaceRequest) bool {
+	return strings.TrimSpace(workspace.LifecycleID) != "" && filepath.IsAbs(workspace.SourceRoot) && filepath.IsAbs(workspace.Root) &&
+		strings.TrimSpace(workspace.Branch) != "" && strings.TrimSpace(workspace.BaseHead) != ""
+}
+
+func executionPrepareHostComplete(req port.ExecutionOrcaProbeRequest) bool {
+	switch req.Host {
+	case "codex", "claude", "omo", "omp":
+		return strings.TrimSpace(req.Model) != "" && strings.TrimSpace(req.Marker) != ""
+	}
+	return false
+}
+
+func executionMarkerSealsIssue(marker, provider string, issue int) bool {
+	markerProvider, providerOK := executionMarkerField(marker, "provider")
+	markerIssue, issueOK := executionMarkerField(marker, "issue")
+	return providerOK && markerProvider == provider && issueOK && markerIssue == strconv.Itoa(issue)
+}
+
+func executionParentWorktreeIsolated(workspace port.ExecutionWorkspaceRequest) bool {
+	parent := strings.TrimSpace(workspace.ParentWorktree)
+	if parent == "" {
+		return true
+	}
+	return filepath.IsAbs(parent) && !samePath(parent, workspace.SourceRoot) && !samePath(parent, workspace.Root)
 }
 
 func validateExecutionWorktree(row port.OrcaWorktree, workspace port.ExecutionWorkspaceRequest, req port.ExecutionOrcaProbeRequest) error {
@@ -313,6 +337,13 @@ func validateExecutionOwnerLaunch(prepared port.ExecutionOrcaWorkspaceReceipt, r
 	if req.Host != "codex" && req.Host != "claude" && req.Host != "omo" && req.Host != "omp" || strings.TrimSpace(req.Model) == "" {
 		return fmt.Errorf("Orca owner launch requires an explicit first-party owner profile")
 	}
+	if err := validateExecutionSealedPacket(prepared, launch); err != nil {
+		return err
+	}
+	return validateExecutionSealedPrompt(prepared, launch)
+}
+
+func validateExecutionSealedPacket(prepared port.ExecutionOrcaWorkspaceReceipt, launch port.ExecutionOrcaLaunchRequest) error {
 	packet, err := readExecutionSealedFile(prepared.Workspace.Root, launch.ContextPacketPath)
 	if err != nil {
 		return fmt.Errorf("sealed context packet is invalid: %w", err)
@@ -320,6 +351,10 @@ func validateExecutionOwnerLaunch(prepared port.ExecutionOrcaWorkspaceReceipt, r
 	if digestExecutionBytes(packet) != strings.ToLower(strings.TrimSpace(launch.ContextPacketSHA256)) {
 		return fmt.Errorf("sealed context packet digest mismatch")
 	}
+	return nil
+}
+
+func validateExecutionSealedPrompt(prepared port.ExecutionOrcaWorkspaceReceipt, launch port.ExecutionOrcaLaunchRequest) error {
 	prompt, err := readExecutionSealedFile(prepared.Workspace.Root, launch.PromptPath)
 	if err != nil {
 		return fmt.Errorf("sealed owner prompt is invalid: %w", err)

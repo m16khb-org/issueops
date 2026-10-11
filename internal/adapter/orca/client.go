@@ -104,6 +104,39 @@ func (c *Client) DeliveryIdentity(ctx context.Context) (port.ExecutionOrcaDelive
 	}, nil
 }
 
+type orcaCapabilityCheck struct {
+	argv    []string
+	want    []string
+	wantAny [][]string
+}
+
+func orcaCapabilityChecks(provider string) []orcaCapabilityCheck {
+	worktreeCreateFlags := []string{"--repo", "--name", "--base-branch", "--no-parent", "--setup", "--comment", "--json"}
+	if provider == "github" {
+		worktreeCreateFlags = append(worktreeCreateFlags, "--issue")
+	}
+	return []orcaCapabilityCheck{
+		{argv: []string{"orca", "worktree", "create", "--help"}, want: worktreeCreateFlags},
+		{argv: []string{"orca", "worktree", "list", "--help"}, want: []string{"--repo", "--limit", "--json"}},
+		{argv: []string{"orca", "terminal", "create", "--help"}, want: []string{"--worktree", "--command", "--title", "--json"}},
+		{argv: []string{"orca", "terminal", "list", "--help"}, want: []string{"--worktree", "--limit", "--json"}},
+		{argv: []string{"orca", "orchestration", "run-create", "--help"}, want: []string{"--objective", "--from", "--json"}},
+		{argv: []string{"orca", "orchestration", "run-list", "--help"}, want: []string{"--cursor", "--json"}},
+		{argv: []string{"orca", "orchestration", "run-current", "--help"}, want: []string{"--from", "--json"}},
+		{argv: []string{"orca", "orchestration", "run-use", "--help"}, want: []string{"--id", "--from", "--json"}},
+		{argv: []string{"orca", "orchestration", "task-create", "--help"}, want: []string{"--spec", "--task-title", "--display-name", "--run", "--from", "--json"}},
+		{argv: []string{"orca", "orchestration", "task-list", "--help"}, want: []string{"--ready", "--status", "--run", "--json"}},
+		{argv: []string{"orca", "orchestration", "gate-list", "--help"}, want: []string{"--run", "--json"}},
+		{argv: []string{"orca", "orchestration", "task-update", "--help"}, want: []string{"--id", "--status", "--result", "--run", "--from", "--json"}},
+		{argv: []string{"orca", "orchestration", "dispatch", "--help"}, want: []string{"--task", "--to", "--run", "--from", "--inject", "--return-preamble", "--retry-request", "--json"}},
+		{argv: []string{"orca", "orchestration", "request-show", "--help"}, want: []string{"--request", "--json"}},
+		{argv: []string{"orca", "terminal", "send", "--help"}, want: []string{"--terminal", "--text", "--enter", "--retry-request", "--json"}},
+		{argv: []string{"orca", "orchestration", "dispatch-show", "--help"}, want: []string{"--task", "--preamble", "--from", "--json"}},
+		{argv: []string{"orca", "orchestration", "send", "--help"}, want: []string{"--run", "--to", "--from", "--type", "--subject", "--body", "--task-id", "--dispatch-id", "--outcome", "--files-modified", "--report-path", "--json"}},
+		{argv: []string{"orca", "worktree", "rm", "--help"}, want: []string{"--worktree", "--force", "--json"}},
+	}
+}
+
 func (c *Client) Probe(ctx context.Context, req port.OrcaProbeRequest) (port.OrcaProbeResult, error) {
 	agent := strings.TrimSpace(req.Agent)
 	if agent == "" {
@@ -128,20 +161,8 @@ func (c *Client) Probe(ctx context.Context, req port.OrcaProbeRequest) (port.Orc
 		return result, nil
 	}
 	result.RuntimeID = status.RuntimeID
-	if strings.TrimSpace(status.RuntimeID) == "" {
-		result.Code = "runtime_id_unresolved"
-		return result, nil
-	}
-	if !status.RuntimeReachable {
-		result.Code = "runtime_unreachable"
-		return result, nil
-	}
-	if status.RuntimeState != "ready" {
-		result.Code = "runtime_not_ready"
-		return result, nil
-	}
-	if status.GraphState != "ready" {
-		result.Code = "graph_not_ready"
+	if code := probeStatusCode(status); code != "" {
+		result.Code = code
 		return result, nil
 	}
 	repo, err := c.showRepo(ctx, req.Repo)
@@ -154,132 +175,142 @@ func (c *Client) Probe(ctx context.Context, req port.OrcaProbeRequest) (port.Orc
 	result.RepoPath = repo.Path
 	result.RepoRemoteName = repo.RemoteName
 	result.WorktreeBasePath = repo.WorktreeBasePath
-	if strings.TrimSpace(repo.ID) == "" || strings.TrimSpace(repo.Path) == "" {
-		result.Code = "repo_identity_unresolved"
+	if code := probeRepoCode(repo, req.Repo); code != "" {
+		result.Code = code
 		return result, nil
 	}
-	if !samePath(repo.Path, req.Repo) {
-		result.Code = "repo_path_mismatch"
+	if !c.probeCapabilities(ctx, provider) {
+		result.Code = "capability_missing"
 		return result, nil
-	}
-	if strings.TrimSpace(repo.RemoteName) == "" {
-		result.Code = "repo_remote_unresolved"
-		return result, nil
-	}
-	if strings.TrimSpace(repo.WorktreeBasePath) == "" {
-		result.Code = "worktree_base_unresolved"
-		return result, nil
-	}
-	basePath := repo.WorktreeBasePath
-	if !filepath.IsAbs(basePath) {
-		basePath = filepath.Join(repo.Path, basePath)
-	}
-	if !samePath(basePath, filepath.Clean(req.Repo)+".worktrees") {
-		result.Code = "worktree_base_mismatch"
-		return result, nil
-	}
-	worktreeCreateFlags := []string{"--repo", "--name", "--base-branch", "--no-parent", "--setup", "--comment", "--json"}
-	if provider == "github" {
-		worktreeCreateFlags = append(worktreeCreateFlags, "--issue")
-	}
-	for _, capability := range []struct {
-		argv    []string
-		want    []string
-		wantAny [][]string
-	}{
-		{argv: []string{"orca", "worktree", "create", "--help"}, want: worktreeCreateFlags},
-		{argv: []string{"orca", "worktree", "list", "--help"}, want: []string{"--repo", "--limit", "--json"}},
-		{argv: []string{"orca", "terminal", "create", "--help"}, want: []string{"--worktree", "--command", "--title", "--json"}},
-		{argv: []string{"orca", "terminal", "list", "--help"}, want: []string{"--worktree", "--limit", "--json"}},
-		{argv: []string{"orca", "orchestration", "run-create", "--help"}, want: []string{"--objective", "--from", "--json"}},
-		{argv: []string{"orca", "orchestration", "run-list", "--help"}, want: []string{"--cursor", "--json"}},
-		{argv: []string{"orca", "orchestration", "run-current", "--help"}, want: []string{"--from", "--json"}},
-		{argv: []string{"orca", "orchestration", "run-use", "--help"}, want: []string{"--id", "--from", "--json"}},
-		{argv: []string{"orca", "orchestration", "task-create", "--help"}, want: []string{"--spec", "--task-title", "--display-name", "--run", "--from", "--json"}},
-		{argv: []string{"orca", "orchestration", "task-list", "--help"}, want: []string{"--ready", "--status", "--run", "--json"}},
-		{argv: []string{"orca", "orchestration", "gate-list", "--help"}, want: []string{"--run", "--json"}},
-		{argv: []string{"orca", "orchestration", "task-update", "--help"}, want: []string{"--id", "--status", "--result", "--run", "--from", "--json"}},
-		{argv: []string{"orca", "orchestration", "dispatch", "--help"}, want: []string{"--task", "--to", "--run", "--from", "--inject", "--return-preamble", "--retry-request", "--json"}},
-		{argv: []string{"orca", "orchestration", "request-show", "--help"}, want: []string{"--request", "--json"}},
-		{argv: []string{"orca", "terminal", "send", "--help"}, want: []string{"--terminal", "--text", "--enter", "--retry-request", "--json"}},
-		{argv: []string{"orca", "orchestration", "dispatch-show", "--help"}, want: []string{"--task", "--preamble", "--from", "--json"}},
-		{argv: []string{"orca", "orchestration", "send", "--help"}, want: []string{"--run", "--to", "--from", "--type", "--subject", "--body", "--task-id", "--dispatch-id", "--outcome", "--files-modified", "--report-path", "--json"}},
-		{argv: []string{"orca", "worktree", "rm", "--help"}, want: []string{"--worktree", "--force", "--json"}},
-	} {
-		text, err := c.runText(ctx, "", readTimeout, capability.argv)
-		matched := len(capability.want) > 0 && containsAllHelpFlags(text, capability.want)
-		for _, alternative := range capability.wantAny {
-			matched = matched || containsAllHelpFlags(text, alternative)
-		}
-		if err != nil || !matched {
-			result.Code = "capability_missing"
-			return result, nil
-		}
 	}
 	if _, err := c.runner.LookPath(command); err != nil {
 		result.Code = "agent_not_found"
 		return result, nil
 	}
-	if agent == "codex" {
-		help, err := c.runText(ctx, "", readTimeout, []string{"codex", "--help"})
-		if err != nil || !containsAllHelpFlags(help, []string{"--dangerously-bypass-hook-trust"}) {
-			result.Code = "codex_hook_trust_bypass_unsupported"
-			return result, nil
-		}
-		if !containsAllHelpFlags(help, []string{"--model", "--config"}) {
-			result.Code = "host_model_selection_unsupported"
-			return result, nil
-		}
-		if !containsAllHelpFlags(help, []string{"--dangerously-bypass-approvals-and-sandbox"}) {
-			result.Code = "host_permission_bypass_unsupported"
-			return result, nil
-		}
-	}
-	if agent == "claude" || agent == "omo" || agent == "omp" {
-		help, err := c.runText(ctx, "", readTimeout, []string{agent, "--help"})
-		if err != nil || !containsAllHelpFlags(help, []string{"--model"}) {
-			result.Code = "host_model_selection_unsupported"
-			return result, nil
-		}
-		if agent == "claude" && !containsAllHelpFlags(help, []string{"--dangerously-skip-permissions"}) {
-			result.Code = "host_permission_bypass_unsupported"
-			return result, nil
-		}
-		if agent == "omp" && !containsAllHelpFlags(help, []string{"--thinking"}) {
-			result.Code = "host_model_selection_unsupported"
-			return result, nil
-		}
-		if agent == "omp" && !containsAllHelpFlags(help, []string{"--auto-approve"}) {
-			result.Code = "host_permission_bypass_unsupported"
-			return result, nil
-		}
-		// 역할 에이전트는 --agents로 주입한다. 지원하지 않는 claude면 terminal을
-		// 만들기 전에 멈춘다.
-		if agent == "claude" && !containsAllHelpFlags(help, []string{"--agents"}) {
-			result.Code = "host_role_agents_unsupported"
-			return result, nil
-		}
-	}
-	currentRun, err := c.currentRunInventory(ctx)
-	if err == nil {
-		err = validateExecutionInventoryRuntime(currentRun.RuntimeID, status.RuntimeID)
-	}
-	if err != nil {
-		result.Code = "orchestration_unready"
-		result.Detail = boundedDiagnostic(err.Error())
+	if code := c.probeHostAgentCode(ctx, agent); code != "" {
+		result.Code = code
 		return result, nil
 	}
-	runs, err := c.listRunsInventory(ctx)
-	if err == nil {
-		err = validateExecutionInventoryRuntime(runs.RuntimeID, status.RuntimeID)
-	}
-	if err != nil {
+	if err := c.probeOrchestration(ctx, status.RuntimeID); err != nil {
 		result.Code = "orchestration_unready"
 		result.Detail = boundedDiagnostic(err.Error())
 		return result, nil
 	}
 	result.Ready = true
 	return result, nil
+}
+
+// probeStatusCode returns the first failing runtime status code, or "" when the runtime is ready.
+func probeStatusCode(status port.OrcaStatus) string {
+	switch {
+	case strings.TrimSpace(status.RuntimeID) == "":
+		return "runtime_id_unresolved"
+	case !status.RuntimeReachable:
+		return "runtime_unreachable"
+	case status.RuntimeState != "ready":
+		return "runtime_not_ready"
+	case status.GraphState != "ready":
+		return "graph_not_ready"
+	}
+	return ""
+}
+
+// probeRepoCode returns the first failing repo identity code, or "" when the repo is usable.
+func probeRepoCode(repo port.OrcaRepo, requestedRepo string) string {
+	switch {
+	case strings.TrimSpace(repo.ID) == "" || strings.TrimSpace(repo.Path) == "":
+		return "repo_identity_unresolved"
+	case !samePath(repo.Path, requestedRepo):
+		return "repo_path_mismatch"
+	case strings.TrimSpace(repo.RemoteName) == "":
+		return "repo_remote_unresolved"
+	case strings.TrimSpace(repo.WorktreeBasePath) == "":
+		return "worktree_base_unresolved"
+	}
+	basePath := repo.WorktreeBasePath
+	if !filepath.IsAbs(basePath) {
+		basePath = filepath.Join(repo.Path, basePath)
+	}
+	if !samePath(basePath, filepath.Clean(requestedRepo)+".worktrees") {
+		return "worktree_base_mismatch"
+	}
+	return ""
+}
+
+// probeCapabilities reports whether every required orca subcommand help advertises its flags.
+func (c *Client) probeCapabilities(ctx context.Context, provider string) bool {
+	for _, capability := range orcaCapabilityChecks(provider) {
+		text, err := c.runText(ctx, "", readTimeout, capability.argv)
+		matched := len(capability.want) > 0 && containsAllHelpFlags(text, capability.want)
+		for _, alternative := range capability.wantAny {
+			matched = matched || containsAllHelpFlags(text, alternative)
+		}
+		if err != nil || !matched {
+			return false
+		}
+	}
+	return true
+}
+
+// probeHostAgentCode checks the host agent CLI flags Orca delivery depends on.
+func (c *Client) probeHostAgentCode(ctx context.Context, agent string) string {
+	switch agent {
+	case "codex":
+		return c.probeCodexHelpCode(ctx)
+	case "claude", "omo", "omp":
+		return c.probeAgentHelpCode(ctx, agent)
+	}
+	return ""
+}
+
+func (c *Client) probeCodexHelpCode(ctx context.Context) string {
+	help, err := c.runText(ctx, "", readTimeout, []string{"codex", "--help"})
+	switch {
+	case err != nil || !containsAllHelpFlags(help, []string{"--dangerously-bypass-hook-trust"}):
+		return "codex_hook_trust_bypass_unsupported"
+	case !containsAllHelpFlags(help, []string{"--model", "--config"}):
+		return "host_model_selection_unsupported"
+	case !containsAllHelpFlags(help, []string{"--dangerously-bypass-approvals-and-sandbox"}):
+		return "host_permission_bypass_unsupported"
+	}
+	return ""
+}
+
+func (c *Client) probeAgentHelpCode(ctx context.Context, agent string) string {
+	help, err := c.runText(ctx, "", readTimeout, []string{agent, "--help"})
+	if err != nil || !containsAllHelpFlags(help, []string{"--model"}) {
+		return "host_model_selection_unsupported"
+	}
+	has := func(flag string) bool { return containsAllHelpFlags(help, []string{flag}) }
+	switch {
+	case agent == "claude" && !has("--dangerously-skip-permissions"):
+		return "host_permission_bypass_unsupported"
+	case agent == "omp" && !has("--thinking"):
+		return "host_model_selection_unsupported"
+	case agent == "omp" && !has("--auto-approve"):
+		return "host_permission_bypass_unsupported"
+	// 역할 에이전트는 --agents로 주입한다. 지원하지 않는 claude면 terminal을
+	// 만들기 전에 멈춘다.
+	case agent == "claude" && !has("--agents"):
+		return "host_role_agents_unsupported"
+	}
+	return ""
+}
+
+// probeOrchestration verifies the current-run and run-list inventories belong to the probed runtime.
+func (c *Client) probeOrchestration(ctx context.Context, runtimeID string) error {
+	currentRun, err := c.currentRunInventory(ctx)
+	if err == nil {
+		err = validateExecutionInventoryRuntime(currentRun.RuntimeID, runtimeID)
+	}
+	if err != nil {
+		return err
+	}
+	runs, err := c.listRunsInventory(ctx)
+	if err == nil {
+		err = validateExecutionInventoryRuntime(runs.RuntimeID, runtimeID)
+	}
+	return err
 }
 
 func (c *Client) showRepo(ctx context.Context, repo string) (port.OrcaRepo, error) {
@@ -373,6 +404,12 @@ func (c *Client) CreateWorktree(ctx context.Context, req port.OrcaCreateWorktree
 	if created.Branch == "" || created.Branch == requestedBranch {
 		return created, nil
 	}
+	upstream, allowNumericSuffix := c.canonicalUpstream(ctx, req, created, preparedRemote)
+	return c.canonicalizeWorktreeBranch(ctx, created, requestedBranch, upstream, allowNumericSuffix)
+}
+
+// canonicalUpstream picks the upstream to track after renaming the created branch.
+func (c *Client) canonicalUpstream(ctx context.Context, req port.OrcaCreateWorktreeRequest, created port.OrcaWorktree, preparedRemote string) (string, bool) {
 	upstream := strings.TrimSpace(req.UpstreamBranch)
 	allowNumericSuffix := false
 	if upstream == "" && preparedRemote != "" &&
@@ -384,7 +421,7 @@ func (c *Client) CreateWorktree(ctx context.Context, req port.OrcaCreateWorktree
 	if upstream == "" && !exactGitObjectIDPattern().MatchString(strings.TrimSpace(req.BaseBranch)) {
 		upstream = strings.TrimSpace(req.BaseBranch)
 	}
-	return c.canonicalizeWorktreeBranch(ctx, created, requestedBranch, upstream, allowNumericSuffix)
+	return upstream, allowNumericSuffix
 }
 
 func (c *Client) canonicalizeWorktreeBranch(ctx context.Context, created port.OrcaWorktree, requestedBranch, upstream string, allowNumericSuffix bool) (port.OrcaWorktree, error) {

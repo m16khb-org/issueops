@@ -10,6 +10,37 @@ import (
 )
 
 func ValidateExecution(execution issueopscontract.Execution) error {
+	if err := validateExecutionCore(execution); err != nil {
+		return err
+	}
+	if err := validateExecutionOrcaBinding(execution); err != nil {
+		return err
+	}
+	if err := validateExecutionPending(execution.Pending); err != nil {
+		return err
+	}
+	if err := validateExecutionCompletions(execution); err != nil {
+		return err
+	}
+	if execution.Failure != nil {
+		if execution.Failure.Code == "" || execution.Failure.At == "" || len(execution.Failure.Message) > 4096 {
+			return fmt.Errorf("execution failure is invalid")
+		}
+	}
+	if execution.SyncBaseResolution != nil {
+		if err := validateExecutionSyncBaseResolution(execution, *execution.SyncBaseResolution); err != nil {
+			return err
+		}
+	}
+	for _, event := range execution.SyncBaseEvents {
+		if err := validateExecutionSyncBaseEvent(event); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateExecutionCore(execution issueopscontract.Execution) error {
 	if execution.Mode != issueopscontract.ExecutionModeDirect && execution.Mode != issueopscontract.ExecutionModeOrca {
 		return fmt.Errorf("execution mode must be direct or orca")
 	}
@@ -22,28 +53,39 @@ func ValidateExecution(execution issueopscontract.Execution) error {
 	if execution.Selection == nil {
 		return fmt.Errorf("execution selection receipt is required")
 	}
-	if err := validateExecutionSelection(*execution.Selection, execution.Mode); err != nil {
-		return err
-	}
+	return validateExecutionSelection(*execution.Selection, execution.Mode)
+}
+
+func validateExecutionOrcaBinding(execution issueopscontract.Execution) error {
 	if execution.Mode == issueopscontract.ExecutionModeDirect && execution.Orca != nil {
 		return fmt.Errorf("direct execution must not contain an Orca binding")
 	}
-	if execution.Orca != nil {
-		if err := validateOrcaBinding(*execution.Orca); err != nil {
-			return err
-		}
-		if execution.Orca.LeaseGeneration == 0 {
-			return fmt.Errorf("Orca binding lease_generation is required")
-		}
-		if execution.Orca.LeaseGeneration > execution.Lease.Generation {
-			return fmt.Errorf("Orca binding lease_generation exceeds the lease generation")
-		}
+	if execution.Orca == nil {
+		return nil
 	}
-	if execution.Pending != nil {
-		if execution.Pending.OperationID == "" || execution.Pending.Kind == "" || execution.Pending.Marker == "" || execution.Pending.StartedAt == "" {
-			return fmt.Errorf("pending external intent is incomplete")
-		}
+	if err := validateOrcaBinding(*execution.Orca); err != nil {
+		return err
 	}
+	if execution.Orca.LeaseGeneration == 0 {
+		return fmt.Errorf("Orca binding lease_generation is required")
+	}
+	if execution.Orca.LeaseGeneration > execution.Lease.Generation {
+		return fmt.Errorf("Orca binding lease_generation exceeds the lease generation")
+	}
+	return nil
+}
+
+func validateExecutionPending(pending *issueopscontract.ExternalIntent) error {
+	if pending == nil {
+		return nil
+	}
+	if pending.OperationID == "" || pending.Kind == "" || pending.Marker == "" || pending.StartedAt == "" {
+		return fmt.Errorf("pending external intent is incomplete")
+	}
+	return nil
+}
+
+func validateExecutionCompletions(execution issueopscontract.Execution) error {
 	if execution.Completion != nil {
 		if err := validateExecutionCompletion(*execution.Completion); err != nil {
 			return err
@@ -66,28 +108,11 @@ func ValidateExecution(execution issueopscontract.Execution) error {
 			return fmt.Errorf("execution completion history generation conflicts with its completion")
 		}
 	}
-	if execution.Failure != nil {
-		if execution.Failure.Code == "" || execution.Failure.At == "" || len(execution.Failure.Message) > 4096 {
-			return fmt.Errorf("execution failure is invalid")
-		}
-	}
-	if execution.SyncBaseResolution != nil {
-		if err := validateExecutionSyncBaseResolution(execution, *execution.SyncBaseResolution); err != nil {
-			return err
-		}
-	}
-	for _, event := range execution.SyncBaseEvents {
-		if err := validateExecutionSyncBaseEvent(event); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
 func validateExecutionSyncBaseResolution(execution issueopscontract.Execution, resolution issueopscontract.ExecutionSyncBaseResolution) error {
-	if execution.Lease.Status != issueopscontract.LeaseStatusReleased || execution.Completion == nil ||
-		resolution.Generation == 0 || resolution.Generation != execution.Lease.Generation ||
-		resolution.CompletionGeneration == 0 || resolution.CompletionGeneration != execution.Completion.Generation {
+	if !syncBaseResolutionBindsCompletion(execution, resolution) {
 		return fmt.Errorf("execution sync-base resolution must bind the released current completion")
 	}
 	if !validCommitSHA(resolution.BaseOID) || strings.TrimSpace(resolution.StartedAt) == "" || len(resolution.ConflictFiles) == 0 {
@@ -98,13 +123,24 @@ func validateExecutionSyncBaseResolution(execution issueopscontract.Execution, r
 	}
 	seen := map[string]bool{}
 	for _, path := range resolution.ConflictFiles {
-		clean := filepath.Clean(path)
-		if path == "" || path != clean || filepath.IsAbs(path) || clean == "." || clean == ".." || strings.HasPrefix(clean, ".."+string(filepath.Separator)) || seen[clean] {
+		if !validSyncBaseConflictPath(path) || seen[filepath.Clean(path)] {
 			return fmt.Errorf("execution sync-base resolution conflict path is invalid")
 		}
-		seen[clean] = true
+		seen[filepath.Clean(path)] = true
 	}
 	return nil
+}
+
+func syncBaseResolutionBindsCompletion(execution issueopscontract.Execution, resolution issueopscontract.ExecutionSyncBaseResolution) bool {
+	return execution.Lease.Status == issueopscontract.LeaseStatusReleased && execution.Completion != nil &&
+		resolution.Generation != 0 && resolution.Generation == execution.Lease.Generation &&
+		resolution.CompletionGeneration != 0 && resolution.CompletionGeneration == execution.Completion.Generation
+}
+
+// validSyncBaseConflictPath는 정규화된 상대 경로이면서 작업 트리 밖으로 나가지 않는지 확인한다.
+func validSyncBaseConflictPath(path string) bool {
+	clean := filepath.Clean(path)
+	return path != "" && path == clean && !filepath.IsAbs(path) && clean != "." && clean != ".." && !strings.HasPrefix(clean, ".."+string(filepath.Separator))
 }
 
 func validateExecutionCompletion(completion issueopscontract.ExecutionCompletion) error {
@@ -121,6 +157,22 @@ func validateExecutionCompletion(completion issueopscontract.ExecutionCompletion
 }
 
 func validateExecutionSelection(selection issueopscontract.ExecutionSelection, mode issueopscontract.ExecutionMode) error {
+	if err := validateSelectionProbeShape(selection, mode); err != nil {
+		return err
+	}
+	if err := validateSelectionModeFallback(selection, mode); err != nil {
+		return err
+	}
+	if err := validateSelectionExplicitDirect(selection); err != nil {
+		return err
+	}
+	if !validSHA256(selection.ReadinessFingerprint) || strings.TrimSpace(selection.SelectedAt) == "" {
+		return fmt.Errorf("selection receipt requires fingerprint and selected_at")
+	}
+	return nil
+}
+
+func validateSelectionProbeShape(selection issueopscontract.ExecutionSelection, mode issueopscontract.ExecutionMode) error {
 	if selection.RequestedMode != "auto" && selection.RequestedMode != "direct" && selection.RequestedMode != "orca" {
 		return fmt.Errorf("selection requested_mode must be auto, direct, or orca")
 	}
@@ -139,6 +191,10 @@ func validateExecutionSelection(selection issueopscontract.ExecutionSelection, m
 	if selection.RequestedMode != "direct" && !selection.ProbeAttempted {
 		return fmt.Errorf("auto and Orca selections require a readiness probe")
 	}
+	return nil
+}
+
+func validateSelectionModeFallback(selection issueopscontract.ExecutionSelection, mode issueopscontract.ExecutionMode) error {
 	if (selection.RequestedMode == "direct" && mode != issueopscontract.ExecutionModeDirect) ||
 		(selection.RequestedMode == "orca" && mode != issueopscontract.ExecutionModeOrca) {
 		return fmt.Errorf("explicit selection mode must equal execution mode")
@@ -156,18 +212,21 @@ func validateExecutionSelection(selection issueopscontract.ExecutionSelection, m
 	if mode == issueopscontract.ExecutionModeOrca && strings.TrimSpace(selection.FallbackCode) != "" {
 		return fmt.Errorf("Orca selection must not contain fallback_code")
 	}
-	if selection.RequestedMode == "direct" {
-		if selection.ProbeAttempted || strings.TrimSpace(selection.ExplicitDirectReason) == "" {
-			return fmt.Errorf("explicit direct selection requires a reason and no probe")
+	return nil
+}
+
+func validateSelectionExplicitDirect(selection issueopscontract.ExecutionSelection) error {
+	if selection.RequestedMode != "direct" {
+		if strings.TrimSpace(selection.ExplicitDirectReason) != "" {
+			return fmt.Errorf("non-direct selection must not contain explicit_direct_reason")
 		}
-		if selection.FallbackCode != "" {
-			return fmt.Errorf("explicit direct selection must not contain fallback_code")
-		}
-	} else if strings.TrimSpace(selection.ExplicitDirectReason) != "" {
-		return fmt.Errorf("non-direct selection must not contain explicit_direct_reason")
+		return nil
 	}
-	if !validSHA256(selection.ReadinessFingerprint) || strings.TrimSpace(selection.SelectedAt) == "" {
-		return fmt.Errorf("selection receipt requires fingerprint and selected_at")
+	if selection.ProbeAttempted || strings.TrimSpace(selection.ExplicitDirectReason) == "" {
+		return fmt.Errorf("explicit direct selection requires a reason and no probe")
+	}
+	if selection.FallbackCode != "" {
+		return fmt.Errorf("explicit direct selection must not contain fallback_code")
 	}
 	return nil
 }
@@ -189,16 +248,16 @@ func validateExecutionSyncBaseEvent(event issueopscontract.ExecutionSyncBaseEven
 }
 
 func validateWorkspace(workspace issueopscontract.Workspace, mode issueopscontract.ExecutionMode) error {
-	for name, value := range map[string]string{
-		"source_root": workspace.SourceRoot,
-		"root":        workspace.Root,
-		"branch":      workspace.Branch,
-		"base_head":   workspace.BaseHead,
-		"driver":      workspace.Driver,
-		"linked_at":   workspace.LinkedAt,
+	for _, field := range []struct{ name, value string }{
+		{"source_root", workspace.SourceRoot},
+		{"root", workspace.Root},
+		{"branch", workspace.Branch},
+		{"base_head", workspace.BaseHead},
+		{"driver", workspace.Driver},
+		{"linked_at", workspace.LinkedAt},
 	} {
-		if strings.TrimSpace(value) == "" {
-			return fmt.Errorf("workspace %s is required", name)
+		if strings.TrimSpace(field.value) == "" {
+			return fmt.Errorf("workspace %s is required", field.name)
 		}
 	}
 	if workspace.SourceRoot == workspace.Root {
@@ -226,17 +285,13 @@ func validateWriteLease(lease issueopscontract.WriteLease) error {
 		if lease.Holder == nil || lease.ClaimTokenSHA256 != "" || lease.ClaimedAt == "" {
 			return fmt.Errorf("active lease requires one holder and no token hash")
 		}
-		if err := ValidateNativeActor(*lease.Holder); err != nil {
-			return err
-		}
+		return ValidateNativeActor(*lease.Holder)
 	case issueopscontract.LeaseStatusRevoking:
 		// 이전 holder는 quiescence 진단에만 남고 이 상태에서는 writer가 아니다.
 		if lease.Holder == nil || lease.ClaimTokenSHA256 != "" {
 			return fmt.Errorf("revoking lease requires the fenced holder and no token hash")
 		}
-		if err := ValidateNativeActor(*lease.Holder); err != nil {
-			return err
-		}
+		return ValidateNativeActor(*lease.Holder)
 	case issueopscontract.LeaseStatusReleased:
 		if lease.Holder != nil || lease.ClaimTokenSHA256 != "" {
 			return fmt.Errorf("released lease must not retain a holder or token hash")
@@ -248,17 +303,17 @@ func validateWriteLease(lease issueopscontract.WriteLease) error {
 }
 
 func validateOrcaBinding(binding issueopscontract.OrcaBinding) error {
-	for name, value := range map[string]string{
-		"runtime_id":  binding.RuntimeID,
-		"repo_id":     binding.RepoID,
-		"worktree_id": binding.WorktreeID,
-		"owner_host":  binding.OwnerHost,
-		"owner_model": binding.OwnerModel,
-		"task_id":     binding.TaskID,
-		"dispatch_id": binding.DispatchID,
+	for _, field := range []struct{ name, value string }{
+		{"runtime_id", binding.RuntimeID},
+		{"repo_id", binding.RepoID},
+		{"worktree_id", binding.WorktreeID},
+		{"owner_host", binding.OwnerHost},
+		{"owner_model", binding.OwnerModel},
+		{"task_id", binding.TaskID},
+		{"dispatch_id", binding.DispatchID},
 	} {
-		if strings.TrimSpace(value) == "" {
-			return fmt.Errorf("Orca binding %s is required", name)
+		if strings.TrimSpace(field.value) == "" {
+			return fmt.Errorf("Orca binding %s is required", field.name)
 		}
 	}
 	if binding.OwnerHost != "codex" && binding.OwnerHost != "claude" && binding.OwnerHost != "omo" && binding.OwnerHost != "omp" {

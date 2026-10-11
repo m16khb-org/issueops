@@ -59,14 +59,7 @@ func OwnerClaimHandoffDeliveryObservation(result issueopscontract.ExecutionResul
 }
 
 func manualOwnerClaimObservation(result issueopscontract.ExecutionResult, observations []issueopscontract.IssueOpsHandoffDeliveryObservation) (*issueopscontract.IssueOpsHandoffDeliveryObservation, error) {
-	candidates := make([]issueopscontract.IssueOpsHandoffDeliveryObservation, 0, 1)
-	for _, observation := range observations {
-		if observation.LifecycleID == result.ID && result.Execution.Lease.Generation > 1 &&
-			observation.SourceGeneration == result.Execution.Lease.Generation-1 &&
-			strings.HasPrefix(observation.LineageID, handoffDeliveryManualLineagePrefix) && observation.ExpectedOwnerHost == result.Execution.Lease.Holder.Host {
-			candidates = append(candidates, observation)
-		}
-	}
+	candidates := manualClaimCandidates(result, observations)
 	folded, decisions := FoldHandoffDeliveryObservations(candidates)
 	for _, decision := range decisions {
 		if !decision.Accepted {
@@ -81,15 +74,33 @@ func manualOwnerClaimObservation(result issueopscontract.ExecutionResult, observ
 	}
 	holderProcess := result.Execution.Lease.Holder.SessionProcess
 	for _, observation := range folded {
-		process := observation.Target.Process
-		accepted := observation.InputAccepted.Status == issueopscontract.IssueOpsHandoffDeliveryStateObserved ||
-			observation.NativeTurnObserved.Status == issueopscontract.IssueOpsHandoffDeliveryStateObserved
-		if accepted && holderProcess != nil && process != nil && process.PID == holderProcess.PID &&
-			process.StartedAt == holderProcess.StartedAt && process.Executable == holderProcess.Executable {
+		if manualClaimFromHolderProcess(observation, holderProcess) {
 			return claimedHandoffDeliveryObservation(observation, result.Execution.Lease)
 		}
 	}
 	return nil, nil
+}
+
+// manualClaimCandidates는 직전 generation에서 현재 holder host로 넘긴 manual lineage 관찰만 고른다.
+func manualClaimCandidates(result issueopscontract.ExecutionResult, observations []issueopscontract.IssueOpsHandoffDeliveryObservation) []issueopscontract.IssueOpsHandoffDeliveryObservation {
+	candidates := make([]issueopscontract.IssueOpsHandoffDeliveryObservation, 0, 1)
+	for _, observation := range observations {
+		if observation.LifecycleID == result.ID && result.Execution.Lease.Generation > 1 &&
+			observation.SourceGeneration == result.Execution.Lease.Generation-1 &&
+			strings.HasPrefix(observation.LineageID, handoffDeliveryManualLineagePrefix) && observation.ExpectedOwnerHost == result.Execution.Lease.Holder.Host {
+			candidates = append(candidates, observation)
+		}
+	}
+	return candidates
+}
+
+// manualClaimFromHolderProcess는 입력 또는 네이티브 턴이 관찰됐고 대상 프로세스가 holder 프로세스와 같은지 확인한다.
+func manualClaimFromHolderProcess(observation issueopscontract.IssueOpsHandoffDeliveryObservation, holderProcess *issueopscontract.NativeProcessReceipt) bool {
+	process := observation.Target.Process
+	accepted := observation.InputAccepted.Status == issueopscontract.IssueOpsHandoffDeliveryStateObserved ||
+		observation.NativeTurnObserved.Status == issueopscontract.IssueOpsHandoffDeliveryStateObserved
+	return accepted && holderProcess != nil && process != nil && process.PID == holderProcess.PID &&
+		process.StartedAt == holderProcess.StartedAt && process.Executable == holderProcess.Executable
 }
 
 func claimedHandoffDeliveryObservation(observation issueopscontract.IssueOpsHandoffDeliveryObservation, lease issueopscontract.WriteLease) (*issueopscontract.IssueOpsHandoffDeliveryObservation, error) {

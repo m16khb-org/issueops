@@ -226,6 +226,10 @@ func inspectHandoffDeliveryRecovery(ctx context.Context, audit Audit, request po
 			return port.ExecutionOrcaIntentInventory{}, false, err
 		}
 	}
+	return concludeHandoffDeliveryRecovery(request, identity, plan, status, exists, receipt, prompt, promptFound)
+}
+
+func concludeHandoffDeliveryRecovery(request port.ExecutionOrcaIntentRequest, identity port.ExecutionOrcaDeliveryIdentity, plan issueopsdomain.DeliveryRecoveryPlan, status string, exists bool, receipt port.ExecutionOrcaIntentReceipt, prompt issueopscontract.IssueOpsHandoffDeliveryObservation, promptFound bool) (port.ExecutionOrcaIntentInventory, bool, error) {
 	conclusion, err := issueopsdomain.FinishDeliveryRecovery(request.Probe.Host, plan, status, exists, prompt, promptFound)
 	if err != nil {
 		return port.ExecutionOrcaIntentInventory{}, false, err

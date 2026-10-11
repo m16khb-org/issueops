@@ -98,41 +98,12 @@ func Classify(in Input) Decision {
 	decision.Warnings = warnings(in)
 
 	index := phaseIndex(in.Record.Phase)
-	execution := in.Record.Execution
-	id := in.Record.ID
 
-	if execution != nil && execution.Pending != nil {
-		decision.Stage = stage(issueopsnextcontract.StageBlockedPending, index)
-		decision.NextCommand = "issueops execution reconcile --id " + id + " --preview"
-		return finish(in, decision)
+	if decided, ok := classifyBlockedExecution(in, decision, index); ok {
+		return finish(in, decided)
 	}
-	if execution == nil && issueopsdomain.IssueOpsPhaseRank(in.Record.Phase) >= issueopsdomain.IssueOpsPhaseRank(issueopsnextcontract.PhasePlan) &&
-		strings.TrimSpace(in.RootConflictID) != "" {
-		decision.Stage = stage(issueopsnextcontract.StageBlockedRoot, 3)
-		decision.NextCommand = "issueops list --repo " + placeholder(in.SourceRoot, "<source_root>") + " --json"
-		decision.Warnings = append(decision.Warnings, "canonical worktree root is already claimed by cycle "+strings.TrimSpace(in.RootConflictID))
-		return finish(in, decision)
-	}
-	if execution != nil {
-		lease := execution.Lease
-		holderOther := lease.Holder != nil && !holderIsSelf(in)
-		if lease.Status == issueopsnextcontract.LeaseStatusActive && holderOther && live(in.HolderLive) {
-			decision.Stage = stage(issueopsnextcontract.StageBlockedHolderLive, index)
-			decision.NextCommand = "issueops execution status --id " + id + " --json"
-			return finish(in, decision)
-		}
-		if (lease.Status == issueopsnextcontract.LeaseStatusActive && holderOther && !live(in.HolderLive)) ||
-			lease.Status == issueopsnextcontract.LeaseStatusRevoking {
-			decision.Stage = stage(issueopsnextcontract.StageTakeover, index)
-			decision.NextCommand = takeoverCommand(in)
-			return finish(in, decision)
-		}
-		if (lease.Status == issueopsnextcontract.LeaseStatusClaimable || lease.Status == issueopsnextcontract.LeaseStatusReleased) &&
-			execution.Completion == nil {
-			decision.Stage = stage(issueopsnextcontract.StageClaim, index)
-			decision.NextCommand = "issueops execution status --id " + id + " --json"
-			return finish(in, decision)
-		}
+	if decided, ok := classifyLease(in, decision, index); ok {
+		return finish(in, decided)
 	}
 	if decided, ok := classifyPreparation(in, decision); ok {
 		return finish(in, decided)
@@ -143,13 +114,67 @@ func Classify(in Input) Decision {
 	if decided, ok := classifyPublication(in, decision, index); ok {
 		return finish(in, decided)
 	}
+	return finish(in, unknownDecision(in, decision, index))
+}
+
+// classifyBlockedExecution은 pending execution과 이미 점유된 canonical root처럼
+// lease를 보기 전에 사이클을 멈추는 두 차단 규칙이다.
+func classifyBlockedExecution(in Input, decision Decision, index int) (Decision, bool) {
+	execution := in.Record.Execution
+	if execution != nil && execution.Pending != nil {
+		decision.Stage = stage(issueopsnextcontract.StageBlockedPending, index)
+		decision.NextCommand = "issueops execution reconcile --id " + in.Record.ID + " --preview"
+		return decision, true
+	}
+	if execution == nil && issueopsdomain.IssueOpsPhaseRank(in.Record.Phase) >= issueopsdomain.IssueOpsPhaseRank(issueopsnextcontract.PhasePlan) &&
+		strings.TrimSpace(in.RootConflictID) != "" {
+		decision.Stage = stage(issueopsnextcontract.StageBlockedRoot, 3)
+		decision.NextCommand = "issueops list --repo " + placeholder(in.SourceRoot, "<source_root>") + " --json"
+		decision.Warnings = append(decision.Warnings, "canonical worktree root is already claimed by cycle "+strings.TrimSpace(in.RootConflictID))
+		return decision, true
+	}
+	return decision, false
+}
+
+// classifyLease는 execution lease 상태가 다음 행동을 정하는 규칙이다: 다른
+// 살아 있는 holder, 인수, 아직 claim되지 않은 lease.
+func classifyLease(in Input, decision Decision, index int) (Decision, bool) {
+	execution := in.Record.Execution
+	if execution == nil {
+		return decision, false
+	}
+	id := in.Record.ID
+	lease := execution.Lease
+	holderOther := lease.Holder != nil && !holderIsSelf(in)
+	if lease.Status == issueopsnextcontract.LeaseStatusActive && holderOther && live(in.HolderLive) {
+		decision.Stage = stage(issueopsnextcontract.StageBlockedHolderLive, index)
+		decision.NextCommand = "issueops execution status --id " + id + " --json"
+		return decision, true
+	}
+	if (lease.Status == issueopsnextcontract.LeaseStatusActive && holderOther && !live(in.HolderLive)) ||
+		lease.Status == issueopsnextcontract.LeaseStatusRevoking {
+		decision.Stage = stage(issueopsnextcontract.StageTakeover, index)
+		decision.NextCommand = takeoverCommand(in)
+		return decision, true
+	}
+	if (lease.Status == issueopsnextcontract.LeaseStatusClaimable || lease.Status == issueopsnextcontract.LeaseStatusReleased) &&
+		execution.Completion == nil {
+		decision.Stage = stage(issueopsnextcontract.StageClaim, index)
+		decision.NextCommand = "issueops execution status --id " + id + " --json"
+		return decision, true
+	}
+	return decision, false
+}
+
+// unknownDecision은 어느 규칙도 맞지 않을 때의 status 안내다.
+func unknownDecision(in Input, decision Decision, index int) Decision {
 	decision.Stage = stage(issueopsnextcontract.StageUnknown, index)
-	decision.NextCommand = "issueops status --id " + id + " --json"
+	decision.NextCommand = "issueops status --id " + in.Record.ID + " --json"
 	if in.Local != nil && len(in.Local.Missing) > 0 {
 		decision.Missing = append([]string{}, in.Local.Missing...)
 		decision.Warnings = append(decision.Warnings, "unmatched readiness gates: "+strings.Join(in.Local.Missing, ", "))
 	}
-	return finish(in, decision)
+	return decision
 }
 
 // classifyPreparation은 execution이 아직 없는 1~3단계를 가른다. phase가 아니라
@@ -164,27 +189,11 @@ func classifyPreparation(in Input, decision Decision) (Decision, bool) {
 	if !planningPhase(record.Phase) {
 		return decision, false
 	}
-	if strings.TrimSpace(record.IssueURL) == "" &&
-		(record.Phase == issueopsnextcontract.PhaseProblem || record.Phase == issueopsnextcontract.PhaseGrill) {
-		decision.Stage = stage(issueopsnextcontract.StageIssue, 1)
-		decision.Missing = stageOneMissing(in)
-		decision.NextCommand = OwnerCommand(id, firstOr(decision.Missing, "intent_contract"))
-		return decision, true
-	}
 	if strings.TrimSpace(record.IssueURL) == "" {
-		return decision, false
+		return classifyIssueMissing(in, decision)
 	}
-	if record.Phase == issueopsnextcontract.PhaseProblem || record.Phase == issueopsnextcontract.PhaseGrill ||
-		record.BranchPrepare == nil || strings.TrimSpace(record.BranchPrepare.BaseSHA) == "" {
-		decision.Stage = stage(issueopsnextcontract.StagePrepare, 2)
-		if record.Phase == issueopsnextcontract.PhaseProblem {
-			decision.Missing = stageOneMissing(in)
-			decision.NextCommand = "issueops phase --id " + id + " --to grill --json"
-			return decision, true
-		}
-		decision.Missing = []string{"branch_prepare"}
-		decision.NextCommand = OwnerCommand(id, "branch_prepare")
-		return decision, true
+	if branchPrepareNeeded(record) {
+		return classifyBranchPrepare(in, decision)
 	}
 	if !in.StagedPlan {
 		decision.Stage = stage(issueopsnextcontract.StagePlanWrite, 3)
@@ -210,29 +219,44 @@ func classifyPreparation(in Input, decision Decision) (Decision, bool) {
 	return decision, true
 }
 
+// classifyIssueMissing는 이슈 URL이 없을 때 1단계로 가른다. problem/grill 외 phase는 분류하지 않는다.
+func classifyIssueMissing(in Input, decision Decision) (Decision, bool) {
+	record := in.Record
+	if record.Phase != issueopsnextcontract.PhaseProblem && record.Phase != issueopsnextcontract.PhaseGrill {
+		return decision, false
+	}
+	decision.Stage = stage(issueopsnextcontract.StageIssue, 1)
+	decision.Missing = stageOneMissing(in)
+	decision.NextCommand = OwnerCommand(record.ID, firstOr(decision.Missing, "intent_contract"))
+	return decision, true
+}
+
+// branchPrepareNeeded는 이슈 URL이 있는 사이클이 아직 2단계(브랜치 준비)에 머무는지 판정한다.
+func branchPrepareNeeded(record issueopsnextcontract.Record) bool {
+	return record.Phase == issueopsnextcontract.PhaseProblem || record.Phase == issueopsnextcontract.PhaseGrill ||
+		record.BranchPrepare == nil || strings.TrimSpace(record.BranchPrepare.BaseSHA) == ""
+}
+
+func classifyBranchPrepare(in Input, decision Decision) (Decision, bool) {
+	record := in.Record
+	decision.Stage = stage(issueopsnextcontract.StagePrepare, 2)
+	if record.Phase == issueopsnextcontract.PhaseProblem {
+		decision.Missing = stageOneMissing(in)
+		decision.NextCommand = "issueops phase --id " + record.ID + " --to grill --json"
+		return decision, true
+	}
+	decision.Missing = []string{"branch_prepare"}
+	decision.NextCommand = OwnerCommand(record.ID, "branch_prepare")
+	return decision, true
+}
+
 // classifyImplementation은 홀더가 이 세션인 4~8단계를 가른다.
 func classifyImplementation(in Input, decision Decision) (Decision, bool) {
 	record := in.Record
 	id := record.ID
 	if record.Execution != nil && record.Execution.Lease.Status == issueopsnextcontract.LeaseStatusActive && holderIsSelf(in) {
-		switch record.Phase {
-		case issueopsnextcontract.PhasePlan, issueopsnextcontract.PhaseCompatibilityReview:
-			decision.Stage = stage(issueopsnextcontract.StageImplementEnter, 4)
-			switch {
-			case strings.TrimSpace(record.PlanPath) == "":
-				decision.Missing = []string{"plan_path"}
-				decision.NextCommand = OwnerCommand(id, "plan_path")
-			case record.CompatibilityReview == nil || !record.CompatibilityReview.Approved:
-				decision.Missing = []string{"compatibility_review"}
-				decision.NextCommand = OwnerCommand(id, "compatibility_review")
-			default:
-				decision.NextCommand = "issueops phase --id " + id + " --to implement $ACTOR_FLAGS --json"
-			}
-			return decision, true
-		case issueopsnextcontract.PhaseImplement:
-			decision.Stage = stage(issueopsnextcontract.StageImplement, 4)
-			decision.NextCommand = "issueops phase --id " + id + " --to ai-slop-clean $ACTOR_FLAGS --json"
-			return decision, true
+		if next, ok := classifyHolderImplement(in, decision); ok {
+			return next, true
 		}
 	}
 	if record.Phase == issueopsnextcontract.PhaseAISlopClean {
@@ -246,6 +270,38 @@ func classifyImplementation(in Input, decision Decision) (Decision, bool) {
 	if !postImplementPhase(record.Phase) || in.Local == nil {
 		return decision, false
 	}
+	return classifyLocalGates(in, decision)
+}
+
+// classifyHolderImplement는 활성 lease 홀더가 이 세션일 때 4단계(구현 진입/구현)를 가른다.
+func classifyHolderImplement(in Input, decision Decision) (Decision, bool) {
+	record := in.Record
+	id := record.ID
+	switch record.Phase {
+	case issueopsnextcontract.PhasePlan, issueopsnextcontract.PhaseCompatibilityReview:
+		decision.Stage = stage(issueopsnextcontract.StageImplementEnter, 4)
+		switch {
+		case strings.TrimSpace(record.PlanPath) == "":
+			decision.Missing = []string{"plan_path"}
+			decision.NextCommand = OwnerCommand(id, "plan_path")
+		case record.CompatibilityReview == nil || !record.CompatibilityReview.Approved:
+			decision.Missing = []string{"compatibility_review"}
+			decision.NextCommand = OwnerCommand(id, "compatibility_review")
+		default:
+			decision.NextCommand = "issueops phase --id " + id + " --to implement $ACTOR_FLAGS --json"
+		}
+		return decision, true
+	case issueopsnextcontract.PhaseImplement:
+		decision.Stage = stage(issueopsnextcontract.StageImplement, 4)
+		decision.NextCommand = "issueops phase --id " + id + " --to ai-slop-clean $ACTOR_FLAGS --json"
+		return decision, true
+	}
+	return decision, false
+}
+
+// classifyLocalGates는 구현 이후 phase의 로컬 미충족 게이트로 5~8단계를 가른다.
+func classifyLocalGates(in Input, decision Decision) (Decision, bool) {
+	id := in.Record.ID
 	local := in.Local.Missing
 	if missing := intersect(local, cleanLocalKeys); len(missing) > 0 {
 		decision.Stage = stage(issueopsnextcontract.StageClean, 5)

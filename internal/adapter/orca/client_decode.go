@@ -184,23 +184,31 @@ func stableVisualTabTitles(layouts []visualLayoutPayload) (map[string]string, er
 			return nil, fmt.Errorf("Orca visual tab inventory exceeds %d entries", port.OrcaMaxBaselineIDs)
 		}
 		for _, tab := range layout.Root.Tabs {
-			tabID := strings.TrimSpace(tab.TabID)
-			leafID := strings.TrimSpace(tab.ActiveLeafID)
-			title := strings.TrimSpace(tab.Title)
-			if tabID == "" || leafID == "" || title == "" {
-				continue
+			if err := addVisualTabTitle(result, tab.TabID, tab.ActiveLeafID, tab.Title); err != nil {
+				return nil, err
 			}
-			if tabID != tab.TabID || leafID != tab.ActiveLeafID || title != tab.Title || len(tabID) > 1024 || len(leafID) > 1024 || len(title) > 4096 {
-				return nil, fmt.Errorf("Orca visual tab identity is not canonical and bounded")
-			}
-			key := visualTabKey(tabID, leafID)
-			if previous, ok := result[key]; ok && previous != title {
-				return nil, fmt.Errorf("Orca visual tab identity has conflicting titles")
-			}
-			result[key] = title
 		}
 	}
 	return result, nil
+}
+
+// addVisualTabTitle records one tab title under its tab/leaf key; incomplete tabs are skipped.
+func addVisualTabTitle(result map[string]string, rawTabID, rawLeafID, rawTitle string) error {
+	tabID := strings.TrimSpace(rawTabID)
+	leafID := strings.TrimSpace(rawLeafID)
+	title := strings.TrimSpace(rawTitle)
+	if tabID == "" || leafID == "" || title == "" {
+		return nil
+	}
+	if tabID != rawTabID || leafID != rawLeafID || title != rawTitle || len(tabID) > 1024 || len(leafID) > 1024 || len(title) > 4096 {
+		return fmt.Errorf("Orca visual tab identity is not canonical and bounded")
+	}
+	key := visualTabKey(tabID, leafID)
+	if previous, ok := result[key]; ok && previous != title {
+		return fmt.Errorf("Orca visual tab identity has conflicting titles")
+	}
+	result[key] = title
+	return nil
 }
 
 func visualTabKey(tabID, leafID string) string {

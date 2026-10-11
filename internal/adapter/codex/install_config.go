@@ -13,18 +13,8 @@ import (
 
 func (installer Installer) writeGlobalConfig(path string, req port.NativeInstallRequest) (port.InstallFile, error) {
 	file := port.InstallFile{Path: path, Kind: "codex_user_mcp_config"}
-	text := ""
-	if b, err := os.ReadFile(path); err == nil {
-		text = string(b)
-		if !req.DryRun {
-			backup := path + ".harness.bak"
-			if _, statErr := os.Stat(backup); errors.Is(statErr, fs.ErrNotExist) {
-				if writeErr := os.WriteFile(backup, []byte(text), 0o600); writeErr != nil {
-					return file, writeErr
-				}
-			}
-		}
-	} else if !errors.Is(err, fs.ErrNotExist) && !req.DryRun {
+	text, err := readGlobalConfigWithBackup(path, req)
+	if err != nil {
 		return file, err
 	}
 	for _, section := range []string{"mcp_servers.issueops", "mcp_servers.issueops.env", "mcp_servers.issueops.http_headers"} {
@@ -56,6 +46,28 @@ func (installer Installer) writeGlobalConfig(path string, req port.NativeInstall
 	}
 	file.Written = true
 	return file, nil
+}
+
+// readGlobalConfigWithBackup returns the current config text and, outside a
+// dry run, keeps a one-time ".harness.bak" copy of an existing config.
+func readGlobalConfigWithBackup(path string, req port.NativeInstallRequest) (string, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		if !errors.Is(err, fs.ErrNotExist) && !req.DryRun {
+			return "", err
+		}
+		return "", nil
+	}
+	text := string(b)
+	if !req.DryRun {
+		backup := path + ".harness.bak"
+		if _, statErr := os.Stat(backup); errors.Is(statErr, fs.ErrNotExist) {
+			if writeErr := os.WriteFile(backup, b, 0o600); writeErr != nil {
+				return "", writeErr
+			}
+		}
+	}
+	return text, nil
 }
 
 func (installer Installer) codexGlobalBlock(req port.NativeInstallRequest) string {

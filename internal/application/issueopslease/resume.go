@@ -52,101 +52,151 @@ func (s *ResumeService) Resume(ctx context.Context, request ResumeRequest) (Resu
 	}
 	var result ResumeResult
 	err := s.fence.Within(ctx, request.ID, func(fenceCtx context.Context) error {
-		if _, err := resolveActor(fenceCtx, request.Actor, request.Ancestry, s.verifier); err != nil {
-			return err
-		}
-		snapshot, err := s.repository.LoadSnapshot(fenceCtx, request.ID, request.ExpectedGeneration)
+		resumed, err := s.resumeWithinFence(fenceCtx, request)
 		if err != nil {
 			return err
 		}
-		if snapshot.Record.Stable.Execution == nil || snapshot.Record.Stable.Execution.Orca == nil {
-			return fmt.Errorf("execution resume requires an existing Orca binding")
-		}
-		preflight := resumeDomainRequest(snapshot.Record.Stable, request.ExpectedGeneration, s.paths.Matches(request.CWD, snapshot.Record.CanonicalRoot), leasedomain.ResumeInventory{})
-		if _, err := leasedomain.PlanResume(preflight); err != nil {
-			return err
-		}
-		artifacts, err := s.artifacts.ReadAndVerify(fenceCtx, snapshot.Record.Stable)
-		if err != nil {
-			return err
-		}
-		inventory, err := s.owners.Observe(fenceCtx, snapshot.Record.Stable)
-		if err != nil {
-			return err
-		}
-		plan, err := leasedomain.PlanResume(resumeDomainRequest(snapshot.Record.Stable, request.ExpectedGeneration, true, inventory))
-		if err != nil {
-			return err
-		}
-		if plan.Disposition == leasedomain.ResumeExistingBinding {
-			result = ResumeResult{OK: true, ID: request.ID, Disposition: plan.Disposition, Receipt: leasecontract.ResumeReceipt{Execution: *snapshot.Record.Stable.Execution, Artifacts: artifacts}}
-			return nil
-		}
-		roleAgentArgs, err := s.terminalRoleAgentArgs(fenceCtx, snapshot.Record.Stable, plan)
-		if err != nil {
-			return err
-		}
-		operationID, err := s.operationIDs.New()
-		if err != nil {
-			return err
-		}
-		progress, err := s.repository.BeginIntent(fenceCtx, snapshot, artifacts, plan, operationID)
-		if err != nil {
-			return err
-		}
-		for attempts := 0; attempts < 5 && progress.Pending; attempts++ {
-			intent, err := s.repository.LoadIntent(fenceCtx, progress)
-			if err != nil {
-				return err
-			}
-			inventory, err := s.stages.Inspect(fenceCtx, intent)
-			if err != nil {
-				cause := fmt.Errorf("Orca intent inventory is ambiguous; intent retained: %w", err)
-				_ = s.repository.RecordFailure(fenceCtx, intent, intent.InvocationState, err)
-				return cause
-			}
-			stagePlan, err := leasedomain.PlanResumeStage(leasedomain.ResumeStageRequest{CandidateCount: len(inventory.Candidates), AuthoritativeZero: inventory.AuthoritativeZero, ExactReplay: inventory.ExactReplay, InvocationState: intent.InvocationState, InvocationAttempts: intent.InvocationAttempts})
-			if err != nil {
-				cause := resumeStageDecisionCause(intent, inventory, err)
-				_ = s.repository.RecordFailure(fenceCtx, intent, intent.InvocationState, cause)
-				return cause
-			}
-			var receipt leasecontract.ResumeStageReceipt
-			receiptIntent := intent
-			switch stagePlan.Action {
-			case leasedomain.ResumeStageAdopt:
-				receipt = inventory.Candidates[stagePlan.CandidateIndex]
-			case leasedomain.ResumeStageInvoke:
-				receiptIntent, err = s.repository.MarkInvoking(fenceCtx, intent)
-				if err != nil {
-					return err
-				}
-				receipt, err = s.stages.Invoke(fenceCtx, receiptIntent, argsForStage(intent.Stage, roleAgentArgs))
-				if err != nil {
-					_ = s.repository.RecordFailure(fenceCtx, receiptIntent, resumeInvocationFailureState(err), err)
-					return resumeReconcileRequired(err)
-				}
-			case leasedomain.ResumeStageReconcile:
-				cause := resumeStageReconcileCause(stagePlan.Reason)
-				_ = s.repository.RecordFailure(fenceCtx, intent, intent.InvocationState, cause)
-				return cause
-			}
-			progress, err = s.repository.ApplyReceipt(fenceCtx, receiptIntent, receipt)
-			if err != nil {
-				_ = s.repository.RecordFailure(fenceCtx, receiptIntent, "unknown", err)
-				return err
-			}
-		}
-		if progress.Pending {
-			return fmt.Errorf("execution resume did not complete the owner launch stages")
-		}
-		result = ResumeResult{OK: true, ID: request.ID, Disposition: plan.Disposition, Receipt: leasecontract.ResumeReceipt{Execution: progress.Execution, Artifacts: artifacts}}
+		result = resumed
 		return nil
 	})
 	if err != nil {
 		return ResumeResult{ID: request.ID}, err
 	}
 	return result, nil
+}
+
+// resumeWithinFence runs one resume attempt while the lease fence is held.
+func (s *ResumeService) resumeWithinFence(ctx context.Context, request ResumeRequest) (ResumeResult, error) {
+	snapshot, artifacts, plan, err := s.planResume(ctx, request)
+	if err != nil {
+		return ResumeResult{}, err
+	}
+	if plan.Disposition == leasedomain.ResumeExistingBinding {
+		return ResumeResult{OK: true, ID: request.ID, Disposition: plan.Disposition, Receipt: leasecontract.ResumeReceipt{Execution: *snapshot.Record.Stable.Execution, Artifacts: artifacts}}, nil
+	}
+	roleAgentArgs, err := s.terminalRoleAgentArgs(ctx, snapshot.Record.Stable, plan)
+	if err != nil {
+		return ResumeResult{}, err
+	}
+	operationID, err := s.operationIDs.New()
+	if err != nil {
+		return ResumeResult{}, err
+	}
+	progress, err := s.repository.BeginIntent(ctx, snapshot, artifacts, plan, operationID)
+	if err != nil {
+		return ResumeResult{}, err
+	}
+	progress, err = s.driveResumeStages(ctx, progress, roleAgentArgs)
+	if err != nil {
+		return ResumeResult{}, err
+	}
+	return ResumeResult{OK: true, ID: request.ID, Disposition: plan.Disposition, Receipt: leasecontract.ResumeReceipt{Execution: progress.Execution, Artifacts: artifacts}}, nil
+}
+
+// planResume authenticates the caller, loads the snapshot, verifies artifacts,
+// observes the owner inventory, and returns the resume plan.
+func (s *ResumeService) planResume(ctx context.Context, request ResumeRequest) (ResumeSnapshot, leasecontract.ResumeArtifacts, leasedomain.ResumePlan, error) {
+	if _, err := resolveActor(ctx, request.Actor, request.Ancestry, s.verifier); err != nil {
+		return ResumeSnapshot{}, leasecontract.ResumeArtifacts{}, leasedomain.ResumePlan{}, err
+	}
+	snapshot, err := s.repository.LoadSnapshot(ctx, request.ID, request.ExpectedGeneration)
+	if err != nil {
+		return ResumeSnapshot{}, leasecontract.ResumeArtifacts{}, leasedomain.ResumePlan{}, err
+	}
+	if snapshot.Record.Stable.Execution == nil || snapshot.Record.Stable.Execution.Orca == nil {
+		return ResumeSnapshot{}, leasecontract.ResumeArtifacts{}, leasedomain.ResumePlan{}, fmt.Errorf("execution resume requires an existing Orca binding")
+	}
+	preflight := resumeDomainRequest(snapshot.Record.Stable, request.ExpectedGeneration, s.paths.Matches(request.CWD, snapshot.Record.CanonicalRoot), leasedomain.ResumeInventory{})
+	if _, err := leasedomain.PlanResume(preflight); err != nil {
+		return ResumeSnapshot{}, leasecontract.ResumeArtifacts{}, leasedomain.ResumePlan{}, err
+	}
+	artifacts, err := s.artifacts.ReadAndVerify(ctx, snapshot.Record.Stable)
+	if err != nil {
+		return ResumeSnapshot{}, leasecontract.ResumeArtifacts{}, leasedomain.ResumePlan{}, err
+	}
+	inventory, err := s.owners.Observe(ctx, snapshot.Record.Stable)
+	if err != nil {
+		return ResumeSnapshot{}, leasecontract.ResumeArtifacts{}, leasedomain.ResumePlan{}, err
+	}
+	plan, err := leasedomain.PlanResume(resumeDomainRequest(snapshot.Record.Stable, request.ExpectedGeneration, true, inventory))
+	if err != nil {
+		return ResumeSnapshot{}, leasecontract.ResumeArtifacts{}, leasedomain.ResumePlan{}, err
+	}
+	return snapshot, artifacts, plan, nil
+}
+
+// resumeStageAttempts bounds how many owner launch stages one resume drives.
+const resumeStageAttempts = 5
+
+// driveResumeStages applies pending owner launch stages until none remain.
+func (s *ResumeService) driveResumeStages(ctx context.Context, progress ResumeProgress, roleAgentArgs []string) (ResumeProgress, error) {
+	for attempts := 0; attempts < resumeStageAttempts && progress.Pending; attempts++ {
+		next, err := s.advanceResumeStage(ctx, progress, roleAgentArgs)
+		if err != nil {
+			return ResumeProgress{}, err
+		}
+		progress = next
+	}
+	if progress.Pending {
+		return ResumeProgress{}, fmt.Errorf("execution resume did not complete the owner launch stages")
+	}
+	return progress, nil
+}
+
+// advanceResumeStage inspects the pending intent, adopts, invokes, or refuses
+// its stage, and applies the resulting receipt.
+func (s *ResumeService) advanceResumeStage(ctx context.Context, progress ResumeProgress, roleAgentArgs []string) (ResumeProgress, error) {
+	intent, err := s.repository.LoadIntent(ctx, progress)
+	if err != nil {
+		return ResumeProgress{}, err
+	}
+	inventory, err := s.stages.Inspect(ctx, intent)
+	if err != nil {
+		cause := fmt.Errorf("Orca intent inventory is ambiguous; intent retained: %w", err)
+		_ = s.repository.RecordFailure(ctx, intent, intent.InvocationState, err)
+		return ResumeProgress{}, cause
+	}
+	stagePlan, err := leasedomain.PlanResumeStage(leasedomain.ResumeStageRequest{CandidateCount: len(inventory.Candidates), AuthoritativeZero: inventory.AuthoritativeZero, ExactReplay: inventory.ExactReplay, InvocationState: intent.InvocationState, InvocationAttempts: intent.InvocationAttempts})
+	if err != nil {
+		cause := resumeStageDecisionCause(intent, inventory, err)
+		_ = s.repository.RecordFailure(ctx, intent, intent.InvocationState, cause)
+		return ResumeProgress{}, cause
+	}
+	receiptIntent, receipt, err := s.resolveStageReceipt(ctx, intent, inventory, stagePlan, roleAgentArgs)
+	if err != nil {
+		return ResumeProgress{}, err
+	}
+	next, err := s.repository.ApplyReceipt(ctx, receiptIntent, receipt)
+	if err != nil {
+		_ = s.repository.RecordFailure(ctx, receiptIntent, "unknown", err)
+		return ResumeProgress{}, err
+	}
+	return next, nil
+}
+
+// resolveStageReceipt produces the stage receipt for the planned action and
+// the intent state the receipt must be applied against.
+func (s *ResumeService) resolveStageReceipt(ctx context.Context, intent ResumeIntentState, inventory leasecontract.ResumeStageInventory, stagePlan leasedomain.ResumeStagePlan, roleAgentArgs []string) (ResumeIntentState, leasecontract.ResumeStageReceipt, error) {
+	switch stagePlan.Action {
+	case leasedomain.ResumeStageAdopt:
+		return intent, inventory.Candidates[stagePlan.CandidateIndex], nil
+	case leasedomain.ResumeStageInvoke:
+		receiptIntent, err := s.repository.MarkInvoking(ctx, intent)
+		if err != nil {
+			return intent, leasecontract.ResumeStageReceipt{}, err
+		}
+		receipt, err := s.stages.Invoke(ctx, receiptIntent, argsForStage(intent.Stage, roleAgentArgs))
+		if err != nil {
+			_ = s.repository.RecordFailure(ctx, receiptIntent, resumeInvocationFailureState(err), err)
+			return receiptIntent, leasecontract.ResumeStageReceipt{}, resumeReconcileRequired(err)
+		}
+		return receiptIntent, receipt, nil
+	case leasedomain.ResumeStageReconcile:
+		cause := resumeStageReconcileCause(stagePlan.Reason)
+		_ = s.repository.RecordFailure(ctx, intent, intent.InvocationState, cause)
+		return intent, leasecontract.ResumeStageReceipt{}, cause
+	}
+	return intent, leasecontract.ResumeStageReceipt{}, nil
 }
 
 func resumeDomainRequest(record leasecontract.Record, generation uint64, canonicalCWD bool, inventory leasedomain.ResumeInventory) leasedomain.ResumeRequest {

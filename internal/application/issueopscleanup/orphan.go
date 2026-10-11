@@ -115,25 +115,8 @@ func finishOrphan(result contract.Result) contract.Result {
 }
 
 func (s OrphanCleaner) Apply(ctx context.Context, request contract.Request, apply contract.ApplyRequest) (contract.Result, error) {
-	if !apply.Confirm {
-		return contract.Result{}, fmt.Errorf("orphan cleanup apply requires --confirm")
-	}
-	if strings.TrimSpace(apply.Fingerprint) == "" {
-		return contract.Result{}, fmt.Errorf("orphan cleanup apply requires --fingerprint from a ready preview")
-	}
-	preview, err := s.Preview(ctx, request)
-	preview.Preview = false
-	preview.Confirmed = true
+	preview, err := s.previewForApply(ctx, request, apply)
 	if err != nil {
-		return preview, err
-	}
-	if !preview.Ready {
-		return preview, fmt.Errorf("orphan cleanup apply is blocked: %s", strings.Join(preview.Missing, ", "))
-	}
-	if strings.TrimSpace(apply.Fingerprint) != preview.Fingerprint {
-		return preview, fmt.Errorf("stale preview fingerprint: rerun orphan cleanup preview before apply")
-	}
-	if err := ctx.Err(); err != nil {
 		return preview, err
 	}
 	lifetime, err := s.Environment.ExcludeWrites(ctx)
@@ -146,28 +129,8 @@ func (s OrphanCleaner) Apply(ctx context.Context, request contract.Request, appl
 		}
 	}()
 	ctx = lifetime.Context(ctx)
-	request, err = s.normalize(request)
+	preview, err = s.revalidateLocal(ctx, request, preview)
 	if err != nil {
-		return preview, err
-	}
-	// Only local reads are allowed while all record writers are excluded.
-	snapshot, err := s.Environment.CollectLocal(ctx, request.RepoRoot)
-	if err != nil {
-		return preview, fmt.Errorf("refresh orphan local authority: %w", err)
-	}
-	current := s.localPreview(ctx, request, snapshot)
-	current.RemoteMerged = preview.RemoteMerged
-	current = finishOrphan(current)
-	current.Preview = false
-	current.Confirmed = true
-	if !current.Ready {
-		return current, fmt.Errorf("orphan cleanup apply is blocked: %s", strings.Join(current.Missing, ", "))
-	}
-	if current.Fingerprint != preview.Fingerprint {
-		return current, fmt.Errorf("stale preview fingerprint: rerun orphan cleanup preview before apply")
-	}
-	preview = current
-	if err := ctx.Err(); err != nil {
 		return preview, err
 	}
 	if err := s.Environment.RemoveWorktree(ctx, preview.RepoRoot, preview.WorktreePath); err != nil {
@@ -189,4 +152,52 @@ func (s OrphanCleaner) Apply(ctx context.Context, request contract.Request, appl
 	}
 	preview.Applied = true
 	return preview, nil
+}
+
+// previewForApply는 apply 입력을 검증하고 재계산한 미리보기가 준비 상태이며 지문이 일치하는지 확인한다.
+func (s OrphanCleaner) previewForApply(ctx context.Context, request contract.Request, apply contract.ApplyRequest) (contract.Result, error) {
+	if !apply.Confirm {
+		return contract.Result{}, fmt.Errorf("orphan cleanup apply requires --confirm")
+	}
+	if strings.TrimSpace(apply.Fingerprint) == "" {
+		return contract.Result{}, fmt.Errorf("orphan cleanup apply requires --fingerprint from a ready preview")
+	}
+	preview, err := s.Preview(ctx, request)
+	preview.Preview = false
+	preview.Confirmed = true
+	if err != nil {
+		return preview, err
+	}
+	if !preview.Ready {
+		return preview, fmt.Errorf("orphan cleanup apply is blocked: %s", strings.Join(preview.Missing, ", "))
+	}
+	if strings.TrimSpace(apply.Fingerprint) != preview.Fingerprint {
+		return preview, fmt.Errorf("stale preview fingerprint: rerun orphan cleanup preview before apply")
+	}
+	return preview, ctx.Err()
+}
+
+// revalidateLocal은 쓰기 차단 중 로컬 권위 정보를 다시 읽어 미리보기와 같은 지문인지 확인한다.
+func (s OrphanCleaner) revalidateLocal(ctx context.Context, request contract.Request, preview contract.Result) (contract.Result, error) {
+	request, err := s.normalize(request)
+	if err != nil {
+		return preview, err
+	}
+	// Only local reads are allowed while all record writers are excluded.
+	snapshot, err := s.Environment.CollectLocal(ctx, request.RepoRoot)
+	if err != nil {
+		return preview, fmt.Errorf("refresh orphan local authority: %w", err)
+	}
+	current := s.localPreview(ctx, request, snapshot)
+	current.RemoteMerged = preview.RemoteMerged
+	current = finishOrphan(current)
+	current.Preview = false
+	current.Confirmed = true
+	if !current.Ready {
+		return current, fmt.Errorf("orphan cleanup apply is blocked: %s", strings.Join(current.Missing, ", "))
+	}
+	if current.Fingerprint != preview.Fingerprint {
+		return current, fmt.Errorf("stale preview fingerprint: rerun orphan cleanup preview before apply")
+	}
+	return current, ctx.Err()
 }

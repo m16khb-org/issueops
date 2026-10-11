@@ -41,14 +41,9 @@ func (service *Service) Next(ctx context.Context, stateRoot, cwd, id string) (is
 		SourceRoot:  sourceRoot,
 		Missing:     []string{},
 	}
-	actorHost, actorSession := "", ""
-	if ports.Actor != nil {
-		host, session, err := ports.Actor()
-		if err != nil {
-			result.Warnings = append(result.Warnings, "native session identity is unavailable: "+err.Error())
-		} else {
-			actorHost, actorSession = host, session
-		}
+	actorHost, actorSession, actorWarning := actorIdentity(ports)
+	if actorWarning != "" {
+		result.Warnings = append(result.Warnings, actorWarning)
 	}
 	result = service.applyReviewModel(result, actorHost, agentmodelcontract.RolePlanReview, "", cwd)
 
@@ -61,11 +56,7 @@ func (service *Service) Next(ctx context.Context, stateRoot, cwd, id string) (is
 		return applyDecision(result, issueopsnextdomain.Classify(issueopsnextdomain.Input{})), nil
 	}
 
-	selectedID := strings.TrimSpace(id)
-	if selectedID == "" && ports.Env != nil {
-		selectedID = strings.TrimSpace(ports.Env("ISSUEOPS_ID"))
-	}
-	if selectedID != "" {
+	if selectedID := requestedCycleID(ports, id); selectedID != "" {
 		return service.nextSelected(ctx, stateRoot, sourceRoot, selectedID, result, actorHost, actorSession)
 	}
 	listing, err := ports.ListCycles(ctx, stateRoot, sourceRoot)
@@ -86,22 +77,46 @@ func (service *Service) Next(ctx context.Context, stateRoot, cwd, id string) (is
 	}
 	result.Selected = entryOf(*selected)
 	if selected.Invalid {
-		result.Stage = issueopsnextcontract.Stage{Key: issueopsnextcontract.StageInvalid}
-		result.NextCommand = "issueops status --id " + selected.ID + " --json"
-		result.NextCommandKind = commandKind(result.NextCommand)
-		return result, nil
+		return markInvalidSelection(result, selected.ID), nil
 	}
 	record, err := ports.ReadRecord(stateRoot, selected.ID)
 	if err != nil {
-		result.Stage = issueopsnextcontract.Stage{Key: issueopsnextcontract.StageInvalid}
-		result.NextCommand = "issueops status --id " + selected.ID + " --json"
-		result.NextCommandKind = commandKind(result.NextCommand)
+		result = markInvalidSelection(result, selected.ID)
 		result.Warnings = append(result.Warnings, "record is unreadable: "+err.Error())
 		return result, nil
 	}
 	result.Selected = recordEntry(record)
 	decided := applyDecision(result, issueopsnextdomain.Classify(service.buildInput(stateRoot, sourceRoot, record, listing.Entries, actorHost, actorSession)))
 	return service.applyReviewTier(decided, record, actorHost), nil
+}
+
+// actorIdentity는 native 세션 신원을 읽는다. 읽지 못하면 빈 신원과 경고를 돌려준다.
+func actorIdentity(ports Ports) (host, session, warning string) {
+	if ports.Actor == nil {
+		return "", "", ""
+	}
+	host, session, err := ports.Actor()
+	if err != nil {
+		return "", "", "native session identity is unavailable: " + err.Error()
+	}
+	return host, session, ""
+}
+
+// requestedCycleID는 인자 id를, 비어 있으면 ISSUEOPS_ID 환경 값을 돌려준다.
+func requestedCycleID(ports Ports, id string) string {
+	selectedID := strings.TrimSpace(id)
+	if selectedID == "" && ports.Env != nil {
+		selectedID = strings.TrimSpace(ports.Env("ISSUEOPS_ID"))
+	}
+	return selectedID
+}
+
+// markInvalidSelection은 선택된 사이클을 invalid 단계로 표시하고 status 명령을 안내한다.
+func markInvalidSelection(result issueopsnextcontract.Result, id string) issueopsnextcontract.Result {
+	result.Stage = issueopsnextcontract.Stage{Key: issueopsnextcontract.StageInvalid}
+	result.NextCommand = "issueops status --id " + id + " --json"
+	result.NextCommandKind = commandKind(result.NextCommand)
+	return result
 }
 
 // applyReviewTier는 선택된 사이클의 변경 집합으로 리뷰 티어·렌즈·effort를 채운다.

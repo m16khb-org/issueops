@@ -58,26 +58,7 @@ func (s Service) executeAction(ctx context.Context, stateRoot string, req model.
 			ID: req.ID, Generation: req.Generation, Actor: req.Actor, CWD: req.CWD,
 		})
 	case model.ExecutionActionReplace:
-		if req.ReplaceAction == model.ExecutionReplaceReseed {
-			if deps.Reseed == nil {
-				return model.ExecutionReplaceResult{OK: false, ID: req.ID, Action: req.ReplaceAction}, model.ErrReseedHandlerUnavailable
-			}
-			return deps.Reseed(ctx, stateRoot, model.ExecutionReseedRequest{
-				ID: req.ID, ExpectedGeneration: req.ExpectedGeneration, CompletionGeneration: req.CompletionGeneration, InventoryFingerprint: req.InventoryFingerprint,
-				Reason: req.Reason, Actor: req.Actor, CWD: req.CWD, Confirm: req.Confirm,
-				ReadIssue: deps.ReadIssue,
-			})
-		}
-		if deps.Replace == nil {
-			return model.ExecutionReplaceResult{ID: req.ID, Action: req.ReplaceAction}, fmt.Errorf("issueops execution replace handler is not configured")
-		}
-		return deps.Replace(ctx, stateRoot, model.ExecutionReplaceRequest{
-			ID: req.ID, Action: req.ReplaceAction, ExpectedGeneration: req.ExpectedGeneration, CompletionGeneration: req.CompletionGeneration,
-			InventoryFingerprint: req.InventoryFingerprint, QuiescenceFingerprint: req.QuiescenceFingerprint,
-			Reason: req.Reason, Actor: req.Actor, CWD: req.CWD, Confirm: req.Confirm, ReadIssue: deps.ReadIssue,
-			// finalize/reseed 재봉인이 현재 이슈 본문을 다시 읽어야 하므로
-			// prepare/claim과 같은 리더를 함께 넘긴다.
-		}, port.ReplacementInvocation{OrcaOwner: deps.OrcaOwner, BaseSync: deps.BaseSync})
+		return executeReplace(ctx, stateRoot, req, deps)
 	case model.ExecutionActionResume:
 		if !req.Confirm {
 			return model.ExecutionResumeResult{OK: false, ID: req.ID}, fmt.Errorf("execution resume requires confirm")
@@ -108,4 +89,27 @@ func (s Service) executeAction(ctx context.Context, stateRoot string, req model.
 	default:
 		return nil, fmt.Errorf("unsupported issueops execution action %q", req.Action)
 	}
+}
+
+func executeReplace(ctx context.Context, stateRoot string, req model.ExecutionActionRequest, deps port.ExecutionActionDependencies) (any, error) {
+	if req.ReplaceAction == model.ExecutionReplaceReseed {
+		if deps.Reseed == nil {
+			return model.ExecutionReplaceResult{OK: false, ID: req.ID, Action: req.ReplaceAction}, model.ErrReseedHandlerUnavailable
+		}
+		return deps.Reseed(ctx, stateRoot, model.ExecutionReseedRequest{
+			ID: req.ID, ExpectedGeneration: req.ExpectedGeneration, CompletionGeneration: req.CompletionGeneration, InventoryFingerprint: req.InventoryFingerprint,
+			Reason: req.Reason, Actor: req.Actor, CWD: req.CWD, Confirm: req.Confirm,
+			ReadIssue: deps.ReadIssue,
+		})
+	}
+	if deps.Replace == nil {
+		return model.ExecutionReplaceResult{ID: req.ID, Action: req.ReplaceAction}, fmt.Errorf("issueops execution replace handler is not configured")
+	}
+	return deps.Replace(ctx, stateRoot, model.ExecutionReplaceRequest{
+		ID: req.ID, Action: req.ReplaceAction, ExpectedGeneration: req.ExpectedGeneration, CompletionGeneration: req.CompletionGeneration,
+		InventoryFingerprint: req.InventoryFingerprint, QuiescenceFingerprint: req.QuiescenceFingerprint,
+		Reason: req.Reason, Actor: req.Actor, CWD: req.CWD, Confirm: req.Confirm, ReadIssue: deps.ReadIssue,
+		// finalize/reseed 재봉인이 현재 이슈 본문을 다시 읽어야 하므로
+		// prepare/claim과 같은 리더를 함께 넘긴다.
+	}, port.ReplacementInvocation{OrcaOwner: deps.OrcaOwner, BaseSync: deps.BaseSync})
 }

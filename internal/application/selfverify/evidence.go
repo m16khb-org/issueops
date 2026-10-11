@@ -18,14 +18,34 @@ func requireGoldenEvidence(step contract.StepResult) error {
 		"issueops/cmd/issueops/contractgolden/TestMCPResourcesGolden":   false,
 		"issueops/cmd/issueops/issueopsapp/TestResponseContractsGolden": false,
 	}
-	ran := make(map[string]bool)
 	passedPackages := make(map[string]bool)
-	decoder := json.NewDecoder(strings.NewReader(step.Stdout))
+	if err := scanGoTestEvents(step.Stdout, required, passedPackages); err != nil {
+		return err
+	}
+	for test, passed := range required {
+		if !passed {
+			return fmt.Errorf("required test did not run and pass: %s", test)
+		}
+	}
+	for _, pkg := range []string{"issueops/cmd/issueops/contractgolden", "issueops/cmd/issueops/issueopsapp"} {
+		if !passedPackages[pkg] {
+			return fmt.Errorf("package did not pass: %s", pkg)
+		}
+	}
+
+	return nil
+}
+
+// scanGoTestEvents는 go test JSON 이벤트를 읽어 필수 테스트의 통과 여부(required)와 패키지 통과 여부(passedPackages)를 채운다.
+// fail/skip 이벤트나 잘못된 JSON은 즉시 오류로 돌려준다.
+func scanGoTestEvents(stdout string, required, passedPackages map[string]bool) error {
+	ran := make(map[string]bool)
+	decoder := json.NewDecoder(strings.NewReader(stdout))
 	for {
 		var event struct{ Action, Package, Test string }
 		err := decoder.Decode(&event)
 		if err == io.EOF {
-			break
+			return nil
 		}
 		if err != nil {
 			return fmt.Errorf("invalid go test JSON: %w", err)
@@ -48,18 +68,6 @@ func requireGoldenEvidence(step contract.StepResult) error {
 			required[key] = true
 		}
 	}
-	for test, passed := range required {
-		if !passed {
-			return fmt.Errorf("required test did not run and pass: %s", test)
-		}
-	}
-	for _, pkg := range []string{"issueops/cmd/issueops/contractgolden", "issueops/cmd/issueops/issueopsapp"} {
-		if !passedPackages[pkg] {
-			return fmt.Errorf("package did not pass: %s", pkg)
-		}
-	}
-
-	return nil
 }
 
 func binaryDriftEvidence(step contract.StepResult) contract.StepResult {

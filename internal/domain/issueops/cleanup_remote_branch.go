@@ -43,50 +43,14 @@ func CleanupRemoteBranchNeedsTipEvidence(facts CleanupRemoteBranchObservation) b
 
 func BuildCleanupRemoteBranchPreview(record model.IssueOpsRecord, req model.CleanupRemoteBranchRequest, inventory model.CleanupRemoteBranchInventory, facts CleanupRemoteBranchObservation) (model.CleanupRemoteBranchInventory, model.CleanupRemoteBranchResult) {
 	result := model.CleanupRemoteBranchResult{OK: true, ID: record.ID, Preview: !req.Apply, Branch: inventory.Branch, Missing: []string{}}
-	missing := []string{}
-	if inventory.Branch == "" {
-		missing = append(missing, "branch_recorded")
-	} else if err := ValidateBranch(inventory.Branch); err != nil {
-		missing = append(missing, "branch_name_revalidated")
-	}
-	if inventory.Branch != "" && record.BranchPrepare != nil && inventory.Branch == strings.TrimSpace(record.BranchPrepare.BaseBranch) {
-		missing = append(missing, "branch_not_base")
-	}
-	if record.Phase != model.IssueOpsPhaseDone {
-		missing = append(missing, "phase_done")
-	}
-	if record.Execution != nil && record.Execution.Lease.Status != model.LeaseStatusReleased {
-		missing = append(missing, "lease_released")
-	}
-	for _, link := range record.IssueLinks {
-		if link.Type == "child" && strings.TrimSpace(link.CloseVerifiedAt) == "" {
-			missing = append(missing, "child_tasks_closed")
-			break
-		}
+	missing := cleanupRemoteBranchRecordMissing([]string{}, record, inventory)
+	if hasUnclosedChildTask(record.IssueLinks) {
+		missing = append(missing, "child_tasks_closed")
 	}
 	if record.RemoteArtifact == nil {
 		missing = append(missing, "remote_artifact_present")
 	} else {
-		switch {
-		case !facts.MergeConfigured:
-			missing = append(missing, "remote_artifact_merged")
-			result.ArtifactError = "merge verification is not configured"
-		case facts.MergeError != nil:
-			if facts.ArtifactSupersededBy == "" {
-				missing = append(missing, "remote_artifact_merged")
-				result.ArtifactError = facts.MergeError.Error()
-				if facts.ArtifactSupersedeError != nil {
-					result.SupersedeError = facts.ArtifactSupersedeError.Error()
-				}
-			} else {
-				inventory.SupersededBy = facts.ArtifactSupersededBy
-			}
-		default:
-			result.ArtifactHeadBranch, result.ArtifactHeadOID = strings.TrimSpace(facts.Head.HeadRefName), strings.TrimSpace(facts.Head.HeadRefOID)
-			if result.ArtifactHeadBranch == "" || result.ArtifactHeadBranch != inventory.Branch {
-				missing = append(missing, "artifact_head_branch_match")
-			}
-		}
+		missing = cleanupRemoteBranchArtifactMissing(missing, &result, &inventory, facts)
 		if facts.IdentityError != nil {
 			missing = append(missing, "remote_identity_match")
 			result.RemoteIdentityError = facts.IdentityError.Error()
@@ -101,21 +65,71 @@ func BuildCleanupRemoteBranchPreview(record model.IssueOpsRecord, req model.Clea
 		}
 	}
 	if result.RemoteBranchPresent && CleanupRemoteBranchNeedsTipEvidence(facts) {
-		if facts.TipReachedBase {
-			result.RemoteTipReachedBase = true
-		} else if facts.TipSupersededBy == "" {
-			if facts.TipSupersedeError != nil {
-				result.SupersedeError = facts.TipSupersedeError.Error()
-			}
-			missing = append(missing, "remote_tip_equals_merged_head")
-		} else {
-			inventory.SupersededBy = facts.TipSupersededBy
-		}
+		missing = cleanupRemoteBranchTipMissing(missing, &result, &inventory, facts)
 	}
 	result.SupersededBy = inventory.SupersededBy
 	result.Missing = missing
 	result.OK = len(missing) == 0
 	return inventory, result
+}
+
+// cleanupRemoteBranchRecordMissing checks branch name, base-branch collision, phase, and lease gates.
+func cleanupRemoteBranchRecordMissing(missing []string, record model.IssueOpsRecord, inventory model.CleanupRemoteBranchInventory) []string {
+	if inventory.Branch == "" {
+		missing = append(missing, "branch_recorded")
+	} else if err := ValidateBranch(inventory.Branch); err != nil {
+		missing = append(missing, "branch_name_revalidated")
+	}
+	if inventory.Branch != "" && record.BranchPrepare != nil && inventory.Branch == strings.TrimSpace(record.BranchPrepare.BaseBranch) {
+		missing = append(missing, "branch_not_base")
+	}
+	if record.Phase != model.IssueOpsPhaseDone {
+		missing = append(missing, "phase_done")
+	}
+	if record.Execution != nil && record.Execution.Lease.Status != model.LeaseStatusReleased {
+		missing = append(missing, "lease_released")
+	}
+	return missing
+}
+
+// cleanupRemoteBranchArtifactMissing verifies the remote artifact merge state and its head branch match.
+func cleanupRemoteBranchArtifactMissing(missing []string, result *model.CleanupRemoteBranchResult, inventory *model.CleanupRemoteBranchInventory, facts CleanupRemoteBranchObservation) []string {
+	switch {
+	case !facts.MergeConfigured:
+		missing = append(missing, "remote_artifact_merged")
+		result.ArtifactError = "merge verification is not configured"
+	case facts.MergeError != nil:
+		if facts.ArtifactSupersededBy == "" {
+			missing = append(missing, "remote_artifact_merged")
+			result.ArtifactError = facts.MergeError.Error()
+			if facts.ArtifactSupersedeError != nil {
+				result.SupersedeError = facts.ArtifactSupersedeError.Error()
+			}
+		} else {
+			inventory.SupersededBy = facts.ArtifactSupersededBy
+		}
+	default:
+		result.ArtifactHeadBranch, result.ArtifactHeadOID = strings.TrimSpace(facts.Head.HeadRefName), strings.TrimSpace(facts.Head.HeadRefOID)
+		if result.ArtifactHeadBranch == "" || result.ArtifactHeadBranch != inventory.Branch {
+			missing = append(missing, "artifact_head_branch_match")
+		}
+	}
+	return missing
+}
+
+// cleanupRemoteBranchTipMissing requires the remote tip to be proven merged: reached base or superseded.
+func cleanupRemoteBranchTipMissing(missing []string, result *model.CleanupRemoteBranchResult, inventory *model.CleanupRemoteBranchInventory, facts CleanupRemoteBranchObservation) []string {
+	if facts.TipReachedBase {
+		result.RemoteTipReachedBase = true
+	} else if facts.TipSupersededBy == "" {
+		if facts.TipSupersedeError != nil {
+			result.SupersedeError = facts.TipSupersedeError.Error()
+		}
+		missing = append(missing, "remote_tip_equals_merged_head")
+	} else {
+		inventory.SupersededBy = facts.TipSupersededBy
+	}
+	return missing
 }
 
 func ValidateCleanupRemoteBranchApply(req model.CleanupRemoteBranchRequest, fingerprint string) error {

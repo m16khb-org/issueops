@@ -58,30 +58,26 @@ func isMetadataIP(ip netip.Addr) bool {
 	return v4[0] == 169 && v4[1] == 254 && v4[2] == 169 && v4[3] == 254
 }
 
+// reservedPrefixes는 SSRF 방어에서 거부하는 예약 대역이다.
+var reservedPrefixes = []netip.Prefix{
+	netip.MustParsePrefix("0.0.0.0/8"),
+	netip.MustParsePrefix("100.64.0.0/10"),
+	netip.MustParsePrefix("192.0.0.0/24"),
+	netip.MustParsePrefix("192.0.2.0/24"),
+	netip.MustParsePrefix("198.18.0.0/15"),
+	netip.MustParsePrefix("198.51.100.0/24"),
+	netip.MustParsePrefix("203.0.113.0/24"),
+	netip.MustParsePrefix("240.0.0.0/4"),
+	netip.MustParsePrefix("2001:db8::/32"),
+}
+
 func isReservedIP(ip netip.Addr) bool {
-	if ip.Is4() {
-		v4 := ip.As4()
-		switch {
-		case v4[0] == 0:
-			return true
-		case v4[0] == 100 && v4[1]&0b11000000 == 64:
-			return true
-		case v4[0] == 192 && v4[1] == 0 && v4[2] == 0:
-			return true
-		case v4[0] == 192 && v4[1] == 0 && v4[2] == 2:
-			return true
-		case v4[0] == 198 && (v4[1] == 18 || v4[1] == 19):
-			return true
-		case v4[0] == 198 && v4[1] == 51 && v4[2] == 100:
-			return true
-		case v4[0] == 203 && v4[1] == 0 && v4[2] == 113:
-			return true
-		case v4[0] >= 240:
+	for _, prefix := range reservedPrefixes {
+		if prefix.Contains(ip) {
 			return true
 		}
-		return false
 	}
-	return strings.HasPrefix(strings.ToLower(ip.String()), "2001:db8:")
+	return false
 }
 
 func IsIPAddress(host string) bool { return parseIPAddress(host).IsValid() }

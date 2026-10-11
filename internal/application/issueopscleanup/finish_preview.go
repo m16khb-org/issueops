@@ -66,19 +66,24 @@ func (s FinishPreviewer) Plan(ctx context.Context, record model.IssueOpsRecord, 
 		facts.WorktreeClean = code == 0 && strings.TrimSpace(out) == ""
 	}
 	if inventory.Branch != "" {
-		code, out := s.Environment.Git(record.Repo, "rev-parse", "--verify", "--quiet", "refs/heads/"+inventory.Branch)
-		oid := strings.TrimSpace(out)
-		facts.BranchObservable = code == 1 || (code == 0 && oid != "")
-		if code == 0 {
-			inventory.BranchOID = oid
-		}
-		code, out = s.Environment.Git(record.Repo, "ls-remote", "--heads", "origin", "refs/heads/"+inventory.Branch)
-		facts.RemoteReadable = code == 0
-		if fields := strings.Fields(strings.TrimSpace(out)); len(fields) > 0 {
-			facts.RemoteOID = fields[0]
-		}
+		s.observeBranch(record.Repo, &inventory, &facts)
 	}
 	return inventory, domain.BuildCleanupFinishPreview(record, req, inventory, facts)
+}
+
+// observeBranch는 로컬 브랜치 OID와 origin 원격 브랜치 상태를 관찰해 inventory와 facts에 기록한다.
+func (s FinishPreviewer) observeBranch(repo string, inventory *model.CleanupFinishInventory, facts *domain.CleanupFinishObservation) {
+	code, out := s.Environment.Git(repo, "rev-parse", "--verify", "--quiet", "refs/heads/"+inventory.Branch)
+	oid := strings.TrimSpace(out)
+	facts.BranchObservable = code == 1 || (code == 0 && oid != "")
+	if code == 0 {
+		inventory.BranchOID = oid
+	}
+	code, out = s.Environment.Git(repo, "ls-remote", "--heads", "origin", "refs/heads/"+inventory.Branch)
+	facts.RemoteReadable = code == 0
+	if fields := strings.Fields(strings.TrimSpace(out)); len(fields) > 0 {
+		facts.RemoteOID = fields[0]
+	}
 }
 
 func (s FinishPreviewer) observeMergedBaseRefs(repo, base string) (string, bool, bool) {

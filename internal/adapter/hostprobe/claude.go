@@ -105,36 +105,10 @@ func (r ClaudeRunner) Run(ctx context.Context, request port.HostProbeRequest) (r
 		Env:     environment,
 		Timeout: EpisodeTimeout,
 	})
-	if err != nil {
-		cause, code := claudeProcessFailure(err)
-		return failedResult(r.Name(), "", request, started, r.deps, cause, code)
-	}
-	capture, err := decodeEpisodeCapture(resultPath, request)
-	if err != nil {
-		cause, code := normalizedCaptureFailure(err)
-		return failedResult(r.Name(), "", request, started, r.deps, cause, code)
-	}
-	result = completedResult(r.Name(), "", request, started, r.deps, capture)
-	observation, err := observeHostStream(output.Stdout)
-	if err != nil {
-		return failedResult(r.Name(), "", request, started, r.deps, "transport", "host_stream_invalid")
-	}
-	recorded, err := observeRecordedHookEvents(observationPath)
-	if err != nil || !recorded.SessionStartObserved || mergeHookObservation(&observation, recorded) != nil {
-		return failedResult(r.Name(), "", request, started, r.deps, "transport", "hook_observation_invalid")
-	}
-	if !validHostRuntimeObservation(observation) {
-		return failedResult(r.Name(), "", request, started, r.deps, "transport", "host_stream_invalid")
-	}
-	applyHostStreamObservation(&result, observation, output.ExitCode)
-	result.ObservedModel = observation.Model
-	result.AmbientToolCount = observation.AmbientToolCount
-	if hookSmoke {
-		if err := persistChildSmokeObservation(r.deps, result, observation.MCPCallCount); err != nil {
-			return failedResult(r.Name(), "", request, started, r.deps, "transport", err.Error())
-		}
-	}
-	return result
+	return hookEpisodeFinish{
+		name: r.Name(), request: request, started: started, deps: r.deps,
+		resultPath: resultPath, observationPath: observationPath, hookSmoke: hookSmoke,
+	}.finish(output, err)
 }
 
 func prepareClaudeLiveSettings(path, harnessBinary, observationPath string) error {
@@ -178,8 +152,4 @@ func claudeArgvMode(executable, configPath, settingsPath string, request port.Ho
 		argv = append(argv, "--model", request.Model)
 	}
 	return append(argv, request.Prompt)
-}
-
-func claudeProcessFailure(err error) (string, string) {
-	return normalizedProcessFailure(err, "host_process_failed")
 }

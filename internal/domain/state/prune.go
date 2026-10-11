@@ -28,6 +28,23 @@ func SelectPrune(records []statecontract.StateListEntry, prefix string, cutoff t
 		}
 		return matching[i].Key < matching[j].Key
 	})
+	selected := selectPruneKeys(matching, cutoff, maxRecords)
+	pruned := make([]statecontract.StateListEntry, 0, len(selected))
+	for _, record := range matching {
+		if selected[record.Key] {
+			pruned = append(pruned, record)
+		} else {
+			kept = append(kept, record)
+		}
+	}
+	sort.Slice(pruned, func(i, j int) bool { return pruned[i].Key < pruned[j].Key })
+	sort.Slice(kept, func(i, j int) bool { return kept[i].Key < kept[j].Key })
+	return pruned, kept
+}
+
+// selectPruneKeys는 cutoff보다 오래된 키와, 보존 개수를 넘는 가장 오래된 키를 고른다.
+// matching은 오래된 순으로 정렬되어 있어야 한다.
+func selectPruneKeys(matching []statecontract.StateListEntry, cutoff time.Time, maxRecords int) map[string]bool {
 	selected := make(map[string]bool, len(matching))
 	for _, record := range matching {
 		updatedAt, err := statecontract.ParseTime(record.UpdatedAt)
@@ -47,15 +64,5 @@ func SelectPrune(records []statecontract.StateListEntry, prefix string, cutoff t
 			retained = retained[1:]
 		}
 	}
-	pruned := make([]statecontract.StateListEntry, 0, len(selected))
-	for _, record := range matching {
-		if selected[record.Key] {
-			pruned = append(pruned, record)
-		} else {
-			kept = append(kept, record)
-		}
-	}
-	sort.Slice(pruned, func(i, j int) bool { return pruned[i].Key < pruned[j].Key })
-	sort.Slice(kept, func(i, j int) bool { return kept[i].Key < kept[j].Key })
-	return pruned, kept
+	return selected
 }

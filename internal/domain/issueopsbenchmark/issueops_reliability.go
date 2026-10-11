@@ -38,75 +38,17 @@ func ComputeReliability(rec contract.RecordedOutcomes, alpha float64) (contract.
 		return contract.ReliabilityReport{}, fmt.Errorf("reliability: alpha must be in (0,1), got %v", alpha)
 	}
 
-	seenID := make(map[string]bool, len(runs))
-	provSeen := make(map[string]bool, len(runs))
-	var provList []string
-	for i, run := range runs {
-		id := strings.TrimSpace(run.RunID)
-		if id == "" {
-			return contract.ReliabilityReport{}, fmt.Errorf("reliability: run %d has an empty run_id", i)
-		}
-		if seenID[id] {
-			return contract.ReliabilityReport{}, fmt.Errorf("reliability: duplicate run_id %q — runs must be distinct executions, not re-scorings of one artifact", id)
-		}
-		seenID[id] = true
-		prov := strings.TrimSpace(run.Provenance)
-		if prov == "" {
-			return contract.ReliabilityReport{}, fmt.Errorf("reliability: run %q has empty provenance (name how the run was generated)", id)
-		}
-		if !provSeen[prov] {
-			provSeen[prov] = true
-			provList = append(provList, prov)
-		}
-		if len(run.Outcomes) == 0 {
-			return contract.ReliabilityReport{}, fmt.Errorf("reliability: run %q has no outcomes", id)
-		}
+	provList, err := validateReliabilityRunProvenance(runs)
+	if err != nil {
+		return contract.ReliabilityReport{}, err
 	}
-
-	// 정렬된 fixture 집합: 각 run은 정확히 같은 fixture를 포함해야 fixture별 시행
-	// 수가 run 수와 같고 macro-average가 잘 정의된다.
-	canonical := make([]string, 0, len(runs[0].Outcomes))
-	for f := range runs[0].Outcomes {
-		canonical = append(canonical, f)
+	canonical, err := alignedReliabilityFixtures(runs)
+	if err != nil {
+		return contract.ReliabilityReport{}, err
 	}
-	sort.Strings(canonical)
-	canonSet := make(map[string]bool, len(canonical))
-	for _, f := range canonical {
-		canonSet[f] = true
-	}
-	for _, run := range runs {
-		if len(run.Outcomes) != len(canonical) {
-			return contract.ReliabilityReport{}, fmt.Errorf("reliability: run %q covers %d fixtures, expected %d (runs must be whole-benchmark replays with aligned fixtures)", run.RunID, len(run.Outcomes), len(canonical))
-		}
-		for f := range run.Outcomes {
-			if !canonSet[f] {
-				return contract.ReliabilityReport{}, fmt.Errorf("reliability: run %q has unexpected fixture %q (fixture sets must match across runs)", run.RunID, f)
-			}
-		}
-	}
-
-	fixtures := make([]contract.FixtureReliability, 0, len(canonical))
-	for _, f := range canonical {
-		c, n := 0, 0
-		for _, run := range runs {
-			n++
-			if run.Outcomes[f] {
-				c++
-			}
-		}
-		lo, hi, err := ClopperPearson(c, n, alpha)
-		if err != nil {
-			return contract.ReliabilityReport{}, err
-		}
-		fixtures = append(fixtures, contract.FixtureReliability{
-			FixtureID:     f,
-			Trials:        n,
-			Successes:     c,
-			PassAt1:       Round4(float64(c) / float64(n)),
-			IntervalLow:   Round4(lo),
-			IntervalHigh:  Round4(hi),
-			IntervalWidth: Round4(hi - lo),
-		})
+	fixtures, err := reliabilityFixtureStats(runs, canonical, alpha)
+	if err != nil {
+		return contract.ReliabilityReport{}, err
 	}
 
 	maxK := len(runs) // aligned ⇒ every trials_i == len(runs)
@@ -116,17 +58,9 @@ func ComputeReliability(rec contract.RecordedOutcomes, alpha float64) (contract.
 	}
 	macro /= float64(len(fixtures))
 
-	curve := make([]contract.PassPowKPoint, 0, maxK)
-	for k := 1; k <= maxK; k++ {
-		sum := 0.0
-		for _, fr := range fixtures {
-			v, err := PassPowK(fr.Successes, fr.Trials, k)
-			if err != nil {
-				return contract.ReliabilityReport{}, err
-			}
-			sum += v
-		}
-		curve = append(curve, contract.PassPowKPoint{K: k, PassPowK: Round4(sum / float64(len(fixtures)))})
+	curve, err := passPowKCurve(fixtures, maxK)
+	if err != nil {
+		return contract.ReliabilityReport{}, err
 	}
 
 	return contract.ReliabilityReport{
@@ -138,6 +72,107 @@ func ComputeReliability(rec contract.RecordedOutcomes, alpha float64) (contract.
 		Fixtures:      fixtures,
 		Provenance:    provList,
 	}, nil
+}
+
+// validateReliabilityRunProvenance는 각 run의 run_id 유일성, provenance, outcome 존재를
+// 검증하고 처음 등장한 순서대로 중복 없는 provenance 목록을 반환한다.
+func validateReliabilityRunProvenance(runs []contract.RecordedRun) ([]string, error) {
+	seenID := make(map[string]bool, len(runs))
+	provSeen := make(map[string]bool, len(runs))
+	var provList []string
+	for i, run := range runs {
+		id := strings.TrimSpace(run.RunID)
+		if id == "" {
+			return nil, fmt.Errorf("reliability: run %d has an empty run_id", i)
+		}
+		if seenID[id] {
+			return nil, fmt.Errorf("reliability: duplicate run_id %q — runs must be distinct executions, not re-scorings of one artifact", id)
+		}
+		seenID[id] = true
+		prov := strings.TrimSpace(run.Provenance)
+		if prov == "" {
+			return nil, fmt.Errorf("reliability: run %q has empty provenance (name how the run was generated)", id)
+		}
+		if !provSeen[prov] {
+			provSeen[prov] = true
+			provList = append(provList, prov)
+		}
+		if len(run.Outcomes) == 0 {
+			return nil, fmt.Errorf("reliability: run %q has no outcomes", id)
+		}
+	}
+	return provList, nil
+}
+
+// alignedReliabilityFixtures는 첫 run의 정렬된 fixture 집합을 정본으로 삼아, 각 run이
+// 정확히 같은 fixture를 포함해야 fixture별 시행 수가 run 수와 같고 macro-average가
+// 잘 정의되도록 검증한다.
+func alignedReliabilityFixtures(runs []contract.RecordedRun) ([]string, error) {
+	canonical := make([]string, 0, len(runs[0].Outcomes))
+	for f := range runs[0].Outcomes {
+		canonical = append(canonical, f)
+	}
+	sort.Strings(canonical)
+	canonSet := make(map[string]bool, len(canonical))
+	for _, f := range canonical {
+		canonSet[f] = true
+	}
+	for _, run := range runs {
+		if len(run.Outcomes) != len(canonical) {
+			return nil, fmt.Errorf("reliability: run %q covers %d fixtures, expected %d (runs must be whole-benchmark replays with aligned fixtures)", run.RunID, len(run.Outcomes), len(canonical))
+		}
+		for f := range run.Outcomes {
+			if !canonSet[f] {
+				return nil, fmt.Errorf("reliability: run %q has unexpected fixture %q (fixture sets must match across runs)", run.RunID, f)
+			}
+		}
+	}
+	return canonical, nil
+}
+
+// reliabilityFixtureStats는 fixture별 pass@1과 Clopper-Pearson interval을 계산한다.
+func reliabilityFixtureStats(runs []contract.RecordedRun, canonical []string, alpha float64) ([]contract.FixtureReliability, error) {
+	fixtures := make([]contract.FixtureReliability, 0, len(canonical))
+	for _, f := range canonical {
+		c, n := 0, 0
+		for _, run := range runs {
+			n++
+			if run.Outcomes[f] {
+				c++
+			}
+		}
+		lo, hi, err := ClopperPearson(c, n, alpha)
+		if err != nil {
+			return nil, err
+		}
+		fixtures = append(fixtures, contract.FixtureReliability{
+			FixtureID:     f,
+			Trials:        n,
+			Successes:     c,
+			PassAt1:       Round4(float64(c) / float64(n)),
+			IntervalLow:   Round4(lo),
+			IntervalHigh:  Round4(hi),
+			IntervalWidth: Round4(hi - lo),
+		})
+	}
+	return fixtures, nil
+}
+
+// passPowKCurve는 k=1..maxK에 대해 fixture 평균 pass^k 곡선을 계산한다.
+func passPowKCurve(fixtures []contract.FixtureReliability, maxK int) ([]contract.PassPowKPoint, error) {
+	curve := make([]contract.PassPowKPoint, 0, maxK)
+	for k := 1; k <= maxK; k++ {
+		sum := 0.0
+		for _, fr := range fixtures {
+			v, err := PassPowK(fr.Successes, fr.Trials, k)
+			if err != nil {
+				return nil, err
+			}
+			sum += v
+		}
+		curve = append(curve, contract.PassPowKPoint{K: k, PassPowK: Round4(sum / float64(len(fixtures)))})
+	}
+	return curve, nil
 }
 
 // passPowK는 tau-bench의 fixture별 신뢰도 kernel이다. 기록된 `trials`회 중

@@ -33,25 +33,59 @@ type installHostTransaction struct {
 	parents   []installHostPathSnapshot
 }
 
-func prepareInstallHostTransaction(plan port.NativeInstallResult) (*installHostTransaction, error) {
+// collectInstallHostPaths는 plan의 파일/링크 경로를 정리해 종류별로 모으고, 같은 경로가 두 종류로 선언되면 오류를 낸다.
+func collectInstallHostPaths(plan port.NativeInstallResult) (map[string]installHostPathKind, error) {
 	paths := map[string]installHostPathKind{}
+	add := func(raw string, want installHostPathKind) error {
+		if raw == "" {
+			return nil
+		}
+		path := filepath.Clean(raw)
+		if kind, exists := paths[path]; exists && kind != want {
+			return fmt.Errorf("native install path is both file and symlink: %s", path)
+		}
+		paths[path] = want
+		return nil
+	}
 	for _, file := range plan.Files {
-		if file.Path != "" {
-			path := filepath.Clean(file.Path)
-			if kind, exists := paths[path]; exists && kind != installHostFile {
-				return nil, fmt.Errorf("native install path is both file and symlink: %s", path)
-			}
-			paths[path] = installHostFile
+		if err := add(file.Path, installHostFile); err != nil {
+			return nil, err
 		}
 	}
 	for _, link := range plan.Links {
-		if link.Path != "" {
-			path := filepath.Clean(link.Path)
-			if kind, exists := paths[path]; exists && kind != installHostLink {
-				return nil, fmt.Errorf("native install path is both file and symlink: %s", path)
-			}
-			paths[path] = installHostLink
+		if err := add(link.Path, installHostLink); err != nil {
+			return nil, err
 		}
+	}
+	return paths, nil
+}
+
+// captureInstallHostParents는 path의 상위 디렉터리 스냅샷을 존재하는 첫 디렉터리까지 기록한다.
+func (transaction *installHostTransaction) captureInstallHostParents(path string, parentSnapshots map[string]installHostPathSnapshot) error {
+	for parent := filepath.Dir(path); parent != "." && parent != string(filepath.Separator); parent = filepath.Dir(parent) {
+		if parentSnapshot, seen := parentSnapshots[parent]; seen {
+			if parentSnapshot.existed {
+				break
+			}
+			continue
+		}
+		parentSnapshot, parentErr := captureInstallHostParent(parent)
+		if parentErr != nil {
+			return parentErr
+		}
+		parentSnapshots[parent] = parentSnapshot
+		transaction.parents = append(transaction.parents, parentSnapshot)
+		if parentSnapshot.existed {
+			break
+		}
+	}
+	return nil
+}
+
+func prepareInstallHostTransaction(plan port.NativeInstallResult) (*installHostTransaction, error) {
+	paths, err := collectInstallHostPaths(plan)
+	if err != nil {
+		return nil, err
 	}
 	ordered := make([]string, 0, len(paths))
 	for path := range paths {
@@ -66,22 +100,8 @@ func prepareInstallHostTransaction(plan port.NativeInstallResult) (*installHostT
 			return nil, err
 		}
 		transaction.snapshots = append(transaction.snapshots, snapshot)
-		for parent := filepath.Dir(path); parent != "." && parent != string(filepath.Separator); parent = filepath.Dir(parent) {
-			if parentSnapshot, seen := parentSnapshots[parent]; seen {
-				if parentSnapshot.existed {
-					break
-				}
-				continue
-			}
-			parentSnapshot, parentErr := captureInstallHostParent(parent)
-			if parentErr != nil {
-				return nil, parentErr
-			}
-			parentSnapshots[parent] = parentSnapshot
-			transaction.parents = append(transaction.parents, parentSnapshot)
-			if parentSnapshot.existed {
-				break
-			}
+		if err := transaction.captureInstallHostParents(path, parentSnapshots); err != nil {
+			return nil, err
 		}
 	}
 	sort.Slice(transaction.parents, func(left, right int) bool {
@@ -167,46 +187,60 @@ func (transaction *installHostTransaction) RollbackHosts() error {
 	return transaction.rollback()
 }
 
+// removeInstallPathIfPresent removes path and treats a missing path as success.
+func removeInstallPathIfPresent(path string) error {
+	if err := os.Remove(path); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	return nil
+}
+
+// writeInstallHostSnapshotContent writes the snapshot content and enforces its permission bits.
+func writeInstallHostSnapshotContent(snapshot installHostPathSnapshot) error {
+	if err := os.WriteFile(snapshot.path, snapshot.content, snapshot.mode.Perm()); err != nil {
+		return err
+	}
+	return os.Chmod(snapshot.path, snapshot.mode.Perm())
+}
+
+// removeNonRegularInstallHostPath removes path only when it exists and is not a regular file.
+func removeNonRegularInstallHostPath(path string) error {
+	info, err := os.Lstat(path)
+	if err == nil && !info.Mode().IsRegular() {
+		return os.Remove(path)
+	}
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	return nil
+}
+
 func restoreInstallHostPath(snapshot installHostPathSnapshot) error {
 	if !snapshot.existed {
-		if err := os.Remove(snapshot.path); err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return err
-		}
-		return nil
+		return removeInstallPathIfPresent(snapshot.path)
 	}
 	if err := os.MkdirAll(filepath.Dir(snapshot.path), 0o755); err != nil {
 		return err
 	}
 	if snapshot.kind == installHostLink {
-		if err := os.Remove(snapshot.path); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		if err := removeInstallPathIfPresent(snapshot.path); err != nil {
 			return err
 		}
 		return os.Symlink(snapshot.linkTarget, snapshot.path)
 	}
 	if snapshot.wasSymlink {
-		if err := os.Remove(snapshot.path); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		if err := removeInstallPathIfPresent(snapshot.path); err != nil {
 			return err
 		}
 		if err := os.Symlink(snapshot.linkTarget, snapshot.path); err != nil {
 			return err
 		}
-		if err := os.WriteFile(snapshot.path, snapshot.content, snapshot.mode.Perm()); err != nil {
-			return err
-		}
-		return os.Chmod(snapshot.path, snapshot.mode.Perm())
+		return writeInstallHostSnapshotContent(snapshot)
 	}
-	info, err := os.Lstat(snapshot.path)
-	if err == nil && !info.Mode().IsRegular() {
-		if err := os.Remove(snapshot.path); err != nil {
-			return err
-		}
-	} else if err != nil && !errors.Is(err, fs.ErrNotExist) {
+	if err := removeNonRegularInstallHostPath(snapshot.path); err != nil {
 		return err
 	}
-	if err := os.WriteFile(snapshot.path, snapshot.content, snapshot.mode.Perm()); err != nil {
-		return err
-	}
-	return os.Chmod(snapshot.path, snapshot.mode.Perm())
+	return writeInstallHostSnapshotContent(snapshot)
 }
 
 func pathDepth(path string) int {

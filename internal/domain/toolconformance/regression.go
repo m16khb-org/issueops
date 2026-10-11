@@ -12,8 +12,7 @@ func ValidateRegressionFixture(fixture contract.RegressionFixture) error {
 	if fixture.SchemaVersion != 1 {
 		return fmt.Errorf("unsupported_regression_schema_version:%d", fixture.SchemaVersion)
 	}
-	if fixture.FixtureID == "" || fixture.SourceTool == "" || fixture.ProbeTool == "" || fixture.Host == "" ||
-		fixture.HostVersion == "" || fixture.ModelLabel == "" || fixture.CanonicalArguments == nil {
+	if regressionFixtureIncomplete(fixture) {
 		return fmt.Errorf("invalid_regression_fixture")
 	}
 	if !ValidEvidenceID(fixture.SourceSchemaSHA256) || !ValidEvidenceID(fixture.RawArgumentsSHA256) {
@@ -28,15 +27,8 @@ func ValidateRegressionFixture(fixture contract.RegressionFixture) error {
 		fixture.ExpectedDiagnosticSignature != DiagnosticSignature(fixture.ExpectedClassification, diagnostics) {
 		return fmt.Errorf("regression_diagnostic_signature_mismatch")
 	}
-	distinctEvidence := map[string]bool{}
-	for _, id := range fixture.ConfirmedEvidenceIDs {
-		if !ValidEvidenceID(id) {
-			return fmt.Errorf("invalid_regression_evidence_id")
-		}
-		distinctEvidence[id] = true
-	}
-	if len(distinctEvidence) < 2 {
-		return fmt.Errorf("regression_not_confirmed")
+	if err := validateConfirmedEvidence(fixture.ConfirmedEvidenceIDs); err != nil {
+		return err
 	}
 	if fixture.ExpectedHandlerCallCount != 0 || !fixture.ExpectedStateUnchanged {
 		return fmt.Errorf("invalid_regression_behavioral_expectation")
@@ -44,6 +36,30 @@ func ValidateRegressionFixture(fixture contract.RegressionFixture) error {
 	expectedFinal := InvalidToolArgumentsResult(fixture.SourceTool, diagnostics)
 	if !jsonDeepEqual(fixture.ExpectedFinalResult, expectedFinal) {
 		return fmt.Errorf("invalid_regression_final_result")
+	}
+	return nil
+}
+
+func regressionFixtureIncomplete(fixture contract.RegressionFixture) bool {
+	for _, text := range []string{fixture.FixtureID, fixture.SourceTool, fixture.ProbeTool, fixture.Host, fixture.HostVersion, fixture.ModelLabel} {
+		if text == "" {
+			return true
+		}
+	}
+	return fixture.CanonicalArguments == nil
+}
+
+// validateConfirmedEvidence requires well-formed ids with at least two distinct values.
+func validateConfirmedEvidence(ids []string) error {
+	distinct := map[string]bool{}
+	for _, id := range ids {
+		if !ValidEvidenceID(id) {
+			return fmt.Errorf("invalid_regression_evidence_id")
+		}
+		distinct[id] = true
+	}
+	if len(distinct) < 2 {
+		return fmt.Errorf("regression_not_confirmed")
 	}
 	return nil
 }

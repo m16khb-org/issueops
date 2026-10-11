@@ -28,20 +28,8 @@ func Fetch(ctx context.Context, request webfetchcontract.Request, dependencies D
 	if dependencies.Now != nil {
 		now = dependencies.Now()
 	}
-	result := webfetchcontract.Result{
-		URL:             webfetchdomain.SanitizeURL(request.URL),
-		Category:        webfetchcontract.CategoryUnknown,
-		StopReason:      webfetchcontract.StopReasonError,
-		AttemptedRoutes: []webfetchcontract.RouteRecord{},
-		UntriedRoutes:   []webfetchcontract.RouteRecord{},
-		Metadata:        map[string]any{},
-		Warnings:        []string{},
-		RetrievedAt:     now.UTC().Format(time.RFC3339Nano),
-	}
-	timeout := request.Timeout
-	if timeout <= 0 {
-		timeout = 30 * time.Second
-	}
+	result := newFetchResult(request, now)
+	timeout := requestTimeout(request)
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
@@ -79,20 +67,14 @@ func Fetch(ctx context.Context, request webfetchcontract.Request, dependencies D
 		if webfetchdomain.IsRedirect(response.StatusCode) {
 			location := webfetchdomain.HeaderValue(response.Header, "Location")
 			_ = response.Body.Close()
-			if strings.TrimSpace(location) == "" {
-				return stopped(result, request.MaxChars, started, webfetchcontract.CategoryUnknown, webfetchcontract.StopReasonGridExhausted, "empty_redirect_location"), nil
+			next, stop := followRedirect(ctx, dependencies, request, current, location)
+			if stop != nil {
+				if stop.err != nil {
+					result.Warnings = append(result.Warnings, stop.err.Error())
+				}
+				return stopped(result, request.MaxChars, started, stop.category, stop.reason, stop.skipped), nil
 			}
-			next, resolveErr := webfetchdomain.ResolveRedirect(current, location)
-			if resolveErr != nil {
-				result.Warnings = append(result.Warnings, resolveErr.Error())
-				return stopped(result, request.MaxChars, started, webfetchcontract.CategoryUnknown, webfetchcontract.StopReasonUnsafeRedirect, "unsafe_redirect"), nil
-			}
-			validated, validateErr := dependencies.URLPolicy.Validate(ctx, next, request.AllowPrivateNetwork)
-			if validateErr != nil {
-				result.Warnings = append(result.Warnings, validateErr.Error())
-				return stopped(result, request.MaxChars, started, webfetchcontract.CategoryBlocked, webfetchcontract.StopReasonUnsafeRedirect, "unsafe_redirect"), nil
-			}
-			current = validated
+			current = next
 			result.FinalURL = webfetchdomain.SanitizeURL(current)
 			continue
 		}
@@ -109,31 +91,84 @@ func Fetch(ctx context.Context, request webfetchcontract.Request, dependencies D
 			Body:       body,
 			URL:        current,
 		})
-		if validation.Category == webfetchcontract.CategoryRateLimited && webfetchdomain.HeaderValue(response.Header, "Retry-After") != "" && !retriedAfter {
+		if retryAfter := webfetchdomain.HeaderValue(response.Header, "Retry-After"); shouldRetryAfter(validation, retryAfter, retriedAfter) {
 			retriedAfter = true
-			serviceRetryDelay(ctx, dependencies, webfetchdomain.HeaderValue(response.Header, "Retry-After"))
+			serviceRetryDelay(ctx, dependencies, retryAfter)
 			delete(visited, current)
 			continue
 		}
-		result.Category = validation.Category
-		result.StopReason = validation.StopReason
-		result.Content = validation.Content
-		result.Metadata = validation.Metadata
-		if retriedAfter {
-			result.Metadata["retry_after_retried"] = true
-		}
-		result.Warnings = append(result.Warnings, validation.Warnings...)
-		result.OK = validation.Category == webfetchcontract.CategoryStrongOK || validation.Category == webfetchcontract.CategoryWeakOK || validation.Category == webfetchcontract.CategoryPaywalled
-		if validation.StopReason == webfetchcontract.StopReasonAccepted {
-			result.GridExhausted = false
-			result.UntriedRoutes = SkippedRoutes("not_needed_after_success")
-		} else {
-			result.GridExhausted = true
-			result.UntriedRoutes = SkippedRoutes(validation.Category)
-		}
+		result = applyValidation(result, validation, retriedAfter)
 		return FinalizeResult(result, request.MaxChars, started), nil
 	}
 	return stopped(result, request.MaxChars, started, webfetchcontract.CategoryUnknown, webfetchcontract.StopReasonRedirectLoop, "redirect_loop"), nil
+}
+
+func requestTimeout(request webfetchcontract.Request) time.Duration {
+	if request.Timeout <= 0 {
+		return 30 * time.Second
+	}
+	return request.Timeout
+}
+
+// shouldRetryAfter allows exactly one retry for a rate-limited response that carries a Retry-After header.
+func shouldRetryAfter(validation webfetchcontract.ResponseValidation, retryAfter string, alreadyRetried bool) bool {
+	return validation.Category == webfetchcontract.CategoryRateLimited && retryAfter != "" && !alreadyRetried
+}
+
+func newFetchResult(request webfetchcontract.Request, now time.Time) webfetchcontract.Result {
+	return webfetchcontract.Result{
+		URL:             webfetchdomain.SanitizeURL(request.URL),
+		Category:        webfetchcontract.CategoryUnknown,
+		StopReason:      webfetchcontract.StopReasonError,
+		AttemptedRoutes: []webfetchcontract.RouteRecord{},
+		UntriedRoutes:   []webfetchcontract.RouteRecord{},
+		Metadata:        map[string]any{},
+		Warnings:        []string{},
+		RetrievedAt:     now.UTC().Format(time.RFC3339Nano),
+	}
+}
+
+// redirectStop describes why a redirect hop ended the fetch; err's message is appended to the result warnings when err is set.
+type redirectStop struct {
+	category, reason, skipped string
+	err                       error
+}
+
+// followRedirect resolves and validates a redirect Location. A non-nil stop means the fetch must end.
+func followRedirect(ctx context.Context, dependencies Dependencies, request webfetchcontract.Request, current, location string) (string, *redirectStop) {
+	if strings.TrimSpace(location) == "" {
+		return "", &redirectStop{category: webfetchcontract.CategoryUnknown, reason: webfetchcontract.StopReasonGridExhausted, skipped: "empty_redirect_location"}
+	}
+	next, resolveErr := webfetchdomain.ResolveRedirect(current, location)
+	if resolveErr != nil {
+		return "", &redirectStop{category: webfetchcontract.CategoryUnknown, reason: webfetchcontract.StopReasonUnsafeRedirect, skipped: "unsafe_redirect", err: resolveErr}
+	}
+	validated, validateErr := dependencies.URLPolicy.Validate(ctx, next, request.AllowPrivateNetwork)
+	if validateErr != nil {
+		return "", &redirectStop{category: webfetchcontract.CategoryBlocked, reason: webfetchcontract.StopReasonUnsafeRedirect, skipped: "unsafe_redirect", err: validateErr}
+	}
+	return validated, nil
+}
+
+// applyValidation records a final (non-redirect) response validation on the result.
+func applyValidation(result webfetchcontract.Result, validation webfetchcontract.ResponseValidation, retriedAfter bool) webfetchcontract.Result {
+	result.Category = validation.Category
+	result.StopReason = validation.StopReason
+	result.Content = validation.Content
+	result.Metadata = validation.Metadata
+	if retriedAfter {
+		result.Metadata["retry_after_retried"] = true
+	}
+	result.Warnings = append(result.Warnings, validation.Warnings...)
+	result.OK = validation.Category == webfetchcontract.CategoryStrongOK || validation.Category == webfetchcontract.CategoryWeakOK || validation.Category == webfetchcontract.CategoryPaywalled
+	if validation.StopReason == webfetchcontract.StopReasonAccepted {
+		result.GridExhausted = false
+		result.UntriedRoutes = SkippedRoutes("not_needed_after_success")
+	} else {
+		result.GridExhausted = true
+		result.UntriedRoutes = SkippedRoutes(validation.Category)
+	}
+	return result
 }
 
 func stopped(result webfetchcontract.Result, maxChars int, started time.Time, category, reason, skippedReason string) webfetchcontract.Result {

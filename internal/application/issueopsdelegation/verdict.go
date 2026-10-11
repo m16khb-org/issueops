@@ -54,41 +54,8 @@ func (s Validator) validate(ctx context.Context, parentID, childID, verdict, rea
 		}
 	}
 	err = s.Records.WithinLock(ctx, parentID, func(spanCtx context.Context) error {
-		parent, err := s.Records.Load(parentID)
+		ref, err := s.applyVerdictToParent(ctx, spanCtx, parentID, childID, verdict, reason, evidence, actor, archived)
 		if err != nil {
-			return err
-		}
-		if err := s.Authority.Validate(ctx, parent, actor); err != nil {
-			return err
-		}
-		current, readErr := s.Records.Load(childID)
-		now := s.Now().UTC().Format(time.RFC3339Nano)
-		var ref model.IssueOpsChildCycleRef
-		if archived {
-			if readErr == nil {
-				return domain.ValidateArchivedChildObservation(current, parentID)
-			}
-			if !errors.Is(readErr, fs.ErrNotExist) {
-				return readErr
-			}
-			parent, ref, err = domain.ApplyArchivedChildVerdict(parent, childID, verdict, reason, evidence, now)
-		} else {
-			if readErr != nil {
-				return readErr
-			}
-			if err := domain.ValidateChildMutation(current); err != nil {
-				return err
-			}
-			if err := domain.ValidateChildForVerdict(current, parentID, verdict); err != nil {
-				return err
-			}
-			parent, ref, err = domain.ApplyChildVerdict(parent, current, verdict, reason, evidence, now)
-		}
-		if err != nil {
-			return err
-		}
-		parent.UpdatedAt = now
-		if _, err := s.Records.Save(spanCtx, parent); err != nil {
 			return err
 		}
 		result.ParentRef = ref
@@ -99,4 +66,46 @@ func (s Validator) validate(ctx context.Context, parentID, childID, verdict, rea
 	}
 	result.OK = true
 	return result, nil
+}
+
+// applyVerdictToParent는 부모 잠금 안에서 권한을 확인하고 자식 판정을 부모 레코드에 반영해 저장한다.
+func (s Validator) applyVerdictToParent(ctx, spanCtx context.Context, parentID, childID, verdict, reason string, evidence []string, actor *model.IssueOpsActor, archived bool) (model.IssueOpsChildCycleRef, error) {
+	var ref model.IssueOpsChildCycleRef
+	parent, err := s.Records.Load(parentID)
+	if err != nil {
+		return ref, err
+	}
+	if err := s.Authority.Validate(ctx, parent, actor); err != nil {
+		return ref, err
+	}
+	current, readErr := s.Records.Load(childID)
+	now := s.Now().UTC().Format(time.RFC3339Nano)
+	if archived {
+		if readErr == nil {
+			return ref, domain.ValidateArchivedChildObservation(current, parentID)
+		}
+		if !errors.Is(readErr, fs.ErrNotExist) {
+			return ref, readErr
+		}
+		parent, ref, err = domain.ApplyArchivedChildVerdict(parent, childID, verdict, reason, evidence, now)
+	} else {
+		if readErr != nil {
+			return ref, readErr
+		}
+		if err := domain.ValidateChildMutation(current); err != nil {
+			return ref, err
+		}
+		if err := domain.ValidateChildForVerdict(current, parentID, verdict); err != nil {
+			return ref, err
+		}
+		parent, ref, err = domain.ApplyChildVerdict(parent, current, verdict, reason, evidence, now)
+	}
+	if err != nil {
+		return ref, err
+	}
+	parent.UpdatedAt = now
+	if _, err := s.Records.Save(spanCtx, parent); err != nil {
+		return ref, err
+	}
+	return ref, nil
 }

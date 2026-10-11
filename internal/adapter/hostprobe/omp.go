@@ -198,47 +198,10 @@ func (r OmpRunner) Run(ctx context.Context, request port.HostProbeRequest) (resu
 		// omp emits the same pi agent event stream as Omo.
 		OmoJSONL: true,
 	})
-	if err != nil {
-		cause, code := normalizedProcessFailure(err, "host_process_failed")
-		result := failedResult(r.Name(), "", request, started, r.deps, cause, code)
-		result.ExitCode = output.ExitCode
-		return result
-	}
-	if output.ExitCode != 0 {
-		result := failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "host_process_failed")
-		result.ExitCode = output.ExitCode
-		return result
-	}
-	observation, err := observeOmoStream(output.Stdout, targetTool)
-	if err != nil {
-		cause, code := omoStreamFailure(err)
-		result := failedResult(r.Name(), "", request, started, r.deps, cause, code)
-		result.ExitCode = output.ExitCode
-		result.AmbientToolCount = observation.AmbientToolCount
-		result.CallCount = observation.MCPCallCount
-		return result
-	}
-	capture, err := decodeEpisodeCapture(resultPath, request)
-	if err != nil {
-		cause, code := normalizedCaptureFailure(err)
-		result := failedResult(r.Name(), "", request, started, r.deps, cause, code)
-		result.ExitCode = output.ExitCode
-		return result
-	}
-	if capture.CallCount != 1 || observation.MCPCallCount != 1 {
-		result := failedResult(r.Name(), "", request, started, r.deps, "transport", "probe_call_cardinality_invalid")
-		result.ExitCode = output.ExitCode
-		return result
-	}
-	result = completedResult(r.Name(), "", request, started, r.deps, capture)
-	result.ObservedModel = observation.Model
-	// The private guard extension blocks this exact MCP tool unless the managed
-	// lifecycle extension injected one hidden project-doc message first.
-	result.SessionStartObserved = true
-	result.ResponseSHA256 = observation.ResponseSHA256
-	result.AmbientToolCount = observation.AmbientToolCount
-	result.ExitCode = output.ExitCode
-	return result
+	return omoEpisodeFinish{
+		name: r.Name(), request: request, started: started, deps: r.deps,
+		resultPath: resultPath, targetTool: targetTool,
+	}.finish(output, err)
 }
 
 func (r OmpRunner) validLifecycleExtension() bool {
@@ -336,20 +299,8 @@ func snapshotOmpAuth(ctx context.Context, source, destination string) error {
 		return err
 	}
 	defer func() { _ = tx.Rollback() }()
-	rows, err := tx.QueryContext(ctx, "SELECT sql FROM source.sqlite_master WHERE type = 'table' AND name IN ('auth_schema_version', 'auth_credentials')")
+	schema, err := readOmpAuthSchema(ctx, tx)
 	if err != nil {
-		return err
-	}
-	schema := []string{}
-	for rows.Next() {
-		var statement string
-		if err := rows.Scan(&statement); err != nil {
-			rows.Close()
-			return err
-		}
-		schema = append(schema, statement)
-	}
-	if err := errors.Join(rows.Err(), rows.Close()); err != nil {
 		return err
 	}
 	if len(schema) == 0 {
@@ -368,6 +319,27 @@ func snapshotOmpAuth(ctx context.Context, source, destination string) error {
 		}
 	}
 	return tx.Commit()
+}
+
+// readOmpAuthSchema lists the CREATE statements of the source auth tables.
+func readOmpAuthSchema(ctx context.Context, tx *sql.Tx) ([]string, error) {
+	rows, err := tx.QueryContext(ctx, "SELECT sql FROM source.sqlite_master WHERE type = 'table' AND name IN ('auth_schema_version', 'auth_credentials')")
+	if err != nil {
+		return nil, err
+	}
+	schema := []string{}
+	for rows.Next() {
+		var statement string
+		if err := rows.Scan(&statement); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		schema = append(schema, statement)
+	}
+	if err := errors.Join(rows.Err(), rows.Close()); err != nil {
+		return nil, err
+	}
+	return schema, nil
 }
 
 func prepareOmpPrivateState(root string) error {

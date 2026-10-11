@@ -22,16 +22,9 @@ const sourceGitOutputLimit = 64 * 1024 * 1024
 // productionGoFiles preserves partial file results for the branch collector.
 // SNR rejects any collection error instead of reporting an incomplete ratio.
 func productionGoFiles(root string) ([]string, []error) {
-	root, err := filepath.Abs(root)
+	root, err := resolveSourceRoot(root)
 	if err != nil {
 		return nil, []error{err}
-	}
-	info, err := os.Lstat(root)
-	if err != nil {
-		return nil, []error{err}
-	}
-	if !info.IsDir() {
-		return nil, []error{fmt.Errorf("quality source root is not a directory: %s", root)}
 	}
 	gitWorkspace, err := hasGitWorkspace(root)
 	if err != nil {
@@ -40,84 +33,148 @@ func productionGoFiles(root string) ([]string, []error) {
 	var candidates []string
 	var scanErrors []error
 	if gitWorkspace != "" {
-		ctx, cancel := context.WithTimeout(context.Background(), sourceGitTimeout)
-		defer cancel()
-		output, err := sourceGitOutput(ctx, root, sourceGitOutputLimit, "ls-files", "--cached", "--others", "--exclude-standard", "-z", "--", ".")
+		var excluded bool
+		candidates, excluded, err = gitSourceCandidates(gitWorkspace, root)
 		if err != nil {
 			return nil, []error{err}
 		}
-		scope, err := filepath.Rel(gitWorkspace, root)
-		if err != nil {
-			return nil, []error{err}
-		}
-		if excludedSourcePath(scope) {
+		if excluded {
 			return []string{}, nil
 		}
-		candidates = strings.Split(output, "\x00")
 	} else {
 		if excludedSourcePath(root) {
 			return []string{}, nil
 		}
-		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
-			if err != nil {
-				scanErrors = append(scanErrors, err)
-				return nil
-			}
-			relative, err := filepath.Rel(root, path)
-			if err != nil {
-				return err
-			}
-			if excludedSourcePath(relative) && entry.IsDir() {
-				return filepath.SkipDir
-			}
-			if !entry.IsDir() {
-				candidates = append(candidates, relative)
-			}
-			return nil
-		})
-		if err != nil {
-			scanErrors = append(scanErrors, err)
-		}
+		candidates, scanErrors = walkSourceCandidates(root)
 	}
-	files := []string{}
-	seen := map[string]bool{}
+	filter := &productionFileFilter{root: root, seen: map[string]bool{}, files: []string{}, scanErrors: scanErrors}
 	for _, relative := range candidates {
-		if relative == "" {
-			continue
-		}
-		relative = filepath.Clean(relative)
-		if filepath.IsAbs(relative) || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
-			scanErrors = append(scanErrors, fmt.Errorf("quality source path escapes root: %s", relative))
-			continue
-		}
-		if excludedSourcePath(relative) || !strings.HasSuffix(relative, ".go") || strings.HasSuffix(relative, "_test.go") || seen[relative] {
-			continue
-		}
-		seen[relative] = true
-		path := filepath.Join(root, relative)
-		regular, err := regularSourcePath(root, relative)
-		if err != nil {
-			scanErrors = append(scanErrors, err)
-			continue
-		}
-		if !regular {
-			continue
-		}
-		data, err := os.ReadFile(path)
-		if err != nil {
-			scanErrors = append(scanErrors, err)
-			continue
-		}
-		// PackageClauseOnly reads the generated header without changing the existing
-		// collectors' handling of malformed function bodies or SNR line limits.
-		file, _ := parser.ParseFile(token.NewFileSet(), path, data, parser.PackageClauseOnly|parser.ParseComments)
-		if file != nil && ast.IsGenerated(file) {
-			continue
-		}
-		files = append(files, path)
+		filter.add(relative)
 	}
-	sort.Strings(files)
-	return files, scanErrors
+	sort.Strings(filter.files)
+	return filter.files, filter.scanErrors
+}
+
+// resolveSourceRoot은 root를 절대 경로로 바꾸고 디렉터리인지 확인한다.
+func resolveSourceRoot(root string) (string, error) {
+	root, err := filepath.Abs(root)
+	if err != nil {
+		return "", err
+	}
+	info, err := os.Lstat(root)
+	if err != nil {
+		return "", err
+	}
+	if !info.IsDir() {
+		return "", fmt.Errorf("quality source root is not a directory: %s", root)
+	}
+	return root, nil
+}
+
+// gitSourceCandidates는 git이 추적하거나 무시하지 않은 파일 목록을 돌려준다.
+// root 자체가 제외 경로이면 excluded가 true다.
+func gitSourceCandidates(gitWorkspace, root string) (candidates []string, excluded bool, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), sourceGitTimeout)
+	defer cancel()
+	output, err := sourceGitOutput(ctx, root, sourceGitOutputLimit, "ls-files", "--cached", "--others", "--exclude-standard", "-z", "--", ".")
+	if err != nil {
+		return nil, false, err
+	}
+	scope, err := filepath.Rel(gitWorkspace, root)
+	if err != nil {
+		return nil, false, err
+	}
+	if excludedSourcePath(scope) {
+		return nil, true, nil
+	}
+	return strings.Split(output, "\x00"), false, nil
+}
+
+// walkSourceCandidates는 git이 없는 디렉터리를 순회해 root 기준 상대 경로를 모은다.
+// 순회 중 오류는 중단하지 않고 scanErrors로 모은다.
+func walkSourceCandidates(root string) (candidates []string, scanErrors []error) {
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			scanErrors = append(scanErrors, err)
+			return nil
+		}
+		relative, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		if excludedSourcePath(relative) && entry.IsDir() {
+			return filepath.SkipDir
+		}
+		if !entry.IsDir() {
+			candidates = append(candidates, relative)
+		}
+		return nil
+	})
+	if err != nil {
+		scanErrors = append(scanErrors, err)
+	}
+	return candidates, scanErrors
+}
+
+// productionFileFilter는 후보 경로에서 생산 Go 소스 파일만 골라 누적한다.
+type productionFileFilter struct {
+	root       string
+	seen       map[string]bool
+	files      []string
+	scanErrors []error
+}
+
+func (f *productionFileFilter) add(relative string) {
+	if relative == "" {
+		return
+	}
+	relative = filepath.Clean(relative)
+	if escapesSourceRoot(relative) {
+		f.scanErrors = append(f.scanErrors, fmt.Errorf("quality source path escapes root: %s", relative))
+		return
+	}
+	if !productionGoCandidate(relative) || f.seen[relative] {
+		return
+	}
+	f.seen[relative] = true
+	path := filepath.Join(f.root, relative)
+	regular, err := regularSourcePath(f.root, relative)
+	if err != nil {
+		f.scanErrors = append(f.scanErrors, err)
+		return
+	}
+	if !regular {
+		return
+	}
+	generated, err := generatedGoSource(path)
+	if err != nil {
+		f.scanErrors = append(f.scanErrors, err)
+		return
+	}
+	if generated {
+		return
+	}
+	f.files = append(f.files, path)
+}
+
+func escapesSourceRoot(relative string) bool {
+	return filepath.IsAbs(relative) || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator))
+}
+
+// productionGoCandidate는 제외 경로, 비Go 파일, 테스트 파일을 걸러낸다.
+func productionGoCandidate(relative string) bool {
+	return !excludedSourcePath(relative) && strings.HasSuffix(relative, ".go") && !strings.HasSuffix(relative, "_test.go")
+}
+
+// generatedGoSource는 파일 헤더만 파싱해 생성 코드인지 판정한다.
+// PackageClauseOnly는 기존 수집기의 함수 본문 오류 처리나 SNR 줄 수 제한을 바꾸지 않는다.
+func generatedGoSource(path string) (bool, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return false, err
+	}
+	file, _ := parser.ParseFile(token.NewFileSet(), path, data, parser.PackageClauseOnly|parser.ParseComments)
+	return file != nil && ast.IsGenerated(file), nil
 }
 
 func excludedSourcePath(relative string) bool {

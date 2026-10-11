@@ -146,26 +146,53 @@ func CoverageFingerprint(root string) (string, error) {
 	sort.Slice(paths, func(left, right int) bool {
 		return bytes.Compare(paths[left], paths[right]) < 0
 	})
-	fileCount := 0
-	var totalFileBytes int64
+	if err := hashCoverageUntrackedFiles(hasher, root, paths); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(hasher.Sum(nil)), nil
+}
+
+// coverageFingerprintBudget는 추적되지 않은 파일의 개수와 총 바이트를 누적하며 한도를 검사한다.
+type coverageFingerprintBudget struct {
+	fileCount      int
+	totalFileBytes int64
+}
+
+func (budget *coverageFingerprintBudget) admit(relative string, size int64) error {
+	budget.fileCount++
+	if budget.fileCount > coverageFingerprintFileCountLimit {
+		return fmt.Errorf("coverage fingerprint exceeds %d untracked files", coverageFingerprintFileCountLimit)
+	}
+	if size > coverageFingerprintFileLimit {
+		return fmt.Errorf("coverage fingerprint file %s exceeds %d bytes", relative, coverageFingerprintFileLimit)
+	}
+	budget.totalFileBytes += size
+	if budget.totalFileBytes > coverageFingerprintTotalFileLimit {
+		return fmt.Errorf("coverage fingerprint exceeds %d untracked bytes", coverageFingerprintTotalFileLimit)
+	}
+	return nil
+}
+
+func hashCoverageUntrackedFiles(hasher io.Writer, root string, paths [][]byte) error {
+	var budget coverageFingerprintBudget
 	for _, rawPath := range paths {
 		if len(rawPath) == 0 {
 			continue
 		}
 		relative := filepath.Clean(string(rawPath))
 		if relative == "." || filepath.IsAbs(relative) || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
-			return "", fmt.Errorf("coverage fingerprint path escapes repository: %s", relative)
+			return fmt.Errorf("coverage fingerprint path escapes repository: %s", relative)
 		}
 		path := filepath.Join(root, relative)
 		info, err := os.Lstat(path)
 		if err != nil {
-			return "", err
+			return err
 		}
 		_, _ = fmt.Fprintf(hasher, "path:%s\nmode:%s\n", filepath.ToSlash(relative), info.Mode())
 		if info.Mode()&os.ModeSymlink != 0 {
 			target, err := os.Readlink(path)
 			if err != nil {
-				return "", err
+				return err
 			}
 			_, _ = hasher.Write([]byte(target))
 			continue
@@ -173,31 +200,27 @@ func CoverageFingerprint(root string) (string, error) {
 		if !info.Mode().IsRegular() {
 			continue
 		}
-		fileCount++
-		if fileCount > coverageFingerprintFileCountLimit {
-			return "", fmt.Errorf("coverage fingerprint exceeds %d untracked files", coverageFingerprintFileCountLimit)
+		if err := budget.admit(relative, info.Size()); err != nil {
+			return err
 		}
-		if info.Size() > coverageFingerprintFileLimit {
-			return "", fmt.Errorf("coverage fingerprint file %s exceeds %d bytes", relative, coverageFingerprintFileLimit)
-		}
-		totalFileBytes += info.Size()
-		if totalFileBytes > coverageFingerprintTotalFileLimit {
-			return "", fmt.Errorf("coverage fingerprint exceeds %d untracked bytes", coverageFingerprintTotalFileLimit)
-		}
-		file, err := os.Open(path)
-		if err != nil {
-			return "", err
-		}
-		_, copyErr := io.Copy(hasher, file)
-		closeErr := file.Close()
-		if copyErr != nil {
-			return "", copyErr
-		}
-		if closeErr != nil {
-			return "", closeErr
+		if err := hashCoverageFileContent(hasher, path); err != nil {
+			return err
 		}
 	}
-	return hex.EncodeToString(hasher.Sum(nil)), nil
+	return nil
+}
+
+func hashCoverageFileContent(hasher io.Writer, path string) error {
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	_, copyErr := io.Copy(hasher, file)
+	closeErr := file.Close()
+	if copyErr != nil {
+		return copyErr
+	}
+	return closeErr
 }
 
 func gitCoverageFingerprintInput(root string, args ...string) ([]byte, error) {

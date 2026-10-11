@@ -33,12 +33,28 @@ func Mode(request guardcontract.GuardCheckRequest) string {
 	return "staged"
 }
 
+// changeKinds records which kinds of change the analyzed files contain.
+type changeKinds struct {
+	prod, test, contractSurface, golden bool
+}
+
+func (kinds *changeKinds) observe(rel string) {
+	if TestPath(rel) {
+		kinds.test = true
+	} else if SourcePath(rel) {
+		kinds.prod = true
+	}
+	if ContractSurfacePath(rel) {
+		kinds.contractSurface = true
+	}
+	if strings.Contains(filepath.ToSlash(rel), "testdata/") || strings.Contains(strings.ToLower(rel), "golden") {
+		kinds.golden = true
+	}
+}
+
 func Analyze(files []FileObservation, existingSymbols map[string][]string) Analysis {
 	result := Analysis{Findings: []guardcontract.GuardFinding{}}
-	hasProdChange := false
-	hasTestChange := false
-	hasContractSurfaceChange := false
-	hasGoldenChange := false
+	var kinds changeKinds
 	for _, file := range files {
 		rel := file.Path
 		if SecretLikePath(rel) {
@@ -48,28 +64,18 @@ func Analyze(files []FileObservation, existingSymbols map[string][]string) Analy
 			})
 			continue
 		}
-		if TestPath(rel) {
-			hasTestChange = true
-		} else if SourcePath(rel) {
-			hasProdChange = true
-		}
-		if ContractSurfacePath(rel) {
-			hasContractSurfaceChange = true
-		}
-		if strings.Contains(filepath.ToSlash(rel), "testdata/") || strings.Contains(strings.ToLower(rel), "golden") {
-			hasGoldenChange = true
-		}
+		kinds.observe(rel)
 		if file.Read {
 			result.Findings = append(result.Findings, FileFindings(rel, file.Content, existingSymbols)...)
 		}
 	}
-	if hasProdChange && !hasTestChange {
+	if kinds.prod && !kinds.test {
 		result.Findings = append(result.Findings, guardcontract.GuardFinding{
 			Severity: "warn", Rule: "prod-change-without-test",
 			Message: "Production source changed without a changed test file; verify this is documentation/config-only or add focused coverage.",
 		})
 	}
-	if hasContractSurfaceChange && !hasGoldenChange {
+	if kinds.contractSurface && !kinds.golden {
 		result.Findings = append(result.Findings, guardcontract.GuardFinding{
 			Severity: "warn", Rule: "contract-surface-without-golden",
 			Message: "CLI/MCP/adapter contract surface changed without a golden/testdata update.",
@@ -77,29 +83,40 @@ func Analyze(files []FileObservation, existingSymbols map[string][]string) Analy
 	}
 	result.Findings = DedupeFindings(result.Findings)
 	sort.Slice(result.Findings, func(i, j int) bool {
-		if SeverityRank(result.Findings[i].Severity) != SeverityRank(result.Findings[j].Severity) {
-			return SeverityRank(result.Findings[i].Severity) < SeverityRank(result.Findings[j].Severity)
-		}
-		if result.Findings[i].File != result.Findings[j].File {
-			return result.Findings[i].File < result.Findings[j].File
-		}
-		if result.Findings[i].Line != result.Findings[j].Line {
-			return result.Findings[i].Line < result.Findings[j].Line
-		}
-		return result.Findings[i].Rule < result.Findings[j].Rule
+		return findingLess(result.Findings[i], result.Findings[j])
 	})
-	for _, finding := range result.Findings {
-		switch finding.Severity {
-		case "block":
-			result.Summary.Block++
-		case "warn":
-			result.Summary.Warn++
-		case "review":
-			result.Summary.Review++
-		default:
-			result.Summary.Info++
-		}
-	}
+	result.Summary = summarizeFindings(result.Findings)
 	result.OK = result.Summary.Block == 0
 	return result
+}
+
+// findingLess orders by severity rank, then file, line and rule.
+func findingLess(a, b guardcontract.GuardFinding) bool {
+	if SeverityRank(a.Severity) != SeverityRank(b.Severity) {
+		return SeverityRank(a.Severity) < SeverityRank(b.Severity)
+	}
+	if a.File != b.File {
+		return a.File < b.File
+	}
+	if a.Line != b.Line {
+		return a.Line < b.Line
+	}
+	return a.Rule < b.Rule
+}
+
+func summarizeFindings(findings []guardcontract.GuardFinding) guardcontract.GuardSummary {
+	var summary guardcontract.GuardSummary
+	for _, finding := range findings {
+		switch finding.Severity {
+		case "block":
+			summary.Block++
+		case "warn":
+			summary.Warn++
+		case "review":
+			summary.Review++
+		default:
+			summary.Info++
+		}
+	}
+	return summary
 }

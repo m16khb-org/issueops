@@ -110,35 +110,12 @@ func Validate(input IssueOpsTemplateInput) IssueOpsTemplateValidation {
 	}
 	v.MissingRequiredFields = append(v.MissingRequiredFields, missingFields(input)...)
 	body := strings.TrimSpace(input.Body)
-	if strings.Contains(strings.ToLower(body), "## plan link") || strings.Contains(strings.ToLower(body), "## plan") {
-		v.Critical = append(v.Critical, "plan_link_section_forbidden")
-	}
-	if strings.EqualFold(input.Provider, "gitlab") && strings.Contains(strings.ToLower(body), "## related issues") {
-		v.Critical = append(v.Critical, "gitlab_related_issues_body_section_forbidden")
-	}
+	v.Critical = append(v.Critical, forbiddenBodySectionCriticals(input.Provider, body)...)
 	if body != "" && !containsHangul(body) {
 		v.Critical = append(v.Critical, "korean_body_required")
 	}
 	if body != "" && supportedArtifactKind(input.Kind) && SupportsTemplate(input.Kind, input.Template) {
-		if !hasNonEmptySummarySection(body) {
-			v.Critical = append(v.Critical, "summary_section_missing")
-		}
-		for _, spec := range sectionsFor(input.Kind, input.Template) {
-			if !spec.Required {
-				continue
-			}
-			content, ok := sectionContentFromBody(body, spec.Title)
-			if !ok {
-				v.MissingRequiredSections = append(v.MissingRequiredSections, spec.Title)
-				continue
-			}
-			if isPlaceholderContent(content) {
-				v.Critical = append(v.Critical, "placeholder_section")
-			}
-		}
-		if len(v.MissingRequiredSections) > 0 {
-			v.Critical = append(v.Critical, "required_section_missing")
-		}
+		v.validateRequiredSections(input, body)
 	}
 	for _, key := range unrenderedFields(input) {
 		v.Warnings = append(v.Warnings, "unrendered_field:"+key)
@@ -156,6 +133,44 @@ func Validate(input IssueOpsTemplateInput) IssueOpsTemplateValidation {
 	v.Warnings = uniqueSorted(v.Warnings)
 	v.OK = len(v.Critical) == 0
 	return v
+}
+
+// forbiddenBodySectionCriticals reports the critical codes for body sections
+// that the contract forbids (plan link, and GitLab related issues).
+func forbiddenBodySectionCriticals(provider, body string) []string {
+	var critical []string
+	lowerBody := strings.ToLower(body)
+	if strings.Contains(lowerBody, "## plan link") || strings.Contains(lowerBody, "## plan") {
+		critical = append(critical, "plan_link_section_forbidden")
+	}
+	if strings.EqualFold(provider, "gitlab") && strings.Contains(lowerBody, "## related issues") {
+		critical = append(critical, "gitlab_related_issues_body_section_forbidden")
+	}
+	return critical
+}
+
+// validateRequiredSections checks the summary section and every required
+// section of the input's template against body, recording gaps in v.
+func (v *IssueOpsTemplateValidation) validateRequiredSections(input IssueOpsTemplateInput, body string) {
+	if !hasNonEmptySummarySection(body) {
+		v.Critical = append(v.Critical, "summary_section_missing")
+	}
+	for _, spec := range sectionsFor(input.Kind, input.Template) {
+		if !spec.Required {
+			continue
+		}
+		content, ok := sectionContentFromBody(body, spec.Title)
+		if !ok {
+			v.MissingRequiredSections = append(v.MissingRequiredSections, spec.Title)
+			continue
+		}
+		if isPlaceholderContent(content) {
+			v.Critical = append(v.Critical, "placeholder_section")
+		}
+	}
+	if len(v.MissingRequiredSections) > 0 {
+		v.Critical = append(v.Critical, "required_section_missing")
+	}
 }
 
 func supportedArtifactKind(kind IssueOpsArtifactKind) bool {

@@ -61,12 +61,9 @@ func (r *ResumeRepository) BeginIntent(ctx context.Context, snapshot leaseapp.Re
 	if err := recordcodec.RequireMutableLeaseSnapshot(snapshot.Record.Stable, snapshot.Raw); err != nil {
 		return leaseapp.ResumeProgress{}, err
 	}
-	if r == nil || r.store == nil {
-		return leaseapp.ResumeProgress{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("transactional record store is required"))
-	}
-	store, ok := r.store.(port.RecordRawCASStore)
-	if !ok {
-		return leaseapp.ResumeProgress{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("resume record store does not support raw CAS"))
+	store, err := r.rawCASStore()
+	if err != nil {
+		return leaseapp.ResumeProgress{}, err
 	}
 	if len(snapshot.Raw) == 0 {
 		return leaseapp.ResumeProgress{}, fmt.Errorf("resume raw record snapshot is required")
@@ -75,16 +72,9 @@ func (r *ResumeRepository) BeginIntent(ctx context.Context, snapshot leaseapp.Re
 	if record.Execution == nil || record.Execution.Orca == nil {
 		return leaseapp.ResumeProgress{}, fmt.Errorf("execution resume requires an existing Orca binding")
 	}
-	workspace, err := preparationdomain.ResumeWorkspace(record)
+	workspace, err := resumeBeginWorkspace(record)
 	if err != nil {
 		return leaseapp.ResumeProgress{}, err
-	}
-	matcher := FilesystemPathMatcher{}
-	if workspace.ExpectedParent != "" && !matcher.Matches(workspace.Request.ParentWorktree, workspace.ExpectedParent) {
-		return leaseapp.ResumeProgress{}, fmt.Errorf("parent_worktree %q does not match canonical parent worktree %q", workspace.Request.ParentWorktree, workspace.ExpectedParent)
-	}
-	if !matcher.Matches(workspace.Request.Root, record.Execution.Workspace.Root) {
-		return leaseapp.ResumeProgress{}, fmt.Errorf("execution resume workspace is not canonical")
 	}
 	intent, err := preparationdomain.BuildResumeIntent(preparationdomain.ResumeIntentInput{
 		Record: record, Workspace: workspace.Request, Artifacts: artifacts,
@@ -94,31 +84,11 @@ func (r *ResumeRepository) BeginIntent(ctx context.Context, snapshot leaseapp.Re
 	if err != nil {
 		return leaseapp.ResumeProgress{}, err
 	}
-	currentRaw, ok, err := r.store.Get(recordBucket, record.ID)
+	current, err := r.loadCurrentResumeRecord(record)
 	if err != nil {
 		return leaseapp.ResumeProgress{}, err
 	}
-	if !ok {
-		return leaseapp.ResumeProgress{}, fmt.Errorf("issueops record %s not found", record.ID)
-	}
-	current, err := decodeMutableLeaseRecord(record.ID, currentRaw)
-	if err != nil {
-		return leaseapp.ResumeProgress{}, err
-	}
-	if current.Execution == nil {
-		return leaseapp.ResumeProgress{}, leasecontract.Fail(leasecontract.FailurePersistence, leasecontract.ErrExecutionNotPrepared)
-	}
-	if current.Execution.Lease.Generation != record.Execution.Lease.Generation {
-		return leaseapp.ResumeProgress{}, fmt.Errorf("stale lease generation: current=%d expected=%d", current.Execution.Lease.Generation, record.Execution.Lease.Generation)
-	}
-	if err := leasedomain.ValidateResumeBeginAuthority(leasedomain.ResumeBeginAuthority{
-		Pending:     current.Execution.Pending != nil,
-		LeaseSame:   reflect.DeepEqual(current.Execution.Lease, record.Execution.Lease),
-		BindingSame: reflect.DeepEqual(current.Execution.Orca, record.Execution.Orca),
-	}); err != nil {
-		return leaseapp.ResumeProgress{}, err
-	}
-	if err := preparationdomain.ValidateReconcileIntentIssueIdentity(current, intent); err != nil {
+	if err := validateResumeBeginCurrent(current, record, intent); err != nil {
 		return leaseapp.ResumeProgress{}, err
 	}
 	next := preparationdomain.ApplyResumeIntent(current, intent)
@@ -134,16 +104,83 @@ func (r *ResumeRepository) BeginIntent(ctx context.Context, snapshot leaseapp.Re
 		{Bucket: recordBucket, ID: record.ID, Data: recordData},
 		{Bucket: "external_intent_v1", ID: operationID, Data: intentData, RequireAbsent: true},
 	})
-	if stale, ok := errors.AsType[port.RawCASFailure](err); ok {
-		if stale.FailedBucket() == recordBucket {
-			return leaseapp.ResumeProgress{}, fmt.Errorf("stale raw record snapshot")
-		}
-		return leaseapp.ResumeProgress{}, fmt.Errorf("stale raw intent snapshot")
-	}
-	if err != nil {
+	if err := translateRawCASFailure(err); err != nil {
 		return leaseapp.ResumeProgress{}, err
 	}
 	return leaseapp.ResumeProgress{Record: toApplicationRecord(next), Execution: *next.Execution, Pending: true}, nil
+}
+
+// rawCASStore는 저장소가 준비되어 있고 raw CAS를 지원하는지 확인한 뒤 해당 저장소를 돌려준다.
+func (r *ResumeRepository) rawCASStore() (port.RecordRawCASStore, error) {
+	if r == nil || r.store == nil {
+		return nil, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("transactional record store is required"))
+	}
+	store, ok := r.store.(port.RecordRawCASStore)
+	if !ok {
+		return nil, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("resume record store does not support raw CAS"))
+	}
+	return store, nil
+}
+
+// resumeBeginWorkspace는 resume 작업공간을 계산하고 부모 worktree와 루트가 canonical 값과 일치하는지 검증한다.
+func resumeBeginWorkspace(record leasecontract.Record) (preparationdomain.ResumeWorkspacePlan, error) {
+	workspace, err := preparationdomain.ResumeWorkspace(record)
+	if err != nil {
+		return workspace, err
+	}
+	matcher := FilesystemPathMatcher{}
+	if workspace.ExpectedParent != "" && !matcher.Matches(workspace.Request.ParentWorktree, workspace.ExpectedParent) {
+		return workspace, fmt.Errorf("parent_worktree %q does not match canonical parent worktree %q", workspace.Request.ParentWorktree, workspace.ExpectedParent)
+	}
+	if !matcher.Matches(workspace.Request.Root, record.Execution.Workspace.Root) {
+		return workspace, fmt.Errorf("execution resume workspace is not canonical")
+	}
+	return workspace, nil
+}
+
+// loadCurrentResumeRecord는 저장소의 현재 레코드를 읽어 실행 준비 여부와 lease 세대가 snapshot과 같은지 확인한다.
+func (r *ResumeRepository) loadCurrentResumeRecord(record leasecontract.Record) (leasecontract.Record, error) {
+	currentRaw, ok, err := r.store.Get(recordBucket, record.ID)
+	if err != nil {
+		return leasecontract.Record{}, err
+	}
+	if !ok {
+		return leasecontract.Record{}, fmt.Errorf("issueops record %s not found", record.ID)
+	}
+	current, err := decodeMutableLeaseRecord(record.ID, currentRaw)
+	if err != nil {
+		return leasecontract.Record{}, err
+	}
+	if current.Execution == nil {
+		return leasecontract.Record{}, leasecontract.Fail(leasecontract.FailurePersistence, leasecontract.ErrExecutionNotPrepared)
+	}
+	if current.Execution.Lease.Generation != record.Execution.Lease.Generation {
+		return leasecontract.Record{}, fmt.Errorf("stale lease generation: current=%d expected=%d", current.Execution.Lease.Generation, record.Execution.Lease.Generation)
+	}
+	return current, nil
+}
+
+// validateResumeBeginCurrent는 현재 레코드가 resume 시작 권한과 issue 정체성 조건을 만족하는지 검증한다.
+func validateResumeBeginCurrent(current, record leasecontract.Record, intent preparationcontract.Intent) error {
+	if err := leasedomain.ValidateResumeBeginAuthority(leasedomain.ResumeBeginAuthority{
+		Pending:     current.Execution.Pending != nil,
+		LeaseSame:   reflect.DeepEqual(current.Execution.Lease, record.Execution.Lease),
+		BindingSame: reflect.DeepEqual(current.Execution.Orca, record.Execution.Orca),
+	}); err != nil {
+		return err
+	}
+	return preparationdomain.ValidateReconcileIntentIssueIdentity(current, intent)
+}
+
+// translateRawCASFailure는 raw CAS 실패를 어느 snapshot이 낡았는지 나타내는 오류로 바꾸고, 그 외 오류는 그대로 돌려준다.
+func translateRawCASFailure(err error) error {
+	if stale, ok := errors.AsType[port.RawCASFailure](err); ok {
+		if stale.FailedBucket() == recordBucket {
+			return fmt.Errorf("stale raw record snapshot")
+		}
+		return fmt.Errorf("stale raw intent snapshot")
+	}
+	return err
 }
 
 func (r *ResumeRepository) LoadIntent(_ context.Context, progress leaseapp.ResumeProgress) (leaseapp.ResumeIntentState, error) {

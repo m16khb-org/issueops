@@ -1,6 +1,8 @@
 package stateroundtrip
 
 import (
+	"encoding/json"
+
 	selfverify "issueops/internal/contract/selfverify"
 )
 
@@ -46,4 +48,20 @@ func (s *stateRoundtripSelfVerifySession) fail(errs ...string) selfverify.StepRe
 
 func (s *stateRoundtripSelfVerifySession) combineFailed(step selfverify.StepResult) selfverify.StepResult {
 	return combineFailedStep("state roundtrip", s.input.started, step, s.stdoutParts, s.commands)
+}
+
+// runSelfVerifyJSON은 CLI 단계를 실행하고 stdout을 T로 해석한다.
+// 실행 실패나 해석 실패 시 호출자가 그대로 반환할 실패 단계를 함께 돌려준다.
+func runSelfVerifyJSON[T any](s *stateRoundtripSelfVerifySession, label string, args ...string) (T, *selfverify.StepResult) {
+	var result T
+	step := s.run(label, append([]string{s.input.binary}, args...)...)
+	if !step.OK {
+		failed := s.combineFailed(step)
+		return result, &failed
+	}
+	if err := json.Unmarshal([]byte(step.Stdout), &result); err != nil {
+		failed := s.fail(err.Error())
+		return result, &failed
+	}
+	return result, nil
 }

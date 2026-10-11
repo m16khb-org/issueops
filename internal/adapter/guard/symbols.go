@@ -18,7 +18,7 @@ func guardExistingSymbols(root string, targetFiles []string) map[string][]string
 		}
 		name := d.Name()
 		if d.IsDir() {
-			if name == ".git" || name == "bin" || name == ".cache" || name == ".codex" || name == ".codegraph" || name == ".omx" || name == ".omc" {
+			if guardSkippedDir(name) {
 				return filepath.SkipDir
 			}
 			return nil
@@ -35,18 +35,30 @@ func guardExistingSymbols(root string, targetFiles []string) map[string][]string
 		if err != nil {
 			return nil
 		}
-		for _, line := range strings.Split(string(b), "\n") {
-			if m := pattern.NewSymbol().FindStringSubmatch(line); len(m) == 2 {
-				key := guarddomain.NormalizeSymbol(m[1])
-				if key != "" {
-					symbols[key] = append(symbols[key], rel)
-				}
-			}
-		}
+		collectGuardSymbols(symbols, rel, string(b))
 		return nil
 	})
 	for key := range symbols {
 		symbols[key] = uniqSorted(symbols[key])
 	}
 	return symbols
+}
+
+func guardSkippedDir(name string) bool {
+	switch name {
+	case ".git", "bin", ".cache", ".codex", ".codegraph", ".omx", ".omc":
+		return true
+	}
+	return false
+}
+
+func collectGuardSymbols(symbols map[string][]string, rel, content string) {
+	for _, line := range strings.Split(content, "\n") {
+		if m := pattern.NewSymbol().FindStringSubmatch(line); len(m) == 2 {
+			key := guarddomain.NormalizeSymbol(m[1])
+			if key != "" {
+				symbols[key] = append(symbols[key], rel)
+			}
+		}
+	}
 }

@@ -81,17 +81,8 @@ func ValidateHolderlessRuntimeRollover(request HolderlessRuntimeRolloverRequest)
 }
 
 func PlanResume(request ResumeRequest) (ResumePlan, error) {
-	if !request.ModeOrca || !request.BindingPresent {
-		return ResumePlan{}, Deny(DenyResumeLease, fmt.Errorf("execution resume requires an existing Orca binding"))
-	}
-	if !request.PendingAbsent {
-		return ResumePlan{}, Deny(DenyResumeLease, fmt.Errorf("execution resume is blocked by a pending external intent; run execution reconcile"))
-	}
-	if request.Lease.Generation != request.ExpectedGeneration || request.Lease.Status != "claimable" || request.Lease.Holder != nil || strings.TrimSpace(request.Lease.ClaimTokenSHA256) == "" {
-		return ResumePlan{}, Deny(DenyResumeLease, fmt.Errorf("execution resume requires a holderless claimable lease"))
-	}
-	if !request.CanonicalCWD {
-		return ResumePlan{}, Deny(DenyCanonicalCWD, fmt.Errorf("execution resume cwd must be the canonical worktree"))
+	if err := validateResumePreconditions(request); err != nil {
+		return ResumePlan{}, err
 	}
 	runtimeID := strings.TrimSpace(request.Inventory.RuntimeID)
 	if runtimeID == "" {
@@ -105,6 +96,27 @@ func PlanResume(request ResumeRequest) (ResumePlan, error) {
 		}
 		return ResumePlan{Disposition: ResumeCreateTerminal, RuntimeID: runtimeID}, nil
 	}
+	return planResumeOwnerState(request, runtimeID)
+}
+
+func validateResumePreconditions(request ResumeRequest) error {
+	if !request.ModeOrca || !request.BindingPresent {
+		return Deny(DenyResumeLease, fmt.Errorf("execution resume requires an existing Orca binding"))
+	}
+	if !request.PendingAbsent {
+		return Deny(DenyResumeLease, fmt.Errorf("execution resume is blocked by a pending external intent; run execution reconcile"))
+	}
+	if request.Lease.Generation != request.ExpectedGeneration || request.Lease.Status != "claimable" || request.Lease.Holder != nil || strings.TrimSpace(request.Lease.ClaimTokenSHA256) == "" {
+		return Deny(DenyResumeLease, fmt.Errorf("execution resume requires a holderless claimable lease"))
+	}
+	if !request.CanonicalCWD {
+		return Deny(DenyCanonicalCWD, fmt.Errorf("execution resume cwd must be the canonical worktree"))
+	}
+	return nil
+}
+
+// planResumeOwnerState decides the disposition from the observed owner task/terminal inventory.
+func planResumeOwnerState(request ResumeRequest, runtimeID string) (ResumePlan, error) {
 	terminalID := strings.TrimSpace(request.Inventory.TerminalID)
 	if request.Inventory.TaskLive {
 		if !request.Inventory.TerminalLive {

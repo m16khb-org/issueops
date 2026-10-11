@@ -53,108 +53,147 @@ func (s *ReseedService) Reseed(ctx context.Context, request ReseedRequest) (Rese
 	}
 	var result ReseedResult
 	err := s.fence.Within(ctx, request.ID, func(fenceCtx context.Context) error {
-		actor, err := resolveActor(fenceCtx, request.Actor, request.Ancestry, s.verifier)
+		reseeded, err := s.reseedWithinFence(fenceCtx, request)
 		if err != nil {
 			return err
 		}
-		if !request.Confirm {
-			return fmt.Errorf("reseed requires confirm")
-		}
-		snapshot, err := s.repository.LoadSnapshot(fenceCtx, request.ID)
-		if err != nil {
-			return err
-		}
-		before := snapshot.Record
-		if before.Stable.Execution == nil {
-			return leasecontract.Fail(leasecontract.FailurePersistence, leasecontract.ErrExecutionNotPrepared)
-		}
-		if cleanupAbandonApplying(before.Stable.CleanupAbandonFailure) {
-			return fmt.Errorf("execution reseed is blocked by cleanup abandon apply")
-		}
-		if err := leasedomain.ValidateReseedGeneration(toDomainLease(before.Lease), request.ExpectedGeneration); err != nil {
-			return err
-		}
-		if before.Stable.Execution.Pending != nil {
-			return fmt.Errorf("execution replacement is blocked by a pending external intent; run execution reconcile")
-		}
-		canonicalCWD := s.paths.Matches(request.CWD, before.SourceRoot) || s.paths.Matches(request.CWD, before.CanonicalRoot)
-		if err := leasedomain.ValidateReseed(toDomainLease(before.Lease), leasedomain.ReseedRequest{ExpectedGeneration: request.ExpectedGeneration, CanonicalCWD: canonicalCWD, Reason: request.Reason}); err != nil {
-			return err
-		}
-		completionGeneration, err := resolveCompletionGeneration(before.Stable.Execution, request.CompletionGeneration)
-		if err != nil {
-			return err
-		}
-		if err := s.observeCompletedBase(fenceCtx, before.Stable, completionGeneration); err != nil {
-			return err
-		}
-		observed, err := s.inventory.Observe(fenceCtx, before.Stable, actor)
-		if err != nil {
-			return err
-		}
-		if observed.Fingerprint != request.InventoryFingerprint {
-			return fmt.Errorf("stale replacement inventory fingerprint")
-		}
-		if before.Stable.Execution.Mode == "orca" {
-			binding := before.Stable.Execution.Orca
-			if binding == nil {
-				return leasecontract.Fail(leasecontract.FailurePersistence, leasecontract.ErrExecutionNotPrepared)
-			}
-			if err := leasedomain.ValidateHolderlessRuntimeRollover(leasedomain.HolderlessRuntimeRolloverRequest{
-				Lease: toDomainLease(before.Lease), BindingRuntimeID: binding.RuntimeID, Inventory: observed.Inventory,
-			}); err != nil {
-				return err
-			}
-		}
-		stable, err := cloneReseedRecord(before.Stable)
-		if err != nil {
-			return leasecontract.Fail(leasecontract.FailurePersistence, err)
-		}
-		next := before
-		next.Stable = stable
-		if next.Stable.Execution.Orca != nil && strings.TrimSpace(observed.RuntimeID) != "" {
-			next.Stable.Execution.Orca.RuntimeID = strings.TrimSpace(observed.RuntimeID)
-		}
-		reseededAt := s.clock.Now()
-		outcome := leasedomain.ApplyReseed(reseededAt, toDomainLease(before.Lease), leasedomain.ReseedRequest{ExpectedGeneration: request.ExpectedGeneration, Reason: request.Reason})
-		next.Stable.Execution.Lease.Generation = outcome.Generation
-		next.Stable.Execution.Lease.Status = outcome.Status
-		next.Stable.Execution.Lease.Holder = toContractReseedActor(outcome.Holder)
-		next.Stable.Execution.Lease.ClaimTokenSHA256 = outcome.ClaimTokenSHA256
-		next.Stable.Execution.Lease.ReplacedAt = outcome.ReplacedAt
-		next.Stable.Execution.Lease.ReplacementReason = outcome.ReplacementReason
-		if err := reopenCompletedExecution(&next.Stable, completionGeneration, before.Lease.Generation, outcome.Generation, outcome.ReplacementReason, outcome.ReplacedAt); err != nil {
-			return leasecontract.Fail(leasecontract.FailurePersistence, err)
-		}
-		prepared, err := s.artifacts.Prepare(fenceCtx, next.Stable)
-		if err != nil {
-			return err
-		}
-		next.Stable.Execution.Lease.ClaimTokenSHA256 = prepared.TokenSHA256
-		if next.Stable.Execution.Orca != nil {
-			next.Stable.Execution.Orca.LeaseGeneration = outcome.Generation
-			next.Stable.Execution.Orca.ArtifactIdentityVersion = leasecontract.OrcaArtifactIdentityVersion
-			next.Stable.Execution.Orca.IssueBodySHA256 = prepared.Receipt.IssueBodySHA256
-			next.Stable.Execution.Orca.ContextPacketSHA256 = prepared.Receipt.ContextPacketSHA256
-			next.Stable.Execution.Orca.OwnerPromptSHA256 = prepared.Receipt.OwnerPromptSHA256
-		}
-		next.Lease = next.Stable.Execution.Lease
-		after, err := s.repository.CommitReseed(fenceCtx, snapshot, next)
-		if err != nil {
-			if rollbackErr := s.artifacts.Rollback(fenceCtx, prepared); rollbackErr != nil {
-				return fmt.Errorf("%w; replacement residue cleanup failed: %v", err, rollbackErr)
-			}
-			return err
-		}
-		_ = s.artifacts.CleanupSuperseded(fenceCtx, before.Stable)
-		prepared.Receipt.Execution = after.Execution
-		result = ReseedResult{OK: true, ID: request.ID, Receipt: prepared.Receipt, Execution: after.Execution}
+		result = reseeded
 		return nil
 	})
 	if err != nil {
 		return ReseedResult{ID: request.ID}, err
 	}
 	return result, nil
+}
+
+// reseedWithinFence runs one reseed attempt while the lease fence is held.
+func (s *ReseedService) reseedWithinFence(ctx context.Context, request ReseedRequest) (ReseedResult, error) {
+	actor, err := resolveActor(ctx, request.Actor, request.Ancestry, s.verifier)
+	if err != nil {
+		return ReseedResult{}, err
+	}
+	if !request.Confirm {
+		return ReseedResult{}, fmt.Errorf("reseed requires confirm")
+	}
+	snapshot, err := s.repository.LoadSnapshot(ctx, request.ID)
+	if err != nil {
+		return ReseedResult{}, err
+	}
+	before := snapshot.Record
+	if err := s.validateReseedPreconditions(before, request); err != nil {
+		return ReseedResult{}, err
+	}
+	completionGeneration, err := resolveCompletionGeneration(before.Stable.Execution, request.CompletionGeneration)
+	if err != nil {
+		return ReseedResult{}, err
+	}
+	if err := s.observeCompletedBase(ctx, before.Stable, completionGeneration); err != nil {
+		return ReseedResult{}, err
+	}
+	observed, err := s.inventory.Observe(ctx, before.Stable, actor)
+	if err != nil {
+		return ReseedResult{}, err
+	}
+	if observed.Fingerprint != request.InventoryFingerprint {
+		return ReseedResult{}, fmt.Errorf("stale replacement inventory fingerprint")
+	}
+	if err := validateReseedRuntimeRollover(before, observed); err != nil {
+		return ReseedResult{}, err
+	}
+	next, outcome, err := s.reseededRecord(before, request, observed, completionGeneration)
+	if err != nil {
+		return ReseedResult{}, err
+	}
+	prepared, err := s.artifacts.Prepare(ctx, next.Stable)
+	if err != nil {
+		return ReseedResult{}, err
+	}
+	applyPreparedReseedArtifacts(&next, outcome.Generation, prepared)
+	after, err := s.repository.CommitReseed(ctx, snapshot, next)
+	if err != nil {
+		if rollbackErr := s.artifacts.Rollback(ctx, prepared); rollbackErr != nil {
+			return ReseedResult{}, fmt.Errorf("%w; replacement residue cleanup failed: %v", err, rollbackErr)
+		}
+		return ReseedResult{}, err
+	}
+	_ = s.artifacts.CleanupSuperseded(ctx, before.Stable)
+	prepared.Receipt.Execution = after.Execution
+	return ReseedResult{OK: true, ID: request.ID, Receipt: prepared.Receipt, Execution: after.Execution}, nil
+}
+
+// validateReseedPreconditions checks the loaded record and request before any
+// inventory or base observation happens.
+func (s *ReseedService) validateReseedPreconditions(before Record, request ReseedRequest) error {
+	if before.Stable.Execution == nil {
+		return leasecontract.Fail(leasecontract.FailurePersistence, leasecontract.ErrExecutionNotPrepared)
+	}
+	if cleanupAbandonApplying(before.Stable.CleanupAbandonFailure) {
+		return fmt.Errorf("execution reseed is blocked by cleanup abandon apply")
+	}
+	if err := leasedomain.ValidateReseedGeneration(toDomainLease(before.Lease), request.ExpectedGeneration); err != nil {
+		return err
+	}
+	if before.Stable.Execution.Pending != nil {
+		return fmt.Errorf("execution replacement is blocked by a pending external intent; run execution reconcile")
+	}
+	canonicalCWD := s.paths.Matches(request.CWD, before.SourceRoot) || s.paths.Matches(request.CWD, before.CanonicalRoot)
+	return leasedomain.ValidateReseed(toDomainLease(before.Lease), leasedomain.ReseedRequest{ExpectedGeneration: request.ExpectedGeneration, CanonicalCWD: canonicalCWD, Reason: request.Reason})
+}
+
+// validateReseedRuntimeRollover rejects an Orca runtime change while a holder
+// still owns the lease. Non-Orca executions have nothing to roll over.
+func validateReseedRuntimeRollover(before Record, observed ReseedInventoryReceipt) error {
+	if before.Stable.Execution.Mode != "orca" {
+		return nil
+	}
+	binding := before.Stable.Execution.Orca
+	if binding == nil {
+		return leasecontract.Fail(leasecontract.FailurePersistence, leasecontract.ErrExecutionNotPrepared)
+	}
+	return leasedomain.ValidateHolderlessRuntimeRollover(leasedomain.HolderlessRuntimeRolloverRequest{
+		Lease: toDomainLease(before.Lease), BindingRuntimeID: binding.RuntimeID, Inventory: observed.Inventory,
+	})
+}
+
+// reseededRecord builds the replacement record: a cloned stable record with the
+// reseeded lease applied and the completed execution reopened.
+func (s *ReseedService) reseededRecord(before Record, request ReseedRequest, observed ReseedInventoryReceipt, completionGeneration uint64) (Record, leasedomain.ReseedOutcome, error) {
+	stable, err := cloneReseedRecord(before.Stable)
+	if err != nil {
+		return Record{}, leasedomain.ReseedOutcome{}, leasecontract.Fail(leasecontract.FailurePersistence, err)
+	}
+	next := before
+	next.Stable = stable
+	if next.Stable.Execution.Orca != nil && strings.TrimSpace(observed.RuntimeID) != "" {
+		next.Stable.Execution.Orca.RuntimeID = strings.TrimSpace(observed.RuntimeID)
+	}
+	reseededAt := s.clock.Now()
+	outcome := leasedomain.ApplyReseed(reseededAt, toDomainLease(before.Lease), leasedomain.ReseedRequest{ExpectedGeneration: request.ExpectedGeneration, Reason: request.Reason})
+	lease := &next.Stable.Execution.Lease
+	lease.Generation = outcome.Generation
+	lease.Status = outcome.Status
+	lease.Holder = toContractReseedActor(outcome.Holder)
+	lease.ClaimTokenSHA256 = outcome.ClaimTokenSHA256
+	lease.ReplacedAt = outcome.ReplacedAt
+	lease.ReplacementReason = outcome.ReplacementReason
+	if err := reopenCompletedExecution(&next.Stable, completionGeneration, before.Lease.Generation, outcome.Generation, outcome.ReplacementReason, outcome.ReplacedAt); err != nil {
+		return Record{}, leasedomain.ReseedOutcome{}, leasecontract.Fail(leasecontract.FailurePersistence, err)
+	}
+	return next, outcome, nil
+}
+
+// applyPreparedReseedArtifacts records the prepared artifact identities on the
+// replacement record and mirrors the execution lease into the record lease.
+func applyPreparedReseedArtifacts(next *Record, generation uint64, prepared ReseedArtifactReceipt) {
+	next.Stable.Execution.Lease.ClaimTokenSHA256 = prepared.TokenSHA256
+	if binding := next.Stable.Execution.Orca; binding != nil {
+		binding.LeaseGeneration = generation
+		binding.ArtifactIdentityVersion = leasecontract.OrcaArtifactIdentityVersion
+		binding.IssueBodySHA256 = prepared.Receipt.IssueBodySHA256
+		binding.ContextPacketSHA256 = prepared.Receipt.ContextPacketSHA256
+		binding.OwnerPromptSHA256 = prepared.Receipt.OwnerPromptSHA256
+	}
+	next.Lease = next.Stable.Execution.Lease
 }
 
 func (s *ReseedService) observeCompletedBase(ctx context.Context, record leasecontract.Record, completionGeneration uint64) error {

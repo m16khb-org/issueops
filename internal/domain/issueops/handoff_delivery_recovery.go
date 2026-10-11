@@ -66,18 +66,22 @@ func FinishDeliveryRecovery(host string, plan DeliveryRecoveryPlan, dispatchStat
 		return DeliveryRecoveryConclusion{Mode: DeliveryRecoveryReplay}, nil
 	}
 	if promptFound && (prompt.InputAccepted.Status == model.IssueOpsHandoffDeliveryStateObserved || prompt.OwnerClaimed.Status == model.IssueOpsHandoffDeliveryStateObserved) {
-		if !dispatchExists || strings.TrimSpace(prompt.Request.DurableID) == "" || strings.TrimSpace(prompt.Target.ProcessIncarnation) == "" || prompt.Target.PromptGeneration == nil || prompt.Target.BaselineWorkingSequence == nil {
-			return DeliveryRecoveryConclusion{}, fmt.Errorf("Omo prompt delivery recovery evidence is incomplete")
-		}
-		stages := []string{"input_accepted"}
-		if prompt.NativeTurnObserved.Status == model.IssueOpsHandoffDeliveryStateObserved {
-			stages = append(stages, "turn_started")
-		}
-		return DeliveryRecoveryConclusion{Mode: DeliveryRecoveryCandidate, Prompt: &DeliveryPrompt{RequestID: prompt.Request.DurableID, Stages: stages, ProcessIncarnation: prompt.Target.ProcessIncarnation, Generation: *prompt.Target.PromptGeneration, BaselineWorkingSequence: cloneDeliveryUint64(prompt.Target.BaselineWorkingSequence)}}, nil
+		return omoObservedPromptRecovery(dispatchExists, prompt)
 	}
 	// Terminal prompt UUIDs are replayed through terminal send, never request-show.
 	if plan.PromptID != "" || plan.DispatchID != "" && (dispatchStatus == "completed" || dispatchStatus == "pending") {
 		return DeliveryRecoveryConclusion{Mode: DeliveryRecoveryReplay}, nil
 	}
 	return DeliveryRecoveryConclusion{Mode: DeliveryRecoveryDelegate}, nil
+}
+
+func omoObservedPromptRecovery(dispatchExists bool, prompt model.IssueOpsHandoffDeliveryObservation) (DeliveryRecoveryConclusion, error) {
+	if !dispatchExists || strings.TrimSpace(prompt.Request.DurableID) == "" || strings.TrimSpace(prompt.Target.ProcessIncarnation) == "" || prompt.Target.PromptGeneration == nil || prompt.Target.BaselineWorkingSequence == nil {
+		return DeliveryRecoveryConclusion{}, fmt.Errorf("Omo prompt delivery recovery evidence is incomplete")
+	}
+	stages := []string{"input_accepted"}
+	if prompt.NativeTurnObserved.Status == model.IssueOpsHandoffDeliveryStateObserved {
+		stages = append(stages, "turn_started")
+	}
+	return DeliveryRecoveryConclusion{Mode: DeliveryRecoveryCandidate, Prompt: &DeliveryPrompt{RequestID: prompt.Request.DurableID, Stages: stages, ProcessIncarnation: prompt.Target.ProcessIncarnation, Generation: *prompt.Target.PromptGeneration, BaselineWorkingSequence: cloneDeliveryUint64(prompt.Target.BaselineWorkingSequence)}}, nil
 }

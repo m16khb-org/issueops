@@ -241,36 +241,9 @@ func regressionFixtures(dir string) ([]string, error) {
 }
 
 func (c *Conformance) runConformanceLive(args []string) error {
-	fs := flag.NewFlagSet("contract conformance live", flag.ContinueOnError)
-	hosts := fs.String("hosts", "codex,claude", "comma-separated hosts")
-	profile := fs.String("profile", "clean", "clean or context-pressure")
-	only := fs.String("only", "", "host:fixture")
-	resume := fs.String("resume-report", "", "previous report")
-	target := fs.Int("target-completed", 1, "1, 10, or 20")
-	maxAttempts := fs.Int("max-attempts-per-case", 3, "1 through 3")
-	evidenceDir := fs.String("evidence-dir", ".issueops/evidence/tool-conformance", "ignored evidence directory")
-	jsonOut := fs.Bool("json", false, "print JSON")
-	var models stringSlice
-	fs.Var(&models, "model", "host=value")
-	if err := fs.Parse(args); err != nil {
+	request, jsonOut, err := parseLiveRequest(args)
+	if err != nil {
 		return err
-	}
-	if *profile != "clean" && *profile != "context-pressure" {
-		return fmt.Errorf("invalid profile %q", *profile)
-	}
-	if *target != 1 && *target != 10 && *target != 20 {
-		return fmt.Errorf("invalid target-completed %d", *target)
-	}
-	if *maxAttempts < 1 || *maxAttempts > 3 {
-		return fmt.Errorf("invalid max-attempts-per-case %d", *maxAttempts)
-	}
-	request := LiveRequest{
-		Hosts: splitNonEmpty(*hosts), Models: models, Profile: *profile,
-		Only: *only, ResumeReport: *resume, TargetCompleted: *target,
-		MaxAttemptsPerCase: *maxAttempts, EvidenceDir: *evidenceDir,
-	}
-	if len(request.Hosts) == 0 {
-		return fmt.Errorf("hosts_required")
 	}
 	if os.Getenv("ISSUEOPS_TOOL_CONFORMANCE_LIVE") != "1" {
 		return fmt.Errorf("live_opt_in_required")
@@ -293,7 +266,7 @@ func (c *Conformance) runConformanceLive(args []string) error {
 	if err := c.persistLiveReport(&report, request); err != nil {
 		return err
 	}
-	if *jsonOut {
+	if jsonOut {
 		if err := printJSON(report); err != nil {
 			return err
 		}
@@ -304,6 +277,42 @@ func (c *Conformance) runConformanceLive(args []string) error {
 		return fmt.Errorf("conformance_inconclusive")
 	}
 	return nil
+}
+
+// parseLiveRequest는 live 서브커맨드 플래그를 파싱·검증해 LiveRequest와 --json 여부를 돌려준다.
+func parseLiveRequest(args []string) (LiveRequest, bool, error) {
+	fs := flag.NewFlagSet("contract conformance live", flag.ContinueOnError)
+	hosts := fs.String("hosts", "codex,claude", "comma-separated hosts")
+	profile := fs.String("profile", "clean", "clean or context-pressure")
+	only := fs.String("only", "", "host:fixture")
+	resume := fs.String("resume-report", "", "previous report")
+	target := fs.Int("target-completed", 1, "1, 10, or 20")
+	maxAttempts := fs.Int("max-attempts-per-case", 3, "1 through 3")
+	evidenceDir := fs.String("evidence-dir", ".issueops/evidence/tool-conformance", "ignored evidence directory")
+	jsonOut := fs.Bool("json", false, "print JSON")
+	var models stringSlice
+	fs.Var(&models, "model", "host=value")
+	if err := fs.Parse(args); err != nil {
+		return LiveRequest{}, false, err
+	}
+	if *profile != "clean" && *profile != "context-pressure" {
+		return LiveRequest{}, false, fmt.Errorf("invalid profile %q", *profile)
+	}
+	if *target != 1 && *target != 10 && *target != 20 {
+		return LiveRequest{}, false, fmt.Errorf("invalid target-completed %d", *target)
+	}
+	if *maxAttempts < 1 || *maxAttempts > 3 {
+		return LiveRequest{}, false, fmt.Errorf("invalid max-attempts-per-case %d", *maxAttempts)
+	}
+	request := LiveRequest{
+		Hosts: splitNonEmpty(*hosts), Models: models, Profile: *profile,
+		Only: *only, ResumeReport: *resume, TargetCompleted: *target,
+		MaxAttemptsPerCase: *maxAttempts, EvidenceDir: *evidenceDir,
+	}
+	if len(request.Hosts) == 0 {
+		return LiveRequest{}, false, fmt.Errorf("hosts_required")
+	}
+	return request, *jsonOut, nil
 }
 
 func loadBenchmarkReport(path string) (toolconformancecontract.BenchmarkReport, error) {
@@ -403,28 +412,7 @@ func writePrivateJSONFile(path string, value any) error {
 
 func (c *Conformance) buildCandidateRegression(report toolconformancecontract.BenchmarkReport) (toolconformancecontract.RegressionFixture, string, error) {
 	signature := report.Gate.ConfirmedSignature
-	groups := map[string][]toolconformancecontract.EpisodeReport{}
-	keys := []string{}
-	for _, host := range report.Hosts {
-		for _, episode := range host.Cases {
-			if episode.Status != "completed" || episode.DiagnosticSignature != signature {
-				continue
-			}
-			key := host.Host + "\x00" + episode.FixtureID
-			if _, exists := groups[key]; !exists {
-				keys = append(keys, key)
-			}
-			groups[key] = append(groups[key], episode)
-		}
-	}
-	sort.Strings(keys)
-	matches := []toolconformancecontract.EpisodeReport{}
-	for _, key := range keys {
-		if len(groups[key]) >= 2 {
-			matches = groups[key]
-			break
-		}
-	}
+	matches := confirmedEpisodeMatches(report, signature)
 	if len(matches) < 2 {
 		return toolconformancecontract.RegressionFixture{}, "", fmt.Errorf("confirmed_signature_evidence_missing")
 	}
@@ -468,6 +456,34 @@ func (c *Conformance) buildCandidateRegression(report toolconformancecontract.Be
 	name := matches[0].Host + "-" + fixture.ID + "-" + firstN(signature, 12) + ".json"
 	tracked := filepath.Join("internal", "adapter", "toolconformance", "testdata", "regressions", name)
 	return regression, tracked, nil
+}
+
+// confirmedEpisodeMatches returns the first host/fixture group (in sorted key order)
+// with at least two completed episodes carrying the confirmed signature; empty when none qualifies.
+func confirmedEpisodeMatches(report toolconformancecontract.BenchmarkReport, signature string) []toolconformancecontract.EpisodeReport {
+	groups := map[string][]toolconformancecontract.EpisodeReport{}
+	keys := []string{}
+	for _, host := range report.Hosts {
+		for _, episode := range host.Cases {
+			if episode.Status != "completed" || episode.DiagnosticSignature != signature {
+				continue
+			}
+			key := host.Host + "\x00" + episode.FixtureID
+			if _, exists := groups[key]; !exists {
+				keys = append(keys, key)
+			}
+			groups[key] = append(groups[key], episode)
+		}
+	}
+	sort.Strings(keys)
+	matches := []toolconformancecontract.EpisodeReport{}
+	for _, key := range keys {
+		if len(groups[key]) >= 2 {
+			matches = groups[key]
+			break
+		}
+	}
+	return matches
 }
 
 func validSHA256Text(value string) bool {

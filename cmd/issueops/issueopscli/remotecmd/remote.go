@@ -24,131 +24,53 @@ type Deps struct {
 	Publication            PublicationHandlers
 }
 
+var remoteUsageLines = []string{
+	"Usage:",
+	"  issueops remote score --input PATH [--judge none|prompt|file] [--judge-file PATH] [--json]",
+	"  issueops remote render-template --kind issue|child|pr --template KIND --title TEXT --provider github|gitlab --field key=value... [--score-file PATH] [--json]",
+	"  issueops remote verify-artifact --id ID --provider github|gitlab --kind pr|mr --url URL --target-branch BRANCH --label LABEL --assignee USER [--json]",
+	"  issueops remote create-issue --id ID --title TEXT [--provider github|gitlab] [--body TEXT|--body-file PATH] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... [--confirm] [--json]",
+	"  issueops remote reconcile-issue --id ID [--confirm] [--json]",
+	"  issueops remote reconcile-child --id ID --operation-id HEX [--host HOST --session-id SESSION --cwd WORKTREE] [--confirm] [--json]",
+	"  issueops remote create-child --id ID [--operation-id HEX] --title TEXT [--body TEXT|--body-file PATH] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... --host codex|claude|omo|omp --session-id SESSION [--agent-id ID] --cwd WORKER_PATH [--confirm] [--json]",
+	"  issueops remote create-pr --id ID --expected-generation N --title TEXT --head BRANCH --base BRANCH [--body TEXT] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... --host codex|claude|omo|omp --session-id SESSION [--agent-id ID] --session-pid PID --session-started-at RFC3339 --session-executable PATH --cwd WORKER_PATH [--confirm] [--json]",
+	"  issueops remote sync-graph --id ID [--confirm] [--json]",
+	"  issueops remote sync-issue --id ID [--provider github|gitlab] [--url CHILD_URL] [--body TEXT|--body-file PATH] [--expected-body-sha256 SHA] [--accept-remote-edits] [--host codex|claude|omo|omp] [--session-id SESSION] [--agent-id ID] [--cwd WORKER_PATH] [--confirm] [--json]",
+	"  issueops remote sync-pr --id ID --expected-generation N [--provider github|gitlab] [--body TEXT|--body-file PATH] [--expected-body-sha256 SHA] [--accept-remote-edits] --host codex|claude|omo|omp --session-id SESSION [--agent-id ID] --cwd WORKER_PATH [--confirm] [--json]",
+	"  issueops remote reflect-devils-advocate --id ID [--provider github|gitlab] --host codex|claude|omo|omp --session-id SESSION [--agent-id ID] --cwd WORKER_PATH [--confirm] [--json]",
+	"  issueops remote reflect-completion --id ID [--provider github|gitlab] [--confirm] [--json]",
+	"  issueops remote close-issue --id ID [--provider github|gitlab] [--confirm] [--json]",
+	"  issueops remote merge-pr --id ID [--method squash|merge|rebase] [--confirm] [--json]",
+}
+
+func printRemoteUsage() {
+	for _, line := range remoteUsageLines {
+		fmt.Println(line)
+	}
+}
+
 func (command Command) Run(args []string, deps Deps) error {
 	if deps.ObserveProcessAncestry == nil {
 		deps.ObserveProcessAncestry = command.Operations.ObserveNativeProcessAncestry
 	}
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
-		fmt.Println("Usage:")
-		fmt.Println("  issueops remote score --input PATH [--judge none|prompt|file] [--judge-file PATH] [--json]")
-		fmt.Println("  issueops remote render-template --kind issue|child|pr --template KIND --title TEXT --provider github|gitlab --field key=value... [--score-file PATH] [--json]")
-		fmt.Println("  issueops remote verify-artifact --id ID --provider github|gitlab --kind pr|mr --url URL --target-branch BRANCH --label LABEL --assignee USER [--json]")
-		fmt.Println("  issueops remote create-issue --id ID --title TEXT [--provider github|gitlab] [--body TEXT|--body-file PATH] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... [--confirm] [--json]")
-		fmt.Println("  issueops remote reconcile-issue --id ID [--confirm] [--json]")
-		fmt.Println("  issueops remote reconcile-child --id ID --operation-id HEX [--host HOST --session-id SESSION --cwd WORKTREE] [--confirm] [--json]")
-		fmt.Println("  issueops remote create-child --id ID [--operation-id HEX] --title TEXT [--body TEXT|--body-file PATH] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... --host codex|claude|omo|omp --session-id SESSION [--agent-id ID] --cwd WORKER_PATH [--confirm] [--json]")
-		fmt.Println("  issueops remote create-pr --id ID --expected-generation N --title TEXT --head BRANCH --base BRANCH [--body TEXT] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... --host codex|claude|omo|omp --session-id SESSION [--agent-id ID] --session-pid PID --session-started-at RFC3339 --session-executable PATH --cwd WORKER_PATH [--confirm] [--json]")
-		fmt.Println("  issueops remote sync-graph --id ID [--confirm] [--json]")
-		fmt.Println("  issueops remote sync-issue --id ID [--provider github|gitlab] [--url CHILD_URL] [--body TEXT|--body-file PATH] [--expected-body-sha256 SHA] [--accept-remote-edits] [--host codex|claude|omo|omp] [--session-id SESSION] [--agent-id ID] [--cwd WORKER_PATH] [--confirm] [--json]")
-		fmt.Println("  issueops remote sync-pr --id ID --expected-generation N [--provider github|gitlab] [--body TEXT|--body-file PATH] [--expected-body-sha256 SHA] [--accept-remote-edits] --host codex|claude|omo|omp --session-id SESSION [--agent-id ID] --cwd WORKER_PATH [--confirm] [--json]")
-		fmt.Println("  issueops remote reflect-devils-advocate --id ID [--provider github|gitlab] --host codex|claude|omo|omp --session-id SESSION [--agent-id ID] --cwd WORKER_PATH [--confirm] [--json]")
-		fmt.Println("  issueops remote reflect-completion --id ID [--provider github|gitlab] [--confirm] [--json]")
-		fmt.Println("  issueops remote close-issue --id ID [--provider github|gitlab] [--confirm] [--json]")
-		fmt.Println("  issueops remote merge-pr --id ID [--method squash|merge|rebase] [--confirm] [--json]")
+		printRemoteUsage()
 		return nil
 	}
 	if args[0] == "remote-score" {
 		args[0] = "score"
 	}
-	if len(args) == 0 {
-		return fmt.Errorf("unknown issueops remote subcommand")
-	}
+	return command.dispatchRemote(args, deps)
+}
+
+// dispatchRemote routes the first group of subcommands; the remainder are
+// handled by dispatchRemoteLifecycle.
+func (command Command) dispatchRemote(args []string, deps Deps) error {
 	switch args[0] {
 	case "score":
-		fs := flag.NewFlagSet("issueops remote score", flag.ContinueOnError)
-		input := fs.String("input", "", "IssueOps remote scoring request JSON file")
-		judge := fs.String("judge", "none", "judge backend: none, prompt, or file")
-		judgeFile := fs.String("judge-file", "", "host-agent remote score result JSON path for --judge file")
-		jsonOut := fs.Bool("json", false, "print JSON")
-		if help, err := parseFlags(fs, args[1:]); help || err != nil {
-			return err
-		}
-		req, err := readIssueOpsRemoteScoringRequestFile(*input)
-		if err != nil {
-			if *jsonOut {
-				if printErr := deps.printError(err); printErr != nil {
-					return printErr
-				}
-			}
-			return err
-		}
-		if *judge == "prompt" {
-			result, promptErr := issueopsremote.RenderIssueOpsRemoteJudgePrompt(issueopsremote.IssueOpsRemoteLLMJudgeRequest{Request: req})
-			if promptErr != nil {
-				if *jsonOut {
-					if printErr := deps.printError(promptErr); printErr != nil {
-						return printErr
-					}
-				}
-				return promptErr
-			}
-			if *jsonOut {
-				return deps.printJSON(result)
-			}
-			fmt.Println(result.Prompt)
-			return nil
-		}
-		var result issueopsremote.IssueOpsRemoteScoringResult
-		switch *judge {
-		case "file":
-			result, err = readIssueOpsRemoteJudgeFile(*judgeFile)
-		case "none":
-			result, err = issueopsremote.ScoreIssueOpsRemoteCandidates(req)
-		default:
-			err = fmt.Errorf("unsupported issueops remote score judge %q", *judge)
-		}
-		if err != nil {
-			if *jsonOut {
-				if printErr := deps.printError(err); printErr != nil {
-					return printErr
-				}
-			}
-			return err
-		}
-		if *jsonOut {
-			return deps.printJSON(result)
-		}
-		fmt.Printf("provider=%s threshold=%.2f related_issues=%d labels=%d\n", result.Provider, result.Threshold, len(result.SelectedRelatedIssues), len(result.SelectedLabels))
-		for _, issue := range result.SelectedRelatedIssues {
-			fmt.Printf("- related issue: %s score=%.2f\n", formatIssueOpsRemoteIssueRef(issue), issue.Score)
-		}
-		for _, label := range result.SelectedLabels {
-			fmt.Printf("- label: %s score=%.2f\n", label.Name, label.Score)
-		}
-		return nil
+		return command.runRemoteScore(args[1:], deps)
 	case "verify-artifact":
-		fs := flag.NewFlagSet("issueops remote verify-artifact", flag.ContinueOnError)
-		id := fs.String("id", "", "IssueOps id")
-		provider := fs.String("provider", "", "remote provider: github or gitlab")
-		kind := fs.String("kind", "", "remote artifact kind: pr or mr")
-		url := fs.String("url", "", "remote PR/MR URL")
-		targetBranch := fs.String("target-branch", "", "verified PR/MR target branch")
-		var labels repeatedFlag
-		var assignees repeatedFlag
-		fs.Var(&labels, "label", "verified remote label; may be repeated")
-		fs.Var(&labels, "labels", "verified remote label; may be repeated")
-		fs.Var(&assignees, "assignee", "verified remote assignee; may be repeated")
-		fs.Var(&assignees, "assignees", "verified remote assignee; may be repeated")
-		host := fs.String("host", "", "native holder host")
-		sessionID := fs.String("session-id", "", "native holder session id")
-		agentID := fs.String("agent-id", "", "optional native holder agent id")
-		cwd := fs.String("cwd", "", "canonical holder worktree cwd")
-		jsonOut := fs.Bool("json", false, "print JSON")
-		if help, err := parseFlags(fs, args[1:]); help || err != nil {
-			return err
-		}
-		req := issueopscontract.IssueOpsRemoteArtifactVerificationRequest{
-			Provider:     *provider,
-			Kind:         *kind,
-			URL:          *url,
-			TargetBranch: *targetBranch,
-			Labels:       labels,
-			Assignees:    assignees,
-		}
-		record, err := command.Operations.VerifyRemoteArtifact(context.Background(), command.Operations.IssueOpsStateRoot(), *id, req, issueopscontract.IssueOpsActor{
-			Host: *host, SessionID: *sessionID, AgentID: *agentID, CWD: *cwd,
-		}, deps.verifyLive, deps.observeNativeProcessAncestry)
-		return deps.printResult(record, *jsonOut, err)
+		return command.runRemoteVerifyArtifact(args[1:], deps)
 	case "render-template":
 		return command.runRemoteRenderTemplate(args[1:], deps)
 	case "create-issue":
@@ -159,6 +81,13 @@ func (command Command) Run(args []string, deps Deps) error {
 		return command.runRemoteReconcileChild(args[1:], deps)
 	case "create-child":
 		return command.runRemoteCreateChild(args[1:], deps)
+	default:
+		return command.dispatchRemoteLifecycle(args, deps)
+	}
+}
+
+func (command Command) dispatchRemoteLifecycle(args []string, deps Deps) error {
+	switch args[0] {
 	case "create-pr":
 		return command.runRemotePublication(args[1:], deps)
 	case "sync-graph":
@@ -178,6 +107,101 @@ func (command Command) Run(args []string, deps Deps) error {
 	default:
 		return fmt.Errorf("unknown issueops remote subcommand %q", args[0])
 	}
+}
+
+func (command Command) runRemoteScore(args []string, deps Deps) error {
+	fs := flag.NewFlagSet("issueops remote score", flag.ContinueOnError)
+	input := fs.String("input", "", "IssueOps remote scoring request JSON file")
+	judge := fs.String("judge", "none", "judge backend: none, prompt, or file")
+	judgeFile := fs.String("judge-file", "", "host-agent remote score result JSON path for --judge file")
+	jsonOut := fs.Bool("json", false, "print JSON")
+	if help, err := parseFlags(fs, args); help || err != nil {
+		return err
+	}
+	req, err := readIssueOpsRemoteScoringRequestFile(*input)
+	if err != nil {
+		return deps.printErrorResult(*jsonOut, err)
+	}
+	if *judge == "prompt" {
+		return printRemoteScorePrompt(deps, req, *jsonOut)
+	}
+	result, err := scoreRemoteByJudge(req, *judge, *judgeFile)
+	if err != nil {
+		return deps.printErrorResult(*jsonOut, err)
+	}
+	if *jsonOut {
+		return deps.printJSON(result)
+	}
+	printRemoteScoreSummary(result)
+	return nil
+}
+
+func printRemoteScorePrompt(deps Deps, req issueopsremote.IssueOpsRemoteScoringRequest, jsonOut bool) error {
+	result, err := issueopsremote.RenderIssueOpsRemoteJudgePrompt(issueopsremote.IssueOpsRemoteLLMJudgeRequest{Request: req})
+	if err != nil {
+		return deps.printErrorResult(jsonOut, err)
+	}
+	if jsonOut {
+		return deps.printJSON(result)
+	}
+	fmt.Println(result.Prompt)
+	return nil
+}
+
+func scoreRemoteByJudge(req issueopsremote.IssueOpsRemoteScoringRequest, judge, judgeFile string) (issueopsremote.IssueOpsRemoteScoringResult, error) {
+	switch judge {
+	case "file":
+		return readIssueOpsRemoteJudgeFile(judgeFile)
+	case "none":
+		return issueopsremote.ScoreIssueOpsRemoteCandidates(req)
+	default:
+		return issueopsremote.IssueOpsRemoteScoringResult{}, fmt.Errorf("unsupported issueops remote score judge %q", judge)
+	}
+}
+
+func printRemoteScoreSummary(result issueopsremote.IssueOpsRemoteScoringResult) {
+	fmt.Printf("provider=%s threshold=%.2f related_issues=%d labels=%d\n", result.Provider, result.Threshold, len(result.SelectedRelatedIssues), len(result.SelectedLabels))
+	for _, issue := range result.SelectedRelatedIssues {
+		fmt.Printf("- related issue: %s score=%.2f\n", formatIssueOpsRemoteIssueRef(issue), issue.Score)
+	}
+	for _, label := range result.SelectedLabels {
+		fmt.Printf("- label: %s score=%.2f\n", label.Name, label.Score)
+	}
+}
+
+func (command Command) runRemoteVerifyArtifact(args []string, deps Deps) error {
+	fs := flag.NewFlagSet("issueops remote verify-artifact", flag.ContinueOnError)
+	id := fs.String("id", "", "IssueOps id")
+	provider := fs.String("provider", "", "remote provider: github or gitlab")
+	kind := fs.String("kind", "", "remote artifact kind: pr or mr")
+	url := fs.String("url", "", "remote PR/MR URL")
+	targetBranch := fs.String("target-branch", "", "verified PR/MR target branch")
+	var labels repeatedFlag
+	var assignees repeatedFlag
+	fs.Var(&labels, "label", "verified remote label; may be repeated")
+	fs.Var(&labels, "labels", "verified remote label; may be repeated")
+	fs.Var(&assignees, "assignee", "verified remote assignee; may be repeated")
+	fs.Var(&assignees, "assignees", "verified remote assignee; may be repeated")
+	host := fs.String("host", "", "native holder host")
+	sessionID := fs.String("session-id", "", "native holder session id")
+	agentID := fs.String("agent-id", "", "optional native holder agent id")
+	cwd := fs.String("cwd", "", "canonical holder worktree cwd")
+	jsonOut := fs.Bool("json", false, "print JSON")
+	if help, err := parseFlags(fs, args); help || err != nil {
+		return err
+	}
+	req := issueopscontract.IssueOpsRemoteArtifactVerificationRequest{
+		Provider:     *provider,
+		Kind:         *kind,
+		URL:          *url,
+		TargetBranch: *targetBranch,
+		Labels:       labels,
+		Assignees:    assignees,
+	}
+	record, err := command.Operations.VerifyRemoteArtifact(context.Background(), command.Operations.IssueOpsStateRoot(), *id, req, issueopscontract.IssueOpsActor{
+		Host: *host, SessionID: *sessionID, AgentID: *agentID, CWD: *cwd,
+	}, deps.verifyLive, deps.observeNativeProcessAncestry)
+	return deps.printResult(record, *jsonOut, err)
 }
 
 func (command Command) runRemoteReflectDevilsAdvocate(args []string, deps Deps) error {

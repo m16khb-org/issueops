@@ -40,12 +40,8 @@ func acquire(ctx context.Context, directory, key string, mode int) (*Lease, erro
 		return nil, err
 	}
 	defer unix.Close(dirFD)
-	var dirInfo unix.Stat_t
-	if err := unix.Fstat(dirFD, &dirInfo); err != nil {
+	if err := validateLockDirectory(dirFD); err != nil {
 		return nil, err
-	}
-	if dirInfo.Mode&0777 != 0700 || dirInfo.Uid != uint32(os.Geteuid()) {
-		return nil, errors.New("execution lifetime directory must be private and owned by the current user")
 	}
 	name := fmt.Sprintf("%x.lock", sha256.Sum256([]byte(key)))
 	fd, err := unix.Openat(dirFD, name, unix.O_RDWR|unix.O_CREAT|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0600)
@@ -59,17 +55,10 @@ func acquire(ctx context.Context, directory, key string, mode int) (*Lease, erro
 			_ = file.Close()
 		}
 	}()
-	var info unix.Stat_t
-	if err := unix.Fstat(fd, &info); err != nil {
+	if err := validateLockFile(fd); err != nil {
 		return nil, err
 	}
-	if info.Mode&unix.S_IFMT != unix.S_IFREG || info.Mode&0777 != 0600 || info.Uid != uint32(os.Geteuid()) {
-		return nil, errors.New("execution lifetime lock must be a private regular file owned by the current user")
-	}
-	if err := unix.Flock(fd, mode|unix.LOCK_NB); err != nil {
-		if errors.Is(err, unix.EWOULDBLOCK) || errors.Is(err, unix.EAGAIN) {
-			return nil, ErrBusy
-		}
+	if err := flockNonBlocking(fd, mode); err != nil {
 		return nil, err
 	}
 	if err := ctx.Err(); err != nil {
@@ -77,4 +66,37 @@ func acquire(ctx context.Context, directory, key string, mode int) (*Lease, erro
 	}
 	keep = true
 	return &Lease{file: file, directory: directory, key: key}, nil
+}
+
+func validateLockDirectory(dirFD int) error {
+	var dirInfo unix.Stat_t
+	if err := unix.Fstat(dirFD, &dirInfo); err != nil {
+		return err
+	}
+	if dirInfo.Mode&0777 != 0700 || dirInfo.Uid != uint32(os.Geteuid()) {
+		return errors.New("execution lifetime directory must be private and owned by the current user")
+	}
+	return nil
+}
+
+func validateLockFile(fd int) error {
+	var info unix.Stat_t
+	if err := unix.Fstat(fd, &info); err != nil {
+		return err
+	}
+	if info.Mode&unix.S_IFMT != unix.S_IFREG || info.Mode&0777 != 0600 || info.Uid != uint32(os.Geteuid()) {
+		return errors.New("execution lifetime lock must be a private regular file owned by the current user")
+	}
+	return nil
+}
+
+// flockNonBlocking은 비차단 flock을 시도하고 경합은 ErrBusy로 변환한다.
+func flockNonBlocking(fd, mode int) error {
+	if err := unix.Flock(fd, mode|unix.LOCK_NB); err != nil {
+		if errors.Is(err, unix.EWOULDBLOCK) || errors.Is(err, unix.EAGAIN) {
+			return ErrBusy
+		}
+		return err
+	}
+	return nil
 }

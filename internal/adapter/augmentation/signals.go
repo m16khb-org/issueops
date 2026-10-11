@@ -29,6 +29,18 @@ func (repo Repository) CollectSignals(root string, docsIndexed int, skills []str
 }
 
 func (repo Repository) signalRules() []repoSignalRule {
+	return slices.Concat(
+		repo.selfWorkflowRules(),
+		repo.verificationRules(),
+		repo.coverageRules(),
+		repo.workerAndInboundRules(),
+		repo.cliAndOperationsRules(),
+		repo.releaseGuideRules(),
+		repo.releaseDistributionRules(),
+	)
+}
+
+func (repo Repository) selfWorkflowRules() []repoSignalRule {
 	return []repoSignalRule{
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
 			signals.HasSelfVerificationDocs = repo.DocsContainTerm(root, "Self-verification") && repo.DocsContainTerm(root, "Self-augmentation")
@@ -54,6 +66,11 @@ func (repo Repository) signalRules() []repoSignalRule {
 			signals.HasAdapterContractMatrix = FileContainsTerm(root, filepath.Join("internal", "adapter", "install_contract_matrix_test.go"), "TestNativeInstallAdapterContractMatrix") &&
 				FileContainsTerm(root, filepath.Join("internal", "adapter", "testdata", "native_install_contract_matrix.golden.json"), "project-local-opt-in")
 		}},
+	}
+}
+
+func (repo Repository) verificationRules() []repoSignalRule {
+	return []repoSignalRule{
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
 			signals.HasRiskQATier = DirContainsTerm(root, filepath.Join("internal", "adapter", "verification", "riskqa"), "Validate") &&
 				FileContainsTerm(root, filepath.Join("internal", "domain", "selfverify", "contract.go"), "risk_qa")
@@ -86,6 +103,11 @@ func (repo Repository) signalRules() []repoSignalRule {
 				qualityInspectContainsTerm(root, "audit_p1_p2_items") &&
 				qualityInspectContainsTerm(root, "low_coverage_packages")
 		}},
+	}
+}
+
+func (repo Repository) coverageRules() []repoSignalRule {
+	return []repoSignalRule{
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
 			signals.HasMCPResourceCoverage = FileContainsTerm(root, filepath.Join("internal", "adapter", "inbound", "catalog", "mcp", "resource_catalog_test.go"), "TestResourcesExposeStableDescriptors") &&
 				FileContainsTerm(root, filepath.Join("internal", "adapter", "inbound", "catalog", "mcp", "catalog_assembly_test.go"), "TestResourceMapsPreserveDescriptorShape") &&
@@ -111,6 +133,11 @@ func (repo Repository) signalRules() []repoSignalRule {
 				FileContainsTerm(root, filepath.Join("internal", "adapter", "outbound", "state", "state_io.go"), "func NewService() *stateapplication.Service {") &&
 				FileContainsTerm(root, filepath.Join("internal", "adapter", "outbound", "state", "state_test.go"), "TestStateWriteWaitsForKeyLock")
 		}},
+	}
+}
+
+func (repo Repository) workerAndInboundRules() []repoSignalRule {
+	return []repoSignalRule{
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
 			signals.HasWorkerStuckRunningDetection = FileContainsTerm(root, filepath.Join("internal", "application", "worker", "service.go"), "func (service Service) DetectStuck(ctx context.Context)") &&
 				FileContainsTerm(root, filepath.Join("internal", "domain", "worker", "lifecycle.go"), "WorkerStatusFailed") &&
@@ -128,6 +155,11 @@ func (repo Repository) signalRules() []repoSignalRule {
 				FileContainsTerm(root, filepath.Join("internal", "adapter", "inbound", "issueopsstatus", "status_test.go"), "TestStatusHandlerProjectsStoredRecord") &&
 				FileContainsTerm(root, filepath.Join("internal", "adapter", "inbound", "issueopslease", "handlers_test.go"), "TestPublicClaimErrorMapsDenialsToStableMessages")
 		}},
+	}
+}
+
+func (repo Repository) cliAndOperationsRules() []repoSignalRule {
+	return []repoSignalRule{
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
 			signals.HasToolConformanceTransportCoverage = FileContainsTerm(root, filepath.Join("internal", "contract", "toolconformance", "types_test.go"), "TestClassificationsCoverAllContractCases") &&
 				FileContainsTerm(root, filepath.Join("internal", "contract", "toolconformance", "types_test.go"), "TestBenchmarkReportJSONRoundTripPreservesTypedEnums") &&
@@ -167,6 +199,11 @@ func (repo Repository) signalRules() []repoSignalRule {
 			signals.HasWorkerMVP = FileContainsTerm(root, filepath.Join("internal", "application", "worker", "service.go"), "func (service Service) Enqueue(") &&
 				FileContainsTerm(root, filepath.Join("cmd", "issueops", "workercli", "worker_queue_cli.go"), "func (command Command) RunEnqueue(")
 		}},
+	}
+}
+
+func (repo Repository) releaseGuideRules() []repoSignalRule {
+	return []repoSignalRule{
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
 			signals.HasReleaseReproPack = FileContainsTerm(root, filepath.Join("scripts", "release-repro-smoke.sh"), "install --dry-run --project-local --json") &&
 				FileContainsTerm(root, filepath.Join(".issueops", "operations", "release-reproducibility.md"), "Release Checklist") &&
@@ -187,6 +224,11 @@ func (repo Repository) signalRules() []repoSignalRule {
 				!readmeContainsTerm(root, "git reset --hard") &&
 				FileContainsTerm(root, filepath.Join(".issueops", "operations", "release-reproducibility.md"), "Release User Guide: Install, Update, Rollback")
 		}},
+	}
+}
+
+func (repo Repository) releaseDistributionRules() []repoSignalRule {
+	return []repoSignalRule{
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
 			signals.HasCrossPlatformBuildMatrix = FileContainsTerm(root, filepath.Join("scripts", "release-build-matrix.sh"), "darwin/arm64 darwin/amd64 linux/amd64 linux/arm64") &&
 				FileContainsTerm(root, filepath.Join(".issueops", "operations", "release-reproducibility.md"), "Cross-Platform Build Matrix") &&

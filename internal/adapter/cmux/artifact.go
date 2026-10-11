@@ -36,23 +36,44 @@ type BootstrapReceipt struct {
 }
 
 func PrepareLauncher(request cmuxcontract.ArtifactRequest, buildArgv func(string, string, string, string, string) ([]string, error)) (cmuxcontract.PreparedLauncher, error) {
-	if !filepath.IsAbs(request.Root) || !filepath.IsAbs(request.CWD) || !filepath.IsAbs(request.SocketPath) ||
-		!validUUID(request.WindowID) || !validUUID(request.WorkspaceID) || !validUUID(request.SurfaceID) {
-		return cmuxcontract.PreparedLauncher{}, fmt.Errorf("cmux launcher artifact scope is invalid")
+	if err := validateLauncherRequest(request); err != nil {
+		return cmuxcontract.PreparedLauncher{}, err
 	}
-	if len(request.Prompt) > MaximumPromptBytes || bytes.IndexByte(request.Prompt, 0) >= 0 || digest(request.Prompt) != request.PromptSHA256 || !validDigest(request.MaterialSHA256) {
-		return cmuxcontract.PreparedLauncher{}, fmt.Errorf("cmux launcher prompt or material digest is invalid")
+	return writeLauncherArtifact(request, buildArgv)
+}
+
+// validateLauncherRequest checks scope, prompt/material digests, host executable, and raw-input safety in order.
+func validateLauncherRequest(request cmuxcontract.ArtifactRequest) error {
+	if !launcherScopeValid(request) {
+		return fmt.Errorf("cmux launcher artifact scope is invalid")
+	}
+	if !launcherPromptDigestValid(request) {
+		return fmt.Errorf("cmux launcher prompt or material digest is invalid")
 	}
 	hostInfo, err := os.Stat(request.HostExecutable)
 	if err != nil || !hostInfo.Mode().IsRegular() || hostInfo.Mode().Perm()&0o111 == 0 {
-		return cmuxcontract.PreparedLauncher{}, fmt.Errorf("native host executable is unavailable")
+		return fmt.Errorf("native host executable is unavailable")
 	}
 	if strings.ContainsAny(request.Root, "\\\r\n\x00") {
-		return cmuxcontract.PreparedLauncher{}, fmt.Errorf("cmux launcher artifact root is not safe for raw input")
+		return fmt.Errorf("cmux launcher artifact root is not safe for raw input")
 	}
 	if strings.ContainsAny(request.CWD+request.SocketPath, "\r\n\x00") {
-		return cmuxcontract.PreparedLauncher{}, fmt.Errorf("cmux launcher identity is not safe for raw input")
+		return fmt.Errorf("cmux launcher identity is not safe for raw input")
 	}
+	return nil
+}
+
+func launcherScopeValid(request cmuxcontract.ArtifactRequest) bool {
+	return filepath.IsAbs(request.Root) && filepath.IsAbs(request.CWD) && filepath.IsAbs(request.SocketPath) &&
+		validUUID(request.WindowID) && validUUID(request.WorkspaceID) && validUUID(request.SurfaceID)
+}
+
+func launcherPromptDigestValid(request cmuxcontract.ArtifactRequest) bool {
+	return len(request.Prompt) <= MaximumPromptBytes && bytes.IndexByte(request.Prompt, 0) < 0 &&
+		digest(request.Prompt) == request.PromptSHA256 && validDigest(request.MaterialSHA256)
+}
+
+func writeLauncherArtifact(request cmuxcontract.ArtifactRequest, buildArgv func(string, string, string, string, string) ([]string, error)) (cmuxcontract.PreparedLauncher, error) {
 	if err := ensurePrivateDirectory(request.Root); err != nil {
 		return cmuxcontract.PreparedLauncher{}, err
 	}
@@ -150,11 +171,7 @@ func ReadBootstrapReceipt(path string) (BootstrapReceipt, error) {
 }
 
 func ValidateBootstrapReceipt(receipt BootstrapReceipt, expected cmuxcontract.BootstrapExpectation, observe func(int) (issueopscontract.NativeProcessReceipt, error)) (issueopscontract.NativeProcessReceipt, error) {
-	if receipt.Status != "ok" || receipt.CWD != expected.CWD || receipt.WorkspaceID != expected.WorkspaceID ||
-		receipt.SurfaceID != expected.SurfaceID || receipt.SocketPath != expected.SocketPath ||
-		(receipt.WindowID != "" && receipt.WindowID != expected.WindowID) ||
-		receipt.HostExecutable != expected.HostExecutable || receipt.PromptSHA256 != expected.PromptSHA256 ||
-		receipt.MaterialSHA256 != expected.MaterialSHA256 || !validDigest(expected.HostArgvSHA256) || receipt.HostArgvSHA256 != expected.HostArgvSHA256 {
+	if !bootstrapReceiptMatches(receipt, expected) {
 		return issueopscontract.NativeProcessReceipt{}, fmt.Errorf("cmux bootstrap receipt identity mismatch")
 	}
 	if observe == nil {
@@ -171,6 +188,14 @@ func ValidateBootstrapReceipt(receipt BootstrapReceipt, expected cmuxcontract.Bo
 		return issueopscontract.NativeProcessReceipt{}, fmt.Errorf("cmux receiver process executable does not match the expected native host")
 	}
 	return process, nil
+}
+
+func bootstrapReceiptMatches(receipt BootstrapReceipt, expected cmuxcontract.BootstrapExpectation) bool {
+	return receipt.Status == "ok" && receipt.CWD == expected.CWD && receipt.WorkspaceID == expected.WorkspaceID &&
+		receipt.SurfaceID == expected.SurfaceID && receipt.SocketPath == expected.SocketPath &&
+		(receipt.WindowID == "" || receipt.WindowID == expected.WindowID) &&
+		receipt.HostExecutable == expected.HostExecutable && receipt.PromptSHA256 == expected.PromptSHA256 &&
+		receipt.MaterialSHA256 == expected.MaterialSHA256 && validDigest(expected.HostArgvSHA256) && receipt.HostArgvSHA256 == expected.HostArgvSHA256
 }
 
 func sameExecutableIdentity(observed, expected string) bool {

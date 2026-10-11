@@ -62,45 +62,14 @@ type Client struct {
 }
 
 func (client Client) Preflight(ctx context.Context, request cmuxcontract.PreflightRequest) (cmuxcontract.PreflightResult, error) {
-	if client.Runner == nil || client.ObserveEndpoint == nil {
-		return cmuxcontract.PreflightResult{}, fmt.Errorf("cmux preflight dependencies are unavailable")
-	}
-	if !filepath.IsAbs(request.Executable) || filepath.Clean(request.Executable) != request.Executable {
-		return cmuxcontract.PreflightResult{}, fmt.Errorf("cmux executable must be an absolute clean path")
-	}
-	if request.ExpectedVersion != SupportedVersion || request.ExpectedBuild != SupportedBuildIdentity ||
-		request.SocketPath == "" || strings.ContainsRune(request.SocketPath, 0) || !validUUID(request.WindowID) {
-		return cmuxcontract.PreflightResult{}, fmt.Errorf("cmux preflight identity is incomplete")
+	if err := validatePreflightRequest(client, request); err != nil {
+		return cmuxcontract.PreflightResult{}, err
 	}
 	before, err := client.ObserveEndpoint(request.SocketPath, client.UID)
 	if err != nil {
 		return cmuxcontract.PreflightResult{}, err
 	}
-	versionOutput, err := client.run(ctx, request.Executable, request.SocketPath, "version")
-	if err != nil {
-		return cmuxcontract.PreflightResult{}, fmt.Errorf("cmux version preflight failed: %w", err)
-	}
-	versionIdentity := string(versionOutput.Stdout)
-	if versionIdentity != request.ExpectedBuild && versionIdentity != request.ExpectedBuild+"\n" {
-		return cmuxcontract.PreflightResult{}, fmt.Errorf("cmux version/build mismatch: expected %s", request.ExpectedBuild)
-	}
-	ping, err := client.run(ctx, request.Executable, request.SocketPath, "ping")
-	if err != nil || strings.TrimSpace(string(ping.Stdout)) != "PONG" {
-		return cmuxcontract.PreflightResult{}, fmt.Errorf("cmux ping preflight failed")
-	}
-	capabilityOutput, err := client.run(ctx, request.Executable, request.SocketPath, "capabilities")
-	if err != nil {
-		return cmuxcontract.PreflightResult{}, fmt.Errorf("cmux capabilities preflight failed: %w", err)
-	}
-	if err := validateCapabilities(capabilityOutput.Stdout, request.SocketPath); err != nil {
-		return cmuxcontract.PreflightResult{}, err
-	}
-	identifyOutput, err := client.run(ctx, request.Executable, request.SocketPath,
-		"--id-format", "uuids", "identify", "--window", request.WindowID, "--no-caller")
-	if err != nil {
-		return cmuxcontract.PreflightResult{}, fmt.Errorf("cmux identify preflight failed: %w", err)
-	}
-	if err := validateIdentify(identifyOutput.Stdout, request.SocketPath, request.WindowID, "", "", false); err != nil {
+	if err := client.verifyPreflightCommands(ctx, request); err != nil {
 		return cmuxcontract.PreflightResult{}, err
 	}
 	after, err := client.ObserveEndpoint(request.SocketPath, client.UID)
@@ -111,6 +80,49 @@ func (client Client) Preflight(ctx context.Context, request cmuxcontract.Preflig
 		return cmuxcontract.PreflightResult{}, fmt.Errorf("cmux socket endpoint incarnation changed during preflight")
 	}
 	return cmuxcontract.PreflightResult{Executable: request.Executable, Version: request.ExpectedVersion, Build: request.ExpectedBuild, SocketPath: request.SocketPath, WindowID: request.WindowID, Endpoint: before}, nil
+}
+
+func validatePreflightRequest(client Client, request cmuxcontract.PreflightRequest) error {
+	if client.Runner == nil || client.ObserveEndpoint == nil {
+		return fmt.Errorf("cmux preflight dependencies are unavailable")
+	}
+	if !filepath.IsAbs(request.Executable) || filepath.Clean(request.Executable) != request.Executable {
+		return fmt.Errorf("cmux executable must be an absolute clean path")
+	}
+	if request.ExpectedVersion != SupportedVersion || request.ExpectedBuild != SupportedBuildIdentity ||
+		request.SocketPath == "" || strings.ContainsRune(request.SocketPath, 0) || !validUUID(request.WindowID) {
+		return fmt.Errorf("cmux preflight identity is incomplete")
+	}
+	return nil
+}
+
+// verifyPreflightCommands runs version, ping, capabilities, and identify in order.
+func (client Client) verifyPreflightCommands(ctx context.Context, request cmuxcontract.PreflightRequest) error {
+	versionOutput, err := client.run(ctx, request.Executable, request.SocketPath, "version")
+	if err != nil {
+		return fmt.Errorf("cmux version preflight failed: %w", err)
+	}
+	versionIdentity := string(versionOutput.Stdout)
+	if versionIdentity != request.ExpectedBuild && versionIdentity != request.ExpectedBuild+"\n" {
+		return fmt.Errorf("cmux version/build mismatch: expected %s", request.ExpectedBuild)
+	}
+	ping, err := client.run(ctx, request.Executable, request.SocketPath, "ping")
+	if err != nil || strings.TrimSpace(string(ping.Stdout)) != "PONG" {
+		return fmt.Errorf("cmux ping preflight failed")
+	}
+	capabilityOutput, err := client.run(ctx, request.Executable, request.SocketPath, "capabilities")
+	if err != nil {
+		return fmt.Errorf("cmux capabilities preflight failed: %w", err)
+	}
+	if err := validateCapabilities(capabilityOutput.Stdout, request.SocketPath); err != nil {
+		return err
+	}
+	identifyOutput, err := client.run(ctx, request.Executable, request.SocketPath,
+		"--id-format", "uuids", "identify", "--window", request.WindowID, "--no-caller")
+	if err != nil {
+		return fmt.Errorf("cmux identify preflight failed: %w", err)
+	}
+	return validateIdentify(identifyOutput.Stdout, request.SocketPath, request.WindowID, "", "", false)
 }
 
 func (client Client) CreateWorkspace(ctx context.Context, request cmuxcontract.CreateRequest) (cmuxcontract.CreatedWorkspace, error) {
@@ -181,6 +193,25 @@ func (client Client) Send(ctx context.Context, request cmuxcontract.SendRequest)
 }
 
 func (client Client) resolveCreatedTarget(ctx context.Context, name, createdHandle string, result *cmuxcontract.CreatedWorkspace) error {
+	if err := client.resolveCreatedWorkspaceID(ctx, name, createdHandle, result); err != nil {
+		return err
+	}
+	if err := client.resolveCreatedPaneID(ctx, result); err != nil {
+		return err
+	}
+	if err := client.resolveCreatedSurfaceID(ctx, result); err != nil {
+		return err
+	}
+	identifyOutput, err := client.run(ctx, result.Preflight.Executable, result.Preflight.SocketPath,
+		"--id-format", "uuids", "identify", "--window", result.WindowID,
+		"--workspace", result.WorkspaceID, "--surface", result.SurfaceID)
+	if err != nil {
+		return err
+	}
+	return validateIdentify(identifyOutput.Stdout, result.Preflight.SocketPath, result.WindowID, result.WorkspaceID, result.SurfaceID, true)
+}
+
+func (client Client) resolveCreatedWorkspaceID(ctx context.Context, name, createdHandle string, result *cmuxcontract.CreatedWorkspace) error {
 	workspaceOutput, err := client.run(ctx, result.Preflight.Executable, result.Preflight.SocketPath,
 		"--json", "--id-format", "both", "list-workspaces", "--window", result.WindowID)
 	if err != nil {
@@ -203,6 +234,10 @@ func (client Client) resolveCreatedTarget(ctx context.Context, name, createdHand
 	if !validUUID(result.WorkspaceID) {
 		return fmt.Errorf("created workspace identity is unavailable")
 	}
+	return nil
+}
+
+func (client Client) resolveCreatedPaneID(ctx context.Context, result *cmuxcontract.CreatedWorkspace) error {
 	paneOutput, err := client.run(ctx, result.Preflight.Executable, result.Preflight.SocketPath,
 		"--json", "--id-format", "uuids", "list-panes", "--window", result.WindowID, "--workspace", result.WorkspaceID)
 	if err != nil {
@@ -218,6 +253,10 @@ func (client Client) resolveCreatedTarget(ctx context.Context, name, createdHand
 		return fmt.Errorf("created workspace pane identity is incomplete")
 	}
 	result.PaneID = panes.Panes[0].ID
+	return nil
+}
+
+func (client Client) resolveCreatedSurfaceID(ctx context.Context, result *cmuxcontract.CreatedWorkspace) error {
 	surfaceOutput, err := client.run(ctx, result.Preflight.Executable, result.Preflight.SocketPath,
 		"--json", "--id-format", "uuids", "list-pane-surfaces", "--window", result.WindowID,
 		"--workspace", result.WorkspaceID, "--pane", result.PaneID)
@@ -233,13 +272,7 @@ func (client Client) resolveCreatedTarget(ctx context.Context, name, createdHand
 		return fmt.Errorf("created workspace surface identity is incomplete")
 	}
 	result.SurfaceID = surfaces.Surfaces[0].ID
-	identifyOutput, err := client.run(ctx, result.Preflight.Executable, result.Preflight.SocketPath,
-		"--id-format", "uuids", "identify", "--window", result.WindowID,
-		"--workspace", result.WorkspaceID, "--surface", result.SurfaceID)
-	if err != nil {
-		return err
-	}
-	return validateIdentify(identifyOutput.Stdout, result.Preflight.SocketPath, result.WindowID, result.WorkspaceID, result.SurfaceID, true)
+	return nil
 }
 
 func parseCreatedWorkspaceHandle(data []byte) (string, error) {
@@ -379,44 +412,52 @@ func decodeJSONValue(decoder *json.Decoder) (any, error) {
 	}
 	switch delim {
 	case '{':
-		object := map[string]any{}
-		for decoder.More() {
-			keyToken, err := decoder.Token()
-			if err != nil {
-				return nil, err
-			}
-			key, ok := keyToken.(string)
-			if !ok {
-				return nil, fmt.Errorf("JSON object key is not a string")
-			}
-			if _, duplicate := object[key]; duplicate {
-				return nil, fmt.Errorf("duplicate JSON key %q", key)
-			}
-			object[key], err = decodeJSONValue(decoder)
-			if err != nil {
-				return nil, err
-			}
-		}
-		if end, err := decoder.Token(); err != nil || end != json.Delim('}') {
-			return nil, fmt.Errorf("malformed JSON object")
-		}
-		return object, nil
+		return decodeJSONObject(decoder)
 	case '[':
-		array := []any{}
-		for decoder.More() {
-			item, err := decodeJSONValue(decoder)
-			if err != nil {
-				return nil, err
-			}
-			array = append(array, item)
-		}
-		if end, err := decoder.Token(); err != nil || end != json.Delim(']') {
-			return nil, fmt.Errorf("malformed JSON array")
-		}
-		return array, nil
+		return decodeJSONArray(decoder)
 	default:
 		return nil, fmt.Errorf("unexpected JSON delimiter")
 	}
+}
+
+func decodeJSONObject(decoder *json.Decoder) (any, error) {
+	object := map[string]any{}
+	for decoder.More() {
+		keyToken, err := decoder.Token()
+		if err != nil {
+			return nil, err
+		}
+		key, ok := keyToken.(string)
+		if !ok {
+			return nil, fmt.Errorf("JSON object key is not a string")
+		}
+		if _, duplicate := object[key]; duplicate {
+			return nil, fmt.Errorf("duplicate JSON key %q", key)
+		}
+		object[key], err = decodeJSONValue(decoder)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if end, err := decoder.Token(); err != nil || end != json.Delim('}') {
+		return nil, fmt.Errorf("malformed JSON object")
+	}
+	return object, nil
+}
+
+func decodeJSONArray(decoder *json.Decoder) (any, error) {
+	array := []any{}
+	for decoder.More() {
+		item, err := decodeJSONValue(decoder)
+		if err != nil {
+			return nil, err
+		}
+		array = append(array, item)
+	}
+	if end, err := decoder.Token(); err != nil || end != json.Delim(']') {
+		return nil, fmt.Errorf("malformed JSON array")
+	}
+	return array, nil
 }
 
 type ExecRunner struct{}

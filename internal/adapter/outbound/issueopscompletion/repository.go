@@ -45,18 +45,8 @@ func (r *Repository) Update(ctx context.Context, id string, transition completio
 }
 
 func updateWithinSpan(ctx context.Context, store port.TransactionalRecordStore, id string, transition completionapp.RecordTransition) (completionapp.RepositoryResult, error) {
-	data, ok, err := store.Get(recordBucket, id)
+	record, err := loadUncleanedRecord(store, id)
 	if err != nil {
-		return completionapp.RepositoryResult{}, err
-	}
-	if !ok {
-		return completionapp.RepositoryResult{}, fmt.Errorf("issueops record %s not found", id)
-	}
-	record, err := recordcodec.DecodeLease(id, data)
-	if err != nil {
-		return completionapp.RepositoryResult{}, err
-	}
-	if err := issueopsdomain.RequireNoCleanupAttempt(record.CleanupAttempt); err != nil {
 		return completionapp.RepositoryResult{}, err
 	}
 	before, err := snapshot(record)
@@ -88,20 +78,12 @@ func updateWithinSpan(ctx context.Context, store port.TransactionalRecordStore, 
 		return completionapp.RepositoryResult{}, err
 	}
 	mutations := []port.RecordMutation{{Bucket: recordBucket, ID: record.ID, Data: encoded}}
-	indexKey := holderIndexKey(*previousHolder)
-	indexData, exists, err := store.Get(holderBucket, indexKey)
+	indexMutation, err := holderIndexDeletion(store, record.ID, *previousHolder)
 	if err != nil {
 		return completionapp.RepositoryResult{}, err
 	}
-	if exists {
-		var index holderIndex
-		if err := json.Unmarshal(indexData, &index); err != nil {
-			return completionapp.RepositoryResult{}, fmt.Errorf("decode active lease-holder index: %w", err)
-		}
-		if index.LifecycleID != record.ID {
-			return completionapp.RepositoryResult{}, fmt.Errorf("refusing to delete another lifecycle's lease-holder index")
-		}
-		mutations = append(mutations, port.RecordMutation{Bucket: holderBucket, ID: indexKey, Delete: true})
+	if indexMutation != nil {
+		mutations = append(mutations, *indexMutation)
 	}
 	if err := store.Apply(ctx, mutations); err != nil {
 		return completionapp.RepositoryResult{}, err
@@ -111,6 +93,45 @@ func updateWithinSpan(ctx context.Context, store port.TransactionalRecordStore, 
 		return completionapp.RepositoryResult{}, err
 	}
 	return completionapp.RepositoryResult{Record: persisted, Execution: *record.Execution}, nil
+}
+
+// loadUncleanedRecord는 lifecycle record를 읽고 cleanup 시도가 없음을 확인한다.
+func loadUncleanedRecord(store port.TransactionalRecordStore, id string) (leasecontract.Record, error) {
+	data, ok, err := store.Get(recordBucket, id)
+	if err != nil {
+		return leasecontract.Record{}, err
+	}
+	if !ok {
+		return leasecontract.Record{}, fmt.Errorf("issueops record %s not found", id)
+	}
+	record, err := recordcodec.DecodeLease(id, data)
+	if err != nil {
+		return leasecontract.Record{}, err
+	}
+	if err := issueopsdomain.RequireNoCleanupAttempt(record.CleanupAttempt); err != nil {
+		return leasecontract.Record{}, err
+	}
+	return record, nil
+}
+
+// holderIndexDeletion은 lifecycle이 소유한 holder index 삭제 mutation을 반환한다. index가 없으면 nil이다.
+func holderIndexDeletion(store port.TransactionalRecordStore, lifecycleID string, holder leasecontract.Actor) (*port.RecordMutation, error) {
+	indexKey := holderIndexKey(holder)
+	indexData, exists, err := store.Get(holderBucket, indexKey)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, nil
+	}
+	var index holderIndex
+	if err := json.Unmarshal(indexData, &index); err != nil {
+		return nil, fmt.Errorf("decode active lease-holder index: %w", err)
+	}
+	if index.LifecycleID != lifecycleID {
+		return nil, fmt.Errorf("refusing to delete another lifecycle's lease-holder index")
+	}
+	return &port.RecordMutation{Bucket: holderBucket, ID: indexKey, Delete: true}, nil
 }
 
 func snapshot(record leasecontract.Record) (completioncontract.RecordSnapshot, error) {

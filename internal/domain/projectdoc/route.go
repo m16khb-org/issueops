@@ -16,82 +16,141 @@ func NormalizeRouteTask(task string) string {
 	return task
 }
 
-// RouteDocsForTask expects the lowercased task selected by the caller.
-func RouteDocsForTask(task string) []RouteDoc {
+type routeDocSpec struct{ name, reason string }
+
+// routeRule selects docs when any substring of the task or any whole token
+// matches. weakSubs only match while no earlier rule has matched.
+type routeRule struct {
+	subs     []string
+	tokens   []string
+	weakSubs []string
+	docs     []routeDocSpec
+}
+
+var defaultRouteDocs = []routeDocSpec{
+	{"CONSTITUTION.md", "source-of-truth and operating principles"},
+	{"AGENT_WORKFLOW.md", "default start/work/verify/finish workflow"},
+	{"CONVENTIONS.md", "general editing rules"},
+	{"CAUTIONS.md", "known project risks"},
+	{"TESTING.md", "default test design and verification guidance"},
+}
+
+var vcsRouteSubs = []string{"gitlab", "github", "glab", "gh issue", "vcs", "merge request", "pull request", "remote issue"}
+
+var routeRules = []routeRule{
+	{tokens: []string{"implement", "implementation", "edit"}, subs: []string{"구현"}, docs: defaultRouteDocs},
+	{subs: []string{"conflict", "constitution", "principle", "instruction", "session"}, docs: []routeDocSpec{
+		{"CONSTITUTION.md", "SessionStart baseline and source-of-truth priority"},
+		{"CAUTIONS.md", "risks that may affect the decision"}}},
+	{subs: []string{"caution", "risk", "false", "failure", "regression"}, docs: []routeDocSpec{
+		{"CAUTIONS.md", "known false cases, repeated failures, and risk notes"},
+		{"TESTING.md", "test design rules and verification checks to prevent recurrence"},
+		{"ADR.md", "decision context if the false case was caused by architecture"}}},
+	{subs: []string{"adr", "decision", "alternative", "why"}, docs: []routeDocSpec{
+		{"ADR.md", "architecture decision rationale, rejected alternatives, and consequences"},
+		{"ARCHITECTURE.md", "current structure affected by the decision"},
+		{"CONSTITUTION.md", "principles that constrain decisions"}}},
+	{subs: []string{"performance", "profiling", "성능", "프로파일링"}, docs: []routeDocSpec{
+		{"ARCHITECTURE.md", "performance-sensitive structure and boundaries"},
+		{"TECH_STACK.md", "toolchain and profiling technology evidence"},
+		{"TESTING.md", "performance verification and regression checks"}}},
+	{subs: []string{"execution", "finish", "complete", "workflow"}, docs: []routeDocSpec{
+		{"AGENT_WORKFLOW.md", "agent start/work/verify/finish procedure"},
+		{"TESTING.md", "verification evidence before completion"}}},
+	{subs: []string{"commit", "push"}, tokens: []string{"pr"}, docs: []routeDocSpec{
+		{"COMMIT_POLICY.md", "commit message, staging, and verification policy"},
+		{"TESTING.md", "checks to run before commit/PR"},
+		{"CAUTIONS.md", "project-specific commit risks"}}},
+	{subs: []string{"openapi", "swagger", "endpoint", "controller", "dto", "api doc", "api spec"}, docs: []routeDocSpec{
+		{"OPEN_API_SPEC.md", "project-specific OpenAPI/Swagger static and agent review prompt"},
+		{"TESTING.md", "API documentation check commands and static-vs-agent boundary"},
+		{"AGENT_WORKFLOW.md", "verification workflow"},
+		{"CAUTIONS.md", "known API documentation risks"}}},
+	{subs: []string{"test", "testing"}, tokens: []string{"ci"}, weakSubs: []string{"spec", "verify"}, docs: []routeDocSpec{
+		{"TESTING.md", "well/poorly structured test guidance plus test/build/lint command candidates"},
+		{"TECH_STACK.md", "toolchain evidence"},
+		{"AGENT_WORKFLOW.md", "verification workflow"},
+		{"CAUTIONS.md", "known verification risks"}}},
+	{subs: []string{"ux", "style", "styling", "css", "typography", "palette", "theme", "color", "accessibility", "a11y", "animation", "motion", "redesign"}, docs: []routeDocSpec{
+		{"DESIGN.md", "client design system: palette, typography, spacing, motion, accessibility, component states"},
+		{"CONVENTIONS.md", "styling and component conventions"}}},
+	{subs: []string{"architecture", "refactor"}, tokens: []string{"design"}, docs: []routeDocSpec{
+		{"ARCHITECTURE.md", "system structure and boundaries"},
+		{"DESIGN.md", "client design system contract when present"},
+		{"ADR.md", "past structure decisions and rejected alternatives"},
+		{"CONSTITUTION.md", "decision priority and invariants"},
+		{"CONVENTIONS.md", "editing and structure conventions"}}},
+	{subs: []string{"dependency", "package", "upgrade", "stack"}, docs: []routeDocSpec{
+		{"TECH_STACK.md", "detected stack and package manager evidence"},
+		{"CONVENTIONS.md", "dependency addition rules"},
+		{"TESTING.md", "test design rules and checks after dependency changes"}}},
+	{subs: []string{"deploy", "env", "operate", "배포"}, weakSubs: []string{"run", "local"}, docs: []routeDocSpec{
+		{"OPERATIONS.md", "local development, environment, and deployment guidance"},
+		{"TECH_STACK.md", "toolchain evidence"},
+		{"CAUTIONS.md", "operational risks"}}},
+}
+
+func containsAny(task string, subs []string) bool {
+	for _, s := range subs {
+		if strings.Contains(task, s) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasAnyToken(tokens map[string]bool, names []string) bool {
+	for _, n := range names {
+		if tokens[n] {
+			return true
+		}
+	}
+	return false
+}
+
+func (r routeRule) matches(task string, tokens map[string]bool, matched bool) bool {
+	if containsAny(task, r.subs) || hasAnyToken(tokens, r.tokens) {
+		return true
+	}
+	return !matched && containsAny(task, r.weakSubs)
+}
+
+func routeTokens(task string) map[string]bool {
 	tokens := make(map[string]bool)
 	for token := range strings.FieldsFuncSeq(task, func(r rune) bool {
 		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
 	}) {
 		tokens[token] = true
 	}
+	return tokens
+}
+
+// RouteDocsForTask expects the lowercased task selected by the caller.
+func RouteDocsForTask(task string) []RouteDoc {
+	tokens := routeTokens(task)
 	result := []RouteDoc{{"AGENTS.md", "repo-level agent entrypoint and document router"}}
 	seen := map[string]bool{"AGENTS.md": true}
-	appendDocs := func(docs ...RouteDoc) {
-		for _, doc := range docs {
-			if !seen[doc.Rel] {
-				result = append(result, doc)
-				seen[doc.Rel] = true
+	appendDocs := func(specs []routeDocSpec) {
+		for _, spec := range specs {
+			rel := filepath.ToSlash(filepath.Join(ProjectDocsDir, spec.name))
+			if !seen[rel] {
+				result = append(result, RouteDoc{rel, spec.reason})
+				seen[rel] = true
 			}
 		}
 	}
-	p := func(name, reason string) RouteDoc {
-		return RouteDoc{filepath.ToSlash(filepath.Join(ProjectDocsDir, name)), reason}
-	}
-	if strings.Contains(task, "gitlab") || strings.Contains(task, "github") ||
-		strings.Contains(task, "glab") || strings.Contains(task, "gh issue") ||
-		strings.Contains(task, "vcs") || strings.Contains(task, "merge request") ||
-		strings.Contains(task, "pull request") || strings.Contains(task, "remote issue") {
-		appendDocs(p("VCS.md", "verified VCS provider capabilities, exact request recipes, and CLI fallbacks"))
+	if containsAny(task, vcsRouteSubs) {
+		appendDocs([]routeDocSpec{{"VCS.md", "verified VCS provider capabilities, exact request recipes, and CLI fallbacks"}})
 	}
 	matched := false
-	add := func(match bool, names ...RouteDoc) {
-		if !match {
-			return
+	for _, rule := range routeRules {
+		if rule.matches(task, tokens, matched) {
+			matched = true
+			appendDocs(rule.docs)
 		}
-		matched = true
-		appendDocs(names...)
 	}
-	add(tokens["implement"] || tokens["implementation"] || tokens["edit"] || strings.Contains(task, "구현"),
-		p("CONSTITUTION.md", "source-of-truth and operating principles"),
-		p("AGENT_WORKFLOW.md", "default start/work/verify/finish workflow"),
-		p("CONVENTIONS.md", "general editing rules"),
-		p("CAUTIONS.md", "known project risks"),
-		p("TESTING.md", "default test design and verification guidance"))
-	add(strings.Contains(task, "conflict") || strings.Contains(task, "constitution") || strings.Contains(task, "principle") || strings.Contains(task, "instruction") || strings.Contains(task, "session"),
-		p("CONSTITUTION.md", "SessionStart baseline and source-of-truth priority"), p("CAUTIONS.md", "risks that may affect the decision"))
-	add(strings.Contains(task, "caution") || strings.Contains(task, "risk") || strings.Contains(task, "false") || strings.Contains(task, "failure") || strings.Contains(task, "regression"),
-		p("CAUTIONS.md", "known false cases, repeated failures, and risk notes"), p("TESTING.md", "test design rules and verification checks to prevent recurrence"), p("ADR.md", "decision context if the false case was caused by architecture"))
-	add(strings.Contains(task, "adr") || strings.Contains(task, "decision") || strings.Contains(task, "alternative") || strings.Contains(task, "why"),
-		p("ADR.md", "architecture decision rationale, rejected alternatives, and consequences"), p("ARCHITECTURE.md", "current structure affected by the decision"), p("CONSTITUTION.md", "principles that constrain decisions"))
-	add(strings.Contains(task, "performance") || strings.Contains(task, "profiling") || strings.Contains(task, "성능") || strings.Contains(task, "프로파일링"),
-		p("ARCHITECTURE.md", "performance-sensitive structure and boundaries"), p("TECH_STACK.md", "toolchain and profiling technology evidence"), p("TESTING.md", "performance verification and regression checks"))
-	add(strings.Contains(task, "execution") || strings.Contains(task, "finish") || strings.Contains(task, "complete") || strings.Contains(task, "workflow"),
-		p("AGENT_WORKFLOW.md", "agent start/work/verify/finish procedure"), p("TESTING.md", "verification evidence before completion"))
-	add(strings.Contains(task, "commit") || tokens["pr"] || strings.Contains(task, "push"),
-		p("COMMIT_POLICY.md", "commit message, staging, and verification policy"), p("TESTING.md", "checks to run before commit/PR"), p("CAUTIONS.md", "project-specific commit risks"))
-	add(strings.Contains(task, "openapi") || strings.Contains(task, "swagger") || strings.Contains(task, "endpoint") || strings.Contains(task, "controller") || strings.Contains(task, "dto") || strings.Contains(task, "api doc") || strings.Contains(task, "api spec"),
-		p("OPEN_API_SPEC.md", "project-specific OpenAPI/Swagger static and agent review prompt"), p("TESTING.md", "API documentation check commands and static-vs-agent boundary"), p("AGENT_WORKFLOW.md", "verification workflow"), p("CAUTIONS.md", "known API documentation risks"))
-	strongTesting := strings.Contains(task, "test") || strings.Contains(task, "testing") || tokens["ci"]
-	weakTesting := strings.Contains(task, "spec") || strings.Contains(task, "verify")
-	add(strongTesting || (!matched && weakTesting),
-		p("TESTING.md", "well/poorly structured test guidance plus test/build/lint command candidates"), p("TECH_STACK.md", "toolchain evidence"), p("AGENT_WORKFLOW.md", "verification workflow"), p("CAUTIONS.md", "known verification risks"))
-	add(strings.Contains(task, "ux") || strings.Contains(task, "style") || strings.Contains(task, "styling") || strings.Contains(task, "css") || strings.Contains(task, "typography") || strings.Contains(task, "palette") || strings.Contains(task, "theme") || strings.Contains(task, "color") || strings.Contains(task, "accessibility") || strings.Contains(task, "a11y") || strings.Contains(task, "animation") || strings.Contains(task, "motion") || strings.Contains(task, "redesign"),
-		p("DESIGN.md", "client design system: palette, typography, spacing, motion, accessibility, component states"), p("CONVENTIONS.md", "styling and component conventions"))
-	add(strings.Contains(task, "architecture") || tokens["design"] || strings.Contains(task, "refactor"),
-		p("ARCHITECTURE.md", "system structure and boundaries"), p("DESIGN.md", "client design system contract when present"), p("ADR.md", "past structure decisions and rejected alternatives"), p("CONSTITUTION.md", "decision priority and invariants"), p("CONVENTIONS.md", "editing and structure conventions"))
-	add(strings.Contains(task, "dependency") || strings.Contains(task, "package") || strings.Contains(task, "upgrade") || strings.Contains(task, "stack"),
-		p("TECH_STACK.md", "detected stack and package manager evidence"), p("CONVENTIONS.md", "dependency addition rules"), p("TESTING.md", "test design rules and checks after dependency changes"))
-	strongOperations := strings.Contains(task, "deploy") || strings.Contains(task, "env") || strings.Contains(task, "operate") || strings.Contains(task, "배포")
-	weakOperations := strings.Contains(task, "run") || strings.Contains(task, "local")
-	add(strongOperations || (!matched && weakOperations),
-		p("OPERATIONS.md", "local development, environment, and deployment guidance"), p("TECH_STACK.md", "toolchain evidence"), p("CAUTIONS.md", "operational risks"))
 	if !matched {
-		appendDocs(
-			p("CONSTITUTION.md", "source-of-truth and operating principles"),
-			p("AGENT_WORKFLOW.md", "default start/work/verify/finish workflow"),
-			p("CONVENTIONS.md", "general editing rules"),
-			p("CAUTIONS.md", "known project risks"),
-			p("TESTING.md", "default test design and verification guidance"))
+		appendDocs(defaultRouteDocs)
 	}
 	return result
 }

@@ -89,16 +89,7 @@ func Decide(input DecisionInput) (Decision, error) {
 	decision := Decision{RequestedMode: requested}
 	if execution := input.Snapshot.Record.Execution; execution != nil {
 		decision.ResolvedMode = execution.Mode
-		switch {
-		case execution.Pending != nil:
-			decision.Code = CodePendingReconcile
-		case requested != preparationcontract.ModeAuto && requested != execution.Mode:
-			decision.Code = CodeModeMismatch
-		case input.Command.Confirm && writerless(execution.Lease.Status):
-			decision.Code = CodeWriterless
-		default:
-			decision.Code = CodeExisting
-		}
+		decision.Code = existingExecutionCode(requested, input.Command.Confirm, execution.Pending != nil, execution.Mode, execution.Lease.Status)
 		return decision, nil
 	}
 	if requested == preparationcontract.ModeDirect {
@@ -116,15 +107,7 @@ func Decide(input DecisionInput) (Decision, error) {
 		decision.ReadinessFingerprint = Fingerprint(decision, input.Command)
 		return decision, nil
 	}
-	decision.ProbeAttempted = true
-	decision.ProbeAvailable = input.Orca.Available
-	decision.ProbeReady = input.Orca.Available && input.Orca.Ready
-	decision.ProbeCode = strings.TrimSpace(input.Orca.Code)
-	decision.ProbeProvider = strings.ToLower(strings.TrimSpace(input.Orca.Provider))
-	decision.ProbeIssue = input.Orca.Issue
-	if decision.ProbeReady && decision.ProbeCode == "" {
-		decision.ProbeCode = "ready"
-	}
+	decision.recordProbe(input.Orca)
 	if decision.ProbeReady {
 		decision.ResolvedMode = preparationcontract.ModeOrca
 		decision.Code = preparationCode(input.Command.Confirm, true)
@@ -148,6 +131,33 @@ func Decide(input DecisionInput) (Decision, error) {
 		message = "Orca provisioner is unavailable"
 	}
 	return decision, &Denial{Reason: DenialOrcaUnavailable, Code: code, Cause: errors.New(message)}
+}
+
+// existingExecutionCode는 이미 execution이 있는 레코드의 결정 코드를 고른다.
+func existingExecutionCode(requested string, confirm, pending bool, mode, leaseStatus string) Code {
+	switch {
+	case pending:
+		return CodePendingReconcile
+	case requested != preparationcontract.ModeAuto && requested != mode:
+		return CodeModeMismatch
+	case confirm && writerless(leaseStatus):
+		return CodeWriterless
+	default:
+		return CodeExisting
+	}
+}
+
+// recordProbe는 Orca 준비 상태 관측값을 결정에 기록한다.
+func (decision *Decision) recordProbe(orca OrcaReadiness) {
+	decision.ProbeAttempted = true
+	decision.ProbeAvailable = orca.Available
+	decision.ProbeReady = orca.Available && orca.Ready
+	decision.ProbeCode = strings.TrimSpace(orca.Code)
+	decision.ProbeProvider = strings.ToLower(strings.TrimSpace(orca.Provider))
+	decision.ProbeIssue = orca.Issue
+	if decision.ProbeReady && decision.ProbeCode == "" {
+		decision.ProbeCode = "ready"
+	}
 }
 
 func NormalizeDirectReason(reason string) (string, error) {

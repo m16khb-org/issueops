@@ -98,17 +98,8 @@ func reseedInventoryActor(actor leasedomain.Actor) leasecontract.Actor {
 }
 
 func reseedWorkspaceSnapshot(workspace leasecontract.Workspace) (string, error) {
-	info, err := os.Lstat(workspace.Root)
-	if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
-		return "", fmt.Errorf("canonical worktree must be a real directory")
-	}
-	top, err := reseedGitOutput(workspace.Root, "rev-parse", "--show-toplevel")
-	if err != nil || !(FilesystemPathMatcher{}).Matches(top, workspace.Root) {
-		return "", fmt.Errorf("canonical worktree root does not match Git top-level")
-	}
-	branch, err := reseedGitOutput(workspace.Root, "branch", "--show-current")
-	if err != nil || branch != workspace.Branch {
-		return "", fmt.Errorf("canonical worktree branch mismatch")
+	if err := reseedRequireCanonicalWorktree(workspace); err != nil {
+		return "", err
 	}
 	head, err := reseedGitOutput(workspace.Root, "rev-parse", "HEAD")
 	if err != nil {
@@ -118,58 +109,107 @@ func reseedWorkspaceSnapshot(workspace leasecontract.Workspace) (string, error) 
 	if err != nil {
 		return "", err
 	}
-	indexPath, err := reseedGitOutput(workspace.Root, "rev-parse", "--git-path", "index")
+	indexBytes, err := reseedIndexBytes(workspace.Root)
 	if err != nil {
 		return "", err
 	}
+	tracked, staged, err := reseedGitDiffs(workspace.Root)
+	if err != nil {
+		return "", err
+	}
+	untracked, err := reseedUntrackedFiles(workspace.Root)
+	if err != nil {
+		return "", err
+	}
+	hash := sha256.New()
+	reseedWriteFingerprintPart(hash, workspace.Root)
+	reseedWriteFingerprintPart(hash, commonDir)
+	reseedWriteFingerprintPart(hash, workspace.Branch)
+	reseedWriteFingerprintPart(hash, head)
+	reseedWriteFingerprintBytes(hash, indexBytes)
+	reseedWriteFingerprintPart(hash, tracked)
+	reseedWriteFingerprintPart(hash, staged)
+	for _, relative := range untracked {
+		if err := reseedWriteUntrackedFingerprint(hash, workspace.Root, relative); err != nil {
+			return "", err
+		}
+	}
+	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+// reseedRequireCanonicalWorktree는 작업공간 루트가 실제 디렉터리이고 Git top-level 및 현재 브랜치와 일치하는지 확인한다.
+func reseedRequireCanonicalWorktree(workspace leasecontract.Workspace) error {
+	info, err := os.Lstat(workspace.Root)
+	if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+		return fmt.Errorf("canonical worktree must be a real directory")
+	}
+	top, err := reseedGitOutput(workspace.Root, "rev-parse", "--show-toplevel")
+	if err != nil || !(FilesystemPathMatcher{}).Matches(top, workspace.Root) {
+		return fmt.Errorf("canonical worktree root does not match Git top-level")
+	}
+	branch, err := reseedGitOutput(workspace.Root, "branch", "--show-current")
+	if err != nil || branch != workspace.Branch {
+		return fmt.Errorf("canonical worktree branch mismatch")
+	}
+	return nil
+}
+
+// reseedIndexBytes는 Git index 파일 내용을 읽는다. 파일이 없으면 빈 값을 돌려준다.
+func reseedIndexBytes(root string) ([]byte, error) {
+	indexPath, err := reseedGitOutput(root, "rev-parse", "--git-path", "index")
+	if err != nil {
+		return nil, err
+	}
 	if !filepath.IsAbs(indexPath) {
-		indexPath = filepath.Join(workspace.Root, indexPath)
+		indexPath = filepath.Join(root, indexPath)
 	}
 	indexBytes, err := os.ReadFile(indexPath)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return "", err
+		return nil, err
 	}
-	code, tracked, stderr := reseedGitRaw(workspace.Root, "diff", "--binary", "--no-ext-diff", "--")
+	return indexBytes, nil
+}
+
+// reseedGitDiffs는 추적 파일의 작업 트리 diff와 staged diff를 순서대로 읽는다.
+func reseedGitDiffs(root string) (tracked, staged string, err error) {
+	code, tracked, stderr := reseedGitRaw(root, "diff", "--binary", "--no-ext-diff", "--")
 	if code != 0 {
-		return "", fmt.Errorf("read tracked diff: %s", strings.TrimSpace(stderr))
+		return "", "", fmt.Errorf("read tracked diff: %s", strings.TrimSpace(stderr))
 	}
-	code, staged, stderr := reseedGitRaw(workspace.Root, "diff", "--cached", "--binary", "--no-ext-diff", "--")
+	code, staged, stderr = reseedGitRaw(root, "diff", "--cached", "--binary", "--no-ext-diff", "--")
 	if code != 0 {
-		return "", fmt.Errorf("read staged diff: %s", strings.TrimSpace(stderr))
+		return "", "", fmt.Errorf("read staged diff: %s", strings.TrimSpace(stderr))
 	}
-	code, untrackedRaw, stderr := reseedGitRaw(workspace.Root, "ls-files", "--others", "--exclude-standard", "-z")
+	return tracked, staged, nil
+}
+
+// reseedUntrackedFiles는 추적되지 않은 파일의 상대 경로를 정렬해 돌려준다. 없으면 nil이다.
+func reseedUntrackedFiles(root string) ([]string, error) {
+	code, untrackedRaw, stderr := reseedGitRaw(root, "ls-files", "--others", "--exclude-standard", "-z")
 	if code != 0 {
-		return "", fmt.Errorf("list untracked files: %s", strings.TrimSpace(stderr))
+		return nil, fmt.Errorf("list untracked files: %s", strings.TrimSpace(stderr))
 	}
 	untracked := strings.Split(strings.TrimSuffix(untrackedRaw, "\x00"), "\x00")
 	if len(untracked) == 1 && untracked[0] == "" {
 		untracked = nil
 	}
 	sort.Strings(untracked)
-	hash := sha256.New()
-	reseedWriteFingerprintPart(hash, workspace.Root)
-	reseedWriteFingerprintPart(hash, commonDir)
-	reseedWriteFingerprintPart(hash, branch)
-	reseedWriteFingerprintPart(hash, head)
-	reseedWriteFingerprintBytes(hash, indexBytes)
-	reseedWriteFingerprintPart(hash, tracked)
-	reseedWriteFingerprintPart(hash, staged)
-	for _, relative := range untracked {
-		if filepath.IsAbs(relative) || strings.HasPrefix(filepath.Clean(relative), ".."+string(filepath.Separator)) {
-			return "", fmt.Errorf("unsafe untracked path %q", relative)
-		}
-		path := filepath.Join(workspace.Root, filepath.FromSlash(relative))
-		entry, err := os.Lstat(path)
-		if err != nil || entry.Mode()&os.ModeSymlink != 0 || !entry.Mode().IsRegular() {
-			return "", fmt.Errorf("untracked path must be a regular file: %s", relative)
-		}
-		reseedWriteFingerprintPart(hash, relative)
-		reseedWriteFingerprintPart(hash, entry.Mode().String())
-		if err := reseedWriteFingerprintFile(hash, path, entry); err != nil {
-			return "", err
-		}
+	return untracked, nil
+}
+
+// reseedWriteUntrackedFingerprint는 추적되지 않은 일반 파일 하나의 경로, 모드, 내용을 지문에 기록한다.
+func reseedWriteUntrackedFingerprint(hash io.Writer, root, relative string) error {
+	if filepath.IsAbs(relative) || strings.HasPrefix(filepath.Clean(relative), ".."+string(filepath.Separator)) {
+		return fmt.Errorf("unsafe untracked path %q", relative)
 	}
-	return hex.EncodeToString(hash.Sum(nil)), nil
+	path := filepath.Join(root, filepath.FromSlash(relative))
+	entry, err := os.Lstat(path)
+	if err != nil || entry.Mode()&os.ModeSymlink != 0 || !entry.Mode().IsRegular() {
+		return fmt.Errorf("untracked path must be a regular file: %s", relative)
+	}
+	reseedWriteFingerprintPart(hash, relative)
+	reseedWriteFingerprintPart(hash, entry.Mode().String())
+	return reseedWriteFingerprintFile(hash, path, entry)
 }
 
 func reseedGitOutput(root string, args ...string) (string, error) {

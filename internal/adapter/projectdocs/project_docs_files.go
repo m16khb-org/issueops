@@ -22,7 +22,7 @@ func listInterestingFiles(root string) []string {
 		parts := strings.Split(rel, "/")
 		if d.IsDir() {
 			base := d.Name()
-			if base == ".git" || base == "node_modules" || base == "vendor" || base == "dist" || base == "build" || base == ".issueops" {
+			if isSkippedProjectDir(base) {
 				return filepath.SkipDir
 			}
 			if len(parts) > maxDepth {
@@ -31,7 +31,7 @@ func listInterestingFiles(root string) []string {
 			return nil
 		}
 		base := filepath.Base(rel)
-		if len(parts) <= maxDepth && (isProjectSignalFile(base) || strings.HasPrefix(rel, ".github/workflows/") || strings.HasSuffix(base, "_test.go") || strings.HasSuffix(base, ".test.ts") || strings.HasSuffix(base, ".spec.ts")) {
+		if len(parts) <= maxDepth && isInterestingProjectFile(rel, base) {
 			interesting[rel] = true
 		}
 		return nil
@@ -42,6 +42,22 @@ func listInterestingFiles(root string) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+func isSkippedProjectDir(base string) bool {
+	switch base {
+	case ".git", "node_modules", "vendor", "dist", "build", ".issueops":
+		return true
+	}
+	return false
+}
+
+func isInterestingProjectFile(rel, base string) bool {
+	return isProjectSignalFile(base) ||
+		strings.HasPrefix(rel, ".github/workflows/") ||
+		strings.HasSuffix(base, "_test.go") ||
+		strings.HasSuffix(base, ".test.ts") ||
+		strings.HasSuffix(base, ".spec.ts")
 }
 
 func isProjectSignalFile(base string) bool {

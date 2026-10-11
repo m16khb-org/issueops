@@ -59,3 +59,65 @@ func TestSealedClaimContextRejectsIdentityAndBodyDrift(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestClaimContextDigestsNormalizeAndRequireSHA256(t *testing.T) {
+	issue := strings.Repeat("ab", 32)
+	packet := strings.Repeat("0f", 32)
+	gotIssue, gotPacket, err := ClaimContextDigests("  "+strings.ToUpper(issue)+"\n", strings.ToUpper(packet))
+	if err != nil || gotIssue != issue || gotPacket != packet {
+		t.Fatalf("digests = %q %q err=%v, want normalized lowercase", gotIssue, gotPacket, err)
+	}
+	for name, pair := range map[string][2]string{
+		"empty issue":       {"", packet},
+		"short packet":      {issue, packet[:62]},
+		"non-hex issue":     {strings.Repeat("g", 64), packet},
+		"long packet":       {issue, packet + "00"},
+		"both unspecified":  {"", ""},
+		"whitespace packet": {issue, "   "},
+	} {
+		if _, _, err := ClaimContextDigests(pair[0], pair[1]); err == nil {
+			t.Fatalf("%s accepted", name)
+		}
+	}
+}
+
+func TestValidateSealedClaimGenerationRequiresOrcaGeneration(t *testing.T) {
+	orca := func(generation uint64) leasecontract.Record {
+		record := leasecontract.Record{Execution: &leasecontract.Execution{Mode: "orca"}}
+		record.Execution.Lease.Generation = generation
+		return record
+	}
+	if err := ValidateSealedClaimGeneration(orca(1)); err != nil {
+		t.Fatalf("orca generation 1: %v", err)
+	}
+	direct := orca(1)
+	direct.Execution.Mode = "direct"
+	for name, record := range map[string]leasecontract.Record{
+		"no execution":    {},
+		"direct mode":     direct,
+		"zero generation": orca(0),
+	} {
+		if err := ValidateSealedClaimGeneration(record); err == nil {
+			t.Fatalf("%s accepted", name)
+		}
+	}
+}
+
+func TestClaimArtifactAndPacketDigestMismatchErrorsIdentifyTheArtifact(t *testing.T) {
+	// SHA-256 of "abc", independent of the production digest helper.
+	const digest = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+	if err := ValidateClaimArtifact("owner_prompt", []byte("abc"), digest); err != nil {
+		t.Fatal(err)
+	}
+	err := ValidateClaimArtifact("owner_prompt", []byte("abd"), digest)
+	if err == nil || !strings.Contains(err.Error(), "owner_prompt") {
+		t.Fatalf("drift error must name the artifact: %v", err)
+	}
+	if err := ValidateClaimPacketDigest([]byte("abc"), digest, "/packet.json"); err != nil {
+		t.Fatal(err)
+	}
+	err = ValidateClaimPacketDigest([]byte("abd"), digest, "/packet.json")
+	if err == nil || !strings.Contains(err.Error(), "expected="+digest) || !strings.Contains(err.Error(), "path=/packet.json") {
+		t.Fatalf("packet drift error must report expected digest and path: %v", err)
+	}
+}

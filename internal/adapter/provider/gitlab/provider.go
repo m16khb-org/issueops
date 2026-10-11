@@ -121,23 +121,7 @@ func (Provider) CreatePullRequestContext(ctx context.Context, req port.IssueProv
 	if err != nil {
 		return executionissue.IssueProviderCreatePullRequestResult{OK: false}, err
 	}
-	args := []string{"mr", "create", "--title", title, "--source-branch", head, "--target-branch", base, "--yes"}
-	if projectURL != "" {
-		args = append(args, "--repo", projectURL)
-	}
-	if req.Draft {
-		args = append(args, "--draft")
-	}
-	body := strings.TrimSpace(req.Body)
-	if body != "" {
-		args = append(args, "--description", body)
-	}
-	for _, label := range req.Labels {
-		args = append(args, "--label", label)
-	}
-	for _, assignee := range req.Assignees {
-		args = append(args, "--assignee", assignee)
-	}
+	args := gitLabMRCreateArgs(req, title, head, base, projectURL)
 	if !req.Confirm {
 		return executionissue.IssueProviderCreatePullRequestResult{
 			OK:      true,
@@ -161,6 +145,27 @@ func (Provider) CreatePullRequestContext(ctx context.Context, req port.IssueProv
 		return executionissue.IssueProviderCreatePullRequestResult{OK: false, URL: result.URL}, gitlabCreatedMergeRequestError(result.URL, err)
 	}
 	return result, nil
+}
+
+// gitLabMRCreateArgs는 glab mr create 인자를 요청 순서대로 조립한다.
+func gitLabMRCreateArgs(req port.IssueProviderCreatePullRequestRequest, title, head, base, projectURL string) []string {
+	args := []string{"mr", "create", "--title", title, "--source-branch", head, "--target-branch", base, "--yes"}
+	if projectURL != "" {
+		args = append(args, "--repo", projectURL)
+	}
+	if req.Draft {
+		args = append(args, "--draft")
+	}
+	if body := strings.TrimSpace(req.Body); body != "" {
+		args = append(args, "--description", body)
+	}
+	for _, label := range req.Labels {
+		args = append(args, "--label", label)
+	}
+	for _, assignee := range req.Assignees {
+		args = append(args, "--assignee", assignee)
+	}
+	return args
 }
 
 func validCanonicalGitLabMergeRequestURL(raw string) bool {
@@ -233,6 +238,11 @@ func verifyCreatedGitLabMergeRequest(ctx context.Context, req port.IssueProvider
 	if err := json.Unmarshal(out, &got); err != nil {
 		return fmt.Errorf("parse created merge request readback: %w", err)
 	}
+	return compareGitLabMergeRequestReadback(req, createdURL, got)
+}
+
+// compareGitLabMergeRequestReadback는 읽어 온 MR이 요청과 정확히 일치하는지 순서대로 검사한다.
+func compareGitLabMergeRequestReadback(req port.IssueProviderCreatePullRequestRequest, createdURL string, got gitlabMergeRequestProjection) error {
 	assignees := gitlabAssigneeUsernames(got.Assignees)
 	if strings.TrimSpace(got.WebURL) != createdURL || strings.TrimSpace(got.SourceBranch) != strings.TrimSpace(req.HeadBranch) || strings.TrimSpace(got.TargetBranch) != strings.TrimSpace(req.BaseBranch) || got.Draft != req.Draft {
 		return fmt.Errorf("created merge request identity or draft status does not match the request")

@@ -48,31 +48,11 @@ func (s *CreatePreparation) Prepare(ctx context.Context, command contract.Create
 		return contract.PreparedCreate{}, err
 	}
 	if command.Confirm {
-		if err := s.authority.Authorize(ctx, record, publicationMutationActor(command)); err != nil {
-			return contract.PreparedCreate{}, err
-		}
-		if err := remote.ValidateCreatePending(record.Execution.Pending != nil); err != nil {
-			return contract.PreparedCreate{}, err
-		}
-		fingerprint := s.observer.Fingerprint(ctx, record)
-		review := reviewcontract.ReviewGateEvidence{}
-		if record.ImplementationReview != nil {
-			review = reviewcontract.ReviewGateEvidence{Present: true, Verdict: record.ImplementationReview.Verdict, ReviewedFingerprint: record.ImplementationReview.ReviewedFingerprint}
-		}
-		missing := reviewdomain.ImplementationReviewMissing(true, review, fingerprint)
-		if err := remote.ValidateCreateReview(record.ID, missing, fingerprint, review.ReviewedFingerprint != ""); err != nil {
+		if err := s.authorizeConfirmedCreate(ctx, record, command); err != nil {
 			return contract.PreparedCreate{}, err
 		}
 	}
-	authority := remote.CreateBranchAuthority{Prepared: record.BranchPrepare != nil, IssueURL: record.IssueURL, WorkspaceBranch: strings.TrimSpace(record.Branch)}
-	if record.BranchPrepare != nil {
-		authority.Provider = record.BranchPrepare.Provider
-		authority.BaseBranch = record.BranchPrepare.BaseBranch
-		authority.CodeProjectKey = record.BranchPrepare.CodeProjectKey
-	}
-	if record.Execution != nil {
-		authority.WorkspaceBranch = record.Execution.Workspace.Branch
-	}
+	authority := createBranchAuthority(record)
 	title, body := strings.TrimSpace(command.Title), strings.TrimSpace(command.Body)
 	prepared, err := remote.PrepareCreateRequest(authority, remote.CreateRequest{
 		Provider: provider, Head: command.Head, Base: command.Base, Title: title, Body: body, Labels: command.Labels, Assignees: command.Assignees,
@@ -103,4 +83,35 @@ func (s *CreatePreparation) Prepare(ctx context.Context, command contract.Create
 			BranchAuthority: true, CanonicalLabelsAssignees: true,
 		},
 	}, nil
+}
+
+// authorizeConfirmedCreate는 확정 생성 전에 권한, 대기 상태, 구현 리뷰 증거를 순서대로 검증한다.
+func (s *CreatePreparation) authorizeConfirmedCreate(ctx context.Context, record model.IssueOpsRecord, command contract.CreateCommand) error {
+	if err := s.authority.Authorize(ctx, record, publicationMutationActor(command)); err != nil {
+		return err
+	}
+	if err := remote.ValidateCreatePending(record.Execution.Pending != nil); err != nil {
+		return err
+	}
+	fingerprint := s.observer.Fingerprint(ctx, record)
+	review := reviewcontract.ReviewGateEvidence{}
+	if record.ImplementationReview != nil {
+		review = reviewcontract.ReviewGateEvidence{Present: true, Verdict: record.ImplementationReview.Verdict, ReviewedFingerprint: record.ImplementationReview.ReviewedFingerprint}
+	}
+	missing := reviewdomain.ImplementationReviewMissing(true, review, fingerprint)
+	return remote.ValidateCreateReview(record.ID, missing, fingerprint, review.ReviewedFingerprint != "")
+}
+
+// createBranchAuthority는 레코드의 브랜치 준비/실행 정보로 브랜치 권한 사실을 만든다.
+func createBranchAuthority(record model.IssueOpsRecord) remote.CreateBranchAuthority {
+	authority := remote.CreateBranchAuthority{Prepared: record.BranchPrepare != nil, IssueURL: record.IssueURL, WorkspaceBranch: strings.TrimSpace(record.Branch)}
+	if record.BranchPrepare != nil {
+		authority.Provider = record.BranchPrepare.Provider
+		authority.BaseBranch = record.BranchPrepare.BaseBranch
+		authority.CodeProjectKey = record.BranchPrepare.CodeProjectKey
+	}
+	if record.Execution != nil {
+		authority.WorkspaceBranch = record.Execution.Workspace.Branch
+	}
+	return authority
 }

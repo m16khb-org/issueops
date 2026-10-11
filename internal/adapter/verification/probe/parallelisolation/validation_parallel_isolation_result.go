@@ -38,20 +38,20 @@ func parallelIsolationErrors(probes []parallelIsolationProbe) []string {
 		if probe.Error != "" {
 			errs = append(errs, fmt.Sprintf("worker %d: %s", probe.Worker, probe.Error))
 		}
-		for label, path := range map[string]string{
-			"temp_root":     probe.TempRoot,
-			"state_dir":     probe.StateDir,
-			"artifact_path": probe.ArtifactPath,
+		for _, field := range []struct{ name, value string }{
+			{"temp_root", probe.TempRoot},
+			{"state_dir", probe.StateDir},
+			{"artifact_path", probe.ArtifactPath},
 		} {
-			if strings.TrimSpace(path) == "" {
-				errs = append(errs, fmt.Sprintf("worker %d has empty %s", probe.Worker, label))
+			if strings.TrimSpace(field.value) == "" {
+				errs = append(errs, fmt.Sprintf("worker %d has empty %s", probe.Worker, field.name))
 				continue
 			}
-			if previous, ok := seenPaths[path]; ok {
-				errs = append(errs, fmt.Sprintf("path collision: %s reused by %s and worker %d %s", path, previous, probe.Worker, label))
+			if previous, ok := seenPaths[field.value]; ok {
+				errs = append(errs, fmt.Sprintf("path collision: %s reused by %s and worker %d %s", field.value, previous, probe.Worker, field.name))
 				continue
 			}
-			seenPaths[path] = fmt.Sprintf("worker %d %s", probe.Worker, label)
+			seenPaths[field.value] = fmt.Sprintf("worker %d %s", probe.Worker, field.name)
 		}
 	}
 	return errs

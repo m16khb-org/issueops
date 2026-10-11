@@ -113,12 +113,18 @@ func CandidateExportValidationErrors(key string, exportResult augmentcontract.Se
 	if exportResult.SelectedCandidate != nil || len(exportResult.OpenCandidateIDs) != 0 || !slices.Contains(exportResult.SatisfiedCandidateIDs, "completion-evidence-audit") {
 		errs = append(errs, "candidate export did not mark completion evidence candidate satisfied")
 	}
-	if slices.Contains(exportResult.OpenCandidateIDs, "self-verify-candidate-export") || !slices.Contains(exportResult.SatisfiedCandidateIDs, "self-verify-candidate-export") || slices.Contains(exportResult.OpenCandidateIDs, "self-verify-step-budget-baseline") || !slices.Contains(exportResult.SatisfiedCandidateIDs, "self-verify-step-budget-baseline") || slices.Contains(exportResult.OpenCandidateIDs, "self-verify-install-dry-run-smoke") || !slices.Contains(exportResult.SatisfiedCandidateIDs, "self-verify-install-dry-run-smoke") {
+	if !implementedCandidatesSatisfied(exportResult.OpenCandidateIDs, exportResult.SatisfiedCandidateIDs) {
 		errs = append(errs, "candidate export did not mark implemented candidates satisfied")
 	}
 	if exportResult.StateCheckpoint == nil || !exportResult.StateCheckpoint.OK || exportResult.StateCheckpoint.Key != key {
 		errs = append(errs, "candidate export did not save the requested state checkpoint")
 	}
+	return append(errs, candidateExportSnapshotErrors(exportResult, snapshot)...)
+}
+
+// candidateExportSnapshotErrors는 저장된 상태 스냅샷이 export 결과와 일치하는지 검사한다.
+func candidateExportSnapshotErrors(exportResult augmentcontract.SelfVerificationCandidateExportResult, snapshot augmentcontract.SelfVerificationCandidateExportStateSnapshot) []string {
+	errs := []string{}
 	if snapshot.Kind != augmentcontract.SelfVerificationCandidateExportKind || snapshot.CandidateCount != exportResult.CandidateCount {
 		errs = append(errs, "candidate export state snapshot mismatch")
 	}
@@ -126,4 +132,14 @@ func CandidateExportValidationErrors(key string, exportResult augmentcontract.Se
 		errs = append(errs, "candidate export state satisfied candidate mismatch")
 	}
 	return errs
+}
+
+// implementedCandidatesSatisfied reports whether every implemented candidate is absent from open and present in satisfied.
+func implementedCandidatesSatisfied(open, satisfied []string) bool {
+	for _, id := range []string{"self-verify-candidate-export", "self-verify-step-budget-baseline", "self-verify-install-dry-run-smoke"} {
+		if slices.Contains(open, id) || !slices.Contains(satisfied, id) {
+			return false
+		}
+	}
+	return true
 }

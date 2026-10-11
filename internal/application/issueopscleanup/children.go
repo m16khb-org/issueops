@@ -32,15 +32,9 @@ func (s ChildrenCloser) Close(ctx context.Context, id string, requested, confirm
 	var observed model.IssueOpsRecord
 	if requested {
 		var err error
-		observed, err = s.Records.Load(id)
+		observed, err = s.observeMergeEvidence(id, &req)
 		if err != nil {
 			return result, err
-		}
-		observed.IssueLinks = append([]model.IssueOpsIssueLink(nil), observed.IssueLinks...)
-		if observed.RemoteArtifact != nil {
-			artifact := *observed.RemoteArtifact
-			observed.RemoteArtifact = &artifact
-			req.Merged = s.VerifyMerged(artifact) == nil
 		}
 	}
 	err := s.Records.WithinLock(ctx, id, func(spanCtx context.Context) error {
@@ -63,27 +57,9 @@ func (s ChildrenCloser) Close(ctx context.Context, id string, requested, confirm
 			return err
 		}
 		result.EvidenceBasis = basis
-		indices := make([]int, 0)
-		for index, link := range record.IssueLinks {
-			if link.Type == "child" {
-				indices = append(indices, index)
-			}
-		}
+		indices := childLinkIndices(record)
 		outcomes := s.closeConcurrently(record, indices, req)
-		var changed []int
-		var firstErr error
-		for index, outcome := range outcomes {
-			result.Children = append(result.Children, outcome.result)
-			if outcome.err != nil && firstErr == nil {
-				firstErr = outcome.err
-			}
-			if outcome.changed {
-				changed = append(changed, indices[index])
-			}
-			if outcome.result.Closed {
-				result.ClosedCount++
-			}
-		}
+		changed, firstErr := collectChildOutcomes(&result, outcomes, indices)
 		if firstErr != nil {
 			return firstErr
 		}
@@ -95,6 +71,50 @@ func (s ChildrenCloser) Close(ctx context.Context, id string, requested, confirm
 		return nil
 	})
 	return result, err
+}
+
+// observeMergeEvidence는 잠금 전에 레코드를 읽고 머지 검증 결과를 req.Merged에 기록한다.
+func (s ChildrenCloser) observeMergeEvidence(id string, req *model.IssueOpsCloseChildrenRequest) (model.IssueOpsRecord, error) {
+	observed, err := s.Records.Load(id)
+	if err != nil {
+		return observed, err
+	}
+	observed.IssueLinks = append([]model.IssueOpsIssueLink(nil), observed.IssueLinks...)
+	if observed.RemoteArtifact != nil {
+		artifact := *observed.RemoteArtifact
+		observed.RemoteArtifact = &artifact
+		req.Merged = s.VerifyMerged(artifact) == nil
+	}
+	return observed, nil
+}
+
+func childLinkIndices(record model.IssueOpsRecord) []int {
+	indices := make([]int, 0)
+	for index, link := range record.IssueLinks {
+		if link.Type == "child" {
+			indices = append(indices, index)
+		}
+	}
+	return indices
+}
+
+// collectChildOutcomes는 결과를 result에 누적하고 변경된 링크 인덱스와 첫 오류를 돌려준다.
+func collectChildOutcomes(result *model.IssueOpsCloseChildrenResult, outcomes []closeChildOutcome, indices []int) ([]int, error) {
+	var changed []int
+	var firstErr error
+	for index, outcome := range outcomes {
+		result.Children = append(result.Children, outcome.result)
+		if outcome.err != nil && firstErr == nil {
+			firstErr = outcome.err
+		}
+		if outcome.changed {
+			changed = append(changed, indices[index])
+		}
+		if outcome.result.Closed {
+			result.ClosedCount++
+		}
+	}
+	return changed, firstErr
 }
 
 type closeChildOutcome struct {

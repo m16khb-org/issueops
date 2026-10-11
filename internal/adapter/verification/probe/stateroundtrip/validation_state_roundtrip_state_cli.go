@@ -4,7 +4,6 @@ import (
 	selfverify "issueops/internal/contract/selfverify"
 	"slices"
 
-	"encoding/json"
 	"time"
 
 	statecontract "issueops/internal/contract/state"
@@ -63,38 +62,31 @@ func (s *stateRoundtripStateSession) result(step selfverify.StepResult) validate
 	return validateStateRoundtripStateResult{step: step, stdoutParts: s.stdoutParts, commands: s.commands}
 }
 
+// recordMatches reports whether a state result carries the roundtrip record unchanged.
+func (s *stateRoundtripStateSession) recordMatches(result statecontract.StateResult) bool {
+	return result.OK && result.Record.Key == s.input.key && result.Record.Content == s.input.content && result.Record.Bytes == len([]byte(s.input.content))
+}
+
 func (s *stateRoundtripStateSession) validateWriteReadList() selfverify.StepResult {
-	write := s.run("state write", s.input.binary, "state", "write", "--key", s.input.key, "--value", s.input.content, "--json")
-	if !write.OK {
-		return s.combineFailed(write)
+	writeResult, failed, ok := runStateJSON[statecontract.StateResult](s, "state write", s.input.binary, "state", "write", "--key", s.input.key, "--value", s.input.content, "--json")
+	if !ok {
+		return failed
 	}
-	var writeResult statecontract.StateResult
-	if err := json.Unmarshal([]byte(write.Stdout), &writeResult); err != nil {
-		return s.fail(err.Error())
-	}
-	if !writeResult.OK || writeResult.Record.Key != s.input.key || writeResult.Record.Content != s.input.content || writeResult.Record.Bytes != len([]byte(s.input.content)) {
+	if !s.recordMatches(writeResult) {
 		return s.fail("write result did not match expected record")
 	}
 
-	read := s.run("state read", s.input.binary, "state", "read", "--key", s.input.key, "--json")
-	if !read.OK {
-		return s.combineFailed(read)
+	readResult, failed, ok := runStateJSON[statecontract.StateResult](s, "state read", s.input.binary, "state", "read", "--key", s.input.key, "--json")
+	if !ok {
+		return failed
 	}
-	var readResult statecontract.StateResult
-	if err := json.Unmarshal([]byte(read.Stdout), &readResult); err != nil {
-		return s.fail(err.Error())
-	}
-	if !readResult.OK || readResult.Record.Key != s.input.key || readResult.Record.Content != s.input.content || readResult.Record.Bytes != len([]byte(s.input.content)) {
+	if !s.recordMatches(readResult) {
 		return s.fail("read result did not match expected record")
 	}
 
-	list := s.run("state list", s.input.binary, "state", "list", "--json")
-	if !list.OK {
-		return s.combineFailed(list)
-	}
-	var listResult statecontract.StateListResult
-	if err := json.Unmarshal([]byte(list.Stdout), &listResult); err != nil {
-		return s.fail(err.Error())
+	listResult, failed, ok := runStateJSON[statecontract.StateListResult](s, "state list", s.input.binary, "state", "list", "--json")
+	if !ok {
+		return failed
 	}
 	if !listResult.OK || !slices.Contains(listResult.Keys, s.input.key) {
 		return s.fail("state list did not include roundtrip key")

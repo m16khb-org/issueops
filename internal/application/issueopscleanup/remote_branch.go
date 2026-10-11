@@ -47,31 +47,14 @@ func (s RemoteBranchCleaner) Run(ctx context.Context, req model.CleanupRemoteBra
 	if len(result.Missing) > 0 {
 		return result, fmt.Errorf("cleanup remote-branch is not ready: %s", strings.Join(result.Missing, ", "))
 	}
+	var stop bool
 	if !result.RemoteBranchPresent {
-		// Absence still precedes confirmation and fingerprint. Only an explicit
-		// apply may release a crashed same-operation attempt; preview never writes.
-		result.AlreadyAbsent = true
-		if record.CleanupAttempt == nil {
-			return result, nil
-		}
-		if !req.Apply {
-			result.NextCommand = fmt.Sprintf("issueops cleanup remote-branch --id %s --apply --json", record.ID)
-			return result, nil
-		}
+		result, stop, err = planAbsentBranch(record, req, result)
 	} else {
-		fingerprint, err := cleanupRemoteBranchFingerprint(inventory)
-		if err != nil {
-			return failed, err
-		}
-		result.Fingerprint = fingerprint
-		if !req.Apply {
-			result.NextCommand = fmt.Sprintf("issueops cleanup remote-branch --id %s --apply --confirm --fingerprint %s%s --json", record.ID, fingerprint, cleanupSupersededByFlag(result.SupersededBy))
-			return result, nil
-		}
-		if err := domain.ValidateCleanupRemoteBranchApply(req, fingerprint); err != nil {
-			result.OK = false
-			return result, err
-		}
+		result, stop, err = planPresentBranch(record, req, inventory, result)
+	}
+	if stop || err != nil {
+		return result, err
 	}
 	attempt, err := s.NewAttempt(model.CleanupOperationRemoteBranch)
 	if err != nil {
@@ -86,22 +69,10 @@ func (s RemoteBranchCleaner) Run(ctx context.Context, req model.CleanupRemoteBra
 	// No external calls may follow this single drainage attempt. A live child
 	// or replacement owner retains its guard even when the original call failed.
 	finalize := func(step string, cause error) (model.CleanupRemoteBranchResult, error) {
-		next, drainErr := lifetime.Drain(finalizeCtx)
+		var next CleanupLifetime
+		next, result, err = s.releaseAttempt(finalizeCtx, lifetime, snapshot, record.ID, result, step, cause)
 		lifetime = next
-		var releaseErr error
-		if drainErr == nil {
-			_, releaseErr = s.Records.Release(finalizeCtx, snapshot, s.Now().UTC().Format(time.RFC3339Nano))
-		}
-		if err := errors.Join(cause, drainErr, releaseErr); err != nil {
-			result.OK = false
-			if step == "" {
-				step = "record_release"
-			}
-			result.FailedStep = step
-			result.NextCommand = fmt.Sprintf("issueops cleanup remote-branch --id %s --preview --json", record.ID)
-			return result, err
-		}
-		return result, nil
+		return result, err
 	}
 	if result.AlreadyAbsent {
 		return finalize("", nil)
@@ -115,6 +86,60 @@ func (s RemoteBranchCleaner) Run(ctx context.Context, req model.CleanupRemoteBra
 	result.Deleted, result.DeletedAt = true, s.Now().UTC().Format(time.RFC3339)
 	result.Audit = fmt.Sprintf("원격 브랜치 삭제: branch=%s oid=%s at=%s", inventory.Branch, inventory.RemoteOID, result.DeletedAt)
 	return finalize("", nil)
+}
+
+// planAbsentBranch handles an already-absent remote branch. stop reports that Run must return the result as is.
+func planAbsentBranch(record model.IssueOpsRecord, req model.CleanupRemoteBranchRequest, result model.CleanupRemoteBranchResult) (model.CleanupRemoteBranchResult, bool, error) {
+	// Absence still precedes confirmation and fingerprint. Only an explicit
+	// apply may release a crashed same-operation attempt; preview never writes.
+	result.AlreadyAbsent = true
+	if record.CleanupAttempt == nil {
+		return result, true, nil
+	}
+	if !req.Apply {
+		result.NextCommand = fmt.Sprintf("issueops cleanup remote-branch --id %s --apply --json", record.ID)
+		return result, true, nil
+	}
+	return result, false, nil
+}
+
+// releaseAttempt drains the lifetime once and releases the armed record, folding any failure into the result.
+// The drained lifetime is returned even on error so the caller's deferred Close sees the replacement owner.
+func (s RemoteBranchCleaner) releaseAttempt(ctx context.Context, lifetime CleanupLifetime, snapshot model.CleanupSnapshot, id string, result model.CleanupRemoteBranchResult, step string, cause error) (CleanupLifetime, model.CleanupRemoteBranchResult, error) {
+	next, drainErr := lifetime.Drain(ctx)
+	var releaseErr error
+	if drainErr == nil {
+		_, releaseErr = s.Records.Release(ctx, snapshot, s.Now().UTC().Format(time.RFC3339Nano))
+	}
+	if err := errors.Join(cause, drainErr, releaseErr); err != nil {
+		result.OK = false
+		if step == "" {
+			step = "record_release"
+		}
+		result.FailedStep = step
+		result.NextCommand = fmt.Sprintf("issueops cleanup remote-branch --id %s --preview --json", id)
+		return next, result, err
+	}
+	return next, result, nil
+}
+
+// planPresentBranch fingerprints a present remote branch and validates the apply request.
+// On a fingerprint failure it returns the bare failed result, matching Run's contract.
+func planPresentBranch(record model.IssueOpsRecord, req model.CleanupRemoteBranchRequest, inventory model.CleanupRemoteBranchInventory, result model.CleanupRemoteBranchResult) (model.CleanupRemoteBranchResult, bool, error) {
+	fingerprint, err := cleanupRemoteBranchFingerprint(inventory)
+	if err != nil {
+		return model.CleanupRemoteBranchResult{OK: false, ID: req.ID}, true, err
+	}
+	result.Fingerprint = fingerprint
+	if !req.Apply {
+		result.NextCommand = fmt.Sprintf("issueops cleanup remote-branch --id %s --apply --confirm --fingerprint %s%s --json", record.ID, fingerprint, cleanupSupersededByFlag(result.SupersededBy))
+		return result, true, nil
+	}
+	if err := domain.ValidateCleanupRemoteBranchApply(req, fingerprint); err != nil {
+		result.OK = false
+		return result, true, err
+	}
+	return result, false, nil
 }
 
 func cleanupSupersededByFlag(value string) string {

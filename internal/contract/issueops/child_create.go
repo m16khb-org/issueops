@@ -25,14 +25,11 @@ func ValidateChildCreateOperations(operations []ChildCreateOperation) error {
 		if err := ValidateIssueCreateIntent(shape); err != nil {
 			return err
 		}
-		if op.Marker != "<!-- issueops:child-create:"+op.OperationID+" -->" || (op.Origin != "implicit" && op.Origin != "explicit") || strings.TrimSpace(op.ParentURL) == "" || len(op.ParentURL) > MaxIssueCreateURLBytes {
-			return fmt.Errorf("invalid child create operation identity")
+		if err := validateChildCreateIdentity(op); err != nil {
+			return err
 		}
-		if len(op.RequestSHA256) != 64 || strings.ToLower(op.RequestSHA256) != op.RequestSHA256 {
-			return fmt.Errorf("invalid child request digest")
-		}
-		if _, err := hex.DecodeString(op.RequestSHA256); err != nil {
-			return fmt.Errorf("invalid child request digest")
+		if err := validateChildRequestDigest(op.RequestSHA256); err != nil {
+			return err
 		}
 		if ids[op.OperationID] || op.Origin == "implicit" && implicit[op.RequestSHA256] {
 			return fmt.Errorf("duplicate child create operation identity")
@@ -41,16 +38,40 @@ func ValidateChildCreateOperations(operations []ChildCreateOperation) error {
 		if op.Origin == "implicit" {
 			implicit[op.RequestSHA256] = true
 		}
-		if (op.Status == IssueCreateIntentCompleted || op.Status == IssueCreateIntentURLObserved) && op.CanonicalURL == "" {
-			return fmt.Errorf("child create operation requires canonical_url")
+		if err := validateChildCreateCanonicalAndAuthority(op); err != nil {
+			return err
 		}
-		if op.Generation == 0 {
-			if op.Holder != nil || op.CWD != "" {
-				return fmt.Errorf("invalid unleased child authority")
-			}
-		} else if op.Holder == nil || op.CWD == "" {
-			return fmt.Errorf("missing child authority")
+	}
+	return nil
+}
+
+func validateChildCreateIdentity(op ChildCreateOperation) error {
+	if op.Marker != "<!-- issueops:child-create:"+op.OperationID+" -->" || (op.Origin != "implicit" && op.Origin != "explicit") || strings.TrimSpace(op.ParentURL) == "" || len(op.ParentURL) > MaxIssueCreateURLBytes {
+		return fmt.Errorf("invalid child create operation identity")
+	}
+	return nil
+}
+
+func validateChildRequestDigest(digest string) error {
+	if len(digest) != 64 || strings.ToLower(digest) != digest {
+		return fmt.Errorf("invalid child request digest")
+	}
+	if _, err := hex.DecodeString(digest); err != nil {
+		return fmt.Errorf("invalid child request digest")
+	}
+	return nil
+}
+
+func validateChildCreateCanonicalAndAuthority(op ChildCreateOperation) error {
+	if (op.Status == IssueCreateIntentCompleted || op.Status == IssueCreateIntentURLObserved) && op.CanonicalURL == "" {
+		return fmt.Errorf("child create operation requires canonical_url")
+	}
+	if op.Generation == 0 {
+		if op.Holder != nil || op.CWD != "" {
+			return fmt.Errorf("invalid unleased child authority")
 		}
+	} else if op.Holder == nil || op.CWD == "" {
+		return fmt.Errorf("missing child authority")
 	}
 	return nil
 }

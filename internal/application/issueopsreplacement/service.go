@@ -156,69 +156,9 @@ func (s Service) mutateExecutionReplacement(ctx context.Context, req issueops.Ex
 		now := s.Now()
 		switch req.Action {
 		case issueops.ExecutionReplaceRevoke:
-			if err := domain.ValidateReplacementRevoke(*lease, req.Reason); err != nil {
-				return err
-			}
-			if err := s.refuseSelfRevoke(record.ID, *lease, req.Actor); err != nil {
-				return err
-			}
-			fingerprint, _, err := s.inventory(ctx, record, req.Actor)
-			if err != nil {
-				return err
-			}
-			if fingerprint != req.InventoryFingerprint {
-				return fmt.Errorf("stale replacement inventory fingerprint")
-			}
-			previous := *lease.Holder
-			*lease = domain.RevokeReplacement(*lease, req.Reason, now)
-			persisted, err = s.Records.Persist(spanCtx, record, &previous)
-			return err
+			return s.revokeReplacement(ctx, spanCtx, req, record, lease, now, &persisted)
 		case issueops.ExecutionReplaceFinalize:
-			if lease.Status != issueops.LeaseStatusRevoking {
-				return fmt.Errorf("finalize requires a revoking lease")
-			}
-			fingerprint, err := s.quiescence(ctx, record, req.Actor)
-			if err != nil {
-				return err
-			}
-			if fingerprint != req.QuiescenceFingerprint {
-				return fmt.Errorf("stale quiescence fingerprint")
-			}
-			if err := s.Artifacts.Cleanup(record); err != nil {
-				return err
-			}
-			// 넘겨줄 workspace가 없으면 claimable은 사실이 아니다 — claim
-			// token은 그 worktree에서 읽히도록 만들어지고 owner context
-			// 재봉인도 거기에 쓴다. 아무도 claim할 수 없는 세대를 만들면서
-			// 쓰기에 실패해 lease가 revoking에 갇히고, abandon은
-			// claimable/released만 받으므로 회수가 막힌다(#435).
-			//
-			// terminal 상태인 released가 정확하다. 이 lifecycle은 폐기하거나
-			// 처음부터 다시 prepare해야 하며, 두 경로 모두 released에서 열린다.
-			if s.Artifacts.WorkspaceAbsent(record.Execution.Workspace.Root) {
-				*lease = domain.FinalizeReplacement(*lease, true, "")
-				persisted, err = s.Records.Persist(spanCtx, record, nil)
-				return err
-			}
-			token, path, err := s.Artifacts.CreateToken(record)
-			if err != nil {
-				return s.cleanupFailure(record, err)
-			}
-			tokenPath = path
-			*lease = domain.FinalizeReplacement(*lease, false, token)
-			// revoking 세대의 durable 상태는 재봉인이 모두 성공한 뒤에만
-			// claimable로 바뀐다. 실패한 token은 즉시 지워 재시도 경로만 남긴다.
-			reseal, err := s.ResealOwner(ctx, record)
-			if err != nil {
-				return s.cleanupFailure(record, err)
-			}
-			domain.SealReplacementOwner(record.Execution.Orca, lease.Generation, reseal)
-			resealed = reseal
-			persisted, err = s.Records.Persist(spanCtx, record, nil)
-			if err != nil {
-				return s.cleanupFailure(record, err)
-			}
-			return nil
+			return s.finalizeReplacement(ctx, spanCtx, req, record, lease, &persisted, &tokenPath, &resealed)
 		}
 		return fmt.Errorf("unsupported execution replace action %q", req.Action)
 	})
@@ -242,6 +182,74 @@ func (s Service) mutateExecutionReplacement(ctx context.Context, req issueops.Ex
 		}
 	}
 	return result, nil
+}
+
+func (s Service) revokeReplacement(ctx, spanCtx context.Context, req issueops.ExecutionReplaceRequest, record issueops.IssueOpsRecord, lease *issueops.WriteLease, now string, persisted *issueops.IssueOpsRecord) error {
+	if err := domain.ValidateReplacementRevoke(*lease, req.Reason); err != nil {
+		return err
+	}
+	if err := s.refuseSelfRevoke(record.ID, *lease, req.Actor); err != nil {
+		return err
+	}
+	fingerprint, _, err := s.inventory(ctx, record, req.Actor)
+	if err != nil {
+		return err
+	}
+	if fingerprint != req.InventoryFingerprint {
+		return fmt.Errorf("stale replacement inventory fingerprint")
+	}
+	previous := *lease.Holder
+	*lease = domain.RevokeReplacement(*lease, req.Reason, now)
+	*persisted, err = s.Records.Persist(spanCtx, record, &previous)
+	return err
+}
+
+func (s Service) finalizeReplacement(ctx, spanCtx context.Context, req issueops.ExecutionReplaceRequest, record issueops.IssueOpsRecord, lease *issueops.WriteLease, persisted *issueops.IssueOpsRecord, tokenPath *string, resealed *issueops.ReplacementArtifacts) error {
+	if lease.Status != issueops.LeaseStatusRevoking {
+		return fmt.Errorf("finalize requires a revoking lease")
+	}
+	fingerprint, err := s.quiescence(ctx, record, req.Actor)
+	if err != nil {
+		return err
+	}
+	if fingerprint != req.QuiescenceFingerprint {
+		return fmt.Errorf("stale quiescence fingerprint")
+	}
+	if err := s.Artifacts.Cleanup(record); err != nil {
+		return err
+	}
+	// 넘겨줄 workspace가 없으면 claimable은 사실이 아니다 — claim
+	// token은 그 worktree에서 읽히도록 만들어지고 owner context
+	// 재봉인도 거기에 쓴다. 아무도 claim할 수 없는 세대를 만들면서
+	// 쓰기에 실패해 lease가 revoking에 갇히고, abandon은
+	// claimable/released만 받으므로 회수가 막힌다(#435).
+	//
+	// terminal 상태인 released가 정확하다. 이 lifecycle은 폐기하거나
+	// 처음부터 다시 prepare해야 하며, 두 경로 모두 released에서 열린다.
+	if s.Artifacts.WorkspaceAbsent(record.Execution.Workspace.Root) {
+		*lease = domain.FinalizeReplacement(*lease, true, "")
+		*persisted, err = s.Records.Persist(spanCtx, record, nil)
+		return err
+	}
+	token, path, err := s.Artifacts.CreateToken(record)
+	if err != nil {
+		return s.cleanupFailure(record, err)
+	}
+	*tokenPath = path
+	*lease = domain.FinalizeReplacement(*lease, false, token)
+	// revoking 세대의 durable 상태는 재봉인이 모두 성공한 뒤에만
+	// claimable로 바뀐다. 실패한 token은 즉시 지워 재시도 경로만 남긴다.
+	reseal, err := s.ResealOwner(ctx, record)
+	if err != nil {
+		return s.cleanupFailure(record, err)
+	}
+	domain.SealReplacementOwner(record.Execution.Orca, lease.Generation, reseal)
+	*resealed = reseal
+	*persisted, err = s.Records.Persist(spanCtx, record, nil)
+	if err != nil {
+		return s.cleanupFailure(record, err)
+	}
+	return nil
 }
 
 func (s Service) recordAtGeneration(id string, generation uint64) (issueops.IssueOpsRecord, error) {

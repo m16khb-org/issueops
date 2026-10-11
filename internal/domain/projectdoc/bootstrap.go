@@ -28,13 +28,24 @@ type BootstrapFileDecision struct {
 
 func DecideBootstrapFile(input BootstrapFileInput) BootstrapFileDecision {
 	if input.Kind == BootstrapModuleFile || input.Kind == BootstrapManifestFile {
-		return BootstrapFileDecision{
-			Write:           input.Write && input.Action == "create",
-			Preserved:       input.Kind == BootstrapModuleFile && input.Action == "update",
-			Report:          true,
-			FamilyPreserved: input.Kind == BootstrapModuleFile && input.Action == "update",
-		}
+		return decideGeneratedBootstrapFile(input)
 	}
+	return decideRootBootstrapFile(input)
+}
+
+// decideGeneratedBootstrapFile covers module and manifest files, which are
+// written only on create and never synced.
+func decideGeneratedBootstrapFile(input BootstrapFileInput) BootstrapFileDecision {
+	moduleUpdate := input.Kind == BootstrapModuleFile && input.Action == "update"
+	return BootstrapFileDecision{
+		Write:           input.Write && input.Action == "create",
+		Preserved:       moduleUpdate,
+		Report:          true,
+		FamilyPreserved: moduleUpdate,
+	}
+}
+
+func decideRootBootstrapFile(input BootstrapFileInput) BootstrapFileDecision {
 	familyDoc := IsFamilyDocRel(input.Rel)
 	shouldWrite := input.Write && input.Action != "unchanged" && !familyDoc &&
 		(input.Sync || input.Action == "create" || input.Rel == "AGENTS.md")

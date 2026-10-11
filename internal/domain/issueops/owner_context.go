@@ -130,6 +130,44 @@ func validateExecutionOwnerPromptInputs(packet issueops.OwnerContextPacket, pack
 	return nil
 }
 
+// branchLinkCommands renders the pre-link commands. All three are "none" once
+// the branch link is verified (or no branch was prepared).
+func branchLinkCommands(record issueops.IssueOpsRecord, policy issueops.OwnerPolicyContext, shortActor string) (awaitBranchLink, verifyBranchLinkRead, verifyBranchLink string) {
+	awaitBranchLink, verifyBranchLinkRead, verifyBranchLink = "none", "none", "none"
+	prepared := record.BranchPrepare
+	if prepared == nil || prepared.LinkVerified {
+		return awaitBranchLink, verifyBranchLinkRead, verifyBranchLink
+	}
+	if strings.EqualFold(strings.TrimSpace(prepared.Provider), "github") {
+		// GitHub에서만 pre-link 창이 존재한다. GitLab은 prepare 시점에
+		// 이미 link_verified를 요구하므로 기다릴 것이 없다(#319).
+		awaitBranchLink = "issueops branch await-link --id " + quoteReplacementArg(record.ID) + " --json"
+		projectKey := policy.ProjectKey
+		issueNumber := policy.IssueNumber
+		repoSlug := strings.TrimPrefix(projectKey, "github.com/")
+		if projectKey != "" && repoSlug != projectKey && issueNumber != "" {
+			verifyBranchLinkRead = "gh issue develop --list " + issueNumber +
+				" --repo " + quoteReplacementArg(repoSlug)
+		}
+	}
+	verifyBranchLink = "issueops branch prepare --id " + quoteReplacementArg(record.ID) +
+		" --provider " + quoteReplacementArg(strings.ToLower(strings.TrimSpace(prepared.Provider))) +
+		" --issue-url " + quoteReplacementArg(strings.TrimSpace(prepared.IssueURL)) +
+		" --branch " + quoteReplacementArg(strings.TrimSpace(prepared.Branch)) +
+		" --base-branch " + quoteReplacementArg(strings.TrimSpace(prepared.BaseBranch))
+	for _, optional := range []struct{ flag, value string }{
+		{"--base-sha", prepared.BaseSHA},
+		{"--parent-worktree", prepared.ParentWorktree},
+		{"--remote-branch-url", prepared.RemoteBranchURL},
+	} {
+		if value := strings.TrimSpace(optional.value); value != "" {
+			verifyBranchLink += " " + optional.flag + " " + quoteReplacementArg(value)
+		}
+	}
+	verifyBranchLink += " --link-verified " + shortActor + " --json"
+	return awaitBranchLink, verifyBranchLinkRead, verifyBranchLink
+}
+
 func OwnerCommandsFor(record issueops.IssueOpsRecord, req issueops.ExecutionPrepareRequest, issueBodySHA256 string, paths issueops.OwnerPaths, policy issueops.OwnerPolicyContext) issueops.OwnerCommands {
 	generation := record.Execution.Lease.Generation
 	actorFlags := strings.Join([]string{
@@ -152,38 +190,7 @@ func OwnerCommandsFor(record issueops.IssueOpsRecord, req issueops.ExecutionPrep
 	// 아무도 그 lifecycle을 회수할 수 없다(#319).
 	release := "issueops execution release --id " + quoteReplacementArg(record.ID) +
 		" --generation " + strconv.FormatUint(record.Execution.Lease.Generation, 10) + " " + actorFlags + " --json"
-	verifyBranchLinkRead := "none"
-	verifyBranchLink := "none"
-	awaitBranchLink := "none"
-	if prepared := record.BranchPrepare; prepared != nil && !prepared.LinkVerified {
-		if strings.EqualFold(strings.TrimSpace(prepared.Provider), "github") {
-			// GitHub에서만 pre-link 창이 존재한다. GitLab은 prepare 시점에
-			// 이미 link_verified를 요구하므로 기다릴 것이 없다(#319).
-			awaitBranchLink = "issueops branch await-link --id " + quoteReplacementArg(record.ID) + " --json"
-			projectKey := policy.ProjectKey
-			issueNumber := policy.IssueNumber
-			repoSlug := strings.TrimPrefix(projectKey, "github.com/")
-			if projectKey != "" && repoSlug != projectKey && issueNumber != "" {
-				verifyBranchLinkRead = "gh issue develop --list " + issueNumber +
-					" --repo " + quoteReplacementArg(repoSlug)
-			}
-		}
-		verifyBranchLink = "issueops branch prepare --id " + quoteReplacementArg(record.ID) +
-			" --provider " + quoteReplacementArg(strings.ToLower(strings.TrimSpace(prepared.Provider))) +
-			" --issue-url " + quoteReplacementArg(strings.TrimSpace(prepared.IssueURL)) +
-			" --branch " + quoteReplacementArg(strings.TrimSpace(prepared.Branch)) +
-			" --base-branch " + quoteReplacementArg(strings.TrimSpace(prepared.BaseBranch))
-		for _, optional := range []struct{ flag, value string }{
-			{"--base-sha", prepared.BaseSHA},
-			{"--parent-worktree", prepared.ParentWorktree},
-			{"--remote-branch-url", prepared.RemoteBranchURL},
-		} {
-			if value := strings.TrimSpace(optional.value); value != "" {
-				verifyBranchLink += " " + optional.flag + " " + quoteReplacementArg(value)
-			}
-		}
-		verifyBranchLink += " --link-verified " + shortActor + " --json"
-	}
+	awaitBranchLink, verifyBranchLinkRead, verifyBranchLink := branchLinkCommands(record, policy, shortActor)
 	planPath := paths.Plan
 	linkPlan := "none"
 	if strings.TrimSpace(record.PlanPath) == "" {

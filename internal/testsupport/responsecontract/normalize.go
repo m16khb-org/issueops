@@ -12,65 +12,7 @@ import (
 func NormalizeContractValue(value any, replacements map[string]string) any {
 	switch v := value.(type) {
 	case map[string]any:
-		out := make(map[string]any, len(v))
-		isStateCheckpoint := looksLikeStateCheckpoint(v)
-		isDynamicStateRecord := looksLikeDynamicStateRecord(v)
-		isDynamicStateHistoryEntry := looksLikeDynamicStateHistoryEntry(v)
-		isCommandRun := looksLikeCommandRunResult(v)
-		for key, child := range v {
-			if isDynamicTimeKey(key) {
-				out[key] = "$TIMESTAMP"
-				continue
-			}
-			if isCommandRun && key == "duration_ms" {
-				out[key] = "$DURATION_MS"
-				continue
-			}
-			if isStateCheckpoint && key == "bytes" {
-				out[key] = "$STATE_BYTES"
-				continue
-			}
-			if (isDynamicStateRecord || isDynamicStateHistoryEntry) && key == "bytes" {
-				out[key] = "$STATE_RECORD_BYTES"
-				continue
-			}
-			if key == "audit_log_id" {
-				out[key] = "$AUDIT_ID"
-				continue
-			}
-			// Repo-local host integrations are gitignored install artifacts. Their
-			// presence is machine state, not committed response-contract behavior.
-			if key == "project_claude_skill" || key == "project_codex_skill" {
-				out[key] = "$PROJECT_SKILL_PRESENCE"
-				continue
-			}
-			if key == "id" {
-				if s, ok := child.(string); ok && strings.HasPrefix(s, "job-") {
-					out[key] = "$WORKER_JOB_ID"
-					continue
-				}
-				if s, ok := child.(string); ok && strings.HasPrefix(s, "io-") {
-					out[key] = "$ISSUEOPS_ID"
-					continue
-				}
-			}
-			if key == "pid" {
-				out[key] = "$PID"
-				continue
-			}
-			if key == "head" || key == "sha" {
-				out[key] = "$GIT_SHA"
-				continue
-			}
-			if key == "score" {
-				if score, ok := child.(float64); ok {
-					out[key] = math.Round(score*100) / 100
-					continue
-				}
-			}
-			out[key] = NormalizeContractValue(child, replacements)
-		}
-		return out
+		return normalizeContractMap(v, replacements)
 	case []any:
 		out := make([]any, 0, len(v))
 		for _, child := range v {
@@ -82,6 +24,81 @@ func NormalizeContractValue(value any, replacements map[string]string) any {
 	default:
 		return v
 	}
+}
+
+// contractMapKind는 맵 전체의 모양에서 결정되는, 키 "bytes"/"duration_ms" 치환 조건이다.
+type contractMapKind struct {
+	stateCheckpoint bool
+	stateRecord     bool // dynamic state record 또는 history entry
+	commandRun      bool
+}
+
+func normalizeContractMap(v map[string]any, replacements map[string]string) map[string]any {
+	out := make(map[string]any, len(v))
+	kind := contractMapKind{
+		stateCheckpoint: looksLikeStateCheckpoint(v),
+		stateRecord:     looksLikeDynamicStateRecord(v) || looksLikeDynamicStateHistoryEntry(v),
+		commandRun:      looksLikeCommandRunResult(v),
+	}
+	for key, child := range v {
+		if placeholder, ok := contractPlaceholder(key, child, kind); ok {
+			out[key] = placeholder
+			continue
+		}
+		out[key] = NormalizeContractValue(child, replacements)
+	}
+	return out
+}
+
+// contractPlaceholder returns the fixed replacement for a volatile map entry, if any.
+func contractPlaceholder(key string, child any, kind contractMapKind) (any, bool) {
+	if isDynamicTimeKey(key) {
+		return "$TIMESTAMP", true
+	}
+	switch key {
+	case "duration_ms":
+		if kind.commandRun {
+			return "$DURATION_MS", true
+		}
+	case "bytes":
+		if kind.stateCheckpoint {
+			return "$STATE_BYTES", true
+		}
+		if kind.stateRecord {
+			return "$STATE_RECORD_BYTES", true
+		}
+	case "audit_log_id":
+		return "$AUDIT_ID", true
+	case "project_claude_skill", "project_codex_skill":
+		// Repo-local host integrations are gitignored install artifacts. Their
+		// presence is machine state, not committed response-contract behavior.
+		return "$PROJECT_SKILL_PRESENCE", true
+	case "id":
+		return contractIDPlaceholder(child)
+	case "pid":
+		return "$PID", true
+	case "head", "sha":
+		return "$GIT_SHA", true
+	case "score":
+		if score, ok := child.(float64); ok {
+			return math.Round(score*100) / 100, true
+		}
+	}
+	return nil, false
+}
+
+func contractIDPlaceholder(child any) (any, bool) {
+	s, ok := child.(string)
+	if !ok {
+		return nil, false
+	}
+	if strings.HasPrefix(s, "job-") {
+		return "$WORKER_JOB_ID", true
+	}
+	if strings.HasPrefix(s, "io-") {
+		return "$ISSUEOPS_ID", true
+	}
+	return nil, false
 }
 
 func looksLikeDynamicStateRecord(value map[string]any) bool {

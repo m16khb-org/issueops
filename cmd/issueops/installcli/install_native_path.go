@@ -50,26 +50,8 @@ func (c Command) prepareInstallPathPlanForCandidate(result *port.NativeInstallRe
 			return nil, statErr
 		}
 	}
-	if statErr == nil && info.Mode().IsRegular() && info.Mode()&os.ModeSymlink == 0 {
-		managed, plan, err := c.PrepareManagedCommandPathCandidate(req.BinPath, candidatePath, commandPath, req.AdoptCommandFile, req.DryRun)
-		result.CommandPath = managedCommandPathResult(plan)
-		result.Links = append(result.Links, port.InstallLink{Path: commandPath, Target: req.BinPath, WouldCreate: plan.WouldAdopt})
-		if err != nil {
-			return nil, err
-		}
-		transaction.command = managed
-		transaction.managed = true
-	} else {
-		if statErr != nil && !errors.Is(statErr, fs.ErrNotExist) {
-			return nil, statErr
-		}
-		link, err := c.EnsureSymlinkPlan(req.BinPath, commandPath, true)
-		if req.DryRun {
-			result.Links = append(result.Links, link)
-		}
-		if err != nil {
-			return nil, err
-		}
+	if err := c.planInstallCommandPath(result, req, candidatePath, transaction, info, statErr); err != nil {
+		return nil, err
 	}
 	shortLink, err := ensureShortCommandShimPlan(commandPath, shortCommandPath, true, c.EnsureSymlinkPlan)
 	if req.DryRun {
@@ -84,6 +66,31 @@ func (c Command) prepareInstallPathPlanForCandidate(result *port.NativeInstallRe
 		}
 	}
 	return transaction, nil
+}
+
+// planInstallCommandPath plans the issueops command entry: a regular file is
+// adopted as a managed command, anything else becomes a symlink plan.
+func (c Command) planInstallCommandPath(result *port.NativeInstallResult, req port.NativeInstallRequest, candidatePath string, transaction *installPathTransaction, info os.FileInfo, statErr error) error {
+	commandPath := transaction.path
+	if statErr == nil && info.Mode().IsRegular() && info.Mode()&os.ModeSymlink == 0 {
+		managed, plan, err := c.PrepareManagedCommandPathCandidate(req.BinPath, candidatePath, commandPath, req.AdoptCommandFile, req.DryRun)
+		result.CommandPath = managedCommandPathResult(plan)
+		result.Links = append(result.Links, port.InstallLink{Path: commandPath, Target: req.BinPath, WouldCreate: plan.WouldAdopt})
+		if err != nil {
+			return err
+		}
+		transaction.command = managed
+		transaction.managed = true
+		return nil
+	}
+	if statErr != nil && !errors.Is(statErr, fs.ErrNotExist) {
+		return statErr
+	}
+	link, err := c.EnsureSymlinkPlan(req.BinPath, commandPath, true)
+	if req.DryRun {
+		result.Links = append(result.Links, link)
+	}
+	return err
 }
 
 func (transaction *installPathTransaction) apply(result *port.NativeInstallResult) error {
@@ -115,29 +122,8 @@ func (transaction *installPathTransaction) Apply(result *port.NativeInstallResul
 
 func (transaction *installPathTransaction) rollback(result *port.NativeInstallResult) error {
 	var errs []error
-	if transaction.shortCreated {
-		if err := os.Remove(transaction.shortPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
-			errs = append(errs, err)
-		} else {
-			transaction.shortCreated = false
-		}
-	}
-	if transaction.commandExisted && !transaction.managed {
-		if err := os.Remove(transaction.path); err != nil && !errors.Is(err, fs.ErrNotExist) {
-			errs = append(errs, err)
-		} else {
-			transaction.commandCreated = false
-			if err := os.Symlink(transaction.commandTarget, transaction.path); err != nil {
-				errs = append(errs, err)
-			}
-		}
-	} else if transaction.commandCreated {
-		if err := os.Remove(transaction.path); err != nil && !errors.Is(err, fs.ErrNotExist) {
-			errs = append(errs, err)
-		} else {
-			transaction.commandCreated = false
-		}
-	}
+	errs = transaction.rollbackShortShim(errs)
+	errs = transaction.rollbackCommandLink(errs)
 	if transaction.managed && transaction.command != nil && transaction.applied {
 		plan, err := transaction.command.Rollback()
 		if err == nil {
@@ -147,23 +133,59 @@ func (transaction *installPathTransaction) rollback(result *port.NativeInstallRe
 		errs = append(errs, err)
 	}
 	if !transaction.commandCreated && !transaction.shortCreated {
-		type cleanupPath struct {
-			path    string
-			existed bool
-		}
-		for _, item := range []cleanupPath{
-			{path: filepath.Dir(transaction.path), existed: transaction.binDirExisted},
-			{path: filepath.Dir(filepath.Dir(transaction.path)), existed: transaction.localDirExisted},
-		} {
-			if item.existed {
-				continue
-			}
-			if err := removeInstallDirectoryIfEmpty(item.path); err != nil {
-				errs = append(errs, err)
-			}
-		}
+		errs = transaction.rollbackCreatedDirectories(errs)
 	}
 	return errors.Join(errs...)
+}
+
+func (transaction *installPathTransaction) rollbackShortShim(errs []error) []error {
+	if !transaction.shortCreated {
+		return errs
+	}
+	if err := removeInstallPathIfPresent(transaction.shortPath); err != nil {
+		return append(errs, err)
+	}
+	transaction.shortCreated = false
+	return errs
+}
+
+func (transaction *installPathTransaction) rollbackCommandLink(errs []error) []error {
+	if transaction.commandExisted && !transaction.managed {
+		if err := removeInstallPathIfPresent(transaction.path); err != nil {
+			return append(errs, err)
+		}
+		transaction.commandCreated = false
+		if err := os.Symlink(transaction.commandTarget, transaction.path); err != nil {
+			errs = append(errs, err)
+		}
+		return errs
+	}
+	if transaction.commandCreated {
+		if err := removeInstallPathIfPresent(transaction.path); err != nil {
+			return append(errs, err)
+		}
+		transaction.commandCreated = false
+	}
+	return errs
+}
+
+func (transaction *installPathTransaction) rollbackCreatedDirectories(errs []error) []error {
+	type cleanupPath struct {
+		path    string
+		existed bool
+	}
+	for _, item := range []cleanupPath{
+		{path: filepath.Dir(transaction.path), existed: transaction.binDirExisted},
+		{path: filepath.Dir(filepath.Dir(transaction.path)), existed: transaction.localDirExisted},
+	} {
+		if item.existed {
+			continue
+		}
+		if err := removeInstallDirectoryIfEmpty(item.path); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errs
 }
 
 func (transaction *installPathTransaction) Rollback(result *port.NativeInstallResult) error {

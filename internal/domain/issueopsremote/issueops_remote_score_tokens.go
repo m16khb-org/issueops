@@ -37,20 +37,25 @@ func issueOpsRemoteOverlap(left, right map[string]bool) float64 {
 	return float64(intersect) / float64(min(len(left), len(right)))
 }
 
+// issueOpsRemoteLabelKeywords는 라벨 이름별 휴리스틱 키워드와 일치 시 점수를 정의한다.
+var issueOpsRemoteLabelKeywords = map[string]struct {
+	tokens []string
+	score  float64
+}{
+	"enhancement":   {[]string{"feature", "request", "개선", "추가", "지원"}, 1},
+	"bug":           {[]string{"bug", "defect", "failure", "오류", "결함"}, 1},
+	"documentation": {[]string{"docs", "documentation", "문서", "skill", "prompt"}, 0.75},
+}
+
 func issueOpsRemoteLabelHeuristic(issueTokens map[string]bool, candidate IssueOpsRemoteLabelCandidate) float64 {
 	name := strings.ToLower(strings.TrimSpace(candidate.Name))
-	switch name {
-	case "enhancement":
-		if issueTokens["feature"] || issueTokens["request"] || issueTokens["개선"] || issueTokens["추가"] || issueTokens["지원"] {
-			return 1
-		}
-	case "bug":
-		if issueTokens["bug"] || issueTokens["defect"] || issueTokens["failure"] || issueTokens["오류"] || issueTokens["결함"] {
-			return 1
-		}
-	case "documentation":
-		if issueTokens["docs"] || issueTokens["documentation"] || issueTokens["문서"] || issueTokens["skill"] || issueTokens["prompt"] {
-			return 0.75
+	rule, ok := issueOpsRemoteLabelKeywords[name]
+	if !ok {
+		return 0
+	}
+	for _, token := range rule.tokens {
+		if issueTokens[token] {
+			return rule.score
 		}
 	}
 	return 0

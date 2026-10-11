@@ -39,17 +39,22 @@ func ValidEnvName(name string) bool {
 		return false
 	}
 	for i, r := range name {
-		if i == 0 {
-			if r != '_' && (r < 'A' || r > 'Z') && (r < 'a' || r > 'z') {
-				return false
-			}
-			continue
-		}
-		if r != '_' && (r < 'A' || r > 'Z') && (r < 'a' || r > 'z') && (r < '0' || r > '9') {
+		if !validEnvNameRune(r, i == 0) {
 			return false
 		}
 	}
 	return true
+}
+
+// validEnvNameRune accepts ASCII letters and '_'; digits are allowed only after the first rune.
+func validEnvNameRune(r rune, first bool) bool {
+	switch {
+	case r == '_', r >= 'A' && r <= 'Z', r >= 'a' && r <= 'z':
+		return true
+	case r >= '0' && r <= '9':
+		return !first
+	}
+	return false
 }
 
 func RedactArgv(argv []string) []string {

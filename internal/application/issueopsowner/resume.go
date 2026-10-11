@@ -104,6 +104,14 @@ func (s ResumeReader) validatePacket(record issueops.IssueOpsRecord, issueDigest
 	if err := domain.ValidateOwnerResumePacket(record, packet, issueDigest, sourceMatches, rootMatches); err != nil {
 		return err
 	}
+	if err := s.validateSealedPlan(record, packet); err != nil {
+		return err
+	}
+	return s.validateManifestArtifacts(record, packet)
+}
+
+// validateSealedPlan은 봉인된 plan이 manifest·sealed 사본·durable plan에서 모두 같은 digest인지 확인한다.
+func (s ResumeReader) validateSealedPlan(record issueops.IssueOpsRecord, packet issueops.OwnerContextPacket) error {
 	planDigest, ok := packet.ArtifactManifest["plan"]
 	if !ok || !domain.ValidOwnerDigest(planDigest) {
 		return domain.OwnerResumePlanRequired(record)
@@ -117,6 +125,11 @@ func (s ResumeReader) validatePacket(record issueops.IssueOpsRecord, issueDigest
 	if err != nil || durablePlan.Digest != planDigest {
 		return domain.OwnerResumePlanRequired(record)
 	}
+	return nil
+}
+
+// validateManifestArtifacts는 plan을 제외한 manifest 항목의 sealed 사본 digest를 확인한다.
+func (s ResumeReader) validateManifestArtifacts(record issueops.IssueOpsRecord, packet issueops.OwnerContextPacket) error {
 	for name, expectedDigest := range packet.ArtifactManifest {
 		if name == "plan" {
 			continue

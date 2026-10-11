@@ -31,29 +31,29 @@ func ValidateChildMatchesParent(parentURL, childURL string) error {
 
 func ProjectKey(rawURL, provider, kind string) string {
 	parsed, err := url.Parse(strings.TrimSpace(rawURL))
-	if err != nil || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" || parsed.Scheme != "https" {
+	if err != nil || !isCanonicalWebURL(parsed) {
 		return ""
 	}
 	host := normalizedWebHost(parsed)
 	parts := SplitURLPath(strings.ToLower(parsed.EscapedPath()))
 	switch provider + ":" + kind {
 	case "github:issue":
-		if len(parts) != 4 || parts[2] != "issues" || !isDecimalString(parts[3]) {
+		if !isGitHubItemPath(parts, "issues") {
 			return ""
 		}
 		return host + "/" + strings.Join(parts[:2], "/")
 	case "github:pr":
-		if len(parts) != 4 || parts[2] != "pull" || !isDecimalString(parts[3]) {
+		if !isGitHubItemPath(parts, "pull") {
 			return ""
 		}
 		return host + "/" + strings.Join(parts[:2], "/")
 	case "gitlab:issue":
-		if strings.EqualFold(parsed.Hostname(), "github.com") || len(parts) < 5 || parts[len(parts)-3] != "-" || !isGitLabIssueLikePath(parts[len(parts)-2]) || !isDecimalString(parts[len(parts)-1]) {
+		if !isGitLabItemPath(parts, parsed.Hostname(), isGitLabIssueLikePath) {
 			return ""
 		}
 		return host + "/" + strings.Join(parts[:len(parts)-3], "/")
 	case "gitlab:mr":
-		if strings.EqualFold(parsed.Hostname(), "github.com") || len(parts) < 5 || parts[len(parts)-3] != "-" || parts[len(parts)-2] != "merge_requests" || !isDecimalString(parts[len(parts)-1]) {
+		if !isGitLabItemPath(parts, parsed.Hostname(), isGitLabMergeRequestPath) {
 			return ""
 		}
 		return host + "/" + strings.Join(parts[:len(parts)-3], "/")
@@ -62,32 +62,34 @@ func ProjectKey(rawURL, provider, kind string) string {
 	}
 }
 
+// isCanonicalWebURL는 query/fragment/userinfo 없는 https URL인지 확인한다.
+func isCanonicalWebURL(parsed *url.URL) bool {
+	return parsed.Host != "" && parsed.User == nil && parsed.RawQuery == "" && parsed.Fragment == "" && parsed.Scheme == "https"
+}
+
+// isGitHubItemPath는 owner/repo/<segment>/<number> 형태인지 확인한다.
+func isGitHubItemPath(parts []string, segment string) bool {
+	return len(parts) == 4 && parts[2] == segment && isDecimalString(parts[3])
+}
+
+// isGitLabItemPath는 <group...>/-/<kind>/<number> 형태이고 호스트가 github.com이 아닌지 확인한다.
+func isGitLabItemPath(parts []string, hostname string, kindOK func(string) bool) bool {
+	if strings.EqualFold(hostname, "github.com") || len(parts) < 5 {
+		return false
+	}
+	return parts[len(parts)-3] == "-" && kindOK(parts[len(parts)-2]) && isDecimalString(parts[len(parts)-1])
+}
+
+func isGitLabMergeRequestPath(segment string) bool { return segment == "merge_requests" }
+
 func ProjectKeyFromGitRemoteURL(rawURL, provider string) (string, error) {
 	rawURL = strings.TrimSpace(rawURL)
 	if rawURL == "" || strings.ContainsAny(rawURL, "\x00\r\n\t ") {
 		return "", fmt.Errorf("git remote URL is empty or contains whitespace")
 	}
-	host, remotePath := "", ""
-	if parsed, err := url.Parse(rawURL); err == nil && parsed.Scheme != "" {
-		if parsed.Scheme != "https" && parsed.Scheme != "ssh" || parsed.Host == "" || parsed.RawQuery != "" || parsed.Fragment != "" {
-			return "", fmt.Errorf("git remote URL scheme or authority is unsupported")
-		}
-		if parsed.Scheme == "https" {
-			if parsed.User != nil {
-				return "", fmt.Errorf("git remote HTTPS URL must not contain userinfo")
-			}
-			host = normalizedWebHost(parsed)
-		} else {
-			if _, hasPassword := parsed.User.Password(); hasPassword {
-				return "", fmt.Errorf("git remote SSH URL must not contain password userinfo")
-			}
-			host = strings.ToLower(parsed.Hostname())
-		}
-		remotePath = strings.TrimPrefix(parsed.EscapedPath(), "/")
-	} else if match := scpRemotePattern().FindStringSubmatch(rawURL); len(match) == 3 {
-		host, remotePath = strings.ToLower(match[1]), match[2]
-	} else {
-		return "", fmt.Errorf("git remote URL must be HTTPS, SSH, or SCP syntax")
+	host, remotePath, err := gitRemoteHostAndPath(rawURL)
+	if err != nil {
+		return "", err
 	}
 	remotePath = strings.TrimSuffix(strings.Trim(remotePath, "/"), ".git")
 	parts := SplitURLPath(strings.ToLower(remotePath))
@@ -103,6 +105,31 @@ func ProjectKeyFromGitRemoteURL(rawURL, provider string) (string, error) {
 		return "", fmt.Errorf("unsupported provider %q", provider)
 	}
 	return host + "/" + strings.Join(parts, "/"), nil
+}
+
+// gitRemoteHostAndPath는 HTTPS/SSH URL 또는 SCP 문법의 git remote에서 호스트와 경로를 분리한다.
+func gitRemoteHostAndPath(rawURL string) (host, remotePath string, err error) {
+	if parsed, perr := url.Parse(rawURL); perr == nil && parsed.Scheme != "" {
+		if parsed.Scheme != "https" && parsed.Scheme != "ssh" || parsed.Host == "" || parsed.RawQuery != "" || parsed.Fragment != "" {
+			return "", "", fmt.Errorf("git remote URL scheme or authority is unsupported")
+		}
+		if parsed.Scheme == "https" {
+			if parsed.User != nil {
+				return "", "", fmt.Errorf("git remote HTTPS URL must not contain userinfo")
+			}
+			host = normalizedWebHost(parsed)
+		} else {
+			if _, hasPassword := parsed.User.Password(); hasPassword {
+				return "", "", fmt.Errorf("git remote SSH URL must not contain password userinfo")
+			}
+			host = strings.ToLower(parsed.Hostname())
+		}
+		return host, strings.TrimPrefix(parsed.EscapedPath(), "/"), nil
+	}
+	if match := scpRemotePattern().FindStringSubmatch(rawURL); len(match) == 3 {
+		return strings.ToLower(match[1]), match[2], nil
+	}
+	return "", "", fmt.Errorf("git remote URL must be HTTPS, SSH, or SCP syntax")
 }
 
 func normalizedWebHost(parsed *url.URL) string {

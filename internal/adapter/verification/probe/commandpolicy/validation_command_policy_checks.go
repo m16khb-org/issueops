@@ -33,49 +33,22 @@ func commandPolicyChecks(binary, tempWorkspace, outside string) []commandPolicyV
 			},
 		},
 		{
-			label: "policy deny outside",
-			name:  binary,
-			args:  []string{"policy", "check", "--json", "--workspace-root", tempWorkspace, "--cwd", outside, "--", "git", "status", "--short"},
-			validate: func(stdout string) []string {
-				var outsideEval policy.CommandPolicyEvaluation
-				if err := json.Unmarshal([]byte(stdout), &outsideEval); err != nil {
-					return []string{err.Error()}
-				}
-				if outsideEval.Allowed || !slices.Contains(outsideEval.DenyReasons, "cwd_outside_workspace") {
-					return []string{"outside cwd was not denied"}
-				}
-				return nil
-			},
+			label:    "policy deny outside",
+			name:     binary,
+			args:     []string{"policy", "check", "--json", "--workspace-root", tempWorkspace, "--cwd", outside, "--", "git", "status", "--short"},
+			validate: denyValidator("cwd_outside_workspace", "outside cwd was not denied"),
 		},
 		{
-			label: "policy deny outside path arg",
-			name:  binary,
-			args:  []string{"policy", "check", "--json", "--workspace-root", tempWorkspace, "--cwd", tempWorkspace, "--", "cat", filepath.Join(outside, "note.txt")},
-			validate: func(stdout string) []string {
-				var outsidePathEval policy.CommandPolicyEvaluation
-				if err := json.Unmarshal([]byte(stdout), &outsidePathEval); err != nil {
-					return []string{err.Error()}
-				}
-				if outsidePathEval.Allowed || !slices.Contains(outsidePathEval.DenyReasons, "path_outside_workspace") {
-					return []string{"outside path arg was not denied"}
-				}
-				return nil
-			},
+			label:    "policy deny outside path arg",
+			name:     binary,
+			args:     []string{"policy", "check", "--json", "--workspace-root", tempWorkspace, "--cwd", tempWorkspace, "--", "cat", filepath.Join(outside, "note.txt")},
+			validate: denyValidator("path_outside_workspace", "outside path arg was not denied"),
 		},
 		{
-			label: "policy deny shell",
-			name:  binary,
-			args:  []string{"policy", "check", "--json", "--workspace-root", tempWorkspace, "--cwd", tempWorkspace, "--", "sh", "-c", "echo ok"},
-			validate: func(stdout string) []string {
-				var shellEval policy.CommandPolicyEvaluation
-				if err := json.Unmarshal([]byte(stdout), &shellEval); err != nil {
-					return []string{err.Error()}
-				}
-				if shellEval.Allowed || !slices.Contains(shellEval.DenyReasons, "shell_interpreter_not_allowed") {
-					return []string{"shell command was not denied"}
-				}
-				return nil
-			},
+			label:    "policy deny shell",
+			name:     binary,
+			args:     []string{"policy", "check", "--json", "--workspace-root", tempWorkspace, "--cwd", tempWorkspace, "--", "sh", "-c", "echo ok"},
+			validate: denyValidator("shell_interpreter_not_allowed", "shell command was not denied"),
 		},
 		{
 			label: "policy fake-run",
@@ -92,5 +65,20 @@ func commandPolicyChecks(binary, tempWorkspace, outside string) []commandPolicyV
 				return nil
 			},
 		},
+	}
+}
+
+// denyValidator returns a validator that expects the policy evaluation to be
+// denied with the given reason, reporting failureMessage otherwise.
+func denyValidator(reason, failureMessage string) func(stdout string) []string {
+	return func(stdout string) []string {
+		var eval policy.CommandPolicyEvaluation
+		if err := json.Unmarshal([]byte(stdout), &eval); err != nil {
+			return []string{err.Error()}
+		}
+		if eval.Allowed || !slices.Contains(eval.DenyReasons, reason) {
+			return []string{failureMessage}
+		}
+		return nil
 	}
 }

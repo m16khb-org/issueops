@@ -8,56 +8,125 @@ import (
 )
 
 func validateCycleResources(builder *findingBuilder, resources resourceIndex, cycle operationalhealthcontract.Cycle, authority operationalhealthcontract.CycleAuthority, repoScoped bool, gitPathCounts, worktreeCounts, terminalCounts, ptyCounts, taskCounts, dispatchCounts map[string]int) {
-	var gitWorktree operationalhealthcontract.GitWorktree
-	gitWorktreeOK := false
-	if repoScoped && (authority == AuthorityLive || strings.TrimSpace(cycle.WorktreePath) != "") {
-		gitWorktree, gitWorktreeOK = resources.gitPaths.unique(cycle.WorktreePath)
-		if !gitWorktreeOK || gitPathCounts[clean(cycle.WorktreePath)] != 1 || strings.TrimSpace(gitWorktree.Branch) != strings.TrimSpace(cycle.Branch) {
-			builder.add(operationalhealthcontract.FindingInventoryUnknown, "git_worktree", clean(cycle.WorktreePath), "cycle identity does not match exactly one Git worktree", clean(cycle.WorktreePath))
-		}
-	}
+	gitWorktree, gitWorktreeOK := validateCycleGitWorktree(builder, resources, cycle, authority, repoScoped, gitPathCounts)
 	isOrca := strings.TrimSpace(cycle.ExecutionMode) == "orca"
 	if repoScoped && (isOrca || strings.TrimSpace(cycle.OrcaWorktreeID) != "") {
-		worktree, ok := resources.worktrees.unique(cycle.OrcaWorktreeID)
-		headMismatch := gitWorktreeOK && strings.TrimSpace(worktree.Head) != strings.TrimSpace(gitWorktree.Head)
-		instanceMismatch := strings.TrimSpace(cycle.OrcaWorktreeInstanceID) != "" && strings.TrimSpace(worktree.InstanceID) != strings.TrimSpace(cycle.OrcaWorktreeInstanceID)
-		if !ok || worktreeCounts[strings.TrimSpace(cycle.OrcaWorktreeID)] != 1 || strings.TrimSpace(worktree.RuntimeID) != strings.TrimSpace(cycle.OrcaRuntimeID) || strings.TrimSpace(worktree.RepoID) != strings.TrimSpace(cycle.OrcaRepoID) || instanceMismatch || clean(worktree.Repo) != clean(cycle.Repo) || clean(worktree.Path) != clean(cycle.WorktreePath) || strings.TrimSpace(worktree.Branch) != strings.TrimSpace(cycle.Branch) || headMismatch {
-			builder.add(operationalhealthcontract.FindingInventoryUnknown, "worktree", cycle.OrcaWorktreeID, "cycle worktree identity does not match exactly one Orca worktree", clean(cycle.WorktreePath))
-		}
+		validateCycleOrcaWorktree(builder, resources, cycle, worktreeCounts, gitWorktree, gitWorktreeOK)
 	}
 	var dispatch operationalhealthcontract.OrcaDispatch
 	dispatchOK := false
 	if isOrca || strings.TrimSpace(cycle.DispatchID) != "" {
-		dispatch, dispatchOK = resources.dispatches.unique(cycle.DispatchID)
-		statusMismatch := authority == AuthorityLive && strings.TrimSpace(dispatch.Status) != "dispatched"
-		if !dispatchOK || dispatchCounts[cycle.DispatchID] != 1 || strings.TrimSpace(dispatch.RuntimeID) != strings.TrimSpace(cycle.OrcaRuntimeID) ||
-			orcaTaskKey(dispatch.RunID, dispatch.TaskID) != orcaTaskKey(cycle.RunID, cycle.TaskID) || statusMismatch {
-			builder.add(operationalhealthcontract.FindingInventoryUnknown, "dispatch", cycle.DispatchID, "cycle dispatch identity does not match exactly one expected dispatch", "")
-		}
+		dispatch, dispatchOK = validateCycleDispatch(builder, resources, cycle, authority, dispatchCounts)
 	}
 	if isOrca || strings.TrimSpace(cycle.TerminalPTYID) != "" {
-		handle := strings.TrimSpace(dispatch.AssigneeHandle)
-		var terminal operationalhealthcontract.OrcaTerminal
-		terminalOK := false
-		if strings.TrimSpace(cycle.TerminalPTYID) != "" {
-			terminal, terminalOK = resources.ptys.unique(cycle.TerminalPTYID)
-		} else if handle != "" {
-			terminal, terminalOK = resources.terminals.unique(handle)
-		}
-		liveMismatch := authority == AuthorityLive && (!terminal.Connected || !terminal.Writable)
-		countMismatch := terminalCounts[strings.TrimSpace(terminal.Handle)] != 1 || (strings.TrimSpace(cycle.TerminalPTYID) != "" && ptyCounts[cycle.TerminalPTYID] != 1)
-		if !terminalOK || countMismatch || strings.TrimSpace(terminal.RuntimeID) != strings.TrimSpace(cycle.OrcaRuntimeID) ||
-			(dispatchOK && strings.TrimSpace(terminal.Handle) != handle) || strings.TrimSpace(terminal.WorktreeID) != strings.TrimSpace(cycle.OrcaWorktreeID) ||
-			clean(terminal.WorktreePath) != clean(cycle.WorktreePath) || liveMismatch {
-			builder.add(operationalhealthcontract.FindingInventoryUnknown, "terminal", firstNonEmpty(handle, cycle.TerminalPTYID), "cycle terminal identity or liveness does not match exactly one expected terminal", clean(cycle.WorktreePath))
-		}
+		validateCycleTerminal(builder, resources, cycle, authority, dispatch, dispatchOK, terminalCounts, ptyCounts)
 	}
 	if isOrca || strings.TrimSpace(cycle.TaskID) != "" {
-		taskKey := orcaTaskKey(cycle.RunID, cycle.TaskID)
-		task, ok := resources.tasks.unique(taskKey)
-		if !ok || taskCounts[taskKey] != 1 || strings.TrimSpace(task.RuntimeID) != strings.TrimSpace(cycle.OrcaRuntimeID) || (authority == AuthorityLive && strings.TrimSpace(task.Status) != "dispatched") || (strings.TrimSpace(task.DispatchID) != "" && strings.TrimSpace(task.DispatchID) != strings.TrimSpace(cycle.DispatchID)) {
-			builder.add(operationalhealthcontract.FindingInventoryUnknown, "task", cycle.TaskID, "cycle task identity or status does not match exactly one task", "")
+		validateCycleTask(builder, resources, cycle, authority, taskCounts)
+	}
+}
+
+// anyTrue reports whether any condition holds; every operand is a side-effect-free comparison.
+func anyTrue(conditions ...bool) bool {
+	for _, condition := range conditions {
+		if condition {
+			return true
 		}
+	}
+	return false
+}
+
+func sameTrimmed(a, b string) bool {
+	return strings.TrimSpace(a) == strings.TrimSpace(b)
+}
+
+func validateCycleGitWorktree(builder *findingBuilder, resources resourceIndex, cycle operationalhealthcontract.Cycle, authority operationalhealthcontract.CycleAuthority, repoScoped bool, gitPathCounts map[string]int) (operationalhealthcontract.GitWorktree, bool) {
+	var gitWorktree operationalhealthcontract.GitWorktree
+	if !repoScoped || (authority != AuthorityLive && strings.TrimSpace(cycle.WorktreePath) == "") {
+		return gitWorktree, false
+	}
+	gitWorktree, ok := resources.gitPaths.unique(cycle.WorktreePath)
+	if anyTrue(!ok, gitPathCounts[clean(cycle.WorktreePath)] != 1, !sameTrimmed(gitWorktree.Branch, cycle.Branch)) {
+		builder.add(operationalhealthcontract.FindingInventoryUnknown, "git_worktree", clean(cycle.WorktreePath), "cycle identity does not match exactly one Git worktree", clean(cycle.WorktreePath))
+	}
+	return gitWorktree, ok
+}
+
+func validateCycleOrcaWorktree(builder *findingBuilder, resources resourceIndex, cycle operationalhealthcontract.Cycle, worktreeCounts map[string]int, gitWorktree operationalhealthcontract.GitWorktree, gitWorktreeOK bool) {
+	worktree, ok := resources.worktrees.unique(cycle.OrcaWorktreeID)
+	headMismatch := gitWorktreeOK && !sameTrimmed(worktree.Head, gitWorktree.Head)
+	instanceMismatch := strings.TrimSpace(cycle.OrcaWorktreeInstanceID) != "" && !sameTrimmed(worktree.InstanceID, cycle.OrcaWorktreeInstanceID)
+	if anyTrue(
+		!ok,
+		worktreeCounts[strings.TrimSpace(cycle.OrcaWorktreeID)] != 1,
+		!sameTrimmed(worktree.RuntimeID, cycle.OrcaRuntimeID),
+		!sameTrimmed(worktree.RepoID, cycle.OrcaRepoID),
+		instanceMismatch,
+		clean(worktree.Repo) != clean(cycle.Repo),
+		clean(worktree.Path) != clean(cycle.WorktreePath),
+		!sameTrimmed(worktree.Branch, cycle.Branch),
+		headMismatch,
+	) {
+		builder.add(operationalhealthcontract.FindingInventoryUnknown, "worktree", cycle.OrcaWorktreeID, "cycle worktree identity does not match exactly one Orca worktree", clean(cycle.WorktreePath))
+	}
+}
+
+func validateCycleDispatch(builder *findingBuilder, resources resourceIndex, cycle operationalhealthcontract.Cycle, authority operationalhealthcontract.CycleAuthority, dispatchCounts map[string]int) (operationalhealthcontract.OrcaDispatch, bool) {
+	dispatch, ok := resources.dispatches.unique(cycle.DispatchID)
+	statusMismatch := authority == AuthorityLive && strings.TrimSpace(dispatch.Status) != "dispatched"
+	if anyTrue(
+		!ok,
+		dispatchCounts[cycle.DispatchID] != 1,
+		!sameTrimmed(dispatch.RuntimeID, cycle.OrcaRuntimeID),
+		orcaTaskKey(dispatch.RunID, dispatch.TaskID) != orcaTaskKey(cycle.RunID, cycle.TaskID),
+		statusMismatch,
+	) {
+		builder.add(operationalhealthcontract.FindingInventoryUnknown, "dispatch", cycle.DispatchID, "cycle dispatch identity does not match exactly one expected dispatch", "")
+	}
+	return dispatch, ok
+}
+
+func lookupCycleTerminal(resources resourceIndex, cycle operationalhealthcontract.Cycle, handle string) (operationalhealthcontract.OrcaTerminal, bool) {
+	if strings.TrimSpace(cycle.TerminalPTYID) != "" {
+		return resources.ptys.unique(cycle.TerminalPTYID)
+	}
+	if handle != "" {
+		return resources.terminals.unique(handle)
+	}
+	return operationalhealthcontract.OrcaTerminal{}, false
+}
+
+func validateCycleTerminal(builder *findingBuilder, resources resourceIndex, cycle operationalhealthcontract.Cycle, authority operationalhealthcontract.CycleAuthority, dispatch operationalhealthcontract.OrcaDispatch, dispatchOK bool, terminalCounts, ptyCounts map[string]int) {
+	handle := strings.TrimSpace(dispatch.AssigneeHandle)
+	terminal, terminalOK := lookupCycleTerminal(resources, cycle, handle)
+	liveMismatch := authority == AuthorityLive && (!terminal.Connected || !terminal.Writable)
+	countMismatch := terminalCounts[strings.TrimSpace(terminal.Handle)] != 1 || (strings.TrimSpace(cycle.TerminalPTYID) != "" && ptyCounts[cycle.TerminalPTYID] != 1)
+	if anyTrue(
+		!terminalOK,
+		countMismatch,
+		!sameTrimmed(terminal.RuntimeID, cycle.OrcaRuntimeID),
+		dispatchOK && !sameTrimmed(terminal.Handle, handle),
+		!sameTrimmed(terminal.WorktreeID, cycle.OrcaWorktreeID),
+		clean(terminal.WorktreePath) != clean(cycle.WorktreePath),
+		liveMismatch,
+	) {
+		builder.add(operationalhealthcontract.FindingInventoryUnknown, "terminal", firstNonEmpty(handle, cycle.TerminalPTYID), "cycle terminal identity or liveness does not match exactly one expected terminal", clean(cycle.WorktreePath))
+	}
+}
+
+func validateCycleTask(builder *findingBuilder, resources resourceIndex, cycle operationalhealthcontract.Cycle, authority operationalhealthcontract.CycleAuthority, taskCounts map[string]int) {
+	taskKey := orcaTaskKey(cycle.RunID, cycle.TaskID)
+	task, ok := resources.tasks.unique(taskKey)
+	statusMismatch := authority == AuthorityLive && strings.TrimSpace(task.Status) != "dispatched"
+	dispatchMismatch := strings.TrimSpace(task.DispatchID) != "" && !sameTrimmed(task.DispatchID, cycle.DispatchID)
+	if anyTrue(
+		!ok,
+		taskCounts[taskKey] != 1,
+		!sameTrimmed(task.RuntimeID, cycle.OrcaRuntimeID),
+		statusMismatch,
+		dispatchMismatch,
+	) {
+		builder.add(operationalhealthcontract.FindingInventoryUnknown, "task", cycle.TaskID, "cycle task identity or status does not match exactly one task", "")
 	}
 }
 
@@ -99,11 +168,18 @@ func validateLeaseHolderIndexes(builder *findingBuilder, cycles []operationalhea
 			builder.add(operationalhealthcontract.FindingInventoryUnknown, "lease_holder", strings.TrimSpace(cycle.ID), "active cycle must match exactly one lease-holder reverse index", "")
 		}
 	}
+	validateLeaseHolderIndexEntries(builder, indexes, activeCounts)
+}
+
+func leaseHolderIndexComplete(index operationalhealthcontract.LeaseHolderIndex) bool {
+	return strings.TrimSpace(index.Key) != "" && strings.TrimSpace(index.LifecycleID) != "" && index.Generation > 0 &&
+		validNativeHost(index.Host) && strings.TrimSpace(index.SessionID) != ""
+}
+
+func validateLeaseHolderIndexEntries(builder *findingBuilder, indexes []operationalhealthcontract.LeaseHolderIndex, activeCounts map[leaseHolderKey]int) {
 	for _, index := range indexes {
-		valid := strings.TrimSpace(index.Key) != "" && strings.TrimSpace(index.LifecycleID) != "" && index.Generation > 0 &&
-			validNativeHost(index.Host) && strings.TrimSpace(index.SessionID) != ""
 		matches := activeCounts[holderKey(index.LifecycleID, index.Generation, index.Host, index.SessionID, index.AgentID)]
-		if !valid || matches != 1 {
+		if !leaseHolderIndexComplete(index) || matches != 1 {
 			builder.add(operationalhealthcontract.FindingInventoryUnknown, "lease_holder", firstNonEmpty(strings.TrimSpace(index.Key), strings.TrimSpace(index.LifecycleID), "index"), "lease-holder reverse index must match exactly one active cycle", "")
 		}
 	}

@@ -7,107 +7,7 @@ import (
 )
 
 func ScoreArtifact(fixture issueopscontract.IssueOpsBenchmarkFixture, artifact issueopscontract.IssueOpsBenchmarkArtifact, routingComplete bool) issueopscontract.IssueOpsBenchmarkScore {
-	checks := map[string]struct {
-		ok       bool
-		evidence string
-		failure  string
-	}{
-		"intent_understanding": {
-			ok:       strings.TrimSpace(artifact.ProblemSummary) != "" || strings.TrimSpace(artifact.IssueDraft) != "",
-			evidence: "problem summary or issue draft is present",
-			failure:  "missing problem summary or issue draft",
-		},
-		"issue_quality": {
-			ok:       hasAllIssueOpsConcepts(artifact.IssueDraft, issueOpsIssueSectionConcepts) && containsHangul(artifact.IssueDraft) && hasIssueOpsGuidelineRef(artifact) && issueOpsLabelDecisionEvidenceComplete(artifact),
-			evidence: "issue draft includes required sections, Korean text, guideline reference, and label scoring decision evidence",
-			failure:  "issue draft missing required sections, Korean text, guideline reference, or label scoring decision evidence",
-		},
-		"domain_contract_quality": {
-			ok:       issueOpsDomainContractEvidenceComplete(artifact),
-			evidence: "domain contract evidence separates invariants, exact mechanisms, equivalent behavior, and source lines",
-			failure:  "domain contract evidence missing invariants, exact mechanisms, equivalent behavior, or source lines",
-		},
-		"plan_quality": {
-			ok:       containsAnyFold(artifact.Plan, "go test", "verify", "verification", "test"),
-			evidence: "plan includes verification commands or tests",
-			failure:  "plan missing verification commands",
-		},
-		"api_doc_gate_quality": {
-			ok:       issueOpsAPIDocGateEvidenceComplete(artifact),
-			evidence: "API documentation gate evidence covers changed endpoints, public error responses, and static plus review checks",
-			failure:  "API documentation gate evidence missing changed endpoints, public error responses, static check, or review check",
-		},
-		"live_evidence_quality": {
-			ok:       issueOpsLiveEvidenceMatrixComplete(artifact),
-			evidence: "live evidence matrix separates environments, repo/config evidence, runtime evidence, and remediation order",
-			failure:  "live evidence matrix missing environments, repo/config evidence, runtime evidence, or remediation order",
-		},
-		"task_decomposition": {
-			ok:       containsAllFold(artifact.TaskBreakdown, "owns") && containsAnyFold(artifact.TaskBreakdown, "worker", "task") && issueOpsHierarchyEvidenceComplete(artifact),
-			evidence: "task breakdown assigns bounded ownership and uses provider-native hierarchy for large issues",
-			failure:  "task breakdown missing bounded ownership or provider-native hierarchy",
-		},
-		"tdd_quality": {
-			ok:       containsAllFold(artifact.TDDPlan, "failing", "test") && containsAnyFold(artifact.TDDPlan, "before", "first"),
-			evidence: "TDD plan names failing tests before implementation",
-			failure:  "TDD plan missing failing-test-first evidence",
-		},
-		"subagent_orchestration": {
-			ok:       containsAllFold(artifact.SubagentPrompts, "not alone", "do not revert", "own") && containsAnyFold(artifact.SubagentPrompts, "expected output", "report") && workerPromptHasContextGate(artifact) && reviewPromptIsBounded(artifact),
-			evidence: "subagent prompts include coordination, ownership, context verification, and bounded review guidance",
-			failure:  "subagent prompts missing coordination, context verification, or bounded review guidance",
-		},
-		"review_feedback_accountability": {
-			ok:       issueOpsReviewFeedbackEvidenceComplete(artifact),
-			evidence: "review feedback evidence classifies claims, cites verification, records thread replies, and tracks resolution",
-			failure:  "review feedback evidence missing claim classification, verification, thread replies, or resolution status",
-		},
-		"implementation_readiness": {
-			ok:       strings.TrimSpace(artifact.BranchName) != "" && strings.TrimSpace(artifact.WorktreePath) != "",
-			evidence: "branch and worktree are recorded",
-			failure:  "branch or worktree evidence missing",
-		},
-		"pr_mr_quality": {
-			ok:       hasAllIssueOpsConcepts(artifact.PRDraft, issueOpsPRSectionConcepts) && containsAnyFold(artifact.PRDraft, "issue:", "fixes", "closes", "이슈:") && containsHangul(artifact.PRDraft) && hasIssueOpsGuidelineRef(artifact),
-			evidence: "PR/MR draft includes required sections, issue link, Korean text, reviewer notes, and guideline reference",
-			failure:  "PR/MR draft missing required sections, issue link, Korean text, reviewer notes, or guideline reference",
-		},
-		"phase_control_quality": {
-			ok:       containsAllFold(artifact.PhaseChoices, "proceed", "revise", "jump", "pause"),
-			evidence: "phase choices include proceed, revise, jump, and pause",
-			failure:  "phase choices missing required options",
-		},
-		"branch_worktree_gate_quality": {
-			ok:       strings.HasPrefix(artifact.BranchName, "feature/") && strings.Contains(artifact.WorktreePath, ".worktrees/"),
-			evidence: "issue branch and sibling worktree path are recorded",
-			failure:  "issue branch or sibling worktree gate missing",
-		},
-		"isolation_compliance": {
-			ok:       implementationInWorktree(artifact),
-			evidence: "implementation location is inside the isolated worktree",
-			failure:  "implementation location is outside the isolated worktree",
-		},
-		"completion_hygiene_quality": {
-			ok:       issueOpsCompletionHygieneComplete(artifact),
-			evidence: "completion hygiene records final diff, target branch, remote artifact refresh, single-commit policy, and cleanup status",
-			failure:  "completion hygiene missing final diff, target branch, remote artifact refresh, single-commit policy, or cleanup status",
-		},
-		"worktree_cleanup_quality": {
-			ok:       containsAnyFold(artifact.WorktreeCleanup, "clean") && containsAnyFold(artifact.WorktreeCleanup, "cleanup", "remove") && containsAnyFold(artifact.WorktreeCleanup, "choice", "offered", "present"),
-			evidence: "worktree cleanup status and choices are recorded",
-			failure:  "worktree cleanup status or choices missing",
-		},
-		"pioneer_skill_contribution": {
-			ok:       PioneerSkillEvidenceComplete(fixture, artifact),
-			evidence: "pioneer skill evidence carries the targeted skill's distinctive-method signature (necessary keyword proxy, not live-routing proof)",
-			failure:  "pioneer skill evidence missing the targeted skill's distinctive-method signature",
-		},
-		"skill_routing_fidelity": {
-			ok:       routingComplete,
-			evidence: "recorded routing trace covers every expected skill-at-phase (recorded-trace proxy, not live-routing proof)",
-			failure:  "recorded routing trace is missing an expected skill-at-phase",
-		},
-	}
+	checks := issueOpsBenchmarkChecks(fixture, artifact, routingComplete)
 
 	score := issueopscontract.IssueOpsBenchmarkScore{OK: true, FixtureID: fixture.ID}
 	for _, dimension := range dimensions {
@@ -161,4 +61,160 @@ func issueOpsDimensionNotApplicable(dimension string, fixture issueopscontract.I
 		}
 	}
 	return ""
+}
+
+type issueOpsBenchmarkCheck struct {
+	ok       bool
+	evidence string
+	failure  string
+}
+
+// issueOpsBenchmarkChecks evaluates every scoring dimension for the artifact.
+func issueOpsBenchmarkChecks(fixture issueopscontract.IssueOpsBenchmarkFixture, artifact issueopscontract.IssueOpsBenchmarkArtifact, routingComplete bool) map[string]issueOpsBenchmarkCheck {
+	checks := issueOpsDraftAndPlanChecks(artifact)
+	for dimension, check := range issueOpsExecutionChecks(fixture, artifact, routingComplete) {
+		checks[dimension] = check
+	}
+	return checks
+}
+
+func issueOpsDraftAndPlanChecks(artifact issueopscontract.IssueOpsBenchmarkArtifact) map[string]issueOpsBenchmarkCheck {
+	return map[string]issueOpsBenchmarkCheck{
+		"intent_understanding": {
+			ok:       intentUnderstood(artifact),
+			evidence: "problem summary or issue draft is present",
+			failure:  "missing problem summary or issue draft",
+		},
+		"issue_quality": {
+			ok:       issueDraftQualityComplete(artifact),
+			evidence: "issue draft includes required sections, Korean text, guideline reference, and label scoring decision evidence",
+			failure:  "issue draft missing required sections, Korean text, guideline reference, or label scoring decision evidence",
+		},
+		"domain_contract_quality": {
+			ok:       issueOpsDomainContractEvidenceComplete(artifact),
+			evidence: "domain contract evidence separates invariants, exact mechanisms, equivalent behavior, and source lines",
+			failure:  "domain contract evidence missing invariants, exact mechanisms, equivalent behavior, or source lines",
+		},
+		"plan_quality": {
+			ok:       containsAnyFold(artifact.Plan, "go test", "verify", "verification", "test"),
+			evidence: "plan includes verification commands or tests",
+			failure:  "plan missing verification commands",
+		},
+		"api_doc_gate_quality": {
+			ok:       issueOpsAPIDocGateEvidenceComplete(artifact),
+			evidence: "API documentation gate evidence covers changed endpoints, public error responses, and static plus review checks",
+			failure:  "API documentation gate evidence missing changed endpoints, public error responses, static check, or review check",
+		},
+		"live_evidence_quality": {
+			ok:       issueOpsLiveEvidenceMatrixComplete(artifact),
+			evidence: "live evidence matrix separates environments, repo/config evidence, runtime evidence, and remediation order",
+			failure:  "live evidence matrix missing environments, repo/config evidence, runtime evidence, or remediation order",
+		},
+	}
+}
+
+func issueOpsExecutionChecks(fixture issueopscontract.IssueOpsBenchmarkFixture, artifact issueopscontract.IssueOpsBenchmarkArtifact, routingComplete bool) map[string]issueOpsBenchmarkCheck {
+	return map[string]issueOpsBenchmarkCheck{
+		"task_decomposition": {
+			ok:       taskDecompositionComplete(artifact),
+			evidence: "task breakdown assigns bounded ownership and uses provider-native hierarchy for large issues",
+			failure:  "task breakdown missing bounded ownership or provider-native hierarchy",
+		},
+		"tdd_quality": {
+			ok:       tddPlanComplete(artifact),
+			evidence: "TDD plan names failing tests before implementation",
+			failure:  "TDD plan missing failing-test-first evidence",
+		},
+		"subagent_orchestration": {
+			ok:       subagentOrchestrationComplete(artifact),
+			evidence: "subagent prompts include coordination, ownership, context verification, and bounded review guidance",
+			failure:  "subagent prompts missing coordination, context verification, or bounded review guidance",
+		},
+		"review_feedback_accountability": {
+			ok:       issueOpsReviewFeedbackEvidenceComplete(artifact),
+			evidence: "review feedback evidence classifies claims, cites verification, records thread replies, and tracks resolution",
+			failure:  "review feedback evidence missing claim classification, verification, thread replies, or resolution status",
+		},
+		"implementation_readiness": {
+			ok:       implementationReady(artifact),
+			evidence: "branch and worktree are recorded",
+			failure:  "branch or worktree evidence missing",
+		},
+		"pr_mr_quality": {
+			ok:       prDraftQualityComplete(artifact),
+			evidence: "PR/MR draft includes required sections, issue link, Korean text, reviewer notes, and guideline reference",
+			failure:  "PR/MR draft missing required sections, issue link, Korean text, reviewer notes, or guideline reference",
+		},
+		"phase_control_quality": {
+			ok:       containsAllFold(artifact.PhaseChoices, "proceed", "revise", "jump", "pause"),
+			evidence: "phase choices include proceed, revise, jump, and pause",
+			failure:  "phase choices missing required options",
+		},
+		"branch_worktree_gate_quality": {
+			ok:       branchWorktreeGateComplete(artifact),
+			evidence: "issue branch and sibling worktree path are recorded",
+			failure:  "issue branch or sibling worktree gate missing",
+		},
+		"isolation_compliance": {
+			ok:       implementationInWorktree(artifact),
+			evidence: "implementation location is inside the isolated worktree",
+			failure:  "implementation location is outside the isolated worktree",
+		},
+		"completion_hygiene_quality": {
+			ok:       issueOpsCompletionHygieneComplete(artifact),
+			evidence: "completion hygiene records final diff, target branch, remote artifact refresh, single-commit policy, and cleanup status",
+			failure:  "completion hygiene missing final diff, target branch, remote artifact refresh, single-commit policy, or cleanup status",
+		},
+		"worktree_cleanup_quality": {
+			ok:       worktreeCleanupComplete(artifact),
+			evidence: "worktree cleanup status and choices are recorded",
+			failure:  "worktree cleanup status or choices missing",
+		},
+		"pioneer_skill_contribution": {
+			ok:       PioneerSkillEvidenceComplete(fixture, artifact),
+			evidence: "pioneer skill evidence carries the targeted skill's distinctive-method signature (necessary keyword proxy, not live-routing proof)",
+			failure:  "pioneer skill evidence missing the targeted skill's distinctive-method signature",
+		},
+		"skill_routing_fidelity": {
+			ok:       routingComplete,
+			evidence: "recorded routing trace covers every expected skill-at-phase (recorded-trace proxy, not live-routing proof)",
+			failure:  "recorded routing trace is missing an expected skill-at-phase",
+		},
+	}
+}
+
+func intentUnderstood(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+	return strings.TrimSpace(artifact.ProblemSummary) != "" || strings.TrimSpace(artifact.IssueDraft) != ""
+}
+
+func issueDraftQualityComplete(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+	return hasAllIssueOpsConcepts(artifact.IssueDraft, issueOpsIssueSectionConcepts) && containsHangul(artifact.IssueDraft) && hasIssueOpsGuidelineRef(artifact) && issueOpsLabelDecisionEvidenceComplete(artifact)
+}
+
+func taskDecompositionComplete(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+	return containsAllFold(artifact.TaskBreakdown, "owns") && containsAnyFold(artifact.TaskBreakdown, "worker", "task") && issueOpsHierarchyEvidenceComplete(artifact)
+}
+
+func tddPlanComplete(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+	return containsAllFold(artifact.TDDPlan, "failing", "test") && containsAnyFold(artifact.TDDPlan, "before", "first")
+}
+
+func subagentOrchestrationComplete(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+	return containsAllFold(artifact.SubagentPrompts, "not alone", "do not revert", "own") && containsAnyFold(artifact.SubagentPrompts, "expected output", "report") && workerPromptHasContextGate(artifact) && reviewPromptIsBounded(artifact)
+}
+
+func implementationReady(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+	return strings.TrimSpace(artifact.BranchName) != "" && strings.TrimSpace(artifact.WorktreePath) != ""
+}
+
+func prDraftQualityComplete(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+	return hasAllIssueOpsConcepts(artifact.PRDraft, issueOpsPRSectionConcepts) && containsAnyFold(artifact.PRDraft, "issue:", "fixes", "closes", "이슈:") && containsHangul(artifact.PRDraft) && hasIssueOpsGuidelineRef(artifact)
+}
+
+func branchWorktreeGateComplete(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+	return strings.HasPrefix(artifact.BranchName, "feature/") && strings.Contains(artifact.WorktreePath, ".worktrees/")
+}
+
+func worktreeCleanupComplete(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+	return containsAnyFold(artifact.WorktreeCleanup, "clean") && containsAnyFold(artifact.WorktreeCleanup, "cleanup", "remove") && containsAnyFold(artifact.WorktreeCleanup, "choice", "offered", "present")
 }

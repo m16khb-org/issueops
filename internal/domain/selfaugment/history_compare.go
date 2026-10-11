@@ -29,39 +29,11 @@ func CompareSnapshots(baselineKey, candidateKey string, maxElapsedRegressionPct 
 	result.TotalStepsDelta = candidate.Summary.TotalSteps - baseline.Summary.TotalSteps
 	result.MissingStepLabels = MissingStrings(baseline.Summary.StepLabels, candidate.Summary.StepLabels)
 	result.AddedStepLabels = MissingStrings(candidate.Summary.StepLabels, baseline.Summary.StepLabels)
-	if baseline.OK && !candidate.OK {
-		result.Regressions = append(result.Regressions, "candidate_not_ok")
-	}
-	if baseline.Summary.TerminationEligible && !candidate.Summary.TerminationEligible {
-		result.Regressions = append(result.Regressions, "candidate_not_termination_eligible")
-	}
-	if baseline.Summary.MinimumGoalScore > 0 && candidate.Summary.MinimumGoalScore < baseline.Summary.MinimumGoalScore {
-		result.Regressions = append(result.Regressions, fmt.Sprintf("minimum_goal_score_decreased_by_%.2f", baseline.Summary.MinimumGoalScore-candidate.Summary.MinimumGoalScore))
-	}
-	if result.FailedStepsDelta > 0 {
-		result.Regressions = append(result.Regressions, fmt.Sprintf("failed_steps_increased_by_%d", result.FailedStepsDelta))
-	}
-	if result.ElapsedDeltaPct > maxElapsedRegressionPct {
-		result.Regressions = append(result.Regressions, fmt.Sprintf("elapsed_ms_increased_by_%.2f_pct", result.ElapsedDeltaPct))
-	}
+	appendSummaryRegressions(&result, baseline, candidate, maxElapsedRegressionPct)
 	if baseline.Summary.FailedSteps > 0 && candidate.Summary.FailedSteps > 0 && baseline.Summary.FailureCause != candidate.Summary.FailureCause {
 		result.Warnings = append(result.Warnings, fmt.Sprintf("failure_cause_changed:%s->%s", baseline.Summary.FailureCause, candidate.Summary.FailureCause))
 	}
-	baselineContract, candidateContract := baseline.Summary.Contract, candidate.Summary.Contract
-	if baselineContract.Name == candidateContract.Name &&
-		baselineContract.Version == candidateContract.Version &&
-		baselineContract.Hash == candidateContract.Hash {
-		result.SlowStepRegressions = CompareSlowestStepRegressions(baseline.Summary.SlowestSteps, candidate.Summary.SlowestSteps, maxElapsedRegressionPct)
-		result.StepBudgetRegressions = CompareStepBudgetRegressions(result.BaselineStepDurationStats, result.CandidateStepDurationStats, maxElapsedRegressionPct)
-	} else {
-		result.Warnings = append(result.Warnings, "step_duration_contract_mismatch")
-	}
-	for _, regression := range result.SlowStepRegressions {
-		result.Regressions = append(result.Regressions, fmt.Sprintf("slow_step:%s_increased_by_%.2f_pct", regression.Label, regression.DeltaPct))
-	}
-	for _, regression := range result.StepBudgetRegressions {
-		result.Regressions = append(result.Regressions, fmt.Sprintf("step_budget:%s_p95_increased_by_%.2f_pct", regression.Label, regression.DeltaPct))
-	}
+	compareStepDurations(&result, baseline, candidate, maxElapsedRegressionPct)
 	for _, label := range result.MissingStepLabels {
 		result.Regressions = append(result.Regressions, "missing_step_label:"+label)
 	}
@@ -78,6 +50,46 @@ func CompareSnapshots(baselineKey, candidateKey string, maxElapsedRegressionPct 
 	result.Regressed = len(result.Regressions) > 0
 	result.OK = true
 	return result
+}
+
+// appendSummaryRegressions records the regressions derivable from the snapshot
+// status, goal score, failed-step count and elapsed time.
+func appendSummaryRegressions(result *contract.SelfAugmentCompareResult, baseline, candidate contract.SelfAugmentStateSnapshot, maxElapsedRegressionPct float64) {
+	if baseline.OK && !candidate.OK {
+		result.Regressions = append(result.Regressions, "candidate_not_ok")
+	}
+	if baseline.Summary.TerminationEligible && !candidate.Summary.TerminationEligible {
+		result.Regressions = append(result.Regressions, "candidate_not_termination_eligible")
+	}
+	if baseline.Summary.MinimumGoalScore > 0 && candidate.Summary.MinimumGoalScore < baseline.Summary.MinimumGoalScore {
+		result.Regressions = append(result.Regressions, fmt.Sprintf("minimum_goal_score_decreased_by_%.2f", baseline.Summary.MinimumGoalScore-candidate.Summary.MinimumGoalScore))
+	}
+	if result.FailedStepsDelta > 0 {
+		result.Regressions = append(result.Regressions, fmt.Sprintf("failed_steps_increased_by_%d", result.FailedStepsDelta))
+	}
+	if result.ElapsedDeltaPct > maxElapsedRegressionPct {
+		result.Regressions = append(result.Regressions, fmt.Sprintf("elapsed_ms_increased_by_%.2f_pct", result.ElapsedDeltaPct))
+	}
+}
+
+// compareStepDurations records slow-step and step-budget regressions when both
+// snapshots share the same step-duration contract, else a mismatch warning.
+func compareStepDurations(result *contract.SelfAugmentCompareResult, baseline, candidate contract.SelfAugmentStateSnapshot, maxElapsedRegressionPct float64) {
+	baselineContract, candidateContract := baseline.Summary.Contract, candidate.Summary.Contract
+	if baselineContract.Name == candidateContract.Name &&
+		baselineContract.Version == candidateContract.Version &&
+		baselineContract.Hash == candidateContract.Hash {
+		result.SlowStepRegressions = CompareSlowestStepRegressions(baseline.Summary.SlowestSteps, candidate.Summary.SlowestSteps, maxElapsedRegressionPct)
+		result.StepBudgetRegressions = CompareStepBudgetRegressions(result.BaselineStepDurationStats, result.CandidateStepDurationStats, maxElapsedRegressionPct)
+	} else {
+		result.Warnings = append(result.Warnings, "step_duration_contract_mismatch")
+	}
+	for _, regression := range result.SlowStepRegressions {
+		result.Regressions = append(result.Regressions, fmt.Sprintf("slow_step:%s_increased_by_%.2f_pct", regression.Label, regression.DeltaPct))
+	}
+	for _, regression := range result.StepBudgetRegressions {
+		result.Regressions = append(result.Regressions, fmt.Sprintf("step_budget:%s_p95_increased_by_%.2f_pct", regression.Label, regression.DeltaPct))
+	}
 }
 
 func NewCompareResult(baselineKey, candidateKey string, maxElapsedRegressionPct float64, stateDir string) contract.SelfAugmentCompareResult {

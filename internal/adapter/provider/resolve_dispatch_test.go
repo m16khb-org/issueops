@@ -37,3 +37,20 @@ func TestReadExecutionIssueSnapshotFailsClosed(t *testing.T) {
 		t.Fatal("cancelled context must fail before any remote call")
 	}
 }
+
+// 병합 능력은 provider 이름에 따라 위임되고, 알 수 없는 이름은 Resolve 오류를
+// 그대로 돌려줘야 한다.
+func TestResolvePullRequestMerger(t *testing.T) {
+	if _, err := ResolvePullRequestMerger("bitbucket"); err == nil || !strings.Contains(err.Error(), "unknown provider") {
+		t.Fatalf("unknown provider must propagate Resolve error: %v", err)
+	}
+	for _, name := range []string{"github", "gitlab"} {
+		merger, err := ResolvePullRequestMerger(name)
+		if err != nil {
+			t.Fatalf("%s must expose merge capability: %v", name, err)
+		}
+		if merger == nil {
+			t.Fatalf("%s: nil merger without error", name)
+		}
+	}
+}

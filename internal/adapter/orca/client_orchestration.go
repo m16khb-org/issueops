@@ -173,16 +173,12 @@ func (c *Client) listRunsInventory(ctx context.Context) (executionRunInventory, 
 			seenRuns[value.ID] = struct{}{}
 			result = append(result, value)
 		}
-		nextCursor := strings.TrimSpace(string(payload.NextCursor))
-		if nextCursor == "" {
-			return executionRunInventory{}, &port.OrcaError{Code: "incomplete_list", Detail: "Orca Run list nextCursor completeness metadata is missing", Invoked: true}
+		cursor, done, err := parseRunListNextCursor(payload.NextCursor)
+		if err != nil {
+			return executionRunInventory{}, err
 		}
-		if nextCursor == "null" {
+		if done {
 			break
-		}
-		var cursor string
-		if json.Unmarshal(payload.NextCursor, &cursor) != nil || strings.TrimSpace(cursor) == "" || cursor != strings.TrimSpace(cursor) {
-			return executionRunInventory{}, &port.OrcaError{Code: "incomplete_list", Detail: "Orca Run list nextCursor is invalid", Invoked: true}
 		}
 		if _, duplicate := seenCursors[cursor]; duplicate {
 			return executionRunInventory{}, &port.OrcaError{Code: "incomplete_list", Detail: "Orca Run list nextCursor repeated", Invoked: true}
@@ -194,6 +190,21 @@ func (c *Client) listRunsInventory(ctx context.Context) (executionRunInventory, 
 		return strings.Compare(left.ID, right.ID)
 	})
 	return executionRunInventory{RuntimeID: runtimeID, Rows: result}, nil
+}
+
+// parseRunListNextCursor decodes a Run list nextCursor; done reports the explicit JSON null end marker.
+func parseRunListNextCursor(raw json.RawMessage) (cursor string, done bool, err error) {
+	next := strings.TrimSpace(string(raw))
+	if next == "" {
+		return "", false, &port.OrcaError{Code: "incomplete_list", Detail: "Orca Run list nextCursor completeness metadata is missing", Invoked: true}
+	}
+	if next == "null" {
+		return "", true, nil
+	}
+	if json.Unmarshal(raw, &cursor) != nil || strings.TrimSpace(cursor) == "" || cursor != strings.TrimSpace(cursor) {
+		return "", false, &port.OrcaError{Code: "incomplete_list", Detail: "Orca Run list nextCursor is invalid", Invoked: true}
+	}
+	return cursor, false, nil
 }
 
 func (c *Client) CreateRun(ctx context.Context, req port.OrcaCreateRunRequest) (port.OrcaRun, error) {

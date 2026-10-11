@@ -25,42 +25,100 @@ type AbandonExecutor struct {
 	Now        func() time.Time
 }
 
+// abandonRun carries the state shared by the phases of one abandon execution.
+type abandonRun struct {
+	s           AbandonExecutor
+	ctx         context.Context
+	finalizeCtx context.Context
+	req         model.CleanupAbandonRequest
+	snapshot    model.CleanupSnapshot
+	record      model.IssueOpsRecord
+	provider    port.IssueProvider
+	inventory   model.CleanupAbandonInventory
+	fingerprint string
+	result      model.CleanupAbandonResult
+	drainer     *cleanupDrainer
+}
+
 func (s AbandonExecutor) Run(ctx context.Context, req model.CleanupAbandonRequest) (model.CleanupAbandonResult, error) {
 	failed := model.CleanupAbandonResult{OK: false, ID: req.ID}
 	lifetime, err := s.Acquire(ctx, req.ID)
 	if err != nil {
 		return failed, err
 	}
-	defer func() {
-		if lifetime != nil {
-			_ = lifetime.Close()
-		}
-	}()
-	ctx = lifetime.Context(ctx)
-	snapshot, err := s.Records.Load(ctx, req.ID)
+	drainer := &cleanupDrainer{lifetime: lifetime}
+	defer drainer.close()
+	r := &abandonRun{s: s, ctx: lifetime.Context(ctx), req: req, drainer: drainer}
+	if err := r.load(); err != nil {
+		return failed, err
+	}
+	if res, err := r.plan(failed); err != nil {
+		return res, err
+	}
+	if !r.req.Apply {
+		r.result.NextCommand = fmt.Sprintf("issueops cleanup abandon --id %s --reason %q%s --apply --confirm --fingerprint %s --json", r.record.ID, r.result.Reason, domain.CleanupAbandonRemoteFlags(r.req), r.fingerprint)
+		return r.result, nil
+	}
+	if err := r.authorizeApply(); err != nil {
+		r.result.OK = false
+		return r.result, err
+	}
+	attempt, err := s.NewAttempt(model.CleanupOperationAbandon)
 	if err != nil {
 		return failed, err
 	}
-	record := snapshot.Record
-	if err := domain.ValidateCleanupOperationAccess(record, model.CleanupOperationAbandon); err != nil {
-		return failed, err
-	}
-	var provider port.IssueProvider
-	if record.RemoteArtifact != nil || req.ClosePR || req.CloseIssue || req.DeleteRemoteBranch {
-		name := domain.ResolveRecordProvider(record)
-		if name == "" || s.Provider == nil {
-			return failed, fmt.Errorf("cannot determine provider from IssueOps record; remote abandon evidence needs one")
-		}
-		provider, err = s.Provider(name)
-		if err != nil {
-			return failed, err
-		}
-	}
-	req, err = s.Observe(ctx, record, req, provider)
+	failure := abandonFailure(r.record, r.inventory, r.fingerprint, model.CleanupFailureStepApplying, "", attempt.StartedAt)
+	r.snapshot, err = s.Records.ArmAbandon(r.ctx, r.snapshot, attempt, failure)
 	if err != nil {
-		return failed, err
+		r.result.OK = false
+		return r.result, err
 	}
-	inventory, result := s.Plan(ctx, record, req, provider)
+	// Cancellation must stop commands, but must not prevent releasing their
+	// durable ownership after the inherited descriptors have safely drained.
+	r.finalizeCtx = context.WithoutCancel(r.ctx)
+	return r.execute()
+}
+
+// load reads the record, validates access, resolves the provider, and
+// observes remote evidence.
+func (r *abandonRun) load() error {
+	snapshot, err := r.s.Records.Load(r.ctx, r.req.ID)
+	if err != nil {
+		return err
+	}
+	r.snapshot = snapshot
+	r.record = snapshot.Record
+	if err := domain.ValidateCleanupOperationAccess(r.record, model.CleanupOperationAbandon); err != nil {
+		return err
+	}
+	if err := r.resolveProvider(); err != nil {
+		return err
+	}
+	r.req, err = r.s.Observe(r.ctx, r.record, r.req, r.provider)
+	return err
+}
+
+func (r *abandonRun) resolveProvider() error {
+	if r.record.RemoteArtifact == nil && !r.req.ClosePR && !r.req.CloseIssue && !r.req.DeleteRemoteBranch {
+		return nil
+	}
+	name := domain.ResolveRecordProvider(r.record)
+	if name == "" || r.s.Provider == nil {
+		return fmt.Errorf("cannot determine provider from IssueOps record; remote abandon evidence needs one")
+	}
+	provider, err := r.s.Provider(name)
+	if err != nil {
+		return err
+	}
+	r.provider = provider
+	return nil
+}
+
+// plan builds the inventory and fingerprint; failed is returned for errors
+// that originally carried the generic failed result.
+func (r *abandonRun) plan(failed model.CleanupAbandonResult) (model.CleanupAbandonResult, error) {
+	inventory, result := r.s.Plan(r.ctx, r.record, r.req, r.provider)
+	r.inventory, r.result = inventory, result
 	if len(result.Missing) > 0 {
 		return result, fmt.Errorf("cleanup abandon is not ready: %s", strings.Join(result.Missing, ", "))
 	}
@@ -68,115 +126,127 @@ func (s AbandonExecutor) Run(ctx context.Context, req model.CleanupAbandonReques
 	if err != nil {
 		return failed, err
 	}
-	result.Fingerprint = fingerprint
-	result.RemovalPlan = domain.CleanupAbandonRemovalPlan(record, inventory)
-	result.Record = &record
-	if !req.Apply {
-		result.NextCommand = fmt.Sprintf("issueops cleanup abandon --id %s --reason %q%s --apply --confirm --fingerprint %s --json", record.ID, result.Reason, domain.CleanupAbandonRemoteFlags(req), fingerprint)
-		return result, nil
+	r.fingerprint = fingerprint
+	r.result.Fingerprint = fingerprint
+	r.result.RemovalPlan = domain.CleanupAbandonRemovalPlan(r.record, inventory)
+	r.result.Record = &r.record
+	return r.result, nil
+}
+
+func (r *abandonRun) authorizeApply() error {
+	if !r.req.Confirm {
+		return fmt.Errorf("cleanup abandon --apply requires --confirm")
 	}
-	if !req.Confirm {
-		result.OK = false
-		return result, fmt.Errorf("cleanup abandon --apply requires --confirm")
+	if r.req.Fingerprint != r.fingerprint {
+		return fmt.Errorf("stale cleanup fingerprint; run --preview again and retry with the new value")
 	}
-	if req.Fingerprint != fingerprint {
-		result.OK = false
-		return result, fmt.Errorf("stale cleanup fingerprint; run --preview again and retry with the new value")
+	return nil
+}
+
+func (r *abandonRun) fail(step string, cause error) (model.CleanupAbandonResult, error) {
+	r.result.OK = false
+	r.result.FailedStep = step
+	drainErr := r.drainer.drain(r.finalizeCtx)
+	receiptStep := step
+	// A cancelled local command can have removed its target before cancellation
+	// reached the parent. Preserve the sealed applying state until fresh preview
+	// observes which prefix of worktree -> branch removal actually completed.
+	if (step == model.CleanupFailureStepWorktreeRemove || step == model.CleanupFailureStepBranchDelete) &&
+		(errors.Is(cause, context.Canceled) || errors.Is(cause, context.DeadlineExceeded)) {
+		receiptStep = model.CleanupFailureStepApplying
 	}
-	attempt, err := s.NewAttempt(model.CleanupOperationAbandon)
+	receipt := abandonFailure(r.record, r.inventory, r.fingerprint, receiptStep, errors.Join(cause, drainErr).Error(), r.s.Now().UTC().Format(time.RFC3339Nano))
+	_, receiptErr := r.s.Records.FailAbandon(r.finalizeCtx, r.snapshot, receipt, r.drainer.drained)
+	r.result.NextCommand = domain.CleanupAbandonPreviewCommand(r.record.ID, r.result.Reason, r.req)
+	return r.result, fmt.Errorf("cleanup abandon %s failed (record preserved; re-run preview then apply): %w", step, errors.Join(cause, drainErr, receiptErr))
+}
+
+// execute runs the armed apply steps in order and finalizes the record.
+func (r *abandonRun) execute() (model.CleanupAbandonResult, error) {
+	if step, err := r.s.applyRemote(r.ctx, r.snapshot, r.req, r.provider, r.inventory, &r.result); err != nil {
+		return r.fail(step, err)
+	}
+	steps := []struct {
+		step string
+		run  func() error
+	}{
+		{model.CleanupFailureStepWorkspaceProcessesStop, r.stopWorkspaceProcesses},
+		{model.CleanupFailureStepWorktreeRemove, r.removeWorktree},
+		{model.CleanupFailureStepBranchDelete, r.deleteBranch},
+	}
+	for _, st := range steps {
+		if err := st.run(); err != nil {
+			return r.fail(st.step, err)
+		}
+	}
+	if err := r.drainer.drain(r.finalizeCtx); err != nil {
+		return r.fail(model.CleanupFailureStepRecordDelete, err)
+	}
+	var err error
+	r.result.IntentRowsDeleted, err = r.s.Records.DeleteAbandoned(r.finalizeCtx, r.snapshot)
 	if err != nil {
-		return failed, err
+		return r.fail(model.CleanupFailureStepRecordDelete, err)
 	}
-	failure := abandonFailure(record, inventory, fingerprint, model.CleanupFailureStepApplying, "", attempt.StartedAt)
-	snapshot, err = s.Records.ArmAbandon(ctx, snapshot, attempt, failure)
-	if err != nil {
-		result.OK = false
-		return result, err
+	r.result.RecordDeleted = true
+	r.result.AbandonedAt = r.s.Now().UTC().Format(time.RFC3339)
+	return r.result, nil
+}
+
+func (r *abandonRun) stopWorkspaceProcesses() error {
+	inv := r.inventory
+	if !inv.WorktreePresent || (len(r.result.WorkspaceProcesses) == 0 && len(inv.OrcaTerminals) == 0 && !inv.OrcaRuntimeReady) {
+		return nil
 	}
-	finalizeCtx := context.WithoutCancel(ctx)
-	drainageAttempted, drained := false, false
-	var drainageErr error
-	drain := func() error {
-		if drainageAttempted {
-			return drainageErr
+	if err := r.s.Records.Check(r.ctx, r.snapshot); err != nil {
+		return err
+	}
+	var err error
+	r.result.WorkspaceProcessesStopped, r.result.OrcaTerminalsStopped, err = r.s.Stop(r.ctx, inv, r.result.WorkspaceProcesses)
+	return err
+}
+
+func (r *abandonRun) removeWorktree() error {
+	if !r.inventory.WorktreePresent {
+		return nil
+	}
+	if err := r.s.Records.Check(r.ctx, r.snapshot); err != nil {
+		return err
+	}
+	if code, out := r.s.Git(r.ctx, r.record.Repo, "worktree", "remove", r.inventory.WorktreeRoot); code != 0 {
+		if err := r.ctx.Err(); err != nil {
+			return err
 		}
-		drainageAttempted = true
-		lifetime, drainageErr = lifetime.Drain(finalizeCtx)
-		drained = drainageErr == nil
-		return drainageErr
-	}
-	fail := func(step string, cause error) (model.CleanupAbandonResult, error) {
-		result.OK = false
-		result.FailedStep = step
-		drainErr := drain()
-		receiptStep := step
-		// A cancelled local command can have removed its target before cancellation
-		// reached the parent. Preserve the sealed applying state until fresh preview
-		// observes which prefix of worktree -> branch removal actually completed.
-		if (step == model.CleanupFailureStepWorktreeRemove || step == model.CleanupFailureStepBranchDelete) &&
-			(errors.Is(cause, context.Canceled) || errors.Is(cause, context.DeadlineExceeded)) {
-			receiptStep = model.CleanupFailureStepApplying
-		}
-		receipt := abandonFailure(record, inventory, fingerprint, receiptStep, errors.Join(cause, drainErr).Error(), s.Now().UTC().Format(time.RFC3339Nano))
-		_, receiptErr := s.Records.FailAbandon(finalizeCtx, snapshot, receipt, drained)
-		result.NextCommand = domain.CleanupAbandonPreviewCommand(record.ID, result.Reason, req)
-		return result, fmt.Errorf("cleanup abandon %s failed (record preserved; re-run preview then apply): %w", step, errors.Join(cause, drainErr, receiptErr))
-	}
-	if step, err := s.applyRemote(ctx, snapshot, req, provider, inventory, &result); err != nil {
-		return fail(step, err)
-	}
-	if inventory.WorktreePresent && (len(result.WorkspaceProcesses) > 0 || len(inventory.OrcaTerminals) > 0 || inventory.OrcaRuntimeReady) {
-		if err := s.Records.Check(ctx, snapshot); err != nil {
-			return fail(model.CleanupFailureStepWorkspaceProcessesStop, err)
-		}
-		result.WorkspaceProcessesStopped, result.OrcaTerminalsStopped, err = s.Stop(ctx, inventory, result.WorkspaceProcesses)
-		if err != nil {
-			return fail(model.CleanupFailureStepWorkspaceProcessesStop, err)
+		present, observeErr := r.s.Directory(r.inventory.WorktreeRoot)
+		if observeErr != nil || present {
+			return errors.Join(fmt.Errorf("git worktree remove: %s", out), observeErr)
 		}
 	}
-	if inventory.WorktreePresent {
-		if err := s.Records.Check(ctx, snapshot); err != nil {
-			return fail(model.CleanupFailureStepWorktreeRemove, err)
-		}
-		if code, out := s.Git(ctx, record.Repo, "worktree", "remove", inventory.WorktreeRoot); code != 0 {
-			if err := ctx.Err(); err != nil {
-				return fail(model.CleanupFailureStepWorktreeRemove, err)
-			}
-			present, observeErr := s.Directory(inventory.WorktreeRoot)
-			if observeErr != nil || present {
-				return fail(model.CleanupFailureStepWorktreeRemove, errors.Join(fmt.Errorf("git worktree remove: %s", out), observeErr))
-			}
-		}
-		result.WorktreeRemoved = true
+	r.result.WorktreeRemoved = true
+	return nil
+}
+
+func (r *abandonRun) deleteBranch() error {
+	if r.inventory.BranchOID == "" {
+		return nil
 	}
-	if inventory.BranchOID != "" {
-		if err := s.Records.Check(ctx, snapshot); err != nil {
-			return fail(model.CleanupFailureStepBranchDelete, err)
+	if err := r.s.Records.Check(r.ctx, r.snapshot); err != nil {
+		return err
+	}
+	ref := "refs/heads/" + r.inventory.Branch
+	if code, out := r.s.Git(r.ctx, r.record.Repo, "update-ref", "-d", ref, r.inventory.BranchOID); code != 0 {
+		if err := r.ctx.Err(); err != nil {
+			return err
 		}
-		if code, out := s.Git(ctx, record.Repo, "update-ref", "-d", "refs/heads/"+inventory.Branch, inventory.BranchOID); code != 0 {
-			if err := ctx.Err(); err != nil {
-				return fail(model.CleanupFailureStepBranchDelete, err)
-			}
-			observed, _ := s.Git(ctx, record.Repo, "show-ref", "--verify", "--quiet", "refs/heads/"+inventory.Branch)
-			if err := ctx.Err(); err != nil {
-				return fail(model.CleanupFailureStepBranchDelete, err)
-			}
-			if observed != 1 {
-				return fail(model.CleanupFailureStepBranchDelete, fmt.Errorf("git update-ref -d: %s", out))
-			}
+		observed, _ := r.s.Git(r.ctx, r.record.Repo, "show-ref", "--verify", "--quiet", ref)
+		if err := r.ctx.Err(); err != nil {
+			return err
 		}
-		result.BranchDeleted = true
+		if observed != 1 {
+			return fmt.Errorf("git update-ref -d: %s", out)
+		}
 	}
-	if err := drain(); err != nil {
-		return fail(model.CleanupFailureStepRecordDelete, err)
-	}
-	result.IntentRowsDeleted, err = s.Records.DeleteAbandoned(finalizeCtx, snapshot)
-	if err != nil {
-		return fail(model.CleanupFailureStepRecordDelete, err)
-	}
-	result.RecordDeleted = true
-	result.AbandonedAt = s.Now().UTC().Format(time.RFC3339)
-	return result, nil
+	r.result.BranchDeleted = true
+	return nil
 }
 
 func abandonFailure(record model.IssueOpsRecord, inventory model.CleanupAbandonInventory, fingerprint, step, message, now string) model.IssueOpsCleanupAbandonFailure {
@@ -222,62 +292,85 @@ func (s AbandonExecutor) applyRemote(ctx context.Context, snapshot model.Cleanup
 	if !req.ClosePR && !req.CloseIssue && !req.DeleteRemoteBranch {
 		return "", nil
 	}
-	record := snapshot.Record
 	result.RemoteEffects = []string{}
 	if req.ClosePR {
-		if err := s.Records.Check(ctx, snapshot); err != nil {
-			return model.CleanupFailureStepClosePR, err
+		if step, err := s.closeRemotePR(ctx, snapshot, provider, result); err != nil {
+			return step, err
 		}
-		closer, ok := provider.(port.IssueProviderPullRequestCloser)
-		if !ok {
-			return model.CleanupFailureStepClosePR, fmt.Errorf("provider does not support closing a pull request")
-		}
-		closed, err := closer.ClosePullRequest(ctx, port.IssueProviderClosePullRequestRequest{Repo: record.Repo, ArtifactURL: record.RemoteArtifact.URL, Kind: strings.TrimSpace(record.RemoteArtifact.Kind), Confirm: true})
-		if err != nil {
-			return model.CleanupFailureStepClosePR, err
-		}
-		if closed.Merged {
-			return model.CleanupFailureStepClosePR, fmt.Errorf("pull request was merged after the preview; run reflect-completion and cleanup finish instead")
-		}
-		effect := "close_pr"
-		if closed.AlreadyClosed {
-			effect += ":already_closed"
-		}
-		result.RemoteEffects = append(result.RemoteEffects, effect)
-		result.RemoteArtifactState = closed.State
-		result.PRClosed = closed.Closed
 	}
 	if req.CloseIssue {
-		if err := s.Records.Check(ctx, snapshot); err != nil {
-			return model.CleanupFailureStepCloseIssue, err
+		if step, err := s.closeRemoteIssue(ctx, snapshot, provider, result); err != nil {
+			return step, err
 		}
-		closed, err := provider.CloseIssue(ctx, port.IssueProviderCloseIssueRequest{Repo: record.Repo, IssueURL: record.IssueURL, Reason: "not_planned", Confirm: true})
-		if err != nil {
-			return model.CleanupFailureStepCloseIssue, err
-		}
-		effect := "close_issue"
-		if closed.AlreadyClosed {
-			effect += ":already_closed"
-		}
-		result.RemoteEffects = append(result.RemoteEffects, effect)
-		result.IssueState = closed.State
-		result.IssueClosed = closed.Closed
 	}
 	if req.DeleteRemoteBranch {
-		if err := s.Records.Check(ctx, snapshot); err != nil {
-			return model.CleanupFailureStepRemoteBranchDelete, err
+		if step, err := s.deleteRemoteBranch(ctx, snapshot, inventory, result); err != nil {
+			return step, err
 		}
-		effect := "remote_branch_delete"
-		if inventory.RemoteBranchOID == "" {
-			effect += ":absent"
-		} else {
-			ref := "refs/heads/" + inventory.Branch
-			if code, out := s.Git(ctx, record.Repo, "push", "origin", "--delete", ref, "--force-with-lease="+ref+":"+inventory.RemoteBranchOID); code != 0 {
-				return model.CleanupFailureStepRemoteBranchDelete, fmt.Errorf("%s", strings.TrimSpace(out))
-			}
-			result.RemoteBranchDeleted = true
-		}
-		result.RemoteEffects = append(result.RemoteEffects, effect)
 	}
+	return "", nil
+}
+
+func (s AbandonExecutor) closeRemotePR(ctx context.Context, snapshot model.CleanupSnapshot, provider port.IssueProvider, result *model.CleanupAbandonResult) (string, error) {
+	record := snapshot.Record
+	if err := s.Records.Check(ctx, snapshot); err != nil {
+		return model.CleanupFailureStepClosePR, err
+	}
+	closer, ok := provider.(port.IssueProviderPullRequestCloser)
+	if !ok {
+		return model.CleanupFailureStepClosePR, fmt.Errorf("provider does not support closing a pull request")
+	}
+	closed, err := closer.ClosePullRequest(ctx, port.IssueProviderClosePullRequestRequest{Repo: record.Repo, ArtifactURL: record.RemoteArtifact.URL, Kind: strings.TrimSpace(record.RemoteArtifact.Kind), Confirm: true})
+	if err != nil {
+		return model.CleanupFailureStepClosePR, err
+	}
+	if closed.Merged {
+		return model.CleanupFailureStepClosePR, fmt.Errorf("pull request was merged after the preview; run reflect-completion and cleanup finish instead")
+	}
+	effect := "close_pr"
+	if closed.AlreadyClosed {
+		effect += ":already_closed"
+	}
+	result.RemoteEffects = append(result.RemoteEffects, effect)
+	result.RemoteArtifactState = closed.State
+	result.PRClosed = closed.Closed
+	return "", nil
+}
+
+func (s AbandonExecutor) closeRemoteIssue(ctx context.Context, snapshot model.CleanupSnapshot, provider port.IssueProvider, result *model.CleanupAbandonResult) (string, error) {
+	record := snapshot.Record
+	if err := s.Records.Check(ctx, snapshot); err != nil {
+		return model.CleanupFailureStepCloseIssue, err
+	}
+	closed, err := provider.CloseIssue(ctx, port.IssueProviderCloseIssueRequest{Repo: record.Repo, IssueURL: record.IssueURL, Reason: "not_planned", Confirm: true})
+	if err != nil {
+		return model.CleanupFailureStepCloseIssue, err
+	}
+	effect := "close_issue"
+	if closed.AlreadyClosed {
+		effect += ":already_closed"
+	}
+	result.RemoteEffects = append(result.RemoteEffects, effect)
+	result.IssueState = closed.State
+	result.IssueClosed = closed.Closed
+	return "", nil
+}
+
+func (s AbandonExecutor) deleteRemoteBranch(ctx context.Context, snapshot model.CleanupSnapshot, inventory model.CleanupAbandonInventory, result *model.CleanupAbandonResult) (string, error) {
+	record := snapshot.Record
+	if err := s.Records.Check(ctx, snapshot); err != nil {
+		return model.CleanupFailureStepRemoteBranchDelete, err
+	}
+	effect := "remote_branch_delete"
+	if inventory.RemoteBranchOID == "" {
+		effect += ":absent"
+	} else {
+		ref := "refs/heads/" + inventory.Branch
+		if code, out := s.Git(ctx, record.Repo, "push", "origin", "--delete", ref, "--force-with-lease="+ref+":"+inventory.RemoteBranchOID); code != 0 {
+			return model.CleanupFailureStepRemoteBranchDelete, fmt.Errorf("%s", strings.TrimSpace(out))
+		}
+		result.RemoteBranchDeleted = true
+	}
+	result.RemoteEffects = append(result.RemoteEffects, effect)
 	return "", nil
 }

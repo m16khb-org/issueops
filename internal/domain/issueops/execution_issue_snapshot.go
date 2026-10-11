@@ -67,42 +67,63 @@ func SameGitLabExecutionIssueIdentity(left, right string) bool {
 }
 
 func parseGitLabExecutionIssueIdentity(raw string) (gitLabExecutionIssueIdentity, error) {
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" || trimmed != raw || strings.IndexFunc(raw, unicode.IsControl) >= 0 {
-		return gitLabExecutionIssueIdentity{}, fmt.Errorf("GitLab issue URL must be canonical")
+	parsed, err := parseGitLabExecutionIssueURL(raw)
+	if err != nil {
+		return gitLabExecutionIssueIdentity{}, err
 	}
-	parsed, err := url.Parse(raw)
-	if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.Hostname() == "" ||
-		parsed.Opaque != "" || parsed.User != nil || parsed.RawQuery != "" || parsed.ForceQuery || parsed.Fragment != "" {
-		return gitLabExecutionIssueIdentity{}, fmt.Errorf("GitLab issue URL must be canonical HTTPS without userinfo, query, or fragment")
-	}
-	path := parsed.EscapedPath()
-	if path == "" || !strings.HasPrefix(path, "/") || strings.HasSuffix(path, "/") {
-		return gitLabExecutionIssueIdentity{}, fmt.Errorf("GitLab issue URL path is invalid")
-	}
-	parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
-	if len(parts) < 5 || parts[len(parts)-3] != "-" ||
-		(parts[len(parts)-2] != "issues" && parts[len(parts)-2] != "work_items") {
-		return gitLabExecutionIssueIdentity{}, fmt.Errorf("GitLab issue URL must end with /-/issues/:iid or /-/work_items/:iid")
-	}
-	projectParts := parts[:len(parts)-3]
-	for _, part := range projectParts {
-		decoded, decodeErr := url.PathUnescape(part)
-		if decodeErr != nil || part == "" || decoded == "." || decoded == ".." ||
-			strings.ContainsAny(decoded, `/\`) || strings.IndexFunc(decoded, unicode.IsControl) >= 0 {
-			return gitLabExecutionIssueIdentity{}, fmt.Errorf("GitLab issue project path is invalid")
-		}
-	}
-	iid := parts[len(parts)-1]
-	number, err := strconv.Atoi(iid)
-	if err != nil || number <= 0 || strconv.Itoa(number) != iid {
-		return gitLabExecutionIssueIdentity{}, fmt.Errorf("GitLab issue IID must be a canonical positive integer")
+	projectParts, iid, err := splitGitLabExecutionIssuePath(parsed.EscapedPath())
+	if err != nil {
+		return gitLabExecutionIssueIdentity{}, err
 	}
 	return gitLabExecutionIssueIdentity{
 		authority: strings.ToLower(parsed.Host),
 		project:   strings.Join(projectParts, "/"),
 		iid:       iid,
 	}, nil
+}
+
+// parseGitLabExecutionIssueURL accepts only a canonical HTTPS URL without userinfo, query, or fragment.
+func parseGitLabExecutionIssueURL(raw string) (*url.URL, error) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" || trimmed != raw || strings.IndexFunc(raw, unicode.IsControl) >= 0 {
+		return nil, fmt.Errorf("GitLab issue URL must be canonical")
+	}
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.Hostname() == "" ||
+		parsed.Opaque != "" || parsed.User != nil || parsed.RawQuery != "" || parsed.ForceQuery || parsed.Fragment != "" {
+		return nil, fmt.Errorf("GitLab issue URL must be canonical HTTPS without userinfo, query, or fragment")
+	}
+	return parsed, nil
+}
+
+// splitGitLabExecutionIssuePath validates the escaped path and returns the project path segments and the canonical IID.
+func splitGitLabExecutionIssuePath(path string) ([]string, string, error) {
+	if path == "" || !strings.HasPrefix(path, "/") || strings.HasSuffix(path, "/") {
+		return nil, "", fmt.Errorf("GitLab issue URL path is invalid")
+	}
+	parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
+	if len(parts) < 5 || parts[len(parts)-3] != "-" ||
+		(parts[len(parts)-2] != "issues" && parts[len(parts)-2] != "work_items") {
+		return nil, "", fmt.Errorf("GitLab issue URL must end with /-/issues/:iid or /-/work_items/:iid")
+	}
+	projectParts := parts[:len(parts)-3]
+	for _, part := range projectParts {
+		if !validGitLabExecutionProjectSegment(part) {
+			return nil, "", fmt.Errorf("GitLab issue project path is invalid")
+		}
+	}
+	iid := parts[len(parts)-1]
+	number, err := strconv.Atoi(iid)
+	if err != nil || number <= 0 || strconv.Itoa(number) != iid {
+		return nil, "", fmt.Errorf("GitLab issue IID must be a canonical positive integer")
+	}
+	return projectParts, iid, nil
+}
+
+func validGitLabExecutionProjectSegment(part string) bool {
+	decoded, err := url.PathUnescape(part)
+	return err == nil && part != "" && decoded != "." && decoded != ".." &&
+		!strings.ContainsAny(decoded, `/\`) && strings.IndexFunc(decoded, unicode.IsControl) < 0
 }
 
 func ValidateExecutionSnapshotEvidence(req issueops.ExecutionActionRequest, record issueops.IssueOpsRecord) error {

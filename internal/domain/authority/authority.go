@@ -123,9 +123,7 @@ func DecodeRecord(data []byte, key string) (contract.Record, error) {
 }
 
 func validateRecord(record contract.Record, key string) error {
-	if record.SchemaVersion != contract.SchemaVersion || !ValidKey(record.Key) || record.Key != key ||
-		!isLowerHex(record.TokenSHA256, sha256.Size*2) || !filepath.IsAbs(record.SourceRoot) ||
-		(record.GitCommonDir != "" && !filepath.IsAbs(record.GitCommonDir)) {
+	if !validRecordIdentity(record, key) {
 		return contract.ErrInvalidState
 	}
 	if _, err := time.Parse(time.RFC3339Nano, record.IssuedAt); err != nil {
@@ -134,13 +132,36 @@ func validateRecord(record contract.Record, key string) error {
 	if _, err := time.Parse(time.RFC3339Nano, record.ExpiresAt); err != nil {
 		return contract.ErrInvalidState
 	}
-	actor := record.Actor
-	if (actor.Host != "codex" && actor.Host != "claude" && actor.Host != "omo" && actor.Host != "omp") || actor.SessionID == "" ||
-		actor.SessionProcess == nil || actor.SessionProcess.PID <= 0 || actor.SessionProcess.StartedAt == "" ||
-		actor.SessionProcess.Executable == "" || len(actor.ProcessAncestry) != 0 {
+	if !validRecordActor(record.Actor) {
 		return contract.ErrInvalidState
 	}
 	return nil
+}
+
+// validRecordIdentity checks schema, key, token digest and absolute roots.
+func validRecordIdentity(record contract.Record, key string) bool {
+	if record.SchemaVersion != contract.SchemaVersion || !ValidKey(record.Key) || record.Key != key {
+		return false
+	}
+	if !isLowerHex(record.TokenSHA256, sha256.Size*2) || !filepath.IsAbs(record.SourceRoot) {
+		return false
+	}
+	return record.GitCommonDir == "" || filepath.IsAbs(record.GitCommonDir)
+}
+
+// validRecordActor checks the stored native actor is a known host with a
+// complete session process and no ancestry.
+func validRecordActor(actor contract.NativeActor) bool {
+	switch actor.Host {
+	case "codex", "claude", "omo", "omp":
+	default:
+		return false
+	}
+	if actor.SessionID == "" || len(actor.ProcessAncestry) != 0 {
+		return false
+	}
+	process := actor.SessionProcess
+	return process != nil && process.PID > 0 && process.StartedAt != "" && process.Executable != ""
 }
 
 // Check validates one credential against its stored grant at the given instant.

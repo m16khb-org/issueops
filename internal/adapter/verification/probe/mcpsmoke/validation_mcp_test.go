@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	verifydomain "issueops/internal/domain/selfverify"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -120,4 +122,32 @@ func validMCPSmokeStdout() string {
 		fmt.Fprintf(&b, `{"id":%d,"text":%q}`+"\n", i, markers)
 	}
 	return b.String()
+}
+
+func TestRunSDKSmokeConnectFailureReportsStep(t *testing.T) {
+	binary := filepath.Join(t.TempDir(), "missing-binary")
+	step := runSDKSmoke(t.TempDir(), binary, nil, 5*time.Second)
+	if step.OK || step.Label != "MCP smoke" || step.Command != binary+" mcp" {
+		t.Fatalf("unexpected step: %+v", step)
+	}
+	if !strings.HasPrefix(step.Error, "connect SDK MCP session: ") {
+		t.Fatalf("error = %q", step.Error)
+	}
+	if step.Stdout != "" {
+		t.Fatalf("stdout should be empty: %+v", step)
+	}
+}
+
+func TestValidateMCPFailsWhenBinaryExitsWithoutServing(t *testing.T) {
+	script := filepath.Join(t.TempDir(), "fake")
+	if err := os.WriteFile(script, []byte("#!/bin/sh\necho oops >&2\nexit 3\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	step := ValidateMCP(script, t.TempDir())
+	if step.OK || !strings.Contains(step.Error, "connect SDK MCP session") {
+		t.Fatalf("unexpected step: %+v", step)
+	}
+	if !strings.Contains(step.Stderr, "oops") || step.StderrBytes != len(step.Stderr) {
+		t.Fatalf("stderr not captured: %+v", step)
+	}
 }

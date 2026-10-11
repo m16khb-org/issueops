@@ -15,7 +15,21 @@ func installDryRunValidationErrors(result installDryRunSmokeResult, tempHome, te
 	if len(result.Hosts) != len(requiredInstallDryRunHosts) {
 		errs = append(errs, "install dry-run host set mismatch")
 	}
-	for index, host := range result.Hosts {
+	errs = append(errs, installDryRunHostErrors(result.Hosts)...)
+	if !slices.Contains(result.SkillNames, skillName) {
+		errs = append(errs, "install dry-run did not discover smoke skill")
+	}
+	plannedErrs, plannedWrite, plannedLink := installDryRunPlanErrors(result)
+	errs = append(errs, plannedErrs...)
+	if !plannedWrite || !plannedLink {
+		errs = append(errs, "install dry-run did not expose planned writes and links")
+	}
+	return append(errs, installDryRunUnexpectedPathErrors(tempHome, tempRoot, pathExists)...)
+}
+
+func installDryRunHostErrors(hosts []installDryRunSmokeHost) []string {
+	var errs []string
+	for index, host := range hosts {
 		if !host.OK || !host.DryRun {
 			errs = append(errs, "install dry-run host mismatch:"+host.Host)
 		}
@@ -23,10 +37,11 @@ func installDryRunValidationErrors(result installDryRunSmokeResult, tempHome, te
 			errs = append(errs, "install dry-run host order mismatch:"+host.Host)
 		}
 	}
-	if !slices.Contains(result.SkillNames, skillName) {
-		errs = append(errs, "install dry-run did not discover smoke skill")
-	}
-	plannedWrite := false
+	return errs
+}
+
+// installDryRunPlanErrors reports written/created entries and whether any write and link were planned.
+func installDryRunPlanErrors(result installDryRunSmokeResult) (errs []string, plannedWrite, plannedLink bool) {
 	for _, file := range result.Files {
 		if file.Written {
 			errs = append(errs, "install dry-run reported written file:"+file.Path)
@@ -35,7 +50,6 @@ func installDryRunValidationErrors(result installDryRunSmokeResult, tempHome, te
 			plannedWrite = true
 		}
 	}
-	plannedLink := false
 	for _, link := range result.Links {
 		if link.Created {
 			errs = append(errs, "install dry-run reported created link:"+link.Path)
@@ -44,9 +58,11 @@ func installDryRunValidationErrors(result installDryRunSmokeResult, tempHome, te
 			plannedLink = true
 		}
 	}
-	if !plannedWrite || !plannedLink {
-		errs = append(errs, "install dry-run did not expose planned writes and links")
-	}
+	return errs, plannedWrite, plannedLink
+}
+
+func installDryRunUnexpectedPathErrors(tempHome, tempRoot string, pathExists func(string) bool) []string {
+	var errs []string
 	for _, path := range []string{
 		filepath.Join(tempHome, ".codex"),
 		filepath.Join(tempHome, ".claude"),

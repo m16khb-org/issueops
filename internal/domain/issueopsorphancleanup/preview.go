@@ -54,6 +54,25 @@ func InspectInventory(result *contract.Result, request contract.Request, snapsho
 	if len(snapshot.InventoryProblems) > 0 {
 		Missing(result, "inventory_complete")
 	}
+	canonicalCount := inspectGitWorktrees(result, request, snapshot)
+	if canonicalCount != 1 {
+		Missing(result, "canonical_repo_root")
+	}
+	if result.TargetWorktreeCount != 1 {
+		Missing(result, "target_worktree_count")
+	}
+	if result.TargetCanonical {
+		Missing(result, "canonical_worktree")
+	}
+	inspectWorktreeHead(result, request)
+	inspectLocalBranchRefs(result, request, snapshot)
+	inspectCycleRecords(result, request, snapshot)
+	inspectLeaseAndOrcaAuthority(result, request, snapshot)
+}
+
+// inspectGitWorktrees records the target worktree facts and returns how many
+// canonical worktrees sit at the request repo root.
+func inspectGitWorktrees(result *contract.Result, request contract.Request, snapshot corehealth.Snapshot) int {
 	canonicalCount := 0
 	for _, worktree := range snapshot.GitWorktrees {
 		if worktree.Canonical && samePath(worktree.Path, request.RepoRoot) {
@@ -73,21 +92,19 @@ func InspectInventory(result *contract.Result, request contract.Request, snapsho
 			Missing(result, "branch_match")
 		}
 	}
-	if canonicalCount != 1 {
-		Missing(result, "canonical_repo_root")
-	}
-	if result.TargetWorktreeCount != 1 {
-		Missing(result, "target_worktree_count")
-	}
-	if result.TargetCanonical {
-		Missing(result, "canonical_worktree")
-	}
+	return canonicalCount
+}
+
+func inspectWorktreeHead(result *contract.Result, request contract.Request) {
 	if !validGitOID(result.HeadSHA) {
 		Missing(result, "worktree_head")
-	} else {
-		result.RecoveryHead = result.HeadSHA
-		result.RecoveryPath = filepath.Join(filepath.Dir(request.WorktreePath), filepath.Base(request.WorktreePath)+"-recovery-"+result.HeadSHA[:12])
+		return
 	}
+	result.RecoveryHead = result.HeadSHA
+	result.RecoveryPath = filepath.Join(filepath.Dir(request.WorktreePath), filepath.Base(request.WorktreePath)+"-recovery-"+result.HeadSHA[:12])
+}
+
+func inspectLocalBranchRefs(result *contract.Result, request contract.Request, snapshot corehealth.Snapshot) {
 	matchingLocalRefs := 0
 	for _, ref := range snapshot.LocalRefs {
 		if strings.TrimSpace(ref.Location) != "local" || strings.TrimSpace(ref.Branch) != request.Branch {
@@ -99,6 +116,9 @@ func InspectInventory(result *contract.Result, request contract.Request, snapsho
 	if matchingLocalRefs != 1 || result.LocalBranchOID == "" || result.LocalBranchOID != result.HeadSHA {
 		Missing(result, "local_branch_head")
 	}
+}
+
+func inspectCycleRecords(result *contract.Result, request contract.Request, snapshot corehealth.Snapshot) {
 	for _, cycle := range snapshot.Cycles {
 		if strings.TrimSpace(cycle.ID) == request.ID {
 			result.RecordAbsent = false
@@ -117,6 +137,9 @@ func InspectInventory(result *contract.Result, request contract.Request, snapsho
 			Missing(result, "target_lifecycle_authority_unknown")
 		}
 	}
+}
+
+func inspectLeaseAndOrcaAuthority(result *contract.Result, request contract.Request, snapshot corehealth.Snapshot) {
 	for _, index := range snapshot.LeaseHolderIndexes {
 		if strings.TrimSpace(index.LifecycleID) == request.ID {
 			Missing(result, "target_lease_authority")

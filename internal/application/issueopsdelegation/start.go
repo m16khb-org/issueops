@@ -39,48 +39,9 @@ func (s ChildStarter) Start(ctx context.Context, req model.IssueOpsChildStartReq
 	}
 	var result model.IssueOpsChildStartResult
 	err = s.Records.WithinLock(ctx, req.ParentID, func(spanCtx context.Context) error {
-		parent, err := s.Records.Load(req.ParentID)
-		if err != nil {
-			return err
-		}
-		if err = s.Authority.Validate(ctx, parent, actor); err != nil {
-			return err
-		}
-		if missing := domain.ChildStartMissingPreconditions(parent, req); len(missing) > 0 {
-			return fmt.Errorf("cannot start issueops child: missing %s", strings.Join(missing, ", "))
-		}
-		repo := s.Identity.CanonicalRepo(parent.Repo)
-		if repo == "" {
-			return fmt.Errorf("repo is required")
-		}
-		if err = domain.ValidateBranch(req.Branch); err != nil {
-			return err
-		}
-		id := s.Identity.StableID(repo, req.Branch)
-		child, err := s.Records.Load(id)
-		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return err
-		}
-		now := s.Now().UTC().Format(time.RFC3339Nano)
-		if errors.Is(err, fs.ErrNotExist) {
-			child = domain.NewCycleRecord(id, repo, req.Branch, now)
-		}
-		if err = domain.ValidateChildMutation(child); err != nil {
-			return err
-		}
-		child = domain.BuildDelegatedProfile(parent, child, req, now)
-		child.DevilsAdvocateReview = reviewdomain.InheritedParentReview(parent.ID, now)
-		child.UpdatedAt = now
-		parent, ref, changed := domain.RegisterChildReference(parent, child, req, now)
-		if changed {
-			parent.UpdatedAt = now
-		}
-		parent, child, err = s.Records.SavePair(ctx, parent, child)
-		if err != nil {
-			return err
-		}
-		result = model.IssueOpsChildStartResult{OK: true, ParentID: parent.ID, Child: child, ParentRef: ref, Guidance: "base_branch=" + parent.Branch + "; create an isolated worktree for " + child.Branch + " and export ISSUEOPS_EXPECTED_WORKTREE after linking it"}
-		return nil
+		var err error
+		result, err = s.startLocked(ctx, req, actor)
+		return err
 	})
 	if err != nil {
 		return model.IssueOpsChildStartResult{OK: false}, err
@@ -91,4 +52,49 @@ func (s ChildStarter) Start(ctx context.Context, req model.IssueOpsChildStartReq
 		}
 	}
 	return result, nil
+}
+
+// startLocked는 부모 락 안에서 자식 레코드를 만들거나 갱신하고 부모와 함께 저장한다.
+func (s ChildStarter) startLocked(ctx context.Context, req model.IssueOpsChildStartRequest, actor *model.IssueOpsActor) (model.IssueOpsChildStartResult, error) {
+	parent, err := s.Records.Load(req.ParentID)
+	if err != nil {
+		return model.IssueOpsChildStartResult{}, err
+	}
+	if err = s.Authority.Validate(ctx, parent, actor); err != nil {
+		return model.IssueOpsChildStartResult{}, err
+	}
+	if missing := domain.ChildStartMissingPreconditions(parent, req); len(missing) > 0 {
+		return model.IssueOpsChildStartResult{}, fmt.Errorf("cannot start issueops child: missing %s", strings.Join(missing, ", "))
+	}
+	repo := s.Identity.CanonicalRepo(parent.Repo)
+	if repo == "" {
+		return model.IssueOpsChildStartResult{}, fmt.Errorf("repo is required")
+	}
+	if err = domain.ValidateBranch(req.Branch); err != nil {
+		return model.IssueOpsChildStartResult{}, err
+	}
+	id := s.Identity.StableID(repo, req.Branch)
+	child, err := s.Records.Load(id)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return model.IssueOpsChildStartResult{}, err
+	}
+	now := s.Now().UTC().Format(time.RFC3339Nano)
+	if errors.Is(err, fs.ErrNotExist) {
+		child = domain.NewCycleRecord(id, repo, req.Branch, now)
+	}
+	if err = domain.ValidateChildMutation(child); err != nil {
+		return model.IssueOpsChildStartResult{}, err
+	}
+	child = domain.BuildDelegatedProfile(parent, child, req, now)
+	child.DevilsAdvocateReview = reviewdomain.InheritedParentReview(parent.ID, now)
+	child.UpdatedAt = now
+	parent, ref, changed := domain.RegisterChildReference(parent, child, req, now)
+	if changed {
+		parent.UpdatedAt = now
+	}
+	parent, child, err = s.Records.SavePair(ctx, parent, child)
+	if err != nil {
+		return model.IssueOpsChildStartResult{}, err
+	}
+	return model.IssueOpsChildStartResult{OK: true, ParentID: parent.ID, Child: child, ParentRef: ref, Guidance: "base_branch=" + parent.Branch + "; create an isolated worktree for " + child.Branch + " and export ISSUEOPS_EXPECTED_WORKTREE after linking it"}, nil
 }

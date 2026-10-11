@@ -41,14 +41,9 @@ func openHandoffDeliveryAudit(stateRoot string, mode handoffDeliveryAuditMode, h
 		}
 	}()
 
-	if mode == handoffDeliveryAuditAppend {
-		if err := unix.Mkdirat(stateFD, "audit", 0o700); err != nil && !errors.Is(err, unix.EEXIST) {
-			return nil, fmt.Errorf("create handoff delivery audit directory: %w", err)
-		}
-	}
-	auditFD, err := openPinnedHandoffDeliveryUnixDirectory(stateFD, "audit", nil)
+	auditFD, err := openHandoffDeliveryAuditDirectoryUnix(stateFD, mode)
 	if err != nil {
-		return nil, fmt.Errorf("open handoff delivery audit directory: %w", err)
+		return nil, err
 	}
 	closeAudit := true
 	defer func() {
@@ -59,26 +54,77 @@ func openHandoffDeliveryAudit(stateRoot string, mode handoffDeliveryAuditMode, h
 	if err := validateHandoffDeliveryUnixFD(auditFD, true, 0o700); err != nil {
 		return nil, fmt.Errorf("handoff delivery audit directory: %w", err)
 	}
-	var beforeFile unix.Stat_t
-	beforeFileErr := unix.Fstatat(auditFD, "handoff-delivery.jsonl", &beforeFile, unix.AT_SYMLINK_NOFOLLOW)
-	if beforeFileErr != nil && !(mode == handoffDeliveryAuditAppend && errors.Is(beforeFileErr, unix.ENOENT)) {
-		return nil, fmt.Errorf("inspect handoff delivery audit log: %w", beforeFileErr)
+	file, err := openHandoffDeliveryAuditLeafUnix(stateRoot, auditFD, mode, hooks)
+	if err != nil {
+		return nil, err
 	}
-	if beforeFileErr == nil && (beforeFile.Mode&unix.S_IFMT != unix.S_IFREG || beforeFile.Mode&0o777 != 0o600) {
-		return nil, errors.New("handoff delivery audit log has unsafe type or permissions")
+
+	handle := &handoffDeliveryAuditHandle{file: file}
+	handle.verifyPath = func() error {
+		return verifyHandoffDeliveryAuditPathUnix(statePathFDs, statePathNames, stateFD, auditFD, file)
+	}
+	handle.closePath = func() error {
+		return errors.Join(unix.Close(auditFD), closeHandoffDeliveryUnixFDs(statePathFDs))
+	}
+	closeAudit = false
+	closeState = false
+	return handle, nil
+}
+
+// openHandoffDeliveryAuditDirectoryUnix creates the audit directory in append
+// mode and opens it as a pinned directory handle.
+func openHandoffDeliveryAuditDirectoryUnix(stateFD int, mode handoffDeliveryAuditMode) (int, error) {
+	if mode == handoffDeliveryAuditAppend {
+		if err := unix.Mkdirat(stateFD, "audit", 0o700); err != nil && !errors.Is(err, unix.EEXIST) {
+			return -1, fmt.Errorf("create handoff delivery audit directory: %w", err)
+		}
+	}
+	auditFD, err := openPinnedHandoffDeliveryUnixDirectory(stateFD, "audit", nil)
+	if err != nil {
+		return -1, fmt.Errorf("open handoff delivery audit directory: %w", err)
+	}
+	return auditFD, nil
+}
+
+// inspectHandoffDeliveryAuditLeafUnix lstats the leaf before opening and checks
+// its type and permissions. inspectErr is the raw lstat result; the caller uses
+// it to decide O_EXCL and whether to compare identity after opening.
+func inspectHandoffDeliveryAuditLeafUnix(auditFD int, mode handoffDeliveryAuditMode) (before unix.Stat_t, inspectErr error, err error) {
+	inspectErr = unix.Fstatat(auditFD, "handoff-delivery.jsonl", &before, unix.AT_SYMLINK_NOFOLLOW)
+	if inspectErr != nil && !(mode == handoffDeliveryAuditAppend && errors.Is(inspectErr, unix.ENOENT)) {
+		return before, inspectErr, fmt.Errorf("inspect handoff delivery audit log: %w", inspectErr)
+	}
+	if inspectErr == nil && (before.Mode&unix.S_IFMT != unix.S_IFREG || before.Mode&0o777 != 0o600) {
+		return before, inspectErr, errors.New("handoff delivery audit log has unsafe type or permissions")
+	}
+	return before, inspectErr, nil
+}
+
+// handoffDeliveryAuditLeafOpenFlags picks open flags from the mode and the
+// pre-open lstat result.
+func handoffDeliveryAuditLeafOpenFlags(mode handoffDeliveryAuditMode, beforeFileErr error) int {
+	if mode != handoffDeliveryAuditAppend {
+		return unix.O_RDONLY | unix.O_CLOEXEC | unix.O_NOFOLLOW
+	}
+	flags := unix.O_RDWR | unix.O_APPEND | unix.O_CREAT | unix.O_CLOEXEC | unix.O_NOFOLLOW
+	if errors.Is(beforeFileErr, unix.ENOENT) {
+		flags |= unix.O_EXCL
+	}
+	return flags
+}
+
+// openHandoffDeliveryAuditLeafUnix inspects and opens the leaf, then verifies
+// its type, permissions, and identity. On failure it closes any file it opened.
+func openHandoffDeliveryAuditLeafUnix(stateRoot string, auditFD int, mode handoffDeliveryAuditMode, hooks handoffDeliveryOpenHooks) (*os.File, error) {
+	beforeFile, beforeFileErr, err := inspectHandoffDeliveryAuditLeafUnix(auditFD, mode)
+	if err != nil {
+		return nil, err
 	}
 	if hooks.beforeLeafOpen != nil {
 		hooks.beforeLeafOpen()
 	}
 
-	flags := unix.O_RDONLY | unix.O_CLOEXEC | unix.O_NOFOLLOW
-	if mode == handoffDeliveryAuditAppend {
-		flags = unix.O_RDWR | unix.O_APPEND | unix.O_CREAT | unix.O_CLOEXEC | unix.O_NOFOLLOW
-		if errors.Is(beforeFileErr, unix.ENOENT) {
-			flags |= unix.O_EXCL
-		}
-	}
-	fileFD, err := unix.Openat(auditFD, "handoff-delivery.jsonl", flags, 0o600)
+	fileFD, err := unix.Openat(auditFD, "handoff-delivery.jsonl", handoffDeliveryAuditLeafOpenFlags(mode, beforeFileErr), 0o600)
 	if err != nil {
 		return nil, fmt.Errorf("open handoff delivery audit log: %w", err)
 	}
@@ -101,28 +147,24 @@ func openHandoffDeliveryAudit(stateRoot string, mode handoffDeliveryAuditMode, h
 	if hooks.afterLeafOpen != nil {
 		hooks.afterLeafOpen()
 	}
+	return file, nil
+}
 
-	handle := &handoffDeliveryAuditHandle{file: file}
-	handle.verifyPath = func() error {
-		for index, name := range statePathNames {
-			if err := verifyHandoffDeliveryUnixEntry(statePathFDs[index], name, statePathFDs[index+1], true); err != nil {
-				return fmt.Errorf("handoff delivery state path component %q changed: %w", name, err)
-			}
+// verifyHandoffDeliveryAuditPathUnix checks that every pinned path component
+// still names the same object.
+func verifyHandoffDeliveryAuditPathUnix(statePathFDs []int, statePathNames []string, stateFD, auditFD int, file *os.File) error {
+	for index, name := range statePathNames {
+		if err := verifyHandoffDeliveryUnixEntry(statePathFDs[index], name, statePathFDs[index+1], true); err != nil {
+			return fmt.Errorf("handoff delivery state path component %q changed: %w", name, err)
 		}
-		if err := verifyHandoffDeliveryUnixEntry(stateFD, "audit", auditFD, true); err != nil {
-			return fmt.Errorf("handoff delivery audit directory changed: %w", err)
-		}
-		if err := verifyHandoffDeliveryUnixEntry(auditFD, "handoff-delivery.jsonl", int(file.Fd()), false); err != nil {
-			return fmt.Errorf("handoff delivery audit log changed: %w", err)
-		}
-		return nil
 	}
-	handle.closePath = func() error {
-		return errors.Join(unix.Close(auditFD), closeHandoffDeliveryUnixFDs(statePathFDs))
+	if err := verifyHandoffDeliveryUnixEntry(stateFD, "audit", auditFD, true); err != nil {
+		return fmt.Errorf("handoff delivery audit directory changed: %w", err)
 	}
-	closeAudit = false
-	closeState = false
-	return handle, nil
+	if err := verifyHandoffDeliveryUnixEntry(auditFD, "handoff-delivery.jsonl", int(file.Fd()), false); err != nil {
+		return fmt.Errorf("handoff delivery audit log changed: %w", err)
+	}
+	return nil
 }
 
 func openHandoffDeliveryStateRootUnix(stateRoot string, beforeStateRootOpen func()) ([]int, []string, error) {

@@ -170,34 +170,12 @@ func (transaction *ManagedCommandPathTransaction) Rollback() (install.ManagedCom
 	if transaction == nil || transaction.closed || !transaction.applied {
 		return install.ManagedCommandPathPlan{}, fmt.Errorf("managed command path transaction cannot roll back")
 	}
-	if err := verifyManagedCommandSymlink(transaction.plan.Path, transaction.plan.Target); err != nil {
-		return transaction.plan, fmt.Errorf("managed command path changed before rollback")
-	}
-	temporary, err := transaction.temporaryRegularPath("rollback")
+	temporary, err := transaction.exchangeRollbackBackup()
 	if err != nil {
 		return transaction.plan, err
 	}
-	if err := copyManagedCommandFile(transaction.plan.BackupPath, temporary, transaction.existing.mode.Perm(), nil); err != nil {
-		return transaction.plan, fmt.Errorf("prepare command rollback: %w", err)
-	}
-	if err := verifyManagedCommandCopy(temporary, transaction.existing); err != nil {
-		_ = os.Remove(temporary)
-		return transaction.plan, fmt.Errorf("verify command rollback: %w", err)
-	}
-	if err := transaction.deps.exchangePaths(temporary, transaction.plan.Path); err != nil {
-		_ = os.Remove(temporary)
-		return transaction.plan, fmt.Errorf("atomically exchange original command during rollback: %w", err)
-	}
-	if err := verifyManagedCommandSymlink(temporary, transaction.plan.Target); err != nil {
-		restoreErr := transaction.restoreRollbackDisplacement(temporary)
-		return transaction.plan, errors.Join(
-			fmt.Errorf("managed command path changed during rollback; recovery backup retained at %s", transaction.plan.BackupPath),
-			restoreErr,
-		)
-	}
-	if err := verifyManagedCommandCopy(transaction.plan.Path, transaction.existing); err != nil {
-		restoreErr := transaction.restoreRollbackDisplacement(temporary)
-		return transaction.plan, errors.Join(fmt.Errorf("verify restored command after rollback: %w", err), restoreErr)
+	if err := transaction.verifyRollbackExchange(temporary); err != nil {
+		return transaction.plan, err
 	}
 	if err := os.Remove(temporary); err != nil {
 		return transaction.plan, fmt.Errorf("remove displaced command symlink after rollback: %w", err)
@@ -209,20 +187,68 @@ func (transaction *ManagedCommandPathTransaction) Rollback() (install.ManagedCom
 	transaction.plan.Adopted = false
 	transaction.plan.RollbackAvailable = false
 	transaction.closed = true
-	if transaction.displaced != "" {
-		if err := os.Remove(transaction.displaced); err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return transaction.plan, fmt.Errorf("remove retained displaced command after rollback: %w", err)
-		}
-		transaction.displaced = ""
-	}
-	if err := os.Remove(transaction.plan.BackupPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return transaction.plan, fmt.Errorf("remove command backup after rollback: %w", err)
+	if err := transaction.removeRollbackLeftovers(); err != nil {
+		return transaction.plan, err
 	}
 	transaction.plan.BackupRetained = false
 	if err := transaction.deps.syncDir(filepath.Dir(transaction.plan.Path)); err != nil {
 		return transaction.plan, fmt.Errorf("sync rollback cleanup: %w", err)
 	}
 	return transaction.plan, nil
+}
+
+// exchangeRollbackBackup copies the backup to a temporary regular file and atomically exchanges it with the managed symlink.
+// It returns the temporary path that now holds the displaced symlink.
+func (transaction *ManagedCommandPathTransaction) exchangeRollbackBackup() (string, error) {
+	if err := verifyManagedCommandSymlink(transaction.plan.Path, transaction.plan.Target); err != nil {
+		return "", fmt.Errorf("managed command path changed before rollback")
+	}
+	temporary, err := transaction.temporaryRegularPath("rollback")
+	if err != nil {
+		return "", err
+	}
+	if err := copyManagedCommandFile(transaction.plan.BackupPath, temporary, transaction.existing.mode.Perm(), nil); err != nil {
+		return "", fmt.Errorf("prepare command rollback: %w", err)
+	}
+	if err := verifyManagedCommandCopy(temporary, transaction.existing); err != nil {
+		_ = os.Remove(temporary)
+		return "", fmt.Errorf("verify command rollback: %w", err)
+	}
+	if err := transaction.deps.exchangePaths(temporary, transaction.plan.Path); err != nil {
+		_ = os.Remove(temporary)
+		return "", fmt.Errorf("atomically exchange original command during rollback: %w", err)
+	}
+	return temporary, nil
+}
+
+// verifyRollbackExchange checks both sides of the rollback exchange and restores the displaced path on failure.
+func (transaction *ManagedCommandPathTransaction) verifyRollbackExchange(temporary string) error {
+	if err := verifyManagedCommandSymlink(temporary, transaction.plan.Target); err != nil {
+		restoreErr := transaction.restoreRollbackDisplacement(temporary)
+		return errors.Join(
+			fmt.Errorf("managed command path changed during rollback; recovery backup retained at %s", transaction.plan.BackupPath),
+			restoreErr,
+		)
+	}
+	if err := verifyManagedCommandCopy(transaction.plan.Path, transaction.existing); err != nil {
+		restoreErr := transaction.restoreRollbackDisplacement(temporary)
+		return errors.Join(fmt.Errorf("verify restored command after rollback: %w", err), restoreErr)
+	}
+	return nil
+}
+
+// removeRollbackLeftovers deletes the retained displaced command and the backup after a completed rollback.
+func (transaction *ManagedCommandPathTransaction) removeRollbackLeftovers() error {
+	if transaction.displaced != "" {
+		if err := os.Remove(transaction.displaced); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("remove retained displaced command after rollback: %w", err)
+		}
+		transaction.displaced = ""
+	}
+	if err := os.Remove(transaction.plan.BackupPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("remove command backup after rollback: %w", err)
+	}
+	return nil
 }
 
 func (transaction *ManagedCommandPathTransaction) restoreDisplacedPath(displaced string) error {
@@ -322,8 +348,7 @@ func inspectManagedCommand(path string, readBuildInfo func(string) (managedBuild
 		return managedCommandIdentity{}, err
 	}
 	stat, ok := info.Sys().(*syscall.Stat_t)
-	if !ok || !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 || info.Mode().Perm()&0o111 == 0 ||
-		info.Size() <= 0 || info.Size() > managedCommandMaxSize || uint32(stat.Uid) != uint32(os.Geteuid()) || uint64(stat.Nlink) != 1 {
+	if !ok || !acceptableManagedCommandFile(info, stat) {
 		return managedCommandIdentity{}, fmt.Errorf("managed command must be a current-user executable single-link regular file within the size limit")
 	}
 	identity := managedCommandIdentity{
@@ -343,6 +368,11 @@ func inspectManagedCommand(path string, readBuildInfo func(string) (managedBuild
 		return managedCommandIdentity{}, fmt.Errorf("managed command identity changed during build inspection")
 	}
 	return identity, nil
+}
+
+func acceptableManagedCommandFile(info os.FileInfo, stat *syscall.Stat_t) bool {
+	return info.Mode().IsRegular() && info.Mode()&os.ModeSymlink == 0 && info.Mode().Perm()&0o111 != 0 &&
+		info.Size() > 0 && info.Size() <= managedCommandMaxSize && uint32(stat.Uid) == uint32(os.Geteuid()) && uint64(stat.Nlink) == 1
 }
 
 func hashManagedCommand(path string, expected os.FileInfo, identity managedCommandIdentity) (string, error) {
@@ -411,11 +441,8 @@ func copyManagedCommandFile(source, destination string, mode os.FileMode, expect
 		return err
 	}
 	if expected != nil {
-		after, statErr := input.Stat()
-		pathAfter, pathErr := os.Lstat(source)
-		if statErr != nil || pathErr != nil || !sameManagedCommandIdentity(after, before, *expected) || !sameManagedCommandIdentity(pathAfter, before, *expected) ||
-			hex.EncodeToString(digest.Sum(nil)) != expected.sha256 {
-			return fmt.Errorf("managed command identity changed during backup")
+		if err := verifyManagedCommandBackupSource(input, source, before, *expected, digest); err != nil {
+			return err
 		}
 	}
 	if err := output.Chmod(mode); err != nil {
@@ -428,6 +455,16 @@ func copyManagedCommandFile(source, destination string, mode os.FileMode, expect
 		return err
 	}
 	clean = false
+	return nil
+}
+
+func verifyManagedCommandBackupSource(input *os.File, source string, before os.FileInfo, expected managedCommandIdentity, digest hash.Hash) error {
+	after, statErr := input.Stat()
+	pathAfter, pathErr := os.Lstat(source)
+	if statErr != nil || pathErr != nil || !sameManagedCommandIdentity(after, before, expected) || !sameManagedCommandIdentity(pathAfter, before, expected) ||
+		hex.EncodeToString(digest.Sum(nil)) != expected.sha256 {
+		return fmt.Errorf("managed command identity changed during backup")
+	}
 	return nil
 }
 

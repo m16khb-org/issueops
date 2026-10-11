@@ -44,26 +44,8 @@ func VerifyHookConfigActivation(actual, expected map[string]any) (string, error)
 		}
 	}
 	for event, groupsValue := range actualHooks {
-		groups, ok := groupsValue.([]any)
-		if !ok {
-			return "", fmt.Errorf("installed hook event %s is malformed", event)
-		}
-		harnessGroups := []any{}
-		for _, group := range groups {
-			if HookGroupContainsAgentHarness(group) {
-				harnessGroups = append(harnessGroups, group)
-			}
-		}
-		expectedGroupsValue, expectedEvent := expectedHooks[event]
-		if !expectedEvent {
-			if len(harnessGroups) != 0 {
-				return "", fmt.Errorf("installed hook event %s contains an unexpected issueops group", event)
-			}
-			continue
-		}
-		expectedGroups, ok := expectedGroupsValue.([]any)
-		if !ok || len(expectedGroups) != 1 || len(harnessGroups) != 1 || !canonicalJSONEqual(harnessGroups[0], expectedGroups[0]) {
-			return "", fmt.Errorf("installed hook event %s does not contain exactly one canonical issueops group", event)
+		if err := verifyInstalledHookEvent(event, groupsValue, expectedHooks); err != nil {
+			return "", err
 		}
 	}
 	for event := range expectedHooks {
@@ -72,6 +54,31 @@ func VerifyHookConfigActivation(actual, expected map[string]any) (string, error)
 		}
 	}
 	return SemanticSHA256(expected)
+}
+
+func verifyInstalledHookEvent(event string, groupsValue any, expectedHooks map[string]any) error {
+	groups, ok := groupsValue.([]any)
+	if !ok {
+		return fmt.Errorf("installed hook event %s is malformed", event)
+	}
+	harnessGroups := []any{}
+	for _, group := range groups {
+		if HookGroupContainsAgentHarness(group) {
+			harnessGroups = append(harnessGroups, group)
+		}
+	}
+	expectedGroupsValue, expectedEvent := expectedHooks[event]
+	if !expectedEvent {
+		if len(harnessGroups) != 0 {
+			return fmt.Errorf("installed hook event %s contains an unexpected issueops group", event)
+		}
+		return nil
+	}
+	expectedGroups, ok := expectedGroupsValue.([]any)
+	if !ok || len(expectedGroups) != 1 || len(harnessGroups) != 1 || !canonicalJSONEqual(harnessGroups[0], expectedGroups[0]) {
+		return fmt.Errorf("installed hook event %s does not contain exactly one canonical issueops group", event)
+	}
+	return nil
 }
 
 func SemanticSHA256(value any) (string, error) {
@@ -89,13 +96,9 @@ func CaptureNativeActivationEvidence(host, surface, path, semanticSHA256 string)
 		return port.NativeActivationEvidence{}, err
 	}
 	path = filepath.Clean(path)
-	info, err := os.Lstat(path)
+	info, stat, err := lstatPhysicalRegularFile(path)
 	if err != nil {
 		return port.NativeActivationEvidence{}, err
-	}
-	stat, ok := info.Sys().(*syscall.Stat_t)
-	if !ok || stat.Dev == 0 || stat.Ino == 0 || stat.Nlink != 1 || !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
-		return port.NativeActivationEvidence{}, fmt.Errorf("activation evidence must be a physical single-link regular file: %s", path)
 	}
 	file, err := os.Open(path)
 	if err != nil {
@@ -111,7 +114,7 @@ func CaptureNativeActivationEvidence(host, surface, path, semanticSHA256 string)
 		return port.NativeActivationEvidence{}, err
 	}
 	openedStat, ok := opened.Sys().(*syscall.Stat_t)
-	if !ok || openedStat.Dev != stat.Dev || openedStat.Ino != stat.Ino || opened.Size() != info.Size() {
+	if !ok || !sameActivationReadback(opened, openedStat, info, stat) {
 		return port.NativeActivationEvidence{}, fmt.Errorf("activation evidence changed during readback: %s", path)
 	}
 	return port.NativeActivationEvidence{
@@ -119,6 +122,23 @@ func CaptureNativeActivationEvidence(host, surface, path, semanticSHA256 string)
 		SHA256: hex.EncodeToString(hash.Sum(nil)), Mode: uint32(opened.Mode()), Size: opened.Size(),
 		Device: uint64(openedStat.Dev), Inode: uint64(openedStat.Ino),
 	}, nil
+}
+
+// lstatPhysicalRegularFile lstat이 돌려준 경로가 물리적 단일 링크 일반 파일인지 확인한다.
+func lstatPhysicalRegularFile(path string) (os.FileInfo, *syscall.Stat_t, error) {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return nil, nil, err
+	}
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	if !ok || stat.Dev == 0 || stat.Ino == 0 || stat.Nlink != 1 || !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
+		return nil, nil, fmt.Errorf("activation evidence must be a physical single-link regular file: %s", path)
+	}
+	return info, stat, nil
+}
+
+func sameActivationReadback(opened os.FileInfo, openedStat *syscall.Stat_t, info os.FileInfo, stat *syscall.Stat_t) bool {
+	return openedStat.Dev == stat.Dev && openedStat.Ino == stat.Ino && opened.Size() == info.Size()
 }
 
 func canonicalJSONEqual(left, right any) bool {

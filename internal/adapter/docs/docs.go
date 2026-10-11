@@ -83,19 +83,8 @@ func ReadHeadings(path string) (string, []string) {
 	title := ""
 	headings := []string{}
 	for _, line := range strings.Split(string(b), "\n") {
-		line = strings.TrimSpace(line)
-		if !strings.HasPrefix(line, "#") {
-			continue
-		}
-		level := 0
-		for level < len(line) && line[level] == '#' {
-			level++
-		}
-		if level == 0 || level > 6 || level >= len(line) || line[level] != ' ' {
-			continue
-		}
-		text := strings.TrimSpace(line[level+1:])
-		if text == "" {
+		level, text, ok := parseHeadingLine(strings.TrimSpace(line))
+		if !ok {
 			continue
 		}
 		if title == "" && level == 1 {
@@ -110,4 +99,17 @@ func ReadHeadings(path string) (string, []string) {
 		title = headings[0]
 	}
 	return title, headings
+}
+
+// parseHeadingLine parses an ATX heading ("# " to "###### ") from a trimmed line.
+func parseHeadingLine(line string) (int, string, bool) {
+	level := 0
+	for level < len(line) && line[level] == '#' {
+		level++
+	}
+	if level == 0 || level > 6 || level >= len(line) || line[level] != ' ' {
+		return 0, "", false
+	}
+	text := strings.TrimSpace(line[level+1:])
+	return level, text, text != ""
 }

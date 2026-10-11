@@ -173,24 +173,13 @@ func putChildOperation(record model.IssueOpsRecord, op model.ChildCreateOperatio
 
 func childProjectAuthority(raw, provider string) (string, error) {
 	parsed, err := url.Parse(raw)
-	if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+	if err != nil || !validChildProjectURL(parsed) {
 		return "", fmt.Errorf("invalid child project URL")
 	}
 	parts := strings.Split(strings.Trim(parsed.EscapedPath(), "/"), "/")
-	projectEnd := 0
-	switch provider {
-	case "github":
-		if !strings.EqualFold(parsed.Hostname(), "github.com") || len(parts) != 4 || parts[2] != "issues" {
-			return "", fmt.Errorf("invalid github child URL")
-		}
-		projectEnd = 2
-	case "gitlab":
-		if strings.EqualFold(parsed.Hostname(), "github.com") || len(parts) < 5 || parts[len(parts)-3] != "-" || (parts[len(parts)-2] != "issues" && parts[len(parts)-2] != "work_items") {
-			return "", fmt.Errorf("invalid gitlab child URL")
-		}
-		projectEnd = len(parts) - 3
-	default:
-		return "", fmt.Errorf("invalid child provider")
+	projectEnd, err := childProjectEnd(parsed.Hostname(), parts, provider)
+	if err != nil {
+		return "", err
 	}
 	number := parts[len(parts)-1]
 	if _, err := strconv.ParseUint(number, 10, 64); err != nil || number == "" || strings.ContainsAny(number, "+-") {
@@ -206,4 +195,27 @@ func childProjectAuthority(raw, provider string) (string, error) {
 		host = strings.TrimSuffix(host, ":443")
 	}
 	return host + "/" + strings.ToLower(strings.Join(parts[:projectEnd], "/")), nil
+}
+
+func validChildProjectURL(parsed *url.URL) bool {
+	return parsed.Scheme == "https" && parsed.Host != "" && parsed.User == nil && parsed.RawQuery == "" && parsed.Fragment == ""
+}
+
+// childProjectEnd returns the index at which the project path ends within parts
+// for the provider-specific issue URL layout.
+func childProjectEnd(hostname string, parts []string, provider string) (int, error) {
+	switch provider {
+	case "github":
+		if !strings.EqualFold(hostname, "github.com") || len(parts) != 4 || parts[2] != "issues" {
+			return 0, fmt.Errorf("invalid github child URL")
+		}
+		return 2, nil
+	case "gitlab":
+		if strings.EqualFold(hostname, "github.com") || len(parts) < 5 || parts[len(parts)-3] != "-" || (parts[len(parts)-2] != "issues" && parts[len(parts)-2] != "work_items") {
+			return 0, fmt.Errorf("invalid gitlab child URL")
+		}
+		return len(parts) - 3, nil
+	default:
+		return 0, fmt.Errorf("invalid child provider")
+	}
 }

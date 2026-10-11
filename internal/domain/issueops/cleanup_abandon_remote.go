@@ -58,55 +58,79 @@ func BuildCleanupAbandonRemotePreview(req model.CleanupAbandonRequest, inventory
 	inventory.ClosePR, inventory.CloseIssue, inventory.DeleteRemoteBranch = req.ClosePR, req.CloseIssue, req.DeleteRemoteBranch
 	effects := []string{}
 	if req.ClosePR {
-		switch {
-		case plan.ArtifactMissing != "":
-			observed.RemoteMissing = append(observed.RemoteMissing, plan.ArtifactMissing)
-		case facts.ArtifactError != nil:
-			observed.RemoteMissing = append(observed.RemoteMissing, "remote_artifact_readable")
-		default:
-			observed.RemoteArtifactState = facts.ArtifactState
-			switch strings.ToLower(strings.TrimSpace(facts.ArtifactState)) {
-			case "merged":
-				observed.RemoteMissing = append(observed.RemoteMissing, "remote_artifact_unmerged")
-			case "closed":
-				effects = append(effects, "close_pr:already_closed")
-			default:
-				effects = append(effects, "close_pr")
-			}
-		}
+		effects = appendNonEmpty(effects, previewClosePR(&observed, plan, facts))
 	}
 	if req.CloseIssue {
-		switch {
-		case plan.IssueMissing != "":
-			observed.RemoteMissing = append(observed.RemoteMissing, plan.IssueMissing)
-		case facts.IssueError != nil:
-			observed.RemoteMissing = append(observed.RemoteMissing, "issue_readable")
-		default:
-			observed.IssueState = facts.IssueState
-			if strings.EqualFold(strings.TrimSpace(facts.IssueState), "closed") {
-				effects = append(effects, "close_issue:already_closed")
-			} else {
-				effects = append(effects, "close_issue")
-			}
-		}
+		effects = appendNonEmpty(effects, previewCloseIssue(&observed, plan, facts))
 	}
 	if req.DeleteRemoteBranch {
-		switch {
-		case plan.BranchMissing != "":
-			observed.RemoteMissing = append(observed.RemoteMissing, plan.BranchMissing)
-		case facts.BranchError != nil:
-			observed.RemoteMissing = append(observed.RemoteMissing, "remote_branch_readable")
-		default:
-			inventory.RemoteBranchOID = facts.BranchOID
-			if facts.BranchOID == "" {
-				effects = append(effects, "remote_branch_delete:absent")
-			} else {
-				effects = append(effects, "remote_branch_delete")
-			}
-		}
+		effects = appendNonEmpty(effects, previewDeleteRemoteBranch(&observed, &inventory, plan, facts))
 	}
 	if len(observed.RemoteMissing) == 0 && (req.ClosePR || req.CloseIssue || req.DeleteRemoteBranch) {
 		observed.RemoteEffects = effects
 	}
 	return inventory, observed
+}
+
+func appendNonEmpty(effects []string, effect string) []string {
+	if effect == "" {
+		return effects
+	}
+	return append(effects, effect)
+}
+
+// previewClosePR는 PR 닫기 단계의 미충족 항목을 observed에 기록하고, 계획된 효과(없으면 "")를 돌려준다.
+func previewClosePR(observed *CleanupAbandonObservation, plan CleanupAbandonRemoteReads, facts CleanupAbandonRemoteFacts) string {
+	switch {
+	case plan.ArtifactMissing != "":
+		observed.RemoteMissing = append(observed.RemoteMissing, plan.ArtifactMissing)
+		return ""
+	case facts.ArtifactError != nil:
+		observed.RemoteMissing = append(observed.RemoteMissing, "remote_artifact_readable")
+		return ""
+	}
+	observed.RemoteArtifactState = facts.ArtifactState
+	switch strings.ToLower(strings.TrimSpace(facts.ArtifactState)) {
+	case "merged":
+		observed.RemoteMissing = append(observed.RemoteMissing, "remote_artifact_unmerged")
+		return ""
+	case "closed":
+		return "close_pr:already_closed"
+	default:
+		return "close_pr"
+	}
+}
+
+// previewCloseIssue는 이슈 닫기 단계의 미충족 항목을 observed에 기록하고, 계획된 효과(없으면 "")를 돌려준다.
+func previewCloseIssue(observed *CleanupAbandonObservation, plan CleanupAbandonRemoteReads, facts CleanupAbandonRemoteFacts) string {
+	switch {
+	case plan.IssueMissing != "":
+		observed.RemoteMissing = append(observed.RemoteMissing, plan.IssueMissing)
+		return ""
+	case facts.IssueError != nil:
+		observed.RemoteMissing = append(observed.RemoteMissing, "issue_readable")
+		return ""
+	}
+	observed.IssueState = facts.IssueState
+	if strings.EqualFold(strings.TrimSpace(facts.IssueState), "closed") {
+		return "close_issue:already_closed"
+	}
+	return "close_issue"
+}
+
+// previewDeleteRemoteBranch는 원격 브랜치 삭제 단계의 미충족 항목을 observed에 기록하고, 계획된 효과(없으면 "")를 돌려준다.
+func previewDeleteRemoteBranch(observed *CleanupAbandonObservation, inventory *model.CleanupAbandonInventory, plan CleanupAbandonRemoteReads, facts CleanupAbandonRemoteFacts) string {
+	switch {
+	case plan.BranchMissing != "":
+		observed.RemoteMissing = append(observed.RemoteMissing, plan.BranchMissing)
+		return ""
+	case facts.BranchError != nil:
+		observed.RemoteMissing = append(observed.RemoteMissing, "remote_branch_readable")
+		return ""
+	}
+	inventory.RemoteBranchOID = facts.BranchOID
+	if facts.BranchOID == "" {
+		return "remote_branch_delete:absent"
+	}
+	return "remote_branch_delete"
 }

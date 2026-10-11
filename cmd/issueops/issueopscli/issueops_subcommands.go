@@ -399,26 +399,35 @@ func (cli command) runIssueOpsArtifact(args []string) error {
 		fmt.Println("Usage:\n  issueops artifact stage --id ID --name plan|spec|verified-execution-loop --file PATH [--json]\n  issueops artifact unstage --id ID --name plan|spec|verified-execution-loop [--json]")
 		return nil
 	}
-	if args[0] == "unstage" {
-		fs := flag.NewFlagSet("issueops artifact unstage", flag.ContinueOnError)
-		id := fs.String("id", "", "issueops id")
-		name := fs.String("name", "", "artifact name: plan|spec|verified-execution-loop")
-		jsonOut := fs.Bool("json", false, "print JSON")
-		if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
-			return err
-		}
-		record, err := cli.Runtime.UnstageIssueOpsArtifact(cli.Runtime.IssueOpsStateRoot(), *id, *name)
-		return printIssueOpsResult(record, *jsonOut, err)
-	}
-	if args[0] != "stage" {
+	switch args[0] {
+	case "unstage":
+		return cli.runIssueOpsArtifactUnstage(args[1:])
+	case "stage":
+		return cli.runIssueOpsArtifactStage(args[1:])
+	default:
 		return fmt.Errorf("unknown issueops artifact subcommand %q", args[0])
 	}
+}
+
+func (cli command) runIssueOpsArtifactUnstage(args []string) error {
+	fs := flag.NewFlagSet("issueops artifact unstage", flag.ContinueOnError)
+	id := fs.String("id", "", "issueops id")
+	name := fs.String("name", "", "artifact name: plan|spec|verified-execution-loop")
+	jsonOut := fs.Bool("json", false, "print JSON")
+	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
+		return err
+	}
+	record, err := cli.Runtime.UnstageIssueOpsArtifact(cli.Runtime.IssueOpsStateRoot(), *id, *name)
+	return printIssueOpsResult(record, *jsonOut, err)
+}
+
+func (cli command) runIssueOpsArtifactStage(args []string) error {
 	fs := flag.NewFlagSet("issueops artifact stage", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
 	name := fs.String("name", "", "artifact name: plan|spec|verified-execution-loop")
 	file := fs.String("file", "", "artifact source file path")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
+	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
 	}
 	if strings.TrimSpace(*file) == "" {
