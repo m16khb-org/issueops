@@ -5723,6 +5723,7 @@
         "func isClientProxyType",
         "func isControllerLike",
         "func isSkippedIndexDir",
+        "func methodNameAt",
         "func newEvidenceExtractor",
         "func nextMethodName",
         "func parenDepthDeltaOf",

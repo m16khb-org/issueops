@@ -118,15 +118,14 @@ func (e *evidenceExtractor) extractController(file, text string) {
 	injections := parseInjections(text)
 	lines := strings.Split(text, "\n")
 	for i := range lines {
-		m := methodNameRe2().FindStringSubmatch(lines[i])
-		if m == nil {
+		method, isMethod := methodNameAt(lines[i])
+		if !isMethod {
 			continue
 		}
 		bodyStart, body, ok := extractMethodBody(lines, i)
 		if !ok {
 			continue
 		}
-		method := m[1]
 		if method == "constructor" {
 			continue
 		}
@@ -298,8 +297,7 @@ func (e *evidenceExtractor) addThrows(key, servicePath, serviceText, method stri
 	}
 	lines := strings.Split(serviceText, "\n")
 	for i := range lines {
-		m := methodNameRe2().FindStringSubmatch(lines[i])
-		if m == nil || m[1] != method {
+		if name, ok := methodNameAt(lines[i]); !ok || name != method {
 			continue
 		}
 		_, body, ok := extractMethodBody(lines, i)
@@ -465,10 +463,24 @@ func (e *evidenceExtractor) addExceptionFilters(key string) {
 	}
 }
 
+// methodNameAt reports the member name declared on line. Control-flow
+// statements such as `if (x) {` share the call shape but are never methods.
+func methodNameAt(line string) (string, bool) {
+	m := methodNameRe2().FindStringSubmatch(line)
+	if m == nil {
+		return "", false
+	}
+	switch m[1] {
+	case "if", "for", "while", "switch", "catch":
+		return "", false
+	}
+	return m[1], true
+}
+
 func nextMethodName(lines []string, from int) string {
 	for i := from; i < len(lines) && i < from+12; i++ {
-		if m := methodNameRe2().FindStringSubmatch(lines[i]); m != nil && m[1] != "constructor" {
-			return m[1]
+		if name, ok := methodNameAt(lines[i]); ok && name != "constructor" {
+			return name
 		}
 	}
 	return ""
@@ -476,8 +488,7 @@ func nextMethodName(lines []string, from int) string {
 
 func handlerBody(lines []string, from int, handler string) (int, string, bool) {
 	for i := from; i < len(lines) && i < from+12; i++ {
-		m := methodNameRe2().FindStringSubmatch(lines[i])
-		if m == nil || m[1] != handler {
+		if name, ok := methodNameAt(lines[i]); !ok || name != handler {
 			continue
 		}
 		return extractMethodBody(lines, i)
