@@ -1,0 +1,132 @@
+package issueopsexecution
+
+import (
+	"context"
+	"errors"
+	"strings"
+	"testing"
+
+	model "issueops/internal/contract/issueops"
+	"issueops/internal/port"
+)
+
+type stubVerifier struct {
+	identity model.NativeActor
+	err      error
+}
+
+func (v stubVerifier) Verify(context.Context, model.NativeActor) (model.VerifiedActor, error) {
+	return model.VerifiedActor{Identity: v.identity}, v.err
+}
+
+func reconcileService(exec *model.Execution, readErr error, verr error) Service {
+	return Service{
+		ReadRecord: func(string, string) (model.IssueOpsRecord, error) {
+			return model.IssueOpsRecord{ID: "cycle", Execution: exec}, readErr
+		},
+		SamePath: func(a, b string) bool { return a == b },
+		Verifier: stubVerifier{identity: model.NativeActor{Host: "h"}, err: verr},
+	}
+}
+
+func execWithPending(mode model.ExecutionMode, kind string) *model.Execution {
+	e := &model.Execution{Mode: mode, Workspace: model.Workspace{SourceRoot: "/src", Root: "/wt"}}
+	if kind != "" {
+		e.Pending = &model.ExternalIntent{OperationID: "op", Kind: kind}
+	}
+	return e
+}
+
+func TestReconcilePreconditionFailures(t *testing.T) {
+	boom := errors.New("boom")
+	cases := []struct {
+		name string
+		svc  Service
+		cwd  string
+		msg  string
+		is   error
+	}{
+		{name: "no verifier", svc: Service{}, msg: "execution reconcile actor verifier is required"},
+		{name: "verify error", svc: reconcileService(nil, nil, boom), is: boom},
+		{name: "read error", svc: reconcileService(nil, boom, nil), is: boom},
+		{name: "not prepared", svc: reconcileService(nil, nil, nil), msg: "IssueOps execution v1 is not prepared"},
+		{name: "foreign cwd", svc: reconcileService(execWithPending(model.ExecutionModeDirect, ""), nil, nil), cwd: "/elsewhere", msg: "execution reconcile cwd must be source_root or the canonical worktree"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := tc.svc.Reconcile(t.Context(), "state", model.ExecutionReconcileRequest{ID: "cycle", Preview: true, CWD: tc.cwd}, port.ExecutionReconcileDependencies{})
+			if got.OK || got.ID != "cycle" || err == nil || (tc.msg != "" && err.Error() != tc.msg) || (tc.is != nil && !errors.Is(err, tc.is)) {
+				t.Fatalf("got=%+v err=%v", got, err)
+			}
+		})
+	}
+}
+
+func TestReconcilePreviewCodes(t *testing.T) {
+	cases := []struct {
+		kind, code string
+	}{
+		{"", "no_pending_external_intent"},
+		{"remote_pr_create", "remote_reconcile_required"},
+		{"worktree_create", "orca_reconcile_required"},
+		{"mystery", "unsupported_external_intent"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.code+"/"+tc.kind, func(t *testing.T) {
+			svc := reconcileService(execWithPending(model.ExecutionModeDirect, tc.kind), nil, nil)
+			got, err := svc.Reconcile(t.Context(), "state", model.ExecutionReconcileRequest{ID: "cycle", Preview: true, CWD: "/wt"}, port.ExecutionReconcileDependencies{})
+			if err != nil || !got.OK || !got.Preview || got.Code != tc.code {
+				t.Fatalf("got=%+v err=%v", got, err)
+			}
+			if (tc.kind == "") != (got.Pending == nil) {
+				t.Fatalf("pending=%+v", got.Pending)
+			}
+			if tc.kind == "" && !got.Reconciled {
+				t.Fatal("no pending intent must report reconciled")
+			}
+		})
+	}
+}
+
+func TestReconcileConfirmRoutesOrcaIntentToHandlerWithSnapshot(t *testing.T) {
+	remoteCalled := false
+	orcaCalled := false
+	deps := port.ExecutionReconcileDependencies{
+		RemoteReconcile: func(_ context.Context, _ string, req model.ExecutionReconcileRequest) (model.ExecutionReconcileResult, error) {
+			remoteCalled = req.Snapshot != nil && req.Snapshot.ID == "cycle"
+			return model.ExecutionReconcileResult{OK: true, Code: "remote"}, nil
+		},
+		Handler: func(_ context.Context, _ string, req model.ExecutionReconcileRequest, _ port.ExecutionReconcileDependencies) (model.ExecutionReconcileResult, error) {
+			orcaCalled = req.Snapshot != nil && req.Snapshot.ID == "cycle"
+			return model.ExecutionReconcileResult{OK: true, Code: "orca"}, nil
+		},
+	}
+	// Orca-mode orca intents skip the mutation guard, so no lease is needed.
+	svc := reconcileService(execWithPending(model.ExecutionModeOrca, "owner_launch"), nil, nil)
+	got, err := svc.Reconcile(t.Context(), "state", model.ExecutionReconcileRequest{ID: "cycle", Confirm: true, CWD: "/src"}, deps)
+	if err != nil || got.Code != "orca" || !orcaCalled || remoteCalled {
+		t.Fatalf("got=%+v err=%v", got, err)
+	}
+}
+
+func TestReconcileConfirmWithoutHandlerFailsClosed(t *testing.T) {
+	svc := reconcileService(execWithPending(model.ExecutionModeOrca, "dispatch"), nil, nil)
+	got, err := svc.Reconcile(t.Context(), "state", model.ExecutionReconcileRequest{ID: "cycle", Confirm: true, CWD: "/wt"}, port.ExecutionReconcileDependencies{})
+	if !errors.Is(err, model.ErrReconcileHandlerUnavailable) || got.OK || got.Code != "orca_reconcile_ambiguous" || got.Pending == nil {
+		t.Fatalf("got=%+v err=%v", got, err)
+	}
+}
+
+func TestReconcileConfirmUnsupportedKindIsRejected(t *testing.T) {
+	// The padded kind is recognised as an Orca intent for the preview code but
+	// does not match exactly, so routing falls to the unsupported branch.
+	svc := reconcileService(execWithPending(model.ExecutionModeOrca, " owner_launch "), nil, nil)
+	got, err := svc.Reconcile(t.Context(), "state", model.ExecutionReconcileRequest{ID: "cycle", Confirm: true, CWD: "/wt"}, port.ExecutionReconcileDependencies{
+		Handler: func(context.Context, string, model.ExecutionReconcileRequest, port.ExecutionReconcileDependencies) (model.ExecutionReconcileResult, error) {
+			t.Fatal("handler reached")
+			return model.ExecutionReconcileResult{}, nil
+		}})
+	if got.OK || got.Code != "unsupported_external_intent" || err == nil || !strings.Contains(err.Error(), "unsupported pending external intent kind") {
+		t.Fatalf("got=%+v err=%v", got, err)
+	}
+}
