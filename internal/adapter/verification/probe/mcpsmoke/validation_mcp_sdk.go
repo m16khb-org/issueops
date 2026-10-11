@@ -34,15 +34,19 @@ func runSDKSmoke(root, binary string, env []string, timeout time.Duration) selfv
 	}
 	// 세션 Close는 stderr 버퍼(cmd.Stderr)와의 경쟁을 없앤 뒤에만 읽는다:
 	// subprocess가 아직 살아있는 동안 stderr.String()을 평가하면 데이터
-	// 레이스다(-race 디텍터가 실제로 잡았다). 정상 경로는 명시적으로
-	// Close하고 결과를 조립한다.
+	// 레이스다(-race 디텍터가 실제로 잡았다). 실패 경로도 fail로 먼저
+	// Close한 뒤 stderr를 읽는다.
 	defer session.Close()
+	fail := func(err error) selfverify.StepResult {
+		_ = session.Close()
+		return sdkSmokeFailure(started, binary, stderr.String(), err)
+	}
 
 	results := make([]any, 0, 11)
 	results = append(results, session.InitializeResult())
 	tools, err := session.ListTools(ctx, nil)
 	if err != nil {
-		return sdkSmokeFailure(started, binary, stderr.String(), fmt.Errorf("list MCP tools: %w", err))
+		return fail(fmt.Errorf("list MCP tools: %w", err))
 	}
 	results = append(results, tools)
 	for _, uri := range []string{
@@ -55,7 +59,7 @@ func runSDKSmoke(root, binary string, env []string, timeout time.Duration) selfv
 	} {
 		result, err := session.ReadResource(ctx, &mcp.ReadResourceParams{URI: uri})
 		if err != nil {
-			return sdkSmokeFailure(started, binary, stderr.String(), fmt.Errorf("read MCP resource %s: %w", uri, err))
+			return fail(fmt.Errorf("read MCP resource %s: %w", uri, err))
 		}
 		results = append(results, result)
 	}
@@ -66,10 +70,10 @@ func runSDKSmoke(root, binary string, env []string, timeout time.Duration) selfv
 	} {
 		result, err := session.CallTool(ctx, &call)
 		if err != nil {
-			return sdkSmokeFailure(started, binary, stderr.String(), fmt.Errorf("call MCP tool %s: %w", call.Name, err))
+			return fail(fmt.Errorf("call MCP tool %s: %w", call.Name, err))
 		}
 		if result.IsError {
-			return sdkSmokeFailure(started, binary, stderr.String(), fmt.Errorf("MCP tool %s returned isError", call.Name))
+			return fail(fmt.Errorf("MCP tool %s returned isError", call.Name))
 		}
 		results = append(results, result)
 	}
@@ -78,7 +82,7 @@ func runSDKSmoke(root, binary string, env []string, timeout time.Duration) selfv
 	for index, result := range results {
 		body, err := json.Marshal(result)
 		if err != nil {
-			return sdkSmokeFailure(started, binary, stderr.String(), fmt.Errorf("marshal MCP result %d: %w", index+1, err))
+			return fail(fmt.Errorf("marshal MCP result %d: %w", index+1, err))
 		}
 		stdout.Write(body)
 		stdout.WriteByte('\n')
