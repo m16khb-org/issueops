@@ -468,7 +468,8 @@ func (ExecRunner) Run(ctx context.Context, request CommandRequest) (CommandOutpu
 	command := exec.CommandContext(runCtx, request.Executable, request.Args...)
 	command.Env = commandEnvironment(request.Env)
 	var stdout, stderr boundedBuffer
-	command.Stdout, command.Stderr = &stdout, &stderr
+	// Hide bytes.Buffer.ReadFrom: io.Copy must use the bounded Write method.
+	command.Stdout, command.Stderr = struct{ io.Writer }{&stdout}, struct{ io.Writer }{&stderr}
 	if err := command.Start(); err != nil {
 		return CommandOutput{}, err
 	}
