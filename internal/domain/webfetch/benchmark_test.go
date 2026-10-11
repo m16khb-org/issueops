@@ -53,3 +53,19 @@ func TestBenchmarkCompletionEnforcesHardFailuresAndSafety(t *testing.T) {
 		t.Fatal("score went below zero")
 	}
 }
+
+func TestBenchmarkFixtureAcceptsContentExactlyAtMinimum(t *testing.T) {
+	fixture := model.BenchmarkFixture{ID: "article", Expected: []string{model.CategoryStrongOK}, MinBodyChars: 5}
+	result := model.Result{OK: true, Category: model.CategoryStrongOK, Content: "12345"}
+	run, falseStrong := EvaluateBenchmarkFixture(fixture, result, false, 0)
+	if !run.OK || falseStrong || run.Failure != "" {
+		t.Fatalf("content equal to the minimum must pass: %+v falseStrong=%v", run, falseStrong)
+	}
+}
+
+func TestCompleteOfflineBenchmarkRecordsNoHardFailureWhenClean(t *testing.T) {
+	result := CompleteOfflineBenchmark(NewBenchmarkResult(1), 0, 0)
+	if !result.OK || len(result.HardFailures) != 0 || result.Score != 100 || result.FalseStrongOK != 0 {
+		t.Fatalf("clean offline run must carry no hard failures: %+v", result)
+	}
+}

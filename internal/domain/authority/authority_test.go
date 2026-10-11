@@ -1,6 +1,7 @@
 package authority
 
 import (
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -99,6 +100,40 @@ func TestRecordRoundTripStripsAncestryAndRejectsUnsupportedSchema(t *testing.T) 
 	}
 	if _, err := DecodeRecord(data, strings.Repeat("0", 64)); !errors.Is(err, contract.ErrInvalidState) {
 		t.Fatalf("foreign key err=%v", err)
+	}
+}
+
+func TestDecodeRecordValidatesGitCommonDirAndSessionProcessPID(t *testing.T) {
+	token := testToken(gitScope())
+	base := testRecord(t, token)
+	for name, tc := range map[string]struct {
+		edit func(*contract.Record)
+		ok   bool
+	}{
+		"empty git common dir":    {func(r *contract.Record) { r.GitCommonDir = "" }, true},
+		"absolute git common dir": {func(r *contract.Record) { r.GitCommonDir = "/repo/.git" }, true},
+		"relative git common dir": {func(r *contract.Record) { r.GitCommonDir = "repo/.git" }, false},
+		"zero session pid":        {func(r *contract.Record) { r.Actor.SessionProcess.PID = 0 }, false},
+		"positive session pid":    {func(r *contract.Record) { r.Actor.SessionProcess.PID = 1 }, true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			record := base
+			process := *record.Actor.SessionProcess
+			record.Actor.SessionProcess = &process
+			record.Actor.ProcessAncestry = nil
+			tc.edit(&record)
+			data, err := json.Marshal(record)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = DecodeRecord(data, record.Key)
+			if tc.ok && err != nil {
+				t.Fatalf("valid record rejected: %v", err)
+			}
+			if !tc.ok && !errors.Is(err, contract.ErrInvalidState) {
+				t.Fatalf("invalid record err=%v", err)
+			}
+		})
 	}
 }
 

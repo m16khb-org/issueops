@@ -83,6 +83,16 @@ func TestValidateReleaseDeniesZeroValueRequesterForHolderlessLease(t *testing.T)
 	}
 }
 
+func TestValidateReleaseAcceptsHolderWithoutProcessReceipt(t *testing.T) {
+	holder := releaseTestActor()
+	holder.Process = nil
+	lease := Lease{Generation: 1, Status: "active", Holder: &holder}
+	request := ReleaseRequest{Generation: 1, Actor: holder, AuthorityVerified: true, CanonicalCWD: true}
+	if err := ValidateRelease(lease, request); err != nil {
+		t.Fatalf("holder recorded without a process receipt must release: %v", err)
+	}
+}
+
 func TestApplyReleaseStampsUTCRFC3339Nano(t *testing.T) {
 	zone := time.FixedZone("KST", 9*3600)
 	outcome := ApplyRelease(time.Date(2026, 7, 30, 9, 0, 0, 123456789, zone))

@@ -116,3 +116,9 @@ func TestRenderInitialLedgerEmitsOptionalAttributesInSpecOrder(t *testing.T) {
 		t.Fatalf("out=%q", out)
 	}
 }
+
+func TestGateFileSlugDropsLeadingSeparators(t *testing.T) {
+	if got := gateFileSlug("--Hello  World"); got != "hello-world" {
+		t.Fatalf("got %q", got)
+	}
+}

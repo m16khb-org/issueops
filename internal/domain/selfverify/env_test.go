@@ -1,6 +1,9 @@
 package selfverify
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+)
 
 func TestMergeEnvOverridesReplacesExistingKeys(t *testing.T) {
 	env := MergeEnvOverrides(
@@ -25,5 +28,16 @@ func TestMergeEnvOverridesReplacesExistingKeys(t *testing.T) {
 	}
 	if values["ISSUEOPS_ROOT"] != "ISSUEOPS_ROOT=/fixture-root" {
 		t.Fatalf("ISSUEOPS_ROOT override missing: %v", env)
+	}
+}
+
+func TestMergeEnvOverridesDropsEntriesWithoutKeyAndAcceptsMoreOverridesThanBase(t *testing.T) {
+	got := MergeEnvOverrides([]string{"A=1"}, []string{"=novalue", "NOEQ", "B=2", "C=3", "D=4"})
+	want := []string{"A=1", "B=2", "C=3", "D=4"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got=%v want=%v", got, want)
+	}
+	if key, ok := EnvEntryKey("=x"); ok || key != "" {
+		t.Fatalf("empty key must be rejected: %q %v", key, ok)
 	}
 }

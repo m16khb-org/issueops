@@ -144,3 +144,54 @@ func TestTrimIncompleteRuneUTF8Safe(t *testing.T) {
 		}
 	}
 }
+
+// Invalid UTF-8 (for example binary command output) must never make the
+// helpers back off by more than UTFMax-1 bytes or index out of range.
+func TestTruncateBytesInvalidUTF8BacksOffAtMostThreeBytes(t *testing.T) {
+	cont := strings.Repeat("\x80", 6)
+	cases := []struct {
+		in string
+		n  int
+	}{
+		{"a" + cont, 5},
+		{cont, 2},
+		{cont, 4},
+	}
+	for _, tc := range cases {
+		got := TruncateBytes(tc.in, tc.n)
+		if len(got) > tc.n || len(got) < tc.n-(utf8.UTFMax-1) || !strings.HasPrefix(tc.in, got) {
+			t.Fatalf("TruncateBytes(%q, %d) = %q, want a prefix of length in [%d, %d]", tc.in, tc.n, got, tc.n-(utf8.UTFMax-1), tc.n)
+		}
+	}
+}
+
+func TestTailBytesInvalidUTF8(t *testing.T) {
+	cont := strings.Repeat("\x80", 6)
+	for _, tc := range []struct {
+		in string
+		n  int
+	}{
+		{cont + "z", 6},
+		{cont, 2},
+	} {
+		got := TailBytes(tc.in, tc.n)
+		if len(got) > tc.n || len(got) < tc.n-(utf8.UTFMax-1) || !strings.HasSuffix(tc.in, got) {
+			t.Fatalf("TailBytes(%q, %d) = %q, want a suffix of length in [%d, %d]", tc.in, tc.n, got, tc.n-(utf8.UTFMax-1), tc.n)
+		}
+	}
+	if got := TailBytes("\x80abc", 4); got != "\x80abc" {
+		t.Fatalf("TailBytes at exact length = %q, want the input unchanged", got)
+	}
+}
+
+func TestTrimIncompleteRuneDropsWholeStringWhenAllIncomplete(t *testing.T) {
+	for _, tc := range []struct{ in, want string }{
+		{"가"[:2], ""},
+		{"😀"[:1], ""},
+		{"😀"[:3], ""},
+	} {
+		if got := TrimIncompleteRune(tc.in); got != tc.want {
+			t.Fatalf("TrimIncompleteRune(%q) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}

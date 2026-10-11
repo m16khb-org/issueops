@@ -147,3 +147,58 @@ func TestDecodeBodyHandlesGzipAndPassthrough(t *testing.T) {
 		t.Fatalf("corrupt gzip must fall back to the raw body, got %q", broken)
 	}
 }
+
+func TestDecodeBodyFallsBackWhenGzipStreamIsTruncated(t *testing.T) {
+	var buf bytes.Buffer
+	writer := gzip.NewWriter(&buf)
+	_, _ = writer.Write([]byte(strings.Repeat("payload ", 100)))
+	_ = writer.Close()
+	truncated := buf.Bytes()[:buf.Len()-10]
+	got := decodeBody(map[string][]string{"Content-Encoding": {"gzip"}}, truncated)
+	if !bytes.Equal(got, truncated) {
+		t.Fatalf("truncated gzip must fall back to the raw body, got %d bytes", len(got))
+	}
+}
+
+func TestValidateResponseEmptySPAShellLengthBoundary(t *testing.T) {
+	shell := func(n int) webfetchcontract.ResponseValidationInput {
+		return webfetchcontract.ResponseValidationInput{StatusCode: 200, Body: []byte(`<div id="root">` + strings.Repeat("a", n) + `</div>`)}
+	}
+	below := ValidateResponse(shell(99))
+	if below.Category != webfetchcontract.CategorySuspectOK || len(below.Warnings) != 1 || below.Warnings[0] != "empty_spa_shell" {
+		t.Fatalf("99 chars inside an app root must be an empty SPA shell: %+v", below)
+	}
+	at := ValidateResponse(shell(100))
+	if at.Category != webfetchcontract.CategoryWeakOK || len(at.Warnings) != 0 {
+		t.Fatalf("100 chars inside an app root must not be an empty SPA shell: %+v", at)
+	}
+}
+
+func TestValidateResponseOGTitleMarkerPositionAndMalformedContent(t *testing.T) {
+	body := strings.Repeat("word ", 30)
+	cases := []struct {
+		name, text, want string
+	}{
+		{"marker at start of body", `property="og:title" content="Start" ` + body, "Start"},
+		{"marker after tag", `<meta property="og:title" content="Mid"> ` + body, "Mid"},
+		{"single quoted", `<meta property="og:title" content='Single'> ` + body, "Single"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := ValidateResponse(webfetchcontract.ResponseValidationInput{StatusCode: 200, Body: []byte(tc.text)})
+			if got.Metadata["og_title"] != tc.want {
+				t.Fatalf("og_title = %v, want %q", got.Metadata["og_title"], tc.want)
+			}
+		})
+	}
+	for _, text := range []string{
+		`<meta property="og:title" content=unquoted> ` + body,
+		`<meta property="og:title" content="unterminated ` + body,
+		`<meta property="og:title"> ` + body,
+	} {
+		got := ValidateResponse(webfetchcontract.ResponseValidationInput{StatusCode: 200, Body: []byte(text)})
+		if _, ok := got.Metadata["og_title"]; ok {
+			t.Fatalf("malformed og:title must not be recorded: %+v", got.Metadata)
+		}
+	}
+}

@@ -49,3 +49,9 @@ func TestLLMEvalGateReasonsOnlyInGateMode(t *testing.T) {
 		t.Fatalf("got=%v", got)
 	}
 }
+
+func TestLLMEvalGateReasonsScoreEqualToTargetIsNotBelow(t *testing.T) {
+	if got := LLMEvalGateReasons("gate", true, 90, 90, nil); len(got) != 0 {
+		t.Fatalf("score equal to target must pass: %v", got)
+	}
+}

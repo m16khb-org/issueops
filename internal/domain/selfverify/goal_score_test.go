@@ -36,3 +36,11 @@ func TestScoreGoalsUsesFirstRunAndLastMatchingStep(t *testing.T) {
 		t.Fatalf("duplicate run and step precedence=%+v", scores)
 	}
 }
+
+func TestScoreGoalsGoalWithoutLabelsScoresZero(t *testing.T) {
+	goals := []contract.SelfVerificationGoalDefinition{{Name: "empty"}}
+	scores := ScoreGoals(goals, []Run{{Iteration: 1}}, 1, 90)
+	if len(scores) != 1 || scores[0].Score != 0 || scores[0].Passed || scores[0].TotalChecks != 0 {
+		t.Fatalf("scores=%+v", scores)
+	}
+}

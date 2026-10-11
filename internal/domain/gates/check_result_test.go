@@ -178,3 +178,23 @@ func TestMutationAdmissionRejectsMissingFieldsAndDuplicates(t *testing.T) {
 		t.Fatalf("rec=%+v", rec)
 	}
 }
+
+func TestNormalizeCheckZeroTimeoutFallsBackToDefault(t *testing.T) {
+	got := NormalizeCheck(model.CheckRequest{CWD: "/ws"})
+	if got.TimeoutSeconds != model.TimeoutDefaultSeconds {
+		t.Fatalf("timeout=%d", got.TimeoutSeconds)
+	}
+}
+
+func TestSortIssueFoldersHandlesDigitNineLeadingZerosAndEqualNumbers(t *testing.T) {
+	names := []string{"19", "9", "2", "01"}
+	SortIssueFolders(names)
+	if want := []string{"01", "2", "9", "19"}; !reflect.DeepEqual(names, want) {
+		t.Fatalf("got %q want %q", names, want)
+	}
+	names = []string{"1", "01"}
+	SortIssueFolders(names)
+	if want := []string{"1", "01"}; !reflect.DeepEqual(names, want) {
+		t.Fatalf("equal numbers must keep input order: got %q", names)
+	}
+}

@@ -385,3 +385,32 @@ func TestReuseFindingRequiresKnownCandidates(t *testing.T) {
 		t.Fatalf("suggestions = %q", finding.Suggestions)
 	}
 }
+
+func TestFileFindingsReportsEveryExternalURLOnALine(t *testing.T) {
+	line := `client.Get("https://api.stripe.com/v1"); client.Get("https://api.github.com/v3"); client.Get("https://example.com/ok")`
+	got := FileFindings("pkg/client_test.go", line+"\n", nil)
+	var evidence []string
+	for _, finding := range got {
+		if finding.Rule == "real-external-service-in-test" {
+			evidence = append(evidence, finding.Evidence)
+		}
+	}
+	want := []string{"https://api.stripe.com/v1", "https://api.github.com/v3"}
+	if !slices.Equal(evidence, want) {
+		t.Fatalf("external URL evidence = %q, want %q", evidence, want)
+	}
+}
+
+func TestNormalizeSymbolSplitsCamelCaseAtLetterBoundaries(t *testing.T) {
+	for camel, snake := range map[string]string{
+		"fooAbc":   "foo_abc",
+		"fooZoo":   "foo_zoo",
+		"dataBase": "data_base",
+		"buzzCut":  "buzz_cut",
+	} {
+		got := NormalizeSymbol(camel)
+		if got == "" || got != NormalizeSymbol(snake) {
+			t.Errorf("NormalizeSymbol(%q) = %q, want same key as %q (%q)", camel, got, snake, NormalizeSymbol(snake))
+		}
+	}
+}

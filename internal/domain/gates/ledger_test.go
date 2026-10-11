@@ -154,3 +154,26 @@ func TestParseTrailingNewlineAndEmptyText(t *testing.T) {
 		t.Fatalf("trailing newline parse wrong: %+v %q", ledger.Gates, ledger.Lines)
 	}
 }
+
+func TestParseIgnoresAttributeLinesBeforeAnyGate(t *testing.T) {
+	ledger := Parse("  CHECK: orphan\n- [ ] G1: a\n- [ ] G2: b\n")
+	if len(ledger.Gates) != 2 || ledger.Gates[0].CheckCmd != "" || ledger.Gates[1].CheckCmd != "" {
+		t.Fatalf("orphan attribute must not attach to any gate: %+v", ledger.Gates)
+	}
+}
+
+func TestAppendAbandonOnlyBlankLinesInsertsAtTop(t *testing.T) {
+	ledger := Parse("\n\n")
+	AppendAbandon(&ledger, "G1", " r ")
+	if got := Render(ledger); got != "ABANDON: G1 r\n\n\n" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestAppendAbandonKeepsMissingEvidenceLineUnset(t *testing.T) {
+	ledger := Parse("- [ ] G1: a\n")
+	AppendAbandon(&ledger, "G1", "r")
+	if ledger.Gates[0].EvidenceLine != -1 {
+		t.Fatalf("EvidenceLine=%d, want -1", ledger.Gates[0].EvidenceLine)
+	}
+}

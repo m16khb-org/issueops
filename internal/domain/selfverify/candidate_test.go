@@ -54,3 +54,39 @@ func TestCoverageForLabelsWithNoLabelsReportsEveryClaimMissing(t *testing.T) {
 		}
 	}
 }
+
+func TestCandidateIDsByStatusFiltersExactStatusInOrder(t *testing.T) {
+	cands := []contract.SelfVerificationCandidate{
+		{ID: "a", Status: contract.CandidateStatusOpen},
+		{ID: "b", Status: contract.CandidateStatusSatisfied},
+		{ID: "c", Status: contract.CandidateStatusOpen},
+	}
+	got := CandidateIDsByStatus(cands, contract.CandidateStatusOpen)
+	if len(got) != 2 || got[0] != "a" || got[1] != "c" {
+		t.Fatalf("open ids=%v", got)
+	}
+}
+
+func TestSelectedCandidateKeepsFirstOnTies(t *testing.T) {
+	open := contract.CandidateStatusOpen
+	tests := []struct {
+		name  string
+		cands []contract.SelfVerificationCandidate
+	}{
+		{"equal score, later has worse priority", []contract.SelfVerificationCandidate{
+			{ID: "first", Status: open, Score: 80, Priority: 1},
+			{ID: "second", Status: open, Score: 80, Priority: 2},
+		}},
+		{"equal score and priority", []contract.SelfVerificationCandidate{
+			{ID: "first", Status: open, Score: 80, Priority: 3},
+			{ID: "second", Status: open, Score: 80, Priority: 3},
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := SelectedCandidate(tt.cands); got == nil || got.ID != "first" {
+				t.Fatalf("selected=%+v", got)
+			}
+		})
+	}
+}

@@ -203,3 +203,120 @@ func TestQuoteWord(t *testing.T) {
 		t.Fatalf("quoted QuoteWord = %q", got)
 	}
 }
+
+func TestSplitCommandTokensKeepsTrailingBackslash(t *testing.T) {
+	tests := []struct {
+		name    string
+		command string
+		want    []string
+	}{
+		{"trailing backslash in double quote", `"a\`, []string{`a\`}},
+		{"trailing backslash unquoted", `a\`, []string{`a\`}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := SplitCommandTokens(tt.command); !stringSlicesEqual(got, tt.want) {
+				t.Fatalf("SplitCommandTokens(%q) = %#v, want %#v", tt.command, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestHasActiveShellSpecialQuotingQuoteBoundaries(t *testing.T) {
+	for command, want := range map[string]bool{
+		`echo 'a$"b'`:  false, // quoted dollar stays data after more than one quoted char
+		`echo "a$'b"`:  false,
+		`echo ''$`:     false, // trailing dollar after a quote is not special quoting
+		`echo $`:       false,
+		`echo 'a'$'b'`: true,
+	} {
+		if got := HasActiveShellSpecialQuoting(command); got != want {
+			t.Fatalf("HasActiveShellSpecialQuoting(%q) = %v, want %v", command, got, want)
+		}
+	}
+}
+
+func TestHasActiveZshEqualsExpansionBoundaries(t *testing.T) {
+	for command, want := range map[string]bool{
+		`'\' =git`:   true,  // backslash is literal inside single quotes
+		`'a' =git`:   true,  // a closed quote does not hide the next word start
+		`echo =`:     false, // a trailing equals has nothing to expand
+		`'a =git'`:   false,
+		`"a =git"`:   false,
+		`echo \=git`: false,
+	} {
+		if got := HasActiveZshEqualsExpansion(command); got != want {
+			t.Fatalf("HasActiveZshEqualsExpansion(%q) = %v, want %v", command, got, want)
+		}
+	}
+}
+
+func TestHasUnquotedControlOperatorSingleQuotedBackslash(t *testing.T) {
+	if !HasUnquotedControlOperator(`echo '\'; ls`) {
+		t.Fatal("backslash is literal in single quotes, so the following semicolon is active")
+	}
+	if HasUnquotedControlOperator(`echo "\"; ls"`) {
+		t.Fatal("escaped double quote must keep the semicolon quoted")
+	}
+}
+
+func TestHasActiveParameterOrTildeExpansionQuoting(t *testing.T) {
+	for command, want := range map[string]bool{
+		`echo "a ~/x"`:   false, // blank inside double quotes does not start a word
+		`echo "a" ~/x`:   true,
+		`echo "a" $HOME`: true,
+	} {
+		if got := HasActiveParameterOrTildeExpansion(command); got != want {
+			t.Fatalf("HasActiveParameterOrTildeExpansion(%q) = %v, want %v", command, got, want)
+		}
+	}
+}
+
+func TestHasActiveParameterOrTildeExpansionAssignmentNames(t *testing.T) {
+	for _, name := range []string{"_", "a", "z", "m", "A", "Z", "M", "_a", "Aa", "Az", "Am", "AA", "AZ", "AM", "A0", "A5", "A9", "A_"} {
+		if !HasActiveParameterOrTildeExpansion(name + "=~/x") {
+			t.Fatalf("assignment %q must keep tilde expansion active", name)
+		}
+	}
+	for _, name := range []string{"0", "5", "9", "0A", "`", "{", "@", "[", "-", "A/", "A:", "A`", "A{", "A@", "A[", "A-"} {
+		if HasActiveParameterOrTildeExpansion(name + "=~/x") {
+			t.Fatalf("%q is not an assignment name; tilde must stay data", name)
+		}
+	}
+	if HasActiveParameterOrTildeExpansion(`=~/x`) {
+		t.Fatal("an empty assignment name must not enable tilde expansion")
+	}
+}
+
+func TestHasActiveParameterOrTildeExpansionParameterStarts(t *testing.T) {
+	for _, next := range []string{"{", "(", "_", "a", "m", "z", "A", "M", "Z", "0", "5", "9", "*", "@", "#", "?", "-", "$", "!"} {
+		if !HasActiveParameterOrTildeExpansion("echo $" + next) {
+			t.Fatalf("$%s must be a parameter expansion", next)
+		}
+	}
+	for _, next := range []string{"/", ":", "[", "`", ".", " ", "="} {
+		if HasActiveParameterOrTildeExpansion("echo $" + next) {
+			t.Fatalf("$%s must not be a parameter expansion", next)
+		}
+	}
+}
+
+func TestHasActivePathnameExpansionDelimiters(t *testing.T) {
+	for command, want := range map[string]bool{
+		`ls [abc`:     false, // unterminated bracket
+		`ls []`:       false, // empty bracket expression
+		`ls ['\']`:    true,  // backslash is literal inside single quotes
+		`ls {abc`:     false, // unterminated brace
+		`ls {a.b}`:    false, // a single dot is not a range delimiter
+		`ls {..}`:     true,
+		`ls {a..b}`:   true,
+		`ls {a,b}`:    true,
+		`ls {ab}`:     false,
+		`ls {a b}`:    false,
+		`ls {a'..'b}`: true,
+	} {
+		if got := HasActivePathnameExpansion(command); got != want {
+			t.Fatalf("HasActivePathnameExpansion(%q) = %v, want %v", command, got, want)
+		}
+	}
+}
