@@ -75,6 +75,7 @@ footer; older notes also live in `archive/cautions-incidents.md`.
 
 | Date | Lesson |
 |---|---|
+| 2026-10-12 | [`bytes.Buffer`를 임베딩한 상한 writer는 `ReadFrom`으로 상한을 우회하고, map 리터럴 순회 검증은 오류 필드가 실행마다 바뀐다](cautions/2026-10-12-bounded-writers-and-map-ordered-messages.md) |
 | 2026-10-08 | [LOCK_NB flock lease에 닿는 테스트를 t.Parallel로 돌리면 다른 테스트의 fork/exec가 fd를 복제해 확률적으로 실패한다](cautions/2026-10-08-parallel-tests-and-non-blocking-flock-leases.md) |
 | 2026-10-08 | [추적 intent 사본은 요청 원문을 그대로 담고, 커밋 전 로컬 self-verify는 추적 파일 검사를 보지 못한다](cautions/2026-10-08-tracked-intent-copies-quote-the-raw-request-and-local-self-v.md) |
 | 2026-10-08 | [표준 문서 설명을 바꿔도 frontmatter가 있는 레포의 catalog는 `--sync` 전까지 그대로다](cautions/2026-10-08-changing-a-standard-doc-description-does-not-change-the-cata.md) |
