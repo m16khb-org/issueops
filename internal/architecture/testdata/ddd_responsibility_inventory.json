@@ -7463,6 +7463,7 @@
         "func closeGitLabChildWorkItem",
         "func createGitLabChildWorkItem",
         "func gitlabAssigneeUsernames",
+        "func gitlabAssigneeUsernamesFromRequest",
         "func gitlabChildByIID",
         "func gitlabChildDryRunPreview",
         "func gitlabChildFailure",

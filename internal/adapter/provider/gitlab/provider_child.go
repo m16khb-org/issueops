@@ -145,7 +145,7 @@ func verifyGitLabCreatedChild(req port.IssueProviderCreateChildRequest, hostname
 	if missing := providerutil.MissingStrings(req.Labels, labels); len(missing) > 0 {
 		return gitlabChildFailure(childURL), gitlabCreatedChildError(childURL, fmt.Errorf("gitlab child work item missing labels: %s", strings.Join(missing, ", ")))
 	}
-	if missing := providerutil.MissingStrings(req.Assignees, assignees); len(missing) > 0 {
+	if missing := providerutil.MissingStrings(gitlabAssigneeUsernamesFromRequest(req.Assignees), assignees); len(missing) > 0 {
 		return gitlabChildFailure(childURL), gitlabCreatedChildError(childURL, fmt.Errorf("gitlab child work item missing assignees: %s", strings.Join(missing, ", ")))
 	}
 	return port.IssueProviderCreateChildResult{
@@ -157,6 +157,16 @@ func verifyGitLabCreatedChild(req port.IssueProviderCreateChildRequest, hostname
 		Labels:            labels,
 		Assignees:         assignees,
 	}, nil
+}
+
+// gitlabAssigneeUsernamesFromRequest strips the optional "@" prefix the same way
+// resolveGitLabAssigneeIDs does before the username lookup.
+func gitlabAssigneeUsernamesFromRequest(assignees []string) []string {
+	usernames := make([]string, 0, len(assignees))
+	for _, assignee := range assignees {
+		usernames = append(usernames, strings.TrimPrefix(strings.TrimSpace(assignee), "@"))
+	}
+	return usernames
 }
 
 func (Provider) CloseChild(req port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
