@@ -271,7 +271,11 @@ func runUnset(ctx context.Context, deps Dependencies, args []string) error {
 		fmt.Fprintf(deps.Stdout, "%s %s.%s was not set (%s)\n", t.scope, t.host, t.role, path)
 		return nil
 	}
-	fmt.Fprintf(deps.Stdout, "unset %s %s.%s %s(%s)\n", t.scope, t.host, t.role, strings.TrimSpace(*field+" "), path)
+	fieldLabel := ""
+	if *field != "" {
+		fieldLabel = *field + " "
+	}
+	fmt.Fprintf(deps.Stdout, "unset %s %s.%s %s(%s)\n", t.scope, t.host, t.role, fieldLabel, path)
 	return nil
 }
 
