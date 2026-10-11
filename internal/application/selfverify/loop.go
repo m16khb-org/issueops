@@ -128,7 +128,7 @@ func ExecuteLoop(request LoopRequest, deps LoopDeps) (selfaugmentcontract.SelfAu
 		emitEnd(request.Reporter, result.LoopKind, iterations, request.BaseSeed, false, message)
 		return result, fmt.Errorf("%w: %s", ErrSelfVerificationGateFailed, message)
 	}
-	emit(request.Reporter, selfverifycontract.ProgressEvent{Event: "iteration_end", LoopKind: result.LoopKind, Iteration: iteration, Iterations: iterations, Seed: seed, OK: boolPtr(true), StepCount: len(plannedSteps)})
+	emit(request.Reporter, selfverifycontract.ProgressEvent{Event: "iteration_end", LoopKind: result.LoopKind, Iteration: iteration, Iterations: iterations, Seed: seed, OK: new(true), StepCount: len(plannedSteps)})
 	result.OK = true
 	result.Summary = deps.Summarize(result, request.TargetScore)
 	result.TerminationEligible = result.Summary.TerminationEligible
@@ -147,8 +147,6 @@ func emit(reporter ProgressReporter, event selfverifycontract.ProgressEvent) {
 }
 
 func emitEnd(reporter ProgressReporter, loopKind string, iterations int, seed int64, ok bool, errorText string) {
-	event := selfverifycontract.ProgressEvent{Event: "loop_end", LoopKind: loopKind, Iterations: iterations, Seed: seed, OK: boolPtr(ok), Error: errorText}
+	event := selfverifycontract.ProgressEvent{Event: "loop_end", LoopKind: loopKind, Iterations: iterations, Seed: seed, OK: new(ok), Error: errorText}
 	emit(reporter, event)
 }
-
-func boolPtr(value bool) *bool { return &value }

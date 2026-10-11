@@ -1,6 +1,7 @@
 package selfaugment
 
 import (
+	"slices"
 	"sort"
 
 	contract "issueops/internal/contract/selfaugment"
@@ -41,15 +42,12 @@ func BuildStepDurationStats(durationsByLabel map[string][]int64) []contract.Self
 			continue
 		}
 		sortedDurations := append([]int64{}, durations...)
-		sort.Slice(sortedDurations, func(i, j int) bool { return sortedDurations[i] < sortedDurations[j] })
+		slices.Sort(sortedDurations)
 		var sum int64
 		for _, duration := range sortedDurations {
 			sum += duration
 		}
-		p95Index := (95*len(sortedDurations) + 99) / 100
-		if p95Index < 1 {
-			p95Index = 1
-		}
+		p95Index := max((95*len(sortedDurations)+99)/100, 1)
 		stats = append(stats, contract.SelfAugmentStepDurationStat{
 			Label:             label,
 			Count:             len(sortedDurations),

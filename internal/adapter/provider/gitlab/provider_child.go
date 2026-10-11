@@ -444,7 +444,7 @@ func parseGlabOutput(out string) (url string, number string) {
 	if out == "" {
 		return "", ""
 	}
-	for _, line := range strings.Split(out, "\n") {
+	for line := range strings.SplitSeq(out, "\n") {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "https://") {
 			return line, ""

@@ -54,7 +54,7 @@ esac
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, line := range strings.Split(strings.TrimSpace(string(logged)), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(string(logged)), "\n") {
 		if !strings.Contains(line, "--hostname gitlab.corp.example.com") {
 			t.Fatalf("every glab call must carry the self-hosted hostname: %q", line)
 		}

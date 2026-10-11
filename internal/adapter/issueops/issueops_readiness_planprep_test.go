@@ -4,6 +4,7 @@ import (
 	cycleapp "issueops/internal/application/issueopscycle"
 	reviewcontract "issueops/internal/contract/issueopsreview"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"issueops/internal/contract/issueops"
@@ -22,12 +23,7 @@ func baseIntentRecord(class string) issueops.IssueOpsRecord {
 }
 
 func planPrepHasMissing(missing []string, key string) bool {
-	for _, m := range missing {
-		if m == key {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(missing, key)
 }
 
 func TestPlanReadinessRequiresPlanPrepForNonTrivial(t *testing.T) {

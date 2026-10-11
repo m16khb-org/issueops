@@ -178,7 +178,7 @@ func generatedGoSource(path string) (bool, error) {
 }
 
 func excludedSourcePath(relative string) bool {
-	for _, component := range strings.Split(relative, string(filepath.Separator)) {
+	for component := range strings.SplitSeq(relative, string(filepath.Separator)) {
 		switch component {
 		case ".git", ".codegraph", ".issueops-runtime", ".issueops", "bin", "vendor", "node_modules", "testdata":
 			return true

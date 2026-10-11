@@ -2,6 +2,7 @@ package issueops
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	model "issueops/internal/contract/issueops"
@@ -34,10 +35,8 @@ func NormalizeNativeActor(actor model.NativeActor) (model.NativeActor, error) {
 	if err := ValidateNativeActor(actor); err != nil {
 		return actor, err
 	}
-	for _, receipt := range actor.ProcessAncestry {
-		if receipt == *actor.SessionProcess {
-			return actor, nil
-		}
+	if slices.Contains(actor.ProcessAncestry, *actor.SessionProcess) {
+		return actor, nil
 	}
 	return actor, fmt.Errorf("native session process receipt is not in the local process ancestry")
 }

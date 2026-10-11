@@ -152,7 +152,7 @@ func PioneerSkillEvidenceComplete(fixture issueopscontract.IssueOpsBenchmarkFixt
 }
 
 func hasStructuredClause(text string, markers ...string) bool {
-	for _, line := range strings.Split(text, "\n") {
+	for line := range strings.SplitSeq(text, "\n") {
 		if !strings.Contains(line, ":") {
 			continue
 		}

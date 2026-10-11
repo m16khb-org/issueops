@@ -3,6 +3,7 @@ package preflight
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	preflightapp "issueops/internal/application/preflight"
@@ -58,10 +59,5 @@ func TestGitPreflightDetectsCommitStyleAndSecretLikePath(t *testing.T) {
 }
 
 func containsString(items []string, want string) bool {
-	for _, item := range items {
-		if item == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(items, want)
 }

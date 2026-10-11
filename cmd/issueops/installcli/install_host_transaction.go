@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 
 	"issueops/internal/port"
@@ -167,8 +168,8 @@ func (transaction *installHostTransaction) rollback() error {
 		return nil
 	}
 	var errs []error
-	for index := len(transaction.snapshots) - 1; index >= 0; index-- {
-		if err := restoreInstallHostPath(transaction.snapshots[index]); err != nil {
+	for _, v := range slices.Backward(transaction.snapshots) {
+		if err := restoreInstallHostPath(v); err != nil {
 			errs = append(errs, err)
 		}
 	}

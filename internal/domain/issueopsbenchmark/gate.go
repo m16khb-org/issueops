@@ -3,6 +3,7 @@ package issueopsbenchmark
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	contract "issueops/internal/contract/issueopsbenchmark"
@@ -121,8 +122,8 @@ func issueOpsPathAllowed(changedPath string, editSurface []string) bool {
 		if pattern == "" {
 			continue
 		}
-		if strings.HasSuffix(pattern, "/**") {
-			prefix := strings.TrimSuffix(pattern, "/**")
+		if before, ok := strings.CutSuffix(pattern, "/**"); ok {
+			prefix := before
 			if changedPath == prefix || strings.HasPrefix(changedPath, prefix+"/") {
 				return true
 			}
@@ -139,12 +140,7 @@ func issueOpsPathAllowed(changedPath string, editSurface []string) bool {
 }
 
 func isKnownIssueOpsBenchmarkDimension(target string) bool {
-	for _, dimension := range dimensions {
-		if dimension == target {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(dimensions, target)
 }
 
 func normalizeIssueOpsPath(path string) string {

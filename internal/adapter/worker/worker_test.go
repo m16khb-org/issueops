@@ -341,7 +341,7 @@ func TestWorkerConcurrentCancelAndRunDoesNotLoseUpdates(t *testing.T) {
 	}()
 
 	var results []workercontract.WorkerJob
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		results = append(results, <-resultCh)
 		if e := <-errCh; e != nil {
 			t.Errorf("unexpected error from goroutine %d: %v", i, e)

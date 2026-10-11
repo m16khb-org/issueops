@@ -59,7 +59,7 @@ func (r *SelfVerifyProgressReporter) EmitStepEnd(loopKind string, iteration, ite
 		StepIndex:   stepIndex,
 		StepCount:   stepCount,
 		Step:        step.Label,
-		OK:          boolPtr(step.OK),
+		OK:          new(step.OK),
 		DurationMS:  step.DurationMS,
 		LastSuccess: lastSuccess,
 		Error:       step.Error,
@@ -68,10 +68,6 @@ func (r *SelfVerifyProgressReporter) EmitStepEnd(loopKind string, iteration, ite
 	if step.OK {
 		r.lastSuccess = step.Label
 	}
-}
-
-func boolPtr(value bool) *bool {
-	return &value
 }
 
 func (r *SelfVerifyProgressReporter) SetStarted(started time.Time) {

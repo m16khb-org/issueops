@@ -2,6 +2,7 @@ package issueops
 
 import (
 	cycle "issueops/internal/application/issueopscycle"
+	"slices"
 	"strings"
 	"testing"
 
@@ -49,12 +50,7 @@ func TestRecordIssueOpsDomainReview(t *testing.T) {
 }
 
 func issueOpsDomainReviewMissingForTest(r issueops.IssueOpsReadiness) bool {
-	for _, m := range r.Missing {
-		if m == "domain_review" {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(r.Missing, "domain_review")
 }
 
 func TestRecordIssueOpsAISlopCleanEvidence(t *testing.T) {

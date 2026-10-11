@@ -96,7 +96,7 @@ func (s FinishPreviewer) observeMergedBaseRefs(repo, base string) (string, bool,
 	if code != 0 {
 		return "", present, false
 	}
-	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(out), "\n") {
 		rest, found := strings.CutPrefix(strings.TrimSpace(line), "ref: refs/heads/")
 		if !found {
 			continue

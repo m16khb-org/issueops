@@ -87,11 +87,11 @@ func readSkillDescription(path string) string {
 	if err != nil {
 		return ""
 	}
-	lines := strings.Split(string(b), "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(string(b), "\n")
+	for line := range lines {
 		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "description:") {
-			return strings.Trim(strings.TrimSpace(strings.TrimPrefix(line, "description:")), `"'`)
+		if after, ok := strings.CutPrefix(line, "description:"); ok {
+			return strings.Trim(strings.TrimSpace(after), `"'`)
 		}
 	}
 	return ""

@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"issueops/cmd/issueops/mcpcli/argmap"
@@ -204,10 +206,8 @@ func recordRequestRoot(ctx context.Context, records RecordRoots, kind RecordKind
 		return "", authorityInvalid("record " + id + " names no existing workspace")
 	}
 	if explicit != "" {
-		for _, root := range roots {
-			if root == explicit {
-				return explicit, nil
-			}
+		if slices.Contains(roots, explicit) {
+			return explicit, nil
 		}
 		return "", authorityInvalid("workspace root conflicts with record " + id)
 	}
@@ -248,9 +248,7 @@ func pathWithin(path, root string) bool {
 // become the scope root, cwd the scope cwd, and request-relative files absolute.
 func scopedArguments(args map[string]any, spec toolAuthority, scope authoritycontract.Scope) map[string]any {
 	scoped := make(map[string]any, len(args)+2)
-	for key, value := range args {
-		scoped[key] = value
-	}
+	maps.Copy(scoped, args)
 	delete(scoped, argAuthorityFile)
 	scoped[argWorkspaceRoot] = scope.WorkspaceRoot
 	scoped[argCWD] = scope.CWD

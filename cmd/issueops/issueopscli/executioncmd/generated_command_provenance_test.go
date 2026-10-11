@@ -106,8 +106,7 @@ func TestOutputBaseSyncRequiredObservationFailureHasNoUnboundFallback(t *testing
 	if !ok || fields.IssueOpsErrorFields()["code"] != "generated_command_provenance_observation_failed" {
 		t.Fatalf("observation failure is not structured: %T %v", err, err)
 	}
-	var typed *issueopscontract.BaseSyncRequiredError
-	if errors.As(err, &typed) {
+	if typed, ok := errors.AsType[*issueopscontract.BaseSyncRequiredError](err); ok {
 		t.Fatalf("observation failure returned unbound next_command: %q", typed.NextCommand)
 	}
 }

@@ -2,17 +2,13 @@ package policy
 
 import (
 	"os"
+	"slices"
 
 	policycontract "issueops/internal/contract/policy"
 )
 
 func containsString(items []string, want string) bool {
-	for _, item := range items {
-		if item == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(items, want)
 }
 
 func existsForTest(path string) bool {

@@ -309,7 +309,7 @@ func secureMkdirAll(root, target string) error {
 		return fmt.Errorf("runtime token directory escapes the canonical worktree")
 	}
 	current := root
-	for _, part := range strings.Split(relative, string(filepath.Separator)) {
+	for part := range strings.SplitSeq(relative, string(filepath.Separator)) {
 		if part == "" || part == "." {
 			continue
 		}

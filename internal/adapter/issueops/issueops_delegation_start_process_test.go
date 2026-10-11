@@ -46,7 +46,7 @@ func TestStartIssueOpsChildConcurrentSiblingsAcrossProcesses(t *testing.T) {
 		err    error
 	}
 	outcomes := make(chan outcome, workers)
-	for i := 0; i < workers; i++ {
+	for i := range workers {
 		branch := fmt.Sprintf("12%d-child-process-sibling", i)
 		title := fmt.Sprintf("process sibling %d", i)
 		go func() {
@@ -71,7 +71,7 @@ func TestStartIssueOpsChildConcurrentSiblingsAcrossProcesses(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for i := 0; i < workers; i++ {
+	for range workers {
 		result := <-outcomes
 		if result.err != nil {
 			t.Fatalf("child start subprocess for %s failed: %v\n%s", result.branch, result.err, result.output)
@@ -88,7 +88,7 @@ func TestStartIssueOpsChildConcurrentSiblingsAcrossProcesses(t *testing.T) {
 	if len(parentAfter.ChildCycles) != len(parent.ChildCycles)+workers {
 		t.Fatalf("expected %d child refs after process-concurrent start, got %d", len(parent.ChildCycles)+workers, len(parentAfter.ChildCycles))
 	}
-	for i := 0; i < workers; i++ {
+	for i := range workers {
 		branch := fmt.Sprintf("12%d-child-process-sibling", i)
 		childID := newIssueOpsID(parent.Repo, branch)
 		ref, ok := childRefByID(parentAfter.ChildCycles, childID)
@@ -195,7 +195,7 @@ func waitForChildStartGate(t *testing.T, gate string) {
 func seedChildStartParentRefsForTest(t *testing.T, stateRoot string, parent issueops.IssueOpsRecord, count int) issueops.IssueOpsRecord {
 	t.Helper()
 	parent.ChildCycles = make([]issueops.IssueOpsChildCycleRef, 0, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		branch := fmt.Sprintf("90%d-existing-child-ref", i)
 		parent.ChildCycles = append(parent.ChildCycles, issueops.IssueOpsChildCycleRef{
 			CycleID:   newIssueOpsID(parent.Repo, branch),

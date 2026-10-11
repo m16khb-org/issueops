@@ -145,10 +145,7 @@ func TestExecRunnerStreamHelper(t *testing.T) {
 	}
 	remaining := MaxEnvelopeBytes + len(chunk)
 	for remaining > 0 {
-		write := len(chunk)
-		if remaining < write {
-			write = remaining
-		}
+		write := min(remaining, len(chunk))
 		if _, err := w.Write(chunk[:write]); err != nil {
 			os.Exit(2)
 		}

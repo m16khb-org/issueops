@@ -160,7 +160,7 @@ func TestLoopInstancesSerializeAttemptsInSharedStore(t *testing.T) {
 		t.Fatal(err)
 	}
 	errors := make(chan error, 16)
-	for i := 0; i < 16; i++ {
+	for i := range 16 {
 		go func(i int) {
 			service := first
 			if i%2 == 1 {
@@ -170,7 +170,7 @@ func TestLoopInstancesSerializeAttemptsInSharedStore(t *testing.T) {
 			errors <- err
 		}(i)
 	}
-	for i := 0; i < 16; i++ {
+	for range 16 {
 		if err := <-errors; err != nil {
 			t.Fatal(err)
 		}

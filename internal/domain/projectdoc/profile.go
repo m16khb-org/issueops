@@ -79,13 +79,13 @@ func RemoteHost(remote string) string {
 			return strings.ToLower(u.Hostname())
 		}
 	}
-	if at := strings.Index(remote, "@"); at >= 0 {
-		rest := remote[at+1:]
-		if colon := strings.Index(rest, ":"); colon >= 0 {
-			return strings.ToLower(rest[:colon])
+	if _, after, ok := strings.Cut(remote, "@"); ok {
+		rest := after
+		if before, _, ok := strings.Cut(rest, ":"); ok {
+			return strings.ToLower(before)
 		}
-		if slash := strings.Index(rest, "/"); slash >= 0 {
-			return strings.ToLower(rest[:slash])
+		if before, _, ok := strings.Cut(rest, "/"); ok {
+			return strings.ToLower(before)
 		}
 	}
 	return ""

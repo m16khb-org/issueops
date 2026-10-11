@@ -43,7 +43,7 @@ func TestProjectDocMCPInstancesKeepDefaultRootsSeparate(t *testing.T) {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			for n := 0; n < 3; n++ {
+			for n := range 3 {
 				read, err := projectDocsSDKRead(t, deps[i])
 				if err != nil {
 					t.Error(err)

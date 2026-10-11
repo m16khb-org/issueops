@@ -117,7 +117,7 @@ func (e *evidenceExtractor) readRepoFile(rel string) (string, bool) {
 func (e *evidenceExtractor) extractController(file, text string) {
 	injections := parseInjections(text)
 	lines := strings.Split(text, "\n")
-	for i := 0; i < len(lines); i++ {
+	for i := range lines {
 		m := methodNameRe2().FindStringSubmatch(lines[i])
 		if m == nil {
 			continue
@@ -297,7 +297,7 @@ func (e *evidenceExtractor) addThrows(key, servicePath, serviceText, method stri
 		return
 	}
 	lines := strings.Split(serviceText, "\n")
-	for i := 0; i < len(lines); i++ {
+	for i := range lines {
 		m := methodNameRe2().FindStringSubmatch(lines[i])
 		if m == nil || m[1] != method {
 			continue

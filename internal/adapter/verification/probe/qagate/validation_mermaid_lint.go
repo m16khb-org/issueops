@@ -47,8 +47,8 @@ func LintMermaidBlocks(relPath, text string) []string {
 		if mermaidUnquotedBracketTextRe().MatchString(line) {
 			errs = append(errs, fmt.Sprintf("%s:%d mermaid node text must start with a quote", relPath, lineNo))
 		}
-		if strings.HasPrefix(trimmed, "subgraph ") {
-			title := strings.TrimSpace(strings.TrimPrefix(trimmed, "subgraph "))
+		if after, ok := strings.CutPrefix(trimmed, "subgraph "); ok {
+			title := strings.TrimSpace(after)
 			if title != "" && !strings.HasPrefix(title, `"`) {
 				errs = append(errs, fmt.Sprintf("%s:%d mermaid subgraph title must be quoted", relPath, lineNo))
 			}

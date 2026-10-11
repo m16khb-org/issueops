@@ -2,6 +2,7 @@ package selfverify
 
 import (
 	contract "issueops/internal/contract/selfverify"
+	"slices"
 	"sort"
 )
 
@@ -43,7 +44,7 @@ func FailureClusters(runs []Run) []contract.SelfVerificationFailureCluster {
 	clusters := []contract.SelfVerificationFailureCluster{}
 	for _, step := range steps {
 		seeds := append([]int64{}, byStep[step]...)
-		sort.Slice(seeds, func(i, j int) bool { return seeds[i] < seeds[j] })
+		slices.Sort(seeds)
 		clusters = append(clusters, contract.SelfVerificationFailureCluster{
 			Step:  step,
 			Seeds: seeds,

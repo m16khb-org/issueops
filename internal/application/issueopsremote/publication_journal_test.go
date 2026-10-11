@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"strings"
 	"testing"
 
@@ -23,9 +24,7 @@ type memoryPublicationStore struct {
 
 func (s *memoryPublicationStore) WithinTransaction(ctx context.Context, _ string, fn func(context.Context) error) error {
 	saved, payloads := s.record, map[string]contract.IntentPayload{}
-	for k, v := range s.payload {
-		payloads[k] = v
-	}
+	maps.Copy(payloads, s.payload)
 	if err := fn(ctx); err != nil {
 		s.record, s.payload = saved, payloads
 		return err

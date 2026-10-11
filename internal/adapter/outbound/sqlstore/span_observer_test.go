@@ -90,7 +90,8 @@ func (clock *scriptedClock) requireExhausted() {
 
 func millis(value int) time.Duration { return time.Duration(value) * time.Millisecond }
 
-func durationRef(value time.Duration) *time.Duration { return &value }
+//go:fix inline
+func durationRef(value time.Duration) *time.Duration { return new(value) }
 
 func collectSpans(ctx context.Context) (context.Context, *[]SpanObservation) {
 	observations := &[]SpanObservation{}
@@ -133,8 +134,8 @@ func TestSpanPhaseBoundaries(t *testing.T) {
 			Acquired:       true,
 			Wait:           millis(7),
 			Hold:           millis(36),
-			Callback:       durationRef(millis(20)),
-			Commit:         durationRef(millis(3)),
+			Callback:       new(millis(20)),
+			Commit:         new(millis(3)),
 			Total:          millis(47),
 			CommitCount:    1,
 			CommitCoverage: SpanCommitCoverageComplete,
@@ -171,8 +172,8 @@ func TestSpanPhaseBoundaries(t *testing.T) {
 			Acquired:       true,
 			Wait:           millis(1),
 			Hold:           millis(7),
-			Callback:       durationRef(millis(4)),
-			Commit:         durationRef(millis(1)),
+			Callback:       new(millis(4)),
+			Commit:         new(millis(1)),
 			Total:          millis(9),
 			CommitCount:    1,
 			CommitCoverage: SpanCommitCoverageComplete,

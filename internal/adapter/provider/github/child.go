@@ -82,7 +82,7 @@ func githubChildCreatePreview(createArgs []string, target githubChildTarget) str
 // ghCreateHelpCapabilities는 `gh issue create --help` 출력의 플래그 줄에서
 // --parent 지원 여부와 --title 존재(=도움말 형식을 알아봤는지)를 읽는다.
 func ghCreateHelpCapabilities(help string) (usedParentFlag, knownCreateHelp bool) {
-	for _, line := range strings.Split(help, "\n") {
+	for line := range strings.SplitSeq(help, "\n") {
 		fields := strings.Fields(line)
 		if len(fields) > 0 && strings.HasPrefix(fields[0], "-") {
 			for _, field := range fields {

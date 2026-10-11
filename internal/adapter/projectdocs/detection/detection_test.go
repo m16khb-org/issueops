@@ -3,6 +3,7 @@ package detection
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"testing"
 )
@@ -278,12 +279,7 @@ func writeFile(t *testing.T, path, content string) {
 }
 
 func containsString(slice []string, s string) bool {
-	for _, v := range slice {
-		if v == s {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(slice, s)
 }
 
 func TestProjectTypes_ClientSurfaces(t *testing.T) {

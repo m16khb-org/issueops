@@ -252,8 +252,8 @@ func OwnerVerificationCommands(body string) []string {
 	commands := []string{}
 	for _, raw := range lines {
 		line := strings.TrimSpace(raw)
-		if strings.HasPrefix(line, "## ") {
-			heading := strings.ToLower(strings.TrimSpace(strings.TrimPrefix(line, "## ")))
+		if after, ok := strings.CutPrefix(line, "## "); ok {
+			heading := strings.ToLower(strings.TrimSpace(after))
 			inSection = heading == "검증" || heading == "검증 명령" ||
 				heading == "verification" || heading == "verification commands"
 			inFence = false

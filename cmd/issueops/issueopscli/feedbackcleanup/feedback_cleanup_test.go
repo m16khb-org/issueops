@@ -7,6 +7,7 @@ import (
 	executionissue "issueops/internal/contract/executionissue"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -534,12 +535,7 @@ func printedCleanupStatus(t *testing.T, printed []any) issueopscontract.IssueOps
 }
 
 func containsCleanupStatusValue(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(values, want)
 }
 
 type cleanupStatusProvider struct {

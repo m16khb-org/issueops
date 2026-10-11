@@ -82,7 +82,7 @@ func TestChildAcceptancePreservesConcurrentSiblingReceipts(t *testing.T) {
 	root := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, root)
 	var ids []string
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		started, err := startIssueOpsChildForTest(root, parent, model.IssueOpsChildStartRequest{ParentID: parent.ID, Branch: fmt.Sprintf("124-child-%d", i), TaskScope: "concurrent acceptance", AcceptanceCriteria: []string{"all receipts persist"}})
 		if err != nil {
 			t.Fatal(err)

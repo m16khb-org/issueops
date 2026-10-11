@@ -2,6 +2,7 @@ package apidoc
 
 import (
 	"os/exec"
+	"slices"
 	"testing"
 
 	"issueops/internal/testsupport"
@@ -37,10 +38,5 @@ func runGitForContract(t *testing.T, dir string, args ...string) {
 }
 
 func containsString(items []string, want string) bool {
-	for _, item := range items {
-		if item == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(items, want)
 }

@@ -7,6 +7,7 @@ import (
 	projectdoc "issueops/internal/domain/projectdoc"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -404,12 +405,7 @@ func writeProjectDocFixtureFile(t *testing.T, root, rel, content string) {
 }
 
 func containsProjectDocString(items []string, want string) bool {
-	for _, item := range items {
-		if item == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(items, want)
 }
 
 func routeContains(entries []projectdocscontract.ProjectDocRouteEntry, rel string) bool {

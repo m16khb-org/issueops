@@ -98,7 +98,7 @@ func TestRunReusesHistoryTimestampOrdering(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			contents := map[string]string{"a": summaryContent(t, tc.generated[0], true), "b": summaryContent(t, tc.generated[1], false)}
 			records := []statecontract.StateListEntry{{Key: "b", UpdatedAt: tc.updated[1]}, {Key: "a", UpdatedAt: tc.updated[0]}}
-			for i := 0; i < 2; i++ {
+			for range 2 {
 				got := historyFixture(statecontract.StateListResult{OK: true, Records: records}, contents).Run("repo")
 				if !got.OK || got.SelfVerify.LatestKey != tc.want || len(got.Warnings) != tc.warnings {
 					t.Fatalf("%+v", got)

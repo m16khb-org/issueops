@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"golang.org/x/sys/unix"
@@ -157,8 +158,8 @@ func validatePromptLeafStat(stat unix.Stat_t, expectedUID uint32) error {
 }
 
 func closePromptComponents(components []promptOpenedComponent) {
-	for index := len(components) - 1; index >= 0; index-- {
-		_ = unix.Close(components[index].fd)
+	for _, component := range slices.Backward(components) {
+		_ = unix.Close(component.fd)
 	}
 }
 

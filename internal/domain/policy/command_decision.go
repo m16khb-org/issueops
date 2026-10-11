@@ -1,6 +1,7 @@
 package policy
 
 import (
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -88,11 +89,8 @@ func argumentDenies(req policycontract.CommandPolicyRequest) []string {
 			break
 		}
 	}
-	for _, arg := range req.Argv {
-		if SecretLikeArg(arg) {
-			denies = append(denies, "secret_like_argument")
-			break
-		}
+	if slices.ContainsFunc(req.Argv, SecretLikeArg) {
+		denies = append(denies, "secret_like_argument")
 	}
 	return denies
 }

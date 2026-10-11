@@ -48,7 +48,6 @@ func TestApplyRequireAbsentIsAtomicUnderConcurrentWriters(t *testing.T) {
 	var ready sync.WaitGroup
 	ready.Add(2)
 	for _, lifecycleID := range []string{"io-1", "io-2"} {
-		lifecycleID := lifecycleID
 		go func() {
 			ready.Done()
 			<-start

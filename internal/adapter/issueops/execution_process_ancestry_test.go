@@ -2,6 +2,7 @@ package issueops
 
 import (
 	"os"
+	"slices"
 	"testing"
 )
 
@@ -69,10 +70,8 @@ func TestObserveNativeProcessAncestryIncludesCurrentExactReceipt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, receipt := range got {
-		if receipt == want {
-			return
-		}
+	if slices.Contains(got, want) {
+		return
 	}
 	t.Fatalf("current process receipt %+v not found in ancestry %+v", want, got)
 }

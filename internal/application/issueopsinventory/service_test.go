@@ -270,9 +270,7 @@ func TestServiceListCyclesKeepsConcurrentRequestCachesIndependent(t *testing.T) 
 	errors := make(chan error, requests)
 	var group sync.WaitGroup
 	for range requests {
-		group.Add(1)
-		go func() {
-			defer group.Done()
+		group.Go(func() {
 			<-start
 			result, err := service.ListCycles(context.Background(), "/state", "/source")
 			if err != nil {
@@ -282,7 +280,7 @@ func TestServiceListCyclesKeepsConcurrentRequestCachesIndependent(t *testing.T) 
 			if len(result.Entries) != 2 {
 				errors <- fmt.Errorf("entries = %d, want 2", len(result.Entries))
 			}
-		}()
+		})
 	}
 	close(start)
 	group.Wait()

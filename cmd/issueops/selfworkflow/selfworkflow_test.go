@@ -217,9 +217,6 @@ func TestSelfVerifyLLMEvalAndProgress(t *testing.T) {
 	if llmeval.SelfVerifyLLMResponseSchemaExample() == "" || len(llmeval.SelfVerifyLLMResponseFieldTypes()) == 0 {
 		t.Fatal("LLM response schema helpers should return content")
 	}
-	if boolPtr(true) == nil || !*boolPtr(true) {
-		t.Fatal("boolPtr should return pointer to value")
-	}
 	var progress bytes.Buffer
 	reporter, err := progresscontract.NewSelfVerifyProgressReporter("jsonl", &progress)
 	if err != nil {

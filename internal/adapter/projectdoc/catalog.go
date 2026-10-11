@@ -275,7 +275,7 @@ func FormatProjectDocCatalogOmissions(omissions projectdocdomain.CatalogOmission
 // firstMarkdownHeading returns the first level-1 heading in a document body
 // (frontmatter already stripped). Returns "" when there is no H1.
 func firstMarkdownHeading(body string) string {
-	for _, line := range strings.Split(body, "\n") {
+	for line := range strings.SplitSeq(body, "\n") {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "# ") {
 			return strings.TrimSpace(line[2:])

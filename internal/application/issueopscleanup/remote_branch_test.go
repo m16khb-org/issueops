@@ -68,8 +68,7 @@ func (e *remoteBranchTestEnvironment) Delete(ctx context.Context, repo, branch, 
 }
 
 func TestRemoteBranchCleanerReportsAuditWithoutRemoteBodyWrite(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	calls := []string{}
 	env := &remoteBranchTestEnvironment{t: t, ctx: ctx, calls: &calls, oid: "abc"}
 	record := model.IssueOpsRecord{ID: "io-test", Repo: "/repo", Branch: "123-work", Phase: model.IssueOpsPhaseDone, RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/1"}}

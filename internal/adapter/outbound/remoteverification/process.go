@@ -32,13 +32,10 @@ func runRemoteVerifyCommand(ctx context.Context, build func(context.Context) *ex
 	}
 	ctx, cancel := context.WithTimeout(ctx, remoteVerifyCommandTimeout)
 	defer cancel()
-	attempts := remoteVerifyAttempts
-	if attempts < 1 {
-		attempts = 1
-	}
+	attempts := max(remoteVerifyAttempts, 1)
 	var lastOut []byte
 	var lastErr error
-	for attempt := 0; attempt < attempts; attempt++ {
+	for attempt := range attempts {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}

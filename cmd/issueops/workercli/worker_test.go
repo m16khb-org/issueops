@@ -114,8 +114,7 @@ func TestRunWorkerRunRequiresReadOnlyAndSurfacesDeniedPolicy(t *testing.T) {
 		"--",
 		"sh", "-c", "true",
 	})
-	var denied policy.PolicyDeniedError
-	if !errors.As(err, &denied) {
+	if _, ok := errors.AsType[policy.PolicyDeniedError](err); !ok {
 		t.Fatalf("expected policy denied error, got %T %v", err, err)
 	}
 }

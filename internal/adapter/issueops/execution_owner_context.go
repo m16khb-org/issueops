@@ -87,7 +87,7 @@ func ensureExecutionOwnerArtifactDirectory(root, target string) error {
 		return fmt.Errorf("owner artifact directory must be inside the canonical worktree")
 	}
 	current := root
-	for _, part := range strings.Split(rel, string(os.PathSeparator)) {
+	for part := range strings.SplitSeq(rel, string(os.PathSeparator)) {
 		current = filepath.Join(current, part)
 		info, statErr := os.Lstat(current)
 		if errors.Is(statErr, os.ErrNotExist) {

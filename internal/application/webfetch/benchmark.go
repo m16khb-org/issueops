@@ -127,10 +127,7 @@ func (service Benchmark) compareBaseline(ctx context.Context, command string, fi
 		result.LiveParityReport.Warnings = append(result.LiveParityReport.Warnings, "baseline comparator unavailable: "+err.Error())
 		return
 	}
-	baselineTimeout := timeout
-	if baselineTimeout < 5*time.Second {
-		baselineTimeout = 5 * time.Second
-	}
+	baselineTimeout := max(timeout, 5*time.Second)
 	successes := 0
 	comparable := 0
 	agreements := 0

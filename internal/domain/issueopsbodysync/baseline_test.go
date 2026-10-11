@@ -31,7 +31,7 @@ func TestSelectBaselinePrefersLastRecordedSync(t *testing.T) {
 
 func TestRetainedBaselineIndicesReplacesAliasAndCapsHistory(t *testing.T) {
 	urls := make([]string, 0, 16)
-	for index := 0; index < 16; index++ {
+	for index := range 16 {
 		urls = append(urls, "https://example.com/"+string(rune('a'+index)))
 	}
 	urls[0] = "https://gitlab.com/group/repo/-/work_items/4"

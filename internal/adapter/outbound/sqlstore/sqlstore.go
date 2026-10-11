@@ -20,6 +20,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -369,12 +370,10 @@ func spanOutcome(err error) string {
 func (d *DB) runSpan(ctx context.Context, run *spanRun, fn func(context.Context) error) error {
 	chain, _ := ctx.Value(spanChainKey{}).([]string)
 	chain = append([]string(nil), chain...)
-	for _, active := range chain {
-		if active == d.dir {
-			return &NestedSpanError{
-				ActiveDirs:   append([]string(nil), chain...),
-				RequestedDir: d.dir,
-			}
+	if slices.Contains(chain, d.dir) {
+		return &NestedSpanError{
+			ActiveDirs:   append([]string(nil), chain...),
+			RequestedDir: d.dir,
 		}
 	}
 	select {

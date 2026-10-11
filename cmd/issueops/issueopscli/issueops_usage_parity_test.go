@@ -26,7 +26,7 @@ func usageCommandKey(line string) string {
 // 덮기 때문에 이 테스트가 없으면 issueops 쪽 usage의 drift가 감지되지 않는다.
 func TestIssueOpsUsageMatchesAdapterUsage(t *testing.T) {
 	adapterByKey := map[string]string{}
-	for _, line := range strings.Split(cliadapter.Usage("test"), "\n") {
+	for line := range strings.SplitSeq(cliadapter.Usage("test"), "\n") {
 		trimmed := strings.TrimSpace(line)
 		if strings.HasPrefix(trimmed, "issueops ") {
 			adapterByKey[usageCommandKey(trimmed)] = trimmed
@@ -36,7 +36,7 @@ func TestIssueOpsUsageMatchesAdapterUsage(t *testing.T) {
 		t.Fatal("adapter usage exposes no issueops lines; parity test inputs are broken")
 	}
 	shared := 0
-	for _, line := range strings.Split(cliadapter.LifecycleUsage(), "\n") {
+	for line := range strings.SplitSeq(cliadapter.LifecycleUsage(), "\n") {
 		trimmed := strings.TrimSpace(line)
 		if !strings.HasPrefix(trimmed, "issueops ") {
 			continue
@@ -64,7 +64,7 @@ func TestIssueOpsUsageMatchesAdapterUsage(t *testing.T) {
 func TestAdapterIssueOpsUsageCommandsExistInIssueOpsUsage(t *testing.T) {
 	const prefix = "issueops "
 	issueOpsKeys := map[string]bool{}
-	for _, line := range strings.Split(cliadapter.LifecycleUsage(), "\n") {
+	for line := range strings.SplitSeq(cliadapter.LifecycleUsage(), "\n") {
 		trimmed := strings.TrimSpace(line)
 		if !strings.HasPrefix(trimmed, prefix) {
 			continue
@@ -76,7 +76,7 @@ func TestAdapterIssueOpsUsageCommandsExistInIssueOpsUsage(t *testing.T) {
 	}
 	var missing []string
 	seen := map[string]bool{}
-	for _, line := range strings.Split(cliadapter.Usage("test"), "\n") {
+	for line := range strings.SplitSeq(cliadapter.Usage("test"), "\n") {
 		trimmed := strings.TrimSpace(line)
 		if !strings.HasPrefix(trimmed, prefix) {
 			continue

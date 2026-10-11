@@ -95,7 +95,7 @@ func readMarkerLines(path string) []string {
 		return nil
 	}
 	var out []string
-	for _, line := range strings.Split(strings.TrimSpace(string(data)), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(string(data)), "\n") {
 		if line != "" {
 			out = append(out, line)
 		}

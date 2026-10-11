@@ -24,7 +24,8 @@ func digest(kind, id string) string {
 
 func scopeDigest(host, session string) string { return digest("scope", host+"\x00"+session) }
 
-func i64(v int64) *int64 { return &v }
+//go:fix inline
+func i64(v int64) *int64 { return new(v) }
 
 func samePtr(a, b *int64) bool {
 	if a == nil || b == nil {
@@ -252,7 +253,7 @@ func TestHostUsageOmpCountsEachAssistantMessageEndOfAToolTurn(t *testing.T) {
 			t.Fatalf("unexpected sample %+v", sample)
 		}
 		delete(want, sample.MessageID)
-		requireMetrics(t, sample, i64(expected.input), i64(expected.output), i64(0), i64(0))
+		requireMetrics(t, sample, new(expected.input), new(expected.output), i64(0), i64(0))
 		if sample.Host != "omp" || sample.Provider != "anthropic" || sample.Model != "claude-haiku-4-5" || sample.SessionID != digest("session", "sess-omp-1") ||
 			sample.Finality != tracecontract.UsageFinalityFinal || sample.Temporality != tracecontract.UsageTemporalityDelta {
 			t.Errorf("sample = %+v", sample)

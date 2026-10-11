@@ -28,7 +28,7 @@ func TestIssueLinkCompositionPreservesConcurrentRelationsAndRefusedState(t *test
 	}
 	var wg sync.WaitGroup
 	errs := make(chan error, 12)
-	for n := 0; n < 12; n++ {
+	for n := range 12 {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()

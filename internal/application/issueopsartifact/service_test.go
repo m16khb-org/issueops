@@ -2,6 +2,7 @@ package issueopsartifact
 
 import (
 	"context"
+	"maps"
 	"reflect"
 	"testing"
 
@@ -82,8 +83,6 @@ func (repository *fakeRepository) ReadStaged(context.Context, string, string) (m
 
 func cloneMap(source map[string]string) map[string]string {
 	cloned := make(map[string]string, len(source))
-	for key, value := range source {
-		cloned[key] = value
-	}
+	maps.Copy(cloned, source)
 	return cloned
 }

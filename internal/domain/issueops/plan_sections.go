@@ -16,7 +16,7 @@ var RequiredPlanSections = []string{
 // 헤딩이나 본문 안의 언급은 절로 세지 않는다.
 func MissingPlanSections(content string) []string {
 	present := map[string]bool{}
-	for _, line := range strings.Split(content, "\n") {
+	for line := range strings.SplitSeq(content, "\n") {
 		present[collapseHeading(line)] = true
 	}
 	var missing []string

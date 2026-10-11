@@ -4,18 +4,14 @@ import (
 	"issueops/internal/adapter/issueops/readinesspaths"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"issueops/internal/contract/issueops"
 )
 
 func containsString(items []string, want string) bool {
-	for _, item := range items {
-		if item == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(items, want)
 }
 
 // recordIssueOpsProjectDocsReviewForTest는 publication 게이트가 요구하는

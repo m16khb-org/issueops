@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -150,12 +151,7 @@ func ForRecord(record model.IssueOpsRecord, req model.IssueOpsCleanupStatusReque
 }
 
 func containsString(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(values, want)
 }
 
 func completeCleanupRecord(t *testing.T) model.IssueOpsRecord {

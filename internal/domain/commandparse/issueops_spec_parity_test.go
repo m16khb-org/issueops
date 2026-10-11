@@ -23,7 +23,7 @@ func TestIssueOpsCommandSpecAcceptsEveryCatalogAdvertisedFlag(t *testing.T) {
 		}
 		carriesRecordActorFlags := false
 		advertised := map[string]bool{}
-		for _, field := range strings.Fields(line) {
+		for field := range strings.FieldsSeq(line) {
 			switch field {
 			case "issueops":
 			case "RECORD_ACTOR_FLAGS", "[RECORD_ACTOR_FLAGS]":
@@ -43,7 +43,7 @@ func TestIssueOpsCommandSpecAcceptsEveryCatalogAdvertisedFlag(t *testing.T) {
 				}
 				// 배타 그룹 (--preview|--apply)은 이미 Trim으로 괄호가 벗겨지므로
 				// 내부 | 기준으로도 분리한다.
-				for _, part := range strings.Split(trimmed, "|") {
+				for part := range strings.SplitSeq(trimmed, "|") {
 					part = strings.Trim(part, "[](),.:")
 					if strings.HasPrefix(part, "--") {
 						advertised[part] = true

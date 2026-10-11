@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -347,12 +348,7 @@ func assertCompletedReseedLedgerStale(t *testing.T, record leasecontract.Record)
 }
 
 func containsString(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(values, want)
 }
 
 func TestReseedServiceOrdersPrepareCommitAndBestEffortCleanup(t *testing.T) {

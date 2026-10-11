@@ -535,7 +535,7 @@ func executionIntentInventory(candidates []port.ExecutionOrcaIntentReceipt) port
 func executionTaskTitle(marker, promptSHA256 string) string {
 	marker = strings.TrimSpace(marker)
 	lifecycleID := ""
-	for _, field := range strings.Fields(marker) {
+	for field := range strings.FieldsSeq(marker) {
 		if value, ok := strings.CutPrefix(field, "lifecycle="); ok {
 			lifecycleID = value
 			break

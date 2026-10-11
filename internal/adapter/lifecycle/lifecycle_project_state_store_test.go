@@ -6,6 +6,7 @@ import (
 	projectdoccontract "issueops/internal/contract/projectdoc"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -107,7 +108,7 @@ func TestInitProjectLifecycleStateConcurrentNoDuplicates(t *testing.T) {
 	results := make([]lifecyclecontract.ProjectLifecycleStatePlan, n)
 	errs := make([]error, n)
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
@@ -160,12 +161,7 @@ func mustWrite(t *testing.T, path, content string) {
 }
 
 func containsString(items []string, want string) bool {
-	for _, item := range items {
-		if item == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(items, want)
 }
 
 func TestInitProjectLifecycleStateUpdatesExistingWithMetadata(t *testing.T) {

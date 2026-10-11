@@ -21,7 +21,7 @@ import (
 
 func TestTopLevelUsageRendersExactlyTheLifecycleCatalog(t *testing.T) {
 	rendered := map[string]bool{}
-	for _, raw := range strings.Split(Usage("test"), "\n") {
+	for raw := range strings.SplitSeq(Usage("test"), "\n") {
 		trimmed := strings.TrimSpace(raw)
 		if !strings.HasPrefix(trimmed, "issueops ") {
 			continue

@@ -206,8 +206,8 @@ func benchmarkRunIDs(t *testing.T) []string {
 	}
 	var ids []string
 	for _, entry := range entries {
-		if strings.HasSuffix(entry.Name(), ".json") {
-			ids = append(ids, strings.TrimSuffix(entry.Name(), ".json"))
+		if before, ok := strings.CutSuffix(entry.Name(), ".json"); ok {
+			ids = append(ids, before)
 		}
 	}
 	return ids

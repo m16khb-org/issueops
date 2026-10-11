@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 
 	issueopscontract "issueops/internal/contract/issueops"
@@ -302,12 +303,7 @@ func staleCompletedReseedLedger(record *leasecontract.Record, previousGeneration
 }
 
 func containsLedgerNote(notes []string, want string) bool {
-	for _, note := range notes {
-		if note == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(notes, want)
 }
 
 func cleanupAbandonApplying(raw json.RawMessage) bool {

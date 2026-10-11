@@ -2,6 +2,7 @@ package issueops
 
 import (
 	"path"
+	"slices"
 	"strings"
 )
 
@@ -60,7 +61,7 @@ func PathIsSchemaChange(rel string) bool {
 	if strings.HasSuffix(base, ".entity.ts") || strings.HasSuffix(base, ".entity.js") || strings.HasSuffix(base, ".entity.go") {
 		return true
 	}
-	for _, segment := range strings.Split(path.Dir(rel), "/") {
+	for segment := range strings.SplitSeq(path.Dir(rel), "/") {
 		switch segment {
 		case "migrations", "migration", "entities":
 			return true
@@ -81,7 +82,7 @@ func PathIsFrontendChange(rel string) bool {
 	if frontendExtensions[path.Ext(rel)] {
 		return true
 	}
-	for _, segment := range strings.Split(path.Dir(rel), "/") {
+	for segment := range strings.SplitSeq(path.Dir(rel), "/") {
 		if frontendPathSegments[segment] {
 			return true
 		}
@@ -91,12 +92,7 @@ func PathIsFrontendChange(rel string) bool {
 
 // HasFrontendChange는 변경 집합에 화면 변경이 하나라도 있는지 본다.
 func HasFrontendChange(paths []string) bool {
-	for _, rel := range paths {
-		if PathIsFrontendChange(rel) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(paths, PathIsFrontendChange)
 }
 
 // ClassifyChangeTier는 변경 집합 하나를 티어로 바꾼다. 우선순위는
@@ -151,7 +147,7 @@ func normalizeChangePath(rel string) string {
 }
 
 func pathTouchesAuth(rel string) bool {
-	for _, segment := range strings.Split(path.Dir(rel), "/") {
+	for segment := range strings.SplitSeq(path.Dir(rel), "/") {
 		if authPathSegments[segment] {
 			return true
 		}

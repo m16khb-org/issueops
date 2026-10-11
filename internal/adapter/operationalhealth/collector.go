@@ -390,7 +390,7 @@ func parseWorktrees(output []byte, repo string) ([]operationalhealthcontract.Git
 		current = operationalhealthcontract.GitWorktree{}
 		return nil
 	}
-	for _, raw := range bytes.Split(output, []byte{0}) {
+	for raw := range bytes.SplitSeq(output, []byte{0}) {
 		line := strings.TrimSpace(string(raw))
 		if line == "" {
 			if err := flush(); err != nil {
@@ -416,7 +416,7 @@ func parseWorktrees(output []byte, repo string) ([]operationalhealthcontract.Git
 
 func parseLocalRefs(output []byte) ([]operationalhealthcontract.GitRef, error) {
 	var fields []string
-	for _, raw := range bytes.Split(output, []byte{0}) {
+	for raw := range bytes.SplitSeq(output, []byte{0}) {
 		if value := strings.TrimSpace(string(raw)); value != "" {
 			fields = append(fields, value)
 		}
@@ -437,7 +437,7 @@ func parseLocalRefs(output []byte) ([]operationalhealthcontract.GitRef, error) {
 
 func parseRemoteRefs(output []byte) ([]operationalhealthcontract.GitRef, error) {
 	var result []operationalhealthcontract.GitRef
-	for _, raw := range bytes.Split(output, []byte{'\n'}) {
+	for raw := range bytes.SplitSeq(output, []byte{'\n'}) {
 		line := strings.TrimSpace(string(raw))
 		if line == "" {
 			continue

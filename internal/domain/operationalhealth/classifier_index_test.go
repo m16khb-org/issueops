@@ -19,7 +19,7 @@ func indexedHealthSnapshot(n int) Snapshot {
 	s.OrcaObserved, s.OrcaRuntimeID, s.OrcaRepoID = true, "runtime", "repo-id"
 	s.OrcaWorktrees = []operationalhealthcontract.OrcaWorktree{{RuntimeID: "runtime", RepoID: "repo-id", ID: "main", Repo: "/repo", Path: "/repo", Branch: "main", Head: s.SourceHead}}
 	s.Messages.RuntimeID = "runtime"
-	for i := 0; i < n; i++ {
+	for i := range n {
 		id := fmt.Sprintf("resource-%d", i)
 		c := healthyDirectSnapshot().Cycles[0]
 		c.ID, c.Branch, c.WorktreePath, c.HolderSessionID = id, id, "/worktrees/"+id, id

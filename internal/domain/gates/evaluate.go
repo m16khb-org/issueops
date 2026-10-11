@@ -47,7 +47,7 @@ func ExpectMatches(expect, output string) bool {
 			return re.MatchString(output)
 		}
 	}
-	for _, line := range strings.Split(strings.ReplaceAll(output, "\r\n", "\n"), "\n") {
+	for line := range strings.SplitSeq(strings.ReplaceAll(output, "\r\n", "\n"), "\n") {
 		line = strings.TrimSpace(line)
 		if line == expect {
 			return true

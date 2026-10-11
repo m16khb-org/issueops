@@ -222,7 +222,7 @@ func QualityStatuses(warnings []string, findings []contract.Finding) (string, st
 
 func ParseCoveragePackages(output string, threshold float64) []contract.CoveragePackage {
 	var packages []contract.CoveragePackage
-	for _, line := range strings.Split(output, "\n") {
+	for line := range strings.SplitSeq(output, "\n") {
 		if !strings.Contains(line, "coverage:") || !strings.Contains(line, "% of statements") {
 			continue
 		}
@@ -267,7 +267,7 @@ func FailedTestPackages(output string, limit int) ([]string, int) {
 	packages := []string{}
 	seen := map[string]bool{}
 	omitted := 0
-	for _, line := range strings.Split(output, "\n") {
+	for line := range strings.SplitSeq(output, "\n") {
 		fields := strings.Fields(line)
 		if len(fields) < 2 || fields[0] != "FAIL" || seen[fields[1]] {
 			continue

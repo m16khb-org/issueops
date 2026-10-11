@@ -146,8 +146,7 @@ func TestUsageErrors(t *testing.T) {
 		{"bogus"},
 	} {
 		_, err := run(t, newFakeFiles(), args...)
-		var usage UsageError
-		if !errors.As(err, &usage) {
+		if _, ok := errors.AsType[UsageError](err); !ok {
 			t.Fatalf("%v: err = %v, want UsageError", args, err)
 		}
 	}

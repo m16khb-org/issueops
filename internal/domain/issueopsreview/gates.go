@@ -1,6 +1,7 @@
 package issueopsreview
 
 import (
+	"slices"
 	"strings"
 
 	reviewcontract "issueops/internal/contract/issueopsreview"
@@ -54,10 +55,5 @@ func SchemaEvidenceMissing(touchesSchema bool, evidence reviewcontract.SchemaGat
 }
 
 func ChangeSetTouchesSchema(changed []string) bool {
-	for _, path := range changed {
-		if issueopsdomain.PathIsSchemaChange(path) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(changed, issueopsdomain.PathIsSchemaChange)
 }

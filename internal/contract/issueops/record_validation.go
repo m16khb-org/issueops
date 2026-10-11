@@ -2,6 +2,7 @@ package issueops
 
 import (
 	"fmt"
+	"slices"
 )
 
 // recordValidators runs in declaration order; the first error wins.
@@ -217,10 +218,5 @@ func knownCleanupAbandonFailureStep(step string) bool {
 }
 
 func knownRecordPhase(phase IssueOpsPhase) bool {
-	for _, known := range IssueOpsPhases {
-		if phase == known {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(IssueOpsPhases, phase)
 }

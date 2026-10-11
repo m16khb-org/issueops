@@ -20,7 +20,7 @@ func CommitStyleHints(recent []preflightcontract.CommitInfo, bodies []string, po
 	}
 	lore := 0
 	for _, body := range bodies {
-		for _, line := range strings.Split(body, "\n") {
+		for line := range strings.SplitSeq(body, "\n") {
 			line = strings.TrimSpace(line)
 			if line == "Lore:" || strings.HasPrefix(line, "Lore-") {
 				lore++

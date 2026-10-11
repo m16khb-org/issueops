@@ -16,7 +16,7 @@ func TestPrepareManifestPreservesInputAndIsolatesNestedArguments(t *testing.T) {
 		{ID: "b", SourceTool: "source", SchemaSHA256: hash, ExpectedArguments: map[string]any{"nested": []any{"original"}}},
 		{ID: "a", SourceTool: "source", SchemaSHA256: hash, ExpectedArguments: map[string]any{}},
 	}}
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		manifest.BaselineCases = append(manifest.BaselineCases, contract.BaselineCase{FixtureID: "b", Arguments: map[string]any{"nested": []any{"original"}}})
 	}
 	before, err := json.Marshal(manifest)

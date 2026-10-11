@@ -21,8 +21,8 @@ func TestStateRoundtripDetectsDryRunWriteInProbeState(t *testing.T) {
 		if label == "self verify promote dry-run" {
 			var probeRoot string
 			for _, value := range env {
-				if strings.HasPrefix(value, "ISSUEOPS_STATE_DIR=") {
-					probeRoot = strings.TrimPrefix(value, "ISSUEOPS_STATE_DIR=")
+				if after, ok := strings.CutPrefix(value, "ISSUEOPS_STATE_DIR="); ok {
+					probeRoot = after
 				}
 			}
 			if probeRoot == "" {

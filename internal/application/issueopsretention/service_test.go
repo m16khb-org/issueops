@@ -122,7 +122,7 @@ func TestServiceBoundsUnreadableDiagnosticsWithoutStoppingPrune(t *testing.T) {
 	now := time.Date(2026, 8, 11, 4, 0, 0, 0, time.UTC)
 	ids := make([]string, 0, unreadableReportLimit+6)
 	readErrors := make(map[string]error, unreadableReportLimit+5)
-	for index := 0; index < unreadableReportLimit+5; index++ {
+	for index := range unreadableReportLimit + 5 {
 		id := fmt.Sprintf("broken-%02d", index)
 		ids = append(ids, id)
 		readErrors[id] = errors.New("invalid state")

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	contract "issueops/internal/contract/toolconformance"
 	"reflect"
+	"slices"
 )
 
 func ValidateRegressionFixture(fixture contract.RegressionFixture) error {
@@ -41,10 +42,8 @@ func ValidateRegressionFixture(fixture contract.RegressionFixture) error {
 }
 
 func regressionFixtureIncomplete(fixture contract.RegressionFixture) bool {
-	for _, text := range []string{fixture.FixtureID, fixture.SourceTool, fixture.ProbeTool, fixture.Host, fixture.HostVersion, fixture.ModelLabel} {
-		if text == "" {
-			return true
-		}
+	if slices.Contains([]string{fixture.FixtureID, fixture.SourceTool, fixture.ProbeTool, fixture.Host, fixture.HostVersion, fixture.ModelLabel}, "") {
+		return true
 	}
 	return fixture.CanonicalArguments == nil
 }

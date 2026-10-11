@@ -8,7 +8,7 @@ import (
 
 func TestWorktreeBranchPriorityAndShortCircuit(t *testing.T) {
 	refs := []string{"refs/heads/feature", "refs/remotes/origin/feature", "refs/remotes/upstream/feature"}
-	for mask := 0; mask < 8; mask++ {
+	for mask := range 8 {
 		queried := []string{}
 		p := Provisioner{GitOut: func(dir string, args ...string) string {
 			if dir != "/source" || len(args) != 4 || !reflect.DeepEqual(args[:3], []string{"show-ref", "--verify", "--hash"}) {
@@ -25,7 +25,7 @@ func TestWorktreeBranchPriorityAndShortCircuit(t *testing.T) {
 		}}
 		got := p.worktreeAddArgs(port.ExecutionWorkspaceReceipt{SourceRoot: "/source", Root: "/source.worktrees/feature", Branch: "feature", BaseHead: "base"})
 		selected := 3
-		for i := 0; i < 3; i++ {
+		for i := range 3 {
 			if mask&(1<<i) != 0 {
 				selected = i
 				break

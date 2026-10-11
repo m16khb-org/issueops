@@ -3,6 +3,7 @@ package projectdoc
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -25,8 +26,8 @@ func NormalizeRelPath(relPath string) (string, error) {
 	if rel == "" {
 		return "", fmt.Errorf("rel_path is required")
 	}
-	if strings.HasPrefix(rel, ProjectDocsDir+"/") {
-		rel = strings.TrimPrefix(rel, ProjectDocsDir+"/")
+	if after, ok := strings.CutPrefix(rel, ProjectDocsDir+"/"); ok {
+		rel = after
 	}
 	names := AllowedProjectDocNames()
 	allowed := map[string]bool{}
@@ -55,10 +56,8 @@ func NonEmptyStrings(items []string) []string {
 }
 
 func AppendUnique(items []string, v string) []string {
-	for _, item := range items {
-		if item == v {
-			return items
-		}
+	if slices.Contains(items, v) {
+		return items
 	}
 	return append(items, v)
 }

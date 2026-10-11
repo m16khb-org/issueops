@@ -10,7 +10,7 @@ func TestUsageCatalogKeepsLifecycleAndChildHelpAligned(t *testing.T) {
 	if !strings.HasPrefix(full, "issueops catalog-probe\n") {
 		t.Fatal("version missing from root usage")
 	}
-	for _, line := range strings.Split(lifecycle, "\n") {
+	for line := range strings.SplitSeq(lifecycle, "\n") {
 		if strings.HasPrefix(line, "  issueops ") && !strings.Contains(full, line) {
 			t.Fatalf("root help dropped %q", line)
 		}

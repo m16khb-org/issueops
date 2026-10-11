@@ -120,7 +120,7 @@ func TestChildrenCloserLimitsConcurrencyAndPreservesResultOrder(t *testing.T) {
 		done <- result
 		errs <- err
 	}()
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		select {
 		case <-started:
 		case <-time.After(2 * time.Second):
@@ -140,7 +140,7 @@ func TestChildrenCloserLimitsConcurrencyAndPreservesResultOrder(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("fifth request did not start after a slot was released")
 	}
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		release <- struct{}{}
 	}
 	result := <-done

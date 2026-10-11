@@ -4,6 +4,7 @@ import (
 	riskqacontractx "issueops/internal/application/riskqa"
 	riskqacontract "issueops/internal/contract/riskqa"
 	selfverify "issueops/internal/contract/selfverify"
+	"slices"
 
 	"os"
 	"os/exec"
@@ -188,12 +189,7 @@ func sameStringSlice(a, b []string) bool {
 }
 
 func containsString(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(values, want)
 }
 
 func runRiskQATestCommand(t *testing.T, dir string, name string, args ...string) {

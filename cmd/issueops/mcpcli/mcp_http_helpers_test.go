@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"net"
 	"net/http"
 	"path/filepath"
@@ -130,9 +131,7 @@ func toolCallBody(revision, name string, args map[string]any) string {
 func (s httpTestServer) callTool(ctx context.Context, revision, name string, args map[string]any, header map[string]string) (map[string]any, bool, *jsonrpc.Error, error) {
 	if revision >= revisionNew {
 		merged := map[string]string{"Mcp-Method": "tools/call", "Mcp-Name": name}
-		for key, value := range header {
-			merged[key] = value
-		}
+		maps.Copy(merged, header)
 		header = merged
 	}
 	response, err := s.post(ctx, revision, toolCallBody(revision, name, args), header)

@@ -312,7 +312,7 @@ func executionMarkerField(marker, name string) (string, bool) {
 	prefix := name + "="
 	value := ""
 	seen := false
-	for _, field := range strings.Fields(marker) {
+	for field := range strings.FieldsSeq(marker) {
 		if !strings.HasPrefix(field, prefix) {
 			continue
 		}

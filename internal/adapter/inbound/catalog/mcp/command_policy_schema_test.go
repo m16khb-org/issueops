@@ -1,5 +1,7 @@
 package mcp
 
+import "slices"
+
 import contract "issueops/internal/contract/mcp"
 
 import "testing"
@@ -65,10 +67,5 @@ func assertPropertyType(t *testing.T, properties map[string]any, name string, wa
 }
 
 func schemaRequiredContains(items []string, target string) bool {
-	for _, item := range items {
-		if item == target {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(items, target)
 }

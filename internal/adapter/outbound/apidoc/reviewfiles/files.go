@@ -80,7 +80,7 @@ func (f Files) Tracked(repo string) []string {
 		return nil
 	}
 	var files []string
-	for _, line := range strings.Split(out, "\n") {
+	for line := range strings.SplitSeq(out, "\n") {
 		file := strings.TrimSpace(line)
 		if file == "" || !domain.IsCandidate(file) {
 			continue
@@ -117,7 +117,7 @@ func Normalize(repo string, files []string) []string {
 
 func splitLines(text string) []string {
 	var lines []string
-	for _, line := range strings.Split(text, "\n") {
+	for line := range strings.SplitSeq(text, "\n") {
 		line = strings.TrimSpace(line)
 		if line != "" {
 			lines = append(lines, line)

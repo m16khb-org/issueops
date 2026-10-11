@@ -35,7 +35,7 @@ func TestAcceptIssueOpsChildrenConcurrentlyAcrossProcesses(t *testing.T) {
 
 	childIDs := make([]string, workers)
 	evidenceByChild := make(map[string]string, workers)
-	for i := 0; i < workers; i++ {
+	for i := range workers {
 		started, err := startIssueOpsChildForTest(stateRoot, parent, issueops.IssueOpsChildStartRequest{
 			ParentID:           parent.ID,
 			Branch:             fmt.Sprintf("124-child-accept-%d", i),
@@ -71,7 +71,7 @@ func TestAcceptIssueOpsChildrenConcurrentlyAcrossProcesses(t *testing.T) {
 		t.Fatalf("release accept gate: %v", err)
 	}
 
-	for i := 0; i < workers; i++ {
+	for range workers {
 		result := <-outputs
 		if result.err != nil {
 			t.Fatalf("worker %d failed: %v\ncombined output:\n%s", result.worker, result.err, result.output)

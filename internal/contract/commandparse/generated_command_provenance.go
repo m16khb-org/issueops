@@ -147,8 +147,8 @@ func generatedCommandProvenanceArg(arg string) (string, string, bool) {
 		if arg == name {
 			return name, "", true
 		}
-		if strings.HasPrefix(arg, name+"=") {
-			return name, strings.TrimPrefix(arg, name+"="), true
+		if after, ok := strings.CutPrefix(arg, name+"="); ok {
+			return name, after, true
 		}
 	}
 	return "", "", false

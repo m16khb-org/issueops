@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -192,12 +193,7 @@ func TestAdvancePhaseGuardsPRWithGates(t *testing.T) {
 }
 
 func containsMissing(values []string, target string) bool {
-	for _, value := range values {
-		if value == target {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(values, target)
 }
 
 func hasWarning(warnings []string, gateID string) bool {

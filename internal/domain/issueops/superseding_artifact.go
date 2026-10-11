@@ -78,7 +78,7 @@ func ValidateSupersedingArtifact(original, replacement ArtifactObservation) erro
 // 등장한다. supersede 어휘와 대상 참조가 **같은 줄에** 있어야 인정한다.
 func bodyDeclaresSupersede(body, originalURL string) bool {
 	number, hasNumber := artifactNumberReference(originalURL)
-	for _, line := range strings.Split(body, "\n") {
+	for line := range strings.SplitSeq(body, "\n") {
 		lowered := strings.ToLower(line)
 		if !strings.Contains(lowered, "supersede") && !strings.Contains(lowered, "replaces") {
 			continue

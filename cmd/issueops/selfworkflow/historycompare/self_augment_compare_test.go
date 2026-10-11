@@ -3,6 +3,7 @@ package historycompare
 import (
 	augmentcontract "issueops/internal/contract/selfaugment"
 	domain "issueops/internal/domain/selfaugment"
+	"slices"
 	"testing"
 )
 
@@ -231,10 +232,5 @@ func TestCompareStepBudgetRegressionsIgnoresTinyAbsoluteNoise(t *testing.T) {
 }
 
 func containsString(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(values, want)
 }

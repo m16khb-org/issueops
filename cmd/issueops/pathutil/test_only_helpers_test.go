@@ -1,6 +1,7 @@
 package pathutil
 
 import (
+	"slices"
 	"strings"
 
 	statecontract "issueops/internal/contract/state"
@@ -29,12 +30,7 @@ func SplitCSV(s string) []string {
 }
 
 func ContainsString(items []string, want string) bool {
-	for _, item := range items {
-		if item == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(items, want)
 }
 
 func StateDoctorHasIssueCode(issues []statecontract.StateDoctorIssue, want string) bool {

@@ -2,6 +2,7 @@ package toolconformance
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -321,12 +322,7 @@ func TestRunLiveBenchmarkRetriesIncompleteAttemptsUpToLimit(t *testing.T) {
 }
 
 func contains(values []string, want string) bool {
-	for _, v := range values {
-		if v == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(values, want)
 }
 
 func TestRunLiveBenchmarkHostWithNoCompletedEpisodeIsUnavailable(t *testing.T) {

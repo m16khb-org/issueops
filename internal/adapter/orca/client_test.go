@@ -656,7 +656,7 @@ func TestClientNormalizesWorktreeHeadRefBranch(t *testing.T) {
 
 func TestStableVisualTabTitlesBoundsTotalInventoryAcrossLayouts(t *testing.T) {
 	layouts := make([]visualLayoutPayload, 2)
-	for i := 0; i < port.OrcaMaxBaselineIDs+1; i++ {
+	for i := range port.OrcaMaxBaselineIDs + 1 {
 		layout := i % len(layouts)
 		layouts[layout].Root.Tabs = append(layouts[layout].Root.Tabs, struct {
 			TabID        string `json:"tabId"`

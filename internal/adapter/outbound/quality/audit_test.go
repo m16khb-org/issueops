@@ -66,7 +66,7 @@ func TestCollectAuditItemsInvalidDocuments(t *testing.T) {
 			}
 		})
 	}
-	for column := 0; column < 5; column++ {
+	for column := range 5 {
 		t.Run("empty required "+[]string{"ID", "Area", "Title", "Priority", "Size"}[column], func(t *testing.T) {
 			root := t.TempDir()
 			cells := []string{"A1", "Core", "Fix", "P1", "Small"}

@@ -53,8 +53,7 @@ func TestRunPolicyRunRequiresReadOnlyAndDeniesShell(t *testing.T) {
 	}
 
 	err := RunFakeRun([]string{"--workspace-root", repo, "--cwd", repo, "--", "sh", "-c", "true"})
-	var denied policy.PolicyDeniedError
-	if !errors.As(err, &denied) {
+	if _, ok := errors.AsType[policy.PolicyDeniedError](err); !ok {
 		t.Fatalf("expected policy denied error, got %T %v", err, err)
 	}
 }

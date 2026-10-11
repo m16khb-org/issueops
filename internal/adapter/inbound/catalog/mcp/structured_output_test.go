@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"encoding/json"
+	"maps"
 	"reflect"
 	"slices"
 	"strings"
@@ -167,7 +168,7 @@ func TestInspectOutputSchemaModelsInspectInfo(t *testing.T) {
 			t.Errorf("%s was accepted", name)
 		}
 	}
-	assertSchemaCoversStruct(t, "harness_inspect", reflect.TypeOf(inspectcontract.InspectInfo{}))
+	assertSchemaCoversStruct(t, "harness_inspect", reflect.TypeFor[inspectcontract.InspectInfo]())
 }
 
 func mustMergeInspect(t *testing.T, extra map[string]any) map[string]any {
@@ -177,9 +178,7 @@ func mustMergeInspect(t *testing.T, extra map[string]any) map[string]any {
 	if err := json.Unmarshal(raw, &out); err != nil {
 		t.Fatal(err)
 	}
-	for k, v := range extra {
-		out[k] = v
-	}
+	maps.Copy(out, extra)
 	return out
 }
 
@@ -194,7 +193,7 @@ func TestDocsIndexOutputSchemaModelsDocsIndexResult(t *testing.T) {
 	if err := validateAgainst(t, resolved, map[string]any{"ok": true, "docs": "none"}); err == nil {
 		t.Error("malformed docs_index output was accepted")
 	}
-	assertSchemaCoversStruct(t, "docs_index", reflect.TypeOf(docscontract.DocsIndexResult{}))
+	assertSchemaCoversStruct(t, "docs_index", reflect.TypeFor[docscontract.DocsIndexResult]())
 }
 
 // assertSchemaCoversStruct walks the DTO and requires the output schema to
@@ -217,8 +216,7 @@ func walkStruct(t *testing.T, path string, schema, defs map[string]any, typ refl
 	properties, _ := schema["properties"].(map[string]any)
 	required, _ := schema["required"].([]string)
 	seen := map[string]bool{}
-	for i := 0; i < typ.NumField(); i++ {
-		field := typ.Field(i)
+	for field := range typ.Fields() {
 		name, opts, _ := strings.Cut(field.Tag.Get("json"), ",")
 		if name == "" || name == "-" {
 			continue

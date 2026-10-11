@@ -82,7 +82,7 @@ func ReadHeadings(path string) (string, []string) {
 	}
 	title := ""
 	headings := []string{}
-	for _, line := range strings.Split(string(b), "\n") {
+	for line := range strings.SplitSeq(string(b), "\n") {
 		level, text, ok := parseHeadingLine(strings.TrimSpace(line))
 		if !ok {
 			continue

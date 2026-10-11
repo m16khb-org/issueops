@@ -74,7 +74,7 @@ func TestIssueOpsNamespaceUsageExistsInCatalog(t *testing.T) {
 
 	var missingCommands, missingFlags []string
 	for _, namespace := range []string{"remote", "execution", "cleanup", "child", "branch", "artifact", "implementation-review"} {
-		for _, line := range strings.Split(issueOpsNamespaceHelpText(t, namespace), "\n") {
+		for line := range strings.SplitSeq(issueOpsNamespaceHelpText(t, namespace), "\n") {
 			trimmed := strings.TrimSpace(line)
 			if !strings.HasPrefix(trimmed, prefix) {
 				continue

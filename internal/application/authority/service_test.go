@@ -451,14 +451,12 @@ func TestConcurrentRequestsKeepCapabilitiesIsolated(t *testing.T) {
 	start := make(chan struct{})
 	errs := make(chan error, 64)
 	var wg sync.WaitGroup
-	for i := 0; i < 32; i++ {
+	for i := range 32 {
 		use, want := alice, "alice"
 		if i%2 == 1 {
 			use, want = bob, "bob"
 		}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			<-start
 			ctx, verified, err := h.service.Bind(context.Background(), use)
 			if err != nil {
@@ -469,7 +467,7 @@ func TestConcurrentRequestsKeepCapabilitiesIsolated(t *testing.T) {
 			if err != nil || verified.Identity.SessionID != want || again.Identity.SessionID != want {
 				errs <- fmt.Errorf("request crossed identities: want %s got %s/%s err=%v", want, verified.Identity.SessionID, again.Identity.SessionID, err)
 			}
-		}()
+		})
 	}
 	close(start)
 	wg.Wait()

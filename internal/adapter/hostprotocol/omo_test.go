@@ -369,11 +369,11 @@ func exportObject(value goja.Value) (map[string]any, error) {
 func parseGeneratedLifecycleContract(t *testing.T, source string) generatedLifecycleContract {
 	t.Helper()
 	const prefix = "const issueopsLifecycleContract = "
-	start := strings.Index(source, prefix)
-	if start < 0 {
+	_, after, ok := strings.Cut(source, prefix)
+	if !ok {
 		t.Fatal("generated extension has no lifecycle contract")
 	}
-	remaining := source[start+len(prefix):]
+	remaining := after
 	end := strings.IndexByte(remaining, '\n')
 	if end < 0 {
 		t.Fatal("generated lifecycle contract is not line-delimited")

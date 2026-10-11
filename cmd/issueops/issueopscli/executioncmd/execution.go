@@ -8,6 +8,7 @@ import (
 	executionissue "issueops/internal/contract/executionissue"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	model "issueops/internal/contract/issueops"
@@ -158,15 +159,10 @@ func cmuxHandoffHasEveryIdentityFence(request model.ExecutionCmuxHandoffRequest)
 	if request.Generation == 0 {
 		return false
 	}
-	for _, value := range []string{
+	return !slices.Contains([]string{
 		request.ID, request.CmuxExecutable, request.CmuxVersion, request.CmuxBuild, request.SocketPath, request.WindowID,
 		request.CWD, request.Host, request.HostExecutable, request.Model, request.PromptFile, request.PromptSHA256, request.MaterialSHA256,
-	} {
-		if value == "" {
-			return false
-		}
-	}
-	return true
+	}, "")
 }
 
 type actorFlags struct {

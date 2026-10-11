@@ -137,8 +137,8 @@ func ExactFlags(command ExactIssueOpsCommand, values, booleans, repeatable map[s
 			return nil, false
 		}
 		name, value, hasValue := token, "", false
-		if at := strings.Index(token, "="); at >= 0 {
-			name, value, hasValue = token[:at], token[at+1:], true
+		if before, after, ok := strings.Cut(token, "="); ok {
+			name, value, hasValue = before, after, true
 		}
 		switch {
 		case booleans[name]:

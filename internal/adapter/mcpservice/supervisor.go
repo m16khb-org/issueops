@@ -128,7 +128,7 @@ func (l launchd) supervised(ctx context.Context) (bool, int, error) {
 	if err != nil {
 		return false, 0, nil
 	}
-	for _, line := range strings.Split(string(out), "\n") {
+	for line := range strings.SplitSeq(string(out), "\n") {
 		key, value, ok := strings.Cut(strings.TrimSpace(line), "=")
 		if !ok || strings.TrimSpace(key) != "pid" {
 			continue
@@ -163,7 +163,7 @@ func (s systemd) checkUnitPath(ctx context.Context) error {
 		return nil
 	}
 	env := map[string]string{}
-	for _, line := range strings.Split(string(out), "\n") {
+	for line := range strings.SplitSeq(string(out), "\n") {
 		if key, value, ok := strings.Cut(line, "="); ok {
 			env[key] = value
 		}
@@ -183,7 +183,7 @@ func (s systemd) checkUnitPath(ctx context.Context) error {
 	// UnitPath omits directories that do not exist yet, so it can only
 	// confirm a match, never prove the first install from the same HOME wrong.
 	paths, _ := s.run(ctx, "systemctl", "--user", "show", "-p", "UnitPath", "--value")
-	for _, path := range strings.Fields(string(paths)) {
+	for path := range strings.FieldsSeq(string(paths)) {
 		if filepath.Clean(path) == dir {
 			return nil
 		}
@@ -222,7 +222,7 @@ func (s systemd) supervised(ctx context.Context) (bool, int, error) {
 		return false, 0, nil
 	}
 	active, pid := false, 0
-	for _, line := range strings.Split(string(out), "\n") {
+	for line := range strings.SplitSeq(string(out), "\n") {
 		key, value, ok := strings.Cut(strings.TrimSpace(line), "=")
 		if !ok {
 			continue

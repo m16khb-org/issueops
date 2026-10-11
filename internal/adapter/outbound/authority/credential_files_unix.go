@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"golang.org/x/sys/unix"
 
@@ -136,7 +137,7 @@ func privateEntry(stat unix.Stat_t, kind uint32) bool {
 }
 
 func closeFDs(fds []int) {
-	for index := len(fds) - 1; index >= 0; index-- {
-		_ = unix.Close(fds[index])
+	for _, fd := range slices.Backward(fds) {
+		_ = unix.Close(fd)
 	}
 }

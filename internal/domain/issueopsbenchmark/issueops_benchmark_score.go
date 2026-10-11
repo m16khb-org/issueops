@@ -1,6 +1,7 @@
 package issueopsbenchmark
 
 import (
+	"maps"
 	"strings"
 
 	issueopscontract "issueops/internal/contract/issueopsbenchmark"
@@ -72,9 +73,7 @@ type issueOpsBenchmarkCheck struct {
 // issueOpsBenchmarkChecks evaluates every scoring dimension for the artifact.
 func issueOpsBenchmarkChecks(fixture issueopscontract.IssueOpsBenchmarkFixture, artifact issueopscontract.IssueOpsBenchmarkArtifact, routingComplete bool) map[string]issueOpsBenchmarkCheck {
 	checks := issueOpsDraftAndPlanChecks(artifact)
-	for dimension, check := range issueOpsExecutionChecks(fixture, artifact, routingComplete) {
-		checks[dimension] = check
-	}
+	maps.Copy(checks, issueOpsExecutionChecks(fixture, artifact, routingComplete))
 	return checks
 }
 

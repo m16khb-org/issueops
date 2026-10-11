@@ -2,6 +2,7 @@ package projectdocs
 
 import (
 	projectdoc "issueops/internal/domain/projectdoc"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,9 +32,7 @@ func RenderProjectDocs(root string, signals projectdoc.ProjectSignals) map[strin
 		out[rel] = projectdoc.EnsureMetaFrontmatter(filepath.Base(rel), content)
 	}
 	// Module starters carry their own explicit frontmatter and back-links.
-	for rel, content := range renderFamilyModuleDocs(signals) {
-		out[rel] = content
-	}
+	maps.Copy(out, renderFamilyModuleDocs(signals))
 	return out
 }
 

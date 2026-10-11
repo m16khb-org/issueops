@@ -60,14 +60,14 @@ func (r Reader) changedPathsIn(record model.IssueOpsRecord, gitRoot string) []st
 	paths := map[string]bool{}
 	if base := r.DiffBaseRef(record, gitRoot); base != "" {
 		_, names, _ := r.GitCmd(gitRoot, "diff", "--name-only", base+"..HEAD", "--")
-		for _, name := range strings.Split(names, "\n") {
+		for name := range strings.SplitSeq(names, "\n") {
 			if path := cleanRelativePath(name); path != "" {
 				paths[path] = true
 			}
 		}
 	}
 	status := r.gitStatusPorcelain(gitRoot)
-	for _, line := range strings.Split(status, "\n") {
+	for line := range strings.SplitSeq(status, "\n") {
 		if path := cleanRelativePath(PorcelainPath(line)); path != "" {
 			paths[path] = true
 		}
@@ -103,7 +103,7 @@ func (r Reader) ObservedPathsIn(gitRoot, base string) ([]string, bool) {
 		if code != 0 {
 			return nil, false
 		}
-		for _, name := range strings.Split(names, "\n") {
+		for name := range strings.SplitSeq(names, "\n") {
 			if path := cleanRelativePath(name); path != "" {
 				paths[path] = true
 			}
@@ -113,7 +113,7 @@ func (r Reader) ObservedPathsIn(gitRoot, base string) ([]string, bool) {
 	if code != 0 {
 		return nil, false
 	}
-	for _, line := range strings.Split(status, "\n") {
+	for line := range strings.SplitSeq(status, "\n") {
 		if path := cleanRelativePath(PorcelainPath(line)); path != "" {
 			paths[path] = true
 		}
@@ -187,7 +187,7 @@ func PathMatchesPlan(record model.IssueOpsRecord, worktree, path string) bool {
 
 func (r Reader) gitStatusHasImplementationChange(record model.IssueOpsRecord, worktree string) bool {
 	out := r.gitStatusPorcelain(worktree)
-	for _, line := range strings.Split(out, "\n") {
+	for line := range strings.SplitSeq(out, "\n") {
 		path := PorcelainPath(line)
 		if path == "" {
 			continue
@@ -213,7 +213,7 @@ func (r Reader) gitHeadDiffersFromBase(record model.IssueOpsRecord, worktree str
 		return false
 	}
 	_, names, _ := r.GitCmd(worktree, "diff", "--name-only", ref+"..HEAD", "--")
-	for _, name := range strings.Split(names, "\n") {
+	for name := range strings.SplitSeq(names, "\n") {
 		name = strings.TrimSpace(name)
 		if reviewdomain.ImplementationChange(name, pathIsPlanningMaterial(record, worktree, name)) {
 			return true

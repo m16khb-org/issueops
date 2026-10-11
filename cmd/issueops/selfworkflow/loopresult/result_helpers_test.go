@@ -27,14 +27,10 @@ func EmitEnd(reporter *progress.SelfVerifyProgressReporter, loopKind string, ite
 		LoopKind:   loopKind,
 		Iterations: iterations,
 		Seed:       seed,
-		OK:         boolPtr(ok),
+		OK:         new(ok),
 	}
 	if errorText != "" {
 		event.Error = errorText
 	}
 	reporter.Emit(event)
-}
-
-func boolPtr(value bool) *bool {
-	return &value
 }

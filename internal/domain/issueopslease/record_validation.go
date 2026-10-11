@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	leasecontract "issueops/internal/contract/issueopslease"
@@ -344,13 +345,7 @@ func validateCompletion(completion leasecontract.Completion) error {
 	return nil
 }
 func validHexDigest(value string, sizes ...int) bool {
-	valid := false
-	for _, size := range sizes {
-		if len(value) == size {
-			valid = true
-			break
-		}
-	}
+	valid := slices.Contains(sizes, len(value))
 	if !valid {
 		return false
 	}

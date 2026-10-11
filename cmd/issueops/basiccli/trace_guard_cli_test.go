@@ -98,8 +98,7 @@ func TestRunGuardCheckTextOutputReturnsBlockedError(t *testing.T) {
 	out, err := captureTraceGuardPolicyStdout(t, func() error {
 		return RunGuardCheck([]string{"--repo", repo, "--", "slow_test.go"})
 	})
-	var blocked guardcontract.GuardBlockedError
-	if !errors.As(err, &blocked) {
+	if _, ok := errors.AsType[guardcontract.GuardBlockedError](err); !ok {
 		t.Fatalf("expected guard blocked error, got %T %v", err, err)
 	}
 	if !strings.Contains(out, "guard files: 1 file(s), block=1") || !strings.Contains(out, "sleep-in-test") {

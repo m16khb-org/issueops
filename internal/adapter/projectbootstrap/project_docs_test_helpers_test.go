@@ -4,6 +4,7 @@ import (
 	projectdoccontract "issueops/internal/contract/projectdoc"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -66,10 +67,5 @@ func routeContains(result projectdocs.ProjectDocsRouteResult, rel string) bool {
 }
 
 func containsProjectString(items []string, want string) bool {
-	for _, item := range items {
-		if item == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(items, want)
 }

@@ -17,12 +17,12 @@ import (
 func cleanupSubcommandsInUsageText(usage string) []string {
 	const marker = "issueops cleanup "
 	seen := map[string]struct{}{}
-	for _, line := range strings.Split(usage, "\n") {
-		index := strings.Index(line, marker)
-		if index < 0 {
+	for line := range strings.SplitSeq(usage, "\n") {
+		_, after, ok := strings.Cut(line, marker)
+		if !ok {
 			continue
 		}
-		fields := strings.Fields(line[index+len(marker):])
+		fields := strings.Fields(after)
 		if len(fields) == 0 || strings.HasPrefix(fields[0], "-") {
 			continue
 		}

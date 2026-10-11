@@ -1,5 +1,7 @@
 package projectdoc
 
+import "slices"
+
 import "testing"
 
 func TestBuildProfileCollectsObservedAndDeclaredEvidence(t *testing.T) {
@@ -13,12 +15,7 @@ func TestBuildProfileCollectsObservedAndDeclaredEvidence(t *testing.T) {
 }
 
 func containsProfileEvidence(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(values, want)
 }
 
 func TestClassifyVCSFromObservedOrigin(t *testing.T) {

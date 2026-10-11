@@ -489,16 +489,16 @@ func executionSyncBaseUnmergedPaths(ctx context.Context, root string, deps issue
 	}
 	seen := map[string]bool{}
 	paths := []string{}
-	for _, entry := range strings.Split(out, "\x00") {
+	for entry := range strings.SplitSeq(out, "\x00") {
 		if strings.TrimSpace(entry) == "" {
 			continue
 		}
 		// "<mode> <oid> <stage>\t<path>"
-		tab := strings.Index(entry, "\t")
-		if tab < 0 {
+		_, after, ok := strings.Cut(entry, "\t")
+		if !ok {
 			continue
 		}
-		path := entry[tab+1:]
+		path := after
 		if !seen[path] {
 			seen[path] = true
 			paths = append(paths, path)
@@ -540,7 +540,7 @@ func executionSyncBaseWorktreeStatus(ctx context.Context, root string, deps issu
 	}
 	trackedDirty := false
 	untracked := []string{}
-	for _, line := range strings.Split(strings.ReplaceAll(out, "\r\n", "\n"), "\n") {
+	for line := range strings.SplitSeq(strings.ReplaceAll(out, "\r\n", "\n"), "\n") {
 		if len(line) < 4 {
 			continue
 		}
@@ -570,7 +570,7 @@ func executionSyncBaseMergeMsgConflictCount(ctx context.Context, root string, de
 		return 0
 	}
 	count, inBlock := 0, false
-	for _, line := range strings.Split(string(data), "\n") {
+	for line := range strings.SplitSeq(string(data), "\n") {
 		trimmed := strings.TrimSpace(strings.TrimPrefix(line, "#"))
 		if trimmed == "Conflicts:" {
 			inBlock = true

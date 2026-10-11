@@ -15,8 +15,8 @@ func ScopeGateLedgers(root string, files []string, issueNumber string) (judged, 
 	}
 	issuesDir := filepath.Join(root, ".issueops", "issues") + string(filepath.Separator)
 	for _, file := range files {
-		if strings.HasPrefix(file, issuesDir) {
-			folder := strings.SplitN(strings.TrimPrefix(file, issuesDir), string(filepath.Separator), 2)[0]
+		if after, ok := strings.CutPrefix(file, issuesDir); ok {
+			folder, _, _ := strings.Cut(after, string(filepath.Separator))
 			if folder != issueNumber && gateLedgerAllDigits(folder) {
 				skipped = append(skipped, file)
 				continue

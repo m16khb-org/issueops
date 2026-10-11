@@ -1,5 +1,7 @@
 package mcp
 
+import "slices"
+
 import contract "issueops/internal/contract/mcp"
 
 import "testing"
@@ -65,12 +67,7 @@ func schemaRequires(schema map[string]any, name string) bool {
 	if !ok {
 		return false
 	}
-	for _, item := range required {
-		if item == name {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(required, name)
 }
 
 func contains(s, sub string) bool {

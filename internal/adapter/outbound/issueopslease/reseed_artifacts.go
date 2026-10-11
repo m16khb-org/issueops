@@ -256,7 +256,7 @@ func reseedMkdirAll(root, target string) error {
 // 이미 있는 구성요소는 symlink가 아닌 실제 디렉터리인지 확인한다.
 func reseedMkdirWalk(root, rel string) error {
 	current := root
-	for _, part := range strings.Split(rel, string(filepath.Separator)) {
+	for part := range strings.SplitSeq(rel, string(filepath.Separator)) {
 		if part == "" || part == "." {
 			continue
 		}

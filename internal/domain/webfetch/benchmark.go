@@ -2,7 +2,7 @@ package webfetch
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -78,12 +78,7 @@ func CompleteBenchmark(result webfetchcontract.BenchmarkResult, live bool, compa
 	return result
 }
 func CategoryAllowed(category string, expected []string) bool {
-	for _, value := range expected {
-		if category == value {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(expected, category)
 }
 
 func IsFalseStrongOKFixture(id string) bool {
@@ -116,17 +111,11 @@ func PercentileLatency(values []int64, Percentile int) int64 {
 		return 0
 	}
 	copied := append([]int64(nil), values...)
-	sort.Slice(copied, func(i, j int) bool { return copied[i] < copied[j] })
+	slices.Sort(copied)
 	if Percentile <= 0 {
 		return copied[0]
 	}
-	index := (len(copied)*Percentile + 99) / 100
-	if index < 1 {
-		index = 1
-	}
-	if index > len(copied) {
-		index = len(copied)
-	}
+	index := min(max((len(copied)*Percentile+99)/100, 1), len(copied))
 	return copied[index-1]
 }
 

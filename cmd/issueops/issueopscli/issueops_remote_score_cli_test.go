@@ -19,12 +19,12 @@ func TestRunIssueOpsRemoteScoreCLIDeterministic(t *testing.T) {
 			Body:  "Score related issues and enhancement labels before creating an issue.",
 		},
 		IssueCandidates: []remotedomain.IssueOpsRemoteIssueCandidate{
-			{ID: "#11", Title: "IssueOps related issue and label scoring", Score: scoreForCLITest(0.93)},
-			{ID: "#8", Title: "Unrelated docs cleanup", Score: scoreForCLITest(0.30)},
+			{ID: "#11", Title: "IssueOps related issue and label scoring", Score: new(0.93)},
+			{ID: "#8", Title: "Unrelated docs cleanup", Score: new(0.30)},
 		},
 		LabelCandidates: []remotedomain.IssueOpsRemoteLabelCandidate{
-			{Name: "enhancement", Score: scoreForCLITest(0.90)},
-			{Name: "documentation", Score: scoreForCLITest(0.20)},
+			{Name: "enhancement", Score: new(0.90)},
+			{Name: "documentation", Score: new(0.20)},
 		},
 	})
 	out := captureStdoutForContract(t, func() error {
@@ -120,7 +120,7 @@ func TestRunIssueOpsRemoteScoreCLITextShowsIssueTitleWithReference(t *testing.T)
 		Threshold: 0.70,
 		Issue:     remotedomain.IssueOpsRemoteArtifact{Title: "IssueOps related issue scoring"},
 		IssueCandidates: []remotedomain.IssueOpsRemoteIssueCandidate{
-			{ID: "#11", Title: "IssueOps related issue and label scoring", Score: scoreForCLITest(0.93)},
+			{ID: "#11", Title: "IssueOps related issue and label scoring", Score: new(0.93)},
 		},
 	})
 	out := captureStdoutForContract(t, func() error {

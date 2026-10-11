@@ -692,7 +692,7 @@ func TestStartIssueOpsChildConcurrentSameBranch(t *testing.T) {
 		err    error
 	}
 	outcomes := make(chan outcome, workers)
-	for i := 0; i < workers; i++ {
+	for i := range workers {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
@@ -745,10 +745,10 @@ func TestStartIssueOpsChildConcurrentSiblings(t *testing.T) {
 	var wg sync.WaitGroup
 	errs := make(chan error, workers)
 	expectedTitles := make(map[string]string, workers)
-	for i := 0; i < workers; i++ {
+	for i := range workers {
 		expectedTitles[fmt.Sprintf("12%d-child-sibling", i)] = fmt.Sprintf("sibling %d", i)
 	}
-	for i := 0; i < workers; i++ {
+	for i := range workers {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
@@ -786,7 +786,7 @@ func TestStartIssueOpsChildConcurrentSiblings(t *testing.T) {
 	if len(parentAfter.ChildCycles) != workers {
 		t.Fatalf("expected %d sibling refs, got %#v", workers, parentAfter.ChildCycles)
 	}
-	for i := 0; i < workers; i++ {
+	for i := range workers {
 		branch := fmt.Sprintf("12%d-child-sibling", i)
 		childID := newIssueOpsID(parent.Repo, branch)
 		ref, ok := childRefByID(parentAfter.ChildCycles, childID)

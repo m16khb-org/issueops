@@ -452,7 +452,7 @@ func TestExecutionOwnerPromptRenderingRejectsPlaceholderAndLineInjectionDetermin
 		AcceptanceIDs: []string{"AC-01"}, Verification: []string{"go test ./... -count=1"},
 		VerificationReportPath: executionOwnerVerificationReportPath(record), Commands: commands,
 	}
-	for attempt := 0; attempt < 100; attempt++ {
+	for attempt := range 100 {
 		if _, err := renderExecutionOwnerPrompt(packet, filepath.Join(packet.WorktreeRoot, "context.json"), strings.Repeat("b", 64)); err == nil || !strings.Contains(err.Error(), "placeholder") {
 			t.Fatalf("placeholder injection attempt %d was not rejected deterministically: %v", attempt, err)
 		}
@@ -519,7 +519,7 @@ func ownerPacketFixture() (issueops.IssueOpsRecord, issueops.ExecutionPrepareReq
 
 func executionOwnerReportLabels(report string) []string {
 	labels := []string{}
-	for _, line := range strings.Split(report, "\n") {
+	for line := range strings.SplitSeq(report, "\n") {
 		if !strings.HasPrefix(line, "- ") {
 			continue
 		}

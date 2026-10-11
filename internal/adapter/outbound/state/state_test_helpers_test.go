@@ -3,15 +3,11 @@ package state
 import (
 	"issueops/internal/adapter/outbound/sqlstore"
 	statecontract "issueops/internal/contract/state"
+	"slices"
 )
 
 func containsString(items []string, want string) bool {
-	for _, item := range items {
-		if item == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(items, want)
 }
 
 func stateDoctorHasIssue(issues []statecontract.StateDoctorIssue, code string) bool {

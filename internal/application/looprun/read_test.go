@@ -3,6 +3,7 @@ package looprun
 import (
 	"errors"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -100,10 +101,5 @@ func TestServiceResolveIDValidatesNameAndRepo(t *testing.T) {
 }
 
 func containsString(values []string, want string) bool {
-	for _, v := range values {
-		if v == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(values, want)
 }

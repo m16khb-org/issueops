@@ -94,8 +94,7 @@ func TestRepositoryRejectsUnsupportedSchemaAndNestedLeaseSpan(t *testing.T) {
 	err = database.WithSpan(context.Background(), func(spanCtx context.Context) error {
 		return repository.Within(spanCtx, record.Key, func(*contract.Record) (*contract.Record, error) { return &record, nil })
 	})
-	var nested *sqlstore.NestedSpanError
-	if !errors.As(err, &nested) {
+	if _, ok := errors.AsType[*sqlstore.NestedSpanError](err); !ok {
 		t.Fatalf("issue inside a lease span must be refused as nested: %v", err)
 	}
 }

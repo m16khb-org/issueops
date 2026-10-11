@@ -457,8 +457,8 @@ func TestSelfVerifyHelpers(t *testing.T) {
 	if _, err := readSelfAugmentStateSnapshot("missing"); err == nil {
 		t.Fatal("missing snapshot read should fail")
 	}
-	if !domain.IsSelfVerificationSummaryKind(domain.SelfVerificationSummaryKind) || boolPtr(true) == nil {
-		t.Fatal("summary kind/boolPtr wrappers failed")
+	if !domain.IsSelfVerificationSummaryKind(domain.SelfVerificationSummaryKind) {
+		t.Fatal("summary kind wrapper failed")
 	}
 	result := newSelfVerifyLoopResult(1, 100, 95)
 	if result.Iterations != 1 {

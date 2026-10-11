@@ -56,8 +56,7 @@ func runFakeGit(args []string) int {
 	cmd := exec.Command(os.Getenv(fakeGitRealEnv), args...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	if err := cmd.Run(); err != nil {
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
+		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 			return exitErr.ExitCode()
 		}
 		_, _ = fmt.Fprintln(os.Stderr, err)

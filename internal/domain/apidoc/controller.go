@@ -43,7 +43,7 @@ var bodyNamedRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompi
 func CheckNestController(file, text string) []contract.Violation {
 	lines := strings.Split(text, "\n")
 	var violations []contract.Violation
-	for i := 0; i < len(lines); i++ {
+	for i := range lines {
 		if !methodNameRe().MatchString(lines[i]) {
 			continue
 		}
@@ -223,17 +223,10 @@ func IsNestPrivateRoute(block, fileText string) bool {
 // guard (@UseGuards/@ApiBearerAuth/RequireTier above the class declaration),
 // which makes every member route private unless it opts out with @Public.
 func hasClassLevelGuard(fileText string) bool {
-	classIdx := strings.Index(fileText, "class ")
-	if classIdx < 0 {
+	before, _, ok := strings.Cut(fileText, "class ")
+	if !ok {
 		return false
 	}
-	header := fileText[:classIdx]
+	header := before
 	return strings.Contains(header, "@UseGuards") || strings.Contains(header, "@ApiBearerAuth") || strings.Contains(header, "RequireTier")
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

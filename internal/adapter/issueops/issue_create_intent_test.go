@@ -226,7 +226,7 @@ func TestIssueCreateIntentConcurrentBeginsPersistOnlyOneAttempt(t *testing.T) {
 	service := newIssueCreateIntentsForTest(root)
 	request := issueopscontract.IssueOpsIssueCreateIntentRequest{OperationID: "0123456789abcdef0123456789abcdef", Provider: "github", ProjectAuthority: "github.com/acme/repo", Title: "one issue", BodySHA256: strings.Repeat("a", 64), StartedAt: "2026-09-28T00:00:00Z"}
 	start, results := make(chan struct{}), make(chan error, 6)
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		go func() {
 			<-start
 			_, err := service.Begin(context.Background(), record.ID, request)
@@ -235,7 +235,7 @@ func TestIssueCreateIntentConcurrentBeginsPersistOnlyOneAttempt(t *testing.T) {
 	}
 	close(start)
 	successes := 0
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		if err := <-results; err == nil {
 			successes++
 		} else if !strings.Contains(err.Error(), "reconcile before retry") {

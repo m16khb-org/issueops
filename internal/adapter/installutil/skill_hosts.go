@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 )
 
 type skillInstallConfig struct {
@@ -23,12 +24,7 @@ func SkillEnabledForHost(root, skillName, host string) bool {
 	if err := json.Unmarshal(b, &cfg); err != nil || len(cfg.Hosts) == 0 {
 		return true
 	}
-	for _, allowed := range cfg.Hosts {
-		if allowed == host {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(cfg.Hosts, host)
 }
 
 // SkillNamesForHost partitions already-discovered skills by their optional

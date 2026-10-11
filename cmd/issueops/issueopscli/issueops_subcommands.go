@@ -287,7 +287,7 @@ func parseExpectedRouting(spec string) ([]issueopsroutingcontract.Expected, erro
 		return nil, fmt.Errorf("--expect is required as comma-separated phase:skill pairings")
 	}
 	var out []issueopsroutingcontract.Expected
-	for _, p := range strings.Split(spec, ",") {
+	for p := range strings.SplitSeq(spec, ",") {
 		p = strings.TrimSpace(p)
 		if p == "" {
 			continue

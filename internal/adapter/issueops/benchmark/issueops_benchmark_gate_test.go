@@ -155,7 +155,7 @@ func issueOpsBenchmarkRunForGateTest(id string, average, minimum float64, critic
 		},
 		Passed: criticalFailures == 0 && minimum >= 100,
 	}
-	for i := 0; i < criticalFailures; i++ {
+	for range criticalFailures {
 		score.CriticalFailures = append(score.CriticalFailures, "critical failure")
 	}
 	return domain.FinalizeRun(benchmark.IssueOpsBenchmarkRunResult{ID: id, Scores: []benchmark.IssueOpsBenchmarkScore{score}})

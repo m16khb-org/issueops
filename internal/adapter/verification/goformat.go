@@ -21,7 +21,7 @@ func ListTrackedGoFiles(ctx context.Context, root string) ([]string, error) {
 		return nil, commandError(err, stderr.String())
 	}
 	files := []string{}
-	for _, file := range strings.Split(string(out), "\x00") {
+	for file := range strings.SplitSeq(string(out), "\x00") {
 		file = strings.TrimSpace(file)
 		if file == "" {
 			continue
@@ -58,7 +58,7 @@ func commandError(err error, stderr string) error {
 
 func nonEmptyLines(text string) []string {
 	lines := []string{}
-	for _, line := range strings.Split(text, "\n") {
+	for line := range strings.SplitSeq(text, "\n") {
 		if line = strings.TrimSpace(line); line != "" {
 			lines = append(lines, line)
 		}

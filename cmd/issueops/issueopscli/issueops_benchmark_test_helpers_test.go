@@ -23,10 +23,6 @@ func writeIssueOpsRemoteScoreRequestForCLITest(t *testing.T, req remotedomain.Is
 	return path
 }
 
-func scoreForCLITest(score float64) *float64 {
-	return &score
-}
-
 func writeIssueOpsCandidateForCLITest(t *testing.T, candidate benchmarkcontract.IssueOpsAutoresearchCandidate) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "candidate.json")

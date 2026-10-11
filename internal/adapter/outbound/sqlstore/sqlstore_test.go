@@ -388,12 +388,12 @@ func TestWithSpanAllowsWritesInsideSpanAndPropagatesError(t *testing.T) {
 func TestConcurrentSpansAndReadsRace(t *testing.T) {
 	d := openTestDB(t)
 	var wg sync.WaitGroup
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()
 			id := fmt.Sprintf("id-%d", n%4)
-			for j := 0; j < 10; j++ {
+			for j := range 10 {
 				_ = d.WithSpan(context.Background(), func(context.Context) error {
 					_, _, _ = d.Get("race", id)
 					return d.Put("race", id, []byte(fmt.Sprintf("%d-%d", n, j)))

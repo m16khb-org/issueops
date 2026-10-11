@@ -70,10 +70,6 @@ func writeSelfAugmentSnapshotRecord(dir, key string, snapshot augmentcontract.Se
 	}, Now: time.Now}).Write(dir, key, snapshot)
 }
 
-func boolPtr(value bool) *bool {
-	return &value
-}
-
 func newSelfVerifyLoopResult(iterations int, baseSeed int64, targetScore float64) augmentcontract.SelfAugmentResult {
 	return verifyapp.NewLoopResult(iterations, baseSeed, targetScore, selfWorkflowRootForTest())
 }
@@ -89,7 +85,7 @@ func emitSelfVerifyLoopEnd(progress *selfVerifyProgressReporter, loopKind string
 	if progress == nil {
 		return
 	}
-	progress.inner.Emit(verifycontract.ProgressEvent{Event: "loop_end", LoopKind: loopKind, Iterations: iterations, Seed: seed, OK: boolPtr(ok), Error: errorText})
+	progress.inner.Emit(verifycontract.ProgressEvent{Event: "loop_end", LoopKind: loopKind, Iterations: iterations, Seed: seed, OK: new(ok), Error: errorText})
 }
 
 func saveSelfVerificationSummary(result *augmentcontract.SelfAugmentResult, key string) error {

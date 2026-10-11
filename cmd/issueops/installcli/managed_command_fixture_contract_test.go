@@ -45,11 +45,9 @@ func assertManagedCommandFixtureBuildsOnceForIsolatedCopies(t *testing.T) {
 	var wait sync.WaitGroup
 	errorsByCopy := make(chan error, len(destinations))
 	for _, destination := range destinations {
-		wait.Add(1)
-		go func() {
-			defer wait.Done()
+		wait.Go(func() {
 			errorsByCopy <- fixture.copyTo(destination)
-		}()
+		})
 	}
 	wait.Wait()
 	close(errorsByCopy)

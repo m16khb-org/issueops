@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -273,12 +274,7 @@ func TestCodexRunnerCleanupFailureSuppressesSuccessfulEpisode(t *testing.T) {
 }
 
 func containsArgument(argv []string, wanted string) bool {
-	for _, arg := range argv {
-		if arg == wanted {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(argv, wanted)
 }
 
 func TestCodexRunnerRunModelSelection(t *testing.T) {

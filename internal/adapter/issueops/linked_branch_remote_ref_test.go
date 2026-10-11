@@ -27,8 +27,7 @@ func TestLinkedBranchRemoteRefRequiresSuccessfulExactReadback(t *testing.T) {
 		{name: "duplicate", out: lbSealedBase + "\trefs/heads/" + lbBranch + "\n" + lbSealedBase + "\trefs/heads/" + lbBranch, fail: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+			ctx := t.Context()
 			env := LinkedBranchRemoteRef{RunGit: func(got context.Context, repo string, args ...string) (int, string) {
 				if got != ctx || repo != "/repo" || !reflect.DeepEqual(args, []string{"ls-remote", "--heads", "origin", "refs/heads/" + lbBranch}) {
 					t.Fatalf("unexpected observation: repo=%q args=%q", repo, args)

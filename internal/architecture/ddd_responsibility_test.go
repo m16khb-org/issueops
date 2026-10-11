@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -214,7 +215,7 @@ func collectDDDTestNames(t *testing.T, root string) map[string]map[string]bool {
 				return err
 			}
 			dir := filepath.ToSlash(rel)
-			for _, line := range strings.Split(string(data), "\n") {
+			for line := range strings.SplitSeq(string(data), "\n") {
 				rest, ok := strings.CutPrefix(line, "func Test")
 				if !ok {
 					continue
@@ -259,12 +260,7 @@ func dddEvidenceTestExists(root string, names map[string]map[string]bool, eviden
 }
 
 func slicesContains(values []string, value string) bool {
-	for _, candidate := range values {
-		if candidate == value {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(values, value)
 }
 
 func TestDDDInventoryFindsNewPolicySymbol(t *testing.T) {
@@ -646,8 +642,8 @@ func dddTask(path string) string {
 	if strings.HasPrefix(path, "internal/architecture/") {
 		return "T21"
 	}
-	if strings.HasPrefix(path, "internal/adapter/issueops/") {
-		part := strings.TrimPrefix(path, "internal/adapter/issueops/")
+	if after, ok := strings.CutPrefix(path, "internal/adapter/issueops/"); ok {
+		part := after
 		switch {
 		case strings.HasPrefix(part, "benchmark/"):
 			return "T17"

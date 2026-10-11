@@ -2,6 +2,7 @@ package issueops
 
 import (
 	cycle "issueops/internal/application/issueopscycle"
+	"slices"
 	"testing"
 
 	"issueops/internal/contract/issueops"
@@ -95,10 +96,5 @@ func TestIssueOpsPhaseCompletionDispatches(t *testing.T) {
 }
 
 func containsLedgerKey(keys []string, want string) bool {
-	for _, key := range keys {
-		if key == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(keys, want)
 }

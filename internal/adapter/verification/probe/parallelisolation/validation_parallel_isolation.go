@@ -17,7 +17,7 @@ func validateParallelTempIsolationWithDeps(binary, root string, seed int64, deps
 	const workers = 3
 	results := make(chan parallelIsolationProbe, workers)
 	var wg sync.WaitGroup
-	for worker := 0; worker < workers; worker++ {
+	for worker := range workers {
 		wg.Add(1)
 		go func(worker int) {
 			defer wg.Done()

@@ -8,13 +8,11 @@ import (
 	tracecontract "issueops/internal/contract/trace"
 )
 
-func ptr(v int64) *int64 { return &v }
-
 func cumulative(session, model string, input, output int64) UsageObservation {
 	return UsageObservation{
 		Host: "claude", Model: model, SessionID: session,
 		Finality: tracecontract.UsageFinalityFinal, Temporality: tracecontract.UsageTemporalityCumulative,
-		Input: ptr(input), Output: ptr(output), CostBasis: tracecontract.UsageCostBasisUnknown,
+		Input: new(input), Output: new(output), CostBasis: tracecontract.UsageCostBasisUnknown,
 	}
 }
 
@@ -22,7 +20,7 @@ func delta(session, turn string, input int64) UsageObservation {
 	return UsageObservation{
 		Host: "codex", SessionID: session, TurnID: turn,
 		Finality: tracecontract.UsageFinalityFinal, Temporality: tracecontract.UsageTemporalityDelta,
-		Input: ptr(input), CostBasis: tracecontract.UsageCostBasisUnknown,
+		Input: new(input), CostBasis: tracecontract.UsageCostBasisUnknown,
 	}
 }
 

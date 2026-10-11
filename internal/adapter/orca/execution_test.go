@@ -1599,7 +1599,8 @@ func (f *executionFake) SendTerminalPrompt(_ context.Context, handle, prompt, re
 	return port.OrcaPromptReceipt{RequestID: requestID, Stages: []string{"input_accepted", "turn_started"}, Provider: "omo", Observation: "turn_started", ProcessIncarnation: "incarnation-1", Generation: 1, BaselineWorkingSequence: orcaTestUint64(1)}, nil
 }
 
-func orcaTestUint64(value uint64) *uint64 { return &value }
+//go:fix inline
+func orcaTestUint64(value uint64) *uint64 { return new(value) }
 
 func (f *executionFake) ListTerminals(context.Context, string) ([]port.OrcaTerminal, error) {
 	f.calls = append(f.calls, "list-terminals")

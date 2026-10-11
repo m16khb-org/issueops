@@ -367,7 +367,7 @@ func hedgeOrIntroCount(body string) int {
 // than one `## ` section.
 func firstDuplicateSentence(body string) string {
 	seen := map[string]int{}
-	for _, sec := range strings.Split(body, "\n## ") {
+	for sec := range strings.SplitSeq(body, "\n## ") {
 		local := map[string]bool{}
 		for _, s := range splitSentences(sec) {
 			s = strings.TrimSpace(s)

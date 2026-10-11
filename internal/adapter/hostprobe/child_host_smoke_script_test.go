@@ -196,8 +196,8 @@ func environmentValue(t *testing.T, environment []string, name string) string {
 	t.Helper()
 	prefix := name + "="
 	for _, entry := range environment {
-		if strings.HasPrefix(entry, prefix) {
-			return strings.TrimPrefix(entry, prefix)
+		if after, ok := strings.CutPrefix(entry, prefix); ok {
+			return after
 		}
 	}
 	t.Fatalf("environment %s missing from %q", name, environment)
@@ -665,7 +665,7 @@ func runChildHostSmokeFixture(t *testing.T, fixture childSmokeFixture) childSmok
 		}
 	}
 	if calls, err := os.ReadFile(logPath); err == nil {
-		for _, call := range strings.Split(string(calls), "\n") {
+		for call := range strings.SplitSeq(string(calls), "\n") {
 			switch call {
 			case "source_restore":
 				result.RestoreCalls++

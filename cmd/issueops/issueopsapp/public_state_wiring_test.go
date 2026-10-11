@@ -67,7 +67,7 @@ func TestPublicStateInstancesKeepToolsAndResourcesSeparate(t *testing.T) {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			for n := 0; n < 5; n++ {
+			for n := range 5 {
 				want := fmt.Sprintf("owner-%d-%d", i, n)
 				_, err := sessions[i].CallTool(context.Background(), &mcp.CallToolParams{Name: "state_write", Arguments: map[string]any{"key": "shared", "content": want}})
 				if err != nil {

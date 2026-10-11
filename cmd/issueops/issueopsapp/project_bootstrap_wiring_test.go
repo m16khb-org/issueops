@@ -35,7 +35,7 @@ func TestProjectBootstrapMCPInstancesKeepRepositoryAndStateSeparate(t *testing.T
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			for n := 0; n < 2; n++ {
+			for range 2 {
 				params := json.RawMessage(`{"name":"project_docs_bootstrap_plan","arguments":{}}`)
 				result, callErr := callSDKTool(t, params, dependencies[i])
 				if callErr != nil {

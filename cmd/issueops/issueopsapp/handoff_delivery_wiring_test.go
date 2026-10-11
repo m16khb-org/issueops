@@ -809,4 +809,5 @@ func advancingHandoffClock(start time.Time) func() time.Time {
 	}
 }
 
-func handoffTestUint64(value uint64) *uint64 { return &value }
+//go:fix inline
+func handoffTestUint64(value uint64) *uint64 { return new(value) }

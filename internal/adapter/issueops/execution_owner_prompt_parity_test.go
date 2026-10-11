@@ -24,11 +24,11 @@ func TestExecutionOwnerPromptMatchesKarpathyDoc(t *testing.T) {
 		t.Fatal("prompt-engineering doc has no ```text prompt block")
 	}
 	rest := string(doc)[start+len(fence):]
-	end := strings.Index(rest, "```")
-	if end < 0 {
+	before, _, ok := strings.Cut(rest, "```")
+	if !ok {
 		t.Fatal("prompt-engineering doc prompt block is unterminated")
 	}
-	docPrompt := strings.TrimRight(rest[:end], "\n")
+	docPrompt := strings.TrimRight(before, "\n")
 	embedded := strings.TrimRight(executionOwnerPromptTemplate, "\n")
 	if docPrompt != embedded {
 		t.Fatalf("owner prompt template drifted from the prompt-engineering doc PROMPT block:\n--- doc ---\n%s\n--- embed ---\n%s", firstDiffContext(docPrompt, embedded), firstDiffContext(embedded, docPrompt))
@@ -37,7 +37,7 @@ func TestExecutionOwnerPromptMatchesKarpathyDoc(t *testing.T) {
 
 func firstDiffContext(a, b string) string {
 	limit := min(len(a), len(b))
-	for i := 0; i < limit; i++ {
+	for i := range limit {
 		if a[i] != b[i] {
 			lo := max(0, i-80)
 			hi := min(len(a), i+80)

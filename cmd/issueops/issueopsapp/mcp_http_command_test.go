@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"io"
+	"maps"
 	"net/http"
 	"os"
 	"os/exec"
@@ -65,7 +66,7 @@ func startProductionHTTPServer(t *testing.T, deps mcpcli.MCPDependencies) (strin
 		t.Fatalf("server did not report ready: %v (%v)", err, <-done)
 	}
 	url := ""
-	for _, field := range strings.Fields(ready) {
+	for field := range strings.FieldsSeq(ready) {
 		if value, ok := strings.CutPrefix(field, "url="); ok {
 			url = value
 		}
@@ -100,9 +101,7 @@ type headerTransport struct {
 
 func (h headerTransport) RoundTrip(request *http.Request) (*http.Response, error) {
 	clone := request.Clone(request.Context())
-	for key, values := range h.header {
-		clone.Header[key] = values
-	}
+	maps.Copy(clone.Header, h.header)
 	return http.DefaultTransport.RoundTrip(clone)
 }
 

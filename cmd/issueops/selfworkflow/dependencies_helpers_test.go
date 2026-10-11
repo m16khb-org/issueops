@@ -3,6 +3,7 @@ package selfworkflow
 import (
 	"encoding/json"
 	"os"
+	"slices"
 )
 
 const (
@@ -34,10 +35,5 @@ func fileExists(path string) bool {
 }
 
 func containsString(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(values, want)
 }

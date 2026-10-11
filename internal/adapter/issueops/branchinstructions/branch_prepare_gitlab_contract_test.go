@@ -1,6 +1,7 @@
 package branchinstructions
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -200,10 +201,5 @@ func gitlabRawFieldValues(t *testing.T, arguments map[string]any) []string {
 }
 
 func containsValue(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(values, want)
 }

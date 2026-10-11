@@ -1,6 +1,7 @@
 package issueopsapp
 
 import (
+	"maps"
 	"strings"
 	"testing"
 )
@@ -50,9 +51,7 @@ func docsIndexContractProjection(value any) map[string]any {
 func inspectContractProjection(value any) map[string]any {
 	obj, _ := value.(map[string]any)
 	projection := make(map[string]any, len(obj))
-	for key, item := range obj {
-		projection[key] = item
-	}
+	maps.Copy(projection, obj)
 	docs, _ := obj["docs"].([]any)
 	seen := make(map[string]bool, len(docs))
 	for _, item := range docs {

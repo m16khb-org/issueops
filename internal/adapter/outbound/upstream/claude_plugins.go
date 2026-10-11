@@ -89,7 +89,7 @@ func parseMarketplaceNames(body []byte) ([]string, error) {
 
 func collectNonEmpty(count int, at func(int) string) []string {
 	values := make([]string, 0, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		if value := strings.TrimSpace(at(i)); value != "" {
 			values = append(values, value)
 		}

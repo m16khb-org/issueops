@@ -18,10 +18,7 @@ func IssueOpsUsageKey(line string) string {
 		return ""
 	}
 	fields = fields[1:]
-	limit := len(fields)
-	if limit > 2 {
-		limit = 2
-	}
+	limit := min(len(fields), 2)
 	for index, field := range fields[:limit] {
 		if strings.HasPrefix(field, "-") || strings.HasPrefix(field, "[") || strings.HasPrefix(field, "(") {
 			limit = index

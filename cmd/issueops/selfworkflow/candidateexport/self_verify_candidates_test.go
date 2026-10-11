@@ -5,6 +5,7 @@ import (
 	contract "issueops/internal/contract/selfverify"
 	domain "issueops/internal/domain/selfverify"
 	"path/filepath"
+	"slices"
 	"testing"
 )
 
@@ -61,10 +62,5 @@ func TestSaveSelfVerificationCandidateExportRejectsInvalidStateKey(t *testing.T)
 }
 
 func containsString(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(values, want)
 }

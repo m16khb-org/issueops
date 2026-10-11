@@ -17,7 +17,7 @@ func EmitSelfVerifyLoopStart(progress *progress.SelfVerifyProgressReporter, loop
 }
 
 func EmitSelfVerifyLoopEnd(progress *progress.SelfVerifyProgressReporter, loopKind string, iterations int, seed int64, ok bool, errorText string) {
-	progress.Emit(verifycontract.ProgressEvent{Event: "loop_end", LoopKind: loopKind, Iterations: iterations, Seed: seed, OK: boolPtr(ok), Error: errorText})
+	progress.Emit(verifycontract.ProgressEvent{Event: "loop_end", LoopKind: loopKind, Iterations: iterations, Seed: seed, OK: new(ok), Error: errorText})
 }
 
 func SelfVerificationCoverageDefinitions() []verifycontract.SelfVerificationCoverageDefinition {

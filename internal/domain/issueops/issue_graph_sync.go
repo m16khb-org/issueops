@@ -33,7 +33,7 @@ func PlanIssueGraphSync(record model.IssueOpsRecord, confirm bool) (IssueGraphSy
 	}
 	rendered := RenderIssueGraphComment(record)
 	count := 0
-	for _, line := range strings.Split(rendered, "\n") {
+	for line := range strings.SplitSeq(rendered, "\n") {
 		if strings.HasPrefix(strings.TrimSpace(line), "- **") {
 			count++
 		}

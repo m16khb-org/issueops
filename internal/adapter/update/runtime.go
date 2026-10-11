@@ -72,7 +72,7 @@ func (r Runtime) List() ([]contract.MCPProxyProcess, error) {
 		return nil, fmt.Errorf("resolve MCP proxy binary: %w", err)
 	}
 	var processes []contract.MCPProxyProcess
-	for _, line := range strings.Split(string(out), "\n") {
+	for line := range strings.SplitSeq(string(out), "\n") {
 		process, ok := ParseMCPProxyProcessSnapshot(line, canonicalBinary)
 		if !ok {
 			continue

@@ -2620,8 +2620,7 @@
         "func NewSelfVerifyProgressReporter",
         "func SelfVerifyProgressReporter.Emit",
         "func SelfVerifyProgressReporter.EmitStepEnd",
-        "func SelfVerifyProgressReporter.SetStarted",
-        "func boolPtr"
+        "func SelfVerifyProgressReporter.SetStarted"
       ]
     },
     {
@@ -10940,7 +10939,6 @@
       "symbols": [
         "func ExecuteLoop",
         "func NewLoopResult",
-        "func boolPtr",
         "func emit",
         "func emitEnd",
         "type LoopDeps",
@@ -13115,7 +13113,6 @@
         "func controllerDecoratorStart",
         "func hasClassLevelGuard",
         "func hasNamedDecorator",
-        "func min",
         "func nestBodyAndResponseViolations",
         "func nestRouteViolations",
         "func parenDepthDelta"

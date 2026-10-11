@@ -104,7 +104,7 @@ func catalogAdvertisedFlags(line string) map[string]bool {
 	recordActor := []string{"--host", "--session-id", "--agent-id", "--cwd"}
 	fullActor := append(append([]string{}, recordActor...), "--session-pid", "--session-started-at", "--session-executable")
 	flags := map[string]bool{}
-	for _, field := range strings.Fields(line) {
+	for field := range strings.FieldsSeq(line) {
 		switch strings.Trim(field, "[]()") {
 		case "RECORD_ACTOR_FLAGS":
 			for _, name := range recordActor {
@@ -117,7 +117,7 @@ func catalogAdvertisedFlags(line string) map[string]bool {
 			}
 			continue
 		}
-		for _, part := range strings.Split(strings.Trim(field, "[](),.:"), "|") {
+		for part := range strings.SplitSeq(strings.Trim(field, "[](),.:"), "|") {
 			part = strings.TrimSuffix(strings.Trim(part, "[](),.:"), "...")
 			if strings.HasPrefix(part, "--") {
 				flags[part] = true

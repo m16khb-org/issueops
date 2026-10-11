@@ -50,8 +50,7 @@ func TestWithKeyLockPropagatesActiveRoot(t *testing.T) {
 		}
 		return db.WithSpan(spanCtx, func(context.Context) error { return nil })
 	})
-	var nested *sqlstore.NestedSpanError
-	if !errors.As(err, &nested) {
+	if _, ok := errors.AsType[*sqlstore.NestedSpanError](err); !ok {
 		t.Fatalf("expected NestedSpanError, got %v", err)
 	}
 }

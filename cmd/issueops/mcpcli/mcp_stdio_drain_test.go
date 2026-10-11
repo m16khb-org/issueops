@@ -22,7 +22,7 @@ func TestServeMCPStreamAnswersEveryRequestReadBeforeInputEOF(t *testing.T) {
 	var output bytes.Buffer
 	_ = ServeMCPStreamWithDependencies(strings.NewReader(input), &output, io.Discard, MCPDependencies{Execution: testExecutionDeps(), Catalog: mcpcatalog.Build(), Resources: resourceConfigForTest()})
 	answered := map[string]bool{}
-	for _, line := range strings.Split(strings.TrimSpace(output.String()), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(output.String()), "\n") {
 		if line == "" {
 			continue
 		}

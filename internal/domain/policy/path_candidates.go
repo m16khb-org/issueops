@@ -42,8 +42,8 @@ func looksLikeRemoteOrURL(arg string) bool {
 	if strings.Contains(lower, "://") {
 		return true
 	}
-	if at := strings.Index(arg, "@"); at >= 0 {
-		return strings.Contains(arg[at+1:], ":")
+	if _, after, ok := strings.Cut(arg, "@"); ok {
+		return strings.Contains(after, ":")
 	}
 	return false
 }

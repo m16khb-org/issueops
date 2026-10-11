@@ -75,7 +75,7 @@ func (r CleanupAbandonRuntime) BranchCheckoutPath(ctx context.Context, repo, bra
 
 func cleanupAbandonBranchCheckoutPath(output, branch string) string {
 	currentPath := ""
-	for _, line := range strings.Split(output, "\n") {
+	for line := range strings.SplitSeq(output, "\n") {
 		switch {
 		case strings.HasPrefix(line, "worktree "):
 			currentPath = strings.TrimSpace(strings.TrimPrefix(line, "worktree "))

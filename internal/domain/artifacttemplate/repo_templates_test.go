@@ -53,7 +53,7 @@ func TestRepositoryTemplatesMatchContract(t *testing.T) {
 // carry titles as textarea labels, Markdown templates as `## ` headings.
 func missingTemplateTitles(content, path string, kind IssueOpsArtifactKind, template IssueOpsTemplateKind) []string {
 	var titles []string
-	for _, line := range strings.Split(content, "\n") {
+	for line := range strings.SplitSeq(content, "\n") {
 		trimmed := strings.TrimSpace(line)
 		if strings.HasSuffix(path, ".yml") {
 			if title, ok := strings.CutPrefix(trimmed, "label: "); ok {

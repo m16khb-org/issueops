@@ -63,7 +63,7 @@ func regressionScenario(t *testing.T) (*fixtureFilesFake, contract.RegressionFix
 	}
 	regression := contract.RegressionFixture{SchemaVersion: 1, FixtureID: "f", SourceTool: "source", ProbeTool: "probe", SourceSchemaSHA256: hash, Host: "claude", HostVersion: "test", ModelLabel: "test", CanonicalArguments: map[string]any{"extra": true}, RawArgumentsSHA256: strings.Repeat("a", 64), ExpectedClassification: classified.Classification, ExpectedDiagnostics: classified.Diagnostics, ExpectedDiagnosticSignature: domain.DiagnosticSignature(classified.Classification, classified.Diagnostics), ConfirmedEvidenceIDs: []string{strings.Repeat("b", 64), strings.Repeat("c", 64)}, ExpectedHandlerCallCount: 0, ExpectedFinalResult: domain.InvalidToolArgumentsResult("source", classified.Diagnostics), ExpectedStateUnchanged: true}
 	manifest := contract.FixtureManifest{SchemaVersion: contract.FixtureManifestVersion, Fixtures: []contract.Fixture{{ID: "f", SourceTool: "source", ProbeTool: "probe", SchemaSHA256: hash, ExpectedArguments: map[string]any{}}}}
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		manifest.BaselineCases = append(manifest.BaselineCases, contract.BaselineCase{FixtureID: "f"})
 	}
 	return &fixtureFilesFake{manifest: manifest, regression: regression}, regression, []contract.ToolDescriptor{{Name: "source", InputSchema: schema}}

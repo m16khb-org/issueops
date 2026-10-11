@@ -126,7 +126,6 @@ func readRunsBounded[T any](ctx context.Context, runs []port.OrcaRun, read func(
 	group, groupCtx := errgroup.WithContext(ctx)
 	group.SetLimit(workers)
 	for index := range runs {
-		index := index
 		group.Go(func() error {
 			values[index], errs[index] = read(groupCtx, runs[index])
 			return nil

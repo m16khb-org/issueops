@@ -41,7 +41,7 @@ func TestIssueOpsListDispatchesThroughRegistry(t *testing.T) {
 func TestIssueOpsUsageRegistryBidirectionalParity(t *testing.T) {
 	const prefix = "issueops "
 	usageKeys := map[string]bool{}
-	for _, line := range strings.Split(clicatalog.LifecycleUsage(), "\n") {
+	for line := range strings.SplitSeq(clicatalog.LifecycleUsage(), "\n") {
 		line = strings.TrimSpace(line)
 		if !strings.HasPrefix(line, prefix) {
 			continue

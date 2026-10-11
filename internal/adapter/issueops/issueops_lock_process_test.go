@@ -26,8 +26,7 @@ func TestWithIssueOpsLockRejectsSameRootReentry(t *testing.T) {
 	err := withIssueOpsLock(context.Background(), stateRoot, outer, func(ctx context.Context) error {
 		return withIssueOpsLock(ctx, stateRoot, inner, func(context.Context) error { return nil })
 	})
-	var nested *sqlstore.NestedSpanError
-	if !errors.As(err, &nested) {
+	if _, ok := errors.AsType[*sqlstore.NestedSpanError](err); !ok {
 		t.Fatalf("same-root re-entry must be rejected with NestedSpanError, got %v", err)
 	}
 }
@@ -113,7 +112,7 @@ func readLockMarkers(path string) []string {
 		return nil
 	}
 	var out []string
-	for _, line := range strings.Split(strings.TrimSpace(string(data)), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(string(data)), "\n") {
 		if line != "" {
 			out = append(out, line)
 		}

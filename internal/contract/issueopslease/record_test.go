@@ -240,12 +240,11 @@ type jsonTaggedField struct {
 
 func jsonTaggedFields(typ reflect.Type) map[string]jsonTaggedField {
 	fields := map[string]jsonTaggedField{}
-	for index := 0; index < typ.NumField(); index++ {
-		field := typ.Field(index)
+	for field := range typ.Fields() {
 		if !field.IsExported() {
 			continue
 		}
-		tag := strings.Split(field.Tag.Get("json"), ",")[0]
+		tag, _, _ := strings.Cut(field.Tag.Get("json"), ",")
 		if tag == "" || tag == "-" {
 			continue
 		}

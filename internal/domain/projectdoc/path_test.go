@@ -1,5 +1,7 @@
 package projectdoc
 
+import "slices"
+
 import "testing"
 
 func TestOptionalVCSProjectDocIsAllowedButNotRequired(t *testing.T) {
@@ -15,12 +17,7 @@ func TestOptionalVCSProjectDocIsAllowedButNotRequired(t *testing.T) {
 }
 
 func containsProjectDocName(names []string, want string) bool {
-	for _, name := range names {
-		if name == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(names, want)
 }
 
 func TestNormalizeRelPathAllowsFamilyModuleDocs(t *testing.T) {

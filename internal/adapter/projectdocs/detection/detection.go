@@ -2,6 +2,7 @@ package detection
 
 import (
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -150,10 +151,8 @@ func ProjectTypes(root string, languages, frameworks []string, monorepo bool, ad
 }
 
 func appendUnique(values []string, value string) []string {
-	for _, existing := range values {
-		if existing == value {
-			return values
-		}
+	if slices.Contains(values, value) {
+		return values
 	}
 	return append(values, value)
 }

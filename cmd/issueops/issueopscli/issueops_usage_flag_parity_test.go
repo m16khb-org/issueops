@@ -55,7 +55,7 @@ func parseUsageFlagLines(t *testing.T, usage string) []usageFlagLine {
 	t.Helper()
 	const prefix = "issueops "
 	var lines []usageFlagLine
-	for _, raw := range strings.Split(usage, "\n") {
+	for raw := range strings.SplitSeq(usage, "\n") {
 		trimmed := strings.TrimSpace(raw)
 		if !strings.HasPrefix(trimmed, prefix) {
 			continue
@@ -70,7 +70,7 @@ func parseUsageFlagLines(t *testing.T, usage string) []usageFlagLine {
 			shorthand: usageActorShorthand(trimmed),
 		}
 		seen := map[string]bool{}
-		for _, field := range strings.Fields(trimmed) {
+		for field := range strings.FieldsSeq(trimmed) {
 			name := usageFlagName(field)
 			if name == "" || seen[name] {
 				continue
@@ -118,7 +118,7 @@ func registeredFlags(t *testing.T, args []string) map[string]bool {
 		return nil
 	})
 	flags := map[string]bool{}
-	for _, raw := range strings.Split(output, "\n") {
+	for raw := range strings.SplitSeq(output, "\n") {
 		trimmed := strings.TrimSpace(raw)
 		if !strings.HasPrefix(trimmed, "-") || strings.HasPrefix(trimmed, "--") {
 			continue
@@ -272,7 +272,7 @@ func TestUsageTextsDefineActorFlagShorthand(t *testing.T) {
 // legendLine은 `SHORTHAND: ...` 정의 줄을 돌려준다. 정의 줄 안에서 플래그를 확인하지
 // 않으면 usage 다른 곳에 우연히 있는 플래그가 legend를 통과시킨다.
 func legendLine(usage, shorthand string) string {
-	for _, raw := range strings.Split(usage, "\n") {
+	for raw := range strings.SplitSeq(usage, "\n") {
 		trimmed := strings.TrimSpace(raw)
 		if strings.HasPrefix(trimmed, shorthand+":") {
 			return trimmed

@@ -11,7 +11,7 @@ type ClaudeMCPDuplicateWarning struct {
 func DetectClaudeMCPDuplicateWarnings(output string) []ClaudeMCPDuplicateWarning {
 	warnings := []ClaudeMCPDuplicateWarning{}
 	current := -1
-	for _, line := range strings.Split(output, "\n") {
+	for line := range strings.SplitSeq(output, "\n") {
 		trimmed := strings.TrimSpace(strings.TrimPrefix(line, "└"))
 		trimmed = strings.TrimSpace(strings.TrimPrefix(trimmed, "│"))
 		if strings.Contains(trimmed, "[Warning]") && strings.Contains(trimmed, "defined in multiple scopes") {

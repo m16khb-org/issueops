@@ -4,6 +4,7 @@ import (
 	app "issueops/internal/application/selfverify"
 	verifycontract "issueops/internal/contract/selfverify"
 	domain "issueops/internal/domain/selfverify"
+	"slices"
 	"strings"
 	"testing"
 
@@ -178,10 +179,5 @@ func TestSummarizeSelfVerificationMarksGoalFailureWhenLabelsMissing(t *testing.T
 }
 
 func containsString(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(values, want)
 }

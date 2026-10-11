@@ -123,11 +123,12 @@ func Merge(live, proposed string) (string, []contract.Region, error) {
 		return "", nil, err
 	}
 	regions := ManagedRegions(live)
-	merged := strings.TrimRight(proposed, "\n")
+	var merged strings.Builder
+	merged.WriteString(strings.TrimRight(proposed, "\n"))
 	for _, region := range regions {
-		merged += "\n\n" + region.Block
+		merged.WriteString("\n\n" + region.Block)
 	}
-	return merged + "\n", regions, nil
+	return merged.String() + "\n", regions, nil
 }
 
 // ValidateProposal checks a body the caller authored, without reading the

@@ -7,6 +7,7 @@ import (
 	reviewcontract "issueops/internal/contract/issueopsreview"
 	"issueops/internal/testsupport"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -22,12 +23,7 @@ func captureProjectCLIStderr(t *testing.T, fn func() error) (string, error) {
 }
 
 func containsString(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(values, want)
 }
 
 func recordIssueOpsCLIIntentForTest(t *testing.T, id string) {

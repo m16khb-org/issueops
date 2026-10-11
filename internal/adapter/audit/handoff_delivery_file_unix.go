@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"golang.org/x/sys/unix"
@@ -198,8 +199,8 @@ func openHandoffDeliveryStateRootUnix(stateRoot string, beforeStateRootOpen func
 
 func closeHandoffDeliveryUnixFDs(fds []int) error {
 	errs := make([]error, 0, len(fds))
-	for index := len(fds) - 1; index >= 0; index-- {
-		if err := unix.Close(fds[index]); err != nil {
+	for _, fd := range slices.Backward(fds) {
+		if err := unix.Close(fd); err != nil {
 			errs = append(errs, err)
 		}
 	}

@@ -51,7 +51,7 @@ func TestSelfWorkflowHistoryInstancesKeepCLIAndMCPStateSeparate(t *testing.T) {
 		wg.Add(1)
 		go func(i int, service augmentapp.HistoryService) {
 			defer wg.Done()
-			for n := 0; n < 10; n++ {
+			for range 10 {
 				var cli contract.SelfAugmentHistoryResult
 				err := historycompare.RunSelfVerifyHistory([]string{"--json"}, historycompare.CLIDeps{History: func(prefix string, limit int, retention contract.SelfAugmentHistoryRetentionOptions) (contract.SelfAugmentHistoryResult, error) {
 					return service.History(context.Background(), prefix, limit, retention)

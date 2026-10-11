@@ -18,7 +18,7 @@ func InferProviderFromRepoRemotes(repo string) (string, error) {
 		return "", fmt.Errorf("cannot determine provider: repository remotes could not be observed; pass --provider github|gitlab")
 	}
 	urls := []string{}
-	for _, line := range strings.Split(out, "\n") {
+	for line := range strings.SplitSeq(out, "\n") {
 		fields := strings.Fields(line)
 		if len(fields) >= 2 {
 			urls = append(urls, fields[1])

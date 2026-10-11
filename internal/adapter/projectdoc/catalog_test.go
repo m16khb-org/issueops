@@ -85,7 +85,7 @@ func TestDiscoverProjectDocsRejectsSymlinkedAgentHarnessDirectory(t *testing.T) 
 
 func TestDiscoverProjectDocsBoundsEntriesAndContent(t *testing.T) {
 	repo := t.TempDir()
-	for index := 0; index < projectDocCatalogMaxEntries+1; index++ {
+	for index := range projectDocCatalogMaxEntries + 1 {
 		writeProjectDoc(t, repo, fmt.Sprintf("entry-%02d.md", index), "# Entry\n")
 	}
 	if got := discoverProjectDocEntries(repo); len(got) != projectDocCatalogMaxEntries {
@@ -103,7 +103,7 @@ func TestDiscoverProjectDocsBoundsEntriesAndContent(t *testing.T) {
 func TestDiscoverReadsBoundedHeader(t *testing.T) {
 	repo := t.TempDir()
 	const files = 9
-	for index := 0; index < files; index++ {
+	for index := range files {
 		writeProjectDoc(t, repo, fmt.Sprintf("entry-%02d.md", index), "# Entry\n"+strings.Repeat("x", 240*1024))
 	}
 
@@ -127,7 +127,7 @@ func TestDiscoverReadsBoundedHeader(t *testing.T) {
 func TestDiscoverCapsEntriesAndCountsOverCap(t *testing.T) {
 	repo := t.TempDir()
 	total := projectDocCatalogMaxEntries + 6
-	for index := 0; index < total; index++ {
+	for index := range total {
 		writeProjectDoc(t, repo, fmt.Sprintf("entry-%03d.md", index), "# Entry\n")
 	}
 
@@ -147,7 +147,7 @@ func TestDiscoverSelectionIndependentOfCreationOrder(t *testing.T) {
 		var batches [2]int
 		for run, descending := range []bool{false, true} {
 			repo := t.TempDir()
-			for index := 0; index < total; index++ {
+			for index := range total {
 				n := index
 				if descending {
 					n = total - 1 - index
@@ -175,7 +175,7 @@ func TestDiscoverSelectionIndependentOfCreationOrder(t *testing.T) {
 
 func TestProjectDocNameSelectorIgnoresInputOrder(t *testing.T) {
 	names := []string{"ARCHITECTURE.md", "VCS.md", "ADR.md"}
-	for index := 0; index < 100; index++ {
+	for index := range 100 {
 		names = append(names, fmt.Sprintf("0-%03d.md", index))
 	}
 	orders := [][]string{append([]string(nil), names...)}
@@ -207,7 +207,7 @@ func TestProjectDocNameSelectorIgnoresInputOrder(t *testing.T) {
 
 func TestDiscoverRequiredDocsSurviveCap(t *testing.T) {
 	repo := t.TempDir()
-	for index := 0; index < projectDocCatalogMaxEntries+6; index++ {
+	for index := range projectDocCatalogMaxEntries + 6 {
 		writeProjectDoc(t, repo, fmt.Sprintf("0-%02d.md", index), "# Filler\n")
 	}
 	writeProjectDoc(t, repo, "ARCHITECTURE.md", "# 아키텍처\n")
@@ -330,7 +330,7 @@ func (e fakeDirEntry) Info() (os.FileInfo, error) { return nil, errors.New("unus
 
 func TestScanProjectDocNamesMarksReadErrorAsTruncated(t *testing.T) {
 	batch := make([]os.DirEntry, 0, projectDocCatalogDirBatch)
-	for index := 0; index < projectDocCatalogDirBatch; index++ {
+	for index := range projectDocCatalogDirBatch {
 		batch = append(batch, fakeDirEntry{name: fmt.Sprintf("doc-%03d.md", index)})
 	}
 	selector, batches, truncated := scanProjectDocNames(&failingDirReader{batches: [][]os.DirEntry{batch}})

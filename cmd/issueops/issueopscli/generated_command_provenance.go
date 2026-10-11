@@ -5,6 +5,7 @@ import (
 	commandparsecontract "issueops/internal/contract/commandparse"
 	issueopscontract "issueops/internal/contract/issueops"
 	"issueops/internal/domain/commandparse"
+	"slices"
 	"strings"
 )
 
@@ -132,22 +133,17 @@ func issueOpsCommandID(args []string) string {
 	if len(args) >= 2 && args[0] == "child" {
 		idFlag = "--parent"
 	}
-	for index := 0; index < len(args); index++ {
+	for index := range args {
 		if args[index] == idFlag && index+1 < len(args) {
 			return strings.TrimSpace(args[index+1])
 		}
-		if strings.HasPrefix(args[index], idFlag+"=") {
-			return strings.TrimSpace(strings.TrimPrefix(args[index], idFlag+"="))
+		if after, ok := strings.CutPrefix(args[index], idFlag+"="); ok {
+			return strings.TrimSpace(after)
 		}
 	}
 	return ""
 }
 
 func issueOpsJSONRequested(args []string) bool {
-	for _, arg := range args {
-		if arg == "--json" {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(args, "--json")
 }

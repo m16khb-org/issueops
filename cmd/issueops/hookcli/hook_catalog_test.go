@@ -192,7 +192,6 @@ func TestRunHookContextEventsAcrossIsolatedWorktreesDoNotCreateHarnessState(t *t
 	for _, host := range []string{"codex", "claude"} {
 		for _, repo := range []string{hookTempRepoWithDoc(t), hookTempRepoWithDoc(t)} {
 			for _, event := range []string{"session-start", "subagent-start", "post-compact"} {
-				event := event
 				runHookCapture(t, `{"cwd":"`+repo+`","source":"startup"}`, func() error {
 					return runHook([]string{event, "--host", host})
 				})

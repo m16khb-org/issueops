@@ -277,7 +277,7 @@ func githubSourceProjectKey(projectKey string, row githubPullRequestProjection) 
 	if err != nil || selector == "" || strings.TrimSpace(row.HeadRepository.NameWithOwner) == "" {
 		return ""
 	}
-	host := strings.SplitN(selector, "/", 2)[0]
+	host, _, _ := strings.Cut(selector, "/")
 	return strings.ToLower(host + "/" + strings.Trim(strings.TrimSpace(row.HeadRepository.NameWithOwner), "/"))
 }
 

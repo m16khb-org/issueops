@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"maps"
 	"os"
 	"regexp"
 	"strconv"
@@ -301,9 +302,7 @@ func (p *codexIssueOpsTableParser) consumeKeyValue(line string, lines []string, 
 			return i, errors.New("issueops must be a table")
 		}
 		p.count++
-		for k, v := range inline {
-			p.entry[k] = v
-		}
+		maps.Copy(p.entry, inline)
 	case inTable:
 		p.entry[key] = value
 	default:
