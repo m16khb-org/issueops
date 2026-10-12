@@ -20,11 +20,17 @@ func (installer Installer) writeGlobalConfig(path string, req port.NativeInstall
 	for _, section := range []string{"mcp_servers.issueops", "mcp_servers.issueops.env", "mcp_servers.issueops.http_headers"} {
 		text = removeTOMLSection(text, section)
 	}
-	if strings.TrimSpace(text) != "" && !strings.HasSuffix(text, "\n") {
-		text += "\n"
-	}
-	if strings.TrimSpace(text) != "" && !strings.HasSuffix(text, "\n\n") {
-		text += "\n"
+	if strings.TrimSpace(text) == "" {
+		// Only the harness block (or blank lines) was present: start fresh so a
+		// reinstall reproduces the file byte for byte instead of prepending "\n".
+		text = ""
+	} else {
+		if !strings.HasSuffix(text, "\n") {
+			text += "\n"
+		}
+		if !strings.HasSuffix(text, "\n\n") {
+			text += "\n"
+		}
 	}
 	text += installer.codexGlobalBlock(req)
 	existing, _ := os.ReadFile(path)

@@ -93,6 +93,38 @@ func TestCodexInstallerMergesLifecycleHooksIdempotently(t *testing.T) {
 	}
 }
 
+func TestCodexInstallerReinstallLeavesHarnessOnlyConfigUnchanged(t *testing.T) {
+	root := t.TempDir()
+	home := t.TempDir()
+	writeAdapterTestSkill(t, root, "alpha")
+	req := install.DefaultNativeInstallRequest(root, home, filepath.Join(home, ".codex"), filepath.Join(root, "bin", "issueops"))
+	req.SkillNames = []string{"alpha"}
+	configPath := filepath.Join(home, ".codex", "config.toml")
+	if _, err := testInstaller().Install(req); err != nil {
+		t.Fatal(err)
+	}
+	first, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := testInstaller().Install(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(second) != string(first) || strings.HasPrefix(string(second), "\n") {
+		t.Fatalf("reinstall changed a config holding only the harness block:\nfirst=%q\nsecond=%q", first, second)
+	}
+	for _, file := range result.Files {
+		if file.Path == configPath && file.Written {
+			t.Fatalf("reinstall rewrote an unchanged config: %+v", file)
+		}
+	}
+}
+
 func TestMergeHookConfigPreservesCoResidentHookPositions(t *testing.T) {
 	agentHarness := map[string]any{"hooks": []any{map[string]any{
 		"type": "command", "command": "'/old/bin/issueops' hook pre-tool-use --host codex", "timeout": float64(5),
