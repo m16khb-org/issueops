@@ -88,6 +88,7 @@ func TestCompareRuns(t *testing.T) {
 		ok, improved bool
 	}{
 		{"strictly better", runWith(true, 80, 70, 1), runWith(true, 90, 70, 0), true, true},
+		{"better average with equal critical failures is improved", runWith(true, 80, 70, 1), runWith(true, 90, 70, 1), true, true},
 		{"equal is ok but not improved", runWith(true, 80, 70, 0), runWith(true, 80, 70, 0), true, false},
 		{"minimum dropped", runWith(true, 80, 70, 0), runWith(true, 95, 60, 0), false, false},
 		{"more critical failures", runWith(true, 80, 70, 0), runWith(true, 95, 70, 1), false, false},

@@ -1,7 +1,9 @@
 package artifactreadability
 
 import (
+	"fmt"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 
@@ -403,4 +405,189 @@ func hasCriticalCode(report reportcontract.Report, code string) bool {
 		}
 	}
 	return false
+}
+
+func hasWarningCode(report reportcontract.Report, code string) bool {
+	for _, f := range report.Warnings {
+		if f.Code == code {
+			return true
+		}
+	}
+	return false
+}
+
+func checkRemainder(section string) reportcontract.Report {
+	return Check(Input{Kind: KindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: validPRBody() + "\n\n## 남은 일\n\n" + section})
+}
+
+func TestCheckCleanBodyHasNoSlopOrDuplicateWarnings(t *testing.T) {
+	report := Check(Input{Kind: KindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: validPRBody()})
+	for _, code := range []string{"slop_pattern", "duplicate_sentence"} {
+		if hasWarningCode(report, code) {
+			t.Fatalf("clean body must not warn %s: %+v", code, report.Warnings)
+		}
+	}
+}
+
+func TestCheckSlopRepeatedPunctuationThreshold(t *testing.T) {
+	cases := []struct {
+		name, text string
+		want       bool
+	}{
+		{"two em dashes", "하나 — 둘 — 셋을 이어서 설명합니다.", false},
+		{"three em dashes", "하나 — 둘 — 셋 — 넷을 이어서 설명합니다.", true},
+		{"two arrows", "하나 → 둘 → 셋으로 이어서 설명합니다.", false},
+		{"three arrows", "하나 → 둘 → 셋 → 넷으로 이어서 설명합니다.", true},
+	}
+	for _, tc := range cases {
+		if got := hasWarningCode(checkRemainder(tc.text), "slop_pattern"); got != tc.want {
+			t.Fatalf("%s: slop_pattern = %v, want %v", tc.name, got, tc.want)
+		}
+	}
+}
+
+func TestCheckCompletionLengthBoundary(t *testing.T) {
+	atLimit := Check(Input{Kind: KindCompletion, Body: strings.Repeat("가", completionMaxRunes)})
+	if hasCriticalCode(atLimit, "result_too_long") {
+		t.Fatalf("exactly %d runes must pass: %+v", completionMaxRunes, atLimit.Critical)
+	}
+	over := Check(Input{Kind: KindCompletion, Body: strings.Repeat("가", completionMaxRunes+1)})
+	if !hasCriticalCode(over, "result_too_long") {
+		t.Fatalf("%d runes must fail: %+v", completionMaxRunes+1, over.Critical)
+	}
+	padded := Check(Input{Kind: KindCompletion, Body: "\n\n" + strings.Repeat("가", completionMaxRunes) + "\n\n"})
+	if hasCriticalCode(padded, "result_too_long") {
+		t.Fatalf("surrounding whitespace must not count toward the limit: %+v", padded.Critical)
+	}
+}
+
+func TestCheckKoreanRatioThresholds(t *testing.T) {
+	words := func(token string, n int) string { return strings.TrimSpace(strings.Repeat(token+" ", n)) }
+	hangul20 := strings.Repeat("가", minHangulChars)
+	cases := []struct {
+		name string
+		body string
+		want bool
+	}{
+		{"19 hangul syllables", strings.Repeat("가", minHangulChars-1), true},
+		{"20 hangul syllables", hangul20, false},
+		{"first syllable counts", "가" + strings.Repeat("나", minHangulChars-1), false},
+		{"last syllable counts", strings.Repeat("나", minHangulChars-1) + "힣", false},
+		{"ratio exactly 1.2", hangul20 + " " + words("a", 24), false},
+		{"ratio above 1.2", hangul20 + " " + words("a", 25), true},
+		{"letter A is a word", hangul20 + " " + words("A", 25), true},
+		{"letter Z is a word", hangul20 + " " + words("Z", 25), true},
+		{"letter z is a word", hangul20 + " " + words("z", 25), true},
+		{"digit 0 continues a word", hangul20 + " " + words("a0", 25), true},
+		{"digit 9 continues a word", hangul20 + " " + words("a9", 25), true},
+		{"digit 0 within bounds", hangul20 + " " + words("a0", 24), false},
+	}
+	for _, tc := range cases {
+		report := Check(Input{Kind: KindCompletion, Body: tc.body})
+		if got := hasCriticalCode(report, "korean_ratio"); got != tc.want {
+			t.Fatalf("%s: korean_ratio = %v, want %v: %+v", tc.name, got, tc.want, report.Critical)
+		}
+	}
+}
+
+func TestCheckSummaryLengthBoundary(t *testing.T) {
+	check := func(summaryRunes int) reportcontract.Report {
+		body := strings.Replace(validPRBody(), "이슈와 PR 본문을 사람이 읽는 문서로 바꾸는 가독성 검사를 추가합니다. 게시 명령 안에서 항상 실행됩니다.", strings.Repeat("가", summaryRunes), 1)
+		return Check(Input{Kind: KindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: body})
+	}
+	if hasWarningCode(check(summaryMaxRunes), "summary_too_long") {
+		t.Fatalf("a %d-rune summary must not warn", summaryMaxRunes)
+	}
+	if !hasWarningCode(check(summaryMaxRunes+1), "summary_too_long") {
+		t.Fatalf("a %d-rune summary must warn", summaryMaxRunes+1)
+	}
+}
+
+func TestCheckDuplicateSentenceDetection(t *testing.T) {
+	const eight = "가나다라마바사아"
+	cases := []struct {
+		name, first, second string
+		want                bool
+	}{
+		{"eight-rune sentence repeats", eight, eight, true},
+		{"previous line does not leak into sentence", "앞줄 하나\n중복되는 문장입니다 정말로", "앞줄 둘\n중복되는 문장입니다 정말로", true},
+		{"dot without whitespace is not a boundary", "v1.2.3.4", "v1.2.3.4", true},
+		{"trailing dot before newline ends the sentence", "중복되는 문장입니다 정말로.\n다음 줄", "중복되는 문장입니다 정말로", true},
+		{"scan resumes right after the boundary", "앞 문장입니다. x\n중복되는 문장입니다 정말로", "중복되는 문장입니다 정말로", true},
+		{"distinct sentences", "첫째 문장은 이것입니다", "둘째 문장은 저것입니다", false},
+	}
+	for _, tc := range cases {
+		body := "## 요약\n" + tc.first + "\n\n## 변경 내용\n" + tc.second + "\n\n## 확인한 것\n\ngo test로 확인했습니다.\n\n## 리뷰 포인트\n\n봐 주세요."
+		report := Check(Input{Kind: KindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: body})
+		if got := hasWarningCode(report, "duplicate_sentence"); got != tc.want {
+			t.Fatalf("%s: duplicate_sentence = %v, want %v", tc.name, got, tc.want)
+		}
+	}
+}
+
+func TestCheckHexWordBoundaries(t *testing.T) {
+	rep := strings.Repeat
+	cases := []struct {
+		name         string
+		line         string
+		sha256, sha1 bool
+	}{
+		{"64 uppercase A", rep("A", 64), true, false},
+		{"64 uppercase F", rep("F", 64), true, false},
+		{"64 lowercase a", rep("a", 64), true, false},
+		{"64 lowercase f", rep("f", 64), true, false},
+		{"63 hex then g", rep("a", 63) + "g", false, false},
+		{"Z before 64 hex", "Z" + rep("a", 64), false, false},
+		{"z before 64 hex", "z" + rep("a", 64), false, false},
+		{"Z after 64 hex", rep("a", 64) + "Z", false, false},
+		{"z after 64 hex", rep("a", 64) + "z", false, false},
+		{"40 uppercase A", rep("A", 40), false, true},
+		{"40 lowercase a", rep("a", 40), false, true},
+		{"40 lowercase f", rep("f", 40), false, true},
+		{"Z before 40 hex", "Z" + rep("a", 40), false, false},
+		{"z before 40 hex", "z" + rep("a", 40), false, false},
+		{"Z after 40 hex", rep("a", 40) + "Z", false, false},
+		{"z after 40 hex", rep("a", 40) + "z", false, false},
+	}
+	for _, tc := range cases {
+		report := checkRemainder("확인한 값은 " + tc.line + " 입니다.")
+		if got := hasCriticalCode(report, "sha256_hex"); got != tc.sha256 {
+			t.Fatalf("%s: sha256_hex = %v, want %v", tc.name, got, tc.sha256)
+		}
+		if got := hasWarningCode(report, "commit_sha_full"); got != tc.sha1 {
+			t.Fatalf("%s: commit_sha_full = %v, want %v", tc.name, got, tc.sha1)
+		}
+	}
+}
+
+func TestCheckFindingsAreSortedByCodeThenLine(t *testing.T) {
+	body := "/Users/dev/wt 경로를 두 이슈를 서로 다른 세션에서 동시에 진행해도 간섭하지 않음을 확인했습니다.\n" +
+		strings.Repeat("cd", 32) + "\n" +
+		strings.Repeat("ab", 20) + "\n"
+	report := Check(Input{Kind: KindCompletion, Body: body})
+	var got []string
+	for _, f := range report.Critical {
+		got = append(got, fmt.Sprintf("%s@%d", f.Code, f.Line))
+	}
+	want := []string{"commit_sha_full@3", "local_path@1", "sha256_hex@2"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("critical order = %v, want %v", got, want)
+	}
+
+	terms := Check(Input{Kind: KindCompletion, Body: "lease grill 용어를 두 이슈를 서로 다른 세션에서 동시에 진행해도 확인했습니다.\nlease 용어가 한 번 더 나옵니다."})
+	var lineSeq []int
+	var firstLine []string
+	for _, f := range terms.Warnings {
+		lineSeq = append(lineSeq, f.Line)
+		if f.Line == 1 {
+			firstLine = append(firstLine, f.Message)
+		}
+	}
+	slices.Sort(firstLine)
+	if !slices.Equal(lineSeq, []int{1, 1, 2}) {
+		t.Fatalf("warning lines = %v, want [1 1 2]", lineSeq)
+	}
+	if want := []string{"하네스 용어가 나옵니다: grill", "하네스 용어가 나옵니다: lease"}; !slices.Equal(firstLine, want) {
+		t.Fatalf("line 1 warnings = %v, want %v", firstLine, want)
+	}
 }

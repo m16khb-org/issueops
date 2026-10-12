@@ -42,3 +42,30 @@ func sameStrings(left, right []string) bool {
 	}
 	return true
 }
+
+func TestSelectPruneCountRuleDropsOldestByTimestamp(t *testing.T) {
+	// Keys sort opposite to timestamps, so the retained-count rule must order
+	// by parsed time.
+	records := []statecontract.StateListEntry{
+		{Key: "a", UpdatedAt: "2026-01-05T00:00:00Z"},
+		{Key: "b", UpdatedAt: "2026-01-04T00:00:00Z"},
+		{Key: "c", UpdatedAt: "2026-01-03T00:00:00Z"},
+	}
+	pruned, _ := SelectPrune(records, "", time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), 2)
+	if !sameStrings(entryKeys(pruned), []string{"c"}) {
+		t.Fatalf("pruned=%v", entryKeys(pruned))
+	}
+}
+
+func TestSelectPruneAgeRuleAppliesWithoutRetainedCountLimit(t *testing.T) {
+	records := []statecontract.StateListEntry{
+		{Key: "old", UpdatedAt: "2026-01-01T00:00:00Z"},
+		{Key: "boundary", UpdatedAt: "2026-01-02T00:00:00Z"},
+		{Key: "new", UpdatedAt: "2026-01-03T00:00:00Z"},
+		{Key: "bad", UpdatedAt: "invalid"},
+	}
+	pruned, kept := SelectPrune(records, "", time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC), 0)
+	if !sameStrings(entryKeys(pruned), []string{"old"}) || !sameStrings(entryKeys(kept), []string{"bad", "boundary", "new"}) {
+		t.Fatalf("pruned=%v kept=%v", entryKeys(pruned), entryKeys(kept))
+	}
+}

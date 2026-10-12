@@ -88,6 +88,7 @@ func TestPassPowK(t *testing.T) {
 		{"hypergeometric", 3, 5, 2, 0.3, false},
 		{"k above successes", 1, 5, 2, 0, false},
 		{"k equals one", 2, 4, 1, 0.5, false},
+		{"trials at cap", 1, MaxReliabilityTrials, 1, 1.0 / MaxReliabilityTrials, false},
 		{"zero trials", 0, 0, 0, 0, true},
 		{"trials above cap", 1, MaxReliabilityTrials + 1, 1, 0, true},
 		{"negative successes", -1, 3, 1, 0, true},
@@ -115,6 +116,9 @@ func TestClopperPearson(t *testing.T) {
 	lo, hi, err = ClopperPearson(5, 10, 0.05)
 	if err != nil || !approx(Round4(lo), 0.1871) || !approx(Round4(hi), 0.8129) {
 		t.Fatalf("5/10: %v %v %v", lo, hi, err)
+	}
+	if lo, hi, err := ClopperPearson(0, MaxReliabilityTrials, 0.05); err != nil || lo != 0 || hi <= 0 || hi >= 1 {
+		t.Fatalf("0/%d must be accepted: %v %v %v", MaxReliabilityTrials, lo, hi, err)
 	}
 	for _, c := range []struct {
 		c, n int

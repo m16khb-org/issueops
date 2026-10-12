@@ -115,3 +115,82 @@ func TestUsageDigestIsDeterministicAndDomainSeparated(t *testing.T) {
 		t.Errorf("an empty identifier must stay empty")
 	}
 }
+
+func TestReduceUsageEqualCumulativeValuesAreNotAReset(t *testing.T) {
+	cost := func(value float64) *float64 { return &value }
+	for name, mutate := range map[string]func(o *UsageObservation){
+		"cache read":  func(o *UsageObservation) { o.CacheRead = new(int64(5)) },
+		"cache write": func(o *UsageObservation) { o.CacheWrite = new(int64(5)) },
+		"cost":        func(o *UsageObservation) { o.CostUSD = cost(0.5) },
+	} {
+		a, b := cumulative("s", "m", 10, 5), cumulative("s", "m", 10, 5)
+		mutate(&a)
+		mutate(&b)
+		report := ReduceUsage([]UsageObservation{a, b}, nil)
+		if len(report.Samples) != 1 || warned(report, "usage_cumulative_reset") || report.Coverage != tracecontract.UsageCoverageComplete {
+			t.Errorf("%s: equal snapshot must replace, not reset: %+v", name, report)
+		}
+	}
+}
+
+func TestReduceUsageEachCounterDecreaseIsAReset(t *testing.T) {
+	for name, set := range map[string]func(o *UsageObservation, v int64){
+		"output":      func(o *UsageObservation, v int64) { o.Output = new(v) },
+		"cache read":  func(o *UsageObservation, v int64) { o.CacheRead = new(v) },
+		"cache write": func(o *UsageObservation, v int64) { o.CacheWrite = new(v) },
+	} {
+		a, b := cumulative("s", "m", 10, 5), cumulative("s", "m", 10, 5)
+		set(&a, 9)
+		set(&b, 8)
+		report := ReduceUsage([]UsageObservation{a, b}, nil)
+		if len(report.Samples) != 2 || !warned(report, "usage_cumulative_reset") {
+			t.Errorf("%s decrease must reset: %+v", name, report)
+		}
+	}
+}
+
+func TestReduceUsageDuplicateDeltaClassificationByCost(t *testing.T) {
+	cost := func(value float64) *float64 { return &value }
+	for name, tc := range map[string]struct {
+		a, b *float64
+		want string
+	}{
+		"both absent":    {nil, nil, "usage_duplicate_event"},
+		"first only":     {cost(1), nil, "usage_conflicting_duplicate"},
+		"second only":    {nil, cost(1), "usage_conflicting_duplicate"},
+		"equal cost":     {cost(1), cost(1), "usage_duplicate_event"},
+		"different cost": {cost(1), cost(2), "usage_conflicting_duplicate"},
+	} {
+		a, b := delta("s", "t", 5), delta("s", "t", 5)
+		a.CostUSD, b.CostUSD = tc.a, tc.b
+		report := ReduceUsage([]UsageObservation{a, b}, nil)
+		other := "usage_conflicting_duplicate"
+		if tc.want == other {
+			other = "usage_duplicate_event"
+		}
+		if len(report.Samples) != 1 || !warned(report, tc.want) || warned(report, other) {
+			t.Errorf("%s: want %s, got %+v", name, tc.want, report.Warnings)
+		}
+	}
+}
+
+func TestReduceUsageSampleScopeAndUnknownDefaults(t *testing.T) {
+	scoped := delta("sess", "t", 1)
+	scoped.Finality, scoped.CostBasis = "", ""
+	sample := ReduceUsage([]UsageObservation{scoped}, nil).Samples[0]
+	if sample.ScopeID != UsageDigest("scope", "codex\x00sess") || sample.ScopeID == "" {
+		t.Errorf("scope = %q", sample.ScopeID)
+	}
+	if sample.Finality != "unknown" || sample.CostBasis != "unknown" {
+		t.Errorf("empty finality/cost basis must report unknown: %+v", sample)
+	}
+	known := delta("", "t", 1)
+	known.CostBasis = tracecontract.UsageCostBasisHostEstimate
+	sample = ReduceUsage([]UsageObservation{known}, nil).Samples[0]
+	if sample.ScopeID != "" || sample.SessionID != "" {
+		t.Errorf("sessionless sample must have empty scope: %+v", sample)
+	}
+	if sample.Finality != tracecontract.UsageFinalityFinal || sample.CostBasis != tracecontract.UsageCostBasisHostEstimate {
+		t.Errorf("known values must be preserved: %+v", sample)
+	}
+}

@@ -78,3 +78,25 @@ func TestScoreClampsToRange(t *testing.T) {
 		t.Fatalf("ordinary score should remain in range, got %f", got)
 	}
 }
+
+func TestScoreWeights(t *testing.T) {
+	tests := []struct {
+		name                               string
+		impact, feasibility, novelty, risk float64
+		want                               float64
+	}{
+		{"impact weight", 100, 0, 0, 100, 38},
+		{"feasibility weight", 0, 100, 0, 100, 30},
+		{"novelty weight", 0, 0, 100, 100, 20},
+		{"risk weight", 0, 0, 0, 0, 12},
+		{"mixed", 50, 60, 70, 20, 60.6},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := Score(test.impact, test.feasibility, test.novelty, test.risk)
+			if diff := got - test.want; diff > 1e-9 || diff < -1e-9 {
+				t.Fatalf("Score = %v, want %v", got, test.want)
+			}
+		})
+	}
+}
