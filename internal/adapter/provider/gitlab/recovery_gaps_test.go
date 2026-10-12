@@ -2,6 +2,7 @@ package gitlab
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -321,6 +322,30 @@ func TestGitLabFindIssueCreateCandidatesRejectsBadRequestsAndResponses(t *testin
 			})
 			if err == nil || !strings.Contains(err.Error(), "glab issue reconciliation") && !strings.Contains(err.Error(), "parse glab issue reconciliation") {
 				t.Fatalf("error = %v", err)
+			}
+		})
+	}
+}
+
+func TestGitLabFindChildCreateCandidatesFlagsTruncationAtFullPageWithoutNextPage(t *testing.T) {
+	skipOnWindows(t)
+	for _, tt := range []struct {
+		nodes int
+		want  bool
+	}{{99, false}, {100, true}} {
+		t.Run(fmt.Sprintf("%d nodes", tt.nodes), func(t *testing.T) {
+			binDir, repo := t.TempDir(), t.TempDir()
+			nodes := strings.TrimSuffix(strings.Repeat(`{"webUrl":"https://gitlab.example.com/acme/repo/-/work_items/1","title":"t","description":"MARK-1"},`, tt.nodes), ",")
+			writeFakeGlab(t, binDir, "#!/bin/sh\nprintf '%s' '{\"data\":{\"project\":{\"workItems\":{\"nodes\":["+nodes+"],\"pageInfo\":{\"hasNextPage\":false}}}}}'\n")
+			t.Setenv("PATH", binDir)
+			got, err := NewProvider().FindChildCreateCandidates(context.Background(), port.IssueProviderFindIssueCreateCandidatesRequest{
+				Repo: repo, ProjectAuthority: "gitlab.example.com/acme/repo", Marker: "MARK-1",
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(got.Candidates) != tt.nodes || got.Truncated != tt.want {
+				t.Fatalf("candidates=%d truncated=%v, want %d/%v", len(got.Candidates), got.Truncated, tt.nodes, tt.want)
 			}
 		})
 	}

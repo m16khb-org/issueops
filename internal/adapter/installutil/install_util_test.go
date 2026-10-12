@@ -38,6 +38,20 @@ func TestWriteTextPlanCoversDryRunWriteAndNoop(t *testing.T) {
 	}
 }
 
+func TestWriteTextPlanOverwritesDifferingContent(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "file.txt")
+	if err := os.WriteFile(path, []byte("old\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	file, err := WriteTextPlan(path, "config", "new\n", 0o644, false)
+	if err != nil || !file.Written || file.WouldWrite {
+		t.Fatalf("file=%+v err=%v", file, err)
+	}
+	if got, readErr := os.ReadFile(path); readErr != nil || string(got) != "new\n" {
+		t.Fatalf("content = %q err=%v", got, readErr)
+	}
+}
+
 func TestWriteJSONPlanCoversMarshalAndInvalidValue(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, "settings.json")

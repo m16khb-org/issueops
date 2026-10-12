@@ -287,3 +287,24 @@ func TestGitLabCreateChildAcceptsAtPrefixedAssigneeVerifiedByBareUsername(t *tes
 		t.Fatalf("lookup must use the bare username:\n%s", gapCalls(t, repo))
 	}
 }
+
+func TestGitLabCreateChildSendsResolvedLabelAndAssigneeIDsInCreateMutation(t *testing.T) {
+	repo := installChildFlowGlab(t, nil)
+	if _, err := NewProvider().CreateChild(port.IssueProviderCreateChildRequest{
+		Repo: repo, ParentIssueURL: "https://gitlab.com/acme/repo/-/issues/12", Title: "child",
+		Labels: []string{"bug"}, Assignees: []string{"sample"}, Confirm: true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var create string
+	for line := range strings.SplitSeq(gapCalls(t, repo), "\n") {
+		if strings.Contains(line, "mutation workItemCreate") {
+			create = line
+		}
+	}
+	for _, want := range []string{`labelIds: ["gid://gitlab/ProjectLabel/7"]`, `assigneeIds: ["gid://gitlab/User/9"]`} {
+		if !strings.Contains(create, want) {
+			t.Fatalf("create mutation missing %q:\n%s", want, create)
+		}
+	}
+}

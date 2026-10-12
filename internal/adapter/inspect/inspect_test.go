@@ -4,6 +4,7 @@ import (
 	"issueops/internal/adapter/docs"
 	docsapp "issueops/internal/application/docs"
 	inspectcontract "issueops/internal/contract/inspect"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -51,4 +52,24 @@ func containsSkill(skills []inspectcontract.SkillInfo, name string) bool {
 		}
 	}
 	return false
+}
+
+func TestCodexMCPConfiguredRequiresIssueopsServerTable(t *testing.T) {
+	dir := t.TempDir()
+	write := func(name, body string) string {
+		path := filepath.Join(dir, name)
+		if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return path
+	}
+	if !CodexMCPConfigured(write("yes.toml", "[mcp_servers.issueops]\nurl = \"x\"\n")) {
+		t.Fatal("issueops table must be detected")
+	}
+	if CodexMCPConfigured(write("other.toml", "[mcp_servers.other]\n")) {
+		t.Fatal("other server must not count")
+	}
+	if CodexMCPConfigured(filepath.Join(dir, "absent.toml")) {
+		t.Fatal("missing file must not count")
+	}
 }

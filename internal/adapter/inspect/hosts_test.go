@@ -623,3 +623,150 @@ func TestCommandHostVersionReadsVersionFromAllowedBinary(t *testing.T) {
 		}
 	}
 }
+
+func TestHostsCodexParserAcceptsEmptyLiteralString(t *testing.T) {
+	fixture := newHostFixture(t)
+	writeTestFile(t, filepath.Join(fixture.codexHome, "config.toml"),
+		"[mcp_servers.issueops]\nurl = \"http://127.0.0.1:47831/mcp\"\nhttp_headers = { Empty = '', Authorization = \"Bearer x\" }\n")
+
+	codex := fixture.inspect(t, inspectcontract.Options{})["codex"]
+
+	requireStatus(t, "configured", codex.Configured, "verified", "")
+}
+
+func TestHostsReceiptSizeLimitIsInclusive(t *testing.T) {
+	const prefix, suffix = `{"schema_version":1,"hosts":[{"host":"`, `"}]}`
+	for name, tc := range map[string]struct {
+		size   int
+		reason string
+	}{
+		"exactly at limit": {maxReceiptBytes, "no_receipt_for_host"},
+		"one over limit":   {maxReceiptBytes + 1, "receipt_unreadable"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			fixture := newHostFixture(t)
+			path := filepath.Join(t.TempDir(), "receipts.json")
+			writeTestFile(t, path, prefix+strings.Repeat("x", tc.size-len(prefix)-len(suffix))+suffix)
+
+			codex := fixture.inspect(t, inspectcontract.Options{HostReceipts: path})["codex"]
+
+			status := "not_checked"
+			if tc.reason == "receipt_unreadable" {
+				status = "unknown"
+			}
+			requireStatus(t, "connected", codex.Connected, status, tc.reason)
+		})
+	}
+}
+
+func TestHostsReceiptProtocolRevisionPrefersNegotiatedOverRequested(t *testing.T) {
+	for name, tc := range map[string]struct {
+		requested, negotiated string
+		status, reason        string
+	}{
+		"negotiated wins over unmatched requested":  {"2099-01-01", "2025-11-25", "verified", ""},
+		"requested used when negotiated is empty":   {"2025-11-25", "", "verified", ""},
+		"negotiated unmatched even if requested ok": {"2025-11-25", "2099-01-01", "unknown", "receipt_artifact_missing_revision"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			fixture := newHostFixture(t)
+			fixture.versions["codex"] = "0.128.0"
+			receipts := newReceiptFixture(t)
+			receipt := receipts.hostReceipt(fixture.inspect(t, inspectcontract.Options{})["codex"], "0.128.0")
+			receipt.Protocol.RequestedRevision = tc.requested
+			receipt.Protocol.NegotiatedRevision = tc.negotiated
+			path := receipts.write(t, receipt)
+
+			codex := fixture.inspect(t, inspectcontract.Options{HostReceipts: path})["codex"]
+
+			requireStatus(t, "protocol", codex.Protocol, tc.status, tc.reason)
+		})
+	}
+}
+
+func TestHostsCodexEntryTypeMustMatchTransport(t *testing.T) {
+	for name, tc := range map[string]struct {
+		body      string
+		transport string
+		reason    string
+	}{
+		"http with http type":    {"url = \"http://x\"\ntype = \"http\"\n", "http", ""},
+		"http with sse type":     {"url = \"http://x\"\ntype = \"sse\"\n", "", "entry_type_unsupported"},
+		"http with stdio type":   {"url = \"http://x\"\ntype = \"stdio\"\n", "", "entry_type_unsupported"},
+		"stdio with stdio type":  {"command = \"c\"\ntype = \"stdio\"\n", "stdio", ""},
+		"stdio with http type":   {"command = \"c\"\ntype = \"http\"\n", "", "entry_type_unsupported"},
+		"stdio with custom type": {"command = \"c\"\ntype = \"sse\"\n", "", "entry_type_unsupported"},
+		"http without type":      {"url = \"http://x\"\n", "http", ""},
+		"stdio without type":     {"command = \"c\"\n", "stdio", ""},
+	} {
+		t.Run(name, func(t *testing.T) {
+			fixture := newHostFixture(t)
+			writeTestFile(t, filepath.Join(fixture.codexHome, "config.toml"), "[mcp_servers.issueops]\n"+tc.body)
+
+			codex := fixture.inspect(t, inspectcontract.Options{})["codex"]
+
+			if tc.reason != "" {
+				requireStatus(t, "configured", codex.Configured, "failed", tc.reason)
+				return
+			}
+			requireStatus(t, "configured", codex.Configured, "verified", "")
+			if codex.Transport != tc.transport {
+				t.Fatalf("transport = %q, want %q", codex.Transport, tc.transport)
+			}
+		})
+	}
+}
+
+func TestHostsCodexParserHonoursQuotesCommentsAndMultilineBrackets(t *testing.T) {
+	plain := "[mcp_servers.issueops]\ncommand = \"/bin/i#s\"\nargs = [\"a]b\", 'c[', \"q\\\"]#\", ['n'], {k = \"}\"}]\nnote = 'it#s'\n"
+	commented := "[mcp_servers.issueops] # table\ncommand = \"/bin/i#s\" # trailing\nargs = [ # open\n  \"a]b\", 'c[', # keep\n  \"q\\\"]#\",\n  ['n'],\n  {k = \"}\"},\n]\nnote = 'it#s' # c\n"
+	hash := map[string]string{}
+	for name, body := range map[string]string{"plain": plain, "commented": commented} {
+		fixture := newHostFixture(t)
+		writeTestFile(t, filepath.Join(fixture.codexHome, "config.toml"), body)
+		codex := fixture.inspect(t, inspectcontract.Options{})["codex"]
+		requireStatus(t, name+" configured", codex.Configured, "verified", "")
+		hash[name] = codex.Configured.ConfigSHA256
+	}
+	if hash["plain"] == "" || hash["plain"] != hash["commented"] {
+		t.Fatalf("comments and line breaks must not change the parsed entry: %v", hash)
+	}
+	fixture := newHostFixture(t)
+	writeTestFile(t, filepath.Join(fixture.codexHome, "config.toml"), strings.Replace(plain, "a]b", "a]c", 1))
+	changed := fixture.inspect(t, inspectcontract.Options{})["codex"].Configured.ConfigSHA256
+	if changed == hash["plain"] {
+		t.Fatal("string content inside arrays must still reach the hash")
+	}
+}
+
+func TestHostsReceiptArtifactEvidenceBeyondScanLimitIsIgnored(t *testing.T) {
+	fixture := newHostFixture(t)
+	fixture.versions["codex"] = "0.128.0"
+	receipts := newReceiptFixture(t)
+	evidence, err := os.ReadFile(receipts.artifact)
+	if err != nil {
+		t.Fatal(err)
+	}
+	file, err := os.OpenFile(receipts.artifact, os.O_WRONLY|os.O_TRUNC, 0o600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+	// A newline halfway keeps every token inside the scanner buffer, so only the
+	// maxArtifactBytes read limit can hide the evidence written right after it.
+	if _, err := file.WriteAt([]byte("\n"), maxArtifactBytes/2); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := file.WriteAt(append([]byte("\n"), evidence...), maxArtifactBytes); err != nil {
+		t.Fatal(err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+	path := receipts.write(t, receipts.hostReceipt(fixture.inspect(t, inspectcontract.Options{})["codex"], "0.128.0"))
+
+	codex := fixture.inspect(t, inspectcontract.Options{HostReceipts: path})["codex"]
+
+	requireStatus(t, "discovered", codex.Discovered, "unknown", "receipt_artifact_missing_evidence")
+	requireStatus(t, "connected", codex.Connected, "unknown", "receipt_artifact_missing_evidence")
+}

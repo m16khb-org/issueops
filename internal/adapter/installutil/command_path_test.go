@@ -252,6 +252,9 @@ func TestManagedCommandPathApplyDoesNotOverwriteReplacementAtExchange(t *testing
 	if err == nil || !strings.Contains(err.Error(), "identity changed during replacement") {
 		t.Fatalf("apply plan=%+v err=%v", plan, err)
 	}
+	if strings.Contains(err.Error(), "remove recovered") || strings.Contains(err.Error(), "retained displaced") {
+		t.Fatalf("successful displaced-path recovery reported a recovery failure: %v", err)
+	}
 	assertRegularCommand(t, command, "concurrent", 0o755)
 	backupInfo, statErr := os.Lstat(plan.BackupPath)
 	if statErr != nil || backupInfo.Mode().Perm() != 0o600 || !plan.BackupRetained {
@@ -286,6 +289,9 @@ func TestManagedCommandPathRollbackDoesNotOverwriteReplacementAtExchange(t *test
 	plan, err := transaction.Rollback()
 	if err == nil || !strings.Contains(err.Error(), "changed during rollback") {
 		t.Fatalf("rollback plan=%+v err=%v", plan, err)
+	}
+	if strings.Contains(err.Error(), "remove recovered") || strings.Contains(err.Error(), "retained displaced") {
+		t.Fatalf("successful rollback recovery reported a recovery failure: %v", err)
 	}
 	assertRegularCommand(t, command, "concurrent", 0o755)
 	backupInfo, statErr := os.Lstat(plan.BackupPath)
