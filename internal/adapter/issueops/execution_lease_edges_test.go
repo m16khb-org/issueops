@@ -132,6 +132,13 @@ func TestSameNativeActorComparisons(t *testing.T) {
 		if got := sameNativeActor(a, tc.b); got != tc.want {
 			t.Errorf("%s: sameNativeActor = %v, want %v", tc.name, got, tc.want)
 		}
+		if got := sameNativeActor(tc.b, a); got != tc.want {
+			t.Errorf("%s (reversed): sameNativeActor = %v, want %v", tc.name, got, tc.want)
+		}
+	}
+	bare := func() *issueops.NativeActor { return &issueops.NativeActor{Host: "codex", SessionID: "s"} }
+	if !sameNativeActor(bare(), bare()) {
+		t.Error("actors without a session process must match each other")
 	}
 	if !sameNativeActor(nil, nil) {
 		t.Error("two nil actors should match")
