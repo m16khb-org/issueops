@@ -209,3 +209,34 @@ func TestGoldenFallbackRejectsIncompleteJSONEvidence(t *testing.T) {
 		})
 	}
 }
+
+func TestGoldenFallbackRejectsRequiredTestThatRanButNeverPassed(t *testing.T) {
+	var body string
+	for _, tc := range []struct{ pkg, test string }{
+		{"issueops/cmd/issueops/contractgolden", "TestCLIUsageGolden"},
+		{"issueops/cmd/issueops/contractgolden", "TestMCPToolsGolden"},
+		{"issueops/cmd/issueops/contractgolden", "TestMCPResourcesGolden"},
+		{"issueops/cmd/issueops/issueopsapp", "TestResponseContractsGolden"},
+	} {
+		actions := []string{"run", "pass"}
+		if tc.test == "TestMCPToolsGolden" {
+			actions = []string{"run", "output"}
+		}
+		for _, action := range actions {
+			event, err := json.Marshal(map[string]string{"Package": tc.pkg, "Test": tc.test, "Action": action})
+			if err != nil {
+				t.Fatal(err)
+			}
+			body += string(event) + "\n"
+		}
+	}
+	body += `{"Action":"pass","Package":"issueops/cmd/issueops/contractgolden"}` + "\n"
+	body += `{"Action":"pass","Package":"issueops/cmd/issueops/issueopsapp"}` + "\n"
+	deps := SelfVerifyStepDeps{IssueOpsRoot: func() string { return "/repo" }, RunCommandStep: func(string, string, time.Duration, string, string, ...string) contract.StepResult {
+		return contract.StepResult{OK: true, Stdout: body}
+	}}
+	got := CachedContractGoldenStep(contract.StepResult{OK: false}, deps)
+	if got.OK || !strings.Contains(got.Error, "TestMCPToolsGolden") {
+		t.Fatalf("golden evidence accepted a test that never passed: %+v", got)
+	}
+}

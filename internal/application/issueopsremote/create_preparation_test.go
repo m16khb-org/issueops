@@ -108,3 +108,51 @@ func TestPreparationStopsBeforeUnnecessaryEffects(t *testing.T) {
 		})
 	}
 }
+
+func TestPreparationReplacesActorProcessWithVerifiedNormalizedReceipt(t *testing.T) {
+	observer, command := preparationFixture()
+	padded := contract.ProcessReceipt{PID: 42, StartedAt: " then ", Executable: " /bin/codex "}
+	command.Actor.SessionProcess = &padded
+	got, err := NewCreatePreparation(observer, observer, inspectorVerifier(observer.inspect)).Prepare(context.Background(), command)
+	if err != nil {
+		t.Fatal(err)
+	}
+	process := got.Command.Actor.SessionProcess
+	if process == nil || process.PID != 42 || process.StartedAt != "then" || process.Executable != "/bin/codex" {
+		t.Fatalf("session process=%+v", process)
+	}
+}
+
+func TestPreparationReportsExecutionEligibilityFromRecord(t *testing.T) {
+	observer, command := preparationFixture()
+	got, err := NewCreatePreparation(observer, observer, inspectorVerifier(observer.inspect)).Prepare(context.Background(), command)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.Eligibility.ExecutionActive || !got.Eligibility.NoPending || !got.Eligibility.CanonicalLabelsAssignees {
+		t.Fatalf("confirmed eligibility=%+v", got.Eligibility)
+	}
+
+	for _, tc := range []struct {
+		name                      string
+		change                    func(*model.IssueOpsRecord)
+		wantActive, wantNoPending bool
+	}{
+		{"no execution", func(r *model.IssueOpsRecord) { r.Execution = nil }, false, true},
+		{"released lease", func(r *model.IssueOpsRecord) { r.Execution.Lease.Status = model.LeaseStatusClaimable }, false, true},
+		{"pending intent", func(r *model.IssueOpsRecord) { r.Execution.Pending = &model.ExternalIntent{} }, true, false},
+	} {
+		t.Run("preview "+tc.name, func(t *testing.T) {
+			o, c := preparationFixture()
+			c.Confirm = false
+			tc.change(&o.record)
+			got, err := NewCreatePreparation(o, o, inspectorVerifier(o.inspect)).Prepare(context.Background(), c)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.Eligibility.ExecutionActive != tc.wantActive || got.Eligibility.NoPending != tc.wantNoPending {
+				t.Fatalf("eligibility=%+v", got.Eligibility)
+			}
+		})
+	}
+}

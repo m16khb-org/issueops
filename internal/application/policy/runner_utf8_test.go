@@ -27,3 +27,22 @@ func TestCapturedOutputPreservesTruncationAfterRedaction(t *testing.T) {
 		}
 	}
 }
+
+func TestOutputBudgetBoundaryIsInclusive(t *testing.T) {
+	const limit = 32 * 1024
+	for _, size := range []int{5, limit} {
+		text := strings.Repeat("a", size)
+		if got := budgetOutput(text); got != text {
+			t.Errorf("budgetOutput altered %d bytes within the limit", size)
+		}
+		if got := capturedOutput(text, false); got != text {
+			t.Errorf("capturedOutput altered %d untruncated bytes within the limit", size)
+		}
+	}
+	if got := capturedOutput(strings.Repeat("a", limit), true); !strings.HasSuffix(got, "\n<truncated>\n") {
+		t.Errorf("executor truncation marker lost for output exactly at the limit")
+	}
+	if got := budgetOutput(strings.Repeat("a", limit+1)); !strings.HasSuffix(got, "\n<truncated>\n") {
+		t.Errorf("over-limit output was not marked truncated")
+	}
+}

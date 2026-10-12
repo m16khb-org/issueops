@@ -81,3 +81,21 @@ func TestRiskEvidenceIsLocalToEachPlannedRun(t *testing.T) {
 		t.Fatal("first run lost successful golden evidence")
 	}
 }
+
+func TestPlannedGoBuildStepHasTwoMinuteTimeout(t *testing.T) {
+	var gotLabel string
+	var gotTimeout time.Duration
+	deps := SelfVerifyStepDeps{RunCommandStep: func(_ string, label string, timeout time.Duration, _ string, _ string, _ ...string) contract.StepResult {
+		gotLabel, gotTimeout = label, timeout
+		return contract.StepResult{OK: true}
+	}}
+	var full contract.StepResult
+	planned := PlannedSteps("/repo", "/bin", 100, &full, deps)[7]
+	if planned.Label != "go build" {
+		t.Fatalf("step 7 is %q", planned.Label)
+	}
+	planned.Run()
+	if gotLabel != "go build" || gotTimeout != 2*time.Minute {
+		t.Fatalf("label=%q timeout=%v", gotLabel, gotTimeout)
+	}
+}

@@ -169,3 +169,20 @@ func TestHistoryCollectsDiagnosticsBeforeLimitingResults(t *testing.T) {
 		t.Fatalf("entry metadata/empty arrays changed: %+v", entry)
 	}
 }
+
+func TestHistoryWithoutLimitOrRetentionReturnsEveryEntryAndNoRetentionReceipt(t *testing.T) {
+	service := HistoryService{
+		StateDir: func() string { return "/state" },
+		List: func() (state.StateListResult, error) {
+			return state.StateListResult{Records: []state.StateListEntry{{Key: "a"}, {Key: "b"}}}, nil
+		},
+		Read: func(string) (state.StateResult, error) {
+			return state.StateResult{Record: state.RecordEnvelope{Content: `{"schema_version":1,"kind":"self_verification_summary","generated_at":"2026-09-29T00:00:00Z"}`}}, nil
+		},
+		Delete: func(context.Context, string) error { t.Fatal("history without retention deleted state"); return nil },
+	}
+	result, err := service.History(context.Background(), "", 0, contract.SelfAugmentHistoryRetentionOptions{})
+	if err != nil || !result.OK || result.TotalMatches != 2 || result.Returned != 2 || len(result.Entries) != 2 || result.Retention != nil {
+		t.Fatalf("result=%+v err=%v", result, err)
+	}
+}

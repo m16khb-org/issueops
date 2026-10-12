@@ -468,3 +468,40 @@ func TestWorkspaceCleanerStopFailsClosedOnTerminalProblems(t *testing.T) {
 		}
 	})
 }
+
+func TestWorkspaceCleanerStopWithoutTerminalsNeedsNoOrcaSurface(t *testing.T) {
+	t.Run("no orca surface", func(t *testing.T) {
+		control := &fakeProcessControl{observe: staticOccupancy()}
+		_, closed, err := cleanerFor(control, nil).Stop(t.Context(), "/wt", nil, nil, false, 0)
+		if err != nil || closed != 0 {
+			t.Fatalf("closed=%d err=%v", closed, err)
+		}
+	})
+	t.Run("orca not consulted", func(t *testing.T) {
+		orca := readyOrca()
+		control := &fakeProcessControl{observe: staticOccupancy()}
+		if _, _, err := cleanerFor(control, orca).Stop(t.Context(), "/wt", nil, nil, false, 0); err != nil {
+			t.Fatal(err)
+		}
+		if len(orca.closed) != 0 || orca.byPathCall != 0 {
+			t.Fatalf("closed=%v inventoryChecks=%d; nothing was previewed", orca.closed, orca.byPathCall)
+		}
+	})
+}
+
+func TestWorkspaceProcessStopperObservesOnlyOncePerPhaseWhenGracefulStopSucceeds(t *testing.T) {
+	control := &fakeProcessControl{}
+	control.observe = func(call int) (port.CleanupWorkspaceOccupancy, error) {
+		if call == 1 {
+			return occupancyOf(shellProcess), nil
+		}
+		return occupancyOf(), nil
+	}
+	if _, err := (WorkspaceProcessStopper{Processes: control}).Stop("/wt", []model.CleanupWorkspaceProcess{shellProcess}, nil); err != nil {
+		t.Fatal(err)
+	}
+	// initial occupancy, grace-period release check, final confirmation
+	if control.observed != 3 || slices.Contains(control.signals, "kill") {
+		t.Fatalf("observed=%d signals=%v; no kill-phase observation when nothing survived", control.observed, control.signals)
+	}
+}

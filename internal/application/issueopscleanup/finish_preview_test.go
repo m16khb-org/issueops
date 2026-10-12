@@ -101,3 +101,40 @@ func TestFinishPreviewPreservesObservationOrderAndBoundTargets(t *testing.T) {
 		t.Fatalf("calls=%v", env.calls)
 	}
 }
+
+type withinFinishPreviewEnvironment struct {
+	finishPreviewEnvironment
+	within []string
+}
+
+func (e *withinFinishPreviewEnvironment) PathWithin(path, root string) bool {
+	e.within = append(e.within, path+"|"+root)
+	return true
+}
+
+func TestFinishPreviewFlagsRequesterCWDInsideWorktreeOnlyWhenCWDIsGiven(t *testing.T) {
+	record := model.IssueOpsRecord{ID: "cycle", Repo: "/repo", Branch: "123-cleanup", WorktreePath: "/worktree", Phase: model.IssueOpsPhaseDone}
+	for _, tc := range []struct {
+		name       string
+		cwd        string
+		wantWithin []string
+		want       string
+	}{
+		{"cwd inside worktree", " /worktree/src ", []string{"/worktree/src|/worktree"}, "cwd_outside_worktree"},
+		{"blank cwd", "   ", nil, "cwd_unresolved"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			env := &withinFinishPreviewEnvironment{finishPreviewEnvironment: finishPreviewEnvironment{directory: true, branchCode: 1}}
+			service := app.FinishPreviewer{Environment: env, Workspace: func(context.Context, model.IssueOpsRecord, string) (app.FinishWorkspaceObservation, []string) {
+				return app.FinishWorkspaceObservation{}, nil
+			}}
+			_, result := service.Plan(context.Background(), record, model.CleanupFinishRequest{Merged: true, CompletionReflected: true, IssueClosed: true, CWD: tc.cwd})
+			if !slices.Contains(result.Missing, tc.want) || !slices.Equal(env.within, tc.wantWithin) {
+				t.Fatalf("missing=%v within=%v", result.Missing, env.within)
+			}
+			if tc.want == "cwd_unresolved" && slices.Contains(result.Missing, "cwd_outside_worktree") {
+				t.Fatalf("blank cwd judged against the worktree: %v", result.Missing)
+			}
+		})
+	}
+}

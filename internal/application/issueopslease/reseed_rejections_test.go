@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	issueopscontract "issueops/internal/contract/issueops"
 	leasecontract "issueops/internal/contract/issueopslease"
 	leasedomain "issueops/internal/domain/issueopslease"
 	basesyncport "issueops/internal/port/issueopsbasesync"
@@ -289,5 +290,38 @@ func TestReseedServiceReportsBothCommitAndRollbackFailures(t *testing.T) {
 	_, err := service.Reseed(t.Context(), reseedServiceRequest(record.ID))
 	if !errors.Is(err, commitErr) || !strings.Contains(err.Error(), "replacement residue cleanup failed: rollback failed") || rollbacks != 1 {
 		t.Fatalf("error=%v rollbacks=%d", err, rollbacks)
+	}
+}
+
+func TestReseedServiceChecksBaseDriftOfClaimableCompletedExecution(t *testing.T) {
+	harness := &reseedRejectionHarness{}
+	record := completedReseedTestRecord(strings.Repeat("d", 40))
+	record.Stable.Execution.Lease.Status = "claimable"
+	record.Stable.Execution.Lease.ClaimTokenSHA256 = strings.Repeat("b", 64)
+	record.Lease = record.Stable.Execution.Lease
+	observed := 0
+	service := newReseedServiceForTestWithBaseSync(passThroughFence(), harness.repository(record), harness.artifacts(), baseSyncInspectorFunc(func(context.Context, basesyncport.Request) (basesyncport.Receipt, error) {
+		observed++
+		return basesyncport.Receipt{SyncRequired: true}, nil
+	}))
+	request := reseedServiceRequest(record.ID)
+	request.ExpectedGeneration = 4
+	_, err := service.Reseed(t.Context(), request)
+	var syncRequired *issueopscontract.BaseSyncRequiredError
+	if !errors.As(err, &syncRequired) || observed != 1 || harness.prepares != 0 || harness.commits != 0 {
+		t.Fatalf("err=%v observed=%d prepares=%d commits=%d", err, observed, harness.prepares, harness.commits)
+	}
+}
+
+func TestReseedServiceReopensCompletedExecutionWithoutRecordedPhaseLedger(t *testing.T) {
+	harness := &reseedRejectionHarness{}
+	record := completedReseedTestRecord(strings.Repeat("d", 40))
+	record.Stable.PhaseLedger = nil
+	service := newReseedServiceForTest(passThroughFence(), harness.repository(record), harness.artifacts())
+	request := reseedServiceRequest(record.ID)
+	request.ExpectedGeneration = 4
+	result, err := service.Reseed(t.Context(), request)
+	if err != nil || harness.commits != 1 || result.Execution.Completion != nil {
+		t.Fatalf("err=%v commits=%d execution=%+v", err, harness.commits, result.Execution)
 	}
 }

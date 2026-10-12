@@ -454,3 +454,34 @@ func TestIssueCreateIntentsRejectOutcomeAndCompletionWithoutIntent(t *testing.T)
 		t.Fatal("a rejected transition must not touch the record")
 	}
 }
+
+// failingUpdateStore fails the Nth Update call and delegates every other call.
+type failingUpdateStore struct {
+	*artifactStoreForTest
+	failAt, updates int
+	err             error
+}
+
+func (s *failingUpdateStore) Update(ctx context.Context, id string, transition RecordTransition) (model.IssueOpsRecord, error) {
+	s.updates++
+	if s.updates == s.failAt {
+		return model.IssueOpsRecord{}, s.err
+	}
+	return s.artifactStoreForTest.Update(ctx, id, transition)
+}
+
+func TestIssueCreateJoinsOutcomePersistenceFailureWithProviderError(t *testing.T) {
+	providerErr, storeErr := errors.New("gh exploded"), errors.New("disk full")
+	base, _ := newArtifactStoreForTest(model.IssueOpsRecord{ID: "io-create", Repo: "/repo"})
+	// Update 1 seals the intent; update 2 records the provider failure.
+	store := &failingUpdateStore{artifactStoreForTest: base, failAt: 2, err: storeErr}
+	env := &createEnv{inferred: "github", authority: testAuthority}
+	env.invoke = func(context.Context, port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
+		return port.IssueProviderCreateIssueResult{}, providerErr
+	}
+	creator := NewIssueCreator(store, env, NewTemplateBodyResolver(os.ReadFile), NewIssueCreateIntents(store, fixedNow), nil, fixedNow)
+	_, err := creator.Create(context.Background(), confirmCmd())
+	if !errors.Is(err, providerErr) || !errors.Is(err, storeErr) {
+		t.Fatalf("err=%v; want both provider and persistence failures", err)
+	}
+}

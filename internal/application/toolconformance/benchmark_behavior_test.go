@@ -2,6 +2,7 @@ package toolconformance
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -542,5 +543,101 @@ func TestIncompleteEpisodeNormalizesCauseAndSource(t *testing.T) {
 	kept := policy.incompleteEpisode("codex", "1", fixture, "clean", "m", 2, "model", "code", "src")
 	if kept.FailureCauseEvidence[0].Cause != failurecausecontract.Model || kept.FailureCauseEvidence[0].Source != "src" {
 		t.Fatalf("kept=%+v", kept)
+	}
+}
+
+func failingResult(cause, code string) func(int, port.HostProbeRequest) port.HostProbeResult {
+	return func(_ int, request port.HostProbeRequest) port.HostProbeResult {
+		return port.HostProbeResult{Host: "codex", HostVersion: request.HostVersion, Profile: request.Profile, Attempt: request.Attempt, FixtureID: request.FixtureID, Cause: cause, Code: code}
+	}
+}
+
+func TestRunLiveBenchmarkStopsAfterFirstCompletionDespiteAttemptBudget(t *testing.T) {
+	runner := &scriptedRunner{preflight: readyPreflight(), script: evidenceByAttempt("codex")}
+	deps := liveDeps(map[string]port.HostProbeRunner{"codex": runner}, testFixtures())
+	request := baseRequest()
+	request.Only = "codex:fx-a"
+	request.MaxAttemptsPerCase = 3
+	report, err := RunLiveBenchmark(context.Background(), request, nil, deps)
+	if err != nil || len(runner.requests) != 1 || report.Hosts[0].AttemptCount != 1 {
+		t.Fatalf("err=%v requests=%d host=%+v", err, len(runner.requests), report.Hosts[0])
+	}
+}
+
+func TestRunLiveBenchmarkResumedAttemptBudgetCoversOnlyRemainingCompletions(t *testing.T) {
+	first := &scriptedRunner{preflight: readyPreflight(), script: evidenceByAttempt("codex")}
+	request := baseRequest()
+	request.Only = "codex:fx-a"
+	previous, err := RunLiveBenchmark(context.Background(), request, nil, liveDeps(map[string]port.HostProbeRunner{"codex": first}, testFixtures()))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resumed := &scriptedRunner{preflight: readyPreflight(), script: failingResult("harness_environment", "spawn_failed")}
+	request.Previous = &previous
+	request.TargetCompleted = 10
+	request.MaxAttemptsPerCase = 2
+	if _, err := RunLiveBenchmark(context.Background(), request, nil, liveDeps(map[string]port.HostProbeRunner{"codex": resumed}, testFixtures())); err != nil {
+		t.Fatal(err)
+	}
+	if want := (10 - 1) * 2; len(resumed.requests) != want {
+		t.Fatalf("new attempts=%d want %d", len(resumed.requests), want)
+	}
+	if resumed.requests[0].Attempt != 2 {
+		t.Fatalf("first resumed attempt=%d want 2", resumed.requests[0].Attempt)
+	}
+}
+
+func TestRunLiveBenchmarkKeepsPreflightObservedModelWhenHostNotReady(t *testing.T) {
+	preflight := port.HostProbePreflight{Installed: true, Code: "auth_missing", Cause: "harness_environment", ObservedModel: "preflight-model"}
+	runner := &scriptedRunner{preflight: preflight, script: evidenceByAttempt("codex")}
+	report, err := RunLiveBenchmark(context.Background(), baseRequest(), nil, liveDeps(map[string]port.HostProbeRunner{"codex": runner}, testFixtures()))
+	if err != nil || report.Hosts[0].ObservedModel != "preflight-model" {
+		t.Fatalf("err=%v host=%+v", err, report.Hosts[0])
+	}
+}
+
+// runWithFirstAttemptFailure runs fixtureCount fixtures; the very first attempt fails with the given
+// cause and every later attempt completes.
+func runWithFirstAttemptFailure(t *testing.T, fixtureCount int, cause, code string) contract.BenchmarkReport {
+	t.Helper()
+	fixtures := make([]contract.Fixture, 0, fixtureCount)
+	for i := range fixtureCount {
+		id := string(rune('a' + i))
+		fixtures = append(fixtures, contract.Fixture{ID: "fx-" + id, ProbeTool: "probe", SourceTool: "tool", SchemaSHA256: hex64("1"), ExpectedArguments: map[string]any{"i": i}})
+	}
+	runner := &scriptedRunner{preflight: readyPreflight(), script: func(call int, request port.HostProbeRequest) port.HostProbeResult {
+		if call == 1 {
+			return failingResult(cause, code)(call, request)
+		}
+		return validResult("codex", request, fmt.Sprintf("%064x", call))
+	}}
+	request := baseRequest()
+	request.MaxAttemptsPerCase = 2
+	report, err := RunLiveBenchmark(context.Background(), request, nil, liveDeps(map[string]port.HostProbeRunner{"codex": runner}, fixtures))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return report
+}
+
+func TestRunLiveBenchmarkWarnsOnlyWhenFailureRateExceedsFivePercent(t *testing.T) {
+	const warning = "environment_transport_failure_rate_above_5_percent"
+	// 1 failure in exactly 20 attempts is 5%: not above the threshold.
+	report := runWithFirstAttemptFailure(t, 19, "harness_environment", "spawn_failed")
+	if report.Counts.Attempts != 20 || report.Counts.EnvironmentFailures != 1 || contains(report.Warnings, warning) {
+		t.Fatalf("counts=%+v warnings=%v", report.Counts, report.Warnings)
+	}
+	// 1 failure in 2 attempts is far above the threshold.
+	report = runWithFirstAttemptFailure(t, 1, "harness_environment", "spawn_failed")
+	if !contains(report.Warnings, warning) {
+		t.Fatalf("warnings=%v", report.Warnings)
+	}
+}
+
+func TestRunLiveBenchmarkTransportFailuresCountTowardFailureRate(t *testing.T) {
+	report := runWithFirstAttemptFailure(t, 1, "transport", "probe_result_invalid")
+	if report.Counts.TransportFailures != 1 || !contains(report.Warnings, "environment_transport_failure_rate_above_5_percent") {
+		t.Fatalf("counts=%+v warnings=%v", report.Counts, report.Warnings)
 	}
 }

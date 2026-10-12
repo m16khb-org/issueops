@@ -59,3 +59,26 @@ func TestCombinedCheckPassesReviewOptionsAfterStaticSuccess(t *testing.T) {
 		t.Fatal(order)
 	}
 }
+
+func TestCombinedCheckReportsOKWhenReviewPasses(t *testing.T) {
+	service := Service{
+		Static: StaticService{Effects: StaticEffects{
+			NormalizeFiles: func(string, []string) []string { return []string{"api/openapi.yaml"} },
+			Mode:           func(string) string { return "" },
+		}},
+		Reviewer: ReviewService{Effects: ReviewEffects{
+			NormalizeFiles: func(_ string, files []string) []string { return files },
+			Input:          func(string, []string, string, bool) (string, error) { return "content", nil },
+			ExtraPrompt:    func(ReviewOptions) (string, error) { return "", nil },
+			BuildPrompt:    func([]string, string, string, string) string { return "" },
+			Schema:         func() map[string]any { return nil },
+			ReadResult: func(_, file string) (string, []byte, error) {
+				return file, []byte(`{"verdict":"pass"}`), nil
+			},
+		}},
+	}
+	result, err := service.Check(StaticOptions{}, ReviewOptions{Files: []string{"api/openapi.yaml"}, ResultFile: "result"})
+	if err != nil || !result.OK || !result.Static.OK || !result.Review.OK || result.Review.Verdict != "pass" {
+		t.Fatalf("result=%+v err=%v", result, err)
+	}
+}

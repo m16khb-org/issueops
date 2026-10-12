@@ -130,3 +130,59 @@ func TestRunProjectsUnexpectedStateArtifactsAsResidueWithoutMutatingCallerSnapsh
 		t.Fatalf("caller snapshot mutated: %+v backing=%+v", snapshot.StateArtifacts, artifacts[:4])
 	}
 }
+
+func TestRunReportsLifecycleStateOnlyWhenValidationSucceeds(t *testing.T) {
+	plan := lifecyclecontract.ProjectLifecycleStatePlan{Exists: true, NamespaceValid: true, RepoID: "repo-1"}
+	ok := baseService(func() (statecontract.StateDoctorResult, error) {
+		return statecontract.StateDoctorResult{Healthy: true}, nil
+	})
+	ok.Effects.ValidateLifecycle = func(string) (lifecyclecontract.ProjectLifecycleStatePlan, error) { return plan, nil }
+	result, err := ok.Run(doctorcontract.HarnessDoctorRequest{RepoRoot: "/repo", StaticOnly: true})
+	if err != nil || result.LifecycleState.RepoID != "repo-1" {
+		t.Fatalf("lifecycle=%+v err=%v", result.LifecycleState, err)
+	}
+
+	failing := baseService(func() (statecontract.StateDoctorResult, error) {
+		return statecontract.StateDoctorResult{Healthy: true}, nil
+	})
+	failing.Effects.ValidateLifecycle = func(string) (lifecyclecontract.ProjectLifecycleStatePlan, error) {
+		return plan, errors.New("lifecycle invalid")
+	}
+	result, err = failing.Run(doctorcontract.HarnessDoctorRequest{RepoRoot: "/repo", StaticOnly: true})
+	if err != nil || !reflect.DeepEqual(result.LifecycleState, lifecyclecontract.ProjectLifecycleStatePlan{}) {
+		t.Fatalf("lifecycle must stay empty on validation error: %+v err=%v", result.LifecycleState, err)
+	}
+}
+
+func TestRunPrefixesOperationalFindingSummaryWithResourceIdentity(t *testing.T) {
+	service := baseService(func() (statecontract.StateDoctorResult, error) {
+		return statecontract.StateDoctorResult{Healthy: true, StateDir: "/state"}, nil
+	})
+	snapshot := operationalhealth.Snapshot{
+		StateArtifacts: []operationalhealthcontract.StateArtifact{{Path: "/state/stray", Code: "unexpected_file"}},
+		InventoryProblems: []operationalhealthcontract.InventoryProblem{
+			{Code: "probe_failed", Detail: "boom"},
+		},
+	}
+	result, err := service.Run(doctorcontract.HarnessDoctorRequest{
+		RepoRoot: "/repo", StaticOnly: true, OperationalSnapshot: &snapshot,
+		OperationalOptions: operationalhealth.Options{Now: time.Date(2026, 9, 29, 0, 0, 0, 0, time.UTC)},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	summaries := map[string]string{}
+	inventory := map[string]bool{}
+	for _, issue := range result.Issues {
+		summaries[issue.Code+"|"+issue.Path] = issue.Summary
+		if issue.Code == operationalhealthcontract.FindingInventoryUnknown {
+			inventory[issue.Summary] = true
+		}
+	}
+	if got, want := summaries[operationalhealthcontract.FindingStateArtifactResidue+"|/state/stray"], "state_artifact /state/stray: state directory contains an unexpected runtime or recovery artifact"; got != want {
+		t.Fatalf("residue summary=%q want %q", got, want)
+	}
+	if want := "resource probe_failed: boom"; !inventory[want] {
+		t.Fatalf("blank resource kind must read %q, got %v", want, inventory)
+	}
+}

@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	model "issueops/internal/contract/issueops"
 	contract "issueops/internal/contract/issueopsorphancleanup"
@@ -22,11 +23,15 @@ type orphanTestEnvironment struct {
 	excludeErr    error
 	removeErr     error
 	deleteErr     error
+	afterDelete   func()
 	drainErr      error
 	canonicalFail string
+	canonicalSeen []string
+	lease         CleanupLifetime
 }
 
 func (e *orphanTestEnvironment) CanonicalPath(p string) (string, error) {
+	e.canonicalSeen = append(e.canonicalSeen, p)
 	if p == e.canonicalFail {
 		return "", errors.New("no such path")
 	}
@@ -45,6 +50,9 @@ func (e *orphanTestEnvironment) ExcludeWrites(context.Context) (CleanupLifetime,
 	if e.excludeErr != nil {
 		return nil, e.excludeErr
 	}
+	if e.lease != nil {
+		return e.lease, nil
+	}
 	return &finishTestLease{events: e.events, drainErr: e.drainErr}, nil
 }
 func (e *orphanTestEnvironment) RemoveWorktree(_ context.Context, repo, path string) error {
@@ -53,6 +61,9 @@ func (e *orphanTestEnvironment) RemoveWorktree(_ context.Context, repo, path str
 }
 func (e *orphanTestEnvironment) DeleteBranch(_ context.Context, repo, branch, oid string) error {
 	*e.events = append(*e.events, "delete-branch "+branch+" "+oid)
+	if e.afterDelete != nil {
+		e.afterDelete()
+	}
 	return e.deleteErr
 }
 
@@ -221,4 +232,99 @@ func TestOrphanCleanerApplyPropagatesWriteExclusionFailure(t *testing.T) {
 	if err == nil || err.Error() != "writers active" || result.Applied {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
+}
+
+type orphanDrainProbe struct {
+	remaining time.Duration
+	hasLimit  bool
+	ctxErr    error
+}
+
+func (p *orphanDrainProbe) Context(ctx context.Context) context.Context { return ctx }
+func (p *orphanDrainProbe) Close() error                                { return nil }
+func (p *orphanDrainProbe) Drain(ctx context.Context) (CleanupLifetime, error) {
+	p.ctxErr = ctx.Err()
+	if deadline, ok := ctx.Deadline(); ok {
+		p.hasLimit, p.remaining = true, time.Until(deadline)
+	}
+	return p, nil
+}
+
+func TestOrphanCleanerApplyGivesDrainAFifteenSecondBudgetDetachedFromCancellation(t *testing.T) {
+	cleaner, env, _ := orphanFixture()
+	probe := &orphanDrainProbe{}
+	env.lease = probe
+	preview, _ := cleaner.Preview(context.Background(), orphanTestRequest())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	env.afterDelete = cancel
+	result, err := cleaner.Apply(ctx, orphanTestRequest(), contract.ApplyRequest{Confirm: true, Fingerprint: preview.Fingerprint})
+	if err != nil || !result.Applied {
+		t.Fatalf("result=%+v err=%v", result, err)
+	}
+	if ctx.Err() == nil {
+		t.Fatal("apply context was never cancelled")
+	}
+	if !probe.hasLimit || probe.remaining < 10*time.Second || probe.remaining > 15*time.Second {
+		t.Fatalf("drain budget hasLimit=%v remaining=%v; want about 15s", probe.hasLimit, probe.remaining)
+	}
+	if probe.ctxErr != nil {
+		t.Fatalf("drain context inherited cancellation: %v", probe.ctxErr)
+	}
+}
+
+func TestOrphanCleanerPreviewReportsCancellationDuringMergeVerification(t *testing.T) {
+	cleaner, _, _ := orphanFixture()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	cleaner.VerifyMerged = func(context.Context, model.IssueOpsRemoteArtifactVerification) error {
+		cancel()
+		return nil
+	}
+	if _, err := cleaner.Preview(ctx, orphanTestRequest()); !errors.Is(err, context.Canceled) {
+		t.Fatalf("err=%v; cancellation after provider verification must surface", err)
+	}
+}
+
+func TestOrphanCleanerPreviewCanonicalizesEveryRecordedPathAndSkipsBlankOnes(t *testing.T) {
+	t.Run("blank inventory paths are never canonicalized", func(t *testing.T) {
+		cleaner, env, _ := orphanFixture()
+		cleaner.Collect = func(context.Context, string) (health.Snapshot, error) {
+			snapshot := orphanTestSnapshot()
+			snapshot.RepoRoot = "  "
+			return snapshot, nil
+		}
+		if _, err := cleaner.Preview(context.Background(), orphanTestRequest()); err != nil {
+			t.Fatal(err)
+		}
+		blank, orphan := 0, 0
+		for _, seen := range env.canonicalSeen {
+			if strings.TrimSpace(seen) == "" {
+				blank++
+			}
+			if seen == "/wt/orphan" {
+				orphan++
+			}
+		}
+		if blank != 0 || orphan == 0 {
+			t.Fatalf("canonicalized=%q", env.canonicalSeen)
+		}
+	})
+	t.Run("an unresolvable inventory path blocks readiness", func(t *testing.T) {
+		cleaner, env, _ := orphanFixture()
+		cleaner.Collect = func(context.Context, string) (health.Snapshot, error) {
+			snapshot := orphanTestSnapshot()
+			snapshot.GitWorktrees = append(snapshot.GitWorktrees, health.GitWorktree{Path: "/wt/gone", Branch: "99-other", Head: orphanTestHead})
+			return snapshot, nil
+		}
+		preview, err := cleaner.Preview(context.Background(), orphanTestRequest())
+		if err != nil || !preview.Ready {
+			t.Fatalf("baseline preview=%+v err=%v", preview, err)
+		}
+		env.canonicalFail = "/wt/gone"
+		preview, err = cleaner.Preview(context.Background(), orphanTestRequest())
+		if err != nil || preview.Ready || preview.Fingerprint != "" {
+			t.Fatalf("preview=%+v err=%v", preview, err)
+		}
+	})
 }

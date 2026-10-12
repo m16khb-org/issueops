@@ -296,3 +296,30 @@ func TestPublicationJournalCompleteNotInvokedClearsPendingAndRecordsFailure(t *t
 		t.Fatalf("replay err=%v", err)
 	}
 }
+
+func TestPublicationJournalLoadIntentRequiresLabelsAndAssigneesForEligibility(t *testing.T) {
+	for _, tc := range []struct {
+		name              string
+		labels, assignees []string
+		want              bool
+	}{
+		{"both present", []string{"bug"}, []string{"octocat"}, true},
+		{"no labels", nil, []string{"octocat"}, false},
+		{"no assignees", []string{"bug"}, nil, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			journal, _, prepared := journalFixture()
+			prepared.Request.Labels, prepared.Request.Assignees = tc.labels, tc.assignees
+			if _, err := journal.BeginCreate(t.Context(), prepared); err != nil {
+				t.Fatal(err)
+			}
+			loaded, err := journal.LoadIntent(t.Context(), "cycle")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if loaded.Eligibility.CanonicalLabelsAssignees != tc.want {
+				t.Fatalf("CanonicalLabelsAssignees=%v want %v", loaded.Eligibility.CanonicalLabelsAssignees, tc.want)
+			}
+		})
+	}
+}

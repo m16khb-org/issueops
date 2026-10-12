@@ -256,3 +256,66 @@ func cloneChildRecord(r model.IssueOpsRecord) model.IssueOpsRecord {
 	_ = json.Unmarshal(b, &out)
 	return out
 }
+
+func TestChildRecoveryCommandQuotesArgumentsAndIncludesActorOnlyWhenIdentified(t *testing.T) {
+	const base = "issueops remote reconcile-child --id 'io-1' --operation-id 'op-1'"
+	for _, tc := range []struct {
+		name   string
+		actors []model.IssueOpsActor
+		want   string
+	}{
+		{"no actor", nil, base + " --confirm --json"},
+		{"actor without host", []model.IssueOpsActor{{SessionID: "s", CWD: "/w"}}, base + " --confirm --json"},
+		{"actor without agent", []model.IssueOpsActor{{Host: "codex", SessionID: "s", CWD: "/w"}}, base + " --host 'codex' --session-id 's' --cwd '/w' --confirm --json"},
+		{"actor with agent", []model.IssueOpsActor{{Host: "codex", SessionID: "s", CWD: "/w", AgentID: "a1"}}, base + " --host 'codex' --session-id 's' --cwd '/w' --agent-id 'a1' --confirm --json"},
+		{"only first actor used", []model.IssueOpsActor{{Host: "codex", SessionID: "s", CWD: "/w"}, {Host: "claude", SessionID: "x", CWD: "/x"}}, base + " --host 'codex' --session-id 's' --cwd '/w' --confirm --json"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := ChildRecoveryCommand("io-1", "op-1", tc.actors...); got != tc.want {
+				t.Fatalf("command=%q want %q", got, tc.want)
+			}
+		})
+	}
+	if got := ChildRecoveryCommand("a'b", "op", model.IssueOpsActor{Host: "h", SessionID: "s", CWD: "/it's"}); !strings.Contains(got, `--id 'a'"'"'b'`) || !strings.Contains(got, `--cwd '/it'"'"'s'`) {
+		t.Fatalf("embedded quotes not escaped: %q", got)
+	}
+}
+
+func TestChildCreatorReportsOKOnlyWhenCreateSucceeds(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		failLink bool
+	}{{"success", false}, {"link failure", true}} {
+		t.Run(tc.name, func(t *testing.T) {
+			record := model.IssueOpsRecord{ID: "io-child", Repo: "/repo", IssueURL: "https://github.com/acme/repo/issues/1", Branch: "1-parent", BranchPrepare: &model.IssueOpsBranchPrepare{Branch: "1-parent"}}
+			store := &testChildStore{record: record, before: func(updated model.IssueOpsRecord) error {
+				if tc.failLink && updated.ChildCreateOperations[0].Status == model.IssueCreateIntentCompleted {
+					return errors.New("link refused")
+				}
+				return nil
+			}}
+			service := ChildCreator{
+				Records: childRecordReader(func(context.Context, string) (model.IssueOpsRecord, error) { return store.read(), nil }),
+				Resolve: func(string) (ChildProvider, error) {
+					return childProviderFunc(func(port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
+						return port.IssueProviderCreateChildResult{OK: true, ChildURL: "https://github.com/acme/repo/issues/2", HierarchyVerified: true}, nil
+					}), nil
+				},
+				Bodies:         NewTemplateBodyResolver(nil),
+				Intents:        &ChildCreateIntents{Store: store, Authority: testChildAuthority{}, Now: time.Now},
+				NewOperationID: func() (string, error) { return strings.Repeat("a", 32), nil },
+			}
+			cmd := ChildCreateCommand{ID: record.ID, Title: "Child", Body: readableChildBody, Labels: []string{"bug"}, Assignees: []string{"owner"}, Confirm: true}
+			result, err := service.Create(context.Background(), cmd, nil)
+			if tc.failLink {
+				if err == nil || result.OK {
+					t.Fatalf("OK=%v err=%v; a failed create must not report OK", result.OK, err)
+				}
+				return
+			}
+			if err != nil || !result.OK {
+				t.Fatalf("OK=%v err=%v", result.OK, err)
+			}
+		})
+	}
+}

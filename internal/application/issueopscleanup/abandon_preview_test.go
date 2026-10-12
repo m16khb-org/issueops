@@ -261,3 +261,60 @@ func TestAbandonPreviewerFeedsRemoteEffectsIntoThePreview(t *testing.T) {
 		t.Fatalf("inventory=%+v result=%+v", inventory, result)
 	}
 }
+
+func TestAbandonPreviewerTrustsOnlyAuthenticallySealedFailureReceipts(t *testing.T) {
+	hex64 := func(c string) string { return strings.Repeat(c, 64) }
+	record := localAbandonRecord()
+	sealed := abandonFailure(record, model.CleanupAbandonInventory{
+		RecordSHA: hex64("a"), WorktreeRoot: "/wt", Branch: "feature", WorktreeHead: "h1", BranchOID: "h1",
+	}, hex64("b"), "worktree_remove", "git failed", "2026-09-29T00:00:00Z")
+	tampered := sealed
+	tampered.RecordSHA = hex64("c") // still well-formed, but no longer what the seal covers
+	for _, tc := range []struct {
+		name    string
+		failure model.IssueOpsCleanupAbandonFailure
+		trusted bool
+	}{
+		{"sealed receipt matching the live resources", sealed, true},
+		{"well-formed receipt whose sealed fields were altered", tampered, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			current := record
+			failure := tc.failure
+			current.CleanupAbandonFailure = &failure
+			_, result := abandonPreviewer(healthyAbandonEnv()).Plan(t.Context(), current, abandonReason, nil)
+			if got := !slices.Contains(result.Missing, "cleanup_failure_inventory"); got != tc.trusted {
+				t.Fatalf("trusted=%v want %v missing=%v", got, tc.trusted, result.Missing)
+			}
+		})
+	}
+}
+
+func TestAbandonPreviewerTreatsLiveOrcaTerminalsAsResidueOnlyWhenStopCannotReachThem(t *testing.T) {
+	record := localAbandonRecord()
+	record.Execution = &model.Execution{
+		Mode: model.ExecutionModeOrca, Workspace: model.Workspace{Root: "/wt", Branch: "feature"},
+		Lease: model.WriteLease{Status: model.LeaseStatusReleased},
+		Orca:  &model.OrcaBinding{TaskID: "task"},
+	}
+	for _, tc := range []struct {
+		name      string
+		terminals []string
+		residue   bool
+	}{
+		{"listed terminals are closed by the stop step", []string{"term-1"}, false},
+		{"unlisted live terminal cannot be stopped", nil, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			previewer := abandonPreviewer(healthyAbandonEnv())
+			previewer.Workspace = func(context.Context, model.IssueOpsRecord, string) (FinishWorkspaceObservation, []string) {
+				return FinishWorkspaceObservation{Terminals: tc.terminals}, nil
+			}
+			previewer.Orca = AbandonOrcaObserver{Owner: &fakeOwnerInspector{result: port.ExecutionOrcaOwnerInventory{TerminalLive: true}}}
+			_, result := previewer.Plan(t.Context(), record, abandonReason, nil)
+			if got := slices.Contains(result.Missing, "orca_resources_absent"); got != tc.residue {
+				t.Fatalf("residue gate=%v want %v missing=%v", got, tc.residue, result.Missing)
+			}
+		})
+	}
+}

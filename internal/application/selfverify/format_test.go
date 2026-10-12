@@ -57,3 +57,14 @@ func TestValidateFormatFailsClosedWithoutFilesOrTooling(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateFormatPassesWhenEveryTrackedFileIsFormatted(t *testing.T) {
+	step := ValidateFormat("/repo", FormatDeps{
+		Now:                time.Now,
+		ListTrackedGoFiles: func(context.Context, string) ([]string, error) { return []string{"a.go", "b.go"}, nil },
+		ListUnformatted:    func(context.Context, string, []string) ([]string, error) { return nil, nil },
+	})
+	if !step.OK || step.Error != "" || !strings.Contains(step.Stdout, "checked 2 tracked .go file(s)") {
+		t.Fatalf("step=%+v", step)
+	}
+}

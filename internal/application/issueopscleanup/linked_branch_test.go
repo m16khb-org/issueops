@@ -179,3 +179,19 @@ func TestLinkedBranchCleanerMapsObservationAndDeleteFailuresToSteps(t *testing.T
 		t.Fatalf("res=%+v err=%v", res, err)
 	}
 }
+
+func TestLinkedBranchCleanerAuditsStaleFingerprintButNotUnconfirmedApply(t *testing.T) {
+	f := newLinkedBranchFixture()
+	preview, err := f.cleaner.Run(context.Background(), model.CleanupLinkedBranchRequest{ID: "io-linked"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := f.cleaner.Run(context.Background(), model.CleanupLinkedBranchRequest{ID: "io-linked", Apply: true, Fingerprint: preview.Fingerprint})
+	if err == nil || res.FailedStep != "confirm" || res.AuditRecorded || len(f.records.saved) != 0 {
+		t.Fatalf("unconfirmed apply must not be audited: res=%+v err=%v saved=%d", res, err, len(f.records.saved))
+	}
+	res, err = f.cleaner.Run(context.Background(), model.CleanupLinkedBranchRequest{ID: "io-linked", Apply: true, Confirm: true, Fingerprint: "stale"})
+	if err == nil || res.FailedStep != "stale_fingerprint" || !res.AuditRecorded || len(f.records.saved) != 1 {
+		t.Fatalf("stale apply must be audited once: res=%+v err=%v saved=%d", res, err, len(f.records.saved))
+	}
+}

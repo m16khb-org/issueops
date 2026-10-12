@@ -403,6 +403,122 @@ func TestAbandonExecutorRequiresResolvableProviderForRemoteEvidence(t *testing.T
 	}
 }
 
+func TestAbandonExecutorResolvesProviderOnlyWhenRemoteEvidenceIsNeeded(t *testing.T) {
+	artifact := &model.IssueOpsRemoteArtifactVerification{Kind: "pr", URL: "u"}
+	cases := []struct {
+		name      string
+		artifact  *model.IssueOpsRemoteArtifactVerification
+		req       model.CleanupAbandonRequest
+		wantCalls int
+	}{
+		{"local only needs no provider", nil, model.CleanupAbandonRequest{}, 0},
+		{"recorded artifact needs a provider", artifact, model.CleanupAbandonRequest{}, 1},
+		{"remote flag needs a provider", nil, model.CleanupAbandonRequest{DeleteRemoteBranch: true}, 1},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := abandonExecutorFixture()
+			f.records.snapshot.Record.RemoteArtifact = tc.artifact
+			calls := 0
+			f.executor.Provider = func(string) (port.IssueProvider, error) {
+				calls++
+				if tc.wantCalls == 0 {
+					return nil, errors.New("provider must not be resolved")
+				}
+				return f.provider, nil
+			}
+			var observed port.IssueProvider
+			f.executor.Observe = func(_ context.Context, _ model.IssueOpsRecord, r model.CleanupAbandonRequest, p port.IssueProvider) (model.CleanupAbandonRequest, error) {
+				observed = p
+				return r, nil
+			}
+			req := tc.req
+			req.ID = "io-abandon"
+			if _, err := f.executor.Run(context.Background(), req); err != nil {
+				t.Fatal(err)
+			}
+			if calls != tc.wantCalls || (observed != nil) != (tc.wantCalls == 1) {
+				t.Fatalf("provider calls=%d observed=%v want calls=%d", calls, observed, tc.wantCalls)
+			}
+		})
+	}
+}
+
+func TestAbandonExecutorKeepsApplyingSealOnlyForCancelledLocalRemovals(t *testing.T) {
+	cases := []struct {
+		name        string
+		setup       func(f *abandonTestFixture, cancel context.CancelFunc)
+		wantFailed  string
+		wantReceipt string
+	}{
+		{"branch delete cancelled", func(f *abandonTestFixture, cancel context.CancelFunc) {
+			f.executor.Git = func(_ context.Context, _ string, args ...string) (int, string) {
+				if args[0] == "update-ref" {
+					cancel()
+					return 1, "signal: killed"
+				}
+				return 0, ""
+			}
+		}, model.CleanupFailureStepBranchDelete, model.CleanupFailureStepApplying},
+		{"record delete drain cancelled", func(f *abandonTestFixture, _ context.CancelFunc) {
+			f.lease.drainErr = context.Canceled
+		}, model.CleanupFailureStepRecordDelete, model.CleanupFailureStepRecordDelete},
+		{"process stop cancelled", func(f *abandonTestFixture, _ context.CancelFunc) {
+			f.inventory.OrcaRuntimeReady = true
+			f.records.checkErr = context.Canceled
+		}, model.CleanupFailureStepWorkspaceProcessesStop, model.CleanupFailureStepWorkspaceProcessesStop},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := abandonExecutorFixture()
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			tc.setup(f, cancel)
+			req := f.applyRequest(t)
+			result, err := f.executor.Run(ctx, req)
+			if err == nil || result.FailedStep != tc.wantFailed {
+				t.Fatalf("result=%+v err=%v", result, err)
+			}
+			if f.records.failed == nil || f.records.failed.Step != tc.wantReceipt {
+				t.Fatalf("receipt=%+v want step %q", f.records.failed, tc.wantReceipt)
+			}
+		})
+	}
+}
+
+func TestAbandonExecutorStopsWorkspaceOnlyWhenSomethingOccupiesIt(t *testing.T) {
+	cases := []struct {
+		name     string
+		setup    func(*abandonTestFixture)
+		wantStop bool
+	}{
+		{"nothing to stop", func(*abandonTestFixture) {}, false},
+		{"runtime ready", func(f *abandonTestFixture) { f.inventory.OrcaRuntimeReady = true }, true},
+		{"processes only", func(f *abandonTestFixture) {
+			f.result.WorkspaceProcesses = []model.CleanupWorkspaceProcess{{PID: 7, Command: "sh"}}
+		}, true},
+		{"terminals only", func(f *abandonTestFixture) { f.inventory.OrcaTerminals = []string{"term-1"} }, true},
+		{"worktree already gone", func(f *abandonTestFixture) {
+			f.inventory.WorktreePresent = false
+			f.inventory.OrcaRuntimeReady = true
+			f.result.WorkspaceProcesses = []model.CleanupWorkspaceProcess{{PID: 7, Command: "sh"}}
+		}, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := abandonExecutorFixture()
+			tc.setup(f)
+			req := f.applyRequest(t)
+			if _, err := f.executor.Run(context.Background(), req); err != nil {
+				t.Fatal(err)
+			}
+			if got := contains(*f.events, "stop"); got != tc.wantStop {
+				t.Fatalf("stop called=%v want %v events=%v", got, tc.wantStop, *f.events)
+			}
+		})
+	}
+}
+
 func TestAbandonExecutorRejectsCycleOwnedByAnotherCleanup(t *testing.T) {
 	f := abandonExecutorFixture()
 	f.records.snapshot.Record.CleanupAttempt = &model.IssueOpsCleanupAttempt{Operation: model.CleanupOperationFinish}

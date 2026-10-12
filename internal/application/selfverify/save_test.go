@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	failurecausecontract "issueops/internal/contract/failurecause"
 	selfaugmentcontract "issueops/internal/contract/selfaugment"
 	statecontract "issueops/internal/contract/state"
 )
@@ -42,5 +43,36 @@ func TestSaveSummaryWriteFailureRecordsStateDir(t *testing.T) {
 	})
 	if !errors.Is(err, wantErr) || result.StateCheckpoint == nil || result.StateCheckpoint.OK || result.StateCheckpoint.Key != "custom" || result.StateCheckpoint.StateDir != "/state" {
 		t.Fatalf("result=%+v err=%v", result, err)
+	}
+}
+
+func TestSaveSummaryClassifiesFailureCauseOnlyWhenStepsFailed(t *testing.T) {
+	evidence := []failurecausecontract.Evidence{{Cause: failurecausecontract.Transport, Code: "dial_timeout", Source: "fixture"}}
+	for _, tc := range []struct {
+		name        string
+		failedSteps int
+		wantCause   failurecausecontract.Cause
+		wantReason  string
+		wantItems   int
+	}{
+		{"no failed steps", 0, failurecausecontract.None, "no_failed_steps", 0},
+		{"failed step", 1, failurecausecontract.Transport, "transport:dial_timeout", 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var saved selfaugmentcontract.SelfAugmentStateSnapshot
+			result := selfaugmentcontract.SelfAugmentResult{Summary: selfaugmentcontract.SelfAugmentSummary{FailedSteps: tc.failedSteps, FailureCauseEvidence: evidence}}
+			err := SaveSummary(&result, "k", SaveSummaryDeps{
+				Now: time.Now,
+				Encode: func(s selfaugmentcontract.SelfAugmentStateSnapshot) ([]byte, error) {
+					saved = s
+					return []byte("{}"), nil
+				},
+				Write: func(string, string) (statecontract.StateResult, error) { return statecontract.StateResult{}, nil },
+			})
+			got := saved.Summary
+			if err != nil || got.FailureCause != tc.wantCause || got.FailureCauseReason != tc.wantReason || len(got.FailureCauseEvidence) != tc.wantItems {
+				t.Fatalf("err=%v summary=%+v", err, got)
+			}
+		})
 	}
 }

@@ -197,3 +197,23 @@ func TestSaveLessonStopsOnFailureAndPrunesOnlyAfterWrite(t *testing.T) {
 		})
 	}
 }
+
+func TestSaveLessonUsesSelectedCandidateWhenRequestOmitsOne(t *testing.T) {
+	var written string
+	result, err := SaveLesson(contract.SelfAugmentLessonRequest{CandidateID: "  ", Lesson: "lesson", NextAction: "next"}, SaveLessonDeps{
+		SelectCandidate: func() *contract.SelfAugmentCandidate { return &contract.SelfAugmentCandidate{ID: "selected_candidate"} },
+		Now:             func() time.Time { return time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC) },
+		Encode:          func(s contract.SelfAugmentLessonStateSnapshot) ([]byte, error) { return json.Marshal(s) },
+		Write: func(key, content string) (state.StateResult, error) {
+			written = content
+			return state.StateResult{Record: state.RecordEnvelope{Key: key}}, nil
+		},
+		StateDir: func() string { return "/state" },
+		Prune: func(string, time.Duration, int, bool) (state.StatePruneResult, error) {
+			return state.StatePruneResult{}, nil
+		},
+	})
+	if err != nil || !result.OK || result.CandidateID != "selected_candidate" || !strings.Contains(written, `"candidate_id":"selected_candidate"`) {
+		t.Fatalf("result=%+v err=%v written=%s", result, err, written)
+	}
+}

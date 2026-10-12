@@ -57,6 +57,9 @@ func TestSummaryComposesCoverageFailureEvidenceAndRecoveryHints(t *testing.T) {
 	if !success.TerminationEligible || success.MinimumGoalScore != 100 || len(success.CoverageGaps) != 0 || success.TotalSteps != 27 || success.FailedSteps != 0 {
 		t.Fatalf("complete evidence was lost: %+v", success)
 	}
+	if success.FailureCause != cause.None || success.FailureCauseReason != "no_failed_steps" {
+		t.Fatalf("passing evidence classified a failure cause: %+v", success)
+	}
 	equal := SummarizeSelfVerification(input, 100)
 	if equal.TerminationEligible {
 		t.Fatal("score equal to target passed")

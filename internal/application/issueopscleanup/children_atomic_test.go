@@ -156,3 +156,19 @@ func TestChildrenCloserLimitsConcurrencyAndPreservesResultOrder(t *testing.T) {
 		}
 	}
 }
+
+func TestChildrenCloserConfirmWithoutChildLinksPersistsNothing(t *testing.T) {
+	record := model.IssueOpsRecord{RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/100"}, ID: "parent", IssueURL: "https://github.com/acme/repo/issues/1"}
+	records := &lockedChildCleanupRecords{t: t, record: record}
+	closer := app.ChildrenCloser{VerifyMerged: func(model.IssueOpsRemoteArtifactVerification) error { return nil }, Records: records, Provider: func(string) (port.IssueProvider, error) {
+		t.Fatal("provider consulted without child links")
+		return nil, nil
+	}, Now: func() time.Time { return time.Unix(123, 0) }}
+	result, err := closer.Close(context.Background(), record.ID, true, true)
+	if err != nil || len(result.Children) != 0 {
+		t.Fatalf("result=%+v err=%v", result, err)
+	}
+	if records.saves != 0 {
+		t.Fatalf("saves=%d; a confirm that changed nothing must not rewrite the record", records.saves)
+	}
+}

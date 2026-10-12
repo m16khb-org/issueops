@@ -91,3 +91,27 @@ func TestAllowedRunUsesBoundedExecutorAndRedactsOutput(t *testing.T) {
 		t.Fatalf("allowed result=%+v", result)
 	}
 }
+
+func TestRunFailureExitCodeIsExecutorCodeOrOneWhenExecutorReportsNone(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		exit, want int
+	}{{"executor reports no code", 0, 1}, {"executor code preserved", 2, 2}} {
+		t.Run(tc.name, func(t *testing.T) {
+			service := Service{
+				Clock: runnerClock{at: time.Date(2026, 9, 25, 0, 0, 0, 0, time.UTC)},
+				Observer: observeFunc(func(policycontract.CommandPolicyRequest) Observation {
+					return Observation{Root: "/repo", CWD: "/repo",
+						Facts: policydomain.CommandFacts{RootDirectory: true, CWDDirectory: true, CWDWithinRoot: true, ReadOnlyAllowed: true}}
+				}),
+				Executor: executeFunc(func(policycontract.CommandPolicyRequest, time.Duration) Execution {
+					return Execution{Stderr: "boom\n", ExitCode: tc.exit, Err: errors.New("exit status")}
+				}),
+			}
+			result := service.Run(policycontract.CommandPolicyRequest{WorkspaceRoot: "/repo", CWD: "/repo", Argv: []string{"cat", "note"}, Timeout: "5s"})
+			if result.OK || !result.Executed || result.TimedOut || result.ExitCode != tc.want || result.Stderr != "boom\n" {
+				t.Fatalf("result=%+v", result)
+			}
+		})
+	}
+}

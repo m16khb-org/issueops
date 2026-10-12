@@ -170,3 +170,30 @@ func TestReconcileResolvesRoleAgentsFromTheProbeBeforeMarkingTerminalInvoke(t *t
 		t.Fatalf("settings failure must leave the intent untouched: marks=%d invokes=%d failures=%d", repository.markCalls, stages.invokeCalls, repository.failureCalls)
 	}
 }
+
+type reconcileLatestFailureRepository struct {
+	*reconcileRepositoryFake
+}
+
+func (reconcileLatestFailureRepository) Latest(context.Context, string) (leasecontract.Record, error) {
+	return leasecontract.Record{ID: "must-not-be-used"}, errors.New("latest unavailable")
+}
+
+func TestReconcileFailureReportsTheLatestRecordWhenItCanBeRead(t *testing.T) {
+	repository := reconcileRepositoryFixture("task_create", "not_invoked_proven", 2)
+	repository.latest = leasecontract.Record{OK: true, ID: "io-1", Execution: &leasecontract.Execution{Mode: "latest-marker"}}
+	stages := &reconcileStageExecutorFake{attempted: true, inventory: leasecontract.ReconcileStageInventory{ExactReplay: true}}
+	result, err := NewReconcileService(repository, stages, noRoleAgents).Reconcile(t.Context(), ReconcileRequest{ID: "io-1"})
+	if err == nil || result.Code != "orca_reconcile_ambiguous" || result.Record.Execution == nil || result.Record.Execution.Mode != "latest-marker" {
+		t.Fatalf("result=%+v err=%v", result, err)
+	}
+}
+
+func TestReconcileFailureKeepsCanonicalRecordWhenLatestCannotBeRead(t *testing.T) {
+	repository := reconcileRepositoryFixture("task_create", "not_invoked_proven", 2)
+	stages := &reconcileStageExecutorFake{attempted: true, inventory: leasecontract.ReconcileStageInventory{ExactReplay: true}}
+	result, err := NewReconcileService(reconcileLatestFailureRepository{repository}, stages, noRoleAgents).Reconcile(t.Context(), ReconcileRequest{ID: "io-1"})
+	if err == nil || result.Code != "orca_reconcile_ambiguous" || result.Record.ID != "io-1" || result.Record.Execution == nil || result.Record.Execution.Pending == nil {
+		t.Fatalf("result=%+v err=%v", result, err)
+	}
+}

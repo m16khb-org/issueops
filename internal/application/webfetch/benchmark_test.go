@@ -82,3 +82,59 @@ func TestBenchmarkBaselinePreservesPartialFailureAndMetricDenominators(t *testin
 		t.Fatalf("effect order=%v", effects)
 	}
 }
+
+func TestLiveBenchmarkCategoryAgreementCountsOnlyFixturesWithExpectations(t *testing.T) {
+	service := Benchmark{
+		Now: time.Now,
+		Fetch: func(context.Context, model.Request) (model.Result, error) {
+			return model.Result{OK: true, Category: model.CategoryStrongOK}, nil
+		},
+	}
+	req := model.BenchmarkRequest{Live: true, LiveOptIn: true, Fixtures: []model.BenchmarkFixture{
+		{ID: "expected", URL: "https://expected.invalid", Expected: []string{model.CategoryStrongOK}},
+		{ID: "unconstrained", URL: "https://unconstrained.invalid"},
+	}}
+	result, err := service.Run(context.Background(), req)
+	if err != nil || result.LiveParityReport.CategoryAgreement != 100 {
+		t.Fatalf("agreement must ignore fixtures without expectations: %+v %v", result.LiveParityReport, err)
+	}
+}
+
+func TestLiveBenchmarkReportsZeroAgreementWhenExpectationIsMissed(t *testing.T) {
+	service := Benchmark{
+		Now: time.Now,
+		Fetch: func(context.Context, model.Request) (model.Result, error) {
+			return model.Result{OK: true, Category: model.CategoryStrongOK}, nil
+		},
+	}
+	req := model.BenchmarkRequest{Live: true, LiveOptIn: true, Fixtures: []model.BenchmarkFixture{
+		{ID: "wrong", URL: "https://wrong.invalid", Expected: []string{model.CategoryWeakOK}},
+		{ID: "right", URL: "https://right.invalid", Expected: []string{model.CategoryStrongOK, model.CategoryWeakOK}},
+		{ID: "wrong2", URL: "https://wrong2.invalid", Expected: []string{model.CategoryWeakOK}},
+		{ID: "right2", URL: "https://right2.invalid", Expected: []string{model.CategoryStrongOK}},
+	}}
+	result, err := service.Run(context.Background(), req)
+	if err != nil || result.LiveParityReport.CategoryAgreement != 50 {
+		t.Fatalf("agreement=%v err=%v", result.LiveParityReport.CategoryAgreement, err)
+	}
+}
+
+func TestLiveBenchmarkKeepsCandidateAgreementWhenBaselineHasNoComparableCategory(t *testing.T) {
+	service := Benchmark{
+		Now: time.Now,
+		Fetch: func(context.Context, model.Request) (model.Result, error) {
+			return model.Result{OK: true, Category: model.CategoryStrongOK}, nil
+		},
+		CheckComparator: func(string) error { return nil },
+		RunComparator: func(context.Context, string, string) ([]byte, error) {
+			return []byte(`{"ok":true}`), nil
+		},
+	}
+	req := model.BenchmarkRequest{Live: true, LiveOptIn: true, CompareCommand: "compare", Fixtures: []model.BenchmarkFixture{
+		{ID: "a", URL: "https://a.invalid", Expected: []string{model.CategoryStrongOK}},
+	}}
+	result, err := service.Run(context.Background(), req)
+	if err != nil || !result.LiveParityReport.BaselineAvailable || result.LiveParityReport.CategoryAgreement != 100 {
+		t.Fatalf("baseline without categories must not overwrite agreement: %+v %v", result.LiveParityReport, err)
+	}
+}
