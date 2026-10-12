@@ -151,3 +151,16 @@ func executionSnapshotCLIRecord(t *testing.T) (string, string, string) {
 	}
 	return stateRoot, repo, written.ID
 }
+
+func TestReadExecutionIssueSnapshotFileSizeLimitIsInclusive(t *testing.T) {
+	valid := validExecutionSnapshotJSON()
+	exact := valid + strings.Repeat(" ", executionIssueSnapshotFileLimit-len(valid))
+	got, err := readExecutionIssueSnapshotFile(writeExecutionSnapshotTestFile(t, exact, 0o600))
+	if err != nil || got == nil || got.Source != "glab_mcp" {
+		t.Fatalf("snapshot of exactly the limit must be accepted: got=%#v err=%v", got, err)
+	}
+	_, err = readExecutionIssueSnapshotFile(writeExecutionSnapshotTestFile(t, exact+" ", 0o600))
+	if err == nil || !strings.Contains(err.Error(), fmt.Sprintf("exceeds %d bytes", executionIssueSnapshotFileLimit)) {
+		t.Fatalf("snapshot over the limit error=%v", err)
+	}
+}

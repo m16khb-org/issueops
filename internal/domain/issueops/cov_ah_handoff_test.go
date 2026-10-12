@@ -868,8 +868,12 @@ func TestCovHandoffOwnerClaimManualLineage(t *testing.T) {
 		},
 		"target without proc": func(_ *issueopscontract.ExecutionResult, o *covHandoffObservation) { o.Target.Process = nil },
 		"lease generation 1":  func(r *issueopscontract.ExecutionResult, _ *covHandoffObservation) { r.Execution.Lease.Generation = 1 },
-		"skipped generation":  func(r *issueopscontract.ExecutionResult, _ *covHandoffObservation) { r.Execution.Lease.Generation = 9 },
-		"other lifecycle":     func(r *issueopscontract.ExecutionResult, _ *covHandoffObservation) { r.ID = "io-other" },
+		"generation 0 source under lease generation 1": func(r *issueopscontract.ExecutionResult, o *covHandoffObservation) {
+			r.Execution.Lease.Generation = 1
+			o.SourceGeneration = 0
+		},
+		"skipped generation": func(r *issueopscontract.ExecutionResult, _ *covHandoffObservation) { r.Execution.Lease.Generation = 9 },
+		"other lifecycle":    func(r *issueopscontract.ExecutionResult, _ *covHandoffObservation) { r.ID = "io-other" },
 		"other owner host": func(r *issueopscontract.ExecutionResult, _ *covHandoffObservation) {
 			r.Execution.Lease.Holder.Host = "claude"
 		},
