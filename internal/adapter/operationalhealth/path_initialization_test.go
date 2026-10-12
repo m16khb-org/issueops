@@ -24,3 +24,14 @@ func TestCanonicalInventoryPathWorksWithoutGlobalInitialization(t *testing.T) {
 		t.Fatalf("empty path=%q", got)
 	}
 }
+
+func TestCanonicalInventoryPathAnchorsRelativeMissingPathAtWorkingDirectory(t *testing.T) {
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(root)
+	if got, want := canonicalInventoryPath(filepath.Join("missing", "deeper")), filepath.Join(root, "missing", "deeper"); got != want {
+		t.Fatalf("relative missing path = %q, want %q", got, want)
+	}
+}

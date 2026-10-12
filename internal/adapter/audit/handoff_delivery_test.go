@@ -366,3 +366,36 @@ func auditDeliveryObservationFixture() issueopscontract.IssueOpsHandoffDeliveryO
 		Ambiguous:          issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateNotObserved},
 	}
 }
+
+func TestReadHandoffDeliveryAuditLineLimitIsInclusiveOfNewline(t *testing.T) {
+	const limit = 256 * 1024
+	tests := []struct {
+		name      string
+		lineBytes int
+		oversized bool
+	}{
+		{name: "exactly at limit reaches record parsing", lineBytes: limit},
+		{name: "one byte over limit is rejected as oversized", lineBytes: limit + 1, oversized: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			stateDir := t.TempDir()
+			store := auditStoreForTest(stateDir)
+			path := filepath.Join(stateDir, "audit", "handoff-delivery.jsonl")
+			if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+				t.Fatal(err)
+			}
+			content := strings.Repeat("x", test.lineBytes-1) + "\n"
+			if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			_, err := store.Read()
+			if err == nil {
+				t.Fatal("malformed line was accepted")
+			}
+			if got := strings.Contains(err.Error(), "exceeds reader limit"); got != test.oversized {
+				t.Fatalf("oversized error=%v want %v: %v", got, test.oversized, err)
+			}
+		})
+	}
+}

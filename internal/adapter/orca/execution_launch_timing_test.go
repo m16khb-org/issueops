@@ -1,6 +1,7 @@
 package orca
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -99,6 +100,9 @@ func TestTerminalIntentBoundsAPersistentlyAbsentPTY(t *testing.T) {
 	var orcaErr *port.OrcaError
 	if !asOrcaError(err, &orcaErr) || !strings.Contains(orcaErr.Detail, "attempt") {
 		t.Fatalf("bounded absence must preserve attempt evidence: %v", err)
+	}
+	if want := fmt.Sprintf("attempt %d over", fake.inventoryCalls); !strings.Contains(orcaErr.Detail, want) {
+		t.Fatalf("detail = %q, want the real inventory attempt count (%q)", orcaErr.Detail, want)
 	}
 	if fake.inventoryCalls < 2 {
 		t.Fatalf("persistent absence must consume the bounded settle window: %d", fake.inventoryCalls)

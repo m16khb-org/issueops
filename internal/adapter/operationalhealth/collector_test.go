@@ -450,3 +450,147 @@ func TestCollectIssueOpsScansRecordsAndReportsUnreadableRows(t *testing.T) {
 		t.Fatalf("problems=%#v", snapshot.InventoryProblems)
 	}
 }
+
+func TestCycleFromRecordProjectsCleanupFailureAndCompletionPresence(t *testing.T) {
+	inspect := func(receipt issueopscontract.NativeProcessReceipt) (string, issueopscontract.NativeProcessReceipt, error) {
+		return operationalhealthcontract.ProcessStatusLive, receipt, nil
+	}
+	now := time.Date(2026, 7, 22, 0, 0, 0, 0, time.UTC)
+	cases := []struct {
+		name           string
+		record         issueopscontract.IssueOpsRecord
+		wantCleanup    bool
+		wantCompletion bool
+	}{
+		{name: "none"},
+		{name: "finish failure", record: issueopscontract.IssueOpsRecord{CleanupFinishFailure: &issueopscontract.IssueOpsCleanupFinishFailure{}}, wantCleanup: true},
+		{name: "abandon failure", record: issueopscontract.IssueOpsRecord{CleanupAbandonFailure: &issueopscontract.IssueOpsCleanupAbandonFailure{}}, wantCleanup: true},
+		{name: "completion", record: issueopscontract.IssueOpsRecord{Execution: &issueopscontract.Execution{Completion: &issueopscontract.ExecutionCompletion{}}}, wantCompletion: true},
+		{name: "execution without completion", record: issueopscontract.IssueOpsRecord{Execution: &issueopscontract.Execution{}}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cycle, _ := cycleFromRecordAt(tc.record, inspect, now)
+			if cycle.CleanupFailurePresent != tc.wantCleanup || cycle.CompletionPresent != tc.wantCompletion {
+				t.Fatalf("cleanup=%t completion=%t, want cleanup=%t completion=%t", cycle.CleanupFailurePresent, cycle.CompletionPresent, tc.wantCleanup, tc.wantCompletion)
+			}
+		})
+	}
+}
+
+func orcaIdentityProblemCount(snapshot corehealth.Snapshot, code string) int {
+	count := 0
+	for _, problem := range snapshot.InventoryProblems {
+		if problem.Code == code {
+			count++
+		}
+	}
+	return count
+}
+
+func TestCollectOrcaProjectsResolvedRepoPathOntoWorktrees(t *testing.T) {
+	worktree := port.OrcaWorktree{RuntimeID: "runtime", ID: "wt", InstanceID: "inst", Path: "/repo.worktrees/x", RepoID: "repo"}
+	cases := []struct {
+		name     string
+		repo     port.OrcaRepo
+		repoErr  error
+		wantRepo string
+	}{
+		{name: "resolved path wins", repo: port.OrcaRepo{RuntimeID: "runtime", ID: "repo", Path: "/resolved/repo"}, wantRepo: "/resolved/repo"},
+		{name: "blank resolved path falls back to requested repo", repo: port.OrcaRepo{RuntimeID: "runtime", ID: "repo"}, wantRepo: "/repo"},
+		{name: "resolve failure ignores partial path", repo: port.OrcaRepo{RuntimeID: "runtime", ID: "repo", Path: "/resolved/repo"}, repoErr: errors.New("resolve failed"), wantRepo: "/repo"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			orca := &inventoryOrca{repo: tc.repo, repoErr: tc.repoErr, worktrees: []port.OrcaWorktree{worktree}, runInventoryOrca: runInventoryOrca{
+				inventory: port.OrcaRunInventory{RuntimeID: "runtime", Runs: []port.OrcaRun{{RuntimeID: "runtime", ID: "run-1"}}},
+			}}
+			snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: operationalhealthcontract.MessagePresence{Empty: true}}
+			Collector{Orca: orca}.collectOrca(context.Background(), &snapshot, false)
+			if len(snapshot.OrcaWorktrees) != 1 || snapshot.OrcaWorktrees[0].Repo != tc.wantRepo {
+				t.Fatalf("worktrees = %+v, want repo %q", snapshot.OrcaWorktrees, tc.wantRepo)
+			}
+		})
+	}
+}
+
+func TestCollectOrcaWorktreeIdentityValidatesEachFieldIndependently(t *testing.T) {
+	valid := port.OrcaWorktree{RuntimeID: "runtime", ID: "wt", InstanceID: "inst", Path: "/repo.worktrees/x", RepoID: "repo"}
+	mutate := func(edit func(*port.OrcaWorktree)) port.OrcaWorktree {
+		value := valid
+		edit(&value)
+		return value
+	}
+	cases := []struct {
+		name       string
+		resolvedID string
+		value      port.OrcaWorktree
+		wantBad    int
+	}{
+		{name: "valid", resolvedID: "repo", value: valid},
+		{name: "padded identity is trimmed", resolvedID: "repo", value: mutate(func(v *port.OrcaWorktree) {
+			v.RuntimeID, v.ID, v.InstanceID, v.RepoID = " runtime ", " wt ", " inst ", " repo "
+		})},
+		{name: "foreign runtime", resolvedID: "repo", value: mutate(func(v *port.OrcaWorktree) { v.RuntimeID = "other" }), wantBad: 1},
+		{name: "blank id", resolvedID: "repo", value: mutate(func(v *port.OrcaWorktree) { v.ID = "  " }), wantBad: 1},
+		{name: "blank instance", resolvedID: "repo", value: mutate(func(v *port.OrcaWorktree) { v.InstanceID = "" }), wantBad: 1},
+		{name: "blank path", resolvedID: "repo", value: mutate(func(v *port.OrcaWorktree) { v.Path = " " }), wantBad: 1},
+		{name: "repo id mismatch", resolvedID: "repo", value: mutate(func(v *port.OrcaWorktree) { v.RepoID = "other" }), wantBad: 1},
+		{name: "repo id not compared without resolved id", resolvedID: "", value: mutate(func(v *port.OrcaWorktree) { v.RepoID = "other" })},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			orca := &inventoryOrca{
+				repo:      port.OrcaRepo{RuntimeID: "runtime", ID: tc.resolvedID, Path: "/repo"},
+				worktrees: []port.OrcaWorktree{tc.value},
+				runInventoryOrca: runInventoryOrca{
+					inventory: port.OrcaRunInventory{RuntimeID: "runtime", Runs: []port.OrcaRun{{RuntimeID: "runtime", ID: "run-1"}}},
+				},
+			}
+			snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: operationalhealthcontract.MessagePresence{Empty: true}}
+			Collector{Orca: orca}.collectOrca(context.Background(), &snapshot, false)
+			if got := orcaIdentityProblemCount(snapshot, "orca_worktree_identity_invalid"); got != tc.wantBad {
+				t.Fatalf("identity problems = %d, want %d: %#v", got, tc.wantBad, snapshot.InventoryProblems)
+			}
+		})
+	}
+}
+
+func TestCollectOrcaTerminalIdentityValidatesEachFieldIndependently(t *testing.T) {
+	valid := port.OrcaTerminal{RuntimeID: "runtime", Handle: "h", PTYID: "pty", WorktreeID: "wt", TabID: "tab", LeafID: "leaf"}
+	mutate := func(edit func(*port.OrcaTerminal)) port.OrcaTerminal {
+		value := valid
+		edit(&value)
+		return value
+	}
+	cases := []struct {
+		name    string
+		value   port.OrcaTerminal
+		wantBad int
+	}{
+		{name: "valid", value: valid},
+		{name: "padded identity is trimmed", value: mutate(func(v *port.OrcaTerminal) { v.RuntimeID, v.Handle = " runtime ", " h " })},
+		{name: "foreign runtime", value: mutate(func(v *port.OrcaTerminal) { v.RuntimeID = "other" }), wantBad: 1},
+		{name: "blank handle", value: mutate(func(v *port.OrcaTerminal) { v.Handle = " " }), wantBad: 1},
+		{name: "blank pty", value: mutate(func(v *port.OrcaTerminal) { v.PTYID = "" }), wantBad: 1},
+		{name: "blank worktree", value: mutate(func(v *port.OrcaTerminal) { v.WorktreeID = "" }), wantBad: 1},
+		{name: "blank tab", value: mutate(func(v *port.OrcaTerminal) { v.TabID = "" }), wantBad: 1},
+		{name: "blank leaf", value: mutate(func(v *port.OrcaTerminal) { v.LeafID = "" }), wantBad: 1},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			orca := &inventoryOrca{
+				repo:      port.OrcaRepo{RuntimeID: "runtime", ID: "repo", Path: "/repo"},
+				terminals: []port.OrcaTerminal{tc.value},
+				runInventoryOrca: runInventoryOrca{
+					inventory: port.OrcaRunInventory{RuntimeID: "runtime", Runs: []port.OrcaRun{{RuntimeID: "runtime", ID: "run-1"}}},
+				},
+			}
+			snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: operationalhealthcontract.MessagePresence{Empty: true}}
+			Collector{Orca: orca}.collectOrca(context.Background(), &snapshot, false)
+			if got := orcaIdentityProblemCount(snapshot, "orca_terminal_identity_invalid"); got != tc.wantBad {
+				t.Fatalf("identity problems = %d, want %d: %#v", got, tc.wantBad, snapshot.InventoryProblems)
+			}
+		})
+	}
+}

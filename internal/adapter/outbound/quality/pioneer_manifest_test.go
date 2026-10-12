@@ -103,6 +103,18 @@ func TestPioneerManifestCountsVerdictsHiddenAndBlockedReasons(t *testing.T) {
 	}
 }
 
+func TestPioneerManifestAcceptsReceiptAtExactByteLimit(t *testing.T) {
+	f := newPioneerFixture(t)
+	f.manifest.Runs[0].ReceiptBytes = 1 << 20
+	counts, err := f.collect(t)
+	if err != nil {
+		t.Fatalf("receipt of exactly 1 MiB must be accepted: %v", err)
+	}
+	if counts.observed != 3 || counts.executions != 1 {
+		t.Fatalf("counts = %+v", counts)
+	}
+}
+
 func TestPioneerManifestRejectsInvalidManifests(t *testing.T) {
 	tests := []struct {
 		name   string

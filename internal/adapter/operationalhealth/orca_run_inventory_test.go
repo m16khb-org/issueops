@@ -211,8 +211,9 @@ func TestApplyOrcaGatesNormalizesRowsAndFlagsForeignRuntime(t *testing.T) {
 		{RuntimeID: "runtime", ID: "g1", TaskID: "t1", Status: "open"},
 		{RuntimeID: "other", ID: "g2", TaskID: "t2", Status: "closed"},
 	}
-	if !reflect.DeepEqual(snapshot.Gates, want) || !reflect.DeepEqual(problemCodes(snapshot.InventoryProblems), []string{"orca_gate_runtime_mismatch"}) {
-		t.Fatalf("gates=%+v problems=%v", snapshot.Gates, problemCodes(snapshot.InventoryProblems))
+	wantProblems := []operationalhealthcontract.InventoryProblem{{Source: "orca_gates", Code: "orca_gate_runtime_mismatch", Detail: "gate g2 runtime identity does not match"}}
+	if !reflect.DeepEqual(snapshot.Gates, want) || !reflect.DeepEqual(snapshot.InventoryProblems, wantProblems) {
+		t.Fatalf("gates=%+v problems=%+v", snapshot.Gates, snapshot.InventoryProblems)
 	}
 }
 

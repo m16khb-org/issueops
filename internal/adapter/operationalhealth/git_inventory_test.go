@@ -383,3 +383,16 @@ func TestCanonicalInventoryPathResolvesSymlinksAndMissingTails(t *testing.T) {
 		t.Fatalf("relative path = %q, want %q", got, root)
 	}
 }
+
+func TestExecGitRunnerAppliesDefaultTimeoutWhenUnset(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	testsupport.IsolateGitConfig(t)
+	for name, runner := range map[string]ExecGitRunner{"zero": {}, "negative": {timeout: -time.Second}} {
+		output, err := runner.Run(t.Context(), t.TempDir(), "--version")
+		if err != nil || !strings.HasPrefix(string(output), "git version") {
+			t.Fatalf("%s timeout: output=%q err=%v", name, output, err)
+		}
+	}
+}

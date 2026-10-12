@@ -25,6 +25,9 @@ func TestCollectPioneerCoverageKeepsNamesakeDenominatorSeparate(t *testing.T) {
 	if coverage.Expected != 12 || coverage.BenchmarkObserved != 1 || coverage.ReproductionObserved != 1 {
 		t.Fatalf("coverage = %+v", coverage)
 	}
+	if coverage.IsolatedExpected != 36 {
+		t.Fatalf("isolated expected = %d, want three axes per skill (36)", coverage.IsolatedExpected)
+	}
 	if slices.Contains(coverage.BenchmarkMissing, "verified-execution") || len(coverage.BenchmarkMissing) != 11 {
 		t.Fatalf("benchmark missing = %v", coverage.BenchmarkMissing)
 	}

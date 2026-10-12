@@ -932,6 +932,7 @@ func TestExecutionOwnerInventoryUsesCurrentPaneRuntimeForTerminalLiveness(t *tes
 	currentRuntime := "runtime-70"
 	paneLive := 1
 	paneGhost := -1
+	paneFirst := 0
 	request := port.ExecutionOrcaOwnerInventoryRequest{
 		RuntimeID: "runtime-69", WorktreeID: "wt-69", TaskID: "task-69", DispatchID: "dispatch-69",
 		TerminalPTYID: "pty-69", AllowRuntimeRollover: true,
@@ -944,6 +945,7 @@ func TestExecutionOwnerInventoryUsesCurrentPaneRuntimeForTerminalLiveness(t *tes
 		wantErr  bool
 	}{
 		{name: "현재 pane", pane: &paneLive, wantLive: true},
+		{name: "runtime id 0인 현재 pane", pane: &paneFirst, wantLive: true},
 		{name: "runtime 재시작 뒤 남은 ghost 행", pane: &paneGhost},
 		{name: "pane runtime 증거 누락", pane: nil, wantErr: true},
 	} {
