@@ -514,3 +514,89 @@ func TestInstallPathTransactionFinalizeWithoutManagedCommandIsNoop(t *testing.T)
 		t.Fatalf("finalize = %v, commandPath=%+v", err, result.CommandPath)
 	}
 }
+
+func TestPrepareInstallPathPlanPlansRelinkOfExistingCommandSymlink(t *testing.T) {
+	home := t.TempDir()
+	command := filepath.Join(home, ".local", "bin", "issueops")
+	if err := os.MkdirAll(filepath.Dir(command), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("/previous/issueops", command); err != nil {
+		t.Fatal(err)
+	}
+	target := filepath.Join(t.TempDir(), "issueops")
+	var result port.NativeInstallResult
+	transaction, err := testInstallCommand(t, Deps{}).prepareInstallPathPlanForCandidate(&result, port.NativeInstallRequest{Home: home, BinPath: target, DryRun: true}, target, "skip")
+	if err != nil || transaction.managed {
+		t.Fatalf("prepare = %+v, %v", transaction, err)
+	}
+	planned := false
+	for _, link := range result.Links {
+		if link.Path == command && link.Target == target && link.WouldCreate {
+			planned = true
+		}
+	}
+	if !planned {
+		t.Fatalf("dry-run must plan the command symlink to the new target: %+v", result.Links)
+	}
+}
+
+func TestInstallPathTransactionRollbackReportsFailureToRestorePreviousLink(t *testing.T) {
+	home := t.TempDir()
+	userBin := filepath.Join(home, ".local", "bin")
+	if err := os.MkdirAll(userBin, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	command := filepath.Join(userBin, "issueops")
+	if err := os.Symlink("/previous/issueops", command); err != nil {
+		t.Fatal(err)
+	}
+	target := filepath.Join(t.TempDir(), "issueops")
+	var result port.NativeInstallResult
+	transaction, err := testInstallCommand(t, Deps{}).prepareInstallPathPlanForCandidate(&result, port.NativeInstallRequest{Home: home, BinPath: target}, target, "skip")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := transaction.Apply(&result); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.RemoveAll(userBin); err != nil {
+		t.Fatal(err)
+	}
+	if err := transaction.Rollback(&result); err == nil {
+		t.Fatal("rollback must report that the previous symlink could not be restored")
+	}
+}
+
+func TestInstallPathTransactionRollbackReportsCreatedDirectoryReplacedByFile(t *testing.T) {
+	home := t.TempDir()
+	boom := errors.New("symlink denied")
+	cli := testInstallCommand(t, Deps{})
+	cli.EnsureSymlinkPlan = func(target, path string, dryRun bool) (port.InstallLink, error) {
+		link := port.InstallLink{Path: path, Target: target}
+		if dryRun {
+			return link, nil
+		}
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		return link, boom
+	}
+	var result port.NativeInstallResult
+	transaction, err := cli.prepareInstallPathPlanForCandidate(&result, port.NativeInstallRequest{Home: home, BinPath: "/t/issueops"}, "/t/issueops", "skip")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := transaction.Apply(&result); !errors.Is(err, boom) {
+		t.Fatalf("apply err = %v, want %v", err, boom)
+	}
+	bin := filepath.Join(home, ".local", "bin")
+	if err := os.Remove(bin); err != nil {
+		t.Fatal(err)
+	}
+	writeInstallFixtureFile(t, bin, "not a directory", 0o644)
+	err = transaction.Rollback(&result)
+	if err == nil || !strings.Contains(err.Error(), "changed to non-directory") {
+		t.Fatalf("rollback err = %v", err)
+	}
+}

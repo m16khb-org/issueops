@@ -1153,3 +1153,57 @@ exit 2
 		t.Fatalf("result=%+v observations=%d body=%s", result, observations, body)
 	}
 }
+
+func TestRunRemoteCreatePRTextOutputPrintsPreviewOrCreatedURL(t *testing.T) {
+	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
+	record := remoteIssueOpsRecord(t)
+	ancestry, err := issueopscore.ObserveNativeProcessAncestry(os.Getpid())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var process issueopscontract.NativeProcessReceipt
+	for _, receipt := range ancestry {
+		if receipt.PID == os.Getpid() {
+			process = receipt
+			break
+		}
+	}
+	if process.PID == 0 {
+		t.Fatalf("current process receipt missing from ancestry: %#v", ancestry)
+	}
+	deps := Deps{
+		Publication: PublicationHandlers{Create: func(_ context.Context, _ string, request issueopscontract.RemotePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
+			if request.Confirm {
+				return executionissue.IssueProviderCreatePullRequestResult{OK: true, URL: "https://github.com/acme/repo/pull/195", Number: "195"}, nil
+			}
+			return executionissue.IssueProviderCreatePullRequestResult{OK: true, Preview: "would create pull request"}, nil
+		}},
+		ObserveProcessAncestry: func(int) ([]issueopscontract.NativeProcessReceipt, error) {
+			return append([]issueopscontract.NativeProcessReceipt(nil), ancestry...), nil
+		},
+	}
+	baseArgs := []string{
+		"create-pr", "--id", record.ID, "--provider", "github", "--title", "PR", "--body", readablePRBody,
+		"--head", record.Branch, "--base", "main", "--label", "bug", "--assignee", "octocat",
+	}
+	var runErr error
+	preview := captureStdout(t, func() { runErr = testRemoteCommand().Run(baseArgs, deps) })
+	if runErr != nil {
+		t.Fatal(runErr)
+	}
+	if preview != "would create pull request\n" {
+		t.Fatalf("dry-run text output = %q", preview)
+	}
+	confirmArgs := append(append([]string{}, baseArgs...),
+		"--host", "codex", "--session-id", "session-195", "--session-pid", strconv.Itoa(process.PID),
+		"--session-started-at", process.StartedAt, "--session-executable", process.Executable,
+		"--cwd", record.Repo, "--confirm",
+	)
+	created := captureStdout(t, func() { runErr = testRemoteCommand().Run(confirmArgs, deps) })
+	if runErr != nil {
+		t.Fatal(runErr)
+	}
+	if created != "created: https://github.com/acme/repo/pull/195\n" {
+		t.Fatalf("confirmed text output = %q", created)
+	}
+}

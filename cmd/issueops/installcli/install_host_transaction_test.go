@@ -92,3 +92,54 @@ func TestInstallHostTransactionRestoresManagedFileSymlinkReferent(t *testing.T) 
 		t.Fatalf("managed file referent was not restored: body=%q mode=%v readErr=%v statErr=%v", body, info.Mode(), err, statErr)
 	}
 }
+
+func TestInstallHostTransactionRollbackTreatsAlreadyMissingPathsAsRestored(t *testing.T) {
+	root := t.TempDir()
+	created := filepath.Join(root, "created.json")
+	existing := filepath.Join(root, "existing.json")
+	if err := os.WriteFile(existing, []byte("original"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	transaction, err := prepareInstallHostTransaction(port.NativeInstallResult{Files: []port.InstallFile{{Path: created}, {Path: existing}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(existing); err != nil {
+		t.Fatal(err)
+	}
+	if err := transaction.RollbackHosts(); err != nil {
+		t.Fatalf("rollback with missing paths: %v", err)
+	}
+	body, err := os.ReadFile(existing)
+	if err != nil || string(body) != "original" {
+		t.Fatalf("existing file not restored: %q, %v", body, err)
+	}
+	if _, err := os.Lstat(created); !os.IsNotExist(err) {
+		t.Fatalf("created path must stay absent: %v", err)
+	}
+}
+
+func TestInstallHostTransactionRollbackReportsUnrestorablePath(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, "sub")
+	path := filepath.Join(dir, "settings.json")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("original"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	transaction, err := prepareInstallHostTransaction(port.NativeInstallResult{Files: []port.InstallFile{{Path: path}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.RemoveAll(dir); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(dir, []byte("now a file"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := transaction.RollbackHosts(); err == nil {
+		t.Fatal("rollback must report a path whose parent can no longer be created")
+	}
+}

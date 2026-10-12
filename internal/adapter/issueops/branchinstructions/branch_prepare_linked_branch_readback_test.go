@@ -88,3 +88,35 @@ func TestGitHubStepsKeepFailAsTheLastStep(t *testing.T) {
 		}
 	}
 }
+
+func TestGitHubStepsDeriveIssueCoordinatesFromTheIssueURL(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		issueURL     string
+		wantPath     string
+		wantReadback string
+	}{
+		{"full URL", "https://github.com/acme/repo/issues/16", "repos/acme/repo/issues/16", `repository(owner:"acme",name:"repo"){issue(number:16)`},
+		{"trailing slash", "https://github.com/acme/repo/issues/16/", "repos/acme/repo/issues/16", `repository(owner:"acme",name:"repo"){issue(number:16)`},
+		{"too few segments", "https://github.com", "repos/OWNER/REPO/issues/NUMBER", `repository(owner:"OWNER",name:"REPO"){issue(number:NUMBER)`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var nodeCommand, readback string
+			for _, step := range Steps("github", tc.issueURL, "16-demo", "main", "deadbeef") {
+				command := strings.Join(step.Command, " ")
+				switch {
+				case strings.HasPrefix(command, "gh api ") && strings.Contains(command, ".node_id"):
+					nodeCommand = command
+				case strings.Contains(command, "linkedBranches"):
+					readback = command
+				}
+			}
+			if !strings.Contains(nodeCommand, " "+tc.wantPath+" ") {
+				t.Fatalf("node id command must read %q: %s", tc.wantPath, nodeCommand)
+			}
+			if !strings.Contains(readback, tc.wantReadback) {
+				t.Fatalf("readback query must contain %q: %s", tc.wantReadback, readback)
+			}
+		})
+	}
+}

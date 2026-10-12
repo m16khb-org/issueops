@@ -139,3 +139,24 @@ func TestStoreSaveThenReadRoundTripsAndValidatesID(t *testing.T) {
 		t.Fatal("corrupt run file must fail to decode")
 	}
 }
+
+func TestLoadFixturesOrdersByIDRegardlessOfFileName(t *testing.T) {
+	dir := t.TempDir()
+	for name, id := range map[string]string{"a.json": "zeta", "b.json": "alpha", "c.json": "mid"} {
+		body := `{"id":"` + id + `","title":"t","user_prompt":"p","repo_context":"r","critical_failures":["f"]}`
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	fixtures, err := (Files{}).LoadFixtures(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, f := range fixtures {
+		got = append(got, f.ID)
+	}
+	if strings.Join(got, ",") != "alpha,mid,zeta" {
+		t.Fatalf("fixtures must be ordered by ID, got %v", got)
+	}
+}

@@ -89,6 +89,15 @@ func TestBoundedLLMEvalErrorStaysWithinBudget(t *testing.T) {
 	}
 }
 
+func TestBoundedLLMEvalErrorJoinsPrefixErrorAndTrimmedOutput(t *testing.T) {
+	if got := BoundedLLMEvalError("parse", errors.New("bad"), "  \n"); got != "parse: bad" {
+		t.Fatalf("blank output must not add a suffix, got %q", got)
+	}
+	if got := BoundedLLMEvalError("parse", errors.New("bad"), " out\n"); got != "parse: bad: out" {
+		t.Fatalf("output must be trimmed and appended, got %q", got)
+	}
+}
+
 func TestSelfVerifyLLMEvalRendersPromptOnlyResult(t *testing.T) {
 	result := augmentcontract.SelfAugmentResult{OK: true, TerminationEligible: true}
 	updated, err := ApplySelfVerifyLLMEval(result, selfverifyx.LLMEvalOptions{Enabled: true, Mode: "advisory", TargetScore: 95})

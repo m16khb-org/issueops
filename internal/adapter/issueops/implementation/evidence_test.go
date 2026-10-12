@@ -23,6 +23,7 @@ func TestPorcelainPath(t *testing.T) {
 		{"renamed", "R  old.go -> new.go", "new.go"},
 		{"with quotes", `?? "file name.go"`, "file name.go"},
 		{"too short", "M", ""},
+		{"shortest valid line", "M  a", "a"},
 		{"empty", "", ""},
 		{"only spaces", "    ", ""},
 		{"with CR", "?? file.go\r", "file.go"},
@@ -307,4 +308,28 @@ func runGitOutput(t *testing.T, dir string, args ...string) string {
 		t.Fatalf("git %v: %v\n%s", args, err, out)
 	}
 	return string(out)
+}
+
+func TestHasEvidenceTreatsTrackedMaterialFromBranchPrepareIssueURLAsPlanning(t *testing.T) {
+	worktree := t.TempDir()
+	material := filepath.Join(worktree, ".issueops", "issues", "513", "spec.md")
+	if err := os.MkdirAll(filepath.Dir(material), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(material, []byte("spec"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	record := model.IssueOpsRecord{
+		WorktreePath: worktree,
+		BranchPrepare: &model.IssueOpsBranchPrepare{
+			IssueURL: "https://github.com/acme/repo/issues/513",
+		},
+	}
+	if testReader().HasEvidence(record) {
+		t.Fatal("tracked material copy named by the branch-prepare issue URL must not count as implementation evidence")
+	}
+	record.BranchPrepare.IssueURL = "https://github.com/acme/repo/issues/514"
+	if !testReader().HasEvidence(record) {
+		t.Fatal("material copy of a different issue must count as implementation evidence")
+	}
 }

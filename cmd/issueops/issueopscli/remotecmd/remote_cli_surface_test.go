@@ -12,6 +12,7 @@ import (
 	reportcontract "issueops/internal/contract/artifactreadability"
 	issueopscontract "issueops/internal/contract/issueops"
 	bodysynccontract "issueops/internal/contract/issueopsbodysync"
+	"issueops/internal/domain/artifacttemplate"
 	"issueops/internal/port"
 	"issueops/internal/testsupport"
 )
@@ -573,5 +574,29 @@ func TestObserveNativeProcessAncestryRejectsFailureAndEmptyReceipts(t *testing.T
 	}}.observeNativeProcessAncestry()
 	if err != nil || len(got) != 1 {
 		t.Fatalf("expected receipts, got %v %v", got, err)
+	}
+}
+
+func TestRemoteRenderTemplateOmitsMissingFieldsLineWhenAllRequiredFieldsAreSupplied(t *testing.T) {
+	base := []string{"render-template", "--kind", "issue", "--template", "feature", "--title", "Complete", "--provider", "github"}
+	sink := &jsonSink{}
+	if err := testRemoteCommand().Run(append(append([]string{}, base...), "--json"), sink.deps()); err != nil {
+		t.Fatal(err)
+	}
+	rendered, ok := sink.values[0].(artifacttemplate.IssueOpsTemplateResult)
+	if !ok || len(rendered.MissingRequiredFields) == 0 {
+		t.Fatalf("fixture needs required fields to supply, got %#v", sink.values[0])
+	}
+	args := append([]string{}, base...)
+	for _, name := range rendered.MissingRequiredFields {
+		args = append(args, "--field", name+"=value for "+name)
+	}
+	var runErr error
+	out := captureStdout(t, func() { runErr = testRemoteCommand().Run(args, Deps{}) })
+	if runErr != nil {
+		t.Fatal(runErr)
+	}
+	if !strings.HasPrefix(out, "# Complete\n") || strings.Contains(out, "missing_required_fields") {
+		t.Fatalf("rendering with every required field must not report missing fields:\n%s", out)
 	}
 }

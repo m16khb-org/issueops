@@ -104,3 +104,41 @@ func TestSelfVerifyLLMEvalPromptForcesPlainJSONOutput(t *testing.T) {
 		}
 	}
 }
+
+func selfVerifyLLMEvalPromptWithGap(t *testing.T, gapBytes int) (string, int) {
+	t.Helper()
+	prompt, packetBytes, err := BuildSelfVerifyLLMEvalPrompt(augmentcontract.SelfAugmentResult{
+		OK:       true,
+		LoopKind: "self_verification",
+		Summary:  augmentcontract.SelfAugmentSummary{CoverageGaps: []string{strings.Repeat("g", gapBytes)}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if packetBytes != len(prompt) {
+		t.Fatalf("reported packet bytes %d must equal prompt length %d", packetBytes, len(prompt))
+	}
+	return prompt, packetBytes
+}
+
+func TestSelfVerifyLLMEvalPromptKeepsEvidenceWhenPacketExactlyFitsBudget(t *testing.T) {
+	_, base := selfVerifyLLMEvalPromptWithGap(t, 0)
+	exact := -1
+	for gap := max(0, SelfVerifyLLMEvalEvidenceBudgetBytes-base-16); gap <= SelfVerifyLLMEvalEvidenceBudgetBytes-base+16; gap++ {
+		if _, size := selfVerifyLLMEvalPromptWithGap(t, gap); size == SelfVerifyLLMEvalEvidenceBudgetBytes {
+			exact = gap
+			break
+		}
+	}
+	if exact < 0 {
+		t.Fatalf("no gap size produced a packet of exactly %d bytes", SelfVerifyLLMEvalEvidenceBudgetBytes)
+	}
+	prompt, _ := selfVerifyLLMEvalPromptWithGap(t, exact)
+	if strings.Contains(prompt, "[truncated:") {
+		t.Fatal("a packet that exactly fits the budget must keep its evidence untruncated")
+	}
+	over, size := selfVerifyLLMEvalPromptWithGap(t, exact+1)
+	if size > SelfVerifyLLMEvalEvidenceBudgetBytes || !strings.Contains(over, "[truncated:") {
+		t.Fatalf("a packet over budget must be truncated within budget, got %d bytes", size)
+	}
+}
