@@ -80,24 +80,24 @@ func TestHandleSelfLoopMCPToolCallCoversBoundaryErrorsAndUnknownTool(t *testing.
 	}{
 		{
 			name:    "self augment lesson missing lesson",
-			call:    MCPToolCall{Name: "self_augment_lesson", Arguments: map[string]any{"candidate_id": "candidate-refill-curriculum", "next_action": "y"}},
+			call:    MCPToolCall{Name: "self_augment_lesson", Arguments: map[string]any{"candidate_id": "candidate-refill-curriculum", "lesson": " ", "next_action": "y"}},
 			wantMsg: "Self-augmentation lesson save failed",
 		},
 		{
 			name:    "self verify compare missing baseline",
-			call:    MCPToolCall{Name: "self_verify_compare", Arguments: map[string]any{"candidate_key": "candidate"}},
+			call:    MCPToolCall{Name: "self_verify_compare", Arguments: map[string]any{"baseline_key": " ", "candidate_key": "candidate"}},
 			wantMsg: "Self-verify compare failed",
 		},
 		{
 			name:    "self verify promote missing source",
-			call:    MCPToolCall{Name: "self_verify_promote", Arguments: map[string]any{"baseline_key": "baseline", "confirm": true}},
+			call:    MCPToolCall{Name: "self_verify_promote", Arguments: map[string]any{"from_key": " ", "baseline_key": "baseline", "confirm": true}},
 			wantMsg: "Self-verify promote failed",
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			outcome := testHandleSelfLoopMCPToolCall(tc.call)
-			if !outcome.Handled || outcome.Err == nil || outcome.Err.Message != tc.wantMsg {
+			if !outcome.Handled || outcome.Err == nil || outcome.Err.Code != -32602 || outcome.Err.Message != tc.wantMsg {
 				t.Fatalf("unexpected MCP outcome: %#v", outcome)
 			}
 		})
