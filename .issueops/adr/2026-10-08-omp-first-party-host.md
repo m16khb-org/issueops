@@ -55,7 +55,9 @@ omp is the fourth first-party host, ordered after Omo everywhere
 - Role models use built-in defaults only, like Omo (`anthropic/claude-opus-5-5`
   high for implement and reviews, Sonnet 5.5 for research, Haiku 5.5 for
   reader-check), with the effort ladder `off..max`. omp gets a print argv
-  (`omp -p --model M --thinking E`) and no role-agent injection.
+  (`omp -p --model M --thinking E`) and no role-agent injection. Superseded in
+  part: omp role models read the agent model settings files since
+  [2026-10-12](2026-10-12-omp-role-models-resolve-from-the-agent-model-settings-files.md).
 - Launch profiles: interactive and cmux `omp --model M --thinking E
   --auto-approve -- PROMPT`; Orca owner `omp --model 'M' --thinking 'E'
   --auto-approve`, probed through `omp --help` for `--model`, `--thinking`, and
