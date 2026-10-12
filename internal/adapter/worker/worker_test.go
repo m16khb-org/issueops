@@ -366,3 +366,16 @@ func TestWorkerConcurrentCancelAndRunDoesNotLoseUpdates(t *testing.T) {
 		t.Fatalf("expected final status cancelled, got %s", final.Status)
 	}
 }
+
+func TestStorePIDAliveRejectsNonPositivePIDs(t *testing.T) {
+	var store Store
+	if store.PIDAlive(0) {
+		t.Fatal("pid 0 addresses the caller's process group and must not count as a live worker")
+	}
+	if store.PIDAlive(-1) {
+		t.Fatal("negative pid must not be alive")
+	}
+	if !store.PIDAlive(os.Getpid()) {
+		t.Fatal("own pid must be alive")
+	}
+}

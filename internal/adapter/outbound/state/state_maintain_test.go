@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 
@@ -149,4 +150,44 @@ func TestStateMaintainReportsProjectDiscoveryErrors(t *testing.T) {
 func StateMaintain() (statecontract.StateMaintainResult, error) {
 	stores := NewMaintenanceStores(StateDir(), os.Getenv("ISSUEOPS_WORKER_DIR"))
 	return stateapp.NewMaintenanceService(stateapp.MaintenanceDependencies{AllRoots: stores.Roots, StoreExists: stores.Exists, MaintainStore: stores.Maintain}).Maintain()
+}
+
+func TestNewMaintenanceStoresWorkerRootDefaultsUnderBaseAndOverrideIsAbsolute(t *testing.T) {
+	base := t.TempDir()
+	roots, err := NewMaintenanceStores(base, "").Roots()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := filepath.Join(base, "worker"); !slices.Contains(roots, want) {
+		t.Fatalf("empty override must use %s, roots=%v", want, roots)
+	}
+
+	override := t.TempDir()
+	roots, err = NewMaintenanceStores(base, override).Roots()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(roots, override) || slices.Contains(roots, filepath.Join(base, "worker")) {
+		t.Fatalf("override %s must replace the default worker root, roots=%v", override, roots)
+	}
+
+	t.Chdir(override)
+	roots, err = NewMaintenanceStores(base, "rel-worker").Roots()
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolvedOverride, err := filepath.EvalSymlinks(override)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, root := range roots {
+		if filepath.Base(root) == "rel-worker" {
+			resolved, err := filepath.EvalSymlinks(filepath.Dir(root))
+			if err != nil || resolved != resolvedOverride {
+				t.Fatalf("relative override must resolve against cwd, got %s", root)
+			}
+			return
+		}
+	}
+	t.Fatalf("relative override missing from roots=%v", roots)
 }

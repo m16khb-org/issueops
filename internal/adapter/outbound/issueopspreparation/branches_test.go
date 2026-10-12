@@ -419,3 +419,22 @@ func TestRecordFailureRequiresFailureTimestampAndLeavesStorageUntouched(t *testi
 		t.Fatal("failed RecordFailure changed storage")
 	}
 }
+
+func TestEnsureRootUnclaimedNormalizesRelativeRootAgainstWorkingDirectory(t *testing.T) {
+	ctx := context.Background()
+	_, repository, begin := newOrcaRepositoryFixture(t)
+	if _, err := repository.BeginIntent(ctx, begin); err != nil {
+		t.Fatal(err)
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	relative, err := filepath.Rel(cwd, begin.Workspace.Root)
+	if err != nil || filepath.IsAbs(relative) {
+		t.Fatalf("no relative spelling of %s from %s: %v", begin.Workspace.Root, cwd, err)
+	}
+	if err := repository.EnsureRootUnclaimed(ctx, "io-other", relative); err == nil || !strings.Contains(err.Error(), "io-orca") {
+		t.Fatalf("relative spelling of a claimed root must conflict: %v", err)
+	}
+}
