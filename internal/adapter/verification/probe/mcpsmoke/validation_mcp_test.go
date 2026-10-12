@@ -36,7 +36,7 @@ func TestValidateMCPSmokeContract(t *testing.T) {
 		want   string
 	}{
 		{name: "wrong count", stdout: `{}`, want: "expected 11 MCP SDK results"},
-		{name: "bad json", stdout: strings.Repeat(`{}`+"\n", 10) + `not json`, want: "invalid JSON"},
+		{name: "bad json", stdout: strings.Repeat(`{}`+"\n", 10) + `not json`, want: "SDK result 11 is invalid JSON: "},
 		{name: "missing markers", stdout: strings.Repeat(`{}`+"\n", 11), want: "expected tool/resource"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

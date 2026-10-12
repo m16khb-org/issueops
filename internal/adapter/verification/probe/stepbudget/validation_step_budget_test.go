@@ -16,6 +16,7 @@ func TestValidateStepBudgetBaselineWithDepsCoversSuccessAndWriteFailure(t *testi
 	root := t.TempDir()
 	tempState := t.TempDir()
 	writes := []string{}
+	removed := []string{}
 	deps := StepBudgetValidationDeps{
 		MakeTempState: func(seed int64) (string, error) {
 			if seed != 42 {
@@ -27,6 +28,7 @@ func TestValidateStepBudgetBaselineWithDepsCoversSuccessAndWriteFailure(t *testi
 			if path != tempState {
 				t.Fatalf("unexpected cleanup path: %s", path)
 			}
+			removed = append(removed, path)
 			return nil
 		},
 		WriteSnapshot: func(dir, key string, snapshot selfaugment.SelfAugmentStateSnapshot) error {
@@ -50,6 +52,10 @@ func TestValidateStepBudgetBaselineWithDepsCoversSuccessAndWriteFailure(t *testi
 	step := ValidateStepBudgetBaselineWithDeps("bin/issueops", root, 42, deps)
 	if !step.OK || len(writes) != 2 || writes[0] != "self-verify-budget-baseline-42" || writes[1] != "self-verify-budget-candidate-42" {
 		t.Fatalf("unexpected step budget success: step=%+v writes=%v", step, writes)
+	}
+
+	if len(removed) != 1 || removed[0] != tempState {
+		t.Fatalf("expected injected RemoveAll to clean the temp state once, got %v", removed)
 	}
 
 	deps.WriteSnapshot = func(string, string, selfaugment.SelfAugmentStateSnapshot) error { return errors.New("write fail") }

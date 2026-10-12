@@ -411,3 +411,14 @@ func TestNativeIntegrationKeepsPreparedStableRoot(t *testing.T) {
 		}
 	}
 }
+
+func TestDetectClaudeMCPDuplicateWarningsIgnoresSuggestionWithoutPrecedingWarning(t *testing.T) {
+	got := DetectClaudeMCPDuplicateWarnings("   Suggestion: remove it\n")
+	if len(got) != 0 {
+		t.Fatalf("orphan suggestion produced warnings: %+v", got)
+	}
+	got = DetectClaudeMCPDuplicateWarnings("   Suggestion: orphan\n" + ClaudeMCPDuplicateWarningFixture())
+	if len(got) != 1 || len(got[0].Suggestions) != 1 || strings.Contains(got[0].Suggestions[0], "orphan") {
+		t.Fatalf("orphan suggestion attached to a warning: %+v", got)
+	}
+}

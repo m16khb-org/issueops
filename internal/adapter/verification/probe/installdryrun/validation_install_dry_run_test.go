@@ -209,3 +209,25 @@ func writeInstallDryRunFakeBinary(t *testing.T, dir string) string {
 	}
 	return path
 }
+
+func TestValidateInstallDryRunSmokeKeepsRunnerStepOnSuccess(t *testing.T) {
+	root := t.TempDir()
+	deps := installDryRunValidationDeps{
+		makeTempDir: func(string, int64) (string, error) { return t.TempDir(), nil },
+		removeAll:   func(string) error { return nil },
+		makeDirAll:  func(string, uint32) error { return nil },
+		writeFile:   func(string, []byte, uint32) error { return nil },
+		exists:      func(string) bool { return false },
+		run: func(_, label string, _ time.Duration, _ string, _ []string, name string, args ...string) selfverify.StepResult {
+			return selfverify.StepResult{
+				Label: label, Command: name, OK: true,
+				Stdout: mustMarshalInstallDryRunTest(t, validInstallDryRunResult()), StdoutBytes: 4242,
+				Stderr: "runner stderr", StderrBytes: 13,
+			}
+		},
+	}
+	step := validateInstallDryRunSmokeWithDeps("bin", root, 1, deps)
+	if !step.OK || step.Stderr != "runner stderr" || step.StderrBytes != 13 || step.StdoutBytes != 4242 {
+		t.Fatalf("runner step fields not preserved: %+v", step)
+	}
+}

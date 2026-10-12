@@ -3,6 +3,7 @@ package invariants
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -273,4 +274,16 @@ func containsRetiredNameOutsideRuntimePaths(text, root string) bool {
 		}
 	}
 	return false
+}
+
+func TestForbiddenNameHitsDetectsNeedleAtFileStart(t *testing.T) {
+	needle := "m" + "16kh"
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "leading.txt"), []byte(needle+" at start"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	hits := ForbiddenNameHits(root)
+	if want := []string{"leading.txt contains " + needle}; !slices.Equal(hits, want) {
+		t.Fatalf("hits = %q, want %q", hits, want)
+	}
 }

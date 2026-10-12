@@ -14,6 +14,7 @@ import (
 	"time"
 
 	riskqadomain "issueops/internal/domain/riskqa"
+	"issueops/internal/testsupport"
 )
 
 func TestValidateRiskQATierWrapperRunsElevatedDefaultCommands(t *testing.T) {
@@ -307,5 +308,19 @@ func TestScopedPlanUsesTreeRangeAndPreservesObservationFailures(t *testing.T) {
 				t.Fatalf("observation failure accepted: %+v", plan)
 			}
 		})
+	}
+}
+
+func TestScopedPlanKeepsSingleCharacterUntrackedPath(t *testing.T) {
+	testsupport.IsolateGitConfig(t)
+	root := t.TempDir()
+	runRiskQATestCommand(t, root, "git", "init", "-q")
+	writeFileForWrapperTest(t, filepath.Join(root, "base.txt"), "base\n")
+	runRiskQATestCommand(t, root, "git", "add", ".")
+	runRiskQATestCommand(t, root, "git", "-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-qm", "base")
+	writeFileForWrapperTest(t, filepath.Join(root, "a"), "untracked\n")
+	plan := PlanWithScope(root, "HEAD")
+	if plan.Scope == nil || plan.Scope.Error != "" || !slices.Equal(plan.ChangedPaths, []string{"a"}) {
+		t.Fatalf("expected the one-character untracked path to be planned, got %+v", plan)
 	}
 }
