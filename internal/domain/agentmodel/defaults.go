@@ -22,9 +22,14 @@ func Roles() []contract.Role { return slices.Clone(roles) }
 
 func knownRole(role contract.Role) bool { return slices.Contains(roles, role) }
 
-// configurableHosts are the hosts a settings file may configure. omo and omp
-// keep their built-in defaults.
-var configurableHosts = []string{"claude", "codex"}
+// configurableHosts are the hosts a settings file may configure.
+var configurableHosts = []string{"claude", "codex", "omo", "omp"}
+
+// ConfigurableHosts returns the hosts a settings file may configure.
+func ConfigurableHosts() []string { return slices.Clone(configurableHosts) }
+
+// Configurable reports whether a settings file may configure host.
+func Configurable(host string) bool { return slices.Contains(configurableHosts, host) }
 
 // Effort ladders, lowest first. The empty effort means "do not pass one".
 var effortLadders = map[string][]string{

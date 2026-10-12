@@ -106,6 +106,23 @@ func TestSetMergesFieldsAndReportsLocalExclude(t *testing.T) {
 	}
 }
 
+func TestSetOmpWritesItsOwnSection(t *testing.T) {
+	files := newFakeFiles()
+	if _, err := run(t, files, "set", "--scope", "local", "--host", "omp", "--role", "implement", "--model", "anthropic/claude-sonnet-5-5", "--json"); err != nil {
+		t.Fatal(err)
+	}
+	if files.settings.Local.Omp[contract.RoleImplement] != (contract.Layer{Model: "anthropic/claude-sonnet-5-5"}) || files.settings.Local.Claude != nil {
+		t.Fatalf("local = %+v", files.settings.Local)
+	}
+	resolved, err := run(t, files, "resolve", "--host", "omp", "--role", "implement", "--json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resolved["model"] != "anthropic/claude-sonnet-5-5" || resolved["model_source"] != "local" || resolved["effort"] != "high" || resolved["argv"].([]any)[0] != "omp" {
+		t.Fatalf("resolve = %v", resolved)
+	}
+}
+
 func TestSetWarnsButSavesUnknownModels(t *testing.T) {
 	files := newFakeFiles()
 	got, err := run(t, files, "set", "--scope", "global", "--host", "codex", "--role", "diff-review", "--model", "gpt-6-astra", "--json")
@@ -120,7 +137,7 @@ func TestSetWarnsButSavesUnknownModels(t *testing.T) {
 func TestUsageErrors(t *testing.T) {
 	for _, args := range [][]string{
 		{"set", "--scope", "global", "--host", "claude", "--role", "implement", "--effort", "ultra"},
-		{"set", "--scope", "global", "--host", "omo", "--role", "implement", "--model", "x"},
+		{"set", "--scope", "global", "--host", "gemini", "--role", "implement", "--model", "x"},
 		{"set", "--scope", "team", "--host", "claude", "--role", "implement", "--model", "x"},
 		{"set", "--scope", "global", "--host", "claude", "--role", "implement"},
 		{"unset", "--scope", "global", "--host", "claude", "--role", "implement", "--field", "name"},
@@ -192,7 +209,7 @@ func TestShowListsEveryRoleWithSources(t *testing.T) {
 	}
 	hosts := got["hosts"].(map[string]any)
 	claude := hosts["claude"].([]any)
-	if len(hosts) != 2 || len(claude) != 7 || len(hosts["codex"].([]any)) != 7 {
+	if len(hosts) != 4 || len(claude) != 7 || len(hosts["codex"].([]any)) != 7 || len(hosts["omo"].([]any)) != 7 || len(hosts["omp"].([]any)) != 7 {
 		t.Fatalf("show = %v", got)
 	}
 	research := claude[5].(map[string]any)

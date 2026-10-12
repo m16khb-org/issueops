@@ -13,12 +13,18 @@ func TestResolve(t *testing.T) {
 		contract.RoleDiffReview: {Effort: "max"},
 	}, Codex: map[contract.Role]contract.Layer{
 		contract.RoleResearch: {Effort: "low"},
+	}, Omp: map[contract.Role]contract.Layer{
+		contract.RoleImplement: {Effort: "max"},
 	}}
 	global := contract.Config{Version: 1, Claude: map[contract.Role]contract.Layer{
 		contract.RoleImplement: {Model: "claude-sonnet-5-5", Effort: "low"},
 	}, Codex: map[contract.Role]contract.Layer{
 		contract.RoleResearch:       {Model: "gpt-6-luna-mini"},
 		contract.RoleChildImplement: {Effort: "medium"},
+	}, Omo: map[contract.Role]contract.Layer{
+		contract.RoleImplement: {Model: "chatgpt-subscription/gpt-6.1-sol", Effort: "high"},
+	}, Omp: map[contract.Role]contract.Layer{
+		contract.RoleImplement: {Model: "anthropic/claude-sonnet-5-5", Effort: "low"},
 	}}
 	tests := []struct {
 		name string
@@ -58,12 +64,12 @@ func TestResolve(t *testing.T) {
 			res("claude", contract.RoleDiffReview, "claude-opus-5-1", "xhigh", "global", "inherited")},
 		{"review-escalate equals diff-review round 3", ResolveInput{Host: "codex", Role: contract.RoleReviewEscalate},
 			res("codex", contract.RoleReviewEscalate, "gpt-6-astra", "xhigh", "inherited", "inherited")},
-		{"omo ignores settings", ResolveInput{Host: "omo", Role: contract.RoleImplement, Local: local, Global: global},
-			res("omo", contract.RoleImplement, "chatgpt-subscription/gpt-6-sol", "max", "default", "default")},
+		{"omo reads settings", ResolveInput{Host: "omo", Role: contract.RoleImplement, Local: local, Global: global},
+			res("omo", contract.RoleImplement, "chatgpt-subscription/gpt-6.1-sol", "high", "global", "global")},
 		{"omo has no reader-check default", ResolveInput{Host: "omo", Role: contract.RoleReaderCheck},
 			res("omo", contract.RoleReaderCheck, "", "", "", "")},
-		{"omp ignores settings", ResolveInput{Host: "omp", Role: contract.RoleImplement, Local: local, Global: global},
-			res("omp", contract.RoleImplement, "anthropic/claude-opus-5-5", "high", "default", "default")},
+		{"omp reads settings", ResolveInput{Host: "omp", Role: contract.RoleImplement, Local: local, Global: global},
+			res("omp", contract.RoleImplement, "anthropic/claude-sonnet-5-5", "max", "global", "local")},
 		{"omp reader-check", ResolveInput{Host: "omp", Role: contract.RoleReaderCheck},
 			res("omp", contract.RoleReaderCheck, "anthropic/claude-haiku-5-5", "medium", "default", "default")},
 		{"claude reader-check", ResolveInput{Host: "claude", Role: contract.RoleReaderCheck},
@@ -105,7 +111,7 @@ func TestValidateSetting(t *testing.T) {
 		in   contract.Layer
 		want string
 	}{
-		{"omo", contract.RoleImplement, contract.Layer{Model: "x"}, "claude, codex"},
+		{"gemini", contract.RoleImplement, contract.Layer{Model: "x"}, "claude, codex, omo, omp"},
 		{"claude", "reviewer", contract.Layer{Model: "x"}, "implement"},
 		{"claude", contract.RoleImplement, contract.Layer{Effort: "ultra"}, "low, medium, high, xhigh, max"},
 		{"codex", contract.RoleImplement, contract.Layer{Effort: "off"}, "minimal, low"},

@@ -88,24 +88,19 @@ func TestPreparationBrokenSettingsFailBeforeAnyStateChange(t *testing.T) {
 // owner 모델과 effort를 둘 다 명시해도 같은 설정 파일이 owner packet의 리뷰·조사·
 // 독자 검토 모델을 정한다. 깨진 파일은 Orca worktree를 만들기 전에 드러나야 한다.
 func TestPreparationBrokenSettingsFailBeforeOrcaEvenWithExplicitOwnerFlags(t *testing.T) {
-	for _, confirm := range []bool{false, true} {
-		fixture := newOrcaApplicationFixture()
-		fixture.models.ownerErr = errors.New("/repo/.issueops/agent-models.local.json: unsupported version 2")
-		_, err := fixture.service.Prepare(context.Background(), orcaCommand(confirm, preparationcontract.ModeOrca))
-		if err == nil || !strings.Contains(err.Error(), "agent-models.local.json") {
-			t.Fatalf("confirm=%v err = %v", confirm, err)
-		}
-		if !reflect.DeepEqual(fixture.trace, []string{"load"}) {
-			t.Fatalf("confirm=%v: a settings error must stop right after load: %v", confirm, fixture.trace)
-		}
-	}
-	for _, host := range []string{"omo"} {
-		fixture := newOrcaApplicationFixture()
-		fixture.models.ownerErr = errors.New("omo never reads settings")
-		command := orcaCommand(false, preparationcontract.ModeOrca)
-		command.OwnerHost, command.OwnerModel, command.OwnerEffort = host, "chatgpt-subscription/gpt-6-sol", "max"
-		if _, err := fixture.service.Prepare(context.Background(), command); err != nil {
-			t.Fatalf("%s must not read settings: %v", host, err)
+	for _, host := range []string{"codex", "omo", "omp"} {
+		for _, confirm := range []bool{false, true} {
+			fixture := newOrcaApplicationFixture()
+			fixture.models.ownerErr = errors.New("/repo/.issueops/agent-models.local.json: unsupported version 2")
+			command := orcaCommand(confirm, preparationcontract.ModeOrca)
+			command.OwnerHost = host
+			_, err := fixture.service.Prepare(context.Background(), command)
+			if err == nil || !strings.Contains(err.Error(), "agent-models.local.json") {
+				t.Fatalf("%s confirm=%v err = %v", host, confirm, err)
+			}
+			if !reflect.DeepEqual(fixture.trace, []string{"load"}) {
+				t.Fatalf("%s confirm=%v: a settings error must stop right after load: %v", host, confirm, fixture.trace)
+			}
 		}
 	}
 }

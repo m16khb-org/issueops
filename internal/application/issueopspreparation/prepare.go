@@ -406,10 +406,6 @@ func (service *Service) normalizeOwnerDefaults(ctx context.Context, snapshot pre
 	}
 	// 플래그를 둘 다 명시해도 같은 설정 파일이 owner packet의 리뷰·조사·독자 검토
 	// 모델을 정한다. 그 파일이 깨졌으면 Orca worktree를 만든 뒤가 아니라 여기서 멈춘다.
-	// omo와 omp는 설정 파일을 읽지 않는다.
-	if command.OwnerModel != "" && command.OwnerEffort != "" && (command.OwnerHost == "omo" || command.OwnerHost == "omp") {
-		return command, nil
-	}
 	if service.models == nil {
 		return command, fmt.Errorf("agent model resolver is unavailable")
 	}

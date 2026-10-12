@@ -37,8 +37,8 @@ type Dependencies struct {
 
 const usage = `Usage:
   issueops model show [--host claude|codex|omo|omp] [--repo PATH] [--json]
-  issueops model set --scope global|local --host claude|codex --role ROLE [--model MODEL] [--effort EFFORT] [--repo PATH] [--json]
-  issueops model unset --scope global|local --host claude|codex --role ROLE [--field model|effort] [--repo PATH] [--json]
+  issueops model set --scope global|local --host claude|codex|omo|omp --role ROLE [--model MODEL] [--effort EFFORT] [--repo PATH] [--json]
+  issueops model unset --scope global|local --host claude|codex|omo|omp --role ROLE [--field model|effort] [--repo PATH] [--json]
   issueops model resolve --host claude|codex|omo|omp --role ROLE [--tier TIER] [--round N] [--model MODEL] [--effort EFFORT] [--agents] [--repo PATH] [--json]
 
 Roles: implement, child-implement, plan-review, diff-review, review-escalate, research, reader-check.
@@ -104,7 +104,7 @@ func runShow(ctx context.Context, deps Dependencies, args []string) error {
 	if err := parse(fs, args); err != nil {
 		return err
 	}
-	hosts := []string{"claude", "codex"}
+	hosts := domain.ConfigurableHosts()
 	if *host != "" {
 		if !domain.KnownHost(*host) {
 			return UsageError{Message: fmt.Sprintf("unknown host %q (use claude, codex, omo, or omp)", *host)}
@@ -149,7 +149,7 @@ type target struct {
 
 func parseTarget(fs *flag.FlagSet, args []string, deps Dependencies) (target, error) {
 	scope := fs.String("scope", "", "global or local")
-	host := fs.String("host", "", "claude or codex")
+	host := fs.String("host", "", "claude, codex, omo, or omp")
 	role := fs.String("role", "", "role")
 	repoFlag := fs.String("repo", "", "repository (defaults to cwd)")
 	if err := parse(fs, args); err != nil {
@@ -380,8 +380,13 @@ func writeScope(ctx context.Context, deps Dependencies, t target, path string, c
 
 func hostSection(cfg *contract.Config, host string) *map[contract.Role]contract.Layer {
 	section := &cfg.Claude
-	if host == "codex" {
+	switch host {
+	case "codex":
 		section = &cfg.Codex
+	case "omo":
+		section = &cfg.Omo
+	case "omp":
+		section = &cfg.Omp
 	}
 	if *section == nil {
 		*section = map[contract.Role]contract.Layer{}
@@ -392,6 +397,8 @@ func hostSection(cfg *contract.Config, host string) *map[contract.Role]contract.
 func cloneConfig(cfg contract.Config) contract.Config {
 	cfg.Claude = maps.Clone(cfg.Claude)
 	cfg.Codex = maps.Clone(cfg.Codex)
+	cfg.Omo = maps.Clone(cfg.Omo)
+	cfg.Omp = maps.Clone(cfg.Omp)
 	return cfg
 }
 

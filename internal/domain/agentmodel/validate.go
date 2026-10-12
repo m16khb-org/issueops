@@ -15,7 +15,7 @@ var claudeAliases = []string{"opus", "sonnet", "haiku", "fable"}
 // know is only a warning, so users can pin a model before it ships.
 // codexCatalog is the locally cached Codex model list; empty skips the check.
 func ValidateSetting(host string, role contract.Role, layer contract.Layer, codexCatalog []string) ([]string, error) {
-	if !slices.Contains(configurableHosts, host) {
+	if !Configurable(host) {
 		return nil, fmt.Errorf("host %q is not configurable (use %s)", host, strings.Join(configurableHosts, ", "))
 	}
 	if !knownRole(role) {
@@ -46,7 +46,7 @@ func modelWarnings(host, model string, codexCatalog []string) []string {
 // ValidateConfig checks a decoded settings file. The zero Config stands for
 // an absent file and is valid.
 func ValidateConfig(cfg contract.Config) error {
-	if cfg.Version == 0 && cfg.Claude == nil && cfg.Codex == nil {
+	if cfg.Version == 0 && cfg.Claude == nil && cfg.Codex == nil && cfg.Omo == nil && cfg.Omp == nil {
 		return nil
 	}
 	if cfg.Version != contract.ConfigVersion {

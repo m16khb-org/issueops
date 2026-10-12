@@ -29,6 +29,8 @@ type Config struct {
 	Version int            `json:"version"`
 	Claude  map[Role]Layer `json:"claude,omitempty"`
 	Codex   map[Role]Layer `json:"codex,omitempty"`
+	Omo     map[Role]Layer `json:"omo,omitempty"`
+	Omp     map[Role]Layer `json:"omp,omitempty"`
 }
 
 // Source labels where a resolved field came from.

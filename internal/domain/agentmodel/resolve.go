@@ -89,8 +89,7 @@ func resolveRole(host string, role contract.Role, in ResolveInput) (field, field
 	return model, effort
 }
 
-// configured merges the local and global layers of one role. omo and omp have
-// no settings file section, so they always fall through to built-ins.
+// configured merges the local and global layers of one role.
 func configured(host string, role contract.Role, in ResolveInput) (model, effort field) {
 	for _, layer := range []struct {
 		cfg    contract.Config
@@ -114,6 +113,10 @@ func hostLayers(cfg contract.Config, host string) map[contract.Role]contract.Lay
 		return cfg.Claude
 	case "codex":
 		return cfg.Codex
+	case "omo":
+		return cfg.Omo
+	case "omp":
+		return cfg.Omp
 	default:
 		return nil
 	}

@@ -21,15 +21,14 @@ func TestResolveUsesRepoSettings(t *testing.T) {
 	}
 }
 
-func TestResolveSurfacesBrokenSettingsButNotForOmo(t *testing.T) {
+func TestResolveSurfacesBrokenSettings(t *testing.T) {
 	broken := Service{Load: func(context.Context, string) (Settings, error) {
 		return Settings{}, errors.New("/cfg/agent-models.json: unknown field")
 	}}
-	if _, err := broken.Resolve(context.Background(), "/repo", domain.ResolveInput{Host: "claude", Role: contract.RoleImplement}); err == nil {
-		t.Fatal("a broken settings file must not fall back to defaults")
-	}
-	if got, err := broken.Resolve(context.Background(), "/repo", domain.ResolveInput{Host: "omo", Role: contract.RoleImplement}); err != nil || got.Model == "" {
-		t.Fatalf("omo never reads settings: %+v, %v", got, err)
+	for _, host := range []string{"claude", "codex", "omo", "omp"} {
+		if _, err := broken.Resolve(context.Background(), "/repo", domain.ResolveInput{Host: host, Role: contract.RoleImplement}); err == nil {
+			t.Fatalf("%s: a broken settings file must not fall back to defaults", host)
+		}
 	}
 	if _, err := broken.RoleAgents(context.Background(), "codex", "/repo"); err == nil {
 		t.Fatal("RoleAgents must surface a broken settings file")

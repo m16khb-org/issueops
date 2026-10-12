@@ -87,7 +87,7 @@ func TestReadRejectsUnknownField(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), path) || !strings.Contains(err.Error(), `unknown field "modle"`) {
 		t.Fatalf("Read err = %v", err)
 	}
-	for _, body := range []string{`{"version":2}`, `{"version":1,"claude":{"reviewer":{"model":"opus"}}}`, `{"version":1,"omo":{}}`, `{"version":1} {}`} {
+	for _, body := range []string{`{"version":2}`, `{"version":1,"claude":{"reviewer":{"model":"opus"}}}`, `{"version":1,"gemini":{}}`, `{"version":1} {}`} {
 		write(t, path, body)
 		if _, err := Read(path); err == nil || !strings.Contains(err.Error(), path) {
 			t.Fatalf("Read(%s) err = %v", body, err)

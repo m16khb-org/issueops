@@ -12484,6 +12484,8 @@
       "owner": "domain",
       "task": "T20",
       "symbols": [
+        "func Configurable",
+        "func ConfigurableHosts",
         "func KnownHost",
         "func Roles",
         "func SupportsEffort",

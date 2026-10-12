@@ -32,9 +32,8 @@ var injectedRoles = []contract.Role{
 }
 
 // Resolve fills in.Local and in.Global from repo's settings and resolves.
-// omo and omp have no settings section, so their resolution never reads the files.
 func (s Service) Resolve(ctx context.Context, repo string, in domain.ResolveInput) (contract.Resolution, error) {
-	if in.Host == "claude" || in.Host == "codex" {
+	if domain.Configurable(in.Host) {
 		if s.Load == nil {
 			return contract.Resolution{}, fmt.Errorf("agent model settings loader is not configured")
 		}
