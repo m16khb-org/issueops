@@ -40,21 +40,24 @@ func renderProjectDocsAppendFields(kind string, req projectdocscontract.ProjectD
 			fmt.Fprintf(&b, "- Consequences: %s\n", v)
 		}
 	}
-	if len(req.Evidence) > 0 {
-		b.WriteString("- Evidence:\n")
-		for _, ev := range req.Evidence {
-			if ev = strings.TrimSpace(ev); ev != "" {
-				fmt.Fprintf(&b, "  - %s\n", ev)
-			}
-		}
-	}
-	if len(req.Alternatives) > 0 {
-		b.WriteString("- Alternatives / rejected options:\n")
-		for _, alt := range req.Alternatives {
-			if alt = strings.TrimSpace(alt); alt != "" {
-				fmt.Fprintf(&b, "  - %s\n", alt)
-			}
-		}
-	}
+	writeProjectDocsAppendList(&b, "- Evidence:\n", req.Evidence)
+	writeProjectDocsAppendList(&b, "- Alternatives / rejected options:\n", req.Alternatives)
 	return b.String()
+}
+
+// writeProjectDocsAppendList writes header and the non-blank entries; a list whose
+// entries are all blank writes nothing, so records never carry empty headers.
+func writeProjectDocsAppendList(b *strings.Builder, header string, entries []string) {
+	wroteHeader := false
+	for _, entry := range entries {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			continue
+		}
+		if !wroteHeader {
+			b.WriteString(header)
+			wroteHeader = true
+		}
+		fmt.Fprintf(b, "  - %s\n", entry)
+	}
 }

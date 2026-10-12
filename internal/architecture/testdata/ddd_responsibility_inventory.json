@@ -7109,7 +7109,8 @@
       "task": "T13",
       "symbols": [
         "func renderProjectDocsAppendFields",
-        "func renderProjectDocsAppendRecordFile"
+        "func renderProjectDocsAppendRecordFile",
+        "func writeProjectDocsAppendList"
       ]
     },
     {
