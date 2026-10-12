@@ -195,3 +195,15 @@ func TestClaimContextPreflightRejectsPacketDigestBeforeParsing(t *testing.T) {
 		t.Fatalf("digest priority: %v", err)
 	}
 }
+
+func TestReadClaimOwnerArtifactAcceptsExactlyMaxBytes(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "artifact.md")
+	if err := os.WriteFile(path, make([]byte, leasecontract.OwnerArtifactMaxBytes), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	data, err := readClaimOwnerArtifact(root, path)
+	if err != nil || len(data) != leasecontract.OwnerArtifactMaxBytes {
+		t.Fatalf("max-size artifact len=%d err=%v", len(data), err)
+	}
+}

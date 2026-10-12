@@ -9,6 +9,7 @@ import (
 	"sync"
 	"testing"
 
+	preflightapp "issueops/internal/application/preflight"
 	preflightcontract "issueops/internal/contract/preflight"
 )
 
@@ -266,5 +267,31 @@ func TestGitPreflightHistoryProjectionsMatchRealGit(t *testing.T) {
 	}
 	if lore != 5 {
 		t.Fatalf("lore bodies = %d, want 5 (even changes 3..12)", lore)
+	}
+}
+
+func TestGitObserverReportsUpstreamAheadBehindOnlyWhenTracking(t *testing.T) {
+	observe := func(git *recordingGit) preflightapp.Observation {
+		return GitObserver{Run: git.run}.Observe("/repo", "/issueops")
+	}
+	tracking := newRecordingGit("")
+	tracking.outputs["rev-parse --abbrev-ref --symbolic-full-name @{u}"] = recordedGitResult{out: "origin/topic\n"}
+	tracking.outputs["rev-list --left-right --count origin/topic...HEAD"] = recordedGitResult{out: "2\t3\n"}
+	facts := observe(tracking)
+	if facts.Upstream == nil || *facts.Upstream != "origin/topic" || facts.Behind == nil || *facts.Behind != 2 || facts.Ahead == nil || *facts.Ahead != 3 {
+		t.Fatalf("tracking facts = %+v", facts)
+	}
+
+	single := newRecordingGit("")
+	single.outputs["rev-parse --abbrev-ref --symbolic-full-name @{u}"] = recordedGitResult{out: "origin/topic\n"}
+	single.outputs["rev-list --left-right --count origin/topic...HEAD"] = recordedGitResult{out: "5\n"}
+	if facts := observe(single); facts.Ahead != nil || facts.Behind != nil {
+		t.Fatalf("a count line with fewer than two fields produced ahead/behind: %+v", facts)
+	}
+
+	untracked := newRecordingGit("")
+	facts = observe(untracked)
+	if facts.Upstream != nil || facts.Ahead != nil || facts.Behind != nil || untracked.count("rev-list") != 0 {
+		t.Fatalf("untracked branch facts = %+v calls=%v", facts, untracked.calls)
 	}
 }

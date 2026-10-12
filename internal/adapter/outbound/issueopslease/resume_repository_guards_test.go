@@ -3,8 +3,10 @@ package issueopslease
 import (
 	"context"
 	"errors"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"issueops/internal/adapter/outbound/sqlstore"
 	leaseapp "issueops/internal/application/issueopslease"
@@ -172,5 +174,112 @@ func TestReconcileRepositoryApplyReceiptRejectsCorruptIntentAndMissingExecution(
 	noExecution.Progress.Record.Execution = nil
 	if _, err := NewReconcileRepositoryWithSnapshot(store, nil, nil, nil, nil).ApplyReceipt(ctx, noExecution, receipt); err == nil || !strings.Contains(err.Error(), "reconcile execution is required") {
 		t.Fatalf("record without execution err=%v", err)
+	}
+}
+
+func beginIntentFixture(t *testing.T, mutate func(record *leasecontract.Record)) (*ResumeRepository, leaseapp.ResumeSnapshot, leasecontract.ResumeArtifacts, *sqlstore.DB, leasecontract.Record) {
+	t.Helper()
+	record := resumeRepositoryRecord(t, 4)
+	repo := filepath.Join(t.TempDir(), "repo")
+	record.Repo, record.Branch = repo, "193-resume"
+	record.BranchPrepare = []byte(`{"provider":"github","issue_url":"https://github.com/m16khb/issueops/issues/193","link_verified":true,"base_branch":"main","base_sha":"base"}`)
+	record.Execution.Workspace.SourceRoot = repo
+	record.Execution.Workspace.Root = filepath.Join(repo+".worktrees", record.Branch)
+	record.Execution.Workspace.Branch = record.Branch
+	record.Execution.Workspace.BaseHead = "base"
+	if mutate != nil {
+		mutate(&record)
+	}
+	_, store := newResumeRepositoryStore(t, record)
+	repository := NewResumeRepository(store)
+	snapshot, err := repository.LoadSnapshot(context.Background(), record.ID, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := record.Execution.Workspace.Root
+	artifacts := leasecontract.ResumeArtifacts{IssueBodySHA256: strings.Repeat("a", 64), OwnerPromptPath: filepath.Join(root, "prompt"), OwnerPromptSHA256: strings.Repeat("c", 64), ContextPacketPath: filepath.Join(root, "packet"), ContextPacketSHA256: strings.Repeat("d", 64)}
+	return repository, snapshot, artifacts, store, record
+}
+
+func TestResumeRepositoryBeginIntentStampsInjectedClockAndDefaultsMissingOne(t *testing.T) {
+	fixed := time.Date(2026, time.July, 31, 3, 15, 0, 0, time.FixedZone("KST", 9*3600))
+	_, snapshot, artifacts, store, _ := beginIntentFixture(t, nil)
+	progress, err := NewResumeRepositoryWithDiagnosticRedactor(store, nil, func() time.Time { return fixed }).BeginIntent(context.Background(), snapshot, artifacts, resumeRepositoryPlan(), strings.Repeat("e", 32))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := progress.Execution.Pending.StartedAt, fixed.UTC().Format(time.RFC3339Nano); got != want {
+		t.Fatalf("StartedAt=%q want %q", got, want)
+	}
+
+	_, snapshot, artifacts, store, _ = beginIntentFixture(t, nil)
+	before := time.Now().Add(-time.Second)
+	progress, err = NewResumeRepositoryWithDiagnosticRedactor(store, nil, nil).BeginIntent(context.Background(), snapshot, artifacts, resumeRepositoryPlan(), strings.Repeat("e", 32))
+	if err != nil {
+		t.Fatalf("nil clock must default to wall time: %v", err)
+	}
+	stamped, err := time.Parse(time.RFC3339Nano, progress.Execution.Pending.StartedAt)
+	if err != nil || stamped.Before(before) || stamped.After(time.Now().Add(time.Second)) {
+		t.Fatalf("default StartedAt=%q err=%v", progress.Execution.Pending.StartedAt, err)
+	}
+}
+
+func TestResumeRepositoryBeginIntentRejectsRecordWithoutVerifiedBranchPreparation(t *testing.T) {
+	repository, snapshot, artifacts, _, _ := beginIntentFixture(t, func(record *leasecontract.Record) {
+		record.BranchPrepare = []byte(`{"provider":"github","base_branch":"main"}`)
+	})
+	_, err := repository.BeginIntent(context.Background(), snapshot, artifacts, resumeRepositoryPlan(), strings.Repeat("e", 32))
+	if err == nil || !strings.Contains(err.Error(), "verified branch preparation with base_sha is required") {
+		t.Fatalf("err=%v", err)
+	}
+}
+
+func TestResumeRepositoryBeginIntentRejectsNonCanonicalWorkspaceRoot(t *testing.T) {
+	repository, snapshot, artifacts, _, _ := beginIntentFixture(t, func(record *leasecontract.Record) {
+		record.Execution.Workspace.Root = filepath.Join(filepath.Dir(record.Execution.Workspace.Root), "elsewhere")
+	})
+	_, err := repository.BeginIntent(context.Background(), snapshot, artifacts, resumeRepositoryPlan(), strings.Repeat("e", 32))
+	if err == nil || err.Error() != "execution resume workspace is not canonical" {
+		t.Fatalf("err=%v", err)
+	}
+}
+
+func TestResumeRepositoryBeginIntentRejectsParentWorktreeThatIsNotCanonical(t *testing.T) {
+	repository, snapshot, artifacts, _, _ := beginIntentFixture(t, func(record *leasecontract.Record) {
+		record.BranchPrepare = []byte(`{"provider":"github","issue_url":"https://github.com/m16khb/issueops/issues/193","link_verified":true,"base_branch":"main","base_sha":"base","parent_worktree":"/somewhere/else"}`)
+	})
+	_, err := repository.BeginIntent(context.Background(), snapshot, artifacts, resumeRepositoryPlan(), strings.Repeat("e", 32))
+	if err == nil || !strings.Contains(err.Error(), `parent_worktree "/somewhere/else" does not match canonical parent worktree`) {
+		t.Fatalf("err=%v", err)
+	}
+}
+
+func TestResumeRepositoryBeginIntentRefusesWhenIntentAlreadyPending(t *testing.T) {
+	ctx := context.Background()
+	repository, snapshot, artifacts, store, record := beginIntentFixture(t, nil)
+	pending := record
+	execution := *record.Execution
+	execution.Pending = &leasecontract.ExternalIntent{OperationID: strings.Repeat("9", 32), Kind: "owner_launch", Marker: "marker", StartedAt: "2026-07-31T00:00:00Z"}
+	pending.Execution = &execution
+	if err := store.Apply(ctx, []port.RecordMutation{resumeRepositoryMutation(t, pending)}); err != nil {
+		t.Fatal(err)
+	}
+	_, err := repository.BeginIntent(ctx, snapshot, artifacts, resumeRepositoryPlan(), strings.Repeat("e", 32))
+	if err == nil || err.Error() != "execution resume authority changed before intent persistence" {
+		t.Fatalf("err=%v", err)
+	}
+	if _, ok, err := store.Get("external_intent_v1", strings.Repeat("e", 32)); err != nil || ok {
+		t.Fatalf("intent persisted despite refusal: present=%v err=%v", ok, err)
+	}
+}
+
+func TestResumeRepositoryLoadIntentReportsPendingProgress(t *testing.T) {
+	repository, state, _ := seededResumeIntent(t)
+	loaded, err := repository.LoadIntent(context.Background(), state.Progress)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !loaded.Progress.Pending || loaded.Progress.Execution.Pending == nil {
+		t.Fatalf("loaded progress=%+v", loaded.Progress)
 	}
 }

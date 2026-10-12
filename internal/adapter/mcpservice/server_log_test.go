@@ -128,3 +128,21 @@ func TestSameFileIsFalseForClosedFileOrMissingPath(t *testing.T) {
 		t.Fatal("closed file matched")
 	}
 }
+
+func TestCappedLogWriterRotatesOnlyWhenSizeExceedsLimit(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "server.log")
+	stderr := openServiceLogForTest(t, path, os.O_APPEND)
+	writer := serviceLogWriter(nil, stderr, path, 16)
+	if _, err := writer.Write([]byte("exactly16bytes!\n")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(path + ".1"); !os.IsNotExist(err) {
+		t.Fatalf("log exactly at the limit was rotated: %v", err)
+	}
+	if _, err := writer.Write([]byte("x")); err != nil {
+		t.Fatal(err)
+	}
+	if rotated, err := os.ReadFile(path + ".1"); err != nil || string(rotated) != "exactly16bytes!\nx" {
+		t.Fatalf("rotated=%q err=%v, want rotation once the limit is exceeded", rotated, err)
+	}
+}

@@ -126,3 +126,34 @@ func TestResumeNextCommandReferencesCycleAndArtifacts(t *testing.T) {
 		t.Fatalf("resume next command incomplete: %q", command)
 	}
 }
+
+func TestHandlersFailClosedWhenOnlyServiceIsMissing(t *testing.T) {
+	ctx := context.Background()
+
+	_, resumeErr := NewResumeHandler(nil, func(string, uint64, string, string, string) string { return "next" })(ctx, "", issueopscontract.ExecutionResumeRequest{ID: "io-1"})
+	if !errors.Is(resumeErr, issueopscontract.ErrResumeHandlerUnavailable) {
+		t.Fatalf("resume handler err = %v, want ErrResumeHandlerUnavailable", resumeErr)
+	}
+
+	_, reseedErr := NewReseedHandler(nil, func(string, uint64, string, string) string { return "next" })(ctx, "", issueopscontract.ExecutionReseedRequest{ID: "io-1"})
+	if !errors.Is(reseedErr, issueopscontract.ErrReseedHandlerUnavailable) {
+		t.Fatalf("reseed handler err = %v, want ErrReseedHandlerUnavailable", reseedErr)
+	}
+}
+
+func TestPublicResumeAndReseedErrorsReturnDenialCauseItself(t *testing.T) {
+	cause := errors.New("generation moved")
+	if mapped := publicResumeError(leasedomain.Deny(leasedomain.DenyClaimToken, cause)); mapped != cause {
+		t.Fatalf("resume denial must surface its bare cause, got %v", mapped)
+	}
+	if mapped := publicReseedError(leasedomain.Deny(leasedomain.DenyClaimToken, cause)); mapped != cause {
+		t.Fatalf("reseed denial must surface its bare cause, got %v", mapped)
+	}
+}
+
+func TestPublicResumeErrorKeepsCauselessDenial(t *testing.T) {
+	denial := leasedomain.Deny(leasedomain.DenyClaimToken, nil)
+	if mapped := publicResumeError(denial); mapped != denial {
+		t.Fatalf("causeless denial must not be swallowed, got %v", mapped)
+	}
+}

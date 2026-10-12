@@ -569,3 +569,60 @@ func TestNewAppliesDefaultsAndLeavesUnsupportedGOOSWithoutSupervisor(t *testing.
 		t.Fatalf("explicit timings overridden: %+v", custom.cfg)
 	}
 }
+
+func TestProbeAcceptsEventStreamDataLinesLargerThanTheInitialBuffer(t *testing.T) {
+	padding := strings.Repeat("x", 100*1024)
+	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
+		rw.Header().Set("Content-Type", "text/event-stream")
+		rw.Header().Set(HeaderPID, "321")
+		rw.Header().Set(HeaderBuildID, "build-x")
+		_, _ = rw.Write([]byte(`data: {"result":{"serverInfo":{"name":"issueops"},"pad":"` + padding + "\"}}\n\n"))
+	}))
+	defer server.Close()
+	w := newFakeWorld(t)
+	pid, _, err := w.service(strings.TrimPrefix(server.URL, "http://")).probe(t.Context())
+	if err != nil || pid != 321 {
+		t.Fatalf("pid=%d err=%v", pid, err)
+	}
+}
+
+func TestStartKeepsPollingUntilTheServiceBecomesReady(t *testing.T) {
+	w := newFakeWorld(t)
+	service := w.service(w.address)
+	polls := 0
+	service.cfg.Wait = func(ctx context.Context, _ time.Duration) error {
+		polls++
+		if polls == 2 {
+			w.serve(5150, w.buildID())
+		}
+		return ctx.Err()
+	}
+	status, err := service.Start(t.Context())
+	if err != nil || !status.OK || status.PID != 5150 || polls != 2 {
+		t.Fatalf("status=%+v err=%v polls=%d", status, err, polls)
+	}
+}
+
+func TestStopRemovesRecordOfTheStoppedInstanceThatBootoutLeftBehind(t *testing.T) {
+	w := newFakeWorld(t)
+	w.serve(4242, w.buildID())
+	w.loaded = true
+	path := filepath.Join(httpDir(w.stateDir), recordFileName)
+	status, err := w.serviceWithRun(w.address, func(args []string) ([]byte, error, bool) {
+		switch args[0] {
+		case "print":
+			return []byte("pid = 4242\n"), nil, true
+		case "bootout":
+			w.holder = 0
+			w.closeEndpoint()
+			return nil, nil, true
+		}
+		return nil, nil, false
+	}).Stop(t.Context())
+	if err != nil || status.Status != mcpservice.StatusStopped {
+		t.Fatalf("status=%+v err=%v", status, err)
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatalf("record of the stopped instance survived: %v", err)
+	}
+}

@@ -240,6 +240,9 @@ func TestStoreUpdateRelatedCreatesReplacesAndRemovesRelatedRow(t *testing.T) {
 		if err != nil || !result.OK || result.ID != "io-rel" {
 			t.Fatalf("result=%+v err=%v", result, err)
 		}
+		if result.Repo != "/repo" || result.Phase != issueopscontract.IssueOpsPhaseProblem {
+			t.Fatalf("result must carry the record read inside the span: %+v", result)
+		}
 	}
 	step([]byte("one"), false)
 	step([]byte("two"), false)

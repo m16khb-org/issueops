@@ -3,6 +3,7 @@ package issueopslease
 import (
 	"context"
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -271,5 +272,52 @@ func TestReseedInventoryObservePropagatesInspectorErrorsAndBindsHolderProcess(t 
 	}
 	if owner.request.AllowRuntimeRollover {
 		t.Fatal("runtime rollover must not be allowed while a holder owns the lease")
+	}
+}
+
+func TestReseedInventoryObserveAllowsRuntimeRolloverOnlyForHolderlessReleasedOrClaimableLeases(t *testing.T) {
+	root := newReseedGitRepo(t, "guards")
+	actor := leasedomain.Actor{Host: "codex", SessionID: "s", Process: &leasedomain.ProcessReceipt{PID: 9, StartedAt: "2026-01-01T00:00:00Z", Executable: "/bin/codex"}}
+	inspect := func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
+		return "live", leasedomain.ProcessReceipt{}, nil
+	}
+	for status, want := range map[string]bool{"released": true, "claimable": true, "active": false} {
+		t.Run(status, func(t *testing.T) {
+			record := orcaReseedRecord(root)
+			record.Execution.Mode = "orca"
+			record.Execution.Orca = &leasecontract.OrcaBinding{RuntimeID: "rt-old", WorktreeID: "wt", RunID: "run", TaskID: "task", DispatchID: "d", TerminalPTYID: "pty"}
+			record.Execution.Lease = leasecontract.Lease{Generation: 2, Status: status}
+			owner := &recordingOwnerInspector{}
+			if _, err := NewReseedInventory(owner, inspect).Observe(t.Context(), record, actor); err != nil {
+				t.Fatal(err)
+			}
+			if owner.request.AllowRuntimeRollover != want {
+				t.Fatalf("status %q AllowRuntimeRollover=%t want %t", status, owner.request.AllowRuntimeRollover, want)
+			}
+		})
+	}
+}
+
+func TestReseedIndexBytesReportsGitFailureAndUnreadableIndex(t *testing.T) {
+	if _, err := reseedIndexBytes(filepath.Join(t.TempDir(), "missing-dir")); err == nil || !strings.Contains(err.Error(), "git rev-parse --git-path index") {
+		t.Fatalf("git failure err=%v", err)
+	}
+
+	root := newReseedGitRepo(t, "index")
+	index := filepath.Join(root, ".git", "index")
+	if data, err := reseedIndexBytes(root); err != nil || len(data) == 0 {
+		t.Fatalf("staged repo index len=%d err=%v", len(data), err)
+	}
+	if err := os.Remove(index); err != nil {
+		t.Fatal(err)
+	}
+	if data, err := reseedIndexBytes(root); err != nil || len(data) != 0 {
+		t.Fatalf("absent index must read as empty: len=%d err=%v", len(data), err)
+	}
+	if err := os.Mkdir(index, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := reseedIndexBytes(root); err == nil || errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("unreadable index must fail closed, err=%v", err)
 	}
 }

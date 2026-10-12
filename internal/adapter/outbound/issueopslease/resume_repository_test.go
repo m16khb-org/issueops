@@ -2,7 +2,6 @@ package issueopslease
 
 import (
 	"context"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -30,23 +29,10 @@ func TestResumeRepositoryLoadsExactGenerationSnapshot(t *testing.T) {
 }
 
 func TestResumeRepositoryBeginIntentPersistsSealedPendingStateWithRawCAS(t *testing.T) {
-	record := resumeRepositoryRecord(t, 4)
-	repo := filepath.Join(t.TempDir(), "repo")
-	record.Repo, record.Branch = repo, "193-resume"
-	record.BranchPrepare = []byte(`{"provider":"github","issue_url":"https://github.com/m16khb/issueops/issues/193","link_verified":true,"base_branch":"main","base_sha":"base"}`)
-	record.Execution.Workspace.SourceRoot = repo
-	record.Execution.Workspace.Root = filepath.Join(repo+".worktrees", record.Branch)
-	record.Execution.Workspace.Branch = record.Branch
-	record.Execution.Workspace.BaseHead = "base"
-	_, store := newResumeRepositoryStore(t, record)
-	repository := NewResumeRepository(store)
-	repository.now = func() time.Time { return time.Date(2026, time.July, 31, 3, 15, 0, 0, time.UTC) }
-	snapshot, err := repository.LoadSnapshot(context.Background(), record.ID, 4)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fixed := time.Date(2026, time.July, 31, 3, 15, 0, 0, time.UTC)
+	_, snapshot, artifacts, store, _ := beginIntentFixture(t, nil)
+	repository := NewResumeRepositoryWithDiagnosticRedactor(store, nil, func() time.Time { return fixed })
 	operationID := strings.Repeat("e", 32)
-	artifacts := leasecontract.ResumeArtifacts{IssueBodySHA256: strings.Repeat("a", 64), OwnerPromptPath: filepath.Join(record.Execution.Workspace.Root, "prompt"), OwnerPromptSHA256: strings.Repeat("c", 64), ContextPacketPath: filepath.Join(record.Execution.Workspace.Root, "packet"), ContextPacketSHA256: strings.Repeat("d", 64)}
 	progress, err := repository.BeginIntent(context.Background(), snapshot, artifacts, resumeRepositoryPlan(), operationID)
 	if err != nil {
 		t.Fatal(err)

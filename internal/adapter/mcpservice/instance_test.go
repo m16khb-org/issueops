@@ -274,3 +274,27 @@ func TestIdentityHandlerStampsOnlyFirstStatusAndExposesUnderlyingWriter(t *testi
 		t.Fatalf("Unwrap returned %T, want the underlying recorder", inner)
 	}
 }
+
+func TestIdentityHandlerStampsOnlySuccessStatuses(t *testing.T) {
+	record := Record{PID: 9, BuildID: "build-9"}
+	for status, want := range map[int]bool{
+		http.StatusOK:                  true,
+		http.StatusNoContent:           true,
+		299:                            true,
+		http.StatusMultipleChoices:     false,
+		http.StatusInternalServerError: false,
+	} {
+		handler := IdentityHandler(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
+			rw.WriteHeader(status)
+		}), record)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/mcp", nil))
+		pid, build := rec.Header().Get(HeaderPID), rec.Header().Get(HeaderBuildID)
+		if want && (pid != "9" || build != "build-9") {
+			t.Fatalf("status %d must carry both identity headers: %v", status, rec.Header())
+		}
+		if !want && (pid != "" || build != "") {
+			t.Fatalf("status %d must not leak either identity header: %v", status, rec.Header())
+		}
+	}
+}

@@ -165,3 +165,18 @@ func TestScopeResolverSharesCommonDirAcrossWorktreesAndBoundsNonGit(t *testing.T
 		t.Fatalf("caller GIT_DIR must not redirect scope: %+v err=%v", scope, err)
 	}
 }
+
+func TestScopeResolverReportsGitFailuresOtherThanNotARepository(t *testing.T) {
+	workspace := t.TempDir()
+	fakeGit := filepath.Join(t.TempDir(), "git")
+	if err := os.WriteFile(fakeGit, []byte("#!/bin/sh\necho 'fatal: boom' >&2\nexit 1\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(fakeGit, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	scope, err := (ScopeResolver{Git: fakeGit}).Resolve(context.Background(), workspace, "")
+	if err == nil || !strings.Contains(err.Error(), "resolve git identity") {
+		t.Fatalf("scope=%+v err=%v, want git identity failure", scope, err)
+	}
+}

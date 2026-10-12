@@ -2,6 +2,8 @@ package issueopslease
 
 import (
 	"context"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -117,5 +119,34 @@ func TestValidateReseedReceiptTargetsRejectsEmptyAndForeignPaths(t *testing.T) {
 		if err := validateReseedReceiptTargets(receipt, targets); err == nil || !strings.Contains(err.Error(), "outside the target generation") {
 			t.Fatalf("%s err=%v", name, err)
 		}
+	}
+}
+
+func TestReseedArtifactsCleanupSupersededRejectsMissingOrSymlinkedRoot(t *testing.T) {
+	artifacts := NewReseedArtifacts(nil)
+
+	missing := reseedArtifactRecord(filepath.Join(t.TempDir(), "absent"), 1)
+	if err := artifacts.CleanupSuperseded(t.Context(), missing); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("missing root err=%v, want not-exist", err)
+	}
+
+	real := t.TempDir()
+	linked := filepath.Join(t.TempDir(), "link")
+	if err := os.Symlink(real, linked); err != nil {
+		t.Fatal(err)
+	}
+	record := reseedArtifactRecord(linked, 1)
+	if err := os.MkdirAll(filepath.Dir(reseedTokenPath(reseedArtifactRecord(real, 1))), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	target := reseedTokenPath(reseedArtifactRecord(real, 1))
+	if err := os.WriteFile(target, []byte("token\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := artifacts.CleanupSuperseded(t.Context(), record); err == nil || !strings.Contains(err.Error(), "only real directories") {
+		t.Fatalf("symlinked root err=%v", err)
+	}
+	if _, err := os.Lstat(target); err != nil {
+		t.Fatalf("token behind symlinked root was deleted: %v", err)
 	}
 }
