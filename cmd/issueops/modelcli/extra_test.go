@@ -42,7 +42,7 @@ func TestFlagParsingFailuresAreUsageErrors(t *testing.T) {
 		{"positional after set flags", []string{"set", "--scope", "global", "--host", "claude", "--role", "implement", "--model", "opus", "stray"}, `unexpected positional argument "stray"`},
 		{"unknown host in show", []string{"show", "--host", "vim"}, `unknown host "vim"`},
 		{"unset without scope", []string{"unset", "--host", "claude", "--role", "implement"}, `--scope must be global or local, got ""`},
-		{"unset on a host that is not configurable", []string{"unset", "--scope", "global", "--host", "omo", "--role", "implement"}, `host "omo" is not configurable`},
+		{"unset on a host that is not configurable", []string{"unset", "--scope", "global", "--host", "gemini", "--role", "implement"}, `host "gemini" is not configurable`},
 		{"unset an unknown role", []string{"unset", "--scope", "global", "--host", "claude", "--role", "boss"}, `unknown role "boss"`},
 	}
 	for _, tt := range tests {
@@ -131,7 +131,7 @@ func TestShowTextMarksMissingLocalPathAndSources(t *testing.T) {
 	}
 }
 
-func TestShowAcceptsHostsThatCannotBeConfigured(t *testing.T) {
+func TestShowWithHostListsOnlyThatHostsRoles(t *testing.T) {
 	got, err := run(t, newFakeFiles(), "show", "--host", "omp", "--json")
 	if err != nil {
 		t.Fatal(err)
