@@ -24,6 +24,7 @@ guide that matches the task.
 | IssueOps execution lifecycle, recovery, sync-base, owner sequence, ten-stage operation | [issueops-execution.md](operations/guides/issueops-execution.md) |
 | Direct CLI, policy, guard, state, loop, MCP cleanup, worker, audit | [cli-and-mcp.md](operations/guides/cli-and-mcp.md) |
 | Codex/Claude/Omo/omp native skills, MCP registration, lifecycle hooks | [hosts.md](operations/guides/hosts.md) |
+| Opt-in cmux launch of a native host into an existing canonical worktree | [cmux-handoff.md](operations/guides/cmux-handoff.md) |
 | Project bootstrap, project-doc routing, MCP document updates | [project-docs.md](operations/guides/project-docs.md) |
 | Web-fetch deterministic benchmark and opt-in live parity | [web-fetch-live-parity.md](operations/guides/web-fetch-live-parity.md) |
 | Stability audit baseline and child-host smoke | [stability-baseline.md](operations/guides/stability-baseline.md), [child-host-smoke.md](operations/guides/child-host-smoke.md) |

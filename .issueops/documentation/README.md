@@ -178,6 +178,7 @@ does not certify every Markdown file in the repository.
 - `operations/guides/issueops-execution.md`: IssueOps execution and recovery
 - `operations/guides/cli-and-mcp.md`: direct CLI, policy, state, MCP, worker
 - `operations/guides/hosts.md`: Codex/Claude/Omo/omp skills, MCP registration, hooks
+- `operations/guides/cmux-handoff.md`: opt-in `issueops execution handoff-cmux` launch contract
 - `operations/guides/project-docs.md`: bootstrap, routing, MCP document updates
 - `operations/guides/web-fetch-live-parity.md`: web-fetch benchmark and live parity
 - `operations/guides/stability-baseline.md`, `child-host-smoke.md`: stability audit
