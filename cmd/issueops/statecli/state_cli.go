@@ -21,7 +21,7 @@ func runStateWrite(deps Dependencies, args []string) error {
 	if *key == "" && fs.NArg() > 0 {
 		*key = fs.Arg(0)
 	}
-	valueProvided := flagProvided(args, "value")
+	valueProvided := flagProvided(fs, "value")
 	sourceCount := 0
 	if valueProvided {
 		sourceCount++

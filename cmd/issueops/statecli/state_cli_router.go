@@ -1,9 +1,9 @@
 package statecli
 
 import (
+	"flag"
 	"fmt"
 	"os"
-	"strings"
 )
 
 func Run(deps Dependencies, args []string) error {
@@ -41,15 +41,14 @@ func stateUsage() {
 `)
 }
 
-func flagProvided(args []string, name string) bool {
-	long := "--" + name
-	for i, arg := range args {
-		if arg == long || strings.HasPrefix(arg, long+"=") {
-			return true
+// flagProvided reports whether the parsed flag set saw name, in any syntax the
+// flag package accepts (-name, --name, -name=v, --name=v), even with an empty value.
+func flagProvided(fs *flag.FlagSet, name string) bool {
+	provided := false
+	fs.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			provided = true
 		}
-		if arg == "-"+name && i < len(args) {
-			return true
-		}
-	}
-	return false
+	})
+	return provided
 }

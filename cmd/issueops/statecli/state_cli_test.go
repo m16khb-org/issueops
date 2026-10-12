@@ -164,3 +164,91 @@ func stateDoctorHasIssueCode(issues []statecontract.StateDoctorIssue, want strin
 	}
 	return false
 }
+
+func TestRunStateWriteContentSourceAndKeyResolution(t *testing.T) {
+	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
+
+	out := captureStatusVerifyStdout(t, func() error {
+		return Run(testDependencies(), []string{"write", "--key", "flag-key", "--value", "abc"})
+	})
+	if !strings.Contains(out, `state "flag-key" written (3 bytes)`) {
+		t.Fatalf("--value write output:\n%s", out)
+	}
+	out = captureStatusVerifyStdout(t, func() error {
+		return Run(testDependencies(), []string{"write", "--value", "abcd", "positional-key"})
+	})
+	if !strings.Contains(out, `state "positional-key" written (4 bytes)`) {
+		t.Fatalf("positional key write output:\n%s", out)
+	}
+	out = captureStatusVerifyStdout(t, func() error {
+		return Run(testDependencies(), []string{"write", "--key", "flag-key", "--value=xy", "ignored-positional"})
+	})
+	if !strings.Contains(out, `state "flag-key" written (2 bytes)`) {
+		t.Fatalf("explicit --key must win over positional:\n%s", out)
+	}
+	if err := Run(testDependencies(), []string{"write", "--key", "k", "--value", "v", "--stdin"}); err == nil || !strings.Contains(err.Error(), "exactly one content source") {
+		t.Fatalf("multiple content sources must be rejected: %v", err)
+	}
+}
+
+func TestRunStateWriteAcceptsEverySyntaxTheFlagPackageAcceptsForValue(t *testing.T) {
+	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
+	for _, args := range [][]string{
+		{"write", "--key", "k", "-value=xy"},
+		{"write", "--key", "k", "--value=xy"},
+		{"write", "--key", "k", "-value", "xy"},
+	} {
+		out := captureStatusVerifyStdout(t, func() error { return Run(testDependencies(), args) })
+		if !strings.Contains(out, `state "k" written (2 bytes)`) {
+			t.Fatalf("args %v output:\n%s", args, out)
+		}
+	}
+	out := captureStatusVerifyStdout(t, func() error {
+		return Run(testDependencies(), []string{"write", "--key", "empty", "-value="})
+	})
+	if !strings.Contains(out, `state "empty" written (0 bytes)`) {
+		t.Fatalf("an explicitly empty -value= is still a content source:\n%s", out)
+	}
+}
+
+func TestRunStateWriteReadsContentFromStdinAsTheOnlySource(t *testing.T) {
+	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := writer.WriteString("from-stdin"); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	original := os.Stdin
+	os.Stdin = reader
+	t.Cleanup(func() {
+		os.Stdin = original
+		reader.Close()
+	})
+
+	out := captureStatusVerifyStdout(t, func() error {
+		return Run(testDependencies(), []string{"write", "--key", "piped", "--stdin"})
+	})
+	if !strings.Contains(out, `state "piped" written (10 bytes)`) {
+		t.Fatalf("--stdin write output:\n%s", out)
+	}
+}
+
+func TestRunStateReadExplicitKeyWinsOverPositional(t *testing.T) {
+	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
+	for key, value := range map[string]string{"first": "one", "second": "two"} {
+		if err := Run(testDependencies(), []string{"write", "--key", key, "--value", value}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	out := captureStatusVerifyStdout(t, func() error {
+		return Run(testDependencies(), []string{"read", "--key", "first", "second"})
+	})
+	if out != "one" {
+		t.Fatalf("read output %q, want explicit --key content", out)
+	}
+}
