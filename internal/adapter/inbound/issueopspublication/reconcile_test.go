@@ -69,3 +69,27 @@ func TestReconcileHandlerFailsClosedWithoutService(t *testing.T) {
 		t.Fatalf("result=%#v err=%v", got, err)
 	}
 }
+
+func TestReconcileHandlerReportsServiceRecordIDWhenItDiffersFromRequest(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		recordID string
+		want     string
+	}{
+		{name: "service record id wins", recordID: "io-195", want: "io-195"},
+		{name: "request id kept without record id", recordID: "", want: "io-request"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			request := fullCoreReconcileRequest()
+			request.ID = "io-request"
+			service := &fakeReconcileService{
+				t: t, expected: true, err: errors.New("remote lookup failed"),
+				result: publicationcontract.ReconcileResult{Record: publicationcontract.RecordSnapshot{ID: test.recordID}},
+			}
+			got, _ := NewReconcileHandler(service)(context.Background(), "/state", request)
+			if got.ID != test.want {
+				t.Fatalf("ID=%q want %q", got.ID, test.want)
+			}
+		})
+	}
+}

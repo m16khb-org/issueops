@@ -25,8 +25,10 @@ func TestInspectReturnsStableCurrentIdentity(t *testing.T) {
 }
 
 func TestInspectRejectsNonPositivePID(t *testing.T) {
-	if _, err := testInspector().Inspect(0); err == nil {
-		t.Fatal("expected pid 0 to be rejected")
+	inspector := Inspector{PSExecutable: "/nonexistent/ps", Environment: os.Environ()}
+	_, err := inspector.Inspect(0)
+	if err == nil || err.Error() != "pid must be positive" {
+		t.Fatalf("err=%v, want pid must be positive", err)
 	}
 }
 

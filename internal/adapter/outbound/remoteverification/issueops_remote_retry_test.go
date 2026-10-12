@@ -62,16 +62,34 @@ exit 1
 	}
 }
 
-func TestRunRemoteVerifyCommandRejectsOversizedOutput(t *testing.T) {
-	bin := t.TempDir()
-	writeFakeCommand(t, filepath.Join(bin, "gh"), `#!/bin/sh
-dd if=/dev/zero bs=1024 count=300 2>/dev/null
+func TestRunRemoteVerifyCommandEnforcesOutputLimit(t *testing.T) {
+	for name, tc := range map[string]struct {
+		size    int
+		wantErr bool
+	}{
+		"exactly at limit": {size: maxRemoteVerifyOutputBytes, wantErr: false},
+		"one byte over":    {size: maxRemoteVerifyOutputBytes + 1, wantErr: true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			bin := t.TempDir()
+			// Valid JSON padded with whitespace to the exact size.
+			writeFakeCommand(t, filepath.Join(bin, "gh"), `#!/bin/sh
+printf '%s' '{"url":"https://github.com/example/repo/issues/7","state":"OPEN","title":"x"}'
+head -c $(( `+strconv.Itoa(tc.size)+` - 77 )) /dev/zero | tr '\\0' ' '
 `)
-	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+			t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 
-	err := VerifyGitHubIssueLive("https://github.com/example/repo/issues/7")
-	if err == nil || !strings.Contains(err.Error(), "output exceeds") {
-		t.Fatalf("oversized output error = %v", err)
+			err := VerifyGitHubIssueLive("https://github.com/example/repo/issues/7")
+			if tc.wantErr {
+				if err == nil || !strings.Contains(err.Error(), "output exceeds") {
+					t.Fatalf("oversized output error = %v", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("output exactly at the limit must succeed, got %v", err)
+			}
+		})
 	}
 }
 

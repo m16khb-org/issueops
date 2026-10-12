@@ -117,3 +117,42 @@ func fullContractExecution() leasecontract.Execution {
 		SyncBaseEvents: []leasecontract.SyncBaseEvent{{Mode: "merge", BaseBranch: "main", BaseOID: "base", MergeCommit: "merge", ConflictFiles: 2, Actor: "codex", At: "synced"}},
 	}
 }
+
+func TestHandlerMapsEachOptionalExecutionSectionToExpectedValues(t *testing.T) {
+	execution := fullContractExecution()
+	service := &serviceFake{result: preparationcontract.Result{ID: "io-199", Execution: &execution}}
+
+	got, err := NewHandler(service)(context.Background(), "/state", model.ExecutionPrepareRequest{ID: "io-199"}, executionissue.ExecutionPrepareInvocation{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	exec := got.Execution
+	if exec == nil {
+		t.Fatal("execution missing")
+	}
+	if exec.Selection == nil || exec.Selection.ResolvedMode != "orca" || exec.Selection.ProbeCode != "ready" {
+		t.Fatalf("selection=%+v", exec.Selection)
+	}
+	holder := exec.Lease.Holder
+	if holder == nil || holder.Host != "claude" || holder.SessionID != "owner" || holder.AgentID != "agent" {
+		t.Fatalf("holder=%+v", holder)
+	}
+	if holder.SessionProcess == nil || holder.SessionProcess.PID != 200 || holder.SessionProcess.Executable != "/bin/claude" {
+		t.Fatalf("holder process=%+v", holder.SessionProcess)
+	}
+	if exec.Orca == nil || exec.Orca.RuntimeID != "runtime" || exec.Orca.TaskID != "task" {
+		t.Fatalf("orca=%+v", exec.Orca)
+	}
+	if exec.Pending == nil || exec.Pending.OperationID != "operation" || exec.Pending.Kind != "orca_prepare" {
+		t.Fatalf("pending=%+v", exec.Pending)
+	}
+	if exec.Completion == nil || exec.Completion.FinalHead != "head" || len(exec.Completion.Verification) != 1 {
+		t.Fatalf("completion=%+v", exec.Completion)
+	}
+	if exec.Failure == nil || exec.Failure.Code != "failed" || exec.Failure.Message != "redacted" {
+		t.Fatalf("failure=%+v", exec.Failure)
+	}
+	if len(exec.SyncBaseEvents) != 1 || exec.SyncBaseEvents[0].BaseBranch != "main" || exec.SyncBaseEvents[0].ConflictFiles != 2 {
+		t.Fatalf("sync base events=%+v", exec.SyncBaseEvents)
+	}
+}

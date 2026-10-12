@@ -478,3 +478,35 @@ func TestRunBenchmarkOfflineReplayToleratesUnspecifiedStatus(t *testing.T) {
 		t.Fatalf("empty replay should fail min_body_chars, not pass: %+v", result.FixtureResults[0])
 	}
 }
+
+func TestFixtureRunnerReplaysBoundaryStatusCodesVerbatim(t *testing.T) {
+	runner := FixtureRunner{Fetch: Fetch}
+	serverError, _, err := runner.Run(context.Background(), webfetchcontract.BenchmarkFixture{ID: "edge-599", StatusCode: 599, Body: "upstream failure"}, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ok, _, err := runner.Run(context.Background(), webfetchcontract.BenchmarkFixture{ID: "unspecified", Body: "upstream failure"}, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if serverError.Category == ok.Category {
+		t.Fatalf("status 599 must be replayed as-is, not coerced to 200: both categorized %q", ok.Category)
+	}
+}
+
+func TestParseRetryAfterParsesSecondsAndEmpty(t *testing.T) {
+	for _, tc := range []struct {
+		in   string
+		want time.Duration
+	}{
+		{"", 0},
+		{"   ", 0},
+		{"7", 7 * time.Second},
+		{" 120 ", 120 * time.Second},
+		{"not-a-date", 0},
+	} {
+		if got := ParseRetryAfter(tc.in); got != tc.want {
+			t.Fatalf("ParseRetryAfter(%q)=%v, want %v", tc.in, got, tc.want)
+		}
+	}
+}

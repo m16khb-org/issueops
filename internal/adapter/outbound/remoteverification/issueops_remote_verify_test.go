@@ -286,3 +286,29 @@ func TestVerifyRemoteArtifactMergedHonorsCancellation(t *testing.T) {
 		t.Fatalf("verification command ran after cancellation: %v", statErr)
 	}
 }
+
+func TestFetchGitLabMergeRequestArtifactDerivesMergedFromMergedAt(t *testing.T) {
+	for name, tc := range map[string]struct {
+		mergedAt string
+		want     bool
+	}{
+		"opened without merged_at": {mergedAt: "", want: false},
+		"blank merged_at":          {mergedAt: "  ", want: false},
+		"opened with merged_at":    {mergedAt: "2026-01-02T03:04:05Z", want: true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			bin := t.TempDir()
+			writeFakeCommand(t, filepath.Join(bin, "glab"), `#!/bin/sh
+printf '%s\n' '{"web_url":"https://gitlab.example.com/group/project/-/merge_requests/42","state":"opened","merged_at":"`+tc.mergedAt+`","labels":[],"assignees":[]}'
+`)
+			t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+			artifact, err := fetchGitLabMergeRequestArtifact("https://gitlab.example.com/group/project/-/merge_requests/42")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if artifact.Merged != tc.want {
+				t.Fatalf("Merged = %v, want %v", artifact.Merged, tc.want)
+			}
+		})
+	}
+}

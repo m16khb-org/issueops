@@ -315,3 +315,25 @@ func gitIn(t *testing.T, dir string, args ...string) {
 		t.Fatalf("git %v: %v\n%s", args, err, out)
 	}
 }
+
+func TestInstallSkillClonesWholeRepoWhenPathIsEmpty(t *testing.T) {
+	requireGit(t)
+	repo := newSkillRepo(t, ".", "---\nname: demo\n---\n")
+	writeFile(t, filepath.Join(repo, "references", "guide.md"), "guide")
+	for _, args := range [][]string{{"add", "-A"}, {"commit", "--quiet", "-m", "references"}} {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = repo
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	cacheDir := filepath.Join(t.TempDir(), "cache")
+	store := GitSkillStore{SkillsDir: t.TempDir(), CacheDir: cacheDir}
+
+	if err := store.InstallSkill(t.Context(), upstreamcontract.SkillEntry{Name: "demo", Repo: repo}); err != nil {
+		t.Fatalf("InstallSkill with empty Path: %v", err)
+	}
+	if body, err := os.ReadFile(filepath.Join(cacheDir, "demo", "references", "guide.md")); err != nil || string(body) != "guide" {
+		t.Fatalf("whole-repo checkout must include nested files: %q, %v", body, err)
+	}
+}
