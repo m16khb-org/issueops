@@ -1,0 +1,20 @@
+{
+  "ok": false,
+  "provider": "github",
+  "url": "https://github.com/acme/issueops/pull/57",
+  "state": "OPEN",
+  "draft": false,
+  "base_branch": "main",
+  "branch": "12-gates-failed-summary",
+  "method": "squash",
+  "head_oid": "b41d9e07c2aa58f1e3d6c0b9a7e2f4d1c8b3a6e5",
+  "expected_head_oid": "9e2a7c51d0b4f3e8a1c6d9b2e5f7a0c3d8b1e4f6",
+  "checks": "2 passed, 1 failed",
+  "failing_checks": ["go test (ubuntu-latest)"],
+  "pending_checks": [],
+  "already_merged": false,
+  "blockers": [
+    {"code": "head_mismatch", "message": "PR head b41d9e07c2 is not the completion head 9e2a7c51d0 sealed by generation 3"},
+    {"code": "checks_failing", "message": "1 required check failed: go test (ubuntu-latest)"}
+  ]
+}

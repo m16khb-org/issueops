@@ -1,0 +1,8 @@
+# gh run view 8812345 --log-failed (go test (ubuntu-latest), head b41d9e07c2)
+--- FAIL: TestAddFileResultListsFailedGates (0.00s)
+    check_result_test.go:142: FailedGates = ["a.md:G1" "a.md:G3"], want ["a.md:G1" "a.md:G2" "a.md:G3"]
+        (G2 is checked with EVIDENCE: pending and must be listed as unmet)
+FAIL
+FAIL	issueops/internal/domain/gates	0.214s
+ok  	issueops/cmd/issueops/gatescli	0.388s
+# Same job on the completion head 9e2a7c51d0 (run 8811902): passed.

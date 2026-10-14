@@ -1,0 +1,54 @@
+diff --git a/cmd/issueops/gatescli/gates.go b/cmd/issueops/gatescli/gates.go
+index a093330a..874a6ae2 100644
+--- a/cmd/issueops/gatescli/gates.go
++++ b/cmd/issueops/gatescli/gates.go
+@@ -271,6 +271,10 @@ func printSummaryText(result gatescontract.CheckResult) {
+ 		return
+ 	}
+ 	fmt.Printf("UNMET: %d (met: %d%s)\n", result.TotalUnmet, result.TotalMet, suffix)
++	if len(result.FailedGates) > 0 {
++		// fmt.Println("debug failed:", result.FailedGates)
++		fmt.Printf("FAILED: %s\n", strings.Join(result.FailedGates, ", "))
++	}
+ }
+ 
+ type repeatedStrings []string
+diff --git a/internal/contract/gates/types.go b/internal/contract/gates/types.go
+index 545d12d6..941fc2e7 100644
+--- a/internal/contract/gates/types.go
++++ b/internal/contract/gates/types.go
+@@ -70,6 +70,8 @@ type CheckResult struct {
+ 	TotalMet       int          `json:"total_met"`
+ 	TotalUnmet     int          `json:"total_unmet"`
+ 	TotalAbandoned int          `json:"total_abandoned"`
++	// FailedGates lists "<file>:<gate id>" for every gate that is not met.
++	FailedGates    []string     `json:"failedGates,omitempty"`
+ 	Files          []FileResult `json:"files"`
+ 	Warnings       []string     `json:"warnings,omitempty"`
+ 	GeneratedAt    string       `json:"generated_at"`
+diff --git a/internal/domain/gates/check_result.go b/internal/domain/gates/check_result.go
+index 47100991..eb71a5f6 100644
+--- a/internal/domain/gates/check_result.go
++++ b/internal/domain/gates/check_result.go
+@@ -71,6 +71,12 @@ func AddFileResult(result model.CheckResult, file model.FileResult, warnings []s
+ 	result.TotalMet += file.Met
+ 	result.TotalUnmet += file.Unmet
+ 	result.TotalAbandoned += file.Abandoned
++	// TODO: maybe also include abandoned gates here later
++	for _, gate := range file.Gates {
++		if gate.State == "unchecked" || gate.State == "evidence_pending" {
++			result.FailedGates = append(result.FailedGates, file.File+":"+gate.ID)
++		}
++	}
+ 	if file.Error != "" {
+ 		result.OK = false
+ 	}
+@@ -95,3 +101,8 @@ func ValidateLedger(ledger Ledger) error {
+ 	}
+ 	return nil
+ }
++
++// failedGateLabel formats a failed gate for display.
++func failedGateLabel(file, id string) string {
++	return file + ":" + id
++}

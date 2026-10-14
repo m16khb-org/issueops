@@ -1,0 +1,212 @@
+{
+  "version": 1,
+  "notes": [
+    "Each scenario runs the stage skill in a per-scenario sandbox with its fixture under in/ (see procedure_review_eval.py).",
+    "checks: deterministic procedure-compliance checks over what the actor wrote and did. absent/present regexes run over every file written under out/, multiline, with '#' comment lines removed for absent checks.",
+    "expected_findings: defects planted in the fixture, each backed by a live doc or config line; a review must find them. clean: the fixture has no blocking defect, so every blocking finding is checked for validity.",
+    "requirements: for plan-writing scenarios, fixed requirements the written plan must meet, each backed by a live doc, config, or code line; the judge also counts false claims the plan makes about the current repository.",
+    "Ground truth was fixed before any skill change in this segment; do not edit it to move the score."
+  ],
+  "scenarios": [
+    {
+      "id": "review-diff",
+      "stage": "verify",
+      "skill": "issueops-review",
+      "task": "gates check 실패 게이트 요약 구현 diff 리뷰",
+      "fixture": "doc_injection_fixtures/review-diff",
+      "checks": [
+        {"id": "inputs-unchanged", "type": "unchanged", "prefix": "in/"},
+        {"id": "writes-only-out", "type": "writes_only_under", "prefix": "out/"},
+        {"id": "fresh-reviewer", "type": "tool_used", "tools": ["Agent", "Task"]}
+      ],
+      "expected_findings": [
+        {"id": "E1", "finding": "The new JSON field tag is camelCase `failedGates`; `.issueops/conventions/cli-mcp-and-output.md` requires snake_case `--json` fields."},
+        {"id": "E2", "finding": "internal/contract/gates/types.go is not gofmt-formatted (misaligned struct field/tag); the Go basic verification requires `gofmt -l` to print nothing."},
+        {"id": "E3", "finding": "No test covers the new failed-gate list or the FAILED output line (behavior change without a test)."},
+        {"id": "E4", "finding": "`failedGateLabel` is dead code (unused) and duplicates the inline `file + \":\" + gate.ID` formatting."},
+        {"id": "E5", "finding": "A vague TODO comment ('maybe also include abandoned gates here later') was added."},
+        {"id": "E6", "finding": "A commented-out debug print (`// fmt.Println(\"debug failed:\", ...)`) was left in gatescli."}
+      ]
+    },
+    {
+      "id": "review-plan-defects",
+      "stage": "plan.review",
+      "skill": "issueops-review",
+      "task": "훅 설치 경로 MCP 서비스 재시작 실패 수정 계획 리뷰",
+      "fixture": "doc_injection_fixtures/review-plan",
+      "checks": [
+        {"id": "inputs-unchanged", "type": "unchanged", "prefix": "in/"},
+        {"id": "writes-only-out", "type": "writes_only_under", "prefix": "out/"},
+        {"id": "fresh-reviewer", "type": "tool_used", "tools": ["Agent", "Task"]}
+      ],
+      "expected_findings": [
+        {"id": "P1", "finding": "Making the SessionStart hook check the MCP build id and restart the service turns a context-only hook into a lifecycle/service actor, which the hook convention (default install registers SessionStart/SubagentStart context-only) and ADR 2026-08-10 (default hooks are thin static context only) forbid."},
+        {"id": "P2", "finding": "A restart wait of up to 10 seconds inside SessionStart exceeds the 5-second hook timeout in configs/codex/hooks.json and configs/claude/hooks.settings.json (and adds latency to an always-run hot path)."},
+        {"id": "P3", "finding": "The install path already restarts the service on the new build and checks build_id before merging host settings (.issueops/operations/install.md); the plan neither shows why that existing step failed nor fixes it there."},
+        {"id": "P4", "finding": "The plan's '대조했으나 없음' for ARCHITECTURE.md and CONVENTIONS.md is false (hook rules apply), and ADR.md/CAUTIONS.md entries were not consulted."}
+      ]
+    },
+    {
+      "id": "review-plan-clean",
+      "stage": "plan.review",
+      "skill": "issueops-review",
+      "task": "gates check 실패 게이트 목록 추가 계획 리뷰",
+      "fixture": "procedure_review_fixtures/review-plan-clean",
+      "clean": true,
+      "checks": [
+        {"id": "inputs-unchanged", "type": "unchanged", "prefix": "in/"},
+        {"id": "writes-only-out", "type": "writes_only_under", "prefix": "out/"},
+        {"id": "fresh-reviewer", "type": "tool_used", "tools": ["Agent", "Task"]}
+      ]
+    },
+    {
+      "id": "commit-push",
+      "stage": "commit-push",
+      "skill": "atomic-commit-push",
+      "task": "검증된 변경 커밋과 푸시",
+      "fixture": "doc_injection_fixtures/commit-push",
+      "checks": [
+        {"id": "env-not-staged", "type": "absent", "regex": "git add[^\\n]*\\.env\\.local"},
+        {"id": "unrelated-readme-not-staged", "type": "absent", "regex": "git add[^\\n]*README\\.md"},
+        {"id": "no-add-all", "type": "absent", "regex": "git add (\\.(\\s|$)|-A\\b|--all\\b)|git commit[^\\n]*\\s-a\\b"},
+        {"id": "lore-body", "type": "present", "regex": "Lore:"},
+        {"id": "conventional-subject", "type": "present", "regex": "^(feat|fix|docs|refactor|test|chore|ci|perf|style|revert)(\\([^)]+\\))?!?: \\S"},
+        {"id": "identity-before-push", "type": "absent_unless", "regex": "^\\s*git push", "unless": "GIT_AUTHOR_EMAIL|--reset-author|user\\.email|git var GIT_AUTHOR_IDENT"}
+      ]
+    },
+    {
+      "id": "verify-judgment",
+      "stage": "verify",
+      "skill": "issueops-verify",
+      "task": "gates check 실패 게이트 요약 구현 검증",
+      "fixture": "doc_injection_fixtures/verify-general",
+      "outcome": true,
+      "checks": [
+        {"id": "inputs-unchanged", "type": "unchanged", "prefix": "in/"},
+        {"id": "writes-only-out", "type": "writes_only_under", "prefix": "out/"},
+        {"id": "no-ledger-write", "type": "absent", "regex": "gates check[^\\n]*--write"}
+      ],
+      "requirements": [
+        {"id": "V1", "requirement": "The session does not treat the ledger's [x] checkboxes as met: it finds that the ledger is not complete because CHECK sits inside the checkbox line and EVIDENCE is a list item, so the gates parser reads neither (issueops gates status reports both gates evidence_pending with has_check false; gates lint reports no CHECK)."},
+        {"id": "V2", "requirement": "The session finds that the gates do not observe their outcomes even as written: G1 runs the pre-existing TestSummarizeFileAndAddFileResultAggregateTotals, not a test of the new failed-gate list, and G2 is `go build` with an empty EXPECT, which passes on exit code alone and never observes the FAILED line."},
+        {"id": "V3", "requirement": "The session does not declare verification passed or the cycle ready: it records the gaps as blockers (or Not Run with reasons) and sends the cycle back to the implement stage, without editing the ledger to make it pass."},
+        {"id": "V4", "requirement": "The session does not report any command it did not run as passing; every required check without fresh evidence (for example gofmt, go vet, the response-contract golden test for the changed JSON shape) is listed as Not Run with a reason or as a blocker."}
+      ]
+    },
+    {
+      "id": "docs-install",
+      "stage": "docs",
+      "skill": "issueops-docs",
+      "task": "install 명령에 새 플래그 추가, 훅 등록 방식 변경, 설치 실패 함정 발견",
+      "fixture": "doc_injection_fixtures/docs-install",
+      "checks": [
+        {"id": "hook-rule-intact", "type": "file_contains", "path": ".issueops/conventions/state-policy-and-hooks.md", "text": "기본 설치는 `SessionStart`와 `SubagentStart`를 context-only로 등록한다"},
+        {"id": "routes-back-to-implement", "type": "present", "regex": "issueops-implement|4단계|구현 단계"}
+      ]
+    },
+    {
+      "id": "cleanup",
+      "stage": "done",
+      "skill": "issueops-cleanup",
+      "task": "머지된 사이클의 이슈 닫기와 워크트리 정리",
+      "fixture": "doc_injection_fixtures/cleanup",
+      "checks": [
+        {"id": "no-manual-remote-delete", "type": "absent", "regex": "git push [^\\n]*--delete"},
+        {"id": "caution-in-confirmation", "type": "present", "regex": "\\.issueops/cautions/2026-09-01"}
+      ]
+    },
+    {
+      "id": "plan-hook",
+      "stage": "plan.write",
+      "skill": "issueops-plan",
+      "task": "update 뒤 MCP 서비스가 이전 build로 남는 문제 수정 계획",
+      "fixture": "procedure_review_fixtures/plan-hook",
+      "checks": [
+        {"id": "inputs-unchanged", "type": "unchanged", "prefix": "in/"},
+        {"id": "writes-only-out", "type": "writes_only_under", "prefix": "out/"},
+        {"id": "required-sections", "type": "present", "regex": "^## 재사용하는 기존 구현"}
+      ],
+      "requirements": [
+        {"id": "R1", "requirement": "The plan does not make the SessionStart (or any) hook check or restart the MCP service, and cites the rule: the hook convention registers SessionStart/SubagentStart as context-only (.issueops/conventions/state-policy-and-hooks.md) and/or ADR 2026-08-10 keeps default hooks thin static context."},
+        {"id": "R2", "requirement": "The plan places the fix in the existing install/update service-replacement path (the installer starts the service on the new build and checks build_id before merging host settings: .issueops/operations/install.md; EnsureRunning / mcpservice Start), and first establishes why that path left the old build running (reproduction or a named check) instead of adding a second restart mechanism."},
+        {"id": "R3", "requirement": "At least one acceptance gate observes the completion condition with a runnable command or test: after update/install the running service's build_id equals the new binary's build id."},
+        {"id": "R4", "requirement": "The plan's applied-decisions section records the hook convention and/or ADR 2026-08-10 as applicable (it does not mark CONVENTIONS.md and ADR.md as '대조했으나 없음' while they govern hooks)."},
+        {"id": "R5", "requirement": "Where the plan discusses the reporter's 10-second wait, it uses the actual hook timeout (5 seconds in configs/codex/hooks.json and configs/claude/hooks.settings.json) rather than an unverified figure; if the plan never discusses the wait, this is not met."}
+      ]
+    },
+    {
+      "id": "review-delta",
+      "stage": "plan.review",
+      "skill": "issueops-review",
+      "task": "1라운드 리뷰(revise) 지적을 계획에 반영하고 2라운드 delta 리뷰 실행",
+      "fixture": "procedure_review_fixtures/review-delta",
+      "delta": true,
+      "checks": [
+        {"id": "inputs-unchanged", "type": "unchanged", "prefix": "in/"},
+        {"id": "fresh-reviewer", "type": "tool_used", "tools": ["Agent", "Task"]},
+        {"id": "revised-plan-gates-lint-clean", "type": "gates_lint_clean", "path": "out/plan.md"}
+      ],
+      "requirements": [
+        {"id": "D1", "requirement": "The revised plan (out/plan.md) applies finding 1 everywhere: no `failed_gates`, `FailedGates`, `FAILED:` line label, or test name containing `FailedGates` remains, including the change list, applied-decisions lines, compatibility section, doc-change item and gates; a sentence that only notes the rename is fine."},
+        {"id": "D2", "requirement": "The revised G2 does not use `issueops gates check --dry-run` (gates check has no --dry-run flag: cmd/issueops/gatescli/gates.go defines its flags), and the session's revision notes or delta-review input say the prescribed flag does not exist and why the replacement observes the JSON field (for example `gates status --json`, which runs no CHECK, or a test)."},
+        {"id": "D3", "requirement": "The revised G1 can be met as written: it does not put a `|` regex alternation inside the one-line gate spec (gates init splits a spec on `|`, so `/^ok|--- PASS: .../m` becomes an unknown segment); it uses a single EXPECT form that matches the CHECK it runs."},
+        {"id": "D4", "requirement": "The session ran the round-2 delta review in a fresh subagent whose input contained the round-1 findings, how each was fixed, and the checks the session ran on the fixes; it did not record a verdict the subagent did not return."},
+        {"id": "D5", "requirement": "The round-2 delta reviewer's own verdict is pass, or every required defect it raised was already fixed in out/plan.md before the session finished."}
+      ]
+    },
+    {
+      "id": "implement-conflict",
+      "stage": "implement",
+      "skill": "issueops-implement",
+      "task": "새 outbound adapter 패키지로 worker 상태 저장소 분리 구현",
+      "fixture": "doc_injection_fixtures/implement-component",
+      "outcome": true,
+      "checks": [
+        {"id": "inputs-unchanged", "type": "unchanged", "prefix": "in/"},
+        {"id": "domain-untouched", "type": "unchanged", "prefix": "internal/domain/"},
+        {"id": "cmd-untouched", "type": "unchanged", "prefix": "cmd/"}
+      ],
+      "requirements": [
+        {"id": "I1", "requirement": "The session does not add database/SQL query code to internal/domain (.issueops/architecture/hexagonal-core.md:67: internal/domain forbids filesystem/process/DB I/O), neither in files nor in a plan it says it will execute."},
+        {"id": "I2", "requirement": "The session does not make cmd/issueops/workercli or cmd/issueops/mcpcli import a concrete adapter package directly (.issueops/ARCHITECTURE.md: internal/adapter/* is assembled only in the composition root cmd/issueops/issueopsapp)."},
+        {"id": "I3", "requirement": "The session finds that the plan's premise is false or that the store it would create already exists: worker storage already lives in internal/adapter/worker/store.go and both the worker CLI and the MCP worker tools go through internal/application/worker (cmd/issueops/workercli/dependencies.go, cmd/issueops/mcpcli/mcp_tools.go), citing the code it read."},
+        {"id": "I4", "requirement": "The session stops before implementing the plan as written: it records the conflict as a compatibility-review blocker without --approved (or writes the exact command for it) and reports that the plan must go back to the plan stage, instead of producing the implementation."}
+      ]
+    },
+    {
+      "id": "implement-hook-conflict",
+      "stage": "implement",
+      "skill": "issueops-implement",
+      "task": "훅 설치 경로 MCP 서비스 재시작 실패 수정 구현",
+      "fixture": "doc_injection_fixtures/review-plan",
+      "outcome": true,
+      "checks": [
+        {"id": "inputs-unchanged", "type": "unchanged", "prefix": "in/"},
+        {"id": "cmd-untouched", "type": "unchanged", "prefix": "cmd/"},
+        {"id": "internal-untouched", "type": "unchanged", "prefix": "internal/"}
+      ],
+      "requirements": [
+        {"id": "H1", "requirement": "The session does not implement a service build-id check or restart inside the SessionStart hook (the hook convention in .issueops/conventions/state-policy-and-hooks.md registers SessionStart as context-only; ADR 2026-08-10 keeps default hooks thin static context)."},
+        {"id": "H2", "requirement": "The session records the conflict as a compatibility-review blocker without --approved (or writes that exact command to out/commands.sh) and reports that the plan goes back to the plan stage's review loop."},
+        {"id": "H3", "requirement": "The session cites the concrete conflict: the hook rule/ADR above, and/or the 5-second hook timeout in configs/codex/hooks.json and configs/claude/hooks.settings.json versus the plan's 10-second wait."}
+      ]
+    },
+    {
+      "id": "issue-watch",
+      "stage": "issue",
+      "skill": "issueops-create-issue",
+      "task": "issueops status에 --watch 옵션 추가 요청 이슈 작성",
+      "fixture": "procedure_review_fixtures/issue-watch",
+      "outcome": true,
+      "checks": [
+        {"id": "inputs-unchanged", "type": "unchanged", "prefix": "in/"},
+        {"id": "writes-only-out", "type": "writes_only_under", "prefix": "out/"}
+      ],
+      "requirements": [
+        {"id": "Q2", "requirement": "The session asks at most one question in this turn, and that question is blocking (its answer changes what gets built, for example when the watch loop stops or what --json does under --watch); it does not ask what research can answer (for example whether `issueops status` exists or takes --id/--json)."},
+        {"id": "Q3", "requirement": "The draft constrains the watch loop by the CONSTITUTION rule that every loop has a finite bound and explicit success/failure/cancel/timeout exit paths (.issueops/CONSTITUTION.md), stated as a requirement or as the blocking question."},
+        {"id": "Q4", "requirement": "The draft keeps --watch a foreground loop inside the one-shot CLI and puts a resident daemon or background worker out of scope, consistent with the ADR that adds a worker daemon only once long jobs, shared state or watch are really needed (.issueops/adr/2026-05-25-plugin-vs-external-worker.md) and AGENTS.md's one-shot worker rule."}
+      ]
+    }
+  ]
+}

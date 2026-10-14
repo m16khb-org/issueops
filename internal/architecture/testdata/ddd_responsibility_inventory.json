@@ -18279,6 +18279,21 @@
       "task": "T12"
     },
     {
+      "path": "scripts/autoresearch/doc_injection_eval.py",
+      "owner": "execution-script",
+      "task": "T17"
+    },
+    {
+      "path": "scripts/autoresearch/doc_injection_judge.py",
+      "owner": "execution-script",
+      "task": "T17"
+    },
+    {
+      "path": "scripts/autoresearch/procedure_review_eval.py",
+      "owner": "execution-script",
+      "task": "T17"
+    },
+    {
       "path": "scripts/ci_workflow_test.py",
       "owner": "execution-script",
       "task": "T20"
