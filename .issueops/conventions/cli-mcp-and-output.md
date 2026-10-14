@@ -19,7 +19,9 @@
   - `1`: 일반 실패. flag/usage 오류도 현재는 `gates`를 제외하면 `1`이다.
   - `2`: 알 수 없는 subcommand, `gates` usage 오류
   - `3`: policy 거부(`policy`)와 guard 차단(`guard`)
-  - workspace/config 전용 코드는 없다. 새 코드를 도입하면 이 목록과 `usage.golden.txt`를 함께 갱신한다.
+  - workspace/config 전용 exit code는 없다. 새 exit code를 도입하면 이 목록과 `usage.golden.txt`를 함께 갱신한다.
+- 명령·플래그를 추가하거나 지우면 `internal/adapter/inbound/catalog/cli/usage.go`의 usage 줄과
+  `cmd/issueops/testdata/usage.golden.txt`를 함께 고친다. `TestCLIUsageGolden`이 둘을 대조한다.
 
 ---
 
