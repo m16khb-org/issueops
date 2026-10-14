@@ -28,7 +28,7 @@ var remoteUsageLines = []string{
 	"Usage:",
 	"  issueops remote score --input PATH [--judge none|prompt|file] [--judge-file PATH] [--json]",
 	"  issueops remote render-template --kind issue|child|pr --template KIND --title TEXT --provider github|gitlab --field key=value... [--score-file PATH] [--json]",
-	"  issueops remote verify-artifact --id ID --provider github|gitlab --kind pr|mr --url URL --target-branch BRANCH --label LABEL --assignee USER [--json]",
+	"  issueops remote verify-artifact --id ID --provider github|gitlab --kind pr|mr --url URL --target-branch BRANCH --label LABEL --assignee USER RECORD_ACTOR_FLAGS [--json]",
 	"  issueops remote create-issue --id ID --title TEXT [--provider github|gitlab] [--body TEXT|--body-file PATH] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... [--confirm] [--json]",
 	"  issueops remote reconcile-issue --id ID [--confirm] [--json]",
 	"  issueops remote reconcile-child --id ID --operation-id HEX [--host HOST --session-id SESSION --cwd WORKTREE] [--confirm] [--json]",
