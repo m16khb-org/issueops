@@ -1438,6 +1438,60 @@
     "name": "gates_init"
   },
   {
+    "description": "Check gate specs, the gate lines of a plan file, or existing ledgers without running any CHECK: ledger spec rules (one argv command, segment split on |), the argv tokenizer, the command policy gates_check would apply, and EXPECT regex compilation. Problems mean the gate cannot be met as written regardless of the implementation. Writes nothing.",
+    "inputSchema": {
+      "properties": {
+        "authority_file": {
+          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "type": "string"
+        },
+        "cwd": {
+          "description": "CHECK working directory for the policy judgment, and base for relative plan_file and files. Defaults to the agent project directory.",
+          "type": "string"
+        },
+        "env_allowlist": {
+          "description": "Environment variable allowlist the CHECKs will run with. Defaults to HOME,PATH.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "files": {
+          "description": "Existing gate ledger files to lint.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "gates": {
+          "description": "Gate specs: \"ID: outcome | CHECK: command | EXPECT: expectation\".",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "network_allowed": {
+          "description": "Judge CHECKs as gates_check with network access would run them. Default false.",
+          "type": "boolean"
+        },
+        "plan_file": {
+          "description": "Plan file whose one-line gate specs or ledger-form gates are linted. Lines that mention CHECK: in another form are reported as not linted.",
+          "type": "string"
+        },
+        "workspace_root": {
+          "description": "Workspace root boundary for the policy judgment. Defaults to cwd.",
+          "type": "string"
+        },
+        "write_allowed": {
+          "description": "Judge CHECKs as gates_check with write access would run them. Default true.",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "name": "gates_lint"
+  },
+  {
     "description": "Append a durable message to a named session-to-session channel backed by the shared issueops state. Codex, Claude Code, Omo, and omp sessions sharing the state see it. Use for cross-session coordination such as front/server contract negotiation.",
     "inputSchema": {
       "properties": {

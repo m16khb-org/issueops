@@ -96,6 +96,7 @@ var mcpToolAuthorities = map[string]toolAuthority{
 	"gates_check":   {scope: toolScopeWorkspace, pathArgs: []string{"files"}},
 	"gates_status":  {scope: toolScopeWorkspace, pathArgs: []string{"files"}},
 	"gates_report":  {scope: toolScopeWorkspace, pathArgs: []string{"files"}},
+	"gates_lint":    {scope: toolScopeWorkspace, pathArgs: []string{"plan_file", "files"}},
 	// channel
 	"channel_send": serverTool,
 	"channel_recv": serverTool,

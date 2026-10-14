@@ -27,25 +27,8 @@ const (
 // 플래그는 무시한다. 컴파일 실패는 false다 — 패닉이나 오류가 아니다.
 func ExpectMatches(expect, output string) bool {
 	expect = strings.TrimSpace(expect)
-	if strings.HasPrefix(expect, "/") {
-		if m := regexp.MustCompile(`^/(.+)/([a-z]*)$`).FindStringSubmatch(expect); m != nil {
-			pattern := m[1]
-			for _, flag := range m[2] {
-				switch flag {
-				case 'i':
-					pattern = "(?i)" + pattern
-				case 'm':
-					pattern = "(?m)" + pattern
-				case 's':
-					pattern = "(?s)" + pattern
-				}
-			}
-			re, err := regexp.Compile(pattern)
-			if err != nil {
-				return false
-			}
-			return re.MatchString(output)
-		}
+	if re, isRegex, err := expectRegex(expect); isRegex {
+		return err == nil && re.MatchString(output)
 	}
 	for line := range strings.SplitSeq(strings.ReplaceAll(output, "\r\n", "\n"), "\n") {
 		line = strings.TrimSpace(line)
@@ -57,6 +40,31 @@ func ExpectMatches(expect, output string) bool {
 		}
 	}
 	return false
+}
+
+var expectRegexForm = regexp.MustCompile(`^/(.+)/([a-z]*)$`)
+
+// expectRegex는 trim된 EXPECT가 `/pattern/flags` 형식이면 컴파일한 정규식을 돌려준다.
+// isRegex가 false면 리터럴 EXPECT다. isRegex가 true인데 err가 있으면 이 EXPECT는
+// 어떤 출력과도 일치하지 않는다.
+func expectRegex(expect string) (re *regexp.Regexp, isRegex bool, err error) {
+	m := expectRegexForm.FindStringSubmatch(expect)
+	if !strings.HasPrefix(expect, "/") || m == nil {
+		return nil, false, nil
+	}
+	pattern := m[1]
+	for _, flag := range m[2] {
+		switch flag {
+		case 'i':
+			pattern = "(?i)" + pattern
+		case 'm':
+			pattern = "(?m)" + pattern
+		case 's':
+			pattern = "(?s)" + pattern
+		}
+	}
+	re, err = regexp.Compile(pattern)
+	return re, true, err
 }
 
 // EvidenceTail은 증거로 기록할 결정적 출력 꼬리를 만든다. unlazy처럼 비어 있지

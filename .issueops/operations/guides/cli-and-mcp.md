@@ -101,12 +101,16 @@ issueops gates check [--file PATH]... [--workspace-root PATH] [--cwd PATH] [--ti
 issueops gates status [--file PATH]... [--workspace-root PATH] [--cwd PATH] [--json]
 issueops gates report [--file PATH]... [--workspace-root PATH] [--cwd PATH] [--json]
 issueops gates abandon --file PATH --gate ID --reason TEXT [--json]
+issueops gates lint [--gate SPEC]... [--plan PATH] [--file PATH]... [--workspace-root PATH] [--cwd PATH] [--env NAME,NAME] [--write] [--network] [--json]
 ```
 
 `gates` discovers per-issue ledgers (`.issueops/issues/<n>/gates.md`)
 first, then generic task ledgers (`.issueops/gates/*.md`). The format is the
 unlazy v2 contract: one checkbox per outcome,
-`CHECK:` command plus `EXPECT:` substring-or-`/regex/` match, and `EVIDENCE:`
+`CHECK:` command plus an `EXPECT:` match (a literal matches when one trimmed output
+line equals it or starts with it followed by a space or tab, so `ok` matches
+`ok  issueops/...` and `--- PASS: TestX` matches `--- PASS: TestX (0.00s)`; it is not
+a substring match; `/regex/` uses RE2), and `EVIDENCE:`
 recorded from the deciding output tail. A checkbox is a claim; evidence is the
 proof — a checked gate whose evidence still reads `pending` counts as unmet
 (`evidence_pending`, worse than `unchecked`). `ABANDON: <id> <reason>` is the
@@ -127,8 +131,27 @@ Discovery reads only `.issueops/issues/<n>/gates.md` and `.issueops/gates/*.md`;
 root `GATES.md` and `gates/*.md` are not read, and `gates abandon` requires
 `--file`.
 
+`gates lint` runs nothing and writes nothing. It reads `--gate` specs, the gate
+lines of a plan file (`--plan`: one-line `G1: outcome | CHECK: cmd | EXPECT: x`
+specs, optionally wrapped whole in one pair of backticks or quotes or given as a
+`--gate "..."` line, and ledger-form gates), or
+existing ledgers (`--file`), and reports gates that cannot be met as written no
+matter what is implemented: a spec that `gates init` would reject (shell
+operators, a `|` inside a regex that splits the spec), a CHECK the command policy
+would deny under the same request `gates check` sends (for example
+`secret_like_argument`), markdown backticks inside CHECK or around EXPECT, an
+EXPECT regex RE2 cannot compile, and a gate with no CHECK. A plan line that looks
+like a gate (starts with a gate id or mentions `CHECK:`) but is in neither form is
+listed in `unparsed_lines` and also makes the result not clean: it cannot be
+copied into `gates init` and was not checked. It warns when the argv tokenizer
+consumes backslashes (inside double quotes `\d` becomes `d`; single quotes keep
+them) and when EXPECT is missing. Exit `0` clean, `1` problems or unreadable
+gate lines, `2` nothing to lint. Plan and review rounds run it before a reviewer
+sees the gates, because these defects otherwise cost a whole review round each.
+
 MCP exposes the same operations as `gates_init`, `gates_check`, `gates_status`,
-`gates_report`, and `gates_abandon` sharing one contract DTO (schema version 1).
+`gates_report`, `gates_abandon`, and `gates_lint` sharing one contract DTO
+(schema version 1).
 
 ## Cross-Session Channels
 

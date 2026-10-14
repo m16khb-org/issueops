@@ -398,7 +398,7 @@
           "name": "status"
         }
       ],
-      "hash": "0ed9b456b65fc78d4f5bc0d97851d9b750896ae64b26cbf59c48779a21a6e99e",
+      "hash": "51b48914fa0fb04176538f271067a76d87178fb9389683ea2b44215f41228f80",
       "mcp_tools": [
         "api_doc_review",
         "api_doc_static_check",
@@ -416,6 +416,7 @@
         "gates_abandon",
         "gates_check",
         "gates_init",
+        "gates_lint",
         "gates_report",
         "gates_status",
         "harness_inspect",
@@ -7239,7 +7240,7 @@
                 "name": "status"
               }
             ],
-            "hash": "0ed9b456b65fc78d4f5bc0d97851d9b750896ae64b26cbf59c48779a21a6e99e",
+            "hash": "51b48914fa0fb04176538f271067a76d87178fb9389683ea2b44215f41228f80",
             "mcp_tools": [
               "api_doc_review",
               "api_doc_static_check",
@@ -7257,6 +7258,7 @@
               "gates_abandon",
               "gates_check",
               "gates_init",
+              "gates_lint",
               "gates_report",
               "gates_status",
               "harness_inspect",

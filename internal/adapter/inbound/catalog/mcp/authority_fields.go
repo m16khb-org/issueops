@@ -35,6 +35,7 @@ var workspaceScopedTools = map[string]bool{
 	"gates_check":                 true,
 	"gates_status":                true,
 	"gates_report":                true,
+	"gates_lint":                  true,
 	"commit_suggest":              true,
 	"lint_diagnose":               true,
 	"worker_run_read_only":        true,

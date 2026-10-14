@@ -59,5 +59,19 @@ func GatesTools() []Tool {
 				"gates": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Gate specs: \"ID: outcome | CHECK: command | EXPECT: expectation\"."},
 			}},
 		},
+		{
+			Name:        "gates_lint",
+			Description: "Check gate specs, the gate lines of a plan file, or existing ledgers without running any CHECK: ledger spec rules (one argv command, segment split on |), the argv tokenizer, the command policy gates_check would apply, and EXPECT regex compilation. Problems mean the gate cannot be met as written regardless of the implementation. Writes nothing.",
+			InputSchema: map[string]any{"type": "object", "properties": map[string]any{
+				"workspace_root":  stringProp("Workspace root boundary for the policy judgment. Defaults to cwd."),
+				"cwd":             stringProp("CHECK working directory for the policy judgment, and base for relative plan_file and files. Defaults to the agent project directory."),
+				"gates":           map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Gate specs: \"ID: outcome | CHECK: command | EXPECT: expectation\"."},
+				"plan_file":       stringProp("Plan file whose one-line gate specs or ledger-form gates are linted. Lines that mention CHECK: in another form are reported as not linted."),
+				"files":           map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Existing gate ledger files to lint."},
+				"env_allowlist":   map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Environment variable allowlist the CHECKs will run with. Defaults to HOME,PATH."},
+				"write_allowed":   boolProp("Judge CHECKs as gates_check with write access would run them. Default true."),
+				"network_allowed": boolProp("Judge CHECKs as gates_check with network access would run them. Default false."),
+			}},
+		},
 	}
 }

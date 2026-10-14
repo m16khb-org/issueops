@@ -9,6 +9,9 @@ import "errors"
 // ErrNoGateFiles는 게이트 파일을 못 찾았을 때의 사용법 오류이다(unlazy exit 2).
 var ErrNoGateFiles = errors.New("no gate files found (.issueops/issues/<n>/gates.md or .issueops/gates/*.md)")
 
+// ErrNothingToLint는 lint할 게이트 출처가 하나도 없을 때의 사용법 오류다(exit 2).
+var ErrNothingToLint = errors.New("give at least one --gate spec, --plan file, or --file ledger to lint")
+
 // SchemaVersion는 gates 응답 계약의 현재 버전이다.
 const SchemaVersion = 1
 
@@ -107,4 +110,46 @@ type AbandonResult struct {
 	GateID        string `json:"gate_id"`
 	Recorded      bool   `json:"recorded"`
 	Error         string `json:"error,omitempty"`
+}
+
+// LintRequest는 게이트를 실행하지 않고 원장 규칙·command policy·EXPECT 형식으로
+// 검사하는 요청이다. Gates(init과 같은 spec), PlanFile(계획 문서 안의 게이트 줄),
+// Files(기존 원장) 중 하나 이상을 준다. 정책 옵션은 gates check와 같은 의미다.
+type LintRequest struct {
+	WorkspaceRoot  string   `json:"workspace_root"`
+	CWD            string   `json:"cwd"`
+	Gates          []string `json:"gates,omitempty"`
+	PlanFile       string   `json:"plan_file,omitempty"`
+	Files          []string `json:"files,omitempty"`
+	TimeoutSeconds int      `json:"timeout_seconds"`
+	EnvAllowlist   []string `json:"env_allowlist,omitempty"`
+	WriteAllowed   bool     `json:"write_allowed"`
+	NetworkAllowed bool     `json:"network_allowed"`
+}
+
+// LintGate는 게이트 하나의 검사 결과다. Problems가 있으면 gates check에서
+// 구현과 무관하게 met이 될 수 없다. Warnings는 의도와 다르게 읽힐 수 있는 형식이다.
+type LintGate struct {
+	Source       string   `json:"source"` // "spec", "<plan file>:<line>", 또는 원장 파일
+	ID           string   `json:"id"`
+	Check        string   `json:"check"`
+	Argv         []string `json:"argv,omitempty"`
+	Expect       string   `json:"expect"`
+	PolicyDenied bool     `json:"policy_denied,omitempty"`
+	Problems     []string `json:"problems,omitempty"`
+	Warnings     []string `json:"warnings,omitempty"`
+}
+
+// LintResult는 gates lint의 응답이다. Clean은 모든 게이트에 Problems가 없고, 계획에서
+// 게이트처럼 보이지만 읽지 못한 줄(UnparsedLines)도 없다는 뜻이다. 읽지 못한 게이트는
+// gates init으로 옮겨 적을 수 없고 검사되지도 않았다.
+type LintResult struct {
+	OK                bool       `json:"ok"`
+	SchemaVersion     int        `json:"schema_version"`
+	Clean             bool       `json:"clean"`
+	TotalGates        int        `json:"total_gates"`
+	GatesWithProblems int        `json:"gates_with_problems"`
+	Gates             []LintGate `json:"gates"`
+	UnparsedLines     []string   `json:"unparsed_lines,omitempty"` // "<plan file>:<line>"
+	Warnings          []string   `json:"warnings,omitempty"`
 }

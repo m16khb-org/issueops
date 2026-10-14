@@ -32,6 +32,17 @@ type Dependencies struct {
 	Check   func(gatescontract.CheckRequest) (gatescontract.CheckResult, error)
 	Init    func(gatescontract.InitRequest) (gatescontract.InitResult, error)
 	Abandon func(gatescontract.AbandonRequest) (gatescontract.AbandonResult, error)
+	Lint    func(gatescontract.LintRequest) (gatescontract.LintResult, error)
+}
+
+// LintError는 lint가 문제를 찾은 상태의 종료 오류이다(exit 1).
+type LintError struct {
+	Gates    int
+	Unparsed int
+}
+
+func (e LintError) Error() string {
+	return fmt.Sprintf("%d gate(s) cannot be met as written, %d gate-like plan line(s) could not be read", e.Gates, e.Unparsed)
 }
 
 func Run(deps Dependencies, args []string) error {
@@ -50,6 +61,8 @@ func Run(deps Dependencies, args []string) error {
 		return runReport(deps, args[1:])
 	case "abandon":
 		return runAbandon(deps, args[1:])
+	case "lint":
+		return runLint(deps, args[1:])
 	default:
 		gatesUsage()
 		return UsageError{Message: fmt.Sprintf("unknown gates subcommand %q", args[0])}
@@ -63,8 +76,9 @@ func gatesUsage() {
   issueops gates status [--file PATH]... [--workspace-root PATH] [--cwd PATH] [--json]
   issueops gates report [--file PATH]... [--workspace-root PATH] [--cwd PATH] [--json]
   issueops gates abandon --file PATH --gate ID --reason TEXT [--json]
+  issueops gates lint [--gate SPEC]... [--plan PATH] [--file PATH]... [--workspace-root PATH] [--cwd PATH] [--env NAME,NAME] [--write] [--network] [--json]
 
-Exit codes: 0 all gates met or honestly abandoned, 1 unmet gates remain, 2 usage error.
+Exit codes: 0 all gates met or honestly abandoned (lint: no problems), 1 unmet gates remain (lint: problems found), 2 usage error.
 `)
 }
 
@@ -186,6 +200,78 @@ func runAbandon(deps Dependencies, args []string) error {
 	return printSimpleResult(result, result.OK, err, *jsonOut)
 }
 
+func runLint(deps Dependencies, args []string) error {
+	fs := flag.NewFlagSet("gates lint", flag.ContinueOnError)
+	var gateSpecs, files repeatedStrings
+	fs.Var(&gateSpecs, "gate", `gate spec to lint: "ID: outcome | CHECK: cmd | EXPECT: expect" (repeatable)`)
+	plan := fs.String("plan", "", "plan file whose gate lines (one-line specs or ledger form) are linted")
+	fs.Var(&files, "file", "existing gate ledger file to lint (repeatable)")
+	root := fs.String("workspace-root", "", "workspace root boundary for the policy judgment (defaults to --cwd)")
+	cwd := fs.String("cwd", "", "CHECK working directory for the policy judgment (defaults to cwd)")
+	env := fs.String("env", "HOME,PATH", "environment variable allowlist the CHECKs will run with")
+	write := fs.Bool("write", true, "judge CHECKs as gates check --write would run them")
+	network := fs.Bool("network", false, "judge CHECKs as gates check --network would run them")
+	jsonOut := fs.Bool("json", false, "print JSON")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() > 0 {
+		return UsageError{Message: fmt.Sprintf("unexpected positional argument %q", fs.Arg(0))}
+	}
+	if strings.TrimSpace(*cwd) == "" && strings.TrimSpace(*root) == "" {
+		wd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		*cwd = wd
+	}
+	result, err := deps.Lint(gatescontract.LintRequest{
+		WorkspaceRoot: *root, CWD: *cwd, Gates: gateSpecs, PlanFile: *plan, Files: files,
+		EnvAllowlist: splitCSV(*env), WriteAllowed: *write, NetworkAllowed: *network,
+	})
+	if err != nil {
+		if errors.Is(err, gatescontract.ErrNothingToLint) {
+			return UsageError{Message: err.Error()}
+		}
+		return err
+	}
+	if *jsonOut {
+		if printErr := printJSON(result); printErr != nil {
+			return printErr
+		}
+	} else {
+		printLintText(result)
+	}
+	if !result.Clean {
+		return LintError{Gates: result.GatesWithProblems, Unparsed: len(result.UnparsedLines)}
+	}
+	return nil
+}
+
+func printLintText(result gatescontract.LintResult) {
+	for _, gate := range result.Gates {
+		mark := "ok  "
+		if len(gate.Problems) > 0 {
+			mark = "FAIL"
+		}
+		fmt.Printf("%s %s (%s)\n", mark, gate.ID, gate.Source)
+		for _, problem := range gate.Problems {
+			fmt.Printf("  problem: %s\n", problem)
+		}
+		for _, warning := range gate.Warnings {
+			fmt.Printf("  warning: %s\n", warning)
+		}
+	}
+	for _, warning := range result.Warnings {
+		fmt.Printf("warning: %s\n", warning)
+	}
+	if result.Clean {
+		fmt.Printf("LINT CLEAN (%d gates)\n", result.TotalGates)
+		return
+	}
+	fmt.Printf("LINT PROBLEMS: %d of %d gates, %d unreadable gate line(s)\n", result.GatesWithProblems, result.TotalGates, len(result.UnparsedLines))
+}
+
 func classifyCheckError(err error) error {
 	if errors.Is(err, gatescontract.ErrNoGateFiles) {
 		return UsageError{Message: err.Error()}
@@ -262,6 +348,9 @@ func printReportText(result gatescontract.CheckResult) {
 }
 
 func printSummaryText(result gatescontract.CheckResult) {
+	for _, warning := range result.Warnings {
+		fmt.Printf("warning: %s\n", warning)
+	}
 	suffix := ""
 	if result.TotalAbandoned > 0 {
 		suffix = fmt.Sprintf(", %d abandoned", result.TotalAbandoned)

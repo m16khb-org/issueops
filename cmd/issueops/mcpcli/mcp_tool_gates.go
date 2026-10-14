@@ -14,6 +14,7 @@ var gatesMCPHandlers = map[string]func(map[string]any, gatesapp.Service) MCPTool
 	"gates_report":  handleMCPGatesReport,
 	"gates_abandon": handleMCPGatesAbandon,
 	"gates_init":    handleMCPGatesInit,
+	"gates_lint":    handleMCPGatesLint,
 }
 
 func handleGatesMCPToolCall(call MCPToolCall, service gatesapp.Service) MCPToolOutcome {
@@ -89,4 +90,14 @@ func handleMCPGatesInit(args map[string]any, service gatesapp.Service) MCPToolOu
 		Gates: argmap.StringSlice(args, "gates"),
 	})
 	return gatesMCPOutcome(result, err, "Gates init failed")
+}
+
+func handleMCPGatesLint(args map[string]any, service gatesapp.Service) MCPToolOutcome {
+	base := gatesBaseCheckRequest(args)
+	result, err := service.Lint(gatescontract.LintRequest{
+		WorkspaceRoot: base.WorkspaceRoot, CWD: base.CWD, Files: base.Files,
+		Gates: argmap.StringSlice(args, "gates"), PlanFile: argmap.String(args, "plan_file"),
+		EnvAllowlist: base.EnvAllowlist, WriteAllowed: base.WriteAllowed, NetworkAllowed: base.NetworkAllowed,
+	})
+	return gatesMCPOutcome(result, err, "Gates lint failed")
 }

@@ -26,6 +26,9 @@ type Service struct {
 	Store  LedgerStore
 	Runner Runner
 	Clock  Clock
+	// Evaluate는 Lint가 CHECK를 실행하지 않고 command policy 판정만 볼 때 쓴다.
+	// nil이면 Lint는 정책 판정을 건너뛴다.
+	Evaluate PolicyEvaluate
 }
 
 func (service Service) Check(request gatescontract.CheckRequest) (gatescontract.CheckResult, error) {
@@ -66,6 +69,7 @@ func (service Service) checkFile(root, cwd string, request gatescontract.CheckRe
 		fileResult.Error = err.Error()
 		return fileResult, warnings
 	}
+	warnings = append(warnings, gatesdomain.LedgerFormatWarnings(file, ledger)...)
 	changed := false
 	for i := range ledger.Gates {
 		var outcome *gatesdomain.CheckOutcome

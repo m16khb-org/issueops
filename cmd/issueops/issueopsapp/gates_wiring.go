@@ -16,9 +16,9 @@ func newScopedGatesService(root, cwd string) app.Service {
 
 func gatesServiceWith(store app.LedgerStore) app.Service {
 	policy := newPolicyService()
-	return app.Service{Store: store, Clock: adapter.Clock{}, Runner: app.CommandRunner{Evaluate: policy.Evaluate, Execute: policy.Run}}
+	return app.Service{Store: store, Clock: adapter.Clock{}, Runner: app.CommandRunner{Evaluate: policy.Evaluate, Execute: policy.Run}, Evaluate: policy.Evaluate}
 }
 func gatesDependencies() gatescli.Dependencies {
 	service := newGatesService()
-	return gatescli.Dependencies{Check: service.Check, Init: service.Init, Abandon: service.Abandon}
+	return gatescli.Dependencies{Check: service.Check, Init: service.Init, Abandon: service.Abandon, Lint: service.Lint}
 }
