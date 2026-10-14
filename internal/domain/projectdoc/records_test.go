@@ -61,3 +61,33 @@ func TestIsRecordFile(t *testing.T) {
 		}
 	}
 }
+
+func TestMatchModulesReachesTheModuleThatOwnsTheRuleByHeading(t *testing.T) {
+	modules := []Record{
+		ParseModule("testing/unit.md", "# Unit tests\n\n## Go race detector\n\n## Golden contract regeneration\n"),
+		ParseModule("testing/hosts.md", "---\ndescription: Host parity for hooks and MCP registration.\n---\n# Hosts\n"),
+		ParseModule("testing/api.md", "# API documentation checks\n\n## OpenAPI prompt\n"),
+	}
+	docs := MatchModules("golden contract drift after a race fix", modules, 3)
+	if len(docs) != 1 || docs[0].Rel != "testing/unit.md" {
+		t.Fatalf("headings must route to the owning module: %v", docs)
+	}
+	if docs := MatchModules("hook mcp registration", modules, 3); len(docs) != 1 || docs[0].Rel != "testing/hosts.md" {
+		t.Fatalf("frontmatter description must route to the owning module: %v", docs)
+	}
+}
+
+func TestMatchModulesIgnoresTermsTooManyModulesCarry(t *testing.T) {
+	// "issueops" is in every module, so it cannot be the second shared term.
+	modules := []Record{
+		{Rel: "cautions/a.md", Title: "issueops worktree cleanup"},
+		{Rel: "cautions/b.md", Title: "issueops lease fence"},
+		{Rel: "cautions/c.md", Title: "issueops orchestration mailbox"},
+	}
+	if docs := MatchModules("issueops worktree", modules, 3); len(docs) != 0 {
+		t.Fatalf("a common term must not count toward the two: %v", docs)
+	}
+	if docs := MatchRecords("issueops worktree", modules, 3); len(docs) != 1 {
+		t.Fatalf("records keep counting every shared term: %v", docs)
+	}
+}

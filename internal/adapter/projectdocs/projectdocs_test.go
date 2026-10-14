@@ -247,11 +247,11 @@ func TestRouteProjectDocsRetainsAllCategoriesInCompoundRequests(t *testing.T) {
 		},
 		{
 			task: "PR review and CI test",
-			want: []string{"AGENTS.md", ".issueops/COMMIT_POLICY.md", ".issueops/TESTING.md", ".issueops/CAUTIONS.md", ".issueops/TECH_STACK.md", ".issueops/AGENT_WORKFLOW.md"},
+			want: []string{"AGENTS.md", ".issueops/VCS.md", ".issueops/COMMIT_POLICY.md", ".issueops/TESTING.md", ".issueops/CAUTIONS.md", ".issueops/AGENT_WORKFLOW.md", ".issueops/TECH_STACK.md"},
 		},
 		{
 			task: "PR review CI test",
-			want: []string{"AGENTS.md", ".issueops/COMMIT_POLICY.md", ".issueops/TESTING.md", ".issueops/CAUTIONS.md", ".issueops/TECH_STACK.md", ".issueops/AGENT_WORKFLOW.md"},
+			want: []string{"AGENTS.md", ".issueops/VCS.md", ".issueops/COMMIT_POLICY.md", ".issueops/TESTING.md", ".issueops/CAUTIONS.md", ".issueops/AGENT_WORKFLOW.md", ".issueops/TECH_STACK.md"},
 		},
 	}
 	for _, tt := range tests {

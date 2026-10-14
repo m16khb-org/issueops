@@ -44,7 +44,7 @@ Generated project-doc set:
 Tools/resources:
 
 - `project_docs_bootstrap_plan`: write-free bootstrap plan.
-- `project_docs_route`: recommend `AGENTS.md`/`.issueops` docs for a task, plus up to five dated `cautions/`/`adr/` records whose title, summary, or source shares at least two terms with the task (Korean words like 배포·빌드·이미지 map to English terms).
+- `project_docs_route`: recommend `AGENTS.md`/`.issueops` docs for a task, up to three living modules of the routed index docs whose title, description, or `## ` headings share at least two distinctive terms with the task, and up to five dated `cautions/`/`adr/` records whose title, summary, or source shares at least two terms with the task (Korean words like 배포·빌드·이미지 map to English terms). A record's summary is its `- Summary:` line, else its frontmatter `description`, else the first 300 characters of its `## Decision`/`## 결정`/`## Summary` section or of a one-line decision marker (`**결정:**`, `**결정: …**`, `Decision:`, `- Decision:`) with its wrapped lines, so older records without a summary are matched on what they decided.
 - `project_docs_read`: read a document and return its hash.
 - `project_docs_revise`: full-document replacement; requires `expected_sha256` and `confirm=true`.
 - `project_docs_append`: append-only ADR/caution record; also adds a `- [<title>](<file>)` line to the family `overview.md` when it exists (warning otherwise). The root index is never modified.

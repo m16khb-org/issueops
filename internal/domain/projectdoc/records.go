@@ -3,10 +3,13 @@ package projectdoc
 import (
 	"fmt"
 	"math"
+	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
+	"unicode/utf8"
 )
 
 // Record is the routing view of one dated record file under a family module
@@ -30,13 +33,29 @@ func IsRecordFile(name string) bool {
 
 // ParseRecord reads the first H1 (without a leading "YYYY-MM-DD —" date), the
 // "- Summary:" line, and the "- Source:" line. Hand-written records without a
-// Summary line fall back to their frontmatter description.
+// Summary line fall back to their frontmatter description, and records with
+// neither fall back to the start of their decision ("## Decision"/"## 결정"
+// section or a "**결정:**" line), so older records are matched on what they
+// decided and not on the title alone.
 func ParseRecord(rel, content string) Record {
 	record := Record{Rel: rel}
 	description := ""
+	var decision strings.Builder
+	inDecision := false
+	// inDecisionLine keeps a one-line decision marker open across its wrapped lines, up to
+	// a blank line or the next list item, bold label, or heading.
+	inDecisionLine := false
 	for line := range strings.Lines(content) {
 		line = strings.TrimSpace(line)
+		continued := inDecisionLine && line != "" && !strings.HasPrefix(line, "- ") &&
+			!strings.HasPrefix(line, "**") && !strings.HasPrefix(line, "#")
+		inDecisionLine = false
 		switch {
+		case continued:
+			inDecisionLine = true
+			if utf8.RuneCountInString(decision.String()) < decisionFallbackRunes {
+				decision.WriteString(" " + line)
+			}
 		case record.Title == "" && strings.HasPrefix(line, "# "):
 			record.Title = stripLeadingDate(strings.TrimSpace(line[2:]))
 		case record.Summary == "" && strings.HasPrefix(line, "- Summary:"):
@@ -45,12 +64,42 @@ func ParseRecord(rel, content string) Record {
 			record.Source = strings.TrimSpace(strings.TrimPrefix(line, "- Source:"))
 		case description == "" && strings.HasPrefix(line, "description:"):
 			description = strings.TrimSpace(strings.TrimPrefix(line, "description:"))
+		case strings.HasPrefix(line, "## "):
+			heading := strings.ToLower(strings.TrimSpace(line[3:]))
+			inDecision = decision.Len() == 0 && (strings.HasPrefix(heading, "decision") || strings.HasPrefix(heading, "결정") || heading == "summary")
+		case decision.Len() == 0 && decisionLineRe().MatchString(line):
+			decision.WriteString(decisionLineRe().FindStringSubmatch(line)[1])
+			inDecisionLine = true
+		case inDecision && line != "" && utf8.RuneCountInString(decision.String()) < decisionFallbackRunes:
+			decision.WriteString(line + " ")
 		}
 	}
-	if record.Summary == "" {
+	switch {
+	case record.Summary != "":
+	case description != "":
 		record.Summary = description
+	default:
+		record.Summary = truncateRunes(strings.TrimSpace(decision.String()), decisionFallbackRunes)
 	}
 	return record
+}
+
+// decisionLineRe is a one-line decision marker: "**결정:** text", "**결정: text**",
+// "Decision: text", "- Decision: text", or "**Decision:** text". It captures the text.
+var decisionLineRe = sync.OnceValue(func() *regexp.Regexp {
+	return regexp.MustCompile(`^(?:-\s+)?(?:\*\*)?(?i:decision|결정)(?:\*\*)?\s*:\s*(?:\*\*)?\s*(.*?)\s*(?:\*\*)?$`)
+})
+
+// decisionFallbackRunes bounds the decision text a record without a summary is
+// matched on: about one summary sentence, so long decisions do not match every task.
+const decisionFallbackRunes = 300
+
+func truncateRunes(text string, limit int) string {
+	runes := []rune(text)
+	if len(runes) <= limit {
+		return text
+	}
+	return string(runes[:limit])
 }
 
 func stripLeadingDate(title string) string {
@@ -74,6 +123,37 @@ func RecordIndexLine(title, fileName string) string {
 // weighs ln(N/df) over the given records, so words most records use barely
 // count. Korean task words reach English records through koreanTerms.
 func MatchRecords(task string, records []Record, limit int) []RouteDoc {
+	return matchRecords(task, records, limit, "past record %q shares: %s", false)
+}
+
+// MatchModules is MatchRecords for the living modules of a routed index doc:
+// the module files its table points to, matched by title, description, and
+// section headings, so a task reaches the module that owns the detailed rule.
+func MatchModules(task string, modules []Record, limit int) []RouteDoc {
+	return matchRecords(task, modules, limit, "module %q of the routed index shares: %s", true)
+}
+
+// ParseModule is the routing view of a living module: its H1, frontmatter
+// description, and "## " headings, which name the rules the module owns.
+func ParseModule(rel, content string) Record {
+	record := Record{Rel: rel}
+	var summary []string
+	for line := range strings.Lines(content) {
+		line = strings.TrimSpace(line)
+		switch {
+		case record.Title == "" && strings.HasPrefix(line, "# "):
+			record.Title = strings.TrimSpace(line[2:])
+		case strings.HasPrefix(line, "## "):
+			summary = append(summary, strings.TrimSpace(line[3:]))
+		case strings.HasPrefix(line, "description:"):
+			summary = append(summary, strings.TrimSpace(strings.TrimPrefix(line, "description:")))
+		}
+	}
+	record.Summary = strings.Join(summary, "; ")
+	return record
+}
+
+func matchRecords(task string, records []Record, limit int, reasonFormat string, skipCommon bool) []RouteDoc {
 	taskTerms := routeTerms(task)
 	if len(taskTerms) < 2 || len(records) == 0 || limit <= 0 {
 		return nil
@@ -96,7 +176,9 @@ func MatchRecords(task string, records []Record, limit int) []RouteDoc {
 		var shared []string
 		score := 0.0
 		for term := range taskTerms {
-			if recordTerms[i][term] {
+			// For modules, a term a third of the candidates carry (the project's own
+			// name, for one) cannot tell them apart, so it does not count toward the two.
+			if recordTerms[i][term] && (!skipCommon || df[term]*3 <= len(records)) {
 				shared = append(shared, term)
 				score += math.Log(float64(len(records)) / float64(df[term]))
 			}
@@ -114,7 +196,7 @@ func MatchRecords(task string, records []Record, limit int) []RouteDoc {
 	})
 	docs := make([]RouteDoc, 0, min(limit, len(matches)))
 	for _, m := range matches[:min(limit, len(matches))] {
-		docs = append(docs, RouteDoc{m.record.Rel, fmt.Sprintf("past record %q shares: %s", m.record.Title, strings.Join(m.shared, ", "))})
+		docs = append(docs, RouteDoc{m.record.Rel, fmt.Sprintf(reasonFormat, m.record.Title, strings.Join(m.shared, ", "))})
 	}
 	return docs
 }
@@ -140,6 +222,10 @@ var koreanStopStems = map[string]bool{
 	"이다": true, "이번": true, "모든": true, "그리": true, "위해": true, "대한": true, "통해": true,
 	"경우": true, "때문": true, "같은": true, "다른": true, "이미": true, "아직": true, "다시": true,
 	"먼저": true, "직접": true,
+	// Task-description filler: every change "adds", "changes", or "summarizes" something, and every
+	// stage task is a "plan" for some "problem".
+	"추가": true, "변경": true, "요약": true, "결과": true, "에서": true, "경로": true, "명령": true,
+	"상태": true, "수정": true, "구현": true, "완료": true, "사이": true, "정리": true, "계획": true, "문제": true,
 }
 
 var englishStopWords = map[string]bool{

@@ -19,6 +19,9 @@ const (
 	// frontmatter description and the first H1 are used, so the first 8KiB is the
 	// metadata window. 64 entries * 8KiB is the structural read ceiling.
 	projectDocCatalogHeaderBytes = 8 * 1024
+	// projectDocCatalogUsage follows the catalog header in every host's model text.
+	projectDocCatalogUsage = "An index doc's module table names the file that owns each detailed rule; open that module, not just the index. " +
+		"When a decision applies a doc rule, quote the rule's sentence verbatim with the path of the file you read it in; a rule you cannot quote that way is not a doc rule."
 )
 
 // projectdocdomain.ProjectDocCatalogEntry describes one project doc in the working repo's
@@ -240,15 +243,19 @@ func buildProjectDocCatalogEntry(name, header string, truncated bool) (projectdo
 }
 
 // FormatProjectDocCatalog renders the model-facing catalog every host receives:
-// a header line, then one "- <path>: <description>" line per document, so the
-// agent can open a document by its path once it judges the document relevant.
+// a header line, one usage line, then one "- <path>: <description>" line per
+// document, so the agent can open a document by its path once it judges the
+// document relevant. The usage line carries the two habits the qualitative
+// doc-injection evaluation found missing: following an index doc into the
+// module that owns the rule, and citing a rule only from a file actually opened.
 // Returns "" when there is nothing to present.
 func FormatProjectDocCatalog(entries []projectdocdomain.ProjectDocCatalogEntry) string {
 	if len(entries) == 0 {
 		return ""
 	}
-	lines := make([]string, 0, len(entries)+1)
-	lines = append(lines, "Project docs under .issueops/ (read the ones relevant to the task before acting):")
+	lines := make([]string, 0, len(entries)+2)
+	lines = append(lines, "Project docs under .issueops/ (read the ones relevant to the task before acting):",
+		projectDocCatalogUsage)
 	for _, entry := range entries {
 		meta := entry.Description
 		if meta == "" {

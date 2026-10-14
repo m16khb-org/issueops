@@ -348,7 +348,7 @@ func TestFormatProjectDocCatalogListsPathsWithDescriptions(t *testing.T) {
 		{RelPath: ".issueops/X.md", Title: "엑스", Description: ""},
 		{RelPath: ".issueops/BARE.md"},
 	}
-	want := "Project docs under .issueops/ (read the ones relevant to the task before acting):\n" +
+	want := "Project docs under .issueops/ (read the ones relevant to the task before acting):\n" + projectDocCatalogUsage + "\n" +
 		"- .issueops/ADR.md: Structural decisions, rationale, and rejected alternatives.\n" +
 		"- .issueops/X.md: 엑스\n" +
 		"- .issueops/BARE.md"

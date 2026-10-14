@@ -4,6 +4,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 func TestCatalogOmissionsAnyAndSummary(t *testing.T) {
@@ -77,6 +78,45 @@ func TestParseRecordTitleDateStrippingAndSummaryFallback(t *testing.T) {
 		if got := ParseRecord("a.md", "# "+title+"\n").Title; got != want {
 			t.Fatalf("title %q parsed as %q, want %q", title, got, want)
 		}
+	}
+}
+
+func TestParseRecordWithoutSummaryFallsBackToTheDecision(t *testing.T) {
+	old := ParseRecord("adr/a.md", "# Task gate ledger\n\n## Context\nwhy\n\n## Decision\n\n1. CLI와 MCP가 같은 gates contract DTO를 공유한다.\n2. exit code 0/1/2.\n\n## Consequences\nlater\n")
+	if old.Summary != "1. CLI와 MCP가 같은 gates contract DTO를 공유한다. 2. exit code 0/1/2." {
+		t.Fatalf("summary = %q, want the Decision section text only", old.Summary)
+	}
+	inline := ParseRecord("adr/b.md", "# Title\n\n**결정:** hook은 정적 catalog만 렌더한다.\n\n## 결정 근거\nnot this\n")
+	if inline.Summary != "hook은 정적 catalog만 렌더한다." {
+		t.Fatalf("summary = %q, want the inline 결정 line", inline.Summary)
+	}
+	long := ParseRecord("adr/c.md", "# T\n## Decision\n"+strings.Repeat("가", 400)+"\n")
+	if got := utf8.RuneCountInString(long.Summary); got != decisionFallbackRunes {
+		t.Fatalf("summary runes = %d, want the %d-rune cap so long decisions do not match every task", got, decisionFallbackRunes)
+	}
+	for content, want := range map[string]string{
+		"# T\n\n**결정: 외부 코어와 얇은 adapter를 쓴다.**\n\n- 근거\n":                                              "외부 코어와 얇은 adapter를 쓴다.",
+		"# T\n\nDecision: prefer a tarball first.\nDefer Homebrew.\n\nlater text\n":                    "prefer a tarball first. Defer Homebrew.",
+		"# T\n\n- Kind: `adr`\n- Decision: port may import\n  contract DTOs.\n- Rationale: not this\n": "port may import contract DTOs.",
+		"# T\n\n## Summary\n\nHTTP 설치 검증이 stdio만 본다.\n\n## Fix\nnot this\n":                            "HTTP 설치 검증이 stdio만 본다.",
+	} {
+		if got := ParseRecord("adr/e.md", content).Summary; got != want {
+			t.Fatalf("summary = %q, want %q for %q", got, want, content)
+		}
+	}
+	if described := ParseRecord("adr/d.md", "description: fm\n# T\n## Decision\nbody\n"); described.Summary != "fm" {
+		t.Fatalf("summary = %q, want frontmatter description to win over the decision fallback", described.Summary)
+	}
+}
+
+func TestMatchRecordsIgnoresPlanAndProblemFiller(t *testing.T) {
+	records := []Record{
+		{Rel: "adr/lint.md", Title: "gates lint", Summary: "계획 파일의 게이트를 검사해 리뷰 문제를 줄인다. MCP tool."},
+		{Rel: "adr/mcp.md", Title: "shared MCP service", Summary: "update restarts the MCP service build."},
+	}
+	got := MatchRecords("update 뒤 MCP 서비스가 이전 build로 남는 문제 수정 계획", records, 5)
+	if len(got) != 1 || got[0].Rel != "adr/mcp.md" {
+		t.Fatalf("routes = %+v, want only the MCP service record; sharing mcp plus 계획/문제 filler is not a match", got)
 	}
 }
 

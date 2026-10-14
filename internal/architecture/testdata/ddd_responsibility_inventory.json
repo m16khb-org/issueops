@@ -10728,6 +10728,7 @@
       "task": "T20",
       "symbols": [
         "func Route",
+        "func readModules",
         "func readRecords",
         "type RouteEffects"
       ]
@@ -16622,14 +16623,18 @@
       "task": "T20",
       "symbols": [
         "func IsRecordFile",
+        "func MatchModules",
         "func MatchRecords",
+        "func ParseModule",
         "func ParseRecord",
         "func RecordIndexLine",
         "func RecordModuleDirs",
         "func addHangulTerms",
         "func latinTerm",
+        "func matchRecords",
         "func routeTerms",
         "func stripLeadingDate",
+        "func truncateRunes",
         "type Record"
       ]
     },

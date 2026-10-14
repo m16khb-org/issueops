@@ -3,6 +3,7 @@ package projectdocs
 import (
 	"errors"
 	"io/fs"
+	"maps"
 	"slices"
 	"strings"
 	"testing"
@@ -167,14 +168,18 @@ func TestAppendReportsOverviewLinkFailureAsWarningAfterWritingRecord(t *testing.
 func TestRouteWarnsWhenRecordsCannotBeListedOrRead(t *testing.T) {
 	dir := &failingRoute{dirErr: fs.ErrPermission, routeEffects: routeEffects{existing: map[string]bool{"/repo/.issueops": true}}}
 	result := Route("/repo", "docker", dir)
-	var listWarnings int
+	// "docker" routes the default docs, so CONVENTIONS and TESTING module dirs are
+	// listed too. Every directory that cannot be listed is reported exactly once,
+	// including cautions/, which is both a record and a module directory.
+	listed := map[string]int{}
 	for _, warning := range result.Warnings {
-		if strings.HasPrefix(warning, "could not list .issueops/") && strings.Contains(warning, fs.ErrPermission.Error()) {
-			listWarnings++
+		if rest, ok := strings.CutPrefix(warning, "could not list .issueops/"); ok && strings.Contains(warning, fs.ErrPermission.Error()) {
+			listed[strings.Fields(rest)[0]]++
 		}
 	}
-	if listWarnings != 2 {
-		t.Fatalf("want one list warning per record family (cautions, adr), warnings=%v", result.Warnings)
+	want := map[string]int{"cautions": 1, "adr": 1, "conventions": 1, "testing": 1}
+	if !maps.Equal(listed, want) {
+		t.Fatalf("want one list warning per unreadable directory %v, got %v (warnings=%v)", want, listed, result.Warnings)
 	}
 
 	file := &failingRoute{fileErr: errEffect, routeEffects: routeEffects{
