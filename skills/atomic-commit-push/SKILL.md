@@ -16,7 +16,7 @@ Turn local changes into one or more atomic commits, verify each commit as approp
 - Commit/push only within user authorization. Approval to continue an IssueOps cycle through
   draft PR/MR publication includes commits and pushes to that cycle's issue branch; do not
   request the same approval again. A request limited to local edits does not authorize publication.
-- Read the repo's nearest `AGENTS.md`/`CLAUDE.md` and relevant project docs before committing.
+- Read the repo's nearest `AGENTS.md`/`CLAUDE.md` and relevant project docs before committing. When `.issueops/TESTING.md` exists, it decides which checks a commit must pass; if it is an index whose module table hands a topic (for example the changed language's basic checks) to a module file, open that module too. Open the `.issueops/CAUTIONS.md` modules for secrets and commit identity when they exist.
 - If `.issueops/COMMIT_POLICY.md` exists, use it as the commit-message source of truth.
 - Never use `git add .` or `git commit -a`. Stage exact files, and use `git add -p` when a file mixes unrelated changes.
 - Do not discard, stash, reformat, or rewrite user changes unless the user explicitly asks.
@@ -36,11 +36,11 @@ Turn local changes into one or more atomic commits, verify each commit as approp
 
 2. **Understand scope**
    - Review unstaged, staged, and untracked changes with `git diff`, `git diff --cached`, and targeted file reads.
-   - Identify unrelated changes and leave them unstaged.
-   - Build an atomic commit plan: each commit should represent one intent and be revertible on its own.
+   - Decide what belongs to the requested work: the active cycle's issue, or exactly what the user asked to commit. Changes outside it stay unstaged even when they are small and worth keeping; list them in the report so the user can commit them separately.
+   - Build an atomic commit plan within that scope: each commit should represent one intent and be revertible on its own. Splitting into atomic commits never pulls out-of-scope changes into a commit of their own.
 
 3. **Verify before staging**
-   - Run the smallest relevant tests/checks for the changed scope when practical.
+   - Run the smallest relevant tests/checks for the changed scope when practical, starting with the required checks in `.issueops/TESTING.md` when it exists.
    - If checks are expensive or unavailable, note the reason and use targeted inspection.
 
 4. **Stage one atomic unit**
@@ -57,7 +57,7 @@ Turn local changes into one or more atomic commits, verify each commit as approp
      - `Intent`: one purpose for this atomic commit.
      - `Why`: the user/request/problem context.
      - `Changes`: concise bullets describing the staged diff.
-     - `Verify`: commands run, or `Not-tested: <reason>`.
+     - `Verify`: record the commands run, or `Not-tested: <reason>`. When `.issueops/TESTING.md` exists, record which of its required checks ran.
      - `Risk`: rollout/compatibility/secret/generated-file risk, or `Low`.
    - Commit only after the staged diff matches the planned atomic unit.
 

@@ -27,6 +27,7 @@ Failure signature: <stable error line, stack frame, diff, or trace divergence>
 Root cause hypothesis: <falsifiable cause statement>
 Isolation: <bisect, trace diff, divide-and-conquer, or direct line proof>
 Minimal fix boundary: <smallest file/function/behavior surface to change>
+Known cautions: <matching .issueops/CAUTIONS.md or cautions/ entry path, or "none matched">
 Verification: <rerun, regression test, or blocker if verification cannot run>
 ```
 
@@ -42,6 +43,14 @@ code, inputs, and a stable failure signature. Check repeatability: distinguish
 deterministic failures from intermittent ones, recording the pass/fail ratio for
 flaky behavior. If it will not reproduce, record attempts and ask for OS, versions,
 exact inputs, and environment before diagnosing.
+
+When the repo has `.issueops/TESTING.md`, take the canonical test command and
+flags from it so the reproduction matches what the repo's verification runs.
+
+Before forming any hypothesis, read `.issueops/CAUTIONS.md` (index and the
+module for the failing area) and search dated `.issueops/cautions/` records for
+the failure signature. A recorded pitfall that matches is the first hypothesis;
+record its path under `Known cautions`, or record "none matched".
 
 ### 2. Translate
 

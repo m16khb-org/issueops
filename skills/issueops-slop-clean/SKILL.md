@@ -27,6 +27,13 @@ issueops next --id "$ISSUEOPS_ID" --json
 `ai_slop_clean_stale`이 되어 이 단계로 되돌아온다. 그것은 오류가 아니라 의도된
 회귀다. 바뀐 것을 확인하고 다시 봉인한다.
 
+## 프로젝트 문서 확인
+
+무엇이 slop인지는 저장소의 코드 규칙이 정한다. 정리 프롬프트를 실행하기 **전에**
+`.issueops/CONVENTIONS.md`를 읽고 이름·주석·레이어 경계·의존 방향 규칙을 골라 프롬프트의
+`<PROJECT_RULES>`에 넣는다. 그 규칙과 아래 분류 표가 충돌하면 저장소 규칙을 따른다.
+정리 기록에는 삭제·통합의 근거가 된 규칙을 문서 경로와 함께 적는다.
+
 ## 정리 프롬프트
 
 정확히 canonical worktree에서, 구현 단계의 테스트가 최소 한 번 통과한 뒤에 실행한다.
@@ -46,6 +53,8 @@ Inputs:
 - Worktree branch: <BRANCH>
 - Diff command: git -C <EXPECTED_WORKTREE> diff --stat && git -C <EXPECTED_WORKTREE> diff
 - Verification commands already run: <COMMANDS_AND_RESULTS>
+- Project rules from .issueops/CONVENTIONS.md: <PROJECT_RULES>
+  These rules win over the generic table below when they conflict.
 
 Step 1 - Lock current behavior before editing:
 - Identify what must stay the same inside CLEANUP_BOUNDARY.
@@ -95,13 +104,15 @@ Output:
 - Preserved intentionally: suspicious-looking code kept on purpose and why.
 - Out-of-scope findings: smells outside CLEANUP_BOUNDARY, listed only.
 - Verification: fresh commands and results.
+- Project rules applied: each rule that justified a removal, with its doc path.
 - Remaining risks or explicit none.
 ```
 
 ## 측정
 
 [`code-quality-metrics`](../code-quality-metrics/SKILL.md)으로 정리 전후를 측정한다. 신호 대 잡음 비율, 중복
-비율, boilerplate 비율을 숫자로 남긴다.
+비율, boilerplate 비율을 숫자로 남긴다. 측정은 그 스킬 파일을 열어 거기 적힌 셸 레시피(`git diff` 기반)로 한다.
+`issueops`에는 품질 측정 명령이 없다(`issueops quality`는 `inspect`뿐이다). 없는 명령을 지어내 적지 않는다.
 
 측정 없이 "더 깔끔해졌다"고 적지 않는다. 측정값이 없으면 그 주장은 검증할 수 없고,
 검증할 수 없는 주장은 다음 리뷰가 공격할 대상이 된다.
@@ -124,6 +135,10 @@ verified-execution report를 확정한다. report는 워크트리 **안**의 정
 **성능 측정값**을 반드시 담는다. 링크나 임시 경로가 아니라 커밋될 파일이어야 한다.
 
 ## 기록
+
+봉인하기 **전에** 정리 프롬프트 출력의 `Project rules applied` 항목을 verified-execution report의
+`## 적용한 문서 규칙` 절에 `| 문서 경로 | 해당 문장 인용 | 이 규칙으로 지운·합친 것 |` 행으로 옮긴다.
+아래 명령이 report까지 봉인하므로, 기록 뒤에 옮기면 `ai_slop_clean_stale`이 된다.
 
 ```bash
 issueops ai-slop-clean record --id "$ISSUEOPS_ID" \

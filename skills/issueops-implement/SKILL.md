@@ -143,6 +143,38 @@ issueops phase --id "$ISSUEOPS_ID" --to implement $RECORD_ACTOR_FLAGS --json
 
 blocker가 하나라도 있으면 compatibility review는 승인되지 않는다. blocker를 먼저 없앤다.
 
+compatibility review를 기록하기 전에 계획이 고치거나 재사용한다고 적은 코드를 열어, 계획이 현재 동작에
+대해 단언한 것(어디에 무엇이 있고 누가 호출하는가)이 맞는지 확인한다. 계획대로 구현하면 문서 규칙(레이어
+경계, 컨벤션)이나 실제 코드와 충돌하거나 계획의 전제가 코드와 다르면 구현하지 않는다. 충돌마다 계획 위치와
+근거(문서 규칙 원문, 확인한 `파일:줄`)를 `--blocker`로 적어 `--approved` 없이 compatibility review를
+기록한다. 기록은 다음 세션도 보는 상태로 남는다. 그다음 [`issueops-plan`](../issueops-plan/SKILL.md)의
+검토 루프로 돌려보내 계획을 고치고 새 리뷰를 받는다. 이 단계에서 계획을 직접 다시 쓰거나 충돌을 우회하는
+다른 설계로 구현하지 않는다.
+
+blocker 근거는 기록 직전에 한 번 더 확인한다. `파일:줄`은 Read 도구나 `grep -n`처럼 줄 번호를 찍는 출력에서
+그대로 옮긴다. `sed -n`·`cat`처럼 번호 없는 출력에서 세어 적지 않는다(한 줄씩 어긋나기 쉽다).
+"없다"·"아무도 호출하지 않는다"는 Glob 한 번이 0건이라는 이유로 쓰지 않는다. 상위 디렉터리를 읽거나 Grep으로
+다시 찾은 뒤에 쓰고, `_test.go`에서만 나온 호출은 production 의존으로 세지 않는다. 계획이 무언가가 아직 없거나
+중복 구현됐다고 전제하면 두 가지를 각각 `파일:줄`로 적는다. 하나는 그 코드가 이미 있는지이고, 다른 하나는
+진입점(CLI·MCP·hook 등)이 이미 그 코드를 거치는지다.
+
+## 프로젝트 문서 확인
+
+코드를 고치기 **전에** 이 변경을 제약하는 운영 문서를 읽는다. 계획의
+`## 적용되는 결정과 주의사항`은 계획 시점의 대조 결과라서, 구현 중 새로 닿는 모듈의 규칙은
+여기서 다시 확인해야 한다.
+
+- `.issueops/CONVENTIONS.md`: 코드 작성 규칙과 레이어 경계
+- `.issueops/TESTING.md`: RED 테스트 설계와 필수 검증 명령
+- `.issueops/CAUTIONS.md`: 색인과 변경 모듈의 반복 실수
+- 새 패키지·컴포넌트를 추가하거나 책임을 옮기면 `.issueops/ARCHITECTURE.md`
+- endpoint·DTO·OpenAPI를 바꾸면 `.issueops/OPEN_API_SPEC.md`
+
+구현에 적용한 문서 규칙은 verified-execution report의 `## 적용한 문서 규칙` 절에 규칙마다
+`| 문서 경로 | 해당 문장 인용 | 이 구현에서 바뀐 결정 |` 한 행으로 적는다. 게이트 원장 EVIDENCE는
+`gates check --write`가 명령 출력으로 채우므로 여기에 쓰지 않는다. 읽었지만 적용할 규칙이 없으면
+그 절에 대조한 문서 목록을 적는다.
+
 ## 구현 루프
 
 - behavior change는 focused failing test에서 시작한다:
@@ -160,6 +192,7 @@ blocker가 하나라도 있으면 compatibility review는 승인되지 않는다
   agent review 결과를 기록한다. 관련 없는 legacy 부채로 실패시키지 않는다.
 - RED/GREEN 증거는 [`gates-ledger`](../gates-ledger/SKILL.md)로
   `.issueops/issues/<n>/gates.md`에 `gates check --write`로 채운다.
+- 코드를 바꾸기 직전에 그 변경을 정한 문서 규칙을 `## 적용한 문서 규칙` 절에 한 행 추가한다.
 
 계획과 코드베이스를 존중하는 네 규칙:
 

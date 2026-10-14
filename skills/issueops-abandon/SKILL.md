@@ -66,19 +66,29 @@ cwd가 canonical worktree와 **정확히** 같아야 한다. 다른 디렉터리
 홀더가 죽은 사이클을 폐기하려면 먼저 그 체인을 완주해 lease를 released나 self active로
 만든다. 살아 있는 홀더를 가진 사이클은 폐기 게이트가 막는다.
 
+## 프로젝트 문서 확인
+
+폐기는 record·워크트리·로컬 브랜치를 지우고, 고른 원격 효과는 되돌릴 수 없다. preview
+전에 `.issueops/CAUTIONS.md` 색인을 읽고, `project_docs_route`(MCP를 쓸 수 없으면
+`issueops project route-docs --repo "$PWD" --task "<작업 요약>" --json`)에 "미머지 사이클 폐기와
+원격 브랜치 정리" 같은 작업 요약을 넣어 폐기·잔여물·원격 브랜치에 관한 `cautions/` 기록을
+고른다. 원격 정리 선택지를 물을 때 해당 주의사항을 문서 경로와 함께 적는다.
+
 ## 폐기
 
 원격 효과를 먼저 정한 뒤(아래 `## 원격 정리 선택지`) 사용자가 고른 것만 플래그로
-넣는다.
+넣는다. 아래 `$REMOTE_FLAGS`는 답을 받은 뒤에 채운다. 예를 들어 PR만 닫고 이슈와 브랜치는
+남기기로 했으면 `--close-pr` 하나다. 답을 받기 전에 세 플래그를 모두 넣은 명령을 적어 두지 않는다.
 
 ```bash
+REMOTE_FLAGS="<고른 것만: --close-pr / --close-issue / --delete-remote-branch>"
 issueops cleanup abandon --id "$ISSUEOPS_ID" --reason "$REASON" \
-  --close-pr --close-issue --delete-remote-branch --preview --json
+  $REMOTE_FLAGS --preview --json
 
 # preview의 remote_effects, worktree, branch, fingerprint를 사용자에게 확인한 뒤
 # 돌려준 next_command 그대로 실행한다.
 issueops cleanup abandon --id "$ISSUEOPS_ID" --reason "$REASON" \
-  --close-pr --close-issue --delete-remote-branch --apply --confirm --fingerprint "$FP" --json
+  $REMOTE_FLAGS --apply --confirm --fingerprint "$FP" --json
 ```
 
 apply는 원격 효과를 record 삭제보다 **먼저** 실행한다. record가 사라진 뒤에는 `--id`
@@ -128,6 +138,8 @@ record가 없기를 요구하므로, 이 사이클의 출구는 폐기뿐이다.
 ## 원격 정리 선택지
 
 preview 전에 번호로 묻는다. 고른 것만 플래그로 넣는다. 묻지 않고 전부 켜지 않는다.
+질문 끝에 `주의사항:` 줄을 붙여 `## 프로젝트 문서 확인`에서 고른 항목을 "문서 경로: 해당 문장
+인용"으로 적는다. 해당 항목이 없으면 대조한 문서 경로 목록과 "해당 없음"을 적는다.
 
 1. **draft PR/MR을 닫는다**(`--close-pr`). 아티팩트가 있을 때만 의미가 있다.
 2. **이슈를 닫는다**(`--close-issue`) 또는 열어 둔다. 다시 시작할 예정이면 열어 둔다.

@@ -74,8 +74,18 @@ recording belongs to this stage. `quality inspect` is not a semantic skill runne
 
 Unmerged retirement (draft PR/MR, issue and remote branch closure) belongs to
 `issueops-abandon`/typed `cleanup abandon`, not this path. An unmerged PR/MR the
-developer approved is merged first by `issueops-merge` (`issueops remote merge-pr`),
-which also deletes the remote branch before handing off here.
+developer approved is merged first by `issueops-merge`: `issueops remote merge-pr`
+merges without deleting the branch, and that skill's step 6 deletes the remote branch
+through `issueops cleanup remote-branch` before handing off here.
+
+## Project docs
+
+Before the preview, read the `.issueops/CAUTIONS.md` index and route the task through
+`project_docs_route` (or `issueops project route-docs --repo "$PWD" --task "<cleanup
+summary>" --json` when MCP is unavailable) to pick the dated `cautions/` and `adr/`
+records about cleanup, worktree processes, and remote branches. Recorded cleanup
+failures are the first things to check in the preview. In the confirmation summary,
+record each caution that applies with its path, or "none applied".
 
 ## Preview the exact targets
 
@@ -134,9 +144,11 @@ Obtain one explicit confirmation naming all three destructive/external effects:
 OID <BRANCH_OID>인 로컬 브랜치 <BRANCH>를 삭제할까요?
 apply가 먼저 종료하는 것: 프로세스 <N>개(<pid:command …>), Orca 터미널 <M>개.
 원격 브랜치는 삭제하지 않습니다.
+주의사항: <Project docs에서 고른 caution마다 "문서 경로: 해당 문장 인용", 없으면 "열어 본 caution <경로 목록>, 해당 없음">
 ```
 
-If no processes/terminals are listed, say nothing will be stopped.
+If no processes/terminals are listed, say nothing will be stopped. The `주의사항:` line is the
+record the `Project docs` section asks for; write it in the confirmation itself.
 
 The latest user message must confirm these exact targets; generic "cleanup" authorizes preview only.
 

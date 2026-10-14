@@ -79,6 +79,13 @@ evidence gates로 돌아간다. stale은 봉인 이후 diff가 바뀌었다는 �
 moving default branch를 추측하지 않는다. label score의 선택/거절과 threshold는
 본문이 아니라 `issueops decision add --kind review --title "라벨 판단"`으로 record에 남긴다.
 
+## 프로젝트 문서 확인
+
+body를 쓰기 **전에** `.issueops/AGENT_WORKFLOW.md`의 Verify·Finish 절을 읽는다. 완료 보고에
+넣어야 할 검증 결과와 실행하지 못한 검증의 사유를 그 절이 정한다. `.issueops/VCS.md`가 있으면
+provider recipe도 거기서 확인한다. body의 확인한 것 절에는 그 절이 요구한 검증과 결과를,
+실행하지 못한 검증은 사유와 함께 적는다.
+
 ## Body 형식
 
 골격은 `issueops remote render-template --kind pr --template pull_request`가 출력한다.
@@ -132,10 +139,13 @@ Issue linkage, labels, assignee, body를 확인한다.
 issueops remote verify-artifact \
   --id "$ISSUEOPS_ID" --provider "$PROVIDER" --kind "$ARTIFACT_KIND" \
   --url "$PR_OR_MR_URL" --target-branch "$BASE_BRANCH" \
-  --label enhancement --assignee "$ASSIGNEE" --json
+  --label enhancement --assignee "$ASSIGNEE" \
+  --host "$HOST" --session-id "$SESSION_ID" --agent-id "$AGENT_ID" \
+  --cwd "$WORKER_PATH" --json
 ```
 
-`ARTIFACT_KIND`는 GitHub에서 `pr`, GitLab에서 `mr`이다. 생성 command 이름과
+`verify-artifact`는 검증 결과를 record에 쓰므로 활성 lease의 holder로만 실행된다. actor 플래그(`RECORD_ACTOR_FLAGS`)를
+빼면 holder 확인에서 거부된다. `ARTIFACT_KIND`는 GitHub에서 `pr`, GitLab에서 `mr`이다. 생성 command 이름과
 검증 artifact kind를 혼동하지 않는다.
 
 provider 결과가 불명확하면 create를 반복하지 않는다. execution의 reconcile

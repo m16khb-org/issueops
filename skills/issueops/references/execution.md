@@ -456,7 +456,7 @@ issueops artifact stage --id "$ISSUEOPS_ID" --name verified-execution-loop --fil
 두 기록 모두 변경 집합 fingerprint를 봉인하므로 문서 수정이 기록보다 먼저다.
 
 ```bash
-issueops project-docs-review record --id "$ISSUEOPS_ID"   --verdict updated --doc ".issueops/CAUTIONS.md" --evidence "..."   --host codex --session-id "$SESSION" --cwd "$WORKTREE" --json
+issueops project-docs-review record --id "$ISSUEOPS_ID"   --verdict updated --doc "<고친 문서 경로>" --evidence "..."   --host codex --session-id "$SESSION" --cwd "$WORKTREE" --json
 ```
 
 - 게이트: `project_docs_review`. verdict는 `updated|no-change`, evidence는 항상

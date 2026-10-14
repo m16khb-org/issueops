@@ -62,6 +62,15 @@ issueops next --id "$ISSUEOPS_ID" --json
 상태라면 워크트리 세션이 아직 끝나지 않은 것이다. 이때는 멈추고 그 사실을 보고한다.
 살아 있는 홀더의 lease를 가져오지 않는다.
 
+## 프로젝트 문서 확인
+
+머지와 원격 브랜치 삭제는 되돌리기 어렵다. 미리보기 전에 `.issueops/CAUTIONS.md` 색인을
+읽고, `project_docs_route`(MCP를 쓸 수 없으면 `issueops project route-docs --repo "$PWD"
+--task "<작업 요약>" --json`)에 "PR 머지와 원격 브랜치 삭제" 같은 작업 요약을 넣어 머지·브랜치·
+정리에 관한 `cautions/`·`adr/` 기록을 고른다. `.issueops/VCS.md`가 있으면 provider별 머지
+방식과 제약을 거기서 확인한다. 확인 ①에서 사용자에게 보여 줄 때 해당되는 주의사항을
+문서 경로와 함께 적는다.
+
 ## 3 미리보기
 
 ```bash
@@ -145,6 +154,7 @@ issueops execution sync-base --id "$ISSUEOPS_ID" --completion-generation "$COMPL
 PR <URL>(head <head_oid 앞 10자>, 체크 <checks>)을
 <draft면 "draft에서 해제하고 "><method> 방식으로 <base_branch>에 머지하고,
 머지 뒤 원격 브랜치 <branch>(OID <head_oid 앞 10자>)를 삭제할까요?
+주의사항: <프로젝트 문서 확인에서 고른 항목마다 "문서 경로: 해당 문장 인용", 없으면 "대조한 문서 <경로 목록>, 해당 없음">
 워크트리·로컬 브랜치 정리와 이슈 종료는 다음 단계에서 따로 확인합니다.
 ```
 

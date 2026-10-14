@@ -58,7 +58,8 @@ issueops remote <verb> --id "$ISSUEOPS_ID" ... --body-file "$BODY_FILE" --confir
 
 # 7. readback
 issueops remote verify-artifact --id "$ISSUEOPS_ID" --provider "$PROVIDER" \
-  --kind pr --url "$URL" --target-branch "$BASE" --label "$LABEL" --assignee "$ASSIGNEE" --json   # PR/MR
+  --kind pr --url "$URL" --target-branch "$BASE" --label "$LABEL" --assignee "$ASSIGNEE" \
+  $RECORD_ACTOR_FLAGS --json   # PR/MR. record를 쓰므로 lease holder의 actor 플래그가 필요하다
 # issue·child·본문 갱신은 해당 명령의 응답 readback 필드(hierarchy_verified, url, body sha)를 확인한다.
 
 # 8. 결과가 불명확하면 재호출하지 않는다.

@@ -60,6 +60,15 @@ issueops next --id "$ISSUEOPS_ID" --json
 있다" 같은 가능성은 묻는 근거가 아니다. 릴리스 흐름을 건너뛰는 base는 사용자가 명시한
 경우에만 쓴다. 관례와 다르게 정했으면 그 사실을 보고에 적는다.
 
+## 프로젝트 문서 확인
+
+브랜치와 provider 링크를 만들기 전에 `.issueops/CAUTIONS.md` 색인을 읽고,
+`project_docs_route`(MCP를 쓸 수 없으면 `issueops project route-docs --repo "$SOURCE_ROOT"
+--task "<작업 요약>" --json`)에 "봉인한 base SHA에서 이슈 브랜치 준비" 같은 작업 요약을 넣어
+브랜치·base에 관한 `cautions/`·`adr/` 기록을 고른다. `.issueops/VCS.md`가 있으면 provider별
+브랜치 생성 recipe를 거기서 확인한다. 적용한 주의사항은 `branch prepare` 보고의 결정 근거
+줄에 문서 경로와 함께 적는다.
+
 ## 절차
 
 ```bash
@@ -130,6 +139,8 @@ branch는 부모 사이클의 브랜치이고, base SHA는 부모 워크트리�
   있고, GitLab은 `glab api "projects/:id/repository/branches/<branch>"`가 원격 브랜치를
   돌려준다(`<iid>-` 접두가 관계를 보장한다).
 - `git -C "$SOURCE_ROOT" status --short`가 비어 있고 브랜치가 바뀌지 않았다.
+- `branch prepare` 보고의 결정 근거 줄에 base branch 결정 순번과, 적용한 주의사항의 문서
+  경로와 인용 문장이 있다. 적용한 항목이 없으면 대조한 문서 경로 목록이 있다.
 - **`git worktree list`에 새 항목이 없다.** 있으면 이 단계가 하지 말아야 할 일을 한 것이다.
 
 ## 출구
@@ -141,7 +152,11 @@ source checkout 밖 임시 파일에 쓰고 `artifact stage --name plan`으로 �
 
 ## 실패 처리
 
-- **브랜치 이름 충돌**: 멈추고 충돌하는 ref를 나열한 뒤 재사용할지 이름을 바꿀지 묻는다.
+- **브랜치 이름 충돌**: 멈추고 충돌하는 ref와 그 HEAD·마지막 커밋을 나열한 뒤 묻는다. 고를 수 있는 것은 다른
+  이름으로 준비하는 것, 또는 사용자가 기존 브랜치를 직접 확인·정리한 뒤 같은 이름으로 다시 준비하는 것이다.
+  기존 브랜치를 그대로 쓰는 선택지는 내놓지 않는다. `execution prepare`는 같은 이름의 로컬 브랜치가 있으면 그
+  브랜치를 그대로 체크아웃하므로(`internal/domain/gitworktree/policy.go`의 `BranchCandidates`), 봉인한 base
+  SHA가 아니라 그 브랜치 HEAD에서 작업이 시작된다.
 - **`createLinkedBranch` 거부**(이름 선점, 권한 부족): API 오류 원문을 보고한다.
   `gh issue develop`으로 조용히 대체하지 않는다.
 - **부분 완료**(record는 남고 provider 링크가 실패): 기록을 지우지 말고 어느 단계가

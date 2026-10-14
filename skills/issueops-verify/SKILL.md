@@ -35,6 +35,19 @@ change fingerprint는 `git diff <base>..HEAD`와 `git status`가 가리키는 **
 검증이 실패해 코드를 고쳐야 하면 4단계로 돌아가 구현·정리·재봉인·문서 반영을 다시
 밟는다. `next`가 `clean`으로 되돌리는 것이 그 신호다.
 
+## 프로젝트 문서 확인
+
+실행할 검증을 고르기 **전에** 저장소가 요구하는 검증 기준을 읽는다. 무엇이 필수 명령인지는
+이 문서들이 정하고, 게이트 원장은 그중 이번 변경에 해당하는 부분만 담는다.
+
+- `.issueops/TESTING.md`: 필수 검증 배터리와 "검증됨"이라고 말할 수 있는 기준
+- `.issueops/AGENT_WORKFLOW.md`: 검증에서 완료 보고까지의 흐름
+- endpoint·DTO·OpenAPI가 바뀌었으면 `.issueops/OPEN_API_SPEC.md`
+- 같은 검증이 반복해서 실패하면 `.issueops/CAUTIONS.md`
+
+report의 검증 절에는 따른 문서 경로와 그 문서가 요구한 명령을 짝지어 적는다. 문서가
+요구했지만 실행하지 않은 명령은 사유와 함께 `Not Run`으로 적는다.
+
 ## 0 재사용을 확인하고 필요한 작업을 병렬 실행한다
 
 봉인된 fingerprint와 1절의 증거 재사용 조건을 먼저 확인한다. 아래 작업 중 유효한
@@ -78,6 +91,12 @@ change fingerprint는 `git diff <base>..HEAD`와 `git status`가 가리키는 **
 절에 적어 4절의 readiness 판정에서 blocker로 다룬다. direct 사이클에서 봉인 뒤 intent가
 다시 기록됐으면 `status --json`의 `.intent`가 최신이다.
 
+원장은 눈으로 읽지 않는다. 체크박스와 EVIDENCE 줄은 주장이고, 원장의 실제 상태는 파서가 읽은 값이다.
+먼저 `issueops gates status --file "$LEDGER" --cwd "$WORKTREE" --workspace-root "$WORKTREE" --json`을
+실행해 게이트마다 `state`와 `has_check`를 본다. `met`이 아니거나 `has_check`가 false인 게이트는 `[x]`여도
+미충족이다. met인 게이트도 그 CHECK가 성공 기준의 동작을 실제로 관찰하는지 본다. 관계없는 기존 테스트나
+EXPECT 없는 빌드는 그 게이트의 증거가 아니다.
+
 현재 fingerprint에 대한 성공 기록이 있고 명령·입력·의존성·환경이 같으며 외부 상태의
 유효기간도 지나지 않았으면 그 결과를 재사용한다. 단계가 바뀌었다는 이유만으로 같은
 명령을 다시 실행하지 않는다. 하나라도 확인할 수 없거나 저장소가 새 실행을 요구하면
@@ -119,6 +138,9 @@ tree까지의 변경과 staged·unstaged·untracked 경로의 합집합이다.
   `npm run swagger:check` 같은 wrapper가 있으면 그것을 먼저 실행한다.
 - `verify-work`는 실행한 명령과 결과를 evidence로 남긴다. 실행하지 않은 검증을 pass로
   적지 않는다.
+- report의 검증 절은 명령마다 한 행을 쓴다:
+  `| 요구한 문서 경로 | 그 문서의 해당 문장 인용 | 명령 | 결과 또는 Not Run 사유 |`.
+  문서가 요구하지 않았지만 실행한 명령은 문서 칸에 `게이트 원장`이나 `스킬`처럼 실제 출처를 적는다.
 - 미충족 게이트가 남으면 여기서 멈추고 4단계로 돌아간다. 원장을 고쳐 통과시키지 않는다.
 
 ## 2 스키마 실측과 기록
@@ -149,8 +171,11 @@ issueops schema-evidence record --id "$ISSUEOPS_ID" \
 
 ## 3 구현 리뷰
 
-[`issueops-review`](../issueops-review/SKILL.md)를 `--target diff`로 호출한다. 루프
-절차는 그 스킬이 소유한다. 이 단계가 아는 것은 여섯이다.
+[`issueops-review`](../issueops-review/SKILL.md) 스킬 파일을 열고, 대상 `diff`로 그 `## 실행` 절을 따른다.
+`--target diff`는 CLI 명령이 아니라 그 스킬의 대상 구분이다(`issueops review` 명령은 없다). 리뷰는 이 세션이
+지금 delegation 도구로 띄우는 빈 컨텍스트 서브에이전트이며, 명령 파일에 적어 두고 끝내지 않는다. 띄울 수
+없으면 판정 없이 그 사실과 이유를 보고한다. 판정은 서브에이전트가 돌려준 결과로만
+`issueops implementation-review record`에 기록한다. 루프 절차는 그 스킬이 소유한다. 이 단계가 아는 것은 여섯이다.
 
 - 리뷰어에게 diff와 **계획을 함께** 준다. 무엇을 하기로 했는지 모르는 리뷰어는 구현이
   계획에서 벗어났는지 판정할 수 없다.

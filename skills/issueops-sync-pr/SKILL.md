@@ -74,6 +74,9 @@ PR/MR은 리뷰어가 본문에 체크리스트나 메모를 직접 추가하는
 특히 `## 확인한 것`에 실행하지 않은 확인을 남겨 두지 않는다. 옛 13절 형식을
 동기화할 때는 요약, 변경 내용, 확인한 것, 리뷰 포인트로 다시 쓴다.
 
+`## 확인한 것`을 다시 쓰기 전에 `.issueops/AGENT_WORKFLOW.md`의 Verify·Finish 절을 읽는다.
+그 절이 요구하는 검증 결과와 실행하지 못한 검증의 사유를 지금 diff 기준으로 다시 적는다.
+
 원격에 쓰기 전에 `fluent-korean` 스킬을 Skill 도구로 호출해서 문장을 다듬는다.
 이 호출을 건너뛴 body로는 `--confirm`을 붙이지 않는다.
 
@@ -102,6 +105,10 @@ issueops remote sync-pr \
   --host "$HOST" --session-id "$SESSION_ID" --agent-id "$AGENT_ID" \
   --cwd "$WORKER_PATH" --confirm --json
 ```
+
+`$EXPECTED_BODY_SHA256`은 같은 `--body-file`로 돌린 preview 응답의 `expected_body_sha256`을 그대로 쓴다. 이 값은
+새 본문이 아니라 preview가 읽은 **원격 현재 본문**의 digest다(그 사이 원격이 바뀌면 confirm이 거부되는
+compare-and-swap 값). body-file을 `shasum`으로 해시해 넣지 않는다.
 
 confirm 결과의 `updated`, `remote_body_sha256`, `drift`를 확인하고 실제 artifact를
 readback한다. 본문 최신화는 완료 기록이 아니다. 완료 증거 봉인과 generation

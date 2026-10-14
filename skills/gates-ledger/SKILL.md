@@ -54,6 +54,20 @@ issueops gates init --file "$WORKTREE/.issueops/issues/$ISSUE/gates.md" --scope 
 - 자동으로 관찰할 수 없는 결과는 게이트로 쓰지 않는다. 그런 것은 수동 확인 기록으로
   남기고 EVIDENCE에 관측 시각과 관측값을 적는다.
 
+원장을 만들기 전에, 그리고 계획에 게이트를 적거나 고칠 때마다 실행 없이 검사한다.
+
+```bash
+issueops gates lint --plan "$PLAN" --cwd "$WORKTREE" --json   # 또는 --gate SPEC..., --file "$LEDGER"
+```
+
+`problems`가 있는 게이트는 구현과 상관없이 met이 될 수 없다. 정책 거부, `|`로 잘리는 정규식,
+셸 연산자, 컴파일되지 않는 정규식이 여기 해당한다. 고친 뒤 다시 lint한다. 큰따옴표 안의
+`\`는 토크나이저가 먹는다는 경고(`argv`에 실제 값이 나온다)와 읽지 못한 `CHECK:` 줄 경고도 확인한다.
+
+원장에서 `CHECK`·`EXPECT`·`EVIDENCE`는 게이트 줄 아래 목록 기호 없이 들여쓴 줄에서만 읽힌다. spec 형식(`| CHECK:`)을
+체크박스 줄에 그대로 두거나 `- EVIDENCE:`처럼 목록 항목으로 적으면 그 값은 무시된다. `gates lint --file`,
+`gates status`, `gates check`는 이런 게이트를 `warnings`에 이름과 함께 적는다.
+
 ## 검사
 
 ```bash

@@ -9,7 +9,7 @@ description: Agent start, execution, verification, and completion flow; read whe
 
 1. `AGENTS.md`를 먼저 읽는다.
 2. 세션 시작 시 `.issueops/CONSTITUTION.md`를 기본 원칙으로 확인한다.
-3. 작업 종류에 맞는 `.issueops/` 문서를 확인한다.
+3. 작업 종류에 맞는 `.issueops/` 문서를 확인한다. IssueOps 사이클 안에서는 각 단계 스킬의 `프로젝트 문서 확인` 절이 행동 전에 읽을 문서와 적용한 규칙을 기록할 자리를 정한다.
 4. 현재 파일과 명령 출력으로 문서의 추정 항목을 검증한다.
 
 ## Work

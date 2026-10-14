@@ -48,6 +48,7 @@ flowchart LR
 | actor가 살아 있는 PID 재사용 안전 receipt를 포함한다 | `native actor requires a PID reuse-safe session_process receipt` / `native process identity is not live` |
 | `--final-head`가 canonical worktree의 현재 HEAD와 같은 전체 SHA다 | `final_head must match canonical worktree HEAD` |
 | `--verification-report`가 canonical worktree 안의 정규 파일이다 | `verification report must be inside the canonical worktree` / `must be a regular file` |
+| pr 진입 때 기록한 head(`pr_head`) 이후 바뀐 경로가 검증 보고서뿐이다 | `final_head changes N path(s) after the verified pr head ... besides the verification report` |
 | `--confirm`이 있다 | `execution complete requires confirm` |
 
 ```bash
@@ -59,12 +60,26 @@ issueops execution whoami --json
 `complete`에는 preview가 없다. 확신이 서지 않으면 위 세 관측을 먼저 읽고,
 막혔을 때는 `execution status`가 돌려주는 `next_command`를 따른다.
 
+## 프로젝트 문서 확인
+
+보고서를 쓰기 **전에** `.issueops/AGENT_WORKFLOW.md`의 Verify·Finish 절을 읽는다. 완료
+보고에 넣을 검증 결과, 실행하지 못한 검증과 그 사유, 남겨야 할 ADR·CAUTIONS 기록을 그
+절이 정한다. 보고서에는 그 절이 요구한 항목을 적고, 근거 줄에 따른 문서 경로를 적는다.
+
 ## 증거를 만드는 순서
 
 순서가 계약이다. 보고서를 커밋하면 HEAD가 움직이므로 **커밋한 뒤에** HEAD를
 읽어야 한다. 먼저 읽어 둔 SHA를 그대로 쓰면 `final_head must match canonical
 worktree HEAD`로 거부된다.
 
+0. 보고서를 쓰기 **전에** `issueops next --id "$ISSUEOPS_ID" --json`을 읽는다. readiness에
+   `implementation_review_stale`·`project_docs_review_stale`처럼 `_stale`로 끝나는 항목이 있거나,
+   PR을 만든 뒤 코드 커밋이 있으면 검증한 변경 집합이 바뀐 것이다. 아직 보고서를 바꾸지 않았으므로
+   보고서 탓이 아니다. `complete`하지 않고 사용자에게 알린 뒤 새 head를 정리·문서·검증부터 다시 받는다.
+   `issueops phase --to ai-slop-clean`으로 정리 봉인을 새로 받고, `next`가 가리키는 리뷰·검증을 새 head로
+   다시 기록한 뒤 `issueops phase --to pr`로 `pr_head`를 다시 봉인한다. 변경이 작다는 이유로 이전 검증을
+   새 head에 넘기지 않는다. `complete`도 `pr_head` 이후 보고서 밖 변경을 거부하지만, 보고서를 커밋한 뒤에
+   알게 되면 되돌릴 일이 는다.
 1. 보고서를 canonical worktree 안에 쓴다. 경로는 worktree root 기준 안전한
    상대 경로여야 하고, 심볼릭 링크나 상위 탈출은 거부된다. `/tmp` 같은
    worktree 밖 경로는 받지 않는다.
@@ -142,6 +157,9 @@ Cleanup/readiness
   cleanup 대기: pr_phase 통과, remote_artifact 확인됨
   남은 조건: PR 확인 → issueops-merge(머지) → issueops-cleanup(워크트리·브랜치·이슈 정리)
 
+Doc rules applied
+  <문서 경로>: "<그 문서에서 그대로 옮긴 규칙 문장>"   (적용한 규칙마다 한 줄)
+
 MR: https://gitlab.example.com/group/project/-/merge_requests/5657
 
 커밋 2개 (eb0ca1b604 fix, 0aee8ee05b ai-slop-clean), 최종 15 스위트 100개 테스트 통과.
@@ -159,6 +177,7 @@ MR: https://gitlab.example.com/group/project/-/merge_requests/5657
 | Flow evidence | status에 기록된 review와 evidence |
 | Cleanup/readiness | `issueops pr-readiness --id ID --strict --json`, `issueops cleanup status --id ID --json` |
 | 커밋·테스트 | 실행한 git 명령과 테스트 명령의 실제 출력 |
+| Doc rules applied | 보고서 근거 줄에 적은 문서 경로와, 그 문서에서 그대로 옮긴 문장 |
 
 - 확인하지 못한 줄은 지어내지 말고 빼거나 `미확인`으로 적는다. `--verification`에
   적용하는 규칙이 화면 보고에도 똑같이 적용된다.

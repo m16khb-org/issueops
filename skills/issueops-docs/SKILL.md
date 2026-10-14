@@ -41,7 +41,7 @@ append는 이 단계의 재봉인이 흡수한다. 7단계 이후의 append는 �
 
 구현 diff 요약을 만들어 읽을 문서를 고른다. 요약에는 변경 파일 목록, 새로 생긴
 명령·플래그·구조, 작업 중 만난 함정을 넣는다. UI·스타일을 바꿨으면 그 사실도 적는다.
-`project_docs_route`는 요약에 `ux`·`style`·`css`·`theme` 같은 단어가 있어야 `DESIGN.md`를 고른다.
+`project_docs_route`는 요약에 `ux`·`style`·`css`·`theme`·`디자인`·`화면`·`스타일` 같은 단어가 있어야 `DESIGN.md`를 고른다.
 
 ```bash
 git -C "$WORKTREE" diff --stat "$BASE_SHA"
@@ -49,19 +49,27 @@ git -C "$WORKTREE" diff --stat "$BASE_SHA"
 # MCP: project_docs_read로 각 문서의 현재 content와 SHA를 받는다.
 ```
 
-MCP를 쓸 수 없으면 `issueops docs --json`의 required-doc 목록에서 `CONSTITUTION.md`,
-`ARCHITECTURE.md`(해당 모듈), `CONVENTIONS.md`, `CAUTIONS.md`(색인과 해당 모듈),
-`ADR.md`, `TESTING.md`를 읽는다. 변경이 닿았으면 `OPERATIONS.md`, `TECH_STACK.md`,
-`OPEN_API_SPEC.md`, `DESIGN.md`(있을 때)도 읽는다.
+MCP를 쓸 수 없으면 같은 요약으로 `issueops project route-docs --repo "$WORKTREE" --task "<요약>" --json`을
+실행한다. MCP와 같은 라우터라서 고르는 문서도 같다.
+
+route 결과는 **더하는** 후보이고 아래 네 문서를 대신하지 않는다. 2절의 문서 → 구현 대조에 쓰는
+`CONSTITUTION.md`, `CONVENTIONS.md`, `ARCHITECTURE.md`, `CAUTIONS.md`는 route가 무엇을 돌려주든 직접
+열고, 5절 판정 기록의 `--reviewed-doc`에 실제로 연 문서만 넣는다. 네 문서 중 열지 않은 것이
+있으면 판정을 기록하지 않는다.
 
 ## 2 양방향 대조
 
 한 방향만 보면 절반을 놓친다.
 
 **문서 → 구현.** CONSTITUTION, CONVENTIONS, ARCHITECTURE, CAUTIONS가 정한 것을 이번
-diff가 어겼는가. 어겼으면 **문서가 아니라 구현을 고친다.** 이때는 4단계
+diff가 어겼는가. 문서를 고치기 **전에** 네 문서와 그 색인이 넘기는 모듈에서 이 diff가 닿는 규칙을 찾아
+verified-execution report의 `## 문서 → 구현 대조` 절에
+`| 문서 경로 | 규칙 문장 인용 | 지킴 또는 어김 | diff의 근거 위치 |` 한 행씩 적는다. 어김이 하나라도
+있으면 **문서가 아니라 구현을 고친다.** 이때는 3절로 가지 않고 4단계
 [`issueops-implement`](../issueops-implement/SKILL.md)로 돌아간다. 규칙을 지키기 어렵다는
-이유로 규칙을 고치는 것은 이 단계의 권한이 아니다.
+이유로 규칙을 고치는 것은 이 단계의 권한이 아니다. 기존 규칙 문장을 바꾸거나 지우는 수정은
+계획의 `## 적용되는 결정과 주의사항`이나 기존 ADR이 그 규칙 변경을 이미 결정했을 때만 하고, 그 근거
+경로를 표의 근거 칸에 적는다. 근거가 없으면 그 규칙은 어김이다.
 
 **구현 → 문서.** 이번 변경이 문서가 아직 모르는 것을 만들었는가.
 
@@ -120,14 +128,13 @@ category는 정리 단계와 같다. 이전 코드 검증의 명령·시점·대
 
 ```bash
 issueops project-docs-review record --id "$ISSUEOPS_ID" \
-  --verdict updated --doc ".issueops/CAUTIONS.md" --doc ".issueops/cautions/<module>.md" \
+  --verdict updated --doc "<고친 문서 경로>" --doc "<고친 문서 경로>" \
   --evidence "<무엇을 대조했고 왜 이 문서를 고쳤는가>" $RECORD_ACTOR_FLAGS --json
 
 # 고칠 것이 없을 때
 issueops project-docs-review record --id "$ISSUEOPS_ID" \
   --verdict no-change \
-  --reviewed-doc ".issueops/CONSTITUTION.md" --reviewed-doc ".issueops/CAUTIONS.md" \
-  --reviewed-doc ".issueops/ADR.md" \
+  --reviewed-doc "<1절에서 실제로 읽은 문서 경로>" --reviewed-doc "<1절에서 실제로 읽은 문서 경로>" \
   --evidence "<대조한 문서와 판단>" $RECORD_ACTOR_FLAGS --json
 ```
 
