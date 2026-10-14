@@ -190,3 +190,28 @@ Herdr에서는 `worktree create` 대신 `worktree open`으로 준비된 checkout
 - 검증 보고서는 **원격 아티팩트(PR/MR) 생성 이전에** 커밋한다. `execution complete`가 리포트를 요구하는 시점이 머지 이후면 그 커밋이 어느 아티팩트에도 실리지 못해 두 번째 PR/MR이 필요해진다(GitHub PR에서 실측, #153). 원인은 provider가 아니라 `execution complete`의 리포트 요구 시점이므로 GitLab MR에서도 같을 것으로 보이나 실환경에서 확인하지 않았다. #153이 그 상황을 회복 가능하게 고쳤지만(원격 tip이 base에 도달했으면 통과) 애초에 만들지 않는 편이 낫다.
 - 하네스 코드를 고친 뒤에는 **설치본을 재빌드한다**: `go build -o bin/issueops ./cmd/issueops`. `~/.local/bin/issueops`는 그 경로를 가리키는 심볼릭 링크이므로 머지만 하고 재빌드를 빠뜨리면 고친 동작이 나오지 않는다 — #153 cleanup에서 로컬 `main`이 두 머지 뒤처져 #154의 진단 필드가 출력되지 않았고 원인을 찾는 데 시간이 들었다.
 - 생성된 IssueOps `next_command`의 absolute 첫 token과 끝의 `--generated-by-executable`, `--generated-by-sha256`, `--generated-for-generation`은 제거하거나 수동 보정하지 않는다. 첫 token이 생성 바이너리를 정확히 선택하므로 stale PATH에서도 동일 바이너리를 실행하며, 현재 바이너리는 subcommand 실행 전에 envelope를 canonical executable·SHA-256·durable generation과 비교한다. Hook은 durable worktree/source의 canonical binary 밖 absolute target, wrapper, substitution을 먼저 거부한다. 관측 실패나 mismatch가 나면 PATH를 바꾸거나 다른 바이너리로 우회하지 말고 structured error를 그대로 복구 근거로 사용한다. 사람이 직접 실행하는 일반 `issueops …` 명령은 계속 PATH를 사용한다. `execution switch-mode --apply` 성공은 execution authority를 제거하므로 실행 command 대신 `next_action` 안내를 반환하며, 새 prepare는 사용자가 일반 PATH 명령으로 시작한다.
+
+## 역할별 모델 기본값과 설정
+
+README의 「모델과 세션 인계」가 이 절을 가리킨다. 아래 표는 `internal/domain/agentmodel/defaults.go`의
+내장 기본값이다. `child-implement`는 따로 설정하지 않으면 `implement` 값을 따른다. `review-escalate`는
+리뷰 3라운드부터 쓰며, 따로 설정하지 않으면 리뷰 모델을 그대로 쓰고 effort를 한 단계 올린다.
+
+| 호스트 | 구현(`implement`) | 계획·리뷰(`plan-review`·`diff-review`) | 조사(`research`) | 독자 검토(`reader-check`) |
+|---|---|---|---|---|
+| Codex | `gpt-6.1-sol` / `high` | `gpt-6-astra` / `high` | `gpt-6-luna` / `medium` | `gpt-6-luna` / `low` |
+| Claude Code | `claude-opus-5-5` / `high` | `claude-opus-5-5` / `high` | `claude-sonnet-5-5` / `medium` | `claude-haiku-5-5` / `medium` |
+| Omo native | `chatgpt-subscription/gpt-6-sol` / `max` | `chatgpt-subscription/gpt-6-astra` / `max` | `chatgpt-subscription/gpt-6-luna` / `medium` | 없음 |
+| omp | `anthropic/claude-opus-5-5` / `high` | `anthropic/claude-opus-5-5` / `high` | `anthropic/claude-sonnet-5-5` / `medium` | `anthropic/claude-haiku-5-5` / `medium` |
+
+네 호스트 모두 역할별 model·effort를 사용자 전체(global)나 저장소 하나(local) 단위로 바꿀 수 있다.
+우선순위는 필드마다 명시 플래그 > local > global > 기본값이다. local 설정은 메인 워크트리의
+`.issueops/agent-models.local.json` 하나이며 커밋하지 않는다. 연결 워크트리도 같은 파일을 읽는다.
+global은 `$XDG_CONFIG_HOME/issueops/agent-models.json`(변수가 비면 `~/.config/issueops/`)이다.
+대화로 바꾸려면 [`io-model`](../../../skills/io-model/SKILL.md) 스킬을 쓴다.
+
+IssueOps가 Orca·Herdr·cmux로 띄우는 Claude Code와 Codex owner 세션에는 리뷰·조사·독자 검토 역할을
+서브에이전트로 넣는다. Omo native와 omp 세션에는 넣지 않는다. 리뷰 3라운드부터는
+`issueops model resolve --round N`이 돌려주는 상향 값을 쓴다. Fable은 기본값이나 상향에 쓰지 않고
+이름으로 지정할 때만 쓴다. `chatgpt-subscription/`은 Omo의 provider 식별자이며 Codex 호스트 이름을
+바꾸는 설정이 아니다.
