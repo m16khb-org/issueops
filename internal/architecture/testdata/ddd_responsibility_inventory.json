@@ -2929,6 +2929,7 @@
         "func hasMCPAdapterCatalog",
         "func qualityInspectContainsTerm",
         "func readmeContainsTerm",
+        "func readmeStatesDistributionDecision",
         "func rootWiresMCPCatalog",
         "type repoSignalRule"
       ]

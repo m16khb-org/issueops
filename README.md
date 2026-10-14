@@ -258,7 +258,7 @@ io inspect --json
 멈추고 새 바이너리로 다시 띄운 뒤 `build_id`를 확인합니다. MCP 변경은 호스트가 서버를 다시 연결할 때
 적용되므로, 업데이트 후에도 옛 도구가 보이면 MCP를 재연결하세요.
 
-현재 배포 결정: 첫 릴리스는 tarball/manual archive로 내고, Homebrew는 재현성 검증과 롤백 기준을 충족한 뒤 도입하기로
+첫 릴리스는 tarball/manual archive로 내고, Homebrew는 재현성 검증과 롤백 기준을 충족한 뒤 도입하기로
 했습니다. 설치 복구가 필요하면
 [릴리스 재현성과 롤백 기준](.issueops/operations/release-reproducibility.md)을 따르세요.
 

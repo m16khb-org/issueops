@@ -377,7 +377,7 @@ func TestDistributionDecisionRecordIsSatisfiedByADRReleaseDocsAndReadme(t *testi
 	root := t.TempDir()
 	writeFileForRepoSignalTest(t, filepath.Join(root, ".issueops", "adr", "decisions", "2026-06-13-distribution-decision-gate.md"), "### 2026-06-13 — Distribution decision gate\n")
 	writeFileForRepoSignalTest(t, filepath.Join(root, ".issueops", "operations", "release-reproducibility.md"), "Current decision: prefer tarball/manual archive\n\nRollback criteria\n")
-	writeFileForRepoSignalTest(t, filepath.Join(root, "README.md"), "Current distribution decision: use a tarball/manual archive for the first release\n")
+	writeFileForRepoSignalTest(t, filepath.Join(root, "README.en.md"), "The first release will ship as tarball and manual archives. Read the [release reproducibility and rollback criteria](.issueops/operations/release-reproducibility.md).\n")
 
 	signals := CollectSelfAugmentRepoSignals(root, 0, nil, "")
 	if !signals.HasDistributionDecision {
@@ -395,11 +395,28 @@ func TestDistributionDecisionSupportsKoreanCanonicalReadme(t *testing.T) {
 	root := t.TempDir()
 	writeFileForRepoSignalTest(t, filepath.Join(root, ".issueops", "adr", "decisions", "2026-06-13-distribution-decision-gate.md"), "### 2026-06-13 — Distribution decision gate\n")
 	writeFileForRepoSignalTest(t, filepath.Join(root, ".issueops", "operations", "release-reproducibility.md"), "Current decision: prefer tarball/manual archive\n\nRollback criteria\n")
-	writeFileForRepoSignalTest(t, filepath.Join(root, "README.md"), "현재 배포 결정은 tarball/manual archive를 우선합니다.\n")
+	writeFileForRepoSignalTest(t, filepath.Join(root, "README.md"), "첫 릴리스는 tarball/manual archive로 내기로 했습니다. [릴리스 재현성과 롤백 기준](.issueops/operations/release-reproducibility.md)을 따르세요.\n")
 
 	signals := CollectSelfAugmentRepoSignals(root, 0, nil, "")
 	if !signals.HasDistributionDecision {
 		t.Fatalf("Korean README distribution decision signal was not detected: %+v", signals)
+	}
+}
+
+func TestDistributionDecisionNeedsTheReadmeToStateTheChannelAndLinkTheDecisionDoc(t *testing.T) {
+	for name, readme := range map[string]string{
+		"no link to the decision doc": "첫 릴리스는 tarball/manual archive로 냅니다.\n",
+		"no release channel":          "[릴리스 재현성과 롤백 기준](.issueops/operations/release-reproducibility.md)\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			root := t.TempDir()
+			writeFileForRepoSignalTest(t, filepath.Join(root, ".issueops", "adr", "decisions", "2026-06-13-distribution-decision-gate.md"), "### 2026-06-13 — Distribution decision gate\n")
+			writeFileForRepoSignalTest(t, filepath.Join(root, ".issueops", "operations", "release-reproducibility.md"), "Current decision: prefer tarball/manual archive\n\nRollback criteria\n")
+			writeFileForRepoSignalTest(t, filepath.Join(root, "README.md"), readme)
+			if signals := CollectSelfAugmentRepoSignals(root, 0, nil, ""); signals.HasDistributionDecision {
+				t.Fatalf("README %q must not count as stating the distribution decision", readme)
+			}
+		})
 	}
 }
 

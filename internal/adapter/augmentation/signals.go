@@ -238,7 +238,7 @@ func (repo Repository) releaseDistributionRules() []repoSignalRule {
 			signals.HasDistributionDecision = repo.DocsContainTerm(root, "2026-06-13 — Distribution decision gate") &&
 				FileContainsTerm(root, filepath.Join(".issueops", "operations", "release-reproducibility.md"), "Current decision: prefer tarball/manual archive") &&
 				FileContainsTerm(root, filepath.Join(".issueops", "operations", "release-reproducibility.md"), "Rollback criteria") &&
-				(readmeContainsTerm(root, "Current distribution decision") || readmeContainsTerm(root, "현재 배포 결정"))
+				readmeStatesDistributionDecision(root)
 		}},
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
 			signals.HasReleaseDogfoodNotes = FileContainsTerm(root, filepath.Join(".issueops", "operations", "release-dogfood-notes.md"), "Codex MCP transcript") &&
@@ -247,6 +247,18 @@ func (repo Repository) releaseDistributionRules() []repoSignalRule {
 				FileContainsTerm(root, filepath.Join(".issueops", "operations", "release-reproducibility.md"), "Release Dogfood Notes")
 		}},
 	}
+}
+
+// readmeStatesDistributionDecision reports whether one README states the release channel
+// (tarball) and links the release reproducibility doc that owns the decision and its rollback
+// criteria. It does not depend on a fixed sentence, so rewording the README keeps the signal.
+func readmeStatesDistributionDecision(root string) bool {
+	for _, readme := range []string{"README.md", "README.en.md"} {
+		if FileContainsTerm(root, readme, "tarball") && FileContainsTerm(root, readme, "release-reproducibility.md") {
+			return true
+		}
+	}
+	return false
 }
 
 func readmeContainsTerm(root, term string) bool {
