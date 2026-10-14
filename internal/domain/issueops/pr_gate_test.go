@@ -7,7 +7,7 @@ import (
 )
 
 func TestPRGateAdmissionAndReadinessPreserveContract(t *testing.T) {
-	if !NeedsPRGateRead(" pr ") || NeedsPRGateRead("feedback") || NeedsPRGateEvaluation(model.IssueOpsPhasePR) || !NeedsPRGateEvaluation(model.IssueOpsPhaseFeedback) {
+	if !NeedsPRGateRead(" pr ") || NeedsPRGateRead("feedback") {
 		t.Fatal("wrong PR gate admission")
 	}
 	ready := model.IssueOpsReadiness{Ready: true, Missing: []string{"base"}, Warnings: []string{"existing"}}

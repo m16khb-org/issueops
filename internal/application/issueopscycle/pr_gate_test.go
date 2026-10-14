@@ -18,13 +18,12 @@ func TestApplyLoopGatePreservesMissingAndWarningOrder(t *testing.T) {
 	}
 }
 
-func TestGuardPRPhaseSkipsReadWhenUnrelatedOrAlreadyPR(t *testing.T) {
+func TestGuardPRPhaseSkipsUnrelatedTargetsAndGatesPRReentry(t *testing.T) {
 	reads, gates := 0, 0
-	current := model.IssueOpsPhasePR
 	ports := cycleport.PRPhaseGuard{
 		Read: func(string, string) (model.IssueOpsRecord, error) {
 			reads++
-			return model.IssueOpsRecord{Phase: current}, nil
+			return model.IssueOpsRecord{Phase: model.IssueOpsPhasePR}, nil
 		},
 		Gate: func(model.IssueOpsRecord) model.IssueOpsReadiness {
 			gates++
@@ -34,12 +33,9 @@ func TestGuardPRPhaseSkipsReadWhenUnrelatedOrAlreadyPR(t *testing.T) {
 	if err := GuardPRPhase("state", "id", "feedback", ports); err != nil || reads != 0 || gates != 0 {
 		t.Fatalf("unrelated phase err=%v reads=%d gates=%d", err, reads, gates)
 	}
-	if err := GuardPRPhase("state", "id", "pr", ports); err != nil || reads != 1 || gates != 0 {
-		t.Fatalf("existing PR err=%v reads=%d gates=%d", err, reads, gates)
-	}
-	current = model.IssueOpsPhaseFeedback
-	if err := GuardPRPhase("state", "id", "pr", ports); err == nil || !strings.Contains(err.Error(), "cannot enter pr phase: missing loop_active") || reads != 2 || gates != 1 {
-		t.Fatalf("new PR err=%v reads=%d gates=%d", err, reads, gates)
+	// Re-entering pr reseals pr_head, so it passes the same loop and ledger gate as entry.
+	if err := GuardPRPhase("state", "id", "pr", ports); err == nil || !strings.Contains(err.Error(), "cannot enter pr phase: missing loop_active") || reads != 1 || gates != 1 {
+		t.Fatalf("pr reseal err=%v reads=%d gates=%d", err, reads, gates)
 	}
 }
 

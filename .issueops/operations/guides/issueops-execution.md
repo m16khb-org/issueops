@@ -81,7 +81,13 @@ provider-unavailable 계약으로 fail closed한다.
 
 `issueops execution complete` requires phase `pr`, the exact active generation,
 final HEAD, committed verification report, verification evidence, and the verified
-durable remote artifact URL. It records `done` and releases the lease
+durable remote artifact URL. Entering `pr` records the canonical HEAD as `pr_head`;
+completion refuses a final HEAD whose diff from `pr_head` touches anything besides
+the verification report, because that change never passed cleanup, docs review, or
+verification. After a post-PR fix, refresh cleanup (`issueops phase --to ai-slop-clean`),
+re-record the reviews `next` reports, and run `issueops phase --to pr` again: re-entry
+passes the same strict pr gate and reseals `pr_head`. Records without `pr_head` skip the
+check; reseed clears it. Completion records `done` and releases the lease
 atomically. It never merges or deletes a worktree, branch, terminal, or remote
 resource. Operational release evidence includes fake-provider recovery
 matrices, installed Codex/Claude hook smokes, and disposable live Orca

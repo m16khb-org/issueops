@@ -22,6 +22,9 @@ type Environment interface {
 	PathsMatch(string, string) bool
 	CurrentHead(context.Context, string) (string, error)
 	VerifyReport(string, string) (string, error)
+	// ChangedPathsSince lists the root-relative paths that differ between from and to,
+	// leaving out the verification report (a resolved path from VerifyReport).
+	ChangedPathsSince(ctx context.Context, root, from, to, report string) ([]string, error)
 }
 
 type Clock interface{ Now() time.Time }

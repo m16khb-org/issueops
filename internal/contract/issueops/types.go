@@ -367,9 +367,14 @@ type IssueOpsRecord struct {
 	AISlopCleanFingerprint  string                              `json:"ai_slop_clean_fingerprint,omitempty"`
 	AISlopCleanCategories   []string                            `json:"ai_slop_clean_categories,omitempty"`
 	AISlopCleanVerification []string                            `json:"ai_slop_clean_verification,omitempty"`
-	PhaseLedger             IssueOpsPhaseLedger                 `json:"phase_ledger,omitempty"`
-	CreatedAt               string                              `json:"created_at"`
-	UpdatedAt               string                              `json:"updated_at"`
+	// PRHead is the canonical worktree HEAD sealed when the cycle entered pr, or when it
+	// re-entered pr through the same strict gate after a post-pr fix. The gate requires a
+	// clean, upstream-synced worktree with fresh review seals, so this is the verified head;
+	// completion refuses a final head that changed anything but the verification report since.
+	PRHead      string              `json:"pr_head,omitempty"`
+	PhaseLedger IssueOpsPhaseLedger `json:"phase_ledger,omitempty"`
+	CreatedAt   string              `json:"created_at"`
+	UpdatedAt   string              `json:"updated_at"`
 }
 
 // IssueOpsImplementationReview captures the design-review adversarial verdict on the

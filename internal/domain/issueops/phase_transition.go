@@ -16,6 +16,9 @@ func ApplyPhaseTransition(record model.IssueOpsRecord, phase model.IssueOpsPhase
 		record.AISlopCleanHead = head
 		record.AISlopCleanFingerprint = fingerprint
 	}
+	if phase == model.IssueOpsPhasePR {
+		record.PRHead = head
+	}
 	record.PhaseLedger = StampForwardTransition(record.PhaseLedger, previous, phase, now, completedArtifacts)
 	return record
 }

@@ -10,9 +10,12 @@ import (
 func ApplyPhaseTransition(observations cycleport.PhaseTransitionObservations, record model.IssueOpsRecord, phase model.IssueOpsPhase) model.IssueOpsRecord {
 	now := observations.Now()
 	head, fingerprint := "", ""
-	if phase == model.IssueOpsPhaseAISlopClean {
+	switch phase {
+	case model.IssueOpsPhaseAISlopClean:
 		head = observations.Head(record)
 		fingerprint = observations.Fingerprint(record)
+	case model.IssueOpsPhasePR:
+		head = observations.Head(record)
 	}
 	return cycledomain.ApplyPhaseTransition(record, phase, now, head, fingerprint, statusdomain.ArtifactKeys(record.Phase))
 }

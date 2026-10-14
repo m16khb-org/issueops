@@ -58,6 +58,7 @@ type Record struct {
 	AISlopCleanFingerprint  string                                   `json:"ai_slop_clean_fingerprint,omitempty"`
 	AISlopCleanCategories   json.RawMessage                          `json:"ai_slop_clean_categories,omitempty"`
 	AISlopCleanVerification json.RawMessage                          `json:"ai_slop_clean_verification,omitempty"`
+	PRHead                  string                                   `json:"pr_head,omitempty"`
 	PhaseLedger             json.RawMessage                          `json:"phase_ledger,omitempty"`
 	CreatedAt               string                                   `json:"created_at"`
 	UpdatedAt               string                                   `json:"updated_at"`

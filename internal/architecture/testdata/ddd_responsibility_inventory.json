@@ -5861,6 +5861,7 @@
       "owner": "adapter",
       "task": "T07",
       "symbols": [
+        "func Environment.ChangedPathsSince",
         "func Environment.CurrentHead",
         "func Environment.PathsMatch",
         "func Environment.VerifyReport",
@@ -14556,7 +14557,6 @@
       "task": "T20",
       "symbols": [
         "func MergeGateReadiness",
-        "func NeedsPRGateEvaluation",
         "func NeedsPRGateRead",
         "func PRGateError",
         "func gateMissingKeys"
@@ -15163,7 +15163,9 @@
         "func ValidateFinalHead",
         "func ValidatePhase",
         "func ValidatePrepared",
+        "func ValidateVerifiedSincePR",
         "func normalizeVerification",
+        "func shortSHA",
         "func validFullCommitSHA",
         "func validateRemoteArtifactURL"
       ]
@@ -21821,9 +21823,9 @@
       "id": "gate-pr-phase-admission",
       "source_path": "internal/application/issueopscycle/pr_gate.go",
       "source_symbol": "func GuardPRPhase",
-      "responsibility": "only entering a new PR phase requires readiness evaluation",
+      "responsibility": "a pr target, first entry or reseal, requires readiness evaluation",
       "target": "internal/domain/issueops",
-      "target_symbol": "func NeedsPRGateEvaluation",
+      "target_symbol": "func NeedsPRGateRead",
       "task": "T20",
       "entrypoints": [
         "issueops gates",

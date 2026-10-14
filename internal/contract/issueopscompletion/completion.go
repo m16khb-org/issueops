@@ -95,6 +95,9 @@ type RecordSnapshot struct {
 	CodeProjectKey string
 	Ledger         map[string]LedgerEntry
 	Orca           *OrcaBinding
+	// PRHead is the canonical HEAD recorded when the cycle entered the pr phase; empty for
+	// records that entered pr before it was recorded.
+	PRHead string
 }
 
 func (r RecordSnapshot) Clone() RecordSnapshot {

@@ -66,3 +66,28 @@ func (Environment) VerifyReport(root, path string) (string, error) {
 	}
 	return resolved, nil
 }
+
+func (Environment) ChangedPathsSince(ctx context.Context, root, from, to, report string) ([]string, error) {
+	command := exec.CommandContext(ctx, "git", "-C", root, "diff", "--name-only", "--no-renames", strings.TrimSpace(from), strings.TrimSpace(to), "--")
+	output, err := command.Output()
+	if err != nil {
+		return nil, fmt.Errorf("git diff --name-only %s %s: %w", from, to, err)
+	}
+	reportRel := ""
+	if absRoot, absErr := filepath.Abs(root); absErr == nil {
+		if resolved, resolveErr := filepath.EvalSymlinks(absRoot); resolveErr == nil {
+			absRoot = resolved
+		}
+		if rel, relErr := filepath.Rel(absRoot, report); relErr == nil {
+			reportRel = filepath.ToSlash(rel)
+		}
+	}
+	var changed []string
+	for line := range strings.SplitSeq(string(output), "\n") {
+		path := strings.TrimSpace(line)
+		if path != "" && path != reportRel {
+			changed = append(changed, path)
+		}
+	}
+	return changed, nil
+}

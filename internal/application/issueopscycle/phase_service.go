@@ -54,7 +54,8 @@ func (s PhaseService) AdvanceReport(stateRoot, id, to string) (issueops.IssueOps
 }
 
 // prefetchForPhase는 pr 진입일 때만 strict 판정이 쓸 fetch를
-// span 밖에서 끝낸다. 다른 전이는 fetch하지 않는다. 거부될 호출자를 위해 fetch하지
+// span 밖에서 끝낸다. 이미 pr이면 다시 봉인하는 호출이므로 같은 strict 판정을 위해 fetch한다.
+// 다른 전이는 fetch하지 않는다. 거부될 호출자를 위해 fetch하지
 // 않도록 권한을 먼저 보고, 권한 판정은 span 안에서 다시 한다.
 func (s PhaseService) prefetchForPhase(stateRoot, id, to string) (func(string) review.UpstreamFetch, error) {
 	if issueops.IssueOpsPhase(strings.TrimSpace(to)) != issueops.IssueOpsPhasePR {
@@ -63,9 +64,6 @@ func (s PhaseService) prefetchForPhase(stateRoot, id, to string) (func(string) r
 	record, err := s.Store.Read(stateRoot, id)
 	if err != nil {
 		return nil, err
-	}
-	if record.Phase == issueops.IssueOpsPhasePR {
-		return nil, nil
 	}
 	if err := s.Store.ValidateMutation(record); err != nil {
 		return nil, err
@@ -84,8 +82,18 @@ func (s PhaseService) advanceLocked(stateRoot, id, to string, upstream func(stri
 		return record, materials, err
 	}
 	if record.Phase == phase {
-		if phase == issueops.IssueOpsPhaseAISlopClean {
+		switch phase {
+		case issueops.IssueOpsPhaseAISlopClean:
 			record, err = s.Refresh(stateRoot, record)
+			return record, materials, err
+		case issueops.IssueOpsPhasePR:
+			// pr 안에서 코드를 고치고 정리·문서·검증 봉인을 새 head로 다시 받은 뒤의 재봉인이다.
+			// pr 진입과 같은 strict 판정을 통과해야 completion이 비교할 pr_head가 바뀐다.
+			if err := ValidatePhaseEntry(s.entryReadiness(stateRoot, upstream), record, phase); err != nil {
+				return issueops.IssueOpsRecord{OK: false}, materials, err
+			}
+			record.PRHead = s.Transitions.Head(record)
+			record, err = s.touchWrite(stateRoot, record)
 			return record, materials, err
 		}
 		return record, materials, nil

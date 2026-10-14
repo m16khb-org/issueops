@@ -263,6 +263,7 @@ func reopenCompletedExecution(record *leasecontract.Record, completionGeneration
 	record.Phase = "implement"
 	record.AISlopCleanAt = ""
 	record.AISlopCleanHead = ""
+	record.PRHead = ""
 	record.AISlopCleanFingerprint = ""
 	record.AISlopCleanCategories = nil
 	record.AISlopCleanVerification = nil

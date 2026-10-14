@@ -22,7 +22,12 @@ func TestApplyPhaseTransitionObservesCleanupOnlyWhenNeeded(t *testing.T) {
 	}
 	calls = nil
 	result = ApplyPhaseTransition(store, record, model.IssueOpsPhaseFeedback)
-	if !reflect.DeepEqual(calls, []string{"clock"}) || result.AISlopCleanHead != "" {
+	if !reflect.DeepEqual(calls, []string{"clock"}) || result.AISlopCleanHead != "" || result.PRHead != "" {
 		t.Fatalf("result=%+v calls=%v", result, calls)
+	}
+	calls = nil
+	result = ApplyPhaseTransition(store, model.IssueOpsRecord{Phase: model.IssueOpsPhaseFeedback}, model.IssueOpsPhasePR)
+	if !reflect.DeepEqual(calls, []string{"clock", "head"}) || result.PRHead != "head" || result.AISlopCleanHead != "" {
+		t.Fatalf("pr entry must record the verified head completion checks against: result=%+v calls=%v", result, calls)
 	}
 }

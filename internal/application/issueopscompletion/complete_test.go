@@ -106,6 +106,39 @@ func TestCompleteRejectsNonCanonicalCWDWithoutCommit(t *testing.T) {
 	}
 }
 
+func TestCompleteRefusesHeadThatChangedCodeAfterPREntry(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		prHead  string
+		changed []string
+		wantErr string
+	}{
+		{"code commit after the verified pr head", strings.Repeat("b", 40), []string{"internal/domain/gates/check_result.go"}, "final_head changes 1 path(s) after the verified pr head bbbbbbbbbb"},
+		{"only the report changed", strings.Repeat("b", 40), nil, ""},
+		{"record entered pr before pr_head existed", "", []string{"internal/domain/gates/check_result.go"}, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			record := activeCompletionRecord("direct")
+			record.PRHead = tc.prHead
+			trace := []string{}
+			repository := &repositoryFake{record: record, trace: &trace}
+			environment := &environmentFake{trace: &trace, canonical: true, head: strings.Repeat("a", 40), report: "/worktree/report.json", changed: tc.changed}
+			service := NewService(repository, environment, fixedClock{fixedCompletionTime}, tracedLiveInspector(&trace))
+
+			_, err := service.Complete(context.Background(), validRequest())
+			if tc.wantErr == "" {
+				if err != nil || repository.commits != 1 {
+					t.Fatalf("err = %v, commits = %d; want a committed completion", err, repository.commits)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tc.wantErr) || repository.commits != 0 {
+				t.Fatalf("err = %v, commits = %d; want refusal containing %q and no commit", err, repository.commits, tc.wantErr)
+			}
+		})
+	}
+}
+
 func TestCompleteRepositoryFailureLeavesRecordUnchanged(t *testing.T) {
 	trace := []string{}
 	repository := &repositoryFake{record: activeCompletionRecord("orca"), trace: &trace, commitErr: errors.New("commit failed")}
@@ -202,6 +235,8 @@ type environmentFake struct {
 	canonical bool
 	head      string
 	report    string
+	// changed is what ChangedPathsSince reports after the report is left out.
+	changed []string
 }
 
 func (f *environmentFake) PathsMatch(_, _ string) bool {
@@ -215,6 +250,10 @@ func (f *environmentFake) CurrentHead(context.Context, string) (string, error) {
 func (f *environmentFake) VerifyReport(_, _ string) (string, error) {
 	*f.trace = append(*f.trace, "report")
 	return f.report, nil
+}
+func (f *environmentFake) ChangedPathsSince(context.Context, string, string, string, string) ([]string, error) {
+	*f.trace = append(*f.trace, "since-pr")
+	return f.changed, nil
 }
 
 type fixedClock struct{ at time.Time }

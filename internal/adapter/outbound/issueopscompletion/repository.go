@@ -135,7 +135,7 @@ func holderIndexDeletion(store port.TransactionalRecordStore, lifecycleID string
 }
 
 func snapshot(record leasecontract.Record) (completioncontract.RecordSnapshot, error) {
-	result := completioncontract.RecordSnapshot{ID: record.ID, Prepared: record.Execution != nil, Phase: record.Phase, IssueURL: record.IssueURL}
+	result := completioncontract.RecordSnapshot{ID: record.ID, Prepared: record.Execution != nil, Phase: record.Phase, IssueURL: record.IssueURL, PRHead: record.PRHead}
 	if len(record.BranchPrepare) > 0 {
 		var branch struct {
 			BaseBranch     string `json:"base_branch"`

@@ -37,6 +37,7 @@ and supersession rules live in [adr/README.md](adr/README.md).
 
 | Date | Decision | Record |
 |---|---|---|
+| 2026-10-14 | Entering pr seals the canonical HEAD as `pr_head`; `execution complete` refuses a final head that changed anything but the verification report since; re-running `phase --to pr` from pr passes the same strict gate and reseals | [record](adr/2026-10-14-completion-checks-the-verified-pr-head.md) |
 | 2026-10-14 | `gates lint` / MCP `gates_lint` checks gate specs, plan gate lines, and ledgers without running them (spec rules, the command policy check would apply, markdown backticks, RE2 EXPECT); plans write gates as one-line specs and lint before staging; the author sweeps stale text, prescribed facts, and gates before each delta review | [record](adr/2026-10-14-gates-lint-and-pre-delta-author-sweep.md) |
 | 2026-10-12 | omp and omo role models resolve from the agent model settings files (`issueops model set --host omp\|omo`); supersedes in part the omp built-in-defaults-only role models and the claude/codex-only settings hosts of 2026-10-08 | [record](adr/2026-10-12-omp-role-models-resolve-from-the-agent-model-settings-files.md) |
 | 2026-10-10 | Completed cycles merge through typed `remote merge-pr` (squash default, head pinned to completion, no branch deletion/admin/auto-merge); blockers reopen the cycle via reseed | [record](adr/2026-10-10-issueops-merges-completed-cycles-through-a-typed-remote-merg.md) |

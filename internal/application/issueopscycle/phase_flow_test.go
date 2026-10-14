@@ -228,17 +228,20 @@ func TestAdvanceReportToPRWithoutPrefetchedUpstreamDoesNotBypassFetchGate(t *tes
 	}
 }
 
-func TestPrefetchForPhaseSkipsNonPRAndAlreadyPRTargets(t *testing.T) {
+func TestPrefetchForPhaseFetchesOnlyForPRTargetsAfterAuthority(t *testing.T) {
 	p := &phaseFlow{record: model.IssueOpsRecord{ID: "io-1", Phase: model.IssueOpsPhasePR}}
 	service := flowService(p, Readiness{})
-	for _, to := range []string{"feedback", "pr"} {
-		fetch, err := service.prefetchForPhase("state", "io-1", to)
-		if err != nil || fetch != nil {
-			t.Fatalf("to=%s fetch non-nil=%v err=%v", to, fetch != nil, err)
-		}
+	if fetch, err := service.prefetchForPhase("state", "io-1", "feedback"); err != nil || fetch != nil || len(p.events) != 0 {
+		t.Fatalf("non-pr target fetched or read: fetch=%v err=%v events=%v", fetch != nil, err, p.events)
 	}
-	if len(p.events) != 1 || p.events[0] != "read" {
-		t.Fatalf("events=%v (non-pr must not read; pr from pr reads once and skips authority)", p.events)
+	// pr from pr reseals pr_head through the same strict gate, so it needs the fetch too,
+	// but only after the caller is authorized.
+	p.mutateErr = errors.New("not the holder")
+	if fetch, err := service.prefetchForPhase("state", "io-1", "pr"); err == nil || fetch != nil {
+		t.Fatalf("unauthorized reseal fetched: fetch=%v err=%v", fetch != nil, err)
+	}
+	if want := []string{"read", "authorize"}; !reflect.DeepEqual(p.events, want) {
+		t.Fatalf("events=%v want %v", p.events, want)
 	}
 }
 

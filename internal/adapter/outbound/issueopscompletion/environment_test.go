@@ -48,6 +48,40 @@ func TestEnvironmentCurrentHeadRunsGit(t *testing.T) {
 	}
 }
 
+func TestEnvironmentChangedPathsSinceLeavesOutOnlyTheReport(t *testing.T) {
+	repo := t.TempDir() // on macOS /var is a symlink to /private/var; the report path arrives resolved
+	commit := func(path, body string) string {
+		full := filepath.Join(repo, path)
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		mustCombinedOutput(t, repo, "add", path)
+		mustCombinedOutput(t, repo, "commit", "-q", "-m", path)
+		return strings.TrimSpace(mustCombinedOutput(t, repo, "rev-parse", "HEAD"))
+	}
+	mustCombinedOutput(t, repo, "init", "-q")
+	mustCombinedOutput(t, repo, "config", "user.email", "t@e.invalid")
+	mustCombinedOutput(t, repo, "config", "user.name", "t")
+	prHead := commit("code.go", "package a\n")
+	reportHead := commit(".issueops/issues/12/verified-execution-report.md", "report\n")
+	report, err := NewEnvironment().VerifyReport(repo, filepath.Join(repo, ".issueops/issues/12/verified-execution-report.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	changed, err := NewEnvironment().ChangedPathsSince(context.Background(), repo, prHead, reportHead, report)
+	if err != nil || len(changed) != 0 {
+		t.Fatalf("report-only commit: changed=%q err=%v, want none", changed, err)
+	}
+	codeHead := commit("code.go", "package a\n\nvar x = 1\n")
+	changed, err = NewEnvironment().ChangedPathsSince(context.Background(), repo, prHead, codeHead, report)
+	if err != nil || len(changed) != 1 || changed[0] != "code.go" {
+		t.Fatalf("code commit after pr head: changed=%q err=%v, want [code.go]", changed, err)
+	}
+}
+
 func mustCombinedOutput(t *testing.T, dir string, args ...string) string {
 	t.Helper()
 	out, err := exec.Command("git", append([]string{"-C", dir}, args...)...).CombinedOutput()

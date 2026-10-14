@@ -398,7 +398,7 @@
           "name": "status"
         }
       ],
-      "hash": "51b48914fa0fb04176538f271067a76d87178fb9389683ea2b44215f41228f80",
+      "hash": "fa8882493280ce93a28c47bbf2ae48c195bec5bb58c01803cf2a5825b69b166e",
       "mcp_tools": [
         "api_doc_review",
         "api_doc_static_check",
@@ -684,6 +684,7 @@
           "ai_slop_clean_fingerprint",
           "ai_slop_clean_categories",
           "ai_slop_clean_verification",
+          "pr_head",
           "phase_ledger",
           "created_at",
           "updated_at"
@@ -7240,7 +7241,7 @@
                 "name": "status"
               }
             ],
-            "hash": "51b48914fa0fb04176538f271067a76d87178fb9389683ea2b44215f41228f80",
+            "hash": "fa8882493280ce93a28c47bbf2ae48c195bec5bb58c01803cf2a5825b69b166e",
             "mcp_tools": [
               "api_doc_review",
               "api_doc_static_check",
@@ -7526,6 +7527,7 @@
                 "ai_slop_clean_fingerprint",
                 "ai_slop_clean_categories",
                 "ai_slop_clean_verification",
+                "pr_head",
                 "phase_ledger",
                 "created_at",
                 "updated_at"

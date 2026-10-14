@@ -303,6 +303,7 @@ func completedReseedTestRecord(oldHead string) Record {
 	record.Stable.ImplementationReview = json.RawMessage(`{"verdict":"pass"}`)
 	record.Stable.AISlopCleanAt = "old-at"
 	record.Stable.AISlopCleanHead = oldHead
+	record.Stable.PRHead = oldHead
 	record.Stable.AISlopCleanFingerprint = "old-fingerprint"
 	record.Stable.AISlopCleanCategories = json.RawMessage(`["duplication"]`)
 	record.Stable.AISlopCleanVerification = json.RawMessage(`["old verification"]`)
@@ -312,7 +313,7 @@ func completedReseedTestRecord(oldHead string) Record {
 
 func assertCompletedReseedProofCleared(t *testing.T, record leasecontract.Record) {
 	t.Helper()
-	if record.AISlopCleanAt != "" || record.AISlopCleanHead != "" || record.AISlopCleanFingerprint != "" || record.AISlopCleanCategories != nil || record.AISlopCleanVerification != nil || record.ImplementationReview != nil || record.RemoteCompletion != nil {
+	if record.AISlopCleanAt != "" || record.AISlopCleanHead != "" || record.PRHead != "" || record.AISlopCleanFingerprint != "" || record.AISlopCleanCategories != nil || record.AISlopCleanVerification != nil || record.ImplementationReview != nil || record.RemoteCompletion != nil {
 		t.Fatalf("current proof not cleared: %+v", record)
 	}
 }

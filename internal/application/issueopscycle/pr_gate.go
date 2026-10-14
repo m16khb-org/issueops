@@ -18,8 +18,5 @@ func GuardPRPhase(stateRoot, id, to string, ports cycleport.PRPhaseGuard) error 
 	if err != nil {
 		return err
 	}
-	if !domain.NeedsPRGateEvaluation(record.Phase) {
-		return nil
-	}
 	return domain.PRGateError(ports.Gate(record))
 }

@@ -44,6 +44,29 @@ func ValidateFinalHead(requested, observed string) error {
 	return nil
 }
 
+// ValidateVerifiedSincePR refuses a final head that changed anything other than the
+// verification report since pr_head was sealed. The pr gate sealed that head, so any other
+// change was never cleaned, documented, reviewed, or verified.
+func ValidateVerifiedSincePR(prHead string, changed []string) error {
+	if len(changed) == 0 {
+		return nil
+	}
+	shown := changed
+	if len(shown) > 5 {
+		shown = shown[:5]
+	}
+	return fmt.Errorf("final_head changes %d path(s) after the verified pr head %s besides the verification report (%s); refresh cleanup with issueops phase --to ai-slop-clean, re-record the reviews and verification issueops next reports for the new head, reseal with issueops phase --to pr, then complete",
+		len(changed), shortSHA(prHead), strings.Join(shown, ", "))
+}
+
+func shortSHA(sha string) string {
+	sha = strings.TrimSpace(sha)
+	if len(sha) > 10 {
+		return sha[:10]
+	}
+	return sha
+}
+
 func normalizeVerification(values []string) ([]string, error) {
 	result := make([]string, 0, len(values))
 	for _, value := range values {

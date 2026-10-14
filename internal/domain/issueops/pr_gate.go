@@ -11,7 +11,6 @@ import (
 func NeedsPRGateRead(to string) bool {
 	return model.IssueOpsPhase(strings.TrimSpace(to)) == model.IssueOpsPhasePR
 }
-func NeedsPRGateEvaluation(phase model.IssueOpsPhase) bool { return phase != model.IssueOpsPhasePR }
 func PRGateError(ready model.IssueOpsReadiness) error {
 	if ready.Ready {
 		return nil
