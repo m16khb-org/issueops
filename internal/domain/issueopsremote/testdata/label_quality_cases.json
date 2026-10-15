@@ -1,0 +1,51 @@
+[
+  {
+    "issue": 210,
+    "note": "조사·어미가 붙은 한국어 결함 어휘(실패를, 실패합니다, 재현하는, 회귀)가 bug 근거 4개로 모인다",
+    "title": "fix(daemon): 레거시 프로세스 시작 시간 비교를 타임존 독립적으로 정규화",
+    "body": "## 문제\n`TestDaemonProcessIdentityMatchesLegacyLocalizedStartTime`는 KST 환경에서는 통과하지만 Ubuntu/GitHub Actions의 UTC 러너에서는 실패합니다.\n\n## 원인\n`canonicalProcessStartTime`가 레거시 한국어 receipt를 `time.Local`로 파싱합니다. 그래서 러너 타임존에 따라 같은 프로세스의 시작 시간이 다르게 해석됩니다.\n\n## 수용 기준\n- UTC에서 실패를 재현하는 회귀 테스트를 추가한다.",
+    "want_selected": ["bug"]
+  },
+  {
+    "issue": 41,
+    "note": "근거가 두 개뿐이어도 모두 bug면 선택한다",
+    "title": "no-change handoff의 worker_done 빈 변경 목록 projection 회귀 수정",
+    "body": "## 문제\n\nno-change handoff finish가 durable state에는 성공하지만 Orca worker_done projection이 빈 changed_files를 invalid로 거부해 coordinator 자동 알림이 실패한다.",
+    "want_selected": ["bug"]
+  },
+  {
+    "issue": 81,
+    "note": "신규·추가·확장이 enhancement 근거 3개로 모인다",
+    "title": "[p] C3: 부모 이슈 close와 completion 섹션 provider 확장",
+    "body": "## 범위\n- port.IssueProvider에 CloseIssue 추가(gh issue close --reason completed)\n- 신규 CLI: issueops remote reflect-completion / close-issue (preview→confirm, 한국어 게이트)",
+    "want_selected": ["enhancement"]
+  },
+  {
+    "issue": 181,
+    "note": "문서, 문서가, 문서를이 documentation 근거 3개이고 bug 근거는 결함 하나라 3/4로 선택한다",
+    "title": "문서: orca 발행 경로와 가드·어휘 규율을 이 세션 결과로 갱신한다",
+    "body": "## 문제\n\n이 세션에서 결함 8건을 머지했는데 `.agent-harness` 공용 문서가 그 결과를 반영하지 않는다.\n\n문서를 따라 실행하면 이 세션에서 실측한 발행 불가 상태로 다시 들어간다.",
+    "want_selected": ["documentation"]
+  },
+  {
+    "issue": 109,
+    "note": "enhancement 2와 documentation 2가 같아 어느 라벨도 0.7에 닿지 않아 기권한다",
+    "title": "contract golden의 docs 계수를 placeholder로 정규화: 문서 추가마다 반복되는 수동 동기화 함정 제거",
+    "body": "## 문제\n\n`response_contracts.golden.json`이 `docs_count`의 절대값을 스냅샷으로 고정해, md가 추적될 때마다 golden 수동 동기화가 필요하다.\n\n## 수용 기준\n\n- golden 내 docs_count가 placeholder로 고정되고, 문서 추가에도 golden 테스트가 green이다.",
+    "want_selected": []
+  },
+  {
+    "issue": 39,
+    "note": "근거가 회귀 하나뿐이라 고르면 오답 위험이 커서 기권한다",
+    "title": "[p] no-change finish hook parity 회귀 수정",
+    "body": "## 작업 목표\n\nworker가 허용된 finish completion preset을 Codex PreToolUse fence에서도 실행할 수 있게 parser와 allowlist를 CLI 계약과 동기화한다.",
+    "want_selected": []
+  },
+  {
+    "issue": 158,
+    "note": "근거가 add 하나뿐이라 기권한다(원래 라벨은 bug)",
+    "title": "decision add가 lease active 중 실행되지 않아 구현 중 결정을 기록할 수 없다",
+    "body": "## 문제\n\nallowlist에 `decision add`가 없다. lease가 active인 동안 `issueops decision add`가 거부된다.",
+    "want_selected": []
+  }
+]

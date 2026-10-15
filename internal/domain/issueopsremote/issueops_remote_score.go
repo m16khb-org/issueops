@@ -26,6 +26,7 @@ func ScoreIssueOpsRemoteCandidates(req IssueOpsRemoteScoringRequest) (IssueOpsRe
 	}
 	issueTokens := issueOpsRemoteTokens(issueText)
 	result := normalizeIssueOpsRemoteScoringResult(IssueOpsRemoteScoringResult{OK: true, Provider: provider, Threshold: threshold})
+	typeEvidence := issueOpsRemoteLabelEvidence(issueTokens)
 	for _, candidate := range req.IssueCandidates {
 		item := scoreIssueOpsRemoteIssue(provider, threshold, issueTokens, candidate)
 		if item.Selected {
@@ -35,7 +36,7 @@ func ScoreIssueOpsRemoteCandidates(req IssueOpsRemoteScoringRequest) (IssueOpsRe
 		}
 	}
 	for _, candidate := range req.LabelCandidates {
-		item := scoreIssueOpsRemoteLabel(provider, threshold, issueTokens, candidate)
+		item := scoreIssueOpsRemoteLabel(provider, threshold, issueTokens, typeEvidence, candidate)
 		if item.Selected {
 			result.SelectedLabels = append(result.SelectedLabels, item)
 		} else {
@@ -117,17 +118,19 @@ func scoreIssueOpsRemoteIssue(provider string, threshold float64, issueTokens ma
 	return item
 }
 
-func scoreIssueOpsRemoteLabel(provider string, threshold float64, issueTokens map[string]bool, candidate IssueOpsRemoteLabelCandidate) IssueOpsRemoteScoredItem {
+func scoreIssueOpsRemoteLabel(provider string, threshold float64, issueTokens map[string]bool, typeEvidence issueOpsRemoteTypeEvidence, candidate IssueOpsRemoteLabelCandidate) IssueOpsRemoteScoredItem {
 	score := scorePtr(candidate.Score)
 	evidence := []string{}
 	if candidate.Score != nil {
 		evidence = append(evidence, "explicit score provided")
+	} else if typeScore, matched, ok := issueOpsRemoteLabelEvidenceScore(typeEvidence, candidate); ok {
+		score = clampScore(typeScore)
+		evidence = append(evidence, fmt.Sprintf("type_evidence=%d/%d", len(matched), typeEvidence.total), "matched_tokens="+strings.Join(matched, ","))
 	} else {
 		labelText := strings.TrimSpace(candidate.Name + "\n" + candidate.Description + "\n" + strings.Join(candidate.Aliases, " "))
 		overlap := issueOpsRemoteOverlap(issueTokens, issueOpsRemoteTokens(labelText))
-		heuristic := issueOpsRemoteLabelHeuristic(issueTokens, candidate)
-		score = clampScore(0.65*overlap + 0.35*heuristic)
-		evidence = append(evidence, fmt.Sprintf("token_overlap=%.2f", overlap), fmt.Sprintf("type_heuristic=%.2f", heuristic))
+		score = clampScore(0.65 * overlap)
+		evidence = append(evidence, fmt.Sprintf("token_overlap=%.2f", overlap), "type_heuristic=0.00")
 	}
 	selected := score >= threshold
 	item := IssueOpsRemoteScoredItem{
