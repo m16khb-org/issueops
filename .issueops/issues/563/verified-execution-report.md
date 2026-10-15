@@ -15,6 +15,7 @@ main CI의 golangci-lint v2.12.2 지적 90건(errcheck 62, govet inline 25, unus
 | gofmt, `go vet ./...`, `go build ./cmd/issueops`, `go test -race ./... -count=1`이 통과한다 | G2 | `ALL_PASS` |
 | `.golangci.yml` diff, 추가된 `nolint`, 변경된 production Go 파일이 없다 | G3 | `NO_SUPPRESSION` |
 | self-verify의 모든 단계가 통과한다 | G4 | `SELF_VERIFY_OK=True` |
+| `internal/adapter/update` 테스트가 Linux 컨테이너에서 `text file busy` 없이 통과한다(CI pull_request run 실패 대응) | G5 | `ETXTBSY_FREE` |
 
 base에서 같은 lint는 `90 issues: errcheck 62, govet 25, unused 3`이었다(구현 전 재현, `/tmp/io-lint-main.txt`).
 
@@ -27,7 +28,7 @@ base에서 같은 lint는 `90 issues: errcheck 62, govet 25, unused 3`이었다(
 - `internal/adapter/mcpservice/instance_test.go`의 `defer instance.Release()`는 오류를 `t.Errorf`로 보고한다.
 - `//go:fix inline` helper 4개(`i64`, `orcaTestUint64`, `handoffTestUint64`, `durationRef`)는 `GOTOOLCHAIN=go1.26.6 go fix -inline ./...`로 호출 49곳을 인라인하고 정의와 directive를 지웠다.
 - unused 3건(`explicitActor`, `phaseFlow.prefetches`, `stepLabels`)은 선언을 지웠다.
-- 바뀐 파일은 `*_test.go` 18개이며 production 파일, `.golangci.yml`, CLI/MCP 계약은 바뀌지 않았다.
+- 바뀐 파일은 `*_test.go` 19개이며(lint 지적 18개와 아래 `update` 패키지 수정 1개) production 파일, `.golangci.yml`, CLI/MCP 계약은 바뀌지 않았다.
 
 ## 적용한 문서 규칙
 
@@ -54,7 +55,7 @@ base에서 같은 lint는 `90 issues: errcheck 62, govet 25, unused 3`이었다(
 
 ## ai-slop-clean
 
-변경 범위는 지적된 `*_test.go` 18개다. 정리 대상은 구현이 만든 것과 lint가 지목한 선언에 한정했다.
+변경 범위는 지적된 `*_test.go` 18개와 CI에서 드러난 `internal/adapter/update/runtime_test.go`다. 정리 대상은 구현이 만든 것과 lint가 지목한 선언에 한정했다.
 
 | 분류 | 제거한 것 |
 |---|---|
@@ -65,13 +66,25 @@ base에서 같은 lint는 `90 issues: errcheck 62, govet 25, unused 3`이었다(
 - 범위 밖 발견: 없음.
 - 적용한 프로젝트 규칙: `.issueops/CONVENTIONS.md`와 `.issueops/conventions/go-and-packages.md`를 대조했고 테스트 helper 형태나 이름에 관한 규칙이 없어 이 정리를 정한 문서 규칙은 없다.
 
+## CI에서 드러난 update 패키지 결함
+
+PR #564의 pull_request CI(run `38706548073`)가 `Race test all packages`에서 두 번 연속 실패했다.
+`internal/adapter/update`의 `TestRuntimeInstall/runs_script_with_args,_env,_stdin_in_root`가 `fork/exec .../install-native.sh: text file busy`로 끝났다.
+같은 head의 push run은 통과했다. 이 결함은 lint 실패에 가려 있던 것이고, #563 성공 기준(lint 이후 단계까지 CI success)을 지키기 위해 이 사이클에서 고친다.
+
+- 원인: `writeScript`가 `os.WriteFile`로 스크립트를 쓴 직후 같은 테스트가 exec한다. 그 사이 다른 병렬 테스트의 fork가 쓰기 fd를 상속하면 Linux가 exec에 `ETXTBSY`를 돌려준다. macOS에서는 재현되지 않는다.
+- 재현: Linux arm64용 test binary를 `ubuntu:24.04` 컨테이너에서 `-test.count=300 -test.cpu=4 -test.shuffle=on`으로 실행했다. 수정 전에는 `TestProcessTableRead`, `TestRuntimeInstall`, `TestRuntimeList`가 `text file busy`로 실패했다. CI가 지목한 한 곳만이 아니라 스크립트를 쓰고 곧바로 실행하는 테스트 세 개가 모두 같은 패턴이다.
+- 수정: 이 세 테스트와 하위 테스트에서 `t.Parallel`을 뺐다. 직렬 테스트는 병렬 테스트가 재개되기 전에 끝나고, 병렬로 남은 테스트(`TestParseMCPProxyProcessSnapshot`, `TestRuntimeProcessBasics`)는 fork하지 않으므로 창이 사라진다. `writeScript`에 이유를 주석으로 남겼다.
+- 확인: 같은 컨테이너 실행을 `-test.count=1500 -test.cpu=2,8,16 -test.shuffle=on`으로 늘려 `text file busy` 없이 통과했다. 원장 G5가 이 실행을 고정한다.
+- 같은 패턴을 다른 패키지에서 찾아본 결과: 실행 파일 권한(0o755)을 쓰고 `t.Parallel`을 쓰는 테스트 파일이 `internal/adapter/issueops`와 `internal/adapter/hostprobe`에도 있다. `hostprobe` 테스트 binary를 같은 컨테이너에서 돌렸더니 `TestChildHostSmoke*`가 거의 매번 실패했지만 `text file busy`가 아니라 컨테이너에 저장소 파일이 없어서 생긴 실패로 보여 ETXTBSY 여부는 판정하지 못했다. 이 사이클은 `update` 패키지만 고쳤다.
+
 ## 성능 측정
 
 production hot path가 없다. 인라인한 `new(int64(250))` 같은 표현은 helper 호출과 같은 할당을 하므로 측정하지 않았다.
 
 ## Side effect
 
-- 파일: `*_test.go` 18개 수정, `.issueops/issues/563/` 아래 추적 사본과 이 report.
+- 파일: `*_test.go` 19개 수정, `.issueops/` 아래 caution 한 건과 색인 한 줄, `.issueops/issues/563/` 아래 추적 사본과 이 report.
 - 원격·durable state: 구현 단계에서는 없다. 커밋·push·draft PR 발행은 pr 단계에서 한다.
 - #560(Orca 연동 제거)이 `internal/adapter/orca/*_test.go`를 지울 때 base 동기화에서 modify/delete 충돌이 날 수 있고 삭제 쪽을 택하면 된다.
 
@@ -89,3 +102,8 @@ production hot path가 없다. 인라인한 `new(int64(250))` 같은 표현은 h
 ## 실패와 재시도
 
 - 첫 `gates check`는 `--cwd`·`--workspace-root` 누락으로 정책에 거부되어 4개 게이트가 실행되지 않았다. 두 플래그를 주고 다시 실행해 4개 모두 met이 됐다. 코드 변경은 없었다.
+- 재개 뒤 G1~G5 재실행에서 G4가 `SELF_VERIFY_OK=False`였다. 원인은 이 변경이 아니라 이 머신의 `~/.omo`가 사라져 `native integration` 단계가 `missing ~/.omo/agent/skills/...`로 실패한 것이다(첫 실행 때는 있었다). CI와 같은 방식(임시 HOME에 `install-native.sh --skip-build --path-mode=skip --mcp-transport=stdio` 뒤 self-verify, GOCACHE·GOMODCACHE·GOPATH는 실제 값)으로 G4 CHECK를 바꿔 다시 실행했고 통과했다.
+- 재개 뒤 첫 G1 증거가 `go: downloading ...` 줄이어서 원장을 다시 열고 G1을 재실행했다. 같은 명령이 `0 issues.`를 출력했다.
+- `gates check`는 이미 met인 게이트를 다시 실행하지 않는다. 테스트 코드가 바뀐 뒤에는 G1~G4의 체크박스와 EVIDENCE를 되돌려야 실제로 다시 돈다.
+- `.issueops/TESTING.md`의 "다단계 검증 시나리오에서 한 단계라도 실패하면 이전 단계의 통과를 재사용하지 않고 첫 게이트부터 전체 재실행한다."에 따라 G1~G5를 모두 되돌려 한 번의 `gates check`로 다시 실행했다. 다섯 게이트가 한 run에서 모두 met이고 원장 EVIDENCE는 그 run의 출력이다. 위 부분 재실행 결과는 보고에 쓰지 않는다.
+- 구현 리뷰 전의 `self-verify --base-ref`(임시 HOME)가 한 번 `risk QA tier`의 race 테스트에서 실패했다. 출력이 잘려 실패한 테스트는 알 수 없었다. 같은 `go test -race ./... -count=1`을 임시 HOME에서 다섯 번 더 돌렸더니 네 번은 통과했고 한 번은 `cmd/issueops/issueopscli`의 `TestCLIIssueOpsPhaseAdvanceToPRBlockedByChildren`(`native session process receipt is not in the local process ancestry`)과 `cmd/issueops/issueopscli/remotecmd`의 `TestChildCLIStaleOperationRequiresCurrentHolderReconcile`(`context deadline exceeded`)가 실패했다. 두 테스트는 이 변경이 건드리지 않은 파일이며 프로세스 조회·시간 제한에 기대므로 이 머신의 부하에서 확률적으로 실패하는 것으로 보이지만 원인은 확정하지 못했다. 이 사이클은 고치지 않았다. 같은 명령 재실행의 `self-verify --base-ref bac123aa`는 27단계 모두 통과했다. GitHub Actions(Linux)에서 이 사이클 PR의 race 단계가 실패한 것은 `update` 패키지 한 곳뿐이었다.

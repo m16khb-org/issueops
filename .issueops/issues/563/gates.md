@@ -13,6 +13,10 @@
   EXPECT: NO_SUPPRESSION
   EVIDENCE: NO_SUPPRESSION
 - [x] G4: self-verify의 모든 단계(go test ./... -count=1 포함)가 통과한다
-  CHECK: python3 -c "import subprocess as s,json; b=s.run(['go','build','-o','bin/issueops','./cmd/issueops'],capture_output=True,text=True); p=s.run(['./bin/issueops','self-verify','--seed=100','--target-score=95','--llm-eval=false','--json'],capture_output=True,text=True); d=json.loads(p.stdout or '{}'); print('SELF_VERIFY_OK='+str(b.returncode==0 and bool(d.get('ok'))))"
+  CHECK: python3 -c "import os,shutil,subprocess as s,json,tempfile; e=lambda k: s.run(['go','env',k],capture_output=True,text=True).stdout.strip(); t=tempfile.mkdtemp(); env=dict(os.environ,HOME=t,CODEX_HOME=t+'/.codex',GOCACHE=e('GOCACHE'),GOMODCACHE=e('GOMODCACHE'),GOPATH=e('GOPATH')); b=s.run(['go','build','-o','bin/issueops','./cmd/issueops'],capture_output=True,text=True); i=s.run(['./scripts/install-native.sh','--skip-build','--path-mode=skip','--mcp-transport=stdio'],env=env,capture_output=True,text=True); p=s.run(['./bin/issueops','self-verify','--seed=100','--target-score=95','--llm-eval=false','--json'],env=env,capture_output=True,text=True); d=json.loads(p.stdout or '{}'); s.run(['chmod','-R','u+w',t]); shutil.rmtree(t,ignore_errors=True); print('SELF_VERIFY_OK='+str(b.returncode==0 and i.returncode==0 and bool(d.get('ok'))))"
   EXPECT: SELF_VERIFY_OK=True
   EVIDENCE: SELF_VERIFY_OK=True
+- [x] G5: update 패키지 테스트가 Linux 컨테이너에서 병렬 fork 압박을 받아도 text file busy 없이 통과한다
+  CHECK: python3 -c "import os,platform,subprocess,sys,tempfile; a='arm64' if platform.machine() in ('arm64','aarch64') else 'amd64'; v=subprocess.run(['go','list','-m','-f','{{.GoVersion}}'],capture_output=True,text=True,check=True).stdout.strip(); d=tempfile.mkdtemp(dir='/tmp'); b=d+'/update.test'; c=subprocess.run(['go','test','-c','-o',b,'./internal/adapter/update'],env=dict(os.environ,GOOS='linux',GOARCH=a,GOTOOLCHAIN='go'+v),capture_output=True,text=True); r=subprocess.run(['docker','run','--rm','-v',b+':/t:ro','ubuntu:24.04','/t','-test.count=1500','-test.cpu=2,8,16','-test.shuffle=on'],capture_output=True,text=True) if c.returncode==0 else c; out=r.stdout+r.stderr; ok=c.returncode==0 and r.returncode==0 and 'text file busy' not in out; print('ETXTBSY_FREE' if ok else 'FAIL '+out[-300:]); sys.exit(0 if ok else 1)"
+  EXPECT: ETXTBSY_FREE
+  EVIDENCE: ETXTBSY_FREE
