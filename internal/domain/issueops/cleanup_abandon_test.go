@@ -92,14 +92,14 @@ func TestCleanupAbandonPreviewPreservesAllRefusalReasons(t *testing.T) {
 	inventory := model.CleanupAbandonInventory{Branch: "task", WorktreePresent: true, WorktreeHead: "first", BranchOID: "second"}
 	facts := CleanupAbandonObservation{
 		WorktreeIdentityConflict: true, WorkspaceMissing: []string{"source_checkout"},
-		PendingIntentError: "unresolved external intent", OrcaResidueError: "task still live", RemoteMissing: []string{"issue_readable"},
+		PendingIntentError: "unresolved external intent", RemoteMissing: []string{"issue_readable"},
 	}
 	_, result := BuildCleanupAbandonPreview(record, model.CleanupAbandonRequest{}, inventory, facts)
-	want := "reason_required,remote_artifact_unmerged,worktree_identity_conflict,worktree_canonical,worktree_branch_match,worktree_head,worktree_clean,source_checkout,local_branch_observable,worktree_registry_observable,local_residue_execution,local_branch_head,pending_intent_safe,orca_resources_absent,issue_readable"
+	want := "reason_required,remote_artifact_unmerged,worktree_identity_conflict,worktree_canonical,worktree_branch_match,worktree_head,worktree_clean,source_checkout,local_branch_observable,worktree_registry_observable,local_residue_execution,local_branch_head,pending_intent_safe,issue_readable"
 	if got := strings.Join(result.Missing, ","); got != want {
 		t.Fatalf("all ordered reasons: got=%s want=%s", got, want)
 	}
-	if result.OK || result.ReasonError == "" || result.PendingIntentError != facts.PendingIntentError || result.OrcaResidueError != facts.OrcaResidueError {
+	if result.OK || result.ReasonError == "" || result.PendingIntentError != facts.PendingIntentError {
 		t.Fatalf("diagnostics lost: %+v", result)
 	}
 }

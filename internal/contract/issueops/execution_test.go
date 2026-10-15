@@ -8,42 +8,16 @@ import (
 	issueopsdomain "issueops/internal/domain/issueops"
 )
 
-func validOrcaExecutionForTest() Execution {
+func validExecutionForTest() Execution {
 	return Execution{
-		Mode: ExecutionModeOrca,
 		Workspace: Workspace{
 			SourceRoot: "/repo",
-			Root:       "/repo.worktrees/resume",
-			Branch:     "resume",
+			Root:       "/repo.worktrees/run",
+			Branch:     "run",
 			BaseHead:   strings.Repeat("a", 40),
-			Driver:     "orca",
 			LinkedAt:   "2026-07-30T00:00:00Z",
 		},
 		Lease: WriteLease{Generation: 2, Status: LeaseStatusReleased},
-		Orca: &OrcaBinding{
-			RuntimeID:               "runtime-1",
-			RepoID:                  "repo-1",
-			WorktreeID:              "worktree-1",
-			RunID:                   "run_issueops_1",
-			LeaseGeneration:         2,
-			ArtifactIdentityVersion: OrcaArtifactIdentityVersion,
-			IssueBodySHA256:         strings.Repeat("a", 64),
-			ContextPacketSHA256:     strings.Repeat("b", 64),
-			OwnerPromptSHA256:       strings.Repeat("c", 64),
-			OwnerHost:               "codex",
-			OwnerModel:              "gpt-6-astra",
-			TaskID:                  "task-1",
-			DispatchID:              "dispatch-1",
-		},
-		Selection: selectionFixture(ExecutionModeOrca),
-	}
-}
-
-func TestValidateExecutionRejectsMissingOrcaLeaseGeneration(t *testing.T) {
-	execution := validOrcaExecutionForTest()
-	execution.Orca.LeaseGeneration = 0
-	if err := issueopsdomain.ValidateExecution(execution); err == nil || !strings.Contains(err.Error(), "lease_generation is required") {
-		t.Fatalf("Orca binding without lease generation must fail closed: %v", err)
 	}
 }
 
@@ -60,87 +34,8 @@ func TestValidateNativeActorAcceptsOmo(t *testing.T) {
 	}
 }
 
-func TestValidateExecutionAcceptsOmoOrcaOwner(t *testing.T) {
-	execution := validOrcaExecutionForTest()
-	execution.Orca.OwnerHost = "omo"
-	execution.Orca.OwnerModel = "chatgpt-subscription/gpt-6-sol"
-	if err := issueopsdomain.ValidateExecution(execution); err != nil {
-		t.Fatalf("Omo Orca owner must be valid: %v", err)
-	}
-}
-
-func TestValidateExecutionRejectsMissingOrcaRunID(t *testing.T) {
-	execution := validOrcaExecutionForTest()
-	execution.Orca.RunID = ""
-	if err := issueopsdomain.ValidateExecution(execution); err == nil || !strings.Contains(err.Error(), "run_id must be one canonical explicit Run identity") {
-		t.Fatalf("Orca binding without run id must fail closed: %v", err)
-	}
-}
-
-func TestValidateExecutionAcceptsSealedOrcaRunID(t *testing.T) {
-	execution := validOrcaExecutionForTest()
-	execution.Orca.RunID = "run_issueops_1"
-	if err := issueopsdomain.ValidateExecution(execution); err != nil {
-		t.Fatalf("sealed Orca run id must be valid: %v", err)
-	}
-}
-
-func TestValidateExecutionAcceptsOpaqueOrcaRunID(t *testing.T) {
-	execution := validOrcaExecutionForTest()
-	execution.Orca.RunID = "run_other_local"
-
-	if err := issueopsdomain.ValidateExecution(execution); err != nil {
-		t.Fatalf("syntactically valid opaque Orca Run identity must be valid: %v", err)
-	}
-}
-
-func TestValidateExecutionRejectsBindingFromFutureLeaseGeneration(t *testing.T) {
-	execution := validOrcaExecutionForTest()
-	execution.Orca.LeaseGeneration = 3
-	if err := issueopsdomain.ValidateExecution(execution); err == nil ||
-		!strings.Contains(err.Error(), "Orca binding lease_generation exceeds the lease generation") {
-		t.Fatalf("future binding generation must fail closed: %v", err)
-	}
-}
-
-func TestValidateExecutionRequiresVersionedCompleteOrcaArtifactIdentity(t *testing.T) {
-	if err := issueopsdomain.ValidateExecution(validOrcaExecutionForTest()); err != nil {
-		t.Fatalf("complete artifact identity must be valid: %v", err)
-	}
-	for _, tc := range []struct {
-		name   string
-		mutate func(*OrcaBinding)
-		want   string
-	}{
-		{name: "unversioned empty", want: "unsupported Orca artifact identity version 0", mutate: func(binding *OrcaBinding) {
-			binding.ArtifactIdentityVersion = 0
-			binding.IssueBodySHA256, binding.ContextPacketSHA256, binding.OwnerPromptSHA256 = "", "", ""
-		}},
-		{name: "unversioned complete", want: "unsupported Orca artifact identity version 0", mutate: func(binding *OrcaBinding) {
-			binding.ArtifactIdentityVersion = 0
-		}},
-		{name: "versioned empty", want: "version requires a complete sealed artifact identity", mutate: func(binding *OrcaBinding) {
-			binding.IssueBodySHA256, binding.ContextPacketSHA256, binding.OwnerPromptSHA256 = "", "", ""
-		}},
-		{name: "versioned partial", want: "complete sealed artifact identity", mutate: func(binding *OrcaBinding) {
-			binding.IssueBodySHA256, binding.ContextPacketSHA256 = "", ""
-		}},
-		{name: "not a digest", want: "must contain SHA-256 digests", mutate: func(binding *OrcaBinding) {
-			binding.OwnerPromptSHA256 = "not-a-digest"
-		}},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			execution := validOrcaExecutionForTest()
-			tc.mutate(execution.Orca)
-			if err := issueopsdomain.ValidateExecution(execution); err == nil || !strings.Contains(err.Error(), tc.want) {
-				t.Fatalf("artifact identity error=%v want %q", err, tc.want)
-			}
-		})
-	}
-}
-
 func TestValidateExecutionAcceptsCompletionHistory(t *testing.T) {
-	execution := validOrcaExecutionForTest()
+	execution := validExecutionForTest()
 	execution.CompletionHistory = []ExecutionCompletionHistory{{
 		Generation: 1,
 		Completion: ExecutionCompletion{
@@ -185,7 +80,7 @@ func TestValidateExecutionRejectsInvalidCompletionHistory(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			entry := valid
 			test.mutate(&entry)
-			execution := validOrcaExecutionForTest()
+			execution := validExecutionForTest()
 			execution.CompletionHistory = []ExecutionCompletionHistory{entry}
 			if err := issueopsdomain.ValidateExecution(execution); err == nil {
 				t.Fatal("invalid completion history accepted")
@@ -194,89 +89,13 @@ func TestValidateExecutionRejectsInvalidCompletionHistory(t *testing.T) {
 	}
 }
 
-func TestValidateExecutionSelectionReceipt(t *testing.T) {
-	execution := validOrcaExecutionForTest()
-	execution.Selection = &ExecutionSelection{
-		RequestedMode:        "auto",
-		ResolvedMode:         "orca",
-		ProbeAttempted:       true,
-		ProbeAvailable:       true,
-		ProbeReady:           true,
-		ProbeCode:            "ready",
-		ReadinessFingerprint: strings.Repeat("b", 64),
-		SelectedAt:           "2026-08-03T00:00:00Z",
-	}
+func TestValidateExecutionRequiresWorkspaceIsolatedFromSourceRoot(t *testing.T) {
+	execution := validExecutionForTest()
 	if err := issueopsdomain.ValidateExecution(execution); err != nil {
-		t.Fatalf("valid selection receipt rejected: %v", err)
+		t.Fatalf("valid execution rejected: %v", err)
 	}
-
-	invalid := []struct {
-		name   string
-		mutate func(*ExecutionSelection)
-	}{
-		{name: "mode mismatch", mutate: func(receipt *ExecutionSelection) { receipt.ResolvedMode = "direct" }},
-		{name: "auto without probe", mutate: func(receipt *ExecutionSelection) {
-			receipt.ProbeAttempted = false
-			receipt.ProbeAvailable = false
-			receipt.ProbeReady = false
-			receipt.ProbeCode = ""
-		}},
-		{name: "ready without available", mutate: func(receipt *ExecutionSelection) { receipt.ProbeAvailable = false }},
-		{name: "fallback on orca", mutate: func(receipt *ExecutionSelection) { receipt.FallbackCode = "orca_unready" }},
-		{name: "direct reason on auto", mutate: func(receipt *ExecutionSelection) { receipt.ExplicitDirectReason = "manual recovery" }},
-		{name: "missing fingerprint", mutate: func(receipt *ExecutionSelection) { receipt.ReadinessFingerprint = "" }},
-	}
-	for _, test := range invalid {
-		t.Run(test.name, func(t *testing.T) {
-			candidate := execution
-			receipt := *execution.Selection
-			test.mutate(&receipt)
-			candidate.Selection = &receipt
-			if err := issueopsdomain.ValidateExecution(candidate); err == nil {
-				t.Fatal("invalid selection receipt accepted")
-			}
-		})
-	}
-}
-
-func TestValidateExecutionSelectionRequiresExactAutoFallbackCode(t *testing.T) {
-	execution := validOrcaExecutionForTest()
-	execution.Mode = ExecutionModeDirect
-	execution.Workspace.Driver = "git"
-	execution.Orca = nil
-	execution.Selection = &ExecutionSelection{
-		RequestedMode: "auto", ResolvedMode: "direct", ProbeAttempted: true,
-		ProbeCode: "orca_unready", FallbackCode: "orca_unready",
-		ReadinessFingerprint: strings.Repeat("b", 64), SelectedAt: "2026-08-03T00:00:00Z",
-	}
-	if err := issueopsdomain.ValidateExecution(execution); err != nil {
-		t.Fatalf("valid auto fallback rejected: %v", err)
-	}
-	for _, fallback := range []string{"", "different_code", " orca_unready "} {
-		candidate := execution
-		selection := *execution.Selection
-		selection.FallbackCode = fallback
-		candidate.Selection = &selection
-		if err := issueopsdomain.ValidateExecution(candidate); err == nil {
-			t.Fatalf("invalid fallback_code %q accepted", fallback)
-		}
-	}
-}
-
-func TestValidateExecutionSelectionRejectsExplicitDirectFallbackCode(t *testing.T) {
-	execution := validOrcaExecutionForTest()
-	execution.Mode = ExecutionModeDirect
-	execution.Workspace.Driver = "git"
-	execution.Orca = nil
-	execution.Selection = &ExecutionSelection{
-		RequestedMode: "direct", ResolvedMode: "direct",
-		ReadinessFingerprint: strings.Repeat("b", 64), SelectedAt: "2026-08-03T00:00:00Z",
-		ExplicitDirectReason: "manual recovery",
-	}
-	for _, fallback := range []string{"orca_unready", " "} {
-		execution.Selection.FallbackCode = fallback
-		if err := issueopsdomain.ValidateExecution(execution); err == nil {
-			t.Fatalf("explicit direct selection with fallback_code %q accepted", fallback)
-		}
+	execution.Workspace.Root = execution.Workspace.SourceRoot
+	if err := issueopsdomain.ValidateExecution(execution); err == nil || !strings.Contains(err.Error(), "isolated from source_root") {
+		t.Fatalf("workspace root equal to source_root accepted: %v", err)
 	}
 }

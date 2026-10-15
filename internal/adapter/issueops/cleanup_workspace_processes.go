@@ -13,13 +13,12 @@ import (
 
 // CleanupProcessDeps는 cleanup이 워크트리 점유 프로세스를 관측하고 종료하는
 // 표면이다. nil 필드는 기본 구현(lsof+ps 스냅샷 join, syscall.Kill, time.Sleep,
-// os.Getpid, os.Getenv)을 쓴다.
+// os.Getpid)을 쓴다.
 type CleanupProcessDeps struct {
 	Observe func(root string) (port.CleanupWorkspaceOccupancy, error)
 	Signal  func(pid int, sig syscall.Signal) error
 	Sleep   func(time.Duration)
 	SelfPID int
-	Getenv  func(string) string
 }
 
 func (d CleanupProcessDeps) withDefaults() CleanupProcessDeps {
@@ -37,9 +36,6 @@ func (d CleanupProcessDeps) withDefaults() CleanupProcessDeps {
 	}
 	if d.Sleep == nil {
 		d.Sleep = time.Sleep
-	}
-	if d.Getenv == nil {
-		d.Getenv = os.Getenv
 	}
 	return d
 }

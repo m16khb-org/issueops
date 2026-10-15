@@ -22,7 +22,7 @@ import (
 )
 
 // issueOpsNextHandler는 단계 분류에 필요한 관측을 꽂는다. 전부 읽기 전용이며,
-// fetch도 provider 호출도 Orca 호출도 없다.
+// fetch도 provider 호출도 없다.
 func issueOpsNextHandler(
 	stagedArtifactNames func(stateRoot, id string) ([]string, error),
 	observers ...issueopsrecord.Observer,

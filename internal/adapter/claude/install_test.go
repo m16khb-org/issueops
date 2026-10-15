@@ -110,7 +110,7 @@ func TestClaudeInstallerMergesLifecycleHooksIdempotently(t *testing.T) {
         "hooks": [
           {
             "type": "command",
-            "command": "orca subagent observe"
+            "command": "acme subagent observe"
           }
         ]
       }
@@ -158,7 +158,7 @@ func TestClaudeInstallerMergesLifecycleHooksIdempotently(t *testing.T) {
 		t.Fatalf("unexpected UserPromptSubmit group after managed-hook cleanup: %q", command)
 	}
 	subagentGroups := hooks["SubagentStart"].([]any)
-	if first := subagentGroups[0].(map[string]any)["hooks"].([]any)[0].(map[string]any)["command"]; len(subagentGroups) != 2 || first != "orca subagent observe" {
+	if first := subagentGroups[0].(map[string]any)["hooks"].([]any)[0].(map[string]any)["command"]; len(subagentGroups) != 2 || first != "acme subagent observe" {
 		t.Fatalf("third-party SubagentStart group must stay first: %+v", subagentGroups)
 	}
 	for _, removed := range []string{"PreToolUse", "PostToolUse", "PreCompact", "PostCompact", "Stop"} {

@@ -2,7 +2,6 @@ package issueopslease
 
 import (
 	"context"
-	"fmt"
 
 	leasecontract "issueops/internal/contract/issueopslease"
 	leasedomain "issueops/internal/domain/issueopslease"
@@ -10,15 +9,13 @@ import (
 )
 
 type ClaimRequest struct {
-	ID                  string
-	Generation          uint64
-	Actor               leasedomain.Actor
-	Ancestry            []leasedomain.ProcessReceipt
-	CWD                 string
-	TokenFile           string
-	ClaimCurrentToken   bool
-	IssueBodySHA256     string
-	ContextPacketSHA256 string
+	ID                string
+	Generation        uint64
+	Actor             leasedomain.Actor
+	Ancestry          []leasedomain.ProcessReceipt
+	CWD               string
+	TokenFile         string
+	ClaimCurrentToken bool
 }
 
 type ClaimResult struct {
@@ -31,29 +28,19 @@ type ClaimService struct {
 	repository ClaimRepository
 	clock      Clock
 	verifier   authorityport.ActorVerifier
-	preflight  ClaimContextPreflight
 }
 
-func NewClaimService(repository ClaimRepository, clock Clock, verifier authorityport.ActorVerifier, preflight ClaimContextPreflight) *ClaimService {
-	return &ClaimService{repository: repository, clock: clock, verifier: verifier, preflight: preflight}
+func NewClaimService(repository ClaimRepository, clock Clock, verifier authorityport.ActorVerifier) *ClaimService {
+	return &ClaimService{repository: repository, clock: clock, verifier: verifier}
 }
 
 func (s *ClaimService) Claim(ctx context.Context, request ClaimRequest) (ClaimResult, error) {
-	if s.preflight == nil {
-		return ClaimResult{ID: request.ID}, fmt.Errorf("claim context preflight is required")
-	}
-	validate, err := s.preflight.Preflight(ctx, ClaimPreflightRequest{
-		ID: request.ID, Generation: request.Generation, IssueBodySHA256: request.IssueBodySHA256, ContextPacketSHA256: request.ContextPacketSHA256,
-	})
-	if err != nil {
-		return ClaimResult{ID: request.ID}, err
-	}
 	actor, err := resolveActor(ctx, request.Actor, request.Ancestry, s.verifier)
 	if err != nil {
 		return ClaimResult{ID: request.ID}, err
 	}
 	after, err := s.repository.Claim(ctx, ClaimRepositoryRequest{
-		ID: request.ID, Generation: request.Generation, Actor: actor, CWD: request.CWD, TokenFile: request.TokenFile, ClaimCurrentToken: request.ClaimCurrentToken, ValidateRecord: validate, Clock: s.clock,
+		ID: request.ID, Generation: request.Generation, Actor: actor, CWD: request.CWD, TokenFile: request.TokenFile, ClaimCurrentToken: request.ClaimCurrentToken, Clock: s.clock,
 	})
 	if err != nil {
 		return ClaimResult{ID: request.ID}, err

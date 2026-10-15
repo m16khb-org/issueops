@@ -8,7 +8,6 @@ import (
 
 	cleanupapp "issueops/internal/application/issueopscleanup"
 	model "issueops/internal/contract/issueops"
-	"issueops/internal/port"
 )
 
 func CleanupFinishFingerprint(inventory model.CleanupFinishInventory) (string, error) {
@@ -21,9 +20,8 @@ func CleanupFinishFingerprint(inventory model.CleanupFinishInventory) (string, e
 }
 
 type CleanupFinishRuntime struct {
-	RunGit        func(string, ...string) (int, string)
-	Processes     CleanupProcessDeps
-	OrcaTerminals port.CleanupOrcaTerminals
+	RunGit    func(string, ...string) (int, string)
+	Processes CleanupProcessDeps
 }
 
 func (r CleanupFinishRuntime) Git(ctx context.Context, dir string, args ...string) (int, string) {
@@ -33,8 +31,8 @@ func (r CleanupFinishRuntime) Git(ctx context.Context, dir string, args ...strin
 	return defaultExecutionSyncBaseGit(ctx, dir, args...)
 }
 func (r CleanupFinishRuntime) Workspace(ctx context.Context, record model.IssueOpsRecord, root string) (cleanupapp.FinishWorkspaceObservation, []string) {
-	return NewCleanupWorkspaceCleaner(r.Processes, r.OrcaTerminals).Observe(ctx, record, root)
+	return NewCleanupWorkspaceCleaner(r.Processes).Observe(root, record.Repo)
 }
-func (r CleanupFinishRuntime) Stop(ctx context.Context, inventory model.CleanupFinishInventory, processes []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, int, error) {
-	return NewCleanupWorkspaceCleaner(r.Processes, r.OrcaTerminals).Stop(ctx, inventory.WorktreeRoot, processes, inventory.OrcaTerminals, inventory.OrcaRuntimeReady, inventory.OrcaAppPID)
+func (r CleanupFinishRuntime) Stop(ctx context.Context, inventory model.CleanupFinishInventory, processes []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, error) {
+	return NewCleanupWorkspaceCleaner(r.Processes).Stop(inventory.WorktreeRoot, processes)
 }

@@ -11,7 +11,7 @@ import (
 	linkedbranch "issueops/internal/domain/issueopslinkedbranch"
 )
 
-// awaitFixture는 GitHub Orca 시작 창에 있는 record를 심는다: link 미검증,
+// awaitFixture는 GitHub link 대기 창에 있는 record를 심는다: link 미검증,
 // 봉인된 branch/base 있음.
 func awaitFixture(t *testing.T, linkVerified bool) string {
 	t.Helper()
@@ -76,10 +76,10 @@ func healthyNodes() []linkedbranch.Node {
 // TestAwaitBranchLinkWaitsThroughTheCoordinatorStartupWindow는 #319의 핵심을
 // 고정한다.
 //
-// GitHub Orca 경로에서 owner는 링크가 **아직 없는** 시점에 시작한다 — prepare가
-// link 미검증 상태에서 owner를 띄우고 coordinator의 createLinkedBranch가 그 뒤에
-// 오기 때문이다. 시작 시점의 부재를 terminal 실패로 다루면 이 경로는 구조적으로
-// 완주할 수 없다. 실측된 실패가 정확히 그것이었다(task_e3946ef93086).
+// GitHub 경로에서 대기는 링크가 **아직 없는** 시점에 시작한다 — prepare가
+// link 미검증 상태로 끝나고 coordinator의 createLinkedBranch가 그 뒤에 오기
+// 때문이다. 시작 시점의 부재를 terminal 실패로 다루면 이 경로는 구조적으로
+// 완주할 수 없다.
 func TestAwaitBranchLinkWaitsThroughTheCoordinatorStartupWindow(t *testing.T) {
 	t.Parallel()
 

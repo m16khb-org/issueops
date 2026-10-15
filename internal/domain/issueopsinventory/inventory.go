@@ -20,15 +20,11 @@ func ProjectEntry(record issueopsinventorycontract.Record) issueopsinventorycont
 			record.RemoteCompletion.ReflectedAt == ""
 	}
 	if record.Execution != nil {
-		entry.Mode = string(record.Execution.Mode)
 		entry.LeaseStatus = string(record.Execution.Lease.Status)
 		entry.WorkspaceRoot = record.Execution.Workspace.Root
 		if record.Execution.Lease.Holder != nil {
 			entry.HolderHost = record.Execution.Lease.Holder.Host
 			entry.HolderSession = record.Execution.Lease.Holder.SessionID
-		}
-		if record.Execution.Orca != nil {
-			entry.OwnerModel = record.Execution.Orca.OwnerModel
 		}
 		if record.Execution.Pending != nil {
 			entry.PendingKind = record.Execution.Pending.Kind

@@ -88,7 +88,7 @@ func TestAbandonArtifactDriftCannotArmOldEvidence(t *testing.T) {
 
 func TestAbandonCancellationPreservesFailureAndReleasesDrainedOwner(t *testing.T) {
 	root, record := abandonTestRecord(t)
-	executor := abandonExecutorForTests(root, abandonDeps(&fakeAbandonGit{branchOID: "abc123"}, authoritativeZeroOrca()))
+	executor := abandonExecutorForTests(root, abandonDeps(&fakeAbandonGit{branchOID: "abc123"}))
 	// A record-backed absent workspace authorizes the branch-only target.
 	mutateFinishRecord(t, root, record.ID, func(r *model.IssueOpsRecord) {
 		r.WorktreePath = filepath.Join(t.TempDir(), "absent-abandon-cancellation")

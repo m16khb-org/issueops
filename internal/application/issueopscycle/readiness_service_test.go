@@ -54,7 +54,7 @@ func TestReadinessLocalSharesSnapshotAndStrictObservesPathsAfterFetch(t *testing
 	locked := false
 	events := []string{}
 	ready, _ := readinessForEffects(t, &locked, &events)
-	record := model.IssueOpsRecord{Repo: "/repo", Branch: "feature", Phase: model.IssueOpsPhaseFeedback, Execution: &model.Execution{Mode: model.ExecutionModeDirect}}
+	record := model.IssueOpsRecord{Repo: "/repo", Branch: "feature", Phase: model.IssueOpsPhaseFeedback, Execution: &model.Execution{}}
 	local, changes := ready.ObserveLocalPR(record)
 	if local.Strict || !changes.Verified || !reflect.DeepEqual(events, []string{"observe"}) {
 		t.Fatalf("local observation performed extra effects: %v %+v", events, changes)
@@ -70,7 +70,7 @@ func TestReadinessPrefetchRejectsChangedRootWithoutAnotherFetch(t *testing.T) {
 	locked := false
 	events := []string{}
 	ready, git := readinessForEffects(t, &locked, &events)
-	record := model.IssueOpsRecord{Repo: "/repo", Branch: "feature", Phase: model.IssueOpsPhaseFeedback, Execution: &model.Execution{Mode: model.ExecutionModeDirect}}
+	record := model.IssueOpsRecord{Repo: "/repo", Branch: "feature", Phase: model.IssueOpsPhaseFeedback, Execution: &model.Execution{}}
 	fetched := ready.PrefetchUpstream(record)
 	git.root = "/other"
 	locked = true
@@ -87,7 +87,7 @@ func TestPhaseAdvanceAuthorizesBeforePrefetchAndAgainUnderLock(t *testing.T) {
 			events := []string{}
 			calls, writes := 0, 0
 			ready, _ := readinessForEffects(t, &locked, &events)
-			record := model.IssueOpsRecord{ID: "io-phase", Repo: "/repo", Branch: "feature", Phase: model.IssueOpsPhaseFeedback, Execution: &model.Execution{Mode: model.ExecutionModeDirect}}
+			record := model.IssueOpsRecord{ID: "io-phase", Repo: "/repo", Branch: "feature", Phase: model.IssueOpsPhaseFeedback, Execution: &model.Execution{}}
 			denied := errors.New("holder denied")
 			service := PhaseService{Readiness: ready, Store: port.PhaseStore{
 				Read: func(string, string) (model.IssueOpsRecord, error) {
@@ -141,7 +141,7 @@ func TestStrictPRWithFetchMergesChildGateMissingAndWarnings(t *testing.T) {
 		}
 		return []string{"child_pr_open"}, []string{"child #4 still open"}
 	}
-	record := model.IssueOpsRecord{Repo: "/repo", Branch: "feature", Phase: model.IssueOpsPhaseFeedback, Execution: &model.Execution{Mode: model.ExecutionModeDirect}}
+	record := model.IssueOpsRecord{Repo: "/repo", Branch: "feature", Phase: model.IssueOpsPhaseFeedback, Execution: &model.Execution{}}
 	got := ready.StrictPRWithFetch("state", record, ready.Git.Fetch)
 	if got.Ready || !strings.Contains(strings.Join(got.Missing, ","), "child_pr_open") || !slices.Contains(got.Warnings, "child #4 still open") {
 		t.Fatalf("child gate not merged: %+v", got)

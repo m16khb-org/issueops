@@ -22,11 +22,9 @@ func configureOperationalCollectorTest(t *testing.T, collect func(context.Contex
 func healthyCLIOperationalSnapshot(repo string) operationalhealth.Snapshot {
 	return operationalhealth.Snapshot{
 		RepoRoot: repo, CanonicalBranch: "main", SourceHead: "head-main", SourceClean: true,
-		GitWorktrees:  []operationalhealthcontract.GitWorktree{{Path: repo, Branch: "main", Head: "head-main", Clean: true, Canonical: true}},
-		LocalRefs:     []operationalhealthcontract.GitRef{{Name: "refs/heads/main", Branch: "main", OID: "head-main", Location: "local"}},
-		RemoteRefs:    []operationalhealthcontract.GitRef{{Name: "refs/heads/main", Branch: "main", OID: "head-main", Location: "remote"}},
-		OrcaWorktrees: []operationalhealthcontract.OrcaWorktree{{ID: "wt-main", InstanceID: "instance-main", Repo: repo, Path: repo, Branch: "main", Head: "head-main"}},
-		Messages:      operationalhealthcontract.MessagePresence{Empty: true, CompleteAbsence: true},
+		GitWorktrees: []operationalhealthcontract.GitWorktree{{Path: repo, Branch: "main", Head: "head-main", Clean: true, Canonical: true}},
+		LocalRefs:    []operationalhealthcontract.GitRef{{Name: "refs/heads/main", Branch: "main", OID: "head-main", Location: "local"}},
+		RemoteRefs:   []operationalhealthcontract.GitRef{{Name: "refs/heads/main", Branch: "main", OID: "head-main", Location: "remote"}},
 	}
 }
 

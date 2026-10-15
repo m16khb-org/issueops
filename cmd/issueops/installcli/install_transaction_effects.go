@@ -11,7 +11,7 @@ import (
 type installTransactionEffects struct{ command Command }
 
 func (effects installTransactionEffects) PreparePath(result *port.NativeInstallResult, request port.NativeInstallRequest, candidate, mode string) (installapp.PathTransaction, error) {
-	return effects.command.prepareInstallPathPlanForCandidate(result, request, candidate, mode)
+	return effects.command.prepareInstallPathPlanFromCandidate(result, request, candidate, mode)
 }
 
 func (effects installTransactionEffects) Install(request port.NativeInstallRequest) (port.NativeInstallResult, error) {

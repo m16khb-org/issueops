@@ -76,7 +76,7 @@ func (p Provisioner) Prepare(ctx context.Context, req port.ExecutionWorkspaceReq
 func (p Provisioner) validateRequest(req port.ExecutionWorkspaceRequest) (port.ExecutionWorkspaceReceipt, error) {
 	receipt := port.ExecutionWorkspaceReceipt{
 		SourceRoot: filepath.Clean(req.SourceRoot), Root: filepath.Clean(req.Root),
-		Branch: strings.TrimSpace(req.Branch), BaseHead: strings.TrimSpace(req.BaseHead), Driver: "git",
+		Branch: strings.TrimSpace(req.Branch), BaseHead: strings.TrimSpace(req.BaseHead),
 	}
 	if err := domain.ValidateRequired(req.LifecycleID, receipt.SourceRoot, receipt.Root, receipt.Branch, receipt.BaseHead); err != nil {
 		return receipt, err

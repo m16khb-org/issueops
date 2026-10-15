@@ -2,13 +2,6 @@ package commandparse
 
 import "testing"
 
-func TestParseExactIssueOpsCommandAcceptsBareLifecycleCommand(t *testing.T) {
-	command, ok := ParseExactIssueOpsCommand("issueops status")
-	if !ok || command.Path != "status" || command.Start != 2 {
-		t.Fatalf("bare lifecycle command = %+v, ok=%v", command, ok)
-	}
-}
-
 func TestParseExactIssueOpsArgsAcceptsSingleArgument(t *testing.T) {
 	command, ok := ParseExactIssueOpsArgs([]string{"status"})
 	if !ok || command.Path != "status" || command.Start != 2 || len(command.Tokens) != 2 {

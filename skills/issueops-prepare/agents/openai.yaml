@@ -1,4 +1,4 @@
 interface:
   display_name: "IssueOps Prepare"
   short_description: "Seal the branch identity of an IssueOps cycle"
-  default_prompt: "Use $issueops-prepare to pin the base SHA, record and verify the branch identity within the authorized preparation scope, and continue to planning. Worktree preparation and the single session choice belong to the subsequent stage; Orca availability alone does not select a session."
+  default_prompt: "Use $issueops-prepare to pin the base SHA, record and verify the branch identity within the authorized preparation scope, and continue to planning. Worktree preparation and the single session choice belong to the subsequent stage."

@@ -20,8 +20,7 @@ type FinishExecutor struct {
 	Plan            func(context.Context, model.IssueOpsRecord, model.CleanupFinishRequest) (model.CleanupFinishInventory, model.CleanupFinishResult)
 	Fingerprint     func(model.CleanupFinishInventory) (string, error)
 	NewAttempt      func(model.CleanupOperation) (model.IssueOpsCleanupAttempt, error)
-	Stop            func(context.Context, model.CleanupFinishInventory, []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, int, error)
-	RemoveOrca      func(context.Context, string) error
+	Stop            func(context.Context, model.CleanupFinishInventory, []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, error)
 	Directory       func(string) (bool, error)
 	Git             func(context.Context, string, ...string) (int, string)
 	Now             func() time.Time
@@ -135,7 +134,6 @@ func (r *finishRun) execute() (model.CleanupFinishResult, error) {
 		run  func() error
 	}{
 		{model.CleanupFailureStepWorkspaceProcessesStop, r.stopWorkspaceProcesses},
-		{model.CleanupFailureStepOrcaRemove, r.removeOrca},
 		{model.CleanupFailureStepWorktreeRemove, r.removeWorktree},
 		{model.CleanupFailureStepBranchDelete, r.deleteBranch},
 	}
@@ -157,47 +155,19 @@ func (r *finishRun) execute() (model.CleanupFinishResult, error) {
 
 func (r *finishRun) stopWorkspaceProcesses() error {
 	inv := r.inventory
-	if !inv.WorktreePresent || (len(r.result.WorkspaceProcesses) == 0 && len(inv.OrcaTerminals) == 0 && !inv.OrcaRuntimeReady) {
+	if !inv.WorktreePresent || len(r.result.WorkspaceProcesses) == 0 {
 		return nil
 	}
 	if err := r.s.Records.Check(r.ctx, r.snapshot); err != nil {
 		return err
 	}
 	var err error
-	r.result.WorkspaceProcessesStopped, r.result.OrcaTerminalsStopped, err = r.s.Stop(r.ctx, inv, r.result.WorkspaceProcesses)
+	r.result.WorkspaceProcessesStopped, err = r.s.Stop(r.ctx, inv, r.result.WorkspaceProcesses)
 	return err
 }
 
-func (r *finishRun) removeOrca() error {
-	if r.inventory.OrcaWorktreeID == "" {
-		return nil
-	}
-	if err := r.s.Records.Check(r.ctx, r.snapshot); err != nil {
-		return err
-	}
-	if r.s.RemoveOrca == nil {
-		return fmt.Errorf("orca worktree remover is not configured")
-	}
-	if err := r.s.RemoveOrca(r.ctx, r.inventory.OrcaWorktreeID); err != nil {
-		return err
-	}
-	r.result.OrcaRemoved = true
-	return nil
-}
-
 func (r *finishRun) removeWorktree() error {
-	worktreePresent := r.inventory.WorktreePresent
-	if worktreePresent && r.result.OrcaRemoved {
-		var err error
-		worktreePresent, err = r.s.Directory(r.inventory.WorktreeRoot)
-		if err != nil {
-			return err
-		}
-		if !worktreePresent {
-			r.result.WorktreeRemoved = true
-		}
-	}
-	if !worktreePresent {
+	if !r.inventory.WorktreePresent {
 		return nil
 	}
 	if err := r.s.Records.Check(r.ctx, r.snapshot); err != nil {

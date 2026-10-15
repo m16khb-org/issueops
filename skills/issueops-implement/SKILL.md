@@ -26,9 +26,9 @@ issueops next --id "$ISSUEOPS_ID" --json
 선택한 ID는 인계·압축 뒤에도 유지한다. `blocked.*`는 우회하지 않는다.
 ID가 없고 후보를 구별할 근거가 없을 때만 사용자에게 선택을 묻는다.
 
-- `claim`이면 이 세션이 Orca가 띄운 구현 세션인지 확인한다. 맞으면 자기 프롬프트의
-  봉인된 `execution claim --claim-current-token` 명령을 정확히 한 번 실행하고 `next`를
-  다시 돌린다. 아니면 `next_command`가 돌려주는 회복 체인을 따른다.
+- `claim`이면 `next_command`가 돌려주는 `execution claim --claim-current-token` 명령을
+  정확히 한 번 실행하고 `next`를 다시 돌린다. released는 `replace --preview`, revoking은
+  `replace --finalize-preview`로 시작하는 회복 체인을 따른다.
 - `plan.*`이면 [`issueops-plan`](../issueops-plan/SKILL.md)이, `clean`이면
   [`issueops-slop-clean`](../issueops-slop-clean/SKILL.md)이 맞다.
 - `none`이면 사이클이 아직 없다. [`issueops-create-issue`](../issueops-create-issue/SKILL.md)로
@@ -47,10 +47,10 @@ holder/generation 불일치는 아래 회복 표를 따른다. branch·HEAD 불�
 진입 전에 인계 결정 기록과 원래 요청의 승인 범위·종료점을 `status`로 대조한다.
 새 세션은 이전 holder의 release 확인 후 자기 lease로 인수하며, 이미 인계받았으면
 재인계하지 않는다. 보류·phase·claim·`--approved`는 구현이나 publication 승인이 아니다.
-준비 세션은 같은 direct worktree에서 Orca runtime ready → 호환되는 실행 중 Herdr와
-현재 native host → 둘 다 사용 불가면 current 순서로 결정한다. 준비 세션이 Herdr 세션이면
-Herdr를 먼저 확인하고 사용 가능하면 Orca가 ready여도 Herdr로 인계한다. 설치만으로 ready라
-판단하거나 실행 방식 메뉴를 묻지 않는다. 최신 명시적 current/new-session/hold가 우선한다.
+준비 세션은 같은 worktree에서 Herdr를 먼저 확인한다. 준비 세션이 Herdr 세션이고 실행 중인
+서버·호환성·현재 native host 실행 가능 여부가 확인되면 Herdr로 인계한다. Herdr를 쓸 수
+없으면 현재 세션에서 이어가거나, 사용자가 직접 연 두 번째 터미널에서 수동으로 인계한다.
+설치만으로 ready라 판단하거나 실행 방식 메뉴를 묻지 않는다. 최신 명시적 current/new-session/hold가 우선한다.
 인계 시 아래 writer 종료 규칙을 지키고 ID·generation·경로·요청/대화 근거·승인 범위·종료점,
 목적/비목표·base/full HEAD·diff·계획 digest·검증 입력/명령/시각/환경/실패·미완료 결과 위치·
 exact resume/조회 명령·자료 digest를 남긴다. secret/token은 제외한다. release/status로
@@ -59,8 +59,7 @@ exact resume/조회 명령·자료 digest를 남긴다. secret/token은 제외�
 [`session-choice.md`](../issueops/references/session-choice.md)를 사용한다.
 인계문이 있으면 현재 HEAD, 계획 digest, 인계 자료 digest를 현재 worktree와 대조한다.
 stale하거나 누락된 근거는 필요한 범위만 다시 확인한다. 서로 다른 host의 session ID는
-이식 가능한 identity가 아니다. 독립 direct claim 경로는 Orca owner packet 없이 인계 자료와
-status를 검증한 뒤 direct claim 복구 체인을 따른다.
+이식 가능한 identity가 아니다. 인계 자료와 status를 검증한 뒤 claim 복구 체인을 따른다.
 
 ### 인계 관찰과 writer 종료
 
@@ -120,7 +119,7 @@ issueops execution sync-base --id "$ISSUEOPS_ID" --preview $ACTOR_FLAGS --json
 
 ## 진입 절차
 
-`implement.enter`면 direct/Orca 모두 아래 순서를 지킨다.
+`implement.enter`면 아래 순서를 지킨다.
 
 ```bash
 # prepare가 스테이징한 계획을 워크트리에 풀어 두고 plan_path를 채웠으면 생략한다.
@@ -246,7 +245,7 @@ lease 부재·다른 holder·모호한 mutation은 아래에서 시작해 반환
 | provisioning·publication 결과가 모호하다 | `execution reconcile --id ID --preview` 후 `--confirm` |
 
 - `--revoke`·`--finalize`·`--reseed`·fingerprint는 preview가 준 값만 쓴다.
-- direct 회복의 종착은 `claim`, Orca는 `resume`이다. 서로 바꾸지 않는다.
+- 회복의 종착은 `claim`이다.
 - 모호한 prepare/create는 흔적이 안 보여도 반복하지 않는다. reconcile이 처분한다.
 - legacy도 CLI가 반환한 체인을 따른다. 추가 설명은 [`execution.md`](../issueops/references/execution.md)에 있다.
 
@@ -273,8 +272,7 @@ issueops child status --parent "$ISSUEOPS_ID" \
 - child의 branch·worktree·lease는 child cycle 자신의 `branch prepare`와
   `execution prepare`가 소유한다. worktree provisioning은 `execution prepare`
   몫이며, legacy `worktree prepare` 계열 명령은 v1 카탈로그에서 제거되었다.
-  parent가 child worktree를 직접 만들거나 `orca worktree create`로 대체하지
-  않는다.
+  parent가 child worktree를 직접 만들지 않는다.
 - child가 scope drift를 보고하면 child를 조용히 넓히지 않는다. 사용자가
   승인해도 경로는 두 가지뿐이다: 새 scope를 **새 child**로 분리하거나, plan을
   개정하고 plan hash에 묶인 리뷰 freshness를 다시 확인한다.

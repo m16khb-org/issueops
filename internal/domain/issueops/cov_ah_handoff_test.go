@@ -1,16 +1,10 @@
 package issueops
 
 import (
-	"errors"
 	"strings"
 	"testing"
 
 	issueopscontract "issueops/internal/contract/issueops"
-)
-
-const (
-	covHandoffUUID1 = "11111111-1111-4111-8111-111111111111"
-	covHandoffUUID2 = "22222222-2222-4222-8222-222222222222"
 )
 
 type covHandoffObservation = issueopscontract.IssueOpsHandoffDeliveryObservation
@@ -21,7 +15,7 @@ func covHandoffObserved(evidence string) issueopscontract.IssueOpsHandoffDeliver
 	return deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateObserved, evidence)
 }
 
-// covHandoffClaimedFixture returns a valid orca observation that carries an exact owner claim.
+// covHandoffClaimedFixture returns a valid observation that carries an exact owner claim.
 func covHandoffClaimedFixture() covHandoffObservation {
 	observation := deliveryObservationFixture()
 	observation.OwnerClaimed = covHandoffObserved(issueopscontract.IssueOpsHandoffDeliveryEvidenceIssueOpsClaim)
@@ -87,15 +81,11 @@ func TestCovHandoffValidateRejectsMalformedObservation(t *testing.T) {
 		{"call_staged with wrong evidence", deliveryObservationFixture, func(o *covHandoffObservation) {
 			o.CallStaged = covHandoffObserved(issueopscontract.IssueOpsHandoffDeliveryEvidenceTimeout)
 		}, "call_staged evidence is invalid"},
-		{"orca dispatch evidence for omo owner", deliveryObservationFixture, func(o *covHandoffObservation) {
-			o.ExpectedOwnerHost = "omo"
-			o.InputAccepted = covHandoffObserved(issueopscontract.IssueOpsHandoffDeliveryEvidenceOrcaDispatch)
+		{"input_accepted with native evidence", deliveryObservationFixture, func(o *covHandoffObservation) {
+			o.InputAccepted = covHandoffObserved(issueopscontract.IssueOpsHandoffDeliveryEvidenceNativeReceipt)
 		}, "input_accepted evidence is invalid"},
 		{"ambiguous with claim evidence", deliveryObservationFixture, func(o *covHandoffObservation) {
 			o.Ambiguous = covHandoffObserved(issueopscontract.IssueOpsHandoffDeliveryEvidenceIssueOpsClaim)
-		}, "ambiguous evidence is invalid"},
-		{"omo send failure for non-omo owner", deliveryObservationFixture, func(o *covHandoffObservation) {
-			o.Ambiguous = covHandoffObserved(issueopscontract.IssueOpsHandoffDeliveryEvidenceOmoSendFailed)
 		}, "ambiguous evidence is invalid"},
 		{"oversized owner actor host", deliveryObservationFixture, func(o *covHandoffObservation) { o.OwnerActor.Host = covHandoffLong() }, "actor host is too large"},
 		{"oversized owner actor session", deliveryObservationFixture, func(o *covHandoffObservation) { o.OwnerActor.SessionID = covHandoffLong() }, "actor session_id is too large"},
@@ -310,7 +300,7 @@ func TestCovHandoffMergeAdoptsMissingTargetTimingReceiptAndOwner(t *testing.T) {
 	next.Target.PromptGeneration, next.Target.BaselineWorkingSequence = &generation, &baseline
 	next.Target.PaneID = "pane-rotated"
 	next.Timing = &issueopscontract.IssueOpsHandoffDeliveryTiming{PreflightMS: 5, InputSendMS: 7}
-	next.Receipt = issueopscontract.IssueOpsHandoffDeliveryReceipt{Location: "audit/orca/receipt-2.json", Digest: strings.Repeat("f", 64)}
+	next.Receipt = issueopscontract.IssueOpsHandoffDeliveryReceipt{Location: "audit/herdr/receipt-2.json", Digest: strings.Repeat("f", 64)}
 	next.UpdatedAt = "2026-09-20T10:06:00Z"
 
 	merged, decision := MergeHandoffDeliveryObservation(current, next)
@@ -338,7 +328,7 @@ func TestCovHandoffMergeAdoptsMissingTargetTimingReceiptAndOwner(t *testing.T) {
 	if merged.Timing == next.Timing {
 		t.Fatal("timing must be copied, not aliased")
 	}
-	if merged.Receipt.Location != "audit/orca/receipt-2.json" || merged.UpdatedAt != "2026-09-20T10:06:00Z" {
+	if merged.Receipt.Location != "audit/herdr/receipt-2.json" || merged.UpdatedAt != "2026-09-20T10:06:00Z" {
 		t.Fatalf("receipt/updated_at not advanced: %+v %s", merged.Receipt, merged.UpdatedAt)
 	}
 }
@@ -419,390 +409,29 @@ func TestCovHandoffManualOwnerClaimGenerationRule(t *testing.T) {
 	}
 }
 
-func TestCovHandoffAttemptIdentityHelpers(t *testing.T) {
-	attempt := DeliveryAttempt{
-		OperationID: " op ", Stage: "dispatch", LifecycleID: " io-1 ", Host: " omo ",
-		PromptSHA256: " " + strings.Repeat("a", 64) + " ", MaterialSHA256: strings.Repeat("b", 64), SourceGeneration: 4,
-	}
-	if got := attempt.AttemptID("prompt"); got != "op:dispatch:prompt" {
-		t.Fatalf("attempt id=%q", got)
-	}
-	wantLineage := "generation:4:prompt:" + strings.Repeat("a", 64) + ":material:" + strings.Repeat("b", 64) + ":call:prompt"
-	if got := attempt.LineageID(" prompt "); got != wantLineage {
-		t.Fatalf("lineage=%q", got)
-	}
-	launcher := issueopscontract.IssueOpsHandoffDeliveryLauncher{Name: "orca"}
-	probe := attempt.Probe(launcher, "dispatch")
-	if probe.LifecycleID != "io-1" || probe.ExpectedOwnerHost != "omo" || probe.PromptSHA256 != strings.Repeat("a", 64) ||
-		probe.SourceGeneration != 4 || probe.Launcher != launcher || probe.LineageID != attempt.LineageID("dispatch") {
-		t.Fatalf("probe=%+v", probe)
-	}
-
-	for _, test := range []struct {
-		stage     string
-		hasLaunch bool
-		want      bool
-	}{{"dispatch", true, true}, {"dispatch", false, false}, {"preflight", true, false}} {
-		if got := (DeliveryAttempt{Stage: test.stage, HasLaunch: test.hasLaunch}).IsDelivery(); got != test.want {
-			t.Fatalf("IsDelivery(%+v)=%v", test, got)
-		}
-	}
-
-	for _, test := range []struct {
-		host, stage string
-		failure     *DeliveryFailure
-		want        string
-	}{
-		{"omo", "dispatch", &DeliveryFailure{CallPhase: "terminal_send"}, "prompt"},
-		{"codex", "dispatch", &DeliveryFailure{CallPhase: "terminal_send"}, "prompt"},
-		{"omo", "dispatch", &DeliveryFailure{CallPhase: "other"}, "dispatch"},
-		{"omo", "dispatch", nil, "dispatch"},
-		{"codex", "dispatch", nil, "dispatch"},
-		{"omo", "preflight", nil, "preflight"},
-		{"codex", "assign", nil, "assign"},
-	} {
-		if got := (DeliveryAttempt{Host: test.host, Stage: test.stage}).CallKind(test.failure); got != test.want {
-			t.Fatalf("CallKind(%+v)=%q", test, got)
-		}
-	}
-}
-
-func TestCovHandoffRetryRequestIDsValidatedPerCall(t *testing.T) {
-	for _, test := range []struct {
-		name            string
-		dispatch, input string
-		want            string
-	}{
-		{"both empty", "", "", ""},
-		{"both valid", covHandoffUUID1, covHandoffUUID2, ""},
-		{"bad dispatch", "nope", covHandoffUUID2, "Orca dispatch retry request ID is invalid"},
-		{"bad prompt", covHandoffUUID1, "nope", "Orca prompt retry request ID is invalid"},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			err := ValidateDeliveryRetryRequestIDs(DeliveryAttempt{RetryRequestID: test.dispatch, PromptRetryRequestID: test.input})
-			if (test.want == "") != (err == nil) || err != nil && err.Error() != test.want {
-				t.Fatalf("err=%v", err)
-			}
-		})
-	}
-	if _, err := DeliveryDurableRequestID("", "bad", true, "prompt"); err == nil || err.Error() != "Orca prompt delivery observation has an invalid durable request ID" {
-		t.Fatalf("invalid observed id err=%v", err)
-	}
-	if _, err := DeliveryDurableRequestID(covHandoffUUID1, covHandoffUUID2, true, "prompt"); err == nil || err.Error() != "Orca prompt retry request has no exact delivery observation" {
-		t.Fatalf("mismatched retry err=%v", err)
-	}
-}
-
-func TestCovHandoffResponseIdentityRejection(t *testing.T) {
-	tests := []struct {
-		name    string
-		request DeliveryAttempt
-		failure *DeliveryFailure
-		want    bool
-	}{
-		{"no typed failure", DeliveryAttempt{}, nil, false},
-		{"identity mismatch code without observed id", DeliveryAttempt{}, &DeliveryFailure{Code: "dispatch_request_identity_mismatch"}, true},
-		{"prompt mismatch code without observed id", DeliveryAttempt{}, &DeliveryFailure{Code: "terminal_prompt_request_identity_mismatch"}, true},
-		{"receipt invalid code without observed id", DeliveryAttempt{}, &DeliveryFailure{Code: "terminal_prompt_receipt_invalid"}, true},
-		{"unrelated code without observed id", DeliveryAttempt{}, &DeliveryFailure{Code: "timeout"}, false},
-		{"invalid observed id", DeliveryAttempt{}, &DeliveryFailure{OrchestrationRequestID: "nope"}, true},
-		{"observed id differs from sealed", DeliveryAttempt{RetryRequestID: covHandoffUUID1}, &DeliveryFailure{OrchestrationRequestID: covHandoffUUID2}, true},
-		{"observed id equals sealed", DeliveryAttempt{RetryRequestID: covHandoffUUID1}, &DeliveryFailure{OrchestrationRequestID: covHandoffUUID1}, false},
-		{"observed id without seal", DeliveryAttempt{}, &DeliveryFailure{OrchestrationRequestID: covHandoffUUID1}, false},
-		{"terminal send checks prompt seal", DeliveryAttempt{RetryRequestID: covHandoffUUID1, PromptRetryRequestID: covHandoffUUID2}, &DeliveryFailure{CallPhase: "terminal_send", OrchestrationRequestID: covHandoffUUID1}, true},
-		{"terminal send matching prompt seal", DeliveryAttempt{RetryRequestID: covHandoffUUID1, PromptRetryRequestID: covHandoffUUID2}, &DeliveryFailure{CallPhase: "terminal_send", OrchestrationRequestID: covHandoffUUID2}, false},
-		{"terminal send invalid dispatch id", DeliveryAttempt{}, &DeliveryFailure{CallPhase: "terminal_send", DispatchRequestID: "nope"}, true},
-		{"terminal send dispatch id differs from seal", DeliveryAttempt{RetryRequestID: covHandoffUUID1}, &DeliveryFailure{CallPhase: "terminal_send", DispatchRequestID: covHandoffUUID2}, true},
-		{"terminal send dispatch id matches seal", DeliveryAttempt{RetryRequestID: covHandoffUUID1}, &DeliveryFailure{CallPhase: "terminal_send", DispatchRequestID: covHandoffUUID1}, false},
-		{"terminal send receipt invalid", DeliveryAttempt{}, &DeliveryFailure{CallPhase: "terminal_send", Code: "terminal_prompt_receipt_invalid"}, true},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			if got := DeliveryResponseIdentityRejected(test.request, test.failure); got != test.want {
-				t.Fatalf("got %v want %v", got, test.want)
-			}
-		})
-	}
-	for _, test := range []struct{ sealed, observed, want string }{
-		{"", covHandoffUUID1, covHandoffUUID1},
-		{covHandoffUUID1, " " + covHandoffUUID1 + " ", covHandoffUUID1},
-		{covHandoffUUID1, covHandoffUUID2, ""},
-		{"", "nope", ""},
-		{"", "", ""},
-	} {
-		if got := DeliveryAcceptedResponseID(test.sealed, test.observed); got != test.want {
-			t.Fatalf("DeliveryAcceptedResponseID(%q,%q)=%q", test.sealed, test.observed, got)
-		}
-	}
-}
-
-func TestCovHandoffDispatchReceiptMustMatchDurableIdentity(t *testing.T) {
-	receipt := DeliveryReceiptIdentity{RequestID: covHandoffUUID1, TaskID: "task", DispatchID: "dispatch", TerminalID: "term", TerminalHandle: "handle"}
-	if err := ValidateDeliveryDispatchReceipt(receipt, " task ", "term", "handle ", covHandoffUUID1); err != nil {
-		t.Fatalf("exact receipt rejected: %v", err)
-	}
-	for name, mutate := range map[string]func(*DeliveryReceiptIdentity){
-		"request":  func(r *DeliveryReceiptIdentity) { r.RequestID = covHandoffUUID2 },
-		"task":     func(r *DeliveryReceiptIdentity) { r.TaskID = "other" },
-		"dispatch": func(r *DeliveryReceiptIdentity) { r.DispatchID = "  " },
-		"terminal": func(r *DeliveryReceiptIdentity) { r.TerminalID = "other" },
-		"handle":   func(r *DeliveryReceiptIdentity) { r.TerminalHandle = "other" },
-	} {
-		t.Run(name, func(t *testing.T) {
-			mutated := receipt
-			mutate(&mutated)
-			err := ValidateDeliveryDispatchReceipt(mutated, "task", "term", "handle", covHandoffUUID1)
-			if err == nil || err.Error() != "Orca dispatch candidate does not match the durable request and delivery terminal identity" {
-				t.Fatalf("err=%v", err)
-			}
-		})
-	}
-}
-
-func TestCovHandoffRecoverDeliveryObservation(t *testing.T) {
-	stored := deliveryObservationFixture()
-	probe := deliveryObservationFixture()
-	probe.Request = issueopscontract.IssueOpsHandoffDeliveryRequest{}
-
-	t.Run("exact match is returned", func(t *testing.T) {
-		got, ok, err := RecoverDeliveryObservation(probe, "term-1", []covHandoffObservation{stored}, nil)
-		if err != nil || !ok || got.Request.DurableID != "request-1" {
-			t.Fatalf("got=%+v ok=%v err=%v", got, ok, err)
-		}
-	})
-	t.Run("observation without terminal binds to any terminal", func(t *testing.T) {
-		unbound := stored
-		unbound.Target = issueopscontract.IssueOpsHandoffDeliveryTarget{PaneID: "pane-1"}
-		_, ok, err := RecoverDeliveryObservation(probe, "term-9", []covHandoffObservation{unbound}, nil)
-		if err != nil || !ok {
-			t.Fatalf("ok=%v err=%v", ok, err)
-		}
-	})
-	t.Run("no stored observation", func(t *testing.T) {
-		_, ok, err := RecoverDeliveryObservation(probe, "term-1", nil, nil)
-		if err != nil || ok {
-			t.Fatalf("ok=%v err=%v", ok, err)
-		}
-	})
-	t.Run("probe without lineage identity", func(t *testing.T) {
-		blank := probe
-		blank.LineageID = ""
-		_, ok, err := RecoverDeliveryObservation(blank, "term-1", []covHandoffObservation{stored}, nil)
-		if err != nil || ok {
-			t.Fatalf("ok=%v err=%v", ok, err)
-		}
-	})
-	t.Run("lookup error passes through", func(t *testing.T) {
-		lookup := errors.New("ledger unreadable")
-		_, ok, err := RecoverDeliveryObservation(probe, "term-1", []covHandoffObservation{stored}, lookup)
-		if ok || !errors.Is(err, lookup) || strings.Contains(err.Error(), "rejected") {
-			t.Fatalf("ok=%v err=%v", ok, err)
-		}
-	})
-	t.Run("rejected evidence names the reason", func(t *testing.T) {
-		broken := stored
-		broken.Receipt.Digest = "bad"
-		_, ok, err := RecoverDeliveryObservation(probe, "term-1", []covHandoffObservation{broken}, nil)
-		if ok || err == nil || err.Error() != "handoff delivery recovery evidence rejected: delivery observation receipt is invalid" {
-			t.Fatalf("ok=%v err=%v", ok, err)
-		}
-	})
-	t.Run("rejected evidence wraps lookup error", func(t *testing.T) {
-		broken := stored
-		broken.Receipt.Digest = "bad"
-		lookup := errors.New("ledger unreadable")
-		_, ok, err := RecoverDeliveryObservation(probe, "term-1", []covHandoffObservation{broken}, lookup)
-		if ok || !errors.Is(err, lookup) || !strings.Contains(err.Error(), "recovery evidence rejected") {
-			t.Fatalf("ok=%v err=%v", ok, err)
-		}
-	})
-	for name, mutate := range map[string]func(*covHandoffObservation, *string){
-		"prompt digest":   func(p *covHandoffObservation, _ *string) { p.PromptSHA256 = strings.Repeat("b", 64) },
-		"material digest": func(p *covHandoffObservation, _ *string) { p.MaterialSHA256 = strings.Repeat("c", 64) },
-		"generation":      func(p *covHandoffObservation, _ *string) { p.SourceGeneration = 8 },
-		"launcher":        func(p *covHandoffObservation, _ *string) { p.Launcher.Path = "/other/orca" },
-		"owner host":      func(p *covHandoffObservation, _ *string) { p.ExpectedOwnerHost = "claude" },
-		"terminal":        func(_ *covHandoffObservation, terminal *string) { *terminal = "term-2" },
-	} {
-		t.Run("conflict on "+name, func(t *testing.T) {
-			conflicting := probe
-			terminal := "term-1"
-			mutate(&conflicting, &terminal)
-			_, ok, err := RecoverDeliveryObservation(conflicting, terminal, []covHandoffObservation{stored}, nil)
-			if ok || err == nil || err.Error() != "handoff delivery recovery evidence conflicts with current request identity" {
-				t.Fatalf("ok=%v err=%v", ok, err)
-			}
-		})
-	}
-}
-
-func TestCovHandoffDeliveryRequestStatus(t *testing.T) {
-	for _, status := range []string{"completed", "pending", " pending "} {
-		got, err := DeliveryRequestStatus(covHandoffUUID1, "orchestration.dispatch", "rt", covHandoffUUID1, "orchestration.dispatch", " rt ", status)
-		if err != nil || got != strings.TrimSpace(status) {
-			t.Fatalf("status %q => %q, %v", status, got, err)
-		}
-	}
-	mismatch := "Orca request observation identity mismatch"
-	for name, args := range map[string][3]string{
-		"request": {covHandoffUUID2, "orchestration.dispatch", "rt"},
-		"method":  {covHandoffUUID1, "orchestration.other", "rt"},
-		"runtime": {covHandoffUUID1, "orchestration.dispatch", "rt-2"},
-	} {
-		_, err := DeliveryRequestStatus(covHandoffUUID1, "orchestration.dispatch", "rt", args[0], args[1], args[2], "completed")
-		if err == nil || err.Error() != mismatch {
-			t.Fatalf("%s mismatch accepted: %v", name, err)
-		}
-	}
-	_, err := DeliveryRequestStatus(covHandoffUUID1, "m", "rt", covHandoffUUID1, "m", "rt", "absent")
-	if err == nil || err.Error() != "Orca durable request is absent; recovery remains ambiguous" {
-		t.Fatalf("absent err=%v", err)
-	}
-	_, err = DeliveryRequestStatus(covHandoffUUID1, "m", "rt", covHandoffUUID1, "m", "rt", "weird")
-	if err == nil || err.Error() != "Orca request observation state is invalid" {
-		t.Fatalf("unknown status err=%v", err)
-	}
-}
-
-func TestCovHandoffClaimQueryFor(t *testing.T) {
+func TestCovHandoffClaimObservable(t *testing.T) {
 	holder := &issueopscontract.NativeActor{Host: "codex", SessionID: "s"}
-	active := func(execution issueopscontract.Execution) issueopscontract.ExecutionResult {
-		execution.Lease = issueopscontract.WriteLease{Generation: 6, Status: issueopscontract.LeaseStatusActive, Holder: holder}
-		return issueopscontract.ExecutionResult{OK: true, ID: "io-claim", Execution: execution}
-	}
-	if got := HandoffDeliveryClaimQueryFor(issueopscontract.ExecutionResult{ID: "io-claim", Execution: issueopscontract.Execution{Lease: issueopscontract.WriteLease{Status: issueopscontract.LeaseStatusActive, Holder: holder}}}); got != (HandoffDeliveryClaimQuery{}) {
-		t.Fatalf("not-ok result queried: %+v", got)
-	}
-	released := active(issueopscontract.Execution{})
-	released.Execution.Lease.Status = issueopscontract.LeaseStatusReleased
-	if got := HandoffDeliveryClaimQueryFor(released); got != (HandoffDeliveryClaimQuery{}) {
-		t.Fatalf("released lease queried: %+v", got)
-	}
-	holderless := active(issueopscontract.Execution{})
-	holderless.Execution.Lease.Holder = nil
-	if got := HandoffDeliveryClaimQueryFor(holderless); got != (HandoffDeliveryClaimQuery{}) {
-		t.Fatalf("holderless lease queried: %+v", got)
-	}
-	direct := active(issueopscontract.Execution{Mode: issueopscontract.ExecutionModeDirect})
-	if got := HandoffDeliveryClaimQueryFor(direct); got != (HandoffDeliveryClaimQuery{Observe: true, Manual: true, LifecycleID: "io-claim"}) {
-		t.Fatalf("direct query=%+v", got)
-	}
-	nonDirect := active(issueopscontract.Execution{Mode: "other"})
-	if got := HandoffDeliveryClaimQueryFor(nonDirect); got != (HandoffDeliveryClaimQuery{Manual: true, LifecycleID: "io-claim"}) {
-		t.Fatalf("non-direct query=%+v", got)
-	}
-	binding := &issueopscontract.OrcaBinding{OwnerHost: "codex", OwnerPromptSHA256: " p ", ContextPacketSHA256: " m "}
-	orca := active(issueopscontract.Execution{Orca: binding})
-	if got := HandoffDeliveryClaimQueryFor(orca); got != (HandoffDeliveryClaimQuery{Observe: true, LifecycleID: "io-claim", LineageID: "generation:6:prompt:p:material:m:call:dispatch"}) {
-		t.Fatalf("orca query=%+v", got)
-	}
-	binding.OwnerHost = "omo"
-	if got := HandoffDeliveryClaimQueryFor(orca); got.LineageID != "generation:6:prompt:p:material:m:call:prompt" || got.Manual {
-		t.Fatalf("omo query=%+v", got)
-	}
-}
-
-func covHandoffOrcaClaimResult(observation covHandoffObservation) issueopscontract.ExecutionResult {
-	holder := *observation.OwnerActor
-	return issueopscontract.ExecutionResult{OK: true, ID: observation.LifecycleID, Execution: issueopscontract.Execution{
-		Mode: issueopscontract.ExecutionModeOrca,
-		Lease: issueopscontract.WriteLease{
-			Generation: observation.SourceGeneration, Status: issueopscontract.LeaseStatusActive, Holder: &holder, ClaimedAt: "2026-09-20T10:06:00Z",
-		},
-		Orca: &issueopscontract.OrcaBinding{
-			RuntimeID: observation.Launcher.RuntimeID, OwnerHost: "codex", TerminalPTYID: observation.Target.TerminalID,
-			OwnerPromptSHA256: observation.PromptSHA256, ContextPacketSHA256: observation.MaterialSHA256,
-		},
+	active := issueopscontract.ExecutionResult{OK: true, ID: "io-claim", Execution: issueopscontract.Execution{
+		Lease: issueopscontract.WriteLease{Generation: 6, Status: issueopscontract.LeaseStatusActive, Holder: holder},
 	}}
-}
-
-func covHandoffOrcaClaimObservation() covHandoffObservation {
-	observation := deliveryObservationFixture()
-	observation.ExpectedOwnerHost = "codex"
-	observation.InputAccepted = covHandoffObserved(issueopscontract.IssueOpsHandoffDeliveryEvidenceOrcaDispatch)
-	observation.LineageID = "generation:7:prompt:" + observation.PromptSHA256 + ":material:" + observation.MaterialSHA256 + ":call:dispatch"
-	return observation
-}
-
-func TestCovHandoffOwnerClaimOrcaLineage(t *testing.T) {
-	observation := covHandoffOrcaClaimObservation()
-	result := covHandoffOrcaClaimResult(observation)
-
-	t.Run("claims the exact lineage", func(t *testing.T) {
-		claimed, err := OwnerClaimHandoffDeliveryObservation(result, []covHandoffObservation{observation})
-		if err != nil || claimed == nil {
-			t.Fatalf("claimed=%+v err=%v", claimed, err)
-		}
-		if claimed.OwnerClaimed.Status != issueopscontract.IssueOpsHandoffDeliveryStateObserved ||
-			claimed.OwnerClaimed.Evidence != issueopscontract.IssueOpsHandoffDeliveryEvidenceIssueOpsClaim ||
-			claimed.OwnerClaimed.ObservedAt != "2026-09-20T10:06:00Z" || claimed.UpdatedAt != "2026-09-20T10:06:00Z" ||
-			!claimed.OwnerClaim.Claimed || claimed.OwnerClaim.Generation != 7 || claimed.OwnerClaim.ClaimedAt != "2026-09-20T10:06:00Z" ||
-			claimed.OwnerActor == nil || claimed.OwnerActor.SessionID != "session-1" {
-			t.Fatalf("claim fields wrong: %+v", claimed)
-		}
-		if claimed.InputAccepted.Status != issueopscontract.IssueOpsHandoffDeliveryStateObserved {
-			t.Fatalf("existing evidence dropped: %+v", claimed.InputAccepted)
-		}
-	})
-	t.Run("inactive lease observes nothing", func(t *testing.T) {
-		released := result
-		released.Execution.Lease.Status = issueopscontract.LeaseStatusReleased
-		claimed, err := OwnerClaimHandoffDeliveryObservation(released, []covHandoffObservation{observation})
-		if claimed != nil || err != nil {
-			t.Fatalf("claimed=%+v err=%v", claimed, err)
-		}
-	})
-	t.Run("different lineage is not found", func(t *testing.T) {
-		other := observation
-		other.LineageID = "lineage-other"
-		claimed, err := OwnerClaimHandoffDeliveryObservation(result, []covHandoffObservation{other})
-		if claimed != nil || err != nil {
-			t.Fatalf("claimed=%+v err=%v", claimed, err)
-		}
-	})
-	t.Run("invalid stored evidence fails closed", func(t *testing.T) {
-		broken := observation
-		broken.Receipt.Location = ""
-		claimed, err := OwnerClaimHandoffDeliveryObservation(result, []covHandoffObservation{broken})
-		if claimed != nil || err == nil || err.Error() != "handoff delivery claim evidence is invalid: delivery observation receipt is invalid" {
-			t.Fatalf("claimed=%+v err=%v", claimed, err)
-		}
-	})
-	for name, mutate := range map[string]func(*issueopscontract.ExecutionResult){
-		"generation": func(r *issueopscontract.ExecutionResult) { r.Execution.Lease.Generation = 8 },
-		"host":       func(r *issueopscontract.ExecutionResult) { r.Execution.Lease.Holder.Host = "claude" },
-		"runtime":    func(r *issueopscontract.ExecutionResult) { r.Execution.Orca.RuntimeID = "runtime-2" },
-		"terminal":   func(r *issueopscontract.ExecutionResult) { r.Execution.Orca.TerminalPTYID = "term-2" },
-	} {
-		t.Run("committed lease mismatch on "+name, func(t *testing.T) {
-			mismatched := covHandoffOrcaClaimResult(observation)
-			mutate(&mismatched)
-			// Keep the lineage query identical so only the lease comparison can reject.
-			mismatched.Execution.Orca.OwnerPromptSHA256 = observation.PromptSHA256
-			stored := observation
-			stored.LineageID = HandoffDeliveryClaimQueryFor(mismatched).LineageID
-			claimed, err := OwnerClaimHandoffDeliveryObservation(mismatched, []covHandoffObservation{stored})
-			if claimed != nil || err == nil || err.Error() != "handoff delivery claim does not match the committed lease" {
-				t.Fatalf("claimed=%+v err=%v", claimed, err)
-			}
-		})
+	if !HandoffDeliveryClaimObservable(active) {
+		t.Fatal("active holder result must be observable")
 	}
-	t.Run("unbound pty accepts any observed terminal", func(t *testing.T) {
-		unbound := covHandoffOrcaClaimResult(observation)
-		unbound.Execution.Orca.TerminalPTYID = ""
-		claimed, err := OwnerClaimHandoffDeliveryObservation(unbound, []covHandoffObservation{observation})
-		if err != nil || claimed == nil {
-			t.Fatalf("claimed=%+v err=%v", claimed, err)
-		}
-	})
-	t.Run("claim failing observation validation is returned", func(t *testing.T) {
-		badClaim := covHandoffOrcaClaimResult(observation)
-		badClaim.Execution.Lease.ClaimedAt = "2026-09-20T09:00:00Z"
-		claimed, err := OwnerClaimHandoffDeliveryObservation(badClaim, []covHandoffObservation{observation})
-		if claimed != nil || err == nil {
-			t.Fatalf("claim before creation accepted: %+v", claimed)
-		}
-	})
+	notOK := active
+	notOK.OK = false
+	if HandoffDeliveryClaimObservable(notOK) {
+		t.Fatal("not-ok result observed")
+	}
+	released := active
+	released.Execution.Lease.Status = issueopscontract.LeaseStatusReleased
+	if HandoffDeliveryClaimObservable(released) {
+		t.Fatal("released lease observed")
+	}
+	holderless := active
+	holderless.Execution.Lease.Holder = nil
+	if HandoffDeliveryClaimObservable(holderless) {
+		t.Fatal("holderless lease observed")
+	}
 }
 
 func covHandoffManualClaimFixture() (issueopscontract.ExecutionResult, covHandoffObservation) {
@@ -817,7 +446,6 @@ func covHandoffManualClaimFixture() (issueopscontract.ExecutionResult, covHandof
 	holderProcess := *process
 	holder := issueopscontract.NativeActor{Host: "codex", SessionID: "session-9", SessionProcess: &holderProcess}
 	return issueopscontract.ExecutionResult{OK: true, ID: observation.LifecycleID, Execution: issueopscontract.Execution{
-		Mode: issueopscontract.ExecutionModeDirect,
 		Lease: issueopscontract.WriteLease{
 			Generation: 8, Status: issueopscontract.LeaseStatusActive, Holder: &holder, ClaimedAt: "2026-09-20T10:10:00Z",
 		},
@@ -905,316 +533,6 @@ func TestCovHandoffOwnerClaimManualLineage(t *testing.T) {
 			t.Fatalf("claimed=%+v err=%v", claimed, err)
 		}
 	})
-	t.Run("non-direct execution without orca binding observes nothing", func(t *testing.T) {
-		result, observation := covHandoffManualClaimFixture()
-		result.Execution.Mode = "other"
-		claimed, err := OwnerClaimHandoffDeliveryObservation(result, []covHandoffObservation{observation})
-		if claimed != nil || err != nil {
-			t.Fatalf("claimed=%+v err=%v", claimed, err)
-		}
-	})
-}
-
-func TestCovHandoffCompleteDeliveryObservation(t *testing.T) {
-	const at = "2026-09-20T10:03:00Z"
-	base := deliveryObservationFixture()
-	baseline := uint64(9)
-	prompt := &DeliveryPrompt{RequestID: covHandoffUUID2, ProcessIncarnation: " inc-2 ", Generation: 4, BaselineWorkingSequence: &baseline, Stages: []string{"input_accepted", "turn_started"}}
-
-	got, err := CompleteDeliveryObservation(base, "codex", "dispatch", at, nil)
-	if err != nil || got.InputAccepted != DeliveryObserved(at, issueopscontract.IssueOpsHandoffDeliveryEvidenceOrcaDispatch) ||
-		got.Ambiguous != base.Ambiguous {
-		t.Fatalf("non-omo dispatch: %+v err=%v", got, err)
-	}
-	got, err = CompleteDeliveryObservation(base, "omo", "dispatch", at, nil)
-	if err != nil || got.Ambiguous != DeliveryObserved(at, issueopscontract.IssueOpsHandoffDeliveryEvidenceOrcaDispatchReceipt) ||
-		got.InputAccepted != base.InputAccepted {
-		t.Fatalf("omo dispatch must stay ambiguous: %+v err=%v", got, err)
-	}
-	if _, err = CompleteDeliveryObservation(base, "omo", "prompt", at, nil); err == nil || err.Error() != "Omo prompt completion is missing its durable receipt" {
-		t.Fatalf("prompt without receipt err=%v", err)
-	}
-	got, err = CompleteDeliveryObservation(base, "omo", "prompt", at, prompt)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.InputAccepted != DeliveryObserved(at, issueopscontract.IssueOpsHandoffDeliveryEvidenceOmoSendAccepted) ||
-		got.NativeTurnObserved != DeliveryObserved(at, issueopscontract.IssueOpsHandoffDeliveryEvidenceNativeReceipt) ||
-		got.Target.ProcessIncarnation != "inc-2" || got.Target.PromptGeneration == nil || *got.Target.PromptGeneration != 4 ||
-		got.Target.BaselineWorkingSequence == nil || *got.Target.BaselineWorkingSequence != 9 {
-		t.Fatalf("prompt completion: %+v", got)
-	}
-	baseline = 100
-	if *got.Target.BaselineWorkingSequence != 9 {
-		t.Fatal("baseline pointer aliased the prompt receipt")
-	}
-	prompt.Stages = []string{"input_accepted"}
-	got, err = CompleteDeliveryObservation(base, "omo", "prompt", at, prompt)
-	if err != nil || got.NativeTurnObserved != base.NativeTurnObserved {
-		t.Fatalf("native turn recorded without turn_started: %+v err=%v", got.NativeTurnObserved, err)
-	}
-	prompt.BaselineWorkingSequence = nil
-	got, err = CompleteDeliveryObservation(base, "omo", "prompt", at, prompt)
-	if err != nil || got.Target.BaselineWorkingSequence != nil {
-		t.Fatalf("nil baseline invented: %+v err=%v", got.Target.BaselineWorkingSequence, err)
-	}
-}
-
-func TestCovHandoffDeliveryCompletionID(t *testing.T) {
-	prompt := &DeliveryPrompt{RequestID: " " + covHandoffUUID2 + " "}
-	for _, test := range []struct {
-		dispatch, kind string
-		prompt         *DeliveryPrompt
-		want           string
-	}{
-		{" " + covHandoffUUID1 + " ", "dispatch", prompt, covHandoffUUID1},
-		{covHandoffUUID1, "prompt", prompt, covHandoffUUID2},
-		{covHandoffUUID1, "prompt", nil, covHandoffUUID1},
-	} {
-		if got := DeliveryCompletionID(test.dispatch, test.kind, test.prompt); got != test.want {
-			t.Fatalf("DeliveryCompletionID(%+v)=%q", test, got)
-		}
-	}
-}
-
-func TestCovHandoffDeliveryFailurePlan(t *testing.T) {
-	attempt := DeliveryAttempt{RetryRequestID: covHandoffUUID1, PromptRetryRequestID: covHandoffUUID2}
-	lost := issueopscontract.IssueOpsHandoffDeliveryEvidenceAcceptedResponseLost
-	if got := DeliveryFailurePlan(attempt, nil); got != (DeliveryFailureDisposition{Evidence: lost}) {
-		t.Fatalf("nil failure plan=%+v", got)
-	}
-	for name, failure := range map[string]*DeliveryFailure{
-		"never invoked":           {Invoked: false, OrchestrationRequestID: covHandoffUUID1},
-		"observation failed":      {Invoked: true, Code: "delivery_observation_failed", OrchestrationRequestID: covHandoffUUID1},
-		"response id mismatched":  {Invoked: true, OrchestrationRequestID: covHandoffUUID2},
-		"identity mismatch code":  {Invoked: true, Code: "dispatch_request_identity_mismatch"},
-		"terminal dispatch drift": {Invoked: true, CallPhase: "terminal_send", DispatchRequestID: covHandoffUUID2, OrchestrationRequestID: covHandoffUUID2},
-	} {
-		if got := DeliveryFailurePlan(attempt, failure); got != (DeliveryFailureDisposition{Skip: true}) {
-			t.Fatalf("%s: plan=%+v", name, got)
-		}
-	}
-	got := DeliveryFailurePlan(attempt, &DeliveryFailure{Invoked: true, OrchestrationRequestID: covHandoffUUID1})
-	if got != (DeliveryFailureDisposition{DurableID: covHandoffUUID1, Evidence: lost}) {
-		t.Fatalf("dispatch response lost plan=%+v", got)
-	}
-	got = DeliveryFailurePlan(DeliveryAttempt{}, &DeliveryFailure{Invoked: true})
-	if got != (DeliveryFailureDisposition{Evidence: lost}) {
-		t.Fatalf("response lost without ids plan=%+v", got)
-	}
-	got = DeliveryFailurePlan(attempt, &DeliveryFailure{Invoked: true, CallPhase: "terminal_send", OrchestrationRequestID: covHandoffUUID2, DispatchRequestID: covHandoffUUID1})
-	want := DeliveryFailureDisposition{DurableID: covHandoffUUID2, DispatchID: covHandoffUUID1, Evidence: issueopscontract.IssueOpsHandoffDeliveryEvidenceOmoSendResponseLost}
-	if got != want {
-		t.Fatalf("terminal send plan=%+v want %+v", got, want)
-	}
-}
-
-func TestCovHandoffNewDeliveryObservation(t *testing.T) {
-	attempt := DeliveryAttempt{
-		OperationID: "op", Stage: "dispatch", LifecycleID: "io-new", Host: "codex", TerminalID: "term-attempt",
-		PromptSHA256: strings.Repeat("a", 64), MaterialSHA256: strings.Repeat("e", 64), SourceGeneration: 7,
-	}
-	launcher := deliveryObservationFixture().Launcher
-	input := DeliveryObservationInput{Attempt: attempt, Launcher: launcher, DurableID: " " + covHandoffUUID1 + " ", CallKind: "dispatch", Timestamp: "2026-09-20T11:00:00Z"}
-
-	fresh := NewDeliveryObservation(input, nil)
-	if fresh.SchemaVersion != issueopscontract.IssueOpsHandoffDeliverySchemaVersion || fresh.AttemptID != "op:dispatch:dispatch" ||
-		fresh.LineageID != attempt.LineageID("dispatch") || fresh.Request.DurableID != covHandoffUUID1 ||
-		fresh.CreatedAt != input.Timestamp || fresh.UpdatedAt != input.Timestamp || fresh.ExpectedOwnerHost != "codex" ||
-		fresh.Target.TerminalID != "term-attempt" || fresh.Target.PaneID != "" {
-		t.Fatalf("fresh=%+v", fresh)
-	}
-	for name, state := range map[string]issueopscontract.IssueOpsHandoffDeliveryState{
-		"input": fresh.InputAccepted, "native": fresh.NativeTurnObserved, "claimed": fresh.OwnerClaimed, "ambiguous": fresh.Ambiguous,
-	} {
-		if state != (issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateNotObserved}) {
-			t.Fatalf("%s state=%+v", name, state)
-		}
-	}
-	if fresh.CallStaged.Status != "" {
-		t.Fatalf("call_staged must be left for the caller: %+v", fresh.CallStaged)
-	}
-
-	input.Target = issueopscontract.IssueOpsHandoffDeliveryTarget{TerminalID: "term-target", PaneID: "pane-target"}
-	if got := NewDeliveryObservation(input, nil).Target; got.TerminalID != "term-target" || got.PaneID != "pane-target" {
-		t.Fatalf("target precedence=%+v", got)
-	}
-	input.ReceiptTarget = issueopscontract.IssueOpsHandoffDeliveryTarget{TerminalID: " term-receipt ", PaneID: "pane-receipt"}
-	if got := NewDeliveryObservation(input, nil).Target; got.TerminalID != "term-receipt" || got.PaneID != "pane-receipt" {
-		t.Fatalf("receipt target precedence=%+v", got)
-	}
-
-	existing := deliveryObservationFixture()
-	existing.LifecycleID = "io-new"
-	existing.LineageID = attempt.LineageID("dispatch")
-	existing.CreatedAt = "2026-09-20T10:00:01Z"
-	got := NewDeliveryObservation(input, []covHandoffObservation{existing})
-	if got.CreatedAt != "2026-09-20T10:00:01Z" || got.UpdatedAt != "2026-09-20T11:00:00Z" {
-		t.Fatalf("created_at must be preserved from the folded lineage: %+v", got)
-	}
-	existing.SchemaVersion = 0
-	got = NewDeliveryObservation(input, []covHandoffObservation{existing})
-	if got.CreatedAt != "2026-09-20T11:00:00Z" {
-		t.Fatalf("invalid prior evidence must not donate created_at: %s", got.CreatedAt)
-	}
-}
-
-func TestCovHandoffPlanDeliveryRecovery(t *testing.T) {
-	dispatch := covHandoffObservation{Request: issueopscontract.IssueOpsHandoffDeliveryRequest{DurableID: covHandoffUUID1}}
-	prompt := covHandoffObservation{Request: issueopscontract.IssueOpsHandoffDeliveryRequest{DurableID: covHandoffUUID2}}
-	none := covHandoffObservation{}
-
-	plan, err := PlanDeliveryRecovery(DeliveryAttempt{Host: "codex"}, none, none, false, false)
-	if err != nil || plan != (DeliveryRecoveryPlan{}) {
-		t.Fatalf("nothing recovered plan=%+v err=%v", plan, err)
-	}
-	plan, err = PlanDeliveryRecovery(DeliveryAttempt{Host: "omo"}, dispatch, prompt, true, true)
-	if err != nil || plan != (DeliveryRecoveryPlan{DispatchID: covHandoffUUID1, PromptID: covHandoffUUID2, Active: true}) {
-		t.Fatalf("plan=%+v err=%v", plan, err)
-	}
-	plan, err = PlanDeliveryRecovery(DeliveryAttempt{Host: "codex"}, dispatch, none, true, false)
-	if err != nil || !plan.Active || plan.DispatchID != covHandoffUUID1 || plan.PromptID != "" {
-		t.Fatalf("dispatch-only plan=%+v err=%v", plan, err)
-	}
-	plan, err = PlanDeliveryRecovery(DeliveryAttempt{Host: "codex"}, none, none, false, true)
-	if err != nil || !plan.Active {
-		t.Fatalf("non-omo prompt without id plan=%+v err=%v", plan, err)
-	}
-	for _, test := range []struct {
-		name               string
-		attempt            DeliveryAttempt
-		dispatch, prompt   covHandoffObservation
-		dispatchF, promptF bool
-		want               string
-	}{
-		{"invalid dispatch retry id", DeliveryAttempt{RetryRequestID: "bad"}, none, none, false, false, "Orca dispatch retry request ID is invalid"},
-		{"dispatch without durable id", DeliveryAttempt{Host: "codex"}, none, none, true, false, "Orca dispatch delivery is ambiguous without a durable request ID"},
-		{"invalid prompt retry id", DeliveryAttempt{PromptRetryRequestID: "bad"}, none, none, false, false, "Orca prompt retry request ID is invalid"},
-		{"prompt retry without observation", DeliveryAttempt{PromptRetryRequestID: covHandoffUUID2}, none, none, false, false, "Orca prompt retry request has no exact delivery observation"},
-		{"omo prompt without durable id", DeliveryAttempt{Host: "omo"}, dispatch, none, true, true, "Omo prompt delivery is ambiguous without a durable request ID"},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			_, err := PlanDeliveryRecovery(test.attempt, test.dispatch, test.prompt, test.dispatchF, test.promptF)
-			if err == nil || err.Error() != test.want {
-				t.Fatalf("err=%v", err)
-			}
-		})
-	}
-}
-
-func TestCovHandoffInspectDeliveryDispatch(t *testing.T) {
-	for _, test := range []struct {
-		host   string
-		found  bool
-		status string
-		want   bool
-		fail   bool
-	}{
-		{"codex", false, "completed", true, false},
-		{"codex", false, "pending", true, false},
-		{"claude", true, "absent", false, false},
-		{"codex", true, "", false, false},
-		{"omo", true, "absent", true, false},
-		{"omo", false, "completed", false, true},
-	} {
-		got, err := InspectDeliveryDispatch(test.host, test.found, test.status)
-		if got != test.want || (err != nil) != test.fail {
-			t.Fatalf("InspectDeliveryDispatch(%+v)=%v,%v", test, got, err)
-		}
-	}
-}
-
-func TestCovHandoffFinishDeliveryRecovery(t *testing.T) {
-	baseline, generation := uint64(12), uint64(3)
-	accepted := covHandoffObservation{
-		Request:       issueopscontract.IssueOpsHandoffDeliveryRequest{DurableID: covHandoffUUID2},
-		Target:        issueopscontract.IssueOpsHandoffDeliveryTarget{ProcessIncarnation: "inc", PromptGeneration: &generation, BaselineWorkingSequence: &baseline},
-		InputAccepted: covHandoffObserved(issueopscontract.IssueOpsHandoffDeliveryEvidenceOmoSendAccepted),
-	}
-
-	for _, test := range []struct {
-		name   string
-		exists bool
-		want   DeliveryRecoveryMode
-	}{{"existing dispatch becomes candidate", true, DeliveryRecoveryCandidate}, {"missing dispatch replays", false, DeliveryRecoveryReplay}} {
-		got, err := FinishDeliveryRecovery("codex", DeliveryRecoveryPlan{}, "completed", test.exists, covHandoffObservation{}, false)
-		if err != nil || got.Mode != test.want || got.Prompt != nil {
-			t.Fatalf("%s: %+v err=%v", test.name, got, err)
-		}
-	}
-
-	got, err := FinishDeliveryRecovery("omo", DeliveryRecoveryPlan{}, "", true, accepted, true)
-	if err != nil || got.Mode != DeliveryRecoveryCandidate || got.Prompt == nil {
-		t.Fatalf("accepted prompt: %+v err=%v", got, err)
-	}
-	if got.Prompt.RequestID != covHandoffUUID2 || got.Prompt.ProcessIncarnation != "inc" || got.Prompt.Generation != 3 ||
-		len(got.Prompt.Stages) != 1 || got.Prompt.Stages[0] != "input_accepted" ||
-		got.Prompt.BaselineWorkingSequence == nil || *got.Prompt.BaselineWorkingSequence != 12 {
-		t.Fatalf("prompt=%+v", got.Prompt)
-	}
-	if got.Prompt.BaselineWorkingSequence == &baseline {
-		t.Fatal("baseline must be copied")
-	}
-
-	turn := accepted
-	turn.NativeTurnObserved = covHandoffObserved(issueopscontract.IssueOpsHandoffDeliveryEvidenceNativeReceipt)
-	got, err = FinishDeliveryRecovery("omo", DeliveryRecoveryPlan{}, "", true, turn, true)
-	if err != nil || len(got.Prompt.Stages) != 2 || got.Prompt.Stages[1] != "turn_started" {
-		t.Fatalf("native turn prompt: %+v err=%v", got.Prompt, err)
-	}
-
-	claimedOnly := accepted
-	claimedOnly.InputAccepted = deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateNotObserved, "")
-	claimedOnly.OwnerClaimed = covHandoffObserved(issueopscontract.IssueOpsHandoffDeliveryEvidenceIssueOpsClaim)
-	got, err = FinishDeliveryRecovery("omo", DeliveryRecoveryPlan{}, "", true, claimedOnly, true)
-	if err != nil || got.Mode != DeliveryRecoveryCandidate || got.Prompt == nil {
-		t.Fatalf("claimed prompt: %+v err=%v", got, err)
-	}
-
-	incomplete := map[string]func() (covHandoffObservation, bool){
-		"dispatch missing": func() (covHandoffObservation, bool) { return accepted, false },
-		"no durable id":    func() (covHandoffObservation, bool) { o := accepted; o.Request.DurableID = " "; return o, true },
-		"no incarnation":   func() (covHandoffObservation, bool) { o := accepted; o.Target.ProcessIncarnation = ""; return o, true },
-		"no generation":    func() (covHandoffObservation, bool) { o := accepted; o.Target.PromptGeneration = nil; return o, true },
-		"no baseline count": func() (covHandoffObservation, bool) {
-			o := accepted
-			o.Target.BaselineWorkingSequence = nil
-			return o, true
-		},
-	}
-	for name, build := range incomplete {
-		t.Run(name, func(t *testing.T) {
-			observation, dispatchExists := build()
-			got, err := FinishDeliveryRecovery("omo", DeliveryRecoveryPlan{}, "completed", dispatchExists, observation, true)
-			if err == nil || err.Error() != "Omo prompt delivery recovery evidence is incomplete" || got.Prompt != nil {
-				t.Fatalf("got=%+v err=%v", got, err)
-			}
-		})
-	}
-
-	for _, test := range []struct {
-		name   string
-		plan   DeliveryRecoveryPlan
-		status string
-		want   DeliveryRecoveryMode
-	}{
-		{"prompt id replays through terminal send", DeliveryRecoveryPlan{PromptID: covHandoffUUID2}, "absent", DeliveryRecoveryReplay},
-		{"completed dispatch replays", DeliveryRecoveryPlan{DispatchID: covHandoffUUID1}, "completed", DeliveryRecoveryReplay},
-		{"pending dispatch replays", DeliveryRecoveryPlan{DispatchID: covHandoffUUID1}, "pending", DeliveryRecoveryReplay},
-		{"absent dispatch delegates", DeliveryRecoveryPlan{DispatchID: covHandoffUUID1}, "absent", DeliveryRecoveryDelegate},
-		{"nothing recovered delegates", DeliveryRecoveryPlan{}, "completed", DeliveryRecoveryDelegate},
-	} {
-		got, err := FinishDeliveryRecovery("omo", test.plan, test.status, true, covHandoffObservation{}, false)
-		if err != nil || got.Mode != test.want || got.Prompt != nil {
-			t.Fatalf("%s: %+v err=%v", test.name, got, err)
-		}
-	}
-	notAccepted := accepted
-	notAccepted.InputAccepted = deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateNotObserved, "")
-	got, err = FinishDeliveryRecovery("omo", DeliveryRecoveryPlan{}, "", true, notAccepted, true)
-	if err != nil || got.Mode != DeliveryRecoveryDelegate {
-		t.Fatalf("unobserved prompt must not be resumed: %+v err=%v", got, err)
-	}
 }
 
 func TestCovHandoffCmuxDigestAndNULValidation(t *testing.T) {
@@ -1304,12 +622,11 @@ func TestCovHandoffCmuxCanonicalPromptPath(t *testing.T) {
 func TestCovHandoffCmuxReleasedRecordRejections(t *testing.T) {
 	released := func() issueopscontract.IssueOpsRecord {
 		return issueopscontract.IssueOpsRecord{Execution: &issueopscontract.Execution{
-			Mode: issueopscontract.ExecutionModeDirect, Lease: issueopscontract.WriteLease{Status: issueopscontract.LeaseStatusReleased, Generation: 3},
+			Lease: issueopscontract.WriteLease{Status: issueopscontract.LeaseStatusReleased, Generation: 3},
 		}}
 	}
 	for name, mutate := range map[string]func(*issueopscontract.IssueOpsRecord){
 		"no execution": func(r *issueopscontract.IssueOpsRecord) { r.Execution = nil },
-		"orca mode":    func(r *issueopscontract.IssueOpsRecord) { r.Execution.Mode = issueopscontract.ExecutionModeOrca },
 		"active lease": func(r *issueopscontract.IssueOpsRecord) {
 			r.Execution.Lease.Status = issueopscontract.LeaseStatusActive
 		},

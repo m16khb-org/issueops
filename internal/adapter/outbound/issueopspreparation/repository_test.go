@@ -13,7 +13,6 @@ import (
 	model "issueops/internal/contract/issueops"
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
-	preparationdomain "issueops/internal/domain/issueopspreparation"
 	"issueops/internal/port"
 )
 
@@ -22,7 +21,7 @@ func TestDirectRepositoryCommitWritesRecordAndHolderAtomically(t *testing.T) {
 	record := repositoryRecord("io-prepare", "/repo", "199-prepare")
 	record.Decisions = json.RawMessage(`[{"kind":"preserved"}]`)
 	store.seedRecord(t, record)
-	repository := NewSQLiteRepositoryWithDiagnosticRedactor(store, nil)
+	repository := NewSQLiteRepository(store)
 
 	snapshot, err := repository.Load(context.Background(), record.ID)
 	if err != nil {
@@ -46,11 +45,8 @@ func TestDirectRepositoryCommitWritesRecordAndHolderAtomically(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if persisted.Execution == nil || persisted.Execution.Mode != preparationcontract.ModeDirect || persisted.Execution.Lease.Generation != 1 || persisted.Execution.Lease.Status != "active" {
+	if persisted.Execution == nil || persisted.Execution.Lease.Generation != 1 || persisted.Execution.Lease.Status != "active" {
 		t.Fatalf("execution=%+v", persisted.Execution)
-	}
-	if persisted.Execution.Selection == nil || persisted.Execution.Selection.ReadinessFingerprint == "" || persisted.Execution.Selection.ExplicitDirectReason != "planned recovery" {
-		t.Fatalf("selection=%+v", persisted.Execution.Selection)
 	}
 	if persisted.Execution.Lease.Holder == nil || persisted.Execution.Lease.Holder.SessionProcess == nil || persisted.Execution.Lease.Holder.SessionProcess.StartedAt != "boot:42" {
 		t.Fatalf("holder=%+v", persisted.Execution.Lease.Holder)
@@ -66,7 +62,7 @@ func TestDirectRepositoryHolderConflictRollsBackRecord(t *testing.T) {
 	store.seedRecord(t, record)
 	commit := directRepositoryCommit(preparationcontract.Snapshot{Record: record, RecordRaw: store.mustGet(recordBucket, record.ID)})
 	store.rows[holderBucket] = map[string][]byte{holderIndexKey(commit.Command.Actor): []byte(`{"occupied":true}`)}
-	repository := NewSQLiteRepositoryWithDiagnosticRedactor(store, nil)
+	repository := NewSQLiteRepository(store)
 	before := append([]byte(nil), store.mustGet(recordBucket, record.ID)...)
 
 	if _, err := repository.CommitDirect(context.Background(), commit); err == nil || !strings.Contains(err.Error(), "already exists") {
@@ -96,7 +92,7 @@ func TestRepositoryRootScanRejectsClaimAndCorruption(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			store := newPreparationStore()
 			test.seed(t, store)
-			repository := NewSQLiteRepositoryWithDiagnosticRedactor(store, nil)
+			repository := NewSQLiteRepository(store)
 			err := repository.EnsureRootUnclaimed(context.Background(), "io-self", "/repo.worktrees/199-prepare")
 			if err == nil || !strings.Contains(err.Error(), test.want) {
 				t.Fatalf("err=%v", err)
@@ -107,19 +103,13 @@ func TestRepositoryRootScanRejectsClaimAndCorruption(t *testing.T) {
 
 func directRepositoryCommit(snapshot preparationcontract.Snapshot) preparationapp.DirectCommit {
 	actor := leasecontract.Actor{Host: "codex", SessionID: "session", AgentID: "agent", SessionProcess: &leasecontract.ProcessReceipt{PID: 42, StartedAt: "boot:42", Executable: "/bin/codex"}}
-	command := preparationcontract.Command{ID: snapshot.Record.ID, Mode: preparationcontract.ModeDirect, DirectReason: "planned recovery", Actor: actor, Confirm: true}
-	decision, err := preparationdomain.Decide(preparationdomain.DecisionInput{Command: command})
-	if err != nil {
-		panic(err)
-	}
+	command := preparationcontract.Command{ID: snapshot.Record.ID, Actor: actor, Confirm: true}
 	return preparationapp.DirectCommit{
-		Snapshot:      snapshot,
-		Command:       command,
-		Workspace:     preparationcontract.WorkspaceReceipt{SourceRoot: snapshot.Record.Repo, Root: "/repo.worktrees/199-prepare", Branch: snapshot.Record.Branch, BaseHead: "base", Driver: "git", Exists: true},
-		RequestedMode: preparationcontract.ModeDirect,
-		LinkedAt:      "2026-08-02T00:00:00Z",
-		ClaimedAt:     "2026-08-02T00:00:01Z",
-		Selection:     leasecontract.Selection{RequestedMode: "direct", ResolvedMode: "direct", ReadinessFingerprint: decision.ReadinessFingerprint, SelectedAt: "2026-08-02T00:00:00Z", ExplicitDirectReason: "planned recovery"},
+		Snapshot:  snapshot,
+		Command:   command,
+		Workspace: preparationcontract.WorkspaceReceipt{SourceRoot: snapshot.Record.Repo, Root: "/repo.worktrees/199-prepare", Branch: snapshot.Record.Branch, BaseHead: "base", Exists: true},
+		LinkedAt:  "2026-08-02T00:00:00Z",
+		ClaimedAt: "2026-08-02T00:00:01Z",
 	}
 }
 
@@ -130,7 +120,6 @@ func repositoryRecord(id, repo, branch string) leasecontract.Record {
 type preparationStore struct {
 	rows    map[string]map[string][]byte
 	spans   int
-	cas     int
 	applies [][]port.RecordMutation
 }
 
@@ -181,20 +170,6 @@ func (store *preparationStore) Apply(_ context.Context, mutations []port.RecordM
 	return nil
 }
 
-func (store *preparationStore) CompareAndApply(ctx context.Context, expected []port.ExpectedRecord, mutations []port.RecordMutation) error {
-	store.cas++
-	for _, item := range expected {
-		data, ok, err := store.Get(item.Bucket, item.ID)
-		if err != nil {
-			return err
-		}
-		if !ok || !reflect.DeepEqual(data, item.Data) {
-			return errors.New("stale raw record snapshot")
-		}
-	}
-	return store.Apply(ctx, mutations)
-}
-
 func (store *preparationStore) seedRecord(t *testing.T, record leasecontract.Record) {
 	t.Helper()
 	data, err := leasecontract.Encode(record)
@@ -217,7 +192,7 @@ func TestPreparationRefusesExistingFinishAttempt(t *testing.T) {
 	record.CleanupAttempt = &model.IssueOpsCleanupAttempt{Operation: "finish", Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
 	store.seedRecord(t, record)
 	before := append([]byte(nil), store.mustGet(recordBucket, record.ID)...)
-	repository := NewSQLiteRepositoryWithDiagnosticRedactor(store, nil)
+	repository := NewSQLiteRepository(store)
 	if _, err := repository.Load(context.Background(), record.ID); err == nil || !strings.Contains(err.Error(), "cleanup finish") {
 		t.Errorf("loaded armed preparation: %v", err)
 	}

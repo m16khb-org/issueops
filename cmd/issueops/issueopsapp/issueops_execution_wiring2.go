@@ -13,7 +13,6 @@ func newIssueOpsExecutionRunners() executioncmd.ExecutionDeps {
 	return executioncmd.ExecutionDeps{
 		ExecuteExecution:             newExecutionService().Execute,
 		ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry,
-		SwitchExecutionMode:          newModeSwitcher(),
 		SyncExecutionBase:            issueopscore.VerifiedSyncExecutionBase(issueOpsActorVerifier()),
 	}
 }

@@ -46,7 +46,7 @@ func TestIssueOpsUsageListsNewlyAddedSubcommands(t *testing.T) {
 		"issueops routing-score",
 		"issueops remote-score",
 		"compatibility-review",
-		"issueops execution prepare --id ID --mode auto|direct|orca",
+		"issueops execution prepare --id ID ACTOR_FLAGS [--confirm]",
 		"issueops execution handoff-cmux --id ID --generation N",
 	}
 	for _, fragment := range wantFragments {

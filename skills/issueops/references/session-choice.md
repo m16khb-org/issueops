@@ -1,8 +1,8 @@
 # 준비된 워크트리에서 자동 세션 인계
 
 [IssueOps](../SKILL.md)의 인계 지점에 도달했거나 인계받은 새 세션만 이 문서를
-읽는다. CLI의 `direct|orca`는 workspace/lease 운영 방식이다. 새 native 세션을 여는 것만으로
-mode를 바꾸지 않는다. 일반 흐름은 direct로 만든 **같은 worktree**를 유지한다.
+읽는다. 새 native 세션을 여는 것만으로 workspace나 lease가 바뀌지 않는다. 일반 흐름은
+준비한 **같은 worktree**를 유지한다.
 
 ## 환경 판별과 승인 근거 기록
 
@@ -10,19 +10,13 @@ mode를 바꾸지 않는다. 일반 흐름은 direct로 만든 **같은 worktree
 이미 인계받은 세션은 기존 기록과 승인 범위를 대조한 뒤 이어간다. 환경 판별부터 다시
 시작해 새 세션을 연쇄 생성하지 않는다.
 
-준비 세션이 Herdr 안에서 실행 중이면 Orca가 ready여도 Herdr를 먼저 확인한다. `HERDR_ENV=1`이고
+브랜치·worktree 준비 뒤 Herdr를 확인한다. `HERDR_ENV=1`이고
 `HERDR_SOCKET_PATH`가 있으면 Herdr 세션이다. env는 먼저 확인할 런처만 정한다. 사용 가능
 여부는 아래 Herdr 확인 명령과 조건으로 실측해 판단하고, 대상은 그 세션의
 `HERDR_SOCKET_PATH`가 가리키는 서버로 고정한다. 다른 서버를 찾거나 시작하지 않는다. 사용
-가능하면 Herdr의 `new-session`을 선택하고 Orca는 확인하지 않는다. Herdr 세션에서 Herdr가
-사용 불가임이 확인됐으면 아래 Orca 확인으로 넘어가며 Herdr를 다시 확인하지 않는다.
+가능하면 Herdr의 `new-session`을 선택한다. Herdr 세션이 아니거나 Herdr가 사용 불가임이
+확인됐으면 Herdr를 다시 확인하지 않는다.
 인계받은 새 세션도 같은 env를 갖지만 환경 판별을 다시 시작하지 않는다.
-
-그 밖의 준비 세션은 설치된 `orca-cli` 안내로 실행 파일을 정하고 `orca status --json`을 확인한다.
-`runtime.state == "ready"`면 Orca의 `new-session`을 선택한다. 기존 Orca execution은
-prepare·resume·reconcile에 연결된 production observer를 사용한다. direct execution의 raw
-Orca 전송은 아래 `trace handoff-delivery` producer로 실제 호출 전후를 기록한다. Orca가 없거나
-unready인 것이 확인됐을 때만 Herdr를 확인한다.
 
 ```bash
 command -v herdr
@@ -39,16 +33,18 @@ Herdr는 실행 중인 서버가 있고 client/server endpoint가 호환되며, 
 사람용 출력이므로 존재하지 않는 JSON 필드나 `--json` 옵션을 가정하지 않는다.
 별도 세션/socket 환경을 쓰면 모든 명령에 같은 대상을 유지한다.
 
-둘 다 없거나 사용 불가임이 확인됐으면 `current`다. 외부 도구를 자동 설치하거나
+Herdr를 쓸 수 없음이 확인됐으면 현재 세션에서 이어가는 `current`다. 사용자가 직접 연 두 번째
+터미널에서 이어가길 원하면 같은 release와 인수 체인으로 수동 인계한다. 바이너리 설치 여부만으로
+ready라고 판단하지 않는다. 외부 도구를 자동 설치하거나
 서버를 시작하지 않는다. 설치·업데이트·self-verify의 필수 조건으로도 추가하지 않는다.
-실행 방식을 묻지 않는다. status 오류로 사용 가능 여부를 판별할 수 없으면 오류를 보고한다.
+status 오류로 사용 가능 여부를 판별할 수 없으면 오류를 보고한다.
 이미 시작한 open·launch의 실패·모호함을 도구 부재로 해석해 다른 런처로 재실행하거나
 현재 세션에서 구현하지 않는다.
 사용자가 현재 세션·새 세션·보류를 명시했으면 그 지시가 우선한다.
 
 ### 사용자가 명시한 cmux 인계
 
-cmux는 위 자동 선택에 참여하지 않는다. 사용자가 cmux 사용을 명시했고, 기존 direct
+cmux는 위 자동 선택에 참여하지 않는다. 사용자가 cmux 사용을 명시했고, 기존
 execution이 정확한 generation에서 released이며 canonical worktree가 이미 있을 때만 다음
 명령을 실행한다. bare `cmux <path>`는 앱을 자동으로 시작할 수 있으므로 실행하지 않는다.
 Omo도 generic terminal 안에서 native Omo 실행 파일을 직접 실행하며 `cmux omo`를 호출하지
@@ -125,13 +121,13 @@ workspace를 닫지 않는다. 명시적인 복구 결정을 내리기 전에는
 
 ```bash
 issueops decision add --id "$ISSUEOPS_ID" --kind implementation \
-  --title "실행 방식 선택" --body "$CHOICE_RECORD" \
+  --title "세션 인계 선택" --body "$CHOICE_RECORD" \
   --rationale "환경별 자동 세션 인계 규칙 또는 명시적 사용자 지시" \
   $RECORD_ACTOR_FLAGS --json
 ```
 
 `CHOICE_RECORD`에는 `current|new-session|hold`, 자동 결정인지 명시적 지시인지,
-선택한 런처(`orca|herdr|none`, 명시적 지시일 때만 `cmux`)와 확인한 status·host 실행 가능 관찰값(없으면 부재 근거),
+선택한 런처(`herdr|none`, 명시적 지시일 때만 `cmux|manual`)와 확인한 status·host 실행 가능 관찰값(없으면 부재 근거),
 원래 사용자 요청과 그 대화 위치,
 선택 시점의 lifecycle ID·issue URL·branch·worktree·계획 경로, 승인 범위·종료점과
 현재 generation을 적는다. `hold`의 승인 범위는 보류다. 이 기록의 created_at과 내용을
@@ -141,15 +137,14 @@ issueops decision add --id "$ISSUEOPS_ID" --kind implementation \
 ## 1 현재 세션
 
 기존 holder와 generation을 유지한다. 도구의 작업 경로를 canonical worktree로 맞추고
-`next --id`가 가리키는 단계로 이어간다. mode 전환, release, 새 세션 생성은 하지 않는다.
+`next --id`가 가리키는 단계로 이어간다. release와 새 세션 생성은 하지 않는다.
 
 ## 2 새 세션
 
-이 절의 일반 경로는 direct execution이다. **기존 Orca execution**에서는 선택을 기록하고
-release한 준비 세션이 `status`의 replace/reseed/resume 체인을 따른다. core의 `resume`이
-봉인된 새 owner를 띄우므로 별도 terminal/session을 먼저 만들지 않는다. 새 owner는 자기
-봉인된 claim을 사용하고 결정 기록을 읽는다. 수동으로 연 세션은 이 owner를 대신 claim하지
-않고 coordinator 복구 경로만 사용한다. 아래 3번의 별도 세션 실행은 이 경우 생략한다.
+새 세션은 Herdr가 열거나 사용자가 직접 연 두 번째 터미널에서 시작한다. 어느 경로든 기존 세션이
+release로 lease를 해제하고, 새 세션이 자기 native actor로 `execution replace --id ID
+--expected-generation N --preview`를 실행한 뒤, 반환된 `--reseed` 명령과
+`claim --claim-current-token`으로 인수한다. 아래 번호 순서는 이 체인 앞의 준비 절차다.
 
 1. 인계할 내용을 먼저 준비한다. 우선 **새 쓰기 작업과 하위 작업 dispatch를 중지**하고,
    이미 시작한 작업을 빠짐없이 열거한다. 각 항목에는 **소유자, 실행 핸들, 입력 리비전,
@@ -168,15 +163,14 @@ release한 준비 세션이 `status`의 replace/reseed/resume 체인을 따른�
 3. 봉인된 인계 자료를 만든다. 필수 필드는 **목적, 비목표, 승인된 종료점**,
    **source root와 canonical worktree**, **base head, full head, diff**, **계획 경로와 계획
    digest**, 완료한 조사와 검증의 **입력, 명령, 시각, 환경, 실패**, **미완료 작업과 결과 위치**,
-   **현재 lifecycle 상태**, exact **resume 명령과 읽기 전용 확인 명령**, 그리고 인계 자료
+   **현재 lifecycle 상태**, exact **인수 명령과 읽기 전용 확인 명령**, 그리고 인계 자료
    digest다. 자료에는 secret, 인증 정보, 이전 lease token을 넣지 않는다.
 4. 위 결정의 created_at과 내용, exact ID·issue·branch·worktree, 계획 경로, 현재 단계·성공 기준·
    승인된 종료점을 인계문에 실제 값으로 채운다. 인계문에 secret이나 claim token은 넣지 않는다.
    수신자는 **현재 HEAD, 계획 digest, 인계 자료 digest**를 대조하고, 일치하는 근거만
    재사용한다. stale하거나 누락된 근거는 필요한 범위만 다시 확인한다. 서로 다른 host의
    session ID는 이식 가능한 identity가 아니다. 새 host/session은 durable actor flags와 runtime
-   receipt로 다시 식별한다. **독립 direct claim**은 이 자료와 status를 검증하지만,
-   일반 direct claim에 Orca owner context packet을 요구하지 않는다.
+   receipt로 다시 식별한다. **독립 claim**은 이 자료와 status를 검증한다.
 5. 기존 holder가 canonical worktree에서 최신 `whoami`의 actor flags로 release한다.
 
    ```bash
@@ -186,50 +180,32 @@ release한 준비 세션이 `status`의 replace/reseed/resume 체인을 따른�
 
    released임을 확인하기 전에는 새 세션을 시작하지 않는다. release 실패를 revoke나
    worktree 삭제로 우회하지 않는다. release 후 기존 세션은 구현하거나 다시 claim하지 않는다.
-6. 자동 `new-session`이면 추가 질문 없이 **기존 worktree에** 새 세션 하나만 연다.
+6. 자동 `new-session`이면 추가 질문 없이 **기존 worktree에** Herdr 세션 하나만 연다.
    현재 native host를 유지하고 현재 모델·effort는 해당 launch가 지원하는 값만 전달한다.
    Claude Code를 여는 명령에는 `--dangerously-skip-permissions`, Codex를 여는
    명령에는 `--dangerously-bypass-approvals-and-sandbox`, Omo를 여는 명령에는
    `--permission-preset full-access`, omp를 여는 명령에는 `--auto-approve`를 붙인다. 설치된 host의
    `--help`에서 플래그 지원을 확인한 뒤 호출한다.
-   사용자가 직접 세션을 열겠다고 명시한 경우에만 경로와 인계문을 제공하고 종료한다.
-   Orca에서는 설치된 `orca-cli` 안내로 exact worktree 경로를 확인한 뒤 `terminal create`와
-   일회성 prompt 전달을 사용한다. Herdr는 아래 **Herdr 실행** 절을 따른다. raw launcher를
+   사용자가 직접 연 두 번째 터미널로 인계하겠다고 명시한 경우에만 경로와 인계문을 제공하고 종료한다.
+   Herdr는 아래 **Herdr 실행** 절을 따른다. raw launcher를
    호출하기 직전과 receipt를 읽은 직후에는 아래 producer를 호출한다. staged 관측 기록이
    실패하면 launcher를 호출하지 않는다. 호출 뒤 관측 기록이 실패하면 같은 입력을 다시
-   보내지 않고 기존 terminal/session을 확인한다. `worktree create`, `switch-mode`, coordinator
-   task 생성은 이 인계의 수단이 아니다.
+   보내지 않고 기존 terminal/session을 확인한다. worktree를 다시 만드는 것은 이 인계의
+   수단이 아니다.
 7. 실행 결과가 모호하면 새 세션을 또 띄우지 않고 기존 terminal/session을 확인한다.
    인계 전달을 확인하면 원래 세션은 종료 보고한다. 구현 완료를 기다리는 감독 루프를 만들지 않는다.
 
-Orca 1.4.200 이상에서 인계 전달을 관측할 때 IssueOps operation ID와 Orca mutation request ID를
-혼동하지 않는다. `newExecutionOperationID()`는 IssueOps intent CAS lineage이고 Orca의
-`--retry-request` 값이 아니다. 설치 번들의 `shared/orchestration-retry-request-id.js`는
-`--retry-request`를 UUID로 검증하며, “Orca reported for the original request; omit to start a new request”를
-계약으로 둔다. 따라서 첫 `orca orchestration dispatch`와 첫 `orca terminal send`에는
-`--retry-request`를 붙이지 않는다. 성공 응답의 `mutation.requestId` 또는 ambiguous error의
-`data.orchestrationRequestId`로 받은 UUID만 같은 외부 호출의 read-only recovery에서 재사용한다.
+### 인수 체인
 
-Omo 인계는 durable 외부 호출이 두 개다. `orchestration dispatch --return-preamble --inject=false`가
-반환하는 dispatch mutation UUID와, 그 preamble을 전달하는 `terminal send` prompt UUID는 서로 다른
-identity다. dispatch UUID를 terminal send의 `--retry-request`로 넘기지 않고, terminal prompt UUID를
-dispatch recovery에 쓰지 않는다. dispatch 성공은 preamble 생성 증거일 뿐 Omo 입력 수락이 아니다.
-Omo 입력 수락은 `terminal send`의 prompt receipt(`requestId`, `stages`, `provider`, `observation`,
-`processIncarnation`, `generation`, `baselineWorkingSequence`)로만 기록한다. `turn_started` 같은
-native turn 관측과 IssueOps owner claim은 여전히 별도 상태이며, claim/status는 IssueOps claim CAS만
-바꾼다.
-
-`orca orchestration request-show --request <uuid> --json`은 read-only evidence다. 설치 번들의
-`handlers/orchestration/mutation-request-show-handler.js`와 `shared/orchestration-mutation-request.js`는
-top-level `requestId`, `state`(`completed|pending|absent`), `method`, `interpretation`을 출력한다.
-`completed`는 Orca가 같은 UUID replay를 idempotent하게 처리한다는 증거이고, `pending`·`absent`도
-새 IssueOps owner나 자동 retry 권한이 아니다. IssueOps handoff delivery observation은 folded evidence로
-현재 lineage/prompt/material/runtime/generation과 충돌하는 recovery를 fail-closed시키지만, blind retry,
-새 owner claim, status promotion을 승인하지 않는다.
+인수 세션은 자기 native actor로 `next --id`를 실행하고 반환된 `next_command`를 따른다.
+claimable이면 `claim --claim-current-token`, released이면 `execution replace --id ID
+--expected-generation N --preview`, revoking이면 `execution replace --finalize-preview`다.
+preview가 반환한 `--reseed` 명령을 실행한 뒤 `claim --claim-current-token`으로 마친다.
+이 체인이 유일한 인계 경로다. Herdr 세션이든 사용자가 직접 연 두 번째 터미널이든 같다.
 
 ### raw launcher 전송 관측
 
-direct execution에서 Orca나 Herdr를 호출할 때는 `issueops trace handoff-delivery`를 공통
+Herdr를 호출할 때는 `issueops trace handoff-delivery`를 공통
 producer로 사용한다. 이 명령은 user-state audit에 관측만 추가하며 retry, claim, status를
 바꾸지 않는다. 입력 JSON에는 실제로 읽은 launcher path/version, runtime과 server 또는 target
 identity, terminal/pane, generation, prompt와 material digest를 넣는다. `unknown`, `pending`,
@@ -247,7 +223,7 @@ runtime ID를 복사한 server ID 같은 대체값을 만들지 않는다.
   "prompt_sha256": "<sha256>",
   "material_sha256": "<sha256>",
   "request": {"durable_id": ""},
-  "launcher": {"name": "<orca|herdr>", "version": "<observed>", "path": "<absolute observed path>", "runtime_id": "<observed>", "machine_id": "<observed>", "server_id": "<observed target identity>"},
+  "launcher": {"name": "herdr", "version": "<observed>", "path": "<absolute observed path>", "runtime_id": "<observed>", "machine_id": "<observed>", "server_id": "<observed target identity>"},
   "target": {"terminal_id": "<observed>", "pane_id": "<observed>"},
   "expected_owner_host": "<codex|claude|omo|omp>",
   "source_generation": <generation>,
@@ -266,9 +242,9 @@ runtime ID를 복사한 server ID 같은 대체값을 만들지 않는다.
 issueops trace handoff-delivery --input "$OBSERVATION_JSON" --json
 ```
 
-receipt를 받은 뒤 같은 attempt/lineage/`created_at`으로 두 번째 observation을 기록한다. Orca는
-반환된 terminal prompt UUID만 `request.durable_id`에 넣고 실제 `processIncarnation`도 보존한다.
-launcher가 제공하는 process 조회로 수신 agent의 PID, 시작 시각, executable을 확인해
+receipt를 받은 뒤 같은 attempt/lineage/`created_at`으로 두 번째 observation을 기록한다.
+launcher가 반환한 실제 ID가 있으면 그 값만 `request.durable_id`에 넣고 실제 `processIncarnation`도
+보존한다. launcher가 제공하는 process 조회로 수신 agent의 PID, 시작 시각, executable을 확인해
 `target.process`에 기록한다. 이 PID reuse-safe receipt를 확인할 수 없으면 owner claim과 연결하지
 않으며, 입력 수락 관측까지만 남긴다.
 
@@ -327,17 +303,16 @@ base head, full head, diff: <actual values>
 검증 입력, 명령, 시각, 환경, 실패: <actual values>
 미완료 작업과 결과 위치: <actual values>
 현재 lifecycle 상태: <actual state>
-resume 명령과 읽기 전용 확인 명령: <exact commands>
-사용자 선택 기록: status.decisions의 <created_at>, 제목 "실행 방식 선택"
-선택: new-session. 런처: <orca|herdr>. 결정 근거: <사용 가능 관찰 또는 명시적 지시>
+인수 명령과 읽기 전용 확인 명령: <exact commands>
+사용자 선택 기록: status.decisions의 <created_at>, 제목 "세션 인계 선택"
+선택: new-session. 런처: <herdr|cmux|manual>. 결정 근거: <사용 가능 관찰 또는 명시적 지시>
 원래 사용자 요청: <actual request and conversation reference>
 승인 범위와 종료점: <scope>, <draft PR/MR publication + execution complete, or narrower endpoint>
 기존 holder는 release를 마쳤습니다. 현재 status와 선택 기록, 현재 HEAD, 계획 digest,
 인계 자료 digest를 읽고 인계 내용과 대조하세요. stale하거나 누락된 근거는 필요한 범위만 다시 확인하세요.
 같은 worktree에서 next --id가 제공하는 복구 명령 체인을 따라 자기 native actor로 인수하세요.
-direct의 released 상태는 replace preview부터 시작하며 이후 반환된 exact next_command를 따릅니다.
-execution resume은 Orca binding 전용이므로 direct에 쓰지 마세요. 현재 generation을 직접 관측하세요.
-독립 direct claim은 자료와 status 검증을 요구하지만 Orca owner packet을 요구하지 않습니다.
+released 상태는 `execution replace --id ID --expected-generation N --preview`로 시작하고,
+반환된 `--reseed` 명령을 실행한 뒤 `claim --claim-current-token`으로 인수합니다. 현재 generation을 직접 관측하세요.
 서로 다른 host의 session ID는 이식 가능한 identity가 아니므로 새 host/session은 자기 native actor flags로 식별하세요.
 active(self)가 된 뒤 승인된 범위 안에서 재질문 없이 이어가세요. 자동 인계를 다시 적용해 새 세션을 띄우지 마세요.
 기록보다 최신 사용자 지시가 우선합니다.
@@ -345,12 +320,12 @@ active(self)가 된 뒤 승인된 범위 안에서 재질문 없이 이어가세
 
 계획·범위·작업 경로가 선택 기록과 달라졌으면 원인을 조사한다. 다른 사이클의 승인이나
 phase/claim 성공으로 승인 범위를 넓히지 않는다. 승인 근거를 확인할 수 없을 때만 필요한
-결정을 묻는다. core의 actor·generation·fingerprint 검사는 그대로 통과해야 한다.
+결정을 묻는다. core의 actor·generation 검사는 그대로 통과해야 한다.
 
 ### Herdr 실행
 
-이 절은 위 direct release가 확인된 뒤에만 실행한다. Herdr는 세션 배치만 맡으며
-IssueOps lease나 `direct|orca` mode를 소유하지 않는다. 실제 Herdr 호출 전후에는 위
+이 절은 위 release가 확인된 뒤에만 실행한다. Herdr는 세션 배치만 맡으며
+IssueOps lease를 소유하지 않는다. 실제 Herdr 호출 전후에는 위
 `trace handoff-delivery` producer를 사용한다.
 
 1. `SOURCE_ROOT`와 `WORKTREE`는 record에서 확인한 절대경로다. 기존 checkout을 연다.
@@ -380,7 +355,7 @@ IssueOps lease나 `direct|orca` mode를 소유하지 않는다. 실제 Herdr 호
      `herdr agent prompt "$AGENT_NAME" "$HANDOFF"`로 한 번 전달한다.
    - Claude Code와 Codex의 모델·effort는 `issueops model resolve --host "$HOST" --role implement
      --agents --json`의 `model`·`effort`를 쓴다(child cycle은 `--role child-implement`). 역할
-     서브에이전트는 같은 응답의 `agent_args`를 같은 `--` 뒤에 원소 그대로 붙인다. Orca·cmux 인계와
+     서브에이전트는 같은 응답의 `agent_args`를 같은 `--` 뒤에 원소 그대로 붙인다. cmux 인계와
      같은 인자이며, 다시 인용하거나 합치지 않는다.
    - Omo: Herdr 0.9.0의 kind 목록에는 `omo`가 없다. `pi`나 `omp`, Claude로 대체하지
      않는다. `omo --model … --thinking … --permission-preset full-access -- "$HANDOFF"`처럼 설치된 CLI가 지원하는

@@ -22,7 +22,7 @@ func (c CleanupProcessController) Terminate(pid int)        { _ = c.deps.Signal(
 func (c CleanupProcessController) Kill(pid int)             { _ = c.deps.Signal(pid, syscall.SIGKILL) }
 func (c CleanupProcessController) Wait(delay time.Duration) { c.deps.Sleep(delay) }
 
-func NewCleanupWorkspaceCleaner(deps CleanupProcessDeps, orca port.CleanupOrcaTerminals) cleanupapp.WorkspaceCleaner {
+func NewCleanupWorkspaceCleaner(deps CleanupProcessDeps) cleanupapp.WorkspaceCleaner {
 	deps = deps.withDefaults()
-	return cleanupapp.WorkspaceCleaner{Processes: NewCleanupProcessController(deps), Orca: orca, SamePath: cleanupStrictSamePath, PaneKey: deps.Getenv("ORCA_PANE_KEY"), Handle: deps.Getenv("ORCA_TERMINAL_HANDLE")}
+	return cleanupapp.WorkspaceCleaner{Processes: NewCleanupProcessController(deps), SamePath: cleanupStrictSamePath}
 }

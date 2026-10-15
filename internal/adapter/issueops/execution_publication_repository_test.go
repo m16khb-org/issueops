@@ -304,7 +304,7 @@ func TestPublicationJournalRejectsAbsentOrOtherPendingIntent(t *testing.T) {
 			case "no-intent":
 				record.Execution.Pending = nil
 			case "other-kind":
-				record.Execution.Pending.Kind = "orca"
+				record.Execution.Pending.Kind = "unknown_kind"
 			}
 			if _, err := writeIssueOps(context.Background(), root, record); err != nil {
 				t.Fatal(err)

@@ -18,10 +18,9 @@ func ValidateManualHandoffDeliveryObservation(record issueopscontract.IssueOpsRe
 		!strings.HasPrefix(observation.LineageID, handoffDeliveryManualLineagePrefix) {
 		return fmt.Errorf("manual handoff delivery observation requires an isolated manual-direct namespace")
 	}
-	if observation.Launcher.Name != issueopscontract.IssueOpsHandoffDeliveryLauncherOrca &&
-		observation.Launcher.Name != issueopscontract.IssueOpsHandoffDeliveryLauncherHerdr &&
+	if observation.Launcher.Name != issueopscontract.IssueOpsHandoffDeliveryLauncherHerdr &&
 		observation.Launcher.Name != issueopscontract.IssueOpsHandoffDeliveryLauncherCmux {
-		return fmt.Errorf("manual handoff delivery observation launcher must be Orca, Herdr, or cmux")
+		return fmt.Errorf("manual handoff delivery observation launcher must be Herdr or cmux")
 	}
 	if manualHandoffHasOwnerClaimEvidence(observation) {
 		return fmt.Errorf("manual handoff delivery observation cannot produce owner claim evidence")
@@ -30,7 +29,7 @@ func ValidateManualHandoffDeliveryObservation(record issueopscontract.IssueOpsRe
 }
 
 func manualHandoffReleasedDirectGeneration(record issueopscontract.IssueOpsRecord, observation issueopscontract.IssueOpsHandoffDeliveryObservation) bool {
-	return record.Execution != nil && record.Execution.Mode == issueopscontract.ExecutionModeDirect && record.Execution.Lease.Status == issueopscontract.LeaseStatusReleased &&
+	return record.Execution != nil && record.Execution.Lease.Status == issueopscontract.LeaseStatusReleased &&
 		record.Execution.Lease.Generation == observation.SourceGeneration && record.ID == observation.LifecycleID
 }
 

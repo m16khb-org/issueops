@@ -27,41 +27,6 @@ func claimTokenRecord(t *testing.T) issueops.IssueOpsRecord {
 	}
 }
 
-func TestCreateOrAdoptClaimTokenAdoptsExistingTokenFile(t *testing.T) {
-	record := claimTokenRecord(t)
-	first, err := createOrAdoptClaimToken(record)
-	if err != nil {
-		t.Fatal(err)
-	}
-	again, err := createOrAdoptClaimToken(record)
-	if err != nil {
-		t.Fatalf("adopt existing token: %v", err)
-	}
-	if again != first {
-		t.Fatalf("adopted digest %q differs from created digest %q", again, first)
-	}
-	record.Execution.Lease.Generation++
-	next, err := createOrAdoptClaimToken(record)
-	if err != nil || next == first {
-		t.Fatalf("next generation digest = %q, %v; want a fresh token", next, err)
-	}
-}
-
-func TestCreateOrAdoptClaimTokenRejectsTamperedTokenFile(t *testing.T) {
-	record := claimTokenRecord(t)
-	if _, err := createOrAdoptClaimToken(record); err != nil {
-		t.Fatal(err)
-	}
-	path := claimTokenPath(record)
-	if err := os.Chmod(path, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	_, err := createOrAdoptClaimToken(record)
-	if err == nil || !strings.Contains(err.Error(), "recover deterministic claim token") {
-		t.Fatalf("err = %v, want recovery rejection for loosened permissions", err)
-	}
-}
-
 func TestCreateClaimTokenRefusesToOverwrite(t *testing.T) {
 	record := claimTokenRecord(t)
 	token, path, err := createClaimToken(record)

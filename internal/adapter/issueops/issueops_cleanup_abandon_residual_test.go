@@ -214,39 +214,6 @@ func TestCleanupAbandonApplyingReceiptForOriginallyAbsentExecutionIsRetryable(t 
 	}
 }
 
-func TestSwitchExecutionModeRejectsCleanupAbandonFence(t *testing.T) {
-	t.Parallel()
-
-	stateRoot, record := executionPrepareRecord(t)
-	if code, _, stderr := preflight.GitCmd(record.Repo, "update-ref", "-d", "refs/remotes/origin/"+record.Branch); code != 0 {
-		t.Fatalf("remove remote branch fixture: %s", stderr)
-	}
-	mutateFinishRecord(t, stateRoot, record.ID, func(current *issueops.IssueOpsRecord) {
-		current.Execution = issueOpsExecutionForTest(current.Repo, filepath.Join(t.TempDir(), "absent-worktree"), current.Branch)
-		current.Execution.Lease = issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased}
-		current.CleanupAbandonFailure = &issueops.IssueOpsCleanupAbandonFailure{
-			Step: "applying", Fingerprint: strings.Repeat("a", 64), At: "2026-08-04T00:00:00Z",
-		}
-	})
-
-	preview, err := SwitchExecutionMode(context.Background(), stateRoot, issueops.ExecutionSwitchModeRequest{
-		ID: record.ID, Mode: string(issueops.ExecutionModeOrca),
-	}, ExecutionSwitchModeDependencies{})
-	if err != nil {
-		t.Fatalf("switch-mode preview: %v", err)
-	}
-	result, err := SwitchExecutionMode(context.Background(), stateRoot, issueops.ExecutionSwitchModeRequest{
-		ID: record.ID, Mode: string(issueops.ExecutionModeOrca), Apply: true, Confirm: true, Fingerprint: preview.Fingerprint,
-	}, ExecutionSwitchModeDependencies{})
-	if err == nil || !strings.Contains(err.Error(), "cleanup abandon apply is in progress") {
-		t.Fatalf("switch-mode must not erase an applying cleanup fence: err=%v result=%+v", err, result)
-	}
-	kept, readErr := ReadIssueOps(stateRoot, record.ID)
-	if readErr != nil || kept.Execution == nil || kept.CleanupAbandonFailure == nil {
-		t.Fatalf("rejected switch-mode must preserve the fenced record: err=%v record=%+v", readErr, kept)
-	}
-}
-
 func TestCleanupAbandonRecordDeletePartialStateIsRetryable(t *testing.T) {
 	stateRoot := filepath.Join(t.TempDir(), "state")
 	fixture := newClaimableExecutionFixture(t, stateRoot, "293-cleanup-record-partial")

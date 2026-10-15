@@ -34,19 +34,7 @@ type ClaimRepositoryRequest struct {
 	CWD               string
 	TokenFile         string
 	ClaimCurrentToken bool
-	ValidateRecord    RecordValidator
 	Clock             Clock
-}
-
-type ClaimContextPreflight interface {
-	Preflight(context.Context, ClaimPreflightRequest) (RecordValidator, error)
-}
-
-type ClaimPreflightRequest struct {
-	ID                  string
-	Generation          uint64
-	IssueBodySHA256     string
-	ContextPacketSHA256 string
 }
 
 type RecordValidator func(Record) error
@@ -85,14 +73,8 @@ type ReseedRepository interface {
 	CommitReseed(context.Context, ReseedSnapshot, Record) (RepositoryResult, error)
 }
 
-type ReseedInventoryReceipt struct {
-	Fingerprint string
-	RuntimeID   string
-	Inventory   issueopslease.ResumeInventory
-}
-
 type ReseedInventory interface {
-	Observe(context.Context, leasecontract.Record, issueopslease.Actor) (ReseedInventoryReceipt, error)
+	Observe(context.Context, leasecontract.Record, issueopslease.Actor) (string, error)
 }
 
 type ReseedArtifactReceipt struct {
@@ -105,100 +87,4 @@ type ReseedArtifacts interface {
 	Prepare(context.Context, leasecontract.Record) (ReseedArtifactReceipt, error)
 	Rollback(context.Context, ReseedArtifactReceipt) error
 	CleanupSuperseded(context.Context, leasecontract.Record) error
-}
-
-type ResumeFence interface {
-	Within(context.Context, string, func(context.Context) error) error
-}
-
-type ResumeSnapshot struct {
-	Record Record
-	Raw    []byte
-}
-
-type ResumeProgress struct {
-	Record    Record
-	Execution leasecontract.Execution
-	Pending   bool
-}
-
-type ResumeIntentState struct {
-	Progress           ResumeProgress
-	OperationID        string
-	Stage              string
-	InvocationState    string
-	InvocationAttempts int
-	RecordRaw          []byte
-	IntentRaw          []byte
-}
-
-type ResumeRepository interface {
-	LoadSnapshot(context.Context, string, uint64) (ResumeSnapshot, error)
-	BeginIntent(context.Context, ResumeSnapshot, leasecontract.ResumeArtifacts, issueopslease.ResumePlan, string) (ResumeProgress, error)
-	LoadIntent(context.Context, ResumeProgress) (ResumeIntentState, error)
-	MarkInvoking(context.Context, ResumeIntentState) (ResumeIntentState, error)
-	RecordFailure(context.Context, ResumeIntentState, string, error) error
-	ApplyReceipt(context.Context, ResumeIntentState, leasecontract.ResumeStageReceipt) (ResumeProgress, error)
-}
-
-type ResumeArtifacts interface {
-	ReadAndVerify(context.Context, leasecontract.Record) (leasecontract.ResumeArtifacts, error)
-}
-
-type ResumeOwnerInventory interface {
-	Observe(context.Context, leasecontract.Record) (issueopslease.ResumeInventory, error)
-}
-
-type ResumeStageExecutor interface {
-	Inspect(context.Context, ResumeIntentState) (leasecontract.ResumeStageInventory, error)
-	// Invoke runs one stage. roleAgentArgs are set only for the terminal stage.
-	Invoke(ctx context.Context, intent ResumeIntentState, roleAgentArgs []string) (leasecontract.ResumeStageReceipt, error)
-}
-
-// RoleAgentArgs renders the role-agent launch arguments for an owner host
-// from repo's agent model settings. Errors name the broken settings file.
-type RoleAgentArgs func(ctx context.Context, host, repo string) ([]string, error)
-
-// terminalStage is the Orca intent stage that launches the owner session.
-const terminalStage = "terminal_create"
-
-type ResumeOperationIDs interface {
-	New() (string, error)
-}
-
-type ReconcileProgress struct {
-	Record    leasecontract.Record
-	Pending   bool
-	NextStage string
-}
-
-type ReconcileIntentState struct {
-	Progress           ReconcileProgress
-	OperationID        string
-	Stage              string
-	InvocationState    string
-	InvocationAttempts int
-	RecordRaw          []byte
-	IntentRaw          []byte
-	// ProbeHost and ProbeRepo come from the sealed intent probe. A prepare
-	// intent has no Orca binding until dispatch, so reconcile reads these.
-	ProbeHost string
-	ProbeRepo string
-}
-
-type ReconcileRepository interface {
-	Canonicalize(context.Context, string) (ReconcileIntentState, error)
-	MarkInvoking(context.Context, ReconcileIntentState) (ReconcileIntentState, error)
-	RecordFailure(context.Context, ReconcileIntentState, string, error) error
-	ApplyReceipt(context.Context, ReconcileIntentState, leasecontract.ReconcileStageReceipt) (ReconcileProgress, error)
-	// ClearIntent는 외부 자원이 없음이 authoritative하게 확인된 intent를
-	// 제거한다. 재시도가 아니라 기록 정리다(#280).
-	ClearIntent(context.Context, ReconcileIntentState, error) (ReconcileProgress, error)
-	Latest(context.Context, string) (leasecontract.Record, error)
-}
-
-type ReconcileStageExecutor interface {
-	Inspect(context.Context, ReconcileIntentState) (leasecontract.ReconcileStageInventory, bool, error)
-	// Invoke runs one stage. roleAgentArgs are set only for the terminal stage.
-	Invoke(ctx context.Context, intent ReconcileIntentState, roleAgentArgs []string) (leasecontract.ReconcileStageReceipt, string, error)
 }

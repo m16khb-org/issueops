@@ -113,10 +113,9 @@ func seedIssueOpsCLIExecution(t *testing.T, record issueopscontract.IssueOpsReco
 	}
 	actor.NativeProcessAncestry = []issueopscontract.NativeProcessReceipt{receipt}
 	record.Execution = &issueopscontract.Execution{
-		Mode: issueopscontract.ExecutionModeDirect,
 		Workspace: issueopscontract.Workspace{
 			SourceRoot: record.Repo, Root: record.WorktreePath, Branch: record.Branch,
-			BaseHead: baseHead, Driver: "git", LinkedAt: now,
+			BaseHead: baseHead, LinkedAt: now,
 		},
 		Lease: issueopscontract.WriteLease{
 			Generation: 1, Status: issueopscontract.LeaseStatusActive, ClaimedAt: now,
@@ -125,7 +124,6 @@ func seedIssueOpsCLIExecution(t *testing.T, record issueopscontract.IssueOpsReco
 				SessionProcess: &receipt,
 			},
 		},
-		Selection: selectionFixture(issueopscontract.ExecutionModeDirect),
 	}
 	written, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record)
 	if err != nil {

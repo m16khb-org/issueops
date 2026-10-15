@@ -34,12 +34,6 @@ func ClaimWithinTransaction(ctx context.Context, transaction ClaimTransaction, r
 	if err := leasedomain.ValidateClaim(lease, claim); err != nil {
 		return RepositoryResult{}, err
 	}
-	if request.ValidateRecord == nil {
-		return RepositoryResult{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("claim record validator is required"))
-	}
-	if err := request.ValidateRecord(before); err != nil {
-		return RepositoryResult{}, err
-	}
 	if (request.TokenFile == "") == !request.ClaimCurrentToken {
 		return RepositoryResult{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("exactly one claim token selector is required"))
 	}

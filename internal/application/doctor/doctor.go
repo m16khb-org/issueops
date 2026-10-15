@@ -139,11 +139,6 @@ func cloneOperationalSnapshot(snapshot operationalhealth.Snapshot) operationalhe
 	snapshot.GitWorktrees = append([]operationalhealthcontract.GitWorktree(nil), snapshot.GitWorktrees...)
 	snapshot.LocalRefs = append([]operationalhealthcontract.GitRef(nil), snapshot.LocalRefs...)
 	snapshot.RemoteRefs = append([]operationalhealthcontract.GitRef(nil), snapshot.RemoteRefs...)
-	snapshot.OrcaWorktrees = append([]operationalhealthcontract.OrcaWorktree(nil), snapshot.OrcaWorktrees...)
-	snapshot.Terminals = append([]operationalhealthcontract.OrcaTerminal(nil), snapshot.Terminals...)
-	snapshot.Tasks = append([]operationalhealthcontract.OrcaTask(nil), snapshot.Tasks...)
-	snapshot.Dispatches = append([]operationalhealthcontract.OrcaDispatch(nil), snapshot.Dispatches...)
-	snapshot.Gates = append([]operationalhealthcontract.OrcaGate(nil), snapshot.Gates...)
 	snapshot.StateArtifacts = append([]operationalhealthcontract.StateArtifact(nil), snapshot.StateArtifacts...)
 	snapshot.InventoryProblems = append([]operationalhealthcontract.InventoryProblem(nil), snapshot.InventoryProblems...)
 	return snapshot

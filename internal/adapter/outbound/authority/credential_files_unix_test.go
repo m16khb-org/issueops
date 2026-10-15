@@ -135,7 +135,7 @@ func TestCredentialReadRejectsSymlinksModesAndForeignContent(t *testing.T) {
 	}
 }
 
-func TestCredentialFilesHonorCancellation(t *testing.T) {
+func TestCredentialFilesRespectCancellation(t *testing.T) {
 	files, key, token := credentialFixture(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

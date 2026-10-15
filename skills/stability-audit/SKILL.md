@@ -12,7 +12,7 @@ Prove issueops is operationally stable across install/update, native host integr
 ## Safety model
 
 - Default to evidence-first audit; do not kill processes or alter user/global config unless the user asked to resolve issues or the stale target is clearly owned by this harness checkout.
-- Keep the top-level `operational_doctor` on the inherited live harness environment. A sealed caller may pass one exact `--preserve-terminal term_*` assertion; do not implement that by overriding `ORCA_TERMINAL_HANDLE`. For regression/stress tests, pin `ISSUEOPS_ROOT` to the exact audited source checkout and use dedicated temporary `ISSUEOPS_STATE_DIR` and `ISSUEOPS_WORKER_DIR`; successful tests must not write IssueOps sessions back into the state being audited.
+- Keep the top-level `operational_doctor` on the inherited live harness environment. For regression/stress tests, pin `ISSUEOPS_ROOT` to the exact audited source checkout and use dedicated temporary `ISSUEOPS_STATE_DIR` and `ISSUEOPS_WORKER_DIR`; successful tests must not write IssueOps sessions back into the state being audited.
 - Never kill active `codex`, `claude`, `tmux`, or unrelated MCP processes. Only clean up confirmed stale `issueops`/legacy `bin/harness` MCP processes or temp watchers after recording evidence.
 - Treat host-level install commands as side-effecting. Use dry-run first; run real install only when the user asked for install E2E or the current task is explicitly about installed hooks/MCP.
 
@@ -30,22 +30,16 @@ For a full installation and cleanup pass:
 python3 skills/stability-audit/scripts/e2e_stability_audit.py --full-install --cleanup-stale --json
 ```
 
-For a sealed reconciliation gate, pass the already resolved handle as data rather than rewriting the environment:
-
-```bash
-python3 skills/stability-audit/scripts/e2e_stability_audit.py --cleanup-stale --preserve-terminal EXACT_SEALED_HANDLE --json
-```
-
 If the script reports `ok: false`, inspect `failures`, patch the root cause, and rerun the same command plus the relevant targeted tests.
 
-The script builds the current binary and immediately runs the existing top-level `doctor` as its `operational_doctor` gate. An explicitly supplied `--preserve-terminal` must be a single non-empty `term_*` handle no longer than 256 bytes and wins over the inherited environment; absence alone permits the existing `ORCA_TERMINAL_HANDLE` fallback. Sealed reconciliation passes `manifest.current_terminal.handle` explicitly and never rewrites the environment variable. Non-zero exit, malformed output, `ok=false`, `healthy=false`, or unknown operational inventory fails the audit; the report retains only bounded issue codes and summaries, not raw doctor or Orca output.
+The script builds the current binary and immediately runs the existing top-level `doctor` as its `operational_doctor` gate. Non-zero exit, malformed output, `ok=false`, `healthy=false`, or unknown operational inventory fails the audit; the report retains only bounded issue codes and summaries, not raw doctor output.
 
 ## Manual workflow
 
 1. **Preflight scope**
    - Read `.issueops/OPERATIONS.md`, `.issueops/CONVENTIONS.md`, and `.issueops/TESTING.md` when install, hooks, MCP, worker, or native integration behavior is in scope.
    - Capture `git status --short --branch`, process baseline, `issueops mcp service status --json`, and host MCP registrations.
-   - Treat `doctor` as the sole cross-system operational-health authority. Do not duplicate Git/IssueOps/Orca ownership or residue rules in this script.
+   - Treat `doctor` as the sole cross-system operational-health authority. Do not duplicate Git/IssueOps ownership or residue rules in this script.
 
 2. **Install/update E2E**
    - Build: `go build -o bin/issueops ./cmd/issueops`.

@@ -6,10 +6,10 @@
 ## Execution boundary
 
 Workspace provisioning and lease grant are one execution transaction. The
-source main worktree remains available before, during, and after direct or Orca
+source main worktree remains available before, during, and after
 execution for unrelated work. A generic session binding is routing metadata
 only. The fence selects the exact lifecycle ID, generation, native process
-receipt, canonical worktree, and persisted Orca identity.
+receipt, and canonical worktree.
 
 One active execution exists per record, not per source repository. Exact-ID
 routing therefore keeps parallel cycles independent. The active holder performs
@@ -31,15 +31,11 @@ Post-merge cleanup ordering is a contract: `reflect-completion`(사람이 쓴
 남는다) → `close-issue` →
 `cleanup finish`. finish는 preview 게이트(원격 readback fail-closed·요청자
 보호·head OID CAS·fingerprint) 뒤에만 파괴 단계를 수행하고 마지막에
-레코드를 삭제한다. 워크트리를 점유한 프로세스와 그 워크트리에 매인 Orca 터미널은
-차단 사유가 아니라 apply ①′의 종료 대상이다: preview가 receipt(pid·시작 시각·실행
-파일)와 터미널 handle을 fingerprint에 결속하고, apply가 fingerprint된 handle마다
-`orca terminal close --terminal`(same-handle·`ptyKilled=true` receipt 필수)를
-호출한 뒤 HUP+TERM → KILL → 최종 점유·터미널 재관측(둘 다 0 증명) 순서로 닫은
-뒤 orca 회수로 넘어간다. bulk `terminal stop --worktree`는 fingerprint 밖 동시
-생성 터미널까지 닫을 수 있어 쓰지 않는다. 터미널 close 실패는 fail-closed다
-(`workspace_processes_stop`, 시그널 없음). 요청자 자신(pid 조상, `ORCA_PANE_KEY`/`ORCA_TERMINAL_HANDLE`로 확정한
-요청자 터미널)과 소스 체크아웃은 종료·삭제 대상이 될 수 없어 preview가 거부한다
+레코드를 삭제한다. 워크트리를 점유한 프로세스는 차단 사유가 아니라 apply ①′의 종료 대상이다:
+preview가 receipt(pid·시작 시각·실행 파일)를 fingerprint에 결속하고, apply가
+HUP+TERM → KILL → 최종 점유 재관측(0 증명) 순서로 닫는다. 종료 실패는
+fail-closed다(`workspace_processes_stop`, 시그널 없음). 요청자 자신(pid 조상으로 확정한
+요청자 프로세스)과 소스 체크아웃은 종료·삭제 대상이 될 수 없어 preview가 거부한다
 (#477) — 결정적 ID(`sha256(repo+branch)`) 재사용과 충돌하지 않는
 유일한 수명 종료다. 각 파괴 단계는 멱등이며, 실패 시 레코드가 보존되고 재실행
 전 preview 재발급이 요구된다. prune은 completion 미반영 + RemoteArtifact 보유
@@ -81,15 +77,14 @@ fingerprint와 실패 기록의 봉인은 `internal/application/issueopscleanup`
 일치하는 단일 행인지 확인한다. 성공한 빈 결과만 부재이며, 다른 ref·여러 행·불완전한
 행은 `remote_branch_readable`로 거부해 fingerprint와 삭제 권한을 발급하지 않는다.
 
-`AbandonPreviewer`가 로컬 자원·자식 cycle·pending intent·Orca owner 관측을 조합한다.
-워크트리·브랜치·DB 읽기와 경로 해석은 adapter에 두고, 자식의 완료 여부와 Orca 잔여물
-허용 조건은 domain에서 판정한다. preparation domain은 봉인된 단계까지 확인할 자원
+`AbandonPreviewer`가 로컬 자원·자식 cycle·pending intent 관측을 조합한다.
+워크트리·브랜치·DB 읽기와 경로 해석은 adapter에 두고, 자식의 완료 여부는
+domain에서 판정한다. preparation domain은 봉인된 단계까지 확인할 자원
 순서를 결정하고, application은 그 결과를 lifecycle domain의 신원·부재 판정과 조합한다.
-앞선 단계의 자원이 남았거나 부재 관측에 권위가 없으면 폐기를 거부한다. 실제 터미널은
-점유 종료 단계에서 도달 가능한 경우에만 허용하며, 런타임 전환 관측 권한은 holderless일 때만 연다.
+앞선 단계의 자원이 남았거나 부재 관측에 권위가 없으면 폐기를 거부한다.
 
 `cleanup orphan`의 요청 검증·삭제 허용 조건은 `internal/domain/issueopsorphancleanup`이,
-preview·fingerprint·삭제 순서는 `OrphanCleaner`가 소유한다. 원격 병합과 Orca 관측은
+preview·fingerprint·삭제 순서는 `OrphanCleaner`가 소유한다. 원격 병합 관측은
 잠금 밖에서 끝내고, apply는 sqlstore 쓰기 배제 잠금 아래에서 레코드·lease index와
 로컬 Git 상태를 다시 읽는다. 새 소유자·잘못된 행·HEAD 변경이 있으면 삭제하지 않는다.
 대상이 상태 저장소와 잠금 파일을 포함하면 symlink 경로도 정규화해 preview와 apply에서

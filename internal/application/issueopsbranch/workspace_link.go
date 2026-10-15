@@ -36,7 +36,7 @@ func (s WorkspaceLinker) Plan(ctx context.Context, id, path string, actor *model
 		if err != nil {
 			return err
 		}
-		if err = s.Authority.ValidatePlanLink(ctx, record, actor); err != nil {
+		if err = s.Authority.Validate(ctx, record, actor); err != nil {
 			return err
 		}
 		path = strings.TrimSpace(path)

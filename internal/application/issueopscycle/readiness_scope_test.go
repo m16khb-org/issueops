@@ -43,7 +43,7 @@ func TestReadinessPublicOperationsCreateOneScope(t *testing.T) {
 				}
 				return copy
 			}
-			record := model.IssueOpsRecord{Repo: "/repo", Branch: "feature", Phase: model.IssueOpsPhaseFeedback, Execution: &model.Execution{Mode: model.ExecutionModeDirect}}
+			record := model.IssueOpsRecord{Repo: "/repo", Branch: "feature", Phase: model.IssueOpsPhaseFeedback, Execution: &model.Execution{}}
 			operation.run(s, record)
 			if scopes != 1 || cleanups > 1 || s.NewObservationScope == nil {
 				t.Fatalf("scopes=%d cleanups=%d original factory cleared=%v", scopes, cleanups, s.NewObservationScope == nil)

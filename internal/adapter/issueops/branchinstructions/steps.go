@@ -10,7 +10,7 @@ import (
 //
 // baseSHA는 두 provider 모두에서 새 브랜치의 base를 못박는 데 쓴다. 비어 있으면
 // base 브랜치 이름으로 떨어지고, 그 경우 provider가 **그 시점** 브랜치 HEAD를
-// 쓰므로 orca가 봉인한 base와 갈릴 수 있다(#176 GitHub, #180 GitLab).
+// 쓰므로 봉인한 base와 갈릴 수 있다(#176 GitHub, #180 GitLab).
 func Steps(provider, issueURL, branch, baseBranch, baseSHA string) []model.IssueOpsBranchPrepareStep {
 	switch provider {
 	case "gitlab":
@@ -101,7 +101,7 @@ func gitlabSteps(branch, baseBranch, baseSHA string) []model.IssueOpsBranchPrepa
 // githubSteps는 linked branch 생성 안내를 만든다.
 //
 // `gh issue develop --base <branch>`는 GitHub이 **그 시점** 브랜치 HEAD를 조회해
-// `CreateLinkedBranchInput.oid`로 쓴다. Orca는 봉인된 base SHA에서 로컬 브랜치를
+// `CreateLinkedBranchInput.oid`로 쓴다. execution prepare는 봉인된 base SHA에서 로컬 브랜치를
 // 만들므로, 링크를 붙이는 사이 base 브랜치가 진행하면 두 base가 갈리고 push가
 // non-fast-forward로 거부된다. 그때 봉인 가드가 merge를, 안전 훅이 force push를,
 // `sync-base`가 completion 이전 실행을 막으므로 발행 경로가 사라진다(#176, #147 실측).
@@ -115,13 +115,6 @@ func gitlabSteps(branch, baseBranch, baseSHA string) []model.IssueOpsBranchPrepa
 // 정적으로 분류할 수 없고 이 저장소는 그런 명령을 거부한다. `fallback_api`는
 // 지금도 사람이나 에이전트가 실행하는 안내이므로 값을 옮기는 것이 그 주체의 일이다.
 func githubSteps(issueURL, branch, baseBranch, baseSHA string) []model.IssueOpsBranchPrepareStep {
-	// Orca 모드에서는 링크 단계를 execution prepare **이후**로 미룬다.
-	// `createLinkedBranch`는 이름이 원격에 이미 있으면 실패하지만 로컬에만 있으면
-	// 성공한다(#163 실측). Orca는 로컬 워크트리와 로컬 브랜치만 만들고 push하지
-	// 않으므로, 먼저 실행하면 Orca가 이름 충돌로 막히고(#149·#152·#154) 나중에
-	// 실행하면 linked branch 추적을 그대로 얻는다.
-	const orcaOrder = "For Orca mode run this after `issueops execution prepare` instead: Orca creates the local branch " +
-		"without pushing, so the name is still free on the remote and the link still attaches."
 	steps := []model.IssueOpsBranchPrepareStep{{
 		Order:       1,
 		Strategy:    "mcp_unavailable",
@@ -136,7 +129,7 @@ func githubSteps(issueURL, branch, baseBranch, baseSHA string) []model.IssueOpsB
 			Command:  []string{"gh", "issue", "develop", issueURL, "--base", baseBranch, "--name", branch},
 			Description: "Create a GitHub linked development branch through gh issue develop. " +
 				"Recorded base_sha is empty, so the linked branch takes whatever " + baseBranch +
-				" points at when this runs — it can diverge from a sealed Orca base (#176). " + orcaOrder,
+				" points at when this runs — it can diverge from the sealed base (#176).",
 		})
 		steps = append(steps, githubLinkedBranchReadbackSteps(issueURL, branch, "", 3)...)
 		return append(steps, model.IssueOpsBranchPrepareStep{
@@ -163,7 +156,7 @@ func githubSteps(issueURL, branch, baseBranch, baseSHA string) []model.IssueOpsB
 				"gh issue develop cannot do this: its --base flag takes a branch name and GitHub resolves that " +
 				"branch's current HEAD, which diverges from the sealed base once " + baseBranch + " moves (#176). " +
 				"Single-quote the query argument in the shell — its GraphQL variables ($issueId, $oid, $name) are read " +
-				"as shell parameter expansion otherwise and the lifecycle guard rejects the command. " + orcaOrder,
+				"as shell parameter expansion otherwise and the lifecycle guard rejects the command.",
 		},
 	)
 	steps = append(steps, githubLinkedBranchReadbackSteps(issueURL, branch, baseSHA, 4)...)

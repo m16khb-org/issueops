@@ -189,7 +189,7 @@ hook은 단계 판정을 두 곳에 두게 되므로 채택하지 않았습니�
 
 필수 환경은 **Git, Go 1.26.6 이상, 사용할 코딩 호스트 하나 이상**입니다. 아직 공개된 바이너리
 릴리스가 없어 소스에서 빌드합니다(`v0.1.0`은 Draft 상태입니다). GitHub·GitLab에 이슈나 PR/MR을
-쓰려면 해당 provider의 CLI(`gh`·`glab`)와 인증도 준비합니다. Orca, Herdr와 브라우저 QA용 Aside는
+쓰려면 해당 provider의 CLI(`gh`·`glab`)와 인증도 준비합니다. Herdr와 브라우저 QA용 Aside는
 선택 연동이며 별도로 설치합니다. 스킬과 이슈·PR 템플릿은 현재 한국어로만 제공됩니다.
 
 ```bash
@@ -334,10 +334,12 @@ base 변경을 반영합니다.
 
 ## 모델과 세션 인계
 
-구현에 들어가기 전에 실행 세션을 자동으로 정합니다. 준비 세션이 Herdr 세션이면 Herdr로 먼저
-인계합니다. 그 밖에는 Orca가 준비되어 있으면 같은 worktree의 새 세션으로 인계하고, Orca를 쓸 수
-없으면 Herdr를, 둘 다 쓸 수 없으면 현재 세션에서 이어 갑니다. cmux는 사용자가 지정했을 때만
-씁니다. 사용자가 지정한 세션·보류·종료점이 이 자동 선택보다 우선합니다.
+구현에 들어가기 전에 실행 세션을 자동으로 정합니다. 브랜치와 worktree를 준비한 뒤 Herdr를 확인하고,
+Herdr 세션에서 준비 중이며 실행 중인 서버와 호환성, 현재 호스트의 실행 가능 여부가 확인되면 같은
+worktree의 새 Herdr 세션으로 인계합니다. Herdr를 쓸 수 없으면 현재 세션에서 이어 가거나, 직접 연
+두 번째 터미널에서 수동으로 인계합니다. 바이너리가 설치되어 있다는 사실만으로 Herdr가 준비되었다고
+판단하지 않으며, 런처를 설치하거나 서버를 시작하지도 않습니다. cmux는 사용자가 지정했을 때만 씁니다.
+사용자가 지정한 세션·보류·종료점이 이 자동 선택보다 우선합니다.
 
 역할별 model·effort는 네 호스트 모두 사용자 전체(global)나 저장소 하나(local) 단위로 바꿀 수
 있습니다. 우선순위는 필드마다 명시 플래그 > local > global > 기본값입니다.
@@ -356,7 +358,7 @@ issueops model resolve --host claude --role research --json  # 최종 값과 빈
 `--dangerously-bypass-approvals-and-sandbox`, Omo native에 `--permission-preset full-access`,
 omp에 `--auto-approve`를 전달합니다. 호스트의 권한 확인을 생략하는 옵션이므로 인계할 작업 범위를
 먼저 정하세요. IssueOps 자체의 실행 권한·세대·workspace·원격 쓰기 검사는 유지됩니다. 인계 명령의
-수락과 실제 owner claim·작업 완료는 각각 다른 증거로 기록합니다.
+수락과 실제 claim·작업 완료는 각각 다른 증거로 기록합니다.
 
 ## 아키텍처
 
@@ -405,7 +407,7 @@ CLI 게이트가 담당합니다. 상세 경계는 [아키텍처 문서](.issueo
 - 명령 실행에는 workspace·cwd 경계, 쓰기·네트워크 의도, timeout과 secret redaction을 적용합니다.
 - MCP 도구 인자는 공개 스키마로 검증하며, 모르는 필드나 빠지거나 타입이 틀린 필드는 거부합니다.
 - secret 원문은 문서, 상태 응답, 감사 로그, 테스트 fixture에 남기지 않습니다.
-- 외부 도구의 설치나 인증은 해당 도구의 공식 절차로 별도 준비합니다. Orca 같은 연동은 선택 사항이며,
+- 외부 도구의 설치나 인증은 해당 도구의 공식 절차로 별도 준비합니다. Herdr 같은 연동은 선택 사항이며,
   기본 설치·준비 상태 확인·자기 검증은 외부 도구를 요구하지 않습니다.
 
 ## 검증과 일상 진단
@@ -442,7 +444,7 @@ io quality inspect --json
 | 업데이트 후에도 옛 MCP 도구가 보임 | 호스트 MCP 재연결 후 `io inspect --json` 확인 |
 | 단계가 막혔거나 다음 작업이 불분명함 | `io next --id <ID> --json`의 `missing`·`next_command` 확인 |
 | 문서 판정 후 이전 단계로 돌아감 | diff 변경으로 fingerprint가 달라졌는지 확인하고 문서 검토·재봉인 |
-| 인계 모델이나 effort가 예상과 다름 | `io model show --json`의 값과 출처, 명시한 `--owner-model`·`--owner-effort`, 리뷰 라운드 확인 |
+| 인계 모델이나 effort가 예상과 다름 | `io model show --json`의 값과 출처, 명시한 지정값, 리뷰 라운드 확인 |
 | self-verify가 오래 걸림 | `--progress=jsonl`로 실행 중인 단계 확인 |
 | 설치·상태 저장소에 문제가 있음 | `io doctor --repo . --json`로 항목별 진단 |
 

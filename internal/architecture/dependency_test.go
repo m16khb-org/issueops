@@ -101,7 +101,6 @@ func TestCurrentIssueOpsVerticalOnly(t *testing.T) {
 	repoRoot := findRepoRoot(t)
 	forbidden := []string{
 		"Compatibility" + "Oracle",
-		"Legacy" + "Orca",
 		"Legacy" + "Self",
 		"parse" + "Legacy",
 		"render" + "Legacy",
@@ -319,16 +318,6 @@ func TestProductionReseedRoutingHasNoRetiredFallback(t *testing.T) {
 	}
 }
 
-func TestProductionResumeRoutingHasNoRetiredFallback(t *testing.T) {
-	violations, err := productionResumeRoutingViolations(findRepoRoot(t))
-	if err != nil {
-		t.Fatalf("inspect production resume routing: %v", err)
-	}
-	if len(violations) != 0 {
-		t.Fatalf("production resume routing violations: %s", strings.Join(violations, "; "))
-	}
-}
-
 func TestDependencyProductionReconcileRoutingHasNoRetiredFallback(t *testing.T) {
 	violations, err := productionReconcileRoutingViolations(findRepoRoot(t))
 	if err != nil {
@@ -374,8 +363,8 @@ func TestDependencyPreparationRoutingViolationsRejectRetiredFallback(t *testing.
 func route(req request, deps dependencies) {
 	switch req.Action {
 	case ExecutionActionPrepare:
-		invokeExecutionPrepareHandler()
-		invokeExecutionPrepareHandler()
+		deps.Prepare()
+		deps.Prepare()
 		PrepareExecution()
 	}
 }
@@ -394,10 +383,10 @@ func TestDependencyPreparationCallerViolationsRejectConcreteConstruction(t *test
 	file, err := parser.ParseFile(token.NewFileSet(), "caller.go", `package caller
 import (
 	wt "issueops/internal/adapter/gitworktree"
-	"issueops/internal/adapter/orca"
+	"issueops/internal/adapter/provider"
 )
-func issueOpsExecutionDeps() { _ = wt.New(); _ = orca.NewExecution() }
-func unrelatedCleanup() { _ = orca.NewExecution() }
+func issueOpsExecutionDeps() { _ = wt.New(); _ = provider.Resolve("github") }
+func unrelatedCleanup() { _ = provider.Resolve("github") }
 `, 0)
 	if err != nil {
 		t.Fatal(err)
@@ -438,55 +427,18 @@ func createPullRequest() { provider.Resolve("github") }
 	}
 }
 
-func TestDependencyReconcileRoutingViolationsRejectRetiredFallback(t *testing.T) {
+func TestDependencyReconcileRoutingViolationsRequireRemoteReconcile(t *testing.T) {
 	file, err := parser.ParseFile(token.NewFileSet(), "router.go", `package issueops
 func route(deps dependencies) {
-	reconcileOrcaExecutionIntent()
+	_ = deps
 }
 `, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	violations := reconcileRoutingViolations(file, true)
-	joined := strings.Join(violations, "; ")
-	if !strings.Contains(joined, "does not invoke injected Handler") || !strings.Contains(joined, "calls retired reconcileOrcaExecutionIntent") {
-		t.Fatalf("retired fallback violations=%v", violations)
-	}
-}
-
-func TestResumeRoutingViolationsRejectRetiredFallback(t *testing.T) {
-	file, err := parser.ParseFile(token.NewFileSet(), "router.go", `package issueops
-func route(req request, deps dependencies) {
-	switch req.Action {
-	case ExecutionActionResume:
-		ResumeExecutionWithDependencies()
-	}
-}
-`, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	violations := resumeRoutingViolations(file, true)
-	if len(violations) == 0 || !strings.Contains(strings.Join(violations, "; "), "does not invoke injected Resume handler") || !strings.Contains(strings.Join(violations, "; "), "calls retired ResumeExecutionWithDependencies") {
-		t.Fatalf("retired fallback violations=%v", violations)
-	}
-}
-
-func TestReseedOwnerArtifactPreparationDoesNotReapplyLeaseTransition(t *testing.T) {
-	path := filepath.Join(findRepoRoot(t), "internal", "application", "issueopsowner", "reseal.go")
-	contents, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, forbidden := range []string{
-		"record.Execution.Lease.Generation++",
-		"record.Execution.Lease.Status =",
-		"record.Execution.Lease.Holder =",
-		"record.Execution.Lease.ClaimTokenSHA256 =",
-	} {
-		if strings.Contains(string(contents), forbidden) {
-			t.Fatalf("owner artifact preparation must use the application transition, found %q", forbidden)
-		}
+	violations := reconcileRoutingViolations(file)
+	if joined := strings.Join(violations, "; "); !strings.Contains(joined, "does not invoke injected RemoteReconcile exactly once") {
+		t.Fatalf("missing remote reconcile violations=%v", violations)
 	}
 }
 
@@ -550,98 +502,12 @@ func productionReseedRoutingViolations(repoRoot string) ([]string, error) {
 	return violations, nil
 }
 
-func productionResumeRoutingViolations(repoRoot string) ([]string, error) {
-	dir := filepath.Join(repoRoot, "internal", "adapter", "issueops")
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil, err
-	}
-	var violations []string
-	for _, entry := range entries {
-		name := entry.Name()
-		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
-			continue
-		}
-		path := filepath.Join(dir, name)
-		contents, err := os.ReadFile(path)
-		if err != nil {
-			return nil, err
-		}
-		file, err := parser.ParseFile(token.NewFileSet(), path, contents, 0)
-		if err != nil {
-			return nil, err
-		}
-		if sourceHasIdentifier(file, "ResumeExecutionWithDependencies") {
-			violations = append(violations, name+" retains retired resume orchestration")
-		}
-		violations = append(violations, resumeRoutingViolations(file, name == "execution_api.go")...)
-	}
-	outboundDir := filepath.Join(repoRoot, "internal", "adapter", "outbound", "issueopslease")
-	entries, err = os.ReadDir(outboundDir)
-	if err != nil {
-		return nil, err
-	}
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
-			continue
-		}
-		contents, err := os.ReadFile(filepath.Join(outboundDir, entry.Name()))
-		if err != nil {
-			return nil, err
-		}
-		for _, forbidden := range []string{"executeOrcaIntentStage", "ResumeExecutionWithDependencies"} {
-			if strings.Contains(string(contents), forbidden) {
-				violations = append(violations, entry.Name()+" calls "+forbidden)
-			}
-		}
-	}
-	applicationFile, err := parseProductionFile(filepath.Join(repoRoot, "internal", "application", "issueopsexecution", "execution_api.go"))
-	if err != nil {
-		return nil, err
-	}
-	violations = append(violations, resumeRoutingViolations(applicationFile, true)...)
-	sort.Strings(violations)
-	return violations, nil
-}
-
 func productionReconcileRoutingViolations(repoRoot string) ([]string, error) {
-	coreDir := filepath.Join(repoRoot, "internal", "adapter", "issueops")
-	entries, err := os.ReadDir(coreDir)
-	if err != nil {
-		return nil, err
-	}
-	var violations []string
-	for _, entry := range entries {
-		name := entry.Name()
-		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
-			continue
-		}
-		path := filepath.Join(coreDir, name)
-		contents, err := os.ReadFile(path)
-		if err != nil {
-			return nil, err
-		}
-		file, err := parser.ParseFile(token.NewFileSet(), path, contents, 0)
-		if err != nil {
-			return nil, err
-		}
-		if sourceHasIdentifier(file, "reconcileOrcaExecutionIntent") {
-			violations = append(violations, name+" retains retired Orca reconcile orchestration")
-		}
-		if name == "execution_reconcile.go" {
-			violations = append(violations, reconcileRoutingViolations(file, true)...)
-		}
-	}
-	wiringViolations, err := reconcileWiringForbiddenCalls(repoRoot)
-	if err != nil {
-		return nil, err
-	}
-	violations = append(violations, wiringViolations...)
 	applicationFile, err := parseProductionFile(filepath.Join(repoRoot, "internal", "application", "issueopsexecution", "execution_reconcile.go"))
 	if err != nil {
 		return nil, err
 	}
-	violations = append(violations, reconcileRoutingViolations(applicationFile, true)...)
+	violations := reconcileRoutingViolations(applicationFile)
 	sort.Strings(violations)
 	return violations, nil
 }
@@ -697,7 +563,7 @@ func productionPreparationRoutingViolations(repoRoot string) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		for _, identifier := range []string{"PrepareExecution", "prepareDirectExecution", "prepareOrcaExecution", "ExecutionPrepareDependencies"} {
+		for _, identifier := range []string{"PrepareExecution", "prepareDirectExecution", "ExecutionPrepareDependencies"} {
 			if sourceHasIdentifier(file, identifier) {
 				violations = append(violations, name+" retains retired preparation orchestration "+identifier)
 			}
@@ -774,10 +640,10 @@ func preparationRoutingViolations(file *ast.File, requireInjectedHandler bool) [
 		}
 		routes++
 		calls := sourceCallCounts(branch)
-		if requireInjectedHandler && calls["invokeExecutionPrepareHandler"] != 1 {
+		if requireInjectedHandler && calls["Prepare"] != 1 {
 			violations = append(violations, "prepare route does not invoke injected prepare handler exactly once")
 		}
-		for _, retired := range []string{"PrepareExecution", "prepareDirectExecution", "prepareOrcaExecution"} {
+		for _, retired := range []string{"PrepareExecution", "prepareDirectExecution"} {
 			if calls[retired] != 0 {
 				violations = append(violations, "prepare route calls retired "+retired)
 			}
@@ -825,7 +691,7 @@ func concretePreparationImportAliases(file *ast.File) map[string]string {
 		if err != nil {
 			continue
 		}
-		if path != "issueops/internal/adapter/gitworktree" && path != "issueops/internal/adapter/orca" && path != "issueops/internal/adapter/provider" {
+		if path != "issueops/internal/adapter/gitworktree" && path != "issueops/internal/adapter/provider" {
 			continue
 		}
 		alias := filepath.Base(path)
@@ -890,7 +756,7 @@ func publicationCallerViolations(file *ast.File, name string) []string {
 	var violations []string
 	for _, declaration := range file.Decls {
 		function, ok := declaration.(*ast.FuncDecl)
-		if !ok || function.Body == nil || !publicationCallerFunction(function) || !sourceHasSelectorCall(function.Body, "provider", "Resolve") {
+		if !ok || function.Body == nil || !publicationCallerFunction(function) || !sourceHasSelectorInvocation(function.Body, "provider", "Resolve") {
 			continue
 		}
 		violations = append(violations, name+":"+function.Name.Name+" calls provider.Resolve")
@@ -913,7 +779,7 @@ func publicationCallerFunction(function *ast.FuncDecl) bool {
 	return false
 }
 
-func sourceHasSelectorCall(node ast.Node, qualifier, name string) bool {
+func sourceHasSelectorInvocation(node ast.Node, qualifier, name string) bool {
 	found := false
 	ast.Inspect(node, func(node ast.Node) bool {
 		call, ok := node.(*ast.CallExpr)
@@ -932,35 +798,6 @@ func sourceHasSelectorCall(node ast.Node, qualifier, name string) bool {
 		return true
 	})
 	return found
-}
-
-func reconcileWiringForbiddenCalls(repoRoot string) ([]string, error) {
-	var violations []string
-	for _, relative := range []string{
-		filepath.Join("internal", "adapter", "outbound", "issueopslease"),
-		filepath.Join("cmd", "issueops", "issueopsapp"),
-	} {
-		dir := filepath.Join(repoRoot, relative)
-		entries, err := os.ReadDir(dir)
-		if err != nil {
-			return nil, err
-		}
-		for _, entry := range entries {
-			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
-				continue
-			}
-			contents, err := os.ReadFile(filepath.Join(dir, entry.Name()))
-			if err != nil {
-				return nil, err
-			}
-			for _, forbidden := range []string{"reconcileOrcaExecutionIntent", "executeOrcaIntentStage"} {
-				if strings.Contains(string(contents), forbidden) {
-					violations = append(violations, entry.Name()+" calls "+forbidden)
-				}
-			}
-		}
-	}
-	return violations, nil
 }
 
 func reseedRoutingViolations(file *ast.File, requireInjectedHandler bool) []string {
@@ -987,38 +824,10 @@ func reseedRoutingViolations(file *ast.File, requireInjectedHandler bool) []stri
 	return violations
 }
 
-func resumeRoutingViolations(file *ast.File, requireInjectedHandler bool) []string {
+func reconcileRoutingViolations(file *ast.File) []string {
 	var violations []string
-	routes := 0
-	ast.Inspect(file, func(node ast.Node) bool {
-		branch, ok := node.(*ast.CaseClause)
-		if !ok || !sourceHasIdentifier(branch, "ExecutionActionResume") {
-			return true
-		}
-		routes++
-		calls := sourceCallCounts(branch)
-		if requireInjectedHandler && calls["Resume"] != 1 {
-			violations = append(violations, "resume route does not invoke injected Resume handler exactly once")
-		}
-		if calls["ResumeExecutionWithDependencies"] != 0 {
-			violations = append(violations, "resume route calls retired ResumeExecutionWithDependencies")
-		}
-		return true
-	})
-	if requireInjectedHandler && routes != 1 {
-		violations = append(violations, fmt.Sprintf("expected one production resume route, found %d", routes))
-	}
-	return violations
-}
-
-func reconcileRoutingViolations(file *ast.File, requireInjectedHandler bool) []string {
-	counts := sourceCallCounts(file)
-	var violations []string
-	if requireInjectedHandler && counts["Handler"] != 1 {
-		violations = append(violations, "reconcile route does not invoke injected Handler exactly once")
-	}
-	if counts["reconcileOrcaExecutionIntent"] != 0 {
-		violations = append(violations, "reconcile route calls retired reconcileOrcaExecutionIntent")
+	if sourceCallCounts(file)["RemoteReconcile"] != 1 {
+		violations = append(violations, "reconcile route does not invoke injected RemoteReconcile exactly once")
 	}
 	return violations
 }
@@ -1431,7 +1240,7 @@ func isProcessLifetimeEdge(importer, imported string) bool {
 		return false
 	}
 	switch importer {
-	case "internal/adapter/issueops", "internal/adapter/orca", "internal/adapter/provider/providerutil", "internal/adapter/outbound/sqlstore":
+	case "internal/adapter/issueops", "internal/adapter/provider/providerutil", "internal/adapter/outbound/sqlstore":
 		return true
 	default:
 		return false

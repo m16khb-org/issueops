@@ -181,6 +181,16 @@ func CleanupAbandonRemovalPlan(record issueops.IssueOpsRecord, inventory issueop
 	return plan
 }
 
+// CleanupAbandonPendingError는 미해결 외부 intent가 남은 사이클의 abandon을 막는
+// 사유다. 해결 중인 intent는 reconcile이 정리해야 하므로, 비어 있지 않은 값은
+// pending_intent_safe 게이트를 미충족으로 만든다.
+func CleanupAbandonPendingError(record issueops.IssueOpsRecord) string {
+	if record.Execution == nil || record.Execution.Pending == nil {
+		return ""
+	}
+	return fmt.Sprintf("pending external intent kind %q is unresolved; run `issueops execution reconcile --id %s --preview --json` until it settles before retrying abandon", record.Execution.Pending.Kind, record.ID)
+}
+
 func CleanupAbandonIntentOperationIDs(record issueops.IssueOpsRecord) []string {
 	if record.Execution == nil {
 		return nil

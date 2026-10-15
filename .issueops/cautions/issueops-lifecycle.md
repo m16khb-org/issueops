@@ -8,10 +8,8 @@ description: Cautions for IssueOps branches, worktree edits, numbered-choice rep
 Family index: [CAUTIONS.md](../CAUTIONS.md). Evergreen hazards for IssueOps
 branches, worktree isolation, numbered-choice replies, hooks-as-workers
 boundary, CLI domain vocabulary, artifact URL parsing, response-contract
-golden drift, and readiness-gate blast radius. Orca supervised-handoff
-operations live in [issueops-orchestration.md](issueops-orchestration.md);
-execution liveness and lease authority live in
-[issueops-execution.md](issueops-execution.md).
+golden drift, and readiness-gate blast radius. Execution liveness and lease
+authority live in [issueops-execution.md](issueops-execution.md).
 
 ## 8. IssueOps local-only branch 착각
 
@@ -19,10 +17,6 @@ IssueOps 이슈 브랜치를 `git worktree add -b`로 바로 만들면 GitHub/Gi
 
 주의:
 - 이슈 기반 worktree를 만들기 전에 provider-linked branch를 먼저 생성한다.
-- 단, GitHub Orca는 원격 이름 충돌을 피하려고 branch prepare 기록과 Orca
-  `execution prepare`를 먼저 수행한 뒤 linked branch를 생성하고
-  `--link-verified`로 갱신한다. marker identity는 provider/issue 일치로 봉인하며
-  아직 생성할 수 없는 linked branch 확인을 Orca prepare 전제로 삼지 않는다.
 - IssueOps branch는 GitLab Development 섹션에 자동 연결되도록 issue/task number와 hyphen으로 시작한다. 예: `2386-remove-dmm-ranking-ranktype`, `2387-fix-grpc-ai-dmm-tag-replication-lag`.
 - `feature/`, `hotfix/` 같은 branch prefix를 이슈 번호 앞에 붙이면 GitLab native branch linking이 동작하지 않는다.
 - GitHub는 linked development branch 생성을 위해 `gh issue develop` 또는 노출된 GitHub MCP linked-branch tool을 사용한다.
@@ -41,7 +35,7 @@ IssueOps worktree isolation cannot rely on the model remembering `pwd` or shell 
 - Tool-root drift: IssueOps may run implementation in a sibling worktree while a host session and some MCP servers remain rooted at the original source checkout. In a sampled `service-api` repository, verified 2026-06-05, Claude `.mcp.json` was gitignored and its `codegraph` server had `--path /Users/sample/workspace/service-api`, while Codex global `codegraph` was `codegraph serve --mcp` without `--path`. Do not solve this by asking the user to restart Claude Code in the worktree; preserve the current session and enforce per-call evidence instead.
 - External code-intelligence tools are the user's own installs; the harness no longer prepares their indexes or validates their `projectPath`. When using one in a worktree session, root every call at the expected worktree yourself.
 - In IssueOps worktrees, prefer native absolute-path file tools, `git -C "$ISSUEOPS_EXPECTED_WORKTREE"`, `rg` rooted at the expected worktree, and worktree-local tests for correctness. Do not let a CodeGraph/Serena-first project rule override direct worktree evidence. Treat filesystem/Serena MCP tools as blocked or advisory unless their root is proven to be the expected worktree in the current session.
-- A merged recordless orphan is not permission to bypass the direct `git worktree remove` guard. Use `issueops cleanup orphan` preview and its exact fingerprinted `--apply --confirm` path only; it fails closed for any record, lifecycle/lease, or Orca authority, never creates a lifecycle, and never deletes the remote branch.
+- A merged recordless orphan is not permission to bypass the direct `git worktree remove` guard. Use `issueops cleanup orphan` preview and its exact fingerprinted `--apply --confirm` path only; it fails closed for any record or lifecycle/lease, never creates a lifecycle, and never deletes the remote branch.
 
 ## 16. IssueOps decision replies must have numbered choices
 
@@ -58,7 +52,7 @@ IssueOps state is durable because `issueops ...` commands record intent, issue l
 
 주의:
 - The installed hooks are context-only (`SessionStart` and `SubagentStart` project-doc catalog). It does not block tool events, create or edit issues, mutate files, run tests, wait for background jobs, prepare branches or worktrees, create PRs/MRs, reply to reviews, merge, or delete branches/worktrees. The readability check (Korean ratio, summary-first, required sections, hashes outside code) runs inside the `issueops remote` publish and sync commands (`create-issue`, `create-child`, `create-pr`, `sync-issue`, `sync-pr`), and VCS-linking checks run inside the `issueops remote ...` commands that own the artifact.
-- When readiness reports `intent_contract`, `plan_prep_*`, `branch_prepare`, compatibility/design/plan evidence, canonical workspace/lease, `ai_slop_clean`, or contract feedback, run the owning `issueops` command in the main-agent loop and retry readiness. Workspace and write authority belong to `issueops execution prepare/status/claim/release/replace/reconcile/switch-mode/complete`; do not add a hook-side workaround.
+- When readiness reports `intent_contract`, `plan_prep_*`, `branch_prepare`, compatibility/design/plan evidence, canonical workspace/lease, `ai_slop_clean`, or contract feedback, run the owning `issueops` command in the main-agent loop and retry readiness. Workspace and write authority belong to `issueops execution prepare/status/claim/release/replace/reconcile/complete`; do not add a hook-side workaround.
 - `execution replace --revoke`는 **다른** 홀더를 걷어내는 명령이다. 자기 lease에 실행하면 `revoking` 상태와 살아 있는 홀더가 겹쳐 claim·release·replace가 모두 막힌다(2026-07-26 실측, 세션 재시작으로만 벗어났다). 자기 정리는 `release --generation N`이다. #170이 이 자기-revoke를 거부하도록 고쳤지만, 진단이 막히는 상태를 스스로 만들지 않는 규율이 먼저다.
 - `--session-id`는 host가 부여한 세션 식별자이며 조합해 만드는 값이 아니다. 세션을 재시작해도 그 값은 유지되고 PID만 바뀌므로, 재시작 후의 `holder_identity_mismatch`는 홀더가 죽었다는 뜻이 아니라 잘못된 id가 기록됐다는 뜻이다. `execution whoami`로 확인한다.
 - Sub-agent use is not a free speedup. It can preserve main context, give a fresh reviewer, isolate tools, or parallelize independent research, but it also reduces mid-run steering/visibility and adds latency/token/coordination cost. Record the documented pattern, tradeoffs, fallback, and net-positive rationale in the plan/evidence; if that rationale is weak, direct main-agent execution remains the default.
@@ -66,15 +60,14 @@ IssueOps state is durable because `issueops ...` commands record intent, issue l
 ## 16.2 선택지는 기존 목표와 execution holder를 대체하지 않는다
 
 숫자 선택 응답을 복원할 때 선택지 label만 새 원문 요청으로 승격하면 이전 턴에서
-확정한 실행 주체, workspace, execution mode가 사라질 수 있다. `Orca owner에게
-실행을 위임`이 `격리된 구현 worktree에서 실행`으로 축약된 뒤 source/main이 직접
+확정한 실행 주체와 workspace가 사라질 수 있다. 실행 owner에게 실행을 위임하는
+선택지가 `격리된 구현 worktree에서 실행`으로 축약된 뒤 source/main이 직접
 구현한 2026-07-22 incident가 이 경로로 재현됐다.
 
 주의:
 - 선택지는 기존 사용자 목표와 명시적 제약을 유지한 채 적용하는 next-action delta다. 선택지 text를 원문 요청의 대체물로 취급하지 않는다.
-- 실행 방식이 갈리는 선택지에는 실행 주체, source/canonical worktree 위치, direct/Orca mode, 외부 mutation 경계를 self-contained하게 적는다.
+- 실행 방식이 갈리는 선택지에는 실행 주체, source/canonical worktree 위치, 외부 mutation 경계를 self-contained하게 적는다.
 - Active cycle에서는 durable generation/holder/workspace state가 자유형 선택지보다 우선한다. `격리된 worktree`만 보고 실행 주체를 추정하지 않는다.
-- Orca launch 뒤 source/main은 owner 완료를 동기 대기하거나 terminal output을 무기한 tail하지 않는다. 한 번의 관측은 30초 이내로 제한하고, 60초 안에 사용자에게 진행 상태를 갱신한다.
 - Claim 또는 native process가 멈추면 source가 구현을 대신하지 않는다. `issueops execution status`를 읽고 generation-CAS replacement/reconciliation 판단 지점으로 돌아간다.
 - 코드·commit·publish·PR/MR mutation은 active generation holder의 canonical worktree에 남긴다. Source main worktree는 unrelated work에 계속 사용할 수 있다.
 
@@ -169,40 +162,23 @@ automatically redirect to /work_items/:iid")는 일반 이슈(`type=ISSUE`)의 `
 
 ## 32. cleanup은 워크트리 점유 프로세스를 종료 대상으로 본다 — 요청자는 제외가 아니라 거부
 
-`cleanup finish/abandon`은 워크트리를 점유한 프로세스와 그 워크트리에 매인 Orca
-터미널을 차단 사유가 아니라 apply ①′의 종료 대상으로 다룬다(#477). preview가
-receipt(pid·시작 시각·실행 파일)·자손/부수 피해 수·터미널 handle을 싣고 fingerprint에
-결속하며, apply는 handle별 `orca terminal close --terminal`(handle 일치·`ptyKilled=true`
-receipt 필수) → HUP+TERM → 최대 5초 → KILL → 재관측(점유·터미널 0 증명) 순서로
-닫는다. 대화형 zsh/bash는 SIGTERM을 무시하고 SIGHUP에 종료된다(2026-08-27 실측).
-터미널 close가 실패하면 시그널 경로로 넘어가지 않고
-`workspace_processes_stop`에서 멈춘다 — 터미널만 죽고 orca 회수는 실패하는 부분 apply를
-막기 위해서다(pr-review #478 finding 2).
+`cleanup finish/abandon`은 워크트리를 점유한 프로세스를 차단 사유가 아니라 apply ①′의
+종료 대상으로 다룬다(#477). preview가 receipt(pid·시작 시각·실행 파일)와 자손/부수 피해
+수를 싣고 fingerprint에 결속하며, apply는 HUP+TERM → 최대 5초 → KILL → 재관측(점유 0
+증명) 순서로 닫는다. 대화형 zsh/bash는 SIGTERM을 무시하고 SIGHUP에 종료된다(2026-08-27
+실측). 점유가 남으면 `workspace_processes_stop`에서 멈춘다.
 
 주의:
 - 요청자 보호는 거부다. lease 경로(`executionQuiescenceFingerprint`)는 요청자 자손을
   quiescence 후보에서 *제외*하지만(직접 승계가 성립해야 하므로), cleanup은 워크트리를
-  지우므로 요청자가 그 안에 서 있으면 진행 자체가 잘못이다 — `requester_occupies_worktree`,
-  `requester_terminal_outside_worktree`, `requester_terminal_unresolved`,
-  `worktree_is_source_checkout`으로 막는다. 한쪽을 다른 쪽에 맞춰 "고치지" 말 것.
-- 요청자 터미널은 `ORCA_PANE_KEY`(tabId:leafId)·`ORCA_TERMINAL_HANDLE` env를 `orca terminal
-  list --json` 전체 행과 join해서만 확정한다. 무선택자 `orca terminal show`는 호출자가 아니라
-  UI-active 터미널을 돌려준다(design-review 실측). bulk `orca terminal stop --worktree`는
-  fingerprint에 없던 동시 생성 터미널까지 닫으므로 cleanup에서 쓰지 않는다. preview가
-  봉인한 exact handle만 닫고, 교체·신규 터미널은 최종 inventory에서 거부한다.
+  지우므로 요청자가 그 안에 서 있으면 진행 자체가 잘못이다 —
+  `requester_occupies_worktree`, `worktree_is_source_checkout`으로 막는다. 한쪽을 다른
+  쪽에 맞춰 "고치지" 말 것.
 - 신호는 apply 시점에 실제로 점유 중인 프로세스에게만 보낸다. 자손 관계는 preview 점유자가
   같은 receipt로 아직 점유 중일 때의 stale 허용 근거일 뿐, cwd만 워크트리인 공유 서버(tmux)의
   다른 세션까지 죽이는 종료 범위 확장이 아니다.
 - 생존 판정은 `kill(pid,0)`이 아니라 점유 재관측이다(좀비는 점유하지 않는다). lsof에 있는데
   ps 스냅샷에 없는 pid는 ESRCH면 소멸, 살아 있으면 `workspace_processes_observable`이다.
-- Orca 바인딩 사이클은 런타임이 ready가 아니면 `orca_runtime_ready`로 막는다(터미널을 죽인
-  뒤 orca 회수가 실패하는 부분 apply 방지). Orca 표면이 배선되지 않은 호출은 pid-조상
-  게이트만 남는다. 미등록 워크트리의 `terminal list`는 `selector_not_found`이며 빈 목록이다.
-- 런타임이 ready면 점유·바인딩·요청자 호스팅과 무관하게 워크트리 터미널을 나열한다. cwd를
-  밖으로 옮긴 셸은 점유자가 아니어도 Orca 레지스트리에는 워크트리 터미널로 남아 있고 apply가
-  닫아야 한다(pr-review #478 finding 3). Orca 앱 pid(시그널 제외 대상)는 fingerprint 입력이라
-  preview 뒤 런타임이 사라지거나 재시작되면 apply가 stale fingerprint로 멈춘다; apply ①′는
-  Orca 상태를 다시 묻지 않는다.
 - 새 실패 단계 `workspace_processes_stop`은 `knownCleanupFinishFailureStep`/
   `knownCleanupAbandonFailureStep`과 abandon failure inventory matcher에 등록돼 있다. 되돌릴
   때 이 값을 가진 receipt가 남아 있으면 `ReadIssueOps`가 거부한다. abandon receipt는 arm 시점

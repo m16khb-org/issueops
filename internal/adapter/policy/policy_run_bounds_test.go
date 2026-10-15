@@ -111,7 +111,7 @@ func TestCommandExecutorTimeoutStopsInheritedPipesAndChildren(t *testing.T) {
 	}
 }
 
-func TestCommandExecutorCaptureIsBoundedWhileDrainingBothStreams(t *testing.T) {
+func TestCommandExecutionCaptureIsBoundedWhileDrainingBothStreams(t *testing.T) {
 	for _, size := range []int{8 << 20, 32 << 20} {
 		t.Run(strconv.Itoa(size), func(t *testing.T) {
 			req := helperRequest(t, "flood", strconv.Itoa(size))

@@ -88,13 +88,11 @@ func remoteBranchTestRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
 		Provider: "github", Kind: "pr", URL: remoteBranchTestArtifact,
 	}
 	record.Execution = &issueops.Execution{
-		Mode: issueops.ExecutionModeDirect,
 		Workspace: issueops.Workspace{
 			SourceRoot: repo, Root: filepath.Join(repo, "wt"), Branch: remoteBranchTestBranch,
-			BaseHead: "deadbeef", Driver: "git", LinkedAt: "2026-07-25T00:00:00Z",
+			BaseHead: "deadbeef", LinkedAt: "2026-07-25T00:00:00Z",
 		},
-		Lease:     issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased},
-		Selection: selectionFixture(issueops.ExecutionModeDirect),
+		Lease: issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased},
 	}
 	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { *rec = record })
 	return stateRoot, record

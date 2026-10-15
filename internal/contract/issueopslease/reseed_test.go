@@ -7,7 +7,7 @@ import (
 
 func TestReseedReceiptJSONRoundTripPreservesV1Execution(t *testing.T) {
 	want := ReseedReceipt{
-		Execution:      Execution{Mode: "direct", Workspace: Workspace{SourceRoot: "/source", Root: "/worktree", Branch: "feature", BaseHead: "abc", Driver: "git", LinkedAt: "2026-07-30T08:00:00Z"}, Lease: Lease{Generation: 2, Status: "claimable", ClaimTokenSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}, Selection: leaseSelectionFixture("direct")},
+		Execution:      Execution{Workspace: Workspace{SourceRoot: "/source", Root: "/worktree", Branch: "feature", BaseHead: "abc", LinkedAt: "2026-07-30T08:00:00Z"}, Lease: Lease{Generation: 2, Status: "claimable", ClaimTokenSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}},
 		ClaimTokenPath: "/worktree/.issueops/state/issueops-v1/lease-2.token",
 	}
 	data, err := json.Marshal(want)

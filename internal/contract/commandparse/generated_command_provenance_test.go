@@ -8,7 +8,7 @@ import (
 
 func TestBindGeneratedCommandRequiresCompleteBinaryProvenance(t *testing.T) {
 	command, err := BindGeneratedCommand(
-		"issueops execution resume --id io-1 --expected-generation 7 --confirm",
+		"issueops execution replace --id io-1 --expected-generation 7 --preview",
 		GeneratedCommandProvenance{LeaseGeneration: 7},
 	)
 	if err == nil {
@@ -21,7 +21,7 @@ func TestBindGeneratedCommandRequiresCompleteBinaryProvenance(t *testing.T) {
 
 func TestBindGeneratedCommandUsesCanonicalExecutableAndAddsBoundedEvidence(t *testing.T) {
 	command, err := BindGeneratedCommand(
-		"issueops execution resume --id io-1 --expected-generation 7 --confirm",
+		"issueops execution replace --id io-1 --expected-generation 7 --preview",
 		GeneratedCommandProvenance{
 			ExecutablePath:   "/repo/bin/issueops",
 			ExecutableSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -31,7 +31,7 @@ func TestBindGeneratedCommandUsesCanonicalExecutableAndAddsBoundedEvidence(t *te
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(command, "'/repo/bin/issueops' execution resume ") {
+	if !strings.HasPrefix(command, "'/repo/bin/issueops' execution replace ") {
 		t.Fatalf("generated command did not select its observed executable: %q", command)
 	}
 	for _, want := range []string{

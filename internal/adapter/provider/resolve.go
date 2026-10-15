@@ -5,9 +5,7 @@
 package provider
 
 import (
-	"context"
 	"fmt"
-	executionissue "issueops/internal/contract/executionissue"
 
 	"issueops/internal/adapter/provider/github"
 	"issueops/internal/adapter/provider/gitlab"
@@ -38,16 +36,4 @@ func ResolvePullRequestMerger(name string) (port.IssueProviderPullRequestMerger,
 		return nil, fmt.Errorf("provider %q cannot merge pull requests", name)
 	}
 	return merger, nil
-}
-
-func ReadExecutionIssueSnapshot(ctx context.Context, name string, req executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
-	resolved, err := Resolve(name)
-	if err != nil {
-		return executionissue.ExecutionIssueSnapshot{}, err
-	}
-	reader, ok := resolved.(port.ExecutionIssueSnapshotReader)
-	if !ok {
-		return executionissue.ExecutionIssueSnapshot{}, fmt.Errorf("provider %q cannot read issue snapshots", name)
-	}
-	return reader.ReadIssueSnapshot(ctx, req)
 }

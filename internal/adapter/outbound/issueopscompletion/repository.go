@@ -180,13 +180,9 @@ func snapshot(record leasecontract.Record) (completioncontract.RecordSnapshot, e
 	}
 	execution := record.Execution
 	result.CanonicalRoot = execution.Workspace.Root
-	result.Mode = execution.Mode
 	result.Lease = completionLease(execution.Lease)
 	if execution.Completion != nil {
 		result.Completion = &completioncontract.Completion{Generation: execution.Completion.Generation, FinalHead: execution.Completion.FinalHead, VerificationReportPath: execution.Completion.VerificationReportPath, Verification: append([]string(nil), execution.Completion.Verification...), RemoteArtifactURL: execution.Completion.RemoteArtifactURL, CompletedAt: execution.Completion.CompletedAt}
-	}
-	if execution.Orca != nil {
-		result.Orca = &completioncontract.OrcaBinding{RunID: execution.Orca.RunID, TaskID: execution.Orca.TaskID}
 	}
 	return result, nil
 }

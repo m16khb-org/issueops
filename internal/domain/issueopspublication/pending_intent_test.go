@@ -11,7 +11,7 @@ func TestPendingPublicationEligibility(t *testing.T) {
 	}{
 		{"unprepared", false, false, "", false},
 		{"no intent", true, false, "", false},
-		{"other intent", true, true, "orca", false},
+		{"other intent", true, true, "future_intent", false},
 		{"publication", true, true, "remote_pr_create", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

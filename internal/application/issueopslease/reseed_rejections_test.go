@@ -139,9 +139,9 @@ func TestReseedServiceRejectsIneligibleRecordsBeforeInventoryOrArtifacts(t *test
 			harness := &reseedRejectionHarness{}
 			record := tt.record()
 			service := newReseedServiceForTest(passThroughFence(), harness.repository(record), harness.artifacts())
-			service.inventory = reseedInventoryFunc(func(context.Context, leasecontract.Record, leasedomain.Actor) (ReseedInventoryReceipt, error) {
+			service.inventory = reseedInventoryFunc(func(context.Context, leasecontract.Record, leasedomain.Actor) (string, error) {
 				t.Fatal("inventory observed for an ineligible record")
-				return ReseedInventoryReceipt{}, nil
+				return "", nil
 			})
 			request := reseedServiceRequest(record.ID)
 			if tt.request != nil {
@@ -206,26 +206,17 @@ func TestReseedServiceRejectsInventoryAndRecordProblemsBeforePreparingArtifacts(
 	tests := []struct {
 		name      string
 		record    func() Record
-		inventory func(context.Context, leasecontract.Record, leasedomain.Actor) (ReseedInventoryReceipt, error)
+		inventory func(context.Context, leasecontract.Record, leasedomain.Actor) (string, error)
 		check     func(error) bool
 		request   func(*ReseedRequest)
 	}{
 		{
 			name:   "inventory failure",
 			record: func() Record { return reseedTestRecord("released", 3) },
-			inventory: func(context.Context, leasecontract.Record, leasedomain.Actor) (ReseedInventoryReceipt, error) {
-				return ReseedInventoryReceipt{}, inventoryErr
+			inventory: func(context.Context, leasecontract.Record, leasedomain.Actor) (string, error) {
+				return "", inventoryErr
 			},
 			check: func(err error) bool { return errors.Is(err, inventoryErr) },
-		},
-		{
-			name: "orca mode without binding",
-			record: func() Record {
-				record := reseedTestRecord("released", 3)
-				record.Stable.Execution.Mode = "orca"
-				return record
-			},
-			check: func(err error) bool { return errors.Is(err, leasecontract.ErrExecutionNotPrepared) },
 		},
 		{
 			name: "record that cannot be cloned",

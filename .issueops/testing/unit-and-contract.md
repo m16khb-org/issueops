@@ -50,11 +50,9 @@ go test ./internal/architecture -count=1
 
 ### Operational-health and stability delegation
 
-- Pure classifier tests verify the 15-minute heartbeat boundary, invocation-only preservation, duplicate/incomplete inventory failures, and exact resource ownership.
-- External-vocabulary enumerations are verified for each axis, and every case cites the upstream definition rather than an observed sample. `knownDispatchStatus`/`settledDispatchStatus`/`knownGateStatus` must accept the full upstream union, including values a local run rarely produces (`circuit_broken`, `timeout`), so an unobserved value is not classified as unknown (#171). Update the test and citation when the upstream union grows.
-- Stale-scan integration must verify that `operational_dead_owner` is report-only (`needs-review`, `releasable=false`) when the heartbeat is missing or stale, while existing confirmed worktree/remote evidence remains releasable after the locked fresh re-probe.
-- Stability audit unit tests must verify that it calls the freshly built top-level `doctor`, forwards only a non-empty exact `ORCA_TERMINAL_HANDLE`, requires exit zero plus JSON `ok=true` and `healthy=true`, and stores only bounded issue code/summary failure details.
-- Final live reconciliation verification runs `python3 skills/stability-audit/scripts/e2e_stability_audit.py --cleanup-stale --json` only after the external recovery manifest/journal is sealed and cleanup readbacks are complete. Orca snapshot evidence is archival-only; reset ambiguity follows forward recovery, never an inferred rollback.
+- Pure classifier tests verify invocation-only preservation, duplicate/incomplete inventory failures, and exact resource ownership.
+- Stability audit unit tests must verify that it calls the freshly built top-level `doctor`, requires exit zero plus JSON `ok=true` and `healthy=true`, and stores only bounded issue code/summary failure details.
+- Final live reconciliation verification runs `python3 skills/stability-audit/scripts/e2e_stability_audit.py --cleanup-stale --json` only after the external recovery manifest/journal is sealed and cleanup readbacks are complete. Reset ambiguity follows forward recovery, never an inferred rollback.
 
 domain/application 패키지를 변경하면 최소한 다음 targeted 검증을 실행한다:
 

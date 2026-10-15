@@ -24,7 +24,7 @@ description: System structure and component boundaries; read before adding a com
 | [`architecture/issueops-cleanup.md`](architecture/issueops-cleanup.md) | 실행·정리 소유권, 외부 효과 순서, CAS·drain 경계 |
 | [`architecture/runtime.md`](architecture/runtime.md) | 실행 모드(CLI/MCP/issueops/loop/worker), docs/state/config/log 토폴로지, lock 직렬화, command/policy model, MCP tool 설계, standalone runtime policy |
 | [`architecture/host-integration.md`](architecture/host-integration.md) | Codex/Claude/Omo/omp 통합 map, pioneer skills layer(host-neutral), host-adapter 변경 체크리스트 |
-| [`architecture/issueops.md`](architecture/issueops.md) | IssueOps v1 execution 상태·schema 권위, capability vertical, operational surface, next_command 권위, actor model, Orca 경계, execution threat model |
+| [`architecture/issueops.md`](architecture/issueops.md) | IssueOps v1 execution 상태·schema 권위, capability vertical, operational surface, next_command 권위, actor model, execution threat model |
 
 ## 의존 방향 불변식 (canonical)
 
@@ -79,8 +79,8 @@ token·holder 검사는 그대로 core가 맡는다. 신뢰 경계는 같은 OS 
 
 ## IssueOps ownership (요약)
 
-IssueOps v1 execution은 단일 authority다. Orca는 readiness·workspace·native
-owner launch/inventory만 제공하고 generation/actor/CWD fence는 core가 소유한다.
+IssueOps v1 execution은 단일 authority다. generation/actor/cwd fence는 core가
+소유한다.
 한 record에 한 `Execution`, 한 canonical worktree, 한 active generation.
 trust boundary는 exact native actor(host, session/agent ID, process
 PID/start/executable receipt, canonical cwd, lifecycle ID, generation)다.
@@ -90,7 +90,7 @@ branch name·source cwd·generic session binding·terminal handle·stable diff�
 
 상세 capability vertical(`execution release`/`reconcile`,
 `issueopspublication`), operational surface, generated `next_command` 권위,
-actor model, Orca 경계, 전체 threat model과 invariants는
+actor model, 전체 threat model과 invariants는
 [issueops.md](architecture/issueops.md)가, execution boundary와
 post-merge cleanup 순서 계약은
 [issueops-cleanup.md](architecture/issueops-cleanup.md)가 소유한다.

@@ -14,15 +14,13 @@ import (
 	leasecontract "issueops/internal/contract/issueopslease"
 )
 
-type ReseedOwnerArtifacts func(context.Context, leasecontract.Record) (leasecontract.ReseedReceipt, error)
+type ReseedArtifacts struct{}
 
-type ReseedArtifacts struct{ owner ReseedOwnerArtifacts }
-
-func NewReseedArtifacts(owner ReseedOwnerArtifacts) *ReseedArtifacts {
-	return &ReseedArtifacts{owner: owner}
+func NewReseedArtifacts() *ReseedArtifacts {
+	return &ReseedArtifacts{}
 }
 
-func (a *ReseedArtifacts) Prepare(ctx context.Context, record leasecontract.Record) (leaseapp.ReseedArtifactReceipt, error) {
+func (a *ReseedArtifacts) Prepare(_ context.Context, record leasecontract.Record) (leaseapp.ReseedArtifactReceipt, error) {
 	if record.Execution == nil {
 		return leaseapp.ReseedArtifactReceipt{}, fmt.Errorf("cannot prepare reseed artifacts without an execution")
 	}
@@ -53,16 +51,6 @@ func (a *ReseedArtifacts) Prepare(ctx context.Context, record leasecontract.Reco
 		return leaseapp.ReseedArtifactReceipt{}, joinReseedArtifactErrors(err, cleanupReseedTarget(record))
 	}
 	receipt := leasecontract.ReseedReceipt{ClaimTokenPath: path}
-	if record.Execution.Mode == "orca" {
-		if a.owner == nil {
-			return leaseapp.ReseedArtifactReceipt{}, joinReseedArtifactErrors(fmt.Errorf("Orca reseed owner artifact writer is required"), cleanupReseedTarget(record))
-		}
-		receipt, err = a.owner(ctx, record)
-		if err != nil {
-			return leaseapp.ReseedArtifactReceipt{}, joinReseedArtifactErrors(err, cleanupReseedTarget(record))
-		}
-		receipt.ClaimTokenPath = path
-	}
 	if err := validateReseedReceiptTargets(receipt, paths); err != nil {
 		return leaseapp.ReseedArtifactReceipt{}, joinReseedArtifactErrors(err, cleanupReseedTarget(record))
 	}
@@ -89,11 +77,7 @@ func cleanupReseedTarget(record leasecontract.Record) error {
 }
 
 func reseedArtifactTargetPaths(record leasecontract.Record) []string {
-	paths := []string{reseedTokenPath(record)}
-	if record.Execution != nil && record.Execution.Mode == "orca" {
-		paths = append(paths, reseedOwnerArtifactPaths(record)...)
-	}
-	return paths
+	return []string{reseedTokenPath(record)}
 }
 
 func removeReseedArtifactTargets(root string, paths []string) error {
@@ -114,7 +98,7 @@ func validateReseedReceiptTargets(receipt leasecontract.ReseedReceipt, targets [
 	for _, path := range targets {
 		allowed[path] = struct{}{}
 	}
-	for _, path := range []string{receipt.ClaimTokenPath, receipt.ContextPacketPath, receipt.OwnerPromptPath} {
+	for _, path := range []string{receipt.ClaimTokenPath} {
 		if path == "" {
 			continue
 		}
@@ -133,12 +117,6 @@ func joinReseedArtifactErrors(primary, cleanup error) error {
 		return cleanup
 	}
 	return fmt.Errorf("%w; target artifact cleanup failed: %w", primary, cleanup)
-}
-
-func reseedOwnerArtifactPaths(record leasecontract.Record) []string {
-	key := claimTokenSHA256(record.ID)[:16]
-	base := filepath.Join(record.Execution.Workspace.Root, ".issueops", "state", "issueops-v1", key, "generation-"+fmt.Sprintf("%d", record.Execution.Lease.Generation))
-	return []string{filepath.Join(base, "context.json"), filepath.Join(base, "owner-prompt.txt")}
 }
 
 func reseedTokenPath(record leasecontract.Record) string {

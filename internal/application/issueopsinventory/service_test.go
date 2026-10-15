@@ -29,7 +29,6 @@ func TestServiceListCyclesFiltersAndProjectsInventory(t *testing.T) {
 					Status: issueopscontract.IssueCreateIntentInvokedUnknown,
 				},
 				Execution: &issueopscontract.Execution{
-					Mode: issueopscontract.ExecutionModeOrca,
 					Workspace: issueopscontract.Workspace{
 						Root: "/worktrees/84-claimable",
 					},
@@ -43,9 +42,6 @@ func TestServiceListCyclesFiltersAndProjectsInventory(t *testing.T) {
 					Failure: &issueopscontract.ExecutionFailure{
 						Code: "external_operation_ambiguous",
 						At:   "2026-08-11T02:01:00Z",
-					},
-					Orca: &issueopscontract.OrcaBinding{
-						OwnerModel: "gpt-6-astra",
 					},
 				},
 			},
@@ -97,7 +93,6 @@ func TestServiceListCyclesFiltersAndProjectsInventory(t *testing.T) {
 		t.Fatalf("planning flags: %+v", entry)
 	}
 	if entry := entries["claimable"]; !entry.Claimable ||
-		entry.OwnerModel != "gpt-6-astra" ||
 		entry.LeaseStatus != string(issueopscontract.LeaseStatusClaimable) ||
 		entry.IssueCreateStatus != issueopscontract.IssueCreateIntentInvokedUnknown ||
 		entry.PendingKind != "remote_pr_create" ||

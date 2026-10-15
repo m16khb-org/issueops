@@ -7,14 +7,11 @@ import (
 
 	"issueops/cmd/issueops/issueopscli/feedbackcleanup"
 	issueopscore "issueops/internal/adapter/issueops"
-	preparationoutbound "issueops/internal/adapter/outbound/issueopspreparation"
 	preflightadapter "issueops/internal/adapter/preflight"
 	cleanupapp "issueops/internal/application/issueopscleanup"
-	preparationapp "issueops/internal/application/issueopspreparation"
 	materialapp "issueops/internal/application/issueopsremote"
 	reviewapp "issueops/internal/application/issueopsreview"
 	issueopscontract "issueops/internal/contract/issueops"
-	preparationcontract "issueops/internal/contract/issueopspreparation"
 	"issueops/internal/port"
 )
 
@@ -34,7 +31,7 @@ func testCleanupCommand() feedbackcleanup.Command {
 			},
 			Fingerprint: issueopscore.CleanupFinishFingerprint, NewAttempt: issueopscore.NewCleanupAttempt,
 
-			Stop: runtime.Stop, RemoveOrca: d.RemoveOrcaWorktree, Directory: (issueopscore.CleanupFinishEnvironment{}).Directory, Git: runtime.Git, Now: time.Now,
+			Stop: runtime.Stop, Directory: (issueopscore.CleanupFinishEnvironment{}).Directory, Git: runtime.Git, Now: time.Now,
 		}).Run(ctx, req)
 	}
 	abandon := func(ctx context.Context, stateRoot string, req issueopscontract.CleanupAbandonRequest, d feedbackcleanup.Deps) (issueopscontract.CleanupAbandonResult, error) {
@@ -44,14 +41,6 @@ func testCleanupCommand() feedbackcleanup.Command {
 			Provider: d.Provider, Observe: cleanupapp.ObserveAbandonArtifact,
 			Plan: (cleanupapp.AbandonPreviewer{
 				Environment: runtime, ReadChild: runtime.ReadChild, Workspace: runtime.Workspace,
-				Orca: cleanupapp.AbandonOrcaObserver{ReadIntent: runtime.ReadIntent, InspectionRequest: func(record issueopscontract.IssueOpsRecord, intent preparationcontract.Intent) (port.ExecutionOrcaIntentRequest, error) {
-					projected, err := issueopscore.PreparationIntentRecord(record)
-					if err != nil {
-						return port.ExecutionOrcaIntentRequest{}, err
-					}
-					request, err := (preparationapp.IntentRequestBuilder{Files: issueopscore.OrcaIntentFiles{}}).Inspect(projected, intent)
-					return preparationoutbound.OrcaIntentRequest(request), err
-				}, Orca: d.OrcaIntent, Owner: d.OrcaOwner},
 				Remote: cleanupapp.AbandonRemoteObserver{RemoteRef: (issueopscore.LinkedBranchRemoteRef{RunGit: runtime.Command}).Observe},
 			}).Plan,
 			NewAttempt: issueopscore.NewCleanupAttempt, Stop: runtime.Stop, Directory: (issueopscore.CleanupFinishEnvironment{}).Directory, Git: runtime.Command, Now: time.Now,

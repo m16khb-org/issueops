@@ -1,7 +1,6 @@
 package issueopslease
 
 import (
-	"context"
 	"errors"
 	"io/fs"
 	"os"
@@ -12,15 +11,8 @@ import (
 	leasecontract "issueops/internal/contract/issueopslease"
 )
 
-func orcaReseedArtifactRecord(root string, generation uint64) leasecontract.Record {
-	record := reseedArtifactRecord(root, generation)
-	record.Execution.Mode = "orca"
-	record.Execution.Selection = leaseSelectionFixture("orca")
-	return record
-}
-
 func TestReseedArtifactsRequireAnExecution(t *testing.T) {
-	artifacts := NewReseedArtifacts(nil)
+	artifacts := NewReseedArtifacts()
 	if _, err := artifacts.Prepare(t.Context(), leasecontract.Record{}); err == nil || !strings.Contains(err.Error(), "without an execution") {
 		t.Fatalf("prepare err=%v", err)
 	}
@@ -35,7 +27,7 @@ func TestReseedArtifactsRequireAnExecution(t *testing.T) {
 func TestReseedArtifactsPrepareWritesTokenWhoseHashMatchesReceipt(t *testing.T) {
 	root := t.TempDir()
 	record := reseedArtifactRecord(root, 4)
-	receipt, err := NewReseedArtifacts(nil).Prepare(t.Context(), record)
+	receipt, err := NewReseedArtifacts().Prepare(t.Context(), record)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,38 +41,16 @@ func TestReseedArtifactsPrepareWritesTokenWhoseHashMatchesReceipt(t *testing.T) 
 	if receipt.Receipt.Execution.Lease.Generation != 4 || len(receipt.TargetPaths) != 1 || receipt.TargetPaths[0] != receipt.Receipt.ClaimTokenPath {
 		t.Fatalf("receipt=%+v", receipt)
 	}
-	second, err := NewReseedArtifacts(nil).Prepare(t.Context(), record)
+	second, err := NewReseedArtifacts().Prepare(t.Context(), record)
 	if err != nil || second.TokenSHA256 == receipt.TokenSHA256 {
 		t.Fatalf("re-prepare must mint a fresh token: err=%v", err)
-	}
-}
-
-func TestReseedArtifactsPrepareRemovesTokenWhenOrcaOwnerWriterIsMissingOrFails(t *testing.T) {
-	root := t.TempDir()
-	record := orcaReseedArtifactRecord(root, 2)
-	if _, err := NewReseedArtifacts(nil).Prepare(t.Context(), record); err == nil || !strings.Contains(err.Error(), "owner artifact writer is required") {
-		t.Fatalf("missing writer err=%v", err)
-	}
-	if _, err := os.Lstat(reseedTokenPath(record)); !os.IsNotExist(err) {
-		t.Fatalf("token left behind after missing writer: %v", err)
-	}
-
-	foreign := filepath.Join(root, "elsewhere.md")
-	outside := NewReseedArtifacts(func(context.Context, leasecontract.Record) (leasecontract.ReseedReceipt, error) {
-		return leasecontract.ReseedReceipt{OwnerPromptPath: foreign}, nil
-	})
-	if _, err := outside.Prepare(t.Context(), record); err == nil || !strings.Contains(err.Error(), "outside the target generation") {
-		t.Fatalf("outside receipt err=%v", err)
-	}
-	if _, err := os.Lstat(reseedTokenPath(record)); !os.IsNotExist(err) {
-		t.Fatalf("token left behind after rejected receipt: %v", err)
 	}
 }
 
 func TestReseedArtifactsCleanupSupersededRemovesOnlyTheTokenOfThatGeneration(t *testing.T) {
 	root := t.TempDir()
 	old, current := reseedArtifactRecord(root, 1), reseedArtifactRecord(root, 2)
-	artifacts := NewReseedArtifacts(nil)
+	artifacts := NewReseedArtifacts()
 	oldReceipt, err := artifacts.Prepare(t.Context(), old)
 	if err != nil {
 		t.Fatal(err)
@@ -107,23 +77,17 @@ func TestValidateReseedReceiptTargetsRejectsEmptyAndForeignPaths(t *testing.T) {
 	if err := validateReseedReceiptTargets(leasecontract.ReseedReceipt{}, nil); err == nil || !strings.Contains(err.Error(), "no target generation paths") {
 		t.Fatalf("empty targets err=%v", err)
 	}
-	targets := []string{"/a/token", "/a/context", "/a/prompt"}
-	if err := validateReseedReceiptTargets(leasecontract.ReseedReceipt{ClaimTokenPath: "/a/token", ContextPacketPath: "/a/context"}, targets); err != nil {
+	targets := []string{"/a/token"}
+	if err := validateReseedReceiptTargets(leasecontract.ReseedReceipt{ClaimTokenPath: "/a/token"}, targets); err != nil {
 		t.Fatalf("in-target receipt rejected: %v", err)
 	}
-	for name, receipt := range map[string]leasecontract.ReseedReceipt{
-		"token":   {ClaimTokenPath: "/b/token"},
-		"context": {ContextPacketPath: "/b/context"},
-		"prompt":  {OwnerPromptPath: "/b/prompt"},
-	} {
-		if err := validateReseedReceiptTargets(receipt, targets); err == nil || !strings.Contains(err.Error(), "outside the target generation") {
-			t.Fatalf("%s err=%v", name, err)
-		}
+	if err := validateReseedReceiptTargets(leasecontract.ReseedReceipt{ClaimTokenPath: "/b/token"}, targets); err == nil || !strings.Contains(err.Error(), "outside the target generation") {
+		t.Fatalf("foreign token err=%v", err)
 	}
 }
 
 func TestReseedArtifactsCleanupSupersededRejectsMissingOrSymlinkedRoot(t *testing.T) {
-	artifacts := NewReseedArtifacts(nil)
+	artifacts := NewReseedArtifacts()
 
 	missing := reseedArtifactRecord(filepath.Join(t.TempDir(), "absent"), 1)
 	if err := artifacts.CleanupSuperseded(t.Context(), missing); !errors.Is(err, fs.ErrNotExist) {

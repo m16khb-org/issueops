@@ -289,122 +289,17 @@ func TestCleanupAbandonResolvedChildrenCountsOnlyDone(t *testing.T) {
 	}
 }
 
-func TestValidateCleanupAbandonPendingRejections(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "io-1", Execution: &model.Execution{Mode: model.ExecutionModeOrca, Pending: &model.ExternalIntent{Kind: "create_worktree"}}}
-	if err := ValidateCleanupAbandonPending(record, false, true); err != nil {
-		t.Fatalf("settled local intent: %v", err)
+func TestCleanupAbandonPendingErrorBlocksOnlyWhenIntentRemains(t *testing.T) {
+	if got := CleanupAbandonPendingError(model.IssueOpsRecord{ID: "io-1"}); got != "" {
+		t.Fatalf("no execution = %q", got)
 	}
-	err := ValidateCleanupAbandonPending(record, false, false)
-	if err == nil || !strings.Contains(err.Error(), `"create_worktree"`) || !strings.Contains(err.Error(), "--id io-1") {
-		t.Fatalf("non-local kind: %v", err)
+	if got := CleanupAbandonPendingError(model.IssueOpsRecord{ID: "io-1", Execution: &model.Execution{}}); got != "" {
+		t.Fatalf("no pending intent = %q", got)
 	}
-	if err := ValidateCleanupAbandonPending(record, true, true); err == nil || !strings.Contains(err.Error(), "still exists") {
-		t.Fatalf("present worktree: %v", err)
-	}
-	record.Execution.Mode = model.ExecutionModeDirect
-	if err := ValidateCleanupAbandonPending(record, false, true); err == nil || !strings.Contains(err.Error(), "Orca execution record") {
-		t.Fatalf("non-orca mode: %v", err)
-	}
-}
-
-func TestValidateCleanupAbandonIntentIdentity(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "io-1", Execution: &model.Execution{
-		Lease: model.WriteLease{Generation: 3}, Pending: &model.ExternalIntent{Marker: "m", Kind: "k"},
-	}}
-	ok := CleanupAbandonIntentIdentity{LifecycleID: "io-1", Marker: "m", PendingKind: "k", Generation: 3}
-	if err := ValidateCleanupAbandonIntent(record, ok); err != nil {
-		t.Fatalf("matching identity: %v", err)
-	}
-	for name, mutate := range map[string]func(*CleanupAbandonIntentIdentity){
-		"lifecycle":  func(i *CleanupAbandonIntentIdentity) { i.LifecycleID = "io-2" },
-		"marker":     func(i *CleanupAbandonIntentIdentity) { i.Marker = "x" },
-		"generation": func(i *CleanupAbandonIntentIdentity) { i.Generation = 4 },
-		"kind":       func(i *CleanupAbandonIntentIdentity) { i.PendingKind = "other" },
-	} {
-		id := ok
-		mutate(&id)
-		if err := ValidateCleanupAbandonIntent(record, id); err == nil || !strings.Contains(err.Error(), "does not belong") {
-			t.Errorf("%s mismatch accepted: %v", name, err)
-		}
-	}
-}
-
-func TestValidateCleanupAbandonIntentObservationErrorWrapsCause(t *testing.T) {
-	cause := errors.New("boom")
-	err := ValidateCleanupAbandonIntentObservation("create", 0, true, cause)
-	if !errors.Is(err, cause) || !strings.Contains(err.Error(), "ambiguous") {
-		t.Fatalf("error must wrap cause: %v", err)
-	}
-	if err := ValidateCleanupAbandonIntentObservation("create", 2, true, nil); err == nil || !strings.Contains(err.Error(), "2 candidate") {
-		t.Fatalf("candidates: %v", err)
-	}
-	if err := ValidateCleanupAbandonIntentObservation("create", 0, false, nil); err == nil || !strings.Contains(err.Error(), "non-authoritative") {
-		t.Fatalf("non-authoritative zero: %v", err)
-	}
-}
-
-func TestCleanupAbandonPendingRecoveryAppendsGuidanceUnlessCauseAlreadyGuides(t *testing.T) {
-	got := CleanupAbandonPendingRecovery("io-1", errors.New("intent unsettled"))
-	if !strings.HasPrefix(got, "intent unsettled; run `issueops execution reconcile --id io-1 --preview --json`") || !strings.Contains(got, "orca worktree remove") ||
-		strings.Count(got, "issueops execution reconcile") != 1 {
-		t.Fatalf("guidance missing or repeated: %s", got)
-	}
-	already := "run execution reconcile to settle the worktree"
-	if got := CleanupAbandonPendingRecovery("io-1", errors.New(already)); got != already {
-		t.Fatalf("guided cause must pass through, got %s", got)
-	}
-	partial := "execution reconcile only"
-	if got := CleanupAbandonPendingRecovery("io-1", errors.New(partial)); got == partial {
-		t.Fatal("cause lacking worktree guidance must be extended")
-	}
-}
-
-func TestCleanupAbandonOrcaTargetRequiresOrcaTaskBinding(t *testing.T) {
-	binding := &model.OrcaBinding{TaskID: "t1"}
-	rec := model.IssueOpsRecord{Execution: &model.Execution{Mode: model.ExecutionModeOrca, Orca: binding}}
-	if got := CleanupAbandonOrcaTarget(rec); got != binding {
-		t.Fatalf("binding expected, got %v", got)
-	}
-	for name, r := range map[string]model.IssueOpsRecord{
-		"no execution":  {},
-		"direct mode":   {Execution: &model.Execution{Mode: model.ExecutionModeDirect, Orca: binding}},
-		"no binding":    {Execution: &model.Execution{Mode: model.ExecutionModeOrca}},
-		"blank task id": {Execution: &model.Execution{Mode: model.ExecutionModeOrca, Orca: &model.OrcaBinding{TaskID: "  "}}},
-	} {
-		if got := CleanupAbandonOrcaTarget(r); got != nil {
-			t.Errorf("%s: want nil, got %v", name, got)
-		}
-	}
-}
-
-func TestCleanupAbandonAllowsRuntimeRolloverNeedsHolderlessLease(t *testing.T) {
-	rec := model.IssueOpsRecord{Execution: &model.Execution{}}
-	if !CleanupAbandonAllowsRuntimeRollover(rec, true) {
-		t.Fatal("holderless lease must allow rollover")
-	}
-	if CleanupAbandonAllowsRuntimeRollover(rec, false) {
-		t.Fatal("caller says not holderless")
-	}
-	rec.Execution.Lease.Holder = &model.NativeActor{Host: "h", SessionID: "s"}
-	if CleanupAbandonAllowsRuntimeRollover(rec, true) {
-		t.Fatal("a recorded holder must block rollover")
-	}
-}
-
-func TestValidateCleanupAbandonOrcaObservationRefusals(t *testing.T) {
-	if err := ValidateCleanupAbandonOrcaObservation(CleanupAbandonOrcaObservation{InspectorAvailable: true}); err != nil {
-		t.Fatalf("quiet orca: %v", err)
-	}
-	if err := ValidateCleanupAbandonOrcaObservation(CleanupAbandonOrcaObservation{}); err == nil || !strings.Contains(err.Error(), "not configured") {
-		t.Fatalf("missing inspector: %v", err)
-	}
-	cause := errors.New("rpc down")
-	if err := ValidateCleanupAbandonOrcaObservation(CleanupAbandonOrcaObservation{InspectorAvailable: true, Err: cause}); !errors.Is(err, cause) {
-		t.Fatalf("inventory error must wrap cause: %v", err)
-	}
-	err := ValidateCleanupAbandonOrcaObservation(CleanupAbandonOrcaObservation{InspectorAvailable: true, TaskLive: true, TaskStatus: "running", DispatchStatus: "dispatched"})
-	if err == nil || !strings.Contains(err.Error(), `task_status="running"`) || !strings.Contains(err.Error(), `dispatch_status="dispatched"`) {
-		t.Fatalf("live task: %v", err)
+	record := model.IssueOpsRecord{ID: "io-1", Execution: &model.Execution{Pending: &model.ExternalIntent{Kind: "remote_pr_create"}}}
+	got := CleanupAbandonPendingError(record)
+	if !strings.Contains(got, `"remote_pr_create"`) || !strings.Contains(got, "issueops execution reconcile --id io-1 --preview --json") {
+		t.Fatalf("pending guidance = %q", got)
 	}
 }
 

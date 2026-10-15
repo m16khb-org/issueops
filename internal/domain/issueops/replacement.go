@@ -47,16 +47,6 @@ func FinalizeReplacement(lease model.WriteLease, workspaceAbsent bool, tokenSHA 
 	}
 	return lease
 }
-func SealReplacementOwner(binding *model.OrcaBinding, generation uint64, artifacts model.ReplacementArtifacts) {
-	if binding == nil {
-		return
-	}
-	binding.LeaseGeneration = generation
-	binding.ArtifactIdentityVersion = model.OrcaArtifactIdentityVersion
-	binding.IssueBodySHA256 = artifacts.IssueBodySHA256
-	binding.ContextPacketSHA256 = artifacts.ContextPacketSHA256
-	binding.OwnerPromptSHA256 = artifacts.OwnerPromptSHA256
-}
 func CompletedReplacementBase(record model.IssueOpsRecord, selected uint64) (bool, error) {
 	execution := record.Execution
 	if execution == nil || execution.Completion == nil || (execution.Lease.Status != model.LeaseStatusReleased && execution.Lease.Status != model.LeaseStatusClaimable) {

@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"errors"
 	issueopscore "issueops/internal/adapter/issueops"
-	"issueops/internal/adapter/orca"
 	commandparsecontract "issueops/internal/contract/commandparse"
 	executionissue "issueops/internal/contract/executionissue"
 	issueopscontract "issueops/internal/contract/issueops"
@@ -95,9 +94,8 @@ func TestBindCleanupNextCommandMissingObserverHasNoFallback(t *testing.T) {
 func TestCurrentRelayCleanupGeneratedCommandDogfood(t *testing.T) {
 	command := testCleanupCommand()
 	binary := os.Getenv("ISSUEOPS_CURRENT_RELAY_DOGFOOD_BINARY")
-	lifecycleID := os.Getenv("ISSUEOPS_CURRENT_RELAY_DOGFOOD_ID")
-	if binary == "" || lifecycleID == "" {
-		t.Skip("live current-relay dogfood requires an exact binary and lifecycle id")
+	if binary == "" {
+		t.Skip("live current-relay dogfood requires an exact binary")
 	}
 	binary, err := filepath.EvalSymlinks(binary)
 	if err != nil {
@@ -108,25 +106,9 @@ func TestCurrentRelayCleanupGeneratedCommandDogfood(t *testing.T) {
 		t.Fatal(err)
 	}
 	binaryHash := sha256.Sum256(binaryBytes)
-	live, err := issueopscore.ReadIssueOps(issueOpsStateRootForTest(), lifecycleID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if live.Execution == nil || live.Execution.Orca == nil {
-		t.Fatal("live dogfood lifecycle is not an Orca execution")
-	}
 
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := cleanupStatusRecord(t, true, true)
-	binding := *live.Execution.Orca
-	binding.WorktreeID = binding.RepoID + "::" + filepath.Join(t.TempDir(), "absent-cleanup-worktree")
-	binding.WorktreeInstanceID = "303-cleanup-dogfood-absent"
-	binding.TaskID = "task-303-cleanup-dogfood-absent"
-	binding.DispatchID = "ctx-303-cleanup-dogfood-absent"
-	binding.TerminalPTYID = "pty-303-cleanup-dogfood-absent"
-	record.Execution.Mode = issueopscontract.ExecutionModeOrca
-	record.Execution.Workspace.Driver = "orca"
-	record.Execution.Orca = &binding
 	if _, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
@@ -138,8 +120,6 @@ func TestCurrentRelayCleanupGeneratedCommandDogfood(t *testing.T) {
 		URL: record.IssueURL, Body: issueopscontract.IssueBodyCompletionStartMarker, State: "closed",
 	}}}
 	var printed any
-	removeCalls := 0
-	client := orca.New()
 	deps := cleanupStatusDeps(nil)
 	deps.Provenance = observer
 	deps.PrintJSON = func(value any) error { printed = value; return nil }
@@ -157,21 +137,6 @@ func TestCurrentRelayCleanupGeneratedCommandDogfood(t *testing.T) {
 	deps.VerifyMergedHead = func(issueopscontract.IssueOpsRemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
 		return issueopscontract.CleanupRemoteBranchArtifactHead{HeadRefName: record.Branch, HeadRefOID: "abc123", BaseRefName: "main"}, nil
 	}
-	deps.RemoveOrcaWorktree = func(ctx context.Context, worktreeID string) error {
-		removeCalls++
-		err := client.RemoveWorktree(ctx, worktreeID, false)
-		if err != nil {
-			var orcaErr *port.OrcaError
-			if errors.As(err, &orcaErr) && strings.Contains(strings.ToLower(orcaErr.Code), "not_found") {
-				return nil
-			}
-			message := strings.ToLower(err.Error())
-			if strings.Contains(message, "not found") || strings.Contains(message, "unknown worktree") {
-				return nil
-			}
-		}
-		return err
-	}
 	if err := command.RunCleanup([]string{"finish", "--id", record.ID, "--preview", "--json"}, deps); err != nil {
 		t.Fatal(err)
 	}
@@ -180,10 +145,10 @@ func TestCurrentRelayCleanupGeneratedCommandDogfood(t *testing.T) {
 		t.Fatalf("cleanup current-relay preview = %#v", printed)
 	}
 	tokens := shelltoken.SplitCommandTokens(preview.NextCommand)
-	if len(tokens) < 4 || tokens[0] != binary || tokens[1] != "issueops" || tokens[2] != "cleanup" {
+	if len(tokens) < 3 || tokens[0] != binary || tokens[1] != "cleanup" {
 		t.Fatalf("cleanup generated command = %q", preview.NextCommand)
 	}
-	clean, provenance, present, err := commandparsecontract.ConsumeGeneratedCommandProvenance(tokens[2:])
+	clean, provenance, present, err := commandparsecontract.ConsumeGeneratedCommandProvenance(tokens[1:])
 	if err != nil || !present {
 		t.Fatalf("cleanup generated provenance err=%v present=%t", err, present)
 	}
@@ -195,9 +160,6 @@ func TestCurrentRelayCleanupGeneratedCommandDogfood(t *testing.T) {
 	}
 	if err := command.RunCleanup(clean[1:], deps); err != nil {
 		t.Fatal(err)
-	}
-	if removeCalls != 1 {
-		t.Fatalf("current relay remove calls = %d, want 1", removeCalls)
 	}
 	if _, err := issueopscore.ReadIssueOps(issueOpsStateRootForTest(), record.ID); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("cleanup dogfood record was not deleted: %v", err)

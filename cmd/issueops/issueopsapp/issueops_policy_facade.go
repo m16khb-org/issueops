@@ -4,7 +4,6 @@ import (
 	"issueops/cmd/issueops/issueopscli"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
 	issueopscontract "issueops/internal/contract/issueops"
-	issueopsport "issueops/internal/port"
 
 	clicatalog "issueops/internal/adapter/inbound/catalog/cli"
 
@@ -28,12 +27,12 @@ func issueOpsCLIDependencies() issueopscli.Dependencies {
 		Execution:      newIssueOpsExecutionRunners(), HandoffCmux: issueOpsCmuxHandoffHandler,
 		Runtime: newIssueOpsCLIRuntime(issueOpsStateRoot()), Gates: newIssueOpsCLIGates(),
 		Usage: clicatalog.LifecycleUsage(), ChildUsage: clicatalog.ChildUsage(),
-		Prepare: execution.Prepare, Orca: execution.Orca, OrcaOwner: execution.OrcaOwner,
-		BaseSync: basesyncoutbound.NewInspector(basesyncoutbound.RunGit), ReadIssue: execution.ReadIssue,
-		Status: issueOpsExecutionStatusHandler, Replace: newIssueOpsReplacementHandler(),
+		Prepare:  execution.Prepare,
+		BaseSync: basesyncoutbound.NewInspector(basesyncoutbound.RunGit),
+		Status:   issueOpsExecutionStatusHandler, Replace: newIssueOpsReplacementHandler(),
 		Claim: issueopscontract.ExecutionClaimHandler(issueOpsClaimHandler), Release: issueopscontract.ExecutionReleaseHandler(issueOpsReleaseHandler),
-		Reseed: issueopscontract.ExecutionReseedHandler(issueOpsReseedHandler), Resume: issueopscontract.ExecutionResumeHandler(issueOpsResumeHandler),
-		Reconcile: issueopsport.ExecutionReconcileHandler(issueOpsReconcileHandler), Complete: issueopscontract.ExecutionCompleteHandler(issueOpsCompleteHandler),
+		Reseed:     issueopscontract.ExecutionReseedHandler(issueOpsReseedHandler),
+		Complete:   issueopscontract.ExecutionCompleteHandler(issueOpsCompleteHandler),
 		Provenance: provenanceadapter.NewExecutableObserver(),
 		Publication: remotecmd.PublicationHandlers{
 			Create:    issueopscontract.RemotePullRequestCreateHandler(issueOpsPublicationCreateHandler),

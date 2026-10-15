@@ -32,7 +32,7 @@ func TestCleanupAbandonClearsAsymmetricResidue(t *testing.T) {
 		})
 		result, err := CleanupAbandon(context.Background(), stateRoot,
 			abandonRequest(record.ID, false, "worktree was reclaimed elsewhere"),
-			abandonDeps(&fakeAbandonGit{branchOID: "abc123"}, authoritativeZeroOrca()))
+			abandonDeps(&fakeAbandonGit{branchOID: "abc123"}))
 		if err != nil {
 			t.Fatalf("branch만 남은 잔여물도 정리 가능해야 한다: %v missing=%v", err, result.Missing)
 		}
@@ -57,7 +57,7 @@ func TestCleanupAbandonClearsAsymmetricResidue(t *testing.T) {
 		git := &asymmetricAbandonGit{root: root, branch: record.Branch, head: "abc123"}
 		result, err := CleanupAbandon(context.Background(), stateRoot,
 			abandonRequest(record.ID, false, "branch ref was removed elsewhere"),
-			CleanupAbandonDeps{Processes: quietCleanupProcesses(), Git: git.run, Orca: authoritativeZeroOrca()})
+			CleanupAbandonDeps{Processes: quietCleanupProcesses(), Git: git.run})
 		if err != nil {
 			t.Fatalf("worktree만 남은 잔여물도 정리 가능해야 한다: %v missing=%v", err, result.Missing)
 		}
@@ -81,7 +81,7 @@ func TestCleanupAbandonStillGatesEachAxisOnItsOwnEvidence(t *testing.T) {
 			rec.Execution = abandonExecution(rec.Repo, root, issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased})
 		})
 		result, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""),
-			abandonDeps(&fakeAbandonGit{}, authoritativeZeroOrca()))
+			abandonDeps(&fakeAbandonGit{}))
 		if err == nil || !containsString(result.Missing, "worktree_canonical") {
 			t.Fatalf("registry가 인정하지 않는 worktree는 계속 막아야 한다: %v %v", err, result.Missing)
 		}
@@ -99,7 +99,7 @@ func TestCleanupAbandonStillGatesEachAxisOnItsOwnEvidence(t *testing.T) {
 		})
 		git := &asymmetricAbandonGit{root: root, branch: record.Branch, head: "aaa", branchOID: "bbb"}
 		result, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""),
-			CleanupAbandonDeps{Processes: quietCleanupProcesses(), Git: git.run, Orca: authoritativeZeroOrca()})
+			CleanupAbandonDeps{Processes: quietCleanupProcesses(), Git: git.run})
 		if err == nil || !containsString(result.Missing, "local_branch_head") {
 			t.Fatalf("쌍이 있는데 head가 갈리면 계속 막아야 한다: %v %v", err, result.Missing)
 		}

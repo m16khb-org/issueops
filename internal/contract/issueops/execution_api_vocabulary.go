@@ -8,8 +8,6 @@ var (
 	ErrClaimHandlerUnavailable                      = errors.New("issueops execution claim handler is not configured")
 	ErrReleaseHandlerUnavailable                    = errors.New("issueops execution release handler is not configured")
 	ErrReseedHandlerUnavailable                     = errors.New("issueops execution reseed handler is not configured")
-	ErrResumeHandlerUnavailable                     = errors.New("issueops execution resume handler is not configured")
-	ErrReconcileHandlerUnavailable                  = errors.New("issueops execution reconcile handler is not configured")
 	ErrCompleteHandlerUnavailable                   = errors.New("issueops execution complete handler is not configured")
 	ErrRemotePullRequestCreateHandlerUnavailable    = errors.New("remote pull request provider is unavailable")
 	ErrRemotePullRequestReconcileHandlerUnavailable = errors.New("remote reconcile provider is unavailable")
@@ -21,7 +19,6 @@ const (
 	ExecutionActionClaim            = "claim"
 	ExecutionActionRelease          = "release"
 	ExecutionActionReplace          = "replace"
-	ExecutionActionResume           = "resume"
 	ExecutionActionReconcile        = "reconcile"
 	ExecutionActionComplete         = "complete"
 	ExecutionReplacePreview         = "preview"

@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	executionissue "issueops/internal/contract/executionissue"
 	model "issueops/internal/contract/issueops"
 	"issueops/internal/port"
 	provenanceport "issueops/internal/port/issueopsprovenance"
@@ -65,7 +64,7 @@ func TestSubcommandHelpFlagExitsWithoutExecuting(t *testing.T) {
 		calls++
 		return nil, nil
 	}}}
-	for _, sub := range []string{"status", "prepare", "release", "complete", "reconcile", "replace", "claim", "resume", "whoami", "sync-base", "switch-mode", "handoff-cmux"} {
+	for _, sub := range []string{"status", "prepare", "release", "complete", "reconcile", "replace", "claim", "whoami", "sync-base", "handoff-cmux"} {
 		var runErr error
 		testsupport.CaptureStderr(t, func() error { runErr = Run([]string{sub, "-h"}, deps); return nil })
 		if runErr != nil {
@@ -78,7 +77,7 @@ func TestSubcommandHelpFlagExitsWithoutExecuting(t *testing.T) {
 }
 
 func TestSubcommandsRejectUnknownFlags(t *testing.T) {
-	for _, sub := range []string{"status", "prepare", "release", "complete", "reconcile", "replace", "claim", "resume", "whoami", "sync-base", "switch-mode", "handoff-cmux"} {
+	for _, sub := range []string{"status", "prepare", "release", "complete", "reconcile", "replace", "claim", "whoami", "sync-base", "handoff-cmux"} {
 		var runErr error
 		testsupport.CaptureStderr(t, func() error { runErr = Run([]string{sub, "--no-such-flag"}, Deps{}); return nil })
 		if runErr == nil || !strings.Contains(runErr.Error(), "flag provided but not defined") {
@@ -135,7 +134,7 @@ func TestStatusReleaseCompleteReconcileMapFlagsToActionRequests(t *testing.T) {
 	if err := Run(args, deps); err != nil {
 		t.Fatal(err)
 	}
-	if got.Action != model.ExecutionActionReconcile || got.ID != "io-4" || !got.Preview || !got.Confirm || got.IssueSnapshot != nil {
+	if got.Action != model.ExecutionActionReconcile || got.ID != "io-4" || !got.Preview || !got.Confirm {
 		t.Fatalf("reconcile req=%+v", got)
 	}
 	if len(printed) != 4 {
@@ -143,71 +142,68 @@ func TestStatusReleaseCompleteReconcileMapFlagsToActionRequests(t *testing.T) {
 	}
 }
 
-func TestReconcileAndPrepareAndReplaceRejectUnreadableSnapshotFileBeforeExecuting(t *testing.T) {
-	missing := filepath.Join(t.TempDir(), "none.json")
-	for name, args := range map[string][]string{
-		"prepare":   {"prepare", "--id", "io-1", "--issue-snapshot-file", missing},
-		"reconcile": {"reconcile", "--id", "io-1", "--issue-snapshot-file", missing},
-		"replace":   {"replace", "--id", "io-1", "--preview", "--issue-snapshot-file", missing},
-		"claim":     append([]string{"claim", "--id", "io-1", "--claim-current-token", "--issue-snapshot-file", missing}, explicitActorArgs...),
-	} {
-		t.Run(name, func(t *testing.T) {
-			var got model.ExecutionActionRequest
-			var printed []any
-			errPrinted := 0
-			deps := capturingDeps(&got, &printed, nil, nil)
-			deps.PrintError = func(error) error { errPrinted++; return nil }
-			err := Run(append(args, "--json"), deps)
-			if err == nil || !strings.Contains(err.Error(), "inspect issue snapshot file") {
-				t.Fatalf("err=%v", err)
-			}
-			if got.Action != "" || len(printed) != 0 || errPrinted != 1 {
-				t.Fatalf("executed=%q printed=%d errPrinted=%d", got.Action, len(printed), errPrinted)
-			}
-		})
-	}
-}
-
-func TestPrepareMapsOwnerDirectReasonAndFingerprintFlags(t *testing.T) {
-	dir := t.TempDir()
-	snapshot := filepath.Join(dir, "s.json")
-	if err := os.WriteFile(snapshot, []byte(validExecutionSnapshotJSON()), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chmod(snapshot, 0o600); err != nil {
-		t.Fatal(err)
-	}
+func TestPrepareMapsActorAndConfirmFlags(t *testing.T) {
 	var got model.ExecutionActionRequest
 	var printed []any
 	deps := capturingDeps(&got, &printed, model.ExecutionPrepareResult{OK: true}, nil)
-	args := append([]string{
-		"prepare", "--id", "io-1", "--owner-host", "claude", "--owner-model", "m", "--owner-effort", "high",
-		"--direct-reason", "no orca", "--expected-readiness-fingerprint", "fp", "--confirm", "--issue-snapshot-file", snapshot, "--json",
-	}, explicitActorArgs...)
+	args := append([]string{"prepare", "--id", "io-1", "--confirm", "--json"}, explicitActorArgs...)
 	if err := Run(args, deps); err != nil {
 		t.Fatal(err)
 	}
-	want := model.ExecutionActionRequest{
-		Action: model.ExecutionActionPrepare, ID: "io-1", Mode: "auto", CWD: "/work", OwnerHost: "claude", OwnerModel: "m", OwnerEffort: "high",
-		IssueSnapshotFile: snapshot, DirectReason: "no orca", ExpectedReadinessFingerprint: "fp", Confirm: true,
-		IssueSnapshot: &executionissue.ExecutionIssueSnapshotEvidence{Provider: "gitlab", Source: "glab_mcp", WebURL: "https://gitlab.example.com/acme/repo/-/issues/69", Body: "AC-69", State: "opened"},
-	}
+	want := model.ExecutionActionRequest{Action: model.ExecutionActionPrepare, ID: "io-1", CWD: "/work", Confirm: true}
 	got.Actor = model.NativeActor{}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got=%+v\nwant=%+v", got, want)
 	}
 }
 
-func TestClaimMapsExplicitActorAndDigests(t *testing.T) {
+func TestRemovedFlagsAreRejected(t *testing.T) {
+	removed := []struct{ sub, flag, value string }{
+		{"prepare", "mode", "direct"},
+		{"prepare", "owner-host", "codex"},
+		{"prepare", "owner-model", "m"},
+		{"prepare", "owner-effort", "high"},
+		{"prepare", "direct-reason", "why"},
+		{"prepare", "expected-readiness-fingerprint", "fp"},
+		{"prepare", "issue-snapshot-file", "/tmp/s.json"},
+		{"claim", "issue-body-sha256", "aa"},
+		{"claim", "context-packet-sha256", "bb"},
+		{"claim", "issue-snapshot-file", "/tmp/s.json"},
+		{"replace", "issue-snapshot-file", "/tmp/s.json"},
+		{"reconcile", "issue-snapshot-file", "/tmp/s.json"},
+	}
+	for _, tc := range removed {
+		t.Run(tc.sub+" --"+tc.flag, func(t *testing.T) {
+			calls := 0
+			deps := Deps{StateRoot: func() string { return "/s" }, Runtime: ExecutionDeps{ExecuteExecution: func(context.Context, string, model.ExecutionActionRequest, port.ExecutionActionDependencies) (any, error) {
+				calls++
+				return nil, nil
+			}}}
+			var runErr error
+			testsupport.CaptureStderr(t, func() error {
+				runErr = Run([]string{tc.sub, "--id", "io-1", "--" + tc.flag, tc.value}, deps)
+				return nil
+			})
+			if runErr == nil || !strings.Contains(runErr.Error(), "flag provided but not defined") {
+				t.Fatalf("err=%v", runErr)
+			}
+			if calls != 0 {
+				t.Fatalf("rejected flag executed %d times", calls)
+			}
+		})
+	}
+}
+
+func TestClaimMapsExplicitActorAndToken(t *testing.T) {
 	var got model.ExecutionActionRequest
 	var printed []any
 	deps := capturingDeps(&got, &printed, model.ExecutionResult{}, nil)
-	args := append([]string{"claim", "--id", "io-1", "--generation", "9", "--claim-token-file", "/tok", "--issue-body-sha256", "aa", "--context-packet-sha256", "bb", "--json"}, explicitActorArgs...)
+	args := append([]string{"claim", "--id", "io-1", "--generation", "9", "--claim-token-file", "/tok", "--json"}, explicitActorArgs...)
 	if err := Run(args, deps); err != nil {
 		t.Fatal(err)
 	}
 	if got.Action != model.ExecutionActionClaim || got.Generation != 9 || got.TokenFile != "/tok" || got.ClaimCurrentToken ||
-		got.IssueBodySHA256 != "aa" || got.ContextPacketSHA256 != "bb" || got.CWD != "/work" || got.Actor.Host != "codex" || got.Actor.SessionID != "sess-1" {
+		got.CWD != "/work" || got.Actor.Host != "codex" || got.Actor.SessionID != "sess-1" {
 		t.Fatalf("claim req=%+v", got)
 	}
 	err := Run([]string{"claim", "--id", "io-1", "--json"}, deps)
@@ -247,19 +243,6 @@ func TestReplaceRequiresExactlyOneActionAndExplicitOrNoActor(t *testing.T) {
 	}
 }
 
-func TestResumeRejectsPartialActorFlagsBeforeExecuting(t *testing.T) {
-	var got model.ExecutionActionRequest
-	var printed []any
-	deps := capturingDeps(&got, &printed, nil, nil)
-	err := Run([]string{"resume", "--id", "io-1", "--cwd", "/work"}, deps)
-	if err == nil || !strings.Contains(err.Error(), "execution resume requires all ACTOR_FLAGS or none") {
-		t.Fatalf("err=%v", err)
-	}
-	if got.Action != "" || len(printed) != 0 {
-		t.Fatalf("resume executed despite rejection: %+v", got)
-	}
-}
-
 func TestResolveNativeActorRejectsUnobservableAndInvalidObservations(t *testing.T) {
 	good := func() nativeActorObservation {
 		return nativeActorObservation{
@@ -276,7 +259,7 @@ func TestResolveNativeActorRejectsUnobservableAndInvalidObservations(t *testing.
 			},
 		}
 	}
-	flags, visited := resumeActorFlagsForTest(t, nil)
+	flags, visited := actorFlagsForTest(t, nil)
 	if _, _, err := resolveNativeActor("claim", flags, visited, good()); err != nil {
 		t.Fatalf("baseline observation rejected: %v", err)
 	}
@@ -496,64 +479,6 @@ func TestSameExistingExecutionPath(t *testing.T) {
 	}
 }
 
-func TestSwitchModeForwardsRequestAndFailsClosed(t *testing.T) {
-	if err := Run([]string{"switch-mode", "--id", "io-1"}, Deps{}); err == nil || err.Error() != "IssueOps state root is unavailable" {
-		t.Fatalf("no state root: %v", err)
-	}
-	if err := Run([]string{"switch-mode", "--id", "io-1"}, Deps{StateRoot: func() string { return "/s" }}); err == nil || err.Error() != "issueops execution is not configured" {
-		t.Fatalf("no runtime: %v", err)
-	}
-	var got model.ExecutionSwitchModeRequest
-	var printed []any
-	deps := Deps{
-		StateRoot: func() string { return "/state" },
-		Runtime: ExecutionDeps{
-			ObserveNativeProcessAncestry: fixedAncestry,
-			SwitchExecutionMode: func(_ context.Context, root string, req model.ExecutionSwitchModeRequest) (model.ExecutionSwitchModeResult, error) {
-				if root != "/state" {
-					t.Fatalf("root=%q", root)
-				}
-				got = req
-				return model.ExecutionSwitchModeResult{OK: true, ID: req.ID}, nil
-			},
-		},
-		PrintJSON: func(v any) error { printed = append(printed, v); return nil },
-	}
-	args := append([]string{"switch-mode", "--id", "io-1", "--mode", "orca", "--fingerprint", "fp", "--apply", "--confirm", "--json"}, explicitActorArgs...)
-	if err := Run(args, deps); err != nil {
-		t.Fatal(err)
-	}
-	if got.ID != "io-1" || got.Mode != "orca" || got.Fingerprint != "fp" || !got.Apply || !got.Confirm || got.CWD != "/work" || got.Actor.SessionID != "sess-1" || len(printed) != 1 {
-		t.Fatalf("req=%+v printed=%d", got, len(printed))
-	}
-}
-
-type ownerInspectingOrca struct{ port.ExecutionOrcaProvisioner }
-
-func (ownerInspectingOrca) InspectOwner(context.Context, port.ExecutionOrcaOwnerInventoryRequest) (port.ExecutionOrcaOwnerInventory, error) {
-	return port.ExecutionOrcaOwnerInventory{}, nil
-}
-
-type explicitOwnerInspector struct{}
-
-func (explicitOwnerInspector) InspectOwner(context.Context, port.ExecutionOrcaOwnerInventoryRequest) (port.ExecutionOrcaOwnerInventory, error) {
-	return port.ExecutionOrcaOwnerInventory{}, nil
-}
-
-func TestActionDepsDerivesOwnerInspectorOnlyFromCapableProvisioner(t *testing.T) {
-	if got := (Deps{Orca: ownerInspectingOrca{}}).actionDeps().OrcaOwner; got == nil {
-		t.Fatal("provisioner that can inspect owners was not promoted")
-	}
-	if got := (Deps{Orca: nil}).actionDeps().OrcaOwner; got != nil {
-		t.Fatalf("owner inspector invented: %v", got)
-	}
-	explicit := explicitOwnerInspector{}
-	got := (Deps{Orca: ownerInspectingOrca{}, OrcaOwner: explicit}).actionDeps().OrcaOwner
-	if _, ok := got.(explicitOwnerInspector); !ok {
-		t.Fatalf("explicit inspector replaced by %T", got)
-	}
-}
-
 func TestOutputRoutesErrorsAndSuccessByJSONMode(t *testing.T) {
 	boom := errors.New("boom")
 	errPrinted := 0
@@ -602,7 +527,7 @@ func TestPrintTextFormatsEachResultKind(t *testing.T) {
 		return model.Execution{Lease: model.WriteLease{Generation: n, Status: status}}
 	}
 	exec := gen(4, "claimed")
-	prepare := model.ExecutionPrepareResult{ID: "io-1", ResolvedMode: "orca"}
+	prepare := model.ExecutionPrepareResult{ID: "io-1"}
 	prepare.Workspace.Root = "/ws"
 	var cmux model.ExecutionCmuxHandoffResult
 	cmux.ID, cmux.Status = "io-1", "delivered"
@@ -613,8 +538,8 @@ func TestPrintTextFormatsEachResultKind(t *testing.T) {
 		value any
 		want  string
 	}{
-		{"prepare without execution", prepare, "io-1 orca /ws generation=0\n"},
-		{"prepare with execution", func() any { p := prepare; p.Execution = &exec; return p }(), "io-1 orca /ws generation=4\n"},
+		{"prepare without execution", prepare, "io-1 /ws generation=0\n"},
+		{"prepare with execution", func() any { p := prepare; p.Execution = &exec; return p }(), "io-1 /ws generation=4\n"},
 		{"execution", model.ExecutionResult{ID: "io-1", Execution: exec}, "io-1 claimed generation=4\n"},
 		{"replace", model.ExecutionReplaceResult{ID: "io-1", Execution: exec, NextCommand: "next"}, "io-1 claimed generation=4 next=next\n"},
 		{"reconcile pending", model.ExecutionReconcileResult{ID: "io-1", Code: "c", Pending: pending}, "io-1 c pending=true\n"},
@@ -649,29 +574,19 @@ func TestRepeatedStringAccumulatesInOrder(t *testing.T) {
 	}
 }
 
-func TestExecutionNextCommandBindsResultAndResumeAndSkipsUnleasedAndUnknown(t *testing.T) {
+func TestExecutionNextCommandBindsResultAndSkipsUnleasedAndUnknown(t *testing.T) {
 	observer := provenanceObserverStub{evidence: provenanceport.Receipt{ExecutablePath: "/repo/bin/issueops", ExecutableSHA256: strings.Repeat("c", 64)}}
 	leased := model.Execution{Lease: model.WriteLease{Generation: 8}}
-	for name, value := range map[string]any{
-		"execution": model.ExecutionResult{Execution: leased, NextCommand: "issueops execution release --id io-1 --generation 8"},
-		"resume":    model.ExecutionResumeResult{Execution: leased, NextCommand: "issueops execution release --id io-1 --generation 8"},
-	} {
-		bound, err := bindExecutionNextCommand(value, observer)
-		if err != nil {
-			t.Fatalf("%s: %v", name, err)
-		}
-		var command string
-		switch r := bound.(type) {
-		case model.ExecutionResult:
-			command = r.NextCommand
-		case model.ExecutionResumeResult:
-			command = r.NextCommand
-		default:
-			t.Fatalf("%s: type %T", name, bound)
-		}
-		if !strings.HasPrefix(command, "'/repo/bin/issueops'") || !strings.Contains(command, "--generated-for-generation 8") {
-			t.Fatalf("%s: command=%q", name, command)
-		}
+	bound, err := bindExecutionNextCommand(model.ExecutionResult{Execution: leased, NextCommand: "issueops execution release --id io-1 --generation 8"}, observer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, ok := bound.(model.ExecutionResult)
+	if !ok {
+		t.Fatalf("type %T", bound)
+	}
+	if !strings.HasPrefix(result.NextCommand, "'/repo/bin/issueops'") || !strings.Contains(result.NextCommand, "--generated-for-generation 8") {
+		t.Fatalf("command=%q", result.NextCommand)
 	}
 	// Without a lease generation or a command nothing is bound, even with no observer.
 	for name, value := range map[string]any{
@@ -683,28 +598,5 @@ func TestExecutionNextCommandBindsResultAndResumeAndSkipsUnleasedAndUnknown(t *t
 		if err != nil || !reflect.DeepEqual(bound, value) {
 			t.Fatalf("%s: bound=%#v err=%v", name, bound, err)
 		}
-	}
-}
-
-func TestReadExecutionIssueSnapshotFileEmptyPathAndMalformedContent(t *testing.T) {
-	got, err := readExecutionIssueSnapshotFile("  ")
-	if got != nil || err != nil {
-		t.Fatalf("blank path: %v %v", got, err)
-	}
-	if _, err := readExecutionIssueSnapshotFile(filepath.Join(t.TempDir(), "none.json")); err == nil || !strings.Contains(err.Error(), "inspect issue snapshot file") {
-		t.Fatalf("missing: %v", err)
-	}
-	if _, err := readExecutionIssueSnapshotFile(writeExecutionSnapshotTestFile(t, "null", 0o600)); err == nil || err.Error() != "issue snapshot file must contain one JSON object" {
-		t.Fatalf("null: %v", err)
-	}
-	if _, err := readExecutionIssueSnapshotFile(writeExecutionSnapshotTestFile(t, validExecutionSnapshotJSON()+" {garbage", 0o600)); err == nil || !strings.Contains(err.Error(), "decode trailing issue snapshot data") {
-		t.Fatalf("garbage trailer: %v", err)
-	}
-	if _, err := readExecutionIssueSnapshotFile(writeExecutionSnapshotTestFile(t, validExecutionSnapshotJSON()+" 7", 0o600)); err == nil || err.Error() != "issue snapshot file must contain exactly one JSON object" {
-		t.Fatalf("second value: %v", err)
-	}
-	ok, err := readExecutionIssueSnapshotFile(writeExecutionSnapshotTestFile(t, validExecutionSnapshotJSON()+"\n", 0o600))
-	if err != nil || ok == nil || ok.Source != "glab_mcp" {
-		t.Fatalf("valid: %+v %v", ok, err)
 	}
 }

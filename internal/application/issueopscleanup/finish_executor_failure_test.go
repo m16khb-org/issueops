@@ -20,9 +20,9 @@ func (r loadFailingFinishRecords) Load(context.Context, string) (model.CleanupSn
 	return model.CleanupSnapshot{}, r.err
 }
 
-func withInventory(executor *FinishExecutor, inventory model.CleanupFinishInventory) {
+func withInventory(executor *FinishExecutor, inventory model.CleanupFinishInventory, occupants ...model.CleanupWorkspaceProcess) {
 	executor.Plan = func(_ context.Context, _ model.IssueOpsRecord, r model.CleanupFinishRequest) (model.CleanupFinishInventory, model.CleanupFinishResult) {
-		return inventory, model.CleanupFinishResult{OK: true, ID: r.ID}
+		return inventory, model.CleanupFinishResult{OK: true, ID: r.ID, WorkspaceProcesses: occupants}
 	}
 }
 
@@ -76,7 +76,7 @@ func TestFinishExecutorRefusesBeforeArmingWhenEvidenceIsMissing(t *testing.T) {
 			if tc.wantIs != nil && !errors.Is(err, tc.wantIs) {
 				t.Fatalf("err=%v, want wrapping %v", err, tc.wantIs)
 			}
-			for _, effect := range []string{"arm", "stop", "orca", "delete"} {
+			for _, effect := range []string{"arm", "stop", "delete"} {
 				if slices.Contains(*events, effect) {
 					t.Fatalf("%s ran before the gates passed: %v", effect, *events)
 				}
@@ -120,26 +120,20 @@ func TestFinishExecutorSurfacesMaterialWarningInPreview(t *testing.T) {
 
 func TestFinishExecutorStepFailuresPreserveTheRecord(t *testing.T) {
 	boom := errors.New("boom")
+	occupant := []model.CleanupWorkspaceProcess{{PID: 7, Command: "sh"}}
 	cases := []struct {
 		name      string
 		inventory model.CleanupFinishInventory
+		occupants []model.CleanupWorkspaceProcess
 		configure func(*FinishExecutor, *finishTestRecords)
 		wantStep  string
 	}{
-		{name: "record check before stop", inventory: model.CleanupFinishInventory{WorktreePresent: true, OrcaRuntimeReady: true}, configure: func(_ *FinishExecutor, r *finishTestRecords) { r.checkErr = boom }, wantStep: model.CleanupFailureStepWorkspaceProcessesStop},
-		{name: "stop fails", inventory: model.CleanupFinishInventory{WorktreePresent: true, OrcaTerminals: []string{"t"}}, configure: func(e *FinishExecutor, _ *finishTestRecords) {
-			e.Stop = func(context.Context, model.CleanupFinishInventory, []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, int, error) {
-				return nil, 0, boom
+		{name: "record check before stop", inventory: model.CleanupFinishInventory{WorktreePresent: true}, occupants: occupant, configure: func(_ *FinishExecutor, r *finishTestRecords) { r.checkErr = boom }, wantStep: model.CleanupFailureStepWorkspaceProcessesStop},
+		{name: "stop fails", inventory: model.CleanupFinishInventory{WorktreePresent: true}, occupants: occupant, configure: func(e *FinishExecutor, _ *finishTestRecords) {
+			e.Stop = func(context.Context, model.CleanupFinishInventory, []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, error) {
+				return nil, boom
 			}
 		}, wantStep: model.CleanupFailureStepWorkspaceProcessesStop},
-		{name: "record check before orca removal", inventory: model.CleanupFinishInventory{OrcaWorktreeID: "orca"}, configure: func(_ *FinishExecutor, r *finishTestRecords) { r.checkErr = boom }, wantStep: model.CleanupFailureStepOrcaRemove},
-		{name: "orca remover missing", inventory: model.CleanupFinishInventory{OrcaWorktreeID: "orca"}, configure: func(e *FinishExecutor, _ *finishTestRecords) { e.RemoveOrca = nil }, wantStep: model.CleanupFailureStepOrcaRemove},
-		{name: "orca removal fails", inventory: model.CleanupFinishInventory{OrcaWorktreeID: "orca"}, configure: func(e *FinishExecutor, _ *finishTestRecords) {
-			e.RemoveOrca = func(context.Context, string) error { return boom }
-		}, wantStep: model.CleanupFailureStepOrcaRemove},
-		{name: "directory unobservable after orca removal", inventory: model.CleanupFinishInventory{OrcaWorktreeID: "orca", WorktreePresent: true, WorktreeRoot: "/wt"}, configure: func(e *FinishExecutor, _ *finishTestRecords) {
-			e.Directory = func(string) (bool, error) { return false, boom }
-		}, wantStep: model.CleanupFailureStepWorktreeRemove},
 		{name: "record check before worktree removal", inventory: model.CleanupFinishInventory{WorktreePresent: true, WorktreeRoot: "/wt"}, configure: func(_ *FinishExecutor, r *finishTestRecords) { r.checkErr = boom }, wantStep: model.CleanupFailureStepWorktreeRemove},
 		{name: "git worktree remove fails and directory remains", inventory: model.CleanupFinishInventory{WorktreePresent: true, WorktreeRoot: "/wt"}, configure: func(e *FinishExecutor, _ *finishTestRecords) {
 			e.Git = func(context.Context, string, ...string) (int, string) { return 128, "dirty" }
@@ -162,7 +156,7 @@ func TestFinishExecutorStepFailuresPreserveTheRecord(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			executor, records, _, events := finishExecutorFixture(t)
-			withInventory(&executor, tc.inventory)
+			withInventory(&executor, tc.inventory, tc.occupants...)
 			tc.configure(&executor, records)
 			result, err := executor.Run(t.Context(), finishApplyRequest())
 			if err == nil || result.FailedStep != tc.wantStep || result.OK || result.RecordDeleted {
@@ -192,20 +186,6 @@ func TestFinishExecutorTreatsAlreadyGoneResourcesAsRemoved(t *testing.T) {
 			t.Fatalf("result=%+v err=%v", result, err)
 		}
 	})
-	t.Run("orca removal already deleted the directory", func(t *testing.T) {
-		executor, _, _, events := finishExecutorFixture(t)
-		withInventory(&executor, model.CleanupFinishInventory{OrcaWorktreeID: "orca", WorktreePresent: true, WorktreeRoot: "/wt"})
-		executor.Directory = func(string) (bool, error) { return false, nil }
-		result, err := executor.Run(t.Context(), finishApplyRequest())
-		if err != nil || !result.OrcaRemoved || !result.WorktreeRemoved {
-			t.Fatalf("result=%+v err=%v", result, err)
-		}
-		for _, event := range *events {
-			if strings.HasPrefix(event, "worktree remove") {
-				t.Fatalf("git worktree remove ran for a vanished directory: %v", *events)
-			}
-		}
-	})
 	t.Run("branch ref vanished after update-ref failure", func(t *testing.T) {
 		executor, _, _, _ := finishExecutorFixture(t)
 		withInventory(&executor, model.CleanupFinishInventory{BranchOID: "oid", Branch: "feature"})
@@ -223,12 +203,16 @@ func TestFinishExecutorTreatsAlreadyGoneResourcesAsRemoved(t *testing.T) {
 }
 
 func TestFinishExecutorSkipsStopWhenNothingOccupiesTheWorktree(t *testing.T) {
-	for name, inventory := range map[string]model.CleanupFinishInventory{
-		"worktree absent": {WorktreePresent: false, OrcaTerminals: []string{"t"}, OrcaRuntimeReady: true},
-		"nothing to stop": {WorktreePresent: true, WorktreeRoot: "/wt"},
+	occupant := model.CleanupWorkspaceProcess{PID: 7, Command: "sh"}
+	for name, plan := range map[string]struct {
+		inventory model.CleanupFinishInventory
+		occupants []model.CleanupWorkspaceProcess
+	}{
+		"worktree absent": {inventory: model.CleanupFinishInventory{WorktreePresent: false}, occupants: []model.CleanupWorkspaceProcess{occupant}},
+		"nothing to stop": {inventory: model.CleanupFinishInventory{WorktreePresent: true, WorktreeRoot: "/wt"}},
 	} {
 		executor, _, _, events := finishExecutorFixture(t)
-		withInventory(&executor, inventory)
+		withInventory(&executor, plan.inventory, plan.occupants...)
 		if _, err := executor.Run(t.Context(), finishApplyRequest()); err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}

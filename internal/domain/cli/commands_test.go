@@ -15,7 +15,7 @@ func TestLifecycleCommandAdmissionAndUsageKeys(t *testing.T) {
 		"  issueops child start --parent ID": "child start",
 		"issueops list [--repo PATH]":        "list",
 		"issueops status (--id ID)":          "status",
-		"issueops execution resume --id ID":  "execution resume",
+		"issueops execution release --id ID": "execution release",
 		"issueops inspect --json":            "",
 		"not-issueops child start":           "",
 	} {

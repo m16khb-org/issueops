@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestBaseSyncRequiredErrorCarriesReseedFreeNextCommand(t *testing.T) {
+func TestBaseSyncRequiredErrorKeepsReseedFreeNextCommand(t *testing.T) {
 	err := NewBaseSyncRequiredError("io-9'x", 7)
 
 	if got := err.Error(); !strings.Contains(got, "io-9'x") || !strings.Contains(got, "completion generation 7") {

@@ -19,7 +19,7 @@ type AbandonExecutor struct {
 	Observe    func(context.Context, model.IssueOpsRecord, model.CleanupAbandonRequest, port.IssueProvider) (model.CleanupAbandonRequest, error)
 	Plan       func(context.Context, model.IssueOpsRecord, model.CleanupAbandonRequest, port.IssueProvider) (model.CleanupAbandonInventory, model.CleanupAbandonResult)
 	NewAttempt func(model.CleanupOperation) (model.IssueOpsCleanupAttempt, error)
-	Stop       func(context.Context, model.CleanupAbandonInventory, []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, int, error)
+	Stop       func(context.Context, model.CleanupAbandonInventory, []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, error)
 	Directory  func(string) (bool, error)
 	Git        func(context.Context, string, ...string) (int, string)
 	Now        func() time.Time
@@ -194,14 +194,14 @@ func (r *abandonRun) execute() (model.CleanupAbandonResult, error) {
 
 func (r *abandonRun) stopWorkspaceProcesses() error {
 	inv := r.inventory
-	if !inv.WorktreePresent || (len(r.result.WorkspaceProcesses) == 0 && len(inv.OrcaTerminals) == 0 && !inv.OrcaRuntimeReady) {
+	if !inv.WorktreePresent || len(r.result.WorkspaceProcesses) == 0 {
 		return nil
 	}
 	if err := r.s.Records.Check(r.ctx, r.snapshot); err != nil {
 		return err
 	}
 	var err error
-	r.result.WorkspaceProcessesStopped, r.result.OrcaTerminalsStopped, err = r.s.Stop(r.ctx, inv, r.result.WorkspaceProcesses)
+	r.result.WorkspaceProcessesStopped, err = r.s.Stop(r.ctx, inv, r.result.WorkspaceProcesses)
 	return err
 }
 

@@ -4,8 +4,7 @@ package cli
 //
 // 전에는 같은 줄이 두 곳에 있었다 — 여기의 최상위 축약 카탈로그와
 // `cmd/issueops/issueopscli`의 전체 목록. 한쪽 누락은 parity 테스트가 잡았지만
-// **양쪽에 아예 없으면** 검사할 대상이 없었고, `execution switch-mode`(#167)가 그
-// 구멍으로 살아남았다(#188).
+// **양쪽에 아예 없으면** 검사할 대상이 없어 문서화되지 않은 명령이 살아남았다(#188).
 //
 // 두 표면은 이제 이 카탈로그의 서로 다른 투영이다:
 //
@@ -44,17 +43,15 @@ const IssueOpsUsageCatalog = `  issueops start --repo PATH [--branch NAME | --ne
   issueops link-plan --id ID --plan-path PATH RECORD_ACTOR_FLAGS [--json]
   issueops artifact stage --id ID --name plan|spec|verified-execution-loop --file PATH [--json]
   issueops artifact unstage --id ID --name plan|spec|verified-execution-loop [--json]
-  issueops execution prepare --id ID --mode auto|direct|orca --owner-host codex|claude|omo|omp [--owner-model MODEL] [--owner-effort EFFORT] [--direct-reason REASON] [--expected-readiness-fingerprint SHA256] [--issue-snapshot-file PATH] ACTOR_FLAGS [--confirm] [--json]
+  issueops execution prepare --id ID ACTOR_FLAGS [--confirm] [--json]
   issueops execution status --id ID [--json]
   issueops execution whoami [--json]
-  issueops execution claim --id ID --generation N (--claim-current-token|--claim-token-file PATH) [--issue-body-sha256 SHA256 --context-packet-sha256 SHA256] [--issue-snapshot-file PATH] [ACTOR_FLAGS] [--json]
+  issueops execution claim --id ID --generation N (--claim-current-token|--claim-token-file PATH) [ACTOR_FLAGS] [--json]
   issueops execution release --id ID --generation N ACTOR_FLAGS [--json]
-  issueops execution replace --id ID --expected-generation N (--preview|--revoke|--finalize-preview|--finalize|--reseed) [--completion-generation N] [--inventory-fingerprint SHA256] [--quiescence-fingerprint SHA256] [--reason TEXT] [--issue-snapshot-file PATH] ACTOR_FLAGS [--confirm] [--json]
-  issueops execution resume --id ID --expected-generation N [ACTOR_FLAGS] --confirm [--json]
-  issueops execution reconcile --id ID (--preview|--confirm) [--issue-snapshot-file PATH] ACTOR_FLAGS [--json]
+  issueops execution replace --id ID --expected-generation N (--preview|--revoke|--finalize-preview|--finalize|--reseed) [--completion-generation N] [--inventory-fingerprint SHA256] [--quiescence-fingerprint SHA256] [--reason TEXT] ACTOR_FLAGS [--confirm] [--json]
+  issueops execution reconcile --id ID (--preview|--confirm) ACTOR_FLAGS [--json]
   issueops execution complete --id ID --generation N --final-head SHA --verification-report PATH --remote-artifact-url URL --verification TEXT... ACTOR_FLAGS --confirm [--json]
   issueops execution sync-base --id ID [--completion-generation N] (--preview | --apply --confirm --fingerprint SHA256 | --finalize | --abort) ACTOR_FLAGS [--json]
-  issueops execution switch-mode --id ID --mode direct|orca [--apply --confirm --fingerprint SHA256] ACTOR_FLAGS [--json]
   issueops execution handoff-cmux --id ID --generation N --cmux-executable ABS --cmux-version VERSION --cmux-build-identity IDENTITY --socket ABS --window UUID --cwd ABS --host codex|claude|omo|omp --host-executable ABS --model MODEL [--effort EFFORT] --prompt-file ABS --prompt-sha256 HEX --material-sha256 HEX [--json]
   issueops phase --id ID --to problem|grill|plan|compatibility-review|implement|ai-slop-clean|feedback|pr RECORD_ACTOR_FLAGS [--json]
   issueops ai-slop-clean record --id ID --category TEXT --verification TEXT RECORD_ACTOR_FLAGS [--json]

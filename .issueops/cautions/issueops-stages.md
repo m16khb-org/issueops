@@ -1,6 +1,6 @@
 ---
 name: cautions/issueops-stages.md
-description: Cautions for the ten-stage IssueOps boundaries, execution mode selection, worktree adoption, unmerged retirement, and fingerprint sealing order.
+description: Cautions for the ten-stage IssueOps boundaries, session launcher selection, worktree adoption, unmerged retirement, and fingerprint sealing order.
 ---
 
 # IssueOps stage cautions
@@ -9,18 +9,17 @@ Family index: [CAUTIONS.md](../CAUTIONS.md). 10단계 흐름을 운영하면서 
 생기는 문제만 여기 둔다. lease·fence 문제는 `issueops-execution.md`, 브랜치·게이트
 문제는 `issueops-lifecycle.md`가 소유한다.
 
-## 1. execution mode와 세션 런처를 혼동하지 않는다
+## 1. workspace 준비와 세션 런처를 혼동하지 않는다
 
-증상: 새 세션을 열려고 이미 준비된 direct execution을 `auto|orca`로 바꾸거나,
-Orca·Herdr의 worktree 생성 명령으로 canonical worktree를 다시 만든다.
+증상: 새 세션을 열려고 이미 준비된 canonical worktree를 Herdr의 worktree 생성
+명령으로 다시 만든다.
 
-원인: workspace/lease 운영 방식과 native 세션 배치를 같은 결정으로 취급했다.
+원인: workspace/lease 준비와 native 세션 배치를 같은 결정으로 취급했다.
 
-규칙: 일반 경로는 사유를 포함한 `execution prepare --mode direct`로 준비하고,
-`session-choice.md`에 따라 Orca, Herdr, 현재 세션 순서로 결정한다. 준비 세션이 Herdr
-세션이면 Orca가 ready여도 Herdr를 먼저 확인한다. 같은 worktree와
-mode를 유지하며 release 뒤 새 세션 하나에 인계한다. 명시적으로 요청했거나 기존에
-선택된 Orca execution의 core 경로와 `auto|orca` API 의미는 유지한다.
+규칙: 일반 경로는 `execution prepare --id ID $ACTOR_FLAGS [--confirm]`로 준비하고,
+`session-choice.md`에 따라 Herdr, 현재 세션 순서로 결정한다. 준비 세션이 Herdr
+세션이면 Herdr를 먼저 확인한다. 같은 worktree를 유지하며 release 뒤 새 세션 하나에
+인계한다.
 
 Herdr 0.9.0은 Claude의 첫 MCP 선택 화면을 `idle`로 보고한 사례가 있다.
 `interactive_ready`나 prompt 제출 성공만 믿지 말고 실제 입력 화면과 native 수신 기록을
@@ -31,7 +30,7 @@ Herdr 0.9.0은 Claude의 첫 MCP 선택 화면을 `idle`로 보고한 사례가 
 
 ## 2. 워크트리 세션은 `<source>.worktrees` 쓰기 권한이 필요하다
 
-증상: Orca나 relaunch로 띄운 세션이 canonical worktree를 만들거나 고치지 못한다.
+증상: relaunch로 띄운 세션이 canonical worktree를 만들거나 고치지 못한다.
 
 원인: 세션의 작업 디렉터리가 source checkout이고, 형제 경로인 워크트리 루트가
 접근 허용 목록 밖이다.
@@ -67,8 +66,8 @@ branch and base_head`로 실패한다.
 --delete-remote-branch`로 원격 효과를 opt-in한다. 원격 효과는 record 삭제보다 먼저
 실행된다. 머지된 사이클은 `issueops-cleanup`의 reflect → finish가 맞다.
 
-또한 implementation review 게이트는 2026-09-05부터 모든 execution mode에 적용된다.
-진행 중이던 direct 사이클도 pr 진입과 create-pr 전에 리뷰 기록이 필요하다.
+또한 implementation review 게이트는 2026-09-05부터 모든 사이클에 적용된다.
+진행 중이던 사이클도 pr 진입과 create-pr 전에 리뷰 기록이 필요하다.
 
 근거: `internal/application/issueopscleanup/abandon_remote.go`, `skills/issueops-abandon/SKILL.md`.
 

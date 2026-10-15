@@ -199,7 +199,7 @@ func TestCollectGitWithoutRunnerReportsMissingRunner(t *testing.T) {
 	}
 }
 
-func TestCollectLocalSkipsRemoteRefsAndOrca(t *testing.T) {
+func TestCollectLocalSkipsRemoteRefs(t *testing.T) {
 	repo := t.TempDir()
 	git := &scriptedGit{outputs: map[string]string{
 		"symbolic-ref": "main\n",
@@ -207,13 +207,13 @@ func TestCollectLocalSkipsRemoteRefsAndOrca(t *testing.T) {
 		"worktree":     "",
 		"for-each-ref": "refs/heads/main\x00" + oidA + "\x00",
 	}}
-	snapshot := Collector{IssueOps: emptyIssueOpsReader(t), Git: git, Orca: &inventoryOrca{}}.CollectLocal(t.Context(), repo)
+	snapshot := Collector{IssueOps: emptyIssueOpsReader(t), Git: git}.CollectLocal(t.Context(), repo)
 	for _, call := range git.calls {
 		if strings.HasPrefix(call, "ls-remote") {
 			t.Fatalf("CollectLocal must not contact the remote: %v", git.calls)
 		}
 	}
-	if snapshot.RepoRoot != canonicalInventoryPath(repo) || snapshot.SourceHead != oidA || len(snapshot.LocalRefs) != 1 || len(snapshot.RemoteRefs) != 0 || snapshot.OrcaObserved {
+	if snapshot.RepoRoot != canonicalInventoryPath(repo) || snapshot.SourceHead != oidA || len(snapshot.LocalRefs) != 1 || len(snapshot.RemoteRefs) != 0 {
 		t.Fatalf("snapshot = %+v", snapshot)
 	}
 	if len(snapshot.InventoryProblems) != 0 {
@@ -227,8 +227,8 @@ func TestCollectRejectsEmptyRepoWithoutTouchingGit(t *testing.T) {
 	if got := problemCodes(snapshot.InventoryProblems); !reflect.DeepEqual(got, []string{"repo_invalid"}) {
 		t.Fatalf("problems = %v", got)
 	}
-	if len(git.calls) != 0 || !snapshot.Messages.Empty {
-		t.Fatalf("git calls=%v messages=%+v", git.calls, snapshot.Messages)
+	if len(git.calls) != 0 {
+		t.Fatalf("git calls=%v", git.calls)
 	}
 }
 
@@ -249,9 +249,6 @@ func TestCollectSortsGitInventoryProblemsBySource(t *testing.T) {
 	if !sortedStrings(sources) {
 		t.Fatalf("problems not sorted by source: %v", sources)
 	}
-	if !snapshot.Messages.CompleteAbsence {
-		t.Fatal("no Orca configured and no Orca-owned records: inbox must be completely absent")
-	}
 }
 
 func sortedStrings(values []string) bool {
@@ -264,20 +261,12 @@ func sortedStrings(values []string) bool {
 }
 
 func TestSortSnapshotOrdersEveryCollectionDeterministically(t *testing.T) {
-	early, late := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC)
 	snapshot := corehealth.Snapshot{
 		InventoryProblems: []operationalhealthcontract.InventoryProblem{{Source: "b"}, {Source: "a", Code: "z"}, {Source: "a", Code: "y"}},
 		GitWorktrees:      []operationalhealthcontract.GitWorktree{{Path: "/b"}, {Path: "/a", Branch: "x"}, {Path: "/a", Branch: "w"}},
 		LocalRefs:         []operationalhealthcontract.GitRef{{Name: "refs/heads/b"}, {Name: "refs/heads/a"}},
 		RemoteRefs:        []operationalhealthcontract.GitRef{{Name: "r2"}, {Name: "r1"}},
-		OrcaWorktrees:     []operationalhealthcontract.OrcaWorktree{{ID: "w2"}, {ID: "w1"}},
-		Terminals:         []operationalhealthcontract.OrcaTerminal{{Handle: "t2"}, {Handle: "t1"}},
-		Tasks: []operationalhealthcontract.OrcaTask{
-			{ID: "t", CompletedAt: late}, {ID: "t", CompletedAt: early}, {ID: "a"},
-		},
-		Dispatches:     []operationalhealthcontract.OrcaDispatch{{ID: "d2"}, {ID: "d1"}},
-		Gates:          []operationalhealthcontract.OrcaGate{{ID: "g2"}, {ID: "g1"}},
-		StateArtifacts: []operationalhealthcontract.StateArtifact{{Path: "/z"}, {Path: "/a"}},
+		StateArtifacts:    []operationalhealthcontract.StateArtifact{{Path: "/z"}, {Path: "/a"}},
 	}
 	sortSnapshot(&snapshot)
 
@@ -290,11 +279,8 @@ func TestSortSnapshotOrdersEveryCollectionDeterministically(t *testing.T) {
 	if snapshot.LocalRefs[0].Name != "refs/heads/a" || snapshot.RemoteRefs[0].Name != "r1" {
 		t.Errorf("refs = %+v %+v", snapshot.LocalRefs, snapshot.RemoteRefs)
 	}
-	if snapshot.OrcaWorktrees[0].ID != "w1" || snapshot.Terminals[0].Handle != "t1" || snapshot.Dispatches[0].ID != "d1" || snapshot.Gates[0].ID != "g1" || snapshot.StateArtifacts[0].Path != "/a" {
-		t.Errorf("orca collections unsorted: %+v", snapshot)
-	}
-	if snapshot.Tasks[0].ID != "a" || !snapshot.Tasks[1].CompletedAt.Equal(early) || !snapshot.Tasks[2].CompletedAt.Equal(late) {
-		t.Errorf("tasks must order by id then completion time: %+v", snapshot.Tasks)
+	if snapshot.StateArtifacts[0].Path != "/a" {
+		t.Errorf("state artifacts unsorted: %+v", snapshot.StateArtifacts)
 	}
 }
 
@@ -307,14 +293,6 @@ func TestOrderedBeforeComparesFirstDifferingFieldThenLength(t *testing.T) {
 	}
 	if orderedBefore([]string{"a"}, []string{"a"}) {
 		t.Fatal("equal keys are not strictly ordered")
-	}
-}
-
-func TestTimeSortValueNormalizesZoneForLexicalOrder(t *testing.T) {
-	zone := time.FixedZone("KST", 9*3600)
-	instant := time.Date(2026, 1, 1, 9, 0, 0, 5, zone)
-	if got := timeSortValue(instant); got != "2026-01-01T00:00:00.000000005Z" {
-		t.Fatalf("got %q", got)
 	}
 }
 

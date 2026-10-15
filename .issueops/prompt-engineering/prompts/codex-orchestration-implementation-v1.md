@@ -1,6 +1,6 @@
 # codex-orchestration-implementation-v1
 
-> **Archived prompt — do not execute for current IssueOps work.** It targets the retired schema-7 orchestration plan and is retained only as prompt-history evidence. Current owners must use `.issueops/prompt-engineering/prompts/issueops-v1-owner-execution-v1.md` and the schema-1 `issueops execution` catalog.
+> **Archived prompt — do not execute for current IssueOps work.** It targets the retired schema-7 orchestration plan and is retained only as prompt-history evidence. Current work uses the schema-1 `issueops execution` catalog.
 
 Delegation prompt for implementing the sub-agent orchestration plan task-by-task with Codex.
 Substitute `{TASK_ID}` (e.g. `17`, `1`, `2`, ...) before each run. One task per run — bounded, reviewable, revertible.

@@ -67,7 +67,7 @@ func evaluateLeaselessCycleAuthority(cycle operationalhealthcontract.Cycle, phas
 }
 
 func evaluateActiveHolderAuthority(cycle operationalhealthcontract.Cycle) operationalhealthcontract.CycleAuthority {
-	if !activeHolderIdentityComplete(cycle) {
+	if !holderIdentityComplete(cycle) {
 		return AuthorityUnknown
 	}
 	switch strings.TrimSpace(cycle.HolderProcessStatus) {
@@ -80,66 +80,12 @@ func evaluateActiveHolderAuthority(cycle operationalhealthcontract.Cycle) operat
 	}
 }
 
-func validateOrcaInventoryIdentity(builder *findingBuilder, snapshot Snapshot) {
-	runtimeID := strings.TrimSpace(snapshot.OrcaRuntimeID)
-	repoID := strings.TrimSpace(snapshot.OrcaRepoID)
-	if runtimeID == "" {
-		builder.add(operationalhealthcontract.FindingInventoryUnknown, "orca_runtime", "runtime", "observed Orca inventory has no runtime identity", "")
-	}
-	if repoID == "" {
-		builder.add(operationalhealthcontract.FindingInventoryUnknown, "orca_repo", "repo", "observed Orca inventory has no repository identity", clean(snapshot.RepoRoot))
-	}
-	validateOrcaWorktreesAndTerminals(builder, snapshot, runtimeID, repoID)
-	validateOrcaTasksGatesMessages(builder, snapshot, runtimeID)
-	validateCanonicalOrcaSource(builder, snapshot)
-}
-
-func validateOrcaWorktreesAndTerminals(builder *findingBuilder, snapshot Snapshot, runtimeID, repoID string) {
-	for _, worktree := range snapshot.OrcaWorktrees {
-		if strings.TrimSpace(worktree.RuntimeID) != runtimeID || strings.TrimSpace(worktree.RepoID) != repoID {
-			builder.add(operationalhealthcontract.FindingInventoryUnknown, "worktree", strings.TrimSpace(worktree.ID), "Orca worktree runtime or repository identity does not match the observed inventory", clean(worktree.Path))
-		}
-	}
-	for _, terminal := range snapshot.Terminals {
-		if strings.TrimSpace(terminal.RuntimeID) != runtimeID {
-			builder.add(operationalhealthcontract.FindingInventoryUnknown, "terminal", strings.TrimSpace(terminal.Handle), "Orca terminal runtime identity does not match the observed runtime", clean(terminal.WorktreePath))
-		}
-	}
-}
-
-func validateOrcaTasksGatesMessages(builder *findingBuilder, snapshot Snapshot, runtimeID string) {
-	for _, task := range snapshot.Tasks {
-		if strings.TrimSpace(task.RuntimeID) != runtimeID {
-			builder.add(operationalhealthcontract.FindingInventoryUnknown, "task", strings.TrimSpace(task.ID), "Orca task runtime identity does not match the observed runtime", "")
-		}
-	}
-	for _, dispatch := range snapshot.Dispatches {
-		if strings.TrimSpace(dispatch.RuntimeID) != runtimeID {
-			builder.add(operationalhealthcontract.FindingInventoryUnknown, "dispatch", strings.TrimSpace(dispatch.ID), "Orca dispatch runtime identity does not match the observed runtime", "")
-		}
-	}
-	for _, gate := range snapshot.Gates {
-		if strings.TrimSpace(gate.RuntimeID) != runtimeID {
-			builder.add(operationalhealthcontract.FindingInventoryUnknown, "gate", strings.TrimSpace(gate.ID), "Orca gate runtime identity does not match the observed runtime", "")
-		}
-	}
-	if strings.TrimSpace(snapshot.Messages.RuntimeID) != runtimeID {
-		builder.add(operationalhealthcontract.FindingInventoryUnknown, "message", "inbox", "Orca inbox runtime identity does not match the observed runtime", "")
-	}
-}
-
 func classifyCycleAuthorities(builder *findingBuilder, snapshot Snapshot, opts Options) map[string]operationalhealthcontract.CycleAuthority {
 	authorities := make(map[string]operationalhealthcontract.CycleAuthority, len(snapshot.Cycles))
 	for _, cycle := range snapshot.Cycles {
 		id := strings.TrimSpace(cycle.ID)
 		authority := EvaluateCycleAuthority(cycle, opts)
 		authorities[id] = authority
-		runtimeMismatch := strings.TrimSpace(cycle.OrcaRuntimeID) != strings.TrimSpace(snapshot.OrcaRuntimeID)
-		repoMismatch := clean(cycle.Repo) == clean(snapshot.RepoRoot) && strings.TrimSpace(cycle.OrcaRepoID) != strings.TrimSpace(snapshot.OrcaRepoID)
-		if snapshot.OrcaObserved && (strings.TrimSpace(cycle.OrcaRuntimeID) != "" || strings.TrimSpace(cycle.OrcaRepoID) != "") &&
-			(runtimeMismatch || repoMismatch) {
-			builder.add(operationalhealthcontract.FindingInventoryUnknown, "cycle", id, "cycle Orca runtime or repository identity does not match the observed inventory", clean(cycle.WorktreePath))
-		}
 		if cycle.ExecutionFailurePresent {
 			builder.add(operationalhealthcontract.FindingExecutionFailure, "cycle", id, "cycle has a durable execution failure; inspect issueops list and reconcile the failed operation", clean(cycle.WorktreePath))
 		}
@@ -159,16 +105,7 @@ func classifyCycleAuthorities(builder *findingBuilder, snapshot Snapshot, opts O
 	return authorities
 }
 
-func validatePreservedResources(builder *findingBuilder, opts Options, cycleCounts, terminalCounts map[string]int, preservedTerminalCounts map[string]bool) {
-	_, invalidPreserveTerminals := normalizedSet(opts.PreserveTerminalHandles)
-	for _, invalid := range invalidPreserveTerminals {
-		builder.add(operationalhealthcontract.FindingInventoryUnknown, "preserve_terminal", invalid, "preserved terminal handles must be non-empty and unique", "")
-	}
-	for handle := range preservedTerminalCounts {
-		if terminalCounts[handle] != 1 {
-			builder.add(operationalhealthcontract.FindingInventoryUnknown, "terminal", handle, "preserved terminal must exist exactly once", "")
-		}
-	}
+func validatePreservedCycles(builder *findingBuilder, opts Options, cycleCounts map[string]int) {
 	_, invalidPreserveCycles := normalizedSet(opts.PreserveCycleIDs)
 	for _, invalid := range invalidPreserveCycles {
 		builder.add(operationalhealthcontract.FindingInventoryUnknown, "preserve_cycle", invalid, "preserved cycle ids must be non-empty and unique", "")
@@ -180,7 +117,7 @@ func validatePreservedResources(builder *findingBuilder, opts Options, cycleCoun
 	}
 }
 
-func validateWorktreeResidues(builder *findingBuilder, snapshot Snapshot, gitPathOwners, worktreeOwners map[string][]string) {
+func validateWorktreeResidues(builder *findingBuilder, snapshot Snapshot, gitPathOwners map[string][]string) {
 	for _, worktree := range snapshot.GitWorktrees {
 		path := clean(worktree.Path)
 		if worktree.Canonical || (path == clean(snapshot.RepoRoot) && strings.TrimSpace(worktree.Branch) == strings.TrimSpace(snapshot.CanonicalBranch)) {
@@ -190,80 +127,6 @@ func validateWorktreeResidues(builder *findingBuilder, snapshot Snapshot, gitPat
 			continue
 		}
 		builder.add(operationalhealthcontract.FindingWorktreeResidue, "git_worktree", path, "non-canonical Git worktree has no live or invocation-preserved owner", path)
-	}
-	for _, worktree := range snapshot.OrcaWorktrees {
-		id := strings.TrimSpace(worktree.ID)
-		if clean(worktree.Path) == clean(snapshot.RepoRoot) && strings.TrimSpace(worktree.Branch) == strings.TrimSpace(snapshot.CanonicalBranch) {
-			continue
-		}
-		if len(worktreeOwners[id]) == 1 {
-			continue
-		}
-		builder.add(operationalhealthcontract.FindingWorktreeResidue, "orca_worktree", id, "Orca worktree has no live or invocation-preserved owner", clean(worktree.Path))
-	}
-}
-
-func validateTerminalResidues(builder *findingBuilder, snapshot Snapshot, opts Options, terminalOwners map[string][]string, preservedTerminalCounts map[string]bool) {
-	for _, terminal := range snapshot.Terminals {
-		handle := strings.TrimSpace(terminal.Handle)
-		if len(terminalOwners[handle]) == 1 || preservedTerminalCounts[handle] {
-			continue
-		}
-		if opts.Profile == operationalhealthcontract.ProfileInteractive && len(terminalOwners[handle]) == 0 {
-			continue
-		}
-		builder.add(operationalhealthcontract.FindingTerminalResidue, "terminal", handle, "terminal has no live or invocation-preserved owner", clean(terminal.WorktreePath))
-	}
-}
-
-func validateTaskResidues(builder *findingBuilder, snapshot Snapshot, taskOwners map[string][]string) {
-	for _, task := range snapshot.Tasks {
-		id := strings.TrimSpace(task.ID)
-		key := orcaTaskKey(task.RunID, task.ID)
-		status := strings.TrimSpace(task.Status)
-		if !knownTaskStatus(status) {
-			builder.add(operationalhealthcontract.FindingInventoryUnknown, "task", id, "task status is unsupported: "+status, "")
-			continue
-		}
-		if status == "ready" && (!task.CompletedAt.IsZero() || task.HasResult) {
-			builder.add(operationalhealthcontract.FindingTaskResidue, "task", id, "ready task carries completion metadata", "")
-			continue
-		}
-		if settledTaskStatus(status) {
-			continue
-		}
-		if len(taskOwners[key]) != 1 {
-			builder.add(operationalhealthcontract.FindingTaskResidue, "task", id, "task has no live or invocation-preserved owner", "")
-		}
-	}
-}
-
-func validateDispatchAndGateResidues(builder *findingBuilder, snapshot Snapshot, dispatchOwners map[string][]string) {
-	for _, dispatch := range snapshot.Dispatches {
-		id := strings.TrimSpace(dispatch.ID)
-		status := strings.TrimSpace(dispatch.Status)
-		if !knownDispatchStatus(status) {
-			builder.add(operationalhealthcontract.FindingInventoryUnknown, "dispatch", id, "dispatch status is unsupported: "+status, "")
-			continue
-		}
-		if settledDispatchStatus(status) {
-			continue
-		}
-		if len(dispatchOwners[id]) != 1 {
-			builder.add(operationalhealthcontract.FindingTaskResidue, "dispatch", id, "dispatch has no live or invocation-preserved owner", "")
-		}
-	}
-	for _, gate := range snapshot.Gates {
-		id := strings.TrimSpace(gate.ID)
-		status := strings.TrimSpace(gate.Status)
-		if !knownGateStatus(status) {
-			builder.add(operationalhealthcontract.FindingInventoryUnknown, "gate", id, "gate status is unsupported: "+status, "")
-			continue
-		}
-		if settledGateStatus(status) {
-			continue
-		}
-		builder.add(operationalhealthcontract.FindingGateResidue, "gate", id, "orchestration gate remains present", "")
 	}
 }
 
@@ -298,29 +161,12 @@ func Classify(snapshot Snapshot, opts Options) operationalhealthcontract.Result 
 		builder.add(operationalhealthcontract.FindingInventoryUnknown, problem.Source, id, firstNonEmpty(problem.Detail, problem.Code, "inventory collection failed"), "")
 	}
 	validateCanonicalSource(&builder, snapshot)
-	if snapshot.OrcaObserved {
-		validateOrcaInventoryIdentity(&builder, snapshot)
-	}
 
 	resources := newResourceIndex(snapshot)
 	cycleCounts := resources.cycles.counts()
-	worktreeCounts := resources.worktrees.counts()
-	instanceCounts := resources.instances.counts()
-	terminalCounts := resources.terminals.counts()
-	ptyCounts := resources.ptys.counts()
-	taskCounts := resources.tasks.counts()
-	dispatchCounts := resources.dispatches.counts()
-	gateCounts := resources.gates.counts()
 	gitPathCounts := resources.gitPaths.counts()
 
 	addDuplicateFindings(&builder, "cycle", cycleCounts)
-	addDuplicateFindings(&builder, "worktree", worktreeCounts)
-	addDuplicateFindings(&builder, "worktree_instance", instanceCounts)
-	addDuplicateFindings(&builder, "terminal", terminalCounts)
-	addDuplicateFindings(&builder, "pty", ptyCounts)
-	addDuplicateFindings(&builder, "task", taskCounts)
-	addDuplicateFindings(&builder, "dispatch", dispatchCounts)
-	addDuplicateFindings(&builder, "gate", gateCounts)
 	addDuplicateFindings(&builder, "git_worktree", gitPathCounts)
 	validateLeaseHolderIndexes(&builder, snapshot.Cycles, snapshot.LeaseHolderIndexes)
 
@@ -338,39 +184,19 @@ func Classify(snapshot Snapshot, opts Options) operationalhealthcontract.Result 
 		}
 	}
 
-	worktreeOwners := ownerIndex(activeRepoCycles, func(cycle operationalhealthcontract.Cycle) string { return strings.TrimSpace(cycle.OrcaWorktreeID) })
-	terminalOwners := make(map[string][]string)
-	for _, cycle := range activeCycles {
-		addOwner(terminalOwners, cycleTerminalHandle(cycle, resources), cycle.ID)
-	}
-	for handle := range terminalOwners {
-		sort.Strings(terminalOwners[handle])
-	}
-	taskOwners := ownerIndex(activeCycles, func(cycle operationalhealthcontract.Cycle) string { return orcaTaskKey(cycle.RunID, cycle.TaskID) })
-	dispatchOwners := ownerIndex(activeCycles, func(cycle operationalhealthcontract.Cycle) string { return strings.TrimSpace(cycle.DispatchID) })
 	gitPathOwners := ownerIndex(activeRepoCycles, func(cycle operationalhealthcontract.Cycle) string { return clean(cycle.WorktreePath) })
-	for kind, owners := range map[string]map[string][]string{
-		"worktree": worktreeOwners, "terminal": terminalOwners, "task": taskOwners,
-		"dispatch": dispatchOwners, "git_worktree": gitPathOwners,
-	} {
-		for id, cycleIDs := range owners {
-			if len(cycleIDs) > 1 {
-				builder.add(operationalhealthcontract.FindingInventoryUnknown, kind, id, "resource is claimed by multiple active cycles: "+strings.Join(cycleIDs, ","), "")
-			}
+	for id, cycleIDs := range gitPathOwners {
+		if len(cycleIDs) > 1 {
+			builder.add(operationalhealthcontract.FindingInventoryUnknown, "git_worktree", id, "resource is claimed by multiple active cycles: "+strings.Join(cycleIDs, ","), "")
 		}
 	}
 
 	for _, cycle := range activeCycles {
-		validateCycleResources(&builder, resources, cycle, authorities[strings.TrimSpace(cycle.ID)], clean(cycle.Repo) == clean(snapshot.RepoRoot), gitPathCounts, worktreeCounts, terminalCounts, ptyCounts, taskCounts, dispatchCounts)
+		validateCycleGitWorktree(&builder, resources, cycle, authorities[strings.TrimSpace(cycle.ID)], clean(cycle.Repo) == clean(snapshot.RepoRoot), gitPathCounts)
 	}
 
-	preservedTerminalCounts, _ := normalizedSet(opts.PreserveTerminalHandles)
-	validatePreservedResources(&builder, opts, cycleCounts, terminalCounts, preservedTerminalCounts)
-	validateWorktreeResidues(&builder, snapshot, gitPathOwners, worktreeOwners)
-	validateTerminalResidues(&builder, snapshot, opts, terminalOwners, preservedTerminalCounts)
-	validateTaskResidues(&builder, snapshot, taskOwners)
-	validateDispatchAndGateResidues(&builder, snapshot, dispatchOwners)
-	classifyMessages(&builder, snapshot.Messages, opts.Profile)
+	validatePreservedCycles(&builder, opts, cycleCounts)
+	validateWorktreeResidues(&builder, snapshot, gitPathOwners)
 	validateBranchResidues(&builder, snapshot, activeRepoCycles)
 
 	for _, artifact := range snapshot.StateArtifacts {

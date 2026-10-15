@@ -109,9 +109,9 @@ func abandonExecutorFixture() *abandonTestFixture {
 		NewAttempt: func(model.CleanupOperation) (model.IssueOpsCleanupAttempt, error) {
 			return model.IssueOpsCleanupAttempt{Operation: model.CleanupOperationAbandon, Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}, nil
 		},
-		Stop: func(context.Context, model.CleanupAbandonInventory, []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, int, error) {
+		Stop: func(context.Context, model.CleanupAbandonInventory, []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, error) {
 			events = append(events, "stop")
-			return nil, 1, nil
+			return []model.CleanupWorkspaceProcess{{PID: 7, Command: "sh"}}, nil
 		},
 		Directory: func(string) (bool, error) { events = append(events, "directory"); return true, nil },
 		Git: func(_ context.Context, _ string, args ...string) (int, string) {
@@ -195,13 +195,13 @@ func TestAbandonExecutorApplyRequiresConfirmAndCurrentFingerprint(t *testing.T) 
 
 func TestAbandonExecutorApplyOrdersEffectsDrainsBeforeDelete(t *testing.T) {
 	f := abandonExecutorFixture()
-	f.inventory.OrcaRuntimeReady = true
+	f.result.WorkspaceProcesses = []model.CleanupWorkspaceProcess{{PID: 7, Command: "sh"}}
 	req := f.applyRequest(t)
 	result, err := f.executor.Run(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !result.RecordDeleted || !result.WorktreeRemoved || !result.BranchDeleted || result.OrcaTerminalsStopped != 1 || result.AbandonedAt != "2026-09-29T00:00:01Z" || !reflect.DeepEqual(result.IntentRowsDeleted, []string{"intent-1"}) {
+	if !result.RecordDeleted || !result.WorktreeRemoved || !result.BranchDeleted || len(result.WorkspaceProcessesStopped) != 1 || result.AbandonedAt != "2026-09-29T00:00:01Z" || !reflect.DeepEqual(result.IntentRowsDeleted, []string{"intent-1"}) {
 		t.Fatalf("result=%+v", result)
 	}
 	want := []string{"acquire", "load", "observe", "plan", "arm", "check", "stop", "check", "worktree remove /worktree", "check", "update-ref -d refs/heads/feature oid", "drain", "delete", "close"}
@@ -224,7 +224,7 @@ func TestAbandonExecutorMapsLocalFailuresToStepsAndPreservesRecord(t *testing.T)
 		{"drain", func(f *abandonTestFixture) { f.lease.drainErr = errors.New("child alive") }, model.CleanupFailureStepRecordDelete},
 		{"record delete", func(f *abandonTestFixture) { f.records.deleteErr = errors.New("db locked") }, model.CleanupFailureStepRecordDelete},
 		{"process stop check", func(f *abandonTestFixture) {
-			f.inventory.OrcaRuntimeReady = true
+			f.result.WorkspaceProcesses = []model.CleanupWorkspaceProcess{{PID: 7, Command: "sh"}}
 			f.records.checkErr = errors.New("record drifted")
 		}, model.CleanupFailureStepWorkspaceProcessesStop},
 	}
@@ -264,7 +264,7 @@ func TestAbandonExecutorTreatsVanishedWorktreeAndBranchAsRemoved(t *testing.T) {
 	}
 }
 
-func TestAbandonExecutorCancelledLocalRemovalKeepsApplyingSeal(t *testing.T) {
+func TestAbandonRunCancelledLocalRemovalKeepsApplyingSeal(t *testing.T) {
 	f := abandonExecutorFixture()
 	ctx, cancel := context.WithCancel(context.Background())
 	f.executor.Git = func(context.Context, string, ...string) (int, string) {
@@ -444,7 +444,7 @@ func TestAbandonExecutorResolvesProviderOnlyWhenRemoteEvidenceIsNeeded(t *testin
 	}
 }
 
-func TestAbandonExecutorKeepsApplyingSealOnlyForCancelledLocalRemovals(t *testing.T) {
+func TestAbandonRunKeepsApplyingSealOnlyWhenLocalRemovalsAreCancelled(t *testing.T) {
 	cases := []struct {
 		name        string
 		setup       func(f *abandonTestFixture, cancel context.CancelFunc)
@@ -464,7 +464,7 @@ func TestAbandonExecutorKeepsApplyingSealOnlyForCancelledLocalRemovals(t *testin
 			f.lease.drainErr = context.Canceled
 		}, model.CleanupFailureStepRecordDelete, model.CleanupFailureStepRecordDelete},
 		{"process stop cancelled", func(f *abandonTestFixture, _ context.CancelFunc) {
-			f.inventory.OrcaRuntimeReady = true
+			f.result.WorkspaceProcesses = []model.CleanupWorkspaceProcess{{PID: 7, Command: "sh"}}
 			f.records.checkErr = context.Canceled
 		}, model.CleanupFailureStepWorkspaceProcessesStop, model.CleanupFailureStepWorkspaceProcessesStop},
 	}
@@ -493,14 +493,11 @@ func TestAbandonExecutorStopsWorkspaceOnlyWhenSomethingOccupiesIt(t *testing.T) 
 		wantStop bool
 	}{
 		{"nothing to stop", func(*abandonTestFixture) {}, false},
-		{"runtime ready", func(f *abandonTestFixture) { f.inventory.OrcaRuntimeReady = true }, true},
 		{"processes only", func(f *abandonTestFixture) {
 			f.result.WorkspaceProcesses = []model.CleanupWorkspaceProcess{{PID: 7, Command: "sh"}}
 		}, true},
-		{"terminals only", func(f *abandonTestFixture) { f.inventory.OrcaTerminals = []string{"term-1"} }, true},
 		{"worktree already gone", func(f *abandonTestFixture) {
 			f.inventory.WorktreePresent = false
-			f.inventory.OrcaRuntimeReady = true
 			f.result.WorkspaceProcesses = []model.CleanupWorkspaceProcess{{PID: 7, Command: "sh"}}
 		}, false},
 	}

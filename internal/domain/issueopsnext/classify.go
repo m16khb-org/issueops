@@ -214,8 +214,7 @@ func classifyPreparation(in Input, decision Decision) (Decision, bool) {
 		return decision, true
 	}
 	decision.Stage = stage(issueopsnextcontract.StagePlanHandoff, 3)
-	decision.NextCommand = "issueops execution prepare --id " + id +
-		" --mode auto --owner-host " + placeholder(in.ActorHost, "<host>") + " $ACTOR_FLAGS --json"
+	decision.NextCommand = "issueops execution prepare --id " + id + " $ACTOR_FLAGS --json"
 	return decision, true
 }
 

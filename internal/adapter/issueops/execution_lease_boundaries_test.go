@@ -223,7 +223,7 @@ func TestListLeaseHolderIndexesAcceptsEverySupportedHostAndRejectsOthers(t *test
 func TestPersistExecutionTransitionIndexesTheActiveLeaseHolder(t *testing.T) {
 	t.Parallel()
 
-	_, record := rolloverExecutionFixture(t)
+	_, record := replacementExecutionFixture(t)
 	stateRoot := t.TempDir()
 	if _, err := (ReplacementRecords{StateRoot: stateRoot}).Persist(context.Background(), record, nil); err != nil {
 		t.Fatal(err)
@@ -242,7 +242,7 @@ func TestPersistExecutionTransitionIndexesTheActiveLeaseHolder(t *testing.T) {
 func TestPersistExecutionTransitionRefusesHolderOfAnotherActiveLease(t *testing.T) {
 	t.Parallel()
 
-	_, record := rolloverExecutionFixture(t)
+	_, record := replacementExecutionFixture(t)
 	stateRoot := t.TempDir()
 	db, err := sqlstore.Open(stateRoot)
 	if err != nil {
@@ -279,73 +279,16 @@ func writeClaimTokenOfSize(t *testing.T, record issueops.IssueOpsRecord, size in
 	}
 }
 
-func TestClaimTokenFileSizeLimitIsInclusiveAt256Bytes(t *testing.T) {
+func TestReplacementCleanupRemovesTokenResidue(t *testing.T) {
 	t.Parallel()
 
 	record := claimTokenRecord(t)
-	writeClaimTokenOfSize(t, record, 256)
-	digest, err := OwnerContextFiles{}.CreateOrAdoptToken(record)
-	if err != nil || digest != tokenSHA256(strings.Repeat("a", 256)) {
-		t.Fatalf("256-byte token = %q, %v; want adopted", digest, err)
-	}
-
-	oversized := claimTokenRecord(t)
-	writeClaimTokenOfSize(t, oversized, 257)
-	if _, err := (OwnerContextFiles{}).CreateOrAdoptToken(oversized); err == nil || !strings.Contains(err.Error(), "oversized") {
-		t.Fatalf("257-byte token err = %v, want oversized refusal", err)
-	}
-}
-
-func orcaBoundClaimTokenRecord(t *testing.T) issueops.IssueOpsRecord {
-	t.Helper()
-	record := claimTokenRecord(t)
-	record.Execution.Mode = issueops.ExecutionModeOrca
-	record.Execution.Orca = &issueops.OrcaBinding{RuntimeID: "runtime"}
-	return record
-}
-
-func TestReplacementCleanupRemovesTokenAndOrcaOwnerArtifacts(t *testing.T) {
-	t.Parallel()
-
-	record := orcaBoundClaimTokenRecord(t)
-	packet, prompt := executionOwnerArtifactPaths(record)
-	token := claimTokenPath(record)
-	for _, path := range []string{token, packet, prompt} {
-		if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(path, []byte("residue"), 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
+	writeClaimTokenOfSize(t, record, 8)
 	if err := (ReplacementArtifacts{}).Cleanup(record); err != nil {
 		t.Fatal(err)
 	}
-	for _, path := range []string{token, packet, prompt} {
-		if _, err := os.Lstat(path); !os.IsNotExist(err) {
-			t.Errorf("%s survived replacement cleanup: %v", path, err)
-		}
-	}
-}
-
-func TestReplacementCleanupLeavesOwnerArtifactsOfAnOrcaExecutionWithoutBindingAlone(t *testing.T) {
-	t.Parallel()
-
-	record := claimTokenRecord(t)
-	record.Execution.Mode = issueops.ExecutionModeOrca
-	packet, _ := executionOwnerArtifactPaths(record)
-	if err := os.MkdirAll(filepath.Dir(packet), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(packet, []byte("kept"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	// Orca 바인딩이 없는 execution은 owner artifact를 소유하지 않는다.
-	if err := (ReplacementArtifacts{}).Cleanup(record); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := os.Lstat(packet); err != nil {
-		t.Fatalf("owner packet without an Orca binding must be untouched: %v", err)
+	if _, err := os.Lstat(claimTokenPath(record)); !os.IsNotExist(err) {
+		t.Errorf("claim token survived replacement cleanup: %v", err)
 	}
 }
 

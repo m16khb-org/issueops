@@ -11,7 +11,7 @@ import (
 //
 // `issueops` 줄은 이 함수에 적지 않는다. `contract.IssueOpsUsageCatalog`가 유일한 원본이고
 // 여기서는 축약 키로 걸러 렌더한다(#188). 두 곳에 손으로 적으면 양쪽에서 동시에
-// 빠진 명령을 어떤 테스트도 잡지 못한다 — `execution switch-mode`가 그랬다.
+// 빠진 명령을 어떤 테스트도 잡지 못한다.
 func Usage(version string) string {
 	return fmt.Sprintf(`issueops %s
 
@@ -19,7 +19,7 @@ Usage:
   issueops inspect [--json] [--repo PATH]
   issueops preflight [--json] [PATH]
   issueops system-status [--repo PATH] [--json]
-  issueops doctor [--repo PATH] [--preserve-cycle ID]... [--preserve-terminal HANDLE]... [--json]
+  issueops doctor [--repo PATH] [--preserve-cycle ID]... [--json]
   issueops docs [index] [--json]
   issueops policy check [--workspace-root PATH] [--cwd PATH] [--write] [--network] [--json] -- ARGV...
   issueops policy fake-run [--workspace-root PATH] [--cwd PATH] [--write] [--network] [--json] -- ARGV...

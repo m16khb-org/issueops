@@ -128,13 +128,11 @@ func seedSyncBaseTransition(t *testing.T) (string, issueopscontract.IssueOpsReco
 		Labels: []string{"bug"}, Assignees: []string{"m16khb"}, TargetBranch: "main", VerifiedAt: "2026-08-04T00:00:00Z",
 	}
 	record.Execution = &issueopscontract.Execution{
-		Mode: issueopscontract.ExecutionModeDirect,
 		Workspace: issueopscontract.Workspace{
 			SourceRoot: source, Root: worktree, Branch: branch, BaseHead: baseHead,
-			Driver: "git", LinkedAt: "2026-08-04T00:00:00Z",
+			LinkedAt: "2026-08-04T00:00:00Z",
 		},
-		Lease:     issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusClaimable},
-		Selection: selectionFixture(issueopscontract.ExecutionModeDirect),
+		Lease: issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusClaimable},
 	}
 	token := "sync-base-transition-token"
 	record.Execution.Lease.ClaimTokenSHA256 = claimWiringSHA256(token)

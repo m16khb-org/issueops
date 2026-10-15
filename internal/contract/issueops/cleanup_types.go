@@ -109,7 +109,6 @@ type CleanupAbandonResult struct {
 	UnresolvedChildren []string `json:"unresolved_children,omitempty"`
 	ReasonError        string   `json:"reason_error,omitempty"`
 	PendingIntentError string   `json:"pending_intent_error,omitempty"`
-	OrcaResidueError   string   `json:"orca_residue_error,omitempty"`
 	Fingerprint        string   `json:"fingerprint,omitempty"`
 	WorktreePath       string   `json:"worktree_path,omitempty"`
 	Branch             string   `json:"branch,omitempty"`
@@ -135,12 +134,10 @@ type CleanupAbandonResult struct {
 	RemoteBranchDeletion string   `json:"remote_branch_deletion"`
 	PendingOperationID   string   `json:"pending_operation_id,omitempty"`
 	IntentRowsDeleted    []string `json:"intent_rows_deleted,omitempty"`
-	// WorkspaceProcesses/OrcaTerminals는 preview가 관측한 apply ①′ 종료 대상이고,
+	// WorkspaceProcesses는 preview가 관측한 apply ①′ 종료 대상이고,
 	// *Stopped는 apply가 실제로 종료한 집합이다(#477).
 	WorkspaceProcesses        []CleanupWorkspaceProcess `json:"workspace_processes,omitempty"`
-	OrcaTerminals             []string                  `json:"orca_terminals,omitempty"`
 	WorkspaceProcessesStopped []CleanupWorkspaceProcess `json:"workspace_processes_stopped,omitempty"`
-	OrcaTerminalsStopped      int                       `json:"orca_terminals_stopped,omitempty"`
 	WorktreeRemoved           bool                      `json:"worktree_removed,omitempty"`
 	BranchDeleted             bool                      `json:"branch_deleted,omitempty"`
 	RecordDeleted             bool                      `json:"record_deleted,omitempty"`
@@ -170,14 +167,8 @@ type CleanupFinishResult struct {
 	// 차단당한 사용자가 lsof를 직접 돌려야 했다 — 그 lsof마저 워크트리 경로를
 	// 인자로 주면 lifecycle 가드에 걸린다(이슈 #154).
 	WorkspaceProcesses []CleanupWorkspaceProcess `json:"workspace_processes,omitempty"`
-	// OrcaTerminals는 preview가 관측한 워크트리 Orca 터미널 handle이고,
-	// WorkspaceProcessesStopped/OrcaTerminalsStopped는 apply ①′가 실제로 종료한
-	// 집합이다(#477).
-	OrcaTerminals             []string                  `json:"orca_terminals,omitempty"`
+	// WorkspaceProcessesStopped는 apply ①′가 실제로 종료한 집합이다(#477).
 	WorkspaceProcessesStopped []CleanupWorkspaceProcess `json:"workspace_processes_stopped,omitempty"`
-	OrcaTerminalsStopped      int                       `json:"orca_terminals_stopped,omitempty"`
-	OrcaWorktreeID            string                    `json:"orca_worktree_id,omitempty"`
-	OrcaRemoved               bool                      `json:"orca_removed,omitempty"`
 	WorktreeRemoved           bool                      `json:"worktree_removed,omitempty"`
 	BranchDeleted             bool                      `json:"branch_deleted,omitempty"`
 	// Audit is the cleanup audit line. It is reported here only; cleanup

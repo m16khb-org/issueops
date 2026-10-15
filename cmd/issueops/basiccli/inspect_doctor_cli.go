@@ -6,7 +6,6 @@ import (
 	"fmt"
 	doctorcontract "issueops/internal/contract/doctor"
 	inspectcontract "issueops/internal/contract/inspect"
-	operationalhealthcontract "issueops/internal/contract/operationalhealth"
 	"issueops/internal/domain/operationalhealth"
 	"sort"
 	"strings"
@@ -59,13 +58,10 @@ func (command Doctor) Run(args []string) error {
 	repo := fs.String("repo", ".", "target repository path")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	staticOnly := fs.Bool("static-only", false, "skip live operational, pipe, and MCP probes")
-	sealed := fs.Bool("sealed", false, "use the sealed audit profile: unowned live terminals and orchestration message history count as residue")
 	var preserveCycles doctorRepeatedFlag
-	var preserveTerminals doctorRepeatedFlag
 	fs.Var(&preserveCycles, "preserve-cycle", "preserve one exact IssueOps cycle for this invocation (repeatable)")
-	fs.Var(&preserveTerminals, "preserve-terminal", "preserve one exact terminal handle for this invocation (repeatable)")
 	fs.Usage = func() {
-		fmt.Fprintln(fs.Output(), "Usage: issueops doctor [--repo PATH] [--static-only] [--sealed] [--preserve-cycle ID]... [--preserve-terminal HANDLE]... [--json]")
+		fmt.Fprintln(fs.Output(), "Usage: issueops doctor [--repo PATH] [--static-only] [--preserve-cycle ID]... [--json]")
 		fs.PrintDefaults()
 	}
 	if err := fs.Parse(args); err != nil {
@@ -75,10 +71,6 @@ func (command Doctor) Run(args []string) error {
 		*repo = fs.Arg(0)
 	}
 	cycleIDs, err := normalizeDoctorPreserve(preserveCycles, "--preserve-cycle")
-	if err != nil {
-		return err
-	}
-	terminalHandles, err := normalizeDoctorPreserve(preserveTerminals, "--preserve-terminal")
 	if err != nil {
 		return err
 	}
@@ -99,10 +91,8 @@ func (command Doctor) Run(args []string) error {
 		StaticOnly:          *staticOnly,
 		OperationalSnapshot: snapshot,
 		OperationalOptions: operationalhealth.Options{
-			Now:                     command.Now().UTC(),
-			Profile:                 doctorProfile(*sealed),
-			PreserveCycleIDs:        cycleIDs,
-			PreserveTerminalHandles: terminalHandles,
+			Now:              command.Now().UTC(),
+			PreserveCycleIDs: cycleIDs,
 		},
 	})
 	if err != nil {
@@ -141,14 +131,4 @@ func normalizeDoctorPreserve(values []string, flagName string) ([]string, error)
 	}
 	sort.Strings(result)
 	return result, nil
-}
-
-// doctorProfile은 CLI 기본값을 interactive profile로 매핑한다. 실제 개발자
-// 머신에서는 사용자가 연 Orca 탭과 orchestration 메시지 이력이 정상이기
-// 때문이다. sealed audit 호출자는 엄격한 residue 계약을 다시 선택한다.
-func doctorProfile(sealed bool) string {
-	if sealed {
-		return operationalhealthcontract.ProfileSealed
-	}
-	return operationalhealthcontract.ProfileInteractive
 }

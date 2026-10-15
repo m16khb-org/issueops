@@ -2,60 +2,21 @@ package issueops
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
-type HandoffDeliveryClaimQuery struct {
-	Observe     bool
-	Manual      bool
-	LifecycleID string
-	LineageID   string
-}
-
-func HandoffDeliveryClaimQueryFor(result issueopscontract.ExecutionResult) HandoffDeliveryClaimQuery {
-	execution := result.Execution
-	if !result.OK || execution.Lease.Status != issueopscontract.LeaseStatusActive || execution.Lease.Holder == nil {
-		return HandoffDeliveryClaimQuery{}
-	}
-	if execution.Orca == nil {
-		return HandoffDeliveryClaimQuery{Observe: execution.Mode == issueopscontract.ExecutionModeDirect, Manual: true, LifecycleID: result.ID}
-	}
-	binding := execution.Orca
-	callKind := "dispatch"
-	if binding.OwnerHost == "omo" {
-		callKind = "prompt"
-	}
-	return HandoffDeliveryClaimQuery{Observe: true, LifecycleID: result.ID, LineageID: strings.Join([]string{"generation", strconv.FormatUint(execution.Lease.Generation, 10), "prompt", strings.TrimSpace(binding.OwnerPromptSHA256), "material", strings.TrimSpace(binding.ContextPacketSHA256), "call", callKind}, ":")}
+// HandoffDeliveryClaimObservable은 claim 결과가 활성 holder를 가진 성공 결과일 때만 true다.
+func HandoffDeliveryClaimObservable(result issueopscontract.ExecutionResult) bool {
+	return result.OK && result.Execution.Lease.Status == issueopscontract.LeaseStatusActive && result.Execution.Lease.Holder != nil
 }
 
 func OwnerClaimHandoffDeliveryObservation(result issueopscontract.ExecutionResult, observations []issueopscontract.IssueOpsHandoffDeliveryObservation) (*issueopscontract.IssueOpsHandoffDeliveryObservation, error) {
-	query := HandoffDeliveryClaimQueryFor(result)
-	if !query.Observe {
+	if !HandoffDeliveryClaimObservable(result) {
 		return nil, nil
 	}
-	if query.Manual {
-		return manualOwnerClaimObservation(result, observations)
-	}
-	folded, decisions := FoldHandoffDeliveryObservations(observations)
-	for _, decision := range decisions {
-		if !decision.Accepted {
-			return nil, fmt.Errorf("handoff delivery claim evidence is invalid: %s", strings.Join(decision.RejectReasons, "; "))
-		}
-	}
-	observation, ok := folded[result.ID+"\x00"+query.LineageID]
-	if !ok {
-		return nil, nil
-	}
-	execution := result.Execution
-	binding := execution.Orca
-	holder := *execution.Lease.Holder
-	if observation.SourceGeneration != execution.Lease.Generation || observation.ExpectedOwnerHost != holder.Host || observation.Launcher.RuntimeID != binding.RuntimeID || (binding.TerminalPTYID != "" && observation.Target.TerminalID != binding.TerminalPTYID) {
-		return nil, fmt.Errorf("handoff delivery claim does not match the committed lease")
-	}
-	return claimedHandoffDeliveryObservation(observation, execution.Lease)
+	return manualOwnerClaimObservation(result, observations)
 }
 
 func manualOwnerClaimObservation(result issueopscontract.ExecutionResult, observations []issueopscontract.IssueOpsHandoffDeliveryObservation) (*issueopscontract.IssueOpsHandoffDeliveryObservation, error) {

@@ -17,7 +17,7 @@ type CleanupAbandonObservation struct {
 	Occupants                                                       []model.CleanupWorkspaceProcess
 	BranchObservable, RegistryObservable, BranchCheckedOutElsewhere bool
 	FailureEvidence                                                 CleanupAbandonFailureEvidence
-	PendingIntentError, OrcaResidueError                            string
+	PendingIntentError                                              string
 	RemoteMissing, RemoteEffects                                    []string
 	RemoteArtifactState, IssueState                                 string
 }
@@ -32,8 +32,8 @@ func BuildCleanupAbandonPreview(record model.IssueOpsRecord, req model.CleanupAb
 		WorktreeClean: inventory.WorktreeClean, WorktreeHead: inventory.WorktreeHead,
 		BranchPresent: inventory.BranchOID != "", BranchOID: inventory.BranchOID,
 		BranchCheckoutPath: inventory.BranchCheckoutPath, PendingOperationID: inventory.PendingOperationID,
-		WorkspaceProcesses: observed.Occupants, OrcaTerminals: inventory.OrcaTerminals,
-		RemoteBranchOID: inventory.RemoteBranchOID, RemoteArtifactState: observed.RemoteArtifactState, IssueState: observed.IssueState,
+		WorkspaceProcesses: observed.Occupants,
+		RemoteBranchOID:    inventory.RemoteBranchOID, RemoteArtifactState: observed.RemoteArtifactState, IssueState: observed.IssueState,
 		RemoteEffects: observed.RemoteEffects,
 	}
 	b.missing = b.result.Missing
@@ -43,7 +43,7 @@ func BuildCleanupAbandonPreview(record model.IssueOpsRecord, req model.CleanupAb
 	b.checkBranchObservation()
 	b.checkFailureReceipt()
 	b.checkLocalResidue()
-	b.checkPendingIntentOrcaAndRemote()
+	b.checkPendingIntentAndRemote()
 	b.result.Missing = b.missing
 	b.result.OK = len(b.missing) == 0
 	return b.inventory, b.result
@@ -148,14 +148,10 @@ func (b *cleanupAbandonPreviewBuilder) checkLocalResidue() {
 	}
 }
 
-func (b *cleanupAbandonPreviewBuilder) checkPendingIntentOrcaAndRemote() {
+func (b *cleanupAbandonPreviewBuilder) checkPendingIntentAndRemote() {
 	if b.observed.PendingIntentError != "" {
 		b.add("pending_intent_safe")
 		b.result.PendingIntentError = b.observed.PendingIntentError
-	}
-	if b.observed.OrcaResidueError != "" {
-		b.add("orca_resources_absent")
-		b.result.OrcaResidueError = b.observed.OrcaResidueError
 	}
 	b.missing = append(b.missing, b.observed.RemoteMissing...)
 }

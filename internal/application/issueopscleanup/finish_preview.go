@@ -17,11 +17,8 @@ type FinishEnvironment interface {
 }
 
 type FinishWorkspaceObservation struct {
-	Occupants    []model.CleanupWorkspaceProcess
-	Receipts     []model.NativeProcessReceipt
-	Terminals    []string
-	RuntimeReady bool
-	AppPID       int
+	Occupants []model.CleanupWorkspaceProcess
+	Receipts  []model.NativeProcessReceipt
 }
 
 type FinishPreviewer struct {
@@ -59,9 +56,6 @@ func (s FinishPreviewer) Plan(ctx context.Context, record model.IssueOpsRecord, 
 		facts.WorkspaceMissing = missing
 		facts.Occupants = observation.Occupants
 		inventory.WorkspaceProcesses = observation.Receipts
-		inventory.OrcaTerminals = observation.Terminals
-		inventory.OrcaAppPID = observation.AppPID
-		inventory.OrcaRuntimeReady = observation.RuntimeReady
 		code, out := s.Environment.Git(inventory.WorktreeRoot, "status", "--porcelain=v1")
 		facts.WorktreeClean = code == 0 && strings.TrimSpace(out) == ""
 	}

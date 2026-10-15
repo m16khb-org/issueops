@@ -7,15 +7,12 @@ import (
 
 	cleanupapp "issueops/internal/application/issueopscleanup"
 	"issueops/internal/contract/issueops"
-	preparation "issueops/internal/contract/issueopspreparation"
-	"issueops/internal/port"
 )
 
 type CleanupAbandonRuntime struct {
-	StateRoot     string
-	Git           func(string, ...string) (int, string)
-	Processes     CleanupProcessDeps
-	OrcaTerminals port.CleanupOrcaTerminals
+	StateRoot string
+	Git       func(string, ...string) (int, string)
+	Processes CleanupProcessDeps
 }
 
 func (CleanupAbandonRuntime) Directory(path string) (bool, error) {
@@ -28,11 +25,8 @@ func (CleanupAbandonRuntime) SamePath(a, b string) bool { return samePath(a, b) 
 func (r CleanupAbandonRuntime) ReadChild(id string) (issueops.IssueOpsRecord, error) {
 	return ReadIssueOpsExisting(r.StateRoot, id)
 }
-func (r CleanupAbandonRuntime) ReadIntent(id string) (preparation.Intent, error) {
-	return ReadExecutionOrcaIntent(r.StateRoot, id)
-}
 func (r CleanupAbandonRuntime) Workspace(ctx context.Context, record issueops.IssueOpsRecord, root string) (cleanupapp.FinishWorkspaceObservation, []string) {
-	return NewCleanupWorkspaceCleaner(r.Processes, r.OrcaTerminals).Observe(ctx, record, root)
+	return NewCleanupWorkspaceCleaner(r.Processes).Observe(root, record.Repo)
 }
 func (r CleanupAbandonRuntime) Worktree(ctx context.Context, root string) cleanupapp.AbandonWorktreeObservation {
 	var observed cleanupapp.AbandonWorktreeObservation
@@ -94,6 +88,6 @@ func (r CleanupAbandonRuntime) Command(ctx context.Context, dir string, args ...
 	return defaultExecutionSyncBaseGit(ctx, dir, args...)
 }
 
-func (r CleanupAbandonRuntime) Stop(ctx context.Context, inventory issueops.CleanupAbandonInventory, processes []issueops.CleanupWorkspaceProcess) ([]issueops.CleanupWorkspaceProcess, int, error) {
-	return NewCleanupWorkspaceCleaner(r.Processes, r.OrcaTerminals).Stop(ctx, inventory.WorktreeRoot, processes, inventory.OrcaTerminals, inventory.OrcaRuntimeReady, inventory.OrcaAppPID)
+func (r CleanupAbandonRuntime) Stop(ctx context.Context, inventory issueops.CleanupAbandonInventory, processes []issueops.CleanupWorkspaceProcess) ([]issueops.CleanupWorkspaceProcess, error) {
+	return NewCleanupWorkspaceCleaner(r.Processes).Stop(inventory.WorktreeRoot, processes)
 }

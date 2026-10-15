@@ -14,9 +14,7 @@ type Service struct {
 	Records          port.ReplacementRecords
 	Workspace        port.ReplacementWorkspace
 	ObserveProcesses func() port.ReplacementProcessSnapshot
-	OrcaOwner        port.ExecutionOrcaOwnerInspector
 	PID              int
-	ResealOwner      func(context.Context, issueops.IssueOpsRecord) (issueops.ReplacementArtifacts, error)
 	Artifacts        port.ReplacementArtifacts
 	BaseSync         basesyncport.Inspector
 	InspectProcess   func(issueops.NativeProcessReceipt) (string, issueops.NativeProcessReceipt, error)
@@ -65,7 +63,7 @@ func (s Service) previewExecutionReplacement(ctx context.Context, req issueops.E
 	if err := observeCompletedExecutionBase(ctx, record, req.CompletionGeneration, s.BaseSync); err != nil {
 		return issueops.ExecutionReplaceResult{OK: false, ID: req.ID, Action: req.Action}, err
 	}
-	fingerprint, _, err := s.inventory(ctx, record, req.Actor)
+	fingerprint, err := s.inventory(record, req.Actor)
 	if err != nil {
 		return issueops.ExecutionReplaceResult{OK: false, ID: req.ID, Action: req.Action}, err
 	}
@@ -130,7 +128,7 @@ func (s Service) previewExecutionFinalization(ctx context.Context, req issueops.
 	if err := s.validateCWD(record, req.CWD); err != nil {
 		return issueops.ExecutionReplaceResult{OK: false, ID: req.ID, Action: req.Action}, err
 	}
-	fingerprint, err := s.quiescence(ctx, record, req.Actor)
+	fingerprint, err := s.quiescence(record, req.Actor)
 	if err != nil {
 		return issueops.ExecutionReplaceResult{OK: false, ID: req.ID, Action: req.Action}, err
 	}
@@ -140,7 +138,6 @@ func (s Service) previewExecutionFinalization(ctx context.Context, req issueops.
 func (s Service) mutateExecutionReplacement(ctx context.Context, req issueops.ExecutionReplaceRequest) (issueops.ExecutionReplaceResult, error) {
 	var persisted issueops.IssueOpsRecord
 	var tokenPath string
-	var resealed issueops.ReplacementArtifacts
 	err := s.Records.WithinLock(ctx, req.ID, func(spanCtx context.Context) error {
 		record, err := s.recordAtGeneration(req.ID, req.ExpectedGeneration)
 		if err != nil {
@@ -156,9 +153,9 @@ func (s Service) mutateExecutionReplacement(ctx context.Context, req issueops.Ex
 		now := s.Now()
 		switch req.Action {
 		case issueops.ExecutionReplaceRevoke:
-			return s.revokeReplacement(ctx, spanCtx, req, record, lease, now, &persisted)
+			return s.revokeReplacement(spanCtx, req, record, lease, now, &persisted)
 		case issueops.ExecutionReplaceFinalize:
-			return s.finalizeReplacement(ctx, spanCtx, req, record, lease, &persisted, &tokenPath, &resealed)
+			return s.finalizeReplacement(spanCtx, req, record, lease, &persisted, &tokenPath)
 		}
 		return fmt.Errorf("unsupported execution replace action %q", req.Action)
 	})
@@ -166,32 +163,20 @@ func (s Service) mutateExecutionReplacement(ctx context.Context, req issueops.Ex
 		return issueops.ExecutionReplaceResult{OK: false, ID: req.ID, Action: req.Action}, err
 	}
 	result := replaceResult(persisted, req.Action, "", "", tokenPath)
-	result.IssueBodySHA256 = resealed.IssueBodySHA256
-	result.ContextPacketPath, result.ContextPacketSHA256 = resealed.ContextPacketPath, resealed.ContextPacketSHA256
-	result.OwnerPromptPath, result.OwnerPromptSHA256 = resealed.OwnerPromptPath, resealed.OwnerPromptSHA256
 	if persisted.Execution.Lease.Status == issueops.LeaseStatusClaimable {
-		switch persisted.Execution.Mode {
-		case issueops.ExecutionModeOrca:
-			result.NextCommand = domain.ReplacementResumeCommand(persisted.ID, persisted.Execution.Lease.Generation)
-		case issueops.ExecutionModeDirect:
-			result.NextCommand = domain.ReplacementClaimCommand(
-				persisted.ID,
-				persisted.Execution.Lease.Generation,
-				tokenPath,
-			)
-		}
+		result.NextCommand = domain.ReplacementClaimCommand(persisted.ID, persisted.Execution.Lease.Generation)
 	}
 	return result, nil
 }
 
-func (s Service) revokeReplacement(ctx, spanCtx context.Context, req issueops.ExecutionReplaceRequest, record issueops.IssueOpsRecord, lease *issueops.WriteLease, now string, persisted *issueops.IssueOpsRecord) error {
+func (s Service) revokeReplacement(spanCtx context.Context, req issueops.ExecutionReplaceRequest, record issueops.IssueOpsRecord, lease *issueops.WriteLease, now string, persisted *issueops.IssueOpsRecord) error {
 	if err := domain.ValidateReplacementRevoke(*lease, req.Reason); err != nil {
 		return err
 	}
 	if err := s.refuseSelfRevoke(record.ID, *lease, req.Actor); err != nil {
 		return err
 	}
-	fingerprint, _, err := s.inventory(ctx, record, req.Actor)
+	fingerprint, err := s.inventory(record, req.Actor)
 	if err != nil {
 		return err
 	}
@@ -204,11 +189,11 @@ func (s Service) revokeReplacement(ctx, spanCtx context.Context, req issueops.Ex
 	return err
 }
 
-func (s Service) finalizeReplacement(ctx, spanCtx context.Context, req issueops.ExecutionReplaceRequest, record issueops.IssueOpsRecord, lease *issueops.WriteLease, persisted *issueops.IssueOpsRecord, tokenPath *string, resealed *issueops.ReplacementArtifacts) error {
+func (s Service) finalizeReplacement(spanCtx context.Context, req issueops.ExecutionReplaceRequest, record issueops.IssueOpsRecord, lease *issueops.WriteLease, persisted *issueops.IssueOpsRecord, tokenPath *string) error {
 	if lease.Status != issueops.LeaseStatusRevoking {
 		return fmt.Errorf("finalize requires a revoking lease")
 	}
-	fingerprint, err := s.quiescence(ctx, record, req.Actor)
+	fingerprint, err := s.quiescence(record, req.Actor)
 	if err != nil {
 		return err
 	}
@@ -219,10 +204,9 @@ func (s Service) finalizeReplacement(ctx, spanCtx context.Context, req issueops.
 		return err
 	}
 	// 넘겨줄 workspace가 없으면 claimable은 사실이 아니다 — claim
-	// token은 그 worktree에서 읽히도록 만들어지고 owner context
-	// 재봉인도 거기에 쓴다. 아무도 claim할 수 없는 세대를 만들면서
-	// 쓰기에 실패해 lease가 revoking에 갇히고, abandon은
-	// claimable/released만 받으므로 회수가 막힌다(#435).
+	// token은 그 worktree에서 읽히도록 만들어진다. 아무도 claim할 수
+	// 없는 세대를 만들면서 쓰기에 실패해 lease가 revoking에 갇히고,
+	// abandon은 claimable/released만 받으므로 회수가 막힌다(#435).
 	//
 	// terminal 상태인 released가 정확하다. 이 lifecycle은 폐기하거나
 	// 처음부터 다시 prepare해야 하며, 두 경로 모두 released에서 열린다.
@@ -237,14 +221,7 @@ func (s Service) finalizeReplacement(ctx, spanCtx context.Context, req issueops.
 	}
 	*tokenPath = path
 	*lease = domain.FinalizeReplacement(*lease, false, token)
-	// revoking 세대의 durable 상태는 재봉인이 모두 성공한 뒤에만
-	// claimable로 바뀐다. 실패한 token은 즉시 지워 재시도 경로만 남긴다.
-	reseal, err := s.ResealOwner(ctx, record)
-	if err != nil {
-		return s.cleanupFailure(record, err)
-	}
-	domain.SealReplacementOwner(record.Execution.Orca, lease.Generation, reseal)
-	*resealed = reseal
+	// 실패한 token은 즉시 지워 재시도 경로만 남긴다.
 	*persisted, err = s.Records.Persist(spanCtx, record, nil)
 	if err != nil {
 		return s.cleanupFailure(record, err)

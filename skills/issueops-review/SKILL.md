@@ -221,9 +221,8 @@ contract_change`로 기록한다([`issueops-plan`](../issueops-plan/SKILL.md)의
   사용자가 reviewer 모델을 이름으로 지정했으면 그 값을 `--model`로 함께 넘긴다. 실제로 넘긴 두
   값을 `--reviewer-model`·`--reviewer-effort`(diff) 또는 finding 첫 줄(plan)에 적는다. 그 안에
   통과하지 못하면 남은 결함과 시도한 수정을 보고한다.
-  - 서브에이전트 도구는 effort를 받지 않는다. Orca가 띄운 세션에는 `issueops-review-escalate`
-    서브에이전트가 주입돼 있으므로 그 에이전트의 model·effort가 위 결과와 같을 때 쓸 수 있다.
-    그 밖에는 `.argv`로 빈 컨텍스트 세션을 띄운다. Claude는 `.argv`에 `--allowedTools
+  - 서브에이전트 도구는 effort를 받지 않는다. 그러므로 `.argv`로 빈 컨텍스트 세션을 띄운다.
+    Claude는 `.argv`에 `--allowedTools
     "Bash Read Grep Glob Skill"`을 붙이고 프롬프트를 표준 입력으로 넘긴다. 출력 파일은 ignored 영역
     `.issueops/issues/<n>/review/`나 워크트리 밖에 둔다. 워크트리 안 미추적 파일은
     fingerprint에 들어가 봉인을 깬다.

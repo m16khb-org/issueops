@@ -19,9 +19,8 @@ import (
 
 func TestCurrentRelayReleasedReseedGeneratedCommandDogfood(t *testing.T) {
 	binary := os.Getenv("ISSUEOPS_CURRENT_RELAY_DOGFOOD_BINARY")
-	lifecycleID := os.Getenv("ISSUEOPS_CURRENT_RELAY_DOGFOOD_ID")
-	if binary == "" || lifecycleID == "" {
-		t.Skip("live current-relay dogfood requires an exact binary and lifecycle id")
+	if binary == "" {
+		t.Skip("live current-relay dogfood requires an exact binary")
 	}
 	binary, err := filepath.EvalSymlinks(binary)
 	if err != nil {
@@ -33,22 +32,13 @@ func TestCurrentRelayReleasedReseedGeneratedCommandDogfood(t *testing.T) {
 	}
 	binaryDigest := sha256.Sum256(binaryBytes)
 
-	live, err := issueops.ReadIssueOps(issueOpsStateRoot(), lifecycleID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if live.Execution == nil || live.Execution.Orca == nil {
-		t.Fatal("live dogfood lifecycle is not an Orca execution")
-	}
-	stateRoot, fixture, _, _, _ := seedOrcaClaimSnapshot(t)
-	orcaBinding := *live.Execution.Orca
-	fixture.IssueURL = live.IssueURL
-	fixture.BranchPrepare.Provider = "github"
-	fixture.BranchPrepare.IssueURL = live.IssueURL
-	fixture.Execution.Orca = &orcaBinding
+	stateRoot, fixture, tokenPath := seedDirectClaimFixture(t)
 	fixture.Execution.Lease.Status = issueopscontract.LeaseStatusReleased
 	fixture.Execution.Lease.Holder = nil
 	fixture.Execution.Lease.ClaimTokenSHA256 = ""
+	if err := os.Remove(tokenPath); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), fixture); err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +51,7 @@ func TestCurrentRelayReleasedReseedGeneratedCommandDogfood(t *testing.T) {
 	actor := claimWiringActor(t)
 	process := actor.SessionProcess
 	previewArgs := []string{
-		"issueops", "execution", "replace", "--id", fixture.ID, "--expected-generation", "1", "--preview",
+		"execution", "replace", "--id", fixture.ID, "--expected-generation", "1", "--preview",
 		"--host", actor.Host, "--session-id", actor.SessionID,
 		"--session-pid", processPID(process), "--session-started-at", process.StartedAt,
 		"--session-executable", process.Executable, "--cwd", fixture.Execution.Workspace.Root, "--json",
@@ -106,10 +96,10 @@ func runCurrentRelayDogfoodBinary(t *testing.T, binary, stateBase, cwd string, a
 func assertCurrentRelayDogfoodCommand(t *testing.T, command, binary, digest string, generation uint64) {
 	t.Helper()
 	tokens := shelltoken.SplitCommandTokens(command)
-	if len(tokens) < 3 || tokens[0] != binary || tokens[1] != "issueops" {
+	if len(tokens) < 2 || tokens[0] != binary {
 		t.Fatalf("generated command does not select exact dogfood binary: %q", command)
 	}
-	_, provenance, present, err := commandparsecontract.ConsumeGeneratedCommandProvenance(tokens[2:])
+	_, provenance, present, err := commandparsecontract.ConsumeGeneratedCommandProvenance(tokens[1:])
 	if err != nil || !present {
 		t.Fatalf("generated command provenance err=%v present=%t: %q", err, present, command)
 	}

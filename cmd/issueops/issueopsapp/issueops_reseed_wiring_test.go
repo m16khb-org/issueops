@@ -3,7 +3,6 @@ package issueopsapp
 import (
 	"context"
 	"fmt"
-	executionissue "issueops/internal/contract/executionissue"
 	replacementmodel "issueops/internal/contract/issueops"
 	shelltoken "issueops/internal/domain/shelltoken"
 	"os"
@@ -37,118 +36,57 @@ func TestIssueOpsAppReseedWiringUsesVerticalRepository(t *testing.T) {
 	}
 }
 
-func TestIssueOpsReseedHandlerUsesResolvedSnapshotReader(t *testing.T) {
-	stateRoot, record, _, _, _ := seedOrcaClaimSnapshot(t)
+func TestExecutionReseedCLIDogfoodDirect(t *testing.T) {
+	stateRoot, record, oldToken := seedDirectClaimFixture(t)
 	actor := claimWiringActor(t)
-	owner := reseedWiringOwner{}
 	preview, err := newIssueOpsReplacementHandler()(context.Background(), stateRoot, replacementmodel.ExecutionReplaceRequest{
 		ID: record.ID, Action: model.ExecutionReplacePreview, ExpectedGeneration: 1, Actor: actor, CWD: record.Execution.Workspace.Root,
-	}, port.ReplacementInvocation{OrcaOwner: owner})
+	}, port.ReplacementInvocation{})
 	if err != nil {
-		t.Fatalf("preview reseed inventory: %v", err)
+		t.Fatalf("preview: %v", err)
 	}
-	evidence := &executionissue.ExecutionIssueSnapshotEvidence{
-		Provider: "gitlab", Source: "glab_mcp", WebURL: "https://gitlab.example.com/acme/repo/-/issues/16",
-		Body: claimWiringIssueBody(), State: "opened",
-	}
-	fallbackCalls := 0
-	raw, err := newExecutionService().Execute(context.Background(), stateRoot, model.ExecutionActionRequest{
-		Action: model.ExecutionActionReplace, ReplaceAction: model.ExecutionReplaceReseed, ID: record.ID,
-		ExpectedGeneration: 1, InventoryFingerprint: preview.InventoryFingerprint, Reason: "resolved snapshot reseed",
-		Actor: actor, CWD: record.Execution.Workspace.Root, Confirm: true, IssueSnapshot: evidence,
-	}, port.ExecutionActionDependencies{
-		ReadIssue: func(context.Context, string, executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
-			fallbackCalls++
-			return executionissue.ExecutionIssueSnapshot{}, context.DeadlineExceeded
+	var result model.ExecutionReplaceResult
+	deps := executioncmd.Deps{
+		Runtime:    newIssueOpsExecutionRunners(),
+		StateRoot:  func() string { return stateRoot },
+		Provenance: reseedProvenanceObserver{},
+		Reseed:     issueOpsReseedHandler,
+		PrintJSON: func(value any) error {
+			mapped, ok := value.(model.ExecutionReplaceResult)
+			if !ok {
+				return fmt.Errorf("unexpected CLI result %T", value)
+			}
+			result = mapped
+			return nil
 		},
-		Reseed: func(ctx context.Context, root string, request model.ExecutionReseedRequest) (model.ExecutionReplaceResult, error) {
-			return issueOpsReseedHandlerWithOwner(ctx, root, request, owner)
-		},
-	})
-	if err != nil {
-		t.Fatalf("reseed with resolved snapshot reader: %v", err)
 	}
-	result, ok := raw.(model.ExecutionReplaceResult)
-	if !ok || !result.OK || result.Execution.Lease.Generation != 2 || result.IssueSnapshotSource != "glab_mcp" || fallbackCalls != 0 {
-		t.Fatalf("reseed result=%#v fallback_calls=%d", raw, fallbackCalls)
+	process := actor.SessionProcess
+	args := []string{
+		"replace", "--id", record.ID, "--expected-generation", "1", "--reseed", "--confirm", "--inventory-fingerprint", preview.InventoryFingerprint,
+		"--reason", "CLI dogfood reseed", "--host", actor.Host, "--session-id", actor.SessionID,
+		"--session-pid", fmt.Sprintf("%d", process.PID), "--session-started-at", process.StartedAt,
+		"--session-executable", process.Executable, "--cwd", record.Execution.Workspace.Root, "--json",
 	}
-}
-
-func TestExecutionReseedCLIDogfoodDirectAndOrca(t *testing.T) {
-	for _, mode := range []model.ExecutionMode{model.ExecutionModeDirect, model.ExecutionModeOrca} {
-		t.Run(string(mode), func(t *testing.T) {
-			stateRoot, record, oldToken, _, _ := seedOrcaClaimSnapshot(t)
-			if mode == model.ExecutionModeDirect {
-				record.Execution.Mode = model.ExecutionModeDirect
-				record.Execution.Selection = selectionFixture(model.ExecutionModeDirect)
-				record.Execution.Workspace.Driver = "git"
-				record.Execution.Orca = nil
-				if _, err := (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), record); err != nil {
-					t.Fatal(err)
-				}
-			}
-			actor := claimWiringActor(t)
-			owner := reseedWiringOwner{}
-			preview, err := newIssueOpsReplacementHandler()(context.Background(), stateRoot, replacementmodel.ExecutionReplaceRequest{
-				ID: record.ID, Action: model.ExecutionReplacePreview, ExpectedGeneration: 1, Actor: actor, CWD: record.Execution.Workspace.Root,
-			}, port.ReplacementInvocation{OrcaOwner: owner})
-			if err != nil {
-				t.Fatalf("preview: %v", err)
-			}
-			var result model.ExecutionReplaceResult
-			deps := executioncmd.Deps{
-				Runtime:    newIssueOpsExecutionRunners(),
-				StateRoot:  func() string { return stateRoot },
-				Provenance: reseedProvenanceObserver{},
-				Reseed: func(ctx context.Context, root string, request model.ExecutionReseedRequest) (model.ExecutionReplaceResult, error) {
-					return issueOpsReseedHandlerWithOwner(ctx, root, request, owner)
-				},
-				PrintJSON: func(value any) error {
-					mapped, ok := value.(model.ExecutionReplaceResult)
-					if !ok {
-						return fmt.Errorf("unexpected CLI result %T", value)
-					}
-					result = mapped
-					return nil
-				},
-			}
-			if mode == model.ExecutionModeOrca {
-				deps.ReadIssue = func(_ context.Context, _ string, request executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
-					return executionissue.ExecutionIssueSnapshot{URL: request.URL, Body: claimWiringIssueBody(), State: "opened"}, nil
-				}
-			}
-			process := actor.SessionProcess
-			args := []string{
-				"replace", "--id", record.ID, "--expected-generation", "1", "--reseed", "--confirm", "--inventory-fingerprint", preview.InventoryFingerprint,
-				"--reason", "CLI dogfood reseed", "--host", actor.Host, "--session-id", actor.SessionID,
-				"--session-pid", fmt.Sprintf("%d", process.PID), "--session-started-at", process.StartedAt,
-				"--session-executable", process.Executable, "--cwd", record.Execution.Workspace.Root, "--json",
-			}
-			if err := executioncmd.Run(args, deps); err != nil {
-				t.Fatalf("CLI reseed: %v", err)
-			}
-			if !result.OK || result.Action != model.ExecutionReplaceReseed || result.Execution.Lease.Generation != 2 || result.Execution.Lease.Status != model.LeaseStatusClaimable || result.ClaimTokenPath == "" {
-				t.Fatalf("CLI reseed result=%+v", result)
-			}
-			if info, err := os.Stat(result.ClaimTokenPath); err != nil || info.Mode().Perm() != 0o600 {
-				t.Fatalf("new token info=%v err=%v", info, err)
-			}
-			if _, err := os.Stat(oldToken); !os.IsNotExist(err) {
-				t.Fatalf("superseded token err=%v", err)
-			}
-			persisted, err := issueops.ReadIssueOps(stateRoot, record.ID)
-			if err != nil || persisted.Execution.Lease.Generation != 2 || persisted.Execution.Lease.Status != model.LeaseStatusClaimable {
-				t.Fatalf("persisted reseed=%+v err=%v", persisted.Execution, err)
-			}
-			if mode == model.ExecutionModeOrca && (result.ContextPacketSHA256 == "" || result.OwnerPromptSHA256 == "" || result.NextCommand == "") {
-				t.Fatalf("Orca owner reseal result=%+v", result)
-			}
-		})
+	if err := executioncmd.Run(args, deps); err != nil {
+		t.Fatalf("CLI reseed: %v", err)
+	}
+	if !result.OK || result.Action != model.ExecutionReplaceReseed || result.Execution.Lease.Generation != 2 || result.Execution.Lease.Status != model.LeaseStatusClaimable || result.ClaimTokenPath == "" {
+		t.Fatalf("CLI reseed result=%+v", result)
+	}
+	if info, err := os.Stat(result.ClaimTokenPath); err != nil || info.Mode().Perm() != 0o600 {
+		t.Fatalf("new token info=%v err=%v", info, err)
+	}
+	if _, err := os.Stat(oldToken); !os.IsNotExist(err) {
+		t.Fatalf("superseded token err=%v", err)
+	}
+	persisted, err := issueops.ReadIssueOps(stateRoot, record.ID)
+	if err != nil || persisted.Execution.Lease.Generation != 2 || persisted.Execution.Lease.Status != model.LeaseStatusClaimable {
+		t.Fatalf("persisted reseed=%+v err=%v", persisted.Execution, err)
 	}
 }
 
 func TestExecutionReseedCompletedStatusExposesReopenContract(t *testing.T) {
-	stateRoot, record, _, _, _ := seedOrcaClaimSnapshot(t)
+	stateRoot, record, _ := seedDirectClaimFixture(t)
 	claimWiringGit(t, record.Execution.Workspace.SourceRoot, "remote", "add", "origin", record.Execution.Workspace.SourceRoot)
 	oldHead := "d6d8c6a5a98fcca6bca33edf9e7965636429ce28"
 	record.Phase = model.IssueOpsPhaseDone
@@ -174,17 +112,14 @@ func TestExecutionReseedCompletedStatusExposesReopenContract(t *testing.T) {
 		t.Fatal(err)
 	}
 	actor := claimWiringActor(t)
-	owner := reseedWiringOwner{}
-	preview, err := newIssueOpsReplacementHandler()(context.Background(), stateRoot, replacementmodel.ExecutionReplaceRequest{ID: record.ID, Action: model.ExecutionReplacePreview, ExpectedGeneration: 1, CompletionGeneration: 1, Actor: actor, CWD: record.Execution.Workspace.Root}, port.ReplacementInvocation{OrcaOwner: owner, BaseSync: basesyncoutbound.NewInspector(basesyncoutbound.RunGit)})
+	preview, err := newIssueOpsReplacementHandler()(context.Background(), stateRoot, replacementmodel.ExecutionReplaceRequest{ID: record.ID, Action: model.ExecutionReplacePreview, ExpectedGeneration: 1, CompletionGeneration: 1, Actor: actor, CWD: record.Execution.Workspace.Root}, port.ReplacementInvocation{BaseSync: basesyncoutbound.NewInspector(basesyncoutbound.RunGit)})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(preview.NextCommand, "--completion-generation 1") {
 		t.Fatalf("preview lost typed completion provenance: %q", preview.NextCommand)
 	}
-	result, err := issueOpsReseedHandlerWithOwner(context.Background(), stateRoot, model.ExecutionReseedRequest{ID: record.ID, ExpectedGeneration: 1, CompletionGeneration: 1, Actor: actor, CWD: record.Execution.Workspace.Root, InventoryFingerprint: preview.InventoryFingerprint, Reason: "functional HEAD changed", Confirm: true, ReadIssue: func(_ context.Context, _ string, request executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
-		return executionissue.ExecutionIssueSnapshot{URL: request.URL, Body: claimWiringIssueBody(), State: "opened"}, nil
-	}}, owner)
+	result, err := issueOpsReseedHandler(context.Background(), stateRoot, model.ExecutionReseedRequest{ID: record.ID, ExpectedGeneration: 1, CompletionGeneration: 1, Actor: actor, CWD: record.Execution.Workspace.Root, InventoryFingerprint: preview.InventoryFingerprint, Reason: "functional HEAD changed", Confirm: true})
 	if err != nil {
 		t.Fatalf("completed reseed: %v", err)
 	}
@@ -202,7 +137,7 @@ func TestExecutionReseedCompletedStatusExposesReopenContract(t *testing.T) {
 	if status.Execution.Completion != nil || len(status.Execution.CompletionHistory) != 1 || persisted.Phase != model.IssueOpsPhaseImplement {
 		t.Fatalf("status projection=%+v record_phase=%s", status.Execution, persisted.Phase)
 	}
-	if !strings.Contains(status.NextCommand, "issueops execution resume") || strings.Contains(status.NextCommand, "execution complete") {
+	if !strings.Contains(status.NextCommand, "issueops execution claim") || strings.Contains(status.NextCommand, "execution complete") {
 		t.Fatalf("status next command=%q", status.NextCommand)
 	}
 	if persisted.AISlopCleanAt != "" || persisted.ImplementationReview != nil || persisted.RemoteCompletion != nil {
@@ -220,11 +155,11 @@ func TestExecutionReseedCompletedStatusExposesReopenContract(t *testing.T) {
 }
 
 func TestCompletedReplacementPreviewRequiresSyncBaseBeforeReseedWhenParentDrifted(t *testing.T) {
-	stateRoot, record, actor, owner := completedReplacementPreviewFixture(t, true)
+	stateRoot, record, actor := completedReplacementPreviewFixture(t, true)
 	preview, err := newIssueOpsReplacementHandler()(context.Background(), stateRoot, replacementmodel.ExecutionReplaceRequest{
 		ID: record.ID, Action: model.ExecutionReplacePreview, ExpectedGeneration: 1, CompletionGeneration: 1,
 		Actor: actor, CWD: record.Execution.Workspace.Root,
-	}, port.ReplacementInvocation{OrcaOwner: owner, BaseSync: basesyncoutbound.NewInspector(basesyncoutbound.RunGit)})
+	}, port.ReplacementInvocation{BaseSync: basesyncoutbound.NewInspector(basesyncoutbound.RunGit)})
 	if err == nil {
 		t.Fatalf("drifted completed preview emitted reseed instead of sync-base: %+v", preview)
 	}
@@ -243,11 +178,11 @@ func TestCompletedReplacementPreviewRequiresSyncBaseBeforeReseedWhenParentDrifte
 }
 
 func TestCompletedReplacementPreviewKeepsNoDriftReseed(t *testing.T) {
-	stateRoot, record, actor, owner := completedReplacementPreviewFixture(t, false)
+	stateRoot, record, actor := completedReplacementPreviewFixture(t, false)
 	preview, err := newIssueOpsReplacementHandler()(context.Background(), stateRoot, replacementmodel.ExecutionReplaceRequest{
 		ID: record.ID, Action: model.ExecutionReplacePreview, ExpectedGeneration: 1, CompletionGeneration: 1,
 		Actor: actor, CWD: record.Execution.Workspace.Root,
-	}, port.ReplacementInvocation{OrcaOwner: owner, BaseSync: basesyncoutbound.NewInspector(basesyncoutbound.RunGit)})
+	}, port.ReplacementInvocation{BaseSync: basesyncoutbound.NewInspector(basesyncoutbound.RunGit)})
 	if err != nil {
 		t.Fatalf("no-drift completed preview: %v", err)
 	}
@@ -257,16 +192,16 @@ func TestCompletedReplacementPreviewKeepsNoDriftReseed(t *testing.T) {
 }
 
 func TestCompletedReplacementRejectsPersistingUnstampedCompletionGeneration(t *testing.T) {
-	stateRoot, record, _, _ := completedReplacementPreviewFixture(t, false)
+	stateRoot, record, _ := completedReplacementPreviewFixture(t, false)
 	record.Execution.Completion.Generation = 0
 	if _, err := (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), record); err == nil {
 		t.Fatal("a completion without its generation must not be persisted")
 	}
 }
 
-func completedReplacementPreviewFixture(t *testing.T, drift bool) (string, model.IssueOpsRecord, model.NativeActor, reseedWiringOwner) {
+func completedReplacementPreviewFixture(t *testing.T, drift bool) (string, model.IssueOpsRecord, model.NativeActor) {
 	t.Helper()
-	stateRoot, record, _, _, _ := seedOrcaClaimSnapshot(t)
+	stateRoot, record, _ := seedDirectClaimFixture(t)
 	source := record.Execution.Workspace.SourceRoot
 	worktree := record.Execution.Workspace.Root
 	claimWiringGit(t, source, "remote", "add", "origin", source)
@@ -290,17 +225,16 @@ func completedReplacementPreviewFixture(t *testing.T, drift bool) (string, model
 	if _, err := (issueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
 	}
-	return stateRoot, record, claimWiringActor(t), reseedWiringOwner{}
+	return stateRoot, record, claimWiringActor(t)
 }
 
 func TestExecutionReseedPreviewNextCommandRunsWithoutCallerRepair(t *testing.T) {
-	stateRoot, record, _, _, _ := seedOrcaClaimSnapshot(t)
+	stateRoot, record, _ := seedDirectClaimFixture(t)
 	actor := claimWiringActor(t)
 	actor.SessionID = "claim wiring's session"
-	owner := reseedWiringOwner{}
 	preview, err := newIssueOpsReplacementHandler()(context.Background(), stateRoot, replacementmodel.ExecutionReplaceRequest{
 		ID: record.ID, Action: model.ExecutionReplacePreview, ExpectedGeneration: 1, Actor: actor, CWD: record.Execution.Workspace.SourceRoot,
-	}, port.ReplacementInvocation{OrcaOwner: owner})
+	}, port.ReplacementInvocation{})
 	if err != nil {
 		t.Fatalf("preview: %v", err)
 	}
@@ -323,12 +257,7 @@ func TestExecutionReseedPreviewNextCommandRunsWithoutCallerRepair(t *testing.T) 
 		Runtime:    newIssueOpsExecutionRunners(),
 		StateRoot:  func() string { return stateRoot },
 		Provenance: reseedProvenanceObserver{},
-		ReadIssue: func(_ context.Context, _ string, request executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
-			return executionissue.ExecutionIssueSnapshot{URL: request.URL, Body: claimWiringIssueBody(), State: "opened"}, nil
-		},
-		Reseed: func(ctx context.Context, root string, request model.ExecutionReseedRequest) (model.ExecutionReplaceResult, error) {
-			return issueOpsReseedHandlerWithOwner(ctx, root, request, owner)
-		},
+		Reseed:     issueOpsReseedHandler,
 	}); err != nil {
 		t.Fatalf("execute emitted preview next command without repair: %v", err)
 	}
@@ -348,10 +277,4 @@ func containsWiringTokenPair(tokens []string, name, value string) bool {
 		}
 	}
 	return false
-}
-
-type reseedWiringOwner struct{}
-
-func (reseedWiringOwner) InspectOwner(context.Context, port.ExecutionOrcaOwnerInventoryRequest) (port.ExecutionOrcaOwnerInventory, error) {
-	return port.ExecutionOrcaOwnerInventory{RuntimeID: "runtime", TaskStatus: "completed", DispatchStatus: "failed"}, nil
 }

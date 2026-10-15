@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import contextlib
 import importlib.util
-import io
 import json
 import subprocess
 import sys
@@ -73,7 +72,7 @@ class StabilityAuditScriptTest(unittest.TestCase):
                 self.assertFalse(audit.self_verify_result_ok(result, invalid))
         self.assertFalse(audit.self_verify_result_ok({"returncode": 1}, valid))
 
-    def test_operational_doctor_invokes_top_level_gate_with_exact_terminal(self) -> None:
+    def test_operational_doctor_invokes_top_level_gate(self) -> None:
         audit = load_audit_module()
         calls: list[list[str]] = []
 
@@ -88,43 +87,18 @@ class StabilityAuditScriptTest(unittest.TestCase):
             }
 
         report = {"steps": [], "failures": []}
-        with mock.patch.dict(audit.os.environ, {"ORCA_TERMINAL_HANDLE": "term_current"}, clear=True):
-            with mock.patch.object(audit, "run", side_effect=fake_run):
-                audit.operational_doctor(report)
+        with mock.patch.object(audit, "run", side_effect=fake_run):
+            audit.operational_doctor(report)
 
         self.assertEqual(
             calls,
-            [[str(audit.BIN), "doctor", "--repo", str(audit.ROOT), "--sealed", "--json", "--preserve-terminal", "term_current"]],
+            [[str(audit.BIN), "doctor", "--repo", str(audit.ROOT), "--json"]],
         )
         self.assertEqual(report["steps"][0]["name"], "operational_doctor")
         self.assertTrue(report["steps"][0]["ok"])
         self.assertEqual(report["failures"], [])
 
-    def test_operational_doctor_explicit_terminal_overrides_stale_environment(self) -> None:
-        audit = load_audit_module()
-        calls: list[list[str]] = []
-
-        def fake_run(cmd, **_kwargs):
-            calls.append([str(arg) for arg in cmd])
-            return {
-                "returncode": 0,
-                "stdout": '{"ok": true, "healthy": true, "issues": []}',
-                "stderr": "",
-                "duration_ms": 1,
-                "timeout": False,
-            }
-
-        report = {"steps": [], "failures": []}
-        with mock.patch.dict(audit.os.environ, {"ORCA_TERMINAL_HANDLE": "term_stale"}, clear=True):
-            with mock.patch.object(audit, "run", side_effect=fake_run):
-                audit.operational_doctor(report, "term_sealed")
-
-        self.assertEqual(
-            calls,
-            [[str(audit.BIN), "doctor", "--repo", str(audit.ROOT), "--sealed", "--json", "--preserve-terminal", "term_sealed"]],
-        )
-
-    def test_operational_doctor_omits_blank_terminal_and_requires_ok_and_healthy(self) -> None:
+    def test_operational_doctor_requires_ok_and_healthy(self) -> None:
         audit = load_audit_module()
         cases = [
             ("nonzero", 1, '{"ok": true, "healthy": true}', False),
@@ -149,11 +123,10 @@ class StabilityAuditScriptTest(unittest.TestCase):
                     }
 
                 report = {"steps": [], "failures": []}
-                with mock.patch.dict(audit.os.environ, {"ORCA_TERMINAL_HANDLE": "   "}, clear=True):
-                    with mock.patch.object(audit, "run", side_effect=fake_run):
-                        audit.operational_doctor(report)
+                with mock.patch.object(audit, "run", side_effect=fake_run):
+                    audit.operational_doctor(report)
 
-                self.assertEqual(calls, [[str(audit.BIN), "doctor", "--repo", str(audit.ROOT), "--sealed", "--json"]])
+                self.assertEqual(calls, [[str(audit.BIN), "doctor", "--repo", str(audit.ROOT), "--json"]])
                 self.assertEqual(report["steps"][0]["ok"], want_ok)
                 self.assertEqual(bool(report["failures"]), not want_ok)
 
@@ -225,75 +198,6 @@ class StabilityAuditScriptTest(unittest.TestCase):
             self.assertEqual(audit.main(), 0)
 
         self.assertEqual(order[:3], ["build", "operational_doctor", "install_checks"])
-
-    def test_main_forwards_explicit_preserve_terminal(self) -> None:
-        audit = load_audit_module()
-        status = {"returncode": 0, "stdout": "", "stderr": "", "duration_ms": 1, "timeout": False}
-        action_names = [
-            "build",
-            "install_checks",
-            "host_mcp_checks",
-            "hook_smoke",
-            "temp_state_worker_policy",
-            "mcp_stress",
-            "cleanup_stale",
-            "rss_sample",
-            "regression",
-        ]
-        with contextlib.ExitStack() as stack:
-            stack.enter_context(mock.patch.object(audit, "run", return_value=status))
-            stack.enter_context(
-                mock.patch.object(
-                    audit.sys,
-                    "argv",
-                    ["stability-audit", "--preserve-terminal", "term_sealed", "--skip-race", "--skip-self-verify"],
-                )
-            )
-            stack.enter_context(mock.patch("builtins.print"))
-            for name in action_names:
-                stack.enter_context(mock.patch.object(audit, name))
-            operational_doctor = stack.enter_context(mock.patch.object(audit, "operational_doctor"))
-            self.assertEqual(audit.main(), 0)
-
-        operational_doctor.assert_called_once()
-        self.assertEqual(operational_doctor.call_args.args[1], "term_sealed")
-
-    def test_invalid_explicit_preserve_terminal_stops_before_any_action(self) -> None:
-        invalid_argv = [
-            ["--preserve-terminal", ""],
-            ["--preserve-terminal", " "],
-            ["--preserve-terminal", "terminal_wrong"],
-            ["--preserve-terminal", "term_bad!"],
-            ["--preserve-terminal", "term_" + "a" * 252],
-            ["--preserve-terminal", "term_one", "--preserve-terminal", "term_two"],
-        ]
-        action_names = [
-            "build",
-            "operational_doctor",
-            "install_checks",
-            "host_mcp_checks",
-            "hook_smoke",
-            "temp_state_worker_policy",
-            "mcp_stress",
-            "cleanup_stale",
-            "rss_sample",
-            "regression",
-        ]
-
-        for argv in invalid_argv:
-            with self.subTest(argv=argv):
-                audit = load_audit_module()
-                with contextlib.ExitStack() as stack:
-                    run = stack.enter_context(mock.patch.object(audit, "run"))
-                    actions = [stack.enter_context(mock.patch.object(audit, name)) for name in action_names]
-                    stack.enter_context(mock.patch.object(audit.sys, "argv", ["stability-audit", *argv]))
-                    stack.enter_context(mock.patch("builtins.print"))
-                    stack.enter_context(contextlib.redirect_stderr(io.StringIO()))
-                    with self.assertRaises(SystemExit):
-                        audit.main()
-                run.assert_not_called()
-                for action in actions:
-                    action.assert_not_called()
 
     def test_install_checks_use_canonical_install_command(self) -> None:
         audit = load_audit_module()
@@ -678,7 +582,6 @@ class HookSmokeTest(unittest.TestCase):
             ("'./bin/issueops' mcp", False),
             ("/opt/bin/issueops-helper hook session-start", False),
             ('python3 "$HOME/.codex/hooks/db-prod-max-execution-time.py"', False),
-            (": orca-agent-hook-form=1; /bin/sh codex-hook.sh || :", False),
             ("'unterminated", False),
             (None, False),
         ]:

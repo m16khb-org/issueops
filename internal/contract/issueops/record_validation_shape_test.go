@@ -114,7 +114,7 @@ func TestValidateRecordAcceptsEveryKnownVocabularyValue(t *testing.T) {
 		accepts(t, "remote artifact "+artifact.Provider+"/"+artifact.Kind, record)
 	}
 	for _, step := range []string{
-		CleanupFailureStepWorkspaceProcessesStop, CleanupFailureStepOrcaRemove, CleanupFailureStepWorktreeRemove,
+		CleanupFailureStepWorkspaceProcessesStop, CleanupFailureStepWorktreeRemove,
 		CleanupFailureStepBranchDelete, CleanupFailureStepRecordDelete,
 	} {
 		record := base()

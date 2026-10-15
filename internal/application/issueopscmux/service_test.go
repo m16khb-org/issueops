@@ -39,7 +39,7 @@ func (c *testClient) Send(context.Context, cmux.SendRequest) (cmux.SendReceipt, 
 }
 
 func releasedRecord() model.IssueOpsRecord {
-	return model.IssueOpsRecord{ID: "cycle", WorktreePath: "/workspace", Execution: &model.Execution{Mode: model.ExecutionModeDirect, Workspace: model.Workspace{Root: "/workspace"}, Lease: model.WriteLease{Status: model.LeaseStatusReleased, Generation: 2}}}
+	return model.IssueOpsRecord{ID: "cycle", WorktreePath: "/workspace", Execution: &model.Execution{Workspace: model.Workspace{Root: "/workspace"}, Lease: model.WriteLease{Status: model.LeaseStatusReleased, Generation: 2}}}
 }
 func rootEnvironment(d *testDirectory) port.RootEnvironment {
 	return port.RootEnvironment{

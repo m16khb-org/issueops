@@ -220,29 +220,6 @@ func createClaimToken(record issueops.IssueOpsRecord) (string, string, error) {
 	return token, path, nil
 }
 
-func readExecutionLeaseToken(record issueops.IssueOpsRecord, path string) (string, error) {
-	expected := claimTokenPath(record)
-	if !samePath(path, expected) {
-		return "", fmt.Errorf("claim_token_file must be the deterministic current-generation path")
-	}
-	info, err := os.Lstat(expected)
-	if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() || info.Mode().Perm() != 0o600 {
-		return "", fmt.Errorf("claim token file must be a 0600 regular file")
-	}
-	if info.Size() > 256 {
-		return "", fmt.Errorf("claim token file is oversized")
-	}
-	data, err := os.ReadFile(expected)
-	if err != nil {
-		return "", err
-	}
-	token := strings.TrimSpace(string(data))
-	if token == "" {
-		return "", fmt.Errorf("claim token file is empty")
-	}
-	return token, nil
-}
-
 func tokenSHA256(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])
@@ -256,10 +233,6 @@ func cleanupReplacementGeneration(record issueops.IssueOpsRecord) error {
 		return fmt.Errorf("cannot clean replacement residue without an execution")
 	}
 	paths := []string{claimTokenPath(record)}
-	if record.Execution.Mode == issueops.ExecutionModeOrca && record.Execution.Orca != nil {
-		packetPath, promptPath := executionOwnerArtifactPaths(record)
-		paths = append(paths, packetPath, promptPath)
-	}
 	for _, path := range paths {
 		if err := removeReplacementRuntimeFile(record.Execution.Workspace.Root, path); err != nil {
 			return fmt.Errorf("clean uncommitted replacement residue %s: %w", path, err)

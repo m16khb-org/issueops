@@ -282,12 +282,11 @@ func legendLine(usage, shorthand string) string {
 }
 
 // ⑤ execution 하위 명령은 sub-subcommand라 dispatch registry 검사가 덮지 않는다.
-// switch-mode(#167)가 두 usage 텍스트에서 모두 빠진 채 살아남은 경로다 — #181이
-// 문서 열거를 고쳤을 때도 CLI는 남았다.
+// usage 텍스트에서 빠진 채 CLI에만 남는 경로가 생길 수 있다(#181).
 func TestExecutionSubcommandsAppearInUsageTexts(t *testing.T) {
 	want := []string{
 		"prepare", "status", "whoami", "claim", "release",
-		"replace", "reconcile", "complete", "sync-base", "switch-mode",
+		"replace", "reconcile", "complete", "sync-base",
 	}
 	for name, usage := range map[string]string{
 		"issueOpsUsageText": cliadapter.LifecycleUsage(),

@@ -8,8 +8,6 @@ import (
 	"testing"
 
 	model "issueops/internal/contract/issueops"
-	preparation "issueops/internal/contract/issueopspreparation"
-	"issueops/internal/port"
 )
 
 type abandonPreviewEnv struct {
@@ -72,7 +70,6 @@ func TestAbandonPreviewerAcceptsHealthyLocalResidueAndCopiesObservations(t *test
 		}
 		return FinishWorkspaceObservation{
 			Receipts:  []model.NativeProcessReceipt{{PID: 7, StartedAt: "t", Executable: "/bin/sh"}},
-			Terminals: []string{"term-1"}, RuntimeReady: true, AppPID: 900,
 			Occupants: []model.CleanupWorkspaceProcess{{PID: 7, Command: "sh"}},
 		}, nil
 	}
@@ -83,7 +80,7 @@ func TestAbandonPreviewerAcceptsHealthyLocalResidueAndCopiesObservations(t *test
 	if inventory.WorktreeRoot != "/wt" || !inventory.WorktreePresent || !inventory.WorktreeCanonical || !inventory.WorktreeClean || inventory.WorktreeHead != "h1" || inventory.WorktreeBranch != "feature" {
 		t.Fatalf("worktree facts not copied: %+v", inventory)
 	}
-	if inventory.BranchOID != "h1" || inventory.OrcaAppPID != 900 || !inventory.OrcaRuntimeReady || !slices.Equal(inventory.OrcaTerminals, []string{"term-1"}) || len(inventory.WorkspaceProcesses) != 1 {
+	if inventory.BranchOID != "h1" || len(inventory.WorkspaceProcesses) != 1 {
 		t.Fatalf("branch/workspace facts not copied: %+v", inventory)
 	}
 	if inventory.RecordSHA != CleanupAbandonRecordSHA(localAbandonRecord()) || len(inventory.RecordSHA) != 64 {
@@ -217,33 +214,22 @@ func TestAbandonPreviewerResolvesChildrenOnlyFromObservedDoneRecords(t *testing.
 	}
 }
 
-func TestAbandonPreviewerSurfacesPendingIntentAndOrcaResidue(t *testing.T) {
+func TestAbandonPreviewerSurfacesPendingIntent(t *testing.T) {
 	record := localAbandonRecord()
 	record.Execution = &model.Execution{
-		Mode: model.ExecutionModeOrca, Workspace: model.Workspace{Root: "/wt", Branch: "feature"},
-		Lease:   model.WriteLease{Status: model.LeaseStatusReleased},
-		Pending: &model.ExternalIntent{OperationID: "op-9", Kind: "reconcile"},
-		Orca:    &model.OrcaBinding{TaskID: "task"},
+		Workspace: model.Workspace{Root: "/wt", Branch: "feature"},
+		Lease:     model.WriteLease{Status: model.LeaseStatusReleased},
+		Pending:   &model.ExternalIntent{OperationID: "op-9", Kind: "remote_pr_create"},
 	}
-	previewer := abandonPreviewer(healthyAbandonEnv())
-	previewer.Orca = AbandonOrcaObserver{
-		ReadIntent: func(string) (preparation.Intent, error) {
-			t.Fatal("intent read for non-local pending kind")
-			return preparation.Intent{}, nil
-		},
-		Owner: &fakeOwnerInspector{result: port.ExecutionOrcaOwnerInventory{TaskLive: true, TaskStatus: "running"}},
-	}
-	inventory, result := previewer.Plan(t.Context(), record, abandonReason, nil)
+	inventory, result := abandonPreviewer(healthyAbandonEnv()).Plan(t.Context(), record, abandonReason, nil)
 	if inventory.PendingOperationID != "op-9" {
 		t.Fatalf("pending operation lost: %+v", inventory)
 	}
-	for _, gate := range []string{"pending_intent_safe", "orca_resources_absent"} {
-		if !slices.Contains(result.Missing, gate) {
-			t.Fatalf("missing=%v, want %s", result.Missing, gate)
-		}
+	if !slices.Contains(result.Missing, "pending_intent_safe") {
+		t.Fatalf("missing=%v, want pending_intent_safe", result.Missing)
 	}
-	if !strings.Contains(result.PendingIntentError, "issueops execution reconcile --id cycle") || !strings.Contains(result.OrcaResidueError, "still live") {
-		t.Fatalf("pending=%q orca=%q", result.PendingIntentError, result.OrcaResidueError)
+	if !strings.Contains(result.PendingIntentError, "issueops execution reconcile --id cycle") || !strings.Contains(result.PendingIntentError, "remote_pr_create") {
+		t.Fatalf("pending=%q", result.PendingIntentError)
 	}
 }
 
@@ -285,35 +271,6 @@ func TestAbandonPreviewerTrustsOnlyAuthenticallySealedFailureReceipts(t *testing
 			_, result := abandonPreviewer(healthyAbandonEnv()).Plan(t.Context(), current, abandonReason, nil)
 			if got := !slices.Contains(result.Missing, "cleanup_failure_inventory"); got != tc.trusted {
 				t.Fatalf("trusted=%v want %v missing=%v", got, tc.trusted, result.Missing)
-			}
-		})
-	}
-}
-
-func TestAbandonPreviewerTreatsLiveOrcaTerminalsAsResidueOnlyWhenStopCannotReachThem(t *testing.T) {
-	record := localAbandonRecord()
-	record.Execution = &model.Execution{
-		Mode: model.ExecutionModeOrca, Workspace: model.Workspace{Root: "/wt", Branch: "feature"},
-		Lease: model.WriteLease{Status: model.LeaseStatusReleased},
-		Orca:  &model.OrcaBinding{TaskID: "task"},
-	}
-	for _, tc := range []struct {
-		name      string
-		terminals []string
-		residue   bool
-	}{
-		{"listed terminals are closed by the stop step", []string{"term-1"}, false},
-		{"unlisted live terminal cannot be stopped", nil, true},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			previewer := abandonPreviewer(healthyAbandonEnv())
-			previewer.Workspace = func(context.Context, model.IssueOpsRecord, string) (FinishWorkspaceObservation, []string) {
-				return FinishWorkspaceObservation{Terminals: tc.terminals}, nil
-			}
-			previewer.Orca = AbandonOrcaObserver{Owner: &fakeOwnerInspector{result: port.ExecutionOrcaOwnerInventory{TerminalLive: true}}}
-			_, result := previewer.Plan(t.Context(), record, abandonReason, nil)
-			if got := slices.Contains(result.Missing, "orca_resources_absent"); got != tc.residue {
-				t.Fatalf("residue gate=%v want %v missing=%v", got, tc.residue, result.Missing)
 			}
 		})
 	}

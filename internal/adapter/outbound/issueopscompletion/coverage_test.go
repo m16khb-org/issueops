@@ -120,11 +120,11 @@ func TestRepositoryUnchangedReturnsSnapshotAndExecution(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !result.Record.Prepared || result.Execution.Lease.Status != "active" || result.Execution.Mode != "direct" {
+	if !result.Record.Prepared || result.Execution.Lease.Status != "active" {
 		t.Fatalf("execution = %+v", result.Execution)
 	}
 	snap := result.Record
-	if snap.CanonicalRoot != "/worktree" || snap.Mode != "direct" || snap.BaseBranch != "main" || snap.Phase != "pr" {
+	if snap.CanonicalRoot != "/worktree" || snap.BaseBranch != "main" || snap.Phase != "pr" {
 		t.Fatalf("snapshot = %+v", snap)
 	}
 	if snap.Lease.Holder == nil || snap.Lease.Holder.SessionID != "session-198" || snap.Lease.Holder.Process == nil || snap.Lease.Holder.Process.PID != 198 || snap.Lease.Holder.Process.Executable != "/bin/codex" {

@@ -335,39 +335,6 @@ func TestEncodeLeaseRejectsWrongSchemaVersion(t *testing.T) {
 	}
 }
 
-func TestRequireMutableLeaseSnapshotChecksProjectionAndPersistedBytes(t *testing.T) {
-	attempt := &issueopscontract.IssueOpsCleanupAttempt{
-		Operation: issueopscontract.CleanupOperationFinish,
-		Token:     strings.Repeat("c", 64),
-		StartedAt: "2026-09-29T00:00:00Z",
-	}
-	plain := leasecontract.Record{SchemaVersion: leasecontract.SchemaVersion, ID: "io-snap", Repo: "/repo", Phase: string(issueopscontract.IssueOpsPhaseDone)}
-	armed := plain
-	armed.CleanupAttempt = attempt
-	plainRaw, err := EncodeLease(plain)
-	if err != nil {
-		t.Fatal(err)
-	}
-	armedRaw, err := EncodeLease(armed)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := RequireMutableLeaseSnapshot(plain, plainRaw); err != nil {
-		t.Fatalf("mutable snapshot rejected: %v", err)
-	}
-	if err := RequireMutableLeaseSnapshot(armed, plainRaw); err == nil || err.Error() != "cleanup finish apply is in progress" {
-		t.Fatalf("armed projection error = %v", err)
-	}
-	// The projection omits the attempt, but the CAS bytes carry it.
-	if err := RequireMutableLeaseSnapshot(plain, armedRaw); err == nil || err.Error() != "cleanup finish apply is in progress" {
-		t.Fatalf("armed bytes error = %v", err)
-	}
-	if err := RequireMutableLeaseSnapshot(plain, []byte("{")); err == nil {
-		t.Fatal("undecodable bytes accepted")
-	}
-}
-
 func TestJSONLineObserverDefaultsThresholdAndIgnoresNilWriter(t *testing.T) {
 	NewJSONLineObserver(nil, time.Second).Observe(SpanObservation{Outcome: "error"})
 

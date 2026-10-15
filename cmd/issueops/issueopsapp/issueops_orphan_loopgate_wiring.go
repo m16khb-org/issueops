@@ -6,7 +6,6 @@ import (
 	"issueops/cmd/issueops/issueopscli"
 	issueopsadapter "issueops/internal/adapter/issueops"
 	healthadapter "issueops/internal/adapter/operationalhealth"
-	orcaadapter "issueops/internal/adapter/orca"
 	cleanupapp "issueops/internal/application/issueopscleanup"
 	issueopscontract "issueops/internal/contract/issueops"
 	health "issueops/internal/contract/operationalhealth"
@@ -24,11 +23,11 @@ func newIssueOpsCLIGates() issueopscli.LoopGateDeps {
 
 func orphanCleaner(root string) cleanupapp.OrphanCleaner {
 	environment := issueopsadapter.OrphanEnvironment{StateRoot: root}
-	collector := newOperationalHealthCollector(root, environment, nil)
+	collector := newOperationalHealthCollector(root, environment)
 	environment.LocalInventory = func(ctx context.Context, repo string) (health.Snapshot, error) {
 		return collector.CollectLocal(ctx, repo), nil
 	}
 	return cleanupapp.OrphanCleaner{Environment: environment, Collect: func(ctx context.Context, repo string) (health.Snapshot, error) {
-		return (newOperationalHealthCollector(root, healthadapter.ExecGitRunner{}, orcaadapter.New())).Collect(ctx, repo), nil
+		return (newOperationalHealthCollector(root, healthadapter.ExecGitRunner{})).Collect(ctx, repo), nil
 	}, VerifyMerged: newRemoteVerifier().Merged}
 }

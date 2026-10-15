@@ -42,39 +42,6 @@ func TestValidateActorAcceptsOmo(t *testing.T) {
 	}
 }
 
-func TestValidateSidecarsRequiresVersionedOrcaArtifactIdentity(t *testing.T) {
-	binding := leasecontract.OrcaBinding{
-		RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", RunID: "run_issueops_1", LeaseGeneration: 1,
-		OwnerHost: "codex", OwnerModel: "model", TaskID: "task", DispatchID: "dispatch",
-	}
-	execution := leasecontract.Execution{Mode: "orca", Orca: &binding, Selection: leaseSelectionFixture("orca")}
-	if err := leasedomain.ValidatePersistedSidecars(execution); err == nil || !strings.Contains(err.Error(), "unsupported Orca artifact identity version 0") {
-		t.Fatalf("unversioned all-empty identity must fail closed: %v", err)
-	}
-
-	execution.Orca.ArtifactIdentityVersion = leasecontract.OrcaArtifactIdentityVersion
-	if err := leasedomain.ValidatePersistedSidecars(execution); err == nil || !strings.Contains(err.Error(), "version requires a complete sealed artifact identity") {
-		t.Fatalf("versioned all-empty identity must fail as an invariant violation: %v", err)
-	}
-
-	execution.Orca.IssueBodySHA256 = strings.Repeat("a", 64)
-	execution.Orca.ContextPacketSHA256 = strings.Repeat("b", 64)
-	execution.Orca.OwnerPromptSHA256 = strings.Repeat("c", 64)
-	if err := leasedomain.ValidatePersistedSidecars(execution); err != nil {
-		t.Fatalf("versioned complete identity must be valid: %v", err)
-	}
-	for name, mutate := range map[string]func(*leasecontract.OrcaBinding){
-		"run_id":           func(binding *leasecontract.OrcaBinding) { binding.RunID = "" },
-		"lease_generation": func(binding *leasecontract.OrcaBinding) { binding.LeaseGeneration = 0 },
-	} {
-		missing := *execution.Orca
-		mutate(&missing)
-		if err := leasedomain.ValidatePersistedSidecars(leasecontract.Execution{Mode: "orca", Orca: &missing, Selection: leaseSelectionFixture("orca")}); err == nil || !strings.Contains(err.Error(), name) {
-			t.Fatalf("binding without %s must fail closed: %v", name, err)
-		}
-	}
-}
-
 func TestCompletionHistoryStrictRoundTripAndRejectsUnstampedCompletion(t *testing.T) {
 	record := completionHistoryRecord()
 	encoded, err := leasecodec.EncodeLease(record)
@@ -175,30 +142,14 @@ func completionHistoryRecord() leasecontract.Record {
 		SchemaVersion: leasecontract.SchemaVersion,
 		ID:            "io-completion-history",
 		Execution: &leasecontract.Execution{
-			Mode:      "direct",
-			Workspace: leasecontract.Workspace{SourceRoot: "/source", Root: "/worktree", Branch: "branch", BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "2026-08-03T00:00:00Z"},
+			Workspace: leasecontract.Workspace{SourceRoot: "/source", Root: "/worktree", Branch: "branch", BaseHead: strings.Repeat("a", 40), LinkedAt: "2026-08-03T00:00:00Z"},
 			Lease:     leasecontract.Lease{Generation: 2, Status: "released"},
 			CompletionHistory: []leasecontract.CompletionHistoryEntry{{
 				Generation: 1,
 				Completion: leasecontract.Completion{Generation: 1, FinalHead: strings.Repeat("b", 40), VerificationReportPath: ".issueops/verified-execution/report.json", Verification: []string{"go test ./... -count=1"}, RemoteArtifactURL: "https://github.com/acme/repo/pull/1", CompletedAt: "2026-08-03T00:00:00Z"},
 				Reason:     "new verified HEAD", ReopenedAt: "2026-08-04T00:00:00Z",
 			}},
-			Selection: leaseSelectionFixture("direct"),
 		},
-	}
-}
-
-func TestSelectionReceiptRejectsExplicitDirectFallbackCode(t *testing.T) {
-	selection := leasecontract.Selection{
-		RequestedMode: "direct", ResolvedMode: "direct",
-		ReadinessFingerprint: strings.Repeat("b", 64), SelectedAt: "2026-08-03T00:00:01Z",
-		ExplicitDirectReason: "manual recovery",
-	}
-	for _, fallback := range []string{"orca_unready", " "} {
-		selection.FallbackCode = fallback
-		if err := leasedomain.ValidatePersistedSelection(selection, "direct"); err == nil {
-			t.Fatalf("explicit direct selection with fallback_code %q accepted", fallback)
-		}
 	}
 }
 
@@ -259,60 +210,29 @@ func dereferenceJSONType(typ reflect.Type) reflect.Type {
 	}
 	return typ
 }
-func TestSelectionReceiptRoundTripsAndIsRequiredInCurrentV1(t *testing.T) {
+func TestExecutionRoundTripsInCurrentV1(t *testing.T) {
 	record := leasecontract.Record{
 		SchemaVersion: leasecontract.SchemaVersion,
-		ID:            "io-selection",
+		ID:            "io-execution",
 		Execution: &leasecontract.Execution{
-			Mode: "direct",
 			Workspace: leasecontract.Workspace{
-				SourceRoot: "/repo", Root: "/repo.worktrees/selection", Branch: "selection",
-				BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "2026-08-03T00:00:00Z",
+				SourceRoot: "/repo", Root: "/repo.worktrees/execution", Branch: "execution",
+				BaseHead: strings.Repeat("a", 40), LinkedAt: "2026-08-03T00:00:00Z",
 			},
 			Lease: leasecontract.Lease{Generation: 1, Status: "released"},
 		},
-	}
-	if _, err := leasecodec.EncodeLease(record); err == nil || !strings.Contains(err.Error(), "invalid state") && !strings.Contains(err.Error(), "selection receipt is required") {
-		t.Fatalf("an execution without a selection receipt must not be encoded: %v", err)
-	}
-	unvalidated, err := json.Marshal(record)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := leasecodec.DecodeLease(record.ID, unvalidated); err == nil {
-		t.Fatal("an execution without a selection receipt must not be decoded")
-	}
-
-	record.Execution.Selection = &leasecontract.Selection{
-		RequestedMode: "direct", ResolvedMode: "direct",
-		ReadinessFingerprint: strings.Repeat("b", 64), SelectedAt: "2026-08-03T00:00:01Z",
-		ExplicitDirectReason: "manual recovery",
 	}
 	encoded, err := leasecodec.EncodeLease(record)
 	if err != nil {
 		t.Fatal(err)
 	}
 	decoded, err := leasecodec.DecodeLease(record.ID, encoded)
-	if err != nil || !reflect.DeepEqual(decoded.Execution.Selection, record.Execution.Selection) {
-		t.Fatalf("selection receipt changed across current-v1 round trip: got=%+v want=%+v err=%v", decoded.Execution.Selection, record.Execution.Selection, err)
+	if err != nil || !reflect.DeepEqual(decoded.Execution, record.Execution) {
+		t.Fatalf("execution changed across current-v1 round trip: got=%+v want=%+v err=%v", decoded.Execution, record.Execution, err)
 	}
-}
-
-func TestSelectionReceiptRequiresExactAutoFallbackCode(t *testing.T) {
-	selection := leasecontract.Selection{
-		RequestedMode: "auto", ResolvedMode: "direct", ProbeAttempted: true,
-		ProbeCode: "orca_unready", FallbackCode: "orca_unready",
-		ReadinessFingerprint: strings.Repeat("b", 64), SelectedAt: "2026-08-03T00:00:01Z",
-	}
-	if err := leasedomain.ValidatePersistedSelection(selection, "direct"); err != nil {
-		t.Fatalf("valid auto fallback rejected: %v", err)
-	}
-	for _, fallback := range []string{"", "different_code", " orca_unready "} {
-		candidate := selection
-		candidate.FallbackCode = fallback
-		if err := leasedomain.ValidatePersistedSelection(candidate, "direct"); err == nil {
-			t.Fatalf("invalid fallback_code %q accepted", fallback)
-		}
+	record.Execution.Workspace.Root = record.Execution.Workspace.SourceRoot
+	if _, err := leasecodec.EncodeLease(record); err == nil || !strings.Contains(err.Error(), "isolated from source_root") {
+		t.Fatalf("an execution without an isolated worktree must not be encoded: %v", err)
 	}
 }
 

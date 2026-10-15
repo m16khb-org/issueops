@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func ReplacementClaimCommand(id string, generation uint64, _ string) string {
+func ReplacementClaimCommand(id string, generation uint64) string {
 	return "issueops execution claim --id " + quoteReplacementArg(id) +
 		" --generation " + strconv.FormatUint(generation, 10) +
 		" --claim-current-token"
@@ -54,9 +54,6 @@ func ReplacementRevokeCommand(id string, generation uint64, fingerprint string, 
 	return command
 }
 
-func ReplacementResumeCommand(id string, generation uint64) string {
-	return "issueops execution resume --id " + quoteReplacementArg(id) + " --expected-generation " + strconv.FormatUint(generation, 10) + " --confirm"
-}
 func quoteReplacementArg(value string) string {
 	return "'" + strings.ReplaceAll(value, "'", "'\\''") + "'"
 }

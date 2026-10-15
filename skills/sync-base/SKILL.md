@@ -38,9 +38,6 @@ or ambiguous ownership/base evidence does. Report it and ask rather than guess.
 2. **Protected branch?** Refuse to sync `main`, `master`, `develop`, or
    `release/*` itself unless the user names the branch and confirms in the same
    message. Syncing a feature branch from one of them is the normal case.
-3. **Orca is optional.** Orca worktree lineage is one evidence source among
-   several. Never require an Orca runtime, and skip the source when
-   `orca status --json` does not report a ready runtime.
 
 ## Safety rules
 
@@ -66,10 +63,9 @@ answered so the user can judge the confidence.
 | 2 | Open PR base / MR target | `gh pr view --json baseRefName` / `glab mr view -F json` (`target_branch`) | exact |
 | 3 | `gh` CLI merge base | `git config --get branch.<branch>.gh-merge-base` | exact |
 | 4 | IssueOps pinned base | `git config --get branch.<branch>.base` | SHA, needs lookup |
-| 5 | Orca worktree lineage | `orca worktree show --worktree path:<path> --json` | exact when ready |
-| 6 | VS Code merge base | `git config --get branch.<branch>.vscode-merge-base` | usually the default branch |
-| 7 | Divergence-point lookup | reflog SHA plus candidate comparison (below) | inferred |
-| 8 | Repository default branch | `git symbolic-ref refs/remotes/origin/HEAD` | weak, announce it |
+| 5 | VS Code merge base | `git config --get branch.<branch>.vscode-merge-base` | usually the default branch |
+| 6 | Divergence-point lookup | reflog SHA plus candidate comparison (below) | inferred |
+| 7 | Repository default branch | `git symbolic-ref refs/remotes/origin/HEAD` | weak, announce it |
 
 The record key stays `branch.<branch>.parent` so records written under this
 skill's former name, `rebase-onto-parent`, keep answering rank 1.
@@ -79,7 +75,7 @@ Each `git config --get` exits 1 when the key is absent. Treat exit 1 as "no
 evidence from this source" and continue down the cascade; do not treat it as a
 failure of the skill.
 
-### Rank 7: divergence-point lookup
+### Rank 6: divergence-point lookup
 
 `git switch -c` records only `branch: Created from HEAD`, so the reflog gives a
 SHA and not a name. Recover the divergence SHA, then rank the candidate branches
@@ -104,7 +100,7 @@ An older ancestor such as `origin/main` shows a merge base further back and
 `base-ahead=0`; the real base shows a merge base equal to `$FORK`. When two
 candidates tie, ask the user instead of guessing.
 
-### Rank 8: repository default branch
+### Rank 7: repository default branch
 
 ```bash
 git symbolic-ref --quiet refs/remotes/origin/HEAD
@@ -113,7 +109,7 @@ git symbolic-ref --quiet refs/remotes/origin/HEAD
 ```
 
 The first call exits 1 in a repository where `origin/HEAD` was never written.
-`git remote set-head origin --auto` creates it. Reaching rank 8 means the base
+`git remote set-head origin --auto` creates it. Reaching rank 7 means the base
 was inferred rather than recorded, so say so before asking for confirmation.
 
 ### Confirm and record

@@ -26,7 +26,7 @@ func TestBuildCleanupOccupancyJoinsReceiptsAndCountsDescendants(t *testing.T) {
 
 	snapshot := map[int]nativeProcessSnapshotEntry{
 		1:     cleanupSnapshotEntry(1, 0, "launchd"),
-		903:   cleanupSnapshotEntry(903, 1, "Orca"),
+		903:   cleanupSnapshotEntry(903, 1, "Acme"),
 		500:   cleanupSnapshotEntry(500, 903, "login"),
 		501:   cleanupSnapshotEntry(501, 500, "zsh"),
 		502:   cleanupSnapshotEntry(502, 501, "sleep"),
@@ -120,7 +120,7 @@ func TestStopWorkspaceProcessesStopsOccupantsHupTermKill(t *testing.T) {
 		diesOn:    map[int]syscall.Signal{501: syscall.SIGHUP, 600: syscall.SIGKILL},
 	}
 	slept := 0
-	stopped, err := stopCleanupWorkspaceProcesses("/tmp/wt", []issueops.CleanupWorkspaceProcess{a, b}, map[int]bool{903: true}, CleanupProcessDeps{
+	stopped, err := stopCleanupWorkspaceProcesses("/tmp/wt", []issueops.CleanupWorkspaceProcess{a, b}, CleanupProcessDeps{
 		Observe: world.observe, Signal: world.signal, Sleep: func(time.Duration) { slept++ }, SelfPID: 777,
 	})
 	if err != nil {
@@ -151,7 +151,7 @@ func TestStopWorkspaceProcessesRefusesReceiptMismatchAndRequester(t *testing.T) 
 		reused := a
 		reused.StartedAt = "s9"
 		world := &fakeCleanupProcessWorld{t: t, occupants: map[int]issueops.CleanupWorkspaceProcess{501: reused}, ancestry: map[int][]int{501: {1}, 777: {1}}}
-		_, err := stopCleanupWorkspaceProcesses("/tmp/wt", []issueops.CleanupWorkspaceProcess{a}, nil, CleanupProcessDeps{Observe: world.observe, Signal: world.signal, Sleep: func(time.Duration) {}, SelfPID: 777})
+		_, err := stopCleanupWorkspaceProcesses("/tmp/wt", []issueops.CleanupWorkspaceProcess{a}, CleanupProcessDeps{Observe: world.observe, Signal: world.signal, Sleep: func(time.Duration) {}, SelfPID: 777})
 		if err == nil || len(world.signals) != 0 {
 			t.Fatalf("a changed receipt must refuse before any signal: err=%v signals=%v", err, world.signals)
 		}
@@ -159,7 +159,7 @@ func TestStopWorkspaceProcessesRefusesReceiptMismatchAndRequester(t *testing.T) 
 	t.Run("requester ancestor occupies", func(t *testing.T) {
 		shell := issueops.CleanupWorkspaceProcess{PID: 700, Command: "zsh", StartedAt: "s7", Executable: "zsh"}
 		world := &fakeCleanupProcessWorld{t: t, occupants: map[int]issueops.CleanupWorkspaceProcess{700: shell}, ancestry: map[int][]int{700: {1}, 777: {700, 1}}}
-		_, err := stopCleanupWorkspaceProcesses("/tmp/wt", []issueops.CleanupWorkspaceProcess{shell}, nil, CleanupProcessDeps{Observe: world.observe, Signal: world.signal, Sleep: func(time.Duration) {}, SelfPID: 777})
+		_, err := stopCleanupWorkspaceProcesses("/tmp/wt", []issueops.CleanupWorkspaceProcess{shell}, CleanupProcessDeps{Observe: world.observe, Signal: world.signal, Sleep: func(time.Duration) {}, SelfPID: 777})
 		if err == nil || len(world.signals) != 0 {
 			t.Fatalf("the requester's own shell must never be signalled: err=%v signals=%v", err, world.signals)
 		}
@@ -168,7 +168,7 @@ func TestStopWorkspaceProcessesRefusesReceiptMismatchAndRequester(t *testing.T) 
 		child := issueops.CleanupWorkspaceProcess{PID: 502, Command: "sleep", StartedAt: "s2", Executable: "sleep"}
 		world := &fakeCleanupProcessWorld{t: t, occupants: map[int]issueops.CleanupWorkspaceProcess{501: a, 502: child}, ancestry: map[int][]int{501: {1}, 502: {501, 1}, 777: {1}},
 			diesOn: map[int]syscall.Signal{501: syscall.SIGTERM, 502: syscall.SIGTERM}}
-		stopped, err := stopCleanupWorkspaceProcesses("/tmp/wt", []issueops.CleanupWorkspaceProcess{a}, nil, CleanupProcessDeps{Observe: world.observe, Signal: world.signal, Sleep: func(time.Duration) {}, SelfPID: 777})
+		stopped, err := stopCleanupWorkspaceProcesses("/tmp/wt", []issueops.CleanupWorkspaceProcess{a}, CleanupProcessDeps{Observe: world.observe, Signal: world.signal, Sleep: func(time.Duration) {}, SelfPID: 777})
 		if err != nil || len(stopped) != 2 {
 			t.Fatalf("a currently occupying descendant of a preview occupant is a valid target: err=%v stopped=%+v", err, stopped)
 		}
@@ -176,7 +176,7 @@ func TestStopWorkspaceProcessesRefusesReceiptMismatchAndRequester(t *testing.T) 
 	t.Run("unknown occupant is stale", func(t *testing.T) {
 		stranger := issueops.CleanupWorkspaceProcess{PID: 900, Command: "vim", StartedAt: "s3", Executable: "vim"}
 		world := &fakeCleanupProcessWorld{t: t, occupants: map[int]issueops.CleanupWorkspaceProcess{501: a, 900: stranger}, ancestry: map[int][]int{501: {1}, 900: {1}, 777: {1}}}
-		_, err := stopCleanupWorkspaceProcesses("/tmp/wt", []issueops.CleanupWorkspaceProcess{a}, nil, CleanupProcessDeps{Observe: world.observe, Signal: world.signal, Sleep: func(time.Duration) {}, SelfPID: 777})
+		_, err := stopCleanupWorkspaceProcesses("/tmp/wt", []issueops.CleanupWorkspaceProcess{a}, CleanupProcessDeps{Observe: world.observe, Signal: world.signal, Sleep: func(time.Duration) {}, SelfPID: 777})
 		if err == nil || len(world.signals) != 0 || !errors.Is(err, domain.ErrCleanupOccupancyChanged) {
 			t.Fatalf("an occupant absent from the preview must be stale, before any signal: err=%v signals=%v", err, world.signals)
 		}

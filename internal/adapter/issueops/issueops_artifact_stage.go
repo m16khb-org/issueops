@@ -37,20 +37,26 @@ func sealedArtifactPath(record issueops.IssueOpsRecord, root, name string) strin
 	return filepath.Join(root, filepath.FromSlash(sealedArtifactDir(record)), name+".md")
 }
 
-func readLinkedPlanIdentity(record issueops.IssueOpsRecord) (issueops.OwnerPlanIdentity, error) {
+// linkedPlanIdentity는 연결된 plan 파일의 경로와 내용 digest다.
+type linkedPlanIdentity struct {
+	Path   string
+	Digest string
+}
+
+func readLinkedPlanIdentity(record issueops.IssueOpsRecord) (linkedPlanIdentity, error) {
 	planPath, err := resolveLinkedPlanPath(record)
 	if err != nil {
-		return issueops.OwnerPlanIdentity{}, err
+		return linkedPlanIdentity{}, err
 	}
 	info, err := os.Lstat(planPath)
 	if err != nil || !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
-		return issueops.OwnerPlanIdentity{}, fmt.Errorf("durable plan path is not a regular file")
+		return linkedPlanIdentity{}, fmt.Errorf("durable plan path is not a regular file")
 	}
 	content, err := os.ReadFile(planPath)
 	if err != nil || strings.TrimSpace(string(content)) == "" {
-		return issueops.OwnerPlanIdentity{}, fmt.Errorf("durable plan is empty or unreadable")
+		return linkedPlanIdentity{}, fmt.Errorf("durable plan is empty or unreadable")
 	}
-	return issueops.OwnerPlanIdentity{Path: planPath, Digest: digestExecutionOwnerBytes(content)}, nil
+	return linkedPlanIdentity{Path: planPath, Digest: digestBytes(content)}, nil
 }
 
 // resolveLinkedPlanPath는 기록된 plan 경로를 절대·정규화하고 캐노니컬 워크트리 안에 있는지 확인한다.
@@ -100,10 +106,9 @@ func readStagedArtifacts(stateRoot, id string) (map[string]string, error) {
 
 // materializeStagedArtifacts는 스테이징된 artifact를 워크트리의
 // 봉인 아티팩트 디렉터리로 0600 파일로 옮기고 name→sha256 manifest를 돌려준다.
-// writeExecutionOwnerArtifact의 immutable 계약을 재사용하므로 재실행은
+// writeSealedArtifact의 immutable 계약을 재사용하므로 재실행은
 // 동일 내용일 때만 통과한다. generic helper는 스테이징이 없으면 빈 manifest를
-// 반환하지만 Orca owner 경로는 application의 MaterializePlan에서 plan을
-// 필수로 검증한다. replacement 재봉인도 그 경로로 같은 내용을 다시 검증한다.
+// 반환한다.
 // 기존 파일을 바꾸는 재-materialize는 immutable writer가 거부한다.
 func materializeStagedArtifacts(stateRoot string, record issueops.IssueOpsRecord) (map[string]string, error) {
 	if record.Execution == nil || strings.TrimSpace(record.Execution.Workspace.Root) == "" {
@@ -120,10 +125,10 @@ func materializeStagedArtifacts(stateRoot string, record issueops.IssueOpsRecord
 	root := record.Execution.Workspace.Root
 	for name, content := range staged {
 		path := sealedArtifactPath(record, root, name)
-		if err := writeExecutionOwnerArtifact(root, path, []byte(content)); err != nil {
+		if err := writeSealedArtifact(root, path, []byte(content)); err != nil {
 			return nil, fmt.Errorf("materialize artifact %s: %w", name, err)
 		}
-		manifest[name] = digestExecutionOwnerBytes([]byte(content))
+		manifest[name] = digestBytes([]byte(content))
 	}
 	// intent는 staging 대상이 아니라 record.intent에서 파생하는 문서다. 문서에
 	// 기록 시각을 넣지 않으므로 같은 내용의 재기록은 같은 바이트가 되고, 내용이
@@ -134,10 +139,10 @@ func materializeStagedArtifacts(stateRoot string, record issueops.IssueOpsRecord
 			// 오류가 staging 표면을 가리키면 사용자가 엉뚱한 곳을 고치므로 record 쪽 명령을 안내한다.
 			return nil, fmt.Errorf("materialize artifact intent: record.intent contains secret-like values; rerun `issueops intent record` with the value redacted, then rerun execution prepare")
 		}
-		if err := writeExecutionOwnerArtifact(root, sealedArtifactPath(record, root, "intent"), content); err != nil {
+		if err := writeSealedArtifact(root, sealedArtifactPath(record, root, "intent"), content); err != nil {
 			return nil, fmt.Errorf("materialize artifact intent: %w", err)
 		}
-		manifest["intent"] = digestExecutionOwnerBytes(content)
+		manifest["intent"] = digestBytes(content)
 	}
 	return manifest, nil
 }

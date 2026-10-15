@@ -7,7 +7,6 @@ const (
 	IssueOpsHandoffDeliveryStateObserved    = "observed"
 
 	IssueOpsHandoffDeliveryLauncherDirect = "direct"
-	IssueOpsHandoffDeliveryLauncherOrca   = "orca"
 	IssueOpsHandoffDeliveryLauncherHerdr  = "herdr"
 	IssueOpsHandoffDeliveryLauncherCmux   = "cmux"
 
@@ -16,11 +15,6 @@ const (
 	IssueOpsHandoffDeliveryEvidenceIssueOpsClaim        = "issueops_claim"
 	IssueOpsHandoffDeliveryEvidenceLauncherAccepted     = "launcher_accepted"
 	IssueOpsHandoffDeliveryEvidenceAcceptedResponseLost = "accepted_response_lost"
-	IssueOpsHandoffDeliveryEvidenceOrcaDispatch         = "orca_dispatch"
-	IssueOpsHandoffDeliveryEvidenceOrcaDispatchReceipt  = "orca_dispatch_receipt"
-	IssueOpsHandoffDeliveryEvidenceOmoSendFailed        = "omo_send_failed"
-	IssueOpsHandoffDeliveryEvidenceOmoSendAccepted      = "omo_send_accepted"
-	IssueOpsHandoffDeliveryEvidenceOmoSendResponseLost  = "omo_send_response_lost"
 	IssueOpsHandoffDeliveryEvidenceRawInput             = "raw_input"
 	IssueOpsHandoffDeliveryEvidenceHerdrWaitState       = "herdr_wait_state"
 	IssueOpsHandoffDeliveryEvidenceTimeout              = "timeout"

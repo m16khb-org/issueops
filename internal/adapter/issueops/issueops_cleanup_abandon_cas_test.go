@@ -14,7 +14,7 @@ func TestAbandonDeletesHolderlessLeaseRecord(t *testing.T) {
 	for _, status := range []issueops.LeaseStatus{issueops.LeaseStatusClaimable, issueops.LeaseStatusReleased} {
 		t.Run(string(status), func(t *testing.T) {
 			stateRoot, record := abandonLeaseRecord(t, status)
-			deps := abandonOrcaDeps(&fakeAbandonGit{}, &fakeOwnerInspector{})
+			deps := abandonDeps(&fakeAbandonGit{})
 
 			preview, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""), deps)
 			if err != nil || preview.Fingerprint == "" {
@@ -41,7 +41,7 @@ func TestAbandonDeletesHolderlessLeaseRecord(t *testing.T) {
 // 실제로 바뀌면 여전히 거부한다.
 func TestAbandonDeletionCASStillCatchesAuthorityDrift(t *testing.T) {
 	stateRoot, record := abandonLeaseRecord(t, issueops.LeaseStatusClaimable)
-	deps := abandonOrcaDeps(&fakeAbandonGit{}, &fakeOwnerInspector{})
+	deps := abandonDeps(&fakeAbandonGit{})
 
 	preview, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""), deps)
 	if err != nil || preview.Fingerprint == "" {

@@ -92,10 +92,9 @@ func publicationRecordRaw(t *testing.T) []byte {
 		OK: true, SchemaVersion: issueopscontract.IssueOpsSchemaVersion, ID: "io-195", Repo: "/repo",
 		Branch: "195-publication", Phase: issueopscontract.IssueOpsPhasePR,
 		Execution: &issueopscontract.Execution{
-			Mode: issueopscontract.ExecutionModeDirect,
 			Workspace: issueopscontract.Workspace{
 				SourceRoot: "/repo", Root: "/repo.worktrees/195-publication", Branch: "195-publication",
-				BaseHead: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Driver: "git", LinkedAt: "2026-08-01T00:00:00Z",
+				BaseHead: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", LinkedAt: "2026-08-01T00:00:00Z",
 			},
 			Lease: issueopscontract.WriteLease{Generation: 9, Status: issueopscontract.LeaseStatusActive},
 			Pending: &issueopscontract.ExternalIntent{

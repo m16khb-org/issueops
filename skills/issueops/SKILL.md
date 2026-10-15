@@ -39,25 +39,23 @@ issueops next --json
 ## 환경별 자동 세션 인계
 
 **브랜치·canonical worktree 준비 후, 구현 진입 전**에 실행 세션을 자동 결정한다.
-실행 방식 메뉴는 묻지 않는다. 전체 사이클은 draft PR/MR 발행·execution complete에서,
+세션 선택 메뉴는 묻지 않는다. 전체 사이클은 draft PR/MR 발행·execution complete에서,
 이슈 작성·계획만 요청했거나 더 좁은 종료점을 정했으면 그 범위에서 끝낸다.
 
-- `issueops-plan`이 direct mode로 워크트리를 먼저 준비한다. 준비 세션이 Herdr 세션이면
-  Herdr를 먼저 확인해 사용 가능하면 Orca가 ready여도 Herdr로 인계한다. 그 밖에는 설치된 `orca-cli` 안내를
-  읽고 `orca status --json`의 `runtime.state == "ready"`인지 확인한다.
-  ready면 같은 worktree의 새 세션으로 자동 인계한다. Orca가 없거나 unready면
-  Herdr의 실행 중인 서버·호환성·현재 native host 실행 가능 여부를 확인해 같은
-  worktree에서 새 세션을 연다. 둘 다 사용 불가면 현재 세션에서 이어간다.
+- `issueops-plan`이 워크트리를 먼저 준비한다. 준비한 뒤 Herdr를 확인한다. 준비 세션이
+  Herdr 세션이고 실행 중인 서버·호환성·현재 native host 실행 가능 여부가 확인되면 같은
+  worktree의 새 Herdr 세션으로 인계한다. Herdr를 쓸 수 없으면 현재 세션에서 이어가거나,
+  사용자가 직접 연 두 번째 터미널에서 수동 인계한다.
   바이너리 설치 여부만으로 ready라고 판단하지 않는다.
 - 결정은 `decision add`에 `current|new-session|hold`, 런처·실측 상태, 원래 요청과 대화 근거,
   ID·issue·branch·worktree·계획·generation·승인 범위·종료점으로 기록하고 `status`로 확인한다.
   인계 전 새 dispatch를 멈추고 writer와 자손의 실제 종료를 확인한다. 인계 자료에는 목적·비목표,
   source/worktree, base/full HEAD·diff, 계획 경로/digest, 검증 입력·명령·시각·환경·실패,
-  미완료 작업·결과 위치, lifecycle 상태, exact resume/조회 명령과 자료 digest를 남긴다.
+  미완료 작업·결과 위치, lifecycle 상태, exact 인수/조회 명령과 자료 digest를 남긴다.
   secret·이전 claim token은 제외한다. release/status로 해제를 확인한 뒤 같은 worktree에
   현재 native host의 새 세션 하나만 연다. 수신자는 HEAD·계획/자료 digest와 최신 지시를 대조하고
   자기 actor로 인수하며, stale 근거만 재확인한다. 이전 callback은 쓰기나 pass 근거가 아니다.
-  자동 분기를 다시 적용하지 않는다. 이미 인계받은 Orca owner도 동일하다.
+  자동 분기를 다시 적용하지 않는다.
 - 런처를 설치하거나 서버를 시작하지 않는다. 호출 전후 `trace handoff-delivery`로 실측
   identity·generation·prompt/material digest와 receipt를 기록한다. 입력 접수, native turn,
   claim은 별개 증거다. 모호한 launch를 재전송하거나 다른 런처/current로 우회하지 않는다.
@@ -68,7 +66,7 @@ issueops next --json
   구현만 요청한 작업에 commit·push·PR/MR 발행 권한을 추가하지 않는다.
   phase·claim·`--approved`도 승인 근거가 아니다.
 - 현재 세션 진행·새 세션·보류를 명시한 최신 사용자 지시는 자동 분기보다 우선한다.
-  보류는 lease를 해제하고 준비 상태를 보존한다. 기존 worktree와 execution mode는
+  보류는 lease를 해제하고 준비 상태를 보존한다. 기존 worktree는
   세션 인계를 이유로 바꾸거나 다시 만들지 않는다.
 
 단계 스킬과 함께 쓰는 계획·검증·Git 스킬도 이 승인 범위와 종료점을 따른다.
@@ -126,9 +124,10 @@ issueops next --json
 ## 세션 경계
 
 1·2단계는 worktree 없이 source 준비 세션에서, 3단계도 같은 세션에서 수행한다.
-3단계 `execution prepare --mode direct`가 worktree·lease를 만들고 위 인계를 적용한다.
+3단계 `execution prepare`가 worktree·lease를 만들고 위 인계를 적용한다.
 4단계부터 선택한 세션이 canonical worktree에서 수행한다. current는 기존 lease를 유지하고
-새 세션은 release 확인 후 인수한다. 명시적/기존 Orca execution은 core의 resume 경로를 쓴다.
+새 세션은 release 확인 후 인수한다. 새 세션은 `replace --preview`와 반환된 `--reseed` 명령,
+`claim --claim-current-token`으로 이어지는 인수 체인이 유일한 인계 경로다.
 host 간 재개·인수도 `next_command`의 generation·quiescence 검증 체인을 따른다.
 
 ## 공통 불변식
@@ -189,7 +188,7 @@ done을 기록한다. hook은 SessionStart의 project-doc context만 제공한�
 | `none`, `issue` | `issueops-create-issue` | 이슈 확정·생성 |
 | `prepare` | `issueops-prepare` | 브랜치 준비 |
 | `plan.write`, `plan.design`, `plan.review`, `plan.handoff` | `issueops-plan` | 문서 확인·계획·검토·인계 |
-| `claim` | 스킬 없음. Orca가 띄운 세션은 자기 프롬프트의 봉인된 claim을 정확히 한 번 실행하고, 그 밖의 세션은 `next_command`가 돌려주는 체인을 lease가 active(self)가 될 때까지 따라간 뒤 `next`를 다시 실행한다 | 현재 index의 label |
+| `claim` | 스킬 없음. `next_command`가 돌려주는 체인(claimable이면 `claim --claim-current-token`, released이면 `replace --preview`, revoking이면 `replace --finalize-preview`)을 lease가 active(self)가 될 때까지 따라간 뒤 `next`를 다시 실행한다 | 현재 index의 label |
 | `implement.enter`, `implement` | `issueops-implement` | 구현 |
 | `clean` | `issueops-slop-clean` | AI slop 정리 |
 | `docs` | `issueops-docs` | 프로젝트 문서 반영 |

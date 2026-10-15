@@ -30,13 +30,11 @@ func WriterlessCommand(record issueops.IssueOpsRecord) string {
 		return ""
 	}
 	lease := record.Execution.Lease
-	switch leasedomain.DecideWriterlessRecovery(string(lease.Status), string(record.Execution.Mode)) {
+	switch leasedomain.DecideWriterlessRecovery(string(lease.Status)) {
 	case leasedomain.RecoveryReplacePreview:
 		return domain.ReplacementPreviewCommand(record.ID, lease.Generation)
-	case leasedomain.RecoveryResume:
-		return domain.ReplacementResumeCommand(record.ID, lease.Generation)
-	case leasedomain.RecoveryDirectClaim:
-		return domain.ReplacementClaimCommand(record.ID, lease.Generation, "")
+	case leasedomain.RecoveryClaim:
+		return domain.ReplacementClaimCommand(record.ID, lease.Generation)
 	case leasedomain.RecoveryFinalizePreview:
 		return domain.ReplacementFinalizePreviewCommand(record.ID, lease.Generation)
 	}

@@ -257,9 +257,8 @@ func TestCovCFFinishAudit(t *testing.T) {
 	inv := model.CleanupFinishInventory{WorktreeRoot: "/wt", Branch: "feat", BranchOID: "abc"}
 	res := model.CleanupFinishResult{
 		WorkspaceProcessesStopped: []model.CleanupWorkspaceProcess{{PID: 1}, {PID: 2}},
-		OrcaTerminalsStopped:      3,
 	}
-	if got, want := CleanupFinishAudit(inv, res, "T"), "cleanup 완료: worktree=/wt branch=feat oid=abc stopped=2 terminals=3 at=T"; got != want {
+	if got, want := CleanupFinishAudit(inv, res, "T"), "cleanup 완료: worktree=/wt branch=feat oid=abc stopped=2 at=T"; got != want {
 		t.Fatalf("got %q want %q", got, want)
 	}
 	res.KeptRemoteBranch = &model.CleanupKeptRemoteBranch{Branch: "feat", RemoteOID: "deadbeef", State: model.CleanupKeptRemoteBranchPresent}
@@ -271,7 +270,7 @@ func TestCovCFFinishAudit(t *testing.T) {
 		t.Fatalf("kept unreadable = %q", got)
 	}
 	empty := CleanupFinishAudit(model.CleanupFinishInventory{WorktreeRoot: " ", Branch: ""}, model.CleanupFinishResult{}, "T")
-	if empty != "cleanup 완료: worktree=(없음) branch=(없음) oid=(없음) stopped=0 terminals=0 at=T" {
+	if empty != "cleanup 완료: worktree=(없음) branch=(없음) oid=(없음) stopped=0 at=T" {
 		t.Fatalf("empty = %q", empty)
 	}
 }
@@ -372,10 +371,9 @@ func TestCovCFFinishTargetsPrefersExecutionWorkspace(t *testing.T) {
 		RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "https://x/1"},
 		Execution: &model.Execution{
 			Workspace: model.Workspace{Root: " /exec ", Branch: " exec-branch "},
-			Orca:      &model.OrcaBinding{WorktreeID: "wt-9"},
 		}}
 	got := CleanupFinishTargets(record)
-	if got.WorktreeRoot != "/exec" || got.Branch != "exec-branch" || got.OrcaWorktreeID != "wt-9" || got.RemoteURL != "https://x/1" {
+	if got.WorktreeRoot != "/exec" || got.Branch != "exec-branch" || got.RemoteURL != "https://x/1" {
 		t.Fatalf("targets = %+v", got)
 	}
 	record.Execution.Workspace = model.Workspace{}
@@ -533,7 +531,6 @@ func TestCovCFStatusFinishEvidenceAndConversion(t *testing.T) {
 	result := model.CleanupFinishResult{
 		OK: false, ID: "c", Missing: []string{"worktree_clean", "phase_done", "phase_done"}, WorktreePath: "/wt", Branch: "feat",
 		WorkspaceProcesses: []model.CleanupWorkspaceProcess{{PID: 4, Command: "vim", StartedAt: "t"}},
-		OrcaTerminals:      []string{"h1", "h2"},
 	}
 	status := CleanupStatusFromFinish(model.IssueOpsCleanupStatus{RemoteArtifactURL: "https://x/1"}, result)
 	if status.Ready || !status.OK || !status.Merged || status.ID != "c" || status.WorktreePath != "/wt" || status.Branch != "feat" || status.RemoteArtifactURL != "https://x/1" {
@@ -542,7 +539,7 @@ func TestCovCFStatusFinishEvidenceAndConversion(t *testing.T) {
 	if !slices.Equal(status.Missing, []string{"phase_done", "worktree_clean"}) {
 		t.Fatalf("missing must be sorted and deduplicated: %v", status.Missing)
 	}
-	if !slices.Equal(status.Warnings, []string{"4:vim:t", "apply가 프로세스 1개와 Orca 터미널 2개를 종료합니다"}) {
+	if !slices.Equal(status.Warnings, []string{"4:vim:t", "apply가 프로세스 1개를 종료합니다"}) {
 		t.Fatalf("warnings = %v", status.Warnings)
 	}
 	if !strings.Contains(status.Choices[0], "차단 해소") {
@@ -560,13 +557,13 @@ func TestCovCFStatusFinishEvidenceAndConversion(t *testing.T) {
 	}
 }
 
-func TestCovCFStatusWarningsOnlyForTerminalsAndProcesses(t *testing.T) {
+func TestCovCFStatusWarningsOnlyForProcesses(t *testing.T) {
 	if got := CleanupStatusWarnings(model.CleanupFinishResult{}); len(got) != 0 {
 		t.Fatalf("none = %v", got)
 	}
-	got := CleanupStatusWarnings(model.CleanupFinishResult{OrcaTerminals: []string{"h"}})
-	if !slices.Equal(got, []string{"apply가 프로세스 0개와 Orca 터미널 1개를 종료합니다"}) {
-		t.Fatalf("terminals only = %v", got)
+	got := CleanupStatusWarnings(model.CleanupFinishResult{WorkspaceProcesses: []model.CleanupWorkspaceProcess{{PID: 4, Command: "vim", StartedAt: "t"}}})
+	if !slices.Equal(got, []string{"4:vim:t", "apply가 프로세스 1개를 종료합니다"}) {
+		t.Fatalf("processes only = %v", got)
 	}
 }
 
@@ -713,42 +710,6 @@ func TestCovCFRequesterOccupancyMissing(t *testing.T) {
 	}
 }
 
-func TestCovCFRequesterTerminalSelection(t *testing.T) {
-	rows := []CleanupTerminalIdentity{
-		{Handle: "h1", TabID: "t1", LeafID: "l1"},
-		{Handle: "h2", TabID: "t2", LeafID: "l2"},
-		{Handle: "h2", TabID: "t3", LeafID: "l3"},
-		{Handle: "h4", TabID: "", LeafID: "l4"},
-	}
-	if got, ok := CleanupRequesterTerminal(rows, "t1:l1", ""); !ok || got.Handle != "h1" {
-		t.Fatalf("pane unique = %+v,%v", got, ok)
-	}
-	// Pane key wins over handle when it matches.
-	if got, ok := CleanupRequesterTerminal(rows, "t1:l1", "h2"); !ok || got.Handle != "h1" {
-		t.Fatalf("pane precedence = %+v,%v", got, ok)
-	}
-	// Unmatched pane key falls back to handle.
-	if got, ok := CleanupRequesterTerminal(rows, "nope", "h1"); !ok || got.TabID != "t1" {
-		t.Fatalf("handle fallback = %+v,%v", got, ok)
-	}
-	// Ambiguous handle is reported as not unique.
-	if got, ok := CleanupRequesterTerminal(rows, "", "h2"); ok || got.Handle != "h2" {
-		t.Fatalf("ambiguous handle = %+v,%v", got, ok)
-	}
-	// Ambiguous pane key.
-	dup := append(slices.Clone(rows), CleanupTerminalIdentity{Handle: "h5", TabID: "t1", LeafID: "l1"})
-	if _, ok := CleanupRequesterTerminal(dup, "t1:l1", ""); ok {
-		t.Fatal("ambiguous pane key must not be unique")
-	}
-	// Rows lacking a tab id never satisfy a pane key.
-	if got, ok := CleanupRequesterTerminal(rows, ":l4", ""); ok || got != (CleanupTerminalIdentity{}) {
-		t.Fatalf("blank tab = %+v,%v", got, ok)
-	}
-	if got, ok := CleanupRequesterTerminal(rows, "", ""); ok || got != (CleanupTerminalIdentity{}) {
-		t.Fatalf("no selectors = %+v,%v", got, ok)
-	}
-}
-
 func TestCovCFOccupantReceiptsSortedByPID(t *testing.T) {
 	got := CleanupOccupantReceipts([]model.CleanupWorkspaceProcess{
 		{PID: 9, StartedAt: "t9", Executable: "/z", Command: "ignored"},
@@ -760,21 +721,5 @@ func TestCovCFOccupantReceiptsSortedByPID(t *testing.T) {
 	}
 	if got := CleanupOccupantReceipts(nil); got == nil || len(got) != 0 {
 		t.Fatalf("empty = %#v", got)
-	}
-}
-
-func TestCovCFWorkspaceOrcaBound(t *testing.T) {
-	cases := map[string]model.IssueOpsRecord{
-		"no execution": {},
-		"no orca":      {Execution: &model.Execution{}},
-		"blank id":     {Execution: &model.Execution{Orca: &model.OrcaBinding{WorktreeID: "  "}}},
-	}
-	for name, record := range cases {
-		if CleanupWorkspaceOrcaBound(record) {
-			t.Errorf("%s must not be bound", name)
-		}
-	}
-	if !CleanupWorkspaceOrcaBound(model.IssueOpsRecord{Execution: &model.Execution{Orca: &model.OrcaBinding{WorktreeID: "wt"}}}) {
-		t.Error("bound record rejected")
 	}
 }

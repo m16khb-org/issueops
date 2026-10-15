@@ -7,10 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	issueopsadapter "issueops/internal/adapter/issueops"
-	"issueops/internal/adapter/orca"
 	"issueops/internal/adapter/outbound/processlease"
 	"issueops/internal/adapter/provider/github"
 	"issueops/internal/adapter/provider/gitlab"
@@ -19,7 +17,7 @@ import (
 )
 
 func TestRunnersInheritExecutionLifetime(t *testing.T) {
-	for _, name := range []string{"git", "orca", "github", "gitlab"} {
+	for _, name := range []string{"git", "github", "gitlab"} {
 		t.Run(name, func(t *testing.T) {
 			repo, bin := t.TempDir(), t.TempDir()
 			lease, err := processlease.Acquire(context.Background(), filepath.Join(t.TempDir(), "leases"), "cycle")
@@ -33,8 +31,6 @@ func TestRunnersInheritExecutionLifetime(t *testing.T) {
 			switch name {
 			case "git":
 				body += "[ \"$*\" = 'ls-remote --heads origin refs/heads/topic' ] || exit 42\n"
-			case "orca":
-				body += "printf '{}'\n"
 			case "github":
 				executable = "gh"
 				body += "if [ \"$1 $2\" = 'issue view' ]; then printf '{\"body\":\"\"}'; exit 0; fi\n[ \"$1 $2\" = 'issue edit' ] || exit 42\nprintf updated > provider-effect\n"
@@ -49,10 +45,6 @@ func TestRunnersInheritExecutionLifetime(t *testing.T) {
 			switch name {
 			case "git":
 				if _, err := (issueopsadapter.LinkedBranchRemoteRef{}).Observe(ctx, repo, "topic"); err != nil {
-					t.Fatal(err)
-				}
-			case "orca":
-				if _, err := (orca.ExecRunner{}).Run(ctx, repo, time.Second*5, []string{"orca", "worktree", "remove", "wt"}); err != nil {
 					t.Fatal(err)
 				}
 			default:

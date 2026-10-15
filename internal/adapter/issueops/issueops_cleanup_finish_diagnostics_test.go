@@ -13,12 +13,11 @@ import (
 // 프로세스 게이트는 무엇이 워크트리를 잡고 있는지 안다(#154). 이제 그 목록은
 // 차단 근거가 아니라 apply가 종료할 대상이며, receipt와 자손 수를 함께 싣는다(#477).
 func TestCleanupFinishNamesTheProcessesHoldingTheWorktree(t *testing.T) {
-	stateRoot, record, worktree := finishTestRecord(t, true)
+	stateRoot, record, _ := finishTestRecord(t, true)
 	deps := finishDeps(&fakeFinishGit{branchOID: "abc123"})
 	gopls := issueops.CleanupWorkspaceProcess{PID: 37393, Command: "gopls", StartedAt: "2026-08-27T00:00:01Z", Executable: "gopls"}
 	claude := issueops.CleanupWorkspaceProcess{PID: 21327, Command: "claude", StartedAt: "2026-08-27T00:00:02Z", Executable: "claude"}
-	deps.Processes = worldCleanupProcesses(occupiedWorld(t, gopls, claude), nil)
-	deps.OrcaTerminals = readyOrca(t, worktree)
+	deps.Processes = worldCleanupProcesses(occupiedWorld(t, gopls, claude))
 
 	result, err := CleanupFinish(context.Background(), stateRoot, finishRequest(record.ID, false, ""), deps)
 	if err != nil {
@@ -72,7 +71,7 @@ func TestCleanupFinishKeepsQuietPreviewUnchanged(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(result.WorkspaceProcesses) != 0 || len(result.WorkspaceProcessesStopped) != 0 || len(result.OrcaTerminals) != 0 {
-		t.Fatalf("점유가 없으면 프로세스·터미널 목록은 비어 있어야 한다: %+v", result)
+	if len(result.WorkspaceProcesses) != 0 || len(result.WorkspaceProcessesStopped) != 0 {
+		t.Fatalf("점유가 없으면 프로세스 목록은 비어 있어야 한다: %+v", result)
 	}
 }

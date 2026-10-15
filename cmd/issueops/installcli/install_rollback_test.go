@@ -389,7 +389,7 @@ func TestInstallPathTransactionManagedCommandLifecycle(t *testing.T) {
 	req := port.NativeInstallRequest{Home: home, BinPath: target, AdoptCommandFile: true}
 	var result port.NativeInstallResult
 
-	transaction, err := cli.prepareInstallPathPlanForCandidate(&result, req, target, "skip")
+	transaction, err := cli.prepareInstallPathPlanFromCandidate(&result, req, target, "skip")
 	if err != nil || !transaction.managed {
 		t.Fatalf("prepare = %+v, %v", transaction, err)
 	}
@@ -424,7 +424,7 @@ func TestInstallPathTransactionManagedApplyFailureKeepsAdoptionStateForRollback(
 		return managed, installcontract.ManagedCommandPathPlan{Path: command}, nil
 	}
 	var result port.NativeInstallResult
-	transaction, err := cli.prepareInstallPathPlanForCandidate(&result, port.NativeInstallRequest{Home: home, BinPath: "/t/issueops"}, "/t/issueops", "skip")
+	transaction, err := cli.prepareInstallPathPlanFromCandidate(&result, port.NativeInstallRequest{Home: home, BinPath: "/t/issueops"}, "/t/issueops", "skip")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -455,7 +455,7 @@ func TestPrepareInstallPathPlanPropagatesManagedPreflightAndStatFailures(t *test
 			return nil, installcontract.ManagedCommandPathPlan{WouldAdopt: false, Path: "p"}, refusal
 		}
 		var result port.NativeInstallResult
-		_, err := cli.prepareInstallPathPlanForCandidate(&result, port.NativeInstallRequest{Home: home, BinPath: "/t/issueops", DryRun: true}, "/t/issueops", "skip")
+		_, err := cli.prepareInstallPathPlanFromCandidate(&result, port.NativeInstallRequest{Home: home, BinPath: "/t/issueops", DryRun: true}, "/t/issueops", "skip")
 		if !errors.Is(err, refusal) || result.CommandPath == nil || result.CommandPath.Path != "p" {
 			t.Fatalf("err=%v commandPath=%+v", err, result.CommandPath)
 		}
@@ -464,7 +464,7 @@ func TestPrepareInstallPathPlanPropagatesManagedPreflightAndStatFailures(t *test
 		home := t.TempDir()
 		writeInstallFixtureFile(t, filepath.Join(home, ".local"), "x", 0o644)
 		var result port.NativeInstallResult
-		_, err := testInstallCommand(t, Deps{}).prepareInstallPathPlanForCandidate(&result, port.NativeInstallRequest{Home: home, BinPath: "/t/issueops", DryRun: true}, "/t/issueops", "skip")
+		_, err := testInstallCommand(t, Deps{}).prepareInstallPathPlanFromCandidate(&result, port.NativeInstallRequest{Home: home, BinPath: "/t/issueops", DryRun: true}, "/t/issueops", "skip")
 		if err == nil {
 			t.Fatal("expected the ENOTDIR stat failure to be returned")
 		}
@@ -484,7 +484,7 @@ func TestInstallPathTransactionApplyReportsSymlinkFailureAndRollsBackRestoredLin
 	target := filepath.Join(t.TempDir(), "issueops")
 	cli := testInstallCommand(t, Deps{})
 	var result port.NativeInstallResult
-	transaction, err := cli.prepareInstallPathPlanForCandidate(&result, port.NativeInstallRequest{Home: home, BinPath: target}, target, "skip")
+	transaction, err := cli.prepareInstallPathPlanFromCandidate(&result, port.NativeInstallRequest{Home: home, BinPath: target}, target, "skip")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -526,7 +526,7 @@ func TestPrepareInstallPathPlanPlansRelinkOfExistingCommandSymlink(t *testing.T)
 	}
 	target := filepath.Join(t.TempDir(), "issueops")
 	var result port.NativeInstallResult
-	transaction, err := testInstallCommand(t, Deps{}).prepareInstallPathPlanForCandidate(&result, port.NativeInstallRequest{Home: home, BinPath: target, DryRun: true}, target, "skip")
+	transaction, err := testInstallCommand(t, Deps{}).prepareInstallPathPlanFromCandidate(&result, port.NativeInstallRequest{Home: home, BinPath: target, DryRun: true}, target, "skip")
 	if err != nil || transaction.managed {
 		t.Fatalf("prepare = %+v, %v", transaction, err)
 	}
@@ -553,7 +553,7 @@ func TestInstallPathTransactionRollbackReportsFailureToRestorePreviousLink(t *te
 	}
 	target := filepath.Join(t.TempDir(), "issueops")
 	var result port.NativeInstallResult
-	transaction, err := testInstallCommand(t, Deps{}).prepareInstallPathPlanForCandidate(&result, port.NativeInstallRequest{Home: home, BinPath: target}, target, "skip")
+	transaction, err := testInstallCommand(t, Deps{}).prepareInstallPathPlanFromCandidate(&result, port.NativeInstallRequest{Home: home, BinPath: target}, target, "skip")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -583,7 +583,7 @@ func TestInstallPathTransactionRollbackReportsCreatedDirectoryReplacedByFile(t *
 		return link, boom
 	}
 	var result port.NativeInstallResult
-	transaction, err := cli.prepareInstallPathPlanForCandidate(&result, port.NativeInstallRequest{Home: home, BinPath: "/t/issueops"}, "/t/issueops", "skip")
+	transaction, err := cli.prepareInstallPathPlanFromCandidate(&result, port.NativeInstallRequest{Home: home, BinPath: "/t/issueops"}, "/t/issueops", "skip")
 	if err != nil {
 		t.Fatal(err)
 	}

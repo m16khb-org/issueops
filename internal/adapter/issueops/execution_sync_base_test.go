@@ -10,6 +10,7 @@ import (
 
 	"issueops/internal/contract/issueops"
 	"issueops/internal/domain/commandparse"
+	"issueops/internal/domain/shelltoken"
 )
 
 const (
@@ -269,7 +270,7 @@ func TestExecutionSyncBaseGatesRejectEveryMissingPrecondition(t *testing.T) {
 		{"pending intent", issueops.ExecutionSyncBasePreview, func(t *testing.T, f *syncBaseFixture) {
 			f.rewrite(t, func(r *issueops.IssueOpsRecord) {
 				r.Execution.Pending = &issueops.ExternalIntent{
-					OperationID: "op-1", Kind: "orca", Marker: "m", StartedAt: "2026-07-25T00:00:00Z",
+					OperationID: "op-1", Kind: "remote_pr_create", Marker: "m", StartedAt: "2026-07-25T00:00:00Z",
 				}
 			})
 		}, "pending_intent_absent"},
@@ -706,7 +707,7 @@ func TestExecutionSyncBaseReleasedCompletionAuthorityRejectsInvalidState(t *test
 			record.Execution.Completion = nil
 		}, missing: "released_completion_authority"},
 		{name: "pending intent", mutate: func(record *issueops.IssueOpsRecord) {
-			record.Execution.Pending = &issueops.ExternalIntent{OperationID: "op-1", Kind: "orca", Marker: "m", StartedAt: "2026-07-25T00:00:00Z"}
+			record.Execution.Pending = &issueops.ExternalIntent{OperationID: "op-1", Kind: "remote_pr_create", Marker: "m", StartedAt: "2026-07-25T00:00:00Z"}
 		}, missing: "pending_intent_absent"},
 	}
 	for _, test := range tests {
@@ -741,7 +742,7 @@ func TestExecutionSyncBaseBlockersKeepLocalDiagnosticsWithoutNetwork(t *testing.
 			fixture := newReleasedSyncBaseFixture(t, "318-efficiency-blocked-"+mode)
 			fixture.rewrite(t, func(record *issueops.IssueOpsRecord) {
 				record.Execution.Pending = &issueops.ExternalIntent{
-					OperationID: "op-1", Kind: "orca", Marker: "m", StartedAt: "2026-07-25T00:00:00Z",
+					OperationID: "op-1", Kind: "remote_pr_create", Marker: "m", StartedAt: "2026-07-25T00:00:00Z",
 				}
 			})
 			fixture.git.currentBranch = ""
@@ -866,15 +867,19 @@ func assertReleasedSyncBaseCommand(t *testing.T, text string, fixture syncBaseFi
 	t.Helper()
 	if strings.Contains(text, "ACTOR_FLAGS") {
 		process := fixture.actor.SessionProcess
-		actorFlags := "--host " + quoteExecutionOwnerArg(fixture.actor.Host) +
-			" --session-id " + quoteExecutionOwnerArg(fixture.actor.SessionID) +
+		actorFlags := "--host " + quoteShellArg(fixture.actor.Host) +
+			" --session-id " + quoteShellArg(fixture.actor.SessionID) +
 			" --session-pid " + strconv.Itoa(process.PID) +
-			" --session-started-at " + quoteExecutionOwnerArg(process.StartedAt) +
-			" --session-executable " + quoteExecutionOwnerArg(process.Executable) +
-			" --cwd " + quoteExecutionOwnerArg(fixture.worktree)
+			" --session-started-at " + quoteShellArg(process.StartedAt) +
+			" --session-executable " + quoteShellArg(process.Executable) +
+			" --cwd " + quoteShellArg(fixture.worktree)
 		text = strings.Replace(text, "ACTOR_FLAGS", actorFlags, 1)
 	}
-	command, ok := commandparse.ParseExactIssueOpsCommand(text)
+	tokens := shelltoken.SplitCommandTokens(text)
+	if len(tokens) == 0 {
+		t.Fatalf("command is empty: %q", text)
+	}
+	command, ok := commandparse.ParseExactIssueOpsArgs(tokens[1:])
 	if !ok || command.Path != "execution sync-base" {
 		t.Fatalf("command is not exact sync-base: %q", text)
 	}

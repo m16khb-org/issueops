@@ -35,7 +35,7 @@ func (s *countingProvenanceObserver) Observe(context.Context) (provenanceport.Re
 func TestBindExecutionNextCommandUsesObservedBinaryAndResultGeneration(t *testing.T) {
 	raw := issueopscontract.ExecutionReplaceResult{
 		Execution:   issueopscontract.Execution{Lease: issueopscontract.WriteLease{Generation: 7}},
-		NextCommand: "issueops execution resume --id io-1 --expected-generation 7 --confirm",
+		NextCommand: "issueops execution claim --id io-1 --generation 7 --claim-current-token",
 	}
 	bound, err := bindExecutionNextCommand(raw, provenanceObserverStub{evidence: provenanceport.Receipt{
 		ExecutablePath: "/repo/bin/issueops", ExecutableSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -114,7 +114,7 @@ func TestOutputBaseSyncRequiredObservationFailureHasNoUnboundFallback(t *testing
 func TestBindExecutionNextCommandObservationFailureHasNoFallback(t *testing.T) {
 	raw := issueopscontract.ExecutionReplaceResult{
 		Execution:   issueopscontract.Execution{Lease: issueopscontract.WriteLease{Generation: 7}},
-		NextCommand: "issueops execution resume --id io-1 --expected-generation 7 --confirm",
+		NextCommand: "issueops execution claim --id io-1 --generation 7 --claim-current-token",
 	}
 	bound, err := bindExecutionNextCommand(raw, provenanceObserverStub{err: errors.New("executable observation failed")})
 	if err == nil {
@@ -132,7 +132,7 @@ func TestBindExecutionNextCommandObservationFailureHasNoFallback(t *testing.T) {
 func TestBindExecutionNextCommandMissingObserverHasNoFallback(t *testing.T) {
 	raw := issueopscontract.ExecutionReplaceResult{
 		Execution:   issueopscontract.Execution{Lease: issueopscontract.WriteLease{Generation: 7}},
-		NextCommand: "issueops execution resume --id io-1 --expected-generation 7 --confirm",
+		NextCommand: "issueops execution claim --id io-1 --generation 7 --claim-current-token",
 	}
 	bound, err := bindExecutionNextCommand(raw, nil)
 	if err == nil || bound != nil {
@@ -170,14 +170,6 @@ func TestBindExecutionNextCommandCoversEveryCommandBearingResult(t *testing.T) {
 			},
 			command: func(value any) string { return value.(issueopscontract.ExecutionSyncBaseResult).NextCommand },
 		},
-		{
-			name: "switch-mode preview", generation: 5,
-			value: issueopscontract.ExecutionSwitchModeResult{
-				LeaseGeneration: 5,
-				NextCommand:     "issueops execution switch-mode --id io-1 --apply",
-			},
-			command: func(value any) string { return value.(issueopscontract.ExecutionSwitchModeResult).NextCommand },
-		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -203,10 +195,6 @@ func TestBindExecutionNextCommandCommandBearingResultsFailClosedWithoutObserver(
 			LeaseGeneration: 4,
 			NextCommand:     "issueops execution sync-base --id io-1 --apply",
 		},
-		issueopscontract.ExecutionSwitchModeResult{
-			LeaseGeneration: 5,
-			NextCommand:     "issueops execution switch-mode --id io-1 --apply",
-		},
 	}
 	for _, value := range values {
 		bound, err := bindExecutionNextCommand(value, nil)
@@ -221,9 +209,9 @@ func TestBindExecutionNextCommandCommandBearingResultsFailClosedWithoutObserver(
 // prepare preview 시점에는 execution이 아직 없어 lease generation이 0이다.
 // provenance는 "이 generation의 lease에 결속된 명령"을 표현하므로 결속할 대상이
 // 없는 명령에 붙일 수 없고, 붙이려 하면 Validate가 generation 0을 거부해
-// prepare 자체가 실패한다 — Orca 준비 경로 전체가 막혔다.
+// prepare 자체가 실패한다 — prepare 경로 전체가 막혔다.
 func TestBindExecutionPrepareLeavesPreviewCommandUnbound(t *testing.T) {
-	const preview = "issueops execution prepare --id io-1 --mode orca --confirm --json"
+	const preview = "issueops execution prepare --id io-1 --confirm --json"
 	observer := &countingProvenanceObserver{}
 
 	bound, err := bindExecutionNextCommand(issueopscontract.ExecutionPrepareResult{

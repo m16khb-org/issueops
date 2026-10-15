@@ -1,6 +1,6 @@
 ---
 name: issueops-plan
-description: Prepare the plan, reviews, and canonical worktree for an IssueOps cycle, then hand off through Orca or Herdr when available, otherwise continue in the current session. Use when "issueops next" reports plan.write, plan.design, plan.review, or plan.handoff, or when the user says "계획 세워줘", "계획 검토해줘", "구현 인계".
+description: Prepare the plan, reviews, and canonical worktree for an IssueOps cycle, then hand off through Herdr when available, otherwise continue in the current session. Use when "issueops next" reports plan.write, plan.design, plan.review, or plan.handoff, or when the user says "계획 세워줘", "계획 검토해줘", "구현 인계".
 ---
 
 # IssueOps Plan
@@ -28,7 +28,7 @@ issueops next --id "$ISSUEOPS_ID" --json
 ## 어디에서 실행하는가
 
 이 단계는 **source checkout의 준비 세션**이 수행한다. 워크트리는 아직 없다. 워크트리를
-만드는 것은 이 단계 끝의 `execution prepare`다. 기본 흐름은 direct로 준비한 뒤 환경별 자동 세션 인계를 적용한다.
+만드는 것은 이 단계 끝의 `execution prepare`다. 준비한 뒤 환경별 자동 세션 인계를 적용한다.
 
 그래서 계획 파일은 **source checkout 밖의 임시 파일**에 쓰고 `artifact stage`로 올린다.
 source checkout 안에 계획을 만들면 그 파일이 커밋 대상이 되고, 워크트리가 생긴 뒤에는
@@ -90,7 +90,7 @@ route가 더한 문서를 열지 않기로 했으면 "열지 않음: <이 변경
 `plan is missing required sections`로 연결이 거부되므로, 제목을 바꾸거나 합치지 않는다.
 
 계획에 lifecycle ID, 사용자 요청 범위, 브랜치·worktree 준비 뒤의 환경별 자동 세션 인계,
-승인된 종료점을 적어 Orca owner도 같은 경계를 알게 한다. 자동 인계는 사용자 요청 범위를
+승인된 종료점을 적어 인계받는 세션도 같은 경계를 알게 한다. 자동 인계는 사용자 요청 범위를
 넓히지 않는다. 이미 읽은 plan-prep 조사와 문서는 변경이나
 새 질문이 없으면 재사용한다. 작업 규모에 맞춰 필요한 검증 명령을 정하고, 같은 명령을
 게이트와 별도 검증 목록에 중복 등록하지 않는다.
@@ -203,32 +203,27 @@ issueops feedback add --id "$ISSUEOPS_ID" --source plan-review --classification 
 
 ```bash
 issueops execution whoami --json   # ACTOR_FLAGS 원문
-issueops execution prepare --id "$ISSUEOPS_ID" --mode direct \
-  --direct-reason "워크트리 준비 후 환경별 자동 세션 인계" \
-  --owner-host "$HOST" $ACTOR_FLAGS --json        # preview
-# 출력의 next_command(--expected-readiness-fingerprint 포함)를 그대로 실행한다.
+issueops execution prepare --id "$ISSUEOPS_ID" $ACTOR_FLAGS --json        # preview
+# preview가 보여 준 workspace root·branch·base를 확인한 뒤, 같은 요청에 --confirm만 더해 실행한다.
 ```
 
-이 기본 경로는 기존 direct API를 사용해 같은 세션에 lease를 부여하고 계획을
-materialize한다. 반환된 `resolved_mode`, canonical path, branch, 계획을 확인한 뒤
+`--confirm`은 같은 세션에 lease를 부여하고 계획을 materialize한다. 반환된
+workspace root, branch, 계획을 확인한 뒤
 [`issueops`](../issueops/SKILL.md)의 **환경별 자동 세션 인계**를 적용한다.
 
 [session-choice.md](../issueops/references/session-choice.md)에 따라 준비 세션이 Herdr 세션이면
-Herdr를 먼저 확인하고, 사용 가능하면 Orca가 ready여도 Herdr로 아래와 같은 release·새 세션
-인계 절차를 적용한다. 그 밖에는 Orca가 ready면
+Herdr의 서버·호환성·현재 native host 실행 가능 여부를 확인하고, 사용 가능하면 아래와 같은
+release·새 세션 인계 절차를 적용한다.
 현재 holder가 결정 기록, 인계 자료 봉인, writer 정리를 마친 뒤 release하고
 같은 worktree에 새 세션 하나를 띄운다. 이때 새 쓰기 작업과 하위 작업 dispatch를 중지하고,
 소유자, 실행 핸들, 입력 리비전, 쓰기 범위, 결과 위치, 읽기 작업인지 쓰기 작업인지의 분류,
 대기 중인 writer가 0이라는 재확인, 자손 프로세스가 실제로 종료됐다는 관측, 늦게 도착한
 결과는 격리했다는 기록을 인계 자료와 release 이전 증거로 남긴다.
-Orca가 없거나 unready면 Herdr의 서버·호환성·현재 native host 실행 가능 여부를
-확인해 같은 release·새 세션 인계 절차를 적용한다. 둘 다 사용 불가면 lease를
-유지하고 현재 세션에서 구현으로 이어간다. Herdr는 기존 worktree를 열 뿐 재생성하지 않는다.
-실행 방식이나 진행 여부를 묻지 않는다. 명시적인 보류·범위 제한은 우선한다.
-
-사용자가 명시적으로 Orca execution을 요청했거나 기존 사이클이 Orca mode면 그 core
-경로를 보존한다. `auto|orca` API의 의미는 바꾸지 않는다. planner gate 실패를 mode 변경으로
-우회하지 않고 필요한 기록을 채운다. 단순히 Orca가 있다는 이유로 그 경로를 선택하지 않는다.
+새 세션은 자기 native actor로 `execution replace --id ID --expected-generation N --preview`를
+실행하고, 반환된 `--reseed` 명령을 거쳐 `claim --claim-current-token`으로 lease를 넘겨받는다.
+Herdr를 쓸 수 없으면 lease를 유지하고 현재 세션에서 구현으로 이어가거나, 사용자가 직접 연
+두 번째 터미널에서 같은 인수 체인으로 수동 인계한다. Herdr는 기존 worktree를 열 뿐
+재생성하지 않는다. 진행 방식을 묻지 않는다. 명시적인 보류·범위 제한은 우선한다.
 
 ## 의존성과 로컬 설정
 
@@ -249,21 +244,21 @@ Orca가 없거나 unready면 Herdr의 서버·호환성·현재 native host 실�
 | 나쁜 행동 | 왜 나쁜가 | 대신 할 일 |
 |---|---|---|
 | source checkout 안에 계획 파일을 만든다 | 커밋 대상이 되고 워크트리 생성 뒤 계획이 두 곳에 존재한다 | 임시 디렉터리에 쓰고 `artifact stage` |
-| `git worktree add`를 실행한다 | Orca 경로가 이름 충돌로 깨진다 | `execution prepare`가 만들게 둔다 |
-| 세션 인계를 위해 `--mode auto`로 바꾸거나 worktree를 재생성한다 | execution mode와 native 세션 인계를 혼동한다 | direct로 준비한 같은 worktree에서 환경별 자동 세션 인계를 적용한다 |
+| `git worktree add`를 실행한다 | `execution prepare`가 만드는 worktree와 경로·브랜치가 충돌한다 | `execution prepare`가 만들게 둔다 |
+| 세션 인계를 위해 worktree를 재생성한다 | lease와 브랜치 identity가 새 worktree와 어긋난다 | 준비한 같은 worktree에서 환경별 자동 세션 인계를 적용한다 |
 | 기존 동작에 대한 단언을 확인 없이 계획에 쓴다 | 저자가 몇 분이면 읽을 코드를 리뷰어가 읽게 되고, 틀린 단언 하나가 리뷰 라운드와 전면 개정을 부른다 | 스테이징 전에 명령으로 확인하고 `파일:라인`을 인용한다 |
 | 리뷰 없이 `--verdict pass`를 기록한다 | 게이트 연극이다 | `issueops-review`로 실제 리뷰를 돌린다 |
 | revise 판정을 `--waive`로 닫는다 | 지적이 반영되지 않은 채 구현으로 간다 | 계획을 고치고 다시 검토한다 |
 | 판정 뒤 계획을 고치고 재검토를 생략한다 | stale 판정으로 인계가 막히거나, 검토되지 않은 계획이 구현된다 | 다시 검토해 새 판정을 기록한다 |
 | staged plan 없이 인계한다 | prepare가 워크트리에 materialize할 계획이 없다 | `artifact stage`를 먼저 한다 |
-| 새 세션에 인계했는데 이 세션이 계속 구현한다 | 두 세션이 같은 워크트리를 쓴다 | direct mode라도 Orca·Herdr 인계 전달을 확인하면 여기서 멈춘다 |
+| 새 세션에 인계했는데 이 세션이 계속 구현한다 | 두 세션이 같은 워크트리를 쓴다 | Herdr 인계 전달을 확인하면 여기서 멈춘다 |
 
 ## 검증
 
 - `issueops status --id "$ISSUEOPS_ID" --json`의 `design_review.approved`가
   true이고 `devils_advocate_review.verdict`가 `pass`이며 그 digest가 현재 계획과 같다.
 - `issueops next --id "$ISSUEOPS_ID" --json`의 `stage.key`가 `plan.handoff`
-  이거나, 인계 뒤라면 `claim`(Orca) 또는 `implement.enter`(direct)다.
+  이거나, 인계 뒤라면 `claim` 또는 `implement.enter`다.
 - `git -C "$SOURCE_ROOT" status --short`에 계획 파일이 없다.
 - 인계 뒤 `execution prepare` 결과의 `workspace.root`가 실제로 존재하고 그 브랜치가
   record의 브랜치와 같다.

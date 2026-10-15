@@ -332,7 +332,7 @@ func TestInstallCommandApprovedDryRunValidatesStagedCandidate(t *testing.T) {
 	}
 
 	result := port.NativeInstallResult{}
-	_, err := testInstallCommand(t, Deps{}).prepareInstallPathPlanForCandidate(&result, port.NativeInstallRequest{
+	_, err := testInstallCommand(t, Deps{}).prepareInstallPathPlanFromCandidate(&result, port.NativeInstallRequest{
 		Home: home, BinPath: target, DryRun: true, AdoptCommandFile: true,
 	}, candidate, "skip")
 	if err != nil {
@@ -372,5 +372,5 @@ func copyTestCommand(t *testing.T, source, destination string) {
 }
 
 func prepareInstallPathPlanForTest(t *testing.T, result *port.NativeInstallResult, req port.NativeInstallRequest, mode string) (*installPathTransaction, error) {
-	return testInstallCommand(t, Deps{}).prepareInstallPathPlanForCandidate(result, req, req.BinPath, mode)
+	return testInstallCommand(t, Deps{}).prepareInstallPathPlanFromCandidate(result, req, req.BinPath, mode)
 }

@@ -42,16 +42,6 @@ func mcpExecutionNextCommand(value any) (string, uint64, func(string) any) {
 			result.NextCommand = command
 			return result
 		}
-	case issueopscontract.ExecutionResumeResult:
-		return result.NextCommand, result.Execution.Lease.Generation, func(command string) any {
-			result.NextCommand = command
-			return result
-		}
-	case issueopscontract.ExecutionSwitchModeResult:
-		return result.NextCommand, result.LeaseGeneration, func(command string) any {
-			result.NextCommand = command
-			return result
-		}
 	default:
 		return "", 0, func(string) any { return value }
 	}

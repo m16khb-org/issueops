@@ -288,7 +288,6 @@ func TestDDDOwnerRoutesKnownMigrationTargets(t *testing.T) {
 		"internal/application/audit/service.go":                          "T09",
 		"internal/contract/policy/overrides.go":                          "T09",
 		"internal/domain/issueops/phase_ledger.go":                       "T04",
-		"internal/contract/issueopspreparation/planner_gates.go":         "T02",
 		"internal/adapter/issueops/devilsadvocate/devils_advocate.go":    "T03",
 		"internal/adapter/issueops/issueops_regress.go":                  "T03",
 		"internal/adapter/issueops/issueops_phase.go":                    "T04",
@@ -456,9 +455,6 @@ func dddTask(path string) string {
 		{"internal/domain/issueopslease/reconcile", "T06"},
 		{"internal/domain/issueopslease/reseed", "T06"},
 		{"internal/domain/issueopspreparation/cleanup_abandon", "T08"},
-		{"internal/domain/issueopspreparation/intent_identity.go", "T08"},
-		{"internal/application/issueopspreparation/intent_request.go", "T08"},
-		{"internal/adapter/issueops/orca_intent_files.go", "T08"},
 		{"internal/domain/issueopspreparation/resume_", "T06"},
 		{"internal/domain/issueopspreparation/reconcile_", "T06"},
 		{"internal/application/issueopslease/resume", "T06"},
@@ -469,7 +465,6 @@ func dddTask(path string) string {
 		{"internal/adapter/outbound/issueopslease/reseed_", "T06"},
 		{"cmd/issueops/issueopsapp/issueops_resume_", "T06"},
 		{"cmd/issueops/issueopsapp/issueops_reconcile_", "T06"},
-		{"internal/adapter/outbound/issueopsrecord/cleanup_fence.go", "T08"},
 		{"internal/adapter/outbound/issueopsrecord/lease_codec.go", "T02"},
 		{"internal/domain/issueops/execution_validation", "T02"},
 		{"internal/domain/issueops/evidence_phase", "T03"},
@@ -544,8 +539,6 @@ func dddTask(path string) string {
 		{"internal/application/issueopsdelegation/", "T08"},
 		{"internal/adapter/issueops/child_cycle_store.go", "T08"},
 		{"cmd/issueops/issueopsapp/issueops_child_start_wiring.go", "T08"},
-		{"internal/domain/issueopsauthorization/plan_link.go", "T08"},
-		{"internal/application/issueopscycle/plan_link_authority.go", "T08"},
 		{"internal/adapter/issueops/link_environment.go", "T08"},
 		{"internal/domain/issueops/issue_link.go", "T08"},
 		{"internal/domain/issueopsremote/child_link.go", "T08"},
@@ -658,7 +651,7 @@ func dddTask(path string) string {
 		case strings.HasPrefix(part, "execution_lease"), strings.HasPrefix(part, "execution_prepare"):
 			return "T05"
 		case strings.HasPrefix(part, "execution_resume"), strings.HasPrefix(part, "execution_reconcile"),
-			strings.HasPrefix(part, "execution_orca_intent"), strings.HasPrefix(part, "execution_sync_base"),
+			strings.HasPrefix(part, "execution_sync_base"),
 			strings.HasPrefix(part, "execution_mode_switch"):
 			return "T06"
 		case strings.HasPrefix(part, "execution_remote"), strings.HasPrefix(part, "execution_publication"), strings.HasPrefix(part, "issue_create_intent"),

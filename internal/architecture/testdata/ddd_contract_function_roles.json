@@ -145,16 +145,6 @@
     "role": "shape"
   },
   {
-    "path": "internal/contract/issueops/orca_request_id.go",
-    "symbol": "func ValidateOrcaRequestID",
-    "role": "shape"
-  },
-  {
-    "path": "internal/contract/issueops/orca_request_id.go",
-    "symbol": "func ValidateOrcaRetryRequestID",
-    "role": "shape"
-  },
-  {
     "path": "internal/contract/issueops/record_validation.go",
     "symbol": "func KnownFeedbackClassification",
     "role": "shape"
@@ -266,12 +256,12 @@
   },
   {
     "path": "internal/contract/issueopsartifact/types.go",
-    "symbol": "func RecoveryError.Error",
+    "symbol": "func SealedError.Error",
     "role": "error"
   },
   {
     "path": "internal/contract/issueopsartifact/types.go",
-    "symbol": "func RecoveryError.IssueOpsErrorFields",
+    "symbol": "func SealedError.IssueOpsErrorFields",
     "role": "error"
   },
   {
@@ -303,176 +293,6 @@
     "path": "internal/contract/issueopslease/record.go",
     "symbol": "func Encode",
     "role": "codec"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func DecodeIssueLinkEvidence",
-    "role": "codec"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func IntentCodec.Decode",
-    "role": "codec"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func IntentCodec.DecodeSelfIdentified",
-    "role": "codec"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func IntentCodec.Encode",
-    "role": "codec"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func IntentCodec.RenderMarker",
-    "role": "codec"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func IntentCodec.RenderReadinessMarker",
-    "role": "codec"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func IntentCodec.Validate",
-    "role": "shape"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func IntentError.Error",
-    "role": "error"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func IntentError.IssueOpsErrorFields",
-    "role": "error"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func InvocationError.Error",
-    "role": "error"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func InvocationError.Unwrap",
-    "role": "error"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func contractError",
-    "role": "error"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func decodeShape",
-    "role": "codec"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func intentEnvelopeValid",
-    "role": "shape"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func intentInvocationValid",
-    "role": "shape"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func intentProbeValid",
-    "role": "shape"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func invalidMarker",
-    "role": "error"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func markerField",
-    "role": "codec"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func ownerLaunchReceiptsValid",
-    "role": "shape"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func parseMarker",
-    "role": "codec"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func parseMarkerTail",
-    "role": "codec"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func renderMarker",
-    "role": "codec"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func resumeShapeValid",
-    "role": "shape"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func sameOptionalPath",
-    "role": "shape"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func samePath",
-    "role": "shape"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func validProvider",
-    "role": "shape"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func validToken",
-    "role": "shape"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func validateIntent",
-    "role": "shape"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func validateOwnerStageProgress",
-    "role": "shape"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func validatePurposeShape",
-    "role": "shape"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func validateShape",
-    "role": "shape"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func validateStageShape",
-    "role": "shape"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/intent.go",
-    "symbol": "func validateWorkspaceReceipt",
-    "role": "shape"
-  },
-  {
-    "path": "internal/contract/issueopspreparation/planner_gates.go",
-    "symbol": "func PlannerGateKeys",
-    "role": "projection"
   },
   {
     "path": "internal/contract/issueopspreparation/prepare.go",

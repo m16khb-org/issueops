@@ -190,10 +190,8 @@ func seedHTTPLeaseRecord(t *testing.T, repo, worktree string, holder model.Nativ
 		ID: (issueopscore.CycleStartIdentity{}).StableID(repo, "300-http-lease"), Repo: repo, Branch: "300-http-lease",
 		Phase: model.IssueOpsPhaseImplement, WorktreePath: worktree,
 		Execution: &model.Execution{
-			Mode:      model.ExecutionModeDirect,
-			Workspace: model.Workspace{SourceRoot: repo, Root: worktree, Branch: "300-http-lease", BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: now},
+			Workspace: model.Workspace{SourceRoot: repo, Root: worktree, Branch: "300-http-lease", BaseHead: strings.Repeat("a", 40), LinkedAt: now},
 			Lease:     model.WriteLease{Generation: 1, Status: model.LeaseStatusActive, Holder: &holder, ClaimedAt: now},
-			Selection: selectionFixture(model.ExecutionModeDirect),
 		},
 		CreatedAt: now, UpdatedAt: now,
 	}

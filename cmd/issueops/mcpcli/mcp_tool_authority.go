@@ -84,7 +84,7 @@ var mcpToolAuthorities = map[string]toolAuthority{
 	"state_doctor":         serverTool,
 	"state_maintain":       serverTool,
 	// issueops
-	"issueops_execution": {scope: toolScopeWorkspace, record: RecordIssueOps, pathArgs: []string{"claim_token_file", "issue_snapshot_file", "verification_report_path"}},
+	"issueops_execution": {scope: toolScopeWorkspace, record: RecordIssueOps, pathArgs: []string{"claim_token_file", "verification_report_path"}},
 	// loop
 	"loop_start":          repoTool,
 	"loop_record_attempt": loopRecord,

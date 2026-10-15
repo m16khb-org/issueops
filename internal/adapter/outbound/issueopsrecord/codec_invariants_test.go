@@ -11,31 +11,25 @@ import (
 	statecontract "issueops/internal/contract/state"
 )
 
-func TestCodecRejectsExecutionSelectionPolicyAsInvalidState(t *testing.T) {
+func TestCodecRejectsExecutionWorkspacePolicyAsInvalidState(t *testing.T) {
 	record := issueopscontract.IssueOpsRecord{
 		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
-		ID:            "io-selection",
+		ID:            "io-workspace",
 		Phase:         issueopscontract.IssueOpsPhaseProblem,
 		Execution: &issueopscontract.Execution{
-			Mode: issueopscontract.ExecutionModeDirect,
 			Workspace: issueopscontract.Workspace{
 				SourceRoot: "/repo", Root: "/repo.worktrees/run", Branch: "run",
-				BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "2026-09-25T00:00:00Z",
+				BaseHead: strings.Repeat("a", 40), LinkedAt: "2026-09-25T00:00:00Z",
 			},
 			Lease: issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusReleased},
-			Selection: &issueopscontract.ExecutionSelection{
-				RequestedMode: "direct", ResolvedMode: "direct",
-				ReadinessFingerprint: strings.Repeat("b", 64), SelectedAt: "2026-09-25T00:00:00Z",
-				ExplicitDirectReason: "manual execution",
-			},
 		},
 	}
 	if _, err := Encode(record); err != nil {
 		t.Fatalf("valid execution rejected: %v", err)
 	}
-	record.Execution.Selection.ProbeReady = true
+	record.Execution.Workspace.Root = record.Execution.Workspace.SourceRoot
 	if err := issueopscontract.ValidateRecord(record); err != nil {
-		t.Fatalf("contract shape rejected policy-only invalid selection: %v", err)
+		t.Fatalf("contract shape rejected policy-only invalid workspace: %v", err)
 	}
 	if encoded, err := Encode(record); encoded != nil || !errors.Is(err, statecontract.ErrInvalidState) {
 		t.Fatalf("Encode = %q, %v; want no bytes and invalid state", encoded, err)

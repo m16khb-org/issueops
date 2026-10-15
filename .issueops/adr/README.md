@@ -16,7 +16,7 @@ later dated record says so explicitly. Current supersessions include:
   by the 2026-07-07 standalone issueops policy.
 - The `gh issue develop` step in #163's Orca ordering is superseded by the
   2026-07-26 sealed-base-SHA linking decision. The Orca-before-linking ordering
-  itself is unchanged.
+  itself stood until the 2026-10-15 decision removed the Orca integration.
 - The 2026-07-07 standalone policy's blanket prohibition on third-party
   installation is superseded only for the constrained declarative path in the
   2026-08-28 optional-upstream-provisioning decision. Standalone core success
@@ -41,6 +41,22 @@ later dated record says so explicitly. Current supersessions include:
   role-model decision: planner and reviewer `claude-opus-5`/high, implementer
   `claude-sonnet-5`/high, and Fable 5 only on explicit manual request. The dual
   planner/implementer structure itself is unchanged.
+- The auto execution mode of the 2026-09-05 ten-stage decision (`execution
+  prepare` picking Orca or direct) and its rejection of release +
+  reseed as the normal handoff path are superseded by the 2026-10-15 decision
+  that removes the Orca integration and execution mode selection. The ten
+  stages, `issueops next`, and planning before worktree provisioning stand.
+- The Orca parts of four earlier records are superseded by the same 2026-10-15
+  decision: the Orca terminal handle routing in 2026-07-15 supervised handoff,
+  the Orca owner packet seal and orca-to-git cleanup order in the 2026-07-24
+  planner/implementer structure, the
+  Orca-before-linking order in 2026-07-26, and the Orca owner-session injection
+  in 2026-10-08 role models. Their coordinator isolation, dual structure and
+  implementation-review publication gate (which already applied to every
+  execution), sealed base SHA, and role-model resolution stand.
+- The 2026-07-19 operational-health decision's optional Orca judgement is
+  superseded by the same 2026-10-15 decision. `doctor` judges Git, IssueOps, and
+  user-state consistency only.
 
 The following records are marked superseded because the code they describe was
 removed. No later record names them explicitly, so each entry names the removing
@@ -70,7 +86,7 @@ change and the decision that now governs. The record bodies are unchanged.
 - 2026-06-18 "IssueOps implementation requires durable worktree tool
   preparation": commit a875a16a (2026-07-23) replaced the handoff authority with
   the v1 write lease and removed `worktree prepare-tools` and its `worktree_tools`
-  gates. Worktree provisioning belongs to `issueops execution prepare --mode auto`
+  gates. Worktree provisioning belongs to `issueops execution prepare`
   under the [2026-09-05 ten-stage decision](2026-09-05-issueops-ten-stage-skills-with-auto-execution-mode.md).
 
 Historical host, schema, and command names inside dated records preserve the

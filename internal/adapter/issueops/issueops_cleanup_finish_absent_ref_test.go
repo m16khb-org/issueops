@@ -30,7 +30,7 @@ func (g *absentRefFinishGit) run(_ string, args ...string) (int, string) {
 		}
 		return 0, g.branchOID
 	case "worktree":
-		// Orca/Git worktree 제거가 linked branch ref까지 회수한다.
+		// git worktree 제거가 linked branch ref까지 회수한다.
 		g.refRemoved = true
 		return 0, ""
 	case "show-ref", "for-each-ref":

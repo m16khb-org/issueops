@@ -146,7 +146,7 @@ func TestHTTPExecutionActionsUseVerifiedCallerWithoutServerAncestry(t *testing.T
 	cases := []struct{ action, replace string }{
 		{"prepare", ""}, {"status", ""}, {"claim", ""}, {"release", ""},
 		{"replace", "preview"}, {"replace", "revoke"}, {"replace", "finalize-preview"}, {"replace", "finalize"}, {"replace", "reseed"},
-		{"resume", ""}, {"reconcile", ""}, {"complete", ""},
+		{"reconcile", ""}, {"complete", ""},
 	}
 	for _, tc := range cases {
 		t.Run(tc.action+"/"+tc.replace, func(t *testing.T) {

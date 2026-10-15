@@ -22,7 +22,6 @@ func TestExecuteReportsMissingHandlerPerAction(t *testing.T) {
 		{name: "release", req: model.ExecutionActionRequest{Action: model.ExecutionActionRelease}, want: model.ErrReleaseHandlerUnavailable},
 		{name: "reseed", req: model.ExecutionActionRequest{Action: model.ExecutionActionReplace, ReplaceAction: model.ExecutionReplaceReseed}, want: model.ErrReseedHandlerUnavailable},
 		{name: "replace", req: model.ExecutionActionRequest{Action: model.ExecutionActionReplace}, msg: "issueops execution replace handler is not configured"},
-		{name: "resume", req: model.ExecutionActionRequest{Action: model.ExecutionActionResume, Confirm: true}, want: model.ErrResumeHandlerUnavailable},
 		{name: "complete", req: model.ExecutionActionRequest{Action: model.ExecutionActionComplete}, want: model.ErrCompleteHandlerUnavailable},
 	}
 	for _, tc := range cases {
@@ -33,18 +32,6 @@ func TestExecuteReportsMissingHandlerPerAction(t *testing.T) {
 				t.Fatalf("err=%v", err)
 			}
 		})
-	}
-}
-
-func TestExecuteResumeRequiresConfirmBeforeHandler(t *testing.T) {
-	called := false
-	_, err := Service{}.Execute(t.Context(), "state", model.ExecutionActionRequest{ID: "cycle", Action: model.ExecutionActionResume}, port.ExecutionActionDependencies{
-		Resume: func(context.Context, string, model.ExecutionResumeRequest) (model.ExecutionResumeResult, error) {
-			called = true
-			return model.ExecutionResumeResult{}, nil
-		}})
-	if err == nil || err.Error() != "execution resume requires confirm" || called {
-		t.Fatalf("err=%v called=%v", err, called)
 	}
 }
 

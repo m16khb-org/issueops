@@ -2,7 +2,6 @@ package issueops
 
 import (
 	cycleapp "issueops/internal/application/issueopscycle"
-	app "issueops/internal/application/issueopsowner"
 	"os"
 	"path/filepath"
 	"strings"
@@ -67,23 +66,19 @@ func gitInitedRepoForReviewTest(t *testing.T) string {
 	return repo
 }
 
-// AC-05: execution이 있는 모든 모드에 fail-closed로 적용된다. execution이 없는
+// AC-05: execution이 있는 레코드에 fail-closed로 적용된다. execution이 없는
 // 레코드(execution을 준비하기 전)만 면제다.
-func TestImplementationReviewMissingAppliesToEveryExecutionMode(t *testing.T) {
+func TestImplementationReviewMissingAppliesWhenExecutionExists(t *testing.T) {
 	t.Parallel()
 
 	record := issueops.IssueOpsRecord{}
 	if got := cycleapp.ImplementationReviewMissing(record, ""); got != "" {
 		t.Fatalf("record without execution must not be gated: %q", got)
 	}
-	for _, mode := range []issueops.ExecutionMode{issueops.ExecutionModeDirect, issueops.ExecutionModeOrca} {
-		record.Execution = &issueops.Execution{Mode: mode, Selection: selectionFixture(mode)}
-		record.ImplementationReview = nil
-		if got := cycleapp.ImplementationReviewMissing(record, ""); got != "implementation_review" {
-			t.Fatalf("%s mode without review must be gated: %q", mode, got)
-		}
+	record.Execution = &issueops.Execution{}
+	if got := cycleapp.ImplementationReviewMissing(record, ""); got != "implementation_review" {
+		t.Fatalf("execution without review must be gated: %q", got)
 	}
-	record.Execution = &issueops.Execution{Mode: issueops.ExecutionModeOrca, Selection: selectionFixture(issueops.ExecutionModeOrca)}
 	record.ImplementationReview = &issueops.IssueOpsImplementationReview{Verdict: "revise"}
 	if got := cycleapp.ImplementationReviewMissing(record, ""); got != "implementation_review_verdict_revise" {
 		t.Fatalf("non-pass verdict must be gated with its verdict: %q", got)
@@ -103,68 +98,29 @@ func TestImplementationReviewMissingAppliesToEveryExecutionMode(t *testing.T) {
 	}
 }
 
-func TestStrictPRReadinessSurfacesImplementationReview(t *testing.T) {
+// 검증 단계가 구현 리뷰 기록을 만들므로 pr readiness는 리뷰 없이는 열리지
+// 않아야 한다.
+func TestPRReadinessRequiresImplementationReview(t *testing.T) {
 	t.Parallel()
 
-	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{Mode: issueops.ExecutionModeOrca, Selection: selectionFixture(issueops.ExecutionModeOrca)}}
-	ready := IssueOpsPRReadiness(record)
-	if !containsString(ready.Missing, "implementation_review") {
-		t.Fatalf("strict readiness must surface the implementation review gate: %+v", ready.Missing)
-	}
-}
-
-// 9단계 재편에서 direct가 기본 경로가 됐다. 검증 단계가 이 기록을 만들므로
-// direct 사이클의 pr readiness도 리뷰 없이는 열리지 않아야 한다.
-func TestDirectModeRequiresImplementationReviewForPR(t *testing.T) {
-	t.Parallel()
-
-	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{Mode: issueops.ExecutionModeDirect, Selection: selectionFixture(issueops.ExecutionModeDirect)}}
+	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{}}
 	if ready := IssueOpsPRReadiness(record); !containsString(ready.Missing, "implementation_review") {
-		t.Fatalf("direct mode must surface the implementation review gate: %+v", ready.Missing)
+		t.Fatalf("pr readiness must surface the implementation review gate: %+v", ready.Missing)
 	}
 	record.ImplementationReview = &issueops.IssueOpsImplementationReview{Verdict: "pass"}
 	if ready := IssueOpsPRReadiness(record); containsString(ready.Missing, "implementation_review") {
-		t.Fatalf("a recorded pass review must clear the direct gate: %+v", ready.Missing)
-	}
-}
-
-func TestOwnerCommandsIncludeImplementationReviewWithRuntimeInputs(t *testing.T) {
-	t.Parallel()
-
-	repo := t.TempDir()
-	worktree := filepath.Join(t.TempDir(), "83-review")
-	record := issueops.IssueOpsRecord{
-		ID: "io-000000000083", Repo: repo,
-		BranchPrepare: &issueops.IssueOpsBranchPrepare{Provider: "github", BaseBranch: "main"},
-		Execution: &issueops.Execution{
-			Mode:      issueops.ExecutionModeOrca,
-			Workspace: issueops.Workspace{SourceRoot: repo, Root: worktree, Branch: "83-review", BaseHead: "deadbeef"},
-			Lease:     issueops.WriteLease{Generation: 1},
-			Selection: selectionFixture(issueops.ExecutionModeOrca),
-		},
-	}
-	for _, host := range []string{"codex", "claude", "omo"} {
-		t.Run(host, func(t *testing.T) {
-			commands := executionOwnerCommandsFor(record, issueops.ExecutionPrepareRequest{OwnerHost: host}, strings.Repeat("a", 64))
-			if !strings.Contains(commands.ImplementationReview, "implementation-review record") ||
-				!strings.Contains(commands.ImplementationReview, "--reviewer-model <REVIEWER_MODEL> --reviewer-effort <REVIEWER_EFFORT>") {
-				t.Fatalf("owner command must accept actual runtime reviewer values: %s", commands.ImplementationReview)
-			}
-			if err := app.ValidateOwnerCatalog(commands); err != nil {
-				t.Fatalf("implementation review command must match the catalog: %v", err)
-			}
-		})
+		t.Fatalf("a recorded pass review must clear the gate: %+v", ready.Missing)
 	}
 }
 
 // fingerprint를 계산할 수 없는 사이클도 판정은 기록할 수 있고, 빈 봉인은
 // fingerprint가 생기는 순간 stale로 잡힌다. project_docs_review와 같은 관용이며,
-// 게이트를 모든 모드로 넓힌 뒤 탈출구 없는 교착을 만들지 않기 위한 것이다.
+// 탈출구 없는 교착을 만들지 않기 위한 것이다.
 func TestImplementationReviewSealsAnEmptyFingerprintAndCatchesItLater(t *testing.T) {
 	t.Parallel()
 
 	record := issueops.IssueOpsRecord{
-		Execution:            &issueops.Execution{Mode: issueops.ExecutionModeDirect, Selection: selectionFixture(issueops.ExecutionModeDirect)},
+		Execution:            &issueops.Execution{},
 		ImplementationReview: &issueops.IssueOpsImplementationReview{Verdict: "pass", ReviewedFingerprint: ""},
 	}
 	if got := cycleapp.ImplementationReviewMissing(record, ""); got != "" {

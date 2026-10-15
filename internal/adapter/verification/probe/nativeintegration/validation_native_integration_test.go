@@ -236,14 +236,14 @@ func TestHasThinCodexContextHooksPermitsThirdPartyLifecycleEvents(t *testing.T) 
 	config := `{
 		"hooks": {
 			"SubagentStart": [
-				{"hooks": [{"type": "command", "command": "'/Users/example/.orca/agent-hooks/codex-hook.sh' observe", "timeout": 10}]},
+				{"hooks": [{"type": "command", "command": "'/Users/example/.acme/agent-hooks/codex-hook.sh' observe", "timeout": 10}]},
 				{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook subagent-start --host codex", "timeout": 5}]}
 			],
 			"SessionStart": [
-				{"hooks": [{"type": "command", "command": "'/Users/example/.orca/agent-hooks/codex-hook.sh' observe", "timeout": 10}]},
+				{"hooks": [{"type": "command", "command": "'/Users/example/.acme/agent-hooks/codex-hook.sh' observe", "timeout": 10}]},
 				{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook session-start --host codex", "timeout": 5}]}
 			],
-			"PreToolUse": [{"hooks": [{"type": "command", "command": "'/Users/example/.orca/agent-hooks/codex-hook.sh' observe", "timeout": 10}]}],
+			"PreToolUse": [{"hooks": [{"type": "command", "command": "'/Users/example/.acme/agent-hooks/codex-hook.sh' observe", "timeout": 10}]}],
 			"UserPromptSubmit": [{"hooks": [{"type": "command", "command": "codegraph observe", "timeout": 10}]}],
 			"SubagentStop": [{"hooks": [{"type": "command", "command": "third-party stop", "timeout": 10}]}],
 			"PermissionRequest": [{"hooks": [{"type": "command", "command": "third-party permission", "timeout": 10}]}]

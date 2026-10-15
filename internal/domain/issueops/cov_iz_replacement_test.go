@@ -88,19 +88,6 @@ func TestFinalizeReplacementReleasesWhenWorkspaceIsAbsent(t *testing.T) {
 	}
 }
 
-func TestSealReplacementOwnerStampsArtifactIdentity(t *testing.T) {
-	SealReplacementOwner(nil, 9, model.ReplacementArtifacts{}) // must not panic
-	binding := &model.OrcaBinding{RuntimeID: "rt", OwnerHost: "codex", IssueBodySHA256: "old"}
-	SealReplacementOwner(binding, 9, model.ReplacementArtifacts{IssueBodySHA256: "i", ContextPacketSHA256: "c", OwnerPromptSHA256: "p", ContextPacketPath: "/ignored"})
-	want := model.OrcaBinding{
-		RuntimeID: "rt", OwnerHost: "codex", LeaseGeneration: 9, ArtifactIdentityVersion: model.OrcaArtifactIdentityVersion,
-		IssueBodySHA256: "i", ContextPacketSHA256: "c", OwnerPromptSHA256: "p",
-	}
-	if *binding != want {
-		t.Fatalf("binding=%+v want=%+v", *binding, want)
-	}
-}
-
 func TestCompletedReplacementBaseRequiresStampedGenerationAndBaseBranch(t *testing.T) {
 	completed := func(status model.LeaseStatus, generation uint64) model.IssueOpsRecord {
 		return model.IssueOpsRecord{
@@ -144,11 +131,8 @@ func TestCompletedReplacementBaseRequiresStampedGenerationAndBaseBranch(t *testi
 }
 
 func TestReplacementCommandsQuoteOperatorInputAndBindIdentity(t *testing.T) {
-	if got := ReplacementClaimCommand("io'1", 2, "/ignored"); got != `issueops execution claim --id 'io'\''1' --generation 2 --claim-current-token` {
+	if got := ReplacementClaimCommand("io'1", 2); got != `issueops execution claim --id 'io'\''1' --generation 2 --claim-current-token` {
 		t.Fatalf("claim=%s", got)
-	}
-	if got := ReplacementResumeCommand("io-1", 7); got != "issueops execution resume --id 'io-1' --expected-generation 7 --confirm" {
-		t.Fatalf("resume=%s", got)
 	}
 	if got := quoteReplacementArg("a'b c"); got != `'a'\''b c'` {
 		t.Fatalf("quote=%s", got)
@@ -174,124 +158,6 @@ func TestReplacementCommandsQuoteOperatorInputAndBindIdentity(t *testing.T) {
 	noProcess := ReplacementRevokeCommand("io-1", 3, "fp", actor, "/w")
 	if strings.Contains(noProcess, "--session-pid") || strings.Contains(noProcess, "--agent-id") || !strings.HasSuffix(noProcess, "--cwd '/w' --confirm") {
 		t.Fatalf("revoke without process: %s", noProcess)
-	}
-}
-
-func covIZOrcaExecution(status model.LeaseStatus, holder *model.NativeActor, sealedRuntime string) model.IssueOpsRecord {
-	return model.IssueOpsRecord{Execution: &model.Execution{
-		Mode: model.ExecutionModeOrca, Orca: &model.OrcaBinding{RuntimeID: sealedRuntime},
-		Lease: model.WriteLease{Status: status, Holder: holder},
-	}}
-}
-
-func TestAllowReplacementRuntimeRolloverRequiresDeadHolderOrNoHolder(t *testing.T) {
-	holder := covIZActor("")
-	for _, tc := range []struct {
-		name    string
-		status  model.LeaseStatus
-		holder  *model.NativeActor
-		process string
-		want    bool
-	}{
-		{"released without holder", model.LeaseStatusReleased, nil, "live", true},
-		{"claimable without holder", model.LeaseStatusClaimable, nil, "", true},
-		{"active without holder", model.LeaseStatusActive, nil, "dead", false},
-		{"active dead holder", model.LeaseStatusActive, &holder, "dead", true},
-		{"revoking dead holder", model.LeaseStatusRevoking, &holder, "dead", true},
-		{"active live holder", model.LeaseStatusActive, &holder, "live", false},
-		{"active unknown holder", model.LeaseStatusActive, &holder, "unknown", false},
-		{"released dead holder", model.LeaseStatusReleased, &holder, "dead", false},
-	} {
-		if got := AllowReplacementRuntimeRollover(covIZOrcaExecution(tc.status, tc.holder, "rt"), tc.process); got != tc.want {
-			t.Fatalf("%s: got %t", tc.name, got)
-		}
-	}
-}
-
-func TestDeadReplacementOwnerRuntimeRolloverNeedsEveryDeadOwnerFact(t *testing.T) {
-	holder := covIZActor("")
-	record := covIZOrcaExecution(model.LeaseStatusActive, &holder, " rt-old ")
-	moved := ReplacementRuntimeFacts{RuntimeID: "rt-new"}
-	if !DeadReplacementOwnerRuntimeRollover(record, "dead", moved) {
-		t.Fatal("dead owner on a rolled-over runtime rejected")
-	}
-	revoking := covIZOrcaExecution(model.LeaseStatusRevoking, &holder, "rt-old")
-	if !DeadReplacementOwnerRuntimeRollover(revoking, "dead", moved) {
-		t.Fatal("revoking lease rejected")
-	}
-	for name, tc := range map[string]struct {
-		record  model.IssueOpsRecord
-		process string
-		facts   ReplacementRuntimeFacts
-	}{
-		"no execution": {model.IssueOpsRecord{}, "dead", moved},
-		"direct mode": {func() model.IssueOpsRecord {
-			r := record
-			e := *r.Execution
-			e.Mode = model.ExecutionModeDirect
-			r.Execution = &e
-			return r
-		}(), "dead", moved},
-		"no orca binding":   {func() model.IssueOpsRecord { r := record; e := *r.Execution; e.Orca = nil; r.Execution = &e; return r }(), "dead", moved},
-		"live holder":       {record, "live", moved},
-		"same runtime":      {record, "dead", ReplacementRuntimeFacts{RuntimeID: "rt-old"}},
-		"unobserved":        {record, "dead", ReplacementRuntimeFacts{RuntimeID: " "}},
-		"terminal id kept":  {record, "dead", ReplacementRuntimeFacts{RuntimeID: "rt-new", TerminalID: "t1"}},
-		"terminal live":     {record, "dead", ReplacementRuntimeFacts{RuntimeID: "rt-new", TerminalLive: true}},
-		"released lease":    {covIZOrcaExecution(model.LeaseStatusReleased, &holder, "rt-old"), "dead", moved},
-		"holder no process": {covIZOrcaExecution(model.LeaseStatusActive, &model.NativeActor{Host: "codex"}, "rt-old"), "dead", moved},
-		"no holder":         {covIZOrcaExecution(model.LeaseStatusActive, nil, "rt-old"), "dead", moved},
-	} {
-		if DeadReplacementOwnerRuntimeRollover(tc.record, tc.process, tc.facts) {
-			t.Fatalf("%s: rollover allowed", name)
-		}
-	}
-}
-
-func TestValidateReplacementRuntimeRolloverRequiresQuiescentOwnerAcrossRuntimes(t *testing.T) {
-	holder := covIZActor("")
-	settled := ReplacementRuntimeFacts{RuntimeID: "rt-new", TaskStatus: "completed", DispatchStatus: "completed"}
-	free := covIZOrcaExecution(model.LeaseStatusReleased, nil, "rt-old")
-
-	if err := ValidateReplacementRuntimeRollover(model.IssueOpsRecord{}, "dead", settled); err != nil {
-		t.Fatalf("no execution: %v", err)
-	}
-	if err := ValidateReplacementRuntimeRollover(free, "", ReplacementRuntimeFacts{RuntimeID: "rt-old", TaskLive: true}); err != nil {
-		t.Fatalf("same runtime is not a rollover: %v", err)
-	}
-	if err := ValidateReplacementRuntimeRollover(free, "", ReplacementRuntimeFacts{TaskLive: true}); err != nil {
-		t.Fatalf("unobserved runtime is not a rollover: %v", err)
-	}
-	if err := ValidateReplacementRuntimeRollover(free, "", settled); err != nil {
-		t.Fatalf("quiescent holderless lease rejected: %v", err)
-	}
-	for _, task := range []string{"completed", "failed"} {
-		for _, dispatch := range []string{"completed", "failed", "circuit_broken"} {
-			facts := ReplacementRuntimeFacts{RuntimeID: "rt-new", TaskStatus: task, DispatchStatus: dispatch}
-			if err := ValidateReplacementRuntimeRollover(free, "", facts); err != nil {
-				t.Fatalf("task=%s dispatch=%s: %v", task, dispatch, err)
-			}
-		}
-	}
-	for name, facts := range map[string]ReplacementRuntimeFacts{
-		"task live":         {RuntimeID: "rt-new", TaskLive: true, TaskStatus: "completed", DispatchStatus: "completed"},
-		"terminal live":     {RuntimeID: "rt-new", TerminalLive: true, TaskStatus: "completed", DispatchStatus: "completed"},
-		"terminal retained": {RuntimeID: "rt-new", TerminalID: "pty", TaskStatus: "completed", DispatchStatus: "completed"},
-		"task running":      {RuntimeID: "rt-new", TaskStatus: "running", DispatchStatus: "completed"},
-		"dispatch pending":  {RuntimeID: "rt-new", TaskStatus: "completed", DispatchStatus: "pending"},
-		"empty statuses":    {RuntimeID: "rt-new"},
-	} {
-		err := ValidateReplacementRuntimeRollover(free, "", facts)
-		if err == nil || !strings.Contains(err.Error(), "not quiescent") {
-			t.Fatalf("%s: %v", name, err)
-		}
-	}
-	held := covIZOrcaExecution(model.LeaseStatusActive, &holder, "rt-old")
-	if err := ValidateReplacementRuntimeRollover(held, "live", settled); err == nil || !strings.Contains(err.Error(), "task_status=completed dispatch_status=completed") {
-		t.Fatalf("live holder across runtimes: %v", err)
-	}
-	if err := ValidateReplacementRuntimeRollover(held, "dead", settled); err != nil {
-		t.Fatalf("dead holder across runtimes: %v", err)
 	}
 }
 
@@ -363,28 +229,5 @@ func TestValidateReplacementQuiescenceFinalizesOnlyDeadHolders(t *testing.T) {
 		if err := ValidateReplacementQuiescence(receipt, status); err == nil || !strings.Contains(err.Error(), "unsafe to finalize") {
 			t.Fatalf("status %q: %v", status, err)
 		}
-	}
-}
-
-func TestValidateReplacementOwnerQuiescenceExemptsDeadRolledOverOwners(t *testing.T) {
-	holder := covIZActor("")
-	record := covIZOrcaExecution(model.LeaseStatusRevoking, &holder, "rt-old")
-	live := ReplacementRuntimeFacts{RuntimeID: "rt-old", TerminalLive: true, TaskLive: true, TaskStatus: "running", DispatchStatus: "pending"}
-	err := ValidateReplacementOwnerQuiescence(record, "dead", live)
-	if err == nil || !strings.Contains(err.Error(), "terminal_live=true task_live=true task_status=running dispatch_status=pending") {
-		t.Fatalf("live terminal/task on the sealed runtime: %v", err)
-	}
-	if err := ValidateReplacementOwnerQuiescence(record, "dead", ReplacementRuntimeFacts{RuntimeID: "rt-old", TaskLive: true}); err == nil {
-		t.Fatal("live task alone accepted")
-	}
-	if err := ValidateReplacementOwnerQuiescence(record, "dead", ReplacementRuntimeFacts{RuntimeID: "rt-old"}); err != nil {
-		t.Fatalf("no live terminal or task: %v", err)
-	}
-	// a dead owner on another runtime cannot be observed there, so the sealed runtime's liveness flags no longer apply
-	if err := ValidateReplacementOwnerQuiescence(record, "dead", ReplacementRuntimeFacts{RuntimeID: "rt-new", TaskLive: true}); err != nil {
-		t.Fatalf("dead rolled-over owner: %v", err)
-	}
-	if err := ValidateReplacementOwnerQuiescence(record, "live", ReplacementRuntimeFacts{RuntimeID: "rt-new", TaskLive: true}); err == nil {
-		t.Fatal("live holder with a live task accepted")
 	}
 }

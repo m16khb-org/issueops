@@ -9,7 +9,7 @@ import (
 )
 
 func TestEvaluateCycleAuthorityPreservationAndLeaselessBoundaries(t *testing.T) {
-	active := healthyDirectSnapshot().Cycles[0]
+	active := healthySnapshot().Cycles[0]
 	leaseless := operationalhealthcontract.Cycle{ID: "io-plan", Repo: "/repo", Branch: "69-plan", Phase: "plan"}
 	preserve := func(ids ...string) Options { return Options{PreserveCycleIDs: ids} }
 
@@ -34,7 +34,6 @@ func TestEvaluateCycleAuthorityPreservationAndLeaselessBoundaries(t *testing.T) 
 		{"claimable with a holder is incomplete", withCycle(active, func(c *operationalhealthcontract.Cycle) { c.LeaseStatus = "claimable" }), preserve("io-v1"), AuthorityUnknown},
 		{"revoking without holder", withCycle(active, func(c *operationalhealthcontract.Cycle) { c.LeaseStatus = "revoking"; clearCycleHolder(c) }), Options{}, AuthorityUnknown},
 		{"completion on a non-done cycle", withCycle(active, func(c *operationalhealthcontract.Cycle) { c.CompletionPresent = true }), Options{}, AuthorityUnknown},
-		{"direct mode with Orca identity", withCycle(active, func(c *operationalhealthcontract.Cycle) { c.TaskID = "task" }), Options{}, AuthorityUnknown},
 		{"zero generation", withCycle(active, func(c *operationalhealthcontract.Cycle) { c.Generation = 0 }), Options{}, AuthorityUnknown},
 		{"unsupported native host", withCycle(active, func(c *operationalhealthcontract.Cycle) { c.HolderHost = "vim" }), Options{}, AuthorityUnknown},
 		{"released done but holder retained", withCycle(active, func(c *operationalhealthcontract.Cycle) {
@@ -53,7 +52,7 @@ func TestSeverityForFindingEscalatesOnlyUnknownInventory(t *testing.T) {
 	if got := SeverityForFinding(operationalhealthcontract.FindingInventoryUnknown); got != "error" {
 		t.Fatalf("unknown inventory severity = %q", got)
 	}
-	for _, code := range []string{operationalhealthcontract.FindingDeadOwner, operationalhealthcontract.FindingMessageResidue, "anything-else"} {
+	for _, code := range []string{operationalhealthcontract.FindingDeadOwner, operationalhealthcontract.FindingWorktreeResidue, "anything-else"} {
 		if got := SeverityForFinding(code); got != "warning" {
 			t.Errorf("severity(%s) = %q", code, got)
 		}
@@ -100,48 +99,17 @@ func findingIDs(result operationalhealthcontract.Result, code, kind string) []st
 }
 
 func TestClassifyRejectsInvalidPreservationRequests(t *testing.T) {
-	snapshot := healthyDirectSnapshot()
-	snapshot.Terminals = []operationalhealthcontract.OrcaTerminal{{RuntimeID: "", Handle: "user-shell"}}
+	snapshot := healthySnapshot()
 	result := Classify(snapshot, Options{
-		Now:                     time.Now(),
-		PreserveCycleIDs:        []string{"io-v1", "io-v1", " ", "io-ghost"},
-		PreserveTerminalHandles: []string{"user-shell", "user-shell", "", "missing-term"},
+		Now:              time.Now(),
+		PreserveCycleIDs: []string{"io-v1", "io-v1", " ", "io-ghost"},
 	})
 	unknown := operationalhealthcontract.FindingInventoryUnknown
 	if got := findingIDs(result, unknown, "preserve_cycle"); !slices.Equal(got, []string{"", "io-v1"}) {
 		t.Errorf("invalid preserved cycles = %q, want blank and duplicate", got)
 	}
-	if got := findingIDs(result, unknown, "preserve_terminal"); !slices.Equal(got, []string{"", "user-shell"}) {
-		t.Errorf("invalid preserved terminals = %q, want blank and duplicate", got)
-	}
 	if got := findingIDs(result, unknown, "cycle"); len(got) != 1 || got[0] != "io-ghost" {
 		t.Errorf("preserved cycle that does not exist must be flagged once, got %v", got)
-	}
-	if got := findingIDs(result, unknown, "terminal"); len(got) != 1 || got[0] != "missing-term" {
-		t.Errorf("preserved terminal that does not exist must be flagged once, got %v", got)
-	}
-}
-
-func TestClassifyMessageObservationOutcomes(t *testing.T) {
-	for _, test := range []struct {
-		name     string
-		messages operationalhealthcontract.MessagePresence
-		profile  string
-		code     string
-	}{
-		{"negative count", operationalhealthcontract.MessagePresence{Count: -1}, operationalhealthcontract.ProfileInteractive, operationalhealthcontract.FindingInventoryUnknown},
-		{"rows present", operationalhealthcontract.MessagePresence{Count: 3}, "", operationalhealthcontract.FindingMessageResidue},
-		{"not empty but zero count", operationalhealthcontract.MessagePresence{Empty: false, CompleteAbsence: true}, "", operationalhealthcontract.FindingMessageResidue},
-		{"empty but absence unproven", operationalhealthcontract.MessagePresence{Empty: true}, "", operationalhealthcontract.FindingInventoryUnknown},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			snapshot := healthyDirectSnapshot()
-			snapshot.Messages = test.messages
-			result := Classify(snapshot, Options{Now: time.Now(), Profile: test.profile})
-			if !hasFinding(result, test.code, "message") || len(result.Findings) != 1 {
-				t.Fatalf("findings = %+v, want exactly one %s message finding", result.Findings, test.code)
-			}
-		})
 	}
 }
 
@@ -160,7 +128,7 @@ func TestClassifyFlagsCanonicalSourceDefects(t *testing.T) {
 		{"remote ref duplicated", func(s *Snapshot) { s.RemoteRefs = append(s.RemoteRefs, s.RemoteRefs[0]) }, "branch"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			snapshot := healthyDirectSnapshot()
+			snapshot := healthySnapshot()
 			test.mutate(&snapshot)
 			result := Classify(snapshot, Options{Now: time.Now()})
 			if !hasFinding(result, operationalhealthcontract.FindingInventoryUnknown, test.kind) {
@@ -176,7 +144,7 @@ func TestClassifyReportsDurableFailuresOnlyAsTheirOwnFinding(t *testing.T) {
 		operationalhealthcontract.FindingCleanupFailure:     func(c *operationalhealthcontract.Cycle) { c.CleanupFailurePresent = true },
 		operationalhealthcontract.FindingIssueCreateFailure: func(c *operationalhealthcontract.Cycle) { c.IssueCreateFailurePresent = true },
 	} {
-		snapshot := healthyDirectSnapshot()
+		snapshot := healthySnapshot()
 		mutate(&snapshot.Cycles[0])
 		result := Classify(snapshot, Options{Now: time.Now()})
 		if len(result.Findings) != 1 || !hasFinding(result, code, "cycle") || result.Healthy {
@@ -186,7 +154,7 @@ func TestClassifyReportsDurableFailuresOnlyAsTheirOwnFinding(t *testing.T) {
 }
 
 func TestClassifyFlagsDeadOwnerAndItsResidue(t *testing.T) {
-	snapshot := healthyDirectSnapshot()
+	snapshot := healthySnapshot()
 	snapshot.Cycles[0].HolderProcessStatus = operationalhealthcontract.ProcessStatusDead
 	result := Classify(snapshot, Options{Now: time.Now()})
 	if !hasFinding(result, operationalhealthcontract.FindingDeadOwner, "cycle") {
@@ -198,7 +166,7 @@ func TestClassifyFlagsDeadOwnerAndItsResidue(t *testing.T) {
 }
 
 func TestClassifyFlagsUnownedNonMainBranchRefs(t *testing.T) {
-	snapshot := healthyDirectSnapshot()
+	snapshot := healthySnapshot()
 	head := snapshot.SourceHead
 	snapshot.LocalRefs = append(snapshot.LocalRefs, operationalhealthcontract.GitRef{Name: "refs/heads/old", Branch: "old", OID: head, Location: "local"})
 	snapshot.RemoteRefs = append(snapshot.RemoteRefs, operationalhealthcontract.GitRef{Name: "refs/remotes/origin/69-v1", Branch: "69-v1", OID: head, Location: "remote"})
@@ -219,7 +187,7 @@ func TestClassifyFlagsUnownedNonMainBranchRefs(t *testing.T) {
 }
 
 func TestClassifyRequiresCycleGitWorktreeToMatchBranch(t *testing.T) {
-	snapshot := healthyDirectSnapshot()
+	snapshot := healthySnapshot()
 	snapshot.GitWorktrees[1].Branch = "other"
 	result := Classify(snapshot, Options{Now: time.Now()})
 	if !hasFinding(result, operationalhealthcontract.FindingInventoryUnknown, "git_worktree") {

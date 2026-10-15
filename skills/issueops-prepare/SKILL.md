@@ -1,6 +1,6 @@
 ---
 name: issueops-prepare
-description: Give an IssueOps cycle its branch identity. Resolve and pin the exact base SHA, record it with "issueops branch prepare", create and verify the provider-side branch link, and move the cycle to the plan phase. Creating the worktree is not this skill's job — "issueops execution prepare" owns it and picks git or Orca. Use when the user says "준비", "브랜치 만들어줘", "prepare the issue branch", or when "issueops next" reports stage prepare.
+description: Give an IssueOps cycle its branch identity. Resolve and pin the exact base SHA, record it with "issueops branch prepare", create and verify the provider-side branch link, and move the cycle to the plan phase. Creating the worktree is not this skill's job — "issueops execution prepare" owns it. Use when the user says "준비", "브랜치 만들어줘", "prepare the issue branch", or when "issueops next" reports stage prepare.
 ---
 
 # IssueOps Prepare
@@ -28,10 +28,8 @@ issueops next --id "$ISSUEOPS_ID" --json
 - **base는 움직이는 ref가 아니라 정확한 SHA로 봉인한다.** `origin/main`은 다음 fetch에
   움직인다. 이후 모든 단계가 이 SHA를 기준으로 판정하므로 이름이 아니라 값을 기록한다.
 - **워크트리를 만들지 않는다.** 워크트리 provisioning은 `execution prepare`가 단독으로
-  소유한다. direct 모드는 git으로 만들고, Orca 모드는 `orca worktree create --name
-  <branch>`로 자기 브랜치와 워크트리를 함께 만든다. 여기서 로컬 브랜치나 워크트리를
-  미리 만들면 Orca 경로가 이름 충돌로 깨진다. `git worktree add`를 실행하지 않고,
-  `link-worktree`도 호출하지 않는다.
+  소유한다. 여기서 로컬 브랜치나 워크트리를 미리 만들지 않는다. `git worktree add`를
+  실행하지 않고, `link-worktree`도 호출하지 않는다.
 - **provider 링크는 외부 write다.** 전체 IssueOps 준비 요청에 포함된 branch/link 생성은
   대상을 설명한 뒤 실행한다. 이미 허용된 준비를 다시 묻지 않는다. 세션 인계는
   [`issueops`](../issueops/SKILL.md)의 환경별 자동 세션 인계 규칙을 따른다.
@@ -113,12 +111,6 @@ issueops branch prepare --id "$ISSUEOPS_ID" --provider "$PROVIDER" \
 issueops phase --id "$ISSUEOPS_ID" --to plan $RECORD_ACTOR_FLAGS --json
 ```
 
-**명시적으로 선택한 GitHub + Orca execution 순서.** 이 모드는 원격 브랜치가 먼저 있으면
-Orca prepare가 실패한다. 그래서 첫 `branch prepare`는 base SHA만 기록하고
-`--link-verified`와 `createLinkedBranch`를 `execution prepare` 뒤로 미룬다. 그 순서는
-[`execution.md`](../issueops/references/execution.md)의 "GitHub Orca Branch Ordering"이
-소유한다. 일반적인 자동 세션 인계는 direct 준비이므로 Orca 설치 여부만으로 이 예외를 적용하지 않는다.
-
 **issue와 code가 다른 프로젝트에 있을 때.** `branch prepare`는 체크아웃의 `origin`을
 관측해 이슈의 프로젝트와 다르면 `code_project_key`를 봉인한다. `origin`이 없거나 다른
 곳을 가리키거나 값을 명시해야 하면 `--code-project-key HOST/GROUP/PROJECT`를 넘긴다.
@@ -147,8 +139,10 @@ branch는 부모 사이클의 브랜치이고, base SHA는 부모 워크트리�
 
 다음은 [`issueops-plan`](../issueops-plan/SKILL.md)이다. 계획은 워크트리가 아직 없으므로
 source checkout 밖 임시 파일에 쓰고 `artifact stage --name plan`으로 올린다. 일반 흐름은
-3단계 끝에서 direct로 워크트리를 준비하고 환경별 자동 세션 인계를 적용한다.
-사용자가 명시한 다른 execution mode나 기존 사이클의 mode는 보존한다.
+3단계 끝에서 `issueops execution prepare --id "$ISSUEOPS_ID" $ACTOR_FLAGS [--confirm] [--json]`로
+워크트리를 준비한다. 그 뒤 Herdr를 먼저 확인해 사용할 수 있으면 같은 worktree의 새 Herdr 세션으로
+인계하고, 사용할 수 없으면 현재 세션에서 이어가거나 사용자가 직접 연 두 번째 터미널에서 수동으로
+인계한다.
 
 ## 실패 처리
 

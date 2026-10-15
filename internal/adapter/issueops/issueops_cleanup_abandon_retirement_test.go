@@ -16,7 +16,7 @@ func TestAbandonAllowsDoneCycleWithUnmergedArtifact(t *testing.T) {
 	req := abandonRequest(record.ID, false, "")
 	req.ArtifactUnmerged = true
 
-	result, err := CleanupAbandon(context.Background(), stateRoot, req, abandonDeps(&fakeAbandonGit{}, authoritativeZeroOrca()))
+	result, err := CleanupAbandon(context.Background(), stateRoot, req, abandonDeps(&fakeAbandonGit{}))
 	if err != nil {
 		t.Fatalf("a done cycle with an unmerged artifact must retire through abandon: %v (%v)", err, result.Missing)
 	}
@@ -29,7 +29,7 @@ func TestAbandonRejectsMergedArtifact(t *testing.T) {
 	req := abandonRequest(record.ID, false, "")
 	req.ArtifactUnmerged = false
 
-	result, err := CleanupAbandon(context.Background(), stateRoot, req, abandonDeps(&fakeAbandonGit{}, authoritativeZeroOrca()))
+	result, err := CleanupAbandon(context.Background(), stateRoot, req, abandonDeps(&fakeAbandonGit{}))
 	if err == nil {
 		t.Fatal("a record whose artifact was not observed as unmerged must stay blocked")
 	}
@@ -44,7 +44,7 @@ func TestAbandonKeepsArtifactGateClosedWithoutObservation(t *testing.T) {
 	stateRoot, record := abandonRetirementRecord(t)
 
 	result, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""),
-		abandonDeps(&fakeAbandonGit{}, authoritativeZeroOrca()))
+		abandonDeps(&fakeAbandonGit{}))
 	if err == nil || !containsString(result.Missing, "remote_artifact_unmerged") {
 		t.Fatalf("an unobserved artifact must keep abandon fail-closed: %v %v", err, result.Missing)
 	}
@@ -60,7 +60,7 @@ func TestAbandonAllowsDoneCycleWithoutArtifact(t *testing.T) {
 	}
 
 	result, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""),
-		abandonDeps(&fakeAbandonGit{}, authoritativeZeroOrca()))
+		abandonDeps(&fakeAbandonGit{}))
 	if err != nil {
 		t.Fatalf("a done cycle without any artifact must retire through abandon: %v (%v)", err, result.Missing)
 	}

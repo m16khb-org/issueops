@@ -2,14 +2,12 @@ package issueopspreparation
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
-	agentmodelcontract "issueops/internal/contract/agentmodel"
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
 	preparationdomain "issueops/internal/domain/issueopspreparation"
@@ -18,27 +16,24 @@ import (
 type Service struct {
 	repository Repository
 	clock      Clock
-	operation  OperationID
 	direct     DirectWorkspace
-	orca       OrcaGateway
 	evidence   PreparationEvidence
-	models     AgentModels
 }
 
-func NewService(repository Repository, clock Clock, operation OperationID, direct DirectWorkspace, orca OrcaGateway, evidence PreparationEvidence, models AgentModels) *Service {
-	return &Service{repository: repository, clock: clock, operation: operation, direct: direct, orca: orca, evidence: evidence, models: models}
+func NewService(repository Repository, clock Clock, direct DirectWorkspace, evidence PreparationEvidence) *Service {
+	return &Service{repository: repository, clock: clock, direct: direct, evidence: evidence}
 }
 
 func (service *Service) Prepare(ctx context.Context, command preparationcontract.Command) (preparationcontract.Result, error) {
-	snapshot, command, requested, err := service.loadPrepareCommand(ctx, command)
+	if service.repository == nil {
+		return failedResult(command.ID), fmt.Errorf("preparation repository is unavailable")
+	}
+	snapshot, err := service.repository.Load(ctx, command.ID)
 	if err != nil {
 		return failedResult(command.ID), err
 	}
+	decision := preparationdomain.Decide(preparationdomain.DecisionInput{Command: command, Snapshot: snapshot})
 	if snapshot.Record.Execution != nil {
-		decision, decideErr := preparationdomain.Decide(preparationdomain.DecisionInput{Command: command, Snapshot: snapshot})
-		if decideErr != nil {
-			return failedResult(command.ID), decideErr
-		}
 		return service.resolveExisting(snapshot, command, decision)
 	}
 	if service.evidence == nil {
@@ -50,322 +45,12 @@ func (service *Service) Prepare(ctx context.Context, command preparationcontract
 	}
 	snapshot.CanonicalRoot = workspace.Root
 	if err := service.repository.EnsureRootUnclaimed(ctx, command.ID, workspace.Root); err != nil {
-		return preparationcontract.Result{ID: command.ID, RequestedMode: requested}, err
-	}
-	readiness, probeRequest, failure, err := service.probeOrcaReadiness(ctx, snapshot, command, requested, workspace)
-	if err != nil {
-		return failure, err
-	}
-	decision, err := preparationdomain.Decide(preparationdomain.DecisionInput{Command: command, Snapshot: snapshot, Orca: readiness})
-	if err != nil {
-		return preparationcontract.Result{ID: command.ID, RequestedMode: requested}, err
-	}
-	if command.Confirm && command.ExpectedReadinessFingerprint != decision.ReadinessFingerprint {
-		return selectionResult(command.ID, decision, true), &preparationdomain.Denial{
-			Reason: preparationdomain.DenialReadinessFingerprintChanged,
-			Cause:  errors.New("readiness fingerprint changed before confirm"),
-		}
-	}
-	if decision.ResolvedMode == preparationcontract.ModeOrca {
-		return service.prepareOrca(ctx, snapshot, command, workspace, probeRequest, decision)
-	}
-	return service.prepareDirect(ctx, snapshot, command, workspace, probeRequest, decision)
-}
-
-// loadPrepareCommand loads the record snapshot and normalizes the owner
-// defaults and requested mode of the command. The returned command always
-// carries the original ID, so callers can build a failed result from it.
-func (service *Service) loadPrepareCommand(ctx context.Context, command preparationcontract.Command) (preparationcontract.Snapshot, preparationcontract.Command, string, error) {
-	if service.repository == nil {
-		return preparationcontract.Snapshot{}, command, "", fmt.Errorf("preparation repository is unavailable")
-	}
-	snapshot, err := service.repository.Load(ctx, command.ID)
-	if err != nil {
-		return snapshot, command, "", err
-	}
-	command, err = service.normalizeOwnerDefaults(ctx, snapshot, command)
-	if err != nil {
-		return snapshot, command, "", err
-	}
-	requested, err := preparationdomain.NormalizeMode(command.Mode)
-	if err != nil {
-		return snapshot, command, "", err
-	}
-	command.Mode = requested
-	return snapshot, command, requested, nil
-}
-
-func isOrcaOwnerHost(host string) bool {
-	return host == "codex" || host == "claude" || host == "omo" || host == "omp"
-}
-
-// probeOrcaReadiness observes Orca readiness for a non-direct request. When it
-// returns an error, failure is the result Prepare must return with it.
-func (service *Service) probeOrcaReadiness(
-	ctx context.Context,
-	snapshot preparationcontract.Snapshot,
-	command preparationcontract.Command,
-	requested string,
-	workspace preparationcontract.WorkspaceRequest,
-) (preparationdomain.OrcaReadiness, preparationcontract.ProbeRequest, preparationcontract.Result, error) {
-	readiness := preparationdomain.OrcaReadiness{}
-	probeRequest := preparationcontract.ProbeRequest{}
-	if requested == preparationcontract.ModeDirect {
-		return readiness, probeRequest, preparationcontract.Result{}, nil
-	}
-	if service.orca == nil {
-		readiness.Code = "orca_adapter_unavailable"
-		return readiness, probeRequest, preparationcontract.Result{}, nil
-	}
-	if !isOrcaOwnerHost(command.OwnerHost) {
-		return readiness, probeRequest, failedResult(command.ID), fmt.Errorf("Orca owner_host must be codex, claude, omo, or omp")
-	}
-	// owner가 보충할 수 없는 planner 전제가 빠져 있으면 띄우지 않는다.
-	// 띄우면 owner는 claim까지 완주한 뒤 채울 수 없는 게이트에 부딪혀
-	// 반드시 실패한다 — 실측으로 그랬다(#319, io-cb83a79e1bfd).
-	if keys := preparationdomain.MissingPlannerGateKeys(plannerEvidence(snapshot.Record)); len(keys) > 0 {
-		gates := plannerGateHints(snapshot.Record.ID, keys)
-		return readiness, probeRequest, failedResult(command.ID), plannerGateError(gates)
-	}
-	codec := preparationcontract.IntentCodec{}
-	issue, issueErr := preparationdomain.PrepareIssueIdentity(snapshot.Record.IssueURL, preparationcontract.DecodeIssueLinkEvidence(snapshot.Record.BranchPrepare))
-	if issueErr != nil {
-		return readiness, probeRequest, failedResult(command.ID), issueErr
-	}
-	marker, markerErr := codec.RenderReadinessMarker(snapshot.Record.ID, issue)
-	if markerErr != nil {
-		return readiness, probeRequest, failedResult(command.ID), markerErr
-	}
-	probeRequest = preparationcontract.ProbeRequest{
-		Repo: snapshot.Record.Repo, Host: strings.ToLower(strings.TrimSpace(command.OwnerHost)),
-		Model: strings.TrimSpace(command.OwnerModel), Effort: strings.TrimSpace(command.OwnerEffort),
-		Provider: issue.Provider, Issue: issue.Issue, Marker: marker, Workspace: workspace,
-	}
-	readiness.Provider = probeRequest.Provider
-	readiness.Issue = probeRequest.Issue
-	probe, probeErr := service.orca.Probe(ctx, probeRequest)
-	readiness.Available = probe.Available
-	readiness.Ready = probeErr == nil && probe.Available && probe.Ready
-	readiness.Code = strings.TrimSpace(probe.Code)
-	if probeErr != nil && readiness.Code == "" {
-		readiness.Code = "orca_probe_failed"
-	}
-	if probeErr != nil && requested == preparationcontract.ModeOrca {
-		return readiness, probeRequest, preparationcontract.Result{ID: command.ID, RequestedMode: requested}, probeErr
-	}
-	return readiness, probeRequest, preparationcontract.Result{}, nil
-}
-
-func (service *Service) prepareOrca(
-	ctx context.Context,
-	snapshot preparationcontract.Snapshot,
-	command preparationcontract.Command,
-	workspace preparationcontract.WorkspaceRequest,
-	probe preparationcontract.ProbeRequest,
-	decision preparationdomain.Decision,
-) (preparationcontract.Result, error) {
-	if service.orca == nil {
-		return failedResult(command.ID), fmt.Errorf("Orca provisioner is unavailable")
-	}
-	workspace.CWD = command.CWD
-	probe.Workspace = workspace
-	if command.Confirm {
-		actor, err := normalizeActor(command.Actor)
-		if err != nil {
-			return failedResult(command.ID), err
-		}
-		command.Actor = actor
-	}
-	owner, err := service.resolveOrcaOwner(ctx, snapshot, command, probe)
-	if err != nil {
 		return failedResult(command.ID), err
 	}
-	preview := preparationcontract.Result{
-		OK: true, ID: command.ID, Preview: !command.Confirm,
-		RequestedMode: decision.RequestedMode, ResolvedMode: preparationcontract.ModeOrca,
-		FallbackCode: decision.FallbackCode, Workspace: workspaceResult(workspace, "orca", ""),
-	}
-	applySelectionResult(&preview, decision)
-	if !command.Confirm {
-		preview.NextCommand = prepareConfirmCommand(command, decision)
-		return preview, nil
-	}
-	if service.operation == nil {
-		return failedResult(command.ID), fmt.Errorf("preparation operation ID generator is unavailable")
-	}
-	operationID, err := service.operation.New()
-	if err != nil {
-		return failedResult(command.ID), err
-	}
-	if service.clock == nil {
-		return failedResult(command.ID), fmt.Errorf("preparation clock is unavailable")
-	}
-	selectedAt := formatTime(service.clock.Now())
-	state, err := service.repository.BeginIntent(ctx, OrcaBegin{
-		Snapshot: snapshot, Command: command, Workspace: workspace, Probe: probe,
-		Owner: owner, OperationID: operationID, StartedAt: selectedAt, Selection: selectionReceipt(decision, selectedAt),
-	})
-	if err != nil {
-		return failedResult(command.ID), err
-	}
-	state.Command, state.Owner, state.Pending = command.Clone(), owner, true
-	progress, err := service.driveOrcaIntent(ctx, state)
-	if err != nil {
-		return failedResult(command.ID), err
-	}
-	result := progress.Result.Clone()
-	result.RequestedMode = decision.RequestedMode
-	result.ResolvedMode = preparationcontract.ModeOrca
-	result.FallbackCode = decision.FallbackCode
-	applySelectionResult(&result, decision)
-	return result, nil
+	return service.prepareDirect(ctx, snapshot, command, workspace)
 }
 
-// resolveOrcaOwner reads the owner evidence and fills its missing issue
-// identity from the probe; the identity must match the probed issue.
-func (service *Service) resolveOrcaOwner(ctx context.Context, snapshot preparationcontract.Snapshot, command preparationcontract.Command, probe preparationcontract.ProbeRequest) (preparationcontract.OwnerEvidence, error) {
-	owner, err := service.evidence.ReadOwner(ctx, snapshot, command)
-	if err != nil {
-		return owner, err
-	}
-	if owner.Provider == "" {
-		owner.Provider = probe.Provider
-	}
-	if owner.Issue == 0 {
-		owner.Issue = probe.Issue
-	}
-	if owner.Provider != probe.Provider || owner.Issue != probe.Issue {
-		return owner, fmt.Errorf("owner issue identity changed before Orca intent persistence")
-	}
-	return owner, nil
-}
-
-// driveOrcaIntent advances the external Orca intent until no stage is pending,
-// bounded by a fixed stage count.
-func (service *Service) driveOrcaIntent(ctx context.Context, state IntentState) (IntentProgress, error) {
-	progress := IntentProgress{State: state, Pending: state.Pending}
-	for step := 0; progress.Pending; step++ {
-		if step >= 6 {
-			return progress, fmt.Errorf("Orca prepare exceeded the fixed external intent stage count")
-		}
-		var err error
-		progress, err = service.advanceOrca(ctx, progress.State)
-		if err != nil {
-			return progress, err
-		}
-	}
-	return progress, nil
-}
-
-func (service *Service) advanceOrca(ctx context.Context, state IntentState) (IntentProgress, error) {
-	request := intentRequest(state.Intent)
-	inventory, err := service.orca.Inspect(ctx, request)
-	if err != nil {
-		_ = service.recordOrcaFailure(ctx, state, state.Intent.InvocationState, err)
-		return IntentProgress{State: state, Pending: true}, fmt.Errorf("Orca intent inventory is ambiguous; intent retained: %w", err)
-	}
-	if len(inventory.Candidates) > 1 {
-		cause := fmt.Errorf("Orca intent inventory found multiple candidates; intent retained")
-		_ = service.recordOrcaFailure(ctx, state, state.Intent.InvocationState, cause)
-		return IntentProgress{State: state, Pending: true}, cause
-	}
-	if len(inventory.Candidates) == 1 {
-		return service.applyOrcaReceipt(ctx, state, inventory.Candidates[0])
-	}
-	if !inventory.ExactReplay && !inventory.AuthoritativeZero {
-		cause := fmt.Errorf("Orca intent inventory returned a non-authoritative zero; intent retained")
-		_ = service.recordOrcaFailure(ctx, state, state.Intent.InvocationState, cause)
-		return IntentProgress{State: state, Pending: true}, cause
-	}
-	if !inventory.ExactReplay && state.Intent.InvocationState != preparationcontract.InvocationNotInvoked && state.Intent.Stage != preparationcontract.IntentStageRunBind {
-		cause := fmt.Errorf("authoritative zero cannot retry an Orca mutation whose absence was not proven; intent retained")
-		_ = service.recordOrcaFailure(ctx, state, state.Intent.InvocationState, cause)
-		return IntentProgress{State: state, Pending: true}, cause
-	}
-	if state.Intent.InvocationAttempts >= preparationcontract.MaxInvocationAttempts {
-		cause := fmt.Errorf("Orca intent retry is exhausted; intent retained")
-		_ = service.recordOrcaFailure(ctx, state, state.Intent.InvocationState, cause)
-		return IntentProgress{State: state, Pending: true}, cause
-	}
-	if request.RoleAgentArgs, err = service.terminalRoleAgentArgs(ctx, state.Intent); err != nil {
-		return IntentProgress{State: state, Pending: true}, err
-	}
-	marked, err := service.repository.MarkInvoking(ctx, state)
-	if err != nil {
-		return IntentProgress{State: state, Pending: true}, err
-	}
-	receipt, err := service.orca.Invoke(ctx, request)
-	if err != nil {
-		invocation := preparationcontract.InvocationUnknown
-		if typed, ok := errors.AsType[*preparationcontract.InvocationError](err); ok && typed.State != "" {
-			invocation = typed.State
-		}
-		_ = service.recordOrcaFailure(ctx, marked, invocation, err)
-		return IntentProgress{State: marked, Pending: true}, fmt.Errorf("Orca mutation outcome requires execution reconcile; mutation was not repeated: %w", err)
-	}
-	return service.applyOrcaReceipt(ctx, marked, receipt)
-}
-
-func (service *Service) applyOrcaReceipt(ctx context.Context, state IntentState, receipt preparationcontract.IntentReceipt) (IntentProgress, error) {
-	if state.Intent.Stage == preparationcontract.IntentStageWorktree {
-		artifacts, err := service.evidence.PrepareOwner(ctx, state.Snapshot, state.Command, state.Intent, receipt)
-		if err != nil {
-			_ = service.recordOrcaFailure(ctx, state, preparationcontract.InvocationUnknown, err)
-			return IntentProgress{State: state, Pending: true}, err
-		}
-		state.OwnerArtifacts = artifacts
-	}
-	progress, err := service.repository.ApplyReceipt(ctx, state, receipt)
-	if err != nil {
-		_ = service.recordOrcaFailure(ctx, state, preparationcontract.InvocationUnknown, err)
-		return IntentProgress{State: state, Pending: true}, err
-	}
-	return progress, nil
-}
-
-// terminalRoleAgentArgs resolves the role-agent launch arguments for the
-// terminal stage. It runs before MarkInvoking: a settings error leaves the
-// intent not_invoked_proven, so the same command retries after the fix.
-func (service *Service) terminalRoleAgentArgs(ctx context.Context, intent preparationcontract.Intent) ([]string, error) {
-	if intent.Stage != preparationcontract.IntentStageTerminal {
-		return nil, nil
-	}
-	if service.models == nil {
-		return nil, fmt.Errorf("agent model resolver is unavailable")
-	}
-	args, err := service.models.RoleAgentArgs(ctx, intent.Probe.Host, intent.Probe.Repo)
-	if err != nil {
-		return nil, fmt.Errorf("resolve role agents before the Orca terminal launch: %w", err)
-	}
-	return args, nil
-}
-
-func (service *Service) recordOrcaFailure(ctx context.Context, state IntentState, invocation string, cause error) error {
-	if service.clock == nil {
-		return fmt.Errorf("preparation clock is unavailable")
-	}
-	state.FailureAt = formatTime(service.clock.Now())
-	return service.repository.RecordFailure(ctx, state, invocation, cause)
-}
-
-func intentRequest(intent preparationcontract.Intent) preparationcontract.IntentRequest {
-	request := preparationcontract.IntentRequest{
-		Stage: intent.Stage, OperationID: intent.OperationID, Generation: intent.Generation,
-		OrcaRequestID: intent.OrcaRequestID, OrcaPromptRequestID: intent.OrcaPromptRequestID,
-		Marker: intent.Marker, Workspace: intent.Workspace,
-		Probe: intent.Probe, Prepared: intent.Prepared, TerminalPTYID: intent.TerminalPTYID,
-		RunID: intent.RunID, RunBound: intent.RunBound, TaskID: intent.TaskID,
-	}
-	if intent.Launch != nil {
-		request.Launch = &preparationcontract.LaunchRequest{
-			PromptPath: intent.Launch.PromptPath, PromptSHA256: intent.Launch.PromptSHA256,
-			ContextPacketPath: intent.Launch.ContextPacketPath, ContextPacketSHA256: intent.Launch.ContextPacketSHA256,
-		}
-	}
-	return request
-}
-
-func (service *Service) prepareDirect(ctx context.Context, snapshot preparationcontract.Snapshot, command preparationcontract.Command, workspace preparationcontract.WorkspaceRequest, probe preparationcontract.ProbeRequest, decision preparationdomain.Decision) (preparationcontract.Result, error) {
+func (service *Service) prepareDirect(ctx context.Context, snapshot preparationcontract.Snapshot, command preparationcontract.Command, workspace preparationcontract.WorkspaceRequest) (preparationcontract.Result, error) {
 	actor, err := normalizeActor(command.Actor)
 	if err != nil {
 		return failedResult(command.ID), err
@@ -387,8 +72,7 @@ func (service *Service) prepareDirect(ctx context.Context, snapshot preparationc
 		}
 		if !access.Allowed {
 			return preparationcontract.Result{
-				ID: command.ID, RequestedMode: decision.RequestedMode, ResolvedMode: decision.ResolvedMode,
-				Workspace: workspaceResult(workspace, "git", ""), NextCommand: access.RelaunchCommand,
+				ID: command.ID, Workspace: workspaceResult(workspace, ""), NextCommand: access.RelaunchCommand,
 			}, fmt.Errorf("canonical worktree base is not accessible; relaunch with: %s", access.RelaunchCommand)
 		}
 	}
@@ -402,12 +86,10 @@ func (service *Service) prepareDirect(ctx context.Context, snapshot preparationc
 	linkedAt := formatTime(service.clock.Now())
 	result := preparationcontract.Result{
 		OK: true, ID: command.ID, Preview: !command.Confirm,
-		RequestedMode: decision.RequestedMode, ResolvedMode: decision.ResolvedMode, FallbackCode: decision.FallbackCode,
 		Workspace: workspaceResultFromReceipt(receipt, linkedAt),
 	}
-	applySelectionResult(&result, decision)
 	if !command.Confirm {
-		result.NextCommand = prepareConfirmCommand(command, decision)
+		result.NextCommand = prepareConfirmCommand(command)
 		return result, nil
 	}
 	claimedAt := formatTime(service.clock.Now())
@@ -416,8 +98,7 @@ func (service *Service) prepareDirect(ctx context.Context, snapshot preparationc
 	}
 	persisted, err := service.repository.CommitDirect(ctx, DirectCommit{
 		Snapshot: snapshot, Command: command, Workspace: receipt,
-		RequestedMode: decision.RequestedMode, FallbackCode: decision.FallbackCode,
-		LinkedAt: linkedAt, ClaimedAt: claimedAt, Selection: selectionReceipt(decision, linkedAt), Probe: probe,
+		LinkedAt: linkedAt, ClaimedAt: claimedAt,
 	})
 	if err != nil {
 		return failedResult(command.ID), err
@@ -426,7 +107,7 @@ func (service *Service) prepareDirect(ctx context.Context, snapshot preparationc
 }
 
 func (service *Service) resolveExisting(snapshot preparationcontract.Snapshot, command preparationcontract.Command, decision preparationdomain.Decision) (preparationcontract.Result, error) {
-	result := preparedResult(snapshot.Record, decision.RequestedMode, decision.FallbackCode)
+	result := preparedResult(snapshot.Record)
 	switch decision.Code {
 	case preparationdomain.CodeExisting:
 		return result, nil
@@ -434,10 +115,6 @@ func (service *Service) resolveExisting(snapshot preparationcontract.Snapshot, c
 		result.OK = false
 		result.NextCommand = "issueops execution reconcile --id " + snapshot.Record.ID + " --preview ACTOR_FLAGS"
 		return result, fmt.Errorf("IssueOps execution has a pending external intent; run %s", result.NextCommand)
-	case preparationdomain.CodeModeMismatch:
-		result.OK = false
-		result.NextCommand = fmt.Sprintf("issueops execution switch-mode --id %s --mode %s --json", snapshot.Record.ID, decision.RequestedMode)
-		return result, fmt.Errorf("IssueOps execution is already prepared as %s; switching to %s removes the canonical worktree, so run %s", decision.ResolvedMode, decision.RequestedMode, result.NextCommand)
 	case preparationdomain.CodeWriterless:
 		result.OK = false
 		result.NextCommand = writerlessNextCommand(snapshot)
@@ -445,43 +122,6 @@ func (service *Service) resolveExisting(snapshot preparationcontract.Snapshot, c
 	default:
 		return failedResult(command.ID), fmt.Errorf("unsupported preparation decision %q", decision.Code)
 	}
-}
-
-// normalizeOwnerDefaults fills a missing owner model or effort from the
-// implement role, or child-implement for a delegated child cycle. Explicit
-// flags win, and a broken settings file fails before any state changes.
-func (service *Service) normalizeOwnerDefaults(ctx context.Context, snapshot preparationcontract.Snapshot, command preparationcontract.Command) (preparationcontract.Command, error) {
-	command.OwnerHost = strings.ToLower(strings.TrimSpace(command.OwnerHost))
-	command.OwnerModel = strings.TrimSpace(command.OwnerModel)
-	command.OwnerEffort = strings.TrimSpace(command.OwnerEffort)
-	if !isOrcaOwnerHost(command.OwnerHost) {
-		return command, nil
-	}
-	// 플래그를 둘 다 명시해도 같은 설정 파일이 owner packet의 리뷰·조사·독자 검토
-	// 모델을 정한다. 그 파일이 깨졌으면 Orca worktree를 만든 뒤가 아니라 여기서 멈춘다.
-	if service.models == nil {
-		return command, fmt.Errorf("agent model resolver is unavailable")
-	}
-	role := agentmodelcontract.RoleImplement
-	if delegated(snapshot.Record.Delegation) {
-		role = agentmodelcontract.RoleChildImplement
-	}
-	model, effort, err := service.models.OwnerDefaults(ctx, command.OwnerHost, role, snapshot.Record.Repo)
-	if err != nil {
-		return command, fmt.Errorf("resolve owner model: %w", err)
-	}
-	if command.OwnerModel == "" {
-		command.OwnerModel = model
-	}
-	if command.OwnerEffort == "" {
-		command.OwnerEffort = effort
-	}
-	return command, nil
-}
-
-func delegated(raw json.RawMessage) bool {
-	trimmed := strings.TrimSpace(string(raw))
-	return trimmed != "" && trimmed != "null"
 }
 
 func normalizeActor(actor leasecontract.Actor) (leasecontract.Actor, error) {
@@ -506,69 +146,14 @@ func normalizeActor(actor leasecontract.Actor) (leasecontract.Actor, error) {
 	return actor, nil
 }
 
-func preparedResult(record preparationcontract.Record, requested, fallback string) preparationcontract.Result {
-	result := preparationcontract.Result{
-		OK: true, ID: record.ID, RequestedMode: requested, ResolvedMode: record.Execution.Mode,
-		FallbackCode: fallback, Workspace: record.Execution.Workspace, Execution: cloneExecution(record.Execution),
-	}
-	if record.Execution.Selection != nil {
-		selection := record.Execution.Selection
-		result.RequestedMode = selection.RequestedMode
-		result.ResolvedMode = selection.ResolvedMode
-		result.FallbackCode = selection.FallbackCode
-		result.ProbeAttempted = selection.ProbeAttempted
-		result.ProbeAvailable = selection.ProbeAvailable
-		result.ProbeReady = selection.ProbeReady
-		result.ProbeCode = selection.ProbeCode
-		result.ReadinessFingerprint = selection.ReadinessFingerprint
-		result.ExplicitDirectReason = selection.ExplicitDirectReason
-	}
-	return result
-}
-
-func selectionResult(id string, decision preparationdomain.Decision, preview bool) preparationcontract.Result {
-	result := preparationcontract.Result{ID: id, Preview: preview, RequestedMode: decision.RequestedMode, ResolvedMode: decision.ResolvedMode, FallbackCode: decision.FallbackCode}
-	applySelectionResult(&result, decision)
-	return result
-}
-
-func applySelectionResult(result *preparationcontract.Result, decision preparationdomain.Decision) {
-	result.ProbeAttempted = decision.ProbeAttempted
-	result.ProbeAvailable = decision.ProbeAvailable
-	result.ProbeReady = decision.ProbeReady
-	result.ProbeCode = decision.ProbeCode
-	result.ReadinessFingerprint = decision.ReadinessFingerprint
-	result.ExplicitDirectReason = decision.ExplicitDirectReason
-}
-
-func selectionReceipt(decision preparationdomain.Decision, selectedAt string) leasecontract.Selection {
-	return leasecontract.Selection{
-		RequestedMode: decision.RequestedMode, ResolvedMode: decision.ResolvedMode,
-		ProbeAttempted: decision.ProbeAttempted, ProbeAvailable: decision.ProbeAvailable,
-		ProbeReady: decision.ProbeReady, ProbeCode: decision.ProbeCode, FallbackCode: decision.FallbackCode,
-		ReadinessFingerprint: decision.ReadinessFingerprint, SelectedAt: selectedAt,
-		ExplicitDirectReason: decision.ExplicitDirectReason,
+func preparedResult(record preparationcontract.Record) preparationcontract.Result {
+	return preparationcontract.Result{
+		OK: true, ID: record.ID, Workspace: record.Execution.Workspace, Execution: cloneExecution(record.Execution),
 	}
 }
 
-func prepareConfirmCommand(command preparationcontract.Command, decision preparationdomain.Decision) string {
-	parts := []string{"issueops", "execution", "prepare", "--id", quoteArg(command.ID), "--mode", quoteArg(decision.RequestedMode)}
-	if command.OwnerHost != "" {
-		parts = append(parts, "--owner-host", quoteArg(command.OwnerHost))
-	}
-	if command.OwnerModel != "" {
-		parts = append(parts, "--owner-model", quoteArg(command.OwnerModel))
-	}
-	if command.OwnerEffort != "" {
-		parts = append(parts, "--owner-effort", quoteArg(command.OwnerEffort))
-	}
-	if decision.ExplicitDirectReason != "" {
-		parts = append(parts, "--direct-reason", quoteArg(decision.ExplicitDirectReason))
-	}
-	parts = append(parts, "--expected-readiness-fingerprint", quoteArg(decision.ReadinessFingerprint))
-	if command.IssueSnapshotFile != "" {
-		parts = append(parts, "--issue-snapshot-file", quoteArg(command.IssueSnapshotFile))
-	}
+func prepareConfirmCommand(command preparationcontract.Command) string {
+	parts := []string{"issueops", "execution", "prepare", "--id", quoteArg(command.ID)}
 	if command.Actor.Host != "" {
 		parts = append(parts, "--host", quoteArg(command.Actor.Host))
 	}
@@ -594,23 +179,19 @@ func cloneExecution(execution *leasecontract.Execution) *leasecontract.Execution
 	return preparationcontract.Result{Execution: execution}.Clone().Execution
 }
 
-func workspaceResult(request preparationcontract.WorkspaceRequest, driver, linkedAt string) leasecontract.Workspace {
-	return leasecontract.Workspace{SourceRoot: request.SourceRoot, Root: request.Root, Branch: request.Branch, BaseHead: request.BaseHead, ParentWorktree: request.ParentWorktree, Driver: driver, LinkedAt: linkedAt}
+func workspaceResult(request preparationcontract.WorkspaceRequest, linkedAt string) leasecontract.Workspace {
+	return leasecontract.Workspace{SourceRoot: request.SourceRoot, Root: request.Root, Branch: request.Branch, BaseHead: request.BaseHead, ParentWorktree: request.ParentWorktree, LinkedAt: linkedAt}
 }
 
 func workspaceResultFromReceipt(receipt preparationcontract.WorkspaceReceipt, linkedAt string) leasecontract.Workspace {
-	return leasecontract.Workspace{SourceRoot: receipt.SourceRoot, Root: receipt.Root, Branch: receipt.Branch, BaseHead: receipt.BaseHead, ParentWorktree: receipt.ParentWorktree, Driver: receipt.Driver, LinkedAt: linkedAt}
+	return leasecontract.Workspace{SourceRoot: receipt.SourceRoot, Root: receipt.Root, Branch: receipt.Branch, BaseHead: receipt.BaseHead, ParentWorktree: receipt.ParentWorktree, LinkedAt: linkedAt}
 }
 
 func writerlessNextCommand(snapshot preparationcontract.Snapshot) string {
 	record := snapshot.Record
-	execution := record.Execution
-	generation := execution.Lease.Generation
-	switch execution.Lease.Status {
+	generation := record.Execution.Lease.Generation
+	switch record.Execution.Lease.Status {
 	case "claimable":
-		if execution.Mode == preparationcontract.ModeOrca {
-			return "issueops execution resume --id " + quoteArg(record.ID) + " --expected-generation " + strconv.FormatUint(generation, 10) + " --confirm"
-		}
 		return "issueops execution claim --id " + quoteArg(record.ID) + " --generation " + strconv.FormatUint(generation, 10) + " --claim-current-token"
 	case "released":
 		return "issueops execution replace --id " + quoteArg(record.ID) + " --expected-generation " + strconv.FormatUint(generation, 10) + " --preview"
@@ -625,12 +206,9 @@ func writerlessError(record preparationcontract.Record, next string) error {
 	lease := record.Execution.Lease
 	switch lease.Status {
 	case "claimable":
-		if record.Execution.Mode == preparationcontract.ModeOrca && (record.Execution.Orca == nil || record.Execution.Orca.LeaseGeneration != lease.Generation) {
-			return fmt.Errorf("IssueOps execution is prepared but Orca generation %d has no current owner; run %s", lease.Generation, next)
-		}
 		return fmt.Errorf("IssueOps execution is prepared but generation %d is claimable and has no writer; run %s", lease.Generation, next)
 	case "released":
-		return fmt.Errorf("IssueOps execution is prepared but generation %d was released and has no writer; preview resealing with %s", lease.Generation, next)
+		return fmt.Errorf("IssueOps execution is prepared but generation %d was released and has no writer; preview replacement with %s", lease.Generation, next)
 	case "revoking":
 		return fmt.Errorf("IssueOps execution generation %d is revoking and has no writer; finalize the revocation with %s", lease.Generation, next)
 	default:
@@ -641,47 +219,3 @@ func writerlessError(record preparationcontract.Record, next string) error {
 func quoteArg(value string) string                      { return "'" + strings.ReplaceAll(value, "'", "'\\''") + "'" }
 func formatTime(value time.Time) string                 { return value.UTC().Format(time.RFC3339Nano) }
 func failedResult(id string) preparationcontract.Result { return preparationcontract.Result{ID: id} }
-
-func plannerEvidence(record preparationcontract.Record) preparationcontract.PlannerEvidence {
-	var evidence preparationcontract.PlannerEvidence
-	if err := json.Unmarshal(record.Intent, &evidence.Intent); err != nil {
-		evidence.Intent = preparationcontract.PlannerIntentEvidence{}
-	}
-	if err := json.Unmarshal(record.DesignReview, &evidence.DesignReview); err != nil {
-		evidence.DesignReview = preparationcontract.PlannerDesignEvidence{}
-	}
-	if err := json.Unmarshal(record.DevilsAdvocateReview, &evidence.DevilsAdvocate); err != nil {
-		evidence.DevilsAdvocate = preparationcontract.PlannerDevilsAdvocateEvidence{}
-	}
-	return evidence
-}
-
-// plannerGateError는 무엇이 빠졌는지와 그것을 기록하는 정확한 명령을 함께
-// 돌려준다. 키만 나열하면 coordinator는 무엇을 실행할지 추측하게 된다.
-func plannerGateHints(id string, keys []string) []preparationcontract.PlannerGate {
-	id = strings.TrimSpace(id)
-	gates := make([]preparationcontract.PlannerGate, 0, len(keys))
-	for _, key := range keys {
-		gate := preparationcontract.PlannerGate{Key: key}
-		switch key {
-		case "intent_contract":
-			gate.Command = "issueops intent record --id " + id + " --raw-request <TEXT> --interpreted-intent <TEXT> --success-criteria <TEXT> ..."
-		case "design_review":
-			gate.Command = "issueops design review --id " + id + " --problem-summary <TEXT> --proposed-design <TEXT> --verification <TEXT> --approved ..."
-		case "devils_advocate_review":
-			gate.Command = "issueops devils-advocate review --id " + id + " --reviewer-context subagent --verdict <VERDICT> --finding <TEXT> ..."
-		}
-		gates = append(gates, gate)
-	}
-	return gates
-}
-
-func plannerGateError(gates []preparationcontract.PlannerGate) error {
-	lines := make([]string, 0, len(gates)+1)
-	lines = append(lines, "Orca prepare needs planner-owned records the owner cannot supply: "+
-		strings.Join(preparationcontract.PlannerGateKeys(gates), ", ")+". Record them first:")
-	for _, gate := range gates {
-		lines = append(lines, "  "+gate.Command)
-	}
-	return errors.New(strings.Join(lines, "\n"))
-}

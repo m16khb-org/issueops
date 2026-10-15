@@ -18,13 +18,13 @@ func NewClaimHandler(service *leaseapp.ClaimService) issueopscontract.ExecutionC
 	return handler.Handle
 }
 
-func (h ClaimHandler) Handle(ctx context.Context, _ string, request issueopscontract.ExecutionClaimRequest, _ issueopscontract.ExecutionClaimDependencies) (issueopscontract.ExecutionResult, error) {
+func (h ClaimHandler) Handle(ctx context.Context, _ string, request issueopscontract.ExecutionClaimRequest) (issueopscontract.ExecutionResult, error) {
 	if h.service == nil {
 		return issueopscontract.ExecutionResult{ID: request.ID}, issueopscontract.ErrClaimHandlerUnavailable
 	}
 	result, err := h.service.Claim(ctx, leaseapp.ClaimRequest{
 		ID: request.ID, Generation: request.Generation, Actor: toDomainActor(request.Actor), Ancestry: toProcessAncestry(request.Actor),
-		CWD: request.CWD, TokenFile: request.TokenFile, ClaimCurrentToken: request.ClaimCurrentToken, IssueBodySHA256: request.IssueBodySHA256, ContextPacketSHA256: request.ContextPacketSHA256,
+		CWD: request.CWD, TokenFile: request.TokenFile, ClaimCurrentToken: request.ClaimCurrentToken,
 	})
 	if err != nil {
 		return issueopscontract.ExecutionResult{ID: request.ID}, publicClaimError(err, request.Generation, request.ID)

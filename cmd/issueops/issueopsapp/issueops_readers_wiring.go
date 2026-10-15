@@ -5,7 +5,7 @@ import (
 	health "issueops/internal/adapter/operationalhealth"
 )
 
-func newOperationalHealthCollector(root string, git health.GitRunner, orca health.OrcaInventory) health.Collector {
-	return health.Collector{Git: git, Orca: orca, InspectNativeProcess: adapter.InspectNativeProcessReceipt,
+func newOperationalHealthCollector(root string, git health.GitRunner) health.Collector {
+	return health.Collector{Git: git, InspectNativeProcess: adapter.InspectNativeProcessReceipt,
 		IssueOps: health.IssueOpsReader{StateRoot: root, Scan: adapter.VisitIssueOpsExisting, ListLeaseHolders: adapter.ListLeaseHolderIndexes}}
 }

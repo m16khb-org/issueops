@@ -10,7 +10,7 @@ import (
 func TestMutationHolderRequiresCurrentLeaseAndVerifiedProcess(t *testing.T) {
 	process := model.NativeProcessReceipt{PID: 1, StartedAt: "start", Executable: "/bin/codex"}
 	holder := model.NativeActor{Host: "codex", SessionID: "session", AgentID: "agent", SessionProcess: &process}
-	record := model.IssueOpsRecord{Execution: &model.Execution{Mode: model.ExecutionModeDirect, Workspace: model.Workspace{SourceRoot: "/repo", Root: "/repo.worktrees/run", Branch: "run", BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "then"}, Lease: model.WriteLease{Generation: 1, Status: model.LeaseStatusActive, Holder: &holder, ClaimedAt: "then"}}}
+	record := model.IssueOpsRecord{Execution: &model.Execution{Workspace: model.Workspace{SourceRoot: "/repo", Root: "/repo.worktrees/run", Branch: "run", BaseHead: strings.Repeat("a", 40), LinkedAt: "then"}, Lease: model.WriteLease{Generation: 1, Status: model.LeaseStatusActive, Holder: &holder, ClaimedAt: "then"}}}
 	actor := model.IssueOpsActor{Host: " CODEX ", SessionID: " session ", AgentID: " agent ", NativeProcessAncestry: []model.NativeProcessReceipt{process}}
 	verified := model.VerifiedActor{Identity: holder, Method: model.VerifiedByNativeAncestry}
 	if needs, err := ValidateHolder(model.IssueOpsRecord{}, nil, nil); err != nil || needs {

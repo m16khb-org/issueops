@@ -13,7 +13,7 @@ func TestRecordUsesStablePhaseAndCurrentTypedSidecars(t *testing.T) {
 		ID:            "io-1",
 		Repo:          "/repo",
 		Phase:         issueops.IssueOpsPhaseImplement,
-		Execution:     &issueops.Execution{Mode: issueops.ExecutionModeDirect},
+		Execution:     &issueops.Execution{},
 		CreatedAt:     "created",
 		UpdatedAt:     "updated",
 	}
@@ -25,7 +25,7 @@ func TestRecordUsesStablePhaseAndCurrentTypedSidecars(t *testing.T) {
 	if err := json.Unmarshal(encoded, &decoded); err != nil {
 		t.Fatal(err)
 	}
-	if string(decoded["phase"]) != `"implement"` || string(decoded["execution"]) != `{"mode":"direct","workspace":{"source_root":"","root":"","branch":"","base_head":"","driver":"","linked_at":""},"lease":{"generation":0,"status":""}}` {
+	if string(decoded["phase"]) != `"implement"` || string(decoded["execution"]) != `{"workspace":{"source_root":"","root":"","branch":"","base_head":"","linked_at":""},"lease":{"generation":0,"status":""}}` {
 		t.Fatalf("current record drift: %s", encoded)
 	}
 }

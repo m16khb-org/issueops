@@ -429,12 +429,10 @@ type IssueOpsSchemaEvidence struct {
 // apply stopped. finish 재실행이 이어받을 수 있도록 레코드에 남긴다(resumable).
 const (
 	CleanupFailureStepApplying       = "applying"
-	CleanupFailureStepOrcaRemove     = "orca_remove"
 	CleanupFailureStepWorktreeRemove = "worktree_remove"
 	CleanupFailureStepBranchDelete   = "branch_delete"
 	CleanupFailureStepRecordDelete   = "record_delete"
-	// CleanupFailureStepWorkspaceProcessesStop은 apply ①′(워크트리 점유 프로세스·
-	// Orca 터미널 종료)이 재관측에서 점유 0을 증명하지 못한 지점이다(#477).
+	// CleanupFailureStepWorkspaceProcessesStop은 apply ①′(워크트리 점유 프로세스 종료)이 재관측에서 점유 0을 증명하지 못한 지점이다(#477).
 	CleanupFailureStepWorkspaceProcessesStop = "workspace_processes_stop"
 	// 아래 셋은 abandon의 원격 효과 단계다. 로컬 단계보다 먼저 실행되므로
 	// 여기서 멈추면 레코드도 워크트리도 그대로 남는다 — 원격만 부분적으로

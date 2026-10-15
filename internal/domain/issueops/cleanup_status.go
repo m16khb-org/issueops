@@ -131,7 +131,7 @@ func appendWorktreeStatusMissing(status *model.IssueOpsCleanupStatus, facts Clea
 	} else if strings.TrimSpace(out) != "" {
 		// worktree_clean: `missing`은 충족되지 않은 요구의 목록이므로 상태 차단도
 		// 요구형으로 적는다. `worktree_dirty`처럼 차단 사실을 적으면 "dirty라는
-		// 요구가 미충족"으로 읽힌다(#185). cleanup finish와 switch-mode 게이트가
+		// 요구가 미충족"으로 읽힌다(#185). cleanup finish 게이트가
 		// 같은 극성을 쓴다.
 		status.Missing = append(status.Missing, "worktree_clean")
 	}
@@ -213,8 +213,8 @@ func CleanupStatusWarnings(result model.CleanupFinishResult) []string {
 	for _, process := range result.WorkspaceProcesses {
 		warnings = append(warnings, fmt.Sprintf("%d:%s:%s", process.PID, process.Command, process.StartedAt))
 	}
-	if len(result.WorkspaceProcesses) > 0 || len(result.OrcaTerminals) > 0 {
-		warnings = append(warnings, fmt.Sprintf("apply가 프로세스 %d개와 Orca 터미널 %d개를 종료합니다", len(result.WorkspaceProcesses), len(result.OrcaTerminals)))
+	if len(result.WorkspaceProcesses) > 0 {
+		warnings = append(warnings, fmt.Sprintf("apply가 프로세스 %d개를 종료합니다", len(result.WorkspaceProcesses)))
 	}
 	return warnings
 }

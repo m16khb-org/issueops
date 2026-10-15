@@ -697,7 +697,7 @@ func TestRunGlabJSONReportsMissingCLI(t *testing.T) {
 	}
 }
 
-func TestRunGlabHelpersHonorCanceledContext(t *testing.T) {
+func TestRunGlabHelpersRespectCanceledContext(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("fake glab shell script is POSIX-only")
 	}

@@ -32,8 +32,6 @@ SELF_VERIFY_TIMEOUT_SECONDS = 1800
 DOCTOR_ISSUE_LIMIT = 20
 DOCTOR_CODE_LIMIT = 96
 DOCTOR_SUMMARY_LIMIT = 320
-TERMINAL_HANDLE_MAX_BYTES = 256
-TERMINAL_HANDLE_RE = re.compile(r"^term_[A-Za-z0-9_-]+$")
 HOOK_TEMPLATES = {
     "codex": ROOT / "configs" / "codex" / "hooks.json",
     "claude": ROOT / "configs" / "claude" / "hooks.settings.json",
@@ -312,21 +310,8 @@ def build(report: dict[str, Any]) -> None:
     add_step(report, "build", res["returncode"] == 0, result={k: res[k] for k in ("returncode", "stderr", "duration_ms")})
 
 
-def _terminal_handle_arg(value: str) -> str:
-    if len(value.encode("utf-8")) > TERMINAL_HANDLE_MAX_BYTES or TERMINAL_HANDLE_RE.fullmatch(value) is None:
-        raise argparse.ArgumentTypeError("must be a term_* handle of at most 256 bytes")
-    return value
-
-
-def operational_doctor(report: dict[str, Any], preserve_terminal: str | None = None) -> None:
-    cmd = [str(BIN), "doctor", "--repo", str(ROOT), "--sealed", "--json"]
-    terminal = (
-        _terminal_handle_arg(preserve_terminal)
-        if preserve_terminal is not None
-        else os.environ.get("ORCA_TERMINAL_HANDLE", "").strip()
-    )
-    if terminal:
-        cmd.extend(["--preserve-terminal", terminal])
+def operational_doctor(report: dict[str, Any]) -> None:
+    cmd = [str(BIN), "doctor", "--repo", str(ROOT), "--json"]
     res = run(cmd, timeout=120)
 
     parsed: dict[str, Any] = {}
@@ -702,13 +687,6 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run issueops E2E stability audit")
     parser.add_argument("--full-install", action="store_true", help="run the canonical install command after dry-run checks")
     parser.add_argument("--cleanup-stale", action="store_true", help="terminate confirmed legacy/temp harness-owned stale processes")
-    parser.add_argument(
-        "--preserve-terminal",
-        action="append",
-        type=_terminal_handle_arg,
-        default=None,
-        help="preserve one exact current Orca terminal for the operational doctor gate",
-    )
     parser.add_argument("--skip-race", action="store_true", help="skip go test -race")
     parser.add_argument("--skip-self-verify", action="store_true", help="skip canonical deterministic self-verify")
     parser.add_argument("--mcp-cycles", type=int, default=3)
@@ -716,9 +694,6 @@ def main() -> int:
     parser.add_argument("--rss-calls", type=int, default=200)
     parser.add_argument("--json", action="store_true", help="print JSON report")
     args = parser.parse_args()
-    if args.preserve_terminal is not None and len(args.preserve_terminal) != 1:
-        parser.error("--preserve-terminal may be specified exactly once")
-    preserve_terminal = args.preserve_terminal[0] if args.preserve_terminal is not None else None
 
     report: dict[str, Any] = {
         "ok": True,
@@ -732,7 +707,7 @@ def main() -> int:
 
     add_step(report, "git_status", True, output=run(["git", "status", "--short", "--branch"], timeout=10)["stdout"])
     build(report)
-    operational_doctor(report, preserve_terminal)
+    operational_doctor(report)
     install_checks(report, args.full_install)
     host_mcp_checks(report)
     hook_smoke(report)

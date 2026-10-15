@@ -63,7 +63,7 @@ func TestInspectInventoryClassifiesCycleRecordsOwningTheTarget(t *testing.T) {
 func TestInspectInventoryRejectsCanonicalTargetAndIncompleteInventory(t *testing.T) {
 	request, snapshot := orphanRequest(), orphanSnapshot()
 	request.WorktreePath = "/repo"
-	snapshot.InventoryProblems = []operationalhealthcontract.InventoryProblem{{Source: "orca", Code: "unreadable"}}
+	snapshot.InventoryProblems = []operationalhealthcontract.InventoryProblem{{Source: "git", Code: "unreadable"}}
 	result := ResultForRequest(request)
 	InspectInventory(&result, request, snapshot)
 	Finish(&result)

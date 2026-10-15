@@ -12,10 +12,10 @@ import (
 
 type ReseedHandler struct {
 	service     *leaseapp.ReseedService
-	nextCommand func(id string, generation uint64, mode, claimTokenPath string) string
+	nextCommand func(id string, generation uint64) string
 }
 
-func NewReseedHandler(service *leaseapp.ReseedService, nextCommand func(id string, generation uint64, mode, claimTokenPath string) string) issueopscontract.ExecutionReseedHandler {
+func NewReseedHandler(service *leaseapp.ReseedService, nextCommand func(id string, generation uint64) string) issueopscontract.ExecutionReseedHandler {
 	return ReseedHandler{service: service, nextCommand: nextCommand}.Handle
 }
 
@@ -32,13 +32,9 @@ func (h ReseedHandler) Handle(ctx context.Context, _ string, request issueopscon
 	}
 	response := issueopscontract.ExecutionReplaceResult{
 		OK: true, ID: result.ID, Action: issueopscontract.ExecutionReplaceReseed, Execution: toCoreExecution(result.Execution),
-		ClaimTokenPath: result.Receipt.ClaimTokenPath, IssueBodySHA256: result.Receipt.IssueBodySHA256,
-		ContextPacketPath: result.Receipt.ContextPacketPath, ContextPacketSHA256: result.Receipt.ContextPacketSHA256,
-		OwnerPromptPath: result.Receipt.OwnerPromptPath, OwnerPromptSHA256: result.Receipt.OwnerPromptSHA256,
+		ClaimTokenPath: result.Receipt.ClaimTokenPath,
 	}
-	response.NextCommand = h.nextCommand(
-		result.ID, result.Execution.Lease.Generation, result.Execution.Mode, result.Receipt.ClaimTokenPath,
-	)
+	response.NextCommand = h.nextCommand(result.ID, result.Execution.Lease.Generation)
 	return response, nil
 }
 

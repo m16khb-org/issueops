@@ -163,27 +163,6 @@ func TestMCPServiceCommandJSONModeReturnsServiceError(t *testing.T) {
 	}
 }
 
-func TestModeSwitchApplyReportsGitStderrWhenBranchRemovalFails(t *testing.T) {
-	repo := makeGitRepoForContract(t)
-	stateRoot := t.TempDir()
-	branch := "main" // checked out in repo, so `git branch -D` refuses with a stderr message
-	missingWorktree := filepath.Join(t.TempDir(), "absent")
-	record := model.IssueOpsRecord{OK: true, SchemaVersion: model.IssueOpsSchemaVersion, ID: "io-0123456789ab", Repo: repo, Branch: branch, Phase: model.IssueOpsPhaseImplement, WorktreePath: missingWorktree, CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z", Execution: &model.Execution{Mode: model.ExecutionModeDirect, Workspace: model.Workspace{SourceRoot: repo, Root: missingWorktree, Branch: branch, BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "2026-01-01T00:00:00Z"}, Lease: model.WriteLease{Generation: 1, Status: model.LeaseStatusReleased}, Selection: selectionFixture(model.ExecutionModeDirect)}}
-	if _, err := (core.CycleRecordStore{StateRoot: stateRoot}).Save(t.Context(), record); err != nil {
-		t.Fatal(err)
-	}
-	switcher := newModeSwitcher()
-	preview, err := switcher(t.Context(), stateRoot, model.ExecutionSwitchModeRequest{ID: record.ID, Mode: "orca"})
-	if err != nil || preview.Fingerprint == "" || !preview.BranchPresent {
-		t.Fatalf("preview=%+v err=%v", preview, err)
-	}
-	_, err = switcher(t.Context(), stateRoot, model.ExecutionSwitchModeRequest{ID: record.ID, Mode: "orca", Apply: true, Confirm: true, Fingerprint: preview.Fingerprint})
-	const prefix = "switch-mode could not remove the local branch (record preserved): "
-	if err == nil || !strings.HasPrefix(err.Error(), prefix) || !strings.Contains(strings.TrimPrefix(err.Error(), prefix), branch) {
-		t.Fatalf("err=%v, want %q followed by git's stderr naming %q", err, prefix, branch)
-	}
-}
-
 func TestQualityInspectCommandInspectsAbsoluteTargetNotDefaultRoot(t *testing.T) {
 	defaultRoot, target := t.TempDir(), t.TempDir()
 	for _, dir := range []string{defaultRoot, target} {

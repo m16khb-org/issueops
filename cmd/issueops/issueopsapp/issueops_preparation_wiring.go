@@ -2,137 +2,77 @@ package issueopsapp
 
 import (
 	"context"
-	executionissue "issueops/internal/contract/executionissue"
 	"time"
 
 	"issueops/internal/adapter/gitworktree"
 	preparationinbound "issueops/internal/adapter/inbound/issueopspreparation"
-	"issueops/internal/adapter/issueops"
-	"issueops/internal/adapter/orca"
 	preparationoutbound "issueops/internal/adapter/outbound/issueopspreparation"
 	"issueops/internal/adapter/outbound/sqlstore"
 	preflightadapter "issueops/internal/adapter/preflight"
-	"issueops/internal/adapter/provider"
 	preparationapp "issueops/internal/application/issueopspreparation"
 	issueopscontract "issueops/internal/contract/issueops"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
-	"issueops/internal/domain/policy"
 	"issueops/internal/port"
 )
 
 type issueOpsPreparationCompositionDeps struct {
-	Direct         port.ExecutionWorkspaceProvisioner
-	Orca           port.ExecutionOrcaProvisioner
-	ReadIssue      executionissue.ExecutionIssueSnapshotReadFunc
-	Now            func() time.Time
-	NewOperationID func() (string, error)
-	ValidateActor  func(context.Context, issueopscontract.NativeActor) error
-	AgentModels    preparationapp.AgentModels
+	Direct        port.ExecutionWorkspaceProvisioner
+	Now           func() time.Time
+	ValidateActor func(context.Context, issueopscontract.NativeActor) error
 }
 
 type issueOpsExecutionCompositionDeps struct {
-	Prepare   issueopscontract.ExecutionPrepareHandler
-	Orca      port.ExecutionOrcaProvisioner
-	OrcaOwner port.ExecutionOrcaOwnerInspector
-	ReadIssue executionissue.ExecutionIssueSnapshotReadFunc
+	Prepare issueopscontract.ExecutionPrepareHandler
 }
 
 func productionIssueOpsExecutionDependencies() issueOpsExecutionCompositionDeps {
-	orcaExecution := orca.NewExecution()
-	readIssue := provider.ReadExecutionIssueSnapshot
 	return issueOpsExecutionCompositionDeps{
 		Prepare: newIssueOpsPreparationHandler(issueOpsPreparationCompositionDeps{
-			Direct: gitworktree.Provisioner{GitCmd: preflightadapter.GitCmd, GitOut: preflightadapter.GitOut}, Orca: orcaExecution, ReadIssue: readIssue,
+			Direct:        gitworktree.Provisioner{GitCmd: preflightadapter.GitCmd, GitOut: preflightadapter.GitOut},
 			ValidateActor: verifyIssueOpsPreparationActor,
 		}),
-		Orca: orcaExecution, OrcaOwner: orcaExecution, ReadIssue: readIssue,
 	}
 }
 
 func newIssueOpsPreparationHandler(deps issueOpsPreparationCompositionDeps) issueopscontract.ExecutionPrepareHandler {
-	return func(ctx context.Context, stateRoot string, request issueopscontract.ExecutionPrepareRequest, invocation executionissue.ExecutionPrepareInvocation) (issueopscontract.ExecutionPrepareResult, error) {
+	return func(ctx context.Context, stateRoot string, request issueopscontract.ExecutionPrepareRequest) (issueopscontract.ExecutionPrepareResult, error) {
 		if deps.ValidateActor != nil {
 			if err := deps.ValidateActor(ctx, request.Actor); err != nil {
 				return issueopscontract.ExecutionPrepareResult{ID: request.ID}, err
 			}
 		}
-		requestDeps := deps
-		if invocation.ReadIssue != nil {
-			requestDeps.ReadIssue = invocation.ReadIssue
-		}
-		service, err := newIssueOpsPreparationService(stateRoot, request.ID, requestDeps)
+		service, err := newIssueOpsPreparationService(stateRoot, deps)
 		if err != nil {
 			return issueopscontract.ExecutionPrepareResult{ID: request.ID}, err
 		}
-		return preparationinbound.NewHandler(service)(ctx, stateRoot, request, invocation)
+		return preparationinbound.NewHandler(service)(ctx, stateRoot, request)
 	}
 }
 
-func newIssueOpsPreparationService(stateRoot, id string, deps issueOpsPreparationCompositionDeps) (*preparationapp.Service, error) {
+func newIssueOpsPreparationService(stateRoot string, deps issueOpsPreparationCompositionDeps) (*preparationapp.Service, error) {
 	database, err := sqlstore.Open(stateRoot)
 	if err != nil {
 		return nil, err
 	}
-	repository := preparationoutbound.NewSQLiteRepositoryWithDiagnosticRedactor(database, policy.RedactDiagnostic)
+	repository := preparationoutbound.NewSQLiteRepository(database)
 	direct := preparationoutbound.NewDirectWorkspace(deps.Direct)
-	branchCheck := newOrcaBranchPrecheck(stateRoot)
-	gateway := preparationoutbound.NewOrcaGateway(preparationoutbound.OrcaDependencies{
-		Provisioner: newHandoffDeliveryProvisioner(stateRoot, deps.Orca, deps.Now),
-		ValidateProbe: func(_ context.Context, request preparationcontract.ProbeRequest) (string, error) {
-			return branchCheck.Check(id, request.Workspace.Branch)
-		},
-		HydrateLaunch: func(_ context.Context, request preparationcontract.IntentRequest) (preparationcontract.IntentRequest, error) {
-			hydrator := preparationapp.LaunchHydrator{
-				ReadRecord: func(id string) (preparationcontract.Record, error) {
-					record, err := issueops.ReadIssueOpsExisting(stateRoot, id)
-					if err != nil {
-						return preparationcontract.Record{}, err
-					}
-					return issueops.PreparationIntentRecord(record)
-				},
-				ReadIntent: func(operationID string) (preparationcontract.Intent, error) {
-					return issueops.ReadExecutionOrcaIntent(stateRoot, operationID)
-				},
-				Builder: preparationapp.IntentRequestBuilder{Files: issueops.OrcaIntentFiles{}},
-			}
-			return hydrator.Hydrate(id, request)
-		},
-	})
-	ownerContext := newIssueOpsOwnerContext(stateRoot, deps.ReadIssue)
+	ownerContext := newIssueOpsOwnerContext(stateRoot)
 	evidence := preparationoutbound.NewEvidence(preparationoutbound.EvidenceDependencies{
 		Workspace: ownerContext.ResolveWorkspace,
-		ReadOwner: func(ctx context.Context, snapshot preparationcontract.Snapshot, _ preparationcontract.Command) (preparationcontract.OwnerEvidence, error) {
-			return ownerContext.ReadPreparationEvidence(ctx, snapshot)
-		},
 		MaterializeDirect: func(_ context.Context, snapshot preparationcontract.Snapshot, receipt preparationcontract.WorkspaceReceipt) error {
 			return ownerContext.MaterializeDirect(snapshot, receipt)
-		},
-		PrepareOwner: func(ctx context.Context, snapshot preparationcontract.Snapshot, command preparationcontract.Command, intent preparationcontract.Intent, receipt preparationcontract.IntentReceipt) (preparationcontract.OwnerArtifacts, error) {
-			return ownerContext.Prepare(ctx, snapshot, command, intent, receipt)
 		},
 	})
 	now := deps.Now
 	if now == nil {
 		now = time.Now
 	}
-	operationID := deps.NewOperationID
-	if operationID == nil {
-		operationID = issueops.NewExecutionOperationID
-	}
-	models := deps.AgentModels
-	if models == nil {
-		models = preparationAgentModels{stateRoot: stateRoot}
-	}
-	return preparationapp.NewService(repository, preparationClock{now}, preparationOperationIDs{operationID}, direct, gateway, evidence, models), nil
+	return preparationapp.NewService(repository, preparationClock{now}, direct, evidence), nil
 }
 
 type preparationClock struct{ now func() time.Time }
 
 func (clock preparationClock) Now() time.Time { return clock.now() }
-
-type preparationOperationIDs struct{ next func() (string, error) }
-
-func (ids preparationOperationIDs) New() (string, error) { return ids.next() }
 
 func verifyIssueOpsPreparationActor(ctx context.Context, actor issueopscontract.NativeActor) error {
 	_, err := issueOpsActorVerifier().Verify(ctx, actor)

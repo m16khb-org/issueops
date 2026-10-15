@@ -170,7 +170,7 @@ func TestPrepareCreatesMissingBaseWithOwnerOnlyMode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !receipt.Exists || receipt.Driver != "git" || receipt.Branch != req.Branch {
+	if !receipt.Exists || receipt.Branch != req.Branch {
 		t.Fatalf("receipt = %#v", receipt)
 	}
 	info, err := os.Stat(repo + ".worktrees")

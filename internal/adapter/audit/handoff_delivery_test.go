@@ -17,7 +17,7 @@ func TestAuditHandoffDeliveryObservationWritesBounded0600JSONL(t *testing.T) {
 	store := auditStoreForTest(stateDir)
 
 	observation := auditDeliveryObservationFixture()
-	observation.Receipt.Location = "audit/orca/token=secret-value.json"
+	observation.Receipt.Location = "audit/herdr/token=secret-value.json"
 	record, err := store.Append(observation)
 	if err != nil {
 		t.Fatal(err)
@@ -345,7 +345,7 @@ func auditDeliveryObservationFixture() issueopscontract.IssueOpsHandoffDeliveryO
 			DurableID: "request-1",
 		},
 		Launcher: issueopscontract.IssueOpsHandoffDeliveryLauncher{
-			Name: "orca", Version: "1.4.200", Path: "/usr/local/bin/orca", RuntimeID: "runtime-1", MachineID: "machine-1", ServerID: "server-1",
+			Name: "herdr", Version: "1.4.200", Path: "/usr/local/bin/herdr", RuntimeID: "runtime-1", MachineID: "machine-1", ServerID: "server-1",
 		},
 		Target: issueopscontract.IssueOpsHandoffDeliveryTarget{
 			TerminalID: "term-1", PaneID: "pane-1", ProcessIncarnation: "incarnation-1", Process: &issueopscontract.NativeProcessReceipt{
@@ -356,7 +356,7 @@ func auditDeliveryObservationFixture() issueopscontract.IssueOpsHandoffDeliveryO
 		CreatedAt:        "2026-09-20T10:00:01Z",
 		UpdatedAt:        "2026-09-20T10:05:00Z",
 		Receipt: issueopscontract.IssueOpsHandoffDeliveryReceipt{
-			Location: "audit/orca/receipt-1.json", Digest: strings.Repeat("d", 64),
+			Location: "audit/herdr/receipt-1.json", Digest: strings.Repeat("d", 64),
 		},
 		InputAccepted: issueopscontract.IssueOpsHandoffDeliveryState{
 			Status: issueopscontract.IssueOpsHandoffDeliveryStateObserved, ObservedAt: "2026-09-20T10:01:00Z", Evidence: issueopscontract.IssueOpsHandoffDeliveryEvidenceLauncherReceipt,

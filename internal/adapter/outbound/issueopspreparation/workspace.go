@@ -44,7 +44,7 @@ func (adapter *DirectWorkspaceAdapter) Prepare(ctx context.Context, request prep
 	return preparationcontract.WorkspaceReceipt{
 		SourceRoot: receipt.SourceRoot, Root: receipt.Root, Branch: receipt.Branch,
 		BaseHead: receipt.BaseHead, ParentWorktree: receipt.ParentWorktree,
-		Driver: receipt.Driver, Exists: receipt.Exists,
+		Exists: receipt.Exists,
 	}, err
 }
 

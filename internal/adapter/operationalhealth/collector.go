@@ -15,23 +15,7 @@ import (
 
 	issueopscontract "issueops/internal/contract/issueops"
 	corehealth "issueops/internal/domain/operationalhealth"
-	"issueops/internal/port"
-
-	"golang.org/x/sync/errgroup"
 )
-
-type OrcaInventory interface {
-	port.OrcaRunInventoryReader
-	Available() bool
-	Status(context.Context) (port.OrcaStatus, error)
-	ResolveRepo(context.Context, string) (port.OrcaRepo, error)
-	ListWorktrees(context.Context, string) ([]port.OrcaWorktree, error)
-	ListTerminals(context.Context, string) ([]port.OrcaTerminal, error)
-	ShowDispatch(context.Context, string) (port.OrcaDispatch, error)
-	InboxPresence(context.Context) (port.OrcaInboxPresence, error)
-}
-
-var _ port.OrcaRunInventoryReader = (OrcaInventory)(nil)
 
 type GitRunner interface {
 	Run(context.Context, string, ...string) ([]byte, error)
@@ -100,57 +84,23 @@ func canonicalInventoryPath(path string) string {
 type Collector struct {
 	IssueOps             IssueOpsReader
 	Git                  GitRunner
-	Orca                 OrcaInventory
 	InspectNativeProcess NativeProcessInspector
 }
 
 func (collector Collector) Collect(ctx context.Context, repo string) corehealth.Snapshot {
-	repo = canonicalInventoryPath(repo)
-	snapshot := corehealth.Snapshot{
-		RepoRoot: repo,
-		Messages: operationalhealthcontract.MessagePresence{Empty: true},
-	}
-	if repo == "" {
+	snapshot := corehealth.Snapshot{RepoRoot: canonicalInventoryPath(repo)}
+	if snapshot.RepoRoot == "" {
 		addProblem(&snapshot, "repo", "repo_invalid", "requested repository path is empty")
 		return snapshot
 	}
-	_, orcaOwned := collector.collectIssueOps(&snapshot)
-	gitSnapshot := corehealth.Snapshot{RepoRoot: repo}
-	orcaSnapshot := corehealth.Snapshot{RepoRoot: repo, Messages: operationalhealthcontract.MessagePresence{Empty: true}}
-	reads, readCtx := errgroup.WithContext(ctx)
-	reads.Go(func() error {
-		collector.collectGit(readCtx, &gitSnapshot, true)
-		return nil
-	})
-	reads.Go(func() error {
-		collector.collectOrca(readCtx, &orcaSnapshot, orcaOwned)
-		return nil
-	})
-	_ = reads.Wait()
-
-	snapshot.CanonicalBranch = gitSnapshot.CanonicalBranch
-	snapshot.SourceHead = gitSnapshot.SourceHead
-	snapshot.SourceClean = gitSnapshot.SourceClean
-	snapshot.GitWorktrees = gitSnapshot.GitWorktrees
-	snapshot.LocalRefs = gitSnapshot.LocalRefs
-	snapshot.RemoteRefs = gitSnapshot.RemoteRefs
-	snapshot.OrcaObserved = orcaSnapshot.OrcaObserved
-	snapshot.OrcaRuntimeID = orcaSnapshot.OrcaRuntimeID
-	snapshot.OrcaRepoID = orcaSnapshot.OrcaRepoID
-	snapshot.OrcaWorktrees = orcaSnapshot.OrcaWorktrees
-	snapshot.Terminals = orcaSnapshot.Terminals
-	snapshot.Tasks = orcaSnapshot.Tasks
-	snapshot.Dispatches = orcaSnapshot.Dispatches
-	snapshot.Gates = orcaSnapshot.Gates
-	snapshot.Messages = orcaSnapshot.Messages
-	snapshot.InventoryProblems = append(snapshot.InventoryProblems, gitSnapshot.InventoryProblems...)
-	snapshot.InventoryProblems = append(snapshot.InventoryProblems, orcaSnapshot.InventoryProblems...)
+	collector.collectIssueOps(&snapshot)
+	collector.collectGit(ctx, &snapshot, true)
 	sortSnapshot(&snapshot)
 	return snapshot
 }
 
 // CollectLocal refreshes strict persisted ownership and local Git facts only.
-// It performs no provider, remote-ref or Orca requests and takes no SQLite span.
+// It performs no provider or remote-ref requests and takes no SQLite span.
 func (collector Collector) CollectLocal(ctx context.Context, repo string) corehealth.Snapshot {
 	snapshot := corehealth.Snapshot{RepoRoot: canonicalInventoryPath(repo)}
 	collector.collectIssueOps(&snapshot)
@@ -251,10 +201,9 @@ func (collector Collector) collectGit(ctx context.Context, snapshot *corehealth.
 	}
 }
 
-func (collector Collector) collectIssueOps(snapshot *corehealth.Snapshot) ([]issueopscontract.IssueOpsRecord, bool) {
+func (collector Collector) collectIssueOps(snapshot *corehealth.Snapshot) {
 	stateRoot := collector.IssueOps.StateRoot
 	records := []issueopscontract.IssueOpsRecord{}
-	orcaOwned := false
 	unreadable := []string{}
 	err := collector.IssueOps.Scan(stateRoot, func(id string, record issueopscontract.IssueOpsRecord, err error) {
 		if err != nil {
@@ -265,7 +214,7 @@ func (collector Collector) collectIssueOps(snapshot *corehealth.Snapshot) ([]iss
 	})
 	if err != nil {
 		addProblem(snapshot, "issueops", "issueops_list_failed", "IssueOps ID inventory failed")
-		return nil, false
+		return
 	}
 	for _, id := range unreadable {
 		addProblem(snapshot, "issueops_record", "issueops_read_failed", "could not read IssueOps record "+strings.TrimSpace(id))
@@ -274,7 +223,6 @@ func (collector Collector) collectIssueOps(snapshot *corehealth.Snapshot) ([]iss
 		cycle, problems := cycleFromRecord(record, collector.InspectNativeProcess)
 		snapshot.Cycles = append(snapshot.Cycles, cycle)
 		snapshot.InventoryProblems = append(snapshot.InventoryProblems, problems...)
-		orcaOwned = orcaOwned || recordOwnsOrca(record)
 	}
 	indexes, err := collector.IssueOps.ListLeaseHolders(stateRoot)
 	if err != nil {
@@ -287,7 +235,6 @@ func (collector Collector) collectIssueOps(snapshot *corehealth.Snapshot) ([]iss
 			})
 		}
 	}
-	return records, orcaOwned
 }
 
 func cycleFromRecord(record issueopscontract.IssueOpsRecord, inspect NativeProcessInspector) (operationalhealthcontract.Cycle, []operationalhealthcontract.InventoryProblem) {
@@ -324,7 +271,6 @@ func cycleFromRecordAt(record issueopscontract.IssueOpsRecord, inspect NativePro
 	}
 	execution := record.Execution
 	cycle.LeaseStatus = string(execution.Lease.Status)
-	cycle.ExecutionMode = string(execution.Mode)
 	cycle.Generation = execution.Lease.Generation
 	cycle.CompletionPresent = execution.Completion != nil
 	mergeWorktreePath(execution.Workspace.Root)
@@ -347,17 +293,6 @@ func cycleFromRecordAt(record issueopscontract.IssueOpsRecord, inspect NativePro
 			}
 		}
 	}
-	if execution.Orca != nil {
-		cycle.OrcaRuntimeID = strings.TrimSpace(execution.Orca.RuntimeID)
-		cycle.OrcaRepoID = strings.TrimSpace(execution.Orca.RepoID)
-		cycle.OrcaWorktreeID = strings.TrimSpace(execution.Orca.WorktreeID)
-		cycle.OrcaWorktreeInstanceID = strings.TrimSpace(execution.Orca.WorktreeInstanceID)
-		cycle.OrcaOwnerHost = strings.TrimSpace(execution.Orca.OwnerHost)
-		cycle.TerminalPTYID = strings.TrimSpace(execution.Orca.TerminalPTYID)
-		cycle.RunID = strings.TrimSpace(execution.Orca.RunID)
-		cycle.TaskID = strings.TrimSpace(execution.Orca.TaskID)
-		cycle.DispatchID = strings.TrimSpace(execution.Orca.DispatchID)
-	}
 	return cycle, problems
 }
 
@@ -366,10 +301,6 @@ func issueCreateIntentNeedsReconciliationAt(intent *issueopscontract.IssueOpsIss
 		return false
 	}
 	return corehealth.IssueCreateIntentNeedsReconciliationAt(intent.Status, intent.UpdatedAt, intent.StartedAt, now)
-}
-
-func recordOwnsOrca(record issueopscontract.IssueOpsRecord) bool {
-	return record.Execution != nil && record.Execution.Mode == issueopscontract.ExecutionModeOrca
 }
 
 func parseWorktrees(output []byte, repo string) ([]operationalhealthcontract.GitWorktree, error) {
@@ -465,20 +396,6 @@ func validOID(value string) bool {
 	return true
 }
 
-func countTasksWithStatus(values []operationalhealthcontract.OrcaTask, runID, id, status string) int {
-	count := 0
-	for _, value := range values {
-		if operationalTaskKey(value.RunID, value.ID) == operationalTaskKey(runID, id) && value.Status == status {
-			count++
-		}
-	}
-	return count
-}
-
-func operationalTaskKey(runID, taskID string) string {
-	return strings.TrimSpace(runID) + "\x00" + strings.TrimSpace(taskID)
-}
-
 func addProblem(snapshot *corehealth.Snapshot, source, code, detail string) {
 	snapshot.InventoryProblems = append(snapshot.InventoryProblems, operationalhealthcontract.InventoryProblem{Source: source, Code: code, Detail: detail})
 }
@@ -491,8 +408,8 @@ func sortSnapshot(snapshot *corehealth.Snapshot) {
 	sort.Slice(snapshot.Cycles, func(i, j int) bool {
 		left, right := snapshot.Cycles[i], snapshot.Cycles[j]
 		return orderedBefore(
-			[]string{left.ID, left.Repo, left.Branch, left.Phase, left.ExecutionMode, left.LeaseStatus, strconv.FormatUint(left.Generation, 10), left.HolderHost, left.HolderSessionID, left.HolderAgentID, strconv.Itoa(left.HolderPID), left.HolderStartedAt, left.HolderExecutable, left.HolderProcessStatus, strconv.FormatBool(left.CompletionPresent), left.OrcaRuntimeID, left.OrcaRepoID, left.WorktreePath, left.OrcaWorktreeID, left.OrcaWorktreeInstanceID, left.OrcaOwnerHost, left.TerminalPTYID, left.RunID, left.TaskID, left.DispatchID},
-			[]string{right.ID, right.Repo, right.Branch, right.Phase, right.ExecutionMode, right.LeaseStatus, strconv.FormatUint(right.Generation, 10), right.HolderHost, right.HolderSessionID, right.HolderAgentID, strconv.Itoa(right.HolderPID), right.HolderStartedAt, right.HolderExecutable, right.HolderProcessStatus, strconv.FormatBool(right.CompletionPresent), right.OrcaRuntimeID, right.OrcaRepoID, right.WorktreePath, right.OrcaWorktreeID, right.OrcaWorktreeInstanceID, right.OrcaOwnerHost, right.TerminalPTYID, right.RunID, right.TaskID, right.DispatchID},
+			[]string{left.ID, left.Repo, left.Branch, left.Phase, left.LeaseStatus, strconv.FormatUint(left.Generation, 10), left.HolderHost, left.HolderSessionID, left.HolderAgentID, strconv.Itoa(left.HolderPID), left.HolderStartedAt, left.HolderExecutable, left.HolderProcessStatus, strconv.FormatBool(left.CompletionPresent), left.WorktreePath},
+			[]string{right.ID, right.Repo, right.Branch, right.Phase, right.LeaseStatus, strconv.FormatUint(right.Generation, 10), right.HolderHost, right.HolderSessionID, right.HolderAgentID, strconv.Itoa(right.HolderPID), right.HolderStartedAt, right.HolderExecutable, right.HolderProcessStatus, strconv.FormatBool(right.CompletionPresent), right.WorktreePath},
 		)
 	})
 	sort.Slice(snapshot.LeaseHolderIndexes, func(i, j int) bool {
@@ -511,38 +428,6 @@ func sortSnapshot(snapshot *corehealth.Snapshot) {
 	})
 	sortRefs(snapshot.LocalRefs)
 	sortRefs(snapshot.RemoteRefs)
-	sort.Slice(snapshot.OrcaWorktrees, func(i, j int) bool {
-		left, right := snapshot.OrcaWorktrees[i], snapshot.OrcaWorktrees[j]
-		return orderedBefore(
-			[]string{left.RuntimeID, left.RepoID, left.ID, left.InstanceID, left.Repo, left.Path, left.Branch, left.Head},
-			[]string{right.RuntimeID, right.RepoID, right.ID, right.InstanceID, right.Repo, right.Path, right.Branch, right.Head},
-		)
-	})
-	sort.Slice(snapshot.Terminals, func(i, j int) bool {
-		left, right := snapshot.Terminals[i], snapshot.Terminals[j]
-		return orderedBefore(
-			[]string{left.RuntimeID, left.Handle, left.PTYID, left.TabID, left.LeafID, left.WorktreeID, left.WorktreePath, strconv.FormatBool(left.Connected), strconv.FormatBool(left.Writable)},
-			[]string{right.RuntimeID, right.Handle, right.PTYID, right.TabID, right.LeafID, right.WorktreeID, right.WorktreePath, strconv.FormatBool(right.Connected), strconv.FormatBool(right.Writable)},
-		)
-	})
-	sort.Slice(snapshot.Tasks, func(i, j int) bool {
-		left, right := snapshot.Tasks[i], snapshot.Tasks[j]
-		return orderedBefore(
-			[]string{left.RuntimeID, left.RunID, left.ID, left.Status, left.DispatchID, timeSortValue(left.CompletedAt), strconv.FormatBool(left.HasResult)},
-			[]string{right.RuntimeID, right.RunID, right.ID, right.Status, right.DispatchID, timeSortValue(right.CompletedAt), strconv.FormatBool(right.HasResult)},
-		)
-	})
-	sort.Slice(snapshot.Dispatches, func(i, j int) bool {
-		left, right := snapshot.Dispatches[i], snapshot.Dispatches[j]
-		return orderedBefore(
-			[]string{left.RuntimeID, left.RunID, left.ID, left.TaskID, left.AssigneeHandle, left.Status},
-			[]string{right.RuntimeID, right.RunID, right.ID, right.TaskID, right.AssigneeHandle, right.Status},
-		)
-	})
-	sort.Slice(snapshot.Gates, func(i, j int) bool {
-		left, right := snapshot.Gates[i], snapshot.Gates[j]
-		return orderedBefore([]string{left.RuntimeID, left.ID, left.TaskID, left.Status}, []string{right.RuntimeID, right.ID, right.TaskID, right.Status})
-	})
 	sort.Slice(snapshot.StateArtifacts, func(i, j int) bool {
 		left, right := snapshot.StateArtifacts[i], snapshot.StateArtifacts[j]
 		return orderedBefore([]string{left.Path, left.Code}, []string{right.Path, right.Code})
@@ -563,8 +448,4 @@ func orderedBefore(left, right []string) bool {
 		}
 	}
 	return len(left) < len(right)
-}
-
-func timeSortValue(value time.Time) string {
-	return value.UTC().Format(time.RFC3339Nano)
 }

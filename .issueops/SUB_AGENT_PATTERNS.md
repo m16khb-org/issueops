@@ -62,7 +62,7 @@ Sub-agent 계획은 아래 slug 중 하나, 기대 이득, 알려진 tradeoff, �
 - **설명:** Git worktree로 분리된 공간에서 독립적 편집. 메인 작업공간과 충돌 방지.
 - **근거:** Claude Code `isolation: worktree`. IssueOps의 worktree 격리 패턴.
 - **issueops 적용:** IssueOps implement phase의 worktree 기반 작업.
-- **D1 delegated child cycle 적용:** parent가 implementation plan 또는 `issueops decision add`에 `isolated-worktree-work` 또는 `task-fan-out-coordination`을 기록한 뒤, child별 isolated worktree와 scoped session binding을 만든다. Child는 `issueops execution resume --id <child-id> --expected-generation <n> --confirm $ACTOR_FLAGS`로 자기 cycle만 재개하고, parent가 결과를 검증해 accept/reject한다.
+- **D1 delegated child cycle 적용:** parent가 implementation plan 또는 `issueops decision add`에 `isolated-worktree-work` 또는 `task-fan-out-coordination`을 기록한 뒤, child별 isolated worktree와 scoped session binding을 만든다. Child는 자기 cycle의 execution lease 안에서만 작업하고, parent가 결과를 검증해 accept/reject한다.
 
 #### 3. Forked Context 탐색 (Forked Context Exploration)
 - **설명:** 메인 대화의 전체 컨텍스트를 복제한 뒤, 분기 탐색만 하고 메인을 오염시키지 않음.

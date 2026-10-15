@@ -7,7 +7,7 @@ import (
 )
 
 func TestClassifySurfacesDurableIssueOpsFailures(t *testing.T) {
-	snapshot := healthyDirectSnapshot()
+	snapshot := healthySnapshot()
 	snapshot.Cycles[0].ExecutionFailurePresent = true
 	snapshot.Cycles[0].CleanupFailurePresent = true
 	snapshot.Cycles[0].IssueCreateFailurePresent = true

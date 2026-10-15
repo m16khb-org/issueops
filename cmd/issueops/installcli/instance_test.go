@@ -25,7 +25,7 @@ func TestPreparedInstallTransactionsKeepTheirPathEffects(t *testing.T) {
 			return installutil.EnsureSymlinkPlan(target, path, dry)
 		}
 		result := &port.NativeInstallResult{}
-		tx, err := cli.prepareInstallPathPlanForCandidate(result, req, req.BinPath, "skip")
+		tx, err := cli.prepareInstallPathPlanFromCandidate(result, req, req.BinPath, "skip")
 		if err != nil {
 			t.Fatal(err)
 		}

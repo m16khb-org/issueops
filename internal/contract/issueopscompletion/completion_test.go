@@ -125,7 +125,6 @@ func TestRecordSnapshotCloneDeepCopiesMutableState(t *testing.T) {
 			Labels:    []string{"ready"},
 			Assignees: []string{"alice"},
 		},
-		Orca: &OrcaBinding{RunID: "run-1", TaskID: "task-1"},
 		Ledger: map[string]LedgerEntry{
 			"plan": {Phase: "plan", Artifacts: []string{"plan"}, Missing: []string{}, Notes: []string{"ok"}},
 		},
@@ -138,7 +137,6 @@ func TestRecordSnapshotCloneDeepCopiesMutableState(t *testing.T) {
 	clone.Completion.Verification[0] = "mutated"
 	clone.Artifact.Labels[0] = "mutated"
 	clone.Artifact.Assignees[0] = "bob"
-	clone.Orca.RunID = "run-2"
 	clone.Ledger["feedback"] = LedgerEntry{Phase: "feedback", Notes: []string{"new"}}
 	clone.Ledger["plan"].Notes[0] = "mutated"
 
@@ -151,9 +149,6 @@ func TestRecordSnapshotCloneDeepCopiesMutableState(t *testing.T) {
 	if snapshot.Artifact.Labels[0] != "ready" || snapshot.Artifact.Assignees[0] != "alice" {
 		t.Fatalf("artifact slices leaked: %+v", snapshot.Artifact)
 	}
-	if snapshot.Orca.RunID != "run-1" {
-		t.Fatalf("orca binding leaked: %+v", snapshot.Orca)
-	}
 	if _, exists := snapshot.Ledger["feedback"]; exists {
 		t.Fatal("ledger map is shared with clone")
 	}
@@ -165,7 +160,7 @@ func TestRecordSnapshotCloneDeepCopiesMutableState(t *testing.T) {
 func TestRecordSnapshotCloneHandlesEmptyProjection(t *testing.T) {
 	var snapshot RecordSnapshot
 	clone := snapshot.Clone()
-	if clone.ID != "" || clone.Lease.Holder != nil || clone.Completion != nil || clone.Orca != nil {
+	if clone.ID != "" || clone.Lease.Holder != nil || clone.Completion != nil {
 		t.Fatalf("empty clone drifted: %+v", clone)
 	}
 	if clone.Ledger == nil {

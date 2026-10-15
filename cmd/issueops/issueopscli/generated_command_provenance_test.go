@@ -34,15 +34,13 @@ func TestGeneratedCommandRejectsStaleInstalledBinaryBeforeMutation(t *testing.T)
 		t.Fatal(err)
 	}
 	record.Execution = &issueopscontract.Execution{
-		Mode:      issueopscontract.ExecutionModeDirect,
-		Workspace: issueopscontract.Workspace{SourceRoot: repo, Root: worktree, Branch: record.Branch, BaseHead: "base", Driver: "git", LinkedAt: "2026-08-04T00:00:00Z"},
+		Workspace: issueopscontract.Workspace{SourceRoot: repo, Root: worktree, Branch: record.Branch, BaseHead: "base", LinkedAt: "2026-08-04T00:00:00Z"},
 		Lease: issueopscontract.WriteLease{
 			Generation: 7, Status: issueopscontract.LeaseStatusActive, ClaimedAt: "2026-08-04T00:00:00Z",
 			Holder: &issueopscontract.NativeActor{Host: "codex", SessionID: "session-1", SessionProcess: &issueopscontract.NativeProcessReceipt{
 				PID: 42, StartedAt: "2026-08-04T00:00:00Z", Executable: "/bin/codex",
 			}},
 		},
-		Selection: selectionFixture(issueopscontract.ExecutionModeDirect),
 	}
 	if _, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
@@ -90,15 +88,13 @@ func TestGeneratedCommandRunsExactObservedBinaryEnvelopeWithoutCallerRepair(t *t
 		t.Fatal(err)
 	}
 	record.Execution = &issueopscontract.Execution{
-		Mode:      issueopscontract.ExecutionModeDirect,
-		Workspace: issueopscontract.Workspace{SourceRoot: repo, Root: worktree, Branch: record.Branch, BaseHead: "base", Driver: "git", LinkedAt: "2026-08-04T00:00:00Z"},
+		Workspace: issueopscontract.Workspace{SourceRoot: repo, Root: worktree, Branch: record.Branch, BaseHead: "base", LinkedAt: "2026-08-04T00:00:00Z"},
 		Lease: issueopscontract.WriteLease{
 			Generation: 7, Status: issueopscontract.LeaseStatusActive, ClaimedAt: "2026-08-04T00:00:00Z",
 			Holder: &issueopscontract.NativeActor{Host: "codex", SessionID: "session-1", SessionProcess: &issueopscontract.NativeProcessReceipt{
 				PID: 42, StartedAt: "2026-08-04T00:00:00Z", Executable: "/bin/codex",
 			}},
 		},
-		Selection: selectionFixture(issueopscontract.ExecutionModeDirect),
 	}
 	if _, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)

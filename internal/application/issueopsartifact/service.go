@@ -41,7 +41,7 @@ func (service *Service) Stage(
 		staged issueopsartifactcontract.Staged,
 	) (issueopsartifactcontract.Staged, error) {
 		if !issueopsartifactdomain.CanStage(record, name) {
-			return staged, &issueopsartifactcontract.RecoveryError{ID: record.ID}
+			return staged, &issueopsartifactcontract.SealedError{ID: record.ID}
 		}
 		staged[name] = string(content)
 		return staged, nil
