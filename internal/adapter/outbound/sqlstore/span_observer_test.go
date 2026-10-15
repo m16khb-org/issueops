@@ -90,9 +90,6 @@ func (clock *scriptedClock) requireExhausted() {
 
 func millis(value int) time.Duration { return time.Duration(value) * time.Millisecond }
 
-//go:fix inline
-func durationRef(value time.Duration) *time.Duration { return new(value) }
-
 func collectSpans(ctx context.Context) (context.Context, *[]SpanObservation) {
 	observations := &[]SpanObservation{}
 	return WithSpanObserver(ctx, func(observation SpanObservation) {
@@ -340,7 +337,7 @@ func TestSpanCommitCoverage(t *testing.T) {
 		want := SpanObservation{
 			Outcome:        SpanOutcomeCanceled,
 			Wait:           millis(4),
-			Commit:         durationRef(0),
+			Commit:         new(time.Duration(0)),
 			Total:          millis(4),
 			CommitCoverage: SpanCommitCoverageComplete,
 		}

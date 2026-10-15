@@ -147,14 +147,6 @@ func TestRequireGoldenEvidenceNamesTheMissingProofAndRejectsFailures(t *testing.
 	}
 }
 
-func stepLabels(result augment.SelfAugmentResult) []string {
-	var labels []string
-	for _, step := range result.Runs[0].Steps {
-		labels = append(labels, step.Label)
-	}
-	return labels
-}
-
 type loopStepLog struct {
 	labels   []string
 	printed  []string

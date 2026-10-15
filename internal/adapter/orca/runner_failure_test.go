@@ -13,7 +13,7 @@ import (
 
 func TestExecRunnerRejectsEmptyArgvWithoutStartingAProcess(t *testing.T) {
 	output, err := (ExecRunner{}).Run(context.Background(), "", time.Second, nil)
-	orcaErr := requireOrcaCode(t, err, "invalid_argv")
+	orcaErr := requireOrcaError(t, err, "invalid_argv")
 	if orcaErr.Invoked || output.Invoked {
 		t.Fatalf("empty argv reported invoked: %#v %#v", orcaErr, output)
 	}
@@ -22,7 +22,7 @@ func TestExecRunnerRejectsEmptyArgvWithoutStartingAProcess(t *testing.T) {
 func TestExecRunnerReportsUnstartableBinaryAsNotInvoked(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "no-such-orca")
 	output, err := (ExecRunner{}).Run(context.Background(), "", 5*time.Second, []string{missing, "status"})
-	orcaErr := requireOrcaCode(t, err, "command_start_failed")
+	orcaErr := requireOrcaError(t, err, "command_start_failed")
 	if orcaErr.Invoked || output.Invoked {
 		t.Fatalf("a binary that never started must not count as invoked: %#v %#v", orcaErr, output)
 	}
@@ -34,7 +34,7 @@ func TestExecRunnerTimeoutIsMarkedAndInvoked(t *testing.T) {
 		t.Fatalf("sleep binary required for the timeout fixture: %v", err)
 	}
 	output, err := (ExecRunner{}).Run(context.Background(), "", 50*time.Millisecond, []string{sleep, "30"})
-	orcaErr := requireOrcaCode(t, err, "command_timeout")
+	orcaErr := requireOrcaError(t, err, "command_timeout")
 	if !orcaErr.Timeout || !orcaErr.Invoked || !output.Invoked {
 		t.Fatalf("timeout = %#v output=%#v", orcaErr, output)
 	}
