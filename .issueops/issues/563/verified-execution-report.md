@@ -98,6 +98,8 @@ production hot path가 없다. 인라인한 `new(int64(250))` 같은 표현은 h
 
 - 커밋 `38d76e01`을 push한 뒤 PR을 발행하기 전에 HEAD 커밋의 CI run `38705119478`을 `gh run list --commit`으로 찾아 끝까지 확인했다. `verify` job의 Format check, Vet, Lint, `.golangci.yml` schema 검증, Shell lint, 스킬 frontmatter 검증, Build, Race test, 결정적 self-verify, HTTP MCP install 단계가 모두 success다. 이 run은 이 PR의 브랜치 push이며 main의 base 커밋에서는 Lint 단계에서 멈췄던 job이다.
 - draft PR #564를 `remote create-pr`로 만들고 `remote verify-artifact`로 확인했다. head `563-main-ci-lint-test-fixes`, base `main`, 라벨 `bug`, 담당자 `m16khb`, 본문 `Closes #563`이 provider readback과 일치한다.
+- PR을 만든 뒤 `pull_request` run `38706548073`이 `Race test all packages`에서 두 번 연속 실패했다(위 `CI에서 드러난 update 패키지 결함`). 수정 커밋 `87ba7cab`을 push하고 같은 head의 두 run을 모두 끝까지 확인했다: `push` run `38720840743`과 `pull_request` run `38720847359`가 모두 success이고 실패하거나 건너뛴 단계가 없다.
+- PR 본문은 `remote sync-pr`(preview의 `expected_body_sha256`을 넘긴 confirm)로 갱신했고 readback에서 `Closes #563`, 두 run 번호가 보이며 `in_sync`다. 이후 `remote verify-artifact`로 draft 상태, head, 라벨 `bug`, 담당자 `m16khb`, base `main`을 다시 확인했다.
 
 ## 실패와 재시도
 
