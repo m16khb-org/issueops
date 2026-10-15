@@ -79,7 +79,12 @@ production hot path가 없다. 인라인한 `new(int64(250))` 같은 표현은 h
 
 - 이 머신의 python3에 pydantic·typer가 없어 임시 venv(`uv venv --python 3.13` + `scripts/python_test_requirements.txt`)를 PATH 앞에 두고 G4를 실행했다.
 - `gates check`는 `--cwd`와 `--workspace-root`를 주지 않으면 `cwd_required; workspace_root_required`로 거부된다. G1이 `go install`로 golangci-lint를 받으므로 `--network`를 줬다.
-- 이 plan의 비차단 메모대로 커밋 전 작업 트리에서 self-verify는 risk QA의 race 전체 실행을 재사용한다. GitHub Actions `verify` job 결과는 push 뒤 pr 단계에서 HEAD 커밋의 `gh run list --commit`으로 확인한다.
+- 구현 리뷰 전에 기준 커밋을 지정한 `self-verify --base-ref`를 한 번 더 실행했다. 27단계가 모두 통과했고 risk QA는 `go test -race ./... -count=1`과 `go vet ./...`을 재사용 없이 실행했다(316.6초).
+
+## 원격 확인
+
+- 커밋 `38d76e01`을 push한 뒤 PR을 발행하기 전에 HEAD 커밋의 CI run `38705119478`을 `gh run list --commit`으로 찾아 끝까지 확인했다. `verify` job의 Format check, Vet, Lint, `.golangci.yml` schema 검증, Shell lint, 스킬 frontmatter 검증, Build, Race test, 결정적 self-verify, HTTP MCP install 단계가 모두 success다. 이 run은 이 PR의 브랜치 push이며 main의 base 커밋에서는 Lint 단계에서 멈췄던 job이다.
+- draft PR #564를 `remote create-pr`로 만들고 `remote verify-artifact`로 확인했다. head `563-main-ci-lint-test-fixes`, base `main`, 라벨 `bug`, 담당자 `m16khb`, 본문 `Closes #563`이 provider readback과 일치한다.
 
 ## 실패와 재시도
 
