@@ -316,7 +316,7 @@ func TestResumeContractReceiptPreservesRunStages(t *testing.T) {
 func TestResumeContractReceiptPreservesDispatchAndPromptRequestIDs(t *testing.T) {
 	receipt := port.ExecutionOrcaIntentReceipt{
 		TaskID: "task-resume", DispatchID: "dispatch-resume", RequestID: "11111111-1111-4111-8111-111111111111",
-		PromptReceipt: &port.OrcaPromptReceipt{RequestID: "22222222-2222-4222-8222-222222222222", ProcessIncarnation: "process-resume", Stages: []string{"input_accepted"}, BaselineWorkingSequence: handoffTestUint64(0)},
+		PromptReceipt: &port.OrcaPromptReceipt{RequestID: "22222222-2222-4222-8222-222222222222", ProcessIncarnation: "process-resume", Stages: []string{"input_accepted"}, BaselineWorkingSequence: new(uint64(0))},
 	}
 	got := resumeContractReceipt(receipt)
 	if got.RequestID != receipt.RequestID || got.PromptReceipt == nil || got.PromptReceipt.RequestID != receipt.PromptReceipt.RequestID || got.PromptReceipt.ProcessIncarnation != "process-resume" {

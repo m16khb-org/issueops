@@ -433,7 +433,7 @@ func reconcileSuccessfulReceipt(request port.ExecutionOrcaIntentRequest) port.Ex
 		if request.Probe.Host == "omo" {
 			receipt.PromptReceipt = &port.OrcaPromptReceipt{
 				RequestID: "22222222-2222-4222-8222-222222222222", Stages: []string{"input_accepted"}, Provider: "omo",
-				Observation: "supported", ProcessIncarnation: "process-1", Generation: 1, BaselineWorkingSequence: handoffTestUint64(0),
+				Observation: "supported", ProcessIncarnation: "process-1", Generation: 1, BaselineWorkingSequence: new(uint64(0)),
 			}
 		}
 		return receipt

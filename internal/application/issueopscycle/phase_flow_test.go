@@ -14,13 +14,12 @@ import (
 
 // phaseFlow is a hermetic PhaseStore around one in-memory record.
 type phaseFlow struct {
-	record     model.IssueOpsRecord
-	events     []string
-	writes     []model.IssueOpsRecord
-	mutateErr  error
-	readErr    error
-	writeErr   error
-	prefetches int
+	record    model.IssueOpsRecord
+	events    []string
+	writes    []model.IssueOpsRecord
+	mutateErr error
+	readErr   error
+	writeErr  error
 }
 
 func (p *phaseFlow) store() cycleport.PhaseStore {

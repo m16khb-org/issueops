@@ -181,7 +181,7 @@ func TestIntentRequestsRejectMalformedRetryRequestIDs(t *testing.T) {
 			mutate(&request)
 			client := fx.fake()
 			_, err := NewExecutionClient(client).InvokeIntent(context.Background(), request)
-			orcaErr := requireOrcaCode(t, err, "intent_preflight_rejected")
+			orcaErr := requireOrcaError(t, err, "intent_preflight_rejected")
 			if orcaErr.Invoked || !strings.Contains(orcaErr.Detail, "request UUID") || len(client.calls) != 0 {
 				t.Fatalf("error=%#v calls=%v", orcaErr, client.calls)
 			}
@@ -198,7 +198,7 @@ func TestInvokeOwnerStageWithoutLaunchIsPreflightRejected(t *testing.T) {
 	request.Launch = nil
 	client := fx.fake()
 	_, err := NewExecutionClient(client).InvokeIntent(context.Background(), request)
-	if orcaErr := requireOrcaCode(t, err, "intent_preflight_rejected"); !strings.Contains(orcaErr.Detail, "sealed context packet is invalid") {
+	if orcaErr := requireOrcaError(t, err, "intent_preflight_rejected"); !strings.Contains(orcaErr.Detail, "sealed context packet is invalid") {
 		t.Fatalf("detail = %q", orcaErr.Detail)
 	}
 	if len(client.calls) != 0 {

@@ -80,7 +80,7 @@ func TestHandoffDeliveryOmoDurablePromptReceiptRecoversCandidateWithoutExternalW
 	promptID := "22222222-2222-4222-8222-222222222222"
 	receipt := port.ExecutionOrcaIntentReceipt{
 		TerminalPTYID: "pty-1", TerminalHandle: "term-1", TaskID: "task-1", DispatchID: "dispatch-1", RequestID: dispatchID,
-		PromptReceipt: &port.OrcaPromptReceipt{RequestID: promptID, Stages: []string{"input_accepted", "turn_started"}, Provider: "omo", ProcessIncarnation: "process-1", Generation: 1, BaselineWorkingSequence: handoffTestUint64(0)},
+		PromptReceipt: &port.OrcaPromptReceipt{RequestID: promptID, Stages: []string{"input_accepted", "turn_started"}, Provider: "omo", ProcessIncarnation: "process-1", Generation: 1, BaselineWorkingSequence: new(uint64(0))},
 	}
 	if err := observeHandoffDeliveryCompleted(stateRoot, request, identity, "dispatch", receipt, time.Now); err != nil {
 		t.Fatal(err)
@@ -131,7 +131,7 @@ func TestHandoffDeliveryOmoCrashBetweenCallsReplaysDispatchIDAndStartsPromptOnce
 		t.Fatalf("crash recovery inventory=%+v err=%v", inventory, err)
 	}
 	promptID := "22222222-2222-4222-8222-222222222222"
-	fake.receipt.PromptReceipt = &port.OrcaPromptReceipt{RequestID: promptID, Stages: []string{"input_accepted"}, Provider: "omo", ProcessIncarnation: "process-1", Generation: 1, BaselineWorkingSequence: handoffTestUint64(0)}
+	fake.receipt.PromptReceipt = &port.OrcaPromptReceipt{RequestID: promptID, Stages: []string{"input_accepted"}, Provider: "omo", ProcessIncarnation: "process-1", Generation: 1, BaselineWorkingSequence: new(uint64(0))}
 	if _, err := observed.InvokeIntent(context.Background(), request); err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +150,7 @@ func TestHandoffDeliveryOmoPromptResponseLossReplaysBothExactIDs(t *testing.T) {
 		t.Fatal(err)
 	}
 	fake := &handoffDeliveryProvisionerFake{
-		receipt:            port.ExecutionOrcaIntentReceipt{TerminalPTYID: "pty-1", TerminalHandle: "term-1", TaskID: "task-1", DispatchID: "dispatch-1", RequestID: dispatchID, PromptReceipt: &port.OrcaPromptReceipt{RequestID: promptID, Stages: []string{"input_accepted"}, Provider: "omo", ProcessIncarnation: "process-1", Generation: 1, BaselineWorkingSequence: handoffTestUint64(0)}},
+		receipt:            port.ExecutionOrcaIntentReceipt{TerminalPTYID: "pty-1", TerminalHandle: "term-1", TaskID: "task-1", DispatchID: "dispatch-1", RequestID: dispatchID, PromptReceipt: &port.OrcaPromptReceipt{RequestID: promptID, Stages: []string{"input_accepted"}, Provider: "omo", ProcessIncarnation: "process-1", Generation: 1, BaselineWorkingSequence: new(uint64(0))}},
 		requestObservation: port.OrcaRequestObservation{RuntimeID: "runtime-1", RequestID: dispatchID, Status: "completed", Method: "orchestration.dispatch"},
 	}
 	observed := newHandoffDeliveryProvisioner(stateRoot, fake, time.Now)
@@ -808,6 +808,3 @@ func advancingHandoffClock(start time.Time) func() time.Time {
 		return value
 	}
 }
-
-//go:fix inline
-func handoffTestUint64(value uint64) *uint64 { return new(value) }

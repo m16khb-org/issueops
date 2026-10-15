@@ -17,12 +17,18 @@ func failEnvelope(code, message string) CommandOutput {
 	return CommandOutput{Stdout: []byte(`{"ok":false,"error":{"code":"` + code + `","message":"` + message + `"},"_meta":{"runtimeId":"runtime-1"}}`)}
 }
 
-func requireOrcaCode(t *testing.T, err error, code string) *port.OrcaError {
+func requireOrcaCode(t *testing.T, err error, code string) {
 	t.Helper()
 	orcaErr, ok := errors.AsType[*port.OrcaError](err)
 	if !ok || orcaErr.Code != code {
 		t.Fatalf("error = %#v (%v), want OrcaError code %q", orcaErr, err, code)
 	}
+}
+
+func requireOrcaError(t *testing.T, err error, code string) *port.OrcaError {
+	t.Helper()
+	requireOrcaCode(t, err, code)
+	orcaErr, _ := errors.AsType[*port.OrcaError](err)
 	return orcaErr
 }
 
@@ -180,7 +186,7 @@ func TestDeliveryIdentityResolution(t *testing.T) {
 		runner.responses["orca status --json"] = okEnvelope(statusNoVersion)
 		runner.errors["orca --version"] = errors.New("boom")
 		_, err := NewClient(runner).DeliveryIdentity(context.Background())
-		if orcaErr := requireOrcaCode(t, err, "orca_identity_unresolved"); !strings.Contains(orcaErr.Detail, "version") {
+		if orcaErr := requireOrcaError(t, err, "orca_identity_unresolved"); !strings.Contains(orcaErr.Detail, "version") {
 			t.Fatalf("detail = %q", orcaErr.Detail)
 		}
 	})
@@ -197,7 +203,7 @@ func TestDeliveryIdentityResolution(t *testing.T) {
 		runner.lookPaths["orca"] = "/opt/orca"
 		runner.responses["orca status --json"] = okEnvelope(`{"runtime":{"runtimeId":"runtime-live","appVersion":"1.0.0"}}`)
 		_, err := NewClient(runner).DeliveryIdentity(context.Background())
-		if orcaErr := requireOrcaCode(t, err, "orca_identity_unresolved"); !strings.Contains(orcaErr.Detail, "server identity") {
+		if orcaErr := requireOrcaError(t, err, "orca_identity_unresolved"); !strings.Contains(orcaErr.Detail, "server identity") {
 			t.Fatalf("detail = %q", orcaErr.Detail)
 		}
 	})
@@ -217,7 +223,7 @@ func TestResolveRepoRejectsRelativePathsAndPropagatesLookupErrors(t *testing.T) 
 
 	runner.responses["orca repo show --repo path:/abs/repo --json"] = okEnvelope(`{"repo":{"id":"","path":"/abs/repo"}}`)
 	_, err = NewClient(runner).ResolveRepo(context.Background(), "/abs/repo")
-	if orcaErr := requireOrcaCode(t, err, "repo_identity_mismatch"); !orcaErr.Invoked {
+	if orcaErr := requireOrcaError(t, err, "repo_identity_mismatch"); !orcaErr.Invoked {
 		t.Fatal("an unidentified repo registration was observed from Orca and must count as invoked")
 	}
 }
@@ -233,7 +239,7 @@ func TestCreateWorktreeRejectsInvalidRequestsBeforeInvokingOrca(t *testing.T) {
 	t.Run("unsupported provider", func(t *testing.T) {
 		runner := newFakeRunner(t)
 		_, err := NewClient(runner).CreateWorktree(context.Background(), port.OrcaCreateWorktreeRequest{Repo: "/repo", Name: "n", Provider: "bitbucket"})
-		if orcaErr := requireOrcaCode(t, err, "unsupported_provider"); orcaErr.Detail != "bitbucket" {
+		if orcaErr := requireOrcaError(t, err, "unsupported_provider"); orcaErr.Detail != "bitbucket" {
 			t.Fatalf("detail = %q", orcaErr.Detail)
 		}
 		if len(runner.calls) != 0 {
@@ -281,7 +287,7 @@ func TestCreateWorktreeBranchCanonicalization(t *testing.T) {
 		runner := newFakeRunner(t)
 		runner.responses[create] = worktree("someone-else", "/repo.worktrees/n")
 		_, err := NewClient(runner).CreateWorktree(context.Background(), request)
-		if orcaErr := requireOrcaCode(t, err, "worktree_branch_mismatch"); !orcaErr.Invoked {
+		if orcaErr := requireOrcaError(t, err, "worktree_branch_mismatch"); !orcaErr.Invoked {
 			t.Fatal("the worktree already exists, so the mismatch must report invoked")
 		}
 		if len(runner.calls) != 1 {
@@ -462,7 +468,7 @@ func TestCreateTerminalPreInvocationAndResponseFailures(t *testing.T) {
 	t.Run("unsupported agent profile", func(t *testing.T) {
 		runner := newFakeRunner(t)
 		_, err := NewClient(runner).CreateTerminal(context.Background(), port.OrcaCreateTerminalRequest{WorktreeID: "wt", Agent: "gemini", Model: "m"})
-		if orcaErr := requireOrcaCode(t, err, "unsupported_agent_profile"); orcaErr.Detail != "gemini" {
+		if orcaErr := requireOrcaError(t, err, "unsupported_agent_profile"); orcaErr.Detail != "gemini" {
 			t.Fatalf("detail = %q", orcaErr.Detail)
 		}
 		if len(runner.calls) != 0 {
@@ -493,7 +499,7 @@ func TestSendTerminalPromptRejectsInvalidInputsBeforeInvocation(t *testing.T) {
 		"nul in text":     {"term_1", "hel\x00lo"},
 	} {
 		_, err := NewClient(runner).SendTerminalPrompt(context.Background(), tt.handle, tt.prompt, "")
-		if orcaErr := requireOrcaCode(t, err, "terminal_prompt_invalid"); orcaErr.Invoked {
+		if orcaErr := requireOrcaError(t, err, "terminal_prompt_invalid"); orcaErr.Invoked {
 			t.Fatalf("%s: validation failures never reach Orca", name)
 		}
 	}
@@ -514,7 +520,7 @@ func TestSendTerminalPromptOrcaOutcomes(t *testing.T) {
 		runner := newFakeRunner(t)
 		runner.responses[command] = okEnvelope(`{"send":{"accepted":false}}`)
 		_, err := NewClient(runner).SendTerminalPrompt(context.Background(), "term_1", "hi", "")
-		if orcaErr := requireOrcaCode(t, err, "terminal_prompt_rejected"); !orcaErr.Invoked {
+		if orcaErr := requireOrcaError(t, err, "terminal_prompt_rejected"); !orcaErr.Invoked {
 			t.Fatal("a rejected prompt was sent to Orca and must report invoked")
 		}
 	})
@@ -706,7 +712,7 @@ func TestRunMutationsRejectIncompleteOrFailedOrcaResponses(t *testing.T) {
 		runner := newFakeRunner(t)
 		runner.responses[create] = okEnvelope(`{"run":{"objective":"o"}}`)
 		_, err := NewClient(runner).CreateRun(context.Background(), port.OrcaCreateRunRequest{Objective: "o"})
-		if orcaErr := requireOrcaCode(t, err, "run_identity_incomplete"); !orcaErr.Invoked {
+		if orcaErr := requireOrcaError(t, err, "run_identity_incomplete"); !orcaErr.Invoked {
 			t.Fatal("the Run was created remotely; the incomplete response must report invoked")
 		}
 	})
@@ -742,7 +748,7 @@ func TestUseRunValidatesIdentityAndBinding(t *testing.T) {
 		runner := newFakeRunner(t)
 		runner.responses["orca orchestration run-use --id run_a --json"] = okEnvelope(`{"run":{"id":"run_b","objective":"o"}}`)
 		_, err := NewClient(runner).UseRun(context.Background(), "run_a")
-		if orcaErr := requireOrcaCode(t, err, "run_binding_mismatch"); !orcaErr.Invoked {
+		if orcaErr := requireOrcaError(t, err, "run_binding_mismatch"); !orcaErr.Invoked {
 			t.Fatal("binding happened remotely and must report invoked")
 		}
 	})
@@ -854,7 +860,7 @@ func TestCreateTaskRunBinding(t *testing.T) {
 		runner := newFakeRunner(t)
 		runner.responses[command] = okEnvelope(`{"task":{"id":"task-1","run_id":"run_b","status":"ready"}}`)
 		_, err := NewClient(runner).CreateTask(context.Background(), request)
-		if orcaErr := requireOrcaCode(t, err, "task_run_mismatch"); !orcaErr.Invoked {
+		if orcaErr := requireOrcaError(t, err, "task_run_mismatch"); !orcaErr.Invoked {
 			t.Fatal("the task exists remotely and must report invoked")
 		}
 	})
@@ -961,7 +967,7 @@ func TestDecodeResultRejectsOversizedMissingAndNullResults(t *testing.T) {
 
 func TestDecodeResultDefaultsRejectionCodeAndRedactsDiagnostics(t *testing.T) {
 	_, err := decodeResult(CommandOutput{Stdout: []byte(`{"ok":false,"error":{"message":"  token=abc  "},"_meta":{"runtimeId":"rt"}}`), Invoked: true}, nil)
-	orcaErr := requireOrcaCode(t, err, "orca_rejected")
+	orcaErr := requireOrcaError(t, err, "orca_rejected")
 	if orcaErr.Detail != "<redacted>" || !orcaErr.Invoked {
 		t.Fatalf("rejection = %#v", orcaErr)
 	}

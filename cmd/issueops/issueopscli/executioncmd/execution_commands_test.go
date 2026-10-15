@@ -21,11 +21,6 @@ var explicitActorArgs = []string{
 	"--session-started-at", "2026-08-01T00:00:00Z", "--session-executable", "/opt/codex", "--cwd", "/work",
 }
 
-var explicitActor = model.NativeActor{
-	Host: "codex", SessionID: "sess-1",
-	SessionProcess: &model.NativeProcessReceipt{PID: 42, StartedAt: "2026-08-01T00:00:00Z", Executable: "/opt/codex"},
-}
-
 func fixedAncestry(int) ([]model.NativeProcessReceipt, error) { return nil, nil }
 
 // capturingDeps returns Deps whose ExecuteExecution records the request and whose

@@ -87,7 +87,7 @@ func TestRequireCompleteListNeedsExplicitCompletenessMetadata(t *testing.T) {
 			}
 			continue
 		}
-		if orcaErr := requireOrcaCode(t, err, "incomplete_list"); !strings.Contains(orcaErr.Detail, tt.wantErr) || !orcaErr.Invoked {
+		if orcaErr := requireOrcaError(t, err, "incomplete_list"); !strings.Contains(orcaErr.Detail, tt.wantErr) || !orcaErr.Invoked {
 			t.Errorf("%s: error = %#v", tt.name, orcaErr)
 		}
 	}
@@ -111,7 +111,7 @@ func TestListWorktreesRequiresCompletenessMetadata(t *testing.T) {
 	runner := newFakeRunner(t)
 	runner.responses["orca worktree list --repo path:/repo --limit 512 --json"] = okEnvelope(`{"worktrees":[]}`)
 	_, err := NewClient(runner).ListWorktrees(context.Background(), "/repo")
-	if orcaErr := requireOrcaCode(t, err, "incomplete_list"); !strings.Contains(orcaErr.Detail, "completeness metadata is missing") {
+	if orcaErr := requireOrcaError(t, err, "incomplete_list"); !strings.Contains(orcaErr.Detail, "completeness metadata is missing") {
 		t.Fatalf("detail = %q", orcaErr.Detail)
 	}
 }
