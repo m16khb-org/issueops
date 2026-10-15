@@ -218,7 +218,7 @@ func TestInvokeIntentRejectsCreatedResourcesThatDriftFromTheSeal(t *testing.T) {
 		client := fx.fake()
 		client.createdWorktree = &drifted
 		_, err := NewExecutionClient(client).InvokeIntent(context.Background(), fx.request(port.ExecutionOrcaIntentWorktree))
-		if orcaErr := requireOrcaCode(t, err, "worktree_identity_mismatch"); !orcaErr.Invoked {
+		if orcaErr := requireOrcaError(t, err, "worktree_identity_mismatch"); !orcaErr.Invoked {
 			t.Fatal("the worktree exists remotely and must report invoked")
 		}
 	})
@@ -226,7 +226,7 @@ func TestInvokeIntentRejectsCreatedResourcesThatDriftFromTheSeal(t *testing.T) {
 		// The fake echoes the sealed objective, so shift the runtime instead.
 		client := runtimeShiftedRuns{&scriptedExecutionFake{executionFake: fx.fake()}}
 		_, err := NewExecutionClient(client).InvokeIntent(context.Background(), fx.request(port.ExecutionOrcaIntentRun))
-		if orcaErr := requireOrcaCode(t, err, "run_identity_mismatch"); !orcaErr.Invoked {
+		if orcaErr := requireOrcaError(t, err, "run_identity_mismatch"); !orcaErr.Invoked {
 			t.Fatal("the Run exists remotely and must report invoked")
 		}
 	})
@@ -234,7 +234,7 @@ func TestInvokeIntentRejectsCreatedResourcesThatDriftFromTheSeal(t *testing.T) {
 		client := fx.fake()
 		client.createdTask = &port.OrcaTask{RuntimeID: "runtime-69", RunID: "run-69", ID: "task-69", Title: "someone else's task", DisplayName: fx.workspace.Branch, Status: "ready"}
 		_, err := NewExecutionClient(client).InvokeIntent(context.Background(), fx.request(port.ExecutionOrcaIntentTask))
-		if orcaErr := requireOrcaCode(t, err, "task_identity_mismatch"); !orcaErr.Invoked {
+		if orcaErr := requireOrcaError(t, err, "task_identity_mismatch"); !orcaErr.Invoked {
 			t.Fatal("the task exists remotely and must report invoked")
 		}
 	})
@@ -257,7 +257,7 @@ func TestInvokeTerminalIntentReconcilesAgainstTheInventory(t *testing.T) {
 		client := fx.fake()
 		client.createdTerminal = &port.OrcaTerminal{RuntimeID: "runtime-69", Handle: "term-69", PTYID: "pty-69", WorktreeID: "wt-69", Title: "agent status", Connected: true, Writable: true}
 		_, err := NewExecutionClient(requestOnlyClient{client}).InvokeIntent(context.Background(), request)
-		if orcaErr := requireOrcaCode(t, err, "terminal_identity_mismatch"); !orcaErr.Invoked || !strings.Contains(orcaErr.Detail, "does not match the sealed intent") {
+		if orcaErr := requireOrcaError(t, err, "terminal_identity_mismatch"); !orcaErr.Invoked || !strings.Contains(orcaErr.Detail, "does not match the sealed intent") {
 			t.Fatalf("error = %#v", orcaErr)
 		}
 	})
@@ -276,7 +276,7 @@ func TestInvokeTerminalIntentReconcilesAgainstTheInventory(t *testing.T) {
 		client := &scriptedExecutionFake{executionFake: fx.fake(), listTerminalsErr: errors.New("inventory down")}
 		client.createdTerminal = &port.OrcaTerminal{RuntimeID: "runtime-69", Handle: "term-69", PTYID: "pty-69", WorktreeID: "wt-69"}
 		_, err := fastSettle(client).InvokeIntent(context.Background(), request)
-		if orcaErr := requireOrcaCode(t, err, "terminal_identity_mismatch"); !strings.Contains(orcaErr.Detail, "inventory down") {
+		if orcaErr := requireOrcaError(t, err, "terminal_identity_mismatch"); !strings.Contains(orcaErr.Detail, "inventory down") {
 			t.Fatalf("detail = %q", orcaErr.Detail)
 		}
 	})
@@ -290,7 +290,7 @@ func TestInvokeTerminalIntentReconcilesAgainstTheInventory(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 		_, err := provisioner.InvokeIntent(ctx, request)
-		if orcaErr := requireOrcaCode(t, err, "terminal_identity_mismatch"); !strings.Contains(orcaErr.Detail, context.Canceled.Error()) {
+		if orcaErr := requireOrcaError(t, err, "terminal_identity_mismatch"); !strings.Contains(orcaErr.Detail, context.Canceled.Error()) {
 			t.Fatalf("detail = %q", orcaErr.Detail)
 		}
 	})
@@ -335,7 +335,7 @@ func TestInvokeRunBindIntent(t *testing.T) {
 		client := fx.fake()
 		client.currentRun = &port.OrcaRun{RuntimeID: "runtime-69", ID: "run-69", Objective: "different objective"}
 		_, err := NewExecutionClient(client).InvokeIntent(context.Background(), request)
-		if orcaErr := requireOrcaCode(t, err, "run_binding_mismatch"); !orcaErr.Invoked {
+		if orcaErr := requireOrcaError(t, err, "run_binding_mismatch"); !orcaErr.Invoked {
 			t.Fatal("binding mismatch must report invoked")
 		}
 	})
@@ -348,7 +348,7 @@ func TestInvokeDispatchIntentFailureAttribution(t *testing.T) {
 	t.Run("dispatch failure is tagged with its call phase", func(t *testing.T) {
 		client := &scriptedExecutionFake{executionFake: fx.fake(), dispatchErr: &port.OrcaError{Code: "runtime_error", Invoked: true}}
 		_, err := NewExecutionClient(client).InvokeIntent(context.Background(), request)
-		if orcaErr := requireOrcaCode(t, err, "runtime_error"); orcaErr.CallPhase != "orca_dispatch" {
+		if orcaErr := requireOrcaError(t, err, "runtime_error"); orcaErr.CallPhase != "orca_dispatch" {
 			t.Fatalf("call phase = %q", orcaErr.CallPhase)
 		}
 	})
@@ -364,7 +364,7 @@ func TestInvokeDispatchIntentFailureAttribution(t *testing.T) {
 		client := fx.fake()
 		client.dispatchResult.AssigneeHandle = "term-other"
 		_, err := NewExecutionClient(client).InvokeIntent(context.Background(), request)
-		if orcaErr := requireOrcaCode(t, err, "dispatch_identity_mismatch"); !orcaErr.Invoked {
+		if orcaErr := requireOrcaError(t, err, "dispatch_identity_mismatch"); !orcaErr.Invoked {
 			t.Fatal("the dispatch exists remotely and must report invoked")
 		}
 	})
@@ -388,7 +388,7 @@ func TestInvokeDispatchIntentFailureAttribution(t *testing.T) {
 		client := fx.fake()
 		client.dispatchResult.RequestID = ""
 		_, err := NewExecutionClient(client).InvokeIntent(context.Background(), request)
-		if orcaErr := requireOrcaCode(t, err, "dispatch_request_identity_mismatch"); orcaErr.CallPhase != "orca_dispatch" {
+		if orcaErr := requireOrcaError(t, err, "dispatch_request_identity_mismatch"); orcaErr.CallPhase != "orca_dispatch" {
 			t.Fatalf("call phase = %q", orcaErr.CallPhase)
 		}
 	})
@@ -422,7 +422,7 @@ func TestInvokeDispatchIntentObserverFailures(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			client := omo.fake()
 			_, err := NewExecutionClient(client).InvokeIntentObserved(context.Background(), omo.request(port.ExecutionOrcaIntentDispatch), failOn(tt.kind, tt.phase))
-			orcaErr := requireOrcaCode(t, err, "delivery_observation_failed")
+			orcaErr := requireOrcaError(t, err, "delivery_observation_failed")
 			if orcaErr.Invoked != tt.wantInvoked || orcaErr.CallPhase != tt.wantPhase || orcaErr.DispatchRequestID != tt.wantDispatch ||
 				!strings.Contains(orcaErr.Detail, "journal full") {
 				t.Fatalf("observer failure = %#v", orcaErr)
@@ -440,7 +440,7 @@ func TestInvokeDispatchPromptDeliveryFailures(t *testing.T) {
 		client := omo.fake()
 		client.promptErr = &port.OrcaError{Code: "terminal_not_writable"}
 		_, err := NewExecutionClient(client).InvokeIntent(context.Background(), omo.request(port.ExecutionOrcaIntentDispatch))
-		orcaErr := requireOrcaCode(t, err, "terminal_not_writable")
+		orcaErr := requireOrcaError(t, err, "terminal_not_writable")
 		if !orcaErr.Invoked || orcaErr.CallPhase != "terminal_send" || orcaErr.DispatchRequestID != stageDispatchRequestID {
 			t.Fatalf("send failure = %#v", orcaErr)
 		}
@@ -456,11 +456,11 @@ func TestInvokeDispatchPromptDeliveryFailures(t *testing.T) {
 	})
 	t.Run("receipt id differs from the pinned retry id", func(t *testing.T) {
 		client := omo.fake()
-		client.promptReceipt = &port.OrcaPromptReceipt{RequestID: "33333333-3333-4333-8333-333333333333", Stages: []string{"input_accepted"}, Provider: "omo", ProcessIncarnation: "p", Generation: 1, BaselineWorkingSequence: orcaTestUint64(0)}
+		client.promptReceipt = &port.OrcaPromptReceipt{RequestID: "33333333-3333-4333-8333-333333333333", Stages: []string{"input_accepted"}, Provider: "omo", ProcessIncarnation: "p", Generation: 1, BaselineWorkingSequence: new(uint64(0))}
 		request := omo.request(port.ExecutionOrcaIntentDispatch)
 		request.PromptRetryRequestID = stagePromptRequestID
 		_, err := NewExecutionClient(client).InvokeIntent(context.Background(), request)
-		orcaErr := requireOrcaCode(t, err, "terminal_prompt_request_identity_mismatch")
+		orcaErr := requireOrcaError(t, err, "terminal_prompt_request_identity_mismatch")
 		if orcaErr.OrchestrationRequestID != "33333333-3333-4333-8333-333333333333" || orcaErr.DispatchRequestID != stageDispatchRequestID {
 			t.Fatalf("identities = %#v", orcaErr)
 		}
@@ -495,7 +495,7 @@ func TestExecutionPreflightErrorKeepsNilAndMarksNotInvoked(t *testing.T) {
 	if executionPreflightError(nil) != nil {
 		t.Fatal("a nil error must stay nil")
 	}
-	orcaErr := requireOrcaCode(t, executionPreflightError(errors.New("bad seal")), "intent_preflight_rejected")
+	orcaErr := requireOrcaError(t, executionPreflightError(errors.New("bad seal")), "intent_preflight_rejected")
 	if orcaErr.Invoked || orcaErr.Detail != "bad seal" {
 		t.Fatalf("preflight = %#v", orcaErr)
 	}

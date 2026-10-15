@@ -41,13 +41,12 @@ type rawCASFailureStub struct{ bucket string }
 func (e rawCASFailureStub) Error() string        { return "raw CAS mismatch" }
 func (e rawCASFailureStub) FailedBucket() string { return e.bucket }
 
-func persistenceFailure(t *testing.T, err error) *leasecontract.Failure {
+func requirePersistenceFailure(t *testing.T, err error) {
 	t.Helper()
 	failure, ok := errors.AsType[*leasecontract.Failure](err)
 	if !ok || failure.Code != leasecontract.FailurePersistence {
 		t.Fatalf("want persistence failure, got %v", err)
 	}
-	return failure
 }
 
 func TestResumeRepositoryLoadSnapshotWrapsStoreReadFailureAsPersistence(t *testing.T) {
@@ -59,7 +58,7 @@ func TestResumeRepositoryLoadSnapshotWrapsStoreReadFailureAsPersistence(t *testi
 	if _, err := failing.LoadSnapshot(ctx, "io-resume-repository", 4); !errors.Is(err, boom) {
 		t.Fatalf("store read err=%v", err)
 	} else {
-		persistenceFailure(t, err)
+		requirePersistenceFailure(t, err)
 	}
 }
 
@@ -71,7 +70,7 @@ func TestResumeRepositoryLoadSnapshotRejectsRecordWithoutExecution(t *testing.T)
 	if !errors.Is(err, leasecontract.ErrExecutionNotPrepared) {
 		t.Fatalf("err=%v", err)
 	}
-	persistenceFailure(t, err)
+	requirePersistenceFailure(t, err)
 }
 
 func TestResumeRepositoryLoadIntentPropagatesReadErrorsAndRejectsCorruptPayload(t *testing.T) {

@@ -13,6 +13,10 @@ import (
 	contract "issueops/internal/contract/update"
 )
 
+// writeScript leaves a script that the calling test executes right away. Tests that
+// run such a script must not call t.Parallel: while the write descriptor is open, a
+// fork from any parallel test duplicates it, and on Linux the exec then fails with
+// ETXTBSY ("text file busy"). Parallel tests of this package never fork.
 func writeScript(t *testing.T, path, body string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -56,7 +60,6 @@ func TestParseMCPProxyProcessSnapshot(t *testing.T) {
 }
 
 func TestProcessTableRead(t *testing.T) {
-	t.Parallel()
 	dir := t.TempDir()
 	script := filepath.Join(dir, "ps")
 	writeScript(t, script, "echo \"$@|$FOO\"\n")
@@ -75,9 +78,7 @@ func TestProcessTableRead(t *testing.T) {
 }
 
 func TestRuntimeInstall(t *testing.T) {
-	t.Parallel()
 	t.Run("runs script with args, env, stdin in root", func(t *testing.T) {
-		t.Parallel()
 		root := t.TempDir()
 		writeScript(t, filepath.Join(root, "scripts", "install-native.sh"),
 			"read line; echo \"args=$@ env=$FOO in=$line pwd=$(pwd -P)\"; echo err >&2\n")
@@ -95,7 +96,6 @@ func TestRuntimeInstall(t *testing.T) {
 		}
 	})
 	t.Run("missing script", func(t *testing.T) {
-		t.Parallel()
 		root := t.TempDir()
 		err := Runtime{}.Install(root, nil)
 		if err == nil || !strings.Contains(err.Error(), "install script not found at "+filepath.Join(root, "scripts", "install-native.sh")) {
@@ -103,7 +103,6 @@ func TestRuntimeInstall(t *testing.T) {
 		}
 	})
 	t.Run("script failure propagates", func(t *testing.T) {
-		t.Parallel()
 		root := t.TempDir()
 		writeScript(t, filepath.Join(root, "scripts", "install-native.sh"), "exit 3\n")
 		if err := (Runtime{}).Install(root, nil); err == nil {
@@ -113,7 +112,6 @@ func TestRuntimeInstall(t *testing.T) {
 }
 
 func TestRuntimeList(t *testing.T) {
-	t.Parallel()
 	newRoot := func(t *testing.T) (root, bin string) {
 		t.Helper()
 		root = t.TempDir()
@@ -133,7 +131,6 @@ func TestRuntimeList(t *testing.T) {
 	}
 
 	t.Run("filters, verifies identity, tolerates inspect errors", func(t *testing.T) {
-		t.Parallel()
 		root, bin := newRoot(t)
 		body := "cat <<'EOF'\n" +
 			"  10 1 " + bin + " mcp\n" +
@@ -167,7 +164,6 @@ func TestRuntimeList(t *testing.T) {
 		}
 	})
 	t.Run("no matches yields nil", func(t *testing.T) {
-		t.Parallel()
 		root, _ := newRoot(t)
 		got, err := Runtime{Root: root, ProcessTable: table(t, "echo nothing\n")}.List()
 		if err != nil || got != nil {
@@ -175,7 +171,6 @@ func TestRuntimeList(t *testing.T) {
 		}
 	})
 	t.Run("inventory failure wrapped", func(t *testing.T) {
-		t.Parallel()
 		sentinel := errors.New("denied")
 		_, err := Runtime{ProcessTable: ProcessTable{PathError: sentinel}}.List()
 		if !errors.Is(err, sentinel) || !strings.HasPrefix(err.Error(), "MCP proxy inventory failed: ") {
@@ -183,7 +178,6 @@ func TestRuntimeList(t *testing.T) {
 		}
 	})
 	t.Run("missing binary", func(t *testing.T) {
-		t.Parallel()
 		_, err := Runtime{Root: t.TempDir(), ProcessTable: table(t, "echo\n")}.List()
 		if err == nil || !strings.HasPrefix(err.Error(), "resolve MCP proxy binary: ") {
 			t.Fatalf("got %v", err)

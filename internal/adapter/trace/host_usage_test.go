@@ -24,9 +24,6 @@ func digest(kind, id string) string {
 
 func scopeDigest(host, session string) string { return digest("scope", host+"\x00"+session) }
 
-//go:fix inline
-func i64(v int64) *int64 { return new(v) }
-
 func samePtr(a, b *int64) bool {
 	if a == nil || b == nil {
 		return a == b
@@ -82,8 +79,8 @@ func TestHostUsageClaudeCumulativeSnapshotAndReset(t *testing.T) {
 		t.Fatalf("samples=%d incomplete=%v usage=%+v", len(usage.Samples), input.Incomplete, usage)
 	}
 	first, second := usage.Samples[0], usage.Samples[1]
-	requireMetrics(t, first, i64(250), i64(120), i64(30), i64(0))
-	requireMetrics(t, second, i64(20), i64(5), i64(0), i64(0))
+	requireMetrics(t, first, new(int64(250)), new(int64(120)), new(int64(30)), new(int64(0)))
+	requireMetrics(t, second, new(int64(20)), new(int64(5)), new(int64(0)), new(int64(0)))
 	if first.Epoch != "0" || second.Epoch != "1" {
 		t.Errorf("epochs = %q, %q", first.Epoch, second.Epoch)
 	}
@@ -110,7 +107,7 @@ func TestHostUsageClaudeRepeatedIdenticalSnapshotIsNotDoubled(t *testing.T) {
 	if len(usage.Samples) != 1 || usage.Coverage != tracecontract.UsageCoverageComplete {
 		t.Fatalf("usage = %+v", usage)
 	}
-	requireMetrics(t, usage.Samples[0], i64(9), i64(2), i64(0), i64(0))
+	requireMetrics(t, usage.Samples[0], new(int64(9)), new(int64(2)), new(int64(0)), new(int64(0)))
 }
 
 func TestHostUsageClaudeMissingSessionKeepsIndependentResultsUnknown(t *testing.T) {
@@ -135,7 +132,7 @@ func TestHostUsageClaudeFailedResultZerosAreUnknownButSuccessZerosAreMeasured(t 
 	success := `{"type":"result","subtype":"success","is_error":false,"session_id":"z","uuid":"u","modelUsage":{"m":{"inputTokens":0,"outputTokens":0,"cacheReadInputTokens":0,"cacheCreationInputTokens":0,"costUSD":0}}}`
 	_, usage = decodeHost(t, tracecontract.InputFormatClaudeJSON, []byte(success+"\n"))
 	sample = usage.Samples[0]
-	requireMetrics(t, sample, i64(0), i64(0), i64(0), i64(0))
+	requireMetrics(t, sample, new(int64(0)), new(int64(0)), new(int64(0)), new(int64(0)))
 	if sample.CostUSD == nil || *sample.CostUSD != 0 {
 		t.Errorf("successful zero cost must be measured: %+v", sample)
 	}
@@ -161,7 +158,7 @@ func TestHostUsageCodexIdenticalTurnsWithoutIdentityAreNotDeduplicated(t *testin
 		t.Fatalf("usage = %+v", usage)
 	}
 	for _, sample := range usage.Samples {
-		requireMetrics(t, sample, i64(100), i64(10), i64(40), nil)
+		requireMetrics(t, sample, new(int64(100)), new(int64(10)), new(int64(40)), nil)
 		if sample.Host != "codex" || sample.Temporality != tracecontract.UsageTemporalityDelta || sample.Finality != tracecontract.UsageFinalityFinal {
 			t.Errorf("sample = %+v", sample)
 		}
@@ -181,7 +178,7 @@ func TestHostUsageCodexDeduplicatesOnlyWithStableTurnID(t *testing.T) {
 	if len(usage.Samples) != 2 || usage.Coverage != tracecontract.UsageCoverageComplete || !hasWarning(usage.Warnings, "usage_duplicate_event") {
 		t.Errorf("duplicate handling = %+v", usage)
 	}
-	requireMetrics(t, usage.Samples[0], i64(10), i64(2), i64(0), nil)
+	requireMetrics(t, usage.Samples[0], new(int64(10)), new(int64(2)), new(int64(0)), nil)
 	if usage.Samples[0].TurnID != digest("turn", "t1") {
 		t.Errorf("turn digest = %q", usage.Samples[0].TurnID)
 	}
@@ -190,7 +187,7 @@ func TestHostUsageCodexDeduplicatesOnlyWithStableTurnID(t *testing.T) {
 	if len(usage.Samples) != 1 || usage.Coverage != tracecontract.UsageCoveragePartial || !hasWarning(usage.Warnings, "usage_conflicting_duplicate") {
 		t.Errorf("conflicting duplicate = %+v", usage)
 	}
-	requireMetrics(t, usage.Samples[0], i64(10), i64(2), i64(0), nil)
+	requireMetrics(t, usage.Samples[0], new(int64(10)), new(int64(2)), new(int64(0)), nil)
 }
 
 func TestHostUsageCodexFailedAndUsagelessTurnsDowngradeCoverage(t *testing.T) {
@@ -218,7 +215,7 @@ func TestHostUsageOmoMessageEndIsFinalAuthority(t *testing.T) {
 		t.Fatalf("usage = %+v incomplete=%v", usage, input.Incomplete)
 	}
 	sample := usage.Samples[0]
-	requireMetrics(t, sample, i64(120), i64(30), i64(0), i64(7))
+	requireMetrics(t, sample, new(int64(120)), new(int64(30)), new(int64(0)), new(int64(7)))
 	if sample.Host != "omo" || sample.Provider != "prov-a" || sample.Model != "model-a" || sample.Temporality != tracecontract.UsageTemporalityDelta || sample.Finality != tracecontract.UsageFinalityFinal {
 		t.Errorf("sample = %+v", sample)
 	}
@@ -253,7 +250,7 @@ func TestHostUsageOmpCountsEachAssistantMessageEndOfAToolTurn(t *testing.T) {
 			t.Fatalf("unexpected sample %+v", sample)
 		}
 		delete(want, sample.MessageID)
-		requireMetrics(t, sample, new(expected.input), new(expected.output), i64(0), i64(0))
+		requireMetrics(t, sample, new(expected.input), new(expected.output), new(int64(0)), new(int64(0)))
 		if sample.Host != "omp" || sample.Provider != "anthropic" || sample.Model != "claude-haiku-4-5" || sample.SessionID != digest("session", "sess-omp-1") ||
 			sample.Finality != tracecontract.UsageFinalityFinal || sample.Temporality != tracecontract.UsageTemporalityDelta {
 			t.Errorf("sample = %+v", sample)
@@ -289,7 +286,7 @@ func TestHostUsageUnknownVersusMeasuredZero(t *testing.T) {
 	if len(usage.Samples) != 2 || usage.Coverage != tracecontract.UsageCoveragePartial {
 		t.Fatalf("usage = %+v", usage)
 	}
-	requireMetrics(t, usage.Samples[0], i64(5), i64(1), nil, nil)
+	requireMetrics(t, usage.Samples[0], new(int64(5)), new(int64(1)), nil, nil)
 	if usage.Samples[0].CostUSD != nil || usage.Samples[0].CostBasis != tracecontract.UsageCostBasisUnknown {
 		t.Errorf("absent cost must be unknown: %+v", usage.Samples[0])
 	}
@@ -313,9 +310,9 @@ func TestHostUsageMetricValidation(t *testing.T) {
 		{"string", `{"input":"12","output":1}`, nil, func(s tracecontract.UsageSample) *int64 { return s.InputTokens }},
 		{"null", `{"input":null,"output":1}`, nil, func(s tracecontract.UsageSample) *int64 { return s.InputTokens }},
 		{"overflow", `{"input":9223372036854775808,"output":1}`, nil, func(s tracecontract.UsageSample) *int64 { return s.InputTokens }},
-		{"beyond float precision", `{"input":9007199254740993,"output":1}`, i64(9007199254740993), func(s tracecontract.UsageSample) *int64 { return s.InputTokens }},
-		{"max int64", `{"input":9223372036854775807,"output":1}`, i64(9223372036854775807), func(s tracecontract.UsageSample) *int64 { return s.InputTokens }},
-		{"sibling survives", `{"input":-1,"output":7}`, i64(7), func(s tracecontract.UsageSample) *int64 { return s.OutputTokens }},
+		{"beyond float precision", `{"input":9007199254740993,"output":1}`, new(int64(9007199254740993)), func(s tracecontract.UsageSample) *int64 { return s.InputTokens }},
+		{"max int64", `{"input":9223372036854775807,"output":1}`, new(int64(9223372036854775807)), func(s tracecontract.UsageSample) *int64 { return s.InputTokens }},
+		{"sibling survives", `{"input":-1,"output":7}`, new(int64(7)), func(s tracecontract.UsageSample) *int64 { return s.OutputTokens }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

@@ -77,6 +77,7 @@ footer; older notes also live in `archive/cautions-incidents.md`.
 
 | Date | Lesson |
 |---|---|
+| 2026-10-15 | [Linux에서 병렬 테스트가 방금 쓴 스크립트를 exec하면 text file busy(ETXTBSY)로 확률적으로 실패하고 macOS에서는 재현되지 않는다](cautions/2026-10-15-linux-exec-text-file-busy.md) |
 | 2026-10-14 | [`execution complete`는 봉인하는 head가 검증받은 변경 집합인지 보지 않으므로, 보고서를 쓰기 전에 `_stale`·PR 뒤 코드 커밋을 확인한다](cautions/2026-10-14-completion-does-not-check-the-head-was-verified.md) |
 | 2026-10-13 | [변이 대응 테스트는 호출자 경계와 호출자가 만들 수 있는 입력만 써야 하고, gremlins v0.6.0은 `issueops/` 아래 변이를 NOT COVERED로 잘못 보고한다](cautions/2026-10-13-mutation-tests-must-stay-on-the-consumer-boundary.md) |
 | 2026-10-12 | [`bytes.Buffer`를 임베딩한 상한 writer는 `ReadFrom`으로 상한을 우회하고, map 리터럴 순회 검증은 오류 필드가 실행마다 바뀐다](cautions/2026-10-12-bounded-writers-and-map-ordered-messages.md) |

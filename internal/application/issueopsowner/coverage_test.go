@@ -46,12 +46,17 @@ func (f *promptFailFiles) Write(root, path string, data []byte) error {
 	return f.ownerFiles.Write(root, path, data)
 }
 
-func requiredPlanError(t *testing.T, err error) *domain.OwnerPlanRequiredError {
+func requirePlanRequired(t *testing.T, err error) {
 	t.Helper()
-	required, ok := errors.AsType[*domain.OwnerPlanRequiredError](err)
-	if !ok {
+	if _, ok := errors.AsType[*domain.OwnerPlanRequiredError](err); !ok {
 		t.Fatalf("want OwnerPlanRequiredError, got %T %v", err, err)
 	}
+}
+
+func requiredPlanError(t *testing.T, err error) *domain.OwnerPlanRequiredError {
+	t.Helper()
+	requirePlanRequired(t, err)
+	required, _ := errors.AsType[*domain.OwnerPlanRequiredError](err)
 	return required
 }
 
@@ -144,7 +149,7 @@ func TestRequirePlanRejectsUnreadableLinkedPlan(t *testing.T) {
 	s, _, r, _, _, _ := ownerFixture(t)
 	r.PlanPath = "/wt/plan.md"
 	_, err := s.RequirePlan(r)
-	requiredPlanError(t, err)
+	requirePlanRequired(t, err)
 }
 
 func TestRequirePlanReturnsLinkedIdentityWhenDigestsAgree(t *testing.T) {
@@ -163,7 +168,7 @@ func TestMaterializePlanRejectsManifestDigestForDifferentPlan(t *testing.T) {
 	if _, _, err := s.MaterializePlan(r); err == nil {
 		t.Fatal("manifest plan digest differing from staged plan must be rejected")
 	} else {
-		requiredPlanError(t, err)
+		requirePlanRequired(t, err)
 	}
 }
 
@@ -171,7 +176,7 @@ func TestMaterializePlanRejectsManifestWithoutPlanEntry(t *testing.T) {
 	s, f, r, _, _, _ := ownerFixture(t)
 	s.Files = &materializeFiles{ownerFiles: f, manifest: map[string]string{}}
 	_, _, err := s.MaterializePlan(r)
-	requiredPlanError(t, err)
+	requirePlanRequired(t, err)
 }
 
 func TestMaterializePlanPropagatesMaterializeFailure(t *testing.T) {
@@ -188,7 +193,7 @@ func TestMaterializePlanRejectsWhenSealedPlanCannotBeLinkedBack(t *testing.T) {
 	// Materialize reports the right digest but never makes the plan linkable.
 	s.Files = &materializeFiles{ownerFiles: f, manifest: map[string]string{"plan": digest([]byte(f.plan))}}
 	_, _, err := s.MaterializePlan(r)
-	requiredPlanError(t, err)
+	requirePlanRequired(t, err)
 }
 
 func TestMaterializePlanKeepsAlreadyLinkedPlanIdentity(t *testing.T) {
@@ -227,7 +232,7 @@ func TestResealRequiresLinkedPlanPath(t *testing.T) {
 	r = orcaRecord(t, f, r)
 	r.PlanPath = "  "
 	_, err := s.Reseal(t.Context(), r)
-	requiredPlanError(t, err)
+	requirePlanRequired(t, err)
 	if len(f.events) != 0 {
 		t.Fatalf("plan path check must precede any file access: %v", f.events)
 	}
@@ -238,7 +243,7 @@ func TestResealPropagatesPlanPreflightFailure(t *testing.T) {
 	r = orcaRecord(t, f, r)
 	f.plan = ""
 	_, err := s.Reseal(t.Context(), r)
-	requiredPlanError(t, err)
+	requirePlanRequired(t, err)
 }
 
 func TestResealFailsWithoutRemoteIssueReader(t *testing.T) {
@@ -270,7 +275,7 @@ func TestResealRejectsMaterializedPlanAtDifferentPath(t *testing.T) {
 	r.PlanPath = "/elsewhere/plan.md"
 	f.linked.Path = "/wt/plan.md"
 	_, err := s.Reseal(t.Context(), r)
-	requiredPlanError(t, err)
+	requirePlanRequired(t, err)
 	if len(f.writes) != 0 {
 		t.Fatal("no artifacts may be written for a mismatched plan path")
 	}

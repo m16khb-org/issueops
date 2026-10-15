@@ -20,7 +20,7 @@ func TestHostUsageRedactsSecretsInMetadataLabels(t *testing.T) {
 	if len(usage.Samples) != 1 {
 		t.Fatalf("samples=%d", len(usage.Samples))
 	}
-	requireMetrics(t, usage.Samples[0], i64(1), i64(2), nil, nil)
+	requireMetrics(t, usage.Samples[0], new(int64(1)), new(int64(2)), nil, nil)
 	data, err := json.Marshal(usage)
 	if err != nil {
 		t.Fatal(err)
