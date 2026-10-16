@@ -119,7 +119,11 @@ func TestPublishFailuresLeaveNoRecord(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer instance.Release()
+			defer func() {
+				if err := instance.Release(); err != nil {
+					t.Errorf("Release: %v", err)
+				}
+			}()
 			inspect := func(int) (processidentity.Identity, error) {
 				if tc.inspectErr {
 					return processidentity.Identity{}, os.ErrPermission
