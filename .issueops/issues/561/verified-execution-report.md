@@ -102,6 +102,20 @@ intent 문서의 해당 문구는 원문 요청의 해석이라 고치지 않았
 - draft PR: https://github.com/m16khb-org/issueops/pull/562 (base `main`, head `561-korean-label-score`, label `bug`, assignee `m16khb`, `Closes #561`)
 - 라벨 점수가 선택한 라벨이 없어(본문이 결함·기능·문서 어휘를 함께 설명) 연결된 이슈의 라벨 `bug`를 수동 override로 복사했고, 판단은 record의 decision에 남겼다.
 
+## base 동기화 뒤 재검증(generation 3)
+
+PR #562의 첫 CI는 옛 main(`bac123aa`)의 golangci-lint 부채 90건 때문에 Lint에서 멈췄다. 그 부채는 #563(PR #564)으로 main에서 고쳐졌고,
+메인 세션이 main(`a2f7dccb`)을 브랜치에 머지(`e2ce2d68`)한 뒤 완료된 generation 2를 보관하고 generation 3으로 reseed했다.
+#561 소유 파일 13개는 머지가 바꾸지 않았다(`git diff a2f7dccb HEAD`가 #561 파일만 가리킨다).
+
+| 명령 | 결과 |
+|---|---|
+| `go test ./internal/domain/issueopsremote/ ./cmd/issueops/issueopscli/remotecmd/ ./cmd/issueops/issueopscli/ ./internal/architecture/ -count=1` | PASS |
+| `python3 scripts/autoresearch/label_score_eval.py --binary bin/issueops --min-number 232 --max-number 560 --check` | 선택 56, 정답 54(96.43%), PASS |
+| `self-verify --base-ref bac123aa…` 첫 실행(사용자 홈 그대로) | 25 step 중 24 통과. `native integration`이 `~/.omo/agent/skills/*` 부재로 실패했다. 이번 변경과 무관하게 사용자 홈의 Omo 설치가 사라진 환경 변화다 |
+| 같은 `self-verify`를 CI와 같은 임시 HOME 설치(`install-native.sh --skip-build --path-mode=skip --mcp-transport=stdio`) 뒤 실행 | 27 step 중 27 통과, 최소 goal score 100 |
+| CI(`e2ce2d68`) push run과 pull_request run | 둘 다 success. Format, Vet, Lint(golangci-lint v2), Build, Race test, self-verify 단계 모두 success |
+
 ## 검증
 
 | 요구한 문서 경로 | 그 문서의 해당 문장 인용 | 명령 | 결과 또는 Not Run 사유 |
