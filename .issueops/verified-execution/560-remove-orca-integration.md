@@ -102,6 +102,8 @@ hot path가 아니다. 측정값은 아래와 같다.
 
 게이트 원장 `.issueops/issues/560/gates.md`의 EVIDENCE가 마지막 전체 실행의 결과다. 구현 리뷰 지적을 고치려고 구현 단계로 돌아온 뒤의 재실행이라서 `gates check --write`로 원장에 기록했다. 원장은 이 사이클의 변경이 모두 끝난 뒤 `./bin/issueops`를 다시 빌드하고 한 번의 `gates check` 실행으로 13개 게이트를 처음부터 모두 돌렸다. G8의 self-verify가 `skills/slack-delegate`의 Python 테스트 때문에 `pydantic`을 요구하고 native integration이 `~/.omo`를 요구해, 임시 venv와 이전 `~/.omo`의 읽기 전용 심볼릭 링크를 담은 임시 HOME에서 실행했다. 두 환경은 저장소 파일을 바꾸지 않는다.
 
+#565가 새 main(`6f1ad90d`) 기준으로 다시 열렸다. 병합 뒤 head에서 원장을 처음부터 다시 돌렸고 13개가 모두 통과했다. 환경 메모: 이 기기의 기본 Go 빌드 캐시가 실행 중에 일부 파일을 잃어(`no such file or directory`) 임시 `GOCACHE`를 썼고, 임시 venv에 `typer`도 설치했다. 원장 G11은 새 main이 이미 갖고 있는 `.issueops/issues/561/plan.md`의 깨진 링크 한 건(`testing/unit-and-contract.md`, origin/main에서도 같은 결과)만 예외로 하도록 CHECK를 고쳤다. 그 파일은 과거 기록 문서라 이 사이클에서 건드리지 않는다.
+
 | 요구한 문서 경로 | 그 문서의 해당 문장 인용 | 명령 | 결과 |
 |---|---|---|---|
 | `.issueops/TESTING.md` | "Go 코드 변경의 기본 검증(`gofmt -l`, `go test -race ./...`, `go vet ./...`" | `gofmt -l` | 출력 없음 |
@@ -113,9 +115,10 @@ hot path가 아니다. 측정값은 아래와 같다.
 | `.issueops/testing/unit-and-contract.md` | "`GOTOOLCHAIN="go$(go list -m -f '{{.GoVersion}}')" golangci-lint run ./...`." | golangci-lint v2.12.2를 `GOTOOLCHAIN=go1.26.6`, 새 캐시로 darwin과 `GOOS=linux`에서 실행하고 base `bac123aa`와 같은 방법으로 비교 | base 90건(서로 다른 파일·메시지 쌍 17개), 변경 후 19건(7개), 중복 횟수까지 센 비교로 새 지적 0건. 변경 후의 지적은 모두 base에 있던 것이다. base의 CI Lint 단계는 이미 실패하는 상태다. 이 변경이 새로 만들 뻔한 테스트 helper `stageIssueOpsArtifact`의 unused 지적은 파일을 지워 없앴다. |
 | `.issueops/cautions/2026-10-06-removal-commits-leave-stale-help-text-orphan-fixtures-and-do.md` | "함수 단위는 golang.org/x/tools/cmd/deadcode ./cmd/...로" | `go run golang.org/x/tools/cmd/deadcode@latest ./cmd/...` | 출력 0줄(기준선 0줄) |
 | 게이트 원장 | G1~G12와 G7a | `issueops gates check --file .issueops/issues/560/gates.md --write` | 13개 모두 met |
-| 스킬 | `issueops-verify` 4절 | `issueops execution sync-base --preview` | `merge_needed: false`, 충돌 없음, base `bac123aa`와 작업 브랜치가 같다 |
+| 스킬 | `issueops-verify` 4절 | `issueops execution sync-base --preview`(새 main `6f1ad90d`) | `merge_needed: true`, 충돌 11개(삭제한 orca·resume·reconcile·owner 테스트 10개와 `handoff_delivery_wiring_test.go`). 삭제 쪽을 택하고 `handoff_delivery_wiring_test.go`는 이 변경의 Orca 제거 판본을 유지했다. 이 파일에서 #564가 한 lint 수정(`//go:fix inline` helper 인라인)은 이미 Orca 제거 판본에 해당 helper가 없어 따로 옮길 것이 없었다. finalize 뒤 `go build ./...`와 `go vet ./...` 통과 |
+| `.issueops/testing/unit-and-contract.md` | 같은 문장 | 병합한 head에서 golangci-lint v2.12.2를 `GOTOOLCHAIN=go1.26.6`, 새 캐시로 `GOOS=linux`와 darwin에서 실행 | 둘 다 `0 issues.`(main의 lint 부채 #564가 병합에 들어왔다) |
 
 - 병렬 실행 이득: 구현 리뷰 서브에이전트를 게이트 실행과 동시에 돌리지 않았다. 리뷰 1라운드 지적이 문서와 코드 정리로 이어져 게이트를 한 번 더 돌려야 했고, 그래서 `parallel_speed`로 절약한 시간은 없다.
-- 구현 리뷰: 1라운드 `revise`(필수 결함 3건 해소), 2라운드 `revise`(필수 결함 1건 해소), 3라운드 `revise`(필수 결함 1건 해소), 4라운드 `pass`. 이후 report 문구만 고쳤고(lint 건수 표기, 리뷰 이력) 5라운드 delta 리뷰로 그 문구 변경만 다시 확인했다. 마지막 판정은 `issueops status`의 `implementation_review`에 기록한다.
+- 구현 리뷰: 1라운드 `revise`(필수 결함 3건 해소), 2라운드 `revise`(필수 결함 1건 해소), 3라운드 `revise`(필수 결함 1건 해소), 4라운드 `pass`. 이후 report 문구만 고쳤고(lint 건수 표기, 리뷰 이력) 5라운드 delta 리뷰로 그 문구 변경만 다시 확인했다. 병합 뒤에는 충돌 해소(삭제와 이 변경 판본 유지)와 새 main 반영만 있어 구현 리뷰를 새 head에서 다시 받는다. 마지막 판정은 `issueops status`의 `implementation_review`에 기록한다.
 - self-verify 범위: base와 HEAD가 같은 커밋(`bac123aa`)이라 `--base-ref`를 주든 안 주든 검사 범위가 같다.
 - Not Run: `issueops api-doc check`(endpoint·DTO·OpenAPI 변경이 없고, 바뀐 것은 CLI·MCP 계약뿐이라 contract golden과 conformance baseline 테스트가 대신한다), 화면 QA(`review.frontend` false), 스키마 실측(변경 집합에 마이그레이션·SQL 파일 없음).
