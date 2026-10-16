@@ -129,28 +129,6 @@ func TestBuildCleanupStatusPRPhaseSatisfiesPRRequirement(t *testing.T) {
 	}
 }
 
-func TestValidateGitLabExecutionSnapshotBodyLimitIsInclusive(t *testing.T) {
-	const url = "https://gitlab.com/group/project/-/issues/1"
-	if err := ValidateGitLabExecutionSnapshot(url, url, strings.Repeat("a", executionIssueSnapshotBodyLimit), "opened"); err != nil {
-		t.Fatalf("body at limit: %v", err)
-	}
-}
-
-func TestSameGitLabExecutionIssueIdentityRejectsControlCharactersInProjectSegments(t *testing.T) {
-	const ok = "https://gitlab.com/group/project/-/issues/1"
-	if !SameGitLabExecutionIssueIdentity(ok, ok) {
-		t.Fatal("canonical URL must match itself")
-	}
-	for _, bad := range []string{
-		"https://gitlab.com/%00group/project/-/issues/1",
-		"https://gitlab.com/group/pro%00ject/-/issues/1",
-	} {
-		if SameGitLabExecutionIssueIdentity(bad, bad) {
-			t.Errorf("%q accepted", bad)
-		}
-	}
-}
-
 func TestExecutionReadinessMissingRequiresActiveLeaseWithHolder(t *testing.T) {
 	exec := covExecDirect()
 	record := model.IssueOpsRecord{Execution: &exec}
@@ -168,18 +146,6 @@ func TestExecutionReadinessMissingRequiresActiveLeaseWithHolder(t *testing.T) {
 	record.Execution = &released
 	if got := ExecutionReadinessMissing(record, true); !slices.Contains(got, "execution_write_lease") {
 		t.Fatalf("released lease with holder: %v", got)
-	}
-}
-
-func TestValidateExecutionOrcaBindingBoundaries(t *testing.T) {
-	e := covExecOrca()
-	e.Orca.LeaseGeneration = e.Lease.Generation
-	if err := ValidateExecution(e); err != nil {
-		t.Fatalf("binding generation equal to lease generation: %v", err)
-	}
-	e.Orca.LeaseGeneration = e.Lease.Generation + 1
-	if err := ValidateExecution(e); err == nil || !strings.Contains(err.Error(), "exceeds the lease generation") {
-		t.Fatalf("binding generation above lease generation: %v", err)
 	}
 }
 
@@ -216,25 +182,6 @@ func TestRenderSectionCompletionBudgetIsInclusive(t *testing.T) {
 	}
 }
 
-func TestOwnerAcceptanceIDsReturnsEveryDistinctID(t *testing.T) {
-	got := OwnerAcceptanceIDs("AC-01 first, AC-02 second, AC-01 again")
-	if !slices.Equal(got, []string{"AC-01", "AC-02"}) {
-		t.Fatalf("ids=%v", got)
-	}
-}
-
-func TestOwnerVerificationCommandsRecognizesEachVerificationHeading(t *testing.T) {
-	for _, heading := range []string{"검증", "검증 명령", "Verification", "verification commands"} {
-		body := "## " + heading + "\n```\ngo test ./...\n```\n"
-		if got := OwnerVerificationCommands(body); !slices.Equal(got, []string{"go test ./..."}) {
-			t.Errorf("%q: %v", heading, got)
-		}
-	}
-	if got := OwnerVerificationCommands("## 개요\n```\ngo test ./...\n```\n"); len(got) != 0 {
-		t.Errorf("unrelated heading: %v", got)
-	}
-}
-
 func TestValidatePhaseProgressionAllowsStayingInPhase(t *testing.T) {
 	if err := ValidatePhaseProgression(model.IssueOpsPhasePR, model.IssueOpsPhasePR); err != nil {
 		t.Fatalf("same phase: %v", err)
@@ -252,17 +199,6 @@ func TestPRGitReadinessUpstreamSyncRequiresExactlyZeroZero(t *testing.T) {
 		if slices.Contains(missing, "upstream_synced") != wantMissing {
 			t.Errorf("counts=%q missing=%v", counts, missing)
 		}
-	}
-}
-
-func TestValidateReplacementRuntimeRolloverTreatsClaimableLeaseAsHolderless(t *testing.T) {
-	record := model.IssueOpsRecord{Execution: &model.Execution{
-		Mode: model.ExecutionModeOrca, Orca: &model.OrcaBinding{RuntimeID: "rt-old"},
-		Lease: model.WriteLease{Status: model.LeaseStatusClaimable},
-	}}
-	facts := ReplacementRuntimeFacts{RuntimeID: "rt-new", TaskStatus: "completed", DispatchStatus: "completed"}
-	if err := ValidateReplacementRuntimeRollover(record, "", facts); err != nil {
-		t.Fatalf("claimable holderless lease: %v", err)
 	}
 }
 

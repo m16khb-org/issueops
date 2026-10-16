@@ -63,123 +63,11 @@ func TestHasUnquotedControlOperator(t *testing.T) {
 	}
 }
 
-func TestHasActiveCommandSubstitution(t *testing.T) {
-	for _, command := range []string{
-		"orca terminal send --text `touch /tmp/x`",
-		`orca terminal send --text "$(touch /tmp/x)"`,
-		`rg "` + "`touch /tmp/x`" + `" .`,
-		`diff <(git status) <(gh pr create --title x)`,
-		`tool --input >(outside-command)`,
-	} {
-		if !HasActiveCommandSubstitution(command) {
-			t.Fatalf("active command substitution must be rejected: %q", command)
-		}
-	}
-	for _, command := range []string{
-		`orca terminal send --text 'literal $(not-run) and ` + "`not-run`" + `'`,
-		`orca terminal send --text \$(not-run)`,
-		"orca terminal send --text \\`not-run\\`",
-		`tool --input '<(literal)'`,
-		`tool --input "<(literal)"`,
-		`tool --input ">(literal)"`,
-		`tool --input \<(literal)`,
-	} {
-		if HasActiveCommandSubstitution(command) {
-			t.Fatalf("literal command-substitution data must remain allowed: %q", command)
-		}
-	}
-}
-
-func TestHasActiveOutputRedirect(t *testing.T) {
-	for _, command := range []string{
-		"rg x > out", "git status >>out", "go test 1>out", "pwd 2>out", "orca task-list 2>>out", "rg x &>out",
-	} {
-		if !HasActiveOutputRedirect(command) {
-			t.Fatalf("active output redirect must be detected: %q", command)
-		}
-	}
-	for _, command := range []string{
-		`finish --verification 'literal > evidence'`, `finish --verification "literal >> evidence"`, `rg '\> literal'`, `rg \>literal`,
-	} {
-		if HasActiveOutputRedirect(command) {
-			t.Fatalf("quoted or escaped redirect punctuation must remain data: %q", command)
-		}
-	}
-}
-
-func TestHasActiveParameterOrTildeExpansion(t *testing.T) {
-	for _, command := range []string{
-		`rm "$HOME/out"`, `touch ${TMPDIR}/x`, `echo $1`, `echo $?`, `touch ~/x`, `cd ~`,
-		`FOO=~/x command`, `FOO=:~/x command`, `FOO=one:~/x command`,
-		`env GIT_DIR=~/.git GIT_WORK_TREE=:~/repo git add .`,
-	} {
-		if !HasActiveParameterOrTildeExpansion(command) {
-			t.Fatalf("active parameter/tilde expansion must be detected: %q", command)
-		}
-	}
-	for _, command := range []string{
-		`touch '$HOME/literal'`, `touch \$HOME/literal`, `touch \~/literal`, `echo trailing$`,
-		`FOO="~/x" command`, `FOO=':~/x' command`, `--label=~/x`,
-	} {
-		if HasActiveParameterOrTildeExpansion(command) {
-			t.Fatalf("literal parameter/tilde text must remain data: %q", command)
-		}
-	}
-}
-
-func TestHasActivePathnameExpansion(t *testing.T) {
-	for _, command := range []string{
-		`touch {..,inside}/outside.txt`, `chmod {one..three}/target`,
-		`touch {..,"inside"}/outside.txt`, `touch {"..",inside}/outside.txt`,
-		`touch {1"."."3"}/outside.txt`, `touch ["a"]/outside.txt`,
-		`touch o*/pwned`, `rm file?.tmp`, `cp [ab].txt target/`,
-	} {
-		if !HasActivePathnameExpansion(command) {
-			t.Fatalf("active pathname expansion must be detected: %q", command)
-		}
-	}
-	for _, command := range []string{
-		`touch '{..,inside}/literal'`, `touch "o*/literal"`, `touch \{one,two\}`, `touch o\*/literal`,
-		`touch {one","two}`, `touch {one\,two}`,
-		`rg --glob '*.go' pattern`, `printf '%s' '[ab].txt'`,
-	} {
-		if HasActivePathnameExpansion(command) {
-			t.Fatalf("quoted or escaped pathname syntax must remain data: %q", command)
-		}
-	}
-}
-
 func TestSplitCommandTokensCanonicalizesUnquotedBackslashEscapes(t *testing.T) {
 	got := SplitCommandTokens(`\g\i\t push origin HEAD --message evidence\ value`)
 	want := []string{"git", "push", "origin", "HEAD", "--message", "evidence value"}
 	if !stringSlicesEqual(got, want) {
 		t.Fatalf("escaped shell argv = %#v, want %#v", got, want)
-	}
-}
-
-func TestHasActiveShellSpecialQuoting(t *testing.T) {
-	for _, command := range []string{`$'git' push origin HEAD`, `$"gh" pr merge 16`, `env $'orca' worktree rm --worktree id:wt-1`} {
-		if !HasActiveShellSpecialQuoting(command) {
-			t.Fatalf("active shell special quoting must be detected: %q", command)
-		}
-	}
-	for _, command := range []string{`printf '%s' '$'`, `printf '%s' '$"git"'`, `printf %s \$'literal'`} {
-		if HasActiveShellSpecialQuoting(command) {
-			t.Fatalf("literal special-quote syntax must remain data: %q", command)
-		}
-	}
-}
-
-func TestHasActiveZshEqualsExpansion(t *testing.T) {
-	for _, command := range []string{`=git push origin branch`, `tool --input =(print -r -- marker)`} {
-		if !HasActiveZshEqualsExpansion(command) {
-			t.Fatalf("active zsh equals expansion must be detected: %q", command)
-		}
-	}
-	for _, command := range []string{`printf '%s' '=git'`, `printf '%s' "=(literal)"`, `printf %s \=git`, `NAME=value ./scripts/test.sh`} {
-		if HasActiveZshEqualsExpansion(command) {
-			t.Fatalf("literal equals text or ordinary assignment must remain allowed: %q", command)
-		}
 	}
 }
 
@@ -222,101 +110,11 @@ func TestSplitCommandTokensKeepsTrailingBackslash(t *testing.T) {
 	}
 }
 
-func TestHasActiveShellSpecialQuotingQuoteBoundaries(t *testing.T) {
-	for command, want := range map[string]bool{
-		`echo 'a$"b'`:  false, // quoted dollar stays data after more than one quoted char
-		`echo "a$'b"`:  false,
-		`echo ''$`:     false, // trailing dollar after a quote is not special quoting
-		`echo $`:       false,
-		`echo 'a'$'b'`: true,
-	} {
-		if got := HasActiveShellSpecialQuoting(command); got != want {
-			t.Fatalf("HasActiveShellSpecialQuoting(%q) = %v, want %v", command, got, want)
-		}
-	}
-}
-
-func TestHasActiveZshEqualsExpansionBoundaries(t *testing.T) {
-	for command, want := range map[string]bool{
-		`'\' =git`:   true,  // backslash is literal inside single quotes
-		`'a' =git`:   true,  // a closed quote does not hide the next word start
-		`echo =`:     false, // a trailing equals has nothing to expand
-		`'a =git'`:   false,
-		`"a =git"`:   false,
-		`echo \=git`: false,
-	} {
-		if got := HasActiveZshEqualsExpansion(command); got != want {
-			t.Fatalf("HasActiveZshEqualsExpansion(%q) = %v, want %v", command, got, want)
-		}
-	}
-}
-
 func TestHasUnquotedControlOperatorSingleQuotedBackslash(t *testing.T) {
 	if !HasUnquotedControlOperator(`echo '\'; ls`) {
 		t.Fatal("backslash is literal in single quotes, so the following semicolon is active")
 	}
 	if HasUnquotedControlOperator(`echo "\"; ls"`) {
 		t.Fatal("escaped double quote must keep the semicolon quoted")
-	}
-}
-
-func TestHasActiveParameterOrTildeExpansionQuoting(t *testing.T) {
-	for command, want := range map[string]bool{
-		`echo "a ~/x"`:   false, // blank inside double quotes does not start a word
-		`echo "a" ~/x`:   true,
-		`echo "a" $HOME`: true,
-	} {
-		if got := HasActiveParameterOrTildeExpansion(command); got != want {
-			t.Fatalf("HasActiveParameterOrTildeExpansion(%q) = %v, want %v", command, got, want)
-		}
-	}
-}
-
-func TestHasActiveParameterOrTildeExpansionAssignmentNames(t *testing.T) {
-	for _, name := range []string{"_", "a", "z", "m", "A", "Z", "M", "_a", "Aa", "Az", "Am", "AA", "AZ", "AM", "A0", "A5", "A9", "A_"} {
-		if !HasActiveParameterOrTildeExpansion(name + "=~/x") {
-			t.Fatalf("assignment %q must keep tilde expansion active", name)
-		}
-	}
-	for _, name := range []string{"0", "5", "9", "0A", "`", "{", "@", "[", "-", "A/", "A:", "A`", "A{", "A@", "A[", "A-"} {
-		if HasActiveParameterOrTildeExpansion(name + "=~/x") {
-			t.Fatalf("%q is not an assignment name; tilde must stay data", name)
-		}
-	}
-	if HasActiveParameterOrTildeExpansion(`=~/x`) {
-		t.Fatal("an empty assignment name must not enable tilde expansion")
-	}
-}
-
-func TestHasActiveParameterOrTildeExpansionParameterStarts(t *testing.T) {
-	for _, next := range []string{"{", "(", "_", "a", "m", "z", "A", "M", "Z", "0", "5", "9", "*", "@", "#", "?", "-", "$", "!"} {
-		if !HasActiveParameterOrTildeExpansion("echo $" + next) {
-			t.Fatalf("$%s must be a parameter expansion", next)
-		}
-	}
-	for _, next := range []string{"/", ":", "[", "`", ".", " ", "="} {
-		if HasActiveParameterOrTildeExpansion("echo $" + next) {
-			t.Fatalf("$%s must not be a parameter expansion", next)
-		}
-	}
-}
-
-func TestHasActivePathnameExpansionDelimiters(t *testing.T) {
-	for command, want := range map[string]bool{
-		`ls [abc`:     false, // unterminated bracket
-		`ls []`:       false, // empty bracket expression
-		`ls ['\']`:    true,  // backslash is literal inside single quotes
-		`ls {abc`:     false, // unterminated brace
-		`ls {a.b}`:    false, // a single dot is not a range delimiter
-		`ls {..}`:     true,
-		`ls {a..b}`:   true,
-		`ls {a,b}`:    true,
-		`ls {ab}`:     false,
-		`ls {a b}`:    false,
-		`ls {a'..'b}`: true,
-	} {
-		if got := HasActivePathnameExpansion(command); got != want {
-			t.Fatalf("HasActivePathnameExpansion(%q) = %v, want %v", command, got, want)
-		}
 	}
 }

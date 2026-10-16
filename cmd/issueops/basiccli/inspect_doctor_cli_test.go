@@ -159,15 +159,13 @@ func TestRunDoctorOperationalPreserveFlagsAreRepeatableAndInvocationScoped(t *te
 			{ID: "io-a", Repo: root, Branch: "main", Phase: "plan"},
 			{ID: "io-z", Repo: root, Branch: "main", Phase: "plan"},
 		}
-		snapshot.Terminals = []operationalhealthcontract.OrcaTerminal{{Handle: "term-a"}, {Handle: "term-z"}}
 		return snapshot
 	})
 
 	out := captureStatusVerifyStdout(t, func() error {
 		return testRunDoctor([]string{
-			"--repo", repo, "--sealed",
+			"--repo", repo,
 			"--preserve-cycle", " io-z ", "--preserve-cycle", "io-a", "--preserve-cycle", "io-a",
-			"--preserve-terminal", " term-z ", "--preserve-terminal", "term-a", "--preserve-terminal", "term-a",
 			"--json",
 		})
 	})
@@ -180,37 +178,26 @@ func TestRunDoctorOperationalPreserveFlagsAreRepeatableAndInvocationScoped(t *te
 		t.Fatalf("repeatable invocation preserves were not applied exactly: check=%#v issues=%#v", check, result.Issues)
 	}
 
+	missingPreserve := captureStatusVerifyStdout(t, func() error {
+		return testRunDoctor([]string{"--repo", repo, "--preserve-cycle", "io-missing", "--json"})
+	})
+	if err := json.Unmarshal([]byte(missingPreserve), &result); err != nil {
+		t.Fatalf("decode missing-preserve doctor json: %v\n%s", err, missingPreserve)
+	}
+	check, ok = doctorResultCheck(result, "operational_state")
+	if !ok || check.Healthy {
+		t.Fatalf("preserve of a missing cycle must be reported: check=%#v issues=%#v", check, result.Issues)
+	}
+
 	withoutPreserve := captureStatusVerifyStdout(t, func() error {
-		return testRunDoctor([]string{"--repo", repo, "--sealed", "--json"})
+		return testRunDoctor([]string{"--repo", repo, "--json"})
 	})
 	if err := json.Unmarshal([]byte(withoutPreserve), &result); err != nil {
 		t.Fatalf("decode unpreserved doctor json: %v\n%s", err, withoutPreserve)
 	}
 	check, ok = doctorResultCheck(result, "operational_state")
-	if !ok || check.Healthy {
-		t.Fatalf("preserve flags leaked beyond one invocation: check=%#v issues=%#v", check, result.Issues)
-	}
-}
-
-func TestRunDoctorDefaultsToInteractiveProfileForUserTerminals(t *testing.T) {
-	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	repo := t.TempDir()
-	configureOperationalCollectorTest(t, func(_ context.Context, root string) operationalhealth.Snapshot {
-		snapshot := healthyCLIOperationalSnapshot(root)
-		snapshot.Terminals = []operationalhealthcontract.OrcaTerminal{{Handle: "term_user_tab"}}
-		snapshot.Messages = operationalhealthcontract.MessagePresence{Count: 5}
-		return snapshot
-	})
-	out := captureStatusVerifyStdout(t, func() error {
-		return testRunDoctor([]string{"--repo", repo, "--json"})
-	})
-	var result doctor.HarnessDoctorResult
-	if err := json.Unmarshal([]byte(out), &result); err != nil {
-		t.Fatalf("decode doctor json: %v\n%s", err, out)
-	}
-	check, ok := doctorResultCheck(result, "operational_state")
 	if !ok || !check.Healthy {
-		t.Fatalf("default doctor must not flag user terminals or message history: check=%#v issues=%#v", check, result.Issues)
+		t.Fatalf("preserve flags leaked beyond one invocation: check=%#v issues=%#v", check, result.Issues)
 	}
 }
 
@@ -219,27 +206,27 @@ func TestRunDoctorPreserveValuesNormalizeAndRejectBlank(t *testing.T) {
 	if err != nil || !slices.Equal(got, []string{"io-a", "io-z"}) {
 		t.Fatalf("normalized preserves = %#v, err=%v", got, err)
 	}
-	if _, err := normalizeDoctorPreserve([]string{" "}, "--preserve-terminal"); err == nil {
+	if _, err := normalizeDoctorPreserve([]string{" "}, "--preserve-cycle"); err == nil {
 		t.Fatal("blank preserve value was accepted")
 	}
 
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := t.TempDir()
-	collectorCalls := 0
+	collectorInvocations := 0
 	configureOperationalCollectorTest(t, func(_ context.Context, root string) operationalhealth.Snapshot {
-		collectorCalls++
+		collectorInvocations++
 		return healthyCLIOperationalSnapshot(root)
 	})
 	for _, args := range [][]string{
 		{"--repo", repo, "--preserve-cycle", " "},
-		{"--repo", repo, "--preserve-terminal="},
+		{"--repo", repo, "--preserve-cycle="},
 	} {
 		if err := testRunDoctor(args); err == nil {
 			t.Fatalf("blank preserve args were accepted: %#v", args)
 		}
 	}
-	if collectorCalls != 0 {
-		t.Fatalf("collector ran after invalid preserve input: calls=%d", collectorCalls)
+	if collectorInvocations != 0 {
+		t.Fatalf("collector ran after invalid preserve input: calls=%d", collectorInvocations)
 	}
 }
 
@@ -248,7 +235,7 @@ func TestRunDoctorOperationalInventoryFailureHasJSONTextParity(t *testing.T) {
 	repo := t.TempDir()
 	configureOperationalCollectorTest(t, func(_ context.Context, root string) operationalhealth.Snapshot {
 		snapshot := healthyCLIOperationalSnapshot(root)
-		snapshot.InventoryProblems = []operationalhealthcontract.InventoryProblem{{Source: "orca_tasks", Code: "orca_tasks_failed", Detail: "task inventory failed"}}
+		snapshot.InventoryProblems = []operationalhealthcontract.InventoryProblem{{Source: "git_worktrees", Code: "git_worktrees_failed", Detail: "worktree inventory failed"}}
 		return snapshot
 	})
 
@@ -277,9 +264,28 @@ func TestRunDoctorOperationalHelpListsPreserveFlags(t *testing.T) {
 	if !errors.Is(err, flag.ErrHelp) {
 		t.Fatalf("doctor help error = %v, want flag.ErrHelp", err)
 	}
-	for _, flagName := range []string{"--preserve-cycle", "--preserve-terminal"} {
+	for _, flagName := range []string{"--preserve-cycle"} {
 		if !strings.Contains(out, flagName) {
 			t.Fatalf("doctor help missing %s:\n%s", flagName, out)
+		}
+	}
+}
+
+func TestRunDoctorRejectsRemovedFlags(t *testing.T) {
+	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
+	repo := t.TempDir()
+	for _, removed := range []struct{ flag, value string }{{"sealed", ""}, {"preserve-terminal", "term-a"}} {
+		args := []string{"--repo", repo, "--" + removed.flag}
+		if removed.value != "" {
+			args = append(args, removed.value)
+		}
+		var err error
+		_, _ = testsupport.CaptureStderrAndError(t, func() error {
+			err = testRunDoctor(args)
+			return err
+		})
+		if err == nil || !strings.Contains(err.Error(), "flag provided but not defined") {
+			t.Fatalf("doctor %v error = %v, want flag provided but not defined", args, err)
 		}
 	}
 }

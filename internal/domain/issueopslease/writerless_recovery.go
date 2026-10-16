@@ -5,20 +5,14 @@ type WriterlessRecoveryAction string
 const (
 	RecoveryNone            WriterlessRecoveryAction = ""
 	RecoveryReplacePreview  WriterlessRecoveryAction = "replace_preview"
-	RecoveryResume          WriterlessRecoveryAction = "resume"
-	RecoveryDirectClaim     WriterlessRecoveryAction = "direct_claim"
+	RecoveryClaim           WriterlessRecoveryAction = "claim"
 	RecoveryFinalizePreview WriterlessRecoveryAction = "finalize_preview"
 )
 
-func DecideWriterlessRecovery(status, mode string) WriterlessRecoveryAction {
+func DecideWriterlessRecovery(status string) WriterlessRecoveryAction {
 	switch status {
 	case "claimable":
-		switch mode {
-		case "orca":
-			return RecoveryResume
-		case "direct":
-			return RecoveryDirectClaim
-		}
+		return RecoveryClaim
 	case "released":
 		return RecoveryReplacePreview
 	case "revoking":

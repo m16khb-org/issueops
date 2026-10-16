@@ -5,25 +5,6 @@ package issueopslease
 // field가 여기서 빠지면 Encode가 그 field를 버리므로,
 // TestLeaseExecutionShapeCoversEveryPersistedExecutionField가 두 shape를 대조한다.
 
-type OrcaBinding struct {
-	RuntimeID               string `json:"runtime_id"`
-	RepoID                  string `json:"repo_id"`
-	WorktreeID              string `json:"worktree_id"`
-	RunID                   string `json:"run_id,omitempty"`
-	WorktreeInstanceID      string `json:"worktree_instance_id,omitempty"`
-	LeaseGeneration         uint64 `json:"lease_generation,omitempty"`
-	ArtifactIdentityVersion uint64 `json:"artifact_identity_version,omitempty"`
-	IssueBodySHA256         string `json:"issue_body_sha256,omitempty"`
-	ContextPacketSHA256     string `json:"context_packet_sha256,omitempty"`
-	OwnerPromptSHA256       string `json:"owner_prompt_sha256,omitempty"`
-	OwnerHost               string `json:"owner_host"`
-	OwnerModel              string `json:"owner_model"`
-	OwnerEffort             string `json:"owner_effort,omitempty"`
-	TaskID                  string `json:"task_id"`
-	DispatchID              string `json:"dispatch_id"`
-	TerminalPTYID           string `json:"terminal_pty_id,omitempty"`
-}
-
 type ExternalIntent struct {
 	OperationID string `json:"operation_id"`
 	Kind        string `json:"kind"`

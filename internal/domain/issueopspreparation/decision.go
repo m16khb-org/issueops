@@ -2,223 +2,45 @@
 package issueopspreparation
 
 import (
-	"crypto/sha256"
-	"errors"
-	"fmt"
-	"strconv"
-	"strings"
-	"unicode/utf8"
-
 	preparationcontract "issueops/internal/contract/issueopspreparation"
 )
 
 type Code string
 
 const (
-	CodePreviewDirect    Code = "preview_direct"
-	CodePreviewOrca      Code = "preview_orca"
-	CodeApplyDirect      Code = "apply_direct"
-	CodeApplyOrca        Code = "apply_orca"
+	CodePreview          Code = "preview"
+	CodeApply            Code = "apply"
 	CodeExisting         Code = "existing"
 	CodePendingReconcile Code = "pending_reconcile"
-	CodeModeMismatch     Code = "mode_mismatch"
 	CodeWriterless       Code = "writerless"
 )
-
-type OrcaReadiness struct {
-	Available bool
-	Ready     bool
-	Code      string
-	Provider  string
-	Issue     int
-}
 
 type DecisionInput struct {
 	Command  preparationcontract.Command
 	Snapshot preparationcontract.Snapshot
-	Orca     OrcaReadiness
 }
 
 type Decision struct {
-	Code                 Code
-	RequestedMode        string
-	ResolvedMode         string
-	FallbackCode         string
-	ProbeAttempted       bool
-	ProbeAvailable       bool
-	ProbeReady           bool
-	ProbeCode            string
-	ProbeProvider        string
-	ProbeIssue           int
-	ReadinessFingerprint string
-	ExplicitDirectReason string
+	Code Code
 }
 
-type DenialReason string
-
-const (
-	DenialInvalidMode                 DenialReason = "invalid_mode"
-	DenialOrcaUnavailable             DenialReason = "orca_unavailable"
-	DenialDirectReasonRequired        DenialReason = "direct_reason_required"
-	DenialInvalidDirectReason         DenialReason = "invalid_direct_reason"
-	DenialReadinessFingerprintChanged DenialReason = "readiness_fingerprint_changed"
-)
-
-type Denial struct {
-	Reason DenialReason
-	Code   string
-	Cause  error
-}
-
-func (denial *Denial) Error() string { return denial.Cause.Error() }
-func (denial *Denial) Unwrap() error { return denial.Cause }
-
-func (denial *Denial) IssueOpsErrorFields() map[string]any {
-	fields := map[string]any{"code": string(denial.Reason)}
-	if denial.Code != "" {
-		fields["probe_code"] = denial.Code
-	}
-	return fields
-}
-
-func Decide(input DecisionInput) (Decision, error) {
-	requested, err := NormalizeMode(input.Command.Mode)
-	if err != nil {
-		return Decision{}, &Denial{Reason: DenialInvalidMode, Cause: err}
-	}
-	decision := Decision{RequestedMode: requested}
-	if execution := input.Snapshot.Record.Execution; execution != nil {
-		decision.ResolvedMode = execution.Mode
-		decision.Code = existingExecutionCode(requested, input.Command.Confirm, execution.Pending != nil, execution.Mode, execution.Lease.Status)
-		return decision, nil
-	}
-	if requested == preparationcontract.ModeDirect {
-		reason, reasonErr := NormalizeDirectReason(input.Command.DirectReason)
-		if reasonErr != nil {
-			reasonKind := DenialInvalidDirectReason
-			if strings.TrimSpace(input.Command.DirectReason) == "" {
-				reasonKind = DenialDirectReasonRequired
-			}
-			return Decision{}, &Denial{Reason: reasonKind, Cause: reasonErr}
+// Decide는 prepare 요청이 새 workspace를 만들지(preview/apply), 이미 준비된
+// execution을 그대로 돌려줄지, 외부 intent나 writer 부재로 막을지 고른다.
+func Decide(input DecisionInput) Decision {
+	execution := input.Snapshot.Record.Execution
+	if execution == nil {
+		if input.Command.Confirm {
+			return Decision{Code: CodeApply}
 		}
-		decision.ResolvedMode = preparationcontract.ModeDirect
-		decision.ExplicitDirectReason = reason
-		decision.Code = preparationCode(input.Command.Confirm, false)
-		decision.ReadinessFingerprint = Fingerprint(decision, input.Command)
-		return decision, nil
+		return Decision{Code: CodePreview}
 	}
-	decision.recordProbe(input.Orca)
-	if decision.ProbeReady {
-		decision.ResolvedMode = preparationcontract.ModeOrca
-		decision.Code = preparationCode(input.Command.Confirm, true)
-		decision.ReadinessFingerprint = Fingerprint(decision, input.Command)
-		return decision, nil
-	}
-	code := strings.TrimSpace(input.Orca.Code)
-	if code == "" {
-		code = "orca_probe_failed"
-	}
-	if requested == preparationcontract.ModeAuto {
-		decision.ResolvedMode = preparationcontract.ModeDirect
-		decision.FallbackCode = code
-		decision.ProbeCode = code
-		decision.Code = preparationCode(input.Command.Confirm, false)
-		decision.ReadinessFingerprint = Fingerprint(decision, input.Command)
-		return decision, nil
-	}
-	message := "Orca probe failed: " + code
-	if code == "orca_adapter_unavailable" {
-		message = "Orca provisioner is unavailable"
-	}
-	return decision, &Denial{Reason: DenialOrcaUnavailable, Code: code, Cause: errors.New(message)}
-}
-
-// existingExecutionCode는 이미 execution이 있는 레코드의 결정 코드를 고른다.
-func existingExecutionCode(requested string, confirm, pending bool, mode, leaseStatus string) Code {
 	switch {
-	case pending:
-		return CodePendingReconcile
-	case requested != preparationcontract.ModeAuto && requested != mode:
-		return CodeModeMismatch
-	case confirm && writerless(leaseStatus):
-		return CodeWriterless
+	case execution.Pending != nil:
+		return Decision{Code: CodePendingReconcile}
+	case input.Command.Confirm && writerless(execution.Lease.Status):
+		return Decision{Code: CodeWriterless}
 	default:
-		return CodeExisting
-	}
-}
-
-// recordProbe는 Orca 준비 상태 관측값을 결정에 기록한다.
-func (decision *Decision) recordProbe(orca OrcaReadiness) {
-	decision.ProbeAttempted = true
-	decision.ProbeAvailable = orca.Available
-	decision.ProbeReady = orca.Available && orca.Ready
-	decision.ProbeCode = strings.TrimSpace(orca.Code)
-	decision.ProbeProvider = strings.ToLower(strings.TrimSpace(orca.Provider))
-	decision.ProbeIssue = orca.Issue
-	if decision.ProbeReady && decision.ProbeCode == "" {
-		decision.ProbeCode = "ready"
-	}
-}
-
-func NormalizeDirectReason(reason string) (string, error) {
-	normalized := strings.TrimSpace(reason)
-	if normalized == "" {
-		return "", fmt.Errorf("explicit direct mode requires a reason")
-	}
-	if !utf8.ValidString(normalized) || len([]byte(normalized)) > 512 {
-		return "", fmt.Errorf("explicit direct reason must be valid UTF-8 and at most 512 bytes")
-	}
-	for _, value := range []byte(normalized) {
-		if value < 0x20 || value == 0x7f {
-			return "", fmt.Errorf("explicit direct reason must not contain ASCII control bytes")
-		}
-	}
-	return normalized, nil
-}
-
-func Fingerprint(decision Decision, command preparationcontract.Command) string {
-	values := []string{decision.RequestedMode, decision.ResolvedMode, strconv.FormatBool(decision.ProbeAttempted), strconv.FormatBool(decision.ProbeAvailable), strconv.FormatBool(decision.ProbeReady), decision.ProbeCode, decision.FallbackCode, decision.ExplicitDirectReason}
-	if decision.ProbeAttempted {
-		values = append(values, strings.ToLower(strings.TrimSpace(command.OwnerHost)), strings.TrimSpace(command.OwnerModel), strings.TrimSpace(command.OwnerEffort), decision.ProbeProvider, strconv.Itoa(decision.ProbeIssue))
-	}
-	var projection strings.Builder
-	for _, value := range values {
-		projection.WriteString(strconv.Itoa(len(value)))
-		projection.WriteByte(':')
-		projection.WriteString(value)
-		projection.WriteByte('|')
-	}
-	return fmt.Sprintf("%x", sha256.Sum256([]byte(projection.String())))
-}
-
-func ValidateSelectionReceipt(selection preparationcontract.Selection, command preparationcontract.Command, probe preparationcontract.ProbeRequest, mode string) error {
-	if selection.ResolvedMode != mode || selection.RequestedMode != command.Mode {
-		return fmt.Errorf("selection receipt does not match the chosen execution path")
-	}
-	decision := Decision{
-		RequestedMode: selection.RequestedMode, ResolvedMode: selection.ResolvedMode,
-		ProbeAttempted: selection.ProbeAttempted, ProbeAvailable: selection.ProbeAvailable,
-		ProbeReady: selection.ProbeReady, ProbeCode: selection.ProbeCode, FallbackCode: selection.FallbackCode,
-		ExplicitDirectReason: selection.ExplicitDirectReason,
-		ProbeProvider:        strings.ToLower(strings.TrimSpace(probe.Provider)), ProbeIssue: probe.Issue,
-	}
-	if expected := Fingerprint(decision, command); selection.ReadinessFingerprint != expected {
-		return fmt.Errorf("selection receipt readiness fingerprint changed before persistence")
-	}
-	if strings.TrimSpace(selection.SelectedAt) == "" {
-		return fmt.Errorf("selection receipt selected_at is required")
-	}
-	return nil
-}
-
-func NormalizeMode(mode string) (string, error) {
-	switch normalized := strings.ToLower(strings.TrimSpace(mode)); normalized {
-	case "", preparationcontract.ModeAuto:
-		return preparationcontract.ModeAuto, nil
-	case preparationcontract.ModeDirect, preparationcontract.ModeOrca:
-		return normalized, nil
-	default:
-		return "", fmt.Errorf("execution mode must be auto, direct, or orca")
+		return Decision{Code: CodeExisting}
 	}
 }
 
@@ -229,17 +51,4 @@ func writerless(status string) bool {
 	default:
 		return false
 	}
-}
-
-func preparationCode(confirm, orca bool) Code {
-	if confirm {
-		if orca {
-			return CodeApplyOrca
-		}
-		return CodeApplyDirect
-	}
-	if orca {
-		return CodePreviewOrca
-	}
-	return CodePreviewDirect
 }

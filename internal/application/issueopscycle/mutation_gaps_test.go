@@ -21,7 +21,7 @@ func (g *baseAdvancedGit) BaseAdvanced(_, ref string) bool {
 }
 
 func feedbackRecord() model.IssueOpsRecord {
-	return model.IssueOpsRecord{Repo: "/repo", Branch: "feature", Phase: model.IssueOpsPhaseFeedback, Execution: &model.Execution{Mode: model.ExecutionModeDirect}}
+	return model.IssueOpsRecord{Repo: "/repo", Branch: "feature", Phase: model.IssueOpsPhaseFeedback, Execution: &model.Execution{}}
 }
 
 func TestAISlopCleanReadinessReportsMissingImplementationChangesOnlyWithoutEvidence(t *testing.T) {
@@ -143,7 +143,6 @@ func TestObservedPRProbesPlanAndWorktreeOnlyWhenRecordNamesThem(t *testing.T) {
 }
 
 func implementReadyRecord() model.IssueOpsRecord {
-	sha := strings.Repeat("f", 64)
 	holder := model.NativeActor{Host: "codex", SessionID: "session", SessionProcess: &model.NativeProcessReceipt{PID: 42, StartedAt: "start", Executable: "/bin/codex"}}
 	return model.IssueOpsRecord{
 		ID: "io-1", Repo: "/repo", Branch: "feature", Phase: model.IssueOpsPhaseCompatibilityReview,
@@ -157,9 +156,7 @@ func implementReadyRecord() model.IssueOpsRecord {
 		CompatibilityReview:  &reviewcontract.CompatibilityReview{BackwardCompatibility: []string{"b"}, SideEffects: []string{"s"}, RollbackPlan: "r", Verification: []string{"v"}, Approved: true},
 		DevilsAdvocateReview: &model.IssueOpsDevilsAdvocateReview{Verdict: "proceed", RecordedAt: "2026-10-12T00:00:00Z", ReviewedPlanDigest: "digest"},
 		Execution: &model.Execution{
-			Mode:      model.ExecutionModeDirect,
-			Selection: &model.ExecutionSelection{RequestedMode: "direct", ResolvedMode: "direct", ExplicitDirectReason: "fixture", ReadinessFingerprint: sha, SelectedAt: "2026-10-12T00:00:00Z"},
-			Workspace: model.Workspace{SourceRoot: "/repo", Root: "/repo.worktrees/feature", Branch: "feature", BaseHead: "base", Driver: "git", LinkedAt: "linked"},
+			Workspace: model.Workspace{SourceRoot: "/repo", Root: "/repo.worktrees/feature", Branch: "feature", BaseHead: "base", LinkedAt: "linked"},
 			Lease:     model.WriteLease{Generation: 1, Status: model.LeaseStatusActive, Holder: &holder, ClaimedAt: "claimed"},
 		},
 	}

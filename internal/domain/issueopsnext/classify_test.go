@@ -77,7 +77,6 @@ func withDAStop(in Input) Input {
 
 func withExecution(in Input, lease issueopscontract.WriteLease) Input {
 	in.Record.Execution = &issueopscontract.Execution{
-		Mode: issueopscontract.ExecutionModeDirect,
 		Workspace: issueopscontract.Workspace{
 			SourceRoot: "/repo", Root: "/repo.worktrees/12-test", Branch: in.Record.Branch,
 		},
@@ -181,13 +180,13 @@ func TestClassifyStages(t *testing.T) {
 		{"grill without issue", baseRecord(issueopsnextcontract.PhaseGrill), "issue", 1},
 		{"grill with issue no branch", withIssue(baseRecord(issueopsnextcontract.PhaseGrill)), "prepare", 2},
 		{"plan right after link-issue auto-advance", withIssue(baseRecord(issueopsnextcontract.PhasePlan)), "prepare", 2},
-		{"implement without execution after switch-mode", withIssue(baseRecord(issueopsnextcontract.PhaseImplement)), "prepare", 2},
+		{"implement without execution", withIssue(baseRecord(issueopsnextcontract.PhaseImplement)), "prepare", 2},
 		{"branch ready, no staged plan", withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan))), "plan.write", 3},
 		{"staged plan, design missing", withStagedPlan(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))), "plan.design", 3},
 		{"design approved, DA missing", withDesign(withStagedPlan(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan))))), "plan.review", 3},
 		{"DA stop unwaived", withDAStop(withDesign(withStagedPlan(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))), "plan.review", 3},
 		{"all planner gates recorded", withDA(withDesign(withStagedPlan(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))), "plan.handoff", 3},
-		{"orca claimable right after prepare", withClaimableLease(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))), "claim", 3},
+		{"claimable right after prepare", withClaimableLease(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))), "claim", 3},
 		{"released lease in implement", withReleasedLease(withBranch(withIssue(baseRecord(issueopsnextcontract.PhaseImplement)))), "claim", 4},
 		{"self holder still in plan phase", withSelfHolder(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))), "implement.enter", 4},
 		{"self holder in implement", withSelfHolder(baseRecord(issueopsnextcontract.PhaseImplement)), "implement", 4},
@@ -252,6 +251,13 @@ func TestClassifyNextCommandTable(t *testing.T) {
 				t.Fatalf("next command kind %q want %q", got.NextCommandKind, testCase.kind)
 			}
 		})
+	}
+}
+
+func TestClassifyHandoffRendersThePrepareCommandWithoutRunSelection(t *testing.T) {
+	got := Classify(withDA(withDesign(withStagedPlan(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))))
+	if want := "issueops execution prepare --id io-test $ACTOR_FLAGS --json"; got.NextCommand != want {
+		t.Fatalf("next command %q want %q", got.NextCommand, want)
 	}
 }
 

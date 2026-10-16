@@ -50,19 +50,18 @@ func (stub *claimTransactionStub) Persist(_ context.Context, record leasecontrac
 }
 func (stub *claimTransactionStub) RemoveToken(string) { stub.events = append(stub.events, "remove") }
 
-func TestClaimWithinTransactionOrdersValidationTokenAndAtomicPersist(t *testing.T) {
+func TestClaimWithinTransactionOrdersTokenAndAtomicPersist(t *testing.T) {
 	stub := claimableTransactionStub()
 	request := ClaimRepositoryRequest{
 		ID: "io-claim", Generation: 3, Actor: leasedomain.Actor{Host: "codex", SessionID: "owner"},
 		CWD: "/repo", ClaimCurrentToken: true,
-		ValidateRecord: func(Record) error { stub.events = append(stub.events, "validate"); return nil },
-		Clock:          claimTransactionClock{},
+		Clock: claimTransactionClock{},
 	}
 	result, err := ClaimWithinTransaction(context.Background(), stub, request)
 	if err != nil || result.Execution.Lease.Status != "active" || result.Execution.Lease.ClaimTokenSHA256 != "" {
 		t.Fatalf("claim result = %+v, %v", result, err)
 	}
-	want := []string{"load", "cwd", "validate", "token", "persist", "remove"}
+	want := []string{"load", "cwd", "token", "persist", "remove"}
 	if !reflect.DeepEqual(stub.events, want) {
 		t.Fatalf("claim order = %v, want %v", stub.events, want)
 	}
@@ -89,7 +88,7 @@ func TestClaimWithinTransactionRejectsAmbiguousSelectorBeforeTokenRead(t *testin
 	stub := claimableTransactionStub()
 	request := ClaimRepositoryRequest{
 		ID: "io-claim", Generation: 3, Actor: leasedomain.Actor{Host: "codex", SessionID: "owner"}, CWD: "/repo",
-		TokenFile: "/token", ClaimCurrentToken: true, ValidateRecord: func(Record) error { return nil },
+		TokenFile: "/token", ClaimCurrentToken: true,
 	}
 	_, err := ClaimWithinTransaction(context.Background(), stub, request)
 	if err == nil || !strings.Contains(err.Error(), "exactly one claim token selector") || !reflect.DeepEqual(stub.events, []string{"load", "cwd"}) {
@@ -97,11 +96,11 @@ func TestClaimWithinTransactionRejectsAmbiguousSelectorBeforeTokenRead(t *testin
 	}
 }
 
-func TestClaimWithinTransactionRejectsStaleGenerationBeforeValidatorAndToken(t *testing.T) {
+func TestClaimWithinTransactionRejectsStaleGenerationBeforeToken(t *testing.T) {
 	stub := claimableTransactionStub()
 	request := ClaimRepositoryRequest{
 		ID: "io-claim", Generation: 2, Actor: leasedomain.Actor{Host: "codex", SessionID: "owner"}, CWD: "/repo",
-		ClaimCurrentToken: true, ValidateRecord: func(Record) error { t.Fatal("stale claim validated record"); return nil },
+		ClaimCurrentToken: true,
 	}
 	_, err := ClaimWithinTransaction(context.Background(), stub, request)
 	if leasedomain.DenyCodeOf(err) != leasedomain.DenyLeaseClaimable || !reflect.DeepEqual(stub.events, []string{"load", "cwd"}) {
@@ -112,7 +111,7 @@ func TestClaimWithinTransactionRejectsStaleGenerationBeforeValidatorAndToken(t *
 func TestClaimWithinTransactionRejectsTokenMismatchAndKeepsTokenOnPersistFailure(t *testing.T) {
 	request := ClaimRepositoryRequest{
 		ID: "io-claim", Generation: 3, Actor: leasedomain.Actor{Host: "codex", SessionID: "owner"}, CWD: "/repo",
-		ClaimCurrentToken: true, ValidateRecord: func(Record) error { return nil }, Clock: claimTransactionClock{},
+		ClaimCurrentToken: true, Clock: claimTransactionClock{},
 	}
 	stub := claimableTransactionStub()
 	stub.token = "wrong-token"

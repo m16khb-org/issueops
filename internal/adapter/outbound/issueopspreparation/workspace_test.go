@@ -24,7 +24,7 @@ func TestDirectWorkspaceMapsPrepareAndAccess(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := port.ExecutionWorkspaceRequest{LifecycleID: request.LifecycleID, SourceRoot: request.SourceRoot, Root: request.Root, Branch: request.Branch, BaseBranch: request.BaseBranch, BaseHead: request.BaseHead, ParentWorktree: request.ParentWorktree, Confirm: true}
-	if !reflect.DeepEqual(provider.request, want) || receipt.Driver != "git" || receipt.Root != request.Root {
+	if !reflect.DeepEqual(provider.request, want) || receipt.Root != request.Root {
 		t.Fatalf("request=%+v receipt=%+v", provider.request, receipt)
 	}
 }
@@ -87,7 +87,7 @@ func (fake *workspaceProviderFake) ProbeAccess(_ context.Context, request port.E
 
 func (fake *workspaceProviderFake) Prepare(_ context.Context, request port.ExecutionWorkspaceRequest) (port.ExecutionWorkspaceReceipt, error) {
 	fake.request = request
-	return port.ExecutionWorkspaceReceipt{SourceRoot: request.SourceRoot, Root: request.Root, Branch: request.Branch, BaseHead: request.BaseHead, ParentWorktree: request.ParentWorktree, Driver: "git", Exists: true}, nil
+	return port.ExecutionWorkspaceReceipt{SourceRoot: request.SourceRoot, Root: request.Root, Branch: request.Branch, BaseHead: request.BaseHead, ParentWorktree: request.ParentWorktree, Exists: true}, nil
 }
 
 type workspacePrepareOnlyFake struct{}

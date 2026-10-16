@@ -2,8 +2,6 @@ package mcpcli
 
 import (
 	"context"
-	"fmt"
-	executionissue "issueops/internal/contract/executionissue"
 	"os"
 
 	"issueops/cmd/issueops/mcpcli/argmap"
@@ -34,8 +32,8 @@ func handleMCPIssueOpsExecutionWithContext(
 
 func issueOpsExecutionActionDependencies(deps MCPDependencies) port.ExecutionActionDependencies {
 	return port.ExecutionActionDependencies{
-		Prepare: deps.Prepare, Orca: deps.Orca, OrcaOwner: deps.OrcaOwner, BaseSync: deps.BaseSync, ReadIssue: deps.ReadIssue,
-		Claim: deps.Claim, Release: deps.Release, Reseed: deps.Reseed, Status: deps.Status, Replace: deps.Replace, Resume: deps.Resume, Reconcile: deps.Reconcile, Complete: deps.Complete,
+		Prepare: deps.Prepare, BaseSync: deps.BaseSync,
+		Claim: deps.Claim, Release: deps.Release, Reseed: deps.Reseed, Status: deps.Status, Replace: deps.Replace, Complete: deps.Complete,
 		RemoteReconcile: deps.Publication.Reconcile,
 	}
 }
@@ -90,88 +88,19 @@ func executionActionRequestFromCapability(args map[string]any, caller model.Veri
 
 func executionActionRequestFromMCPWithAncestry(args map[string]any, ancestry []model.NativeProcessReceipt) (model.ExecutionActionRequest, error) {
 	pid := argmap.Int(args, "session_pid", 0)
-	snapshot, err := executionIssueSnapshotFromMCP(args)
-	if err != nil {
-		return model.ExecutionActionRequest{}, err
-	}
 	return model.ExecutionActionRequest{
-		Action: argmap.String(args, "action"), ID: argmap.String(args, "id"), Mode: argmap.String(args, "mode"),
+		Action: argmap.String(args, "action"), ID: argmap.String(args, "id"),
 		Actor: model.NativeActor{
 			Host: argmap.String(args, "host"), SessionID: argmap.String(args, "session_id"), AgentID: argmap.String(args, "agent_id"),
 			SessionProcess:  &model.NativeProcessReceipt{PID: pid, StartedAt: argmap.String(args, "session_started_at"), Executable: argmap.String(args, "session_executable")},
 			ProcessAncestry: append([]model.NativeProcessReceipt(nil), ancestry...),
 		},
-		CWD: argmap.String(args, "cwd"), OwnerHost: argmap.String(args, "owner_host"), OwnerModel: argmap.String(args, "owner_model"), OwnerEffort: argmap.String(args, "owner_effort"),
+		CWD:        argmap.String(args, "cwd"),
 		Generation: uint64(argmap.Int64(args, "generation", 0)), ExpectedGeneration: uint64(argmap.Int64(args, "expected_generation", 0)), CompletionGeneration: uint64(argmap.Int64(args, "completion_generation", 0)),
-		DirectReason: argmap.String(args, "direct_reason"), ExpectedReadinessFingerprint: argmap.String(args, "expected_readiness_fingerprint"),
-		IssueSnapshotFile: argmap.String(args, "issue_snapshot_file"),
-		TokenFile:         argmap.String(args, "claim_token_file"), ClaimCurrentToken: argmap.Bool(args, "claim_current_token"), ReplaceAction: argmap.String(args, "replace_action"),
-		IssueBodySHA256: argmap.String(args, "issue_body_sha256"), ContextPacketSHA256: argmap.String(args, "context_packet_sha256"),
+		TokenFile: argmap.String(args, "claim_token_file"), ClaimCurrentToken: argmap.Bool(args, "claim_current_token"), ReplaceAction: argmap.String(args, "replace_action"),
 		InventoryFingerprint: argmap.String(args, "inventory_fingerprint"), QuiescenceFingerprint: argmap.String(args, "quiescence_fingerprint"),
 		Reason: argmap.String(args, "reason"), Preview: argmap.Bool(args, "preview"), Confirm: argmap.Bool(args, "confirm"),
 		FinalHead: argmap.String(args, "final_head"), VerificationReportPath: argmap.String(args, "verification_report_path"),
 		Verification: argmap.StringSlice(args, "verification"), RemoteArtifactURL: argmap.String(args, "remote_artifact_url"),
-		IssueSnapshot: snapshot,
-	}, nil
-}
-
-func executionIssueSnapshotFromMCP(args map[string]any) (*executionissue.ExecutionIssueSnapshotEvidence, error) {
-	raw, exists := args["issue_snapshot"]
-	if !exists {
-		return nil, nil
-	}
-	object, ok := raw.(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("issue_snapshot must be an object")
-	}
-	allowed := map[string]bool{
-		"provider": true,
-		"source":   true,
-		"web_url":  true,
-		"body":     true,
-		"state":    true,
-	}
-	for key := range object {
-		if !allowed[key] {
-			return nil, fmt.Errorf("issue_snapshot contains unsupported field %q", key)
-		}
-	}
-	field := func(name string) (string, error) {
-		value, exists := object[name]
-		if !exists {
-			return "", fmt.Errorf("issue_snapshot.%s is required", name)
-		}
-		text, ok := value.(string)
-		if !ok {
-			return "", fmt.Errorf("issue_snapshot.%s must be a string", name)
-		}
-		return text, nil
-	}
-	provider, err := field("provider")
-	if err != nil {
-		return nil, err
-	}
-	source, err := field("source")
-	if err != nil {
-		return nil, err
-	}
-	webURL, err := field("web_url")
-	if err != nil {
-		return nil, err
-	}
-	body, err := field("body")
-	if err != nil {
-		return nil, err
-	}
-	state, err := field("state")
-	if err != nil {
-		return nil, err
-	}
-	return &executionissue.ExecutionIssueSnapshotEvidence{
-		Provider: provider,
-		Source:   source,
-		WebURL:   webURL,
-		Body:     body,
-		State:    state,
 	}, nil
 }

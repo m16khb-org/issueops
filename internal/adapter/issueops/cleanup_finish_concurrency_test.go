@@ -11,25 +11,16 @@ import (
 )
 
 func TestCleanupFinishExcludesConcurrentApplyAndOrdinaryWriters(t *testing.T) {
-	root, record, worktree := finishTestRecord(t, true)
-	mutateFinishRecord(t, root, record.ID, func(rec *model.IssueOpsRecord) {
-		rec.Execution.Mode = model.ExecutionModeOrca
-		rec.Execution.Selection = selectionFixture(model.ExecutionModeOrca)
-		rec.Execution.Workspace.Driver = "orca"
-		rec.Execution.Orca = &model.OrcaBinding{RuntimeID: "rt", RepoID: "repo", WorktreeID: "wt-1", OwnerHost: "codex", OwnerModel: "m", TaskID: "t", DispatchID: "d", RunID: "run_issueops_1", LeaseGeneration: 1, ArtifactIdentityVersion: 1, IssueBodySHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", ContextPacketSHA256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", OwnerPromptSHA256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}
-	})
+	root, record, _ := finishTestRecord(t, true)
 	git := &fakeFinishGit{branchOID: "abc123"}
 	deps := finishDeps(git)
-	deps.OrcaTerminals = readyOrca(t, worktree)
 	entered, release := make(chan struct{}), make(chan struct{})
-	deps.RemoveOrcaWorktree = func(ctx context.Context, _ string) error {
-		close(entered)
-		select {
-		case <-release:
-			return nil
-		case <-ctx.Done():
-			return ctx.Err()
+	deps.Git = func(dir string, args ...string) (int, string) {
+		if args[0] == "worktree" {
+			close(entered)
+			<-release
 		}
+		return git.run(dir, args...)
 	}
 	preview, err := CleanupFinish(context.Background(), root, finishRequest(record.ID, false, ""), deps)
 	if err != nil {
@@ -45,7 +36,7 @@ func TestCleanupFinishExcludesConcurrentApplyAndOrdinaryWriters(t *testing.T) {
 	select {
 	case <-entered:
 	case err := <-finished:
-		t.Fatalf("apply stopped before Orca removal: %v", err)
+		t.Fatalf("apply stopped before worktree removal: %v", err)
 	case <-ctx.Done():
 		t.Fatal(ctx.Err())
 	}

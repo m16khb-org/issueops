@@ -38,7 +38,7 @@ func TestIssueOpsImplementationReadinessRequiresCompatibilityReview(t *testing.T
 		t.Fatalf("compatibility review alone should still require devils_advocate_review, got %+v", ready)
 	}
 	record.DevilsAdvocateReview = issueOpsDevilsAdvocateReviewForTest()
-	record.DevilsAdvocateReview.ReviewedPlanDigest = digestExecutionOwnerBytes([]byte(planBodyForTest()))
+	record.DevilsAdvocateReview.ReviewedPlanDigest = digestBytes([]byte(planBodyForTest()))
 	ready = IssueOpsImplementationReadiness(record)
 	if !ready.Ready || len(ready.Missing) != 0 {
 		t.Fatalf("compatibility + devils-advocate review should satisfy the last implementation gate, got %+v", ready)

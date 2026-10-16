@@ -201,7 +201,7 @@ func TestMCPHTTPCompletedReplacePreviewUsesProductionBaseSync(t *testing.T) {
 	for _, drift := range []bool{false, true} {
 		t.Run(map[bool]string{false: "no-drift", true: "drift"}[drift], func(t *testing.T) {
 			t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-			fixtureRoot, record, _, owner := completedReplacementPreviewFixture(t, drift)
+			fixtureRoot, record, _ := completedReplacementPreviewFixture(t, drift)
 			stored, err := issueopscore.ReadIssueOps(fixtureRoot, record.ID)
 			if err != nil {
 				t.Fatal(err)
@@ -218,7 +218,6 @@ func TestMCPHTTPCompletedReplacePreviewUsesProductionBaseSync(t *testing.T) {
 			if deps.BaseSync == nil {
 				t.Fatal("MCP dependencies lack the production base sync inspector")
 			}
-			deps.OrcaOwner = owner
 			deps.ForRequest = issueOpsMCPRequestDependencies(deps)
 			url, _ := startProductionHTTPServer(t, deps)
 			bearer, err := mcpcli.EnsureHTTPBearer(statestore.StateDir())

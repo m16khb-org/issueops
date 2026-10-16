@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
-	executionissue "issueops/internal/contract/executionissue"
 	shelltoken "issueops/internal/domain/shelltoken"
 
 	"issueops/cmd/issueops/mcpcli"
@@ -80,14 +79,14 @@ func TestIssueOpsExecutionPrepareCLIAndStatusShareSchemaProjection(t *testing.T)
 
 	preparedJSON := captureStdoutForContract(t, func() error {
 		return runIssueOpsForTest(append([]string{
-			"execution", "prepare", "--id", id, "--mode", "direct", "--cwd", repo, "--confirm", "--json",
+			"execution", "prepare", "--id", id, "--cwd", repo, "--confirm", "--json",
 		}, actorFlags...), deps)
 	})
 	var prepared issueopscontract.ExecutionPrepareResult
 	if err := json.Unmarshal([]byte(preparedJSON), &prepared); err != nil {
 		t.Fatalf("execution prepare should return JSON: %v\n%s", err, preparedJSON)
 	}
-	if !prepared.OK || prepared.Execution == nil || prepared.ResolvedMode != "direct" || prepared.Execution.Lease.Generation != 1 {
+	if !prepared.OK || prepared.Execution == nil || prepared.Execution.Lease.Generation != 1 {
 		t.Fatalf("unexpected prepare projection: %#v", prepared)
 	}
 	if prepared.Workspace.Root == repo || !strings.HasPrefix(prepared.Workspace.Root, repo+".worktrees"+string(filepath.Separator)) {
@@ -106,7 +105,7 @@ func TestIssueOpsExecutionPrepareCLIAndStatusShareSchemaProjection(t *testing.T)
 	}
 }
 
-func TestIssueOpsExecutionStatusProjectsActorFreeResumeCommand(t *testing.T) {
+func TestIssueOpsExecutionStatusProjectsActorFreeClaimCommand(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo, id, _ := executionCLIRecord(t)
 	record, err := issueopscore.ReadIssueOps(issueOpsStateRootForTest(), id)
@@ -116,24 +115,14 @@ func TestIssueOpsExecutionStatusProjectsActorFreeResumeCommand(t *testing.T) {
 	worktree := filepath.Join(repo+".worktrees", record.Branch)
 	record.WorktreePath = worktree
 	record.Execution = &issueopscontract.Execution{
-		Mode: issueopscontract.ExecutionModeOrca,
 		Workspace: issueopscontract.Workspace{
 			SourceRoot: repo, Root: worktree, Branch: record.Branch,
-			BaseHead: record.BranchPrepare.BaseSHA, Driver: "orca", LinkedAt: "2026-08-02T00:00:00Z",
+			BaseHead: record.BranchPrepare.BaseSHA, LinkedAt: "2026-08-02T00:00:00Z",
 		},
 		Lease: issueopscontract.WriteLease{
 			Generation: 3, Status: issueopscontract.LeaseStatusClaimable,
 			ClaimTokenSHA256: strings.Repeat("a", 64),
 		},
-		Orca: &issueopscontract.OrcaBinding{
-			RuntimeID: "runtime-1", RepoID: "repo-1", WorktreeID: "worktree-1",
-			LeaseGeneration: 2, OwnerHost: "codex", OwnerModel: "gpt-6-astra",
-			ArtifactIdentityVersion: issueopscontract.OrcaArtifactIdentityVersion,
-			IssueBodySHA256:         strings.Repeat("b", 64), ContextPacketSHA256: strings.Repeat("c", 64), OwnerPromptSHA256: strings.Repeat("d", 64),
-			TaskID: "task-1", DispatchID: "dispatch-1", TerminalPTYID: "pty-1",
-			RunID: "run_issueops_1",
-		},
-		Selection: selectionFixture(issueopscontract.ExecutionModeOrca),
 	}
 	if _, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)
@@ -149,17 +138,9 @@ func TestIssueOpsExecutionStatusProjectsActorFreeResumeCommand(t *testing.T) {
 	if err := json.Unmarshal([]byte(statusJSON), &status); err != nil {
 		t.Fatalf("execution status should return JSON: %v\n%s", err, statusJSON)
 	}
-	want := ownerdomain.ReplacementResumeCommand(id, 3)
+	want := ownerdomain.ReplacementClaimCommand(id, 3)
 	if !sameGeneratedExecutionCommand(status.NextCommand, want, 3) {
 		t.Fatalf("status next command = %q, want %q", status.NextCommand, want)
-	}
-
-	record.Execution.Orca.IssueBodySHA256 = ""
-	record.Execution.Orca.ContextPacketSHA256 = ""
-	record.Execution.Orca.OwnerPromptSHA256 = ""
-	record.Execution.Orca.ArtifactIdentityVersion = 0
-	if _, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record); err == nil {
-		t.Fatal("an unversioned Orca binding must not be persisted")
 	}
 }
 
@@ -194,7 +175,7 @@ func TestIssueOpsExecutionPrepareCLIAndMCPStatusAndErrorsAreIdentical(t *testing
 	repo, id, actorFlags := executionCLIRecord(t)
 	_ = captureStdoutForContract(t, func() error {
 		return runIssueOpsForTest(
-			append([]string{"execution", "prepare", "--id", id, "--mode", "direct", "--cwd", repo, "--confirm", "--json"}, actorFlags...),
+			append([]string{"execution", "prepare", "--id", id, "--cwd", repo, "--confirm", "--json"}, actorFlags...),
 			Dependencies{Prepare: executionCLIPrepareHandler(t)},
 		)
 	})
@@ -252,7 +233,7 @@ func TestIssueOpsExecutionPrepareCLIFailsClosedWithoutHandler(t *testing.T) {
 	repo, id, actorFlags := executionCLIRecord(t)
 	_, err := captureStdoutAndErrorForIssueOps(t, func() error {
 		return runIssueOpsForTest(
-			append([]string{"execution", "prepare", "--id", id, "--mode", "direct", "--cwd", repo, "--json"}, actorFlags...),
+			append([]string{"execution", "prepare", "--id", id, "--cwd", repo, "--json"}, actorFlags...),
 			Dependencies{},
 		)
 	})
@@ -263,7 +244,7 @@ func TestIssueOpsExecutionPrepareCLIFailsClosedWithoutHandler(t *testing.T) {
 
 func executionCLIPrepareHandler(t *testing.T) issueopscontract.ExecutionPrepareHandler {
 	t.Helper()
-	return func(_ context.Context, stateRoot string, request issueopscontract.ExecutionPrepareRequest, _ executionissue.ExecutionPrepareInvocation) (issueopscontract.ExecutionPrepareResult, error) {
+	return func(_ context.Context, stateRoot string, request issueopscontract.ExecutionPrepareRequest) (issueopscontract.ExecutionPrepareResult, error) {
 		record, err := issueopscore.ReadIssueOps(stateRoot, request.ID)
 		if err != nil {
 			return issueopscontract.ExecutionPrepareResult{ID: request.ID}, err
@@ -275,11 +256,9 @@ func executionCLIPrepareHandler(t *testing.T) issueopscontract.ExecutionPrepareH
 			Root:       filepath.Join(record.Repo+".worktrees", record.Branch),
 			Branch:     record.Branch,
 			BaseHead:   record.BranchPrepare.BaseSHA,
-			Driver:     "git",
 			LinkedAt:   "2026-08-02T00:00:00Z",
 		}
 		execution := &issueopscontract.Execution{
-			Mode:      issueopscontract.ExecutionModeDirect,
 			Workspace: workspace,
 			Lease: issueopscontract.WriteLease{
 				Generation: 1,
@@ -287,7 +266,6 @@ func executionCLIPrepareHandler(t *testing.T) issueopscontract.ExecutionPrepareH
 				Holder:     &actor,
 				ClaimedAt:  workspace.LinkedAt,
 			},
-			Selection: selectionFixture(issueopscontract.ExecutionModeDirect),
 		}
 		record.WorktreePath = workspace.Root
 		record.Execution = execution
@@ -296,7 +274,7 @@ func executionCLIPrepareHandler(t *testing.T) issueopscontract.ExecutionPrepareH
 			return issueopscontract.ExecutionPrepareResult{ID: request.ID}, err
 		}
 		return issueopscontract.ExecutionPrepareResult{
-			OK: true, ID: request.ID, RequestedMode: request.Mode, ResolvedMode: "direct",
+			OK: true, ID: request.ID,
 			Workspace: workspace, Execution: written.Execution,
 		}, nil
 	}

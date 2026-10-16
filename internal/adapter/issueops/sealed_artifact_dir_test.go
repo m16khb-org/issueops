@@ -44,17 +44,17 @@ func TestMaterializeStagedArtifactsWritesIntoRecordedArtifactDir(t *testing.T) {
 	stateRoot, record := executionPrepareRecord(t)
 	root := t.TempDir()
 	record.WorktreePath = root
-	record.Execution = artifactRecoveryExecution(issueops.ExecutionModeOrca, issueops.LeaseStatusReleased)
+	record.Execution = preparedExecution(issueops.LeaseStatusReleased)
 	record.Execution.Workspace.SourceRoot = record.Repo
 	record.Execution.Workspace.Root = root
 	record.Execution.Workspace.Branch = record.Branch
 	record.Execution.Workspace.BaseHead = record.BranchPrepare.BaseSHA
 	record.Execution.Workspace.LinkedAt = "2026-08-27T00:00:00Z"
 	record.Execution.Workspace.ArtifactDir = ".issueops/issues/480/artifact"
-	if _, err := writeIssueOps(context.Background(), stateRoot, record); err != nil {
+	if _, err := stageIssueOpsArtifactForTest(stateRoot, record.ID, "plan", []byte("# plan\n")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := stageIssueOpsArtifactForTest(stateRoot, record.ID, "plan", []byte("# plan\n")); err != nil {
+	if _, err := writeIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
 	manifest, err := materializeStagedArtifacts(stateRoot, record)
@@ -79,7 +79,7 @@ func TestMaterializeStagedArtifactsRejectsMissingArtifactDir(t *testing.T) {
 	t.Parallel()
 
 	stateRoot, record := executionPrepareRecord(t)
-	record.Execution = artifactRecoveryExecution(issueops.ExecutionModeOrca, issueops.LeaseStatusReleased)
+	record.Execution = preparedExecution(issueops.LeaseStatusReleased)
 	record.Execution.Workspace.Root = t.TempDir()
 	record.Execution.Workspace.ArtifactDir = ""
 	if _, err := materializeStagedArtifacts(stateRoot, record); err == nil || !strings.Contains(err.Error(), "artifact_dir is missing") {

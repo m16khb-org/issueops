@@ -50,14 +50,6 @@ func TestExecutionCommandsKeepRunnerAndActorOwnership(t *testing.T) {
 				events = append(events, owner+":sync")
 				return model.ExecutionSyncBaseResult{OK: true, ID: req.ID}, nil
 			},
-			SwitchExecutionMode: func(_ context.Context, root string, req model.ExecutionSwitchModeRequest) (model.ExecutionSwitchModeResult, error) {
-				check(root, req.Actor)
-				if req.Mode != "direct" || req.Apply || req.Confirm {
-					t.Fatalf("switch preview changed: %+v", req)
-				}
-				events = append(events, owner+":switch")
-				return model.ExecutionSwitchModeResult{OK: true, ID: req.ID}, nil
-			},
 		}
 		return executionRunnerForIsolation(runtime, Deps{StateRoot: func() string { return owner }, PrintJSON: func(value any) error {
 			if who, ok := value.(ExecutionWhoamiResult); ok {
@@ -77,14 +69,13 @@ func TestExecutionCommandsKeepRunnerAndActorOwnership(t *testing.T) {
 			append([]string{"release", "--id", "cycle", "--generation", "7"}, actor...),
 			{"claim", "--id", "cycle", "--generation", "7", "--claim-current-token", "--json"},
 			append([]string{"sync-base", "--id", "cycle", "--completion-generation", "7", "--preview"}, actor...),
-			append([]string{"switch-mode", "--id", "cycle", "--mode", "direct"}, actor...),
 		} {
 			if err := run(args); err != nil {
 				t.Fatal(fmt.Errorf("%s: %w", args[0], err))
 			}
 		}
 	}
-	want := []string{"a:observe", "a:whoami", "a:observe", "a:release", "a:observe", "a:claim", "a:observe", "a:sync", "a:observe", "a:switch", "b:observe", "b:whoami", "b:observe", "b:release", "b:observe", "b:claim", "b:observe", "b:sync", "b:observe", "b:switch", "a:observe", "a:whoami", "a:observe", "a:release", "a:observe", "a:claim", "a:observe", "a:sync", "a:observe", "a:switch"}
+	want := []string{"a:observe", "a:whoami", "a:observe", "a:release", "a:observe", "a:claim", "a:observe", "a:sync", "b:observe", "b:whoami", "b:observe", "b:release", "b:observe", "b:claim", "b:observe", "b:sync", "a:observe", "a:whoami", "a:observe", "a:release", "a:observe", "a:claim", "a:observe", "a:sync"}
 	if !reflect.DeepEqual(events, want) {
 		t.Fatalf("execution instances shared callbacks:\ngot %v\nwant %v", events, want)
 	}
@@ -99,7 +90,7 @@ func TestExecutionWithoutRunnersFailsClosed(t *testing.T) {
 	for key, value := range map[string]string{"CODEX_THREAD_ID": "session", "CLAUDE_CODE_SESSION_ID": "", "PI_SESSION_ID": "", "ISSUEOPS_OMP_SESSION_ID": ""} {
 		t.Setenv(key, value)
 	}
-	for _, args := range [][]string{{"status", "--id", "cycle"}, {"sync-base", "--id", "cycle", "--preview"}, {"switch-mode", "--id", "cycle", "--mode", "direct"}, {"whoami"}} {
+	for _, args := range [][]string{{"status", "--id", "cycle"}, {"sync-base", "--id", "cycle", "--preview"}, {"whoami"}} {
 		err := Run(args, Deps{StateRoot: func() string { return "/state" }})
 		if err == nil || !strings.Contains(err.Error(), "not configured") {
 			t.Fatalf("missing execution runner: args=%v err=%v", args, err)

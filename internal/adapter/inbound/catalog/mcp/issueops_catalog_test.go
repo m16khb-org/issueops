@@ -21,16 +21,9 @@ func TestIssueOpsAdvertisesOnlyExecutionActionTool(t *testing.T) {
 	if !ok {
 		t.Fatalf("action schema = %#v", properties["action"])
 	}
-	want := []string{"prepare", "status", "claim", "release", "replace", "resume", "reconcile", "complete"}
+	want := []string{"prepare", "status", "claim", "release", "replace", "reconcile", "complete"}
 	if got := action["enum"]; !reflect.DeepEqual(got, want) {
 		t.Fatalf("action enum = %#v, want %#v", got, want)
-	}
-	mode, ok := properties["mode"].(map[string]any)
-	if !ok {
-		t.Fatalf("mode schema = %#v", properties["mode"])
-	}
-	if got, want := mode["enum"], []string{"auto", "direct", "orca"}; !reflect.DeepEqual(got, want) {
-		t.Fatalf("mode enum = %#v, want %#v", got, want)
 	}
 	host, ok := properties["host"].(map[string]any)
 	if !ok {
@@ -39,44 +32,18 @@ func TestIssueOpsAdvertisesOnlyExecutionActionTool(t *testing.T) {
 	if got, want := host["enum"], []string{"codex", "claude", "omo", "omp"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("host enum = %#v, want %#v", got, want)
 	}
-	ownerHost, ok := properties["owner_host"].(map[string]any)
-	if !ok {
-		t.Fatalf("owner_host schema = %#v", properties["owner_host"])
-	}
-	if got, want := ownerHost["enum"], []string{"codex", "claude", "omo", "omp"}; !reflect.DeepEqual(got, want) {
-		t.Fatalf("owner_host enum = %#v, want %#v", got, want)
-	}
 	claimCurrentToken, ok := properties["claim_current_token"].(map[string]any)
 	if !ok || claimCurrentToken["type"] != "boolean" {
 		t.Fatalf("claim_current_token schema = %#v, want boolean", properties["claim_current_token"])
 	}
 }
 
-func TestIssueOpsExecutionSnapshotSchemaIsClosedAndPortable(t *testing.T) {
+func TestIssueOpsExecutionSchemaOmitsRetiredFields(t *testing.T) {
 	tools := contract.IssueOpsBasicTools()
 	properties := tools[0].InputSchema["properties"].(map[string]any)
-	snapshot, ok := properties["issue_snapshot"].(map[string]any)
-	if !ok {
-		t.Fatalf("issue_snapshot schema = %#v", properties["issue_snapshot"])
-	}
-	if got := snapshot["required"]; !reflect.DeepEqual(got, []string{"provider", "source", "web_url", "body", "state"}) {
-		t.Fatalf("issue_snapshot required = %#v", got)
-	}
-	if got := snapshot["additionalProperties"]; got != false {
-		t.Fatalf("issue_snapshot additionalProperties = %#v", got)
-	}
-	snapshotProperties, ok := snapshot["properties"].(map[string]any)
-	if !ok {
-		t.Fatalf("issue_snapshot properties = %#v", snapshot["properties"])
-	}
-	for _, field := range []string{"provider", "source", "web_url", "body", "state"} {
-		if _, ok := snapshotProperties[field]; !ok {
-			t.Fatalf("issue_snapshot is missing %q: %#v", field, snapshotProperties)
-		}
-	}
-	for _, forbidden := range []string{"server_namespace", "wrapper", "profile", "token", "config"} {
-		if _, ok := snapshotProperties[forbidden]; ok {
-			t.Fatalf("issue_snapshot exposes host-private field %q", forbidden)
+	for _, retired := range []string{"mode", "owner_host", "owner_model", "owner_effort", "direct_reason", "issue_body" + "_sha256", "context_packet" + "_sha256", "issue_" + "snapshot"} {
+		if _, ok := properties[retired]; ok {
+			t.Fatalf("issueops_execution schema still advertises retired field %q", retired)
 		}
 	}
 }

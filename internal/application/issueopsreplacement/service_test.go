@@ -12,14 +12,14 @@ import (
 )
 
 type replacementFixture struct {
-	record      model.IssueOpsRecord
-	saved       *model.IssueOpsRecord
-	previous    *model.NativeActor
-	events      []string
-	locked      bool
-	absent      bool
-	resealError error
-	saveError   error
+	record     model.IssueOpsRecord
+	saved      *model.IssueOpsRecord
+	previous   *model.NativeActor
+	events     []string
+	locked     bool
+	absent     bool
+	tokenError error
+	saveError  error
 }
 
 func (f *replacementFixture) Load(string) (model.IssueOpsRecord, error) {
@@ -66,11 +66,10 @@ func (f *replacementFixture) WorkspaceAbsent(string) bool {
 }
 func (f *replacementFixture) CreateToken(model.IssueOpsRecord) (string, string, error) {
 	f.events = append(f.events, "token")
+	if f.tokenError != nil {
+		return "", "", f.tokenError
+	}
 	return "digest", "/workspace/claim.token", nil
-}
-func (f *replacementFixture) Reseal(context.Context, model.IssueOpsRecord) (model.ReplacementArtifacts, error) {
-	f.events = append(f.events, "reseal")
-	return model.ReplacementArtifacts{}, f.resealError
 }
 
 type deadProcesses struct{}
@@ -86,8 +85,8 @@ func fixtureService() (Service, *replacementFixture, model.ExecutionReplaceReque
 	actor := model.NativeActor{Host: "codex", SessionID: "requester", SessionProcess: &process, ProcessAncestry: []model.NativeProcessReceipt{process}}
 	oldProcess := model.NativeProcessReceipt{PID: 41, StartedAt: "old", Executable: "/old-host"}
 	holder := model.NativeActor{Host: "codex", SessionID: "previous", SessionProcess: &oldProcess}
-	fixture := &replacementFixture{record: model.IssueOpsRecord{ID: "io-test", Execution: &model.Execution{Mode: model.ExecutionModeDirect, Workspace: model.Workspace{Root: "/workspace", SourceRoot: "/source"}, Lease: model.WriteLease{Generation: 7, Status: model.LeaseStatusActive, Holder: &holder}}}}
-	service := Service{Records: fixture, Workspace: fixture, Artifacts: fixture, ResealOwner: fixture.Reseal, PID: 43, ObserveProcesses: func() port.ReplacementProcessSnapshot { return deadProcesses{} }, InspectProcess: func(p model.NativeProcessReceipt) (string, model.NativeProcessReceipt, error) { return "live", p, nil }, Verifier: liveVerifier(), Now: func() string { return "now" }}
+	fixture := &replacementFixture{record: model.IssueOpsRecord{ID: "io-test", Execution: &model.Execution{Workspace: model.Workspace{Root: "/workspace", SourceRoot: "/source"}, Lease: model.WriteLease{Generation: 7, Status: model.LeaseStatusActive, Holder: &holder}}}}
+	service := Service{Records: fixture, Workspace: fixture, Artifacts: fixture, PID: 43, ObserveProcesses: func() port.ReplacementProcessSnapshot { return deadProcesses{} }, InspectProcess: func(p model.NativeProcessReceipt) (string, model.NativeProcessReceipt, error) { return "live", p, nil }, Verifier: liveVerifier(), Now: func() string { return "now" }}
 	request := model.ExecutionReplaceRequest{ID: "io-test", Action: model.ExecutionReplacePreview, Actor: actor, CWD: "/workspace", ExpectedGeneration: 7, Confirm: true, Reason: " recovery "}
 	return service, fixture, request
 }
@@ -163,8 +162,8 @@ func TestFinalizeReleasesAbsentWorkspaceWithoutCreatingToken(t *testing.T) {
 		t.Fatalf("events=%v want=%v", f.events, want)
 	}
 }
-func TestFinalizeDoesNotPublishClaimableAuthorityBeforeResealAndSave(t *testing.T) {
-	for _, stage := range []string{"success", "reseal", "save", "stale"} {
+func TestFinalizeDoesNotPublishClaimableAuthorityBeforeTokenAndSave(t *testing.T) {
+	for _, stage := range []string{"success", "token", "save", "stale"} {
 		t.Run(stage, func(t *testing.T) {
 			service, f, req := fixtureService()
 			f.record.Execution.Lease.Status = model.LeaseStatusRevoking
@@ -177,8 +176,8 @@ func TestFinalizeDoesNotPublishClaimableAuthorityBeforeResealAndSave(t *testing.
 			req.QuiescenceFingerprint = preview.QuiescenceFingerprint
 			f.events = nil
 			switch stage {
-			case "reseal":
-				f.resealError = errors.New("reseal failure")
+			case "token":
+				f.tokenError = errors.New("token failure")
 			case "save":
 				f.saveError = errors.New("save failure")
 			case "stale":
@@ -189,7 +188,7 @@ func TestFinalizeDoesNotPublishClaimableAuthorityBeforeResealAndSave(t *testing.
 				if err != nil || !result.OK || f.saved == nil || result.Execution.Lease.Status != model.LeaseStatusClaimable || result.Execution.Lease.ClaimTokenSHA256 != "digest" || result.Execution.Lease.Holder != nil || !strings.Contains(result.NextCommand, "--claim-current-token") {
 					t.Fatalf("result=%+v err=%v", result, err)
 				}
-				if got := strings.Join(f.events, ","); !strings.Contains(got, "token,reseal,persist") {
+				if got := strings.Join(f.events, ","); !strings.Contains(got, "token,persist") {
 					t.Fatalf("events=%s", got)
 				}
 			} else {

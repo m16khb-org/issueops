@@ -109,7 +109,6 @@
       "symbols": [
         "func Command.RunInspect",
         "func Doctor.Run",
-        "func doctorProfile",
         "func doctorRepeatedFlag.Set",
         "func doctorRepeatedFlag.String",
         "func normalizeDoctorPreserve",
@@ -407,7 +406,7 @@
       "task": "T11",
       "symbols": [
         "func Command.planInstallCommandPath",
-        "func Command.prepareInstallPathPlanForCandidate",
+        "func Command.prepareInstallPathPlanFromCandidate",
         "func appendShellPathLinePlan",
         "func ensureShortCommandShimPlan",
         "func installPathDirectoryExists",
@@ -460,13 +459,8 @@
         "func loadAgentModelSettings",
         "func memoizedReviewModel",
         "func modelDependencies",
-        "func preparationAgentModels.OwnerDefaults",
-        "func preparationAgentModels.RoleAgentArgs",
-        "func resolveAgentModel",
         "func roleAgentArgs",
-        "func runModel",
-        "func stateRoleAgentArgs",
-        "type preparationAgentModels"
+        "func runModel"
       ]
     },
     {
@@ -631,8 +625,7 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func newHandoffDeliveryAudit",
-        "func newHandoffDeliveryProvisioner"
+        "func newHandoffDeliveryAudit"
       ]
     },
     {
@@ -754,8 +747,7 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func issueOpsClaimHandler",
-        "func issueOpsClaimProviderName"
+        "func issueOpsClaimHandler"
       ]
     },
     {
@@ -881,8 +873,7 @@
       "task": "T20",
       "symbols": [
         "func issueOpsExecutionStatusHandler",
-        "func newIssueOpsOwnerContext",
-        "func resolveOwnerRoleModel"
+        "func newIssueOpsOwnerContext"
       ]
     },
     {
@@ -902,13 +893,11 @@
         "func newIssueOpsPreparationHandler",
         "func newIssueOpsPreparationService",
         "func preparationClock.Now",
-        "func preparationOperationIDs.New",
         "func productionIssueOpsExecutionDependencies",
         "func verifyIssueOpsPreparationActor",
         "type issueOpsExecutionCompositionDeps",
         "type issueOpsPreparationCompositionDeps",
-        "type preparationClock",
-        "type preparationOperationIDs"
+        "type preparationClock"
       ]
     },
     {
@@ -937,23 +926,6 @@
       "task": "T20",
       "symbols": [
         "func newOperationalHealthCollector"
-      ]
-    },
-    {
-      "path": "cmd/issueops/issueopsapp/issueops_reconcile_wiring.go",
-      "owner": "composition",
-      "task": "T06",
-      "symbols": [
-        "func convertReconcileReceipt",
-        "func coreReconcileEffects.PrepareWorktree",
-        "func coreReconcileEffects.inspectStage",
-        "func coreReconcileEffects.invokeStage",
-        "func coreReconcileEffects.reconcileRequest",
-        "func issueOpsReconcileHandler",
-        "func newIssueOpsReconcileService",
-        "func reconcileContractReceipt",
-        "func reconcileContractRecord",
-        "type coreReconcileEffects"
       ]
     },
     {
@@ -1017,28 +989,7 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func issueOpsReseedExecution",
-        "func issueOpsReseedHandler",
-        "func issueOpsReseedHandlerWithOwner"
-      ]
-    },
-    {
-      "path": "cmd/issueops/issueopsapp/issueops_resume_wiring.go",
-      "owner": "composition",
-      "task": "T06",
-      "symbols": [
-        "func issueOpsOrcaIntentRequest",
-        "func issueOpsResumeHandler",
-        "func newIssueOpsResumeService",
-        "func resumeContractReceipt",
-        "func resumeCoreRecord",
-        "func resumeHostAdapter.inspectStage",
-        "func resumeHostAdapter.invokeStage",
-        "func resumeHostAdapter.observeOwner",
-        "func resumeHostAdapter.readArtifacts",
-        "func resumeOperationIDs.New",
-        "type resumeHostAdapter",
-        "type resumeOperationIDs"
+        "func issueOpsReseedHandler"
       ]
     },
     {
@@ -1187,27 +1138,11 @@
       ]
     },
     {
-      "path": "cmd/issueops/issueopsapp/mode_switch_wiring.go",
-      "owner": "composition",
-      "task": "T20",
-      "symbols": [
-        "func newModeSwitcher"
-      ]
-    },
-    {
       "path": "cmd/issueops/issueopsapp/native_activation_wiring.go",
       "owner": "composition",
       "task": "T20",
       "symbols": [
         "func nativeActivationBackend"
-      ]
-    },
-    {
-      "path": "cmd/issueops/issueopsapp/orca_branch_wiring.go",
-      "owner": "composition",
-      "task": "T20",
-      "symbols": [
-        "func newOrcaBranchPrecheck"
       ]
     },
     {
@@ -1565,9 +1500,7 @@
         "func runReconcile",
         "func runRelease",
         "func runReplace",
-        "func runResume",
         "func runStatus",
-        "func runSwitchMode",
         "func runSyncBase",
         "func runWhoami",
         "func sameExistingExecutionPath",
@@ -1597,14 +1530,6 @@
         "func bindExecutionErrorNextCommand",
         "func bindExecutionNextCommand",
         "func executionNextCommand"
-      ]
-    },
-    {
-      "path": "cmd/issueops/issueopscli/executioncmd/snapshot_file.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func readExecutionIssueSnapshotFile"
       ]
     },
     {
@@ -2256,7 +2181,6 @@
         "func executionActionRequestFromCapability",
         "func executionActionRequestFromMCP",
         "func executionActionRequestFromMCPWithAncestry",
-        "func executionIssueSnapshotFromMCP",
         "func handleMCPIssueOpsExecutionWithContext",
         "func issueOpsExecutionActionDependencies",
         "func issueOpsMCPErrorPayload"
@@ -3776,16 +3700,6 @@
       ]
     },
     {
-      "path": "internal/adapter/inbound/issueopslease/reconcile.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func NewReconcileHandler",
-        "func ReconcileHandler.Handle",
-        "type ReconcileHandler"
-      ]
-    },
-    {
       "path": "internal/adapter/inbound/issueopslease/release.go",
       "owner": "adapter",
       "task": "T20",
@@ -3809,18 +3723,6 @@
         "func ReseedHandler.Handle",
         "func publicReseedError",
         "type ReseedHandler"
-      ]
-    },
-    {
-      "path": "internal/adapter/inbound/issueopslease/resume.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func NewResumeHandler",
-        "func ResumeHandler.Handle",
-        "func ResumeHandler.resumeNextCommand",
-        "func publicResumeError",
-        "type ResumeHandler"
       ]
     },
     {
@@ -4252,7 +4154,6 @@
       "task": "T20",
       "symbols": [
         "func BranchGit.OriginPresent",
-        "func BranchGit.RefOID",
         "type BranchGit"
       ]
     },
@@ -4478,7 +4379,6 @@
         "func claimTokenPath",
         "func cleanupReplacementGeneration",
         "func createClaimToken",
-        "func readExecutionLeaseToken",
         "func removeReplacementRuntimeFile",
         "func secureMkdirAll",
         "func tokenSHA256",
@@ -4491,46 +4391,6 @@
         "type LeaseWorkspaceSnapshot",
         "type fingerprintWriter",
         "type workspaceGitIdentity"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/execution_mode_switch.go",
-      "owner": "adapter",
-      "task": "T06",
-      "symbols": [
-        "func ModeSwitchWorkspace.BranchOID",
-        "func ModeSwitchWorkspace.Clean",
-        "func ModeSwitchWorkspace.CommitCount",
-        "func ModeSwitchWorkspace.Present",
-        "func ModeSwitchWorkspace.RemoveBranch",
-        "func ModeSwitchWorkspace.RemoveWorktree",
-        "type ModeSwitchWorkspace"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/execution_orca_intent.go",
-      "owner": "adapter",
-      "task": "T06",
-      "symbols": [
-        "func ReadExecutionOrcaIntent",
-        "func createOrAdoptClaimToken"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/execution_owner_context.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func ExecutionOwnerPromptTemplate",
-        "func digestExecutionOwnerBytes",
-        "func ensureExecutionOwnerArtifactDirectory",
-        "func ensureExecutionOwnerArtifactIgnore",
-        "func executionOwnerArtifactPaths",
-        "func executionOwnerRegularFiles",
-        "func executionOwnerVerificationReportPath",
-        "func quoteExecutionOwnerArg",
-        "func readExecutionOwnerArtifact",
-        "func writeExecutionOwnerArtifact"
       ]
     },
     {
@@ -4823,7 +4683,8 @@
         "func readStagedArtifacts",
         "func resolveLinkedPlanPath",
         "func sealedArtifactDir",
-        "func sealedArtifactPath"
+        "func sealedArtifactPath",
+        "type linkedPlanIdentity"
       ]
     },
     {
@@ -4857,7 +4718,6 @@
         "func CleanupAbandonRuntime.Command",
         "func CleanupAbandonRuntime.Directory",
         "func CleanupAbandonRuntime.ReadChild",
-        "func CleanupAbandonRuntime.ReadIntent",
         "func CleanupAbandonRuntime.SameLinkedPath",
         "func CleanupAbandonRuntime.SamePath",
         "func CleanupAbandonRuntime.Stop",
@@ -4958,20 +4818,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/orca_intent_files.go",
-      "owner": "adapter",
-      "task": "T08",
-      "symbols": [
-        "func OrcaIntentFiles.ArtifactPaths",
-        "func OrcaIntentFiles.ReadArtifact",
-        "func OrcaIntentFiles.ReadToken",
-        "func OrcaIntentFiles.SamePath",
-        "func PreparationIntentRecord",
-        "func intentFileRecord",
-        "type OrcaIntentFiles"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/orphan_environment.go",
       "owner": "adapter",
       "task": "T08",
@@ -4993,17 +4839,8 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func OwnerContextFiles.ArtifactPath",
-        "func OwnerContextFiles.CreateOrAdoptToken",
         "func OwnerContextFiles.Materialize",
-        "func OwnerContextFiles.Paths",
-        "func OwnerContextFiles.ReadArtifact",
-        "func OwnerContextFiles.ReadLinkedPlan",
-        "func OwnerContextFiles.ReadStaged",
-        "func OwnerContextFiles.RegularFiles",
         "func OwnerContextFiles.SamePath",
-        "func OwnerContextFiles.TokenPath",
-        "func OwnerContextFiles.Write",
         "type OwnerContextFiles"
       ]
     },
@@ -5106,6 +4943,18 @@
         "func ReviewPlanSource.LinkedDigest",
         "func ReviewPlanSource.StagedPlans",
         "type ReviewPlanSource"
+      ]
+    },
+    {
+      "path": "internal/adapter/issueops/sealed_artifact_files.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func digestBytes",
+        "func ensureSealedArtifactDirectory",
+        "func ensureSealedArtifactIgnore",
+        "func quoteShellArg",
+        "func writeSealedArtifact"
       ]
     },
     {
@@ -5351,50 +5200,20 @@
         "func ExecGitRunner.Run",
         "func addProblem",
         "func canonicalInventoryPath",
-        "func countTasksWithStatus",
         "func cycleFromRecord",
         "func cycleFromRecordAt",
         "func issueCreateIntentNeedsReconciliationAt",
-        "func operationalTaskKey",
         "func orderedBefore",
         "func parseLocalRefs",
         "func parseRemoteRefs",
         "func parseWorktrees",
-        "func recordOwnsOrca",
         "func sortRefs",
         "func sortSnapshot",
-        "func timeSortValue",
         "func validOID",
         "type Collector",
         "type ExecGitRunner",
         "type GitRunner",
-        "type NativeProcessInspector",
-        "type OrcaInventory"
-      ]
-    },
-    {
-      "path": "internal/adapter/operationalhealth/collector_orca.go",
-      "owner": "adapter",
-      "task": "T15",
-      "symbols": [
-        "func Collector.applyOrcaDispatches",
-        "func Collector.applyOrcaTasks",
-        "func Collector.collectOrca",
-        "func Collector.collectOrcaDispatch",
-        "func Collector.collectOrcaInbox",
-        "func Collector.collectOrcaRepo",
-        "func Collector.collectOrcaTerminals",
-        "func Collector.collectOrcaWorktrees",
-        "func Collector.readOrcaRunInventories",
-        "func applyOrcaGates",
-        "func assignTaskDispatchID",
-        "func orcaDispatchedTaskAmbiguous",
-        "func orcaStatusReady",
-        "func orcaTerminalIdentityInvalid",
-        "func orcaWorktreeIdentityInvalid",
-        "func recordOrcaUnobserved",
-        "func validateOrcaRunInventory",
-        "type orcaRunReaders"
+        "type NativeProcessInspector"
       ]
     },
     {
@@ -5403,277 +5222,6 @@
       "task": "T15",
       "symbols": [
         "type IssueOpsReader"
-      ]
-    },
-    {
-      "path": "internal/adapter/operationalhealth/task_timestamp.go",
-      "owner": "adapter",
-      "task": "T15",
-      "symbols": [
-        "func parseTaskCompletedAt"
-      ]
-    },
-    {
-      "path": "internal/adapter/orca/client.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func Client.Available",
-        "func Client.CloseTerminal",
-        "func Client.CreateTerminal",
-        "func Client.CreateWorktree",
-        "func Client.DeliveryIdentity",
-        "func Client.ListAllTerminals",
-        "func Client.ListTerminals",
-        "func Client.ListWorktreeTerminalsByPath",
-        "func Client.ListWorktrees",
-        "func Client.Probe",
-        "func Client.RemoveWorktree",
-        "func Client.ResolveRepo",
-        "func Client.SendTerminalPrompt",
-        "func Client.Status",
-        "func Client.canonicalUpstream",
-        "func Client.canonicalizeWorktreeBranch",
-        "func Client.gitRefMatches",
-        "func Client.listTerminalsBySelector",
-        "func Client.listTerminalsInventory",
-        "func Client.probeAgentHelpCode",
-        "func Client.probeCapabilities",
-        "func Client.probeCodexHelpCode",
-        "func Client.probeHostAgentCode",
-        "func Client.probeOrchestration",
-        "func Client.showRepo",
-        "func Client.showTerminalInventory",
-        "func New",
-        "func NewClient",
-        "func exactNumericBranchSuffix",
-        "func isOrcaSelectorNotFound",
-        "func isOrcaTabNotFound",
-        "func orcaCapabilityChecks",
-        "func probeRepoCode",
-        "func probeStatusCode",
-        "type Client",
-        "type orcaCapabilityCheck"
-      ]
-    },
-    {
-      "path": "internal/adapter/orca/client_decode.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func Client.runJSON",
-        "func Client.runText",
-        "func addVisualTabTitle",
-        "func containsAllHelpFlags",
-        "func hasJSONValue",
-        "func hostCommand",
-        "func idSelector",
-        "func orcaIssueProvider",
-        "func ownerAgentBaseCommand",
-        "func ownerAgentCommand",
-        "func pathSelector",
-        "func requireCompleteList",
-        "func requireReturnedCount",
-        "func requireReturnedRunID",
-        "func runPayload.portValue",
-        "func samePath",
-        "func shellSingleQuote",
-        "func stableVisualTabTitles",
-        "func taskPayload.portValue",
-        "func terminalPayload.portValue",
-        "func visualTabKey",
-        "func worktreePayload.portValue",
-        "type executionGateInventory",
-        "type runPayload",
-        "type taskPayload",
-        "type terminalPayload",
-        "type visualLayoutPayload",
-        "type worktreePayload"
-      ]
-    },
-    {
-      "path": "internal/adapter/orca/client_orchestration.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func Client.CreateRun",
-        "func Client.CreateTask",
-        "func Client.CurrentRun",
-        "func Client.Dispatch",
-        "func Client.InboxPresence",
-        "func Client.ListAllTasksFromRuns",
-        "func Client.ListDispatchedTasksFromRuns",
-        "func Client.ListGatesFromRuns",
-        "func Client.ListRunInventory",
-        "func Client.ListRuns",
-        "func Client.ShowDispatch",
-        "func Client.ShowRequest",
-        "func Client.UseRun",
-        "func Client.currentRunInventory",
-        "func Client.dispatchInventoryResult",
-        "func Client.dispatchResult",
-        "func Client.listRunGatesInventory",
-        "func Client.listRunTasksInventory",
-        "func Client.listRunsInventory",
-        "func Client.listTasksFromRuns",
-        "func Client.runMutation",
-        "func Client.showDispatchInventory",
-        "func currentCoordinatorHandle",
-        "func parseRunListNextCursor",
-        "func readRunsBounded",
-        "func validateRunID",
-        "func validateRunInventory"
-      ]
-    },
-    {
-      "path": "internal/adapter/orca/decode.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func decodeResult",
-        "type envelope"
-      ]
-    },
-    {
-      "path": "internal/adapter/orca/execution.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func ExecutionProvisioner.InspectDeliveryDispatch",
-        "func ExecutionProvisioner.InspectDeliveryIdentity",
-        "func ExecutionProvisioner.InspectIntent",
-        "func ExecutionProvisioner.ObserveRequest",
-        "func ExecutionProvisioner.Probe",
-        "func ExecutionProvisioner.inspectIntentDispatch",
-        "func ExecutionProvisioner.inspectIntentRun",
-        "func ExecutionProvisioner.inspectIntentRunBind",
-        "func ExecutionProvisioner.inspectIntentTask",
-        "func ExecutionProvisioner.inspectIntentTerminal",
-        "func ExecutionProvisioner.inspectIntentWorktree",
-        "func ExecutionProvisioner.intentInventoryClient",
-        "func ExecutionProvisioner.reconcileCreatedTerminal",
-        "func ExecutionProvisioner.resolveIntentTerminal",
-        "func ExecutionProvisioner.runInventoryClient",
-        "func ExecutionProvisioner.terminalSettleWindow",
-        "func NewExecution",
-        "func NewExecutionClient",
-        "func executionIntentInventory",
-        "func executionSoleCreatedTerminal",
-        "func executionTaskTitle",
-        "func executionWorkspaceReceipt",
-        "func firstNonEmpty",
-        "type ExecutionProvisioner",
-        "type executionClient",
-        "type executionCurrentRunInventory",
-        "type executionDeliveryIdentityClient",
-        "type executionDispatchInventory",
-        "type executionInventoryClient",
-        "type executionRunInventory",
-        "type executionRunInventoryClient",
-        "type executionTaskInventory",
-        "type executionTerminalDetailClient",
-        "type executionTerminalDetailInventory",
-        "type executionTerminalInventory"
-      ]
-    },
-    {
-      "path": "internal/adapter/orca/execution_invoke.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func ExecutionProvisioner.InvokeIntent",
-        "func ExecutionProvisioner.InvokeIntentObserved",
-        "func ExecutionProvisioner.deliverDispatchPrompt",
-        "func ExecutionProvisioner.invokeDispatchIntent",
-        "func ExecutionProvisioner.invokeIntent",
-        "func ExecutionProvisioner.invokeRunBindIntent",
-        "func ExecutionProvisioner.invokeRunIntent",
-        "func ExecutionProvisioner.invokeTaskIntent",
-        "func ExecutionProvisioner.invokeTerminalIntent",
-        "func ExecutionProvisioner.invokeWorktreeIntent",
-        "func executionPreflightError",
-        "func observeDelivery",
-        "func validateDispatchPromptReceipt",
-        "func validateInvokedDispatchResponse"
-      ]
-    },
-    {
-      "path": "internal/adapter/orca/execution_owner.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func ExecutionProvisioner.InspectOwner",
-        "func ExecutionProvisioner.inspectOwnerTerminal",
-        "func ExecutionProvisioner.inspectOwnerTerminalDetail",
-        "func executionOwnerInventoryRuntime",
-        "func executionTerminalTaskStatus",
-        "func inspectOwnerDispatchRow",
-        "func inspectOwnerTask"
-      ]
-    },
-    {
-      "path": "internal/adapter/orca/execution_validation.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func digestExecutionBytes",
-        "func executionMarkerField",
-        "func executionMarkerSealsIssue",
-        "func executionParentWorktreeIsolated",
-        "func executionPathInsideRoot",
-        "func executionPrepareHostComplete",
-        "func executionRequiredLaunch",
-        "func executionWorkspaceIdentityComplete",
-        "func explicitExecutionParentLineage",
-        "func readExecutionSealedFile",
-        "func validExecutionSHA256",
-        "func validateExecutionInspectionOwnerEnvelope",
-        "func validateExecutionIntentForMode",
-        "func validateExecutionIntentInspectionRequest",
-        "func validateExecutionIntentRequest",
-        "func validateExecutionIntentRun",
-        "func validateExecutionIntentTask",
-        "func validateExecutionIntentTerminal",
-        "func validateExecutionInventoryRuntime",
-        "func validateExecutionInvokedDispatch",
-        "func validateExecutionObservedDispatch",
-        "func validateExecutionOwnerLaunch",
-        "func validateExecutionPrepare",
-        "func validateExecutionResolvedTerminal",
-        "func validateExecutionRetryRequestIDs",
-        "func validateExecutionSealedPacket",
-        "func validateExecutionSealedPrompt",
-        "func validateExecutionTerminalReceipt",
-        "func validateExecutionWorktree"
-      ]
-    },
-    {
-      "path": "internal/adapter/orca/remove_normalize.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func NormalizeRemoveWorktreeError"
-      ]
-    },
-    {
-      "path": "internal/adapter/orca/runner.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func ExecRunner.LookPath",
-        "func ExecRunner.Run",
-        "func boundedDiagnostic",
-        "func boundedStreamBuffer.Bytes",
-        "func boundedStreamBuffer.Write",
-        "func commandFailureDiagnostic",
-        "func hasInheritedOrcaRelay",
-        "func orcaCommandEnvironment",
-        "func runOrcaCommand",
-        "func shouldRetryWithoutInheritedRelay",
-        "type CommandOutput",
-        "type ExecRunner",
-        "type Runner",
-        "type boundedStreamBuffer"
       ]
     },
     {
@@ -5933,21 +5481,6 @@
       ]
     },
     {
-      "path": "internal/adapter/outbound/issueopslease/claim_context.go",
-      "owner": "adapter",
-      "task": "T05",
-      "symbols": [
-        "func ClaimContextReader.DecodePacket",
-        "func ClaimContextReader.Load",
-        "func ClaimContextReader.ReadArtifact",
-        "func ClaimContextReader.ReadPacket",
-        "func NewClaimContextReader",
-        "func claimContextPacketPath",
-        "func readClaimOwnerArtifact",
-        "type ClaimContextReader"
-      ]
-    },
-    {
       "path": "internal/adapter/outbound/issueopslease/claim_token.go",
       "owner": "adapter",
       "task": "T05",
@@ -5978,24 +5511,6 @@
       ]
     },
     {
-      "path": "internal/adapter/outbound/issueopslease/orca_failure.go",
-      "owner": "adapter",
-      "task": "T05",
-      "symbols": [
-        "func boundedOrcaFailureDiagnostic",
-        "func recordOrcaIntentFailure",
-        "type orcaFailureState"
-      ]
-    },
-    {
-      "path": "internal/adapter/outbound/issueopslease/orca_invoking.go",
-      "owner": "adapter",
-      "task": "T05",
-      "symbols": [
-        "func markOrcaIntentInvoking"
-      ]
-    },
-    {
       "path": "internal/adapter/outbound/issueopslease/process.go",
       "owner": "adapter",
       "task": "T05",
@@ -6005,39 +5520,6 @@
         "func parseProcessStart",
         "func pidAlive",
         "func processField"
-      ]
-    },
-    {
-      "path": "internal/adapter/outbound/issueopslease/reconcile_orca.go",
-      "owner": "adapter",
-      "task": "T06",
-      "symbols": [
-        "func NewReconcileStageExecutor",
-        "func ReconcileStageExecutor.Inspect",
-        "func ReconcileStageExecutor.Invoke",
-        "type ReconcileStageExecutor",
-        "type ReconcileStageInspector",
-        "type ReconcileStageInvoker"
-      ]
-    },
-    {
-      "path": "internal/adapter/outbound/issueopslease/reconcile_repository.go",
-      "owner": "adapter",
-      "task": "T06",
-      "symbols": [
-        "func NewReconcileRepositoryWithSnapshot",
-        "func ReconcileRepository.ApplyReceipt",
-        "func ReconcileRepository.Canonicalize",
-        "func ReconcileRepository.ClearIntent",
-        "func ReconcileRepository.Latest",
-        "func ReconcileRepository.MarkInvoking",
-        "func ReconcileRepository.RecordFailure",
-        "func ReconcileRepository.applyPrepareReceipt",
-        "func ReconcileRepository.applyResumeReceipt",
-        "func prepareReceiptMutations",
-        "func reconcilePreparationReceipt",
-        "type ReconcileEffects",
-        "type ReconcileRepository"
       ]
     },
     {
@@ -6058,12 +5540,10 @@
         "func reseedArtifactTargetPaths",
         "func reseedMkdirAll",
         "func reseedMkdirWalk",
-        "func reseedOwnerArtifactPaths",
         "func reseedParentsAreRealDirs",
         "func reseedTokenPath",
         "func validateReseedReceiptTargets",
-        "type ReseedArtifacts",
-        "type ReseedOwnerArtifacts"
+        "type ReseedArtifacts"
       ]
     },
     {
@@ -6111,57 +5591,6 @@
       ]
     },
     {
-      "path": "internal/adapter/outbound/issueopslease/resume_artifacts.go",
-      "owner": "adapter",
-      "task": "T06",
-      "symbols": [
-        "func NewResumeArtifacts",
-        "func ResumeArtifacts.ReadAndVerify",
-        "type ResumeArtifactReader",
-        "type ResumeArtifacts"
-      ]
-    },
-    {
-      "path": "internal/adapter/outbound/issueopslease/resume_orca.go",
-      "owner": "adapter",
-      "task": "T06",
-      "symbols": [
-        "func NewResumeOwnerInventory",
-        "func NewResumeStageExecutor",
-        "func ResumeOwnerInventory.Observe",
-        "func ResumeStageExecutor.Inspect",
-        "func ResumeStageExecutor.Invoke",
-        "type ResumeOwnerInventory",
-        "type ResumeOwnerObserver",
-        "type ResumeStageExecutor",
-        "type ResumeStageInspector",
-        "type ResumeStageInvoker"
-      ]
-    },
-    {
-      "path": "internal/adapter/outbound/issueopslease/resume_repository.go",
-      "owner": "adapter",
-      "task": "T06",
-      "symbols": [
-        "func NewResumeRepository",
-        "func NewResumeRepositoryWithDiagnosticRedactor",
-        "func ResumeRepository.ApplyReceipt",
-        "func ResumeRepository.BeginIntent",
-        "func ResumeRepository.LoadIntent",
-        "func ResumeRepository.LoadSnapshot",
-        "func ResumeRepository.MarkInvoking",
-        "func ResumeRepository.RecordFailure",
-        "func ResumeRepository.loadCurrentResumeRecord",
-        "func ResumeRepository.rawCASStore",
-        "func resumeBeginWorkspace",
-        "func resumePortReceipt",
-        "func resumePreparationReceipt",
-        "func translateRawCASFailure",
-        "func validateResumeBeginCurrent",
-        "type ResumeRepository"
-      ]
-    },
-    {
       "path": "internal/adapter/outbound/issueopslease/sqlite.go",
       "owner": "adapter",
       "task": "T05",
@@ -6190,8 +5619,6 @@
       "task": "T05",
       "symbols": [
         "func Evidence.MaterializeDirect",
-        "func Evidence.PrepareOwner",
-        "func Evidence.ReadOwner",
         "func Evidence.Workspace",
         "func NewEvidence",
         "type Evidence",
@@ -6199,41 +5626,18 @@
       ]
     },
     {
-      "path": "internal/adapter/outbound/issueopspreparation/orca.go",
-      "owner": "adapter",
-      "task": "T05",
-      "symbols": [
-        "func NewOrcaGateway",
-        "func OrcaGatewayAdapter.Inspect",
-        "func OrcaGatewayAdapter.Invoke",
-        "func OrcaGatewayAdapter.Probe",
-        "func OrcaIntentRequest",
-        "func fromPortIntentReceipt",
-        "type OrcaDependencies",
-        "type OrcaGatewayAdapter"
-      ]
-    },
-    {
       "path": "internal/adapter/outbound/issueopspreparation/repository.go",
       "owner": "adapter",
       "task": "T05",
       "symbols": [
-        "func NewSQLiteRepositoryWithDiagnosticRedactor",
-        "func SQLiteRepository.ApplyReceipt",
-        "func SQLiteRepository.BeginIntent",
+        "func NewSQLiteRepository",
         "func SQLiteRepository.CommitDirect",
         "func SQLiteRepository.EnsureRootUnclaimed",
         "func SQLiteRepository.Load",
-        "func SQLiteRepository.MarkInvoking",
-        "func SQLiteRepository.RecordFailure",
-        "func SQLiteRepository.boundedDiagnostic",
-        "func SQLiteRepository.compareAndApply",
         "func cleanAbsPath",
         "func currentClaimTokenPath",
         "func ensureRootUnclaimed",
         "func holderIndexKey",
-        "func preparationDeliveryReceipt",
-        "type DiagnosticRedactor",
         "type SQLiteRepository",
         "type holderIndex"
       ]
@@ -6273,14 +5677,6 @@
         "type ProviderCreateFunc",
         "type ProviderGateway",
         "type ProviderInspectFunc"
-      ]
-    },
-    {
-      "path": "internal/adapter/outbound/issueopsrecord/cleanup_fence.go",
-      "owner": "adapter",
-      "task": "T08",
-      "symbols": [
-        "func RequireMutableLeaseSnapshot"
       ]
     },
     {
@@ -7558,7 +6954,6 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func ReadExecutionIssueSnapshot",
         "func Resolve",
         "func ResolvePullRequestMerger"
       ]
@@ -8541,38 +7936,6 @@
       ]
     },
     {
-      "path": "internal/application/handoffdelivery/provisioner.go",
-      "owner": "application",
-      "task": "T20",
-      "symbols": [
-        "func Observation",
-        "func ObserveCompleted",
-        "func ObserveFailure",
-        "func ObserveStaged",
-        "func Provisioner.InspectIntent",
-        "func Provisioner.InvokeIntent",
-        "func Provisioner.Probe",
-        "func Provisioner.deliveryIdentity",
-        "func concludeHandoffDeliveryRecovery",
-        "func deliveryAttempt",
-        "func deliveryFailure",
-        "func deliveryPrompt",
-        "func deliveryReceiptIdentity",
-        "func foldedHandoffDeliveryObservation",
-        "func handoffDeliveryCallKind",
-        "func handoffDeliveryEventClock",
-        "func handoffDeliveryLauncher",
-        "func handoffDeliveryObserved",
-        "func inspectHandoffDeliveryRecovery",
-        "func observeHandoffDeliveryAfter",
-        "func observeHandoffDeliveryBefore",
-        "func observeHandoffDeliveryRequest",
-        "func recoverHandoffDeliveryRequest",
-        "func rejectStagedHandoffDeliveryWithoutResponse",
-        "type Provisioner"
-      ]
-    },
-    {
       "path": "internal/application/handoffdelivery/service.go",
       "owner": "application",
       "task": "T20",
@@ -8764,15 +8127,6 @@
       ]
     },
     {
-      "path": "internal/application/issueopsbranch/orca_precheck.go",
-      "owner": "application",
-      "task": "T08",
-      "symbols": [
-        "func OrcaBranchPrecheck.Check",
-        "type OrcaBranchPrecheck"
-      ]
-    },
-    {
       "path": "internal/application/issueopsbranch/prepare.go",
       "owner": "application",
       "task": "T08",
@@ -8854,17 +8208,6 @@
       ]
     },
     {
-      "path": "internal/application/issueopscleanup/abandon_orca.go",
-      "owner": "application",
-      "task": "T08",
-      "symbols": [
-        "func AbandonOrcaObserver.PendingSafe",
-        "func AbandonOrcaObserver.ResourcesAbsent",
-        "func abandonInspectionRequest",
-        "type AbandonOrcaObserver"
-      ]
-    },
-    {
       "path": "internal/application/issueopscleanup/abandon_preview.go",
       "owner": "application",
       "task": "T08",
@@ -8924,7 +8267,6 @@
         "func finishRun.fail",
         "func finishRun.load",
         "func finishRun.plan",
-        "func finishRun.removeOrca",
         "func finishRun.removeWorktree",
         "func finishRun.stopWorkspaceProcesses",
         "type FinishExecutor",
@@ -9067,15 +8409,7 @@
       "symbols": [
         "func WorkspaceCleaner.Observe",
         "func WorkspaceCleaner.Stop",
-        "func WorkspaceCleaner.observe",
-        "func WorkspaceCleaner.orcaGates",
-        "func WorkspaceCleaner.requesterTerminalMissing",
-        "func WorkspaceCleaner.requireNoTerminals",
-        "func WorkspaceCleaner.terminalHandles",
-        "func cleanupRequesterEnv.hosted",
-        "func cleanupTerminalIdentities",
-        "type WorkspaceCleaner",
-        "type cleanupRequesterEnv"
+        "type WorkspaceCleaner"
       ]
     },
     {
@@ -9311,14 +8645,6 @@
       ]
     },
     {
-      "path": "internal/application/issueopscycle/plan_link_authority.go",
-      "owner": "application",
-      "task": "T08",
-      "symbols": [
-        "func MutationAuthority.ValidatePlanLink"
-      ]
-    },
-    {
       "path": "internal/application/issueopscycle/pr_gate.go",
       "owner": "application",
       "task": "T20",
@@ -9364,14 +8690,6 @@
       "symbols": [
         "func ObservedSchemaEvidenceMissing",
         "func SchemaEvidenceMissingForPaths"
-      ]
-    },
-    {
-      "path": "internal/application/issueopscycle/staged_plan_binding.go",
-      "owner": "application",
-      "task": "T20",
-      "symbols": [
-        "func DevilsAdvocateStagedPlanBound"
       ]
     },
     {
@@ -9446,9 +8764,7 @@
       "task": "T20",
       "symbols": [
         "func Service.Execute",
-        "func Service.executeAction",
-        "func executeReplace",
-        "func invokeExecutionPrepareHandler"
+        "func executeReplace"
       ]
     },
     {
@@ -9468,16 +8784,6 @@
       "task": "T20",
       "symbols": [
         "type Service"
-      ]
-    },
-    {
-      "path": "internal/application/issueopsexecution/snapshot.go",
-      "owner": "application",
-      "task": "T20",
-      "symbols": [
-        "func Service.snapshotReader",
-        "func executionGitLabFallbackSnapshotReader",
-        "func withExecutionIssueSnapshotSource"
       ]
     },
     {
@@ -9531,20 +8837,6 @@
       ]
     },
     {
-      "path": "internal/application/issueopslease/claim_context.go",
-      "owner": "application",
-      "task": "T20",
-      "symbols": [
-        "func NewSealedClaimContext",
-        "func SealedClaimContext.Preflight",
-        "func SealedClaimContext.validatePacket",
-        "type ClaimContextReader",
-        "type IssueSnapshot",
-        "type IssueSnapshotReader",
-        "type SealedClaimContext"
-      ]
-    },
-    {
       "path": "internal/application/issueopslease/claim_transaction.go",
       "owner": "application",
       "task": "T20",
@@ -9559,17 +8851,11 @@
       "task": "T20",
       "symbols": [
         "type CanonicalPathMatcher",
-        "type ClaimContextPreflight",
-        "type ClaimPreflightRequest",
         "type ClaimRepository",
         "type ClaimRepositoryRequest",
         "type ClaimTransaction",
         "type Clock",
         "type ProcessInspector",
-        "type ReconcileIntentState",
-        "type ReconcileProgress",
-        "type ReconcileRepository",
-        "type ReconcileStageExecutor",
         "type Record",
         "type RecordTransition",
         "type RecordValidator",
@@ -9579,36 +8865,8 @@
         "type ReseedArtifacts",
         "type ReseedFence",
         "type ReseedInventory",
-        "type ReseedInventoryReceipt",
         "type ReseedRepository",
-        "type ReseedSnapshot",
-        "type ResumeArtifacts",
-        "type ResumeFence",
-        "type ResumeIntentState",
-        "type ResumeOperationIDs",
-        "type ResumeOwnerInventory",
-        "type ResumeProgress",
-        "type ResumeRepository",
-        "type ResumeSnapshot",
-        "type ResumeStageExecutor",
-        "type RoleAgentArgs"
-      ]
-    },
-    {
-      "path": "internal/application/issueopslease/reconcile.go",
-      "owner": "application",
-      "task": "T06",
-      "symbols": [
-        "func NewReconcileService",
-        "func ReconcileService.Reconcile",
-        "func ReconcileService.executePlan",
-        "func ReconcileService.failed",
-        "func ReconcileService.terminalRoleAgentArgs",
-        "func reconcileClearCause",
-        "func reconcilePreserveCause",
-        "type ReconcileRequest",
-        "type ReconcileResult",
-        "type ReconcileService"
+        "type ReseedSnapshot"
       ]
     },
     {
@@ -9636,7 +8894,7 @@
         "func ReseedService.reseedWithinFence",
         "func ReseedService.reseededRecord",
         "func ReseedService.validateReseedPreconditions",
-        "func applyPreparedReseedArtifacts",
+        "func applyPreparedReseedToken",
         "func cleanupAbandonApplying",
         "func cloneReseedRecord",
         "func containsLedgerNote",
@@ -9644,57 +8902,9 @@
         "func resolveCompletionGeneration",
         "func staleCompletedReseedLedger",
         "func toContractReseedActor",
-        "func validateReseedRuntimeRollover",
         "type ReseedRequest",
         "type ReseedResult",
         "type ReseedService"
-      ]
-    },
-    {
-      "path": "internal/application/issueopslease/resume.go",
-      "owner": "application",
-      "task": "T06",
-      "symbols": [
-        "func NewResumeService",
-        "func ResumeService.Resume",
-        "func ResumeService.advanceResumeStage",
-        "func ResumeService.driveResumeStages",
-        "func ResumeService.planResume",
-        "func ResumeService.resolveStageReceipt",
-        "func ResumeService.resumeWithinFence",
-        "func ResumeService.terminalRoleAgentArgs",
-        "func argsForStage",
-        "func resumeDomainRequest",
-        "func resumeInvocationFailureState",
-        "func resumeReconcileRequired",
-        "func resumeStageDecisionCause",
-        "func resumeStageReconcileCause",
-        "type ResumeRequest",
-        "type ResumeResult",
-        "type ResumeService"
-      ]
-    },
-    {
-      "path": "internal/application/issueopsmodeswitch/service.go",
-      "owner": "application",
-      "task": "T20",
-      "symbols": [
-        "func Service.RemoveBranch",
-        "func Service.RemoveWorktree",
-        "func Service.ResetExecution",
-        "func Service.Run",
-        "func Service.observe",
-        "func inventoryFor",
-        "type Service"
-      ]
-    },
-    {
-      "path": "internal/application/issueopsmodeswitch/switch.go",
-      "owner": "application",
-      "task": "T20",
-      "symbols": [
-        "func Apply",
-        "type ApplyRequest"
       ]
     },
     {
@@ -9742,71 +8952,6 @@
       ]
     },
     {
-      "path": "internal/application/issueopsowner/plan.go",
-      "owner": "application",
-      "task": "T20",
-      "symbols": [
-        "func Service.MaterializePlan",
-        "func Service.RequirePlan",
-        "func Service.planRequiredError",
-        "func quoteArg"
-      ]
-    },
-    {
-      "path": "internal/application/issueopsowner/policy.go",
-      "owner": "application",
-      "task": "T20",
-      "symbols": [
-        "func OwnerArtifactDir",
-        "func PolicyContext",
-        "func ValidateOwnerCatalog",
-        "type ResolveModelFunc"
-      ]
-    },
-    {
-      "path": "internal/application/issueopsowner/preparation.go",
-      "owner": "application",
-      "task": "T20",
-      "symbols": [
-        "func Service.Prepare",
-        "func Service.ReadPreparationEvidence",
-        "func executionPreparationCoreRecord"
-      ]
-    },
-    {
-      "path": "internal/application/issueopsowner/reseal.go",
-      "owner": "application",
-      "task": "T20",
-      "symbols": [
-        "func Service.Reseal",
-        "func Service.Reseed"
-      ]
-    },
-    {
-      "path": "internal/application/issueopsowner/resume.go",
-      "owner": "application",
-      "task": "T20",
-      "symbols": [
-        "func ResumeReader.Read",
-        "func ResumeReader.readToken",
-        "func ResumeReader.validateManifestArtifacts",
-        "func ResumeReader.validatePacket",
-        "func ResumeReader.validateSealedPlan",
-        "type ResumeReader"
-      ]
-    },
-    {
-      "path": "internal/application/issueopsowner/service.go",
-      "owner": "application",
-      "task": "T20",
-      "symbols": [
-        "func Service.Build",
-        "func Service.ReadSnapshot",
-        "func digest",
-        "type Service"
-      ]
-    },
-    {
       "path": "internal/application/issueopsowner/status.go",
       "owner": "application",
       "task": "T20",
@@ -9821,8 +8966,12 @@
       "owner": "application",
       "task": "T20",
       "symbols": [
+        "func OwnerArtifactDir",
         "func Service.MaterializeDirect",
-        "func Service.ResolveWorkspace"
+        "func Service.ResolveWorkspace",
+        "func executionPreparationCoreRecord",
+        "type ContextFiles",
+        "type Service"
       ]
     },
     {
@@ -9838,64 +8987,7 @@
       "owner": "application",
       "task": "T20",
       "symbols": [
-        "func ApplyDirectCommit",
-        "func ValidateDirectCommit"
-      ]
-    },
-    {
-      "path": "internal/application/issueopspreparation/intent_request.go",
-      "owner": "application",
-      "task": "T08",
-      "symbols": [
-        "func IntentRequestBuilder.Build",
-        "func IntentRequestBuilder.Inspect",
-        "func IntentRequestBuilder.optionalPath",
-        "func IntentRequestBuilder.paths",
-        "func LaunchHydrator.Hydrate",
-        "func intentDigest",
-        "type IntentFiles",
-        "type IntentRequestBuilder",
-        "type LaunchHydrator"
-      ]
-    },
-    {
-      "path": "internal/application/issueopspreparation/intent_state.go",
-      "owner": "application",
-      "task": "T20",
-      "symbols": [
-        "func ValidateIntentState"
-      ]
-    },
-    {
-      "path": "internal/application/issueopspreparation/orca_begin.go",
-      "owner": "application",
-      "task": "T20",
-      "symbols": [
-        "func ApplyOrcaBegin",
-        "func EnsureOrcaBeginUnprepared",
-        "func ValidateOrcaBegin"
-      ]
-    },
-    {
-      "path": "internal/application/issueopspreparation/orca_invocation.go",
-      "owner": "application",
-      "task": "T20",
-      "symbols": [
-        "func ApplyOrcaFailure",
-        "func ApplyOrcaNoResource",
-        "func MarkOrcaInvoking"
-      ]
-    },
-    {
-      "path": "internal/application/issueopspreparation/orca_receipt.go",
-      "owner": "application",
-      "task": "T20",
-      "symbols": [
-        "func ApplyOrcaReceipt",
-        "func applyDispatchReceipt",
-        "func applyIdentifierReceipt",
-        "func applyWorktreeReceipt",
-        "type OrcaReceiptDecision"
+        "func ApplyDirectCommit"
       ]
     },
     {
@@ -9903,15 +8995,9 @@
       "owner": "application",
       "task": "T20",
       "symbols": [
-        "type AgentModels",
         "type Clock",
         "type DirectCommit",
         "type DirectWorkspace",
-        "type IntentProgress",
-        "type IntentState",
-        "type OperationID",
-        "type OrcaBegin",
-        "type OrcaGateway",
         "type PreparationEvidence",
         "type Repository"
       ]
@@ -9923,34 +9009,15 @@
       "symbols": [
         "func NewService",
         "func Service.Prepare",
-        "func Service.advanceOrca",
-        "func Service.applyOrcaReceipt",
-        "func Service.driveOrcaIntent",
-        "func Service.loadPrepareCommand",
-        "func Service.normalizeOwnerDefaults",
         "func Service.prepareDirect",
-        "func Service.prepareOrca",
-        "func Service.probeOrcaReadiness",
-        "func Service.recordOrcaFailure",
         "func Service.resolveExisting",
-        "func Service.resolveOrcaOwner",
-        "func Service.terminalRoleAgentArgs",
-        "func applySelectionResult",
         "func cloneExecution",
-        "func delegated",
         "func failedResult",
         "func formatTime",
-        "func intentRequest",
-        "func isOrcaOwnerHost",
         "func normalizeActor",
-        "func plannerEvidence",
-        "func plannerGateError",
-        "func plannerGateHints",
         "func prepareConfirmCommand",
         "func preparedResult",
         "func quoteArg",
-        "func selectionReceipt",
-        "func selectionResult",
         "func workspaceResult",
         "func workspaceResultFromReceipt",
         "func writerlessError",
@@ -10326,14 +9393,11 @@
       "task": "T20",
       "symbols": [
         "func Service.inventory",
-        "func Service.orcaOwnerInventory",
-        "func Service.ownerInventory",
         "func Service.quiescence",
         "func Service.refuseSelfRevoke",
         "func Service.requireQuiescentWorkspaceProcesses",
         "func Service.validateCWD",
-        "func hashJSON",
-        "func runtimeFacts"
+        "func hashJSON"
       ]
     },
     {
@@ -11437,10 +10501,7 @@
       "task": "T02",
       "symbols": [
         "type ExecutionIssueSnapshot",
-        "type ExecutionIssueSnapshotEvidence",
-        "type ExecutionIssueSnapshotReadFunc",
         "type ExecutionIssueSnapshotRequest",
-        "type ExecutionPrepareInvocation",
         "type IssueProviderCreatePullRequestResult"
       ]
     },
@@ -11635,15 +10696,12 @@
         "type ExecutionCompletion",
         "type ExecutionCompletionHistory",
         "type ExecutionFailure",
-        "type ExecutionMode",
-        "type ExecutionSelection",
         "type ExecutionSyncBaseEvent",
         "type ExecutionSyncBaseResolution",
         "type ExternalIntent",
         "type LeaseStatus",
         "type NativeActor",
         "type NativeProcessReceipt",
-        "type OrcaBinding",
         "type Workspace",
         "type WriteLease"
       ]
@@ -11654,7 +10712,6 @@
       "task": "T02",
       "symbols": [
         "type ExecutionActionRequest",
-        "type ExecutionClaimDependencies",
         "type ExecutionClaimHandler",
         "type ExecutionPrepareHandler",
         "type ExecutionReseedHandler",
@@ -11679,11 +10736,6 @@
         "type ExecutionReleaseRequest",
         "type ExecutionReplaceResult",
         "type ExecutionResult",
-        "type ExecutionResumeHandler",
-        "type ExecutionResumeRequest",
-        "type ExecutionResumeResult",
-        "type ExecutionSwitchModeRequest",
-        "type ExecutionSwitchModeResult",
         "type ExecutionSyncBaseDeps",
         "type ExecutionSyncBaseRequest",
         "type ExecutionSyncBaseResult",
@@ -11724,7 +10776,6 @@
       "task": "T02",
       "symbols": [
         "type ExecutionReplaceRequest",
-        "type ReplacementArtifacts",
         "type ReplacementWorkspaceProcess"
       ]
     },
@@ -11768,40 +10819,6 @@
         "type IssueOpsIssueCreateIntentRequest",
         "type IssueOpsIssueCreateOutcome",
         "type IssueOpsIssueCreateReconcileResult"
-      ]
-    },
-    {
-      "path": "internal/contract/issueops/orca_branch_scope.go",
-      "owner": "contract",
-      "task": "T02",
-      "symbols": [
-        "type OrcaBranchScope"
-      ]
-    },
-    {
-      "path": "internal/contract/issueops/orca_request_id.go",
-      "owner": "contract",
-      "task": "T02",
-      "symbols": [
-        "func ValidateOrcaRequestID",
-        "func ValidateOrcaRetryRequestID"
-      ]
-    },
-    {
-      "path": "internal/contract/issueops/owner_context.go",
-      "owner": "contract",
-      "task": "T02",
-      "symbols": [
-        "type OwnerArtifacts",
-        "type OwnerCommands",
-        "type OwnerContextPacket",
-        "type OwnerIssue",
-        "type OwnerPaths",
-        "type OwnerPlanIdentity",
-        "type OwnerPolicyContext",
-        "type OwnerResumeArtifacts",
-        "type OwnerSnapshot",
-        "type OwnerWorkspaceLayout"
       ]
     },
     {
@@ -11937,10 +10954,10 @@
       "owner": "contract",
       "task": "T02",
       "symbols": [
-        "func RecoveryError.Error",
-        "func RecoveryError.IssueOpsErrorFields",
+        "func SealedError.Error",
+        "func SealedError.IssueOpsErrorFields",
         "type Record",
-        "type RecoveryError",
+        "type SealedError",
         "type Staged"
       ]
     },
@@ -12010,7 +11027,6 @@
         "type Execution",
         "type Lease",
         "type LedgerEntry",
-        "type OrcaBinding",
         "type ProcessReceipt",
         "type RecordSnapshot",
         "type RemoteArtifact"
@@ -12043,15 +11059,6 @@
       "symbols": []
     },
     {
-      "path": "internal/contract/issueopslease/claim_context.go",
-      "owner": "contract",
-      "task": "T02",
-      "symbols": [
-        "type ClaimContextPacket",
-        "type ClaimPacketIssue"
-      ]
-    },
-    {
       "path": "internal/contract/issueopslease/execution_sidecars.go",
       "owner": "contract",
       "task": "T02",
@@ -12060,7 +11067,6 @@
         "type CompletionHistoryEntry",
         "type ExternalIntent",
         "type FailureDetail",
-        "type OrcaBinding",
         "type SyncBaseEvent",
         "type SyncBaseResolution"
       ]
@@ -12078,17 +11084,6 @@
       ]
     },
     {
-      "path": "internal/contract/issueopslease/reconcile.go",
-      "owner": "contract",
-      "task": "T02",
-      "symbols": [
-        "type ReconcilePreparedReceipt",
-        "type ReconcileStageInventory",
-        "type ReconcileStageReceipt",
-        "type ReconcileWorkspaceReceipt"
-      ]
-    },
-    {
       "path": "internal/contract/issueopslease/record.go",
       "owner": "contract",
       "task": "T02",
@@ -12100,7 +11095,6 @@
         "type Lease",
         "type ProcessReceipt",
         "type Record",
-        "type Selection",
         "type Workspace"
       ]
     },
@@ -12110,26 +11104,6 @@
       "task": "T02",
       "symbols": [
         "type ReseedReceipt"
-      ]
-    },
-    {
-      "path": "internal/contract/issueopslease/resume.go",
-      "owner": "contract",
-      "task": "T02",
-      "symbols": [
-        "type OrcaPromptReceipt",
-        "type ResumeArtifacts",
-        "type ResumeReceipt",
-        "type ResumeStageInventory",
-        "type ResumeStageReceipt"
-      ]
-    },
-    {
-      "path": "internal/contract/issueopsmodeswitch/inventory.go",
-      "owner": "contract",
-      "task": "T02",
-      "symbols": [
-        "type Inventory"
       ]
     },
     {
@@ -12158,79 +11132,6 @@
       ]
     },
     {
-      "path": "internal/contract/issueopspreparation/intent.go",
-      "owner": "contract",
-      "task": "T02",
-      "symbols": [
-        "func DecodeIssueLinkEvidence",
-        "func IntentCodec.Decode",
-        "func IntentCodec.DecodeSelfIdentified",
-        "func IntentCodec.Encode",
-        "func IntentCodec.RenderMarker",
-        "func IntentCodec.RenderReadinessMarker",
-        "func IntentCodec.Validate",
-        "func IntentError.Error",
-        "func IntentError.IssueOpsErrorFields",
-        "func InvocationError.Error",
-        "func InvocationError.Unwrap",
-        "func contractError",
-        "func decodeShape",
-        "func intentEnvelopeValid",
-        "func intentInvocationValid",
-        "func intentProbeValid",
-        "func invalidMarker",
-        "func markerField",
-        "func ownerLaunchReceiptsValid",
-        "func parseMarker",
-        "func parseMarkerTail",
-        "func renderMarker",
-        "func resumeShapeValid",
-        "func sameOptionalPath",
-        "func samePath",
-        "func validProvider",
-        "func validToken",
-        "func validateIntent",
-        "func validateOwnerStageProgress",
-        "func validatePurposeShape",
-        "func validateShape",
-        "func validateStageShape",
-        "func validateWorkspaceReceipt",
-        "type Intent",
-        "type IntentCodec",
-        "type IntentError",
-        "type IntentInventory",
-        "type IntentReceipt",
-        "type IntentRequest",
-        "type IntentStage",
-        "type InvocationError",
-        "type IssueIdentity",
-        "type IssueLinkEvidence",
-        "type LaunchIdentity",
-        "type LaunchRequest",
-        "type MarkerIdentity",
-        "type OrcaWorkspaceReceipt",
-        "type ProbeRequest",
-        "type PromptReceipt",
-        "type ResumeBinding",
-        "type WorkspaceReceipt",
-        "type WorkspaceRequest",
-        "type ownerStageProgress"
-      ]
-    },
-    {
-      "path": "internal/contract/issueopspreparation/planner_gates.go",
-      "owner": "contract",
-      "task": "T02",
-      "symbols": [
-        "func PlannerGateKeys",
-        "type PlannerDesignEvidence",
-        "type PlannerDevilsAdvocateEvidence",
-        "type PlannerEvidence",
-        "type PlannerGate",
-        "type PlannerIntentEvidence"
-      ]
-    },
-    {
       "path": "internal/contract/issueopspreparation/prepare.go",
       "owner": "contract",
       "task": "T02",
@@ -12247,17 +11148,11 @@
         "func cloneStrings",
         "type AccessResult",
         "type Command",
-        "type ExternalIntent",
-        "type Lease",
-        "type OrcaBinding",
-        "type OwnerArtifacts",
-        "type OwnerEvidence",
-        "type ProbeResult",
         "type Record",
         "type Result",
-        "type ResumeArtifacts",
-        "type Selection",
-        "type Snapshot"
+        "type Snapshot",
+        "type WorkspaceReceipt",
+        "type WorkspaceRequest"
       ]
     },
     {
@@ -12565,13 +11460,7 @@
         "type GitWorktree",
         "type InventoryProblem",
         "type LeaseHolderIndex",
-        "type MessagePresence",
         "type Options",
-        "type OrcaDispatch",
-        "type OrcaGate",
-        "type OrcaTask",
-        "type OrcaTerminal",
-        "type OrcaWorktree",
         "type Result",
         "type Snapshot",
         "type StateArtifact"
@@ -13330,8 +12219,6 @@
         "func IssueOpsCommandSpec",
         "func IssueOpsLifecycleIDFlag",
         "func ParseExactIssueOpsArgs",
-        "func ParseExactIssueOpsCommand",
-        "func exactIssueOpsExecutable",
         "func generatedCommandProvenanceValueFlag",
         "func parseExactIssueOpsTokens",
         "func toBoolMap",
@@ -13817,6 +12704,7 @@
         "func CleanupAbandonFailureInventoryMatches",
         "func CleanupAbandonIntentOperationIDs",
         "func CleanupAbandonPartialBranchRetry",
+        "func CleanupAbandonPendingError",
         "func CleanupAbandonPreviewCommand",
         "func CleanupAbandonRemoteFlags",
         "func CleanupAbandonRemovalPlan",
@@ -13840,22 +12728,6 @@
       ]
     },
     {
-      "path": "internal/domain/issueops/cleanup_abandon_orca.go",
-      "owner": "domain",
-      "task": "T20",
-      "symbols": [
-        "func CleanupAbandonAllowsRuntimeRollover",
-        "func CleanupAbandonOrcaTarget",
-        "func CleanupAbandonPendingRecovery",
-        "func ValidateCleanupAbandonIntent",
-        "func ValidateCleanupAbandonIntentObservation",
-        "func ValidateCleanupAbandonOrcaObservation",
-        "func ValidateCleanupAbandonPending",
-        "type CleanupAbandonIntentIdentity",
-        "type CleanupAbandonOrcaObservation"
-      ]
-    },
-    {
       "path": "internal/domain/issueops/cleanup_abandon_preview.go",
       "owner": "domain",
       "task": "T20",
@@ -13866,7 +12738,7 @@
         "func cleanupAbandonPreviewBuilder.checkFailureReceipt",
         "func cleanupAbandonPreviewBuilder.checkLeaseArtifactAndChildren",
         "func cleanupAbandonPreviewBuilder.checkLocalResidue",
-        "func cleanupAbandonPreviewBuilder.checkPendingIntentOrcaAndRemote",
+        "func cleanupAbandonPreviewBuilder.checkPendingIntentAndRemote",
         "func cleanupAbandonPreviewBuilder.checkReason",
         "func cleanupAbandonPreviewBuilder.checkWorktreeObservation",
         "type CleanupAbandonObservation",
@@ -14012,14 +12884,11 @@
       "symbols": [
         "func CleanupOccupantReceipts",
         "func CleanupRequesterOccupancyMissing",
-        "func CleanupRequesterTerminal",
         "func CleanupStopTargets",
-        "func CleanupWorkspaceOrcaBound",
         "func DescribeCleanupProcesses",
         "func RemainingCleanupProcesses",
         "func cleanupOccupantBound",
-        "func cleanupReceiptMatches",
-        "type CleanupTerminalIdentity"
+        "func cleanupReceiptMatches"
       ]
     },
     {
@@ -14070,37 +12939,20 @@
       ]
     },
     {
-      "path": "internal/domain/issueops/execution_issue_snapshot.go",
-      "owner": "domain",
-      "task": "T20",
-      "symbols": [
-        "func SameGitLabExecutionIssueIdentity",
-        "func ValidateExecutionSnapshotAction",
-        "func ValidateExecutionSnapshotEvidence",
-        "func ValidateExecutionSnapshotRecord",
-        "func ValidateGitLabExecutionSnapshot",
-        "func parseGitLabExecutionIssueIdentity",
-        "func parseGitLabExecutionIssueURL",
-        "func splitGitLabExecutionIssuePath",
-        "func validGitLabExecutionProjectSegment",
-        "type gitLabExecutionIssueIdentity"
-      ]
-    },
-    {
-      "path": "internal/domain/issueops/execution_mode_switch.go",
-      "owner": "domain",
-      "task": "T20",
-      "symbols": [
-        "func ModeSwitchRecordFingerprint",
-        "func ResetExecutionForModeSwitch"
-      ]
-    },
-    {
       "path": "internal/domain/issueops/execution_readiness.go",
       "owner": "domain",
       "task": "T20",
       "symbols": [
         "func ExecutionReadinessMissing"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/execution_recovery_commands.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ReplacementFinalizePreviewCommand",
+        "func ReplacementPreviewCommand"
       ]
     },
     {
@@ -14116,17 +12968,21 @@
         "func validateExecutionCompletion",
         "func validateExecutionCompletions",
         "func validateExecutionCore",
-        "func validateExecutionOrcaBinding",
         "func validateExecutionPending",
-        "func validateExecutionSelection",
         "func validateExecutionSyncBaseEvent",
         "func validateExecutionSyncBaseResolution",
-        "func validateOrcaBinding",
-        "func validateSelectionExplicitDirect",
-        "func validateSelectionModeFallback",
-        "func validateSelectionProbeShape",
         "func validateWorkspace",
         "func validateWriteLease"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/execution_workspace_layout.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func DeriveWorkspaceLayout",
+        "func ValidateWorkspaceParent",
+        "type WorkspaceLayout"
       ]
     },
     {
@@ -14163,7 +13019,6 @@
         "func handoffDeliveryIdentifierInvalid",
         "func handoffDeliveryIdentityMismatch",
         "func handoffDeliveryMergeRejection",
-        "func handoffDeliveryOmoEvidenceAllowed",
         "func handoffDeliveryProcessCountersChanged",
         "func handoffDeliveryProcessIdentityChanged",
         "func handoffDeliveryReject",
@@ -14196,71 +13051,16 @@
       ]
     },
     {
-      "path": "internal/domain/issueops/handoff_delivery_attempt.go",
-      "owner": "domain",
-      "task": "T20",
-      "symbols": [
-        "func DeliveryAcceptedResponseID",
-        "func DeliveryAttempt.AttemptID",
-        "func DeliveryAttempt.CallKind",
-        "func DeliveryAttempt.IsDelivery",
-        "func DeliveryAttempt.LineageID",
-        "func DeliveryAttempt.Probe",
-        "func DeliveryDurableRequestID",
-        "func DeliveryRequestStatus",
-        "func DeliveryResponseIdentityRejected",
-        "func RecoverDeliveryObservation",
-        "func RejectStagedDeliveryWithoutResponse",
-        "func ValidateDeliveryDispatchReceipt",
-        "func ValidateDeliveryRetryRequestIDs",
-        "type DeliveryAttempt",
-        "type DeliveryFailure",
-        "type DeliveryReceiptIdentity"
-      ]
-    },
-    {
       "path": "internal/domain/issueops/handoff_delivery_claim.go",
       "owner": "domain",
       "task": "T20",
       "symbols": [
-        "func HandoffDeliveryClaimQueryFor",
+        "func HandoffDeliveryClaimObservable",
         "func OwnerClaimHandoffDeliveryObservation",
         "func claimedHandoffDeliveryObservation",
         "func manualClaimCandidates",
         "func manualClaimFromHolderProcess",
-        "func manualOwnerClaimObservation",
-        "type HandoffDeliveryClaimQuery"
-      ]
-    },
-    {
-      "path": "internal/domain/issueops/handoff_delivery_events.go",
-      "owner": "domain",
-      "task": "T20",
-      "symbols": [
-        "func CompleteDeliveryObservation",
-        "func DeliveryCompletionID",
-        "func DeliveryFailurePlan",
-        "func DeliveryObserved",
-        "func NewDeliveryObservation",
-        "func cloneDeliveryUint64",
-        "func firstDeliveryValue",
-        "type DeliveryFailureDisposition",
-        "type DeliveryObservationInput",
-        "type DeliveryPrompt"
-      ]
-    },
-    {
-      "path": "internal/domain/issueops/handoff_delivery_recovery.go",
-      "owner": "domain",
-      "task": "T20",
-      "symbols": [
-        "func FinishDeliveryRecovery",
-        "func InspectDeliveryDispatch",
-        "func PlanDeliveryRecovery",
-        "func omoObservedPromptRecovery",
-        "type DeliveryRecoveryConclusion",
-        "type DeliveryRecoveryMode",
-        "type DeliveryRecoveryPlan"
+        "func manualOwnerClaimObservation"
       ]
     },
     {
@@ -14401,83 +13201,6 @@
         "func NormalizeNativeActor",
         "func ValidateNativeActor",
         "func ValidateObservedNativeProcess"
-      ]
-    },
-    {
-      "path": "internal/domain/issueops/orca_branch.go",
-      "owner": "domain",
-      "task": "T20",
-      "symbols": [
-        "func OrcaBranchScopes",
-        "func ValidateOrcaBranchRef"
-      ]
-    },
-    {
-      "path": "internal/domain/issueops/owner_context.go",
-      "owner": "domain",
-      "task": "T20",
-      "symbols": [
-        "func OwnerAcceptanceIDs",
-        "func OwnerCommandsFor",
-        "func OwnerIssueProvider",
-        "func OwnerRequiredDocCandidates",
-        "func OwnerVerificationCommands",
-        "func OwnerWorkspaceMatches",
-        "func RenderOwnerPrompt",
-        "func ValidOwnerDigest",
-        "func ValidateOwnerSnapshot",
-        "func branchLinkCommands",
-        "func renderExecutionOwnerLines",
-        "func uniqueExecutionOwnerValues",
-        "func validateExecutionOwnerPromptInputs"
-      ]
-    },
-    {
-      "path": "internal/domain/issueops/owner_packet.go",
-      "owner": "domain",
-      "task": "T20",
-      "symbols": [
-        "func OwnerPacket"
-      ]
-    },
-    {
-      "path": "internal/domain/issueops/owner_plan_errors.go",
-      "owner": "domain",
-      "task": "T20",
-      "symbols": [
-        "func OwnerPlanRequiredError.Error",
-        "func OwnerPlanRequiredError.IssueOpsErrorFields",
-        "func OwnerPlanReviewStaleError.Error",
-        "func OwnerPlanReviewStaleError.IssueOpsErrorFields",
-        "type OwnerPlanRequiredError",
-        "type OwnerPlanReviewStaleError"
-      ]
-    },
-    {
-      "path": "internal/domain/issueops/owner_resume.go",
-      "owner": "domain",
-      "task": "T20",
-      "symbols": [
-        "func CompleteOwnerArtifactIdentity",
-        "func OwnerReseedNextCommand",
-        "func OwnerResumeNextCommand",
-        "func OwnerResumePacketPrefixMatches",
-        "func OwnerResumePlanRequired",
-        "func ParseOwnerResumeToken",
-        "func ReplacementFinalizePreviewCommand",
-        "func ReplacementPreviewCommand",
-        "func ValidateOwnerResumeGeneration",
-        "func ValidateOwnerResumePacket",
-        "func ValidateOwnerResumeProfile"
-      ]
-    },
-    {
-      "path": "internal/domain/issueops/owner_workspace.go",
-      "owner": "domain",
-      "task": "T20",
-      "symbols": [
-        "func OwnerWorkspaceLayout",
-        "func ValidateOwnerWorkspaceParent"
       ]
     },
     {
@@ -14674,7 +13397,6 @@
         "func CompletedReplacementBase",
         "func FinalizeReplacement",
         "func RevokeReplacement",
-        "func SealReplacementOwner",
         "func ValidateReplacementGeneration",
         "func ValidateReplacementPreview",
         "func ValidateReplacementRevoke"
@@ -14687,7 +13409,6 @@
       "symbols": [
         "func ReplacementClaimCommand",
         "func ReplacementReseedCommand",
-        "func ReplacementResumeCommand",
         "func ReplacementRevokeCommand",
         "func quoteReplacementArg"
       ]
@@ -14697,17 +13418,11 @@
       "owner": "domain",
       "task": "T20",
       "symbols": [
-        "func AllowReplacementRuntimeRollover",
-        "func DeadReplacementOwnerRuntimeRollover",
         "func ReplacementSelfHolder",
         "func ValidateReplacementCWD",
         "func ValidateReplacementHolderProcess",
-        "func ValidateReplacementOwnerQuiescence",
         "func ValidateReplacementQuiescence",
-        "func ValidateReplacementRuntimeRollover",
-        "func ValidateReplacementSelfRevoke",
-        "func replacementRolloverQuiescent",
-        "type ReplacementRuntimeFacts"
+        "func ValidateReplacementSelfRevoke"
       ]
     },
     {
@@ -14825,15 +13540,6 @@
       "symbols": [
         "func ValidateCWD",
         "func ValidateHolder"
-      ]
-    },
-    {
-      "path": "internal/domain/issueopsauthorization/plan_link.go",
-      "owner": "domain",
-      "task": "T05",
-      "symbols": [
-        "func ValidatePlanCoordinator",
-        "func verifiedCoordinator"
       ]
     },
     {
@@ -15255,40 +13961,12 @@
       ]
     },
     {
-      "path": "internal/domain/issueopslease/claim_context.go",
-      "owner": "domain",
-      "task": "T20",
-      "symbols": [
-        "func ClaimContextDigest",
-        "func ClaimContextDigests",
-        "func RequiresSealedClaimContext",
-        "func ValidateClaimArtifact",
-        "func ValidateClaimIssueSnapshot",
-        "func ValidateClaimPacketDigest",
-        "func ValidateClaimPacketIdentity",
-        "func ValidateSealedClaimGeneration",
-        "func claimSHA256"
-      ]
-    },
-    {
-      "path": "internal/domain/issueopslease/reconcile.go",
-      "owner": "domain",
-      "task": "T06",
-      "symbols": [
-        "func PlanReconcileStage",
-        "type ReconcileStageAction",
-        "type ReconcileStagePlan",
-        "type ReconcileStageRequest"
-      ]
-    },
-    {
       "path": "internal/domain/issueopslease/record_validation.go",
       "owner": "domain",
       "task": "T02",
       "symbols": [
         "func ValidatePersistedActor",
         "func ValidatePersistedRecord",
-        "func ValidatePersistedSelection",
         "func ValidatePersistedSidecars",
         "func syncBaseResolutionMatchesExecution",
         "func validHexDigest",
@@ -15298,12 +13976,7 @@
         "func validateExecutionCompletionSidecars",
         "func validateFailureDetail",
         "func validateLease",
-        "func validateOrcaBinding",
         "func validatePendingIntent",
-        "func validateSelectionDirectReason",
-        "func validateSelectionFallback",
-        "func validateSelectionModeAgreement",
-        "func validateSelectionProbeFlags",
         "func validateSyncBaseEvent",
         "func validateSyncBaseResolution"
       ]
@@ -15343,38 +14016,6 @@
       ]
     },
     {
-      "path": "internal/domain/issueopslease/resume.go",
-      "owner": "domain",
-      "task": "T06",
-      "symbols": [
-        "func PlanResume",
-        "func PlanResumeStage",
-        "func ValidateHolderlessRuntimeRollover",
-        "func planResumeOwnerState",
-        "func recoverableStaleDispatchStatus",
-        "func settledDispatchStatus",
-        "func terminalTaskStatus",
-        "func validateResumePreconditions",
-        "type HolderlessRuntimeRolloverRequest",
-        "type ResumeDisposition",
-        "type ResumeInventory",
-        "type ResumePlan",
-        "type ResumeRequest",
-        "type ResumeStageAction",
-        "type ResumeStagePlan",
-        "type ResumeStageRequest"
-      ]
-    },
-    {
-      "path": "internal/domain/issueopslease/resume_begin.go",
-      "owner": "domain",
-      "task": "T06",
-      "symbols": [
-        "func ValidateResumeBeginAuthority",
-        "type ResumeBeginAuthority"
-      ]
-    },
-    {
       "path": "internal/domain/issueopslease/writer.go",
       "owner": "domain",
       "task": "T20",
@@ -15403,27 +14044,6 @@
         "type Node",
         "type Observation",
         "type State"
-      ]
-    },
-    {
-      "path": "internal/domain/issueopsmodeswitch/decision.go",
-      "owner": "domain",
-      "task": "T20",
-      "symbols": [
-        "func MissingGates",
-        "func NormalizeMode",
-        "type Facts"
-      ]
-    },
-    {
-      "path": "internal/domain/issueopsmodeswitch/transition.go",
-      "owner": "domain",
-      "task": "T20",
-      "symbols": [
-        "func ComparisonRefs",
-        "func InventoryFingerprint",
-        "func ValidateApply",
-        "func hashJSON"
       ]
     },
     {
@@ -15501,7 +14121,7 @@
         "func ResultForRequest",
         "func inspectCycleRecords",
         "func inspectGitWorktrees",
-        "func inspectLeaseAndOrcaAuthority",
+        "func inspectLeaseAuthority",
         "func inspectLocalBranchRefs",
         "func inspectWorktreeHead",
         "func samePath",
@@ -15511,150 +14131,15 @@
       ]
     },
     {
-      "path": "internal/domain/issueopspreparation/cleanup_abandon.go",
-      "owner": "domain",
-      "task": "T08",
-      "symbols": [
-        "func CleanupAbandonIntentStages"
-      ]
-    },
-    {
       "path": "internal/domain/issueopspreparation/decision.go",
       "owner": "domain",
       "task": "T20",
       "symbols": [
         "func Decide",
-        "func Decision.recordProbe",
-        "func Denial.Error",
-        "func Denial.IssueOpsErrorFields",
-        "func Denial.Unwrap",
-        "func Fingerprint",
-        "func NormalizeDirectReason",
-        "func NormalizeMode",
-        "func ValidateSelectionReceipt",
-        "func existingExecutionCode",
-        "func preparationCode",
         "func writerless",
         "type Code",
         "type Decision",
-        "type DecisionInput",
-        "type Denial",
-        "type DenialReason",
-        "type OrcaReadiness"
-      ]
-    },
-    {
-      "path": "internal/domain/issueopspreparation/failure_request_ids.go",
-      "owner": "domain",
-      "task": "T20",
-      "symbols": [
-        "func AdoptFailureRequestIDs",
-        "func adoptFailureRequestID",
-        "type FailureRequestIDFacts"
-      ]
-    },
-    {
-      "path": "internal/domain/issueopspreparation/intent_authority.go",
-      "owner": "domain",
-      "task": "T20",
-      "symbols": [
-        "func CanonicalizeIntent",
-        "func PendingKind",
-        "func PrepareIssueIdentity",
-        "func SealIntent",
-        "func ValidateIntentRecord",
-        "func ValidateIntentRecordAuthority",
-        "func bindingsEqual",
-        "func contractError",
-        "func leasesEqual",
-        "func pendingAuthorityMatches",
-        "func providerIssueURLMatches",
-        "func validProvider"
-      ]
-    },
-    {
-      "path": "internal/domain/issueopspreparation/intent_identity.go",
-      "owner": "domain",
-      "task": "T08",
-      "symbols": [
-        "func ValidateIntentIssueIdentity",
-        "func ValidateIntentRecordIdentity",
-        "func ValidateLaunchRequest",
-        "func preparedIdentityMatches",
-        "func recordIdentityMatches",
-        "type IntentIdentityPaths"
-      ]
-    },
-    {
-      "path": "internal/domain/issueopspreparation/orca_receipt_transition.go",
-      "owner": "domain",
-      "task": "T20",
-      "symbols": [
-        "func NextOrcaReceiptStage"
-      ]
-    },
-    {
-      "path": "internal/domain/issueopspreparation/orca_stage.go",
-      "owner": "domain",
-      "task": "T20",
-      "symbols": [
-        "func ValidateOrcaStagePrerequisites",
-        "func ValidateOrcaStageReceipts",
-        "func orcaReceiptShape.matches",
-        "type OrcaStageFacts",
-        "type orcaReceiptShape"
-      ]
-    },
-    {
-      "path": "internal/domain/issueopspreparation/planner_gates.go",
-      "owner": "domain",
-      "task": "T20",
-      "symbols": [
-        "func MissingPlannerGateKeys",
-        "func nonEmptyValues",
-        "func plannerDesignReviewApproved",
-        "func plannerDevilsAdvocateCleared",
-        "func plannerIntentRecorded"
-      ]
-    },
-    {
-      "path": "internal/domain/issueopspreparation/reconcile_authority.go",
-      "owner": "domain",
-      "task": "T06",
-      "symbols": [
-        "func ValidateReconcileIntentIssueIdentity",
-        "func ValidateReconcileSnapshot",
-        "func reconcileBranchEvidenceEqual"
-      ]
-    },
-    {
-      "path": "internal/domain/issueopspreparation/resume_begin.go",
-      "owner": "domain",
-      "task": "T06",
-      "symbols": [
-        "func ApplyResumeIntent",
-        "func BuildResumeIntent",
-        "type ResumeIntentInput"
-      ]
-    },
-    {
-      "path": "internal/domain/issueopspreparation/resume_receipt.go",
-      "owner": "domain",
-      "task": "T06",
-      "symbols": [
-        "func ApplyResumeReceipt",
-        "func applyResumeDispatchReceipt",
-        "func applyResumeReceiptStage",
-        "type ResumeReceiptDecision"
-      ]
-    },
-    {
-      "path": "internal/domain/issueopspreparation/resume_workspace.go",
-      "owner": "domain",
-      "task": "T06",
-      "symbols": [
-        "func ResumeWorkspace",
-        "type ResumeWorkspacePlan"
+        "type DecisionInput"
       ]
     },
     {
@@ -15726,8 +14211,6 @@
       "task": "T20",
       "symbols": [
         "func DecidePending",
-        "func IsOrcaIntentKind",
-        "func exactOrcaIntentKind",
         "type Decision",
         "type Route"
       ]
@@ -16055,8 +14538,7 @@
       "symbols": [
         "func DevilsAdvocateDigestExempt",
         "func DevilsAdvocatePlanDigestRequired",
-        "func DevilsAdvocateReviewMissing",
-        "func DevilsAdvocateStagedPlanBound"
+        "func DevilsAdvocateReviewMissing"
       ]
     },
     {
@@ -16276,13 +14758,7 @@
         "func evaluateDoneCycleAuthority",
         "func evaluateLeaselessCycleAuthority",
         "func validateBranchResidues",
-        "func validateDispatchAndGateResidues",
-        "func validateOrcaInventoryIdentity",
-        "func validateOrcaTasksGatesMessages",
-        "func validateOrcaWorktreesAndTerminals",
-        "func validatePreservedResources",
-        "func validateTaskResidues",
-        "func validateTerminalResidues",
+        "func validatePreservedCycles",
         "func validateWorktreeResidues"
       ]
     },
@@ -16291,25 +14767,15 @@
       "owner": "domain",
       "task": "T20",
       "symbols": [
-        "func activeHolderIdentityComplete",
         "func executionIdentityComplete",
         "func hasExecutionProjection",
-        "func hasOrcaIdentity",
         "func holderIdentityComplete",
         "func holderIdentityEmpty",
-        "func knownDispatchStatus",
-        "func knownGateStatus",
         "func knownLeaseStatus",
         "func knownPhase",
-        "func knownTaskStatus",
         "func preservableIdentityComplete",
         "func retainedLeaseIdentityComplete",
-        "func settledDispatchStatus",
-        "func settledGateStatus",
-        "func settledTaskStatus",
         "func validNativeHost",
-        "func validOrcaOwnerHost",
-        "func validateCanonicalOrcaSource",
         "func validateCanonicalRef",
         "func validateCanonicalSource"
       ]
@@ -16322,33 +14788,24 @@
         "func addDuplicateFindings",
         "func addOwner",
         "func anyTrue",
-        "func classifyMessages",
         "func clean",
         "func countBy",
-        "func cycleTerminalHandle",
         "func findingBuilder.add",
         "func findingBuilder.sorted",
         "func firstNonEmpty",
         "func holderKey",
         "func indexBy",
         "func leaseHolderIndexComplete",
-        "func lookupCycleTerminal",
         "func nativeHolderIdentity",
         "func newResourceIndex",
         "func normalizedSet",
-        "func orcaTaskKey",
         "func ownerIndex",
         "func preserveContains",
         "func preserveSet",
         "func resourceLookup.counts",
         "func resourceLookup.unique",
         "func sameTrimmed",
-        "func validateCycleDispatch",
         "func validateCycleGitWorktree",
-        "func validateCycleOrcaWorktree",
-        "func validateCycleResources",
-        "func validateCycleTask",
-        "func validateCycleTerminal",
         "func validateLeaseHolderIndexEntries",
         "func validateLeaseHolderIndexes",
         "type findingBuilder",
@@ -17168,41 +15625,14 @@
       "owner": "domain",
       "task": "T20",
       "symbols": [
-        "func HasActiveCommandSubstitution",
-        "func HasActiveOutputRedirect",
-        "func HasActiveParameterOrTildeExpansion",
-        "func HasActivePathnameExpansion",
-        "func HasActiveShellSpecialQuoting",
-        "func HasActiveZshEqualsExpansion",
         "func HasUnquotedControlOperator",
         "func QuoteWord",
         "func SplitCommandTokens",
-        "func braceScanner.noteLiteral",
-        "func braceScanner.step",
         "func doubleQuoteEscape",
-        "func equalsScanner.active",
-        "func equalsScanner.quoteTransition",
-        "func expansionScanner.active",
-        "func expansionScanner.parameterExpansionAt",
-        "func expansionScanner.quoteTransition",
-        "func expansionScanner.tildeExpansionAt",
-        "func expansionScanner.trackWordBoundary",
         "func isShellBlank",
-        "func shellAssignmentName",
-        "func shellAssignmentTildeStart",
-        "func shellParameterStart",
-        "func substitutionScanner.active",
-        "func substitutionScanner.quoteTransition",
-        "func substitutionScanner.substitutionOpenerAt",
         "func tokenSplitter.consume",
         "func tokenSplitter.consumeQuoted",
         "func tokenSplitter.flush",
-        "func unquotedBraceExpansion",
-        "func unquotedExpansionCloser",
-        "type braceScanner",
-        "type equalsScanner",
-        "type expansionScanner",
-        "type substitutionScanner",
         "type tokenSplitter"
       ]
     },
@@ -17715,7 +16145,6 @@
       "symbols": [
         "type ExecutionActionDependencies",
         "type ExecutionReconcileDependencies",
-        "type ExecutionReconcileHandler",
         "type ExecutionStatusHandler"
       ]
     },
@@ -17725,23 +16154,6 @@
       "task": "T20",
       "symbols": [
         "type ExecutionIssueSnapshotReader",
-        "type ExecutionOrcaCallObservation",
-        "type ExecutionOrcaCallPhase",
-        "type ExecutionOrcaDeliveryIdentity",
-        "type ExecutionOrcaDeliveryObserver",
-        "type ExecutionOrcaIntentInventory",
-        "type ExecutionOrcaIntentReceipt",
-        "type ExecutionOrcaIntentRequest",
-        "type ExecutionOrcaIntentStage",
-        "type ExecutionOrcaLaunchRequest",
-        "type ExecutionOrcaObservedInvoker",
-        "type ExecutionOrcaOwnerInspector",
-        "type ExecutionOrcaOwnerInventory",
-        "type ExecutionOrcaOwnerInventoryRequest",
-        "type ExecutionOrcaProbeRequest",
-        "type ExecutionOrcaProbeResult",
-        "type ExecutionOrcaProvisioner",
-        "type ExecutionOrcaWorkspaceReceipt",
         "type ExecutionWorkspaceAccessProber",
         "type ExecutionWorkspaceAccessResult",
         "type ExecutionWorkspaceProvisioner",
@@ -17777,39 +16189,6 @@
       ]
     },
     {
-      "path": "internal/port/issueops_mode_switch.go",
-      "owner": "port",
-      "task": "T20",
-      "symbols": [
-        "type ModeSwitchEffects"
-      ]
-    },
-    {
-      "path": "internal/port/issueops_mode_switch_service.go",
-      "owner": "port",
-      "task": "T20",
-      "symbols": [
-        "type ModeSwitchRecords",
-        "type ModeSwitchWorkspace"
-      ]
-    },
-    {
-      "path": "internal/port/issueops_owner_context.go",
-      "owner": "port",
-      "task": "T20",
-      "symbols": [
-        "type OwnerContextFiles"
-      ]
-    },
-    {
-      "path": "internal/port/issueops_owner_resume.go",
-      "owner": "port",
-      "task": "T20",
-      "symbols": [
-        "type OwnerResumeFiles"
-      ]
-    },
-    {
       "path": "internal/port/issueops_replacement.go",
       "owner": "port",
       "task": "T20",
@@ -17839,14 +16218,6 @@
       "symbols": [
         "type Files",
         "type Runs"
-      ]
-    },
-    {
-      "path": "internal/port/issueopsbranch/orca_precheck.go",
-      "owner": "port",
-      "task": "T20",
-      "symbols": [
-        "type OrcaBranchObservations"
       ]
     },
     {
@@ -17978,48 +16349,6 @@
       ]
     },
     {
-      "path": "internal/port/orca.go",
-      "owner": "port",
-      "task": "T20",
-      "symbols": [
-        "func OrcaError.Error",
-        "func ValidateExecutionOrcaDeliveryReceipt",
-        "func ValidateOrcaDurableRequestID",
-        "func ValidateOrcaPromptReceipt",
-        "func validateOrcaDeliveryHostReceipt",
-        "type CleanupOrcaTerminals",
-        "type OrcaCreateRunRequest",
-        "type OrcaCreateTaskRequest",
-        "type OrcaCreateTerminalRequest",
-        "type OrcaCreateWorktreeRequest",
-        "type OrcaDeliveryReceiptExpectation",
-        "type OrcaDispatch",
-        "type OrcaDispatchRequest",
-        "type OrcaError",
-        "type OrcaGate",
-        "type OrcaInboxPresence",
-        "type OrcaProbeRequest",
-        "type OrcaProbeResult",
-        "type OrcaPromptReceipt",
-        "type OrcaRepo",
-        "type OrcaRequestObservation",
-        "type OrcaRun",
-        "type OrcaStatus",
-        "type OrcaTask",
-        "type OrcaTerminal",
-        "type OrcaWorktree"
-      ]
-    },
-    {
-      "path": "internal/port/orca_context.go",
-      "owner": "port",
-      "task": "T20",
-      "symbols": [
-        "type OrcaRunInventory",
-        "type OrcaRunInventoryReader"
-      ]
-    },
-    {
       "path": "internal/port/provider.go",
       "owner": "port",
       "task": "T20",
@@ -18124,10 +16453,8 @@
       "symbols": [
         "type ExpectedRecord",
         "type RawCASFailure",
-        "type RecordCASStore",
         "type RecordInventoryStore",
         "type RecordMutation",
-        "type RecordRawCASStore",
         "type RecordRow",
         "type TransactionalRecordStore"
       ]
@@ -18682,23 +17009,6 @@
       "status": "migrated"
     },
     {
-      "id": "planner-gates",
-      "source_path": "internal/contract/issueopspreparation/planner_gates.go",
-      "source_symbol": "func MissingPlannerGates",
-      "responsibility": "planner prerequisite decision",
-      "target": "internal/domain/issueopspreparation",
-      "target_symbol": "func MissingPlannerGateKeys",
-      "task": "T02",
-      "entrypoints": [
-        "issueops execution prepare"
-      ],
-      "evidence_tests": [
-        "internal/domain/issueopspreparation/planner_evidence_test.go",
-        "internal/application/issueopspreparation/prepare_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
       "id": "claim-sequencing",
       "source_path": "internal/adapter/outbound/issueopslease/sqlite.go",
       "source_symbol": "func claimWithinSpan",
@@ -18951,25 +17261,7 @@
         "issueops execution prepare"
       ],
       "evidence_tests": [
-        "internal/domain/agentmodel/resolve_test.go",
-        "internal/application/issueopspreparation/orca_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "intent-record-authority",
-      "source_path": "internal/contract/issueopspreparation/intent.go",
-      "source_symbol": "func validateRecordAuthority",
-      "responsibility": "sealed intent must match pending operation and lease generation",
-      "target": "internal/domain/issueopspreparation",
-      "target_symbol": "func ValidateIntentRecordAuthority",
-      "task": "T02",
-      "entrypoints": [
-        "issueops execution prepare",
-        "issueops execution resume"
-      ],
-      "evidence_tests": [
-        "internal/domain/issueopspreparation/intent_authority_test.go"
+        "internal/domain/agentmodel/resolve_test.go"
       ],
       "status": "migrated"
     },
@@ -18987,40 +17279,6 @@
       "evidence_tests": [
         "internal/domain/commandparse/generated_command_provenance_test.go",
         "cmd/issueops/issueopscli/feedbackcleanup/generated_command_provenance_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "intent-issue-seal",
-      "source_path": "internal/contract/issueopspreparation/intent.go",
-      "source_symbol": "func IntentCodec.Seal",
-      "responsibility": "bind the verified issue identity to the external intent and its marker",
-      "target": "internal/domain/issueopspreparation",
-      "target_symbol": "func SealIntent",
-      "task": "T02",
-      "entrypoints": [
-        "issueops execution prepare",
-        "issueops execution resume"
-      ],
-      "evidence_tests": [
-        "internal/domain/issueopspreparation/intent_authority_test.go",
-        "internal/adapter/outbound/issueopspreparation/repository_orca_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "verified-issue-link",
-      "source_path": "internal/contract/issueopspreparation/intent.go",
-      "source_symbol": "func parseIssueIdentity",
-      "responsibility": "GitLab preparation requires verified issue link; GitHub pre-link window exception",
-      "target": "internal/domain/issueopspreparation",
-      "target_symbol": "func PrepareIssueIdentity",
-      "task": "T02",
-      "entrypoints": [
-        "issueops execution prepare"
-      ],
-      "evidence_tests": [
-        "internal/domain/issueopspreparation/intent_authority_test.go"
       ],
       "status": "migrated"
     },
@@ -19058,42 +17316,7 @@
         "internal/adapter/issueops.validateExecutionMutation"
       ],
       "evidence_tests": [
-        "internal/domain/issueops/execution_validation_test.go",
         "internal/adapter/outbound/issueopsrecord/codec_invariants_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "preparation-selection-receipt",
-      "source_path": "internal/adapter/outbound/issueopspreparation/repository.go",
-      "source_symbol": "func validateSelectionReceipt",
-      "responsibility": "Selection receipt must match the chosen execution path and the decision fingerprint before persistence",
-      "target": "internal/domain/issueopspreparation",
-      "target_symbol": "func ValidateSelectionReceipt",
-      "task": "T05",
-      "entrypoints": [
-        "issueops execution prepare"
-      ],
-      "evidence_tests": [
-        "internal/domain/issueopspreparation/decision_test.go",
-        "internal/adapter/outbound/issueopspreparation/repository_orca_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "preparation-pending-kind",
-      "source_path": "internal/adapter/outbound/issueopspreparation/repository.go",
-      "source_symbol": "func pendingKind",
-      "responsibility": "Map an intent stage to the durable pending operation kind",
-      "target": "internal/domain/issueopspreparation",
-      "target_symbol": "func PendingKind",
-      "task": "T05",
-      "entrypoints": [
-        "issueops execution prepare"
-      ],
-      "evidence_tests": [
-        "internal/domain/issueopspreparation/intent_authority_test.go",
-        "internal/adapter/outbound/issueopspreparation/repository_orca_test.go"
       ],
       "status": "migrated"
     },
@@ -19107,7 +17330,6 @@
       "task": "T02",
       "entrypoints": [
         "issueops execution claim",
-        "issueops execution resume",
         "issueops execution reconcile"
       ],
       "evidence_tests": [
@@ -19266,25 +17488,6 @@
       "status": "migrated"
     },
     {
-      "id": "devils-advocate-staged-plan-binding",
-      "source_path": "internal/adapter/issueops/issueops_artifact_stage.go",
-      "source_symbol": "func requireDevilsAdvocateBoundToPlan",
-      "responsibility": "staged owner plan requires the reviewed digest until implement and exempts inherited parent reviews",
-      "target": "internal/domain/issueopsreview",
-      "target_symbol": "func DevilsAdvocateStagedPlanBound",
-      "task": "T04",
-      "entrypoints": [
-        "issueops execution prepare",
-        "issueops artifact stage"
-      ],
-      "evidence_tests": [
-        "internal/domain/issueopsreview/devils_advocate_readiness_test.go",
-        "internal/application/issueopscycle/staged_plan_binding_test.go",
-        "internal/adapter/issueops/issueops_artifact_stage_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
       "id": "direct-preparation-assembly",
       "source_path": "internal/adapter/outbound/issueopspreparation/repository.go",
       "source_symbol": "func SQLiteRepository.CommitDirect",
@@ -19293,102 +17496,13 @@
       "target_symbol": "func ApplyDirectCommit",
       "task": "T05",
       "entrypoints": [
-        "issueops execution prepare --mode direct"
+        "issueops execution prepare"
       ],
       "evidence_tests": [
         "internal/application/issueopspreparation/direct_commit_test.go",
         "internal/adapter/outbound/issueopspreparation/repository_test.go"
       ],
       "status": "retain"
-    },
-    {
-      "id": "orca-preparation-intent-assembly",
-      "source_path": "internal/adapter/outbound/issueopspreparation/repository.go",
-      "source_symbol": "func SQLiteRepository.BeginIntent",
-      "responsibility": "run the atomic record and intent write; application validates owner identity and seals the pending Orca execution",
-      "target": "internal/application/issueopspreparation",
-      "target_symbol": "func ApplyOrcaBegin",
-      "task": "T05",
-      "entrypoints": [
-        "issueops execution prepare --mode orca"
-      ],
-      "evidence_tests": [
-        "internal/application/issueopspreparation/orca_begin_test.go",
-        "internal/adapter/outbound/issueopspreparation/repository_orca_test.go"
-      ],
-      "status": "retain"
-    },
-    {
-      "id": "orca-invocation-transition",
-      "source_path": "internal/adapter/outbound/issueopspreparation/repository.go",
-      "source_symbol": "func SQLiteRepository.MarkInvoking",
-      "responsibility": "persist the application-owned invocation state and attempt count with raw CAS",
-      "target": "internal/application/issueopspreparation",
-      "target_symbol": "func MarkOrcaInvoking",
-      "task": "T05",
-      "entrypoints": [
-        "issueops execution prepare --mode orca",
-        "issueops execution reconcile"
-      ],
-      "evidence_tests": [
-        "internal/application/issueopspreparation/orca_invocation_test.go",
-        "internal/adapter/outbound/issueopspreparation/repository_orca_test.go"
-      ],
-      "status": "retain"
-    },
-    {
-      "id": "orca-failure-transition",
-      "source_path": "internal/adapter/outbound/issueopspreparation/repository.go",
-      "source_symbol": "func SQLiteRepository.RecordFailure",
-      "responsibility": "redact the diagnostic and persist application-owned failure state with record and intent CAS",
-      "target": "internal/application/issueopspreparation",
-      "target_symbol": "func ApplyOrcaFailure",
-      "task": "T05",
-      "entrypoints": [
-        "issueops execution prepare --mode orca",
-        "issueops execution reconcile"
-      ],
-      "evidence_tests": [
-        "internal/application/issueopspreparation/orca_invocation_test.go",
-        "internal/adapter/outbound/issueopspreparation/repository_orca_test.go"
-      ],
-      "status": "retain"
-    },
-    {
-      "id": "orca-receipt-stage-transition",
-      "source_path": "internal/adapter/outbound/issueopspreparation/repository.go",
-      "source_symbol": "func SQLiteRepository.ApplyReceipt",
-      "responsibility": "validate external delivery and persist application-owned receipt stage changes with record and intent raw CAS",
-      "target": "internal/application/issueopspreparation",
-      "target_symbol": "func ApplyOrcaReceipt",
-      "task": "T05",
-      "entrypoints": [
-        "issueops execution prepare --mode orca",
-        "issueops execution reconcile"
-      ],
-      "evidence_tests": [
-        "internal/application/issueopspreparation/orca_receipt_test.go",
-        "internal/adapter/outbound/issueopspreparation/repository_orca_test.go"
-      ],
-      "status": "retain"
-    },
-    {
-      "id": "orca-intent-state-authority",
-      "source_path": "internal/adapter/outbound/issueopspreparation/repository.go",
-      "source_symbol": "func validateIntentState",
-      "responsibility": "require raw CAS evidence before validating the current record and intent authority",
-      "target": "internal/application/issueopspreparation",
-      "target_symbol": "func ValidateIntentState",
-      "task": "T05",
-      "entrypoints": [
-        "issueops execution prepare --mode orca",
-        "issueops execution reconcile"
-      ],
-      "evidence_tests": [
-        "internal/application/issueopspreparation/intent_state_test.go",
-        "internal/adapter/outbound/issueopspreparation/repository_orca_test.go"
-      ],
-      "status": "migrated"
     },
     {
       "id": "preparation-root-claim",
@@ -19408,59 +17522,6 @@
       "status": "retain"
     },
     {
-      "id": "orca-intent-stage-receipts",
-      "source_path": "internal/adapter/orca/execution_validation.go",
-      "source_symbol": "func validateExecutionIntentForMode",
-      "responsibility": "validate observed Orca request identity and external owner evidence; domain decides invocation versus inspection prerequisites and receipt stage progression",
-      "target": "internal/domain/issueopspreparation",
-      "target_symbol": "func ValidateOrcaStageReceipts",
-      "task": "T06",
-      "entrypoints": [
-        "issueops execution prepare --mode orca",
-        "issueops execution resume",
-        "issueops execution reconcile"
-      ],
-      "evidence_tests": [
-        "internal/domain/issueopspreparation/orca_stage_test.go",
-        "internal/adapter/orca/execution_test.go"
-      ],
-      "status": "retain"
-    },
-    {
-      "id": "mode-switch-normalization",
-      "source_path": "internal/adapter/issueops/execution_mode_switch.go",
-      "source_symbol": "func normalizeExecutionSwitchMode",
-      "responsibility": "require an explicit direct or Orca target for a destructive mode switch",
-      "target": "internal/domain/issueopsmodeswitch",
-      "target_symbol": "func NormalizeMode",
-      "task": "T06",
-      "entrypoints": [
-        "issueops execution switch-mode"
-      ],
-      "evidence_tests": [
-        "internal/domain/issueopsmodeswitch/decision_test.go",
-        "internal/adapter/issueops/execution_mode_switch_provenance_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "mode-switch-eligibility",
-      "source_path": "internal/adapter/issueops/execution_mode_switch.go",
-      "source_symbol": "func switchModeGates",
-      "responsibility": "domain combines mode, writer, pending intent, cleanliness, commit and remote-name gates; application sequences observations",
-      "target": "internal/domain/issueopsmodeswitch",
-      "target_symbol": "func MissingGates",
-      "task": "T06",
-      "entrypoints": [
-        "issueops execution switch-mode"
-      ],
-      "evidence_tests": [
-        "internal/domain/issueopsmodeswitch/decision_test.go",
-        "internal/adapter/issueops/execution_mode_switch_provenance_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
       "id": "cleanup-lease-writer-status",
       "source_path": "internal/adapter/issueops/issueops_cleanup_abandon.go",
       "source_symbol": "func cleanupAbandonLeaseHoldsWriter",
@@ -19469,8 +17530,7 @@
       "target_symbol": "func LeaseHoldsWriter",
       "task": "T08",
       "entrypoints": [
-        "issueops cleanup abandon",
-        "issueops execution switch-mode"
+        "issueops cleanup abandon"
       ],
       "evidence_tests": [
         "internal/domain/issueopslease/writer_test.go",
@@ -19537,61 +17597,6 @@
         "internal/adapter/issueops/execution_sync_base_test.go"
       ],
       "status": "retain"
-    },
-    {
-      "id": "orca-prepare-begin-path",
-      "source_path": "internal/adapter/issueops/execution_orca_intent.go",
-      "source_symbol": "func beginOrcaExecutionIntentWithID",
-      "responsibility": "seal a prepare intent and persist its pending record before worktree provisioning",
-      "target": "internal/application/issueopspreparation",
-      "target_symbol": "func ApplyOrcaBegin",
-      "task": "T06",
-      "entrypoints": [
-        "issueops execution prepare --mode orca"
-      ],
-      "evidence_tests": [
-        "internal/adapter/issueops/execution_orca_intent_test.go",
-        "internal/adapter/issueops/execution_orca_marker_test.go",
-        "internal/adapter/outbound/issueopspreparation/repository_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "orca-receipt-stage-progression",
-      "source_path": "internal/adapter/issueops/execution_orca_intent.go",
-      "source_symbol": "func advanceOrcaIntentReceiptWithExpectedRaw",
-      "responsibility": "choose the next durable Orca intent stage after a validated receipt",
-      "target": "internal/domain/issueopspreparation",
-      "target_symbol": "func NextOrcaReceiptStage",
-      "task": "T06",
-      "entrypoints": [
-        "issueops execution prepare --mode orca",
-        "issueops execution resume --confirm",
-        "issueops execution reconcile --confirm"
-      ],
-      "evidence_tests": [
-        "internal/domain/issueopspreparation/orca_receipt_transition_test.go",
-        "internal/application/issueopspreparation/orca_receipt_test.go",
-        "internal/adapter/issueops/execution_orca_intent_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "mode-switch-effect-order",
-      "source_path": "internal/adapter/issueops/execution_mode_switch.go",
-      "source_symbol": "func removeSwitchModeWorkspace",
-      "responsibility": "remove the canonical worktree and local branch before a fenced execution reset",
-      "target": "internal/application/issueopsmodeswitch",
-      "target_symbol": "func Apply",
-      "task": "T06",
-      "entrypoints": [
-        "issueops execution switch-mode --apply"
-      ],
-      "evidence_tests": [
-        "internal/application/issueopsmodeswitch/switch_test.go",
-        "internal/adapter/issueops/execution_mode_switch_provenance_test.go"
-      ],
-      "status": "migrated"
     },
     {
       "id": "base-sync-event-transition",
@@ -19713,76 +17718,6 @@
         "internal/adapter/issueops/execution_sync_base_test.go"
       ],
       "status": "retain"
-    },
-    {
-      "id": "orca-failure-request-id-adoption",
-      "source_path": "internal/adapter/issueops/execution_orca_intent.go",
-      "source_symbol": "func adoptOrcaFailureRequestID",
-      "responsibility": "preserve sealed dispatch and prompt request identity when an Orca failure reports validated IDs",
-      "target": "internal/domain/issueopspreparation",
-      "target_symbol": "func AdoptFailureRequestIDs",
-      "task": "T06",
-      "entrypoints": [
-        "issueops execution prepare --mode orca",
-        "issueops execution resume --confirm"
-      ],
-      "evidence_tests": [
-        "internal/domain/issueopspreparation/failure_request_ids_test.go",
-        "internal/adapter/outbound/issueopslease/resume_repository_test.go",
-        "internal/adapter/issueops/execution_orca_intent_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "orca-no-resource-clear",
-      "source_path": "internal/adapter/issueops/execution_orca_intent.go",
-      "source_symbol": "func ClearOrcaIntentWithNoResource",
-      "responsibility": "clear a pending external intent and retain a redacted no-resource receipt after authoritative zero",
-      "target": "internal/application/issueopspreparation",
-      "target_symbol": "func ApplyOrcaNoResource",
-      "task": "T06",
-      "entrypoints": [
-        "issueops execution reconcile --confirm"
-      ],
-      "evidence_tests": [
-        "internal/application/issueopspreparation/orca_invocation_test.go",
-        "internal/adapter/outbound/issueopslease/reconcile_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "reconcile-snapshot-authority",
-      "source_path": "internal/adapter/issueops/execution_orca_intent.go",
-      "source_symbol": "func reconcileCanonicalOrcaIntent",
-      "responsibility": "reject a reconcile snapshot after pending execution, issue URL, or branch authority changes",
-      "target": "internal/domain/issueopspreparation",
-      "target_symbol": "func ValidateReconcileSnapshot",
-      "task": "T06",
-      "entrypoints": [
-        "issueops execution reconcile"
-      ],
-      "evidence_tests": [
-        "internal/domain/issueopspreparation/reconcile_authority_test.go",
-        "internal/adapter/outbound/issueopslease/reconcile_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "reconcile-intent-issue-identity",
-      "source_path": "internal/adapter/issueops/execution_orca_intent.go",
-      "source_symbol": "func reconcileCanonicalOrcaIntent",
-      "responsibility": "require the sealed intent provider and issue number to match current branch evidence",
-      "target": "internal/domain/issueopspreparation",
-      "target_symbol": "func ValidateReconcileIntentIssueIdentity",
-      "task": "T06",
-      "entrypoints": [
-        "issueops execution reconcile"
-      ],
-      "evidence_tests": [
-        "internal/domain/issueopspreparation/reconcile_authority_test.go",
-        "internal/adapter/outbound/issueopslease/reconcile_test.go"
-      ],
-      "status": "migrated"
     },
     {
       "id": "remote-create-preparation-orchestration",
@@ -20411,47 +18346,6 @@
       ],
       "evidence_tests": [
         "internal/application/issueopsbranch/workspace_link_test.go",
-        "internal/application/issueopscycle/plan_link_authority_test.go",
-        "internal/adapter/issueops/issueops_worktree_plan_test.go",
-        "internal/adapter/issueops/issueops_artifact_stage_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "plan-link-coordinator",
-      "source_path": "internal/adapter/issueops/issueops_actor.go",
-      "source_symbol": "func validatePlanLinkMutation",
-      "responsibility": "require supported native host, session, process ancestry and canonical workspace for released Orca plan staging",
-      "target": "internal/domain/issueopsauthorization",
-      "target_symbol": "func ValidatePlanCoordinator",
-      "task": "T08",
-      "entrypoints": [
-        "issueops link-plan",
-        "issueops link-worktree"
-      ],
-      "evidence_tests": [
-        "internal/application/issueopsbranch/workspace_link_test.go",
-        "internal/application/issueopscycle/plan_link_authority_test.go",
-        "internal/adapter/issueops/issueops_worktree_plan_test.go",
-        "internal/adapter/issueops/issueops_artifact_stage_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "plan-link-authority-orchestration",
-      "source_path": "internal/adapter/issueops/issueops_actor.go",
-      "source_symbol": "func validatePlanLinkMutation",
-      "responsibility": "select released plan staging authority or ordinary write lease authority using domain staging eligibility",
-      "target": "internal/application/issueopscycle",
-      "target_symbol": "func MutationAuthority.ValidatePlanLink",
-      "task": "T08",
-      "entrypoints": [
-        "issueops link-plan",
-        "issueops link-worktree"
-      ],
-      "evidence_tests": [
-        "internal/application/issueopsbranch/workspace_link_test.go",
-        "internal/application/issueopscycle/plan_link_authority_test.go",
         "internal/adapter/issueops/issueops_worktree_plan_test.go",
         "internal/adapter/issueops/issueops_artifact_stage_test.go"
       ],
@@ -20539,44 +18433,6 @@
       "evidence_tests": [
         "internal/application/issueopscleanup/finish_evidence_test.go",
         "cmd/issueops/issueopscli/feedbackcleanup/finish_error_contract_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "sealed-intent-record-identity",
-      "source_path": "internal/adapter/issueops/execution_orca_intent.go",
-      "source_symbol": "func validateOrcaIntentRecordIdentity",
-      "responsibility": "share verified issue identity and sealed workspace matching across preparation, resume and cleanup",
-      "target": "internal/domain/issueopspreparation",
-      "target_symbol": "func ValidateIntentRecordIdentity",
-      "task": "T08",
-      "entrypoints": [
-        "issueops execution prepare",
-        "issueops execution resume",
-        "issueops cleanup abandon"
-      ],
-      "evidence_tests": [
-        "internal/adapter/issueops/orca_intent_files_test.go",
-        "internal/domain/issueopspreparation/intent_authority_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "sealed-intent-request-assembly",
-      "source_path": "internal/adapter/issueops/execution_orca_intent.go",
-      "source_symbol": "func executionOrcaIntentRequest",
-      "responsibility": "inspect sealed metadata then validate current authority and private artifact digests before invocation",
-      "target": "internal/application/issueopspreparation",
-      "target_symbol": "func IntentRequestBuilder.Build",
-      "task": "T08",
-      "entrypoints": [
-        "issueops execution prepare",
-        "issueops execution resume",
-        "issueops cleanup abandon"
-      ],
-      "evidence_tests": [
-        "internal/adapter/issueops/orca_intent_files_test.go",
-        "internal/domain/issueopspreparation/intent_authority_test.go"
       ],
       "status": "migrated"
     },
@@ -20938,41 +18794,6 @@
       "status": "migrated"
     },
     {
-      "id": "planner-model-defaults",
-      "source_path": "internal/port/orca.go",
-      "source_symbol": "func IssueOpsPlannerDefaults",
-      "responsibility": "host planner and independent gate-review model and effort defaults",
-      "target": "internal/domain/agentmodel",
-      "target_symbol": "func Resolve",
-      "task": "T20",
-      "entrypoints": [
-        "issueops next",
-        "issueops execution prepare"
-      ],
-      "evidence_tests": [
-        "internal/adapter/issueops/execution_owner_packet_test.go",
-        "internal/adapter/issueops/issueops_implementation_review_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "review-effort-by-tier",
-      "source_path": "internal/port/orca.go",
-      "source_symbol": "func IssueOpsReviewEffortForTier",
-      "responsibility": "documentation-only review effort reduction with other tiers retaining planner effort",
-      "target": "internal/domain/agentmodel",
-      "target_symbol": "func Resolve",
-      "task": "T20",
-      "entrypoints": [
-        "issueops next",
-        "issueops execution prepare"
-      ],
-      "evidence_tests": [
-        "internal/domain/agentmodel/resolve_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
       "id": "lifecycle-profile-authority",
       "source_path": "internal/adapter/lifecycle/lifecycle_project_state_store.go",
       "source_symbol": "func ResolveProjectLifecycleState",
@@ -21313,7 +19134,7 @@
       "id": "handoff-claim-evidence-selection",
       "source_path": "cmd/issueops/issueopsapp/issueops_claim_wiring.go",
       "source_symbol": "func observeSuccessfulManualIssueOpsClaim",
-      "responsibility": "Select exact manual predecessor-generation receiver or bound Orca lineage; reject invalid or ambiguous evidence",
+      "responsibility": "Select exact manual predecessor-generation receiver; reject invalid or ambiguous evidence",
       "target": "internal/domain/issueops",
       "target_symbol": "func OwnerClaimHandoffDeliveryObservation",
       "task": "T20",
@@ -21358,226 +19179,6 @@
         "internal/contract/guard/error_test.go",
         "cmd/issueops/basiccli/trace_guard_cli_test.go",
         "cmd/issueops/issueopsapp/basic_instance_wiring_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "orca-delivery-retry-identity",
-      "source_path": "cmd/issueops/issueopsapp/handoff_delivery_wiring.go",
-      "source_symbol": "func handoffDeliveryDurableRequestID",
-      "responsibility": "Require a valid exact durable UUID and matching persisted observation before replay",
-      "target": "internal/domain/issueops",
-      "target_symbol": "func DeliveryDurableRequestID",
-      "task": "T20",
-      "entrypoints": [
-        "execution prepare",
-        "execution resume",
-        "execution reconcile"
-      ],
-      "evidence_tests": [
-        "cmd/issueops/issueopsapp/handoff_delivery_wiring_test.go",
-        "internal/domain/issueops/handoff_recovery_test.go",
-        "internal/application/handoffdelivery/provisioner_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "orca-delivery-staged-ambiguity",
-      "source_path": "cmd/issueops/issueopsapp/handoff_delivery_wiring.go",
-      "source_symbol": "func rejectStagedHandoffDeliveryWithoutResponse",
-      "responsibility": "Refuse another external call after a staged call without accepted response evidence",
-      "target": "internal/domain/issueops",
-      "target_symbol": "func RejectStagedDeliveryWithoutResponse",
-      "task": "T20",
-      "entrypoints": [
-        "execution prepare",
-        "execution resume",
-        "execution reconcile"
-      ],
-      "evidence_tests": [
-        "cmd/issueops/issueopsapp/handoff_delivery_wiring_test.go",
-        "internal/domain/issueops/handoff_recovery_test.go",
-        "internal/application/handoffdelivery/provisioner_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "orca-delivery-response-authority",
-      "source_path": "cmd/issueops/issueopsapp/handoff_delivery_wiring.go",
-      "source_symbol": "func handoffDeliveryResponseIdentityRejected",
-      "responsibility": "Reject mismatched dispatch or prompt response identity as recovery authority",
-      "target": "internal/domain/issueops",
-      "target_symbol": "func DeliveryResponseIdentityRejected",
-      "task": "T20",
-      "entrypoints": [
-        "execution prepare",
-        "execution resume",
-        "execution reconcile"
-      ],
-      "evidence_tests": [
-        "cmd/issueops/issueopsapp/handoff_delivery_wiring_test.go",
-        "internal/domain/issueops/handoff_recovery_test.go",
-        "internal/application/handoffdelivery/provisioner_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "orca-delivery-recovery-plan",
-      "source_path": "cmd/issueops/issueopsapp/handoff_delivery_wiring.go",
-      "source_symbol": "func inspectHandoffDeliveryRecovery",
-      "responsibility": "Select durable dispatch and prompt identities and reject missing or ambiguous lineage",
-      "target": "internal/domain/issueops",
-      "target_symbol": "func PlanDeliveryRecovery",
-      "task": "T20",
-      "entrypoints": [
-        "execution prepare",
-        "execution resume",
-        "execution reconcile"
-      ],
-      "evidence_tests": [
-        "cmd/issueops/issueopsapp/handoff_delivery_wiring_test.go",
-        "internal/domain/issueops/handoff_recovery_test.go",
-        "internal/application/handoffdelivery/provisioner_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "orca-delivery-recovery-conclusion",
-      "source_path": "cmd/issueops/issueopsapp/handoff_delivery_wiring.go",
-      "source_symbol": "func inspectHandoffDeliveryRecovery",
-      "responsibility": "Require complete Omo prompt evidence and select candidate, exact replay or delegation",
-      "target": "internal/domain/issueops",
-      "target_symbol": "func FinishDeliveryRecovery",
-      "task": "T20",
-      "entrypoints": [
-        "execution prepare",
-        "execution resume",
-        "execution reconcile"
-      ],
-      "evidence_tests": [
-        "cmd/issueops/issueopsapp/handoff_delivery_wiring_test.go",
-        "internal/domain/issueops/handoff_recovery_test.go",
-        "internal/application/handoffdelivery/provisioner_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "orca-delivery-request-status",
-      "source_path": "cmd/issueops/issueopsapp/handoff_delivery_wiring.go",
-      "source_symbol": "func observeHandoffDeliveryRequest",
-      "responsibility": "Validate provider request runtime and method identity and supported recovery status",
-      "target": "internal/domain/issueops",
-      "target_symbol": "func DeliveryRequestStatus",
-      "task": "T20",
-      "entrypoints": [
-        "execution prepare",
-        "execution resume",
-        "execution reconcile"
-      ],
-      "evidence_tests": [
-        "cmd/issueops/issueopsapp/handoff_delivery_wiring_test.go",
-        "internal/domain/issueops/handoff_recovery_test.go",
-        "internal/application/handoffdelivery/provisioner_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "orca-delivery-receipt-identity",
-      "source_path": "cmd/issueops/issueopsapp/handoff_delivery_wiring.go",
-      "source_symbol": "func validateHandoffDeliveryDispatchReceipt",
-      "responsibility": "Validate durable dispatch candidate task, terminal, handle and request identity",
-      "target": "internal/domain/issueops",
-      "target_symbol": "func ValidateDeliveryDispatchReceipt",
-      "task": "T20",
-      "entrypoints": [
-        "execution prepare",
-        "execution resume",
-        "execution reconcile"
-      ],
-      "evidence_tests": [
-        "cmd/issueops/issueopsapp/handoff_delivery_wiring_test.go",
-        "internal/domain/issueops/handoff_recovery_test.go",
-        "internal/application/handoffdelivery/provisioner_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "orca-delivery-audit-recovery",
-      "source_path": "cmd/issueops/issueopsapp/handoff_delivery_wiring.go",
-      "source_symbol": "func foldedHandoffDeliveryObservation",
-      "responsibility": "Fold scoped evidence preserving rejection precedence and exact current request identity",
-      "target": "internal/domain/issueops",
-      "target_symbol": "func RecoverDeliveryObservation",
-      "task": "T20",
-      "entrypoints": [
-        "execution prepare",
-        "execution resume",
-        "execution reconcile"
-      ],
-      "evidence_tests": [
-        "cmd/issueops/issueopsapp/handoff_delivery_wiring_test.go",
-        "internal/domain/issueops/handoff_recovery_test.go",
-        "internal/application/handoffdelivery/provisioner_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "orca-delivery-failure-evidence",
-      "source_path": "cmd/issueops/issueopsapp/handoff_delivery_wiring.go",
-      "source_symbol": "func observeHandoffDeliveryFailure",
-      "responsibility": "Classify failed external attempts and durable dispatch or prompt response loss evidence",
-      "target": "internal/domain/issueops",
-      "target_symbol": "func DeliveryFailurePlan",
-      "task": "T20",
-      "entrypoints": [
-        "execution prepare",
-        "execution resume",
-        "execution reconcile"
-      ],
-      "evidence_tests": [
-        "cmd/issueops/issueopsapp/handoff_delivery_wiring_test.go",
-        "internal/domain/issueops/handoff_recovery_test.go",
-        "internal/application/handoffdelivery/provisioner_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "orca-delivery-completion-evidence",
-      "source_path": "cmd/issueops/issueopsapp/handoff_delivery_wiring.go",
-      "source_symbol": "func observeHandoffDeliveryCompleted",
-      "responsibility": "Project dispatch and prompt receipt into accepted, native turn or ambiguous evidence",
-      "target": "internal/domain/issueops",
-      "target_symbol": "func CompleteDeliveryObservation",
-      "task": "T20",
-      "entrypoints": [
-        "execution prepare",
-        "execution resume",
-        "execution reconcile"
-      ],
-      "evidence_tests": [
-        "cmd/issueops/issueopsapp/handoff_delivery_wiring_test.go",
-        "internal/domain/issueops/handoff_recovery_test.go",
-        "internal/application/handoffdelivery/provisioner_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "orca-delivery-observation-identity",
-      "source_path": "cmd/issueops/issueopsapp/handoff_delivery_wiring.go",
-      "source_symbol": "func handoffDeliveryObservation",
-      "responsibility": "Preserve creation timestamp and derive canonical handoff observation identity and target",
-      "target": "internal/domain/issueops",
-      "target_symbol": "func NewDeliveryObservation",
-      "task": "T20",
-      "entrypoints": [
-        "execution prepare",
-        "execution resume",
-        "execution reconcile"
-      ],
-      "evidence_tests": [
-        "cmd/issueops/issueopsapp/handoff_delivery_wiring_test.go",
-        "internal/domain/issueops/handoff_recovery_test.go",
-        "internal/application/handoffdelivery/provisioner_test.go"
       ],
       "status": "migrated"
     },
@@ -22448,140 +20049,6 @@
       "status": "migrated"
     },
     {
-      "id": "mode-switch-preview-reset-orchestration",
-      "source_path": "internal/adapter/issueops/execution_mode_switch.go",
-      "source_symbol": "func SwitchExecutionMode",
-      "responsibility": "load and observe mode-switch preview, validate fingerprint before external deletion, re-read under lock before resetting execution",
-      "target": "internal/application/issueopsmodeswitch",
-      "target_symbol": "func Service.Run",
-      "task": "T20",
-      "entrypoints": [
-        "issueops execution switch-mode"
-      ],
-      "evidence_tests": [
-        "internal/application/issueopsmodeswitch/service_test.go",
-        "cmd/issueops/issueopsapp/mode_switch_wiring_test.go",
-        "internal/adapter/issueops/issueops_cleanup_abandon_residual_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "orca-branch-collision-before-provisioning",
-      "source_path": "internal/adapter/issueops/execution_prepare.go",
-      "source_symbol": "func ensureOrcaBranchIsFree",
-      "responsibility": "check local name before remote tracking name and allow only the exact verified GitLab prepared remote base",
-      "target": "internal/domain/issueops",
-      "target_symbol": "func ValidateOrcaBranchRef",
-      "task": "T20",
-      "entrypoints": [
-        "issueops execution prepare --mode orca"
-      ],
-      "evidence_tests": [
-        "internal/domain/issueops/orca_branch_test.go",
-        "internal/application/issueopsbranch/orca_precheck_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "T20-owner-prompt",
-      "source_path": "internal/adapter/issueops/execution_owner_context.go",
-      "source_symbol": "func renderExecutionOwnerPrompt",
-      "responsibility": "owner prompt substitutions and validation",
-      "target": "internal/domain/issueops",
-      "target_symbol": "func RenderOwnerPrompt",
-      "task": "T20",
-      "entrypoints": [
-        "cmd/issueops/issueopsapp/issueops_owner_wiring.go",
-        "cmd/issueops/issueopsapp/issueops_preparation_wiring.go",
-        "cmd/issueops/issueopsapp/issueops_reconcile_wiring.go",
-        "cmd/issueops/issueopsapp/issueops_reseed_wiring.go",
-        "cmd/issueops/issueopsapp/issueops_replacement_wiring.go"
-      ],
-      "evidence_tests": [
-        "internal/adapter/issueops/execution_owner_instance_test.go",
-        "internal/adapter/issueops/execution_owner_packet_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "T20-owner-command-catalog",
-      "source_path": "internal/adapter/issueops/execution_owner_context.go",
-      "source_symbol": "func executionOwnerCommandsFor",
-      "responsibility": "owner command construction and role defaults",
-      "target": "internal/domain/issueops",
-      "target_symbol": "func OwnerCommandsFor",
-      "task": "T20",
-      "entrypoints": [
-        "cmd/issueops/issueopsapp/issueops_owner_wiring.go",
-        "cmd/issueops/issueopsapp/issueops_preparation_wiring.go",
-        "cmd/issueops/issueopsapp/issueops_reconcile_wiring.go",
-        "cmd/issueops/issueopsapp/issueops_reseed_wiring.go",
-        "cmd/issueops/issueopsapp/issueops_replacement_wiring.go"
-      ],
-      "evidence_tests": [
-        "internal/adapter/issueops/execution_owner_packet_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "T20-owner-snapshot",
-      "source_path": "internal/adapter/issueops/execution_owner_context.go",
-      "source_symbol": "func readExecutionOwnerSnapshot",
-      "responsibility": "remote issue read, snapshot validation and local document observations",
-      "target": "internal/application/issueopsowner",
-      "target_symbol": "func Service.ReadSnapshot",
-      "task": "T20",
-      "entrypoints": [
-        "cmd/issueops/issueopsapp/issueops_owner_wiring.go",
-        "cmd/issueops/issueopsapp/issueops_preparation_wiring.go",
-        "cmd/issueops/issueopsapp/issueops_reconcile_wiring.go",
-        "cmd/issueops/issueopsapp/issueops_reseed_wiring.go",
-        "cmd/issueops/issueopsapp/issueops_replacement_wiring.go"
-      ],
-      "evidence_tests": [
-        "internal/domain/issueops/owner_snapshot_test.go",
-        "internal/application/issueopsowner/service_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "T20-owner-plan-binding",
-      "source_path": "internal/adapter/issueops/issueops_artifact_stage.go",
-      "source_symbol": "func RequireStagedExecutionOwnerPlan",
-      "responsibility": "staged plan review and durable identity validation before materialization",
-      "target": "internal/application/issueopsowner",
-      "target_symbol": "func Service.RequirePlan",
-      "task": "T20",
-      "entrypoints": [
-        "cmd/issueops/issueopsapp/issueops_owner_wiring.go",
-        "cmd/issueops/issueopsapp/issueops_preparation_wiring.go",
-        "cmd/issueops/issueopsapp/issueops_reconcile_wiring.go",
-        "cmd/issueops/issueopsapp/issueops_reseed_wiring.go",
-        "cmd/issueops/issueopsapp/issueops_replacement_wiring.go"
-      ],
-      "evidence_tests": [
-        "internal/adapter/issueops/issueops_artifact_stage_test.go",
-        "internal/application/issueopsowner/service_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "T20-workspace-layout",
-      "source_path": "internal/adapter/issueops/execution_prepare.go",
-      "source_symbol": "func executionWorkspaceRequest",
-      "responsibility": "derive delegated workspace layout before parent path observation",
-      "target": "internal/domain/issueops",
-      "target_symbol": "func OwnerWorkspaceLayout",
-      "task": "T20",
-      "entrypoints": [
-        "cmd/issueops/issueopsapp/issueops_preparation_wiring.go"
-      ],
-      "evidence_tests": [
-        "internal/application/issueopsowner/workspace_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
       "id": "T20-intent-request-policy",
       "source_path": "internal/application/issueopsintent/intent.go",
       "source_symbol": "func RecordIntent",
@@ -22867,22 +20334,6 @@
       "status": "migrated"
     },
     {
-      "id": "T20-cleanup-orca-error",
-      "source_path": "cmd/issueops/issueopsapp/cleanup_runtime_wiring.go",
-      "source_symbol": "func normalizeOrcaRemoveWorktreeErr",
-      "responsibility": "normalize typed missing-resource and Orca CLI prose fallback for idempotent cleanup",
-      "target": "internal/adapter/orca",
-      "target_symbol": "func NormalizeRemoveWorktreeError",
-      "task": "T20",
-      "entrypoints": [
-        "cmd/issueops/issueopsapp/issueops_cleanup_wiring.go"
-      ],
-      "evidence_tests": [
-        "internal/adapter/orca/remove_normalize_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
       "id": "docs-index-discovery",
       "source_path": "internal/adapter/docs/docs.go",
       "source_symbol": "func ListDocs",
@@ -23127,24 +20578,6 @@
         "internal/adapter/toolconformance/replay_test.go",
         "internal/adapter/toolconformance/fixtures_internal_test.go",
         "internal/adapter/toolconformance/fixtures_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "sealed-claim-context-policy",
-      "source_path": "internal/adapter/outbound/issueopslease/claim_context.go",
-      "source_symbol": "func validateClaimPacket",
-      "responsibility": "decide Orca generation applicability, sealed digests, execution identity, and remote body drift; application preserves preflight and locked revalidation order",
-      "target": "internal/domain/issueopslease",
-      "target_symbol": "func ValidateClaimPacketIdentity",
-      "task": "T05",
-      "entrypoints": [
-        "issueops execution claim"
-      ],
-      "evidence_tests": [
-        "internal/domain/issueopslease/claim_context_test.go",
-        "internal/adapter/outbound/issueopslease/claim_context_test.go",
-        "cmd/issueops/issueopsapp/issueops_claim_wiring_test.go"
       ],
       "status": "migrated"
     },

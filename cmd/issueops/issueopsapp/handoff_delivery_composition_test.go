@@ -1,30 +1,19 @@
 package issueopsapp
 
 import (
+	"strconv"
+	"strings"
 	"time"
 
-	deliveryapp "issueops/internal/application/handoffdelivery"
 	issueopscontract "issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
-	"issueops/internal/port"
 )
 
-func observeHandoffDeliveryStaged(stateRoot string, request port.ExecutionOrcaIntentRequest, identity port.ExecutionOrcaDeliveryIdentity, callKind string, receipt port.ExecutionOrcaIntentReceipt, now func() time.Time) error {
-	return deliveryapp.ObserveStaged(newHandoffDeliveryAudit(stateRoot), request, identity, callKind, receipt, now)
-}
-func observeHandoffDeliveryCompleted(stateRoot string, request port.ExecutionOrcaIntentRequest, identity port.ExecutionOrcaDeliveryIdentity, callKind string, receipt port.ExecutionOrcaIntentReceipt, now func() time.Time) error {
-	return deliveryapp.ObserveCompleted(newHandoffDeliveryAudit(stateRoot), request, identity, callKind, receipt, now)
-}
-func observeHandoffDeliveryFailure(stateRoot string, request port.ExecutionOrcaIntentRequest, identity port.ExecutionOrcaDeliveryIdentity, err error, now func() time.Time) error {
-	return deliveryapp.ObserveFailure(newHandoffDeliveryAudit(stateRoot), request, identity, err, now)
-}
-func handoffDeliveryObservation(stateRoot string, request port.ExecutionOrcaIntentRequest, identity port.ExecutionOrcaDeliveryIdentity, receipt port.ExecutionOrcaIntentReceipt, durableID, callKind string, now func() time.Time) (issueopscontract.IssueOpsHandoffDeliveryObservation, error) {
-	return deliveryapp.Observation(newHandoffDeliveryAudit(stateRoot), request, identity, receipt, durableID, callKind, now)
-}
 func handoffDeliveryEventClock(now func() time.Time) func() time.Time {
 	timestamp := now()
 	return func() time.Time { return timestamp }
 }
+
 func handoffDeliveryObserved(now func() time.Time, evidence string) issueopscontract.IssueOpsHandoffDeliveryState {
 	return issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateObserved, ObservedAt: now().UTC().Format(time.RFC3339Nano), Evidence: evidence}
 }
@@ -33,4 +22,34 @@ func foldHandoffAuditForTest(stateRoot, lifecycleID, lineageID string) (map[stri
 	observations, err := (newHandoffDeliveryAudit(stateRoot)).ReadFor(lifecycleID, lineageID)
 	folded, decisions := issueopsdomain.FoldHandoffDeliveryObservations(observations)
 	return folded, decisions, err
+}
+
+// manualHerdrHandoffObservation은 trace handoff-delivery가 기록하는 것과 같은 모양의
+// Herdr launcher manual 관찰을 만든다. 처음에는 call_staged만 관찰된 상태다.
+func manualHerdrHandoffObservation(lifecycleID string, generation uint64, attempt string, at time.Time) issueopscontract.IssueOpsHandoffDeliveryObservation {
+	created := at.UTC().Format(time.RFC3339Nano)
+	generationText := strconv.FormatUint(generation, 10)
+	return issueopscontract.IssueOpsHandoffDeliveryObservation{
+		SchemaVersion:  issueopscontract.IssueOpsHandoffDeliverySchemaVersion,
+		AttemptID:      "manual-direct:" + lifecycleID + ":" + generationText + ":herdr:" + attempt,
+		LineageID:      "manual-direct:generation:" + generationText + ":herdr:" + attempt,
+		LifecycleID:    lifecycleID,
+		PromptSHA256:   strings.Repeat("a", 64),
+		MaterialSHA256: strings.Repeat("b", 64),
+		Launcher: issueopscontract.IssueOpsHandoffDeliveryLauncher{
+			Name: issueopscontract.IssueOpsHandoffDeliveryLauncherHerdr, Version: "0.5.0", Path: "/usr/local/bin/herdr",
+			RuntimeID: "runtime-herdr", MachineID: "machine-herdr", ServerID: "server-herdr",
+		},
+		Target:             issueopscontract.IssueOpsHandoffDeliveryTarget{TerminalID: "terminal-herdr", PaneID: "pane-herdr"},
+		ExpectedOwnerHost:  "codex",
+		SourceGeneration:   generation,
+		CreatedAt:          created,
+		UpdatedAt:          created,
+		Receipt:            issueopscontract.IssueOpsHandoffDeliveryReceipt{Location: "audit/herdr.json", Digest: strings.Repeat("d", 64)},
+		CallStaged:         issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateObserved, ObservedAt: created, Evidence: issueopscontract.IssueOpsHandoffDeliveryEvidenceExternalCallStaged},
+		InputAccepted:      issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateNotObserved},
+		NativeTurnObserved: issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateNotObserved},
+		OwnerClaimed:       issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateNotObserved},
+		Ambiguous:          issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateNotObserved},
+	}
 }

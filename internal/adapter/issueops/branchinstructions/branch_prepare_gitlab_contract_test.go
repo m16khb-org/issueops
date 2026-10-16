@@ -12,7 +12,7 @@ import (
 // 로컬에 없다는 것은 계약을 확인할 수 없다는 뜻이 아니다(#180).
 //
 // ① `ref`가 base 브랜치 이름을 받으면 GitLab이 그 시점 브랜치 HEAD에서 브랜치를
-// 만들어 orca가 봉인한 base와 갈린다. `#176`이 GitHub에서 고친 것과 같은 결함이고,
+// 만들어 봉인한 base와 갈린다. `#176`이 GitHub에서 고친 것과 같은 결함이고,
 // GitLab 공식 문서가 `ref`를 "Branch name or commit SHA"로 정의한다.
 //
 // ② MCP `ToolArguments`가 `endpoint`/`method`/`field`를 최상위에 두었다. `glab_api`의

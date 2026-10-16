@@ -2,21 +2,15 @@ package issueops
 
 import (
 	"context"
-	"fmt"
 	reviewcontract "issueops/internal/contract/issueopsreview"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	leaseoutbound "issueops/internal/adapter/outbound/issueopslease"
-	"issueops/internal/adapter/outbound/sqlstore"
 	"issueops/internal/adapter/preflight"
 	"issueops/internal/contract/issueops"
-	leasecontract "issueops/internal/contract/issueopslease"
-	preparationcontract "issueops/internal/contract/issueopspreparation"
 	issueopsdomain "issueops/internal/domain/issueops"
-	leasedomain "issueops/internal/domain/issueopslease"
 )
 
 type claimableExecutionFixture struct {
@@ -54,13 +48,11 @@ func newClaimableExecutionFixture(t *testing.T, stateRoot, branch string) claima
 		Branch: branch, BaseBranch: "main", BaseSHA: baseHead, LinkVerified: true,
 	}
 	record.Execution = &issueops.Execution{
-		Mode: issueops.ExecutionModeDirect,
 		Workspace: issueops.Workspace{
 			SourceRoot: repo, Root: worktree, Branch: branch, BaseHead: baseHead,
-			Driver: "git", LinkedAt: "2026-07-22T00:00:00Z",
+			LinkedAt: "2026-07-22T00:00:00Z",
 		},
-		Lease:     issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusClaimable},
-		Selection: selectionFixture(issueops.ExecutionModeDirect),
+		Lease: issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusClaimable},
 	}
 	token, tokenPath, err := createClaimToken(record)
 	if err != nil {
@@ -85,101 +77,6 @@ func prepareExecutionCompletionFixture(t *testing.T, stateRoot string, fixture *
 	if _, err := writeIssueOps(context.Background(), stateRoot, fixture.record); err != nil {
 		t.Fatal(err)
 	}
-}
-
-func orcaPrepareRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
-	t.Helper()
-	stateRoot, record := executionPrepareRecord(t)
-	if code, _, stderr := preflight.GitCmd(record.Repo, "update-ref", "-d", "refs/remotes/origin/"+record.Branch); code != 0 {
-		t.Fatalf("drop the remote fixture ref: %s", stderr)
-	}
-	return stateRoot, record
-}
-
-func resumeIntentFixture(t *testing.T, provider string, issue int) (string, issueops.IssueOpsRecord, preparationcontract.Intent) {
-	return resumeIntentFixtureWithLinkVerified(t, provider, issue, true)
-}
-
-func resumeIntentFixtureWithLinkVerified(t *testing.T, provider string, issue int, linkVerified bool) (string, issueops.IssueOpsRecord, preparationcontract.Intent) {
-	t.Helper()
-	stateRoot, record := executionPrepareRecord(t)
-	root := issueOpsWorktreePathForTest(record.Repo, record.Branch)
-	if err := os.MkdirAll(root, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if provider == "gitlab" {
-		record.IssueURL = "https://gitlab.example.com/acme/repo/-/work_items/" + fmt.Sprint(issue)
-		record.BranchPrepare.Provider = provider
-		record.BranchPrepare.IssueURL = record.IssueURL
-	}
-	record.BranchPrepare.LinkVerified = linkVerified
-	record.WorktreePath = root
-	record.Execution = &issueops.Execution{
-		Mode: issueops.ExecutionModeOrca,
-		Workspace: issueops.Workspace{
-			SourceRoot: record.Repo, Root: root, Branch: record.Branch,
-			BaseHead: record.BranchPrepare.BaseSHA, Driver: "orca", LinkedAt: "2026-08-02T00:00:00Z",
-		},
-		Lease: issueops.WriteLease{
-			Generation: 2, Status: issueops.LeaseStatusClaimable,
-			ClaimTokenSHA256: strings.Repeat("d", 64),
-		},
-		Orca: &issueops.OrcaBinding{
-			RuntimeID: "runtime-current", RepoID: "repo-current", WorktreeID: "worktree-current",
-			WorktreeInstanceID: "instance-current", LeaseGeneration: 1,
-			OwnerHost: "codex", OwnerModel: "gpt-6-astra", OwnerEffort: "xhigh",
-			RunID: "run-current", TaskID: "task-current", DispatchID: "dispatch-current", TerminalPTYID: "pty-current",
-			ArtifactIdentityVersion: 1,
-			IssueBodySHA256:         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-			ContextPacketSHA256:     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-			OwnerPromptSHA256:       "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-		},
-		Selection: selectionFixture(issueops.ExecutionModeOrca),
-	}
-	record, err := writeIssueOps(context.Background(), stateRoot, record)
-	if err != nil {
-		t.Fatal(err)
-	}
-	packetPath, promptPath := executionOwnerArtifactPaths(record)
-	artifacts := executionResumeArtifacts{
-		claimTokenPath: claimTokenPath(record), issueBodySHA256: strings.Repeat("a", 64),
-		packetPath: packetPath, packetSHA256: strings.Repeat("b", 64),
-		promptPath: promptPath, promptSHA256: strings.Repeat("c", 64),
-	}
-	store, err := sqlstore.Open(stateRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	repository := leaseoutbound.NewResumeRepository(store)
-	snapshot, err := repository.LoadSnapshot(context.Background(), record.ID, record.Execution.Lease.Generation)
-	if err != nil {
-		t.Fatal(err)
-	}
-	operationID, err := NewExecutionOperationID()
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = repository.BeginIntent(context.Background(), snapshot, leasecontract.ResumeArtifacts{
-		IssueBodySHA256:   artifacts.issueBodySHA256,
-		ContextPacketPath: artifacts.packetPath, ContextPacketSHA256: artifacts.packetSHA256,
-		OwnerPromptPath: artifacts.promptPath, OwnerPromptSHA256: artifacts.promptSHA256,
-	}, leasedomain.ResumePlan{RuntimeID: record.Execution.Orca.RuntimeID}, operationID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	persisted, err := ReadIssueOps(stateRoot, record.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	intentRaw, ok, err := store.Get(externalIntentBucket, operationID)
-	if err != nil || !ok {
-		t.Fatalf("resume intent present=%v err=%v", ok, err)
-	}
-	payload, err := (preparationcontract.IntentCodec{}).Decode(operationID, intentRaw)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return stateRoot, persisted, payload
 }
 
 func initIssueOpsRepo(t *testing.T) string {
@@ -384,13 +281,11 @@ func issueOpsDevilsAdvocateReviewForTest() *issueops.IssueOpsDevilsAdvocateRevie
 
 func issueOpsExecutionForTest(repo, worktree, branch string) *issueops.Execution {
 	return &issueops.Execution{
-		Mode: issueops.ExecutionModeDirect,
 		Workspace: issueops.Workspace{
 			SourceRoot: repo,
 			Root:       worktree,
 			Branch:     branch,
 			BaseHead:   "0123456789012345678901234567890123456789",
-			Driver:     "git",
 			LinkedAt:   "2026-07-22T00:00:00Z",
 		},
 		Lease: issueops.WriteLease{
@@ -404,7 +299,6 @@ func issueOpsExecutionForTest(repo, worktree, branch string) *issueops.Execution
 			},
 			ClaimedAt: "2026-07-22T00:00:00Z",
 		},
-		Selection: selectionFixture(issueops.ExecutionModeDirect),
 	}
 }
 

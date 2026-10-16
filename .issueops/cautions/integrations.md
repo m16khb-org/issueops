@@ -164,7 +164,7 @@ the required issueops skill validation gate.
 
 ## Codex co-resident hook merge에서 matcher 배열 위치를 바꾸지 말 것
 
-Codex hook trust는 command 내용만이 아니라 `source:event:matcher-index:hook-index` key의 `trusted_hash`에 결합된다. installer가 issueops 그룹을 제거한 뒤 끝에 append하면 co-resident Orca hook과 배열 위치가 바뀌고, 두 command가 모두 상대방의 stored hash와 비교되어 `modified`가 된다.
+Codex hook trust는 command 내용만이 아니라 `source:event:matcher-index:hook-index` key의 `trusted_hash`에 결합된다. installer가 issueops 그룹을 제거한 뒤 끝에 append하면 같은 이벤트에 등록된 다른 도구의 hook과 배열 위치가 바뀌고, 두 command가 모두 상대방의 stored hash와 비교되어 `modified`가 된다.
 
 - 기존 issueops 그룹은 첫 발견 위치에서 in-place replacement하고, 유효한 제3자 그룹의 상대 순서를 보존한다.
 - issueops 그룹이 없을 때만 append하고, 중복 issueops 그룹은 한 개로 축약한다.

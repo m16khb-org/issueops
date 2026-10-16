@@ -1,12 +1,9 @@
 package commandparse
 
 import (
-	"path/filepath"
 	"strings"
 
 	commandparsecontract "issueops/internal/contract/commandparse"
-	clidomain "issueops/internal/domain/cli"
-	"issueops/internal/domain/shelltoken"
 )
 
 // ExactIssueOpsCommand은 파싱된 정확한 `issueops …` 명령이다.
@@ -17,26 +14,9 @@ type ExactIssueOpsCommand struct {
 	Start  int
 }
 
-// ParseExactIssueOpsCommand은 명령을 ExactIssueOpsCommand으로 파싱하며, 활성
-// shell control/expansion을 담은 명령은 모두 거부한다(fail closed). bare
-// `issueops`, `bin/issueops`, `./bin/issueops …`
-// 호출과 provenance envelope의 executable과 exact 일치하는 absolute 호출만
-// 파싱되고, 지원되는 두 단어 subcommand는 Path로 합쳐진다.
-func ParseExactIssueOpsCommand(command string) (ExactIssueOpsCommand, bool) {
-	command = strings.TrimSpace(command)
-	if command == "" || shelltoken.HasUnquotedControlOperator(command) || shelltoken.HasActiveCommandSubstitution(command) || shelltoken.HasActiveOutputRedirect(command) || shelltoken.HasActiveParameterOrTildeExpansion(command) || shelltoken.HasActivePathnameExpansion(command) || shelltoken.HasActiveShellSpecialQuoting(command) || shelltoken.HasActiveZshEqualsExpansion(command) {
-		return ExactIssueOpsCommand{}, false
-	}
-	tokens := shelltoken.SplitCommandTokens(command)
-	if len(tokens) < 2 || !clidomain.IsLifecycleCommand(tokens[1]) {
-		return ExactIssueOpsCommand{}, false
-	}
-	return parseExactIssueOpsTokens(tokens)
-}
-
 // ParseExactIssueOpsArgs parses the argv slice received after the top-level
-// `issueops` command. Unlike ParseExactIssueOpsCommand, argv values are already
-// separated by the operating system and therefore do not need shell quoting.
+// `issueops` command. argv values are already separated by the operating
+// system and therefore do not need shell quoting.
 func ParseExactIssueOpsArgs(args []string) (ExactIssueOpsCommand, bool) {
 	tokens := make([]string, 0, len(args)+1)
 	tokens = append(tokens, "issueops")
@@ -45,7 +25,7 @@ func ParseExactIssueOpsArgs(args []string) (ExactIssueOpsCommand, bool) {
 }
 
 func parseExactIssueOpsTokens(tokens []string) (ExactIssueOpsCommand, bool) {
-	if len(tokens) < 2 || !exactIssueOpsExecutable(tokens) {
+	if len(tokens) < 2 || tokens[0] != "issueops" {
 		return ExactIssueOpsCommand{}, false
 	}
 	parts := []string{tokens[1]}
@@ -109,21 +89,6 @@ func IssueOpsLifecycleIDFlag(path string) string {
 		return "--parent"
 	}
 	return "--id"
-}
-
-func exactIssueOpsExecutable(tokens []string) bool {
-	if len(tokens) == 0 {
-		return false
-	}
-	switch tokens[0] {
-	case "issueops", "bin/issueops", "./bin/issueops", "io", "bin/io", "./bin/io":
-		return true
-	}
-	if !filepath.IsAbs(tokens[0]) {
-		return false
-	}
-	_, provenance, present, err := commandparsecontract.ConsumeGeneratedCommandProvenance(tokens[1:])
-	return err == nil && present && provenance.ExecutablePath == tokens[0]
 }
 
 // ExactFlags는 ExactIssueOpsCommand의 flag를 value/boolean/repeatable spec에
@@ -208,11 +173,11 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 		booleans: []string{"--json"},
 	},
 	"execution prepare": {
-		values:   []string{"--id", "--mode", "--owner-host", "--owner-model", "--owner-effort", "--issue-snapshot-file", "--direct-reason", "--expected-readiness-fingerprint", "--host", "--session-id", "--agent-id", "--session-pid", "--session-started-at", "--session-executable", "--cwd"},
+		values:   []string{"--id", "--host", "--session-id", "--agent-id", "--session-pid", "--session-started-at", "--session-executable", "--cwd"},
 		booleans: []string{"--confirm", "--json"},
 	},
 	"execution claim": {
-		values:   []string{"--id", "--generation", "--claim-token-file", "--issue-body-sha256", "--context-packet-sha256", "--issue-snapshot-file", "--host", "--session-id", "--agent-id", "--session-pid", "--session-started-at", "--session-executable", "--cwd"},
+		values:   []string{"--id", "--generation", "--claim-token-file", "--host", "--session-id", "--agent-id", "--session-pid", "--session-started-at", "--session-executable", "--cwd"},
 		booleans: []string{"--claim-current-token", "--json"},
 	},
 	"execution release": {
@@ -220,12 +185,8 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 		booleans: []string{"--json"},
 	},
 	"execution replace": {
-		values:   []string{"--id", "--expected-generation", "--completion-generation", "--inventory-fingerprint", "--quiescence-fingerprint", "--reason", "--issue-snapshot-file", "--host", "--session-id", "--agent-id", "--session-pid", "--session-started-at", "--session-executable", "--cwd"},
+		values:   []string{"--id", "--expected-generation", "--completion-generation", "--inventory-fingerprint", "--quiescence-fingerprint", "--reason", "--host", "--session-id", "--agent-id", "--session-pid", "--session-started-at", "--session-executable", "--cwd"},
 		booleans: []string{"--preview", "--revoke", "--finalize-preview", "--finalize", "--reseed", "--confirm", "--json"},
-	},
-	"execution resume": {
-		values:   []string{"--id", "--expected-generation", "--host", "--session-id", "--agent-id", "--session-pid", "--session-started-at", "--session-executable", "--cwd"},
-		booleans: []string{"--confirm", "--json"},
 	},
 	"execution whoami": {
 		booleans: []string{"--json"},
@@ -285,7 +246,7 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 		booleans: []string{"--json"},
 	},
 	"execution reconcile": {
-		values:   []string{"--id", "--issue-snapshot-file", "--host", "--session-id", "--agent-id", "--session-pid", "--session-started-at", "--session-executable", "--cwd"},
+		values:   []string{"--id", "--host", "--session-id", "--agent-id", "--session-pid", "--session-started-at", "--session-executable", "--cwd"},
 		booleans: []string{"--preview", "--confirm", "--json"},
 	},
 	"execution complete": {
@@ -296,10 +257,6 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 	"execution sync-base": {
 		values:   []string{"--id", "--completion-generation", "--fingerprint", "--host", "--session-id", "--agent-id", "--session-pid", "--session-started-at", "--session-executable", "--cwd"},
 		booleans: []string{"--preview", "--apply", "--finalize", "--abort", "--confirm", "--json"},
-	},
-	"execution switch-mode": {
-		values:   []string{"--id", "--mode", "--fingerprint", "--host", "--session-id", "--agent-id", "--session-pid", "--session-started-at", "--session-executable", "--cwd"},
-		booleans: []string{"--apply", "--confirm", "--json"},
 	},
 	"link-plan": {
 		values:   []string{"--id", "--plan-path", "--host", "--session-id", "--agent-id", "--cwd"},

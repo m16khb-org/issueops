@@ -91,10 +91,10 @@ func TestFinishPreviewPreservesObservationOrderAndBoundTargets(t *testing.T) {
 			t.Fatal("workspace observation lost context or target")
 		}
 		env.calls = append(env.calls, "workspace")
-		return app.FinishWorkspaceObservation{Occupants: []model.CleanupWorkspaceProcess{{PID: 12}}, Receipts: []model.NativeProcessReceipt{{PID: 12}}, Terminals: []string{"terminal"}, RuntimeReady: true, AppPID: 42}, nil
+		return app.FinishWorkspaceObservation{Occupants: []model.CleanupWorkspaceProcess{{PID: 12}}, Receipts: []model.NativeProcessReceipt{{PID: 12}}}, nil
 	}}
 	inventory, result := service.Plan(ctx, record, model.CleanupFinishRequest{Merged: true, CompletionReflected: true, IssueClosed: true, CWD: "/outside", MergedBaseBranch: "main"})
-	if !result.OK || result.RetargetedBase == nil || inventory.Branch != "123-cleanup" || inventory.BranchOID != "head" || inventory.OrcaAppPID != 42 || !inventory.OrcaRuntimeReady || len(inventory.WorkspaceProcesses) != 1 || len(result.WorkspaceProcesses) != 1 || !reflect.DeepEqual(inventory.OrcaTerminals, []string{"terminal"}) {
+	if !result.OK || result.RetargetedBase == nil || inventory.Branch != "123-cleanup" || inventory.BranchOID != "head" || len(inventory.WorkspaceProcesses) != 1 || len(result.WorkspaceProcesses) != 1 {
 		t.Fatalf("inventory=%+v result=%+v", inventory, result)
 	}
 	if !reflect.DeepEqual(env.calls, []string{"ls-remote", "ls-remote", "workspace", "status", "rev-parse", "ls-remote"}) {

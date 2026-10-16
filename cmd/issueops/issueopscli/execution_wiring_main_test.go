@@ -12,7 +12,6 @@ func testCLIExecutionRuntime() executioncmd.ExecutionDeps {
 	return executioncmd.ExecutionDeps{
 		ExecuteExecution:             testExecutionService().Execute,
 		ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry,
-		SwitchExecutionMode:          testModeSwitcher(),
 		SyncExecutionBase:            issueopscore.VerifiedSyncExecutionBase(issueopscore.NativeActorVerifier()),
 	}
 }

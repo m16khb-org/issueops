@@ -15,9 +15,7 @@ import (
 
 	"issueops/internal/adapter/outbound/sqlstore"
 	"issueops/internal/contract/issueops"
-	preparationcontract "issueops/internal/contract/issueopspreparation"
 	abandondomain "issueops/internal/domain/issueops"
-	"issueops/internal/port"
 )
 
 const abandonIssueBodySHA = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
@@ -32,30 +30,6 @@ func (g *fakeAbandonGit) run(_ string, args ...string) (int, string) {
 		return 0, g.branchOID
 	}
 	return 0, ""
-}
-
-// fakeAbandonOrca는 InspectIntent만 의미 있게 응답한다. InvokeIntent는 항상
-// 실패를 반환해, abandon이 어떤 경로에서도 orca mutation을 부르지 않음을
-// 구조적으로 고정한다(원격/외부 무접촉 계약).
-type fakeAbandonOrca struct {
-	inventory port.ExecutionOrcaIntentInventory
-	err       error
-	inspects  int
-	stages    []port.ExecutionOrcaIntentStage
-}
-
-func (o *fakeAbandonOrca) Probe(context.Context, port.ExecutionOrcaProbeRequest) (port.ExecutionOrcaProbeResult, error) {
-	return port.ExecutionOrcaProbeResult{Available: true, Ready: true}, nil
-}
-
-func (o *fakeAbandonOrca) InspectIntent(_ context.Context, req port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaIntentInventory, error) {
-	o.inspects++
-	o.stages = append(o.stages, req.Stage)
-	return o.inventory, o.err
-}
-
-func (o *fakeAbandonOrca) InvokeIntent(context.Context, port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaIntentReceipt, error) {
-	return port.ExecutionOrcaIntentReceipt{}, fmt.Errorf("cleanup abandon must never invoke an Orca mutation")
 }
 
 func abandonTestRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
@@ -76,17 +50,13 @@ func abandonRequest(id string, apply bool, fingerprint string) issueops.CleanupA
 	}
 }
 
-func abandonDeps(git *fakeAbandonGit, orca port.ExecutionOrcaProvisioner) CleanupAbandonDeps {
-	return CleanupAbandonDeps{Processes: quietCleanupProcesses(), Git: git.run, Orca: orca}
+func abandonDeps(git *fakeAbandonGit) CleanupAbandonDeps {
+	return CleanupAbandonDeps{Processes: quietCleanupProcesses(), Git: git.run}
 }
 
-func authoritativeZeroOrca() *fakeAbandonOrca {
-	return &fakeAbandonOrca{inventory: port.ExecutionOrcaIntentInventory{AuthoritativeZero: true}}
-}
-
-func writeAbandonIntentRow(t *testing.T, stateRoot, operationID string, payload preparationcontract.Intent) {
+func writeAbandonIntentRow(t *testing.T, stateRoot, operationID, lifecycleID string) {
 	t.Helper()
-	data, err := json.Marshal(payload)
+	data, err := json.Marshal(map[string]string{"operation_id": operationID, "lifecycle_id": lifecycleID})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,63 +82,35 @@ func abandonIntentRowExists(t *testing.T, stateRoot, operationID string) bool {
 	return ok
 }
 
-// abandonExecution은 지정한 lease로 released-가능한 orca 실행 블록을 만든다.
+// abandonExecution은 지정한 lease로 released-가능한 실행 블록을 만든다.
 // root는 부모만 존재하고 자기 자신은 없는 경로다(worktree_absent 충족).
 func abandonExecution(repo, root string, lease issueops.WriteLease) *issueops.Execution {
 	return &issueops.Execution{
-		Mode: issueops.ExecutionModeOrca,
 		Workspace: issueops.Workspace{
 			SourceRoot: repo, Root: root, Branch: "106-abandon",
-			BaseHead: "deadbeef", Driver: "orca", LinkedAt: "2026-07-24T00:00:00Z",
+			BaseHead: "deadbeef", LinkedAt: "2026-07-24T00:00:00Z",
 		},
-		Lease:     lease,
-		Selection: selectionFixture(issueops.ExecutionModeOrca),
+		Lease: lease,
 	}
 }
 
-// abandonOrcaPendingRecord는 실측 io-ff5300b4aa0b 형태를 재현한다: released
-// lease + worktree_create pending + external_operation_ambiguous failure +
-// 디스크에 없는 workspace root.
-func abandonOrcaPendingRecord(t *testing.T, kind string, writeRow bool) (string, issueops.IssueOpsRecord, string, string) {
+// abandonIntentRecord는 실측 형태를 재현한다: released lease +
+// external_operation_ambiguous failure + 디스크에 없는 workspace root. pendingKind가
+// 비어 있지 않으면 같은 operation의 pending intent도 건다.
+func abandonIntentRecord(t *testing.T, pendingKind string, writeRow bool) (string, issueops.IssueOpsRecord, string, string) {
 	t.Helper()
 	stateRoot, record := abandonTestRecord(t)
 	root := filepath.Join(t.TempDir(), "absent-worktree")
-	operationID := "op-abandon-worktree"
-	issueURL := "https://github.com/m16khb/issueops/issues/106"
-	record.IssueURL = issueURL
-	record.BranchPrepare = &issueops.IssueOpsBranchPrepare{
-		Provider: "github", IssueURL: issueURL, Branch: "106-abandon",
-		BaseBranch: "main", BaseSHA: "deadbeef", LinkVerified: true,
-	}
-	marker, err := (preparationcontract.IntentCodec{}).RenderMarker(preparationcontract.MarkerIdentity{
-		Purpose: preparationcontract.PurposePrepare, LifecycleID: record.ID,
-		Generation: 1, OperationID: operationID, Provider: "github", Issue: 106,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	operationID := "op-abandon-intent"
 	if writeRow {
-		writeAbandonIntentRow(t, stateRoot, operationID, preparationcontract.Intent{
-			SchemaVersion: issueops.IssueOpsSchemaVersion, Purpose: preparationcontract.PurposePrepare, OperationID: operationID, LifecycleID: record.ID,
-			Generation: 1, Stage: intentContractStage(port.ExecutionOrcaIntentWorktree), Marker: marker,
-			StartedAt: "2026-07-24T00:00:00Z", InvocationState: preparationcontract.InvocationNotInvoked,
-			Workspace: intentContractWorkspaceRequest(port.ExecutionWorkspaceRequest{
-				LifecycleID: record.ID, SourceRoot: record.Repo, Root: root,
-				Branch: "106-abandon", BaseBranch: "main", BaseHead: "deadbeef",
-			}),
-			Probe: intentContractProbeRequest(port.ExecutionOrcaProbeRequest{
-				Repo: record.Repo, Host: "codex", Model: "gpt-6-sol", Marker: marker,
-				Provider: "github", Issue: 106,
-			}),
-			IssueBodySHA256: abandonIssueBodySHA,
-		})
+		writeAbandonIntentRow(t, stateRoot, operationID, record.ID)
 	}
 	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
-		rec.IssueURL = record.IssueURL
-		rec.BranchPrepare = record.BranchPrepare
 		rec.Execution = abandonExecution(rec.Repo, root, issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased})
-		rec.Execution.Pending = &issueops.ExternalIntent{
-			OperationID: operationID, Kind: kind, Marker: marker, StartedAt: "2026-07-24T00:00:00Z",
+		if pendingKind != "" {
+			rec.Execution.Pending = &issueops.ExternalIntent{
+				OperationID: operationID, Kind: pendingKind, Marker: "marker", StartedAt: "2026-07-24T00:00:00Z",
+			}
 		}
 		rec.Execution.Failure = &issueops.ExecutionFailure{
 			OperationID: operationID, Code: "external_operation_ambiguous", At: "2026-07-24T00:00:00Z",
@@ -185,7 +127,7 @@ func abandonOrcaPendingRecord(t *testing.T, kind string, writeRow bool) (string,
 // apply가 레코드를 삭제하며, 동일 (repo, branch) start가 새 사이클을 연다.
 func TestCleanupAbandonPreviewThenApplyDeletesRecord(t *testing.T) {
 	stateRoot, record := abandonTestRecord(t)
-	deps := abandonDeps(&fakeAbandonGit{}, authoritativeZeroOrca())
+	deps := abandonDeps(&fakeAbandonGit{})
 
 	preview, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""), deps)
 	if err != nil {
@@ -249,7 +191,7 @@ func TestCleanupAbandonLeaseAllowlistCoversEveryStatus(t *testing.T) {
 			mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
 				rec.Execution = abandonExecution(rec.Repo, root, tc.lease)
 			})
-			deps := abandonDeps(&fakeAbandonGit{}, authoritativeZeroOrca())
+			deps := abandonDeps(&fakeAbandonGit{})
 			result, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""), deps)
 			if tc.ready {
 				if err != nil || result.Fingerprint == "" {
@@ -354,7 +296,7 @@ func TestCleanupAbandonRecordGatesRejectUnsafeRecords(t *testing.T) {
 			if tc.request != nil {
 				req = tc.request(record.ID)
 			}
-			deps := abandonDeps(&fakeAbandonGit{}, authoritativeZeroOrca())
+			deps := abandonDeps(&fakeAbandonGit{})
 			result, err := CleanupAbandon(context.Background(), stateRoot, req, deps)
 			if err == nil || !containsString(result.Missing, tc.missing) {
 				t.Fatalf("expected missing %q: err=%v missing=%v", tc.missing, err, result.Missing)
@@ -377,7 +319,7 @@ func TestCleanupAbandonIgnoresSelfChildIssueLink(t *testing.T) {
 		context.Background(),
 		stateRoot,
 		abandonRequest(record.ID, false, "superseded self-linked retry"),
-		abandonDeps(&fakeAbandonGit{}, authoritativeZeroOrca()),
+		abandonDeps(&fakeAbandonGit{}),
 	)
 	if err != nil {
 		t.Fatalf("self child link must not block abandon: %v missing=%v", err, result.Missing)
@@ -399,7 +341,7 @@ func TestCleanupAbandonRejectsLocalResidue(t *testing.T) {
 		mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
 			rec.Execution = abandonExecution(rec.Repo, root, issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased})
 		})
-		result, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""), abandonDeps(&fakeAbandonGit{}, authoritativeZeroOrca()))
+		result, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""), abandonDeps(&fakeAbandonGit{}))
 		// registry가 인정하지 않는 worktree는 계속 막는다. 비대칭 자체는
 		// #433 이후 거부 사유가 아니므로 worktree_canonical만 남는다.
 		if err == nil || !containsString(result.Missing, "worktree_canonical") {
@@ -417,7 +359,7 @@ func TestCleanupAbandonRejectsLocalResidue(t *testing.T) {
 	// 고정한다.
 	t.Run("branch ref present without execution", func(t *testing.T) {
 		stateRoot, record := abandonTestRecord(t)
-		result, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""), abandonDeps(&fakeAbandonGit{branchOID: "abc123"}, authoritativeZeroOrca()))
+		result, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""), abandonDeps(&fakeAbandonGit{branchOID: "abc123"}))
 		if err == nil || !containsString(result.Missing, "local_residue_execution") {
 			t.Fatalf("execution 없는 잔여물은 계속 막아야 한다: %v %v", err, result.Missing)
 		}
@@ -429,207 +371,34 @@ func TestCleanupAbandonRejectsLocalResidue(t *testing.T) {
 			rec.Execution = abandonExecution(rec.Repo, root, issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased})
 			rec.WorktreePath = filepath.Join(t.TempDir(), "other-worktree")
 		})
-		result, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""), abandonDeps(&fakeAbandonGit{}, authoritativeZeroOrca()))
+		result, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""), abandonDeps(&fakeAbandonGit{}))
 		if err == nil || !containsString(result.Missing, "worktree_identity_conflict") {
 			t.Fatalf("conflicting worktree identity must block: %v %v", err, result.Missing)
 		}
 	})
 }
 
-// AC-02: pending kind별 허용/거부 + InspectIntent 분기 전수.
+// AC-02: 미해결 pending intent는 abandon을 막고 reconcile로 안내한다.
 func TestCleanupAbandonPendingIntentGate(t *testing.T) {
-	t.Run("remote kind is never abandonable", func(t *testing.T) {
-		stateRoot, record, _, _ := abandonOrcaPendingRecord(t, issueopspublication.RemoteIntentKind, true)
-		orca := authoritativeZeroOrca()
-		result, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""), abandonDeps(&fakeAbandonGit{}, orca))
-		if err == nil || !containsString(result.Missing, "pending_intent_safe") {
-			t.Fatalf("remote pending kind must block: %v %v", err, result.Missing)
-		}
-		if orca.inspects != 0 {
-			t.Fatalf("remote kind must be rejected before any Orca call: %d", orca.inspects)
-		}
-		if !strings.Contains(result.PendingIntentError, "execution reconcile") {
-			t.Fatalf("rejection must point at execution reconcile: %q", result.PendingIntentError)
-		}
-	})
-	t.Run("missing intent row is ambiguous", func(t *testing.T) {
-		stateRoot, record, _, _ := abandonOrcaPendingRecord(t, "worktree_create", false)
-		result, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""), abandonDeps(&fakeAbandonGit{}, authoritativeZeroOrca()))
-		if err == nil || !containsString(result.Missing, "pending_intent_safe") {
-			t.Fatalf("absent intent row must block the gate: %v %v", err, result.Missing)
-		}
-	})
-	t.Run("orca inspector absent", func(t *testing.T) {
-		stateRoot, record, _, _ := abandonOrcaPendingRecord(t, "worktree_create", true)
-		result, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""), CleanupAbandonDeps{Processes: quietCleanupProcesses(), Git: (&fakeAbandonGit{}).run})
-		if err == nil || !containsString(result.Missing, "pending_intent_safe") {
-			t.Fatalf("missing Orca inspector must block: %v %v", err, result.Missing)
-		}
-	})
-	t.Run("inspect transport failure", func(t *testing.T) {
-		stateRoot, record, _, _ := abandonOrcaPendingRecord(t, "worktree_create", true)
-		orca := &fakeAbandonOrca{err: fmt.Errorf("orca runtime unreachable")}
-		result, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""), abandonDeps(&fakeAbandonGit{}, orca))
-		if err == nil || !containsString(result.Missing, "pending_intent_safe") {
-			t.Fatalf("inspect failure must block: %v %v", err, result.Missing)
-		}
-	})
-	t.Run("candidate found", func(t *testing.T) {
-		stateRoot, record, _, _ := abandonOrcaPendingRecord(t, "worktree_create", true)
-		orca := &fakeAbandonOrca{inventory: port.ExecutionOrcaIntentInventory{
-			Candidates:        []port.ExecutionOrcaIntentReceipt{{Workspace: &port.ExecutionOrcaWorkspaceReceipt{WorktreeID: "wt-1"}}},
-			AuthoritativeZero: false,
-		}}
-		result, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""), abandonDeps(&fakeAbandonGit{}, orca))
-		if err == nil || !containsString(result.Missing, "pending_intent_safe") {
-			t.Fatalf("orca candidate must block: %v %v", err, result.Missing)
-		}
-	})
-	t.Run("non authoritative zero", func(t *testing.T) {
-		stateRoot, record, _, _ := abandonOrcaPendingRecord(t, "worktree_create", true)
-		orca := &fakeAbandonOrca{inventory: port.ExecutionOrcaIntentInventory{AuthoritativeZero: false}}
-		result, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""), abandonDeps(&fakeAbandonGit{}, orca))
-		if err == nil || !containsString(result.Missing, "pending_intent_safe") {
-			t.Fatalf("non-authoritative zero must block: %v %v", err, result.Missing)
-		}
-	})
-	t.Run("workspace root still on disk", func(t *testing.T) {
-		stateRoot, record, _, root := abandonOrcaPendingRecord(t, "worktree_create", true)
-		if err := os.MkdirAll(root, 0o755); err != nil {
-			t.Fatal(err)
-		}
-		orca := authoritativeZeroOrca()
-		result, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""), abandonDeps(&fakeAbandonGit{}, orca))
-		if err == nil || !containsString(result.Missing, "pending_intent_safe") || !containsString(result.Missing, "worktree_canonical") {
-			t.Fatalf("present workspace root must block both gates: %v %v", err, result.Missing)
-		}
-		if orca.inspects != 0 {
-			t.Fatalf("disk residue must be rejected before any Orca call: %d", orca.inspects)
-		}
-	})
-}
-
-// 이미 병합된 child 작업의 worktree와 Orca 자원이 외부에서 정리된 경우,
-// resume의 owner_launch/dispatch pending은 봉인된 모든 단계가 authoritative
-// zero일 때만 abandon할 수 있어야 한다.
-func TestCleanupAbandonAllowsStaleOwnerIntentAfterEveryOrcaStageIsAbsent(t *testing.T) {
-	for _, tc := range []struct {
-		name          string
-		stage         port.ExecutionOrcaIntentStage
-		kind          string
-		wantInspects  int
-		terminalPTYID string
-		runID         string
-		runBound      bool
-		taskID        string
-	}{
-		{name: "owner launch", stage: port.ExecutionOrcaIntentTerminal, kind: "owner_launch", wantInspects: 2},
-		{name: "Run create", stage: port.ExecutionOrcaIntentRun, kind: "owner_launch", wantInspects: 2, terminalPTYID: "pty-current"},
-		{name: "Run bind", stage: port.ExecutionOrcaIntentRunBind, kind: "owner_launch", wantInspects: 2, terminalPTYID: "pty-current", runID: "run-current"},
-		{name: "task", stage: port.ExecutionOrcaIntentTask, kind: "owner_launch", wantInspects: 3, terminalPTYID: "pty-current", runID: "run-current", runBound: true},
-		{name: "dispatch", stage: port.ExecutionOrcaIntentDispatch, kind: "dispatch", wantInspects: 4, terminalPTYID: "pty-current", runID: "run-current", runBound: true, taskID: "task-current"},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			stateRoot, record, payload := resumeIntentFixture(t, "gitlab", 2646)
-			payload.Stage = intentContractStage(tc.stage)
-			payload.TerminalPTYID = tc.terminalPTYID
-			payload.RunID = tc.runID
-			payload.RunBound = tc.runBound
-			payload.TaskID = tc.taskID
-			data, err := json.Marshal(payload)
-			if err != nil {
-				t.Fatal(err)
-			}
-			record.Execution.Pending.Kind = tc.kind
-			record, err = persistExecutionTransitionWithMutations(context.Background(), stateRoot, record, nil, []port.RecordMutation{{
-				Bucket: externalIntentBucket, ID: payload.OperationID, Data: data,
-			}})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if err := os.RemoveAll(record.Execution.Workspace.Root); err != nil {
-				t.Fatal(err)
-			}
-			orca := authoritativeZeroOrca()
-			owner := &fakeOwnerInspector{}
-			deps := CleanupAbandonDeps{Processes: quietCleanupProcesses(), Git: (&fakeAbandonGit{}).run, Orca: orca, OrcaOwner: owner}
-
-			result, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""), deps)
-			if err != nil {
-				t.Fatalf("모든 Orca 자원이 사라진 stale %s intent를 정리하지 못했다: %v (%+v)", tc.kind, err, result)
-			}
-			if orca.inspects != tc.wantInspects {
-				t.Fatalf("현재 단계까지의 모든 봉인 intent를 조회하지 않았다: got=%d want=%d", orca.inspects, tc.wantInspects)
-			}
-			for _, stage := range orca.stages {
-				if stage == port.ExecutionOrcaIntentRun || stage == port.ExecutionOrcaIntentRunBind {
-					t.Fatalf("삭제할 수 없는 Run을 cleanup residue로 조회했다: %+v", orca.stages)
-				}
-			}
-			if len(owner.calls) != 1 {
-				t.Fatalf("이전 generation의 owner 자원을 조회하지 않았다: %+v", owner.calls)
-			}
-		})
+	stateRoot, record, _, _ := abandonIntentRecord(t, issueopspublication.RemoteIntentKind, true)
+	result, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""), abandonDeps(&fakeAbandonGit{}))
+	if err == nil || !containsString(result.Missing, "pending_intent_safe") {
+		t.Fatalf("remote pending kind must block: %v %v", err, result.Missing)
+	}
+	if !strings.Contains(result.PendingIntentError, "execution reconcile") {
+		t.Fatalf("rejection must point at execution reconcile: %q", result.PendingIntentError)
 	}
 }
 
-// 현재 pending 단계만 비어 있어도 이전 단계 자원이 남아 있으면 레코드를
-// 지우면 안 된다. terminal pending에서는 먼저 생성된 worktree를 함께 확인한다.
-func TestCleanupAbandonRejectsStaleOwnerIntentWithEarlierStageResidue(t *testing.T) {
-	stateRoot, record, _ := resumeIntentFixture(t, "gitlab", 2646)
-	if err := os.RemoveAll(record.Execution.Workspace.Root); err != nil {
-		t.Fatal(err)
-	}
-	orca := &fakeAbandonOrca{inventory: port.ExecutionOrcaIntentInventory{
-		Candidates: []port.ExecutionOrcaIntentReceipt{{Workspace: &port.ExecutionOrcaWorkspaceReceipt{
-			WorktreeID: "worktree-still-present",
-		}}},
-	}}
-	result, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""), CleanupAbandonDeps{Processes: quietCleanupProcesses(),
-		Git: (&fakeAbandonGit{}).run, Orca: orca, OrcaOwner: &fakeOwnerInspector{},
-	})
-	if err == nil || !containsString(result.Missing, "pending_intent_safe") ||
-		!strings.Contains(result.PendingIntentError, "candidate") {
-		t.Fatalf("이전 단계 Orca 잔여를 허용했다: err=%v result=%+v", err, result)
-	}
-	if orca.inspects != 1 {
-		t.Fatalf("잔여를 찾은 단계에서 즉시 중단하지 않았다: %d", orca.inspects)
-	}
-}
-
-// 현재 generation의 intent가 비어도 이전 binding의 task/terminal이 살아 있으면
-// 별도 owner gate가 계속 fail-closed해야 한다.
-func TestCleanupAbandonRejectsStaleOwnerIntentWithPriorOwnerResidue(t *testing.T) {
-	stateRoot, record, _ := resumeIntentFixture(t, "gitlab", 2646)
-	if err := os.RemoveAll(record.Execution.Workspace.Root); err != nil {
-		t.Fatal(err)
-	}
-	result, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""), CleanupAbandonDeps{Processes: quietCleanupProcesses(),
-		Git: (&fakeAbandonGit{}).run, Orca: authoritativeZeroOrca(),
-		OrcaOwner: &fakeOwnerInspector{inventory: port.ExecutionOrcaOwnerInventory{
-			TaskLive: true, TaskStatus: "running",
-		}},
-	})
-	if err == nil || containsString(result.Missing, "pending_intent_safe") ||
-		!containsString(result.Missing, "orca_resources_absent") {
-		t.Fatalf("이전 owner 잔여 판정이 분리되지 않았다: err=%v result=%+v", err, result)
-	}
-}
-
-// AC-01/AC-02 성공 경로: 실측 형태(worktree_create pending + ambiguous failure)가
-// preview·apply 양쪽에서 orca를 실조회하고, 레코드와 intent 행을 같은 배치로
-// 지운다.
+// AC-01/AC-02 성공 경로: 실측 형태(ambiguous failure)가 preview·apply를 통과하고,
+// 레코드와 intent 행을 같은 배치로 지운다.
 func TestCleanupAbandonDeletesRecordAndIntentRowAtomically(t *testing.T) {
-	stateRoot, record, operationID, _ := abandonOrcaPendingRecord(t, "worktree_create", true)
-	orca := authoritativeZeroOrca()
-	deps := abandonDeps(&fakeAbandonGit{}, orca)
+	stateRoot, record, operationID, _ := abandonIntentRecord(t, "", true)
+	deps := abandonDeps(&fakeAbandonGit{})
 
 	preview, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""), deps)
 	if err != nil {
 		t.Fatal(err)
-	}
-	if preview.PendingOperationID != operationID {
-		t.Fatalf("preview must surface the pending operation id: %+v", preview)
 	}
 	wantPlanTail := []string{"record:" + record.ID, "intent:" + operationID}
 	if len(preview.RemovalPlan) < 2 || strings.Join(preview.RemovalPlan[len(preview.RemovalPlan)-2:], "\n") != strings.Join(wantPlanTail, "\n") {
@@ -638,9 +407,6 @@ func TestCleanupAbandonDeletesRecordAndIntentRowAtomically(t *testing.T) {
 	applied, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, true, preview.Fingerprint), deps)
 	if err != nil {
 		t.Fatal(err)
-	}
-	if orca.inspects != 2 {
-		t.Fatalf("preview and apply must each inspect the sealed intent: %d", orca.inspects)
 	}
 	if !applied.RecordDeleted || len(applied.IntentRowsDeleted) != 1 || applied.IntentRowsDeleted[0] != operationID {
 		t.Fatalf("apply must delete the record and its intent row: %+v", applied)
@@ -653,8 +419,7 @@ func TestCleanupAbandonDeletesRecordAndIntentRowAtomically(t *testing.T) {
 	}
 }
 
-// 멱등: Failure만 참조하는 행이 이미 없으면 성공이다
-// (normalizeOrcaRemoveWorktreeErr 계약 동형).
+// 멱등: Failure만 참조하는 행이 이미 없으면 성공이다.
 func TestCleanupAbandonTreatsAbsentIntentRowAsSuccess(t *testing.T) {
 	stateRoot, record := abandonTestRecord(t)
 	root := filepath.Join(t.TempDir(), "absent-worktree")
@@ -664,7 +429,7 @@ func TestCleanupAbandonTreatsAbsentIntentRowAsSuccess(t *testing.T) {
 			OperationID: "op-already-collected", Code: "external_operation_ambiguous", At: "2026-07-24T00:00:00Z",
 		}
 	})
-	deps := abandonDeps(&fakeAbandonGit{}, authoritativeZeroOrca())
+	deps := abandonDeps(&fakeAbandonGit{})
 	preview, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""), deps)
 	if err != nil {
 		t.Fatal(err)
@@ -681,23 +446,13 @@ func TestCleanupAbandonTreatsAbsentIntentRowAsSuccess(t *testing.T) {
 // 소유자 가드: 다른 lifecycle이 소유한 행은 하드 에러이고 레코드는 보존된다
 // (execution_state.go:150-159 규율 준용).
 func TestCleanupAbandonRefusesToDeleteAnotherLifecyclesIntentRow(t *testing.T) {
-	stateRoot, record, operationID, root := abandonOrcaPendingRecord(t, "worktree_create", true)
+	stateRoot, record, operationID, _ := abandonIntentRecord(t, "", true)
 	foreign := "op-foreign-row"
-	writeAbandonIntentRow(t, stateRoot, foreign, preparationcontract.Intent{
-		SchemaVersion: issueops.IssueOpsSchemaVersion, OperationID: foreign, LifecycleID: "io-someoneelse",
-		Generation: 1, Stage: intentContractStage(port.ExecutionOrcaIntentWorktree), Marker: "m",
-		StartedAt: "2026-07-24T00:00:00Z", InvocationState: preparationcontract.InvocationNotInvoked,
-		Workspace: intentContractWorkspaceRequest(port.ExecutionWorkspaceRequest{
-			LifecycleID: "io-someoneelse", SourceRoot: record.Repo, Root: root,
-			Branch: "other", BaseBranch: "main", BaseHead: "deadbeef",
-		}),
-		Probe:           intentContractProbeRequest(port.ExecutionOrcaProbeRequest{Repo: record.Repo, Host: "codex", Model: "gpt-6-sol", Marker: "m"}),
-		IssueBodySHA256: abandonIssueBodySHA,
-	})
+	writeAbandonIntentRow(t, stateRoot, foreign, "io-someoneelse")
 	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
 		rec.Execution.Failure.OperationID = foreign
 	})
-	deps := abandonDeps(&fakeAbandonGit{}, authoritativeZeroOrca())
+	deps := abandonDeps(&fakeAbandonGit{})
 	preview, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""), deps)
 	if err != nil {
 		t.Fatal(err)
@@ -718,7 +473,7 @@ func TestCleanupAbandonRefusesToDeleteAnotherLifecyclesIntentRow(t *testing.T) {
 // without --confirm도 함께 고정한다.
 func TestCleanupAbandonApplyRejectsStaleFingerprintAndMissingConfirm(t *testing.T) {
 	stateRoot, record := abandonTestRecord(t)
-	deps := abandonDeps(&fakeAbandonGit{}, authoritativeZeroOrca())
+	deps := abandonDeps(&fakeAbandonGit{})
 	preview, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""), deps)
 	if err != nil {
 		t.Fatal(err)
@@ -743,7 +498,7 @@ func TestCleanupAbandonRejectsUnknownBranchInventory(t *testing.T) {
 	for _, code := range []int{2, 128, -1} {
 		t.Run(fmt.Sprint(code), func(t *testing.T) {
 			root, record := abandonTestRecord(t)
-			deps := abandonDeps(&fakeAbandonGit{}, nil)
+			deps := abandonDeps(&fakeAbandonGit{})
 			deps.Git = func(_ string, args ...string) (int, string) {
 				if args[0] == "rev-parse" {
 					return code, "unavailable"
@@ -772,7 +527,7 @@ func TestCleanupAbandonRejectsNonDirectoryWorkspace(t *testing.T) {
 		t.Fatal(err)
 	}
 	mutateFinishRecord(t, root, record.ID, func(r *issueops.IssueOpsRecord) { r.WorktreePath = path })
-	deps := abandonDeps(&fakeAbandonGit{}, nil)
+	deps := abandonDeps(&fakeAbandonGit{})
 	preview, err := CleanupAbandon(context.Background(), root, abandonRequest(record.ID, false, ""), deps)
 	if err == nil || preview.OK || preview.Fingerprint != "" {
 		t.Errorf("file accepted as absent workspace: %+v %v", preview, err)

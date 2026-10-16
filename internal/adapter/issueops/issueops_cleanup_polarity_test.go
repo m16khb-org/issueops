@@ -22,9 +22,8 @@ import (
 // `remote_branch_present`는 "원격 브랜치 존재라는 요구가 미충족" = 브랜치가 없다로
 // 읽힌다. 실제 상태를 `git ls-remote`로 따로 확인해야 했다.
 //
-// 요구 극성이 다수이고 선례다 — `#167`의 switch-mode 게이트(`worktree_clean`,
-// `lease_holds_no_writer`, `orca_branch_name_free`)와 `cleanup finish`
-// (`worktree_clean`, `remote_branch_absent`)가 그렇다.
+// 요구 극성이 다수이고 선례다 — `cleanup finish`(`worktree_clean`,
+// `remote_branch_absent`)가 그렇다.
 //
 // 이 테스트가 고정하는 것은 이름의 의미가 아니라 **두 표면이 같은 물리 상태를 같은
 // 슬러그로 부른다**는 것이다. 극성의 의미는 문자열로 판정할 수 없지만 두 표면의

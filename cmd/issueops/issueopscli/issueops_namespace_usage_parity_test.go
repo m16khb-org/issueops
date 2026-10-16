@@ -58,9 +58,8 @@ func issueOpsUsageFlagSet(line string) map[string]bool {
 // 명령 존재의 근거를 usage 카탈로그로 못박으므로, 이 구멍은 문맥 없는 새
 // 세션의 복구 경로를 통째로 지운다(#111이 최상위에서 막은 것과 같은 결함).
 //
-// 플래그 방향도 같이 본다. `execution prepare`의 preview가 next_command로
-// 내보내는 `--expected-readiness-fingerprint`는 confirm에 필수인데 카탈로그에
-// 없었다. 축약이 대신하는 actor 플래그는 비교에서 제외한다.
+// 플래그 방향도 같이 본다. 카탈로그에 없는 플래그를 next_command가 내보내면
+// 안 되므로 축약이 대신하는 actor 플래그만 비교에서 제외한다.
 func TestIssueOpsNamespaceUsageExistsInCatalog(t *testing.T) {
 	const prefix = "issueops "
 	catalog := map[string]string{}

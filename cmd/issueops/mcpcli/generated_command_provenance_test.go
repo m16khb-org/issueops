@@ -24,7 +24,7 @@ func (s mcpProvenanceObserverStub) Observe(context.Context) (provenanceport.Rece
 func TestBindMCPIssueOpsExecutionNextCommandMatchesCLIContract(t *testing.T) {
 	raw := issueopscontract.ExecutionReplaceResult{
 		Execution:   issueopscontract.Execution{Lease: issueopscontract.WriteLease{Generation: 5}},
-		NextCommand: "issueops execution resume --id io-1 --expected-generation 5 --confirm",
+		NextCommand: "issueops execution claim --id io-1 --generation 5",
 	}
 	bound, err := bindMCPIssueOpsExecutionNextCommand(raw, mcpProvenanceObserverStub{evidence: provenanceport.Receipt{
 		ExecutablePath: "/repo/bin/issueops", ExecutableSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -43,13 +43,13 @@ func TestMCPIssueOpsExecutionHandlerBindsBaseSyncRequiredErrorNextCommand(t *tes
 		ExecutablePath: "/repo/bin/issueops", ExecutableSHA256: strings.Repeat("a", 64),
 	}}
 	outcome := handleMCPIssueOpsExecutionWithDependencies(map[string]any{
-		"action": "resume", "id": "io-aaaaaaaaaaaa", "expected_generation": float64(7),
+		"action": "claim", "id": "io-aaaaaaaaaaaa", "generation": float64(7),
 		"host": "codex", "session_id": "session-1", "session_pid": float64(42),
 		"session_started_at": "2026-08-04T00:00:00Z", "session_executable": "/bin/codex",
 		"cwd": "/repo.worktrees/318", "confirm": true,
 	}, MCPDependencies{Execution: testExecutionDeps(), Catalog: mcpcatalog.Build(),
-		Resume: func(context.Context, string, issueopscontract.ExecutionResumeRequest) (issueopscontract.ExecutionResumeResult, error) {
-			return issueopscontract.ExecutionResumeResult{}, issueopscontract.NewBaseSyncRequiredError("io-aaaaaaaaaaaa", 7)
+		Claim: func(context.Context, string, issueopscontract.ExecutionClaimRequest) (issueopscontract.ExecutionResult, error) {
+			return issueopscontract.ExecutionResult{}, issueopscontract.NewBaseSyncRequiredError("io-aaaaaaaaaaaa", 7)
 		},
 		Provenance: observer,
 	})
@@ -65,13 +65,13 @@ func TestMCPIssueOpsExecutionHandlerBindsBaseSyncRequiredErrorNextCommand(t *tes
 
 func TestMCPIssueOpsExecutionTypedErrorObservationFailureHasNoUnboundFallback(t *testing.T) {
 	outcome := handleMCPIssueOpsExecutionWithDependencies(map[string]any{
-		"action": "resume", "id": "io-aaaaaaaaaaaa", "expected_generation": float64(7),
+		"action": "claim", "id": "io-aaaaaaaaaaaa", "generation": float64(7),
 		"host": "codex", "session_id": "session-1", "session_pid": float64(42),
 		"session_started_at": "2026-08-04T00:00:00Z", "session_executable": "/bin/codex",
 		"cwd": "/repo.worktrees/318", "confirm": true,
 	}, MCPDependencies{Execution: testExecutionDeps(), Catalog: mcpcatalog.Build(),
-		Resume: func(context.Context, string, issueopscontract.ExecutionResumeRequest) (issueopscontract.ExecutionResumeResult, error) {
-			return issueopscontract.ExecutionResumeResult{}, issueopscontract.NewBaseSyncRequiredError("io-aaaaaaaaaaaa", 7)
+		Claim: func(context.Context, string, issueopscontract.ExecutionClaimRequest) (issueopscontract.ExecutionResult, error) {
+			return issueopscontract.ExecutionResult{}, issueopscontract.NewBaseSyncRequiredError("io-aaaaaaaaaaaa", 7)
 		},
 		Provenance: mcpProvenanceObserverStub{err: errors.New("observation failed")},
 	})
@@ -89,13 +89,13 @@ func TestMCPIssueOpsExecutionHandlerBindsGeneratedNextCommand(t *testing.T) {
 		ExecutablePath: "/repo/bin/issueops", ExecutableSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 	}}
 	outcome := handleMCPIssueOpsExecutionWithDependencies(map[string]any{
-		"action": "resume", "id": "io-aaaaaaaaaaaa", "expected_generation": float64(5),
+		"action": "claim", "id": "io-aaaaaaaaaaaa", "generation": float64(5),
 		"host": "codex", "session_id": "session-1", "session_pid": float64(42),
 		"session_started_at": "2026-08-04T00:00:00Z", "session_executable": "/bin/codex",
 		"cwd": "/repo.worktrees/303", "confirm": true,
 	}, MCPDependencies{Execution: testExecutionDeps(), Catalog: mcpcatalog.Build(),
-		Resume: func(context.Context, string, issueopscontract.ExecutionResumeRequest) (issueopscontract.ExecutionResumeResult, error) {
-			return issueopscontract.ExecutionResumeResult{
+		Claim: func(context.Context, string, issueopscontract.ExecutionClaimRequest) (issueopscontract.ExecutionResult, error) {
+			return issueopscontract.ExecutionResult{
 				OK: true, ID: "io-aaaaaaaaaaaa",
 				Execution:   issueopscontract.Execution{Lease: issueopscontract.WriteLease{Generation: 5}},
 				NextCommand: "issueops execution claim --id io-aaaaaaaaaaaa --generation 5 --claim-token-file /tmp/token",
@@ -103,7 +103,7 @@ func TestMCPIssueOpsExecutionHandlerBindsGeneratedNextCommand(t *testing.T) {
 		},
 		Provenance: observer,
 	})
-	result, ok := outcome.Payload.(issueopscontract.ExecutionResumeResult)
+	result, ok := outcome.Payload.(issueopscontract.ExecutionResult)
 	if !ok || outcome.IsError || !strings.Contains(result.NextCommand, "--generated-for-generation 5") {
 		t.Fatalf("MCP execution outcome = %#v", outcome)
 	}
@@ -111,13 +111,13 @@ func TestMCPIssueOpsExecutionHandlerBindsGeneratedNextCommand(t *testing.T) {
 
 func TestMCPIssueOpsExecutionHandlerObservationFailureHasNoUnboundPayload(t *testing.T) {
 	outcome := handleMCPIssueOpsExecutionWithDependencies(map[string]any{
-		"action": "resume", "id": "io-aaaaaaaaaaaa", "expected_generation": float64(5),
+		"action": "claim", "id": "io-aaaaaaaaaaaa", "generation": float64(5),
 		"host": "codex", "session_id": "session-1", "session_pid": float64(42),
 		"session_started_at": "2026-08-04T00:00:00Z", "session_executable": "/bin/codex",
 		"cwd": "/repo.worktrees/303", "confirm": true,
 	}, MCPDependencies{Execution: testExecutionDeps(), Catalog: mcpcatalog.Build(),
-		Resume: func(context.Context, string, issueopscontract.ExecutionResumeRequest) (issueopscontract.ExecutionResumeResult, error) {
-			return issueopscontract.ExecutionResumeResult{
+		Claim: func(context.Context, string, issueopscontract.ExecutionClaimRequest) (issueopscontract.ExecutionResult, error) {
+			return issueopscontract.ExecutionResult{
 				OK: true, ID: "io-aaaaaaaaaaaa",
 				Execution:   issueopscontract.Execution{Lease: issueopscontract.WriteLease{Generation: 5}},
 				NextCommand: "issueops execution claim --id io-aaaaaaaaaaaa --generation 5 --claim-token-file /tmp/token",
@@ -128,20 +128,20 @@ func TestMCPIssueOpsExecutionHandlerObservationFailureHasNoUnboundPayload(t *tes
 	if !outcome.IsError {
 		t.Fatalf("MCP observation failure outcome = %#v", outcome)
 	}
-	if payload, ok := outcome.Payload.(issueopscontract.ExecutionResumeResult); ok && payload.NextCommand != "" {
+	if payload, ok := outcome.Payload.(issueopscontract.ExecutionResult); ok && payload.NextCommand != "" {
 		t.Fatalf("MCP observation failure leaked unbound command: %#v", payload)
 	}
 }
 
 func TestMCPIssueOpsExecutionHandlerMissingObserverHasNoUnboundPayload(t *testing.T) {
 	outcome := handleMCPIssueOpsExecutionWithDependencies(map[string]any{
-		"action": "resume", "id": "io-aaaaaaaaaaaa", "expected_generation": float64(5),
+		"action": "claim", "id": "io-aaaaaaaaaaaa", "generation": float64(5),
 		"host": "codex", "session_id": "session-1", "session_pid": float64(42),
 		"session_started_at": "2026-08-04T00:00:00Z", "session_executable": "/bin/codex",
 		"cwd": "/repo.worktrees/303", "confirm": true,
 	}, MCPDependencies{Execution: testExecutionDeps(), Catalog: mcpcatalog.Build(),
-		Resume: func(context.Context, string, issueopscontract.ExecutionResumeRequest) (issueopscontract.ExecutionResumeResult, error) {
-			return issueopscontract.ExecutionResumeResult{
+		Claim: func(context.Context, string, issueopscontract.ExecutionClaimRequest) (issueopscontract.ExecutionResult, error) {
+			return issueopscontract.ExecutionResult{
 				OK: true, ID: "io-aaaaaaaaaaaa",
 				Execution:   issueopscontract.Execution{Lease: issueopscontract.WriteLease{Generation: 5}},
 				NextCommand: "issueops execution claim --id io-aaaaaaaaaaaa --generation 5 --claim-token-file /tmp/token",
@@ -151,7 +151,7 @@ func TestMCPIssueOpsExecutionHandlerMissingObserverHasNoUnboundPayload(t *testin
 	if !outcome.IsError {
 		t.Fatalf("MCP missing observer outcome = %#v", outcome)
 	}
-	if payload, ok := outcome.Payload.(issueopscontract.ExecutionResumeResult); ok && payload.NextCommand != "" {
+	if payload, ok := outcome.Payload.(issueopscontract.ExecutionResult); ok && payload.NextCommand != "" {
 		t.Fatalf("MCP missing observer leaked unbound command: %#v", payload)
 	}
 	structured, ok := outcome.Payload.(map[string]any)
@@ -179,12 +179,20 @@ func TestBindMCPIssueOpsExecutionNextCommandCoversEveryCommandBearingResult(t *t
 			command: func(value any) string { return value.(issueopscontract.ExecutionPrepareResult).NextCommand },
 		},
 		{
-			name: "switch-mode preview", generation: 5,
-			value: issueopscontract.ExecutionSwitchModeResult{
-				LeaseGeneration: 5,
-				NextCommand:     "issueops execution switch-mode --id io-1 --apply",
+			name: "execution", generation: 4,
+			value: issueopscontract.ExecutionResult{
+				Execution:   issueopscontract.Execution{Lease: issueopscontract.WriteLease{Generation: 4}},
+				NextCommand: "issueops execution complete --id io-1 --generation 4",
 			},
-			command: func(value any) string { return value.(issueopscontract.ExecutionSwitchModeResult).NextCommand },
+			command: func(value any) string { return value.(issueopscontract.ExecutionResult).NextCommand },
+		},
+		{
+			name: "replace", generation: 5,
+			value: issueopscontract.ExecutionReplaceResult{
+				Execution:   issueopscontract.Execution{Lease: issueopscontract.WriteLease{Generation: 5}},
+				NextCommand: "issueops execution claim --id io-1 --generation 5",
+			},
+			command: func(value any) string { return value.(issueopscontract.ExecutionReplaceResult).NextCommand },
 		},
 	}
 	for _, test := range tests {

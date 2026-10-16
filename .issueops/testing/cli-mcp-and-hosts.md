@@ -16,27 +16,6 @@ direct content의 text·`IsError`, protocol error와 tool error의 구분,
 인자 검증 선행, server별 catalog/dependency 격리를 함께 확인한다.
 commit-policy 결과는 고정한 문구가 아니라 함께 배포한 resource의 실제 bytes와 비교한다.
 
-## GitLab Issue Snapshot
-
-GitLab MCP/CLI snapshot 계약을 바꿀 때는 다음 bounded set을 먼저 실행한다.
-
-```bash
-go test ./internal/adapter/issueops ./internal/adapter/provider/gitlab -run 'IssueSnapshot|ExecutionIssueSnapshot' -count=1
-go test ./internal/adapter/mcp ./cmd/issueops/mcpcli ./internal/adapter/toolconformance -count=1
-go test ./cmd/issueops/issueopscli/executioncmd ./cmd/issueops/issueopscli -run 'Snapshot|ExecutionCLI|Usage' -count=1
-go test ./internal/adapter/skillcontract -run TestGitLabSnapshotSkillsPinPortableVCSContract -count=1
-python3 scripts/validate-skill.py skills/gitlab-usecase
-python3 scripts/validate-skill.py skills/issueops
-go test ./cmd/issueops/contractgolden -run Golden -count=1
-go test ./cmd/issueops/issueopsapp -run TestResponseContractsGolden -count=1
-go build -o bin/issueops ./cmd/issueops
-```
-
-설치 갱신 뒤에는 installed Codex/Claude/Omo/omp MCP schema에 `issue_snapshot`의 exact
-다섯 필드만 있는지 확인하고, GitLab-linked lifecycle preview에서
-`resolved_mode=orca`와 `issue_snapshot_source=glab_mcp|glab_cli`를 확인한다.
-이 smoke는 worktree나 lease를 만들지 않는 preview로 제한한다.
-
 ## Cross-host tool contract conformance
 
 기본 self-verify에는 network/auth가 없는 다음 deterministic baseline이 포함된다.
@@ -67,7 +46,7 @@ Fresh와 resume completed episode는 같은 validator를 통과해야 한다. �
 
 ## Reversible child-host smoke
 
-Reversible Codex/Claude child-host smoke는 일반 live matrix와 별도다. 이 스크립트는 user-scope Codex/Claude activation의 원자 복원 계약을 검증하므로 Omo live/account gate를 추가하지 않는다. Omo는 generated lifecycle SSoT를 소비하는 deterministic mock-pi test와 위의 explicit native live runner에서 따로 검증한다. `scripts/verify-child-host-smoke.sh`는 literal `--confirm-user-activation`, clean local HEAD, exact singleton remote ref가 모두 일치할 때만 user-scope integration을 잠시 활성화한다. 활성화 직후 두 command-host의 managed `SessionStart`·`SubagentStart` handler는 command·type·timeout·key set까지 exact contract로 검증하고 managed event set이 정확히 `SessionStart`와 `SubagentStart`인지 확인하며, legacy event·enforcement flag·shell suffix를 거부한다. 실제 child episode는 `SessionStart`를 관찰하고 `PreToolUse`가 관찰되지 않음을 확인한다; 압축 후 `SessionStart(compact)` 재실행은 host가 compaction을 발생시킨 경우에만 일어나므로 config contract와 host 전사로 증명한다. Codex는 검증된 활성화 handler 자체를 user config·plugin·co-resident hook을 로드하지 않는 private episode `CODEX_HOME`에 투영한 뒤 invocation-scoped `--dangerously-bypass-hook-trust`를 사용하며 trust state는 수정·저장하지 않는다. Host runner는 marker와 native MCP result를 boolean/count/SHA-256/exit/duration projection으로 합친 뒤 원문 stream과 marker를 폐기한다. 영수증의 `validation_lane=native_host`는 Codex·Claude adapter 실동작만 증명하며 Orca Run/task/dispatch/claim 증거를 대신하지 않는다. 어떤 post-activation 실패도 source installer 1회, 원래 네 설정 파일의 private byte snapshot 원자 복원, before/restore raw+semantic digest equality를 모두 통과하지 못하면 `verdict=pass`가 될 수 없다.
+Reversible Codex/Claude child-host smoke는 일반 live matrix와 별도다. 이 스크립트는 user-scope Codex/Claude activation의 원자 복원 계약을 검증하므로 Omo live/account gate를 추가하지 않는다. Omo는 generated lifecycle SSoT를 소비하는 deterministic mock-pi test와 위의 explicit native live runner에서 따로 검증한다. `scripts/verify-child-host-smoke.sh`는 literal `--confirm-user-activation`, clean local HEAD, exact singleton remote ref가 모두 일치할 때만 user-scope integration을 잠시 활성화한다. 활성화 직후 두 command-host의 managed `SessionStart`·`SubagentStart` handler는 command·type·timeout·key set까지 exact contract로 검증하고 managed event set이 정확히 `SessionStart`와 `SubagentStart`인지 확인하며, legacy event·enforcement flag·shell suffix를 거부한다. 실제 child episode는 `SessionStart`를 관찰하고 `PreToolUse`가 관찰되지 않음을 확인한다; 압축 후 `SessionStart(compact)` 재실행은 host가 compaction을 발생시킨 경우에만 일어나므로 config contract와 host 전사로 증명한다. Codex는 검증된 활성화 handler 자체를 user config·plugin·co-resident hook을 로드하지 않는 private episode `CODEX_HOME`에 투영한 뒤 invocation-scoped `--dangerously-bypass-hook-trust`를 사용하며 trust state는 수정·저장하지 않는다. Host runner는 marker와 native MCP result를 boolean/count/SHA-256/exit/duration projection으로 합친 뒤 원문 stream과 marker를 폐기한다. 영수증의 `validation_lane=native_host`는 Codex·Claude adapter 실동작만 증명한다. 어떤 post-activation 실패도 source installer 1회, 원래 네 설정 파일의 private byte snapshot 원자 복원, before/restore raw+semantic digest equality를 모두 통과하지 못하면 `verdict=pass`가 될 수 없다.
 
 managed regular command adoption 테스트는 기본 refusal과 승인 dry-run 무변경, 실제 staged candidate의 정적 build identity, file matrix/size boundary, atomic exchange 시점의 destination drift 보존, apply/finalize, injected rollback, transition-fenced Begin/Seal/Abort, direct-vs-explicit cleanup ownership을 각각 검증한다. child smoke에서 adoption은 literal confirmation 이후 child activation 한 번에만 전달되어야 하며 source restore에는 전달되지 않아야 한다.
 
@@ -88,7 +67,7 @@ rejection handling. Mutation cases pin accepted-event filtering, exact hook
 argv, awaited execution, public `pi.sendMessage`, `display:false`, and
 `triggerTurn:false`.
 This keeps issueops independently verifiable without Node, Omo, an account, a
-provider, Orca, companion tools, or network access.
+provider, companion tools, or network access.
 
 Release/manual QA adds the runtime evidence that deterministic self-verification
 cannot own. In an isolated `HOME`, run native install, then use the installed

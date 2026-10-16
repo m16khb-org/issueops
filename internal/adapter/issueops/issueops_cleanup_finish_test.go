@@ -2,7 +2,6 @@ package issueops
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -101,10 +100,8 @@ func finishTestRecord(t *testing.T, withWorktree bool) (string, issueops.IssueOp
 			t.Fatal(err)
 		}
 		record.Execution = &issueops.Execution{
-			Mode:      issueops.ExecutionModeDirect,
-			Workspace: issueops.Workspace{SourceRoot: repo, Root: worktree, Branch: "80-finish", BaseHead: "deadbeef", Driver: "git", LinkedAt: "2026-07-24T00:00:00Z"},
+			Workspace: issueops.Workspace{SourceRoot: repo, Root: worktree, Branch: "80-finish", BaseHead: "deadbeef", LinkedAt: "2026-07-24T00:00:00Z"},
 			Lease:     issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased},
-			Selection: selectionFixture(issueops.ExecutionModeDirect),
 		}
 	}
 	if err := withIssueOpsLock(context.Background(), stateRoot, record.ID, func(context.Context) error {
@@ -166,8 +163,7 @@ func TestCleanupFinishPreviewGatesRejectMissingEvidence(t *testing.T) {
 	})
 	t.Run("live process is listed, not blocking", func(t *testing.T) {
 		deps := finishDeps(git)
-		deps.Processes = worldCleanupProcesses(occupiedWorld(t, codexOccupant()), nil)
-		deps.OrcaTerminals = readyOrca(t, worktree)
+		deps.Processes = worldCleanupProcesses(occupiedWorld(t, codexOccupant()))
 		result, err := CleanupFinish(context.Background(), stateRoot, finishRequest(record.ID, false, ""), deps)
 		if err != nil || containsString(result.Missing, "workspace_processes_quiescent") || len(result.WorkspaceProcesses) != 1 {
 			t.Fatalf("occupants are apply targets now, not a preview blocker: %v %+v", err, result)
@@ -344,78 +340,6 @@ func TestCleanupFinishResumableConvergesAndRecordDeleted(t *testing.T) {
 	}
 	if fresh.Phase != issueops.IssueOpsPhaseProblem || fresh.Execution != nil || fresh.RemoteArtifact != nil {
 		t.Fatalf("finish must unlock same-branch rework with a fresh cycle: %+v", fresh)
-	}
-}
-
-func TestCleanupFinishOrcaRemovalRunsFirstAndFailureKeepsRecord(t *testing.T) {
-	stateRoot, record, worktree := finishTestRecord(t, true)
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
-		rec.Execution.Mode = issueops.ExecutionModeOrca
-		rec.Execution.Selection = selectionFixture(issueops.ExecutionModeOrca)
-		rec.Execution.Workspace.Driver = "orca"
-		rec.Execution.Orca = &issueops.OrcaBinding{RuntimeID: "rt", RepoID: "repo", WorktreeID: "wt-1", OwnerHost: "codex", OwnerModel: "m", TaskID: "t", DispatchID: "d", RunID: "run_issueops_1", LeaseGeneration: 1, ArtifactIdentityVersion: 1, IssueBodySHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", ContextPacketSHA256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", OwnerPromptSHA256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}
-	})
-	git := &fakeFinishGit{branchOID: "abc123"}
-	deps := finishDeps(git)
-	deps.OrcaTerminals = readyOrca(t, worktree)
-	calls := []string{}
-	deps.RemoveOrcaWorktree = func(_ context.Context, worktreeID string) error {
-		calls = append(calls, "orca:"+worktreeID)
-		return fmt.Errorf("orca runtime unreachable")
-	}
-	preview, err := CleanupFinish(context.Background(), stateRoot, finishRequest(record.ID, false, ""), deps)
-	if err != nil {
-		t.Fatal(err)
-	}
-	result, err := CleanupFinish(context.Background(), stateRoot, finishRequest(record.ID, true, preview.Fingerprint), deps)
-	if err == nil || result.FailedStep != "orca_remove" {
-		t.Fatalf("orca failure must stop before git mutation: %v %+v", err, result)
-	}
-	if git.removedWorktree || git.deletedBranch {
-		t.Fatalf("git steps must not run after orca failure: %+v", git)
-	}
-	if len(calls) != 1 || calls[0] != "orca:wt-1" {
-		t.Fatalf("orca removal must run first with the bound worktree id: %v", calls)
-	}
-	if _, err := ReadIssueOps(stateRoot, record.ID); err != nil {
-		t.Fatalf("record must survive orca failure: %v", err)
-	}
-}
-
-// Orca는 자체 메타데이터뿐 아니라 연결된 Git worktree도 함께 제거한다. 따라서
-// 성공 직후 사라진 경로에 git worktree remove를 다시 실행하면 정상 정리가
-// 실패로 기록된다.
-func TestCleanupFinishSkipsGitRemovalWhenOrcaAlreadyRemovedWorktree(t *testing.T) {
-	stateRoot, record, worktree := finishTestRecord(t, true)
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
-		rec.Execution.Mode = issueops.ExecutionModeOrca
-		rec.Execution.Selection = selectionFixture(issueops.ExecutionModeOrca)
-		rec.Execution.Workspace.Driver = "orca"
-		rec.Execution.Orca = &issueops.OrcaBinding{RuntimeID: "rt", RepoID: "repo", WorktreeID: "wt-1", OwnerHost: "codex", OwnerModel: "m", TaskID: "t", DispatchID: "d", RunID: "run_issueops_1", LeaseGeneration: 1, ArtifactIdentityVersion: 1, IssueBodySHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", ContextPacketSHA256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", OwnerPromptSHA256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}
-	})
-	git := &fakeFinishGit{branchOID: "abc123"}
-	deps := finishDeps(git)
-	deps.OrcaTerminals = readyOrca(t, worktree)
-	deps.RemoveOrcaWorktree = func(_ context.Context, worktreeID string) error {
-		if worktreeID != "wt-1" {
-			t.Fatalf("unexpected worktree id: %s", worktreeID)
-		}
-		return os.RemoveAll(worktree)
-	}
-
-	preview, err := CleanupFinish(context.Background(), stateRoot, finishRequest(record.ID, false, ""), deps)
-	if err != nil {
-		t.Fatal(err)
-	}
-	result, err := CleanupFinish(context.Background(), stateRoot, finishRequest(record.ID, true, preview.Fingerprint), deps)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !result.OrcaRemoved || !result.WorktreeRemoved || !result.BranchDeleted || !result.RecordDeleted {
-		t.Fatalf("orca 제거 후 남은 단계까지 수렴해야 한다: %+v", result)
-	}
-	if git.removedWorktree {
-		t.Fatal("orca가 이미 제거한 worktree에 git worktree remove를 다시 실행하면 안 된다")
 	}
 }
 

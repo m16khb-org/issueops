@@ -6,7 +6,7 @@ import (
 )
 
 // `gh issue develop --base <branch>`는 GitHub이 **그 시점** 브랜치 HEAD를 조회해
-// `oid`로 쓴다. orca는 봉인된 base SHA에서 로컬 브랜치를 만들므로, 그 사이 base
+// `oid`로 쓴다. execution prepare는 봉인된 base SHA에서 로컬 브랜치를 만들므로, 그 사이 base
 // 브랜치가 진행하면 두 base가 갈리고 push가 non-fast-forward로 거부된다. 봉인
 // 가드가 merge를, 안전 훅이 force push를, `sync-base`가 completion 이전 실행을
 // 막으므로 발행 경로가 사라진다(이슈 #176, #147에서 실측).

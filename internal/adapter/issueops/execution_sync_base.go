@@ -616,7 +616,7 @@ func executionSyncBaseActorLabel(actor issueops.NativeActor) string {
 }
 
 func executionSyncBaseCommandPrefix(record issueops.IssueOpsRecord) string {
-	command := "issueops execution sync-base --id " + quoteExecutionOwnerArg(record.ID)
+	command := "issueops execution sync-base --id " + quoteShellArg(record.ID)
 	if record.Execution != nil && record.Execution.Lease.Status == issueops.LeaseStatusReleased &&
 		record.Execution.Completion != nil && record.Execution.Completion.Generation != 0 {
 		command += " --completion-generation " + strconv.FormatUint(record.Execution.Completion.Generation, 10)

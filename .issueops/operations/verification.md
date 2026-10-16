@@ -24,10 +24,10 @@ issueops self-verify --collect-all-steps --seed=100 --target-score=95 --llm-eval
 
 The deterministic project gate pins `--llm-eval=false`. An ambient `ISSUEOPS_SELF_VERIFY_LLM_EVAL=gate` is valid, but the current opt-in path only renders a read-only evaluator prompt, sends no Z.AI request, and cannot pass gate mode without an ingested external verdict. Record the explicit override and restart from the first gate after an interrupted or prompt-only attempt.
 
-### Orca execution focused and native hook smokes
+### Execution focused and native hook smokes
 
 ```bash
-go test ./internal/domain/issueops/... ./internal/adapter/orca ./internal/domain/commandparse ./internal/adapter/skillcontract ./cmd/issueops/hookcli ./cmd/issueops/hookcli/hookinput ./cmd/issueops/issueopscli ./cmd/issueops/issueopsapp -count=1
+go test ./internal/domain/issueops/... ./internal/domain/commandparse ./internal/adapter/skillcontract ./cmd/issueops/hookcli ./cmd/issueops/hookcli/hookinput ./cmd/issueops/issueopscli ./cmd/issueops/issueopsapp -count=1
 ```
 
 The hook-input package is `./cmd/issueops/hookcli/hookinput`; there is no domain-level hook-input package. It only reads the repo/cwd the context hooks need; Codex, Claude, Omo, and omp fixtures go through the same reader and the same catalog shape.

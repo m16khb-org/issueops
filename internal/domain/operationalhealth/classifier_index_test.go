@@ -13,26 +13,16 @@ import (
 )
 
 func indexedHealthSnapshot(n int) Snapshot {
-	s := healthyDirectSnapshot()
+	s := healthySnapshot()
 	s.Cycles, s.LeaseHolderIndexes = nil, nil
 	s.GitWorktrees = s.GitWorktrees[:1]
-	s.OrcaObserved, s.OrcaRuntimeID, s.OrcaRepoID = true, "runtime", "repo-id"
-	s.OrcaWorktrees = []operationalhealthcontract.OrcaWorktree{{RuntimeID: "runtime", RepoID: "repo-id", ID: "main", Repo: "/repo", Path: "/repo", Branch: "main", Head: s.SourceHead}}
-	s.Messages.RuntimeID = "runtime"
 	for i := range n {
 		id := fmt.Sprintf("resource-%d", i)
-		c := healthyDirectSnapshot().Cycles[0]
+		c := healthySnapshot().Cycles[0]
 		c.ID, c.Branch, c.WorktreePath, c.HolderSessionID = id, id, "/worktrees/"+id, id
-		c.ExecutionMode, c.OrcaRuntimeID, c.OrcaRepoID, c.OrcaOwnerHost = "orca", "runtime", "repo-id", "codex"
-		c.OrcaWorktreeID, c.OrcaWorktreeInstanceID, c.TerminalPTYID = id, id, id
-		c.RunID, c.TaskID, c.DispatchID = "run", id, id
 		s.Cycles = append(s.Cycles, c)
 		s.LeaseHolderIndexes = append(s.LeaseHolderIndexes, operationalhealthcontract.LeaseHolderIndex{Key: id, LifecycleID: id, Generation: c.Generation, Host: c.HolderHost, SessionID: id})
 		s.GitWorktrees = append(s.GitWorktrees, operationalhealthcontract.GitWorktree{Path: c.WorktreePath, Branch: id, Head: s.SourceHead, Clean: true})
-		s.OrcaWorktrees = append(s.OrcaWorktrees, operationalhealthcontract.OrcaWorktree{RuntimeID: "runtime", RepoID: "repo-id", ID: id, InstanceID: id, Repo: "/repo", Path: c.WorktreePath, Branch: id, Head: s.SourceHead})
-		s.Terminals = append(s.Terminals, operationalhealthcontract.OrcaTerminal{RuntimeID: "runtime", Handle: id, PTYID: id, WorktreeID: id, WorktreePath: c.WorktreePath, Connected: true, Writable: true})
-		s.Tasks = append(s.Tasks, operationalhealthcontract.OrcaTask{RuntimeID: "runtime", RunID: "run", ID: id, Status: "dispatched", DispatchID: id})
-		s.Dispatches = append(s.Dispatches, operationalhealthcontract.OrcaDispatch{RuntimeID: "runtime", RunID: "run", ID: id, TaskID: id, AssigneeHandle: id, Status: "dispatched"})
 	}
 	return s
 }
@@ -48,41 +38,24 @@ func TestClassifyIndexedFindingsBaseline(t *testing.T) {
 		{"duplicates", func(s *Snapshot) {
 			s.Cycles = append(s.Cycles, s.Cycles[0])
 			s.GitWorktrees = append(s.GitWorktrees, s.GitWorktrees[1])
-			s.OrcaWorktrees = append(s.OrcaWorktrees, s.OrcaWorktrees[1])
-			s.Terminals = append(s.Terminals, s.Terminals[0])
-			s.Tasks = append(s.Tasks, s.Tasks[0])
-			s.Dispatches = append(s.Dispatches, s.Dispatches[0])
 			s.LeaseHolderIndexes = append(s.LeaseHolderIndexes, s.LeaseHolderIndexes[0])
-			s.Gates = []operationalhealthcontract.OrcaGate{{RuntimeID: "runtime", ID: "gate", Status: "pending"}, {RuntimeID: "runtime", ID: "gate", Status: "pending"}}
-		}, "f584dfaa9efeaa0447da99217c853df3b99444fd521bc3805c76d4bb1e448138"},
+		}, "749cdc54e00485c35735ac3296602a37231ac525fdb78ee439a48720c633e649"},
 		{"missing", func(s *Snapshot) {
 			s.GitWorktrees = s.GitWorktrees[:1]
-			s.OrcaWorktrees = s.OrcaWorktrees[:1]
-			s.Terminals, s.Tasks, s.Dispatches, s.LeaseHolderIndexes = nil, nil, nil, nil
-		}, "ca7ef8a84fa41eb81b3eb2dd9513384bb4e5be18c607e63bbff0da5915f4da8e"},
+			s.LeaseHolderIndexes = nil
+		}, "c151e3ba51763bc000ed4df3288f913a8d3d3ec6a505233fdeb0ac72c9ed9d25"},
 		{"mismatch", func(s *Snapshot) {
-			s.OrcaWorktrees[1].InstanceID = "other"
-			s.Terminals[0].WorktreeID = "other"
-			s.Tasks[0].DispatchID = "other"
-			s.Dispatches[0].RunID = "other"
+			s.GitWorktrees[1].Branch = "other"
 			s.LeaseHolderIndexes[0].AgentID = "other"
-		}, "51838c9d1355e73e3b686642fac795bb7682c32653e5a343731bb7723d91874d"},
-		{"same-task-different-run", func(s *Snapshot) {
-			s.Cycles[1].TaskID = s.Cycles[0].TaskID
-			s.Cycles[1].RunID = "other"
-			s.Tasks[1].ID, s.Tasks[1].RunID = s.Tasks[0].ID, "other"
-			s.Dispatches[1].TaskID, s.Dispatches[1].RunID = s.Tasks[0].ID, "other"
-		}, "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"},
+		}, "a1ab9a8878279ca8f50614f5c6509e458ad12acfbc13abaed4abd5f8f3559750"},
 		{"native-duplicate", func(s *Snapshot) {
 			s.Cycles[1].HolderSessionID = s.Cycles[0].HolderSessionID
 			s.LeaseHolderIndexes[1].SessionID = s.Cycles[0].HolderSessionID
 			s.Cycles[1].HolderHost, s.LeaseHolderIndexes[1].Host = "CODEX", "CODEX"
-		}, "e5ea4b300d8c6ca32642801d5474ceba4ce02b7fc6639b6ea2ec7b8a0a8d5ecc"},
+		}, "83cfb89a7447d1ea77faada4ca046db4a279f479eaf5ec6459bc4213c4bcea3a"},
 		{"whitespace", func(s *Snapshot) {
-			s.Cycles[0].DispatchID = " " + s.Cycles[0].DispatchID + " "
-			s.Cycles[0].TerminalPTYID = " " + s.Cycles[0].TerminalPTYID + " "
 			s.LeaseHolderIndexes[0].LifecycleID = " " + s.LeaseHolderIndexes[0].LifecycleID + " "
-		}, "608281ea5ed1ab6977b6deab4a9e67aab82e0a5153f4e2f4f9103e17f9487fea"},
+		}, "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -133,18 +106,18 @@ func BenchmarkClassifyScaling(b *testing.B) {
 func TestResourceIndexVisitsEachValueOnce(t *testing.T) {
 	for _, n := range []int{100, 1000, 10000} {
 		t.Run(fmt.Sprint(n), func(t *testing.T) {
-			values := make([]operationalhealthcontract.OrcaTask, n)
+			values := make([]operationalhealthcontract.GitWorktree, n)
 			for i := range values {
-				values[i].ID = fmt.Sprint(i)
+				values[i].Path = fmt.Sprint(i)
 			}
 			visits := 0
-			index := indexBy(values, func(task operationalhealthcontract.OrcaTask) string {
+			index := indexBy(values, func(worktree operationalhealthcontract.GitWorktree) string {
 				visits++
-				return task.ID
+				return worktree.Path
 			})
-			for _, task := range values {
-				if got, ok := index.unique(task.ID); !ok || got != task {
-					t.Fatalf("lookup %q = %+v, %t", task.ID, got, ok)
+			for _, worktree := range values {
+				if got, ok := index.unique(worktree.Path); !ok || got != worktree {
+					t.Fatalf("lookup %q = %+v, %t", worktree.Path, got, ok)
 				}
 			}
 			if visits != n {
@@ -155,11 +128,11 @@ func TestResourceIndexVisitsEachValueOnce(t *testing.T) {
 }
 
 func TestResourceIndexPreservesDuplicatesAndEmptyKeys(t *testing.T) {
-	index := indexBy([]operationalhealthcontract.OrcaTask{{ID: " task ", RunID: "first"}, {ID: "task", RunID: "second"}, {ID: " "}}, func(task operationalhealthcontract.OrcaTask) string { return task.ID })
-	if got, ok := index.unique("task"); ok || got != (operationalhealthcontract.OrcaTask{}) || index.counts()["task"] != 2 {
+	index := indexBy([]operationalhealthcontract.GitWorktree{{Path: " tree ", Branch: "first"}, {Path: "tree", Branch: "second"}, {Path: " "}}, func(worktree operationalhealthcontract.GitWorktree) string { return worktree.Path })
+	if got, ok := index.unique("tree"); ok || got != (operationalhealthcontract.GitWorktree{}) || index.counts()["tree"] != 2 {
 		t.Fatalf("duplicate lookup = %+v, %t; counts = %+v", got, ok, index.counts())
 	}
-	if got, ok := index.unique(""); !ok || got.ID != " " || index.counts()[""] != 0 {
+	if got, ok := index.unique(""); !ok || got.Path != " " || index.counts()[""] != 0 {
 		t.Fatalf("empty lookup = %+v, %t; counts = %+v", got, ok, index.counts())
 	}
 }
@@ -177,7 +150,7 @@ func TestLeaseHolderIndexUsesEveryExactTupleField(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := healthyDirectSnapshot()
+			s := healthySnapshot()
 			tt.mutate(&s.LeaseHolderIndexes[0])
 			result := Classify(s, Options{Now: time.Unix(1, 0)})
 			want := []operationalhealthcontract.Finding{
@@ -204,15 +177,15 @@ func TestClassifyIndexesAreRequestLocal(t *testing.T) {
 	if result := Classify(s, opts); !result.Healthy {
 		t.Fatal(result.Findings)
 	}
-	s.Tasks[0].ID = "replacement"
+	s.GitWorktrees[1].Path = "/worktrees/replacement"
 	result := Classify(s, opts)
 	found := false
 	for _, finding := range result.Findings {
-		if finding.ResourceKind == "task" && finding.ResourceID == s.Cycles[0].TaskID && strings.Contains(finding.Summary, "exactly one task") {
+		if finding.ResourceKind == "git_worktree" && finding.ResourceID == s.Cycles[0].WorktreePath && strings.Contains(finding.Summary, "exactly one Git worktree") {
 			found = true
 		}
 	}
 	if !found {
-		t.Fatalf("later request reused task inventory: %+v", result.Findings)
+		t.Fatalf("later request reused worktree inventory: %+v", result.Findings)
 	}
 }

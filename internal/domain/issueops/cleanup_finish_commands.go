@@ -49,5 +49,5 @@ func CleanupFinishAudit(inventory model.CleanupFinishInventory, result model.Cle
 		}
 		return value
 	}
-	return fmt.Sprintf("cleanup 완료: worktree=%s branch=%s oid=%s stopped=%d terminals=%d%s at=%s", none(inventory.WorktreeRoot), none(inventory.Branch), none(inventory.BranchOID), len(result.WorkspaceProcessesStopped), result.OrcaTerminalsStopped, kept, now)
+	return fmt.Sprintf("cleanup 완료: worktree=%s branch=%s oid=%s stopped=%d%s at=%s", none(inventory.WorktreeRoot), none(inventory.Branch), none(inventory.BranchOID), len(result.WorkspaceProcessesStopped), kept, now)
 }

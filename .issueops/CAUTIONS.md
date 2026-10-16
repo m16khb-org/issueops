@@ -64,10 +64,9 @@ lesson으로 분리됐고, 여기서는 핵심 한 줄과 탐색 링크만 둔�
 | [security.md](cautions/security.md) | shell/command policy, secrets, git identity, publication git-config authority |
 | [integrations.md](cautions/integrations.md) | host adapters, native hooks, MCP, shared skills, external tools, Slack, Stop-hook output |
 | [issueops-lifecycle.md](cautions/issueops-lifecycle.md) | branches, worktree guards, numbered choices, domain vocab, readiness gates, golden drift |
-| [issueops-stages.md](cautions/issueops-stages.md) | ten-stage boundaries, mode selection, worktree adoption, unmerged retirement, fingerprint sealing order |
-| [issueops-orchestration.md](cautions/issueops-orchestration.md) | Orca create/dispatch/terminal/mailbox/rollover, sealed reconciliation, publication |
-| [issueops-execution.md](cautions/issueops-execution.md) | v1 fence liveness, lease authority, operational-health diagnosis, exact-reader immutability |
-| [audit-and-process.md](cautions/audit-and-process.md) | self-verify/augment drift, stability-audit contracts, JSON/QA process, cross-process helpers |
+| [issueops-stages.md](cautions/issueops-stages.md) | ten-stage boundaries, session launcher selection, worktree adoption, unmerged retirement, fingerprint sealing order |
+| [issueops-execution.md](cautions/issueops-execution.md) | v1 fence liveness, lease authority, operational-health diagnosis, exact-reader immutability, ownership-schema additions, source-main-worktree fencing |
+| [audit-and-process.md](cautions/audit-and-process.md) | self-verify/augment drift, stability-audit contracts, JSON/QA process, yielded verification, cross-process helpers |
 
 ## Dated incident lessons
 
@@ -116,7 +115,7 @@ footer; older notes also live in `archive/cautions-incidents.md`.
 | 2026-08-28 | [Verify host CLI flags against the installed version](cautions/2026-08-28-verify-host-cli-flags-against-the-installed-version.md) |
 | 2026-08-28 | [GitLab WorkItem 직속 labels/assignees selection이 create-child를 막았고 가짜 glab 스텁이 그 오류를 감췄다](cautions/2026-08-28-gitlab-workitem-labels-assignees-selection-create-child-glab.md) |
 | 2026-08-27 | [Skill added without agents/openai.yaml broke the self-verify QA gate on main](cautions/2026-08-27-skill-without-openai-yaml-self-verify-qa-gate.md) |
-| 2026-08-27 | [cleanup finish blocked on one Orca terminal shell; cleanup now stops worktree processes and terminals itself](cautions/2026-08-27-cleanup-stops-worktree-processes.md) |
+| 2026-08-27 | [cleanup finish blocked on one Orca terminal shell; cleanup now stops worktree processes and terminals itself](cautions/2026-08-27-cleanup-stops-worktree-processes.md) (Orca 터미널 정리는 적용 대상이 사라졌고 워크트리 프로세스 정지만 현행) |
 | 2026-08-27 | [Daemon accept-loop burst dial exceeded the unix backlog](cautions/2026-08-27-daemon-accept-loop-burst-dial-backlog.md) (daemon 제거됨, 2026-10-06) |
 | 2026-08-27 | [Record delete bypassed the sqlstore span gate and orphaned related state](cautions/2026-08-27-record-delete-bypassed-the-span-gate.md) |
 | 2026-08-26 | [CI gofmt gate drifted from the local battery; golden captured a dirty working tree](cautions/2026-08-26-ci-gofmt-gate-local-battery-drift.md) |
@@ -135,9 +134,9 @@ footer; older notes also live in `archive/cautions-incidents.md`.
 | 2026-08-04 | [Do not trust generated IssueOps command PATH token alone](cautions/2026-08-04-generated-issueops-command-path-token.md) |
 | 2026-08-04 | [Codex command-only payload omits workdir; cwd is turn cwd](cautions/2026-08-04-codex-command-only-hook-payload-workdir.md) |
 | 2026-08-04 | [Released sync-base conflict needs scoped resolution writer](cautions/2026-08-04-released-sync-base-conflict-write-lease.md) |
-| 2026-08-03 | [Orca resume must not use current prompt template as trust root](cautions/2026-08-03-orca-resume-prompt-template-trust-root.md) |
+| 2026-08-03 | [Orca resume must not use current prompt template as trust root](cautions/2026-08-03-orca-resume-prompt-template-trust-root.md) (resume 경로 삭제로 적용 대상이 사라짐) |
 | 2026-07-31 | [Released direct lease recovery needs a finite next_command chain](cautions/2026-07-31-released-direct-lease-recovery.md) |
-| 2026-07-31 | [Orca task mutation seals explicit Run + coordinator consumer](cautions/2026-07-31-orca-task-mutation-explicit-run-coordinator-consumer.md) |
+| 2026-07-31 | [Orca task mutation seals explicit Run + coordinator consumer](cautions/2026-07-31-orca-task-mutation-explicit-run-coordinator-consumer.md) (Orca 연동 삭제로 적용 대상이 사라짐) |
 | 2026-07-28 | [update does not own host MCP; pending requests are not replayed](cautions/2026-07-28-update-mcp-lifetime-host-owned.md) |
 | 2026-07-10 | [Local MCP gateway FD exhaustion resets all loopback MCP connections](cautions/2026-07-10-local-mcp-gateway-fd-exhaustion.md) |
 | 2026-07-09 | [macOS pipe KVA exhaustion blocks stdout-capture CLI tests](cautions/2026-07-09-macos-pipe-kva-exhaustion.md) |

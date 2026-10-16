@@ -225,59 +225,6 @@ func TestReadCurrentClaimTokenTrimsAndAcceptsSizeBoundary(t *testing.T) {
 	}
 }
 
-func TestClaimContextReaderRejectsMissingStoreRecordAndArtifactDir(t *testing.T) {
-	if _, err := NewClaimContextReader(nil).Load("any"); err == nil || !strings.Contains(err.Error(), "store is required") {
-		t.Fatalf("nil store err=%v", err)
-	}
-	record := claimableRecord(t, leasecontract.Actor{}, "token")
-	reader := NewClaimContextReader(newClaimStore(t, record))
-	_, err := reader.Load("io-unknown")
-	if failure, ok := errors.AsType[*leasecontract.Failure](err); !ok || failure.Code != leasecontract.FailurePersistence || !strings.Contains(err.Error(), "not found") {
-		t.Fatalf("missing record err=%v", err)
-	}
-	loaded, err := reader.Load(record.ID)
-	if err != nil || loaded.ID != record.ID {
-		t.Fatalf("load=%+v err=%v", loaded, err)
-	}
-	if _, err := reader.ReadArtifact(record, "plan"); err == nil || !strings.Contains(err.Error(), "artifact_dir is missing") {
-		t.Fatalf("blank artifact dir err=%v", err)
-	}
-	record.Execution.Workspace.ArtifactDir = "  "
-	if _, err := reader.ReadArtifact(record, "plan"); err == nil || !strings.Contains(err.Error(), "artifact_dir is missing") {
-		t.Fatalf("whitespace artifact dir err=%v", err)
-	}
-	if _, err := reader.DecodePacket([]byte("{not json")); err == nil {
-		t.Fatal("malformed packet must fail to decode")
-	}
-	packet, err := reader.DecodePacket([]byte(`{"lifecycle_id":"io-x"}`))
-	if err != nil || packet.LifecycleID != "io-x" {
-		t.Fatalf("packet=%+v err=%v", packet, err)
-	}
-}
-
-func TestClaimContextReaderReadArtifactResolvesNamedMarkdownInsideWorktree(t *testing.T) {
-	record := claimableRecord(t, leasecontract.Actor{}, "token")
-	record.Execution.Workspace.ArtifactDir = ".issueops/issues/9/artifact"
-	dir := filepath.Join(record.Execution.Workspace.Root, filepath.FromSlash(record.Execution.Workspace.ArtifactDir))
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "plan.md"), []byte("sealed"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	reader := NewClaimContextReader(newClaimStore(t, record))
-	data, err := reader.ReadArtifact(record, "plan")
-	if err != nil || string(data) != "sealed" {
-		t.Fatalf("artifact=%q err=%v", data, err)
-	}
-	if _, err := reader.ReadArtifact(record, "../../../../../escape"); err == nil || !strings.Contains(err.Error(), "inside the canonical worktree") {
-		t.Fatalf("traversal err=%v", err)
-	}
-	if _, err := reader.ReadArtifact(record, "absent"); err == nil {
-		t.Fatal("missing artifact must fail")
-	}
-}
-
 type failingGetStore struct {
 	claimStore
 	getErr error
@@ -288,14 +235,6 @@ func (s *failingGetStore) Get(bucket, id string) ([]byte, bool, error) {
 		return nil, false, s.getErr
 	}
 	return s.claimStore.Get(bucket, id)
-}
-
-func TestClaimContextReaderLoadWrapsStoreReadFailureAsPersistence(t *testing.T) {
-	store := &failingGetStore{getErr: errors.New("disk gone")}
-	_, err := NewClaimContextReader(store).Load("io-x")
-	if failure, ok := errors.AsType[*leasecontract.Failure](err); !ok || failure.Code != leasecontract.FailurePersistence {
-		t.Fatalf("err=%v", err)
-	}
 }
 
 func TestSQLiteRepositoryRequiresStore(t *testing.T) {
@@ -536,38 +475,6 @@ func TestUTCClockReturnsCurrentUTCTime(t *testing.T) {
 	after := time.Now()
 	if got.Location() != time.UTC || got.Before(before.Add(-time.Second)) || got.After(after.Add(time.Second)) {
 		t.Fatalf("now=%v outside [%v,%v] or not UTC", got, before, after)
-	}
-}
-
-func TestReconcileStageExecutorFailsClosedWithoutCallbacks(t *testing.T) {
-	var nilExecutor *ReconcileStageExecutor
-	for name, executor := range map[string]*ReconcileStageExecutor{"nil": nilExecutor, "empty": NewReconcileStageExecutor(nil, nil)} {
-		if _, ok, err := executor.Inspect(t.Context(), leaseapp.ReconcileIntentState{}); err == nil || ok || !strings.Contains(err.Error(), "inspector is required") {
-			t.Fatalf("%s inspect ok=%v err=%v", name, ok, err)
-		}
-		_, status, err := executor.Invoke(t.Context(), leaseapp.ReconcileIntentState{}, nil)
-		if err == nil || status != "unknown" || !strings.Contains(err.Error(), "invoker is required") {
-			t.Fatalf("%s invoke status=%q err=%v", name, status, err)
-		}
-	}
-}
-
-func TestResumeAdaptersFailClosedWithoutCallbacks(t *testing.T) {
-	var nilOwner *ResumeOwnerInventory
-	var nilStages *ResumeStageExecutor
-	if _, err := nilOwner.Observe(t.Context(), leasecontract.Record{}); err == nil || !strings.Contains(err.Error(), "observer is required") {
-		t.Fatalf("nil owner err=%v", err)
-	}
-	if _, err := NewResumeOwnerInventory(nil).Observe(t.Context(), leasecontract.Record{}); err == nil {
-		t.Fatal("empty owner must fail")
-	}
-	for name, stages := range map[string]*ResumeStageExecutor{"nil": nilStages, "empty": NewResumeStageExecutor(nil, nil)} {
-		if _, err := stages.Inspect(t.Context(), leaseapp.ResumeIntentState{}); err == nil || !strings.Contains(err.Error(), "inspector is required") {
-			t.Fatalf("%s inspect err=%v", name, err)
-		}
-		if _, err := stages.Invoke(t.Context(), leaseapp.ResumeIntentState{}, nil); err == nil || !strings.Contains(err.Error(), "invoker is required") {
-			t.Fatalf("%s invoke err=%v", name, err)
-		}
 	}
 }
 

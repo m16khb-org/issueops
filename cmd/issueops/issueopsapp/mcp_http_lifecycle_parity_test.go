@@ -12,10 +12,10 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-// A valid capability must reach the same resume/reseed domain decision as a
+// A valid capability must reach the same claim/reseed domain decision as a
 // native stdio caller with the same fixture. The lifecycle fence database is
 // not the grant database, so it must not be where the grant is rechecked.
-func TestMCPHTTPCapabilityReachesResumeAndReseedDomainDecisions(t *testing.T) {
+func TestMCPHTTPCapabilityReachesClaimAndReseedDomainDecisions(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := gitRepoForHTTPTest(t)
 	self, err := issueopscore.ObserveNativeProcessReceipt(os.Getpid())
@@ -29,11 +29,11 @@ func TestMCPHTTPCapabilityReachesResumeAndReseedDomainDecisions(t *testing.T) {
 
 	native := holder
 	native.ProcessAncestry = []model.NativeProcessReceipt{self}
-	_, resumeErr := issueOpsResumeHandler(t.Context(), issueOpsStateRoot(), model.ExecutionResumeRequest{
-		ID: record.ID, ExpectedGeneration: 1, Actor: native, CWD: worktree, Confirm: true,
+	_, claimErr := issueOpsClaimHandler(t.Context(), issueOpsStateRoot(), model.ExecutionClaimRequest{
+		ID: record.ID, Generation: 2, Actor: native, CWD: worktree, ClaimCurrentToken: true,
 	})
-	if resumeErr == nil || !strings.Contains(resumeErr.Error(), "execution resume requires an existing Orca binding") {
-		t.Fatalf("native resume err = %v, want the Orca binding decision", resumeErr)
+	if claimErr == nil {
+		t.Fatal("native claim succeeded for a generation the lease does not have")
 	}
 	_, reseedErr := issueOpsReseedHandler(t.Context(), issueOpsStateRoot(), model.ExecutionReseedRequest{
 		ID: record.ID, ExpectedGeneration: 1, Actor: native, CWD: worktree, Reason: "parity", Confirm: true,
@@ -53,7 +53,7 @@ func TestMCPHTTPCapabilityReachesResumeAndReseedDomainDecisions(t *testing.T) {
 		args map[string]any
 		want error
 	}{
-		{"resume", map[string]any{"action": "resume", "id": record.ID, "cwd": worktree, "expected_generation": 1, "confirm": true, "authority_file": grant}, resumeErr},
+		{"claim", map[string]any{"action": "claim", "id": record.ID, "cwd": worktree, "generation": 2, "claim_current_token": true, "authority_file": grant}, claimErr},
 		{"reseed", map[string]any{"action": "replace", "replace_action": "reseed", "id": record.ID, "cwd": worktree, "expected_generation": 1, "reason": "parity", "confirm": true, "authority_file": grant}, reseedErr},
 	} {
 		payload, isError := callHTTPTool(t, client, "issueops_execution", tc.args)

@@ -11,7 +11,6 @@ import (
 
 	leasecontract "issueops/internal/contract/issueopslease"
 	leasedomain "issueops/internal/domain/issueopslease"
-	"issueops/internal/port"
 	"issueops/internal/testsupport"
 )
 
@@ -145,12 +144,11 @@ func TestReseedGitOutputReportsFailureWithCommandAndStderr(t *testing.T) {
 	}
 }
 
-func orcaReseedRecord(root string) leasecontract.Record {
+func guardReseedRecord(root string) leasecontract.Record {
 	return leasecontract.Record{
 		ID: "io-reseed-guards",
 		Execution: &leasecontract.Execution{
-			Mode:      "direct",
-			Workspace: leasecontract.Workspace{SourceRoot: root, Root: root, Branch: "guards", Driver: "git"},
+			Workspace: leasecontract.Workspace{SourceRoot: root, Root: root, Branch: "guards"},
 			Lease:     leasecontract.Lease{Generation: 2, Status: "claimable"},
 		},
 	}
@@ -162,49 +160,24 @@ func TestReseedInventoryObserveRejectsIncompleteWiring(t *testing.T) {
 		return "none", leasedomain.ProcessReceipt{}, nil
 	}
 	actor := leasedomain.Actor{Host: "codex", SessionID: "s"}
-	record := orcaReseedRecord(root)
+	record := guardReseedRecord(root)
 
 	var nilInventory *ReseedInventory
 	if _, err := nilInventory.Observe(t.Context(), record, actor); err == nil || !strings.Contains(err.Error(), "requires an execution and process inspector") {
 		t.Fatalf("nil inventory err=%v", err)
 	}
-	if _, err := NewReseedInventory(nil, nil).Observe(t.Context(), record, actor); err == nil {
+	if _, err := NewReseedInventory(nil).Observe(t.Context(), record, actor); err == nil {
 		t.Fatal("missing process inspector must be rejected")
 	}
-	if _, err := NewReseedInventory(nil, inspect).Observe(t.Context(), leasecontract.Record{}, actor); err == nil {
+	if _, err := NewReseedInventory(inspect).Observe(t.Context(), leasecontract.Record{}, actor); err == nil {
 		t.Fatal("record without execution must be rejected")
 	}
 
-	orca := orcaReseedRecord(root)
-	orca.Execution.Mode = "orca"
-	if _, err := NewReseedInventory(&reseedInventoryOwnerStub{}, inspect).Observe(t.Context(), orca, actor); err == nil || !strings.Contains(err.Error(), "exact owner terminal and task inventory") {
-		t.Fatalf("orca without binding err=%v", err)
-	}
-	orca.Execution.Orca = &leasecontract.OrcaBinding{RuntimeID: "rt"}
-	if _, err := NewReseedInventory(nil, inspect).Observe(t.Context(), orca, actor); err == nil || !strings.Contains(err.Error(), "exact owner terminal and task inventory") {
-		t.Fatalf("orca without owner inspector err=%v", err)
-	}
-
-	moved := orcaReseedRecord(root)
+	moved := guardReseedRecord(root)
 	moved.Execution.Workspace.Branch = "different"
-	if _, err := NewReseedInventory(nil, inspect).Observe(t.Context(), moved, actor); err == nil || !strings.Contains(err.Error(), "branch mismatch") {
+	if _, err := NewReseedInventory(inspect).Observe(t.Context(), moved, actor); err == nil || !strings.Contains(err.Error(), "branch mismatch") {
 		t.Fatalf("branch drift err=%v", err)
 	}
-}
-
-type failingOwnerInspector struct{ err error }
-
-func (s failingOwnerInspector) InspectOwner(context.Context, port.ExecutionOrcaOwnerInventoryRequest) (port.ExecutionOrcaOwnerInventory, error) {
-	return port.ExecutionOrcaOwnerInventory{}, s.err
-}
-
-type recordingOwnerInspector struct {
-	request port.ExecutionOrcaOwnerInventoryRequest
-}
-
-func (s *recordingOwnerInspector) InspectOwner(_ context.Context, request port.ExecutionOrcaOwnerInventoryRequest) (port.ExecutionOrcaOwnerInventory, error) {
-	s.request = request
-	return port.ExecutionOrcaOwnerInventory{RuntimeID: " rt-live "}, nil
 }
 
 func TestReseedInventoryObservePropagatesInspectorErrorsAndBindsHolderProcess(t *testing.T) {
@@ -212,12 +185,12 @@ func TestReseedInventoryObservePropagatesInspectorErrorsAndBindsHolderProcess(t 
 	actor := leasedomain.Actor{Host: "codex", SessionID: "s", Process: &leasedomain.ProcessReceipt{PID: 9, StartedAt: "2026-01-01T00:00:00Z", Executable: "/bin/codex"}}
 	holder := &leasecontract.Actor{Host: "codex", SessionID: "holder", SessionProcess: &leasecontract.ProcessReceipt{PID: 77, StartedAt: "2026-01-01T00:00:00Z", Executable: "/bin/codex"}}
 
-	held := orcaReseedRecord(root)
+	held := guardReseedRecord(root)
 	held.Execution.Lease = leasecontract.Lease{Generation: 2, Status: "active", Holder: holder}
 
 	probeErr := errors.New("ps failed")
 	var probed leasedomain.ProcessReceipt
-	if _, err := NewReseedInventory(nil, func(_ context.Context, receipt leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
+	if _, err := NewReseedInventory(func(_ context.Context, receipt leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
 		probed = receipt
 		return "", leasedomain.ProcessReceipt{}, probeErr
 	}).Observe(t.Context(), held, actor); !errors.Is(err, probeErr) || probed.PID != 77 {
@@ -228,73 +201,26 @@ func TestReseedInventoryObservePropagatesInspectorErrorsAndBindsHolderProcess(t 
 	inspect := func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
 		return status, leasedomain.ProcessReceipt{}, nil
 	}
-	live, err := NewReseedInventory(nil, inspect).Observe(t.Context(), held, actor)
+	live, err := NewReseedInventory(inspect).Observe(t.Context(), held, actor)
 	if err != nil {
 		t.Fatal(err)
 	}
 	status = "dead"
-	dead, err := NewReseedInventory(nil, inspect).Observe(t.Context(), held, actor)
+	dead, err := NewReseedInventory(inspect).Observe(t.Context(), held, actor)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if live.Fingerprint == dead.Fingerprint {
+	if live == dead {
 		t.Fatal("holder process liveness must be part of the reseed fingerprint")
 	}
 	otherRequester := actor
 	otherRequester.SessionID = "someone-else"
-	changed, err := NewReseedInventory(nil, inspect).Observe(t.Context(), held, otherRequester)
+	changed, err := NewReseedInventory(inspect).Observe(t.Context(), held, otherRequester)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if changed.Fingerprint == dead.Fingerprint {
+	if changed == dead {
 		t.Fatal("requester identity must be part of the reseed fingerprint")
-	}
-
-	orca := orcaReseedRecord(root)
-	orca.Execution.Mode = "orca"
-	orca.Execution.Orca = &leasecontract.OrcaBinding{RuntimeID: "rt-old", WorktreeID: "wt", RunID: "run", TaskID: "task", DispatchID: "d", TerminalPTYID: "pty"}
-	ownerErr := errors.New("owner unreachable")
-	if _, err := NewReseedInventory(failingOwnerInspector{ownerErr}, inspect).Observe(t.Context(), orca, actor); !errors.Is(err, ownerErr) {
-		t.Fatalf("owner err=%v", err)
-	}
-
-	owner := &recordingOwnerInspector{}
-	receipt, err := NewReseedInventory(owner, inspect).Observe(t.Context(), orca, actor)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !owner.request.AllowRuntimeRollover || owner.request.RuntimeID != "rt-old" || owner.request.TerminalPTYID != "pty" || receipt.RuntimeID != "rt-live" {
-		t.Fatalf("request=%+v receipt=%+v", owner.request, receipt)
-	}
-	orca.Execution.Lease = leasecontract.Lease{Generation: 2, Status: "active", Holder: holder}
-	if _, err := NewReseedInventory(owner, inspect).Observe(t.Context(), orca, actor); err != nil {
-		t.Fatal(err)
-	}
-	if owner.request.AllowRuntimeRollover {
-		t.Fatal("runtime rollover must not be allowed while a holder owns the lease")
-	}
-}
-
-func TestReseedInventoryObserveAllowsRuntimeRolloverOnlyForHolderlessReleasedOrClaimableLeases(t *testing.T) {
-	root := newReseedGitRepo(t, "guards")
-	actor := leasedomain.Actor{Host: "codex", SessionID: "s", Process: &leasedomain.ProcessReceipt{PID: 9, StartedAt: "2026-01-01T00:00:00Z", Executable: "/bin/codex"}}
-	inspect := func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
-		return "live", leasedomain.ProcessReceipt{}, nil
-	}
-	for status, want := range map[string]bool{"released": true, "claimable": true, "active": false} {
-		t.Run(status, func(t *testing.T) {
-			record := orcaReseedRecord(root)
-			record.Execution.Mode = "orca"
-			record.Execution.Orca = &leasecontract.OrcaBinding{RuntimeID: "rt-old", WorktreeID: "wt", RunID: "run", TaskID: "task", DispatchID: "d", TerminalPTYID: "pty"}
-			record.Execution.Lease = leasecontract.Lease{Generation: 2, Status: status}
-			owner := &recordingOwnerInspector{}
-			if _, err := NewReseedInventory(owner, inspect).Observe(t.Context(), record, actor); err != nil {
-				t.Fatal(err)
-			}
-			if owner.request.AllowRuntimeRollover != want {
-				t.Fatalf("status %q AllowRuntimeRollover=%t want %t", status, owner.request.AllowRuntimeRollover, want)
-			}
-		})
 	}
 }
 

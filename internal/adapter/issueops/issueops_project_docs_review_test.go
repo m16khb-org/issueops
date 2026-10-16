@@ -108,18 +108,13 @@ func TestRecordIssueOpsProjectDocsReviewRejectsPreImplementPhase(t *testing.T) {
 	}
 }
 
-// project-docs 게이트는 implementation review와 달리 direct/orca 양쪽에 걸린다.
-func TestProjectDocsReviewMissingAppliesToBothModes(t *testing.T) {
+// project-docs 게이트는 execution이 있는 레코드에 fail-closed로 적용된다.
+func TestProjectDocsReviewMissingAppliesWhenExecutionExists(t *testing.T) {
 	t.Parallel()
 
-	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{Mode: issueops.ExecutionModeDirect, Selection: selectionFixture(issueops.ExecutionModeDirect)}}
+	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{}}
 	if got := cycleapp.ProjectDocsReviewMissing(record, ""); got != "project_docs_review" {
-		t.Fatalf("direct mode must also be gated: %q", got)
-	}
-	record.Execution.Mode = issueops.ExecutionModeOrca
-	record.Execution.Selection = selectionFixture(issueops.ExecutionModeOrca)
-	if got := cycleapp.ProjectDocsReviewMissing(record, ""); got != "project_docs_review" {
-		t.Fatalf("orca mode must be gated: %q", got)
+		t.Fatalf("execution without review must be gated: %q", got)
 	}
 	record.ProjectDocsReview = &issueops.IssueOpsProjectDocsReview{Verdict: "no-change"}
 	if got := cycleapp.ProjectDocsReviewMissing(record, ""); got != "" {
@@ -138,7 +133,7 @@ func TestProjectDocsReviewMissingAppliesToBothModes(t *testing.T) {
 func TestPRReadinessSurfacesProjectDocsReview(t *testing.T) {
 	t.Parallel()
 
-	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{Mode: issueops.ExecutionModeDirect, Selection: selectionFixture(issueops.ExecutionModeDirect)}}
+	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{}}
 	if ready := IssueOpsPRReadiness(record); !containsString(ready.Missing, "project_docs_review") {
 		t.Fatalf("PR readiness must surface the project docs gate: %+v", ready.Missing)
 	}

@@ -82,16 +82,12 @@ func (s OrphanCleaner) canonicalize(snapshot *health.Snapshot) error {
 	// Copy slices before path normalization; collectors may retain their snapshot.
 	snapshot.GitWorktrees = append([]health.GitWorktree(nil), snapshot.GitWorktrees...)
 	snapshot.Cycles = append([]health.Cycle(nil), snapshot.Cycles...)
-	snapshot.OrcaWorktrees = append([]health.OrcaWorktree(nil), snapshot.OrcaWorktrees...)
 	paths := []*string{&snapshot.RepoRoot}
 	for i := range snapshot.GitWorktrees {
 		paths = append(paths, &snapshot.GitWorktrees[i].Path)
 	}
 	for i := range snapshot.Cycles {
 		paths = append(paths, &snapshot.Cycles[i].Repo, &snapshot.Cycles[i].WorktreePath)
-	}
-	for i := range snapshot.OrcaWorktrees {
-		paths = append(paths, &snapshot.OrcaWorktrees[i].Path)
 	}
 	for _, path := range paths {
 		if strings.TrimSpace(*path) == "" {

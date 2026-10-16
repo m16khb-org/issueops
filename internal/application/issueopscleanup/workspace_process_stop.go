@@ -28,12 +28,12 @@ const (
 	cleanupStopPollInterval = 250 * time.Millisecond
 )
 
-func (s WorkspaceProcessStopper) Stop(root string, preview []model.CleanupWorkspaceProcess, excluded map[int]bool) ([]model.CleanupWorkspaceProcess, error) {
+func (s WorkspaceProcessStopper) Stop(root string, preview []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, error) {
 	occupancy, err := s.Processes.Observe(root)
 	if err != nil {
 		return nil, err
 	}
-	targets, err := domain.CleanupStopTargets(occupancy.Occupants, occupancy.Ancestry, s.Processes.RequesterPID(), preview, excluded)
+	targets, err := domain.CleanupStopTargets(occupancy.Occupants, occupancy.Ancestry, s.Processes.RequesterPID(), preview)
 	if err != nil || len(targets) == 0 {
 		return nil, err
 	}

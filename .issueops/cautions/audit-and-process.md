@@ -29,7 +29,6 @@ A stability-audit failure is not automatically a harness defect; the audit frame
 - When an audit step fails suspiciously fast, reproduce the exact invocation directly and compare against the documented commands in `.issueops/OPERATIONS.md` / root `AGENTS.md` before concluding the harness is unstable.
 - `ISSUEOPS_SELF_VERIFY_LLM_EVAL=gate` is a valid ambient runtime configuration, but the current self-verify implementation only renders the read-only evaluator prompt. It sends no Z.AI request and ingests no external verdict, so `gate` intentionally returns a non-passing `llm_eval` result. Do not diagnose that result as environment drift or claim an external judgment occurred. Repository completion gates must use explicit `--llm-eval=false`, record the override, and restart from the first gate after any interrupted or prompt-only run.
 - Handoff focused tests must use `./cmd/issueops/hookcli/hookinput`; the plausible-looking `./internal/core/hookinput` path does not exist and causes a command-spec failure after other packages have already started. Pin the full focused command in `.issueops/TESTING.md` and restart the sequence rather than reusing partial results.
-- `orca orchestration send --type` rejects values outside `status|dispatch|worker_done|merge_ready|escalation|handoff|decision_gate|heartbeat`. Verify the installed CLI when this enum changes; do not improvise `progress`, `blocked`, or `completed` message types.
 
 ## 22. Stability audit smoke tests must track current host/MCP contracts
 
@@ -80,3 +79,11 @@ The stability audit can false-fail when its smoke assumptions lag the issueops c
 - 여러 helper를 동시에 검증할 때는 각 process를 순서대로 `Start`해 launch를 확인한 뒤 모두 `Wait`하여 동시 실행과 진단을 함께 보장한다.
 - stdout/stderr와 exit error를 helper별로 보존하고, 승자·차단자처럼 기대하는 서로 다른 결과를 명시적 marker로 검증한다.
 - count/result artifact 부재만 보고 production concurrency defect로 분류하지 않는다. helper launch/read/create 경계를 먼저 확인한다.
+
+## yielded 검증 command를 완료로 오인하지 말 것
+
+검증 command가 `session_id`만 반환하고 `exit_code`가 없는데 outer tool call이 끝났다는 이유로 통과 처리한 사고가 있었다. 반대로 실제 `go test -race` process가 실행 중인데 화면 spinner만 보고 멈춘 것으로 판단해 중단한 사고도 있었다.
+
+- `go test ... | tail` 또는 `go test ... | grep` 같은 pipeline은 test process의 실제 exit status를 별도로 증명하지 않는 한 검증 evidence가 아니다. 필요한 suite를 pipeline 없는 direct command로 다시 실행한다.
+- command가 `session_id`와 함께 yield되면 아직 실행 중이다. 반환된 exact session을 `write_stdin`으로 poll해 terminal `exit_code`와 남은 output을 회수할 때까지 완료로 기록하지 않는다. 완료된 outer cell에 `wait`를 반복하는 것은 yielded session 재개가 아니다.
+- 살아 있는 yielded test와 겹치는 duplicate test를 새로 시작하지 않는다. spinner나 partial package output만으로 성공이나 hang을 판정하지 않는다.

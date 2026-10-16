@@ -40,8 +40,8 @@ func (s Service) Reconcile(ctx context.Context, stateRoot string, req issueops.E
 	if record.Execution.Pending != nil {
 		kind = record.Execution.Pending.Kind
 	}
-	decision := reconciledomain.DecidePending(string(record.Execution.Mode), kind, record.Execution.Pending != nil)
-	if req.Confirm && !decision.SkipMutationGuard {
+	decision := reconciledomain.DecidePending(kind, record.Execution.Pending != nil)
+	if req.Confirm {
 		mutationActor := issueops.IssueOpsActor{
 			Host: actor.Host, SessionID: actor.SessionID, AgentID: actor.AgentID, CWD: req.CWD,
 			NativeProcessAncestry: actor.ProcessAncestry,
@@ -72,12 +72,6 @@ func dispatchReconcileRoute(ctx context.Context, stateRoot string, req issueops.
 		}
 		req.Snapshot = &record
 		return deps.RemoteReconcile(ctx, stateRoot, req)
-	case reconciledomain.RouteOrca:
-		if deps.Handler == nil {
-			return failedExecutionReconcileResult(record, "orca_reconcile_ambiguous"), issueops.ErrReconcileHandlerUnavailable
-		}
-		req.Snapshot = &record
-		return deps.Handler(ctx, stateRoot, req, deps)
 	default:
 		result.OK = false
 		result.Code = "unsupported_external_intent"

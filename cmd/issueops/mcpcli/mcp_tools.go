@@ -20,7 +20,6 @@ import (
 	verifyapp "issueops/internal/application/selfverify"
 	workerapp "issueops/internal/application/worker"
 	authoritycontract "issueops/internal/contract/authority"
-	executionissue "issueops/internal/contract/executionissue"
 	inspectmodel "issueops/internal/contract/inspect"
 	issueopscontract "issueops/internal/contract/issueops"
 	mcpcontract "issueops/internal/contract/mcp"
@@ -79,17 +78,12 @@ type MCPDependencies struct {
 	SelfState        SelfStateDependencies
 	SelfPlanning     SelfPlanningDependencies
 	Prepare          issueopscontract.ExecutionPrepareHandler
-	Orca             port.ExecutionOrcaProvisioner
-	OrcaOwner        port.ExecutionOrcaOwnerInspector
 	BaseSync         basesyncport.Inspector
-	ReadIssue        executionissue.ExecutionIssueSnapshotReadFunc
 	Claim            issueopscontract.ExecutionClaimHandler
 	Release          issueopscontract.ExecutionReleaseHandler
 	Status           port.ExecutionStatusHandler
 	Replace          port.ExecutionReplaceHandler
 	Reseed           issueopscontract.ExecutionReseedHandler
-	Resume           issueopscontract.ExecutionResumeHandler
-	Reconcile        port.ExecutionReconcileHandler
 	Complete         issueopscontract.ExecutionCompleteHandler
 	Publication      PublicationHandlers
 	Provenance       provenanceport.Observer

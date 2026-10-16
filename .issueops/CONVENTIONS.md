@@ -18,7 +18,7 @@ description: Coding conventions and layer boundaries; read before writing or res
 |--------|------|
 | [`conventions/go-and-packages.md`](conventions/go-and-packages.md) | Go 네이밍/파일 구조, core/port/adapter layer 경계, dependency 원칙·fitness ratchet·concrete-adapter 제거 순서, SOLID/YAGNI/KISS, shared skill packaging |
 | [`conventions/cli-mcp-and-output.md`](conventions/cli-mcp-and-output.md) | CLI·MCP tool schema, `--json`/exit code 계약, response·single-object 출력 형태, api-doc gate, prompt 구조, project-docs bootstrap 표면, 커밋 메시지 형식 |
-| [`conventions/state-policy-and-hooks.md`](conventions/state-policy-and-hooks.md) | worker lifecycle, config/env 우선순위, logging/secret hygiene, hook 출력, 언어 무관 guard, policy tier, doctor·lifecycle state, IssueOps 상태머신 reducer 계약, 외부 orchestration adapter 경계 |
+| [`conventions/state-policy-and-hooks.md`](conventions/state-policy-and-hooks.md) | worker lifecycle, config/env 우선순위, logging/secret hygiene, hook 출력, 언어 무관 guard, policy tier, doctor·lifecycle state, IssueOps 상태머신 reducer 계약, 외부 시스템 호출 규칙 |
 
 각 module은 이 index로 링크하고, 다른 family의 규칙을 복제하지 않는다.
 
@@ -80,7 +80,7 @@ agent가 즉시 알아야 할 canonical 요약이다.
 - `PolicyTier`는 명명 envelope지 deny 판정 로직이 아니다. tier ladder:
   `read_only → workspace_write → network_access → shell_exception`.
 - `doctor`는 기본 read-only. `state doctor`는 checkpoint store 무결성 전용.
-- IssueOps 상태머신 reducer 계약과 외부 orchestration adapter 경계는
+- IssueOps 상태머신 reducer 계약과 외부 시스템 호출 규칙은
   [`conventions/state-policy-and-hooks.md`](conventions/state-policy-and-hooks.md).
 - `issueops review-metrics (--id ID | --repo PATH)`는 적대 리뷰의 라운드·판정 분포·
   regress 수·단계 소요를 record에서 파생하는 읽기 전용 조망이다. record를 쓰지 않으며
@@ -88,9 +88,8 @@ agent가 즉시 알아야 할 canonical 요약이다.
 - `issueops next`의 `review`는 host planner 기본 모델과 함께 변경 집합 티어
   (`docs-only|contract|schema-auth|default`), 적용할 렌즈, 티어별 effort를 돌려준다.
   티어 계산은 implement 이후 phase에서만 일어난다. 스킬 경로(`issueops-review`,
-  `issueops-verify`)의 리뷰어 effort는 이 출력이 소유한다. owner prompt의
-  reviewer 메타데이터는 prepare 시점 기본값이다. owner는 구현 리뷰 직전에 exact ID의
-  `.review`를 읽어 `issueops-review`에 전달한다. 생성 기록 명령의 reviewer model/effort는
+  `issueops-verify`)의 리뷰어 effort는 이 출력이 소유한다. 구현 세션은 구현 리뷰 직전에
+  exact ID의 `.review`를 읽어 `issueops-review`에 전달한다. 생성 기록 명령의 reviewer model/effort는
   명시적 지정과 라운드 상승을 적용한 실제 실행값으로 채운다. 기존 봉인 자료는 갱신하지 않는다. 같은 출력의
   `frontend`는 변경 집합이 화면을 건드리는지 알리는 QA 라우팅 신호이며 티어와 별개다.
   4단계는 이 신호로 `ui-ux-craft`, 7단계는 `aside-web-qa`로 간다.
@@ -127,7 +126,7 @@ agent가 즉시 알아야 할 canonical 요약이다.
   `$WORKTREE`로 표현한다. 두 root에서 확인되는 POSIX 사용자 홈만 `$HOME`으로 바꾸고,
   더 구체적인 root와 경로 token 경계를 우선한다. URL·상대경로·다른 계정 경로는 새
   정규화에서 보존한다. plan-review의 기존 해시·경로 가림(일부 URL 내부 경로 포함)은
-  먼저 적용한다. 봉인 원본 bytes·mode·digest와 owner resume 입력은 바꾸지 않는다(#527).
+  먼저 적용한다. 봉인 원본 bytes·mode·digest는 바꾸지 않는다(#527).
 - 이슈가 없는 작업의 플랜은 `.issueops/plans/<slug>.md`, 리뷰 작업 파일은
   `.issueops/tmp/`에 둔다. 둘 다 이슈 번호를 알 수 없을 때만 쓰는 fallback이다.
 - PR readiness는 현재 사이클의 이슈 원장(`issues/<번호>/gates.md`)과

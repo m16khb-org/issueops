@@ -114,7 +114,7 @@ func validateHandoffDeliveryStates(observation issueopscontract.IssueOpsHandoffD
 		if item.name == "call_staged" && item.state.Status == "" {
 			continue
 		}
-		if err := validateHandoffDeliveryState(item.name, item.state, observation); err != nil {
+		if err := validateHandoffDeliveryState(item.name, item.state); err != nil {
 			return err
 		}
 		if err := validateHandoffDeliveryStateTimestamp(item.name, item.state, createdAt, updatedAt); err != nil {
@@ -241,8 +241,8 @@ func handoffDeliveryMergeRejection(current, next issueopscontract.IssueOpsHandof
 
 func validateHandoffDeliveryLauncher(launcher issueopscontract.IssueOpsHandoffDeliveryLauncher) error {
 	switch launcher.Name {
-	case issueopscontract.IssueOpsHandoffDeliveryLauncherDirect, issueopscontract.IssueOpsHandoffDeliveryLauncherOrca,
-		issueopscontract.IssueOpsHandoffDeliveryLauncherHerdr, issueopscontract.IssueOpsHandoffDeliveryLauncherCmux:
+	case issueopscontract.IssueOpsHandoffDeliveryLauncherDirect, issueopscontract.IssueOpsHandoffDeliveryLauncherHerdr,
+		issueopscontract.IssueOpsHandoffDeliveryLauncherCmux:
 	default:
 		return fmt.Errorf("delivery observation launcher is invalid")
 	}
@@ -378,7 +378,7 @@ func validateHandoffDeliveryTiming(timing *issueopscontract.IssueOpsHandoffDeliv
 	return nil
 }
 
-func validateHandoffDeliveryState(name string, state issueopscontract.IssueOpsHandoffDeliveryState, observation issueopscontract.IssueOpsHandoffDeliveryObservation) error {
+func validateHandoffDeliveryState(name string, state issueopscontract.IssueOpsHandoffDeliveryState) error {
 	if len(state.Status) > handoffDeliveryFieldLimit || len(state.ObservedAt) > handoffDeliveryFieldLimit || len(state.Evidence) > handoffDeliveryFieldLimit {
 		return fmt.Errorf("delivery observation %s state is too large", name)
 	}
@@ -392,7 +392,7 @@ func validateHandoffDeliveryState(name string, state issueopscontract.IssueOpsHa
 		if strings.TrimSpace(state.ObservedAt) == "" || strings.TrimSpace(state.Evidence) == "" {
 			return fmt.Errorf("delivery observation %s evidence is required", name)
 		}
-		if !validHandoffDeliveryEvidenceForState(name, state.Evidence, observation) {
+		if !validHandoffDeliveryEvidenceForState(name, state.Evidence) {
 			return fmt.Errorf("delivery observation %s evidence is invalid", name)
 		}
 		return nil
@@ -575,7 +575,7 @@ func validateHandoffDeliveryModeEvidence(observation issueopscontract.IssueOpsHa
 	return nil
 }
 
-func validHandoffDeliveryEvidenceForState(stateName, evidence string, observation issueopscontract.IssueOpsHandoffDeliveryObservation) bool {
+func validHandoffDeliveryEvidenceForState(stateName, evidence string) bool {
 	switch stateName {
 	case "call_staged":
 		return evidence == issueopscontract.IssueOpsHandoffDeliveryEvidenceExternalCallStaged
@@ -585,13 +585,8 @@ func validHandoffDeliveryEvidenceForState(stateName, evidence string, observatio
 			issueopscontract.IssueOpsHandoffDeliveryEvidenceLauncherAccepted,
 			issueopscontract.IssueOpsHandoffDeliveryEvidenceRawInput:
 			return true
-		case issueopscontract.IssueOpsHandoffDeliveryEvidenceOrcaDispatch:
-			return observation.ExpectedOwnerHost != "omo"
-		case issueopscontract.IssueOpsHandoffDeliveryEvidenceOmoSendAccepted:
-			return handoffDeliveryOmoEvidenceAllowed(observation)
-		default:
-			return false
 		}
+		return false
 	case "native_turn_observed":
 		return evidence == issueopscontract.IssueOpsHandoffDeliveryEvidenceNativeReceipt
 	case "owner_claimed":
@@ -599,25 +594,15 @@ func validHandoffDeliveryEvidenceForState(stateName, evidence string, observatio
 	case "ambiguous":
 		switch evidence {
 		case issueopscontract.IssueOpsHandoffDeliveryEvidenceAcceptedResponseLost,
-			issueopscontract.IssueOpsHandoffDeliveryEvidenceOrcaDispatchReceipt,
 			issueopscontract.IssueOpsHandoffDeliveryEvidenceTimeout,
 			issueopscontract.IssueOpsHandoffDeliveryEvidenceAgentPromptStalled,
 			issueopscontract.IssueOpsHandoffDeliveryEvidenceHerdrWaitState:
 			return true
-		case issueopscontract.IssueOpsHandoffDeliveryEvidenceOmoSendFailed,
-			issueopscontract.IssueOpsHandoffDeliveryEvidenceOmoSendResponseLost:
-			return handoffDeliveryOmoEvidenceAllowed(observation)
-		default:
-			return false
 		}
+		return false
 	default:
 		return false
 	}
-}
-
-func handoffDeliveryOmoEvidenceAllowed(observation issueopscontract.IssueOpsHandoffDeliveryObservation) bool {
-	return observation.Launcher.Name == issueopscontract.IssueOpsHandoffDeliveryLauncherOrca &&
-		((observation.OwnerActor != nil && observation.OwnerActor.Host == "omo") || observation.ExpectedOwnerHost == "omo")
 }
 
 func handoffDeliveryHasEvidence(observation issueopscontract.IssueOpsHandoffDeliveryObservation) bool {
@@ -661,9 +646,8 @@ func handoffDeliveryProcessIdentityChanged(current, next issueopscontract.IssueO
 	if current.TerminalID != next.TerminalID {
 		return true
 	}
-	// PTY/runtime identity is stable, while Orca may rotate the transient pane
-	// handle. A pane-only change is valid only while both observations name the
-	// same nonempty PTY; current dispatch inspection still fences the assignee.
+	// Terminal identity is stable while the pane handle may rotate. A pane-only
+	// change is valid only while both observations name the same nonempty terminal.
 	if current.PaneID != next.PaneID && strings.TrimSpace(current.TerminalID) == "" {
 		return true
 	}

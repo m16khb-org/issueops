@@ -3,8 +3,7 @@ package commandparse
 import "testing"
 
 // ParseExactIssueOpsArgs는 hook이 전체 명령 문자열 대신 argv를 갖고 있을 때의
-// 진입점이다. 문자열 진입점(ParseExactIssueOpsCommand)과 같은 exact 규칙을
-// argv 형태로 지켜야 한다 — 특히 2-단어 하위명령 뒤에 플래그가 오면
+// 진입점이다. exact 규칙을 지켜야 한다 — 특히 2-단어 하위명령 뒤에 플래그가 오면
 // fail-closed로 거부한다.
 func TestParseExactIssueOpsArgsMatchesCommandForms(t *testing.T) {
 	cases := []struct {

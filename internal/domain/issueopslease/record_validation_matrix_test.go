@@ -24,33 +24,15 @@ func completionFixture(generation uint64) leasecontract.Completion {
 
 func directExecutionFixture() leasecontract.Record {
 	return leasecontract.Record{Execution: &leasecontract.Execution{
-		Mode:      "direct",
-		Workspace: leasecontract.Workspace{SourceRoot: "/source", Root: "/worktree", Branch: "branch", BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "2026-08-03T00:00:00Z"},
+		Workspace: leasecontract.Workspace{SourceRoot: "/source", Root: "/worktree", Branch: "branch", BaseHead: strings.Repeat("a", 40), LinkedAt: "2026-08-03T00:00:00Z"},
 		Lease:     leasecontract.Lease{Generation: 3, Status: "released"},
-		Selection: leaseSelectionFixture("direct"),
 	}}
-}
-
-func orcaExecutionFixture() leasecontract.Record {
-	record := directExecutionFixture()
-	execution := record.Execution
-	execution.Mode = "orca"
-	execution.Workspace.Driver = "orca"
-	execution.Selection = leaseSelectionFixture("orca")
-	execution.Orca = &leasecontract.OrcaBinding{
-		RuntimeID: "rt", RepoID: "repo", WorktreeID: "wt", OwnerHost: "omp", OwnerModel: "m",
-		TaskID: "task", DispatchID: "dispatch", RunID: "run", LeaseGeneration: 3,
-		ArtifactIdentityVersion: leasecontract.OrcaArtifactIdentityVersion,
-		IssueBodySHA256:         strings.Repeat("1", 64), ContextPacketSHA256: strings.Repeat("2", 64), OwnerPromptSHA256: strings.Repeat("3", 64),
-	}
-	return record
 }
 
 func TestValidatePersistedRecordAcceptsFixtures(t *testing.T) {
 	for name, record := range map[string]leasecontract.Record{
 		"no execution": {},
 		"direct":       directExecutionFixture(),
-		"orca":         orcaExecutionFixture(),
 	} {
 		if err := ValidatePersistedRecord(record); err != nil {
 			t.Errorf("%s: %v", name, err)
@@ -66,12 +48,8 @@ func TestValidatePersistedRecordRejectsInvalidExecution(t *testing.T) {
 		mutate  func(*leasecontract.Execution)
 		wantErr string
 	}{
-		{"mode", directExecutionFixture, func(e *leasecontract.Execution) { e.Mode = "remote" }, "execution mode must be direct or orca"},
 		{"blank workspace field", directExecutionFixture, func(e *leasecontract.Execution) { e.Workspace.Branch = "  " }, "workspace branch is required"},
-		{"direct driver", directExecutionFixture, func(e *leasecontract.Execution) { e.Workspace.Driver = "orca" }, "driver must be git"},
-		{"orca driver", orcaExecutionFixture, func(e *leasecontract.Execution) { e.Workspace.Driver = "git" }, "driver must be orca"},
-		{"missing selection", directExecutionFixture, func(e *leasecontract.Execution) { e.Selection = nil }, "selection receipt is required"},
-		{"direct with orca binding", directExecutionFixture, func(e *leasecontract.Execution) { e.Orca = &leasecontract.OrcaBinding{} }, "direct execution must not contain an Orca binding"},
+		{"root equals source_root", directExecutionFixture, func(e *leasecontract.Execution) { e.Workspace.Root = e.Workspace.SourceRoot }, "canonical worktree must be isolated from source_root"},
 
 		{"active lease without claimed_at", directExecutionFixture, func(e *leasecontract.Execution) {
 			e.Lease = leasecontract.Lease{Generation: 3, Status: "active", Holder: &holder}
@@ -160,81 +138,6 @@ func TestValidatePersistedActorRequiresReuseSafeReceipt(t *testing.T) {
 			actor := persistedActorFixture()
 			test.mutate(&actor)
 			if err := ValidatePersistedActor(actor); err == nil || !strings.Contains(err.Error(), test.want) {
-				t.Fatalf("error = %v, want containing %q", err, test.want)
-			}
-		})
-	}
-}
-
-func TestValidatePersistedSelectionRejectsInconsistentReceipts(t *testing.T) {
-	autoFallback := func() leasecontract.Selection {
-		selection := *leaseSelectionFixture("direct")
-		selection.RequestedMode = "auto"
-		selection.ExplicitDirectReason = ""
-		selection.ProbeAttempted, selection.ProbeCode, selection.FallbackCode = true, "no_runtime", "no_runtime"
-		return selection
-	}
-	if err := ValidatePersistedSelection(autoFallback(), "direct"); err != nil {
-		t.Fatalf("auto direct fallback fixture: %v", err)
-	}
-	orca := func() leasecontract.Selection { return *leaseSelectionFixture("orca") }
-	direct := func() leasecontract.Selection { return *leaseSelectionFixture("direct") }
-	tests := []struct {
-		name   string
-		base   func() leasecontract.Selection
-		mode   string
-		mutate func(*leasecontract.Selection)
-		want   string
-	}{
-		{"requested mode", direct, "direct", func(s *leasecontract.Selection) { s.RequestedMode = "remote" }, "requested_mode must be auto, direct, or orca"},
-		{"resolved mode", direct, "orca", func(s *leasecontract.Selection) {}, "resolved_mode must equal execution mode"},
-		{"available without attempt", orca, "orca", func(s *leasecontract.Selection) { s.ProbeAttempted = false }, "probe_available requires probe_attempted"},
-		{"ready without available", orca, "orca", func(s *leasecontract.Selection) { s.ProbeAvailable = false }, "probe_ready requires probe_available"},
-		{"probe code without attempt", direct, "direct", func(s *leasecontract.Selection) { s.ProbeCode = "x" }, "unattempted selection probe must not contain probe_code"},
-		{"auto without probe", direct, "direct", func(s *leasecontract.Selection) { s.RequestedMode = "auto" }, "require a readiness probe"},
-		{"explicit orca resolved direct", direct, "direct", func(s *leasecontract.Selection) {
-			s.RequestedMode = "orca"
-			s.ProbeAttempted = true
-		}, "explicit selection mode must equal execution mode"},
-		{"orca without ready probe", orca, "orca", func(s *leasecontract.Selection) { s.ProbeReady = false }, "Orca selection requires a ready probe"},
-		{"auto direct with ready probe", autoFallback, "direct", func(s *leasecontract.Selection) {
-			s.ProbeAvailable, s.ProbeReady = true, true
-		}, "exact probe failure fallback_code"},
-		{"orca with fallback", orca, "orca", func(s *leasecontract.Selection) { s.FallbackCode = "x" }, "Orca selection must not contain fallback_code"},
-		{"non-direct with direct reason", orca, "orca", func(s *leasecontract.Selection) { s.ExplicitDirectReason = "why" }, "non-direct selection must not contain explicit_direct_reason"},
-		{"explicit direct without reason", direct, "direct", func(s *leasecontract.Selection) { s.ExplicitDirectReason = " " }, "explicit direct selection requires a reason and no probe"},
-		{"short fingerprint", direct, "direct", func(s *leasecontract.Selection) { s.ReadinessFingerprint = "abc" }, "requires fingerprint and selected_at"},
-		{"missing selected_at", direct, "direct", func(s *leasecontract.Selection) { s.SelectedAt = "" }, "requires fingerprint and selected_at"},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			selection := test.base()
-			test.mutate(&selection)
-			if err := ValidatePersistedSelection(selection, test.mode); err == nil || !strings.Contains(err.Error(), test.want) {
-				t.Fatalf("error = %v, want containing %q", err, test.want)
-			}
-		})
-	}
-}
-
-func TestValidatePersistedSidecarsRejectsInvalidOrcaBinding(t *testing.T) {
-	tests := []struct {
-		name   string
-		mutate func(*leasecontract.OrcaBinding)
-		want   string
-	}{
-		{"blank identity", func(o *leasecontract.OrcaBinding) { o.TaskID = " " }, "Orca binding task_id is required"},
-		{"artifact identity version", func(o *leasecontract.OrcaBinding) { o.ArtifactIdentityVersion = 9 }, "unsupported Orca artifact identity version 9"},
-		{"missing digest", func(o *leasecontract.OrcaBinding) { o.ContextPacketSHA256 = "" }, "complete sealed artifact identity"},
-		{"short digest", func(o *leasecontract.OrcaBinding) { o.OwnerPromptSHA256 = "abc" }, "SHA-256 digests"},
-		{"non-hex digest", func(o *leasecontract.OrcaBinding) { o.IssueBodySHA256 = strings.Repeat("z", 64) }, "SHA-256 digests"},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			record := orcaExecutionFixture()
-			test.mutate(record.Execution.Orca)
-			err := ValidatePersistedSidecars(*record.Execution)
-			if err == nil || !strings.Contains(err.Error(), test.want) {
 				t.Fatalf("error = %v, want containing %q", err, test.want)
 			}
 		})

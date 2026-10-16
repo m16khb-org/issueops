@@ -3,7 +3,6 @@ package issueops
 import (
 	"context"
 	issueopscontract "issueops/internal/contract/issueops"
-	"issueops/internal/port"
 	"strings"
 	"testing"
 )
@@ -15,12 +14,9 @@ import (
 func TestReplacePreviewRendersTheRevokeStepForAnActiveLease(t *testing.T) {
 	t.Parallel()
 
-	stateRoot, record := rolloverExecutionFixture(t)
+	stateRoot, record := replacementExecutionFixture(t)
 	requester := executionActor("codex", "replacement-owner")
-	deps := ExecutionReplaceDependencies{
-		OrcaOwner:        &rolloverOwnerInspector{inventory: port.ExecutionOrcaOwnerInventory{RuntimeID: "runtime-sealed"}},
-		inspectWorkspace: quiescentWorkspaceInspector(),
-	}
+	deps := ExecutionReplaceDependencies{inspectWorkspace: quiescentWorkspaceInspector()}
 
 	preview, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, issueopscontract.ExecutionReplaceRequest{
 		ID: record.ID, Action: issueopscontract.ExecutionReplacePreview, ExpectedGeneration: 1,

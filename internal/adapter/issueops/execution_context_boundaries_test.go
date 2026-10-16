@@ -20,99 +20,28 @@ func ownerArtifactPath(t *testing.T) (root, path string) {
 	return root, filepath.Join(root, ".issueops", "state", "artifact.bin")
 }
 
-func TestOwnerContextFilesWriteAcceptsExactlyTheArtifactSizeLimit(t *testing.T) {
+func TestWriteSealedArtifactAcceptsExactlyTheArtifactSizeLimit(t *testing.T) {
 	t.Parallel()
 
-	files := OwnerContextFiles{}
 	root, path := ownerArtifactPath(t)
 	atLimit := bytes.Repeat([]byte("a"), leasecontract.OwnerArtifactMaxBytes)
-	if err := files.Write(root, path, atLimit); err != nil {
+	if err := writeSealedArtifact(root, path, atLimit); err != nil {
 		t.Fatalf("artifact of exactly the limit must be written: %v", err)
 	}
-	got, err := files.ReadArtifact(root, path)
+	got, err := os.ReadFile(path)
 	if err != nil || !bytes.Equal(got, atLimit) {
 		t.Fatalf("limit-sized artifact must round-trip: err=%v len=%d", err, len(got))
 	}
 
 	root, path = ownerArtifactPath(t)
-	if err := files.Write(root, path, append(atLimit, 'a')); err == nil {
+	if err := writeSealedArtifact(root, path, append(atLimit, 'a')); err == nil {
 		t.Fatal("artifact one byte over the limit must be refused")
 	}
 	if _, err := os.Lstat(path); !os.IsNotExist(err) {
 		t.Fatalf("oversized artifact must not touch disk: %v", err)
 	}
-	if err := files.Write(root, path, nil); err == nil {
+	if err := writeSealedArtifact(root, path, nil); err == nil {
 		t.Fatal("empty artifact must be refused")
-	}
-}
-
-func TestOwnerContextFilesReadArtifactRequiresPrivateBoundedRegularFile(t *testing.T) {
-	t.Parallel()
-
-	files := OwnerContextFiles{}
-	const want = "owner artifact must be a private bounded regular file"
-	cases := map[string]func(t *testing.T, path string){
-		"group readable": func(t *testing.T, path string) {
-			if err := os.WriteFile(path, []byte("x"), 0o644); err != nil {
-				t.Fatal(err)
-			}
-			if err := os.Chmod(path, 0o644); err != nil {
-				t.Fatal(err)
-			}
-		},
-		"directory": func(t *testing.T, path string) {
-			if err := os.Mkdir(path, 0o700); err != nil {
-				t.Fatal(err)
-			}
-		},
-		"over limit": func(t *testing.T, path string) {
-			if err := os.WriteFile(path, make([]byte, leasecontract.OwnerArtifactMaxBytes+1), 0o600); err != nil {
-				t.Fatal(err)
-			}
-		},
-	}
-	for name, setup := range cases {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			root, path := ownerArtifactPath(t)
-			if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-				t.Fatal(err)
-			}
-			setup(t, path)
-			if _, err := files.ReadArtifact(root, path); err == nil || err.Error() != want {
-				t.Fatalf("error = %v, want %q", err, want)
-			}
-		})
-	}
-
-	root, path := ownerArtifactPath(t)
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(path, []byte("private"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if got, err := files.ReadArtifact(root, path); err != nil || string(got) != "private" {
-		t.Fatalf("private regular artifact must be readable: %q %v", got, err)
-	}
-}
-
-func TestOwnerContextFilesRegularFilesKeepsOnlyRealRegularFiles(t *testing.T) {
-	t.Parallel()
-
-	root := t.TempDir()
-	if err := os.WriteFile(filepath.Join(root, "plan.md"), []byte("x"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Mkdir(filepath.Join(root, "dir"), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Symlink("plan.md", filepath.Join(root, "link.md")); err != nil {
-		t.Fatal(err)
-	}
-	got := OwnerContextFiles{}.RegularFiles(root, []string{"plan.md", "dir", "link.md", "missing.md"})
-	if !slices.Equal(got, []string{"plan.md"}) {
-		t.Fatalf("regular files = %v, want [plan.md]", got)
 	}
 }
 

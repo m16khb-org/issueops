@@ -27,7 +27,6 @@ type AbandonPreviewer struct {
 	Environment AbandonEnvironment
 	ReadChild   func(string) (model.IssueOpsRecord, error)
 	Workspace   func(context.Context, model.IssueOpsRecord, string) (FinishWorkspaceObservation, []string)
-	Orca        AbandonOrcaObserver
 	Remote      AbandonRemoteObserver
 }
 
@@ -53,8 +52,7 @@ func (s AbandonPreviewer) Plan(ctx context.Context, record model.IssueOpsRecord,
 		observed.WorktreeHeadObservable = local.HeadObservable
 		workspace, missing := s.Workspace(ctx, record, inventory.WorktreeRoot)
 		observed.WorkspaceMissing, observed.Occupants = missing, workspace.Occupants
-		inventory.WorkspaceProcesses, inventory.OrcaTerminals = workspace.Receipts, workspace.Terminals
-		inventory.OrcaAppPID, inventory.OrcaRuntimeReady = workspace.AppPID, workspace.RuntimeReady
+		inventory.WorkspaceProcesses = workspace.Receipts
 	}
 	if inventory.Branch != "" {
 		var err error
@@ -71,14 +69,7 @@ func (s AbandonPreviewer) Plan(ctx context.Context, record model.IssueOpsRecord,
 		observed.FailureEvidence.SameWorktree = s.Environment.SamePath(failure.WorktreePath, inventory.WorktreeRoot)
 		observed.FailureEvidence.SealMatches = failure.InventorySHA256 == CleanupAbandonFailureSeal(record, failure)
 	}
-	if record.Execution != nil && record.Execution.Pending != nil {
-		if err := s.Orca.PendingSafe(ctx, record, inventory.WorktreePresent); err != nil {
-			observed.PendingIntentError = domain.CleanupAbandonPendingRecovery(record.ID, err)
-		}
-	}
-	if err := s.Orca.ResourcesAbsent(ctx, record, observed.LeaseHolderless, inventory.WorktreePresent && len(inventory.OrcaTerminals) > 0); err != nil {
-		observed.OrcaResidueError = err.Error()
-	}
+	observed.PendingIntentError = domain.CleanupAbandonPendingError(record)
 	inventory, remote := s.Remote.Observe(ctx, record, req, provider, inventory)
 	observed.RemoteMissing, observed.RemoteEffects = remote.RemoteMissing, remote.RemoteEffects
 	observed.RemoteArtifactState, observed.IssueState = remote.RemoteArtifactState, remote.IssueState

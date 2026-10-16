@@ -157,7 +157,6 @@ does not certify every Markdown file in the repository.
 - `integrations.md`: host, hook, MCP, remote, and external-tool risks
 - `audit-and-process.md`: audit interpretation and verification-process risks
 - `issueops-lifecycle.md`: IssueOps state and lifecycle risks
-- `issueops-orchestration.md`: IssueOps coordination and provider risks
 - `issueops-execution.md`: IssueOps execution and cleanup risks
 - `issueops-stages.md`: IssueOps stage-skill risks
 - `YYYY-MM-DD-<slug>.md`: dated incident lesson, directly in `cautions/`
@@ -195,7 +194,7 @@ tests read their exact paths: `install.md`, `verification.md`,
 - `cli-mcp-and-hosts.md`: CLI, MCP, Codex, and Claude parity
 - `self-verification.md`: single-pass self-verification contract
 - `api-documentation.md`: OpenAPI static and agent review gates
-- `issueops-execution.md`: IssueOps and Orca execution verification
+- `issueops-execution.md`: IssueOps execution verification
 
 ### `archive/`
 
@@ -213,7 +212,7 @@ Retired dated snapshots moved verbatim from living documents:
 - `plans/`: plans without an issue number (implementation-planning)
 - `research/`: research results (web-research), `skill-quality/` scorecards and
   evaluator policy, and dated dogfood reports
-- `prompt-engineering/prompts/`: versioned prompts; parity tests read them
+- `prompt-engineering/prompts/`: versioned prompts
 
 ### `issues/<n>/`
 

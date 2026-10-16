@@ -6,10 +6,6 @@ const (
 	FindingInventoryUnknown     = "operational_inventory_unknown"
 	FindingDeadOwner            = "operational_dead_owner"
 	FindingWorktreeResidue      = "operational_worktree_residue"
-	FindingTerminalResidue      = "operational_terminal_residue"
-	FindingTaskResidue          = "operational_task_residue"
-	FindingGateResidue          = "operational_gate_residue"
-	FindingMessageResidue       = "operational_message_residue"
 	FindingNonMainBranchResidue = "operational_non_main_branch_residue"
 	FindingStateArtifactResidue = "operational_state_artifact_residue"
 	FindingExecutionFailure     = "operational_execution_failure"
@@ -29,7 +25,6 @@ type Cycle struct {
 	Repo                      string
 	Branch                    string
 	Phase                     string
-	ExecutionMode             string
 	LeaseStatus               string
 	Generation                uint64
 	HolderHost                string
@@ -43,16 +38,7 @@ type Cycle struct {
 	ExecutionFailurePresent   bool
 	CleanupFailurePresent     bool
 	IssueCreateFailurePresent bool
-	OrcaRuntimeID             string
-	OrcaRepoID                string
 	WorktreePath              string
-	OrcaWorktreeID            string
-	OrcaWorktreeInstanceID    string
-	OrcaOwnerHost             string
-	TerminalPTYID             string
-	RunID                     string
-	TaskID                    string
-	DispatchID                string
 }
 
 type LeaseHolderIndex struct {
@@ -79,62 +65,6 @@ type GitRef struct {
 	Location string
 }
 
-type OrcaWorktree struct {
-	RuntimeID  string
-	RepoID     string
-	ID         string
-	InstanceID string
-	Repo       string
-	Path       string
-	Branch     string
-	Head       string
-}
-
-type OrcaTerminal struct {
-	RuntimeID    string
-	Handle       string
-	PTYID        string
-	TabID        string
-	LeafID       string
-	WorktreeID   string
-	WorktreePath string
-	Connected    bool
-	Writable     bool
-}
-
-type OrcaTask struct {
-	RuntimeID   string
-	RunID       string
-	ID          string
-	Status      string
-	DispatchID  string
-	CompletedAt time.Time
-	HasResult   bool
-}
-
-type OrcaDispatch struct {
-	RuntimeID      string
-	RunID          string
-	ID             string
-	TaskID         string
-	AssigneeHandle string
-	Status         string
-}
-
-type OrcaGate struct {
-	RuntimeID string
-	ID        string
-	TaskID    string
-	Status    string
-}
-
-type MessagePresence struct {
-	RuntimeID       string
-	Count           int
-	Empty           bool
-	CompleteAbsence bool
-}
-
 type InventoryProblem struct {
 	Source string
 	Code   string
@@ -151,40 +81,19 @@ type Snapshot struct {
 	CanonicalBranch string
 	SourceHead      string
 	SourceClean     bool
-	OrcaObserved    bool
-	OrcaRuntimeID   string
-	OrcaRepoID      string
 
 	Cycles             []Cycle
 	LeaseHolderIndexes []LeaseHolderIndex
 	GitWorktrees       []GitWorktree
 	LocalRefs          []GitRef
 	RemoteRefs         []GitRef
-	OrcaWorktrees      []OrcaWorktree
-	Terminals          []OrcaTerminal
-	Tasks              []OrcaTask
-	Dispatches         []OrcaDispatch
-	Gates              []OrcaGate
-	Messages           MessagePresence
 	StateArtifacts     []StateArtifact
 	InventoryProblems  []InventoryProblem
 }
 
-// Profile selects how strictly unowned-but-live resources are classified.
-// ProfileSealed (the zero value) is the audit contract: every terminal and
-// inbox row must be accounted for by a cycle. ProfileInteractive is for a live
-// developer machine, where Orca tabs the user opened directly and orchestration
-// message history are normal, not residue.
-const (
-	ProfileSealed      = ""
-	ProfileInteractive = "interactive"
-)
-
 type Options struct {
-	Now                     time.Time
-	Profile                 string
-	PreserveCycleIDs        []string
-	PreserveTerminalHandles []string
+	Now              time.Time
+	PreserveCycleIDs []string
 }
 
 type Finding struct {

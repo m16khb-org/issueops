@@ -268,14 +268,14 @@ Preserve the cycle's order and artifacts even when only this body is supplied:
    A stop verdict returns to grill for investigation/replanning, not a waived gate.
    Incorrect issue-body facts require contract-change feedback, issue sync, and
    mark-issue-updated recording; changing only the plan is insufficient.
-5. If authorized beyond planning/review, the owner previews/confirms execution preparation
-   with its returned readiness fingerprint. Preparation materializes the staged plan
+5. If authorized beyond planning/review, the owner previews/confirms execution preparation.
+   Preparation materializes the staged plan
    in the canonical worktree. Final plan location uses the issue number, with slug
    `{issue-number}-{short-title}`; never use a lifecycle ID as the issue folder number.
 6. Return to the stage's authorized routing: after preparation, use automatic
    handoff: usable Herdr first when the preparing session runs inside Herdr, otherwise
-   Orca when ready, otherwise Herdr when usable, otherwise current-session
-   continuation. Preserve explicitly selected execution modes. Handoff requires
+   current-session continuation or a manual handoff from a second terminal the user
+   opened. Handoff requires
    settled writers, release of the old holder, and verified new ownership in the same
    worktree; do not keep implementing after delivery to the new session.
 7. The authenticated active owner performs `issueops link-plan` after materialization

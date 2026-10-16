@@ -676,16 +676,14 @@ func activateRemoteIssueOpsRecordForCurrentProcess(t *testing.T, record *issueop
 	worktree := filepath.Join(record.Repo, "worktree")
 	record.WorktreePath = worktree
 	record.Execution = &issueopscontract.Execution{
-		Mode: issueopscontract.ExecutionModeDirect,
 		Workspace: issueopscontract.Workspace{
 			SourceRoot: record.Repo, Root: worktree, Branch: record.Branch,
-			BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "2026-08-02T00:00:00Z",
+			BaseHead: strings.Repeat("a", 40), LinkedAt: "2026-08-02T00:00:00Z",
 		},
 		Lease: issueopscontract.WriteLease{
 			Generation: 1, Status: issueopscontract.LeaseStatusActive, ClaimedAt: "2026-08-02T00:00:00Z",
 			Holder: &issueopscontract.NativeActor{Host: "codex", SessionID: "session-1", SessionProcess: &process},
 		},
-		Selection: selectionFixture(issueopscontract.ExecutionModeDirect),
 	}
 	if _, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), *record); err != nil {
 		t.Fatal(err)

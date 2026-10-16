@@ -6,120 +6,19 @@ native holder may mutate the record and worktree. The exact lifecycle ID,
 generation, native process receipt, and canonical cwd are the authority; a
 source checkout, branch name, or host session alone is not.
 
-The two modes are `direct` and `orca`:
-
-- `direct` provisions the sibling worktree and grants generation 1 to the
-  calling Codex or Claude session.
-- `orca` provisions the same canonical worktree, seals the remote issue and
-  owner context packet, launches one native owner, and leaves the lease
-  claimable until that owner proves the sealed digests and consumes the token
-  file.
-
-Preparation persists the issue-body, context-packet, and fully rendered owner
-prompt SHA-256 values together on the generation-bound Orca binding before the
-terminal intent is deleted. Resume compares artifact bytes to that durable
-identity; it does not rerender the prompt with the currently installed
-template.
-
-`auto` resolves Orca only when its readiness probe succeeds before mutation.
-An absent or unready Orca resolves to direct without creating Orca state. Once
-an Orca mutation may have happened, ambiguity fails closed and must be
-reconciled; it never falls back to direct.
-
-Orca 1.4.162 이상에서는 모든 task mutation이 명시적 Run과 그 Run의 current
-consumer인 coordinator terminal을 함께 요구한다. IssueOps는 이를 다음의 독립
-intent 단계로 기록한다:
-
-```text
-worktree_create -> terminal_create -> run_create -> run_bind -> task_create -> dispatch
-```
-
-`run_create`는 lifecycle·generation·operation marker를 objective로 가진 새 Run을
-만들고, `run_bind`는 현재 coordinator의 정확한 `ORCA_TERMINAL_HANDLE` 형식을
-fail-closed gate로 검증한 뒤 `run-current`/`run-use --id <run>`를 현재 process에서
-호출한다. 현재 terminal RPC에 `--from`을 붙이면 Orca가 이를 명시적 대리 호출로
-해석해 process authority를 보존하지 못할 수 있으므로 생략한다. focus, cwd, 전역
-current Run을 권한으로 추론하지 않는다. `run_bind`만 수렴 가능한 재바인딩이므로
-불명확한 결과 뒤에도 동일 Run으로 유한 재시도할 수 있고, 자원을 만드는 다른
-단계는 종전처럼 불명확한 mutation을 반복하지 않는다.
-
-binding의 `run_id`는 필수다. owner 검사는 그 Run의 `task-list --run` 결과만 읽고,
-다른 Run의 동명 task는 권한으로 채택하지 않는다.
-
-## GitLab Issue Snapshot
-
-GitLab-linked cycle도 Orca를 사용할 수 있다. issueops가 요구하는 것은 특정
-MCP server나 wrapper가 아니라 linked issue와 identity가 같은 bounded snapshot이다.
-host agent는 먼저 선택 문서 `.issueops/VCS.md`를 읽고, 현재 등록 도구 중 실제
-schema가 호환되는 semantic leaf `glab_api`를 찾는다. server namespace와 개인
-wrapper 이름은 capability identity가 아니며 packet이나 record에 저장하지 않는다.
-
-`glab_api`로 `projects/<URL-escaped-project>/issues/<iid>`를 읽고, schema가
-지원하면 `flags.hostname`으로 target host를 명시한다. 응답의 `web_url`,
-`description`, `state`에서 다음 다섯 필드만 정규화한다:
-
-```json
-{
-  "provider": "gitlab",
-  "source": "glab_mcp",
-  "web_url": "https://gitlab.example.com/group/project/-/issues/69",
-  "body": "remote issue description",
-  "state": "opened"
-}
-```
-
-MCP `issueops_execution`을 호출하면 이 객체를 `issue_snapshot`에 넣는다. host가
-GitLab MCP를 읽었지만 IssueOps는 CLI로 호출한다면 같은 JSON을 exact mode `0600`,
-non-symlink regular file에 쓰고 `--issue-snapshot-file PATH`를 prepare, claim,
-`replace --finalize|--reseed`, pending `worktree_create`의
-`reconcile --confirm`에 전달한다. Reconcile preview와 다른 pending stage에는
-snapshot을 전달하지 않는다. file은 1 MiB 이하이고 unknown field나 trailing
-JSON이 없어야 한다. core가
-authority(명시 port 포함), project path, IID, non-empty body(512 KiB 이하),
-`opened|closed` state를 다시 검증한다.
-
-후보 부재나 auth/permission/transport/schema 호출 실패 뒤에도 successful exact-identity MCP evidence를 얻지 못했을 때만 snapshot 인자를 생략한다.
-provider adapter가 일반 `glab api` CLI로 같은 필드를 읽고 성공 결과의
-`issue_snapshot_source=glab_cli`를 기록한다.
-이미 공급한 invalid evidence는 CLI fallback하지 않고 fail-closed한다. MCP 성공은
-`issue_snapshot_source=glab_mcp`로 확인한다.
-
-성공한 provider read가 재사용 가능한 새 recipe라면 canonical worktree에서
-`project_docs_read`로 `.issueops/VCS.md`의 최신 SHA/content를 읽고,
-`project_docs_revise` SHA-CAS로 tool leaf, 관찰한 schema, endpoint/필드, CLI
-fallback만 기록한다. secret, token, 개인 경로, server namespace는 기록하지
-않는다.
-
-## GitHub Orca Branch Ordering
-
-GitHub Orca는 #176에서 검증된 순서를 고정한다: `branch prepare` (base SHA only) → `artifact stage --name plan` → `execution prepare --mode orca` → GraphQL `createLinkedBranch` with `oid=sealed base SHA` → `branch prepare --link-verified`.
-첫 `branch prepare`는 issue identity와 exact base SHA만 기록하고 provider branch를
-만들거나 `--link-verified`를 기록하지 않는다. plan을 먼저 stage한 뒤 Orca prepare가
-같은 이름의 local-only branch/worktree를 만든다. 그 다음 `createLinkedBranch`에 봉인
-SHA를 `oid`로 전달해 같은 이름의 remote linked branch를 만들고, exact reader로
-연결을 확인한 뒤 `branch prepare --link-verified`를 기록한다. `gh issue develop`은
-링크 시점 base branch HEAD를 사용할 수 있어 봉인 SHA와 갈라지므로 이 경로에서 금지한다.
+Preparation provisions the sibling worktree and grants generation 1 to the
+calling Codex, Claude, Omo, or omp session. A different session takes over only
+through the release, replace, and claim chain described below.
 
 ## Prepare
 
-Run the preview first, inspect the selected mode, branch, base SHA, worktree,
-owner model, and `next_command`, then execute that exact returned command:
+Run the preview first and inspect the workspace root, branch, and base SHA it
+reports, then create the workspace with `--confirm`:
 
 ```bash
-issueops execution prepare \
-  --id "$ISSUEOPS_ID" \
-  --mode auto \
-  --owner-host "$OWNER_HOST" \
-  --owner-model "$OWNER_MODEL" \
-  --owner-effort "$OWNER_EFFORT" \
-  $ACTOR_FLAGS \
-  --json
+issueops execution prepare --id "$ISSUEOPS_ID" $ACTOR_FLAGS --json
+issueops execution prepare --id "$ISSUEOPS_ID" $ACTOR_FLAGS --confirm --json
 ```
-
-The preview response reports `requested_mode` and `resolved_mode` so the caller sees
-which adapter the probe chose before any mutation, seals the selection evidence as a
-readiness fingerprint in `readiness_fingerprint`, and renders the exact confirm as
-`next_command`. Confirm must supply `--expected-readiness-fingerprint`; any changed probe result, owner profile, provider/issue identity, or explicit-direct reason fails before mutation. Explicit `--mode direct` is reserved for a bounded operator-approved exception and requires `--direct-reason`; it performs no Orca probe. Durable status exposes the same fields under `execution.selection`.
 
 `ACTOR_FLAGS` are the exact native process identity and cwd:
 
@@ -140,26 +39,13 @@ omp sessions use `ISSUEOPS_OMP_SESSION_ID`, which the issueops omp extension
 exports from the main session, and a live receipt from the nearest `omp` or
 `bun` ancestor (omp runs as a bun script); that receipt is accepted only for
 `--host omp`. Omo and omp session ids together are ambiguous and fail closed.
-`--owner-host` accepts `codex|claude|omo|omp`, so Orca can own and display any of
-those host sessions. For Omo, IssueOps launches the UI-visible terminal with
-`omo --model '<provider/model>:<thinking>'`; the default is
-`chatgpt-subscription/gpt-6-sol:max`. For omp, IssueOps launches
-`omp --model '<model>' --thinking '<effort>' --auto-approve` and delivers the
-preamble through the same injected dispatch path as Codex and Claude; a
-terminal-send prompt receipt is rejected for omp.
-If Orca does not recognize that TUI for native `--inject`, IssueOps creates a
-non-inject dispatch with the official preamble, validates the sealed task and
-terminal identities, and sends the whole preamble to that exact terminal as one
-bracketed-paste turn followed by one Enter. Raw multiline sends are forbidden
-because embedded newlines can become separate Omo turns. Reconcile must stay
-fenced when a dispatch exists but prompt delivery is not provable.
 
 The provisioned path is the fixed sibling
 `${repo}.worktrees/<branch-with-slashes-replaced>`. Preparation creates or
 reuses only that exact branch/worktree pair and records its base SHA. Do not
 create or link another worktree manually: `execution prepare` is the only owner
-of local workspace provisioning, in both direct and Orca mode. Earlier stages
-record the branch identity and never run `git worktree add`.
+of local workspace provisioning. Earlier stages record the branch identity and
+never run `git worktree add`.
 
 Reuse is conditional, not automatic. `execution prepare` adopts a worktree that
 already sits at that path only when all three hold: the path resolves to that
@@ -180,45 +66,37 @@ so stale references and wrong-root changes are observable.
 `--parent-worktree ${repo}.worktrees/<base-branch-with-slashes-replaced>`를
 명시한다. IssueOps는 이를 `workspace.parent_worktree`에 함께 봉인하고 canonical
 부모 경로와 다르면 실행 전에 거부한다. 기존 delegation cycle은 이 값이 없어도
-같은 경로를 계산해 하위 호환된다. Orca mode는 봉인된 값을
-`worktree create --parent-worktree path:<부모>`로 전달하고 lineage의
-`capture.source=explicit-cli-flag`, `capture.confidence=explicit`를 검증한다.
-따라서 provider-native 엄브렐라 자식도 Orca UI에서 부모 통합 worktree 아래에
-표시된다. 독립 cycle은 `--parent-worktree`를 생략해 top-level을 유지한다.
+같은 경로를 계산한다. 독립 cycle은 `--parent-worktree`를 생략해 top-level을 유지한다.
 
 ## Status And Claim
 
-Status is the read-only orientation command for either mode:
+Status is the read-only orientation command:
 
 ```bash
 issueops execution status --id "$ISSUEOPS_ID" --json
 ```
 
-A direct holder does not claim again after normal preparation. Holderless
-direct recovery is the exception: `replace --reseed|--finalize` returns an exact
+The holder that ran preparation does not claim again. A new session claims only
+through holderless recovery: `replace --reseed|--finalize` returns an exact
 `claim` command for the new claimable generation. That command intentionally
 omits `ACTOR_FLAGS`: the CLI observes the invoking native session and its
 PID-reuse-safe ancestry receipt. Supplying actor flags remains supported, but
-they must be supplied as one complete set; a partial set fails closed. An Orca owner reads the
-private rendered prompt and context packet, verifies the issue and packet
-SHA-256 values, then runs the exact current-generation claim command rendered by
-preparation/status:
+they must be supplied as one complete set; a partial set fails closed. The new
+session runs the exact current-generation claim command rendered by
+replacement/status:
 
 ```bash
 issueops execution claim \
   --id "$ISSUEOPS_ID" \
   --generation "$GENERATION" \
   --claim-current-token \
-  --issue-body-sha256 "$ISSUE_BODY_SHA256" \
-  --context-packet-sha256 "$CONTEXT_PACKET_SHA256" \
   $ACTOR_FLAGS \
   --json
 ```
 
 The CLI resolves the token from its private deterministic path. Its value is
-never printed, and the path is never copied into generated owner prompts or
-claim commands. The token is consumed exactly once. A digest mismatch leaves
-the owner read-only.
+never printed, and the path is never copied into claim commands. The token is
+consumed exactly once.
 
 ## Release, Replacement, And Reconciliation
 
@@ -229,6 +107,12 @@ issueops execution release \
   --id "$ISSUEOPS_ID" --generation "$GENERATION" $ACTOR_FLAGS --json
 ```
 
+Handing a cycle to another session, whether a Herdr session or a second terminal
+the user opened, uses only this chain: the existing session releases the lease,
+the new session runs `replace --preview` with its own native actor, executes the
+returned `--reseed` command, and claims the new generation with
+`--claim-current-token`.
+
 Replacement is a fail-closed sequence. There is no unsafe override:
 
 1. `issueops execution replace --preview` returns the exact generation and
@@ -236,54 +120,17 @@ Replacement is a fail-closed sequence. There is no unsafe override:
 2. `issueops execution replace --revoke --expected-generation N
    --inventory-fingerprint HEX --reason TEXT --confirm` revokes that generation.
 3. `issueops execution replace --finalize-preview --expected-generation N`
-   proves the old process and Orca resource are quiescent and returns a
-   quiescence fingerprint.
+   proves the old process is quiescent and returns a quiescence fingerprint.
 4. `issueops execution replace --finalize --expected-generation N
-   --quiescence-fingerprint HEX --confirm` reseals the generation-specific
-   owner packet/prompt and only then makes that generation claimable.
-5. `issueops execution resume --expected-generation N --confirm` creates a
-   fresh Orca terminal/Run/task/dispatch in the existing canonical worktree and
-   records `orca.lease_generation=N`.
-6. The new owner claims with `--claim-current-token` plus issue/packet digests. A reseal
-   failure preserves the previous durable lease and removes uncommitted
-   generation token/packet/prompt files. A retry first recovers exact
-   harness-owned residue for that still-uncommitted generation.
+   --quiescence-fingerprint HEX --confirm` makes that generation claimable.
+5. The new session claims with `--claim-current-token`. A failed generation
+   change preserves the previous durable lease and removes uncommitted
+   generation token files. A retry first recovers exact harness-owned residue
+   for that still-uncommitted generation.
 
 Every replacement step requires `ACTOR_FLAGS`. `--reseed` is limited to the
 documented holderless recovery case and still uses generation CAS and confirm.
-For Orca, `replace --finalize|--reseed` returns resume, not claim, as its next
-command. Execute that exact status projection without adding flags:
-
-```bash
-issueops execution resume \
-  --id "$ISSUEOPS_ID" --expected-generation "$GENERATION" --confirm
-```
-
-Resume observes the current native Codex/Claude/Omo/omp session, host process receipt,
-and canonical cwd when actor flags are absent. A complete explicit
-`ACTOR_FLAGS` receipt remains valid; a partial receipt is rejected.
-
-Every Orca binding carries artifact identity version 1, all three digests, a
-nonzero `lease_generation`, and an explicit `run_id`. A record whose binding
-lacks any of them fails validation when it is read; there is no recovery chain
-for such a record. Partial identities are invalid, and neither the prompt file
-nor a freshly computed digest is an accepted fallback trust root.
-
-Resume never recreates or reparents the worktree. Its public response includes
-`resume_disposition`: `existing_binding`, `reuse_terminal`, or
-`create_terminal`. A same-generation live terminal/task pair is an idempotent
-`existing_binding` success and allocates no new launch operation. The response
-still returns the exact sealed claim command. A dispatched owner must execute
-that injected claim command exactly once; status' `execution resume` is a
-coordinator recovery projection and is not an owner action. 재실행이 필요하면 기존 terminal을
-재사용할 수 있어도 새 generation-specific Run을 만들고 coordinator를 그 Run에
-명시적으로 바인딩한 뒤 task/dispatch를 만든다. A live old-generation task or
-terminal/task contradiction fails closed. Ambiguous terminal/task/dispatch
-mutation stays pending and must be completed with `execution reconcile`; do not
-repeat resume.
-
-For direct mode, the same replacement result returns the exact token-backed
-claim command instead:
+`replace --finalize|--reseed` returns the exact token-backed claim command:
 
 ```bash
 issueops execution claim \
@@ -292,7 +139,7 @@ issueops execution claim \
   $ACTOR_FLAGS --json
 ```
 
-A released direct cycle is recovered through the finite `next_command` chain
+A released cycle is recovered through the finite `next_command` chain
 returned by each read/mutation result:
 
 ```text
@@ -302,13 +149,15 @@ execution status $ACTOR_FLAGS
   -> execution claim --claim-current-token $ACTOR_FLAGS
 ```
 
+`next` routes by lease state: a claimable generation goes to
+`claim --claim-current-token`, a released one to `replace --preview`, and a
+revoking one to `replace --finalize-preview`.
+
 Do not skip the preview or invent the fingerprint. For a completed cycle,
 `execution status` does not render this chain; start at `execution replace
 --preview`, which still renders the reseed command (after any base sync it
 requires). `issueops-merge` uses this entry to reopen a completed cycle whose
 PR/MR cannot merge.
-
-
 
 When workspace provisioning or remote publication may have mutated external
 state but the result is ambiguous, inspect and then confirm the exact
@@ -352,40 +201,27 @@ issueops execution complete \
 
 Successful completion records the receipt, moves the lifecycle to `done`, and
 releases the lease atomically. It does not merge the PR/MR or delete the
-worktree or branch. The owner returns the exact 14-field report defined in
-`.issueops/prompt-engineering/prompts/issueops-v1-owner-execution-v1.md`.
+worktree or branch.
 
-GitHub의 `branch_prepare.link_verified`가 false이면 sealed owner packet이
-`gh issue develop --list <issue> --repo <owner/repo>` exact reader와 branch
-prepare recorder를 함께 제공한다. owner는 이 reader를 한 번 실행해 exact branch
-연결을 확인한 뒤에만 recorder를 실행하며, 대체 GraphQL이나 다른 provider reader를
-추론하지 않는다.
+## Host-Aware Model Defaults
 
-Orca가 worker prompt에 주입하는 현재 제어 명령은 `--to` 대신
-`--dispatch-capability`를 사용할 수 있다. capability 경로는 exact `--from`을 함께
-전달하고, `worker_done`은 `--outcome succeeded|failed`를 반드시 포함한다.
+`issueops model resolve --host "$HOST" --role implement --agents --json`이 `implement` 역할
+(delegated child cycle은 `child-implement`)을 `issueops model` 설정으로 해석해 model·effort·
+`agent_args`를 돌려준다. 현재 값은 표로 옮겨 적지 않고 `issueops model show --json`으로 읽는다.
 
-## Host-Aware Owner Model Defaults
-
-`--owner-model`/`--owner-effort`를 생략하면 prepare가 `implement` 역할(delegated child
-cycle은 `child-implement`)을 `issueops model` 설정으로 해석해 packet과 OrcaBinding에
-기록한다. 명시 플래그가 항상 우선하고, 이미 봉인된 binding은 설정을 바꿔도 그대로다.
-현재 값은 표로 옮겨 적지 않고 `issueops model show --json`으로 읽는다.
-
-owner 프롬프트의 `{REVIEWER_MODEL}`(`diff-review`), `{RESEARCH_MODEL}`(`research`),
-`{READER_CHECK_MODEL}`(`reader-check`)도 같은 해석기에서 나온다. Orca·cmux가 띄우는
-owner 세션에는 리뷰·조사·독자 검토 역할이 서브에이전트로 주입된다(Claude `--agents`,
+리뷰(`diff-review`)·조사(`research`)·독자 검토(`reader-check`) 모델도 같은 해석기에서 나온다.
+Herdr·cmux가 띄우는 세션에는 이 역할이 서브에이전트로 주입된다(Claude `--agents`,
 Codex `-c agents.issueops-<role>.config_file=…`). 조사 모델은 위임이 이미 허용된 범위의
 읽기 전용 탐색·자료 요약에만 쓰고, 구현·계획 확정·리뷰 게이트 판정에는 쓰지 않는다.
 모델·effort 해석 규칙의 정규 소유자는 `internal/domain/agentmodel`이다.
 
 Fable 5는 자동 기본값·폴백·리뷰 상향에 쓰지 않는다. 필요한 경우에만
-`--owner-model claude-fable-5`나 `issueops model set`으로 명시한다.
+`issueops model set`으로 명시한다.
 
 ## Artifact Staging And Sealing
 
 메인(planner) 세션은 prepare **이전에** 승인된 child plan을 source checkout 밖의
-coordinator 임시 파일에 쓰고 계획/스펙/verified-execution loop를 스테이징한다. Delegation의
+임시 파일에 쓰고 계획/스펙/verified-execution loop를 스테이징한다. Delegation의
 `parent_plan_path`는 child plan readiness 입력이 아니다:
 
 ```bash
@@ -397,42 +233,24 @@ issueops artifact stage --id "$ISSUEOPS_ID" --name verified-execution-loop --fil
 - 이름은 `plan|spec|verified-execution-loop` 고정, 파일당 1MiB 상한, secret 패턴은 거부된다(스크럽 없음).
 - `intent`는 staging 대상이 아니다. prepare가 `record.intent`(원문 요청·해석·성공 기준·비목표·
   제약·모호함·intent_class)를 렌더해 같은 디렉터리에 `intent.md`로 봉인하고 manifest에
-  `intent`로 넣는다. 문서에 기록 시각이 없어 같은 내용의 재기록은 reseed·resume을 그대로
-  통과하고, 내용이 달라진 재봉인은 plan과 같이 불변 writer가 거부한다. 그때 Orca는 사람이
-  워크트리의 `intent.md`를 지운 뒤 `execution replace --reseed`로 다음 generation에 다시
-  봉인한다. direct에는 봉인 뒤 `intent.md`를 다시 만들 CLI 경로가 없으므로 읽는 쪽
+  `intent`로 넣는다. 문서에 기록 시각이 없어 같은 내용의 재기록은 reseed를 그대로
+  통과하고, 내용이 달라진 재봉인은 plan과 같이 불변 writer가 거부한다. 봉인 뒤
+  `intent.md`를 다시 만들 CLI 경로가 없으므로 읽는 쪽
   (review·verify·create-pr)은 `status --json`의 `.intent`를 fallback으로 본다. 자격 증명
   형태는 `intent record`가 기록 시점에 거부하고, 그 이전에 기록된 record나 delegation이
   만든 child intent는 prepare의 materialize가 거부하며 그때는 `intent record`를 고친 뒤 같은
   prepare를 다시 실행한다(child record는 `--intent-class delegated-child`를 유지한다).
-- Orca prepare preflight는 non-empty staged `plan`을 remote issue read와 모든 외부
-  mutation 전에 요구한다. 이미 `plan_path`가 있으면 canonical child worktree 안의
-  regular file이어야 하고 staged bytes와 SHA-256이 정확히 같아야 한다.
 - After the worktree receipt, prepare materializes each artifact as a `0600` file under
   `execution.workspace.artifact_dir`. For an issue-linked cycle, the canonical path is
   `<worktree>/.issueops/issues/<provider-issue-number>/artifact/<name>.md`. Prepare
   rejects a linked issue URL without an issue number, and a record with an empty
-  `artifact_dir` is rejected instead of guessing a sealed path.
-  For a fresh Orca plan, prepare records that path as durable `plan_path` in the same
-  CAS and seals the same SHA-256 in `artifact_manifest.plan` before creating the
-  terminal/Run/task/dispatch. The temporary source may be deleted after successful
-  readback.
+  `artifact_dir` is rejected instead of guessing a sealed path. The temporary source
+  may be deleted after successful readback.
 - prepare 전 잘못 스테이징했으면 `issueops artifact unstage --id ID --name NAME`.
-  Prepare 후 recovery staging은 **Orca + released + holder/pending/completion 없음**의
-  clean generation에서 `--name plan`만 허용한다. 현재 sealed packet은 바뀌지 않으며
-  새 입력은 반드시 `execution replace --reseed`로 다음 generation에 재봉인한 뒤
-  `execution resume`해야 한다.
-- 기존 released cycle에 `plan_path`가 비어 있으면 canonical child worktree에 plan을
-  쓰고 exact `link-plan`을 먼저 실행한 다음 그 동일 파일을 stage한다. Active,
-  claimable, revoking, completed, direct execution과 path identity 교체는 fail-closed다.
 - `execution replace --finalize|--reseed` 재봉인은 staged 원본과 기존 durable
   `plan_path`를 다시 읽어 exact digest identity를 요구한다. Replacement는
   `plan_path`를 새로 만들거나 바꾸지 않으며, immutable artifact writer는 동일
   바이트만 허용한다.
-- Resume은 manifest plan digest, sealed plan file, durable in-worktree `plan_path`를
-  모두 비교한다. 누락/drift는 operation ID, intent, terminal/Run/task/dispatch,
-  lease mutation 전에 `orca_plan_artifact_required`와 replacement-preview action으로
-  끝난다.
 - 이 디렉토리는 gitignore 대상이다 — 보존은 completion 섹션이 담당한다.
 
 ## Cross-Project Cycles
@@ -462,7 +280,7 @@ issueops project-docs-review record --id "$ISSUEOPS_ID"   --verdict updated --do
 - 게이트: `project_docs_review`. verdict는 `updated|no-change`, evidence는 항상
   1개 이상이다. `updated`는 `--doc` 경로가 실제 변경 집합에 있어야 통과하고,
   `no-change`는 `--doc`을 받지 않는다.
-- direct·orca 모드 모두 대상이다. 이후 diff가 바뀌면 `project_docs_review_stale`로
+- 이후 diff가 바뀌면 `project_docs_review_stale`로
   create-pr·strict readiness가 거부한다.
 
 ```bash
@@ -475,7 +293,7 @@ issueops schema-evidence record --id "$ISSUEOPS_ID"   --measurement "orders: 8.4
   `--waive --waiver-rationale "..."`로 근거를 남긴다.
 - 운영 DB에 전수 스캔을 던지지 않는다. 카탈로그 추정 row 수를 쓴다.
 
-## Implementation Review Gate (all execution modes)
+## Implementation Review Gate
 
 사이클의 구현 세션은 publication 전에 planner급 모델 fresh 서브에이전트로
 구현 diff의 design-review 적대 리뷰를 수행하고 결과를 기록해야 한다:
@@ -488,7 +306,7 @@ issueops implementation-review record --id "$ISSUEOPS_ID"   --verdict pass --fin
   이후에만 가능하며, 리뷰가 검토한 변경 집합 fingerprint가 봉인되어 이후 diff가
   바뀌면 `implementation_review_stale`로 create-pr·strict readiness가 거부한다.
 - `reviewer_*`는 감사 기록이다 — 하네스는 모델 자기신고를 검증하지 않는다.
-- execution이 있는 모든 모드가 대상이다. execution이 없는 레코드만 면제다.
+- execution이 있는 레코드가 대상이다. execution이 없는 레코드만 면제다.
   fingerprint를 계산할 수 없는 사이클은 빈 값으로 봉인되고, fingerprint가
   생기는 순간 stale로 잡혀 재기록을 요구한다.
 
@@ -508,15 +326,13 @@ issueops cleanup finish --id "$ISSUEOPS_ID" --apply --confirm --fingerprint "$FP
 - `reflect-completion`이 사람이 쓴 진행 결과(`--body-file`)를 이슈 본문의
   completion 구간(`## 진행 결과`)에 반영한 뒤에만 finish가 통과한다. 최종 head,
   검증 요약, plan·spec은 이슈 본문이 아니라 record와 `.issueops/issues/<n>/`에 있다.
-- finish apply는 워크트리 점유 프로세스·Orca 터미널 종료(`workspace_processes_stop`:
-  fingerprinted handle별 `orca terminal close`(same handle·`ptyKilled=true`) →
-  HUP+TERM → KILL → 최종 점유·터미널 재관측) → orca 워크스페이스
-  회수(force=false) → git worktree 제거 → 로컬 브랜치 CAS 삭제 → 응답에 감사 라인
+- finish apply는 워크트리 점유 프로세스 종료(`workspace_processes_stop`:
+  fingerprinted 프로세스별 HUP+TERM → KILL → 최종 점유 재관측) →
+  git worktree 제거 → 로컬 브랜치 CAS 삭제 → 응답에 감사 라인
   보고(이슈 본문은 쓰지 않음) → **레코드 삭제** 순서로 진행하며, 각 단계는 멱등이고 실패 시 레코드를
   보존한 채 실패 지점을 기록한다. 재실행 전에는 `--preview`로 새 fingerprint를
-  발급받아야 한다(이전 값 무효). preview는 종료될 프로세스(receipt·자손 수)와
-  터미널 handle을 싣고 fingerprint에 결속하며, 요청자 자신이 워크트리를 점유하거나
-  요청자 터미널이 그 워크트리에 매여 있으면 거부한다(#477). abandon도 같은 단계를
+  발급받아야 한다(이전 값 무효). preview는 종료될 프로세스(receipt·자손 수)를 싣고
+  fingerprint에 결속하며, 요청자 자신이 워크트리를 점유하면 거부한다(#477). abandon도 같은 단계를
   워크트리 제거 앞에 둔다.
 - 원격 브랜치는 건드리지 않는다. 다중 사이클 조망과 정리 후보 발견은
   `issueops list --repo "$PWD" --json`을 사용한다.
@@ -526,6 +342,6 @@ issueops cleanup finish --id "$ISSUEOPS_ID" --apply --confirm --fingerprint "$FP
 There is one active execution per record, not one global execution per source
 repository. Fence only the selected exact lifecycle ID, generation, native
 holder, and canonical worktree. Unrelated cycles remain independent. The
-source main worktree remains available before, during, and after either mode
+source main worktree remains available before, during, and after the execution
 for unrelated work, but it must not mutate the selected execution or its
 canonical worktree.

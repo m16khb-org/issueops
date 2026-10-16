@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
 )
 
@@ -28,12 +27,10 @@ func TestExecutionMutationRequiresCurrentLeaseHolderInCanonicalWorktree(t *testi
 		},
 	}
 	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{
-		Mode: issueops.ExecutionModeDirect,
 		Workspace: issueops.Workspace{
-			SourceRoot: source, Root: root, Branch: "69-redesign", BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "2026-07-22T00:00:00Z",
+			SourceRoot: source, Root: root, Branch: "69-redesign", BaseHead: strings.Repeat("a", 40), LinkedAt: "2026-07-22T00:00:00Z",
 		},
-		Lease:     issueops.WriteLease{Generation: 3, Status: issueops.LeaseStatusActive, Holder: &holder, ClaimedAt: "2026-07-22T00:00:01Z"},
-		Selection: selectionFixture(issueops.ExecutionModeDirect),
+		Lease: issueops.WriteLease{Generation: 3, Status: issueops.LeaseStatusActive, Holder: &holder, ClaimedAt: "2026-07-22T00:00:01Z"},
 	}}
 
 	exact := issueops.IssueOpsActor{Host: "codex", SessionID: "session-1", AgentID: "agent-1", CWD: root, NativeProcessAncestry: []issueops.NativeProcessReceipt{*holder.SessionProcess}}
@@ -65,41 +62,13 @@ func TestExecutionMutationAllowsPreExecutionPlanningButFencesNonActiveLease(t *t
 	}
 
 	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{
-		Mode: issueops.ExecutionModeDirect,
 		Workspace: issueops.Workspace{
-			SourceRoot: "/tmp/source", Root: "/tmp/source.worktrees/issue-69", Branch: "69-redesign", BaseHead: strings.Repeat("b", 40), Driver: "git", LinkedAt: "2026-07-22T00:00:00Z",
+			SourceRoot: "/tmp/source", Root: "/tmp/source.worktrees/issue-69", Branch: "69-redesign", BaseHead: strings.Repeat("b", 40), LinkedAt: "2026-07-22T00:00:00Z",
 		},
-		Lease:     issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased, ReleasedAt: "2026-07-22T00:00:01Z"},
-		Selection: selectionFixture(issueops.ExecutionModeDirect),
+		Lease: issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased, ReleasedAt: "2026-07-22T00:00:01Z"},
 	}}
 	actor := issueops.IssueOpsActor{Host: "codex", SessionID: "session-1", CWD: record.Execution.Workspace.Root}
 	if err := validateExecutionMutation(context.Background(), record, &actor, liveTestVerifier()); err == nil {
 		t.Fatal("released lease unexpectedly authorized a mutation")
-	}
-}
-
-func TestReleasedOrcaPlanLinkAllowsOmoCoordinatorInCanonicalWorktree(t *testing.T) {
-	t.Parallel()
-
-	root := filepath.Join(t.TempDir(), "issue.worktree")
-	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{
-		Mode: issueops.ExecutionModeOrca,
-		Workspace: issueops.Workspace{
-			SourceRoot: "/tmp/source", Root: root, Branch: "69-redesign",
-			BaseHead: strings.Repeat("c", 40), Driver: "orca", LinkedAt: "2026-08-12T00:00:00Z",
-		},
-		Lease: issueops.WriteLease{
-			Generation: 1, Status: issueops.LeaseStatusReleased, ReleasedAt: "2026-08-12T00:00:01Z",
-		},
-		Selection: selectionFixture(issueops.ExecutionModeOrca),
-	}}
-	actor := issueops.IssueOpsActor{
-		Host: "omo", SessionID: "omo-session", CWD: root,
-		NativeProcessAncestry: []issueops.NativeProcessReceipt{{
-			PID: 42, StartedAt: "2026-08-12T00:00:00Z", Executable: "omo",
-		}},
-	}
-	if err := cycleapp.NewMutationAuthority(samePath, liveTestVerifier()).ValidatePlanLink(context.Background(), record, &actor); err != nil {
-		t.Fatalf("Omo coordinator must link a released Orca plan: %v", err)
 	}
 }

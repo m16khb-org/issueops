@@ -87,21 +87,16 @@ func finishExecutorFixture(t *testing.T) (FinishExecutor, *finishTestRecords, *f
 		Plan: func(ctx context.Context, _ model.IssueOpsRecord, r model.CleanupFinishRequest) (model.CleanupFinishInventory, model.CleanupFinishResult) {
 			checkContext(ctx)
 			events = append(events, "plan")
-			return model.CleanupFinishInventory{WorktreePresent: true, WorktreeRoot: "/worktree", Branch: "feature", BranchOID: "oid", OrcaWorktreeID: "orca", OrcaRuntimeReady: true}, model.CleanupFinishResult{OK: true, ID: r.ID, Preview: !r.Apply}
+			return model.CleanupFinishInventory{WorktreePresent: true, WorktreeRoot: "/worktree", Branch: "feature", BranchOID: "oid"}, model.CleanupFinishResult{OK: true, ID: r.ID, Preview: !r.Apply, WorkspaceProcesses: []model.CleanupWorkspaceProcess{{PID: 7, Command: "sh"}}}
 		},
 		Fingerprint: func(model.CleanupFinishInventory) (string, error) { return "fingerprint", nil },
 		NewAttempt: func(model.CleanupOperation) (model.IssueOpsCleanupAttempt, error) {
 			return model.IssueOpsCleanupAttempt{Operation: "finish", Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}, nil
 		},
-		Stop: func(ctx context.Context, _ model.CleanupFinishInventory, _ []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, int, error) {
+		Stop: func(ctx context.Context, _ model.CleanupFinishInventory, _ []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, error) {
 			checkContext(ctx)
 			events = append(events, "stop")
-			return nil, 0, nil
-		},
-		RemoveOrca: func(ctx context.Context, _ string) error {
-			checkContext(ctx)
-			events = append(events, "orca")
-			return nil
+			return nil, nil
 		},
 		Directory: func(string) (bool, error) { events = append(events, "directory"); return true, nil },
 		Git: func(ctx context.Context, _ string, args ...string) (int, string) {
@@ -123,7 +118,7 @@ func TestFinishExecutorOrdersBoundEffectsAndDrainsBeforeDelete(t *testing.T) {
 	if err != nil || !result.RecordDeleted || result.Audit == "" {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
-	want := []string{"acquire", "load", "observe", "plan", "arm", "check", "stop", "check", "orca", "directory", "check", "worktree remove /worktree", "check", "update-ref -d refs/heads/feature oid", "drain", "delete", "close"}
+	want := []string{"acquire", "load", "observe", "plan", "arm", "check", "stop", "check", "worktree remove /worktree", "check", "update-ref -d refs/heads/feature oid", "drain", "delete", "close"}
 	if !reflect.DeepEqual(*events, want) {
 		t.Fatalf("events=%v want=%v", *events, want)
 	}
@@ -136,7 +131,7 @@ func TestFinishExecutorRejectsDriftBeforeDestructiveEffects(t *testing.T) {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
 	for _, event := range *events {
-		if event == "stop" || event == "orca" || event == "delete" {
+		if event == "stop" || event == "delete" {
 			t.Fatalf("effect after stale observation: %v", *events)
 		}
 	}
@@ -163,13 +158,13 @@ func TestFinishExecutorPreviewDoesNotArm(t *testing.T) {
 	}
 }
 
-func TestFinishExecutorCancellationStillDrainsAndRecordsFailure(t *testing.T) {
+func TestFinishRunCancellationStillDrainsAndRecordsFailure(t *testing.T) {
 	executor, records, _, _ := finishExecutorFixture(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	executor.Stop = func(context.Context, model.CleanupFinishInventory, []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, int, error) {
+	executor.Stop = func(context.Context, model.CleanupFinishInventory, []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, error) {
 		cancel()
-		return nil, 0, ctx.Err()
+		return nil, ctx.Err()
 	}
 	persistenceFailure := errors.New("receipt persistence failed")
 	records.failErr = persistenceFailure

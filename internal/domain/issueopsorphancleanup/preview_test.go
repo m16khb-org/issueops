@@ -97,9 +97,6 @@ func TestInspectInventoryReportsEachUnmetRequirement(t *testing.T) {
 		"target_lease_authority": func(s *corehealth.Snapshot) {
 			s.LeaseHolderIndexes = []operationalhealthcontract.LeaseHolderIndex{{LifecycleID: "io-orphan"}}
 		},
-		"orca_worktree_authority": func(s *corehealth.Snapshot) {
-			s.OrcaWorktrees = []operationalhealthcontract.OrcaWorktree{{Path: "/wt/orphan"}}
-		},
 	} {
 		t.Run(want, func(t *testing.T) {
 			request, snapshot := orphanRequest(), orphanSnapshot()

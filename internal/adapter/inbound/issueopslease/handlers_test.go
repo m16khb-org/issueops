@@ -3,7 +3,6 @@ package issueopslease
 import (
 	"context"
 	"errors"
-	ownerdomain "issueops/internal/domain/issueops"
 	"strings"
 	"testing"
 
@@ -15,14 +14,9 @@ import (
 func TestNilHandlersFailClosedWithConfiguredErrors(t *testing.T) {
 	ctx := context.Background()
 
-	_, claimErr := NewClaimHandler(nil)(ctx, "", issueopscontract.ExecutionClaimRequest{ID: "io-1"}, issueopscontract.ExecutionClaimDependencies{})
+	_, claimErr := NewClaimHandler(nil)(ctx, "", issueopscontract.ExecutionClaimRequest{ID: "io-1"})
 	if !errors.Is(claimErr, issueopscontract.ErrClaimHandlerUnavailable) {
 		t.Fatalf("claim handler err = %v, want ErrClaimHandlerUnavailable", claimErr)
-	}
-
-	_, resumeErr := NewResumeHandler(nil, nil)(ctx, "", issueopscontract.ExecutionResumeRequest{ID: "io-1"})
-	if !errors.Is(resumeErr, issueopscontract.ErrResumeHandlerUnavailable) {
-		t.Fatalf("resume handler err = %v, want ErrResumeHandlerUnavailable", resumeErr)
 	}
 
 	_, reseedErr := NewReseedHandler(nil, nil)(ctx, "", issueopscontract.ExecutionReseedRequest{ID: "io-1"})
@@ -60,7 +54,7 @@ func TestPublicClaimErrorMapsDenialsToStableMessages(t *testing.T) {
 	}
 }
 
-func TestPublicReseedAndResumeErrorsUnwrapDenials(t *testing.T) {
+func TestPublicReseedErrorUnwrapsDenials(t *testing.T) {
 	cause := errors.New("generation moved")
 
 	reseeded := publicReseedError(leasedomain.Deny(leasedomain.DenyCanonicalCWD, cause))
@@ -74,14 +68,6 @@ func TestPublicReseedAndResumeErrorsUnwrapDenials(t *testing.T) {
 	plain := errors.New("boom")
 	if mapped := publicReseedError(plain); !errors.Is(mapped, plain) {
 		t.Fatalf("reseed plain error must pass through: %v", mapped)
-	}
-
-	resumed := publicResumeError(leasedomain.Deny(leasedomain.DenyClaimToken, cause))
-	if !errors.Is(resumed, cause) {
-		t.Fatalf("resume denial unwrap lost cause: %v", resumed)
-	}
-	if mapped := publicResumeError(plain); !errors.Is(mapped, plain) {
-		t.Fatalf("resume plain error must pass through: %v", mapped)
 	}
 }
 
@@ -116,44 +102,18 @@ func TestToCoreLeaseCopiesHolderAndProcessSafely(t *testing.T) {
 	}
 }
 
-func TestResumeNextCommandReferencesCycleAndArtifacts(t *testing.T) {
-	command := (ResumeHandler{nextCommand: ownerdomain.OwnerResumeNextCommand}).resumeNextCommand("io-12", 4, leasecontract.ResumeArtifacts{
-		ClaimTokenPath:      "/state/io-12/token",
-		IssueBodySHA256:     "abc",
-		ContextPacketSHA256: "def",
-	})
-	if command == "" || !strings.Contains(command, "io-12") || !strings.Contains(command, "abc") {
-		t.Fatalf("resume next command incomplete: %q", command)
-	}
-}
-
 func TestHandlersFailClosedWhenOnlyServiceIsMissing(t *testing.T) {
 	ctx := context.Background()
 
-	_, resumeErr := NewResumeHandler(nil, func(string, uint64, string, string, string) string { return "next" })(ctx, "", issueopscontract.ExecutionResumeRequest{ID: "io-1"})
-	if !errors.Is(resumeErr, issueopscontract.ErrResumeHandlerUnavailable) {
-		t.Fatalf("resume handler err = %v, want ErrResumeHandlerUnavailable", resumeErr)
-	}
-
-	_, reseedErr := NewReseedHandler(nil, func(string, uint64, string, string) string { return "next" })(ctx, "", issueopscontract.ExecutionReseedRequest{ID: "io-1"})
+	_, reseedErr := NewReseedHandler(nil, func(string, uint64) string { return "next" })(ctx, "", issueopscontract.ExecutionReseedRequest{ID: "io-1"})
 	if !errors.Is(reseedErr, issueopscontract.ErrReseedHandlerUnavailable) {
 		t.Fatalf("reseed handler err = %v, want ErrReseedHandlerUnavailable", reseedErr)
 	}
 }
 
-func TestPublicResumeAndReseedErrorsReturnDenialCauseItself(t *testing.T) {
+func TestPublicReseedErrorReturnsDenialCauseItself(t *testing.T) {
 	cause := errors.New("generation moved")
-	if mapped := publicResumeError(leasedomain.Deny(leasedomain.DenyClaimToken, cause)); mapped != cause {
-		t.Fatalf("resume denial must surface its bare cause, got %v", mapped)
-	}
 	if mapped := publicReseedError(leasedomain.Deny(leasedomain.DenyClaimToken, cause)); mapped != cause {
 		t.Fatalf("reseed denial must surface its bare cause, got %v", mapped)
-	}
-}
-
-func TestPublicResumeErrorKeepsCauselessDenial(t *testing.T) {
-	denial := leasedomain.Deny(leasedomain.DenyClaimToken, nil)
-	if mapped := publicResumeError(denial); mapped != denial {
-		t.Fatalf("causeless denial must not be swallowed, got %v", mapped)
 	}
 }

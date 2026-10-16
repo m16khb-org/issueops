@@ -7,22 +7,21 @@ description: Cautions for IssueOps execution liveness, v1 fence identity, lease 
 
 Family index: [CAUTIONS.md](../CAUTIONS.md). Evergreen hazards for the worktree
 guard/execution-liveness v1 fence, operational-health diagnosis versus cleanup
-authority, lease-to-lifecycle-phase promotion, atomic-skill Python gates, and
-exact-reader immutability. Orca supervised-handoff operations live in
-[issueops-orchestration.md](issueops-orchestration.md); branches, worktree
-guards, and readiness gates live in
+authority, lease-to-lifecycle-phase promotion, atomic-skill Python gates,
+exact-reader immutability, ownership-schema additions, and source-main-worktree
+fencing. Branches, worktree guards, and readiness gates live in
 [issueops-lifecycle.md](issueops-lifecycle.md).
 
 ## 21. Worktree guard and execution liveness must use the same v1 fence
 
 A guard that checks only branch or path can deadlock an absent holder or admit a
 stale one. All readers must agree on the exact lifecycle ID, generation, native
-process receipt, canonical worktree, and mode-specific resource identity.
+process receipt, and canonical worktree.
 
 주의:
 - A block message must name one command that the current state actually allows. Start with `issueops execution status`; use its rendered claim, reconciliation, or replacement command rather than inventing an override.
-- A missing directory, old timestamp, stable diff, or absent terminal row is not lease-release evidence. Replacement requires expected generation plus preview inventory and quiescence fingerprints.
-- Hooks may read bounded state and reject a mismatched mutation, but must not call Git, provider, or Orca mutators, revoke a lease, or delete a worktree.
+- A missing directory, old timestamp, stable diff, or absent process is not lease-release evidence. Replacement requires expected generation plus preview inventory and quiescence fingerprints.
+- Hooks may read bounded state and reject a mismatched mutation, but must not call Git or provider mutators, revoke a lease, or delete a worktree.
 - One active execution exists per record, not per repository. Exact-ID selection must not capture an unrelated parallel cycle or make the source main worktree read-only.
 - Completion is generation-fenced and requires phase `pr` plus verified remote evidence. Never force a non-PR cycle to `done` as a recovery shortcut.
 
@@ -31,24 +30,12 @@ process receipt, canonical worktree, and mode-specific resource identity.
 Cross-system residue must not acquire a second truth source in stale scan, status, or the stability script.
 
 주의:
-- `issueops doctor` is the sole public operational-health gate. `--preserve-cycle` and `--preserve-terminal` are exact, invocation-only inputs; never persist them as exemptions.
-- A generic binding proves neither authority nor liveness. An active generation without a complete native process receipt, canonical worktree, and mode-specific identity is unhealthy even when other resource IDs match.
+- `issueops doctor` is the sole public operational-health gate. `--preserve-cycle` is an exact, invocation-only input; never persist it as an exemption.
+- A generic binding proves neither authority nor liveness. An active generation without a complete native process receipt and canonical worktree is unhealthy even when other resource IDs match.
 - Time is diagnostic only. Age never interrupts a holder, deletes a resource, or authorizes replacement; expected generation, exact inventory, and quiescence proof are required.
-- Orca absence is optional only when no durable cycle claims Orca resources. Never turn a missing or incomplete Orca inventory into an empty healthy list.
-- One-time global cleanup evidence lives in an external `0700` recovery bundle. Git/SQLite copies can be restore-tested, but Orca snapshot is archival-only: the public CLI has no conditional reset/import/restore and a last-moment external actor race remains. Stop on pre-reset digest drift; after reset, continue idempotently from the append-only journal instead of guessing rollback.
 - A destructive IssueOps replacement must not rely on a runner-side observation followed by an unfenced write: record and process state can change in that gap. Use expected generation plus inventory/quiescence fingerprint CAS and journal the locked before/after proof.
-- Replacement의 최초 `--preview`는 현재 generation을 찾는 읽기이므로 세대를 생략할 수 있지만, 이후 revoke/finalize/reseed는 preview가 돌려준 exact generation CAS를 요구한다. Orca finalize/reseed는 새 token을 만든 뒤 owner packet/prompt 재봉인까지 성공해야 durable claimable 상태를 기록한다. 실패하면 이전 durable 상태를 보존하고 아직 권한 없는 target generation의 token/packet/prompt residue를 정리하며, 다음 재시도도 같은 exact harness-owned 경로를 먼저 회수한다. GitLab MCP snapshot은 이 재봉인이 실제로 읽는 `replace --finalize|--reseed`에만 전달한다.
+- Replacement의 최초 `--preview`는 현재 generation을 찾는 읽기이므로 세대를 생략할 수 있지만, 이후 revoke/finalize/reseed는 preview가 돌려준 exact generation CAS를 요구한다.
 - A sealed cleanup must also seal its authorities: invoke a bundle-private clean-HEAD executor by hash/VCS revision, override live state/root/daemon/worker environment paths, require singleton equal fetch/push authorities, and push to the sealed explicit URL. Fetch/prune readiness, mutation, and readback must share that URL plus a heads-only refspec, `--no-tags`, and `--no-write-fetch-head`; never reopen mutable `origin` refspec/tag authority. Ignored `bin/issueops`, inherited environment, and mutable remote names are not execution evidence.
-
-## execution owner에게 lease 명령만 주고 lifecycle phase 전이를 추론시키지 말 것
-
-Orca owner가 active lease를 정상 claim하고 구현·대상 검증까지 마쳤지만 lifecycle은 `problem`에 남아 있었다. 기존 sealed prompt가 `link-plan`, `phase --to implement`, `ai-slop-clean record`, `phase --to ai-slop-clean`, `phase --to pr`의 순서와 exact command를 제공하지 않았기 때문이다. cleanup evidence만 기록해도 phase와 fingerprint는 자동으로 전이되지 않으므로 implementation review가 `implement phase` 이전이라고 거부했다.
-
-- sealed owner packet은 plan 연결부터 PR phase까지 필요한 lifecycle mutation을 exact command로 렌더하고 command catalog로 검증한다.
-- staged plan과 기존 `plan_path`가 모두 없으면 임의 계획이나 phase jump로 우회하지 않고 blocker를 보고한다. `link-plan`은 같은 canonical path만 멱등 허용하며 다른 path로의 교체는 fail-closed한다.
-- 구현 수정은 `phase=implement` readback 뒤에 시작하고, cleanup evidence 기록 뒤 `ai-slop-clean` 전이로 fingerprint를 봉인한다.
-- implementation review는 실제 `pass|revise|stop` verdict를 기록한다. `revise`는 수정·재검증·fresh 리뷰를 반복하고 `stop`은 publication을 중단한다. 리뷰 뒤 diff를 바꾸면 cleanup/review fingerprint를 다시 기록한다. clean/synced push 뒤 `phase=pr`을 통과한 다음에만 governed PR/MR 생성 명령을 실행한다.
-- 최신 사용자 지시가 전체 테스트를 제한하면 sealed issue의 오래된 full 명령을 강행하지 않고 targeted 검증과 생략 근거를 verification report에 남긴다.
 
 ## active lease에서 atomic 스킬의 Python gate를 일반 관찰로 열지 말 것
 
@@ -87,3 +74,17 @@ Shannon 측정 중 `rg -c`와 `issueops state read --key ...`가 active lease에
 - tracked와 untracked 변경을 이름 있는 `git stash push --include-untracked`로 보존하고 stash SHA를 기록한 뒤 fast-forward한다.
 - `git stash apply`를 사용해 복구 지점을 유지한 채 변경을 재적용하고, conflict marker·diff·focused/full tests와 두 번째 `git pull --ff-only`를 확인한 뒤에만 stash를 제거한다.
 - dirty `main`을 맞추기 위해 `reset --hard`, `clean`, 사용자 변경 폐기, 임시 worktree branch 삭제를 사용하지 않는다.
+
+## IssueOps ownership 필드를 root schema bump 없이 추가하지 말 것
+
+`execution_handoff`처럼 mutation authority를 소유하는 필드를 기존 root schema에 additive `omitempty`로만 추가하면, 그 필드를 모르는 이전 binary가 unknown JSON을 버린 뒤 같은 schema로 rewrite할 수 있다. 이 사건 당시 legacy root의 schema는 8이었다. 현재 IssueOps는 dedicated v1 namespace의 schema 1만 읽고 쓰며 legacy/future rows를 migration 없이 fail-closed한다. 호환 decoder, re-attestation, background conversion을 추가하지 않는다.
+
+- 새 ownership/security 필드는 root schema compatibility를 명시적으로 검토하고 removed-shape rejection fixture를 둔다.
+- future schema hook scan은 row 전체를 해석하지 않고 bounded repo/worker identity와 invalid marker만 유지해 mutation을 fail-closed한다.
+- CLI, MCP service, Codex, Claude installed binary가 같은 schema를 읽는지 cutover smoke로 확인하기 전에는 mixed-version execution을 시작하지 않는다.
+
+## source main worktree를 supervised fence로 막지 말 것
+
+- Current ownership contract는 workspace provisioning before ownership transfer를 보장한다. source main worktree remains available before, during, and after handoff; generic session binding과 mirrored relative path는 authority가 아니다.
+- Fence는 canonical worker root, exact cycle ID, native owner만 선택한다. Removed handoff record shapes are rejected rather than converted.
+- Record 선택에 `SourceRoot`, source `cwd`, generic repo root를 다시 넣지 않는다. 명시적 canonical target이 있거나 command cwd 자체가 canonical root일 때만 cycle write lease를 적용한다. Codex hook의 top-level cwd는 effective `exec_command.workdir`가 아니므로 explicit canonical file target은 holder/lease/containment가 맞으면 source session cwd에서도 허용한다.

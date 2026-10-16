@@ -8,7 +8,7 @@ func TestParseExactIssueOpsDesignReview(t *testing.T) {
 		" --alternative one --alternative two --risk risk-one --risk risk-two" +
 		" --verification check-one --verification check-two --open-question question-one --open-question question-two" +
 		" --host codex --session-id session-1 --agent-id agent-1 --cwd /repo --approved --json"
-	command, ok := ParseExactIssueOpsCommand(commandText)
+	command, ok := parseExactForTest(commandText)
 	if !ok || command.Path != "design review" {
 		t.Fatalf("design review did not parse as an exact two-word command: %#v ok=%v", command, ok)
 	}
@@ -38,12 +38,12 @@ func TestParseExactIssueOpsDesignReview(t *testing.T) {
 		t.Fatalf("boolean flags were not preserved: %#v", flags)
 	}
 
-	unknown, _ := ParseExactIssueOpsCommand(commandText + " --unknown value")
+	unknown, _ := parseExactForTest(commandText + " --unknown value")
 	if got, accepted := ExactFlags(unknown, values, booleans, repeatable); accepted || got != nil {
 		t.Fatalf("unknown design review flag was accepted: %#v", got)
 	}
 
-	nearMiss, parsed := ParseExactIssueOpsCommand("issueops design approve --id io-1")
+	nearMiss, parsed := parseExactForTest("issueops design approve --id io-1")
 	if parsed {
 		if _, _, _, accepted := IssueOpsCommandSpec(nearMiss.Path); accepted {
 			t.Fatalf("malformed design path was classified: %#v", nearMiss)

@@ -13,9 +13,6 @@ func ValidateExecution(execution issueopscontract.Execution) error {
 	if err := validateExecutionCore(execution); err != nil {
 		return err
 	}
-	if err := validateExecutionOrcaBinding(execution); err != nil {
-		return err
-	}
 	if err := validateExecutionPending(execution.Pending); err != nil {
 		return err
 	}
@@ -41,38 +38,10 @@ func ValidateExecution(execution issueopscontract.Execution) error {
 }
 
 func validateExecutionCore(execution issueopscontract.Execution) error {
-	if execution.Mode != issueopscontract.ExecutionModeDirect && execution.Mode != issueopscontract.ExecutionModeOrca {
-		return fmt.Errorf("execution mode must be direct or orca")
-	}
-	if err := validateWorkspace(execution.Workspace, execution.Mode); err != nil {
+	if err := validateWorkspace(execution.Workspace); err != nil {
 		return err
 	}
-	if err := validateWriteLease(execution.Lease); err != nil {
-		return err
-	}
-	if execution.Selection == nil {
-		return fmt.Errorf("execution selection receipt is required")
-	}
-	return validateExecutionSelection(*execution.Selection, execution.Mode)
-}
-
-func validateExecutionOrcaBinding(execution issueopscontract.Execution) error {
-	if execution.Mode == issueopscontract.ExecutionModeDirect && execution.Orca != nil {
-		return fmt.Errorf("direct execution must not contain an Orca binding")
-	}
-	if execution.Orca == nil {
-		return nil
-	}
-	if err := validateOrcaBinding(*execution.Orca); err != nil {
-		return err
-	}
-	if execution.Orca.LeaseGeneration == 0 {
-		return fmt.Errorf("Orca binding lease_generation is required")
-	}
-	if execution.Orca.LeaseGeneration > execution.Lease.Generation {
-		return fmt.Errorf("Orca binding lease_generation exceeds the lease generation")
-	}
-	return nil
+	return validateWriteLease(execution.Lease)
 }
 
 func validateExecutionPending(pending *issueopscontract.ExternalIntent) error {
@@ -156,81 +125,6 @@ func validateExecutionCompletion(completion issueopscontract.ExecutionCompletion
 	return nil
 }
 
-func validateExecutionSelection(selection issueopscontract.ExecutionSelection, mode issueopscontract.ExecutionMode) error {
-	if err := validateSelectionProbeShape(selection, mode); err != nil {
-		return err
-	}
-	if err := validateSelectionModeFallback(selection, mode); err != nil {
-		return err
-	}
-	if err := validateSelectionExplicitDirect(selection); err != nil {
-		return err
-	}
-	if !validSHA256(selection.ReadinessFingerprint) || strings.TrimSpace(selection.SelectedAt) == "" {
-		return fmt.Errorf("selection receipt requires fingerprint and selected_at")
-	}
-	return nil
-}
-
-func validateSelectionProbeShape(selection issueopscontract.ExecutionSelection, mode issueopscontract.ExecutionMode) error {
-	if selection.RequestedMode != "auto" && selection.RequestedMode != "direct" && selection.RequestedMode != "orca" {
-		return fmt.Errorf("selection requested_mode must be auto, direct, or orca")
-	}
-	if selection.ResolvedMode != string(mode) {
-		return fmt.Errorf("selection resolved_mode must equal execution mode")
-	}
-	if selection.ProbeAvailable && !selection.ProbeAttempted {
-		return fmt.Errorf("selection probe_available requires probe_attempted")
-	}
-	if selection.ProbeReady && !selection.ProbeAvailable {
-		return fmt.Errorf("selection probe_ready requires probe_available")
-	}
-	if !selection.ProbeAttempted && strings.TrimSpace(selection.ProbeCode) != "" {
-		return fmt.Errorf("unattempted selection probe must not contain probe_code")
-	}
-	if selection.RequestedMode != "direct" && !selection.ProbeAttempted {
-		return fmt.Errorf("auto and Orca selections require a readiness probe")
-	}
-	return nil
-}
-
-func validateSelectionModeFallback(selection issueopscontract.ExecutionSelection, mode issueopscontract.ExecutionMode) error {
-	if (selection.RequestedMode == "direct" && mode != issueopscontract.ExecutionModeDirect) ||
-		(selection.RequestedMode == "orca" && mode != issueopscontract.ExecutionModeOrca) {
-		return fmt.Errorf("explicit selection mode must equal execution mode")
-	}
-	if mode == issueopscontract.ExecutionModeOrca && !selection.ProbeReady {
-		return fmt.Errorf("Orca selection requires a ready probe")
-	}
-	if selection.RequestedMode == "auto" && mode == issueopscontract.ExecutionModeDirect {
-		probeCode := strings.TrimSpace(selection.ProbeCode)
-		fallbackCode := strings.TrimSpace(selection.FallbackCode)
-		if selection.ProbeReady || fallbackCode == "" || fallbackCode != probeCode || fallbackCode != selection.FallbackCode {
-			return fmt.Errorf("auto direct selection requires the exact probe failure fallback_code")
-		}
-	}
-	if mode == issueopscontract.ExecutionModeOrca && strings.TrimSpace(selection.FallbackCode) != "" {
-		return fmt.Errorf("Orca selection must not contain fallback_code")
-	}
-	return nil
-}
-
-func validateSelectionExplicitDirect(selection issueopscontract.ExecutionSelection) error {
-	if selection.RequestedMode != "direct" {
-		if strings.TrimSpace(selection.ExplicitDirectReason) != "" {
-			return fmt.Errorf("non-direct selection must not contain explicit_direct_reason")
-		}
-		return nil
-	}
-	if selection.ProbeAttempted || strings.TrimSpace(selection.ExplicitDirectReason) == "" {
-		return fmt.Errorf("explicit direct selection requires a reason and no probe")
-	}
-	if selection.FallbackCode != "" {
-		return fmt.Errorf("explicit direct selection must not contain fallback_code")
-	}
-	return nil
-}
-
 func validateExecutionSyncBaseEvent(event issueopscontract.ExecutionSyncBaseEvent) error {
 	if event.Mode != issueopscontract.ExecutionSyncBaseEventApply && event.Mode != issueopscontract.ExecutionSyncBaseEventFinalize {
 		return fmt.Errorf("execution sync-base event mode must be apply or finalize")
@@ -247,13 +141,12 @@ func validateExecutionSyncBaseEvent(event issueopscontract.ExecutionSyncBaseEven
 	return nil
 }
 
-func validateWorkspace(workspace issueopscontract.Workspace, mode issueopscontract.ExecutionMode) error {
+func validateWorkspace(workspace issueopscontract.Workspace) error {
 	for _, field := range []struct{ name, value string }{
 		{"source_root", workspace.SourceRoot},
 		{"root", workspace.Root},
 		{"branch", workspace.Branch},
 		{"base_head", workspace.BaseHead},
-		{"driver", workspace.Driver},
 		{"linked_at", workspace.LinkedAt},
 	} {
 		if strings.TrimSpace(field.value) == "" {
@@ -262,12 +155,6 @@ func validateWorkspace(workspace issueopscontract.Workspace, mode issueopscontra
 	}
 	if workspace.SourceRoot == workspace.Root {
 		return fmt.Errorf("canonical worktree must be isolated from source_root")
-	}
-	if mode == issueopscontract.ExecutionModeDirect && workspace.Driver != "git" {
-		return fmt.Errorf("direct execution workspace driver must be git")
-	}
-	if mode == issueopscontract.ExecutionModeOrca && workspace.Driver != "orca" {
-		return fmt.Errorf("Orca execution workspace driver must be orca")
 	}
 	return nil
 }
@@ -298,40 +185,6 @@ func validateWriteLease(lease issueopscontract.WriteLease) error {
 		}
 	default:
 		return fmt.Errorf("unsupported lease status %q", lease.Status)
-	}
-	return nil
-}
-
-func validateOrcaBinding(binding issueopscontract.OrcaBinding) error {
-	for _, field := range []struct{ name, value string }{
-		{"runtime_id", binding.RuntimeID},
-		{"repo_id", binding.RepoID},
-		{"worktree_id", binding.WorktreeID},
-		{"owner_host", binding.OwnerHost},
-		{"owner_model", binding.OwnerModel},
-		{"task_id", binding.TaskID},
-		{"dispatch_id", binding.DispatchID},
-	} {
-		if strings.TrimSpace(field.value) == "" {
-			return fmt.Errorf("Orca binding %s is required", field.name)
-		}
-	}
-	if binding.OwnerHost != "codex" && binding.OwnerHost != "claude" && binding.OwnerHost != "omo" && binding.OwnerHost != "omp" {
-		return fmt.Errorf("Orca owner_host must be codex, claude, omo, or omp")
-	}
-	if binding.RunID == "" || binding.RunID != strings.TrimSpace(binding.RunID) || len(binding.RunID) > 1024 {
-		return fmt.Errorf("Orca binding run_id must be one canonical explicit Run identity")
-	}
-	if binding.ArtifactIdentityVersion != issueopscontract.OrcaArtifactIdentityVersion {
-		return fmt.Errorf("unsupported Orca artifact identity version %d", binding.ArtifactIdentityVersion)
-	}
-	for _, digest := range []string{binding.IssueBodySHA256, binding.ContextPacketSHA256, binding.OwnerPromptSHA256} {
-		if digest == "" {
-			return fmt.Errorf("Orca binding artifact identity version requires a complete sealed artifact identity")
-		}
-		if !validSHA256(digest) {
-			return fmt.Errorf("Orca binding sealed artifact identity must contain SHA-256 digests")
-		}
 	}
 	return nil
 }

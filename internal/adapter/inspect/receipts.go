@@ -420,8 +420,8 @@ func (scan *artifactScan) consumeOmoTransport(event map[string]any) {
 	}
 	_, hasDocs := event["docs"].(float64)
 	isError, _ := event["is_error"].(bool)
-	isErrorCamel, _ := event["isError"].(bool)
-	if !ok || isError || isErrorCamel {
+	isCamelCaseError, _ := event["isError"].(bool)
+	if !ok || isError || isCamelCaseError {
 		if hasDocs {
 			scan.facts.docsFailed = true
 		}

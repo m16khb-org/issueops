@@ -30,7 +30,7 @@ func TestOwnerArtifactDirectoryIsInvisibleToGitStatus(t *testing.T) {
 	repo := initIssueOpsRepo(t)
 	artifactDir := filepath.Join(repo, ".issueops", "issues", "1", "artifact")
 
-	if err := writeExecutionOwnerArtifact(repo, filepath.Join(artifactDir, "plan.md"), []byte(planBodyForTest())); err != nil {
+	if err := writeSealedArtifact(repo, filepath.Join(artifactDir, "plan.md"), []byte(planBodyForTest())); err != nil {
 		t.Fatalf("write owner artifact: %v", err)
 	}
 

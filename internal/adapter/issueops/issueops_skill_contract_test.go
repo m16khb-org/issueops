@@ -26,7 +26,7 @@ func TestIssueOpsSkillKeepsCoreWorkflowContract(t *testing.T) {
 	stages := map[string]string{
 		"issueops intent record": readIssueOpsContractFile(t, "skills", "issueops-create-issue", "SKILL.md"),
 		"issueops design review": readIssueOpsContractFile(t, "skills", "issueops-plan", "SKILL.md"),
-		"issueops execution prepare --id \"$ISSUEOPS_ID\" --mode direct": readIssueOpsContractFile(t, "skills", "issueops-plan", "SKILL.md"),
+		"issueops execution prepare --id \"$ISSUEOPS_ID\" $ACTOR_FLAGS --json": readIssueOpsContractFile(t, "skills", "issueops-plan", "SKILL.md"),
 	}
 	for want, document := range stages {
 		if !strings.Contains(document, want) {
@@ -51,13 +51,11 @@ func TestIssueOpsExecutionDocumentationHasOneCurrentContract(t *testing.T) {
 	all := joinIssueOpsContractDocuments(documents)
 	for _, want := range []string{
 		"one `Execution`", "canonical worktree", "exact lifecycle ID",
-		"source main worktree remains available", "direct", "orca",
-		"issueops execution prepare", "--mode auto", "issueops execution status",
-		"issueops execution claim", "--claim-current-token", "--issue-body-sha256",
-		"--context-packet-sha256", "issueops execution release",
-		"issueops execution replace", "issueops execution reconcile",
-		"issueops execution complete", "requested_mode", "resolved_mode",
-		"readiness fingerprint",
+		"source main worktree remains available",
+		"issueops execution prepare", "--confirm", "issueops execution status",
+		"issueops execution claim", "--claim-current-token",
+		"issueops execution release", "issueops execution replace", "--preview",
+		"--reseed", "issueops execution reconcile", "issueops execution complete",
 	} {
 		if !strings.Contains(all, want) {
 			t.Fatalf("current execution v1 contract missing %q", want)
@@ -70,32 +68,28 @@ func TestIssueOpsExecutionDocumentationHasOneCurrentContract(t *testing.T) {
 			}
 		}
 	}
-	if count := strings.Count(documents["execution"], "issueops execution prepare \\"); count != 1 {
-		t.Fatalf("execution reference must show one preview command and delegate confirm to next_command, count=%d", count)
+	if count := strings.Count(documents["execution"], "issueops execution prepare --id"); count != 2 {
+		t.Fatalf("execution reference must show exactly the preview and confirm prepare commands, count=%d", count)
+	}
+	if count := strings.Count(documents["execution"], "issueops execution prepare --id \"$ISSUEOPS_ID\" $ACTOR_FLAGS --confirm --json"); count != 1 {
+		t.Fatalf("execution reference must show one confirm command, count=%d", count)
 	}
 }
 
-func TestIssueOpsDocumentationPreservesGitHubOrcaBranchOrdering(t *testing.T) {
+func TestIssueOpsDocumentationPreservesGitHubBranchOrdering(t *testing.T) {
 	t.Parallel()
 
 	operationsIndex := readIssueOpsContractFile(t, ".issueops", "OPERATIONS.md")
 	if !strings.Contains(operationsIndex, "operations/guides/issueops-providers.md") {
 		t.Fatal("OPERATIONS.md must route provider ordering to operations/guides/issueops-providers.md")
 	}
-	// 순서 문자열의 소유자는 둘이다: 실행 계약 레퍼런스와 provider 운영 가이드.
-	// 단계 스킬은 그 둘을 링크하고 순서를 복사하지 않는다.
-	documents := map[string]string{
-		"execution":  readIssueOpsContractFile(t, "skills", "issueops", "references", "execution.md"),
-		"operations": readIssueOpsContractFile(t, ".issueops", "operations", "guides", "issueops-providers.md"),
+	providers := readIssueOpsContractFile(t, ".issueops", "operations", "guides", "issueops-providers.md")
+	const want = "`branch prepare` (base SHA only) → GraphQL `createLinkedBranch` with `oid=sealed base SHA` → `branch prepare --link-verified`"
+	if !strings.Contains(providers, want) {
+		t.Errorf("provider guide missing GitHub branch ordering %q", want)
 	}
-	const want = "`branch prepare` (base SHA only) → `artifact stage --name plan` → `execution prepare --mode orca` → GraphQL `createLinkedBranch` with `oid=sealed base SHA` → `branch prepare --link-verified`"
-	for name, document := range documents {
-		if !strings.Contains(document, want) {
-			t.Errorf("%s missing GitHub Orca branch ordering %q", name, want)
-		}
-		if strings.Contains(document, "gh issue develop --name") {
-			t.Errorf("%s reintroduces the superseded GitHub Orca branch creation command", name)
-		}
+	if strings.Contains(providers, "gh issue develop --name") {
+		t.Error("provider guide reintroduces the superseded GitHub branch creation command")
 	}
 }
 
@@ -132,7 +126,7 @@ func TestIssueOpsHandoffDocsRouteToDrainAndFreshnessModel(t *testing.T) {
 		"대기 중인 writer가 0",
 		"인계 자료 digest",
 		"stale하거나 누락된 근거는 필요한 범위만 다시 확인",
-		"독립 direct claim",
+		"독립 claim",
 	} {
 		if !strings.Contains(all, want) {
 			t.Fatalf("handoff routing/freshness contract missing %q", want)
@@ -152,8 +146,7 @@ func TestIssueOpsHandoffRoutesEveryNewSessionThroughProductionObservation(t *tes
 
 	sessionChoice := strings.Join(strings.Fields(strings.ToLower(readIssueOpsContractFile(t, "skills", "issueops", "references", "session-choice.md"))), " ")
 	for _, want := range []string{
-		"prepare·resume·reconcile에 연결된 production observer",
-		"direct execution의 raw orca 전송은 아래 `trace handoff-delivery` producer",
+		"herdr를 호출할 때는 `issueops trace handoff-delivery`를 공통 producer로 사용한다",
 		"herdr 전송도 아래 `trace handoff-delivery` producer",
 		"issueops trace handoff-delivery --input",
 		"retry, claim, status를 바꾸지 않는다",
@@ -181,28 +174,51 @@ func TestIssueOpsHandoffPrefersHerdrInsideHerdrSession(t *testing.T) {
 	for _, want := range []string{
 		"`herdr_env=1`",
 		"`herdr_socket_path`",
-		"orca가 ready여도 herdr를 먼저 확인",
 		"env는 먼저 확인할 런처만 정한다",
-		"herdr 세션에서 herdr가 사용 불가임이 확인됐으면",
+		"herdr 세션이 아니거나 herdr가 사용 불가임이 확인됐으면",
 	} {
 		if !strings.Contains(sessionChoice, want) {
 			t.Fatalf("Herdr session preference contract missing %q", want)
 		}
 	}
-	preference := strings.Index(sessionChoice, "orca가 ready여도 herdr를 먼저 확인")
-	orcaProbe := strings.Index(sessionChoice, "`orca status --json`")
-	if orcaProbe < 0 || preference > orcaProbe {
-		t.Fatalf("Herdr session preference must precede the Orca probe: preference=%d orca=%d", preference, orcaProbe)
-	}
-	for name, path := range map[string][]string{
-		"issueops":           {"skills", "issueops", "SKILL.md"},
-		"issueops-plan":      {"skills", "issueops-plan", "SKILL.md"},
-		"issueops-implement": {"skills", "issueops-implement", "SKILL.md"},
-		"workflow":           {".issueops", "AGENT_WORKFLOW.md"},
+	for name, summary := range map[string]struct {
+		path []string
+		want string
+	}{
+		"issueops":           {[]string{"skills", "issueops", "SKILL.md"}, "준비한 뒤 herdr를 확인한다"},
+		"issueops-plan":      {[]string{"skills", "issueops-plan", "SKILL.md"}, "준비 세션이 herdr 세션이면"},
+		"issueops-implement": {[]string{"skills", "issueops-implement", "SKILL.md"}, "herdr를 먼저 확인한다"},
+		"workflow":           {[]string{".issueops", "AGENT_WORKFLOW.md"}, "herdr 세션이면 herdr를 먼저 확인"},
 	} {
-		if !strings.Contains(normalize(readIssueOpsContractFile(t, path...)), "herdr 세션이면 herdr를 먼저 확인") {
-			t.Fatalf("%s must summarize the Herdr session preference", name)
+		if !strings.Contains(normalize(readIssueOpsContractFile(t, summary.path...)), summary.want) {
+			t.Fatalf("%s must summarize the Herdr session preference %q", name, summary.want)
 		}
+	}
+}
+
+// 자동 세션 선택 순서는 Herdr 확인이 먼저고 그 뒤에 현재 세션 또는 수동 두 번째
+// 터미널이다. 새 세션 인수는 `replace --preview` → `--reseed` →
+// `claim --claim-current-token` 체인 하나다.
+func TestIssueOpsAutomaticSessionSelectionOrderAndTakeoverChain(t *testing.T) {
+	t.Parallel()
+
+	normalize := func(text string) string { return strings.Join(strings.Fields(text), " ") }
+	skill := normalize(readIssueOpsContractFile(t, "skills", "issueops", "SKILL.md"))
+	_, section, found := strings.Cut(skill, "## 환경별 자동 세션 인계")
+	if !found {
+		t.Fatal("issueops skill is missing the automatic session handoff section")
+	}
+	section, _, _ = strings.Cut(section, " ## ")
+	herdr := strings.Index(section, "준비한 뒤 Herdr를 확인한다")
+	current := strings.Index(section, "Herdr를 쓸 수 없으면 현재 세션에서 이어가거나, 사용자가 직접 연 두 번째 터미널에서 수동 인계한다")
+	if herdr < 0 || current < 0 || herdr >= current {
+		t.Fatalf("Herdr check must precede the current-session or manual second-terminal fallback: herdr=%d current=%d", herdr, current)
+	}
+
+	sessionChoice := normalize(readIssueOpsContractFile(t, "skills", "issueops", "references", "session-choice.md"))
+	const chain = "`execution replace --id ID --expected-generation N --preview`를 실행한 뒤, 반환된 `--reseed` 명령과 `claim --claim-current-token`으로 인수한다"
+	if !strings.Contains(sessionChoice, chain) {
+		t.Fatalf("session-choice must pin the replace --preview -> --reseed -> claim --claim-current-token chain %q", chain)
 	}
 }
 
@@ -225,10 +241,10 @@ func TestIssueOpsCmuxHandoffIsExplicitAndFollowsTheDefaultFallback(t *testing.T)
 	t.Parallel()
 
 	sessionChoice := strings.Join(strings.Fields(strings.ToLower(readIssueOpsContractFile(t, "skills", "issueops", "references", "session-choice.md"))), " ")
-	fallback := strings.Index(sessionChoice, "둘 다 없거나 사용 불가")
+	fallback := strings.Index(sessionChoice, "herdr를 쓸 수 없음이 확인됐으면 현재 세션에서 이어가는 `current`다")
 	explicit := strings.Index(sessionChoice, "사용자가 명시한 cmux")
 	if fallback < 0 || explicit < 0 || explicit <= fallback {
-		t.Fatalf("explicit cmux procedure must follow the default Orca -> Herdr -> current fallback: fallback=%d explicit=%d", fallback, explicit)
+		t.Fatalf("explicit cmux procedure must follow the default Herdr -> current fallback: fallback=%d explicit=%d", fallback, explicit)
 	}
 	if strings.Contains(sessionChoice[:explicit], "cmux") {
 		t.Fatal("the default launcher selection must not probe or select cmux")
@@ -310,6 +326,8 @@ func removedIssueOpsCurrentCommandTerms() []string {
 		"migrate-v9", "execution decide", "worktree prepare", "handoff start",
 		"handoff claim", "handoff complete", "force-release", "resume --repo",
 		"issueops heartbeat", "reconcile-create", "prepare-worktree-tools",
+		"execution " + "resume", "switch" + "-mode", "--direct-" + "reason", "--owner-" + "host",
+		"--issue-snapshot" + "-file", "--preserve-" + "terminal",
 	}
 }
 

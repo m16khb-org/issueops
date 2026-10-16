@@ -57,8 +57,7 @@ func materialsCycleForTest(t *testing.T) (string, issueops.IssueOpsRecord, strin
 		t.Fatal(err)
 	}
 	recordIssueOpsApprovedDesignForTest(t, stateRoot, record.ID)
-	// Both prepare paths point plan_path at the sealed plan (direct:
-	// issueops_artifact_stage.go, Orca: execution_prepare_bridge.go).
+	// Prepare points plan_path at the sealed plan (issueops_artifact_stage.go).
 	sealedPlan := filepath.Join(worktree, ".issueops", "issues", "13", "artifact", "plan.md")
 	writeIssueOpsFile(t, worktree, ".issueops/issues/13/artifact/plan.md", planBodyForTest())
 	if _, err = LinkIssueOpsPlan(stateRoot, record.ID, sealedPlan); err != nil {
@@ -110,25 +109,6 @@ func TestPhaseTransitionWritesTrackedMaterials(t *testing.T) {
 	if len(again.Written) != 0 || trackedCopy(t, worktree, "13", "intent.md") != intent || trackedCopy(t, worktree, "13", "plan-review.md") != review {
 		t.Fatalf("unchanged materials must not be rewritten: %+v", again)
 	}
-
-	// An Orca cycle passes the same two transitions; its prepare bridge points
-	// plan_path at the sealed plan the same way, so the copies are the same.
-	orca, err := ReadIssueOps(stateRoot, record.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	orca.Execution.Mode = issueops.ExecutionModeOrca
-	orca.Execution.Selection = selectionFixture(issueops.ExecutionModeOrca)
-	orcaRoot := t.TempDir()
-	orca.Execution.Workspace.Root = orcaRoot
-	orca.PlanPath = filepath.Join(orcaRoot, ".issueops", "issues", "13", "artifact", "plan.md")
-	writeIssueOpsFile(t, orcaRoot, ".issueops/issues/13/artifact/plan.md", planBodyForTest())
-	orcaMaterials := (materialapp.TrackedMaterials{Files: MaterialFiles{}}).Write(orca)
-	for _, name := range []string{"plan.md", "intent.md", "plan-review.md"} {
-		if trackedCopy(t, orcaRoot, "13", name) == "" {
-			t.Fatalf("an Orca cycle gets the same tracked %s: %+v", name, orcaMaterials)
-		}
-	}
 }
 
 // 구현 메모 A: plan_path가 봉인 디렉터리 밖(이미 추적되는 파일)이면 plan.md 사본을
@@ -174,10 +154,8 @@ func TestTrackedMaterialsMissingWarning(t *testing.T) {
 	root := t.TempDir()
 	mutateFinishRecord(t, stateRoot2, record2.ID, func(rec *issueops.IssueOpsRecord) {
 		rec.Execution = &issueops.Execution{
-			Mode:      issueops.ExecutionModeDirect,
-			Workspace: issueops.Workspace{SourceRoot: rec.Repo, Root: root, Branch: "81-completion", BaseHead: "deadbeef", Driver: "git", LinkedAt: "2026-07-24T00:00:00Z", ArtifactDir: ".issueops/issues/81/artifact"},
+			Workspace: issueops.Workspace{SourceRoot: rec.Repo, Root: root, Branch: "81-completion", BaseHead: "deadbeef", LinkedAt: "2026-07-24T00:00:00Z", ArtifactDir: ".issueops/issues/81/artifact"},
 			Lease:     issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased},
-			Selection: selectionFixture(issueops.ExecutionModeDirect),
 		}
 	})
 	writeIssueOpsFile(t, root, ".issueops/issues/81/artifact/plan.md", "봉인 계획\n")
@@ -216,7 +194,7 @@ func TestPhaseTransitionNormalizesPublicMaterials(t *testing.T) {
 		}
 		modes[path] = info.Mode()
 	}
-	record.DevilsAdvocateReview.ReviewedPlanDigest = digestExecutionOwnerBytes(originals[record.PlanPath])
+	record.DevilsAdvocateReview.ReviewedPlanDigest = digestBytes(originals[record.PlanPath])
 	if _, err := writeIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
@@ -272,30 +250,26 @@ func TestTrackedMaterialsFallbackAndReviewPaths(t *testing.T) {
 
 	root := t.TempDir()
 	const source = "/workspace/source"
-	for _, mode := range []issueops.ExecutionMode{issueops.ExecutionModeDirect, issueops.ExecutionModeOrca} {
-		t.Run(string(mode), func(t *testing.T) {
-			record := issueops.IssueOpsRecord{
-				Repo: source, IssueURL: "https://github.com/example/repo/issues/13",
-				Intent:               &issueops.IssueOpsIntentContract{RawRequest: "source `" + source + "/a` home `/home/synthetic/.config` work `" + root + "/b`"},
-				Execution:            &issueops.Execution{Mode: mode, Workspace: issueops.Workspace{Root: root, ArtifactDir: ".issueops/issues/13/artifact"}, Selection: selectionFixture(mode)},
-				DevilsAdvocateReview: &issueops.IssueOpsDevilsAdvocateReview{Verdict: "pass", Findings: []string{"source `" + source + "/a` work `" + root + "/b` URL https://host.test/home/synthetic/a"}},
-			}
-			files := materialapp.TrackedMaterials{Files: MaterialFiles{}}
-			if got := files.Write(record); len(got.Warnings) > 0 {
-				t.Fatal(got)
-			}
-			intent := trackedCopy(t, root, "13", "intent.md")
-			if !strings.Contains(intent, "source `$SOURCE_ROOT/a`") || !strings.Contains(intent, "work `$WORKTREE/b`") {
-				t.Fatalf("record fallback: %q", intent)
-			}
-			// The plan-review renderer masks URL home paths before normalization.
-			want := strings.ReplaceAll(strings.ReplaceAll(domain.RenderTrackedPlanReview(record.DevilsAdvocateReview), source, "$SOURCE_ROOT"), root, "$WORKTREE")
-			if got := trackedCopy(t, root, "13", "plan-review.md"); got != want || !strings.Contains(got, "https://host.test[로컬 경로 생략]") {
-				t.Fatalf("review policy changed: %q want %q", got, want)
-			}
-			if got := files.Write(record); len(got.Written) != 0 {
-				t.Fatalf("fallback no-op: %+v", got)
-			}
-		})
+	record := issueops.IssueOpsRecord{
+		Repo: source, IssueURL: "https://github.com/example/repo/issues/13",
+		Intent:               &issueops.IssueOpsIntentContract{RawRequest: "source `" + source + "/a` home `/home/synthetic/.config` work `" + root + "/b`"},
+		Execution:            &issueops.Execution{Workspace: issueops.Workspace{Root: root, ArtifactDir: ".issueops/issues/13/artifact"}},
+		DevilsAdvocateReview: &issueops.IssueOpsDevilsAdvocateReview{Verdict: "pass", Findings: []string{"source `" + source + "/a` work `" + root + "/b` URL https://host.test/home/synthetic/a"}},
+	}
+	files := materialapp.TrackedMaterials{Files: MaterialFiles{}}
+	if got := files.Write(record); len(got.Warnings) > 0 {
+		t.Fatal(got)
+	}
+	intent := trackedCopy(t, root, "13", "intent.md")
+	if !strings.Contains(intent, "source `$SOURCE_ROOT/a`") || !strings.Contains(intent, "work `$WORKTREE/b`") {
+		t.Fatalf("record fallback: %q", intent)
+	}
+	// The plan-review renderer masks URL home paths before normalization.
+	want := strings.ReplaceAll(strings.ReplaceAll(domain.RenderTrackedPlanReview(record.DevilsAdvocateReview), source, "$SOURCE_ROOT"), root, "$WORKTREE")
+	if got := trackedCopy(t, root, "13", "plan-review.md"); got != want || !strings.Contains(got, "https://host.test[로컬 경로 생략]") {
+		t.Fatalf("review policy changed: %q want %q", got, want)
+	}
+	if got := files.Write(record); len(got.Written) != 0 {
+		t.Fatalf("fallback no-op: %+v", got)
 	}
 }

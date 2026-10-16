@@ -7,7 +7,7 @@
 | `next` 없이 phase 추정 | 단계 판별은 CLI가 소유한다 |
 | "3줄 수정이니까" source checkout 수정 | canonical worktree와 readiness HEAD가 어긋난다 |
 | 구두 확인만으로 `replace --revoke --confirm` | quiescence 증거가 아니다 |
-| direct에 `resume`, Orca에 임의 `claim` | 반환된 `next_command`를 따라야 한다 |
+| `claim` 대신 임의의 `replace`, released인데 임의의 `claim` | 반환된 `next_command`를 따라야 한다 |
 | timeout 뒤 prepare/create 재실행 | reconcile 없이 이중 mutation을 만들 수 있다 |
 | 구현 직후 커밋·푸시 또는 정리/리뷰 기록 | 뒤 단계의 변경이 봉인을 stale로 만든다 |
 | 운영 DB `SELECT COUNT(*)` | 카탈로그 추정치 대신 전수 스캔으로 커넥션을 소모한다 |

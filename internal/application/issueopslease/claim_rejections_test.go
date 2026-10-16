@@ -17,53 +17,29 @@ func claimServiceActor() leasedomain.Actor {
 	return leasedomain.Actor{Host: "codex", SessionID: "claim-session", Process: &leasedomain.ProcessReceipt{PID: 9, StartedAt: "2026-07-30T00:00:00Z", Executable: "/codex"}}
 }
 
-func TestClaimServiceRefusesWithoutPreflight(t *testing.T) {
-	service := NewClaimService(claimRepositoryFunc(func(context.Context, ClaimRepositoryRequest) (RepositoryResult, error) {
-		t.Fatal("repository reached without a context preflight")
-		return RepositoryResult{}, nil
-	}), fixedClaimClock{}, nil, nil)
-	result, err := service.Claim(t.Context(), ClaimRequest{ID: "io-claim"})
-	if err == nil || !strings.Contains(err.Error(), "claim context preflight is required") || result.OK || result.ID != "io-claim" {
-		t.Fatalf("result=%+v err=%v", result, err)
-	}
-}
-
-func TestClaimServiceStopsBeforeRepositoryWhenPreflightOrActorProofFails(t *testing.T) {
+func TestClaimServiceStopsBeforeRepositoryWhenActorProofFails(t *testing.T) {
 	actor := claimServiceActor()
 	live := leaseVerifier(func(_ context.Context, receipt leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
 		return "live", receipt, nil
 	})
-	okPreflight := claimPreflightFunc(func(context.Context, ClaimPreflightRequest) (RecordValidator, error) {
-		return func(Record) error { return nil }, nil
-	})
 	tests := []struct {
-		name      string
-		preflight ClaimContextPreflight
-		verifier  func() *ClaimService
-		want      string
+		name     string
+		verifier func() *ClaimService
+		want     string
 	}{
 		{
-			name: "preflight rejection",
-			preflight: claimPreflightFunc(func(context.Context, ClaimPreflightRequest) (RecordValidator, error) {
-				return nil, errors.New("sealed context drifted")
-			}),
-			want: "sealed context drifted",
-		},
-		{
-			name:      "actor not verifiable",
-			preflight: okPreflight,
+			name: "actor not verifiable",
 			verifier: func() *ClaimService {
 				return NewClaimService(nil, fixedClaimClock{}, leaseVerifier(func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
 					return "", leasedomain.ProcessReceipt{}, errors.New("process inspection failed")
-				}), okPreflight)
+				}))
 			},
 			want: "process inspection failed",
 		},
 		{
-			name:      "no verifier configured",
-			preflight: okPreflight,
-			verifier:  func() *ClaimService { return NewClaimService(nil, fixedClaimClock{}, nil, okPreflight) },
-			want:      "native actor verifier is required",
+			name:     "no verifier configured",
+			verifier: func() *ClaimService { return NewClaimService(nil, fixedClaimClock{}, nil) },
+			want:     "native actor verifier is required",
 		},
 	}
 	for _, tt := range tests {
@@ -72,7 +48,7 @@ func TestClaimServiceStopsBeforeRepositoryWhenPreflightOrActorProofFails(t *test
 				t.Fatal("repository reached after a failed gate")
 				return RepositoryResult{}, nil
 			})
-			service := NewClaimService(repository, fixedClaimClock{}, live, tt.preflight)
+			service := NewClaimService(repository, fixedClaimClock{}, live)
 			if tt.verifier != nil {
 				service = tt.verifier()
 				service.repository = repository
@@ -90,15 +66,12 @@ func TestClaimServiceSurfacesRepositoryRefusalAndReturnsClaimedExecutionOnSucces
 	verifier := leaseVerifier(func(_ context.Context, receipt leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
 		return "live", receipt, nil
 	})
-	preflight := claimPreflightFunc(func(context.Context, ClaimPreflightRequest) (RecordValidator, error) {
-		return func(Record) error { return nil }, nil
-	})
 	refused := errors.New("lease not claimable")
 	request := ClaimRequest{ID: "io-claim", Generation: 3, Actor: actor, Ancestry: []leasedomain.ProcessReceipt{*actor.Process}, TokenFile: "/tmp/token"}
 
 	failing := NewClaimService(claimRepositoryFunc(func(context.Context, ClaimRepositoryRequest) (RepositoryResult, error) {
 		return RepositoryResult{}, refused
-	}), fixedClaimClock{}, verifier, preflight)
+	}), fixedClaimClock{}, verifier)
 	if result, err := failing.Claim(t.Context(), request); !errors.Is(err, refused) || result.OK || result.Execution.Lease.Status != "" {
 		t.Fatalf("refusal result=%+v err=%v", result, err)
 	}
@@ -108,7 +81,7 @@ func TestClaimServiceSurfacesRepositoryRefusalAndReturnsClaimedExecutionOnSucces
 	succeeding := NewClaimService(claimRepositoryFunc(func(_ context.Context, got ClaimRepositoryRequest) (RepositoryResult, error) {
 		seen = got
 		return RepositoryResult{Execution: claimed}, nil
-	}), fixedClaimClock{}, verifier, preflight)
+	}), fixedClaimClock{}, verifier)
 	result, err := succeeding.Claim(t.Context(), request)
 	if err != nil || !result.OK || result.ID != "io-claim" || !reflect.DeepEqual(result.Execution, claimed) {
 		t.Fatalf("success result=%+v err=%v", result, err)
@@ -142,14 +115,13 @@ func (f *failingClaimTransaction) ReadToken(record leasecontract.Record, path st
 func claimTransactionRequest() ClaimRepositoryRequest {
 	return ClaimRepositoryRequest{
 		ID: "io-claim", Generation: 3, Actor: leasedomain.Actor{Host: "codex", SessionID: "owner"}, CWD: "/repo",
-		ClaimCurrentToken: true, ValidateRecord: func(Record) error { return nil }, Clock: claimTransactionClock{},
+		ClaimCurrentToken: true, Clock: claimTransactionClock{},
 	}
 }
 
 func TestClaimWithinTransactionRefusesBeforeAnyMutation(t *testing.T) {
 	loadErr := errors.New("record unreadable")
 	readErr := errors.New("token unreadable")
-	validatorErr := errors.New("sealed context drifted")
 	tests := []struct {
 		name       string
 		build      func() *failingClaimTransaction
@@ -186,26 +158,6 @@ func TestClaimWithinTransactionRefusesBeforeAnyMutation(t *testing.T) {
 				return leasedomain.DenyCodeOf(err) == leasedomain.DenyLeaseClaimable && strings.Contains(err.Error(), "cleanup finish")
 			},
 			wantEvents: []string{"load"},
-		},
-		{
-			name: "missing record validator",
-			build: func() *failingClaimTransaction {
-				return &failingClaimTransaction{claimTransactionStub: claimableTransactionStub()}
-			},
-			mutate: func(r *ClaimRepositoryRequest) { r.ValidateRecord = nil },
-			check: func(err error) bool {
-				return err != nil && strings.Contains(err.Error(), "claim record validator is required")
-			},
-			wantEvents: []string{"load", "cwd"},
-		},
-		{
-			name: "validator rejection precedes token read",
-			build: func() *failingClaimTransaction {
-				return &failingClaimTransaction{claimTransactionStub: claimableTransactionStub()}
-			},
-			mutate:     func(r *ClaimRepositoryRequest) { r.ValidateRecord = func(Record) error { return validatorErr } },
-			check:      func(err error) bool { return errors.Is(err, validatorErr) },
-			wantEvents: []string{"load", "cwd"},
 		},
 		{
 			name: "no token selector",

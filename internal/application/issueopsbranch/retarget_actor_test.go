@@ -19,13 +19,11 @@ func retargetActorRecord(t *testing.T, status issueops.LeaseStatus, holder *issu
 		t.Fatal(err)
 	}
 	return issueops.IssueOpsRecord{Execution: &issueops.Execution{
-		Mode: issueops.ExecutionModeDirect,
 		Workspace: issueops.Workspace{
 			SourceRoot: source, Root: root, Branch: "2819-child", BaseHead: strings.Repeat("a", 40),
-			Driver: "git", LinkedAt: "2026-08-28T00:00:00Z",
+			LinkedAt: "2026-08-28T00:00:00Z",
 		},
-		Lease:     issueops.WriteLease{Generation: 1, Status: status, Holder: holder, ClaimedAt: "2026-08-28T00:00:01Z"},
-		Selection: selectionFixture(issueops.ExecutionModeDirect),
+		Lease: issueops.WriteLease{Generation: 1, Status: status, Holder: holder, ClaimedAt: "2026-08-28T00:00:01Z"},
 	}}, root
 }
 

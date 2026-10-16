@@ -23,7 +23,7 @@ func TestCompleteValidatesArtifactBeforeEnvironmentEffects(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			trace := []string{}
 			request := validRequest()
-			record := activeCompletionRecord("direct")
+			record := activeCompletionRecord()
 			record.Artifact = nil
 			if retry {
 				record.Phase = "done"
@@ -48,9 +48,9 @@ func TestCompleteValidatesArtifactBeforeEnvironmentEffects(t *testing.T) {
 	}
 }
 
-func TestCompleteCommitsWithoutOrcaSettle(t *testing.T) {
+func TestCompleteCommitsInEffectOrder(t *testing.T) {
 	trace := []string{}
-	repository := &repositoryFake{record: activeCompletionRecord("orca"), trace: &trace}
+	repository := &repositoryFake{record: activeCompletionRecord(), trace: &trace}
 	environment := &environmentFake{trace: &trace, canonical: true, head: strings.Repeat("a", 40), report: "/worktree/report.json"}
 	service := NewService(repository, environment, fixedClock{fixedCompletionTime}, tracedLiveInspector(&trace))
 
@@ -67,8 +67,8 @@ func TestCompleteCommitsWithoutOrcaSettle(t *testing.T) {
 	}
 }
 
-func TestCompleteIdenticalRetrySkipsEnvironmentWithoutOrcaSettle(t *testing.T) {
-	record := activeCompletionRecord("orca")
+func TestCompleteIdenticalRetrySkipsEnvironment(t *testing.T) {
+	record := activeCompletionRecord()
 	record.Phase = "done"
 	record.Lease.Status = "released"
 	record.Lease.Holder = nil
@@ -93,7 +93,7 @@ func TestCompleteIdenticalRetrySkipsEnvironmentWithoutOrcaSettle(t *testing.T) {
 
 func TestCompleteRejectsNonCanonicalCWDWithoutCommit(t *testing.T) {
 	trace := []string{}
-	repository := &repositoryFake{record: activeCompletionRecord("direct"), trace: &trace}
+	repository := &repositoryFake{record: activeCompletionRecord(), trace: &trace}
 	environment := &environmentFake{trace: &trace, canonical: false}
 	service := NewService(repository, environment, fixedClock{fixedCompletionTime}, tracedLiveInspector(&trace))
 
@@ -118,7 +118,7 @@ func TestCompleteRefusesHeadThatChangedCodeAfterPREntry(t *testing.T) {
 		{"record entered pr before pr_head existed", "", []string{"internal/domain/gates/check_result.go"}, ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			record := activeCompletionRecord("direct")
+			record := activeCompletionRecord()
 			record.PRHead = tc.prHead
 			trace := []string{}
 			repository := &repositoryFake{record: record, trace: &trace}
@@ -141,7 +141,7 @@ func TestCompleteRefusesHeadThatChangedCodeAfterPREntry(t *testing.T) {
 
 func TestCompleteRepositoryFailureLeavesRecordUnchanged(t *testing.T) {
 	trace := []string{}
-	repository := &repositoryFake{record: activeCompletionRecord("orca"), trace: &trace, commitErr: errors.New("commit failed")}
+	repository := &repositoryFake{record: activeCompletionRecord(), trace: &trace, commitErr: errors.New("commit failed")}
 	environment := &environmentFake{trace: &trace, canonical: true, head: strings.Repeat("a", 40), report: "/worktree/report.json"}
 	service := NewService(repository, environment, fixedClock{fixedCompletionTime}, tracedLiveInspector(&trace))
 
@@ -164,7 +164,7 @@ func TestCompleteReopenedGenerationKeepsExactlyOnceContract(t *testing.T) {
 		{name: "issue 237 generation 3", generation: 3, newHead: "9c8db06313cfce39d17a53123f84da1fc4bc7b34"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			record := activeCompletionRecord("direct")
+			record := activeCompletionRecord()
 			record.Lease.Generation = test.generation
 			record.Ledger = map[string]completioncontract.LedgerEntry{
 				"pr":   {Phase: "pr", Notes: []string{"stale: completed execution reseed"}},
@@ -272,22 +272,19 @@ func validRequest() Request {
 	return Request{ID: "io-198", Generation: 1, Actor: completioncontract.Actor{Host: "codex", SessionID: "session-198", Process: &receipt}, Ancestry: []completioncontract.ProcessReceipt{receipt}, CWD: "/worktree", FinalHead: strings.Repeat("a", 40), VerificationReportPath: "/worktree/report.json", Verification: []string{"go test ./..."}, RemoteArtifactURL: "https://github.com/acme/repo/pull/198", Confirm: true}
 }
 
-func activeCompletionRecord(mode string) completioncontract.RecordSnapshot {
+func activeCompletionRecord() completioncontract.RecordSnapshot {
 	receipt := completioncontract.ProcessReceipt{PID: 198, StartedAt: "2026-08-02T00:00:00Z", Executable: "/bin/codex"}
 	record := completioncontract.RecordSnapshot{
-		ID: "io-198", IssueURL: "https://github.com/acme/repo/issues/198", Prepared: true, Phase: "pr", CanonicalRoot: "/worktree", Mode: mode,
+		ID: "io-198", IssueURL: "https://github.com/acme/repo/issues/198", Prepared: true, Phase: "pr", CanonicalRoot: "/worktree",
 		Lease:    completioncontract.Lease{Generation: 1, Status: "active", Holder: &completioncontract.Actor{Host: "codex", SessionID: "session-198", Process: &receipt}, ClaimedAt: "2026-08-02T00:00:01Z"},
 		Artifact: &completioncontract.RemoteArtifact{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/198", Labels: []string{"enhancement"}, Assignees: []string{"m16khb"}, VerifiedAt: "2026-08-02T00:00:02Z", TargetBranch: "main"}, BaseBranch: "main",
 		Ledger: map[string]completioncontract.LedgerEntry{"pr": {Phase: "pr", EnteredAt: "2026-08-02T00:00:02Z"}},
-	}
-	if mode == "orca" {
-		record.Orca = &completioncontract.OrcaBinding{RunID: "run-198", TaskID: "task-198"}
 	}
 	return record
 }
 
 func stableExecution(record completioncontract.RecordSnapshot) leasecontract.Execution {
-	return leasecontract.Execution{Mode: record.Mode, Workspace: leasecontract.Workspace{SourceRoot: "/source", Root: record.CanonicalRoot, Branch: "198", BaseHead: strings.Repeat("b", 40), Driver: map[bool]string{true: "orca", false: "git"}[record.Mode == "orca"], LinkedAt: "2026-08-02T00:00:00Z"}, Lease: leasecontract.Lease{Generation: record.Lease.Generation, Status: record.Lease.Status}}
+	return leasecontract.Execution{Workspace: leasecontract.Workspace{SourceRoot: "/source", Root: record.CanonicalRoot, Branch: "198", BaseHead: strings.Repeat("b", 40), LinkedAt: "2026-08-02T00:00:00Z"}, Lease: leasecontract.Lease{Generation: record.Lease.Generation, Status: record.Lease.Status}}
 }
 
 func TestCompleteRefusalsPreserveEffectOrder(t *testing.T) {
@@ -325,7 +322,7 @@ func TestCompleteRefusalsPreserveEffectOrder(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			trace := []string{}
 			request := validRequest()
-			record := activeCompletionRecord("direct")
+			record := activeCompletionRecord()
 			env := &environmentFake{trace: &trace, canonical: true, head: strings.Repeat("a", 40), report: "/worktree/report.json"}
 			tc.change(&request, &record, env)
 			repository := &repositoryFake{record: record, trace: &trace}

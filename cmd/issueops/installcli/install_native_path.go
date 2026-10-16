@@ -30,7 +30,7 @@ type installPathTransaction struct {
 	shortPath         string
 }
 
-func (c Command) prepareInstallPathPlanForCandidate(result *port.NativeInstallResult, req port.NativeInstallRequest, candidatePath, mode string) (*installPathTransaction, error) {
+func (c Command) prepareInstallPathPlanFromCandidate(result *port.NativeInstallResult, req port.NativeInstallRequest, candidatePath, mode string) (*installPathTransaction, error) {
 	userBin := filepath.Join(req.Home, ".local", "bin")
 	commandPath := filepath.Join(userBin, "issueops")
 	shortCommandPath := filepath.Join(userBin, "io")

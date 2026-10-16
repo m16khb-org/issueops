@@ -214,7 +214,7 @@ func TestAdvanceReportToPRWithoutPrefetchedUpstreamDoesNotBypassFetchGate(t *tes
 	locked := false
 	events := []string{}
 	ready, _ := readinessForEffects(t, &locked, &events)
-	record := model.IssueOpsRecord{ID: "io-1", Repo: "/repo", Branch: "feature", Phase: model.IssueOpsPhaseFeedback, Execution: &model.Execution{Mode: model.ExecutionModeDirect}}
+	record := model.IssueOpsRecord{ID: "io-1", Repo: "/repo", Branch: "feature", Phase: model.IssueOpsPhaseFeedback, Execution: &model.Execution{}}
 	service := flowService(&phaseFlow{record: record}, ready)
 	got := service.entryReadiness("state", nil).StrictPR(record)
 	if got.Ready || !strings.Contains(strings.Join(got.Missing, ","), "upstream_fetch") {

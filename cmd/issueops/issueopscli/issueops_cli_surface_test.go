@@ -748,7 +748,7 @@ func TestGeneratedDelegatedBootstrapAuthorityRequiresMatchingActiveParentTopolog
 			"--branch", branch, "--base-branch", base, "--parent-worktree", tree,
 			"--host", "codex", "--session-id", "s", "--cwd", tree}
 	}
-	executionPrepare := []string{"execution", "prepare", "--id", "child", "--mode", "delegated", "--host", "codex", "--session-id", "s", "--cwd", parentTree}
+	executionPrepare := []string{"execution", "prepare", "--id", "child", "--host", "codex", "--session-id", "s", "--cwd", parentTree}
 
 	tests := []struct {
 		name    string

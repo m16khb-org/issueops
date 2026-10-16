@@ -138,11 +138,9 @@ func publicationReconcileMCPRecord(t *testing.T, stateRoot string) (issueopscont
 		ID: (issueops.CycleStartIdentity{}).StableID(repo, "195-publication-mcp"), Repo: repo, Branch: "195-publication-mcp",
 		Phase: issueopscontract.IssueOpsPhasePR, WorktreePath: worktree,
 		Execution: &issueopscontract.Execution{
-			Mode:      issueopscontract.ExecutionModeDirect,
-			Workspace: issueopscontract.Workspace{SourceRoot: repo, Root: worktree, Branch: "195-publication-mcp", BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "2026-08-01T00:00:00Z"},
+			Workspace: issueopscontract.Workspace{SourceRoot: repo, Root: worktree, Branch: "195-publication-mcp", BaseHead: strings.Repeat("a", 40), LinkedAt: "2026-08-01T00:00:00Z"},
 			Lease:     issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusActive, Holder: &actor, ClaimedAt: "2026-08-01T00:00:00Z"},
 			Pending:   &issueopscontract.ExternalIntent{OperationID: "0123456789abcdef0123456789abcdef", Kind: "remote_pr_create", Marker: "<!-- issueops:issueops-v1 operation=0123456789abcdef0123456789abcdef -->", StartedAt: "2026-08-01T00:00:00Z"},
-			Selection: selectionFixture(issueopscontract.ExecutionModeDirect),
 		},
 		CreatedAt: "2026-08-01T00:00:00Z",
 		UpdatedAt: "2026-08-01T00:00:00Z",
@@ -154,18 +152,18 @@ func publicationReconcileMCPRecord(t *testing.T, stateRoot string) (issueopscont
 	return written, receipt
 }
 
-func TestExecutionActionRequestFromMCPPreservesAutoMode(t *testing.T) {
+func TestExecutionActionRequestFromMCPMapsPrepare(t *testing.T) {
 	wantAncestry := []issueopscontract.NativeProcessReceipt{{
 		PID: 42, StartedAt: "2026-07-22T00:00:00Z", Executable: "/usr/bin/codex",
 	}}
 	req, err := executionActionRequestFromMCPWithAncestry(map[string]any{
-		"action": "prepare", "id": "io-aaaaaaaaaaaa", "mode": "auto",
+		"action": "prepare", "id": "io-aaaaaaaaaaaa", "confirm": true,
 	}, wantAncestry)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if req.Action != "prepare" || req.ID != "io-aaaaaaaaaaaa" || req.Mode != "auto" {
-		t.Fatalf("MCP auto prepare request drifted: %#v", req)
+	if req.Action != "prepare" || req.ID != "io-aaaaaaaaaaaa" || !req.Confirm {
+		t.Fatalf("MCP prepare request drifted: %#v", req)
 	}
 	if len(req.Actor.ProcessAncestry) != 1 || req.Actor.ProcessAncestry[0] != wantAncestry[0] {
 		t.Fatalf("MCP execution adapter did not preserve observed process ancestry: %#v", req.Actor.ProcessAncestry)
@@ -184,26 +182,26 @@ func TestExecutionActionRequestFromMCPMapsCurrentClaimToken(t *testing.T) {
 	}
 }
 
-func TestExecutionActionRequestFromMCPMapsResume(t *testing.T) {
+func TestExecutionActionRequestFromMCPMapsClaim(t *testing.T) {
 	req, err := executionActionRequestFromMCPWithAncestry(map[string]any{
-		"action": "resume", "id": "io-aaaaaaaaaaaa",
-		"expected_generation": float64(3),
-		"host":                "codex",
-		"session_id":          "session-resume",
-		"session_pid":         float64(42),
-		"session_started_at":  "2026-07-30T00:00:00Z",
-		"session_executable":  "/usr/local/bin/codex",
-		"cwd":                 "/repo.worktrees/resume",
-		"confirm":             true,
+		"action": "claim", "id": "io-aaaaaaaaaaaa",
+		"generation":         float64(3),
+		"host":               "codex",
+		"session_id":         "session-claim",
+		"session_pid":        float64(42),
+		"session_started_at": "2026-07-30T00:00:00Z",
+		"session_executable": "/usr/local/bin/codex",
+		"cwd":                "/repo.worktrees/claim",
+		"claim_token_file":   "/tmp/token",
 	}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if req.Action != "resume" || req.ID != "io-aaaaaaaaaaaa" || req.ExpectedGeneration != 3 ||
-		req.Actor.Host != "codex" || req.Actor.SessionID != "session-resume" ||
+	if req.Action != "claim" || req.ID != "io-aaaaaaaaaaaa" || req.Generation != 3 ||
+		req.Actor.Host != "codex" || req.Actor.SessionID != "session-claim" ||
 		req.Actor.SessionProcess == nil || req.Actor.SessionProcess.PID != 42 ||
-		req.CWD != "/repo.worktrees/resume" || !req.Confirm || req.IssueSnapshot != nil {
-		t.Fatalf("MCP resume request drifted: %#v", req)
+		req.CWD != "/repo.worktrees/claim" || req.TokenFile != "/tmp/token" {
+		t.Fatalf("MCP claim request drifted: %#v", req)
 	}
 }
 
@@ -220,82 +218,34 @@ func TestExecutionActionRequestFromMCPMapsCompletionGeneration(t *testing.T) {
 	}
 }
 
-func TestSDKCallToolRoutesResumeToInjectedHandler(t *testing.T) {
+func TestSDKCallToolRoutesClaimToInjectedHandler(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	params, err := json.Marshal(MCPToolCall{Name: "issueops_execution", Arguments: map[string]any{
-		"action": "resume", "id": "io-aaaaaaaaaaaa", "expected_generation": float64(3),
-		"host": "codex", "session_id": "session-resume", "session_pid": float64(42),
+		"action": "claim", "id": "io-aaaaaaaaaaaa", "generation": float64(3), "claim_current_token": true,
+		"host": "codex", "session_id": "session-claim", "session_pid": float64(42),
 		"session_started_at": "2026-07-31T00:00:00Z", "session_executable": "/usr/local/bin/codex",
-		"cwd": "/repo.worktrees/resume", "confirm": true,
+		"cwd": "/repo.worktrees/claim",
 	}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	calls := 0
-	response, rpcErr := callSDKTool(t, params, MCPDependencies{Execution: testExecutionDeps(), Catalog: mcpcatalog.Build(), Resume: func(_ context.Context, stateRoot string, request issueopscontract.ExecutionResumeRequest) (issueopscontract.ExecutionResumeResult, error) {
+	response, rpcErr := callSDKTool(t, params, MCPDependencies{Execution: testExecutionDeps(), Catalog: mcpcatalog.Build(), Claim: func(_ context.Context, stateRoot string, request issueopscontract.ExecutionClaimRequest) (issueopscontract.ExecutionResult, error) {
 		calls++
-		if stateRoot == "" || request.ID != "io-aaaaaaaaaaaa" || request.ExpectedGeneration != 3 || request.CWD != "/repo.worktrees/resume" || !request.Confirm {
-			t.Fatalf("resume handler request=%+v state_root=%q", request, stateRoot)
+		if stateRoot == "" || request.ID != "io-aaaaaaaaaaaa" || request.Generation != 3 || request.CWD != "/repo.worktrees/claim" || !request.ClaimCurrentToken {
+			t.Fatalf("claim handler request=%+v state_root=%q", request, stateRoot)
 		}
-		return issueopscontract.ExecutionResumeResult{OK: true, ID: request.ID, ResumeDisposition: "existing_binding"}, nil
+		return issueopscontract.ExecutionResult{OK: true, ID: request.ID}, nil
 	}})
 	if rpcErr != nil || calls != 1 {
-		t.Fatalf("resume MCP rpc_err=%v calls=%d", rpcErr, calls)
+		t.Fatalf("claim MCP rpc_err=%v calls=%d", rpcErr, calls)
 	}
 	payload, ok := response.(map[string]any)
 	if !ok {
-		t.Fatalf("resume MCP response type=%T", response)
+		t.Fatalf("claim MCP response type=%T", response)
 	}
 	content, ok := payload["content"].([]map[string]any)
-	if !ok || len(content) != 1 || !strings.Contains(content[0]["text"].(string), `"id": "io-aaaaaaaaaaaa"`) ||
-		!strings.Contains(content[0]["text"].(string), `"resume_disposition": "existing_binding"`) {
-		t.Fatalf("resume MCP response=%#v", response)
-	}
-}
-
-func TestExecutionActionRequestFromMCPIssueSnapshot(t *testing.T) {
-	req, err := executionActionRequestFromMCPWithAncestry(map[string]any{
-		"action": "prepare",
-		"id":     "io-aaaaaaaaaaaa",
-		"issue_snapshot": map[string]any{
-			"provider": "gitlab",
-			"source":   "glab_mcp",
-			"web_url":  "https://gitlab.example.com/acme/repo/-/issues/69",
-			"body":     "AC-69",
-			"state":    "opened",
-		},
-	}, nil)
-	if err != nil || req.IssueSnapshot == nil || req.IssueSnapshot.Source != "glab_mcp" {
-		t.Fatalf("nested snapshot mapping failed: req=%#v err=%v", req, err)
-	}
-}
-
-func TestExecutionActionRequestFromMCPRejectsMalformedIssueSnapshot(t *testing.T) {
-	for name, snapshot := range map[string]any{
-		"not_object": "glab_mcp",
-		"non_string": map[string]any{
-			"provider": "gitlab",
-			"source":   "glab_mcp",
-			"web_url":  69,
-			"body":     "AC-69",
-			"state":    "opened",
-		},
-		"unknown_field": map[string]any{
-			"provider":         "gitlab",
-			"source":           "glab_mcp",
-			"web_url":          "https://gitlab.example.com/acme/repo/-/issues/69",
-			"body":             "AC-69",
-			"state":            "opened",
-			"server_namespace": "private",
-		},
-	} {
-		t.Run(name, func(t *testing.T) {
-			_, err := executionActionRequestFromMCPWithAncestry(map[string]any{
-				"action": "prepare", "id": "io-aaaaaaaaaaaa", "issue_snapshot": snapshot,
-			}, nil)
-			if err == nil {
-				t.Fatal("malformed issue_snapshot was silently accepted")
-			}
-		})
+	if !ok || len(content) != 1 || !strings.Contains(content[0]["text"].(string), `"id": "io-aaaaaaaaaaaa"`) {
+		t.Fatalf("claim MCP response=%#v", response)
 	}
 }

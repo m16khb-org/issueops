@@ -23,10 +23,8 @@ func intentArtifactRecord(t *testing.T, intent *issueopscontract.IssueOpsIntentC
 	record.WorktreePath = worktree
 	record.Intent = intent
 	record.Execution = &issueopscontract.Execution{
-		Mode:      issueopscontract.ExecutionModeDirect,
 		Workspace: issueopscontract.Workspace{Root: worktree, ArtifactDir: app.OwnerArtifactDir(record)},
 		Lease:     issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusActive},
-		Selection: selectionFixture(issueopscontract.ExecutionModeDirect),
 	}
 	return stateRoot, record, worktree
 }
@@ -59,8 +57,8 @@ func TestMaterializeStagedArtifactsSealsDerivedIntent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if manifest["intent"] != digestExecutionOwnerBytes(content) {
-		t.Fatalf("manifest intent digest %q does not match file digest %q", manifest["intent"], digestExecutionOwnerBytes(content))
+	if manifest["intent"] != digestBytes(content) {
+		t.Fatalf("manifest intent digest %q does not match file digest %q", manifest["intent"], digestBytes(content))
 	}
 	if !strings.Contains(string(content), "INTENT.md를 어느 시점에 어느 위치에 만들지 조사해줘") || !strings.Contains(string(content), "- issue: https://github.com/acme/repo/issues/16") {
 		t.Fatalf("intent artifact must carry the raw request and issue URL:\n%s", content)
@@ -114,7 +112,7 @@ func TestMaterializeStagedArtifactsIntentIsImmutableAcrossRerecords(t *testing.T
 	}
 	// 내용이 달라진 재기록: 불변 writer가 거부한다.
 	record.Intent.RawRequest = "다른 요청"
-	if _, err := materializeStagedArtifacts(stateRoot, record); err == nil || !strings.Contains(err.Error(), "immutable owner artifact already exists with different identity") {
+	if _, err := materializeStagedArtifacts(stateRoot, record); err == nil || !strings.Contains(err.Error(), "immutable sealed artifact already exists with different identity") {
 		t.Fatalf("changed intent must be rejected by the immutable writer: %v", err)
 	}
 }

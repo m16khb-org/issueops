@@ -6,7 +6,6 @@ import (
 	"issueops/cmd/issueops/issueopscli/executioncmd"
 	"issueops/cmd/issueops/issueopscli/feedbackcleanup"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
-	executionissue "issueops/internal/contract/executionissue"
 	issueopscontract "issueops/internal/contract/issueops"
 	"issueops/internal/port"
 	basesyncport "issueops/internal/port/issueopsbasesync"
@@ -32,17 +31,12 @@ type Dependencies struct {
 	Usage          string
 	ChildUsage     string
 	Prepare        issueopscontract.ExecutionPrepareHandler
-	Orca           port.ExecutionOrcaProvisioner
-	OrcaOwner      port.ExecutionOrcaOwnerInspector
 	BaseSync       basesyncport.Inspector
-	ReadIssue      executionissue.ExecutionIssueSnapshotReadFunc
 	Claim          issueopscontract.ExecutionClaimHandler
 	Release        issueopscontract.ExecutionReleaseHandler
 	Status         port.ExecutionStatusHandler
 	Replace        port.ExecutionReplaceHandler
 	Reseed         issueopscontract.ExecutionReseedHandler
-	Resume         issueopscontract.ExecutionResumeHandler
-	Reconcile      port.ExecutionReconcileHandler
 	Complete       issueopscontract.ExecutionCompleteHandler
 	Publication    remotecmd.PublicationHandlers
 	Provenance     provenanceport.Observer

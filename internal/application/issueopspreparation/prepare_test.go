@@ -10,7 +10,6 @@ import (
 
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
-	preparationdomain "issueops/internal/domain/issueopspreparation"
 )
 
 func TestDirectPreparationPreviewAndConfirmTrace(t *testing.T) {
@@ -32,7 +31,7 @@ func TestDirectPreparationPreviewAndConfirmTrace(t *testing.T) {
 			if !reflect.DeepEqual(fixture.trace, test.wantTrace) {
 				t.Fatalf("trace=%v want=%v", fixture.trace, test.wantTrace)
 			}
-			if !result.OK || result.Preview != !test.confirm || result.RequestedMode != "direct" || result.ResolvedMode != "direct" {
+			if !result.OK || result.Preview != !test.confirm {
 				t.Fatalf("result=%+v", result)
 			}
 			if test.confirm {
@@ -109,46 +108,26 @@ func TestDirectPreparationRejectsIssueURLWithoutNumberBeforeProvisioning(t *test
 	}
 }
 
-func TestPrepareFingerprintGatePrecedesWorkspaceMutation(t *testing.T) {
-	fixture := newDirectServiceFixture()
-	command := directCommand(true)
-	command.ExpectedReadinessFingerprint = ""
-	result, err := fixture.service.Prepare(context.Background(), command)
-	if err == nil || result.OK || !strings.Contains(err.Error(), "readiness fingerprint") {
-		t.Fatalf("result=%+v err=%v", result, err)
-	}
-	if denial, ok := errors.AsType[*preparationdomain.Denial](err); !ok || denial.Reason != preparationdomain.DenialReadinessFingerprintChanged {
-		t.Fatalf("denial=%v err=%v", denial, err)
-	}
-	if traceIndex(fixture.trace, "direct.prepare") >= 0 || fixture.repository.commit != nil {
-		t.Fatalf("fingerprint drift reached mutation: %v", fixture.trace)
-	}
-}
-
 func TestPreparationDecisionShortCircuitsDirectEffects(t *testing.T) {
 	tests := []struct {
 		name      string
-		mode      string
 		execution *leasecontract.Execution
 		rootErr   error
 		wantTrace []string
 		wantCode  string
 		wantNext  bool
 	}{
-		{name: "idempotent", mode: "direct", execution: applicationExecution("direct", "active", false), wantTrace: []string{"load"}, wantCode: "existing"},
-		{name: "pending", mode: "direct", execution: applicationExecution("direct", "released", true), wantTrace: []string{"load"}, wantCode: "pending_reconcile", wantNext: true},
-		{name: "mismatch", mode: "orca", execution: applicationExecution("direct", "active", false), wantTrace: []string{"load"}, wantCode: "mode_mismatch", wantNext: true},
-		{name: "writerless", mode: "direct", execution: applicationExecution("direct", "released", false), wantTrace: []string{"load"}, wantCode: "writerless", wantNext: true},
-		{name: "root collision", mode: "direct", rootErr: errors.New("canonical root belongs to io-other"), wantTrace: []string{"load", "workspace", "root"}, wantCode: "root_conflict"},
+		{name: "idempotent", execution: applicationExecution("active", false), wantTrace: []string{"load"}, wantCode: "existing"},
+		{name: "pending", execution: applicationExecution("released", true), wantTrace: []string{"load"}, wantCode: "pending_reconcile", wantNext: true},
+		{name: "writerless", execution: applicationExecution("released", false), wantTrace: []string{"load"}, wantCode: "writerless", wantNext: true},
+		{name: "root collision", rootErr: errors.New("canonical root belongs to io-other"), wantTrace: []string{"load", "workspace", "root"}, wantCode: "root_conflict"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			fixture := newDirectServiceFixture()
 			fixture.repository.snapshot.Record.Execution = test.execution
 			fixture.repository.rootErr = test.rootErr
-			command := directCommand(true)
-			command.Mode = test.mode
-			result, err := fixture.service.Prepare(context.Background(), command)
+			result, err := fixture.service.Prepare(context.Background(), directCommand(true))
 			if test.wantCode == "existing" {
 				if err != nil || !result.OK {
 					t.Fatalf("result=%+v err=%v", result, err)
@@ -178,35 +157,26 @@ func newDirectServiceFixture() *directServiceFixture {
 	fixture := &directServiceFixture{}
 	record := leasecontract.Record{ID: "io-prepare", Repo: "/repo", Branch: "199-prepare"}
 	fixture.repository = &applicationRepositoryFake{trace: &fixture.trace, snapshot: preparationcontract.Snapshot{Record: record, RecordRaw: []byte("raw"), ArtifactDir: ".issueops/issues/199/artifact"}}
-	fixture.direct = &applicationDirectFake{trace: &fixture.trace, access: preparationcontract.AccessResult{Allowed: true}, receipt: preparationcontract.WorkspaceReceipt{SourceRoot: "/repo", Root: "/repo.worktrees/199-prepare", Branch: "199-prepare", BaseHead: "base", Driver: "git", Exists: true}}
+	fixture.direct = &applicationDirectFake{trace: &fixture.trace, access: preparationcontract.AccessResult{Allowed: true}, receipt: preparationcontract.WorkspaceReceipt{SourceRoot: "/repo", Root: "/repo.worktrees/199-prepare", Branch: "199-prepare", BaseHead: "base", Exists: true}}
 	fixture.evidence = &applicationEvidenceFake{trace: &fixture.trace, workspace: preparationcontract.WorkspaceRequest{LifecycleID: record.ID, SourceRoot: record.Repo, Root: "/repo.worktrees/199-prepare", Branch: record.Branch, BaseBranch: "117-parent", BaseHead: "base", Confirm: true}}
-	fixture.service = NewService(fixture.repository, &applicationClockFake{trace: &fixture.trace}, applicationOperationIDFake{}, fixture.direct, applicationOrcaFake{}, fixture.evidence, &agentModelsFake{})
+	fixture.service = NewService(fixture.repository, &applicationClockFake{trace: &fixture.trace}, fixture.direct, fixture.evidence)
 	return fixture
 }
 
 func directCommand(confirm bool) preparationcontract.Command {
-	command := preparationcontract.Command{
-		ID: "io-prepare", Mode: "direct", CWD: "/repo", Confirm: confirm,
-		DirectReason: "planned recovery",
-		Actor:        leasecontract.Actor{Host: "codex", SessionID: "session", SessionProcess: &leasecontract.ProcessReceipt{PID: 42, StartedAt: "start", Executable: "/bin/codex"}},
+	return preparationcontract.Command{
+		ID: "io-prepare", CWD: "/repo", Confirm: confirm,
+		Actor: leasecontract.Actor{Host: "codex", SessionID: "session", SessionProcess: &leasecontract.ProcessReceipt{PID: 42, StartedAt: "start", Executable: "/bin/codex"}},
 	}
-	if confirm {
-		decision, err := preparationdomain.Decide(preparationdomain.DecisionInput{Command: command})
-		if err != nil {
-			panic(err)
-		}
-		command.ExpectedReadinessFingerprint = decision.ReadinessFingerprint
-	}
-	return command
 }
 
-func applicationExecution(mode, status string, pending bool) *leasecontract.Execution {
-	execution := &leasecontract.Execution{Mode: mode, Workspace: leasecontract.Workspace{SourceRoot: "/repo", Root: "/repo.worktrees/199-prepare", Branch: "199-prepare", BaseHead: "base", Driver: map[string]string{"direct": "git", "orca": "orca"}[mode], LinkedAt: "linked"}, Lease: leasecontract.Lease{Generation: 1, Status: status}}
+func applicationExecution(status string, pending bool) *leasecontract.Execution {
+	execution := &leasecontract.Execution{Workspace: leasecontract.Workspace{SourceRoot: "/repo", Root: "/repo.worktrees/199-prepare", Branch: "199-prepare", BaseHead: "base", LinkedAt: "linked"}, Lease: leasecontract.Lease{Generation: 1, Status: status}}
 	if status == "active" {
 		execution.Lease.Holder = &leasecontract.Actor{Host: "codex", SessionID: "session", SessionProcess: &leasecontract.ProcessReceipt{PID: 42, StartedAt: "start", Executable: "/bin/codex"}}
 	}
 	if pending {
-		execution.Pending = &leasecontract.ExternalIntent{OperationID: "operation", Kind: "owner_launch", Marker: "marker", StartedAt: "started"}
+		execution.Pending = &leasecontract.ExternalIntent{OperationID: "operation", Kind: "remote_pr_create", Marker: "marker", StartedAt: "started"}
 	}
 	return execution
 }
@@ -235,22 +205,8 @@ func (fake *applicationRepositoryFake) CommitDirect(_ context.Context, commit Di
 	if fake.commitErr != nil {
 		return preparationcontract.Result{ID: commit.Command.ID}, fake.commitErr
 	}
-	selection := commit.Selection
-	execution := &leasecontract.Execution{Mode: "direct", Selection: &selection, Workspace: leasecontract.Workspace{SourceRoot: commit.Workspace.SourceRoot, Root: commit.Workspace.Root, Branch: commit.Workspace.Branch, BaseHead: commit.Workspace.BaseHead, ParentWorktree: commit.Workspace.ParentWorktree, Driver: "git", LinkedAt: commit.LinkedAt}, Lease: leasecontract.Lease{Generation: 1, Status: "active", Holder: &commit.Command.Actor, ClaimedAt: commit.ClaimedAt}}
-	return preparationcontract.Result{OK: true, ID: commit.Command.ID, RequestedMode: commit.RequestedMode, ResolvedMode: "direct", FallbackCode: commit.FallbackCode, ReadinessFingerprint: selection.ReadinessFingerprint, ExplicitDirectReason: selection.ExplicitDirectReason, Workspace: execution.Workspace, Execution: execution}, nil
-}
-
-func (*applicationRepositoryFake) BeginIntent(context.Context, OrcaBegin) (IntentState, error) {
-	return IntentState{}, errors.New("unexpected BeginIntent")
-}
-func (*applicationRepositoryFake) MarkInvoking(context.Context, IntentState) (IntentState, error) {
-	return IntentState{}, errors.New("unexpected MarkInvoking")
-}
-func (*applicationRepositoryFake) RecordFailure(context.Context, IntentState, string, error) error {
-	return errors.New("unexpected RecordFailure")
-}
-func (*applicationRepositoryFake) ApplyReceipt(context.Context, IntentState, preparationcontract.IntentReceipt) (IntentProgress, error) {
-	return IntentProgress{}, errors.New("unexpected ApplyReceipt")
+	execution := &leasecontract.Execution{Workspace: leasecontract.Workspace{SourceRoot: commit.Workspace.SourceRoot, Root: commit.Workspace.Root, Branch: commit.Workspace.Branch, BaseHead: commit.Workspace.BaseHead, ParentWorktree: commit.Workspace.ParentWorktree, LinkedAt: commit.LinkedAt}, Lease: leasecontract.Lease{Generation: 1, Status: "active", Holder: &commit.Command.Actor, ClaimedAt: commit.ClaimedAt}}
+	return preparationcontract.Result{OK: true, ID: commit.Command.ID, Workspace: execution.Workspace, Execution: execution}, nil
 }
 
 type applicationClockFake struct {
@@ -263,10 +219,6 @@ func (fake *applicationClockFake) Now() time.Time {
 	fake.next++
 	return time.Date(2026, time.August, 2, 2, fake.next, 0, 0, time.UTC)
 }
-
-type applicationOperationIDFake struct{}
-
-func (applicationOperationIDFake) New() (string, error) { return "operation", nil }
 
 type applicationDirectFake struct {
 	trace      *[]string
@@ -286,18 +238,6 @@ func (fake *applicationDirectFake) Prepare(context.Context, preparationcontract.
 	return fake.receipt, fake.prepareErr
 }
 
-type applicationOrcaFake struct{}
-
-func (applicationOrcaFake) Probe(context.Context, preparationcontract.ProbeRequest) (preparationcontract.ProbeResult, error) {
-	return preparationcontract.ProbeResult{}, errors.New("unexpected Orca probe")
-}
-func (applicationOrcaFake) Inspect(context.Context, preparationcontract.IntentRequest) (preparationcontract.IntentInventory, error) {
-	return preparationcontract.IntentInventory{}, errors.New("unexpected Orca inspect")
-}
-func (applicationOrcaFake) Invoke(context.Context, preparationcontract.IntentRequest) (preparationcontract.IntentReceipt, error) {
-	return preparationcontract.IntentReceipt{}, errors.New("unexpected Orca invoke")
-}
-
 type applicationEvidenceFake struct {
 	trace          *[]string
 	workspace      preparationcontract.WorkspaceRequest
@@ -311,13 +251,16 @@ func (fake *applicationEvidenceFake) Workspace(_ preparationcontract.Snapshot, c
 	result.Confirm = confirm
 	return result, fake.workspaceErr
 }
-func (*applicationEvidenceFake) ReadOwner(context.Context, preparationcontract.Snapshot, preparationcontract.Command) (preparationcontract.OwnerEvidence, error) {
-	return preparationcontract.OwnerEvidence{}, errors.New("unexpected owner evidence")
-}
 func (fake *applicationEvidenceFake) MaterializeDirect(context.Context, preparationcontract.Snapshot, preparationcontract.WorkspaceReceipt) error {
 	*fake.trace = append(*fake.trace, "evidence.materialize")
 	return fake.materializeErr
 }
-func (*applicationEvidenceFake) PrepareOwner(context.Context, preparationcontract.Snapshot, preparationcontract.Command, preparationcontract.Intent, preparationcontract.IntentReceipt) (preparationcontract.OwnerArtifacts, error) {
-	return preparationcontract.OwnerArtifacts{}, errors.New("unexpected owner preparation")
+
+func traceIndex(trace []string, name string) int {
+	for index, entry := range trace {
+		if entry == name {
+			return index
+		}
+	}
+	return -1
 }

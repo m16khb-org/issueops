@@ -11,7 +11,7 @@ func TestPrepareContractClonesMutableAuthority(t *testing.T) {
 	process := &leasecontract.ProcessReceipt{PID: 42, StartedAt: "start", Executable: "/bin/codex"}
 	holder := &leasecontract.Actor{Host: "codex", SessionID: "session", SessionProcess: process}
 	execution := &leasecontract.Execution{
-		Mode: "direct", Lease: leasecontract.Lease{Generation: 1, Status: "active", Holder: holder},
+		Lease:      leasecontract.Lease{Generation: 1, Status: "active", Holder: holder},
 		Completion: &leasecontract.Completion{Verification: []string{"go test ./..."}},
 		CompletionHistory: []leasecontract.CompletionHistoryEntry{{
 			Generation: 1, Completion: leasecontract.Completion{Verification: []string{"old verification"}},

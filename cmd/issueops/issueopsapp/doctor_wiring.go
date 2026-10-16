@@ -9,7 +9,6 @@ import (
 	adapter "issueops/internal/adapter/doctor"
 
 	"issueops/internal/adapter/operationalhealth"
-	"issueops/internal/adapter/orca"
 	statestore "issueops/internal/adapter/outbound/state"
 	app "issueops/internal/application/doctor"
 	statecontract "issueops/internal/contract/state"
@@ -37,7 +36,7 @@ func newDoctorService() app.Service {
 
 func newDoctorCommand() basiccli.Doctor {
 	home, _ := os.UserHomeDir()
-	collector := newOperationalHealthCollector(issueOpsStateRoot(), operationalhealth.ExecGitRunner{}, orca.New())
+	collector := newOperationalHealthCollector(issueOpsStateRoot(), operationalhealth.ExecGitRunner{})
 	return basiccli.Doctor{Service: newDoctorService(), NormalizeRepoRoot: newRepoRootResolver("."),
 		IssueOpsRoot: issueOpsRoot(), Home: home, Version: version, Now: time.Now,
 		CollectOperationalHealth: collector.Collect}

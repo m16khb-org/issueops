@@ -7,15 +7,11 @@ import (
 
 	"issueops/cmd/issueops/issueopscli/feedbackcleanup"
 	issueopscore "issueops/internal/adapter/issueops"
-	orcaadapter "issueops/internal/adapter/orca"
-	preparationoutbound "issueops/internal/adapter/outbound/issueopspreparation"
 	preflightadapter "issueops/internal/adapter/preflight"
 	cleanupapp "issueops/internal/application/issueopscleanup"
-	preparationapp "issueops/internal/application/issueopspreparation"
 	materialapp "issueops/internal/application/issueopsremote"
 	reviewapp "issueops/internal/application/issueopsreview"
 	issueopscontract "issueops/internal/contract/issueops"
-	preparationcontract "issueops/internal/contract/issueopspreparation"
 	"issueops/internal/port"
 )
 
@@ -24,7 +20,7 @@ import (
 func newIssueOpsCleanup(root string) feedbackcleanup.Command {
 
 	finish := func(ctx context.Context, stateRoot string, req issueopscontract.CleanupFinishRequest, d feedbackcleanup.Deps, prov port.IssueProvider) (issueopscontract.CleanupFinishResult, error) {
-		runtime := issueopscore.CleanupFinishRuntime{RunGit: d.CleanupFinishGit, Processes: issueopscore.CleanupProcessDeps{Observe: d.InspectCleanupProcesses}, OrcaTerminals: orcaadapter.New()}
+		runtime := issueopscore.CleanupFinishRuntime{RunGit: d.CleanupFinishGit, Processes: issueopscore.CleanupProcessDeps{Observe: d.InspectCleanupProcesses}}
 		evidence := cleanupapp.FinishEvidenceReader{Provider: prov, VerifyMergedHead: d.VerifyMergedHead, ReadIssueSnapshot: issueopscore.ReadRemoteIssueSnapshot}
 		return (cleanupapp.FinishExecutor{
 			MaterialWarning: (materialapp.TrackedMaterials{Files: issueopscore.MaterialFiles{}}).Warning,
@@ -35,24 +31,16 @@ func newIssueOpsCleanup(root string) feedbackcleanup.Command {
 			},
 			Fingerprint: issueopscore.CleanupFinishFingerprint, NewAttempt: issueopscore.NewCleanupAttempt,
 
-			Stop: runtime.Stop, RemoveOrca: d.RemoveOrcaWorktree, Directory: (issueopscore.CleanupFinishEnvironment{}).Directory, Git: runtime.Git, Now: time.Now,
+			Stop: runtime.Stop, Directory: (issueopscore.CleanupFinishEnvironment{}).Directory, Git: runtime.Git, Now: time.Now,
 		}).Run(ctx, req)
 	}
 	abandon := func(ctx context.Context, stateRoot string, req issueopscontract.CleanupAbandonRequest, d feedbackcleanup.Deps) (issueopscontract.CleanupAbandonResult, error) {
-		runtime := issueopscore.CleanupAbandonRuntime{StateRoot: stateRoot, Git: d.CleanupFinishGit, Processes: issueopscore.CleanupProcessDeps{Observe: d.InspectCleanupProcesses}, OrcaTerminals: orcaadapter.New()}
+		runtime := issueopscore.CleanupAbandonRuntime{StateRoot: stateRoot, Git: d.CleanupFinishGit, Processes: issueopscore.CleanupProcessDeps{Observe: d.InspectCleanupProcesses}}
 		return (cleanupapp.AbandonExecutor{
 			Records: issueopscore.CleanupRecordStore{StateRoot: stateRoot}, Acquire: (issueopscore.CleanupLifetimeLock{StateRoot: stateRoot}).Acquire,
 			Provider: d.Provider, Observe: cleanupapp.ObserveAbandonArtifact,
 			Plan: (cleanupapp.AbandonPreviewer{
 				Environment: runtime, ReadChild: runtime.ReadChild, Workspace: runtime.Workspace,
-				Orca: cleanupapp.AbandonOrcaObserver{ReadIntent: runtime.ReadIntent, InspectionRequest: func(record issueopscontract.IssueOpsRecord, intent preparationcontract.Intent) (port.ExecutionOrcaIntentRequest, error) {
-					projected, err := issueopscore.PreparationIntentRecord(record)
-					if err != nil {
-						return port.ExecutionOrcaIntentRequest{}, err
-					}
-					request, err := (preparationapp.IntentRequestBuilder{Files: issueopscore.OrcaIntentFiles{}}).Inspect(projected, intent)
-					return preparationoutbound.OrcaIntentRequest(request), err
-				}, Orca: d.OrcaIntent, Owner: d.OrcaOwner},
 				Remote: cleanupapp.AbandonRemoteObserver{RemoteRef: (issueopscore.LinkedBranchRemoteRef{RunGit: runtime.Command}).Observe},
 			}).Plan,
 			NewAttempt: issueopscore.NewCleanupAttempt, Stop: runtime.Stop, Directory: (issueopscore.CleanupFinishEnvironment{}).Directory, Git: runtime.Command, Now: time.Now,

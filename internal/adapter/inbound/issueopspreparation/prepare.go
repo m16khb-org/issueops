@@ -5,7 +5,6 @@ package issueopspreparation
 import (
 	"context"
 	"errors"
-	executionissue "issueops/internal/contract/executionissue"
 
 	issueopscontract "issueops/internal/contract/issueops"
 	leasecontract "issueops/internal/contract/issueopslease"
@@ -22,19 +21,16 @@ type Handler struct{ service service }
 // 반환 타입은 어댑터의 이름 붙은 핸들러 타입 대신 같은 시그니처를 직접 쓴다.
 // Go에서 두 형태는 할당 호환이므로 소비자는 그대로 동작하고, inbound 어댑터는
 // issueops 어댑터를 알 필요가 없어진다.
-func NewHandler(service service) func(context.Context, string, issueopscontract.ExecutionPrepareRequest, executionissue.ExecutionPrepareInvocation) (issueopscontract.ExecutionPrepareResult, error) {
+func NewHandler(service service) func(context.Context, string, issueopscontract.ExecutionPrepareRequest) (issueopscontract.ExecutionPrepareResult, error) {
 	return Handler{service: service}.Handle
 }
 
-func (handler Handler) Handle(ctx context.Context, _ string, request issueopscontract.ExecutionPrepareRequest, _ executionissue.ExecutionPrepareInvocation) (issueopscontract.ExecutionPrepareResult, error) {
+func (handler Handler) Handle(ctx context.Context, _ string, request issueopscontract.ExecutionPrepareRequest) (issueopscontract.ExecutionPrepareResult, error) {
 	if handler.service == nil {
 		return issueopscontract.ExecutionPrepareResult{ID: request.ID}, issueopscontract.ErrPrepareHandlerUnavailable
 	}
 	result, err := handler.service.Prepare(ctx, preparationcontract.Command{
-		ID: request.ID, Mode: request.Mode, Actor: preparationActor(request.Actor), CWD: request.CWD,
-		OwnerHost: request.OwnerHost, OwnerModel: request.OwnerModel, OwnerEffort: request.OwnerEffort,
-		IssueSnapshotFile: request.IssueSnapshotFile,
-		DirectReason:      request.DirectReason, ExpectedReadinessFingerprint: request.ExpectedReadinessFingerprint, Confirm: request.Confirm,
+		ID: request.ID, Actor: preparationActor(request.Actor), CWD: request.CWD, Confirm: request.Confirm,
 	})
 	return coreResult(result), publicError(err)
 }
@@ -52,21 +48,15 @@ func preparationActor(actor issueopscontract.NativeActor) leasecontract.Actor {
 func coreResult(result preparationcontract.Result) issueopscontract.ExecutionPrepareResult {
 	return issueopscontract.ExecutionPrepareResult{
 		OK: result.OK, ID: result.ID, Preview: result.Preview,
-		RequestedMode: result.RequestedMode, ResolvedMode: result.ResolvedMode, FallbackCode: result.FallbackCode,
-		ProbeAttempted: result.ProbeAttempted, ProbeAvailable: result.ProbeAvailable, ProbeReady: result.ProbeReady,
-		ProbeCode: result.ProbeCode, ReadinessFingerprint: result.ReadinessFingerprint, ExplicitDirectReason: result.ExplicitDirectReason,
 		Workspace: coreWorkspace(result.Workspace), Execution: coreExecution(result.Execution),
-		ClaimTokenPath: result.ClaimTokenPath, IssueBodySHA256: result.IssueBodySHA256,
-		ContextPacketPath: result.ContextPacketPath, ContextPacketSHA256: result.ContextPacketSHA256,
-		OwnerPromptPath: result.OwnerPromptPath, OwnerPromptSHA256: result.OwnerPromptSHA256,
-		IssueSnapshotSource: result.IssueSnapshotSource, NextCommand: result.NextCommand,
+		ClaimTokenPath: result.ClaimTokenPath, NextCommand: result.NextCommand,
 	}
 }
 
 func coreWorkspace(workspace leasecontract.Workspace) issueopscontract.Workspace {
 	return issueopscontract.Workspace{
 		SourceRoot: workspace.SourceRoot, Root: workspace.Root, Branch: workspace.Branch,
-		BaseHead: workspace.BaseHead, ParentWorktree: workspace.ParentWorktree, Driver: workspace.Driver, LinkedAt: workspace.LinkedAt,
+		BaseHead: workspace.BaseHead, ParentWorktree: workspace.ParentWorktree, LinkedAt: workspace.LinkedAt,
 	}
 }
 
@@ -75,22 +65,12 @@ func coreExecution(execution *leasecontract.Execution) *issueopscontract.Executi
 		return nil
 	}
 	result := &issueopscontract.Execution{
-		Mode: issueopscontract.ExecutionMode(execution.Mode), Workspace: coreWorkspace(execution.Workspace),
+		Workspace: coreWorkspace(execution.Workspace),
 		Lease: issueopscontract.WriteLease{
 			Generation: execution.Lease.Generation, Status: issueopscontract.LeaseStatus(execution.Lease.Status),
 			ClaimTokenSHA256: execution.Lease.ClaimTokenSHA256, ClaimedAt: execution.Lease.ClaimedAt,
 			ReleasedAt: execution.Lease.ReleasedAt, ReplacedAt: execution.Lease.ReplacedAt, ReplacementReason: execution.Lease.ReplacementReason,
 		},
-	}
-	if execution.Selection != nil {
-		selection := execution.Selection
-		result.Selection = &issueopscontract.ExecutionSelection{
-			RequestedMode: selection.RequestedMode, ResolvedMode: selection.ResolvedMode,
-			ProbeAttempted: selection.ProbeAttempted, ProbeAvailable: selection.ProbeAvailable, ProbeReady: selection.ProbeReady,
-			ProbeCode: selection.ProbeCode, FallbackCode: selection.FallbackCode,
-			ReadinessFingerprint: selection.ReadinessFingerprint, SelectedAt: selection.SelectedAt,
-			ExplicitDirectReason: selection.ExplicitDirectReason,
-		}
 	}
 	if execution.Lease.Holder != nil {
 		holder := execution.Lease.Holder
@@ -99,17 +79,6 @@ func coreExecution(execution *leasecontract.Execution) *issueopscontract.Executi
 			result.Lease.Holder.SessionProcess = &issueopscontract.NativeProcessReceipt{
 				PID: holder.SessionProcess.PID, StartedAt: holder.SessionProcess.StartedAt, Executable: holder.SessionProcess.Executable,
 			}
-		}
-	}
-	if execution.Orca != nil {
-		binding := execution.Orca
-		result.Orca = &issueopscontract.OrcaBinding{
-			RuntimeID: binding.RuntimeID, RepoID: binding.RepoID, WorktreeID: binding.WorktreeID,
-			RunID: binding.RunID, WorktreeInstanceID: binding.WorktreeInstanceID, LeaseGeneration: binding.LeaseGeneration,
-			ArtifactIdentityVersion: binding.ArtifactIdentityVersion,
-			IssueBodySHA256:         binding.IssueBodySHA256, ContextPacketSHA256: binding.ContextPacketSHA256, OwnerPromptSHA256: binding.OwnerPromptSHA256,
-			OwnerHost: binding.OwnerHost, OwnerModel: binding.OwnerModel, OwnerEffort: binding.OwnerEffort,
-			TaskID: binding.TaskID, DispatchID: binding.DispatchID, TerminalPTYID: binding.TerminalPTYID,
 		}
 	}
 	if execution.Pending != nil {

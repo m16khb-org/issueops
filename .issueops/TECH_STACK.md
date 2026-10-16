@@ -46,10 +46,6 @@ Python 검증은 stdlib suite runner와 스킬에 이미 선언된 Pydantic/Type
 
 위키, 코드 인텔리전스, 세션 메모리, 서드파티 toolchain은 사용자가 각 도구의 공식 경로로 별도 설치한다. `issueops`는 명시적 파일, command output, 이미 구성된 MCP처럼 검증 가능한 경계만 소비한다.
 
-### Optional Orca boundary
-
-Orca는 `exec.CommandContext`로 설치된 CLI를 호출하는 선택적 IssueOps adapter다. `internal/adapter/orca`는 JSON status/repo/worktree/terminal/task/dispatch projection, bounded timeout, stdout/stderr 분리, redacted error를 담당한다. Orca를 Go module dependency, native installer target, daemon plugin, generic driver registry로 추가하지 않는다. Orca가 없어도 core/CLI/MCP/native install/self-verify는 독립적으로 동작하며, IssueOps `auto` 모드는 mutation 전 probe 실패에만 기존 inline worktree 계약을 반환한다.
-
 ## 2.2 Project skills
 
 `skills/<name>/SKILL.md`의 frontmatter와 본문이 스킬 이름, 활성 조건, 실행 계약의

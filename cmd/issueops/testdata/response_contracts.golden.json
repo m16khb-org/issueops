@@ -398,7 +398,7 @@
           "name": "status"
         }
       ],
-      "hash": "fa8882493280ce93a28c47bbf2ae48c195bec5bb58c01803cf2a5825b69b166e",
+      "hash": "b329f1d186f4ea3833db59d9105795f963328cc30061877796d71bddb382ae0a",
       "mcp_tools": [
         "api_doc_review",
         "api_doc_static_check",
@@ -568,31 +568,15 @@
           "ok",
           "id",
           "execution",
-          "issue_snapshot_source",
           "next_command"
         ],
         "issueops_execution_prepare": [
           "ok",
           "id",
           "preview",
-          "requested_mode",
-          "resolved_mode",
-          "fallback_code",
-          "probe_attempted",
-          "probe_available",
-          "probe_ready",
-          "probe_code",
-          "readiness_fingerprint",
-          "explicit_direct_reason",
           "workspace",
           "execution",
           "claim_token_path",
-          "issue_body_sha256",
-          "context_packet_path",
-          "context_packet_sha256",
-          "owner_prompt_path",
-          "owner_prompt_sha256",
-          "issue_snapshot_source",
           "next_command"
         ],
         "issueops_execution_reconcile": [
@@ -602,8 +586,7 @@
           "reconciled",
           "code",
           "execution",
-          "pending",
-          "issue_snapshot_source"
+          "pending"
         ],
         "issueops_execution_replace": [
           "ok",
@@ -613,20 +596,6 @@
           "inventory_fingerprint",
           "quiescence_fingerprint",
           "claim_token_path",
-          "issue_snapshot_source",
-          "next_command"
-        ],
-        "issueops_execution_resume": [
-          "ok",
-          "id",
-          "resume_disposition",
-          "execution",
-          "claim_token_path",
-          "issue_body_sha256",
-          "context_packet_path",
-          "context_packet_sha256",
-          "owner_prompt_path",
-          "owner_prompt_sha256",
           "next_command"
         ],
         "issueops_next": [
@@ -1364,14 +1333,14 @@
           "path": "$ISSUEOPS_ROOT/skills/issueops-merge"
         },
         {
-          "description": "Prepare the plan, reviews, and canonical worktree for an IssueOps cycle, then hand off through Orca or Herdr when available, otherwise continue in the current session. Use when \"issueops next\" reports plan.write, plan.design, plan.review, or plan.handoff, or when the user says \"계획 세워줘\", \"계획 검토해줘\", \"구현 인계\".",
+          "description": "Prepare the plan, reviews, and canonical worktree for an IssueOps cycle, then hand off through Herdr when available, otherwise continue in the current session. Use when \"issueops next\" reports plan.write, plan.design, plan.review, or plan.handoff, or when the user says \"계획 세워줘\", \"계획 검토해줘\", \"구현 인계\".",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "issueops-plan",
           "path": "$ISSUEOPS_ROOT/skills/issueops-plan"
         },
         {
-          "description": "Give an IssueOps cycle its branch identity. Resolve and pin the exact base SHA, record it with \"issueops branch prepare\", create and verify the provider-side branch link, and move the cycle to the plan phase. Creating the worktree is not this skill's job — \"issueops execution prepare\" owns it and picks git or Orca. Use when the user says \"준비\", \"브랜치 만들어줘\", \"prepare the issue branch\", or when \"issueops next\" reports stage prepare.",
+          "description": "Give an IssueOps cycle its branch identity. Resolve and pin the exact base SHA, record it with \"issueops branch prepare\", create and verify the provider-side branch link, and move the cycle to the plan phase. Creating the worktree is not this skill's job — \"issueops execution prepare\" owns it. Use when the user says \"준비\", \"브랜치 만들어줘\", \"prepare the issue branch\", or when \"issueops next\" reports stage prepare.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "issueops-prepare",
@@ -2177,21 +2146,9 @@
           "generation": 1,
           "status": "claimable"
         },
-        "mode": "direct",
-        "selection": {
-          "explicit_direct_reason": "test fixture",
-          "probe_attempted": false,
-          "probe_available": false,
-          "probe_ready": false,
-          "readiness_fingerprint": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-          "requested_mode": "direct",
-          "resolved_mode": "direct",
-          "selected_at": "$TIMESTAMP"
-        },
         "workspace": {
           "base_head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           "branch": "69-cli-execution-contract",
-          "driver": "git",
           "linked_at": "$TIMESTAMP",
           "root": "$WORKSPACE.worktrees/69-cli-execution-contract",
           "source_root": "$WORKSPACE"
@@ -7241,7 +7198,7 @@
                 "name": "status"
               }
             ],
-            "hash": "fa8882493280ce93a28c47bbf2ae48c195bec5bb58c01803cf2a5825b69b166e",
+            "hash": "b329f1d186f4ea3833db59d9105795f963328cc30061877796d71bddb382ae0a",
             "mcp_tools": [
               "api_doc_review",
               "api_doc_static_check",
@@ -7411,31 +7368,15 @@
                 "ok",
                 "id",
                 "execution",
-                "issue_snapshot_source",
                 "next_command"
               ],
               "issueops_execution_prepare": [
                 "ok",
                 "id",
                 "preview",
-                "requested_mode",
-                "resolved_mode",
-                "fallback_code",
-                "probe_attempted",
-                "probe_available",
-                "probe_ready",
-                "probe_code",
-                "readiness_fingerprint",
-                "explicit_direct_reason",
                 "workspace",
                 "execution",
                 "claim_token_path",
-                "issue_body_sha256",
-                "context_packet_path",
-                "context_packet_sha256",
-                "owner_prompt_path",
-                "owner_prompt_sha256",
-                "issue_snapshot_source",
                 "next_command"
               ],
               "issueops_execution_reconcile": [
@@ -7445,8 +7386,7 @@
                 "reconciled",
                 "code",
                 "execution",
-                "pending",
-                "issue_snapshot_source"
+                "pending"
               ],
               "issueops_execution_replace": [
                 "ok",
@@ -7456,20 +7396,6 @@
                 "inventory_fingerprint",
                 "quiescence_fingerprint",
                 "claim_token_path",
-                "issue_snapshot_source",
-                "next_command"
-              ],
-              "issueops_execution_resume": [
-                "ok",
-                "id",
-                "resume_disposition",
-                "execution",
-                "claim_token_path",
-                "issue_body_sha256",
-                "context_packet_path",
-                "context_packet_sha256",
-                "owner_prompt_path",
-                "owner_prompt_sha256",
                 "next_command"
               ],
               "issueops_next": [
@@ -8221,14 +8147,14 @@
                 "path": "$ISSUEOPS_ROOT/skills/issueops-merge"
               },
               {
-                "description": "Prepare the plan, reviews, and canonical worktree for an IssueOps cycle, then hand off through Orca or Herdr when available, otherwise continue in the current session. Use when \"issueops next\" reports plan.write, plan.design, plan.review, or plan.handoff, or when the user says \"계획 세워줘\", \"계획 검토해줘\", \"구현 인계\".",
+                "description": "Prepare the plan, reviews, and canonical worktree for an IssueOps cycle, then hand off through Herdr when available, otherwise continue in the current session. Use when \"issueops next\" reports plan.write, plan.design, plan.review, or plan.handoff, or when the user says \"계획 세워줘\", \"계획 검토해줘\", \"구현 인계\".",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "issueops-plan",
                 "path": "$ISSUEOPS_ROOT/skills/issueops-plan"
               },
               {
-                "description": "Give an IssueOps cycle its branch identity. Resolve and pin the exact base SHA, record it with \"issueops branch prepare\", create and verify the provider-side branch link, and move the cycle to the plan phase. Creating the worktree is not this skill's job — \"issueops execution prepare\" owns it and picks git or Orca. Use when the user says \"준비\", \"브랜치 만들어줘\", \"prepare the issue branch\", or when \"issueops next\" reports stage prepare.",
+                "description": "Give an IssueOps cycle its branch identity. Resolve and pin the exact base SHA, record it with \"issueops branch prepare\", create and verify the provider-side branch link, and move the cycle to the plan phase. Creating the worktree is not this skill's job — \"issueops execution prepare\" owns it. Use when the user says \"준비\", \"브랜치 만들어줘\", \"prepare the issue branch\", or when \"issueops next\" reports stage prepare.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "issueops-prepare",
@@ -8427,21 +8353,9 @@
                 "generation": 1,
                 "status": "claimable"
               },
-              "mode": "direct",
-              "selection": {
-                "explicit_direct_reason": "test fixture",
-                "probe_attempted": false,
-                "probe_available": false,
-                "probe_ready": false,
-                "readiness_fingerprint": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-                "requested_mode": "direct",
-                "resolved_mode": "direct",
-                "selected_at": "$TIMESTAMP"
-              },
               "workspace": {
                 "base_head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 "branch": "69-mcp-execution-contract",
-                "driver": "git",
                 "linked_at": "$TIMESTAMP",
                 "root": "$WORKSPACE.worktrees/69-mcp-execution-contract",
                 "source_root": "$WORKSPACE"

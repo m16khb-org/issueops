@@ -1,4 +1,4 @@
 interface:
   display_name: "IssueOps"
   short_description: "Route an issue-driven cycle across its ten stages"
-  default_prompt: "Use $issueops to continue the exact selected cycle. After the branch and canonical worktree are prepared, follow references/session-choice.md: inside a Herdr session prefer available Herdr first, otherwise prefer ready Orca, otherwise use available Herdr with the same native host, otherwise continue in the current session. Preserve explicit user choices, the approved endpoint, and release/recovery fencing; never recreate the worktree or recursively hand off."
+  default_prompt: "Use $issueops to continue the exact selected cycle. After the branch and canonical worktree are prepared, follow references/session-choice.md: check Herdr first and hand off to a new Herdr session with the same native host when it is available; otherwise continue in the current session or let the user hand off manually from a second terminal they opened. Preserve explicit user choices, the approved endpoint, and release/recovery fencing; never recreate the worktree or recursively hand off."

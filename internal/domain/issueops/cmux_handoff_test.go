@@ -28,7 +28,7 @@ func TestCmuxAttemptRejectsSameLineageAndStagedGeneration(t *testing.T) {
 	}
 }
 func TestCmuxReleasedGenerationAndResultAuthority(t *testing.T) {
-	r := model.IssueOpsRecord{Execution: &model.Execution{Mode: model.ExecutionModeDirect, Lease: model.WriteLease{Status: model.LeaseStatusReleased, Generation: 3}}}
+	r := model.IssueOpsRecord{Execution: &model.Execution{Lease: model.WriteLease{Status: model.LeaseStatusReleased, Generation: 3}}}
 	if err := ValidateCmuxReleasedRecord(r, 3); err != nil {
 		t.Fatal(err)
 	}

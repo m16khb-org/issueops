@@ -7,7 +7,7 @@ import (
 )
 
 func TestManualHandoffAuthorityRejectsEveryClaimFieldBeforeAppend(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "io-manual", Execution: &model.Execution{Mode: model.ExecutionModeDirect, Lease: model.WriteLease{Status: model.LeaseStatusReleased, Generation: 3}}}
+	record := model.IssueOpsRecord{ID: "io-manual", Execution: &model.Execution{Lease: model.WriteLease{Status: model.LeaseStatusReleased, Generation: 3}}}
 	observation := model.IssueOpsHandoffDeliveryObservation{LifecycleID: record.ID, SourceGeneration: 3, AttemptID: "manual-direct:io-manual:3:attempt", LineageID: "manual-direct:lineage", Launcher: model.IssueOpsHandoffDeliveryLauncher{Name: "cmux"}, OwnerClaimed: model.IssueOpsHandoffDeliveryState{Status: model.IssueOpsHandoffDeliveryStateNotObserved}}
 	if err := ValidateManualHandoffDeliveryObservation(record, observation); err != nil {
 		t.Fatal(err)
@@ -39,7 +39,7 @@ func TestManualHandoffAuthorityRejectsEveryClaimFieldBeforeAppend(t *testing.T) 
 }
 
 func TestManualHandoffAuthorityPreservesRefusalOrder(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "io-manual", Execution: &model.Execution{Mode: model.ExecutionModeDirect, Lease: model.WriteLease{Status: model.LeaseStatusReleased, Generation: 3}}}
+	record := model.IssueOpsRecord{ID: "io-manual", Execution: &model.Execution{Lease: model.WriteLease{Status: model.LeaseStatusReleased, Generation: 3}}}
 	observation := model.IssueOpsHandoffDeliveryObservation{LifecycleID: record.ID, SourceGeneration: 2, AttemptID: "wrong", LineageID: "wrong", Launcher: model.IssueOpsHandoffDeliveryLauncher{Name: "wrong"}, OwnerActor: &model.NativeActor{}}
 	checks := []struct {
 		fix  func()
@@ -50,7 +50,7 @@ func TestManualHandoffAuthorityPreservesRefusalOrder(t *testing.T) {
 		{func() {
 			observation.AttemptID = "manual-direct:io-manual:3:attempt"
 			observation.LineageID = "manual-direct:lineage"
-		}, "manual handoff delivery observation launcher must be Orca, Herdr, or cmux"},
+		}, "manual handoff delivery observation launcher must be Herdr or cmux"},
 		{func() { observation.Launcher.Name = "herdr" }, "manual handoff delivery observation cannot produce owner claim evidence"},
 	}
 	for _, check := range checks {

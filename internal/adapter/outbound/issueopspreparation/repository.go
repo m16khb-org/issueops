@@ -16,25 +16,20 @@ import (
 	issueopsdomain "issueops/internal/domain/issueops"
 	preparationdomain "issueops/internal/domain/issueopspreparation"
 	remote "issueops/internal/domain/issueopsremote"
-	"issueops/internal/domain/policy"
 	"issueops/internal/port"
 )
 
 const (
 	recordBucket = port.IssueOpsRecordBucket
 	holderBucket = port.LeaseHolderBucket
-	intentBucket = "external_intent_v1"
 )
 
-type DiagnosticRedactor func(string) string
-
 type SQLiteRepository struct {
-	store  port.RecordInventoryStore
-	redact DiagnosticRedactor
+	store port.RecordInventoryStore
 }
 
-func NewSQLiteRepositoryWithDiagnosticRedactor(store port.RecordInventoryStore, redact DiagnosticRedactor) *SQLiteRepository {
-	return &SQLiteRepository{store: store, redact: redact}
+func NewSQLiteRepository(store port.RecordInventoryStore) *SQLiteRepository {
+	return &SQLiteRepository{store: store}
 }
 
 func (repository *SQLiteRepository) Load(_ context.Context, id string) (preparationcontract.Snapshot, error) {
@@ -71,9 +66,6 @@ func (repository *SQLiteRepository) EnsureRootUnclaimed(_ context.Context, selfI
 func (repository *SQLiteRepository) CommitDirect(ctx context.Context, commit preparationapp.DirectCommit) (preparationcontract.Result, error) {
 	if repository.store == nil {
 		return preparationcontract.Result{ID: commit.Command.ID}, fmt.Errorf("preparation record store is unavailable")
-	}
-	if err := preparationapp.ValidateDirectCommit(commit); err != nil {
-		return preparationcontract.Result{ID: commit.Command.ID}, err
 	}
 	var result preparationcontract.Result
 	err := repository.store.WithSpan(ctx, func(spanCtx context.Context) error {
@@ -114,185 +106,6 @@ func (repository *SQLiteRepository) CommitDirect(ctx context.Context, commit pre
 		return preparationcontract.Result{ID: commit.Command.ID}, err
 	}
 	return result, nil
-}
-
-func (repository *SQLiteRepository) BeginIntent(ctx context.Context, begin preparationapp.OrcaBegin) (preparationapp.IntentState, error) {
-	if repository.store == nil {
-		return preparationapp.IntentState{}, fmt.Errorf("preparation record store is unavailable")
-	}
-	if err := preparationapp.ValidateOrcaBegin(begin); err != nil {
-		return preparationapp.IntentState{}, err
-	}
-	var state preparationapp.IntentState
-	err := repository.store.WithSpan(ctx, func(spanCtx context.Context) error {
-		current, err := repository.Load(spanCtx, begin.Snapshot.Record.ID)
-		if err != nil {
-			return err
-		}
-		if err := preparationapp.EnsureOrcaBeginUnprepared(current.Record); err != nil {
-			return err
-		}
-		if err := ensureRootUnclaimed(repository.store, current.Record.ID, begin.Workspace.Root); err != nil {
-			return err
-		}
-		codec := preparationcontract.IntentCodec{}
-		record, intent, err := preparationapp.ApplyOrcaBegin(current.Record, begin, remote.IssueArtifactDir(current.Record.IssueURL))
-		if err != nil {
-			return err
-		}
-		intentData, err := codec.Encode(intent)
-		if err != nil {
-			return err
-		}
-		recordData, err := recordcodec.EncodeLease(record)
-		if err != nil {
-			return err
-		}
-		if err := repository.store.Apply(spanCtx, []port.RecordMutation{
-			{Bucket: recordBucket, ID: record.ID, Data: recordData},
-			{Bucket: intentBucket, ID: intent.OperationID, Data: intentData, RequireAbsent: true},
-		}); err != nil {
-			return err
-		}
-		state = preparationapp.IntentState{
-			Snapshot: preparationcontract.Snapshot{Record: record, RecordRaw: recordData},
-			Command:  begin.Command.Clone(), Intent: intent, IntentRaw: intentData,
-			Owner: begin.Owner, Pending: true,
-		}
-		return nil
-	})
-	return state, err
-}
-
-func (repository *SQLiteRepository) MarkInvoking(ctx context.Context, state preparationapp.IntentState) (preparationapp.IntentState, error) {
-	if err := preparationapp.ValidateIntentState(state); err != nil {
-		return state, err
-	}
-	updated := preparationapp.MarkOrcaInvoking(state.Intent)
-	data, err := (preparationcontract.IntentCodec{}).Encode(updated)
-	if err != nil {
-		return state, err
-	}
-	if err := repository.compareAndApply(ctx, state, []port.RecordMutation{{Bucket: intentBucket, ID: updated.OperationID, Data: data}}); err != nil {
-		return state, err
-	}
-	state.Intent, state.IntentRaw = updated, data
-	return state, nil
-}
-
-func (repository *SQLiteRepository) RecordFailure(ctx context.Context, state preparationapp.IntentState, invocation string, cause error) error {
-	if err := preparationapp.ValidateIntentState(state); err != nil {
-		return err
-	}
-	record, intent, err := preparationapp.ApplyOrcaFailure(state, invocation, func() string { return repository.boundedDiagnostic(cause) })
-	if err != nil {
-		return err
-	}
-	intentData, err := (preparationcontract.IntentCodec{}).Encode(intent)
-	if err != nil {
-		return err
-	}
-	recordData, err := recordcodec.EncodeLease(record)
-	if err != nil {
-		return err
-	}
-	return repository.compareAndApply(ctx, state, []port.RecordMutation{
-		{Bucket: recordBucket, ID: record.ID, Data: recordData},
-		{Bucket: intentBucket, ID: intent.OperationID, Data: intentData},
-	})
-}
-
-func (repository *SQLiteRepository) ApplyReceipt(ctx context.Context, state preparationapp.IntentState, receipt preparationcontract.IntentReceipt) (preparationapp.IntentProgress, error) {
-	if err := preparationapp.ValidateIntentState(state); err != nil {
-		return preparationapp.IntentProgress{State: state, Pending: true}, err
-	}
-	decision, err := preparationapp.ApplyOrcaReceipt(state, receipt, remote.IssueArtifactDir(state.Snapshot.Record.IssueURL), func() error {
-		return port.ValidateExecutionOrcaDeliveryReceipt(preparationDeliveryReceipt(receipt), port.OrcaDeliveryReceiptExpectation{
-			Host: state.Intent.Probe.Host, TaskID: state.Intent.TaskID, TerminalPTYID: state.Intent.TerminalPTYID,
-			DispatchRequestID: state.Intent.OrcaRequestID, PromptRequestID: state.Intent.OrcaPromptRequestID,
-		})
-	})
-	if err != nil {
-		return preparationapp.IntentProgress{State: state, Pending: true}, err
-	}
-	record, intent := decision.Record, decision.Intent
-	if decision.Complete {
-		recordData, err := recordcodec.EncodeLease(record)
-		if err != nil {
-			return preparationapp.IntentProgress{State: state, Pending: true}, err
-		}
-		if err := repository.compareAndApply(ctx, state, []port.RecordMutation{
-			{Bucket: recordBucket, ID: record.ID, Data: recordData},
-			{Bucket: intentBucket, ID: state.Intent.OperationID, Delete: true},
-		}); err != nil {
-			return preparationapp.IntentProgress{State: state, Pending: true}, err
-		}
-		state.Snapshot = preparationcontract.Snapshot{Record: record, RecordRaw: recordData, ClaimTokenPath: state.OwnerArtifacts.ClaimTokenPath}
-		state.Pending = false
-		return preparationapp.IntentProgress{State: state, Result: decision.Result}, nil
-	}
-	intentData, err := (preparationcontract.IntentCodec{}).Encode(intent)
-	if err != nil {
-		return preparationapp.IntentProgress{State: state, Pending: true}, err
-	}
-	recordData, err := recordcodec.EncodeLease(record)
-	if err != nil {
-		return preparationapp.IntentProgress{State: state, Pending: true}, err
-	}
-	if err := repository.compareAndApply(ctx, state, []port.RecordMutation{
-		{Bucket: recordBucket, ID: record.ID, Data: recordData},
-		{Bucket: intentBucket, ID: intent.OperationID, Data: intentData},
-	}); err != nil {
-		return preparationapp.IntentProgress{State: state, Pending: true}, err
-	}
-	state.Intent, state.IntentRaw = intent, intentData
-	state.Snapshot = preparationcontract.Snapshot{Record: record, RecordRaw: recordData, ClaimTokenPath: state.OwnerArtifacts.ClaimTokenPath}
-	state.Pending = true
-	return preparationapp.IntentProgress{State: state, Pending: true}, nil
-}
-
-func preparationDeliveryReceipt(receipt preparationcontract.IntentReceipt) port.ExecutionOrcaIntentReceipt {
-	result := port.ExecutionOrcaIntentReceipt{
-		TerminalPTYID: receipt.TerminalPTYID, TerminalHandle: receipt.TerminalHandle,
-		TaskID: receipt.TaskID, DispatchID: receipt.DispatchID, RequestID: receipt.RequestID,
-	}
-	if receipt.PromptReceipt != nil {
-		result.PromptReceipt = &port.OrcaPromptReceipt{
-			RequestID: receipt.PromptReceipt.RequestID, Stages: append([]string(nil), receipt.PromptReceipt.Stages...),
-			Provider: receipt.PromptReceipt.Provider, Observation: receipt.PromptReceipt.Observation,
-			ProcessIncarnation: receipt.PromptReceipt.ProcessIncarnation, Generation: receipt.PromptReceipt.Generation,
-			BaselineWorkingSequence: receipt.PromptReceipt.BaselineWorkingSequence,
-		}
-	}
-	return result
-}
-
-func (repository *SQLiteRepository) compareAndApply(ctx context.Context, state preparationapp.IntentState, mutations []port.RecordMutation) error {
-	if err := recordcodec.RequireMutableLeaseSnapshot(state.Snapshot.Record, state.Snapshot.RecordRaw); err != nil {
-		return err
-	}
-	store, ok := repository.store.(port.RecordCASStore)
-	if !ok {
-		return fmt.Errorf("preparation record store does not support raw CAS")
-	}
-	return store.CompareAndApply(ctx, []port.ExpectedRecord{
-		{Bucket: recordBucket, ID: state.Snapshot.Record.ID, Data: state.Snapshot.RecordRaw},
-		{Bucket: intentBucket, ID: state.Intent.OperationID, Data: state.IntentRaw},
-	}, mutations)
-}
-
-func (repository *SQLiteRepository) boundedDiagnostic(cause error) string {
-	message := "external operation failed"
-	if repository.redact != nil && cause != nil {
-		message = strings.TrimSpace(repository.redact(cause.Error()))
-		if message == "" {
-			message = "external operation failed"
-		}
-	}
-	if len(message) > 4096 {
-		message = policy.TruncateBytes(message, 4096)
-	}
-	return message
 }
 
 func ensureRootUnclaimed(store port.RecordInventoryStore, selfID, root string) error {

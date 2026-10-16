@@ -20,73 +20,46 @@ import (
 	leaseapp "issueops/internal/application/issueopslease"
 	leasecontract "issueops/internal/contract/issueopslease"
 	leasedomain "issueops/internal/domain/issueopslease"
-	"issueops/internal/port"
 )
 
 type ReseedInventory struct {
-	owner   port.ExecutionOrcaOwnerInspector
 	inspect leaseapp.ProcessInspector
 }
 
-func NewReseedInventory(owner port.ExecutionOrcaOwnerInspector, inspect leaseapp.ProcessInspector) *ReseedInventory {
-	return &ReseedInventory{owner: owner, inspect: inspect}
+func NewReseedInventory(inspect leaseapp.ProcessInspector) *ReseedInventory {
+	return &ReseedInventory{inspect: inspect}
 }
 
-func (a *ReseedInventory) Observe(ctx context.Context, record leasecontract.Record, requester leasedomain.Actor) (leaseapp.ReseedInventoryReceipt, error) {
+func (a *ReseedInventory) Observe(ctx context.Context, record leasecontract.Record, requester leasedomain.Actor) (string, error) {
 	if a == nil || a.inspect == nil || record.Execution == nil {
-		return leaseapp.ReseedInventoryReceipt{}, fmt.Errorf("reseed inventory requires an execution and process inspector")
+		return "", fmt.Errorf("reseed inventory requires an execution and process inspector")
 	}
 	snapshot, err := reseedWorkspaceSnapshot(record.Execution.Workspace)
 	if err != nil {
-		return leaseapp.ReseedInventoryReceipt{}, err
+		return "", err
 	}
 	processStatus := "none"
 	if holder := record.Execution.Lease.Holder; holder != nil && holder.SessionProcess != nil {
 		processStatus, _, err = a.inspect(ctx, leasedomain.ProcessReceipt{PID: holder.SessionProcess.PID, StartedAt: holder.SessionProcess.StartedAt, Executable: holder.SessionProcess.Executable})
 		if err != nil {
-			return leaseapp.ReseedInventoryReceipt{}, err
-		}
-	}
-	orcaInventory := port.ExecutionOrcaOwnerInventory{}
-	if record.Execution.Mode == "orca" {
-		if record.Execution.Orca == nil || a.owner == nil {
-			return leaseapp.ReseedInventoryReceipt{}, fmt.Errorf("Orca execution requires exact owner terminal and task inventory")
-		}
-		binding := record.Execution.Orca
-		orcaInventory, err = a.owner.InspectOwner(ctx, port.ExecutionOrcaOwnerInventoryRequest{
-			RuntimeID: binding.RuntimeID, WorktreeID: binding.WorktreeID, RunID: binding.RunID, TaskID: binding.TaskID,
-			DispatchID: binding.DispatchID, TerminalPTYID: binding.TerminalPTYID,
-			AllowRuntimeRollover: record.Execution.Lease.Holder == nil &&
-				(record.Execution.Lease.Status == "released" || record.Execution.Lease.Status == "claimable"),
-		})
-		if err != nil {
-			return leaseapp.ReseedInventoryReceipt{}, err
+			return "", err
 		}
 	}
 	payload := struct {
-		ID         string                           `json:"id"`
-		Generation uint64                           `json:"generation"`
-		Status     string                           `json:"status"`
-		Holder     *leasecontract.Actor             `json:"holder,omitempty"`
-		Requester  leasecontract.Actor              `json:"requester"`
-		Process    string                           `json:"process_status"`
-		Orca       port.ExecutionOrcaOwnerInventory `json:"orca"`
-		Snapshot   string                           `json:"snapshot"`
-	}{record.ID, record.Execution.Lease.Generation, record.Execution.Lease.Status, record.Execution.Lease.Holder, reseedInventoryActor(requester), processStatus, orcaInventory, snapshot}
+		ID         string               `json:"id"`
+		Generation uint64               `json:"generation"`
+		Status     string               `json:"status"`
+		Holder     *leasecontract.Actor `json:"holder,omitempty"`
+		Requester  leasecontract.Actor  `json:"requester"`
+		Process    string               `json:"process_status"`
+		Snapshot   string               `json:"snapshot"`
+	}{record.ID, record.Execution.Lease.Generation, record.Execution.Lease.Status, record.Execution.Lease.Holder, reseedInventoryActor(requester), processStatus, snapshot}
 	encoded, err := json.Marshal(payload)
 	if err != nil {
-		return leaseapp.ReseedInventoryReceipt{}, err
+		return "", err
 	}
 	sum := sha256.Sum256(encoded)
-	return leaseapp.ReseedInventoryReceipt{
-		Fingerprint: hex.EncodeToString(sum[:]), RuntimeID: strings.TrimSpace(orcaInventory.RuntimeID),
-		Inventory: leasedomain.ResumeInventory{
-			RuntimeID: orcaInventory.RuntimeID, TerminalLive: orcaInventory.TerminalLive,
-			TerminalInventoryComplete: orcaInventory.TerminalInventoryComplete, TaskLive: orcaInventory.TaskLive,
-			TerminalID: orcaInventory.TerminalID, TaskStatus: orcaInventory.TaskStatus, DispatchStatus: orcaInventory.DispatchStatus,
-			DispatchAssigneeHandle: orcaInventory.DispatchAssigneeHandle, DispatchAssigneePresent: orcaInventory.DispatchAssigneePresent,
-		},
-	}, nil
+	return hex.EncodeToString(sum[:]), nil
 }
 
 func reseedInventoryActor(actor leasedomain.Actor) leasecontract.Actor {

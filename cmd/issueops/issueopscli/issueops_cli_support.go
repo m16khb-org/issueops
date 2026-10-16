@@ -37,7 +37,7 @@ func (cli command) runIssueOpsBranch(args []string) error {
 	branch := fs.String("branch", "", "provider-linked issue-number branch name")
 	baseBranch := fs.String("base-branch", "", "remote base branch or ref")
 	baseSHA := fs.String("base-sha", "", "optional resolved base commit SHA")
-	parentWorktree := fs.String("parent-worktree", "", "optional canonical parent worktree for Orca lineage")
+	parentWorktree := fs.String("parent-worktree", "", "optional canonical parent worktree for lineage")
 	remoteBranchURL := fs.String("remote-branch-url", "", "optional provider branch URL after creation")
 	codeProjectKey := fs.String("code-project-key", "", "provider project that owns the code when it differs from the issue's project")
 	linkVerified := fs.Bool("link-verified", false, "record that the provider issue shows the branch link")
@@ -96,9 +96,8 @@ func printIssueOpsErrorJSON(err error) error {
 // runIssueOpsBranchAwaitLink는 coordinator가 만들 linked branch가 나타날
 // 때까지 경계 있게 기다린다(#319).
 //
-// 읽기 전용이다. GitHub Orca 경로에서 owner는 링크가 아직 없는 시점에
-// 시작하므로, 그 시작 창을 terminal 실패로 다루지 않으려면 owner가 기다릴
-// 수단이 필요하다. 대기를 프롬프트 지시가 아니라 명령으로 두어야 간격과
+// 읽기 전용이다. owner는 링크가 아직 없는 시점에 시작할 수 있으므로, 그 시작
+// 창을 terminal 실패로 다루지 않으려면 owner가 기다릴 수단이 필요하다. 대기를 프롬프트 지시가 아니라 명령으로 두어야 간격과
 // 상한이 값으로 고정된다.
 // runIssueOpsBranchRetarget은 provider가 실제로 보여주는 PR/MR target으로 준비
 // base를 옮긴다. cleanup finish의 base_branch_drifted는 레코드에 없는 base 변경을

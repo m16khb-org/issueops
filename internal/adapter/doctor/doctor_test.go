@@ -47,7 +47,8 @@ func TestHarnessDoctorProjectsOperationalFinding(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := t.TempDir()
 	snapshot := healthyDoctorOperationalSnapshot(repo)
-	snapshot.Gates = []operationalhealthcontract.OrcaGate{{ID: "gate-1", Status: "pending"}}
+	stray := repo + ".worktrees/stray"
+	snapshot.GitWorktrees = append(snapshot.GitWorktrees, operationalhealthcontract.GitWorktree{Path: stray, Branch: "stray", Head: "head-main", Clean: true})
 
 	result, err := testDoctorService().Run(doctor.HarnessDoctorRequest{
 		RepoRoot: repo, IssueOpsRoot: repo, Home: t.TempDir(), Version: "test",
@@ -62,8 +63,8 @@ func TestHarnessDoctorProjectsOperationalFinding(t *testing.T) {
 	if !ok || check.Healthy || harnessDoctorCheckCount(result.Checks, "operational_state") != 1 {
 		t.Fatalf("operational check projection = %#v", result.Checks)
 	}
-	issue, ok := harnessDoctorIssue(result.Issues, operationalhealthcontract.FindingGateResidue)
-	if !ok || issue.Severity != "warning" || !strings.Contains(issue.Summary, "gate-1") || issue.Fix == nil || issue.Fix.Command != "" {
+	issue, ok := harnessDoctorIssue(result.Issues, operationalhealthcontract.FindingWorktreeResidue)
+	if !ok || issue.Severity != "warning" || !strings.Contains(issue.Summary, stray) || issue.Fix == nil || issue.Fix.Command != "" {
 		t.Fatalf("operational issue projection = %#v", issue)
 	}
 }
@@ -73,7 +74,7 @@ func TestHarnessDoctorOperationalInventoryProblemIsError(t *testing.T) {
 	repo := t.TempDir()
 	snapshot := healthyDoctorOperationalSnapshot(repo)
 	snapshot.InventoryProblems = []operationalhealthcontract.InventoryProblem{{
-		Source: "orca_tasks", Code: "orca_tasks_failed", Detail: "task inventory failed",
+		Source: "git_worktrees", Code: "git_worktrees_failed", Detail: "worktree inventory failed",
 	}}
 
 	result, err := testDoctorService().Run(doctor.HarnessDoctorRequest{
@@ -285,11 +286,9 @@ func doctorOperationalNow() time.Time {
 func healthyDoctorOperationalSnapshot(repo string) operationalhealth.Snapshot {
 	return operationalhealth.Snapshot{
 		RepoRoot: repo, CanonicalBranch: "main", SourceHead: "head-main", SourceClean: true,
-		GitWorktrees:  []operationalhealthcontract.GitWorktree{{Path: repo, Branch: "main", Head: "head-main", Clean: true, Canonical: true}},
-		LocalRefs:     []operationalhealthcontract.GitRef{{Name: "refs/heads/main", Branch: "main", OID: "head-main", Location: "local"}},
-		RemoteRefs:    []operationalhealthcontract.GitRef{{Name: "refs/heads/main", Branch: "main", OID: "head-main", Location: "remote"}},
-		OrcaWorktrees: []operationalhealthcontract.OrcaWorktree{{ID: "wt-main", InstanceID: "instance-main", Repo: repo, Path: repo, Branch: "main", Head: "head-main"}},
-		Messages:      operationalhealthcontract.MessagePresence{Empty: true, CompleteAbsence: true},
+		GitWorktrees: []operationalhealthcontract.GitWorktree{{Path: repo, Branch: "main", Head: "head-main", Clean: true, Canonical: true}},
+		LocalRefs:    []operationalhealthcontract.GitRef{{Name: "refs/heads/main", Branch: "main", OID: "head-main", Location: "local"}},
+		RemoteRefs:   []operationalhealthcontract.GitRef{{Name: "refs/heads/main", Branch: "main", OID: "head-main", Location: "remote"}},
 	}
 }
 

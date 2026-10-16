@@ -87,17 +87,6 @@ func (a *artifactStub) CreateToken(record model.IssueOpsRecord) (string, string,
 	return a.replacementFixture.CreateToken(record)
 }
 
-type orcaStub struct {
-	inventory port.ExecutionOrcaOwnerInventory
-	err       error
-	requests  []port.ExecutionOrcaOwnerInventoryRequest
-}
-
-func (o *orcaStub) InspectOwner(_ context.Context, req port.ExecutionOrcaOwnerInventoryRequest) (port.ExecutionOrcaOwnerInventory, error) {
-	o.requests = append(o.requests, req)
-	return o.inventory, o.err
-}
-
 type baseSyncStub struct {
 	receipt  basesyncport.Receipt
 	err      error
@@ -107,11 +96,6 @@ type baseSyncStub struct {
 func (b *baseSyncStub) Observe(_ context.Context, req basesyncport.Request) (basesyncport.Receipt, error) {
 	b.requests = append(b.requests, req)
 	return b.receipt, b.err
-}
-
-func orcaRecord(f *replacementFixture) {
-	f.record.Execution.Mode = model.ExecutionModeOrca
-	f.record.Execution.Orca = &model.OrcaBinding{RuntimeID: "rt-1", WorktreeID: "wt-1", RunID: "run-1", TaskID: "task-1", DispatchID: "disp-1", TerminalPTYID: "pty-1"}
 }
 
 func TestRunRefusesWithoutVerifier(t *testing.T) {
@@ -163,11 +147,6 @@ func TestPreviewRefusalsReportNotOKAndNeverPersist(t *testing.T) {
 		{"holder process inspection failure", func(s *Service, _ *replacementFixture, _ *model.ExecutionReplaceRequest) {
 			s.ObserveProcesses = func() port.ReplacementProcessSnapshot { return statusProcesses{err: boom} }
 		}, "snapshot unavailable"},
-		{"orca without inspector", func(_ *Service, f *replacementFixture, _ *model.ExecutionReplaceRequest) { orcaRecord(f) }, "Orca execution requires exact owner terminal and task inventory"},
-		{"orca inspector failure", func(s *Service, f *replacementFixture, _ *model.ExecutionReplaceRequest) {
-			orcaRecord(f)
-			s.OrcaOwner = &orcaStub{err: boom}
-		}, "snapshot unavailable"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			service, f, req := fixtureService()
@@ -177,38 +156,6 @@ func TestPreviewRefusalsReportNotOKAndNeverPersist(t *testing.T) {
 				t.Fatalf("result=%+v err=%v saved=%+v", result, err, f.saved)
 			}
 		})
-	}
-}
-
-func TestPreviewRejectsOrcaRuntimeRolloverWhileHolderIsLive(t *testing.T) {
-	service, f, req := fixtureService()
-	orcaRecord(f)
-	service.OrcaOwner = &orcaStub{inventory: port.ExecutionOrcaOwnerInventory{RuntimeID: "rt-2", TerminalID: "term-9", TerminalLive: true}}
-	service.ObserveProcesses = func() port.ReplacementProcessSnapshot { return statusProcesses{status: "live"} }
-	_, err := service.Run(t.Context(), req)
-	if err == nil || !strings.Contains(err.Error(), "Orca runtime rollover owner is not quiescent") || !strings.Contains(err.Error(), "terminal_id=term-9") {
-		t.Fatalf("err=%v", err)
-	}
-}
-
-func TestPreviewAllowsOrcaRuntimeRolloverOnlyForDeadHolder(t *testing.T) {
-	service, f, req := fixtureService()
-	orcaRecord(f)
-	owner := &orcaStub{inventory: port.ExecutionOrcaOwnerInventory{RuntimeID: "rt-2"}}
-	service.OrcaOwner = owner
-	result, err := service.Run(t.Context(), req)
-	if err != nil || !result.OK || result.InventoryFingerprint == "" {
-		t.Fatalf("result=%+v err=%v", result, err)
-	}
-	if len(owner.requests) != 1 || !owner.requests[0].AllowRuntimeRollover || owner.requests[0].TerminalPTYID != "pty-1" || owner.requests[0].RuntimeID != "rt-1" {
-		t.Fatalf("inspector request=%+v", owner.requests)
-	}
-
-	service.ObserveProcesses = func() port.ReplacementProcessSnapshot { return statusProcesses{status: "live"} }
-	owner.requests = nil
-	_, _ = service.Run(t.Context(), req)
-	if len(owner.requests) != 1 || owner.requests[0].AllowRuntimeRollover {
-		t.Fatalf("live holder must not allow runtime rollover: %+v", owner.requests)
 	}
 }
 
@@ -430,21 +377,6 @@ func TestFinalizePreviewRefusals(t *testing.T) {
 			f.record.Execution.Lease.Status = model.LeaseStatusRevoking
 			s.Workspace = errWorkspace{replacementFixture: f, snapshotErr: boom}
 		}, "ps unreadable"},
-		{"orca terminal still live", func(s *Service, f *replacementFixture, _ *model.ExecutionReplaceRequest) {
-			f.record.Execution.Lease.Status = model.LeaseStatusRevoking
-			orcaRecord(f)
-			s.OrcaOwner = &orcaStub{inventory: port.ExecutionOrcaOwnerInventory{RuntimeID: "rt-1", TerminalLive: true, TaskStatus: "running"}}
-		}, "Orca owner is not quiescent: terminal_live=true"},
-		{"orca task still live", func(s *Service, f *replacementFixture, _ *model.ExecutionReplaceRequest) {
-			f.record.Execution.Lease.Status = model.LeaseStatusRevoking
-			orcaRecord(f)
-			s.OrcaOwner = &orcaStub{inventory: port.ExecutionOrcaOwnerInventory{RuntimeID: "rt-1", TaskLive: true, TaskStatus: "running"}}
-		}, "task_live=true task_status=running"},
-		{"orca inspector failure", func(s *Service, f *replacementFixture, _ *model.ExecutionReplaceRequest) {
-			f.record.Execution.Lease.Status = model.LeaseStatusRevoking
-			orcaRecord(f)
-			s.OrcaOwner = &orcaStub{err: boom}
-		}, "ps unreadable"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			service, f, req := fixtureService()
@@ -455,18 +387,6 @@ func TestFinalizePreviewRefusals(t *testing.T) {
 				t.Fatalf("result=%+v err=%v", result, err)
 			}
 		})
-	}
-}
-
-func TestFinalizePreviewAllowsOrcaOwnerOnNewRuntimeAfterHolderDied(t *testing.T) {
-	service, f, req := fixtureService()
-	orcaRecord(f)
-	f.record.Execution.Lease.Status = model.LeaseStatusRevoking
-	service.OrcaOwner = &orcaStub{inventory: port.ExecutionOrcaOwnerInventory{RuntimeID: "rt-2"}}
-	req.Action = model.ExecutionReplaceFinalizePreview
-	result, err := service.Run(t.Context(), req)
-	if err != nil || !result.OK || result.QuiescenceFingerprint == "" {
-		t.Fatalf("result=%+v err=%v", result, err)
 	}
 }
 
@@ -556,12 +476,12 @@ func TestFinalizeCleanupFailureAfterTokenErrorReportsBothCauses(t *testing.T) {
 	}
 }
 
-func TestFinalizeCleanupFailureAfterResealErrorKeepsOriginalCauseWrapped(t *testing.T) {
+func TestFinalizeCleanupFailureAfterPersistErrorKeepsOriginalCauseWrapped(t *testing.T) {
 	service, f, _ := fixtureService()
 	f.record.Execution.Lease.Status = model.LeaseStatusRevoking
 	req := finalizeRequest(t, service)
-	boom := errors.New("reseal broke")
-	f.resealError = boom
+	boom := errors.New("persist broke")
+	f.saveError = boom
 	service.Artifacts = &artifactStub{replacementFixture: f, cleanupErrs: []error{nil, errors.New("rm denied")}}
 	_, err := service.Run(t.Context(), req)
 	if !errors.Is(err, boom) || !strings.Contains(err.Error(), "replacement residue cleanup failed: rm denied") {
@@ -569,47 +489,21 @@ func TestFinalizeCleanupFailureAfterResealErrorKeepsOriginalCauseWrapped(t *test
 	}
 }
 
-func TestFinalizeOrcaSealsOwnerArtifactsAndOffersResumeCommand(t *testing.T) {
+func TestFinalizeOffersClaimCommandAndReportsTokenPath(t *testing.T) {
 	service, f, _ := fixtureService()
-	orcaRecord(f)
 	f.record.Execution.Lease.Status = model.LeaseStatusRevoking
-	service.OrcaOwner = &orcaStub{inventory: port.ExecutionOrcaOwnerInventory{RuntimeID: "rt-1"}}
-	service.ResealOwner = func(context.Context, model.IssueOpsRecord) (model.ReplacementArtifacts, error) {
-		return model.ReplacementArtifacts{
-			IssueBodySHA256: "body-sha", ContextPacketPath: "/w/ctx.md", ContextPacketSHA256: "ctx-sha",
-			OwnerPromptPath: "/w/prompt.md", OwnerPromptSHA256: "prompt-sha",
-		}, nil
-	}
 	req := finalizeRequest(t, service)
 	result, err := service.Run(t.Context(), req)
 	if err != nil || !result.OK {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
-	if result.Execution.Lease.Status != model.LeaseStatusClaimable {
-		t.Fatalf("lease=%+v", result.Execution.Lease)
+	if lease := result.Execution.Lease; lease.Status != model.LeaseStatusClaimable || lease.ClaimTokenSHA256 != "digest" || lease.Holder != nil {
+		t.Fatalf("lease=%+v", lease)
 	}
-	if want := "issueops execution resume --id 'io-test' --expected-generation 7 --confirm"; result.NextCommand != want {
+	if want := "issueops execution claim --id 'io-test' --generation 7 --claim-current-token"; result.NextCommand != want {
 		t.Fatalf("NextCommand=%q want %q", result.NextCommand, want)
-	}
-	if result.IssueBodySHA256 != "body-sha" || result.ContextPacketPath != "/w/ctx.md" || result.ContextPacketSHA256 != "ctx-sha" ||
-		result.OwnerPromptPath != "/w/prompt.md" || result.OwnerPromptSHA256 != "prompt-sha" {
-		t.Fatalf("reseal artifacts not reported: %+v", result)
-	}
-	binding := f.saved.Execution.Orca
-	if binding.LeaseGeneration != 7 || binding.IssueBodySHA256 != "body-sha" || binding.ContextPacketSHA256 != "ctx-sha" || binding.OwnerPromptSHA256 != "prompt-sha" {
-		t.Fatalf("owner binding not resealed: %+v", binding)
 	}
 	if result.ClaimTokenPath != "/workspace/claim.token" {
 		t.Fatalf("ClaimTokenPath=%q", result.ClaimTokenPath)
-	}
-}
-
-func TestFinalizeWithoutOrcaOwnerReleasesClaimableDirectLeaseWithoutResumeCommand(t *testing.T) {
-	service, f, _ := fixtureService()
-	f.record.Execution.Lease.Status = model.LeaseStatusRevoking
-	req := finalizeRequest(t, service)
-	result, err := service.Run(t.Context(), req)
-	if err != nil || result.Execution.Lease.Status != model.LeaseStatusClaimable || strings.Contains(result.NextCommand, "resume") {
-		t.Fatalf("result=%+v err=%v", result, err)
 	}
 }

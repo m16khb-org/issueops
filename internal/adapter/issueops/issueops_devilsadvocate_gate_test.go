@@ -36,7 +36,7 @@ func TestImplementationReadinessRequiresDevilsAdvocateVerdict(t *testing.T) {
 		t.Fatalf("missing devil's-advocate review must block implement: %+v", ready.Missing)
 	}
 	// pass → clears the gate.
-	bound := digestExecutionOwnerBytes([]byte(planBodyForTest()))
+	bound := digestBytes([]byte(planBodyForTest()))
 	record.DevilsAdvocateReview = &issueops.IssueOpsDevilsAdvocateReview{Verdict: "pass", Findings: []string{"attacked gate 3"}, ReviewerContext: "subagent", ReviewedPlanDigest: bound, RecordedAt: "t"}
 	if ready := IssueOpsImplementationReadiness(record); !ready.Ready || len(ready.Missing) != 0 {
 		t.Fatalf("pass verdict should clear the gate: %+v", ready.Missing)
@@ -82,7 +82,7 @@ func TestImplementationReadinessRejectsStaleDevilsAdvocateReview(t *testing.T) {
 	record, planPath := issueOpsPlanBoundRecordForTest(t)
 	record.DevilsAdvocateReview = &issueops.IssueOpsDevilsAdvocateReview{
 		Verdict: "pass", Findings: []string{"attacked gate 3"}, ReviewerContext: "subagent",
-		ReviewedPlanDigest: digestExecutionOwnerBytes([]byte("# plan v1\n")), RecordedAt: "t",
+		ReviewedPlanDigest: digestBytes([]byte("# plan v1\n")), RecordedAt: "t",
 	}
 	if ready := IssueOpsImplementationReadiness(record); !ready.Ready {
 		t.Fatalf("pass bound to the current plan must clear the gate: %+v", ready.Missing)
@@ -97,7 +97,7 @@ func TestImplementationReadinessRejectsStaleDevilsAdvocateReview(t *testing.T) {
 	// A plan that can no longer be identified is not the reviewed plan either:
 	// an empty file or a symlink (identity uses Lstat) must fail closed, even
 	// though plan_exists (Stat) would still pass.
-	record.DevilsAdvocateReview.ReviewedPlanDigest = digestExecutionOwnerBytes([]byte("# plan v1\n"))
+	record.DevilsAdvocateReview.ReviewedPlanDigest = digestBytes([]byte("# plan v1\n"))
 	if err := os.WriteFile(planPath, nil, 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +136,7 @@ func TestAISlopCleanReadinessDoesNotCheckPlanBinding(t *testing.T) {
 	record, planPath := issueOpsPlanBoundRecordForTest(t)
 	record.DevilsAdvocateReview = &issueops.IssueOpsDevilsAdvocateReview{
 		Verdict: "pass", Findings: []string{"attacked gate 3"}, ReviewerContext: "subagent",
-		ReviewedPlanDigest: digestExecutionOwnerBytes([]byte("# plan v1\n")), RecordedAt: "t",
+		ReviewedPlanDigest: digestBytes([]byte("# plan v1\n")), RecordedAt: "t",
 	}
 	if err := os.WriteFile(planPath, []byte("# plan v1\n- [x] T1 done\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -161,11 +161,8 @@ func TestRecordDevilsAdvocateReviewBindsStagedPlanWhenNoFileIsLinked(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := bound.DevilsAdvocateReview.ReviewedPlanDigest, digestExecutionOwnerBytes([]byte("# staged plan\n")); got != want {
+	if got, want := bound.DevilsAdvocateReview.ReviewedPlanDigest, digestBytes([]byte("# staged plan\n")); got != want {
 		t.Fatalf("verdict must bind to the staged plan artifact: got %q want %q", got, want)
-	}
-	if _, err := RequireStagedExecutionOwnerPlan(stateRoot, bound); err != nil {
-		t.Fatalf("a verdict bound to the staged plan must pass the owner preflight: %v", err)
 	}
 }
 

@@ -40,7 +40,7 @@ func TestHookTargetDriftMessages(t *testing.T) {
 		{
 			name: "third party and malformed groups are ignored",
 			config: map[string]any{"hooks": map[string]any{"PreToolUse": []any{
-				map[string]any{"hooks": []any{map[string]any{"command": "/bin/sh /Users/example/.orca/hook.sh"}}},
+				map[string]any{"hooks": []any{map[string]any{"command": "/bin/sh /Users/example/.acme/hook.sh"}}},
 				map[string]any{"hooks": "malformed"},
 				"malformed",
 			}}},

@@ -203,7 +203,7 @@ func TestReseedRepositoryRejectedCASLeavesRecordAndHolderIndexUntouched(t *testi
 }
 
 func reseedRepositoryRecord() leasecontract.Record {
-	return leasecontract.Record{SchemaVersion: leasecontract.SchemaVersion, ID: "io-reseed-repository", Execution: &leasecontract.Execution{Mode: "direct", Workspace: leasecontract.Workspace{SourceRoot: "/source", Root: "/worktree", Branch: "branch", BaseHead: "base", Driver: "git", LinkedAt: "2026-07-30T09:00:00Z"}, Lease: leasecontract.Lease{Generation: 1, Status: "released"}, Selection: leaseSelectionFixture("direct")}}
+	return leasecontract.Record{SchemaVersion: leasecontract.SchemaVersion, ID: "io-reseed-repository", Execution: &leasecontract.Execution{Workspace: leasecontract.Workspace{SourceRoot: "/source", Root: "/worktree", Branch: "branch", BaseHead: "base", LinkedAt: "2026-07-30T09:00:00Z"}, Lease: leasecontract.Lease{Generation: 1, Status: "released"}}}
 }
 
 var _ leaseapp.ReseedRepository = (*ReseedRepository)(nil)
@@ -241,7 +241,17 @@ func TestReseedRefusesFreshlyReadFinishAttempt(t *testing.T) {
 
 func TestReseedCannotRestoreDrainedFinishAttempt(t *testing.T) {
 	record := reseedRepositoryRecord()
-	_, db := newResumeRepositoryStore(t, record)
+	db, err := sqlstore.Open(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := leasecontract.Encode(record)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Apply(context.Background(), []port.RecordMutation{{Bucket: recordBucket, ID: record.ID, Data: data}}); err != nil {
+		t.Fatal(err)
+	}
 	repository := NewReseedRepository(db)
 	snapshot, err := repository.LoadSnapshot(context.Background(), record.ID)
 	if err != nil {

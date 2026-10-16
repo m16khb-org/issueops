@@ -6,37 +6,15 @@ import (
 	leasecontract "issueops/internal/contract/issueopslease"
 )
 
-const (
-	ModeAuto   = "auto"
-	ModeDirect = "direct"
-	ModeOrca   = "orca"
-)
-
 // domain/issueopspreparation은 이 contract 패키지만 import할 수 있어서
 // (preparation domain의 dependency 규칙) lease 어휘를 여기서 이 이름으로 둔다.
 type Record = leasecontract.Record
 
-type Lease = leasecontract.Lease
-type OrcaBinding = leasecontract.OrcaBinding
-type Selection = leasecontract.Selection
-type ResumeArtifacts = leasecontract.ResumeArtifacts
-type ExternalIntent = leasecontract.ExternalIntent
-
-const SchemaVersion = leasecontract.SchemaVersion
-const OrcaArtifactIdentityVersion = leasecontract.OrcaArtifactIdentityVersion
-
 type Command struct {
-	ID                           string              `json:"id"`
-	Mode                         string              `json:"mode"`
-	Actor                        leasecontract.Actor `json:"actor"`
-	CWD                          string              `json:"cwd"`
-	OwnerHost                    string              `json:"owner_host,omitempty"`
-	OwnerModel                   string              `json:"owner_model,omitempty"`
-	OwnerEffort                  string              `json:"owner_effort,omitempty"`
-	IssueSnapshotFile            string              `json:"issue_snapshot_file,omitempty"`
-	DirectReason                 string              `json:"direct_reason,omitempty"`
-	ExpectedReadinessFingerprint string              `json:"expected_readiness_fingerprint,omitempty"`
-	Confirm                      bool                `json:"confirm,omitempty"`
+	ID      string              `json:"id"`
+	Actor   leasecontract.Actor `json:"actor"`
+	CWD     string              `json:"cwd"`
+	Confirm bool                `json:"confirm,omitempty"`
 }
 
 func (command Command) Clone() Command {
@@ -46,28 +24,13 @@ func (command Command) Clone() Command {
 }
 
 type Result struct {
-	OK                   bool                     `json:"ok"`
-	ID                   string                   `json:"id"`
-	Preview              bool                     `json:"preview,omitempty"`
-	RequestedMode        string                   `json:"requested_mode"`
-	ResolvedMode         string                   `json:"resolved_mode"`
-	FallbackCode         string                   `json:"fallback_code,omitempty"`
-	ProbeAttempted       bool                     `json:"probe_attempted"`
-	ProbeAvailable       bool                     `json:"probe_available"`
-	ProbeReady           bool                     `json:"probe_ready"`
-	ProbeCode            string                   `json:"probe_code,omitempty"`
-	ReadinessFingerprint string                   `json:"readiness_fingerprint,omitempty"`
-	ExplicitDirectReason string                   `json:"explicit_direct_reason,omitempty"`
-	Workspace            leasecontract.Workspace  `json:"workspace"`
-	Execution            *leasecontract.Execution `json:"execution,omitempty"`
-	ClaimTokenPath       string                   `json:"claim_token_path,omitempty"`
-	IssueBodySHA256      string                   `json:"issue_body_sha256,omitempty"`
-	ContextPacketPath    string                   `json:"context_packet_path,omitempty"`
-	ContextPacketSHA256  string                   `json:"context_packet_sha256,omitempty"`
-	OwnerPromptPath      string                   `json:"owner_prompt_path,omitempty"`
-	OwnerPromptSHA256    string                   `json:"owner_prompt_sha256,omitempty"`
-	IssueSnapshotSource  string                   `json:"issue_snapshot_source,omitempty"`
-	NextCommand          string                   `json:"next_command,omitempty"`
+	OK             bool                     `json:"ok"`
+	ID             string                   `json:"id"`
+	Preview        bool                     `json:"preview,omitempty"`
+	Workspace      leasecontract.Workspace  `json:"workspace"`
+	Execution      *leasecontract.Execution `json:"execution,omitempty"`
+	ClaimTokenPath string                   `json:"claim_token_path,omitempty"`
+	NextCommand    string                   `json:"next_command,omitempty"`
 }
 
 func (result Result) Clone() Result {
@@ -86,35 +49,32 @@ type Snapshot struct {
 	ArtifactDir string
 }
 
+// WorkspaceRequest is the canonical worktree the preparation will create.
+type WorkspaceRequest struct {
+	LifecycleID    string `json:"lifecycle_id"`
+	SourceRoot     string `json:"source_root"`
+	Root           string `json:"root"`
+	Branch         string `json:"branch"`
+	BaseBranch     string `json:"base_branch"`
+	BaseHead       string `json:"base_head"`
+	ParentWorktree string `json:"parent_worktree,omitempty"`
+	Confirm        bool   `json:"confirm,omitempty"`
+	CWD            string `json:"-"`
+}
+
+type WorkspaceReceipt struct {
+	SourceRoot     string `json:"source_root"`
+	Root           string `json:"root"`
+	Branch         string `json:"branch"`
+	BaseHead       string `json:"base_head"`
+	ParentWorktree string `json:"parent_worktree,omitempty"`
+	Exists         bool   `json:"exists,omitempty"`
+}
+
 type AccessResult struct {
 	Allowed         bool   `json:"allowed"`
 	Code            string `json:"code,omitempty"`
 	RelaunchCommand string `json:"relaunch_command,omitempty"`
-}
-
-type ProbeResult struct {
-	Available bool   `json:"available"`
-	Ready     bool   `json:"ready"`
-	Code      string `json:"code,omitempty"`
-}
-
-type OwnerEvidence struct {
-	IssueURL   string
-	IssueBody  string
-	BodySHA256 string
-	Source     string
-	Provider   string
-	Issue      int
-}
-
-type OwnerArtifacts struct {
-	PlanPath            string
-	ClaimTokenPath      string
-	ClaimTokenSHA256    string
-	ContextPacketPath   string
-	ContextPacketSHA256 string
-	OwnerPromptPath     string
-	OwnerPromptSHA256   string
 }
 
 func (snapshot Snapshot) Clone() Snapshot {
@@ -160,15 +120,7 @@ func cloneExecutionPointer(execution *leasecontract.Execution) *leasecontract.Ex
 		return nil
 	}
 	cloned := *execution
-	if execution.Selection != nil {
-		selection := *execution.Selection
-		cloned.Selection = &selection
-	}
 	cloned.Lease.Holder = cloneActorPointer(execution.Lease.Holder)
-	if execution.Orca != nil {
-		binding := *execution.Orca
-		cloned.Orca = &binding
-	}
 	if execution.Pending != nil {
 		pending := *execution.Pending
 		cloned.Pending = &pending

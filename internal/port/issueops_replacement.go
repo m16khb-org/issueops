@@ -28,7 +28,6 @@ type ReplacementArtifacts interface {
 }
 
 type ReplacementInvocation struct {
-	OrcaOwner ExecutionOrcaOwnerInspector
-	BaseSync  basesync.Inspector
+	BaseSync basesync.Inspector
 }
 type ExecutionReplaceHandler func(context.Context, string, model.ExecutionReplaceRequest, ReplacementInvocation) (model.ExecutionReplaceResult, error)

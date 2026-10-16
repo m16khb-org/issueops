@@ -71,11 +71,6 @@ type RemoteArtifact struct {
 	TargetBranch string
 }
 
-type OrcaBinding struct {
-	RunID  string
-	TaskID string
-}
-
 // RecordSnapshot is the minimum persisted projection required to decide and
 // apply one completion transition. Persistence-specific raw sidecars stay in
 // the outbound repository.
@@ -85,7 +80,6 @@ type RecordSnapshot struct {
 	Phase         string
 	IssueURL      string
 	CanonicalRoot string
-	Mode          string
 	Lease         Lease
 	Completion    *Completion
 	Artifact      *RemoteArtifact
@@ -94,7 +88,6 @@ type RecordSnapshot struct {
 	// code lives in the issue's own project.
 	CodeProjectKey string
 	Ledger         map[string]LedgerEntry
-	Orca           *OrcaBinding
 	// PRHead is the canonical HEAD recorded when the cycle entered the pr phase; empty for
 	// records that entered pr before it was recorded.
 	PRHead string
@@ -120,10 +113,6 @@ func (r RecordSnapshot) Clone() RecordSnapshot {
 		artifact.Labels = append([]string(nil), artifact.Labels...)
 		artifact.Assignees = append([]string(nil), artifact.Assignees...)
 		result.Artifact = &artifact
-	}
-	if r.Orca != nil {
-		orca := *r.Orca
-		result.Orca = &orca
 	}
 	result.Ledger = make(map[string]LedgerEntry, len(r.Ledger))
 	for phase, entry := range r.Ledger {

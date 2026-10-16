@@ -13,7 +13,6 @@ func TestPersistedLeaseCodecHasNoUnreviewedBypass(t *testing.T) {
 	root := findRepoRoot(t)
 	allowed := map[string][]string{
 		"internal/adapter/outbound/issueopsrecord/lease_codec.go": {"Decode", "Encode"},
-		"cmd/issueops/issueopsapp/issueops_reconcile_wiring.go":   {"Decode"},
 	}
 	actual := map[string][]string{}
 	snapshot := cachedDDDSourceSnapshot(t, root)

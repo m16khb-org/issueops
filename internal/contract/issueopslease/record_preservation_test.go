@@ -38,7 +38,7 @@ func TestDecodeRejectsFieldsThePersistedRecordDoesNotDefine(t *testing.T) {
 	for name, data := range map[string]string{
 		"top-level":      strings.Replace(valid, `"ok":true`, `"ok":true,"future_field":1`, 1),
 		"nested sidecar": strings.Replace(valid, `"ok":true`, `"ok":true,"intent":{"raw_request":"x","future_field":1}`, 1),
-		"execution":      strings.Replace(valid, `"ok":true`, `"ok":true,"execution":{"mode":"direct","future_field":1}`, 1),
+		"execution":      strings.Replace(valid, `"ok":true`, `"ok":true,"execution":{"future_field":1}`, 1),
 	} {
 		if _, err := leasecodec.DecodeLease("io-strict", []byte(data)); err == nil {
 			t.Fatalf("%s unknown field must be rejected so a re-encode cannot drop it", name)

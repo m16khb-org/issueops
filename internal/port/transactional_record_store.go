@@ -17,15 +17,6 @@ type RecordInventoryStore interface {
 	GetAll(string) ([]RecordRow, error)
 }
 
-type RecordRawCASStore interface {
-	CompareAndApply(context.Context, []ExpectedRecord, []RecordMutation) error
-}
-
-type RecordCASStore interface {
-	RecordInventoryStore
-	RecordRawCASStore
-}
-
 type RawCASFailure interface {
 	error
 	FailedBucket() string

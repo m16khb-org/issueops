@@ -27,12 +27,13 @@ description: Agent start, execution, verification, and completion flow; read whe
 ## IssueOps 자동 세션 인계
 
 전체 사이클은 `skills/issueops/SKILL.md`의 환경별 자동 세션 인계를 따른다. 일반 흐름은
-이슈 확정·계획·리뷰 뒤 `execution prepare --mode direct`와 사유를 사용해 canonical
-worktree를 준비한다. 준비 세션이 Herdr 세션이면 Herdr를 먼저 확인해 사용 가능하면 Orca가
-ready여도 Herdr로 인계한다. 그 밖에는 Orca runtime이 ready면 같은 worktree의 새 세션으로 자동 인계한다.
-Orca가 없거나 unready면 Herdr의 실행 중인 서버·호환성·현재 native host 실행 가능 여부를
-확인해 새 세션으로 인계하고, 둘 다 사용 불가면 현재 세션에서 이어간다.
-실행 방식 메뉴나 진행 여부를 묻지 않는다. Herdr는 준비된 worktree를 열며 재생성하지 않는다.
+이슈 확정·계획·리뷰 뒤 `execution prepare --id ID $ACTOR_FLAGS`로 preview를 확인하고
+`--confirm`으로 canonical worktree를 준비한다. 브랜치와 worktree를 준비한 뒤 Herdr를 확인한다.
+Herdr 세션에서 준비 중이고 실행 중인 서버·호환성·현재 native host 실행 가능 여부가 확인되면
+같은 worktree의 새 Herdr 세션으로 인계한다. Herdr를 쓸 수 없으면 현재 세션에서 이어가거나,
+사용자가 직접 연 두 번째 터미널에서 수동으로 인계한다. 바이너리 설치 여부만으로 Herdr가 준비되었다고
+판단하지 않으며, 런처를 설치하거나 서버를 시작하지 않는다. 실행 방식 메뉴나 진행 여부를 묻지 않는다.
+cmux는 사용자가 명시적으로 선택할 때만 쓴다. Herdr는 준비된 worktree를 열며 재생성하지 않는다.
 
 자동 결정은 원래 요청의 승인 범위·종료점을 유지한다. 환경 관찰값·원래 사용자 요청·
 대화 근거·ID·경로·범위·종료점을 기존 decision record에 남긴다.
@@ -75,9 +76,9 @@ IssueOps에서 authority는 `issueops ...` CLI/MCP 하나다. 이 경로가 dura
 
 `issueops execution prepare`를 confirm한 뒤에는 반환된 canonical path를 `ISSUEOPS_EXPECTED_WORKTREE`에 반영한다. 이후 편집은 그 절대경로, `git -C "$ISSUEOPS_EXPECTED_WORKTREE"`, worktree-rooted CodeGraph/`rg`/test 명령으로 수행하고, source checkout과 worktree의 `git status --short`를 따로 확인한다.
 
-선택적 Orca 실행은 `issueops execution prepare --mode auto|direct|orca`로 선택한다. Preview와 confirm 요청은 `--confirm` 외에는 동일해야 한다. Orca가 첫 external mutation 전에 absent/unready이면 `auto`는 direct를 선택한다. Orca가 선택되면 private issue/context packet과 fully rendered prompt를 봉인하고 fresh native owner를 launch한다. Owner는 status가 렌더한 `issueops execution claim --claim-current-token` 명령에서 두 digest를 검증한 뒤에만 쓴다. CLI가 현재 generation의 private token path를 내부에서 결정하므로 token path나 값은 owner prompt에 넣지 않는다. 외부 mutation 전에는 pending intent를 durable state에 먼저 저장하며, 모호한 결과는 create를 재시도하거나 direct로 전환하지 않고 `issueops execution reconcile`로 정확히 하나의 결과를 확인한다. 구현, 검증, generation-fenced PR/MR 생성, `issueops execution complete`는 active holder가 canonical worktree에서 수행한다. Complete는 `done`과 lease release를 원자적으로 기록하며 merge와 cleanup은 하지 않는다.
+`issueops execution prepare`의 preview와 confirm 요청은 `--confirm` 외에는 동일해야 한다. 외부 mutation 전에는 pending intent를 durable state에 먼저 저장하며, 모호한 결과는 create를 재시도하지 않고 `issueops execution reconcile`로 정확히 하나의 결과를 확인한다. 구현, 검증, generation-fenced PR/MR 생성, `issueops execution complete`는 active holder가 canonical worktree에서 수행한다. Complete는 `done`과 lease release를 원자적으로 기록하며 merge와 cleanup은 하지 않는다.
 
-완료된 execution을 새 generation과 새 HEAD로 복구할 때는 status/preview가 제공한 typed reseed만 사용한다. Completion-bearing reseed는 이전 영수증을 append-only `completion_history`로 보존하고 current completion, done phase, HEAD-bound proof를 같은 CAS에서 재개 상태로 바꾼다. Completion receipt는 generation을 직접 stamp하며, generation이 없는 receipt를 담은 레코드는 읽을 때 거부된다. `--completion-generation N`은 stamp된 generation과 같아야 하고 preview와 reseed에 동일하게 전달한다. 누락·충돌은 mutation 전에 fail-closed한다. 새 owner는 status의 exact `resume`/`claim`을 실행하고 `implement`부터 AI-slop, implementation review, `pr`, completion까지 정상 순방향 gate를 다시 통과한다. History는 감사 기록이지 현재 generation의 retry evidence가 아니며 state 파일 수동 편집으로 제거하지 않는다.
+완료된 execution을 새 generation과 새 HEAD로 복구할 때는 status/preview가 제공한 typed reseed만 사용한다. Completion-bearing reseed는 이전 영수증을 append-only `completion_history`로 보존하고 current completion, done phase, HEAD-bound proof를 같은 CAS에서 재개 상태로 바꾼다. Completion receipt는 generation을 직접 stamp하며, generation이 없는 receipt를 담은 레코드는 읽을 때 거부된다. `--completion-generation N`은 stamp된 generation과 같아야 하고 preview와 reseed에 동일하게 전달한다. 누락·충돌은 mutation 전에 fail-closed한다. 새 holder는 status의 exact `claim`을 실행하고 `implement`부터 AI-slop, implementation review, `pr`, completion까지 정상 순방향 gate를 다시 통과한다. History는 감사 기록이지 현재 generation의 retry evidence가 아니며 state 파일 수동 편집으로 제거하지 않는다.
 
 Delegated child cycle은 parent plan/evidence가 sub-agent pattern slug, 기대 이득, tradeoff, fallback, verification을 기록한 뒤에만 시작한다. Parent와 child가 같은 repo를 보더라도 각자의 exact lifecycle ID, execution generation, native actor, canonical worktree가 분리되어야 한다. Child는 자기 worktree와 execution lease 안에서만 작업하고, parent main agent가 결과를 검증해 accept/reject를 기록한다.
 
@@ -126,31 +127,22 @@ phase 진입은 fail-closed다: `grill` 진입은 problem 완료(`intent_contrac
 ## Execution v1 workflow
 
 After the provider-linked branch and exact base SHA are recorded, preview and
-confirm `issueops execution prepare --mode direct --direct-reason "<automatic session handoff reason>"`
-for the ordinary flow, then apply the environment-based automatic session handoff. An explicitly requested GitHub Orca execution is the exception:
-record the matching provider/issue identity and exact base SHA first, prepare
-the local-only Orca branch, then create and record the linked branch before
-plan linkage and implementation. Direct mode grants the calling native session
-generation 1; Orca mode launches one owner that verifies the sealed
-issue/context digests and asks the CLI to consume the current-generation private token.
+confirm `issueops execution prepare --id ID $ACTOR_FLAGS` (add `--confirm` to
+create), then apply the environment-based automatic session handoff. The
+preview shows the workspace root, branch, and base. The calling native session
+is granted generation 1. Handoff to another session uses only the takeover
+chain: the current holder runs `release`, the new session runs
+`execution replace --id ID --expected-generation N --preview` with its own
+native actor, then the returned `--reseed` command, then
+`claim --claim-current-token`.
 The active holder performs implementation, cleanup, project-doc reflection,
 verification, publication, and completion from the canonical worktree; planning
 happens before the lease exists, in the preparing session. The source main worktree remains
 available before, during, and after execution for unrelated work.
 
-GitLab-linked execution은 특정 MCP server 이름이 아니라 semantic leaf
-`glab_api`와 실제 schema로 snapshot capability를 찾는다. 개인 wrapper도 같은
-leaf와 compatible schema를 노출하면 후보가 된다. `web_url`, `description`,
-`state`를 linked authority/project/IID와 대조한 뒤 MCP에는 host-neutral
-`issue_snapshot`을, CLI에는 exact mode `0600` file과
-`--issue-snapshot-file`을 넘긴다. 후보 부재나 호출 실패 뒤 successful
-exact-identity MCP evidence가 없을 때만 인자를 생략해 generic `glab api`
-fallback을 사용한다. 이미 공급한 invalid evidence는 fallback하지 않는다. 성공 결과의
-`issue_snapshot_source`가 `glab_mcp` 또는 `glab_cli`인지 확인한다.
-
 Do not use source CWD or a generic session binding as a fence. Select the exact
-lifecycle ID, generation, native process receipt, canonical worktree, and
-persisted Orca resource. One active execution exists per record, so unrelated
+lifecycle ID, generation, native process receipt, and canonical worktree.
+One active execution exists per record, so unrelated
 cycles remain independent. Completion records `done` and releases the lease;
 merge and destructive cleanup require separate authority.
 
@@ -158,10 +150,9 @@ merge and destructive cleanup require separate authority.
 
 1·2단계는 source checkout의 준비 세션이 `issueops-create-issue`와 `issueops-prepare`로
 수행하며 lease를 갖지 않는다. 3단계 `issueops-plan`도 같은 세션이 수행하고,
-`execution prepare --mode direct`로 워크트리를 준비한 뒤 위 자동 세션 인계를 따른다.
-Herdr 세션이면 Herdr를 먼저, 그 밖에는 Orca, Herdr 순서로 사용 가능 여부를 확인하며 둘 다 사용 불가면 현재 세션에서 이어간다.
+`execution prepare --id ID $ACTOR_FLAGS`로 워크트리를 준비한 뒤 위 자동 세션 인계를 따른다.
+Herdr 세션이면 Herdr를 먼저 확인하고, Herdr를 쓸 수 없으면 현재 세션에서 이어가거나 사용자가 직접 연 두 번째 터미널에서 수동 인계한다.
 실행 방식은 묻지 않으며 새 세션은 같은 worktree의 release·인수 절차를 사용한다.
-명시적으로 요청한 Orca execution과 기존 사이클은 해당 core 경로를 유지한다.
 4단계부터는 구현 세션이 canonical worktree에서 `issueops-implement` → `issueops-slop-clean` →
 `issueops-docs` → `issueops-verify` → `atomic-commit-push` → `issueops-create-pr` →
 `issueops-complete`를 지나 완료한다. 개발자가 PR을 확인하면 메인 세션의 `issueops-merge`가

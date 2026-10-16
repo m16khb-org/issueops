@@ -35,14 +35,5 @@ func CanStage(record issueopsartifactcontract.Record, name string) bool {
 	if record.Phase == issueopsartifactcontract.PhaseDone {
 		return false
 	}
-	if record.Execution == nil {
-		return true
-	}
-	execution := record.Execution
-	return name == "plan" &&
-		execution.Mode == issueopsartifactcontract.ExecutionModeOrca &&
-		execution.Lease.Status == issueopsartifactcontract.LeaseStatusReleased &&
-		execution.Lease.Holder == nil &&
-		execution.Pending == nil &&
-		execution.Completion == nil
+	return record.Execution == nil
 }

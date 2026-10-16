@@ -54,7 +54,7 @@
   "directories": {
     ".issueops/plans": "plans without an issue number, written by implementation-planning (including the former issues/_unnumbered plans); ADRs cite them as decision sources",
     ".issueops/research": "research and evaluation results written by web-research and quality reviews, including the skill-quality evaluator rubric, scorecards, and dated dogfood reports",
-    ".issueops/prompt-engineering": "versioned prompts owned by the prompt-engineering skill; owner-prompt parity tests read prompts/ by exact path",
+    ".issueops/prompt-engineering": "versioned prompts owned by the prompt-engineering skill",
     ".issueops/archive": "historical snapshots that no longer describe the current system but are still cited"
   },
   "fixed_documents": [

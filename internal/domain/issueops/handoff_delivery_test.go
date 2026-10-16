@@ -47,9 +47,9 @@ func TestMergeHandoffDeliveryObservationBindsEveryMutableIdentity(t *testing.T) 
 			want: "delivery observation source generation changed",
 		},
 		{
-			name: "dual launcher duplicate attempt cannot merge",
+			name: "different launcher duplicate attempt cannot merge",
 			edit: func(next *issueopscontract.IssueOpsHandoffDeliveryObservation) {
-				next.Launcher.Name = "herdr"
+				next.Launcher.Name = "direct"
 			},
 			want: "delivery observation launcher identity changed",
 		},
@@ -173,49 +173,6 @@ func TestMergeHandoffDeliveryObservationModeSpecificRecoveryEvidence(t *testing.
 			wantOK: true,
 		},
 		{
-			name: "Omo dispatch success send failure records ambiguity only",
-			base: func() issueopscontract.IssueOpsHandoffDeliveryObservation {
-				base := deliveryObservationFixture()
-				base.Launcher.Name = "orca"
-				base.OwnerActor.Host = "omo"
-				return base
-			},
-			update: func(next issueopscontract.IssueOpsHandoffDeliveryObservation) issueopscontract.IssueOpsHandoffDeliveryObservation {
-				next.InputAccepted = issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateNotObserved}
-				next.Ambiguous = deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateObserved, issueopscontract.IssueOpsHandoffDeliveryEvidenceOrcaDispatchReceipt)
-				return next
-			},
-			wantOK: true,
-		},
-		{
-			name: "Omo dispatch-created preamble cannot prove input accepted",
-			base: func() issueopscontract.IssueOpsHandoffDeliveryObservation {
-				base := deliveryObservationFixture()
-				base.ExpectedOwnerHost = "omo"
-				return base
-			},
-			update: func(next issueopscontract.IssueOpsHandoffDeliveryObservation) issueopscontract.IssueOpsHandoffDeliveryObservation {
-				next.InputAccepted = deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateObserved, issueopscontract.IssueOpsHandoffDeliveryEvidenceOrcaDispatch)
-				next.Ambiguous = deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateObserved, issueopscontract.IssueOpsHandoffDeliveryEvidenceOmoSendFailed)
-				return next
-			},
-			reason: "delivery observation input_accepted evidence is invalid",
-		},
-		{
-			name: "Omo send accepted response loss is not owner claim",
-			base: func() issueopscontract.IssueOpsHandoffDeliveryObservation {
-				base := deliveryObservationFixture()
-				base.OwnerActor.Host = "omo"
-				return base
-			},
-			update: func(next issueopscontract.IssueOpsHandoffDeliveryObservation) issueopscontract.IssueOpsHandoffDeliveryObservation {
-				next.InputAccepted = deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateObserved, issueopscontract.IssueOpsHandoffDeliveryEvidenceOmoSendAccepted)
-				next.Ambiguous = deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateObserved, issueopscontract.IssueOpsHandoffDeliveryEvidenceOmoSendResponseLost)
-				return next
-			},
-			wantOK: true,
-		},
-		{
 			name: "same durable request cannot carry changed process incarnation",
 			base: deliveryObservationFixture,
 			update: func(next issueopscontract.IssueOpsHandoffDeliveryObservation) issueopscontract.IssueOpsHandoffDeliveryObservation {
@@ -309,9 +266,9 @@ func TestValidateHandoffDeliveryObservationFailClosedEnumsAndTimestamps(t *testi
 			want: "delivery observation native_turn_observed evidence is invalid",
 		},
 		{
-			name: "Omo send evidence requires Omo owner",
+			name: "input accepted cannot use unknown evidence",
 			edit: func(observation *issueopscontract.IssueOpsHandoffDeliveryObservation) {
-				observation.InputAccepted = deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateObserved, issueopscontract.IssueOpsHandoffDeliveryEvidenceOmoSendAccepted)
+				observation.InputAccepted = deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateObserved, "unknown_evidence")
 			},
 			want: "delivery observation input_accepted evidence is invalid",
 		},
@@ -413,7 +370,7 @@ func TestHandoffDeliveryManualClaimRequiresImmediateReseedGeneration(t *testing.
 		t.Run(test.name, func(t *testing.T) {
 			observation := deliveryObservationFixture()
 			if test.manual {
-				observation.AttemptID = "manual-direct:" + observation.LifecycleID + ":7:orca:attempt-1"
+				observation.AttemptID = "manual-direct:" + observation.LifecycleID + ":7:herdr:attempt-1"
 				observation.LineageID = "manual-direct:" + observation.LineageID
 			}
 			observation.OwnerClaimed = deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateObserved, issueopscontract.IssueOpsHandoffDeliveryEvidenceIssueOpsClaim)
@@ -597,7 +554,7 @@ func deliveryObservationFixture() issueopscontract.IssueOpsHandoffDeliveryObserv
 			DurableID: "request-1",
 		},
 		Launcher: issueopscontract.IssueOpsHandoffDeliveryLauncher{
-			Name: "orca", Version: "1.4.200", Path: "/usr/local/bin/orca", RuntimeID: "runtime-1", MachineID: "machine-1", ServerID: "server-1",
+			Name: "herdr", Version: "1.4.200", Path: "/usr/local/bin/herdr", RuntimeID: "runtime-1", MachineID: "machine-1", ServerID: "server-1",
 		},
 		Target: issueopscontract.IssueOpsHandoffDeliveryTarget{
 			TerminalID: "term-1", PaneID: "pane-1", ProcessIncarnation: "incarnation-1", Process: &issueopscontract.NativeProcessReceipt{
@@ -613,7 +570,7 @@ func deliveryObservationFixture() issueopscontract.IssueOpsHandoffDeliveryObserv
 		CreatedAt:        "2026-09-20T10:00:01Z",
 		UpdatedAt:        "2026-09-20T10:05:00Z",
 		Receipt: issueopscontract.IssueOpsHandoffDeliveryReceipt{
-			Location: "audit/orca/receipt-1.json", Digest: strings.Repeat("d", 64),
+			Location: "audit/herdr/receipt-1.json", Digest: strings.Repeat("d", 64),
 		},
 		InputAccepted:      deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateNotObserved, ""),
 		NativeTurnObserved: deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateNotObserved, ""),

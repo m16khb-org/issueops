@@ -129,10 +129,10 @@ func TestMergeHookConfigPreservesCoResidentHookPositions(t *testing.T) {
 	agentHarness := map[string]any{"hooks": []any{map[string]any{
 		"type": "command", "command": "'/old/bin/issueops' hook pre-tool-use --host codex", "timeout": float64(5),
 	}}}
-	orca := map[string]any{"hooks": []any{map[string]any{
-		"type": "command", "command": "/bin/sh /Users/example/.orca/agent-hooks/codex-hook.sh", "timeout": float64(10),
+	acme := map[string]any{"hooks": []any{map[string]any{
+		"type": "command", "command": "/bin/sh /Users/example/.acme/agent-hooks/codex-hook.sh", "timeout": float64(10),
 	}}}
-	config := map[string]any{"hooks": map[string]any{"PreToolUse": []any{agentHarness, orca}}}
+	config := map[string]any{"hooks": map[string]any{"PreToolUse": []any{agentHarness, acme}}}
 
 	merged := testInstaller().mergeHookConfig(config, "/new/bin/issueops")
 	groups := merged["hooks"].(map[string]any)["PreToolUse"].([]any)
@@ -140,7 +140,7 @@ func TestMergeHookConfigPreservesCoResidentHookPositions(t *testing.T) {
 		t.Fatalf("PreToolUse groups = %d, want only the third-party group: %#v", len(groups), groups)
 	}
 	command := groups[0].(map[string]any)["hooks"].([]any)[0].(map[string]any)["command"].(string)
-	if command != "/bin/sh /Users/example/.orca/agent-hooks/codex-hook.sh" {
+	if command != "/bin/sh /Users/example/.acme/agent-hooks/codex-hook.sh" {
 		t.Fatalf("old issueops group must be removed while third-party group is preserved: %q", command)
 	}
 	for _, event := range []string{"SessionStart", "SubagentStart"} {
@@ -164,7 +164,7 @@ func TestMergeHookConfigReplacesManagedContextGroupsInPlace(t *testing.T) {
 	for name, groups := range map[string][]any{
 		"managed before third party": {
 			managed("'/old/bin/issueops' hook session-start --host codex"),
-			thirdParty("orca observe"),
+			thirdParty("acme observe"),
 		},
 		"managed after third party": {
 			thirdParty("codegraph observe"),
@@ -179,7 +179,7 @@ func TestMergeHookConfigReplacesManagedContextGroupsInPlace(t *testing.T) {
 			}
 			for index, group := range groups {
 				command := group.(map[string]any)["hooks"].([]any)[0].(map[string]any)["command"].(string)
-				if command == "orca observe" || command == "codegraph observe" {
+				if command == "acme observe" || command == "codegraph observe" {
 					gotCommand := got[index].(map[string]any)["hooks"].([]any)[0].(map[string]any)["command"].(string)
 					if gotCommand != command {
 						t.Fatalf("third-party group moved from index %d: got %q want %q", index, gotCommand, command)
@@ -194,12 +194,12 @@ func TestMergeHookConfigReplacesManagedContextGroupsInPlace(t *testing.T) {
 }
 
 func TestMergeHookConfigKeepsThirdPartySubagentStartGroups(t *testing.T) {
-	orca := map[string]any{"hooks": []any{map[string]any{
-		"type": "command", "command": "/bin/sh /Users/example/.orca/agent-hooks/codex-hook.sh", "timeout": float64(10),
+	acme := map[string]any{"hooks": []any{map[string]any{
+		"type": "command", "command": "/bin/sh /Users/example/.acme/agent-hooks/codex-hook.sh", "timeout": float64(10),
 	}}}
-	merged := testInstaller().mergeHookConfig(map[string]any{"hooks": map[string]any{"SubagentStart": []any{orca}}}, "/new/bin/issueops")
+	merged := testInstaller().mergeHookConfig(map[string]any{"hooks": map[string]any{"SubagentStart": []any{acme}}}, "/new/bin/issueops")
 	groups := merged["hooks"].(map[string]any)["SubagentStart"].([]any)
-	if len(groups) != 2 || fmt.Sprint(groups[0]) != fmt.Sprint(orca) {
+	if len(groups) != 2 || fmt.Sprint(groups[0]) != fmt.Sprint(acme) {
 		t.Fatalf("third-party SubagentStart group must stay first and unchanged: %#v", groups)
 	}
 	if count := strings.Count(fmt.Sprint(groups), "'/new/bin/issueops' hook subagent-start --host codex"); count != 1 {

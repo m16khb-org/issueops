@@ -116,7 +116,7 @@ func remoteAbandonRequest(id string, apply bool, fingerprint string) issueops.Cl
 
 func remoteAbandonDeps(git *remoteAbandonGit, remote port.IssueProvider) CleanupAbandonDeps {
 	return CleanupAbandonDeps{
-		Processes: quietCleanupProcesses(), Git: git.run, Orca: authoritativeZeroOrca(), Remote: remote,
+		Processes: quietCleanupProcesses(), Git: git.run, Remote: remote,
 	}
 }
 

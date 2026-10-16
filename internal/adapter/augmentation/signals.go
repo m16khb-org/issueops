@@ -164,7 +164,7 @@ func (repo Repository) cliAndOperationsRules() []repoSignalRule {
 			signals.HasToolConformanceTransportCoverage = FileContainsTerm(root, filepath.Join("internal", "contract", "toolconformance", "types_test.go"), "TestClassificationsCoverAllContractCases") &&
 				FileContainsTerm(root, filepath.Join("internal", "contract", "toolconformance", "types_test.go"), "TestBenchmarkReportJSONRoundTripPreservesTypedEnums") &&
 				FileContainsTerm(root, filepath.Join("internal", "domain", "issueops", "execution_sync_base_validation_test.go"), "TestValidateWriteLeaseStatusMatrix") &&
-				FileContainsTerm(root, filepath.Join("internal", "contract", "issueops", "execution_sync_base_test.go"), "TestBaseSyncRequiredErrorCarriesReseedFreeNextCommand")
+				FileContainsTerm(root, filepath.Join("internal", "contract", "issueops", "execution_sync_base_test.go"), "TestBaseSyncRequiredErrorKeepsReseedFreeNextCommand")
 		}},
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
 			signals.HasGeniusMermaidLint = DirContainsTerm(root, filepath.Join("internal", "adapter", "verification", "probe"), "LintMermaidBlocks") &&

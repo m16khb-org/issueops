@@ -11,21 +11,19 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
-func TestCanStageOnlyRecoveryPlanAfterExecutionPrepare(t *testing.T) {
-	record := issueopscontract.IssueOpsRecord{
+func TestCanStageIsSealedAfterExecutionPrepare(t *testing.T) {
+	released := issueopscontract.IssueOpsRecord{
 		Execution: &issueopscontract.Execution{
-			Mode: issueopscontract.ExecutionModeOrca,
-			Lease: issueopscontract.WriteLease{
-				Generation: 1,
-				Status:     issueopscontract.LeaseStatusReleased,
-			},
+			Lease: issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusReleased},
 		},
 	}
-	if !CanStage(record, "plan") {
-		t.Fatal("clean released Orca generation must accept a recovery plan")
+	for _, name := range []string{"plan", "spec"} {
+		if CanStage(released, name) {
+			t.Fatalf("prepared execution must seal %s artifacts", name)
+		}
 	}
-	if CanStage(record, "spec") {
-		t.Fatal("prepared execution must reject non-plan artifacts")
+	if !CanStage(issueopscontract.IssueOpsRecord{}, "plan") {
+		t.Fatal("record without an execution must accept staged artifacts")
 	}
 }
 

@@ -2,7 +2,6 @@ package issueopslease
 
 import (
 	"context"
-	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,7 +13,7 @@ import (
 func TestReseedArtifactsPrepareAndRollbackOnlyTargetGeneration(t *testing.T) {
 	root := t.TempDir()
 	record := reseedArtifactRecord(root, 2)
-	artifacts := NewReseedArtifacts(nil)
+	artifacts := NewReseedArtifacts()
 	receipt, err := artifacts.Prepare(context.Background(), record)
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
@@ -44,7 +43,7 @@ func TestReseedArtifactsReclaimsExistingTargetToken(t *testing.T) {
 	if err := os.WriteFile(path, []byte("existing\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	receipt, err := NewReseedArtifacts(nil).Prepare(context.Background(), record)
+	receipt, err := NewReseedArtifacts().Prepare(context.Background(), record)
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
 	}
@@ -54,74 +53,10 @@ func TestReseedArtifactsReclaimsExistingTargetToken(t *testing.T) {
 	}
 }
 
-func TestReseedArtifactsCompensatesPartialOwnerWriteAndAllowsRetry(t *testing.T) {
-	root := t.TempDir()
-	record := reseedArtifactRecord(root, 2)
-	record.Execution.Mode = "orca"
-	record.Execution.Selection = leaseSelectionFixture("orca")
-	record.Execution.Orca = &leasecontract.OrcaBinding{RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", OwnerHost: "codex", OwnerModel: "model", TaskID: "task", DispatchID: "dispatch", RunID: "run_issueops_1", LeaseGeneration: 1, ArtifactIdentityVersion: 1, IssueBodySHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", ContextPacketSHA256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", OwnerPromptSHA256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}
-	paths := reseedOwnerArtifactPaths(record)
-	partial := NewReseedArtifacts(func(_ context.Context, _ leasecontract.Record) (leasecontract.ReseedReceipt, error) {
-		if err := os.MkdirAll(filepath.Dir(paths[0]), 0o700); err != nil {
-			return leasecontract.ReseedReceipt{}, err
-		}
-		if err := os.WriteFile(paths[0], []byte("partial packet"), 0o600); err != nil {
-			return leasecontract.ReseedReceipt{}, err
-		}
-		return leasecontract.ReseedReceipt{}, errors.New("prompt write failed")
-	})
-	if _, err := partial.Prepare(context.Background(), record); err == nil || err.Error() != "prompt write failed" {
-		t.Fatalf("partial prepare error=%v", err)
-	}
-	for _, path := range append([]string{reseedTokenPath(record)}, paths...) {
-		if _, err := os.Lstat(path); !os.IsNotExist(err) {
-			t.Fatalf("partial residue %s err=%v", path, err)
-		}
-	}
-	retry := NewReseedArtifacts(func(_ context.Context, _ leasecontract.Record) (leasecontract.ReseedReceipt, error) {
-		return leasecontract.ReseedReceipt{ContextPacketPath: paths[0], OwnerPromptPath: paths[1]}, nil
-	})
-	if _, err := retry.Prepare(context.Background(), record); err != nil {
-		t.Fatalf("retry prepare: %v", err)
-	}
-}
-
-func TestReseedArtifactsPartialOwnerCleanupAttemptsEveryOwnedTarget(t *testing.T) {
-	root := t.TempDir()
-	record := reseedArtifactRecord(root, 2)
-	record.Execution.Mode = "orca"
-	record.Execution.Selection = leaseSelectionFixture("orca")
-	record.Execution.Orca = &leasecontract.OrcaBinding{RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", OwnerHost: "codex", OwnerModel: "model", TaskID: "task", DispatchID: "dispatch", RunID: "run_issueops_1", LeaseGeneration: 1, ArtifactIdentityVersion: 1, IssueBodySHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", ContextPacketSHA256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", OwnerPromptSHA256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}
-	paths := reseedOwnerArtifactPaths(record)
-	artifacts := NewReseedArtifacts(func(_ context.Context, _ leasecontract.Record) (leasecontract.ReseedReceipt, error) {
-		token := reseedTokenPath(record)
-		if err := os.Remove(token); err != nil {
-			return leasecontract.ReseedReceipt{}, err
-		}
-		if err := os.Mkdir(token, 0o700); err != nil {
-			return leasecontract.ReseedReceipt{}, err
-		}
-		if err := os.MkdirAll(filepath.Dir(paths[0]), 0o700); err != nil {
-			return leasecontract.ReseedReceipt{}, err
-		}
-		if err := os.WriteFile(paths[0], []byte("partial packet"), 0o600); err != nil {
-			return leasecontract.ReseedReceipt{}, err
-		}
-		return leasecontract.ReseedReceipt{}, errors.New("prompt write failed")
-	})
-	_, err := artifacts.Prepare(context.Background(), record)
-	if err == nil || !strings.Contains(err.Error(), "prompt write failed") || !strings.Contains(err.Error(), "reseed runtime artifact must be a regular file") {
-		t.Fatalf("partial cleanup error=%v", err)
-	}
-	if _, err := os.Lstat(paths[0]); !os.IsNotExist(err) {
-		t.Fatalf("partial owner packet remained after cleanup failure: %v", err)
-	}
-}
-
 func TestReseedArtifactsRollbackRejectsOutsideReceiptPathAndCleansOwnedTargets(t *testing.T) {
 	root := t.TempDir()
 	record := reseedArtifactRecord(root, 2)
-	artifacts := NewReseedArtifacts(nil)
+	artifacts := NewReseedArtifacts()
 	receipt, err := artifacts.Prepare(context.Background(), record)
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
@@ -130,7 +65,7 @@ func TestReseedArtifactsRollbackRejectsOutsideReceiptPathAndCleansOwnedTargets(t
 	if err := os.WriteFile(outside, []byte("must survive"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	receipt.Receipt.ContextPacketPath = outside
+	receipt.Receipt.ClaimTokenPath = outside
 	if err := artifacts.Rollback(context.Background(), receipt); err == nil || !strings.Contains(err.Error(), "outside the target generation") {
 		t.Fatalf("rollback error=%v", err)
 	}
@@ -145,7 +80,7 @@ func TestReseedArtifactsRollbackRejectsOutsideReceiptPathAndCleansOwnedTargets(t
 func TestReseedArtifactsRollbackRejectsAncestorSymlinkWithoutDeletingOutsideTarget(t *testing.T) {
 	root := t.TempDir()
 	record := reseedArtifactRecord(root, 2)
-	artifacts := NewReseedArtifacts(nil)
+	artifacts := NewReseedArtifacts()
 	receipt, err := artifacts.Prepare(context.Background(), record)
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
@@ -162,33 +97,10 @@ func TestReseedArtifactsRollbackRejectsAncestorSymlinkWithoutDeletingOutsideTarg
 	}
 }
 
-func TestReseedArtifactsPartialOwnerCleanupRejectsAncestorSymlink(t *testing.T) {
-	root := t.TempDir()
-	record := reseedArtifactRecord(root, 2)
-	record.Execution.Mode = "orca"
-	record.Execution.Selection = leaseSelectionFixture("orca")
-	record.Execution.Orca = &leasecontract.OrcaBinding{RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", OwnerHost: "codex", OwnerModel: "model", TaskID: "task", DispatchID: "dispatch", RunID: "run_issueops_1", LeaseGeneration: 1, ArtifactIdentityVersion: 1, IssueBodySHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", ContextPacketSHA256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", OwnerPromptSHA256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}
-	paths := reseedArtifactTargetPaths(record)
-	var outsideTargets []string
-	artifacts := NewReseedArtifacts(func(_ context.Context, _ leasecontract.Record) (leasecontract.ReseedReceipt, error) {
-		outsideTargets = reseedReplaceArtifactDirectoryWithSymlink(t, root, t.TempDir(), paths)
-		return leasecontract.ReseedReceipt{}, errors.New("owner artifact write failed")
-	})
-	_, err := artifacts.Prepare(context.Background(), record)
-	if err == nil || !strings.Contains(err.Error(), "owner artifact write failed") || !strings.Contains(err.Error(), "real directories") {
-		t.Fatalf("partial cleanup error=%v", err)
-	}
-	for _, path := range outsideTargets {
-		if _, err := os.Stat(path); err != nil {
-			t.Fatalf("partial cleanup deleted symlinked outside target %s: %v", path, err)
-		}
-	}
-}
-
 func TestReseedArtifactsCleanupSupersededRejectsAncestorSymlink(t *testing.T) {
 	root := t.TempDir()
 	record := reseedArtifactRecord(root, 2)
-	artifacts := NewReseedArtifacts(nil)
+	artifacts := NewReseedArtifacts()
 	if _, err := artifacts.Prepare(context.Background(), record); err != nil {
 		t.Fatalf("prepare: %v", err)
 	}
@@ -229,5 +141,5 @@ func reseedReplaceArtifactDirectoryWithSymlink(t *testing.T, root, outside strin
 }
 
 func reseedArtifactRecord(root string, generation uint64) leasecontract.Record {
-	return leasecontract.Record{SchemaVersion: leasecontract.SchemaVersion, ID: "io-reseed-artifact", Execution: &leasecontract.Execution{Mode: "direct", Workspace: leasecontract.Workspace{SourceRoot: root + "/source", Root: root, Branch: "branch", BaseHead: "base", Driver: "git", LinkedAt: "2026-07-30T09:00:00Z"}, Lease: leasecontract.Lease{Generation: generation, Status: "claimable"}, Selection: leaseSelectionFixture("direct")}}
+	return leasecontract.Record{SchemaVersion: leasecontract.SchemaVersion, ID: "io-reseed-artifact", Execution: &leasecontract.Execution{Workspace: leasecontract.Workspace{SourceRoot: root + "/source", Root: root, Branch: "branch", BaseHead: "base", LinkedAt: "2026-07-30T09:00:00Z"}, Lease: leasecontract.Lease{Generation: generation, Status: "claimable"}}}
 }

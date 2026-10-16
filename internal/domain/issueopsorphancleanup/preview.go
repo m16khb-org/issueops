@@ -67,7 +67,7 @@ func InspectInventory(result *contract.Result, request contract.Request, snapsho
 	inspectWorktreeHead(result, request)
 	inspectLocalBranchRefs(result, request, snapshot)
 	inspectCycleRecords(result, request, snapshot)
-	inspectLeaseAndOrcaAuthority(result, request, snapshot)
+	inspectLeaseAuthority(result, request, snapshot)
 }
 
 // inspectGitWorktrees records the target worktree facts and returns how many
@@ -139,15 +139,10 @@ func inspectCycleRecords(result *contract.Result, request contract.Request, snap
 	}
 }
 
-func inspectLeaseAndOrcaAuthority(result *contract.Result, request contract.Request, snapshot corehealth.Snapshot) {
+func inspectLeaseAuthority(result *contract.Result, request contract.Request, snapshot corehealth.Snapshot) {
 	for _, index := range snapshot.LeaseHolderIndexes {
 		if strings.TrimSpace(index.LifecycleID) == request.ID {
 			Missing(result, "target_lease_authority")
-		}
-	}
-	for _, worktree := range snapshot.OrcaWorktrees {
-		if samePath(worktree.Path, request.WorktreePath) {
-			Missing(result, "orca_worktree_authority")
 		}
 	}
 }

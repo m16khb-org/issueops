@@ -126,7 +126,6 @@ func TestProcessLifetimePrimitiveHasNarrowConsumers(t *testing.T) {
 	const primitive = "internal/adapter/outbound/processlease"
 	for _, importer := range []string{
 		"internal/adapter/issueops",
-		"internal/adapter/orca",
 		"internal/adapter/provider/providerutil",
 		"internal/adapter/outbound/sqlstore",
 	} {

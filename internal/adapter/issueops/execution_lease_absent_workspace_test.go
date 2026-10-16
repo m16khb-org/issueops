@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	issueops "issueops/internal/contract/issueops"
-	"issueops/internal/port"
 )
 
 func TestWriteFingerprintFileRejectsChangedUntrackedFile(t *testing.T) {
@@ -268,10 +267,9 @@ func TestReplacementResidueCleanupStillRemovesRealFiles(t *testing.T) {
 func TestFinalizeReleasesInsteadOfClaimableWhenTheWorkspaceIsGone(t *testing.T) {
 	t.Parallel()
 
-	stateRoot, record := rolloverExecutionFixture(t)
+	stateRoot, record := replacementExecutionFixture(t)
 	requester := executionActor("codex", "replacement-owner")
-	inspector := &rolloverOwnerInspector{inventory: port.ExecutionOrcaOwnerInventory{RuntimeID: "runtime-sealed"}}
-	deps := ExecutionReplaceDependencies{OrcaOwner: inspector, inspectWorkspace: quiescentWorkspaceInspector()}
+	deps := ExecutionReplaceDependencies{inspectWorkspace: quiescentWorkspaceInspector()}
 	source := record.Execution.Workspace.SourceRoot
 
 	preview, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, issueops.ExecutionReplaceRequest{

@@ -38,7 +38,7 @@ Skipped checks: <checks skipped with explicit reason; "none" if all ran>
 ## Cycle Lane: Authority and Startup (Only When a Cycle Exists)
 
 Render every acceptance criterion as a binary observation. Use the exact
-14-field owner report below, including evidence paths, HEAD, changed files,
+13-field owner report below, including evidence paths, HEAD, changed files,
 artifact URL, verification and the `issueops execution complete` receipt.
 
 Before execution, verify that the plan states the current issue, exact lifecycle ID, branch, base SHA, canonical worktree, bounded scope, acceptance criteria, verification, completion, and cleanup boundary. Never link an unrelated plan as readiness evidence.
@@ -47,11 +47,11 @@ After the canonical worktree exists, the active generation holder owns plan and 
 
 Do not cite stale tools such as positional `state write <key> <content>` forms as executable commands. IssueOps v1 liveness is the persisted generation plus exact native process receipt; inspect it with `issueops execution status --id "$ISSUEOPS_ID" --json`.
 
-For the selected execution, the source checkout is observation-only. From it, use only non-mutating reads such as `git status`, `git diff`, `git log`, `git show`, `git rev-parse`, `git ls-files`, and `rg`. Tests, builds, formatting, installation, generation, commits, and publication run only in the canonical worktree. CLI/MCP generation, actor, and cwd denials must never be bypassed. The owner uses the installed `issueops` command unless its sealed context proves `./bin/issueops` exists in the exact worktree.
+For the selected execution, the source checkout is observation-only. From it, use only non-mutating reads such as `git status`, `git diff`, `git log`, `git show`, `git rev-parse`, `git ls-files`, and `rg`. Tests, builds, formatting, installation, generation, commits, and publication run only in the canonical worktree. CLI/MCP generation, actor, and cwd denials must never be bypassed. The owner uses the installed `issueops` command unless the plan shows `./bin/issueops` exists in the exact worktree.
 
-For a report-only cycle, run only the verification commands declared in the sealed worker packet. Do not invent API, provider-ref, or history probes; the bounded report is not authority to widen verification or inspect unrelated external state. If a declared command cannot run, record the exact failure instead of substituting a new probe.
+For a report-only cycle, run only the verification commands declared in the plan. Do not invent API, provider-ref, or history probes; the bounded report is not authority to widen verification or inspect unrelated external state. If a declared command cannot run, record the exact failure instead of substituting a new probe.
 
-The Verified Execution report path is a safe relative path from the canonical worktree. The report must exist inside that root as committed regular-file content; an absolute path, parent escape, or leaf symlink fails. The worktree must be clean before completion, and claim/completion must retain the sealed issue and context packet digests.
+The Verified Execution report path is a safe relative path from the canonical worktree. The report must exist inside that root as committed regular-file content; an absolute path, parent escape, or leaf symlink fails. The worktree must be clean before completion.
 
 Execution shell red flags include the eval and source primitives, active command substitution, unquoted process substitution, zsh equals expansion (`=git` or `=(...)`), parameter/tilde expansion, and unquoted brace/glob pathname expansion. Use explicit canonical argv paths. Do not steer a launched native owner through raw terminal injection; lifecycle control uses the persisted execution status, replacement, reconciliation, release, and completion commands.
 
@@ -73,26 +73,11 @@ Shell arguments containing Markdown backticks must be single-quoted or passed as
 
 Native owner startup must use the exact installed Codex or Claude command and the canonical worktree. A hook-trust, usage-limit, rate-limit, reset, or model-selection prompt is a user decision boundary; never automate it. Resume only after the native process receipt and generation claim are observable.
 
-Before any replacement, inspect the exact native process, canonical worktree, Orca resource, branch, HEAD, and dirty paths. Any possible writer blocks another writer even when the diff appears stable. A stable diff is not lease evidence. Follow preview → revoke → finalize-preview → finalize with generation and inventory fingerprints; never adopt WIP while the old writer or resource may still be active.
+Before any replacement, inspect the exact native process, canonical worktree, branch, HEAD, and dirty paths. Any possible writer blocks another writer even when the diff appears stable. A stable diff is not lease evidence. Follow preview → revoke → finalize-preview → finalize with generation and inventory fingerprints; never adopt WIP while the old writer may still be active.
 
-Use server-filtered task inventory for sole-writer attestation, then inspect the exact current dispatch:
+Startup evidence is not a convenience bundle: run cwd, git root, branch, HEAD, dirty paths, and source-checkout status as independent commands. A combined command loses which raw read or exit established authority and must be rerun before mutation. When a long suite fails, inspect and fix the first failing test/golden before another unchanged long rerun.
 
-```bash
-orca orchestration task-list --status dispatched --json
-orca orchestration dispatch-show --task <current-task-id> --json
-```
-
-`orca orchestration task show`, `orca orchestration dispatch show`, and status `in_progress` are invalid; use only the exact inventory forms above. Do not infer task absence from a local filter over broad output. For this fence, truncated or unparsable JSON is ambiguity, never absence; rerun the server-filtered observation and keep mutation blocked until the exact task and dispatch are proven.
-
-Read the raw bounded terminal/task/dispatch inventories before any local projection, and run each evidence read as its own command. On resume, discard stale handles from transcript context: the injected current preamble supplies the only task, dispatch, coordinator, and worker identities; `dispatch-show --from` uses the current assignee handle or is omitted. Do not combine observation commands with shell control operators, guess jq paths, use zsh's reserved `path` variable, or invent cursor flags. Additive corrections arrive through normal orchestration status/inbox messages. Interrupt is reserved for explicit cancellation or override; after an interrupt, verify submission and send at most one Enter without resending the body. Model changes and usage resets require user approval, and no checkpoint `worker_done` is permitted while a Critical/Important review or gate remains.
-
-Startup evidence is not a convenience bundle: run cwd, git root, branch, HEAD, dirty paths, source-checkout status, exact-worktree terminals, server-filtered dispatched tasks, and exact dispatch as independent commands. A combined command loses which raw read or exit established authority and must be rerun before mutation. When a long suite fails, inspect and fix the first failing test/golden before another unchanged long rerun.
-
-Start the fresh worker from a login shell and require the actual host banner. Immediately before dispatch, obtain a fresh `connected=true` and `writable=true` check for the exact terminal. One `tui-idle` sample alone is insufficient. After an authorized terminal send delivers interrupt text plus Enter, read the target and verify that native working state actually began. If the full instruction remains at the idle prompt, send exactly one Enter and read again. Never resend the instruction body.
-
-Preview `issueops execution prepare` first and review mode, branch, base SHA, canonical path, native owner model, and next command. Confirmation repeats the identical request with only `--confirm`. `auto` may resolve to direct only when Orca is absent or unready before mutation; any later ambiguity uses `issueops execution reconcile` and never another create attempt.
-
-Explicit nonsecret Orca environment-key allowlist: never dump broad ORCA-prefixed env output or use prefix filtering for identity probes. Allow only explicitly named nonsecret keys such as `ORCA_TERMINAL_HANDLE`, `ORCA_TAB_ID`, and `ORCA_WORKTREE_ID`, and never record secret values in tests, docs, logs, or evidence.
+Preview `issueops execution prepare` first and review workspace root, branch, base SHA, and next command. Confirmation repeats the identical request with only `--confirm`. Any later ambiguity uses `issueops execution reconcile` and never another create attempt.
 
 Installed-file readback does not prove an already running host process loaded the new code. MCP runs in-process; reconnect the host's MCP server to apply an updated binary. Inspect `issueops execution whoami --json` and `issueops execution status --id "$ISSUEOPS_ID" --json` for current native identity and lease authority rather than probing retired enforcement hooks.
 
@@ -106,7 +91,7 @@ Before this fence, each worker commit must use a Conventional Commit subject and
 
 A completed execution is never a new mutation lease. Review feedback that requires edits starts a new bounded execution or an explicitly authorized continuation before completion.
 
-Pending external intent survives interruption: reconcile ambiguous workspace/publication state, or replace a failed holder with exact generation and quiescence evidence. Record before/after process, worktree, branch, HEAD, dirty-path, and Orca-resource observations. Cleanup remains a separate human-authorized operation after verified merge evidence.
+Pending external intent survives interruption: reconcile ambiguous workspace/publication state, or replace a failed holder with exact generation and quiescence evidence. Record before/after process, worktree, branch, HEAD, and dirty-path observations. Cleanup remains a separate human-authorized operation after verified merge evidence.
 
 ## Execution Mode and Evidence
 
@@ -320,16 +305,15 @@ intent rather than retrying creation. A completed execution grants no new lease.
 
 ### Fixed IssueOps v1 Owner Report
 
-Return these 14 fields exactly once, in this order (bounded evidence, no secrets,
+Return these 13 fields exactly once, in this order (bounded evidence, no secrets,
 claim-token text, private reasoning, or raw transcript):
 
 ~~~text
 Status: <completed | blocked>
 Lifecycle: <exact lifecycle ID>
-Mode/host/model: <mode / host / model (effort)>
+Host/model: <host / model (effort)>
 Worktree/branch/final HEAD: <exact values>
 Lease generation/completion: <generation + receipt or blocker>
-Issue/packet digests: <verified | drift>
 Commits: <ordered SHA + subject>
 Changed files: <exact paths>
 Acceptance evidence: <AC-ID → test/command/result and artifact paths>

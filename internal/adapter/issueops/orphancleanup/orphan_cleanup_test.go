@@ -50,7 +50,6 @@ func TestPreviewFailsClosedForUnsafeRecordlessTargets(t *testing.T) {
 						Path: fixture.repo, Branch: "main", Head: fixture.sourceHead, Clean: true, Canonical: true,
 					}},
 					LocalRefs: []operationalhealthcontract.GitRef{{Name: "refs/heads/main", Branch: "main", OID: fixture.sourceHead, Location: "local"}},
-					Messages:  operationalhealthcontract.MessagePresence{CompleteAbsence: true},
 				}
 			},
 			want: "canonical_worktree",
@@ -78,7 +77,6 @@ func TestPreviewFailsClosedForUnsafeRecordlessTargets(t *testing.T) {
 					Repo:                fixture.repo,
 					Branch:              fixture.branch,
 					Phase:               "implement",
-					ExecutionMode:       "direct",
 					LeaseStatus:         "active",
 					Generation:          1,
 					WorktreePath:        fixture.worktree,
@@ -98,7 +96,7 @@ func TestPreviewFailsClosedForUnsafeRecordlessTargets(t *testing.T) {
 			prepare: func(snapshot corehealth.Snapshot) corehealth.Snapshot {
 				snapshot.Cycles = append(snapshot.Cycles, operationalhealthcontract.Cycle{
 					ID: "io-owner-without-worktree", Repo: fixture.repo, Branch: fixture.branch,
-					Phase: "implement", ExecutionMode: "direct", LeaseStatus: "active", Generation: 1,
+					Phase: "implement", LeaseStatus: "active", Generation: 1,
 				})
 				return snapshot
 			},
@@ -310,7 +308,6 @@ func (fixture orphanCleanupGitFixture) snapshot() corehealth.Snapshot {
 			{Name: "refs/heads/main", Branch: "main", OID: strings.TrimSpace(gitOutputNoFail(fixture.repo, "rev-parse", "main")), Location: "remote"},
 			{Name: "refs/heads/" + fixture.branch, Branch: fixture.branch, OID: featureHead, Location: "remote"},
 		},
-		Messages: operationalhealthcontract.MessagePresence{CompleteAbsence: true},
 	}
 }
 

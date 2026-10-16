@@ -239,8 +239,8 @@ would put stage detection in two places. The rationale is in
 You need Git, Go 1.26.6 or later, and at least one host you plan to use (Codex,
 Claude Code, Omo native, or omp). There is no public binary release yet, so you
 build from source (`v0.1.0` is a draft). To write issues or PRs/MRs on GitHub or
-GitLab, also set up and authenticate that provider's CLI (`gh` or `glab`). Orca,
-Herdr, and Aside for browser QA are optional integrations installed separately.
+GitLab, also set up and authenticate that provider's CLI (`gh` or `glab`).
+Herdr and Aside for browser QA are optional integrations installed separately.
 
 ```bash
 git clone https://github.com/m16khb-org/issueops.git
@@ -425,11 +425,14 @@ problem → grill → plan → compatibility-review → implement
 
 ## Models and session handoff
 
-A normal cycle asks nothing about where to run. Before implementation it picks
-the execution session: a preparing session that runs inside Herdr hands off to
-Herdr first. Otherwise, if Orca reports ready, the work hands off to a new session
-in the same worktree; if Orca is unavailable it tries Herdr, and if neither is
-usable it continues in the current session. cmux is used only when you name it.
+A normal cycle asks nothing about where to run. After the branch and worktree
+are prepared, it checks Herdr. If the preparing session runs inside Herdr and a
+running server, a compatible version, and a runnable current native host are
+confirmed, the work hands off to a new Herdr session in the same worktree.
+If Herdr is unavailable, the work continues in the current session, or you hand
+it off by hand from a second terminal you open yourself. An installed binary
+alone does not count as ready, and IssueOps neither installs a launcher nor
+starts a server. cmux is used only when you name it.
 That choice decides only where the work runs; the original request's approved
 scope and endpoint are unchanged, and an explicit instruction to hold or to use a
 particular session wins over it.
@@ -454,7 +457,7 @@ Automatic handoff passes `--dangerously-skip-permissions` to Claude Code,
 `--permission-preset full-access` to Omo native, and `--auto-approve` to omp.
 These skip the host's own permission prompts, so settle the scope of the handed-off
 work first. IssueOps keeps its own lease, generation, workspace, and remote-write
-checks. Acceptance of the handoff command and the actual owner claim and
+checks. Acceptance of the handoff command and the actual claim and
 completion are recorded as separate evidence.
 
 ## Architecture
@@ -538,7 +541,7 @@ semantic verdicts are under [`testdata/pioneer-holdouts/`](testdata/pioneer-hold
 - MCP tool arguments are validated against the public schema; unknown fields and missing or wrongly typed fields are rejected.
 - The executable shell fence checks syntax, failure swallowing, destructive commands, dynamic shell, and symlink escapes without running a shell.
 - Raw secrets never land in docs, state responses, audit logs, or test fixtures.
-- External tools are not dependencies of native install, readiness, or self-verification. Integrations such as Orca are optional adapters; IssueOps stays the durable authority.
+- External tools are not dependencies of native install, readiness, or self-verification. Integrations such as Herdr are optional; IssueOps stays the durable authority.
 
 ## Repository map
 
@@ -604,7 +607,7 @@ first. The README carries no destructive rollback commands.
 | MCP service looks unhealthy | Run `io doctor --repo . --json` and `io mcp service status` |
 | `link-plan` rejects with `missing required sections` | Add the four stage 3 section titles verbatim. Merging or renaming them does not pass |
 | `next` returns to stage 6 with `project_docs_review_stale` | The diff changed after the verdict. Re-check the docs, reseal, and record the verdict again |
-| Handoff model or effort is unexpected | Check `io model show --json` for values and sources, any explicit `--owner-model`/`--owner-effort`, and the review round |
+| Handoff model or effort is unexpected | Check `io model show --json` for values and sources, any explicit override, and the review round |
 | self-verify looks stuck | Add `--progress=jsonl` to see each step's heartbeat |
 | Project docs are stale | Refresh one document at a time with `project-docs-update`; use `project-docs-optimize` for structural problems |
 

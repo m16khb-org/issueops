@@ -88,7 +88,7 @@ func planningOwnerCommand(id, key string) (string, bool) {
 func executionOwnerCommand(id, key string) (string, bool) {
 	switch key {
 	case "worktree_path", "worktree_exists":
-		return "issueops execution prepare --id " + id + " --mode auto --owner-host <codex|claude|omo|omp> $ACTOR_FLAGS", true
+		return "issueops execution prepare --id " + id + " $ACTOR_FLAGS", true
 	case "execution", "execution_valid", "execution_worktree_match", "execution_write_lease":
 		return executionStatusCommand(id), true
 	case "implementation_changes":

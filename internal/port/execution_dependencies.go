@@ -2,9 +2,7 @@ package port
 
 import (
 	"context"
-	"time"
 
-	executionissue "issueops/internal/contract/executionissue"
 	issueopscontract "issueops/internal/contract/issueops"
 	basesyncport "issueops/internal/port/issueopsbasesync"
 )
@@ -14,32 +12,18 @@ import (
 type ExecutionStatusHandler func(context.Context, string, string) (issueopscontract.ExecutionResult, error)
 
 type ExecutionActionDependencies struct {
-	Status    ExecutionStatusHandler
-	Prepare   issueopscontract.ExecutionPrepareHandler
-	Orca      ExecutionOrcaProvisioner
-	OrcaOwner ExecutionOrcaOwnerInspector
-	BaseSync  basesyncport.Inspector
-	ReadIssue executionissue.ExecutionIssueSnapshotReadFunc
-	Claim     issueopscontract.ExecutionClaimHandler
-	Release   issueopscontract.ExecutionReleaseHandler
-	Replace   ExecutionReplaceHandler
-	Reseed    issueopscontract.ExecutionReseedHandler
-	Resume    issueopscontract.ExecutionResumeHandler
-	Reconcile ExecutionReconcileHandler
-	Complete  issueopscontract.ExecutionCompleteHandler
-	// RemoteReconcile handles remote_pr_create recovery independently of the
-	// Orca-specific Reconcile handler.
+	Status   ExecutionStatusHandler
+	Prepare  issueopscontract.ExecutionPrepareHandler
+	BaseSync basesyncport.Inspector
+	Claim    issueopscontract.ExecutionClaimHandler
+	Release  issueopscontract.ExecutionReleaseHandler
+	Replace  ExecutionReplaceHandler
+	Reseed   issueopscontract.ExecutionReseedHandler
+	Complete issueopscontract.ExecutionCompleteHandler
+	// RemoteReconcile handles remote_pr_create recovery.
 	RemoteReconcile issueopscontract.RemotePullRequestReconcileHandler
 }
 
 type ExecutionReconcileDependencies struct {
-	Orca            ExecutionOrcaProvisioner
-	ReadIssue       executionissue.ExecutionIssueSnapshotReadFunc
 	RemoteReconcile issueopscontract.RemotePullRequestReconcileHandler
-	Now             func() time.Time
-	Handler         ExecutionReconcileHandler
 }
-
-// ExecutionReconcileHandler는 의존 묶음을 파라미터로 받으므로 그 묶음과 같은
-// 계층에 있어야 한다.
-type ExecutionReconcileHandler func(context.Context, string, issueopscontract.ExecutionReconcileRequest, ExecutionReconcileDependencies) (issueopscontract.ExecutionReconcileResult, error)

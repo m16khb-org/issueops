@@ -5,7 +5,6 @@ import (
 
 	issueopsadapter "issueops/internal/adapter/issueops"
 	healthadapter "issueops/internal/adapter/operationalhealth"
-	orcaadapter "issueops/internal/adapter/orca"
 	cleanupapp "issueops/internal/application/issueopscleanup"
 	issueopscontract "issueops/internal/contract/issueops"
 	health "issueops/internal/contract/operationalhealth"
@@ -29,6 +28,6 @@ func orphanCleaner() cleanupapp.OrphanCleaner {
 		return collector.CollectLocal(ctx, repo), nil
 	}
 	return cleanupapp.OrphanCleaner{Environment: environment, Collect: func(ctx context.Context, repo string) (health.Snapshot, error) {
-		return (healthadapter.Collector{Git: healthadapter.ExecGitRunner{}, Orca: orcaadapter.New(), IssueOps: healthadapter.IssueOpsReader{StateRoot: environment.StateRoot, Scan: issueopsadapter.VisitIssueOpsExisting, ListLeaseHolders: issueopsadapter.ListLeaseHolderIndexes}, InspectNativeProcess: issueopsadapter.InspectNativeProcessReceipt}).Collect(ctx, repo), nil
+		return (healthadapter.Collector{Git: healthadapter.ExecGitRunner{}, IssueOps: healthadapter.IssueOpsReader{StateRoot: environment.StateRoot, Scan: issueopsadapter.VisitIssueOpsExisting, ListLeaseHolders: issueopsadapter.ListLeaseHolderIndexes}, InspectNativeProcess: issueopsadapter.InspectNativeProcessReceipt}).Collect(ctx, repo), nil
 	}, VerifyMerged: testRemoteVerifier().Merged}
 }

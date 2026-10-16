@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
-	executionissue "issueops/internal/contract/executionissue"
 	"os"
 	"path/filepath"
 	"slices"
@@ -21,17 +20,12 @@ type Deps struct {
 	Runtime                ExecutionDeps
 	StateRoot              func() string
 	Prepare                model.ExecutionPrepareHandler
-	Orca                   port.ExecutionOrcaProvisioner
-	OrcaOwner              port.ExecutionOrcaOwnerInspector
 	BaseSync               basesyncport.Inspector
-	ReadIssue              executionissue.ExecutionIssueSnapshotReadFunc
 	Claim                  model.ExecutionClaimHandler
 	Release                model.ExecutionReleaseHandler
 	Status                 port.ExecutionStatusHandler
 	Replace                port.ExecutionReplaceHandler
 	Reseed                 model.ExecutionReseedHandler
-	Resume                 model.ExecutionResumeHandler
-	Reconcile              port.ExecutionReconcileHandler
 	Complete               model.ExecutionCompleteHandler
 	Publication            remotecmd.PublicationHandlers
 	PrintJSON              func(any) error
@@ -42,18 +36,11 @@ type Deps struct {
 }
 
 func (deps Deps) actionDeps() port.ExecutionActionDependencies {
-	actionDeps := port.ExecutionActionDependencies{
-		Prepare: deps.Prepare, Orca: deps.Orca, OrcaOwner: deps.OrcaOwner, BaseSync: deps.BaseSync, ReadIssue: deps.ReadIssue,
-		Claim: deps.Claim, Release: deps.Release, Reseed: deps.Reseed, Status: deps.Status, Replace: deps.Replace, Resume: deps.Resume, Reconcile: deps.Reconcile, Complete: deps.Complete,
+	return port.ExecutionActionDependencies{
+		Prepare: deps.Prepare, BaseSync: deps.BaseSync,
+		Claim: deps.Claim, Release: deps.Release, Reseed: deps.Reseed, Status: deps.Status, Replace: deps.Replace, Complete: deps.Complete,
 		RemoteReconcile: deps.Publication.Reconcile,
 	}
-	if actionDeps.OrcaOwner == nil {
-		inspector, ok := deps.Orca.(port.ExecutionOrcaOwnerInspector)
-		if ok {
-			actionDeps.OrcaOwner = inspector
-		}
-	}
-	return actionDeps
 }
 
 func execute(req model.ExecutionActionRequest, deps Deps) (any, error) {
@@ -67,17 +54,15 @@ func execute(req model.ExecutionActionRequest, deps Deps) (any, error) {
 }
 
 const Usage = `Usage:
-  issueops execution prepare --id ID --mode auto|direct|orca --owner-host codex|claude|omo|omp [--owner-model MODEL] [--owner-effort EFFORT] [--direct-reason REASON] [--expected-readiness-fingerprint SHA256] [--issue-snapshot-file PATH] ACTOR_FLAGS [--confirm] [--json]
+  issueops execution prepare --id ID ACTOR_FLAGS [--confirm] [--json]
   issueops execution status --id ID [--json]
   issueops execution whoami [--json]
-  issueops execution claim --id ID --generation N (--claim-current-token|--claim-token-file PATH) [--issue-body-sha256 HEX --context-packet-sha256 HEX] [--issue-snapshot-file PATH] [ACTOR_FLAGS] [--json]
+  issueops execution claim --id ID --generation N (--claim-current-token|--claim-token-file PATH) [ACTOR_FLAGS] [--json]
   issueops execution release --id ID --generation N ACTOR_FLAGS [--json]
-  issueops execution replace --id ID --expected-generation N (--preview|--revoke|--finalize-preview|--finalize|--reseed) [--completion-generation N] [fingerprint/reason flags] [--issue-snapshot-file PATH] [ACTOR_FLAGS] [--confirm] [--json]
-  issueops execution resume --id ID --expected-generation N [ACTOR_FLAGS] --confirm [--json]
-  issueops execution reconcile --id ID (--preview|--confirm) [--issue-snapshot-file PATH] ACTOR_FLAGS [--json]
+  issueops execution replace --id ID --expected-generation N (--preview|--revoke|--finalize-preview|--finalize|--reseed) [--completion-generation N] [fingerprint/reason flags] [ACTOR_FLAGS] [--confirm] [--json]
+  issueops execution reconcile --id ID (--preview|--confirm) ACTOR_FLAGS [--json]
   issueops execution complete --id ID --generation N --final-head SHA --verification-report PATH --remote-artifact-url URL --verification TEXT... ACTOR_FLAGS --confirm [--json]
   issueops execution sync-base --id ID --completion-generation N (--preview | --apply --confirm --fingerprint SHA256 | --finalize | --abort) ACTOR_FLAGS [--json]
-  issueops execution switch-mode --id ID --mode direct|orca [--apply --confirm --fingerprint SHA256] ACTOR_FLAGS [--json]
   issueops execution handoff-cmux --id ID --generation N --cmux-executable ABS --cmux-version VERSION --cmux-build-identity IDENTITY --socket ABS --window UUID --cwd ABS --host codex|claude|omo|omp --host-executable ABS --model MODEL [--effort EFFORT] --prompt-file ABS --prompt-sha256 HEX --material-sha256 HEX [--json]
 
 ACTOR_FLAGS: --host codex|claude|omo|omp --session-id ID [--agent-id ID] --session-pid PID --session-started-at RFC3339 --session-executable PATH --cwd PATH`
@@ -100,16 +85,12 @@ func Run(args []string, deps Deps) error {
 		return runRelease(args[1:], deps)
 	case "replace":
 		return runReplace(args[1:], deps)
-	case "resume":
-		return runResume(args[1:], deps)
 	case "reconcile":
 		return runReconcile(args[1:], deps)
 	case "complete":
 		return runComplete(args[1:], deps)
 	case "sync-base":
 		return runSyncBase(args[1:], deps)
-	case "switch-mode":
-		return runSwitchMode(args[1:], deps)
 	case "handoff-cmux":
 		return runHandoffCmux(args[1:], deps)
 	default:
@@ -263,27 +244,14 @@ func resolveNativeActor(operation string, flags actorFlags, visited map[string]b
 
 func runPrepare(args []string, deps Deps) error {
 	fs := flag.NewFlagSet("issueops execution prepare", flag.ContinueOnError)
-	id, mode := fs.String("id", "", "IssueOps id"), fs.String("mode", "auto", "auto, direct, orca")
-	ownerHost, ownerModel := fs.String("owner-host", "", "owner host"), fs.String("owner-model", "", "owner model")
-	ownerEffort := fs.String("owner-effort", "", "owner effort")
-	directReason := fs.String("direct-reason", "", "required reason for explicit direct mode")
-	expectedReadinessFingerprint := fs.String("expected-readiness-fingerprint", "", "preview readiness fingerprint required by confirm")
-	issueSnapshotFile := fs.String("issue-snapshot-file", "", "private GitLab issue snapshot JSON file")
+	id := fs.String("id", "", "IssueOps id")
 	actor := addActorFlags(fs, deps)
 	confirm, jsonOut := fs.Bool("confirm", false, "confirm mutations"), fs.Bool("json", false, "print JSON")
 	if done, err := parse(fs, args); done || err != nil {
 		return err
 	}
-	issueSnapshot, err := readExecutionIssueSnapshotFile(*issueSnapshotFile)
-	if err != nil {
-		return output(nil, *jsonOut, err, deps)
-	}
 	result, err := execute(model.ExecutionActionRequest{
-		Action: model.ExecutionActionPrepare, ID: *id, Mode: *mode, Actor: actor.actor(), CWD: *actor.cwd,
-		OwnerHost: *ownerHost, OwnerModel: *ownerModel, OwnerEffort: *ownerEffort,
-		IssueSnapshotFile: *issueSnapshotFile,
-		DirectReason:      *directReason, ExpectedReadinessFingerprint: *expectedReadinessFingerprint, Confirm: *confirm,
-		IssueSnapshot: issueSnapshot,
+		Action: model.ExecutionActionPrepare, ID: *id, Actor: actor.actor(), CWD: *actor.cwd, Confirm: *confirm,
 	}, deps)
 	return output(result, *jsonOut, err, deps)
 }
@@ -461,9 +429,6 @@ func runClaim(args []string, deps Deps) error {
 	id, generation := fs.String("id", "", "IssueOps id"), fs.Uint64("generation", 0, "lease generation")
 	claimTokenFile, claimCurrentToken := fs.String("claim-token-file", "", "one-time claim token file"), fs.Bool("claim-current-token", false, "resolve the current generation token internally")
 	actor := addActorFlags(fs, deps)
-	issueDigest := fs.String("issue-body-sha256", "", "sealed remote issue body SHA-256")
-	packetDigest := fs.String("context-packet-sha256", "", "sealed owner context packet SHA-256")
-	issueSnapshotFile := fs.String("issue-snapshot-file", "", "private GitLab issue snapshot JSON file")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if done, err := parse(fs, args); done || err != nil {
 		return err
@@ -479,15 +444,9 @@ func runClaim(args []string, deps Deps) error {
 	if err != nil {
 		return output(nil, *jsonOut, err, deps)
 	}
-	issueSnapshot, err := readExecutionIssueSnapshotFile(*issueSnapshotFile)
-	if err != nil {
-		return output(nil, *jsonOut, err, deps)
-	}
 	result, err := execute(model.ExecutionActionRequest{
 		Action: model.ExecutionActionClaim, ID: *id, Generation: *generation,
 		Actor: resolvedActor, CWD: resolvedCWD, TokenFile: *claimTokenFile, ClaimCurrentToken: *claimCurrentToken,
-		IssueBodySHA256: *issueDigest, ContextPacketSHA256: *packetDigest,
-		IssueSnapshot: issueSnapshot,
 	}, deps)
 	return output(result, *jsonOut, err, deps)
 }
@@ -516,14 +475,9 @@ func runReplace(args []string, deps Deps) error {
 	preview, revoke := fs.Bool("preview", false, "preview replacement"), fs.Bool("revoke", false, "revoke current generation")
 	finalizePreview, finalize := fs.Bool("finalize-preview", false, "preview finalization"), fs.Bool("finalize", false, "finalize replacement")
 	reseed, confirm := fs.Bool("reseed", false, "reseed a holderless lease"), fs.Bool("confirm", false, "confirm mutation")
-	issueSnapshotFile := fs.String("issue-snapshot-file", "", "private GitLab issue snapshot JSON file")
 	actor, jsonOut := addActorFlags(fs, deps), fs.Bool("json", false, "print JSON")
 	if done, err := parse(fs, args); done || err != nil {
 		return err
-	}
-	issueSnapshot, err := readExecutionIssueSnapshotFile(*issueSnapshotFile)
-	if err != nil {
-		return output(nil, *jsonOut, err, deps)
 	}
 	actions := map[string]bool{
 		model.ExecutionReplacePreview: *preview, model.ExecutionReplaceRevoke: *revoke,
@@ -555,32 +509,6 @@ func runReplace(args []string, deps Deps) error {
 		CompletionGeneration: *completionGeneration,
 		InventoryFingerprint: *inventory, QuiescenceFingerprint: *quiescence, Reason: *reason,
 		Actor: resolvedActor, CWD: resolvedCWD, Confirm: *confirm,
-		IssueSnapshot: issueSnapshot,
-	}, deps)
-	return output(result, *jsonOut, err, deps)
-}
-
-func runResume(args []string, deps Deps) error {
-	fs := flag.NewFlagSet("issueops execution resume", flag.ContinueOnError)
-	id := fs.String("id", "", "IssueOps id")
-	generation := fs.Uint64("expected-generation", 0, "expected lease generation")
-	actor := addActorFlags(fs, deps)
-	confirm := fs.Bool("confirm", false, "confirm owner resume")
-	jsonOut := fs.Bool("json", false, "print JSON")
-	if done, err := parse(fs, args); done || err != nil {
-		return err
-	}
-	observation := defaultNativeActorObservation(deps)
-	if deps.nativeActorObservation != nil {
-		observation = *deps.nativeActorObservation
-	}
-	resolvedActor, resolvedCWD, err := resolveNativeActor("resume", actor, visitedFlagNames(fs), observation)
-	if err != nil {
-		return output(nil, *jsonOut, err, deps)
-	}
-	result, err := execute(model.ExecutionActionRequest{
-		Action: model.ExecutionActionResume, ID: *id, ExpectedGeneration: *generation,
-		Actor: resolvedActor, CWD: resolvedCWD, Confirm: *confirm,
 	}, deps)
 	return output(result, *jsonOut, err, deps)
 }
@@ -589,18 +517,13 @@ func runReconcile(args []string, deps Deps) error {
 	fs := flag.NewFlagSet("issueops execution reconcile", flag.ContinueOnError)
 	id := fs.String("id", "", "IssueOps id")
 	preview, confirm := fs.Bool("preview", false, "preview reconciliation"), fs.Bool("confirm", false, "confirm reconciliation")
-	issueSnapshotFile := fs.String("issue-snapshot-file", "", "private GitLab issue snapshot JSON file")
 	actor, jsonOut := addActorFlags(fs, deps), fs.Bool("json", false, "print JSON")
 	if done, err := parse(fs, args); done || err != nil {
 		return err
 	}
-	issueSnapshot, err := readExecutionIssueSnapshotFile(*issueSnapshotFile)
-	if err != nil {
-		return output(nil, *jsonOut, err, deps)
-	}
 	result, err := execute(model.ExecutionActionRequest{
 		Action: model.ExecutionActionReconcile, ID: *id, Preview: *preview, Confirm: *confirm,
-		Actor: actor.actor(), CWD: *actor.cwd, IssueSnapshot: issueSnapshot,
+		Actor: actor.actor(), CWD: *actor.cwd,
 	}, deps)
 	return output(result, *jsonOut, err, deps)
 }
@@ -707,33 +630,6 @@ func sameExistingExecutionPath(left, right string) bool {
 	return leftErr == nil && rightErr == nil && filepath.Clean(leftResolved) == filepath.Clean(rightResolved)
 }
 
-// runSwitchMode는 준비된 실행의 모드를 바꾼다. sync-base와 같은 이유로
-// ExecuteExecution을 거치지 않고 core를 직접 호출한다 — 이 표면은 lease writer가
-// 없을 때만 동작하므로 lease 권위 경로와 계약이 다르다(이슈 #167).
-func runSwitchMode(args []string, deps Deps) error {
-	fs := flag.NewFlagSet("issueops execution switch-mode", flag.ContinueOnError)
-	id := fs.String("id", "", "IssueOps id")
-	mode := fs.String("mode", "", "target mode: direct or orca")
-	fingerprint := fs.String("fingerprint", "", "fingerprint issued by the latest preview")
-	apply := fs.Bool("apply", false, "remove the canonical workspace and clear the execution record")
-	confirm := fs.Bool("confirm", false, "confirm the apply mutation")
-	actor, jsonOut := addActorFlags(fs, deps), fs.Bool("json", false, "print JSON")
-	if done, err := parse(fs, args); done || err != nil {
-		return err
-	}
-	if deps.StateRoot == nil {
-		return output(nil, *jsonOut, fmt.Errorf("IssueOps state root is unavailable"), deps)
-	}
-	if deps.Runtime.SwitchExecutionMode == nil {
-		return output(nil, *jsonOut, fmt.Errorf("issueops execution is not configured"), deps)
-	}
-	result, err := deps.Runtime.SwitchExecutionMode(context.Background(), deps.StateRoot(), model.ExecutionSwitchModeRequest{
-		ID: *id, Mode: *mode, CWD: *actor.cwd, Apply: *apply, Confirm: *confirm,
-		Fingerprint: *fingerprint, Actor: actor.actor(),
-	})
-	return output(result, *jsonOut, err, deps)
-}
-
 func output(value any, jsonOut bool, err error, deps Deps) error {
 	if err == nil {
 		value, err = bindExecutionNextCommand(value, deps.Provenance)
@@ -756,7 +652,7 @@ func output(value any, jsonOut bool, err error, deps Deps) error {
 func printText(value any) {
 	switch result := value.(type) {
 	case model.ExecutionPrepareResult:
-		fmt.Printf("%s %s %s generation=%d\n", result.ID, result.ResolvedMode, result.Workspace.Root, executionGeneration(result.Execution))
+		fmt.Printf("%s %s generation=%d\n", result.ID, result.Workspace.Root, executionGeneration(result.Execution))
 	case model.ExecutionResult:
 		fmt.Printf("%s %s generation=%d\n", result.ID, result.Execution.Lease.Status, result.Execution.Lease.Generation)
 	case model.ExecutionReplaceResult:

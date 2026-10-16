@@ -7,18 +7,15 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
-func TestRecoveryErrorContract(t *testing.T) {
-	err := &RecoveryError{ID: "io-42"}
+func TestSealedErrorContract(t *testing.T) {
+	err := &SealedError{ID: "io-42"}
 
-	if err.Error() == "" {
-		t.Fatal("RecoveryError message must not be empty")
+	if got := err.Error(); got != "artifacts are sealed after execution prepare" {
+		t.Fatalf("SealedError message = %q", got)
 	}
 	fields := err.IssueOpsErrorFields()
-	if fields["code"] != "artifact_stage_requires_reseed" {
-		t.Fatalf("code = %v, want artifact_stage_requires_reseed", fields["code"])
-	}
-	if fields["required_action"] != "execution replace --reseed" {
-		t.Fatalf("required_action = %v", fields["required_action"])
+	if fields["code"] != "artifact_stage_sealed" {
+		t.Fatalf("code = %v, want artifact_stage_sealed", fields["code"])
 	}
 	next, _ := fields["next_command"].(string)
 	if !strings.Contains(next, "io-42") {
@@ -37,12 +34,6 @@ func TestAliasesShareUnderlyingIssueOpsContract(t *testing.T) {
 		t.Fatalf("Staged alias mismatch: %+v", staged)
 	}
 
-	if ExecutionModeOrca != issueopscontract.ExecutionModeOrca {
-		t.Fatal("ExecutionModeOrca alias drifted from source contract")
-	}
-	if LeaseStatusReleased != issueopscontract.LeaseStatusReleased {
-		t.Fatal("LeaseStatusReleased alias drifted from source contract")
-	}
 	if PhaseDone != issueopscontract.IssueOpsPhaseDone {
 		t.Fatal("PhaseDone alias drifted from source contract")
 	}

@@ -247,28 +247,9 @@ func TestGitLabSnapshotSkillsPinPortableVCSContract(t *testing.T) {
 		"project_docs_read",
 		"project_docs_revise",
 		"glab api",
-		"successful exact-identity MCP evidence를 얻지 못했을 때만",
-		"이미 공급한 invalid evidence는 CLI fallback하지 않고 fail-closed한다.",
+		"exact-identity MCP 응답을 얻지 못했으면 일반 `glab api` CLI를 사용한다.",
+		"이미 받은 응답이 identity 대조에 실패했으면 CLI로 대체하지 않고 멈춘다.",
 	})
-	execution := readRepoFileForTest(t, filepath.Join("skills", "issueops", "references", "execution.md"))
-	for _, want := range []string{
-		".issueops/VCS.md",
-		"glab_api",
-		"flags.hostname",
-		"issue_snapshot",
-		"--issue-snapshot-file",
-		"glab_mcp",
-		"glab_cli",
-		"project_docs_read",
-		"project_docs_revise",
-		"glab api",
-		"successful exact-identity MCP evidence를 얻지 못했을 때만",
-		"이미 공급한 invalid evidence는 CLI fallback하지 않고 fail-closed한다.",
-	} {
-		if !strings.Contains(execution, want) {
-			t.Fatalf("IssueOps execution reference missing portable snapshot contract %q", want)
-		}
-	}
 	for _, relPath := range []string{
 		filepath.Join("skills", "gitlab-usecase", "SKILL.md"),
 		filepath.Join("skills", "issueops", "references", "execution.md"),

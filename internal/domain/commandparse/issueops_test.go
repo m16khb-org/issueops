@@ -1,20 +1,16 @@
 package commandparse
 
-import (
-	"strings"
-	"testing"
-)
+import "testing"
 
-// TestParseExactIssueOpsCommandCorpus is the accept/reject characterization
+// TestParseExactIssueOpsArgsCorpus is the accept/reject characterization
 // corpus for the exact IssueOps v1 command parser.
-func TestParseExactIssueOpsCommandCorpus(t *testing.T) {
+func TestParseExactIssueOpsArgsCorpus(t *testing.T) {
 	cases := []struct {
 		command  string
 		wantOK   bool
 		wantPath string
 	}{
 		{"issueops status --id io-1 --json", true, "status"},
-		{"./bin/issueops execution claim --id io-1", true, "execution claim"},
 		{"issueops execution prepare --id io-1", true, "execution prepare"},
 		{"issueops execution reconcile --id io-1", true, "execution reconcile"},
 		{"issueops execution whoami --json", true, "execution whoami"},
@@ -24,32 +20,16 @@ func TestParseExactIssueOpsCommandCorpus(t *testing.T) {
 		// Two-word subcommand with a flag where the second word is missing -> reject.
 		{"issueops execution --id io-1", false, ""},
 		{"issueops", false, ""},
-		{"git status", false, ""},
-		{"issueops build", false, ""},
-		// Active shell control / expansion must fail closed.
-		{"issueops status --id io-1; rm -rf /", false, ""},
-		{"issueops status --id $(whoami)", false, ""},
-		{"issueops status --id io-1 > out.txt", false, ""},
 		{"", false, ""},
 	}
 	for _, tc := range cases {
-		got, ok := ParseExactIssueOpsCommand(tc.command)
+		got, ok := parseExactForTest(tc.command)
 		if ok != tc.wantOK {
-			t.Fatalf("ParseExactIssueOpsCommand(%q) ok=%v want=%v", tc.command, ok, tc.wantOK)
+			t.Fatalf("ParseExactIssueOpsArgs(%q) ok=%v want=%v", tc.command, ok, tc.wantOK)
 		}
 		if ok && got.Path != tc.wantPath {
-			t.Fatalf("ParseExactIssueOpsCommand(%q) path=%q want=%q", tc.command, got.Path, tc.wantPath)
+			t.Fatalf("ParseExactIssueOpsArgs(%q) path=%q want=%q", tc.command, got.Path, tc.wantPath)
 		}
-	}
-}
-
-func TestParseExactIssueOpsCommandAcceptsRepoLocalBinSpelling(t *testing.T) {
-	parsed, ok := ParseExactIssueOpsCommand("bin/issueops status --id io-1 --json")
-	if !ok || parsed.Path != "status" {
-		t.Fatalf("repo-local bin spelling must parse exactly: parsed=%#v ok=%v", parsed, ok)
-	}
-	if _, ok := ParseExactIssueOpsCommand("bin/issueops status --id io-1; rm -rf /"); ok {
-		t.Fatal("repo-local bin spelling must still reject active shell control")
 	}
 }
 
@@ -62,31 +42,31 @@ func TestExactFlagsCorpus(t *testing.T) {
 		return v, b, r
 	}
 	// A flag token must not become another flag's value.
-	cmd, _ := ParseExactIssueOpsCommand("issueops execution claim --agent-id --cwd /w")
+	cmd, _ := parseExactForTest("issueops execution claim --agent-id --cwd /w")
 	v, b, r := spec(cmd.Path)
 	if _, ok := ExactFlags(cmd, v, b, r); ok {
 		t.Fatal("flag token must not be consumed as a value")
 	}
 	// Unknown flag rejected.
-	cmd2, _ := ParseExactIssueOpsCommand("issueops status --id io-1 --unknown x")
+	cmd2, _ := parseExactForTest("issueops status --id io-1 --unknown x")
 	v2, b2, r2 := spec(cmd2.Path)
 	if _, ok := ExactFlags(cmd2, v2, b2, r2); ok {
 		t.Fatal("unknown flag must be rejected")
 	}
 	// Repeatable flag accepted multiple times; non-repeatable rejected twice.
-	cmd3, _ := ParseExactIssueOpsCommand("issueops execution complete --id io-1 --verification A --verification B")
+	cmd3, _ := parseExactForTest("issueops execution complete --id io-1 --verification A --verification B")
 	v3, b3, r3 := spec(cmd3.Path)
 	if flags, ok := ExactFlags(cmd3, v3, b3, r3); !ok || len(flags["--verification"]) != 2 {
 		t.Fatalf("repeatable flag not accepted twice: ok=%v flags=%#v", ok, flags)
 	}
-	cmd4, _ := ParseExactIssueOpsCommand("issueops status --id io-1 --id io-2")
+	cmd4, _ := parseExactForTest("issueops status --id io-1 --id io-2")
 	v4, b4, r4 := spec(cmd4.Path)
 	if _, ok := ExactFlags(cmd4, v4, b4, r4); ok {
 		t.Fatal("duplicate non-repeatable flag must be rejected")
 	}
 	// Removed aliases stay rejected instead of silently selecting a different
 	// cycle or compatibility path.
-	cmd5, _ := ParseExactIssueOpsCommand("issueops execution complete --id io-1 --verification-command go-test --verification-command go-vet")
+	cmd5, _ := parseExactForTest("issueops execution complete --id io-1 --verification-command go-test --verification-command go-vet")
 	v5, b5, r5 := spec(cmd5.Path)
 	if flags, ok := ExactFlags(cmd5, v5, b5, r5); ok || flags != nil {
 		t.Fatalf("removed verification-command alias was accepted: ok=%v flags=%#v", ok, flags)
@@ -123,7 +103,7 @@ func TestDelegationCommandsHaveExactSpecs(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			command, ok := ParseExactIssueOpsCommand(test.command)
+			command, ok := parseExactForTest(test.command)
 			if !ok || command.Path != test.path {
 				t.Fatalf("command path=%q ok=%v want=%q", command.Path, ok, test.path)
 			}
@@ -143,7 +123,7 @@ func TestDelegationCommandsHaveExactSpecs(t *testing.T) {
 // lifecycle guard의 typed control plane이 이 명령을 인식한다. 미등록 플래그는
 // 계속 거부되어야 가드 정책이 이름만으로 열리지 않는다.
 func TestExecutionSyncBaseExactFlags(t *testing.T) {
-	command, ok := ParseExactIssueOpsCommand("issueops execution sync-base --id io-1 --completion-generation 3 --apply --confirm --fingerprint deadbeef --host claude --session-id s1 --agent-id a1 --session-pid 42 --session-started-at 2026-07-25T00:00:00Z --session-executable claude --cwd /w --json")
+	command, ok := parseExactForTest("issueops execution sync-base --id io-1 --completion-generation 3 --apply --confirm --fingerprint deadbeef --host claude --session-id s1 --agent-id a1 --session-pid 42 --session-started-at 2026-07-25T00:00:00Z --session-executable claude --cwd /w --json")
 	if !ok || command.Path != "execution sync-base" {
 		t.Fatalf("execution sync-base did not parse as a two-word subcommand: %#v ok=%v", command, ok)
 	}
@@ -156,19 +136,19 @@ func TestExecutionSyncBaseExactFlags(t *testing.T) {
 		t.Fatalf("execution sync-base flags = %#v ok=%v", flags, ok)
 	}
 	for _, mode := range []string{"--preview", "--finalize", "--abort"} {
-		modeCommand, _ := ParseExactIssueOpsCommand("issueops execution sync-base --id io-1 --completion-generation 3 " + mode + " --host claude --session-id s1 --cwd /w --json")
+		modeCommand, _ := parseExactForTest("issueops execution sync-base --id io-1 --completion-generation 3 " + mode + " --host claude --session-id s1 --cwd /w --json")
 		if _, ok := ExactFlags(modeCommand, values, booleans, repeatable); !ok {
 			t.Fatalf("mode %s must be admitted by the exact spec", mode)
 		}
 	}
-	unregistered, _ := ParseExactIssueOpsCommand("issueops execution sync-base --id io-1 --preview --rebase --cwd /w")
+	unregistered, _ := parseExactForTest("issueops execution sync-base --id io-1 --preview --rebase --cwd /w")
 	if flags, ok := ExactFlags(unregistered, values, booleans, repeatable); ok || flags != nil {
 		t.Fatalf("unregistered sync-base flag was accepted: flags=%#v ok=%v", flags, ok)
 	}
 }
 
 func TestExecutionReconcileExactFlags(t *testing.T) {
-	command, ok := ParseExactIssueOpsCommand("issueops execution reconcile --id io-1 --host codex --session-id session-1 --agent-id agent-1 --session-pid 42 --session-started-at 2026-07-22T00:00:00Z --session-executable /bin/codex --cwd /repo --confirm --json")
+	command, ok := parseExactForTest("issueops execution reconcile --id io-1 --host codex --session-id session-1 --agent-id agent-1 --session-pid 42 --session-started-at 2026-07-22T00:00:00Z --session-executable /bin/codex --cwd /repo --confirm --json")
 	if !ok {
 		t.Fatal("execution reconcile command did not parse")
 	}
@@ -182,50 +162,12 @@ func TestExecutionReconcileExactFlags(t *testing.T) {
 	}
 	// CLI의 reconcile FlagSet에는 --operation-id가 없다. exact parser도 CLI가
 	// 거부하는 flag를 받아 주면 안 된다.
-	stale, ok := ParseExactIssueOpsCommand("issueops execution reconcile --id io-1 --operation-id op-1 --json")
+	stale, ok := parseExactForTest("issueops execution reconcile --id io-1 --operation-id op-1 --json")
 	if !ok {
 		t.Fatal("execution reconcile command did not parse")
 	}
 	if flags, ok := ExactFlags(stale, values, booleans, repeatable); ok || flags != nil {
 		t.Fatalf("execution reconcile accepted --operation-id: flags=%#v ok=%v", flags, ok)
-	}
-}
-
-func TestExecutionResumeExactFlags(t *testing.T) {
-	commandText := "issueops execution resume --id io-1 --expected-generation 3 --host codex --session-id session-1 --agent-id agent-1 --session-pid 42 --session-started-at 2026-07-30T00:00:00Z --session-executable /bin/codex --cwd /repo.worktrees/resume --confirm --json"
-	command, ok := ParseExactIssueOpsCommand(commandText)
-	if !ok || command.Path != "execution resume" {
-		t.Fatalf("execution resume did not parse: %#v ok=%v", command, ok)
-	}
-	values, booleans, repeatable, ok := IssueOpsCommandSpec(command.Path)
-	if !ok {
-		t.Fatal("execution resume has no exact flag spec")
-	}
-	flags, ok := ExactFlags(command, values, booleans, repeatable)
-	if !ok || flags["--expected-generation"][0] != "3" || flags["--cwd"][0] != "/repo.worktrees/resume" || len(flags["--confirm"]) != 1 {
-		t.Fatalf("execution resume flags = %#v ok=%v", flags, ok)
-	}
-
-	for name, nearMiss := range map[string]string{
-		"unknown snapshot flag": commandText + " --issue-snapshot-file /tmp/issue.json",
-		"duplicate generation":  commandText + " --expected-generation 4",
-		"missing value":         "issueops execution resume --id io-1 --expected-generation --confirm",
-	} {
-		t.Run(name, func(t *testing.T) {
-			parsed, parsedOK := ParseExactIssueOpsCommand(nearMiss)
-			if !parsedOK {
-				if name == "missing value" {
-					t.Fatal("missing value must reach exact flag validation")
-				}
-				return
-			}
-			if got, accepted := ExactFlags(parsed, values, booleans, repeatable); accepted || got != nil {
-				t.Fatalf("near miss was accepted: flags=%#v", got)
-			}
-		})
-	}
-	if _, ok := ParseExactIssueOpsCommand("issueops execution resume --id io-1 --expected-generation $(date +%s) --confirm"); ok {
-		t.Fatal("active generation substitution was accepted")
 	}
 }
 
@@ -239,7 +181,7 @@ func TestExecutionClaimSupportsCurrentOrExplicitTokenSelector(t *testing.T) {
 		"explicit path":      "issueops execution claim --id io-1 --generation 1 --claim-token-file /tmp/token --host codex --session-id session-1 --session-pid 42 --session-started-at 2026-07-22T00:00:00Z --session-executable /bin/codex --cwd /repo --json",
 	} {
 		t.Run(name, func(t *testing.T) {
-			command, parsed := ParseExactIssueOpsCommand(commandText)
+			command, parsed := parseExactForTest(commandText)
 			if !parsed {
 				t.Fatal("execution claim command did not parse")
 			}
@@ -249,7 +191,7 @@ func TestExecutionClaimSupportsCurrentOrExplicitTokenSelector(t *testing.T) {
 			}
 		})
 	}
-	retired, _ := ParseExactIssueOpsCommand("issueops execution claim --id io-1 --generation 1 --token-file /tmp/token")
+	retired, _ := parseExactForTest("issueops execution claim --id io-1 --generation 1 --token-file /tmp/token")
 	if flags, accepted := ExactFlags(retired, values, booleans, repeatable); accepted || flags != nil {
 		t.Fatalf("retired token-file flag was accepted: flags=%#v ok=%v", flags, accepted)
 	}
@@ -259,7 +201,7 @@ func TestExecutionClaimSupportsCurrentOrExplicitTokenSelector(t *testing.T) {
 // 빈 따옴표 값(”)을 넣으면 토큰이 소실되어 exact claim 전체가 미분류로
 // 떨어졌다. 빈 따옴표 값은 빈 문자열 토큰으로 보존되어야 한다.
 func TestExecutionClaimAcceptsEmptyQuotedAgentID(t *testing.T) {
-	command, ok := ParseExactIssueOpsCommand("issueops execution claim --id 'io-1' --generation 1 --claim-token-file '/tmp/token' --host codex --session-id s1 --agent-id '' --session-pid 42 --session-started-at 2026-07-25T00:00:00Z --session-executable codex --cwd '/w' --json")
+	command, ok := parseExactForTest("issueops execution claim --id 'io-1' --generation 1 --claim-token-file '/tmp/token' --host codex --session-id s1 --agent-id '' --session-pid 42 --session-started-at 2026-07-25T00:00:00Z --session-executable codex --cwd '/w' --json")
 	if !ok {
 		t.Fatal("execution claim with empty quoted --agent-id did not parse")
 	}
@@ -273,38 +215,48 @@ func TestExecutionClaimAcceptsEmptyQuotedAgentID(t *testing.T) {
 	}
 }
 
-func TestExecutionSnapshotFileFlagMatchesCLIContract(t *testing.T) {
-	for path, commandText := range map[string]string{
-		"execution prepare":   "issueops execution prepare --id io-1 --mode orca --issue-snapshot-file /tmp/issue.json --json",
-		"execution claim":     "issueops execution claim --id io-1 --generation 2 --claim-token-file /tmp/token --issue-snapshot-file /tmp/issue.json --json",
-		"execution replace":   "issueops execution replace --id io-1 --expected-generation 1 --preview --issue-snapshot-file /tmp/issue.json --json",
-		"execution reconcile": "issueops execution reconcile --id io-1 --preview --issue-snapshot-file /tmp/issue.json --json",
+func TestRemovedExecutionFlagsAreRejected(t *testing.T) {
+	actor := " --host codex --session-id s1 --cwd /w --json"
+	for path, commandTexts := range map[string][]string{
+		"execution prepare": {
+			"issueops execution prepare --id io-1 --mode direct" + actor,
+			"issueops execution prepare --id io-1 --direct-reason why" + actor,
+			"issueops execution prepare --id io-1 --owner-host codex" + actor,
+			"issueops execution prepare --id io-1 --owner-model m" + actor,
+			"issueops execution prepare --id io-1 --owner-effort high" + actor,
+			"issueops execution prepare --id io-1 --issue-snapshot-file /tmp/issue.json" + actor,
+			"issueops execution prepare --id io-1 --expected-readiness-fingerprint deadbeef" + actor,
+		},
+		"execution claim": {
+			"issueops execution claim --id io-1 --generation 2 --claim-token-file /tmp/token --issue-snapshot-file /tmp/issue.json" + actor,
+			"issueops execution claim --id io-1 --generation 2 --claim-token-file /tmp/token --issue-body-sha256 deadbeef" + actor,
+			"issueops execution claim --id io-1 --generation 2 --claim-token-file /tmp/token --context-packet-sha256 deadbeef" + actor,
+		},
+		"execution replace": {
+			"issueops execution replace --id io-1 --expected-generation 1 --preview --issue-snapshot-file /tmp/issue.json" + actor,
+		},
+		"execution reconcile": {
+			"issueops execution reconcile --id io-1 --preview --issue-snapshot-file /tmp/issue.json" + actor,
+		},
 	} {
-		t.Run(path, func(t *testing.T) {
-			command, ok := ParseExactIssueOpsCommand(commandText)
+		values, booleans, repeatable, ok := IssueOpsCommandSpec(path)
+		if !ok {
+			t.Fatalf("%s 명령 명세가 없다", path)
+		}
+		for _, commandText := range commandTexts {
+			command, ok := parseExactForTest(commandText)
 			if !ok || command.Path != path {
-				t.Fatalf("snapshot 명령이 exact IssueOps 경로로 파싱되지 않았다: %#v ok=%v", command, ok)
+				t.Fatalf("명령이 exact IssueOps 경로로 파싱되지 않았다: %q ok=%v", commandText, ok)
 			}
-			values, booleans, repeatable, ok := IssueOpsCommandSpec(path)
-			if !ok {
-				t.Fatalf("%s 명령 명세가 없다", path)
+			if flags, ok := ExactFlags(command, values, booleans, repeatable); ok || flags != nil {
+				t.Fatalf("지운 플래그를 허용했다: %q flags=%#v", commandText, flags)
 			}
-			flags, ok := ExactFlags(command, values, booleans, repeatable)
-			if !ok || len(flags["--issue-snapshot-file"]) != 1 || flags["--issue-snapshot-file"][0] != "/tmp/issue.json" {
-				t.Fatalf("CLI snapshot 플래그가 exact 명세에서 손실됐다: flags=%#v ok=%v", flags, ok)
-			}
-		})
-	}
-
-	nearMiss, _ := ParseExactIssueOpsCommand("issueops execution claim --id io-1 --issue-snapshot /tmp/issue.json")
-	values, booleans, repeatable, _ := IssueOpsCommandSpec(nearMiss.Path)
-	if flags, ok := ExactFlags(nearMiss, values, booleans, repeatable); ok || flags != nil {
-		t.Fatalf("등록하지 않은 snapshot 별칭을 허용했다: flags=%#v ok=%v", flags, ok)
+		}
 	}
 }
 
 func TestExecutionReplaceCompletionGenerationFlagMatchesCLIContract(t *testing.T) {
-	command, ok := ParseExactIssueOpsCommand("issueops execution replace --id io-1 --expected-generation 5 --preview --completion-generation 4 --json")
+	command, ok := parseExactForTest("issueops execution replace --id io-1 --expected-generation 5 --preview --completion-generation 4 --json")
 	if !ok || command.Path != "execution replace" {
 		t.Fatalf("completion generation 명령이 exact IssueOps 경로로 파싱되지 않았다: %#v ok=%v", command, ok)
 	}
@@ -317,14 +269,14 @@ func TestExecutionReplaceCompletionGenerationFlagMatchesCLIContract(t *testing.T
 		t.Fatalf("CLI completion generation 플래그가 exact 명세에서 손실됐다: flags=%#v ok=%v", flags, ok)
 	}
 
-	nearMiss, _ := ParseExactIssueOpsCommand("issueops execution replace --id io-1 --expected-generation 5 --preview --completion-gen 4 --json")
+	nearMiss, _ := parseExactForTest("issueops execution replace --id io-1 --expected-generation 5 --preview --completion-gen 4 --json")
 	if flags, ok := ExactFlags(nearMiss, values, booleans, repeatable); ok || flags != nil {
 		t.Fatalf("등록하지 않은 completion generation 별칭을 허용했다: flags=%#v ok=%v", flags, ok)
 	}
 }
 
 func TestRemovedExecutionCommandsHaveNoFlagSpecs(t *testing.T) {
-	for _, path := range []string{"resume", "execution decide", "worktree prepare", "worktree prepare-tools", "worktree reconcile", "heartbeat"} {
+	for _, path := range []string{"resume", "execution resume", "execution switch-mode", "execution decide", "worktree prepare", "worktree prepare-tools", "worktree reconcile", "heartbeat"} {
 		if _, _, _, ok := IssueOpsCommandSpec(path); ok {
 			t.Fatalf("removed IssueOps command %q still has an exact flag spec", path)
 		}
@@ -332,7 +284,7 @@ func TestRemovedExecutionCommandsHaveNoFlagSpecs(t *testing.T) {
 }
 
 func TestRemoteArtifactExactFlags(t *testing.T) {
-	command, ok := ParseExactIssueOpsCommand("issueops remote verify-artifact --id io-1 --provider github --kind pr --url https://github.com/acme/repo/pull/1 --target-branch main --label bug --assignee octocat --json")
+	command, ok := parseExactForTest("issueops remote verify-artifact --id io-1 --provider github --kind pr --url https://github.com/acme/repo/pull/1 --target-branch main --label bug --assignee octocat --json")
 	if !ok {
 		t.Fatal("remote verify-artifact command did not parse")
 	}
@@ -347,7 +299,7 @@ func TestRemoteArtifactExactFlags(t *testing.T) {
 }
 
 func TestRemoteScoreExactFlags(t *testing.T) {
-	command, ok := ParseExactIssueOpsCommand("issueops remote score --input /tmp/score-input.json --judge file --judge-file /tmp/judge.json --json")
+	command, ok := parseExactForTest("issueops remote score --input /tmp/score-input.json --judge file --judge-file /tmp/judge.json --json")
 	if !ok {
 		t.Fatal("remote score command did not parse")
 	}
@@ -368,7 +320,7 @@ func TestOwnerRecorderExactFlags(t *testing.T) {
 		"issueops feedback mark-issue-updated --id io-1 --host codex --session-id owner-1 --agent-id agent-1 --cwd /worker --json",
 		"issueops feedback resolve --id io-1 --index 0 --resolution valid-defect --host codex --session-id owner-1 --agent-id agent-1 --cwd /worker --json",
 	} {
-		command, ok := ParseExactIssueOpsCommand(commandText)
+		command, ok := parseExactForTest(commandText)
 		if !ok {
 			t.Fatalf("owner recorder command did not parse: %q", commandText)
 		}
@@ -390,7 +342,7 @@ func TestPlanPrepRecordExactCommandSpec(t *testing.T) {
 		" --web-research-evidence source-1 --web-research-evidence source-2 --web-research-waive no-web" +
 		" --codebase-survey-evidence survey-1 --codebase-survey-evidence survey-2 --codebase-survey-waive no-survey" +
 		" --host codex --session-id owner-1 --agent-id agent-1 --cwd /worker --json"
-	command, ok := ParseExactIssueOpsCommand(commandText)
+	command, ok := parseExactForTest(commandText)
 	if !ok || command.Path != "plan-prep record" {
 		t.Fatalf("plan-prep record path=%q ok=%v", command.Path, ok)
 	}
@@ -429,7 +381,7 @@ func TestPlanPrepRecordRejectsNonExactCommands(t *testing.T) {
 		base + " --decisions-waive first --decisions-waive second",
 		base + " --host claude",
 	} {
-		command, ok := ParseExactIssueOpsCommand(commandText)
+		command, ok := parseExactForTest(commandText)
 		if !ok {
 			t.Fatalf("command must reach exact flag validation: %q", commandText)
 		}
@@ -441,19 +393,16 @@ func TestPlanPrepRecordRejectsNonExactCommands(t *testing.T) {
 			t.Errorf("non-exact plan-prep command accepted: %q flags=%#v", commandText, flags)
 		}
 	}
-	if _, ok := ParseExactIssueOpsCommand(base + " --decisions-evidence $(whoami)"); ok {
-		t.Fatal("active command substitution must fail before flag validation")
-	}
 }
 
 func TestExactIssueOpsFlagsAcceptGeneratedBinaryProvenanceEnvelope(t *testing.T) {
-	command, ok := ParseExactIssueOpsCommand("issueops execution resume --id io-1 --expected-generation 7 --confirm --generated-by-executable /repo/bin/issueops --generated-by-sha256 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa --generated-for-generation 7")
+	command, ok := parseExactForTest("issueops execution replace --id io-1 --expected-generation 7 --confirm --generated-by-executable /repo/bin/issueops --generated-by-sha256 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa --generated-for-generation 7")
 	if !ok {
 		t.Fatal("generated command did not parse")
 	}
 	values, booleans, repeatable, ok := IssueOpsCommandSpec(command.Path)
 	if !ok {
-		t.Fatal("execution resume has no exact flag spec")
+		t.Fatal("execution replace has no exact flag spec")
 	}
 	flags, ok := ExactFlags(command, values, booleans, repeatable)
 	if !ok {
@@ -461,21 +410,5 @@ func TestExactIssueOpsFlagsAcceptGeneratedBinaryProvenanceEnvelope(t *testing.T)
 	}
 	if got := flags["--generated-for-generation"]; len(got) != 1 || got[0] != "7" {
 		t.Fatalf("generation flags = %#v", got)
-	}
-}
-
-func TestParseExactIssueOpsCommandAcceptsOnlyEnvelopeMatchedAbsoluteExecutable(t *testing.T) {
-	base := "/repo/bin/issueops execution resume --id io-1 --expected-generation 7 --confirm" +
-		" --generated-by-executable /repo/bin/issueops" +
-		" --generated-by-sha256 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-		" --generated-for-generation 7"
-	if _, ok := ParseExactIssueOpsCommand(base); !ok {
-		t.Fatal("generated command with envelope-matched absolute executable was rejected")
-	}
-	if _, ok := ParseExactIssueOpsCommand(strings.Replace(base, "--generated-by-executable /repo/bin/issueops", "--generated-by-executable /other/bin/issueops", 1)); ok {
-		t.Fatal("absolute executable must match the generated provenance envelope")
-	}
-	if _, ok := ParseExactIssueOpsCommand("/repo/bin/issueops execution status --id io-1 --json"); ok {
-		t.Fatal("absolute executable without generated provenance must remain fail-closed")
 	}
 }

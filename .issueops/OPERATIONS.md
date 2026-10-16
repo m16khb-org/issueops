@@ -20,8 +20,8 @@ guide that matches the task.
 | CLI discovery, command policy, guard, state maintenance, contract conformance, quick smoke | [cli-and-state.md](operations/guides/cli-and-state.md) |
 | Native skills, host hook rules, hook kill-switch | [skills-and-hosts.md](operations/guides/skills-and-hosts.md) |
 | Health gate, diagnosis, one-time reconciliation | [troubleshooting.md](operations/guides/troubleshooting.md) |
-| IssueOps provider publication, branch linkage, issue snapshots | [issueops-providers.md](operations/guides/issueops-providers.md) |
-| IssueOps execution lifecycle, recovery, sync-base, owner sequence, ten-stage operation | [issueops-execution.md](operations/guides/issueops-execution.md) |
+| IssueOps provider publication, branch linkage | [issueops-providers.md](operations/guides/issueops-providers.md) |
+| IssueOps execution lifecycle, recovery, sync-base, session handoff, ten-stage operation | [issueops-execution.md](operations/guides/issueops-execution.md) |
 | Direct CLI, policy, guard, state, loop, MCP cleanup, worker, audit | [cli-and-mcp.md](operations/guides/cli-and-mcp.md) |
 | Codex/Claude/Omo/omp native skills, MCP registration, lifecycle hooks | [hosts.md](operations/guides/hosts.md) |
 | Opt-in cmux launch of a native host into an existing canonical worktree | [cmux-handoff.md](operations/guides/cmux-handoff.md) |

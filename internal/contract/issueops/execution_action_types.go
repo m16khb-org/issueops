@@ -12,55 +12,40 @@ import (
 // 소유한다. contract 계층은 port를 참조할 수 없다.
 type RemotePullRequestCreateHandler func(context.Context, string, RemotePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error)
 type ExecutionActionRequest struct {
-	Action      string      `json:"action"`
-	ID          string      `json:"id"`
-	Mode        string      `json:"mode,omitempty"`
-	Actor       NativeActor `json:"actor,omitempty"`
-	CWD         string      `json:"cwd,omitempty"`
-	OwnerHost   string      `json:"owner_host,omitempty"`
-	OwnerModel  string      `json:"owner_model,omitempty"`
-	OwnerEffort string      `json:"owner_effort,omitempty"`
-	// 선택 영수증: 어떤 모드를 요청했고 준비도 탐침이 무엇을 봤는지 보존한다.
-	IssueSnapshotFile            string                                         `json:"issue_snapshot_file,omitempty"`
-	DirectReason                 string                                         `json:"direct_reason,omitempty"`
-	ExpectedReadinessFingerprint string                                         `json:"expected_readiness_fingerprint,omitempty"`
-	Generation                   uint64                                         `json:"generation,omitempty"`
-	ExpectedGeneration           uint64                                         `json:"expected_generation,omitempty"`
-	CompletionGeneration         uint64                                         `json:"completion_generation,omitempty"`
-	TokenFile                    string                                         `json:"claim_token_file,omitempty"`
-	ClaimCurrentToken            bool                                           `json:"claim_current_token,omitempty"`
-	IssueBodySHA256              string                                         `json:"issue_body_sha256,omitempty"`
-	ContextPacketSHA256          string                                         `json:"context_packet_sha256,omitempty"`
-	ReplaceAction                string                                         `json:"replace_action,omitempty"`
-	InventoryFingerprint         string                                         `json:"inventory_fingerprint,omitempty"`
-	QuiescenceFingerprint        string                                         `json:"quiescence_fingerprint,omitempty"`
-	Reason                       string                                         `json:"reason,omitempty"`
-	Preview                      bool                                           `json:"preview,omitempty"`
-	Confirm                      bool                                           `json:"confirm,omitempty"`
-	FinalHead                    string                                         `json:"final_head,omitempty"`
-	VerificationReportPath       string                                         `json:"verification_report_path,omitempty"`
-	Verification                 []string                                       `json:"verification,omitempty"`
-	RemoteArtifactURL            string                                         `json:"remote_artifact_url,omitempty"`
-	IssueSnapshot                *executionissue.ExecutionIssueSnapshotEvidence `json:"issue_snapshot,omitempty"`
+	Action                 string      `json:"action"`
+	ID                     string      `json:"id"`
+	Actor                  NativeActor `json:"actor,omitempty"`
+	CWD                    string      `json:"cwd,omitempty"`
+	Generation             uint64      `json:"generation,omitempty"`
+	ExpectedGeneration     uint64      `json:"expected_generation,omitempty"`
+	CompletionGeneration   uint64      `json:"completion_generation,omitempty"`
+	TokenFile              string      `json:"claim_token_file,omitempty"`
+	ClaimCurrentToken      bool        `json:"claim_current_token,omitempty"`
+	ReplaceAction          string      `json:"replace_action,omitempty"`
+	InventoryFingerprint   string      `json:"inventory_fingerprint,omitempty"`
+	QuiescenceFingerprint  string      `json:"quiescence_fingerprint,omitempty"`
+	Reason                 string      `json:"reason,omitempty"`
+	Preview                bool        `json:"preview,omitempty"`
+	Confirm                bool        `json:"confirm,omitempty"`
+	FinalHead              string      `json:"final_head,omitempty"`
+	VerificationReportPath string      `json:"verification_report_path,omitempty"`
+	Verification           []string    `json:"verification,omitempty"`
+	RemoteArtifactURL      string      `json:"remote_artifact_url,omitempty"`
 }
 type RemotePublicationHandlers struct {
 	Create    RemotePullRequestCreateHandler
 	Reconcile RemotePullRequestReconcileHandler
 }
-type ExecutionClaimDependencies struct {
-	ReadIssue executionissue.ExecutionIssueSnapshotReadFunc
-}
 type ExecutionReseedRequest struct {
-	ID                   string                                        `json:"id"`
-	ExpectedGeneration   uint64                                        `json:"expected_generation"`
-	CompletionGeneration uint64                                        `json:"completion_generation,omitempty"`
-	InventoryFingerprint string                                        `json:"inventory_fingerprint,omitempty"`
-	Reason               string                                        `json:"reason,omitempty"`
-	Actor                NativeActor                                   `json:"actor"`
-	CWD                  string                                        `json:"cwd"`
-	Confirm              bool                                          `json:"confirm,omitempty"`
-	ReadIssue            executionissue.ExecutionIssueSnapshotReadFunc `json:"-"`
+	ID                   string      `json:"id"`
+	ExpectedGeneration   uint64      `json:"expected_generation"`
+	CompletionGeneration uint64      `json:"completion_generation,omitempty"`
+	InventoryFingerprint string      `json:"inventory_fingerprint,omitempty"`
+	Reason               string      `json:"reason,omitempty"`
+	Actor                NativeActor `json:"actor"`
+	CWD                  string      `json:"cwd"`
+	Confirm              bool        `json:"confirm,omitempty"`
 }
-type ExecutionPrepareHandler func(context.Context, string, ExecutionPrepareRequest, executionissue.ExecutionPrepareInvocation) (ExecutionPrepareResult, error)
-type ExecutionClaimHandler func(context.Context, string, ExecutionClaimRequest, ExecutionClaimDependencies) (ExecutionResult, error)
+type ExecutionPrepareHandler func(context.Context, string, ExecutionPrepareRequest) (ExecutionPrepareResult, error)
+type ExecutionClaimHandler func(context.Context, string, ExecutionClaimRequest) (ExecutionResult, error)
 type ExecutionReseedHandler func(context.Context, string, ExecutionReseedRequest) (ExecutionReplaceResult, error)

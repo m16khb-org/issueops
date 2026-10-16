@@ -1,15 +1,7 @@
 package issueops
 
 const (
-	IssueOpsSchemaVersion       = 1
-	OrcaArtifactIdentityVersion = 1
-)
-
-type ExecutionMode string
-
-const (
-	ExecutionModeDirect ExecutionMode = "direct"
-	ExecutionModeOrca   ExecutionMode = "orca"
+	IssueOpsSchemaVersion = 1
 )
 
 type LeaseStatus string
@@ -22,11 +14,8 @@ const (
 )
 
 type Execution struct {
-	Mode               ExecutionMode                `json:"mode"`
-	Selection          *ExecutionSelection          `json:"selection,omitempty"`
 	Workspace          Workspace                    `json:"workspace"`
 	Lease              WriteLease                   `json:"lease"`
-	Orca               *OrcaBinding                 `json:"orca,omitempty"`
 	Pending            *ExternalIntent              `json:"pending,omitempty"`
 	Completion         *ExecutionCompletion         `json:"completion,omitempty"`
 	CompletionHistory  []ExecutionCompletionHistory `json:"completion_history,omitempty"`
@@ -40,26 +29,12 @@ type Execution struct {
 	SyncBaseEvents []ExecutionSyncBaseEvent `json:"sync_base_events,omitempty"`
 }
 
-type ExecutionSelection struct {
-	RequestedMode        string `json:"requested_mode"`
-	ResolvedMode         string `json:"resolved_mode"`
-	ProbeAttempted       bool   `json:"probe_attempted"`
-	ProbeAvailable       bool   `json:"probe_available"`
-	ProbeReady           bool   `json:"probe_ready"`
-	ProbeCode            string `json:"probe_code,omitempty"`
-	FallbackCode         string `json:"fallback_code,omitempty"`
-	ReadinessFingerprint string `json:"readiness_fingerprint"`
-	SelectedAt           string `json:"selected_at"`
-	ExplicitDirectReason string `json:"explicit_direct_reason,omitempty"`
-}
-
 type Workspace struct {
 	SourceRoot     string `json:"source_root"`
 	Root           string `json:"root"`
 	Branch         string `json:"branch"`
 	BaseHead       string `json:"base_head"`
 	ParentWorktree string `json:"parent_worktree,omitempty"`
-	Driver         string `json:"driver"`
 	LinkedAt       string `json:"linked_at"`
 	// ArtifactDir은 봉인 아티팩트(plan/spec/verified-execution-loop)를 materialize·재검증·
 	// 게시할 워크트리 상대 디렉터리다(slash 구분, #482). execution prepare가 항상
@@ -92,25 +67,6 @@ type NativeProcessReceipt struct {
 	PID        int    `json:"pid"`
 	StartedAt  string `json:"started_at"`
 	Executable string `json:"executable"`
-}
-
-type OrcaBinding struct {
-	RuntimeID               string `json:"runtime_id"`
-	RepoID                  string `json:"repo_id"`
-	WorktreeID              string `json:"worktree_id"`
-	RunID                   string `json:"run_id,omitempty"`
-	WorktreeInstanceID      string `json:"worktree_instance_id,omitempty"`
-	LeaseGeneration         uint64 `json:"lease_generation,omitempty"`
-	ArtifactIdentityVersion uint64 `json:"artifact_identity_version,omitempty"`
-	IssueBodySHA256         string `json:"issue_body_sha256,omitempty"`
-	ContextPacketSHA256     string `json:"context_packet_sha256,omitempty"`
-	OwnerPromptSHA256       string `json:"owner_prompt_sha256,omitempty"`
-	OwnerHost               string `json:"owner_host"`
-	OwnerModel              string `json:"owner_model"`
-	OwnerEffort             string `json:"owner_effort,omitempty"`
-	TaskID                  string `json:"task_id"`
-	DispatchID              string `json:"dispatch_id"`
-	TerminalPTYID           string `json:"terminal_pty_id,omitempty"`
 }
 
 type ExternalIntent struct {

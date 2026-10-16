@@ -29,9 +29,6 @@ func CleanupFinishTargets(record model.IssueOpsRecord) model.CleanupFinishInvent
 		if branch := strings.TrimSpace(record.Execution.Workspace.Branch); branch != "" {
 			inventory.Branch = branch
 		}
-		if record.Execution.Orca != nil {
-			inventory.OrcaWorktreeID = record.Execution.Orca.WorktreeID
-		}
 	}
 	if inventory.WorktreeRoot == "" {
 		inventory.WorktreeRoot = strings.TrimSpace(record.WorktreePath)
@@ -44,8 +41,7 @@ func BuildCleanupFinishPreview(record model.IssueOpsRecord, req model.CleanupFin
 		OK: true, ID: record.ID, Preview: !req.Apply, Missing: []string{},
 		WorktreePath: inventory.WorktreeRoot, Branch: inventory.Branch,
 		WorktreePresent: inventory.WorktreePresent, BranchPresent: inventory.BranchOID != "",
-		OrcaWorktreeID: inventory.OrcaWorktreeID, WorkspaceProcesses: observed.Occupants,
-		OrcaTerminals: inventory.OrcaTerminals, SupersededBy: inventory.SupersededBy, SupersedeError: observed.SupersedeError,
+		WorkspaceProcesses: observed.Occupants, SupersededBy: inventory.SupersededBy, SupersedeError: observed.SupersedeError,
 	}
 	missing := cleanupFinishLifecycleMissing(result.Missing, record, req, inventory, observed)
 	missing = cleanupFinishBaseMissing(missing, &result, record, req, inventory, observed)

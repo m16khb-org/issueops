@@ -9,23 +9,17 @@ import (
 
 func TestExecutionStatusProjectsRecoveryWithoutChangingRecord(t *testing.T) {
 	for _, tc := range []struct {
-		name    string
-		status  model.LeaseStatus
-		mode    model.ExecutionMode
-		binding bool
-		want    string
+		name   string
+		status model.LeaseStatus
+		want   string
 	}{
-		{"direct claim", model.LeaseStatusClaimable, model.ExecutionModeDirect, false, "execution claim"},
-		{"orca resume", model.LeaseStatusClaimable, model.ExecutionModeOrca, true, "execution resume"},
-		{"released", model.LeaseStatusReleased, model.ExecutionModeDirect, false, "--preview"},
-		{"revoking", model.LeaseStatusRevoking, model.ExecutionModeOrca, true, "--finalize-preview"},
-		{"active", model.LeaseStatusActive, model.ExecutionModeDirect, false, ""},
+		{"claim", model.LeaseStatusClaimable, "execution claim"},
+		{"released", model.LeaseStatusReleased, "--preview"},
+		{"revoking", model.LeaseStatusRevoking, "--finalize-preview"},
+		{"active", model.LeaseStatusActive, ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			r := model.IssueOpsRecord{ID: "io-status", Execution: &model.Execution{Mode: tc.mode, Lease: model.WriteLease{Generation: 3, Status: tc.status}}}
-			if tc.binding {
-				r.Execution.Orca = &model.OrcaBinding{ArtifactIdentityVersion: model.OrcaArtifactIdentityVersion, IssueBodySHA256: strings.Repeat("a", 64), ContextPacketSHA256: strings.Repeat("b", 64), OwnerPromptSHA256: strings.Repeat("c", 64)}
-			}
+			r := model.IssueOpsRecord{ID: "io-status", Execution: &model.Execution{Lease: model.WriteLease{Generation: 3, Status: tc.status}}}
 			reads := 0
 			s := ExecutionStatus{ReadRecord: func(id string) (model.IssueOpsRecord, error) {
 				reads++
@@ -57,5 +51,11 @@ func TestExecutionStatusReadErrorsAndUnpreparedExecution(t *testing.T) {
 		if err == nil || result.OK || result.ID != "missing" || (failure != nil && !errors.Is(err, failure)) {
 			t.Fatalf("status error contract: %+v %v", result, err)
 		}
+	}
+}
+
+func TestWriterlessCommandIsEmptyWithoutExecution(t *testing.T) {
+	if got := WriterlessCommand(model.IssueOpsRecord{ID: "io-1"}); got != "" {
+		t.Fatalf("got %q", got)
 	}
 }

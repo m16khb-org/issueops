@@ -28,15 +28,13 @@ func seedIssueOpsExecutionContract(t *testing.T, repo, branch string) string {
 		BaseSHA: strings.Repeat("a", 40), LinkVerified: true,
 	}
 	record.Execution = &issueopscontract.Execution{
-		Mode: issueopscontract.ExecutionModeDirect,
 		Workspace: issueopscontract.Workspace{
 			SourceRoot: repo, Root: worktree, Branch: branch, BaseHead: strings.Repeat("a", 40),
-			Driver: "git", LinkedAt: "2026-07-22T00:00:00Z",
+			LinkedAt: "2026-07-22T00:00:00Z",
 		},
 		Lease: issueopscontract.WriteLease{
 			Generation: 1, Status: issueopscontract.LeaseStatusClaimable, ClaimTokenSHA256: strings.Repeat("b", 64),
 		},
-		Selection: selectionFixture(issueopscontract.ExecutionModeDirect),
 	}
 	if _, err := (issueops.CycleRecordStore{StateRoot: issueOpsStateRoot()}).Save(context.Background(), record); err != nil {
 		t.Fatal(err)

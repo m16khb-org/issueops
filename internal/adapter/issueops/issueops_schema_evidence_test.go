@@ -42,7 +42,7 @@ func TestSchemaChangeDetection(t *testing.T) {
 func TestSchemaEvidenceGateInactiveWithoutSchemaChange(t *testing.T) {
 	t.Parallel()
 
-	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{Mode: issueops.ExecutionModeDirect, Selection: selectionFixture(issueops.ExecutionModeDirect)}}
+	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{}}
 	if got := cycleapp.SchemaEvidenceMissingForPaths(record, []string{"main.go", "README.md"}, ""); got != "" {
 		t.Fatalf("non-schema change set must not activate the gate: %q", got)
 	}
@@ -52,7 +52,7 @@ func TestSchemaEvidenceGateActivatesOnSchemaChange(t *testing.T) {
 	t.Parallel()
 
 	paths := []string{"main.go", "src/migrations/1730000000-add-index.ts"}
-	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{Mode: issueops.ExecutionModeDirect, Selection: selectionFixture(issueops.ExecutionModeDirect)}}
+	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{}}
 	if got := cycleapp.SchemaEvidenceMissingForPaths(record, paths, ""); got != "schema_evidence" {
 		t.Fatalf("schema change must activate the gate: %q", got)
 	}
@@ -119,7 +119,7 @@ func TestPRReadinessSurfacesDocsGateButNotSchemaGate(t *testing.T) {
 	repo := gitRepoWithSchemaChangeForTest(t)
 	record := issueops.IssueOpsRecord{
 		Repo:      repo,
-		Execution: &issueops.Execution{Mode: issueops.ExecutionModeDirect, Selection: selectionFixture(issueops.ExecutionModeDirect)},
+		Execution: &issueops.Execution{},
 	}
 	ready := IssueOpsPRReadiness(record)
 	if !containsString(ready.Missing, "project_docs_review") {

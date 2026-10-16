@@ -14,12 +14,10 @@ func TestProjectEntryProjectsExecutionAndRemoteState(t *testing.T) {
 		ID: "io-proj", Repo: "/repo", Branch: "12-proj",
 		Phase: issueopscontract.IssueOpsPhaseImplement, UpdatedAt: "2026-08-21T00:00:00Z",
 		Execution: &issueopscontract.Execution{
-			Mode:      issueopscontract.ExecutionModeDirect,
 			Workspace: issueopscontract.Workspace{Root: "/repo.worktrees/12-proj"},
 			Lease: issueopscontract.WriteLease{
 				Status: issueopscontract.LeaseStatusClaimable,
 			},
-			Orca:    &issueopscontract.OrcaBinding{OwnerModel: "gpt-6-sol"},
 			Pending: &issueopscontract.ExternalIntent{Kind: "gh_run", StartedAt: "2026-08-21T01:00:00Z"},
 			Failure: &issueopscontract.ExecutionFailure{Code: "E_TEST", At: "2026-08-21T02:00:00Z"},
 		},
@@ -32,11 +30,11 @@ func TestProjectEntryProjectsExecutionAndRemoteState(t *testing.T) {
 		string(entry.Phase) != "implement" || entry.UpdatedAt != "2026-08-21T00:00:00Z" {
 		t.Fatalf("base projection wrong: %+v", entry)
 	}
-	if entry.Mode != "direct" || entry.LeaseStatus != "claimable" || !entry.Claimable {
+	if entry.LeaseStatus != "claimable" || !entry.Claimable {
 		t.Fatalf("lease projection wrong: %+v", entry)
 	}
-	if entry.WorkspaceRoot != "/repo.worktrees/12-proj" || entry.OwnerModel != "gpt-6-sol" {
-		t.Fatalf("workspace/orca projection wrong: %+v", entry)
+	if entry.WorkspaceRoot != "/repo.worktrees/12-proj" {
+		t.Fatalf("workspace projection wrong: %+v", entry)
 	}
 	if entry.PendingKind != "gh_run" || entry.PendingSince != "2026-08-21T01:00:00Z" {
 		t.Fatalf("pending projection wrong: %+v", entry)

@@ -30,7 +30,6 @@ func TestSQLiteClaimTransaction(t *testing.T) {
 		ID: record.ID, Generation: record.Execution.Lease.Generation,
 		Actor: leasedomain.Actor{Host: actor.Host, SessionID: actor.SessionID, Process: &leasedomain.ProcessReceipt{PID: actor.SessionProcess.PID, StartedAt: actor.SessionProcess.StartedAt, Executable: actor.SessionProcess.Executable}},
 		CWD:   record.Execution.Workspace.Root, TokenFile: path, Clock: fixedClaimClock{at: time.Date(2026, 7, 30, 0, 0, 1, 0, time.UTC)},
-		ValidateRecord: func(leaseapp.Record) error { return nil },
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -55,7 +54,6 @@ func TestSQLiteClaimRetryDoesNotRequireConsumedToken(t *testing.T) {
 		ID: record.ID, Generation: record.Execution.Lease.Generation,
 		Actor: leasedomain.Actor{Host: actor.Host, SessionID: actor.SessionID, Process: &leasedomain.ProcessReceipt{PID: actor.SessionProcess.PID, StartedAt: actor.SessionProcess.StartedAt, Executable: actor.SessionProcess.Executable}},
 		CWD:   record.Execution.Workspace.Root, TokenFile: path, Clock: fixedClaimClock{at: time.Date(2026, 7, 30, 0, 0, 1, 0, time.UTC)},
-		ValidateRecord: func(leaseapp.Record) error { return nil },
 	}
 	repository := NewSQLiteRepository(store)
 	first, err := repository.Claim(context.Background(), request)
@@ -82,7 +80,6 @@ func TestSQLiteClaimApplyFailureKeepsRecordIndexAndTokenUnchanged(t *testing.T) 
 		ID: record.ID, Generation: record.Execution.Lease.Generation,
 		Actor: leasedomain.Actor{Host: actor.Host, SessionID: actor.SessionID, Process: &leasedomain.ProcessReceipt{PID: actor.SessionProcess.PID, StartedAt: actor.SessionProcess.StartedAt, Executable: actor.SessionProcess.Executable}},
 		CWD:   record.Execution.Workspace.Root, TokenFile: path, Clock: fixedClaimClock{at: time.Date(2026, 7, 30, 0, 0, 1, 0, time.UTC)},
-		ValidateRecord: func(leaseapp.Record) error { return nil },
 	})
 	if err == nil || !bytes.Equal(store.records[recordBucket+"\x00"+record.ID], before) || len(store.records) != 1 {
 		t.Fatalf("apply failure mutated store: err=%v records=%d", err, len(store.records))
@@ -104,7 +101,6 @@ func TestSQLiteClaimResolvesCurrentGenerationTokenInternally(t *testing.T) {
 		CWD:               record.Execution.Workspace.Root,
 		ClaimCurrentToken: true,
 		Clock:             fixedClaimClock{at: time.Date(2026, 7, 30, 0, 0, 1, 0, time.UTC)},
-		ValidateRecord:    func(leaseapp.Record) error { return nil },
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -129,7 +125,6 @@ func TestSQLiteClaimRejectsAmbiguousTokenSelectors(t *testing.T) {
 		TokenFile:         path,
 		ClaimCurrentToken: true,
 		Clock:             fixedClaimClock{at: time.Date(2026, 7, 30, 0, 0, 1, 0, time.UTC)},
-		ValidateRecord:    func(leaseapp.Record) error { return nil },
 	})
 	if err == nil || !strings.Contains(err.Error(), "exactly one claim token selector") {
 		t.Fatalf("ambiguous selector error=%v", err)
@@ -155,7 +150,6 @@ func TestSQLiteClaimRejectsCleanupAbandonFence(t *testing.T) {
 		ID: record.ID, Generation: record.Execution.Lease.Generation,
 		Actor: leasedomain.Actor{Host: actor.Host, SessionID: actor.SessionID, Process: &leasedomain.ProcessReceipt{PID: actor.SessionProcess.PID, StartedAt: actor.SessionProcess.StartedAt, Executable: actor.SessionProcess.Executable}},
 		CWD:   record.Execution.Workspace.Root, TokenFile: path, Clock: fixedClaimClock{at: time.Date(2026, 7, 30, 0, 0, 1, 0, time.UTC)},
-		ValidateRecord: func(leaseapp.Record) error { return nil },
 	})
 	if leasedomain.DenyCodeOf(err) != leasedomain.DenyLeaseClaimable {
 		t.Fatalf("cleanup abandon fence must block a concurrent claim: %v", err)
@@ -179,10 +173,8 @@ func claimableRecord(t *testing.T, actor leasecontract.Actor, token string) leas
 	return leasecontract.Record{
 		OK: true, SchemaVersion: leasecontract.SchemaVersion, ID: "io-claim-transaction", Repo: "/source", Branch: "claim", Phase: "implement",
 		Execution: &leasecontract.Execution{
-			Mode:      "direct",
-			Workspace: leasecontract.Workspace{SourceRoot: "/source", Root: root, Branch: "claim", BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "2026-07-30T00:00:00Z"},
+			Workspace: leasecontract.Workspace{SourceRoot: "/source", Root: root, Branch: "claim", BaseHead: strings.Repeat("a", 40), LinkedAt: "2026-07-30T00:00:00Z"},
 			Lease:     leasecontract.Lease{Generation: 3, Status: "claimable", ClaimTokenSHA256: claimTokenSHA256(token)},
-			Selection: leaseSelectionFixture("direct"),
 		},
 	}
 }
@@ -258,7 +250,7 @@ func TestClaimRefusesFinishAttemptBeforeConsumingToken(t *testing.T) {
 	path := writeClaimToken(t, record, "claim-token")
 	_, err := NewSQLiteRepository(store).Claim(context.Background(), leaseapp.ClaimRepositoryRequest{ID: record.ID, Generation: record.Execution.Lease.Generation,
 		Actor: leasedomain.Actor{Host: actor.Host, SessionID: actor.SessionID, Process: &leasedomain.ProcessReceipt{PID: 42, StartedAt: actor.SessionProcess.StartedAt, Executable: actor.SessionProcess.Executable}},
-		CWD:   record.Execution.Workspace.Root, TokenFile: path, Clock: fixedClaimClock{at: time.Date(2026, 9, 29, 0, 0, 1, 0, time.UTC)}, ValidateRecord: func(leaseapp.Record) error { return nil }})
+		CWD:   record.Execution.Workspace.Root, TokenFile: path, Clock: fixedClaimClock{at: time.Date(2026, 9, 29, 0, 0, 1, 0, time.UTC)}})
 	if err == nil || !strings.Contains(err.Error(), "cleanup finish") {
 		t.Fatalf("claim accepted finish attempt: %v", err)
 	}

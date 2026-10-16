@@ -16,17 +16,14 @@ func cleanupReceiptMatches(left, right model.CleanupWorkspaceProcess) bool {
 }
 
 // CleanupStopTargets는 apply 시점 점유자 가운데 preview receipt에 결속된 것만
-// 신호 대상으로 확정한다. 요청자 자신·조상·명시 제외 pid가 점유 중이면 거부다.
-func CleanupStopTargets(occupants []model.CleanupWorkspaceProcess, ancestry map[int][]int, selfPID int, preview []model.CleanupWorkspaceProcess, excluded map[int]bool) ([]model.CleanupWorkspaceProcess, error) {
+// 신호 대상으로 확정한다. 요청자 자신·조상 pid가 점유 중이면 거부다.
+func CleanupStopTargets(occupants []model.CleanupWorkspaceProcess, ancestry map[int][]int, selfPID int, preview []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, error) {
 	selfAncestry, ok := ancestry[selfPID]
 	if !ok {
 		return nil, fmt.Errorf("requester process %d ancestry is unobservable", selfPID)
 	}
 	protected := map[int]bool{selfPID: true}
 	for _, pid := range selfAncestry {
-		protected[pid] = true
-	}
-	for pid := range excluded {
 		protected[pid] = true
 	}
 	previewByPID := map[int]model.CleanupWorkspaceProcess{}
@@ -112,36 +109,6 @@ func CleanupRequesterOccupancyMissing(occupants []model.CleanupWorkspaceProcess,
 	return []string{}, true
 }
 
-func CleanupRequesterTerminal(rows []CleanupTerminalIdentity, paneKey, handle string) (CleanupTerminalIdentity, bool) {
-	if paneKey != "" {
-		var matched CleanupTerminalIdentity
-		count := 0
-		for _, row := range rows {
-			if row.TabID != "" && row.LeafID != "" && row.TabID+":"+row.LeafID == paneKey {
-				matched = row
-				count++
-			}
-		}
-		if count > 0 {
-			return matched, count == 1
-		}
-	}
-	if handle != "" {
-		var matched CleanupTerminalIdentity
-		count := 0
-		for _, row := range rows {
-			if row.Handle == handle {
-				matched = row
-				count++
-			}
-		}
-		if count > 0 {
-			return matched, count == 1
-		}
-	}
-	return CleanupTerminalIdentity{}, false
-}
-
 func CleanupOccupantReceipts(occupants []model.CleanupWorkspaceProcess) []model.NativeProcessReceipt {
 	receipts := make([]model.NativeProcessReceipt, 0, len(occupants))
 	for _, occupant := range occupants {
@@ -149,10 +116,4 @@ func CleanupOccupantReceipts(occupants []model.CleanupWorkspaceProcess) []model.
 	}
 	sort.Slice(receipts, func(i, j int) bool { return receipts[i].PID < receipts[j].PID })
 	return receipts
-}
-
-type CleanupTerminalIdentity struct{ Handle, TabID, LeafID, WorktreePath string }
-
-func CleanupWorkspaceOrcaBound(record model.IssueOpsRecord) bool {
-	return record.Execution != nil && record.Execution.Orca != nil && strings.TrimSpace(record.Execution.Orca.WorktreeID) != ""
 }

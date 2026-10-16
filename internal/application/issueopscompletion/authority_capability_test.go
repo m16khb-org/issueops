@@ -17,7 +17,7 @@ func capabilityVerifier(identity completioncontract.Actor) ActorVerifier {
 func TestCapabilityIdentityCannotCompleteAnotherHoldersGeneration(t *testing.T) {
 	trace := []string{}
 	other := completioncontract.ProcessReceipt{PID: 999, StartedAt: "2026-08-02T00:00:00Z", Executable: "/bin/codex"}
-	repository := &repositoryFake{record: activeCompletionRecord("direct"), trace: &trace}
+	repository := &repositoryFake{record: activeCompletionRecord(), trace: &trace}
 	environment := &environmentFake{trace: &trace, canonical: true, head: strings.Repeat("a", 40), report: "/worktree/report.json"}
 	service := NewService(repository, environment, fixedClock{fixedCompletionTime}, capabilityVerifier(completioncontract.Actor{Host: "codex", SessionID: "other-session", Process: &other}))
 	request := validRequest()
@@ -31,10 +31,10 @@ func TestCapabilityIdentityCannotCompleteAnotherHoldersGeneration(t *testing.T) 
 }
 
 func TestCapabilityHolderCompletesWithoutAncestryButNotStaleGeneration(t *testing.T) {
-	holder := *activeCompletionRecord("direct").Lease.Holder
+	holder := *activeCompletionRecord().Lease.Holder
 	for _, generation := range []uint64{0, 2} {
 		trace := []string{}
-		repository := &repositoryFake{record: activeCompletionRecord("direct"), trace: &trace}
+		repository := &repositoryFake{record: activeCompletionRecord(), trace: &trace}
 		environment := &environmentFake{trace: &trace, canonical: true, head: strings.Repeat("a", 40), report: "/worktree/report.json"}
 		service := NewService(repository, environment, fixedClock{fixedCompletionTime}, capabilityVerifier(holder))
 		request := validRequest()
@@ -44,7 +44,7 @@ func TestCapabilityHolderCompletesWithoutAncestryButNotStaleGeneration(t *testin
 		}
 	}
 	trace := []string{}
-	repository := &repositoryFake{record: activeCompletionRecord("direct"), trace: &trace}
+	repository := &repositoryFake{record: activeCompletionRecord(), trace: &trace}
 	environment := &environmentFake{trace: &trace, canonical: true, head: strings.Repeat("a", 40), report: "/worktree/report.json"}
 	service := NewService(repository, environment, fixedClock{fixedCompletionTime}, capabilityVerifier(holder))
 	request := validRequest()

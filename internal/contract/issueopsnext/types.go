@@ -65,7 +65,7 @@ type Result struct {
 	Warnings        []string `json:"warnings,omitempty"`
 }
 
-// Review는 코드가 소유하는 host별 리뷰어 기본값이다(internal/port/orca.go).
+// Review는 코드가 소유하는 host별 리뷰어 기본값이다.
 // 스킬이 모델 이름을 적어 두면 그 값이 곧 낡으므로 CLI가 돌려준다.
 type Review struct {
 	Model  string `json:"model,omitempty"`

@@ -7,8 +7,7 @@ import (
 )
 
 // 판정은 core가 하지만, CLI가 종결 표면을 실제로 넘기는지는 이 층에서만
-// 확인된다. 주입이 빠지면 orca 모드 사이클의 task가 영원히 dispatched로
-// 남는다(#130).
+// 확인된다. 주입이 빠지면 종결 요청이 라우팅되지 않는다(#130).
 func TestActionDepsCarriesTheCompletionHandler(t *testing.T) {
 	called := false
 	deps := Deps{

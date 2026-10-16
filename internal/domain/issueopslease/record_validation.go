@@ -15,15 +15,11 @@ func ValidatePersistedRecord(record leasecontract.Record) error {
 		return nil
 	}
 	execution := record.Execution
-	if execution.Mode != "direct" && execution.Mode != "orca" {
-		return fmt.Errorf("execution mode must be direct or orca")
-	}
 	for _, field := range []struct{ name, value string }{
 		{"source_root", execution.Workspace.SourceRoot},
 		{"root", execution.Workspace.Root},
 		{"branch", execution.Workspace.Branch},
 		{"base_head", execution.Workspace.BaseHead},
-		{"driver", execution.Workspace.Driver},
 		{"linked_at", execution.Workspace.LinkedAt},
 	} {
 		if strings.TrimSpace(field.value) == "" {
@@ -33,107 +29,10 @@ func ValidatePersistedRecord(record leasecontract.Record) error {
 	if execution.Workspace.SourceRoot == execution.Workspace.Root {
 		return fmt.Errorf("canonical worktree must be isolated from source_root")
 	}
-	if execution.Mode == "direct" && execution.Workspace.Driver != "git" {
-		return fmt.Errorf("direct execution workspace driver must be git")
-	}
-	if execution.Mode == "orca" && execution.Workspace.Driver != "orca" {
-		return fmt.Errorf("Orca execution workspace driver must be orca")
-	}
 	if err := validateLease(execution.Lease); err != nil {
 		return err
 	}
-	if execution.Selection == nil {
-		return fmt.Errorf("execution selection receipt is required")
-	}
-	if err := ValidatePersistedSelection(*execution.Selection, execution.Mode); err != nil {
-		return err
-	}
-	if err := ValidatePersistedSidecars(*execution); err != nil {
-		return err
-	}
-	return nil
-}
-
-func ValidatePersistedSelection(selection leasecontract.Selection, mode string) error {
-	if selection.RequestedMode != "auto" && selection.RequestedMode != "direct" && selection.RequestedMode != "orca" {
-		return fmt.Errorf("selection requested_mode must be auto, direct, or orca")
-	}
-	if selection.ResolvedMode != mode {
-		return fmt.Errorf("selection resolved_mode must equal execution mode")
-	}
-	if err := validateSelectionProbeFlags(selection); err != nil {
-		return err
-	}
-	if err := validateSelectionModeAgreement(selection, mode); err != nil {
-		return err
-	}
-	if err := validateSelectionFallback(selection, mode); err != nil {
-		return err
-	}
-	if err := validateSelectionDirectReason(selection); err != nil {
-		return err
-	}
-	if !validHexDigest(selection.ReadinessFingerprint, 64) || strings.TrimSpace(selection.SelectedAt) == "" {
-		return fmt.Errorf("selection receipt requires fingerprint and selected_at")
-	}
-	return nil
-}
-
-func validateSelectionProbeFlags(selection leasecontract.Selection) error {
-	if selection.ProbeAvailable && !selection.ProbeAttempted {
-		return fmt.Errorf("selection probe_available requires probe_attempted")
-	}
-	if selection.ProbeReady && !selection.ProbeAvailable {
-		return fmt.Errorf("selection probe_ready requires probe_available")
-	}
-	if !selection.ProbeAttempted && strings.TrimSpace(selection.ProbeCode) != "" {
-		return fmt.Errorf("unattempted selection probe must not contain probe_code")
-	}
-	if selection.RequestedMode != "direct" && !selection.ProbeAttempted {
-		return fmt.Errorf("auto and Orca selections require a readiness probe")
-	}
-	return nil
-}
-
-func validateSelectionModeAgreement(selection leasecontract.Selection, mode string) error {
-	if (selection.RequestedMode == "direct" && mode != "direct") ||
-		(selection.RequestedMode == "orca" && mode != "orca") {
-		return fmt.Errorf("explicit selection mode must equal execution mode")
-	}
-	if mode == "orca" && !selection.ProbeReady {
-		return fmt.Errorf("Orca selection requires a ready probe")
-	}
-	return nil
-}
-
-func validateSelectionFallback(selection leasecontract.Selection, mode string) error {
-	if selection.RequestedMode == "auto" && mode == "direct" {
-		probeCode := strings.TrimSpace(selection.ProbeCode)
-		fallbackCode := strings.TrimSpace(selection.FallbackCode)
-		if selection.ProbeReady || fallbackCode == "" || fallbackCode != probeCode || fallbackCode != selection.FallbackCode {
-			return fmt.Errorf("auto direct selection requires the exact probe failure fallback_code")
-		}
-	}
-	if mode == "orca" && strings.TrimSpace(selection.FallbackCode) != "" {
-		return fmt.Errorf("Orca selection must not contain fallback_code")
-	}
-	return nil
-}
-
-func validateSelectionDirectReason(selection leasecontract.Selection) error {
-	if selection.RequestedMode != "direct" {
-		if strings.TrimSpace(selection.ExplicitDirectReason) != "" {
-			return fmt.Errorf("non-direct selection must not contain explicit_direct_reason")
-		}
-		return nil
-	}
-	if selection.ProbeAttempted || strings.TrimSpace(selection.ExplicitDirectReason) == "" {
-		return fmt.Errorf("explicit direct selection requires a reason and no probe")
-	}
-	if selection.FallbackCode != "" {
-		return fmt.Errorf("explicit direct selection must not contain fallback_code")
-	}
-	return nil
+	return ValidatePersistedSidecars(*execution)
 }
 
 func validateLease(lease leasecontract.Lease) error {
@@ -179,14 +78,6 @@ func ValidatePersistedActor(actor leasecontract.Actor) error {
 }
 
 func ValidatePersistedSidecars(execution leasecontract.Execution) error {
-	if execution.Mode == "direct" && execution.Orca != nil {
-		return fmt.Errorf("direct execution must not contain an Orca binding")
-	}
-	if execution.Orca != nil {
-		if err := validateOrcaBinding(execution.Orca); err != nil {
-			return err
-		}
-	}
 	if err := validatePendingIntent(execution.Pending); err != nil {
 		return err
 	}
@@ -219,38 +110,6 @@ func validatePendingIntent(pending *leasecontract.ExternalIntent) error {
 func validateFailureDetail(failure *leasecontract.FailureDetail) error {
 	if failure != nil && (failure.Code == "" || failure.At == "" || len(failure.Message) > 4096) {
 		return fmt.Errorf("execution failure is invalid")
-	}
-	return nil
-}
-
-func validateOrcaBinding(orca *leasecontract.OrcaBinding) error {
-	for _, field := range []struct{ name, value string }{
-		{"runtime_id", orca.RuntimeID},
-		{"repo_id", orca.RepoID},
-		{"worktree_id", orca.WorktreeID},
-		{"owner_host", orca.OwnerHost},
-		{"owner_model", orca.OwnerModel},
-		{"task_id", orca.TaskID},
-		{"dispatch_id", orca.DispatchID},
-		{"run_id", orca.RunID},
-	} {
-		if strings.TrimSpace(field.value) == "" {
-			return fmt.Errorf("Orca binding %s is required", field.name)
-		}
-	}
-	if orca.LeaseGeneration == 0 {
-		return fmt.Errorf("Orca binding lease_generation is required")
-	}
-	if orca.ArtifactIdentityVersion != leasecontract.OrcaArtifactIdentityVersion {
-		return fmt.Errorf("unsupported Orca artifact identity version %d", orca.ArtifactIdentityVersion)
-	}
-	for _, digest := range []string{orca.IssueBodySHA256, orca.ContextPacketSHA256, orca.OwnerPromptSHA256} {
-		if digest == "" {
-			return fmt.Errorf("Orca binding artifact identity version requires a complete sealed artifact identity")
-		}
-		if !validHexDigest(digest, 64) {
-			return fmt.Errorf("Orca binding sealed artifact identity must contain SHA-256 digests")
-		}
 	}
 	return nil
 }

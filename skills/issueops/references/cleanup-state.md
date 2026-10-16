@@ -28,7 +28,7 @@ git -C "$WORKTREE_PATH" ls-remote --heads "$remote_name" "$HEAD_REF_NAME"
 
 For GitLab, use equivalent `glab mr view` or GitLab API fields for merged state and source branch, then run the same local worktree and remote branch checks.
 
-After provider merge evidence is confirmed, run the harness cleanup status check. It is read-only: it does not remove branches or worktrees. It blocks cleanup readiness when merge evidence is missing, the worktree is dirty, the worktree branch does not match the IssueOps branch, the remote artifact was not verified, or the remote source branch still exists. Processes occupying the worktree and Orca terminals bound to it are not blockers: status reports them as warnings (`pid:command:started_at` plus "apply가 프로세스 N개와 Orca 터미널 M개를 종료합니다") because the typed apply stops them itself. Only the requester's own occupancy/terminal (`requester_occupies_worktree`, `requester_terminal_outside_worktree`, `requester_terminal_unresolved`), the source checkout (`worktree_is_source_checkout`), and observation failures (`workspace_processes_observable`, `orca_terminals_observable`, `orca_runtime_ready`) still block.
+After provider merge evidence is confirmed, run the harness cleanup status check. It is read-only: it does not remove branches or worktrees. It blocks cleanup readiness when merge evidence is missing, the worktree is dirty, the worktree branch does not match the IssueOps branch, the remote artifact was not verified, or the remote source branch still exists. Processes occupying the worktree are not blockers: status reports them as warnings (`pid:command:started_at` plus "apply가 프로세스 N개를 종료합니다") because the typed apply stops them itself. Only the requester's own occupancy (`requester_occupies_worktree`), the source checkout (`worktree_is_source_checkout`), and observation failures (`workspace_processes_observable`) still block.
 
 ```bash
 issueops cleanup status --id "$ISSUEOPS_ID" --merged --json
@@ -48,10 +48,10 @@ issueops cleanup orphan \
   --artifact-url "$PR_URL" --json
 ```
 
-The default is read-only. It re-reads Git/IssueOps/lease/Orca inventory and
+The default is read-only. It re-reads Git/IssueOps/lease inventory and
 provider merge evidence, requires the target exactly once in inventory, rejects
 the canonical worktree, dirty or mismatched targets, and fails closed for any
-record, lifecycle/lease, or Orca authority. A ready result includes `head_sha`,
+record or lifecycle/lease authority. A ready result includes `head_sha`,
 a recovery path, and a fingerprint.
 
 After the preview is ready and the user has explicitly approved the exact
@@ -102,7 +102,7 @@ Only run recordless orphan cleanup after the user chooses the proceed option or 
 
 For a recordless orphan, do not use an unconditional raw fallback such as `git branch -d "$BRANCH_NAME" || git branch -D "$BRANCH_NAME"`. If the typed apply cannot remove the local branch with its preview HEAD CAS, report the reason and rerun preview; do not force-delete it.
 
-For ordinary record-backed cleanup status, if the worktree is dirty, the PR/MR is not merged, the remote source branch still exists unexpectedly, or the branch contains unmerged commits that are not explained by a verified squash/rebase merge, do not force-remove. Report the blocker and offer numbered choices. Do not stop occupying processes or Orca terminals by hand to satisfy a preview: the apply step owns that (`workspace_processes_stop`), binds it to the preview fingerprint, and refuses when the requester itself occupies the worktree.
+For ordinary record-backed cleanup status, if the worktree is dirty, the PR/MR is not merged, the remote source branch still exists unexpectedly, or the branch contains unmerged commits that are not explained by a verified squash/rebase merge, do not force-remove. Report the blocker and offer numbered choices. Do not stop occupying processes by hand to satisfy a preview: the apply step owns that (`workspace_processes_stop`), binds it to the preview fingerprint, and refuses when the requester itself occupies the worktree.
 
 ## State Commands
 
@@ -133,8 +133,8 @@ v1. Preview first and repeat the same request with `--confirm`:
 
 ```bash
 issueops branch prepare --id "$ISSUEOPS_ID" --provider "$PROVIDER" --issue-url "$ISSUE_URL" --branch "$BRANCH" --base-branch "$BASE_BRANCH" --link-verified --json
-issueops execution prepare --id "$ISSUEOPS_ID" --mode auto --owner-host "$OWNER_HOST" --owner-model "$OWNER_MODEL" $ACTOR_FLAGS --json
-issueops execution prepare --id "$ISSUEOPS_ID" --mode auto --owner-host "$OWNER_HOST" --owner-model "$OWNER_MODEL" $ACTOR_FLAGS --confirm --json
+issueops execution prepare --id "$ISSUEOPS_ID" $ACTOR_FLAGS --json
+issueops execution prepare --id "$ISSUEOPS_ID" $ACTOR_FLAGS --confirm --json
 ```
 
 Record the approved design review:
@@ -196,7 +196,7 @@ IssueOps does not call an external LLM service in-process. Semantic judgments co
 ## Human cleanup boundary
 
 `issueops execution complete` records the completion receipt, moves the cycle to
-`done`, and releases the generation. It does not merge, close a terminal, remove
+`done`, and releases the generation. It does not merge, remove
 a worktree, or delete a branch. After verified merge evidence, present the
 numbered cleanup choices above and perform only the explicitly authorized
 operations. A Stop hook, elapsed time, or missing prior session never grants

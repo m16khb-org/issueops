@@ -9,7 +9,6 @@ import (
 type Audit interface {
 	Append(model.IssueOpsHandoffDeliveryObservation) (auditcontract.HandoffDeliveryAuditRecord, error)
 	Read() ([]model.IssueOpsHandoffDeliveryObservation, error)
-	ReadFor(string, string) ([]model.IssueOpsHandoffDeliveryObservation, error)
 }
 
 type Service struct {
@@ -34,17 +33,10 @@ func (s Service) ObserveManualSnapshot(record model.IssueOpsRecord, observation 
 }
 
 func (s Service) ObserveClaim(result model.ExecutionResult) error {
-	query := domain.HandoffDeliveryClaimQueryFor(result)
-	if !query.Observe {
+	if !domain.HandoffDeliveryClaimObservable(result) {
 		return nil
 	}
-	var observations []model.IssueOpsHandoffDeliveryObservation
-	var err error
-	if query.Manual {
-		observations, err = s.Audit.Read()
-	} else {
-		observations, err = s.Audit.ReadFor(query.LifecycleID, query.LineageID)
-	}
+	observations, err := s.Audit.Read()
 	if err != nil {
 		return err
 	}

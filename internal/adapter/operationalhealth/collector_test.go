@@ -4,32 +4,23 @@ import (
 	"context"
 	"errors"
 	operationalhealthcontract "issueops/internal/contract/operationalhealth"
-	"reflect"
-	"strings"
-	"sync"
 	"testing"
 	"time"
 
 	issueopscontract "issueops/internal/contract/issueops"
 	corehealth "issueops/internal/domain/operationalhealth"
-	"issueops/internal/port"
 )
 
 func TestCycleFromRecordProjectsExecution(t *testing.T) {
 	record := issueopscontract.IssueOpsRecord{
 		ID: "io-v1", Repo: "/repo", Branch: "69-v1", Phase: issueopscontract.IssueOpsPhaseImplement,
 		Execution: &issueopscontract.Execution{
-			Mode:      issueopscontract.ExecutionModeOrca,
 			Workspace: issueopscontract.Workspace{Root: "/repo.worktrees/69-v1"},
 			Lease: issueopscontract.WriteLease{
 				Generation: 3, Status: issueopscontract.LeaseStatusActive,
 				Holder: &issueopscontract.NativeActor{Host: "codex", SessionID: "session-v1", AgentID: "agent-v1", SessionProcess: &issueopscontract.NativeProcessReceipt{
 					PID: 123, StartedAt: "2026-07-22T00:00:00Z", Executable: "/opt/../opt/codex",
 				}},
-			},
-			Orca: &issueopscontract.OrcaBinding{
-				RuntimeID: "runtime", RepoID: "repo-id", WorktreeID: "worktree-id", WorktreeInstanceID: "instance-id", OwnerHost: "codex",
-				TaskID: "task-id", DispatchID: "dispatch-id", TerminalPTYID: "pty-id",
 			},
 		},
 	}
@@ -39,7 +30,7 @@ func TestCycleFromRecordProjectsExecution(t *testing.T) {
 	if len(problems) != 0 {
 		t.Fatalf("problems = %#v", problems)
 	}
-	if cycle.LeaseStatus != "active" || cycle.ExecutionMode != "orca" || cycle.Generation != 3 {
+	if cycle.LeaseStatus != "active" || cycle.Generation != 3 {
 		t.Fatalf("lease projection = %#v", cycle)
 	}
 	if cycle.HolderHost != "codex" || cycle.HolderSessionID != "session-v1" || cycle.HolderAgentID != "agent-v1" ||
@@ -47,14 +38,11 @@ func TestCycleFromRecordProjectsExecution(t *testing.T) {
 		cycle.WorktreePath != "/repo.worktrees/69-v1" {
 		t.Fatalf("holder/workspace projection = %#v", cycle)
 	}
-	if cycle.OrcaRuntimeID != "runtime" || cycle.OrcaWorktreeID != "worktree-id" || cycle.OrcaOwnerHost != "codex" || cycle.TaskID != "task-id" || cycle.DispatchID != "dispatch-id" || cycle.TerminalPTYID != "pty-id" {
-		t.Fatalf("Orca projection = %#v", cycle)
-	}
 }
 
 func TestCycleFromRecordReportsNativeProcessProbeFailure(t *testing.T) {
 	record := issueopscontract.IssueOpsRecord{ID: "io-v1", Repo: "/repo", Branch: "69-v1", Phase: issueopscontract.IssueOpsPhaseImplement, Execution: &issueopscontract.Execution{
-		Mode: issueopscontract.ExecutionModeDirect, Workspace: issueopscontract.Workspace{Root: "/repo.worktrees/69-v1"},
+		Workspace: issueopscontract.Workspace{Root: "/repo.worktrees/69-v1"},
 		Lease: issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusActive, Holder: &issueopscontract.NativeActor{
 			Host: "codex", SessionID: "session", SessionProcess: &issueopscontract.NativeProcessReceipt{PID: 123, StartedAt: "2026-07-22T00:00:00Z", Executable: "/opt/codex"},
 		}},
@@ -67,152 +55,6 @@ func TestCycleFromRecordReportsNativeProcessProbeFailure(t *testing.T) {
 	}
 }
 
-func TestRecordOwnsOrcaUsesOnlyExecutionBinding(t *testing.T) {
-	if recordOwnsOrca(issueopscontract.IssueOpsRecord{}) {
-		t.Fatal("record without execution must not own Orca")
-	}
-	record := issueopscontract.IssueOpsRecord{Execution: &issueopscontract.Execution{Mode: issueopscontract.ExecutionModeOrca}}
-	if !recordOwnsOrca(record) {
-		t.Fatal("Orca execution without a completed binding was not detected")
-	}
-}
-
-func TestCollectOrcaTreatsUnreadyRuntimeAsOptionalForDirectExecution(t *testing.T) {
-	collector := Collector{Orca: statusOnlyOrca{available: true, status: port.OrcaStatus{RuntimeID: "runtime", RuntimeReachable: true, RuntimeState: "starting", GraphState: "ready"}}}
-	snapshot := corehealth.Snapshot{}
-	collector.collectOrca(context.Background(), &snapshot, false)
-	if snapshot.OrcaObserved || !snapshot.Messages.CompleteAbsence || len(snapshot.InventoryProblems) != 0 {
-		t.Fatalf("optional unready Orca projection = %#v", snapshot)
-	}
-}
-
-func TestCollectOrcaRejectsUnreadyRuntimeForOrcaExecution(t *testing.T) {
-	collector := Collector{Orca: statusOnlyOrca{available: true, status: port.OrcaStatus{RuntimeID: "runtime", RuntimeReachable: true, RuntimeState: "starting", GraphState: "ready"}}}
-	snapshot := corehealth.Snapshot{}
-	collector.collectOrca(context.Background(), &snapshot, true)
-	if !hasProblemCode(snapshot.InventoryProblems, "orca_runtime_unready") {
-		t.Fatalf("owned unready Orca problems = %#v", snapshot.InventoryProblems)
-	}
-}
-
-func TestCollectOrcaSharesOneRunSnapshotAndPreservesCrossChecks(t *testing.T) {
-	orca := &runInventoryOrca{
-		inventory: port.OrcaRunInventory{RuntimeID: "runtime", Runs: []port.OrcaRun{{RuntimeID: "runtime", ID: "run-1"}}},
-		allTasks:  []port.OrcaTask{{RuntimeID: "runtime", RunID: "run-1", ID: "task-1", Status: "dispatched"}},
-	}
-	snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: operationalhealthcontract.MessagePresence{Empty: true}}
-	Collector{Orca: orca}.collectOrca(context.Background(), &snapshot, false)
-
-	if orca.inventoryCalls != 1 {
-		t.Fatalf("Run inventory calls = %d, want 1", orca.inventoryCalls)
-	}
-	if len(orca.readerInventories) != 3 {
-		t.Fatalf("reader inventories = %#v, want all/dispatched/gates", orca.readerInventories)
-	}
-	for _, got := range orca.readerInventories {
-		if !reflect.DeepEqual(got, orca.inventory) {
-			t.Fatalf("reader inventory = %#v, want %#v", got, orca.inventory)
-		}
-	}
-	if !hasProblemCode(snapshot.InventoryProblems, "orca_dispatch_task_mismatch") {
-		t.Fatalf("dispatched cross-check problem missing: %#v", snapshot.InventoryProblems)
-	}
-}
-
-func TestCollectOverlapsGitAndOrcaInventory(t *testing.T) {
-	release := make(chan struct{})
-	gitStarted := make(chan struct{})
-	orcaStarted := make(chan struct{})
-	collector := Collector{
-		IssueOps: emptyIssueOpsReader(t),
-		Git:      &overlapGit{gitStarted: gitStarted, orcaStarted: orcaStarted, release: release},
-		Orca:     &runInventoryOrca{inventory: port.OrcaRunInventory{RuntimeID: "runtime"}, gitStarted: gitStarted, orcaStarted: orcaStarted, release: release},
-	}
-	done := make(chan corehealth.Snapshot, 1)
-	go func() {
-		done <- collector.Collect(context.Background(), t.TempDir())
-	}()
-	defer close(release)
-
-	select {
-	case <-done:
-	case <-time.After(time.Second):
-		t.Fatal("Git and Orca inventory reads did not overlap")
-	}
-}
-
-func TestCollectOrcaFailsClosedForRunRuntimeMismatch(t *testing.T) {
-	orca := &runInventoryOrca{inventory: port.OrcaRunInventory{RuntimeID: "other"}}
-	snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: operationalhealthcontract.MessagePresence{Empty: true}}
-	Collector{Orca: orca}.collectOrca(context.Background(), &snapshot, false)
-
-	if !hasProblemCode(snapshot.InventoryProblems, "orca_run_runtime_mismatch") {
-		t.Fatalf("Run runtime mismatch problem missing: %#v", snapshot.InventoryProblems)
-	}
-	if len(orca.readerInventories) != 0 {
-		t.Fatalf("readers ran after invalid Run snapshot: %#v", orca.readerInventories)
-	}
-}
-
-func TestCollectOrcaReportsReaderFailuresInFixedOrder(t *testing.T) {
-	orca := &runInventoryOrca{
-		inventory:     port.OrcaRunInventory{RuntimeID: "runtime"},
-		allTasksErr:   errors.New("all failed"),
-		dispatchedErr: errors.New("dispatched failed"),
-		gatesErr:      errors.New("gates failed"),
-	}
-	snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: operationalhealthcontract.MessagePresence{Empty: true}}
-	Collector{Orca: orca}.collectOrca(context.Background(), &snapshot, false)
-
-	var codes []string
-	for _, problem := range snapshot.InventoryProblems {
-		if strings.HasSuffix(problem.Code, "_failed") {
-			codes = append(codes, problem.Code)
-		}
-	}
-	want := []string{"orca_tasks_failed", "orca_dispatched_tasks_failed", "orca_gates_failed"}
-	if !reflect.DeepEqual(codes, want) {
-		t.Fatalf("problem order = %#v, want %#v", codes, want)
-	}
-}
-
-type statusOnlyOrca struct {
-	available bool
-	status    port.OrcaStatus
-}
-
-func (orca statusOnlyOrca) Available() bool { return orca.available }
-func (orca statusOnlyOrca) Status(context.Context) (port.OrcaStatus, error) {
-	return orca.status, nil
-}
-func (statusOnlyOrca) ResolveRepo(context.Context, string) (port.OrcaRepo, error) {
-	return port.OrcaRepo{}, errors.New("unexpected ResolveRepo call")
-}
-func (statusOnlyOrca) ListWorktrees(context.Context, string) ([]port.OrcaWorktree, error) {
-	return nil, errors.New("unexpected ListWorktrees call")
-}
-func (statusOnlyOrca) ListTerminals(context.Context, string) ([]port.OrcaTerminal, error) {
-	return nil, errors.New("unexpected ListTerminals call")
-}
-func (statusOnlyOrca) ListRunInventory(context.Context) (port.OrcaRunInventory, error) {
-	return port.OrcaRunInventory{}, errors.New("unexpected ListRunInventory call")
-}
-func (statusOnlyOrca) ListAllTasksFromRuns(context.Context, port.OrcaRunInventory) ([]port.OrcaTask, error) {
-	return nil, errors.New("unexpected ListAllTasksFromRuns call")
-}
-func (statusOnlyOrca) ListDispatchedTasksFromRuns(context.Context, port.OrcaRunInventory) ([]port.OrcaTask, error) {
-	return nil, errors.New("unexpected ListDispatchedTasksFromRuns call")
-}
-func (statusOnlyOrca) ShowDispatch(context.Context, string) (port.OrcaDispatch, error) {
-	return port.OrcaDispatch{}, errors.New("unexpected ShowDispatch call")
-}
-func (statusOnlyOrca) ListGatesFromRuns(context.Context, port.OrcaRunInventory) ([]port.OrcaGate, error) {
-	return nil, errors.New("unexpected ListGatesFromRuns call")
-}
-func (statusOnlyOrca) InboxPresence(context.Context) (port.OrcaInboxPresence, error) {
-	return port.OrcaInboxPresence{}, errors.New("unexpected InboxPresence call")
-}
-
 func hasProblemCode(problems []operationalhealthcontract.InventoryProblem, code string) bool {
 	for _, problem := range problems {
 		if problem.Code == code {
@@ -222,209 +64,9 @@ func hasProblemCode(problems []operationalhealthcontract.InventoryProblem, code 
 	return false
 }
 
-type runInventoryOrca struct {
-	inventory     port.OrcaRunInventory
-	allTasks      []port.OrcaTask
-	dispatched    []port.OrcaTask
-	gates         []port.OrcaGate
-	allTasksErr   error
-	dispatchedErr error
-	gatesErr      error
-
-	gitStarted  <-chan struct{}
-	orcaStarted chan<- struct{}
-	release     <-chan struct{}
-
-	mu                sync.Mutex
-	inventoryCalls    int
-	readerInventories []port.OrcaRunInventory
-	orcaStartOnce     sync.Once
-}
-
-func (*runInventoryOrca) Available() bool { return true }
-func (*runInventoryOrca) Status(context.Context) (port.OrcaStatus, error) {
-	return port.OrcaStatus{RuntimeID: "runtime", RuntimeReachable: true, RuntimeState: "ready", GraphState: "ready"}, nil
-}
-func (*runInventoryOrca) ResolveRepo(_ context.Context, repo string) (port.OrcaRepo, error) {
-	return port.OrcaRepo{RuntimeID: "runtime", ID: "repo", Path: repo}, nil
-}
-func (*runInventoryOrca) ListWorktrees(context.Context, string) ([]port.OrcaWorktree, error) {
-	return nil, nil
-}
-func (*runInventoryOrca) ListTerminals(context.Context, string) ([]port.OrcaTerminal, error) {
-	return nil, nil
-}
-func (orca *runInventoryOrca) ListRunInventory(context.Context) (port.OrcaRunInventory, error) {
-	if orca.orcaStarted != nil {
-		orca.orcaStartOnce.Do(func() { close(orca.orcaStarted) })
-		select {
-		case <-orca.gitStarted:
-		case <-orca.release:
-		}
-	}
-	orca.mu.Lock()
-	orca.inventoryCalls++
-	inventory := orca.inventory
-	orca.mu.Unlock()
-	return inventory, nil
-}
-func (orca *runInventoryOrca) ListAllTasksFromRuns(_ context.Context, inventory port.OrcaRunInventory) ([]port.OrcaTask, error) {
-	orca.recordInventory(inventory)
-	return orca.allTasks, orca.allTasksErr
-}
-func (orca *runInventoryOrca) ListDispatchedTasksFromRuns(_ context.Context, inventory port.OrcaRunInventory) ([]port.OrcaTask, error) {
-	orca.recordInventory(inventory)
-	return orca.dispatched, orca.dispatchedErr
-}
-func (orca *runInventoryOrca) ListGatesFromRuns(_ context.Context, inventory port.OrcaRunInventory) ([]port.OrcaGate, error) {
-	orca.recordInventory(inventory)
-	return orca.gates, orca.gatesErr
-}
-func (*runInventoryOrca) ShowDispatch(context.Context, string) (port.OrcaDispatch, error) {
-	return port.OrcaDispatch{}, errors.New("unexpected ShowDispatch call")
-}
-func (*runInventoryOrca) InboxPresence(context.Context) (port.OrcaInboxPresence, error) {
-	return port.OrcaInboxPresence{RuntimeID: "runtime"}, nil
-}
-func (orca *runInventoryOrca) recordInventory(inventory port.OrcaRunInventory) {
-	orca.mu.Lock()
-	defer orca.mu.Unlock()
-	orca.readerInventories = append(orca.readerInventories, inventory)
-}
-
-type overlapGit struct {
-	gitStarted  chan<- struct{}
-	orcaStarted <-chan struct{}
-	release     <-chan struct{}
-	once        sync.Once
-}
-
-func (git *overlapGit) Run(_ context.Context, _ string, _ ...string) ([]byte, error) {
-	git.once.Do(func() {
-		close(git.gitStarted)
-		select {
-		case <-git.orcaStarted:
-		case <-git.release:
-		}
-	})
-	return nil, nil
-}
-
 func emptyIssueOpsReader(t *testing.T) IssueOpsReader {
 	t.Helper()
 	return IssueOpsReader{StateRoot: t.TempDir(), Scan: func(string, func(string, issueopscontract.IssueOpsRecord, error)) error { return nil }, ListLeaseHolders: func(string) ([]issueopscontract.LeaseHolderIndex, error) { return nil, nil }}
-}
-
-// collectOrca의 자원 identity 필터와 resolve 경계를 잠근다. 자원 rows는
-// runtime/repo/worktree id가 관측된 snapshot과 일치할 때만 유입되어야 한다.
-type inventoryOrca struct {
-	runInventoryOrca
-	repo         port.OrcaRepo
-	repoErr      error
-	worktrees    []port.OrcaWorktree
-	worktreesErr error
-	terminals    []port.OrcaTerminal
-	terminalsErr error
-	dispatch     port.OrcaDispatch
-	dispatchErr  error
-	inbox        port.OrcaInboxPresence
-	inboxErr     error
-}
-
-func (orca *inventoryOrca) ResolveRepo(context.Context, string) (port.OrcaRepo, error) {
-	return orca.repo, orca.repoErr
-}
-func (orca *inventoryOrca) ListWorktrees(context.Context, string) ([]port.OrcaWorktree, error) {
-	return orca.worktrees, orca.worktreesErr
-}
-func (orca *inventoryOrca) ListTerminals(context.Context, string) ([]port.OrcaTerminal, error) {
-	return orca.terminals, orca.terminalsErr
-}
-func (orca *inventoryOrca) ShowDispatch(context.Context, string) (port.OrcaDispatch, error) {
-	return orca.dispatch, orca.dispatchErr
-}
-func (orca *inventoryOrca) InboxPresence(context.Context) (port.OrcaInboxPresence, error) {
-	return orca.inbox, orca.inboxErr
-}
-
-func TestCollectOrcaFiltersResourceIdentityAndReportsResolveProblems(t *testing.T) {
-	base := func() *inventoryOrca {
-		return &inventoryOrca{
-			repo: port.OrcaRepo{RuntimeID: "runtime", ID: "repo", Path: "/repo"},
-			runInventoryOrca: runInventoryOrca{
-				inventory: port.OrcaRunInventory{
-					RuntimeID: "runtime",
-					Runs:      []port.OrcaRun{{RuntimeID: "runtime", ID: "run-1"}},
-				},
-			},
-		}
-	}
-	t.Run("repo resolution failure is reported", func(t *testing.T) {
-		orca := base()
-		orca.repoErr = errors.New("resolve failed")
-		snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: operationalhealthcontract.MessagePresence{Empty: true}}
-		Collector{Orca: orca}.collectOrca(context.Background(), &snapshot, false)
-		if !hasProblemCode(snapshot.InventoryProblems, "orca_repo_failed") {
-			t.Fatalf("resolve failure problem missing: %#v", snapshot.InventoryProblems)
-		}
-	})
-	t.Run("repo identity mismatch is reported", func(t *testing.T) {
-		orca := base()
-		orca.repo = port.OrcaRepo{RuntimeID: "other", ID: "repo", Path: "/repo"}
-		snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: operationalhealthcontract.MessagePresence{Empty: true}}
-		Collector{Orca: orca}.collectOrca(context.Background(), &snapshot, false)
-		if !hasProblemCode(snapshot.InventoryProblems, "orca_repo_identity_mismatch") {
-			t.Fatalf("identity mismatch problem missing: %#v", snapshot.InventoryProblems)
-		}
-	})
-	t.Run("invalid worktree and terminal identities are reported, rows still flow", func(t *testing.T) {
-		orca := base()
-		orca.worktrees = []port.OrcaWorktree{
-			{RuntimeID: "runtime", ID: "wt-ok", InstanceID: "inst", Path: "/repo.worktrees/69-v1", RepoID: "repo"},
-			{RuntimeID: "other", ID: "wt-foreign", InstanceID: "inst", Path: "/elsewhere", RepoID: "repo"},
-		}
-		orca.terminals = []port.OrcaTerminal{
-			{RuntimeID: "runtime", Handle: "term-ok", PTYID: "pty-ok", WorktreeID: "wt", TabID: "tab", LeafID: "leaf"},
-			{RuntimeID: "runtime", Handle: "term-incomplete", PTYID: ""},
-		}
-		snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: operationalhealthcontract.MessagePresence{Empty: true}}
-		Collector{Orca: orca}.collectOrca(context.Background(), &snapshot, false)
-		if len(snapshot.OrcaWorktrees) != 2 {
-			t.Fatalf("worktree rows must all flow into the snapshot: %#v", snapshot.OrcaWorktrees)
-		}
-		if !hasProblemCode(snapshot.InventoryProblems, "orca_worktree_identity_invalid") {
-			t.Fatalf("foreign-runtime worktree must be reported: %#v", snapshot.InventoryProblems)
-		}
-		if len(snapshot.Terminals) != 2 || snapshot.Terminals[0].Handle != "term-ok" {
-			t.Fatalf("terminal rows must all flow into the snapshot: %#v", snapshot.Terminals)
-		}
-		if !hasProblemCode(snapshot.InventoryProblems, "orca_terminal_identity_invalid") {
-			t.Fatalf("incomplete terminal identity must be reported: %#v", snapshot.InventoryProblems)
-		}
-		if snapshot.OrcaRepoID != "repo" {
-			t.Fatalf("repo id projection wrong: %q", snapshot.OrcaRepoID)
-		}
-	})
-	t.Run("worktree and terminal reader failures are reported", func(t *testing.T) {
-		orca := base()
-		orca.worktreesErr = errors.New("wt failed")
-		orca.terminalsErr = errors.New("term failed")
-		snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: operationalhealthcontract.MessagePresence{Empty: true}}
-		Collector{Orca: orca}.collectOrca(context.Background(), &snapshot, false)
-		if !hasProblemCode(snapshot.InventoryProblems, "orca_worktrees_failed") ||
-			!hasProblemCode(snapshot.InventoryProblems, "orca_terminals_failed") {
-			t.Fatalf("reader failure problems missing: %#v", snapshot.InventoryProblems)
-		}
-	})
-	t.Run("inbox and dispatch surfaces flow through", func(t *testing.T) {
-		orca := base()
-		orca.inbox = port.OrcaInboxPresence{RuntimeID: "runtime", Count: 2}
-		snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: operationalhealthcontract.MessagePresence{Empty: true}}
-		Collector{Orca: orca}.collectOrca(context.Background(), &snapshot, false)
-		if snapshot.Messages.RuntimeID != "runtime" || snapshot.Messages.Count != 2 {
-			t.Fatalf("inbox presence projection wrong: %#v", snapshot.Messages)
-		}
-	})
 }
 
 func TestCollectIssueOpsScansRecordsAndReportsUnreadableRows(t *testing.T) {
@@ -432,8 +74,8 @@ func TestCollectIssueOpsScansRecordsAndReportsUnreadableRows(t *testing.T) {
 	reader := emptyIssueOpsReader(t)
 	reader.Scan = func(string, func(string, issueopscontract.IssueOpsRecord, error)) error { return errors.New("locked") }
 	snapshot := corehealth.Snapshot{}
-	if records, _ := (Collector{IssueOps: reader}).collectIssueOps(&snapshot); len(records) != 0 || !hasProblemCode(snapshot.InventoryProblems, "issueops_list_failed") {
-		t.Fatalf("scan failure records=%v problems=%#v", records, snapshot.InventoryProblems)
+	if (Collector{IssueOps: reader}).collectIssueOps(&snapshot); len(snapshot.Cycles) != 0 || !hasProblemCode(snapshot.InventoryProblems, "issueops_list_failed") {
+		t.Fatalf("scan failure cycles=%v problems=%#v", snapshot.Cycles, snapshot.InventoryProblems)
 	}
 	reader.Scan = func(_ string, visit func(string, issueopscontract.IssueOpsRecord, error)) error {
 		scans++
@@ -442,9 +84,9 @@ func TestCollectIssueOpsScansRecordsAndReportsUnreadableRows(t *testing.T) {
 		return nil
 	}
 	snapshot = corehealth.Snapshot{}
-	records, _ := (Collector{IssueOps: reader}).collectIssueOps(&snapshot)
-	if scans != 1 || len(records) != 1 || records[0].ID != "io-a" || len(snapshot.Cycles) != 1 {
-		t.Fatalf("scans=%d records=%v cycles=%v", scans, records, snapshot.Cycles)
+	(Collector{IssueOps: reader}).collectIssueOps(&snapshot)
+	if scans != 1 || len(snapshot.Cycles) != 1 || snapshot.Cycles[0].ID != "io-a" {
+		t.Fatalf("scans=%d cycles=%v", scans, snapshot.Cycles)
 	}
 	if len(snapshot.InventoryProblems) != 1 || snapshot.InventoryProblems[0].Code != "issueops_read_failed" || snapshot.InventoryProblems[0].Detail != "could not read IssueOps record io-b" {
 		t.Fatalf("problems=%#v", snapshot.InventoryProblems)
@@ -478,119 +120,25 @@ func TestCycleFromRecordProjectsCleanupFailureAndCompletionPresence(t *testing.T
 	}
 }
 
-func orcaIdentityProblemCount(snapshot corehealth.Snapshot, code string) int {
-	count := 0
-	for _, problem := range snapshot.InventoryProblems {
-		if problem.Code == code {
-			count++
-		}
+func TestCollectMergesIssueOpsAndGitInventory(t *testing.T) {
+	reader := emptyIssueOpsReader(t)
+	reader.Scan = func(_ string, visit func(string, issueopscontract.IssueOpsRecord, error)) error {
+		visit("io-a", issueopscontract.IssueOpsRecord{OK: true, ID: "io-a", Repo: "/repo", Branch: "a", Phase: issueopscontract.IssueOpsPhasePlan}, nil)
+		return nil
 	}
-	return count
-}
-
-func TestCollectOrcaProjectsResolvedRepoPathOntoWorktrees(t *testing.T) {
-	worktree := port.OrcaWorktree{RuntimeID: "runtime", ID: "wt", InstanceID: "inst", Path: "/repo.worktrees/x", RepoID: "repo"}
-	cases := []struct {
-		name     string
-		repo     port.OrcaRepo
-		repoErr  error
-		wantRepo string
-	}{
-		{name: "resolved path wins", repo: port.OrcaRepo{RuntimeID: "runtime", ID: "repo", Path: "/resolved/repo"}, wantRepo: "/resolved/repo"},
-		{name: "blank resolved path falls back to requested repo", repo: port.OrcaRepo{RuntimeID: "runtime", ID: "repo"}, wantRepo: "/repo"},
-		{name: "resolve failure ignores partial path", repo: port.OrcaRepo{RuntimeID: "runtime", ID: "repo", Path: "/resolved/repo"}, repoErr: errors.New("resolve failed"), wantRepo: "/repo"},
+	git := &scriptedGit{outputs: map[string]string{
+		"symbolic-ref": "main\n",
+		"rev-parse":    oidA + "\n",
+		"status":       "",
+		"worktree":     "",
+		"for-each-ref": "refs/heads/main\x00" + oidA + "\x00",
+		"ls-remote":    oidA + "\trefs/heads/main\n",
+	}}
+	snapshot := Collector{IssueOps: reader, Git: git}.Collect(context.Background(), t.TempDir())
+	if len(snapshot.Cycles) != 1 || snapshot.CanonicalBranch != "main" || snapshot.SourceHead != oidA || len(snapshot.LocalRefs) != 1 || len(snapshot.RemoteRefs) != 1 {
+		t.Fatalf("snapshot = %+v", snapshot)
 	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			orca := &inventoryOrca{repo: tc.repo, repoErr: tc.repoErr, worktrees: []port.OrcaWorktree{worktree}, runInventoryOrca: runInventoryOrca{
-				inventory: port.OrcaRunInventory{RuntimeID: "runtime", Runs: []port.OrcaRun{{RuntimeID: "runtime", ID: "run-1"}}},
-			}}
-			snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: operationalhealthcontract.MessagePresence{Empty: true}}
-			Collector{Orca: orca}.collectOrca(context.Background(), &snapshot, false)
-			if len(snapshot.OrcaWorktrees) != 1 || snapshot.OrcaWorktrees[0].Repo != tc.wantRepo {
-				t.Fatalf("worktrees = %+v, want repo %q", snapshot.OrcaWorktrees, tc.wantRepo)
-			}
-		})
-	}
-}
-
-func TestCollectOrcaWorktreeIdentityValidatesEachFieldIndependently(t *testing.T) {
-	valid := port.OrcaWorktree{RuntimeID: "runtime", ID: "wt", InstanceID: "inst", Path: "/repo.worktrees/x", RepoID: "repo"}
-	mutate := func(edit func(*port.OrcaWorktree)) port.OrcaWorktree {
-		value := valid
-		edit(&value)
-		return value
-	}
-	cases := []struct {
-		name       string
-		resolvedID string
-		value      port.OrcaWorktree
-		wantBad    int
-	}{
-		{name: "valid", resolvedID: "repo", value: valid},
-		{name: "padded identity is trimmed", resolvedID: "repo", value: mutate(func(v *port.OrcaWorktree) {
-			v.RuntimeID, v.ID, v.InstanceID, v.RepoID = " runtime ", " wt ", " inst ", " repo "
-		})},
-		{name: "foreign runtime", resolvedID: "repo", value: mutate(func(v *port.OrcaWorktree) { v.RuntimeID = "other" }), wantBad: 1},
-		{name: "blank id", resolvedID: "repo", value: mutate(func(v *port.OrcaWorktree) { v.ID = "  " }), wantBad: 1},
-		{name: "blank instance", resolvedID: "repo", value: mutate(func(v *port.OrcaWorktree) { v.InstanceID = "" }), wantBad: 1},
-		{name: "blank path", resolvedID: "repo", value: mutate(func(v *port.OrcaWorktree) { v.Path = " " }), wantBad: 1},
-		{name: "repo id mismatch", resolvedID: "repo", value: mutate(func(v *port.OrcaWorktree) { v.RepoID = "other" }), wantBad: 1},
-		{name: "repo id not compared without resolved id", resolvedID: "", value: mutate(func(v *port.OrcaWorktree) { v.RepoID = "other" })},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			orca := &inventoryOrca{
-				repo:      port.OrcaRepo{RuntimeID: "runtime", ID: tc.resolvedID, Path: "/repo"},
-				worktrees: []port.OrcaWorktree{tc.value},
-				runInventoryOrca: runInventoryOrca{
-					inventory: port.OrcaRunInventory{RuntimeID: "runtime", Runs: []port.OrcaRun{{RuntimeID: "runtime", ID: "run-1"}}},
-				},
-			}
-			snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: operationalhealthcontract.MessagePresence{Empty: true}}
-			Collector{Orca: orca}.collectOrca(context.Background(), &snapshot, false)
-			if got := orcaIdentityProblemCount(snapshot, "orca_worktree_identity_invalid"); got != tc.wantBad {
-				t.Fatalf("identity problems = %d, want %d: %#v", got, tc.wantBad, snapshot.InventoryProblems)
-			}
-		})
-	}
-}
-
-func TestCollectOrcaTerminalIdentityValidatesEachFieldIndependently(t *testing.T) {
-	valid := port.OrcaTerminal{RuntimeID: "runtime", Handle: "h", PTYID: "pty", WorktreeID: "wt", TabID: "tab", LeafID: "leaf"}
-	mutate := func(edit func(*port.OrcaTerminal)) port.OrcaTerminal {
-		value := valid
-		edit(&value)
-		return value
-	}
-	cases := []struct {
-		name    string
-		value   port.OrcaTerminal
-		wantBad int
-	}{
-		{name: "valid", value: valid},
-		{name: "padded identity is trimmed", value: mutate(func(v *port.OrcaTerminal) { v.RuntimeID, v.Handle = " runtime ", " h " })},
-		{name: "foreign runtime", value: mutate(func(v *port.OrcaTerminal) { v.RuntimeID = "other" }), wantBad: 1},
-		{name: "blank handle", value: mutate(func(v *port.OrcaTerminal) { v.Handle = " " }), wantBad: 1},
-		{name: "blank pty", value: mutate(func(v *port.OrcaTerminal) { v.PTYID = "" }), wantBad: 1},
-		{name: "blank worktree", value: mutate(func(v *port.OrcaTerminal) { v.WorktreeID = "" }), wantBad: 1},
-		{name: "blank tab", value: mutate(func(v *port.OrcaTerminal) { v.TabID = "" }), wantBad: 1},
-		{name: "blank leaf", value: mutate(func(v *port.OrcaTerminal) { v.LeafID = "" }), wantBad: 1},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			orca := &inventoryOrca{
-				repo:      port.OrcaRepo{RuntimeID: "runtime", ID: "repo", Path: "/repo"},
-				terminals: []port.OrcaTerminal{tc.value},
-				runInventoryOrca: runInventoryOrca{
-					inventory: port.OrcaRunInventory{RuntimeID: "runtime", Runs: []port.OrcaRun{{RuntimeID: "runtime", ID: "run-1"}}},
-				},
-			}
-			snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: operationalhealthcontract.MessagePresence{Empty: true}}
-			Collector{Orca: orca}.collectOrca(context.Background(), &snapshot, false)
-			if got := orcaIdentityProblemCount(snapshot, "orca_terminal_identity_invalid"); got != tc.wantBad {
-				t.Fatalf("identity problems = %d, want %d: %#v", got, tc.wantBad, snapshot.InventoryProblems)
-			}
-		})
+	if len(snapshot.InventoryProblems) != 0 {
+		t.Fatalf("problems = %v", snapshot.InventoryProblems)
 	}
 }

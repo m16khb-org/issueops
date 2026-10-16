@@ -69,7 +69,7 @@ func CmuxCanonicalPromptPath(canonicalRoot, promptPath string, rootAliases ...st
 }
 
 func ValidateCmuxReleasedRecord(record issueopscontract.IssueOpsRecord, generation uint64) error {
-	if record.Execution == nil || record.Execution.Mode != issueopscontract.ExecutionModeDirect ||
+	if record.Execution == nil ||
 		record.Execution.Lease.Status != issueopscontract.LeaseStatusReleased || record.Execution.Lease.Generation != generation {
 		return fmt.Errorf("cmux handoff requires the exact released direct execution generation")
 	}

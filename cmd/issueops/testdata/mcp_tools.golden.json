@@ -904,7 +904,7 @@
     "name": "state_maintain"
   },
   {
-    "description": "Prepare, inspect, claim, release, replace, resume, reconcile, or complete the single IssueOps v1 execution lease. The action selects one shared CLI/MCP DTO; mutations require the exact native actor, generation, canonical cwd, and explicit confirmation.",
+    "description": "Prepare, inspect, claim, release, replace, reconcile, or complete the single IssueOps v1 execution lease. The action selects one shared CLI/MCP DTO; mutations require the exact native actor, generation, canonical cwd, and explicit confirmation.",
     "inputSchema": {
       "properties": {
         "action": {
@@ -914,7 +914,6 @@
             "claim",
             "release",
             "replace",
-            "resume",
             "reconcile",
             "complete"
           ],
@@ -940,22 +939,12 @@
         "confirm": {
           "type": "boolean"
         },
-        "context_packet_sha256": {
-          "pattern": "^[0-9a-f]{64}$",
-          "type": "string"
-        },
         "cwd": {
-          "type": "string"
-        },
-        "direct_reason": {
           "type": "string"
         },
         "expected_generation": {
           "minimum": 1,
           "type": "integer"
-        },
-        "expected_readiness_fingerprint": {
-          "type": "string"
         },
         "final_head": {
           "type": "string"
@@ -977,72 +966,6 @@
           "type": "string"
         },
         "inventory_fingerprint": {
-          "type": "string"
-        },
-        "issue_body_sha256": {
-          "pattern": "^[0-9a-f]{64}$",
-          "type": "string"
-        },
-        "issue_snapshot": {
-          "additionalProperties": false,
-          "properties": {
-            "body": {
-              "maxLength": 524288,
-              "type": "string"
-            },
-            "provider": {
-              "enum": [
-                "gitlab"
-              ],
-              "type": "string"
-            },
-            "source": {
-              "enum": [
-                "glab_mcp"
-              ],
-              "type": "string"
-            },
-            "state": {
-              "enum": [
-                "opened",
-                "closed"
-              ],
-              "type": "string"
-            },
-            "web_url": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "provider",
-            "source",
-            "web_url",
-            "body",
-            "state"
-          ],
-          "type": "object"
-        },
-        "mode": {
-          "enum": [
-            "auto",
-            "direct",
-            "orca"
-          ],
-          "type": "string"
-        },
-        "owner_effort": {
-          "type": "string"
-        },
-        "owner_host": {
-          "enum": [
-            "codex",
-            "claude",
-            "omo",
-            "omp"
-          ],
-          "type": "string"
-        },
-        "owner_model": {
           "type": "string"
         },
         "preview": {

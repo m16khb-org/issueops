@@ -9,10 +9,7 @@ import (
 	statecontract "issueops/internal/contract/state"
 )
 
-const (
-	SchemaVersion               = 1
-	OrcaArtifactIdentityVersion = 1
-)
+const SchemaVersion = 1
 
 // Record은 release가 변경하지 않는 v1 sidecar를 canonical DTO로 보존한다.
 type Record struct {
@@ -65,11 +62,8 @@ type Record struct {
 }
 
 type Execution struct {
-	Mode               string                   `json:"mode"`
-	Selection          *Selection               `json:"selection,omitempty"`
 	Workspace          Workspace                `json:"workspace"`
 	Lease              Lease                    `json:"lease"`
-	Orca               *OrcaBinding             `json:"orca,omitempty"`
 	Pending            *ExternalIntent          `json:"pending,omitempty"`
 	Completion         *Completion              `json:"completion,omitempty"`
 	CompletionHistory  []CompletionHistoryEntry `json:"completion_history,omitempty"`
@@ -78,26 +72,12 @@ type Execution struct {
 	SyncBaseEvents     []SyncBaseEvent          `json:"sync_base_events,omitempty"`
 }
 
-type Selection struct {
-	RequestedMode        string `json:"requested_mode"`
-	ResolvedMode         string `json:"resolved_mode"`
-	ProbeAttempted       bool   `json:"probe_attempted"`
-	ProbeAvailable       bool   `json:"probe_available"`
-	ProbeReady           bool   `json:"probe_ready"`
-	ProbeCode            string `json:"probe_code,omitempty"`
-	FallbackCode         string `json:"fallback_code,omitempty"`
-	ReadinessFingerprint string `json:"readiness_fingerprint"`
-	SelectedAt           string `json:"selected_at"`
-	ExplicitDirectReason string `json:"explicit_direct_reason,omitempty"`
-}
-
 type Workspace struct {
 	SourceRoot     string `json:"source_root"`
 	Root           string `json:"root"`
 	Branch         string `json:"branch"`
 	BaseHead       string `json:"base_head"`
 	ParentWorktree string `json:"parent_worktree,omitempty"`
-	Driver         string `json:"driver"`
 	LinkedAt       string `json:"linked_at"`
 	ArtifactDir    string `json:"artifact_dir,omitempty"`
 }

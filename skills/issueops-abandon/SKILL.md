@@ -111,7 +111,6 @@ apply는 원격 효과를 record 삭제보다 **먼저** 실행한다. record가
 | `worktree_identity_conflict`·`local_branch_head`·`branch_checked_out_elsewhere` | 잔여물이 record가 말하는 것과 다르다 | 무엇이 다른지 확인하고 사람이 판단한다. 지워서 맞추지 않는다 |
 | `local_residue_execution` | record가 링크하지 않은 워크트리·브랜치가 있다 | 그 잔여물의 주인을 먼저 확인한다 |
 | `pending_intent_safe` | 외부 작업 결과가 모호하다 | `execution reconcile --preview`로 정확히 하나를 확인한다 |
-| `orca_resources_absent` | Orca 레지스트리에 자원이 남았다 | 보고된 자원을 Orca에서 회수한다 |
 
 ### execution 없이 끝난 사이클
 

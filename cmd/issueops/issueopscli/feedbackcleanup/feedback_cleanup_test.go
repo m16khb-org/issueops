@@ -277,10 +277,6 @@ func TestRunCleanupStatusProjectsFinishReadinessParity(t *testing.T) {
 					return 1, ""
 				}
 			}
-			// 이 테스트 프로세스가 Orca 터미널 안에서 돌더라도 요청자 터미널 join을
-			// 시도하지 않게 env를 비운다(join은 adapter 테스트가 고정한다).
-			t.Setenv("ORCA_PANE_KEY", "")
-			t.Setenv("ORCA_TERMINAL_HANDLE", "")
 			processCalls := 0
 			deps.InspectCleanupProcesses = func(root string) (port.CleanupWorkspaceOccupancy, error) {
 				processCalls++
@@ -481,13 +477,11 @@ func cleanupStatusRecord(t *testing.T, done, withArtifact bool) issueopscontract
 	}
 	record.WorktreePath = worktree
 	record.Execution = &issueopscontract.Execution{
-		Mode: issueopscontract.ExecutionModeDirect,
 		Workspace: issueopscontract.Workspace{
 			SourceRoot: record.Repo, Root: worktree, Branch: record.Branch,
-			BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "2026-08-04T00:00:00Z",
+			BaseHead: strings.Repeat("a", 40), LinkedAt: "2026-08-04T00:00:00Z",
 		},
-		Lease:     issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusReleased},
-		Selection: selectionFixture(issueopscontract.ExecutionModeDirect),
+		Lease: issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusReleased},
 	}
 	written, err := (issueopscore.CycleRecordStore{StateRoot: issueOpsStateRootForTest()}).Save(context.Background(), record)
 	if err != nil {
@@ -793,7 +787,7 @@ func TestRunCleanupLinkedBranchDisciplineAndDispatch(t *testing.T) {
 	}
 }
 
-// status는 finish preview의 점유·터미널 관측을 "무엇이 종료될지" 경고로 투영한다
+// status는 finish preview의 점유 관측을 "무엇이 종료될지" 경고로 투영한다
 // (#477, plans/285 parity: schema는 그대로, 점유는 Warnings로).
 func TestCleanupStatusWarningsProjectStoppedProcesses(t *testing.T) {
 	warnings := issuedomain.CleanupStatusWarnings(issueopscontract.CleanupFinishResult{
@@ -801,12 +795,11 @@ func TestCleanupStatusWarningsProjectStoppedProcesses(t *testing.T) {
 			{PID: 4321, Command: "codex", StartedAt: "2026-08-27T00:00:01Z", Executable: "codex"},
 			{PID: 5555, Command: "zsh", StartedAt: "2026-08-27T00:00:02Z", Executable: "zsh"},
 		},
-		OrcaTerminals: []string{"term_a"},
 	})
 	if len(warnings) != 3 || warnings[0] != "4321:codex:2026-08-27T00:00:01Z" || warnings[1] != "5555:zsh:2026-08-27T00:00:02Z" {
 		t.Fatalf("occupants must be projected as pid:command:started_at: %v", warnings)
 	}
-	if !strings.Contains(warnings[2], "프로세스 2개") || !strings.Contains(warnings[2], "Orca 터미널 1개") {
+	if !strings.Contains(warnings[2], "프로세스 2개") {
 		t.Fatalf("the summary warning must state what apply will stop: %q", warnings[2])
 	}
 	if quiet := issuedomain.CleanupStatusWarnings(issueopscontract.CleanupFinishResult{}); len(quiet) != 0 {

@@ -36,13 +36,11 @@ func TestNextPersistedCLISelectionAndRootConflict(t *testing.T) {
 			SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
 			ID:            id, Repo: source, Branch: "topic/one", Phase: issueopscontract.IssueOpsPhasePlan,
 			Execution: &issueopscontract.Execution{
-				Mode: issueopscontract.ExecutionModeDirect,
 				Workspace: issueopscontract.Workspace{
 					SourceRoot: source, Root: repo + ".worktrees/extra/../topic-one",
-					Branch: "topic/one", BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "then",
+					Branch: "topic/one", BaseHead: strings.Repeat("a", 40), LinkedAt: "then",
 				},
-				Lease:     issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusReleased},
-				Selection: selectionFixture(issueopscontract.ExecutionModeDirect),
+				Lease: issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusReleased},
 			},
 		}
 	}

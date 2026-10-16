@@ -26,11 +26,9 @@ type ListEntry struct {
 	Repo                  string                         `json:"repo"`
 	Branch                string                         `json:"branch,omitempty"`
 	Phase                 issueopscontract.IssueOpsPhase `json:"phase"`
-	Mode                  string                         `json:"mode,omitempty"`
 	LeaseStatus           string                         `json:"lease_status,omitempty"`
 	HolderHost            string                         `json:"holder_host,omitempty"`
 	HolderSession         string                         `json:"holder_session,omitempty"`
-	OwnerModel            string                         `json:"owner_model,omitempty"`
 	WorkspaceRoot         string                         `json:"workspace_root,omitempty"`
 	IssueURL              string                         `json:"issue_url,omitempty"`
 	RemoteArtifactURL     string                         `json:"remote_artifact_url,omitempty"`

@@ -22,10 +22,6 @@ func (p *auditProbe) Read() ([]model.IssueOpsHandoffDeliveryObservation, error) 
 	p.calls = append(p.calls, "read")
 	return nil, p.err
 }
-func (p *auditProbe) ReadFor(id, lineage string) ([]model.IssueOpsHandoffDeliveryObservation, error) {
-	p.calls = append(p.calls, "read:"+id+":"+lineage)
-	return nil, p.err
-}
 
 func TestManualObservationRefusalHasNoAppendAndPreservesReadError(t *testing.T) {
 	audit := &auditProbe{}
@@ -43,16 +39,15 @@ func TestManualObservationRefusalHasNoAppendAndPreservesReadError(t *testing.T) 
 	}
 }
 
-func TestClaimObservationChoosesScopedReadAndStopsOnReadError(t *testing.T) {
+func TestClaimObservationReadsAuditAndStopsOnReadError(t *testing.T) {
 	for _, test := range []struct {
 		name   string
 		result model.ExecutionResult
 		want   []string
 	}{
 		{name: "failed result"},
-		{name: "missing holder", result: model.ExecutionResult{OK: true, Execution: model.Execution{Mode: model.ExecutionModeDirect, Lease: model.WriteLease{Status: model.LeaseStatusActive}}}},
-		{name: "orca scoped", result: model.ExecutionResult{OK: true, ID: "io-test", Execution: model.Execution{Orca: &model.OrcaBinding{OwnerHost: "omo", OwnerPromptSHA256: "prompt", ContextPacketSHA256: "material"}, Lease: model.WriteLease{Status: model.LeaseStatusActive, Generation: 2, Holder: &model.NativeActor{Host: "omo"}}}}, want: []string{"read:io-test:generation:2:prompt:prompt:material:material:call:prompt"}},
-		{name: "direct", result: model.ExecutionResult{OK: true, ID: "io-test", Execution: model.Execution{Mode: model.ExecutionModeDirect, Lease: model.WriteLease{Status: model.LeaseStatusActive, Generation: 2, Holder: &model.NativeActor{Host: "codex"}}}}, want: []string{"read"}},
+		{name: "missing holder", result: model.ExecutionResult{OK: true, Execution: model.Execution{Lease: model.WriteLease{Status: model.LeaseStatusActive}}}},
+		{name: "active holder", result: model.ExecutionResult{OK: true, ID: "io-test", Execution: model.Execution{Lease: model.WriteLease{Status: model.LeaseStatusActive, Generation: 2, Holder: &model.NativeActor{Host: "codex"}}}}, want: []string{"read"}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			p := &auditProbe{err: errors.New("unreadable audit")}

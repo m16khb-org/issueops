@@ -26,13 +26,8 @@ func loadAgentModelSettings(ctx context.Context, repo string) (agentmodelapp.Set
 	return agentmodelapp.Settings{Local: files.Local, Global: files.Global, LocalPath: files.LocalPath, GlobalPath: files.GlobalPath}, nil
 }
 
-// resolveAgentModel resolves one role for repo with no flag layer.
-func resolveAgentModel(ctx context.Context, host string, role agentmodelcontract.Role, tier, repo string) (agentmodelcontract.Resolution, error) {
-	return agentModelService().Resolve(ctx, repo, agentmodeldomain.ResolveInput{Host: host, Role: role, Tier: tier})
-}
-
 // roleAgentArgs is the one producer of the role-agent launch arguments that
-// Orca, cmux, and `issueops model resolve --agents` inject into a host
+// cmux and `issueops model resolve --agents` inject into a host
 // session. Codex role files go under <stateRoot>/agent-roles/.
 func roleAgentArgs(ctx context.Context, stateRoot, host, repo string) ([]string, error) {
 	resolutions, err := agentModelService().RoleAgents(ctx, host, repo)
@@ -46,27 +41,6 @@ func roleAgentArgs(ctx context.Context, stateRoot, host, repo string) ([]string,
 	return hostprotocol.RoleAgentArgs(host, agents, func(content string) (string, error) {
 		return agentmodelconfig.WriteRoleFile(stateRoot, content)
 	})
-}
-
-// preparationAgentModels adapts the agent model settings to the preparation
-// service, which resolves owner defaults and Orca role-agent arguments.
-type preparationAgentModels struct{ stateRoot string }
-
-func (m preparationAgentModels) OwnerDefaults(ctx context.Context, host string, role agentmodelcontract.Role, repo string) (string, string, error) {
-	resolution, err := resolveAgentModel(ctx, host, role, "", repo)
-	return resolution.Model, resolution.Effort, err
-}
-
-func (m preparationAgentModels) RoleAgentArgs(ctx context.Context, host, repo string) ([]string, error) {
-	return roleAgentArgs(ctx, m.stateRoot, host, repo)
-}
-
-// stateRoleAgentArgs binds roleAgentArgs to one state root for the resume
-// and reconcile services.
-func stateRoleAgentArgs(stateRoot string) func(ctx context.Context, host, repo string) ([]string, error) {
-	return func(ctx context.Context, host, repo string) ([]string, error) {
-		return roleAgentArgs(ctx, stateRoot, host, repo)
-	}
 }
 
 func runModel(args []string) error {
