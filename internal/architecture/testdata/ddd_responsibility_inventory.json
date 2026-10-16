@@ -15904,9 +15904,12 @@
       "owner": "domain",
       "task": "T20",
       "symbols": [
-        "func issueOpsRemoteLabelHeuristic",
+        "func issueOpsRemoteKeywordMatches",
+        "func issueOpsRemoteLabelEvidence",
+        "func issueOpsRemoteLabelEvidenceScore",
         "func issueOpsRemoteOverlap",
-        "func issueOpsRemoteTokens"
+        "func issueOpsRemoteTokens",
+        "type issueOpsRemoteTypeEvidence"
       ]
     },
     {
@@ -18286,6 +18289,11 @@
     },
     {
       "path": "scripts/autoresearch/doc_injection_judge.py",
+      "owner": "execution-script",
+      "task": "T17"
+    },
+    {
+      "path": "scripts/autoresearch/label_score_eval.py",
       "owner": "execution-script",
       "task": "T17"
     },

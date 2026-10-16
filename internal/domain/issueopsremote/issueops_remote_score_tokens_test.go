@@ -1,6 +1,9 @@
 package remote
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+)
 
 func TestIssueOpsRemoteOverlapUsesSmallerTokenSet(t *testing.T) {
 	left := map[string]bool{"refactor": true, "coverage": true, "issueops": true}
@@ -20,44 +23,60 @@ func TestIssueOpsRemoteOverlapRejectsEmptyInputs(t *testing.T) {
 	}
 }
 
-func TestIssueOpsRemoteLabelHeuristicMatchesKnownLabels(t *testing.T) {
+func TestIssueOpsRemoteKeywordMatchesKoreanPrefixAndEnglishExact(t *testing.T) {
 	tests := []struct {
-		name   string
-		tokens map[string]bool
-		label  IssueOpsRemoteLabelCandidate
-		want   float64
+		token, keyword string
+		want           bool
 	}{
-		{
-			name:   "enhancement",
-			tokens: map[string]bool{"feature": true},
-			label:  IssueOpsRemoteLabelCandidate{Name: " Enhancement "},
-			want:   1,
-		},
-		{
-			name:   "bug",
-			tokens: map[string]bool{"failure": true},
-			label:  IssueOpsRemoteLabelCandidate{Name: "BUG"},
-			want:   1,
-		},
-		{
-			name:   "documentation",
-			tokens: map[string]bool{"docs": true},
-			label:  IssueOpsRemoteLabelCandidate{Name: "documentation"},
-			want:   0.75,
-		},
-		{
-			name:   "unknown",
-			tokens: map[string]bool{"coverage": true},
-			label:  IssueOpsRemoteLabelCandidate{Name: "refactor"},
-			want:   0,
-		},
+		{"오류가", "오류", true},
+		{"재현되지", "재현", true},
+		{"오류", "오류", true},
+		{"add", "add", true},
+		{"address", "add", false},
+		{"adds", "add", false},
+		{"여기오류", "오류", false},
+		{"오", "오류", false},
+	}
+	for _, tt := range tests {
+		if got := issueOpsRemoteKeywordMatches(tt.token, tt.keyword); got != tt.want {
+			t.Errorf("issueOpsRemoteKeywordMatches(%q, %q) = %v, want %v", tt.token, tt.keyword, got, tt.want)
+		}
+	}
+}
+
+func TestIssueOpsRemoteLabelEvidenceCountsEachTokenOncePerRule(t *testing.T) {
+	tokens := issueOpsRemoteTokens("오류가 오류를 failure add address 문서 readme")
+	evidence := issueOpsRemoteLabelEvidence(tokens)
+
+	want := map[string][]string{
+		"bug":           {"failure", "오류가", "오류를"},
+		"enhancement":   {"add"},
+		"documentation": {"readme", "문서"},
+	}
+	for label, wantTokens := range want {
+		if !reflect.DeepEqual(evidence.matched[label], wantTokens) {
+			t.Errorf("matched[%s] = %v, want %v", label, evidence.matched[label], wantTokens)
+		}
+	}
+	if evidence.total != 6 {
+		t.Errorf("total = %d, want 6", evidence.total)
+	}
+}
+
+func TestIssueOpsRemoteLabelEvidenceScoreAbstainsBelowMinimumEvidence(t *testing.T) {
+	bug := IssueOpsRemoteLabelCandidate{Name: " BUG "}
+	one := issueOpsRemoteLabelEvidence(issueOpsRemoteTokens("회귀"))
+	score, matched, ok := issueOpsRemoteLabelEvidenceScore(one, bug)
+	if !ok || score != 0 || !reflect.DeepEqual(matched, []string{"회귀"}) {
+		t.Fatalf("one evidence: score=%v matched=%v ok=%v, want 0 [회귀] true", score, matched, ok)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := issueOpsRemoteLabelHeuristic(tt.tokens, tt.label); got != tt.want {
-				t.Fatalf("issueOpsRemoteLabelHeuristic() = %v, want %v", got, tt.want)
-			}
-		})
+	two := issueOpsRemoteLabelEvidence(issueOpsRemoteTokens("회귀 failure"))
+	if score, _, _ := issueOpsRemoteLabelEvidenceScore(two, bug); score != 1 {
+		t.Fatalf("two evidence: score=%v, want 1", score)
+	}
+
+	if _, _, ok := issueOpsRemoteLabelEvidenceScore(two, IssueOpsRemoteLabelCandidate{Name: "question"}); ok {
+		t.Fatal("label without a keyword rule must not use the evidence score")
 	}
 }
