@@ -19,11 +19,11 @@
 - [x] G5: released direct generation이 reseed 뒤 새 세션 claim으로 인수된다
   CHECK: go test ./cmd/issueops/issueopsapp -run TestSuccessfulDirectClaimObservesReleasedReseededGeneration -count=1 -v
   EXPECT: /^--- PASS: TestSuccessfulDirectClaimObservesReleasedReseededGeneration/m
-  EVIDENCE: PASS | ok  	issueops/cmd/issueops/issueopsapp	1.887s
+  EVIDENCE: PASS | ok  	issueops/cmd/issueops/issueopsapp	1.166s
 - [x] G6: CLI·MCP·response contract golden이 갱신된 표면과 일치한다
   CHECK: go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden -count=1
   EXPECT: /^ok\s+issueops\/cmd\/issueops\/contractgolden/m
-  EVIDENCE: ok  	issueops/cmd/issueops/contractgolden	0.330s | ok  	issueops/cmd/issueops/issueopsapp	8.312s
+  EVIDENCE: ok  	issueops/cmd/issueops/contractgolden	0.296s | ok  	issueops/cmd/issueops/issueopsapp	4.333s
 - [x] G7: 전체 race 테스트가 통과한다
   CHECK: python3 -c "import subprocess; b=subprocess.run(['go','test','-race','./...','-count=1'],capture_output=True); print('RACE_PASS' if b.returncode==0 else 'RACE_FAIL %d'%b.returncode)"
   EXPECT: RACE_PASS
@@ -33,7 +33,7 @@
   EXPECT: VET_PASS
   EVIDENCE: VET_PASS
 - [x] G8: self-verify가 95점 게이트를 넘는다
-  CHECK: python3 -c "import json,subprocess; r=subprocess.run(['./bin/issueops','self-verify','--seed=100','--target-score=95','--llm-eval=false','--json'],capture_output=True,text=True); d=json.loads(r.stdout); print('SELF_VERIFY_OK' if r.returncode==0 and d.get('ok') else 'SELF_VERIFY_FAIL')"
+  CHECK: python3 -c "import json,subprocess; r=subprocess.run(['./bin/issueops','self-verify','--seed=100','--target-score=95','--llm-eval=false','--base-ref','bac123aac302fd423673e60be0268c06696f9e13','--json'],capture_output=True,text=True); d=json.loads(r.stdout); print('SELF_VERIFY_OK' if r.returncode==0 and d.get('ok') else 'SELF_VERIFY_FAIL')"
   EXPECT: SELF_VERIFY_OK
   EVIDENCE: SELF_VERIFY_OK
 - [x] G9: 지운 명령·플래그·필드 이름이 현행 표면에 남지 않는다
@@ -43,7 +43,7 @@
 - [x] G10: production 명령 handler로 prepare, release, replace preview, reseed, claim 인계 체인이 끝까지 동작하고, lease가 generation 1 active, 1 released, 2 claimable, 2 active 순서로 바뀌며 claim 뒤 holder가 claim actor와 같다
   CHECK: go test ./cmd/issueops/issueopsapp -run TestDirectHandoffChainThroughProductionCommands -count=1 -v
   EXPECT: /^--- PASS: TestDirectHandoffChainThroughProductionCommands/m
-  EVIDENCE: PASS | ok  	issueops/cmd/issueops/issueopsapp	1.278s
+  EVIDENCE: PASS | ok  	issueops/cmd/issueops/issueopsapp	1.166s
 - [x] G11: `.issueops` 문서 배치와 링크 계약에 위반이 없다. 단 새 main(6f1ad90d)이 이미 갖고 있는 `.issueops/issues/561/plan.md`의 깨진 링크 한 건은 이 사이클 범위 밖이라 예외로 둔다
   CHECK: python3 -B -c "import sys,io,contextlib; sys.path.insert(0,'skills/project-docs-optimize'); import scripts.check as c; o=io.StringIO(); e=io.StringIO(); f=contextlib.redirect_stdout(o); g=contextlib.redirect_stderr(e); f.__enter__(); g.__enter__(); rc=c.main(['--root','.','--mode','check']); g.__exit__(None,None,None); f.__exit__(None,None,None); v=[l for l in (o.getvalue()+e.getvalue()).splitlines() if l.startswith('- [')]; print('DOCS_OK' if v==['- [broken_link] .issueops/issues/561/plan.md: target does not exist: testing/unit-and-contract.md'] or (rc==0 and not v) else 'DOCS_VIOLATIONS '+' | '.join(v))"
   EXPECT: DOCS_OK
