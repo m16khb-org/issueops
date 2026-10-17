@@ -142,3 +142,9 @@ delta 프록시: `review-delta` fixture의 1라운드 지적 세 개에 대해, 
 첫 self-verify는 이 머신의 python3에 `pydantic`이 없어 `skills/slack-delegate` Python 테스트 import에서 실패했다(`ModuleNotFoundError`). 이번 변경과 무관한 환경 문제이며, `uv venv --python 3.13`에 `scripts/python_test_requirements.txt`를 설치한 저장소 밖 임시 환경을 PATH 앞에 두고 같은 명령을 다시 실행했다. 사용자 홈과 저장소는 바꾸지 않았다.
 
 구현 리뷰(1분 11초)는 첫 self-verify 시도(1분 16초, 위 환경 문제로 실패)와 같은 fingerprint에 대해 동시에 실행했다(`parallel_speed`). 통과한 두 번째 self-verify(venv 준비 포함 2분 36초)는 리뷰가 끝난 뒤 실행했으므로 실제로 겹친 시간은 첫 시도 구간 약 1분이다.
+
+## 발행
+
+- draft PR: https://github.com/m16khb-org/issueops/pull/567 (`main` ← `566-review-output-contract-and-pr-risk-rules`, label `enhancement`, assignee `m16khb`, `Closes #566`)
+- 게시 뒤 `remote verify-artifact`와 `gh pr view`로 draft 상태, head·base 브랜치, label, assignee, 연결 이슈, 본문을 다시 읽어 확인했다.
+- 구현 커밋 `d395ace2` 하나와 이 보고서 갱신 커밋으로 끝난다. 머지와 워크트리·브랜치 정리는 별도 승인 단계다.
