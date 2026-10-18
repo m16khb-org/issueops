@@ -17,10 +17,11 @@ description: Accepted structural decisions and their rationale; read before reve
 - **아키텍처:** 외부 하네스 코어(CLI/MCP/worker)에 얇은 host adapter를 얹는
   hybrid 구조. 근거는 [plugin vs external worker](adr/2026-05-25-plugin-vs-external-worker.md)
   와 [Go 언어 선택](adr/2026-05-25-go-language-selection.md) 결정에 있다.
-- **First-party hosts:** Codex, Claude Code, Omo native, omp가 같은 shared skill,
+- **First-party hosts:** Codex, Claude Code, Omo native, omp, opencode가 같은 shared skill,
   MCP, lifecycle activation contract를 사용한다. 근거는
-  [Omo native first-party host](adr/2026-08-12-omo-native-first-party-host.md)와
-  [omp first-party host](adr/2026-10-08-omp-first-party-host.md) 결정에 있다.
+  [Omo native first-party host](adr/2026-08-12-omo-native-first-party-host.md),
+  [omp first-party host](adr/2026-10-08-omp-first-party-host.md),
+  [opencode first-party host](adr/2026-10-18-opencode-v2-as-the-fifth-first-party-host.md) 결정에 있다.
 - **External integrations:** native activation, readiness, self-verification은
   standalone으로 유지한다. Native activation 뒤 Claude-scoped declarative catalog를
   non-fatal로 provision할 수 있는 좁은 예외는
@@ -37,6 +38,7 @@ and supersession rules live in [adr/README.md](adr/README.md).
 
 | Date | Decision | Record |
 |---|---|---|
+| 2026-10-18 | opencode v2 is the fifth first-party host (`codex, claude, omo, omp, opencode`); only a `--standalone` session, proven in core by its own `opencode serve --stdio` argv, can own a lease or `mcp authorize`; a context-hook plugin injects the catalog on every model call; opencode efforts are model-defined variants | [record](adr/2026-10-18-opencode-v2-as-the-fifth-first-party-host.md) |
 | 2026-10-15 | Remove the Orca integration and execution mode selection: direct is the only execution, `execution prepare --id ID` takes no mode, the resume and mode-switch commands are deleted, and sessions hand off only through release, `execution replace --preview`, and `claim --claim-current-token`; supersedes in part the auto execution mode of 2026-09-05 and the Orca judgement of 2026-07-19 | [record](adr/2026-10-15-remove-orca-integration-and-execution-mode-selection.md) |
 | 2026-10-14 | Entering pr seals the canonical HEAD as `pr_head`; `execution complete` refuses a final head that changed anything but the verification report since; re-running `phase --to pr` from pr passes the same strict gate and reseals | [record](adr/2026-10-14-completion-checks-the-verified-pr-head.md) |
 | 2026-10-14 | `gates lint` / MCP `gates_lint` checks gate specs, plan gate lines, and ledgers without running them (spec rules, the command policy check would apply, markdown backticks, RE2 EXPECT); plans write gates as one-line specs and lint before staging; the author sweeps stale text, prescribed facts, and gates before each delta review | [record](adr/2026-10-14-gates-lint-and-pre-delta-author-sweep.md) |

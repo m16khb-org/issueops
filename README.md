@@ -34,7 +34,7 @@ IssueOps는 이 내용을 caution(함정과 해결을 적은 주의 기록)과 A
 
 에이전트가 작업하다 함정을 만나면 caution을, 결정을 내리면 ADR을 한 건씩 `.issueops/cautions/`와
 `.issueops/adr/`에 남깁니다. 기록은 마크다운 파일이라 코드와 함께 커밋되고 PR에서 리뷰를 받습니다.
-팀원이 `git pull`로 기록을 받으면, Codex, Claude Code, Omo native, omp 중 어느 호스트를 쓰든 같은
+팀원이 `git pull`로 기록을 받으면, Codex, Claude Code, Omo native, omp, opencode 중 어느 호스트를 쓰든 같은
 기록을 읽습니다. 맨 위 그림이 이 흐름입니다. 그림에 없는 단계가 둘 있습니다. 팀원의 에이전트는
 기록 전체가 아니라 `route-docs`가 작업에 맞춰 고른 기록만 읽고, 그 작업에서 새로 알게 된 것도 다시
 기록으로 남깁니다. 그래서 기록은 작업이 거듭될수록 쌓입니다.
@@ -151,14 +151,14 @@ PR, 머지 후 결과 보고가 모두 그 이슈 번호에 묶입니다. cautio
 
 ## 사이클이 함께 맡는 일
 
-같은 사이클은 Codex, Claude Code, Omo native, omp 중 어느 호스트에서 이어받아도 같은 실행 계약과
-규칙으로 진행됩니다. 네 호스트는 공통 CLI·MCP·스킬을 쓰고, 작업 상태와 검증 근거는 호스트 밖 로컬
+같은 사이클은 Codex, Claude Code, Omo native, omp, opencode 중 어느 호스트에서 이어받아도 같은 실행 계약과
+규칙으로 진행됩니다. 다섯 호스트는 공통 CLI·MCP·스킬을 쓰고, 작업 상태와 검증 근거는 호스트 밖 로컬
 SQLite에 남습니다. 기록을 읽고 남기게 하는 게이트 말고도 IssueOps는 다음 일을 처리합니다.
 
 - **세션을 바꿔도 이어서 작업:** 연결된 이슈·브랜치·worktree·계획과 다음 단계를 조회합니다.
 - **검증한 변경만 발행:** 리뷰와 문서 판정을 변경 집합의 fingerprint에 묶어, 수정 뒤에는 다시 검증하게 합니다.
 - **중복 실행과 원격 생성 방지:** 실행 권한(lease), 세대 번호, CAS로 변경 주체를 확인하고 응답이 불분명하면 복구 절차로 안내합니다.
-- **호스트 간 규칙 공유:** `skills/` 원본과 `.issueops/` 운영 문서를 Codex·Claude Code·Omo native·omp에서 함께 사용합니다.
+- **호스트 간 규칙 공유:** `skills/` 원본과 `.issueops/` 운영 문서를 Codex·Claude Code·Omo native·omp·opencode에서 함께 사용합니다.
 
 PR/MR 발행 완료, 머지, 정리는 별도 단계입니다. 에이전트는 사용자가 요청한 범위까지
 진행하며, 발행만 요청한 작업을 임의로 머지하거나 삭제하지 않습니다.
@@ -219,19 +219,20 @@ cd issueops
 | Claude Code | `~/.claude/skills/`, user-scope MCP, `SessionStart`·`SubagentStart` hook |
 | Omo native | `~/.omo/agent/skills/`, `~/.omo/mcp.json`, lifecycle extension |
 | omp | `~/.omp/agent/skills/`, `~/.omp/agent/mcp.json`, `~/.omp/agent/extensions/issueops.js` |
+| opencode | `~/.config/opencode/skills/`, `~/.config/opencode/opencode.json`의 `mcp.servers.issueops`, `~/.config/opencode/plugins/issueops.js`(`XDG_CONFIG_HOME`을 따릅니다). lease는 `opencode --standalone` 세션만 가질 수 있습니다 |
 | agy(Antigravity CLI) | `~/.gemini/config/skills/`, `~/.gemini/config/mcp_config.json`. 항상 stdio로 연결하고 hook은 없습니다 |
-| MCP 서비스 | macOS LaunchAgent `io.issueops.mcp` 또는 Linux systemd user `issueops-mcp.service`. `http://127.0.0.1:47831/mcp` 하나를 Codex·Claude Code·Omo native·omp가 함께 씁니다 |
+| MCP 서비스 | macOS LaunchAgent `io.issueops.mcp` 또는 Linux systemd user `issueops-mcp.service`. `http://127.0.0.1:47831/mcp` 하나를 Codex·Claude Code·Omo native·omp·opencode가 함께 씁니다 |
 | 실행 상태 | `~/.local/state/issueops/` 아래 SQLite 저장소. `ISSUEOPS_STATE_DIR`로 격리 가능 |
 | 프로젝트 지식 | 대상 저장소의 `AGENTS.md`·`.issueops/`. 명시적인 project bootstrap으로 생성 |
 
 스킬은 복사하지 않고 이 체크아웃의 `skills/`를 참조합니다. 설치 후에도 체크아웃을 유지하세요.
 기본 설치는 대상 프로젝트에 파일을 만들지 않습니다. `--project-local`을 명시하면 project MCP 설정을
-씁니다. `.mcp.json`, `.omo/mcp.json`, `.omp/mcp.json`은 `--mcp-transport=stdio`일 때만 만들고, 기본
+씁니다. `.mcp.json`, `.omo/mcp.json`, `.omp/mcp.json`, `.opencode/opencode.json`은 `--mcp-transport=stdio`일 때만 만들고, 기본
 HTTP 연결에서는 사용자 홈의 항목을 그대로 씁니다. agy용 `.agents/mcp_config.json`은 연결 방식과
 관계없이 씁니다. 스킬 링크는 어느 경우에도 사용자 홈에만 둡니다.
 
 macOS와 Linux의 기본 MCP 연결은 공용 HTTP 서비스입니다(`--mcp-transport=http`). 설치기는
-`~/.local/state/issueops/mcp-http/bearer`에 인증 토큰을 만들고, 네 호스트 설정의 issueops 항목만
+`~/.local/state/issueops/mcp-http/bearer`에 인증 토큰을 만들고, 다섯 호스트 설정의 issueops 항목만
 URL과 `Authorization` 헤더로 바꾼 뒤 파일 권한을 0600으로 둡니다. 호스트 세션마다 `issueops mcp`를
 따로 띄우려면 `./install.sh --mcp-transport=stdio`로 설치합니다. 서비스 상태는
 `io mcp service status --json`으로 확인합니다. HTTP로 workspace 도구를 부르는 세션은 먼저
@@ -341,7 +342,7 @@ worktree의 새 Herdr 세션으로 인계합니다. Herdr를 쓸 수 없으면 �
 판단하지 않으며, 런처를 설치하거나 서버를 시작하지도 않습니다. cmux는 사용자가 지정했을 때만 씁니다.
 사용자가 지정한 세션·보류·종료점이 이 자동 선택보다 우선합니다.
 
-역할별 model·effort는 네 호스트 모두 사용자 전체(global)나 저장소 하나(local) 단위로 바꿀 수
+역할별 model·effort는 다섯 호스트 모두 사용자 전체(global)나 저장소 하나(local) 단위로 바꿀 수
 있습니다. 우선순위는 필드마다 명시 플래그 > local > global > 기본값입니다.
 
 ```bash
@@ -356,7 +357,7 @@ issueops model resolve --host claude --role research --json  # 최종 값과 빈
 
 자동 인계 명령은 Claude Code에 `--dangerously-skip-permissions`, Codex에
 `--dangerously-bypass-approvals-and-sandbox`, Omo native에 `--permission-preset full-access`,
-omp에 `--auto-approve`를 전달합니다. 호스트의 권한 확인을 생략하는 옵션이므로 인계할 작업 범위를
+omp에 `--auto-approve`를 전달하고, opencode는 `opencode --standalone --auto`로 엽니다. 호스트의 권한 확인을 생략하는 옵션이므로 인계할 작업 범위를
 먼저 정하세요. IssueOps 자체의 실행 권한·세대·workspace·원격 쓰기 검사는 유지됩니다. 인계 명령의
 수락과 실제 claim·작업 완료는 각각 다른 증거로 기록합니다.
 
@@ -372,6 +373,7 @@ flowchart LR
     Claude["Claude Code"] --> Host
     Omo["Omo native"] --> Host
     Omp["omp"] --> Host
+    Opencode["opencode"] --> Host
     Shell["Human shell"] --> Surface["issueops<br/>CLI · 공용 HTTP MCP · stdio MCP"]
     Host --> Surface
     Surface --> Core["Host-neutral Go core"]

@@ -1,9 +1,10 @@
 ---
 name: hosts.md
-description: Codex, Claude, Omo native, and omp skills, MCP registration, and lifecycle hook operations.
+description: Codex, Claude, Omo native, omp, and opencode skills, MCP registration, and lifecycle hook operations.
 ---
 
 # Host Operations
+Per-host sections follow; opencode is in [opencode-host.md](opencode-host.md).
 
 ## Codex
 
@@ -88,7 +89,7 @@ Claude project-local hooks can be committed, so do not create `.claude/settings.
 
 `configs/upstream.json` declares optional third-party plugins and Git skills
 that `issueops install` (and therefore `update`) provisions for Claude Code
-when missing. Codex, Omo, and omp receive only the first-party `skills/` links from
+when missing. Codex, Omo, omp, and opencode receive only the first-party `skills/` links from
 this installer path. Existing upstream entries are skipped, never reinstalled
 or overwritten. The object below shows the schema; the complete catalog
 currently contains four plugins and one skill.

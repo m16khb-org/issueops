@@ -23,7 +23,7 @@ guide that matches the task.
 | IssueOps provider publication, branch linkage | [issueops-providers.md](operations/guides/issueops-providers.md) |
 | IssueOps execution lifecycle, recovery, sync-base, session handoff, ten-stage operation | [issueops-execution.md](operations/guides/issueops-execution.md) |
 | Direct CLI, policy, guard, state, loop, MCP cleanup, worker, audit | [cli-and-mcp.md](operations/guides/cli-and-mcp.md) |
-| Codex/Claude/Omo/omp native skills, MCP registration, lifecycle hooks | [hosts.md](operations/guides/hosts.md) |
+| Codex/Claude/Omo/omp/opencode native skills, MCP registration, lifecycle hooks | [hosts.md](operations/guides/hosts.md), opencode detail in [opencode-host.md](operations/guides/opencode-host.md) |
 | Opt-in cmux launch of a native host into an existing canonical worktree | [cmux-handoff.md](operations/guides/cmux-handoff.md) |
 | Project bootstrap, project-doc routing, MCP document updates | [project-docs.md](operations/guides/project-docs.md) |
 | Web-fetch deterministic benchmark and opt-in live parity | [web-fetch-live-parity.md](operations/guides/web-fetch-live-parity.md) |
@@ -64,7 +64,7 @@ Skill-quality scorecards and dogfood evaluations are research records under
    protection. Failed checks, new commits, or conflicts reopen the cycle through
    `execution replace --reseed` (conflicts first through `execution sync-base`).
 2. MCP: on darwin/linux, `install`/`update`/`bootstrap` default to
-   `--mcp-transport=http`. Codex, Claude Code, Omo, and omp then connect directly to
+   `--mcp-transport=http`. Codex, Claude Code, Omo, omp, and opencode then connect directly to
    one shared Streamable HTTP service at `http://127.0.0.1:47831/mcp`, sending the
    bearer from `<state>/mcp-http/bearer` (0600). Each host config holds only the
    issueops entry (`url` + `Authorization` header), written 0600. `issueops mcp
@@ -108,7 +108,7 @@ Skill-quality scorecards and dogfood evaluations are research records under
    and unmet gates add `gates_incomplete:<file>`. See
    [operations/guides/cli-and-mcp.md](operations/guides/cli-and-mcp.md).
 6. Cross-session channels: `issueops channel send/recv` gives Codex,
-   Claude Code, Omo, and omp sessions a durable shared mailbox over issueops state —
+   Claude Code, Omo, omp, and opencode sessions a durable shared mailbox over issueops state —
    the transport for front/server-style multi-session coordination.
    `recv --wait --since <id>` is the blocking consumer; MCP exposes
    `channel_send`/`channel_recv` with the same contract.

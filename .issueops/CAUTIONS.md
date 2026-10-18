@@ -40,7 +40,7 @@ lesson으로 분리됐고, 여기서는 핵심 한 줄과 탐색 링크만 둔�
   root `GATES.md`·`gates/*.md`는 더 이상 탐색하지 않는다)
   ([2026-08-26 lesson](cautions/2026-08-26-gates-root-ledger-worktree-conflicts.md)).
 - self-verify는 외부 검증 메커니즘을 명시해야 하고 문서만 통과하는 가짜 안정성을 경계한다.
-- Omo·omp MCP catalog는 server config hash로 장기 cache되므로 installer가
+- Omo·omp MCP catalog는 server config hash로 장기 cache되고 opencode는 server config가 바뀔 때 재연결하므로 installer가
   advertised catalog SHA를 config env에 포함해 binary-only schema update도
   fresh session에서 재조회되게 한다
   ([install.md](operations/install.md)).
@@ -76,6 +76,7 @@ footer; older notes also live in `archive/cautions-incidents.md`.
 
 | Date | Lesson |
 |---|---|
+| 2026-10-18 | [Go 테스트·self-verify를 도는 게이트 CHECK는 `LANG`과 CI와 같은 Python venv가 있어야 통과한다](cautions/2026-10-18-gate-checks-that-run-go-tests-or-self-verify-need-lang-and-t.md) |
 | 2026-10-15 | [Linux에서 병렬 테스트가 방금 쓴 스크립트를 exec하면 text file busy(ETXTBSY)로 확률적으로 실패하고 macOS에서는 재현되지 않는다](cautions/2026-10-15-linux-exec-text-file-busy.md) |
 | 2026-10-14 | [`execution complete`는 봉인하는 head가 검증받은 변경 집합인지 보지 않으므로, 보고서를 쓰기 전에 `_stale`·PR 뒤 코드 커밋을 확인한다](cautions/2026-10-14-completion-does-not-check-the-head-was-verified.md) |
 | 2026-10-13 | [변이 대응 테스트는 호출자 경계와 호출자가 만들 수 있는 입력만 써야 하고, gremlins v0.6.0은 `issueops/` 아래 변이를 NOT COVERED로 잘못 보고한다](cautions/2026-10-13-mutation-tests-must-stay-on-the-consumer-boundary.md) |
