@@ -1,11 +1,12 @@
 package trace
 
 const (
-	InputFormatIssueOps   = "issueops"
-	InputFormatClaudeJSON = "claude-stream"
-	InputFormatCodexExec  = "codex-exec"
-	InputFormatOmoJSON    = "omo-json"
-	InputFormatOmpJSON    = "omp-json"
+	InputFormatIssueOps     = "issueops"
+	InputFormatClaudeJSON   = "claude-stream"
+	InputFormatCodexExec    = "codex-exec"
+	InputFormatOmoJSON      = "omo-json"
+	InputFormatOmpJSON      = "omp-json"
+	InputFormatOpencodeJSON = "opencode-json"
 )
 
 const (

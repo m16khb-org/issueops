@@ -90,7 +90,7 @@ func CodexRoleFile(agent RoleAgent) (string, error) {
 
 // RoleAgentArgs renders the launch arguments that inject agents into a host
 // session: claude gets one --agents JSON, codex gets one -c override per role
-// file that writeRoleFile stores. omo and omp get none.
+// file that writeRoleFile stores. omo, omp, and opencode get none.
 func RoleAgentArgs(host string, agents []RoleAgent, writeRoleFile func(content string) (string, error)) ([]string, error) {
 	if len(agents) == 0 {
 		return nil, nil
@@ -146,6 +146,13 @@ func BuildPrintArgv(host, model, effort string) []string {
 			argv = append(argv, "--thinking", effort)
 		}
 		return argv
+	case "opencode":
+		// A private --standalone server keeps the run off the shared service.
+		// The prompt goes on stdin: positional words with spaces gain quotes.
+		if effort != "" {
+			model += "#" + effort
+		}
+		return []string{"opencode", "run", "--standalone", "--model", model}
 	default:
 		return nil
 	}

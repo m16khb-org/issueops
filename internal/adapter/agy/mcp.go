@@ -10,7 +10,7 @@ const agyMCPCatalogSHA256Env = "ISSUEOPS_MCP_CATALOG_SHA256"
 
 func (installer Installer) writeAgyUserMCP(path string, req port.NativeInstallRequest) (port.InstallFile, error) {
 	file := port.InstallFile{Path: path, Kind: "agy_user_mcp_config"}
-	config, err := installer.deps.MergeJSONMapFile(path, "mcpServers", "issueops", req.DryRun, func() (map[string]any, error) {
+	config, err := installer.deps.MergeJSONMapFile(path, []string{"mcpServers"}, "issueops", req.DryRun, func() (map[string]any, error) {
 		return installer.agyUserMCPServer(req)
 	})
 	if err != nil {

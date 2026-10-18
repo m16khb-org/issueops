@@ -20,7 +20,18 @@ func ExecutableMatchesHost(host, executable string) bool {
 		return base == "omo"
 	case "omp":
 		return base == "omp"
+	case "opencode":
+		return base == "opencode"
 	default:
 		return false
 	}
+}
+
+// OpencodeConfigRoot is the opencode user config directory: an absolute
+// XDG_CONFIG_HOME wins over $HOME/.config, as `opencode debug paths` resolves it.
+func OpencodeConfigRoot(home, xdgConfigHome string) string {
+	if filepath.IsAbs(xdgConfigHome) {
+		return filepath.Join(xdgConfigHome, "opencode")
+	}
+	return filepath.Join(home, ".config", "opencode")
 }

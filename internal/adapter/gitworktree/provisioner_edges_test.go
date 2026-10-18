@@ -307,7 +307,7 @@ func TestProbeAccessRejectsUnknownHostOnlyWhenAccessIsDenied(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err := testProvisioner().ProbeAccess(t.Context(), req, "vim")
-	if err == nil || !strings.Contains(err.Error(), "host must be codex, claude, omo, or omp") {
+	if err == nil || !strings.Contains(err.Error(), "host must be codex, claude, omo, omp, or opencode") {
 		t.Fatalf("error = %v", err)
 	}
 }

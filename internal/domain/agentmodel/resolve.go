@@ -28,7 +28,7 @@ type field struct{ value, source string }
 func Resolve(in ResolveInput) (contract.Resolution, error) {
 	host := strings.ToLower(strings.TrimSpace(in.Host))
 	if !KnownHost(host) {
-		return contract.Resolution{}, fmt.Errorf("unknown host %q (use claude, codex, omo, or omp)", in.Host)
+		return contract.Resolution{}, fmt.Errorf("unknown host %q (use claude, codex, omo, omp, or opencode)", in.Host)
 	}
 	if !knownRole(in.Role) {
 		return contract.Resolution{}, fmt.Errorf("unknown role %q (use %s)", in.Role, joinRoles())
@@ -82,7 +82,7 @@ func resolveRole(host string, role contract.Role, in ResolveInput) (field, field
 	}
 	if effort.source == "" && ok {
 		effort = field{builtin.Effort, contract.SourceDefault}
-		if strings.TrimSpace(in.Tier) == "docs-only" && (role == contract.RolePlanReview || role == contract.RoleDiffReview) {
+		if strings.TrimSpace(in.Tier) == "docs-only" && (role == contract.RolePlanReview || role == contract.RoleDiffReview) && !modelDefinedEffort(host) {
 			effort.value = docsOnlyReviewEffort
 		}
 	}
@@ -117,6 +117,8 @@ func hostLayers(cfg contract.Config, host string) map[contract.Role]contract.Lay
 		return cfg.Omo
 	case "omp":
 		return cfg.Omp
+	case "opencode":
+		return cfg.Opencode
 	default:
 		return nil
 	}

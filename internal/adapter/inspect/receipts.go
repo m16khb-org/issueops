@@ -29,10 +29,11 @@ var (
 	versionPattern  = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.+-]*)?`) })
 	schemePattern   = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*:`) })
 	hostBinaryNames = map[string]string{
-		inspectcontract.HostCodex:  "codex",
-		inspectcontract.HostClaude: "claude",
-		inspectcontract.HostOmo:    "omo",
-		inspectcontract.HostOmp:    "omp",
+		inspectcontract.HostCodex:    "codex",
+		inspectcontract.HostClaude:   "claude",
+		inspectcontract.HostOmo:      "omo",
+		inspectcontract.HostOmp:      "omp",
+		inspectcontract.HostOpencode: "opencode",
 	}
 )
 

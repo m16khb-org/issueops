@@ -51,12 +51,13 @@ func (fixture *activationBackendFixture) Abort(_ context.Context, request activa
 type activationReadbackFixture struct{}
 
 func (activationReadbackFixture) Verify(context.Context, string, string) (activationport.Readback, error) {
-	evidence := make([]activationport.Evidence, 0, 9)
+	evidence := make([]activationport.Evidence, 0, 11)
 	for _, item := range [][2]string{
 		{"codex", "mcp"}, {"codex", "hooks"},
 		{"claude", "mcp"}, {"claude", "hooks"},
 		{"omo", "mcp"}, {"omo", "hooks"},
 		{"omp", "mcp"}, {"omp", "hooks"},
+		{"opencode", "mcp"}, {"opencode", "hooks"},
 		{"agy", "mcp"},
 	} {
 		evidence = append(evidence, activationport.Evidence{

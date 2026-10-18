@@ -35,6 +35,7 @@ func newHostFixture(t *testing.T) hostFixture {
 		filepath.Join(fixture.home, ".claude", "skills"),
 		filepath.Join(fixture.home, ".omo", "agent", "skills"),
 		filepath.Join(fixture.home, ".omp", "agent", "skills"),
+		filepath.Join(fixture.home, ".config", "opencode", "skills"),
 	} {
 		if err := os.MkdirAll(skills, 0o755); err != nil {
 			t.Fatal(err)
@@ -55,6 +56,8 @@ func (fixture hostFixture) writeHTTPConfigs(t *testing.T, url, bearer string) {
 	writeTestFile(t, filepath.Join(fixture.home, ".claude.json"), `{"numStartups":3,"mcpServers":{"other":{"command":"other"},"issueops":`+entry+`}}`)
 	writeTestFile(t, filepath.Join(fixture.home, ".omo", "mcp.json"), `{"mcpServers":{"issueops":`+entry+`}}`)
 	writeTestFile(t, filepath.Join(fixture.home, ".omp", "agent", "mcp.json"), `{"mcpServers":{"issueops":`+entry+`}}`)
+	opencodeEntry := `{"type":"remote","url":"` + url + `","headers":{"Authorization":"Bearer ` + bearer + `"},"oauth":false,"codemode":false}`
+	writeTestFile(t, filepath.Join(fixture.home, ".config", "opencode", "opencode.json"), `{"model":"m","mcp":{"servers":{"issueops":`+opencodeEntry+`}}}`)
 }
 
 func (fixture hostFixture) observer(root string) Observer {
@@ -77,8 +80,8 @@ func (fixture hostFixture) inspect(t *testing.T, options inspectcontract.Options
 	for _, host := range info.Integration.Hosts {
 		hosts[host.Host] = host
 	}
-	if len(hosts) != 4 || len(info.Integration.Hosts) != 4 {
-		t.Fatalf("expected codex, claude, omo, omp exactly once: %+v", info.Integration.Hosts)
+	if len(hosts) != 5 || len(info.Integration.Hosts) != 5 {
+		t.Fatalf("expected codex, claude, omo, omp, opencode exactly once: %+v", info.Integration.Hosts)
 	}
 	return hosts
 }
@@ -119,8 +122,29 @@ func TestHostsDefaultChecksFilesOnlyAndLeavesLiveObservationsNotChecked(t *testi
 		hosts["claude"].ConfigPath != filepath.Join(fixture.home, ".claude.json") ||
 		hosts["omo"].SkillPath != filepath.Join(fixture.home, ".omo", "agent", "skills", testSkill) ||
 		hosts["omp"].ConfigPath != filepath.Join(fixture.home, ".omp", "agent", "mcp.json") ||
-		hosts["omp"].SkillPath != filepath.Join(fixture.home, ".omp", "agent", "skills", testSkill) {
+		hosts["omp"].SkillPath != filepath.Join(fixture.home, ".omp", "agent", "skills", testSkill) ||
+		hosts["opencode"].ConfigPath != filepath.Join(fixture.home, ".config", "opencode", "opencode.json") ||
+		hosts["opencode"].SkillPath != filepath.Join(fixture.home, ".config", "opencode", "skills", testSkill) {
 		t.Fatalf("unexpected host paths: %+v", hosts)
+	}
+}
+
+func TestHostsOpencodeReadsMCPServersLayout(t *testing.T) {
+	fixture := newHostFixture(t)
+	config := filepath.Join(fixture.home, ".config", "opencode", "opencode.json")
+	writeTestFile(t, config, `{"mcp":{"servers":{"issueops":{"type":"local","command":["/bin/issueops","mcp"],"environment":{"ISSUEOPS_ROOT":"/r"},"codemode":false}}}}`)
+	host := fixture.inspect(t, inspectcontract.Options{})["opencode"]
+	if host.Transport != "stdio" {
+		t.Fatalf("local entry = %+v", host)
+	}
+	requireStatus(t, "opencode configured", host.Configured, "verified", "")
+	for body, reason := range map[string]string{
+		`{"mcpServers":{"issueops":{"type":"remote","url":"http://127.0.0.1:1/mcp"}}}`:    "entry_missing",
+		`{"mcp":{"servers":{"issueops":{"type":"http","url":"http://127.0.0.1:1/mcp"}}}}`: "entry_transport_unknown",
+		`{"mcp":{"servers":{"issueops":{}},"servers":{}}}`:                                "entry_duplicate",
+	} {
+		writeTestFile(t, config, body)
+		requireStatus(t, "opencode "+reason, fixture.inspect(t, inspectcontract.Options{})["opencode"].Configured, "failed", reason)
 	}
 }
 

@@ -46,7 +46,7 @@ func modelWarnings(host, model string, codexCatalog []string) []string {
 // ValidateConfig checks a decoded settings file. The zero Config stands for
 // an absent file and is valid.
 func ValidateConfig(cfg contract.Config) error {
-	if cfg.Version == 0 && cfg.Claude == nil && cfg.Codex == nil && cfg.Omo == nil && cfg.Omp == nil {
+	if cfg.Version == 0 && cfg.Claude == nil && cfg.Codex == nil && cfg.Omo == nil && cfg.Omp == nil && cfg.Opencode == nil {
 		return nil
 	}
 	if cfg.Version != contract.ConfigVersion {

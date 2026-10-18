@@ -99,11 +99,14 @@ func writeNativeIntegrationFixture(t *testing.T, root, home string) {
 		filepath.Join(root, "configs", "omo", "issueops.js"),
 		filepath.Join(root, "configs", "omp", "mcp.json"),
 		filepath.Join(root, "configs", "omp", "issueops.js"),
+		filepath.Join(root, "configs", "opencode", "opencode.json"),
+		filepath.Join(root, "configs", "opencode", "issueops.js"),
 		filepath.Join(root, "skills", "shared", "SKILL.md"),
 		filepath.Join(home, ".codex", "skills", "shared", "SKILL.md"),
 		filepath.Join(home, ".claude", "skills", "shared", "SKILL.md"),
 		filepath.Join(home, ".omo", "agent", "skills", "shared", "SKILL.md"),
 		filepath.Join(home, ".omp", "agent", "skills", "shared", "SKILL.md"),
+		filepath.Join(home, ".config", "opencode", "skills", "shared", "SKILL.md"),
 	} {
 		writeFileForWrapperTest(t, path, "ok\n")
 	}
@@ -113,6 +116,8 @@ func writeNativeIntegrationFixture(t *testing.T, root, home string) {
 	writeFileForWrapperTest(t, filepath.Join(home, ".omo", "extensions", "issueops.js"), hostprotocol.OmoLifecycleExtension(filepath.Join(root, "bin", "issueops")))
 	writeFileForWrapperTest(t, filepath.Join(home, ".omp", "agent", "mcp.json"), fmt.Sprintf(`{"mcpServers":{"issueops":{"type":"stdio","command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, filepath.Join(root, "bin", "issueops"), root))
 	writeFileForWrapperTest(t, filepath.Join(home, ".omp", "agent", "extensions", "issueops.js"), hostprotocol.OmpLifecycleExtension(filepath.Join(root, "bin", "issueops")))
+	writeFileForWrapperTest(t, filepath.Join(home, ".config", "opencode", "opencode.json"), fmt.Sprintf(`{"mcp":{"servers":{"issueops":{"type":"local","command":[%q,"mcp"],"environment":{"ISSUEOPS_ROOT":%q},"codemode":false}}}}`, filepath.Join(root, "bin", "issueops"), root))
+	writeFileForWrapperTest(t, filepath.Join(home, ".config", "opencode", "plugins", "issueops.js"), hostprotocol.OpencodeLifecyclePlugin(filepath.Join(root, "bin", "issueops")))
 }
 
 func writeFileForWrapperTest(t *testing.T, path, body string) {

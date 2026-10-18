@@ -199,8 +199,11 @@ func workspaceRelaunchCommand(host, sourceRoot, root, base string) (string, erro
 		return "cd " + landing + " && omo", nil
 	case "omp":
 		return "cd " + landing + " && omp", nil
+	case "opencode":
+		// Only a --standalone session can own the lease it resumes.
+		return "cd " + landing + " && opencode --standalone", nil
 	default:
-		return "", fmt.Errorf("native actor host must be codex, claude, omo, or omp")
+		return "", fmt.Errorf("native actor host must be codex, claude, omo, omp, or opencode")
 	}
 }
 

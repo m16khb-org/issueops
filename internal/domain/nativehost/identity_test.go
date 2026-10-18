@@ -25,3 +25,20 @@ func TestExecutableMatchesHost(t *testing.T) {
 		}
 	}
 }
+
+func TestExecutableMatchesHostOpencode(t *testing.T) {
+	for _, tc := range []struct {
+		executable string
+		want       bool
+	}{
+		{"/opt/homebrew/Cellar/opencode-v2/2.0.32/bin/opencode", true},
+		{" /opt/tools/OPENCODE.EXE ", true},
+		{"opencode", true},
+		{"/opt/homebrew/bin/opencode-wrapper", false},
+		{"/Users/u/.bun/bin/omp", false},
+	} {
+		if got := ExecutableMatchesHost("opencode", tc.executable); got != tc.want {
+			t.Errorf("ExecutableMatchesHost(opencode, %q) = %v, want %v", tc.executable, got, tc.want)
+		}
+	}
+}

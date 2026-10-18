@@ -208,7 +208,7 @@ func TestListLeaseHolderIndexesAcceptsEverySupportedHostAndRejectsOthers(t *test
 		}
 		return rows[0].Host, nil
 	}
-	for _, host := range []string{"codex", "claude", "omo", "omp"} {
+	for _, host := range []string{"codex", "claude", "omo", "omp", "opencode"} {
 		if got, err := put(t, host); err != nil || got != host {
 			t.Errorf("host %q: got %q, %v; want accepted", host, got, err)
 		}

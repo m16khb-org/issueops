@@ -10,6 +10,8 @@ import (
 )
 
 func TestInstallRootsAndAllHostReadbacksStayIsolated(t *testing.T) {
+	// The opencode config root follows XDG_CONFIG_HOME; keep it under each temp home.
+	t.Setenv("XDG_CONFIG_HOME", "")
 	makeDeps := func() (installcli.Deps, string, string, string) {
 		root, home, state := t.TempDir(), t.TempDir(), filepath.Join(t.TempDir(), "state")
 		skill := filepath.Join(root, "skills", "fixture", "SKILL.md")
@@ -36,11 +38,11 @@ func TestInstallRootsAndAllHostReadbacksStayIsolated(t *testing.T) {
 		}
 		req := entry.deps.NativeInstallRequest(entry.deps.IssueOpsRoot(), entry.home, filepath.Join(entry.home, ".codex"), filepath.Join(entry.root, "bin", "issueops"))
 		result, err := entry.deps.InstallNative(req)
-		if err != nil || !result.OK || len(result.Hosts) != 5 {
+		if err != nil || !result.OK || len(result.Hosts) != 6 {
 			t.Fatalf("install=%+v err=%v", result, err)
 		}
 		evidence, err := entry.deps.ActivationReadback(req).Verify(context.Background(), req.Root, req.BinPath)
-		if err != nil || len(evidence.Evidence) != 9 {
+		if err != nil || len(evidence.Evidence) != 11 {
 			t.Fatalf("readback=%+v err=%v", evidence, err)
 		}
 		for _, item := range evidence.Evidence {

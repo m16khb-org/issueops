@@ -7,7 +7,7 @@ generation, native process receipt, and canonical cwd are the authority; a
 source checkout, branch name, or host session alone is not.
 
 Preparation provisions the sibling worktree and grants generation 1 to the
-calling Codex, Claude, Omo, or omp session. A different session takes over only
+calling Codex, Claude, Omo, omp, or opencode session. A different session takes over only
 through the release, replace, and claim chain described below.
 
 ## Prepare
@@ -23,7 +23,7 @@ issueops execution prepare --id "$ISSUEOPS_ID" $ACTOR_FLAGS --confirm --json
 `ACTOR_FLAGS` are the exact native process identity and cwd:
 
 ```text
---host codex|claude|omo|omp --session-id ID [--agent-id ID]
+--host codex|claude|omo|omp|opencode --session-id ID [--agent-id ID]
 --session-pid PID --session-started-at RFC3339
 --session-executable PATH --cwd PATH
 ```
@@ -39,6 +39,14 @@ omp sessions use `ISSUEOPS_OMP_SESSION_ID`, which the issueops omp extension
 exports from the main session, and a live receipt from the nearest `omp` or
 `bun` ancestor (omp runs as a bun script); that receipt is accepted only for
 `--host omp`. Omo and omp session ids together are ambiguous and fail closed.
+opencode sessions use `OPENCODE_SESSION_ID`, which opencode exports to each
+session's shell tools, and a live receipt from the nearest `opencode`
+ancestor, accepted only for `--host opencode`. Lease ownership additionally
+requires the receipt process to be the standalone server: claim, prepare,
+mutation authority, and `mcp authorize` read its live arguments and accept only
+`opencode serve --stdio`, which `opencode --standalone` runs. A session of the
+shared background service (`opencode serve --service`) is refused, so open
+the owner session with `opencode --standalone`.
 
 The provisioned path is the fixed sibling
 `${repo}.worktrees/<branch-with-slashes-replaced>`. Preparation creates or

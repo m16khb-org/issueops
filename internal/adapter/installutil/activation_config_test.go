@@ -249,7 +249,7 @@ func TestRemoveJSONMapEntry(t *testing.T) {
 		}
 		return path
 	}
-	config, removed, err := RemoveJSONMapEntry(write("a.json", `{"theme":"dark","mcpServers":{"issueops":{"c":1},"other":{"c":2}}}`), "mcpServers", "issueops")
+	config, removed, err := RemoveJSONMapEntry(write("a.json", `{"theme":"dark","mcpServers":{"issueops":{"c":1},"other":{"c":2}}}`), []string{"mcpServers"}, "issueops")
 	if err != nil || !removed {
 		t.Fatalf("removed=%v err=%v", removed, err)
 	}
@@ -263,17 +263,17 @@ func TestRemoveJSONMapEntry(t *testing.T) {
 		"entry absent":  write("noentry.json", `{"mcpServers":{"other":{}}}`),
 		"parent absent": write("noparent.json", `{"x":1}`),
 	} {
-		config, removed, err := RemoveJSONMapEntry(path, "mcpServers", "issueops")
+		config, removed, err := RemoveJSONMapEntry(path, []string{"mcpServers"}, "issueops")
 		if config != nil || removed || err != nil {
 			t.Fatalf("%s: config=%v removed=%v err=%v", name, config, removed, err)
 		}
 	}
 	for name, content := range map[string]string{"malformed": "{", "null": "null"} {
-		if _, removed, err := RemoveJSONMapEntry(write(name+".json", content), "mcpServers", "issueops"); err == nil || removed {
+		if _, removed, err := RemoveJSONMapEntry(write(name+".json", content), []string{"mcpServers"}, "issueops"); err == nil || removed {
 			t.Fatalf("%s: removed=%v err=%v", name, removed, err)
 		}
 	}
-	if _, _, err := RemoveJSONMapEntry(dir, "mcpServers", "issueops"); err == nil {
+	if _, _, err := RemoveJSONMapEntry(dir, []string{"mcpServers"}, "issueops"); err == nil {
 		t.Fatal("directory read error was swallowed")
 	}
 }

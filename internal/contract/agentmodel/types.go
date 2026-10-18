@@ -26,11 +26,12 @@ const ConfigVersion = 1
 
 // Config is the content of a global or local agent-models.json file.
 type Config struct {
-	Version int            `json:"version"`
-	Claude  map[Role]Layer `json:"claude,omitempty"`
-	Codex   map[Role]Layer `json:"codex,omitempty"`
-	Omo     map[Role]Layer `json:"omo,omitempty"`
-	Omp     map[Role]Layer `json:"omp,omitempty"`
+	Version  int            `json:"version"`
+	Claude   map[Role]Layer `json:"claude,omitempty"`
+	Codex    map[Role]Layer `json:"codex,omitempty"`
+	Omo      map[Role]Layer `json:"omo,omitempty"`
+	Omp      map[Role]Layer `json:"omp,omitempty"`
+	Opencode map[Role]Layer `json:"opencode,omitempty"`
 }
 
 // Source labels where a resolved field came from.

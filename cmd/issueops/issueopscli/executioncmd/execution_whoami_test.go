@@ -210,6 +210,49 @@ func TestNativeSessionIdentityFromEnvRejectsOmoAndOmpTogether(t *testing.T) {
 	}
 }
 
+func TestNativeSessionIdentityFromEnvSupportsOpencode(t *testing.T) {
+	values := map[string]string{
+		"ISSUEOPS_OMP_SESSION_ID": "",
+		"OPENCODE_SESSION_ID":     "ses_1f2e3d4c5b6aABCDEFGHIJKLMN",
+	}
+	identity, err := nativeSessionIdentityFromEnv(func(key string) string { return values[key] })
+	if err != nil {
+		t.Fatalf("opencode identity must be detected: %v", err)
+	}
+	if identity.Host != "opencode" || identity.SessionID != values["OPENCODE_SESSION_ID"] ||
+		identity.Source != "OPENCODE_SESSION_ID" {
+		t.Fatalf("unexpected opencode identity: %+v", identity)
+	}
+	ancestry := []model.NativeProcessReceipt{
+		{PID: 101, StartedAt: "2026-10-18T00:00:02Z", Executable: "issueops"},
+		{PID: 150, StartedAt: "2026-10-18T00:00:01Z", Executable: "/bin/zsh"},
+		{PID: 202, StartedAt: "2026-10-18T00:00:00Z", Executable: "/opt/homebrew/Cellar/opencode-v2/2.0.32/bin/opencode"},
+		{PID: 303, StartedAt: "2026-10-17T00:00:00Z", Executable: "/opt/homebrew/bin/opencode"},
+	}
+	got, err := reusableNativeProcessAncestry("opencode", 101, ancestry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 || got[0].PID != 202 {
+		t.Fatalf("reusable opencode ancestry must start at the nearest opencode process: %+v", got)
+	}
+	if _, err := reusableNativeProcessAncestry("opencode", 101, ancestry[:2]); err == nil ||
+		!strings.Contains(err.Error(), "reusable opencode host process ancestry is unavailable") {
+		t.Fatalf("shell without an opencode ancestor: %v", err)
+	}
+}
+
+func TestNativeSessionIdentityFromEnvRejectsOmpAndOpencodeTogether(t *testing.T) {
+	values := map[string]string{
+		"ISSUEOPS_OMP_SESSION_ID": "omp-session",
+		"OPENCODE_SESSION_ID":     "ses_opencode",
+	}
+	_, err := nativeSessionIdentityFromEnv(func(key string) string { return values[key] })
+	if err == nil || !strings.Contains(err.Error(), "ambiguous") {
+		t.Fatalf("an omp shell that launched opencode must fail closed: %v", err)
+	}
+}
+
 func TestNativeSessionIdentityFromEnvRejectsAmbiguousHosts(t *testing.T) {
 	values := map[string]string{
 		"CODEX_THREAD_ID":        "codex-session",

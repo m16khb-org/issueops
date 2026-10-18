@@ -268,6 +268,44 @@ func TestHostUsageOmpCountsEachAssistantMessageEndOfAToolTurn(t *testing.T) {
 	}
 }
 
+func TestOpencodeHostUsageSumsStepFinishTokens(t *testing.T) {
+	// Given the live test's `opencode run --format json` stream: three tool steps and a final answer
+	input, usage := decodeHost(t, tracecontract.InputFormatOpencodeJSON, fixture(t, "opencode-tool-turn.jsonl"))
+	// Then each step_finish is one delta sample; the final text step prints none
+	if len(usage.Samples) != 3 || input.Incomplete || len(usage.Warnings) != 0 {
+		t.Fatalf("usage = %+v incomplete=%v", usage, input.Incomplete)
+	}
+	messageIDs := map[string]bool{}
+	for _, sample := range usage.Samples {
+		// output counts generated tokens, so the reasoning share is added back
+		requireMetrics(t, sample, new(int64(1134)), new(int64(56)), new(int64(100)), new(int64(0)))
+		if sample.Host != "opencode" || sample.SessionID != digest("session", "ses_eb1140f81ffe7o31X5wo5IsxFD") ||
+			sample.Finality != tracecontract.UsageFinalityFinal || sample.Temporality != tracecontract.UsageTemporalityDelta || sample.CostUSD != nil {
+			t.Errorf("sample = %+v", sample)
+		}
+		messageIDs[sample.MessageID] = true
+	}
+	if len(messageIDs) != 3 {
+		t.Fatalf("steps were not told apart: %+v", usage.Samples)
+	}
+}
+
+func TestOpencodeHostUsageIgnoresInvalidLinesAndRepeats(t *testing.T) {
+	step := `{"type":"step_finish","sessionID":"ses_1","part":{"id":"prt_1","messageID":"msg_1","type":"step-finish","cost":0.002,"tokens":{"input":10,"output":4,"reasoning":1,"cache":{"read":2,"write":3}}}}`
+	body := strings.Join([]string{step, "not json", `{"type":"text","sessionID":"ses_1","part":{"text":"x"}}`, step, `{"type":"step_finish","sessionID":"ses_1","part":{"id":"prt_2","messageID":"msg_2"}}`}, "\n")
+	input, usage := decodeHost(t, tracecontract.InputFormatOpencodeJSON, []byte(body))
+	if len(usage.Samples) != 1 || !input.Incomplete {
+		t.Fatalf("usage = %+v incomplete=%v", usage, input.Incomplete)
+	}
+	requireMetrics(t, usage.Samples[0], new(int64(10)), new(int64(5)), new(int64(2)), new(int64(3)))
+	if cost := usage.Samples[0].CostUSD; cost == nil || *cost != 0.002 {
+		t.Fatalf("cost = %v", cost)
+	}
+	if !slices.Contains(usage.Warnings, "invalid_jsonl_line") || !slices.Contains(usage.Warnings, "usage_missing") {
+		t.Fatalf("warnings = %v", usage.Warnings)
+	}
+}
+
 func TestHostUsageOmoRepeatedMessageEndWithSameIdentityCountsOnce(t *testing.T) {
 	line := omoEnd("resp-1", `{"input":4,"output":1,"cacheRead":0,"cacheWrite":0}`)
 	_, usage := decodeHost(t, tracecontract.InputFormatOmoJSON, []byte(line+"\n"+line+"\n"))

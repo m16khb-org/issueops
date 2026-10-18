@@ -9,7 +9,7 @@ import (
 
 func (installer Installer) VerifyActivation(req port.NativeInstallRequest) ([]port.NativeActivationEvidence, error) {
 	mcpPath := filepath.Join(req.Home, ".claude.json")
-	expectedDigest, err := installer.deps.VerifyJSONMapEntry(mcpPath, "mcpServers", "issueops", "Claude MCP readback", func() (map[string]any, error) {
+	expectedDigest, err := installer.deps.VerifyJSONMapEntry(mcpPath, []string{"mcpServers"}, "issueops", "Claude MCP readback", func() (map[string]any, error) {
 		return claudeUserMCPServer(req), nil
 	}, installer.deps.SemanticSHA256)
 	if err != nil {

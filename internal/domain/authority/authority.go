@@ -153,7 +153,7 @@ func validRecordIdentity(record contract.Record, key string) bool {
 // complete session process and no ancestry.
 func validRecordActor(actor contract.NativeActor) bool {
 	switch actor.Host {
-	case "codex", "claude", "omo", "omp":
+	case "codex", "claude", "omo", "omp", "opencode":
 	default:
 		return false
 	}

@@ -9,6 +9,8 @@ import (
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	installadapter "issueops/internal/adapter/install"
 	"issueops/internal/adapter/installutil"
+	opencodeadapter "issueops/internal/adapter/opencode"
+	"issueops/internal/domain/nativehost"
 	"issueops/internal/port"
 )
 
@@ -90,4 +92,18 @@ func testOmpInstaller() extensionhost.Installer {
 		WriteJSONPlan:                   installutil.WriteJSONPlan,
 		WriteTextPlan:                   installutil.WriteTextPlan,
 	}, hostprotocol.OmpLifecycleExtension)
+}
+func testOpencodeInstaller() opencodeadapter.Installer {
+	return opencodeadapter.NewInstaller(opencodeadapter.Dependencies{
+		MergeJSONMapFile:                installutil.MergeJSONMapFile,
+		RemoveJSONMapEntry:              installutil.RemoveJSONMapEntry,
+		VerifyJSONMapEntry:              installutil.VerifyJSONMapEntry,
+		CaptureNativeActivationEvidence: installutil.CaptureNativeActivationEvidence,
+		MCPCatalogSHA256:                func() (string, error) { return installutil.SemanticSHA256(mcpcatalog.AdvertisedTools()) },
+		NewInstallPlan:                  func(host string, dry bool) port.InstallPlan { return installutil.NewPlan(host, dry) },
+		PlanHostSkillLinks:              installutil.PlanHostSkillLinks,
+		SemanticSHA256:                  installutil.SemanticSHA256,
+		WriteJSONPlan:                   installutil.WriteJSONPlan,
+		WriteTextPlan:                   installutil.WriteTextPlan,
+	}, hostprotocol.OpencodeLifecyclePlugin, func(home string) string { return nativehost.OpencodeConfigRoot(home, "") })
 }

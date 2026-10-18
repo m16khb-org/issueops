@@ -40,6 +40,7 @@ func validateInstallDryRunSmokeWithDeps(binary, root string, seed int64, deps in
 	env := []string{
 		"HOME=" + tempHome,
 		"CODEX_HOME=" + filepath.Join(tempHome, ".codex"),
+		"XDG_CONFIG_HOME=" + filepath.Join(tempHome, ".config"),
 		"ISSUEOPS_ROOT=" + tempRoot,
 	}
 	step := deps.run(root, "install dry-run smoke", 30*time.Second, "", env, binary, "install", "--dry-run", "--project-local", "--json")

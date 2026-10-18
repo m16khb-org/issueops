@@ -50,10 +50,11 @@ const (
 
 // Host 이름이다.
 const (
-	HostCodex  = "codex"
-	HostClaude = "claude"
-	HostOmo    = "omo"
-	HostOmp    = "omp"
+	HostCodex    = "codex"
+	HostClaude   = "claude"
+	HostOmo      = "omo"
+	HostOmp      = "omp"
+	HostOpencode = "opencode"
 )
 
 // HostReceiptsSchemaVersion은 --host-receipts 파일이 지원하는 유일한 schema다.

@@ -111,7 +111,7 @@ func TestValidateSetting(t *testing.T) {
 		in   contract.Layer
 		want string
 	}{
-		{"gemini", contract.RoleImplement, contract.Layer{Model: "x"}, "claude, codex, omo, omp"},
+		{"gemini", contract.RoleImplement, contract.Layer{Model: "x"}, "claude, codex, omo, omp, opencode"},
 		{"claude", "reviewer", contract.Layer{Model: "x"}, "implement"},
 		{"claude", contract.RoleImplement, contract.Layer{Effort: "ultra"}, "low, medium, high, xhigh, max"},
 		{"codex", contract.RoleImplement, contract.Layer{Effort: "off"}, "minimal, low"},
@@ -164,7 +164,7 @@ func TestValidateConfig(t *testing.T) {
 // Fable is a manual-only choice: no default, inheritance, tier, or round may
 // produce it.
 func TestBuiltinNeverFable(t *testing.T) {
-	for _, host := range []string{"claude", "codex", "omo", "omp"} {
+	for _, host := range []string{"claude", "codex", "omo", "omp", "opencode"} {
 		for _, role := range Roles() {
 			for _, tier := range []string{"", "default", "docs-only", "contract"} {
 				for round := 0; round <= 5; round++ {
@@ -184,6 +184,52 @@ func TestBuiltinNeverFable(t *testing.T) {
 func TestSupportsEffort(t *testing.T) {
 	if !SupportsEffort("claude", "") || !SupportsEffort("omo", "off") || !SupportsEffort("omp", "off") || SupportsEffort("omp", "auto") || SupportsEffort("claude", "minimal") || SupportsEffort("gemini", "") {
 		t.Fatal("effort ladder changed")
+	}
+}
+
+// opencode variants are defined per model, so issueops never invents one by
+// lowering a docs-only review or stepping an escalated round.
+func TestResolveOpencodeKeepsModelDefinedEffort(t *testing.T) {
+	settings := contract.Config{Version: 1, Opencode: map[contract.Role]contract.Layer{
+		contract.RoleImplement:  {Model: "mock/m", Effort: "high"},
+		contract.RoleDiffReview: {Effort: "low"},
+	}}
+	tests := []struct {
+		name string
+		in   ResolveInput
+		want contract.Resolution
+	}{
+		{"builtin implement", ResolveInput{Host: "opencode", Role: contract.RoleImplement},
+			res("opencode", contract.RoleImplement, "opencode/deepseek-v4.1-flash-free", "max", "default", "default")},
+		{"builtin research", ResolveInput{Host: "opencode", Role: contract.RoleResearch},
+			res("opencode", contract.RoleResearch, "opencode/deepseek-v4.1-flash-free", "high", "default", "default")},
+		{"builtin reader-check", ResolveInput{Host: "opencode", Role: contract.RoleReaderCheck},
+			res("opencode", contract.RoleReaderCheck, "opencode/deepseek-v4.1-flash-free", "low", "default", "default")},
+		{"docs-only keeps builtin effort", ResolveInput{Host: "opencode", Role: contract.RoleDiffReview, Tier: "docs-only"},
+			res("opencode", contract.RoleDiffReview, "opencode/deepseek-v4.1-flash-free", "max", "default", "default")},
+		{"round 3 keeps configured effort", ResolveInput{Host: "opencode", Role: contract.RoleDiffReview, Round: 3, Global: settings},
+			res("opencode", contract.RoleDiffReview, "opencode/deepseek-v4.1-flash-free", "low", "inherited", "inherited")},
+		{"review-escalate keeps effort", ResolveInput{Host: "opencode", Role: contract.RoleReviewEscalate, Tier: "docs-only"},
+			res("opencode", contract.RoleReviewEscalate, "opencode/deepseek-v4.1-flash-free", "max", "inherited", "inherited")},
+		{"settings file", ResolveInput{Host: "opencode", Role: contract.RoleImplement, Local: settings},
+			res("opencode", contract.RoleImplement, "mock/m", "high", "local", "local")},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := Resolve(test.in)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != test.want {
+				t.Fatalf("Resolve = %+v, want %+v", got, test.want)
+			}
+		})
+	}
+	if !SupportsEffort("opencode", "none") || !SupportsEffort("opencode", "max") || SupportsEffort("opencode", "off") {
+		t.Fatal("opencode effort ladder changed")
+	}
+	if err := ValidateConfig(settings); err != nil {
+		t.Fatalf("an opencode section must be valid: %v", err)
 	}
 }
 

@@ -1,6 +1,7 @@
 package hostprotocol
 
 import (
+	"encoding/json"
 	"fmt"
 	"issueops/internal/domain/agentmodel"
 	"issueops/internal/domain/nativehost"
@@ -21,14 +22,32 @@ func BuildInteractiveArgv(host, executable, model, effort, prompt string, extra 
 	if err := validateInteractiveHost(host, executable, model, effort); err != nil {
 		return nil, err
 	}
-
-	argv := []string{executable, "--model", model}
-	argv = appendHostLaunchFlags(argv, host, effort)
 	if slices.ContainsFunc(extra, func(argument string) bool { return argument == "" || strings.ContainsRune(argument, 0) }) {
 		return nil, fmt.Errorf("native host launch argument is empty or contains NUL")
 	}
+	if host == "opencode" {
+		return opencodeInteractiveArgv(executable, model, prompt, extra), nil
+	}
+
+	argv := []string{executable, "--model", model}
+	argv = appendHostLaunchFlags(argv, host, effort)
 	argv = append(argv, extra...)
 	return append(argv, "--", prompt), nil
+}
+
+// opencodeInteractiveArgv opens a private --standalone server so the session
+// can own a lease. The TUI has no model flag: the model reaches the private
+// server through OPENCODE_CONFIG_CONTENT, which a root-model variant cannot
+// carry, so effort is not passed. An empty model keeps the user's choice.
+func opencodeInteractiveArgv(executable, model, prompt string, extra []string) []string {
+	var argv []string
+	if model != "" {
+		content, _ := json.Marshal(map[string]string{"model": model})
+		argv = append(argv, "/usr/bin/env", "OPENCODE_CONFIG_CONTENT="+string(content))
+	}
+	argv = append(argv, executable, "--standalone", "--auto")
+	argv = append(argv, extra...)
+	return append(argv, "--prompt", prompt)
 }
 
 func validateInteractiveHost(host, executable, model, effort string) error {
@@ -41,7 +60,8 @@ func validateInteractiveHost(host, executable, model, effort string) error {
 	if !nativehost.ExecutableMatchesHost(host, executable) {
 		return fmt.Errorf("native host executable does not match %s", host)
 	}
-	if model == "" || strings.HasPrefix(model, "-") || strings.ContainsAny(model, "\x00\r\n") {
+	invalidModel := strings.HasPrefix(model, "-") || strings.ContainsAny(model, "\x00\r\n")
+	if invalidModel || (model == "" && host != "opencode") {
 		return fmt.Errorf("native host model is invalid")
 	}
 	if !agentmodel.SupportsEffort(host, effort) {

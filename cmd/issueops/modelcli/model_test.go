@@ -208,7 +208,7 @@ func TestShowListsEveryRoleWithSources(t *testing.T) {
 	}
 	hosts := got["hosts"].(map[string]any)
 	claude := hosts["claude"].([]any)
-	if len(hosts) != 4 || len(claude) != 7 || len(hosts["codex"].([]any)) != 7 || len(hosts["omo"].([]any)) != 7 || len(hosts["omp"].([]any)) != 7 {
+	if len(hosts) != 5 || len(claude) != 7 || len(hosts["codex"].([]any)) != 7 || len(hosts["omo"].([]any)) != 7 || len(hosts["omp"].([]any)) != 7 || len(hosts["opencode"].([]any)) != 7 {
 		t.Fatalf("show = %v", got)
 	}
 	research := claude[5].(map[string]any)

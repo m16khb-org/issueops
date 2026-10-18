@@ -14,7 +14,7 @@ IssueOps가 역할별로 띄우는 세션과 서브에이전트의 model·effort
 
 | 항목 | 의미 |
 |---|---|
-| host | `claude`, `codex`, `omo`, `omp`. omo·omp 모델 ID는 `chatgpt-subscription/gpt-6.1-sol`, `anthropic/claude-sonnet-5-5`처럼 `<provider>/<model>` 형식으로 적는다 |
+| host | `claude`, `codex`, `omo`, `omp`, `opencode`. omo·omp·opencode 모델 ID는 `chatgpt-subscription/gpt-6.1-sol`, `anthropic/claude-sonnet-5-5`, `opencode/deepseek-v4.1-flash-free`처럼 `<provider>/<model>` 형식으로 적는다 |
 | role | `implement`, `child-implement`, `plan-review`, `diff-review`, `review-escalate`, `research`, `reader-check` |
 | scope | `global`(사용자 전체), `local`(이 저장소의 메인 워크트리 하나) |
 | 우선순위 | 필드(model, effort)마다 명시 플래그 > local > global > 내장 기본값 |
@@ -27,6 +27,8 @@ IssueOps가 역할별로 띄우는 세션과 서브에이전트의 model·effort
   리뷰 3~5라운드에 원래 리뷰 모델을 effort 한 단계 올려 쓴다.
 - docs-only 변경의 리뷰 effort 하향은 내장 기본값에만 적용된다. 사용자가 적은 effort는
   그대로 쓴다.
+- opencode effort는 모델이 정의한 variant 이름(`none`·`minimal`·`low`·`medium`·`high`·`xhigh`·`max`)이다.
+  docs-only 하향과 3라운드 상향을 적용하지 않고 적은 값을 그대로 쓴다.
 - 이미 실행 중인 세션의 모델은 설정을 바꿔도 바뀌지 않는다. 새로 여는 세션부터 적용된다.
 
 ## 요청별 명령

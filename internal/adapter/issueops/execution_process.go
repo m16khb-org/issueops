@@ -256,6 +256,37 @@ func processField(pid int, field string) (string, error) {
 	return value, nil
 }
 
+// nativeProcessArguments reads `lstart` and the full `args` in one ps call and
+// returns the whitespace-split argv after the five lstart fields.
+func nativeProcessArguments(receipt issueops.NativeProcessReceipt) ([]string, error) {
+	if receipt.PID <= 0 {
+		return nil, fmt.Errorf("native process pid must be positive")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), nativeProcessProbeTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "ps", "-ww", "-p", strconv.Itoa(receipt.PID), "-o", "lstart=,args=")
+	cmd.Env = append(os.Environ(), "LC_ALL=C", "LANG=C")
+	output, err := cmd.Output()
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read native process arguments: %w", err)
+	}
+	fields := strings.Fields(string(output))
+	if len(fields) < 6 {
+		return nil, fmt.Errorf("native process arguments are unavailable for pid %d", receipt.PID)
+	}
+	started, err := parseNativeProcessStart(strings.Join(fields[:5], " "))
+	if err != nil {
+		return nil, fmt.Errorf("parse native process start identity: %w", err)
+	}
+	if started.UTC().Format(time.RFC3339) != receipt.StartedAt {
+		return nil, fmt.Errorf("native process identity does not match live PID %d", receipt.PID)
+	}
+	return fields[5:], nil
+}
+
 // inspectWorkspaceProcesses는 워크트리를 점유한 프로세스를 관측한다. lsof에
 // "+D root"를 주면 트리 전체를 재귀 stat하므로 node_modules 같은 대형 워크트리에서는
 // probe 자체가 타임아웃한다(실측 6~8초). 경로 판정은 어차피

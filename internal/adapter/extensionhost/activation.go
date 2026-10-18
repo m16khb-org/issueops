@@ -12,7 +12,7 @@ func (installer Installer) VerifyActivation(req port.NativeInstallRequest) ([]po
 	host := installer.spec.Host
 	configRoot := installer.configRoot(req.Home)
 	mcpPath := filepath.Join(configRoot, "mcp.json")
-	expectedDigest, err := installer.deps.VerifyJSONMapEntry(mcpPath, "mcpServers", "issueops", installer.spec.DisplayName+" MCP readback", func() (map[string]any, error) {
+	expectedDigest, err := installer.deps.VerifyJSONMapEntry(mcpPath, []string{"mcpServers"}, "issueops", installer.spec.DisplayName+" MCP readback", func() (map[string]any, error) {
 		return installer.userMCPServer(req)
 	}, installer.deps.SemanticSHA256)
 	if err != nil {

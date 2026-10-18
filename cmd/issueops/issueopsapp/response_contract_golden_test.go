@@ -28,6 +28,8 @@ func TestResponseContractsGolden(t *testing.T) {
 	t.Setenv("ISSUEOPS_WORKER_DIR", workerDir)
 	t.Setenv("HOME", homeDir)
 	t.Setenv("CODEX_HOME", filepath.Join(homeDir, ".codex"))
+	// The opencode config root follows XDG_CONFIG_HOME; keep it under $HOME.
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(homeDir, ".config"))
 
 	replacements := map[string]string{
 		stateDir:       "$STATE_DIR",
