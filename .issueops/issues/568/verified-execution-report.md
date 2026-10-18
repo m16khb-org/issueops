@@ -142,3 +142,10 @@ opencode v2(2.0.32)를 Codex, Claude Code, Omo native, omp 다음의 다섯 번�
 - 증거 파일: `.issueops/evidence/task-{1..10}-*.txt`, `task-7-probe-live.json`(무료 Zen 모델의 `provider.auth` 403으로 `harness_environment:provider_auth_failed`, 계획이 예상한 결과), `task-11-isolated-self-verify.txt`, `verify-isolated-self-verify.txt`, `verify-model-smoke.txt`, `slop-clean-metrics.json`.
 - 문서 checker: 위반은 `.issueops/issues/561/plan.md`의 깨진 링크 1건뿐이고 main과 같은 파일이다. 계획의 host 나열 검사는 0줄이다.
 - 병렬 실행: 검증 단계에서 self-verify와 delta 리뷰를 같은 fingerprint에 동시에 돌렸다(`SUB_AGENT_PATTERNS.md`의 `parallel_speed`). 두 작업은 각각 898초와 130초였고, 순서대로 돌렸을 때보다 약 130초를 줄였다. 첫 라운드 때는 리뷰어가 전체 테스트를 돌려 self-verify의 race step이 시간 상한에 걸렸으므로, 2라운드 프롬프트에서는 리뷰어의 전체 테스트 실행을 막았다.
+
+## 발행
+
+- draft PR: https://github.com/m16khb-org/issueops/pull/569 (`main` ← `568-opencode-first-party-host`, label `enhancement`, assignee `m16khb`, `Closes #568`)
+- 게시 뒤 `remote verify-artifact`와 `gh pr view`로 draft 상태, head·base 브랜치, label, assignee, 연결 이슈를 다시 읽어 확인했다.
+- 커밋은 구현(`e85c698b`), 문서(`2015bc54`), 사이클 자료(`21432b3a`) 셋과 이 보고서 갱신 커밋이다. 구현 커밋만 있는 tree를 임시 clone에서 `go test ./...`로 돌렸을 때 실패는 `/tmp` 경로 symlink 때문에 base에서도 실패하는 `installcli` 테스트와, 부하에서 100ms timeout이 흔들리는 기존 `TestExecRunnerTimeoutKillsAndReapsUnixDescendant`(단독 5회 반복 통과)뿐이었다.
+- 머지와 워크트리·브랜치 정리는 별도 승인 단계다.
