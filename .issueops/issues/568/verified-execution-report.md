@@ -108,7 +108,7 @@ opencode v2(2.0.32)를 Codex, Claude Code, Omo native, omp 다음의 다섯 번�
 - 원격: 8~9단계의 브랜치 push와 draft PR 하나(승인 범위). 이슈 본문 계약 변경은 인계 전에 반영했다(`feedback` `issue_updated_at` 기록됨).
 - durable state: 이 사이클 record와 원장.
 - 검증 산출물은 워크트리 밖 `/tmp/io-568-*`(base clone, CI와 같은 Python venv, 격리 self-verify clone)와 ignore되는 `.issueops/evidence/`에 두었다. 사용자 `~/.local/share/opencode`는 probe 전후 mtime이 같다.
-- source checkout `/Users/habin/workspace/issueops`는 구현 중 한 번 잘못 쓰였다가 되돌렸고, `git status` 0줄을 다시 확인했다.
+- source checkout(`$SOURCE_ROOT`)은 구현 중 한 번 잘못 쓰였다가 되돌렸고, `git status` 0줄을 다시 확인했다.
 
 ## 의도 대조
 
@@ -147,5 +147,6 @@ opencode v2(2.0.32)를 Codex, Claude Code, Omo native, omp 다음의 다섯 번�
 
 - draft PR: https://github.com/m16khb-org/issueops/pull/569 (`main` ← `568-opencode-first-party-host`, label `enhancement`, assignee `m16khb`, `Closes #568`)
 - 게시 뒤 `remote verify-artifact`와 `gh pr view`로 draft 상태, head·base 브랜치, label, assignee, 연결 이슈를 다시 읽어 확인했다.
-- 커밋은 구현(`e85c698b`), 문서(`2015bc54`), 사이클 자료(`21432b3a`) 셋과 이 보고서 갱신 커밋이다. 구현 커밋만 있는 tree를 임시 clone에서 `go test ./...`로 돌렸을 때 실패는 `/tmp` 경로 symlink 때문에 base에서도 실패하는 `installcli` 테스트와, 부하에서 100ms timeout이 흔들리는 기존 `TestExecRunnerTimeoutKillsAndReapsUnixDescendant`(단독 5회 반복 통과)뿐이었다.
+- 커밋은 구현(`e85c698b`), 문서(`2015bc54`), 사이클 자료(`21432b3a`) 셋과 보고서 갱신 커밋들이다. 구현 커밋만 있는 tree를 임시 clone에서 `go test ./...`로 돌렸을 때 실패는 `/tmp` 경로 symlink 때문에 base에서도 실패하는 `installcli` 테스트와, 부하에서 100ms timeout이 흔들리는 기존 `TestExecRunnerTimeoutKillsAndReapsUnixDescendant`(단독 5회 반복 통과)뿐이었다.
 - 머지와 워크트리·브랜치 정리는 별도 승인 단계다.
+- PR CI(verify)가 실패했다. `scripts/meeting_notes_skill_contract_test.py`의 `test_synthetic_fixture_family_has_no_identified_meeting_data`는 `git ls-files`로 추적 파일을 훑으며 금지된 식별 데이터의 지문을 찾는다. 이 테스트가 이 보고서의 side effect 절에 적은 source checkout 절대 경로 안의 계정 이름을 잡았다. 경로가 아니어도 계정 이름이 어디에 나오면 실패한다. 로컬 격리 self-verify는 커밋 전 변경을 clone에 복사만 했으므로 보고서가 추적 파일이 아니어서 이를 놓쳤다(caution `2026-10-08-tracked-intent-copies-quote-the-raw-request-and-local-self-v.md`와 같은 원인). 메인 세션이 사이클을 다시 열었고, 경로를 `$SOURCE_ROOT`로 바꿔 같은 PR에 반영한다.
