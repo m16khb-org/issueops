@@ -38,6 +38,7 @@ and supersession rules live in [adr/README.md](adr/README.md).
 
 | Date | Decision | Record |
 |---|---|---|
+| 2026-10-19 | The plan stage approves the architecture before the plan (`plan.architecture`, then `plan.write`), binds the approval to the architecture document sha256, and renames the design stage, command, and record names to architecture; the order part of the 2026-06-18 decision is replaced | [record](adr/2026-10-19-approve-the-architecture-before-the-plan-and-rename-the-desi.md) |
 | 2026-10-18 | opencode v2 is the fifth first-party host (`codex, claude, omo, omp, opencode`); only a `--standalone` session, proven in core by its own `opencode serve --stdio` argv, can own a lease or `mcp authorize`; a context-hook plugin injects the catalog on every model call; opencode efforts are model-defined variants | [record](adr/2026-10-18-opencode-v2-as-the-fifth-first-party-host.md) |
 | 2026-10-15 | Remove the Orca integration and execution mode selection: direct is the only execution, `execution prepare --id ID` takes no mode, the resume and mode-switch commands are deleted, and sessions hand off only through release, `execution replace --preview`, and `claim --claim-current-token`; supersedes in part the auto execution mode of 2026-09-05 and the Orca judgement of 2026-07-19 | [record](adr/2026-10-15-remove-orca-integration-and-execution-mode-selection.md) |
 | 2026-10-14 | Entering pr seals the canonical HEAD as `pr_head`; `execution complete` refuses a final head that changed anything but the verification report since; re-running `phase --to pr` from pr passes the same strict gate and reseals | [record](adr/2026-10-14-completion-checks-the-verified-pr-head.md) |
@@ -114,7 +115,7 @@ and supersession rules live in [adr/README.md](adr/README.md).
 | 2026-07-01 | IssueOps phase transition is a pure reducer over the record | [record](adr/2026-07-01-issueops-phase-transition-pure-reducer.md) |
 | 2026-07-01 | IssueOps devil's-advocate is a fail-closed loop, not just skill prose | [record](adr/2026-07-01-issueops-devils-advocate-fail-closed-loop.md) |
 | 2026-07-01 | MCP transport: adopt go-sdk with a retained legacy JSON-RPC path; superseded in part — the legacy JSON-RPC path was removed on 2026-08-03, go-sdk remains ([2026-10-02 transport](adr/2026-10-02-shared-streamable-http-mcp-and-caller-capability.md)) | [record](adr/2026-07-01-mcp-transport-go-sdk-legacy-jsonrpc.md) |
-| 2026-06-29 | IssueOps phase ledger, grill gate, and Design Review devil's-advocate regression | [record](adr/2026-06-29-issueops-phase-ledger-grill-gate-design-review.md) |
+| 2026-06-29 | IssueOps phase ledger, grill gate, and Architecture Review devil's-advocate regression | [record](adr/2026-06-29-issueops-phase-ledger-grill-gate-design-review.md) |
 | 2026-06-26 | IssueOps compatibility review phase | [record](adr/2026-06-26-issueops-compatibility-review-phase.md) |
 | 2026-06-24 | Skill local background separation | [record](adr/2026-06-24-skill-local-background-separation.md) |
 | 2026-06-23 | IssueOps execution decision gate | [record](adr/2026-06-23-issueops-execution-decision-gate.md) |
