@@ -48,7 +48,7 @@ When the user must choose a route, cleanup action, feedback response, or next ph
 
 ## 16.1 IssueOps state work belongs to `issueops` commands, never to hooks
 
-IssueOps state is durable because `issueops ...` commands record intent, issue links, branch preparation, worktree paths, tool preparation, design review, plan links, ai-slop-clean evidence, feedback joins, PR/MR readiness, and cleanup status. Moving any of that work into lifecycle hooks would make progress depend on host-specific event timing and incomplete hook payloads.
+IssueOps state is durable because `issueops ...` commands record intent, issue links, branch preparation, worktree paths, tool preparation, architecture review, plan links, ai-slop-clean evidence, feedback joins, PR/MR readiness, and cleanup status. Moving any of that work into lifecycle hooks would make progress depend on host-specific event timing and incomplete hook payloads.
 
 주의:
 - The installed hooks are context-only (`SessionStart` and `SubagentStart` project-doc catalog). It does not block tool events, create or edit issues, mutate files, run tests, wait for background jobs, prepare branches or worktrees, create PRs/MRs, reply to reviews, merge, or delete branches/worktrees. The readability check (Korean ratio, summary-first, required sections, hashes outside code) runs inside the `issueops remote` publish and sync commands (`create-issue`, `create-child`, `create-pr`, `sync-issue`, `sync-pr`), and VCS-linking checks run inside the `issueops remote ...` commands that own the artifact.
@@ -79,7 +79,7 @@ IssueOps state is durable because `issueops ...` commands record intent, issue l
 - `issueops <domain-word>`를 추측으로 호출하지 말 것. 먼저 `issueops --help`로 실제 서브커맨드 레지스트리를 확인한다.
 - `grill`/`problem`/`implement`/`ai-slop-clean`/`feedback`/`pr`은 lifecycle phase이며 `issueops phase --id ID --to <phase>`로 진입한다.
 - `split`은 breakdown 결정(no-split 기본)이지 명령어가 아니다. child 생성은 `issueops remote create-child`, 기존 child 연결은 `issueops link-related --type splits-from`.
-- `domain`(review), `compatibility`(review), `design`(review), `intent`(record)는 ledger artifact이며 각각 `issueops domain-review record`, `issueops compatibility review`, `issueops design review`, `issueops intent record`가 실제 명령이다.
+- `domain`(review), `compatibility`(review), `architecture`(review), `intent`(record)는 ledger artifact이며 각각 `issueops domain-review record`, `issueops compatibility review`, `issueops architecture review`, `issueops intent record`가 실제 명령이다.
 - CLI는 잘못된 서브커맨드에 대해 did-you-mean 힌트를 출력한다(`issueops.go`의 `suggestIssueOpsSubcommand`). 매핑 전체는 `skills/issueops/SKILL.md`의 "Concept → Command Map" 섹션을 참조.
 
 ## 25. gh/glab create 출력은 항상 bare URL — JSON/Number 파싱 추가 금지

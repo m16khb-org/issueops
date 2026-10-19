@@ -7,7 +7,7 @@ Ephemeral independent fan-out uses the host's native subagent concurrency contro
 ## S1 Walkthrough: Delegated Child Cycles
 
 1. Confirm the parent is in `implement phase`.
-2. Confirm approved reviews are recorded: design review, compatibility review, and devil's-advocate review are pass or explicitly waived.
+2. Confirm approved reviews are recorded: architecture review, compatibility review, and devil's-advocate review are pass or explicitly waived.
 3. Confirm the parent plan or durable evidence records a documented pattern slug, scope, verification, fallback, tradeoffs, and net-positive rationale.
 4. Start a child with `issueops child start --parent "$ISSUEOPS_ID" --branch "$CHILD_BRANCH" --title "$TITLE" --scope "$SCOPE" --acceptance "$CRITERION" --json`.
 5. Bind and run the child in its own isolated worktree. Its exact execution generation and native process receipt fence writes; inspect them with `issueops execution status --id "$CHILD_ID"`.

@@ -57,7 +57,7 @@ func TestPlanReadinessAcceptsEvidenceAndWaive(t *testing.T) {
 		PriorDecisions: issueops.IssueOpsPlanPrepItem{Status: "evidence", Evidence: []string{".issueops/ADR.md#gate"}},
 		RelatedIssues:  issueops.IssueOpsPlanPrepItem{Status: "evidence", Evidence: []string{"remote score: selected=#12(0.81), threshold=0.70"}},
 		WebResearch:    issueops.IssueOpsPlanPrepItem{Status: "waived", WaiveReason: "순수 내부 리팩토링이라 외부 근거 불필요"},
-		CodebaseSurvey: issueops.IssueOpsPlanPrepItem{Status: "evidence", Evidence: []string{"rg PlanPrep: internal/core/issueops/issueops_readiness.go, model/types.go, intentdesign/plan_prep.go"}},
+		CodebaseSurvey: issueops.IssueOpsPlanPrepItem{Status: "evidence", Evidence: []string{"rg PlanPrep: internal/core/issueops/issueops_readiness.go, model/types.go, intentarchitecture/plan_prep.go"}},
 	}
 	ready := (cycleapp.Readiness{}).Plan(rec)
 	if !ready.Ready {
@@ -116,14 +116,14 @@ func TestImplementationReadinessRequiresExecutionLease(t *testing.T) {
 		BaseBranch:   "main",
 		LinkVerified: true,
 	}
-	rec.DesignReview = &reviewcontract.DesignReview{
-		ProblemSummary: "prepare worktree tools",
-		ProposedDesign: "record worktree tool preparation before implementation",
-		RefactorPlan:   "durable gate only",
-		Alternatives:   []string{"prompt-only reminder"},
-		Risks:          []string{"stale worktree tool state"},
-		Verification:   []string{"design review checked alternatives and risks"},
-		Approved:       true,
+	rec.ArchitectureReview = &reviewcontract.ArchitectureReview{
+		ProblemSummary:       "prepare worktree tools",
+		ProposedArchitecture: "record worktree tool preparation before implementation",
+		RefactorPlan:         "durable gate only",
+		Alternatives:         []string{"prompt-only reminder"},
+		Risks:                []string{"stale worktree tool state"},
+		Verification:         []string{"architecture review checked alternatives and risks"},
+		Approved:             true,
 	}
 	rec.WorktreePath = worktree
 	rec.PlanPath = planPath

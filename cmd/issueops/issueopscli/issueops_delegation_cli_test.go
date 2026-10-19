@@ -290,7 +290,7 @@ func recordIssueOpsCLIParentDelegationPrereqs(t *testing.T, id, planPath string)
 	t.Helper()
 	recordIssueOpsCoreIntentForCLITest(t, id)
 	recordIssueOpsCLIPlanPrepForTest(t, id)
-	recordIssueOpsCoreDesignForCLITest(t, id)
+	recordIssueOpsCoreArchitectureForCLITest(t, id)
 	if _, err := LinkIssueOpsPlanForTest(issueOpsStateRootForTest(), id, planPath); err != nil {
 		t.Fatal(err)
 	}

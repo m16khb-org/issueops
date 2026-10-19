@@ -192,7 +192,7 @@ func isGitLabIssueLikePath(part string) bool {
 // TrackedMaterialNames are the tracked copies of the implementation materials
 // that phase transitions write next to gates.md in .issueops/issues/<n>/
 // (#513). They are derived from the sealed plan and the record.
-var TrackedMaterialNames = []string{"plan.md", "intent.md", "spec.md", "plan-review.md"}
+var TrackedMaterialNames = []string{"plan.md", "intent.md", "spec.md", "architecture.md", "plan-review.md"}
 
 // IsTrackedMaterialPath reports whether relPath (worktree-relative, slash or
 // OS separators) is one of issueURL's tracked material copies.

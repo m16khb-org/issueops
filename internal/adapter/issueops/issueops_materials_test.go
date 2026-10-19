@@ -56,7 +56,7 @@ func materialsCycleForTest(t *testing.T) (string, issueops.IssueOpsRecord, strin
 	if _, err = LinkIssueOpsWorktree(stateRoot, record.ID, worktree); err != nil {
 		t.Fatal(err)
 	}
-	recordIssueOpsApprovedDesignForTest(t, stateRoot, record.ID)
+	recordIssueOpsApprovedArchitectureForTest(t, stateRoot, record.ID)
 	// Prepare points plan_path at the sealed plan (issueops_artifact_stage.go).
 	sealedPlan := filepath.Join(worktree, ".issueops", "issues", "13", "artifact", "plan.md")
 	writeIssueOpsFile(t, worktree, ".issueops/issues/13/artifact/plan.md", planBodyForTest())
@@ -70,6 +70,7 @@ func materialsCycleForTest(t *testing.T) (string, issueops.IssueOpsRecord, strin
 	}
 	record.Execution = issueOpsExecutionForTest(record.Repo, worktree, record.Branch)
 	record.Execution.Workspace.ArtifactDir = ".issueops/issues/13/artifact"
+	sealStagedArchitectureForTest(t, stateRoot, record)
 	if record, err = writeIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
@@ -219,7 +220,7 @@ func TestPhaseTransitionNormalizesPublicMaterials(t *testing.T) {
 			}
 		}
 	}
-	if len(materials.Written) != 4 {
+	if len(materials.Written) != 5 {
 		t.Fatalf("all material kinds: %+v", materials)
 	}
 	check()

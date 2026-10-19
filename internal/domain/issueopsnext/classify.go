@@ -32,6 +32,10 @@ type Input struct {
 	Local *Readiness
 	// StagedPlan은 `artifact stage --name plan`이 올라와 있는지다.
 	StagedPlan bool
+	// StagedArchitecture는 `artifact stage --name architecture`가 올라와 있는지다.
+	StagedArchitecture bool
+	// ArchitectureReviewStale은 승인한 아키텍처 문서가 스테이징된 문서와 달라졌다는 관측이다.
+	ArchitectureReviewStale bool
 	// RootConflictID는 이 사이클의 canonical worktree root를 이미 점유한 다른
 	// 사이클의 id다. 없으면 빈 문자열이다.
 	RootConflictID string
@@ -195,16 +199,16 @@ func classifyPreparation(in Input, decision Decision) (Decision, bool) {
 	if branchPrepareNeeded(record) {
 		return classifyBranchPrepare(in, decision)
 	}
+	if key := architectureGate(in); key != "" {
+		decision.Stage = stage(issueopsnextcontract.StagePlanArchitecture, 3)
+		decision.Missing = []string{key}
+		decision.NextCommand = OwnerCommand(id, key)
+		return decision, true
+	}
 	if !in.StagedPlan {
 		decision.Stage = stage(issueopsnextcontract.StagePlanWrite, 3)
 		decision.Missing = []string{"plan_artifact"}
 		decision.NextCommand = OwnerCommand(id, "plan_artifact")
-		return decision, true
-	}
-	if record.DesignReview == nil || !record.DesignReview.Approved {
-		decision.Stage = stage(issueopsnextcontract.StagePlanDesign, 3)
-		decision.Missing = []string{"design_review"}
-		decision.NextCommand = OwnerCommand(id, "design_review")
 		return decision, true
 	}
 	if devilsAdvocateMissing := devilsAdvocateGate(in); devilsAdvocateMissing != "" {
@@ -216,6 +220,25 @@ func classifyPreparation(in Input, decision Decision) (Decision, bool) {
 	decision.Stage = stage(issueopsnextcontract.StagePlanHandoff, 3)
 	decision.NextCommand = "issueops execution prepare --id " + id + " $ACTOR_FLAGS --json"
 	return decision, true
+}
+
+// architectureGate는 아키텍처가 계획보다 먼저 통과해야 하는 조건 중 처음 막히는
+// 키다. 부모 리뷰를 승계한 위임 자식은 자기 아키텍처 문서를 검토하지 않았으므로
+// 문서 스테이징과 stale 판정을 건너뛴다.
+func architectureGate(in Input) string {
+	review := in.Record.ArchitectureReview
+	if review != nil && review.Approved && review.ReviewerContext == issueopsdomain.ParentReviewPattern {
+		return ""
+	}
+	switch {
+	case !in.StagedArchitecture:
+		return "architecture_artifact"
+	case review == nil || !review.Approved:
+		return "architecture_review"
+	case in.ArchitectureReviewStale:
+		return "architecture_review_stale"
+	}
+	return ""
 }
 
 // classifyIssueMissing는 이슈 URL이 없을 때 1단계로 가른다. problem/grill 외 phase는 분류하지 않는다.

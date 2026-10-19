@@ -258,6 +258,10 @@
           "name": "ai-slop-clean"
         },
         {
+          "description": "IssueOps architecture",
+          "name": "architecture"
+        },
+        {
           "description": "IssueOps artifact",
           "name": "artifact"
         },
@@ -284,10 +288,6 @@
         {
           "description": "IssueOps decision",
           "name": "decision"
-        },
-        {
-          "description": "IssueOps design",
-          "name": "design"
         },
         {
           "description": "IssueOps devils-advocate",
@@ -398,7 +398,7 @@
           "name": "status"
         }
       ],
-      "hash": "b329f1d186f4ea3833db59d9105795f963328cc30061877796d71bddb382ae0a",
+      "hash": "cc9dc1f93f884f93fc2e57602905a12b55578e96668afe8fc401951a4f3bcad9",
       "mcp_tools": [
         "api_doc_review",
         "api_doc_static_check",
@@ -629,7 +629,7 @@
           "branch",
           "phase",
           "intent",
-          "design_review",
+          "architecture_review",
           "domain_review",
           "issue_url",
           "issue_create_intent",
@@ -1223,6 +1223,13 @@
           "path": "$ISSUEOPS_ROOT/skills/algorithm-optimization"
         },
         {
+          "description": "Use when an architecture document, plan, or scope decision needs independent adversarial review before implementation, especially for excessive complexity or optimistic schedules. Run as an isolated sub-agent, never inline.",
+          "has_openai_yaml": true,
+          "has_skill_md": true,
+          "name": "architecture-review",
+          "path": "$ISSUEOPS_ROOT/skills/architecture-review"
+        },
+        {
           "description": "Client-facing functional QA through the installed Aside CLI. Use when asked to verify that a browser feature, acceptance criterion, user journey, validation rule, state transition, persistence behavior, authorization rule, or error-recovery path works as intended and needs a reproducible evidence report. Triggers include functional QA, browser test, acceptance test, requirement verification, regression check, 기능 QA, 요구사항 검증, 의도대로 동작하는지 확인, and client QA report.",
           "has_openai_yaml": true,
           "has_skill_md": true,
@@ -1263,13 +1270,6 @@
           "has_skill_md": true,
           "name": "database-design",
           "path": "$ISSUEOPS_ROOT/skills/database-design"
-        },
-        {
-          "description": "Use when a plan, design, architecture, or scope decision needs independent adversarial review before implementation, especially for excessive complexity or optimistic schedules. Run as an isolated sub-agent, never inline.",
-          "has_openai_yaml": true,
-          "has_skill_md": true,
-          "name": "design-review",
-          "path": "$ISSUEOPS_ROOT/skills/design-review"
         },
         {
           "description": "MUST USE when creating, choosing, or improving any diagram or visual explanation - mermaid flowchart/sequence/state/ER diagrams, architecture sketches, gantt/mindmap/timeline, charts for docs or issues, ASCII art, or rendered HTML pages. Triggers include 다이어그램, 그림, diagram, flowchart, sequence diagram, mermaid, 시각화, architecture diagram, chart. Picks the best form and medium for the content, renders high-quality output, and verifies renderability before delivering.",
@@ -1405,7 +1405,7 @@
           "path": "$ISSUEOPS_ROOT/skills/issueops-merge"
         },
         {
-          "description": "Prepare the plan, reviews, and canonical worktree for an IssueOps cycle, then hand off through Herdr when available, otherwise continue in the current session. Use when \"issueops next\" reports plan.write, plan.design, plan.review, or plan.handoff, or when the user says \"계획 세워줘\", \"계획 검토해줘\", \"구현 인계\".",
+          "description": "Prepare the plan, reviews, and canonical worktree for an IssueOps cycle, then hand off through Herdr when available, otherwise continue in the current session. Use when \"issueops next\" reports plan.architecture, plan.write, plan.review, or plan.handoff, or when the user says \"아키텍처 정해줘\", \"계획 세워줘\", \"계획 검토해줘\", \"구현 인계\".",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "issueops-plan",
@@ -1426,7 +1426,7 @@
           "path": "$ISSUEOPS_ROOT/skills/issueops-remote-write"
         },
         {
-          "description": "Use when issueops-plan or issueops-verify needs an independent review of a cycle plan or implementation diff, or when the user asks for \"계획 검토\", \"구현 리뷰\", \"design-review\", or \"devil's advocate\" within an IssueOps cycle.",
+          "description": "Use when issueops-plan or issueops-verify needs an independent review of a cycle architecture document, plan, or implementation diff, or when the user asks for \"아키텍처 검토\", \"계획 검토\", \"구현 리뷰\", \"architecture-review\", or \"devil's advocate\" within an IssueOps cycle.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "issueops-review",
@@ -1604,6 +1604,25 @@
       "ai_slop_clean_verification": [
         "go test ./cmd/issueops/issueopsapp -run Golden"
       ],
+      "architecture_review": {
+        "alternatives": [
+          "docs-only guidance"
+        ],
+        "approved": false,
+        "problem_summary": "IssueOps needs explicit architecture review",
+        "proposed_architecture": "Gate implementation on approved architecture",
+        "refactor_plan": "Keep changes local to IssueOps state and adapters",
+        "reviewed_architecture_digest": "5218a0a2086e3ca21a844a5981f8d7ee9f30fa04e0e7506e704e07fff6b3852f",
+        "reviewed_at": "$TIMESTAMP",
+        "reviewer_context": "subagent",
+        "risks": [
+          "golden contract drift"
+        ],
+        "verification": [
+          "architecture review checked contract drift risk",
+          "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden"
+        ]
+      },
       "branch": "1-contract-branch",
       "branch_prepare": {
         "base_branch": "main",
@@ -1672,30 +1691,13 @@
           "title": "Contract decision"
         },
         {
-          "body": "design-review stop: scope too broad for one cycle",
+          "body": "architecture-review stop: scope too broad for one cycle",
           "created_at": "$TIMESTAMP",
           "kind": "scope",
           "rationale": "regressed from plan to grill for re-plan",
-          "title": "design-review devil's-advocate stop"
+          "title": "architecture-review devil's-advocate stop"
         }
       ],
-      "design_review": {
-        "alternatives": [
-          "docs-only guidance"
-        ],
-        "approved": false,
-        "problem_summary": "IssueOps needs explicit design review",
-        "proposed_design": "Gate implementation on approved design",
-        "refactor_plan": "Keep changes local to IssueOps state and adapters",
-        "reviewed_at": "$TIMESTAMP",
-        "risks": [
-          "golden contract drift"
-        ],
-        "verification": [
-          "design review checked contract drift risk",
-          "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden"
-        ]
-      },
       "domain_review": {
         "model_fit": "fits the IssueOps phase-ledger domain model",
         "reviewed_at": "$TIMESTAMP",
@@ -1756,7 +1758,7 @@
       "phase_ledger": {
         "compatibility-review": {
           "notes": [
-            "stale: design-review regression (design-review stop: scope too broad for one cycle)"
+            "stale: architecture-review regression (architecture-review stop: scope too broad for one cycle)"
           ],
           "phase": "compatibility-review"
         },
@@ -1775,7 +1777,7 @@
         "plan": {
           "entered_at": "$TIMESTAMP",
           "notes": [
-            "stale: design-review regression (design-review stop: scope too broad for one cycle)"
+            "stale: architecture-review regression (architecture-review stop: scope too broad for one cycle)"
           ],
           "phase": "plan"
         }
@@ -1812,7 +1814,7 @@
         {
           "at": "$TIMESTAMP",
           "from_phase": "plan",
-          "reason": "design-review stop: scope too broad for one cycle"
+          "reason": "architecture-review stop: scope too broad for one cycle"
         }
       ],
       "repo": "$WORKSPACE",
@@ -1851,6 +1853,25 @@
       "worktree_path": "$ORPHAN_WORKTREE"
     },
     "issueops_decision_add": {
+      "architecture_review": {
+        "alternatives": [
+          "docs-only guidance"
+        ],
+        "approved": true,
+        "problem_summary": "IssueOps needs explicit architecture review",
+        "proposed_architecture": "Gate implementation on approved architecture",
+        "refactor_plan": "Keep changes local to IssueOps state and adapters",
+        "reviewed_architecture_digest": "5218a0a2086e3ca21a844a5981f8d7ee9f30fa04e0e7506e704e07fff6b3852f",
+        "reviewed_at": "$TIMESTAMP",
+        "reviewer_context": "subagent",
+        "risks": [
+          "golden contract drift"
+        ],
+        "verification": [
+          "architecture review checked contract drift risk",
+          "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden"
+        ]
+      },
       "branch": "1-contract-branch",
       "branch_prepare": {
         "base_branch": "main",
@@ -1919,23 +1940,6 @@
           "title": "Contract decision"
         }
       ],
-      "design_review": {
-        "alternatives": [
-          "docs-only guidance"
-        ],
-        "approved": true,
-        "problem_summary": "IssueOps needs explicit design review",
-        "proposed_design": "Gate implementation on approved design",
-        "refactor_plan": "Keep changes local to IssueOps state and adapters",
-        "reviewed_at": "$TIMESTAMP",
-        "risks": [
-          "golden contract drift"
-        ],
-        "verification": [
-          "design review checked contract drift risk",
-          "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden"
-        ]
-      },
       "id": "$ISSUEOPS_ID",
       "intent": {
         "ambiguities": [
@@ -2008,6 +2012,25 @@
       "worktree_path": "$ISSUEOPS_WORKTREE"
     },
     "issueops_domain_review": {
+      "architecture_review": {
+        "alternatives": [
+          "docs-only guidance"
+        ],
+        "approved": false,
+        "problem_summary": "IssueOps needs explicit architecture review",
+        "proposed_architecture": "Gate implementation on approved architecture",
+        "refactor_plan": "Keep changes local to IssueOps state and adapters",
+        "reviewed_architecture_digest": "5218a0a2086e3ca21a844a5981f8d7ee9f30fa04e0e7506e704e07fff6b3852f",
+        "reviewed_at": "$TIMESTAMP",
+        "reviewer_context": "subagent",
+        "risks": [
+          "golden contract drift"
+        ],
+        "verification": [
+          "architecture review checked contract drift risk",
+          "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden"
+        ]
+      },
       "branch": "1-contract-branch",
       "branch_prepare": {
         "base_branch": "main",
@@ -2076,30 +2099,13 @@
           "title": "Contract decision"
         },
         {
-          "body": "design-review stop: scope too broad for one cycle",
+          "body": "architecture-review stop: scope too broad for one cycle",
           "created_at": "$TIMESTAMP",
           "kind": "scope",
           "rationale": "regressed from plan to grill for re-plan",
-          "title": "design-review devil's-advocate stop"
+          "title": "architecture-review devil's-advocate stop"
         }
       ],
-      "design_review": {
-        "alternatives": [
-          "docs-only guidance"
-        ],
-        "approved": false,
-        "problem_summary": "IssueOps needs explicit design review",
-        "proposed_design": "Gate implementation on approved design",
-        "refactor_plan": "Keep changes local to IssueOps state and adapters",
-        "reviewed_at": "$TIMESTAMP",
-        "risks": [
-          "golden contract drift"
-        ],
-        "verification": [
-          "design review checked contract drift risk",
-          "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden"
-        ]
-      },
       "domain_review": {
         "model_fit": "fits the IssueOps phase-ledger domain model",
         "reviewed_at": "$TIMESTAMP",
@@ -2160,13 +2166,13 @@
       "phase_ledger": {
         "compatibility-review": {
           "notes": [
-            "stale: design-review regression (design-review stop: scope too broad for one cycle)"
+            "stale: architecture-review regression (architecture-review stop: scope too broad for one cycle)"
           ],
           "phase": "compatibility-review"
         },
         "plan": {
           "notes": [
-            "stale: design-review regression (design-review stop: scope too broad for one cycle)"
+            "stale: architecture-review regression (architecture-review stop: scope too broad for one cycle)"
           ],
           "phase": "plan"
         }
@@ -2203,7 +2209,7 @@
         {
           "at": "$TIMESTAMP",
           "from_phase": "plan",
-          "reason": "design-review stop: scope too broad for one cycle"
+          "reason": "architecture-review stop: scope too broad for one cycle"
         }
       ],
       "repo": "$WORKSPACE",
@@ -2231,6 +2237,25 @@
       "ok": true
     },
     "issueops_feedback_add": {
+      "architecture_review": {
+        "alternatives": [
+          "docs-only guidance"
+        ],
+        "approved": true,
+        "problem_summary": "IssueOps needs explicit architecture review",
+        "proposed_architecture": "Gate implementation on approved architecture",
+        "refactor_plan": "Keep changes local to IssueOps state and adapters",
+        "reviewed_architecture_digest": "5218a0a2086e3ca21a844a5981f8d7ee9f30fa04e0e7506e704e07fff6b3852f",
+        "reviewed_at": "$TIMESTAMP",
+        "reviewer_context": "subagent",
+        "risks": [
+          "golden contract drift"
+        ],
+        "verification": [
+          "architecture review checked contract drift risk",
+          "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden"
+        ]
+      },
       "branch": "1-contract-branch",
       "branch_prepare": {
         "base_branch": "main",
@@ -2299,23 +2324,6 @@
           "title": "Contract decision"
         }
       ],
-      "design_review": {
-        "alternatives": [
-          "docs-only guidance"
-        ],
-        "approved": true,
-        "problem_summary": "IssueOps needs explicit design review",
-        "proposed_design": "Gate implementation on approved design",
-        "refactor_plan": "Keep changes local to IssueOps state and adapters",
-        "reviewed_at": "$TIMESTAMP",
-        "risks": [
-          "golden contract drift"
-        ],
-        "verification": [
-          "design review checked contract drift risk",
-          "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden"
-        ]
-      },
       "feedback": [
         {
           "body": "tighten contract",
@@ -2402,6 +2410,25 @@
       "ai_slop_clean_verification": [
         "go test ./cmd/issueops/issueopsapp -run Golden"
       ],
+      "architecture_review": {
+        "alternatives": [
+          "docs-only guidance"
+        ],
+        "approved": false,
+        "problem_summary": "IssueOps needs explicit architecture review",
+        "proposed_architecture": "Gate implementation on approved architecture",
+        "refactor_plan": "Keep changes local to IssueOps state and adapters",
+        "reviewed_architecture_digest": "5218a0a2086e3ca21a844a5981f8d7ee9f30fa04e0e7506e704e07fff6b3852f",
+        "reviewed_at": "$TIMESTAMP",
+        "reviewer_context": "subagent",
+        "risks": [
+          "golden contract drift"
+        ],
+        "verification": [
+          "architecture review checked contract drift risk",
+          "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden"
+        ]
+      },
       "branch": "1-contract-branch",
       "branch_prepare": {
         "base_branch": "main",
@@ -2470,30 +2497,13 @@
           "title": "Contract decision"
         },
         {
-          "body": "design-review stop: scope too broad for one cycle",
+          "body": "architecture-review stop: scope too broad for one cycle",
           "created_at": "$TIMESTAMP",
           "kind": "scope",
           "rationale": "regressed from plan to grill for re-plan",
-          "title": "design-review devil's-advocate stop"
+          "title": "architecture-review devil's-advocate stop"
         }
       ],
-      "design_review": {
-        "alternatives": [
-          "docs-only guidance"
-        ],
-        "approved": false,
-        "problem_summary": "IssueOps needs explicit design review",
-        "proposed_design": "Gate implementation on approved design",
-        "refactor_plan": "Keep changes local to IssueOps state and adapters",
-        "reviewed_at": "$TIMESTAMP",
-        "risks": [
-          "golden contract drift"
-        ],
-        "verification": [
-          "design review checked contract drift risk",
-          "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden"
-        ]
-      },
       "domain_review": {
         "model_fit": "fits the IssueOps phase-ledger domain model",
         "reviewed_at": "$TIMESTAMP",
@@ -2555,7 +2565,7 @@
       "phase_ledger": {
         "compatibility-review": {
           "notes": [
-            "stale: design-review regression (design-review stop: scope too broad for one cycle)"
+            "stale: architecture-review regression (architecture-review stop: scope too broad for one cycle)"
           ],
           "phase": "compatibility-review"
         },
@@ -2574,7 +2584,7 @@
         "plan": {
           "entered_at": "$TIMESTAMP",
           "notes": [
-            "stale: design-review regression (design-review stop: scope too broad for one cycle)"
+            "stale: architecture-review regression (architecture-review stop: scope too broad for one cycle)"
           ],
           "phase": "plan"
         }
@@ -2611,7 +2621,7 @@
         {
           "at": "$TIMESTAMP",
           "from_phase": "plan",
-          "reason": "design-review stop: scope too broad for one cycle"
+          "reason": "architecture-review stop: scope too broad for one cycle"
         }
       ],
       "repo": "$WORKSPACE",
@@ -2620,6 +2630,25 @@
       "worktree_path": "$ISSUEOPS_WORKTREE"
     },
     "issueops_link_child": {
+      "architecture_review": {
+        "alternatives": [
+          "docs-only guidance"
+        ],
+        "approved": true,
+        "problem_summary": "IssueOps needs explicit architecture review",
+        "proposed_architecture": "Gate implementation on approved architecture",
+        "refactor_plan": "Keep changes local to IssueOps state and adapters",
+        "reviewed_architecture_digest": "5218a0a2086e3ca21a844a5981f8d7ee9f30fa04e0e7506e704e07fff6b3852f",
+        "reviewed_at": "$TIMESTAMP",
+        "reviewer_context": "subagent",
+        "risks": [
+          "golden contract drift"
+        ],
+        "verification": [
+          "architecture review checked contract drift risk",
+          "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden"
+        ]
+      },
       "branch": "1-contract-branch",
       "branch_prepare": {
         "base_branch": "main",
@@ -2671,23 +2700,6 @@
         ]
       },
       "created_at": "$TIMESTAMP",
-      "design_review": {
-        "alternatives": [
-          "docs-only guidance"
-        ],
-        "approved": true,
-        "problem_summary": "IssueOps needs explicit design review",
-        "proposed_design": "Gate implementation on approved design",
-        "refactor_plan": "Keep changes local to IssueOps state and adapters",
-        "reviewed_at": "$TIMESTAMP",
-        "risks": [
-          "golden contract drift"
-        ],
-        "verification": [
-          "design review checked contract drift risk",
-          "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden"
-        ]
-      },
       "id": "$ISSUEOPS_ID",
       "intent": {
         "ambiguities": [
@@ -2809,6 +2821,25 @@
       "updated_at": "$TIMESTAMP"
     },
     "issueops_link_plan": {
+      "architecture_review": {
+        "alternatives": [
+          "docs-only guidance"
+        ],
+        "approved": true,
+        "problem_summary": "IssueOps needs explicit architecture review",
+        "proposed_architecture": "Gate implementation on approved architecture",
+        "refactor_plan": "Keep changes local to IssueOps state and adapters",
+        "reviewed_architecture_digest": "5218a0a2086e3ca21a844a5981f8d7ee9f30fa04e0e7506e704e07fff6b3852f",
+        "reviewed_at": "$TIMESTAMP",
+        "reviewer_context": "subagent",
+        "risks": [
+          "golden contract drift"
+        ],
+        "verification": [
+          "architecture review checked contract drift risk",
+          "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden"
+        ]
+      },
       "branch": "1-contract-branch",
       "branch_prepare": {
         "base_branch": "main",
@@ -2860,23 +2891,6 @@
         ]
       },
       "created_at": "$TIMESTAMP",
-      "design_review": {
-        "alternatives": [
-          "docs-only guidance"
-        ],
-        "approved": true,
-        "problem_summary": "IssueOps needs explicit design review",
-        "proposed_design": "Gate implementation on approved design",
-        "refactor_plan": "Keep changes local to IssueOps state and adapters",
-        "reviewed_at": "$TIMESTAMP",
-        "risks": [
-          "golden contract drift"
-        ],
-        "verification": [
-          "design review checked contract drift risk",
-          "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden"
-        ]
-      },
       "id": "$ISSUEOPS_ID",
       "intent": {
         "ambiguities": [
@@ -2933,6 +2947,25 @@
       "worktree_path": "$ISSUEOPS_WORKTREE"
     },
     "issueops_link_related": {
+      "architecture_review": {
+        "alternatives": [
+          "docs-only guidance"
+        ],
+        "approved": true,
+        "problem_summary": "IssueOps needs explicit architecture review",
+        "proposed_architecture": "Gate implementation on approved architecture",
+        "refactor_plan": "Keep changes local to IssueOps state and adapters",
+        "reviewed_architecture_digest": "5218a0a2086e3ca21a844a5981f8d7ee9f30fa04e0e7506e704e07fff6b3852f",
+        "reviewed_at": "$TIMESTAMP",
+        "reviewer_context": "subagent",
+        "risks": [
+          "golden contract drift"
+        ],
+        "verification": [
+          "architecture review checked contract drift risk",
+          "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden"
+        ]
+      },
       "branch": "1-contract-branch",
       "branch_prepare": {
         "base_branch": "main",
@@ -2984,23 +3017,6 @@
         ]
       },
       "created_at": "$TIMESTAMP",
-      "design_review": {
-        "alternatives": [
-          "docs-only guidance"
-        ],
-        "approved": true,
-        "problem_summary": "IssueOps needs explicit design review",
-        "proposed_design": "Gate implementation on approved design",
-        "refactor_plan": "Keep changes local to IssueOps state and adapters",
-        "reviewed_at": "$TIMESTAMP",
-        "risks": [
-          "golden contract drift"
-        ],
-        "verification": [
-          "design review checked contract drift risk",
-          "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden"
-        ]
-      },
       "id": "$ISSUEOPS_ID",
       "intent": {
         "ambiguities": [
@@ -3179,6 +3195,25 @@
       "worktree_path": "$ISSUEOPS_WORKTREE"
     },
     "issueops_mark_issue_updated": {
+      "architecture_review": {
+        "alternatives": [
+          "docs-only guidance"
+        ],
+        "approved": true,
+        "problem_summary": "IssueOps needs explicit architecture review",
+        "proposed_architecture": "Gate implementation on approved architecture",
+        "refactor_plan": "Keep changes local to IssueOps state and adapters",
+        "reviewed_architecture_digest": "5218a0a2086e3ca21a844a5981f8d7ee9f30fa04e0e7506e704e07fff6b3852f",
+        "reviewed_at": "$TIMESTAMP",
+        "reviewer_context": "subagent",
+        "risks": [
+          "golden contract drift"
+        ],
+        "verification": [
+          "architecture review checked contract drift risk",
+          "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden"
+        ]
+      },
       "branch": "1-contract-branch",
       "branch_prepare": {
         "base_branch": "main",
@@ -3247,23 +3282,6 @@
           "title": "Contract decision"
         }
       ],
-      "design_review": {
-        "alternatives": [
-          "docs-only guidance"
-        ],
-        "approved": true,
-        "problem_summary": "IssueOps needs explicit design review",
-        "proposed_design": "Gate implementation on approved design",
-        "refactor_plan": "Keep changes local to IssueOps state and adapters",
-        "reviewed_at": "$TIMESTAMP",
-        "risks": [
-          "golden contract drift"
-        ],
-        "verification": [
-          "design review checked contract drift risk",
-          "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden"
-        ]
-      },
       "feedback": [
         {
           "body": "tighten contract",
@@ -3526,6 +3544,25 @@
       "updated_at": "$TIMESTAMP"
     },
     "issueops_record_devils_advocate_review": {
+      "architecture_review": {
+        "alternatives": [
+          "docs-only guidance"
+        ],
+        "approved": true,
+        "problem_summary": "IssueOps needs explicit architecture review",
+        "proposed_architecture": "Gate implementation on approved architecture",
+        "refactor_plan": "Keep changes local to IssueOps state and adapters",
+        "reviewed_architecture_digest": "5218a0a2086e3ca21a844a5981f8d7ee9f30fa04e0e7506e704e07fff6b3852f",
+        "reviewed_at": "$TIMESTAMP",
+        "reviewer_context": "subagent",
+        "risks": [
+          "golden contract drift"
+        ],
+        "verification": [
+          "architecture review checked contract drift risk",
+          "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden"
+        ]
+      },
       "branch": "1-contract-branch",
       "branch_prepare": {
         "base_branch": "main",
@@ -3594,23 +3631,6 @@
           "title": "Contract decision"
         }
       ],
-      "design_review": {
-        "alternatives": [
-          "docs-only guidance"
-        ],
-        "approved": true,
-        "problem_summary": "IssueOps needs explicit design review",
-        "proposed_design": "Gate implementation on approved design",
-        "refactor_plan": "Keep changes local to IssueOps state and adapters",
-        "reviewed_at": "$TIMESTAMP",
-        "risks": [
-          "golden contract drift"
-        ],
-        "verification": [
-          "design review checked contract drift risk",
-          "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden"
-        ]
-      },
       "devils_advocate_review": {
         "findings": [
           "second-system effect: three cache backends for one need"
@@ -3730,6 +3750,25 @@
       "updated_at": "$TIMESTAMP"
     },
     "issueops_regress_for_replan": {
+      "architecture_review": {
+        "alternatives": [
+          "docs-only guidance"
+        ],
+        "approved": false,
+        "problem_summary": "IssueOps needs explicit architecture review",
+        "proposed_architecture": "Gate implementation on approved architecture",
+        "refactor_plan": "Keep changes local to IssueOps state and adapters",
+        "reviewed_architecture_digest": "5218a0a2086e3ca21a844a5981f8d7ee9f30fa04e0e7506e704e07fff6b3852f",
+        "reviewed_at": "$TIMESTAMP",
+        "reviewer_context": "subagent",
+        "risks": [
+          "golden contract drift"
+        ],
+        "verification": [
+          "architecture review checked contract drift risk",
+          "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden"
+        ]
+      },
       "branch": "1-contract-branch",
       "branch_prepare": {
         "base_branch": "main",
@@ -3798,30 +3837,13 @@
           "title": "Contract decision"
         },
         {
-          "body": "design-review stop: scope too broad for one cycle",
+          "body": "architecture-review stop: scope too broad for one cycle",
           "created_at": "$TIMESTAMP",
           "kind": "scope",
           "rationale": "regressed from plan to grill for re-plan",
-          "title": "design-review devil's-advocate stop"
+          "title": "architecture-review devil's-advocate stop"
         }
       ],
-      "design_review": {
-        "alternatives": [
-          "docs-only guidance"
-        ],
-        "approved": false,
-        "problem_summary": "IssueOps needs explicit design review",
-        "proposed_design": "Gate implementation on approved design",
-        "refactor_plan": "Keep changes local to IssueOps state and adapters",
-        "reviewed_at": "$TIMESTAMP",
-        "risks": [
-          "golden contract drift"
-        ],
-        "verification": [
-          "design review checked contract drift risk",
-          "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden"
-        ]
-      },
       "feedback": [
         {
           "body": "tighten contract",
@@ -3872,13 +3894,13 @@
       "phase_ledger": {
         "compatibility-review": {
           "notes": [
-            "stale: design-review regression (design-review stop: scope too broad for one cycle)"
+            "stale: architecture-review regression (architecture-review stop: scope too broad for one cycle)"
           ],
           "phase": "compatibility-review"
         },
         "plan": {
           "notes": [
-            "stale: design-review regression (design-review stop: scope too broad for one cycle)"
+            "stale: architecture-review regression (architecture-review stop: scope too broad for one cycle)"
           ],
           "phase": "plan"
         }
@@ -3915,7 +3937,7 @@
         {
           "at": "$TIMESTAMP",
           "from_phase": "plan",
-          "reason": "design-review stop: scope too broad for one cycle"
+          "reason": "architecture-review stop: scope too broad for one cycle"
         }
       ],
       "repo": "$WORKSPACE",
@@ -3997,7 +4019,26 @@
       "updated": true,
       "url": "https://gitlab.example/group/project/-/issues/1"
     },
-    "issueops_review_design": {
+    "issueops_review_architecture": {
+      "architecture_review": {
+        "alternatives": [
+          "docs-only guidance"
+        ],
+        "approved": true,
+        "problem_summary": "IssueOps needs explicit architecture review",
+        "proposed_architecture": "Gate implementation on approved architecture",
+        "refactor_plan": "Keep changes local to IssueOps state and adapters",
+        "reviewed_architecture_digest": "5218a0a2086e3ca21a844a5981f8d7ee9f30fa04e0e7506e704e07fff6b3852f",
+        "reviewed_at": "$TIMESTAMP",
+        "reviewer_context": "subagent",
+        "risks": [
+          "golden contract drift"
+        ],
+        "verification": [
+          "architecture review checked contract drift risk",
+          "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden"
+        ]
+      },
       "branch": "1-contract-branch",
       "branch_prepare": {
         "base_branch": "main",
@@ -4049,23 +4090,6 @@
         ]
       },
       "created_at": "$TIMESTAMP",
-      "design_review": {
-        "alternatives": [
-          "docs-only guidance"
-        ],
-        "approved": true,
-        "problem_summary": "IssueOps needs explicit design review",
-        "proposed_design": "Gate implementation on approved design",
-        "refactor_plan": "Keep changes local to IssueOps state and adapters",
-        "reviewed_at": "$TIMESTAMP",
-        "risks": [
-          "golden contract drift"
-        ],
-        "verification": [
-          "design review checked contract drift risk",
-          "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden"
-        ]
-      },
       "id": "$ISSUEOPS_ID",
       "intent": {
         "ambiguities": [
@@ -4121,6 +4145,25 @@
       "worktree_path": "$ISSUEOPS_WORKTREE"
     },
     "issueops_set_phase": {
+      "architecture_review": {
+        "alternatives": [
+          "docs-only guidance"
+        ],
+        "approved": false,
+        "problem_summary": "IssueOps needs explicit architecture review",
+        "proposed_architecture": "Gate implementation on approved architecture",
+        "refactor_plan": "Keep changes local to IssueOps state and adapters",
+        "reviewed_architecture_digest": "5218a0a2086e3ca21a844a5981f8d7ee9f30fa04e0e7506e704e07fff6b3852f",
+        "reviewed_at": "$TIMESTAMP",
+        "reviewer_context": "subagent",
+        "risks": [
+          "golden contract drift"
+        ],
+        "verification": [
+          "architecture review checked contract drift risk",
+          "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden"
+        ]
+      },
       "branch": "1-contract-branch",
       "branch_prepare": {
         "base_branch": "main",
@@ -4189,30 +4232,13 @@
           "title": "Contract decision"
         },
         {
-          "body": "design-review stop: scope too broad for one cycle",
+          "body": "architecture-review stop: scope too broad for one cycle",
           "created_at": "$TIMESTAMP",
           "kind": "scope",
           "rationale": "regressed from plan to grill for re-plan",
-          "title": "design-review devil's-advocate stop"
+          "title": "architecture-review devil's-advocate stop"
         }
       ],
-      "design_review": {
-        "alternatives": [
-          "docs-only guidance"
-        ],
-        "approved": false,
-        "problem_summary": "IssueOps needs explicit design review",
-        "proposed_design": "Gate implementation on approved design",
-        "refactor_plan": "Keep changes local to IssueOps state and adapters",
-        "reviewed_at": "$TIMESTAMP",
-        "risks": [
-          "golden contract drift"
-        ],
-        "verification": [
-          "design review checked contract drift risk",
-          "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden"
-        ]
-      },
       "domain_review": {
         "model_fit": "fits the IssueOps phase-ledger domain model",
         "reviewed_at": "$TIMESTAMP",
@@ -4273,7 +4299,7 @@
       "phase_ledger": {
         "compatibility-review": {
           "notes": [
-            "stale: design-review regression (design-review stop: scope too broad for one cycle)"
+            "stale: architecture-review regression (architecture-review stop: scope too broad for one cycle)"
           ],
           "phase": "compatibility-review"
         },
@@ -4292,7 +4318,7 @@
         "plan": {
           "entered_at": "$TIMESTAMP",
           "notes": [
-            "stale: design-review regression (design-review stop: scope too broad for one cycle)"
+            "stale: architecture-review regression (architecture-review stop: scope too broad for one cycle)"
           ],
           "phase": "plan"
         }
@@ -4329,7 +4355,7 @@
         {
           "at": "$TIMESTAMP",
           "from_phase": "plan",
-          "reason": "design-review stop: scope too broad for one cycle"
+          "reason": "architecture-review stop: scope too broad for one cycle"
         }
       ],
       "repo": "$WORKSPACE",
@@ -4348,6 +4374,25 @@
       "updated_at": "$TIMESTAMP"
     },
     "issueops_status": {
+      "architecture_review": {
+        "alternatives": [
+          "docs-only guidance"
+        ],
+        "approved": true,
+        "problem_summary": "IssueOps needs explicit architecture review",
+        "proposed_architecture": "Gate implementation on approved architecture",
+        "refactor_plan": "Keep changes local to IssueOps state and adapters",
+        "reviewed_architecture_digest": "5218a0a2086e3ca21a844a5981f8d7ee9f30fa04e0e7506e704e07fff6b3852f",
+        "reviewed_at": "$TIMESTAMP",
+        "reviewer_context": "subagent",
+        "risks": [
+          "golden contract drift"
+        ],
+        "verification": [
+          "architecture review checked contract drift risk",
+          "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden"
+        ]
+      },
       "branch": "1-contract-branch",
       "branch_prepare": {
         "base_branch": "main",
@@ -4416,23 +4461,6 @@
           "title": "Contract decision"
         }
       ],
-      "design_review": {
-        "alternatives": [
-          "docs-only guidance"
-        ],
-        "approved": true,
-        "problem_summary": "IssueOps needs explicit design review",
-        "proposed_design": "Gate implementation on approved design",
-        "refactor_plan": "Keep changes local to IssueOps state and adapters",
-        "reviewed_at": "$TIMESTAMP",
-        "risks": [
-          "golden contract drift"
-        ],
-        "verification": [
-          "design review checked contract drift risk",
-          "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden"
-        ]
-      },
       "feedback": [
         {
           "body": "tighten contract",
@@ -4548,7 +4576,7 @@
             "branch_prepare",
             "worktree_path",
             "plan_path",
-            "design_review"
+            "architecture_review"
           ],
           "notes": [
             "derived"
@@ -5775,13 +5803,13 @@
         "has_worker_stuck_running_detection": true,
         "skills": [
           "algorithm-optimization",
+          "architecture-review",
           "aside-functional-qa",
           "aside-visual-qa",
           "aside-web-qa",
           "atomic-commit-push",
           "code-quality-metrics",
           "database-design",
-          "design-review",
           "diagram-design",
           "explain",
           "fluent-korean",
@@ -7130,6 +7158,10 @@
                 "name": "ai-slop-clean"
               },
               {
+                "description": "IssueOps architecture",
+                "name": "architecture"
+              },
+              {
                 "description": "IssueOps artifact",
                 "name": "artifact"
               },
@@ -7156,10 +7188,6 @@
               {
                 "description": "IssueOps decision",
                 "name": "decision"
-              },
-              {
-                "description": "IssueOps design",
-                "name": "design"
               },
               {
                 "description": "IssueOps devils-advocate",
@@ -7270,7 +7298,7 @@
                 "name": "status"
               }
             ],
-            "hash": "b329f1d186f4ea3833db59d9105795f963328cc30061877796d71bddb382ae0a",
+            "hash": "cc9dc1f93f884f93fc2e57602905a12b55578e96668afe8fc401951a4f3bcad9",
             "mcp_tools": [
               "api_doc_review",
               "api_doc_static_check",
@@ -7501,7 +7529,7 @@
                 "branch",
                 "phase",
                 "intent",
-                "design_review",
+                "architecture_review",
                 "domain_review",
                 "issue_url",
                 "issue_create_intent",
@@ -8109,6 +8137,13 @@
                 "path": "$ISSUEOPS_ROOT/skills/algorithm-optimization"
               },
               {
+                "description": "Use when an architecture document, plan, or scope decision needs independent adversarial review before implementation, especially for excessive complexity or optimistic schedules. Run as an isolated sub-agent, never inline.",
+                "has_openai_yaml": true,
+                "has_skill_md": true,
+                "name": "architecture-review",
+                "path": "$ISSUEOPS_ROOT/skills/architecture-review"
+              },
+              {
                 "description": "Client-facing functional QA through the installed Aside CLI. Use when asked to verify that a browser feature, acceptance criterion, user journey, validation rule, state transition, persistence behavior, authorization rule, or error-recovery path works as intended and needs a reproducible evidence report. Triggers include functional QA, browser test, acceptance test, requirement verification, regression check, 기능 QA, 요구사항 검증, 의도대로 동작하는지 확인, and client QA report.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
@@ -8149,13 +8184,6 @@
                 "has_skill_md": true,
                 "name": "database-design",
                 "path": "$ISSUEOPS_ROOT/skills/database-design"
-              },
-              {
-                "description": "Use when a plan, design, architecture, or scope decision needs independent adversarial review before implementation, especially for excessive complexity or optimistic schedules. Run as an isolated sub-agent, never inline.",
-                "has_openai_yaml": true,
-                "has_skill_md": true,
-                "name": "design-review",
-                "path": "$ISSUEOPS_ROOT/skills/design-review"
               },
               {
                 "description": "MUST USE when creating, choosing, or improving any diagram or visual explanation - mermaid flowchart/sequence/state/ER diagrams, architecture sketches, gantt/mindmap/timeline, charts for docs or issues, ASCII art, or rendered HTML pages. Triggers include 다이어그램, 그림, diagram, flowchart, sequence diagram, mermaid, 시각화, architecture diagram, chart. Picks the best form and medium for the content, renders high-quality output, and verifies renderability before delivering.",
@@ -8291,7 +8319,7 @@
                 "path": "$ISSUEOPS_ROOT/skills/issueops-merge"
               },
               {
-                "description": "Prepare the plan, reviews, and canonical worktree for an IssueOps cycle, then hand off through Herdr when available, otherwise continue in the current session. Use when \"issueops next\" reports plan.write, plan.design, plan.review, or plan.handoff, or when the user says \"계획 세워줘\", \"계획 검토해줘\", \"구현 인계\".",
+                "description": "Prepare the plan, reviews, and canonical worktree for an IssueOps cycle, then hand off through Herdr when available, otherwise continue in the current session. Use when \"issueops next\" reports plan.architecture, plan.write, plan.review, or plan.handoff, or when the user says \"아키텍처 정해줘\", \"계획 세워줘\", \"계획 검토해줘\", \"구현 인계\".",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "issueops-plan",
@@ -8312,7 +8340,7 @@
                 "path": "$ISSUEOPS_ROOT/skills/issueops-remote-write"
               },
               {
-                "description": "Use when issueops-plan or issueops-verify needs an independent review of a cycle plan or implementation diff, or when the user asks for \"계획 검토\", \"구현 리뷰\", \"design-review\", or \"devil's advocate\" within an IssueOps cycle.",
+                "description": "Use when issueops-plan or issueops-verify needs an independent review of a cycle architecture document, plan, or implementation diff, or when the user asks for \"아키텍처 검토\", \"계획 검토\", \"구현 리뷰\", \"architecture-review\", or \"devil's advocate\" within an IssueOps cycle.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "issueops-review",
@@ -9422,13 +9450,13 @@
               "has_worker_stuck_running_detection": true,
               "skills": [
                 "algorithm-optimization",
+                "architecture-review",
                 "aside-functional-qa",
                 "aside-visual-qa",
                 "aside-web-qa",
                 "atomic-commit-push",
                 "code-quality-metrics",
                 "database-design",
-                "design-review",
                 "diagram-design",
                 "explain",
                 "fluent-korean",

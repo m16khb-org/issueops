@@ -39,7 +39,7 @@ type IssueOpsCLIDeps struct {
 	ReadIssueOps                                func(stateRoot, id string) (issueopscontract.IssueOpsRecord, error)
 	RecordIssueOpsAISlopCleanEvidenceWithActor  func(stateRoot, id string, categories, verification []string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
 	RecordIssueOpsCompatibilityReviewWithActor  func(stateRoot, id string, req reviewcontract.CompatibilityReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
-	RecordIssueOpsDesignReviewWithActor         func(stateRoot, id string, req reviewcontract.DesignReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
+	RecordIssueOpsArchitectureReviewWithActor   func(stateRoot, id string, req reviewcontract.ArchitectureReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
 	RecordIssueOpsDevilsAdvocateReviewWithActor func(stateRoot, id string, req reviewcontract.DevilsAdvocateReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
 	RecordIssueOpsDomainReviewWithActor         func(stateRoot, id string, req issueopscontract.IssueOpsDomainReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
 	RecordIssueOpsImplementationReviewWithActor func(stateRoot, id string, req issueopscontract.IssueOpsImplementationReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)

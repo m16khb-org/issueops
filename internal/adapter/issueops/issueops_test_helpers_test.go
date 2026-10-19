@@ -195,18 +195,18 @@ func recordIssueOpsGrillArtifactsForTest(t *testing.T, stateRoot, id string) {
 	}
 }
 
-func recordIssueOpsApprovedDesignForTest(t *testing.T, stateRoot, id string) {
+func recordIssueOpsApprovedArchitectureForTest(t *testing.T, stateRoot, id string) {
 	t.Helper()
 	recordIssueOpsGrillArtifactsForTest(t, stateRoot, id)
 	setIssueOpsPlanPrepForTest(t, stateRoot, id)
-	if _, err := RecordIssueOpsDesignReview(stateRoot, id, reviewcontract.DesignReviewRequest{
-		ProblemSummary: "IssueOps must preserve the work contract",
-		ProposedDesign: "Gate implementation on a reviewed design contract",
-		RefactorPlan:   "Keep IssueOps state and adapter changes scoped to the active cycle",
-		Alternatives:   []string{"documentation-only guidance"},
-		Risks:          []string{"existing tests must create explicit design evidence"},
-		Verification:   []string{"design review checked alternatives and risks", "go test ./internal/core/issueops"},
-		Approved:       true,
+	if _, err := RecordIssueOpsArchitectureReview(stateRoot, id, reviewcontract.ArchitectureReviewRequest{
+		ProblemSummary:       "IssueOps must preserve the work contract",
+		ProposedArchitecture: "Gate implementation on a reviewed design contract",
+		RefactorPlan:         "Keep IssueOps state and adapter changes scoped to the active cycle",
+		Alternatives:         []string{"documentation-only guidance"},
+		Risks:                []string{"existing tests must create explicit design evidence"},
+		Verification:         []string{"architecture review checked alternatives and risks", "go test ./internal/core/issueops"},
+		Approved:             true,
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -220,6 +220,7 @@ func recordIssueOpsPreparedExecutionForTest(t *testing.T, stateRoot, id, worktre
 		t.Fatal(err)
 	}
 	record.Execution = issueOpsExecutionForTest(record.Repo, worktree, record.Branch)
+	sealStagedArchitectureForTest(t, stateRoot, record)
 	record, err = writeIssueOps(context.Background(), stateRoot, record)
 	if err != nil {
 		t.Fatal(err)
@@ -337,8 +338,8 @@ func executionPrepareRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
 	record := issueops.IssueOpsRecord{
 		OK: true, SchemaVersion: issueops.IssueOpsSchemaVersion,
 		ID: newIssueOpsID(repo, branch), Repo: repo, Branch: branch, Phase: issueops.IssueOpsPhasePlan,
-		IssueURL:     "https://github.com/acme/repo/issues/16",
-		DesignReview: &reviewcontract.DesignReview{Approved: true, ReviewedAt: "2026-07-11T00:00:00Z"},
+		IssueURL:           "https://github.com/acme/repo/issues/16",
+		ArchitectureReview: &reviewcontract.ArchitectureReview{Approved: true, ReviewedAt: "2026-07-11T00:00:00Z"},
 		BranchPrepare: &issueops.IssueOpsBranchPrepare{
 			Provider: "github", IssueURL: "https://github.com/acme/repo/issues/16", Branch: branch,
 			BaseBranch: "main", BaseSHA: baseHead, LinkVerified: true, CreatedAt: "2026-07-11T00:00:00Z",
@@ -352,26 +353,28 @@ func executionPrepareRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
 	return stateRoot, written
 }
 
-func issueOpsDesignReviewForTest() *reviewcontract.DesignReview {
-	return &reviewcontract.DesignReview{
-		ProblemSummary: "IssueOps must preserve the work contract",
-		ProposedDesign: "Gate implementation on a reviewed design contract",
-		RefactorPlan:   "Keep IssueOps state and adapter changes scoped to the active cycle",
-		Alternatives:   []string{"documentation-only guidance"},
-		Risks:          []string{"existing tests must create explicit design evidence"},
-		Verification:   []string{"design review checked alternatives and risks", "go test ./internal/core/issueops"},
-		Approved:       true,
-		ReviewedAt:     "2026-06-05T00:00:00Z",
+func issueOpsArchitectureReviewForTest() *reviewcontract.ArchitectureReview {
+	return &reviewcontract.ArchitectureReview{
+		ProblemSummary:       "IssueOps must preserve the work contract",
+		ProposedArchitecture: "Gate implementation on a reviewed design contract",
+		RefactorPlan:         "Keep IssueOps state and adapter changes scoped to the active cycle",
+		Alternatives:         []string{"documentation-only guidance"},
+		Risks:                []string{"existing tests must create explicit design evidence"},
+		Verification:         []string{"architecture review checked alternatives and risks", "go test ./internal/core/issueops"},
+		Approved:             true,
+		// 이 fixture는 digest 게이트가 관심사가 아니므로 부모 승계 표시로 그 게이트를 건너뛴다.
+		ReviewerContext: issueopsdomain.ParentReviewPattern,
+		ReviewedAt:      "2026-06-05T00:00:00Z",
 	}
 }
 
-func issueOpsWeakApprovedDesignReviewForTest() *reviewcontract.DesignReview {
-	return &reviewcontract.DesignReview{
-		ProblemSummary: "IssueOps must preserve the work contract",
-		ProposedDesign: "Gate implementation on a reviewed design contract",
-		Verification:   []string{"go test ./internal/core/issueops"},
-		Approved:       true,
-		ReviewedAt:     "2026-06-05T00:00:00Z",
+func issueOpsWeakApprovedArchitectureReviewForTest() *reviewcontract.ArchitectureReview {
+	return &reviewcontract.ArchitectureReview{
+		ProblemSummary:       "IssueOps must preserve the work contract",
+		ProposedArchitecture: "Gate implementation on a reviewed design contract",
+		Verification:         []string{"go test ./internal/core/issueops"},
+		Approved:             true,
+		ReviewedAt:           "2026-06-05T00:00:00Z",
 	}
 }
 
@@ -382,5 +385,21 @@ func issueOpsWeakApprovedDesignReviewForTest() *reviewcontract.DesignReview {
 func quiescentWorkspaceInspector() executionWorkspaceProcessInspector {
 	return func(string, map[int]bool) ([]workspaceProcess, error) {
 		return nil, nil
+	}
+}
+
+// sealStagedArchitectureForTest는 execution prepare가 하는 봉인을 fixture에서 흉내 낸다.
+// 스테이징된 architecture가 있을 때만 봉인 디렉터리를 정하고 파일을 쓴다.
+func sealStagedArchitectureForTest(t *testing.T, stateRoot string, record issueops.IssueOpsRecord) {
+	t.Helper()
+	staged, err := readStagedArtifacts(stateRoot, record.ID)
+	if err != nil || staged["architecture"] == "" {
+		return
+	}
+	if record.Execution.Workspace.ArtifactDir == "" {
+		record.Execution.Workspace.ArtifactDir = ".issueops/issues/1/artifact"
+	}
+	if err := writeSealedArtifact(record.Execution.Workspace.Root, sealedArtifactPath(record, record.Execution.Workspace.Root, "architecture"), []byte(staged["architecture"])); err != nil {
+		t.Fatal(err)
 	}
 }

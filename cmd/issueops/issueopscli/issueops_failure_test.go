@@ -63,7 +63,7 @@ func TestRunIssueOpsPhaseFailureWithJSONEmitsStructuredError(t *testing.T) {
 	}
 }
 
-func TestRunIssueOpsIntentAndDesignFailuresWithJSONEmitStructuredErrors(t *testing.T) {
+func TestRunIssueOpsIntentAndArchitectureFailuresWithJSONEmitStructuredErrors(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := makeIssueOpsCLIRepoForTest(t, "intent-design-json-failure")
 	start := captureStdoutForContract(t, func() error {
@@ -93,13 +93,14 @@ func TestRunIssueOpsIntentAndDesignFailuresWithJSONEmitStructuredErrors(t *testi
 	assertIssueOpsStructuredFailure(t, intentOut, "success_criteria is required")
 
 	recordIssueOpsCLIIntentForTest(t, id)
-	designOut, err := captureStdoutAndErrorForIssueOps(t, func() error {
+	architectureOut, err := captureStdoutAndErrorForIssueOps(t, func() error {
 		return runIssueOps([]string{
-			"design", "review",
+			"architecture", "review",
 			"--id", id,
 			"--problem-summary", "IssueOps needs a design gate",
-			"--proposed-design", "Require approved design before implementation",
+			"--proposed-architecture", "Require approved design before implementation",
 			"--open-question", "which design?",
+			"--reviewer-context", "subagent",
 			"--approved",
 			"--json",
 		})
@@ -107,16 +108,17 @@ func TestRunIssueOpsIntentAndDesignFailuresWithJSONEmitStructuredErrors(t *testi
 	if err == nil {
 		t.Fatalf("approved design with open questions and missing verification should fail")
 	}
-	assertIssueOpsStructuredFailure(t, designOut, "verification is required")
+	assertIssueOpsStructuredFailure(t, architectureOut, "verification is required")
 
 	openQuestionOut, err := captureStdoutAndErrorForIssueOps(t, func() error {
 		return runIssueOps([]string{
-			"design", "review",
+			"architecture", "review",
 			"--id", id,
 			"--problem-summary", "IssueOps needs a design gate",
-			"--proposed-design", "Require approved design before implementation",
+			"--proposed-architecture", "Require approved design before implementation",
 			"--verification", "go test ./cmd/issueops/issueopscli",
 			"--open-question", "which design?",
+			"--reviewer-context", "subagent",
 			"--approved",
 			"--json",
 		})
@@ -137,11 +139,12 @@ func TestRunIssueOpsIntentAndDesignFailuresWithJSONEmitStructuredErrors(t *testi
 		{
 			name: "missing refactor plan",
 			args: []string{
-				"design", "review",
+				"architecture", "review",
 				"--id", id,
 				"--problem-summary", "IssueOps needs a design gate",
-				"--proposed-design", "Require approved design before implementation",
+				"--proposed-architecture", "Require approved design before implementation",
 				"--verification", "go test ./cmd/issueops/issueopscli",
+				"--reviewer-context", "subagent",
 				"--approved",
 				"--json",
 			},
@@ -150,12 +153,13 @@ func TestRunIssueOpsIntentAndDesignFailuresWithJSONEmitStructuredErrors(t *testi
 		{
 			name: "missing alternatives",
 			args: []string{
-				"design", "review",
+				"architecture", "review",
 				"--id", id,
 				"--problem-summary", "IssueOps needs a design gate",
-				"--proposed-design", "Require approved design before implementation",
+				"--proposed-architecture", "Require approved design before implementation",
 				"--refactor-plan", "Keep changes scoped to IssueOps core and adapters",
 				"--verification", "go test ./cmd/issueops/issueopscli",
+				"--reviewer-context", "subagent",
 				"--approved",
 				"--json",
 			},
@@ -164,33 +168,35 @@ func TestRunIssueOpsIntentAndDesignFailuresWithJSONEmitStructuredErrors(t *testi
 		{
 			name: "missing risks",
 			args: []string{
-				"design", "review",
+				"architecture", "review",
 				"--id", id,
 				"--problem-summary", "IssueOps needs a design gate",
-				"--proposed-design", "Require approved design before implementation",
+				"--proposed-architecture", "Require approved design before implementation",
 				"--refactor-plan", "Keep changes scoped to IssueOps core and adapters",
 				"--alternative", "docs-only guidance",
 				"--verification", "go test ./cmd/issueops/issueopscli",
+				"--reviewer-context", "subagent",
 				"--approved",
 				"--json",
 			},
 			want: "risks",
 		},
 		{
-			name: "missing design review evidence",
+			name: "missing architecture review evidence",
 			args: []string{
-				"design", "review",
+				"architecture", "review",
 				"--id", id,
 				"--problem-summary", "IssueOps needs a design gate",
-				"--proposed-design", "Require approved design before implementation",
+				"--proposed-architecture", "Require approved design before implementation",
 				"--refactor-plan", "Keep changes scoped to IssueOps core and adapters",
 				"--alternative", "docs-only guidance",
 				"--risk", "existing tests need explicit setup",
 				"--verification", "go test ./cmd/issueops/issueopscli",
+				"--reviewer-context", "subagent",
 				"--approved",
 				"--json",
 			},
-			want: `add --verification "design review checked alternatives and risks"`,
+			want: `add --verification "architecture review checked alternatives and risks"`,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

@@ -27,7 +27,7 @@ func TestRegressIssueOpsForReplanStatusBackfillsAllPhases(t *testing.T) {
 	// Advance to plan with NO ledger stamped (mimics the linking /
 	// compatibility-review paths that record artifacts without a ledger).
 	rec.Phase = issueops.IssueOpsPhasePlan
-	rec.DesignReview = &reviewcontract.DesignReview{ProblemSummary: "s", ProposedDesign: "d", Verification: []string{"v"}, Approved: true, ReviewedAt: "2026-06-29T00:00:00Z"}
+	rec.ArchitectureReview = &reviewcontract.ArchitectureReview{ProblemSummary: "s", ProposedArchitecture: "d", Verification: []string{"v"}, Approved: true, ReviewedAt: "2026-06-29T00:00:00Z"}
 	rec.DevilsAdvocateReview = &issueops.IssueOpsDevilsAdvocateReview{Verdict: "stop", Findings: []string{"gold-plating"}, RecordedAt: "2026-06-29T00:00:00Z", IssueReflectedAt: "2026-06-29T00:02:00Z"}
 	rec.PlanPath = "/repo/plans/x.md"
 	rec.PhaseLedger = nil

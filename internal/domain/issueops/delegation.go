@@ -13,8 +13,8 @@ func ChildStartMissingPreconditions(parent model.IssueOpsRecord, req model.Issue
 	if parent.Phase != model.IssueOpsPhaseImplement {
 		missing = append(missing, "parent_phase_not_implement")
 	}
-	if parent.DesignReview == nil || !parent.DesignReview.Approved {
-		missing = append(missing, "parent_design_review_unapproved")
+	if parent.ArchitectureReview == nil || !parent.ArchitectureReview.Approved {
+		missing = append(missing, "parent_architecture_review_unapproved")
 	}
 	if parent.CompatibilityReview == nil || !parent.CompatibilityReview.Approved || len(cleanDelegationValues(parent.CompatibilityReview.Blockers)) > 0 {
 		missing = append(missing, "parent_compatibility_unapproved")
@@ -30,6 +30,10 @@ func ChildStartMissingPreconditions(parent model.IssueOpsRecord, req model.Issue
 	}
 	return missing
 }
+
+// ParentReviewPattern identifies a delegated child's inherited review. Its own
+// plan and architecture were not reviewed, so the digest gates do not apply.
+const ParentReviewPattern = "delegated-parent-review"
 
 func BuildDelegatedProfile(parent, child model.IssueOpsRecord, req model.IssueOpsChildStartRequest, now string) model.IssueOpsRecord {
 	taskScope := strings.TrimSpace(req.TaskScope)
@@ -87,11 +91,12 @@ func BuildDelegatedProfile(parent, child model.IssueOpsRecord, req model.IssueOp
 		CreatedAt: now,
 	}}
 	child.IssueURL = childIssueURL
-	if parent.DesignReview != nil {
-		dr := *parent.DesignReview
+	if parent.ArchitectureReview != nil {
+		dr := *parent.ArchitectureReview
 		dr.Approved = true
+		dr.ReviewerContext = ParentReviewPattern
 		dr.ReviewedAt = now
-		child.DesignReview = &dr
+		child.ArchitectureReview = &dr
 	}
 	if parent.CompatibilityReview != nil {
 		cr := *parent.CompatibilityReview

@@ -78,7 +78,7 @@ func TestRunIssueOpsLifecycle(t *testing.T) {
 	if worktreeRecord["worktree_path"] != worktreePath {
 		t.Fatalf("worktree link should persist exact path: %#v", worktreeRecord)
 	}
-	recordIssueOpsCLIDesignForTest(t, id)
+	recordIssueOpsCLIArchitectureForTest(t, id)
 	writeIssueOpsCLIFileForTest(t, worktreePath, "docs/superpowers/plans/demo.md", planBodyForCLITest())
 	plan := captureStdoutForContract(t, func() error {
 		return runIssueOps([]string{"link-plan", "--id", id, "--plan-path", filepath.Join(worktreePath, "docs", "superpowers", "plans", "demo.md"), "--json"})

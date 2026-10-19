@@ -1687,13 +1687,13 @@
       ]
     },
     {
-      "path": "cmd/issueops/issueopscli/issueops_intent_design.go",
+      "path": "cmd/issueops/issueopscli/issueops_intent_architecture.go",
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func command.runIssueOpsDesign",
+        "func command.runIssueOpsArchitecture",
         "func command.runIssueOpsIntent",
-        "func printIssueOpsDesignReviewUsage"
+        "func printIssueOpsArchitectureReviewUsage"
       ]
     },
     {
@@ -4997,8 +4997,11 @@
       "owner": "adapter",
       "task": "T07",
       "symbols": [
+        "func ReviewArchitectureSource.Document",
+        "func ReviewArchitectureSource.SealedDigest",
         "func ReviewPlanSource.LinkedDigest",
         "func ReviewPlanSource.StagedPlans",
+        "type ReviewArchitectureSource",
         "type ReviewPlanSource"
       ]
     },
@@ -8111,6 +8114,7 @@
         "func NewService",
         "func Service.Names",
         "func Service.Stage",
+        "func Service.Staged",
         "func Service.Unstage",
         "type Service"
       ]
@@ -8606,6 +8610,15 @@
       ]
     },
     {
+      "path": "internal/application/issueopscycle/architecture_readiness.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func ArchitectureReviewMissing",
+        "func ArchitectureReviewStaleMissing"
+      ]
+    },
+    {
       "path": "internal/application/issueopscycle/base_implementation_readiness.go",
       "owner": "application",
       "task": "T20",
@@ -8629,14 +8642,6 @@
         "func ApplyChildPRGate",
         "func ComposeObservedPRReadiness",
         "type ObservedPRReadinessFacts"
-      ]
-    },
-    {
-      "path": "internal/application/issueopscycle/design_readiness.go",
-      "owner": "application",
-      "task": "T20",
-      "symbols": [
-        "func DesignReviewMissing"
       ]
     },
     {
@@ -9553,11 +9558,11 @@
       ]
     },
     {
-      "path": "internal/application/issueopsreview/design_review.go",
+      "path": "internal/application/issueopsreview/architecture_review.go",
       "owner": "application",
       "task": "T03",
       "symbols": [
-        "func RecordDesignReview"
+        "func RecordArchitectureReview"
       ]
     },
     {
@@ -9623,8 +9628,8 @@
       "owner": "application",
       "task": "T03",
       "symbols": [
+        "func PlanningRecorder.Architecture",
         "func PlanningRecorder.Compatibility",
-        "func PlanningRecorder.Design",
         "func PlanningRecorder.DevilsAdvocate",
         "func PlanningRecorder.Intent",
         "func PlanningRecorder.PlanPrep",
@@ -11312,21 +11317,22 @@
       ]
     },
     {
+      "path": "internal/contract/issueopsreview/architecture.go",
+      "owner": "contract",
+      "task": "T03",
+      "symbols": [
+        "type ArchitectureReview",
+        "type ArchitectureReviewRequest",
+        "type ArchitectureReviewRound"
+      ]
+    },
+    {
       "path": "internal/contract/issueopsreview/compatibility.go",
       "owner": "contract",
       "task": "T03",
       "symbols": [
         "type CompatibilityReview",
         "type CompatibilityReviewRequest"
-      ]
-    },
-    {
-      "path": "internal/contract/issueopsreview/design.go",
-      "owner": "contract",
-      "task": "T03",
-      "symbols": [
-        "type DesignReview",
-        "type DesignReviewRequest"
       ]
     },
     {
@@ -13382,6 +13388,7 @@
       "owner": "domain",
       "task": "T20",
       "symbols": [
+        "func MissingArchitectureSections",
         "func MissingPlanSections",
         "func collapseHeading"
       ]
@@ -14162,6 +14169,7 @@
       "task": "T20",
       "symbols": [
         "func Classify",
+        "func architectureGate",
         "func branchPrepareNeeded",
         "func classifyBlockedExecution",
         "func classifyBranchPrepare",
@@ -14205,8 +14213,8 @@
       "symbols": [
         "func OwnerCommand",
         "func aiSlopCleanCommand",
+        "func architectureReviewCommand",
         "func compatibilityReviewCommand",
-        "func designReviewCommand",
         "func executionOwnerCommand",
         "func executionStatusCommand",
         "func intakeOwnerCommand",
@@ -14571,6 +14579,29 @@
       ]
     },
     {
+      "path": "internal/domain/issueopsreview/architecture.go",
+      "owner": "domain",
+      "task": "T03",
+      "symbols": [
+        "func ApplyArchitectureReview",
+        "func ArchitectureDocumentDigest",
+        "func FinalizeArchitectureReview",
+        "func HasArchitectureReviewEvidence",
+        "func NonPlanPrepMissing",
+        "func PrepareArchitectureReview",
+        "func cleanArchitectureValues"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsreview/architecture_readiness.go",
+      "owner": "domain",
+      "task": "T03",
+      "symbols": [
+        "func ArchitectureReviewMissing",
+        "func ArchitectureReviewStale"
+      ]
+    },
+    {
       "path": "internal/domain/issueopsreview/change_observation.go",
       "owner": "domain",
       "task": "T03",
@@ -14606,26 +14637,6 @@
       "task": "T03",
       "symbols": [
         "func CompatibilityReviewMissing"
-      ]
-    },
-    {
-      "path": "internal/domain/issueopsreview/design.go",
-      "owner": "domain",
-      "task": "T03",
-      "symbols": [
-        "func FinalizeDesignReview",
-        "func HasDesignReviewEvidence",
-        "func NonPlanPrepMissing",
-        "func PrepareDesignReview",
-        "func cleanDesignValues"
-      ]
-    },
-    {
-      "path": "internal/domain/issueopsreview/design_readiness.go",
-      "owner": "domain",
-      "task": "T03",
-      "symbols": [
-        "func DesignReviewMissing"
       ]
     },
     {
@@ -16428,8 +16439,8 @@
       "task": "T03",
       "symbols": [
         "type AISlopCleanStore",
+        "type ArchitectureReviewStore",
         "type CompatibilityStore",
-        "type DesignReviewStore",
         "type DevilsAdvocateStore",
         "type EvidenceReviewStore",
         "type ProjectDocsReviewStore",
@@ -16847,6 +16858,11 @@
       "task": "T21"
     },
     {
+      "path": "skills/architecture-review/SKILL.md",
+      "owner": "skill-contract",
+      "task": "T21"
+    },
+    {
       "path": "skills/aside-functional-qa/SKILL.md",
       "owner": "skill-contract",
       "task": "T21"
@@ -16873,11 +16889,6 @@
     },
     {
       "path": "skills/database-design/SKILL.md",
-      "owner": "skill-contract",
-      "task": "T21"
-    },
-    {
-      "path": "skills/design-review/SKILL.md",
       "owner": "skill-contract",
       "task": "T21"
     },
@@ -17550,24 +17561,24 @@
       ],
       "evidence_tests": [
         "internal/domain/issueops/intent_readiness_test.go",
-        "internal/adapter/issueops/issueops_intent_design_test.go"
+        "internal/adapter/issueops/issueops_intent_architecture_test.go"
       ],
       "status": "migrated"
     },
     {
-      "id": "design-review-readiness",
+      "id": "architecture-review-readiness",
       "source_path": "internal/adapter/issueops/issueops_readiness.go",
-      "source_symbol": "func issueOpsDesignReviewMissing",
-      "responsibility": "design review completion requires meaningful evidence, approval, resolved questions, plan, alternatives and risks",
+      "source_symbol": "func issueOpsArchitectureReviewMissing",
+      "responsibility": "architecture review completion requires meaningful evidence, approval, resolved questions, plan, alternatives and risks",
       "target": "internal/domain/issueopsreview",
-      "target_symbol": "func DesignReviewMissing",
+      "target_symbol": "func ArchitectureReviewMissing",
       "task": "T04",
       "entrypoints": [
         "issueops advance --to implement",
         "issueops next"
       ],
       "evidence_tests": [
-        "internal/domain/issueopsreview/design_readiness_test.go",
+        "internal/domain/issueopsreview/architecture_readiness_test.go",
         "internal/adapter/issueops/issueops_readiness_test.go"
       ],
       "status": "migrated"

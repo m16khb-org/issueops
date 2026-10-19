@@ -175,7 +175,7 @@ func pioneerEvidenceFor(target string) string {
 		return "Git state proof: status branch log and worktree list captured\nRecovery path: backup ref verified\nDestructive confirmation gate: exact reset command requires approval\nAtomic scope: one intent per commit\nForce-with-lease rule: no raw force push"
 	case "requirements-analysis":
 		return "Document scope: Korean planning document and embedded visuals\nOCR evidence: small text marked uncertain\nRequirement ledger: body table and implementation requirements mapped\nContradiction: email-only table conflicts with social-login body\nRisk-driven recommendation: confirm conflict before implementation"
-	case "design-review":
+	case "architecture-review":
 		return "Essential complexity: one bounded CLI behavior change\nAccidental complexity: workflow engine queue and policy DSL removed\nSecond-system effect: broad platform rewrite rejected\nConceptual integrity: one existing command path retained\nGO/NO-GO verdict: NO-GO broad plan; GO narrowed change"
 	case "meeting-notes":
 		return "Source fidelity: synthetic transcript preserved without invented facts\nDecision log: production deployment remains undecided\nAction owners: backend owner checks the error dashboard\nUncertainty: deployment date is explicitly unknown\nCanvas handoff: minutes and tracking fields prepared"

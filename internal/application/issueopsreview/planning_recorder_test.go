@@ -20,8 +20,8 @@ func TestPlanningRecorderRejectsAuthorityBeforeRequestValidation(t *testing.T) {
 			_, e := s.PlanPrep("state", "cycle", model.IssueOpsPlanPrepRequest{})
 			return e
 		},
-		"design": func(s PlanningRecorder) error {
-			_, e := s.Design("state", "cycle", reviewcontract.DesignReviewRequest{})
+		"architecture": func(s PlanningRecorder) error {
+			_, e := s.Architecture("state", "cycle", reviewcontract.ArchitectureReviewRequest{})
 			return e
 		},
 		"compatibility": func(s PlanningRecorder) error {

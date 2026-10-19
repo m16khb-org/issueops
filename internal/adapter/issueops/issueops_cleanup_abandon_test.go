@@ -136,7 +136,7 @@ func TestCleanupAbandonPreviewThenApplyDeletesRecord(t *testing.T) {
 	if !preview.Preview || preview.Fingerprint == "" || preview.RecordDeleted {
 		t.Fatalf("preview must issue a fingerprint without mutating: %+v", preview)
 	}
-	// design-review F7 완화책: 삭제 전 캡처가 가능해야 한다.
+	// architecture-review F7 완화책: 삭제 전 캡처가 가능해야 한다.
 	if preview.Record == nil || preview.Record.ID != record.ID || preview.Record.Repo != record.Repo {
 		t.Fatalf("preview must carry the full record about to be deleted: %+v", preview.Record)
 	}
@@ -164,7 +164,7 @@ func TestCleanupAbandonPreviewThenApplyDeletesRecord(t *testing.T) {
 }
 
 // AC-02: LeaseStatus 4값 전수 테이블. released만 통과하고 revoking을 포함한
-// 나머지는 전부 lease_terminal로 거부된다(design-review F5).
+// 나머지는 전부 lease_terminal로 거부된다(architecture-review F5).
 func TestCleanupAbandonLeaseAllowlistCoversEveryStatus(t *testing.T) {
 	holder := &issueops.NativeActor{
 		Host: "codex", SessionID: "s-1",

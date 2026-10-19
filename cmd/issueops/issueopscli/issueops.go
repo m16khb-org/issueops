@@ -27,7 +27,7 @@ func (cli command) issueOpsSubcommands(deps Dependencies) map[string]func([]stri
 		"next":                  cli.runIssueOpsNext,
 		"intent":                cli.runIssueOpsIntent,
 		"plan-prep":             cli.runIssueOpsPlanPrep,
-		"design":                cli.runIssueOpsDesign,
+		"architecture":          cli.runIssueOpsArchitecture,
 		"compatibility":         cli.runIssueOpsCompatibility,
 		"devils-advocate":       cli.runIssueOpsDevilsAdvocate,
 		"domain-review":         cli.runIssueOpsDomainReview,

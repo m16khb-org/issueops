@@ -122,7 +122,7 @@ Skill-quality scorecards and dogfood evaluations are research records under
 - Default hooks provide only static project-doc context. They must not create
   issues/PRs, run tests, edit shared docs, read IssueOps state, perform
   maintenance, or perform long network/file reads.
-- IssueOps implementation must pass durable design, compatibility,
+- IssueOps implementation must pass durable architecture, compatibility,
   devil's-advocate, and execution v1 gates. Hooks do not decide compatibility,
   side effects, sub-agent usage, or lease ownership.
   `issueops execution prepare/status/claim/release/replace/reconcile/complete`

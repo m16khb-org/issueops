@@ -138,7 +138,7 @@ func registeredFlags(t *testing.T, args []string) map[string]bool {
 // ① usage가 언급한 플래그는 모두 등록돼 있어야 한다. 유령 플래그는 운영자를
 // `flag provided but not defined`로 보낸다.
 //
-// 자기 FlagSet 대신 직접 만든 usage 문자열을 인쇄하는 명령(design review,
+// 자기 FlagSet 대신 직접 만든 usage 문자열을 인쇄하는 명령(architecture review,
 // regress, feedback resolve 등)은 등록 플래그를 수집할 수 없어 건너뛴다. 그
 // 목록을 로그로 남겨 무음 축소가 되지 않게 한다.
 func TestUsageDeclaredFlagsAreRegistered(t *testing.T) {

@@ -105,7 +105,7 @@ var pioneerSkillSignatures = map[string][]pioneerClause{
 		structuredClause("contradiction"),
 		structuredClause("risk-driven recommendation"),
 	},
-	"design-review": {
+	"architecture-review": {
 		structuredClause("essential complexity"),
 		structuredClause("accidental complexity"),
 		structuredClause("second-system effect"),

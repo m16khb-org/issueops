@@ -16,12 +16,12 @@ func recordAtPhaseForRegressTest(t *testing.T, phase issueops.IssueOpsPhase) (st
 	t.Helper()
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
-	rec, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-design-review"})
+	rec, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-architecture-review"})
 	if err != nil {
 		t.Fatalf("start: %v", err)
 	}
 	rec.Phase = phase
-	rec.DesignReview = &reviewcontract.DesignReview{ProblemSummary: "s", ProposedDesign: "d", Verification: []string{"v"}, Approved: true, ReviewedAt: "2026-06-29T00:00:00Z"}
+	rec.ArchitectureReview = &reviewcontract.ArchitectureReview{ProblemSummary: "s", ProposedArchitecture: "d", Verification: []string{"v"}, Approved: true, ReviewedAt: "2026-06-29T00:00:00Z"}
 	rec.DevilsAdvocateReview = &issueops.IssueOpsDevilsAdvocateReview{Verdict: "stop", Findings: []string{"gold-plating"}, RecordedAt: "2026-06-29T00:00:00Z", IssueReflectedAt: "2026-06-29T00:02:00Z"}
 	rec.PlanPath = "/repo/plans/x.md"
 	rec.PhaseLedger = issueops.IssueOpsPhaseLedger{
@@ -47,15 +47,15 @@ func TestRegressIssueOpsForReplanFromPlan(t *testing.T) {
 		t.Fatalf("regress: %v", err)
 	}
 	if out.Phase != issueops.IssueOpsPhaseGrill {
-		t.Fatalf("design-review stop must regress to grill, got %s", out.Phase)
+		t.Fatalf("architecture-review stop must regress to grill, got %s", out.Phase)
 	}
-	if out.DesignReview == nil || out.DesignReview.Approved {
-		t.Fatalf("regression must clear design approval to force re-plan: %#v", out.DesignReview)
+	if out.ArchitectureReview == nil || out.ArchitectureReview.Approved {
+		t.Fatalf("regression must clear design approval to force re-plan: %#v", out.ArchitectureReview)
 	}
 	if out.DevilsAdvocateReview != nil {
 		t.Fatalf("regression must clear the devil's-advocate review so the gate re-fires: %#v", out.DevilsAdvocateReview)
 	}
-	// audit: a scope decision captures the design-review stop reason
+	// audit: a scope decision captures the architecture-review stop reason
 	found := false
 	for _, d := range out.Decisions {
 		if d.Kind == "scope" && strings.Contains(d.Body, "second-system effect") {

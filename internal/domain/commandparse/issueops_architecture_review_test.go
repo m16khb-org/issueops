@@ -2,27 +2,27 @@ package commandparse
 
 import "testing"
 
-func TestParseExactIssueOpsDesignReview(t *testing.T) {
-	commandText := "issueops design review" +
-		" --id io-1 --problem-summary problem --proposed-design design --refactor-plan boundary" +
+func TestParseExactIssueOpsArchitectureReview(t *testing.T) {
+	commandText := "issueops architecture review" +
+		" --id io-1 --problem-summary problem --proposed-architecture design --refactor-plan boundary" +
 		" --alternative one --alternative two --risk risk-one --risk risk-two" +
 		" --verification check-one --verification check-two --open-question question-one --open-question question-two" +
 		" --host codex --session-id session-1 --agent-id agent-1 --cwd /repo --approved --json"
 	command, ok := parseExactForTest(commandText)
-	if !ok || command.Path != "design review" {
-		t.Fatalf("design review did not parse as an exact two-word command: %#v ok=%v", command, ok)
+	if !ok || command.Path != "architecture review" {
+		t.Fatalf("architecture review did not parse as an exact two-word command: %#v ok=%v", command, ok)
 	}
 
 	values, booleans, repeatable, ok := IssueOpsCommandSpec(command.Path)
 	if !ok {
-		t.Fatal("design review has no exact flag spec")
+		t.Fatal("architecture review has no exact flag spec")
 	}
 	flags, ok := ExactFlags(command, values, booleans, repeatable)
 	if !ok {
-		t.Fatal("design review's existing CLI flags were rejected")
+		t.Fatal("architecture review's existing CLI flags were rejected")
 	}
 	for _, name := range []string{
-		"--id", "--problem-summary", "--proposed-design", "--refactor-plan",
+		"--id", "--problem-summary", "--proposed-architecture", "--refactor-plan",
 		"--host", "--session-id", "--agent-id", "--cwd",
 	} {
 		if len(flags[name]) != 1 {
@@ -40,10 +40,10 @@ func TestParseExactIssueOpsDesignReview(t *testing.T) {
 
 	unknown, _ := parseExactForTest(commandText + " --unknown value")
 	if got, accepted := ExactFlags(unknown, values, booleans, repeatable); accepted || got != nil {
-		t.Fatalf("unknown design review flag was accepted: %#v", got)
+		t.Fatalf("unknown architecture review flag was accepted: %#v", got)
 	}
 
-	nearMiss, parsed := parseExactForTest("issueops design approve --id io-1")
+	nearMiss, parsed := parseExactForTest("issueops architecture approve --id io-1")
 	if parsed {
 		if _, _, _, accepted := IssueOpsCommandSpec(nearMiss.Path); accepted {
 			t.Fatalf("malformed design path was classified: %#v", nearMiss)

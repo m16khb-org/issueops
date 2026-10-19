@@ -33,14 +33,14 @@ func TestStartIssueOpsChildFailClosedPreconditions(t *testing.T) {
 			missing: "parent_phase_not_implement",
 		},
 		{
-			name:        "unapproved design review",
+			name:        "unapproved architecture review",
 			childBranch: "124-child-design",
 			mutate: func(t *testing.T, stateRoot string, parent issueops.IssueOpsRecord) issueops.IssueOpsRecord {
 				t.Helper()
-				parent.DesignReview.Approved = false
+				parent.ArchitectureReview.Approved = false
 				return writeIssueOpsRecordForDelegationTest(t, stateRoot, parent)
 			},
-			missing: "parent_design_review_unapproved",
+			missing: "parent_architecture_review_unapproved",
 		},
 		{
 			name:        "blocked compatibility review",
@@ -137,8 +137,8 @@ func TestStartIssueOpsChildCreatesDelegatedProfile(t *testing.T) {
 	if child.PlanPrep == nil || child.PlanPrep.PriorDecisions.WaiveReason != "delegated:"+parent.ID {
 		t.Fatalf("child plan prep should be delegated/waived: %#v", child.PlanPrep)
 	}
-	if child.DesignReview == nil || !child.DesignReview.Approved || child.DesignReview.RefactorPlan == "" || len(child.DesignReview.Alternatives) == 0 || len(child.DesignReview.Risks) == 0 {
-		t.Fatalf("child design review should be approved and populated: %#v", child.DesignReview)
+	if child.ArchitectureReview == nil || !child.ArchitectureReview.Approved || child.ArchitectureReview.RefactorPlan == "" || len(child.ArchitectureReview.Alternatives) == 0 || len(child.ArchitectureReview.Risks) == 0 {
+		t.Fatalf("child architecture review should be approved and populated: %#v", child.ArchitectureReview)
 	}
 	if child.CompatibilityReview == nil || !child.CompatibilityReview.Approved || len(child.CompatibilityReview.Verification) == 0 {
 		t.Fatalf("child compatibility review should be approved and populated: %#v", child.CompatibilityReview)
@@ -208,15 +208,15 @@ func TestStartIssueOpsChildPerConditionRemedy(t *testing.T) {
 			remedyMessage: "fixing only parent phase",
 		},
 		{
-			name:        "design review",
+			name:        "architecture review",
 			childBranch: "123-child-remedy-design",
-			missing:     "parent_design_review_unapproved",
+			missing:     "parent_architecture_review_unapproved",
 			breakParent: func(parent issueops.IssueOpsRecord) issueops.IssueOpsRecord {
-				parent.DesignReview.Approved = false
+				parent.ArchitectureReview.Approved = false
 				return parent
 			},
 			remedy: func(parent issueops.IssueOpsRecord, req *issueops.IssueOpsChildStartRequest) issueops.IssueOpsRecord {
-				parent.DesignReview.Approved = true
+				parent.ArchitectureReview.Approved = true
 				return parent
 			},
 			remedyMessage: "fixing only design approval",
@@ -821,7 +821,7 @@ func createDelegationReadyParentForTest(t *testing.T, stateRoot string) issueops
 	if err != nil {
 		t.Fatal(err)
 	}
-	recordIssueOpsApprovedDesignForTest(t, stateRoot, record.ID)
+	recordIssueOpsApprovedArchitectureForTest(t, stateRoot, record.ID)
 	writeIssueOpsFile(t, worktree, "plans/parent.md", planBodyForTest())
 	record, err = LinkIssueOpsPlan(stateRoot, record.ID, filepath.Join(worktree, "plans/parent.md"))
 	if err != nil {

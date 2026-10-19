@@ -39,8 +39,8 @@ func Regress(store reviewport.RegressStore, stateRoot, id, reason string) (model
 		Title: change.DecisionTitle, Body: change.DecisionBody, Kind: change.DecisionKind,
 		Rationale: change.DecisionRationale, CreatedAt: change.At,
 	})
-	if change.ClearDesignApproval && record.DesignReview != nil {
-		record.DesignReview.Approved = false
+	if change.ClearArchitectureApproval && record.ArchitectureReview != nil {
+		record.ArchitectureReview.Approved = false
 	}
 	stalePhases := make([]model.IssueOpsPhase, 0, len(change.StalePhases))
 	for _, phase := range change.StalePhases {

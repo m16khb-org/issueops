@@ -40,16 +40,16 @@ func TestRunIssueOpsUsageAndCleanupBranches(t *testing.T) {
 		t.Fatalf("cleanup usage missing recordless orphan syntax:\n%s", cleanupUsage)
 	}
 
-	designUsage := captureStdoutForContract(t, func() error {
-		return runIssueOps([]string{"design", "review", "--help"})
+	architectureUsage := captureStdoutForContract(t, func() error {
+		return runIssueOps([]string{"architecture", "review", "--help"})
 	})
 	for _, want := range []string{
 		"Approved reviews require --refactor-plan, at least one --alternative, at least one --risk",
-		`--verification "design review checked alternatives and risks"`,
-		"Approval is recorded with the full design review payload; there is no approve-only merge step.",
+		`--verification "architecture review checked alternatives and risks"`,
+		"Approval is recorded with the full architecture review payload; there is no approve-only merge step.",
 	} {
-		if !strings.Contains(designUsage, want) {
-			t.Fatalf("design review usage missing %q:\n%s", want, designUsage)
+		if !strings.Contains(architectureUsage, want) {
+			t.Fatalf("architecture review usage missing %q:\n%s", want, architectureUsage)
 		}
 	}
 

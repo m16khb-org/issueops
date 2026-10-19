@@ -43,7 +43,7 @@ func (s WorkspaceLinker) Plan(ctx context.Context, id, path string, actor *model
 		if err = domain.ValidateWorkspaceLinkPath("plan_path", path); err != nil {
 			return err
 		}
-		if err = domain.ValidatePlanLinkReadiness(record, stringlist.UniqueSorted(cycleapp.DesignReviewMissing(record))); err != nil {
+		if err = domain.ValidatePlanLinkReadiness(record, stringlist.UniqueSorted(cycleapp.ArchitectureReviewMissing(record))); err != nil {
 			return err
 		}
 		worktree := strings.TrimSpace(record.WorktreePath)

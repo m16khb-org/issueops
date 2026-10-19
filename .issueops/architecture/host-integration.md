@@ -47,7 +47,7 @@ issueops는 `skills/` 디렉토리를 공용 스킬 53개의 단일 출처(singl
 | `verified-execution` | Evidence-Bound Execution — 증거 기반 목표 실행 | implement, ai-slop-clean, feedback, pr, cleanup |
 | `web-research` | Web Research — 출처 인용 다중 소스 조사 | grill, issue, feedback |
 | `requirements-analysis` | Risk-driven planning-document analysis — Kordoc·OCR·시각 증거 조정 | grill, issue, plan, compatibility-review |
-| `design-review` | Devil's-advocate design/plan critic — 구현 전 계획 적대 검증 | plan, compatibility-review |
+| `architecture-review` | Devil's-advocate design/plan critic — 구현 전 계획 적대 검증 | plan, compatibility-review |
 | `database-design` | Database Design & Optimization — 정규화·인덱스·쿼리 최적화 | issue, plan, implement |
 | `algorithm-optimization` | Algorithm Design & Complexity Optimization | plan, implement, ai-slop-clean |
 | `meeting-notes` | Meeting-record augmentation / team-memory | 직접 연동 없음 |

@@ -5,8 +5,10 @@ import (
 	issueopscore "issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
 	reviewcontract "issueops/internal/contract/issueopsreview"
+	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/testsupport"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -41,19 +43,35 @@ func recordIssueOpsCLIIntentForTest(t *testing.T, id string) {
 	})
 }
 
-func recordIssueOpsCLIDesignForTest(t *testing.T, id string) {
+// stageArchitectureForCLITest는 필수 절을 채운 아키텍처 문서를 스테이징한다. 이미 스테이징돼
+// 있거나 봉인된 뒤라면 CLI가 돌려주는 오류를 무시한다.
+func stageArchitectureForCLITest(t *testing.T, id string) {
 	t.Helper()
+	path := filepath.Join(t.TempDir(), "architecture.md")
+	body := strings.Join(issueopsdomain.RequiredArchitectureSections, "\n내용\n") + "\n내용\n"
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_ = captureStdoutForContract(t, func() error {
+		return runIssueOps([]string{"artifact", "stage", "--id", id, "--name", "architecture", "--file", path, "--json"})
+	})
+}
+
+func recordIssueOpsCLIArchitectureForTest(t *testing.T, id string) {
+	t.Helper()
+	stageArchitectureForCLITest(t, id)
 	_ = captureStdoutForContract(t, func() error {
 		return runIssueOps([]string{
-			"design", "review",
+			"architecture", "review",
 			"--id", id,
 			"--problem-summary", "IssueOps must preserve the work contract",
-			"--proposed-design", "Gate implementation on a reviewed design contract",
+			"--proposed-architecture", "Gate implementation on a reviewed design contract",
 			"--refactor-plan", "Keep IssueOps state and adapter changes scoped to the active cycle",
 			"--alternative", "documentation-only guidance",
 			"--risk", "existing tests must create explicit design evidence",
-			"--verification", "design review checked alternatives and risks",
+			"--verification", "architecture review checked alternatives and risks",
 			"--verification", "go test ./cmd/issueops/issueopscli",
+			"--reviewer-context", "subagent",
 			"--approved",
 			"--json",
 		})
@@ -84,16 +102,18 @@ func recordIssueOpsCLIPlanPrepForTest(t *testing.T, id string) {
 	}
 }
 
-func recordIssueOpsCoreDesignForCLITest(t *testing.T, id string) {
+func recordIssueOpsCoreArchitectureForCLITest(t *testing.T, id string) {
 	t.Helper()
-	if _, err := planningRecorderForTest(nil).Design(issueOpsStateRootForTest(), id, reviewcontract.DesignReviewRequest{
-		ProblemSummary: "IssueOps must preserve the work contract",
-		ProposedDesign: "Gate implementation on a reviewed design contract",
-		RefactorPlan:   "Keep IssueOps state and adapter changes scoped to the active cycle",
-		Alternatives:   []string{"documentation-only guidance"},
-		Risks:          []string{"existing tests must create explicit design evidence"},
-		Verification:   []string{"design review checked alternatives and risks", "go test ./cmd/issueops/issueopscli"},
-		Approved:       true,
+	stageArchitectureForCLITest(t, id)
+	if _, err := planningRecorderForTest(nil).Architecture(issueOpsStateRootForTest(), id, reviewcontract.ArchitectureReviewRequest{
+		ProblemSummary:       "IssueOps must preserve the work contract",
+		ProposedArchitecture: "Gate implementation on a reviewed design contract",
+		RefactorPlan:         "Keep IssueOps state and adapter changes scoped to the active cycle",
+		Alternatives:         []string{"documentation-only guidance"},
+		Risks:                []string{"existing tests must create explicit design evidence"},
+		Verification:         []string{"architecture review checked alternatives and risks", "go test ./cmd/issueops/issueopscli"},
+		Approved:             true,
+		ReviewerContext:      "subagent",
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -112,6 +132,11 @@ func seedIssueOpsCLIExecution(t *testing.T, record issueopscontract.IssueOpsReco
 		t.Fatal(err)
 	}
 	actor.NativeProcessAncestry = []issueopscontract.NativeProcessReceipt{receipt}
+	// 이 fixture는 execution prepare 없이 Execution을 만들어 봉인된 architecture가 없다. 비git
+	// 워크트리에서는 봉인 파일이 구현 변경으로 잡히므로, 봉인 digest 게이트는 부모 승계 표시로 건너뛴다.
+	if record.ArchitectureReview != nil {
+		record.ArchitectureReview.ReviewerContext = issueopsdomain.ParentReviewPattern
+	}
 	record.Execution = &issueopscontract.Execution{
 		Workspace: issueopscontract.Workspace{
 			SourceRoot: record.Repo, Root: record.WorktreePath, Branch: record.Branch,

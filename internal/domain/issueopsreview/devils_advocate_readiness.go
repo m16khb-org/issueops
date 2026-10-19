@@ -4,14 +4,11 @@ import (
 	"strings"
 
 	reviewcontract "issueops/internal/contract/issueopsreview"
+	issueopsdomain "issueops/internal/domain/issueops"
 )
 
-// ParentReviewPattern identifies a delegated child's inherited review. Its own
-// plan was not reviewed, so the plan digest gate does not apply.
-const ParentReviewPattern = "delegated-parent-review"
-
 func DevilsAdvocateDigestExempt(review reviewcontract.DevilsAdvocateReview) bool {
-	return review.ReviewerPattern == ParentReviewPattern
+	return review.ReviewerPattern == issueopsdomain.ParentReviewPattern
 }
 
 func DevilsAdvocatePlanDigestRequired(review *reviewcontract.DevilsAdvocateReview, checkPlanBinding, hasLinkedPlan bool) bool {

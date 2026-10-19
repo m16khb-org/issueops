@@ -10,5 +10,5 @@ import (
 
 func newPlanningRecorder(actor *model.IssueOpsActor) app.PlanningRecorder {
 	readiness := newCycleReadiness()
-	return app.PlanningRecorder{ActiveChildren: (delegation.ChildGates{Scan: core.ScanReadableIssueOps}).ActiveIDs, Store: core.NewReviewMutationStore(actor), PlanReadiness: readiness.Plan, CompatibilityReadiness: readiness.Compatibility, PhaseRank: domain.IssueOpsPhaseRank, PlanDigest: app.NewPlanDigestResolver(core.ReviewPlanSource{}).Digest}
+	return app.PlanningRecorder{ActiveChildren: (delegation.ChildGates{Scan: core.ScanReadableIssueOps}).ActiveIDs, Store: core.NewReviewMutationStore(actor), PlanReadiness: readiness.Plan, CompatibilityReadiness: readiness.Compatibility, PhaseRank: domain.IssueOpsPhaseRank, PlanDigest: app.NewPlanDigestResolver(core.ReviewPlanSource{}).Digest, ArchitectureDocument: core.ReviewArchitectureSource{}.Document}
 }

@@ -12,12 +12,12 @@ import (
 func baseAdvancedRecord(repo, baseBranch string) issueops.IssueOpsRecord {
 	return issueops.IssueOpsRecord{
 		OK: true, Repo: repo, Branch: "main", WorktreePath: repo,
-		IssueURL:      "https://gitlab.example/group/project/-/issues/1",
-		PlanPath:      "plans/demo.md",
-		Intent:        issueOpsIntentContractForTest(),
-		DesignReview:  issueOpsDesignReviewForTest(),
-		BranchPrepare: &issueops.IssueOpsBranchPrepare{Provider: "gitlab", IssueURL: "https://gitlab.example/group/project/-/issues/1", Branch: "main", BaseBranch: baseBranch, LinkVerified: true},
-		AISlopCleanAt: "2026-06-05T00:00:00Z",
+		IssueURL:           "https://gitlab.example/group/project/-/issues/1",
+		PlanPath:           "plans/demo.md",
+		Intent:             issueOpsIntentContractForTest(),
+		ArchitectureReview: issueOpsArchitectureReviewForTest(),
+		BranchPrepare:      &issueops.IssueOpsBranchPrepare{Provider: "gitlab", IssueURL: "https://gitlab.example/group/project/-/issues/1", Branch: "main", BaseBranch: baseBranch, LinkVerified: true},
+		AISlopCleanAt:      "2026-06-05T00:00:00Z",
 		ProjectDocsReview: &issueops.IssueOpsProjectDocsReview{
 			Verdict: "no-change", ReviewedDocs: []string{".issueops/CAUTIONS.md"},
 		},

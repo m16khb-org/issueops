@@ -36,7 +36,7 @@ func TestIssueOpsCompatibilityReviewCLIRecordsReview(t *testing.T) {
 	if _, err := LinkIssueOpsWorktreeForTest(issueOpsStateRootForTest(), id, worktree); err != nil {
 		t.Fatal(err)
 	}
-	recordIssueOpsCoreDesignForCLITest(t, id)
+	recordIssueOpsCoreArchitectureForCLITest(t, id)
 	writeIssueOpsCLIFileForTest(t, worktree, "plans/demo.md", planBodyForCLITest())
 	if _, err := LinkIssueOpsPlanForTest(issueOpsStateRootForTest(), id, filepath.Join(worktree, "plans/demo.md")); err != nil {
 		t.Fatal(err)

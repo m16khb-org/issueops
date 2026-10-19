@@ -2,13 +2,13 @@
 
 Source: independent Astra review of the current files; task st_01a1007e.
 
-**Recommendation:** Centralize evaluator policy, not actor-facing contracts. The upstream file was supplied at `.issueops/documentation/owner-design-review.md`; its ownership split is viable after the corrections below.
+**Recommendation:** Centralize evaluator policy, not actor-facing contracts. The upstream file was supplied at `.issueops/documentation/owner-architecture-review.md`; its ownership split is viable after the corrections below.
 
 **You need:** 3/3 review tasks complete. Findings are grounded in current source, CLI help probes, and realpath checks. No edits, installs, commits, or evaluations were run.
 
 ### Actionable findings
 
-1. **Correct the false command rejection.** The upstream report says `issueops feedback add` does not exist (`owner-design-review.md:52-54`). It does: `./bin/issueops feedback --help` exited **0**. Root dispatch additionally registers lifecycle commands (`cmd/issueops/issueopsapp/root_command_facade.go:70-73`), including feedback (`internal/contract/cli/issueops_catalog.go:124`). The skills’ examples omit actor flags; that is the defect, not command absence. Preserve recording duties and delegate authenticated recording to the invoking stage.
+1. **Correct the false command rejection.** The upstream report says `issueops feedback add` does not exist (`owner-architecture-review.md:52-54`). It does: `./bin/issueops feedback --help` exited **0**. Root dispatch additionally registers lifecycle commands (`cmd/issueops/issueopsapp/root_command_facade.go:70-73`), including feedback (`internal/contract/cli/issueops_catalog.go:124`). The skills’ examples omit actor flags; that is the defect, not command absence. Preserve recording duties and delegate authenticated recording to the invoking stage.
 
 2. **Resolve contradictory isolation instructions before declaring one evaluator owner.** The rubric requires a **new session** when subagents are unavailable (`.issueops/research/skill-quality/pioneer-skill-quality-rubric.md:88-100`); the fixture document permits the **existing main session** (`.issueops/research/skill-quality/pioneer-skill-rerun-fixtures.md:23`). Choose one normative policy and make consumers refer to it. Merely linking the rubric leaves competing executable instructions.
 

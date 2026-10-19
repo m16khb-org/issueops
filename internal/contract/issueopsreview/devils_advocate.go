@@ -43,16 +43,16 @@ type RegressionPreconditions struct {
 // RegressionChange describes the record mutation after eligibility and child
 // checks; persistence remains with the application boundary.
 type RegressionChange struct {
-	FromPhase           string
-	ToPhase             string
-	EventReason         string
-	At                  string
-	DecisionTitle       string
-	DecisionBody        string
-	DecisionKind        string
-	DecisionRationale   string
-	StalePhases         []string
-	StaleNote           string
-	ClearDesignApproval bool
-	ClearReview         bool
+	FromPhase                 string
+	ToPhase                   string
+	EventReason               string
+	At                        string
+	DecisionTitle             string
+	DecisionBody              string
+	DecisionKind              string
+	DecisionRationale         string
+	StalePhases               []string
+	StaleNote                 string
+	ClearArchitectureApproval bool
+	ClearReview               bool
 }

@@ -77,6 +77,19 @@ func (service *Service) Unstage(
 	})
 }
 
+// Staged는 스테이징된 아티팩트의 이름→본문 map이다. 호출자가 본문 digest를 한 번의
+// 읽기로 계산할 수 있게 한다.
+func (service *Service) Staged(
+	ctx context.Context,
+	stateRoot string,
+	id string,
+) (issueopsartifactcontract.Staged, error) {
+	if service == nil || service.repository == nil {
+		return nil, fmt.Errorf("issueops artifact repository is required")
+	}
+	return service.repository.ReadStaged(ctx, stateRoot, id)
+}
+
 func (service *Service) Names(
 	ctx context.Context,
 	stateRoot string,

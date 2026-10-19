@@ -87,7 +87,7 @@ func (snapshot Snapshot) Clone() Snapshot {
 func cloneRecord(record leasecontract.Record) leasecontract.Record {
 	cloned := record
 	cloned.Intent = cloneRaw(record.Intent)
-	cloned.DesignReview = cloneRaw(record.DesignReview)
+	cloned.ArchitectureReview = cloneRaw(record.ArchitectureReview)
 	cloned.DomainReview = cloneRaw(record.DomainReview)
 	cloned.IssueLinks = cloneRaw(record.IssueLinks)
 	cloned.BranchPrepare = cloneRaw(record.BranchPrepare)

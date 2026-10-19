@@ -22,15 +22,15 @@ func ValidateLinkBranchEvidence(record model.IssueOpsRecord, kind string) error 
 	}
 	return nil
 }
-func ValidatePlanLinkReadiness(record model.IssueOpsRecord, designMissing []string) error {
+func ValidatePlanLinkReadiness(record model.IssueOpsRecord, architectureMissing []string) error {
 	if err := ValidateLinkBranchEvidence(record, "plan"); err != nil {
 		return err
 	}
 	if strings.TrimSpace(record.WorktreePath) == "" {
 		return fmt.Errorf("cannot link plan before linked worktree")
 	}
-	if len(designMissing) > 0 {
-		return fmt.Errorf("cannot link plan before approved design review: missing %s", strings.Join(designMissing, ", "))
+	if len(architectureMissing) > 0 {
+		return fmt.Errorf("cannot link plan before approved architecture review: missing %s", strings.Join(architectureMissing, ", "))
 	}
 	return nil
 }

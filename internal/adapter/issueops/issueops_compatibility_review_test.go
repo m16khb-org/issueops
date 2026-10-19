@@ -15,16 +15,16 @@ func TestIssueOpsImplementationReadinessRequiresCompatibilityReview(t *testing.T
 	repo := filepath.Join(t.TempDir(), "example")
 	worktree := makeIssueOpsWorktreeDirForTest(t, repo, "1-demo")
 	record := issueops.IssueOpsRecord{
-		OK:            true,
-		Repo:          repo,
-		Branch:        "1-demo",
-		IssueURL:      "https://github.com/example/repo/issues/1",
-		PlanPath:      filepath.Join(worktree, "plans/demo.md"),
-		WorktreePath:  worktree,
-		Intent:        issueOpsIntentContractForTest(),
-		DesignReview:  issueOpsDesignReviewForTest(),
-		BranchPrepare: &issueops.IssueOpsBranchPrepare{Provider: "github", IssueURL: "https://github.com/example/repo/issues/1", Branch: "1-demo", BaseBranch: "main", LinkVerified: true},
-		Execution:     issueOpsExecutionForTest(repo, worktree, "1-demo"),
+		OK:                 true,
+		Repo:               repo,
+		Branch:             "1-demo",
+		IssueURL:           "https://github.com/example/repo/issues/1",
+		PlanPath:           filepath.Join(worktree, "plans/demo.md"),
+		WorktreePath:       worktree,
+		Intent:             issueOpsIntentContractForTest(),
+		ArchitectureReview: issueOpsArchitectureReviewForTest(),
+		BranchPrepare:      &issueops.IssueOpsBranchPrepare{Provider: "github", IssueURL: "https://github.com/example/repo/issues/1", Branch: "1-demo", BaseBranch: "main", LinkVerified: true},
+		Execution:          issueOpsExecutionForTest(repo, worktree, "1-demo"),
 	}
 	writeIssueOpsFile(t, worktree, "plans/demo.md", planBodyForTest())
 
@@ -70,7 +70,7 @@ func TestIssueOpsPhaseImplementRequiresCompatibilityReviewPhase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	recordIssueOpsApprovedDesignForTest(t, stateRoot, record.ID)
+	recordIssueOpsApprovedArchitectureForTest(t, stateRoot, record.ID)
 	writeIssueOpsFile(t, worktree, "plans/demo.md", planBodyForTest())
 	record, err = LinkIssueOpsPlan(stateRoot, record.ID, filepath.Join(worktree, "plans/demo.md"))
 	if err != nil {

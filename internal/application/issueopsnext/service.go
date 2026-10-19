@@ -13,6 +13,7 @@ import (
 	issueopsnextcontract "issueops/internal/contract/issueopsnext"
 	issueopsdomain "issueops/internal/domain/issueops"
 	issueopsnextdomain "issueops/internal/domain/issueopsnext"
+	reviewdomain "issueops/internal/domain/issueopsreview"
 )
 
 type Service struct {
@@ -186,11 +187,13 @@ func (service *Service) buildInput(
 		},
 	}
 	if ports.StagedArtifacts != nil {
-		if names, err := ports.StagedArtifacts(stateRoot, record.ID); err == nil {
-			for _, name := range names {
-				if strings.TrimSpace(name) == "plan" {
-					input.StagedPlan = true
-				}
+		if staged, err := ports.StagedArtifacts(stateRoot, record.ID); err == nil {
+			_, input.StagedPlan = staged["plan"]
+			architecture, hasArchitecture := staged["architecture"]
+			input.StagedArchitecture = hasArchitecture
+			if hasArchitecture && record.Execution == nil {
+				digest, digestErr := reviewdomain.ArchitectureDocumentDigest(architecture)
+				input.ArchitectureReviewStale = reviewdomain.ArchitectureReviewStale(record.ArchitectureReview, digest, digestErr)
 			}
 		}
 	}

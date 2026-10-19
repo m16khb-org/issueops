@@ -73,6 +73,7 @@ func (m *memStore) planning() PlanningRecorder {
 		CompatibilityReadiness: func(model.IssueOpsRecord) model.IssueOpsReadiness { return model.IssueOpsReadiness{Ready: true} },
 		PhaseRank:              issueopsdomain.IssueOpsPhaseRank,
 		PlanDigest:             func(string, model.IssueOpsRecord) (string, error) { return "plan-digest", nil },
+		ArchitectureDocument:   func(string, model.IssueOpsRecord) (string, error) { return validArchitectureDocument(), nil },
 		ActiveChildren:         func(string, model.IssueOpsRecord) ([]string, error) { return nil, nil },
 	}
 }
@@ -358,57 +359,58 @@ func TestPlanningRecorderPlanPrepRejectsIncompleteItemWithoutWrite(t *testing.T)
 	}
 }
 
-func TestPlanningRecorderDesignExplainsMissingApprovalEvidence(t *testing.T) {
+func TestPlanningRecorderArchitectureExplainsMissingApprovalEvidence(t *testing.T) {
 	m := &memStore{rec: model.IssueOpsRecord{ID: "io", Phase: model.IssueOpsPhasePlan}}
-	req := reviewcontract.DesignReviewRequest{
-		ProblemSummary: "p", ProposedDesign: "d", RefactorPlan: "r", Alternatives: []string{"a"}, Risks: []string{"x"},
-		Verification: []string{"unit tests pass"}, Approved: true,
+	req := reviewcontract.ArchitectureReviewRequest{
+		ProblemSummary: "p", ProposedArchitecture: "d", RefactorPlan: "r", Alternatives: []string{"a"}, Risks: []string{"x"},
+		Verification: []string{"unit tests pass"}, Approved: true, ReviewerContext: "inline",
 	}
-	_, err := m.planning().Design("s", "io", req)
-	wantErr(t, err, "design_review_evidence")
+	_, err := m.planning().Architecture("s", "io", req)
+	wantErr(t, err, "architecture_review_evidence")
 	if m.writes != 0 {
 		t.Fatal("rejected approval must not write")
 	}
-	req.Verification = []string{"design review checked alternatives and risks"}
-	out, err := m.planning().Design("s", "io", req)
-	if err != nil || out.DesignReview == nil || !out.DesignReview.Approved || out.DesignReview.ReviewedAt != covNow || out.UpdatedAt != covNow || m.writes != 1 {
+	req.Verification = []string{"architecture review checked alternatives and risks"}
+	out, err := m.planning().Architecture("s", "io", req)
+	if err != nil || out.ArchitectureReview == nil || !out.ArchitectureReview.Approved || out.ArchitectureReview.ReviewedAt != covNow || out.UpdatedAt != covNow || m.writes != 1 {
 		t.Fatalf("approved design: %+v err=%v writes=%d", out, err, m.writes)
 	}
 }
 
-func TestPlanningRecorderDesignPassesThroughOtherErrorsUnchanged(t *testing.T) {
+func TestPlanningRecorderArchitecturePassesThroughOtherErrorsUnchanged(t *testing.T) {
 	m := &memStore{rec: model.IssueOpsRecord{ID: "io"}}
-	_, err := m.planning().Design("s", "io", reviewcontract.DesignReviewRequest{})
+	_, err := m.planning().Architecture("s", "io", reviewcontract.ArchitectureReviewRequest{})
 	if err == nil || err.Error() != "problem_summary is required" {
 		t.Fatalf("err=%v", err)
 	}
 }
 
-func TestRecordDesignReviewReadinessIgnoresOnlyPlanPrepGaps(t *testing.T) {
+func TestRecordArchitectureReviewReadinessIgnoresOnlyPlanPrepGaps(t *testing.T) {
 	var written model.IssueOpsRecord
 	missing := []string{"plan_prep_decisions"}
-	store := reviewport.DesignReviewStore{
+	store := reviewport.ArchitectureReviewStore{
 		Read:          func(string, string) (model.IssueOpsRecord, error) { return model.IssueOpsRecord{ID: "io"}, nil },
 		PlanReadiness: func(model.IssueOpsRecord) model.IssueOpsReadiness { return model.IssueOpsReadiness{Missing: missing} },
 		TouchWrite:    func(_ string, r model.IssueOpsRecord) (model.IssueOpsRecord, error) { written = r; return r, nil },
 		Now:           func() string { return covNow },
+		Document:      func(string, model.IssueOpsRecord) (string, error) { return validArchitectureDocument(), nil },
 	}
-	req := reviewcontract.DesignReviewRequest{ProblemSummary: "p", ProposedDesign: "d", Verification: []string{"checked"}}
-	if _, err := RecordDesignReview(store, "s", "io", req); err != nil || written.DesignReview == nil {
+	req := reviewcontract.ArchitectureReviewRequest{ProblemSummary: "p", ProposedArchitecture: "d", Verification: []string{"checked"}, ReviewerContext: "subagent"}
+	if _, err := RecordArchitectureReview(store, "s", "io", req); err != nil || written.ArchitectureReview == nil {
 		t.Fatalf("plan_prep-only gaps must not block: %v", err)
 	}
 	missing = []string{"plan_prep_decisions", "intent"}
 	written = model.IssueOpsRecord{}
-	_, err := RecordDesignReview(store, "s", "io", req)
+	_, err := RecordArchitectureReview(store, "s", "io", req)
 	wantErr(t, err, "before intent contract: missing intent")
-	if strings.Contains(err.Error(), "plan_prep") || written.DesignReview != nil {
+	if strings.Contains(err.Error(), "plan_prep") || written.ArchitectureReview != nil {
 		t.Fatalf("only non-plan-prep gaps may be listed and nothing written: %v", err)
 	}
 }
 
-func TestRecordDesignReviewPropagatesReadFailureAndApprovalGaps(t *testing.T) {
+func TestRecordArchitectureReviewPropagatesReadFailureAndApprovalGaps(t *testing.T) {
 	boom := errors.New("read failed")
-	store := reviewport.DesignReviewStore{
+	store := reviewport.ArchitectureReviewStore{
 		Read: func(string, string) (model.IssueOpsRecord, error) { return model.IssueOpsRecord{}, boom },
 		TouchWrite: func(string, model.IssueOpsRecord) (model.IssueOpsRecord, error) {
 			t.Fatal("must not write")
@@ -416,15 +418,15 @@ func TestRecordDesignReviewPropagatesReadFailureAndApprovalGaps(t *testing.T) {
 		},
 		Now: func() string { return covNow },
 	}
-	req := reviewcontract.DesignReviewRequest{ProblemSummary: "p", ProposedDesign: "d", Verification: []string{"v"}}
-	if _, err := RecordDesignReview(store, "s", "io", req); !errors.Is(err, boom) {
+	req := reviewcontract.ArchitectureReviewRequest{ProblemSummary: "p", ProposedArchitecture: "d", Verification: []string{"v"}, ReviewerContext: "subagent"}
+	if _, err := RecordArchitectureReview(store, "s", "io", req); !errors.Is(err, boom) {
 		t.Fatalf("err=%v", err)
 	}
 	store.Read = func(string, string) (model.IssueOpsRecord, error) { return model.IssueOpsRecord{}, nil }
 	store.PlanReadiness = func(model.IssueOpsRecord) model.IssueOpsReadiness { return model.IssueOpsReadiness{Ready: true} }
 	req.Approved = true
-	_, err := RecordDesignReview(store, "s", "io", req)
-	wantErr(t, err, "approved design review requires refactor_plan")
+	_, err := RecordArchitectureReview(store, "s", "io", req)
+	wantErr(t, err, "approved architecture review requires refactor_plan")
 }
 
 func TestPlanningRecorderCompatibilityAdvancesPhaseAndStampsUpdate(t *testing.T) {

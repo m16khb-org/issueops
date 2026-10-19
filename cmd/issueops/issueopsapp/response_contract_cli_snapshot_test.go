@@ -111,8 +111,13 @@ func buildCLIResponseContractSnapshot(t *testing.T, replacements map[string]stri
 		}
 	}
 	cliSnapshot["issueops_cleanup_orphan_preview"] = responsecontract.NormalizeContractValue(orphanPreviewRaw, replacements)
-	cliSnapshot["issueops_review_design"] = runCLIJSONContract(t, replacements, func() error {
-		return runIssueOps([]string{"design", "review", "--id", issueopsID, "--problem-summary", "IssueOps needs explicit design review", "--proposed-design", "Gate implementation on approved design", "--refactor-plan", "Keep changes local to IssueOps state and adapters", "--risk", "golden contract drift", "--alternative", "docs-only guidance", "--verification", "design review checked contract drift risk", "--verification", "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden", "--approved", "--json"})
+	architectureFile := filepath.Join(t.TempDir(), "architecture.md")
+	writeContractFile(t, filepath.Dir(architectureFile), "architecture.md", strings.Join(issueopsdomain.RequiredArchitectureSections, "\n본문\n")+"\n본문\n")
+	if err := runIssueOps([]string{"artifact", "stage", "--id", issueopsID, "--name", "architecture", "--file", architectureFile, "--json"}); err != nil {
+		t.Fatalf("stage architecture: %v", err)
+	}
+	cliSnapshot["issueops_review_architecture"] = runCLIJSONContract(t, replacements, func() error {
+		return runIssueOps([]string{"architecture", "review", "--id", issueopsID, "--problem-summary", "IssueOps needs explicit architecture review", "--proposed-architecture", "Gate implementation on approved architecture", "--refactor-plan", "Keep changes local to IssueOps state and adapters", "--risk", "golden contract drift", "--alternative", "docs-only guidance", "--verification", "architecture review checked contract drift risk", "--verification", "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden", "--reviewer-context", "subagent", "--approved", "--json"})
 	})
 	writeContractFile(t, contractWorktree, "docs/superpowers/plans/contract.md", "# plan\n"+strings.Join(issueopsdomain.RequiredPlanSections, "\n본문\n")+"\n본문\n")
 	cliSnapshot["issueops_link_plan"] = runCLIJSONContract(t, replacements, func() error {
@@ -160,7 +165,7 @@ func buildCLIResponseContractSnapshot(t *testing.T, replacements map[string]stri
 		return runIssueOps([]string{"remote", "reflect-devils-advocate", "--id", issueopsID, "--confirm", "--json"})
 	})
 	cliSnapshot["issueops_regress_for_replan"] = runCLIJSONContract(t, replacements, func() error {
-		return runIssueOps([]string{"regress", "--id", issueopsID, "--reason", "design-review stop: scope too broad for one cycle", "--json"})
+		return runIssueOps([]string{"regress", "--id", issueopsID, "--reason", "architecture-review stop: scope too broad for one cycle", "--json"})
 	})
 	cliSnapshot["issueops_domain_review"] = runCLIJSONContract(t, replacements, func() error {
 		return runIssueOps([]string{"domain-review", "record", "--id", issueopsID, "--model-fit", "fits the IssueOps phase-ledger domain model", "--terminology", "phase ledger", "--risk", "ledger drift between CLI and MCP", "--json"})

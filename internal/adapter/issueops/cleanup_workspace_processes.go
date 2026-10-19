@@ -59,7 +59,7 @@ func observeCleanupWorkspaceOccupancy(root string, selfPID int) (port.CleanupWor
 
 // buildCleanupOccupancy는 점유자마다 receipt와 계보를 같은 스냅샷에서 채운다.
 // 요청자 계보를 관측하지 못하면 실패다 — 제외 집합을 {self}로 축약하면 cwd가
-// 워크트리인 부모 셸에 신호가 가서 하네스 자신이 HUP을 받는다(design-review 1차 finding 7).
+// 워크트리인 부모 셸에 신호가 가서 하네스 자신이 HUP을 받는다(architecture-review 1차 finding 7).
 func buildCleanupOccupancy(procs []workspaceProcess, snapshot map[int]nativeProcessSnapshotEntry, selfPID int) (port.CleanupWorkspaceOccupancy, error) {
 	return buildCleanupOccupancyWithAncestry(procs, snapshot, selfPID, func(pid int) ([]int, error) {
 		return cleanupAncestorPIDs(snapshot, pid)
@@ -79,7 +79,7 @@ func buildCleanupOccupancyWithAncestry(procs []workspaceProcess, snapshot map[in
 		entry, ok := snapshot[pid]
 		if !ok {
 			// lsof와 ps 사이에 종료한 단명 프로세스는 소멸로 본다. 살아 있는데
-			// 스냅샷에 없으면 관측 실패다(design-review 2차 finding 9).
+			// 스냅샷에 없으면 관측 실패다(architecture-review 2차 finding 9).
 			alive, aliveErr := nativePIDAlive(pid)
 			if aliveErr != nil || alive {
 				return port.CleanupWorkspaceOccupancy{}, fmt.Errorf("workspace process %d is live but absent from the process snapshot", pid)

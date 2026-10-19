@@ -319,7 +319,7 @@ func (command Command) runCleanupFinish(args []string, deps Deps) error {
 
 // runCleanupRemoteBranch는 머지 검증된 사이클의 원격 브랜치를 typed 경로로
 // 삭제한다. 원격 삭제 자체는 git 직접 호출이고, provider는 감사 라인 반영에만
-// 쓰인다(#116 부속 변경 — design-review M12).
+// 쓰인다(#116 부속 변경 — architecture-review M12).
 func (command Command) runCleanupRemoteBranch(args []string, deps Deps) error {
 	fs := flag.NewFlagSet("issueops cleanup remote-branch", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")

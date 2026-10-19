@@ -106,11 +106,12 @@ func TestObservedPRProbesPlanAndWorktreeOnlyWhenRecordNamesThem(t *testing.T) {
 		locked, events := false, []string{}
 		ready, _ := readinessForEffects(t, &locked, &events)
 		ready.Paths = port.ReadinessObservations{
-			WorktreePathValid:    func(path string) bool { worktreeCalls = append(worktreeCalls, path); return true },
-			PlanPathExists:       func(_, path string) bool { planCalls = append(planCalls, path); return true },
-			PlanInLinkedWorktree: func(model.IssueOpsRecord) bool { return true },
-			WorkspaceMatches:     func(string, string) bool { return true },
-			LinkedPlanDigest:     func(model.IssueOpsRecord) (string, error) { return "", nil },
+			WorktreePathValid:        func(path string) bool { worktreeCalls = append(worktreeCalls, path); return true },
+			PlanPathExists:           func(_, path string) bool { planCalls = append(planCalls, path); return true },
+			PlanInLinkedWorktree:     func(model.IssueOpsRecord) bool { return true },
+			WorkspaceMatches:         func(string, string) bool { return true },
+			LinkedPlanDigest:         func(model.IssueOpsRecord) (string, error) { return "", nil },
+			SealedArchitectureDigest: func(model.IssueOpsRecord) (string, error) { return "architecture-digest", nil },
 		}
 		return ready
 	}
@@ -149,9 +150,10 @@ func implementReadyRecord() model.IssueOpsRecord {
 		IssueURL: "https://github.com/acme/repo/issues/1", PlanPath: "plans/p.md", WorktreePath: "/repo.worktrees/feature",
 		BranchPrepare: &model.IssueOpsBranchPrepare{Provider: "github", IssueURL: "https://github.com/acme/repo/issues/1", Branch: "feature", BaseBranch: "main", LinkVerified: true},
 		Intent:        &model.IssueOpsIntentContract{RawRequest: "r", InterpretedIntent: "i", SuccessCriteria: []string{"c"}},
-		DesignReview: &reviewcontract.DesignReview{
-			ProblemSummary: "p", ProposedDesign: "d", RefactorPlan: "r", Alternatives: []string{"a"}, Risks: []string{"r"},
-			Verification: []string{"design review checked alternatives and risks"}, Approved: true,
+		ArchitectureReview: &reviewcontract.ArchitectureReview{
+			ProblemSummary: "p", ProposedArchitecture: "d", RefactorPlan: "r", Alternatives: []string{"a"}, Risks: []string{"r"},
+			Verification: []string{"architecture review checked alternatives and risks"}, Approved: true,
+			ReviewerContext: "subagent", ReviewedArchitectureDigest: "architecture-digest",
 		},
 		CompatibilityReview:  &reviewcontract.CompatibilityReview{BackwardCompatibility: []string{"b"}, SideEffects: []string{"s"}, RollbackPlan: "r", Verification: []string{"v"}, Approved: true},
 		DevilsAdvocateReview: &model.IssueOpsDevilsAdvocateReview{Verdict: "proceed", RecordedAt: "2026-10-12T00:00:00Z", ReviewedPlanDigest: "digest"},
@@ -172,6 +174,7 @@ func TestAdvanceReportWritesTrackedMaterialsWhenEnteringImplementIfHookWired(t *
 			locked, events := false, []string{}
 			ready, _ := readinessForEffects(t, &locked, &events)
 			ready.Paths.LinkedPlanDigest = func(model.IssueOpsRecord) (string, error) { return "digest", nil }
+			ready.Paths.SealedArchitectureDigest = func(model.IssueOpsRecord) (string, error) { return "architecture-digest", nil }
 			p := &phaseFlow{record: implementReadyRecord()}
 			service := flowService(p, ready)
 			calls := 0

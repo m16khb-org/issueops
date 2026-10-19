@@ -411,7 +411,7 @@ func TestCleanupFinishReportsAuditInResponse(t *testing.T) {
 	}
 }
 
-// design-review H8: remote-branch를 건너뛴 finish가 레코드를 지우면 typed 원격 삭제
+// architecture-review H8: remote-branch를 건너뛴 finish가 레코드를 지우면 typed 원격 삭제
 // 경로가 그 브랜치에 영원히 닿지 못한다. 잔존과 관측 불가 모두 차단한다.
 func TestCleanupFinishBlocksWhileRemoteBranchStillExists(t *testing.T) {
 	stateRoot, record, _ := finishTestRecord(t, true)

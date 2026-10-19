@@ -92,7 +92,7 @@ func makeIssueOpsPRPhaseRecordForCLITest(t *testing.T, id, repo string) (issueop
 	if _, err := LinkIssueOpsWorktreeForTest(issueOpsStateRootForTest(), id, worktree); err != nil {
 		t.Fatal(err)
 	}
-	recordIssueOpsCoreDesignForCLITest(t, id)
+	recordIssueOpsCoreArchitectureForCLITest(t, id)
 	planPath := filepath.Join(worktree, "plans", "remote-verify.md")
 	writeIssueOpsCLIFileForTest(t, worktree, "plans/remote-verify.md", planBodyForCLITest())
 	if _, err := LinkIssueOpsPlanForTest(issueOpsStateRootForTest(), id, planPath); err != nil {

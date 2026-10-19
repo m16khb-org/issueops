@@ -55,7 +55,7 @@ func TestIssueOpsCleanupStatusRequiresMergedCleanWorktreeAndDeletedRemoteBranch(
 	if err != nil {
 		t.Fatal(err)
 	}
-	recordIssueOpsApprovedDesignForTest(t, stateRoot, record.ID)
+	recordIssueOpsApprovedArchitectureForTest(t, stateRoot, record.ID)
 	writeIssueOpsFile(t, worktree, "plans/demo.md", planBodyForTest())
 	record, err = LinkIssueOpsPlan(stateRoot, record.ID, filepath.Join(worktree, "plans/demo.md"))
 	if err != nil {

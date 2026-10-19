@@ -332,7 +332,7 @@ type IssueOpsRecord struct {
 	Branch                  string                              `json:"branch,omitempty"`
 	Phase                   IssueOpsPhase                       `json:"phase"`
 	Intent                  *IssueOpsIntentContract             `json:"intent,omitempty"`
-	DesignReview            *reviewcontract.DesignReview        `json:"design_review,omitempty"`
+	ArchitectureReview      *reviewcontract.ArchitectureReview  `json:"architecture_review,omitempty"`
 	DomainReview            *IssueOpsDomainReview               `json:"domain_review,omitempty"`
 	IssueURL                string                              `json:"issue_url,omitempty"`
 	ChildCreateOperations   []ChildCreateOperation              `json:"child_create_operations,omitempty"`
@@ -377,7 +377,7 @@ type IssueOpsRecord struct {
 	UpdatedAt   string              `json:"updated_at"`
 }
 
-// IssueOpsImplementationReview captures the design-review adversarial verdict on the
+// IssueOpsImplementationReview captures the architecture-review adversarial verdict on the
 // implementation diff, recorded by the execution owner before publication.
 // reviewer_* 필드는 감사 기록이며 게이트 조건이 아니다 — 하네스는 모델
 // 자기신고를 검증할 수 없으므로 verdict와 실질 내용만 게이트한다(설계 v5 WS5).

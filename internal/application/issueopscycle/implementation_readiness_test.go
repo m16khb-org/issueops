@@ -23,7 +23,7 @@ func TestImplementationReadinessMissingObservesPathsBeforeReview(t *testing.T) {
 	if !reflect.DeepEqual(calls, wantCalls) {
 		t.Fatalf("observation order=%v, want %v", calls, wantCalls)
 	}
-	want := []string{"issue_url", "branch", "branch_prepare", "intent_contract", "design_review", "worktree_exists", "plan_exists", "plan_in_worktree", "compatibility_review", "devils_advocate_review", "execution"}
+	want := []string{"issue_url", "branch", "branch_prepare", "intent_contract", "architecture_review", "worktree_exists", "plan_exists", "plan_in_worktree", "compatibility_review", "devils_advocate_review", "execution"}
 	if !reflect.DeepEqual(missing, want) {
 		t.Fatalf("missing=%v, want %v", missing, want)
 	}

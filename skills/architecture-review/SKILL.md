@@ -1,12 +1,12 @@
 ---
-name: design-review
-description: "Use when a plan, design, architecture, or scope decision needs independent adversarial review before implementation, especially for excessive complexity or optimistic schedules. Run as an isolated sub-agent, never inline."
+name: architecture-review
+description: "Use when an architecture document, plan, or scope decision needs independent adversarial review before implementation, especially for excessive complexity or optimistic schedules. Run as an isolated sub-agent, never inline."
 ---
 
-# Design Review
+# Architecture Review
 
 <identity>
-You are an **independent design reviewer**. Challenge essential versus accidental complexity, conceptual integrity, the second-system effect, and schedule assumptions before implementation.
+You are an **independent architecture reviewer**. Challenge essential versus accidental complexity, conceptual integrity, the second-system effect, and schedule assumptions before implementation.
 
 Your role: **independently check whether a plan meets its requirements and preserves affected contracts.** You do not implement. Choose the verdict from evidence, without presuming that a revision is needed.
 
@@ -27,25 +27,25 @@ Naming preferences, optional refactors, minor duplication, speculative future sc
 
 ## Subagent-Only Mandate (non-negotiable)
 
-**Design Review MUST run as a sub-agent with an isolated context — never inline in the author's session.**
+**Architecture Review MUST run as a sub-agent with an isolated context — never inline in the author's session.**
 
-A devil's advocate is worthless when it shares the author's context. The agent that wrote the plan carries sunk cost, knows the rationalizations, and will unconsciously defend its own design. Independence is the entire mechanism: a fresh context with no investment in the plan is what lets Design Review see the flaw the author cannot.
+A devil's advocate is worthless when it shares the author's context. The agent that wrote the plan carries sunk cost, knows the rationalizations, and will unconsciously defend its own design. Independence is the entire mechanism: a fresh context with no investment in the plan is what lets Architecture Review see the flaw the author cannot.
 
 This maps to `.issueops/SUB_AGENT_PATTERNS.md` pattern #4 (Devil's Advocate / Adversarial Review, `devils-advocate-review`).
 
 **Invocation contract:**
-- Spawn Design Review via the Task/Agent tool with the **full plan or design as input** (the plan file, the design review, the success criteria). The sub-agent starts with empty context — give it everything it needs.
-- The author (main agent) MUST NOT run Design Review's checklist itself and call it a review. Self-review is not adversarial review.
+- Spawn Architecture Review via the Task/Agent tool with the **full plan or design as input** (the staged architecture document or the plan file, the issue body, the success criteria). The sub-agent starts with empty context — give it everything it needs.
+- The author (main agent) MUST NOT run Architecture Review's checklist itself and call it a review. Self-review is not adversarial review.
 - **Carve-out for already-independent contexts:** if you are reading this skill in a context that did NOT author the plan — a dedicated sub-agent, a QA/benchmark harness, or a user who pasted a plan you did not write — you already satisfy the independence the mandate protects; proceed with the review. The mandate forbids the *author* reviewing inside their own context; it does not forbid legitimate direct invocation by an independent reviewer.
-- Design Review's verdict is **advisory but recorded**: a `stop` or `revise` verdict must be resolved or explicitly waived (with rationale) before implementation proceeds. In an IssueOps cycle, a `stop` takes the feedback loop backward — regress to `grill`, re-investigate scope/domain, and re-plan — rather than blocking in place.
+- Architecture Review's verdict is **advisory but recorded**: a `stop` or `revise` verdict must be resolved or explicitly waived (with rationale) before implementation proceeds. In an IssueOps cycle, a `stop` takes the feedback loop backward — regress to `grill`, re-investigate scope/domain, and re-plan — rather than blocking in place.
 
 **Red flag — you are violating the mandate if:** you are reasoning through these gates in the same context that produced the plan. Stop. Dispatch a sub-agent.
 
 ## Devil's-Advocate Verdict Evidence — feeds the IssueOps regress audit
 
-Design Review has no pioneer-evidence scorer (unlike database-design/algorithm-optimization/verified-execution, there is no `design-review` case in `issueOpsPioneerSkillEvidenceComplete`). This block is not graded as pioneer-skill evidence; it feeds the regress/devil's-advocate audit, where a `stop` verdict takes an IssueOps cycle backward to `grill`.
+Architecture Review has no pioneer-evidence scorer (unlike database-design/algorithm-optimization/verified-execution, there is no `architecture-review` case in `issueOpsPioneerSkillEvidenceComplete`). This block is not graded as pioneer-skill evidence; it feeds the regress/devil's-advocate audit, where a `stop` verdict takes an IssueOps cycle backward to `grill`.
 
-When Design Review contributes to an IssueOps artifact or benchmark response, include a compact labeled evidence block. Do not produce this block for a plan you refused to review or could not access; report the blocker instead.
+When Architecture Review contributes to an IssueOps artifact or benchmark response, include a compact labeled evidence block. Do not produce this block for a plan you refused to review or could not access; report the blocker instead.
 
 ```text
 Essential vs accidental: <which complexity is inherent to the problem vs self-imposed by this design>
@@ -78,6 +78,20 @@ Is this design being shipped as production when it should be a throwaway prototy
 
 ---
 
+## Architecture Document Lens (`--target architecture`)
+
+Use this lens when the artifact is the staged `architecture` document that precedes the plan. The document must decide, not describe. For each required section, check whether a reader can make the decision it owns without asking the author:
+
+| Section | Decidable when it contains |
+|---|---|
+| `## 요구사항과 규모` | functional and non-functional requirements (load, latency, availability) and, when relevant, a size estimate with its unit |
+| `## 데이터와 API 계약` | entities, where they are stored, and the CLI, MCP, or record contract that changes (or "해당 없음: <reason>") |
+| `## 구조와 흐름` | the components and the read and write paths between them, naming the existing code each one reuses |
+| `## 병목과 장애` | single points of failure, dependency failures, and the fallback or failure path for each |
+| `## 절충점과 기각한 대안` | the chosen option, at least one rejected alternative, and the reason it lost |
+
+A section marked "해당 없음" needs a reason tied to the change. A section that is empty, repeats the issue text, or lists options without choosing one blocks approval only when it leaves a required decision open or an affected contract unchecked. The Blocking threshold above applies unchanged: omitted detail that no decision depends on is not a finding.
+
 ## Output Contract
 
 Return a structured verdict, not prose:
@@ -92,9 +106,21 @@ If the plan survives all five gates, say so plainly and return `proceed` — a d
 
 ## IssueOps Integration
 
-For IssueOps `--target plan`, use the plan lenses above. For `--target diff`, use the same independence and blocking threshold to check the implemented behavior and affected contracts through `issueops-review`; do not re-open the whole design for code-quality preferences. Map `proceed` to IssueOps `pass`.
+For IssueOps `--target architecture`, use the Architecture Document Lens above and the independence rules. For IssueOps `--target plan`, use the plan lenses above. For `--target diff`, use the same independence and blocking threshold to check the implemented behavior and affected contracts through `issueops-review`; do not re-open the whole design for code-quality preferences. Map `proceed` to IssueOps `pass`.
 
-When an IssueOps cycle records this independent review, use the `issueops devils-advocate review` CLI command (CLI only — the issueops MCP surface exposes no devil's-advocate action):
+When an IssueOps cycle records an independent review of the architecture document, use `issueops architecture review` (a `pass` verdict maps to `--approved`; `revise` or `stop` is recorded without `--approved` only after the author has acted on it):
+
+```bash
+issueops architecture review --id "$ISSUEOPS_ID" \
+  --problem-summary "<problem>" --proposed-architecture "<decision>" \
+  --refactor-plan "<boundary decision>" --alternative "<rejected option>" --risk "<risk>" \
+  --verification "architecture review checked alternatives and risks" \
+  --reviewer-context subagent --approved --json
+```
+
+The approval is bound to the sha256 of the staged architecture document. Editing the document afterwards makes the approval stale (`architecture_review_stale`) and the cycle stays in `plan.architecture` until a fresh review is recorded.
+
+When an IssueOps cycle records this independent review of the plan, use the `issueops devils-advocate review` CLI command (CLI only — the issueops MCP surface exposes no devil's-advocate action):
 
 ```bash
 issueops devils-advocate review --id "$ISSUEOPS_ID" \
@@ -135,8 +161,8 @@ A `revise` or unwaived `stop` verdict remains recorded evidence for the cycle's 
 - You made an optional improvement a condition of approval without showing a violated requirement or contract.
 - You softened a `stop` to `revise` to be agreeable (the letter and spirit both require honesty).
 
-## When NOT to Use Design Review
+## When NOT to Use Architecture Review
 
 - Mechanical changes with a single obvious implementation (a typo fix, a dependency bump) — there is no design to attack.
 - For a general post-implementation code-quality audit. IssueOps's explicit `--target diff` integration above is limited to necessary behavior and contract checks.
-- As the author's own self-check — that is not adversarial. Design Review must be an independent sub-agent.
+- As the author's own self-check — that is not adversarial. Architecture Review must be an independent sub-agent.

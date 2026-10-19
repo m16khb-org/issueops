@@ -53,7 +53,7 @@ func newLinkStoreForTest(records ...model.IssueOpsRecord) (*linkStoreForTest, br
 			r.IssueURL = "https://github.com/example/repo/issues/10"
 		}
 		r.BranchPrepare = &model.IssueOpsBranchPrepare{LinkVerified: true}
-		r.DesignReview = &reviewcontract.DesignReview{ProblemSummary: "problem", ProposedDesign: "design", Verification: []string{"design review checked alternatives and risks"}, Approved: true, RefactorPlan: "plan", Alternatives: []string{"alternative"}, Risks: []string{"risk"}}
+		r.ArchitectureReview = &reviewcontract.ArchitectureReview{ProblemSummary: "problem", ProposedArchitecture: "architecture", Verification: []string{"architecture review checked alternatives and risks"}, Approved: true, RefactorPlan: "plan", Alternatives: []string{"alternative"}, Risks: []string{"risk"}}
 		s.records[r.ID] = r
 	}
 	return s, branchapp.WorkspaceLinker{Records: s, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, core.NativeActorVerifier()), Files: core.LinkEnvironment{}, Now: func() time.Time { return time.Date(2026, 9, 28, 0, 0, 0, 0, time.UTC) }}
@@ -168,11 +168,11 @@ func TestLinkPlanRejectsBoundaryViolations(t *testing.T) {
 			r.BranchPrepare = nil
 			s.records[record.ID] = r
 		}, wantErr: "before branch evidence"},
-		{name: "missing design review", path: "plan.md", mutate: func(s *linkStoreForTest) {
+		{name: "missing architecture review", path: "plan.md", mutate: func(s *linkStoreForTest) {
 			r := s.records[record.ID]
-			r.DesignReview.Approved = false
+			r.ArchitectureReview.Approved = false
 			s.records[record.ID] = r
-		}, wantErr: "design_approval"},
+		}, wantErr: "architecture_approval"},
 		{name: "missing file", path: "missing.md", wantErr: "plan_path does not exist"},
 		{name: "absolute path outside worktree", path: outsidePlanPath, wantErr: "plan_path must be inside linked worktree"},
 	} {

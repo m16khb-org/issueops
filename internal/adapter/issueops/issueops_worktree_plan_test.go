@@ -43,7 +43,7 @@ func TestIssueOpsLinkPlanResolvesRelativePathInsideLinkedWorktree(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	recordIssueOpsApprovedDesignForTest(t, stateRoot, record.ID)
+	recordIssueOpsApprovedArchitectureForTest(t, stateRoot, record.ID)
 	if _, err := LinkIssueOpsPlan(stateRoot, record.ID, "docs/plans/source-only.md"); err == nil || !strings.Contains(err.Error(), "plan_path does not exist") {
 		t.Fatalf("relative plan path should be resolved inside linked worktree, got %v", err)
 	}
@@ -237,7 +237,7 @@ func TestIssueOpsPlanMustStayInsideLinkedWorktree(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	recordIssueOpsApprovedDesignForTest(t, stateRoot, record.ID)
+	recordIssueOpsApprovedArchitectureForTest(t, stateRoot, record.ID)
 	sourcePlan := filepath.Join(repo, "plans", "demo.md")
 	if _, err := LinkIssueOpsPlan(stateRoot, record.ID, sourcePlan); err == nil || !strings.Contains(err.Error(), "inside linked worktree") {
 		t.Fatalf("source checkout plan should not link after worktree, got %v", err)

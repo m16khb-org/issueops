@@ -146,6 +146,18 @@ func TestTrackedMaterialsWriteRendersPlanReviewAndMasksLocalPaths(t *testing.T) 
 	}
 }
 
+func TestTrackedMaterialsWriteCopiesSealedArchitectureNextToPlan(t *testing.T) {
+	files := newMemoryMaterialFiles()
+	files.files[trackedSealed+"/architecture.md"] = []byte("# architecture\n")
+	got := TrackedMaterials{Files: files}.Write(trackedRecord())
+	if len(got.Written) != 1 || got.Written[0] != ".issueops/issues/7/architecture.md" {
+		t.Fatalf("sealed architecture must be copied: %+v", got)
+	}
+	if string(files.files["/wt/.issueops/issues/7/architecture.md"]) != "# architecture\n" {
+		t.Fatalf("architecture copy differs: %v", files.files)
+	}
+}
+
 func TestTrackedMaterialsPlanSourceHonorsLinkedPlanLocation(t *testing.T) {
 	files := newMemoryMaterialFiles()
 	files.files[trackedSealed+"/custom-plan.md"] = []byte("linked")

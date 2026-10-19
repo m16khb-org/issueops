@@ -11,7 +11,7 @@ func TestMissingPreconditionsAcceptsReviewedParent(t *testing.T) {
 	parent := model.IssueOpsRecord{
 		Phase:                model.IssueOpsPhaseImplement,
 		Branch:               "123-parent",
-		DesignReview:         &reviewcontract.DesignReview{Approved: true},
+		ArchitectureReview:   &reviewcontract.ArchitectureReview{Approved: true},
 		CompatibilityReview:  &reviewcontract.CompatibilityReview{Approved: true},
 		DevilsAdvocateReview: &model.IssueOpsDevilsAdvocateReview{Verdict: "pass", RecordedAt: "2026-07-07T00:00:00Z"},
 	}

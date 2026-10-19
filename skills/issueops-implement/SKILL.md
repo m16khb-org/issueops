@@ -254,7 +254,7 @@ lease 부재·다른 holder·모호한 mutation은 아래에서 시작해 반환
 원격 parent/child 분리는 [`issueops-create-issue`](../issueops-create-issue/SKILL.md)가
 소유한다. 실행 중 만드는 delegated child cycle은 그것과 별개다.
 
-세 조건이 모두 참일 때만 위임한다: parent가 implement phase다, design·compatibility·
+세 조건이 모두 참일 때만 위임한다: parent가 implement phase다, architecture·compatibility·
 devil's-advocate 리뷰가 approved 또는 waive다, plan이 sub-agent pattern·scope·acceptance·
 verification·fallback·tradeoff·기대 이득을 기록한다.
 

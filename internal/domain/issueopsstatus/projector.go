@@ -65,7 +65,7 @@ func ArtifactKeys(phase issueopsstatuscontract.Phase) []string {
 	case issueopsstatuscontract.PhaseGrill:
 		return []string{"issue_url", "branch", "plan_prep", "split_decision", "domain_review"}
 	case issueopsstatuscontract.PhasePlan:
-		return []string{"branch_prepare", "worktree_path", "plan_path", "design_review"}
+		return []string{"branch_prepare", "worktree_path", "plan_path", "architecture_review"}
 	case issueopsstatuscontract.PhaseCompatibilityReview:
 		return []string{"compatibility_review", "compatibility_approval", "compatibility_blockers"}
 	case issueopsstatuscontract.PhaseImplement:

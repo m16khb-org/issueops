@@ -7,10 +7,11 @@ import (
 
 func ReadinessPathObservations() cycleport.ReadinessObservations {
 	return cycleport.ReadinessObservations{
-		WorktreePathValid:    readinesspaths.WorktreePathValid,
-		PlanPathExists:       readinesspaths.PlanPathExists,
-		PlanInLinkedWorktree: readinesspaths.PlanInLinkedWorktree,
-		WorkspaceMatches:     samePath,
-		LinkedPlanDigest:     ReviewPlanSource{}.LinkedDigest,
+		WorktreePathValid:        readinesspaths.WorktreePathValid,
+		PlanPathExists:           readinesspaths.PlanPathExists,
+		PlanInLinkedWorktree:     readinesspaths.PlanInLinkedWorktree,
+		WorkspaceMatches:         samePath,
+		LinkedPlanDigest:         ReviewPlanSource{}.LinkedDigest,
+		SealedArchitectureDigest: ReviewArchitectureSource{}.SealedDigest,
 	}
 }

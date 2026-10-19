@@ -177,7 +177,7 @@ func TestCovBranchChildApplyVerdict(t *testing.T) {
 func TestCovBranchChildStartPreconditions(t *testing.T) {
 	ok := model.IssueOpsRecord{
 		Branch: "1-parent", Phase: model.IssueOpsPhaseImplement,
-		DesignReview:         &reviewcontract.DesignReview{Approved: true},
+		ArchitectureReview:   &reviewcontract.ArchitectureReview{Approved: true},
 		CompatibilityReview:  &reviewcontract.CompatibilityReview{Approved: true, Blockers: []string{" "}},
 		DevilsAdvocateReview: &model.IssueOpsDevilsAdvocateReview{RecordedAt: "t", Verdict: "proceed"},
 	}
@@ -186,7 +186,7 @@ func TestCovBranchChildStartPreconditions(t *testing.T) {
 		t.Fatalf("ok = %v", got)
 	}
 	bad := model.IssueOpsRecord{Branch: "1-parent", Delegation: &model.IssueOpsDelegationContract{}}
-	want := []string{"parent_phase_not_implement", "parent_design_review_unapproved", "parent_compatibility_unapproved", "parent_devils_advocate_missing", "delegation_depth_exceeded", "child_branch_equals_parent"}
+	want := []string{"parent_phase_not_implement", "parent_architecture_review_unapproved", "parent_compatibility_unapproved", "parent_devils_advocate_missing", "delegation_depth_exceeded", "child_branch_equals_parent"}
 	if got := ChildStartMissingPreconditions(bad, model.IssueOpsChildStartRequest{Branch: " 1-parent "}); !slices.Equal(got, want) {
 		t.Fatalf("bad = %v", got)
 	}
