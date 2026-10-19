@@ -47,7 +47,7 @@ When an agent hits a pitfall it writes a caution, and when it makes a decision i
 writes an ADR, one record each under `.issueops/cautions/` and `.issueops/adr/`.
 Records are plain Markdown, so they are committed with the code and reviewed in
 the PR. Once a teammate pulls them, every host (Codex, Claude Code, Omo native,
-or omp) reads the same records. The image at the top shows this flow. Two steps
+omp, or opencode) reads the same records. The image at the top shows this flow. Two steps
 are not in it: the teammate's agent reads only the records `route-docs` picks
 for the task, not all of them, and what that task teaches becomes new records in
 turn, so the records grow with every task.
@@ -178,7 +178,7 @@ parent cycle accepts (`child accept`) or rejects (`child reject`) the result.
 ## What else the cycle handles
 
 The same cycle follows one execution contract whichever host picks it up: Codex,
-Claude Code, Omo native, or omp. A human shell and several agents share the same
+Claude Code, Omo native, omp, or opencode. A human shell and several agents share the same
 Go core, CLI/MCP contract, command policy, and skill source tree, and workflow
 state and verification evidence stay in a local store outside the host. IssueOps
 does not replace a host and does not approve work on its own. It binds the issue,
@@ -187,7 +187,7 @@ cycle state, so any session that picks the work up gets the same answer.
 
 | Capability | What it provides |
 |---|---|
-| Cross-host integration | Codex, Claude Code, Omo native, and omp share one core and one response contract |
+| Cross-host integration | Codex, Claude Code, Omo native, omp, and opencode share one core and one response contract |
 | CLI and MCP | The human-facing CLI and the agent-facing MCP share one core and one SQLite state. MCP runs as one shared local HTTP service per user by default; `--mcp-transport=stdio` runs it inside each host session |
 | IssueOps cycle | Durable state from issue through plan, worktree, implementation, doc reflection, verification, PR/MR, and cleanup |
 | Project docs | Creates, routes, and incrementally refreshes `AGENTS.md` and `.issueops/`, and enforces reflection through cycle gates |
@@ -237,7 +237,7 @@ would put stage detection in two places. The rationale is in
 ## Quick start
 
 You need Git, Go 1.26.6 or later, and at least one host you plan to use (Codex,
-Claude Code, Omo native, or omp). There is no public binary release yet, so you
+Claude Code, Omo native, omp, or opencode). There is no public binary release yet, so you
 build from source (`v0.1.0` is a draft). To write issues or PRs/MRs on GitHub or
 GitLab, also set up and authenticate that provider's CLI (`gh` or `glab`).
 Herdr and Aside for browser QA are optional integrations installed separately.
@@ -276,8 +276,9 @@ The default installer wires every host adapter into the same execution contract.
 | Claude Code | `~/.claude/skills/`, user-scope MCP, `SessionStart` and `SubagentStart` hooks |
 | Omo native | `~/.omo/agent/skills/`, `~/.omo/mcp.json`, lifecycle extension |
 | omp | `~/.omp/agent/skills/`, `~/.omp/agent/mcp.json`, `~/.omp/agent/extensions/issueops.js` |
+| opencode | `~/.config/opencode/skills/`, `mcp.servers.issueops` in `~/.config/opencode/opencode.json`, `~/.config/opencode/plugins/issueops.js` (follows `XDG_CONFIG_HOME`); only an `opencode --standalone` session can hold a lease |
 | agy (Antigravity CLI) | `~/.gemini/config/skills/`, `~/.gemini/config/mcp_config.json`; always stdio, no hooks |
-| MCP service | macOS LaunchAgent `io.issueops.mcp` or Linux systemd user `issueops-mcp.service`; Codex, Claude Code, Omo native, and omp share `http://127.0.0.1:47831/mcp` |
+| MCP service | macOS LaunchAgent `io.issueops.mcp` or Linux systemd user `issueops-mcp.service`; Codex, Claude Code, Omo native, omp, and opencode share `http://127.0.0.1:47831/mcp` |
 | Runtime state | SQLite store under `~/.local/state/issueops/`; isolate it with `ISSUEOPS_STATE_DIR` |
 | Project knowledge | `AGENTS.md` and `.issueops/` in the target repository, created only by an explicit project bootstrap |
 
@@ -298,7 +299,7 @@ these files, so the trust boundary is the OS user.
 
 `install` accepts `--interactive`, `--project-local`, and
 `--path-mode=auto|manual|skip`; `bootstrap` adds `--sync`. `--project-local`
-writes `.mcp.json`, `.omo/mcp.json`, and `.omp/mcp.json` only with
+writes `.mcp.json`, `.omo/mcp.json`, `.omp/mcp.json`, and `.opencode/opencode.json` only with
 `--mcp-transport=stdio`; with the default HTTP transport those hosts keep the
 user-scope entry. agy's `.agents/mcp_config.json` is written either way, and
 skill links always stay in your home. After native activation, `install` and
@@ -437,7 +438,7 @@ That choice decides only where the work runs; the original request's approved
 scope and endpoint are unchanged, and an explicit instruction to hold or to use a
 particular session wins over it.
 
-All four hosts let you change the model and effort per role, for your whole user
+All five hosts let you change the model and effort per role, for your whole user
 (global) or one repository (local). Each field resolves explicit flag > local >
 global > built-in default.
 
@@ -454,7 +455,8 @@ To change them in conversation, use the [`io-model`](skills/io-model/SKILL.md) s
 
 Automatic handoff passes `--dangerously-skip-permissions` to Claude Code,
 `--dangerously-bypass-approvals-and-sandbox` to Codex,
-`--permission-preset full-access` to Omo native, and `--auto-approve` to omp.
+`--permission-preset full-access` to Omo native, and `--auto-approve` to omp,
+and opens opencode with `opencode --standalone --auto`.
 These skip the host's own permission prompts, so settle the scope of the handed-off
 work first. IssueOps keeps its own lease, generation, workspace, and remote-write
 checks. Acceptance of the handoff command and the actual claim and
@@ -472,6 +474,7 @@ flowchart LR
     Claude["Claude Code"] --> Host
     Omo["Omo native"] --> Host
     Omp["omp"] --> Host
+    Opencode["opencode"] --> Host
     Shell["Human shell"] --> Surface["issueops<br/>CLI · shared HTTP MCP · stdio MCP"]
     Host --> Surface
     Surface --> Core["Host-neutral Go core"]
@@ -553,7 +556,7 @@ internal/application/   use cases composing domain and ports
 internal/port/          external capability interfaces and error contracts
 internal/adapter/       host, filesystem, process, and DB boundary implementations
 internal/architecture/  production import graph fitness tests
-configs/                Codex, Claude Code, Omo native, omp, and agy templates plus upstream.json
+configs/                Codex, Claude Code, Omo native, omp, opencode, and agy templates plus upstream.json
 skills/                 skill source shared by every host
 .issueops/              architecture, operations, testing, ADR, and other project docs
 scripts/                install, release, smoke, and validation scripts

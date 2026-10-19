@@ -106,3 +106,15 @@ func TestBuildPrintArgv(t *testing.T) {
 		t.Fatalf("omp = %q", got)
 	}
 }
+
+func TestBuildPrintArgvOpencodeRun(t *testing.T) {
+	if got := BuildPrintArgv("opencode", "opencode/deepseek-v4.1-flash-free", "max"); !reflect.DeepEqual(got, []string{"opencode", "run", "--standalone", "--model", "opencode/deepseek-v4.1-flash-free#max"}) {
+		t.Fatalf("opencode = %q", got)
+	}
+	if got := BuildPrintArgv("opencode", "opencode/m", ""); !reflect.DeepEqual(got, []string{"opencode", "run", "--standalone", "--model", "opencode/m"}) {
+		t.Fatalf("opencode without effort = %q", got)
+	}
+	if got, err := RoleAgentArgs("opencode", []RoleAgent{{Role: modelcontract.RoleResearch, Model: "opencode/m"}}, nil); err != nil || got != nil {
+		t.Fatalf("opencode role agents = %q, %v", got, err)
+	}
+}

@@ -3,6 +3,7 @@ package authority
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -215,7 +216,31 @@ func (s *Service) verifyNative(ctx context.Context, actor model.NativeActor) (mo
 	if err := s.observeLive(ctx, *normalized.SessionProcess); err != nil {
 		return model.VerifiedActor{}, err
 	}
+	if issueopsdomain.IsOpencodeExecutable(normalized.SessionProcess.Executable) {
+		if err := s.requireOpencodeStandaloneServer(ctx, *normalized.SessionProcess); err != nil {
+			return model.VerifiedActor{}, err
+		}
+	}
 	return model.VerifiedActor{Identity: normalized, Method: model.VerifiedByNativeAncestry}, nil
+}
+
+// requireOpencodeStandaloneServer accepts an opencode receipt, whatever host the
+// caller declared, only when it is the per-client `serve --stdio` server. The
+// shared `serve --service` outlives its sessions, so it cannot prove one.
+func (s *Service) requireOpencodeStandaloneServer(ctx context.Context, receipt model.NativeProcessReceipt) error {
+	const refusal = "opencode lease ownership requires a --standalone session (the session process is not `opencode serve --stdio`)"
+	inspector, ok := s.inspector.(authorityport.ProcessArgumentsInspector)
+	if !ok {
+		return fmt.Errorf("%s: process arguments cannot be observed", refusal)
+	}
+	fields, err := inspector.Arguments(ctx, receipt)
+	if err != nil {
+		return fmt.Errorf("%s: %w", refusal, err)
+	}
+	if !issueopsdomain.OpencodeStandaloneServer(fields) {
+		return errors.New(refusal)
+	}
+	return nil
 }
 
 func (s *Service) observeLive(ctx context.Context, receipt model.NativeProcessReceipt) error {

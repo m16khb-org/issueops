@@ -21,6 +21,18 @@ func (NativeProcessInspector) Inspect(ctx context.Context, receipt issueops.Nati
 	return InspectNativeProcessReceipt(receipt)
 }
 
+var _ authorityport.ProcessArgumentsInspector = NativeProcessInspector{}
+
+// Arguments returns the live argv of the receipt's process, only while the
+// process start identity still equals the receipt's, so a reused PID cannot
+// lend its arguments to an older receipt.
+func (NativeProcessInspector) Arguments(ctx context.Context, receipt issueops.NativeProcessReceipt) ([]string, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	return nativeProcessArguments(receipt)
+}
+
 // NativeActorVerifier proves callers only by observed native ancestry and the
 // live session receipt. It has no grant store, so a capability-bound request
 // fails closed instead of falling back to native identity.

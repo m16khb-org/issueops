@@ -11,7 +11,8 @@
         "claude-only",
         "codex-only",
         "omo-only",
-        "omp-only"
+        "omp-only",
+        "opencode-only"
       ],
       "hosts": [
         {
@@ -22,21 +23,21 @@
               "kind": "agy_project_mcp_config",
               "path": "$ROOT/.agents/mcp_config.json",
               "written": true,
-              "content_sha256": "3ddb37e2cf54493ab9de28b272e0c4fe6b09507977289433b2a0fee8859428fc",
+              "content_sha256": "bbbda98c27d4ca05a8c733b2ef7a9de1eb5da6828d9f2d3078e761569acc6bc1",
               "content": ""
             },
             {
               "kind": "agy_project_mcp_template",
               "path": "$ROOT/configs/agy/mcp_config.json",
               "written": true,
-              "content_sha256": "3ddb37e2cf54493ab9de28b272e0c4fe6b09507977289433b2a0fee8859428fc",
+              "content_sha256": "bbbda98c27d4ca05a8c733b2ef7a9de1eb5da6828d9f2d3078e761569acc6bc1",
               "content": ""
             },
             {
               "kind": "agy_user_mcp_config",
               "path": "$HOME/.gemini/config/mcp_config.json",
               "written": true,
-              "content_sha256": "bb5b25989607e47108278486f247b780f98cc04d14875628ae7c31c169226a5b",
+              "content_sha256": "670866e8235e8cde6fbd70818e2875edd67799aab363fd3eaca73a5d0b756563",
               "content": ""
             }
           ],
@@ -64,7 +65,8 @@
             "skip skill for agy: claude-only",
             "skip skill for agy: codex-only",
             "skip skill for agy: omo-only",
-            "skip skill for agy: omp-only"
+            "skip skill for agy: omp-only",
+            "skip skill for agy: opencode-only"
           ]
         },
         {
@@ -131,7 +133,8 @@
             "skip skill for claude: agy-only",
             "skip skill for claude: codex-only",
             "skip skill for claude: omo-only",
-            "skip skill for claude: omp-only"
+            "skip skill for claude: omp-only",
+            "skip skill for claude: opencode-only"
           ]
         },
         {
@@ -191,7 +194,8 @@
             "skip skill for codex: agy-only",
             "skip skill for codex: claude-only",
             "skip skill for codex: omo-only",
-            "skip skill for codex: omp-only"
+            "skip skill for codex: omp-only",
+            "skip skill for codex: opencode-only"
           ]
         },
         {
@@ -209,14 +213,14 @@
               "kind": "omo_project_mcp_config",
               "path": "$ROOT/.omo/mcp.json",
               "written": true,
-              "content_sha256": "3ddb37e2cf54493ab9de28b272e0c4fe6b09507977289433b2a0fee8859428fc",
+              "content_sha256": "bbbda98c27d4ca05a8c733b2ef7a9de1eb5da6828d9f2d3078e761569acc6bc1",
               "content": ""
             },
             {
               "kind": "omo_project_mcp_template",
               "path": "$ROOT/configs/omo/mcp.json",
               "written": true,
-              "content_sha256": "3ddb37e2cf54493ab9de28b272e0c4fe6b09507977289433b2a0fee8859428fc",
+              "content_sha256": "bbbda98c27d4ca05a8c733b2ef7a9de1eb5da6828d9f2d3078e761569acc6bc1",
               "content": ""
             },
             {
@@ -230,7 +234,7 @@
               "kind": "omo_user_mcp_config",
               "path": "$HOME/.omo/mcp.json",
               "written": true,
-              "content_sha256": "bb5b25989607e47108278486f247b780f98cc04d14875628ae7c31c169226a5b",
+              "content_sha256": "670866e8235e8cde6fbd70818e2875edd67799aab363fd3eaca73a5d0b756563",
               "content": ""
             }
           ],
@@ -258,7 +262,8 @@
             "skip skill for omo: agy-only",
             "skip skill for omo: claude-only",
             "skip skill for omo: codex-only",
-            "skip skill for omo: omp-only"
+            "skip skill for omo: omp-only",
+            "skip skill for omo: opencode-only"
           ]
         },
         {
@@ -276,14 +281,14 @@
               "kind": "omp_project_mcp_config",
               "path": "$ROOT/.omp/mcp.json",
               "written": true,
-              "content_sha256": "321445100885f51cb10ead90868597bc2ffbd059aff5fe04373fec37b5bd50d0",
+              "content_sha256": "12435a081368add705d1c97635bd5fb9bb0bf803116cb99cb0eb8e395a391786",
               "content": ""
             },
             {
               "kind": "omp_project_mcp_template",
               "path": "$ROOT/configs/omp/mcp.json",
               "written": true,
-              "content_sha256": "321445100885f51cb10ead90868597bc2ffbd059aff5fe04373fec37b5bd50d0",
+              "content_sha256": "12435a081368add705d1c97635bd5fb9bb0bf803116cb99cb0eb8e395a391786",
               "content": ""
             },
             {
@@ -297,7 +302,7 @@
               "kind": "omp_user_mcp_config",
               "path": "$HOME/.omp/agent/mcp.json",
               "written": true,
-              "content_sha256": "2d61f0d790bf83d4e552a401962c623ff06d672feb8665bd48c9f373c120c7d6",
+              "content_sha256": "d779420c413717d4127c5bda78ff142878e280bba759440f5d206fd4bd18ef62",
               "content": ""
             }
           ],
@@ -325,15 +330,84 @@
             "skip skill for omp: agy-only",
             "skip skill for omp: claude-only",
             "skip skill for omp: codex-only",
-            "skip skill for omp: omo-only"
+            "skip skill for omp: omo-only",
+            "skip skill for omp: opencode-only"
+          ]
+        },
+        {
+          "host": "opencode",
+          "ok": true,
+          "files": [
+            {
+              "kind": "opencode_lifecycle_extension_template",
+              "path": "$ROOT/configs/opencode/issueops.js",
+              "written": true,
+              "content_sha256": "0819ec583a07c15e689215fb731b77a95a49475ccf7629a3f9915f193da6d522",
+              "content": ""
+            },
+            {
+              "kind": "opencode_project_mcp_config",
+              "path": "$ROOT/.opencode/opencode.json",
+              "written": true,
+              "content_sha256": "b524e5054d9abcc5b4d919dba494700fb691df8fee18ca50b4595a24f770b712",
+              "content": ""
+            },
+            {
+              "kind": "opencode_project_mcp_template",
+              "path": "$ROOT/configs/opencode/opencode.json",
+              "written": true,
+              "content_sha256": "b524e5054d9abcc5b4d919dba494700fb691df8fee18ca50b4595a24f770b712",
+              "content": ""
+            },
+            {
+              "kind": "opencode_user_lifecycle_plugin",
+              "path": "$HOME/.config/opencode/plugins/issueops.js",
+              "written": true,
+              "content_sha256": "77adc1f9bf66f16df504438f94782d411d8b3f8745dca18c35a11806c7442077",
+              "content": ""
+            },
+            {
+              "kind": "opencode_user_mcp_config",
+              "path": "$HOME/.config/opencode/opencode.json",
+              "written": true,
+              "content_sha256": "fa7150c32f39c152b16c12e5caceda0803529c0734b4d601a5964c86a9a66d4c",
+              "content": ""
+            }
+          ],
+          "links": [
+            {
+              "path": "$HOME/.config/opencode/skills/alpha",
+              "target": "$ROOT/skills/alpha",
+              "created": true,
+              "resolves_to_root_skill": true
+            },
+            {
+              "path": "$HOME/.config/opencode/skills/beta",
+              "target": "$ROOT/skills/beta",
+              "created": true,
+              "resolves_to_root_skill": true
+            },
+            {
+              "path": "$HOME/.config/opencode/skills/opencode-only",
+              "target": "$ROOT/skills/opencode-only",
+              "created": true,
+              "resolves_to_root_skill": true
+            }
+          ],
+          "messages": [
+            "skip skill for opencode: agy-only",
+            "skip skill for opencode: claude-only",
+            "skip skill for opencode: codex-only",
+            "skip skill for opencode: omo-only",
+            "skip skill for opencode: omp-only"
           ]
         }
       ],
       "assertions": [
         "core discovers shared skills once and passes sorted names to all host adapters",
-        "Codex, Claude, Omo, and omp user skill installs are symlinks resolving to $ROOT/skills/*",
-        "Codex, Claude, Omo, and omp user-level lifecycle hooks route through the same issueops hook CLI",
-        "default install writes no repo-local .claude, .omo, .omp, or .mcp.json paths",
+        "Codex, Claude, Omo, omp, and opencode user skill installs are symlinks resolving to $ROOT/skills/*",
+        "Codex, Claude, Omo, omp, and opencode user-level lifecycle hooks route through the same issueops hook CLI",
+        "default install writes no repo-local .claude, .omo, .omp, .opencode, or .mcp.json paths",
         "project-local repo files are created only when project_local=true"
       ]
     },
@@ -348,7 +422,8 @@
         "claude-only",
         "codex-only",
         "omo-only",
-        "omp-only"
+        "omp-only",
+        "opencode-only"
       ],
       "hosts": [
         {
@@ -359,14 +434,14 @@
               "kind": "agy_project_mcp_template",
               "path": "$ROOT/configs/agy/mcp_config.json",
               "written": true,
-              "content_sha256": "3ddb37e2cf54493ab9de28b272e0c4fe6b09507977289433b2a0fee8859428fc",
+              "content_sha256": "bbbda98c27d4ca05a8c733b2ef7a9de1eb5da6828d9f2d3078e761569acc6bc1",
               "content": ""
             },
             {
               "kind": "agy_user_mcp_config",
               "path": "$HOME/.gemini/config/mcp_config.json",
               "written": true,
-              "content_sha256": "bb5b25989607e47108278486f247b780f98cc04d14875628ae7c31c169226a5b",
+              "content_sha256": "670866e8235e8cde6fbd70818e2875edd67799aab363fd3eaca73a5d0b756563",
               "content": ""
             }
           ],
@@ -394,7 +469,8 @@
             "skip skill for agy: claude-only",
             "skip skill for agy: codex-only",
             "skip skill for agy: omo-only",
-            "skip skill for agy: omp-only"
+            "skip skill for agy: omp-only",
+            "skip skill for agy: opencode-only"
           ]
         },
         {
@@ -454,7 +530,8 @@
             "skip skill for claude: agy-only",
             "skip skill for claude: codex-only",
             "skip skill for claude: omo-only",
-            "skip skill for claude: omp-only"
+            "skip skill for claude: omp-only",
+            "skip skill for claude: opencode-only"
           ]
         },
         {
@@ -514,7 +591,8 @@
             "skip skill for codex: agy-only",
             "skip skill for codex: claude-only",
             "skip skill for codex: omo-only",
-            "skip skill for codex: omp-only"
+            "skip skill for codex: omp-only",
+            "skip skill for codex: opencode-only"
           ]
         },
         {
@@ -532,7 +610,7 @@
               "kind": "omo_project_mcp_template",
               "path": "$ROOT/configs/omo/mcp.json",
               "written": true,
-              "content_sha256": "3ddb37e2cf54493ab9de28b272e0c4fe6b09507977289433b2a0fee8859428fc",
+              "content_sha256": "bbbda98c27d4ca05a8c733b2ef7a9de1eb5da6828d9f2d3078e761569acc6bc1",
               "content": ""
             },
             {
@@ -546,7 +624,7 @@
               "kind": "omo_user_mcp_config",
               "path": "$HOME/.omo/mcp.json",
               "written": true,
-              "content_sha256": "bb5b25989607e47108278486f247b780f98cc04d14875628ae7c31c169226a5b",
+              "content_sha256": "670866e8235e8cde6fbd70818e2875edd67799aab363fd3eaca73a5d0b756563",
               "content": ""
             }
           ],
@@ -574,7 +652,8 @@
             "skip skill for omo: agy-only",
             "skip skill for omo: claude-only",
             "skip skill for omo: codex-only",
-            "skip skill for omo: omp-only"
+            "skip skill for omo: omp-only",
+            "skip skill for omo: opencode-only"
           ]
         },
         {
@@ -592,7 +671,7 @@
               "kind": "omp_project_mcp_template",
               "path": "$ROOT/configs/omp/mcp.json",
               "written": true,
-              "content_sha256": "321445100885f51cb10ead90868597bc2ffbd059aff5fe04373fec37b5bd50d0",
+              "content_sha256": "12435a081368add705d1c97635bd5fb9bb0bf803116cb99cb0eb8e395a391786",
               "content": ""
             },
             {
@@ -606,7 +685,7 @@
               "kind": "omp_user_mcp_config",
               "path": "$HOME/.omp/agent/mcp.json",
               "written": true,
-              "content_sha256": "2d61f0d790bf83d4e552a401962c623ff06d672feb8665bd48c9f373c120c7d6",
+              "content_sha256": "d779420c413717d4127c5bda78ff142878e280bba759440f5d206fd4bd18ef62",
               "content": ""
             }
           ],
@@ -634,15 +713,77 @@
             "skip skill for omp: agy-only",
             "skip skill for omp: claude-only",
             "skip skill for omp: codex-only",
-            "skip skill for omp: omo-only"
+            "skip skill for omp: omo-only",
+            "skip skill for omp: opencode-only"
+          ]
+        },
+        {
+          "host": "opencode",
+          "ok": true,
+          "files": [
+            {
+              "kind": "opencode_lifecycle_extension_template",
+              "path": "$ROOT/configs/opencode/issueops.js",
+              "written": true,
+              "content_sha256": "0819ec583a07c15e689215fb731b77a95a49475ccf7629a3f9915f193da6d522",
+              "content": ""
+            },
+            {
+              "kind": "opencode_project_mcp_template",
+              "path": "$ROOT/configs/opencode/opencode.json",
+              "written": true,
+              "content_sha256": "b524e5054d9abcc5b4d919dba494700fb691df8fee18ca50b4595a24f770b712",
+              "content": ""
+            },
+            {
+              "kind": "opencode_user_lifecycle_plugin",
+              "path": "$HOME/.config/opencode/plugins/issueops.js",
+              "written": true,
+              "content_sha256": "77adc1f9bf66f16df504438f94782d411d8b3f8745dca18c35a11806c7442077",
+              "content": ""
+            },
+            {
+              "kind": "opencode_user_mcp_config",
+              "path": "$HOME/.config/opencode/opencode.json",
+              "written": true,
+              "content_sha256": "fa7150c32f39c152b16c12e5caceda0803529c0734b4d601a5964c86a9a66d4c",
+              "content": ""
+            }
+          ],
+          "links": [
+            {
+              "path": "$HOME/.config/opencode/skills/alpha",
+              "target": "$ROOT/skills/alpha",
+              "created": true,
+              "resolves_to_root_skill": true
+            },
+            {
+              "path": "$HOME/.config/opencode/skills/beta",
+              "target": "$ROOT/skills/beta",
+              "created": true,
+              "resolves_to_root_skill": true
+            },
+            {
+              "path": "$HOME/.config/opencode/skills/opencode-only",
+              "target": "$ROOT/skills/opencode-only",
+              "created": true,
+              "resolves_to_root_skill": true
+            }
+          ],
+          "messages": [
+            "skip skill for opencode: agy-only",
+            "skip skill for opencode: claude-only",
+            "skip skill for opencode: codex-only",
+            "skip skill for opencode: omo-only",
+            "skip skill for opencode: omp-only"
           ]
         }
       ],
       "assertions": [
         "core discovers shared skills once and passes sorted names to all host adapters",
-        "Codex, Claude, Omo, and omp user skill installs are symlinks resolving to $ROOT/skills/*",
-        "Codex, Claude, Omo, and omp user-level lifecycle hooks route through the same issueops hook CLI",
-        "default install writes no repo-local .claude, .omo, .omp, or .mcp.json paths",
+        "Codex, Claude, Omo, omp, and opencode user skill installs are symlinks resolving to $ROOT/skills/*",
+        "Codex, Claude, Omo, omp, and opencode user-level lifecycle hooks route through the same issueops hook CLI",
+        "default install writes no repo-local .claude, .omo, .omp, .opencode, or .mcp.json paths",
         "project-local repo files are created only when project_local=true"
       ]
     }

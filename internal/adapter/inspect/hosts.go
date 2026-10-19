@@ -6,6 +6,7 @@ import (
 	"time"
 
 	inspectcontract "issueops/internal/contract/inspect"
+	"issueops/internal/domain/nativehost"
 )
 
 type hostSpec struct {
@@ -27,11 +28,16 @@ func (observer Observer) observeHosts(root, home, skillName string, options insp
 	if codexHome == "" {
 		codexHome = filepath.Join(home, ".codex")
 	}
+	opencodeConfigRoot := nativehost.OpencodeConfigRoot(home, "")
+	if observer.OpencodeConfigRoot != nil {
+		opencodeConfigRoot = observer.OpencodeConfigRoot(home)
+	}
 	specs := []hostSpec{
 		{inspectcontract.HostCodex, filepath.Join(codexHome, "config.toml"), filepath.Join(codexHome, "skills", skillName), readCodexEntry},
 		{inspectcontract.HostClaude, filepath.Join(home, ".claude.json"), filepath.Join(home, ".claude", "skills", skillName), readJSONEntry},
 		{inspectcontract.HostOmo, filepath.Join(home, ".omo", "mcp.json"), filepath.Join(home, ".omo", "agent", "skills", skillName), readJSONEntry},
 		{inspectcontract.HostOmp, filepath.Join(home, ".omp", "agent", "mcp.json"), filepath.Join(home, ".omp", "agent", "skills", skillName), readJSONEntry},
+		{inspectcontract.HostOpencode, filepath.Join(opencodeConfigRoot, "opencode.json"), filepath.Join(opencodeConfigRoot, "skills", skillName), readOpencodeEntry},
 	}
 	observedAt := observer.now().Format(time.RFC3339)
 	hosts := make([]inspectcontract.HostIntegration, 0, len(specs))

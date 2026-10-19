@@ -17,7 +17,7 @@ func TestMergeJSONMapFile(t *testing.T) {
 			}
 			server := map[string]any{"command": "new"}
 			calls := 0
-			config, err := MergeJSONMapFile(path, "mcpServers", "issueops", false, func() (map[string]any, error) {
+			config, err := MergeJSONMapFile(path, []string{"mcpServers"}, "issueops", false, func() (map[string]any, error) {
 				calls++
 				return server, nil
 			})
@@ -49,7 +49,7 @@ func TestMergeJSONMapFileReadFailures(t *testing.T) {
 				t.Fatal(err)
 			}
 			calls := 0
-			if _, err := MergeJSONMapFile(path, "mcpServers", "issueops", dryRun, func() (map[string]any, error) {
+			if _, err := MergeJSONMapFile(path, []string{"mcpServers"}, "issueops", dryRun, func() (map[string]any, error) {
 				calls++
 				return nil, nil
 			}); err == nil || calls != 0 {
@@ -57,7 +57,7 @@ func TestMergeJSONMapFileReadFailures(t *testing.T) {
 			}
 		}
 		path := filepath.Join(t.TempDir(), "missing.json")
-		if _, err := MergeJSONMapFile(path, "mcpServers", "issueops", dryRun, func() (map[string]any, error) {
+		if _, err := MergeJSONMapFile(path, []string{"mcpServers"}, "issueops", dryRun, func() (map[string]any, error) {
 			return map[string]any{"command": "new"}, nil
 		}); err != nil {
 			t.Fatal(err)
@@ -65,7 +65,7 @@ func TestMergeJSONMapFileReadFailures(t *testing.T) {
 		if _, err := os.Stat(path); !os.IsNotExist(err) {
 			t.Fatalf("missing file was created: %v", err)
 		}
-		_, err := MergeJSONMapFile(t.TempDir(), "mcpServers", "issueops", dryRun, func() (map[string]any, error) {
+		_, err := MergeJSONMapFile(t.TempDir(), []string{"mcpServers"}, "issueops", dryRun, func() (map[string]any, error) {
 			return map[string]any{"command": "new"}, nil
 		})
 		if (err == nil) != dryRun {
@@ -73,7 +73,7 @@ func TestMergeJSONMapFileReadFailures(t *testing.T) {
 		}
 	}
 	want := errors.New("server unavailable")
-	_, err := MergeJSONMapFile(filepath.Join(t.TempDir(), "missing"), "mcpServers", "issueops", false, func() (map[string]any, error) {
+	_, err := MergeJSONMapFile(filepath.Join(t.TempDir(), "missing"), []string{"mcpServers"}, "issueops", false, func() (map[string]any, error) {
 		return nil, want
 	})
 	if !errors.Is(err, want) {
@@ -102,7 +102,7 @@ func TestVerifyJSONMapEntry(t *testing.T) {
 				t.Fatal(err)
 			}
 			hashCalls := 0
-			digest, err := VerifyJSONMapEntry(path, "mcpServers", "issueops", "host MCP readback",
+			digest, err := VerifyJSONMapEntry(path, []string{"mcpServers"}, "issueops", "host MCP readback",
 				func() (map[string]any, error) { return expected, nil },
 				func(value any) (string, error) {
 					hashCalls++
@@ -128,7 +128,7 @@ func TestVerifyJSONMapEntryPropagatesErrors(t *testing.T) {
 		expectedCalls++
 		return map[string]any{"command": "new"}, nil
 	}
-	if _, err := VerifyJSONMapEntry(path, "mcpServers", "issueops", "host MCP readback", expected, SemanticSHA256); !os.IsNotExist(err) || expectedCalls != 0 {
+	if _, err := VerifyJSONMapEntry(path, []string{"mcpServers"}, "issueops", "host MCP readback", expected, SemanticSHA256); !os.IsNotExist(err) || expectedCalls != 0 {
 		t.Fatalf("missing file err=%v expected calls=%d", err, expectedCalls)
 	}
 	if err := os.WriteFile(path, []byte(`{"mcpServers":{"issueops":{}}}`), 0o600); err != nil {
@@ -137,7 +137,7 @@ func TestVerifyJSONMapEntryPropagatesErrors(t *testing.T) {
 	for _, failAt := range []int{1, 2} {
 		calls := 0
 		want := errors.New("digest unavailable")
-		_, err := VerifyJSONMapEntry(path, "mcpServers", "issueops", "host MCP readback", expected, func(value any) (string, error) {
+		_, err := VerifyJSONMapEntry(path, []string{"mcpServers"}, "issueops", "host MCP readback", expected, func(value any) (string, error) {
 			calls++
 			if calls == failAt {
 				return "", want
@@ -149,7 +149,7 @@ func TestVerifyJSONMapEntryPropagatesErrors(t *testing.T) {
 		}
 	}
 	want := errors.New("expected server unavailable")
-	_, err := VerifyJSONMapEntry(path, "mcpServers", "issueops", "host MCP readback",
+	_, err := VerifyJSONMapEntry(path, []string{"mcpServers"}, "issueops", "host MCP readback",
 		func() (map[string]any, error) { return nil, want }, SemanticSHA256)
 	if !errors.Is(err, want) {
 		t.Fatalf("expected server error=%v", err)

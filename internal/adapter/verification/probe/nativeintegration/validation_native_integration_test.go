@@ -17,7 +17,7 @@ func TestValidateNativeIntegrationWithDepsCoversSuccessAndMissingPaths(t *testin
 	home := t.TempDir()
 	existing := nativeIntegrationExpectedPaths(root, home)
 	validator.ListSkillNames = func(string) ([]string, error) {
-		return []string{"shared", "codex-only", "claude-only", "omo-only", "omp-only"}, nil
+		return []string{"shared", "codex-only", "claude-only", "omo-only", "omp-only", "opencode-only"}, nil
 	}
 	validator.SkillNamesForHost = func(_ string, _ []string, host string) ([]string, []string) {
 		switch host {
@@ -29,6 +29,8 @@ func TestValidateNativeIntegrationWithDepsCoversSuccessAndMissingPaths(t *testin
 			return []string{"shared", "omo-only"}, nil
 		case "omp":
 			return []string{"shared", "omp-only"}, nil
+		case "opencode":
+			return []string{"shared", "opencode-only"}, nil
 		default:
 			return nil, nil
 		}
@@ -47,6 +49,10 @@ func TestValidateNativeIntegrationWithDepsCoversSuccessAndMissingPaths(t *testin
 				return []byte(fmt.Sprintf(`{"mcpServers":{"issueops":{"type":"stdio","command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, filepath.Join(root, "bin", "issueops"), root)), nil
 			case path == filepath.Join(home, ".omp", "agent", "extensions", "issueops.js"):
 				return []byte(hostprotocol.OmpLifecycleExtension(filepath.Join(root, "bin", "issueops"))), nil
+			case path == filepath.Join(home, ".config", "opencode", "opencode.json"):
+				return []byte(fmt.Sprintf(`{"model":"m","mcp":{"servers":{"issueops":{"type":"local","command":[%q,"mcp"],"environment":{"ISSUEOPS_ROOT":%q},"codemode":false}}}}`, filepath.Join(root, "bin", "issueops"), root)), nil
+			case path == filepath.Join(home, ".config", "opencode", "plugins", "issueops.js"):
+				return []byte(hostprotocol.OpencodeLifecyclePlugin(filepath.Join(root, "bin", "issueops"))), nil
 			}
 			switch filepath.Base(path) {
 			case "config.toml":
@@ -68,6 +74,8 @@ func TestValidateNativeIntegrationWithDepsCoversSuccessAndMissingPaths(t *testin
 	for _, missingPath := range []string{
 		filepath.Join(home, ".omo", "agent", "skills", "omo-only", "SKILL.md"),
 		filepath.Join(home, ".omp", "agent", "skills", "omp-only", "SKILL.md"),
+		filepath.Join(home, ".config", "opencode", "skills", "opencode-only", "SKILL.md"),
+		filepath.Join(root, "configs", "opencode", "issueops.js"),
 	} {
 		existing[missingPath] = false
 		failed := validateNativeIntegrationWithDeps(root, deps)
@@ -153,6 +161,44 @@ func TestNativeIntegrationOmpConfigRejectsOmoLifecycleModule(t *testing.T) {
 	}
 }
 
+func TestNativeIntegrationOpencodeConfigChecksMCPServersAndPluginBytes(t *testing.T) {
+	root, configRoot := t.TempDir(), t.TempDir()
+	validator := testNativeValidator()
+	validator.ResolveStableNativeRoot = func(string) (string, error) { return root, nil }
+	binary := filepath.Join(root, "bin", "issueops")
+	files := map[string]string{
+		filepath.Join(configRoot, "plugins", "issueops.js"): hostprotocol.OpencodeLifecyclePlugin(binary),
+	}
+	deps := nativeIntegrationValidationDeps{Validator: validator, readFile: func(path string) ([]byte, error) {
+		body, ok := files[path]
+		if !ok {
+			return nil, errors.New("unexpected read")
+		}
+		return []byte(body), nil
+	}}
+	mcpPath := filepath.Join(configRoot, "opencode.json")
+	bearer := strings.Repeat("A", 43)
+	local := fmt.Sprintf(`{"mcp":{"servers":{"issueops":{"type":"local","command":[%q,"mcp"],"environment":{"ISSUEOPS_ROOT":%q},"codemode":false}}}}`, binary, root)
+	for config, want := range map[string]bool{
+		local: true,
+		`{"mcp":{"servers":{"issueops":{"type":"remote","url":"http://127.0.0.1:47831/mcp","headers":{"Authorization":"Bearer ` + bearer + `"},"oauth":false,"codemode":false}}}}`: true,
+		fmt.Sprintf(`{"mcp":{"servers":{"issueops":{"type":"local","command":[%q,"mcp"],"environment":{"ISSUEOPS_ROOT":%q}}}}}`, binary, root):                                     false,
+		fmt.Sprintf(`{"mcpServers":{"issueops":{"command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, binary, root):                                                          false,
+	} {
+		files[mcpPath] = config
+		errs := nativeIntegrationOpencodeConfigErrors(root, configRoot, deps)
+		if (len(errs) == 0) != want {
+			t.Fatalf("config %s: errs=%v, want accepted=%v", config, errs, want)
+		}
+	}
+	files[mcpPath] = local
+	files[filepath.Join(configRoot, "plugins", "issueops.js")] = hostprotocol.OmpLifecycleExtension(binary)
+	errs := nativeIntegrationOpencodeConfigErrors(root, configRoot, deps)
+	if len(errs) != 1 || errs[0] != "opencode lifecycle extension missing canonical context-hook surface" {
+		t.Fatalf("omp module accepted as the opencode plugin: %v", errs)
+	}
+}
+
 func TestValidateNativeIntegrationWithDepsCoversSkillConfigAndWarningFailures(t *testing.T) {
 	root := t.TempDir()
 	validator := testNativeValidator()
@@ -188,6 +234,8 @@ func TestValidateNativeIntegrationWithDepsCoversSkillConfigAndWarningFailures(t 
 		"Omo lifecycle extension missing canonical session_start/session_compact surface",
 		"omp MCP config missing canonical issueops server",
 		"omp lifecycle extension missing canonical session_start/session_switch/session_compact surface",
+		"opencode MCP config missing canonical issueops server",
+		"opencode lifecycle extension missing canonical context-hook surface",
 		"Claude duplicate MCP warning fixture was not classified",
 	} {
 		if !strings.Contains(step.Error, want) {
@@ -338,6 +386,8 @@ func nativeIntegrationExpectedPaths(root, home string) map[string]bool {
 		filepath.Join(root, "configs", "omo", "issueops.js"),
 		filepath.Join(root, "configs", "omp", "mcp.json"),
 		filepath.Join(root, "configs", "omp", "issueops.js"),
+		filepath.Join(root, "configs", "opencode", "opencode.json"),
+		filepath.Join(root, "configs", "opencode", "issueops.js"),
 		filepath.Join(home, ".codex", "skills", "shared", "SKILL.md"),
 		filepath.Join(home, ".codex", "skills", "codex-only", "SKILL.md"),
 		filepath.Join(home, ".claude", "skills", "shared", "SKILL.md"),
@@ -346,6 +396,8 @@ func nativeIntegrationExpectedPaths(root, home string) map[string]bool {
 		filepath.Join(home, ".omo", "agent", "skills", "omo-only", "SKILL.md"),
 		filepath.Join(home, ".omp", "agent", "skills", "shared", "SKILL.md"),
 		filepath.Join(home, ".omp", "agent", "skills", "omp-only", "SKILL.md"),
+		filepath.Join(home, ".config", "opencode", "skills", "shared", "SKILL.md"),
+		filepath.Join(home, ".config", "opencode", "skills", "opencode-only", "SKILL.md"),
 	}
 	out := map[string]bool{}
 	for _, path := range paths {

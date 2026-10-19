@@ -1,7 +1,7 @@
-# Host integration: Codex, Claude, Omo, and omp thin adapters
+# Host integration: Codex, Claude, Omo, omp, and opencode thin adapters
 
 > Family index: [`../ARCHITECTURE.md`](../ARCHITECTURE.md). This module owns the
-> Codex/Claude/Omo/omp integration map, the shared pioneer-skills layer, and the
+> Codex/Claude/Omo/omp/opencode integration map, the shared pioneer-skills layer, and the
 > host-adapter change checklist. Core/port/adapter structure and package
 > boundaries live in [`hexagonal-core.md`](hexagonal-core.md); runtime and MCP
 > topology live in [`runtime.md`](runtime.md).
@@ -68,7 +68,7 @@ issueops는 `skills/` 디렉토리를 공용 스킬 53개의 단일 출처(singl
 
 - **Language/tech agnostic**: 어떤 스킬도 특정 언어·프레임워크를 강제하지 않는다(6f31c55에서 검증 완료). 언어별 예시는 동등한 명령어를 여러 언어로 제시한다.
 - **Namesake philosophy**: 각 스킬의 방법론은 이름의 과학자가 남긴 핵심 기여에서 파생된다(예: Codd → 정규화 이론, Dijkstra → 구조적 프로그래밍 + 최단 경로).
-- **Host-neutral**: `skills/` 원본 하나로 Codex, Claude Code, Omo native, omp에서 모든 스킬을 동일하게 사용한다.
+- **Host-neutral**: `skills/` 원본 하나로 Codex, Claude Code, Omo native, omp, opencode에서 모든 스킬을 동일하게 사용한다.
 - **Executable-fence contract**: shipped `sh`/`bash`/`zsh`/`shell` fences는
   `scripts/verify-skill-shell.py`의 syntax·failure propagation·safe expansion
   gate를 통과한다. MCP pseudo-call이나 설명용 예시는 `text` fence로 둔다.
@@ -82,6 +82,6 @@ issueops는 `skills/` 디렉토리를 공용 스킬 53개의 단일 출처(singl
 - core behavior를 변경하면 CLI, MCP, worker adapter가 같은 결과를 내는지 테스트한다.
 - command policy를 변경하면 CAUTIONS와 TESTING에 위험과 검증 내용을 업데이트한다.
 - guard 변경: portable anti-pattern rule은 `internal/adapter/guard/guard_test.go`로 block/warn/review 판정을 고정하고, CLI/contract golden을 함께 갱신한다.
-- host adapter 변경: core contract를 복제하지 않았는지 확인하고 `internal/adapter` contract matrix golden으로 Codex/Claude/Omo/omp 설치 표면이 drift되지 않았는지 검증한다.
-- shared skill 변경: `skills/<name>` 원본과 user-level host skill 연결(`~/.codex/skills`, `~/.claude/skills`, `~/.omo/agent/skills`, `~/.omp/agent/skills`)이 같은 대상을 가리키는지 확인한다. repo-local skill link는 기본 설치에 포함하지 않는다.
+- host adapter 변경: core contract를 복제하지 않았는지 확인하고 `internal/adapter` contract matrix golden으로 Codex/Claude/Omo/omp/opencode 설치 표면이 drift되지 않았는지 검증한다.
+- shared skill 변경: `skills/<name>` 원본과 user-level host skill 연결(`~/.codex/skills`, `~/.claude/skills`, `~/.omo/agent/skills`, `~/.omp/agent/skills`, `~/.config/opencode/skills`)이 같은 대상을 가리키는지 확인한다. repo-local skill link는 기본 설치에 포함하지 않는다.
 - state 위치 변경: migration/backward compatibility와 cleanup 전략을 문서화한다.

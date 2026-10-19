@@ -1,6 +1,8 @@
 package issueopsapp
 
 import (
+	"os"
+
 	agyadapter "issueops/internal/adapter/agy"
 	claudeadapter "issueops/internal/adapter/claude"
 	codexadapter "issueops/internal/adapter/codex"
@@ -9,6 +11,8 @@ import (
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	installadapter "issueops/internal/adapter/install"
 	"issueops/internal/adapter/installutil"
+	opencodeadapter "issueops/internal/adapter/opencode"
+	"issueops/internal/domain/nativehost"
 	"issueops/internal/port"
 )
 
@@ -84,4 +88,24 @@ func newExtensionHostInstaller(spec extensionhost.Spec, lifecycleExtension func(
 		WriteJSONPlan:                   installutil.WriteJSONPlan,
 		WriteTextPlan:                   installutil.WriteTextPlan,
 	}, lifecycleExtension)
+}
+func newOpencodeInstaller() opencodeadapter.Installer {
+	return opencodeadapter.NewInstaller(opencodeadapter.Dependencies{
+		MergeJSONMapFile:                installutil.MergeJSONMapFile,
+		RemoveJSONMapEntry:              installutil.RemoveJSONMapEntry,
+		VerifyJSONMapEntry:              installutil.VerifyJSONMapEntry,
+		CaptureNativeActivationEvidence: installutil.CaptureNativeActivationEvidence,
+		MCPCatalogSHA256:                func() (string, error) { return installutil.SemanticSHA256(mcpcatalog.AdvertisedTools()) },
+		NewInstallPlan:                  func(host string, dry bool) port.InstallPlan { return installutil.NewPlan(host, dry) },
+		PlanHostSkillLinks:              installutil.PlanHostSkillLinks,
+		SemanticSHA256:                  installutil.SemanticSHA256,
+		WriteJSONPlan:                   installutil.WriteJSONPlan,
+		WriteTextPlan:                   installutil.WriteTextPlan,
+	}, hostprotocol.OpencodeLifecyclePlugin, opencodeConfigRoot)
+}
+
+// opencodeConfigRoot is the one opencode config root resolver handed to the
+// installer, the native integration validator, and inspect.
+func opencodeConfigRoot(home string) string {
+	return nativehost.OpencodeConfigRoot(home, os.Getenv("XDG_CONFIG_HOME"))
 }

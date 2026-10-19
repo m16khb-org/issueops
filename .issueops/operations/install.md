@@ -28,9 +28,9 @@ issueops project bootstrap --repo /path/to/repo --sync
 
 `./install.sh` computes the checkout root, builds `bin/issueops` when needed, and then runs `issueops install`. In a real terminal with no arguments it enters the interactive installer. Non-interactive automation can pass explicit flags such as `--dry-run --json`.
 
-`install` owns environment setup. Normal users should not export `ISSUEOPS_ROOT` manually; the installer writes it into Codex, Claude, Omo, and omp MCP configuration. `CODEX_HOME` is honored when already set and otherwise defaults to `~/.codex`; Omo uses its native flat-layout `~/.omo` root; omp uses `~/.omp/agent`. PATH setup is selected with `--path-mode=auto|manual|skip`. Every mode plans or writes the canonical `~/.local/bin/issueops` shim and the managed `~/.local/bin/io -> ~/.local/bin/issueops` shorthand; `manual` and `skip` only omit shell rc changes. The default `auto` mode also adds a shell rc PATH line when needed.
+`install` owns environment setup. Normal users should not export `ISSUEOPS_ROOT` manually; the installer writes it into Codex, Claude, Omo, omp, and opencode MCP configuration. `CODEX_HOME` is honored when already set and otherwise defaults to `~/.codex`; Omo uses its native flat-layout `~/.omo` root; omp uses `~/.omp/agent`; opencode uses `$XDG_CONFIG_HOME/opencode` when `XDG_CONFIG_HOME` is absolute and `~/.config/opencode` otherwise. PATH setup is selected with `--path-mode=auto|manual|skip`. Every mode plans or writes the canonical `~/.local/bin/issueops` shim and the managed `~/.local/bin/io -> ~/.local/bin/issueops` shorthand; `manual` and `skip` only omit shell rc changes. The default `auto` mode also adds a shell rc PATH line when needed.
 
-Each install/update refreshes user skill links for all four first-party hosts,
+Each install/update refreshes user skill links for all five first-party hosts,
 managed MCP registration, and the host lifecycle context surface. It also prunes
 stale links in each host skill directory whose target lies under this
 checkout's `skills/` but no longer exists (a removed or renamed shared skill);
@@ -51,18 +51,28 @@ those snapshots together with the command shims before aborting the transition.
 
 `bootstrap` and `update` use the current `issueops` checkout. They build `bin/issueops`, refresh both command shims through the same installer path, run native host installation, and refresh issueops MCP registration. They do not run `git pull`. Executable symlinks are resolved back to the checkout, so `io update` works outside the repository directory.
 
-darwin/linux의 기본 `--mcp-transport=http` 설치는 네 host의 issueops entry를 공용 서비스
+darwin/linux의 기본 `--mcp-transport=http` 설치는 다섯 host의 issueops entry를 공용 서비스
 `http://127.0.0.1:47831/mcp`와 bearer 헤더로 바꾼다. 설치기는 host plan을 dry-run으로 먼저 검증하고,
 서비스를 새 build로 띄운 뒤 `build_id`와 인증된 MCP 응답을 확인해야 host 설정을 merge한다.
 `update`/`bootstrap`도 같은 순서로 서비스를 교체한다. 실패하면 host 설정을 바꾸지 않는다.
 서비스 stdout/stderr는 unit이 `<state>/mcp-http/server.log`에 append한다. 서버는 그 파일에 쓸 때 크기를 8MiB로
 제한한다. 한 줄을 쓴 뒤 8MiB를 넘으면 내용을 `server.log.1`로 복사하고 원본을 그 자리에서 비운다(copytruncate).
 그래서 로그는 두 파일을 합쳐 약 16MiB를 넘지 않는다. unit 형식은 바뀌지 않는다.
-`--mcp-transport=stdio`는 이전 stdio entry를 설치한다. 아래 Omo·omp catalog cache token은 stdio entry에서는
-`env.ISSUEOPS_MCP_CATALOG_SHA256`으로, HTTP entry에서는 `headers.X-Issueops-Mcp-Catalog-Sha256`으로
-들어간다. Omo는 server config 전체(헤더 포함)를 `hashConfig`로 해싱해 catalog cache 키로 쓰므로,
-catalog가 바뀌면 두 transport 모두 다음 세션이 새 `tools/list`를 조회한다. 서버는 이 헤더를 읽지 않는다
+`--mcp-transport=stdio`는 이전 stdio entry를 설치한다. 아래 Omo·omp·opencode catalog cache token은 stdio entry에서는
+`env.ISSUEOPS_MCP_CATALOG_SHA256`(opencode는 `environment.ISSUEOPS_MCP_CATALOG_SHA256`)으로, HTTP entry에서는
+`headers.X-Issueops-Mcp-Catalog-Sha256`으로 들어간다. Omo는 server config 전체(헤더 포함)를 `hashConfig`로 해싱해
+catalog cache 키로 쓰므로, catalog가 바뀌면 두 transport 모두 다음 세션이 새 `tools/list`를 조회한다. opencode는
+디스크 cache가 확인되지 않았지만 entry가 바뀌어야 reload나 새 세션이 다시 연결하므로 같은 token을 넣는다.
+서버는 이 헤더를 읽지 않는다
 (`internal/adapter/extensionhost/mcp.go`의 `mcpCatalogHeader`, `TestHTTPEntryChangesWithTheAdvertisedCatalog`).
+
+opencode는 같은 디렉터리의 `opencode.json`과 `opencode.jsonc`를 모두 읽고 `.jsonc`의 같은 이름 server로
+entry 전체를 덮는다. issueops는 주석을 지키려고 `opencode.jsonc`를 고치지 않는다. 그 파일에
+`mcp.servers.issueops`가 있으면 opencode 설치가 오류로 멈추므로 그 항목을 지우고 다시 설치한다. 파일을
+읽거나 해석하지 못하면 경고만 남기고 다른 host 설치는 계속한다. 반대로 `opencode.json`에 주석이나 끝 쉼표가
+있으면 opencode는 정상으로 읽지만, issueops가 항목을 병합하면 파일을 일반 JSON으로 다시 쓰므로 주석이
+사라진다. 그래서 opencode 설치는 파일을 고치지 않고 그 경로를 담은 오류로 멈춘다. 주석 달린 설정을
+`opencode.jsonc`로 옮기거나 주석을 지운 뒤 다시 설치한다.
 
 Linux에서 HOME을 임시 디렉터리로 바꿔 설치하면(CI 등) HTTP 설치가 실패한다. installer는 unit을 그 HOME의
 `~/.config/systemd/user/`에 쓰지만, 이미 실행 중인 user systemd manager는 자기 HOME 기준 경로에서 unit을 찾기 때문이다.

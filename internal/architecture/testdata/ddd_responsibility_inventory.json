@@ -648,7 +648,9 @@
         "func newCodexInstaller",
         "func newExtensionHostInstaller",
         "func newOmoInstaller",
-        "func newOmpInstaller"
+        "func newOmpInstaller",
+        "func newOpencodeInstaller",
+        "func opencodeConfigRoot"
       ]
     },
     {
@@ -3468,11 +3470,49 @@
       ]
     },
     {
+      "path": "internal/adapter/hostprobe/opencode.go",
+      "owner": "adapter",
+      "task": "T15",
+      "symbols": [
+        "func NewOpencodeRunner",
+        "func OpencodeRunner.Name",
+        "func OpencodeRunner.Preflight",
+        "func OpencodeRunner.Run",
+        "func OpencodeRunner.episodeInputs",
+        "func OpencodeRunner.resolveExecutable",
+        "func OpencodeRunner.startEpisodeServer",
+        "func OpencodeRunner.validLifecyclePlugin",
+        "func OpencodeRunner.waitReady",
+        "func OpencodeRunner.warmProbeMCP",
+        "func basicAuthGet",
+        "func execServer.Stop",
+        "func freeLoopbackPort",
+        "func isolatedOpencodeEnv",
+        "func observeOpencodeStream",
+        "func opencodeEpisodeFinish",
+        "func opencodeGuardPlugin",
+        "func opencodeMCPStatus",
+        "func opencodePassword",
+        "func opencodeReportedError",
+        "func prepareOpencodeEpisode",
+        "func startExecServer",
+        "type OpencodeRunner",
+        "type ServerProcess",
+        "type ServerRequest",
+        "type execServer",
+        "type opencodeEpisodeConfig",
+        "type opencodeMCPServer",
+        "type opencodePermission"
+      ]
+    },
+    {
       "path": "internal/adapter/hostprobe/process_group_unix.go",
       "owner": "adapter",
       "task": "T15",
       "symbols": [
         "func configureProcessGroup",
+        "func interruptProcessTree",
+        "func signalProcessTree",
         "func terminateProcessTree"
       ]
     },
@@ -3558,6 +3598,7 @@
       "symbols": [
         "func BuildInteractiveArgv",
         "func appendHostLaunchFlags",
+        "func opencodeInteractiveArgv",
         "func validateInteractiveHost"
       ]
     },
@@ -3588,6 +3629,16 @@
       "task": "T19",
       "symbols": [
         "func OmpLifecycleExtension"
+      ]
+    },
+    {
+      "path": "internal/adapter/hostprotocol/opencode.go",
+      "owner": "adapter",
+      "task": "T19",
+      "symbols": [
+        "func OpencodeLifecyclePlugin",
+        "type opencodeContract",
+        "type opencodeHookNames"
       ]
     },
     {
@@ -3808,6 +3859,7 @@
         "func codexIssueOpsTableParser.consumeKeyValue",
         "func codexIssueOpsTableParser.enterHeader",
         "func configReadError.Error",
+        "func entryDigest",
         "func entryTransport",
         "func finishEntry",
         "func jsonObjectFields",
@@ -3816,6 +3868,8 @@
         "func parseTOMLValue",
         "func readCodexEntry",
         "func readJSONEntry",
+        "func readJSONServerEntry",
+        "func readOpencodeEntry",
         "func redactValues",
         "func stripSecrets",
         "func stripTOMLComment",
@@ -4097,7 +4151,8 @@
       "symbols": [
         "func MergeJSONMapFile",
         "func RemoveJSONMapEntry",
-        "func VerifyJSONMapEntry"
+        "func VerifyJSONMapEntry",
+        "func jsonObjectAt"
       ]
     },
     {
@@ -4358,6 +4413,7 @@
       "task": "T05",
       "symbols": [
         "func NativeActorVerifier",
+        "func NativeProcessInspector.Arguments",
         "func NativeProcessInspector.Inspect",
         "func inspectNativeProcessReceiptForRollover",
         "func sameNativeActor",
@@ -4418,6 +4474,7 @@
         "func nativePIDAlive",
         "func nativeProcessAncestryFromSnapshot",
         "func nativeProcessAncestryPIDsFromSnapshot",
+        "func nativeProcessArguments",
         "func observeNativeProcessSnapshot",
         "func parseNativeProcessSnapshot",
         "func parseNativeProcessStart",
@@ -5186,6 +5243,51 @@
         "type supervisor",
         "type systemd",
         "type unitSpec"
+      ]
+    },
+    {
+      "path": "internal/adapter/opencode/activation.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Installer.VerifyActivation"
+      ]
+    },
+    {
+      "path": "internal/adapter/opencode/dependencies.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "type Dependencies"
+      ]
+    },
+    {
+      "path": "internal/adapter/opencode/install.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Installer.Install",
+        "func Installer.Name",
+        "func NewInstaller",
+        "type Installer"
+      ]
+    },
+    {
+      "path": "internal/adapter/opencode/mcp.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Installer.catalogSHA256",
+        "func Installer.localMCPServer",
+        "func Installer.removeProjectMCP",
+        "func Installer.userMCPServer",
+        "func Installer.writeProjectMCP",
+        "func Installer.writeUserMCP",
+        "func checkJSONCShadow",
+        "func commentEnd",
+        "func dropTrailingComma",
+        "func normalizeJSONC",
+        "func requirePlainJSON"
       ]
     },
     {
@@ -7043,6 +7145,8 @@
         "func hostCollector.omo",
         "func hostCollector.omoCost",
         "func hostCollector.omoMessageEnd",
+        "func hostCollector.opencode",
+        "func hostCollector.positiveCost",
         "func hostCollector.warn",
         "func isHostFormat",
         "func label",
@@ -7307,6 +7411,7 @@
       "task": "T18",
       "symbols": [
         "func hasCanonicalLifecycleHostMCP",
+        "func hasCanonicalOpencodeMCP",
         "func isCanonicalHTTPMCPServer",
         "func isCanonicalLoopbackMCPURL",
         "func isCanonicalStdioMCPServer",
@@ -7315,6 +7420,7 @@
         "func nativeIntegrationLifecycleHostErrors",
         "func nativeIntegrationOmoConfigErrors",
         "func nativeIntegrationOmpConfigErrors",
+        "func nativeIntegrationOpencodeConfigErrors",
         "func nativeIntegrationPathErrors",
         "func nativeIntegrationRequiredPaths",
         "func nativeIntegrationValidationDeps.canonicalHarnessBinary",
@@ -7803,6 +7909,7 @@
         "func Service.check",
         "func Service.observeLive",
         "func Service.recordReader",
+        "func Service.requireOpencodeStandaloneServer",
         "func Service.resolveBinding",
         "func Service.verifyNative",
         "func bindingFrom",
@@ -11974,6 +12081,7 @@
         "func SupportsEffort",
         "func builtinLayer",
         "func knownRole",
+        "func modelDefinedEffort",
         "func stepEffort"
       ]
     },
@@ -13198,7 +13306,9 @@
       "owner": "domain",
       "task": "T05",
       "symbols": [
+        "func IsOpencodeExecutable",
         "func NormalizeNativeActor",
+        "func OpencodeStandaloneServer",
         "func ValidateNativeActor",
         "func ValidateObservedNativeProcess"
       ]
@@ -14741,7 +14851,8 @@
       "owner": "domain",
       "task": "T19",
       "symbols": [
-        "func ExecutableMatchesHost"
+        "func ExecutableMatchesHost",
+        "func OpencodeConfigRoot"
       ]
     },
     {
@@ -16062,6 +16173,7 @@
       "symbols": [
         "type ActorVerifier",
         "type CredentialFiles",
+        "type ProcessArgumentsInspector",
         "type ProcessInspector",
         "type RecordReader",
         "type Repository",
@@ -16601,6 +16713,16 @@
     },
     {
       "path": "configs/omp/mcp.json",
+      "owner": "host-configuration",
+      "task": "T19"
+    },
+    {
+      "path": "configs/opencode/issueops.js",
+      "owner": "host-configuration",
+      "task": "T19"
+    },
+    {
+      "path": "configs/opencode/opencode.json",
       "owner": "host-configuration",
       "task": "T19"
     },

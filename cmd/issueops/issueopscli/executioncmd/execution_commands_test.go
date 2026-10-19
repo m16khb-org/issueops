@@ -315,7 +315,7 @@ func TestResolveNativeSessionIdentityReturnsHostSessionAndSource(t *testing.T) {
 
 func clearNativeSessionEnv(t *testing.T) {
 	t.Helper()
-	for _, k := range []string{"CODEX_THREAD_ID", "CLAUDE_CODE_SESSION_ID", "PI_SESSION_ID", "ISSUEOPS_OMP_SESSION_ID"} {
+	for _, k := range []string{"CODEX_THREAD_ID", "CLAUDE_CODE_SESSION_ID", "PI_SESSION_ID", "ISSUEOPS_OMP_SESSION_ID", "OPENCODE_SESSION_ID"} {
 		t.Setenv(k, "")
 	}
 }

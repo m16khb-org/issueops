@@ -1,10 +1,10 @@
-# CLI, MCP, Codex, Claude, Omo, and omp host parity
+# CLI, MCP, Codex, Claude, Omo, omp, and opencode host parity
 
 [← TESTING.md](../TESTING.md) owns the test-strategy index. This module owns
-CLI/MCP/Codex/Claude/Omo/omp host parity: GitLab snapshot contracts, cross-host tool
+CLI/MCP/Codex/Claude/Omo/omp/opencode host parity: GitLab snapshot contracts, cross-host tool
 conformance, reversible child-host smoke, and native integration parity. The
 single-pass verification battery that exercises these commands lives in
-[self-verification.md](self-verification.md); IssueOps CLI/MCP/Codex/Claude/Omo/omp
+[self-verification.md](self-verification.md); IssueOps CLI/MCP/Codex/Claude/Omo/omp/opencode
 adapter parity is owned by
 [issueops-execution.md](issueops-execution.md).
 
@@ -26,7 +26,7 @@ commit-policy 결과는 고정한 문구가 아니라 함께 배포한 resource�
 
 baseline은 representative schema 3개와 `valid`, `unknown_key`, `coercible_type_drift`, `noncoercible_type_drift` payload class의 preregistered 10 cases를 정확히 판정하고, 승격된 behavioral regression fixture가 있으면 handler 호출 0회·동일한 state digest·정규화된 final result를 재생한다.
 
-Live 측정은 CI와 기본 self-verify에 포함하지 않는다. 기본 `contract conformance live` host 목록은 Codex/Claude로 유지한다. Omo native와 omp episode는 각각 `ISSUEOPS_TOOL_CONFORMANCE_LIVE=1`, `--hosts omo` 또는 `--hosts omp`, explicit `--model omo=provider/model` 또는 `--model omp=provider/model`을 모두 지정한 경우에만 시작하며 서로 대체하지 않는다. 네 host parity를 측정할 때는 각 host/model을 명시해 clean-context `4 hosts × 3 fixtures = 12 completed episodes`를 수집한다. environment/transport/no-call attempt는 model denominator에서 제외하며, case당 최대 3회 retry 후 12 episodes를 채우지 못하면 `inconclusive`다. invalid raw call은 동일 host/schema/diagnostic signature가 2회 이상 재현되어야 regression fixture와 canonical production enforcement 후보가 된다. 한 번뿐인 관측은 승격하지 않는다.
+Live 측정은 CI와 기본 self-verify에 포함하지 않는다. 기본 `contract conformance live` host 목록은 Codex/Claude로 유지한다. Omo native, omp, opencode episode는 각각 `ISSUEOPS_TOOL_CONFORMANCE_LIVE=1`, `--hosts omo`·`--hosts omp`·`--hosts opencode`, explicit `--model <host>=provider/model`을 모두 지정한 경우에만 시작하며 서로 대체하지 않는다. opencode runner는 private `opencode serve`를 무작위 비밀번호와 격리된 HOME·XDG로 띄우고, episode 위치의 probe MCP가 `connected`가 된 뒤 `opencode run --server`를 실행한다. 사용자 환경에서는 이름이 `_API_KEY`로 끝나는 provider key만 넘긴다. opencode의 무료 Zen 모델은 이 episode를 `provider.auth` 403으로 거부하므로 결과가 `harness_environment:provider_auth_failed`가 되며, 측정에는 key가 있는 provider 모델을 지정한다. 다섯 host parity를 측정할 때는 각 host/model을 명시해 clean-context `5 hosts × 3 fixtures = 15 completed episodes`를 수집한다. environment/transport/no-call attempt는 model denominator에서 제외하며, case당 최대 3회 retry 후 15 episodes를 채우지 못하면 `inconclusive`다. invalid raw call은 동일 host/schema/diagnostic signature가 2회 이상 재현되어야 regression fixture와 canonical production enforcement 후보가 된다. 한 번뿐인 관측은 승격하지 않는다.
 
 ```bash
 ISSUEOPS_TOOL_CONFORMANCE_LIVE=1 ./bin/issueops contract conformance live \
@@ -53,9 +53,9 @@ managed regular command adoption 테스트는 기본 refusal과 승인 dry-run �
 ## Native integration parity
 
 Native integration smoke는 single-pass verification battery의 일부로
-[self-verification.md](self-verification.md)가 실행한다. Codex/Claude/Omo/omp
+[self-verification.md](self-verification.md)가 실행한다. Codex/Claude/Omo/omp/opencode
 user-level skill 파일 존재, Codex/Claude MCP registration, Omo
-`~/.omo/mcp.json`과 omp `~/.omp/agent/mcp.json`, 그리고 managed Omo·omp lifecycle extension을 확인한다.
+`~/.omo/mcp.json`과 omp `~/.omp/agent/mcp.json`, opencode `~/.config/opencode/opencode.json`의 `mcp.servers.issueops`, 그리고 managed Omo·omp lifecycle extension과 opencode plugin을 확인한다.
 The deterministic battery does not require the external Omo runtime: it checks
 installed Omo skill paths, exact MCP semantics, exact generated extension
 bytes, and executes that generated JavaScript module against a mock pi with a
@@ -78,6 +78,18 @@ require all pioneer skills with zero diagnostics. Use
 `runtime.sendMessage`, invoke both handlers, and require rejected compaction to
 emit nothing while accepted events inject hidden `triggerTurn=false` context.
 Record the Omo/Senpi package versions with that evidence.
+
+opencode has an env-gated live test that CI and self-verify skip:
+`ISSUEOPS_OPENCODE_LIVE=1 go test -count=1 -run TestOpencodeLiveStandaloneSession ./internal/adapter/opencode`
+needs an opencode 2.x binary on PATH and calls no real model. It builds a
+temporary issueops binary, installs into a temporary HOME and XDG roots, starts
+`opencode run --standalone` against a local mock provider, and asserts the
+catalog in every model request, `issueops_*` MCP tools, a single listing of a
+skill that is also in `~/.claude/skills`, one hook spawn for the session, that
+`execution whoami` reports `host=opencode` from `OPENCODE_SESSION_ID` with an
+`opencode` receipt, and that `mcp authorize` with those actor flags succeeds.
+The refusal of a shared-service (`serve --service`) receipt is covered by unit
+tests, not by this live test.
 
 Codex and Claude hook fixtures continue through the common hook input boundary;
 the IssueOps hook matrices are owned by

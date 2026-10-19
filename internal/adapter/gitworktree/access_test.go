@@ -111,6 +111,18 @@ func TestWorkspaceRelaunchCommandRejectsUnknownHost(t *testing.T) {
 	}
 }
 
+func TestWorkspaceRelaunchCommandOpencode(t *testing.T) {
+	base := t.TempDir()
+	root := filepath.Join(base, "568-relaunch")
+	if err := os.Mkdir(root, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	got, err := workspaceRelaunchCommand("opencode", "/unused/source", root, base)
+	if want := "cd '" + root + "' && opencode --standalone"; err != nil || got != want {
+		t.Fatalf("opencode relaunch command=%q err=%v want=%q", got, err, want)
+	}
+}
+
 func initAccessRepo(t *testing.T) string {
 	t.Helper()
 	repo := filepath.Join(t.TempDir(), "repo")

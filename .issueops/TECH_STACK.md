@@ -74,7 +74,7 @@ source of truth다. 목록·개수는 `issueops inspect --json`의 `skills` 배�
 | State 저장 | SQLite (`modernc.org/sqlite`, pure Go) | `ISSUEOPS_STATE_DIR` 또는 `~/.local/state/issueops/`; state root마다 `issueops.db`(WAL, records(bucket,id,data) JSON blob) + `issueops.lock.db`(BEGIN IMMEDIATE span lock). 동시성은 per-root sqlstore span으로 직렬화 |
 | Testing | 표준 `testing`, golden file, `net/http/httptest` | 외부 agent host 없이 core contract를 검증하며 HTTP boundary 격리에만 `httptest` 사용 |
 
-직접 의존성(`go.mod`, Go 1.26.6): `golang.org/x/sync` v0.23.0, `golang.org/x/term` v0.46.0, `golang.org/x/sys` v0.48.0, `modernc.org/sqlite` v1.60.1, `github.com/google/uuid` v1.6.0, `github.com/modelcontextprotocol/go-sdk` v1.8.0, `github.com/google/jsonschema-go` v0.4.3, `github.com/dop251/goja` v0.0.0-20261006212518-44620e89763c(Omo extension JS를 실행하는 테스트 전용).
+직접 의존성(`go.mod`, Go 1.26.6): `golang.org/x/sync` v0.23.0, `golang.org/x/term` v0.46.0, `golang.org/x/sys` v0.48.0, `modernc.org/sqlite` v1.60.1, `github.com/google/uuid` v1.6.0, `github.com/modelcontextprotocol/go-sdk` v1.8.0, `github.com/google/jsonschema-go` v0.4.3, `github.com/dop251/goja` v0.0.0-20261006212518-44620e89763c(Omo·omp extension과 opencode plugin JS를 실행하는 테스트 전용).
 
 ---
 

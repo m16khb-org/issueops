@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-func nativeIntegrationRequiredPaths(root, home string, codexSkills, claudeSkills, omoSkills, ompSkills []string) []string {
+func nativeIntegrationRequiredPaths(root, home, opencodeConfigRoot string, codexSkills, claudeSkills, omoSkills, ompSkills, opencodeSkills []string) []string {
 	paths := []string{
 		filepath.Join(root, "configs", "codex", "mcp.config.toml"),
 		filepath.Join(root, "configs", "codex", "hooks.json"),
@@ -20,6 +20,8 @@ func nativeIntegrationRequiredPaths(root, home string, codexSkills, claudeSkills
 		filepath.Join(root, "configs", "omo", "issueops.js"),
 		filepath.Join(root, "configs", "omp", "mcp.json"),
 		filepath.Join(root, "configs", "omp", "issueops.js"),
+		filepath.Join(root, "configs", "opencode", "opencode.json"),
+		filepath.Join(root, "configs", "opencode", "issueops.js"),
 	}
 	for _, nativeSkill := range codexSkills {
 		paths = append(paths, filepath.Join(home, ".codex", "skills", nativeSkill, "SKILL.md"))
@@ -32,6 +34,9 @@ func nativeIntegrationRequiredPaths(root, home string, codexSkills, claudeSkills
 	}
 	for _, nativeSkill := range ompSkills {
 		paths = append(paths, filepath.Join(home, ".omp", "agent", "skills", nativeSkill, "SKILL.md"))
+	}
+	for _, nativeSkill := range opencodeSkills {
+		paths = append(paths, filepath.Join(opencodeConfigRoot, "skills", nativeSkill, "SKILL.md"))
 	}
 	return paths
 }
@@ -82,6 +87,9 @@ type lifecycleHost struct {
 	extensionPath string
 	render        func(string) string
 	events        string
+	// hasMCP checks the host's MCP config file; nil means the pi-style
+	// mcpServers layout.
+	hasMCP func(body []byte, expectedBinary, root string) bool
 }
 
 func nativeIntegrationOmoConfigErrors(root, home string, deps nativeIntegrationValidationDeps) []string {
@@ -104,6 +112,17 @@ func nativeIntegrationOmpConfigErrors(root, home string, deps nativeIntegrationV
 	})
 }
 
+func nativeIntegrationOpencodeConfigErrors(root, configRoot string, deps nativeIntegrationValidationDeps) []string {
+	return nativeIntegrationLifecycleHostErrors(root, deps, lifecycleHost{
+		label:         "opencode",
+		mcpPath:       filepath.Join(configRoot, "opencode.json"),
+		extensionPath: filepath.Join(configRoot, "plugins", "issueops.js"),
+		render:        deps.OpencodeLifecyclePlugin,
+		events:        "context-hook",
+		hasMCP:        hasCanonicalOpencodeMCP,
+	})
+}
+
 func nativeIntegrationLifecycleHostErrors(root string, deps nativeIntegrationValidationDeps, host lifecycleHost) []string {
 	stableRoot, err := deps.canonicalStableNativeRoot(root)
 	if err != nil {
@@ -111,7 +130,11 @@ func nativeIntegrationLifecycleHostErrors(root string, deps nativeIntegrationVal
 	}
 	expectedBinary := filepath.Join(stableRoot, "bin", "issueops")
 	errs := []string{}
-	if body, readErr := deps.readFile(host.mcpPath); readErr != nil || !hasCanonicalLifecycleHostMCP(body, expectedBinary, stableRoot) {
+	hasMCP := host.hasMCP
+	if hasMCP == nil {
+		hasMCP = hasCanonicalLifecycleHostMCP
+	}
+	if body, readErr := deps.readFile(host.mcpPath); readErr != nil || !hasMCP(body, expectedBinary, stableRoot) {
 		errs = append(errs, host.label+" MCP config missing canonical issueops server")
 	}
 	if host.render == nil {
@@ -139,6 +162,28 @@ func hasCanonicalLifecycleHostMCP(body []byte, expectedBinary, root string) bool
 		return isCanonicalHTTPMCPServer(server)
 	}
 	return isCanonicalStdioMCPServer(server, expectedBinary, root)
+}
+
+// hasCanonicalOpencodeMCP reads opencode's mcp.servers layout: a "remote"
+// HTTP entry or a "local" entry whose command is the binary plus "mcp".
+func hasCanonicalOpencodeMCP(body []byte, expectedBinary, root string) bool {
+	var config map[string]any
+	if json.Unmarshal(body, &config) != nil {
+		return false
+	}
+	mcp, _ := config["mcp"].(map[string]any)
+	servers, _ := mcp["servers"].(map[string]any)
+	server, ok := servers["issueops"].(map[string]any)
+	if !ok || server["codemode"] != false {
+		return false
+	}
+	if server["type"] == "remote" {
+		return isCanonicalHTTPMCPServer(server)
+	}
+	command, _ := server["command"].([]any)
+	environment, _ := server["environment"].(map[string]any)
+	return server["type"] == "local" && len(command) == 2 && command[0] == expectedBinary && command[1] == "mcp" &&
+		environment["ISSUEOPS_ROOT"] == root
 }
 
 func isCanonicalHTTPMCPServer(server map[string]any) bool {

@@ -164,7 +164,10 @@ func TestConformanceLiveDefaultsExcludeOmoAndOmpAndExplicitSelectionIncludesThem
 	if err := runtime.runConformanceLive([]string{"--hosts", "omp", "--model", "omp=anthropic/claude-haiku-4-5"}); err != nil {
 		t.Fatal(err)
 	}
-	if len(requests) != 3 || !reflect.DeepEqual(requests[0].Hosts, []string{"codex", "claude"}) || !reflect.DeepEqual(requests[1].Hosts, []string{"omo"}) || !reflect.DeepEqual(requests[2].Hosts, []string{"omp"}) {
+	if err := runtime.runConformanceLive([]string{"--hosts", "opencode", "--model", "opencode=opencode/deepseek-v4.1-flash-free"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(requests) != 4 || !reflect.DeepEqual(requests[0].Hosts, []string{"codex", "claude"}) || !reflect.DeepEqual(requests[1].Hosts, []string{"omo"}) || !reflect.DeepEqual(requests[2].Hosts, []string{"omp"}) || !reflect.DeepEqual(requests[3].Hosts, []string{"opencode"}) {
 		t.Fatalf("live host selections = %#v", requests)
 	}
 }

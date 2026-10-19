@@ -56,13 +56,15 @@ func TestBuildInteractiveArgvRejectsUnsupportedOrAmbiguousInputs(t *testing.T) {
 	tests := []struct {
 		name, host, executable, model, effort string
 	}{
-		{name: "unknown host", host: "opencode", executable: "/opt/native/opencode", model: "model"},
+		{name: "unknown host", host: "gemini", executable: "/opt/native/gemini", model: "model"},
 		{name: "relative executable", host: "codex", executable: "codex", model: "model"},
 		{name: "wrong host executable", host: "codex", executable: "/usr/bin/python3", model: "model"},
 		{name: "missing model", host: "codex", executable: "/opt/native/codex"},
 		{name: "effort injection", host: "claude", executable: "/opt/native/claude", model: "model", effort: "high\n--danger"},
 		{name: "model option injection", host: "omo", executable: "/opt/native/omo", model: "--help"},
 		{name: "unsupported omp effort", host: "omp", executable: "/opt/native/omp", model: "model", effort: "auto"},
+		{name: "wrong opencode executable", host: "opencode", executable: "/opt/native/omp", model: "opencode/m"},
+		{name: "opencode model option injection", host: "opencode", executable: "/opt/native/opencode", model: "--help"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -92,5 +94,24 @@ func TestBuildInteractiveArgvExtraArgs(t *testing.T) {
 	}
 	if _, err := BuildInteractiveArgv("claude", "/opt/native/claude", "m", "", "go", []string{"a\x00b"}); err == nil {
 		t.Fatal("a NUL launch argument must be rejected")
+	}
+}
+
+func TestBuildInteractiveArgvOpencodeStandalone(t *testing.T) {
+	prompt := "first line\n'quoted' $() `ticks`"
+	got, err := BuildInteractiveArgv("opencode", "/opt/native/opencode", "opencode/deepseek-v4.1-flash-free", "max", prompt, []string{"--continue"})
+	want := []string{
+		"/usr/bin/env", `OPENCODE_CONFIG_CONTENT={"model":"opencode/deepseek-v4.1-flash-free"}`,
+		"/opt/native/opencode", "--standalone", "--auto", "--continue", "--prompt", prompt,
+	}
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Fatalf("argv=%q err=%v, want %q", got, err, want)
+	}
+	// The TUI has no model flag and drops a root-model variant, so effort
+	// never reaches the argv; an unset model leaves the user's choice alone.
+	got, err = BuildInteractiveArgv("opencode", "/opt/native/opencode", "", "", "", nil)
+	want = []string{"/opt/native/opencode", "--standalone", "--auto", "--prompt", ""}
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Fatalf("argv without model=%q err=%v, want %q", got, err, want)
 	}
 }

@@ -36,7 +36,7 @@ creating a new claimable generation.
 `execution replace --finalize-preview`. Execute the returned generation-bound
 command unchanged. Actor flags are all-or-nothing: pass either the complete
 explicit `ACTOR_FLAGS` receipt or none; the actor-free form observes the
-current Codex/Claude/Omo/omp session, native host process ancestry, and
+current Codex/Claude/Omo/omp/opencode session, native host process ancestry, and
 canonical process cwd. Supplying only part of `ACTOR_FLAGS` is rejected.
 
 완료 영수증이 있는 `released` 또는 `claimable` execution을 `--reseed`하면 기존 영수증은
@@ -144,7 +144,7 @@ source checkout의 준비 세션이, 4단계 이후는 canonical worktree의 구
 `skills/issueops/references/session-choice.md`를 따른다. 준비 세션이 Herdr 세션이고 실행 중인
 서버·호환성·현재 native host 실행 가능 여부가 확인되면 같은 worktree의 새 Herdr 세션으로
 인계한다. Herdr를 쓸 수 없으면 현재 세션에서 이어가거나 사용자가 직접 연 두 번째
-터미널에서 수동으로 인계한다. Claude Code·Codex·Omo·omp host를 유지하며
+터미널에서 수동으로 인계한다. Claude Code·Codex·Omo·omp·opencode host를 유지하며
 Herdr에서는 `worktree create` 대신 `worktree open`으로 준비된 checkout을 등록한다.
 세션 인계는 기존 세션이 `release`로 lease를 해제하고, 새 세션이 자기 native actor로
 `execution replace --id ID --expected-generation N --preview`를 실행해 반환된 `--reseed`
@@ -173,15 +173,19 @@ README의 「모델과 세션 인계」가 이 절을 가리킨다. 아래 표�
 | Claude Code | `claude-opus-5-5` / `high` | `claude-opus-5-5` / `high` | `claude-sonnet-5-5` / `medium` | `claude-haiku-5-5` / `medium` |
 | Omo native | `chatgpt-subscription/gpt-6-sol` / `max` | `chatgpt-subscription/gpt-6-astra` / `max` | `chatgpt-subscription/gpt-6-luna` / `medium` | 없음 |
 | omp | `anthropic/claude-opus-5-5` / `high` | `anthropic/claude-opus-5-5` / `high` | `anthropic/claude-sonnet-5-5` / `medium` | `anthropic/claude-haiku-5-5` / `medium` |
+| opencode | `opencode/deepseek-v4.1-flash-free` / `max` | `opencode/deepseek-v4.1-flash-free` / `max` | `opencode/deepseek-v4.1-flash-free` / `high` | `opencode/deepseek-v4.1-flash-free` / `low` |
 
-네 호스트 모두 역할별 model·effort를 사용자 전체(global)나 저장소 하나(local) 단위로 바꿀 수 있다.
+다섯 호스트 모두 역할별 model·effort를 사용자 전체(global)나 저장소 하나(local) 단위로 바꿀 수 있다.
 우선순위는 필드마다 명시 플래그 > local > global > 기본값이다. local 설정은 메인 워크트리의
 `.issueops/agent-models.local.json` 하나이며 커밋하지 않는다. 연결 워크트리도 같은 파일을 읽는다.
 global은 `$XDG_CONFIG_HOME/issueops/agent-models.json`(변수가 비면 `~/.config/issueops/`)이다.
 대화로 바꾸려면 [`io-model`](../../../skills/io-model/SKILL.md) 스킬을 쓴다.
 
 IssueOps가 cmux로 띄우는 Claude Code와 Codex 세션에는 리뷰·조사·독자 검토 역할을
-서브에이전트로 넣는다. Omo native와 omp 세션에는 넣지 않는다. 리뷰 3라운드부터는
-`issueops model resolve --round N`이 돌려주는 상향 값을 쓴다. Fable은 기본값이나 상향에 쓰지 않고
+서브에이전트로 넣는다. Omo native, omp, opencode 세션에는 넣지 않는다. 리뷰 3라운드부터는
+`issueops model resolve --round N`이 돌려주는 상향 값을 쓴다. opencode effort는 모델마다 다른 variant
+이름이므로 문서 전용 리뷰의 `medium` 하향과 3라운드 상향을 적용하지 않는다. 대화형 opencode 세션은
+`--model` 플래그가 없어 `OPENCODE_CONFIG_CONTENT`의 모델만 받고 effort는 사용자 `model.json`의 variant를 쓴다.
+Fable은 기본값이나 상향에 쓰지 않고
 이름으로 지정할 때만 쓴다. `chatgpt-subscription/`은 Omo의 provider 식별자이며 Codex 호스트 이름을
 바꾸는 설정이 아니다.

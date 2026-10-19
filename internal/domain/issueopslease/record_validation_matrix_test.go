@@ -116,7 +116,7 @@ func TestValidatePersistedRecordAcceptsBoundaryExecutionDetails(t *testing.T) {
 }
 
 func TestValidatePersistedActorRequiresReuseSafeReceipt(t *testing.T) {
-	for _, host := range []string{"codex", "claude", "omo", "omp"} {
+	for _, host := range []string{"codex", "claude", "omo", "omp", "opencode"} {
 		actor := persistedActorFixture()
 		actor.Host = host
 		if err := ValidatePersistedActor(actor); err != nil {

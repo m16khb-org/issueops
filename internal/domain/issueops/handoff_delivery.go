@@ -135,7 +135,7 @@ func validateHandoffDeliveryOwnerIdentity(observation issueopscontract.IssueOpsH
 		}
 	}
 	switch observation.ExpectedOwnerHost {
-	case "", "codex", "claude", "omo", "omp":
+	case "", "codex", "claude", "omo", "omp", "opencode":
 		return nil
 	}
 	return fmt.Errorf("delivery observation expected owner host is invalid")

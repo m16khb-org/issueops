@@ -1,0 +1,18 @@
+{
+  "mcp": {
+    "servers": {
+      "issueops_project": {
+        "codemode": false,
+        "command": [
+          "./bin/issueops",
+          "mcp"
+        ],
+        "environment": {
+          "ISSUEOPS_MCP_CATALOG_SHA256": "be8fdd69b93b2158f9ace25be2b27bbbe1cf7e8778b3cfad32ace779c5cad29f",
+          "ISSUEOPS_ROOT": "."
+        },
+        "type": "local"
+      }
+    }
+  }
+}

@@ -164,7 +164,7 @@ func applyAndCommit(ctx context.Context, request TransactionRequest, effects Tra
 // reported as messages because the activation can no longer be rolled back.
 func finalizeCommitted(result *port.NativeInstallResult, request TransactionRequest, effects TransactionEffects, pathTransaction PathTransaction) {
 	result.Committed = true
-	result.Messages = append(result.Messages, "native activation receipt sealed after strict Codex/Claude/Omo/omp MCP and lifecycle readback")
+	result.Messages = append(result.Messages, "native activation receipt sealed after strict Codex/Claude/Omo/omp/opencode MCP and lifecycle readback")
 	effects.AppendUpstream(result, request.Install.Root, false)
 	if finalizeErr := pathTransaction.Finalize(result); finalizeErr != nil {
 		result.Messages = append(result.Messages, "native activation is committed; command backup cleanup requires manual recovery: "+finalizeErr.Error())

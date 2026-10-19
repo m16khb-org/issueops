@@ -230,6 +230,8 @@ func TestIssueOpsHandoffLaunchesEveryNativeHostWithPermissionBypass(t *testing.T
 		"--dangerously-skip-permissions",
 		"--dangerously-bypass-approvals-and-sandbox",
 		"--permission-preset full-access",
+		"--auto-approve",
+		"opencode --standalone --auto",
 	} {
 		if count := strings.Count(sessionChoice, flag); count < 3 {
 			t.Fatalf("explicit launcher, new-session, and Herdr procedures must each require %q: count=%d", flag, count)

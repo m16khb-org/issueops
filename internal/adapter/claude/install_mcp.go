@@ -12,7 +12,7 @@ const mcpTransportHTTP = "http"
 
 func (installer Installer) writeClaudeUserMCP(path string, req port.NativeInstallRequest) (port.InstallFile, error) {
 	file := port.InstallFile{Path: path, Kind: "claude_user_mcp_config"}
-	config, err := installer.deps.MergeJSONMapFile(path, "mcpServers", "issueops", req.DryRun, func() (map[string]any, error) {
+	config, err := installer.deps.MergeJSONMapFile(path, []string{"mcpServers"}, "issueops", req.DryRun, func() (map[string]any, error) {
 		return claudeUserMCPServer(req), nil
 	})
 	if err != nil {
@@ -46,7 +46,7 @@ func claudeUserMCPServer(req port.NativeInstallRequest) map[string]any {
 
 func (installer Installer) removeClaudeProjectMCP(path string, dryRun bool) (port.InstallFile, error) {
 	file := port.InstallFile{Path: path, Kind: "claude_project_mcp_config"}
-	config, removed, err := installer.deps.RemoveJSONMapEntry(path, "mcpServers", "issueops_project")
+	config, removed, err := installer.deps.RemoveJSONMapEntry(path, []string{"mcpServers"}, "issueops_project")
 	if err != nil || !removed {
 		return file, err
 	}

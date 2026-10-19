@@ -36,10 +36,10 @@ type Dependencies struct {
 }
 
 const usage = `Usage:
-  issueops model show [--host claude|codex|omo|omp] [--repo PATH] [--json]
-  issueops model set --scope global|local --host claude|codex|omo|omp --role ROLE [--model MODEL] [--effort EFFORT] [--repo PATH] [--json]
-  issueops model unset --scope global|local --host claude|codex|omo|omp --role ROLE [--field model|effort] [--repo PATH] [--json]
-  issueops model resolve --host claude|codex|omo|omp --role ROLE [--tier TIER] [--round N] [--model MODEL] [--effort EFFORT] [--agents] [--repo PATH] [--json]
+  issueops model show [--host claude|codex|omo|omp|opencode] [--repo PATH] [--json]
+  issueops model set --scope global|local --host claude|codex|omo|omp|opencode --role ROLE [--model MODEL] [--effort EFFORT] [--repo PATH] [--json]
+  issueops model unset --scope global|local --host claude|codex|omo|omp|opencode --role ROLE [--field model|effort] [--repo PATH] [--json]
+  issueops model resolve --host claude|codex|omo|omp|opencode --role ROLE [--tier TIER] [--round N] [--model MODEL] [--effort EFFORT] [--agents] [--repo PATH] [--json]
 
 Roles: implement, child-implement, plan-review, diff-review, review-escalate, research, reader-check.
 Precedence per field: flag > local > global > built-in default.
@@ -107,7 +107,7 @@ func runShow(ctx context.Context, deps Dependencies, args []string) error {
 	hosts := domain.ConfigurableHosts()
 	if *host != "" {
 		if !domain.KnownHost(*host) {
-			return UsageError{Message: fmt.Sprintf("unknown host %q (use claude, codex, omo, or omp)", *host)}
+			return UsageError{Message: fmt.Sprintf("unknown host %q (use claude, codex, omo, omp, or opencode)", *host)}
 		}
 		hosts = []string{*host}
 	}
@@ -149,7 +149,7 @@ type target struct {
 
 func parseTarget(fs *flag.FlagSet, args []string, deps Dependencies) (target, error) {
 	scope := fs.String("scope", "", "global or local")
-	host := fs.String("host", "", "claude, codex, omo, or omp")
+	host := fs.String("host", "", "claude, codex, omo, omp, or opencode")
 	role := fs.String("role", "", "role")
 	repoFlag := fs.String("repo", "", "repository (defaults to cwd)")
 	if err := parse(fs, args); err != nil {
@@ -290,7 +290,7 @@ type resolveResult struct {
 
 func runResolve(ctx context.Context, deps Dependencies, args []string) error {
 	fs := newFlagSet("resolve")
-	host := fs.String("host", "", "claude, codex, omo, or omp")
+	host := fs.String("host", "", "claude, codex, omo, omp, or opencode")
 	role := fs.String("role", "", "role")
 	tier := fs.String("tier", "", "review tier (docs-only lowers a built-in review effort)")
 	round := fs.Int("round", 0, "review round (3 and later escalate)")
@@ -391,6 +391,8 @@ func hostSection(cfg *contract.Config, host string) *map[contract.Role]contract.
 		section = &cfg.Omo
 	case "omp":
 		section = &cfg.Omp
+	case "opencode":
+		section = &cfg.Opencode
 	}
 	if *section == nil {
 		*section = map[contract.Role]contract.Layer{}
@@ -403,6 +405,7 @@ func cloneConfig(cfg contract.Config) contract.Config {
 	cfg.Codex = maps.Clone(cfg.Codex)
 	cfg.Omo = maps.Clone(cfg.Omo)
 	cfg.Omp = maps.Clone(cfg.Omp)
+	cfg.Opencode = maps.Clone(cfg.Opencode)
 	return cfg
 }
 

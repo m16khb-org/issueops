@@ -16,6 +16,7 @@ cache/
 .antigravitycli/
 .omo/
 .omp/
+.opencode/
 .agents/
 # Local workflow evidence (root, .issueops, and the verified-execution roots
 # under skills/verified-execution). A bare name would also hide any source

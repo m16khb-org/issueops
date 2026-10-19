@@ -49,7 +49,8 @@ execution이 정확한 generation에서 released이며 canonical worktree가 이
 명령을 실행한다. bare `cmux <path>`는 앱을 자동으로 시작할 수 있으므로 실행하지 않는다.
 Omo도 generic terminal 안에서 native Omo 실행 파일을 직접 실행하며 `cmux omo`를 호출하지
 않는다. omp는 bun script로 실행되어 cmux receiver 검사에서 `bun`으로 관측되므로 cmux로 omp에
-인계하면 그 검사에서 fail closed 된다.
+인계하면 그 검사에서 fail closed 된다. opencode는 `/usr/bin/env`로 `OPENCODE_CONFIG_CONTENT`에
+모델을 실어 `--standalone` 세션을 연다. TUI에는 모델·effort 플래그가 없어 effort는 전달하지 않는다.
 
 prompt 파일은 canonical worktree 안의 absolute regular file로 만들고 mode 0600, 현재
 프로세스의 effective UID 소유, 최대 64 KiB, SHA-256 조건을 모두 충족해야 한다. prompt는
@@ -60,7 +61,8 @@ no-follow handle traversal과 namespace identity 검사가 보호하므로 이 l
 실행 파일, socket, window UUID, model을 실측한 exact 값으로 채우고, 해당 host가 지원하는
 effort만 전달한다. cmux의 private launcher는 Claude Code에
 `--dangerously-skip-permissions`, Codex에
-`--dangerously-bypass-approvals-and-sandbox`, Omo에 `--permission-preset full-access`, omp에 `--auto-approve`를 붙인다.
+`--dangerously-bypass-approvals-and-sandbox`, Omo에 `--permission-preset full-access`, omp에 `--auto-approve`,
+opencode에 `opencode --standalone --auto`를 붙인다.
 
 ```bash
 issueops execution handoff-cmux \
@@ -184,8 +186,10 @@ release로 lease를 해제하고, 새 세션이 자기 native actor로 `executio
    현재 native host를 유지하고 현재 모델·effort는 해당 launch가 지원하는 값만 전달한다.
    Claude Code를 여는 명령에는 `--dangerously-skip-permissions`, Codex를 여는
    명령에는 `--dangerously-bypass-approvals-and-sandbox`, Omo를 여는 명령에는
-   `--permission-preset full-access`, omp를 여는 명령에는 `--auto-approve`를 붙인다. 설치된 host의
-   `--help`에서 플래그 지원을 확인한 뒤 호출한다.
+   `--permission-preset full-access`, omp를 여는 명령에는 `--auto-approve`, opencode를 여는 명령에는
+   `opencode --standalone --auto`를 쓴다. 설치된 host의
+   `--help`에서 플래그 지원을 확인한 뒤 호출한다. opencode는 공유 서비스 세션이 lease를 쥘 수
+   없으므로 `--standalone`을 빼지 않는다.
    사용자가 직접 연 두 번째 터미널로 인계하겠다고 명시한 경우에만 경로와 인계문을 제공하고 종료한다.
    Herdr는 아래 **Herdr 실행** 절을 따른다. raw launcher를
    호출하기 직전과 receipt를 읽은 직후에는 아래 producer를 호출한다. staged 관측 기록이
@@ -225,7 +229,7 @@ runtime ID를 복사한 server ID 같은 대체값을 만들지 않는다.
   "request": {"durable_id": ""},
   "launcher": {"name": "herdr", "version": "<observed>", "path": "<absolute observed path>", "runtime_id": "<observed>", "machine_id": "<observed>", "server_id": "<observed target identity>"},
   "target": {"terminal_id": "<observed>", "pane_id": "<observed>"},
-  "expected_owner_host": "<codex|claude|omo|omp>",
+  "expected_owner_host": "<codex|claude|omo|omp|opencode>",
   "source_generation": <generation>,
   "created_at": "<RFC3339Nano>",
   "updated_at": "<same RFC3339Nano>",
@@ -366,6 +370,18 @@ IssueOps lease를 소유하지 않는다. 실제 Herdr 호출 전후에는 위
      `pane run` 성공은 입력 제출 영수증일 뿐이다. `pane read --source visible`,
      foreground process와 Omo native 세션 기록으로 새 세션·cwd·인계 수신을 확인한다.
      Herdr의 agent 감지가 없어도 native 기록으로 확인하며 감지를 성공으로 꾸미지 않는다.
+   - omp: `herdr agent start "$AGENT_NAME" --kind omp --pane "$PANE_ID" --timeout 60000 --
+     --model "$MODEL" --thinking "$EFFORT" --auto-approve`를 사용한다. 모델·effort는
+     `issueops model resolve --host omp --role implement --json`의 값이다. 성공 후
+     `herdr agent read "$AGENT_NAME" --source visible`로 입력창을 확인하고
+     `herdr agent prompt "$AGENT_NAME" "$HANDOFF"`로 한 번 전달한다.
+   - opencode: 모델은 TUI 플래그가 아니라 `OPENCODE_CONFIG_CONTENT`로만 전달되므로
+     `herdr pane run "$PANE_ID" "$LAUNCH_COMMAND"`로 한 번 실행한다. `LAUNCH_COMMAND`는
+     `OPENCODE_CONFIG_CONTENT='{"model":"<implement model>"}' opencode --standalone --auto --prompt '<handoff>'`이며
+     모델과 인계문을 각각 shell-quote한다. 모델은 `issueops model resolve --host opencode --role implement
+     --json`의 `model`이고 effort는 넣지 않는다(TUI는 사용자 `model.json`의 variant를 쓴다).
+     수신은 Herdr가 opencode TUI plugin으로 보고하는 `ses_…` 세션 id와 새 세션 셸의
+     `issueops execution whoami --json`(host `opencode`, `session_id_source` `OPENCODE_SESSION_ID`)으로 확인한다.
 3. Herdr의 `idle`/`interactive_ready`만으로 준비 완료라고 판단하지 않는다.
    0.9.0에서 Claude의 첫 MCP 선택 화면도 `idle`로 관측됐다. 실제 화면의 질문을 읽고
    기존 승인 범위 안에서 처리한다. 필요 없는 선택 기능은 화면이 제공하는 건너뛰기를

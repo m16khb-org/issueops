@@ -52,10 +52,10 @@ const IssueOpsUsageCatalog = `  issueops start --repo PATH [--branch NAME | --ne
   issueops execution reconcile --id ID (--preview|--confirm) ACTOR_FLAGS [--json]
   issueops execution complete --id ID --generation N --final-head SHA --verification-report PATH --remote-artifact-url URL --verification TEXT... ACTOR_FLAGS --confirm [--json]
   issueops execution sync-base --id ID [--completion-generation N] (--preview | --apply --confirm --fingerprint SHA256 | --finalize | --abort) ACTOR_FLAGS [--json]
-  issueops execution handoff-cmux --id ID --generation N --cmux-executable ABS --cmux-version VERSION --cmux-build-identity IDENTITY --socket ABS --window UUID --cwd ABS --host codex|claude|omo|omp --host-executable ABS --model MODEL [--effort EFFORT] --prompt-file ABS --prompt-sha256 HEX --material-sha256 HEX [--json]
+  issueops execution handoff-cmux --id ID --generation N --cmux-executable ABS --cmux-version VERSION --cmux-build-identity IDENTITY --socket ABS --window UUID --cwd ABS --host codex|claude|omo|omp|opencode --host-executable ABS --model MODEL [--effort EFFORT] --prompt-file ABS --prompt-sha256 HEX --material-sha256 HEX [--json]
   issueops phase --id ID --to problem|grill|plan|compatibility-review|implement|ai-slop-clean|feedback|pr RECORD_ACTOR_FLAGS [--json]
   issueops ai-slop-clean record --id ID --category TEXT --verification TEXT RECORD_ACTOR_FLAGS [--json]
-  issueops implementation-review record --id ID --verdict pass|revise|stop --finding TEXT... --evidence TEXT... [--reviewer-host codex|claude|omo|omp] [--reviewer-model MODEL] [--reviewer-effort EFFORT] RECORD_ACTOR_FLAGS [--json]
+  issueops implementation-review record --id ID --verdict pass|revise|stop --finding TEXT... --evidence TEXT... [--reviewer-host codex|claude|omo|omp|opencode] [--reviewer-model MODEL] [--reviewer-effort EFFORT] RECORD_ACTOR_FLAGS [--json]
   issueops project-docs-review record --id ID --verdict updated|no-change [--doc PATH...] [--reviewed-doc PATH...] --evidence TEXT... RECORD_ACTOR_FLAGS [--json]
   issueops schema-evidence record --id ID --measurement TEXT... --source TEXT... [--waive --waiver-rationale TEXT] RECORD_ACTOR_FLAGS [--json]
   issueops regress --id ID --reason TEXT RECORD_ACTOR_FLAGS [--json]
@@ -82,7 +82,7 @@ const IssueOpsUsageCatalog = `  issueops start --repo PATH [--branch NAME | --ne
   issueops remote sync-graph --id ID [--confirm] [--json]
   issueops remote sync-issue --id ID [--provider github|gitlab] [--url CHILD_URL] [--body TEXT|--body-file PATH] [--template KIND] [--expected-body-sha256 SHA] [--accept-remote-edits] RECORD_ACTOR_FLAGS [--confirm] [--json]
   issueops remote sync-pr --id ID --expected-generation N [--provider github|gitlab] [--url ARTIFACT_URL] [--body TEXT|--body-file PATH] [--template KIND] [--expected-body-sha256 SHA] [--accept-remote-edits] RECORD_ACTOR_FLAGS [--confirm] [--json]
-  issueops remote create-child --id ID [--operation-id HEX] --title TEXT [--provider github|gitlab] [--score-file PATH] [--body TEXT|--body-file PATH] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... --host codex|claude|omo|omp --session-id SESSION [--agent-id ID] --cwd WORKER_PATH [--confirm] [--json]
+  issueops remote create-child --id ID [--operation-id HEX] --title TEXT [--provider github|gitlab] [--score-file PATH] [--body TEXT|--body-file PATH] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... --host codex|claude|omo|omp|opencode --session-id SESSION [--agent-id ID] --cwd WORKER_PATH [--confirm] [--json]
   issueops remote create-pr --id ID --expected-generation N --title TEXT --head BRANCH --base BRANCH [--provider github|gitlab] [--score-file PATH] [--body TEXT|--body-file PATH] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... ACTOR_FLAGS [--confirm] [--json]
   issueops remote verify-artifact --id ID --provider github|gitlab --kind pr|mr --url URL --target-branch BRANCH --label LABEL --assignee USER RECORD_ACTOR_FLAGS [--json]
   issueops remote reflect-devils-advocate --id ID [--provider github|gitlab] RECORD_ACTOR_FLAGS [--confirm] [--json]
@@ -97,8 +97,8 @@ const IssueOpsUsageCatalog = `  issueops start --repo PATH [--branch NAME | --ne
 
 // IssueOpsActorFlagLegend는 두 usage 출력이 공유하는 actor 축약 정의다. 축약을 쓰는
 // 출력은 같은 출력 안에서 그것을 정의해야 한다(#184).
-const IssueOpsActorFlagLegend = `RECORD_ACTOR_FLAGS: --host codex|claude|omo|omp --session-id ID [--agent-id ID] --cwd PATH
-ACTOR_FLAGS: --host codex|claude|omo|omp --session-id ID [--agent-id ID] --session-pid PID --session-started-at RFC3339 --session-executable PATH --cwd PATH
+const IssueOpsActorFlagLegend = `RECORD_ACTOR_FLAGS: --host codex|claude|omo|omp|opencode --session-id ID [--agent-id ID] --cwd PATH
+ACTOR_FLAGS: --host codex|claude|omo|omp|opencode --session-id ID [--agent-id ID] --session-pid PID --session-started-at RFC3339 --session-executable PATH --cwd PATH
 
 Durable-record mutations take RECORD_ACTOR_FLAGS; without them an active execution rejects the
 call as a non-holder. execution claim accepts either no actor flags and observes the current

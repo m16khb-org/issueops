@@ -32,6 +32,9 @@ func TestPrivateLauncherPreservesPromptAndExactHostArgv(t *testing.T) {
 		{host: "codex", model: "gpt-6-astra", effort: "high", wantPrefix: []string{"--model", "gpt-6-astra", "-c", "model_reasoning_effort=high", "--dangerously-bypass-approvals-and-sandbox", "--"}},
 		{host: "claude", model: "claude-sonnet-5-5", effort: "high", wantPrefix: []string{"--model", "claude-sonnet-5-5", "--effort", "high", "--dangerously-skip-permissions", "--"}},
 		{host: "omo", model: "chatgpt-subscription/gpt-6-sol", effort: "xhigh", wantPrefix: []string{"--model", "chatgpt-subscription/gpt-6-sol:xhigh", "--permission-preset", "full-access", "--"}},
+		{host: "omp", model: "anthropic/claude-opus-5-5", effort: "high", wantPrefix: []string{"--model", "anthropic/claude-opus-5-5", "--thinking", "high", "--auto-approve", "--"}},
+		// /usr/bin/env passes the model in OPENCODE_CONFIG_CONTENT, so the host sees only its own flags.
+		{host: "opencode", model: "opencode/deepseek-v4.1-flash-free", effort: "max", wantPrefix: []string{"--standalone", "--auto", "--prompt"}},
 	} {
 		t.Run(test.host, func(t *testing.T) {
 			capture := filepath.Join(root, test.host+"-argv")
@@ -58,6 +61,12 @@ func TestPrivateLauncherPreservesPromptAndExactHostArgv(t *testing.T) {
 			}
 			if bytes.Contains(launcherBytes, []byte(prompt)) || strings.Contains(string(launcherBytes), "cmux omo") {
 				t.Fatal("launcher embedded prompt text or cmux host shortcut")
+			}
+			if test.host == "opencode" {
+				want := `exec '/usr/bin/env' 'OPENCODE_CONFIG_CONTENT={"model":"opencode/deepseek-v4.1-flash-free"}' '` + host + `' '--standalone' '--auto' '--prompt' "$prompt"`
+				if !strings.Contains(string(launcherBytes), want) {
+					t.Fatalf("opencode launcher line missing %q:\n%s", want, launcherBytes)
+				}
 			}
 			for _, fence := range []string{"ISSUEOPS_CMUX_EXPECTED_WINDOW_ID=", "ISSUEOPS_CMUX_EXPECTED_WORKSPACE_ID=", "ISSUEOPS_CMUX_EXPECTED_SURFACE_ID=", "ISSUEOPS_CMUX_EXPECTED_SOCKET_PATH="} {
 				if !strings.Contains(prepared.Command, fence) {

@@ -24,7 +24,7 @@ type hostCollector struct {
 }
 
 func isHostFormat(format string) bool {
-	return format == tracecontract.InputFormatClaudeJSON || format == tracecontract.InputFormatCodexExec || format == tracecontract.InputFormatOmoJSON || format == tracecontract.InputFormatOmpJSON
+	return format == tracecontract.InputFormatClaudeJSON || format == tracecontract.InputFormatCodexExec || format == tracecontract.InputFormatOmoJSON || format == tracecontract.InputFormatOmpJSON || format == tracecontract.InputFormatOpencodeJSON
 }
 
 func decodeHostUsage(body []byte, format string) tracedomain.Input {
@@ -48,6 +48,8 @@ func decodeHostUsage(body []byte, format string) tracedomain.Input {
 	case tracecontract.InputFormatOmpJSON:
 		// omp emits the same pi agent event stream and usage shape as Omo.
 		collector.omo("omp", events)
+	case tracecontract.InputFormatOpencodeJSON:
+		collector.opencode(events)
 	}
 	warnings := append([]string{}, input.Warnings...)
 	for code := range collector.codes {
@@ -356,9 +358,51 @@ func (c *hostCollector) omoMessageEnd(host, session string, event hostEvent) {
 }
 
 func (c *hostCollector) omoCost(usage hostEvent) *float64 {
-	total := c.cost(object(usage, "cost"), "total")
-	if total != nil && *total == 0 {
+	return c.positiveCost(object(usage, "cost"), "total")
+}
+
+// opencode reads `opencode run --format json`. Each step_finish line carries
+// the usage of one model step. opencode exits before printing the last step's
+// step_finish, so the sum covers the observed steps only.
+func (c *hostCollector) opencode(events []hostEvent) {
+	for _, event := range events {
+		switch kind := text(event, "type"); kind {
+		case "step_finish":
+			part := object(event, "part")
+			tokens := object(part, "tokens")
+			if tokens == nil {
+				c.warn("usage_missing")
+				continue
+			}
+			// opencode reports reasoning apart from output; issueops output
+			// counts every generated token, as the other hosts do.
+			output := c.metric(tokens, "output")
+			if reasoning := c.metric(tokens, "reasoning"); output != nil && reasoning != nil {
+				*output += *reasoning
+			}
+			cache := object(tokens, "cache")
+			c.add(tracedomain.UsageObservation{
+				Host: "opencode", SessionID: c.identity(text(event, "sessionID")),
+				TurnID: c.identity(text(part, "id")), MessageID: c.identity(text(part, "messageID")),
+				Finality: tracecontract.UsageFinalityFinal, Temporality: tracecontract.UsageTemporalityDelta,
+				Input: c.metric(tokens, "input"), Output: output,
+				CacheRead: c.metric(cache, "read"), CacheWrite: c.metric(cache, "write"),
+				CostUSD: c.positiveCost(part, "cost"),
+			})
+		case "step_start", "text", "reasoning", "tool_use", "error":
+		default:
+			if hasUsageKey(event) {
+				c.warn("usage_unknown_event")
+			}
+		}
+	}
+}
+
+// positiveCost treats a zero host cost as unknown.
+func (c *hostCollector) positiveCost(event hostEvent, key string) *float64 {
+	cost := c.cost(event, key)
+	if cost != nil && *cost == 0 {
 		return nil
 	}
-	return total
+	return cost
 }

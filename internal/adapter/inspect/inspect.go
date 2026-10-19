@@ -18,6 +18,9 @@ type Observer struct {
 	HostVersion func(host string) string
 	// ReceiptRoot가 있으면 receipt 파일은 이 root 안에 있어야 한다.
 	ReceiptRoot string
+	// OpencodeConfigRoot는 home에서 opencode 설정 디렉터리를 정한다. 설치기와 같은
+	// 해석기를 쓰며, 비어 있으면 XDG_CONFIG_HOME 없이 $HOME/.config/opencode다.
+	OpencodeConfigRoot func(home string) string
 }
 
 func (observer Observer) Inspect(root, target, home, version, skillName string, options inspectcontract.Options) inspectcontract.InspectInfo {

@@ -20,7 +20,7 @@ const (
 
 func (installer Installer) writeUserMCP(path string, req port.NativeInstallRequest) (port.InstallFile, error) {
 	file := port.InstallFile{Path: path, Kind: installer.spec.Host + "_user_mcp_config"}
-	config, err := installer.deps.MergeJSONMapFile(path, "mcpServers", "issueops", req.DryRun, func() (map[string]any, error) {
+	config, err := installer.deps.MergeJSONMapFile(path, []string{"mcpServers"}, "issueops", req.DryRun, func() (map[string]any, error) {
 		return installer.userMCPServer(req)
 	})
 	if err != nil {
@@ -36,7 +36,7 @@ func (installer Installer) writeUserMCP(path string, req port.NativeInstallReque
 
 func (installer Installer) removeProjectMCP(path string, dryRun bool) (port.InstallFile, error) {
 	file := port.InstallFile{Path: path, Kind: installer.spec.Host + "_project_mcp_config"}
-	config, removed, err := installer.deps.RemoveJSONMapEntry(path, "mcpServers", "issueops_project")
+	config, removed, err := installer.deps.RemoveJSONMapEntry(path, []string{"mcpServers"}, "issueops_project")
 	if err != nil || !removed {
 		return file, err
 	}

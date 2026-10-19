@@ -88,7 +88,7 @@ func holderIdentityComplete(cycle operationalhealthcontract.Cycle) bool {
 
 func validNativeHost(host string) bool {
 	host = strings.TrimSpace(host)
-	return host == "codex" || host == "claude" || host == "omo" || host == "omp"
+	return host == "codex" || host == "claude" || host == "omo" || host == "omp" || host == "opencode"
 }
 
 func holderIdentityEmpty(cycle operationalhealthcontract.Cycle) bool {

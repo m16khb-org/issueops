@@ -34,54 +34,93 @@ type hostEntry struct {
 }
 
 func readJSONEntry(path string) (hostEntry, error) {
-	body, err := os.ReadFile(path)
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return hostEntry{}, configReadError{"config_missing"}
-		}
-		return hostEntry{}, configReadError{"config_unreadable"}
-	}
-	servers, err := jsonServerEntries(body)
+	entry, err := readJSONServerEntry(path, []string{"mcpServers"})
 	if err != nil {
 		return hostEntry{}, err
 	}
+	return finishEntry(entry)
+}
+
+// readOpencodeEntry reads mcp.servers.issueops from opencode.json, where a
+// "remote" entry is HTTP and a "local" entry runs a command array over stdio.
+func readOpencodeEntry(path string) (hostEntry, error) {
+	entry, err := readJSONServerEntry(path, []string{"mcp", "servers"})
+	if err != nil {
+		return hostEntry{}, err
+	}
+	url, _ := entry["url"].(string)
+	command, _ := entry["command"].([]any)
+	transport := ""
+	switch kind, _ := entry["type"].(string); {
+	case kind == "remote" && url != "" && command == nil:
+		transport = "http"
+	case kind == "local" && len(command) > 0 && url == "":
+		transport = "stdio"
+	default:
+		return hostEntry{}, configReadError{"entry_transport_unknown"}
+	}
+	digest, err := entryDigest(entry)
+	if err != nil {
+		return hostEntry{}, err
+	}
+	return hostEntry{entry: entry, transport: transport, sha256: digest}, nil
+}
+
+func readJSONServerEntry(path string, serversPath []string) (map[string]any, error) {
+	body, err := os.ReadFile(path)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, configReadError{"config_missing"}
+		}
+		return nil, configReadError{"config_unreadable"}
+	}
+	servers, err := jsonServerEntries(body, serversPath)
+	if err != nil {
+		return nil, err
+	}
 	switch len(servers) {
 	case 0:
-		return hostEntry{}, configReadError{"entry_missing"}
+		return nil, configReadError{"entry_missing"}
 	case 1:
 	default:
-		return hostEntry{}, configReadError{"entry_duplicate"}
+		return nil, configReadError{"entry_duplicate"}
 	}
 	var entry map[string]any
 	decoder := json.NewDecoder(bytes.NewReader(servers[0]))
 	decoder.UseNumber()
 	if err := decoder.Decode(&entry); err != nil || entry == nil {
-		return hostEntry{}, configReadError{"entry_malformed"}
+		return nil, configReadError{"entry_malformed"}
 	}
-	return finishEntry(entry)
+	return entry, nil
 }
 
-func jsonServerEntries(body []byte) ([]json.RawMessage, error) {
+// jsonServerEntries walks serversPath, rejecting a duplicated key at any level,
+// and returns every "issueops" member of the servers object.
+func jsonServerEntries(body []byte, serversPath []string) ([]json.RawMessage, error) {
 	if !json.Valid(body) {
 		return nil, configReadError{"config_malformed"}
 	}
-	top, err := jsonObjectFields(body)
-	if err != nil {
-		return nil, configReadError{"config_malformed"}
-	}
-	var serverObjects []json.RawMessage
-	for _, field := range top {
-		if field.key == "mcpServers" {
-			serverObjects = append(serverObjects, field.value)
+	object := json.RawMessage(body)
+	for _, key := range serversPath {
+		fields, err := jsonObjectFields(object)
+		if err != nil {
+			return nil, configReadError{"config_malformed"}
 		}
+		var matches []json.RawMessage
+		for _, field := range fields {
+			if field.key == key {
+				matches = append(matches, field.value)
+			}
+		}
+		if len(matches) == 0 {
+			return nil, nil
+		}
+		if len(matches) > 1 {
+			return nil, configReadError{"entry_duplicate"}
+		}
+		object = matches[0]
 	}
-	if len(serverObjects) == 0 {
-		return nil, nil
-	}
-	if len(serverObjects) > 1 {
-		return nil, configReadError{"entry_duplicate"}
-	}
-	fields, err := jsonObjectFields(serverObjects[0])
+	fields, err := jsonObjectFields(object)
 	if err != nil {
 		return nil, configReadError{"config_malformed"}
 	}
@@ -154,12 +193,20 @@ func finishEntry(entry map[string]any) (hostEntry, error) {
 	if err != nil {
 		return hostEntry{}, err
 	}
+	digest, err := entryDigest(entry)
+	if err != nil {
+		return hostEntry{}, err
+	}
+	return hostEntry{entry: entry, transport: transport, sha256: digest}, nil
+}
+
+func entryDigest(entry map[string]any) (string, error) {
 	canonical, err := json.Marshal(stripSecrets(entry))
 	if err != nil {
-		return hostEntry{}, configReadError{"entry_malformed"}
+		return "", configReadError{"entry_malformed"}
 	}
 	digest := sha256.Sum256(canonical)
-	return hostEntry{entry: entry, transport: transport, sha256: hex.EncodeToString(digest[:])}, nil
+	return hex.EncodeToString(digest[:]), nil
 }
 
 func entryTransport(entry map[string]any) (string, error) {

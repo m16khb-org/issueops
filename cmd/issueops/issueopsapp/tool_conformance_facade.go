@@ -42,10 +42,11 @@ func runToolConformanceLive(ctx context.Context, request contractcli.LiveRequest
 
 func toolConformanceRunners(binary string) map[string]port.HostProbeRunner {
 	return map[string]port.HostProbeRunner{
-		"codex":  hostprobe.NewCodexRunner(binary, hostprobe.Dependencies{}),
-		"claude": hostprobe.NewClaudeRunner(binary, hostprobe.Dependencies{}),
-		"omo":    hostprobe.NewOmoRunner(binary, hostprotocol.OmoLifecycleExtension(binary), hostprobe.Dependencies{}, hostprotocol.OmoLifecycleExtension),
-		"omp":    hostprobe.NewOmpRunner(binary, hostprotocol.OmpLifecycleExtension(binary), hostprobe.Dependencies{}, hostprotocol.OmpLifecycleExtension),
+		"codex":    hostprobe.NewCodexRunner(binary, hostprobe.Dependencies{}),
+		"claude":   hostprobe.NewClaudeRunner(binary, hostprobe.Dependencies{}),
+		"omo":      hostprobe.NewOmoRunner(binary, hostprotocol.OmoLifecycleExtension(binary), hostprobe.Dependencies{}, hostprotocol.OmoLifecycleExtension),
+		"omp":      hostprobe.NewOmpRunner(binary, hostprotocol.OmpLifecycleExtension(binary), hostprobe.Dependencies{}, hostprotocol.OmpLifecycleExtension),
+		"opencode": hostprobe.NewOpencodeRunner(binary, hostprotocol.OpencodeLifecyclePlugin(binary), hostprobe.Dependencies{}, hostprotocol.OpencodeLifecyclePlugin),
 	}
 }
 

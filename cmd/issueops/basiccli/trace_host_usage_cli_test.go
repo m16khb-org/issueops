@@ -14,6 +14,7 @@ const (
 	hostCodexTurn    = `{"type":"thread.started","thread_id":"cli-thread"}` + "\n" + `{"type":"turn.completed","usage":{"input_tokens":8,"cached_input_tokens":2,"output_tokens":1}}` + "\n"
 	hostOmoMessage   = `{"type":"session","id":"cli-omo"}` + "\n" + `{"type":"message_end","message":{"role":"assistant","responseId":"cli-msg","stopReason":"stop","usage":{"input":5,"output":2,"cacheRead":0,"cacheWrite":1}}}` + "\n"
 	hostOmpMessage   = `{"type":"session","version":3,"id":"cli-omp"}` + "\n" + `{"type":"message_end","message":{"role":"assistant","provider":"anthropic","model":"claude-haiku-4-5","responseId":"cli-msg","stopReason":"toolUse","usage":{"input":6,"output":2,"cacheRead":0,"cacheWrite":0,"totalTokens":8,"cost":{"total":0.001}}}}` + "\n"
+	hostOpencodeStep = `{"type":"step_finish","sessionID":"cli-sess","part":{"id":"prt_cli","messageID":"cli-msg","type":"step-finish","cost":0,"tokens":{"input":7,"output":2,"reasoning":1,"cache":{"read":0,"write":0}}}}` + "\n"
 )
 
 func runTraceAnalyzeJSON(t *testing.T, args ...string) (trace.TraceAnalyzeResult, string, error) {
@@ -40,6 +41,7 @@ func TestRunTraceAnalyzeHostFormatsReportUsageThroughTheCLI(t *testing.T) {
 		{trace.InputFormatCodexExec, hostCodexTurn, "codex", 8, trace.UsageCoverageUnknown},
 		{trace.InputFormatOmoJSON, hostOmoMessage, "omo", 5, trace.UsageCoverageComplete},
 		{trace.InputFormatOmpJSON, hostOmpMessage, "omp", 6, trace.UsageCoverageComplete},
+		{trace.InputFormatOpencodeJSON, hostOpencodeStep, "opencode", 7, trace.UsageCoverageComplete},
 	}
 	for _, tc := range cases {
 		t.Run(tc.format, func(t *testing.T) {

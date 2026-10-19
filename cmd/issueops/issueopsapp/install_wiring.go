@@ -18,6 +18,7 @@ import (
 	"issueops/internal/adapter/install"
 	"issueops/internal/adapter/installutil"
 	mcpserviceadapter "issueops/internal/adapter/mcpservice"
+	opencodeadapter "issueops/internal/adapter/opencode"
 	mcpcontract "issueops/internal/contract/mcp"
 	"issueops/internal/contract/mcpservice"
 	"issueops/internal/port"
@@ -30,7 +31,7 @@ import (
 // CLI는 flag 해석과 출력만 소유한다.
 func installDependencies() installcli.Deps {
 	root, stateRoot := issueOpsRoot(), issueOpsStateRoot()
-	codex, claude, omo, omp, agy := newCodexInstaller(), newClaudeInstaller(), newOmoInstaller(), newOmpInstaller(), newAgyInstaller()
+	codex, claude, omo, omp, opencode, agy := newCodexInstaller(), newClaudeInstaller(), newOmoInstaller(), newOmpInstaller(), newOpencodeInstaller(), newAgyInstaller()
 	return installcli.Deps{
 		IssueOpsRoot:      func() string { return root },
 		StateRoot:         stateRoot,
@@ -45,9 +46,9 @@ func installDependencies() installcli.Deps {
 		},
 		ActivationBackend:    nativeActivationBackend(),
 		NativeInstallRequest: install.DefaultNativeInstallRequest,
-		InstallNative:        (installapp.Service{Environment: install.Environment{}, Installers: []port.HostInstaller{codex, claude, omo, omp, agy}}).Install,
+		InstallNative:        (installapp.Service{Environment: install.Environment{}, Installers: []port.HostInstaller{codex, claude, omo, omp, opencode, agy}}).Install,
 		ActivationReadback: func(req port.NativeInstallRequest) activationport.ReadbackVerifier {
-			return hostActivationReadback{request: req, codex: codex, claude: claude, omo: omo, omp: omp, agy: agy}
+			return hostActivationReadback{request: req, codex: codex, claude: claude, omo: omo, omp: omp, opencode: opencode, agy: agy}
 		},
 		SyncUpstream:        syncUpstream,
 		RemoveRetiredState:  install.RemoveRetiredState,
@@ -82,37 +83,29 @@ func (s installMCPService) EnsureRunning(ctx context.Context, binary string) (mc
 }
 
 type hostActivationReadback struct {
-	request port.NativeInstallRequest
-	codex   codexadapter.Installer
-	claude  claudeadapter.Installer
-	omo     extensionhost.Installer
-	omp     extensionhost.Installer
-	agy     agyadapter.Installer
+	request  port.NativeInstallRequest
+	codex    codexadapter.Installer
+	claude   claudeadapter.Installer
+	omo      extensionhost.Installer
+	omp      extensionhost.Installer
+	opencode opencodeadapter.Installer
+	agy      agyadapter.Installer
 }
 
 func (readback hostActivationReadback) Verify(_ context.Context, issueOpsRoot, targetBinary string) (activationport.Readback, error) {
 	if readback.request.Root != issueOpsRoot || readback.request.BinPath != targetBinary {
 		return activationport.Readback{}, fmt.Errorf("native activation readback target changed")
 	}
-	codexEvidence, err := readback.codex.VerifyActivation(readback.request)
-	if err != nil {
-		return activationport.Readback{}, err
-	}
-	claudeEvidence, err := readback.claude.VerifyActivation(readback.request)
-	if err != nil {
-		return activationport.Readback{}, err
-	}
-	omoEvidence, err := readback.omo.VerifyActivation(readback.request)
-	if err != nil {
-		return activationport.Readback{}, err
-	}
-	ompEvidence, err := readback.omp.VerifyActivation(readback.request)
-	if err != nil {
-		return activationport.Readback{}, err
-	}
-	agyEvidence, err := readback.agy.VerifyActivation(readback.request)
-	if err != nil {
-		return activationport.Readback{}, err
+	var evidence []port.NativeActivationEvidence
+	for _, verify := range []func(port.NativeInstallRequest) ([]port.NativeActivationEvidence, error){
+		readback.codex.VerifyActivation, readback.claude.VerifyActivation, readback.omo.VerifyActivation,
+		readback.omp.VerifyActivation, readback.opencode.VerifyActivation, readback.agy.VerifyActivation,
+	} {
+		hostEvidence, err := verify(readback.request)
+		if err != nil {
+			return activationport.Readback{}, err
+		}
+		evidence = append(evidence, hostEvidence...)
 	}
 	tools := mcpcontract.IssueOpsBasicTools()
 	if len(tools) != 1 || tools[0].Name != "issueops_execution" {
@@ -122,10 +115,6 @@ func (readback hostActivationReadback) Verify(_ context.Context, issueOpsRoot, t
 	if err != nil {
 		return activationport.Readback{}, err
 	}
-	evidence := append(codexEvidence, claudeEvidence...)
-	evidence = append(evidence, omoEvidence...)
-	evidence = append(evidence, ompEvidence...)
-	evidence = append(evidence, agyEvidence...)
 	result := make([]activationport.Evidence, 0, len(evidence))
 	for _, item := range evidence {
 		result = append(result, activationport.Evidence{

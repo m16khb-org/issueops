@@ -38,6 +38,8 @@ type CommandRequest struct {
 	Env      []string
 	Timeout  time.Duration
 	OmoJSONL bool
+	// Stdin, when set, is the child's standard input.
+	Stdin string
 }
 
 type CommandOutput struct {
@@ -60,6 +62,9 @@ type Dependencies struct {
 	RemoveAll func(string) error
 	Getenv    func(string) string
 	Environ   func() []string
+	// StartServer and HTTPGet drive a host's private background server.
+	StartServer func(context.Context, ServerRequest) (ServerProcess, error)
+	HTTPGet     func(ctx context.Context, url, user, password string) (int, []byte, error)
 }
 
 type ExecRunner struct{}
@@ -100,6 +105,9 @@ func (ExecRunner) Run(ctx context.Context, request CommandRequest) (CommandOutpu
 	cmd.Dir = request.Cwd
 	if request.Env != nil {
 		cmd.Env = append([]string(nil), request.Env...)
+	}
+	if request.Stdin != "" {
+		cmd.Stdin = strings.NewReader(request.Stdin)
 	}
 	stdout := &boundedBuffer{limit: MaxOutputBytes}
 	stderr := &boundedBuffer{limit: MaxOutputBytes}
@@ -197,6 +205,12 @@ func normalizeDependencies(deps Dependencies) Dependencies {
 	}
 	if deps.Environ == nil {
 		deps.Environ = os.Environ
+	}
+	if deps.StartServer == nil {
+		deps.StartServer = startExecServer
+	}
+	if deps.HTTPGet == nil {
+		deps.HTTPGet = basicAuthGet
 	}
 	return deps
 }

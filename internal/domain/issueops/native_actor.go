@@ -2,6 +2,7 @@ package issueops
 
 import (
 	"fmt"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -9,8 +10,10 @@ import (
 )
 
 func ValidateNativeActor(actor model.NativeActor) error {
-	if actor.Host != "codex" && actor.Host != "claude" && actor.Host != "omo" && actor.Host != "omp" {
-		return fmt.Errorf("native actor host must be codex, claude, omo, or omp")
+	switch actor.Host {
+	case "codex", "claude", "omo", "omp", "opencode":
+	default:
+		return fmt.Errorf("native actor host must be codex, claude, omo, omp, or opencode")
 	}
 	if strings.TrimSpace(actor.SessionID) == "" {
 		return fmt.Errorf("native actor session_id is required")
@@ -35,6 +38,11 @@ func NormalizeNativeActor(actor model.NativeActor) (model.NativeActor, error) {
 	if err := ValidateNativeActor(actor); err != nil {
 		return actor, err
 	}
+	// An opencode session is proven only by its own server process, never by a
+	// long-lived ancestor such as the shell the user started opencode from.
+	if actor.Host == "opencode" && !IsOpencodeExecutable(actor.SessionProcess.Executable) {
+		return actor, fmt.Errorf("opencode session process receipt must be the opencode standalone server")
+	}
 	if slices.Contains(actor.ProcessAncestry, *actor.SessionProcess) {
 		return actor, nil
 	}
@@ -49,4 +57,28 @@ func ValidateObservedNativeProcess(receipt model.NativeProcessReceipt, status st
 		return fmt.Errorf("native process identity does not match live PID %d", receipt.PID)
 	}
 	return nil
+}
+
+// IsOpencodeExecutable reports whether a process executable is the opencode
+// binary, with the same normalization the CLI uses to pick its receipt.
+func IsOpencodeExecutable(executable string) bool {
+	normalized := strings.ToLower(filepath.ToSlash(strings.TrimSpace(executable)))
+	return strings.TrimSuffix(filepath.Base(normalized), ".exe") == "opencode"
+}
+
+// OpencodeStandaloneServer reports whether whitespace-split process arguments
+// belong to the per-client `opencode serve --stdio` server that `--standalone`
+// starts. The first opencode token is the executable (earlier fields are pieces
+// of a path with spaces), so the subcommand must follow it directly; a prompt
+// that merely contains "opencode serve --stdio" does not match. A path whose
+// earlier piece also ends in "opencode" fails closed.
+func OpencodeStandaloneServer(fields []string) bool {
+	for index, field := range fields {
+		if !IsOpencodeExecutable(field) {
+			continue
+		}
+		rest := fields[index+1:]
+		return len(rest) > 0 && rest[0] == "serve" && slices.Contains(rest[1:], "--stdio")
+	}
+	return false
 }
