@@ -160,7 +160,7 @@ work set out to do and how far it got.
 | Start | `issueops-create-issue` settles the requirements through research and blocking questions, then creates the issue. An implementation issue body needs the `요약` (summary), `배경` (background), `완료 기준` (acceptance), `범위` (scope), and `검증` (verification) sections |
 | Branch | Named `<issue number>-<slug>`. GitHub links it to the issue as a linked branch; GitLab links it through the naming rule |
 | Plan | The plan review's progress shows as one line in a managed region of the issue body |
-| Implement | Tracked copies of the plan, intent, spec, and plan review (`plan.md`, `intent.md`, `spec.md`, `plan-review.md`) are committed to `.issueops/issues/<n>/`; the spec and plan-review copies exist only when those materials do |
+| Implement | Tracked copies of the plan, architecture, intent, spec, and plan review (`plan.md`, `architecture.md`, `intent.md`, `spec.md`, `plan-review.md`) are committed to `.issueops/issues/<n>/`; the spec and plan-review copies exist only when those materials do |
 | Publish | The PR comes from the issue-linked branch and carries the caution and ADR records with the code |
 | After merge | A human-written progress report is reflected into the issue body and the issue is closed |
 
@@ -209,10 +209,16 @@ mistake would cost.
 |---|---|---|
 | Context (hook) | Static information a session needs. Reads and writes no state | `SessionStart` and `SubagentStart` inject the `.issueops/` document catalog |
 | Procedure (skill) | Ordering and criteria that need judgment. Review catches violations | Read CONSTITUTION, CAUTIONS, and ADR before planning and record them under `## 적용되는 결정과 주의사항` |
-| Gate (CLI) | Violations block the next stage. Sealed into the cycle state by fingerprint | The required-section check in `link-plan`, the `project_docs_review` publication gate |
+| Gate (CLI) | Violations block the next stage. Sealed into the cycle state by fingerprint | The required-section checks in `architecture review` and `link-plan`, the `project_docs_review` publication gate |
 
 These gates exist in the CLI for the operating docs:
 
+- `issueops architecture review` records an approval only when the architecture
+  document has all five sections, `## 요구사항과 규모`, `## 데이터와 API 계약`,
+  `## 구조와 흐름`, `## 병목과 장애`, and `## 절충점과 기각한 대안`, each with a
+  non-empty body. The approval is bound to the document's sha256, so editing it
+  afterwards turns it into `architecture_review_stale` and the cycle cannot move on
+  to writing the plan until it is approved again.
 - `issueops link-plan` refuses a plan that lacks any of the four sections
   `## 적용되는 결정과 주의사항`, `## 재사용하는 기존 구현`, `## 성능 영향`, and
   `## 하위 호환성과 side effect`.
@@ -400,7 +406,7 @@ decides which stage a cycle is in, so every host gets the same answer.
 |---|---|---|
 | 1 Confirm and create the issue | `issueops-create-issue` | Settles the contract through research and blocking questions, then creates the issue |
 | 2 Prepare the branch | `issueops-prepare` | Seals the base SHA and links the branch to the issue |
-| 3 Read docs, plan, review, hand off | `issueops-plan` | Reads the operating docs and related caution and ADR records, writes the plan, passes review, and picks the execution session automatically |
+| 3 Read docs, approve the architecture, plan, review, hand off | `issueops-plan` | Reads the operating docs and related caution and ADR records, gets the architecture document approved by an independent review, writes the plan on top of it, passes review, and picks the execution session automatically |
 | 4 Implement | `issueops-implement` | Implements with TDD in the canonical worktree |
 | 5 Clean AI slop | `issueops-slop-clean` | Removes residue and seals the change set |
 | 6 Reflect into project docs | `issueops-docs` | Records decisions and pitfalls in the operating docs and reseals |

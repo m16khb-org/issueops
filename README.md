@@ -136,7 +136,7 @@ PR, 머지 후 결과 보고가 모두 그 이슈 번호에 묶입니다. cautio
 | 시작 | `issueops-create-issue`가 조사와 확인 질문으로 요구사항을 정한 뒤 이슈를 만듭니다. 구현 이슈 본문에는 `요약`, `배경`, `완료 기준`, `범위`, `검증` 섹션이 있어야 합니다 |
 | 브랜치 | `<이슈 번호>-<slug>` 이름으로 만듭니다. GitHub에서는 linked branch로 이슈에 연결하고, GitLab에서는 이 이름 규칙으로 연결합니다 |
 | 계획 | 계획 검토의 진행 흐름이 이슈 본문의 관리 영역에 한 줄로 표시됩니다 |
-| 구현 | 계획·의도·명세·계획 검토 사본(`plan.md`, `intent.md`, `spec.md`, `plan-review.md`)을 `.issueops/issues/<n>/`에 커밋합니다. 명세와 계획 검토 사본은 해당 자료가 있을 때만 생깁니다 |
+| 구현 | 계획·아키텍처·의도·명세·계획 검토 사본(`plan.md`, `architecture.md`, `intent.md`, `spec.md`, `plan-review.md`)을 `.issueops/issues/<n>/`에 커밋합니다. 명세와 계획 검토 사본은 해당 자료가 있을 때만 생깁니다 |
 | 발행 | 이슈에 연결된 브랜치에서 PR을 만들고, caution·ADR 기록이 코드와 함께 담깁니다 |
 | 머지 후 | 사람이 쓴 진행 결과를 이슈 본문에 반영하고 이슈를 닫습니다 |
 
@@ -171,8 +171,12 @@ PR/MR 발행 완료, 머지, 정리는 별도 단계입니다. 에이전트는 �
 |---|---|---|
 | 문맥(hook) | 세션에 필요한 정적 정보. 상태를 읽거나 쓰지 않습니다 | `SessionStart`·`SubagentStart`가 `.issueops/` 문서 목록을 넣습니다 |
 | 절차(스킬) | 판단이 필요한 순서와 기준. 어기면 리뷰에서 잡습니다 | 계획 전에 CONSTITUTION·CAUTIONS·ADR을 읽고 `## 적용되는 결정과 주의사항`에 적습니다 |
-| 게이트(CLI) | 어기면 다음 단계가 막힙니다. fingerprint로 사이클 상태에 봉인합니다 | `link-plan`의 필수 섹션 검사, `project_docs_review` 발행 게이트 |
+| 게이트(CLI) | 어기면 다음 단계가 막힙니다. fingerprint로 사이클 상태에 봉인합니다 | `architecture review`의 필수 섹션 검사, `link-plan`의 필수 섹션 검사, `project_docs_review` 발행 게이트 |
 
+- `architecture review`는 아키텍처 문서에 `## 요구사항과 규모`, `## 데이터와 API 계약`,
+  `## 구조와 흐름`, `## 병목과 장애`, `## 절충점과 기각한 대안` 다섯 섹션이 모두 있고 본문이 비어 있지
+  않아야 기록됩니다. 승인은 문서의 sha256에 묶이므로, 승인한 뒤 문서를 고치면
+  `architecture_review_stale`이 되어 다시 승인을 받아야 계획 작성으로 넘어갑니다.
 - `link-plan`은 `## 적용되는 결정과 주의사항`, `## 재사용하는 기존 구현`, `## 성능 영향`,
   `## 하위 호환성과 side effect` 네 섹션 중 하나라도 없으면 계획을 거부합니다.
 - `project-docs-review record`의 `--verdict updated`는 `--doc`으로 적은 경로가 모두 실제 변경에
@@ -314,7 +318,7 @@ io next --id "반환된-ID" --json
 |---|---|---|
 | 1. 이슈 확정·생성 | `issueops-create-issue` | 요구사항·완료 기준을 담은 이슈 |
 | 2. 브랜치 준비 | `issueops-prepare` | base SHA와 이슈에 연결된 브랜치 |
-| 3. 계획·검토·인계 | `issueops-plan` | 관련 caution·ADR을 반영해 검토한 계획과 실행 worktree·세션 |
+| 3. 아키텍처·계획·검토·인계 | `issueops-plan` | 독립 리뷰로 승인한 아키텍처, 관련 caution·ADR을 반영해 검토한 계획, 실행 worktree·세션 |
 | 4. 구현 | `issueops-implement` | 테스트로 확인한 구현 |
 | 5. AI slop 정리 | `issueops-slop-clean` | 불필요한 변경을 제거하고 봉인한 diff |
 | 6. 문서 반영 | `issueops-docs` | 현재 구현과 일치하는 운영 문서, 이번 작업에서 나온 caution·ADR 기록 |
