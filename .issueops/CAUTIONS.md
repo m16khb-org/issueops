@@ -77,6 +77,7 @@ footer; older notes also live in `archive/cautions-incidents.md`.
 | Date | Lesson |
 |---|---|
 | 2026-10-19 | [게이트 CHECK는 긴 출력 뒤에 찍은 기대 문자열이 잘려 불일치가 되고, `--file` 없는 `gates check`는 모든 원장을 실행한다](cautions/2026-10-19-gate-check-output-is-truncated-before-expect-is-matched-and.md) |
+| 2026-10-19 | [Herdr 인계의 두 번째 전달 관측은 수신 세션이 claim하기 전에 기록해야 한다](cautions/2026-10-19-herdr-claim.md) |
 | 2026-10-18 | [Go 테스트·self-verify를 도는 게이트 CHECK는 `LANG`과 CI와 같은 Python venv가 있어야 통과한다](cautions/2026-10-18-gate-checks-that-run-go-tests-or-self-verify-need-lang-and-t.md) |
 | 2026-10-15 | [Linux에서 병렬 테스트가 방금 쓴 스크립트를 exec하면 text file busy(ETXTBSY)로 확률적으로 실패하고 macOS에서는 재현되지 않는다](cautions/2026-10-15-linux-exec-text-file-busy.md) |
 | 2026-10-14 | [`execution complete`는 봉인하는 head가 검증받은 변경 집합인지 보지 않으므로, 보고서를 쓰기 전에 `_stale`·PR 뒤 코드 커밋을 확인한다](cautions/2026-10-14-completion-does-not-check-the-head-was-verified.md) |
