@@ -21,7 +21,7 @@ func TestBuildDelegatedProfileInheritsParentState(t *testing.T) {
 		DomainReview: &model.IssueOpsDomainReview{
 			ModelFit: "go", Terminology: []string{"term"}, Risks: []string{"risk"}, OpenUncertainties: []string{"u"},
 		},
-		DesignReview:        &reviewcontract.DesignReview{Approved: false, Verification: []string{"v"}},
+		ArchitectureReview:  &reviewcontract.ArchitectureReview{Approved: false, Verification: []string{"v"}},
 		CompatibilityReview: &reviewcontract.CompatibilityReview{Approved: false, Blockers: []string{"b"}},
 	}
 	child := model.IssueOpsRecord{OK: true, ID: "io-child", Repo: "/repo", Branch: "6001-child", Phase: model.IssueOpsPhaseProblem}
@@ -56,8 +56,8 @@ func TestBuildDelegatedProfileInheritsParentState(t *testing.T) {
 	if built.IssueURL != "https://example.com/i/6000" {
 		t.Fatalf("issue url inheritance wrong: %q", built.IssueURL)
 	}
-	if built.DesignReview == nil || !built.DesignReview.Approved {
-		t.Fatalf("design review must be inherited as approved: %#v", built.DesignReview)
+	if built.ArchitectureReview == nil || !built.ArchitectureReview.Approved {
+		t.Fatalf("architecture review must be inherited as approved: %#v", built.ArchitectureReview)
 	}
 	if built.CompatibilityReview == nil || !built.CompatibilityReview.Approved || built.CompatibilityReview.Blockers != nil {
 		t.Fatalf("compatibility review must inherit approved and cleared blockers: %#v", built.CompatibilityReview)
@@ -89,5 +89,25 @@ func TestParentRefProjectsChildReference(t *testing.T) {
 	if ref.CycleID != "io-child" || ref.Branch != "6001-child" || ref.Title != "child one" ||
 		ref.ChildIssueURL != "https://example.com/i/6001" || ref.CreatedAt != "now" {
 		t.Fatalf("parent ref wrong: %#v", ref)
+	}
+}
+
+func TestBuildDelegatedProfileMarksParentArchitectureReview(t *testing.T) {
+	parent := model.IssueOpsRecord{
+		OK: true, ID: "io-parent", Repo: "/repo", Branch: "6000-parent", Phase: model.IssueOpsPhaseImplement,
+		IssueURL: "https://example.com/i/6000",
+		ArchitectureReview: &reviewcontract.ArchitectureReview{
+			Approved: true, ReviewerContext: "subagent", ReviewedArchitectureDigest: "abc",
+			Verification: []string{"architecture review checked risks"},
+		},
+	}
+	child := model.IssueOpsRecord{OK: true, ID: "io-child", Repo: "/repo", Branch: "6001-child", Phase: model.IssueOpsPhaseProblem}
+	built := BuildDelegatedProfile(parent, child, model.IssueOpsChildStartRequest{Branch: "6001-child", Title: "child", TaskScope: "scope"}, "2026-08-21T12:00:00Z")
+	review := built.ArchitectureReview
+	if review == nil || !review.Approved || review.ReviewerContext != ParentReviewPattern {
+		t.Fatalf("child copy must be approved and carry the inherited marker: %+v", review)
+	}
+	if parent.ArchitectureReview.ReviewerContext != "subagent" {
+		t.Fatalf("the parent's own review must stay untouched: %+v", parent.ArchitectureReview)
 	}
 }

@@ -61,14 +61,14 @@ func (g *executionSyncBaseGateRun) checkHeadOnRecordedBranch() {
 }
 
 // observeMergeState는 ⑦ merge_state_clean / merge_in_progress: 중간 상태를
-// 모드별로 갈라 본다(design-review F11 — apply는 거부, finalize/abort는 필수 전제).
+// 모드별로 갈라 본다(architecture-review F11 — apply는 거부, finalize/abort는 필수 전제).
 func (g *executionSyncBaseGateRun) observeMergeState() {
 	g.inventory.MergeInProgress = executionSyncBaseMergeInProgress(g.ctx, g.inventory.Root, g.deps)
 	g.result.MergeInProgress = g.inventory.MergeInProgress
 	mergeFacts := basesyncdomain.MergeStateFacts{Mode: g.mode, MergeInProgress: g.inventory.MergeInProgress}
 	if g.mode == issueops.ExecutionSyncBaseApply {
 		// ⑧ worktree_clean: tracked 변경만 차단하고 untracked는 경고로
-		//    나열한다(design-review F10 — 상시 거부 방지).
+		//    나열한다(architecture-review F10 — 상시 거부 방지).
 		trackedDirty, untracked := executionSyncBaseWorktreeStatus(g.ctx, g.inventory.Root, g.deps)
 		g.result.UntrackedWarnings = untracked
 		mergeFacts.TrackedDirty = trackedDirty
@@ -86,7 +86,7 @@ func (g *executionSyncBaseGateRun) observeWorkTip() {
 }
 
 // observeRemoteBranch는 ③ remote_branch_present: 머지·삭제된 원격 브랜치
-// 부활을 방지한다(design-review F7).
+// 부활을 방지한다(architecture-review F7).
 func (g *executionSyncBaseGateRun) observeRemoteBranch() {
 	if code, out := g.deps.Git(g.ctx, g.inventory.Root, "ls-remote", "--heads", "origin", "refs/heads/"+g.inventory.Branch); code != 0 {
 		g.missing = append(g.missing, "remote_branch_readable")
@@ -118,7 +118,7 @@ func (g *executionSyncBaseGateRun) resolveBaseTip() {
 }
 
 // fetchBaseTip은 fetch 선행(preview·apply)으로 stale base 머지를 방지한다
-// (design-review F6 — pr-readiness strict 선례). base tip은 반드시 fetch 이후 값이어야 한다.
+// (architecture-review F6 — pr-readiness strict 선례). base tip은 반드시 fetch 이후 값이어야 한다.
 func (g *executionSyncBaseGateRun) fetchBaseTip() {
 	if g.inventory.BaseBranch == "" {
 		return

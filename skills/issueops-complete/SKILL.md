@@ -148,7 +148,7 @@ Phase routing
   → implement → ai-slop-clean → feedback → pr → done
 
 Flow evidence
-  intent / plan-prep 4항목 / design review(approved)
+  intent / plan-prep 4항목 / architecture review(approved)
   devils-advocate(pass, 결함 1건 발견·교정) / compatibility review(approved)
   TDD RED→GREEN, ai-slop-clean 기록, MR 검증(verify-artifact)
 

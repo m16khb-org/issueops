@@ -24,7 +24,7 @@ type Execution struct {
 	// SyncBaseEvents는 completion 이후 base 재동기화(merge+push)의 durable
 	// 감사 기록이다. append-only이며 Completion.FinalHead는 불변으로 남는다
 	// — 완결 시점 증거를 보존하고, PR head는 provider가 관측하며, merge OID는
-	// 이 이벤트가 담당한다(설계 v2 design-review F9). 기존 레코드는 nil이므로
+	// 이 이벤트가 담당한다(설계 v2 architecture-review F9). 기존 레코드는 nil이므로
 	// 스키마는 additive다.
 	SyncBaseEvents []ExecutionSyncBaseEvent `json:"sync_base_events,omitempty"`
 }

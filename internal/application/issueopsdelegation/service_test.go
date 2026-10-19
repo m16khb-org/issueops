@@ -93,7 +93,7 @@ func authority() cycleapp.MutationAuthority { return cycleapp.NewMutationAuthori
 func readyParent() model.IssueOpsRecord {
 	return model.IssueOpsRecord{
 		ID: "parent", Repo: "/repo", Branch: "1-parent", Phase: model.IssueOpsPhaseImplement,
-		DesignReview:         &reviewcontract.DesignReview{Approved: true},
+		ArchitectureReview:   &reviewcontract.ArchitectureReview{Approved: true},
 		CompatibilityReview:  &reviewcontract.CompatibilityReview{Approved: true},
 		DevilsAdvocateReview: &model.IssueOpsDevilsAdvocateReview{Verdict: "proceed", RecordedAt: "2026-09-27T00:00:00Z"},
 	}
@@ -157,7 +157,7 @@ func TestChildStartIsIdempotentForExistingChild(t *testing.T) {
 func TestChildStartRejectionsLeaveStoreUntouched(t *testing.T) {
 	notReady := readyParent()
 	notReady.Phase = model.IssueOpsPhasePlan
-	notReady.DesignReview = nil
+	notReady.ArchitectureReview = nil
 	badRepo := readyParent()
 	badRepo.Repo = "  "
 	cases := []struct {
@@ -170,7 +170,7 @@ func TestChildStartRejectionsLeaveStoreUntouched(t *testing.T) {
 		{"missing branch", readyParent(), func(r *model.IssueOpsChildStartRequest) { r.Branch = "" }, "branch is required"},
 		{"missing scope", readyParent(), func(r *model.IssueOpsChildStartRequest) { r.TaskScope = "" }, "task_scope is required"},
 		{"missing acceptance", readyParent(), func(r *model.IssueOpsChildStartRequest) { r.AcceptanceCriteria = []string{" "} }, "acceptance_criteria"},
-		{"unready parent", notReady, nil, "parent_phase_not_implement, parent_design_review_unapproved"},
+		{"unready parent", notReady, nil, "parent_phase_not_implement, parent_architecture_review_unapproved"},
 		{"same branch", readyParent(), func(r *model.IssueOpsChildStartRequest) { r.Branch = "1-parent" }, "child_branch_equals_parent"},
 		{"empty repo", badRepo, nil, "repo is required"},
 		{"invalid branch", readyParent(), func(r *model.IssueOpsChildStartRequest) { r.Branch = "no-number" }, "issue number"},

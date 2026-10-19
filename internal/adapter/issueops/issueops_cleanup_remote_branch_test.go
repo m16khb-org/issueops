@@ -362,7 +362,7 @@ func TestCleanupRemoteBranchPushFailureSurfacesFailedStep(t *testing.T) {
 	}
 }
 
-// 감사(design-review M12): apply 성공 시 브랜치·OID·시각이 응답 audit에 남는다.
+// 감사(architecture-review M12): apply 성공 시 브랜치·OID·시각이 응답 audit에 남는다.
 // 이슈 본문은 쓰지 않는다(#513).
 func TestCleanupRemoteBranchApplyReportsAuditLine(t *testing.T) {
 	stateRoot, record := remoteBranchTestRecord(t)

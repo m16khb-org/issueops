@@ -238,7 +238,7 @@ issueops artifact stage --id "$ISSUEOPS_ID" --name spec --file spec.md --json
 issueops artifact stage --id "$ISSUEOPS_ID" --name verified-execution-loop --file verified-execution-loop.md --json
 ```
 
-- 이름은 `plan|spec|verified-execution-loop` 고정, 파일당 1MiB 상한, secret 패턴은 거부된다(스크럽 없음).
+- 이름은 `plan|spec|verified-execution-loop|architecture` 고정, 파일당 1MiB 상한, secret 패턴은 거부된다(스크럽 없음).
 - `intent`는 staging 대상이 아니다. prepare가 `record.intent`(원문 요청·해석·성공 기준·비목표·
   제약·모호함·intent_class)를 렌더해 같은 디렉터리에 `intent.md`로 봉인하고 manifest에
   `intent`로 넣는다. 문서에 기록 시각이 없어 같은 내용의 재기록은 reseed를 그대로
@@ -304,7 +304,7 @@ issueops schema-evidence record --id "$ISSUEOPS_ID"   --measurement "orders: 8.4
 ## Implementation Review Gate
 
 사이클의 구현 세션은 publication 전에 planner급 모델 fresh 서브에이전트로
-구현 diff의 design-review 적대 리뷰를 수행하고 결과를 기록해야 한다:
+구현 diff의 architecture-review 적대 리뷰를 수행하고 결과를 기록해야 한다:
 
 ```bash
 issueops implementation-review record --id "$ISSUEOPS_ID"   --verdict pass --finding "..." --evidence "..."   --reviewer-host codex --reviewer-model gpt-6-astra   --host codex --session-id "$SESSION" --cwd "$WORKTREE" --json

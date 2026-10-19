@@ -24,24 +24,24 @@ func TestIssueOpsDoneRequiresPRPhase(t *testing.T) {
 	}
 }
 
-func TestIssueOpsImplementationReadinessRejectsPersistedWeakDesignReview(t *testing.T) {
+func TestIssueOpsImplementationReadinessRejectsPersistedWeakArchitectureReview(t *testing.T) {
 	t.Parallel()
 
 	record := issueops.IssueOpsRecord{
-		OK:            true,
-		Repo:          "/repo/example",
-		Branch:        "1-demo",
-		IssueURL:      "https://github.com/example/repo/issues/1",
-		PlanPath:      "plans/demo.md",
-		WorktreePath:  "/repo/example.worktrees/1-demo",
-		Intent:        issueOpsIntentContractForTest(),
-		DesignReview:  issueOpsWeakApprovedDesignReviewForTest(),
-		BranchPrepare: &issueops.IssueOpsBranchPrepare{Provider: "github", IssueURL: "https://github.com/example/repo/issues/1", Branch: "1-demo", BaseBranch: "main", LinkVerified: true},
+		OK:                 true,
+		Repo:               "/repo/example",
+		Branch:             "1-demo",
+		IssueURL:           "https://github.com/example/repo/issues/1",
+		PlanPath:           "plans/demo.md",
+		WorktreePath:       "/repo/example.worktrees/1-demo",
+		Intent:             issueOpsIntentContractForTest(),
+		ArchitectureReview: issueOpsWeakApprovedArchitectureReviewForTest(),
+		BranchPrepare:      &issueops.IssueOpsBranchPrepare{Provider: "github", IssueURL: "https://github.com/example/repo/issues/1", Branch: "1-demo", BaseBranch: "main", LinkVerified: true},
 	}
 
 	ready := IssueOpsImplementationReadiness(record)
 	if ready.Ready {
-		t.Fatalf("weak persisted approved design review should not be implementation-ready: %+v", ready)
+		t.Fatalf("weak persisted approved architecture review should not be implementation-ready: %+v", ready)
 	}
 	for _, want := range []string{"refactor_plan", "alternatives", "risks"} {
 		if !containsString(ready.Missing, want) {
@@ -82,7 +82,7 @@ func TestImplementGateDoesNotRequireCodeGraph(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	recordIssueOpsApprovedDesignForTest(t, stateRoot, record.ID)
+	recordIssueOpsApprovedArchitectureForTest(t, stateRoot, record.ID)
 	record, err = LinkIssueOpsPlan(stateRoot, record.ID, planPath)
 	if err != nil {
 		t.Fatal(err)
@@ -111,16 +111,16 @@ func TestIssueOpsStrictPRReadinessRequiresCleanSyncedRepo(t *testing.T) {
 
 	repo := initIssueOpsRepo(t)
 	record := issueops.IssueOpsRecord{
-		OK:            true,
-		Repo:          repo,
-		Branch:        "main",
-		IssueURL:      "https://gitlab.example/group/project/-/issues/1",
-		PlanPath:      "plans/demo.md",
-		WorktreePath:  repo,
-		Intent:        issueOpsIntentContractForTest(),
-		DesignReview:  issueOpsDesignReviewForTest(),
-		BranchPrepare: &issueops.IssueOpsBranchPrepare{Provider: "gitlab", IssueURL: "https://gitlab.example/group/project/-/issues/1", Branch: "main", BaseBranch: "main", LinkVerified: true},
-		AISlopCleanAt: "2026-06-05T00:00:00Z",
+		OK:                 true,
+		Repo:               repo,
+		Branch:             "main",
+		IssueURL:           "https://gitlab.example/group/project/-/issues/1",
+		PlanPath:           "plans/demo.md",
+		WorktreePath:       repo,
+		Intent:             issueOpsIntentContractForTest(),
+		ArchitectureReview: issueOpsArchitectureReviewForTest(),
+		BranchPrepare:      &issueops.IssueOpsBranchPrepare{Provider: "gitlab", IssueURL: "https://gitlab.example/group/project/-/issues/1", Branch: "main", BaseBranch: "main", LinkVerified: true},
+		AISlopCleanAt:      "2026-06-05T00:00:00Z",
 		// publication 게이트는 execution lease가 없는 record에도 걸린다.
 		ProjectDocsReview: &issueops.IssueOpsProjectDocsReview{Verdict: "no-change", ReviewedDocs: []string{".issueops/CAUTIONS.md"}},
 	}
@@ -161,16 +161,16 @@ func TestIssueOpsStrictPRReadinessUsesLinkedWorktree(t *testing.T) {
 		t.Fatal(err)
 	}
 	record := issueops.IssueOpsRecord{
-		OK:            true,
-		Repo:          repo,
-		Branch:        branch,
-		IssueURL:      "https://gitlab.example/group/project/-/issues/2",
-		PlanPath:      "plans/demo.md",
-		WorktreePath:  worktree,
-		Intent:        issueOpsIntentContractForTest(),
-		DesignReview:  issueOpsDesignReviewForTest(),
-		BranchPrepare: &issueops.IssueOpsBranchPrepare{Provider: "gitlab", IssueURL: "https://gitlab.example/group/project/-/issues/2", Branch: branch, BaseBranch: "main", LinkVerified: true},
-		AISlopCleanAt: "2026-06-05T00:00:00Z",
+		OK:                 true,
+		Repo:               repo,
+		Branch:             branch,
+		IssueURL:           "https://gitlab.example/group/project/-/issues/2",
+		PlanPath:           "plans/demo.md",
+		WorktreePath:       worktree,
+		Intent:             issueOpsIntentContractForTest(),
+		ArchitectureReview: issueOpsArchitectureReviewForTest(),
+		BranchPrepare:      &issueops.IssueOpsBranchPrepare{Provider: "gitlab", IssueURL: "https://gitlab.example/group/project/-/issues/2", Branch: branch, BaseBranch: "main", LinkVerified: true},
+		AISlopCleanAt:      "2026-06-05T00:00:00Z",
 		// publication 게이트는 execution lease가 없는 record에도 걸린다.
 		ProjectDocsReview: &issueops.IssueOpsProjectDocsReview{Verdict: "no-change", ReviewedDocs: []string{".issueops/CAUTIONS.md"}},
 	}
@@ -223,7 +223,7 @@ func TestIssueOpsStrictPRReadinessDetectsStaleAISlopCleanAfterImplementationChan
 	if err != nil {
 		t.Fatal(err)
 	}
-	recordIssueOpsApprovedDesignForTest(t, stateRoot, record.ID)
+	recordIssueOpsApprovedArchitectureForTest(t, stateRoot, record.ID)
 	writeIssueOpsFile(t, worktree, "plans/demo.md", planBodyForTest())
 	record, err = LinkIssueOpsPlan(stateRoot, record.ID, filepath.Join(worktree, "plans/demo.md"))
 	if err != nil {

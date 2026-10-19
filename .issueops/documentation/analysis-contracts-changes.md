@@ -5,7 +5,7 @@ are recorded in `quality-audit-2026-10-03.md` and `quality-after-2026-10-03.json
 
 ## Scope and decision
 Compacted three independently activated actor contracts; frontmatter name/description unchanged.
-Read `owner-design-review.md` and `owner-preservation-review.md` first.
+Read `owner-architecture-review.md` and `owner-preservation-review.md` first.
 Keep execution rules in each SKILL.md; move optional examples/catalogs, not required outputs.
 Rejected a mandatory shared runtime/evaluator dependency and a hard 250-line cutoff.
 | Skill | SKILL.md before → after | Reference changes |

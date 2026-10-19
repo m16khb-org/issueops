@@ -6,7 +6,7 @@ compatibility. Final measurements and closure evidence are recorded in
 
 ## Decision and Scope
 
-Applied the existing owner-design-review and owner-preservation-review findings.
+Applied the existing owner-architecture-review and owner-preservation-review findings.
 Actor instructions remain in each SKILL.md; evaluator material and sibling installs are not execution prerequisites.
 Only Markdown in the four assigned skill directories and this report was written.
 Frontmatter name/description remain byte-identical. No code, tests, global docs, or historical evaluation files were edited.

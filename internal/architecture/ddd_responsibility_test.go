@@ -640,7 +640,7 @@ func dddTask(path string) string {
 		switch {
 		case strings.HasPrefix(part, "benchmark/"):
 			return "T17"
-		case strings.HasPrefix(part, "devilsadvocate/"), strings.HasPrefix(part, "intentdesign/"), strings.HasPrefix(part, "compatibilityreview/"),
+		case strings.HasPrefix(part, "devilsadvocate/"), strings.HasPrefix(part, "intentarchitecture/"), strings.HasPrefix(part, "compatibilityreview/"),
 			strings.HasPrefix(part, "issueops_regress"), strings.HasPrefix(part, "issueops_implementation_review"),
 			strings.HasPrefix(part, "issueops_project_docs_review"), strings.HasPrefix(part, "issueops_schema_evidence"),
 			strings.HasPrefix(part, "issueops_feedback"), strings.HasPrefix(part, "issueops_ledger_recorders"):

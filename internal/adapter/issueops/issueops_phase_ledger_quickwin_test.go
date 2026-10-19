@@ -54,7 +54,7 @@ func TestIssueOpsStatusBackfillsPartialLedger(t *testing.T) {
 func TestStampForwardTransitionClearsStaleNote(t *testing.T) {
 	t.Parallel()
 
-	ledger := issueopsdomain.MarkLedgerStale(issueops.IssueOpsPhaseLedger{}, "stale: design-review regression (second-system effect)", issueops.IssueOpsPhasePlan)
+	ledger := issueopsdomain.MarkLedgerStale(issueops.IssueOpsPhaseLedger{}, "stale: architecture-review regression (second-system effect)", issueops.IssueOpsPhasePlan)
 	if len(ledger[issueops.IssueOpsPhasePlan].Notes) == 0 {
 		t.Fatal("precondition: plan must carry a stale note before re-completion")
 	}

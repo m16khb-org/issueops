@@ -1,12 +1,14 @@
 package issueopsnext
 
 import (
-	reviewcontract "issueops/internal/contract/issueopsreview"
+	"slices"
 	"strings"
 	"testing"
 
 	issueopscontract "issueops/internal/contract/issueops"
 	issueopsnextcontract "issueops/internal/contract/issueopsnext"
+	reviewcontract "issueops/internal/contract/issueopsreview"
+	issueopsdomain "issueops/internal/domain/issueops"
 )
 
 func defaultCompletion(phase issueopsnextcontract.Phase) Readiness {
@@ -51,13 +53,19 @@ func withStagedPlan(in Input) Input {
 	return in
 }
 
-func withDesign(in Input) Input {
-	in.Record.DesignReview = &reviewcontract.DesignReview{
-		ProblemSummary: "summary", ProposedDesign: "design",
-		Verification: []string{"design review checked alternatives and risks"},
-		Approved:     true, ReviewedAt: "2026-09-05T00:00:00Z",
-	}
+func withStagedArchitecture(in Input) Input {
+	in.StagedArchitecture = true
 	return in
+}
+
+// withArchitecture는 아키텍처 문서를 스테이징하고 그 문서를 승인한 상태다.
+func withArchitecture(in Input) Input {
+	in.Record.ArchitectureReview = &reviewcontract.ArchitectureReview{
+		ProblemSummary: "summary", ProposedArchitecture: "architecture",
+		Verification: []string{"architecture review checked alternatives and risks"},
+		Approved:     true, ReviewerContext: "subagent", ReviewedArchitectureDigest: "digest", ReviewedAt: "2026-09-05T00:00:00Z",
+	}
+	return withStagedArchitecture(in)
 }
 
 func withDA(in Input) Input {
@@ -181,11 +189,12 @@ func TestClassifyStages(t *testing.T) {
 		{"grill with issue no branch", withIssue(baseRecord(issueopsnextcontract.PhaseGrill)), "prepare", 2},
 		{"plan right after link-issue auto-advance", withIssue(baseRecord(issueopsnextcontract.PhasePlan)), "prepare", 2},
 		{"implement without execution", withIssue(baseRecord(issueopsnextcontract.PhaseImplement)), "prepare", 2},
-		{"branch ready, no staged plan", withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan))), "plan.write", 3},
-		{"staged plan, design missing", withStagedPlan(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))), "plan.design", 3},
-		{"design approved, DA missing", withDesign(withStagedPlan(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan))))), "plan.review", 3},
-		{"DA stop unwaived", withDAStop(withDesign(withStagedPlan(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))), "plan.review", 3},
-		{"all planner gates recorded", withDA(withDesign(withStagedPlan(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))), "plan.handoff", 3},
+		{"branch ready, nothing staged", withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan))), "plan.architecture", 3},
+		{"architecture approved, no staged plan", withArchitecture(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))), "plan.write", 3},
+		{"staged plan, architecture missing", withStagedPlan(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))), "plan.architecture", 3},
+		{"architecture approved, DA missing", withArchitecture(withStagedPlan(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan))))), "plan.review", 3},
+		{"DA stop unwaived", withDAStop(withArchitecture(withStagedPlan(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))), "plan.review", 3},
+		{"all planner gates recorded", withDA(withArchitecture(withStagedPlan(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))), "plan.handoff", 3},
 		{"claimable right after prepare", withClaimableLease(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))), "claim", 3},
 		{"released lease in implement", withReleasedLease(withBranch(withIssue(baseRecord(issueopsnextcontract.PhaseImplement)))), "claim", 4},
 		{"self holder still in plan phase", withSelfHolder(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))), "implement.enter", 4},
@@ -235,8 +244,8 @@ func TestClassifyNextCommandTable(t *testing.T) {
 	}{
 		{"none starts a cycle", Input{SourceRoot: "/repo"}, "issueops start --repo /repo", "exact"},
 		{"issue records intent", baseRecord(issueopsnextcontract.PhaseGrill), "issueops intent record", "template"},
-		{"handoff prepares execution", withDA(withDesign(withStagedPlan(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))), "issueops execution prepare", "template"},
-		{"stop verdict regresses", withDAStop(withDesign(withStagedPlan(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))), "issueops regress --id io-test", "template"},
+		{"handoff prepares execution", withDA(withArchitecture(withStagedPlan(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))), "issueops execution prepare", "template"},
+		{"stop verdict regresses", withDAStop(withArchitecture(withStagedPlan(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))), "issueops regress --id io-test", "template"},
 		{"commit-push checks strict readiness", withLocal(withSelfHolder(baseRecord(issueopsnextcontract.PhaseAISlopClean)), "upstream"), "issueops pr-readiness --id io-test --strict", "exact"},
 		{"done checks cleanup", baseRecord(issueopsnextcontract.PhaseDone), "issueops cleanup status --id io-test --merged", "exact"},
 		{"unknown falls back to status", withLocal(withSelfHolder(baseRecord(issueopsnextcontract.PhaseFeedback)), "branch_match"), "issueops status --id io-test", "exact"},
@@ -255,7 +264,7 @@ func TestClassifyNextCommandTable(t *testing.T) {
 }
 
 func TestClassifyHandoffRendersThePrepareCommandWithoutRunSelection(t *testing.T) {
-	got := Classify(withDA(withDesign(withStagedPlan(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))))
+	got := Classify(withDA(withArchitecture(withStagedPlan(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))))
 	if want := "issueops execution prepare --id io-test $ACTOR_FLAGS --json"; got.NextCommand != want {
 		t.Fatalf("next command %q want %q", got.NextCommand, want)
 	}
@@ -305,7 +314,7 @@ func TestOwnerCommandCoversGateMap(t *testing.T) {
 		"intent_contract", "raw_request", "interpreted_intent", "success_criteria",
 		"plan_prep_decisions", "plan_prep_related_issues", "plan_prep_web_research", "plan_prep_codebase_survey",
 		"issue_url", "branch", "branch_prepare", "split_decision", "domain_review",
-		"design_review", "design_open_questions", "compatibility_review", "compatibility_blockers",
+		"architecture_review", "architecture_open_questions", "compatibility_review", "compatibility_blockers",
 		"devils_advocate_review", "devils_advocate_review_stale",
 		"worktree_path", "worktree_exists", "plan_artifact", "plan_path", "plan_exists", "plan_in_worktree",
 		"execution", "execution_valid", "execution_worktree_match", "execution_write_lease",
@@ -549,5 +558,66 @@ func TestClassifyWarningsPassThroughLocalAndWorktreeObservations(t *testing.T) {
 	blankRoot.WorktreePresent = false
 	if got := Classify(blankRoot).Warnings; len(got) != 0 {
 		t.Fatalf("a blank workspace root has no worktree to miss, got %q", got)
+	}
+}
+
+func TestClassifyPlanStagesArchitectureFirst(t *testing.T) {
+	plan := withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))
+	stagedUnreviewed := withStagedArchitecture(plan)
+	for _, step := range []struct {
+		name    string
+		in      Input
+		stage   string
+		missing string
+		command string
+	}{
+		{"nothing staged", plan, "plan.architecture", "architecture_artifact", "issueops artifact stage --id io-test --name architecture"},
+		{"plan staged before architecture", withStagedPlan(plan), "plan.architecture", "architecture_artifact", "issueops artifact stage --id io-test --name architecture"},
+		{"architecture staged, not reviewed", stagedUnreviewed, "plan.architecture", "architecture_review", "issueops architecture review --id io-test"},
+		{"architecture approved", withArchitecture(plan), "plan.write", "plan_artifact", "issueops artifact stage --id io-test --name plan"},
+		{"plan staged after architecture", withStagedPlan(withArchitecture(plan)), "plan.review", "devils_advocate_review", "issueops devils-advocate review --id io-test"},
+		{"devils advocate recorded", withDA(withStagedPlan(withArchitecture(plan))), "plan.handoff", "", "issueops execution prepare --id io-test"},
+	} {
+		t.Run(step.name, func(t *testing.T) {
+			got := Classify(step.in)
+			if got.Stage.Key != step.stage || !strings.HasPrefix(got.NextCommand, step.command) {
+				t.Fatalf("stage=%q command=%q, want %q starting with %q", got.Stage.Key, got.NextCommand, step.stage, step.command)
+			}
+			if step.missing == "" && len(got.Missing) != 0 || step.missing != "" && !slices.Equal(got.Missing, []string{step.missing}) {
+				t.Fatalf("missing=%v, want %q", got.Missing, step.missing)
+			}
+		})
+	}
+}
+
+func TestClassifyArchitectureReviewStaleStaysInArchitectureStage(t *testing.T) {
+	in := withDA(withStagedPlan(withArchitecture(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan))))))
+	if got := Classify(in); got.Stage.Key != "plan.handoff" {
+		t.Fatalf("fresh approval must reach handoff, got %q", got.Stage.Key)
+	}
+	in.ArchitectureReviewStale = true
+	got := Classify(in)
+	if got.Stage.Key != "plan.architecture" || !slices.Equal(got.Missing, []string{"architecture_review_stale"}) {
+		t.Fatalf("stale approval must stay in plan.architecture: stage=%q missing=%v", got.Stage.Key, got.Missing)
+	}
+	if !strings.HasPrefix(got.NextCommand, "issueops architecture review --id io-test") {
+		t.Fatalf("stale approval is re-recorded with architecture review, got %q", got.NextCommand)
+	}
+}
+
+func TestClassifyDelegatedChildSkipsArchitectureStage(t *testing.T) {
+	child := withStagedPlan(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan))))
+	child.Record.ArchitectureReview = &reviewcontract.ArchitectureReview{
+		ProblemSummary: "summary", ProposedArchitecture: "architecture",
+		Verification: []string{"architecture review checked alternatives and risks"},
+		Approved:     true, ReviewerContext: issueopsdomain.ParentReviewPattern, ReviewedAt: "2026-09-05T00:00:00Z",
+	}
+	child.ArchitectureReviewStale = true
+	if got := Classify(child); got.Stage.Key != "plan.review" {
+		t.Fatalf("inherited approval must skip the architecture stage, got %q missing=%v", got.Stage.Key, got.Missing)
+	}
+	child.Record.ArchitectureReview.ReviewerContext = "subagent"
+	if got := Classify(child); got.Stage.Key != "plan.architecture" {
+		t.Fatalf("a reviewed child without its own staged architecture stays in plan.architecture, got %q", got.Stage.Key)
 	}
 }

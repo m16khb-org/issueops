@@ -113,13 +113,14 @@ agent가 즉시 알아야 할 canonical 요약이다.
   plan-review.md 추적 계획 검토 라운드와 지적(해시·로컬 경로는 가림). 같은 전이가 record에서 쓴다
   gates.md     추적  `gates init/check` 원장. `gates check`와 IssueOps `gates_incomplete`가 1순위로 읽는다
   spec.md      추적  선택. superpowers 스펙을 이슈에 붙일 때. 봉인 spec이 있으면 같은 전이가 사본을 쓴다
+  architecture.md 추적 계획보다 먼저 승인한 아키텍처 문서의 사본. 봉인 architecture가 있으면 같은 전이가 사본을 쓴다
   review/      무시  pr-review·review-agent-feedback 작업 파일(`<provider>-<mr번호>/`)
-  artifact/    무시  봉인 아티팩트(plan/spec/verified-execution-loop/intent, 0600 불변). 레코드
+  artifact/    무시  봉인 아티팩트(plan/spec/verified-execution-loop/architecture/intent, 0600 불변). 레코드
                      `execution.workspace.artifact_dir`가 이 경로를 영속한다(#482). intent는
                      staging이 아니라 prepare가 record.intent에서 파생한다(#507)
 ```
 
-- 사본(plan.md, intent.md, spec.md, plan-review.md)은 파생물이다. 내용이 같으면 쓰지 않고,
+- 사본(plan.md, intent.md, spec.md, architecture.md, plan-review.md)은 파생물이다. 내용이 같으면 쓰지 않고,
   다르면 현재 봉인 원본과 record로 덮어쓴다. 구현 진입 뒤 생긴 사본은 첫 커밋에 포함한다.
   사본만 바뀐 상태는 `implementation_changes`를 충족하지 않는다(#513).
 - 공개 사본은 생성·재생성 때 record의 source/worktree root를 각각 `$SOURCE_ROOT`·

@@ -20,7 +20,7 @@ func NormalizeRegressionReason(reason string) (string, error) {
 // CheckRegression keeps the persisted eligibility checks ahead of child lookup.
 func CheckRegression(snapshot reviewcontract.RegressionPreconditions) error {
 	if snapshot.Phase != "plan" && snapshot.Phase != "compatibility-review" {
-		return fmt.Errorf("design-review regression only applies from plan or compatibility-review phase, not %s", snapshot.Phase)
+		return fmt.Errorf("architecture-review regression only applies from plan or compatibility-review phase, not %s", snapshot.Phase)
 	}
 	review := snapshot.Review
 	if review != nil && review.Verdict == "revise" {
@@ -48,10 +48,10 @@ func CheckRegressionChildren(activeChildIDs []string) error {
 func BuildRegressionChange(fromPhase, reason, at string) reviewcontract.RegressionChange {
 	return reviewcontract.RegressionChange{
 		FromPhase: fromPhase, ToPhase: "grill", EventReason: reason, At: at,
-		DecisionTitle: "design-review devil's-advocate stop", DecisionBody: reason,
+		DecisionTitle: "architecture-review devil's-advocate stop", DecisionBody: reason,
 		DecisionKind: "scope", DecisionRationale: fmt.Sprintf("regressed from %s to grill for re-plan", fromPhase),
-		StalePhases:         []string{"plan", "compatibility-review"},
-		StaleNote:           fmt.Sprintf("stale: design-review regression (%s)", reason),
-		ClearDesignApproval: true, ClearReview: true,
+		StalePhases:               []string{"plan", "compatibility-review"},
+		StaleNote:                 fmt.Sprintf("stale: architecture-review regression (%s)", reason),
+		ClearArchitectureApproval: true, ClearReview: true,
 	}
 }

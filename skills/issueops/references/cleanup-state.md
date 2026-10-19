@@ -137,16 +137,17 @@ issueops execution prepare --id "$ISSUEOPS_ID" $ACTOR_FLAGS --json
 issueops execution prepare --id "$ISSUEOPS_ID" $ACTOR_FLAGS --confirm --json
 ```
 
-Record the approved design review:
+Record the approved architecture review (the architecture document must be staged first with `issueops artifact stage --name architecture`):
 
 ```bash
-issueops design review --id "$ISSUEOPS_ID" \
+issueops architecture review --id "$ISSUEOPS_ID" \
   --problem-summary "$PROBLEM_SUMMARY" \
-  --proposed-design "$PROPOSED_DESIGN" \
+  --proposed-architecture "$PROPOSED_ARCHITECTURE" \
   --refactor-plan "$REFACTOR_PLAN" \
   --alternative "$ALTERNATIVE_CONSIDERED" \
-  --risk "$DESIGN_RISK" \
+  --risk "$ARCHITECTURE_RISK" \
   --verification "$VERIFICATION_STEP" \
+  --reviewer-context subagent \
   --approved \
   --json
 ```
@@ -157,7 +158,7 @@ Link the plan:
 issueops link-plan --id "$ISSUEOPS_ID" --plan-path "$PLAN_PATH" --json
 ```
 
-State recovery must preserve the redacted intent contract and design review fields. Do not reconstruct them from hook recommendations alone; re-record main-agent judgment when the saved state is missing those sections.
+State recovery must preserve the redacted intent contract and architecture review fields. Do not reconstruct them from hook recommendations alone; re-record main-agent judgment when the saved state is missing those sections.
 
 Record feedback:
 

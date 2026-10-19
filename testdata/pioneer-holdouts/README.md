@@ -41,7 +41,7 @@ scenario can be re-run, but it is no longer a blind holdout.
 - **6 of 12 primary cases are filesystem fixtures** (algorithm-optimization, issueops-debugging, code-quality-metrics, git-operations,
   verified-execution, implementation-planning). `code-quality-metrics` and `git-operations` need a git working-tree state,
   so they ship a `setup.sh` builder rather than a committable nested `.git`.
-- **5 are in-prompt** (requirements-analysis, design-review, database-design, meeting-notes, prompt-engineering): there is no
+- **5 are in-prompt** (requirements-analysis, architecture-review, database-design, meeting-notes, prompt-engineering): there is no
   filesystem input beyond the prompt text in `TASK.md`.
 - **1 is live-web** (web-research): it depended on live network state and is
   **NOT reproducible offline** — recorded for provenance only.

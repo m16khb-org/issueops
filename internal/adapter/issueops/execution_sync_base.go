@@ -24,11 +24,11 @@ import (
 // execution sync-base는 completion 이후에도 남는 typed 충돌 해소 표면이다
 // (이슈 #114). sealed git topology 가드 정책은 그대로 두고, lifecycle guard의
 // typed control plane 목록과 commandparse spec에만 이 명령을 가산 등록한다.
-// typed 등록은 훅의 mutation 가드 블록 전체를 스킵시키므로(design-review F14) lease와
+// typed 등록은 훅의 mutation 가드 블록 전체를 스킵시키므로(architecture-review F14) lease와
 // 권위 검사는 100% 이 파일의 책임이다 — 훅은 --id만 보고 통과시킨다.
 
 // executionSyncBaseGitTimeout은 fetch/push가 자격증명 프롬프트나 네트워크
-// 정지에 걸려 holder 세션을 무한정 붙잡는 것을 막는 상한이다(design-review F5 —
+// 정지에 걸려 holder 세션을 무한정 붙잡는 것을 막는 상한이다(architecture-review F5 —
 // issueops 프로덕션의 첫 push 표면).
 const executionSyncBaseGitTimeout = 120 * time.Second
 
@@ -146,7 +146,7 @@ func executionSyncBaseGates(ctx context.Context, record issueops.IssueOpsRecord,
 	missing := basesyncdomain.MissingRecordGates(executionSyncBaseRecordFacts(record, execution, inventory))
 	result.Branch, result.BaseBranch = inventory.Branch, inventory.BaseBranch
 	// ⑤ worktree_present + cwd_canonical: 소스 루트 호출의 훅 사각지대를
-	//    봉쇄한다(design-review F2 — complete/claim 선례 준용).
+	//    봉쇄한다(architecture-review F2 — complete/claim 선례 준용).
 	info, err := os.Lstat(inventory.Root)
 	if inventory.Root == "" || err != nil || !info.IsDir() {
 		return inventory, append(missing, "worktree_present")
@@ -157,7 +157,7 @@ func executionSyncBaseGates(ctx context.Context, record issueops.IssueOpsRecord,
 	missing = append(missing, executionSyncBaseAuthorityMissing(execution, req, mode, actor)...)
 	run := &executionSyncBaseGateRun{ctx: ctx, deps: deps, mode: mode, inventory: inventory, result: result, missing: missing}
 	// ⑥ head_on_recorded_branch: detached HEAD의 무증상 push 실패를 막는다
-	//    (design-review F3).
+	//    (architecture-review F3).
 	run.checkHeadOnRecordedBranch()
 	if len(run.missing) > 0 {
 		run.observeMergeState()
@@ -369,7 +369,7 @@ func (e *executionSyncBasePushEffects) AppendEvent(ctx context.Context, id strin
 
 // appendExecutionSyncBaseEvent는 레코드 쓰기 락 안에서 이벤트만 append한다.
 // Completion.FinalHead는 여기서도 다른 어디서도 건드리지 않는다 — 완결 시점
-// 증거를 보존하고 merge OID는 이벤트가 담당한다는 정책이다(design-review F9).
+// 증거를 보존하고 merge OID는 이벤트가 담당한다는 정책이다(architecture-review F9).
 func appendExecutionSyncBaseEvent(ctx context.Context, stateRoot, id string, event issueops.ExecutionSyncBaseEvent) error {
 	return withIssueOpsLock(ctx, stateRoot, id, func(spanCtx context.Context) error {
 		rec, err := ReadIssueOps(stateRoot, id)
@@ -451,7 +451,7 @@ func executionSyncBaseFail(record issueops.IssueOpsRecord, result *issueops.Exec
 }
 
 // executionSyncBasePredictConflicts는 워크트리를 오염시키지 않고 병합 결과를
-// 시험한다(ODB에만 객체를 쓴다 — design-review F12). exit 0=무충돌, 1=충돌,
+// 시험한다(ODB에만 객체를 쓴다 — architecture-review F12). exit 0=무충돌, 1=충돌,
 // 그 외=미지원/오류로 갈라 fail-closed 처리한다(git 2.38 미만 포함).
 func executionSyncBasePredictConflicts(ctx context.Context, root, workOID, baseOID string, deps issueops.ExecutionSyncBaseDeps) ([]string, error) {
 	code, out := deps.Git(ctx, root, "merge-tree", "--write-tree", "--name-only", "-z", workOID, baseOID)
@@ -508,7 +508,7 @@ func executionSyncBaseUnmergedPaths(ctx context.Context, root string, deps issue
 }
 
 // executionSyncBaseMergeInProgress는 MERGE_HEAD/CHERRY_PICK_HEAD/REBASE_HEAD와
-// rebase 디렉토리를 모두 본다(design-review F11). 경로 해석 실패는 진행 중으로 본다.
+// rebase 디렉토리를 모두 본다(architecture-review F11). 경로 해석 실패는 진행 중으로 본다.
 func executionSyncBaseMergeInProgress(ctx context.Context, root string, deps issueops.ExecutionSyncBaseDeps) bool {
 	for _, ref := range []string{"MERGE_HEAD", "CHERRY_PICK_HEAD", "REBASE_HEAD"} {
 		if code, _ := deps.Git(ctx, root, "rev-parse", "--verify", "--quiet", ref); code == 0 {
@@ -635,7 +635,7 @@ func executionStatusCommandForSyncBase(id string) string {
 // defaultExecutionSyncBaseGit은 push/fetch 계약을 강제한다: 자격증명 프롬프트
 // 금지(GIT_TERMINAL_PROMPT=0, GIT_ASKPASS 비움), ssh 비대화(BatchMode), 그리고
 // context timeout. 이 계약이 없으면 첫 프로덕션 push가 holder 세션을 붙잡는다
-// (design-review F5). preflight.GitCmd는 env/ctx를 받지 않아 여기서 직접 실행한다.
+// (architecture-review F5). preflight.GitCmd는 env/ctx를 받지 않아 여기서 직접 실행한다.
 func defaultExecutionSyncBaseGit(ctx context.Context, dir string, args ...string) (int, string) {
 	if ctx == nil {
 		ctx = context.Background()

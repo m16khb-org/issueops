@@ -519,7 +519,7 @@ issueops contract check --json
 The shared skill source is [`skills/`](skills/). The installer points each
 host's user-level skill path at this directory.
 
-- Planning and critique: `implementation-planning`, `requirements-analysis`, `design-review`, `prompt-engineering`
+- Planning and critique: `implementation-planning`, `requirements-analysis`, `architecture-review`, `prompt-engineering`
 - Execution and verification: `verified-execution`, `issueops-debugging`, `algorithm-optimization`, `database-design`, `code-quality-metrics`
 - Research and team work: `web-research`, `meeting-notes`, `slack-delegate`, `sharing-backend-work`, `explain`
 - Git and operations: `git-operations`, `atomic-commit-push`, `sync-base`, `gitlab-usecase`. `sync-base` checks whether the commits already reached another branch and whether other authors or reviewers depend on them, then picks merge or rebase, falling back to merge when the evidence is unclear

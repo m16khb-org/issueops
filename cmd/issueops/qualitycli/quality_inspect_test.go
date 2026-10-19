@@ -222,9 +222,9 @@ func TestInspectSeparatesCollectionHealthAndGateStatus(t *testing.T) {
 		return contract.PioneerCoverage{
 			Expected:             12,
 			BenchmarkObserved:    9,
-			BenchmarkMissing:     []string{"requirements-analysis", "design-review", "meeting-notes"},
+			BenchmarkMissing:     []string{"requirements-analysis", "architecture-review", "meeting-notes"},
 			ReproductionObserved: 9,
-			ReproductionMissing:  []string{"requirements-analysis", "design-review", "meeting-notes"},
+			ReproductionMissing:  []string{"requirements-analysis", "architecture-review", "meeting-notes"},
 		}, nil
 	}
 

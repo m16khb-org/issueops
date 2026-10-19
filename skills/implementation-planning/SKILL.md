@@ -261,9 +261,12 @@ Preserve the cycle's order and artifacts even when only this body is supplied:
    temporary storage and return it for `issueops artifact stage`. Do not create a
    duplicate tracked source-checkout plan, manually create a worktree, or link early.
    Include acceptance gates `G1..Gn` with CHECK/EXPECT in the plan; no ledger file yet.
-4. Stage owner records design review and routing, then actual adversarial plan review.
-   Design approval needs refactor plan, rejected alternative, risk, design-review
-   evidence, and zero open questions. Plan review must record pass with at least one
+4. In an IssueOps cycle the architecture comes before the plan: the stage owner stages an
+   architecture document (`## 요구사항과 규모`, `## 데이터와 API 계약`, `## 구조와 흐름`,
+   `## 병목과 장애`, `## 절충점과 기각한 대안`), records an independent architecture review bound
+   to that document's sha256, and only then writes the plan from it. Architecture approval needs
+   refactor plan, rejected alternative, risk, architecture-review evidence, and zero open
+   questions. Then the stage owner records routing and the actual adversarial plan review. Plan review must record pass with at least one
    finding bound to the current plan digest. Changed plans require re-review.
    A stop verdict returns to grill for investigation/replanning, not a waived gate.
    Incorrect issue-body facts require contract-change feedback, issue sync, and

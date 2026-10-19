@@ -123,7 +123,7 @@ const (
 	StageIssue             = "issue"
 	StagePrepare           = "prepare"
 	StagePlanWrite         = "plan.write"
-	StagePlanDesign        = "plan.design"
+	StagePlanArchitecture  = "plan.architecture"
 	StagePlanReview        = "plan.review"
 	StagePlanHandoff       = "plan.handoff"
 	StageImplementEnter    = "implement.enter"

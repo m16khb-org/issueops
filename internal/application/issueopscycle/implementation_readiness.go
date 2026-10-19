@@ -16,6 +16,7 @@ func CompatibilityReadinessMissing(record model.IssueOpsRecord, observations cyc
 func ImplementationReadinessMissing(record model.IssueOpsRecord, checkPlanBinding bool, observations cycleport.ReadinessObservations) []string {
 	missing := CompatibilityReadinessMissing(record, observations)
 	missing = append(missing, CompatibilityReviewMissing(record)...)
+	missing = append(missing, ArchitectureReviewStaleMissing(record, checkPlanBinding, observations.SealedArchitectureDigest)...)
 	missing = append(missing, DevilsAdvocateReviewMissing(record, checkPlanBinding, observations.LinkedPlanDigest)...)
 	workspaceMatches := false
 	if record.Execution != nil {

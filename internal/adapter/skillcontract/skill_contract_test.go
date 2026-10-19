@@ -91,7 +91,7 @@ func TestP1PioneerCorrectnessContracts(t *testing.T) {
 		"claimed-but-unverified",
 		"validate_analysis_report.py",
 	})
-	assertSkillContains(t, "design-review", []string{
+	assertSkillContains(t, "architecture-review", []string{
 		"## IssueOps Integration",
 		"issueops devils-advocate review",
 		"--reviewer-context subagent|inline",

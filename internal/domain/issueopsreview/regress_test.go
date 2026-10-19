@@ -61,11 +61,11 @@ func TestBuildRegressionChangePreservesAuditAndStaleInstructions(t *testing.T) {
 	change := BuildRegressionChange("compatibility-review", "scope changed", "2026-09-24T00:00:00Z")
 	if change.FromPhase != "compatibility-review" || change.ToPhase != "grill" ||
 		change.EventReason != "scope changed" || change.DecisionKind != "scope" ||
-		change.DecisionTitle != "design-review devil's-advocate stop" ||
+		change.DecisionTitle != "architecture-review devil's-advocate stop" ||
 		change.DecisionRationale != "regressed from compatibility-review to grill for re-plan" ||
-		change.StaleNote != "stale: design-review regression (scope changed)" ||
+		change.StaleNote != "stale: architecture-review regression (scope changed)" ||
 		len(change.StalePhases) != 2 || change.StalePhases[0] != "plan" || change.StalePhases[1] != "compatibility-review" ||
-		!change.ClearDesignApproval || !change.ClearReview {
+		!change.ClearArchitectureApproval || !change.ClearReview {
 		t.Fatalf("regression change = %+v", change)
 	}
 }

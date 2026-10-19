@@ -1,27 +1,28 @@
 ---
 name: issueops-review
-description: Use when issueops-plan or issueops-verify needs an independent review of a cycle plan or implementation diff, or when the user asks for "계획 검토", "구현 리뷰", "design-review", or "devil's advocate" within an IssueOps cycle.
+description: Use when issueops-plan or issueops-verify needs an independent review of a cycle architecture document, plan, or implementation diff, or when the user asks for "아키텍처 검토", "계획 검토", "구현 리뷰", "architecture-review", or "devil's advocate" within an IssueOps cycle.
 ---
 
-# IssueOps Plan and Implementation Review
+# IssueOps Architecture, Plan, and Implementation Review
 
 이 스킬의 일은 **적대 리뷰 한 번을 실제로 실행하고 그 판정을 원장에 기록하는
-것**이다. 계획 단계와 검증 단계가 같은 규칙을 쓰도록 두 곳에서 이 스킬을
+것**이다. 계획 단계(아키텍처 문서와 계획)와 검증 단계(구현 diff)가 같은 규칙을 쓰도록 두 곳에서 이 스킬을
 호출한다. 대상 파일을 고치는 것은 호출한 단계의 일이다.
 
 - 계획 단계: [`issueops-plan`](../issueops-plan/SKILL.md)
 - 검증 단계: [`issueops-verify`](../issueops-verify/SKILL.md)
-- 리뷰 렌즈 원문: [`design-review`](../design-review/SKILL.md)
+- 리뷰 렌즈 원문: [`architecture-review`](../architecture-review/SKILL.md)
 - 원격 반영 프로토콜: [`issueops-remote-write`](../issueops-remote-write/SKILL.md)
 
 ## 입력
 
-`--target plan`과 `--target diff` 두 가지다. 대상을 정하고 리뷰어에게 줄 자료를
+`--target architecture`, `--target plan`, `--target diff` 세 가지다. 대상을 정하고 리뷰어에게 줄 자료를
 모은다.
 
 | target | 리뷰 대상 | 함께 주는 자료 |
 |---|---|---|
-| `plan` | `status --json`의 `plan_path` 파일 전체(링크 전이면 staged plan artifact) | 이슈 본문, intent contract의 성공 기준, design review 본문 |
+| `architecture` | staged `architecture` artifact 전문(`artifact stage --name architecture`로 올린 것) | 이슈 본문, intent contract의 성공 기준, 관련 문서 발췌 |
+| `plan` | `status --json`의 `plan_path` 파일 전체(링크 전이면 staged plan artifact) | 이슈 본문, intent contract의 성공 기준, 승인된 아키텍처 문서 전문 |
 | `diff` | `git -C "$WORKTREE" diff "$BASE_SHA"` 전체 | plan 파일 전체, 봉인 intent 문서(`<artifact_dir>/intent.md`, 없으면 `status --json`의 `.intent`), 검증 명령과 결과, 변경한 프로젝트 문서 |
 
 리뷰가 "무시된 결정"을 잡으려면 계획이 인용한 항목만으로는 부족하다. plan과 diff 모두 리뷰를
@@ -61,18 +62,18 @@ issueops next --id "$ISSUEOPS_ID" --json
 
 ## 실행
 
-현재 호스트의 delegation 도구로 design-review를 **빈 컨텍스트의 새 세션**에 띄운다.
+현재 호스트의 delegation 도구로 architecture-review를 **빈 컨텍스트의 새 세션**에 띄운다.
 띄우기는 이 세션이 지금 하는 도구 호출이다. 리뷰어 프롬프트를 파일로 써 두고 끝내지 않는다.
 기록할 판정과 finding은 서브에이전트가 돌려준 출력에서 옮긴다. 서브에이전트를 백그라운드로 띄웠으면 결과가
 도착할 때까지 기다린다. 시작됐다는 응답(실행 ID, launch 안내)은 판정이 아니다. 저자 세션이 먼저 읽고 내린
 판단은 판정이 아니므로 기록하지 않는다. 서브에이전트를 띄우지 못했으면 판정 없이 그 사실과
 이유를 보고한다. `--reviewer-context subagent`는 서브에이전트가 실제로 돌려준 판정에만 쓴다.
-필수 수정의 기준은 [`design-review`의 Blocking threshold](../design-review/SKILL.md#blocking-threshold)를
-따른다. `plan`은 계획을, `diff`는 구현 동작과 영향받은 계약을 확인한다.
+필수 수정의 기준은 [`architecture-review`의 Blocking threshold](../architecture-review/SKILL.md#blocking-threshold)를
+따른다. `architecture`는 아키텍처 문서의 결정과 계약을, `plan`은 계획을, `diff`는 구현 동작과 영향받은 계약을 확인한다.
 리뷰가 지적을 냈다는 이유만으로 수정하지 않고, 발생 조건·위반한 요구사항·근거가
 맞는지 확인한 뒤 필요한 수정만 한다. 반증된 지적은 그 증거를 재리뷰에 전달한다.
 
-저자 세션이 design-review의 게이트를 직접 밟아 보는 것은 리뷰가 아니다. 계획을 쓴
+저자 세션이 architecture-review의 게이트를 직접 밟아 보는 것은 리뷰가 아니다. 문서나 계획을 쓴
 에이전트는 매몰 비용을 지고 있고 자기 합리화를 기억하며 자기 설계를 무의식적으로
 변호한다. 독립성이 기제 전부다. 계획에 아무 투자도 하지 않은 새 컨텍스트만이 저자가
 못 보는 결함을 본다.
@@ -120,8 +121,9 @@ issueops next --id "$ISSUEOPS_ID" --json
    확인한 뒤 지적한다. 열 수 없으면 그 가정과 최소 확인을 **확인 질문**으로 따로 적고
    판정을 바꾸지 않는다.
    호출자가 확인한 결과를 다음 라운드에 전달하며, CHECK 형식의 유무로 차단 여부를
-   바꾸지 않는다([`design-review`의 Blocking threshold](../design-review/SKILL.md#blocking-threshold)).
-5. 대상에 맞는 렌즈. `plan`에는 design-review의 계획 렌즈와 아래 코드베이스 존중
+   바꾸지 않는다([`architecture-review`의 Blocking threshold](../architecture-review/SKILL.md#blocking-threshold)).
+5. 대상에 맞는 렌즈. `architecture`에는 architecture-review의 아키텍처 문서 렌즈를 적용한다.
+   `plan`에는 architecture-review의 계획 렌즈와 아래 코드베이스 존중
    렌즈를 적용한다. 구현 전 `next.review.tier`는 변경 경로를 조회하지 않은 `default`이므로
    계획의 위험 분류로 해석하지 않는다. 계획에 명시한 인증·스키마 등 필수 계약을 확인한다.
    `diff`에는 `next.review.tier`와 `lenses`를 전달하고 선택된 렌즈만 적용한다.
@@ -150,7 +152,7 @@ issueops next --id "$ISSUEOPS_ID" --json
 - **side effect**: 파일·원격·durable state에 남는 변화가 문서화된 것과 일치하는가.
   실패했을 때 남는 상태가 사람이 이어받을 수 있는 모양인가.
 
-렌즈에 걸린 항목도 [Blocking threshold](../design-review/SKILL.md#blocking-threshold)를 넘어야
+렌즈에 걸린 항목도 [Blocking threshold](../architecture-review/SKILL.md#blocking-threshold)를 넘어야
 필수 결함이다. 작은 중복의 기준은 위 4번 출력 계약을 따른다.
 
 ## 지적을 실행한다
@@ -162,7 +164,7 @@ issueops next --id "$ISSUEOPS_ID" --json
 issueops verify-work --json -- <CHECK>
 ```
 
-- `--target plan`과 `--target diff` 모두 이 경로로 실행한다. 계획 단계에는 아직 게이트
+- `--target architecture`, `--target plan`, `--target diff` 모두 이 경로로 실행한다. 계획 단계에는 아직 게이트
   원장 파일이 없다(원장은 4단계 진입의 `gates init`이 만든다). 그러니 여기서 `gates`
   명령을 부르지 않는다.
 - plan 리뷰에서 살아남은 CHECK/EXPECT는 4단계 진입의 그 단일 `gates init` spec에
@@ -178,6 +180,12 @@ issueops verify-work --json -- <CHECK>
 있으면 먼저 도착한 `pass`를 기록하지 않는다. 실패 증거는 호출한 단계에 전달한다.
 
 ```bash
+# --target architecture (pass일 때만 --approved)
+issueops architecture review --id "$ISSUEOPS_ID" \
+  --problem-summary "<문제>" --proposed-architecture "<아키텍처 결정>" --refactor-plan "<리팩터 계획>" \
+  --alternative "<기각한 대안>" --risk "<위험>" --verification "아키텍처 검토로 대안과 위험을 확인했다" \
+  --reviewer-context subagent --approved $RECORD_ACTOR_FLAGS --json
+
 # --target plan
 issueops devils-advocate review --id "$ISSUEOPS_ID" \
   --verdict pass --reviewer-context subagent \
@@ -200,6 +208,11 @@ finding은 이슈의 `## 계획 검토` 구간과 `.issueops/issues/<n>/plan-rev
 전문, 로컬 절대 경로는 쓰지 않는다(렌더러가 가리지만 문장이 깨진다). 리뷰가 이슈
 본문의 사실이 틀렸다고 판정하면 호출 단계가 `feedback add --classification
 contract_change`로 기록한다([`issueops-plan`](../issueops-plan/SKILL.md)의 검토 루프).
+
+`architecture review`의 승인은 스테이징한 아키텍처 문서의 sha256에 묶인다. 리뷰 뒤 문서를 고치면
+`architecture_review_stale`이므로 다시 스테이징하고 새 리뷰를 받는다. `revise`면 문서를 고쳐 다시
+리뷰하고(같은 5라운드 상한), `stop`이면 승인을 기록하지 않고 이슈 본문의 사실 변경을
+`feedback add --classification contract_change`로 남긴 뒤 이슈를 동기화한다.
 
 `reviewer_context`와 `reviewer_*`는 감사 필드이지 게이트 조건이 아니다. 하네스는
 모델의 자기신고를 검증할 수 없으므로 verdict와 finding·evidence의 실질만 게이트한다.
@@ -231,7 +244,7 @@ contract_change`로 기록한다([`issueops-plan`](../issueops-plan/SKILL.md)의
   영향받은 계약을 delta 리뷰에 포함한다. CHECK 형식이 없다는 이유만으로 전체를 반복하지 않는다.
 - 같은 대상의 수정·재리뷰는 최대 5라운드다. 3라운드부터 5라운드까지는 상향된 리뷰 모델로
   띄운다. model과 effort는 다음 명령의 결과를 그대로 쓴다. `review-escalate` 설정이 있으면 그
-  값이, 없으면 원래 리뷰 모델에 effort 한 단계 상향이 나온다. plan 대상이면 `--role plan-review`다.
+  값이, 없으면 원래 리뷰 모델에 effort 한 단계 상향이 나온다. architecture와 plan 대상이면 `--role plan-review`다.
 
   ```bash
   issueops model resolve --host "$HOST" --role diff-review --tier "$TIER" --round "$ROUND" --json

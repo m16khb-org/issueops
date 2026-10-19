@@ -1,7 +1,7 @@
 // IssueOps CLI가 읽는 구현 검토 DTO다.
 package issueops
 
-// IssueOpsImplementationReviewRequest는 구현 diff에 대한 design-review 리뷰 기록이다.
+// IssueOpsImplementationReviewRequest는 구현 diff에 대한 architecture-review 리뷰 기록이다.
 type IssueOpsImplementationReviewRequest struct {
 	Verdict        string
 	Findings       []string
@@ -27,8 +27,8 @@ type IssueOpsSchemaEvidenceRequest struct {
 	WaiverRationale string
 }
 
-// 설계 검토 증거 예시 문구는 CLI 도움말과 어댑터가 함께 쓰는 어휘다.
-const IssueOpsDesignReviewEvidenceExample = "design review checked alternatives and risks"
+// 아키텍처 검토 증거 예시 문구는 CLI 도움말과 어댑터가 함께 쓰는 어휘다.
+const IssueOpsArchitectureReviewEvidenceExample = "architecture review checked alternatives and risks"
 
 // IssueOpsReviewMetricsCycle는 사이클 하나의 적대 리뷰 지표 파생값이다. 새
 // durable 상태가 아니라 record가 이미 들고 있는 원자료(devil's-advocate

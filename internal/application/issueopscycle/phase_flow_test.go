@@ -65,11 +65,12 @@ func flowService(p *phaseFlow, ready Readiness) PhaseService {
 
 func readyPaths() cycleport.ReadinessObservations {
 	return cycleport.ReadinessObservations{
-		WorktreePathValid:    func(string) bool { return true },
-		PlanPathExists:       func(string, string) bool { return true },
-		PlanInLinkedWorktree: func(model.IssueOpsRecord) bool { return true },
-		WorkspaceMatches:     func(string, string) bool { return true },
-		LinkedPlanDigest:     func(model.IssueOpsRecord) (string, error) { return "", nil },
+		WorktreePathValid:        func(string) bool { return true },
+		PlanPathExists:           func(string, string) bool { return true },
+		PlanInLinkedWorktree:     func(model.IssueOpsRecord) bool { return true },
+		WorkspaceMatches:         func(string, string) bool { return true },
+		LinkedPlanDigest:         func(model.IssueOpsRecord) (string, error) { return "", nil },
+		SealedArchitectureDigest: func(model.IssueOpsRecord) (string, error) { return "architecture-digest", nil },
 	}
 }
 

@@ -187,7 +187,7 @@ done을 기록한다. hook은 SessionStart의 project-doc context만 제공한�
 |---|---|---|
 | `none`, `issue` | `issueops-create-issue` | 이슈 확정·생성 |
 | `prepare` | `issueops-prepare` | 브랜치 준비 |
-| `plan.write`, `plan.design`, `plan.review`, `plan.handoff` | `issueops-plan` | 문서 확인·계획·검토·인계 |
+| `plan.architecture`, `plan.write`, `plan.review`, `plan.handoff` | `issueops-plan` | 문서 확인·아키텍처·계획·검토·인계 |
 | `claim` | 스킬 없음. `next_command`가 돌려주는 체인(claimable이면 `claim --claim-current-token`, released이면 `replace --preview`, revoking이면 `replace --finalize-preview`)을 lease가 active(self)가 될 때까지 따라간 뒤 `next`를 다시 실행한다 | 현재 index의 label |
 | `implement.enter`, `implement` | `issueops-implement` | 구현 |
 | `clean` | `issueops-slop-clean` | AI slop 정리 |
@@ -289,7 +289,7 @@ stale 판정이나 테스트 실패 자체를 사용자에게 진행 여부를 �
   본문의 Execution ownership에 있는 base 선택 순서로 해소하고 질문 사유로 삼지 않는다.
   [`issueops-prepare`](../issueops-prepare/SKILL.md)는 추가 설명이며 필수 dependency가 아니다.
 - intent·success criteria·domain term 해석이 구현을 바꿀 만큼 갈린다.
-- design open question, compatibility blocker, stale review가 남아 있다.
+- architecture open question, compatibility blocker, stale review(`architecture_review_stale` 포함)가 남아 있다.
 - branch/worktree/plan/generation/actor가 current record와 맞지 않는다.
 - strict PR readiness가 Issue, branch link, plan, worktree, upstream,
   ai-slop-clean, project-doc 반영 판정, 스키마 실측 근거, contract feedback를

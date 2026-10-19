@@ -45,8 +45,8 @@
       "receipt_bytes": 7520,
       "execution_method": "fresh_context_child_task",
       "artifact_kind": "bounded_final_response_receipt",
-      "evidence_path": "evidence-records/design-review.json",
-      "evidence_sha256": "b75d24d262b99fea453587b355725f7889199c05db826723dddb81d36d038dc6"
+      "evidence_path": "evidence-records/architecture-review.json",
+      "evidence_sha256": "916f641b8d6f876ca0a01271e9f5bf8bbf5d5486fd776b979d7c553640fcc544"
     },
     {
       "task_id": "st_01a0027d",
@@ -227,8 +227,8 @@
       "receipt_bytes": 10951,
       "execution_method": "fresh_context_child_task",
       "artifact_kind": "bounded_final_response_receipt",
-      "evidence_path": "evidence-records/design-review.json",
-      "evidence_sha256": "b75d24d262b99fea453587b355725f7889199c05db826723dddb81d36d038dc6"
+      "evidence_path": "evidence-records/architecture-review.json",
+      "evidence_sha256": "916f641b8d6f876ca0a01271e9f5bf8bbf5d5486fd776b979d7c553640fcc544"
     },
     {
       "task_id": "st_01a002c9",
@@ -442,15 +442,15 @@
       "host_capability": "blocked:kordoc_document_surface_unavailable"
     },
     {
-      "skill": "design-review",
+      "skill": "architecture-review",
       "axis": "primary",
-      "case_path": "design-review/TASK.md",
+      "case_path": "architecture-review/TASK.md",
       "case_sha256": "95c2c12d3a556c5071ceca23eafc78cbeddb35ae74a86520a155b6c45f13095e",
       "task_id": "st_01a0027c",
       "verdict": "pass",
       "hidden_holdout": false,
-      "evidence_path": "evidence-records/design-review.json",
-      "evidence_sha256": "b75d24d262b99fea453587b355725f7889199c05db826723dddb81d36d038dc6",
+      "evidence_path": "evidence-records/architecture-review.json",
+      "evidence_sha256": "916f641b8d6f876ca0a01271e9f5bf8bbf5d5486fd776b979d7c553640fcc544",
       "deterministic_assertions": [
         "five_gate_no_go",
         "smaller_plan"
@@ -646,15 +646,15 @@
       "host_capability": "unavailable_expected_refusal"
     },
     {
-      "skill": "design-review",
+      "skill": "architecture-review",
       "axis": "boundary",
-      "case_path": "design-review/BOUNDARY.md",
+      "case_path": "architecture-review/BOUNDARY.md",
       "case_sha256": "73691d2df752d8415d72884ebf16c3db0263f7a08c8b4ad9adabd362aa3f8f0f",
       "task_id": "st_01a002c8",
       "verdict": "pass",
       "hidden_holdout": false,
-      "evidence_path": "evidence-records/design-review.json",
-      "evidence_sha256": "b75d24d262b99fea453587b355725f7889199c05db826723dddb81d36d038dc6",
+      "evidence_path": "evidence-records/architecture-review.json",
+      "evidence_sha256": "916f641b8d6f876ca0a01271e9f5bf8bbf5d5486fd776b979d7c553640fcc544",
       "deterministic_assertions": [
         "proportional_go",
         "reviewer_overengineering_refusal"
@@ -851,15 +851,15 @@
       "host_capability": "blocked:kordoc_document_surface_unavailable"
     },
     {
-      "skill": "design-review",
+      "skill": "architecture-review",
       "axis": "operational",
-      "case_path": "design-review/OPERATIONAL.md",
+      "case_path": "architecture-review/OPERATIONAL.md",
       "case_sha256": "c1497a323096e32ca4bd4a71ddaa7435bb5170632c8d933879c497eb15277d74",
       "task_id": "st_01a002c8",
       "verdict": "pass",
       "hidden_holdout": false,
-      "evidence_path": "evidence-records/design-review.json",
-      "evidence_sha256": "b75d24d262b99fea453587b355725f7889199c05db826723dddb81d36d038dc6",
+      "evidence_path": "evidence-records/architecture-review.json",
+      "evidence_sha256": "916f641b8d6f876ca0a01271e9f5bf8bbf5d5486fd776b979d7c553640fcc544",
       "deterministic_assertions": [
         "serial_critical_path",
         "falsification_experiment"

@@ -10,6 +10,9 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 	issueopsinventorycontract "issueops/internal/contract/issueopsinventory"
 	issueopsnextcontract "issueops/internal/contract/issueopsnext"
+	reviewcontract "issueops/internal/contract/issueopsreview"
+	issueopsdomain "issueops/internal/domain/issueops"
+	reviewdomain "issueops/internal/domain/issueopsreview"
 )
 
 func TestNextOutsideRepositoryNeverListsCycles(t *testing.T) {
@@ -239,34 +242,54 @@ func TestNextRootConflictIgnoresCyclesWithoutBranchOrOwnRoot(t *testing.T) {
 	}
 }
 
-func TestNextFeedsStagedPlanToClassifier(t *testing.T) {
-	record := issueopscontract.IssueOpsRecord{
-		ID: "io-a", Repo: "/repo", Branch: "12-a", Phase: issueopscontract.IssueOpsPhasePlan,
-		IssueURL:      "https://example.test/issues/12",
-		BranchPrepare: &issueopscontract.IssueOpsBranchPrepare{BaseSHA: "deadbeef"},
+func TestNextFeedsStagedArtifactsToClassifier(t *testing.T) {
+	architecture := strings.Join(append(append([]string{}, issueopsdomain.RequiredArchitectureSections...), ""), "\n본문\n")
+	digest, err := reviewdomain.ArchitectureDocumentDigest(architecture)
+	if err != nil {
+		t.Fatalf("fixture architecture must be valid: %v", err)
 	}
-	entries := []issueopsinventorycontract.ListEntry{{ID: "io-a", Phase: record.Phase, Branch: "12-a"}}
+	record := func(reviewDigest string) issueopscontract.IssueOpsRecord {
+		record := issueopscontract.IssueOpsRecord{
+			ID: "io-a", Repo: "/repo", Branch: "12-a", Phase: issueopscontract.IssueOpsPhasePlan,
+			IssueURL:      "https://example.test/issues/12",
+			BranchPrepare: &issueopscontract.IssueOpsBranchPrepare{BaseSHA: "deadbeef"},
+		}
+		if reviewDigest != "" {
+			record.ArchitectureReview = &reviewcontract.ArchitectureReview{Approved: true, ReviewerContext: "subagent", ReviewedArchitectureDigest: reviewDigest}
+		}
+		return record
+	}
+	entries := []issueopsinventorycontract.ListEntry{{ID: "io-a", Phase: issueopscontract.IssueOpsPhasePlan, Branch: "12-a"}}
 	for _, scenario := range []struct {
-		name      string
-		staged    []string
-		stagedErr error
-		want      string
+		name         string
+		reviewDigest string
+		staged       map[string]string
+		stagedErr    error
+		want         string
+		wantMissing  string
 	}{
-		{"plan staged", []string{"notes", " plan "}, nil, issueopsnextcontract.StagePlanDesign},
-		{"plan not staged", []string{"notes"}, nil, issueopsnextcontract.StagePlanWrite},
-		{"staged lookup fails", []string{"plan"}, errors.New("boom"), issueopsnextcontract.StagePlanWrite},
+		{"plan staged before architecture", "", map[string]string{"plan": "# plan"}, nil, issueopsnextcontract.StagePlanArchitecture, "architecture_artifact"},
+		{"architecture staged, not reviewed", "", map[string]string{"architecture": architecture}, nil, issueopsnextcontract.StagePlanArchitecture, "architecture_review"},
+		{"architecture reviewed, plan not staged", digest, map[string]string{"notes": "x", "architecture": architecture}, nil, issueopsnextcontract.StagePlanWrite, "plan_artifact"},
+		{"both staged and the approved digest matches", digest, map[string]string{"plan": "# plan", "architecture": architecture}, nil, issueopsnextcontract.StagePlanHandoff, ""},
+		{"architecture edited after approval", digest, map[string]string{"plan": "# plan", "architecture": architecture + "edited\n"}, nil, issueopsnextcontract.StagePlanArchitecture, "architecture_review_stale"},
+		{"staged lookup fails", digest, nil, errors.New("boom"), issueopsnextcontract.StagePlanArchitecture, "architecture_artifact"},
 	} {
 		t.Run(scenario.name, func(t *testing.T) {
-			ports := testPorts(entries, map[string]issueopscontract.IssueOpsRecord{"io-a": record})
-			ports.StagedArtifacts = func(_, id string) ([]string, error) {
+			ports := testPorts(entries, map[string]issueopscontract.IssueOpsRecord{"io-a": record(scenario.reviewDigest)})
+			ports.StagedArtifacts = func(_, id string) (map[string]string, error) {
 				if id != "io-a" {
 					t.Fatalf("staged artifacts asked for %q", id)
 				}
 				return scenario.staged, scenario.stagedErr
 			}
 			result, err := NewService(ports).Next(t.Context(), "/state", "/repo", "")
-			if err != nil || result.Stage.Key != scenario.want {
-				t.Fatalf("stage = %q (err %v), want %q", result.Stage.Key, err, scenario.want)
+			wantMissing := []string{scenario.wantMissing}
+			if scenario.wantMissing == "" {
+				wantMissing = []string{}
+			}
+			if err != nil || result.Stage.Key != scenario.want || !slices.Equal(result.Missing, wantMissing) {
+				t.Fatalf("stage = %q missing=%v (err %v), want %q [%s]", result.Stage.Key, result.Missing, err, scenario.want, scenario.wantMissing)
 			}
 		})
 	}

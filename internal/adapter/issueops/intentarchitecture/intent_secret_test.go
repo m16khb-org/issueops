@@ -1,4 +1,4 @@
-package intentdesign
+package intentarchitecture
 
 import (
 	"strings"

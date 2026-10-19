@@ -101,7 +101,7 @@ legacy edge를 없앨 때는 **소비되는 심볼의 성격**이 처방을 결�
   contract(예: `internal/contract/issueops`)를 domain에서 import하면
   `domain_must_not_import_implementation`으로 즉시 실패한다(`isAllowedDomainContract`). 그 DTO가
   필요하면 domain은 순수 필드 구조체를 입력으로 받고 adapter가 record를 그 구조체로 옮긴다
-  (#507의 `issueopsintent.Document`와 `intentdesign.IntentDocument`). 두 capability가 공유하는
+  (#507의 `issueopsintent.Document`와 `intentarchitecture.IntentDocument`). 두 capability가 공유하는
   wire/persisted 타입은 contract에 두고, redaction 같은 보안 규칙을 중복 선언해 dependency
   규칙을 우회하지 않는다.
 - **주입에 default 구현을 두지 않는다.** default가 concrete를 가리키면 그 package가 다시

@@ -10,7 +10,7 @@ import (
 func BaseImplementationMissing(record model.IssueOpsRecord) []string {
 	missing := cycledomain.BranchEvidenceMissing(record)
 	missing = append(missing, cycledomain.IntentMissing(record)...)
-	missing = append(missing, DesignReviewMissing(record)...)
+	missing = append(missing, ArchitectureReviewMissing(record)...)
 	if strings.TrimSpace(record.PlanPath) == "" {
 		missing = append(missing, "plan_path")
 	}

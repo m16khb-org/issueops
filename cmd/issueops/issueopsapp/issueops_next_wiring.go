@@ -24,7 +24,7 @@ import (
 // issueOpsNextHandler는 단계 분류에 필요한 관측을 꽂는다. 전부 읽기 전용이며,
 // fetch도 provider 호출도 없다.
 func issueOpsNextHandler(
-	stagedArtifactNames func(stateRoot, id string) ([]string, error),
+	stagedArtifacts func(stateRoot, id string) (map[string]string, error),
 	observers ...issueopsrecord.Observer,
 ) func(
 	string,
@@ -55,7 +55,7 @@ func issueOpsNextHandler(
 			WriterlessCommand: ownerapp.WriterlessCommand,
 			ReviewModel:       memoizedReviewModel(),
 			ChangedPaths:      localObservation.changedPaths,
-			StagedArtifacts:   stagedArtifactNames,
+			StagedArtifacts:   stagedArtifacts,
 			Actor: func() (string, string, error) {
 				host, sessionID, _, err := executioncmd.ResolveNativeSessionIdentity(os.Getenv)
 				return host, sessionID, err

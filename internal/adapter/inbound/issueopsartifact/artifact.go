@@ -10,6 +10,7 @@ import (
 type Handlers struct {
 	Stage   func(string, string, string, []byte) (issueopsartifactcontract.Record, error)
 	Names   func(string, string) ([]string, error)
+	Staged  func(string, string) (issueopsartifactcontract.Staged, error)
 	Unstage func(string, string, string) (issueopsartifactcontract.Record, error)
 }
 
@@ -25,6 +26,9 @@ func NewHandlers(service *issueopsartifactapplication.Service) Handlers {
 		},
 		Names: func(stateRoot, id string) ([]string, error) {
 			return service.Names(context.Background(), stateRoot, id)
+		},
+		Staged: func(stateRoot, id string) (issueopsartifactcontract.Staged, error) {
+			return service.Staged(context.Background(), stateRoot, id)
 		},
 		Unstage: func(
 			stateRoot string,

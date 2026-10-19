@@ -13,7 +13,7 @@ func TestRegressPersistsOneAuditedTransition(t *testing.T) {
 	record := model.IssueOpsRecord{
 		ID: "io-regress", Phase: model.IssueOpsPhasePlan,
 		DevilsAdvocateReview: &model.IssueOpsDevilsAdvocateReview{Verdict: "stop", IssueReflectedAt: at},
-		DesignReview:         &reviewcontract.DesignReview{Approved: true},
+		ArchitectureReview:   &reviewcontract.ArchitectureReview{Approved: true},
 	}
 	writes := 0
 	store := reviewport.RegressStore{
@@ -30,7 +30,7 @@ func TestRegressPersistsOneAuditedTransition(t *testing.T) {
 		t.Fatal(err)
 	}
 	if writes != 1 || out.Phase != model.IssueOpsPhaseGrill || len(out.RegressEvents) != 1 ||
-		len(out.Decisions) != 1 || out.DevilsAdvocateReview != nil || out.DesignReview.Approved {
+		len(out.Decisions) != 1 || out.DevilsAdvocateReview != nil || out.ArchitectureReview.Approved {
 		t.Fatalf("regression did not persist one complete transition: writes=%d record=%+v", writes, out)
 	}
 	if out.RegressEvents[0].Reason != "scope changed" || out.UpdatedAt != at {

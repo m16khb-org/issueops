@@ -3,7 +3,7 @@ package pioneerskill
 var canonicalNames = []string{
 	"web-research",
 	"requirements-analysis",
-	"design-review",
+	"architecture-review",
 	"database-design",
 	"algorithm-optimization",
 	"meeting-notes",

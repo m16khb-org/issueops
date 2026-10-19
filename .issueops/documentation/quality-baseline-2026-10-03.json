@@ -6088,7 +6088,7 @@
       "sha256": "890139c2e153a6e1e3c5c4d6c062b0b2ef936ec49270bae6ef7b9e8487be680d"
     },
     {
-      "path": "skills/design-review/SKILL.md",
+      "path": "skills/architecture-review/SKILL.md",
       "scope": "skill",
       "lines": 142,
       "words": 2127,
@@ -6808,7 +6808,7 @@
       "sha256": "6b3b3141389a8f36ccf44c0a183890e6dbd6321a182ee9b0c2ad7a7c6a93b5b4"
     },
     {
-      "path": "testdata/pioneer-holdouts/design-review/BOUNDARY.md",
+      "path": "testdata/pioneer-holdouts/architecture-review/BOUNDARY.md",
       "scope": "other",
       "lines": 2,
       "words": 33,
@@ -6816,7 +6816,7 @@
       "sha256": "73691d2df752d8415d72884ebf16c3db0263f7a08c8b4ad9adabd362aa3f8f0f"
     },
     {
-      "path": "testdata/pioneer-holdouts/design-review/OPERATIONAL.md",
+      "path": "testdata/pioneer-holdouts/architecture-review/OPERATIONAL.md",
       "scope": "other",
       "lines": 2,
       "words": 36,
@@ -6824,7 +6824,7 @@
       "sha256": "c1497a323096e32ca4bd4a71ddaa7435bb5170632c8d933879c497eb15277d74"
     },
     {
-      "path": "testdata/pioneer-holdouts/design-review/TASK.md",
+      "path": "testdata/pioneer-holdouts/architecture-review/TASK.md",
       "scope": "other",
       "lines": 10,
       "words": 50,

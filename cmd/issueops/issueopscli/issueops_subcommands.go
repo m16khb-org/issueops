@@ -398,7 +398,7 @@ func (cli command) runIssueOpsPRReadiness(args []string) error {
 // execution prepare가 소유한다(설계 v5 WS2).
 func (cli command) runIssueOpsArtifact(args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
-		fmt.Println("Usage:\n  issueops artifact stage --id ID --name plan|spec|verified-execution-loop --file PATH [--json]\n  issueops artifact unstage --id ID --name plan|spec|verified-execution-loop [--json]")
+		fmt.Println("Usage:\n  issueops artifact stage --id ID --name plan|spec|verified-execution-loop|architecture --file PATH [--json]\n  issueops artifact unstage --id ID --name plan|spec|verified-execution-loop|architecture [--json]")
 		return nil
 	}
 	switch args[0] {
@@ -414,7 +414,7 @@ func (cli command) runIssueOpsArtifact(args []string) error {
 func (cli command) runIssueOpsArtifactUnstage(args []string) error {
 	fs := flag.NewFlagSet("issueops artifact unstage", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
-	name := fs.String("name", "", "artifact name: plan|spec|verified-execution-loop")
+	name := fs.String("name", "", "artifact name: plan|spec|verified-execution-loop|architecture")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
@@ -426,7 +426,7 @@ func (cli command) runIssueOpsArtifactUnstage(args []string) error {
 func (cli command) runIssueOpsArtifactStage(args []string) error {
 	fs := flag.NewFlagSet("issueops artifact stage", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
-	name := fs.String("name", "", "artifact name: plan|spec|verified-execution-loop")
+	name := fs.String("name", "", "artifact name: plan|spec|verified-execution-loop|architecture")
 	file := fs.String("file", "", "artifact source file path")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
@@ -460,7 +460,7 @@ func (cli command) runIssueOpsArtifactStage(args []string) error {
 }
 
 // runIssueOpsImplementationReview는 execution owner가 publication 전에
-// planner급 design-review 리뷰 verdict를 기록하는 표면이다. reviewer 필드는 감사
+// planner급 architecture-review 리뷰 verdict를 기록하는 표면이다. reviewer 필드는 감사
 // 기록이며 게이트는 verdict pass + 실질 내용만 본다(설계 v5 WS5).
 func (cli command) runIssueOpsImplementationReview(args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {

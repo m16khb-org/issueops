@@ -36,7 +36,7 @@ func newIssueOpsCLIRuntime(stateRoot string) issueopscli.IssueOpsCLIDeps {
 			return newChildStatusService(root).Status(context.Background(), id, repair, &actor)
 		},
 		IssueOpsPRReadiness: readiness.PR,
-		IssueOpsNext:        issueOpsNextHandler(artifacts.Names, observer),
+		IssueOpsNext:        issueOpsNextHandler(artifacts.Staged, observer),
 		IssueOpsStateRoot:   func() string { return stateRoot },
 		IssueOpsStatus:      issueOpsStatusHandler(observer),
 		LinkIssueOpsChildWithActor: func(root, id, childURL, title string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
@@ -85,8 +85,8 @@ func newIssueOpsCLIRuntime(stateRoot string) issueopscli.IssueOpsCLIDeps {
 		RecordIssueOpsCompatibilityReviewWithActor: func(root, id string, req reviewcontract.CompatibilityReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
 			return newPlanningRecorder(&actor).Compatibility(root, id, req)
 		},
-		RecordIssueOpsDesignReviewWithActor: func(root, id string, req reviewcontract.DesignReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
-			return newPlanningRecorder(&actor).Design(root, id, req)
+		RecordIssueOpsArchitectureReviewWithActor: func(root, id string, req reviewcontract.ArchitectureReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return newPlanningRecorder(&actor).Architecture(root, id, req)
 		},
 		RecordIssueOpsDevilsAdvocateReviewWithActor: func(root, id string, req reviewcontract.DevilsAdvocateReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
 			return newPlanningRecorder(&actor).DevilsAdvocate(root, id, req)

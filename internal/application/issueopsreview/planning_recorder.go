@@ -19,6 +19,7 @@ type PlanningRecorder struct {
 	CompatibilityReadiness func(model.IssueOpsRecord) model.IssueOpsReadiness
 	PhaseRank              func(model.IssueOpsPhase) int
 	PlanDigest             func(string, model.IssueOpsRecord) (string, error)
+	ArchitectureDocument   func(string, model.IssueOpsRecord) (string, error)
 }
 
 func (s PlanningRecorder) record(root, id string, apply func() (model.IssueOpsRecord, error)) (model.IssueOpsRecord, error) {
@@ -50,11 +51,11 @@ func (s PlanningRecorder) PlanPrep(root, id string, req model.IssueOpsPlanPrepRe
 		return intentapp.RecordPlanPrep(intentport.Store{Read: s.Store.Read, TouchWrite: s.touchWrite, Now: s.Store.Now}, root, id, req)
 	})
 }
-func (s PlanningRecorder) Design(root, id string, req reviewcontract.DesignReviewRequest) (model.IssueOpsRecord, error) {
+func (s PlanningRecorder) Architecture(root, id string, req reviewcontract.ArchitectureReviewRequest) (model.IssueOpsRecord, error) {
 	return s.record(root, id, func() (model.IssueOpsRecord, error) {
-		record, err := RecordDesignReview(port.DesignReviewStore{Read: s.Store.Read, TouchWrite: s.touchWrite, Now: s.Store.Now, PlanReadiness: s.PlanReadiness}, root, id, req)
-		if errors.Is(err, domain.ErrMissingDesignReviewEvidence) {
-			return model.IssueOpsRecord{OK: false}, errors.New(`approved design review requires design_review_evidence: this is not a separate flag or decision record; add --verification "design review checked alternatives and risks" or a Korean equivalent such as "설계 검토 완료: 대안과 위험 확인"`)
+		record, err := RecordArchitectureReview(port.ArchitectureReviewStore{Read: s.Store.Read, TouchWrite: s.touchWrite, Now: s.Store.Now, PlanReadiness: s.PlanReadiness, Document: s.ArchitectureDocument}, root, id, req)
+		if errors.Is(err, domain.ErrMissingArchitectureReviewEvidence) {
+			return model.IssueOpsRecord{OK: false}, errors.New(`approved architecture review requires architecture_review_evidence: this is not a separate flag or decision record; add --verification "architecture review checked alternatives and risks" or a Korean equivalent such as "아키텍처 검토 완료: 대안과 위험 확인"`)
 		}
 		return record, err
 	})

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	reviewcontract "issueops/internal/contract/issueopsreview"
+	issueopsdomain "issueops/internal/domain/issueops"
 )
 
 func TestValidateAISlopCleanEvidenceRequiresCategoriesBeforeVerification(t *testing.T) {
@@ -22,7 +23,7 @@ func TestValidateAISlopCleanEvidenceRequiresCategoriesBeforeVerification(t *test
 
 func TestInheritedParentReviewIsWaivedPassNamingParent(t *testing.T) {
 	review := InheritedParentReview("io-7", "2026-10-01T00:00:00Z")
-	if review.Verdict != "pass" || !review.Waived || review.ReviewerPattern != ParentReviewPattern ||
+	if review.Verdict != "pass" || !review.Waived || review.ReviewerPattern != issueopsdomain.ParentReviewPattern ||
 		review.RecordedAt != "2026-10-01T00:00:00Z" || review.IssueReflectedAt != "" ||
 		review.WaiverRationale != "delegated:io-7 parent DA verdict pass" {
 		t.Fatalf("inherited review = %+v", review)
@@ -30,8 +31,8 @@ func TestInheritedParentReviewIsWaivedPassNamingParent(t *testing.T) {
 }
 
 func TestNonPlanPrepMissingDropsOnlyPlanPrepItems(t *testing.T) {
-	got := NonPlanPrepMissing([]string{"plan_prep_grill", "design_review", "plan_prep_x", "my_plan_prep_y"})
-	if want := []string{"design_review", "my_plan_prep_y"}; !slices.Equal(got, want) {
+	got := NonPlanPrepMissing([]string{"plan_prep_grill", "architecture_review", "plan_prep_x", "my_plan_prep_y"})
+	if want := []string{"architecture_review", "my_plan_prep_y"}; !slices.Equal(got, want) {
 		t.Fatalf("got %v, want %v", got, want)
 	}
 	if got := NonPlanPrepMissing(nil); got == nil || len(got) != 0 {
@@ -109,24 +110,28 @@ func TestApplyReviewWaivedReviseIgnoresCapAndWaivedRoundsDoNotCount(t *testing.T
 	}
 }
 
-func TestPrepareDesignReviewRequiredFieldsInOrder(t *testing.T) {
-	valid := reviewcontract.DesignReviewRequest{ProblemSummary: "p", ProposedDesign: "d", Verification: []string{"v"}}
+func TestPrepareArchitectureReviewRequiredFieldsInOrder(t *testing.T) {
+	valid := reviewcontract.ArchitectureReviewRequest{ProblemSummary: "p", ProposedArchitecture: "d", Verification: []string{"v"}, ReviewerContext: "inline"}
 	for _, tc := range []struct {
 		name   string
-		mutate func(*reviewcontract.DesignReviewRequest)
+		mutate func(*reviewcontract.ArchitectureReviewRequest)
 		want   string
 	}{
-		{"problem", func(r *reviewcontract.DesignReviewRequest) {
-			r.ProblemSummary, r.ProposedDesign, r.Verification = " ", "", nil
+		{"problem", func(r *reviewcontract.ArchitectureReviewRequest) {
+			r.ProblemSummary, r.ProposedArchitecture, r.Verification = " ", "", nil
 		}, "problem_summary is required"},
-		{"design", func(r *reviewcontract.DesignReviewRequest) { r.ProposedDesign, r.Verification = "", nil }, "proposed_design is required"},
-		{"verification blank", func(r *reviewcontract.DesignReviewRequest) { r.Verification = []string{" "} }, "verification is required"},
-		{"verification nul", func(r *reviewcontract.DesignReviewRequest) { r.Verification = []string{"a\x00b"} }, "verification is required"},
+		{"architecture", func(r *reviewcontract.ArchitectureReviewRequest) { r.ProposedArchitecture, r.Verification = "", nil }, "proposed_architecture is required"},
+		{"verification blank", func(r *reviewcontract.ArchitectureReviewRequest) { r.Verification = []string{" "} }, "verification is required"},
+		{"verification nul", func(r *reviewcontract.ArchitectureReviewRequest) { r.Verification = []string{"a\x00b"} }, "verification is required"},
+		{"reviewer context missing", func(r *reviewcontract.ArchitectureReviewRequest) { r.ReviewerContext = "" }, "reviewer_context must be subagent or inline"},
+		{"reviewer context inherited", func(r *reviewcontract.ArchitectureReviewRequest) {
+			r.ReviewerContext = issueopsdomain.ParentReviewPattern
+		}, "reviewer_context must be subagent or inline"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			req := valid
 			tc.mutate(&req)
-			if _, err := PrepareDesignReview(req); err == nil || err.Error() != tc.want {
+			if _, err := PrepareArchitectureReview(req); err == nil || err.Error() != tc.want {
 				t.Fatalf("error = %v, want %q", err, tc.want)
 			}
 		})
@@ -134,41 +139,41 @@ func TestPrepareDesignReviewRequiredFieldsInOrder(t *testing.T) {
 	// Unapproved reviews may carry open questions; duplicates collapse.
 	req := valid
 	req.OpenQuestions = []string{"q", " q ", ""}
-	review, err := PrepareDesignReview(req)
+	review, err := PrepareArchitectureReview(req)
 	if err != nil || len(review.OpenQuestions) != 1 || review.Approved {
 		t.Fatalf("review = %+v %v", review, err)
 	}
 }
 
-func TestFinalizeDesignReviewApprovedRequirementsInOrder(t *testing.T) {
-	approved := reviewcontract.DesignReview{
+func TestFinalizeArchitectureReviewApprovedRequirementsInOrder(t *testing.T) {
+	approved := reviewcontract.ArchitectureReview{
 		Approved: true, RefactorPlan: "plan", Alternatives: []string{"a"}, Risks: []string{"r"},
-		Verification: []string{"design review done"},
+		Verification: []string{"architecture review done"},
 	}
 	for _, tc := range []struct {
 		name   string
-		mutate func(*reviewcontract.DesignReview)
+		mutate func(*reviewcontract.ArchitectureReview)
 		want   string
 	}{
-		{"refactor plan", func(r *reviewcontract.DesignReview) {
+		{"refactor plan", func(r *reviewcontract.ArchitectureReview) {
 			r.RefactorPlan, r.Alternatives, r.Risks, r.Verification = "", nil, nil, []string{"ran tests"}
 		}, "requires refactor_plan"},
-		{"alternatives", func(r *reviewcontract.DesignReview) {
+		{"alternatives", func(r *reviewcontract.ArchitectureReview) {
 			r.Alternatives, r.Risks, r.Verification = nil, nil, []string{"ran tests"}
 		}, "requires alternatives"},
-		{"risks", func(r *reviewcontract.DesignReview) { r.Risks, r.Verification = nil, []string{"ran tests"} }, "requires risks"},
-		{"evidence", func(r *reviewcontract.DesignReview) { r.Verification = []string{"ran tests"} }, ErrMissingDesignReviewEvidence.Error()},
+		{"risks", func(r *reviewcontract.ArchitectureReview) { r.Risks, r.Verification = nil, []string{"ran tests"} }, "requires risks"},
+		{"evidence", func(r *reviewcontract.ArchitectureReview) { r.Verification = []string{"ran tests"} }, ErrMissingArchitectureReviewEvidence.Error()},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			review := approved
 			tc.mutate(&review)
-			if _, err := FinalizeDesignReview(review, "now"); err == nil || !strings.Contains(err.Error(), tc.want) {
+			if _, err := FinalizeArchitectureReview(review, "now"); err == nil || !strings.Contains(err.Error(), tc.want) {
 				t.Fatalf("error = %v, want %q", err, tc.want)
 			}
 		})
 	}
 	// An unapproved review needs none of those and is only stamped.
-	got, err := FinalizeDesignReview(reviewcontract.DesignReview{}, "now")
+	got, err := FinalizeArchitectureReview(reviewcontract.ArchitectureReview{}, "now")
 	if err != nil || got.ReviewedAt != "now" {
 		t.Fatalf("unapproved finalize = %+v %v", got, err)
 	}

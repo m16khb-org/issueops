@@ -391,7 +391,7 @@ func TestPlanLinkValidationsExplainEachRefusal(t *testing.T) {
 	if err := ValidatePlanLinkReadiness(noTree, nil); err == nil || !strings.Contains(err.Error(), "linked worktree") {
 		t.Fatalf("worktree: %v", err)
 	}
-	if err := ValidatePlanLinkReadiness(ready, []string{"design_review", "approval"}); err == nil || !strings.Contains(err.Error(), "missing design_review, approval") {
+	if err := ValidatePlanLinkReadiness(ready, []string{"architecture_review", "approval"}); err == nil || !strings.Contains(err.Error(), "missing architecture_review, approval") {
 		t.Fatalf("design: %v", err)
 	}
 

@@ -50,7 +50,7 @@ func CleanupStopTargets(occupants []model.CleanupWorkspaceProcess, ancestry map[
 // cleanupOccupantBound는 점유자가 preview receipt와 같거나, preview 점유자의
 // 증명된 자손이면서 그 조상이 지금도 같은 receipt로 점유 중일 때 참이다. 자손
 // 관계는 stale 허용 근거일 뿐 종료 범위 확장이 아니다 — 점유하지 않는 자손에는
-// 신호를 보내지 않는다(design-review 2차 finding 2).
+// 신호를 보내지 않는다(architecture-review 2차 finding 2).
 func cleanupOccupantBound(occupant model.CleanupWorkspaceProcess, previewByPID, currentByPID map[int]model.CleanupWorkspaceProcess, ancestors []int) bool {
 	if previewed, ok := previewByPID[occupant.PID]; ok && cleanupReceiptMatches(previewed, occupant) {
 		return true

@@ -37,12 +37,12 @@ const IssueOpsUsageCatalog = `  issueops start --repo PATH [--branch NAME | --ne
   issueops branch await-link --id ID [--timeout DURATION] [--json]
   issueops branch retarget --id ID --base-branch REF --reason TEXT RECORD_ACTOR_FLAGS [--json]
   issueops link-worktree --id ID --worktree-path PATH RECORD_ACTOR_FLAGS [--json]
-  issueops design review --id ID --problem-summary TEXT --proposed-design TEXT --verification TEXT [--refactor-plan TEXT] [--alternative TEXT] [--risk TEXT] [--open-question TEXT] [--approved] RECORD_ACTOR_FLAGS [--json]
+  issueops architecture review --id ID --problem-summary TEXT --proposed-architecture TEXT --verification TEXT --reviewer-context subagent|inline [--refactor-plan TEXT] [--alternative TEXT] [--risk TEXT] [--open-question TEXT] [--approved] RECORD_ACTOR_FLAGS [--json]
   issueops compatibility review --id ID --backward-compatibility TEXT --side-effect TEXT --rollback-plan TEXT --verification TEXT [--blocker TEXT] [--approved] RECORD_ACTOR_FLAGS [--json]
   issueops devils-advocate review --id ID --verdict pass|revise|stop --reviewer-context subagent|inline [--finding TEXT]... [--waive --waiver-rationale TEXT] RECORD_ACTOR_FLAGS [--json]
   issueops link-plan --id ID --plan-path PATH RECORD_ACTOR_FLAGS [--json]
-  issueops artifact stage --id ID --name plan|spec|verified-execution-loop --file PATH [--json]
-  issueops artifact unstage --id ID --name plan|spec|verified-execution-loop [--json]
+  issueops artifact stage --id ID --name plan|spec|verified-execution-loop|architecture --file PATH [--json]
+  issueops artifact unstage --id ID --name plan|spec|verified-execution-loop|architecture [--json]
   issueops execution prepare --id ID ACTOR_FLAGS [--confirm] [--json]
   issueops execution status --id ID [--json]
   issueops execution whoami [--json]
@@ -109,6 +109,7 @@ lease transitions and generation-fenced publication verify the live session proc
 func LifecycleCommands() []Command {
 	return []Command{
 		{Name: "ai-slop-clean", Description: "IssueOps ai-slop-clean"},
+		{Name: "architecture", Description: "IssueOps architecture"},
 		{Name: "artifact", Description: "IssueOps artifact"},
 		{Name: "benchmark", Description: "IssueOps benchmark"},
 		{Name: "branch", Description: "IssueOps branch"},
@@ -116,7 +117,6 @@ func LifecycleCommands() []Command {
 		{Name: "cleanup", Description: "IssueOps cleanup"},
 		{Name: "compatibility", Description: "IssueOps compatibility"},
 		{Name: "decision", Description: "IssueOps decision"},
-		{Name: "design", Description: "IssueOps design"},
 		{Name: "devils-advocate", Description: "IssueOps devils-advocate"},
 		{Name: "domain-review", Description: "IssueOps domain-review"},
 		{Name: "execution", Description: "IssueOps execution"},

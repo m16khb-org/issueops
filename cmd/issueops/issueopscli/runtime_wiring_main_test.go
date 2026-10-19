@@ -2,6 +2,7 @@ package issueopscli
 
 import (
 	"context"
+	issueopsrecord "issueops/internal/adapter/outbound/issueopsrecord"
 	ownerapp "issueops/internal/application/issueopsowner"
 	reviewapp "issueops/internal/application/issueopsreview"
 	reviewcontract "issueops/internal/contract/issueopsreview"
@@ -76,7 +77,12 @@ func wireIssueOpsRuntimeForTests() {
 		ListCycles: func(ctx context.Context, stateRoot, repo string) (issueopsinventorycontract.ListResult, error) {
 			return listCycles(stateRoot, repo)
 		},
-		ReadRecord: issueopscore.ReadIssueOps,
+		ReadRecord:   issueopscore.ReadIssueOps,
+		ReadSelected: issueopsrecord.Store{}.ReadSelected,
+		ScanRecords: func(ctx context.Context, stateRoot string, visit func(issueopscontract.IssueOpsRecord) error) error {
+			_, err := (issueopsrecord.Store{}).ScanEach(ctx, stateRoot, visit)
+			return err
+		},
 		Completion: testCycleReadiness().Completion,
 		LocalReadiness: func(record issueopscontract.IssueOpsRecord) issueopscontract.IssueOpsReadiness {
 			ready, _ := testCycleReadiness().ObserveLocalPR(record)
@@ -87,7 +93,7 @@ func wireIssueOpsRuntimeForTests() {
 			resolution, err := agentmodel.Resolve(agentmodel.ResolveInput{Host: host, Role: role, Tier: tier})
 			return resolution.Model, resolution.Effort, err
 		},
-		StagedArtifacts: artifacts.Names,
+		StagedArtifacts: artifacts.Staged,
 		Actor: func() (string, string, error) {
 			host, sessionID, _, err := executioncmd.ResolveNativeSessionIdentity(os.Getenv)
 			return host, sessionID, err
@@ -135,8 +141,8 @@ func wireIssueOpsRuntimeForTests() {
 		RecordIssueOpsCompatibilityReviewWithActor: func(root, id string, req reviewcontract.CompatibilityReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
 			return planningRecorderForTest(&actor).Compatibility(root, id, req)
 		},
-		RecordIssueOpsDesignReviewWithActor: func(root, id string, req reviewcontract.DesignReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
-			return planningRecorderForTest(&actor).Design(root, id, req)
+		RecordIssueOpsArchitectureReviewWithActor: func(root, id string, req reviewcontract.ArchitectureReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return planningRecorderForTest(&actor).Architecture(root, id, req)
 		},
 		RecordIssueOpsDevilsAdvocateReviewWithActor: func(root, id string, req reviewcontract.DevilsAdvocateReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
 			return planningRecorderForTest(&actor).DevilsAdvocate(root, id, req)

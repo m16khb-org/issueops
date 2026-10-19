@@ -16,13 +16,14 @@ import (
 
 // Tracked copies of the implementation materials live next to gates.md in
 // .issueops/issues/<n>/ and are committed with the change, so reviewers can
-// read the plan, intent, spec, and plan review after the worktree is gone.
+// read the plan, intent, spec, architecture, and plan review after the worktree is gone.
 // The sealed originals stay under artifact/, which remains ignored (#513).
 const (
-	trackedPlan       = "plan.md"
-	trackedIntent     = "intent.md"
-	trackedSpec       = "spec.md"
-	trackedPlanReview = "plan-review.md"
+	trackedPlan         = "plan.md"
+	trackedIntent       = "intent.md"
+	trackedSpec         = "spec.md"
+	trackedArchitecture = "architecture.md"
+	trackedPlanReview   = "plan-review.md"
 )
 
 // trackedMaterialsDir is the worktree-relative .issueops/issues/<n>/ folder,
@@ -89,6 +90,9 @@ func (s TrackedMaterials) contents(record issueops.IssueOpsRecord, root string) 
 	}
 	if content, err := s.readSealed(sealed, record, root, "spec"); err == nil {
 		materials = append(materials, trackedMaterial{trackedSpec, content})
+	}
+	if content, err := s.readSealed(sealed, record, root, "architecture"); err == nil {
+		materials = append(materials, trackedMaterial{trackedArchitecture, content})
 	}
 	if review := record.DevilsAdvocateReview; review != nil {
 		materials = append(materials, trackedMaterial{trackedPlanReview, []byte(domain.RenderTrackedPlanReview(review))})

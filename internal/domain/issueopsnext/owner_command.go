@@ -34,8 +34,8 @@ func prefixOwnerCommand(id, key string) (string, bool) {
 	case strings.HasPrefix(key, "plan_prep_"):
 		return "issueops plan-prep record --id " + id +
 			" --decisions-evidence <TEXT> --related-score-ref <TEXT> --web-research-evidence <TEXT> --codebase-survey-evidence <TEXT>", true
-	case strings.HasPrefix(key, "design_"):
-		return designReviewCommand(id), true
+	case strings.HasPrefix(key, "architecture_") && key != "architecture_artifact":
+		return architectureReviewCommand(id), true
 	case strings.HasPrefix(key, "compatibility_"):
 		return compatibilityReviewCommand(id), true
 	case strings.HasPrefix(key, "ai_slop_clean_"):
@@ -66,11 +66,13 @@ func intakeOwnerCommand(id, key string) (string, bool) {
 	return "", false
 }
 
-// planningOwnerCommand는 2~3단계(설계·호환성·반론·계획) 키의 명령이다.
+// planningOwnerCommand는 2~3단계(아키텍처·호환성·반론·계획) 키의 명령이다.
 func planningOwnerCommand(id, key string) (string, bool) {
 	switch key {
-	case "design_review":
-		return designReviewCommand(id), true
+	case "architecture_artifact":
+		return "issueops artifact stage --id " + id + " --name architecture --file <PATH>", true
+	case "architecture_review":
+		return architectureReviewCommand(id), true
 	case "compatibility_review":
 		return compatibilityReviewCommand(id), true
 	case "devils_advocate_review", "devils_advocate_review_stale":
@@ -137,10 +139,10 @@ func publicationOwnerCommand(id, key string) (string, bool) {
 	return "", false
 }
 
-func designReviewCommand(id string) string {
-	return "issueops design review --id " + id +
-		" --problem-summary <TEXT> --proposed-design <TEXT> --refactor-plan <TEXT>" +
-		" --alternative <TEXT> --risk <TEXT> --verification <TEXT> --approved"
+func architectureReviewCommand(id string) string {
+	return "issueops architecture review --id " + id +
+		" --problem-summary <TEXT> --proposed-architecture <TEXT> --refactor-plan <TEXT>" +
+		" --alternative <TEXT> --risk <TEXT> --verification <TEXT> --reviewer-context subagent --approved"
 }
 
 func compatibilityReviewCommand(id string) string {

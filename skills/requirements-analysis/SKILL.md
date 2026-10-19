@@ -257,7 +257,7 @@ explicitly permits it.
 
 ## Relationship with Other Skills
 
-- Use `design-review` when a proposed implementation plan needs adversarial design
+- Use `architecture-review` when a proposed implementation plan needs adversarial design
   criticism after evidence collection.
 - Use `prompt-engineering` when the analysis prompt itself needs controlled optimization.
 - Use `verified-execution` only for a separately authorized implementation phase.

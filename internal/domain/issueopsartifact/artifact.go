@@ -11,10 +11,10 @@ import (
 func NormalizeName(name string) (string, error) {
 	name = strings.TrimSpace(name)
 	switch name {
-	case "plan", "spec", "verified-execution-loop":
+	case "plan", "spec", "verified-execution-loop", "architecture":
 		return name, nil
 	default:
-		return "", fmt.Errorf("artifact name must be plan|spec|verified-execution-loop")
+		return "", fmt.Errorf("artifact name must be plan|spec|verified-execution-loop|architecture")
 	}
 }
 

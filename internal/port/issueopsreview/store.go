@@ -53,9 +53,12 @@ type AISlopCleanStore struct {
 	Refresh func(string, model.IssueOpsRecord) (model.IssueOpsRecord, error)
 }
 
-type DesignReviewStore struct {
+type ArchitectureReviewStore struct {
 	Read          func(string, string) (model.IssueOpsRecord, error)
 	PlanReadiness func(model.IssueOpsRecord) model.IssueOpsReadiness
 	TouchWrite    func(string, model.IssueOpsRecord) (model.IssueOpsRecord, error)
 	Now           func() string
+	// Document은 검토 대상 아키텍처 문서 본문이다. 실행 전에는 스테이징본, 실행 뒤에는
+	// 봉인본이며, 문서가 없으면 빈 문자열이다.
+	Document func(string, model.IssueOpsRecord) (string, error)
 }

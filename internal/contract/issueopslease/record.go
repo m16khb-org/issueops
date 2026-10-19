@@ -20,7 +20,7 @@ type Record struct {
 	Branch                  string                                   `json:"branch,omitempty"`
 	Phase                   string                                   `json:"phase"`
 	Intent                  json.RawMessage                          `json:"intent,omitempty"`
-	DesignReview            json.RawMessage                          `json:"design_review,omitempty"`
+	ArchitectureReview      json.RawMessage                          `json:"architecture_review,omitempty"`
 	DomainReview            json.RawMessage                          `json:"domain_review,omitempty"`
 	IssueURL                string                                   `json:"issue_url,omitempty"`
 	ChildCreateOperations   json.RawMessage                          `json:"child_create_operations,omitempty"`

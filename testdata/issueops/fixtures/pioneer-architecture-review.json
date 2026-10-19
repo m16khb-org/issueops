@@ -1,10 +1,10 @@
 {
-  "id": "pioneer-design-review",
+  "id": "pioneer-architecture-review",
   "title": "Implementation plan needs adversarial complexity review",
   "user_prompt": "이 구현 계획이 과설계인지 적대적으로 검토하고 필수 범위만 남겨줘",
   "repo_context": "A broad implementation plan risks second-system overreach, accidental complexity, schedule optimism, and loss of conceptual integrity before coding starts.",
-  "pioneer_skill_target": "design-review",
-  "expected_routing": [{"phase": "plan", "skill": "design-review"}],
+  "pioneer_skill_target": "architecture-review",
+  "expected_routing": [{"phase": "plan", "skill": "architecture-review"}],
   "expected_issue": ["records success criteria", "defines evidence artifacts", "is written in Korean", "references issue/pr guideline"],
   "expected_plan": ["maps criteria to evidence", "records cleanup receipts", "includes verification"],
   "expected_tasks": ["bounded ownership"],

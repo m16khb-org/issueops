@@ -32,7 +32,7 @@ func parseExactIssueOpsTokens(tokens []string) (ExactIssueOpsCommand, bool) {
 	start := 2
 	if len(tokens) > 2 {
 		switch tokens[1] {
-		case "compatibility", "execution", "devils-advocate", "feedback", "remote", "cleanup", "ai-slop-clean", "artifact", "implementation-review", "branch", "decision", "child", "intent", "domain-review", "design", "plan-prep", "project-docs-review", "schema-evidence":
+		case "compatibility", "execution", "devils-advocate", "feedback", "remote", "cleanup", "ai-slop-clean", "artifact", "implementation-review", "branch", "decision", "child", "intent", "domain-review", "architecture", "plan-prep", "project-docs-review", "schema-evidence":
 			if strings.HasPrefix(tokens[2], "--") {
 				return ExactIssueOpsCommand{}, false
 			}
@@ -50,7 +50,7 @@ func ExactIssueOpsOwnerMutation(command ExactIssueOpsCommand) (map[string][]stri
 	case "link-plan", "link-worktree", "compatibility review", "devils-advocate review", "phase",
 		"decision add", "ai-slop-clean record", "feedback mark-issue-updated", "feedback resolve",
 		"implementation-review record", "project-docs-review record", "schema-evidence record",
-		"branch prepare", "branch retarget", "intent record", "domain-review record", "design review", "regress",
+		"branch prepare", "branch retarget", "intent record", "domain-review record", "architecture review", "regress",
 		"plan-prep record",
 		"link-child", "link-related", "feedback add",
 		"child start", "child status", "child accept", "child reject", "child drop",
@@ -231,8 +231,8 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 		repeatable: []string{"--terminology", "--risk", "--uncertainty"},
 		booleans:   []string{"--json"},
 	},
-	"design review": {
-		values:     []string{"--id", "--problem-summary", "--proposed-design", "--refactor-plan", "--alternative", "--risk", "--verification", "--open-question", "--host", "--session-id", "--agent-id", "--cwd"},
+	"architecture review": {
+		values:     []string{"--id", "--problem-summary", "--proposed-architecture", "--refactor-plan", "--alternative", "--risk", "--verification", "--open-question", "--reviewer-context", "--host", "--session-id", "--agent-id", "--cwd"},
 		repeatable: []string{"--alternative", "--risk", "--verification", "--open-question"},
 		booleans:   []string{"--approved", "--json"},
 	},

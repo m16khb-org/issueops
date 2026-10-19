@@ -11,16 +11,16 @@ func TestStrictPRReadinessFlagsTargetBranchMismatch(t *testing.T) {
 
 	repo := initIssueOpsRepo(t)
 	base := issueops.IssueOpsRecord{
-		OK:            true,
-		Repo:          repo,
-		Branch:        "main",
-		Phase:         issueops.IssueOpsPhasePR,
-		IssueURL:      "https://github.com/example/repo/issues/1",
-		PlanPath:      "plans/demo.md",
-		WorktreePath:  repo,
-		Intent:        issueOpsIntentContractForTest(),
-		DesignReview:  issueOpsDesignReviewForTest(),
-		BranchPrepare: &issueops.IssueOpsBranchPrepare{Provider: "github", IssueURL: "https://github.com/example/repo/issues/1", Branch: "main", BaseBranch: "main", LinkVerified: true},
+		OK:                 true,
+		Repo:               repo,
+		Branch:             "main",
+		Phase:              issueops.IssueOpsPhasePR,
+		IssueURL:           "https://github.com/example/repo/issues/1",
+		PlanPath:           "plans/demo.md",
+		WorktreePath:       repo,
+		Intent:             issueOpsIntentContractForTest(),
+		ArchitectureReview: issueOpsArchitectureReviewForTest(),
+		BranchPrepare:      &issueops.IssueOpsBranchPrepare{Provider: "github", IssueURL: "https://github.com/example/repo/issues/1", Branch: "main", BaseBranch: "main", LinkVerified: true},
 	}
 
 	mismatch := base
