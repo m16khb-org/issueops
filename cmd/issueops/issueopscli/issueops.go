@@ -83,9 +83,7 @@ func (cli command) runIssueOpsWithDependencies(args []string, deps Dependencies)
 	}
 	if err != nil {
 		if issueOpsJSONRequested(args) {
-			if printErr := printIssueOpsErrorJSON(err); printErr != nil {
-				return printErr
-			}
+			return reportIssueOpsError(err)
 		}
 		return err
 	}

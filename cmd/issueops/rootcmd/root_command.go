@@ -5,6 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"sort"
+	"strings"
+
+	"issueops/cmd/issueops/jsonout"
 )
 
 type Runner func([]string) error
@@ -35,8 +39,53 @@ func (c Command) Run(args []string) int {
 	if ok, exitCode := c.runSubcommand(args[0], args[1:]); ok {
 		return exitCode
 	}
-	c.printUsage()
+	c.printUnknownCommand(args[0])
 	return 2
+}
+
+// printUnknownCommand answers an unknown command with one short line and the
+// closest known names instead of the full usage (17 KB), which agents would
+// otherwise read in full on every typo.
+func (c Command) printUnknownCommand(name string) {
+	fmt.Fprintf(c.stderr(), "issueops: unknown command %q\n", name)
+	if suggestions := c.suggest(name); len(suggestions) > 0 {
+		fmt.Fprintf(c.stderr(), "Did you mean: %s\n", strings.Join(suggestions, ", "))
+	}
+	fmt.Fprintln(c.stderr(), "Run 'issueops --help' for the full usage.")
+}
+
+func (c Command) suggest(name string) []string {
+	var out []string
+	for known := range c.Runners {
+		if strings.HasPrefix(known, name) || strings.HasPrefix(name, known) || editDistance(name, known) <= 2 {
+			out = append(out, known)
+		}
+	}
+	sort.Strings(out)
+	if len(out) > 5 {
+		out = out[:5]
+	}
+	return out
+}
+
+func editDistance(a, b string) int {
+	prev := make([]int, len(b)+1)
+	for j := range prev {
+		prev[j] = j
+	}
+	for i := 1; i <= len(a); i++ {
+		cur := make([]int, len(b)+1)
+		cur[0] = i
+		for j := 1; j <= len(b); j++ {
+			cost := 1
+			if a[i-1] == b[j-1] {
+				cost = 0
+			}
+			cur[j] = min(prev[j]+1, cur[j-1]+1, prev[j-1]+cost)
+		}
+		prev = cur
+	}
+	return prev[len(b)]
 }
 
 func (c Command) runSubcommand(name string, args []string) (bool, int) {
@@ -51,10 +100,30 @@ func (c Command) runSubcommand(name string, args []string) (bool, int) {
 		if errors.Is(err, flag.ErrHelp) {
 			return true, 0
 		}
-		fmt.Fprintln(c.stderr(), name+":", err)
+		if !jsonout.IsReported(err) {
+			fmt.Fprintln(c.stderr(), name+":", err)
+		}
 		return true, c.errorExitCode(name, err)
 	}
 	return true, 0
+}
+
+// HelpRequested reports whether args ask for usage: a leading "help" or a help
+// flag before any "--" passthrough separator (argv after "--" belongs to
+// another program).
+func HelpRequested(args []string) bool {
+	if len(args) > 0 && args[0] == "help" {
+		return true
+	}
+	for _, arg := range args {
+		switch arg {
+		case "--":
+			return false
+		case "-h", "-help", "--help":
+			return true
+		}
+	}
+	return false
 }
 
 func (c Command) printUsage() {

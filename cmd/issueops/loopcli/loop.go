@@ -130,7 +130,7 @@ func printLoopResult(result any, err error, jsonOut bool) error {
 	if jsonOut {
 		if err != nil {
 			_ = printJSON(map[string]any{"ok": false, "error": err.Error()})
-			return err
+			return jsonout.Reported(err)
 		}
 		return printJSON(result)
 	}

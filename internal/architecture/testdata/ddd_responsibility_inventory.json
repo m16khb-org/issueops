@@ -1413,6 +1413,17 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopscli/actorreceipt/actorreceipt.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func Add",
+        "func Flags.Filter",
+        "func Flags.Observer",
+        "type Flags"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopscli/benchmarkartifact/issueops_benchmark_artifact.go",
       "owner": "inbound",
       "task": "T20",
@@ -1633,7 +1644,8 @@
         "func command.runIssueOpsBranchRetarget",
         "func issueOpsUsage",
         "func printIssueOpsErrorJSON",
-        "func printIssueOpsResult"
+        "func printIssueOpsResult",
+        "func reportIssueOpsError"
       ]
     },
     {
@@ -1927,8 +1939,14 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
+        "func IsReported",
         "func Print",
-        "func PrintTo"
+        "func PrintError",
+        "func PrintTo",
+        "func Reported",
+        "func reportedError.Error",
+        "func reportedError.Unwrap",
+        "type reportedError"
       ]
     },
     {
@@ -2462,10 +2480,14 @@
       "symbols": [
         "func Command.Run",
         "func Command.errorExitCode",
+        "func Command.printUnknownCommand",
         "func Command.printUsage",
         "func Command.runSubcommand",
         "func Command.stderr",
         "func Command.stdout",
+        "func Command.suggest",
+        "func HelpRequested",
+        "func editDistance",
         "type Command",
         "type Runner"
       ]
@@ -2598,7 +2620,8 @@
       "symbols": [
         "func runStateList",
         "func runStateRead",
-        "func runStateWrite"
+        "func runStateWrite",
+        "func stateError"
       ]
     },
     {

@@ -6,7 +6,18 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"issueops/cmd/issueops/jsonout"
 )
+
+// stateError prints the JSON error envelope when --json was requested, so a
+// failed `state ... --json` still answers with one JSON document on stdout.
+func stateError(err error, jsonOut bool) error {
+	if jsonOut {
+		return jsonout.PrintError(err)
+	}
+	return err
+}
 
 func runStateWrite(deps Dependencies, args []string) error {
 	fs := flag.NewFlagSet("state write", flag.ContinueOnError)
@@ -54,7 +65,7 @@ func runStateWrite(deps Dependencies, args []string) error {
 	}
 	result, err := deps.Write(context.Background(), *key, content)
 	if err != nil {
-		return err
+		return stateError(err, *jsonOut)
 	}
 	if *jsonOut {
 		return printJSON(result)
@@ -75,7 +86,7 @@ func runStateRead(deps Dependencies, args []string) error {
 	}
 	result, err := deps.Read(*key)
 	if err != nil {
-		return err
+		return stateError(err, *jsonOut)
 	}
 	if *jsonOut {
 		return printJSON(result)
@@ -92,7 +103,7 @@ func runStateList(deps Dependencies, args []string) error {
 	}
 	result, err := deps.List()
 	if err != nil {
-		return err
+		return stateError(err, *jsonOut)
 	}
 	if *jsonOut {
 		return printJSON(result)

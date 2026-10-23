@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"issueops/cmd/issueops/issueopscli/actorreceipt"
 	remoteapp "issueops/internal/application/issueopsremote"
 	issueopscontract "issueops/internal/contract/issueops"
 	bodysynccontract "issueops/internal/contract/issueopsbodysync"
@@ -37,6 +38,7 @@ func (command Command) runBodySyncCommand(ctx context.Context, name, kind string
 	sessionID := fs.String("session-id", "", "native holder session id")
 	agentID := fs.String("agent-id", "", "optional native holder agent id")
 	cwd := fs.String("cwd", "", "canonical holder worktree cwd")
+	receipt := actorreceipt.Add(fs)
 	confirm := fs.Bool("confirm", false, "write to the remote artifact; without this, dry-run preview only")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	var expectedGeneration *uint64
@@ -62,7 +64,7 @@ func (command Command) runBodySyncCommand(ctx context.Context, name, kind string
 	_, result, err := command.Operations.SyncRemoteBody(ctx, command.Operations.IssueOpsStateRoot(), remoteapp.BodySyncInput{
 		Provider: *providerOverride, BodyFile: *bodyFile, Command: cmd,
 		Actor: issueopscontract.IssueOpsActor{Host: *host, SessionID: *sessionID, AgentID: *agentID, CWD: *cwd},
-	}, deps.observeNativeProcessAncestry)
+	}, receipt.Observer(deps.observeNativeProcessAncestry))
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}

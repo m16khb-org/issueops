@@ -235,9 +235,7 @@ func (cli command) runIssueOpsChildDrop(args []string) error {
 func printIssueOpsChildValue(value any, jsonOut bool, err error) error {
 	if err != nil {
 		if jsonOut {
-			if printErr := printIssueOpsErrorJSON(err); printErr != nil {
-				return printErr
-			}
+			return reportIssueOpsError(err)
 		}
 		return err
 	}
@@ -267,9 +265,7 @@ func (cli command) runIssueOpsRoutingScore(args []string) error {
 	)
 	if err != nil {
 		if *jsonOut {
-			if printErr := printIssueOpsErrorJSON(err); printErr != nil {
-				return printErr
-			}
+			return reportIssueOpsError(err)
 		}
 		return err
 	}
@@ -333,7 +329,7 @@ func (cli command) runIssueOpsPhase(args []string) error {
 	if strings.TrimSpace(*to) == "done" {
 		err := fmt.Errorf("done is entered atomically by issueops execution complete")
 		if *jsonOut {
-			_ = printIssueOpsErrorJSON(err)
+			return reportIssueOpsError(err)
 		}
 		return err
 	}
@@ -373,9 +369,7 @@ func (cli command) runIssueOpsPRReadiness(args []string) error {
 	record, err := cli.Runtime.ReadIssueOps(cli.Runtime.IssueOpsStateRoot(), *id)
 	if err != nil {
 		if *jsonOut {
-			if printErr := printIssueOpsErrorJSON(err); printErr != nil {
-				return printErr
-			}
+			return reportIssueOpsError(err)
 		}
 		return err
 	}
@@ -442,9 +436,7 @@ func (cli command) runIssueOpsArtifactStage(args []string) error {
 	record, err := cli.Runtime.StageIssueOpsArtifact(cli.Runtime.IssueOpsStateRoot(), *id, *name, content)
 	if err != nil {
 		if *jsonOut {
-			if printErr := printIssueOpsErrorJSON(err); printErr != nil {
-				return printErr
-			}
+			return reportIssueOpsError(err)
 		}
 		return err
 	}
@@ -562,9 +554,7 @@ func (cli command) runIssueOpsReviewMetrics(args []string) error {
 	if err != nil {
 		// 다른 issueops 명령과 같은 오류 형태를 낸다: --json이면 {"ok":false,"error":...}.
 		if *jsonOut {
-			if printErr := printIssueOpsErrorJSON(err); printErr != nil {
-				return printErr
-			}
+			return reportIssueOpsError(err)
 		}
 		return err
 	}

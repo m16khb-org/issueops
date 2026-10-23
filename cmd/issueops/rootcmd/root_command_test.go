@@ -35,10 +35,10 @@ func TestRunRootCommandUsageAndVersionSurface(t *testing.T) {
 			wantOut:  "issueops 0.1.0\n",
 		},
 		{
-			name:     "unknown prints usage to stderr",
-			args:     []string{"unknown-command"},
+			name:     "unknown prints a short error with suggestions",
+			args:     []string{"statu"},
 			wantCode: 2,
-			wantErr:  "issueops 0.1.0",
+			wantErr:  "issueops: unknown command \"statu\"\nDid you mean: status\nRun 'issueops --help' for the full usage.\n",
 		},
 	}
 
@@ -111,9 +111,29 @@ func TestRunRootCommandTreatsHelpRequestAsSuccess(t *testing.T) {
 	}
 }
 
+func TestHelpRequestedStopsAtPassthroughSeparator(t *testing.T) {
+	cases := map[string]struct {
+		args []string
+		want bool
+	}{
+		"leading help":           {[]string{"help"}, true},
+		"subcommand help flag":   {[]string{"decision", "add", "--help"}, true},
+		"single dash":            {[]string{"gates", "init", "-h"}, true},
+		"help as a flag value":   {[]string{"state", "write", "--value", "help"}, false},
+		"help after passthrough": {[]string{"policy", "check", "--", "git", "--help"}, false},
+		"no help":                {[]string{"status", "--json"}, false},
+	}
+	for name, tc := range cases {
+		if got := HelpRequested(tc.args); got != tc.want {
+			t.Errorf("%s: HelpRequested(%q) = %v, want %v", name, tc.args, got, tc.want)
+		}
+	}
+}
+
 func captureRootCommandOutput(args []string) (string, string, int) {
 	var stdout, stderr bytes.Buffer
 	cmd := testCommand(&stdout, &stderr)
+	cmd.Runners["status"] = func([]string) error { return nil }
 	code := cmd.Run(args)
 	return stdout.String(), stderr.String(), code
 }

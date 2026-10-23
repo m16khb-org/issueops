@@ -9,6 +9,8 @@ import (
 	"os"
 	"strings"
 
+	"issueops/cmd/issueops/issueopscli/actorreceipt"
+	"issueops/cmd/issueops/jsonout"
 	issueopscontract "issueops/internal/contract/issueops"
 	artifacttemplate "issueops/internal/domain/artifacttemplate"
 	issueopsremote "issueops/internal/domain/issueopsremote"
@@ -32,7 +34,7 @@ var remoteUsageLines = []string{
 	"  issueops remote verify-artifact --id ID --provider github|gitlab --kind pr|mr --url URL --target-branch BRANCH --label LABEL --assignee USER RECORD_ACTOR_FLAGS [--json]",
 	"  issueops remote create-issue --id ID --title TEXT [--provider github|gitlab] [--body TEXT|--body-file PATH] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... [--confirm] [--json]",
 	"  issueops remote reconcile-issue --id ID [--confirm] [--json]",
-	"  issueops remote reconcile-child --id ID --operation-id HEX [--host HOST --session-id SESSION --cwd WORKTREE] [--confirm] [--json]",
+	"  issueops remote reconcile-child --id ID --operation-id HEX [--host HOST --session-id SESSION --agent-id ID --cwd WORKTREE [--session-pid PID --session-started-at RFC3339 --session-executable PATH]] [--confirm] [--json]",
 	"  issueops remote create-child --id ID [--operation-id HEX] --title TEXT [--body TEXT|--body-file PATH] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... --host codex|claude|omo|omp|opencode --session-id SESSION [--agent-id ID] --cwd WORKER_PATH [--confirm] [--json]",
 	"  issueops remote create-pr --id ID --expected-generation N --title TEXT --head BRANCH --base BRANCH [--body TEXT] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... --host codex|claude|omo|omp|opencode --session-id SESSION [--agent-id ID] --session-pid PID --session-started-at RFC3339 --session-executable PATH --cwd WORKER_PATH [--confirm] [--json]",
 	"  issueops remote sync-graph --id ID [--confirm] [--json]",
@@ -187,6 +189,7 @@ func (command Command) runRemoteVerifyArtifact(args []string, deps Deps) error {
 	sessionID := fs.String("session-id", "", "native holder session id")
 	agentID := fs.String("agent-id", "", "optional native holder agent id")
 	cwd := fs.String("cwd", "", "canonical holder worktree cwd")
+	receipt := actorreceipt.Add(fs)
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseFlags(fs, args); help || err != nil {
 		return err
@@ -201,7 +204,7 @@ func (command Command) runRemoteVerifyArtifact(args []string, deps Deps) error {
 	}
 	record, err := command.Operations.VerifyRemoteArtifact(context.Background(), command.Operations.IssueOpsStateRoot(), *id, req, issueopscontract.IssueOpsActor{
 		Host: *host, SessionID: *sessionID, AgentID: *agentID, CWD: *cwd,
-	}, deps.verifyLive, deps.observeNativeProcessAncestry)
+	}, deps.verifyLive, receipt.Observer(deps.observeNativeProcessAncestry))
 	return deps.printResult(record, *jsonOut, err)
 }
 
@@ -213,6 +216,7 @@ func (command Command) runRemoteReflectDevilsAdvocate(args []string, deps Deps) 
 	sessionID := fs.String("session-id", "", "native holder session id")
 	agentID := fs.String("agent-id", "", "optional native holder agent id")
 	cwd := fs.String("cwd", "", "canonical holder worktree cwd")
+	receipt := actorreceipt.Add(fs)
 	confirm := fs.Bool("confirm", false, "write to the remote issue; without this, dry-run preview only")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseFlags(fs, args); help || err != nil {
@@ -220,7 +224,7 @@ func (command Command) runRemoteReflectDevilsAdvocate(args []string, deps Deps) 
 	}
 	_, result, err := command.Operations.ReflectReviewFindings(context.Background(), command.Operations.IssueOpsStateRoot(), *id, *providerOverride, *confirm, issueopscontract.IssueOpsActor{
 		Host: *host, SessionID: *sessionID, AgentID: *agentID, CWD: *cwd,
-	}, deps.observeNativeProcessAncestry)
+	}, receipt.Observer(deps.observeNativeProcessAncestry))
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}
@@ -266,6 +270,7 @@ func (deps Deps) printErrorResult(jsonOut bool, err error) error {
 		if printErr := deps.printError(err); printErr != nil {
 			return printErr
 		}
+		return jsonout.Reported(err)
 	}
 	return err
 }

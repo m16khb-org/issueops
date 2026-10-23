@@ -102,7 +102,10 @@ func TestOutputBaseSyncRequiredObservationFailureHasNoUnboundFallback(t *testing
 	if err == nil {
 		t.Fatal("observation failure exposed the typed error command")
 	}
-	fields, ok := err.(interface{ IssueOpsErrorFields() map[string]any })
+	fields, ok := errors.AsType[interface {
+		error
+		IssueOpsErrorFields() map[string]any
+	}](err)
 	if !ok || fields.IssueOpsErrorFields()["code"] != "generated_command_provenance_observation_failed" {
 		t.Fatalf("observation failure is not structured: %T %v", err, err)
 	}

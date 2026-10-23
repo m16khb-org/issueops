@@ -18,6 +18,12 @@ var dependencyWiring sync.Once
 
 func RunRootCommand(args []string) int {
 	wireDependencies()
+	if rootcmd.HelpRequested(args) {
+		// Usage is the answer to a help request, not a diagnostic: print it on
+		// stdout so `issueops X --help | grep` works. Subcommands write usage
+		// to os.Stderr directly (flag.FlagSet default output).
+		os.Stderr = os.Stdout
+	}
 	return rootCommand().Run(args)
 }
 

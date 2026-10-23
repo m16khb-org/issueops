@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
+	"issueops/cmd/issueops/jsonout"
 	"os"
 	"path/filepath"
 	"slices"
@@ -384,10 +385,10 @@ func executionWhoamiResult(
 		OK: true, Host: identity.Host, SessionID: identity.SessionID,
 		SessionIDSource: identity.Source, Ancestry: ancestry,
 	}
-	// record 계열 하위명령은 host/session-id/cwd만 받는다(RECORD_ACTOR_FLAGS).
-	// claim용 receipt 플래그를 record 명령에 넘기면 정의되지 않은 플래그로
-	// 거부되므로, whoami는 두 명령군의 플래그를 각각 내놓아 한 번의 복붙으로
-	// 라이프사이클 전체를 진행할 수 있게 한다.
+	// record 계열 하위명령은 RECORD_ACTOR_FLAGS(host/session-id/cwd)를 받고,
+	// claim 벡터의 receipt 플래그도 선택적으로 받는다(라이브 ancestry와 대조).
+	// whoami는 두 벡터를 모두 내놓아 어느 쪽을 복붙해도 라이프사이클 전체를
+	// 진행할 수 있게 한다.
 	result.RecordActorFlags = fmt.Sprintf(
 		"--host %s --session-id %s --cwd %s",
 		identity.Host, shellQuoteClaimValue(identity.SessionID), shellQuoteClaimValue(cwd))
@@ -646,7 +647,10 @@ func output(value any, jsonOut bool, err error, deps Deps) error {
 	}
 	if err != nil {
 		if jsonOut && deps.PrintError != nil {
-			_ = deps.PrintError(err)
+			if printErr := deps.PrintError(err); printErr != nil {
+				return printErr
+			}
+			return jsonout.Reported(err)
 		}
 		return err
 	}

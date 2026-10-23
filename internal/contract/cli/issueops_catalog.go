@@ -78,7 +78,7 @@ const IssueOpsUsageCatalog = `  issueops start --repo PATH [--branch NAME | --ne
   issueops remote render-template --kind issue|child|pr --template KIND --title TEXT --provider github|gitlab --field key=value... [--score-file PATH] [--json]
   issueops remote create-issue --id ID --title TEXT [--provider github|gitlab] [--score-file PATH] [--body TEXT|--body-file PATH] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... [--confirm] [--json]
   issueops remote reconcile-issue --id ID [--confirm] [--json]
-  issueops remote reconcile-child --id ID --operation-id HEX [--host HOST --session-id SESSION --agent-id ID --cwd WORKTREE] [--confirm] [--json]
+  issueops remote reconcile-child --id ID --operation-id HEX [RECORD_ACTOR_FLAGS] [--confirm] [--json]
   issueops remote sync-graph --id ID [--confirm] [--json]
   issueops remote sync-issue --id ID [--provider github|gitlab] [--url CHILD_URL] [--body TEXT|--body-file PATH] [--template KIND] [--expected-body-sha256 SHA] [--accept-remote-edits] RECORD_ACTOR_FLAGS [--confirm] [--json]
   issueops remote sync-pr --id ID --expected-generation N [--provider github|gitlab] [--url ARTIFACT_URL] [--body TEXT|--body-file PATH] [--template KIND] [--expected-body-sha256 SHA] [--accept-remote-edits] RECORD_ACTOR_FLAGS [--confirm] [--json]
@@ -97,10 +97,11 @@ const IssueOpsUsageCatalog = `  issueops start --repo PATH [--branch NAME | --ne
 
 // IssueOpsActorFlagLegend는 두 usage 출력이 공유하는 actor 축약 정의다. 축약을 쓰는
 // 출력은 같은 출력 안에서 그것을 정의해야 한다(#184).
-const IssueOpsActorFlagLegend = `RECORD_ACTOR_FLAGS: --host codex|claude|omo|omp|opencode --session-id ID [--agent-id ID] --cwd PATH
+const IssueOpsActorFlagLegend = `RECORD_ACTOR_FLAGS: --host codex|claude|omo|omp|opencode --session-id ID [--agent-id ID] --cwd PATH [--session-pid PID --session-started-at RFC3339 --session-executable PATH]
 ACTOR_FLAGS: --host codex|claude|omo|omp|opencode --session-id ID [--agent-id ID] --session-pid PID --session-started-at RFC3339 --session-executable PATH --cwd PATH
 
-Durable-record mutations take RECORD_ACTOR_FLAGS; without them an active execution rejects the
+Durable-record mutations take RECORD_ACTOR_FLAGS (so either whoami vector works; optional receipt flags must
+name a live native ancestor); without them an active execution rejects the
 call as a non-holder. execution claim accepts either no actor flags and observes the current
 native session receipt, or one complete ACTOR_FLAGS set; partial actor flags fail closed. Other execution
 lease transitions and generation-fenced publication verify the live session process with ACTOR_FLAGS.`

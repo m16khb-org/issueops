@@ -101,8 +101,10 @@ func flagSetFlagsForCommand(t *testing.T, path []string) map[string]bool {
 }
 
 func catalogAdvertisedFlags(line string) map[string]bool {
-	recordActor := []string{"--host", "--session-id", "--agent-id", "--cwd"}
-	fullActor := append(append([]string{}, recordActor...), "--session-pid", "--session-started-at", "--session-executable")
+	// RECORD_ACTOR_FLAGS and ACTOR_FLAGS name the same flag set; the receipt
+	// flags are optional on record commands (IssueOpsActorFlagLegend).
+	recordActor := []string{"--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"}
+	fullActor := recordActor
 	flags := map[string]bool{}
 	for field := range strings.FieldsSeq(line) {
 		switch strings.Trim(field, "[]()") {

@@ -8,6 +8,8 @@ import (
 	"os"
 	"strings"
 
+	"issueops/cmd/issueops/issueopscli/actorreceipt"
+	"issueops/cmd/issueops/jsonout"
 	issueopscontract "issueops/internal/contract/issueops"
 	orphancontract "issueops/internal/contract/issueopsorphancleanup"
 	port "issueops/internal/port"
@@ -56,11 +58,12 @@ func (command Command) RunFeedback(args []string, deps Deps) error {
 		sessionID := fs.String("session-id", "", "native actor session id")
 		agentID := fs.String("agent-id", "", "native actor agent id")
 		cwd := fs.String("cwd", "", "canonical actor cwd")
+		receipt := actorreceipt.Add(fs)
 		jsonOut := fs.Bool("json", false, "print JSON")
 		if help, err := deps.ParseFlags(fs, args[1:]); help || err != nil {
 			return err
 		}
-		record, err := command.Operations.AddIssueOpsFeedbackWithActor(command.Operations.IssueOpsStateRoot(), *id, *source, *body, *classification, command.localActor(*host, *sessionID, *agentID, *cwd))
+		record, err := command.Operations.AddIssueOpsFeedbackWithActor(command.Operations.IssueOpsStateRoot(), *id, *source, *body, *classification, command.localActor(*host, *sessionID, *agentID, *cwd, receipt))
 		return deps.PrintResult(record, *jsonOut, err)
 	case "mark-issue-updated":
 		fs := flag.NewFlagSet("issueops feedback mark-issue-updated", flag.ContinueOnError)
@@ -69,22 +72,23 @@ func (command Command) RunFeedback(args []string, deps Deps) error {
 		sessionID := fs.String("session-id", "", "native actor session id")
 		agentID := fs.String("agent-id", "", "native actor agent id")
 		cwd := fs.String("cwd", "", "canonical actor cwd")
+		receipt := actorreceipt.Add(fs)
 		jsonOut := fs.Bool("json", false, "print JSON")
 		if help, err := deps.ParseFlags(fs, args[1:]); help || err != nil {
 			return err
 		}
-		record, err := command.Operations.MarkIssueOpsContractFeedbackIssueUpdatedWithActor(command.Operations.IssueOpsStateRoot(), *id, command.localActor(*host, *sessionID, *agentID, *cwd))
+		record, err := command.Operations.MarkIssueOpsContractFeedbackIssueUpdatedWithActor(command.Operations.IssueOpsStateRoot(), *id, command.localActor(*host, *sessionID, *agentID, *cwd, receipt))
 		return deps.PrintResult(record, *jsonOut, err)
 	default:
 		return fmt.Errorf("unknown issueops feedback subcommand")
 	}
 }
 
-func (command Command) localActor(host, sessionID, agentID, cwd string) issueopscontract.IssueOpsActor {
+func (command Command) localActor(host, sessionID, agentID, cwd string, receipt actorreceipt.Flags) issueopscontract.IssueOpsActor {
 	ancestry, _ := command.Operations.ObserveNativeProcessAncestry(os.Getpid())
 	return issueopscontract.IssueOpsActor{
 		Host: host, SessionID: sessionID, AgentID: agentID, CWD: cwd,
-		NativeProcessAncestry: ancestry,
+		NativeProcessAncestry: receipt.Filter(ancestry),
 	}
 }
 
@@ -120,6 +124,7 @@ func printCleanupError(deps Deps, jsonOut bool, err error) error {
 		if printErr := deps.PrintError(err); printErr != nil {
 			return printErr
 		}
+		return jsonout.Reported(err)
 	}
 	return err
 }
@@ -455,6 +460,7 @@ func printCleanupFinishError(deps Deps, jsonOut bool, err error) error {
 		if printErr := deps.PrintError(err); printErr != nil {
 			return printErr
 		}
+		return jsonout.Reported(err)
 	}
 	return err
 }

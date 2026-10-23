@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"issueops/cmd/issueops/jsonout"
 	cleanupapp "issueops/internal/application/issueopscleanup"
 	issueopscontract "issueops/internal/contract/issueops"
 	orphancontract "issueops/internal/contract/issueopsorphancleanup"
@@ -551,11 +552,12 @@ func TestRunCleanupInvocationFailuresRenderOnlyTheOriginalCause(t *testing.T) {
 			if err == nil || !strings.Contains(err.Error(), tt.want) || len(outputs.json) != 0 || len(outputs.errors) != 0 {
 				t.Fatalf("text err=%v json=%v errors=%v", err, outputs.json, outputs.errors)
 			}
-			// JSON mode renders exactly the unwrapped cause through PrintError.
+			// JSON mode renders exactly the unwrapped cause through PrintError
+			// and returns it marked as reported, so stderr does not repeat it.
 			outputs = &cleanupOutputs{}
 			err = command.RunCleanup(append(slicesClone(tt.args), "--json"), outputs.deps())
 			var wrapped *port.CleanupInvocationError
-			if err == nil || errors.As(err, &wrapped) || len(outputs.errors) != 1 || outputs.errors[0] != err || len(outputs.json) != 0 {
+			if err == nil || errors.As(err, &wrapped) || !jsonout.IsReported(err) || len(outputs.errors) != 1 || errors.Unwrap(err) != outputs.errors[0] || len(outputs.json) != 0 {
 				t.Fatalf("json err=%v rendered=%v json=%v", err, outputs.errors, outputs.json)
 			}
 			// A failing renderer outranks the cause.

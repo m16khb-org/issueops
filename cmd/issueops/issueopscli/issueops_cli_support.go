@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 
+	"issueops/cmd/issueops/jsonout"
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
@@ -62,9 +63,7 @@ func (cli command) runIssueOpsBranch(args []string) error {
 func printIssueOpsResult(record issueopscontract.IssueOpsRecord, jsonOut bool, err error) error {
 	if err != nil {
 		if jsonOut {
-			if printErr := printIssueOpsErrorJSON(err); printErr != nil {
-				return printErr
-			}
+			return reportIssueOpsError(err)
 		}
 		return err
 	}
@@ -73,6 +72,15 @@ func printIssueOpsResult(record issueopscontract.IssueOpsRecord, jsonOut bool, e
 	}
 	fmt.Printf("%s %s %s\n", record.ID, record.Phase, record.Repo)
 	return nil
+}
+
+// reportIssueOpsError prints err as the JSON error envelope and returns it
+// marked as reported, so the root command does not repeat it on stderr.
+func reportIssueOpsError(err error) error {
+	if printErr := printIssueOpsErrorJSON(err); printErr != nil {
+		return printErr
+	}
+	return jsonout.Reported(err)
 }
 
 func printIssueOpsErrorJSON(err error) error {

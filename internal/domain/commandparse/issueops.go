@@ -192,57 +192,57 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 		booleans: []string{"--json"},
 	},
 	"branch prepare": {
-		values:   []string{"--id", "--provider", "--issue-url", "--branch", "--base-branch", "--base-sha", "--parent-worktree", "--remote-branch-url", "--code-project-key", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:   []string{"--id", "--provider", "--issue-url", "--branch", "--base-branch", "--base-sha", "--parent-worktree", "--remote-branch-url", "--code-project-key", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		booleans: []string{"--link-verified", "--json"},
 	},
 	"child start": {
-		values:     []string{"--parent", "--branch", "--title", "--scope", "--acceptance", "--child-issue-url", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:     []string{"--parent", "--branch", "--title", "--scope", "--acceptance", "--child-issue-url", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		repeatable: []string{"--acceptance"},
 		booleans:   []string{"--json"},
 	},
 	"child status": {
-		values:   []string{"--parent", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:   []string{"--parent", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		booleans: []string{"--repair", "--json"},
 	},
 	"child list": {
-		values:   []string{"--parent", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:   []string{"--parent", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		booleans: []string{"--json"},
 	},
 	"child accept": {
-		values:     []string{"--parent", "--child", "--evidence", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:     []string{"--parent", "--child", "--evidence", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		repeatable: []string{"--evidence"},
 		booleans:   []string{"--json"},
 	},
 	"child reject": {
-		values:   []string{"--parent", "--child", "--reason", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:   []string{"--parent", "--child", "--reason", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		booleans: []string{"--json"},
 	},
 	"child drop": {
-		values:   []string{"--parent", "--child", "--reason", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:   []string{"--parent", "--child", "--reason", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		booleans: []string{"--json"},
 	},
 	"intent record": {
-		values:     []string{"--id", "--raw-request", "--interpreted-intent", "--success-criteria", "--constraint", "--ambiguity", "--non-goal", "--intent-class", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:     []string{"--id", "--raw-request", "--interpreted-intent", "--success-criteria", "--constraint", "--ambiguity", "--non-goal", "--intent-class", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		repeatable: []string{"--success-criteria", "--constraint", "--ambiguity", "--non-goal"},
 		booleans:   []string{"--json"},
 	},
 	"domain-review record": {
-		values:     []string{"--id", "--model-fit", "--terminology", "--risk", "--uncertainty", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:     []string{"--id", "--model-fit", "--terminology", "--risk", "--uncertainty", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		repeatable: []string{"--terminology", "--risk", "--uncertainty"},
 		booleans:   []string{"--json"},
 	},
 	"architecture review": {
-		values:     []string{"--id", "--problem-summary", "--proposed-architecture", "--refactor-plan", "--alternative", "--risk", "--verification", "--open-question", "--reviewer-context", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:     []string{"--id", "--problem-summary", "--proposed-architecture", "--refactor-plan", "--alternative", "--risk", "--verification", "--open-question", "--reviewer-context", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		repeatable: []string{"--alternative", "--risk", "--verification", "--open-question"},
 		booleans:   []string{"--approved", "--json"},
 	},
 	"plan-prep record": {
-		values:     []string{"--id", "--decisions-evidence", "--decisions-waive", "--related-score-ref", "--related-waive", "--web-research-evidence", "--web-research-waive", "--codebase-survey-evidence", "--codebase-survey-waive", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:     []string{"--id", "--decisions-evidence", "--decisions-waive", "--related-score-ref", "--related-waive", "--web-research-evidence", "--web-research-waive", "--codebase-survey-evidence", "--codebase-survey-waive", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		repeatable: []string{"--decisions-evidence", "--related-score-ref", "--web-research-evidence", "--codebase-survey-evidence"},
 		booleans:   []string{"--json"},
 	},
 	"regress": {
-		values:   []string{"--id", "--reason", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:   []string{"--id", "--reason", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		booleans: []string{"--json"},
 	},
 	"execution reconcile": {
@@ -259,55 +259,55 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 		booleans: []string{"--preview", "--apply", "--finalize", "--abort", "--confirm", "--json"},
 	},
 	"link-plan": {
-		values:   []string{"--id", "--plan-path", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:   []string{"--id", "--plan-path", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		booleans: []string{"--json"},
 	},
 	"link-worktree": {
-		values:   []string{"--id", "--worktree-path", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:   []string{"--id", "--worktree-path", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		booleans: []string{"--json"},
 	},
 	"link-child": {
-		values:   []string{"--id", "--child-url", "--title", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:   []string{"--id", "--child-url", "--title", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		booleans: []string{"--json"},
 	},
 	"link-related": {
-		values:   []string{"--id", "--type", "--related-url", "--title", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:   []string{"--id", "--type", "--related-url", "--title", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		booleans: []string{"--json"},
 	},
 	"feedback add": {
-		values:   []string{"--id", "--source", "--body", "--classification", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:   []string{"--id", "--source", "--body", "--classification", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		booleans: []string{"--json"},
 	},
 	"compatibility review": {
-		values:     []string{"--id", "--host", "--session-id", "--agent-id", "--cwd", "--backward-compatibility", "--side-effect", "--rollback-plan", "--verification", "--blocker"},
+		values:     []string{"--id", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable", "--backward-compatibility", "--side-effect", "--rollback-plan", "--verification", "--blocker"},
 		repeatable: []string{"--backward-compatibility", "--side-effect", "--verification", "--blocker"},
 		booleans:   []string{"--approved", "--json"},
 	},
 	"devils-advocate review": {
-		values:     []string{"--id", "--host", "--session-id", "--agent-id", "--cwd", "--verdict", "--reviewer-context", "--finding", "--waiver-rationale"},
+		values:     []string{"--id", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable", "--verdict", "--reviewer-context", "--finding", "--waiver-rationale"},
 		repeatable: []string{"--finding"},
 		booleans:   []string{"--waive", "--json"},
 	},
 	"phase": {
-		values:   []string{"--id", "--to", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:   []string{"--id", "--to", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		booleans: []string{"--json"},
 	},
 	"decision add": {
-		values:     []string{"--id", "--host", "--session-id", "--agent-id", "--cwd", "--title", "--body", "--kind", "--rationale", "--alternative", "--affected-link", "--affected-artifact"},
+		values:     []string{"--id", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable", "--title", "--body", "--kind", "--rationale", "--alternative", "--affected-link", "--affected-artifact"},
 		repeatable: []string{"--alternative", "--affected-link", "--affected-artifact"},
 		booleans:   []string{"--json"},
 	},
 	"ai-slop-clean record": {
-		values:     []string{"--id", "--host", "--session-id", "--agent-id", "--cwd", "--category", "--verification"},
+		values:     []string{"--id", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable", "--category", "--verification"},
 		repeatable: []string{"--category", "--verification"},
 		booleans:   []string{"--json"},
 	},
 	"feedback mark-issue-updated": {
-		values:   []string{"--id", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:   []string{"--id", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		booleans: []string{"--json"},
 	},
 	"feedback resolve": {
-		values:   []string{"--id", "--host", "--session-id", "--agent-id", "--cwd", "--index", "--resolution"},
+		values:   []string{"--id", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable", "--index", "--resolution"},
 		booleans: []string{"--json"},
 	},
 	"remote create-pr": {
@@ -316,7 +316,7 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 		booleans:   []string{"--confirm", "--json"},
 	},
 	"remote reconcile-child": {
-		values:   []string{"--id", "--operation-id", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:   []string{"--id", "--operation-id", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		booleans: []string{"--confirm", "--json"},
 	},
 	"remote create-child": {
@@ -325,7 +325,7 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 		booleans:   []string{"--confirm", "--json"},
 	},
 	"remote verify-artifact": {
-		values:     []string{"--id", "--provider", "--kind", "--url", "--target-branch", "--label", "--labels", "--assignee", "--assignees", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:     []string{"--id", "--provider", "--kind", "--url", "--target-branch", "--label", "--labels", "--assignee", "--assignees", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		repeatable: []string{"--label", "--labels", "--assignee", "--assignees"},
 		booleans:   []string{"--json"},
 	},
@@ -334,7 +334,7 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 		booleans: []string{"--json"},
 	},
 	"implementation-review record": {
-		values:     []string{"--id", "--verdict", "--finding", "--evidence", "--reviewer-host", "--reviewer-model", "--reviewer-effort", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:     []string{"--id", "--verdict", "--finding", "--evidence", "--reviewer-host", "--reviewer-model", "--reviewer-effort", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		repeatable: []string{"--finding", "--evidence"},
 		booleans:   []string{"--json"},
 	},
@@ -343,12 +343,12 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 		booleans: []string{"--json"},
 	},
 	"project-docs-review record": {
-		values:     []string{"--id", "--verdict", "--doc", "--reviewed-doc", "--evidence", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:     []string{"--id", "--verdict", "--doc", "--reviewed-doc", "--evidence", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		repeatable: []string{"--doc", "--reviewed-doc", "--evidence"},
 		booleans:   []string{"--json"},
 	},
 	"schema-evidence record": {
-		values:     []string{"--id", "--measurement", "--source", "--waiver-rationale", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:     []string{"--id", "--measurement", "--source", "--waiver-rationale", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		repeatable: []string{"--measurement", "--source"},
 		booleans:   []string{"--json", "--waive"},
 	},
@@ -365,7 +365,7 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 		booleans: []string{"--json"},
 	},
 	"branch retarget": {
-		values:   []string{"--id", "--base-branch", "--reason", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:   []string{"--id", "--base-branch", "--reason", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		booleans: []string{"--json"},
 	},
 	"cleanup status": {
@@ -404,7 +404,7 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 		booleans: []string{"--confirm", "--json"},
 	},
 	"remote reflect-devils-advocate": {
-		values:   []string{"--id", "--provider", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:   []string{"--id", "--provider", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		booleans: []string{"--confirm", "--json"},
 	},
 	"remote close-issue": {
@@ -416,11 +416,11 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 		booleans: []string{"--confirm", "--json"},
 	},
 	"remote sync-issue": {
-		values:   []string{"--id", "--provider", "--url", "--body", "--body-file", "--template", "--expected-body-sha256", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:   []string{"--id", "--provider", "--url", "--body", "--body-file", "--template", "--expected-body-sha256", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		booleans: []string{"--accept-remote-edits", "--confirm", "--json"},
 	},
 	"remote sync-pr": {
-		values:   []string{"--id", "--provider", "--url", "--expected-generation", "--body", "--body-file", "--template", "--expected-body-sha256", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:   []string{"--id", "--provider", "--url", "--expected-generation", "--body", "--body-file", "--template", "--expected-body-sha256", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		booleans: []string{"--accept-remote-edits", "--confirm", "--json"},
 	},
 }
