@@ -1338,7 +1338,7 @@
           "path": "$ISSUEOPS_ROOT/skills/git-operations"
         },
         {
-          "description": "Use before GitLab, glab, GitLab MCP, IssueOps remote issue/MR, linked-item, child-item, work-item, Kody/Kodus review, issue-body update, branch-target, or cleanup work. Prevents repeated GitLab mistakes by distinguishing native linked items from child items, enforcing body-of-record rules, authenticated CLI/MCP fallback, labels/assignee/target-branch checks, and review-thread verification.",
+          "description": "Use before GitLab, glab, GitLab MCP, IssueOps remote issue/MR, linked-item, child-item, work-item, Kody/Kodus review, issue-body update, branch-target, or cleanup work, to avoid repeated GitLab mistakes (linked vs child items, body of record, labels/assignee/target branch, review threads).",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "gitlab-usecase",
@@ -1443,7 +1443,7 @@
           "path": "$ISSUEOPS_ROOT/skills/issueops-plan"
         },
         {
-          "description": "Give an IssueOps cycle its branch identity. Resolve and pin the exact base SHA, record it with \"issueops branch prepare\", create and verify the provider-side branch link, and move the cycle to the plan phase. Creating the worktree is not this skill's job — \"issueops execution prepare\" owns it. Use when the user says \"준비\", \"브랜치 만들어줘\", \"prepare the issue branch\", or when \"issueops next\" reports stage prepare.",
+          "description": "Give an IssueOps cycle its branch identity: pin the base SHA, record \"issueops branch prepare\", and verify the provider branch link (the worktree belongs to \"issueops execution prepare\"). Use when the user says \"준비\", \"브랜치 만들어줘\", \"prepare the issue branch\", or when \"issueops next\" reports stage prepare.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "issueops-prepare",
@@ -1464,7 +1464,7 @@
           "path": "$ISSUEOPS_ROOT/skills/issueops-review"
         },
         {
-          "description": "Run the IssueOps ai-slop-clean stage on the canonical worktree. Confirm the phase, remove lazy agent residue from the task diff one pass at a time while preserving behavior, measure before and after with code-quality-metrics, re-run the gate ledger and the focused verification, and record the cleanup evidence that seals the change fingerprint. Use when \"issueops next\" reports clean, or when the user says \"AI slop 정리\", \"slop 치워줘\", \"정리 단계\".",
+          "description": "Run the IssueOps ai-slop-clean stage: remove agent residue from the task diff without changing behavior, re-verify, and record the cleanup evidence. Use when \"issueops next\" reports clean, or when the user says \"AI slop 정리\", \"slop 치워줘\", \"정리 단계\".",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "issueops-slop-clean",
@@ -1527,7 +1527,7 @@
           "path": "$ISSUEOPS_ROOT/skills/project-docs-optimize"
         },
         {
-          "description": "Use when a completed change, solved failure, new command, or durable decision should be reflected in existing .issueops docs outside an IssueOps docs stage. Routes, reads with SHA-256, then appends cautions/ADRs or revises one document through the project_docs MCP contract. New docs: project-docs-bootstrap; restructuring: project-docs-optimize.",
+          "description": "Use when a completed change, solved failure, new command, or durable decision should be reflected in existing .issueops docs outside an IssueOps docs stage. New docs: project-docs-bootstrap; restructuring: project-docs-optimize.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "project-docs-update",
@@ -1590,14 +1590,14 @@
           "path": "$ISSUEOPS_ROOT/skills/slack-delegate"
         },
         {
-          "description": "Run an exhaustive issueops stability audit from install/update through hooks, MCP, worker, state, process hygiene, memory-growth signals, zombie/orphan processes, and regression verification. Use when the user asks for E2E stability checks, full operational sweep, hook/MCP reliability, install verification, memory leak investigation, zombie process investigation, or “전수조사/안정성 점검”.",
+          "description": "Run an exhaustive issueops stability audit across install/update, hooks, MCP, worker, state, and processes. Use when the user asks for E2E stability checks, a full operational sweep, hook/MCP reliability, install verification, memory leak or zombie process investigation, or “전수조사/안정성 점검”.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "stability-audit",
           "path": "$ISSUEOPS_ROOT/skills/stability-audit"
         },
         {
-          "description": "Use when a base or release branch moved ahead and the feature branch must catch up, or for \"베이스 브랜치 최신화\", \"release 브랜치 반영\", \"브랜치 최신으로 맞춰줘\", \"rebase onto parent\", \"sync with base branch\". Picks merge or rebase from evidence, keeps a backup ref, proves no commit was lost, then pushes. An issueops-owned branch uses `issueops execution sync-base` instead.",
+          "description": "Use when a base or release branch moved ahead and the feature branch must catch up (merge or rebase with a backup ref and no lost commits), or for \"베이스 브랜치 최신화\", \"release 브랜치 반영\", \"브랜치 최신으로 맞춰줘\", \"rebase onto parent\", \"sync with base branch\". An issueops-owned branch uses `issueops execution sync-base` instead.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "sync-base",
@@ -5819,7 +5819,7 @@
                 "path": "$ISSUEOPS_ROOT/skills/git-operations"
               },
               {
-                "description": "Use before GitLab, glab, GitLab MCP, IssueOps remote issue/MR, linked-item, child-item, work-item, Kody/Kodus review, issue-body update, branch-target, or cleanup work. Prevents repeated GitLab mistakes by distinguishing native linked items from child items, enforcing body-of-record rules, authenticated CLI/MCP fallback, labels/assignee/target-branch checks, and review-thread verification.",
+                "description": "Use before GitLab, glab, GitLab MCP, IssueOps remote issue/MR, linked-item, child-item, work-item, Kody/Kodus review, issue-body update, branch-target, or cleanup work, to avoid repeated GitLab mistakes (linked vs child items, body of record, labels/assignee/target branch, review threads).",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "gitlab-usecase",
@@ -5924,7 +5924,7 @@
                 "path": "$ISSUEOPS_ROOT/skills/issueops-plan"
               },
               {
-                "description": "Give an IssueOps cycle its branch identity. Resolve and pin the exact base SHA, record it with \"issueops branch prepare\", create and verify the provider-side branch link, and move the cycle to the plan phase. Creating the worktree is not this skill's job — \"issueops execution prepare\" owns it. Use when the user says \"준비\", \"브랜치 만들어줘\", \"prepare the issue branch\", or when \"issueops next\" reports stage prepare.",
+                "description": "Give an IssueOps cycle its branch identity: pin the base SHA, record \"issueops branch prepare\", and verify the provider branch link (the worktree belongs to \"issueops execution prepare\"). Use when the user says \"준비\", \"브랜치 만들어줘\", \"prepare the issue branch\", or when \"issueops next\" reports stage prepare.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "issueops-prepare",
@@ -5945,7 +5945,7 @@
                 "path": "$ISSUEOPS_ROOT/skills/issueops-review"
               },
               {
-                "description": "Run the IssueOps ai-slop-clean stage on the canonical worktree. Confirm the phase, remove lazy agent residue from the task diff one pass at a time while preserving behavior, measure before and after with code-quality-metrics, re-run the gate ledger and the focused verification, and record the cleanup evidence that seals the change fingerprint. Use when \"issueops next\" reports clean, or when the user says \"AI slop 정리\", \"slop 치워줘\", \"정리 단계\".",
+                "description": "Run the IssueOps ai-slop-clean stage: remove agent residue from the task diff without changing behavior, re-verify, and record the cleanup evidence. Use when \"issueops next\" reports clean, or when the user says \"AI slop 정리\", \"slop 치워줘\", \"정리 단계\".",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "issueops-slop-clean",
@@ -6008,7 +6008,7 @@
                 "path": "$ISSUEOPS_ROOT/skills/project-docs-optimize"
               },
               {
-                "description": "Use when a completed change, solved failure, new command, or durable decision should be reflected in existing .issueops docs outside an IssueOps docs stage. Routes, reads with SHA-256, then appends cautions/ADRs or revises one document through the project_docs MCP contract. New docs: project-docs-bootstrap; restructuring: project-docs-optimize.",
+                "description": "Use when a completed change, solved failure, new command, or durable decision should be reflected in existing .issueops docs outside an IssueOps docs stage. New docs: project-docs-bootstrap; restructuring: project-docs-optimize.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "project-docs-update",
@@ -6071,14 +6071,14 @@
                 "path": "$ISSUEOPS_ROOT/skills/slack-delegate"
               },
               {
-                "description": "Run an exhaustive issueops stability audit from install/update through hooks, MCP, worker, state, process hygiene, memory-growth signals, zombie/orphan processes, and regression verification. Use when the user asks for E2E stability checks, full operational sweep, hook/MCP reliability, install verification, memory leak investigation, zombie process investigation, or “전수조사/안정성 점검”.",
+                "description": "Run an exhaustive issueops stability audit across install/update, hooks, MCP, worker, state, and processes. Use when the user asks for E2E stability checks, a full operational sweep, hook/MCP reliability, install verification, memory leak or zombie process investigation, or “전수조사/안정성 점검”.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "stability-audit",
                 "path": "$ISSUEOPS_ROOT/skills/stability-audit"
               },
               {
-                "description": "Use when a base or release branch moved ahead and the feature branch must catch up, or for \"베이스 브랜치 최신화\", \"release 브랜치 반영\", \"브랜치 최신으로 맞춰줘\", \"rebase onto parent\", \"sync with base branch\". Picks merge or rebase from evidence, keeps a backup ref, proves no commit was lost, then pushes. An issueops-owned branch uses `issueops execution sync-base` instead.",
+                "description": "Use when a base or release branch moved ahead and the feature branch must catch up (merge or rebase with a backup ref and no lost commits), or for \"베이스 브랜치 최신화\", \"release 브랜치 반영\", \"브랜치 최신으로 맞춰줘\", \"rebase onto parent\", \"sync with base branch\". An issueops-owned branch uses `issueops execution sync-base` instead.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "sync-base",
