@@ -50,7 +50,7 @@ func ValidateHolder(record issueopsauthorizationcontract.Record, actor *issueops
 // paths, so the caller can correct --cwd without reading the record.
 func ValidateCWD(canonical bool, cwd, root string) error {
 	if !canonical {
-		return fmt.Errorf("IssueOps execution mutation requires the canonical worktree cwd: --cwd %q, worktree %q", cwd, root)
+		return fmt.Errorf("IssueOps execution mutation requires the canonical worktree cwd: rerun with --cwd %q (got %q)", root, cwd)
 	}
 	return nil
 }
