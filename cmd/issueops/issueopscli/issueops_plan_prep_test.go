@@ -42,15 +42,13 @@ func TestRunIssueOpsPlanPrepRecord(t *testing.T) {
 	}
 
 	// evidence와 waive를 올바르게 섞으면 성공하고 plan_prep을 낸다.
-	out := captureStdoutForContract(t, func() error {
-		return runIssueOps([]string{
-			"plan-prep", "record", "--id", id,
-			"--decisions-evidence", ".issueops/ADR.md",
-			"--related-score-ref", "remote score: selected=#1(0.9), threshold=0.70",
-			"--web-research-waive", "internal-only change",
-			"--codebase-survey-evidence", "rg/CodeGraph sweep: touched symbols and files listed in plan",
-			"--json",
-		})
+	out := statusJSONAfter(t, id, []string{
+		"plan-prep", "record", "--id", id,
+		"--decisions-evidence", ".issueops/ADR.md",
+		"--related-score-ref", "remote score: selected=#1(0.9), threshold=0.70",
+		"--web-research-waive", "internal-only change",
+		"--codebase-survey-evidence", "rg/CodeGraph sweep: touched symbols and files listed in plan",
+		"--json",
 	})
 	if !strings.Contains(out, "plan_prep") || !strings.Contains(out, "waived") {
 		t.Fatalf("plan-prep record should emit plan_prep with a waived item: %s", out)

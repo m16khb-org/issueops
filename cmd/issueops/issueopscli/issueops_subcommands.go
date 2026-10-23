@@ -25,7 +25,9 @@ func (cli command) runIssueOpsStart(args []string) error {
 		return err
 	}
 	record, err := cli.Runtime.StartIssueOps(cli.Runtime.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: *repo, Branch: *branch, New: *newCycle})
-	return printIssueOpsResult(record, *jsonOut, err)
+	// start answers with the new record itself: it is small at creation and
+	// carries the repo identity a caller binds the cycle to.
+	return printIssueOpsRecord(record, *jsonOut, err)
 }
 
 func (cli command) runIssueOpsStatus(args []string) error {
@@ -36,7 +38,7 @@ func (cli command) runIssueOpsStatus(args []string) error {
 		return err
 	}
 	record, err := cli.Runtime.IssueOpsStatus(cli.Runtime.IssueOpsStateRoot(), *id)
-	return printIssueOpsResult(record, *jsonOut, err)
+	return printIssueOpsRecord(record, *jsonOut, err)
 }
 
 func (cli command) runIssueOpsLinkIssue(args []string) error {

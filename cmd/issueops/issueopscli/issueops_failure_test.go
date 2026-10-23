@@ -226,15 +226,13 @@ func TestRunIssueOpsIntentRedactsSecretLikeFreeform(t *testing.T) {
 		t.Fatalf("unexpected start record: %#v", record)
 	}
 
-	out := captureStdoutForContract(t, func() error {
-		return runIssueOps([]string{
-			"intent", "record",
-			"--id", id,
-			"--raw-request", "token=secret-value",
-			"--interpreted-intent", "api_key=secret-value",
-			"--success-criteria", "password=secret-value",
-			"--json",
-		})
+	out := statusJSONAfter(t, id, []string{
+		"intent", "record",
+		"--id", id,
+		"--raw-request", "token=secret-value",
+		"--interpreted-intent", "api_key=secret-value",
+		"--success-criteria", "password=secret-value",
+		"--json",
 	})
 	if strings.Contains(out, "secret-value") || (!strings.Contains(out, "<redacted>") && !strings.Contains(out, `\u003credacted\u003e`)) {
 		t.Fatalf("intent JSON should redact secret-like freeform values:\n%s", out)

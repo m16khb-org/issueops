@@ -27,6 +27,28 @@ type IssueOpsSchemaEvidenceRequest struct {
 	WaiverRationale string
 }
 
+// IssueOpsMutationAck is the --json answer of a record mutation. It names the
+// record and its position instead of echoing the whole record (which grew to
+// 25+ KB per call over a cycle); `issueops status --id ID --json` returns the
+// full record when a caller needs it.
+type IssueOpsMutationAck struct {
+	OK            bool          `json:"ok"`
+	SchemaVersion int           `json:"schema_version"`
+	ID            string        `json:"id"`
+	Phase         IssueOpsPhase `json:"phase"`
+	Branch        string        `json:"branch,omitempty"`
+	WorktreePath  string        `json:"worktree_path,omitempty"`
+	UpdatedAt     string        `json:"updated_at"`
+}
+
+// MutationAck projects record onto its mutation acknowledgement.
+func MutationAck(record IssueOpsRecord) IssueOpsMutationAck {
+	return IssueOpsMutationAck{
+		OK: record.OK, SchemaVersion: record.SchemaVersion, ID: record.ID, Phase: record.Phase,
+		Branch: record.Branch, WorktreePath: record.WorktreePath, UpdatedAt: record.UpdatedAt,
+	}
+}
+
 // 아키텍처 검토 증거 예시 문구는 CLI 도움말과 어댑터가 함께 쓰는 어휘다.
 const IssueOpsArchitectureReviewEvidenceExample = "architecture review checked alternatives and risks"
 

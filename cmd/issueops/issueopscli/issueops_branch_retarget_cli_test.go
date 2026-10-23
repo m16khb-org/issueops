@@ -27,14 +27,12 @@ func TestBranchRetargetCLIForwardsRequestAndPrintsRecord(t *testing.T) {
 	if gotID != "io-1" || got.BaseBranch != "2803-umbrella" || !strings.Contains(got.Reason, "umbrella") {
 		t.Fatalf("retarget request must reach the core unchanged: id=%q req=%+v", gotID, got)
 	}
-	var record map[string]any
-	if err := json.Unmarshal([]byte(out), &record); err != nil {
+	var ack map[string]any
+	if err := json.Unmarshal([]byte(out), &ack); err != nil {
 		t.Fatalf("branch retarget should return JSON: %v\n%s", err, out)
 	}
-	prepare, _ := record["branch_prepare"].(map[string]any)
-	retargets, _ := prepare["retargets"].([]any)
-	if prepare["base_branch"] != "2803-umbrella" || len(retargets) != 1 {
-		t.Fatalf("printed record must show the retargeted base and history: %#v", record)
+	if ack["ok"] != true || ack["id"] != "io-1" || ack["branch_prepare"] != nil {
+		t.Fatalf("branch retarget must answer with the compact mutation ack: %#v", ack)
 	}
 }
 

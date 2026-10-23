@@ -42,22 +42,16 @@ func TestIssueOpsCompatibilityReviewCLIRecordsReview(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	out := captureStdoutForContract(t, func() error {
-		return runIssueOps([]string{
-			"compatibility", "review",
-			"--id", id,
-			"--backward-compatibility", "existing IssueOps JSON records remain readable",
-			"--side-effect", "phase ordering changes are limited to IssueOps lifecycle gates",
-			"--rollback-plan", "revert the compatibility-review phase and readiness gate",
-			"--verification", "compatibility review checked backward compatibility and side effects",
-			"--approved",
-			"--json",
-		})
+	updated := statusRecordAfter(t, id, []string{
+		"compatibility", "review",
+		"--id", id,
+		"--backward-compatibility", "existing IssueOps JSON records remain readable",
+		"--side-effect", "phase ordering changes are limited to IssueOps lifecycle gates",
+		"--rollback-plan", "revert the compatibility-review phase and readiness gate",
+		"--verification", "compatibility review checked backward compatibility and side effects",
+		"--approved",
+		"--json",
 	})
-	var updated map[string]any
-	if err := json.Unmarshal([]byte(out), &updated); err != nil {
-		t.Fatalf("compatibility review should return JSON: %v\n%s", err, out)
-	}
 	review, ok := updated["compatibility_review"].(map[string]any)
 	if !ok || review["approved"] != true || review["reviewed_at"] == "" {
 		t.Fatalf("compatibility review not persisted in CLI output: %#v", updated)

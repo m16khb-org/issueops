@@ -1644,6 +1644,7 @@
         "func command.runIssueOpsBranchRetarget",
         "func issueOpsUsage",
         "func printIssueOpsErrorJSON",
+        "func printIssueOpsRecord",
         "func printIssueOpsResult",
         "func reportIssueOpsError"
       ]
@@ -10822,8 +10823,10 @@
       "owner": "contract",
       "task": "T02",
       "symbols": [
+        "func MutationAck",
         "type IssueOpsCycleOutcome",
         "type IssueOpsImplementationReviewRequest",
+        "type IssueOpsMutationAck",
         "type IssueOpsProjectDocsReviewRequest",
         "type IssueOpsReviewMetricsAggregate",
         "type IssueOpsReviewMetricsCycle",

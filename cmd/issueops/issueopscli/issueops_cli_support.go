@@ -60,7 +60,17 @@ func (cli command) runIssueOpsBranch(args []string) error {
 	return printIssueOpsResult(record, *jsonOut, err)
 }
 
+// printIssueOpsResult answers a record mutation. --json prints the compact
+// acknowledgement; the full record stays one `status` call away.
 func printIssueOpsResult(record issueopscontract.IssueOpsRecord, jsonOut bool, err error) error {
+	if err == nil && jsonOut {
+		return printJSON(issueopscontract.MutationAck(record))
+	}
+	return printIssueOpsRecord(record, jsonOut, err)
+}
+
+// printIssueOpsRecord prints the whole record (the `status` read).
+func printIssueOpsRecord(record issueopscontract.IssueOpsRecord, jsonOut bool, err error) error {
 	if err != nil {
 		if jsonOut {
 			return reportIssueOpsError(err)

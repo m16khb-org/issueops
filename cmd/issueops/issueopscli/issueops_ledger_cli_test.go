@@ -29,9 +29,7 @@ func TestRunIssueOpsDomainReviewRecord(t *testing.T) {
 	if err := runIssueOps([]string{"domain-review", "record", "--id", id}); err == nil {
 		t.Fatal("domain-review without model-fit/terminology must error")
 	}
-	out := captureStdoutForContract(t, func() error {
-		return runIssueOps([]string{"domain-review", "record", "--id", id, "--model-fit", "fits the model", "--terminology", "ledger", "--risk", "deadlock", "--json"})
-	})
+	out := statusJSONAfter(t, id, []string{"domain-review", "record", "--id", id, "--model-fit", "fits the model", "--terminology", "ledger", "--risk", "deadlock", "--json"})
 	if !strings.Contains(out, "domain_review") || !strings.Contains(out, "fits the model") {
 		t.Fatalf("domain-review record should emit domain_review: %s", out)
 	}
@@ -43,9 +41,7 @@ func TestRunIssueOpsAISlopCleanRecord(t *testing.T) {
 	if err := runIssueOps([]string{"ai-slop-clean", "record", "--id", id, "--category", "dead-code"}); err == nil {
 		t.Fatal("ai-slop-clean record without verification must error")
 	}
-	out := captureStdoutForContract(t, func() error {
-		return runIssueOps([]string{"ai-slop-clean", "record", "--id", id, "--category", "dead-code", "--verification", "go test ./...", "--json"})
-	})
+	out := statusJSONAfter(t, id, []string{"ai-slop-clean", "record", "--id", id, "--category", "dead-code", "--verification", "go test ./...", "--json"})
 	if !strings.Contains(out, "ai_slop_clean_categories") || !strings.Contains(out, "dead-code") {
 		t.Fatalf("ai-slop-clean record should emit categories: %s", out)
 	}
@@ -60,9 +56,7 @@ func TestRunIssueOpsFeedbackResolve(t *testing.T) {
 	if err := runIssueOps([]string{"feedback", "resolve", "--id", id, "--index", "0", "--resolution", "bogus"}); err == nil {
 		t.Fatal("bogus resolution must error")
 	}
-	out := captureStdoutForContract(t, func() error {
-		return runIssueOps([]string{"feedback", "resolve", "--id", id, "--index", "0", "--resolution", "valid-defect", "--json"})
-	})
+	out := statusJSONAfter(t, id, []string{"feedback", "resolve", "--id", id, "--index", "0", "--resolution", "valid-defect", "--json"})
 	if !strings.Contains(out, "valid-defect") {
 		t.Fatalf("feedback resolve should emit resolution: %s", out)
 	}

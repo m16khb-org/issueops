@@ -2,6 +2,7 @@ package issueopscli
 
 import (
 	"encoding/json"
+	"fmt"
 	issueopscore "issueops/internal/adapter/issueops"
 	"os"
 	"path/filepath"
@@ -44,13 +45,7 @@ func TestRunIssueOpsLifecycle(t *testing.T) {
 		t.Fatalf("issue link should move to plan phase: %#v", issueRecord)
 	}
 
-	branch := captureStdoutForContract(t, func() error {
-		return runIssueOps([]string{"branch", "prepare", "--id", id, "--provider", "github", "--issue-url", "https://github.com/example/repo/issues/1", "--branch", "1-provider-linked-branch", "--base-branch", "main", "--parent-worktree", repo + ".worktrees/main", "--link-verified", "--json"})
-	})
-	var branchRecord map[string]any
-	if err := json.Unmarshal([]byte(branch), &branchRecord); err != nil {
-		t.Fatalf("branch prepare should return JSON: %v\n%s", err, branch)
-	}
+	branchRecord := statusRecordAfter(t, id, []string{"branch", "prepare", "--id", id, "--provider", "github", "--issue-url", "https://github.com/example/repo/issues/1", "--branch", "1-provider-linked-branch", "--base-branch", "main", "--parent-worktree", repo + ".worktrees/main", "--link-verified", "--json"})
 	prepare, ok := branchRecord["branch_prepare"].(map[string]any)
 	if !ok || prepare["provider"] != "github" || prepare["branch"] != "1-provider-linked-branch" {
 		t.Fatalf("branch prepare should persist provider-linked contract: %#v", branchRecord)
@@ -131,10 +126,10 @@ func TestRunIssueOpsLifecycle(t *testing.T) {
 	child := captureStdoutForContract(t, func() error {
 		return runIssueOpsForTest(withIssueOpsCLIActor([]string{"link-child", "--id", id, "--child-url", "https://github.com/example/repo/issues/2", "--title", "write child graph tests", "--json"}, actor), Dependencies{Verification: RemoteVerification{Child: func(string) error { return nil }}})
 	})
-	var childRecord map[string]any
-	if err := json.Unmarshal([]byte(child), &childRecord); err != nil {
-		t.Fatalf("child issue link should return JSON: %v\n%s", err, child)
+	if !strings.Contains(child, `"ok": true`) {
+		t.Fatalf("child issue link should acknowledge: %s", child)
 	}
+	childRecord := statusRecordForTest(t, id)
 	issueLinks, ok := childRecord["issue_links"].([]any)
 	if !ok || len(issueLinks) != 1 {
 		t.Fatalf("child issue link should be persisted: %#v", childRecord)
@@ -147,11 +142,8 @@ func TestRunIssueOpsLifecycle(t *testing.T) {
 	feedback := captureStdoutForContract(t, func() error {
 		return runIssueOps(withIssueOpsCLIActor([]string{"feedback", "add", "--id", id, "--source", "user", "--body", "tighten acceptance criteria", "--json"}, actor))
 	})
-	var feedbackRecord map[string]any
-	if err := json.Unmarshal([]byte(feedback), &feedbackRecord); err != nil {
-		t.Fatalf("feedback should return JSON: %v\n%s", err, feedback)
-	}
-	if feedbackRecord["phase"] != "implement" || !strings.Contains(feedback, "tighten acceptance criteria") {
+	feedbackRecord := statusRecordForTest(t, id)
+	if feedbackRecord["phase"] != "implement" || !strings.Contains(feedback, `"ok": true`) || !strings.Contains(fmt.Sprint(feedbackRecord["feedback"]), "tighten acceptance criteria") {
 		t.Fatalf("early feedback should be persisted without entering feedback phase: %#v", feedbackRecord)
 	}
 
@@ -174,9 +166,9 @@ func TestRunIssueOpsLifecycle(t *testing.T) {
 	cleaned := captureStdoutForContract(t, func() error {
 		return runIssueOps(withIssueOpsCLIActor([]string{"phase", "--id", id, "--to", "ai-slop-clean", "--json"}, actor))
 	})
-	var cleanedRecord map[string]any
-	if err := json.Unmarshal([]byte(cleaned), &cleanedRecord); err != nil {
-		t.Fatalf("ai-slop-clean phase should return JSON: %v\n%s", err, cleaned)
+	cleanedRecord := statusRecordForTest(t, id)
+	if !strings.Contains(cleaned, `"phase": "ai-slop-clean"`) {
+		t.Fatalf("ai-slop-clean phase should acknowledge the new phase: %s", cleaned)
 	}
 	if cleanedRecord["phase"] != "ai-slop-clean" || cleanedRecord["ai_slop_clean_at"] == "" {
 		t.Fatalf("ai-slop-clean should be persisted before PR readiness: %#v", cleanedRecord)
@@ -190,10 +182,10 @@ func TestRunIssueOpsLifecycle(t *testing.T) {
 			"--evidence", "이 변경은 운영 문서에 남길 결정을 만들지 않는다", "--json",
 		}, actor))
 	})
-	var docsRecord map[string]any
-	if err := json.Unmarshal([]byte(docsReview), &docsRecord); err != nil {
-		t.Fatalf("project docs review should return JSON: %v\n%s", err, docsReview)
+	if !strings.Contains(docsReview, `"ok": true`) {
+		t.Fatalf("project docs review should acknowledge: %s", docsReview)
 	}
+	docsRecord := statusRecordForTest(t, id)
 	if docsRecord["project_docs_review"] == nil {
 		t.Fatalf("project docs review should be persisted: %#v", docsRecord)
 	}
@@ -207,10 +199,10 @@ func TestRunIssueOpsLifecycle(t *testing.T) {
 			"--reviewer-host", "claude", "--json",
 		}, actor))
 	})
-	var implRecord map[string]any
-	if err := json.Unmarshal([]byte(implReview), &implRecord); err != nil {
-		t.Fatalf("implementation review should return JSON: %v\n%s", err, implReview)
+	if !strings.Contains(implReview, `"ok": true`) {
+		t.Fatalf("implementation review should acknowledge: %s", implReview)
 	}
+	implRecord := statusRecordForTest(t, id)
 	if implRecord["implementation_review"] == nil {
 		t.Fatalf("implementation review should be persisted: %#v", implRecord)
 	}
@@ -246,12 +238,11 @@ func TestRunIssueOpsLifecycle(t *testing.T) {
 	marked := captureStdoutForContract(t, func() error {
 		return runIssueOps(withIssueOpsCLIActor([]string{"feedback", "mark-issue-updated", "--id", id, "--json"}, actor))
 	})
-	var markedRecord map[string]any
-	if err := json.Unmarshal([]byte(marked), &markedRecord); err != nil {
-		t.Fatalf("mark issue updated should return JSON: %v\n%s", err, marked)
+	if !strings.Contains(marked, `"ok": true`) {
+		t.Fatalf("mark issue updated should acknowledge: %s", marked)
 	}
-	if !strings.Contains(marked, "issue_updated_at") {
-		t.Fatalf("mark issue updated should timestamp contract feedback: %#v", markedRecord)
+	if markedRecord := statusRecordForTest(t, id); !strings.Contains(fmt.Sprint(markedRecord["feedback"]), "issue_updated_at") {
+		t.Fatalf("mark issue updated should timestamp contract feedback: %#v", markedRecord["feedback"])
 	}
 	unblockedReadiness := captureStdoutForContract(t, func() error {
 		return runIssueOps([]string{"pr-readiness", "--id", id, "--json"})

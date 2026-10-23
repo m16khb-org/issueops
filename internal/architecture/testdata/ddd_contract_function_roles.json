@@ -583,5 +583,10 @@
     "path": "internal/contract/upstream/upstream.go",
     "symbol": "func PluginEntry.ID",
     "role": "projection"
+  },
+  {
+    "path": "internal/contract/issueops/cli_result_types.go",
+    "symbol": "func MutationAck",
+    "role": "projection"
   }
 ]
