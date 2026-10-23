@@ -13,7 +13,7 @@
 사용자 선택지 2: "P0~P4 전체 로드맵을 `.issueops/plans/` 계획 문서로 먼저 기록해 우선순위를 확정한 뒤 수정에 착수한다."
 
 ### 근거 (감사 출처)
-- 4개 병렬 서브에이전트 전수 감사 (2026-07-20, main @ 9ec412a): 그룹1 web-research/design-review/database-design, 그룹2 algorithm-optimization/meeting-notes/debugging, 그룹3 prompt-engineering/code-quality-metrics/git-operations, 그룹4 verified-execution/implementation-planning. 모든 결함은 file:line 증거 + 실행 재현(macOS, git 2.50.1, `grep`→ugrep 7.5.0 별칭 호스트) 기반.
+- 4개 병렬 서브에이전트 전수 감사 (2026-07-20, main @ 9ec412a): 그룹1 web-research/design-review/database-schema-architecture, 그룹2 algorithm-optimization/meeting-notes/debugging, 그룹3 prompt-engineering/code-quality-metrics/git-operations, 그룹4 verified-execution/implementation-planning. 모든 결함은 file:line 증거 + 실행 재현(macOS, git 2.50.1, `grep`→ugrep 7.5.0 별칭 호스트) 기반.
 - 인프라 층 직접 조사: rubric v2·홀드아웃 스위트(`.issueops/evidence/pioneer-skills-quality/`), 통합 벤치마크(`internal/core/issueops/benchmark/`), 라우팅(`internal/core/hookprompt/rules.go`), 회귀 핀(`internal/core/skillcontract/`), 배포 경로(`~/.claude/skills` 심링크).
 - 선행 이력: `.issueops/issues/_unnumbered/pioneer-skills-quality-improvement.md` (6월 사이클, 완료), `.issueops/operations/pioneer-v2-regrade-2026-06-16.md` (v2 홀드아웃 평균 4.78/5).
 
@@ -58,7 +58,7 @@
 
 ## P2 — 토큰 경제: references/ 분리 일괄 패스 (스킬별 병렬 가능)
 
-원칙: database-design(83줄 본문 + `references/deep-database-review.md`, 중복 0)가 정본 패턴. 활성화 시점 자료(게이트·계약·단계 흐름·NEVER/ALWAYS)만 본문에 남기고 조회형 자료(표·패턴 라이브러리·템플릿)는 분리. **주의: `internal/core/skillcontract/skill_contract_test.go`가 assert하는 문구는 본문에 반드시 보존**(예: web-research 4개 문구 `:66-73`).
+원칙: database-schema-architecture(83줄 본문 + `references/deep-database-review.md`, 중복 0)가 정본 패턴. 활성화 시점 자료(게이트·계약·단계 흐름·NEVER/ALWAYS)만 본문에 남기고 조회형 자료(표·패턴 라이브러리·템플릿)는 분리. **주의: `internal/core/skillcontract/skill_contract_test.go`가 assert하는 문구는 본문에 반드시 보존**(예: web-research 4개 문구 `:66-73`).
 
 | 스킬 | 현재 | 분리 대상 | 목표 |
 |------|------|-----------|------|
@@ -78,13 +78,13 @@
 ### P3-A. 경량 모드 이식 (5개 스킬)
 정본 패턴: prompt-engineering lifespan gate(`:59-67`, `skill_contract_test.go:34-35`로 핀) + verified-execution proportionate mode.
 - design-review: `## Proportionality` — 단일 모듈 5단계 미만 계획은 Gate 1·3·4만 + 판정/최대 결함/더 작은 계획 반환.
-- database-design: `## Proportional Mode` — 단일 쿼리/인덱스 질문은 SURVEY(행수만)→INDEX→VERIFY, 다중 테이블/스키마 변경 시 7단계 전체.
+- database-schema-architecture: `## Proportional Mode` — 단일 쿼리/인덱스 질문은 SURVEY(행수만)→INDEX→VERIFY, 다중 테이블/스키마 변경 시 7단계 전체.
 - code-quality-metrics: 소형 diff quick 모드(SNR+대형파일만) vs PR 게이트 4지표 풀 모드.
 - implementation-planning: Phase-0 Trivial/Standard에서 wave 선택화 + F1-F4를 단일 체크로 축약(`:334,:367,:429-434`). non-negotiable(References/Acceptance/QA)은 유지.
 - web-research: `:334-337` 불릿에 묻힌 Quick-lookup을 Phase 0 직후 1급 섹션으로 승격.
 
 ### P3-B. 라우팅 양방향화 + superpowers 경계 선언
-- 검증된 양방향 쌍은 git-operations↔atomic-commit-push 유일. 주장된 모든 관계 엣지가 양쪽 파일에 존재하도록 1회 정합 패스: algorithm-optimization에 code-quality-metrics 행 추가(`code-quality-metrics:13,303,406,442`가 이미 4× 역참조), database-design에 관계 표 신설(algorithm-optimization/debugging/web-research/implementation-planning 경계), debugging에 `superpowers:systematic-debugging` 경계 행, verified-execution `:522-534`에 superpowers:verification-before-completion + issueops 소유권 2행, implementation-planning에 superpowers:writing-plans/brainstorming + EnterPlanMode 경계.
+- 검증된 양방향 쌍은 git-operations↔atomic-commit-push 유일. 주장된 모든 관계 엣지가 양쪽 파일에 존재하도록 1회 정합 패스: algorithm-optimization에 code-quality-metrics 행 추가(`code-quality-metrics:13,303,406,442`가 이미 4× 역참조), database-schema-architecture에 관계 표 신설(algorithm-optimization/debugging/web-research/implementation-planning 경계), debugging에 `superpowers:systematic-debugging` 경계 행, verified-execution `:522-534`에 superpowers:verification-before-completion + issueops 소유권 2행, implementation-planning에 superpowers:writing-plans/brainstorming + EnterPlanMode 경계.
 - repo 자기모순 해소: `issueops/SKILL.md:62`(brainstorming) vs `:257`(implementation-planning) — 한쪽 양보 결정 필요. ⚠️ **사용자 확인 지점**(워크플로 정책 결정).
 - git-operations `:305-309` 관계 행 4건이 자기 경계(`:15,314-315`)와 모순 — 정리. `:303`의 preflight 위임 주장은 미구현(`git_preflight.py`에 신호 0) — 산문 삭제 또는 구현 결정.
 - web-research 관계 표에 외부 플러그인 `deep-research` 경계 행 추가.
@@ -96,8 +96,8 @@
 
 ## P4 — 인프라 재발 방지
 
-- **P4-A. 측정 편입·재측정**: design-review·meeting-notes를 격리 rubric과 `issueOpsPioneerSkillEvidenceComplete`(`issueops_pioneer_checks.go` — design-review는 현재 `default: return false`)에 편입. 6/16 이후 대량 변경 스킬(database-design −1,000줄, verified-execution +155줄)과 P0–P3 수정분 재측정 → `quality-dashboard.md` 갱신. ⚠️ 홀드아웃 fresh-context 재실행은 토큰 비용이 있어 **사용자 opt-in**(대시보드 기존 정책과 동일).
-- **P4-B. skillcontract 핀 확대**: design-review(서브에이전트 강제·regress 시맨틱·P1-2 반영 후 기록 명령), database-design(라이브 DDL 금지·EXPLAIN-실행 경고), git-operations(확인 사다리·clean 사다리), algorithm-optimization(Gate 0), verified-execution(proportionate mode), web-research(패턴 slug). 근거: 이번 감사에서 핀된 계약은 지켜졌고 핀 안 된 상호참조가 썩었다.
+- **P4-A. 측정 편입·재측정**: design-review·meeting-notes를 격리 rubric과 `issueOpsPioneerSkillEvidenceComplete`(`issueops_pioneer_checks.go` — design-review는 현재 `default: return false`)에 편입. 6/16 이후 대량 변경 스킬(database-schema-architecture −1,000줄, verified-execution +155줄)과 P0–P3 수정분 재측정 → `quality-dashboard.md` 갱신. ⚠️ 홀드아웃 fresh-context 재실행은 토큰 비용이 있어 **사용자 opt-in**(대시보드 기존 정책과 동일).
+- **P4-B. skillcontract 핀 확대**: design-review(서브에이전트 강제·regress 시맨틱·P1-2 반영 후 기록 명령), database-schema-architecture(라이브 DDL 금지·EXPLAIN-실행 경고), git-operations(확인 사다리·clean 사다리), algorithm-optimization(Gate 0), verified-execution(proportionate mode), web-research(패턴 slug). 근거: 이번 감사에서 핀된 계약은 지켜졌고 핀 안 된 상호참조가 썩었다.
 - **P4-C. `scripts/validate-skill.py`에 description 길이 검사 추가**: design-review 1,020~1,026자로 한도(~1,024) 대비 여유 4자 — 편집 한 번에 조용히 잘림. design-review description 자체도 ~700자로 축소(전기 서술은 `<identity>`에 이미 존재). design-review `agents/openai.yaml:4` default_prompt 411자 → 형제 스타일 한 문장.
 - **P4-D. `scripts/verify-skill-shell.sh` 신설**: SKILL.md fenced bash 블록 추출 → macOS/BSD + ugrep 별칭 환경에서 dry-run. 이 도구 하나면 S1–S5·T1을 기계적으로 전부 잡았음. 계열 규칙 명문화: `command grep -E` 사용, `||`를 에러 억제로 금지, 머지 전 1회 실행.
 - **P4-E. 고아 references lint**: SKILL.md가 링크하지 않는 `references/*` 파일을 결함으로 검출(이번 감사에서 verified-execution·implementation-planning 각 1건 — repo 비용+미로드+drift의 최악 조합).

@@ -4,7 +4,7 @@
 > rev.5: verifier 검증-적정성 리뷰(verdict: request_changes)를 반영 — T1 N/A **양방향** 테스트(비대상 평균 수치불변 + 대상 evidence="" → MinimumScore==0), T2 AND-절별 음성+hollow 경계 케이스, T4 **CLI dispatch 경로 강제**(라이브러리 직호출 불충분)+비대상 evidence="" 단언, T7 누락/추가 키 fail-closed 음성 시나리오, F2·F4 **binary 명령화**, evidence 위생(gitignored 파일 대신 go test -v 출력).
 
 ## TL;DR
-> **Summary**: issueops 품질 벤치마크에 ① "대상 fixture의 산출물이 pioneer 스킬(algorithm-optimization/database-design/debugging/code-quality-metrics)의 distinctive-method 시그니처를 담고 있는가"를 deterministic하게 채점하는 dimension·검출기·fixture를 추가하고, 기존 compare/gate로 시그니처 present/absent를 회귀-게이트한다. ② LLM judge 백엔드를 외부 `agy -p` shell-out에서 **fresh-context 서브에이전트가 채운 JSON 패킷**(`--judge file`)으로 전환하고 agy는 legacy로 강등한다.
+> **Summary**: issueops 품질 벤치마크에 ① "대상 fixture의 산출물이 pioneer 스킬(algorithm-optimization/database-schema-architecture/debugging/code-quality-metrics)의 distinctive-method 시그니처를 담고 있는가"를 deterministic하게 채점하는 dimension·검출기·fixture를 추가하고, 기존 compare/gate로 시그니처 present/absent를 회귀-게이트한다. ② LLM judge 백엔드를 외부 `agy -p` shell-out에서 **fresh-context 서브에이전트가 채운 JSON 패킷**(`--judge file`)으로 전환하고 agy는 legacy로 강등한다.
 > **Deliverables**: ① artifact 필드 `PioneerSkillEvidence` ② fixture 필드 `pioneer_skill_target`(데이터 기반 적용성) ③ dimension `pioneer_skill_contribution`(비대상 fixture는 정직한 N/A) ④ 4개 스킬 시그니처 검출기 ⑤ 4개 fixture ⑥ CLI `FromFixture` 배선 + 전체 fixture run 테스트 ⑦ present/absent 판별 A/B 테스트 ⑧ contract·judge-rubric·golden 정합 ⑨ **`--judge file` 백엔드(서브에이전트 판정 JSON 입력) + agy legacy 강등** ⑩ **issueops SKILL.md에 fresh-context 서브에이전트 judge 프로토콜 문서화**
 > **Effort**: Medium-Large (judge 백엔드 흡수로 +2 task)
 > **Parallel**: YES — 4 waves
@@ -168,10 +168,10 @@ Final: F1–F4
 - [ ] 2. 4개 스킬 시그니처 검출기(동의어 집합, 필요조건 프록시)
 
   **What to do**:
-  - 신규 `issueops_pioneer_checks.go`: `issueOpsPioneerSkillEvidenceComplete(fixture,artifact) bool` — `fixture.PioneerSkillTarget` 값으로 분기(`"algorithm-optimization"|"database-design"|"debugging"|"code-quality-metrics"`), 빈 값이면 호출되지 않음(T1이 N/A로 처리). 알 수 없는 target은 false.
+  - 신규 `issueops_pioneer_checks.go`: `issueOpsPioneerSkillEvidenceComplete(fixture,artifact) bool` — `fixture.PioneerSkillTarget` 값으로 분기(`"algorithm-optimization"|"database-schema-architecture"|"debugging"|"code-quality-metrics"`), 빈 값이면 호출되지 않음(T1이 N/A로 처리). 알 수 없는 target은 false.
   - 시그니처(복수 AND + 각 절에 **동의어 집합**으로 거짓음성 완화):
     - algorithm-optimization: 복잡도(`complexity`|`asymptotic`|`big-o`|`quadratic`|`linearithmic`) AND 스케일링(`scaling`|`n=`|`n →`|`100→1000`|`benchmark`) AND 전후(`before`|`after`|`baseline`).
-    - database-design: 인덱스(`index`) AND 쓰기비용(`write penalty`|`write cost`|`insert cost`) AND 설계근거(`1nf`|`2nf`|`3nf`|`bcnf`|`normal`|`selectivity`|`row count`|`read:write`).
+    - database-schema-architecture: 인덱스(`index`) AND 쓰기비용(`write penalty`|`write cost`|`insert cost`) AND 설계근거(`1nf`|`2nf`|`3nf`|`bcnf`|`normal`|`selectivity`|`row count`|`read:write`).
     - debugging: `reproduce` AND 원인(`root cause`|`isolate`|`hypothesis`) AND 검증(`verify`|`fix`|`regression`).
     - code-quality-metrics: `snr` AND 전(`before`|`baseline`) AND 후(`after`|`improved`) AND 지표(`entropy`|`redundancy`|`overhead`).
   - T1 스텁을 실호출로 교체. `issueops_quality_checks.go:38` switch에 `case strings.Contains(ruleText,"skips pioneer method") && !issueOpsPioneerSkillEvidenceComplete(fixture,artifact):` 추가.
@@ -208,7 +208,7 @@ Final: F1–F4
 
 - [ ] 3. 4개 fixture(+ pioneer_skill_target)
 
-  **What to do**: `testdata/issueops/fixtures/pioneer-{algorithm-optimization,database-design,debugging,code-quality-metrics}.json`. 각 fixture에 `"pioneer_skill_target":"<skill>"`, 스킬을 부를 user_prompt/repo_context, `critical_failures`에 `"skips pioneer method"` + 기존 필수 critical(Korean, guideline, worker context 등) 포함, `expected_*` 기술.
+  **What to do**: `testdata/issueops/fixtures/pioneer-{algorithm-optimization,database-schema-architecture,debugging,code-quality-metrics}.json`. 각 fixture에 `"pioneer_skill_target":"<skill>"`, 스킬을 부를 user_prompt/repo_context, `critical_failures`에 `"skips pioneer method"` + 기존 필수 critical(Korean, guideline, worker context 등) 포함, `expected_*` 기술.
   **Must NOT do**: 기존 5 fixture 수정. `feature/` 모순 회피(기존 검사 통과 형태).
 
   **Recommended Agent**: quick.

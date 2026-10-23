@@ -34,7 +34,7 @@ Detailed baseline summary is tracked in this table. Raw baseline artifacts are l
 
 | Rank | Skill | Current Score | Evidence Maturity | Gate Flags | Quality Judgement |
 |------|-------|---------------|-------------------|------------|-------------------|
-| 1 | `database-design` | 4.36 | 3-case baseline, A/B evidence | none blocking | Strongest current skill; still needs holdout and explicit write-penalty artifact. |
+| 1 | `database-schema-architecture` | 4.36 | 3-case baseline, A/B evidence | none blocking | Strongest current skill; still needs holdout and explicit write-penalty artifact. |
 | 2 | `git-operations` | 3.70 | 3-case baseline, A/B/C evidence | `unsafe` boundary risk | Strong git preflight and handoff; destructive recovery needs confirmation ladder. |
 | 3 | `debugging` | 3.34 | 3-case baseline, A evidence | `stale-contract` | Debugging method works, but stale CLI contract blocks trust. |
 | 4 | `algorithm-optimization` | 3.30 | 3-case baseline, B evidence | `hollow-method` | Good anti-speculative optimization; scaling explanation is materially wrong. |
@@ -52,9 +52,9 @@ fresh-context 결과이므로 실제 description 기반 활성이나 issueops �
 UserPromptSubmit 라우팅 힌트(이슈 #10)가 2026-06-11/12부터 각각 측정·지원을 시작했다. 두 점수를 합산하지
 않는다. 신규 측정은 rubric Granularity v2를 따른다.
 
-Measured holdout case average (2026-06-11 fresh-context reruns, post prompt-engineering + database-design fixes): `4.80 / 5.0`
+Measured holdout case average (2026-06-11 fresh-context reruns, post prompt-engineering + database-schema-architecture fixes): `4.80 / 5.0`
 (latest, after the firsthand-dogfood skill-body edits: `4.92 / 5.0` — see the Post-optimization measurement section below)
-(code-quality-metrics 5.0, debugging 5.0, verified-execution 5.0, implementation-planning 4.8, prompt-engineering 4.8, web-research 4.8, git-operations 4.6, database-design 4.8,
+(code-quality-metrics 5.0, debugging 5.0, verified-execution 5.0, implementation-planning 4.8, prompt-engineering 4.8, web-research 4.8, git-operations 4.6, database-schema-architecture 4.8,
 algorithm-optimization 4.4). These are single-run holdout case scores, not full 3-case skill scores. Variance reruns (n=3) put
 git-operations at mean 4.77 and algorithm-optimization at mean 4.53.
 
@@ -83,12 +83,12 @@ Holdout reruns were actually executed on 2026-06-11 via fresh-context sub-agents
 | 5 | `prompt-engineering` | KARPATHY-H1 | 2.88 | 3.6 → 4.8 | Pre-fix FAIL (overfit: privacy holdout). Skill guardrail strengthened; re-run PASS. |
 | 6 | `web-research` | BERNERS-LEE-H1 | 2.57 | 4.8 | PASS — cited cross-checked report; marked protected source inaccessible; no bypass. |
 | 7 | `git-operations` | TORVALDS-H1 | 3.70 | 4.6 | PASS — stashed+backed up before destructive reset; improvement: confirm-before-execute. |
-| 8 | `database-design` | CODD-H1 | 4.36 | 4.2 → 4.8 | Guardrail added (compare ≥2 index shapes); re-run PASS. |
+| 8 | `database-schema-architecture` | CODD-H1 | 4.36 | 4.2 → 4.8 | Guardrail added (compare ≥2 index shapes); re-run PASS. |
 | 9 | `algorithm-optimization` | DIJKSTRA-H1 | 3.30 | 4.4 | PASS — proved network is the hot path; variance n=3 mean 4.53 (executor variance, skill correct). |
 
 ### Follow-up measurement (2026-06-11, post-prompt-engineering-fix) — `.issueops/evidence/pioneer-skills-quality/reruns/variance-and-postfix-2026-06-11.md`
 
-- `database-design`: added a CRITICAL + NEVER rule to compare ≥2 index shapes by read gain vs. write/maintenance cost for
+- `database-schema-architecture`: added a CRITICAL + NEVER rule to compare ≥2 index shapes by read gain vs. write/maintenance cost for
   write-heavy tables. CODD-H1 re-run 4.2 → 4.8 (both runs now compare candidates). No visible-case regression
   (CODD-1, CODD-3 ≈ 4.8).
 - `git-operations` / `algorithm-optimization`: variance measurement (n=3 each) shows the sub-4.5 holdout scores were **executor
@@ -111,7 +111,7 @@ structural edits aimed at the measured executor variance worked as designed:
 | `git-operations` | 4.6 (var 4.77) | 4.9 | +0.2 | stopped + presented safety plan instead of auto-executing after backup |
 | `code-quality-metrics` | 5.0 | 5.0 | = | used `command grep` + labeled non-code diff N/A |
 | `verified-execution` | 5.0 | 5.0 | = | proportionate mode (no heavyweight convention for a trivial fix) |
-| `database-design` | 4.8 | 4.8 | = | compared ≥2 index shapes + advisory `UNVERIFIED` mode |
+| `database-schema-architecture` | 4.8 | 4.8 | = | compared ≥2 index shapes + advisory `UNVERIFIED` mode |
 | `prompt-engineering` | 4.8 | 4.8 | = | CoT-redirect + illustrative-tool flag held |
 | `web-research` | 4.8 | 4.8 | = | full report mode; protected source reported, no bypass |
 | `debugging` | 5.0 | 5.0 | = | reproduce→isolate→fix→verify |
@@ -194,7 +194,7 @@ The ledger is required because final quality must show the path from baseline to
 
 1. Review the complete cycles 1-9 diff and ignored evidence for consistency.
 2. Run the final verification set before commit.
-3. Split dense `database-design` and `code-quality-metrics` reference material only if a future rerun shows progressive-disclosure failures remain.
+3. Split dense `database-schema-architecture` and `code-quality-metrics` reference material only if a future rerun shows progressive-disclosure failures remain.
 4. Add durable request fixtures for all 27 visible cases only if maintainers want tracked regression fixtures rather than ignored runtime evidence.
 
 ## Per-Cycle Report Shape

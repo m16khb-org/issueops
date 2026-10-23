@@ -36,17 +36,17 @@ func TestPioneerSkillSignatures(t *testing.T) {
 			"Hot path: pprof shows matcher at 87% CPU\nComplexity: O(n^2) -> O(n log n)\nScaling evidence: N=100/1000/10000 table\nBefore/after measurement: baseline 4.1s, after 0.2s", false},
 		{"algorithm-optimization missing before/after clause", "algorithm-optimization",
 			"Hot path: pprof shows matcher at 87% CPU\nComplexity: O(n^2) -> O(n log n)\nScaling evidence: N=100/1000/10000 table\nCorrectness invariant: sorted candidate set preserves all matches", false},
-		// database-design: schema/row-count AND query plan AND index/write-penalty AND
+		// database-schema-architecture: schema/row-count AND query plan AND index/write-penalty AND
 		// normalization/anomaly rationale.
-		{"database-design full", "database-design",
+		{"database-schema-architecture full", "database-schema-architecture",
 			"Schema/row count: orders has 12M rows\nEXPLAIN evidence: seq scan before, index scan after\nIndex tradeoff: covering index, write penalty +8% insert cost\nNormalization rationale: 3NF retained; no update anomaly", true},
-		{"database-design synonyms", "database-design",
+		{"database-schema-architecture synonyms", "database-schema-architecture",
 			"DDL and cardinality: orders row count 12M\nQuery plan: EXPLAIN ANALYZE before/after compared\nIndex recommendation: partial index; write cost grows 8%\nAnomaly rationale: BCNF held; read:write ratio justifies no denormalization", true},
-		{"database-design missing index clause", "database-design",
+		{"database-schema-architecture missing index clause", "database-schema-architecture",
 			"Schema/row count: orders has 12M rows\nEXPLAIN evidence: seq scan before, index scan after\nNormalization rationale: 3NF retained; no update anomaly", false},
-		{"database-design missing write-penalty clause", "database-design",
+		{"database-schema-architecture missing write-penalty clause", "database-schema-architecture",
 			"Schema/row count: orders has 12M rows\nEXPLAIN evidence: seq scan before, index scan after\nIndex recommendation: covering index on user_id_created_at\nNormalization rationale: 3NF retained; no update anomaly", false},
-		{"database-design missing rationale clause", "database-design",
+		{"database-schema-architecture missing rationale clause", "database-schema-architecture",
 			"Schema/row count: orders has 12M rows\nEXPLAIN evidence: seq scan before, index scan after\nIndex tradeoff: covering index, write penalty +8% insert cost", false},
 		// debugging: reproduction/failure signature AND cause hypothesis AND
 		// isolation AND minimal fix boundary AND verification.
@@ -103,7 +103,7 @@ func TestPioneerSkillSignatures(t *testing.T) {
 		// still a proxy, but it now requires method-specific artifact structure.
 		{"algorithm-optimization hollow keyword soup rejected", "algorithm-optimization",
 			"complexity scaling before after invariant hot path O(n) words in no meaningful order", false},
-		{"database-design hollow keyword soup rejected", "database-design",
+		{"database-schema-architecture hollow keyword soup rejected", "database-schema-architecture",
 			"index write penalty row count explain normal form recommendation", false},
 		{"debugging hollow keyword soup rejected", "issueops-debugging",
 			"reproduce root cause verify regression hypothesis signature isolate fix", false},

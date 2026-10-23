@@ -35,11 +35,11 @@ func runStub(t *testing.T, cli command, args func(command) error) (string, error
 }
 
 func TestParseExpectedRoutingAcceptsPairingsAndRejectsMalformedSpecs(t *testing.T) {
-	got, err := parseExpectedRouting(" plan:database-design , ,implement:algorithm-optimization ")
+	got, err := parseExpectedRouting(" plan:database-schema-architecture , ,implement:algorithm-optimization ")
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []issueopsroutingcontract.Expected{{Phase: "plan", Skill: "database-design"}, {Phase: "implement", Skill: "algorithm-optimization"}}
+	want := []issueopsroutingcontract.Expected{{Phase: "plan", Skill: "database-schema-architecture"}, {Phase: "implement", Skill: "algorithm-optimization"}}
 	if len(got) != 2 || got[0] != want[0] || got[1] != want[1] {
 		t.Fatalf("pairings = %#v, want %#v", got, want)
 	}
@@ -69,17 +69,17 @@ func TestRoutingScoreReportsMissingPairingsAndRoutesErrors(t *testing.T) {
 			return result, 3, fail
 		},
 	})
-	result = issueopsroutingcontract.Result{OK: false, Missing: []issueopsroutingcontract.Expected{{Phase: "plan", Skill: "database-design"}}}
+	result = issueopsroutingcontract.Result{OK: false, Missing: []issueopsroutingcontract.Expected{{Phase: "plan", Skill: "database-schema-architecture"}}}
 	out, err := runStub(t, cli, func(c command) error {
-		return c.runIssueOpsRoutingScore([]string{"--id", "c1", "--expect", "plan:database-design"})
+		return c.runIssueOpsRoutingScore([]string{"--id", "c1", "--expect", "plan:database-schema-architecture"})
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(gotExpected) != 1 || gotExpected[0].Skill != "database-design" {
+	if len(gotExpected) != 1 || gotExpected[0].Skill != "database-schema-architecture" {
 		t.Fatalf("expected pairings were not parsed from --expect: %#v", gotExpected)
 	}
-	if !strings.Contains(out, "routing fidelity: ok=false (observed 3 pairings)") || !strings.Contains(out, "- missing: database-design@plan") {
+	if !strings.Contains(out, "routing fidelity: ok=false (observed 3 pairings)") || !strings.Contains(out, "- missing: database-schema-architecture@plan") {
 		t.Fatalf("text output wrong:\n%s", out)
 	}
 

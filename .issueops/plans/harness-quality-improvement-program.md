@@ -115,7 +115,7 @@
 - **issueops 사이클로 실행** (코드 변경 중).
 
 ### S5. Proportionate mode 확산 5/16 → 적용 가능 전수 [검증된 패턴 확산]
-- **무엇**: verified-execution/prompt-engineering/database-design/code-quality-metrics/implementation-planning에서 검증된 비례 모드를, 고정-무게로 남은 스킬 중 적용 가치가 있는 것(web-research quick-lookup은 일부 반영됨 → issueops 경량 사이클, atomic-commit-push 단일 파일 fast-path 등)에 확장. 단 **measured gap 없으면 EDIT 금지**(keep/discard 규율 유지) — S1 도그푸드 결과로 대상 선별.
+- **무엇**: verified-execution/prompt-engineering/database-schema-architecture/code-quality-metrics/implementation-planning에서 검증된 비례 모드를, 고정-무게로 남은 스킬 중 적용 가치가 있는 것(web-research quick-lookup은 일부 반영됨 → issueops 경량 사이클, atomic-commit-push 단일 파일 fast-path 등)에 확장. 단 **measured gap 없으면 EDIT 금지**(keep/discard 규율 유지) — S1 도그푸드 결과로 대상 선별.
 - **수용 기준**: S1 결과에서 비례성 마찰이 기록된 스킬에만 EDIT; 각 EDIT 후 해당 스킬 holdout 재측정 무회귀.
 
 ### S6. 정직성 단서 일괄 정비 [보고서 권고 3 잔여분]

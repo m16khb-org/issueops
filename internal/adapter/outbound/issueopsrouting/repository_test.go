@@ -38,7 +38,7 @@ func TestRepositoryUpdatesAndReadsRecordWithinSpan(t *testing.T) {
 		func(record issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, bool, error) {
 			record.RoutingTrace = append(record.RoutingTrace, issueopscontract.SkillRoutingEntry{
 				Phase: "plan",
-				Skill: "database-design",
+				Skill: "database-schema-architecture",
 			})
 			return record, true, nil
 		},

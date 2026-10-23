@@ -66,9 +66,9 @@ issueops next --json
 
 단계 라우팅은 아래 표 하나를 쓴다. 필요한 협업만 로드한다:
 1단계는 `implementation-planning` 인터뷰·`web-research`, 3단계는 계획·`issueops-review`·
-`database-design`·`algorithm-optimization`·`prompt-engineering`, 4단계는 `issueops-debugging`·
+`database-schema-architecture`·`algorithm-optimization`·`prompt-engineering`, 4단계는 `issueops-debugging`·
 `verified-execution`·`ui-ux-craft`·`sync-base`, 5단계는 `code-quality-metrics`·`verified-execution`,
-6단계는 `project-docs-update`, 7단계는 `database-design`·`verified-execution`·`aside-web-qa`,
+6단계는 `project-docs-update`, 7단계는 `database-schema-architecture`·`verified-execution`·`aside-web-qa`,
 8단계의 history 수술은 `git-operations`다. 공용 협업은 `gates-ledger`(3·4·5·7),
 `issueops-review`(3·7), `issueops-remote-write`(1·9·10·동기화), `explain`(사용자 보고)이다.
 낡은 본문은 `issueops-sync-issue`/`issueops-sync-pr`로 관리 블록을 보존해 갱신한다.

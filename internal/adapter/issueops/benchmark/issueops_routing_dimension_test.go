@@ -6,22 +6,22 @@ import (
 	"testing"
 )
 
-// A2/A5 database-design evidence that satisfies issueOpsPioneerSkillEvidenceComplete.
+// A2/A5 database-schema-architecture evidence that satisfies issueOpsPioneerSkillEvidenceComplete.
 const coddKeywordEvidence = "Schema/row count: orders has 12M rows\nEXPLAIN evidence: seq scan before, index scan after\nIndex tradeoff: compared covering index vs partial index; write penalty +8% insert cost\nNormalization rationale: 3NF retained; no update anomaly"
 
 // Same-entry pairing: the expected (phase,skill) must match ONE trace entry on
 // BOTH fields. A trace with the right skill at the WRONG phase must fail.
 func TestSkillRoutingFidelitySameEntryPairing(t *testing.T) {
-	fixture := benchmark.IssueOpsBenchmarkFixture{ExpectedRouting: []benchmark.SkillRouting{{Phase: "plan", Skill: "database-design"}}}
+	fixture := benchmark.IssueOpsBenchmarkFixture{ExpectedRouting: []benchmark.SkillRouting{{Phase: "plan", Skill: "database-schema-architecture"}}}
 
-	matched := benchmark.IssueOpsBenchmarkArtifact{RoutingTrace: []benchmark.SkillRouting{{Phase: "Plan", Skill: "DATABASE-DESIGN"}}}
+	matched := benchmark.IssueOpsBenchmarkArtifact{RoutingTrace: []benchmark.SkillRouting{{Phase: "Plan", Skill: "DATABASE-SCHEMA-ARCHITECTURE"}}}
 	if !issueOpsSkillRoutingFidelityComplete(fixture, matched) {
 		t.Fatal("case-insensitive same-entry pairing must pass")
 	}
 
-	// 'plan' present (from debugging entry) and 'database-design' present (from review entry),
-	// but database-design never fired at plan -> must FAIL same-entry pairing.
-	crossPaired := benchmark.IssueOpsBenchmarkArtifact{RoutingTrace: []benchmark.SkillRouting{{Phase: "plan", Skill: "issueops-debugging"}, {Phase: "review", Skill: "database-design"}}}
+	// 'plan' present (from debugging entry) and 'database-schema-architecture' present (from review entry),
+	// but database-schema-architecture never fired at plan -> must FAIL same-entry pairing.
+	crossPaired := benchmark.IssueOpsBenchmarkArtifact{RoutingTrace: []benchmark.SkillRouting{{Phase: "plan", Skill: "issueops-debugging"}, {Phase: "review", Skill: "database-schema-architecture"}}}
 	if issueOpsSkillRoutingFidelityComplete(fixture, crossPaired) {
 		t.Fatal("cross-paired trace (right skill at wrong phase) must FAIL same-entry pairing")
 	}
@@ -57,7 +57,7 @@ func TestRoutingDimensionNAExcludedForNonRoutingFixture(t *testing.T) {
 // Direction B (silent-no-op guard): a routing fixture with an empty trace must
 // actually participate — minimum drops to 0 and a routing failure is recorded.
 func TestRoutingDimensionParticipatesForRoutingFixture(t *testing.T) {
-	fixture := benchmark.IssueOpsBenchmarkFixture{ID: "f", ExpectedRouting: []benchmark.SkillRouting{{Phase: "plan", Skill: "database-design"}}}
+	fixture := benchmark.IssueOpsBenchmarkFixture{ID: "f", ExpectedRouting: []benchmark.SkillRouting{{Phase: "plan", Skill: "database-schema-architecture"}}}
 	score := ScoreIssueOpsBenchmarkArtifact(fixture, completeBenchmarkArtifactForTest())
 
 	if score.MinimumScore != 0 || score.Passed {
@@ -81,14 +81,14 @@ func TestRoutingDimensionParticipatesForRoutingFixture(t *testing.T) {
 func TestSkillRoutingFidelityCatchesKeywordWithoutRouting(t *testing.T) {
 	fixture := benchmark.IssueOpsBenchmarkFixture{
 		ID:                 "routing-boundary",
-		PioneerSkillTarget: "database-design",
-		ExpectedRouting:    []benchmark.SkillRouting{{Phase: "plan", Skill: "database-design"}},
+		PioneerSkillTarget: "database-schema-architecture",
+		ExpectedRouting:    []benchmark.SkillRouting{{Phase: "plan", Skill: "database-schema-architecture"}},
 		CriticalFailures:   []string{"skips expected routing"},
 	}
 
 	clean := completeBenchmarkArtifactForTest()
 	clean.PioneerSkillEvidence = coddKeywordEvidence
-	clean.RoutingTrace = []benchmark.SkillRouting{{Phase: "plan", Skill: "database-design"}}
+	clean.RoutingTrace = []benchmark.SkillRouting{{Phase: "plan", Skill: "database-schema-architecture"}}
 	cleanScore := ScoreIssueOpsBenchmarkArtifact(fixture, clean)
 
 	if dimScore(cleanScore, "skill_routing_fidelity") != 100 {

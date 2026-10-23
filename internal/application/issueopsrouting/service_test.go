@@ -28,13 +28,13 @@ func TestServiceRecordsIdempotentlyAndScoresObservedRouting(t *testing.T) {
 		"/state",
 		"io-routing01",
 		" plan ",
-		" database-design ",
+		" database-schema-architecture ",
 		issueopscontract.IssueOpsActor{},
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(record.RoutingTrace) != 1 || record.RoutingTrace[0].Phase != "plan" || record.RoutingTrace[0].Skill != "database-design" {
+	if len(record.RoutingTrace) != 1 || record.RoutingTrace[0].Phase != "plan" || record.RoutingTrace[0].Skill != "database-schema-architecture" {
 		t.Fatalf("routing entry was not normalized: %+v", record.RoutingTrace)
 	}
 	if repository.writes != 1 {
@@ -46,7 +46,7 @@ func TestServiceRecordsIdempotentlyAndScoresObservedRouting(t *testing.T) {
 		"/state",
 		"io-routing01",
 		"PLAN",
-		"DATABASE-DESIGN",
+		"DATABASE-SCHEMA-ARCHITECTURE",
 		issueopscontract.IssueOpsActor{},
 	); err != nil {
 		t.Fatal(err)
@@ -60,7 +60,7 @@ func TestServiceRecordsIdempotentlyAndScoresObservedRouting(t *testing.T) {
 		"/state",
 		"io-routing01",
 		[]benchmark.SkillRouting{
-			{Phase: "plan", Skill: "database-design"},
+			{Phase: "plan", Skill: "database-schema-architecture"},
 			{Phase: "implement", Skill: "algorithm-optimization"},
 		},
 	)

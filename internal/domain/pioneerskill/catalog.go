@@ -4,7 +4,7 @@ var canonicalNames = []string{
 	"web-research",
 	"requirements-analysis",
 	"architecture-review",
-	"database-design",
+	"database-schema-architecture",
 	"algorithm-optimization",
 	"meeting-notes",
 	"issueops-debugging",

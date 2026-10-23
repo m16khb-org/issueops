@@ -14,10 +14,10 @@
 
 ### 감사에서 확인한 사실 (2026-09-08)
 - 스킬 51개 중 파이프라인 스킬 18개. 참조 그래프를 코드로 그려 대조했다.
-- 라우터 표(`skills/issueops/SKILL.md:65-71`)가 약속했는데 본문에 없는 것: 1단계 `implementation-planning`, 3단계 `design-review`·`database-design`·`prompt-engineering`, 4단계 `issueops-debugging`·`code-quality-metrics`.
+- 라우터 표(`skills/issueops/SKILL.md:65-71`)가 약속했는데 본문에 없는 것: 1단계 `implementation-planning`, 3단계 `design-review`·`database-schema-architecture`·`prompt-engineering`, 4단계 `issueops-debugging`·`code-quality-metrics`.
 - `references/review-feedback.md:30`이 봇 리뷰 처리를 산문으로 다시 적어 `review-agent-feedback`과 같은 판단을 두 곳이 소유한다. 다만 같은 문서 42-63행의 `타당성:` 답글 형식과 `선택지` 블록은 **사람 리뷰어용**이며 `review-agent-feedback`은 자기 범위 밖으로 둔다(그 스킬 description).
 - `sync-base`를 아는 곳은 `rebase-onto-parent`뿐이다. strict readiness의 `upstream_synced`는 feature 브랜치 자신의 upstream과의 ahead/behind다(`issueops_pr_readiness_strict.go:59-64`). base 브랜치가 앞서 나간 사실은 어떤 표면도 관측하지 않는다.
-- `ui-ux-craft`·`aside-*`는 어느 단계도 부르지 않는다. 검증 단계는 스키마 파일이 있을 때만 `database-design`을 켜지만(`issueops-verify/SKILL.md:88`) frontend에는 그 대칭이 없다.
+- `ui-ux-craft`·`aside-*`는 어느 단계도 부르지 않는다. 검증 단계는 스키마 파일이 있을 때만 `database-schema-architecture`를 켜지만(`issueops-verify/SKILL.md:88`) frontend에는 그 대칭이 없다.
 - `requirements-analysis`(Kordoc 기획서 분석)와 `prompt-engineering`은 파이프라인 어디서도 호출되지 않는다.
 - owner prompt의 required skills(`execution_owner_context.go:148`)는 라우터가 단계 스킬로 안내하므로 설계상 맞다. 범위 밖.
 
@@ -132,7 +132,7 @@
   **What to do**:
   1. `skills/issueops/SKILL.md:65-71` 표: 3단계 `design-review` → `issueops-review`. 4단계 `code-quality-metrics` 제거. (4·7·9단계의 새 동반 스킬은 T5·T2가 넣는다.)
   2. `skills/issueops-create-issue/SKILL.md` "## 질문 규칙" 끝: blocking 질문이 둘 이상이거나 답에 따라 만들 것이 갈리면 `implementation-planning`의 Phase 2 인터뷰 절차(드래프트 파일, 한 번에 한 질문, clearance check)를 쓴다. 드래프트의 "Requirements (confirmed)"가 `--interpreted-intent`의 원문이 된다.
-  3. `skills/issueops-plan/SKILL.md:73-75` 표 `## 하위 호환성과 side effect` 행: 계획이 마이그레이션·엔티티·인덱스·쿼리를 바꾸면 `database-design`으로 설계를 검토하고 결과(정규화 판단, 인덱스 계획, 예상 row 수)를 이 절에 적는다. 7단계 실측은 이 값과 대조한다.
+  3. `skills/issueops-plan/SKILL.md:73-75` 표 `## 하위 호환성과 side effect` 행: 계획이 마이그레이션·엔티티·인덱스·쿼리를 바꾸면 `database-schema-architecture`로 설계를 검토하고 결과(정규화 판단, 인덱스 계획, 예상 row 수)를 이 절에 적는다. 7단계 실측은 이 값과 대조한다.
   4. `skills/issueops-plan/SKILL.md` 네 절 표 뒤에 `prompt-engineering` 분기(LLM에게 주는 프롬프트 본문 변경 시 측정 가능한 출력 기준). 표가 3단계에 그 스킬을 약속하므로 이것도 표↔본문 정합이며 T6가 아니라 여기서 한다.
   5. `skills/issueops-create-issue/SKILL.md` 3항(배경지식과 웹 조사)이 `--web-research-evidence` 플래그만 부르고 `web-research` 스킬 이름을 부르지 않았다. 스킬 호출로 바꾼다.
   6. `skills/issueops-implement/SKILL.md` "## 구현 루프" 끝: 같은 focused test가 **두 번** GREEN에 실패하면 세 번째를 추측으로 시도하지 않고 `issueops-debugging`으로 재현·격리·근본 원인을 먼저 잡는다. 이 카운터는 `verified-execution`의 "같은 기준 3회 실패 → 목표 종료"와 **같은 카운터**이며, 세 번째 실패가 그 종료다. 진단은 verified-execution report의 실패 항목에 적는다.

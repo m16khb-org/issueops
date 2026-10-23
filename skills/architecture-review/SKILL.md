@@ -43,7 +43,7 @@ This maps to `.issueops/SUB_AGENT_PATTERNS.md` pattern #4 (Devil's Advocate / Ad
 
 ## Devil's-Advocate Verdict Evidence — feeds the IssueOps regress audit
 
-Architecture Review has no pioneer-evidence scorer (unlike database-design/algorithm-optimization/verified-execution, there is no `architecture-review` case in `issueOpsPioneerSkillEvidenceComplete`). This block is not graded as pioneer-skill evidence; it feeds the regress/devil's-advocate audit, where a `stop` verdict takes an IssueOps cycle backward to `grill`.
+Architecture Review has no pioneer-evidence scorer (unlike database-schema-architecture/algorithm-optimization/verified-execution, there is no `architecture-review` case in `issueOpsPioneerSkillEvidenceComplete`). This block is not graded as pioneer-skill evidence; it feeds the regress/devil's-advocate audit, where a `stop` verdict takes an IssueOps cycle backward to `grill`.
 
 When Architecture Review contributes to an IssueOps artifact or benchmark response, include a compact labeled evidence block. Do not produce this block for a plan you refused to review or could not access; report the blocker instead.
 

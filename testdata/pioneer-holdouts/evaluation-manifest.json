@@ -60,8 +60,8 @@
       "receipt_bytes": 10344,
       "execution_method": "fresh_context_child_task",
       "artifact_kind": "bounded_final_response_receipt",
-      "evidence_path": "evidence-records/database-design.json",
-      "evidence_sha256": "2314df4e5b1b0ba284c49c49a69f3e86b7f5c9c8b53297bbffc3ebdbddfdc45b"
+      "evidence_path": "evidence-records/database-schema-architecture.json",
+      "evidence_sha256": "9c1df6f4bf91789a8f4c31059961d0863c799fb5168d840424b87860cc650edb"
     },
     {
       "task_id": "st_01a0027e",
@@ -243,8 +243,8 @@
       "receipt_bytes": 11445,
       "execution_method": "fresh_context_child_task",
       "artifact_kind": "bounded_final_response_receipt",
-      "evidence_path": "evidence-records/database-design.json",
-      "evidence_sha256": "2314df4e5b1b0ba284c49c49a69f3e86b7f5c9c8b53297bbffc3ebdbddfdc45b"
+      "evidence_path": "evidence-records/database-schema-architecture.json",
+      "evidence_sha256": "9c1df6f4bf91789a8f4c31059961d0863c799fb5168d840424b87860cc650edb"
     },
     {
       "task_id": "st_01a002ca",
@@ -459,15 +459,15 @@
       "host_capability": "available"
     },
     {
-      "skill": "database-design",
+      "skill": "database-schema-architecture",
       "axis": "primary",
-      "case_path": "database-design/TASK.md",
+      "case_path": "database-schema-architecture/TASK.md",
       "case_sha256": "6b3b3141389a8f36ccf44c0a183890e6dbd6321a182ee9b0c2ad7a7c6a93b5b4",
       "task_id": "st_01a0027d",
       "verdict": "pass",
       "hidden_holdout": false,
-      "evidence_path": "evidence-records/database-design.json",
-      "evidence_sha256": "2314df4e5b1b0ba284c49c49a69f3e86b7f5c9c8b53297bbffc3ebdbddfdc45b",
+      "evidence_path": "evidence-records/database-schema-architecture.json",
+      "evidence_sha256": "9c1df6f4bf91789a8f4c31059961d0863c799fb5168d840424b87860cc650edb",
       "deterministic_assertions": [
         "read_write_cost_model",
         "verification_commands"
@@ -663,15 +663,15 @@
       "host_capability": "available"
     },
     {
-      "skill": "database-design",
+      "skill": "database-schema-architecture",
       "axis": "boundary",
-      "case_path": "database-design/BOUNDARY.md",
+      "case_path": "database-schema-architecture/BOUNDARY.md",
       "case_sha256": "a0450701cb026b8c9568c033ede98d8e1e6cab64ac56700e013500ea264e9dae",
       "task_id": "st_01a002c9",
       "verdict": "pass",
       "hidden_holdout": false,
-      "evidence_path": "evidence-records/database-design.json",
-      "evidence_sha256": "2314df4e5b1b0ba284c49c49a69f3e86b7f5c9c8b53297bbffc3ebdbddfdc45b",
+      "evidence_path": "evidence-records/database-schema-architecture.json",
+      "evidence_sha256": "9c1df6f4bf91789a8f4c31059961d0863c799fb5168d840424b87860cc650edb",
       "deterministic_assertions": [
         "advisory_mode_labels",
         "reversal_evidence"
@@ -868,15 +868,15 @@
       "host_capability": "available"
     },
     {
-      "skill": "database-design",
+      "skill": "database-schema-architecture",
       "axis": "operational",
-      "case_path": "database-design/OPERATIONAL.md",
+      "case_path": "database-schema-architecture/OPERATIONAL.md",
       "case_sha256": "b57d7ff97f308de032246731a32b507b4c6b94766fe4bae2139083f0c176706b",
       "task_id": "st_01a002c9",
       "verdict": "pass",
       "hidden_holdout": false,
-      "evidence_path": "evidence-records/database-design.json",
-      "evidence_sha256": "2314df4e5b1b0ba284c49c49a69f3e86b7f5c9c8b53297bbffc3ebdbddfdc45b",
+      "evidence_path": "evidence-records/database-schema-architecture.json",
+      "evidence_sha256": "9c1df6f4bf91789a8f4c31059961d0863c799fb5168d840424b87860cc650edb",
       "deterministic_assertions": [
         "partition_canary",
         "rollback_thresholds"

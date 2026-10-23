@@ -6072,7 +6072,7 @@
       "sha256": "04ba90859c8ce544c230cc8b88e4a4d55b10c47b77d24b9172979db0d9b9b12b"
     },
     {
-      "path": "skills/database-design/SKILL.md",
+      "path": "skills/database-schema-architecture/SKILL.md",
       "scope": "skill",
       "lines": 83,
       "words": 719,
@@ -6080,7 +6080,7 @@
       "sha256": "34d1992ea690e1f02188c042bf126c949f7e7ab019cb8eb4c522d4df913755a3"
     },
     {
-      "path": "skills/database-design/references/deep-database-review.md",
+      "path": "skills/database-schema-architecture/references/deep-database-review.md",
       "scope": "skill",
       "lines": 144,
       "words": 644,
@@ -6784,7 +6784,7 @@
       "sha256": "a5c73835f80d25442795d0cd1a49d6225e5940c0ce8f86d1915fb817ae55f7a3"
     },
     {
-      "path": "testdata/pioneer-holdouts/database-design/BOUNDARY.md",
+      "path": "testdata/pioneer-holdouts/database-schema-architecture/BOUNDARY.md",
       "scope": "other",
       "lines": 2,
       "words": 36,
@@ -6792,7 +6792,7 @@
       "sha256": "a0450701cb026b8c9568c033ede98d8e1e6cab64ac56700e013500ea264e9dae"
     },
     {
-      "path": "testdata/pioneer-holdouts/database-design/OPERATIONAL.md",
+      "path": "testdata/pioneer-holdouts/database-schema-architecture/OPERATIONAL.md",
       "scope": "other",
       "lines": 2,
       "words": 34,
@@ -6800,7 +6800,7 @@
       "sha256": "b57d7ff97f308de032246731a32b507b4c6b94766fe4bae2139083f0c176706b"
     },
     {
-      "path": "testdata/pioneer-holdouts/database-design/TASK.md",
+      "path": "testdata/pioneer-holdouts/database-schema-architecture/TASK.md",
       "scope": "other",
       "lines": 10,
       "words": 95,

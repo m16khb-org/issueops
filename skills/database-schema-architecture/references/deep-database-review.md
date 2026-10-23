@@ -1,6 +1,6 @@
-# Database Design Deep Database Review Reference
+# Database Schema Architecture Deep Database Review Reference
 
-Use this file only after the first-turn Database Design contract confirms a relational database, SQL-like query engine, or row-count driven schema question is in scope.
+Use this file only after the first-turn Database Schema Architecture contract confirms a relational database, SQL-like query engine, or row-count driven schema question is in scope.
 
 ## Survey Commands
 

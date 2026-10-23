@@ -23,7 +23,7 @@
 | `## 적용되는 결정과 주의사항` | 위 문서 확인의 결과 |
 | `## 재사용하는 기존 구현` | plan-prep의 코드베이스 조사에서 찾은 심볼·패키지·테스트 헬퍼와 재사용 방식. 새로 만드는 것이 있으면 기존 것으로 왜 안 되는지 |
 | `## 성능 영향` | hot path 여부, 복잡도 변화, 측정 계획. 알고리즘 선택이 걸리면 [`algorithm-optimization`](../../algorithm-optimization/SKILL.md) |
-| `## 하위 호환성과 side effect` | CLI JSON·MCP schema·golden·record schema·provider body 계약, 기존 데이터, 롤백 경로. 마이그레이션·엔티티·인덱스·쿼리가 걸리면 [`database-design`](../../database-design/SKILL.md)으로 정규화 판단·인덱스 계획·예상 row 수를 먼저 정하고 그 값을 여기 적는다. 7단계의 실측이 이 값과 대조된다 |
+| `## 하위 호환성과 side effect` | CLI JSON·MCP schema·golden·record schema·provider body 계약, 기존 데이터, 롤백 경로. 마이그레이션·엔티티·인덱스·쿼리가 걸리면 [`database-schema-architecture`](../../database-schema-architecture/SKILL.md)으로 정규화 판단·인덱스 계획·예상 row 수를 먼저 정하고 그 값을 여기 적는다. 7단계의 실측이 이 값과 대조된다 |
 
 계획이 **LLM에게 주는 프롬프트 본문**을 바꾸면(서브에이전트·리뷰어 프롬프트,
 `.issueops/prompt-engineering/`의 문서, SKILL 안의 프롬프트 템플릿 블록)

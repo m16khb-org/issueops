@@ -163,7 +163,7 @@ func pioneerEvidenceFor(target string) string {
 		return "Source fan-out: official docs, changelog, package index\nSource index: cited URLs with retrieval timestamp\nClaim verification: confirmed/single-sourced/disputed table\nAccess boundary: protected source inaccessible without bypass"
 	case "algorithm-optimization":
 		return "Hot path: pprof shows matcher at 87% CPU\nComplexity: O(n^2) -> O(n log n)\nScaling evidence: N=100/1000/10000 table\nCorrectness invariant: sorted candidates preserve matches\nBefore/after measurement: baseline 4.1s after 0.2s"
-	case "database-design":
+	case "database-schema-architecture":
 		return "Schema/row count: orders has 12M rows\nEXPLAIN evidence: seq scan before index scan after\nIndex tradeoff: covering index with write penalty +8% insert cost\nNormalization rationale: 3NF retained no update anomaly"
 	case "issueops-debugging":
 		return "Reproduction: go test exits 1\nFailure signature: intermittent webhook retry timeout\nRoot cause hypothesis: retry timer races\nIsolation: trace diff narrowed to scheduler\nMinimal fix boundary: retry timer only\nVerification: regression test rerun passed"

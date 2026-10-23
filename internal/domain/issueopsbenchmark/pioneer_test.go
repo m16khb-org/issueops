@@ -7,7 +7,7 @@ import (
 	contract "issueops/internal/contract/issueopsbenchmark"
 )
 
-const databaseDesignEvidence = `schema: row count 1M
+const databaseSchemaArchitectureEvidence = `schema: row count 1M
 explain: query plan uses seq scan
 index: idx_a
 write penalty noted
@@ -20,16 +20,16 @@ func TestPioneerSkillEvidenceComplete(t *testing.T) {
 		evidence string
 		want     bool
 	}{
-		{"complete", "database-design", databaseDesignEvidence, true},
-		{"target is case/space insensitive", "  Database-Design ", databaseDesignEvidence, true},
-		{"unknown target", "no-such-skill", databaseDesignEvidence, false},
-		{"empty target", "", databaseDesignEvidence, false},
-		{"empty evidence", "database-design", "", false},
-		{"structured clause needs colon", "database-design", strings.Replace(databaseDesignEvidence, "index: idx_a", "index idx_a", 1), false},
-		{"marker with colon on other line does not count", "database-design", strings.Replace(databaseDesignEvidence, "index: idx_a", "idx\nnote: x", 1), false},
-		{"unstructured clause satisfied anywhere", "database-design", strings.Replace(databaseDesignEvidence, "write penalty noted", "insert cost: low", 1), true},
-		{"unstructured clause missing", "database-design", strings.Replace(databaseDesignEvidence, "write penalty noted", "", 1), false},
-		{"markers case-insensitive", "database-design", strings.ToUpper(databaseDesignEvidence), true},
+		{"complete", "database-schema-architecture", databaseSchemaArchitectureEvidence, true},
+		{"target is case/space insensitive", "  Database-Schema-Architecture ", databaseSchemaArchitectureEvidence, true},
+		{"unknown target", "no-such-skill", databaseSchemaArchitectureEvidence, false},
+		{"empty target", "", databaseSchemaArchitectureEvidence, false},
+		{"empty evidence", "database-schema-architecture", "", false},
+		{"structured clause needs colon", "database-schema-architecture", strings.Replace(databaseSchemaArchitectureEvidence, "index: idx_a", "index idx_a", 1), false},
+		{"marker with colon on other line does not count", "database-schema-architecture", strings.Replace(databaseSchemaArchitectureEvidence, "index: idx_a", "idx\nnote: x", 1), false},
+		{"unstructured clause satisfied anywhere", "database-schema-architecture", strings.Replace(databaseSchemaArchitectureEvidence, "write penalty noted", "insert cost: low", 1), true},
+		{"unstructured clause missing", "database-schema-architecture", strings.Replace(databaseSchemaArchitectureEvidence, "write penalty noted", "", 1), false},
+		{"markers case-insensitive", "database-schema-architecture", strings.ToUpper(databaseSchemaArchitectureEvidence), true},
 		{"algorithm complete", "algorithm-optimization", "hot path: profile\ncomplexity: o(n)\nscaling: n=1000\ninvariant: correctness\nbefore/after: before 5ms", true},
 		{"web-research timestamp year marker", "web-research", "source fan-out: 3\nsource index: sources\nclaim verification: verification status ok\naccess boundary: paywall\nfetched 2026-01-01", true},
 	}

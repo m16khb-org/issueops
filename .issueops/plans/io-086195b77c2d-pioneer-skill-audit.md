@@ -30,10 +30,10 @@ Update ARCHITECTURE.md and TECH_STACK.md so pioneer skills are discoverable from
 - Corrected web-research research report
 ### Definition of Done
 ```bash
-grep -c "implementation-planning\|verified-execution\|web-research\|database-design\|algorithm-optimization\|debugging\|prompt-engineering\|code-quality-metrics\|git-operations\|issueops" .issueops/ARCHITECTURE.md
+grep -c "implementation-planning\|verified-execution\|web-research\|database-schema-architecture\|algorithm-optimization\|debugging\|prompt-engineering\|code-quality-metrics\|git-operations\|issueops" .issueops/ARCHITECTURE.md
 # Expected: >0 matches for at least 3 skill names
 
-grep -c "implementation-planning\|verified-execution\|web-research\|database-design\|algorithm-optimization\|debugging\|prompt-engineering\|code-quality-metrics\|git-operations\|issueops" .issueops/TECH_STACK.md
+grep -c "implementation-planning\|verified-execution\|web-research\|database-schema-architecture\|algorithm-optimization\|debugging\|prompt-engineering\|code-quality-metrics\|git-operations\|issueops" .issueops/TECH_STACK.md
 # Expected: >0 matches for at least 3 skill names
 
 grep -ri 'go\|node\.js\|python\|typescript\|javascript' skills/*/SKILL.md | grep -v '#' | grep -v 'description:'
@@ -136,7 +136,7 @@ Wave 3: T4 (correct research report), T5 (final verification) — after T2, T3
     Channel: bash
     Steps:
       1. grep -n "^## 9. Pioneer Skills Layer" .issueops/ARCHITECTURE.md
-      2. Count skill name mentions: grep -c "implementation-planning\|verified-execution\|web-research\|database-design\|algorithm-optimization\|debugging\|prompt-engineering\|code-quality-metrics\|git-operations" .issueops/ARCHITECTURE.md
+      2. Count skill name mentions: grep -c "implementation-planning\|verified-execution\|web-research\|database-schema-architecture\|algorithm-optimization\|debugging\|prompt-engineering\|code-quality-metrics\|git-operations" .issueops/ARCHITECTURE.md
     Expected: Section header found. At least 8 skill names mentioned (total count >= 8).
     Evidence: .issueops/evidence/task_two_architecture_section.txt
   ```

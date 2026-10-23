@@ -127,7 +127,7 @@ func TestScoreArtifactConditionalDimensions(t *testing.T) {
 	})
 	t.Run("pioneer target without evidence fails", func(t *testing.T) {
 		fx := baseFixture()
-		fx.PioneerSkillTarget = "database-design"
+		fx.PioneerSkillTarget = "database-schema-architecture"
 		s := ScoreArtifact(fx, completeArtifact(), true)
 		if s.Passed {
 			t.Fatalf("missing pioneer evidence must fail: %+v", s)
@@ -135,9 +135,9 @@ func TestScoreArtifactConditionalDimensions(t *testing.T) {
 	})
 	t.Run("pioneer target with evidence passes", func(t *testing.T) {
 		fx := baseFixture()
-		fx.PioneerSkillTarget = "database-design"
+		fx.PioneerSkillTarget = "database-schema-architecture"
 		a := completeArtifact()
-		a.PioneerSkillEvidence = databaseDesignEvidence
+		a.PioneerSkillEvidence = databaseSchemaArchitectureEvidence
 		if s := ScoreArtifact(fx, a, true); !s.Passed {
 			t.Fatalf("expected pass: %+v", s)
 		}
@@ -188,7 +188,7 @@ func TestScoreArtifactCriticalFailureRules(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			fx := baseFixture()
 			fx.CriticalFailures = []string{c.rule}
-			fx.PioneerSkillTarget = "database-design"
+			fx.PioneerSkillTarget = "database-schema-architecture"
 			a := completeArtifact()
 			c.mutate(&a)
 			got := detectIssueOpsCriticalFailures(fx, a, true)

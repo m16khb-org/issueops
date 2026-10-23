@@ -74,7 +74,7 @@
 1. **격리 측정의 맹점.** rubric은 SKILL.md를 직접 주입하므로 (a) 실제 서술(description) 기반 activation이
    되는지, (b) 다른 스킬과의 핸드오프가 되는지를 측정하지 못한다. 이 맹점은 이미 실증됐다 —
    `pioneer-skill-optimization-strategy.md`의 firsthand 도그푸드에서 **서브에이전트 holdout이 놓친 결함들**
-   (code-quality-metrics의 ugrep 명령 오작동 27–34행, algorithm-optimization/database-design/git-operations의 "묻힌 결정 게이트" 124–135행)이 직접
+   (code-quality-metrics의 ugrep 명령 오작동 27–34행, algorithm-optimization/database-schema-architecture/git-operations의 "묻힌 결정 게이트" 124–135행)이 직접
    사용에서야 드러났다. 즉 격리 측정은 firsthand/통합 측정이 잡는 것을 구조적으로 놓친다.
 2. **단일-런 분산.** 4.92는 single-run holdout 점수다. n=3 분산 재측정에서 git-operations 4.77, algorithm-optimization 4.53으로
    내려간다 (scorecard 52–53, 89–91행). 즉 "모두 ≥4.8"은 표본 1회의 진술이고, gate(≥4.2)는 통과하나 4.92라는
@@ -93,11 +93,11 @@
 
 1. **Activation Fidelity (활성 충실도)** — 실제 서술/트리거로 스킬이 *맞게 켜지고 안 켜지는가*. 현재 rubric의
    "Request Fit" dimension(165–181행)은 개념적으로 이를 노리지만, 측정 시 SKILL.md를 직접 주입하므로 실제
-   activation을 검증하지 못한다. issueops 런 중 "DDL 변경인데 database-design가 호출됐는가 / 알고리즘 아닌데 algorithm-optimization가
+   activation을 검증하지 못한다. issueops 런 중 "DDL 변경인데 database-schema-architecture가 호출됐는가 / 알고리즘 아닌데 algorithm-optimization가
    오작동(overbroad)하지 않았는가"를 보는 기준이 필요하다.
 
 2. **Orchestration / Handoff Quality (오케스트레이션·핸드오프 품질)** — issueops SKILL.md의 Phase Assist
-   Map(SKILL.md 44–54행)은 implementation-planning→database-design→algorithm-optimization→...→code-quality-metrics→verified-execution의 파이프라인을 규정한다. 그러나
+   Map(SKILL.md 44–54행)은 implementation-planning→database-schema-architecture→algorithm-optimization→...→code-quality-metrics→verified-execution의 파이프라인을 규정한다. 그러나
    스킬 A의 산출물이 스킬 B의 입력으로 *실제로 올바르게 전달되는지*를 보는 기준이 없다. 이는 rubric의
    `hollow-method` gate(스킬이 방법을 언급하나 산출물을 바꾸지 않음, 256행)를 **issueops 수준으로 끌어올린**
    개념이다 — 현재는 단일 스킬 안에서만 적용된다.
@@ -138,7 +138,7 @@
 - `.issueops/ISSUEOPS_AUDIT.md`는 pioneer 스킬을 **한 번도 언급하지 않는다**(grep 0건).
 - 계층 A scorecard는 스킬을 issueops 밖 격리 상태로만 측정한다.
 
-즉 "issueops가 algorithm-optimization/database-design/debugging를 적시에 호출해 산출물을 개선한다"는 명제는 **참도 거짓도 아닌 미측정**
+즉 "issueops가 algorithm-optimization/database-schema-architecture/debugging를 적시에 호출해 산출물을 개선한다"는 명제는 **참도 거짓도 아닌 미측정**
 상태다. Phase Assist Map은 잘 설계된 *의도*이지만, 그 의도가 런타임에 실현되는지에 대한 evidence는
 계층 어디에도 없다. rubric 자신의 기준으로 보면 이 명제는 근거 등급 **D(추정)** 이며, rubric은 D를 최종
 판정에 쓰지 못하게 한다(rubric 273행). 따라서 "적절한 퍼포먼스를 보인다"고 보고하는 것은 rubric 위반이다.

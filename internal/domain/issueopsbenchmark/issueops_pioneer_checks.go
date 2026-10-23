@@ -58,7 +58,7 @@ var pioneerSkillSignatures = map[string][]pioneerClause{
 		structuredClause("before/after", "before", "benchmark delta", "measurement"),
 		anyMarkerClause("after", "improved"),
 	},
-	"database-design": {
+	"database-schema-architecture": {
 		structuredClause("schema", "row count", "ddl", "cardinality"),
 		structuredClause("explain", "query plan"),
 		structuredClause("index"),

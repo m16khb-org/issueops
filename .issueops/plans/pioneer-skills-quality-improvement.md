@@ -2,7 +2,7 @@
 
 ## TL;DR
 > **Summary**: The first pass was only a static risk review plus small smoke usage. That is insufficient for a qualitative quality evaluation of skills. The evaluation must be redone around realistic requests: does each pioneer skill complete the request as well as its description promises, without stale commands, unsafe shortcuts, overreach, or missing evidence?
-> **Deliverables**: request-fulfillment evaluation protocol, full-function coverage matrix, corrected risk findings, prioritized defect list, and a decision-complete improvement plan for `web-research`, `database-design`, `algorithm-optimization`, `debugging`, `prompt-engineering`, `code-quality-metrics`, `git-operations`, `verified-execution`, and `implementation-planning`.
+> **Deliverables**: request-fulfillment evaluation protocol, full-function coverage matrix, corrected risk findings, prioritized defect list, and a decision-complete improvement plan for `web-research`, `database-schema-architecture`, `algorithm-optimization`, `debugging`, `prompt-engineering`, `code-quality-metrics`, `git-operations`, `verified-execution`, and `implementation-planning`.
 > **Effort**: Large
 > **Parallel**: YES - 3 waves
 > **Critical Path**: T0 request-fulfillment evaluation -> T1 contract inventory -> T2 high-severity command fixes -> T5 common authoring contract -> T9 final quality gate
@@ -16,7 +16,7 @@ Execution update (2026-06-10): cycles 1-9 have now applied first-pass guardrail 
 ### Scope
 IN:
 - `skills/web-research/SKILL.md`
-- `skills/database-design/SKILL.md`
+- `skills/database-schema-architecture/SKILL.md`
 - `skills/algorithm-optimization/SKILL.md`
 - `skills/debugging/SKILL.md`
 - `skills/prompt-engineering/SKILL.md`
@@ -33,7 +33,7 @@ OUT:
 
 ### Evidence Gathered
 - `find skills -maxdepth 2 -type f -name 'SKILL.md' | sort` showed 16 skills total; the 9 person-named pioneer skills are the evaluation target.
-- `wc -l` showed 4,251 total lines across the 9 target `SKILL.md` files. `database-design` is the outlier at 989 lines.
+- `wc -l` showed 4,251 total lines across the 9 target `SKILL.md` files. `database-schema-architecture` is the outlier at 989 lines.
 - Historical host-managed `quick_validate.py <skill>` evidence passed for all 9
   target skills; current runs should use `python3 scripts/validate-skill.py
   <skill>` so validation is repo-owned and independent of host system skill
@@ -106,7 +106,7 @@ Each listed function surface needs at least one positive scenario and one bounda
 | Skill | Function Surfaces That Must Be Covered |
 |-------|----------------------------------------|
 | `web-research` | intent classification; fan-out search; direct fetch; blocked-source resilience levels FR-0 through FR-4; cross-verification; adversarial review; report synthesis; source index; sub-agent pattern disclosure; stop rules; IssueOps feedback |
-| `database-design` | survey; row-count classification; normalization audit; anomaly detection; denormalization decision; scale/capacity planning; partitioning decision; index type and column-order selection; query-plan interpretation; join strategy; N+1 detection; concurrency and lock diagnosis; deadlock simulation; isolation levels; pool sizing; before/after verification |
+| `database-schema-architecture` | survey; row-count classification; normalization audit; anomaly detection; denormalization decision; scale/capacity planning; partitioning decision; index type and column-order selection; query-plan interpretation; join strategy; N+1 detection; concurrency and lock diagnosis; deadlock simulation; isolation levels; pool sizing; before/after verification |
 | `algorithm-optimization` | structured-programming discipline; correctness proof; hot-path profiling; empirical complexity classification; algorithm/data-structure selection; invariant derivation; benchmark verification; scaling test; space audit; concurrent algorithm safety; documentation of algorithm choice |
 | `debugging` | reproduction; `lint_diagnose` translation; bisect strategy; divide-and-conquer isolation; trace-diff strategy; falsifiable hypothesis; fix verification; learning record; cross-stack command mapping; stop rules; IssueOps feedback |
 | `prompt-engineering` | task classification; prompt structure; evidence-based prompt techniques; model calibration; context-budgeting; test-suite construction; eval methods; adversarial testing; failure diagnosis; one-change iteration; A/B prompt testing; prompt versioning; five prompt patterns; IssueOps prompt feedback |
@@ -130,7 +130,7 @@ Scoring scale: 5 = strong, 3 = usable with notable risk, 1 = likely to mislead o
 | Skill | Overall | Strengths | Main Risks | Priority |
 |-------|---------|-----------|------------|----------|
 | `web-research` | 3/5 | Clear cited-research contract; good source independence and report template. | Auto-install guidance and WAF/TLS impersonation escalation are too aggressive (`skills/web-research/SKILL.md:146-247`); assumes `web_fetch` and sub-agent availability (`skills/web-research/SKILL.md:35-79`). | P1 |
-| `database-design` | 3/5 | Strong survey -> normalize -> verify method; good DDL and concurrency cautions (`skills/database-design/SKILL.md:942-965`). | 989-line core skill is too large; claims method applies to non-relational stores while identity is relational (`skills/database-design/SKILL.md:36-44`); hard-coded thresholds need engine/data caveats. | P1 |
+| `database-schema-architecture` | 3/5 | Strong survey -> normalize -> verify method; good DDL and concurrency cautions (`skills/database-schema-architecture/SKILL.md:942-965`). | 989-line core skill is too large; claims method applies to non-relational stores while identity is relational (`skills/database-schema-architecture/SKILL.md:36-44`); hard-coded thresholds need engine/data caveats. | P1 |
 | `algorithm-optimization` | 4/5 | Strong profile-before-optimize and benchmark discipline (`skills/algorithm-optimization/SKILL.md:109-154`, `skills/algorithm-optimization/SKILL.md:468-495`). | Scaling explanation mixes 10x inputs with doubling language (`skills/algorithm-optimization/SKILL.md:156-174`); formal-invariant burden may be too heavy for simple hot-path fixes. | P2 |
 | `debugging` | 3/5 | Reproduce -> isolate -> hypothesize -> verify is strong (`skills/debugging/SKILL.md:36-82`, `skills/debugging/SKILL.md:296-318`). | CLI snippet uses non-existent `--command-argv` flag (`skills/debugging/SKILL.md:71-77`; actual parser: `cmd/issueops/projectcli/project_lint_diagnose.go:10-24`); divide-and-conquer suggests commenting out code before guardrails (`skills/debugging/SKILL.md:109-123`). | P0 |
 | `prompt-engineering` | 3/5 | Good prompt test-suite and adversarial-testing requirements (`skills/prompt-engineering/SKILL.md:152-190`, `skills/prompt-engineering/SKILL.md:402-429`). | Recommends explicit chain-of-thought output (`skills/prompt-engineering/SKILL.md:79`, `skills/prompt-engineering/SKILL.md:320-337`); tool-use examples define fake `search_codebase` and `read_file` schemas not aligned with Codex tools (`skills/prompt-engineering/SKILL.md:362-385`). | P1 |
@@ -143,7 +143,7 @@ Scoring scale: 5 = strong, 3 = usable with notable risk, 1 = likely to mislead o
 1. **Command drift is the highest-severity class**: stale snippets can make a skill fail before domain reasoning begins.
 2. **Activation overreach is concentrated in `verified-execution` and `implementation-planning`**: both can hijack broad tasks into heavy workflows.
 3. **Host-tool assumptions are inconsistent**: the skills mention Claude, Codex, Reasonix, `task(...)`, `spawn_agent`, `web_fetch`, and `read_file(...)` without a single current translation contract.
-4. **Safety posture is uneven**: `git-operations` and `database-design` are safety-conscious; `web-research` and `code-quality-metrics` still include install or scraping escalation that should require explicit approval or sandboxing.
+4. **Safety posture is uneven**: `git-operations` and `database-schema-architecture` are safety-conscious; `web-research` and `code-quality-metrics` still include install or scraping escalation that should require explicit approval or sandboxing.
 5. **Maintainer ergonomics need a shared rubric**: every skill has a different template and no automated drift test for command snippets, tool names, or dangerous defaults.
 
 ## T0 Request-Fulfillment Results
@@ -168,7 +168,7 @@ Calibrated 27-case baseline scores:
 
 | Skill | Baseline | Main Request-Fulfillment Blocker From Live/Contract Evidence |
 |-------|-------------|----------------------------------|
-| `database-design` | 4.36/5 | Strongest current skill; still needs holdout and explicit write-penalty artifact. |
+| `database-schema-architecture` | 4.36/5 | Strongest current skill; still needs holdout and explicit write-penalty artifact. |
 | `git-operations` | 3.70/5 | Strong git preflight; destructive recovery needs explicit confirmation ladder. |
 | `debugging` | 3.34/5 | Debugging method works, but documented `lint-diagnose` CLI is stale. |
 | `algorithm-optimization` | 3.30/5 | Strong anti-speculative optimization; scaling guidance is materially inconsistent. |
@@ -183,7 +183,7 @@ Calibrated 27-case baseline scores:
 2. **P0: Remove unsafe defaults**: first-pass fixes applied for global installs, fetch escalation boundaries, destructive git recovery, and live DDL advice; affected request reruns passed calibration.
 3. **P1: Rebalance activation**: first-pass fixes applied in `verified-execution` and `implementation-planning`; affected request reruns passed calibration.
 4. **P1: Make quality measurement real**: first-pass `code-quality-metrics` tracked/untracked and zero-input fixes applied; the fixture-backed rerun passed calibration.
-5. **P1: Improve progressive disclosure**: still pending; do this only if reruns show dense `database-design` or `code-quality-metrics` content remains a request-fulfillment blocker.
+5. **P1: Improve progressive disclosure**: still pending; do this only if reruns show dense `database-schema-architecture` or `code-quality-metrics` content remains a request-fulfillment blocker.
 6. **P2: Add fixtures to prevent regression**: fixture contract added in `.issueops/operations/pioneer-skill-rerun-fixtures.md`; all nine executable artifacts passed calibration and have official after-scores. Further tracked regression fixtures are optional maintainer follow-up, not a blocker for this improvement pass.
 
 ### Improvement Target
@@ -483,9 +483,9 @@ Wave 3: T8, T9, T10 - qualitative fixtures, docs sync, final verification.
 
   **Commit**: YES | Message: `docs(skills): rebalance planning and evidence activation`
 
-- [ ] 5. Harden safety boundaries in `web-research`, `code-quality-metrics`, `git-operations`, and `database-design`
+- [ ] 5. Harden safety boundaries in `web-research`, `code-quality-metrics`, `git-operations`, and `database-schema-architecture`
 
-  **What to do**: Remove unqualified auto-install instructions from `web-research` and `code-quality-metrics`; replace with "check availability, ask or use project-local temp env" language. In `web-research`, clarify that fetch resilience must not bypass auth, paywalls, robots-sensitive restrictions, or site abuse controls. In `git-operations`, make destructive recovery commands a last-resort, explicitly user-confirmed path with backup verification. In `database-design`, keep DDL recommendations advisory and require environment/transaction-lock checks before live migration advice.
+  **What to do**: Remove unqualified auto-install instructions from `web-research` and `code-quality-metrics`; replace with "check availability, ask or use project-local temp env" language. In `web-research`, clarify that fetch resilience must not bypass auth, paywalls, robots-sensitive restrictions, or site abuse controls. In `git-operations`, make destructive recovery commands a last-resort, explicitly user-confirmed path with backup verification. In `database-schema-architecture`, keep DDL recommendations advisory and require environment/transaction-lock checks before live migration advice.
   **Must NOT do**: Do not remove useful examples; convert risky commands into gated examples.
   **Why this improves quality**: It converts `unsafe` request outcomes into safe stop, ask, or sandboxed execution paths.
 
@@ -498,13 +498,13 @@ Wave 3: T8, T9, T10 - qualitative fixtures, docs sync, final verification.
   - `web-research` auto-install and fetch escalation: `skills/web-research/SKILL.md:83-190`, `skills/web-research/SKILL.md:238-247`
   - `code-quality-metrics` baseline and install snippets: `skills/code-quality-metrics/SKILL.md:167-218`, `skills/code-quality-metrics/SKILL.md:302-338`
   - `git-operations` destructive recovery example: `skills/git-operations/SKILL.md:75-94`
-  - `database-design` DDL safety rules: `skills/database-design/SKILL.md:679-685`, `skills/database-design/SKILL.md:942-965`
+  - `database-schema-architecture` DDL safety rules: `skills/database-schema-architecture/SKILL.md:679-685`, `skills/database-schema-architecture/SKILL.md:942-965`
 
   **Acceptance Criteria**:
   - [ ] No target skill contains `pip install`, `go install`, or equivalent global install as an unconditional instruction.
   - [ ] `web-research` retains the login/paywall stop rule and adds explicit "do not bypass access control" language.
   - [ ] `git-operations` documents backup verification before any `reset --hard` recovery.
-  - [ ] `database-design` keeps live DDL behind evidence and migration-safety gates.
+  - [ ] `database-schema-architecture` keeps live DDL behind evidence and migration-safety gates.
 
   **QA Scenarios**:
   ```
@@ -562,7 +562,7 @@ Wave 3: T8, T9, T10 - qualitative fixtures, docs sync, final verification.
 
 - [ ] 7. Reduce core size and improve progressive disclosure for dense skills
 
-  **What to do**: Move bulky reference material out of `database-design`, `code-quality-metrics`, and optionally `algorithm-optimization` into `references/` files. Keep each `SKILL.md` focused on activation, role, method, critical rules, stop rules, and references to optional material. `database-design` should split at least engine-specific catalog queries, lock tables, and connection pool formulas into references. `code-quality-metrics` should split shell heuristics and AST-tool recipes into references.
+  **What to do**: Move bulky reference material out of `database-schema-architecture`, `code-quality-metrics`, and optionally `algorithm-optimization` into `references/` files. Keep each `SKILL.md` focused on activation, role, method, critical rules, stop rules, and references to optional material. `database-schema-architecture` should split at least engine-specific catalog queries, lock tables, and connection pool formulas into references. `code-quality-metrics` should split shell heuristics and AST-tool recipes into references.
   **Must NOT do**: Do not delete domain content. Preserve it as referenced material.
   **Why this improves quality**: It helps agents complete the actual request path without drowning in unrelated examples or engine-specific branches.
 
@@ -572,11 +572,11 @@ Wave 3: T8, T9, T10 - qualitative fixtures, docs sync, final verification.
   **Parallelization**: Can Parallel: YES | Wave 2 | Blocks: T8, T10 | Blocked By: T3
 
   **References**:
-  - Current size: `wc -l` showed `skills/database-design/SKILL.md` has 989 lines, `algorithm-optimization` 509, `prompt-engineering` 443, `verified-execution` 403.
+  - Current size: `wc -l` showed `skills/database-schema-architecture/SKILL.md` has 989 lines, `algorithm-optimization` 509, `prompt-engineering` 443, `verified-execution` 403.
   - Existing reference-file pattern: `skills/verified-execution/references/evidence-contract.md`, `skills/implementation-planning/references/clearance-checklist.md`, `skills/git-operations/references/*.md`
 
   **Acceptance Criteria**:
-  - [ ] `skills/database-design/SKILL.md` core size is materially reduced while `quick_validate.py skills/database-design` still passes.
+  - [ ] `skills/database-schema-architecture/SKILL.md` core size is materially reduced while `quick_validate.py skills/database-schema-architecture` still passes.
   - [ ] New references are linked from `SKILL.md` with clear "when to open" instructions.
   - [ ] No orphaned references: every new `references/*.md` is mentioned by its parent `SKILL.md`.
 
@@ -585,20 +585,20 @@ Wave 3: T8, T9, T10 - qualitative fixtures, docs sync, final verification.
   Scenario: Codd progressive disclosure
     Channel: bash
     Steps:
-      1. Run `wc -l skills/database-design/SKILL.md`.
-      2. Run `find skills/database-design/references -type f | sort`.
-      3. For each reference, grep its filename in `skills/database-design/SKILL.md`.
+      1. Run `wc -l skills/database-schema-architecture/SKILL.md`.
+      2. Run `find skills/database-schema-architecture/references -type f | sort`.
+      3. For each reference, grep its filename in `skills/database-schema-architecture/SKILL.md`.
     Expected: Codd core is smaller and every reference is reachable.
     Evidence: .issueops/evidence/pioneer-skills-quality/task-7-progressive-disclosure.txt
 
   Scenario: Skill validation after splits
     Channel: bash
-    Steps: Run `python3 scripts/validate-skill.py skills/database-design`.
+    Steps: Run `python3 scripts/validate-skill.py skills/database-schema-architecture`.
     Expected: Validation passes.
     Evidence: .issueops/evidence/pioneer-skills-quality/task-7-progressive-disclosure.txt
   ```
 
-  **Commit**: YES | Message: `docs(database-design): move dense database references out of core skill`
+  **Commit**: YES | Message: `docs(database-schema-architecture): move dense database references out of core skill`
 
 - [ ] 8. Add qualitative fixture suite for all 9 pioneer skills
 
@@ -731,7 +731,7 @@ Recommended atomic commits:
 3. `docs(skills): rebalance planning and evidence activation`
 4. `docs(skills): harden pioneer safety boundaries`
 5. `docs(prompt-engineering): align prompt patterns with reasoning privacy`
-6. `docs(database-design): move dense database references out of core skill`
+6. `docs(database-schema-architecture): move dense database references out of core skill`
 7. `test(skills): add pioneer qualitative quality fixtures`
 8. `docs(skills): sync pioneer adapter prompts`
 

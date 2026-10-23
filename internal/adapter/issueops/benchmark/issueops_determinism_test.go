@@ -28,13 +28,13 @@ func TestScorerDeterminismOrderedOutputsStable(t *testing.T) {
 	// slices and prove little).
 	fixture := benchmark.IssueOpsBenchmarkFixture{
 		ID:                 "determinism",
-		PioneerSkillTarget: "database-design",
-		ExpectedRouting:    []benchmark.SkillRouting{{Phase: "plan", Skill: "database-design"}},
+		PioneerSkillTarget: "database-schema-architecture",
+		ExpectedRouting:    []benchmark.SkillRouting{{Phase: "plan", Skill: "database-schema-architecture"}},
 		CriticalFailures:   []string{"skips domain contract evidence", "skips live evidence matrix"},
 	}
 	artifact := completeBenchmarkArtifactForTest()
 	artifact.PioneerSkillEvidence = coddKeywordEvidence
-	artifact.RoutingTrace = []benchmark.SkillRouting{{Phase: "plan", Skill: "database-design"}}
+	artifact.RoutingTrace = []benchmark.SkillRouting{{Phase: "plan", Skill: "database-schema-architecture"}}
 	artifact.DomainContractEvidence = ""
 	artifact.LiveEvidenceMatrix = ""
 	artifact.PhaseChoices = ""

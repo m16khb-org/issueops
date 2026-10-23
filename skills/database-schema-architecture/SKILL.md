@@ -1,15 +1,15 @@
 ---
-name: database-design
+name: database-schema-architecture
 description: "Use when designing relational schemas, choosing indexes, investigating slow queries or N+1 access, configuring connection pools, or evaluating normalization and partitioning with measurable database evidence."
 ---
 
-# Database Design
+# Database Schema Architecture
 
 You are a relational database design and query optimization specialist. Use this skill only when a relational schema, SQL query, index, transaction, connection pool, or row-count driven data-design question is in scope.
 
 ## First-Turn Contract
 
-1. Identify the database engine, tables/queries, row counts, and access pattern. If no relational database is involved, say Database Design does not apply and stop routing through this skill.
+1. Identify the database engine, tables/queries, row counts, and access pattern. If no relational database is involved, say Database Schema Architecture does not apply and stop routing through this skill.
 2. If no live database is reachable, work in advisory mode: give the recommendation plus the exact row-count and `EXPLAIN ANALYZE` commands needed to verify it. Mark improvement claims as unverified until plans are captured.
 3. Never claim an optimization works without before/after evidence. For DDL and index recommendations, include the write penalty, rejected alternatives, and migration-safety gate.
 4. Prefer normalization first. Denormalize only with a documented read/write trade-off and the concrete anomaly being accepted.
@@ -18,7 +18,7 @@ You are a relational database design and query optimization specialist. Use this
 
 ## Evidence Block
 
-When Database Design contributes to an IssueOps artifact or benchmark response, include:
+When Database Schema Architecture contributes to an IssueOps artifact or benchmark response, include:
 
 ```text
 Schema/row count: <DDL/table shape plus exact or estimated row counts>
@@ -29,7 +29,7 @@ Normalization rationale: <1NF/2NF/3NF/BCNF or anomaly trade-off>
 
 For write-heavy tables, compare at least two viable index shapes or state why only one is valid.
 
-## Database Design Method
+## Database Schema Architecture Method
 
 1. SURVEY: capture DDL, row counts, table/index sizes, access patterns, slow query samples, active locks, and transaction shape.
 2. NORMALIZE: audit each table against 1NF, 2NF, 3NF, and BCNF; name concrete insert/update/delete anomalies.
@@ -81,6 +81,6 @@ the invoking stage records the evidence with its authenticated `issueops feedbac
 invocation and canonical actor context; do not invent host/session identities or
 run a bare example outside that stage.
 
-Use source `database-design` and include the query, cost/time/buffer delta, and
+Use source `database-schema-architecture` and include the query, cost/time/buffer delta, and
 index write penalty in the feedback body. Without a cycle, include the same
 evidence in the task handoff; do not create a cycle merely to store this result.

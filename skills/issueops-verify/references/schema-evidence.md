@@ -3,7 +3,7 @@
 SKILL.md의 `## 2` 절에서 넘어온 세부 규칙이다.
 
 활성화되면 추정이 아니라 **실제 데이터베이스 관찰값**을 요구한다. 대상 테이블의 기존
-인덱스 현황과 row 수, 그리고 그 값을 어디서 봤는지다. 조회는 [`database-design`](../../database-design/SKILL.md)
+인덱스 현황과 row 수, 그리고 그 값을 어디서 봤는지다. 조회는 [`database-schema-architecture`](../../database-schema-architecture/SKILL.md)
 또는 DB MCP 서버로 한다.
 
 커넥션을 소모하는 대형 스캔을 던지지 않는다. `COUNT(*)` 전수 대신 카탈로그의 추정 row

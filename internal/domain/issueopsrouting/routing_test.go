@@ -12,17 +12,17 @@ import (
 // 검증, 멱등 append, trace 상한, 점수 매칭(대소문자/공백 무시)을 잠근다.
 func TestNewEntryValidatesAndNormalizes(t *testing.T) {
 	at := time.Date(2026, 8, 21, 12, 0, 0, 0, time.UTC)
-	entry, err := NewEntry("  plan  ", "database-design", at)
-	if err != nil || entry.Phase != "plan" || entry.Skill != "database-design" || entry.At != "2026-08-21T12:00:00Z" {
+	entry, err := NewEntry("  plan  ", "database-schema-architecture", at)
+	if err != nil || entry.Phase != "plan" || entry.Skill != "database-schema-architecture" || entry.At != "2026-08-21T12:00:00Z" {
 		t.Fatalf("entry = %#v err = %v", entry, err)
 	}
 	for _, bad := range []struct {
 		phase, skill string
 		want         string
 	}{
-		{"", "database-design", "phase is required"},
+		{"", "database-schema-architecture", "phase is required"},
 		{"plan", "", "skill is required"},
-		{strings.Repeat("p", 65), "database-design", "64 bytes"},
+		{strings.Repeat("p", 65), "database-schema-architecture", "64 bytes"},
 		{"plan", strings.Repeat("s", 65), "64 bytes"},
 	} {
 		if _, err := NewEntry(bad.phase, bad.skill, at); err == nil || !strings.Contains(err.Error(), bad.want) {
@@ -54,19 +54,19 @@ func TestAppendIsIdempotentAndBounded(t *testing.T) {
 func TestScoreMatchesPairingsLeniently(t *testing.T) {
 	record := issueopsroutingcontract.Record{RoutingTrace: []issueopsroutingcontract.Entry{
 		{Phase: "problem", Skill: "issueops"},
-		{Phase: "plan", Skill: "database-design"},
+		{Phase: "plan", Skill: "database-schema-architecture"},
 	}}
 	result := ScoreRecord(record, []issueopsroutingcontract.Expected{
 		{Phase: " PROBLEM ", Skill: "IssueOps"},
-		{Phase: "plan", Skill: "database-design"},
+		{Phase: "plan", Skill: "database-schema-architecture"},
 		{Phase: "implement", Skill: "algorithm-optimization"},
 	})
 	if result.OK || len(result.Missing) != 1 || result.Missing[0].Skill != "algorithm-optimization" {
 		t.Fatalf("score record = %#v", result)
 	}
 	if got := Score(
-		[]issueopsroutingcontract.Expected{{Phase: "plan", Skill: "database-design"}},
-		[]issueopsroutingcontract.Expected{{Phase: "PLAN", Skill: " database-design "}},
+		[]issueopsroutingcontract.Expected{{Phase: "plan", Skill: "database-schema-architecture"}},
+		[]issueopsroutingcontract.Expected{{Phase: "PLAN", Skill: " database-schema-architecture "}},
 	); !got.OK {
 		t.Fatalf("lenient pairing must match: %#v", got)
 	}

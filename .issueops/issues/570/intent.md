@@ -19,7 +19,7 @@ IssueOps 계획 단계에서 아키텍처를 계획보다 먼저 정하도록 �
 
 ## 비목표
 - 과거 기록 문서(.issueops/adr, cautions, issues, plans, research, verified-execution)와 과거 리뷰 라운드를 가리키는 코드 주석은 고치지 않는다
-- database-design, ui-ux-craft 등 다른 뜻의 design은 바꾸지 않는다
+- database-schema-architecture, ui-ux-craft 등 다른 뜻의 design은 바꾸지 않는다
 - durable phase를 추가하지 않는다
 - 계획 필수 절 네 개는 바꾸지 않는다
 - 이전 필드 이름을 읽는 호환 경로를 두지 않는다

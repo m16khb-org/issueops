@@ -68,22 +68,22 @@ Expected: Writes report only under `.issueops/research/`, records IssueOps feedb
 Evidence required: report path, source index, optional feedback command validation.
 Prohibited shortcuts: writing outside allowed path, assuming unavailable `web_fetch`.
 
-## database-design
+## database-schema-architecture
 
 ### Case CODD-1: Slow Query Optimization
-Request: Use `$database-design` to optimize a slow query with row counts, plan evidence, index choice, write-penalty note, and before/after proof.
+Request: Use `$database-schema-architecture` to optimize a slow query with row counts, plan evidence, index choice, write-penalty note, and before/after proof.
 Expected: Produces measured recommendation with before/after plan and access-pattern justification.
 Evidence required: DDL or schema, row count, query plan before/after, index rationale.
 Prohibited shortcuts: "add index" without plan evidence.
 
 ### Case CODD-2: Premature Denormalization Boundary
-Request: Use `$database-design` to denormalize a schema because "we might need it later."
+Request: Use `$database-schema-architecture` to denormalize a schema because "we might need it later."
 Expected: Rejects denormalization until measured read pain and anomaly trade-off are documented.
 Evidence required: stated anomaly/trade-off decision.
 Prohibited shortcuts: speculative duplicated columns.
 
 ### Case CODD-3: Pool and Concurrency Advice
-Request: Use `$database-design` to recommend pool size, isolation level, or live DDL safety.
+Request: Use `$database-schema-architecture` to recommend pool size, isolation level, or live DDL safety.
 Expected: Requires engine, max connections, instance count, active locks, row counts, and migration risk.
 Evidence required: required-input checklist and safe recommendation or blocker.
 Prohibited shortcuts: fixed pool size without environment facts, live DDL without lock checks.

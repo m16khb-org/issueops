@@ -2,7 +2,7 @@
 
 ## 2026-07-02 Status Update
 
-- Skill context-cost work was implemented as document restructuring, not a runtime lazy-loader. `skills/database-design/SKILL.md` now keeps only the first-turn contract and routes detailed SQL/catalog/index/concurrency material to `skills/database-design/references/deep-database-review.md`; `issueops` and `meeting-notes` moved long operational/UI examples into references while preserving contract-tested entrypoint phrases.
+- Skill context-cost work was implemented as document restructuring, not a runtime lazy-loader. `skills/database-schema-architecture/SKILL.md` now keeps only the first-turn contract and routes detailed SQL/catalog/index/concurrency material to `skills/database-schema-architecture/references/deep-database-review.md`; `issueops` and `meeting-notes` moved long operational/UI examples into references while preserving contract-tested entrypoint phrases.
 - No measured daemon/MCP latency regression was found in this quality pass, and no measurement-backed micro-optimization was attempted. The accepted threshold remains: optimize only after a before/after command or self-verify step duration shows a concrete bottleneck.
 - Quick verification evidence for this pass uses `go test ./...`, `go vet ./...`, `go build -o bin/issueops ./cmd/issueops`, skill validation, and `self-verify --seed=100`; the full 10-iteration gate is still the release-grade proof.
 - Deferred by design: automatic `/tmp` reaper and Slack List schema write test. `/tmp` cleanup remains explicit hygiene, and Slack List schema testing needs an isolated fixture or approved test List to avoid live workspace side effects.
@@ -13,7 +13,7 @@
 > - self-verify quick 실패 재현 여부와 원인 분류
 > - `issueops://commit-policy` resource read의 cwd/root 의존성 회귀 테스트
 > - benign MCP stream close 로그의 noisy error 축소
-> - pioneer skills 크기/로딩 비용 기준선과 `database-design` 분할안
+> - pioneer skills 크기/로딩 비용 기준선과 `database-schema-architecture` 분할안
 > - 최종 self-verify/go-test/daemon smoke evidence
 > **Effort**: Medium
 > **Parallel**: YES - 2 waves
@@ -33,7 +33,7 @@
 - `./bin/issueops self-verify --seed=100 --target-score=95 --json` 결과: 실패. `go test ./... -count=1`은 self-verify 내부에서 통과했고 69,818ms가 걸렸지만, `MCP smoke`가 `expected 12 MCP responses, got 1`로 실패했다. self-verify의 `MCP smoke` duration은 84ms라서 느린 병목이 아니라 response contract/transport 문제다.
 - 같은 self-verify 결과에서 slowest steps는 `go test` 69,818ms, `go build` 1,336ms, `binary drift` 398ms, `harness invariants` 115ms, `MCP smoke` 84ms였다.
 - daemon log tail에는 `mcp stream error: close ... use of closed network connection`가 반복된다. 이 로그는 `cmd/issueops/daemoncli/daemon_server.go`의 `serveMCPStream` error logging path에서 발생한다.
-- pioneer skill `SKILL.md` 총량은 215,173 bytes다. 최대 파일은 `skills/database-design/SKILL.md` 56,298 bytes이고, 다음은 `prompt-engineering` 24,333, `algorithm-optimization` 24,059, `verified-execution` 22,584, `implementation-planning` 20,845 bytes다.
+- pioneer skill `SKILL.md` 총량은 215,173 bytes다. 최대 파일은 `skills/database-schema-architecture/SKILL.md` 56,298 bytes이고, 다음은 `prompt-engineering` 24,333, `algorithm-optimization` 24,059, `verified-execution` 22,584, `implementation-planning` 20,845 bytes다.
 - CodeGraph 기준 `ReadProjectDoc`는 `cmd/issueops/mcpcli/mcp_tool_project.go` 호출은 있으나 covering test가 부족하다고 보고됐다. resource read 테스트는 `cmd/issueops/mcpcli/mcp_tool_project_test.go`에 있지만 현재는 default `HarnessRoot()`에 기대는 형태다.
 
 ### Gap Analysis
@@ -91,7 +91,7 @@ Wave 1:
 Wave 2:
 - T2 daemon-backed MCP multi-request handling fix
 - T3 implementation if daemon log classification confirms benign close can be safely downgraded
-- T4 database-design split or compression only after baseline and validation criteria are fixed
+- T4 database-schema-architecture split or compression only after baseline and validation criteria are fixed
 - T5 final verification
 
 ### Dependency Matrix
@@ -231,7 +231,7 @@ Wave 2:
 
 - [ ] 4. Shrink pioneer skill context cost without host drift
 
-  **What to do**: Establish byte/token baseline for the 9 pioneer skills. For `database-design`, move long examples/checklists that are not first-turn operating rules into `references/` only if the skill body explicitly points to when to read them. Keep `SKILL.md` self-contained enough for safe activation. Validate changed skills with `quick_validate.py`. Do not implement lazy loading in issueops core.
+  **What to do**: Establish byte/token baseline for the 9 pioneer skills. For `database-schema-architecture`, move long examples/checklists that are not first-turn operating rules into `references/` only if the skill body explicitly points to when to read them. Keep `SKILL.md` self-contained enough for safe activation. Validate changed skills with `quick_validate.py`. Do not implement lazy loading in issueops core.
   **Must NOT do**: Do not split source of truth across Codex/Claude copies. Do not remove safety rules or IssueOps integration. Do not add README/changelog files inside skill folders.
 
   **Recommended Agent**: deep
@@ -240,15 +240,15 @@ Wave 2:
   **Parallelization**: Can Parallel: YES | Wave 1/2 | Blocks: T5 | Blocked By: -
 
   **References**:
-  - `skills/database-design/SKILL.md` - largest current skill, 56,298 bytes.
+  - `skills/database-schema-architecture/SKILL.md` - largest current skill, 56,298 bytes.
   - `skills/*/SKILL.md` - pioneer skill set totals 215,173 bytes.
   - `.issueops/CONVENTIONS.md` - shared skill conventions and no host-specific copies.
   - `.issueops/CAUTIONS.md` - shared skill drift and companion tool reimplementation warnings.
 
   **Acceptance Criteria**:
   - [ ] Baseline and after byte counts are recorded.
-  - [ ] `database-design` `SKILL.md` shrinks only if references preserve the required detail.
-  - [ ] `quick_validate.py skills/database-design` passes for any changed skill.
+  - [ ] `database-schema-architecture` `SKILL.md` shrinks only if references preserve the required detail.
+  - [ ] `quick_validate.py skills/database-schema-architecture` passes for any changed skill.
   - [ ] User-level symlink targets remain pointed at repo `skills/<name>` if install refresh is performed.
 
   **QA Scenarios**:
@@ -256,18 +256,18 @@ Wave 2:
   ```
   Scenario: Skill byte baseline
     Channel: bash
-    Steps: wc -c skills/{web-research,database-design,algorithm-optimization,debugging,prompt-engineering,code-quality-metrics,git-operations,verified-execution,implementation-planning}/SKILL.md
-    Expected: report includes total bytes and identifies database-design as the largest
+    Steps: wc -c skills/{web-research,database-schema-architecture,algorithm-optimization,debugging,prompt-engineering,code-quality-metrics,git-operations,verified-execution,implementation-planning}/SKILL.md
+    Expected: report includes total bytes and identifies database-schema-architecture as the largest
     Evidence: .issueops/evidence/performance-improvement/task-4-byte-baseline.txt
 
   Scenario: Changed skill validates
     Channel: bash
-    Steps: python3 scripts/validate-skill.py skills/database-design
+    Steps: python3 scripts/validate-skill.py skills/database-schema-architecture
     Expected: validation exits 0
-    Evidence: .issueops/evidence/performance-improvement/task-4-database-design-validate.txt
+    Evidence: .issueops/evidence/performance-improvement/task-4-database-schema-architecture-validate.txt
   ```
 
-  **Commit**: YES | Message: `docs(skills): reduce pioneer skill context cost` | Files: `skills/database-design/**` and any explicitly changed pioneer skill references
+  **Commit**: YES | Message: `docs(skills): reduce pioneer skill context cost` | Files: `skills/database-schema-architecture/**` and any explicitly changed pioneer skill references
 
 - [ ] 5. Final performance and stability verification
 

@@ -10,7 +10,7 @@ func TestCanonicalNamesAndMissingAreDeterministic(t *testing.T) {
 		"web-research",
 		"requirements-analysis",
 		"architecture-review",
-		"database-design",
+		"database-schema-architecture",
 		"algorithm-optimization",
 		"meeting-notes",
 		"issueops-debugging",
@@ -32,7 +32,7 @@ func TestCanonicalNamesAndMissingAreDeterministic(t *testing.T) {
 	wantMissing := []string{
 		"web-research",
 		"architecture-review",
-		"database-design",
+		"database-schema-architecture",
 		"algorithm-optimization",
 		"meeting-notes",
 		"issueops-debugging",

@@ -80,7 +80,7 @@ those same dimensions. Historical v1 records remain v1 until actually rescored.
 | `prompt-engineering` | 5 | KARPATHY-2, KARPATHY-3 | KARPATHY-H1 | Prompt spec that requests hidden/private thoughts and includes fictional tool names. | `reruns/prompt-engineering/result.yaml` with revised prompt, concise rationale requirement, tool mapping or illustrative labels, and privacy/tool hallucination eval cases. |
 | `web-research` | 6 | BERNERS-LEE-1, BERNERS-LEE-2 | BERNERS-LEE-H1 | Three-source research fixture: one accessible official source, one accessible package/source metadata page, one blocked/protected source represented by captured status text. | `reruns/web-research/result.yaml` with source table, accessible citations, protected-source stop rationale, and no bypass guidance. |
 | `git-operations` | 7 | TORVALDS-2 plus TORVALDS-1 smoke | TORVALDS-H1 | Isolated git repo with dirty tracked and untracked work plus a candidate reset target. Do not run destructive commands. | `reruns/git-operations/result.yaml` with status/log/ref evidence, candidate target SHA, data-loss surface, and explicit confirmation gate. |
-| `database-design` | 8 | CODD-1, CODD-3 | CODD-H1 | SQL/schema fixture for a write-heavy event table, one slow read query, candidate composite/partial indexes, and write-rate assumptions. | `reruns/database-design/result.yaml` with row-count/table-size assumptions, before/after or blocked plan evidence, write-penalty comparison, and live DDL gate. |
+| `database-schema-architecture` | 8 | CODD-1, CODD-3 | CODD-H1 | SQL/schema fixture for a write-heavy event table, one slow read query, candidate composite/partial indexes, and write-rate assumptions. | `reruns/database-schema-architecture/result.yaml` with row-count/table-size assumptions, before/after or blocked plan evidence, write-penalty comparison, and live DDL gate. |
 | `algorithm-optimization` | 9 | DIJKSTRA-1, DIJKSTRA-2, DIJKSTRA-3 | DIJKSTRA-H1 | Benchmark/scaling fixture with CPU-light startup quadratic routine, bounded N <= 300, and separate evidence that the real hot path is I/O wait. | `reruns/algorithm-optimization/result.yaml` with hot-path check, scale-factor interpretation, no-change threshold, benchmark validity notes, and proportional invariant burden. |
 
 ## Calibration Rerun Set
@@ -110,7 +110,7 @@ in each `reruns/<skill>/result.yaml`.
 | `prompt-engineering` | `.issueops/evidence/pioneer-skills-quality/reruns/prompt-engineering/result.yaml` | 3.6 → 4.8 | Pre-fix FAIL (overfit, privacy holdout); skill guardrail fixed; re-run PASS. |
 | `web-research` | `.issueops/evidence/pioneer-skills-quality/reruns/web-research/result.yaml` | 4.8 | Executed; PASS. |
 | `git-operations` | `.issueops/evidence/pioneer-skills-quality/reruns/git-operations/result.yaml` | 4.6 | Executed; PASS (improvement noted: confirm-before-execute on destructive reset). |
-| `database-design` | `.issueops/evidence/pioneer-skills-quality/reruns/database-design/result.yaml` | 4.2 → 4.8 | Executed; borderline pre-fix → skill guardrail added (compare ≥2 index shapes); re-run PASS. |
+| `database-schema-architecture` | `.issueops/evidence/pioneer-skills-quality/reruns/database-schema-architecture/result.yaml` | 4.2 → 4.8 | Executed; borderline pre-fix → skill guardrail added (compare ≥2 index shapes); re-run PASS. |
 | `algorithm-optimization` | `.issueops/evidence/pioneer-skills-quality/reruns/algorithm-optimization/result.yaml` | 4.4 | Executed; PASS (improvement noted: lead with no-change decision + input-size threshold). |
 
 ## Completion Criteria

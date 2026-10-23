@@ -251,7 +251,7 @@ func printIssueOpsChildValue(value any, jsonOut bool, err error) error {
 func (cli command) runIssueOpsRoutingScore(args []string) error {
 	fs := flag.NewFlagSet("issueops routing-score", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
-	expect := fs.String("expect", "", "expected routing as comma-separated phase:skill pairings (e.g. plan:database-design,implement:algorithm-optimization)")
+	expect := fs.String("expect", "", "expected routing as comma-separated phase:skill pairings (e.g. plan:database-schema-architecture,implement:algorithm-optimization)")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
@@ -312,7 +312,7 @@ func (cli command) runIssueOpsRecordRouting(args []string) error {
 	id := fs.String("id", "", "issueops id")
 	actor := cli.addIssueOpsActorFlags(fs)
 	phase := fs.String("phase", "", "lifecycle phase at which the skill fired")
-	skill := fs.String("skill", "", "skill that fired (database-design, algorithm-optimization, debugging, code-quality-metrics, ...)")
+	skill := fs.String("skill", "", "skill that fired (database-schema-architecture, algorithm-optimization, debugging, code-quality-metrics, ...)")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err

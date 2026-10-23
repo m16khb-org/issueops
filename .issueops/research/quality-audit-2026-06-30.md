@@ -40,7 +40,7 @@
 | 13 | both audit docs present already-fixed P0/P1s as open (inconsistent RESOLVED marking) | `.issueops/ISSUEOPS_AUDIT.md:10`; `.issueops/PROJECT_AUDIT.md:11` | P2 | quick | docs-drift | Mark ISSUEOPS 1.1 + PROJECT daemon 1.1/1.3 RESOLVED with fixing commits (5536cc8); add "last reconciled against `<sha>`" line; archive as dated snapshots |
 | 14 | orphan `.lock` cleanup only runs when ≥1 cycle released (audit 1.3 PARTIAL); test bypasses the gate | `issueops_stale_scan.go:89-91,135-147` | P3 | quick | correctness | Run sweep + `git worktree prune` whenever `req.Apply`, independent of `len(Released)`; add ScanStale-driven zero-release test |
 | 15 | non-Unix lock fallback is in-process only (audit 1.2 deferred, out of scope) | `issueops_lock_other.go:10-38` | P3 | quick | correctness | Keep deferred; document single-session-on-Windows constraint at call sites before any Windows claim |
-| 16 | database-design 217-line concurrency section unrouted/undescribed | `skills/database-design/SKILL.md:3,672-887`; `rules.go:129-134` | P3 | quick | routing | Add deadlock/lock-contention/isolation/transaction (+ 데드락/락/트랜잭션) to database-design keywords and "Use when" |
+| 16 | database-schema-architecture 217-line concurrency section unrouted/undescribed | `skills/database-schema-architecture/SKILL.md:3,672-887`; `rules.go:129-134` | P3 | quick | routing | Add deadlock/lock-contention/isolation/transaction (+ 데드락/락/트랜잭션) to database-schema-architecture keywords and "Use when" |
 | 17 | created parent issues have no live verify path (only PR/MR + children verified) | `provider/github/provider.go:20-52`; `gitlab:20-44` | P3 | medium | contract | Add github:issue/gitlab:issue verify symmetric to verify-artifact; call after `--confirm` |
 | 18 | "CLI-first then MCP fallback" has no code support; harness MCP wraps same CLI, errors unclassified | `mcpcli/mcp_tool_issueops.go:122,161,201` | P3 | medium | dx | Classify auth/permission/missing-token into typed error, OR document that fallback needs external github/gitlab MCP |
 | 19 | issue/PR/MR `Number` population dead in prod; JSON/IID branch only hit by fake CLIs | `provider/gitlab/provider.go:434-456`; `github:263-275` | P3 | medium | test-gap | Request JSON on create + parse number for real, or drop `Number`/IID branch and feed tests the real bare-URL output |
@@ -56,7 +56,7 @@
 | 29 | duplicate slice-flag types with inconsistent `String()` separator | `issueops_decision_cli.go:47-50`; `issueops_flags.go:5-14` | P3 | quick | consistency | Collapse to one repeatable `[]string` flag type; delete the duplicate |
 | 30 | duplicate `mustJSON` panic helper across two cmd packages | `issueopsapp/misc_facade.go:148-153`; `apidoc/api_doc_review_output.go:7-13` | P3 | quick | consistency | Extract one shared helper; low priority |
 
-> **Verification corrections applied:** audit-survey findings IO-02 (orphan-lock cleanup), IO-06 (non-Unix lock), PS-01 (database-design concurrency routing), and SC-01 (skillcontract pins) were *downgraded* P2→P3 by the adversarial pass (real but lower impact than first surveyed). Finding #13 was *downgraded* P1→P2. These corrected severities are reflected above.
+> **Verification corrections applied:** audit-survey findings IO-02 (orphan-lock cleanup), IO-06 (non-Unix lock), PS-01 (database-schema-architecture concurrency routing), and SC-01 (skillcontract pins) were *downgraded* P2→P3 by the adversarial pass (real but lower impact than first surveyed). Finding #13 was *downgraded* P1→P2. These corrected severities are reflected above.
 
 ---
 
@@ -64,7 +64,7 @@
 
 ### A. Quick wins (quick effort, real value) — do this first
 - **Correctness, quick:** #1 (drop `os.Remove(lockPath)`), #2 (seed/merge-derive ledger before mark-stale), #3 (carry metadata across stale-reset), **LK-01** (abs-normalize the lock key in `StartIssueOps`), #14 (run orphan sweep on any `--apply`).
-- **Routing/consistency, quick:** #6 (structural GitLab host detection), #11 (design-review routing hint), #12 (meeting-notes frontmatter), #16 (database-design concurrency keywords).
+- **Routing/consistency, quick:** #6 (structural GitLab host detection), #11 (design-review routing hint), #12 (meeting-notes frontmatter), #16 (database-schema-architecture concurrency keywords).
 - **DX, quick:** #10 (`gofmt -w` + add gofmt/vet CI steps).
 
 ### B. Structural / correctness (medium+ effort)

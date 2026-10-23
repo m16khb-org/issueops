@@ -17,7 +17,7 @@ Current tracked working-tree scope:
 - `skills/prompt-engineering/SKILL.md`: private reasoning boundary and host-neutral tool contract guidance.
 - `skills/web-research/SKILL.md`: current-host fetch/search wording, access-control boundaries, and no silent dependency installs.
 - `skills/git-operations/SKILL.md`: destructive git recovery confirmation ladder.
-- `skills/database-design/SKILL.md`: live DDL/transaction-lock safety gate.
+- `skills/database-schema-architecture/SKILL.md`: live DDL/transaction-lock safety gate.
 - `skills/algorithm-optimization/SKILL.md`: benchmark validity gate, scale-factor analysis, and proportional proof burden.
 - `cmd/issueops/testdata/response_contracts.golden.json`: regenerated docs/response contract golden output.
 
@@ -29,7 +29,7 @@ The calibrated 27-case visible baseline produced these current scores:
 
 | Rank | Skill | Score | Main Blocker |
 |------|-------|-------|--------------|
-| 1 | `database-design` | 4.36 | Needs holdout proof and clearer write-penalty artifact. |
+| 1 | `database-schema-architecture` | 4.36 | Needs holdout proof and clearer write-penalty artifact. |
 | 2 | `git-operations` | 3.70 | Destructive recovery path needs an explicit confirmation ladder. |
 | 3 | `debugging` | 3.34 | Stale `--command-argv` lint-diagnose contract. |
 | 4 | `algorithm-optimization` | 3.30 | Scaling explanation and no-change template need correction. |
@@ -121,7 +121,7 @@ Current local ignored evidence files:
 - `.issueops/evidence/pioneer-skills-quality/task-prompt-engineering-cycle-5.txt`
 - `.issueops/evidence/pioneer-skills-quality/task-web-research-cycle-6.txt`
 - `.issueops/evidence/pioneer-skills-quality/task-git-operations-cycle-7.txt`
-- `.issueops/evidence/pioneer-skills-quality/task-database-design-cycle-8.txt`
+- `.issueops/evidence/pioneer-skills-quality/task-database-schema-architecture-cycle-8.txt`
 - `.issueops/evidence/pioneer-skills-quality/task-algorithm-optimization-cycle-9.txt`
 - `.issueops/evidence/pioneer-skills-quality/reruns/code-quality-metrics/result.yaml`
 - `.issueops/evidence/pioneer-skills-quality/reruns/debugging/result.yaml`
@@ -133,9 +133,9 @@ Current local ignored evidence files:
 - `.issueops/evidence/pioneer-skills-quality/reruns/web-research/result.yaml`
 - `.issueops/evidence/pioneer-skills-quality/reruns/calibration/prompt-engineering-web-research-calibration.yaml`
 - `.issueops/evidence/pioneer-skills-quality/reruns/git-operations/result.yaml`
-- `.issueops/evidence/pioneer-skills-quality/reruns/database-design/result.yaml`
+- `.issueops/evidence/pioneer-skills-quality/reruns/database-schema-architecture/result.yaml`
 - `.issueops/evidence/pioneer-skills-quality/reruns/algorithm-optimization/result.yaml`
-- `.issueops/evidence/pioneer-skills-quality/reruns/calibration/git-operations-database-design-algorithm-optimization-calibration.yaml`
+- `.issueops/evidence/pioneer-skills-quality/reruns/calibration/git-operations-database-schema-architecture-algorithm-optimization-calibration.yaml`
 
 Historical baseline raw evidence paths referenced by older planning text may not exist in the current workspace because `.issueops/evidence/` is ignored. The tracked handoff, scorecard, cases, rubric, and rerun fixture contract are the durable resume source; new runtime artifacts should still be written under the ignored evidence path.
 

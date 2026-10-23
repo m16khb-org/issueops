@@ -28,7 +28,7 @@
   - `ls ~/.reasonix/skills/archimedes/` → NOT FOUND (2026-06-10)
   - `ls skills/implementation-planning/SKILL.md` → EXISTS — canonical project planning skill
   - IssueOps SKILL.md — references `implementation-planning` 6 times in phase assist map
-  - Git log: 6f31c55 refactor(skills): generalize pioneer skills — added implementation-planning, web-research, database-design, algorithm-optimization, debugging, prompt-engineering, code-quality-metrics
+  - Git log: 6f31c55 refactor(skills): generalize pioneer skills — added implementation-planning, web-research, database-schema-architecture, algorithm-optimization, debugging, prompt-engineering, code-quality-metrics
 - **Verification**: Confirmed (file existence checks + git history)
 - **Confidence**: High — this was a false positive in the initial audit
 

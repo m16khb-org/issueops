@@ -41,9 +41,9 @@ func TestDefaultsForNoExtraRequirementsFixture(t *testing.T) {
 func TestFromFixtureForwardsRoutingTrace(t *testing.T) {
 	withRouting := FromFixture(benchmark.IssueOpsBenchmarkFixture{
 		ID:              "routing",
-		ExpectedRouting: []benchmark.SkillRouting{{Phase: "plan", Skill: "database-design"}},
+		ExpectedRouting: []benchmark.SkillRouting{{Phase: "plan", Skill: "database-schema-architecture"}},
 	})
-	if len(withRouting.RoutingTrace) != 1 || withRouting.RoutingTrace[0] != (benchmark.SkillRouting{Phase: "plan", Skill: "database-design"}) {
+	if len(withRouting.RoutingTrace) != 1 || withRouting.RoutingTrace[0] != (benchmark.SkillRouting{Phase: "plan", Skill: "database-schema-architecture"}) {
 		t.Fatalf("FromFixture must synthesize RoutingTrace from ExpectedRouting, got %+v", withRouting.RoutingTrace)
 	}
 	if got := FromFixture(benchmark.IssueOpsBenchmarkFixture{ID: "no-routing"}); len(got.RoutingTrace) != 0 {

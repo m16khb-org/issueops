@@ -7,10 +7,10 @@
 
 - [ ] 1. `hookRoutingRules`에 9개 secondary 룰 추가 — 요청유형→스킬(영/한 키워드):
   web-research(웹 리서치/조사/출처), debugging(디버그/원인/flaky), algorithm-optimization(최적화/복잡도/느려),
-  database-design(스키마/인덱스/쿼리/정규화), git-operations(rebase/bisect/충돌), atomic-commit-push(커밋/푸시),
+  database-schema-architecture(스키마/인덱스/쿼리/정규화), git-operations(rebase/bisect/충돌), atomic-commit-push(커밋/푸시),
   implementation-planning(계획/플랜/설계해), code-quality-metrics(품질 측정/슬롭/SNR), prompt-engineering(프롬프트).
   verified-execution은 광범위 키워드('검증') 과활성 위험으로 제외(Non-goal).
-- [ ] 2. **TDD**: 테이블 테스트 — 대표 프롬프트("웹에서 자료 조사해줘"→web-research, "이 쿼리 인덱스 봐줘"→database-design,
+- [ ] 2. **TDD**: 테이블 테스트 — 대표 프롬프트("웹에서 자료 조사해줘"→web-research, "이 쿼리 인덱스 봐줘"→database-schema-architecture,
   "rebase 하다 충돌"→git-operations, …) 점화 + 무관 프롬프트("안녕") 미점화.
 
 ## Acceptance

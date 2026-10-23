@@ -48,7 +48,7 @@ Outcome (the method works): debugging's 7-step flow drove straight to a confirme
 Root cause found: the response-contract golden is **non-hermetic**. The snapshot captures the live
 `$ISSUEOPS_ROOT/.issueops/` docs index, which includes the **gitignored `evidence/` subtree**. The committed
 golden (regenerated in ae5832a) baked in references to local-only evidence files present at that moment
-(`reruns/web-research/fixture-request.md`, `database-design/analysis.md`, …); any other working tree indexes different
+(`reruns/web-research/fixture-request.md`, `database-schema-architecture/analysis.md`, …); any other working tree indexes different
 evidence files (e.g. `baseline-27-case-results.md`, 30844 bytes) and the golden mismatches. The earlier `?? .env`
 manifestation is the same class (the worker fixture captured an untracked file's `git status`). This is a real
 harness defect (docs index / golden should exclude the ignored `evidence/` subtree, or scan a fixture dir), filed
@@ -134,30 +134,30 @@ Optimization strategy:
   STOP: recommend no-change and state the input-size threshold that would change the decision. Only enter the
   method if CPU is the proven bottleneck." This directly attacks the measured executor variance.
 
-### database-design — firsthand: applied to the events-table task; confirmed a structural verification gap
+### database-schema-architecture — firsthand: applied to the events-table task; confirmed a structural verification gap
 
-Outcome: invoked database-design and applied Step 4. The multi-index CRITICAL rule I added earlier is present and well-placed
+Outcome: invoked database-schema-architecture and applied Step 4. The multi-index CRITICAL rule I added earlier is present and well-placed
 (candidate A full composite vs. candidate B partial `WHERE type='click'`, chosen by selectivity + insert rate).
 The skill is the most thorough of the nine.
 
 Friction observed firsthand:
-1. **Verification gold standard is structurally unreachable in the common agent context.** database-design's NEVER rule
+1. **Verification gold standard is structurally unreachable in the common agent context.** database-schema-architecture's NEVER rule
    ("Recommend DDL without the full before/after EXPLAIN ANALYZE evidence") and all of Step 7 assume a live DB
-   connection. In issueops — and most agent sessions — there is **no DB**, so every database-design recommendation can
+   connection. In issueops — and most agent sessions — there is **no DB**, so every database-schema-architecture recommendation can
    only ever be "estimated + run EXPLAIN to confirm." The "or state the missing-input blocker" escape (which I
    added to the index rule) exists, but the NEVER rule / Step 7 are still framed as hard requirements, creating a
-   permanent tension every database-design run hits.
-2. **Applicability gate missing.** database-design is 1000+ lines (longest skill) yet this repo has no RDBMS at all — database-design is
+   permanent tension every database-schema-architecture run hits.
+2. **Applicability gate missing.** database-schema-architecture is 1000+ lines (longest skill) yet this repo has no RDBMS at all — database-schema-architecture is
    N/A here. There's no quick top-of-file "does a relational DB even exist?" gate (same buried-gate pattern as
    algorithm-optimization/git-operations).
 
 Optimization strategy:
 - **HOLD**: the method, the just-added multi-index rule, the live-DDL safety gate, engine-portability tables.
 - **EDIT (medium)**: add an explicit "Advisory mode (no live DB)" note at Step 1/Step 7 — when no DB connection is
-  available, database-design outputs the recommendation + the exact EXPLAIN/row-count commands for the operator + marks it
+  available, database-schema-architecture outputs the recommendation + the exact EXPLAIN/row-count commands for the operator + marks it
   UNVERIFIED. Clarify the EXPLAIN NEVER-rule governs *claiming an optimization works*, not *advising one*. This
   resolves the structural tension and matches what every real run already does.
-- **EDIT (low)**: add an early applicability gate ("no relational DB / pure file-state repo → database-design does not apply").
+- **EDIT (low)**: add an early applicability gate ("no relational DB / pure file-state repo → database-schema-architecture does not apply").
 
 ### prompt-engineering — firsthand: critiqued my own holdout sub-agent prompt; it caught a real bug
 
@@ -215,7 +215,7 @@ not request a plan) and the planner-mode boundary correctly routed it to **direc
 real design choice (exclude `evidence/` at the docs-index-builder level vs. the test fixture; recommended: builder
 level). This is exactly the VON-NEUMANN-H1 behavior — it did NOT hijack a "fix X" into a heavyweight plan.
 
-Strengths (HOLD): unlike algorithm-optimization/git-operations/database-design, implementation-planning puts its decision gate at the TOP (identity para +
+Strengths (HOLD): unlike algorithm-optimization/git-operations/database-schema-architecture, implementation-planning puts its decision gate at the TOP (identity para +
 Phase 0 + the explicit planner-mode boundary "imperative language alone does not force planning"). Applied
 directly, it routes correctly. This is the model the other skills' buried gates should imitate.
 
@@ -260,17 +260,17 @@ Optimization strategy:
 
 Dogfooding all nine surfaced two dominant, repeating friction patterns plus two unique high-value items:
 
-1. **Buried decision gate** (algorithm-optimization, database-design, git-operations; code-quality-metrics's non-code case). The "should I even act / which mode
+1. **Buried decision gate** (algorithm-optimization, database-schema-architecture, git-operations; code-quality-metrics's non-code case). The "should I even act / which mode
    / does this apply?" gate sits at the *bottom* of long skills, so a reader internalizes the heavy machinery before
    reaching the rule that says "don't." **implementation-planning is the positive model** — its activation boundary is at the
    TOP (Phase 0 + identity), and applied firsthand it routed correctly with no over-planning. **Strategy: hoist each
    skill's decision/applicability gate to the top.** This is also the most likely cause of the measured sub-agent
    variance (algorithm-optimization/git-operations optimized/acted because the gate came too late).
 
-2. **No proportionality / lightweight mode** (prompt-engineering, verified-execution, web-research; database-design's advisory case). Skills calibrated
+2. **No proportionality / lightweight mode** (prompt-engineering, verified-execution, web-research; database-schema-architecture's advisory case). Skills calibrated
    for high-stakes reuse over-ceremony simple/low-risk tasks (test suites, reviewer gates, report files, EXPLAIN).
    **Strategy: add an explicit lightweight mode to each** — one-shot prompt (prompt-engineering), low-risk proportionate
-   evidence (verified-execution), quick lookup (web-research), advisory-no-DB (database-design).
+   evidence (verified-execution), quick lookup (web-research), advisory-no-DB (database-schema-architecture).
 
 3. **code-quality-metrics portability defect (unique, highest individual value)**: the skill's own measurement commands silently
    mis-measure on a host where `grep` is aliased to `ugrep`/`rg`. Real, reproduced twice. **Strategy: ugrep-safe
@@ -288,7 +288,7 @@ Dogfooding all nine surfaced two dominant, repeating friction patterns plus two 
 | 2 | algorithm-optimization | hoist "optimize-at-all?" gate to top | Attacks measured executor variance |
 | 3 | verified-execution | proportionate low-risk mode | Confirmed TURING-H1 gap firsthand |
 | 4 | debugging | add Snapshot/Golden isolation strategy | Most common Go failure class, missing |
-| 5 | database-design | advisory-mode (no live DB) note | Resolves structural EXPLAIN tension |
+| 5 | database-schema-architecture | advisory-mode (no live DB) note | Resolves structural EXPLAIN tension |
 | 6 | prompt-engineering | one-shot/orchestration prompt mode | Over-heavy for inline prompts |
 | 7 | web-research | reconcile quick-lookup vs Critical Rules | Minor proportionality |
 | 8 | implementation-planning | routing-record for no-plan case | Closes VON-NEUMANN-H1 0.2 gap |

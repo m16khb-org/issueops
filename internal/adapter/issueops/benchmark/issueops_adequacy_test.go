@@ -46,8 +46,8 @@ func adequacyFixtureForTest() benchmark.IssueOpsBenchmarkFixture {
 		ID:                 "adequacy-full",
 		Title:              "Adequacy full fixture",
 		UserPrompt:         "exercise every scoring dimension",
-		PioneerSkillTarget: "database-design",
-		ExpectedRouting:    []benchmark.SkillRouting{{Phase: "plan", Skill: "database-design"}},
+		PioneerSkillTarget: "database-schema-architecture",
+		ExpectedRouting:    []benchmark.SkillRouting{{Phase: "plan", Skill: "database-schema-architecture"}},
 		// 이 suite는 deterministic 차원 channel만 검증하므로 의도적으로
 		// CriticalFailures를 두지 않는다.
 	}
@@ -56,7 +56,7 @@ func adequacyFixtureForTest() benchmark.IssueOpsBenchmarkFixture {
 func adequacyArtifactForTest() benchmark.IssueOpsBenchmarkArtifact {
 	a := completeBenchmarkArtifactForTest()
 	a.PioneerSkillEvidence = coddKeywordEvidence
-	a.RoutingTrace = []benchmark.SkillRouting{{Phase: "plan", Skill: "database-design"}}
+	a.RoutingTrace = []benchmark.SkillRouting{{Phase: "plan", Skill: "database-schema-architecture"}}
 	return a
 }
 

@@ -13,7 +13,7 @@ Scope: the changed toolchain row in `AGENTS.md`; `.issueops/TECH_STACK.md`,
 `AGENT_WORKFLOW.md`, `testing/self-verification.md`,
 `documentation/{README.md,manifest.json,AUDIT.md}`,
 `operations/{pioneer-skill-quality-rubric.md,pioneer-skill-rerun-fixtures.md}`;
-Markdown changes in `skills/{self-verify,database-design,sharing-backend-work}/`.
+Markdown changes in `skills/{self-verify,database-schema-architecture,sharing-backend-work}/`.
 The other 15 skill refactors were not reviewed.
 
 ## Evidence-bound judgments
@@ -57,7 +57,7 @@ The other 15 skill refactors were not reviewed.
 - **Feedback:** `feedback` and `status` are valid root aliases
   (`internal/contract/cli/issueops_catalog.go:109-147`,
   `cmd/issueops/issueopsapp/root_command_facade.go:70-73`).
-  `skills/database-design/SKILL.md:78-86` preserves the evidence/source
+  `skills/database-schema-architecture/SKILL.md:78-86` preserves the evidence/source
   requirement while handing authenticated recording to the invoking stage.
   The actual feedback parser requires actor fields and passes a local actor
   to `AddIssueOpsFeedbackWithActor`
@@ -76,7 +76,7 @@ The other 15 skill refactors were not reviewed.
 
 ## Verification performed and limits
 
-- `python3 -B scripts/validate-skill.py skills/self-verify skills/database-design skills/sharing-backend-work`
+- `python3 -B scripts/validate-skill.py skills/self-verify skills/database-schema-architecture skills/sharing-backend-work`
   reported all three valid.
 - `./bin/issueops inspect --json`, `docs --json`, and `contract schema --json`
   exited 0. Docs discovery returned 620 entries and included all nine checked
