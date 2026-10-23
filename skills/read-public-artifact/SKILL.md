@@ -1,6 +1,6 @@
 ---
 name: read-public-artifact
-description: "Use when a claude.ai/code/artifact link (or another iframe-rendered web page) must be read from an agent session and the in-process route fails or is unavailable — Artifact read / WebFetch return 'served to you as a public (non-member) reader', 'reading public artifacts that way is not enabled yet', a sign-in shell, an SPA shell, or a Cloudflare 403, and the user asks to read, summarize, or extract a shared or public artifact without claude-in-chrome. Triggers include 아티팩트 읽어줘, 공유 아티팩트, public artifact, artifact read failed, 이 링크 내용 확인, iframe page text."
+description: "Use when a claude.ai/code/artifact link or other iframe-rendered page must be read and Artifact read/WebFetch fail (public-reader notice, sign-in or SPA shell, Cloudflare 403). Triggers: 아티팩트 읽어줘, 공유 아티팩트, public artifact, 이 링크 내용 확인."
 ---
 
 # Read Public Artifact

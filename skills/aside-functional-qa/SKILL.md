@@ -1,6 +1,6 @@
 ---
 name: aside-functional-qa
-description: "Client-facing functional QA through the installed Aside CLI. Use when asked to verify that a browser feature, acceptance criterion, user journey, validation rule, state transition, persistence behavior, authorization rule, or error-recovery path works as intended and needs a reproducible evidence report. Triggers include functional QA, browser test, acceptance test, requirement verification, regression check, 기능 QA, 요구사항 검증, 의도대로 동작하는지 확인, and client QA report."
+description: "Use to verify through the Aside CLI that a browser feature, acceptance criterion, user journey, validation, state transition, persistence, authorization, or error recovery works as intended, with a reproducible evidence report. Triggers: functional QA, browser/acceptance test, regression check, 기능 QA, 요구사항 검증, 의도대로 동작하는지 확인."
 ---
 
 # Aside Functional QA

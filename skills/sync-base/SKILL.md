@@ -1,6 +1,6 @@
 ---
 name: sync-base
-description: Bring the current branch up to date with the base branch it was created from after that base advanced, choosing merge or rebase by an evidence-based decision table, with evidence-based base resolution, a verified backup ref, proof that no commit was lost, and a confirmed push (plain for merge, --force-with-lease for rebase). Use when a release or other base branch moved ahead and the feature branch must catch up or pre-resolve conflicts, or when the user says "베이스 브랜치 최신화", "release 브랜치 반영", "브랜치 최신으로 맞춰줘", "부모 브랜치 rebase", "base 브랜치 merge", "sync with base branch", "catch up with base", "rebase onto parent", "refresh a stacked branch". Git Operations sub-skill; an issueops-owned branch routes to `issueops execution sync-base` instead.
+description: Use when a base or release branch moved ahead and the feature branch must catch up, or for "베이스 브랜치 최신화", "release 브랜치 반영", "브랜치 최신으로 맞춰줘", "rebase onto parent", "sync with base branch". Picks merge or rebase from evidence, keeps a backup ref, proves no commit was lost, then pushes. An issueops-owned branch uses `issueops execution sync-base` instead.
 ---
 
 # Sync Base

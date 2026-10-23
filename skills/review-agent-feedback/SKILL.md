@@ -1,6 +1,6 @@
 ---
 name: review-agent-feedback
-description: "Use when an existing GitHub pull request or GitLab merge request already carries review comments from an automated reviewer — Kody/Kodus, CodeRabbit, Copilot, Gemini Code Assist, PR Review, or any other bot — and the user wants those threads validated against the real code, answered in-thread, rated with 👍/👎, and resolved: '봇 리뷰 검증해줘', 'Kody 코멘트 답글', 'CodeRabbit 지적 맞는지 확인', '리뷰 스레드 정리/resolve', 'reply to the bot review', 'review feedback triage'. Not for writing a new review (pr-review), an uncommitted local diff (code-review), or human reviewer feedback inside an issueops cycle (issueops review-feedback)."
+description: "Use when a PR/MR already has automated reviewer threads (Kody/Kodus, CodeRabbit, Copilot, Gemini) to verify against the code, reply, rate 👍/👎, and resolve: '봇 리뷰 검증해줘', 'Kody 코멘트 답글', 'CodeRabbit 지적 맞는지 확인', '리뷰 스레드 resolve'. Not for writing a new review (pr-review)."
 ---
 
 # Review Agent Feedback

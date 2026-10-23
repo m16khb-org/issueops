@@ -1,6 +1,6 @@
 ---
 name: issueops-merge
-description: Merge the PR or MR of a completed IssueOps cycle from the main session after the developer reviewed it, then hand off to issueops-cleanup. Resolves the cycle from an issue or PR number, previews draft, checks, head and mergeability through `issueops remote merge-pr`, squash-merges by default pinned to the completed head, deletes the merged remote branch through the typed cleanup flow, and routes failed checks, new commits, or conflicts back to the worktree session through reseed. Use when the user says "머지해줘", "PR 머지하고 정리", "#123 머지", "merge the PR", "land this cycle".
+description: Use for "머지해줘", "PR 머지하고 정리", "#123 머지", "merge the PR", "land this cycle" on a completed IssueOps cycle. Previews checks and mergeability with `issueops remote merge-pr`, squash-merges pinned to the completed head, deletes the remote branch, then hands off to issueops-cleanup.
 ---
 
 # IssueOps Merge

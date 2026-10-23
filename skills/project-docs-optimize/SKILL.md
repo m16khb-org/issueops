@@ -1,6 +1,6 @@
 ---
 name: project-docs-optimize
-description: Audit and restructure the `.issueops` operating-document tree so its folders, root indexes, and records match the current issueops layout without losing constraints, breaking code-read paths, or duplicating normative ownership. Use when asked to optimize, split, reorganize, re-folder, or validate `.issueops` documentation, ADRs, cautions, conventions, operations, testing, or architecture docs, or when the checker reports nested records, undeclared directories, undeclared root documents, broken links, or oversized documents.
+description: Use to optimize, split, reorganize, re-folder, or validate the `.issueops` document tree (ADRs, cautions, conventions, operations, testing, architecture), or when its checker reports nested records, undeclared directories or root docs, broken links, or oversized documents. Keeps every constraint and code-read path.
 ---
 
 # Project Docs Optimize

@@ -1,6 +1,6 @@
 ---
 name: diagram-design
-description: MUST USE when creating, choosing, or improving any diagram or visual explanation - mermaid flowchart/sequence/state/ER diagrams, architecture sketches, gantt/mindmap/timeline, charts for docs or issues, ASCII art, or rendered HTML pages. Triggers include 다이어그램, 그림, diagram, flowchart, sequence diagram, mermaid, 시각화, architecture diagram, chart. Picks the best form and medium for the content, renders high-quality output, and verifies renderability before delivering.
+description: MUST USE when creating or improving any diagram or visual explanation (mermaid flowchart/sequence/state/ER, architecture sketch, gantt, timeline, chart, ASCII art, rendered HTML). Triggers: 다이어그램, 그림, 시각화, diagram, flowchart, mermaid, chart. Picks the best form and verifies it renders.
 license: MIT
 metadata:
   routing_source: https://github.com/melodic-software/claude-code-plugins (visualize skill)

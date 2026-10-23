@@ -1,6 +1,6 @@
 ---
 name: issueops-cleanup
-description: Safely finish a merged IssueOps cycle by closing its linked issue, removing its local worktree, and deleting its local branch. Use when the user asks for IssueOps cleanup, post-merge cleanup, worktree/branch deletion plus issue closure, or says "이슈옵스 정리", "워크트리 지우고 브랜치 지우고 이슈 닫아줘".
+description: Use after an IssueOps cycle merged, or for post-merge cleanup, "이슈옵스 정리", "워크트리 지우고 브랜치 지우고 이슈 닫아줘". Closes the linked issue and removes the worktree and local branch. Unmerged cycles: issueops-abandon.
 ---
 
 # IssueOps Cleanup

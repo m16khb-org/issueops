@@ -1261,28 +1261,28 @@
           "path": "$ISSUEOPS_ROOT/skills/architecture-review"
         },
         {
-          "description": "Client-facing functional QA through the installed Aside CLI. Use when asked to verify that a browser feature, acceptance criterion, user journey, validation rule, state transition, persistence behavior, authorization rule, or error-recovery path works as intended and needs a reproducible evidence report. Triggers include functional QA, browser test, acceptance test, requirement verification, regression check, 기능 QA, 요구사항 검증, 의도대로 동작하는지 확인, and client QA report.",
+          "description": "Use to verify through the Aside CLI that a browser feature, acceptance criterion, user journey, validation, state transition, persistence, authorization, or error recovery works as intended, with a reproducible evidence report. Triggers: functional QA, browser/acceptance test, regression check, 기능 QA, 요구사항 검증, 의도대로 동작하는지 확인.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "aside-functional-qa",
           "path": "$ISSUEOPS_ROOT/skills/aside-functional-qa"
         },
         {
-          "description": "Client-facing UI/UX QA through the installed Aside CLI. Use when asked to review whether a web page, flow, or responsive state matches product or design intent; follows accessibility and usability standards; feels coherent rather than awkward; or needs an evidence-backed visual QA report. Triggers include UI QA, UX review, visual review, design intent check, accessibility review, responsive review, 어색한지 확인, 화면 QA, UI/UX 검수, and client QA report.",
+          "description": "Use for UI/UX QA through the Aside CLI: whether a page, flow, or responsive state matches design intent, meets accessibility and usability standards, and feels coherent, with an evidence-backed report. Triggers: UI QA, UX/visual review, accessibility review, 어색한지 확인, 화면 QA, UI/UX 검수.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "aside-visual-qa",
           "path": "$ISSUEOPS_ROOT/skills/aside-visual-qa"
         },
         {
-          "description": "Client-facing web QA orchestration through the installed Aside CLI. Runs aside-functional-qa and aside-visual-qa as one combined engagement with a shared preflight, one browser session plan, cross-phase defect routing and deduplication, and a single merged client report. Use when asked for combined or end-to-end web QA, a full client QA report, both behavior verification and UI/UX review, 통합 QA, 종합 QA, 웹 QA 오케스트레이션, or 클라이언트 QA 총점검. Use aside-functional-qa alone for behavior-only asks and aside-visual-qa alone for design- or UX-only asks.",
+          "description": "Use for combined web QA through the Aside CLI: behavior verification plus UI/UX review in one engagement with one merged client report (통합 QA, 종합 QA, 웹 QA 오케스트레이션, 클라이언트 QA 총점검). Behavior-only asks go to aside-functional-qa; design/UX-only asks to aside-visual-qa.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "aside-web-qa",
           "path": "$ISSUEOPS_ROOT/skills/aside-web-qa"
         },
         {
-          "description": "Git Operations sub-skill — safe git staging and push. Create small, reviewable git commits from local changes and push the current branch safely using a hybrid Conventional Commit subject plus Lore body. Use when the user asks to commit, split changes into atomic commits, push/publish a branch, or perform a careful commit-and-push workflow while preserving unrelated work and avoiding accidental secrets or broad staging. For advanced git operations (rebase, bisect, conflict resolution, reflog recovery, cherry-pick, worktree), see the parent skill **git-operations**.",
+          "description": "Use when the user asks to commit, split changes into atomic commits, or push/publish a branch. Stages narrowly, writes a Conventional Commit subject with a Lore body, avoids secrets, and preserves unrelated work. Rebase, bisect, conflicts, cherry-pick, and worktrees belong to git-operations.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "atomic-commit-push",
@@ -1303,7 +1303,7 @@
           "path": "$ISSUEOPS_ROOT/skills/database-schema-architecture"
         },
         {
-          "description": "MUST USE when creating, choosing, or improving any diagram or visual explanation - mermaid flowchart/sequence/state/ER diagrams, architecture sketches, gantt/mindmap/timeline, charts for docs or issues, ASCII art, or rendered HTML pages. Triggers include 다이어그램, 그림, diagram, flowchart, sequence diagram, mermaid, 시각화, architecture diagram, chart. Picks the best form and medium for the content, renders high-quality output, and verifies renderability before delivering.",
+          "description": "MUST USE when creating or improving any diagram or visual explanation (mermaid flowchart/sequence/state/ER, architecture sketch, gantt, timeline, chart, ASCII art, rendered HTML). Triggers: 다이어그램, 그림, 시각화, diagram, flowchart, mermaid, chart. Picks the best form and verifies it renders.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "diagram-design",
@@ -1324,7 +1324,7 @@
           "path": "$ISSUEOPS_ROOT/skills/fluent-korean"
         },
         {
-          "description": "Create, check, and report task gate ledgers with the issueops gates CLI. Turns acceptance criteria into G-numbered CHECK and EXPECT gates in .issueops/issues/\u003cn\u003e/gates.md or .issueops/gates/\u003cscope\u003e.md, fills EVIDENCE by running the checks through the command policy, and abandons gates honestly. Use when issueops-plan, issueops-implement, issueops-slop-clean, issueops-verify, or verified-execution needs a gate ledger, or when the user says \"게이트 원장\", \"gates 만들어줘\", \"수용 기준 체크\".",
+          "description": "Use when a task needs a gate ledger, or for \"게이트 원장\", \"gates 만들어줘\", \"수용 기준 체크\". Turns acceptance criteria into G-numbered CHECK/EXPECT gates under .issueops/issues/\u003cn\u003e/gates.md or .issueops/gates/, fills EVIDENCE through the issueops gates CLI, and abandons gates honestly.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "gates-ledger",
@@ -1373,28 +1373,28 @@
           "path": "$ISSUEOPS_ROOT/skills/issueops"
         },
         {
-          "description": "Leave an IssueOps cycle safely from any stage. Pause by releasing the execution lease so another session or host can resume it, or abandon the cycle by closing its draft PR or MR, closing the issue, deleting the remote branch, and removing the worktree, local branch, and record through one fingerprinted cleanup abandon. Use when the user says \"중단\", \"탈출\", \"이슈옵스 정리\", \"일시 중단\", \"abandon the cycle\", or when \"issueops next\" reports an abandon exit.",
+          "description": "Use to pause or abandon an unmerged IssueOps cycle at any stage, or for \"중단\", \"탈출\", \"일시 중단\", \"머지 전 정리\", \"abandon the cycle\", or when \"issueops next\" reports an abandon exit. Pause releases the lease; abandon closes the PR/MR and issue and removes branch, worktree, and record. Merged cycles: issueops-cleanup.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "issueops-abandon",
           "path": "$ISSUEOPS_ROOT/skills/issueops-abandon"
         },
         {
-          "description": "Safely finish a merged IssueOps cycle by closing its linked issue, removing its local worktree, and deleting its local branch. Use when the user asks for IssueOps cleanup, post-merge cleanup, worktree/branch deletion plus issue closure, or says \"이슈옵스 정리\", \"워크트리 지우고 브랜치 지우고 이슈 닫아줘\".",
+          "description": "Use after an IssueOps cycle merged, or for post-merge cleanup, \"이슈옵스 정리\", \"워크트리 지우고 브랜치 지우고 이슈 닫아줘\". Closes the linked issue and removes the worktree and local branch. Unmerged cycles: issueops-abandon.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "issueops-cleanup",
           "path": "$ISSUEOPS_ROOT/skills/issueops-cleanup"
         },
         {
-          "description": "Record IssueOps execution completion and release the generation after a draft PR or MR is published and verified, with exact evidence ordering, actor and generation fencing, idempotent recovery, a fixed final completion report, and explicit good and bad examples. Use when a cycle sits in pr phase with an active lease, when the user asks to finish or complete an issue cycle, or says \"완료 처리해줘\", \"사이클 끝내줘\", \"execution complete\", \"완료 기록해줘\".",
+          "description": "Use when a cycle sits in the pr phase with an active lease after the draft PR/MR is published and verified, or for \"완료 처리해줘\", \"사이클 끝내줘\", \"execution complete\", \"완료 기록해줘\". Records completion with ordered evidence under actor and generation fencing and releases the generation.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "issueops-complete",
           "path": "$ISSUEOPS_ROOT/skills/issueops-complete"
         },
         {
-          "description": "Confirm and create the IssueOps issue that a cycle contracts on. Interview the user only on blocking ambiguity, survey the codebase and background sources into plan-prep evidence, record the intent contract, domain review, split decision, and plan prep, then publish a readable Korean issue through the shared remote write protocol and link it. Use at the start of a cycle, when \"issueops next\" reports stage none or issue, or when the user says \"이슈 만들어줘\", \"이슈부터 시작하자\", \"child task 만들어줘\".",
+          "description": "Use at the start of an IssueOps cycle, when \"issueops next\" reports stage none or issue, or for \"이슈 만들어줘\", \"이슈부터 시작하자\", \"child task 만들어줘\". Interviews only on blocking ambiguity, records intent, domain review, and plan-prep evidence, then publishes and links a readable Korean issue.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "issueops-create-issue",
@@ -1415,21 +1415,21 @@
           "path": "$ISSUEOPS_ROOT/skills/issueops-debugging"
         },
         {
-          "description": "Reflect a finished IssueOps implementation into the project's operating documents. Route the diff to the .issueops documents it touches, check both directions (did the change break a documented rule, and did it create a decision, pitfall, command, or convention the documents do not know yet), update ADR, CAUTIONS, CONVENTIONS, ARCHITECTURE, TESTING, OPERATIONS, TECH_STACK, OPEN_API_SPEC, or DESIGN through the project_docs MCP contract, re-seal the ai-slop-clean fingerprint, and record the project-docs-review verdict. Use when \"issueops next\" reports docs, or when the user says \"문서 반영\", \"ADR 남겨줘\", \"주의사항 기록\", \"update the project docs\".",
+          "description": "Use when \"issueops next\" reports docs, or for \"문서 반영\", \"ADR 남겨줘\", \"주의사항 기록\", \"update the project docs\" inside an IssueOps cycle. Reflects the finished diff into the .issueops documents it touches, re-seals the ai-slop-clean fingerprint, and records the project-docs-review verdict.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "issueops-docs",
           "path": "$ISSUEOPS_ROOT/skills/issueops-docs"
         },
         {
-          "description": "Run the implement stage of a linked IssueOps cycle with a generation-fenced execution lease, canonical-worktree TDD, a gate ledger for the RED and GREEN evidence, and delegated child cycles. Enter through link-plan, the compatibility review, and the ledger; exit by moving the cycle to ai-slop-clean. Use when \"issueops next\" reports implement.enter or implement, or when the user says \"구현 시작\", \"구현 이어서 해줘\", \"이슈 구현해줘\", \"child로 나눠서 구현해줘\".",
+          "description": "Use when \"issueops next\" reports implement.enter or implement, or for \"구현 시작\", \"구현 이어서 해줘\", \"이슈 구현해줘\", \"child로 나눠서 구현해줘\". Runs canonical-worktree TDD under the generation-fenced lease with a gate ledger for RED/GREEN evidence, then moves the cycle to ai-slop-clean.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "issueops-implement",
           "path": "$ISSUEOPS_ROOT/skills/issueops-implement"
         },
         {
-          "description": "Merge the PR or MR of a completed IssueOps cycle from the main session after the developer reviewed it, then hand off to issueops-cleanup. Resolves the cycle from an issue or PR number, previews draft, checks, head and mergeability through `issueops remote merge-pr`, squash-merges by default pinned to the completed head, deletes the merged remote branch through the typed cleanup flow, and routes failed checks, new commits, or conflicts back to the worktree session through reseed. Use when the user says \"머지해줘\", \"PR 머지하고 정리\", \"#123 머지\", \"merge the PR\", \"land this cycle\".",
+          "description": "Use for \"머지해줘\", \"PR 머지하고 정리\", \"#123 머지\", \"merge the PR\", \"land this cycle\" on a completed IssueOps cycle. Previews checks and mergeability with `issueops remote merge-pr`, squash-merges pinned to the completed head, deletes the remote branch, then hands off to issueops-cleanup.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "issueops-merge",
@@ -1450,7 +1450,7 @@
           "path": "$ISSUEOPS_ROOT/skills/issueops-prepare"
         },
         {
-          "description": "Apply the shared IssueOps remote write protocol to any governed \"issueops remote ...\" mutation. Write the body from the render-template skeleton and the readable-body guide, polish it with fluent-korean, read the readability report in the preview, confirm the identical request, read the artifact back, and reconcile instead of retrying when the result is ambiguous. Use before creating or editing issues, child tasks, PR or MR bodies, comments, or review replies inside an IssueOps cycle, or when the user says \"원격에 써줘\", \"이슈 본문 올려줘\", \"PR 본문 갱신\".",
+          "description": "Use before any governed \"issueops remote ...\" write (issue, child task, PR/MR body, comment, review reply) or for \"원격에 써줘\", \"이슈 본문 올려줘\", \"PR 본문 갱신\". Renders the template body, polishes it with fluent-korean, checks the readability preview, confirms, reads back, and reconciles instead of retrying.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "issueops-remote-write",
@@ -1506,28 +1506,28 @@
           "path": "$ISSUEOPS_ROOT/skills/pr-review"
         },
         {
-          "description": "Orchestrate first-time issueops project setup for a repository: AGENTS.md routing block, repo profile metadata, and the .issueops document family through the project-docs-bootstrap sub-skill, plus lifecycle routing to project-docs-update and project-docs-optimize. Use when asked to bootstrap a repo for issueops, set up project docs, or initialize agent guidance for a repository. Each sub-skill is also usable standalone.",
+          "description": "Use to bootstrap a repository for issueops: AGENTS.md routing block, repo profile metadata, and the .issueops document family (via project-docs-bootstrap), with routing to project-docs-update and project-docs-optimize for later upkeep.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "project-bootstrap",
           "path": "$ISSUEOPS_ROOT/skills/project-bootstrap"
         },
         {
-          "description": "Initial creation or template refresh of repo-local .issueops operating documents and the AGENTS.md routing block from repository evidence, through the deterministic issueops project bootstrap pass followed by an agent enrichment pass. Use when asked to bootstrap, initialize, or regenerate project docs for a repository, or to set up AGENTS.md agent guidance. For incremental refresh during ongoing work use project-docs-update; for restructuring oversized docs use project-docs-optimize.",
+          "description": "Use to create, initialize, or regenerate a repository's .issueops operating documents and AGENTS.md routing block from repository evidence (deterministic bootstrap pass, then agent enrichment). Incremental refresh: project-docs-update; restructuring: project-docs-optimize.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "project-docs-bootstrap",
           "path": "$ISSUEOPS_ROOT/skills/project-docs-bootstrap"
         },
         {
-          "description": "Audit and restructure the `.issueops` operating-document tree so its folders, root indexes, and records match the current issueops layout without losing constraints, breaking code-read paths, or duplicating normative ownership. Use when asked to optimize, split, reorganize, re-folder, or validate `.issueops` documentation, ADRs, cautions, conventions, operations, testing, or architecture docs, or when the checker reports nested records, undeclared directories, undeclared root documents, broken links, or oversized documents.",
+          "description": "Use to optimize, split, reorganize, re-folder, or validate the `.issueops` document tree (ADRs, cautions, conventions, operations, testing, architecture), or when its checker reports nested records, undeclared directories or root docs, broken links, or oversized documents. Keeps every constraint and code-read path.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "project-docs-optimize",
           "path": "$ISSUEOPS_ROOT/skills/project-docs-optimize"
         },
         {
-          "description": "Evidence-bound incremental refresh of existing .issueops project documents during ongoing work through the project_docs MCP contract: route, read with SHA-256, then append cautions or ADRs via project_docs_append, or revise one document at a time via project_docs_revise. Use when a completed change, solved failure, new command, or durable decision should be reflected in project docs. For initial creation use project-docs-bootstrap; for structural modularization use project-docs-optimize.",
+          "description": "Use when a completed change, solved failure, new command, or durable decision should be reflected in existing .issueops docs outside an IssueOps docs stage. Routes, reads with SHA-256, then appends cautions/ADRs or revises one document through the project_docs MCP contract. New docs: project-docs-bootstrap; restructuring: project-docs-optimize.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "project-docs-update",
@@ -1541,7 +1541,7 @@
           "path": "$ISSUEOPS_ROOT/skills/prompt-engineering"
         },
         {
-          "description": "Use when a claude.ai/code/artifact link (or another iframe-rendered web page) must be read from an agent session and the in-process route fails or is unavailable — Artifact read / WebFetch return 'served to you as a public (non-member) reader', 'reading public artifacts that way is not enabled yet', a sign-in shell, an SPA shell, or a Cloudflare 403, and the user asks to read, summarize, or extract a shared or public artifact without claude-in-chrome. Triggers include 아티팩트 읽어줘, 공유 아티팩트, public artifact, artifact read failed, 이 링크 내용 확인, iframe page text.",
+          "description": "Use when a claude.ai/code/artifact link or other iframe-rendered page must be read and Artifact read/WebFetch fail (public-reader notice, sign-in or SPA shell, Cloudflare 403). Triggers: 아티팩트 읽어줘, 공유 아티팩트, public artifact, 이 링크 내용 확인.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "read-public-artifact",
@@ -1555,14 +1555,14 @@
           "path": "$ISSUEOPS_ROOT/skills/requirements-analysis"
         },
         {
-          "description": "Use when an existing GitHub pull request or GitLab merge request already carries review comments from an automated reviewer — Kody/Kodus, CodeRabbit, Copilot, Gemini Code Assist, PR Review, or any other bot — and the user wants those threads validated against the real code, answered in-thread, rated with 👍/👎, and resolved: '봇 리뷰 검증해줘', 'Kody 코멘트 답글', 'CodeRabbit 지적 맞는지 확인', '리뷰 스레드 정리/resolve', 'reply to the bot review', 'review feedback triage'. Not for writing a new review (pr-review), an uncommitted local diff (code-review), or human reviewer feedback inside an issueops cycle (issueops review-feedback).",
+          "description": "Use when a PR/MR already has automated reviewer threads (Kody/Kodus, CodeRabbit, Copilot, Gemini) to verify against the code, reply, rate 👍/👎, and resolve: '봇 리뷰 검증해줘', 'Kody 코멘트 답글', 'CodeRabbit 지적 맞는지 확인', '리뷰 스레드 resolve'. Not for writing a new review (pr-review).",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "review-agent-feedback",
           "path": "$ISSUEOPS_ROOT/skills/review-agent-feedback"
         },
         {
-          "description": "Run the self-augmentation loop for issueops or another repository: use GENIUS_THINK.md, repo evidence, and research-backed agent improvement patterns to choose a necessary feature, performance, quality, or documentation improvement, implement one safe high-value diff, and verify it with the self-verification loop. Use when the user asks for self-augmentation, autonomous improvement, repo enhancement, 95-point gate loops, or to decide and execute the next valuable improvement.",
+          "description": "Use for self-augmentation, autonomous repo improvement, 95-point gate loops, or deciding and executing the next valuable improvement. Picks one feature, performance, quality, or docs change from repo evidence and GENIUS_THINK.md, implements one safe diff, and verifies it with self-verify.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "self-augment",
@@ -1597,14 +1597,14 @@
           "path": "$ISSUEOPS_ROOT/skills/stability-audit"
         },
         {
-          "description": "Bring the current branch up to date with the base branch it was created from after that base advanced, choosing merge or rebase by an evidence-based decision table, with evidence-based base resolution, a verified backup ref, proof that no commit was lost, and a confirmed push (plain for merge, --force-with-lease for rebase). Use when a release or other base branch moved ahead and the feature branch must catch up or pre-resolve conflicts, or when the user says \"베이스 브랜치 최신화\", \"release 브랜치 반영\", \"브랜치 최신으로 맞춰줘\", \"부모 브랜치 rebase\", \"base 브랜치 merge\", \"sync with base branch\", \"catch up with base\", \"rebase onto parent\", \"refresh a stacked branch\". Git Operations sub-skill; an issueops-owned branch routes to `issueops execution sync-base` instead.",
+          "description": "Use when a base or release branch moved ahead and the feature branch must catch up, or for \"베이스 브랜치 최신화\", \"release 브랜치 반영\", \"브랜치 최신으로 맞춰줘\", \"rebase onto parent\", \"sync with base branch\". Picks merge or rebase from evidence, keeps a backup ref, proves no commit was lost, then pushes. An issueops-owned branch uses `issueops execution sync-base` instead.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "sync-base",
           "path": "$ISSUEOPS_ROOT/skills/sync-base"
         },
         {
-          "description": "Build or redesign polished React and Next.js interfaces by selecting and composing shadcn/ui, shadcnblocks, Beautiful UI, AI SDK Elements, beUI, Rare UI, Transitions.dev, Magic UI, and Aceternity UI without turning the product into a mismatched component collage. Use for UI/UX implementation, landing pages, dashboards, AI chat or agent interfaces, component-library selection, interaction design, animation, visual polish, responsive design, and accessibility QA.",
+          "description": "Use to build or redesign polished React/Next.js interfaces (landing pages, dashboards, AI chat or agent UIs) by composing shadcn/ui, shadcnblocks, Magic UI, Aceternity UI, and similar libraries into one coherent design, including interaction, animation, responsive design, and accessibility QA.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "ui-ux-craft",
@@ -5742,28 +5742,28 @@
                 "path": "$ISSUEOPS_ROOT/skills/architecture-review"
               },
               {
-                "description": "Client-facing functional QA through the installed Aside CLI. Use when asked to verify that a browser feature, acceptance criterion, user journey, validation rule, state transition, persistence behavior, authorization rule, or error-recovery path works as intended and needs a reproducible evidence report. Triggers include functional QA, browser test, acceptance test, requirement verification, regression check, 기능 QA, 요구사항 검증, 의도대로 동작하는지 확인, and client QA report.",
+                "description": "Use to verify through the Aside CLI that a browser feature, acceptance criterion, user journey, validation, state transition, persistence, authorization, or error recovery works as intended, with a reproducible evidence report. Triggers: functional QA, browser/acceptance test, regression check, 기능 QA, 요구사항 검증, 의도대로 동작하는지 확인.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "aside-functional-qa",
                 "path": "$ISSUEOPS_ROOT/skills/aside-functional-qa"
               },
               {
-                "description": "Client-facing UI/UX QA through the installed Aside CLI. Use when asked to review whether a web page, flow, or responsive state matches product or design intent; follows accessibility and usability standards; feels coherent rather than awkward; or needs an evidence-backed visual QA report. Triggers include UI QA, UX review, visual review, design intent check, accessibility review, responsive review, 어색한지 확인, 화면 QA, UI/UX 검수, and client QA report.",
+                "description": "Use for UI/UX QA through the Aside CLI: whether a page, flow, or responsive state matches design intent, meets accessibility and usability standards, and feels coherent, with an evidence-backed report. Triggers: UI QA, UX/visual review, accessibility review, 어색한지 확인, 화면 QA, UI/UX 검수.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "aside-visual-qa",
                 "path": "$ISSUEOPS_ROOT/skills/aside-visual-qa"
               },
               {
-                "description": "Client-facing web QA orchestration through the installed Aside CLI. Runs aside-functional-qa and aside-visual-qa as one combined engagement with a shared preflight, one browser session plan, cross-phase defect routing and deduplication, and a single merged client report. Use when asked for combined or end-to-end web QA, a full client QA report, both behavior verification and UI/UX review, 통합 QA, 종합 QA, 웹 QA 오케스트레이션, or 클라이언트 QA 총점검. Use aside-functional-qa alone for behavior-only asks and aside-visual-qa alone for design- or UX-only asks.",
+                "description": "Use for combined web QA through the Aside CLI: behavior verification plus UI/UX review in one engagement with one merged client report (통합 QA, 종합 QA, 웹 QA 오케스트레이션, 클라이언트 QA 총점검). Behavior-only asks go to aside-functional-qa; design/UX-only asks to aside-visual-qa.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "aside-web-qa",
                 "path": "$ISSUEOPS_ROOT/skills/aside-web-qa"
               },
               {
-                "description": "Git Operations sub-skill — safe git staging and push. Create small, reviewable git commits from local changes and push the current branch safely using a hybrid Conventional Commit subject plus Lore body. Use when the user asks to commit, split changes into atomic commits, push/publish a branch, or perform a careful commit-and-push workflow while preserving unrelated work and avoiding accidental secrets or broad staging. For advanced git operations (rebase, bisect, conflict resolution, reflog recovery, cherry-pick, worktree), see the parent skill **git-operations**.",
+                "description": "Use when the user asks to commit, split changes into atomic commits, or push/publish a branch. Stages narrowly, writes a Conventional Commit subject with a Lore body, avoids secrets, and preserves unrelated work. Rebase, bisect, conflicts, cherry-pick, and worktrees belong to git-operations.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "atomic-commit-push",
@@ -5784,7 +5784,7 @@
                 "path": "$ISSUEOPS_ROOT/skills/database-schema-architecture"
               },
               {
-                "description": "MUST USE when creating, choosing, or improving any diagram or visual explanation - mermaid flowchart/sequence/state/ER diagrams, architecture sketches, gantt/mindmap/timeline, charts for docs or issues, ASCII art, or rendered HTML pages. Triggers include 다이어그램, 그림, diagram, flowchart, sequence diagram, mermaid, 시각화, architecture diagram, chart. Picks the best form and medium for the content, renders high-quality output, and verifies renderability before delivering.",
+                "description": "MUST USE when creating or improving any diagram or visual explanation (mermaid flowchart/sequence/state/ER, architecture sketch, gantt, timeline, chart, ASCII art, rendered HTML). Triggers: 다이어그램, 그림, 시각화, diagram, flowchart, mermaid, chart. Picks the best form and verifies it renders.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "diagram-design",
@@ -5805,7 +5805,7 @@
                 "path": "$ISSUEOPS_ROOT/skills/fluent-korean"
               },
               {
-                "description": "Create, check, and report task gate ledgers with the issueops gates CLI. Turns acceptance criteria into G-numbered CHECK and EXPECT gates in .issueops/issues/\u003cn\u003e/gates.md or .issueops/gates/\u003cscope\u003e.md, fills EVIDENCE by running the checks through the command policy, and abandons gates honestly. Use when issueops-plan, issueops-implement, issueops-slop-clean, issueops-verify, or verified-execution needs a gate ledger, or when the user says \"게이트 원장\", \"gates 만들어줘\", \"수용 기준 체크\".",
+                "description": "Use when a task needs a gate ledger, or for \"게이트 원장\", \"gates 만들어줘\", \"수용 기준 체크\". Turns acceptance criteria into G-numbered CHECK/EXPECT gates under .issueops/issues/\u003cn\u003e/gates.md or .issueops/gates/, fills EVIDENCE through the issueops gates CLI, and abandons gates honestly.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "gates-ledger",
@@ -5854,28 +5854,28 @@
                 "path": "$ISSUEOPS_ROOT/skills/issueops"
               },
               {
-                "description": "Leave an IssueOps cycle safely from any stage. Pause by releasing the execution lease so another session or host can resume it, or abandon the cycle by closing its draft PR or MR, closing the issue, deleting the remote branch, and removing the worktree, local branch, and record through one fingerprinted cleanup abandon. Use when the user says \"중단\", \"탈출\", \"이슈옵스 정리\", \"일시 중단\", \"abandon the cycle\", or when \"issueops next\" reports an abandon exit.",
+                "description": "Use to pause or abandon an unmerged IssueOps cycle at any stage, or for \"중단\", \"탈출\", \"일시 중단\", \"머지 전 정리\", \"abandon the cycle\", or when \"issueops next\" reports an abandon exit. Pause releases the lease; abandon closes the PR/MR and issue and removes branch, worktree, and record. Merged cycles: issueops-cleanup.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "issueops-abandon",
                 "path": "$ISSUEOPS_ROOT/skills/issueops-abandon"
               },
               {
-                "description": "Safely finish a merged IssueOps cycle by closing its linked issue, removing its local worktree, and deleting its local branch. Use when the user asks for IssueOps cleanup, post-merge cleanup, worktree/branch deletion plus issue closure, or says \"이슈옵스 정리\", \"워크트리 지우고 브랜치 지우고 이슈 닫아줘\".",
+                "description": "Use after an IssueOps cycle merged, or for post-merge cleanup, \"이슈옵스 정리\", \"워크트리 지우고 브랜치 지우고 이슈 닫아줘\". Closes the linked issue and removes the worktree and local branch. Unmerged cycles: issueops-abandon.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "issueops-cleanup",
                 "path": "$ISSUEOPS_ROOT/skills/issueops-cleanup"
               },
               {
-                "description": "Record IssueOps execution completion and release the generation after a draft PR or MR is published and verified, with exact evidence ordering, actor and generation fencing, idempotent recovery, a fixed final completion report, and explicit good and bad examples. Use when a cycle sits in pr phase with an active lease, when the user asks to finish or complete an issue cycle, or says \"완료 처리해줘\", \"사이클 끝내줘\", \"execution complete\", \"완료 기록해줘\".",
+                "description": "Use when a cycle sits in the pr phase with an active lease after the draft PR/MR is published and verified, or for \"완료 처리해줘\", \"사이클 끝내줘\", \"execution complete\", \"완료 기록해줘\". Records completion with ordered evidence under actor and generation fencing and releases the generation.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "issueops-complete",
                 "path": "$ISSUEOPS_ROOT/skills/issueops-complete"
               },
               {
-                "description": "Confirm and create the IssueOps issue that a cycle contracts on. Interview the user only on blocking ambiguity, survey the codebase and background sources into plan-prep evidence, record the intent contract, domain review, split decision, and plan prep, then publish a readable Korean issue through the shared remote write protocol and link it. Use at the start of a cycle, when \"issueops next\" reports stage none or issue, or when the user says \"이슈 만들어줘\", \"이슈부터 시작하자\", \"child task 만들어줘\".",
+                "description": "Use at the start of an IssueOps cycle, when \"issueops next\" reports stage none or issue, or for \"이슈 만들어줘\", \"이슈부터 시작하자\", \"child task 만들어줘\". Interviews only on blocking ambiguity, records intent, domain review, and plan-prep evidence, then publishes and links a readable Korean issue.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "issueops-create-issue",
@@ -5896,21 +5896,21 @@
                 "path": "$ISSUEOPS_ROOT/skills/issueops-debugging"
               },
               {
-                "description": "Reflect a finished IssueOps implementation into the project's operating documents. Route the diff to the .issueops documents it touches, check both directions (did the change break a documented rule, and did it create a decision, pitfall, command, or convention the documents do not know yet), update ADR, CAUTIONS, CONVENTIONS, ARCHITECTURE, TESTING, OPERATIONS, TECH_STACK, OPEN_API_SPEC, or DESIGN through the project_docs MCP contract, re-seal the ai-slop-clean fingerprint, and record the project-docs-review verdict. Use when \"issueops next\" reports docs, or when the user says \"문서 반영\", \"ADR 남겨줘\", \"주의사항 기록\", \"update the project docs\".",
+                "description": "Use when \"issueops next\" reports docs, or for \"문서 반영\", \"ADR 남겨줘\", \"주의사항 기록\", \"update the project docs\" inside an IssueOps cycle. Reflects the finished diff into the .issueops documents it touches, re-seals the ai-slop-clean fingerprint, and records the project-docs-review verdict.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "issueops-docs",
                 "path": "$ISSUEOPS_ROOT/skills/issueops-docs"
               },
               {
-                "description": "Run the implement stage of a linked IssueOps cycle with a generation-fenced execution lease, canonical-worktree TDD, a gate ledger for the RED and GREEN evidence, and delegated child cycles. Enter through link-plan, the compatibility review, and the ledger; exit by moving the cycle to ai-slop-clean. Use when \"issueops next\" reports implement.enter or implement, or when the user says \"구현 시작\", \"구현 이어서 해줘\", \"이슈 구현해줘\", \"child로 나눠서 구현해줘\".",
+                "description": "Use when \"issueops next\" reports implement.enter or implement, or for \"구현 시작\", \"구현 이어서 해줘\", \"이슈 구현해줘\", \"child로 나눠서 구현해줘\". Runs canonical-worktree TDD under the generation-fenced lease with a gate ledger for RED/GREEN evidence, then moves the cycle to ai-slop-clean.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "issueops-implement",
                 "path": "$ISSUEOPS_ROOT/skills/issueops-implement"
               },
               {
-                "description": "Merge the PR or MR of a completed IssueOps cycle from the main session after the developer reviewed it, then hand off to issueops-cleanup. Resolves the cycle from an issue or PR number, previews draft, checks, head and mergeability through `issueops remote merge-pr`, squash-merges by default pinned to the completed head, deletes the merged remote branch through the typed cleanup flow, and routes failed checks, new commits, or conflicts back to the worktree session through reseed. Use when the user says \"머지해줘\", \"PR 머지하고 정리\", \"#123 머지\", \"merge the PR\", \"land this cycle\".",
+                "description": "Use for \"머지해줘\", \"PR 머지하고 정리\", \"#123 머지\", \"merge the PR\", \"land this cycle\" on a completed IssueOps cycle. Previews checks and mergeability with `issueops remote merge-pr`, squash-merges pinned to the completed head, deletes the remote branch, then hands off to issueops-cleanup.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "issueops-merge",
@@ -5931,7 +5931,7 @@
                 "path": "$ISSUEOPS_ROOT/skills/issueops-prepare"
               },
               {
-                "description": "Apply the shared IssueOps remote write protocol to any governed \"issueops remote ...\" mutation. Write the body from the render-template skeleton and the readable-body guide, polish it with fluent-korean, read the readability report in the preview, confirm the identical request, read the artifact back, and reconcile instead of retrying when the result is ambiguous. Use before creating or editing issues, child tasks, PR or MR bodies, comments, or review replies inside an IssueOps cycle, or when the user says \"원격에 써줘\", \"이슈 본문 올려줘\", \"PR 본문 갱신\".",
+                "description": "Use before any governed \"issueops remote ...\" write (issue, child task, PR/MR body, comment, review reply) or for \"원격에 써줘\", \"이슈 본문 올려줘\", \"PR 본문 갱신\". Renders the template body, polishes it with fluent-korean, checks the readability preview, confirms, reads back, and reconciles instead of retrying.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "issueops-remote-write",
@@ -5987,28 +5987,28 @@
                 "path": "$ISSUEOPS_ROOT/skills/pr-review"
               },
               {
-                "description": "Orchestrate first-time issueops project setup for a repository: AGENTS.md routing block, repo profile metadata, and the .issueops document family through the project-docs-bootstrap sub-skill, plus lifecycle routing to project-docs-update and project-docs-optimize. Use when asked to bootstrap a repo for issueops, set up project docs, or initialize agent guidance for a repository. Each sub-skill is also usable standalone.",
+                "description": "Use to bootstrap a repository for issueops: AGENTS.md routing block, repo profile metadata, and the .issueops document family (via project-docs-bootstrap), with routing to project-docs-update and project-docs-optimize for later upkeep.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "project-bootstrap",
                 "path": "$ISSUEOPS_ROOT/skills/project-bootstrap"
               },
               {
-                "description": "Initial creation or template refresh of repo-local .issueops operating documents and the AGENTS.md routing block from repository evidence, through the deterministic issueops project bootstrap pass followed by an agent enrichment pass. Use when asked to bootstrap, initialize, or regenerate project docs for a repository, or to set up AGENTS.md agent guidance. For incremental refresh during ongoing work use project-docs-update; for restructuring oversized docs use project-docs-optimize.",
+                "description": "Use to create, initialize, or regenerate a repository's .issueops operating documents and AGENTS.md routing block from repository evidence (deterministic bootstrap pass, then agent enrichment). Incremental refresh: project-docs-update; restructuring: project-docs-optimize.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "project-docs-bootstrap",
                 "path": "$ISSUEOPS_ROOT/skills/project-docs-bootstrap"
               },
               {
-                "description": "Audit and restructure the `.issueops` operating-document tree so its folders, root indexes, and records match the current issueops layout without losing constraints, breaking code-read paths, or duplicating normative ownership. Use when asked to optimize, split, reorganize, re-folder, or validate `.issueops` documentation, ADRs, cautions, conventions, operations, testing, or architecture docs, or when the checker reports nested records, undeclared directories, undeclared root documents, broken links, or oversized documents.",
+                "description": "Use to optimize, split, reorganize, re-folder, or validate the `.issueops` document tree (ADRs, cautions, conventions, operations, testing, architecture), or when its checker reports nested records, undeclared directories or root docs, broken links, or oversized documents. Keeps every constraint and code-read path.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "project-docs-optimize",
                 "path": "$ISSUEOPS_ROOT/skills/project-docs-optimize"
               },
               {
-                "description": "Evidence-bound incremental refresh of existing .issueops project documents during ongoing work through the project_docs MCP contract: route, read with SHA-256, then append cautions or ADRs via project_docs_append, or revise one document at a time via project_docs_revise. Use when a completed change, solved failure, new command, or durable decision should be reflected in project docs. For initial creation use project-docs-bootstrap; for structural modularization use project-docs-optimize.",
+                "description": "Use when a completed change, solved failure, new command, or durable decision should be reflected in existing .issueops docs outside an IssueOps docs stage. Routes, reads with SHA-256, then appends cautions/ADRs or revises one document through the project_docs MCP contract. New docs: project-docs-bootstrap; restructuring: project-docs-optimize.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "project-docs-update",
@@ -6022,7 +6022,7 @@
                 "path": "$ISSUEOPS_ROOT/skills/prompt-engineering"
               },
               {
-                "description": "Use when a claude.ai/code/artifact link (or another iframe-rendered web page) must be read from an agent session and the in-process route fails or is unavailable — Artifact read / WebFetch return 'served to you as a public (non-member) reader', 'reading public artifacts that way is not enabled yet', a sign-in shell, an SPA shell, or a Cloudflare 403, and the user asks to read, summarize, or extract a shared or public artifact without claude-in-chrome. Triggers include 아티팩트 읽어줘, 공유 아티팩트, public artifact, artifact read failed, 이 링크 내용 확인, iframe page text.",
+                "description": "Use when a claude.ai/code/artifact link or other iframe-rendered page must be read and Artifact read/WebFetch fail (public-reader notice, sign-in or SPA shell, Cloudflare 403). Triggers: 아티팩트 읽어줘, 공유 아티팩트, public artifact, 이 링크 내용 확인.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "read-public-artifact",
@@ -6036,14 +6036,14 @@
                 "path": "$ISSUEOPS_ROOT/skills/requirements-analysis"
               },
               {
-                "description": "Use when an existing GitHub pull request or GitLab merge request already carries review comments from an automated reviewer — Kody/Kodus, CodeRabbit, Copilot, Gemini Code Assist, PR Review, or any other bot — and the user wants those threads validated against the real code, answered in-thread, rated with 👍/👎, and resolved: '봇 리뷰 검증해줘', 'Kody 코멘트 답글', 'CodeRabbit 지적 맞는지 확인', '리뷰 스레드 정리/resolve', 'reply to the bot review', 'review feedback triage'. Not for writing a new review (pr-review), an uncommitted local diff (code-review), or human reviewer feedback inside an issueops cycle (issueops review-feedback).",
+                "description": "Use when a PR/MR already has automated reviewer threads (Kody/Kodus, CodeRabbit, Copilot, Gemini) to verify against the code, reply, rate 👍/👎, and resolve: '봇 리뷰 검증해줘', 'Kody 코멘트 답글', 'CodeRabbit 지적 맞는지 확인', '리뷰 스레드 resolve'. Not for writing a new review (pr-review).",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "review-agent-feedback",
                 "path": "$ISSUEOPS_ROOT/skills/review-agent-feedback"
               },
               {
-                "description": "Run the self-augmentation loop for issueops or another repository: use GENIUS_THINK.md, repo evidence, and research-backed agent improvement patterns to choose a necessary feature, performance, quality, or documentation improvement, implement one safe high-value diff, and verify it with the self-verification loop. Use when the user asks for self-augmentation, autonomous improvement, repo enhancement, 95-point gate loops, or to decide and execute the next valuable improvement.",
+                "description": "Use for self-augmentation, autonomous repo improvement, 95-point gate loops, or deciding and executing the next valuable improvement. Picks one feature, performance, quality, or docs change from repo evidence and GENIUS_THINK.md, implements one safe diff, and verifies it with self-verify.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "self-augment",
@@ -6078,14 +6078,14 @@
                 "path": "$ISSUEOPS_ROOT/skills/stability-audit"
               },
               {
-                "description": "Bring the current branch up to date with the base branch it was created from after that base advanced, choosing merge or rebase by an evidence-based decision table, with evidence-based base resolution, a verified backup ref, proof that no commit was lost, and a confirmed push (plain for merge, --force-with-lease for rebase). Use when a release or other base branch moved ahead and the feature branch must catch up or pre-resolve conflicts, or when the user says \"베이스 브랜치 최신화\", \"release 브랜치 반영\", \"브랜치 최신으로 맞춰줘\", \"부모 브랜치 rebase\", \"base 브랜치 merge\", \"sync with base branch\", \"catch up with base\", \"rebase onto parent\", \"refresh a stacked branch\". Git Operations sub-skill; an issueops-owned branch routes to `issueops execution sync-base` instead.",
+                "description": "Use when a base or release branch moved ahead and the feature branch must catch up, or for \"베이스 브랜치 최신화\", \"release 브랜치 반영\", \"브랜치 최신으로 맞춰줘\", \"rebase onto parent\", \"sync with base branch\". Picks merge or rebase from evidence, keeps a backup ref, proves no commit was lost, then pushes. An issueops-owned branch uses `issueops execution sync-base` instead.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "sync-base",
                 "path": "$ISSUEOPS_ROOT/skills/sync-base"
               },
               {
-                "description": "Build or redesign polished React and Next.js interfaces by selecting and composing shadcn/ui, shadcnblocks, Beautiful UI, AI SDK Elements, beUI, Rare UI, Transitions.dev, Magic UI, and Aceternity UI without turning the product into a mismatched component collage. Use for UI/UX implementation, landing pages, dashboards, AI chat or agent interfaces, component-library selection, interaction design, animation, visual polish, responsive design, and accessibility QA.",
+                "description": "Use to build or redesign polished React/Next.js interfaces (landing pages, dashboards, AI chat or agent UIs) by composing shadcn/ui, shadcnblocks, Magic UI, Aceternity UI, and similar libraries into one coherent design, including interaction, animation, responsive design, and accessibility QA.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "ui-ux-craft",

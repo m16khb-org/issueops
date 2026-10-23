@@ -1,6 +1,6 @@
 ---
 name: self-augment
-description: "Run the self-augmentation loop for issueops or another repository: use GENIUS_THINK.md, repo evidence, and research-backed agent improvement patterns to choose a necessary feature, performance, quality, or documentation improvement, implement one safe high-value diff, and verify it with the self-verification loop. Use when the user asks for self-augmentation, autonomous improvement, repo enhancement, 95-point gate loops, or to decide and execute the next valuable improvement."
+description: "Use for self-augmentation, autonomous repo improvement, 95-point gate loops, or deciding and executing the next valuable improvement. Picks one feature, performance, quality, or docs change from repo evidence and GENIUS_THINK.md, implements one safe diff, and verifies it with self-verify."
 ---
 
 # Self-augmentation loop

@@ -1,6 +1,6 @@
 ---
 name: issueops-complete
-description: Record IssueOps execution completion and release the generation after a draft PR or MR is published and verified, with exact evidence ordering, actor and generation fencing, idempotent recovery, a fixed final completion report, and explicit good and bad examples. Use when a cycle sits in pr phase with an active lease, when the user asks to finish or complete an issue cycle, or says "완료 처리해줘", "사이클 끝내줘", "execution complete", "완료 기록해줘".
+description: Use when a cycle sits in the pr phase with an active lease after the draft PR/MR is published and verified, or for "완료 처리해줘", "사이클 끝내줘", "execution complete", "완료 기록해줘". Records completion with ordered evidence under actor and generation fencing and releases the generation.
 ---
 
 # IssueOps Complete

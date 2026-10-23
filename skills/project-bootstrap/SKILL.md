@@ -1,6 +1,6 @@
 ---
 name: project-bootstrap
-description: "Orchestrate first-time issueops project setup for a repository: AGENTS.md routing block, repo profile metadata, and the .issueops document family through the project-docs-bootstrap sub-skill, plus lifecycle routing to project-docs-update and project-docs-optimize. Use when asked to bootstrap a repo for issueops, set up project docs, or initialize agent guidance for a repository. Each sub-skill is also usable standalone."
+description: "Use to bootstrap a repository for issueops: AGENTS.md routing block, repo profile metadata, and the .issueops document family (via project-docs-bootstrap), with routing to project-docs-update and project-docs-optimize for later upkeep."
 ---
 
 # Project Bootstrap (Orchestration)

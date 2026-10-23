@@ -1,6 +1,6 @@
 ---
 name: project-docs-bootstrap
-description: "Initial creation or template refresh of repo-local .issueops operating documents and the AGENTS.md routing block from repository evidence, through the deterministic issueops project bootstrap pass followed by an agent enrichment pass. Use when asked to bootstrap, initialize, or regenerate project docs for a repository, or to set up AGENTS.md agent guidance. For incremental refresh during ongoing work use project-docs-update; for restructuring oversized docs use project-docs-optimize."
+description: "Use to create, initialize, or regenerate a repository's .issueops operating documents and AGENTS.md routing block from repository evidence (deterministic bootstrap pass, then agent enrichment). Incremental refresh: project-docs-update; restructuring: project-docs-optimize."
 ---
 
 # Project Docs Bootstrap

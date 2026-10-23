@@ -1,6 +1,6 @@
 ---
 name: issueops-remote-write
-description: Apply the shared IssueOps remote write protocol to any governed "issueops remote ..." mutation. Write the body from the render-template skeleton and the readable-body guide, polish it with fluent-korean, read the readability report in the preview, confirm the identical request, read the artifact back, and reconcile instead of retrying when the result is ambiguous. Use before creating or editing issues, child tasks, PR or MR bodies, comments, or review replies inside an IssueOps cycle, or when the user says "원격에 써줘", "이슈 본문 올려줘", "PR 본문 갱신".
+description: Use before any governed "issueops remote ..." write (issue, child task, PR/MR body, comment, review reply) or for "원격에 써줘", "이슈 본문 올려줘", "PR 본문 갱신". Renders the template body, polishes it with fluent-korean, checks the readability preview, confirms, reads back, and reconciles instead of retrying.
 ---
 
 # IssueOps Remote Write

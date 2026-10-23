@@ -1,6 +1,6 @@
 ---
 name: issueops-abandon
-description: Leave an IssueOps cycle safely from any stage. Pause by releasing the execution lease so another session or host can resume it, or abandon the cycle by closing its draft PR or MR, closing the issue, deleting the remote branch, and removing the worktree, local branch, and record through one fingerprinted cleanup abandon. Use when the user says "중단", "탈출", "이슈옵스 정리", "일시 중단", "abandon the cycle", or when "issueops next" reports an abandon exit.
+description: Use to pause or abandon an unmerged IssueOps cycle at any stage, or for "중단", "탈출", "일시 중단", "머지 전 정리", "abandon the cycle", or when "issueops next" reports an abandon exit. Pause releases the lease; abandon closes the PR/MR and issue and removes branch, worktree, and record. Merged cycles: issueops-cleanup.
 ---
 
 # IssueOps Abandon

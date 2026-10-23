@@ -1,6 +1,6 @@
 ---
 name: aside-web-qa
-description: "Client-facing web QA orchestration through the installed Aside CLI. Runs aside-functional-qa and aside-visual-qa as one combined engagement with a shared preflight, one browser session plan, cross-phase defect routing and deduplication, and a single merged client report. Use when asked for combined or end-to-end web QA, a full client QA report, both behavior verification and UI/UX review, 통합 QA, 종합 QA, 웹 QA 오케스트레이션, or 클라이언트 QA 총점검. Use aside-functional-qa alone for behavior-only asks and aside-visual-qa alone for design- or UX-only asks."
+description: "Use for combined web QA through the Aside CLI: behavior verification plus UI/UX review in one engagement with one merged client report (통합 QA, 종합 QA, 웹 QA 오케스트레이션, 클라이언트 QA 총점검). Behavior-only asks go to aside-functional-qa; design/UX-only asks to aside-visual-qa."
 ---
 
 # Aside Web QA (Orchestration)

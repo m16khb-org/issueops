@@ -1,6 +1,6 @@
 ---
 name: issueops-create-issue
-description: Confirm and create the IssueOps issue that a cycle contracts on. Interview the user only on blocking ambiguity, survey the codebase and background sources into plan-prep evidence, record the intent contract, domain review, split decision, and plan prep, then publish a readable Korean issue through the shared remote write protocol and link it. Use at the start of a cycle, when "issueops next" reports stage none or issue, or when the user says "이슈 만들어줘", "이슈부터 시작하자", "child task 만들어줘".
+description: Use at the start of an IssueOps cycle, when "issueops next" reports stage none or issue, or for "이슈 만들어줘", "이슈부터 시작하자", "child task 만들어줘". Interviews only on blocking ambiguity, records intent, domain review, and plan-prep evidence, then publishes and links a readable Korean issue.
 ---
 
 # IssueOps Create Issue

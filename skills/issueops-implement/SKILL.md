@@ -1,6 +1,6 @@
 ---
 name: issueops-implement
-description: Run the implement stage of a linked IssueOps cycle with a generation-fenced execution lease, canonical-worktree TDD, a gate ledger for the RED and GREEN evidence, and delegated child cycles. Enter through link-plan, the compatibility review, and the ledger; exit by moving the cycle to ai-slop-clean. Use when "issueops next" reports implement.enter or implement, or when the user says "구현 시작", "구현 이어서 해줘", "이슈 구현해줘", "child로 나눠서 구현해줘".
+description: Use when "issueops next" reports implement.enter or implement, or for "구현 시작", "구현 이어서 해줘", "이슈 구현해줘", "child로 나눠서 구현해줘". Runs canonical-worktree TDD under the generation-fenced lease with a gate ledger for RED/GREEN evidence, then moves the cycle to ai-slop-clean.
 ---
 
 # IssueOps Implement

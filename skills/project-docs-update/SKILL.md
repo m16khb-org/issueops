@@ -1,6 +1,6 @@
 ---
 name: project-docs-update
-description: "Evidence-bound incremental refresh of existing .issueops project documents during ongoing work through the project_docs MCP contract: route, read with SHA-256, then append cautions or ADRs via project_docs_append, or revise one document at a time via project_docs_revise. Use when a completed change, solved failure, new command, or durable decision should be reflected in project docs. For initial creation use project-docs-bootstrap; for structural modularization use project-docs-optimize."
+description: "Use when a completed change, solved failure, new command, or durable decision should be reflected in existing .issueops docs outside an IssueOps docs stage. Routes, reads with SHA-256, then appends cautions/ADRs or revises one document through the project_docs MCP contract. New docs: project-docs-bootstrap; restructuring: project-docs-optimize."
 ---
 
 # Project Docs Update
