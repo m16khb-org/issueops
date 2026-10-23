@@ -351,12 +351,12 @@ func (cli command) runIssueOpsPhase(args []string) error {
 		}
 		return nil
 	}
-	return printJSON(phaseResponse{IssueOpsRecord: record, TrackedMaterials: &materials})
+	return printJSON(phaseResponse{IssueOpsMutationAck: issueopscontract.MutationAck(record), TrackedMaterials: &materials})
 }
 
-// phaseResponse는 phase 전이 JSON에 추적 사본 보고를 얹는다. record 필드가 아니다.
+// phaseResponse는 phase 전이 ack에 추적 사본 보고를 얹는다. record 필드가 아니다.
 type phaseResponse struct {
-	issueopscontract.IssueOpsRecord
+	issueopscontract.IssueOpsMutationAck
 	TrackedMaterials *issueopscontract.IssueOpsTrackedMaterials `json:"tracked_materials,omitempty"`
 }
 
