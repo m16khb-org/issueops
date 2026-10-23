@@ -117,9 +117,11 @@ func TestMCPAuthorizeDerivesTheCurrentSessionOnlyWhenEverySessionFlagIsOmitted(t
 	run := func(args ...string) (*recordingAuthorityIssuer, error) {
 		issuer := &recordingAuthorityIssuer{}
 		err := mcpAuthorizeCommand{
-			issuer:  issuer,
-			observe: func(int) ([]model.NativeProcessReceipt, error) { return []model.NativeProcessReceipt{{PID: 7, Executable: "/bin/zsh"}, session}, nil },
-			pid:     func() int { return 1 },
+			issuer: issuer,
+			observe: func(int) ([]model.NativeProcessReceipt, error) {
+				return []model.NativeProcessReceipt{{PID: 7, Executable: "/bin/zsh"}, session}, nil
+			},
+			pid: func() int { return 1 },
 			getenv: func(key string) string {
 				if key == "CODEX_THREAD_ID" {
 					return "thread-1"
