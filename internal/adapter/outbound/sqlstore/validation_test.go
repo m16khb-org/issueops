@@ -187,7 +187,7 @@ func TestWithSpanObserverIgnoresNilArguments(t *testing.T) {
 	if got := WithSpanObserver(nil, func(SpanObservation) {}); got != nil {
 		t.Fatal("nil context must stay nil")
 	}
-	if spanObserver(nil) != nil { //nolint:staticcheck
+	if spanObserver(nil) != nil { //nolint:staticcheck // nil context is the branch under test
 		t.Fatal("nil context has no observer")
 	}
 	if spanObserver(ctx) != nil {

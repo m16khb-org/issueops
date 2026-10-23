@@ -44,7 +44,7 @@ func TestEvaluateProjectsValidatedSummaryAndSeparatesDiagnosticsFromReadFailure(
 	if !got.OK || !got.SelfVerify.Found || got.SelfVerify.LatestKey != record.Key || got.SelfVerify.UpdatedAt != record.UpdatedAt || got.SelfVerify.Bytes != record.Bytes || !reflect.DeepEqual(got.Warnings, []string{"selfverify: invalid_generated_at:older"}) {
 		t.Fatalf("%+v", got)
 	}
-	if !reflect.DeepEqual(facts, before) || record != (Record{Key: "custom-run", UpdatedAt: "2026", Bytes: 22}) {
+	if !reflect.DeepEqual(facts, before) || record != (Record{Key: "custom-run", UpdatedAt: "2026", Bytes: 22}) { //nolint:govet // same error values on both sides; this checks the input was not mutated
 		t.Fatal("input mutated")
 	}
 	facts.SelfVerifyReadFailed = true

@@ -82,9 +82,9 @@ func TestEnsureExcludeIdempotent(t *testing.T) {
 
 func TestReadRejectsUnknownField(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "agent-models.json")
-	write(t, path, `{"version":1,"claude":{"implement":{"modle":"x"}}}`)
+	write(t, path, `{"version":1,"claude":{"implement":{"modle":"x"}}}`) //nolint:misspell // the typo is the unknown field under test
 	_, err := Read(path)
-	if err == nil || !strings.Contains(err.Error(), path) || !strings.Contains(err.Error(), `unknown field "modle"`) {
+	if err == nil || !strings.Contains(err.Error(), path) || !strings.Contains(err.Error(), `unknown field "modle"`) { //nolint:misspell // the typo is the unknown field under test
 		t.Fatalf("Read err = %v", err)
 	}
 	for _, body := range []string{`{"version":2}`, `{"version":1,"claude":{"reviewer":{"model":"opus"}}}`, `{"version":1,"gemini":{}}`, `{"version":1} {}`} {

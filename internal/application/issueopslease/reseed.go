@@ -110,7 +110,7 @@ func (s *ReseedService) reseedWithinFence(ctx context.Context, request ReseedReq
 	after, err := s.repository.CommitReseed(ctx, snapshot, next)
 	if err != nil {
 		if rollbackErr := s.artifacts.Rollback(ctx, prepared); rollbackErr != nil {
-			return ReseedResult{}, fmt.Errorf("%w; replacement residue cleanup failed: %v", err, rollbackErr)
+			return ReseedResult{}, fmt.Errorf("%w; replacement residue cleanup failed: %v", err, rollbackErr) //nolint:errorlint // only the commit failure belongs in the chain; the cleanup failure is diagnostic text
 		}
 		return ReseedResult{}, err
 	}

@@ -33,7 +33,7 @@ func (client netHTTPClient) Do(ctx context.Context, request webfetchport.HTTPReq
 	for key, value := range request.Header {
 		httpRequest.Header.Set(key, value)
 	}
-	response, err := client.client.Do(httpRequest)
+	response, err := client.client.Do(httpRequest) //nolint:bodyclose // the body is returned to the caller, which owns closing it
 	if err != nil {
 		return webfetchport.HTTPResponse{}, err
 	}

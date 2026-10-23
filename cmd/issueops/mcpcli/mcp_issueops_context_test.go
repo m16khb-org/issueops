@@ -19,7 +19,7 @@ func TestIssueOpsMCPExecutionPropagatesRequestCancellation(t *testing.T) {
 		_ issueopscontract.ExecutionActionRequest,
 		_ port.ExecutionActionDependencies,
 	) (any, error) {
-		observed = ctx
+		observed = ctx //nolint:fatcontext // the test captures the request context to assert it was cancelled
 		return nil, ctx.Err()
 	}
 	ctx, cancel := context.WithCancel(context.Background())

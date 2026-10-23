@@ -12,6 +12,6 @@ func (e GuardBlockedError) Error() string {
 }
 
 func IsGuardBlocked(err error) bool {
-	_, ok := err.(GuardBlockedError)
+	_, ok := err.(GuardBlockedError) //nolint:errorlint // exit code 3 maps only a direct guard block; TestIsGuardBlockedMatchesDirectErrorOnly pins it
 	return ok
 }

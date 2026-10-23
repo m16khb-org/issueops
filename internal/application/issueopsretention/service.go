@@ -80,7 +80,7 @@ func (service *Service) Prune(
 					)
 				}
 				result.Error = ErrIncomplete.Error()
-				return result, fmt.Errorf("%w: delete %s: %v", ErrIncomplete, id, err)
+				return result, fmt.Errorf("%w: delete %s: %v", ErrIncomplete, id, err) //nolint:errorlint // callers classify on ErrIncomplete alone; the delete failure is diagnostic text
 			}
 		}
 		result.Pruned = append(result.Pruned, id)

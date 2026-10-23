@@ -188,7 +188,7 @@ func TestNextWarnsOnceAndBlanksReviewWhenSettingsAreBroken(t *testing.T) {
 	calls := 0
 	ports := reviewTierPorts(implementRecordForTier(), []string{"README.md"}, true, &calls)
 	ports.ReviewModel = func(string, agentmodelcontract.Role, string, string) (string, string, error) {
-		return "", "", errors.New("/cfg/issueops/agent-models.json: json: unknown field \"modle\"")
+		return "", "", errors.New("/cfg/issueops/agent-models.json: json: unknown field \"modle\"") //nolint:misspell // the typo is the unknown field under test
 	}
 	result, err := NewService(ports).Next(context.Background(), "/state", "/repo", "")
 	if err != nil {

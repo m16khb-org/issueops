@@ -238,7 +238,7 @@ func (s Service) recordAtGeneration(id string, generation uint64) (issueops.Issu
 }
 func (s Service) cleanupFailure(record issueops.IssueOpsRecord, cause error) error {
 	if err := s.Artifacts.Cleanup(record); err != nil {
-		return fmt.Errorf("%w; replacement residue cleanup failed: %v", cause, err)
+		return fmt.Errorf("%w; replacement residue cleanup failed: %v", cause, err) //nolint:errorlint // only the cause belongs in the chain; the cleanup failure is diagnostic text
 	}
 	return cause
 }

@@ -91,6 +91,6 @@ func (e PolicyDeniedError) Error() string {
 }
 
 func IsPolicyDenied(err error) bool {
-	_, ok := err.(PolicyDeniedError)
+	_, ok := err.(PolicyDeniedError) //nolint:errorlint // exit code 3 maps only a direct policy denial; TestIsPolicyDeniedMatchesDirectErrorOnly pins it
 	return ok
 }

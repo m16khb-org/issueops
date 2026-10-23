@@ -1,7 +1,10 @@
 # golangci-lint v2 configuration.
 #
-# gosimple is part of staticcheck in v2. Keep the previous linter set and
-# default exclusion presets; report the complete list locally and in CI.
+# The linter set targets real defects, dead code, and needless abstraction.
+# Pure style and micro-performance linters (revive, gocritic, perfsprint,
+# predeclared, stylecheck, quickfix) stay off: they churn code without
+# catching bugs. unconvert stays off because syscall.Stat_t field types differ
+# between darwin and linux, so a conversion needed on one is flagged on the other.
 # golangci-lint is a CI/developer gate; it is not part of the harness
 # install/update/self-verify readiness path (AGENTS.md §10).
 version: "2"
@@ -10,18 +13,72 @@ run:
 linters:
   default: none
   enable:
+    # Defects
+    - asasalint
+    - bidichk
+    - bodyclose
+    - durationcheck
     - errcheck
+    - errorlint
+    - fatcontext
     - govet
-    - ineffassign
+    - makezero
+    - nilnesserr
+    - reassign
+    - rowserrcheck
+    - sqlclosecheck
     - staticcheck
+    # Dead code and needless abstraction
+    - iface
+    - ineffassign
+    - unparam
     - unused
+    - wastedassign
+    # Legacy idioms with a standard replacement
+    - copyloopvar
+    - intrange
+    - modernize
+    - usestdlibvars
+    - usetesting
+    # Hygiene
+    - misspell
+    - nolintlint
   settings:
+    govet:
+      enable-all: true
+      disable:
+        # Struct layout and shadowing are style choices here, not defects.
+        - fieldalignment
+        - shadow
+    iface:
+      enable:
+        # Two interfaces with the same method set are one abstraction. The
+        # opaque check stays off: injected constructors return the interface
+        # their fakes also satisfy.
+        - identical
+    nolintlint:
+      require-explanation: true
+      require-specific: true
     staticcheck:
       # v1 enabled staticcheck (SA) and gosimple (S1), not stylecheck or quickfix.
       checks:
         - SA*
         - S1*
+    usetesting:
+      # os.MkdirTemp in tests is deliberate: short /tmp roots keep unix socket
+      # paths under the length limit, and fakes stand in for injected TempDir.
+      os-mkdir-temp: false
   exclusions:
+    rules:
+      # Tests compare error identity on purpose: a wrapped error must fail them.
+      - path: _test\.go
+        linters:
+          - errorlint
+      # Fakes must match injected signatures and test helpers name their
+      # fixtures, so constant arguments and nil results there are not dead code.
+      - path: _test\.go
+        linters:
+          - unparam
     generated: lax
     presets:
       - comments
