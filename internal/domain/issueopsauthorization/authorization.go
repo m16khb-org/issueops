@@ -21,19 +21,27 @@ func ValidateHolder(record issueopsauthorizationcontract.Record, actor *issueops
 			lease.Generation,
 		)
 	}
-	holderRequired := fmt.Errorf("IssueOps execution mutation requires the current write lease holder")
-	if actor == nil ||
-		!strings.EqualFold(strings.TrimSpace(actor.Host), lease.Holder.Host) ||
-		strings.TrimSpace(actor.SessionID) != lease.Holder.SessionID ||
-		strings.TrimSpace(actor.AgentID) != lease.Holder.AgentID {
-		return false, holderRequired
+	// The refusal names the first mismatch and the recovery step; holder
+	// identity is already public in `status`.
+	holderRequired := func(detail string) error {
+		return fmt.Errorf("IssueOps execution mutation requires the current write lease holder: %s; run `issueops execution whoami --json` in the holder session and pass its claim flags", detail)
+	}
+	switch {
+	case actor == nil:
+		return false, holderRequired("no actor flags were passed")
+	case !strings.EqualFold(strings.TrimSpace(actor.Host), lease.Holder.Host):
+		return false, holderRequired(fmt.Sprintf("caller host %q, holder host %q", strings.TrimSpace(actor.Host), lease.Holder.Host))
+	case strings.TrimSpace(actor.SessionID) != lease.Holder.SessionID:
+		return false, holderRequired(fmt.Sprintf("caller session id %q, holder session id %q", strings.TrimSpace(actor.SessionID), lease.Holder.SessionID))
+	case strings.TrimSpace(actor.AgentID) != lease.Holder.AgentID:
+		return false, holderRequired(fmt.Sprintf("caller agent id %q, holder agent id %q", strings.TrimSpace(actor.AgentID), lease.Holder.AgentID))
 	}
 	if verified == nil || lease.Holder.SessionProcess == nil || verified.Identity.SessionProcess == nil ||
 		!strings.EqualFold(verified.Identity.Host, lease.Holder.Host) ||
 		verified.Identity.SessionID != lease.Holder.SessionID ||
 		verified.Identity.AgentID != lease.Holder.AgentID ||
 		*verified.Identity.SessionProcess != *lease.Holder.SessionProcess {
-		return false, holderRequired
+		return false, holderRequired("the caller's verified session process is not the holder's")
 	}
 	return true, nil
 }
