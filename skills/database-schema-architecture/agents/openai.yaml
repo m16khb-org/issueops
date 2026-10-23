@@ -1,4 +1,4 @@
 interface:
   display_name: "Database Schema Architecture"
-  short_description: "Design relational schemas and optimize SQL queries"
-  default_prompt: "Use $database-schema-architecture to assess this schema or SQL query and recommend improvements with measured plans and index tradeoffs."
+  short_description: "Design relational schemas, keys, and indexes from measured data"
+  default_prompt: "Use $database-schema-architecture to assess this schema, ORM mapping, or SQL query and recommend key, index, and partitioning changes with measured row counts, plans, and index tradeoffs."

@@ -48,7 +48,7 @@ issueops는 `skills/` 디렉토리를 공용 스킬 53개의 단일 출처(singl
 | `web-research` | Web Research — 출처 인용 다중 소스 조사 | grill, issue, feedback |
 | `requirements-analysis` | Risk-driven planning-document analysis — Kordoc·OCR·시각 증거 조정 | grill, issue, plan, compatibility-review |
 | `architecture-review` | Devil's-advocate design/plan critic — 구현 전 계획 적대 검증 | plan, compatibility-review |
-| `database-schema-architecture` | Database Schema Architecture & Optimization — 정규화·인덱스·쿼리 최적화 | issue, plan, implement |
+| `database-schema-architecture` | Database Schema Architecture — 키·외래키·정규화·파티셔닝·커버링 인덱스·ORM 매핑을 row 수와 리소스 실측으로 설계 | issue, plan, implement |
 | `algorithm-optimization` | Algorithm Design & Complexity Optimization | plan, implement, ai-slop-clean |
 | `meeting-notes` | Meeting-record augmentation / team-memory | 직접 연동 없음 |
 | `issueops-debugging` | Systematic Debugging — 7단계 과학적 디버깅 | implement, feedback |
@@ -67,7 +67,7 @@ issueops는 `skills/` 디렉토리를 공용 스킬 53개의 단일 출처(singl
 ### 설계 원칙
 
 - **Language/tech agnostic**: 어떤 스킬도 특정 언어·프레임워크를 강제하지 않는다(6f31c55에서 검증 완료). 언어별 예시는 동등한 명령어를 여러 언어로 제시한다.
-- **Namesake philosophy**: 각 스킬의 방법론은 이름의 과학자가 남긴 핵심 기여에서 파생된다(예: Codd → 정규화 이론, Dijkstra → 구조적 프로그래밍 + 최단 경로).
+- **Namesake origin**: 스킬은 기능 이름을 쓰지만 방법론은 각 분야 선구자의 핵심 기여에서 파생된다(예: `database-schema-architecture` ← Codd의 정규화 이론, `algorithm-optimization` ← Dijkstra의 구조적 프로그래밍과 최단 경로).
 - **Host-neutral**: `skills/` 원본 하나로 Codex, Claude Code, Omo native, omp, opencode에서 모든 스킬을 동일하게 사용한다.
 - **Executable-fence contract**: shipped `sh`/`bash`/`zsh`/`shell` fences는
   `scripts/verify-skill-shell.py`의 syntax·failure propagation·safe expansion
