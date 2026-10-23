@@ -26,5 +26,5 @@ func issueOpsReseedHandler(ctx context.Context, stateRoot string, request model.
 	artifacts := leaseoutbound.NewReseedArtifacts()
 	baseSync := basesyncoutbound.NewInspector(basesyncoutbound.RunGit)
 	service := leaseapp.NewReseedService(fence, leaseoutbound.NewReseedRepository(db), inventory, baseSync, artifacts, leaseoutbound.UTCClock{}, issueOpsActorVerifier(), leaseoutbound.FilesystemPathMatcher{})
-	return leaseinbound.NewReseedHandler(service, ownerdomain.ReplacementClaimCommand)(ctx, stateRoot, request)
+	return leaseinbound.NewReseedHandler(service, ownerdomain.ReplacementClaimCommandAs)(ctx, stateRoot, request)
 }

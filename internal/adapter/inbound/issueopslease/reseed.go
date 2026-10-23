@@ -12,10 +12,14 @@ import (
 
 type ReseedHandler struct {
 	service     *leaseapp.ReseedService
-	nextCommand func(id string, generation uint64) string
+	nextCommand ClaimCommand
 }
 
-func NewReseedHandler(service *leaseapp.ReseedService, nextCommand func(id string, generation uint64) string) issueopscontract.ExecutionReseedHandler {
+// ClaimCommand renders the claim the reseeding actor runs next from the
+// canonical worktree root.
+type ClaimCommand func(id string, generation uint64, actor issueopscontract.NativeActor, root string) string
+
+func NewReseedHandler(service *leaseapp.ReseedService, nextCommand ClaimCommand) issueopscontract.ExecutionReseedHandler {
 	return ReseedHandler{service: service, nextCommand: nextCommand}.Handle
 }
 
@@ -34,7 +38,7 @@ func (h ReseedHandler) Handle(ctx context.Context, _ string, request issueopscon
 		OK: true, ID: result.ID, Action: issueopscontract.ExecutionReplaceReseed, Execution: toCoreExecution(result.Execution),
 		ClaimTokenPath: result.Receipt.ClaimTokenPath,
 	}
-	response.NextCommand = h.nextCommand(result.ID, result.Execution.Lease.Generation)
+	response.NextCommand = h.nextCommand(result.ID, result.Execution.Lease.Generation, request.Actor, response.Execution.Workspace.Root)
 	return response, nil
 }
 

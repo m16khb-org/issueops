@@ -68,7 +68,7 @@ func claimableDenyError(generation uint64, id string) error {
 // the way other IssueOps mutations report a non-canonical cwd.
 func canonicalCWDError(verb string, err error) error {
 	if root := leasedomain.CanonicalRootOf(err); root != "" {
-		return fmt.Errorf("%s cwd must be the canonical worktree: rerun with --cwd %q", verb, root)
+		return fmt.Errorf("%s cwd must be the canonical worktree %q: run it from there, or with every ACTOR_FLAG and --cwd %q", verb, root, root)
 	}
 	return fmt.Errorf("%s cwd must be the canonical worktree", verb)
 }

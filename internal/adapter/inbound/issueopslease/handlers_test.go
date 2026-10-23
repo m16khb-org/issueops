@@ -105,7 +105,7 @@ func TestToCoreLeaseCopiesHolderAndProcessSafely(t *testing.T) {
 func TestHandlersFailClosedWhenOnlyServiceIsMissing(t *testing.T) {
 	ctx := context.Background()
 
-	_, reseedErr := NewReseedHandler(nil, func(string, uint64) string { return "next" })(ctx, "", issueopscontract.ExecutionReseedRequest{ID: "io-1"})
+	_, reseedErr := NewReseedHandler(nil, func(string, uint64, issueopscontract.NativeActor, string) string { return "next" })(ctx, "", issueopscontract.ExecutionReseedRequest{ID: "io-1"})
 	if !errors.Is(reseedErr, issueopscontract.ErrReseedHandlerUnavailable) {
 		t.Fatalf("reseed handler err = %v, want ErrReseedHandlerUnavailable", reseedErr)
 	}

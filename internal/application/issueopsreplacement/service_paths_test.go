@@ -500,7 +500,9 @@ func TestFinalizeOffersClaimCommandAndReportsTokenPath(t *testing.T) {
 	if lease := result.Execution.Lease; lease.Status != model.LeaseStatusClaimable || lease.ClaimTokenSHA256 != "digest" || lease.Holder != nil {
 		t.Fatalf("lease=%+v", lease)
 	}
-	if want := "issueops execution claim --id 'io-test' --generation 7 --claim-current-token"; result.NextCommand != want {
+	// The claim is the finalizing actor's, bound to the canonical worktree, so
+	// it runs from wherever that session is (the source checkout included).
+	if want := "issueops execution claim --id 'io-test' --generation 7 --claim-current-token --host 'codex' --session-id 'requester' --session-pid 42 --session-started-at 'start' --session-executable '/host' --cwd '/workspace'"; result.NextCommand != want {
 		t.Fatalf("NextCommand=%q want %q", result.NextCommand, want)
 	}
 	if result.ClaimTokenPath != "/workspace/claim.token" {

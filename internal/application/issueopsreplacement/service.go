@@ -169,7 +169,7 @@ func (s Service) mutateExecutionReplacement(ctx context.Context, req issueops.Ex
 	result := replaceResult(persisted, req.Action, "", "", tokenPath)
 	switch persisted.Execution.Lease.Status {
 	case issueops.LeaseStatusClaimable:
-		result.NextCommand = domain.ReplacementClaimCommand(persisted.ID, persisted.Execution.Lease.Generation)
+		result.NextCommand = domain.ReplacementClaimCommandAs(persisted.ID, persisted.Execution.Lease.Generation, req.Actor, persisted.Execution.Workspace.Root)
 	case issueops.LeaseStatusRevoking:
 		result.NextCommand = domain.ReplacementFinalizePreviewCommand(persisted.ID, persisted.Execution.Lease.Generation)
 	}

@@ -6,10 +6,21 @@ import (
 	"strings"
 )
 
+// ReplacementClaimCommand is the actor-free claim for a reader that does not
+// know the claiming actor (status, next). Without ACTOR_FLAGS claim observes
+// the session itself, including its cwd, so it runs from the canonical
+// worktree.
 func ReplacementClaimCommand(id string, generation uint64) string {
 	return "issueops execution claim --id " + quoteReplacementArg(id) +
 		" --generation " + strconv.FormatUint(generation, 10) +
 		" --claim-current-token"
+}
+
+// ReplacementClaimCommandAs is the exact claim for the actor that just
+// finalized or reseeded the lease: its ACTOR_FLAGS with the canonical
+// worktree as --cwd, so it runs from wherever that actor is.
+func ReplacementClaimCommandAs(id string, generation uint64, actor issueops.NativeActor, root string) string {
+	return ReplacementClaimCommand(id, generation) + replacementActorFlags(actor, root)
 }
 
 func ReplacementReseedCommand(id string, generation, completionGeneration uint64, fingerprint string, actor issueops.NativeActor, cwd string) string {

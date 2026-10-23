@@ -3838,6 +3838,7 @@
         "func NewReseedHandler",
         "func ReseedHandler.Handle",
         "func publicReseedError",
+        "type ClaimCommand",
         "type ReseedHandler"
       ]
     },
@@ -13643,6 +13644,7 @@
       "task": "T20",
       "symbols": [
         "func ReplacementClaimCommand",
+        "func ReplacementClaimCommandAs",
         "func ReplacementFinalizeCommand",
         "func ReplacementReseedCommand",
         "func ReplacementRevokeCommand",

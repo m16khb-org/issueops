@@ -12,8 +12,8 @@ import (
 
 func TestReseedNextCommandsKeepTheirRenderer(t *testing.T) {
 	var calls []string
-	makeCommand := func(owner string) func(string, uint64) string {
-		handler := ReseedHandler{nextCommand: func(id string, generation uint64) string {
+	makeCommand := func(owner string) ClaimCommand {
+		handler := ReseedHandler{nextCommand: func(id string, generation uint64, _ issueopscontract.NativeActor, _ string) string {
 			if id != "cycle" || generation != 7 {
 				t.Fatal("response fields lost")
 			}
@@ -23,8 +23,8 @@ func TestReseedNextCommandsKeepTheirRenderer(t *testing.T) {
 		return handler.nextCommand
 	}
 	first, second := makeCommand("first"), makeCommand("second")
-	for _, render := range []func(string, uint64) string{first, second, first} {
-		render("cycle", 7)
+	for _, render := range []ClaimCommand{first, second, first} {
+		render("cycle", 7, issueopscontract.NativeActor{}, "")
 	}
 	if !reflect.DeepEqual(calls, []string{"first", "second", "first"}) {
 		t.Fatalf("renderers crossed instances: %v", calls)
