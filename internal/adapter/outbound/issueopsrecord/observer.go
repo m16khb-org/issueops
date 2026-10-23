@@ -65,10 +65,14 @@ func (observer *jsonLineObserver) Observe(observation SpanObservation) {
 		return
 	}
 	thresholdMS := observer.slowThreshold.Milliseconds()
-	if observation.Outcome == sqlstore.SpanOutcomeSuccess &&
-		!observation.Contended &&
-		observation.WaitMS < thresholdMS &&
-		observation.HoldMS < thresholdMS {
+	fast := !observation.Contended && observation.WaitMS < thresholdMS && observation.HoldMS < thresholdMS
+	// A fast, uncontended span is noise when it succeeded, and also when it
+	// failed after acquiring the lock: that failure is the command's own
+	// error, which the caller already reports (as the JSON error envelope on
+	// stdout under --json). Lock failures and slow or contended spans stay
+	// visible.
+	if fast && (observation.Outcome == sqlstore.SpanOutcomeSuccess ||
+		(observation.Outcome == sqlstore.SpanOutcomeError && observation.Acquired)) {
 		return
 	}
 	observation.Event = "issueops_record_span"

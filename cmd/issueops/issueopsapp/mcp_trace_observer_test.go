@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"issueops/internal/adapter/outbound/issueopsrecord"
 	"issueops/internal/adapter/outbound/sqlstore"
@@ -36,7 +37,10 @@ func TestMCPTraceBindingObservesDirectSQLSpansAndClearsCorrelation(t *testing.T)
 		if valid != (raw != "invalid-private-header") {
 			t.Fatalf("wrong validity for header")
 		}
-		if err := database.WithSpan(ctx, func(context.Context) error { return callbackError }); !errors.Is(err, callbackError) {
+		// A fast failed span is the command's own error and stays silent; a
+		// span held past the slow threshold is actionable telemetry.
+		slowFailure := func(context.Context) error { time.Sleep(issueOpsSlowSpanThreshold); return callbackError }
+		if err := database.WithSpan(ctx, slowFailure); !errors.Is(err, callbackError) {
 			t.Fatal(err)
 		}
 	}

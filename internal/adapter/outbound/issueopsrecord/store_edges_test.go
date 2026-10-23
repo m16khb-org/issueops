@@ -362,6 +362,19 @@ func TestJSONLineObserverEmitsFailedSpansAndKeepsProvidedTimestamp(t *testing.T)
 	}
 }
 
+func TestJSONLineObserverLeavesFastCommandErrorsToTheCaller(t *testing.T) {
+	var output bytes.Buffer
+	observer := NewJSONLineObserver(&output, 100*time.Millisecond)
+	observer.Observe(SpanObservation{Outcome: sqlstore.SpanOutcomeError, Acquired: true, WaitMS: 1, HoldMS: 1})
+	if output.Len() != 0 {
+		t.Fatalf("fast command error inside an acquired span emitted telemetry: %q", output.String())
+	}
+	observer.Observe(SpanObservation{Outcome: sqlstore.SpanOutcomeError, Acquired: true, HoldMS: 100})
+	if !strings.Contains(output.String(), `"event":"issueops_record_span"`) {
+		t.Fatalf("slow failed span not emitted: %q", output.String())
+	}
+}
+
 func TestOptionalMillisecondsClampsNegativeAndKeepsNil(t *testing.T) {
 	if optionalMilliseconds(nil) != nil {
 		t.Fatal("nil duration became non-nil")
