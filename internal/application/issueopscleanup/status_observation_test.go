@@ -68,12 +68,13 @@ func TestStatusServiceOnlyNormalizesSameCycleReadinessErrors(t *testing.T) {
 		{"unclassified failure", "cycle", nil, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			record := model.IssueOpsRecord{ID: "cycle", Repo: "/repo", Phase: model.IssueOpsPhaseDone, IssueURL: "https://github.com/acme/repo/issues/1", RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/2", Labels: []string{"ready"}, Assignees: []string{"owner"}}}
+			record := model.IssueOpsRecord{ID: "cycle", Repo: "/repo", WorktreePath: "/repo.worktrees/cycle", Branch: "cycle", Phase: model.IssueOpsPhaseDone, IssueURL: "https://github.com/acme/repo/issues/1", RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/2", Labels: []string{"ready"}, Assignees: []string{"owner"}}}
+			env := &statusEnvironment{exists: true, branch: "cycle", remotes: "origin"}
 			var calls []string
 			type requestContextKey struct{}
 			ctx := context.WithValue(context.Background(), requestContextKey{}, "request")
 			service := app.StatusService{
-				Records: newCleanupStatusTestStore(record), Structural: app.StructuralStatus{Environment: &statusEnvironment{}},
+				Records: newCleanupStatusTestStore(record), Structural: app.StructuralStatus{Environment: env},
 				Provider: func(name string) (port.IssueProvider, error) {
 					calls = append(calls, "provider")
 					if name != "github" {
@@ -96,6 +97,11 @@ func TestStatusServiceOnlyNormalizesSameCycleReadinessErrors(t *testing.T) {
 			}
 			if !reflect.DeepEqual(calls, []string{"provider", "cwd", "preview"}) {
 				t.Fatalf("calls=%v", calls)
+			}
+			// The finish preview replaces the structural status, so the git
+			// and network ls-remote observations are not repeated.
+			if len(env.calls) != 0 {
+				t.Fatalf("structural observations=%v, want none on the readback path", env.calls)
 			}
 			if tc.wantErr {
 				if status.OK || status.ID != "cycle" {

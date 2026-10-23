@@ -58,10 +58,13 @@ func (s StatusService) Status(ctx context.Context, id string, mergedRequested bo
 	if err != nil {
 		return failed, err
 	}
-	structural := s.Structural.ForRecord(record, model.IssueOpsCleanupStatusRequest{})
 	if !domain.CleanupStatusNeedsMergeReadback(record, mergedRequested) {
-		return structural, nil
+		return s.Structural.ForRecord(record, model.IssueOpsCleanupStatusRequest{}), nil
 	}
+	// The finish preview observes the worktree and remote refs itself and its
+	// result replaces the structural status, which then contributes only the
+	// record's artifact URL: skip the git and network ls-remote observation.
+	structural := domain.BuildCleanupStatus(record, model.IssueOpsCleanupStatusRequest{}, domain.CleanupStatusObservation{})
 	providerName := domain.ResolveRecordProvider(record)
 	if providerName == "" {
 		return failed, fmt.Errorf("cannot determine provider from IssueOps record")
