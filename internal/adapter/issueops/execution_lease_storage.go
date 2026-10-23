@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 
+	"issueops/internal/adapter/outbound/gitexclude"
 	"issueops/internal/contract/issueops"
 )
 
@@ -204,6 +205,9 @@ func createClaimToken(record issueops.IssueOpsRecord) (string, string, error) {
 	if err := secureMkdirAll(record.Execution.Workspace.Root, filepath.Dir(path)); err != nil {
 		return "", "", err
 	}
+	// Best effort: the token must not show up as an untracked change in a
+	// target repo; a failure here only leaves git status noisier.
+	_ = gitexclude.EnsureWorkspaceState(record.Execution.Workspace.Root)
 	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return "", "", err

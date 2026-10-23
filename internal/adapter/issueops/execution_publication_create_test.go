@@ -3,6 +3,8 @@ package issueops
 import (
 	"bytes"
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -44,6 +46,11 @@ func TestPublicationCreateUsesPreparedDomainRulesBeforePersistence(t *testing.T)
 		t.Run(scenario, func(t *testing.T) {
 			root := t.TempDir()
 			fixture := newClaimableExecutionFixture(t, root, "197-create-preparation")
+			// The reviewed change; the claim token under .issueops/state/ is
+			// excluded runtime state, not part of the change set.
+			if err := os.WriteFile(filepath.Join(fixture.worktree, "change.go"), []byte("package change\n"), 0o600); err != nil {
+				t.Fatal(err)
+			}
 			actor := executionActor("codex", "publication-creator")
 			record := fixture.record
 			record.Phase = model.IssueOpsPhasePR

@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"issueops/internal/adapter/outbound/gitexclude"
 	contract "issueops/internal/contract/agentmodel"
 	"issueops/internal/domain/agentmodel"
 	"issueops/internal/domain/repoidentity"
@@ -120,27 +121,7 @@ func WriteLocal(local Local, cfg contract.Config) (excluded bool, err error) {
 
 // EnsureExcluded appends excludeLine to <common-dir>/info/exclude once.
 func EnsureExcluded(commonDir string) (bool, error) {
-	path := filepath.Join(commonDir, "info", "exclude")
-	data, err := os.ReadFile(path)
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return false, fmt.Errorf("%s: %w", path, err)
-	}
-	for line := range strings.SplitSeq(string(data), "\n") {
-		if strings.TrimSpace(line) == excludeLine {
-			return false, nil
-		}
-	}
-	if len(data) > 0 && !bytes.HasSuffix(data, []byte("\n")) {
-		data = append(data, '\n')
-	}
-	data = append(data, excludeLine+"\n"...)
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return false, fmt.Errorf("%s: %w", path, err)
-	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		return false, fmt.Errorf("%s: %w", path, err)
-	}
-	return true, nil
+	return gitexclude.Ensure(commonDir, excludeLine)
 }
 
 // CodexCatalog lists the model slugs in $CODEX_HOME/models_cache.json

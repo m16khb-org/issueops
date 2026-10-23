@@ -1126,7 +1126,8 @@ func forbiddenEdges(edges []dependencyEdge) []dependencyEdge {
 		if (isCore(edge.importer) && isForbiddenCoreInfrastructure(edge.imported)) ||
 			(isAdapter(edge.importer) && isCore(edge.imported) && !isMigratedInboundAdapter(edge.importer)) ||
 			(isAdapter(edge.imported) && !isCompositionRoot(edge.importer) && !isSameCapabilityAdapter(edge.importer, edge.imported) &&
-				!isSharedStorageEngineEdge(edge.importer, edge.imported) && !isProcessLifetimeEdge(edge.importer, edge.imported)) {
+				!isSharedStorageEngineEdge(edge.importer, edge.imported) && !isProcessLifetimeEdge(edge.importer, edge.imported) &&
+				!isGitExcludeEdge(edge.importer, edge.imported)) {
 			forbidden = append(forbidden, edge)
 		}
 	}
@@ -1241,6 +1242,22 @@ func isProcessLifetimeEdge(importer, imported string) bool {
 	}
 	switch importer {
 	case "internal/adapter/issueops", "internal/adapter/provider/providerutil", "internal/adapter/outbound/sqlstore":
+		return true
+	default:
+		return false
+	}
+}
+
+// gitexclude is the one writer of <common-dir>/info/exclude: the adapters that
+// place harness files inside a repository (lease tokens, local model settings)
+// keep them out of git status through it. It holds no capability policy and no
+// state of its own, like processlease.
+func isGitExcludeEdge(importer, imported string) bool {
+	if imported != "internal/adapter/outbound/gitexclude" {
+		return false
+	}
+	switch importer {
+	case "internal/adapter/issueops", "internal/adapter/outbound/issueopslease", "internal/adapter/outbound/agentmodelconfig":
 		return true
 	default:
 		return false

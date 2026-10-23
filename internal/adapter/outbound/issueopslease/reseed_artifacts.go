@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"issueops/internal/adapter/outbound/gitexclude"
 	leaseapp "issueops/internal/application/issueopslease"
 	leasecontract "issueops/internal/contract/issueopslease"
 )
@@ -32,6 +33,9 @@ func (a *ReseedArtifacts) Prepare(_ context.Context, record leasecontract.Record
 	if err := reseedMkdirAll(record.Execution.Workspace.Root, filepath.Dir(path)); err != nil {
 		return leaseapp.ReseedArtifactReceipt{}, err
 	}
+	// Best effort: the token must not show up as an untracked change in a
+	// target repo; a failure here only leaves git status noisier.
+	_ = gitexclude.EnsureWorkspaceState(record.Execution.Workspace.Root)
 	raw := make([]byte, 32)
 	if _, err := rand.Read(raw); err != nil {
 		return leaseapp.ReseedArtifactReceipt{}, err

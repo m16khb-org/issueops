@@ -5541,6 +5541,15 @@
       ]
     },
     {
+      "path": "internal/adapter/outbound/gitexclude/gitexclude.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Ensure",
+        "func EnsureWorkspaceState"
+      ]
+    },
+    {
       "path": "internal/adapter/outbound/issueopsartifact/store_adapter.go",
       "owner": "adapter",
       "task": "T20",
