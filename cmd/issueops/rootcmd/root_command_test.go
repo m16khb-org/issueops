@@ -2,6 +2,7 @@ package rootcmd
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"flag"
 	"strings"
@@ -108,6 +109,41 @@ func TestRunRootCommandTreatsHelpRequestAsSuccess(t *testing.T) {
 	}
 	if stderr.Len() != 0 {
 		t.Fatalf("stderr = %q, want nothing for a help request", stderr.String())
+	}
+}
+
+// An unreported failure under --json is one {"ok":false,"error":...} document
+// on stdout and nothing on stderr, so `--json 2>&1 | jq` parses it; without
+// --json (or with --json only in passthrough argv) it stays a stderr line.
+func TestUnreportedFailureUnderJSONIsOneEnvelopeOnStdout(t *testing.T) {
+	for _, tc := range []struct {
+		args     []string
+		wantJSON bool
+	}{
+		{[]string{"worker", "status", "--json"}, true},
+		{[]string{"worker", "status", "--json=true"}, true},
+		{[]string{"worker", "status"}, false},
+		{[]string{"worker", "run", "--read-only", "--", "tool", "--json"}, false},
+	} {
+		var stdout, stderr bytes.Buffer
+		cmd := testCommand(&stdout, &stderr)
+		cmd.Runners["worker"] = func([]string) error { return errors.New("invalid worker job id") }
+		if code := cmd.Run(tc.args); code != 1 {
+			t.Fatalf("%q: exit code = %d, want 1", tc.args, code)
+		}
+		if !tc.wantJSON {
+			if stdout.Len() != 0 || stderr.String() != "worker: invalid worker job id\n" {
+				t.Fatalf("%q: stdout=%q stderr=%q, want the stderr line", tc.args, stdout.String(), stderr.String())
+			}
+			continue
+		}
+		var envelope struct {
+			OK    bool   `json:"ok"`
+			Error string `json:"error"`
+		}
+		if err := json.Unmarshal(stdout.Bytes(), &envelope); err != nil || envelope.OK || envelope.Error != "worker: invalid worker job id" || stderr.Len() != 0 {
+			t.Fatalf("%q: stdout=%q stderr=%q err=%v", tc.args, stdout.String(), stderr.String(), err)
+		}
 	}
 }
 

@@ -14,7 +14,8 @@
 - 사람이 읽는 기본 출력과 agent가 파싱하는 `--json` 출력을 구분한다.
 - `--json` 출력 field는 snake_case를 사용한다.
 - 실패 시 stderr에는 짧은 설명, JSON 모드에는 machine-readable error code를 포함한다.
-- `--json` 실패는 stdout의 `{"ok":false,"error":...}` 한 문서로만 답한다. 그 오류를 stderr에 다시 쓰지 않는다(`2>&1 | json.load`가 한 문서를 받아야 한다). 오류 envelope을 출력한 명령은 `jsonout.PrintError`나 `jsonout.Reported`로 오류를 표시하고, root command는 표시된 오류를 반복하지 않는다(`cmd/issueops/rootcmd/root_command.go`).
+- `--json` 실패는 stdout의 `{"ok":false,"error":...}` 한 문서로만 답한다. 그 오류를 stderr에 다시 쓰지 않는다(`2>&1 | json.load`가 한 문서를 받아야 한다). 오류 envelope을 출력한 명령은 `jsonout.PrintError`나 `jsonout.Reported`로 오류를 표시하고, root command는 표시된 오류를 반복하지 않는다(`cmd/issueops/rootcmd/root_command.go`). 표시되지 않은 오류는 `--json`(passthrough `--` 앞)이 있으면 root가 `{"ok":false,"error":"<command>: <message>"}`를 stdout에 낸다(`rootcmd.JSONRequested`). 그러므로 결과 DTO를 이미 출력한 명령은 오류를 반드시 표시해야 한다. 실패 결과는 `jsonout.PrintResultError`(DTO에 `error`를 합친다)로, 결과 자체가 판정인 경우(`gates` 미충족, policy 거부, `verify-work`)는 `jsonout.Reported`로 돌려준다.
+- `--help`는 usage에 나열된 모든 명령 경로에서 exit 0과 stdout 출력으로 답한다(`TestEveryListedCommandPathAnswersHelpOnStdout`).
 - record mutation(`intent record`, `phase`, `decision add`, `link-plan` 등)의 `--json` 성공 응답은 `{ok, schema_version, id, phase, branch, worktree_path, updated_at}` 확인 응답이다(`issueopscontract.MutationAck`). 전체 record는 `issueops status --id ID --json`이 돌려준다. `start`도 전체 record를 낸다.
 - `--help`·`-h`·선두 `help`의 usage는 stdout으로 나간다(`issueops X --help | grep`). 알 수 없는 top-level 명령은 전체 usage 대신 한 줄 오류와 가까운 명령 후보를 stderr에 낸다.
 - record 계열 명령의 RECORD_ACTOR_FLAGS는 `cmd/issueops/issueopscli/actorflags` 한 곳에서 선언한다. `execution whoami`의 claim 벡터(receipt 플래그 포함)도 받으며, receipt는 라이브 native ancestry의 한 항목과 세 필드가 모두 맞아야 하고 아니면 ancestry를 비워 fail-closed로 거부된다.

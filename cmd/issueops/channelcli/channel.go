@@ -97,6 +97,9 @@ func runRecv(deps Dependencies, args []string) error {
 		Limit:          *limit,
 	})
 	if *jsonOut {
+		if err != nil {
+			return jsonout.PrintResultError(os.Stdout, result, err)
+		}
 		if printErr := printJSON(result); printErr != nil {
 			return printErr
 		}
@@ -107,6 +110,9 @@ func runRecv(deps Dependencies, args []string) error {
 		return err
 	}
 	if result.TimedOut {
+		if *jsonOut {
+			return jsonout.Reported(TimedOutError{})
+		}
 		return TimedOutError{}
 	}
 	return nil

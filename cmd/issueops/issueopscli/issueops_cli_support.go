@@ -153,9 +153,7 @@ func (cli command) runIssueOpsBranchAwaitLink(args []string) error {
 		issueopscontract.AwaitBranchLinkRequest{ID: *id, Timeout: *timeout})
 	if err != nil {
 		if *jsonOut {
-			if printErr := printJSON(result); printErr != nil {
-				return printErr
-			}
+			return jsonout.PrintResultError(os.Stdout, result, err)
 		}
 		return err
 	}

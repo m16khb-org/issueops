@@ -130,6 +130,9 @@ func runCheck(deps Dependencies, args []string, statusOnly bool) error {
 	}
 	result, err := deps.Check(req)
 	if jsonOut {
+		if err != nil {
+			return jsonout.PrintResultError(os.Stdout, result, classifyCheckError(err))
+		}
 		if printErr := printJSON(result); printErr != nil {
 			return printErr
 		}
@@ -140,7 +143,7 @@ func runCheck(deps Dependencies, args []string, statusOnly bool) error {
 		return classifyCheckError(err)
 	}
 	if !result.Complete {
-		return UnmetError{Unmet: result.TotalUnmet}
+		return reportedIf(jsonOut, UnmetError{Unmet: result.TotalUnmet})
 	}
 	return nil
 }
@@ -158,6 +161,9 @@ func runReport(deps Dependencies, args []string) error {
 		StatusOnly:    true,
 	})
 	if jsonOut {
+		if err != nil {
+			return jsonout.PrintResultError(os.Stdout, result, classifyCheckError(err))
+		}
 		if printErr := printJSON(result); printErr != nil {
 			return printErr
 		}
@@ -168,7 +174,7 @@ func runReport(deps Dependencies, args []string) error {
 		return classifyCheckError(err)
 	}
 	if !result.Complete {
-		return UnmetError{Unmet: result.TotalUnmet}
+		return reportedIf(jsonOut, UnmetError{Unmet: result.TotalUnmet})
 	}
 	return nil
 }
@@ -243,7 +249,7 @@ func runLint(deps Dependencies, args []string) error {
 		printLintText(result)
 	}
 	if !result.Clean {
-		return LintError{Gates: result.GatesWithProblems, Unparsed: len(result.UnparsedLines)}
+		return reportedIf(*jsonOut, LintError{Gates: result.GatesWithProblems, Unparsed: len(result.UnparsedLines)})
 	}
 	return nil
 }
@@ -281,16 +287,24 @@ func classifyCheckError(err error) error {
 
 func printSimpleResult(result any, err error, jsonOut bool) error {
 	if jsonOut {
-		if printErr := printJSON(result); printErr != nil {
-			return printErr
-		}
-	} else if err == nil {
+		return jsonout.PrintResultError(os.Stdout, result, err)
+	}
+	if err == nil {
 		switch value := result.(type) {
 		case gatescontract.InitResult:
 			fmt.Printf("created %s with %d gates\n", value.File, value.GateCount)
 		case gatescontract.AbandonResult:
 			fmt.Printf("recorded ABANDON for %s in %s\n", value.GateID, value.File)
 		}
+	}
+	return err
+}
+
+// reportedIf marks a verdict error as already shown when its JSON result is on
+// stdout: the result carries the verdict, so the root adds nothing.
+func reportedIf(jsonOut bool, err error) error {
+	if jsonOut {
+		return jsonout.Reported(err)
 	}
 	return err
 }

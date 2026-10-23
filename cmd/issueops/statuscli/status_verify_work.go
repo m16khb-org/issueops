@@ -3,6 +3,7 @@ package statuscli
 import (
 	"flag"
 	"fmt"
+	"issueops/cmd/issueops/jsonout"
 	verifyworkapp "issueops/internal/application/verifywork"
 )
 
@@ -29,7 +30,12 @@ func RunVerifyWork(service verifyworkapp.Service, args []string) error {
 		}
 	}
 	if !result.OK {
-		return fmt.Errorf("verify-work found incomplete evidence")
+		incomplete := fmt.Errorf("verify-work found incomplete evidence")
+		if *jsonOut {
+			// The printed evidence matrix is the verdict.
+			return jsonout.Reported(incomplete)
+		}
+		return incomplete
 	}
 	return nil
 }

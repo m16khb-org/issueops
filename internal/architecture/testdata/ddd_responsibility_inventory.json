@@ -238,6 +238,7 @@
         "func repeatedFlag.String",
         "func repeatedStrings.Set",
         "func repeatedStrings.String",
+        "func reportedIf",
         "func runAbandon",
         "func runCheck",
         "func runInit",
@@ -1947,8 +1948,10 @@
         "func IsReported",
         "func Print",
         "func PrintError",
+        "func PrintResultError",
         "func PrintTo",
         "func Reported",
+        "func WithError",
         "func reportedError.Error",
         "func reportedError.Unwrap",
         "type reportedError"
@@ -2400,7 +2403,8 @@
         "func Command.Run",
         "func Command.RunReadOnly",
         "func policyUsage",
-        "func printPolicyEvaluation"
+        "func printPolicyEvaluation",
+        "func reportedIf"
       ]
     },
     {
@@ -2493,6 +2497,7 @@
         "func Command.stdout",
         "func Command.suggest",
         "func HelpRequested",
+        "func JSONRequested",
         "func editDistance",
         "type Command",
         "type Runner"

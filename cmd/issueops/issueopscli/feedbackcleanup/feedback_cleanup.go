@@ -228,12 +228,15 @@ func runOrphanCleanup(args []string, deps Deps) error {
 		result, err = deps.OrphanPreview(context.Background(), request)
 	}
 	if *jsonOut {
-		if printErr := deps.PrintJSON(result); printErr != nil {
+		if err == nil {
+			return deps.PrintJSON(result)
+		}
+		if printErr := deps.PrintJSON(jsonout.WithError(result, err)); printErr != nil {
 			return printErr
 		}
-	} else {
-		printOrphanCleanupResult(result)
+		return jsonout.Reported(err)
 	}
+	printOrphanCleanupResult(result)
 	return err
 }
 

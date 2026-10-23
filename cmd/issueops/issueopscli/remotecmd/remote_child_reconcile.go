@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"issueops/cmd/issueops/issueopscli/actorflags"
+	"issueops/cmd/issueops/jsonout"
 	app "issueops/internal/application/issueopsremote"
 	model "issueops/internal/contract/issueops"
 )
@@ -31,6 +32,7 @@ func (command Command) runRemoteReconcileChild(args []string, deps Deps) error {
 		}{result, message}); e != nil {
 			return e
 		}
+		return jsonout.Reported(err)
 	} else if err == nil {
 		fmt.Printf("child operation %s: %s (preview=%v)\n", result.OperationID, result.ChildURL, result.WouldAdopt)
 	}

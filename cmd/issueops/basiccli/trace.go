@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"issueops/cmd/issueops/jsonout"
 	issueopscontract "issueops/internal/contract/issueops"
 	tracecontract "issueops/internal/contract/trace"
 	"os"
@@ -104,10 +105,9 @@ func (command Command) runTraceAnalyze(args []string) error {
 	result, err := command.Trace.Analyze(tracecontract.TraceAnalyzeRequest{Input: *input, InputFormat: *inputFormat})
 	if err != nil {
 		if *jsonOut {
-			_ = printJSON(result)
-		} else {
-			traceUsage()
+			return jsonout.PrintResultError(os.Stdout, result, err)
 		}
+		traceUsage()
 		return err
 	}
 	if *jsonOut {

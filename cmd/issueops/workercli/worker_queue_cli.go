@@ -4,6 +4,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
+
+	"issueops/cmd/issueops/jsonout"
 )
 
 func (command Command) RunEnqueue(args []string) error {
@@ -16,7 +19,7 @@ func (command Command) RunEnqueue(args []string) error {
 	}
 	job, err := command.Service.Enqueue(context.Background(), *kind, *payload)
 	if *jsonOut {
-		_ = printJSON(job)
+		return jsonout.PrintResultError(os.Stdout, job, err)
 	}
 	if err == nil && !*jsonOut {
 		fmt.Printf("queued %s %s\n", job.ID, job.Kind)
@@ -33,7 +36,7 @@ func (command Command) RunStatus(args []string) error {
 	}
 	job, err := command.Service.Read(*id)
 	if *jsonOut {
-		_ = printJSON(job)
+		return jsonout.PrintResultError(os.Stdout, job, err)
 	}
 	if err == nil && !*jsonOut {
 		fmt.Printf("%s %s\n", job.ID, job.Status)
@@ -49,7 +52,7 @@ func (command Command) RunList(args []string) error {
 	}
 	result, err := command.Service.List()
 	if *jsonOut {
-		_ = printJSON(result)
+		return jsonout.PrintResultError(os.Stdout, result, err)
 	}
 	if err == nil && !*jsonOut {
 		for _, job := range result.Jobs {
@@ -67,7 +70,7 @@ func (command Command) RunCleanupStuck(args []string) error {
 	}
 	result, err := command.Service.DetectStuck(context.Background())
 	if *jsonOut {
-		_ = printJSON(result)
+		return jsonout.PrintResultError(os.Stdout, result, err)
 	}
 	if err == nil && !*jsonOut {
 		for _, job := range result.Jobs {
@@ -86,7 +89,7 @@ func (command Command) RunCancel(args []string) error {
 	}
 	job, err := command.Service.Cancel(context.Background(), *id)
 	if *jsonOut {
-		_ = printJSON(job)
+		return jsonout.PrintResultError(os.Stdout, job, err)
 	}
 	if err == nil && !*jsonOut {
 		fmt.Printf("cancelled %s\n", job.ID)

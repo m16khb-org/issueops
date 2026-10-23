@@ -3,6 +3,7 @@ package policycli
 import (
 	"flag"
 	"fmt"
+	"issueops/cmd/issueops/jsonout"
 	policydomain "issueops/internal/contract/policy"
 	"os"
 )
@@ -72,9 +73,18 @@ func (command Command) FakeRun(args []string) error {
 		}
 	}
 	if !result.Policy.Allowed {
-		return policydomain.PolicyDeniedError{Reasons: result.Policy.DenyReasons}
+		return reportedIf(jsonOut, policydomain.PolicyDeniedError{Reasons: result.Policy.DenyReasons})
 	}
 	return nil
+}
+
+// reportedIf marks a verdict error as already shown when the JSON result that
+// carries it (deny reasons, exit code) is on stdout.
+func reportedIf(jsonOut bool, err error) error {
+	if jsonOut {
+		return jsonout.Reported(err)
+	}
+	return err
 }
 
 func (command Command) RunReadOnly(args []string) error {
@@ -100,10 +110,10 @@ func (command Command) RunReadOnly(args []string) error {
 		}
 	}
 	if !result.Policy.Allowed {
-		return policydomain.PolicyDeniedError{Reasons: result.Policy.DenyReasons}
+		return reportedIf(jsonOut, policydomain.PolicyDeniedError{Reasons: result.Policy.DenyReasons})
 	}
 	if result.ExitCode != 0 {
-		return fmt.Errorf("command exited %d", result.ExitCode)
+		return reportedIf(jsonOut, fmt.Errorf("command exited %d", result.ExitCode))
 	}
 	return nil
 }
@@ -115,13 +125,10 @@ func (command Command) AuditPolicy(args []string) error {
 	}
 	result, err := command.Audit.Audit(req)
 	if jsonOut {
-		if printErr := printJSON(result); printErr != nil {
-			return printErr
-		}
-	} else {
-		printPolicyEvaluation(result.Policy)
-		fmt.Printf("audit log: %s\n", result.LogPath)
+		return jsonout.PrintResultError(os.Stdout, result, err)
 	}
+	printPolicyEvaluation(result.Policy)
+	fmt.Printf("audit log: %s\n", result.LogPath)
 	return err
 }
 

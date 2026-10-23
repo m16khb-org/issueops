@@ -117,7 +117,13 @@ func (c Command) runSubcommand(name string, args []string) (bool, int) {
 			return true, 0
 		}
 		if !jsonout.IsReported(err) {
-			fmt.Fprintln(c.stderr(), name+":", err)
+			// Under --json the failure is the one JSON document on stdout, so
+			// `--json 2>&1 | jq` parses it; otherwise a plain stderr line.
+			if JSONRequested(args) {
+				_ = jsonout.PrintTo(c.stdout(), map[string]any{"ok": false, "error": name + ": " + err.Error()})
+			} else {
+				fmt.Fprintln(c.stderr(), name+":", err)
+			}
 		}
 		return true, c.errorExitCode(name, err)
 	}
@@ -136,6 +142,20 @@ func HelpRequested(args []string) bool {
 		case "--":
 			return false
 		case "-h", "-help", "--help":
+			return true
+		}
+	}
+	return false
+}
+
+// JSONRequested reports whether args ask for JSON output: a --json flag (or
+// --json=true) before any "--" passthrough separator.
+func JSONRequested(args []string) bool {
+	for _, arg := range args {
+		switch arg {
+		case "--":
+			return false
+		case "--json", "-json", "--json=true", "-json=true":
 			return true
 		}
 	}

@@ -4,6 +4,7 @@
 package jsonout
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
@@ -54,4 +55,37 @@ func PrintError(err error) error {
 		return printErr
 	}
 	return Reported(err)
+}
+
+// PrintResultError prints a failed command's result WithError and returns err
+// marked as reported, so `--json 2>&1` sees one document that names the
+// failure. A nil err prints value unchanged.
+func PrintResultError(w io.Writer, value any, err error) error {
+	if err == nil {
+		return PrintTo(w, value)
+	}
+	if printErr := PrintTo(w, WithError(value, err)); printErr != nil {
+		return printErr
+	}
+	return Reported(err)
+}
+
+// WithError returns value's JSON object with err in its "error" field (an
+// existing non-empty "error" is kept) and "ok" defaulting to false.
+func WithError(value any, err error) map[string]any {
+	fields := map[string]any{}
+	if data, marshalErr := json.Marshal(value); marshalErr == nil {
+		decoder := json.NewDecoder(bytes.NewReader(data))
+		decoder.UseNumber()
+		if decoder.Decode(&fields) != nil || fields == nil {
+			fields = map[string]any{}
+		}
+	}
+	if _, ok := fields["ok"]; !ok {
+		fields["ok"] = false
+	}
+	if existing, _ := fields["error"].(string); existing == "" && err != nil {
+		fields["error"] = err.Error()
+	}
+	return fields
 }

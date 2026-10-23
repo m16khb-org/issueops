@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"issueops/cmd/issueops/jsonout"
 	policy "issueops/internal/contract/policy"
 	"os"
 	"time"
@@ -80,7 +81,12 @@ func (command Command) RunReadOnly(args []string) error {
 	}
 	job, err := command.Service.RunReadOnly(context.Background(), *kind, *payload, req)
 	if *jsonOut {
-		_ = printJSON(job)
+		if err != nil {
+			return jsonout.PrintResultError(os.Stdout, job, err)
+		}
+		if printErr := printJSON(job); printErr != nil {
+			return printErr
+		}
 	}
 	if err == nil && !*jsonOut {
 		fmt.Printf("%s %s exit=%d\n", job.ID, job.Status, job.Result.ExitCode)
@@ -95,10 +101,19 @@ func (command Command) RunReadOnly(args []string) error {
 		return err
 	}
 	if job.Result != nil && !job.Result.Policy.Allowed {
-		return policy.PolicyDeniedError{Reasons: job.Result.Policy.DenyReasons}
+		denied := error(policy.PolicyDeniedError{Reasons: job.Result.Policy.DenyReasons})
+		if *jsonOut {
+			return jsonout.Reported(denied)
+		}
+		return denied
 	}
 	if job.Result != nil && job.Result.ExitCode != 0 {
-		return fmt.Errorf("worker read-only command exited %d", job.Result.ExitCode)
+		exited := fmt.Errorf("worker read-only command exited %d", job.Result.ExitCode)
+		if *jsonOut {
+			// The printed job carries the exit code.
+			return jsonout.Reported(exited)
+		}
+		return exited
 	}
 	return nil
 }
