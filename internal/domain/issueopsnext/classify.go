@@ -436,7 +436,7 @@ func classifyPRRefresh(in Input, decision Decision) (Decision, bool) {
 	prHead, head := strings.TrimSpace(in.Record.PRHead), strings.TrimSpace(in.WorktreeHead)
 	if in.Local != nil && prHead != "" && head != "" && prHead != head {
 		decision.Stage = stage(issueopsnextcontract.StageCommitPush, 8)
-		decision.Missing = []string{"pr_head"}
+		decision.Missing = []string{"pr_head_stale"}
 		decision.NextCommand = "issueops phase --id " + id + " --to pr $ACTOR_FLAGS --json"
 		return decision, true
 	}
