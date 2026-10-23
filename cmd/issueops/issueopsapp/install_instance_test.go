@@ -2,11 +2,12 @@ package issueopsapp
 
 import (
 	"context"
-	"issueops/cmd/issueops/installcli"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"issueops/cmd/issueops/installcli"
 )
 
 func TestInstallRootsAndAllHostReadbacksStayIsolated(t *testing.T) {

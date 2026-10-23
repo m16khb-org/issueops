@@ -1,12 +1,13 @@
 package issueopsapp
 
 import (
-	augmentcontract "issueops/internal/contract/selfaugment"
-	"issueops/internal/testsupport"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
+
+	augmentcontract "issueops/internal/contract/selfaugment"
+	"issueops/internal/testsupport"
 )
 
 func makeGitRepoForContract(t *testing.T) string {

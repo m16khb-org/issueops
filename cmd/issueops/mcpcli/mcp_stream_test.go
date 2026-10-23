@@ -3,11 +3,12 @@ package mcpcli
 import (
 	"context"
 	"io"
-	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
-	issueopscontract "issueops/internal/contract/issueops"
 	"net"
 	"testing"
 	"time"
+
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
+	issueopscontract "issueops/internal/contract/issueops"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )

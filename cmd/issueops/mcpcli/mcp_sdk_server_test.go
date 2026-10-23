@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
-	issueopscontract "issueops/internal/contract/issueops"
 	"strings"
 	"sync"
 	"testing"
+
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
+	issueopscontract "issueops/internal/contract/issueops"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )

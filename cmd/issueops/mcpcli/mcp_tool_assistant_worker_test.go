@@ -2,9 +2,10 @@ package mcpcli
 
 import (
 	"encoding/json"
-	workercontract "issueops/internal/contract/worker"
 	"strings"
 	"testing"
+
+	workercontract "issueops/internal/contract/worker"
 )
 
 func TestHandleAssistantWorkerMCPToolCallCoversLocalAssistantPayloads(t *testing.T) {

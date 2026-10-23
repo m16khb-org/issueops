@@ -108,11 +108,12 @@ func TestHandleToolCallRejectsMissingAndUnknownStateWriteArguments(t *testing.T)
 		`{"name":"state_write","arguments":{"key":"schema-reject","content":7}}`,
 	} {
 		result, protocolErr := testCallSDKTool(t, json.RawMessage(raw))
-		if protocolErr == nil || protocolErr.Code != -32602 {
+		envelope, _ := result.(map[string]any)
+		if protocolErr != nil || envelope["isError"] != true {
 			t.Fatalf("call %s result=%#v error=%v", raw, result, protocolErr)
 		}
-		if !strings.Contains(string(protocolErr.Data), "invalid_tool_arguments") {
-			t.Fatalf("call %s diagnostics=%s", raw, protocolErr.Data)
+		if text := extractSingleTextResult(t, result); !strings.Contains(text, "invalid_tool_arguments") {
+			t.Fatalf("call %s diagnostics=%s", raw, text)
 		}
 	}
 }

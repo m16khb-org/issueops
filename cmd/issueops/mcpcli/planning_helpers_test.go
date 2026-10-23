@@ -3,9 +3,10 @@ package mcpcli
 import (
 	"context"
 	"encoding/json"
+	"time"
+
 	docsapp "issueops/internal/application/docs"
 	statecontract "issueops/internal/contract/state"
-	"time"
 
 	"issueops/internal/adapter/augmentation"
 	"issueops/internal/adapter/docs"

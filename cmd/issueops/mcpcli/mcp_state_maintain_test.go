@@ -2,9 +2,10 @@ package mcpcli
 
 import (
 	"context"
+	"testing"
+
 	statestore "issueops/internal/adapter/outbound/state"
 	statecontract "issueops/internal/contract/state"
-	"testing"
 )
 
 func TestMCPStateMaintain(t *testing.T) {

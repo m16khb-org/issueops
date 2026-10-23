@@ -3,6 +3,9 @@ package mcpcli
 import (
 	"context"
 	"encoding/json"
+	"os"
+	"time"
+
 	"issueops/cmd/issueops/mcpcli/resources"
 	"issueops/internal/adapter/docs"
 	statestore "issueops/internal/adapter/outbound/state"
@@ -10,8 +13,6 @@ import (
 	docsapp "issueops/internal/application/docs"
 	stateapp "issueops/internal/application/state"
 	statecontract "issueops/internal/contract/state"
-	"os"
-	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 )

@@ -2,9 +2,10 @@ package mcpcli
 
 import (
 	"fmt"
+	"path/filepath"
+
 	statestore "issueops/internal/adapter/outbound/state"
 	model "issueops/internal/contract/issueops"
-	"path/filepath"
 )
 
 func issueOpsStateRootForTest() string {

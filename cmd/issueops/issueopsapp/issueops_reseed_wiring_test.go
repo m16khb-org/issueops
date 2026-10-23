@@ -3,11 +3,12 @@ package issueopsapp
 import (
 	"context"
 	"fmt"
-	replacementmodel "issueops/internal/contract/issueops"
-	shelltoken "issueops/internal/domain/shelltoken"
 	"os"
 	"strings"
 	"testing"
+
+	replacementmodel "issueops/internal/contract/issueops"
+	shelltoken "issueops/internal/domain/shelltoken"
 
 	"issueops/cmd/issueops/issueopscli/executioncmd"
 	"issueops/internal/adapter/issueops"

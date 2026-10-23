@@ -2,11 +2,12 @@ package issueopsapp
 
 import (
 	"context"
+	"time"
+
 	adapter "issueops/internal/adapter/issueops"
 	branchpreflight "issueops/internal/adapter/preflight"
 	app "issueops/internal/application/issueopsbranch"
 	contract "issueops/internal/contract/issueops"
-	"time"
 )
 
 func startIssueOpsFixture(stateRoot string, req contract.IssueOpsStartRequest) (contract.IssueOpsRecord, error) {

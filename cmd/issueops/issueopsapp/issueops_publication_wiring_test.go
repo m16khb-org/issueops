@@ -2,9 +2,10 @@ package issueopsapp
 
 import (
 	"context"
-	executionissue "issueops/internal/contract/executionissue"
 	"testing"
 	"time"
+
+	executionissue "issueops/internal/contract/executionissue"
 
 	issueopscontract "issueops/internal/contract/issueops"
 

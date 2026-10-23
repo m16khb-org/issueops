@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -13,6 +12,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 
 	"issueops/internal/adapter/channel"
 	issueopsadapter "issueops/internal/adapter/issueops"

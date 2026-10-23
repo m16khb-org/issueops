@@ -3,11 +3,12 @@ package issueopsapp
 import (
 	"context"
 	"errors"
-	shelltoken "issueops/internal/domain/shelltoken"
 	"os"
 	"strings"
 	"testing"
 	"time"
+
+	shelltoken "issueops/internal/domain/shelltoken"
 
 	"issueops/cmd/issueops/issueopscli/executioncmd"
 	issueopscore "issueops/internal/adapter/issueops"

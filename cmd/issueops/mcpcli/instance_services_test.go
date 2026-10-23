@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"strings"
 	"testing"
+
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 
 	"issueops/cmd/issueops/mcpcli/resources"
 	commitapp "issueops/internal/application/commitsuggest"

@@ -2,11 +2,12 @@ package issueopsapp
 
 import (
 	"context"
-	traceapp "issueops/internal/application/trace"
-	tracecontract "issueops/internal/contract/trace"
 	"os"
 	"path/filepath"
 	"testing"
+
+	traceapp "issueops/internal/application/trace"
+	tracecontract "issueops/internal/contract/trace"
 )
 
 func TestTraceServicesKeepCapturedStateAndFilePriority(t *testing.T) {

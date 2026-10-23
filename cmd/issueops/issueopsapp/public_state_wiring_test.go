@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"issueops/internal/adapter/outbound/sqlstore"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -14,7 +12,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
+	"issueops/internal/adapter/outbound/sqlstore"
 
 	"issueops/cmd/issueops/mcpcli"
 	"issueops/cmd/issueops/statecli"
@@ -136,7 +134,7 @@ func TestPublicStateRefusalAndMissingReadsDoNotCreateStores(t *testing.T) {
 		`{"name":"state_read","arguments":{"key":"missing"}}`,
 		`{"name":"state_prune","arguments":{"max_age":"0s","confirm":true}}`,
 	} {
-		if _, err := callSDKTool(t, json.RawMessage(args), deps); err == nil {
+		if _, refused := envelopeRefusal(callSDKTool(t, json.RawMessage(args), deps)); !refused {
 			t.Fatalf("request accepted: %s", args)
 		}
 	}
@@ -172,15 +170,13 @@ func TestPublicStateUnknownSchemaIsRefusedWithoutRewriting(t *testing.T) {
 			if err := statecli.Run(cli, []string{"read", "--key", "future"}); err == nil || err.Error() != "invalid state" {
 				t.Fatalf("CLI schema refusal: %v", err)
 			}
-			_, rpcErr := callSDKTool(t, json.RawMessage(`{"name":"state_read","arguments":{"key":"future"}}`), deps)
-			if rpcErr == nil || rpcErr.Code != -32602 || string(rpcErr.Data) != `"invalid state"` {
-				t.Fatalf("MCP schema refusal: %+v", rpcErr)
+			// The model sees the generic refusal text, never a schema detail.
+			if text, refused := envelopeRefusal(callSDKTool(t, json.RawMessage(`{"name":"state_read","arguments":{"key":"future"}}`), deps)); !refused || !strings.Contains(text, "invalid state") {
+				t.Fatalf("MCP schema refusal: %q %v", text, refused)
 			}
 			session := startHistoryMCPTestSession(t, deps)
-			_, err = session.CallTool(context.Background(), &mcp.CallToolParams{Name: "state_read", Arguments: map[string]any{"key": "future"}})
-			var protocolErr *jsonrpc.Error
-			if !errors.As(err, &protocolErr) || protocolErr.Code != -32602 || string(protocolErr.Data) != `"invalid state"` {
-				t.Fatalf("SDK schema refusal: %v (%+v)", err, protocolErr)
+			if text, refused := toolRefusal(session.CallTool(context.Background(), &mcp.CallToolParams{Name: "state_read", Arguments: map[string]any{"key": "future"}})); !refused || !strings.Contains(text, "invalid state") {
+				t.Fatalf("SDK schema refusal: %q %v", text, refused)
 			}
 			doctor, err := cli.Doctor()
 			if err != nil || doctor.Healthy || len(doctor.Issues) != 1 || doctor.Issues[0].Code != "invalid_state" {

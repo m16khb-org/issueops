@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -76,9 +77,15 @@ func TestSDKInputValidationParallelNestedProperties(t *testing.T) {
 			t.Run(raw, func(t *testing.T) {
 				t.Parallel()
 				req := &mcp.CallToolRequest{Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(raw)}}
-				_, err := handler(t.Context(), req)
-				if (err == nil) != (raw == `{"nested":{"value":1}}`) {
-					t.Fatalf("unexpected validation result: %v", err)
+				result, err := handler(t.Context(), req)
+				// Invalid arguments come back as an isError result naming the
+				// diagnostics, not as a protocol error (MCP 2025-11-25).
+				rejected := err != nil || result.IsError
+				if rejected != (raw != `{"nested":{"value":1}}`) {
+					t.Fatalf("unexpected validation result: %+v %v", result, err)
+				}
+				if rejected && !strings.Contains(toolResultText(result), "invalid_tool_arguments") {
+					t.Fatalf("rejection does not name the diagnostics: %s", toolResultText(result))
 				}
 			})
 		}

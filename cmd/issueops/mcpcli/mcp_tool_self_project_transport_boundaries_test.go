@@ -46,7 +46,7 @@ func TestHTTPAccessLogRecordsToolOutcomePerResultKind(t *testing.T) {
 	}{
 		{"worker_list", map[string]any{}, "tool=worker_list outcome=ok"},
 		{"project_docs_route", map[string]any{"repo": t.TempDir()}, "tool=project_docs_route outcome=tool_error"},
-		{"worker_status", map[string]any{"id": "../bad"}, "tool=worker_status outcome=protocol_error"},
+		{"worker_status", map[string]any{"id": "../bad"}, "tool=worker_status outcome=tool_error"},
 	}
 	for _, tc := range tests {
 		if _, _, _, err := server.callTool(t.Context(), revisionInitialize, tc.tool, tc.args, nil); err != nil {

@@ -3,7 +3,6 @@ package issueopsapp
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -19,7 +18,6 @@ import (
 	contract "issueops/internal/contract/selfaugment"
 	statecontract "issueops/internal/contract/state"
 
-	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -118,15 +116,12 @@ func TestSelfWorkflowPromotionRefusesFailedAndUnknownSummaryWithoutWriting(t *te
 	}
 	deps := mcpcli.MCPDependencies{Catalog: mcpcatalog.Build(), SelfState: service}
 	params, _ := json.Marshal(mcpcli.MCPToolCall{Name: "self_verify_promote", Arguments: map[string]any{"from_key": "failed", "baseline_key": "forbidden", "confirm": true}})
-	_, rpcErr := callSDKTool(t, params, deps)
-	if rpcErr == nil || rpcErr.Code != -32602 || !strings.Contains(string(rpcErr.Data), "refusing to promote") {
-		t.Fatalf("MCP gate refused incorrectly: %+v", rpcErr)
+	if text, refused := envelopeRefusal(callSDKTool(t, params, deps)); !refused || !strings.Contains(text, "refusing to promote") {
+		t.Fatalf("MCP gate refused incorrectly: %q %v", text, refused)
 	}
 	session := startHistoryMCPTestSession(t, deps)
-	_, err = session.CallTool(context.Background(), &mcp.CallToolParams{Name: "self_verify_promote", Arguments: map[string]any{"from_key": "failed", "baseline_key": "forbidden", "confirm": true}})
-	var sdkErr *jsonrpc.Error
-	if !errors.As(err, &sdkErr) || sdkErr.Code != -32602 || !strings.Contains(string(sdkErr.Data), "refusing to promote") {
-		t.Fatalf("SDK gate refused incorrectly: %v", err)
+	if text, refused := toolRefusal(session.CallTool(context.Background(), &mcp.CallToolParams{Name: "self_verify_promote", Arguments: map[string]any{"from_key": "failed", "baseline_key": "forbidden", "confirm": true}})); !refused || !strings.Contains(text, "refusing to promote") {
+		t.Fatalf("SDK gate refused incorrectly: %q %v", text, refused)
 	}
 	if err := promotecmd.Run([]string{"--from-key", "failed", "--baseline-key", "forbidden", "--confirm", "--json"}, promotecmd.Deps{Promote: func(from, to string, confirm, allowFailed bool) (contract.SelfAugmentPromoteResult, error) {
 		return service.Promote(context.Background(), from, to, confirm, allowFailed)

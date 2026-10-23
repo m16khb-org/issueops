@@ -14,6 +14,47 @@ import (
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 )
 
+// toolRefusal reports whether an SDK tool call was refused and the text the
+// model sees: a protocol error's message and data, or an isError result's
+// text (tool failures are isError results since MCP 2025-11-25).
+func toolRefusal(result *mcp.CallToolResult, err error) (string, bool) {
+	var protocolErr *jsonrpc.Error
+	if errors.As(err, &protocolErr) {
+		return protocolErr.Message + " " + string(protocolErr.Data), true
+	}
+	if err != nil {
+		return err.Error(), true
+	}
+	if result == nil || !result.IsError {
+		return "", false
+	}
+	text := ""
+	for _, item := range result.Content {
+		if content, ok := item.(*mcp.TextContent); ok {
+			text += content.Text
+		}
+	}
+	return text, true
+}
+
+// envelopeRefusal is toolRefusal for callSDKTool's envelope.
+func envelopeRefusal(envelope any, err *jsonrpc.Error) (string, bool) {
+	if err != nil {
+		return err.Message + " " + string(err.Data), true
+	}
+	result, _ := envelope.(map[string]any)
+	if isError, _ := result["isError"].(bool); !isError {
+		return "", false
+	}
+	text := ""
+	content, _ := result["content"].([]map[string]any)
+	for _, item := range content {
+		value, _ := item["text"].(string)
+		text += value
+	}
+	return text, true
+}
+
 func serveMCPStreamContext(ctx context.Context, input io.Reader, output io.Writer, diagnostics io.Writer) error {
 	return mcpcli.ServeMCPStreamContextWithDependencies(ctx, input, output, diagnostics, issueOpsMCPDependencies())
 }

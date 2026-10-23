@@ -3,10 +3,11 @@ package mcpcli
 import (
 	"context"
 	"encoding/json"
-	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
-	model "issueops/internal/contract/channel"
 	"strings"
 	"testing"
+
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
+	model "issueops/internal/contract/channel"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )

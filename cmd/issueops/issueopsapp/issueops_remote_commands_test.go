@@ -3,11 +3,12 @@ package issueopsapp
 import (
 	"context"
 	"errors"
-	executionissue "issueops/internal/contract/executionissue"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	executionissue "issueops/internal/contract/executionissue"
 
 	core "issueops/internal/adapter/issueops"
 	application "issueops/internal/application/issueopsremote"

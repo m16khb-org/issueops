@@ -2,12 +2,13 @@ package issueopsapp
 
 import (
 	"context"
-	"issueops/internal/adapter/issueops"
-	issueopscontract "issueops/internal/contract/issueops"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"issueops/internal/adapter/issueops"
+	issueopscontract "issueops/internal/contract/issueops"
 )
 
 func seedIssueOpsExecutionContract(t *testing.T, repo, branch string) string {

@@ -2,10 +2,11 @@ package mcpcli
 
 import (
 	"encoding/json"
-	workercontract "issueops/internal/contract/worker"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	workercontract "issueops/internal/contract/worker"
 )
 
 func TestMCPWorkerRunReadOnlyAllowsGitStatus(t *testing.T) {

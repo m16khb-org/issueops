@@ -6,15 +6,16 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"issueops/internal/adapter/issueops"
-	commandparsecontract "issueops/internal/contract/commandparse"
-	issueopscontract "issueops/internal/contract/issueops"
-	shelltoken "issueops/internal/domain/shelltoken"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"issueops/internal/adapter/issueops"
+	commandparsecontract "issueops/internal/contract/commandparse"
+	issueopscontract "issueops/internal/contract/issueops"
+	shelltoken "issueops/internal/domain/shelltoken"
 )
 
 func TestCurrentRelayReleasedReseedGeneratedCommandDogfood(t *testing.T) {

@@ -1,13 +1,14 @@
 package issueopsapp
 
 import (
+	"os"
+	"path/filepath"
+	"testing"
+
 	"issueops/cmd/issueops/hookcli"
 	"issueops/cmd/issueops/hookcli/hookcatalog"
 	pathutil "issueops/cmd/issueops/pathutil"
 	hookcontract "issueops/internal/contract/hookprompt"
-	"os"
-	"path/filepath"
-	"testing"
 )
 
 func TestResolveTarget(t *testing.T) {

@@ -3,10 +3,11 @@ package mcpcli
 import (
 	"context"
 	"encoding/json"
-	verifyapp "issueops/internal/application/selfverify"
-	augmentcontract "issueops/internal/contract/selfaugment"
 	"strings"
 	"testing"
+
+	verifyapp "issueops/internal/application/selfverify"
+	augmentcontract "issueops/internal/contract/selfaugment"
 )
 
 func TestHandleSelfLoopMCPToolCallCoversLocalPayloads(t *testing.T) {

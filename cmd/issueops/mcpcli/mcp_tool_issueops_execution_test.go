@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"os"
 	"reflect"
 	"strings"
 	"testing"
+
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 
 	"issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"

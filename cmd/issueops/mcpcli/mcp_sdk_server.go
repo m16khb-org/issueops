@@ -70,10 +70,16 @@ func sdkToolHandlerWithContext(
 			return nil, inputErr
 		}
 		if validationErr := validateMCPToolArguments(input, toolName, args); validationErr != nil {
+			if result, ok := toolExecutionError(validationErr); ok {
+				return result, nil
+			}
 			return nil, validationErr
 		}
 		outcome := groupHandler(ctx, MCPToolCall{Name: toolName, Arguments: args})
 		if outcome.Err != nil {
+			if result, ok := toolExecutionError(outcome.Err); ok {
+				return result, nil
+			}
 			return nil, outcome.Err
 		}
 		if outcome.Direct {
@@ -96,6 +102,40 @@ func sdkToolHandlerWithContext(
 		}
 		return result, nil
 	}
+}
+
+// toolExecutionError turns a tool's own failure into an isError result, as
+// MCP 2025-11-25 (SEP-1303) asks for input validation and business errors:
+// hosts show the model only a JSON-RPC error's message ("Invalid params"),
+// dropping data that names the missing field or the reason, so the model
+// cannot correct the call. Unknown tools and internal errors (-32603) stay
+// protocol errors.
+func toolExecutionError(err *jsonrpc.Error) (*mcp.CallToolResult, bool) {
+	if (err.Code != -32602 && err.Code != -32000) || err.Message == "Unknown tool" {
+		return nil, false
+	}
+	var payload any
+	var data any
+	if len(err.Data) > 0 && json.Unmarshal(err.Data, &data) == nil {
+		switch value := data.(type) {
+		case map[string]any:
+			if _, ok := value["ok"]; ok {
+				payload = value
+			} else {
+				payload = map[string]any{"ok": false, "error": err.Message, "detail": value}
+			}
+		case string:
+			payload = map[string]any{"ok": false, "error": err.Message + ": " + value}
+		}
+	}
+	if payload == nil {
+		payload = map[string]any{"ok": false, "error": err.Message}
+	}
+	text, marshalErr := compactJSON(payload)
+	if marshalErr != nil {
+		return nil, false
+	}
+	return &mcp.CallToolResult{IsError: true, Content: []mcp.Content{&mcp.TextContent{Text: string(text)}}}, true
 }
 
 // decodeSDKToolArguments decodes the raw call arguments; absent or null

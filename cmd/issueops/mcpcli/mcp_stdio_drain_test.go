@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"strings"
 	"testing"
 	"time"
+
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 )
 
 // host나 셸 파이프라인이 요청을 보낸 직후 stdin을 닫아도, 이미 받은 요청의 응답은

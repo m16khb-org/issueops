@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"strings"
 	"testing"
 
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
+
 	app "issueops/internal/application/apidoc"
 
-	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -70,27 +70,16 @@ func TestAPIDocDirectAndSDKKeepServicesAndGateErrors(t *testing.T) {
 				direct, rpcErr := callSDKTool(t, raw, deps[i])
 				sdk, err := sessions[i].CallTool(context.Background(), &mcp.CallToolParams{Name: tool, Arguments: args})
 				failedIO := strings.HasSuffix(mode, "-io")
-				var sdkText string
-				if failedIO {
-					var protocolErr *jsonrpc.Error
-					if rpcErr == nil || rpcErr.Code != -32000 || !errors.As(err, &protocolErr) || protocolErr.Code != -32000 {
-						t.Fatalf("%s direct=%v sdk=%v", mode, rpcErr, err)
-					}
-					encoded, _ := json.Marshal(protocolErr)
-					sdkText = string(encoded)
-				} else {
-					if rpcErr != nil || err != nil || sdk.IsError {
-						t.Fatalf("%s direct=%v sdk=%+v err=%v", mode, rpcErr, sdk, err)
-					}
-					sdkText = toolResultText(sdk)
+				if rpcErr != nil || err != nil {
+					t.Fatalf("%s direct=%v sdk=%v", mode, rpcErr, err)
 				}
-				var text string
-				if rpcErr != nil {
-					bytes, _ := json.Marshal(rpcErr)
-					text = string(bytes)
-				} else {
-					text = extractSingleTextResult(t, direct)
+				// A failed API doc run is a tool execution error the model can
+				// read, not a protocol error (MCP 2025-11-25).
+				if sdk.IsError != failedIO {
+					t.Fatalf("%s sdk isError=%v want %v: %+v", mode, sdk.IsError, failedIO, sdk)
 				}
+				sdkText := toolResultText(sdk)
+				text := extractSingleTextResult(t, direct)
 				for _, output := range []string{text, sdkText} {
 					if !strings.Contains(output, owners[i]) || strings.Contains(output, owners[1-i]) {
 						t.Fatalf("%s wrong instance: %s", mode, output)

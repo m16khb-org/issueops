@@ -2,11 +2,12 @@ package issueopsapp
 
 import (
 	"encoding/json"
-	"issueops/cmd/issueops/issueopscli"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"issueops/cmd/issueops/issueopscli"
 
 	"issueops/internal/adapter/outbound/sqlstore"
 	issueopsdomain "issueops/internal/domain/issueops"

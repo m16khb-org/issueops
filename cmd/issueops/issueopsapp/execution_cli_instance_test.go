@@ -3,13 +3,14 @@ package issueopsapp
 import (
 	"context"
 	"encoding/json"
+	"os"
+	"strings"
+	"testing"
+
 	"issueops/cmd/issueops/issueopscli"
 	core "issueops/internal/adapter/issueops"
 	model "issueops/internal/contract/issueops"
 	"issueops/internal/testsupport"
-	"os"
-	"strings"
-	"testing"
 )
 
 func TestExecutionCLIInstancesReadTheirCapturedGeneration(t *testing.T) {

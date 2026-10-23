@@ -1,13 +1,14 @@
 package mcpcli
 
 import (
+	"path/filepath"
+	"time"
+
 	"issueops/internal/adapter/channel"
 	issueopsadapter "issueops/internal/adapter/issueops"
 	"issueops/internal/adapter/outbound/sqlstore"
 	statestore "issueops/internal/adapter/outbound/state"
 	channelapp "issueops/internal/application/channel"
-	"path/filepath"
-	"time"
 )
 
 func testChannelService() channelapp.Service { return testChannelServiceAt(statestore.StateDir()) }

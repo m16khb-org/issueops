@@ -36,7 +36,7 @@ func TestMCPCatalogValidationIsInstanceScopedAndPrecedesEffects(t *testing.T) {
 			invoke := func(i int, raw json.RawMessage) (bool, string) {
 				result, err := sessions[i].CallTool(t.Context(), &mcp.CallToolParams{Name: "issueops_execution", Arguments: mustCatalogArgs(t, raw)})
 				bytes, _ := json.Marshal(result)
-				return err != nil, string(bytes)
+				return err != nil || result.IsError, string(bytes)
 			}
 			input := []json.RawMessage{
 				json.RawMessage(`{"action":"release","id":"io-string","generation":1,"proof":"value"}`),

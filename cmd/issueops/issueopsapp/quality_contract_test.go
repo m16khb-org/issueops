@@ -2,13 +2,14 @@ package issueopsapp
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
+	"testing"
+
 	"issueops/cmd/issueops/qualitycli"
 	qualityapp "issueops/internal/application/quality"
 	qualitycontract "issueops/internal/contract/quality"
 	contract "issueops/internal/contract/qualitycatalog"
-	"os"
-	"path/filepath"
-	"testing"
 )
 
 func qualitycliInspectDepsForContract() qualityapp.InspectDeps {

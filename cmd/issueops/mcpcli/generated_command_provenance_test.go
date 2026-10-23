@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"strings"
 	"testing"
+
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 
 	issueopscontract "issueops/internal/contract/issueops"
 	provenanceport "issueops/internal/port/issueopsprovenance"

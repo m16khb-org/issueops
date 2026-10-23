@@ -3,18 +3,19 @@ package issueopsapp
 import (
 	"context"
 	"encoding/json"
-	"issueops/cmd/issueops/mcpcli"
-	"issueops/cmd/issueops/selfworkflow/verifycmd"
-	catalog "issueops/internal/adapter/inbound/catalog/mcp"
-	app "issueops/internal/application/selfverify"
-	augmentcontract "issueops/internal/contract/selfaugment"
-	verify "issueops/internal/contract/selfverify"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"issueops/cmd/issueops/mcpcli"
+	"issueops/cmd/issueops/selfworkflow/verifycmd"
+	catalog "issueops/internal/adapter/inbound/catalog/mcp"
+	app "issueops/internal/application/selfverify"
+	augmentcontract "issueops/internal/contract/selfaugment"
+	verify "issueops/internal/contract/selfverify"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -80,8 +81,7 @@ func TestSelfVerifySDKScopeMatchesCLIRequest(t *testing.T) {
 		t.Fatalf("surface scope mismatch: %v %+v %v", got, result, err)
 	}
 	for _, value := range []any{"", 7, nil} {
-		_, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "self_verify", Arguments: map[string]any{"base_ref": value}})
-		if err == nil {
+		if _, refused := toolRefusal(session.CallTool(context.Background(), &mcp.CallToolParams{Name: "self_verify", Arguments: map[string]any{"base_ref": value}})); !refused {
 			t.Fatalf("SDK accepted invalid scope %#v", value)
 		}
 	}

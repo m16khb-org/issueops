@@ -2,11 +2,12 @@ package mcpcli
 
 import (
 	"context"
+	"net/http"
+	"time"
+
 	outbound "issueops/internal/adapter/outbound/webfetch"
 	app "issueops/internal/application/webfetch"
 	model "issueops/internal/contract/webfetch"
-	"net/http"
-	"time"
 )
 
 func testWebFetch(ctx context.Context, req model.Request) (model.Result, error) {

@@ -2,14 +2,15 @@ package issueopsapp
 
 import (
 	"context"
-	"issueops/internal/adapter/issueops"
-	issueopsport "issueops/internal/port"
-	"issueops/internal/testsupport"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
+
+	"issueops/internal/adapter/issueops"
+	issueopsport "issueops/internal/port"
+	"issueops/internal/testsupport"
 
 	issueopscontract "issueops/internal/contract/issueops"
 )

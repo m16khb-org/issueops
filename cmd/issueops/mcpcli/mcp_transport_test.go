@@ -2,18 +2,17 @@ package mcpcli
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
-	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
-	issueopscontract "issueops/internal/contract/issueops"
 	"net"
 	"os"
 	"strings"
 	"sync"
 	"testing"
 
-	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
+	issueopscontract "issueops/internal/contract/issueops"
+
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -116,20 +115,18 @@ func TestSDKTransportOwnsBothStdioAndStreamConnections(t *testing.T) {
 	}
 }
 
-func TestSDKTransportPreservesStructuredToolErrors(t *testing.T) {
+// A tool's own failure reaches the model as an isError result carrying the
+// reason; as a JSON-RPC error the host would show only "Invalid params".
+func TestSDKTransportReturnsToolFailuresAsReadableResults(t *testing.T) {
 	session := startMCPTransportTestSession(t, "stdio", MCPDependencies{Execution: testExecutionDeps(), Catalog: mcpcatalog.Build(), Resources: resourceConfigForTest(), State: publicStateForTest()})
-	_, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "state_prune", Arguments: map[string]any{"max_age": "not-a-duration"},
 	})
-	if err == nil {
-		t.Fatal("invalid tool arguments unexpectedly succeeded")
+	if err != nil || !result.IsError {
+		t.Fatalf("tool failure was not an isError result: %+v %v", result, err)
 	}
-	var protocolErr *jsonrpc.Error
-	if !errors.As(err, &protocolErr) {
-		t.Fatalf("tool failure was not a structured JSON-RPC error: %T %v", err, err)
-	}
-	if protocolErr.Code != jsonrpc.CodeInvalidParams {
-		t.Fatalf("protocol error code = %d, want %d", protocolErr.Code, jsonrpc.CodeInvalidParams)
+	if text := toolResultText(result); !strings.Contains(text, "State prune failed: invalid max_age") {
+		t.Fatalf("isError text does not carry the reason: %s", text)
 	}
 }
 

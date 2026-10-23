@@ -2,10 +2,11 @@ package issueopsapp
 
 import (
 	"context"
-	statecontract "issueops/internal/contract/state"
-	statepath "issueops/internal/domain/statepath"
 	"os"
 	"time"
+
+	statecontract "issueops/internal/contract/state"
+	statepath "issueops/internal/domain/statepath"
 
 	"issueops/cmd/issueops/selfworkflow/candidatescmd"
 	"issueops/cmd/issueops/selfworkflow/promotecmd"

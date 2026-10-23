@@ -3,13 +3,14 @@ package issueopsapp
 import (
 	"context"
 	"encoding/json"
-	"issueops/cmd/issueops/mcpcli"
-	"issueops/internal/adapter/outbound/sqlstore"
-	workercontract "issueops/internal/contract/worker"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"issueops/cmd/issueops/mcpcli"
+	"issueops/internal/adapter/outbound/sqlstore"
+	workercontract "issueops/internal/contract/worker"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )

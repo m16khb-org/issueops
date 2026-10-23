@@ -5,14 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	qualityoutbound "issueops/internal/adapter/outbound/quality"
-	qualitycontract "issueops/internal/contract/quality"
-	qualitydomain "issueops/internal/domain/quality"
 	"math"
 	"os"
 	"path/filepath"
 	"sync"
 	"testing"
+
+	qualityoutbound "issueops/internal/adapter/outbound/quality"
+	qualitycontract "issueops/internal/contract/quality"
+	qualitydomain "issueops/internal/domain/quality"
 
 	"issueops/cmd/issueops/mcpcli"
 	"issueops/cmd/issueops/qualitycli"

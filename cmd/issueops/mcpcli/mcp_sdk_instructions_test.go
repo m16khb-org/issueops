@@ -2,9 +2,10 @@ package mcpcli
 
 import (
 	"context"
-	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"strings"
 	"testing"
+
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )

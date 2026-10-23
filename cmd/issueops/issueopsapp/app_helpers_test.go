@@ -26,11 +26,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	updatecli "issueops/cmd/issueops/updatecli"
-	updateadapter "issueops/internal/adapter/update"
-	qualityapp "issueops/internal/application/quality"
-	qualitycontract "issueops/internal/contract/quality"
-	updatecontract "issueops/internal/contract/update"
 	"net"
 	"os"
 	"path/filepath"
@@ -39,6 +34,12 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	updatecli "issueops/cmd/issueops/updatecli"
+	updateadapter "issueops/internal/adapter/update"
+	qualityapp "issueops/internal/application/quality"
+	qualitycontract "issueops/internal/contract/quality"
+	updatecontract "issueops/internal/contract/update"
 
 	issueopscontract "issueops/internal/contract/issueops"
 

@@ -2,10 +2,11 @@ package issueopsapp
 
 import (
 	"context"
-	statusapp "issueops/internal/application/status"
 	"os"
 	"path/filepath"
 	"testing"
+
+	statusapp "issueops/internal/application/status"
 )
 
 func TestStatusInstancesKeepCapturedStoresAndInspectionContext(t *testing.T) {

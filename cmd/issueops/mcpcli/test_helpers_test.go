@@ -2,11 +2,12 @@ package mcpcli
 
 import (
 	"encoding/json"
-	"issueops/internal/testsupport"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
+
+	"issueops/internal/testsupport"
 )
 
 func mustMarshalMCPTest(t *testing.T, value any) json.RawMessage {

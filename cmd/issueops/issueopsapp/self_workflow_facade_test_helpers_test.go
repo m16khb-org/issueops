@@ -2,8 +2,9 @@ package issueopsapp
 
 import (
 	"context"
-	docsapp "issueops/internal/application/docs"
 	"time"
+
+	docsapp "issueops/internal/application/docs"
 
 	augmentation "issueops/internal/adapter/augmentation"
 	docs "issueops/internal/adapter/docs"

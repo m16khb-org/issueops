@@ -2140,6 +2140,7 @@
         "func sdkServerOptionsWithLogger",
         "func sdkToolAnnotations",
         "func sdkToolHandlerWithContext",
+        "func toolExecutionError",
         "func validatedStructuredContent"
       ]
     },

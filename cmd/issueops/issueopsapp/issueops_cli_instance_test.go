@@ -3,14 +3,15 @@ package issueopsapp
 import (
 	"context"
 	"encoding/json"
+	"os"
+	"slices"
+	"testing"
+
 	"issueops/cmd/issueops/issueopscli"
 	core "issueops/internal/adapter/issueops"
 	model "issueops/internal/contract/issueops"
 	loopmodel "issueops/internal/contract/looprun"
 	"issueops/internal/testsupport"
-	"os"
-	"slices"
-	"testing"
 )
 
 // A CLI constructed for one state root must not follow later environment

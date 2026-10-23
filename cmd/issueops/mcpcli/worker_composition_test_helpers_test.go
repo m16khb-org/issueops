@@ -3,11 +3,12 @@ package mcpcli
 import (
 	"context"
 
+	"path/filepath"
+
 	"issueops/internal/adapter/outbound/sqlstore"
 	policyadapter "issueops/internal/adapter/policy"
 	workeradapter "issueops/internal/adapter/worker"
 	workerapp "issueops/internal/application/worker"
-	"path/filepath"
 )
 
 func testWorkerStore() workeradapter.Store {

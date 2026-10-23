@@ -2,13 +2,14 @@ package issueopsapp
 
 import (
 	"context"
-	core "issueops/internal/adapter/issueops"
-	model "issueops/internal/contract/issueops"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
+
+	core "issueops/internal/adapter/issueops"
+	model "issueops/internal/contract/issueops"
 )
 
 func TestEvidenceReviewRuntimePersistsObservedChangeSet(t *testing.T) {

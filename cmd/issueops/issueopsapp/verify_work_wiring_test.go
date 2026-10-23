@@ -1,12 +1,13 @@
 package issueopsapp
 
 import (
-	verifyworkapp "issueops/internal/application/verifywork"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sync"
 	"testing"
+
+	verifyworkapp "issueops/internal/application/verifywork"
 )
 
 func TestVerifyWorkInstancesKeepHarnessContextAndReloadPolicy(t *testing.T) {

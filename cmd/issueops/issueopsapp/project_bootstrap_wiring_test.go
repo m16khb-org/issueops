@@ -8,10 +8,11 @@ import (
 	"sync"
 	"testing"
 
+	"strings"
+
 	"issueops/cmd/issueops/mcpcli"
 	"issueops/cmd/issueops/projectcli"
 	bootstrapcontract "issueops/internal/contract/projectbootstrap"
-	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )

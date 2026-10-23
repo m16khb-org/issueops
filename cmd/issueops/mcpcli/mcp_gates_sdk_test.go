@@ -3,14 +3,15 @@ package mcpcli
 import (
 	"context"
 	"encoding/json"
-	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
-	app "issueops/internal/application/gates"
-	model "issueops/internal/contract/gates"
-	policy "issueops/internal/contract/policy"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
+	app "issueops/internal/application/gates"
+	model "issueops/internal/contract/gates"
+	policy "issueops/internal/contract/policy"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )

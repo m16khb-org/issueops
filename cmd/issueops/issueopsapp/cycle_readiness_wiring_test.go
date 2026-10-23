@@ -1,8 +1,6 @@
 package issueopsapp
 
 import (
-	"issueops/internal/adapter/preflight"
-	model "issueops/internal/contract/issueops"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,6 +8,9 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"issueops/internal/adapter/preflight"
+	model "issueops/internal/contract/issueops"
 )
 
 func TestCycleReadinessKeepsCapturedGitCapabilities(t *testing.T) {

@@ -95,10 +95,10 @@ func TestProjectDocMCPRefusalsPreserveFileBytes(t *testing.T) {
 		{"repo": root, "rel_path": ".issueops/TESTING.md", "content": "changed", "summary": "missing digest", "confirm": true},
 	} {
 		params, _ := json.Marshal(map[string]any{"name": "project_docs_revise", "arguments": args})
-		if _, err := callSDKTool(t, params, deps); err == nil {
+		if _, refused := envelopeRefusal(callSDKTool(t, params, deps)); !refused {
 			t.Errorf("direct accepted %+v", args)
 		}
-		if _, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "project_docs_revise", Arguments: args}); err == nil {
+		if _, refused := toolRefusal(session.CallTool(context.Background(), &mcp.CallToolParams{Name: "project_docs_revise", Arguments: args})); !refused {
 			t.Errorf("SDK accepted %+v", args)
 		}
 		raw, err := os.ReadFile(path)

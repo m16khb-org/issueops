@@ -3,8 +3,9 @@ package mcpcli
 import (
 	"context"
 	"errors"
-	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"testing"
+
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 
 	issueopscontract "issueops/internal/contract/issueops"
 	"issueops/internal/port"

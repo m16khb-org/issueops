@@ -3,7 +3,6 @@ package issueopsapp
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -13,7 +12,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"issueops/cmd/issueops/mcpcli"
@@ -166,15 +164,12 @@ func TestSelfWorkflowHistoryRefusalDoesNotMaterializeState(t *testing.T) {
 		t.Fatalf("compare refusal: %v", err)
 	}
 	mcpDeps := mcpcli.MCPDependencies{Catalog: mcpcatalog.Build(), SelfHistory: service}
-	_, rpcErr := callSDKTool(t, json.RawMessage(`{"name":"self_verify_history","arguments":{"confirm":true}}`), mcpDeps)
-	if rpcErr == nil || rpcErr.Code != -32602 || !strings.Contains(string(rpcErr.Data), "requires --prune-retention") {
-		t.Fatalf("MCP domain refusal: %+v", rpcErr)
+	if text, refused := envelopeRefusal(callSDKTool(t, json.RawMessage(`{"name":"self_verify_history","arguments":{"confirm":true}}`), mcpDeps)); !refused || !strings.Contains(text, "requires --prune-retention") {
+		t.Fatalf("MCP domain refusal: %q %v", text, refused)
 	}
 	session := startHistoryMCPTestSession(t, mcpDeps)
-	_, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "self_verify_history", Arguments: map[string]any{"confirm": true}})
-	var sdkError *jsonrpc.Error
-	if !errors.As(err, &sdkError) || sdkError.Code != -32602 || !strings.Contains(string(sdkError.Data), "requires --prune-retention") {
-		t.Fatalf("SDK domain refusal: %v (%+v)", err, sdkError)
+	if text, refused := toolRefusal(session.CallTool(context.Background(), &mcp.CallToolParams{Name: "self_verify_history", Arguments: map[string]any{"confirm": true}})); !refused || !strings.Contains(text, "requires --prune-retention") {
+		t.Fatalf("SDK domain refusal: %q %v", text, refused)
 	}
 	if _, err := os.Stat(dir); !os.IsNotExist(err) {
 		t.Fatalf("refused request materialized state: %v", err)

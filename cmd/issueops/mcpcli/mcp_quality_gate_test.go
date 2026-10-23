@@ -2,11 +2,12 @@ package mcpcli
 
 import (
 	"encoding/json"
-	app "issueops/internal/application/selfverify"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	app "issueops/internal/application/selfverify"
 )
 
 func TestMCPAPIDocStaticGateFailureReturnsNormalPayload(t *testing.T) {
