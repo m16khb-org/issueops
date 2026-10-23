@@ -1810,6 +1810,47 @@
       "ok": true,
       "phase": "plan",
       "schema_version": 1,
+      "steps": [
+        {
+          "description": "Create the issue-prefixed branch through the GitLab MCP authenticated API tool. The branch starts from branch main, whose current HEAD GitLab resolves at call time. That can diverge from the base this cycle sealed; pass --base-sha to pin the exact commit (#180). glab_api takes the endpoint as a positional `args` entry and everything else inside `flags`; `raw_field` is glab's --raw-field string parameter, not the inferred-type --field.",
+          "order": 1,
+          "strategy": "mcp",
+          "tool": "mcp__glab.glab_api",
+          "tool_arguments": {
+            "args": [
+              "projects/:fullpath/repository/branches"
+            ],
+            "flags": {
+              "method": "POST",
+              "raw_field": [
+                "branch=1-contract-branch",
+                "ref=main"
+              ]
+            }
+          }
+        },
+        {
+          "command": [
+            "glab",
+            "api",
+            "projects/:fullpath/repository/branches",
+            "-X",
+            "POST",
+            "-f",
+            "branch=1-contract-branch",
+            "-f",
+            "ref=main"
+          ],
+          "description": "Fallback to the GitLab API through glab when the MCP tool is unavailable or fails. -f is --raw-field, the same flag the MCP step names as raw_field.",
+          "order": 2,
+          "strategy": "fallback_api"
+        },
+        {
+          "description": "Stop the IssueOps branch preparation if neither provider-linked creation path succeeds.",
+          "order": 3,
+          "strategy": "fail"
+        }
+      ],
       "updated_at": "$TIMESTAMP"
     },
     "issueops_record_devils_advocate_review": {
@@ -1967,48 +2008,7 @@
         "created_at": "$TIMESTAMP",
         "issue_url": "https://gitlab.example/group/project/-/issues/1",
         "link_verified": true,
-        "provider": "gitlab",
-        "steps": [
-          {
-            "description": "Create the issue-prefixed branch through the GitLab MCP authenticated API tool. The branch starts from branch main, whose current HEAD GitLab resolves at call time. That can diverge from the base this cycle sealed; pass --base-sha to pin the exact commit (#180). glab_api takes the endpoint as a positional `args` entry and everything else inside `flags`; `raw_field` is glab's --raw-field string parameter, not the inferred-type --field.",
-            "order": 1,
-            "strategy": "mcp",
-            "tool": "mcp__glab.glab_api",
-            "tool_arguments": {
-              "args": [
-                "projects/:fullpath/repository/branches"
-              ],
-              "flags": {
-                "method": "POST",
-                "raw_field": [
-                  "branch=1-contract-branch",
-                  "ref=main"
-                ]
-              }
-            }
-          },
-          {
-            "command": [
-              "glab",
-              "api",
-              "projects/:fullpath/repository/branches",
-              "-X",
-              "POST",
-              "-f",
-              "branch=1-contract-branch",
-              "-f",
-              "ref=main"
-            ],
-            "description": "Fallback to the GitLab API through glab when the MCP tool is unavailable or fails. -f is --raw-field, the same flag the MCP step names as raw_field.",
-            "order": 2,
-            "strategy": "fallback_api"
-          },
-          {
-            "description": "Stop the IssueOps branch preparation if neither provider-linked creation path succeeds.",
-            "order": 3,
-            "strategy": "fail"
-          }
-        ]
+        "provider": "gitlab"
       },
       "created_at": "$TIMESTAMP",
       "decisions": [

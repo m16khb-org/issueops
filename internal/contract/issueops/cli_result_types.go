@@ -49,6 +49,33 @@ func MutationAck(record IssueOpsRecord) IssueOpsMutationAck {
 	}
 }
 
+// IssueOpsBranchPrepareAck is the `branch prepare --json` answer: the mutation
+// acknowledgement plus the branch-creation steps the caller acts on next.
+type IssueOpsBranchPrepareAck struct {
+	IssueOpsMutationAck
+	Steps []IssueOpsBranchPrepareStep `json:"steps,omitempty"`
+}
+
+// BranchPrepareAck projects record onto the branch prepare acknowledgement.
+func BranchPrepareAck(record IssueOpsRecord) IssueOpsBranchPrepareAck {
+	ack := IssueOpsBranchPrepareAck{IssueOpsMutationAck: MutationAck(record)}
+	if record.BranchPrepare != nil {
+		ack.Steps = record.BranchPrepare.Steps
+	}
+	return ack
+}
+
+// StatusView is the record as `status --json` prints it: the stored record
+// without the static branch-creation steps (already shown by branch prepare).
+func StatusView(record IssueOpsRecord) IssueOpsRecord {
+	if record.BranchPrepare != nil && len(record.BranchPrepare.Steps) > 0 {
+		prepare := *record.BranchPrepare
+		prepare.Steps = nil
+		record.BranchPrepare = &prepare
+	}
+	return record
+}
+
 // 아키텍처 검토 증거 예시 문구는 CLI 도움말과 어댑터가 함께 쓰는 어휘다.
 const IssueOpsArchitectureReviewEvidenceExample = "architecture review checked alternatives and risks"
 

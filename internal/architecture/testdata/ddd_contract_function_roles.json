@@ -588,5 +588,15 @@
     "path": "internal/contract/issueops/cli_result_types.go",
     "symbol": "func MutationAck",
     "role": "projection"
+  },
+  {
+    "path": "internal/contract/issueops/cli_result_types.go",
+    "symbol": "func BranchPrepareAck",
+    "role": "projection"
+  },
+  {
+    "path": "internal/contract/issueops/cli_result_types.go",
+    "symbol": "func StatusView",
+    "role": "projection"
   }
 ]

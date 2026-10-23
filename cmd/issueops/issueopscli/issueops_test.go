@@ -45,7 +45,19 @@ func TestRunIssueOpsLifecycle(t *testing.T) {
 		t.Fatalf("issue link should move to plan phase: %#v", issueRecord)
 	}
 
-	branchRecord := statusRecordAfter(t, id, []string{"branch", "prepare", "--id", id, "--provider", "github", "--issue-url", "https://github.com/example/repo/issues/1", "--branch", "1-provider-linked-branch", "--base-branch", "main", "--parent-worktree", repo + ".worktrees/main", "--link-verified", "--json"})
+	prepareOut := captureStdoutForContract(t, func() error {
+		return runIssueOps([]string{"branch", "prepare", "--id", id, "--provider", "github", "--issue-url", "https://github.com/example/repo/issues/1", "--branch", "1-provider-linked-branch", "--base-branch", "main", "--parent-worktree", repo + ".worktrees/main", "--link-verified", "--json"})
+	})
+	var prepareAck map[string]any
+	if err := json.Unmarshal([]byte(prepareOut), &prepareAck); err != nil {
+		t.Fatalf("branch prepare should return JSON: %v\n%s", err, prepareOut)
+	}
+	// #306: 생성 뒤 linked-branch readback 두 단계가 더해져 5단계다. 단계는
+	// branch prepare 응답에만 실리고 status에는 다시 싣지 않는다.
+	if steps, ok := prepareAck["steps"].([]any); !ok || len(steps) != 5 || prepareAck["id"] != id {
+		t.Fatalf("branch prepare ack should carry the fallback and readback steps: %#v", prepareAck)
+	}
+	branchRecord := statusRecordForTest(t, id)
 	prepare, ok := branchRecord["branch_prepare"].(map[string]any)
 	if !ok || prepare["provider"] != "github" || prepare["branch"] != "1-provider-linked-branch" {
 		t.Fatalf("branch prepare should persist provider-linked contract: %#v", branchRecord)
@@ -53,10 +65,8 @@ func TestRunIssueOpsLifecycle(t *testing.T) {
 	if prepare["parent_worktree"] != repo+".worktrees/main" {
 		t.Fatalf("branch prepare should persist explicit parent worktree: %#v", prepare)
 	}
-	// #306: 생성 뒤 linked-branch readback 두 단계가 더해져 5단계다.
-	steps, ok := prepare["steps"].([]any)
-	if !ok || len(steps) != 5 {
-		t.Fatalf("branch prepare should include fallback and readback steps: %#v", prepare)
+	if _, shown := prepare["steps"]; shown {
+		t.Fatalf("status must not repeat the branch-creation steps: %#v", prepare)
 	}
 
 	worktreePath := makeIssueOpsCLIWorktreeForTest(t, repo, "1-provider-linked-branch")

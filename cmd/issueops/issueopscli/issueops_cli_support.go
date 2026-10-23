@@ -57,6 +57,9 @@ func (cli command) runIssueOpsBranch(args []string) error {
 		CodeProjectKey:  *codeProjectKey,
 		LinkVerified:    *linkVerified,
 	}, actor.actor())
+	if err == nil && *jsonOut {
+		return printJSON(issueopscontract.BranchPrepareAck(record))
+	}
 	return printIssueOpsResult(record, *jsonOut, err)
 }
 

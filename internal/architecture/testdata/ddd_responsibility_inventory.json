@@ -10838,7 +10838,10 @@
       "owner": "contract",
       "task": "T02",
       "symbols": [
+        "func BranchPrepareAck",
         "func MutationAck",
+        "func StatusView",
+        "type IssueOpsBranchPrepareAck",
         "type IssueOpsCycleOutcome",
         "type IssueOpsImplementationReviewRequest",
         "type IssueOpsMutationAck",

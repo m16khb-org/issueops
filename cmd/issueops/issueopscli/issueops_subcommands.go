@@ -38,7 +38,7 @@ func (cli command) runIssueOpsStatus(args []string) error {
 		return err
 	}
 	record, err := cli.Runtime.IssueOpsStatus(cli.Runtime.IssueOpsStateRoot(), *id)
-	return printIssueOpsRecord(record, *jsonOut, err)
+	return printIssueOpsRecord(issueopscontract.StatusView(record), *jsonOut, err)
 }
 
 func (cli command) runIssueOpsLinkIssue(args []string) error {
