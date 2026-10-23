@@ -5,6 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"io"
+	"os"
+
+	"issueops/cmd/issueops/jsonout"
 	"strings"
 	"testing"
 )
@@ -144,6 +148,37 @@ func TestUnreportedFailureUnderJSONIsOneEnvelopeOnStdout(t *testing.T) {
 		if err := json.Unmarshal(stdout.Bytes(), &envelope); err != nil || envelope.OK || envelope.Error != "worker: invalid worker job id" || stderr.Len() != 0 {
 			t.Fatalf("%q: stdout=%q stderr=%q err=%v", tc.args, stdout.String(), stderr.String(), err)
 		}
+	}
+}
+
+// A command that printed its JSON result and returned an unmarked verdict
+// error keeps stdout to that one document; the error goes to stderr.
+func TestFailureAfterPrintedJSONResultAddsNoSecondDocument(t *testing.T) {
+	read, write, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	realStdout := os.Stdout
+	os.Stdout = write
+	t.Cleanup(func() { os.Stdout = realStdout })
+	var stdout, stderr bytes.Buffer
+	cmd := testCommand(&stdout, &stderr)
+	cmd.Runners["contract"] = func([]string) error {
+		if err := jsonout.Print(map[string]any{"ok": false, "gate": "inconclusive"}); err != nil {
+			return err
+		}
+		return errors.New("conformance_inconclusive")
+	}
+	code := cmd.Run([]string{"contract", "conformance", "live", "--json"})
+	os.Stdout = realStdout
+	_ = write.Close()
+	printed, _ := io.ReadAll(read)
+	if code != 1 || stdout.Len() != 0 || stderr.String() != "contract: conformance_inconclusive\n" {
+		t.Fatalf("code=%d root stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+	var result map[string]any
+	if err := json.Unmarshal(printed, &result); err != nil {
+		t.Fatalf("command stdout is not one JSON document: %q", printed)
 	}
 }
 

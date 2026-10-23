@@ -2,10 +2,10 @@ package issueopsapp
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
+	"issueops/cmd/issueops/jsonout"
 	"os"
 
 	"issueops/internal/contract/mcpservice"
@@ -54,12 +54,7 @@ func (command mcpServiceCommand) Run(args []string) error {
 	}
 	status, err := call(context.Background())
 	if *jsonOut {
-		encoder := json.NewEncoder(command.stdout)
-		encoder.SetIndent("", "  ")
-		if printErr := encoder.Encode(status); printErr != nil {
-			return printErr
-		}
-		return err
+		return jsonout.PrintResultError(command.stdout, status, err)
 	}
 	if _, printErr := fmt.Fprintf(command.stdout, "status: %s\nurl: %s\npid: %d\nerror_code: %s\n", status.Status, status.URL, status.PID, status.ErrorCode); printErr != nil {
 		return printErr

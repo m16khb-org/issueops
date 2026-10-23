@@ -191,6 +191,7 @@
         "func parseLiveRequest",
         "func regressionDirectory",
         "func regressionFixtures",
+        "func reportedIf",
         "func safeRunID",
         "func splitNonEmpty",
         "func stringSlice.Set",
@@ -1951,7 +1952,9 @@
         "func PrintResultError",
         "func PrintTo",
         "func Reported",
+        "func ResetStdoutDocument",
         "func WithError",
+        "func WroteStdoutDocument",
         "func reportedError.Error",
         "func reportedError.Unwrap",
         "type reportedError"

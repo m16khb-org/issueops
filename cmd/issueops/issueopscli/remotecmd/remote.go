@@ -240,9 +240,7 @@ func (deps Deps) printJSON(v any) error {
 	if deps.PrintJSON != nil {
 		return deps.PrintJSON(v)
 	}
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	return enc.Encode(v)
+	return jsonout.Print(v)
 }
 
 func (deps Deps) printError(err error) error {

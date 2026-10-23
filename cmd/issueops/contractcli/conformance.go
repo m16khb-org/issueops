@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"issueops/cmd/issueops/jsonout"
 	toolconformancecontract "issueops/internal/contract/toolconformance"
 	toolconformancedomain "issueops/internal/domain/toolconformance"
 	"os"
@@ -186,7 +187,7 @@ func (c *Conformance) runConformanceBaseline(args []string) error {
 		fmt.Printf("cases=%d ok=%t\n", report.CaseCount, report.OK)
 	}
 	if !report.OK {
-		return fmt.Errorf("baseline_failed")
+		return reportedIf(*jsonOut, fmt.Errorf("baseline_failed"))
 	}
 	return nil
 }
@@ -274,7 +275,7 @@ func (c *Conformance) runConformanceLive(args []string) error {
 		fmt.Printf("gate=%s completed=%d attempts=%d report=%s\n", report.Gate.Decision, report.Counts.Completed, report.Counts.Attempts, report.Evidence.ReportPath)
 	}
 	if !report.OK {
-		return fmt.Errorf("conformance_inconclusive")
+		return reportedIf(jsonOut, fmt.Errorf("conformance_inconclusive"))
 	}
 	return nil
 }
@@ -526,9 +527,18 @@ func (c *Conformance) runConformanceReplay(args []string) error {
 		}
 	}
 	if !ok {
-		return fmt.Errorf("replay_failed")
+		return reportedIf(*jsonOut, fmt.Errorf("replay_failed"))
 	}
 	return nil
+}
+
+// reportedIf marks a verdict error as already shown when the JSON report that
+// carries it is on stdout.
+func reportedIf(jsonOut bool, err error) error {
+	if jsonOut {
+		return jsonout.Reported(err)
+	}
+	return err
 }
 
 func (c *Conformance) replayFixture(fixture string) (ReplayOutcome, error) {

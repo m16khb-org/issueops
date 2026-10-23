@@ -109,6 +109,7 @@ func (c Command) runSubcommand(name string, args []string) (bool, int) {
 	if !ok {
 		return false, 0
 	}
+	jsonout.ResetStdoutDocument()
 	if err := runner(args); err != nil {
 		// A help request is answered by the usage the subcommand already
 		// printed; it is not a failure and must not add a "flag: help
@@ -118,8 +119,10 @@ func (c Command) runSubcommand(name string, args []string) (bool, int) {
 		}
 		if !jsonout.IsReported(err) {
 			// Under --json the failure is the one JSON document on stdout, so
-			// `--json 2>&1 | jq` parses it; otherwise a plain stderr line.
-			if JSONRequested(args) {
+			// `--json 2>&1 | jq` parses it; otherwise a plain stderr line. A
+			// command that already printed its JSON result keeps stdout to
+			// that one document and the error goes to stderr.
+			if JSONRequested(args) && !jsonout.WroteStdoutDocument() {
 				_ = jsonout.PrintTo(c.stdout(), map[string]any{"ok": false, "error": name + ": " + err.Error()})
 			} else {
 				fmt.Fprintln(c.stderr(), name+":", err)

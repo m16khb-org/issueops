@@ -9,7 +9,12 @@ import (
 	"errors"
 	"io"
 	"os"
+	"sync/atomic"
 )
+
+// stdoutDocument records that a JSON document reached os.Stdout in this
+// command run, so the root never prints a second document after it.
+var stdoutDocument atomic.Bool
 
 // Print writes value to the current os.Stdout as two-space indented JSON.
 func Print(value any) error {
@@ -18,10 +23,20 @@ func Print(value any) error {
 
 // PrintTo writes value to w as two-space indented JSON.
 func PrintTo(w io.Writer, value any) error {
+	if file, ok := w.(*os.File); ok && file == os.Stdout {
+		stdoutDocument.Store(true)
+	}
 	encoder := json.NewEncoder(w)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(value)
 }
+
+// WroteStdoutDocument reports whether a JSON document was written to
+// os.Stdout since the last ResetStdoutDocument.
+func WroteStdoutDocument() bool { return stdoutDocument.Load() }
+
+// ResetStdoutDocument starts a new command run.
+func ResetStdoutDocument() { stdoutDocument.Store(false) }
 
 // reportedError marks an error whose {"ok":false,"error":...} envelope is
 // already on stdout. The root command must not repeat it on stderr: callers
