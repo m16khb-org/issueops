@@ -247,6 +247,7 @@ func TestClassifyNextCommandTable(t *testing.T) {
 		{"handoff prepares execution", withDA(withArchitecture(withStagedPlan(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))), "issueops execution prepare", "template"},
 		{"stop verdict regresses", withDAStop(withArchitecture(withStagedPlan(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))), "issueops regress --id io-test", "template"},
 		{"commit-push checks strict readiness", withLocal(withSelfHolder(baseRecord(issueopsnextcontract.PhaseAISlopClean)), "upstream"), "issueops pr-readiness --id io-test --strict", "exact"},
+		{"pushed and clean transitions to pr", withLocal(withSelfHolder(baseRecord(issueopsnextcontract.PhaseAISlopClean))), "issueops phase --id io-test --to pr $ACTOR_FLAGS", "template"},
 		{"done checks cleanup", baseRecord(issueopsnextcontract.PhaseDone), "issueops cleanup status --id io-test --merged", "exact"},
 		{"unknown falls back to status", withLocal(withSelfHolder(baseRecord(issueopsnextcontract.PhaseFeedback)), "branch_match"), "issueops status --id io-test", "exact"},
 	}
@@ -482,6 +483,20 @@ func TestClassifyUnverifiedBranchLinkStaysInPrepare(t *testing.T) {
 	verified := Classify(withSelfHolder(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))
 	if verified.Stage.Key != "implement.enter" || len(verified.Missing) != 1 || verified.Missing[0] != "plan_path" {
 		t.Fatalf("holder at plan with verified link: %s %v", verified.Stage.Key, verified.Missing)
+	}
+}
+
+// The claim stage names the chain's first command directly: a released lease
+// starts with replace --preview, a claimable one is claimed with the current
+// token. (It used to answer `execution status`, an extra round trip.)
+func TestClassifyClaimStageStartsTheChain(t *testing.T) {
+	released := Classify(withReleasedLease(withBranch(withIssue(baseRecord(issueopsnextcontract.PhaseImplement)))))
+	if released.Stage.Key != "claim" || released.NextCommand != "issueops execution replace --id 'io-test' --expected-generation 1 --preview" {
+		t.Fatalf("released: %s %q", released.Stage.Key, released.NextCommand)
+	}
+	claimable := Classify(withClaimableLease(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))
+	if claimable.Stage.Key != "claim" || claimable.NextCommand != "issueops execution claim --id 'io-test' --generation 1 --claim-current-token" {
+		t.Fatalf("claimable: %s %q", claimable.Stage.Key, claimable.NextCommand)
 	}
 }
 

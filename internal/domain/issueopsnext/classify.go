@@ -164,7 +164,11 @@ func classifyLease(in Input, decision Decision, index int) (Decision, bool) {
 	if (lease.Status == issueopsnextcontract.LeaseStatusClaimable || lease.Status == issueopsnextcontract.LeaseStatusReleased) &&
 		execution.Completion == nil {
 		decision.Stage = stage(issueopsnextcontract.StageClaim, index)
-		decision.NextCommand = "issueops execution status --id " + id + " --json"
+		// The chain's first command, not a status read that only returns it.
+		decision.NextCommand = issueopsdomain.ReplacementPreviewCommand(id, lease.Generation)
+		if lease.Status == issueopsnextcontract.LeaseStatusClaimable {
+			decision.NextCommand = issueopsdomain.ReplacementClaimCommand(id, lease.Generation)
+		}
 		return decision, true
 	}
 	return decision, false
@@ -369,6 +373,11 @@ func classifyLocalGates(in Input, decision Decision) (Decision, bool) {
 		decision.Stage = stage(issueopsnextcontract.StageCommitPush, 8)
 		decision.Missing = append([]string{}, local...)
 		decision.NextCommand = "issueops pr-readiness --id " + id + " --strict --json"
+		if len(local) == 0 {
+			// Committed and pushed: the pr transition is the next step (it runs
+			// the strict readiness itself), not another readiness read.
+			decision.NextCommand = "issueops phase --id " + id + " --to pr $ACTOR_FLAGS --json"
+		}
 		return decision, true
 	}
 	return decision, false
