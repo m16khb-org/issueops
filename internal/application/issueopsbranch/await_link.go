@@ -67,8 +67,8 @@ func (s LinkAwaiter) Await(ctx context.Context, req issueopscontract.AwaitBranch
 		if !s.Now().Before(deadline) {
 			result.OK, result.TimedOut = false, true
 			return result, fmt.Errorf(
-				"the coordinator's linked branch for %s did not appear within %s (last state: %s); "+
-					"the coordinator must create it at the sealed base %s",
+				"the linked branch for %s did not appear within %s (last state: %s; see state_reason); "+
+					"it must be created at the sealed base %s (by this session or the coordinator), and --link-verified stays unrecorded until it is seen",
 				prepare.Branch, timeout, state, prepare.BaseSHA)
 		}
 		if err := s.Sleep(ctx, domain.AwaitBranchLinkInterval); err != nil {

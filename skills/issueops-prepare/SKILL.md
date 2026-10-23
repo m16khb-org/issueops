@@ -103,6 +103,10 @@ glab api --method POST "projects/:id/repository/branches" \
   -f branch="$BRANCH" -f ref="$BASE_SHA"
 ```
 
+`--link-verified`는 provider가 링크를 돌려준 것을 본 뒤에만 붙인다. 링크를 만든 다음
+`issueops branch await-link --id "$ISSUEOPS_ID" --timeout 1m --json`으로 읽어 보고 `linked: true`일
+때만 기록한다. provider에 닿지 못하거나 링크가 보이지 않으면 붙이지 않고 그 사실을 보고하며 멈춘다.
+
 ```bash
 issueops branch prepare --id "$ISSUEOPS_ID" --provider "$PROVIDER" \
   --issue-url "$ISSUE_URL" --branch "$BRANCH" --base-branch "$BASE_BRANCH" \
