@@ -305,9 +305,9 @@ func systemText(request map[string]any) string {
 
 func lastToolResult(request map[string]any) string {
 	all := messages(request)
-	for index := len(all) - 1; index >= 0; index-- {
-		if all[index]["role"] == "tool" {
-			return contentText(all[index])
+	for _, v := range slices.Backward(all) {
+		if v["role"] == "tool" {
+			return contentText(v)
 		}
 	}
 	return ""

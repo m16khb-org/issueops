@@ -167,7 +167,7 @@ func TestBuiltinNeverFable(t *testing.T) {
 	for _, host := range []string{"claude", "codex", "omo", "omp", "opencode"} {
 		for _, role := range Roles() {
 			for _, tier := range []string{"", "default", "docs-only", "contract"} {
-				for round := 0; round <= 5; round++ {
+				for round := range 6 {
 					got, err := Resolve(ResolveInput{Host: host, Role: role, Tier: tier, Round: round})
 					if err != nil {
 						t.Fatal(err)

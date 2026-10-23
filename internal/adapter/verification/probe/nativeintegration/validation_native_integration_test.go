@@ -42,15 +42,15 @@ func TestValidateNativeIntegrationWithDepsCoversSuccessAndMissingPaths(t *testin
 		readFile: func(path string) ([]byte, error) {
 			switch {
 			case path == filepath.Join(home, ".omo", "mcp.json"):
-				return []byte(fmt.Sprintf(`{"mcpServers":{"issueops":{"command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, filepath.Join(root, "bin", "issueops"), root)), nil
+				return fmt.Appendf(nil, `{"mcpServers":{"issueops":{"command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, filepath.Join(root, "bin", "issueops"), root), nil
 			case path == filepath.Join(home, ".omo", "extensions", "issueops.js"):
 				return []byte(hostprotocol.OmoLifecycleExtension(filepath.Join(root, "bin", "issueops"))), nil
 			case path == filepath.Join(home, ".omp", "agent", "mcp.json"):
-				return []byte(fmt.Sprintf(`{"mcpServers":{"issueops":{"type":"stdio","command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, filepath.Join(root, "bin", "issueops"), root)), nil
+				return fmt.Appendf(nil, `{"mcpServers":{"issueops":{"type":"stdio","command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, filepath.Join(root, "bin", "issueops"), root), nil
 			case path == filepath.Join(home, ".omp", "agent", "extensions", "issueops.js"):
 				return []byte(hostprotocol.OmpLifecycleExtension(filepath.Join(root, "bin", "issueops"))), nil
 			case path == filepath.Join(home, ".config", "opencode", "opencode.json"):
-				return []byte(fmt.Sprintf(`{"model":"m","mcp":{"servers":{"issueops":{"type":"local","command":[%q,"mcp"],"environment":{"ISSUEOPS_ROOT":%q},"codemode":false}}}}`, filepath.Join(root, "bin", "issueops"), root)), nil
+				return fmt.Appendf(nil, `{"model":"m","mcp":{"servers":{"issueops":{"type":"local","command":[%q,"mcp"],"environment":{"ISSUEOPS_ROOT":%q},"codemode":false}}}}`, filepath.Join(root, "bin", "issueops"), root), nil
 			case path == filepath.Join(home, ".config", "opencode", "plugins", "issueops.js"):
 				return []byte(hostprotocol.OpencodeLifecyclePlugin(filepath.Join(root, "bin", "issueops"))), nil
 			}
@@ -58,7 +58,7 @@ func TestValidateNativeIntegrationWithDepsCoversSuccessAndMissingPaths(t *testin
 			case "config.toml":
 				return []byte("[mcp_servers.issueops]\ncommand = \"issueops\"\n"), nil
 			case "hooks.json":
-				return []byte(fmt.Sprintf(`{"hooks":{"SessionStart":[{"hooks":[{"command":"'%[1]s' hook session-start --host codex","timeout":5,"type":"command"}]}],"SubagentStart":[{"hooks":[{"command":"'%[1]s' hook subagent-start --host codex","timeout":5,"type":"command"}]}]}}`, filepath.Join(root, "bin", "issueops"))), nil
+				return fmt.Appendf(nil, `{"hooks":{"SessionStart":[{"hooks":[{"command":"'%[1]s' hook session-start --host codex","timeout":5,"type":"command"}]}],"SubagentStart":[{"hooks":[{"command":"'%[1]s' hook subagent-start --host codex","timeout":5,"type":"command"}]}]}}`, filepath.Join(root, "bin", "issueops")), nil
 			default:
 				return nil, errors.New("unexpected read")
 			}
@@ -98,7 +98,7 @@ func TestNativeIntegrationOmoConfigAcceptsStableRootFromWorktree(t *testing.T) {
 		readFile: func(path string) ([]byte, error) {
 			switch path {
 			case filepath.Join(home, ".omo", "mcp.json"):
-				return []byte(fmt.Sprintf(`{"mcpServers":{"issueops":{"command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, expectedBinary, stableRoot)), nil
+				return fmt.Appendf(nil, `{"mcpServers":{"issueops":{"command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, expectedBinary, stableRoot), nil
 			case filepath.Join(home, ".omo", "extensions", "issueops.js"):
 				return []byte(hostprotocol.OmoLifecycleExtension(expectedBinary)), nil
 			default:
@@ -124,7 +124,7 @@ func TestNativeIntegrationOmpConfigAcceptsStableRootFromWorktree(t *testing.T) {
 		readFile: func(path string) ([]byte, error) {
 			switch path {
 			case filepath.Join(home, ".omp", "agent", "mcp.json"):
-				return []byte(fmt.Sprintf(`{"mcpServers":{"issueops":{"type":"stdio","command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, expectedBinary, stableRoot)), nil
+				return fmt.Appendf(nil, `{"mcpServers":{"issueops":{"type":"stdio","command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, expectedBinary, stableRoot), nil
 			case filepath.Join(home, ".omp", "agent", "extensions", "issueops.js"):
 				return []byte(hostprotocol.OmpLifecycleExtension(expectedBinary)), nil
 			default:
@@ -148,7 +148,7 @@ func TestNativeIntegrationOmpConfigRejectsOmoLifecycleModule(t *testing.T) {
 	deps := nativeIntegrationValidationDeps{Validator: validator, readFile: func(path string) ([]byte, error) {
 		switch path {
 		case filepath.Join(home, ".omp", "agent", "mcp.json"):
-			return []byte(fmt.Sprintf(`{"mcpServers":{"issueops":{"type":"stdio","command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, binary, root)), nil
+			return fmt.Appendf(nil, `{"mcpServers":{"issueops":{"type":"stdio","command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, binary, root), nil
 		case filepath.Join(home, ".omp", "agent", "extensions", "issueops.js"):
 			return []byte(hostprotocol.OmoLifecycleExtension(binary)), nil
 		default:
@@ -266,7 +266,7 @@ func TestValidateNativeIntegrationReportsStableRootResolutionError(t *testing.T)
 			case "config.toml":
 				return []byte("[mcp_servers.issueops]\n"), nil
 			case "hooks.json":
-				return []byte(fmt.Sprintf(`{"hooks":{"SessionStart":[{"hooks":[{"command":"'%[1]s' hook session-start --host codex","timeout":5,"type":"command"}]}],"SubagentStart":[{"hooks":[{"command":"'%[1]s' hook subagent-start --host codex","timeout":5,"type":"command"}]}]}}`, filepath.Join(root, "bin", "issueops"))), nil
+				return fmt.Appendf(nil, `{"hooks":{"SessionStart":[{"hooks":[{"command":"'%[1]s' hook session-start --host codex","timeout":5,"type":"command"}]}],"SubagentStart":[{"hooks":[{"command":"'%[1]s' hook subagent-start --host codex","timeout":5,"type":"command"}]}]}}`, filepath.Join(root, "bin", "issueops")), nil
 			default:
 				return nil, errors.New("unexpected read")
 			}
@@ -440,11 +440,11 @@ func TestNativeIntegrationKeepsPreparedStableRoot(t *testing.T) {
 		return (nativeIntegrationValidationDeps{Validator: validator, readFile: func(path string) ([]byte, error) {
 			switch path {
 			case filepath.Join(home, ".omo", "mcp.json"):
-				return []byte(fmt.Sprintf(`{"mcpServers":{"issueops":{"command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, binary, root)), nil
+				return fmt.Appendf(nil, `{"mcpServers":{"issueops":{"command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, binary, root), nil
 			case filepath.Join(home, ".omo", "extensions", "issueops.js"):
 				return []byte(hostprotocol.OmoLifecycleExtension(binary)), nil
 			case filepath.Join(home, ".omp", "agent", "mcp.json"):
-				return []byte(fmt.Sprintf(`{"mcpServers":{"issueops":{"type":"stdio","command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, binary, root)), nil
+				return fmt.Appendf(nil, `{"mcpServers":{"issueops":{"type":"stdio","command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, binary, root), nil
 			case filepath.Join(home, ".omp", "agent", "extensions", "issueops.js"):
 				return []byte(hostprotocol.OmpLifecycleExtension(binary)), nil
 			default:

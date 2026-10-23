@@ -31,7 +31,7 @@ func TestPublicStateInstancesKeepToolsAndResourcesSeparate(t *testing.T) {
 	for i := range deps {
 		dirs[i] = t.TempDir()
 		root := t.TempDir()
-		if err := os.WriteFile(filepath.Join(root, "AGENTS.md"), []byte(fmt.Sprintf("agents-%d", i)), 0600); err != nil {
+		if err := os.WriteFile(filepath.Join(root, "AGENTS.md"), fmt.Appendf(nil, "agents-%d", i), 0600); err != nil {
 			t.Fatal(err)
 		}
 		t.Setenv("ISSUEOPS_STATE_DIR", dirs[i])

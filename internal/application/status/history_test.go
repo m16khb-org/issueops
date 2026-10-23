@@ -180,7 +180,7 @@ func BenchmarkRunHistoryReads(b *testing.B) {
 			originalRead := service.StateRead
 			service.StateRead = func(key string) (statecontract.StateResult, error) { reads++; return originalRead(key) }
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				service.Run("repo")
 			}
 			b.StopTimer()

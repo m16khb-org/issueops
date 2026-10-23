@@ -18,15 +18,15 @@ import (
 func TestGitHubStepsPinTheSealedBaseSHA(t *testing.T) {
 	const baseSHA = "2a56f2cc4d2e6b7b4fa99e3cdd71e3673ae060d2"
 	steps := Steps("github", "https://github.com/acme/repo/issues/16", "16-demo", "main", baseSHA)
-	joined := ""
+	var joined strings.Builder
 	for _, step := range steps {
-		joined += step.Description + " " + strings.Join(step.Command, " ") + "\n"
+		joined.WriteString(step.Description + " " + strings.Join(step.Command, " ") + "\n")
 	}
-	if !strings.Contains(joined, baseSHA) {
-		t.Fatalf("봉인 base SHA를 안내에 담지 않으면 GitHub이 그 시점 HEAD를 쓴다:\n%s", joined)
+	if !strings.Contains(joined.String(), baseSHA) {
+		t.Fatalf("봉인 base SHA를 안내에 담지 않으면 GitHub이 그 시점 HEAD를 쓴다:\n%s", joined.String())
 	}
-	if !strings.Contains(joined, "createLinkedBranch") {
-		t.Fatalf("oid를 넘길 수 있는 것은 GraphQL mutation뿐이다. gh issue develop --base는 브랜치 이름만 받는다:\n%s", joined)
+	if !strings.Contains(joined.String(), "createLinkedBranch") {
+		t.Fatalf("oid를 넘길 수 있는 것은 GraphQL mutation뿐이다. gh issue develop --base는 브랜치 이름만 받는다:\n%s", joined.String())
 	}
 }
 
@@ -56,18 +56,18 @@ func TestGitHubStepsResolveTheIssueNodeIDSeparately(t *testing.T) {
 // 그런지 안내해야 한다 — 조용히 브랜치 이름을 쓰면 #147의 갈림이 재발한다.
 func TestGitHubStepsFallBackWhenTheBaseSHAIsAbsent(t *testing.T) {
 	steps := Steps("github", "https://github.com/acme/repo/issues/16", "16-demo", "main", "")
-	joined := ""
+	var joined strings.Builder
 	for _, step := range steps {
-		joined += step.Description + " " + strings.Join(step.Command, " ") + "\n"
+		joined.WriteString(step.Description + " " + strings.Join(step.Command, " ") + "\n")
 	}
-	if strings.Contains(joined, "createLinkedBranch") {
-		t.Fatalf("base SHA가 없으면 oid를 고정할 수 없다:\n%s", joined)
+	if strings.Contains(joined.String(), "createLinkedBranch") {
+		t.Fatalf("base SHA가 없으면 oid를 고정할 수 없다:\n%s", joined.String())
 	}
-	if !strings.Contains(joined, "gh issue develop") {
-		t.Fatalf("종전 경로로 떨어져야 한다:\n%s", joined)
+	if !strings.Contains(joined.String(), "gh issue develop") {
+		t.Fatalf("종전 경로로 떨어져야 한다:\n%s", joined.String())
 	}
-	if !strings.Contains(joined, "base_sha") {
-		t.Fatalf("왜 oid를 고정하지 못하는지 안내해야 한다:\n%s", joined)
+	if !strings.Contains(joined.String(), "base_sha") {
+		t.Fatalf("왜 oid를 고정하지 못하는지 안내해야 한다:\n%s", joined.String())
 	}
 }
 
@@ -76,12 +76,12 @@ func TestGitHubStepsFallBackWhenTheBaseSHAIsAbsent(t *testing.T) {
 // 그 전제를 안내에 담지 않으면 실행 주체가 그대로 붙여넣어 막힌다.
 func TestGitHubStepsWarnAboutQuotingTheQuery(t *testing.T) {
 	steps := Steps("github", "https://github.com/acme/repo/issues/16", "16-demo", "main", "deadbeef")
-	joined := ""
+	var joined strings.Builder
 	for _, step := range steps {
-		joined += step.Description + "\n"
+		joined.WriteString(step.Description + "\n")
 	}
-	if !strings.Contains(joined, "quote") {
-		t.Fatalf("query 인용 전제를 안내해야 한다:\n%s", joined)
+	if !strings.Contains(joined.String(), "quote") {
+		t.Fatalf("query 인용 전제를 안내해야 한다:\n%s", joined.String())
 	}
 }
 

@@ -129,7 +129,7 @@ func (w *fakeWorld) run(_ context.Context, name string, args ...string) ([]byte,
 		if w.serving != nil {
 			pid = w.serving.PID
 		}
-		return []byte(fmt.Sprintf("gui/501/io.issueops.test = {\n\tstate = running\n\tpid = %d\n}\n", pid)), nil
+		return fmt.Appendf(nil, "gui/501/io.issueops.test = {\n\tstate = running\n\tpid = %d\n}\n", pid), nil
 	case "bootstrap":
 		w.loaded = true
 		if w.onLoad != nil {

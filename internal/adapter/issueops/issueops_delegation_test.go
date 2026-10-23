@@ -505,7 +505,7 @@ func TestAppendIssueOpsChildRefResetsTerminalReceiptOnlyForNewerIncarnation(t *t
 
 			child := started.Child
 			child.CreatedAt = tc.childCreatedAt(existingTime, child.CreatedAt)
-			child = writeIssueOpsRecordForDelegationTest(t, stateRoot, child)
+			writeIssueOpsRecordForDelegationTest(t, stateRoot, child)
 			now := existingTime.Add(time.Minute)
 			actor := issueOpsActorForTest(parent.WorktreePath)
 			starter := childStarterForTest(stateRoot)

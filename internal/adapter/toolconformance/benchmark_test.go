@@ -50,7 +50,7 @@ func (f *fakeProbeRunner) Run(_ context.Context, request port.HostProbeRequest) 
 	}
 	encoded, _ := json.Marshal(arguments)
 	rawSHA := sha256.Sum256(encoded)
-	evidenceSHA := sha256.Sum256([]byte(fmt.Sprintf("%s:%s:%s:%d", f.host, request.FixtureID, request.RunToken, request.Attempt)))
+	evidenceSHA := sha256.Sum256(fmt.Appendf(nil, "%s:%s:%s:%d", f.host, request.FixtureID, request.RunToken, request.Attempt))
 	classification := fixturecontract.Classification(fixturecontract.ExactValid)
 	advertisedValid, canonicalValid := true, true
 	diagnostics := []fixturecontract.Diagnostic{}

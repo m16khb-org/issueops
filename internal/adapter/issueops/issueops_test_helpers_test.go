@@ -221,8 +221,7 @@ func recordIssueOpsPreparedExecutionForTest(t *testing.T, stateRoot, id, worktre
 	}
 	record.Execution = issueOpsExecutionForTest(record.Repo, worktree, record.Branch)
 	sealStagedArchitectureForTest(t, stateRoot, record)
-	record, err = writeIssueOps(context.Background(), stateRoot, record)
-	if err != nil {
+	if _, err = writeIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
 	record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, id, string(issueops.IssueOpsPhaseImplement), issueOpsActorForTest(worktree))

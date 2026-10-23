@@ -101,7 +101,7 @@ func linuxProcessStartTicks(stat []byte) (uint64, error) {
 }
 
 func linuxBootTime(systemStat []byte) (int64, error) {
-	for _, line := range strings.Split(string(systemStat), "\n") {
+	for line := range strings.SplitSeq(string(systemStat), "\n") {
 		fields := strings.Fields(line)
 		if len(fields) != 2 || fields[0] != "btime" {
 			continue

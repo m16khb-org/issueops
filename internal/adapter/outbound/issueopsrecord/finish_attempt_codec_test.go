@@ -72,7 +72,7 @@ func TestFinishAttemptCodecRejectsMalformedAuthority(t *testing.T) {
 		`{"operation":"finish","token":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","started_at":"yesterday"}`,
 		`{"operation":"finish","token":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","started_at":"2026-09-29T00:00:00Z","unknown":true}`,
 	} {
-		raw := []byte(fmt.Sprintf(`{"ok":true,"schema_version":1,"id":"io-finish-codec","phase":"done","cleanup_attempt":%s}`, attempt))
+		raw := fmt.Appendf(nil, `{"ok":true,"schema_version":1,"id":"io-finish-codec","phase":"done","cleanup_attempt":%s}`, attempt)
 		if _, err := Decode("io-finish-codec", raw); !errors.Is(err, state.ErrInvalidState) {
 			t.Errorf("accepted malformed record %s: %v", attempt, err)
 		}

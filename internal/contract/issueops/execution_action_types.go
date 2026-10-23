@@ -14,7 +14,7 @@ type RemotePullRequestCreateHandler func(context.Context, string, RemotePullRequ
 type ExecutionActionRequest struct {
 	Action                 string      `json:"action"`
 	ID                     string      `json:"id"`
-	Actor                  NativeActor `json:"actor,omitempty"`
+	Actor                  NativeActor `json:"actor"`
 	CWD                    string      `json:"cwd,omitempty"`
 	Generation             uint64      `json:"generation,omitempty"`
 	ExpectedGeneration     uint64      `json:"expected_generation,omitempty"`

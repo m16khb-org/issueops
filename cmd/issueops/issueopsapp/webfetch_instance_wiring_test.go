@@ -39,7 +39,7 @@ func TestWebFetchCLIAndMCPKeepCapturedHTTPClients(t *testing.T) {
 			if req.URL.Host != "8.8.8.8" {
 				t.Fatalf("unexpected network target: %s", req.URL)
 			}
-			return &http.Response{StatusCode: 200, Header: http.Header{"Content-Type": []string{"application/json"}}, Body: io.NopCloser(strings.NewReader(fmt.Sprintf(`{"owner":"%s"}`, name)))}, nil
+			return &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"application/json"}}, Body: io.NopCloser(strings.NewReader(fmt.Sprintf(`{"owner":"%s"}`, name)))}, nil
 		})}
 		cli, deps := webFetchDependencies(), issueOpsMCPDependencies()
 		commands = append(commands, prepared{cli: cli, mcp: deps, session: startHistoryMCPTestSession(t, deps), name: name})

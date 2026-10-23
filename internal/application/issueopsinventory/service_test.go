@@ -144,7 +144,7 @@ func TestServiceListCyclesReusesExactRecordNormalizationWithinRequest(t *testing
 			if got, want := paths.TotalCalls(), test.uniquePaths+1; got != want {
 				t.Fatalf("normalization calls = %d, want %d (U + separate repo filter)", got, want)
 			}
-			for unique := 0; unique < test.uniquePaths; unique++ {
+			for unique := range test.uniquePaths {
 				path := fmt.Sprintf("/worktree-%04d", unique)
 				if got := paths.Calls(path); got != 1 {
 					t.Fatalf("Normalize(%q) calls = %d, want 1", path, got)

@@ -128,7 +128,7 @@ func TestBuildCleanupOccupancyAncestryBrokenChains(t *testing.T) {
 				if kind == "129 entries" {
 					length++
 				}
-				for i := 0; i < length; i++ {
+				for i := range length {
 					parent := 0
 					if i < length-1 {
 						parent = 11 + i

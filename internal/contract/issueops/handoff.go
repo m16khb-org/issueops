@@ -38,12 +38,12 @@ type IssueOpsHandoffDeliveryObservation struct {
 	CreatedAt          string                            `json:"created_at"`
 	UpdatedAt          string                            `json:"updated_at"`
 	Receipt            IssueOpsHandoffDeliveryReceipt    `json:"receipt"`
-	CallStaged         IssueOpsHandoffDeliveryState      `json:"call_staged,omitempty"`
+	CallStaged         IssueOpsHandoffDeliveryState      `json:"call_staged"`
 	InputAccepted      IssueOpsHandoffDeliveryState      `json:"input_accepted"`
 	NativeTurnObserved IssueOpsHandoffDeliveryState      `json:"native_turn_observed"`
 	OwnerClaimed       IssueOpsHandoffDeliveryState      `json:"owner_claimed"`
 	Ambiguous          IssueOpsHandoffDeliveryState      `json:"ambiguous"`
-	OwnerClaim         IssueOpsHandoffDeliveryOwnerClaim `json:"owner_claim,omitempty"`
+	OwnerClaim         IssueOpsHandoffDeliveryOwnerClaim `json:"owner_claim"`
 	Timing             *IssueOpsHandoffDeliveryTiming    `json:"timing,omitempty"`
 }
 
@@ -113,7 +113,7 @@ type IssueOpsHandoffDeliveryState struct {
 type IssueOpsHandoffDeliveryOwnerClaim struct {
 	Claimed    bool        `json:"claimed,omitempty"`
 	Generation uint64      `json:"generation,omitempty"`
-	Actor      NativeActor `json:"actor,omitempty"`
+	Actor      NativeActor `json:"actor"`
 	ClaimedAt  string      `json:"claimed_at,omitempty"`
 }
 

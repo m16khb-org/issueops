@@ -94,7 +94,7 @@ func BenchmarkClassifyScaling(b *testing.B) {
 			}
 			b.ReportAllocs()
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				if result := Classify(s, opts); !result.Healthy {
 					b.Fatal(result.Findings)
 				}

@@ -112,7 +112,7 @@ type ExecutionSyncBaseRequest struct {
 	ID                   string      `json:"id"`
 	Mode                 string      `json:"mode"`
 	CompletionGeneration uint64      `json:"completion_generation,omitempty"`
-	Actor                NativeActor `json:"actor,omitempty"`
+	Actor                NativeActor `json:"actor"`
 	CWD                  string      `json:"cwd"`
 	Confirm              bool        `json:"confirm,omitempty"`
 	Fingerprint          string      `json:"fingerprint,omitempty"`

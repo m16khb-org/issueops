@@ -17,7 +17,7 @@ type SelfVerifyLLMEvalInput struct {
 	TargetScore         float64                              `json:"target_score"`
 	TerminationEligible bool                                 `json:"termination_eligible"`
 	Summary             augmentcontract.SelfAugmentSummary   `json:"summary"`
-	LastRun             augmentcontract.SelfAugmentIteration `json:"last_run,omitempty"`
+	LastRun             augmentcontract.SelfAugmentIteration `json:"last_run"`
 }
 
 func BuildSelfVerifyLLMEvalPrompt(result augmentcontract.SelfAugmentResult) (string, int, error) {

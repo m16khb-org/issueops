@@ -327,16 +327,16 @@ func readOmpAuthSchema(ctx context.Context, tx *sql.Tx) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	schema := []string{}
 	for rows.Next() {
 		var statement string
 		if err := rows.Scan(&statement); err != nil {
-			rows.Close()
 			return nil, err
 		}
 		schema = append(schema, statement)
 	}
-	if err := errors.Join(rows.Err(), rows.Close()); err != nil {
+	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 	return schema, nil

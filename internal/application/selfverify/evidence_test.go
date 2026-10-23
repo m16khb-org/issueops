@@ -36,7 +36,8 @@ func TestGoldenFallbackRequiresActualPassingTests(t *testing.T) {
 			writeEvidenceFixture(t, filepath.Join(root, "cmd/issueops/main_test.go"), "package main\nimport \"testing\"\nfunc TestUnrelated(t *testing.T) {}\n")
 			names := map[string][]string{"contractgolden": {"TestCLIUsageGolden", "TestMCPToolsGolden", "TestMCPResourcesGolden"}, "issueopsapp": {"TestResponseContractsGolden"}}
 			for pkg, tests := range names {
-				body := "package " + pkg + "\nimport \"testing\"\n"
+				var body strings.Builder
+				body.WriteString("package " + pkg + "\nimport \"testing\"\n")
 				for _, name := range tests {
 					action := ""
 					if name == "TestResponseContractsGolden" {
@@ -49,9 +50,9 @@ func TestGoldenFallbackRequiresActualPassingTests(t *testing.T) {
 							action = "t.Fatal(\"fixture failure\")"
 						}
 					}
-					body += "func " + name + "(t *testing.T) {" + action + "}\n"
+					body.WriteString("func " + name + "(t *testing.T) {" + action + "}\n")
 				}
-				writeEvidenceFixture(t, filepath.Join(root, "cmd/issueops", pkg, "golden_test.go"), body)
+				writeEvidenceFixture(t, filepath.Join(root, "cmd/issueops", pkg, "golden_test.go"), body.String())
 			}
 			result := CachedContractGoldenStep(contract.StepResult{OK: false}, SelfVerifyStepDeps{IssueOpsRoot: func() string { return root }, RunCommandStep: evidenceRunner})
 			if result.OK != (mode == "pass") {
@@ -170,7 +171,7 @@ func TestBinaryDriftRejectsInvalidEvidenceAndPreservesCommandFailure(t *testing.
 }
 
 func TestGoldenFallbackRejectsIncompleteJSONEvidence(t *testing.T) {
-	valid := ""
+	var valid strings.Builder
 	for _, tc := range []struct{ pkg, test string }{
 		{"issueops/cmd/issueops/contractgolden", "TestCLIUsageGolden"},
 		{"issueops/cmd/issueops/contractgolden", "TestMCPToolsGolden"},
@@ -182,20 +183,20 @@ func TestGoldenFallbackRejectsIncompleteJSONEvidence(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			valid += string(event) + "\n"
+			valid.WriteString(string(event) + "\n")
 		}
 	}
-	valid += `{"Action":"pass","Package":"issueops/cmd/issueops/contractgolden"}` + "\n"
-	valid += `{"Action":"pass","Package":"issueops/cmd/issueops/issueopsapp"}` + "\n"
+	valid.WriteString(`{"Action":"pass","Package":"issueops/cmd/issueops/contractgolden"}` + "\n")
+	valid.WriteString(`{"Action":"pass","Package":"issueops/cmd/issueops/issueopsapp"}` + "\n")
 	for _, tc := range []struct {
 		name, body    string
 		truncated, ok bool
 	}{
-		{"complete", valid, false, true},
-		{"no run", strings.ReplaceAll(valid, `"Action":"run"`, `"Action":"output"`), false, false},
-		{"no package pass", strings.ReplaceAll(valid, `{"Action":"pass","Package":"issueops/cmd/issueops/issueopsapp"}`, ""), false, false},
-		{"malformed", valid + "{", false, false},
-		{"budget truncated", valid, true, false},
+		{"complete", valid.String(), false, true},
+		{"no run", strings.ReplaceAll(valid.String(), `"Action":"run"`, `"Action":"output"`), false, false},
+		{"no package pass", strings.ReplaceAll(valid.String(), `{"Action":"pass","Package":"issueops/cmd/issueops/issueopsapp"}`, ""), false, false},
+		{"malformed", valid.String() + "{", false, false},
+		{"budget truncated", valid.String(), true, false},
 		{"empty", "", false, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -211,7 +212,7 @@ func TestGoldenFallbackRejectsIncompleteJSONEvidence(t *testing.T) {
 }
 
 func TestGoldenFallbackRejectsRequiredTestThatRanButNeverPassed(t *testing.T) {
-	var body string
+	var body strings.Builder
 	for _, tc := range []struct{ pkg, test string }{
 		{"issueops/cmd/issueops/contractgolden", "TestCLIUsageGolden"},
 		{"issueops/cmd/issueops/contractgolden", "TestMCPToolsGolden"},
@@ -227,13 +228,13 @@ func TestGoldenFallbackRejectsRequiredTestThatRanButNeverPassed(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			body += string(event) + "\n"
+			body.WriteString(string(event) + "\n")
 		}
 	}
-	body += `{"Action":"pass","Package":"issueops/cmd/issueops/contractgolden"}` + "\n"
-	body += `{"Action":"pass","Package":"issueops/cmd/issueops/issueopsapp"}` + "\n"
+	body.WriteString(`{"Action":"pass","Package":"issueops/cmd/issueops/contractgolden"}` + "\n")
+	body.WriteString(`{"Action":"pass","Package":"issueops/cmd/issueops/issueopsapp"}` + "\n")
 	deps := SelfVerifyStepDeps{IssueOpsRoot: func() string { return "/repo" }, RunCommandStep: func(string, string, time.Duration, string, string, ...string) contract.StepResult {
-		return contract.StepResult{OK: true, Stdout: body}
+		return contract.StepResult{OK: true, Stdout: body.String()}
 	}}
 	got := CachedContractGoldenStep(contract.StepResult{OK: false}, deps)
 	if got.OK || !strings.Contains(got.Error, "TestMCPToolsGolden") {

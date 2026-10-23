@@ -21,7 +21,7 @@ func TestMCPAssistantServicesKeepCapturedRepositoryAndState(t *testing.T) {
 		t.Chdir(root)
 		t.Setenv("ISSUEOPS_ROOT", root)
 		t.Setenv("ISSUEOPS_STATE_DIR", states[i])
-		if err := os.WriteFile(filepath.Join(root, "README.md"), []byte(fmt.Sprintf("instance-%d\n", i)), 0600); err != nil {
+		if err := os.WriteFile(filepath.Join(root, "README.md"), fmt.Appendf(nil, "instance-%d\n", i), 0600); err != nil {
 			t.Fatal(err)
 		}
 		deps[i] = issueOpsMCPDependencies()

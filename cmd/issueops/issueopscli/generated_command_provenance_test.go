@@ -152,7 +152,7 @@ func TestGeneratedDelegatedChildBootstrapUsesParentExecutionProvenance(t *testin
 		t.Fatal(err)
 	}
 	evidence := commandparsecontract.GeneratedCommandProvenance{
-		ExecutablePath: "/worktree/bin/issueops", ExecutableSHA256: strings.Repeat("a", 64), LeaseGeneration: 1,
+		ExecutablePath: "/worktree/bin/issueops", ExecutableSHA256: strings.Repeat("a", 64),
 	}
 	args := []string{
 		"branch", "prepare", "--id", child.ID, "--provider", "github",
@@ -179,7 +179,7 @@ func TestGeneratedOwnerMutationRequiresActualProcessCWD(t *testing.T) {
 	repo := makeIssueOpsCLIRepoForTest(t, "generated-owner-process-cwd")
 	parent, actor := startIssueOpsCLIReadyDelegationParent(t, repo, "123-330-generated-owner-cwd")
 	evidence := commandparsecontract.GeneratedCommandProvenance{
-		ExecutablePath: "/worktree/bin/issueops", ExecutableSHA256: strings.Repeat("a", 64), LeaseGeneration: 1,
+		ExecutablePath: "/worktree/bin/issueops", ExecutableSHA256: strings.Repeat("a", 64),
 	}
 	args := withIssueOpsCLIActor([]string{
 		"child", "start", "--parent", parent.ID, "--branch", "330-generated-child",

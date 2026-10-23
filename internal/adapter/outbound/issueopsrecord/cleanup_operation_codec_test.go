@@ -9,7 +9,7 @@ import (
 func TestCleanupOperationCodecBindsSupportedOperations(t *testing.T) {
 	for _, operation := range []string{"finish", "remote-branch", "abandon"} {
 		t.Run(operation, func(t *testing.T) {
-			raw := []byte(fmt.Sprintf(`{"schema_version":1,"id":"io-shared-cleanup","phase":"done","cleanup_attempt":{"operation":%q,"token":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","started_at":"2026-09-29T00:00:00Z"}}`, operation))
+			raw := fmt.Appendf(nil, `{"schema_version":1,"id":"io-shared-cleanup","phase":"done","cleanup_attempt":{"operation":%q,"token":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","started_at":"2026-09-29T00:00:00Z"}}`, operation)
 			record, err := Decode("io-shared-cleanup", raw)
 			if err != nil {
 				t.Fatalf("valid operation rejected: %v", err)

@@ -80,12 +80,12 @@ func TestGitLabWithoutBaseSHAExplainsWhyItCannotPin(t *testing.T) {
 		t.Fatalf("baseSHA가 없으면 base 브랜치 이름으로 떨어진다: %q", joined)
 	}
 
-	var descriptions string
+	var descriptions strings.Builder
 	for _, step := range steps {
-		descriptions += step.Description + "\n"
+		descriptions.WriteString(step.Description + "\n")
 	}
-	if !strings.Contains(descriptions, "base-sha") {
-		t.Fatalf("왜 못박지 못하는지와 무엇을 주면 되는지 밝혀야 한다:\n%s", descriptions)
+	if !strings.Contains(descriptions.String(), "base-sha") {
+		t.Fatalf("왜 못박지 못하는지와 무엇을 주면 되는지 밝혀야 한다:\n%s", descriptions.String())
 	}
 }
 

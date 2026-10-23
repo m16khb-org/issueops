@@ -57,17 +57,17 @@ func TestGitHubStepsRequireALinkedBranchReadback(t *testing.T) {
 func TestGitHubReadbackNamesThePartialSuccessAndForbidsRetry(t *testing.T) {
 	steps := githubSteps(readbackIssueURL, readbackBranch, "main", readbackBaseSHA)
 
-	description := ""
+	var description strings.Builder
 	for _, step := range steps {
 		if step.Strategy == "verify_linked_branch" {
-			description += " " + step.Description
+			description.WriteString(" " + step.Description)
 		}
 	}
 	for _, needle := range []string{
 		"ref", "null", readbackBaseSHA, "retry",
 	} {
-		if !strings.Contains(strings.ToLower(description), strings.ToLower(needle)) {
-			t.Fatalf("readback 안내에 %q가 있어야 한다: %s", needle, description)
+		if !strings.Contains(strings.ToLower(description.String()), strings.ToLower(needle)) {
+			t.Fatalf("readback 안내에 %q가 있어야 한다: %s", needle, description.String())
 		}
 	}
 }

@@ -396,7 +396,7 @@ func TestConcurrentSpansAndReadsRace(t *testing.T) {
 			for j := range 10 {
 				_ = d.WithSpan(context.Background(), func(context.Context) error {
 					_, _, _ = d.Get("race", id)
-					return d.Put("race", id, []byte(fmt.Sprintf("%d-%d", n, j)))
+					return d.Put("race", id, fmt.Appendf(nil, "%d-%d", n, j))
 				})
 				_, _, _ = d.Get("race", id)
 			}

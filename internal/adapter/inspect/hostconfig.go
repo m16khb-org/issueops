@@ -50,7 +50,7 @@ func readOpencodeEntry(path string) (hostEntry, error) {
 	}
 	url, _ := entry["url"].(string)
 	command, _ := entry["command"].([]any)
-	transport := ""
+	var transport string
 	switch kind, _ := entry["type"].(string); {
 	case kind == "remote" && url != "" && command == nil:
 		transport = "http"
@@ -367,7 +367,7 @@ func (p *codexIssueOpsTableParser) consumeKeyValue(line string, lines []string, 
 func stripTOMLComment(line string) string {
 	var quote byte
 	escaped := false
-	for i := 0; i < len(line); i++ {
+	for i := range len(line) {
 		c := line[i]
 		switch {
 		case quote == '"' && escaped:
@@ -389,7 +389,7 @@ func bracketDepth(text string) int {
 	depth := 0
 	var quote byte
 	escaped := false
-	for i := 0; i < len(text); i++ {
+	for i := range len(text) {
 		c := text[i]
 		switch {
 		case quote == '"' && escaped:

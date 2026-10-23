@@ -213,7 +213,7 @@ func TestGitPreflightHistoryProjectionsMatchRealGit(t *testing.T) {
 	}
 	commit := func(i int) {
 		t.Helper()
-		if err := os.WriteFile(filepath.Join(repo, "file.txt"), []byte(fmt.Sprintf("%d\n", i)), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(repo, "file.txt"), fmt.Appendf(nil, "%d\n", i), 0o644); err != nil {
 			t.Fatal(err)
 		}
 		if code, _, stderr := GitCmd(repo, "add", "file.txt"); code != 0 {
