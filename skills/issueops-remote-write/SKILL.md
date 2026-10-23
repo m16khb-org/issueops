@@ -1,6 +1,6 @@
 ---
 name: issueops-remote-write
-description: Use before any governed "issueops remote ..." write (issue, child task, PR/MR body, comment, review reply) or for "원격에 써줘", "이슈 본문 올려줘", "PR 본문 갱신". Renders the template body, polishes it with fluent-korean, checks the readability preview, confirms, reads back, and reconciles instead of retrying.
+description: Use before any governed "issueops remote ..." write (issue, child task, PR/MR body, comment, review reply) or for "원격에 써줘", "이슈 본문 올려줘", "PR 본문 갱신". Renders, polishes, confirms, and reads back the body.
 ---
 
 # IssueOps Remote Write

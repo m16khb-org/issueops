@@ -1387,14 +1387,14 @@
           "path": "$ISSUEOPS_ROOT/skills/issueops-cleanup"
         },
         {
-          "description": "Use when a cycle sits in the pr phase with an active lease after the draft PR/MR is published and verified, or for \"완료 처리해줘\", \"사이클 끝내줘\", \"execution complete\", \"완료 기록해줘\". Records completion with ordered evidence under actor and generation fencing and releases the generation.",
+          "description": "Use when a cycle sits in the pr phase with an active lease after the draft PR/MR is published and verified, or for \"완료 처리해줘\", \"사이클 끝내줘\", \"execution complete\", \"완료 기록해줘\". Records completion and releases the lease.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "issueops-complete",
           "path": "$ISSUEOPS_ROOT/skills/issueops-complete"
         },
         {
-          "description": "Use at the start of an IssueOps cycle, when \"issueops next\" reports stage none or issue, or for \"이슈 만들어줘\", \"이슈부터 시작하자\", \"child task 만들어줘\". Interviews only on blocking ambiguity, records intent, domain review, and plan-prep evidence, then publishes and links a readable Korean issue.",
+          "description": "Use at the start of an IssueOps cycle, when \"issueops next\" reports stage none or issue, or for \"이슈 만들어줘\", \"이슈부터 시작하자\", \"child task 만들어줘\". Records intent and publishes a readable Korean issue.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "issueops-create-issue",
@@ -1422,7 +1422,7 @@
           "path": "$ISSUEOPS_ROOT/skills/issueops-docs"
         },
         {
-          "description": "Use when \"issueops next\" reports implement.enter or implement, or for \"구현 시작\", \"구현 이어서 해줘\", \"이슈 구현해줘\", \"child로 나눠서 구현해줘\". Runs canonical-worktree TDD under the generation-fenced lease with a gate ledger for RED/GREEN evidence, then moves the cycle to ai-slop-clean.",
+          "description": "Use when \"issueops next\" reports implement.enter or implement, or for \"구현 시작\", \"구현 이어서 해줘\", \"이슈 구현해줘\", \"child로 나눠서 구현해줘\". Runs TDD in the canonical worktree under the lease.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "issueops-implement",
@@ -1450,7 +1450,7 @@
           "path": "$ISSUEOPS_ROOT/skills/issueops-prepare"
         },
         {
-          "description": "Use before any governed \"issueops remote ...\" write (issue, child task, PR/MR body, comment, review reply) or for \"원격에 써줘\", \"이슈 본문 올려줘\", \"PR 본문 갱신\". Renders the template body, polishes it with fluent-korean, checks the readability preview, confirms, reads back, and reconciles instead of retrying.",
+          "description": "Use before any governed \"issueops remote ...\" write (issue, child task, PR/MR body, comment, review reply) or for \"원격에 써줘\", \"이슈 본문 올려줘\", \"PR 본문 갱신\". Renders, polishes, confirms, and reads back the body.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "issueops-remote-write",
@@ -1520,7 +1520,7 @@
           "path": "$ISSUEOPS_ROOT/skills/project-docs-bootstrap"
         },
         {
-          "description": "Use to optimize, split, reorganize, re-folder, or validate the `.issueops` document tree (ADRs, cautions, conventions, operations, testing, architecture), or when its checker reports nested records, undeclared directories or root docs, broken links, or oversized documents. Keeps every constraint and code-read path.",
+          "description": "Use to optimize, split, reorganize, re-folder, or validate the `.issueops` document tree (ADRs, cautions, conventions, operations, testing, architecture), or when its checker reports nested records, undeclared directories or root docs, broken links, or oversized documents.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "project-docs-optimize",
@@ -1576,7 +1576,7 @@
           "path": "$ISSUEOPS_ROOT/skills/self-verify"
         },
         {
-          "description": "Use when writing a Slack post that shares backend work with the wider dev team, backend peers, or the backend lead — an API contract change, endpoint or parameter addition, error/response change, deploy, environment notice, investigation result, MR merge approval request, incident, or a report to the backend lead — and the channel and message shape must fit that audience.",
+          "description": "Use when writing a Slack post that shares backend work (API contract or endpoint change, deploy, environment notice, investigation result, MR merge approval request, incident, report to the backend lead) with the dev team, backend peers, or the backend lead.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "sharing-backend-work",
@@ -5859,14 +5859,14 @@
                 "path": "$ISSUEOPS_ROOT/skills/issueops-cleanup"
               },
               {
-                "description": "Use when a cycle sits in the pr phase with an active lease after the draft PR/MR is published and verified, or for \"완료 처리해줘\", \"사이클 끝내줘\", \"execution complete\", \"완료 기록해줘\". Records completion with ordered evidence under actor and generation fencing and releases the generation.",
+                "description": "Use when a cycle sits in the pr phase with an active lease after the draft PR/MR is published and verified, or for \"완료 처리해줘\", \"사이클 끝내줘\", \"execution complete\", \"완료 기록해줘\". Records completion and releases the lease.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "issueops-complete",
                 "path": "$ISSUEOPS_ROOT/skills/issueops-complete"
               },
               {
-                "description": "Use at the start of an IssueOps cycle, when \"issueops next\" reports stage none or issue, or for \"이슈 만들어줘\", \"이슈부터 시작하자\", \"child task 만들어줘\". Interviews only on blocking ambiguity, records intent, domain review, and plan-prep evidence, then publishes and links a readable Korean issue.",
+                "description": "Use at the start of an IssueOps cycle, when \"issueops next\" reports stage none or issue, or for \"이슈 만들어줘\", \"이슈부터 시작하자\", \"child task 만들어줘\". Records intent and publishes a readable Korean issue.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "issueops-create-issue",
@@ -5894,7 +5894,7 @@
                 "path": "$ISSUEOPS_ROOT/skills/issueops-docs"
               },
               {
-                "description": "Use when \"issueops next\" reports implement.enter or implement, or for \"구현 시작\", \"구현 이어서 해줘\", \"이슈 구현해줘\", \"child로 나눠서 구현해줘\". Runs canonical-worktree TDD under the generation-fenced lease with a gate ledger for RED/GREEN evidence, then moves the cycle to ai-slop-clean.",
+                "description": "Use when \"issueops next\" reports implement.enter or implement, or for \"구현 시작\", \"구현 이어서 해줘\", \"이슈 구현해줘\", \"child로 나눠서 구현해줘\". Runs TDD in the canonical worktree under the lease.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "issueops-implement",
@@ -5922,7 +5922,7 @@
                 "path": "$ISSUEOPS_ROOT/skills/issueops-prepare"
               },
               {
-                "description": "Use before any governed \"issueops remote ...\" write (issue, child task, PR/MR body, comment, review reply) or for \"원격에 써줘\", \"이슈 본문 올려줘\", \"PR 본문 갱신\". Renders the template body, polishes it with fluent-korean, checks the readability preview, confirms, reads back, and reconciles instead of retrying.",
+                "description": "Use before any governed \"issueops remote ...\" write (issue, child task, PR/MR body, comment, review reply) or for \"원격에 써줘\", \"이슈 본문 올려줘\", \"PR 본문 갱신\". Renders, polishes, confirms, and reads back the body.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "issueops-remote-write",
@@ -5992,7 +5992,7 @@
                 "path": "$ISSUEOPS_ROOT/skills/project-docs-bootstrap"
               },
               {
-                "description": "Use to optimize, split, reorganize, re-folder, or validate the `.issueops` document tree (ADRs, cautions, conventions, operations, testing, architecture), or when its checker reports nested records, undeclared directories or root docs, broken links, or oversized documents. Keeps every constraint and code-read path.",
+                "description": "Use to optimize, split, reorganize, re-folder, or validate the `.issueops` document tree (ADRs, cautions, conventions, operations, testing, architecture), or when its checker reports nested records, undeclared directories or root docs, broken links, or oversized documents.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "project-docs-optimize",
@@ -6048,7 +6048,7 @@
                 "path": "$ISSUEOPS_ROOT/skills/self-verify"
               },
               {
-                "description": "Use when writing a Slack post that shares backend work with the wider dev team, backend peers, or the backend lead — an API contract change, endpoint or parameter addition, error/response change, deploy, environment notice, investigation result, MR merge approval request, incident, or a report to the backend lead — and the channel and message shape must fit that audience.",
+                "description": "Use when writing a Slack post that shares backend work (API contract or endpoint change, deploy, environment notice, investigation result, MR merge approval request, incident, report to the backend lead) with the dev team, backend peers, or the backend lead.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "sharing-backend-work",

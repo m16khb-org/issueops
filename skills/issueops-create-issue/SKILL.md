@@ -1,6 +1,6 @@
 ---
 name: issueops-create-issue
-description: Use at the start of an IssueOps cycle, when "issueops next" reports stage none or issue, or for "이슈 만들어줘", "이슈부터 시작하자", "child task 만들어줘". Interviews only on blocking ambiguity, records intent, domain review, and plan-prep evidence, then publishes and links a readable Korean issue.
+description: Use at the start of an IssueOps cycle, when "issueops next" reports stage none or issue, or for "이슈 만들어줘", "이슈부터 시작하자", "child task 만들어줘". Records intent and publishes a readable Korean issue.
 ---
 
 # IssueOps Create Issue
