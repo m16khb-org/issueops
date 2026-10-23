@@ -238,7 +238,7 @@ func (s *Service) verifyNative(ctx context.Context, actor model.NativeActor) (mo
 // caller declared, only when it is the per-client `serve --stdio` server. The
 // shared `serve --service` outlives its sessions, so it cannot prove one.
 func (s *Service) requireOpencodeStandaloneServer(ctx context.Context, receipt model.NativeProcessReceipt) error {
-	const refusal = "opencode lease ownership requires a --standalone session (the session process is not `opencode serve --stdio`)"
+	const refusal = "opencode lease ownership requires a --standalone session (the session process is not `opencode serve --stdio`; start it with `opencode --standalone` or `opencode run --standalone`)"
 	inspector, ok := s.inspector.(authorityport.ProcessArgumentsInspector)
 	if !ok {
 		return fmt.Errorf("%s: process arguments cannot be observed", refusal)
