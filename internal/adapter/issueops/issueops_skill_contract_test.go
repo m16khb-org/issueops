@@ -117,7 +117,7 @@ func TestIssueOpsExecutionDocumentationPreservesParallelIndependence(t *testing.
 func TestIssueOpsHandoffDocsRouteToDrainAndFreshnessModel(t *testing.T) {
 	t.Parallel()
 
-	sessionChoice := readIssueOpsContractFile(t, "skills", "issueops", "references", "session-choice.md")
+	sessionChoice := readSessionChoiceContract(t)
 	planSkill := readIssueOpsContractFile(t, "skills", "issueops-plan", "SKILL.md")
 	implementSkill := readIssueOpsContractFile(t, "skills", "issueops-implement", "SKILL.md")
 	all := strings.ToLower(sessionChoice + "\n" + planSkill + "\n" + implementSkill)
@@ -144,7 +144,7 @@ func TestIssueOpsHandoffDocsRouteToDrainAndFreshnessModel(t *testing.T) {
 func TestIssueOpsHandoffRoutesEveryNewSessionThroughProductionObservation(t *testing.T) {
 	t.Parallel()
 
-	sessionChoice := strings.Join(strings.Fields(strings.ToLower(readIssueOpsContractFile(t, "skills", "issueops", "references", "session-choice.md"))), " ")
+	sessionChoice := strings.Join(strings.Fields(strings.ToLower(readSessionChoiceContract(t))), " ")
 	for _, want := range []string{
 		"herdr를 호출할 때는 `issueops trace handoff-delivery`를 공통 producer로 사용한다",
 		"herdr 전송도 아래 `trace handoff-delivery` producer",
@@ -170,7 +170,7 @@ func TestIssueOpsHandoffPrefersHerdrInsideHerdrSession(t *testing.T) {
 	normalize := func(text string) string {
 		return strings.Join(strings.Fields(strings.ToLower(text)), " ")
 	}
-	sessionChoice := normalize(readIssueOpsContractFile(t, "skills", "issueops", "references", "session-choice.md"))
+	sessionChoice := normalize(readSessionChoiceContract(t))
 	for _, want := range []string{
 		"`herdr_env=1`",
 		"`herdr_socket_path`",
@@ -215,7 +215,7 @@ func TestIssueOpsAutomaticSessionSelectionOrderAndTakeoverChain(t *testing.T) {
 		t.Fatalf("Herdr check must precede the current-session or manual second-terminal fallback: herdr=%d current=%d", herdr, current)
 	}
 
-	sessionChoice := normalize(readIssueOpsContractFile(t, "skills", "issueops", "references", "session-choice.md"))
+	sessionChoice := normalize(readSessionChoiceContract(t))
 	const chain = "`execution replace --id ID --expected-generation N --preview`를 실행한 뒤, 반환된 `--reseed` 명령과 `claim --claim-current-token`으로 인수한다"
 	if !strings.Contains(sessionChoice, chain) {
 		t.Fatalf("session-choice must pin the replace --preview -> --reseed -> claim --claim-current-token chain %q", chain)
@@ -225,7 +225,7 @@ func TestIssueOpsAutomaticSessionSelectionOrderAndTakeoverChain(t *testing.T) {
 func TestIssueOpsHandoffLaunchesEveryNativeHostWithPermissionBypass(t *testing.T) {
 	t.Parallel()
 
-	sessionChoice := readIssueOpsContractFile(t, "skills", "issueops", "references", "session-choice.md")
+	sessionChoice := readSessionChoiceContract(t)
 	for _, flag := range []string{
 		"--dangerously-skip-permissions",
 		"--dangerously-bypass-approvals-and-sandbox",
@@ -242,7 +242,7 @@ func TestIssueOpsHandoffLaunchesEveryNativeHostWithPermissionBypass(t *testing.T
 func TestIssueOpsCmuxHandoffIsExplicitAndFollowsTheDefaultFallback(t *testing.T) {
 	t.Parallel()
 
-	sessionChoice := strings.Join(strings.Fields(strings.ToLower(readIssueOpsContractFile(t, "skills", "issueops", "references", "session-choice.md"))), " ")
+	sessionChoice := strings.Join(strings.Fields(strings.ToLower(readSessionChoiceContract(t))), " ")
 	fallback := strings.Index(sessionChoice, "herdr를 쓸 수 없음이 확인됐으면 현재 세션에서 이어가는 `current`다")
 	explicit := strings.Index(sessionChoice, "사용자가 명시한 cmux")
 	if fallback < 0 || explicit < 0 || explicit <= fallback {
@@ -358,4 +358,16 @@ func readIssueOpsContractFile(t *testing.T, parts ...string) string {
 		t.Fatal(err)
 	}
 	return string(content)
+}
+
+// readSessionChoiceContract reads the session handoff contract: the core
+// session-choice.md first (release ordering checks index into it), then the
+// cmux and Herdr references that only the matching launcher reads.
+func readSessionChoiceContract(t *testing.T) string {
+	t.Helper()
+	var parts []string
+	for _, name := range []string{"session-choice.md", "session-choice-cmux.md", "session-choice-herdr.md"} {
+		parts = append(parts, readIssueOpsContractFile(t, "skills", "issueops", "references", name))
+	}
+	return strings.Join(parts, "\n")
 }

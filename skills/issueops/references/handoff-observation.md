@@ -51,4 +51,5 @@
   claim은 별개 증거다. 모호한 launch를 재전송하거나 다른 런처/current로 우회하지 않는다.
   Claude/Codex는 설치 CLI가 지원하는 permission bypass 플래그로 연다. 전달을 확인하면
   기존 세션은 종료하며 구현 완료를 기다리지 않는다. 세부 recipe는
-  [session-choice.md](session-choice.md)에 있다.
+  [session-choice.md](session-choice.md)와 런처별
+  [Herdr](session-choice-herdr.md)·[cmux](session-choice-cmux.md) 문서에 있다.

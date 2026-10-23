@@ -8,7 +8,7 @@ description: Opt-in issueops execution handoff-cmux launch of a native host into
 cmux is an opt-in terminal launcher for an existing canonical worktree. It is
 never part of automatic host selection and is not installed, started, or
 required by `issueops install`, `update`, or `self-verify`. Follow
-[`skills/issueops/references/session-choice.md`](../../../skills/issueops/references/session-choice.md#사용자가-명시한-cmux-인계)
+[`skills/issueops/references/session-choice-cmux.md`](../../../skills/issueops/references/session-choice-cmux.md)
 only after the user explicitly requests cmux and the exact direct generation is
 released.
 
