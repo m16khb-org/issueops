@@ -29,7 +29,7 @@ func (c Command) Run(args []string) error {
 
 func parseFlags(fs *flag.FlagSet, args []string) (bool, error) {
 	if err := fs.Parse(args); err != nil {
-		if err == flag.ErrHelp {
+		if errors.Is(err, flag.ErrHelp) {
 			return true, nil
 		}
 		return false, err

@@ -2,6 +2,7 @@ package executioncmd
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
@@ -685,7 +686,7 @@ func executionGeneration(execution *model.Execution) uint64 {
 
 func parse(fs *flag.FlagSet, args []string) (bool, error) {
 	if err := fs.Parse(args); err != nil {
-		if err == flag.ErrHelp {
+		if errors.Is(err, flag.ErrHelp) {
 			return true, nil
 		}
 		return false, err

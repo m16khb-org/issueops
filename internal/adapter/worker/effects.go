@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"errors"
 	policycontract "issueops/internal/contract/policy"
 	"os"
 	"path/filepath"
@@ -22,7 +23,7 @@ func (store Store) Dir() (string, error) { return store.Directory, store.Directo
 func (store Store) EnsureDir(_ string) error {
 	err := os.MkdirAll(store.FilesystemDirectory, 0o700)
 	// Keep the response path relative while executing against the captured directory.
-	if pathErr, ok := err.(*os.PathError); ok && !filepath.IsAbs(store.Directory) {
+	if pathErr, ok := errors.AsType[*os.PathError](err); ok && !filepath.IsAbs(store.Directory) {
 		if rel, relErr := filepath.Rel(store.FilesystemDirectory, pathErr.Path); relErr == nil {
 			return &os.PathError{Op: pathErr.Op, Path: filepath.Join(store.Directory, rel), Err: pathErr.Err}
 		}

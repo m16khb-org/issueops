@@ -203,7 +203,7 @@ func reseedGitRaw(root string, args ...string) (int, string, string) {
 	if err == nil {
 		return 0, stdout.String(), stderr.String()
 	}
-	if exitErr, ok := err.(*exec.ExitError); ok {
+	if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 		return exitErr.ExitCode(), stdout.String(), stderr.String()
 	}
 	return 1, stdout.String(), err.Error()

@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -657,7 +658,7 @@ func defaultExecutionSyncBaseGit(ctx context.Context, dir string, args ...string
 	err := cmd.Run()
 	code := 0
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 			code = exitErr.ExitCode()
 		} else {
 			code = 1

@@ -1,6 +1,7 @@
 package inspect
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"time"
@@ -102,7 +103,7 @@ func sameResolvedPath(resolved, sourcePath string) bool {
 }
 
 func reasonCode(err error) string {
-	if coded, ok := err.(configReadError); ok {
+	if coded, ok := errors.AsType[configReadError](err); ok {
 		return coded.code
 	}
 	return "config_unreadable"

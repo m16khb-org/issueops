@@ -2,6 +2,7 @@ package guard
 
 import (
 	"bytes"
+	"errors"
 	"os/exec"
 	"path/filepath"
 	"sort"
@@ -26,7 +27,7 @@ func gitCmd(dir string, args ...string) (int, string, string) {
 	if err == nil {
 		return 0, strings.TrimSpace(stdout.String()), strings.TrimSpace(stderr.String())
 	}
-	if exitErr, ok := err.(*exec.ExitError); ok {
+	if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 		return exitErr.ExitCode(), strings.TrimSpace(stdout.String()), strings.TrimSpace(stderr.String())
 	}
 	return 1, strings.TrimSpace(stdout.String()), err.Error()

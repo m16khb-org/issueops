@@ -1,6 +1,7 @@
 package updatecli
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 
@@ -22,7 +23,7 @@ func (command Command) Run(commandName string, args []string) error {
 	skipBuild := fs.Bool("skip-build", false, "do not rebuild bin/issueops")
 	mcpTransport := fs.String("mcp-transport", "", "Codex/Claude/Omo/omp/opencode MCP transport: http (shared service) or stdio; default http on darwin/linux")
 	if err := fs.Parse(args); err != nil {
-		if err == flag.ErrHelp {
+		if errors.Is(err, flag.ErrHelp) {
 			return nil
 		}
 		return err

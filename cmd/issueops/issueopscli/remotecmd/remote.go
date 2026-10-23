@@ -3,6 +3,7 @@ package remotecmd
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -281,7 +282,7 @@ func (deps Deps) verifyLive(ctx context.Context, req issueopscontract.IssueOpsRe
 
 func parseFlags(fs *flag.FlagSet, args []string) (bool, error) {
 	if err := fs.Parse(args); err != nil {
-		if err == flag.ErrHelp {
+		if errors.Is(err, flag.ErrHelp) {
 			return true, nil
 		}
 		return false, err

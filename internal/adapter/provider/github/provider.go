@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	executionissue "issueops/internal/contract/executionissue"
 	policy "issueops/internal/domain/policy"
@@ -444,7 +445,7 @@ func runGhAPIJSON[T any](repo string, args []string, kind string) (T, error) {
 	out, err := cmd.Output()
 	if err != nil {
 		stderr := err.Error()
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 			stderr = strings.TrimSpace(string(exitErr.Stderr))
 		}
 		return zero, fmt.Errorf("gh api %s failed: %s", kind, stderr)
@@ -594,7 +595,7 @@ func runGhIssueEdit(ctx context.Context, repo, issueURL, body string) error {
 }
 
 func ghExecStderr(err error) string {
-	if exitErr, ok := err.(*exec.ExitError); ok {
+	if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 		if stderr := strings.TrimSpace(string(exitErr.Stderr)); stderr != "" {
 			return stderr
 		}

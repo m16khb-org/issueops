@@ -1,6 +1,9 @@
 package lintdiagnose
 
-import "os/exec"
+import (
+	"errors"
+	"os/exec"
+)
 
 type Effects struct{ Normalize func(string) (string, error) }
 
@@ -12,7 +15,7 @@ func (Effects) Run(root string, argv []string) (string, int, bool) {
 	if err == nil {
 		return string(output), 0, false
 	}
-	if exitError, ok := err.(*exec.ExitError); ok {
+	if exitError, ok := errors.AsType[*exec.ExitError](err); ok {
 		return string(output), exitError.ExitCode(), true
 	}
 	return string(output), -1, true

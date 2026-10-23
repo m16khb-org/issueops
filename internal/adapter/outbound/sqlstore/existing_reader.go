@@ -25,7 +25,7 @@ func GetExisting(dir, bucket, id string) ([]byte, bool, error) {
 	defer data.Close()
 	var raw []byte
 	err = data.QueryRow(`SELECT data FROM records WHERE bucket = ? AND id = ?`, bucket, id).Scan(&raw)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, false, nil
 	}
 	if err != nil {

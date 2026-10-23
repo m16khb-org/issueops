@@ -1,6 +1,7 @@
 package issueops
 
 import (
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -19,7 +20,7 @@ func (IssueGraphPoster) Post(provider, issueURL, body string) (string, error) {
 	out, err := exec.Command(tool, "issue", action, issueURL, bodyFlag, body).Output()
 	if err != nil {
 		stderr := err.Error()
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 			stderr = strings.TrimSpace(string(exitErr.Stderr))
 		}
 		return "", fmt.Errorf("%s issue %s failed: %s", tool, action, stderr)

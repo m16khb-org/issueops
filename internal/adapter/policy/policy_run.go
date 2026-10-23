@@ -3,6 +3,7 @@ package policy
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"os"
 	"os/exec"
@@ -51,7 +52,7 @@ func (CommandExecutor) Execute(request policycontract.CommandPolicyRequest, time
 	defer errWrite.Close()
 	cmd.Stdout, cmd.Stderr = outWrite, errWrite
 	if err = ctx.Err(); err != nil {
-		return policyapp.Execution{Err: err, ExitCode: 1, TimedOut: err == context.DeadlineExceeded}
+		return policyapp.Execution{Err: err, ExitCode: 1, TimedOut: errors.Is(err, context.DeadlineExceeded)}
 	}
 	if err = cmd.Start(); err != nil {
 		return policyapp.Execution{Err: err, ExitCode: 1, TimedOut: ctx.Err() == context.DeadlineExceeded}
@@ -86,7 +87,7 @@ func superviseCommand(ctx context.Context, cmd *exec.Cmd, outRead, errRead *os.F
 		case <-deadline:
 			timedOut = true
 			deadline = nil
-			if terminateErr := terminateProcessGroup(cmd); terminateErr != nil && terminateErr != os.ErrProcessDone {
+			if terminateErr := terminateProcessGroup(cmd); terminateErr != nil && !errors.Is(terminateErr, os.ErrProcessDone) {
 				_ = cmd.Process.Kill()
 			}
 			// A descendant that escapes the group cannot hold our readers indefinitely.
@@ -107,7 +108,7 @@ func superviseCommand(ctx context.Context, cmd *exec.Cmd, outRead, errRead *os.F
 	result := policyapp.Execution{Stdout: stdout.String(), Stderr: stderr.String(), StdoutTruncated: stdout.truncated, StderrTruncated: stderr.truncated, TimedOut: timedOut, Err: err}
 	if err != nil {
 		result.ExitCode = 1
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 			result.ExitCode = exitErr.ExitCode()
 		}
 	}

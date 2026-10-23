@@ -2,6 +2,7 @@ package issueopscli
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"issueops/cmd/issueops/issueopscli/feedbackcleanup"
@@ -173,7 +174,7 @@ func issueOpsRemoteDepsWithPublication(publication remotecmd.PublicationHandlers
 
 func parseIssueOpsFlags(fs *flag.FlagSet, args []string) (bool, error) {
 	if err := fs.Parse(args); err != nil {
-		if err == flag.ErrHelp {
+		if errors.Is(err, flag.ErrHelp) {
 			return true, nil
 		}
 		return false, err
