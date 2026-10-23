@@ -8,6 +8,7 @@ import (
 
 	"issueops/internal/adapter/outbound/sqlstore"
 	model "issueops/internal/contract/issueops"
+	domain "issueops/internal/domain/issueops"
 )
 
 func TestFinishRecordsBindArmToObservedRevision(t *testing.T) {
@@ -100,7 +101,7 @@ func TestFinishRecordsPreserveReplacementAcrossAllFinalizers(t *testing.T) {
 			case "fail":
 				_, err = store.Fail(ctx, old, finishRecordsFailure(), true)
 			case "delete":
-				err = store.Delete(ctx, old)
+				err = store.Delete(ctx, old, finishOutcome(old))
 			}
 			if err == nil {
 				t.Fatal("old owner finalized replacement")
@@ -167,17 +168,20 @@ func TestFinishRecordsDrainFailureRearmAndAtomicDelete(t *testing.T) {
 	if reflected.Record.RemoteCompletion.IssueClosedAt != "first" || reflected.Record.RemoteCompletion.ReflectedAt != "" || armed.Record.RemoteCompletion.ReflectedAt != "" {
 		t.Fatal("rearm mutated completion receipt")
 	}
-	if err := store.Delete(ctx, armed); err == nil {
+	if err := store.Delete(ctx, armed, finishOutcome(armed)); err == nil {
 		t.Fatal("deletion accepted pre-rearm revision")
 	}
 	db, err := sqlstore.Open(root)
 	if err != nil {
 		t.Fatal(err)
 	}
+	if _, found, err := db.Get(cycleOutcomeBucket, record.ID); err != nil || found {
+		t.Fatalf("rejected delete retained an outcome: found=%v err=%v", found, err)
+	}
 	if err := db.Put(artifactStageBucket, record.ID, []byte(`{}`)); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.Delete(ctx, reflected); err != nil {
+	if err := store.Delete(ctx, reflected, finishOutcome(reflected)); err != nil {
 		t.Fatal(err)
 	}
 	for _, bucket := range []string{issueOpsBucket, artifactStageBucket} {
@@ -185,6 +189,42 @@ func TestFinishRecordsDrainFailureRearmAndAtomicDelete(t *testing.T) {
 			t.Fatalf("delete left %s: found=%v err=%v", bucket, found, err)
 		}
 	}
+	outcomes, unreadable, err := ListCycleOutcomes(root)
+	if err != nil || len(unreadable) != 0 || len(outcomes) != 1 || outcomes[0].ID != record.ID || outcomes[0].Outcome != model.IssueOpsCycleOutcomeFinished {
+		t.Fatalf("retained outcomes = %+v unreadable=%v err=%v", outcomes, unreadable, err)
+	}
+}
+
+func TestFinishRecordsRejectOutcomeForAnotherRecord(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	record, err := writeIssueOps(ctx, root, model.IssueOpsRecord{SchemaVersion: 1, ID: "io-finish-outcome", Phase: model.IssueOpsPhaseDone})
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := CleanupRecordStore{StateRoot: root}
+	snapshot, err := store.Load(ctx, record.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	armed, err := store.Arm(ctx, snapshot, finishRecordsAttempt("a"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	foreign := finishOutcome(armed)
+	foreign.ID = "io-other"
+	if err := store.Delete(ctx, armed, foreign); err == nil {
+		t.Fatal("delete accepted an outcome naming another record")
+	}
+	if current, err := store.Load(ctx, record.ID); err != nil || current.Revision != armed.Revision {
+		t.Fatalf("mismatched outcome changed the record: %v", err)
+	}
+}
+
+func finishOutcome(snapshot model.CleanupSnapshot) model.IssueOpsCycleOutcome {
+	return domain.CycleOutcomeForRecord(snapshot.Record, model.IssueOpsCycleOutcomeFinished, "2026-09-29T00:00:02Z")
 }
 
 func finishRecordsAttempt(char string) model.IssueOpsCleanupAttempt {
@@ -221,7 +261,7 @@ func TestFinishRecordsRejectForgedAttemptProjection(t *testing.T) {
 	if _, err := store.Fail(ctx, forged, finishRecordsFailure(), true); err == nil {
 		t.Fatal("foreign token cleared ownership")
 	}
-	if err := store.Delete(ctx, forged); err == nil {
+	if err := store.Delete(ctx, forged, finishOutcome(forged)); err == nil {
 		t.Fatal("foreign token deleted record")
 	}
 	current, err := store.Load(ctx, record.ID)

@@ -34,8 +34,12 @@ func (s CleanupRecordStore) FailAbandon(ctx context.Context, expected model.Clea
 	}
 	return s.save(ctx, expected, domain.ApplyCleanupAbandonFailure(record, failure, drained))
 }
-func (s CleanupRecordStore) DeleteAbandoned(ctx context.Context, expected model.CleanupSnapshot) ([]string, error) {
+func (s CleanupRecordStore) DeleteAbandoned(ctx context.Context, expected model.CleanupSnapshot, outcome model.IssueOpsCycleOutcome) ([]string, error) {
 	record, err := cleanupOperationRecord(expected, model.CleanupOperationAbandon)
+	if err != nil {
+		return nil, err
+	}
+	retained, err := cycleOutcomeMutation(record.ID, outcome)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +72,7 @@ func (s CleanupRecordStore) DeleteAbandoned(ctx context.Context, expected model.
 				mutations = append(mutations, port.RecordMutation{Bucket: externalIntentBucket, ID: id, Delete: true})
 				rows = append(rows, id)
 			}
-			mutations = append(mutations, port.RecordMutation{Bucket: artifactStageBucket, ID: record.ID, Delete: true}, port.RecordMutation{Bucket: issueOpsBucket, ID: record.ID, Delete: true})
+			mutations = append(mutations, port.RecordMutation{Bucket: artifactStageBucket, ID: record.ID, Delete: true}, port.RecordMutation{Bucket: issueOpsBucket, ID: record.ID, Delete: true}, retained)
 			deleted = rows
 			return mutations, nil
 		})

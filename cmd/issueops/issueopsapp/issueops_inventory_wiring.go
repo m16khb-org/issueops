@@ -2,9 +2,11 @@ package issueopsapp
 
 import (
 	issueopsinventoryinbound "issueops/internal/adapter/inbound/issueopsinventory"
+	issueopscore "issueops/internal/adapter/issueops"
 	issueopsinventoryoutbound "issueops/internal/adapter/outbound/issueopsinventory"
 	"issueops/internal/adapter/outbound/issueopsrecord"
 	issueopsinventoryapplication "issueops/internal/application/issueopsinventory"
+	issueopscontract "issueops/internal/contract/issueops"
 	issueopsinventorycontract "issueops/internal/contract/issueopsinventory"
 )
 
@@ -41,4 +43,23 @@ func issueOpsCycleIDLister(observers ...issueopsrecord.Observer) func(string, st
 		// 집계가 조용히 좁아지므로 unreadable ID를 그대로 넘긴다.
 		return ids, append([]string(nil), result.UnreadableIDs...), nil
 	}
+}
+
+// issueOpsCycleOutcomeLister filters retained cycle outcomes with the same path
+// normalization inventory list applies to live records, so --repo selects the
+// same repository for both populations.
+func issueOpsCycleOutcomeLister(stateRoot, repo string) ([]issueopscontract.IssueOpsCycleOutcome, []string, error) {
+	outcomes, unreadable, err := issueopscore.ListCycleOutcomes(stateRoot)
+	if err != nil || repo == "" {
+		return outcomes, unreadable, err
+	}
+	paths := issueopsinventoryoutbound.CleanPath{}
+	want := paths.Normalize(repo)
+	matched := outcomes[:0]
+	for _, outcome := range outcomes {
+		if paths.Normalize(outcome.Repo) == want {
+			matched = append(matched, outcome)
+		}
+	}
+	return matched, unreadable, nil
 }

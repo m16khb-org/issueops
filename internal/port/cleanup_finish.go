@@ -17,7 +17,8 @@ type CleanupOwnershipRecords interface {
 type CleanupFinishRecords interface {
 	CleanupOwnershipRecords
 	Fail(context.Context, model.CleanupSnapshot, model.IssueOpsCleanupFinishFailure, bool) (model.CleanupSnapshot, error)
-	Delete(context.Context, model.CleanupSnapshot) error
+	// Delete removes the record and stores outcome in the same transaction.
+	Delete(context.Context, model.CleanupSnapshot, model.IssueOpsCycleOutcome) error
 }
 
 type CleanupRemoteBranchRecords interface {

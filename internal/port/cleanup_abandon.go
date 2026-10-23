@@ -13,5 +13,6 @@ type CleanupAbandonRecords interface {
 	ArmAbandon(context.Context, model.CleanupSnapshot, model.IssueOpsCleanupAttempt, model.IssueOpsCleanupAbandonFailure) (model.CleanupSnapshot, error)
 	Check(context.Context, model.CleanupSnapshot) error
 	FailAbandon(context.Context, model.CleanupSnapshot, model.IssueOpsCleanupAbandonFailure, bool) (model.CleanupSnapshot, error)
-	DeleteAbandoned(context.Context, model.CleanupSnapshot) ([]string, error)
+	// DeleteAbandoned removes the record and stores outcome in the same transaction.
+	DeleteAbandoned(context.Context, model.CleanupSnapshot, model.IssueOpsCycleOutcome) ([]string, error)
 }

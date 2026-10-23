@@ -17,6 +17,7 @@ type finishTestRecords struct {
 	armErr, checkErr, deleteErr, failErr error
 	failContextErr                       error
 	retained                             bool
+	outcome                              model.IssueOpsCycleOutcome
 }
 
 func (s *finishTestRecords) Load(context.Context, string) (model.CleanupSnapshot, error) {
@@ -38,7 +39,8 @@ func (s *finishTestRecords) Fail(ctx context.Context, _ model.CleanupSnapshot, _
 	s.failContextErr = ctx.Err()
 	return s.snapshot, s.failErr
 }
-func (s *finishTestRecords) Delete(context.Context, model.CleanupSnapshot) error {
+func (s *finishTestRecords) Delete(_ context.Context, _ model.CleanupSnapshot, outcome model.IssueOpsCycleOutcome) error {
+	s.outcome = outcome
 	*s.events = append(*s.events, "delete")
 	return s.deleteErr
 }
@@ -113,7 +115,7 @@ func finishApplyRequest() model.CleanupFinishRequest {
 }
 
 func TestFinishExecutorOrdersBoundEffectsAndDrainsBeforeDelete(t *testing.T) {
-	executor, _, _, events := finishExecutorFixture(t)
+	executor, records, _, events := finishExecutorFixture(t)
 	result, err := executor.Run(context.Background(), finishApplyRequest())
 	if err != nil || !result.RecordDeleted || result.Audit == "" {
 		t.Fatalf("result=%+v err=%v", result, err)
@@ -121,6 +123,11 @@ func TestFinishExecutorOrdersBoundEffectsAndDrainsBeforeDelete(t *testing.T) {
 	want := []string{"acquire", "load", "observe", "plan", "arm", "check", "stop", "check", "worktree remove /worktree", "check", "update-ref -d refs/heads/feature oid", "drain", "delete", "close"}
 	if !reflect.DeepEqual(*events, want) {
 		t.Fatalf("events=%v want=%v", *events, want)
+	}
+	// The deleted record leaves its finished-cycle summary in the same call.
+	if got := records.outcome; got.ID != "io-finish" || got.Repo != "/repo" || got.Outcome != model.IssueOpsCycleOutcomeFinished ||
+		got.Metrics.Outcome != model.IssueOpsCycleOutcomeFinished || got.RetainedAt != "2026-09-29T00:00:01Z" {
+		t.Fatalf("retained outcome = %+v", got)
 	}
 }
 func TestFinishExecutorRejectsDriftBeforeDestructiveEffects(t *testing.T) {

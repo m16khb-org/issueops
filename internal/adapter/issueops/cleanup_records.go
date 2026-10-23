@@ -68,13 +68,18 @@ func (s CleanupRecordStore) Fail(ctx context.Context, expected model.CleanupSnap
 	return s.save(ctx, expected, domain.ApplyCleanupFinishFailure(record, failure, drained))
 }
 
-func (s CleanupRecordStore) Delete(ctx context.Context, expected model.CleanupSnapshot) error {
+func (s CleanupRecordStore) Delete(ctx context.Context, expected model.CleanupSnapshot, outcome model.IssueOpsCycleOutcome) error {
 	if _, err := cleanupOperationRecord(expected, model.CleanupOperationFinish); err != nil {
+		return err
+	}
+	retained, err := cycleOutcomeMutation(expected.Record.ID, outcome)
+	if err != nil {
 		return err
 	}
 	return s.compare(ctx, expected, []port.RecordMutation{
 		{Bucket: issueOpsBucket, ID: expected.Record.ID, Delete: true},
 		{Bucket: artifactStageBucket, ID: expected.Record.ID, Delete: true},
+		retained,
 	})
 }
 

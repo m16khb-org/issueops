@@ -146,7 +146,8 @@ func (r *finishRun) execute() (model.CleanupFinishResult, error) {
 	if err := r.drainer.drain(r.finalizeCtx); err != nil {
 		return r.fail(model.CleanupFailureStepRecordDelete, err)
 	}
-	if err := r.s.Records.Delete(r.finalizeCtx, r.snapshot); err != nil {
+	outcome := domain.CycleOutcomeForRecord(r.snapshot.Record, model.IssueOpsCycleOutcomeFinished, r.s.Now().UTC().Format(time.RFC3339))
+	if err := r.s.Records.Delete(r.finalizeCtx, r.snapshot, outcome); err != nil {
 		return r.fail(model.CleanupFailureStepRecordDelete, err)
 	}
 	r.result.RecordDeleted = true

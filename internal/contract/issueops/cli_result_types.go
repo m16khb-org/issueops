@@ -30,18 +30,42 @@ type IssueOpsSchemaEvidenceRequest struct {
 // 아키텍처 검토 증거 예시 문구는 CLI 도움말과 어댑터가 함께 쓰는 어휘다.
 const IssueOpsArchitectureReviewEvidenceExample = "architecture review checked alternatives and risks"
 
-// IssueOpsReviewMetricsCycle는 사이클 하나의 적대 리뷰 지표 파생값이다. 새
-// durable 상태가 아니라 record가 이미 들고 있는 원자료(devil's-advocate
-// history, regress 이벤트, phase ledger)의 읽기 전용 projection이다.
+// IssueOpsReviewMetricsCycle는 사이클 하나의 적대 리뷰 지표 파생값이다. 살아
+// 있는 record에서는 그 record가 이미 들고 있는 원자료(devil's-advocate
+// history, regress 이벤트, phase ledger)의 읽기 전용 projection이다. Outcome이
+// 있으면 cleanup이 record를 지우며 남긴 IssueOpsCycleOutcome에서 읽은 값이다.
 type IssueOpsReviewMetricsCycle struct {
 	ID                          string             `json:"id"`
 	Phase                       string             `json:"phase,omitempty"`
+	Outcome                     string             `json:"outcome,omitempty"`
 	DevilsAdvocateRounds        int                `json:"devils_advocate_rounds"`
 	DevilsAdvocateVerdicts      []string           `json:"devils_advocate_verdicts,omitempty"`
 	RegressCount                int                `json:"regress_count"`
 	ImplementationReviewVerdict string             `json:"implementation_review_verdict,omitempty"`
 	StageDurationsSeconds       map[string]float64 `json:"stage_durations_seconds,omitempty"`
 	ReviewRoundGapsSeconds      []float64          `json:"review_round_gaps_seconds,omitempty"`
+}
+
+// IssueOpsCycleOutcomeSchemaVersion은 보존된 사이클 결과 row의 현재 쓰기 버전이다.
+const IssueOpsCycleOutcomeSchemaVersion = 1
+
+// cleanup이 record를 지울 때 남기는 사이클 결과 종류.
+const (
+	IssueOpsCycleOutcomeFinished  = "finished"
+	IssueOpsCycleOutcomeAbandoned = "abandoned"
+)
+
+// IssueOpsCycleOutcome은 cleanup finish·abandon이 record를 지우는 같은
+// 트랜잭션에서 남기는 지표 요약이다. record 원문이 아니라 review-metrics가
+// 파생하는 수치와 판정만 담으므로, record가 사라진 뒤에도 하네스 단계별 효과를
+// 사이클을 가로질러 비교할 수 있다.
+type IssueOpsCycleOutcome struct {
+	SchemaVersion int                        `json:"schema_version"`
+	ID            string                     `json:"id"`
+	Repo          string                     `json:"repo"`
+	Outcome       string                     `json:"outcome"`
+	RetainedAt    string                     `json:"retained_at"`
+	Metrics       IssueOpsReviewMetricsCycle `json:"metrics"`
 }
 
 // IssueOpsReviewMetricsAggregate는 여러 사이클을 가로지르는 요약이다. 평균

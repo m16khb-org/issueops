@@ -47,14 +47,14 @@ func TestCleanupRecordsBindOperationAndReplacementAcrossFinalizers(t *testing.T)
 				"check":   func() error { return store.Check(ctx, forged) },
 				"release": func() error { _, err := store.Release(ctx, forged, "now"); return err },
 				"fail":    func() error { _, err := store.Fail(ctx, forged, finishRecordsFailure(), true); return err },
-				"delete":  func() error { return store.Delete(ctx, forged) },
+				"delete":  func() error { return store.Delete(ctx, forged, finishOutcome(forged)) },
 			} {
 				if err := call(); err == nil {
 					t.Fatalf("forged operation reached %s", name)
 				}
 			}
 			if operation == model.CleanupOperationRemoteBranch {
-				if err := store.Delete(ctx, armed); err == nil {
+				if err := store.Delete(ctx, armed, finishOutcome(armed)); err == nil {
 					t.Fatal("remote owner deleted local cycle")
 				}
 				if _, err := store.Fail(ctx, armed, finishRecordsFailure(), true); err == nil {

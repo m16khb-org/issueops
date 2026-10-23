@@ -84,7 +84,10 @@ agent가 즉시 알아야 할 canonical 요약이다.
   [`conventions/state-policy-and-hooks.md`](conventions/state-policy-and-hooks.md).
 - `issueops review-metrics (--id ID | --repo PATH)`는 적대 리뷰의 라운드·판정 분포·
   regress 수·단계 소요를 record에서 파생하는 읽기 전용 조망이다. record를 쓰지 않으며
-  새 durable 필드도 만들지 않는다. `--id`와 `--repo`는 정확히 하나만 쓴다.
+  record에 새 durable 필드도 만들지 않는다. cleanup finish·abandon은 record를 지우는 같은
+  트랜잭션에서 그 지표 요약을 `issueops_cycle_outcome_v1` bucket에 남기고, review-metrics는
+  live record와 이 요약을 함께 읽되 같은 ID는 live record를 쓴다. 요약에서 온 사이클은
+  `outcome`(`finished`|`abandoned`)을 가진다. `--id`와 `--repo`는 정확히 하나만 쓴다.
 - `issueops next`의 `review`는 host planner 기본 모델과 함께 변경 집합 티어
   (`docs-only|contract|schema-auth|default`), 적용할 렌즈, 티어별 effort를 돌려준다.
   티어 계산은 implement 이후 phase에서만 일어난다. 스킬 경로(`issueops-review`,

@@ -40,6 +40,21 @@ func ReviewMetricsForRecord(record issueopscontract.IssueOpsRecord) (issueopscon
 	return cycle, warnings
 }
 
+// CycleOutcomeForRecord는 cleanup이 record를 지우기 직전에 남길 지표 요약을
+// 만든다. 파싱하지 못한 시각은 ReviewMetricsForRecord처럼 그 항목만 빠진다.
+func CycleOutcomeForRecord(record issueopscontract.IssueOpsRecord, outcome, retainedAt string) issueopscontract.IssueOpsCycleOutcome {
+	metrics, _ := ReviewMetricsForRecord(record)
+	metrics.Outcome = outcome
+	return issueopscontract.IssueOpsCycleOutcome{
+		SchemaVersion: issueopscontract.IssueOpsCycleOutcomeSchemaVersion,
+		ID:            record.ID,
+		Repo:          record.Repo,
+		Outcome:       outcome,
+		RetainedAt:    retainedAt,
+		Metrics:       metrics,
+	}
+}
+
 // reviewRoundGaps는 연속한 두 라운드의 간격을 초로 돌려준다. 한쪽이라도 파싱되지
 // 않으면 그 간격은 만들지 않는다 — 추정한 값을 지표로 내보내지 않는다.
 func reviewRoundGaps(id string, stamps []string) ([]float64, []string) {

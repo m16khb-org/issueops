@@ -22,6 +22,7 @@ type abandonTestRecords struct {
 	failed               *model.IssueOpsCleanupAbandonFailure
 	failedDrained        bool
 	failContextCancelled bool
+	outcome              model.IssueOpsCycleOutcome
 }
 
 func (s *abandonTestRecords) Load(context.Context, string) (model.CleanupSnapshot, error) {
@@ -43,7 +44,8 @@ func (s *abandonTestRecords) FailAbandon(ctx context.Context, snap model.Cleanup
 	s.failContextCancelled = ctx.Err() != nil
 	return snap, nil
 }
-func (s *abandonTestRecords) DeleteAbandoned(context.Context, model.CleanupSnapshot) ([]string, error) {
+func (s *abandonTestRecords) DeleteAbandoned(_ context.Context, _ model.CleanupSnapshot, outcome model.IssueOpsCycleOutcome) ([]string, error) {
+	s.outcome = outcome
 	*s.events = append(*s.events, "delete")
 	return []string{"intent-1"}, s.deleteErr
 }
@@ -210,6 +212,9 @@ func TestAbandonExecutorApplyOrdersEffectsDrainsBeforeDelete(t *testing.T) {
 	}
 	if f.records.armed == nil || f.records.armed.Step != model.CleanupFailureStepApplying || f.records.armed.Fingerprint != req.Fingerprint {
 		t.Fatalf("armed=%+v", f.records.armed)
+	}
+	if got := f.records.outcome; got.Outcome != model.IssueOpsCycleOutcomeAbandoned || got.ID != req.ID || got.RetainedAt != "2026-09-29T00:00:01Z" {
+		t.Fatalf("retained outcome = %+v", got)
 	}
 }
 

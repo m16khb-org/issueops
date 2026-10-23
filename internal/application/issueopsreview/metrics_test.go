@@ -80,3 +80,53 @@ func TestMetricsReaderFailsSingleLookupAndDoesNotObserveInvalidScope(t *testing.
 		t.Fatalf("listing failure=%+v %v calls=%d", got, err, calls)
 	}
 }
+
+func TestMetricsReaderAddsRetainedOutcomesWithoutDoubleCountingLiveRecords(t *testing.T) {
+	retained := func(id, outcome string, verdicts ...string) contract.IssueOpsCycleOutcome {
+		return contract.IssueOpsCycleOutcome{ID: id, Outcome: outcome, Metrics: contract.IssueOpsReviewMetricsCycle{
+			ID: id, Outcome: outcome, DevilsAdvocateRounds: len(verdicts), DevilsAdvocateVerdicts: verdicts,
+		}}
+	}
+	service := MetricsReader{
+		Now:          time.Now,
+		ListCycleIDs: func(string, string) ([]string, []string, error) { return []string{"live"}, nil, nil },
+		ReadRecord: func(_, id string) (contract.IssueOpsRecord, error) {
+			if id != "live" {
+				return contract.IssueOpsRecord{}, errors.New("issueops record not found")
+			}
+			return contract.IssueOpsRecord{ID: id}, nil
+		},
+		ListOutcomes: func(_, repo string) ([]contract.IssueOpsCycleOutcome, []string, error) {
+			// "live" also has a stale retained row; the live record must win.
+			return []contract.IssueOpsCycleOutcome{
+				retained("live", contract.IssueOpsCycleOutcomeFinished, "pass"),
+				retained("gone", contract.IssueOpsCycleOutcomeFinished, "revise", "pass"),
+				retained("dropped", contract.IssueOpsCycleOutcomeAbandoned, "stop"),
+			}, []string{"garbled"}, nil
+		},
+	}
+	got, err := service.Read("state", "", "/repo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ids := []string{}
+	for _, cycle := range got.Cycles {
+		ids = append(ids, cycle.ID+":"+cycle.Outcome)
+	}
+	if !reflect.DeepEqual(ids, []string{"live:", "gone:finished", "dropped:abandoned"}) || got.ReadErrors != 1 {
+		t.Fatalf("cycles=%v read_errors=%d", ids, got.ReadErrors)
+	}
+	// The retained cycles are the only reviewed ones: rounds 2 and 1 over three
+	// verdicts (revise, pass, stop); the stale "live" row adds nothing.
+	if got.Aggregate.Cycles != 3 || got.Aggregate.ReviewedCycles != 2 || got.Aggregate.MeanRounds != 1.5 || got.Aggregate.StopRatio != 1.0/3 {
+		t.Fatalf("aggregate=%+v", got.Aggregate)
+	}
+
+	single, err := service.Read("state", "gone", "")
+	if err != nil || len(single.Cycles) != 1 || single.Cycles[0].Outcome != contract.IssueOpsCycleOutcomeFinished {
+		t.Fatalf("retained single lookup=%+v err=%v", single, err)
+	}
+	if _, err := service.Read("state", "never", ""); err == nil || err.Error() != "issueops record not found" {
+		t.Fatalf("unknown id must keep the record error: %v", err)
+	}
+}

@@ -42,7 +42,7 @@ func TestAbandonRecordFinalizersRejectReplacementAndForeignOperations(t *testing
 				if _, err := store.FailAbandon(ctx, armed, failure, true); err == nil {
 					t.Fatal("foreign owner wrote abandon failure")
 				}
-				if _, err := store.DeleteAbandoned(ctx, armed); err == nil {
+				if _, err := store.DeleteAbandoned(ctx, armed, finishOutcome(armed)); err == nil {
 					t.Fatal("foreign owner deleted lifecycle")
 				}
 				attempt.Operation = model.CleanupOperationAbandon
@@ -54,7 +54,7 @@ func TestAbandonRecordFinalizersRejectReplacementAndForeignOperations(t *testing
 				if _, err := store.Release(ctx, armed, "now"); err == nil {
 					t.Fatal("abandon used remote-branch release")
 				}
-				if err := store.Delete(ctx, armed); err == nil {
+				if err := store.Delete(ctx, armed, finishOutcome(armed)); err == nil {
 					t.Fatal("abandon used finish deletion")
 				}
 				if _, err := store.Fail(ctx, armed, finishRecordsFailure(), true); err == nil {
@@ -68,7 +68,7 @@ func TestAbandonRecordFinalizersRejectReplacementAndForeignOperations(t *testing
 				if _, err := store.FailAbandon(ctx, armed, failure, true); err == nil {
 					t.Fatal("stale owner cleared replacement")
 				}
-				if _, err := store.DeleteAbandoned(ctx, armed); err == nil {
+				if _, err := store.DeleteAbandoned(ctx, armed, finishOutcome(armed)); err == nil {
 					t.Fatal("stale owner deleted replacement")
 				}
 				current, err := store.Load(ctx, record.ID)

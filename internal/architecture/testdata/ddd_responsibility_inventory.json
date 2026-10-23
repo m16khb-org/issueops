@@ -811,6 +811,7 @@
       "task": "T20",
       "symbols": [
         "func issueOpsCycleIDLister",
+        "func issueOpsCycleOutcomeLister",
         "func issueOpsInventoryListHandler"
       ]
     },
@@ -4384,6 +4385,15 @@
       "task": "T08",
       "symbols": [
         "func SleepWithContext"
+      ]
+    },
+    {
+      "path": "internal/adapter/issueops/cycle_outcome_records.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func ListCycleOutcomes",
+        "func cycleOutcomeMutation"
       ]
     },
     {
@@ -9606,6 +9616,7 @@
       "task": "T03",
       "symbols": [
         "func MetricsReader.Read",
+        "func MetricsReader.readRetained",
         "type MetricsReader"
       ]
     },
@@ -10788,6 +10799,7 @@
       "owner": "contract",
       "task": "T02",
       "symbols": [
+        "type IssueOpsCycleOutcome",
         "type IssueOpsImplementationReviewRequest",
         "type IssueOpsProjectDocsReviewRequest",
         "type IssueOpsReviewMetricsAggregate",
@@ -13548,6 +13560,7 @@
       "task": "T20",
       "symbols": [
         "func AggregateReviewMetrics",
+        "func CycleOutcomeForRecord",
         "func ReviewMetricsForRecord",
         "func reviewRoundGaps",
         "func stageDurations"

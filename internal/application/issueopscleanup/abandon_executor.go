@@ -183,7 +183,8 @@ func (r *abandonRun) execute() (model.CleanupAbandonResult, error) {
 		return r.fail(model.CleanupFailureStepRecordDelete, err)
 	}
 	var err error
-	r.result.IntentRowsDeleted, err = r.s.Records.DeleteAbandoned(r.finalizeCtx, r.snapshot)
+	outcome := domain.CycleOutcomeForRecord(r.snapshot.Record, model.IssueOpsCycleOutcomeAbandoned, r.s.Now().UTC().Format(time.RFC3339))
+	r.result.IntentRowsDeleted, err = r.s.Records.DeleteAbandoned(r.finalizeCtx, r.snapshot, outcome)
 	if err != nil {
 		return r.fail(model.CleanupFailureStepRecordDelete, err)
 	}
