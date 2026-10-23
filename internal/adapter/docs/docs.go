@@ -72,7 +72,7 @@ func (Observer) ReadDocument(root, path string) (docscontract.DocIndexInfo, bool
 		rel = path
 	}
 	title, headings := ReadHeadings(path)
-	return docscontract.DocIndexInfo{RelPath: filepath.ToSlash(rel), Path: path, Title: title, Headings: headings, Bytes: info.Size()}, true
+	return docscontract.DocIndexInfo{RelPath: filepath.ToSlash(rel), Title: title, Headings: headings, Bytes: info.Size()}, true
 }
 
 func ReadHeadings(path string) (string, []string) {

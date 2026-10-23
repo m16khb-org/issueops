@@ -124,11 +124,10 @@ func InspectOutputSchema() map[string]any {
 func DocsIndexOutputSchema() map[string]any {
 	doc := schemaObject(map[string]any{
 		"rel_path": schemaString(),
-		"path":     schemaString(),
 		"title":    schemaString(),
 		"headings": schemaArray(schemaString()),
 		"bytes":    schemaInteger(),
-	}, "rel_path", "path", "title", "headings", "bytes")
+	}, "rel_path", "title", "headings", "bytes")
 	schema := schemaObject(map[string]any{
 		"ok":              schemaBool(),
 		"version":         schemaString(),

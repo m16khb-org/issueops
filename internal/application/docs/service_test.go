@@ -41,7 +41,7 @@ func (f *observerFake) ReadDocument(root, path string) (docscontract.DocIndexInf
 	if path == "/root/CLAUDE.md" {
 		return docscontract.DocIndexInfo{}, false
 	}
-	return docscontract.DocIndexInfo{Path: path, RelPath: "AGENTS.md", Title: "Agents", Bytes: 9, Headings: []string{"Agents"}}, true
+	return docscontract.DocIndexInfo{RelPath: "AGENTS.md", Title: "Agents", Bytes: 9, Headings: []string{"Agents"}}, true
 }
 func TestIndexObservesEachSourceOnceAndSkipsDisappearedFiles(t *testing.T) {
 	for _, available := range []bool{true, false} {

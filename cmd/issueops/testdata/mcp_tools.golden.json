@@ -353,9 +353,6 @@
                 "null"
               ]
             },
-            "path": {
-              "type": "string"
-            },
             "rel_path": {
               "type": "string"
             },
@@ -365,7 +362,6 @@
           },
           "required": [
             "rel_path",
-            "path",
             "title",
             "headings",
             "bytes"

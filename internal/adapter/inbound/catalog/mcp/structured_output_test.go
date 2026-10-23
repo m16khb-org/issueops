@@ -169,7 +169,7 @@ func mustMergeInspect(t *testing.T, extra map[string]any) map[string]any {
 
 func TestDocsIndexOutputSchemaModelsDocsIndexResult(t *testing.T) {
 	resolved := resolvedOutputSchema(t, "docs_index")
-	populated := docscontract.DocsIndexResult{OK: true, Docs: []docscontract.DocIndexInfo{{RelPath: "a.md", Path: "/a.md", Title: "A", Headings: []string{"h"}, Bytes: 12}, {RelPath: "b.md"}}}
+	populated := docscontract.DocsIndexResult{OK: true, Docs: []docscontract.DocIndexInfo{{RelPath: "a.md", Title: "A", Headings: []string{"h"}, Bytes: 12}, {RelPath: "b.md"}}}
 	for name, value := range map[string]any{"zero value (null slices)": docscontract.DocsIndexResult{}, "populated": populated} {
 		if err := validateAgainst(t, resolved, value); err != nil {
 			t.Errorf("%s rejected: %v", name, err)
