@@ -486,6 +486,20 @@ func TestClassifyUnverifiedBranchLinkStaysInPrepare(t *testing.T) {
 	}
 }
 
+// execution prepare materializes the sealed plan under artifact_dir; the
+// plan_path step names that file instead of a <PATH> the agent must hunt for.
+func TestClassifyPlanPathNamesTheSealedPlan(t *testing.T) {
+	in := withSelfHolder(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan))))
+	if got := Classify(in).NextCommand; got != OwnerCommand("io-test", "plan_path") {
+		t.Fatalf("without artifact_dir: %q", got)
+	}
+	in.Record.Execution.Workspace.Root = "/repo.worktrees/9-x"
+	in.Record.Execution.Workspace.ArtifactDir = ".issueops/issues/9/artifact"
+	if got := Classify(in).NextCommand; got != "issueops link-plan --id io-test --plan-path '/repo.worktrees/9-x/.issueops/issues/9/artifact/plan.md' $RECORD_ACTOR_FLAGS" {
+		t.Fatalf("with artifact_dir: %q", got)
+	}
+}
+
 // The claim stage names the chain's first command directly: a released lease
 // starts with replace --preview, a claimable one is claimed with the current
 // token. (It used to answer `execution status`, an extra round trip.)

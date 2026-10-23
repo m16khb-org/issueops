@@ -160,7 +160,7 @@ func TestAbandonExecutorRefusesNotReadyPlan(t *testing.T) {
 	f := abandonExecutorFixture()
 	f.result.Missing = []string{"clean worktree", "branch oid"}
 	result, err := f.executor.Run(context.Background(), model.CleanupAbandonRequest{ID: "io-abandon", Apply: true, Confirm: true})
-	if err == nil || !strings.Contains(err.Error(), "cleanup abandon is not ready: clean worktree, branch oid") {
+	if err == nil || !strings.Contains(err.Error(), "cleanup abandon is not ready; unmet gates: clean worktree, branch oid") {
 		t.Fatalf("err=%v", err)
 	}
 	if !reflect.DeepEqual(result.Missing, f.result.Missing) {

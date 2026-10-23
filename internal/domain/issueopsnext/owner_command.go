@@ -1,6 +1,24 @@
 package issueopsnext
 
-import "strings"
+import (
+	"path/filepath"
+	"strings"
+
+	issueopsnextcontract "issueops/internal/contract/issueopsnext"
+	"issueops/internal/domain/shelltoken"
+)
+
+// linkPlanCommand fills --plan-path with the sealed plan execution prepare
+// materialized (<root>/<artifact_dir>/plan.md) when the record names it;
+// otherwise it is the plan_path template.
+func linkPlanCommand(record issueopsnextcontract.Record) string {
+	execution := record.Execution
+	if execution == nil || strings.TrimSpace(execution.Workspace.Root) == "" || strings.TrimSpace(execution.Workspace.ArtifactDir) == "" {
+		return OwnerCommand(record.ID, "plan_path")
+	}
+	plan := filepath.Join(execution.Workspace.Root, filepath.FromSlash(execution.Workspace.ArtifactDir), "plan.md")
+	return "issueops link-plan --id " + record.ID + " --plan-path " + shelltoken.QuoteWord(plan) + " $RECORD_ACTOR_FLAGS"
+}
 
 // OwnerCommand는 readiness가 돌려준 missing 키 하나를 그 상태를 소유한 명령으로
 // 옮긴다. 이 함수가 그 대응의 유일한 소유자다 — 같은 표를 스킬 문서에도 두면

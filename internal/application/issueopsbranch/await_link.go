@@ -37,7 +37,7 @@ func (s LinkAwaiter) Await(ctx context.Context, req issueopscontract.AwaitBranch
 
 	if missing := domain.AwaitBranchLinkGates(record, s.ObserveLinkedBranches != nil); len(missing) > 0 {
 		result.OK, result.Missing = false, missing
-		return result, fmt.Errorf("branch await-link is not ready: %s", strings.Join(missing, ", "))
+		return result, fmt.Errorf("branch await-link is not ready; unmet gates: %s", strings.Join(missing, ", "))
 	}
 	prepare := record.BranchPrepare
 	result.IssueURL, result.Branch, result.SealedBase = prepare.IssueURL, prepare.Branch, prepare.BaseSHA

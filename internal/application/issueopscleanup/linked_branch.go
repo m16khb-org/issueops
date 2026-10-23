@@ -48,7 +48,7 @@ func (s LinkedBranchCleaner) Run(ctx context.Context, req issueopscontract.Clean
 	missing := domain.LinkedBranchCleanupGates(record, s.ObserveLinkedBranches != nil, s.DeleteLinkedBranch != nil)
 	if len(missing) > 0 {
 		result.OK, result.Missing = false, missing
-		return result, fmt.Errorf("cleanup linked-branch is not ready: %s", strings.Join(missing, ", "))
+		return result, fmt.Errorf("cleanup linked-branch is not ready; unmet gates: %s", strings.Join(missing, ", "))
 	}
 	prepare := record.BranchPrepare
 	result.IssueURL, result.RequestedBranch, result.SealedBase = prepare.IssueURL, prepare.Branch, prepare.BaseSHA

@@ -171,9 +171,11 @@ issueops schema-evidence record --id "$ISSUEOPS_ID" \
 
 ## 4 호환성 재확인과 readiness
 
-strict readiness `warnings`의 `base_advanced`는 차단이 아니다. 이 단계에서는
+strict readiness `warnings`의 `base_advanced`는 차단이 아니다. 그 경고가 있을 때만
 `issueops execution sync-base --id "$ISSUEOPS_ID" --preview $ACTOR_FLAGS --json`으로 충돌
-유무만 확인해 report에 적고 **apply하지 않는다.** apply는 봉인된 변경 집합에 base의
+유무를 확인해 report에 적고 **apply하지 않는다.** preview는 원격 작업 브랜치가 있어야 하므로,
+아직 push 전이면 `unmet gates: remote_branch_present`로 멈춘다. 그때는 충돌 확인을 push
+뒤로 미루고 그 사실을 report에 적는다. apply는 봉인된 변경 집합에 base의
 파일을 끌어들여 fingerprint를 바꾸고, 정리·구현 리뷰·문서 반영 판정이 한꺼번에 stale이
 되어 5단계부터 다시 밟게 만든다. 머지는 PR 병합 시점에 provider가 한다. 충돌이 있으면 그
 사실을 PR 본문의 위험 절에 적는다.

@@ -48,7 +48,7 @@ func TestFinishExecutorRefusesBeforeArmingWhenEvidenceIsMissing(t *testing.T) {
 			e.Plan = func(_ context.Context, _ model.IssueOpsRecord, r model.CleanupFinishRequest) (model.CleanupFinishInventory, model.CleanupFinishResult) {
 				return model.CleanupFinishInventory{}, model.CleanupFinishResult{OK: true, ID: r.ID, Missing: []string{"completion_reflected", "branch_oid"}}
 			}
-		}, wantErr: "cleanup finish is not ready: completion_reflected, branch_oid"},
+		}, wantErr: "cleanup finish is not ready; unmet gates: completion_reflected, branch_oid"},
 		{name: "fingerprint fails", req: finishApplyRequest(), configure: func(e *FinishExecutor, _ *finishTestRecords) {
 			e.Fingerprint = func(model.CleanupFinishInventory) (string, error) { return "", fingerprintFailure }
 		}, wantIs: fingerprintFailure},

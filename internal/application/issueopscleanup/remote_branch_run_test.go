@@ -115,7 +115,7 @@ func TestRemoteBranchCleanerRefusesBeforeArming(t *testing.T) {
 		{name: "other cleanup owns the cycle", configure: func(f *branchRunFixture) {
 			f.records.snapshot.Record.CleanupAttempt = &model.IssueOpsCleanupAttempt{Operation: model.CleanupOperationFinish}
 		}, wantErr: "cleanup finish owns this cycle"},
-		{name: "gates missing", configure: func(f *branchRunFixture) { f.records.snapshot.Record.Phase = model.IssueOpsPhaseImplement }, wantErr: "cleanup remote-branch is not ready: phase_done"},
+		{name: "gates missing", configure: func(f *branchRunFixture) { f.records.snapshot.Record.Phase = model.IssueOpsPhaseImplement }, wantErr: "cleanup remote-branch is not ready; unmet gates: phase_done"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

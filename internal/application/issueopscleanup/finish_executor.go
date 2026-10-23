@@ -106,7 +106,7 @@ func (r *finishRun) plan(failed model.CleanupFinishResult) (res model.CleanupFin
 	if len(r.result.Missing) > 0 {
 		r.result.OK = false
 		r.result.NextCommand = domain.CleanupFinishRemedyCommand(r.record.ID, r.result.Missing)
-		return r.result, true, fmt.Errorf("cleanup finish is not ready: %s", strings.Join(r.result.Missing, ", "))
+		return r.result, true, fmt.Errorf("cleanup finish is not ready; unmet gates: %s", strings.Join(r.result.Missing, ", "))
 	}
 	fingerprint, err := r.s.Fingerprint(inventory)
 	if err != nil {

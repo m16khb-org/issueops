@@ -102,7 +102,7 @@ func syncExecutionBase(ctx context.Context, stateRoot string, req issueops.Execu
 	if len(missing) > 0 {
 		result.OK = false
 		result.NextCommand = executionStatusCommandForSyncBase(record.ID)
-		return result, fmt.Errorf("execution sync-base %s is not ready: %s", mode, strings.Join(missing, ", "))
+		return result, fmt.Errorf("execution sync-base %s is not ready; unmet gates: %s", mode, strings.Join(missing, ", "))
 	}
 	fingerprint, err := executionSyncBaseFingerprint(inventory)
 	if err != nil {

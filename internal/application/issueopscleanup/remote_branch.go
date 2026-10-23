@@ -45,7 +45,7 @@ func (s RemoteBranchCleaner) Run(ctx context.Context, req model.CleanupRemoteBra
 	}
 	inventory, result := s.Preview.Plan(ctx, record, req)
 	if len(result.Missing) > 0 {
-		return result, fmt.Errorf("cleanup remote-branch is not ready: %s", strings.Join(result.Missing, ", "))
+		return result, fmt.Errorf("cleanup remote-branch is not ready; unmet gates: %s", strings.Join(result.Missing, ", "))
 	}
 	var stop bool
 	if !result.RemoteBranchPresent {

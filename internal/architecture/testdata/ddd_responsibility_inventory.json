@@ -14345,6 +14345,7 @@
         "func executionOwnerCommand",
         "func executionStatusCommand",
         "func intakeOwnerCommand",
+        "func linkPlanCommand",
         "func planningOwnerCommand",
         "func prefixOwnerCommand",
         "func publicationOwnerCommand",

@@ -122,7 +122,7 @@ func (r *abandonRun) plan(failed model.CleanupAbandonResult) (model.CleanupAband
 	inventory, result := r.s.Plan(r.ctx, r.record, r.req, r.provider)
 	r.inventory, r.result = inventory, result
 	if len(result.Missing) > 0 {
-		return result, fmt.Errorf("cleanup abandon is not ready: %s", strings.Join(result.Missing, ", "))
+		return result, fmt.Errorf("cleanup abandon is not ready; unmet gates: %s", strings.Join(result.Missing, ", "))
 	}
 	fingerprint, err := CleanupAbandonFingerprint(inventory)
 	if err != nil {

@@ -329,7 +329,7 @@ func classifyHolderImplement(in Input, decision Decision) (Decision, bool) {
 			decision.NextCommand = OwnerCommand(id, key)
 		case strings.TrimSpace(record.PlanPath) == "":
 			decision.Missing = []string{"plan_path"}
-			decision.NextCommand = OwnerCommand(id, "plan_path")
+			decision.NextCommand = linkPlanCommand(record)
 		case record.CompatibilityReview == nil || !record.CompatibilityReview.Approved:
 			decision.Missing = []string{"compatibility_review"}
 			decision.NextCommand = OwnerCommand(id, "compatibility_review")
