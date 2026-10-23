@@ -56,8 +56,13 @@ func TestNextGitObservationSharesBranchForTheSameExactRoot(t *testing.T) {
 	if got := fake.count("/wt", "branch --show-current"); got != 1 {
 		t.Fatalf("branch observations = %d, want 1; calls=%v", got, fake.calls)
 	}
+	// The repository check on the cwd and the execution worktree probe of the
+	// same directory share one probe within a call.
+	if again, _, againHead := observation.worktreeState("/wt"); !again || againHead != "abc123" {
+		t.Fatalf("repeated probe = %v %q", again, againHead)
+	}
 	if fake.count("/wt", "rev-parse --show-toplevel") != 1 || fake.count("/wt", "rev-parse HEAD") != 1 || len(fake.calls) != 3 {
-		t.Fatalf("worktree probes must stay fresh and unique: %v", fake.calls)
+		t.Fatalf("worktree probes must run once per root in a call: %v", fake.calls)
 	}
 }
 
