@@ -396,7 +396,7 @@ func finish(in Input, decision Decision) Decision {
 	if strings.TrimSpace(decision.NextCommand) == "" {
 		return decision
 	}
-	if strings.Contains(decision.NextCommand, "<") || strings.Contains(decision.NextCommand, "$ACTOR_FLAGS") {
+	if strings.Contains(decision.NextCommand, "<") || strings.Contains(decision.NextCommand, "ACTOR_FLAGS") {
 		decision.NextCommandKind = issueopsnextcontract.NextCommandKindTemplate
 		return decision
 	}

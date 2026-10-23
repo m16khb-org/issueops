@@ -342,6 +342,24 @@ func TestOwnerCommandCoversGateMap(t *testing.T) {
 	}
 }
 
+// Record commands require RECORD_ACTOR_FLAGS (the holder check refuses a
+// mutation without them), so their templates carry the placeholder and are
+// never reported as exact commands.
+func TestRecordOwnerCommandsCarryActorFlagPlaceholder(t *testing.T) {
+	for _, key := range []string{
+		"implementation_review", "project_docs_review", "schema_evidence",
+		"feedback_classification", "feedback_resolution", "contract_feedback_issue_update", "remote_artifact",
+	} {
+		command := OwnerCommand("io-test", key)
+		if !strings.HasSuffix(command, " $RECORD_ACTOR_FLAGS") {
+			t.Errorf("%s: %q lacks $RECORD_ACTOR_FLAGS", key, command)
+		}
+		if kind := finish(Input{}, Decision{NextCommand: command}).NextCommandKind; kind != issueopsnextcontract.NextCommandKindTemplate {
+			t.Errorf("%s: kind %q, want template", key, kind)
+		}
+	}
+}
+
 func TestClassifyRootConflictBlocksOnlyExecutionlessCyclesFromPlanOnward(t *testing.T) {
 	const blockedRoot = "blocked.root_conflict"
 	cases := []struct {

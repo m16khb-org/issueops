@@ -101,26 +101,27 @@ func executionOwnerCommand(id, key string) (string, bool) {
 	return "", false
 }
 
-// reviewOwnerCommand는 검토·문서·스키마·피드백 증거 키의 명령이다.
+// reviewOwnerCommand는 검토·문서·스키마·피드백 증거 키의 명령이다. 모두
+// RECORD_ACTOR_FLAGS를 요구하므로(lease가 있으면 holder 검사) 템플릿에 자리를 둔다.
 func reviewOwnerCommand(id, key string) (string, bool) {
 	switch key {
 	case "implementation_review", "implementation_review_stale":
 		return "issueops implementation-review record --id " + id +
-			" --verdict <pass|revise|stop> --finding <TEXT> --evidence <TEXT>", true
+			" --verdict <pass|revise|stop> --finding <TEXT> --evidence <TEXT> $RECORD_ACTOR_FLAGS", true
 	case "project_docs_review", "project_docs_review_stale":
 		return "issueops project-docs-review record --id " + id +
-			" --verdict <updated|no-change> --reviewed-doc <PATH> --evidence <TEXT>", true
+			" --verdict <updated|no-change> --reviewed-doc <PATH> --evidence <TEXT> $RECORD_ACTOR_FLAGS", true
 	case "schema_evidence", "schema_evidence_stale":
 		return "issueops schema-evidence record --id " + id +
-			" --measurement <TEXT> --source <TEXT>", true
+			" --measurement <TEXT> --source <TEXT> $RECORD_ACTOR_FLAGS", true
 	case "feedback_classification":
 		return "issueops feedback add --id " + id +
-			" --source <TEXT> --body <TEXT> --classification <TEXT>", true
+			" --source <TEXT> --body <TEXT> --classification <TEXT> $RECORD_ACTOR_FLAGS", true
 	case "feedback_resolution":
 		return "issueops feedback resolve --id " + id +
-			" --index <N> --resolution <valid-defect|question-answered|noise-dismissed>", true
+			" --index <N> --resolution <valid-defect|question-answered|noise-dismissed> $RECORD_ACTOR_FLAGS", true
 	case "contract_feedback_issue_update":
-		return "issueops feedback mark-issue-updated --id " + id, true
+		return "issueops feedback mark-issue-updated --id " + id + " $RECORD_ACTOR_FLAGS", true
 	}
 	return "", false
 }
@@ -130,7 +131,7 @@ func publicationOwnerCommand(id, key string) (string, bool) {
 	switch key {
 	case "remote_artifact":
 		return "issueops remote verify-artifact --id " + id +
-			" --provider <github|gitlab> --kind <pr|mr> --url <URL> --target-branch <BRANCH> --label <LABEL> --assignee <USER>", true
+			" --provider <github|gitlab> --kind <pr|mr> --url <URL> --target-branch <BRANCH> --label <LABEL> --assignee <USER> $RECORD_ACTOR_FLAGS", true
 	case "child_incomplete", "child_unvalidated", "child_rejected_unresolved":
 		return "issueops child status --parent " + id + " --json", true
 	case "worktree_clean", "upstream", "upstream_fetch", "upstream_synced", "branch_match":

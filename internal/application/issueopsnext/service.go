@@ -387,7 +387,7 @@ func placeholder(value, fallback string) string {
 }
 
 func commandKind(command string) string {
-	if strings.Contains(command, "<") || strings.Contains(command, "$ACTOR_FLAGS") {
+	if strings.Contains(command, "<") || strings.Contains(command, "ACTOR_FLAGS") {
 		return issueopsnextcontract.NextCommandKindTemplate
 	}
 	return issueopsnextcontract.NextCommandKindExact
