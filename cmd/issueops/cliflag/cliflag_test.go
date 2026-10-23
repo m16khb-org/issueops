@@ -97,3 +97,15 @@ func TestParseSuggestsTheClosestDefinedFlag(t *testing.T) {
 		t.Fatalf("--zzzzzz: %v", err)
 	}
 }
+
+// zsh passes an unquoted flags variable as one argument; the error says so
+// instead of suggesting the first flag name inside it.
+func TestParseExplainsAnUnsplitFlagsVariable(t *testing.T) {
+	fs := flag.NewFlagSet("demo", flag.ContinueOnError)
+	fs.String("host", "", "host")
+	fs.String("session-id", "", "session")
+	err := Parse(fs, []string{"--host claude --session-id s-1"})
+	if err == nil || !strings.Contains(err.Error(), "one argument holds several flags") || !strings.Contains(err.Error(), "${=VAR}") {
+		t.Fatalf("err=%v", err)
+	}
+}
