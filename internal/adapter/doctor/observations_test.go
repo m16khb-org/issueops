@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"syscall"
 	"testing"
 	"time"
 
@@ -250,30 +249,17 @@ func TestProbeGatewayHTTPAcceptsAnyHTTPStatusButNotTransportFailure(t *testing.T
 	}
 }
 
-func TestIsPipeClosedErrorRecognisesCloseAndBrokenPipeOnly(t *testing.T) {
-	if !isPipeClosedError(os.ErrClosed) || !isPipeClosedError(syscall.EPIPE) || !isPipeClosedError(&os.PathError{Op: "write", Err: os.ErrClosed}) {
-		t.Fatal("close/EPIPE errors not recognised")
+func TestMeasurePipeCapacityReportsTheKernelBufferQuickly(t *testing.T) {
+	started := time.Now()
+	capacity, err := MeasurePipeCapacity()
+	if err != nil {
+		t.Fatal(err)
 	}
-	if isPipeClosedError(errors.New("disk on fire")) || isPipeClosedError(nil) {
-		t.Fatal("unrelated error recognised as a pipe close")
+	// Every supported kernel buffers at least one page and at most the probe cap.
+	if capacity < 4096 || capacity > 1<<20 {
+		t.Fatalf("capacity = %d, want a real pipe buffer size", capacity)
 	}
-}
-
-func TestAwaitWriterAfterCloseIgnoresBenignCloseButSurfacesRealErrors(t *testing.T) {
-	benign := make(chan error, 1)
-	benign <- os.ErrClosed
-	if err := awaitWriterAfterClose(benign); err != nil {
-		t.Fatalf("benign close reported as failure: %v", err)
-	}
-	clean := make(chan error, 1)
-	clean <- nil
-	if err := awaitWriterAfterClose(clean); err != nil {
-		t.Fatalf("nil writer result reported as failure: %v", err)
-	}
-	real := errors.New("write failed")
-	failed := make(chan error, 1)
-	failed <- real
-	if err := awaitWriterAfterClose(failed); !errors.Is(err, real) {
-		t.Fatalf("err = %v, want the writer error", err)
+	if elapsed := time.Since(started); elapsed > 50*time.Millisecond {
+		t.Fatalf("probe took %s; it must not wait on an idle timer", elapsed)
 	}
 }

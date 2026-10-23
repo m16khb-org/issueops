@@ -3195,10 +3195,7 @@
         "func CountGatewayFDsViaLsof",
         "func MeasurePipeCapacity",
         "func ProbeGatewayHTTP",
-        "func awaitWriterAfterClose",
-        "func isPipeClosedError",
         "func loopbackMCPEndpoints",
-        "func resetIdleTimer",
         "func uniqueMCPGatewayPorts",
         "type mcpGatewayEndpoint"
       ]

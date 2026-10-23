@@ -16,77 +16,37 @@ import (
 	"time"
 )
 
+// MeasurePipeCapacity fills a fresh pipe with non-blocking writes until the
+// kernel answers EAGAIN, so the buffered byte count is the pipe capacity. It
+// returns in well under a millisecond instead of waiting on an idle timer.
 func MeasurePipeCapacity() (int, error) {
-	r, w, err := os.Pipe()
-	if err != nil {
+	var fds [2]int
+	if err := syscall.Pipe(fds[:]); err != nil {
 		return 0, err
 	}
-	defer r.Close()
-	defer w.Close()
-
-	progress := make(chan int, 64)
-	done := make(chan error, 1)
+	defer syscall.Close(fds[0])
+	defer syscall.Close(fds[1])
+	if err := syscall.SetNonblock(fds[1], true); err != nil {
+		return 0, err
+	}
+	chunk := make([]byte, 512)
 	total := 0
-	go func() {
-		chunk := make([]byte, 512)
-		for {
-			n, err := w.Write(chunk)
-			if n > 0 {
-				progress <- n
-			}
-			if err != nil {
-				done <- err
-				return
-			}
-		}
-	}()
-
-	idle := time.NewTimer(100 * time.Millisecond)
-	defer idle.Stop()
 	for total < 1<<20 {
-		select {
-		case n := <-progress:
+		n, err := syscall.Write(fds[1], chunk)
+		if n > 0 {
 			total += n
-			resetIdleTimer(idle)
-		case err := <-done:
-			if isPipeClosedError(err) {
-				return total, nil
-			}
+		}
+		if errors.Is(err, syscall.EAGAIN) {
+			return total, nil
+		}
+		if errors.Is(err, syscall.EINTR) {
+			continue
+		}
+		if err != nil {
 			return total, err
-		case <-idle.C:
-			_ = r.Close()
-			_ = w.Close()
-			return total, awaitWriterAfterClose(done)
 		}
 	}
 	return total, nil
-}
-
-func isPipeClosedError(err error) bool {
-	return errors.Is(err, os.ErrClosed) || errors.Is(err, syscall.EPIPE)
-}
-
-func resetIdleTimer(idle *time.Timer) {
-	if !idle.Stop() {
-		select {
-		case <-idle.C:
-		default:
-		}
-	}
-	idle.Reset(100 * time.Millisecond)
-}
-
-// awaitWriterAfterClose waits up to a second for the writer goroutine to report
-// after the pipe ends were closed; a benign close error is not a failure.
-func awaitWriterAfterClose(done <-chan error) error {
-	select {
-	case err := <-done:
-		if err != nil && !isPipeClosedError(err) {
-			return err
-		}
-	case <-time.After(time.Second):
-	}
-	return nil
 }
 
 type mcpGatewayEndpoint struct {
