@@ -27,7 +27,7 @@ func testHandlePolicyStateMCPToolCall(call MCPToolCall) MCPToolOutcome {
 	return handlePolicyStateMCPToolCall(context.Background(), call, MCPDependencies{Policy: testPolicyService(), Audit: testAuditService(), State: publicStateForTest()})
 }
 func resourceConfigForTest() resources.Config {
-	return resources.Config{IssueOpsRoot: IssueOpsRoot(), Version: Version, SkillName: skillName, ReadHarnessFile: ReadHarnessFile, StateList: publicStateForTest().List, RouteProjectDocs: testProjectDocsService().Route, DocsIndex: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).Index, CommandPolicySummary: policy.CommandPolicySummary}
+	return resources.Config{IssueOpsRoot: IssueOpsRoot(), Version: Version, SkillName: skillName, ReadHarnessFile: ReadHarnessFile, StateList: publicStateForTest().List, RouteProjectDocs: testProjectDocsService().Route, DocsIndex: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).IndexScoped, CommandPolicySummary: policy.CommandPolicySummary}
 }
 func testHandleResourceRead(params json.RawMessage) (any, *jsonrpc.Error) {
 	return HandleResourceRead(params, resourceConfigForTest())

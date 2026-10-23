@@ -34,7 +34,7 @@ func TestHandleResourceReadReturnsJSONResources(t *testing.T) {
 		IssueOpsRoot:         issueOpsRoot,
 		Version:              "test-version",
 		StateList:            statestore.NewService().List,
-		DocsIndex:            (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).Index,
+		DocsIndex:            (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).IndexScoped,
 	}
 	for _, uri := range []string{
 		"issueops://docs",

@@ -11,13 +11,14 @@ func (command Command) RunDocs(args []string) error {
 	}
 	fs := flag.NewFlagSet("docs", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", false, "print JSON")
+	all := fs.Bool("all", false, "also list dated history records (.issueops/issues, research, plans, archive, verified-execution)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	if command.DocsIndex == nil {
 		return fmt.Errorf("docs index reader is not configured")
 	}
-	result := command.DocsIndex(command.IssueOpsRoot, command.Version)
+	result := command.DocsIndex(command.IssueOpsRoot, command.Version, *all)
 	if *jsonOut {
 		return printJSON(result)
 	}
@@ -27,6 +28,9 @@ func (command Command) RunDocs(args []string) error {
 			continue
 		}
 		fmt.Printf("%s — %s\n", doc.RelPath, doc.Title)
+	}
+	if result.HistoryOmitted > 0 {
+		fmt.Printf("(%d history records omitted; pass --all to list them)\n", result.HistoryOmitted)
 	}
 	return nil
 }

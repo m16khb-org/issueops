@@ -18,7 +18,7 @@ type Command struct {
 	IssueOpsRoot   string
 	DefaultTarget  string
 	Version        string
-	DocsIndex      func(string, string) docscontract.DocsIndexResult
+	DocsIndex      func(root, version string, includeHistory bool) docscontract.DocsIndexResult
 	InspectHarness func(string, inspectcontract.Options) inspectcontract.InspectInfo
 	Preflight      preflightapp.Service
 	Guard          guardapp.Service

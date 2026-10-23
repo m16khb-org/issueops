@@ -53,6 +53,23 @@ func excluded(relativePath string) bool {
 	return relativePath == evidenceDir || strings.HasPrefix(relativePath, evidenceDir+"/")
 }
 
+// historyDirs hold dated, per-cycle, or retired records: plans, research
+// notes, issue artifacts, verification reports, and the archive. They are
+// not rules an agent applies, and they are most of the index by size.
+var historyDirs = []string{".issueops/issues/", ".issueops/research/", ".issueops/plans/", ".issueops/archive/", ".issueops/verified-execution/"}
+
+// HistoryRecord reports whether relativePath is a dated or retired record that
+// the default docs index leaves out (callers opt in to see them).
+func HistoryRecord(relativePath string) bool {
+	relativePath = filepath.ToSlash(relativePath)
+	for _, dir := range historyDirs {
+		if strings.HasPrefix(relativePath, dir) {
+			return true
+		}
+	}
+	return false
+}
+
 type authoringScope struct{ moduleDirs []string }
 
 func newAuthoringScope(dirs []string) authoringScope {

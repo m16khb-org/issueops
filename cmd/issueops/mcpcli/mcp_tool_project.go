@@ -19,7 +19,7 @@ func handleProjectMCPToolCall(call MCPToolCall, deps MCPDependencies) MCPToolOut
 	case "skill_manifest":
 		return mcpToolPayload(deps.Skills(deps.Resources.IssueOpsRoot, deps.Resources.SkillName))
 	case "docs_index":
-		return mcpToolPayload(deps.Resources.DocsIndex(deps.Resources.IssueOpsRoot, deps.Resources.Version))
+		return mcpToolPayload(deps.Resources.DocsIndex(deps.Resources.IssueOpsRoot, deps.Resources.Version, argmap.Bool(call.Arguments, "include_history")))
 	case "project_docs_route":
 		result, err := deps.ProjectDocs.Route(argmap.String(call.Arguments, "repo"), argmap.StringDefault(call.Arguments, "task", "general"))
 		return mcpPayloadOrFailure(result, err, -32602, "Project docs route failed")

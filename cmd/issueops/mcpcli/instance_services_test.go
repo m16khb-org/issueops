@@ -62,7 +62,7 @@ func TestMCPDirectAndSDKKeepProjectAndExecutionServicesIsolated(t *testing.T) {
 			},
 			Resources: resources.Config{IssueOpsRoot: owner, Version: owner, SkillName: owner,
 				ReadHarnessFile: func(parts ...string) (string, error) { return owner + "/" + strings.Join(parts, "/"), nil },
-				DocsIndex: func(root, version string) docsmodel.DocsIndexResult {
+				DocsIndex: func(root, version string, _ bool) docsmodel.DocsIndexResult {
 					return docsmodel.DocsIndexResult{OK: root == owner && version == owner, IssueOpsRoot: root, Version: version}
 				},
 			},

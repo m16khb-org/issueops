@@ -62,7 +62,7 @@ func issueOpsMCPDependencies() mcpcli.MCPDependencies {
 		Resources: resources.Config{
 			IssueOpsRoot: root, Version: version, SkillName: skillName,
 			ReadHarnessFile: func(parts ...string) (string, error) { return pathutil.ReadHarnessFile(root, parts...) },
-			StateList:       state.List, RouteProjectDocs: docsService.Route, DocsIndex: newDocsService().Index, CommandPolicySummary: policy.CommandPolicySummary,
+			StateList:       state.List, RouteProjectDocs: docsService.Route, DocsIndex: newDocsService().IndexScoped, CommandPolicySummary: policy.CommandPolicySummary,
 		},
 		SelfHistory:  newSelfWorkflowHistory(statestore.StateDir()),
 		SelfState:    newSelfWorkflowState(statestore.StateDir()),

@@ -7998,7 +7998,9 @@
       "task": "T20",
       "symbols": [
         "func Service.Index",
+        "func Service.IndexScoped",
         "func Service.List",
+        "func Service.index",
         "func Service.startList",
         "type Service"
       ]
@@ -12414,6 +12416,7 @@
       "task": "T20",
       "symbols": [
         "func Eligible",
+        "func HistoryRecord",
         "func Roots",
         "func Select",
         "func authoringScope.includes",

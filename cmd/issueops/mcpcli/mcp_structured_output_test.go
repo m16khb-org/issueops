@@ -26,7 +26,7 @@ var structuredToolNames = []string{"harness_inspect", "docs_index"}
 func structuredToolDeps(inspect func(string, string) any) MCPDependencies {
 	deps := testTransportServices()
 	deps.Inspect = inspect
-	deps.Resources.DocsIndex = func(root, version string) docscontract.DocsIndexResult {
+	deps.Resources.DocsIndex = func(root, version string, _ bool) docscontract.DocsIndexResult {
 		return docscontract.DocsIndexResult{OK: true, Version: version, IssueOpsRoot: root}
 	}
 	return deps

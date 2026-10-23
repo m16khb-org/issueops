@@ -45,11 +45,32 @@ func (s Service) startList(root string) ([]docscontract.Candidate, func() []stri
 	}
 }
 
+// Index lists every selected document, history records included.
 func (s Service) Index(root, version string) docscontract.DocsIndexResult {
+	return s.index(root, version, true)
+}
+
+// IndexScoped lists the documents an agent applies (indexes, modules,
+// cautions, ADRs). Dated history records are read and listed only when
+// includeHistory is set; otherwise they are just counted in HistoryOmitted.
+func (s Service) IndexScoped(root, version string, includeHistory bool) docscontract.DocsIndexResult {
+	return s.index(root, version, includeHistory)
+}
+
+func (s Service) index(root, version string, includeHistory bool) docscontract.DocsIndexResult {
 	// Selection only drops eligible candidates, so they are read while Git is
 	// still resolving which of them are selected.
 	candidates, selected := s.startList(root)
 	eligible := docsdomain.Eligible(candidates)
+	if !includeHistory {
+		current := eligible[:0:0]
+		for _, candidate := range eligible {
+			if !docsdomain.HistoryRecord(candidate.RelPath) {
+				current = append(current, candidate)
+			}
+		}
+		eligible = current
+	}
 	read := make([]docscontract.DocIndexInfo, len(eligible))
 	found := make([]bool, len(eligible))
 	var (
@@ -72,11 +93,14 @@ func (s Service) Index(root, version string) docscontract.DocsIndexResult {
 	paths := selected()
 	wg.Wait()
 	docs := make([]docscontract.DocIndexInfo, 0, len(paths))
+	omitted := 0
 	for _, path := range paths {
 		if i, ok := byPath[path]; ok && found[i] {
 			docs = append(docs, read[i])
+		} else if !ok && !includeHistory {
+			omitted++
 		}
 	}
 	sort.Slice(docs, func(i, j int) bool { return docs[i].RelPath < docs[j].RelPath })
-	return docscontract.DocsIndexResult{OK: true, Version: version, IssueOpsRoot: root, Docs: docs, GeneratedAt: s.Now().Format(time.RFC3339)}
+	return docscontract.DocsIndexResult{OK: true, Version: version, IssueOpsRoot: root, Docs: docs, HistoryOmitted: omitted, GeneratedAt: s.Now().Format(time.RFC3339)}
 }

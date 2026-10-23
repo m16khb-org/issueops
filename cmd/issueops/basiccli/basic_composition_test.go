@@ -22,7 +22,7 @@ func testBasicCommand() Command {
 	target := testResolveTarget("")
 	home, _ := os.UserHomeDir()
 	cwd, _ := os.Getwd()
-	return Command{IssueOpsRoot: root, DefaultTarget: target, Version: "0.1.0", DocsIndex: (docsapp.Service{Observer: docsadapter.Observer{}, Now: time.Now}).Index,
+	return Command{IssueOpsRoot: root, DefaultTarget: target, Version: "0.1.0", DocsIndex: (docsapp.Service{Observer: docsadapter.Observer{}, Now: time.Now}).IndexScoped,
 		InspectHarness: func(repo string, options inspectcontract.Options) inspectcontract.InspectInfo {
 			if repo == "" {
 				repo = target

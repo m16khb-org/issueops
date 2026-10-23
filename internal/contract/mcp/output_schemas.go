@@ -130,11 +130,12 @@ func DocsIndexOutputSchema() map[string]any {
 		"bytes":    schemaInteger(),
 	}, "rel_path", "path", "title", "headings", "bytes")
 	schema := schemaObject(map[string]any{
-		"ok":            schemaBool(),
-		"version":       schemaString(),
-		"issueops_root": schemaString(),
-		"docs":          schemaArray(schemaRef("doc")),
-		"generated_at":  schemaString(),
+		"ok":              schemaBool(),
+		"version":         schemaString(),
+		"issueops_root":   schemaString(),
+		"docs":            schemaArray(schemaRef("doc")),
+		"history_omitted": schemaInteger(),
+		"generated_at":    schemaString(),
 	}, "ok", "version", "issueops_root", "docs", "generated_at")
 	schema["$schema"] = jsonSchema2020
 	schema["$defs"] = map[string]any{"doc": doc}

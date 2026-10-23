@@ -31,9 +31,11 @@ func CoreProjectTools() []Tool {
 			InputSchema: map[string]any{"type": "object", "properties": map[string]any{}},
 		},
 		{
-			Name:         "docs_index",
-			Description:  "Return a lightweight index of AGENTS.md, CLAUDE.md, GENIUS_THINK.md, .issueops markdown files, and self-* skill docs: relative path, title, headings, and byte size.",
-			InputSchema:  map[string]any{"type": "object", "properties": map[string]any{}},
+			Name:        "docs_index",
+			Description: "Return a lightweight index of AGENTS.md, CLAUDE.md, GENIUS_THINK.md, .issueops documents, and self-* skill docs: relative path, title, headings, and byte size. Dated records (.issueops/issues, research, plans, archive, verified-execution) are only counted unless include_history is true.",
+			InputSchema: map[string]any{"type": "object", "properties": map[string]any{
+				"include_history": map[string]any{"type": "boolean", "description": "Also list dated history records. Default false."},
+			}},
 			OutputSchema: DocsIndexOutputSchema(),
 			Annotations:  ReadOnlyClosedWorldAnnotations(),
 		},

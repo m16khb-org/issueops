@@ -325,9 +325,14 @@
       "readOnlyHint": true,
       "openWorldHint": false
     },
-    "description": "Return a lightweight index of AGENTS.md, CLAUDE.md, GENIUS_THINK.md, .issueops markdown files, and self-* skill docs: relative path, title, headings, and byte size.",
+    "description": "Return a lightweight index of AGENTS.md, CLAUDE.md, GENIUS_THINK.md, .issueops documents, and self-* skill docs: relative path, title, headings, and byte size. Dated records (.issueops/issues, research, plans, archive, verified-execution) are only counted unless include_history is true.",
     "inputSchema": {
-      "properties": {},
+      "properties": {
+        "include_history": {
+          "description": "Also list dated history records. Default false.",
+          "type": "boolean"
+        }
+      },
       "type": "object"
     },
     "name": "docs_index",
@@ -382,6 +387,9 @@
         },
         "generated_at": {
           "type": "string"
+        },
+        "history_omitted": {
+          "type": "integer"
         },
         "issueops_root": {
           "type": "string"

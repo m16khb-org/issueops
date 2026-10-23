@@ -50,3 +50,24 @@ func TestEmptySelectionPreservesGitAvailabilityShape(t *testing.T) {
 		t.Fatalf("tracked empty list must be allocated: %#v", got)
 	}
 }
+
+func TestHistoryRecordSeparatesDatedRecordsFromRules(t *testing.T) {
+	for path, want := range map[string]bool{
+		".issueops/issues/561/plan.md":        true,
+		".issueops/research/agent-updates.md": true,
+		".issueops/plans/brief.md":            true,
+		".issueops/archive/issueops-audit.md": true,
+		".issueops/verified-execution/548.md": true,
+		".issueops/cautions/2026-10-24-x.md":  false,
+		".issueops/adr/2026-10-02-http.md":    false,
+		".issueops/testing/unit.md":           false,
+		".issueops/CAUTIONS.md":               false,
+		".issueops/issues-guide.md":           false,
+		"AGENTS.md":                           false,
+		"skills/self-verify/SKILL.md":         false,
+	} {
+		if got := HistoryRecord(path); got != want {
+			t.Errorf("HistoryRecord(%q) = %v, want %v", path, got, want)
+		}
+	}
+}

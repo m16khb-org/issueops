@@ -12,7 +12,7 @@ type Config struct {
 	// RouteProjectDocs는 composition root가 주입한다.
 	RouteProjectDocs func(repoRoot, task string) (projectdocscontract.ProjectDocsRouteResult, error)
 	// DocsIndex는 composition root가 주입한다.
-	DocsIndex func(root, version string) docscontract.DocsIndexResult
+	DocsIndex func(root, version string, includeHistory bool) docscontract.DocsIndexResult
 	// StateList는 composition root가 주입한다.
 	StateList       func() (statecontract.StateListResult, error)
 	IssueOpsRoot    string
@@ -73,7 +73,7 @@ func HandleResourceRead(params json.RawMessage, config Config) (any, *ReadError)
 		if config.DocsIndex == nil {
 			return nil, &ReadError{Code: -32000, Message: "Cannot read docs index", Data: "docs index reader is not configured"}
 		}
-		result := config.DocsIndex(config.IssueOpsRoot, config.Version)
+		result := config.DocsIndex(config.IssueOpsRoot, config.Version, false)
 		b, _ := json.MarshalIndent(result, "", "  ")
 		return content(req.URI, "application/json", string(b)), nil
 	}

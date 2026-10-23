@@ -9,7 +9,11 @@ type DocsIndexResult struct {
 	Version      string         `json:"version"`
 	IssueOpsRoot string         `json:"issueops_root"`
 	Docs         []DocIndexInfo `json:"docs"`
-	GeneratedAt  string         `json:"generated_at"`
+	// HistoryOmitted counts dated records (.issueops/issues, research, plans,
+	// archive, verified-execution) left out of the default index; ask for
+	// them with `docs --all` or docs_index include_history.
+	HistoryOmitted int    `json:"history_omitted,omitempty"`
+	GeneratedAt    string `json:"generated_at"`
 }
 
 type DocIndexInfo struct {
