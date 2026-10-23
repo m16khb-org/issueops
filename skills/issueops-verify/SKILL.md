@@ -50,38 +50,14 @@ report의 검증 절에는 따른 문서 경로와 그 문서가 요구한 명�
 
 ## 0 재사용을 확인하고 필요한 작업을 병렬 실행한다
 
-봉인된 fingerprint와 1절의 증거 재사용 조건을 먼저 확인한다. 아래 작업 중 유효한
-증거가 없는 필수 작업만 고르고, 입력과 실행 환경을 공유해 서로 영향을 주지 않는
-작업을 **같은 fingerprint에 대해 동시에** 시작한다. 같은 DB나 브라우저 상태를 쓰는
-검증은 순서대로 실행한다. 리뷰어에게는 기존 검증 증거와 아직 실행 중인 항목을 구분해
-전달하고, 추가 결과가 판정에 영향을 주면 기록 전에 그 결과로 delta 리뷰를 받는다.
-
-1. 게이트 원장과 저장소 검증 배터리(1절). `gates check`는 `--write` 없이 실행한다.
-   `--write`는 4·5단계가 소유한다.
-2. 스키마 실측(2절). 변경 집합에 스키마 파일이 있을 때만 활성화된다.
-3. 구현 리뷰 서브에이전트(3절).
-4. 화면 QA(`next`의 `review.frontend`가 true일 때만).
-   [`aside-web-qa`](../aside-web-qa/SKILL.md)에 네 입력을 이렇게 매핑한다.
-   TARGET=계획이나 이슈 본문의 로컬 실행 절차가 준 URL, SCOPE=변경 집합의 frontend 경로,
-   REQUIREMENTS=intent 문서와 이슈의 성공 기준, `gates.md`, INTENT=4단계 report의 `## UI 판단` 절.
-   넷 중 하나라도 없으면 지어내지 말고 QA를 `Not Run`으로 report에 사유와 함께 적는다.
-   보고서 출력 경로는 ignored 영역 `.issueops/issues/<n>/review/`나 워크트리 밖으로
-   고정한다 — 워크트리 안 미추적 파일은 fingerprint에 들어가 봉인을 깬다. 제품을 바꾸는
-   시나리오는 그 스킬의 allowed mutations·cleanup 계약 안으로 한정하고 정리 영수증을
-   report에 적는다. `aside-functional-qa`·`aside-visual-qa`를 직접 부르지 않는다.
-
-- **결과를 모두 모은 뒤 판정을 기록한다.** 배터리가 실패하거나 필수 스키마·QA 증거가
-  빠졌으면 먼저 도착한 리뷰 `pass`를 기록하지 않는다. 실패 출력과 리뷰 지적은 수정에
-  쓸 근거로 보존하고 4단계로 돌아간다. 수정으로 fingerprint가 바뀌면 이전 판정을
-  재사용하지 않는다. `Not Run`이 성공 기준 검증을 누락했다면 readiness의 blocker다.
-- 이 동시 실행의 전제는 정리 단계가 관련 검증을 이미 통과시켰다는 것이다. 배터리
-  실패가 드물지 않으면 병렬화가 아니라 5단계를 먼저 고친다.
-  검증 명령의 실패 기록으로 판단한다. `issueops review-metrics --repo "$WORKTREE"
-  --json`의 revise 비율은 계획 리뷰 판정 비율이며 배터리 실패율이 아니다.
-- 이 fan-out은 `SUB_AGENT_PATTERNS.md`의 기대 이득 `parallel_speed`에 해당한다.
-  그 slug와 실제로 절약한 벽시계 시간을 verified-execution report에 적는다.
-- 정리(5단계)·문서 반영(6단계)과는 동시에 실행하지 않는다. 그 둘은 파일을 쓰므로
-  봉인을 바꾼다.
+봉인된 fingerprint와 1절의 증거 재사용 조건을 먼저 확인한다. 유효한 증거가 없는 필수
+작업(게이트 원장·검증 배터리, 스키마 실측, 구현 리뷰, `review.frontend`가 true일 때의
+화면 QA)만 **같은 fingerprint에 대해 동시에** 시작한다. `gates check`는 `--write` 없이
+실행한다. `--write`는 4·5단계가 소유한다. **결과를 모두 모은 뒤 판정을 기록한다.**
+배터리가 실패하거나 필수 증거가 빠졌으면 먼저 도착한 리뷰 `pass`를 기록하지 않고 4단계로
+돌아간다. 정리(5단계)·문서 반영(6단계)과는 동시에 실행하지 않는다. 그 둘은 파일을 쓰므로
+봉인을 바꾼다. 공유 상태 검증의 순서, 화면 QA 입력 매핑과 보고서 경로, 실패율 판단, 리뷰어에게
+넘길 증거 구분은 [병렬 실행 세부](references/parallel-run.md)를 병렬 작업을 시작하기 전에 읽는다.
 
 ## 1 검증 증거 확인과 필요한 재검증
 
@@ -149,12 +125,8 @@ tree까지의 변경과 staged·unstaged·untracked 경로의 합집합이다.
 없으면 이 게이트는 뜨지 않는다.
 
 활성화되면 추정이 아니라 **실제 데이터베이스 관찰값**을 요구한다. 대상 테이블의 기존
-인덱스 현황과 row 수, 그리고 그 값을 어디서 봤는지다. 조회는 [`database-design`](../database-design/SKILL.md)
-또는 DB MCP 서버로 한다.
-
-커넥션을 소모하는 대형 스캔을 던지지 않는다. `COUNT(*)` 전수 대신 카탈로그의 추정 row
-수(`pg_class.reltuples`, `information_schema`, `SHOW INDEX`)를 쓰고 필요하면 `LIMIT`을
-건다. 운영 DB에서 무거운 쿼리 하나가 커넥션 풀을 마르게 한다.
+인덱스 현황과 row 수, 그리고 그 값을 어디서 봤는지다. 조회 방법과 커넥션 주의,
+waive 규칙은 [스키마 실측 세부](references/schema-evidence.md)를 읽는다.
 
 ```bash
 issueops schema-evidence record --id "$ISSUEOPS_ID" \
@@ -164,10 +136,7 @@ issueops schema-evidence record --id "$ISSUEOPS_ID" \
 ```
 
 - measurement와 source는 짝이다. 출처 없는 수치는 추정과 구분되지 않는다.
-- 관찰이 불가능하면 `--waive --waiver-rationale "<근거>"`로 남긴다. rationale 없는
-  waive는 게이트를 열지 않는다.
-- 실측 결과가 구현을 바꿔야 한다면 그것은 이 단계가 아니라 4단계의 일이다. row 수가
-  크면 인덱스 생성 전략, 마이그레이션 잠금 시간, 백필 배치 크기가 달라진다.
+- rationale 없는 waive는 게이트를 열지 않는다.
 
 ## 3 구현 리뷰
 
@@ -238,15 +207,7 @@ plan.md, gates.md, verified-execution report, 문서, 구현을 커밋·푸시�
   대한 것이다.
 - 검증 단계에서 `gates check --write`를 실행한다. 원장이 바뀌어 봉인이 stale이 된다.
 
-| 나쁜 행동 | 문제 |
-|---|---|
-| 이 단계에서 파일을 고친다 | 앞 두 단계의 봉인과 판정이 동시에 stale이 된다 |
-| 실행하지 않은 검증을 pass로 기록한다 | 기록은 남고 검증은 없다 |
-| 리뷰 없이 구현 리뷰를 pass로 기록한다 | 게이트 연극이다 |
-| 운영 DB에 `SELECT COUNT(*)` 전수 스캔을 던진다 | 커넥션 풀을 마르게 한다. 카탈로그 추정치를 쓴다 |
-| revise 지적을 이 단계에서 고치고 재리뷰를 생략한다 | fingerprint가 바뀌어 판정이 stale이 되거나, 검토되지 않은 수정이 게시된다 |
-| 미충족 게이트를 원장 수정으로 통과시킨다 | 원장이 통과하고 결과는 검증되지 않는다 |
-| 이 단계에서 커밋한다 | 커밋은 8단계다. 여기서 커밋하면 무엇을 검증한 상태인지 흐려진다 |
+전체 표는 [나쁜 예](references/bad-examples.md)에 있다. 이 단계에서 파일을 고치거나 커밋하지 않는다.
 
 ## 검증
 

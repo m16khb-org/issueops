@@ -54,31 +54,14 @@ route 결과는 아래 목록에 **더하는** 후보이고 목록을 대신하�
 다음 여섯 문서는 직접 열고, 색인이 이 변경의 모듈을 가리키면 그 모듈 파일도 연다:
 `CONSTITUTION.md`, `ARCHITECTURE.md`, `CONVENTIONS.md`, `CAUTIONS.md`, `ADR.md`, `TESTING.md`.
 
-읽은 결과는 계획의 `## 적용되는 결정과 주의사항` 절에(아키텍처 문서에도 해당하는 제약은 그 문서의 관련 절에) 위 여섯 문서와 route가 더한 문서마다
-**한 줄씩** 적는다. 적용되는 항목이 있으면 규칙이 실제로 적힌 파일의 경로(색인이 모듈로 넘기는
-규칙이면 색인이 아니라 그 모듈 경로), 항목 제목, 그 파일에서 그대로 옮긴 문장, 이 계획에 미치는
-제약 한 문장을 쓰고, 열어서 대조했지만 해당 항목이 없으면 그 문서 경로와 "대조했으나 없음"을 쓴다.
-route가 더한 문서를 열지 않기로 했으면 "열지 않음: <이 변경과 무관한 이유>"로 쓴다. "대조했으나 없음"은
-실제로 연 문서에만 쓴다. 여섯 문서는 "열지 않음"을 쓸 수 없고, 한 줄이라도 빠지면 읽지 않은 것이다.
-읽지 않은 것과 읽었는데 없는 것은 다르다.
-
-이 절은 두 곳으로 흘러간다. 아키텍처 검토의 `--risk`에 그 제약이 들어가고,
-`issueops-review`의 리뷰 프롬프트에 이 절이 들어가 리뷰어가 "무시된 결정"을
-공격한다.
+여섯 문서와 route가 더한 문서마다 한 줄씩 적용 여부를 계획의 `## 적용되는 결정과 주의사항` 절에 적는다. 여섯 문서는 "열지 않음"을 쓸 수 없고, 한 줄이라도 빠지면 읽지 않은 것이다. 한 줄의 형식, "대조했으나 없음"과 "열지 않음"을 쓰는 조건, 이 절이 흘러가는 곳은 [세부 규칙](references/project-docs-check.md)을 연다.
 
 ## 아키텍처 작성과 스테이징
 
 계획보다 먼저 **아키텍처 문서**를 쓴다. 문서는 구현 순서가 아니라 구조와 경계에 대한 결정을
-담는다. 저장 위치는 `$(mktemp -d)/architecture.md`처럼 source checkout 밖이다. 다음 다섯 절이
-반드시 있고, 절마다 본문이 비어 있지 않아야 한다.
+담는다. 저장 위치는 `$(mktemp -d)/architecture.md`처럼 source checkout 밖이다.
 
-| 절 | 내용 |
-|---|---|
-| `## 요구사항과 규모` | 기능 요구사항과 비기능 요구사항(부하, 지연, 가용성), 필요할 때의 규모 추정 |
-| `## 데이터와 API 계약` | 엔터티, 저장 위치, CLI·MCP·record 계약 |
-| `## 구조와 흐름` | 구성 요소와 읽기·쓰기 경로. 재사용하는 기존 코드의 `파일:라인`을 함께 적는다 |
-| `## 병목과 장애` | 단일 장애점, 의존성 실패, 대체 경로 |
-| `## 절충점과 기각한 대안` | 선택한 방식, 기각한 대안, 기각한 이유 |
+다섯 절(`## 요구사항과 규모`, `## 데이터와 API 계약`, `## 구조와 흐름`, `## 병목과 장애`, `## 절충점과 기각한 대안`)이 반드시 있고 본문이 비어 있지 않아야 한다. 절별 내용은 [필수 절](references/architecture-and-plan-sections.md)을 연다.
 
 변경과 관계없는 절에는 "해당 없음: <근거>"를 쓴다. 근거 없이 비워 둔 절은 `architecture review`가
 `architecture is missing required sections: <제목>`으로 거부한다. 제목은 `## ` 깊이로 정확히
@@ -112,9 +95,7 @@ issueops record-routing --id "$ISSUEOPS_ID" --phase plan --skill implementation-
   거부된다.
 - `--verification`에는 "아키텍처"와 "검토"가 함께 들어가야 한다(영어면 "architecture"와
   "review"). 그 두 단어가 없으면 `architecture_review_evidence`가 통과하지 않는다.
-- `--reviewer-context`는 `subagent` 또는 `inline`이며 감사 필드다. 하네스는 자기신고를 검증할 수
-  없으므로 `inline`도 기록되지만, 저자 세션이 직접 검토한 기록은 리뷰가 아니라 규칙 위반이다.
-  독립 서브에이전트가 돌려준 판정만 `subagent`로 기록한다.
+- `--reviewer-context`는 `subagent` 또는 `inline`인 감사 필드다. 저자 세션이 직접 검토한 기록은 리뷰가 아니라 규칙 위반이고, 독립 서브에이전트가 돌려준 판정만 `subagent`로 기록한다. 이유는 [세부 규칙](references/gates-and-review-details.md)을 연다.
 - `--refactor-plan`, `--alternative`, `--risk`는 각각 하나 이상 필요하고, open question은
   0이어야 승인된다. 열린 질문이 남았으면 그것을 먼저 닫는다.
 - `revise`면 문서를 고쳐 다시 스테이징하고 다시 검토한다. `stop`이면 승인을 기록하지 않고
@@ -128,63 +109,19 @@ issueops record-routing --id "$ISSUEOPS_ID" --phase plan --skill implementation-
 바꿔야 하면 계획을 멈추고 `plan.architecture`로 돌아가 문서를 고치고 다시 검토한다.
 저장 위치는 `$(mktemp -d)/plan.md`처럼 source checkout 밖이다.
 
-계획에는 다음 네 절이 반드시 있다.
+계획에는 네 절(`## 적용되는 결정과 주의사항`, `## 재사용하는 기존 구현`, `## 성능 영향`, `## 하위 호환성과 side effect`)이 반드시 있다. 절별 내용과 LLM 프롬프트 변경 기준은 [필수 절](references/architecture-and-plan-sections.md)의 "계획"을 연다. 제목을 바꾸거나 합치지 않는다. 네 제목 중 하나라도 없으면 4단계의 `issueops link-plan`이 `plan is missing required sections`로 연결을 거부한다.
 
-| 절 | 내용 |
-|---|---|
-| `## 적용되는 결정과 주의사항` | 위 문서 확인의 결과 |
-| `## 재사용하는 기존 구현` | plan-prep의 코드베이스 조사에서 찾은 심볼·패키지·테스트 헬퍼와 재사용 방식. 새로 만드는 것이 있으면 기존 것으로 왜 안 되는지 |
-| `## 성능 영향` | hot path 여부, 복잡도 변화, 측정 계획. 알고리즘 선택이 걸리면 [`algorithm-optimization`](../algorithm-optimization/SKILL.md) |
-| `## 하위 호환성과 side effect` | CLI JSON·MCP schema·golden·record schema·provider body 계약, 기존 데이터, 롤백 경로. 마이그레이션·엔티티·인덱스·쿼리가 걸리면 [`database-design`](../database-design/SKILL.md)으로 정규화 판단·인덱스 계획·예상 row 수를 먼저 정하고 그 값을 여기 적는다. 7단계의 실측이 이 값과 대조된다 |
-
-계획이 **LLM에게 주는 프롬프트 본문**을 바꾸면(서브에이전트·리뷰어 프롬프트,
-`.issueops/prompt-engineering/`의 문서, SKILL 안의 프롬프트 템플릿 블록)
-[`prompt-engineering`](../prompt-engineering/SKILL.md)으로 측정 가능한 출력 기준을 정해
-`## 하위 호환성과 side effect` 절에 적는다: 무엇이 나오면 그 프롬프트가 실패한 것이고,
-어떤 산출물로 확인하는가. 메인 에이전트가 읽는 절차 산문 변경은 해당 없다.
-
-이 네 절은 형식이 아니라 판단이다. "재사용할 것이 없다"는 결론도 근거와 함께 적으면
-유효하고, 근거 없이 비워 두면 리뷰가 그것을 공격한다. 절 제목 자체는 4단계의
-`issueops link-plan`이 검사한다. 네 제목 중 하나라도 없는 계획은
-`plan is missing required sections`로 연결이 거부되므로, 제목을 바꾸거나 합치지 않는다.
-
-계획에 lifecycle ID, 사용자 요청 범위, 브랜치·worktree 준비 뒤의 환경별 자동 세션 인계,
-승인된 종료점을 적어 인계받는 세션도 같은 경계를 알게 한다. 자동 인계는 사용자 요청 범위를
-넓히지 않는다. 이미 읽은 plan-prep 조사와 문서는 변경이나
-새 질문이 없으면 재사용한다. 작업 규모에 맞춰 필요한 검증 명령을 정하고, 같은 명령을
-게이트와 별도 검증 목록에 중복 등록하지 않는다.
+계획에 lifecycle ID, 사용자 요청 범위, 환경별 자동 세션 인계, 승인된 종료점을 적고, 자동 인계는 사용자 요청 범위를 넓히지 않는다. 같은 명령을 게이트와 별도 검증 목록에 중복 등록하지 않는다. 나머지는 [세부 규칙](references/plan-staging-details.md)을 연다.
 
 ### 사실 주장 확인
 
-계획이 **기존 동작에 대해 단언하는 문장**은 스테이징 전에 명령으로 확인하고
-`파일:라인`을 인용한다. 확인하지 않은 단언은 계획에 쓰지 않는다.
-
-대상은 계획이 "현재 이렇게 되어 있다"고 말하는 모든 것이다. 자주 틀리는 것들:
-
-- 데이터가 어디에 저장되고 무엇을 키로 재사용되는가. "저장 데이터는 그대로"는
-  저장 지점과 조회 키를 둘 다 읽기 전에는 쓸 수 없는 문장이다.
-- 대상 spec이 내가 고치려는 서비스를 mock하는가. mock하면 그 안에 넣은 변경은
-  그 spec으로 관측되지 않으므로 성공 기준을 검증할 수 없다.
-- 재시도 횟수·타임아웃·상수의 실제 값과 그 곱. 최악 지연은 곱으로 계산한다. 대기나 재시도가
-  제한 시간이 있는 경로(hook, 요청 처리, CI job) 안에서 돌면 그 경로의 설정 파일에서 바깥
-  제한 시간을 찾아 최악 지연과 비교한다. 이슈나 사용자가 제안한 대기 시간을 평가할 때도 같다.
-- 이 동작을 소비하는 호출부가 몇 곳인가. 센 것이 아니라 찾은 것을 적는다.
-- 근거로 드는 ADR·선례가 실제로 그 주장을 뒷받침하는가. 제목이 아니라 본문을 읽는다.
-
-이것은 리뷰어의 일이 아니라 저자의 일이다. 확인은 몇 분이지만 틀린 단언 하나는 리뷰
-라운드 하나와 계획 전면 개정을 부른다. 적대 리뷰는 저자가 못 보는 설계 결함을 잡으라고
-있는 것이지, 저자가 읽지 않은 코드를 대신 읽으라고 있는 것이 아니다.
-
-확인할 수 없는 것은 단언하지 말고 미확인 가정으로 적는다. 그러면 리뷰어가 그 가정을
-판별할 최소 확인을 요청할 수 있다.
+계획이 **기존 동작에 대해 단언하는 문장**은 스테이징 전에 명령으로 확인하고 `파일:라인`을 인용한다. 확인하지 않은 단언은 계획에 쓰지 않고, 확인할 수 없는 것은 미확인 가정으로 적는다. 확인은 저자의 일이다. 무엇을 확인하는지는 [사실 주장 확인](references/fact-claims.md)을 연다.
 
 ```bash
 issueops artifact stage --id "$ISSUEOPS_ID" --name plan --file "$TMP_PLAN" --json
 ```
 
-`artifact stage`는 actor 플래그를 받지 않는다. `--id`, `--name`, `--file`, `--json`뿐이다.
-잘못 올렸으면 `issueops artifact unstage --id "$ISSUEOPS_ID" --name plan --json`으로
-내린다.
+`artifact stage`는 actor 플래그를 받지 않는다. 인수와 내리는 법은 [세부 규칙](references/plan-staging-details.md)을 연다.
 
 `link-plan`은 여기서 하지 않는다. 워크트리가 없어 `plan_in_worktree`를 만족할 수 없다.
 prepare가 스테이징한 계획을 워크트리 안에 materialize하고, 4단계가 그것을 링크한다.
@@ -197,11 +134,7 @@ prepare가 스테이징한 계획을 워크트리 안에 materialize하고, 4단
 여기서 만들지 않는다. 4단계가 파일을 만들고 `--write`로 EVIDENCE를 채우며, 5단계가
 정리 뒤 다시 채우고, 7단계는 증거 유효성을 확인해 읽거나 필요한 검사를 재실행한다.
 
-게이트 중 적어도 하나는 이슈의 완료 조건, 곧 보고된 실패가 사라진 최종 상태를 직접 관측한다.
-고치는 의존성을 fake로 바꾼 unit 테스트나 호출 순서만 확인하는 테스트는 그 게이트를 대신하지 못한다.
-그 관측이 smoke 명령(실제 명령을 실행한 뒤 상태를 읽어 비교)이면 구현 단계나 측정 계획에만 적지 말고
-게이트의 CHECK로 쓴다. 테스트로 관측하면 그 테스트가 무엇을 실제로 실행하고 무엇을 비교하는지 게이트
-결과 칸에 적는다.
+게이트 중 적어도 하나는 이슈의 완료 조건, 곧 보고된 실패가 사라진 최종 상태를 직접 관측해야 한다. fake를 쓴 unit 테스트는 그 게이트를 대신하지 못한다. smoke 명령과 테스트 관측 규칙은 [세부 규칙](references/gates-and-review-details.md)을 연다.
 
 스테이징 전에 계획의 게이트를 실행 없이 검사한다. `problems`가 남은 계획은 스테이징하지 않는다.
 
@@ -227,15 +160,7 @@ issueops regress --id "$ISSUEOPS_ID" --reason "<리뷰 결론>" $RECORD_ACTOR_FL
 판정 뒤 계획을 고치면 `devils_advocate_review_stale`이 되어 인계가 막힌다. 고쳤으면
 다시 검토한다.
 
-검토가 이슈 본문의 사실(완료 기준, 범위, 원인 설명, 작업 구조)을 틀렸다고 판정하면
-계획만 고치고 끝내지 않는다. 그 사실을 계약 변경으로 기록한다. 기록이 남으면 기존
-게이트 `contract_feedback_issue_update`가 PR 준비를 막고, `sync-issue`로 본문을 고친 뒤
-`feedback mark-issue-updated`를 기록해야 풀린다.
-
-```bash
-issueops feedback add --id "$ISSUEOPS_ID" --source plan-review --classification contract_change \
-  --body "<이슈 본문에서 바뀐 사실>" $RECORD_ACTOR_FLAGS --json
-```
+검토가 이슈 본문의 사실(완료 기준, 범위, 원인 설명, 작업 구조)을 틀렸다고 판정하면 계획만 고치고 끝내지 않고 `feedback add --classification contract_change`로 기록한다. 명령 형식과 이후 게이트는 [세부 규칙](references/gates-and-review-details.md)을 연다.
 
 ## 인계
 
@@ -269,33 +194,11 @@ Herdr를 쓸 수 없으면 lease를 유지하고 현재 세션에서 구현으�
 
 ## 의존성과 로컬 설정
 
-워크트리가 생긴 뒤의 규칙이지만 계획에 함께 적는다.
-
-의존성은 canonical worktree 안에서 저장소가 문서화한 설치 명령으로 준비한다. 크게
-생성되는 의존성 디렉터리를 재사용하려면 패키지 매니저·lockfile·런타임·플랫폼·네이티브
-모듈 상태가 모두 같은지 확인한 뒤에만 한다. 생성된 의존성 디렉터리나 심볼릭 링크를
-커밋하지 않는다.
-
-`.env`, `.env.local`, `.mcp.json`, `dbhub.toml` 같은 로컬 전용 설정은 작업에 필요하고,
-원본이 ignore돼 있고, 어떤 secret도 프롬프트·로그·테스트·이슈 본문·PR/MR 본문에 들어가지
-않을 때만 링크한다. 추적되는 파일, ignore되지 않은 파일, 설명되지 않은 자격 증명 파일은
-링크하기 전에 멈춘다.
+워크트리가 생긴 뒤의 규칙이지만 계획에 함께 적는다. 의존성은 canonical worktree 안에서 저장소가 문서화한 설치 명령으로 준비하고, 생성된 의존성 디렉터리나 심볼릭 링크를 커밋하지 않는다. 로컬 전용 설정은 조건을 만족할 때만 링크하고, 추적되는 파일·ignore되지 않은 파일·설명되지 않은 자격 증명 파일은 링크하기 전에 멈춘다. 조건 전문은 [세부 규칙](references/dependencies-and-local-config.md)을 연다.
 
 ## 나쁜 예
 
-| 나쁜 행동 | 왜 나쁜가 | 대신 할 일 |
-|---|---|---|
-| source checkout 안에 계획 파일을 만든다 | 커밋 대상이 되고 워크트리 생성 뒤 계획이 두 곳에 존재한다 | 임시 디렉터리에 쓰고 `artifact stage` |
-| `git worktree add`를 실행한다 | `execution prepare`가 만드는 worktree와 경로·브랜치가 충돌한다 | `execution prepare`가 만들게 둔다 |
-| 세션 인계를 위해 worktree를 재생성한다 | lease와 브랜치 identity가 새 worktree와 어긋난다 | 준비한 같은 worktree에서 환경별 자동 세션 인계를 적용한다 |
-| 기존 동작에 대한 단언을 확인 없이 계획에 쓴다 | 저자가 몇 분이면 읽을 코드를 리뷰어가 읽게 되고, 틀린 단언 하나가 리뷰 라운드와 전면 개정을 부른다 | 스테이징 전에 명령으로 확인하고 `파일:라인`을 인용한다 |
-| 아키텍처 없이 계획부터 쓴다 | 결정이 계획 전체에 퍼진 뒤에야 구조 결함이 드러나 계획을 다시 쓴다 | 아키텍처를 먼저 스테이징하고 승인받는다 |
-| 승인한 아키텍처를 고치고 재검토를 생략한다 | `architecture_review_stale`로 계획 단계에 못 들어가거나, 검토되지 않은 구조가 계획에 들어간다 | 다시 스테이징하고 새 승인을 기록한다 |
-| 리뷰 없이 `--verdict pass`나 `--approved`를 기록한다 | 게이트 연극이다 | `issueops-review`로 실제 리뷰를 돌린다 |
-| revise 판정을 `--waive`로 닫는다 | 지적이 반영되지 않은 채 구현으로 간다 | 계획을 고치고 다시 검토한다 |
-| 판정 뒤 계획을 고치고 재검토를 생략한다 | stale 판정으로 인계가 막히거나, 검토되지 않은 계획이 구현된다 | 다시 검토해 새 판정을 기록한다 |
-| staged plan 없이 인계한다 | prepare가 워크트리에 materialize할 계획이 없다 | `artifact stage`를 먼저 한다 |
-| 새 세션에 인계했는데 이 세션이 계속 구현한다 | 두 세션이 같은 워크트리를 쓴다 | Herdr 인계 전달을 확인하면 여기서 멈춘다 |
+다음은 금지다: source checkout 안에 계획 파일 만들기, `git worktree add` 실행, worktree 재생성, 확인 없는 단언, 아키텍처 없이 계획 쓰기, 승인·판정 뒤 수정하고 재검토 생략, 리뷰 없이 `--approved`·`--verdict pass` 기록, revise를 `--waive`로 닫기, staged plan 없이 인계, 인계 뒤에도 구현 계속하기. 이유와 대안은 [나쁜 예 표](references/bad-examples.md)를 연다.
 
 ## 검증
 

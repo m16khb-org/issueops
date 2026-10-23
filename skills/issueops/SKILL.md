@@ -47,21 +47,11 @@ issueops next --json
   worktree의 새 Herdr 세션으로 인계한다. Herdr를 쓸 수 없으면 현재 세션에서 이어가거나,
   사용자가 직접 연 두 번째 터미널에서 수동 인계한다.
   바이너리 설치 여부만으로 ready라고 판단하지 않는다.
-- 결정은 `decision add`에 `current|new-session|hold`, 런처·실측 상태, 원래 요청과 대화 근거,
-  ID·issue·branch·worktree·계획·generation·승인 범위·종료점으로 기록하고 `status`로 확인한다.
-  인계 전 새 dispatch를 멈추고 writer와 자손의 실제 종료를 확인한다. 인계 자료에는 목적·비목표,
-  source/worktree, base/full HEAD·diff, 계획 경로/digest, 검증 입력·명령·시각·환경·실패,
-  미완료 작업·결과 위치, lifecycle 상태, exact 인수/조회 명령과 자료 digest를 남긴다.
-  secret·이전 claim token은 제외한다. release/status로 해제를 확인한 뒤 같은 worktree에
-  현재 native host의 새 세션 하나만 연다. 수신자는 HEAD·계획/자료 digest와 최신 지시를 대조하고
-  자기 actor로 인수하며, stale 근거만 재확인한다. 이전 callback은 쓰기나 pass 근거가 아니다.
-  자동 분기를 다시 적용하지 않는다.
-- 런처를 설치하거나 서버를 시작하지 않는다. 호출 전후 `trace handoff-delivery`로 실측
-  identity·generation·prompt/material digest와 receipt를 기록한다. 입력 접수, native turn,
-  claim은 별개 증거다. 모호한 launch를 재전송하거나 다른 런처/current로 우회하지 않는다.
-  Claude/Codex는 설치 CLI가 지원하는 permission bypass 플래그로 연다. 전달을 확인하면
-  기존 세션은 종료하며 구현 완료를 기다리지 않는다. 세부 recipe는
-  [session-choice.md](references/session-choice.md)에 있다.
+- 결정 기록(`decision add`)·인계 자료·전달 관찰 규칙은 [handoff-observation.md](references/handoff-observation.md)를,
+  launcher recipe는 [session-choice.md](references/session-choice.md)를 본문 계약으로 적용한다. 제출 전 staging observation을 기록하고
+  입력 수락을 native turn이나 owner claim 증거로 삼지 않으며, 모호한 결과는 reconcile한다. 인계 전 새 dispatch를 멈추고 writer와 자손의 실제 종료를
+  확인한 뒤 release/status로 해제를 확인한다. 런처 설치·서버 시작과 모호한 launch의 재전송·우회는 하지 않는다.
+  이전 callback은 쓰기나 pass 근거가 아니다.
 - 자동 분기는 실행 위치만 정한다. 원래 요청의 승인 범위·종료점을 그대로 유지하며,
   구현만 요청한 작업에 commit·push·PR/MR 발행 권한을 추가하지 않는다.
   phase·claim·`--approved`도 승인 근거가 아니다.
@@ -71,43 +61,6 @@ issueops next --json
 
 단계 스킬과 함께 쓰는 계획·검증·Git 스킬도 이 승인 범위와 종료점을 따른다.
 하위 스킬의 일반적인 "계속할까요" 절차를 추가 확인 지점으로 만들지 않는다.
-
-### 인계 관찰과 writer 종료
-
-외부 launcher로 인계할 때는 다음을 본문 계약으로 적용한다.
-
-- build, golden, generator, formatter, fixture와 분류 불명 작업은 명령·cwd·출력 위치로
-  공유 상태를 바꾸지 않는다는 점을 입증하기 전까지 writer다. 공유 상태 밖의 immutable
-  입력만 읽는 독립 reader만 계속 실행할 수 있다. 소유자·핸들·입력 리비전·쓰기 범위·결과
-  위치를 열거하고, writer와 자손의 실제 종료 및 대기 writer 0을 관찰한 뒤에만 release한다.
-- 제출 전에 event/state subscription을 등록하고 staging observation을 성공적으로 기록한다.
-  staging 기록이 실패하면 외부 launch를 실행하지 않는다. idle prompt나 launcher의 `done`은
-  수신 증거가 아니다. 모호한 결과는 재제출하지 말고 기존 attempt를 reconcile한다.
-- `issueops trace handoff-delivery --input "$OBSERVATION_JSON" --json`의 observation에는
-  `schema_version: 1`, `attempt_id`, `lineage_id`, `lifecycle_id`, `prompt_sha256`,
-  `material_sha256`, `request.durable_id`, `expected_owner_host`, `source_generation`,
-  `created_at`, `updated_at`, `receipt`를 포함한다. `launcher`에는 name/version/path/runtime_id/
-  machine_id/server_id, `target`에는 terminal_id/pane_id를 실제 관찰값으로 기록한다.
-- 최초 `created_at`, `updated_at`, `call_staged.observed_at`은 같은 RFC3339Nano 시각이다.
-  `call_staged`는 observed와 evidence `external_call_staged`; input_accepted,
-  native_turn_observed, owner_claimed, ambiguous는 not_observed에서 시작한다.
-  최초 durable_id는 비우고 native launcher가 반환한 실제 ID만 채운다.
-- 이후에도 같은 attempt/lineage/created_at을 유지하고 native receipt 및 processIncarnation을
-  보존한다. receiver의 PID·시작 시각·executable을 실제 process 관찰과 대조한다.
-  owner-claim 증거를 수동으로 만들지 않는다. 늦은 결과는 격리하고 release 뒤의 과거
-  callback을 source 수정이나 pass 기록에 사용하지 않는다.
-- receipt 뒤에는 같은 producer를 다시 호출해 두 번째 observation을 기록하고,
-  `observation.receipt.location`과 digest를 읽어 실제 audit frame을 확인한다.
-  `target.process_incarnation` 및 `target.process`의 pid/started_at/executable을 실제
-  receiver 조회값으로 채운다. PID·시작 시각·executable이 claim holder의 `session_process`와
-  모두 맞아야 owner claim과 연결한다. staged 시점에 아직 없는 process를 추측하지 않으며,
-  PID reuse-safe 상관관계를 확인할 수 없으면 입력 수락 증거만 남긴다.
-- 첫 호출에는 retry ID를 넣지 않는다. 입력 수락의 evidence는 `launcher_receipt`, 실제
-  native host의 새 turn만 `native_receipt`다. timeout/응답 유실은 ambiguous의 timeout/
-  accepted_response_lost로 기록하고 자동 재전송하지 않는다. Herdr의 pane run/agent prompt
-  성공은 `launcher_accepted` 입력 증거일 뿐이며 agent_prompt_stalled/herdr_wait_state는
-  ambiguous이지 native turn이 아니다. owner_claimed는 current generation·expected host·
-  단일 manual lineage·입력 수락·session_process 일치를 확인한 claim handler만 기록한다.
 
 ## 단계별 협업
 
@@ -150,25 +103,13 @@ lease 전의 준비 기록은 source checkout의 native actor로, 구현은 acti
 
 **(d) 편집 대상 확인.** 편집 배치마다 셸 프롬프트를 믿지 말고 실측한다.
 
-```bash
-pwd
-git branch --show-current
-git rev-parse HEAD
-test "$PWD" = "$EXPECTED_WORKTREE"
-git -C "$SOURCE_CHECKOUT" status --short
-git status --short
-```
+`pwd`, branch, HEAD, `test "$PWD" = "$EXPECTED_WORKTREE"`, 두 checkout의 `git status --short`를 실측한다
+([명령·복구 절차](references/edit-target-check.md)). 도구가 다른 체크아웃에 썼으면 멈춘다.
+worker 프롬프트에는 exact lifecycle ID, generation, branch, worktree, 허용 경로, 수락 기준,
+중단 규칙을 넣는다.
 
-patch·edit·생성 도구의 루트를 `$EXPECTED_WORKTREE`로 둔다. 도구가 다른 체크아웃에
-썼으면 멈추고, 자기 변경만 canonical worktree로 옮긴 뒤 두 status를 다시 확인한다.
-worker 프롬프트에는 exact lifecycle ID, generation, branch, worktree, 허용 경로,
-수락 기준, 중단 규칙을 넣는다.
-
-**(e) 코드베이스 존중.** 새로 만들기보다 기존 구현의 확장과 재사용을 먼저 본다. 계약
-표면의 하위 호환성, 성능 영향, 파일·원격·상태의 side effect를 세 곳에서 명시한다:
-계획의 필수 절 세 개(`## 재사용하는 기존 구현`, `## 성능 영향`,
-`## 하위 호환성과 side effect`), 구현 루프의 네 규칙, 리뷰의 네 렌즈. 근거는
-`AGENTS.md` §2 Simplicity First와 §3 Surgical Changes다.
+**(e) 코드베이스 존중.** 새로 만들기보다 기존 구현의 확장과 재사용을 먼저 보고, 하위 호환성·성능 영향·side effect를
+계획·구현 루프·리뷰에서 명시한다([세 곳의 기준](references/codebase-respect.md)).
 
 ## Core contract
 
@@ -207,34 +148,8 @@ done을 기록한다. hook은 SessionStart의 project-doc context만 제공한�
 
 ## 구현·검증 규칙
 
-본문만으로 실행해도 evidence schema를 생략하지 않는다. domain 검토에는 invariant,
-exact mechanism, equivalent behavior, source 근거를 분리해 적는다. 구현 전 환경 표에는
-Environment / Repo-config evidence / Runtime evidence / Failure path / Remediation order를
-채운다. feedback은 classification, verification, thread reply와 resolution을 추적한다.
-완료 기록에는 diff, verification, labels, children, draft URL, thread status, cleanup,
-follow-ups를 남겨 사람이 검사할 수 있게 한다.
-
-domain 계약은 구현 전에 issue 또는 plan의 evidence 절에 기록한다. exact mechanism이
-없다는 사실과 다른 경로가 같은 invariant를 보장하는지는 별개로 판정한다. end-to-end
-동작까지 미확인·반박된 것이 아니면 단순한 mechanism 부재를 기능 부재로 단정하지 않는다.
-endpoint/controller/DTO/schema/OpenAPI 또는 public error 동작이 바뀌면 계획과 PR/MR
-초안에 변경 endpoint(또는 계약 변경 없음), usecase/error mapping의 도달 가능한 public
-error, 대상 repo의 static/API-doc review 결과와 관련 검증 명령을 기록한다. 해당 명령이
-없으면 부재와 가장 가까운 static/review 검사를 명시하고 무관한 legacy 부채와 구분한다.
-
-live matrix에서는 source diff와 실제 DB/config/env/pod/log 증거를 분리하고 비슷해 보이는
-failure path를 한 원인으로 합치지 않는다. local-only 관측과 same-network/in-workload
-관측을 구분하며, 실제 runtime 확인 가능 여부와 여러 수정의 순서를 기록한다.
-feedback classification은 contract_change/defect/question/noise/valid_review/stale_review/
-rollout_evidence_missing/environment_debt, resolution은 unresolved/fixed/resolved/obsolete/
-split to follow-up으로 남긴다. 검증된 feedback만 적용하고 수용 기준·non-goals·검증·labels·
-링크·구현 범위가 바뀌면 계속 진행하기 전에 remote issue body를 갱신한다.
-
-ready/done을 보고하기 전에 actual diff, source/target branch, remote issue/PR/MR body의
-최신성, issue label의 복사 또는 명시적 교체, single-commit 정책 또는 다중 commit 사유,
-branch divergence와 clean worktree, cleanup 상태 또는 번호 붙인 선택지를 확인한다.
-최종 보고와 remote write 전에 위 증거를 담은 inspectable draft completion record를 만든다.
-테스트 성공만으로 remote 갱신·thread reply·merge readiness·cleanup 완료를 대신하지 않는다.
+본문만으로 실행해도 evidence schema를 생략하지 않는다. domain 검토·환경 표·feedback classification/resolution·ready/done 보고 전 draft completion record의
+필수 항목은 [delivery-evidence-rules.md](references/delivery-evidence-rules.md)에 있다. 완료 보고 전에 읽는다. 테스트 성공만으로 remote 갱신·thread reply·merge readiness·cleanup 완료를 대신하지 않는다.
 
 - behavior change는 focused failing test에서 시작해
   `RED→GREEN→SURFACE→CLEAN` 순서로 검증한다.
@@ -244,14 +159,8 @@ branch divergence와 clean worktree, cleanup 상태 또는 번호 붙인 선택�
   완료를 선언하지 않는다.
 - ai-slop-clean은 실제 diff가 생긴 뒤 실행하고, cleanup 후 관련 검증을 다시
   실행한다.
-- publication 전에 구현 diff를 project docs와 양방향으로 대조한다. CONSTITUTION·
-  CONVENTIONS·ARCHITECTURE를 어겼으면 구현을 고치고, CAUTIONS에 남길 재발 함정이나
-  ADR에 남길 결정이 생겼으면 문서를 먼저 고친 뒤 기록한다. 남길 것이 없으면 실제로
-  읽은 문서 경로(`--reviewed-doc`)와 확인 근거를 함께 `no-change`로 기록한다.
-- 변경 집합에 마이그레이션·엔티티·SQL 스키마 파일이 있으면 실제 데이터베이스에서
-  인덱스 현황과 카탈로그 추정 row 수를 관찰해 관찰값과 출처를 기록한다. 전수 스캔하지 않는다.
-  관찰 불가면 근거 있는 waive로 남긴다. 문서·스키마 증거 뒤 구현 리뷰를 기록하고,
-  변경 집합이 바뀌면 봉인을 재검증한다.
+- publication 전에 구현 diff를 project docs와 양방향으로 대조하고, 스키마 변경이 있으면 실측 증거를 기록한다.
+  세부는 [delivery-evidence-rules.md](references/delivery-evidence-rules.md)에 있다.
 - Git staging/push는 `atomic-commit-push`, 고급 history 작업은 `git-operations`가
   소유한다. 원래 요청에서 승인된 issue branch의 commit·push는 다시 묻지 않는다.
 - destructive cleanup은 exact target과 fingerprint를 preview한 뒤 별도 사용자
@@ -259,17 +168,9 @@ branch divergence와 clean worktree, cleanup 상태 또는 번호 붙인 선택�
 
 ## 원격 쓰기
 
-`issueops-remote-write`가 설치되어 있으면 사용한다. 단독 실행에도 다음 순서를 지킨다:
-render-template 골격 → 한국어 다듬기(`fluent-korean`이 있으면 호출, 없으면 완성된 문장·
-명확한 주어·검증 가능한 결과·불필요한 수식 제거를 직접 검토) → secret 제거 →
-threshold로 선택한 label·실제 assignee(`@me` 금지) → preview의 readability 확인 →
-같은 요청에만 confirm → URL·상태·본문·metadata readback. critical은 수정 후 재preview하고,
-warning은 수정하거나 이유를 기록한다. 승인된 원문/범위가 바뀌면 사용자에게 확인한다.
-raw provider 쓰기로 우회하지 않는다. 모호한 write는 reconcile하며 중복 생성하지 않는다.
-계약 변경 feedback은 소유 단계가 인증된 actor로 기록하고 이슈 본문을 먼저 갱신한 뒤
-`feedback mark-issue-updated`를 기록한다. 댓글은 계약이 아니다.
-`issueops feedback add`와 `issueops status`는 유효한 root alias다. `quality inspect`는
-semantic skill runner가 아니며 `issueops skill-bench`는 구현되지 않았다.
+`issueops-remote-write`가 설치되어 있으면 사용한다. 단독 실행 순서와 계약 변경 feedback 규칙은
+[remote-write-standalone.md](references/remote-write-standalone.md)를 따른다. raw provider 쓰기로
+우회하지 않고, 모호한 write는 reconcile하며 중복 생성하지 않는다.
 
 ## Reference map
 
@@ -286,7 +187,7 @@ semantic skill runner가 아니며 `issueops skill-bench`는 구현되지 않았
 stale 판정이나 테스트 실패 자체를 사용자에게 진행 여부를 물을 이유로 삼지 않는다.
 
 - provider, credentials, project, Issue owner가 모호하다. target branch는
-  본문의 Execution ownership에 있는 base 선택 순서로 해소하고 질문 사유로 삼지 않는다.
+  Execution ownership의 base 선택 순서로 해소하고 질문 사유로 삼지 않는다.
   [`issueops-prepare`](../issueops-prepare/SKILL.md)는 추가 설명이며 필수 dependency가 아니다.
 - intent·success criteria·domain term 해석이 구현을 바꿀 만큼 갈린다.
 - architecture open question, compatibility blocker, stale review(`architecture_review_stale` 포함)가 남아 있다.
@@ -304,28 +205,12 @@ stale 판정이나 테스트 실패 자체를 사용자에게 진행 여부를 �
 
 ## IssueOps benchmark artifact contract
 
-Benchmark 응답에는 의도나 계획만 쓰지 말고 다음 labeled evidence를 넣는다.
-
-```text
-Durable state record: <IssueOps id, phase, readiness gates, state path/tool output>
-Phase routing: <problem -> grill -> issue -> plan -> compatibility-review -> implement -> ai-slop-clean -> feedback -> pr -> cleanup>
-Flow evidence: <Issue, plan, TDD, sub-agent decision, feedback, PR/MR artifacts>
-Hook boundary: <what hooks may suggest and what only the main agent/CLI owns>
-Cleanup/readiness evidence: <strict readiness, merge/cleanup status, remaining choices>
-```
-
-semantic judge는 artifact 작성자가 아닌 fresh-context host agent가 맡는다.
-deterministic pass를 먼저 실행하고, JSON-only judge map을 `--judge file`로
-strict-decode한다. 외부 judge는 read-only이며 workspace나 remote를 수정하지
-않는다.
+Benchmark 응답에는 의도나 계획만 쓰지 말고 labeled evidence를 넣는다. 5개 라벨과
+semantic judge 규칙은 [benchmark-artifact.md](references/benchmark-artifact.md)에 있다.
 
 ## Execution ownership
 
-base 선택은 사용자 명시 branch → issue가 지정한 integration branch → 프로젝트 관례 →
-관찰한 최근 merge target → repository default 순서다. 선택한 근거와 정확한 base SHA를
-보고한다. release flow를 벗어나는 base는 사용자가 명시적으로 그 base를 요청한 경우에만
-선택하고 그 예외를 보고한다. 그렇지 않으면 관찰한 release 관례를 따른다.
-형제 prepare 스킬이 없어도 이 순서를 적용한다.
+base 선택 순서와 보고 규칙은 [base-selection.md](references/base-selection.md)에 있다. 형제 prepare 스킬이 없어도 그 순서를 적용한다.
 
 active holder만 canonical worktree에서 구현·검증·publication·`execution complete`를 수행한다.
 complete는 done과 lease 해제만 기록한다. merge·resource 삭제는 별도 승인 단계다.

@@ -72,6 +72,7 @@ issueops는 `skills/` 디렉토리를 공용 스킬 53개의 단일 출처(singl
 - **Executable-fence contract**: shipped `sh`/`bash`/`zsh`/`shell` fences는
   `scripts/verify-skill-shell.py`의 syntax·failure propagation·safe expansion
   gate를 통과한다. MCP pseudo-call이나 설명용 예시는 `text` fence로 둔다.
+- **Body budget**: `scripts/validate-skill.py`는 Agent Skills 명세의 progressive disclosure 권고에 맞춰 frontmatter를 뺀 `SKILL.md` 본문을 500줄 미만, 추정 5000 token 이하(한글 음절당 1, 그 밖의 문자 4개당 1)로 제한하고 description을 1024자로 제한한다. 넘치는 세부 절차·예시·표는 `references/`로 옮기고 본문에는 언제 읽을지 한 줄로 링크한다. `internal/adapter/skillcontract`가 모든 스킬에 이 검사를 돌린다.
 - **Evaluation honesty**: canonical catalog 12종 coverage, deterministic
   reproduction fixtures, fresh-context/real-artifact evaluation은 서로 다른
   evidence layer다. Fixture 통과를 blind holdout이나 실제 skill invocation으로

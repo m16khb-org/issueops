@@ -65,6 +65,42 @@ class ValidateSkillTest(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIn("hyphen-case", message)
 
+    def frontmatter(self, description: str = "sample") -> str:
+        return f"---\nname: sample-skill\ndescription: {description}\n---\n"
+
+    def test_description_limit_is_inclusive(self) -> None:
+        ok, _ = validate_skill.validate_skill(self.write_skill(self.frontmatter("d" * 1024)))
+        self.assertTrue(ok)
+
+        ok, message = validate_skill.validate_skill(self.write_skill(self.frontmatter("d" * 1025)))
+        self.assertFalse(ok)
+        self.assertIn("Description is too long", message)
+
+    def test_body_token_budget_counts_hangul_per_syllable(self) -> None:
+        # 5000 Hangul syllables sit exactly on the budget; one more exceeds it.
+        ok, _ = validate_skill.validate_skill(self.write_skill(self.frontmatter() + "가" * 5000))
+        self.assertTrue(ok)
+
+        ok, message = validate_skill.validate_skill(self.write_skill(self.frontmatter() + "가" * 5001))
+        self.assertFalse(ok)
+        self.assertIn("about 5001 tokens", message)
+
+    def test_body_token_budget_counts_four_other_characters_per_token(self) -> None:
+        ok, _ = validate_skill.validate_skill(self.write_skill(self.frontmatter() + "a" * 20000))
+        self.assertTrue(ok)
+
+        ok, message = validate_skill.validate_skill(self.write_skill(self.frontmatter() + "a" * 20001))
+        self.assertFalse(ok)
+        self.assertIn("about 5001 tokens", message)
+
+    def test_body_line_budget_excludes_frontmatter(self) -> None:
+        ok, _ = validate_skill.validate_skill(self.write_skill(self.frontmatter() + "x\n" * 499))
+        self.assertTrue(ok)
+
+        ok, message = validate_skill.validate_skill(self.write_skill(self.frontmatter() + "x\n" * 500))
+        self.assertFalse(ok)
+        self.assertIn("500 lines", message)
+
 
 if __name__ == "__main__":
     unittest.main()

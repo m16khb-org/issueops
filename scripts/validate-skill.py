@@ -7,13 +7,28 @@ skill copies or optional PyYAML installation.
 from __future__ import annotations
 
 import ast
+import math
 import re
 import sys
 from pathlib import Path
 
 
 MAX_SKILL_NAME_LENGTH = 64
+MAX_DESCRIPTION_LENGTH = 1024
+# Agent Skills specification (https://agentskills.io/specification), progressive
+# disclosure: the SKILL.md body is loaded whole on activation, "< 5000 tokens
+# recommended" and "under 500 lines"; detail belongs in referenced files.
+MAX_BODY_TOKENS = 5000
+MAX_BODY_LINES = 500
 ALLOWED_PROPERTIES = {"name", "description", "license", "allowed-tools", "metadata"}
+HANGUL_SYLLABLE = re.compile(r"[\uac00-\ud7a3]")
+
+
+def estimate_tokens(text: str) -> int:
+    """Return a tokenizer-free estimate: one token per Hangul syllable and one
+    per four other characters. It is a budget gate, not a billing count."""
+    hangul = len(HANGUL_SYLLABLE.findall(text))
+    return hangul + math.ceil((len(text) - hangul) / 4)
 
 
 class FrontmatterError(ValueError):
@@ -138,6 +153,28 @@ def validate_skill(skill_path: Path) -> tuple[bool, str]:
         return False, f"Description must be a string, got {type(description).__name__}"
     if not description.strip():
         return False, "Description cannot be empty"
+    if len(description.strip()) > MAX_DESCRIPTION_LENGTH:
+        return (
+            False,
+            f"Description is too long ({len(description.strip())} characters). "
+            f"Maximum is {MAX_DESCRIPTION_LENGTH} characters.",
+        )
+
+    body = content[match.end():].removeprefix("\n")
+    body_lines = body.count("\n")
+    if body_lines >= MAX_BODY_LINES:
+        return (
+            False,
+            f"SKILL.md body has {body_lines} lines; keep it under {MAX_BODY_LINES} "
+            "and move detail into references/",
+        )
+    body_tokens = estimate_tokens(body)
+    if body_tokens > MAX_BODY_TOKENS:
+        return (
+            False,
+            f"SKILL.md body is about {body_tokens} tokens; keep it at or under "
+            f"{MAX_BODY_TOKENS} and move detail into references/",
+        )
 
     return True, "Skill is valid!"
 

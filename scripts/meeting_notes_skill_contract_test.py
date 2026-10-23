@@ -24,8 +24,11 @@ PUBLISH_SCRIPT = ROOT / "skills" / "meeting-notes" / "scripts" / "publish_meetin
 
 class MeetingNotesSkillContractTest(unittest.TestCase):
     def read_skill(self) -> str:
+        # The contract spans SKILL.md and the references/ files it links; the
+        # SKILL.md body stays within the validate-skill.py size budget.
         self.assertTrue(SKILL.exists(), "skills/meeting-notes/SKILL.md must exist")
-        return SKILL.read_text(encoding="utf-8")
+        parts = [SKILL] + sorted((SKILL.parent / "references").glob("*.md"))
+        return "\n".join(path.read_text(encoding="utf-8") for path in parts)
 
     def load_publish_script(self):
         spec = importlib.util.spec_from_file_location("publish_meeting_canvas", PUBLISH_SCRIPT)

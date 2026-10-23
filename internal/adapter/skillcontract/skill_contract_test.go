@@ -22,35 +22,39 @@ func readSkillForTest(t *testing.T, name string) string {
 
 func TestActiveExecutionGuidanceMatchesCurrentRuntime(t *testing.T) {
 	for _, tc := range []struct {
-		path    string
+		paths   []string
 		current []string
 		retired []string
 	}{
 		{
-			path:    "skills/verified-execution/SKILL.md",
+			// The cycle-lane detail lives in a reference file the SKILL.md links.
+			paths:   []string{"skills/verified-execution/SKILL.md", "skills/verified-execution/references/cycle-lane.md"},
 			current: []string{"context-only", "CLI/MCP", "go test -v ./cmd/issueops/hookcli -run '^TestRetiredHookSubcommandsAreRejected$' -count=1"},
 			retired: []string{"./internal/core/lifecycle", "^TestLifecycleExecution", "UserPromptSubmit", "allow-or-block output", "tool_input paths and patch targets remain enforced", "Hooks only observe, block, or relay", "compatibility default treats the worker as Codex"},
 		},
 		{
-			path:    ".issueops/cautions/audit-and-process.md",
+			paths:   []string{".issueops/cautions/audit-and-process.md"},
 			current: []string{"SessionStart", "project-doc catalog", "단일 deterministic pass"},
 			retired: []string{"반복 횟수 10회 하한을 임의로 낮추지 않는다", "UserPromptSubmit currently injects", "audit must reject old/noisy catalog injection markers"},
 		},
 		{
-			path:    ".issueops/operations/install.md",
+			paths:   []string{".issueops/operations/install.md"},
 			current: []string{"in-process", "reconnect", "architecture/runtime.md"},
 			retired: []string{"two-event lifecycle surface", "restart the shared daemon when it is already running so the MCP backend uses the rebuilt binary"},
 		},
 	} {
-		t.Run(tc.path, func(t *testing.T) {
-			body := readRepoFileForTest(t, tc.path)
+		t.Run(tc.paths[0], func(t *testing.T) {
+			var body strings.Builder
+			for _, path := range tc.paths {
+				body.WriteString(readRepoFileForTest(t, path))
+			}
 			for _, want := range tc.current {
-				if !strings.Contains(body, want) {
+				if !strings.Contains(body.String(), want) {
 					t.Errorf("missing current runtime guidance %q", want)
 				}
 			}
 			for _, retired := range tc.retired {
-				if strings.Contains(body, retired) {
+				if strings.Contains(body.String(), retired) {
 					t.Errorf("retired runtime instruction %q", retired)
 				}
 			}

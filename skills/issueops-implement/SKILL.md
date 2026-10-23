@@ -63,59 +63,13 @@ stale하거나 누락된 근거는 필요한 범위만 다시 확인한다. 서�
 
 ### 인계 관찰과 writer 종료
 
-외부 launcher로 인계할 때는 다음을 본문 계약으로 적용한다.
+외부 launcher로 인계할 때는 [세부 계약](references/handoff-observation.md)을 읽고 본문 계약으로 적용한다.
 
-- build, golden, generator, formatter, fixture와 분류 불명 작업은 명령·cwd·출력 위치로
-  공유 상태를 바꾸지 않는다는 점을 입증하기 전까지 writer다. 공유 상태 밖의 immutable
-  입력만 읽는 독립 reader만 계속 실행할 수 있다. 소유자·핸들·입력 리비전·쓰기 범위·결과
-  위치를 열거하고, writer와 자손의 실제 종료 및 대기 writer 0을 관찰한 뒤에만 release한다.
-- 제출 전에 event/state subscription을 등록하고 staging observation을 성공적으로 기록한다.
-  staging 기록이 실패하면 외부 launch를 실행하지 않는다. idle prompt나 launcher의 `done`은
-  수신 증거가 아니다. 모호한 결과는 재제출하지 말고 기존 attempt를 reconcile한다.
-- `issueops trace handoff-delivery --input "$OBSERVATION_JSON" --json`의 observation에는
-  `schema_version: 1`, `attempt_id`, `lineage_id`, `lifecycle_id`, `prompt_sha256`,
-  `material_sha256`, `request.durable_id`, `expected_owner_host`, `source_generation`,
-  `created_at`, `updated_at`, `receipt`를 포함한다. `launcher`에는 name/version/path/runtime_id/
-  machine_id/server_id, `target`에는 terminal_id/pane_id를 실제 관찰값으로 기록한다.
-- 최초 `created_at`, `updated_at`, `call_staged.observed_at`은 같은 RFC3339Nano 시각이다.
-  `call_staged`는 observed와 evidence `external_call_staged`; input_accepted,
-  native_turn_observed, owner_claimed, ambiguous는 not_observed에서 시작한다.
-  최초 durable_id는 비우고 native launcher가 반환한 실제 ID만 채운다.
-- 이후에도 같은 attempt/lineage/created_at을 유지하고 native receipt 및 processIncarnation을
-  보존한다. receiver의 PID·시작 시각·executable을 실제 process 관찰과 대조한다.
-  owner-claim 증거를 수동으로 만들지 않는다. 늦은 결과는 격리하고 release 뒤의 과거
-  callback을 source 수정이나 pass 기록에 사용하지 않는다.
-- receipt 뒤에는 같은 producer를 다시 호출해 두 번째 observation을 기록하고,
-  `observation.receipt.location`과 digest를 읽어 실제 audit frame을 확인한다.
-  `target.process_incarnation` 및 `target.process`의 pid/started_at/executable을 실제
-  receiver 조회값으로 채운다. PID·시작 시각·executable이 claim holder의 `session_process`와
-  모두 맞아야 owner claim과 연결한다. staged 시점에 아직 없는 process를 추측하지 않으며,
-  PID reuse-safe 상관관계를 확인할 수 없으면 입력 수락 증거만 남긴다.
-- 첫 호출에는 retry ID를 넣지 않는다. 입력 수락의 evidence는 `launcher_receipt`, 실제
-  native host의 새 turn만 `native_receipt`다. timeout/응답 유실은 ambiguous의 timeout/
-  accepted_response_lost로 기록하고 자동 재전송하지 않는다. Herdr의 pane run/agent prompt
-  성공은 `launcher_accepted` 입력 증거일 뿐이며 agent_prompt_stalled/herdr_wait_state는
-  ambiguous이지 native turn이 아니다. owner_claimed는 current generation·expected host·
-  단일 manual lineage·입력 수락·session_process 일치를 확인한 claim handler만 기록한다.
 
 ### base가 앞서 나갔는지 본다
 
-구현 `next`는 readiness 경고를 주지 않는다. **claim 뒤 active(self)**에서 직접 관측한다.
-claimable은 `released_completion_authority`로 거부되므로 재개 세션도 claim부터 끝낸다.
-
-```bash
-issueops execution sync-base --id "$ISSUEOPS_ID" --preview $ACTOR_FLAGS --json
-```
-
-- `merge_needed`가 false면 그대로 진행한다.
-- true이고 `conflict_files`가 비었으면 `--apply --confirm --fingerprint <preview의 값> $ACTOR_FLAGS`로
-  반영한다. **이 apply는 지금, 즉 봉인이 하나도 없는 4단계 진입에서만 한다.** 반영하면
-  변경 집합이 봉인된 `BranchPrepare.BaseSHA` 기준으로 잡히므로 base가 바꾼 파일이 이
-  사이클의 diff·티어·리뷰 대상에 들어온다. 그 사실을 계획의
-  `## 하위 호환성과 side effect` 절에 적는다. 이미 추적 중인 미커밋 변경이 있으면
-  `worktree_clean`으로 거부되므로 변경이 없는 이 시점에 한다.
-- `conflict_files`가 있으면 계획의 영향 범위를 다시 보고 사용자에게 알린다.
-- rebase하지 않는다. 봉인된 base identity와 기존 증거를 보존한다.
+구현 `next`는 readiness 경고를 주지 않는다. claim 뒤 active(self)에서 `issueops execution sync-base --id "$ISSUEOPS_ID" --preview $ACTOR_FLAGS --json`으로 직접 관측한다.
+preview 결과별 처리는 [세부 절차](references/sync-base.md)를 읽고 따른다.
 
 ## 진입 절차
 
@@ -142,20 +96,9 @@ issueops phase --id "$ISSUEOPS_ID" --to implement $RECORD_ACTOR_FLAGS --json
 
 blocker가 하나라도 있으면 compatibility review는 승인되지 않는다. blocker를 먼저 없앤다.
 
-compatibility review를 기록하기 전에 계획이 고치거나 재사용한다고 적은 코드를 열어, 계획이 현재 동작에
-대해 단언한 것(어디에 무엇이 있고 누가 호출하는가)이 맞는지 확인한다. 계획대로 구현하면 문서 규칙(레이어
-경계, 컨벤션)이나 실제 코드와 충돌하거나 계획의 전제가 코드와 다르면 구현하지 않는다. 충돌마다 계획 위치와
-근거(문서 규칙 원문, 확인한 `파일:줄`)를 `--blocker`로 적어 `--approved` 없이 compatibility review를
-기록한다. 기록은 다음 세션도 보는 상태로 남는다. 그다음 [`issueops-plan`](../issueops-plan/SKILL.md)의
-검토 루프로 돌려보내 계획을 고치고 새 리뷰를 받는다. 이 단계에서 계획을 직접 다시 쓰거나 충돌을 우회하는
-다른 설계로 구현하지 않는다.
+compatibility review를 기록하기 전에 계획이 고치거나 재사용한다고 적은 코드를 열어 계획의 단언을 확인한다. 계획이 문서 규칙이나 실제 코드와 충돌하면 구현하지 않고 `--blocker`로 기록해 [`issueops-plan`](../issueops-plan/SKILL.md)의 검토 루프로 돌려보낸다. 충돌 기록 절차는 [근거 확인 규칙](references/plan-conflict-evidence.md)을 읽고 따른다.
 
-blocker 근거는 기록 직전에 한 번 더 확인한다. `파일:줄`은 Read 도구나 `grep -n`처럼 줄 번호를 찍는 출력에서
-그대로 옮긴다. `sed -n`·`cat`처럼 번호 없는 출력에서 세어 적지 않는다(한 줄씩 어긋나기 쉽다).
-"없다"·"아무도 호출하지 않는다"는 Glob 한 번이 0건이라는 이유로 쓰지 않는다. 상위 디렉터리를 읽거나 Grep으로
-다시 찾은 뒤에 쓰고, `_test.go`에서만 나온 호출은 production 의존으로 세지 않는다. 계획이 무언가가 아직 없거나
-중복 구현됐다고 전제하면 두 가지를 각각 `파일:줄`로 적는다. 하나는 그 코드가 이미 있는지이고, 다른 하나는
-진입점(CLI·MCP·hook 등)이 이미 그 코드를 거치는지다.
+blocker 근거는 기록 직전에 한 번 더 확인한다. 확인 규칙은 [근거 확인 규칙](references/plan-conflict-evidence.md)을 읽고 따른다.
 
 ## 프로젝트 문서 확인
 
@@ -181,14 +124,10 @@ blocker 근거는 기록 직전에 한 번 더 확인한다. `파일:줄`은 Rea
   틀린 것이므로 수정에 착수하지 않고 보고한다.
 - 크기·시간과 무관하게 canonical worktree에서만 수정한다. source checkout 구현은 금지다.
 - focused 검증 명령·결과를 그대로 기록한다. 실행하지 않은 검증은 `pass`가 아니다.
-- `phase --to implement`와 `phase --to ai-slop-clean`은 `.issueops/issues/<n>/`에 구현 자료의
-  추적 사본(plan.md, intent.md, spec.md, plan-review.md)을 쓰고 응답 `tracked_materials`에
-  경로를 보고한다. 사본은 변경 집합에 들어가므로 구현 진입 뒤 첫 커밋에 포함한다.
+- `phase --to implement`·`ai-slop-clean` 전이는 추적 사본을 `.issueops/issues/<n>/`에 쓴다. 보고 방식과 첫 커밋 포함 규칙은 [보충 규칙](references/gate-extras.md)을 읽고 따른다.
 - commit·push는 승인된 종료점에 포함되어 있으면 [`atomic-commit-push`](../atomic-commit-push/SKILL.md)로
   이어간다. 원래 요청에서 허용된 issue branch의 publication을 다시 묻지 않는다.
-- API/DTO/OpenAPI 변경은 `.issueops/OPEN_API_SPEC.md` gate를 적용한다.
-  해당 문서가 없는 대상도 변경 endpoint·public error 계약을 조사하고, 제공되는 static check와
-  agent review 결과를 기록한다. 관련 없는 legacy 부채로 실패시키지 않는다.
+- API/DTO/OpenAPI 변경은 `.issueops/OPEN_API_SPEC.md` gate를 적용한다. 문서가 없는 대상의 처리는 [보충 규칙](references/gate-extras.md)을 따른다.
 - RED/GREEN 증거는 [`gates-ledger`](../gates-ledger/SKILL.md)로
   `.issueops/issues/<n>/gates.md`에 `gates check --write`로 채운다.
 - 코드를 바꾸기 직전에 그 변경을 정한 문서 규칙을 `## 적용한 문서 규칙` 절에 한 행 추가한다.
@@ -205,18 +144,10 @@ blocker 근거는 기록 직전에 한 번 더 확인한다. `파일:줄`은 Rea
 4. **side effect를 목록으로 적는다.** 파일·원격·durable state에 남는 변화를 verified-execution
    report에 적는다.
 
-`next.review.frontend`가 true면 기존 디자인 시스템과 컴포넌트 출처·접근성·반응형·
-모션 감소를 확인하고 실제 화면을 검증한다. 설치된 `ui-ux-craft`를 활용하며, 확인 결과는
-report의 **`## UI 판단`**에 적는다. 이는 7단계 브라우저 QA의 INTENT이므로 비우지 않는다.
-schema 변경은 실제 인덱스·카탈로그 추정 row 수와 출처를 기록한다. 운영 DB 전수
-`SELECT COUNT(*)`는 금지하며 관찰 불가면 waive 근거를 남긴다.
+`next.review.frontend`가 true이거나 schema를 바꾸면 [보충 규칙](references/gate-extras.md)을 읽고 적용한다.
 
-같은 focused test가 **두 번** GREEN에 실패하면 세 번째를 추측으로 시도하지 않는다.
-[`issueops-debugging`](../issueops-debugging/SKILL.md)으로 실패 명령을 그대로 재현하고
-원인을 격리한 뒤 최소 수정을 넣는다. 이 카운터는 [`verified-execution`](../verified-execution/SKILL.md)의
-"같은 기준 3회 실패 → 목표 종료"와 **같은 카운터**이며, 세 번째 실패가 그 종료다. 그때는
-4단계를 멈추고 진단과 시도한 수정을 보고한다. 진단 결과는 verified-execution report의
-실패 항목에 적는다.
+
+같은 focused test가 **두 번** GREEN에 실패하면 세 번째를 추측으로 시도하지 않고 [`issueops-debugging`](../issueops-debugging/SKILL.md)으로 넘긴다. 세 번째 실패는 `verified-execution`의 목표 종료와 같은 카운터이며 4단계를 멈추고 보고한다. 세부는 [GREEN 실패 처리](references/green-failure.md)를 읽고 따른다.
 
 ## Lease fencing
 
@@ -227,12 +158,8 @@ record와 대조한다. record 기록은 전자, lease 전이·publication은 �
 편집 배치마다 pwd·branch·HEAD·source/canonical status를 실측하고 도구 루트를 canonical로 둔다.
 잘못된 root에 썼으면 멈추고 자기 변경만 옮긴 뒤 양쪽 status를 확인한다.
 불일치나 다른 holder는 stop이다. 사용자의 구두 확인은 quiescence 증거가 아니다.
-인증된 feedback 기록도 이 단계가 소유한다(`issueops feedback add`/`status`는 유효 alias).
-계약 feedback은 이슈 본문을 먼저 갱신하고 `feedback mark-issue-updated`를 기록한다.
-원격 쓰기는 preview → 동일 요청 confirm → readback이며 모호하면 reconcile한다.
-원래 승인 범위 밖 commit·push·publication·merge·cleanup은 하지 않는다.
-명령 존재는 usage 카탈로그/소스로 확인한다. `skill-bench`는 미구현이며
-`quality inspect`는 semantic skill runner가 아니다.
+feedback 기록·원격 쓰기·명령 존재 확인 규칙은 [보충 규칙](references/gate-extras.md)을 읽고 따른다. 원래 승인 범위 밖 commit·push·publication·merge·cleanup은 하지 않는다.
+
 
 ## 회복은 next_command 체인만
 
@@ -269,30 +196,13 @@ issueops child status --parent "$ISSUEOPS_ID" \
 
 - verdict는 `accept`·`reject`·`drop` 셋뿐이다. child scope를 고치는 amend 명령은
   없으므로 찾거나 발명하지 않는다.
-- child의 branch·worktree·lease는 child cycle 자신의 `branch prepare`와
-  `execution prepare`가 소유한다. worktree provisioning은 `execution prepare`
-  몫이며, legacy `worktree prepare` 계열 명령은 v1 카탈로그에서 제거되었다.
-  parent가 child worktree를 직접 만들지 않는다.
-- child가 scope drift를 보고하면 child를 조용히 넓히지 않는다. 사용자가
-  승인해도 경로는 두 가지뿐이다: 새 scope를 **새 child**로 분리하거나, plan을
-  개정하고 plan hash에 묶인 리뷰 freshness를 다시 확인한다.
+- child의 branch·worktree·lease 소유권과 scope drift 처리는 [Child 위임 세부 규칙](references/child-delegation.md)을 읽고 따른다. parent가 child worktree를 직접 만들지 않는다.
 - 인계 준비나 최신 사용자 취소·범위 축소 뒤에는 새 쓰기 작업과 하위 작업 dispatch를
   중지한다. 이 스킬이 시작한 child나 worker는 인계 자료에 소유자, 실행 핸들, 입력 리비전,
   쓰기 범위, 결과 위치, 읽기 작업인지 쓰기 작업인지의 분류를 남기고, writer와 자손
   프로세스가 실제로 종료됐는지 확인한다. 사용자의 최신 취소나 범위 변경이 우선하며,
   이전 세션의 callback이나 결과는 source 변경이나 pass 기록의 근거가 될 수 없다.
-- accept 전 rubric: 위임한 scope·expected worktree 준수, acceptance별 증거,
-  선언한 검증 명령의 실행 결과, 무관한 diff·secret·stale scaffold 없음. 하나라도
-  모호하면 accept하지 않는다.
-- parent는 child record를 대신 수정하지 않는다. prompt에는 parent/child ID·generation·
-  branch·canonical path·허용 scope·수락 기준·검증·중단 규칙을 넣고, child가 pwd·Git root·
-  branch·HEAD·native process receipt·whoami를 확인한 뒤 쓰게 한다.
-  출력은 변경 파일 요약, 검증 명령/결과, blocker/scope drift다. 새 migration·remote write·
-  미계획 검증·parent 결정도 scope drift다. parent는 증거를 직접 검증한 뒤 accept/reject/drop을
-  기록한다. 고칠 수 있는 미완료는 reject, 범위를 제거하거나 대체할 때만 사유를 적고 drop한다.
-  Omo durable child는 canonical worktree에 cwd가 결속된 native team을 사용한다.
-  prompt의 `cd`나 worktree 결속 없는 task로 대체하지 않는다. team 실행 불가면 사유를 보고하고
-  같은 worktree의 독립 native `omo -p`로 같은 identity 게이트를 확인한다.
+- accept 전 rubric, child prompt, 기록 규칙은 [Child 위임 세부 규칙](references/child-delegation.md)을 읽고 따른다. parent는 child record를 대신 수정하지 않는다.
 
 ## 종료 게이트
 
