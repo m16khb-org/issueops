@@ -4,6 +4,7 @@ package mcp
 func IssueOpsBasicTools() []Tool {
 	return []Tool{{
 		Name:        "issueops_execution",
+		Annotations: UnclaimedWriteAnnotations(),
 		Description: "Prepare, inspect, claim, release, replace, reconcile, or complete the single IssueOps v1 execution lease. The action selects one shared CLI/MCP DTO; mutations require the exact native actor, generation, canonical cwd, and explicit confirmation.",
 		InputSchema: issueOpsExecutionSchema(),
 	}}

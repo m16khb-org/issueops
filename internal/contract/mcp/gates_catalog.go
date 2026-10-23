@@ -12,6 +12,7 @@ func GatesTools() []Tool {
 	return []Tool{
 		{
 			Name:        "gates_check",
+			Annotations: UnclaimedWriteAnnotations(),
 			Description: "Evaluate task gate ledgers (.issueops/issues/<n>/gates.md and .issueops/gates/*.md). Runs CHECK commands for unmet gates through the command policy engine (workspace boundary, env allowlist, timeout, audit), matches EXPECT, flips checkboxes, and records evidence. Complete means zero unmet gates; ABANDON gates count as resolved.",
 			InputSchema: map[string]any{"type": "object", "properties": map[string]any{
 				"workspace_root":  stringProp("Workspace root boundary for CHECK execution. Defaults to cwd."),
@@ -25,6 +26,7 @@ func GatesTools() []Tool {
 		},
 		{
 			Name:        "gates_status",
+			Annotations: ReadOnlyClosedWorldAnnotations(),
 			Description: "Report gate ledger state without executing anything or modifying files. Flags unchecked gates and checked-but-EVIDENCE-pending gates (a checkbox is a claim; evidence is the proof).",
 			InputSchema: map[string]any{"type": "object", "properties": map[string]any{
 				"workspace_root": stringProp("Workspace root. Defaults to cwd."),
@@ -34,6 +36,7 @@ func GatesTools() []Tool {
 		},
 		{
 			Name:        "gates_report",
+			Annotations: ReadOnlyClosedWorldAnnotations(),
 			Description: "Render the final-report ledger paste: per-file N-of-N gate counts, per-gate state, evidence, and abandon reasons. Re-measures counts at report time instead of trusting memory.",
 			InputSchema: map[string]any{"type": "object", "properties": map[string]any{
 				"workspace_root": stringProp("Workspace root. Defaults to cwd."),
@@ -43,6 +46,7 @@ func GatesTools() []Tool {
 		},
 		{
 			Name:        "gates_abandon",
+			Annotations: LocalWriteAnnotations(true, false),
 			Description: "Record an honest ABANDON line for one gate in a ledger file. Abandoned gates count as resolved but stay visible in reports; use instead of silently dropping a gate.",
 			InputSchema: map[string]any{"type": "object", "required": []string{"file", "gate_id", "reason"}, "properties": map[string]any{
 				"file":    stringProp("Gate ledger file: .issueops/issues/<n>/gates.md or .issueops/gates/<scope>.md."),
@@ -52,6 +56,7 @@ func GatesTools() []Tool {
 		},
 		{
 			Name:        "gates_init",
+			Annotations: LocalWriteAnnotations(true, false),
 			Description: "Scaffold a new gate ledger file. Refuses to overwrite an existing file. Each gate spec looks like \"G1: outcome | CHECK: command | EXPECT: expectation\".",
 			InputSchema: map[string]any{"type": "object", "required": []string{"scope", "gates"}, "properties": map[string]any{
 				"file":  stringProp("Gate ledger file to create. Defaults to .issueops/gates/<scope-slug>.md."),
@@ -61,6 +66,7 @@ func GatesTools() []Tool {
 		},
 		{
 			Name:        "gates_lint",
+			Annotations: ReadOnlyClosedWorldAnnotations(),
 			Description: "Check gate specs, the gate lines of a plan file, or existing ledgers without running any CHECK: ledger spec rules (one argv command, segment split on |), the argv tokenizer, the command policy gates_check would apply, and EXPECT regex compilation. Problems mean the gate cannot be met as written regardless of the implementation. Writes nothing.",
 			InputSchema: map[string]any{"type": "object", "properties": map[string]any{
 				"workspace_root":  stringProp("Workspace root boundary for the policy judgment. Defaults to cwd."),

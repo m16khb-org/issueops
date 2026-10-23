@@ -17,50 +17,35 @@ import (
 
 var readOnlyStructuredTools = []string{"harness_inspect", "docs_index"}
 
-func TestOnlyStructuredToolsAreReadOnlyClosedWorld(t *testing.T) {
+// TestEveryToolDeclaresReadOnlyHint keeps the behavior hints complete: hosts
+// treat a missing readOnlyHint as "may write" (no parallel run, no retry), so a
+// new tool must state its claim. Destructive and idempotent hints only mean
+// something on writing tools, and only structured tools carry output schemas.
+func TestEveryToolDeclaresReadOnlyHint(t *testing.T) {
 	for _, tool := range AdvertisedTools() {
-		structured := slices.Contains(readOnlyStructuredTools, tool.Name)
-		if !structured {
-			if tool.Annotations != nil || tool.OutputSchema != nil {
-				t.Errorf("%s must not carry annotations or an output schema: %+v", tool.Name, tool)
-			}
+		a := tool.Annotations
+		if a == nil || a.ReadOnlyHint == nil {
+			t.Errorf("%s must declare readOnlyHint: %+v", tool.Name, a)
 			continue
 		}
-		a := tool.Annotations
-		if a == nil || a.ReadOnlyHint == nil || !*a.ReadOnlyHint || a.OpenWorldHint == nil || *a.OpenWorldHint {
-			t.Errorf("%s annotations = %+v, want readOnlyHint=true openWorldHint=false", tool.Name, a)
+		if *a.ReadOnlyHint && (a.DestructiveHint != nil || a.IdempotentHint != nil) {
+			t.Errorf("%s is read-only and must not claim destructive/idempotent hints: %+v", tool.Name, a)
 		}
-		if a != nil && (a.DestructiveHint != nil || a.IdempotentHint != nil) {
-			t.Errorf("%s must not claim destructive/idempotent hints: %+v", tool.Name, a)
-		}
-		if tool.OutputSchema == nil {
-			t.Errorf("%s has no output schema", tool.Name)
+		if structured := slices.Contains(readOnlyStructuredTools, tool.Name); structured != (tool.OutputSchema != nil) {
+			t.Errorf("%s output schema presence = %v, want %v", tool.Name, tool.OutputSchema != nil, structured)
 		}
 	}
 }
 
 func TestToolMapsCarryOutputSchemaAndAnnotations(t *testing.T) {
-	byName := map[string]map[string]any{}
 	for _, tool := range Build().Tools {
-		byName[tool["name"].(string)] = tool
-	}
-	for _, name := range readOnlyStructuredTools {
-		if _, ok := byName[name]["outputSchema"].(map[string]any); !ok {
-			t.Errorf("%s map lacks outputSchema: %#v", name, byName[name])
+		name := tool["name"].(string)
+		if _, ok := tool["annotations"].(*contract.ToolAnnotations); !ok {
+			t.Errorf("%s map lacks annotations: %#v", name, tool)
 		}
-		if _, ok := byName[name]["annotations"].(*contract.ToolAnnotations); !ok {
-			t.Errorf("%s map lacks annotations: %#v", name, byName[name])
-		}
-	}
-	for name, tool := range byName {
-		if slices.Contains(readOnlyStructuredTools, name) {
-			continue
-		}
-		if _, ok := tool["outputSchema"]; ok {
-			t.Errorf("%s must not advertise outputSchema", name)
-		}
-		if _, ok := tool["annotations"]; ok {
-			t.Errorf("%s must not advertise annotations", name)
+		_, hasSchema := tool["outputSchema"].(map[string]any)
+		if hasSchema != slices.Contains(readOnlyStructuredTools, name) {
+			t.Errorf("%s map outputSchema presence = %v", name, hasSchema)
 		}
 	}
 }

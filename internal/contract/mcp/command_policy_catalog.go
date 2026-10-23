@@ -23,11 +23,13 @@ func CommandPolicyTools() []Tool {
 	return []Tool{
 		{
 			Name:        "command_policy_check",
+			Annotations: ReadOnlyClosedWorldAnnotations(),
 			Description: "Evaluate whether an argv-based command request is allowed by the harness command policy without executing it.",
 			InputSchema: CommandPolicyInputSchema(),
 		},
 		{
 			Name:        "command_fake_run",
+			Annotations: ReadOnlyClosedWorldAnnotations(),
 			Description: "Run the command policy and return a fake runner result. This never executes the command; it only proves policy acceptance/denial and audit metadata.",
 			InputSchema: CommandPolicyInputSchema(),
 		},
@@ -38,6 +40,7 @@ func CommandPolicyAuditTools() []Tool {
 	return []Tool{
 		{
 			Name:        "command_policy_audit",
+			Annotations: LocalWriteAnnotations(true, false),
 			Description: "Evaluate command policy and append a redacted JSONL audit record without executing the command. This writes only to the harness audit log.",
 			InputSchema: CommandPolicyInputSchema(),
 		},

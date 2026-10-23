@@ -4,6 +4,7 @@ func StateTools() []Tool {
 	return []Tool{
 		{
 			Name:        "state_write",
+			Annotations: LocalWriteAnnotations(false, true),
 			Description: "Write a small agent state checkpoint to ISSUEOPS_STATE_DIR or ~/.local/state/issueops. Keys allow [A-Za-z0-9._-] and cannot contain path traversal.",
 			InputSchema: map[string]any{"type": "object", "required": []string{"key", "content"}, "properties": map[string]any{
 				"key":     map[string]any{"type": "string", "description": "State key, max 128 chars, no path separators."},
@@ -12,6 +13,7 @@ func StateTools() []Tool {
 		},
 		{
 			Name:        "state_read",
+			Annotations: ReadOnlyClosedWorldAnnotations(),
 			Description: "Read an agent state checkpoint by key.",
 			InputSchema: map[string]any{"type": "object", "required": []string{"key"}, "properties": map[string]any{
 				"key": map[string]any{"type": "string", "description": "State key."},
@@ -19,11 +21,13 @@ func StateTools() []Tool {
 		},
 		{
 			Name:        "state_list",
+			Annotations: ReadOnlyClosedWorldAnnotations(),
 			Description: "List agent state checkpoint keys and metadata.",
 			InputSchema: map[string]any{"type": "object", "properties": map[string]any{}},
 		},
 		{
 			Name:        "state_prune",
+			Annotations: LocalWriteAnnotations(false, true),
 			Description: "Prune old agent state checkpoints. Defaults to dry-run; pass confirm=true to delete records older than max_age.",
 			InputSchema: map[string]any{"type": "object", "required": []string{"max_age"}, "properties": map[string]any{
 				"max_age": map[string]any{"type": "string", "description": "Duration such as 720h or 168h. Must be positive."},
@@ -32,11 +36,13 @@ func StateTools() []Tool {
 		},
 		{
 			Name:        "state_doctor",
+			Annotations: ReadOnlyClosedWorldAnnotations(),
 			Description: "Inspect agent state checkpoint files for invalid JSON, key mismatches, byte-count drift, invalid timestamps, and unexpected files without modifying state.",
 			InputSchema: map[string]any{"type": "object", "properties": map[string]any{}},
 		},
 		{
 			Name:        "state_maintain",
+			Annotations: LocalWriteAnnotations(true, true),
 			Description: "Run sqlite store maintenance on every existing harness store root: truncate the WAL via wal_checkpoint(TRUNCATE) and re-assert private 0600 file modes. Roots without a store are skipped, never created.",
 			InputSchema: map[string]any{"type": "object", "properties": map[string]any{}},
 		},

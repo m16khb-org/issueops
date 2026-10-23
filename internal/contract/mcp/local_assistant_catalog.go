@@ -4,6 +4,7 @@ func LocalAssistantTools() []Tool {
 	return []Tool{
 		{
 			Name:        "commit_suggest",
+			Annotations: ReadOnlyClosedWorldAnnotations(),
 			Description: "Render a host-agent prompt for a Conventional + Lore Hybrid commit message based on git diff.",
 			InputSchema: map[string]any{
 				"type": "object",
@@ -15,6 +16,7 @@ func LocalAssistantTools() []Tool {
 		},
 		{
 			Name:        "lint_diagnose",
+			Annotations: UnclaimedWriteAnnotations(),
 			Description: "Run a command, capture failure outputs, and render a host-agent diagnosis prompt.",
 			InputSchema: map[string]any{
 				"type":     "object",
@@ -27,6 +29,7 @@ func LocalAssistantTools() []Tool {
 		},
 		{
 			Name:        "web_fetch_resilient",
+			Annotations: ReadOnlyOpenWorldAnnotations(),
 			Description: "Run the clean-room resilient public web fetch engine with safe URL handling, route accounting, response validation, and citation-ready output.",
 			InputSchema: map[string]any{
 				"type":     "object",

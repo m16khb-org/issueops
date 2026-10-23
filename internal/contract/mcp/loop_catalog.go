@@ -13,6 +13,7 @@ func LoopTools() []Tool {
 	return []Tool{
 		{
 			Name:        "loop_start",
+			Annotations: LocalWriteAnnotations(true, true),
 			Description: "Create or resume a durable verify-until-done loop contract. This writes state only; it records verify_argv but never executes shell commands.",
 			InputSchema: map[string]any{"type": "object", "required": []string{"repo", "name", "goal"}, "properties": map[string]any{
 				"repo":         stringProp("Repository path."),
@@ -24,6 +25,7 @@ func LoopTools() []Tool {
 		},
 		{
 			Name:        "loop_record_attempt",
+			Annotations: LocalWriteAnnotations(false, false),
 			Description: "Append a pass/fail attempt with evidence to an active loop contract. This writes state and auto-exhausts after max failed attempts.",
 			InputSchema: map[string]any{"type": "object", "required": []string{"id", "verdict", "evidence"}, "properties": map[string]any{
 				"id":       stringProp("Loop id."),
@@ -33,6 +35,7 @@ func LoopTools() []Tool {
 		},
 		{
 			Name:        "loop_status",
+			Annotations: ReadOnlyClosedWorldAnnotations(),
 			Description: "Read a durable loop contract status and summary. This does not write state.",
 			InputSchema: map[string]any{"type": "object", "required": []string{"id"}, "properties": map[string]any{
 				"id": stringProp("Loop id."),
@@ -40,6 +43,7 @@ func LoopTools() []Tool {
 		},
 		{
 			Name:        "loop_stop",
+			Annotations: LocalWriteAnnotations(false, false),
 			Description: "Stop a loop contract. success=true requires the latest attempt verdict to be pass; non-success stops require a reason.",
 			InputSchema: map[string]any{"type": "object", "required": []string{"id"}, "properties": map[string]any{
 				"id":      stringProp("Loop id."),

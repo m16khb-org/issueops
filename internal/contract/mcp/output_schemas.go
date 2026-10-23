@@ -10,6 +10,40 @@ func ReadOnlyClosedWorldAnnotations() *ToolAnnotations {
 	return &ToolAnnotations{ReadOnlyHint: &readOnly, OpenWorldHint: &closedWorld}
 }
 
+// ReadOnlyOpenWorldAnnotations marks a read-only tool that reaches outside the
+// local installation (public network fetches).
+func ReadOnlyOpenWorldAnnotations() *ToolAnnotations {
+	readOnly, openWorld := true, true
+	return &ToolAnnotations{ReadOnlyHint: &readOnly, OpenWorldHint: &openWorld}
+}
+
+// LocalWriteAnnotations marks a tool that writes only harness state or files
+// under the requested workspace. additive claims the writes never replace or
+// delete existing data; idempotent claims a repeated identical call has no
+// further effect. A false flag leaves its hint unset, so clients keep the
+// protocol default (destructive, not idempotent) instead of reading a claim.
+func LocalWriteAnnotations(additive, idempotent bool) *ToolAnnotations {
+	readOnly, closedWorld := false, false
+	annotations := &ToolAnnotations{ReadOnlyHint: &readOnly, OpenWorldHint: &closedWorld}
+	if additive {
+		destructive := false
+		annotations.DestructiveHint = &destructive
+	}
+	if idempotent {
+		annotations.IdempotentHint = &idempotent
+	}
+	return annotations
+}
+
+// UnclaimedWriteAnnotations marks a tool that may write but whose reach the
+// harness cannot bound: it runs caller-chosen commands or drives git and lease
+// state across worktrees. Only the non-read-only claim is made; every other
+// hint keeps its protocol default.
+func UnclaimedWriteAnnotations() *ToolAnnotations {
+	readOnly := false
+	return &ToolAnnotations{ReadOnlyHint: &readOnly}
+}
+
 func schemaString() map[string]any  { return map[string]any{"type": "string"} }
 func schemaBool() map[string]any    { return map[string]any{"type": "boolean"} }
 func schemaInteger() map[string]any { return map[string]any{"type": "integer"} }

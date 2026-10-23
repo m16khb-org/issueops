@@ -11497,7 +11497,10 @@
       "symbols": [
         "func DocsIndexOutputSchema",
         "func InspectOutputSchema",
+        "func LocalWriteAnnotations",
         "func ReadOnlyClosedWorldAnnotations",
+        "func ReadOnlyOpenWorldAnnotations",
+        "func UnclaimedWriteAnnotations",
         "func schemaArray",
         "func schemaBool",
         "func schemaInteger",

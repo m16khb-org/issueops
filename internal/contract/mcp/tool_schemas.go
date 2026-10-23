@@ -14,16 +14,19 @@ func CoreProjectTools() []Tool {
 		},
 		{
 			Name:        "atomic_commit_preflight",
+			Annotations: ReadOnlyClosedWorldAnnotations(),
 			Description: "Run a read-only git preflight for the atomic-commit-push workflow: branch/upstream, staged/unstaged/untracked files, secret-like paths, and commit style hints.",
 			InputSchema: map[string]any{"type": "object", "properties": map[string]any{"path": map[string]any{"type": "string", "description": "Git repository path. Defaults to the agent project directory."}}},
 		},
 		{
 			Name:        "commit_policy",
+			Annotations: ReadOnlyClosedWorldAnnotations(),
 			Description: "Return the Conventional Commit + Lore body policy used by this harness.",
 			InputSchema: map[string]any{"type": "object", "properties": map[string]any{}},
 		},
 		{
 			Name:        "skill_manifest",
+			Annotations: ReadOnlyClosedWorldAnnotations(),
 			Description: "List shared skills exposed by the harness and their metadata.",
 			InputSchema: map[string]any{"type": "object", "properties": map[string]any{}},
 		},
@@ -36,6 +39,7 @@ func CoreProjectTools() []Tool {
 		},
 		{
 			Name:        "project_docs_route",
+			Annotations: ReadOnlyClosedWorldAnnotations(),
 			Description: "Given a task, return the project AGENTS.md and .issueops documents an agent should read before working, plus up to five dated .issueops/cautions/ and .issueops/adr/ records whose title, summary, or source share terms with the task.",
 			InputSchema: map[string]any{"type": "object", "properties": map[string]any{
 				"repo": map[string]any{"type": "string", "description": "Target repository path. Defaults to current directory."},
@@ -44,11 +48,13 @@ func CoreProjectTools() []Tool {
 		},
 		{
 			Name:        "project_docs_bootstrap_plan",
+			Annotations: ReadOnlyClosedWorldAnnotations(),
 			Description: "Dry-run the project docs bootstrap that creates or updates AGENTS.md and .issueops/*.md from repository evidence. This tool never writes files.",
 			InputSchema: map[string]any{"type": "object", "properties": map[string]any{"repo": map[string]any{"type": "string", "description": "Target repository path. Defaults to current directory."}}},
 		},
 		{
 			Name:        "project_docs_read",
+			Annotations: ReadOnlyClosedWorldAnnotations(),
 			Description: "Read one allowed .issueops project document and return its content plus SHA-256. Use before project_docs_revise so autonomous doc refreshes preserve user consensus and avoid stale overwrites.",
 			InputSchema: map[string]any{"type": "object", "required": []string{"rel_path"}, "properties": map[string]any{
 				"repo":     map[string]any{"type": "string", "description": "Target repository path. Defaults to current directory."},
@@ -57,6 +63,7 @@ func CoreProjectTools() []Tool {
 		},
 		{
 			Name:        "project_docs_revise",
+			Annotations: LocalWriteAnnotations(false, false),
 			Description: "Revise (fully replace) one allowed .issueops project document after reading repo evidence and preserving user consensus. Dry-run unless confirm=true. Existing files require expected_sha256 from project_docs_read. Do not use for solved false cases or ADR entries; use project_docs_append there.",
 			InputSchema: map[string]any{"type": "object", "required": []string{"rel_path", "content", "summary"}, "properties": map[string]any{
 				"repo":            map[string]any{"type": "string", "description": "Target repository path. Defaults to current directory."},
@@ -70,6 +77,7 @@ func CoreProjectTools() []Tool {
 		},
 		{
 			Name:        "project_docs_append",
+			Annotations: LocalWriteAnnotations(true, false),
 			Description: "Append one dated record file under .issueops/cautions/ (kind=caution) or .issueops/adr/ (kind=adr) and link it from the family module overview (cautions/overview.md or adr/overview.md) when that file exists; the family root index is not modified. Use only when there is a concrete issue resolved or decision made; this tool writes files.",
 			InputSchema: map[string]any{"type": "object", "required": []string{"kind", "title", "summary"}, "properties": map[string]any{
 				"repo":         map[string]any{"type": "string", "description": "Target repository path. Defaults to current directory."},
@@ -87,6 +95,7 @@ func CoreProjectTools() []Tool {
 		},
 		{
 			Name:        "api_doc_review",
+			Annotations: ReadOnlyClosedWorldAnnotations(),
 			Description: "Render the API documentation host-agent review prompt/schema, or record a supplied JSON review result for staged or explicit controller/DTO/handler/OpenAPI files. By default it scopes to git staged API candidate files and does not fail unrelated pre-existing Swagger/OpenAPI debt.",
 			InputSchema: map[string]any{"type": "object", "properties": map[string]any{
 				"repo":        map[string]any{"type": "string", "description": "Target git repository path. Defaults to current directory."},
@@ -99,6 +108,7 @@ func CoreProjectTools() []Tool {
 		},
 		{
 			Name:        "api_doc_static_check",
+			Annotations: ReadOnlyClosedWorldAnnotations(),
 			Description: "Run deterministic API documentation checks for syntax-level Swagger/OpenAPI omissions such as missing operation descriptions, params, body/query/header docs, 400/401 responses, and NestJS DTO decorators. Use before api_doc_review.",
 			InputSchema: map[string]any{"type": "object", "properties": map[string]any{
 				"repo":  map[string]any{"type": "string", "description": "Target git repository path. Defaults to current directory."},
@@ -115,6 +125,7 @@ func SelfLoopAdvertisedTools() []Tool {
 	return []Tool{
 		{
 			Name:        "self_augment",
+			Annotations: LocalWriteAnnotations(false, false),
 			Description: "Plan the self-augmentation loop: use GENIUS_THINK.md, repo signals, and research-backed strategies to choose concrete feature/performance/quality improvements. The native skill performs implementation; this tool exposes the scoring contract and candidate curriculum, and can persist the chosen plan to issueops state for durable Reflexion-style memory.",
 			InputSchema: map[string]any{"type": "object", "properties": map[string]any{
 				"cycles":       map[string]any{"type": "integer", "description": "Number of autonomous improvement cycles to plan; defaults to 1."},
@@ -125,6 +136,7 @@ func SelfLoopAdvertisedTools() []Tool {
 		},
 		{
 			Name:        "self_augment_lesson",
+			Annotations: LocalWriteAnnotations(false, false),
 			Description: "Store a Reflexion-style self-augmentation lesson in issueops state for durable cross-session learning.",
 			InputSchema: map[string]any{"type": "object", "required": []string{"lesson", "next_action"}, "properties": map[string]any{
 				"candidate_id": map[string]any{"type": "string", "description": "Candidate id this lesson belongs to; defaults to current selected open candidate."},
@@ -137,6 +149,7 @@ func SelfLoopAdvertisedTools() []Tool {
 		},
 		{
 			Name:        "self_verify",
+			Annotations: UnclaimedWriteAnnotations(),
 			Description: "Run one complete deterministic self-verification evidence pass. Termination requires every concrete goal score to be greater than target_score.",
 			InputSchema: map[string]any{"type": "object", "properties": map[string]any{
 				"base_ref":     map[string]any{"type": "string", "pattern": ".+", "description": "Include committed changes from this commit to HEAD in risk QA; omitted uses working-tree changes only."},
@@ -148,6 +161,7 @@ func SelfLoopAdvertisedTools() []Tool {
 		},
 		{
 			Name:        "self_verify_candidates",
+			Annotations: LocalWriteAnnotations(false, false),
 			Description: "Export the self-verification loop improvement candidate curriculum, including open/satisfied IDs and the next selected candidate.",
 			InputSchema: map[string]any{"type": "object", "properties": map[string]any{
 				"save_state": map[string]any{"type": "boolean", "description": "When true, save the candidate export snapshot to issueops state."},
@@ -156,6 +170,7 @@ func SelfLoopAdvertisedTools() []Tool {
 		},
 		{
 			Name:        "self_verify_history",
+			Annotations: LocalWriteAnnotations(false, false),
 			Description: "List saved self-verification loop summary checkpoints from issueops state, sorted by snapshot generation time for quick baseline/candidate discovery.",
 			InputSchema: map[string]any{"type": "object", "properties": map[string]any{
 				"prefix":          map[string]any{"type": "string", "description": "State key prefix to scan; defaults to self-verify. Use empty string to scan all keys."},
@@ -167,6 +182,7 @@ func SelfLoopAdvertisedTools() []Tool {
 		},
 		{
 			Name:        "self_verify_compare",
+			Annotations: ReadOnlyClosedWorldAnnotations(),
 			Description: "Compare two saved self-verification loop summary checkpoints from issueops state and report elapsed-time, failed-step, step-label, and goal-score regressions.",
 			InputSchema: map[string]any{"type": "object", "required": []string{"baseline_key", "candidate_key"}, "properties": map[string]any{
 				"baseline_key":               map[string]any{"type": "string", "description": "State key containing the baseline self-verification summary snapshot."},
@@ -176,6 +192,7 @@ func SelfLoopAdvertisedTools() []Tool {
 		},
 		{
 			Name:        "self_verify_promote",
+			Annotations: LocalWriteAnnotations(false, true),
 			Description: "Promote a saved self-verification loop summary checkpoint to a baseline state key. Defaults to dry-run; pass confirm=true to write the baseline.",
 			InputSchema: map[string]any{"type": "object", "required": []string{"from_key", "baseline_key"}, "properties": map[string]any{
 				"from_key":            map[string]any{"type": "string", "description": "State key containing the candidate self-verification summary snapshot to promote."},

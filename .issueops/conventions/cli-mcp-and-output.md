@@ -32,6 +32,7 @@
 - tool response에는 불필요한 대용량 파일 내용을 싣지 않는다. 요약, 경로, hash, line range를 우선한다.
 - command 실행 tool은 policy 결과와 audit log id를 함께 반환한다.
 - schema 변경은 golden test와 문서 업데이트를 동반한다.
+- 모든 MCP tool은 `annotations.readOnlyHint`를 명시한다(`TestEveryToolDeclaresReadOnlyHint`). 호스트는 hint가 없는 도구를 쓰기 도구로 다룬다. Claude Code는 `readOnlyHint`가 있어야 도구를 병렬로 실행하고, 연결이 끊긴 HTTP 호출은 read-only·idempotent 도구만 다시 보낸다. 분류는 실제 쓰기 경로를 기준으로 `internal/contract/mcp/output_schemas.go`의 생성자 중 하나를 고른다. 읽기만 하면 `ReadOnlyClosedWorldAnnotations`, 공개 네트워크를 읽으면 `ReadOnlyOpenWorldAnnotations`, harness state나 workspace 파일만 쓰면 `LocalWriteAnnotations(additive, idempotent)`를 쓴다. 호출자가 고른 명령을 실행하거나 lease·git을 움직이는 도구는 `UnclaimedWriteAnnotations`를 쓴다. 옵션(`save_state`, `prune_retention` 등)으로라도 쓸 수 있으면 read-only가 아니다.
 - CLI/MCP contract golden은 `cmd/issueops/testdata/`에 둔다. 의도된 schema 변경일 때만 `go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden -update -count=1`로 갱신한다.
 - 실제 JSON response golden은 dynamic field(timestamp, temp path, audit id)를 normalize해서 host/session 차이로 인한 drift를 막는다.
 - response golden 범위는 state/policy뿐 아니라 docs/inspect/preflight처럼 agent가 자주 의존하는 읽기 표면을 우선 포함한다.

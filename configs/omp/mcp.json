@@ -6,7 +6,7 @@
       ],
       "command": "./bin/issueops",
       "env": {
-        "ISSUEOPS_MCP_CATALOG_SHA256": "be8fdd69b93b2158f9ace25be2b27bbbe1cf7e8778b3cfad32ace779c5cad29f",
+        "ISSUEOPS_MCP_CATALOG_SHA256": "29e0c66713496485b66f5b6ec027cac3940e2bc541bcf215f825c657fb784d7f",
         "ISSUEOPS_ROOT": "."
       },
       "type": "stdio"

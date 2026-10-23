@@ -102,8 +102,8 @@ func assertStructuredToolOverSession(t *testing.T, session *mcp.ClientSession) {
 		if slices.Contains(structuredToolNames, tool.Name) {
 			continue
 		}
-		if tool.Annotations != nil || tool.OutputSchema != nil {
-			t.Fatalf("%s must carry neither annotations nor outputSchema: %+v", tool.Name, tool)
+		if tool.OutputSchema != nil {
+			t.Fatalf("%s must not carry an outputSchema: %+v", tool.Name, tool)
 		}
 	}
 }
@@ -143,9 +143,9 @@ func TestSDKToolsListAgreesWithCatalog(t *testing.T) {
 
 func sameHints(want *mcpcontract.ToolAnnotations, got *mcp.ToolAnnotations) bool {
 	flag := func(hint *bool) bool { return hint != nil && *hint }
+	sameOptional := func(want, got *bool) bool { return (want == nil) == (got == nil) && (want == nil || *want == *got) }
 	return flag(want.ReadOnlyHint) == got.ReadOnlyHint && flag(want.IdempotentHint) == got.IdempotentHint &&
-		(want.DestructiveHint == nil) == (got.DestructiveHint == nil) && (want.OpenWorldHint == nil) == (got.OpenWorldHint == nil) &&
-		(want.OpenWorldHint == nil || *want.OpenWorldHint == *got.OpenWorldHint)
+		sameOptional(want.DestructiveHint, got.DestructiveHint) && sameOptional(want.OpenWorldHint, got.OpenWorldHint)
 }
 
 func sameJSON(t *testing.T, a, b any) bool {
@@ -274,8 +274,8 @@ func TestHTTPToolsListAndCallCarryStructuredOutput(t *testing.T) {
 				if slices.Contains(structuredToolNames, name) {
 					continue
 				}
-				if _, has := tool["annotations"]; has {
-					t.Fatalf("%s advertises annotations over http", name)
+				if _, has := tool["annotations"]; !has {
+					t.Fatalf("%s advertises no annotations over http", name)
 				}
 				if _, has := tool["outputSchema"]; has {
 					t.Fatalf("%s advertises outputSchema over http", name)

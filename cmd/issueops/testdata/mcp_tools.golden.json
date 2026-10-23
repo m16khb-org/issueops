@@ -268,6 +268,10 @@
     }
   },
   {
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
     "description": "Run a read-only git preflight for the atomic-commit-push workflow: branch/upstream, staged/unstaged/untracked files, secret-like paths, and commit style hints.",
     "inputSchema": {
       "properties": {
@@ -293,6 +297,10 @@
     "name": "atomic_commit_preflight"
   },
   {
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
     "description": "Return the Conventional Commit + Lore body policy used by this harness.",
     "inputSchema": {
       "properties": {},
@@ -301,6 +309,10 @@
     "name": "commit_policy"
   },
   {
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
     "description": "List shared skills exposed by the harness and their metadata.",
     "inputSchema": {
       "properties": {},
@@ -392,6 +404,10 @@
     }
   },
   {
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
     "description": "Given a task, return the project AGENTS.md and .issueops documents an agent should read before working, plus up to five dated .issueops/cautions/ and .issueops/adr/ records whose title, summary, or source share terms with the task.",
     "inputSchema": {
       "properties": {
@@ -421,6 +437,10 @@
     "name": "project_docs_route"
   },
   {
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
     "description": "Dry-run the project docs bootstrap that creates or updates AGENTS.md and .issueops/*.md from repository evidence. This tool never writes files.",
     "inputSchema": {
       "properties": {
@@ -446,6 +466,10 @@
     "name": "project_docs_bootstrap_plan"
   },
   {
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
     "description": "Read one allowed .issueops project document and return its content plus SHA-256. Use before project_docs_revise so autonomous doc refreshes preserve user consensus and avoid stale overwrites.",
     "inputSchema": {
       "properties": {
@@ -478,6 +502,10 @@
     "name": "project_docs_read"
   },
   {
+    "annotations": {
+      "readOnlyHint": false,
+      "openWorldHint": false
+    },
     "description": "Revise (fully replace) one allowed .issueops project document after reading repo evidence and preserving user consensus. Dry-run unless confirm=true. Existing files require expected_sha256 from project_docs_read. Do not use for solved false cases or ADR entries; use project_docs_append there.",
     "inputSchema": {
       "properties": {
@@ -535,6 +563,11 @@
     "name": "project_docs_revise"
   },
   {
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
     "description": "Append one dated record file under .issueops/cautions/ (kind=caution) or .issueops/adr/ (kind=adr) and link it from the family module overview (cautions/overview.md or adr/overview.md) when that file exists; the family root index is not modified. Use only when there is a concrete issue resolved or decision made; this tool writes files.",
     "inputSchema": {
       "properties": {
@@ -611,6 +644,10 @@
     "name": "project_docs_append"
   },
   {
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
     "description": "Render the API documentation host-agent review prompt/schema, or record a supplied JSON review result for staged or explicit controller/DTO/handler/OpenAPI files. By default it scopes to git staged API candidate files and does not fail unrelated pre-existing Swagger/OpenAPI debt.",
     "inputSchema": {
       "properties": {
@@ -659,6 +696,10 @@
     "name": "api_doc_review"
   },
   {
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
     "description": "Run deterministic API documentation checks for syntax-level Swagger/OpenAPI omissions such as missing operation descriptions, params, body/query/header docs, 400/401 responses, and NestJS DTO decorators. Use before api_doc_review.",
     "inputSchema": {
       "properties": {
@@ -695,6 +736,10 @@
     "name": "api_doc_static_check"
   },
   {
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
     "description": "Evaluate whether an argv-based command request is allowed by the harness command policy without executing it.",
     "inputSchema": {
       "properties": {
@@ -759,6 +804,10 @@
     "name": "command_policy_check"
   },
   {
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
     "description": "Run the command policy and return a fake runner result. This never executes the command; it only proves policy acceptance/denial and audit metadata.",
     "inputSchema": {
       "properties": {
@@ -823,6 +872,11 @@
     "name": "command_fake_run"
   },
   {
+    "annotations": {
+      "readOnlyHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
     "description": "Write a small agent state checkpoint to ISSUEOPS_STATE_DIR or ~/.local/state/issueops. Keys allow [A-Za-z0-9._-] and cannot contain path traversal.",
     "inputSchema": {
       "properties": {
@@ -844,6 +898,10 @@
     "name": "state_write"
   },
   {
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
     "description": "Read an agent state checkpoint by key.",
     "inputSchema": {
       "properties": {
@@ -860,6 +918,10 @@
     "name": "state_read"
   },
   {
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
     "description": "List agent state checkpoint keys and metadata.",
     "inputSchema": {
       "properties": {},
@@ -868,6 +930,11 @@
     "name": "state_list"
   },
   {
+    "annotations": {
+      "readOnlyHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
     "description": "Prune old agent state checkpoints. Defaults to dry-run; pass confirm=true to delete records older than max_age.",
     "inputSchema": {
       "properties": {
@@ -888,6 +955,10 @@
     "name": "state_prune"
   },
   {
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
     "description": "Inspect agent state checkpoint files for invalid JSON, key mismatches, byte-count drift, invalid timestamps, and unexpected files without modifying state.",
     "inputSchema": {
       "properties": {},
@@ -896,6 +967,12 @@
     "name": "state_doctor"
   },
   {
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
     "description": "Run sqlite store maintenance on every existing harness store root: truncate the WAL via wal_checkpoint(TRUNCATE) and re-assert private 0600 file modes. Roots without a store are skipped, never created.",
     "inputSchema": {
       "properties": {},
@@ -904,6 +981,9 @@
     "name": "state_maintain"
   },
   {
+    "annotations": {
+      "readOnlyHint": false
+    },
     "description": "Prepare, inspect, claim, release, replace, reconcile, or complete the single IssueOps v1 execution lease. The action selects one shared CLI/MCP DTO; mutations require the exact native actor, generation, canonical cwd, and explicit confirmation.",
     "inputSchema": {
       "properties": {
@@ -1027,6 +1107,12 @@
     "name": "issueops_execution"
   },
   {
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
     "description": "Create or resume a durable verify-until-done loop contract. This writes state only; it records verify_argv but never executes shell commands.",
     "inputSchema": {
       "properties": {
@@ -1076,6 +1162,10 @@
     "name": "loop_start"
   },
   {
+    "annotations": {
+      "readOnlyHint": false,
+      "openWorldHint": false
+    },
     "description": "Append a pass/fail attempt with evidence to an active loop contract. This writes state and auto-exhausts after max failed attempts.",
     "inputSchema": {
       "properties": {
@@ -1117,6 +1207,10 @@
     "name": "loop_record_attempt"
   },
   {
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
     "description": "Read a durable loop contract status and summary. This does not write state.",
     "inputSchema": {
       "properties": {
@@ -1145,6 +1239,10 @@
     "name": "loop_status"
   },
   {
+    "annotations": {
+      "readOnlyHint": false,
+      "openWorldHint": false
+    },
     "description": "Stop a loop contract. success=true requires the latest attempt verdict to be pass; non-success stops require a reason.",
     "inputSchema": {
       "properties": {
@@ -1181,6 +1279,9 @@
     "name": "loop_stop"
   },
   {
+    "annotations": {
+      "readOnlyHint": false
+    },
     "description": "Evaluate task gate ledgers (.issueops/issues/\u003cn\u003e/gates.md and .issueops/gates/*.md). Runs CHECK commands for unmet gates through the command policy engine (workspace boundary, env allowlist, timeout, audit), matches EXPECT, flips checkboxes, and records evidence. Complete means zero unmet gates; ABANDON gates count as resolved.",
     "inputSchema": {
       "properties": {
@@ -1228,6 +1329,10 @@
     "name": "gates_check"
   },
   {
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
     "description": "Report gate ledger state without executing anything or modifying files. Flags unchecked gates and checked-but-EVIDENCE-pending gates (a checkbox is a claim; evidence is the proof).",
     "inputSchema": {
       "properties": {
@@ -1256,6 +1361,10 @@
     "name": "gates_status"
   },
   {
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
     "description": "Render the final-report ledger paste: per-file N-of-N gate counts, per-gate state, evidence, and abandon reasons. Re-measures counts at report time instead of trusting memory.",
     "inputSchema": {
       "properties": {
@@ -1284,6 +1393,11 @@
     "name": "gates_report"
   },
   {
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
     "description": "Record an honest ABANDON line for one gate in a ledger file. Abandoned gates count as resolved but stay visible in reports; use instead of silently dropping a gate.",
     "inputSchema": {
       "properties": {
@@ -1322,6 +1436,11 @@
     "name": "gates_abandon"
   },
   {
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
     "description": "Scaffold a new gate ledger file. Refuses to overwrite an existing file. Each gate spec looks like \"G1: outcome | CHECK: command | EXPECT: expectation\".",
     "inputSchema": {
       "properties": {
@@ -1362,6 +1481,10 @@
     "name": "gates_init"
   },
   {
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
     "description": "Check gate specs, the gate lines of a plan file, or existing ledgers without running any CHECK: ledger spec rules (one argv command, segment split on |), the argv tokenizer, the command policy gates_check would apply, and EXPECT regex compilation. Problems mean the gate cannot be met as written regardless of the implementation. Writes nothing.",
     "inputSchema": {
       "properties": {
@@ -1416,6 +1539,10 @@
     "name": "gates_lint"
   },
   {
+    "annotations": {
+      "readOnlyHint": false,
+      "openWorldHint": false
+    },
     "description": "Append a durable message to a named session-to-session channel backed by the shared issueops state. Codex, Claude Code, Omo, omp, and opencode sessions sharing the state see it. Use for cross-session coordination such as front/server contract negotiation.",
     "inputSchema": {
       "properties": {
@@ -1442,6 +1569,10 @@
     "name": "channel_send"
   },
   {
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
     "description": "Read messages from a named channel after a given message id (exclusive). With wait=true, blocks until a new message arrives or the timeout (default 300s) — the receiving side of a front/server session coordination flow.",
     "inputSchema": {
       "properties": {
@@ -1474,6 +1605,10 @@
     "name": "channel_recv"
   },
   {
+    "annotations": {
+      "readOnlyHint": false,
+      "openWorldHint": false
+    },
     "description": "Plan the self-augmentation loop: use GENIUS_THINK.md, repo signals, and research-backed strategies to choose concrete feature/performance/quality improvements. The native skill performs implementation; this tool exposes the scoring contract and candidate curriculum, and can persist the chosen plan to issueops state for durable Reflexion-style memory.",
     "inputSchema": {
       "properties": {
@@ -1499,6 +1634,10 @@
     "name": "self_augment"
   },
   {
+    "annotations": {
+      "readOnlyHint": false,
+      "openWorldHint": false
+    },
     "description": "Store a Reflexion-style self-augmentation lesson in issueops state for durable cross-session learning.",
     "inputSchema": {
       "properties": {
@@ -1536,6 +1675,9 @@
     "name": "self_augment_lesson"
   },
   {
+    "annotations": {
+      "readOnlyHint": false
+    },
     "description": "Run one complete deterministic self-verification evidence pass. Termination requires every concrete goal score to be greater than target_score.",
     "inputSchema": {
       "properties": {
@@ -1566,6 +1708,10 @@
     "name": "self_verify"
   },
   {
+    "annotations": {
+      "readOnlyHint": false,
+      "openWorldHint": false
+    },
     "description": "Export the self-verification loop improvement candidate curriculum, including open/satisfied IDs and the next selected candidate.",
     "inputSchema": {
       "properties": {
@@ -1583,6 +1729,10 @@
     "name": "self_verify_candidates"
   },
   {
+    "annotations": {
+      "readOnlyHint": false,
+      "openWorldHint": false
+    },
     "description": "List saved self-verification loop summary checkpoints from issueops state, sorted by snapshot generation time for quick baseline/candidate discovery.",
     "inputSchema": {
       "properties": {
@@ -1612,6 +1762,10 @@
     "name": "self_verify_history"
   },
   {
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
     "description": "Compare two saved self-verification loop summary checkpoints from issueops state and report elapsed-time, failed-step, step-label, and goal-score regressions.",
     "inputSchema": {
       "properties": {
@@ -1637,6 +1791,11 @@
     "name": "self_verify_compare"
   },
   {
+    "annotations": {
+      "readOnlyHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
     "description": "Promote a saved self-verification loop summary checkpoint to a baseline state key. Defaults to dry-run; pass confirm=true to write the baseline.",
     "inputSchema": {
       "properties": {
@@ -1666,6 +1825,10 @@
     "name": "self_verify_promote"
   },
   {
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
     "description": "Return the current CLI/MCP compatibility contract, required response fields, and stable schema hash. This tool is read-only and is used before changing response DTOs.",
     "inputSchema": {
       "properties": {},
@@ -1674,6 +1837,10 @@
     "name": "contract_schema"
   },
   {
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
     "description": "Check whether the current CLI/MCP compatibility contract is internally consistent. This tool is read-only and returns a pass/fail result plus warnings.",
     "inputSchema": {
       "properties": {},
@@ -1682,6 +1849,11 @@
     "name": "contract_check"
   },
   {
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
     "description": "Create a no-shell local worker job record. This writes only to the issueops worker state directory and never executes shell commands.",
     "inputSchema": {
       "properties": {
@@ -1700,6 +1872,11 @@
     "name": "worker_enqueue"
   },
   {
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
     "description": "Run an argv-only read-only command as a local worker evidence job. This writes only the worker job record and command evidence, forces write/network/shell disabled, applies workspace policy, timeout, env allowlist, redaction, and bounded output.",
     "inputSchema": {
       "properties": {
@@ -1746,6 +1923,10 @@
     "name": "worker_run_read_only"
   },
   {
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
     "description": "Read a no-shell local worker job by id. This is read-only and returns the persisted job lifecycle record.",
     "inputSchema": {
       "properties": {
@@ -1761,6 +1942,10 @@
     "name": "worker_status"
   },
   {
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
     "description": "List no-shell local worker jobs from the issueops worker state directory. This is read-only.",
     "inputSchema": {
       "properties": {},
@@ -1769,6 +1954,11 @@
     "name": "worker_list"
   },
   {
+    "annotations": {
+      "readOnlyHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
     "description": "Mark a queued no-shell local worker job as cancelled. This writes only the job lifecycle record and never kills processes.",
     "inputSchema": {
       "properties": {
@@ -1784,6 +1974,11 @@
     "name": "worker_cancel"
   },
   {
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
     "description": "Evaluate command policy and append a redacted JSONL audit record without executing the command. This writes only to the harness audit log.",
     "inputSchema": {
       "properties": {
@@ -1848,6 +2043,10 @@
     "name": "command_policy_audit"
   },
   {
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
     "description": "Render a host-agent prompt for a Conventional + Lore Hybrid commit message based on git diff.",
     "inputSchema": {
       "properties": {
@@ -1877,6 +2076,9 @@
     "name": "commit_suggest"
   },
   {
+    "annotations": {
+      "readOnlyHint": false
+    },
     "description": "Run a command, capture failure outputs, and render a host-agent diagnosis prompt.",
     "inputSchema": {
       "properties": {
@@ -1912,6 +2114,10 @@
     "name": "lint_diagnose"
   },
   {
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    },
     "description": "Run the clean-room resilient public web fetch engine with safe URL handling, route accounting, response validation, and citation-ready output.",
     "inputSchema": {
       "properties": {

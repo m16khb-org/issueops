@@ -456,6 +456,21 @@
   },
   {
     "path": "internal/contract/mcp/output_schemas.go",
+    "symbol": "func ReadOnlyOpenWorldAnnotations",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/mcp/output_schemas.go",
+    "symbol": "func LocalWriteAnnotations",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/mcp/output_schemas.go",
+    "symbol": "func UnclaimedWriteAnnotations",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/mcp/output_schemas.go",
     "symbol": "func schemaArray",
     "role": "shape"
   },

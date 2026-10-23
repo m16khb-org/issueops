@@ -6,6 +6,7 @@ func ChannelTools() []Tool {
 	return []Tool{
 		{
 			Name:        "channel_send",
+			Annotations: LocalWriteAnnotations(false, false),
 			Description: "Append a durable message to a named session-to-session channel backed by the shared issueops state. Codex, Claude Code, Omo, omp, and opencode sessions sharing the state see it. Use for cross-session coordination such as front/server contract negotiation.",
 			InputSchema: map[string]any{"type": "object", "required": []string{"channel", "from", "body"}, "properties": map[string]any{
 				"channel": map[string]any{"type": "string", "description": "Channel name (shared mailbox key), for example contract or front-server."},
@@ -15,6 +16,7 @@ func ChannelTools() []Tool {
 		},
 		{
 			Name:        "channel_recv",
+			Annotations: ReadOnlyClosedWorldAnnotations(),
 			Description: "Read messages from a named channel after a given message id (exclusive). With wait=true, blocks until a new message arrives or the timeout (default 300s) — the receiving side of a front/server session coordination flow.",
 			InputSchema: map[string]any{"type": "object", "required": []string{"channel"}, "properties": map[string]any{
 				"channel":         map[string]any{"type": "string", "description": "Channel name."},
