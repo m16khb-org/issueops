@@ -254,9 +254,12 @@ func classifyIssueMissing(in Input, decision Decision) (Decision, bool) {
 }
 
 // branchPrepareNeeded는 이슈 URL이 있는 사이클이 아직 2단계(브랜치 준비)에 머무는지 판정한다.
+// provider의 이슈↔브랜치 연결이 확인되지 않았으면 2단계다. link-plan이 그 증거
+// (branch_link_verified)를 요구하므로, 여기서 넘기면 4단계 진입에서야 막힌다.
 func branchPrepareNeeded(record issueopsnextcontract.Record) bool {
 	return record.Phase == issueopsnextcontract.PhaseProblem || record.Phase == issueopsnextcontract.PhaseGrill ||
-		record.BranchPrepare == nil || strings.TrimSpace(record.BranchPrepare.BaseSHA) == ""
+		record.BranchPrepare == nil || strings.TrimSpace(record.BranchPrepare.BaseSHA) == "" ||
+		!record.BranchPrepare.LinkVerified
 }
 
 func classifyBranchPrepare(in Input, decision Decision) (Decision, bool) {
@@ -267,9 +270,19 @@ func classifyBranchPrepare(in Input, decision Decision) (Decision, bool) {
 		decision.NextCommand = "issueops phase --id " + record.ID + " --to grill --json"
 		return decision, true
 	}
-	decision.Missing = []string{"branch_prepare"}
-	decision.NextCommand = OwnerCommand(record.ID, "branch_prepare")
+	key := branchEvidenceKey(record)
+	decision.Missing = []string{key}
+	decision.NextCommand = OwnerCommand(record.ID, key)
 	return decision, true
+}
+
+// branchEvidenceKey names the missing branch evidence: the prepare record
+// itself, or only the provider link check on a prepared branch.
+func branchEvidenceKey(record issueopsnextcontract.Record) string {
+	if record.BranchPrepare != nil && strings.TrimSpace(record.BranchPrepare.BaseSHA) != "" && !record.BranchPrepare.LinkVerified {
+		return "branch_link_verified"
+	}
+	return "branch_prepare"
 }
 
 // classifyImplementation은 홀더가 이 세션인 4~8단계를 가른다.
@@ -303,6 +316,13 @@ func classifyHolderImplement(in Input, decision Decision) (Decision, bool) {
 	case issueopsnextcontract.PhasePlan, issueopsnextcontract.PhaseCompatibilityReview:
 		decision.Stage = stage(issueopsnextcontract.StageImplementEnter, 4)
 		switch {
+		case branchPrepareNeeded(record):
+			// link-plan refuses without branch evidence; send the holder to
+			// the prepare stage that owns it instead of a link-plan that fails.
+			key := branchEvidenceKey(record)
+			decision.Stage = stage(issueopsnextcontract.StagePrepare, 2)
+			decision.Missing = []string{key}
+			decision.NextCommand = OwnerCommand(id, key)
 		case strings.TrimSpace(record.PlanPath) == "":
 			decision.Missing = []string{"plan_path"}
 			decision.NextCommand = OwnerCommand(id, "plan_path")

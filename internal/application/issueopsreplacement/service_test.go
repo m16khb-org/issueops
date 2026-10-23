@@ -110,6 +110,10 @@ func TestRevokePersistsNewGenerationWithPreviousHolderInsideLock(t *testing.T) {
 	if want := []string{"lock", "load", "snapshot", "persist", "unlock"}; !reflect.DeepEqual(fixture.events, want) {
 		t.Fatalf("events=%v want=%v", fixture.events, want)
 	}
+	// The chain's next step is rendered, not left for the session to compose.
+	if want := "issueops execution replace --id 'io-test' --expected-generation 8 --finalize-preview"; result.NextCommand != want {
+		t.Fatalf("revoke next_command = %q, want %q", result.NextCommand, want)
+	}
 }
 func TestReplacementRefusalsNeverPersist(t *testing.T) {
 	for _, tc := range []struct {
@@ -146,6 +150,10 @@ func TestFinalizeReleasesAbsentWorkspaceWithoutCreatingToken(t *testing.T) {
 	preview, err := service.Run(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if !strings.Contains(preview.NextCommand, " --finalize --quiescence-fingerprint "+preview.QuiescenceFingerprint+" ") ||
+		!strings.HasSuffix(preview.NextCommand, " --confirm") || !strings.Contains(preview.NextCommand, " --host ") {
+		t.Fatalf("finalize-preview next_command = %q", preview.NextCommand)
 	}
 	f.events = nil
 	req.Action = model.ExecutionReplaceFinalize

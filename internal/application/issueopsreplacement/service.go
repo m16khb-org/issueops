@@ -132,7 +132,11 @@ func (s Service) previewExecutionFinalization(req issueops.ExecutionReplaceReque
 	if err != nil {
 		return issueops.ExecutionReplaceResult{OK: false, ID: req.ID, Action: req.Action}, err
 	}
-	return replaceResult(record, req.Action, "", fingerprint, ""), nil
+	result := replaceResult(record, req.Action, "", fingerprint, "")
+	// The finalize step needs exactly this fingerprint and the caller's actor;
+	// render it so the taking-over session does not assemble flags by hand.
+	result.NextCommand = domain.ReplacementFinalizeCommand(record.ID, record.Execution.Lease.Generation, fingerprint, req.Actor, record.Execution.Workspace.Root)
+	return result, nil
 }
 
 func (s Service) mutateExecutionReplacement(ctx context.Context, req issueops.ExecutionReplaceRequest) (issueops.ExecutionReplaceResult, error) {
@@ -163,8 +167,11 @@ func (s Service) mutateExecutionReplacement(ctx context.Context, req issueops.Ex
 		return issueops.ExecutionReplaceResult{OK: false, ID: req.ID, Action: req.Action}, err
 	}
 	result := replaceResult(persisted, req.Action, "", "", tokenPath)
-	if persisted.Execution.Lease.Status == issueops.LeaseStatusClaimable {
+	switch persisted.Execution.Lease.Status {
+	case issueops.LeaseStatusClaimable:
 		result.NextCommand = domain.ReplacementClaimCommand(persisted.ID, persisted.Execution.Lease.Generation)
+	case issueops.LeaseStatusRevoking:
+		result.NextCommand = domain.ReplacementFinalizePreviewCommand(persisted.ID, persisted.Execution.Lease.Generation)
 	}
 	return result, nil
 }

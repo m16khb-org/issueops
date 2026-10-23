@@ -79,9 +79,9 @@ issueops next --json
 1·2단계는 worktree 없이 source 준비 세션에서, 3단계도 같은 세션에서 수행한다.
 3단계 `execution prepare`가 worktree·lease를 만들고 위 인계를 적용한다.
 4단계부터 선택한 세션이 canonical worktree에서 수행한다. current는 기존 lease를 유지하고
-새 세션은 release 확인 후 인수한다. 새 세션은 `replace --preview`와 반환된 `--reseed` 명령,
-`claim --claim-current-token`으로 이어지는 인수 체인이 유일한 인계 경로다.
-host 간 재개·인수도 `next_command`의 generation·quiescence 검증 체인을 따른다.
+새 세션은 release 확인 후 인수한다. 인수는 `replace --preview`에서 시작해 각 결과의 `next_command`를
+`claim --claim-current-token`까지 따라가는 것이 유일한 경로다(해제된 lease는 `--reseed`, 죽은 active 홀더는
+`--revoke` → `--finalize-preview` → `--finalize`). host 간 재개·인수도 이 generation·quiescence 검증 체인을 따른다.
 
 ## 공통 불변식
 

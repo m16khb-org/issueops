@@ -13627,9 +13627,11 @@
       "task": "T20",
       "symbols": [
         "func ReplacementClaimCommand",
+        "func ReplacementFinalizeCommand",
         "func ReplacementReseedCommand",
         "func ReplacementRevokeCommand",
-        "func quoteReplacementArg"
+        "func quoteReplacementArg",
+        "func replacementActorFlags"
       ]
     },
     {
@@ -14273,6 +14275,7 @@
       "symbols": [
         "func Classify",
         "func architectureGate",
+        "func branchEvidenceKey",
         "func branchPrepareNeeded",
         "func classifyBlockedExecution",
         "func classifyBranchPrepare",

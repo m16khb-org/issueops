@@ -252,7 +252,7 @@ func TestNextFeedsStagedArtifactsToClassifier(t *testing.T) {
 		record := issueopscontract.IssueOpsRecord{
 			ID: "io-a", Repo: "/repo", Branch: "12-a", Phase: issueopscontract.IssueOpsPhasePlan,
 			IssueURL:      "https://example.test/issues/12",
-			BranchPrepare: &issueopscontract.IssueOpsBranchPrepare{BaseSHA: "deadbeef"},
+			BranchPrepare: &issueopscontract.IssueOpsBranchPrepare{BaseSHA: "deadbeef", LinkVerified: true},
 		}
 		if reviewDigest != "" {
 			record.ArchitectureReview = &reviewcontract.ArchitectureReview{Approved: true, ReviewerContext: "subagent", ReviewedArchitectureDigest: reviewDigest}

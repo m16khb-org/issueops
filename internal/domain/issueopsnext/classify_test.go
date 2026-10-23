@@ -461,6 +461,30 @@ func TestClassifyBranchPrepareCommandDependsOnPhase(t *testing.T) {
 	}
 }
 
+// A branch prepared without the provider link check stays in prepare: link-plan
+// refuses without branch_link_verified, so letting plan or implement.enter
+// through only moves the failure later (an agent run hit exactly that).
+func TestClassifyUnverifiedBranchLinkStaysInPrepare(t *testing.T) {
+	unverified := func(in Input) Input {
+		in = withBranch(in)
+		in.Record.BranchPrepare.LinkVerified = false
+		return in
+	}
+	plan := Classify(unverified(withIssue(baseRecord(issueopsnextcontract.PhasePlan))))
+	if plan.Stage.Key != "prepare" || len(plan.Missing) != 1 || plan.Missing[0] != "branch_link_verified" ||
+		plan.NextCommand != OwnerCommand("io-test", "branch_link_verified") || !strings.Contains(plan.NextCommand, " --link-verified ") {
+		t.Fatalf("plan with unverified link: %s %v %q", plan.Stage.Key, plan.Missing, plan.NextCommand)
+	}
+	holder := Classify(withSelfHolder(unverified(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))
+	if holder.Stage.Key != "prepare" || len(holder.Missing) != 1 || holder.Missing[0] != "branch_link_verified" {
+		t.Fatalf("holder at plan with unverified link: %s %v %q", holder.Stage.Key, holder.Missing, holder.NextCommand)
+	}
+	verified := Classify(withSelfHolder(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))
+	if verified.Stage.Key != "implement.enter" || len(verified.Missing) != 1 || verified.Missing[0] != "plan_path" {
+		t.Fatalf("holder at plan with verified link: %s %v", verified.Stage.Key, verified.Missing)
+	}
+}
+
 func TestClassifyRevokingLeaseOffersTakeover(t *testing.T) {
 	revoking := withExecution(baseRecord(issueopsnextcontract.PhaseImplement), issueopscontract.WriteLease{
 		Generation: 4, Status: issueopsnextcontract.LeaseStatusRevoking,

@@ -69,6 +69,11 @@ func intakeOwnerCommand(id, key string) (string, bool) {
 		// read back; it is a choice, not a default to copy.
 		return "issueops branch prepare --id " + id +
 			" --provider <github|gitlab> --issue-url <URL> --branch <NAME> --base-branch <REF> --base-sha <SHA> [--link-verified] $RECORD_ACTOR_FLAGS", true
+	case "branch_link_verified":
+		// Recorded only after the provider shows the issue↔branch link (the
+		// issueops-prepare skill creates and reads it back).
+		return "issueops branch prepare --id " + id +
+			" --provider <github|gitlab> --issue-url <URL> --branch <NAME> --base-branch <REF> --base-sha <SHA> --link-verified $RECORD_ACTOR_FLAGS", true
 	}
 	return "", false
 }
