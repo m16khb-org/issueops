@@ -14306,6 +14306,7 @@
         "func classifyIssueMissing",
         "func classifyLease",
         "func classifyLocalGates",
+        "func classifyPRRefresh",
         "func classifyPreparation",
         "func classifyPublication",
         "func devilsAdvocateCommand",

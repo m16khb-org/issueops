@@ -697,12 +697,29 @@ func TestClassifyDelegatedChildSkipsArchitectureStage(t *testing.T) {
 	}
 }
 
-// After a sync-base merge in pr the seals are stale and the head moved; the way
-// back is phase --to ai-slop-clean, so the later `phase --to pr` reseals pr_head
-// (completion compares against it). Re-recording seals inside pr would not.
-func TestClassifyPRWithStaleSealsGoesBackThroughClean(t *testing.T) {
-	got := Classify(withLocal(withSelfHolder(baseRecord(issueopsnextcontract.PhasePR)), "ai_slop_clean_stale"))
-	if got.Stage.Key != "clean" || got.NextCommand != "issueops phase --id io-test --to ai-slop-clean $ACTOR_FLAGS --json" {
-		t.Fatalf("stage=%s next=%q", got.Stage.Key, got.NextCommand)
+// After a sync-base merge in pr the head moved and the seals are stale. The
+// in-pr fix path runs in order: `phase --to ai-slop-clean` (a refresh that
+// stays in pr), the stale reviews, then `phase --to pr` to reseal pr_head,
+// which completion compares against. Repeating the refresh would loop.
+func TestClassifyPRRefreshSequenceAfterAMovedHead(t *testing.T) {
+	pr := func(head string, missing ...string) Input {
+		in := withLocal(withSelfHolder(baseRecord(issueopsnextcontract.PhasePR)), missing...)
+		in.Record.PRHead, in.WorktreeHead = "old", head
+		return in
+	}
+	steps := []struct {
+		in         Input
+		stage, cmd string
+	}{
+		{pr("new", "ai_slop_clean_stale", "implementation_review_stale"), "clean", "issueops phase --id io-test --to ai-slop-clean $ACTOR_FLAGS --json"},
+		{pr("new", "implementation_review_stale"), "verify", OwnerCommand("io-test", "implementation_review_stale")},
+		{pr("new"), "commit-push", "issueops phase --id io-test --to pr $ACTOR_FLAGS --json"},
+		{pr("old"), "pr.create", ""},
+	}
+	for i, step := range steps {
+		got := Classify(step.in)
+		if got.Stage.Key != step.stage || (step.cmd != "" && got.NextCommand != step.cmd) {
+			t.Fatalf("step %d: stage=%s next=%q", i, got.Stage.Key, got.NextCommand)
+		}
 	}
 }

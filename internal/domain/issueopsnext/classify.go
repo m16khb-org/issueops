@@ -388,16 +388,8 @@ func classifyPublication(in Input, decision Decision, index int) (Decision, bool
 	id := record.ID
 	if record.Phase == issueopsnextcontract.PhasePR && record.Execution != nil {
 		if record.RemoteArtifact == nil {
-			// create-pr runs the strict readiness. A gate gone unmet since the
-			// pr transition (a sync-base merge that staled the seals, an edit,
-			// an unpushed commit) means a new head: going back through
-			// ai-slop-clean and `phase --to pr` reseals pr_head, which
-			// completion checks; re-recording the seals inside pr would not.
-			if in.Local != nil && len(in.Local.Missing) > 0 {
-				decision.Stage = stage(issueopsnextcontract.StageClean, 5)
-				decision.Missing = append([]string{}, in.Local.Missing...)
-				decision.NextCommand = "issueops phase --id " + id + " --to ai-slop-clean $ACTOR_FLAGS --json"
-				return decision, true
+			if back, ok := classifyPRRefresh(in, decision); ok {
+				return back, true
 			}
 			decision.Stage = stage(issueopsnextcontract.StagePRCreate, 9)
 			decision.Missing = []string{"remote_artifact"}
@@ -422,6 +414,32 @@ func classifyPublication(in Input, decision Decision, index int) (Decision, bool
 		return decision, true
 	}
 	_ = index
+	return decision, false
+}
+
+// classifyPRRefresh is the in-pr fix path before the PR exists (a sync-base
+// merge, an edit): create-pr runs the strict readiness and completion compares
+// against pr_head, so the seals are refreshed in order — `phase --to
+// ai-slop-clean` (a refresh that stays in pr), then the stale reviews, then
+// `phase --to pr`, which reseals pr_head at the new head.
+func classifyPRRefresh(in Input, decision Decision) (Decision, bool) {
+	id := in.Record.ID
+	if in.Local != nil && len(in.Local.Missing) > 0 {
+		if len(intersect(in.Local.Missing, cleanLocalKeys)) > 0 {
+			decision.Stage = stage(issueopsnextcontract.StageClean, 5)
+			decision.Missing = append([]string{}, in.Local.Missing...)
+			decision.NextCommand = "issueops phase --id " + id + " --to ai-slop-clean $ACTOR_FLAGS --json"
+			return decision, true
+		}
+		return classifyLocalGates(in, decision)
+	}
+	prHead, head := strings.TrimSpace(in.Record.PRHead), strings.TrimSpace(in.WorktreeHead)
+	if in.Local != nil && prHead != "" && head != "" && prHead != head {
+		decision.Stage = stage(issueopsnextcontract.StageCommitPush, 8)
+		decision.Missing = []string{"pr_head"}
+		decision.NextCommand = "issueops phase --id " + id + " --to pr $ACTOR_FLAGS --json"
+		return decision, true
+	}
 	return decision, false
 }
 
