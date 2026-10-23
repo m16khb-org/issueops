@@ -30,6 +30,25 @@ func TestCleanPathNormalizesLinkedWorktreeToSourceCheckout(t *testing.T) {
 	}
 }
 
+// A repository reached through a symlink keeps its lexical identity (start
+// and lock keys use it) but compares equal to the real path.
+func TestCanonicalResolvesSymlinkWhileNormalizeStaysLexical(t *testing.T) {
+	base := t.TempDir()
+	real := filepath.Join(base, "real")
+	runGit(t, "", "init", "-b", "main", real)
+	link := filepath.Join(base, "link")
+	if err := os.Symlink(real, link); err != nil {
+		t.Fatal(err)
+	}
+	paths := CleanPath{}
+	if got := paths.Normalize(link); got != link {
+		t.Fatalf("Normalize(link) = %q, want the lexical %q", got, link)
+	}
+	if paths.Canonical(paths.Normalize(link)) != paths.Canonical(paths.Normalize(real)) {
+		t.Fatalf("Canonical(%q)=%q differs from Canonical(%q)=%q", link, paths.Canonical(link), real, paths.Canonical(real))
+	}
+}
+
 func runGit(t *testing.T, dir string, args ...string) {
 	t.Helper()
 	command := exec.Command("git", args...)

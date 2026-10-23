@@ -24,6 +24,8 @@ func (paths *inventoryNormalizer) Normalize(path string) string {
 	return path
 }
 
+func (paths *inventoryNormalizer) Canonical(path string) string { return path }
+
 type inventoryClock struct{}
 
 func (inventoryClock) Now() time.Time { return time.Unix(0, 0).UTC() }

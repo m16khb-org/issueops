@@ -4,7 +4,6 @@ import (
 	"context"
 	ownerapp "issueops/internal/application/issueopsowner"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -62,7 +61,7 @@ func issueOpsNextHandler(
 			},
 			ProcessLive:   observeIssueOpsHolderLiveness,
 			SourceRoot:    issueopsinventoryoutbound.CleanPath{}.Normalize,
-			CleanPath:     filepath.Clean,
+			CleanPath:     issueopsinventoryoutbound.Canonical,
 			WorktreeState: git.worktreeState,
 			CurrentBranch: git.currentBranch,
 			Env:           os.Getenv,

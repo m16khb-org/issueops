@@ -33,6 +33,17 @@ func (service *Service) ListCycles(
 	rawRepo := repo
 	repo = service.paths.Normalize(repo)
 	normalizedRecordPaths := map[string]string{rawRepo: repo}
+	// Lexical identities that differ may still name one directory through a
+	// symlink (/tmp vs /private/tmp on macOS); resolve each once.
+	canonical := map[string]string{}
+	canonicalOf := func(path string) string {
+		resolved, ok := canonical[path]
+		if !ok {
+			resolved = service.paths.Canonical(path)
+			canonical[path] = resolved
+		}
+		return resolved
+	}
 	entries := []issueopsinventorycontract.ListEntry{}
 	scannedRecords := 0
 	diagnostics, err := service.repository.ScanEach(ctx, stateRoot, func(record issueopsinventorycontract.Record) error {
@@ -43,7 +54,7 @@ func (service *Service) ListCycles(
 				normalizedRepo = service.paths.Normalize(record.Repo)
 				normalizedRecordPaths[record.Repo] = normalizedRepo
 			}
-			if normalizedRepo != repo {
+			if normalizedRepo != repo && canonicalOf(normalizedRepo) != canonicalOf(repo) {
 				return nil
 			}
 		}

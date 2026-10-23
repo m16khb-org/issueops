@@ -43,6 +43,7 @@ func (clock fixedClock) Now() time.Time { return clock.now }
 type identityNormalizer struct{}
 
 func (identityNormalizer) Normalize(value string) string { return value }
+func (identityNormalizer) Canonical(value string) string { return value }
 
 func TestListHandlerDelegatesScanAndProjectsResult(t *testing.T) {
 	scanner := &fakeScanner{

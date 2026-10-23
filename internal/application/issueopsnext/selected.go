@@ -34,7 +34,7 @@ func (service *Service) nextSelected(
 		normalizedRepos[repo] = normalized
 		return normalized
 	}
-	if record.Invalid || normalize(record.Repo) != sourceRoot {
+	if record.Invalid || !sameDir(ports, normalize(record.Repo), sourceRoot) {
 		result.Selected = entryOf(issueopsinventorycontract.ListEntry{ID: id, Invalid: true})
 		result.Stage = issueopsnextcontract.Stage{Key: issueopsnextcontract.StageInvalid}
 		result.NextCommand = "issueops status --id " + id + " --json"
@@ -51,7 +51,7 @@ func (service *Service) nextSelected(
 			if input.RootConflictID != "" || candidate.ID == record.ID || candidate.Execution == nil {
 				return nil
 			}
-			if normalize(candidate.Repo) != sourceRoot {
+			if !sameDir(ports, normalize(candidate.Repo), sourceRoot) {
 				return nil
 			}
 			input.RootConflictID = rootConflict(ports, record, sourceRoot, []issueopsinventorycontract.ListEntry{{

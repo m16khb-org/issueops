@@ -369,6 +369,8 @@ func (normalizer *recordingNormalizer) Normalize(path string) string {
 	return normalizer.normalize(path, normalizer.calls[path])
 }
 
+func (normalizer *recordingNormalizer) Canonical(path string) string { return path }
+
 func (normalizer *recordingNormalizer) Calls(path string) int {
 	normalizer.mu.Lock()
 	defer normalizer.mu.Unlock()
@@ -401,6 +403,8 @@ func (normalizer *benchmarkNormalizer) Normalize(path string) string {
 	benchmarkDigestSink = digest
 	return "/source"
 }
+
+func (normalizer *benchmarkNormalizer) Canonical(path string) string { return path }
 
 type fakeRepository struct {
 	ids        []string
@@ -483,3 +487,5 @@ func (cleanPath) Normalize(path string) string {
 	}
 	return path
 }
+
+func (cleanPath) Canonical(path string) string { return path }

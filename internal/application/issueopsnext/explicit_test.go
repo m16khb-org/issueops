@@ -62,6 +62,8 @@ func TestNextSelectedRepositoryFence(t *testing.T) {
 		wantStage  string
 	}{
 		{"alias", "/alias", false, "issue"},
+		// /tmp vs /private/tmp on macOS: lexically different, same directory.
+		{"symlinked spelling", "/private/repo", false, "issue"},
 		{"foreign", "/foreign", false, "invalid"},
 		{"missing", "", true, "invalid"},
 		{"corrupt", "", true, "invalid"},
@@ -74,6 +76,7 @@ func TestNextSelectedRepositoryFence(t *testing.T) {
 				}
 				return path
 			}
+			ports.CleanPath = func(path string) string { return strings.TrimPrefix(filepath.Clean(path), "/private") }
 			ports.ReadSelected = func(context.Context, string, string) (issueopscontract.IssueOpsRecord, error) {
 				return issueopscontract.IssueOpsRecord{ID: "io-selected", Repo: scenario.repo, Invalid: scenario.invalid, Phase: issueopscontract.IssueOpsPhaseGrill}, nil
 			}

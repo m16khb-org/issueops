@@ -5614,8 +5614,11 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
+        "func Canonical",
+        "func CleanPath.Canonical",
         "func CleanPath.Normalize",
         "func SystemClock.Now",
+        "func lexical",
         "type CleanPath",
         "type SystemClock"
       ]
