@@ -1,6 +1,10 @@
 package issueopsstatus
 
-import issueopsstatuscontract "issueops/internal/contract/issueopsstatus"
+import (
+	"maps"
+
+	issueopsstatuscontract "issueops/internal/contract/issueopsstatus"
+)
 
 type Completion func(
 	issueopsstatuscontract.Record,
@@ -20,9 +24,7 @@ func NewProjector(completion Completion) Projector {
 // git) is not computed. Completion always sees the stored ledger.
 func (projector Projector) Project(record issueopsstatuscontract.Record) issueopsstatuscontract.Record {
 	ledger := make(issueopsstatuscontract.PhaseLedger, len(phases))
-	for phase, entry := range record.PhaseLedger {
-		ledger[phase] = entry
-	}
+	maps.Copy(ledger, record.PhaseLedger)
 	for _, phase := range phases {
 		if _, exists := ledger[phase]; !exists {
 			ledger[phase] = projector.derive(record, phase)
