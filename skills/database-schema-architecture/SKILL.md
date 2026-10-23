@@ -1,6 +1,6 @@
 ---
 name: database-schema-architecture
-description: "Use when designing or reviewing relational database schemas: primary and foreign keys, normalization, partitioning, index and covering-index choice, ORM-mapped entities and the SQL they emit, or slow queries, N+1 access and connection pools, judged against measured row counts and table/index resource usage. Not the IssueOps plan architecture review; that is architecture-review."
+description: "Use when designing or reviewing relational database schemas: keys, normalization, partitioning, index choice, ORM entities and the SQL they emit, slow queries, N+1 access, or connection pools. Not the IssueOps plan architecture review; that is architecture-review."
 ---
 
 # Database Schema Architecture

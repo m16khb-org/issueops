@@ -1261,7 +1261,7 @@
           "path": "$ISSUEOPS_ROOT/skills/architecture-review"
         },
         {
-          "description": "Use to verify through the Aside CLI that a browser feature, acceptance criterion, user journey, validation, state transition, persistence, authorization, or error recovery works as intended, with a reproducible evidence report. Triggers: functional QA, browser/acceptance test, regression check, 기능 QA, 요구사항 검증, 의도대로 동작하는지 확인.",
+          "description": "Use to verify through the Aside CLI that a browser feature, acceptance criterion, or user journey works as intended, with a reproducible evidence report. Triggers: functional QA, browser/acceptance test, regression check, 기능 QA, 요구사항 검증, 의도대로 동작하는지 확인.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "aside-functional-qa",
@@ -1296,7 +1296,7 @@
           "path": "$ISSUEOPS_ROOT/skills/code-quality-metrics"
         },
         {
-          "description": "Use when designing or reviewing relational database schemas: primary and foreign keys, normalization, partitioning, index and covering-index choice, ORM-mapped entities and the SQL they emit, or slow queries, N+1 access and connection pools, judged against measured row counts and table/index resource usage. Not the IssueOps plan architecture review; that is architecture-review.",
+          "description": "Use when designing or reviewing relational database schemas: keys, normalization, partitioning, index choice, ORM entities and the SQL they emit, slow queries, N+1 access, or connection pools. Not the IssueOps plan architecture review; that is architecture-review.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "database-schema-architecture",
@@ -1352,7 +1352,7 @@
           "path": "$ISSUEOPS_ROOT/skills/implementation-planning"
         },
         {
-          "description": "Use when the user wants to see or change which model and effort IssueOps uses per role (implement, child-implement, plan-review, diff-review, review-escalate, research, reader-check) for Claude Code or Codex, globally or for one repository. Triggers include io model, issueops model, 역할별 모델 설정, 리뷰 모델 바꿔줘, 서브에이전트 모델, global·local 모델 설정.",
+          "description": "Use when the user wants to see or change which model and effort IssueOps uses per role (implement, review, research, …) for Claude Code or Codex, globally or for one repository. Triggers include io model, issueops model, 역할별 모델 설정, 리뷰 모델 바꿔줘, 서브에이전트 모델, global·local 모델 설정.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "io-model",
@@ -1366,7 +1366,7 @@
           "path": "$ISSUEOPS_ROOT/skills/io-update"
         },
         {
-          "description": "Route an issue-driven work cycle across its ten user-facing stages. Run \"issueops next\" to decide which stage a cycle is in, hand the work to that stage's skill, and hold the invariants every stage shares. Use when the user asks to start, resume, or continue an issue cycle, when the current stage is unclear, or when they say \"이슈옵스\", \"이슈 작업 시작\", \"이어서 진행\".",
+          "description": "Route an issue-driven work cycle to its current stage skill with \"issueops next\" and hold the invariants every stage shares. Use when the user asks to start, resume, or continue an issue cycle, when the current stage is unclear, or when they say \"이슈옵스\", \"이슈 작업 시작\", \"이어서 진행\".",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "issueops",
@@ -1436,7 +1436,7 @@
           "path": "$ISSUEOPS_ROOT/skills/issueops-merge"
         },
         {
-          "description": "Prepare the plan, reviews, and canonical worktree for an IssueOps cycle, then hand off through Herdr when available, otherwise continue in the current session. Use when \"issueops next\" reports plan.architecture, plan.write, plan.review, or plan.handoff, or when the user says \"아키텍처 정해줘\", \"계획 세워줘\", \"계획 검토해줘\", \"구현 인계\".",
+          "description": "Prepare the plan, reviews, and canonical worktree for an IssueOps cycle and hand off implementation. Use when \"issueops next\" reports plan.architecture, plan.write, plan.review, or plan.handoff, or when the user says \"아키텍처 정해줘\", \"계획 세워줘\", \"계획 검토해줘\", \"구현 인계\".",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "issueops-plan",
@@ -5742,7 +5742,7 @@
                 "path": "$ISSUEOPS_ROOT/skills/architecture-review"
               },
               {
-                "description": "Use to verify through the Aside CLI that a browser feature, acceptance criterion, user journey, validation, state transition, persistence, authorization, or error recovery works as intended, with a reproducible evidence report. Triggers: functional QA, browser/acceptance test, regression check, 기능 QA, 요구사항 검증, 의도대로 동작하는지 확인.",
+                "description": "Use to verify through the Aside CLI that a browser feature, acceptance criterion, or user journey works as intended, with a reproducible evidence report. Triggers: functional QA, browser/acceptance test, regression check, 기능 QA, 요구사항 검증, 의도대로 동작하는지 확인.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "aside-functional-qa",
@@ -5777,7 +5777,7 @@
                 "path": "$ISSUEOPS_ROOT/skills/code-quality-metrics"
               },
               {
-                "description": "Use when designing or reviewing relational database schemas: primary and foreign keys, normalization, partitioning, index and covering-index choice, ORM-mapped entities and the SQL they emit, or slow queries, N+1 access and connection pools, judged against measured row counts and table/index resource usage. Not the IssueOps plan architecture review; that is architecture-review.",
+                "description": "Use when designing or reviewing relational database schemas: keys, normalization, partitioning, index choice, ORM entities and the SQL they emit, slow queries, N+1 access, or connection pools. Not the IssueOps plan architecture review; that is architecture-review.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "database-schema-architecture",
@@ -5833,7 +5833,7 @@
                 "path": "$ISSUEOPS_ROOT/skills/implementation-planning"
               },
               {
-                "description": "Use when the user wants to see or change which model and effort IssueOps uses per role (implement, child-implement, plan-review, diff-review, review-escalate, research, reader-check) for Claude Code or Codex, globally or for one repository. Triggers include io model, issueops model, 역할별 모델 설정, 리뷰 모델 바꿔줘, 서브에이전트 모델, global·local 모델 설정.",
+                "description": "Use when the user wants to see or change which model and effort IssueOps uses per role (implement, review, research, …) for Claude Code or Codex, globally or for one repository. Triggers include io model, issueops model, 역할별 모델 설정, 리뷰 모델 바꿔줘, 서브에이전트 모델, global·local 모델 설정.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "io-model",
@@ -5847,7 +5847,7 @@
                 "path": "$ISSUEOPS_ROOT/skills/io-update"
               },
               {
-                "description": "Route an issue-driven work cycle across its ten user-facing stages. Run \"issueops next\" to decide which stage a cycle is in, hand the work to that stage's skill, and hold the invariants every stage shares. Use when the user asks to start, resume, or continue an issue cycle, when the current stage is unclear, or when they say \"이슈옵스\", \"이슈 작업 시작\", \"이어서 진행\".",
+                "description": "Route an issue-driven work cycle to its current stage skill with \"issueops next\" and hold the invariants every stage shares. Use when the user asks to start, resume, or continue an issue cycle, when the current stage is unclear, or when they say \"이슈옵스\", \"이슈 작업 시작\", \"이어서 진행\".",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "issueops",
@@ -5917,7 +5917,7 @@
                 "path": "$ISSUEOPS_ROOT/skills/issueops-merge"
               },
               {
-                "description": "Prepare the plan, reviews, and canonical worktree for an IssueOps cycle, then hand off through Herdr when available, otherwise continue in the current session. Use when \"issueops next\" reports plan.architecture, plan.write, plan.review, or plan.handoff, or when the user says \"아키텍처 정해줘\", \"계획 세워줘\", \"계획 검토해줘\", \"구현 인계\".",
+                "description": "Prepare the plan, reviews, and canonical worktree for an IssueOps cycle and hand off implementation. Use when \"issueops next\" reports plan.architecture, plan.write, plan.review, or plan.handoff, or when the user says \"아키텍처 정해줘\", \"계획 세워줘\", \"계획 검토해줘\", \"구현 인계\".",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "issueops-plan",

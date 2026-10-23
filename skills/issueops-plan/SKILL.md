@@ -1,6 +1,6 @@
 ---
 name: issueops-plan
-description: Prepare the plan, reviews, and canonical worktree for an IssueOps cycle, then hand off through Herdr when available, otherwise continue in the current session. Use when "issueops next" reports plan.architecture, plan.write, plan.review, or plan.handoff, or when the user says "아키텍처 정해줘", "계획 세워줘", "계획 검토해줘", "구현 인계".
+description: Prepare the plan, reviews, and canonical worktree for an IssueOps cycle and hand off implementation. Use when "issueops next" reports plan.architecture, plan.write, plan.review, or plan.handoff, or when the user says "아키텍처 정해줘", "계획 세워줘", "계획 검토해줘", "구현 인계".
 ---
 
 # IssueOps Plan

@@ -1,6 +1,6 @@
 ---
 name: io-model
-description: "Use when the user wants to see or change which model and effort IssueOps uses per role (implement, child-implement, plan-review, diff-review, review-escalate, research, reader-check) for Claude Code or Codex, globally or for one repository. Triggers include io model, issueops model, 역할별 모델 설정, 리뷰 모델 바꿔줘, 서브에이전트 모델, global·local 모델 설정."
+description: "Use when the user wants to see or change which model and effort IssueOps uses per role (implement, review, research, …) for Claude Code or Codex, globally or for one repository. Triggers include io model, issueops model, 역할별 모델 설정, 리뷰 모델 바꿔줘, 서브에이전트 모델, global·local 모델 설정."
 ---
 
 # IO Model
