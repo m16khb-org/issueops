@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
@@ -28,13 +29,13 @@ func toolRefusal(result *mcp.CallToolResult, err error) (string, bool) {
 	if result == nil || !result.IsError {
 		return "", false
 	}
-	text := ""
+	var text strings.Builder
 	for _, item := range result.Content {
 		if content, ok := item.(*mcp.TextContent); ok {
-			text += content.Text
+			text.WriteString(content.Text)
 		}
 	}
-	return text, true
+	return text.String(), true
 }
 
 // envelopeRefusal is toolRefusal for callSDKTool's envelope.
@@ -46,13 +47,13 @@ func envelopeRefusal(envelope any, err *jsonrpc.Error) (string, bool) {
 	if isError, _ := result["isError"].(bool); !isError {
 		return "", false
 	}
-	text := ""
+	var text strings.Builder
 	content, _ := result["content"].([]map[string]any)
 	for _, item := range content {
 		value, _ := item["text"].(string)
-		text += value
+		text.WriteString(value)
 	}
-	return text, true
+	return text.String(), true
 }
 
 func serveMCPStreamContext(ctx context.Context, input io.Reader, output io.Writer, diagnostics io.Writer) error {
