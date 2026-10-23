@@ -10012,6 +10012,7 @@
       "task": "T20",
       "symbols": [
         "func Route",
+        "func absentRoutedDocs",
         "func readModules",
         "func readRecords",
         "type RouteEffects"

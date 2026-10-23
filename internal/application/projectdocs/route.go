@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"path"
 	"slices"
+	"strings"
 	"time"
 
 	projectdocscontract "issueops/internal/contract/projectdocs"
@@ -50,6 +51,8 @@ func Route(root, task string, effects RouteEffects) projectdocscontract.ProjectD
 	warnings := []string{}
 	if !effects.Exists(effects.Path(root, projectdocdomain.ProjectDocsDir)) {
 		warnings = append(warnings, "project docs are missing; run issueops project bootstrap to create AGENTS.md routing, .issueops docs, and repo metadata")
+	} else if absent := absentRoutedDocs(entries); len(absent) > 0 {
+		warnings = append(warnings, "routed docs absent from this repo (exists: false; skip them, issueops project bootstrap creates them): "+strings.Join(absent, ", "))
 	}
 	modules, moduleWarnings := readModules(root, families, effects)
 	warnings = append(warnings, moduleWarnings...)
@@ -65,6 +68,16 @@ func Route(root, task string, effects RouteEffects) projectdocscontract.ProjectD
 		OK: true, Kind: "project_docs_route", RepoRoot: root, Task: normalizedTask,
 		GeneratedAt: effects.Now().UTC().Format(time.RFC3339), Docs: entries, Warnings: warnings,
 	}
+}
+
+func absentRoutedDocs(entries []projectdocscontract.ProjectDocRouteEntry) []string {
+	var absent []string
+	for _, entry := range entries {
+		if !entry.Exists {
+			absent = append(absent, entry.RelPath)
+		}
+	}
+	return absent
 }
 
 // readModules loads the living modules (not dated records, not the overview)

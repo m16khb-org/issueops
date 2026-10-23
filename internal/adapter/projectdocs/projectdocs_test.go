@@ -54,7 +54,9 @@ func TestAnalyzeRenderRouteAndProfile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RouteProjectDocs returned error: %v", err)
 	}
-	if route.Task != "openapi controller dto test" || len(route.Docs) == 0 || len(route.Warnings) != 0 {
+	// The fixture renders docs in memory only, so the routed docs are absent
+	// on disk and that notice is the one warning.
+	if route.Task != "openapi controller dto test" || len(route.Docs) == 0 || len(route.Warnings) != 1 || !strings.HasPrefix(route.Warnings[0], "routed docs absent") {
 		t.Fatalf("unexpected route result: %#v", route)
 	}
 	if !routeContains(route.Docs, filepath.ToSlash(filepath.Join(projectdoc.ProjectDocsDir, "OPEN_API_SPEC.md"))) {

@@ -195,7 +195,7 @@ func TestRouteWarnsWhenRecordsCannotBeListedOrRead(t *testing.T) {
 		t.Fatalf("fixture record must match the task when readable: %+v", routed.Docs)
 	}
 	result = Route("/repo", "docker image build", file)
-	if len(result.Warnings) != 1 || result.Warnings[0] != "could not read record .issueops/adr/2026-09-01-docker.md: "+errEffect.Error() {
+	if warnings := readWarnings(result.Warnings); len(warnings) != 1 || warnings[0] != "could not read record .issueops/adr/2026-09-01-docker.md: "+errEffect.Error() {
 		t.Fatalf("warnings=%v", result.Warnings)
 	}
 	for _, doc := range result.Docs {

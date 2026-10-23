@@ -64,7 +64,35 @@ func TestRouteReturnsRecordsSharingTermsWithKoreanTask(t *testing.T) {
 			records = append(records, doc.RelPath)
 		}
 	}
-	if len(records) != 1 || records[0] != ".issueops/cautions/2026-09-07-disk.md" || len(result.Warnings) != 0 {
+	if len(records) != 1 || records[0] != ".issueops/cautions/2026-09-07-disk.md" || len(readWarnings(result.Warnings)) != 0 {
 		t.Fatalf("records=%v warnings=%v", records, result.Warnings)
+	}
+}
+
+// readWarnings drops the absent-routed-docs notice, which fixtures without
+// index docs always carry, to leave the warnings a test is about.
+func readWarnings(warnings []string) []string {
+	var kept []string
+	for _, warning := range warnings {
+		if !strings.HasPrefix(warning, "routed docs absent") {
+			kept = append(kept, warning)
+		}
+	}
+	return kept
+}
+
+// A routed doc the repo does not have is named in a warning, so an agent
+// skips it instead of trying to read it; present docs are not.
+func TestRouteWarnsAboutRoutedDocsTheRepoLacks(t *testing.T) {
+	fake := &routeEffects{existing: map[string]bool{"/repo/.issueops": true, "/repo/AGENTS.md": true}}
+	result := Route("/repo", "cleanup the merged branch", fake)
+	var absent []string
+	for _, doc := range result.Docs {
+		if !doc.Exists {
+			absent = append(absent, doc.RelPath)
+		}
+	}
+	if len(absent) == 0 || len(result.Warnings) != 1 || !strings.HasSuffix(result.Warnings[0], ": "+strings.Join(absent, ", ")) || strings.Contains(result.Warnings[0], "AGENTS.md") {
+		t.Fatalf("absent=%v warnings=%v", absent, result.Warnings)
 	}
 }
