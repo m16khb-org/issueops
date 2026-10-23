@@ -1,14 +1,49 @@
 package docs
 
 import (
+	"fmt"
 	docsapp "issueops/internal/application/docs"
 	docscontract "issueops/internal/contract/docs"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
+
+func TestReadHeadingsKeepsTitleOutOfSectionList(t *testing.T) {
+	dir := t.TempDir()
+	write := func(name, body string) string {
+		path := filepath.Join(dir, name)
+		if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return path
+	}
+	if title, headings := ReadHeadings(write("h1.md", "## Before\n# Title\n## A\n### B\n")); title != "Title" || !reflect.DeepEqual(headings, []string{"Before", "A", "B"}) {
+		t.Fatalf("h1: %q %v", title, headings)
+	}
+	if title, headings := ReadHeadings(write("noh1.md", "## First\n## Second\n")); title != "First" || !reflect.DeepEqual(headings, []string{"Second"}) {
+		t.Fatalf("no h1: %q %v", title, headings)
+	}
+	var many strings.Builder
+	many.WriteString("# T\n")
+	for i := range 25 {
+		fmt.Fprintf(&many, "## S%d\n", i)
+	}
+	if title, headings := ReadHeadings(write("many.md", many.String())); title != "T" || len(headings) != 20 || headings[19] != "S19" {
+		t.Fatalf("cap: %q %d %v", title, len(headings), headings)
+	}
+	many.Reset()
+	for i := range 25 {
+		fmt.Fprintf(&many, "## S%d\n", i)
+	}
+	if title, headings := ReadHeadings(write("many-noh1.md", many.String())); title != "S0" || len(headings) != 20 || headings[0] != "S1" {
+		t.Fatalf("cap without h1: %q %d %v", title, len(headings), headings)
+	}
+}
 
 // In a real git repo, an UNTRACKED .md (e.g. a session research artifact) must
 // be excluded from the hermetic docs index while TRACKED docs — including ones

@@ -75,6 +75,9 @@ func (Observer) ReadDocument(root, path string) (docscontract.DocIndexInfo, bool
 	return docscontract.DocIndexInfo{RelPath: filepath.ToSlash(rel), Title: title, Headings: headings, Bytes: info.Size()}, true
 }
 
+// ReadHeadings returns the document title (the first level-1 heading, else
+// the first heading) and up to 20 section headings after it; the title is not
+// repeated in the list.
 func ReadHeadings(path string) (string, []string) {
 	b, err := os.ReadFile(path)
 	if err != nil {
@@ -89,16 +92,17 @@ func ReadHeadings(path string) (string, []string) {
 		}
 		if title == "" && level == 1 {
 			title = text
+			continue
 		}
 		headings = append(headings, text)
-		if len(headings) >= 20 {
+		if len(headings) > 20 {
 			break
 		}
 	}
 	if title == "" && len(headings) > 0 {
-		title = headings[0]
+		title, headings = headings[0], headings[1:]
 	}
-	return title, headings
+	return title, headings[:min(len(headings), 20)]
 }
 
 // parseHeadingLine parses an ATX heading ("# " to "###### ") from a trimmed line.
