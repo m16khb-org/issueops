@@ -95,3 +95,14 @@ func TestLintStaticWarnsOnRegexLookingLiteralExpect(t *testing.T) {
 		}
 	}
 }
+
+// `sh script.sh` (the form project docs often give) is denied; the message
+// names the form that runs. Other denials carry no such hint.
+func TestDeniedMessageNamesTheShellInterpreterRemedy(t *testing.T) {
+	if got := DeniedMessage([]string{"command_not_in_read_only_allowlist", "shell_interpreter_not_allowed"}); !strings.Contains(got, "run an executable script directly") {
+		t.Fatalf("shell denial: %q", got)
+	}
+	if got := DeniedMessage([]string{"network_not_allowed"}); got != "check denied by policy: network_not_allowed" {
+		t.Fatalf("other denial: %q", got)
+	}
+}

@@ -91,7 +91,7 @@ func AddFileResult(result model.CheckResult, file model.FileResult, warnings []s
 	return result
 }
 func DeniedCheck(auditLogID string, denyReasons []string) CheckOutcome {
-	return CheckOutcome{PolicyDenied: true, AuditLogID: auditLogID, CheckError: "check denied by policy: " + strings.Join(denyReasons, "; ")}
+	return CheckOutcome{PolicyDenied: true, AuditLogID: auditLogID, CheckError: DeniedMessage(denyReasons)}
 }
 func CompletedCheck(gate Gate, stdout, stderr string, exitCode int, timedOut bool, auditLogID string) CheckOutcome {
 	decision := DecideCheck(gate.Expect, stdout, stderr, exitCode, timedOut)

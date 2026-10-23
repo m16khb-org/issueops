@@ -12627,6 +12627,7 @@
       "task": "T10",
       "symbols": [
         "func DeniedLint",
+        "func DeniedMessage",
         "func LedgerLintCandidates",
         "func LintSpecCandidate",
         "func LintStatic",

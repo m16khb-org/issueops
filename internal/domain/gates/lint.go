@@ -3,6 +3,7 @@ package gates
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -148,8 +149,19 @@ func literalLooksLikeRegex(expect string) bool {
 // DeniedLint는 command policy가 거부한 CHECK를 문제로 기록한다.
 func DeniedLint(result model.LintGate, denyReasons []string) model.LintGate {
 	result.PolicyDenied = true
-	result.Problems = append(result.Problems, "check denied by policy: "+strings.Join(denyReasons, "; "))
+	result.Problems = append(result.Problems, DeniedMessage(denyReasons))
 	return result
+}
+
+// DeniedMessage names the policy denial, with the remedy for a shell
+// interpreter: CHECK runs one argv without a shell, so `sh script.sh`, the
+// form project docs often give, is refused while the script itself runs.
+func DeniedMessage(denyReasons []string) string {
+	message := "check denied by policy: " + strings.Join(denyReasons, "; ")
+	if slices.Contains(denyReasons, "shell_interpreter_not_allowed") {
+		message += " (CHECK runs one argv without a shell; run an executable script directly, e.g. ./script.sh, instead of sh/bash script.sh)"
+	}
+	return message
 }
 
 // SummarizeLint는 게이트별 결과를 응답으로 묶는다. unparsed는 읽지 못한 계획 줄 위치다.
