@@ -15,47 +15,56 @@ func NewProjector(completion Completion) Projector {
 	return Projector{completion: completion}
 }
 
+// Project fills each phase the stored ledger lacks with a derived entry. A
+// recorded phase is never re-derived, so its completion (which may observe
+// git) is not computed. Completion always sees the stored ledger.
 func (projector Projector) Project(record issueopsstatuscontract.Record) issueopsstatuscontract.Record {
-	derived := projector.Derive(record)
-	if len(record.PhaseLedger) == 0 {
-		record.PhaseLedger = derived
-		return record
+	ledger := make(issueopsstatuscontract.PhaseLedger, len(phases))
+	for phase, entry := range record.PhaseLedger {
+		ledger[phase] = entry
 	}
-	for phase, entry := range derived {
-		if _, exists := record.PhaseLedger[phase]; !exists {
-			record.PhaseLedger[phase] = entry
+	for _, phase := range phases {
+		if _, exists := ledger[phase]; !exists {
+			ledger[phase] = projector.derive(record, phase)
 		}
 	}
+	record.PhaseLedger = ledger
 	return record
 }
 
 func (projector Projector) Derive(record issueopsstatuscontract.Record) issueopsstatuscontract.PhaseLedger {
 	ledger := issueopsstatuscontract.PhaseLedger{}
-	for _, phase := range [...]issueopsstatuscontract.Phase{
-		issueopsstatuscontract.PhaseProblem,
-		issueopsstatuscontract.PhaseGrill,
-		issueopsstatuscontract.PhasePlan,
-		issueopsstatuscontract.PhaseCompatibilityReview,
-		issueopsstatuscontract.PhaseImplement,
-		issueopsstatuscontract.PhaseAISlopClean,
-		issueopsstatuscontract.PhaseFeedback,
-		issueopsstatuscontract.PhasePR,
-		issueopsstatuscontract.PhaseDone,
-	} {
-		entry := issueopsstatuscontract.PhaseLedgerEntry{
-			Phase: phase,
-			Notes: []string{"derived"},
-		}
-		completion := projector.completion(record, phase)
-		if completion.Ready {
-			entry.CompletedAt = ""
-			entry.Artifacts = ArtifactKeys(phase)
-		} else {
-			entry.Missing = completion.Missing
-		}
-		ledger[phase] = entry
+	for _, phase := range phases {
+		ledger[phase] = projector.derive(record, phase)
 	}
 	return ledger
+}
+
+var phases = [...]issueopsstatuscontract.Phase{
+	issueopsstatuscontract.PhaseProblem,
+	issueopsstatuscontract.PhaseGrill,
+	issueopsstatuscontract.PhasePlan,
+	issueopsstatuscontract.PhaseCompatibilityReview,
+	issueopsstatuscontract.PhaseImplement,
+	issueopsstatuscontract.PhaseAISlopClean,
+	issueopsstatuscontract.PhaseFeedback,
+	issueopsstatuscontract.PhasePR,
+	issueopsstatuscontract.PhaseDone,
+}
+
+func (projector Projector) derive(record issueopsstatuscontract.Record, phase issueopsstatuscontract.Phase) issueopsstatuscontract.PhaseLedgerEntry {
+	entry := issueopsstatuscontract.PhaseLedgerEntry{
+		Phase: phase,
+		Notes: []string{"derived"},
+	}
+	completion := projector.completion(record, phase)
+	if completion.Ready {
+		entry.CompletedAt = ""
+		entry.Artifacts = ArtifactKeys(phase)
+	} else {
+		entry.Missing = completion.Missing
+	}
+	return entry
 }
 
 func ArtifactKeys(phase issueopsstatuscontract.Phase) []string {

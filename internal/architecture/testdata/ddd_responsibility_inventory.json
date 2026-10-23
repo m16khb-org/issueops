@@ -14838,6 +14838,7 @@
         "func NewProjector",
         "func Projector.Derive",
         "func Projector.Project",
+        "func Projector.derive",
         "type Completion",
         "type Projector"
       ]

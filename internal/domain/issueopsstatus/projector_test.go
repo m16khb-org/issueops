@@ -34,10 +34,12 @@ func TestProjectorDerivesDeterministicLedger(t *testing.T) {
 }
 
 func TestProjectorBackfillsWithoutReplacingPersistedEntries(t *testing.T) {
+	var asked []issueopscontract.IssueOpsPhase
 	projector := NewProjector(func(
-		issueopscontract.IssueOpsRecord,
-		issueopscontract.IssueOpsPhase,
+		_ issueopscontract.IssueOpsRecord,
+		phase issueopscontract.IssueOpsPhase,
 	) issueopscontract.IssueOpsReadiness {
+		asked = append(asked, phase)
 		return issueopscontract.IssueOpsReadiness{Ready: true}
 	})
 	record := issueopscontract.IssueOpsRecord{
@@ -56,6 +58,13 @@ func TestProjectorBackfillsWithoutReplacingPersistedEntries(t *testing.T) {
 	}
 	if got := projected.PhaseLedger[issueopscontract.IssueOpsPhaseProblem].CompletedAt; got != "2026-06-29T00:01:00Z" {
 		t.Fatalf("persisted entry was replaced: %q", got)
+	}
+	// Completion observes git; a recorded phase must not pay for it.
+	if slices.Contains(asked, issueopscontract.IssueOpsPhaseProblem) || len(asked) != len(issueopscontract.IssueOpsPhases)-1 {
+		t.Fatalf("completion asked for %v, want every phase except the recorded problem", asked)
+	}
+	if _, mutated := record.PhaseLedger[issueopscontract.IssueOpsPhasePlan]; mutated {
+		t.Fatal("projection mutated the caller's stored ledger")
 	}
 }
 
