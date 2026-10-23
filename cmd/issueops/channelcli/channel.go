@@ -7,11 +7,13 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"issueops/cmd/issueops/jsonout"
-	channelcontract "issueops/internal/contract/channel"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"issueops/cmd/issueops/cliflag"
+	"issueops/cmd/issueops/jsonout"
+	channelcontract "issueops/internal/contract/channel"
 )
 
 // Dependencies는 channel CLI가 필요한 연산을 함수로 받는다.
@@ -62,7 +64,7 @@ func runSend(deps Dependencies, args []string) error {
 	from := fs.String("from", "", "sending session identity, e.g. server|front|codex:abc")
 	message := fs.String("message", "", "message body")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	result, err := deps.Send(channelcontract.SendRequest{Channel: *channelName, From: *from, Body: *message, Origin: channelcontract.OriginCLI})
@@ -84,7 +86,7 @@ func runRecv(deps Dependencies, args []string) error {
 	timeout := fs.Int("timeout-seconds", channelcontract.DefaultWaitTimeoutSeconds, "wait timeout in seconds (with --wait)")
 	limit := fs.Int("limit", 0, "maximum messages to return (0 = no limit)")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

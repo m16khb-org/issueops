@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 
+	"issueops/cmd/issueops/cliflag"
 	"issueops/cmd/issueops/jsonout"
 )
 
@@ -14,7 +15,7 @@ func (command Command) RunEnqueue(args []string) error {
 	kind := fs.String("kind", "", "job kind")
 	payload := fs.String("payload", "", "redacted job payload")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	job, err := command.Service.Enqueue(context.Background(), *kind, *payload)
@@ -31,7 +32,7 @@ func (command Command) RunStatus(args []string) error {
 	fs := flag.NewFlagSet("worker status", flag.ContinueOnError)
 	id := fs.String("id", "", "job id")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	job, err := command.Service.Read(*id)
@@ -47,7 +48,7 @@ func (command Command) RunStatus(args []string) error {
 func (command Command) RunList(args []string) error {
 	fs := flag.NewFlagSet("worker list", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	result, err := command.Service.List()
@@ -65,7 +66,7 @@ func (command Command) RunList(args []string) error {
 func (command Command) RunCleanupStuck(args []string) error {
 	fs := flag.NewFlagSet("worker cleanup-stuck", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	result, err := command.Service.DetectStuck(context.Background())
@@ -84,7 +85,7 @@ func (command Command) RunCancel(args []string) error {
 	fs := flag.NewFlagSet("worker cancel", flag.ContinueOnError)
 	id := fs.String("id", "", "job id")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	job, err := command.Service.Cancel(context.Background(), *id)

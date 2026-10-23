@@ -3,6 +3,8 @@ package statuscli
 import (
 	"flag"
 	"fmt"
+
+	"issueops/cmd/issueops/cliflag"
 	statusapp "issueops/internal/application/status"
 )
 
@@ -12,7 +14,7 @@ func (command Command) Run(args []string) error {
 	fs := flag.NewFlagSet("status", flag.ContinueOnError)
 	repo := fs.String("repo", ".", "target repository path")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	if fs.NArg() > 0 {

@@ -5,8 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"issueops/cmd/issueops/jsonout"
 	"os"
+
+	"issueops/cmd/issueops/cliflag"
+	"issueops/cmd/issueops/jsonout"
 
 	"issueops/internal/contract/mcpservice"
 	"issueops/internal/port"
@@ -35,7 +37,7 @@ func (command mcpServiceCommand) Run(args []string) error {
 	fs := flag.NewFlagSet("issueops mcp service "+action, flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args[1:]); err != nil {
+	if err := cliflag.Parse(fs, args[1:]); err != nil {
 		return err
 	}
 	if fs.NArg() > 0 {

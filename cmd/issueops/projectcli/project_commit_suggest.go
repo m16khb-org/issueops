@@ -3,9 +3,11 @@ package projectcli
 import (
 	"flag"
 	"fmt"
+	"os"
+
+	"issueops/cmd/issueops/cliflag"
 	app "issueops/internal/application/commitsuggest"
 	commitsuggestcontract "issueops/internal/contract/commitsuggest"
-	"os"
 )
 
 func runProjectCommitSuggest(service app.Service, args []string) error {
@@ -14,7 +16,7 @@ func runProjectCommitSuggest(service app.Service, args []string) error {
 	staged := fs.Bool("staged", false, "suggest commit based on staged changes (git diff --cached)")
 	jsonOut := fs.Bool("json", false, "print JSON")
 
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 

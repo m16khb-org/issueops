@@ -3,6 +3,8 @@ package basiccli
 import (
 	"flag"
 	"fmt"
+
+	"issueops/cmd/issueops/cliflag"
 )
 
 func (command Command) RunDocs(args []string) error {
@@ -12,7 +14,7 @@ func (command Command) RunDocs(args []string) error {
 	fs := flag.NewFlagSet("docs", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", false, "print JSON")
 	all := fs.Bool("all", false, "also list dated history records (.issueops/issues, research, plans, archive, verified-execution)")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	if command.DocsIndex == nil {

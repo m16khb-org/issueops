@@ -12,6 +12,7 @@ import (
 	"sort"
 	"time"
 
+	"issueops/cmd/issueops/cliflag"
 	"issueops/cmd/issueops/jsonout"
 	webfetchcontract "issueops/internal/contract/webfetch"
 )
@@ -113,7 +114,7 @@ func runBenchmark(args []string, deps Deps) error {
 // parseFlags keeps parse errors quiet (the root reports them once) but prints
 // the flag list on --help so `web-fetch fetch --help` answers on stdout.
 func parseFlags(fs *flag.FlagSet, args []string, deps Deps) error {
-	err := fs.Parse(args)
+	err := cliflag.Parse(fs, args)
 	if errors.Is(err, flag.ErrHelp) {
 		fs.SetOutput(deps.Stdout)
 		fs.Usage()

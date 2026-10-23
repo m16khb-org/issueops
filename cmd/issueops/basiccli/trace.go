@@ -6,10 +6,12 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"os"
+
+	"issueops/cmd/issueops/cliflag"
 	"issueops/cmd/issueops/jsonout"
 	issueopscontract "issueops/internal/contract/issueops"
 	tracecontract "issueops/internal/contract/trace"
-	"os"
 )
 
 func (command Command) RunTrace(args []string) error {
@@ -42,7 +44,7 @@ func (command Command) runTraceHandoffDeliveryObserve(args []string) error {
 	fs := flag.NewFlagSet("trace handoff-delivery", flag.ContinueOnError)
 	input := fs.String("input", "", "delivery observation JSON path or '-' for stdin")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	if *input == "" && fs.NArg() > 0 {
@@ -96,7 +98,7 @@ func (command Command) runTraceAnalyze(args []string) error {
 	input := fs.String("input", "", "trace input path, '-' for stdin, or issueops state key (host formats accept only a file or '-')")
 	inputFormat := fs.String("input-format", tracecontract.InputFormatIssueOps, "input format: issueops, claude-stream, codex-exec, omo-json, omp-json or opencode-json")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	if *input == "" && fs.NArg() > 0 {

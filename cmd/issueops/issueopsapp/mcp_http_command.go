@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"issueops/cmd/issueops/cliflag"
 	"issueops/cmd/issueops/mcpcli"
 	mcpserviceadapter "issueops/internal/adapter/mcpservice"
 	statestore "issueops/internal/adapter/outbound/state"
@@ -24,7 +25,7 @@ func runMCPHTTP(args []string) error {
 	fs.SetOutput(os.Stderr)
 	httpMode := fs.Bool("http", false, "serve the shared Streamable HTTP endpoint")
 	address := fs.String("addr", mcpcli.DefaultHTTPAddress, "loopback host:port to listen on")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	if !*httpMode {

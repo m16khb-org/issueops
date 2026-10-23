@@ -4,10 +4,12 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"os"
+
+	"issueops/cmd/issueops/cliflag"
 	application "issueops/internal/application/quality"
 	contract "issueops/internal/contract/quality"
 	quality "issueops/internal/domain/quality"
-	"os"
 )
 
 var ErrQualityGateBlocked = errors.New("quality gate blocked")
@@ -36,7 +38,7 @@ func RunInspect(args []string, deps Deps) error {
 	jsonOut := fs.Bool("json", false, "print JSON")
 	saveBaseline := fs.Bool("save-baseline", false, "persist the current code-SNR as the trend baseline in issueops state")
 	trend := fs.Bool("trend", false, "report the code-SNR delta versus the saved baseline")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	if fs.NArg() > 0 {

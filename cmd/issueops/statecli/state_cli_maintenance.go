@@ -4,6 +4,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
+
+	"issueops/cmd/issueops/cliflag"
 )
 
 func runStatePrune(deps Dependencies, args []string) error {
@@ -11,7 +13,7 @@ func runStatePrune(deps Dependencies, args []string) error {
 	maxAge := fs.Duration("max-age", 0, "prune records older than this duration, e.g. 720h")
 	confirm := fs.Bool("confirm", false, "delete matching records; omitted means dry-run")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	result, err := deps.Prune(context.Background(), *maxAge, *confirm)
@@ -35,7 +37,7 @@ func runStatePrune(deps Dependencies, args []string) error {
 func runStateDoctor(deps Dependencies, args []string) error {
 	fs := flag.NewFlagSet("state doctor", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	result, err := deps.Doctor()
@@ -59,7 +61,7 @@ func runStateDoctor(deps Dependencies, args []string) error {
 func runStateMaintain(deps Dependencies, args []string) error {
 	fs := flag.NewFlagSet("state maintain", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	result, err := deps.Maintain()

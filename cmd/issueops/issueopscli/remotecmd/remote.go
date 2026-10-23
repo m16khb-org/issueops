@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	"issueops/cmd/issueops/cliflag"
 	"issueops/cmd/issueops/issueopscli/actorflags"
 	"issueops/cmd/issueops/jsonout"
 	issueopscontract "issueops/internal/contract/issueops"
@@ -281,7 +282,7 @@ func (deps Deps) verifyLive(ctx context.Context, req issueopscontract.IssueOpsRe
 }
 
 func parseFlags(fs *flag.FlagSet, args []string) (bool, error) {
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return true, nil
 		}

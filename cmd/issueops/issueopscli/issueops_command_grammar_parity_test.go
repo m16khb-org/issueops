@@ -73,11 +73,26 @@ func TestIssueOpsCommandGrammarAgreesAcrossCatalogFlagSetAndSpec(t *testing.T) {
 
 var flagSetDefaultsLine = regexp.MustCompile(`(?m)^\s+-{1,2}([a-z0-9][a-z0-9-]*)`)
 
-// flagSetFlagsForCommand는 알 수 없는 flag로 handler를 호출해 FlagSet이 출력하는
-// 기본값 목록을 읽는다. -h를 먼저 가로채 고유 usage만 출력하는 handler도 알 수 없는
-// flag에서는 FlagSet 파싱 오류와 함께 전체 flag를 출력한다. 파싱이 실패하므로
-// handler는 state나 원격에 닿지 않는다.
+// flagSetFlagsForCommand는 handler를 --help로 호출해 FlagSet이 stdout에 출력하는
+// 기본값 목록을 읽는다. 파싱이 ErrHelp로 끝나므로 handler는 state나 원격에 닿지
+// 않는다. 첫 인자 -h를 가로채 고유 usage만 출력하는 handler(architecture review,
+// regress, feedback resolve)는 --json을 앞에 둬 FlagSet까지 보낸다. 알 수 없는
+// flag는 한 줄 오류만 내고 목록을 출력하지 않는다(cliflag).
 func flagSetFlagsForCommand(t *testing.T, path []string) map[string]bool {
+	t.Helper()
+	for _, probe := range [][]string{{"--help"}, {"--json", "--help"}} {
+		flags := map[string]bool{}
+		for _, match := range flagSetDefaultsLine.FindAllStringSubmatch(captureCombinedOutput(t, append(append([]string{}, path...), probe...)), -1) {
+			flags["--"+match[1]] = true
+		}
+		if len(flags) > 0 {
+			return flags
+		}
+	}
+	return map[string]bool{}
+}
+
+func captureCombinedOutput(t *testing.T, args []string) string {
 	t.Helper()
 	oldStdout, oldStderr := os.Stdout, os.Stderr
 	reader, writer, err := os.Pipe()
@@ -90,14 +105,10 @@ func flagSetFlagsForCommand(t *testing.T, path []string) map[string]bool {
 		data, _ := io.ReadAll(reader)
 		output <- string(data)
 	}()
-	_ = runIssueOps(append(append([]string{}, path...), "--issueops-grammar-probe"))
+	_ = runIssueOps(args)
 	_ = writer.Close()
 	os.Stdout, os.Stderr = oldStdout, oldStderr
-	flags := map[string]bool{}
-	for _, match := range flagSetDefaultsLine.FindAllStringSubmatch(<-output, -1) {
-		flags["--"+match[1]] = true
-	}
-	return flags
+	return <-output
 }
 
 func catalogAdvertisedFlags(line string) map[string]bool {

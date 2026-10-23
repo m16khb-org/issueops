@@ -3,9 +3,11 @@ package projectcli
 import (
 	"flag"
 	"fmt"
+	"os"
+
+	"issueops/cmd/issueops/cliflag"
 	app "issueops/internal/application/lintdiagnose"
 	lintdiagnosecontract "issueops/internal/contract/lintdiagnose"
-	"os"
 )
 
 func runProjectLintDiagnose(service app.Service, args []string) error {
@@ -13,7 +15,7 @@ func runProjectLintDiagnose(service app.Service, args []string) error {
 	repo := fs.String("repo", ".", "target repository path")
 	jsonOut := fs.Bool("json", false, "print JSON")
 
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 

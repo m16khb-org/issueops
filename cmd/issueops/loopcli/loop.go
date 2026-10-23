@@ -4,9 +4,11 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
+
+	"issueops/cmd/issueops/cliflag"
 	"issueops/cmd/issueops/jsonout"
 	loopruncontract "issueops/internal/contract/looprun"
-	"os"
 )
 
 type repeatedFlag []string
@@ -59,7 +61,7 @@ func runStart(deps Dependencies, args []string) error {
 	goal := fs.String("goal", "", "loop goal")
 	maxAttempts := fs.Int("max-attempts", 0, "maximum attempts before exhaustion")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	result, err := deps.Start(context.Background(), loopruncontract.StartLoopRequest{
@@ -79,7 +81,7 @@ func runRecordAttempt(deps Dependencies, args []string) error {
 	var evidence repeatedFlag
 	fs.Var(&evidence, "evidence", "observable evidence")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	result, err := deps.RecordAttempt(context.Background(), *id, loopruncontract.RecordAttemptRequest{
@@ -95,7 +97,7 @@ func runStatus(deps Dependencies, args []string) error {
 	repo := fs.String("repo", "", "repository path")
 	name := fs.String("name", "", "loop name")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	loopID := *id
@@ -116,7 +118,7 @@ func runStop(deps Dependencies, args []string) error {
 	success := fs.Bool("success", false, "mark loop succeeded")
 	reason := fs.String("reason", "", "stop reason for non-successful stop")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	if *success && *reason != "" {

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 
+	"issueops/cmd/issueops/cliflag"
 	app "issueops/internal/application/selfverify"
 	contract "issueops/internal/contract/selfaugment"
 	domain "issueops/internal/domain/selfverify"
@@ -20,7 +21,7 @@ func Run(args []string, deps Deps) error {
 	saveState := fs.Bool("save-state", false, "save candidate export snapshot to issueops state")
 	stateKey := fs.String("state-key", "self-verify-candidates-latest", "state key for --save-state")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	result, err := app.ExportAndSaveCandidates(*saveState, *stateKey, app.ExportAndSaveCandidatesDeps{Export: deps.Export, Save: deps.Save})

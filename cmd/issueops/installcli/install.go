@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"issueops/cmd/issueops/cliflag"
 	installapp "issueops/internal/application/install"
 	activationapp "issueops/internal/application/nativeactivation"
 	activationcontract "issueops/internal/contract/nativeactivation"
@@ -24,7 +25,7 @@ func (c Command) runInstall(args []string) error {
 	adoptCommandFile := fs.Bool("adopt-command-file", false, "replace an existing managed issueops command file with rollback protection")
 	mcpTransportFlag := fs.String("mcp-transport", "", "Codex/Claude/Omo/omp/opencode MCP transport: http (shared service) or stdio; default http on darwin/linux")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	home, err := installUserHomeDir()

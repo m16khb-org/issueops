@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 
+	"issueops/cmd/issueops/cliflag"
 	app "issueops/internal/application/selfaugment"
 	augmentcontract "issueops/internal/contract/selfaugment"
 	augmentdomain "issueops/internal/domain/selfaugment"
@@ -40,7 +41,7 @@ func Run(args []string, deps Deps) error {
 	saveState := fs.Bool("save-state", false, "save compact self-augmentation plan to issueops state")
 	stateKey := fs.String("state-key", "self-augment-latest", "state key for --save-state")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	if *cycles < 1 {

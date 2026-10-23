@@ -4,10 +4,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"issueops/cmd/issueops/jsonout"
-	policy "issueops/internal/contract/policy"
 	"os"
 	"time"
+
+	"issueops/cmd/issueops/cliflag"
+	"issueops/cmd/issueops/jsonout"
+	policy "issueops/internal/contract/policy"
 )
 
 func (command Command) Run(args []string) error {
@@ -58,7 +60,7 @@ func (command Command) RunReadOnly(args []string) error {
 	timeout := fs.Duration("timeout", 30*time.Second, "maximum runtime")
 	envAllowlist := fs.String("env", "", "comma-separated environment variable allowlist")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	if !*readOnly {

@@ -3,8 +3,10 @@ package basiccli
 import (
 	"flag"
 	"fmt"
-	guardcontract "issueops/internal/contract/guard"
 	"os"
+
+	"issueops/cmd/issueops/cliflag"
+	guardcontract "issueops/internal/contract/guard"
 )
 
 func (command Command) RunGuard(args []string) error {
@@ -36,7 +38,7 @@ func (command Command) runGuardCheck(args []string) error {
 	staged := fs.Bool("staged", true, "check staged files")
 	all := fs.Bool("all", false, "check all relevant files")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	files := fs.Args()

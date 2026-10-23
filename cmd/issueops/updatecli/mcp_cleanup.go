@@ -3,9 +3,11 @@ package updatecli
 import (
 	"flag"
 	"fmt"
+	"os"
+
+	"issueops/cmd/issueops/cliflag"
 	"issueops/cmd/issueops/jsonout"
 	updateapp "issueops/internal/application/update"
-	"os"
 )
 
 type CleanupCommand struct{ Effects updateapp.MCPProxyEffects }
@@ -18,7 +20,7 @@ func (command CleanupCommand) Run(args []string) error {
 	dryRunFlag := fs.Bool("dry-run", false, "preview MCP proxy cleanup without terminating processes")
 	apply := fs.Bool("apply", false, "terminate matching MCP proxy processes")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	if fs.NArg() > 0 {

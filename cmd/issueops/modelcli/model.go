@@ -12,6 +12,7 @@ import (
 	"maps"
 	"strings"
 
+	"issueops/cmd/issueops/cliflag"
 	"issueops/cmd/issueops/jsonout"
 	agentmodelapp "issueops/internal/application/agentmodel"
 	contract "issueops/internal/contract/agentmodel"
@@ -78,7 +79,7 @@ func newFlagSet(name string) *flag.FlagSet {
 }
 
 func parse(fs *flag.FlagSet, args []string) error {
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return err
 		}

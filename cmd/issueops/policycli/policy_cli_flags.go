@@ -2,8 +2,10 @@ package policycli
 
 import (
 	"flag"
-	policy "issueops/internal/contract/policy"
 	"time"
+
+	"issueops/cmd/issueops/cliflag"
+	policy "issueops/internal/contract/policy"
 )
 
 func (command Command) ParseFlags(name string, args []string) (policy.CommandPolicyRequest, bool, error) {
@@ -17,7 +19,7 @@ func (command Command) ParseFlags(name string, args []string) (policy.CommandPol
 	shellAllowed := fs.Bool("shell", false, "allow shell interpreter argv[0] with --shell-reason")
 	shellReason := fs.String("shell-reason", "", "reason for shell interpreter exception")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return policy.CommandPolicyRequest{}, false, err
 	}
 	root := *workspaceRoot
@@ -50,7 +52,7 @@ func (command Command) ParseRunFlags(args []string) (policy.CommandPolicyRequest
 	envAllowlist := fs.String("env", "", "comma-separated environment variable allowlist")
 	readOnly := fs.Bool("read-only", false, "execute only if policy allows a read-only command")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return policy.CommandPolicyRequest{}, false, false, err
 	}
 	root := *workspaceRoot

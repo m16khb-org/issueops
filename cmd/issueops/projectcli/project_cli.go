@@ -3,12 +3,14 @@ package projectcli
 import (
 	"flag"
 	"fmt"
+	"os"
+	"strings"
+
+	"issueops/cmd/issueops/cliflag"
 	bootstrapapp "issueops/internal/application/projectbootstrap"
 	docsapp "issueops/internal/application/projectdocs"
 	projectbootstrapcontract "issueops/internal/contract/projectbootstrap"
 	projectdocscontract "issueops/internal/contract/projectdocs"
-	"os"
-	"strings"
 )
 
 func runProjectBootstrap(bootstrap bootstrapapp.Service, args []string) error {
@@ -17,7 +19,7 @@ func runProjectBootstrap(bootstrap bootstrapapp.Service, args []string) error {
 	sync := fs.Bool("sync", false, "refresh existing project docs as well as creating missing files")
 	dryRun := fs.Bool("dry-run", false, "show project docs plan without writing")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	if fs.NArg() > 0 {
@@ -50,7 +52,7 @@ func runProjectDocs(docs docsapp.Service, args []string) error {
 	fs := flag.NewFlagSet("project docs", flag.ContinueOnError)
 	repo := fs.String("repo", ".", "target repository path")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	if fs.NArg() > 0 {
@@ -74,7 +76,7 @@ func runProjectRouteDocs(docs docsapp.Service, args []string) error {
 	repo := fs.String("repo", ".", "target repository path")
 	task := fs.String("task", "general", "task description such as commit, test, architecture, dependency, deploy")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	if fs.NArg() > 0 {
@@ -109,7 +111,7 @@ func runProjectAppend(docs docsapp.Service, args []string) error {
 	consequences := fs.String("consequences", "", "consequences for ADR records")
 	source := fs.String("source", "cli", "append source")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	result, err := docs.Append(projectdocscontract.ProjectDocsAppendRequest{

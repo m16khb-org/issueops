@@ -5,12 +5,14 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"issueops/cmd/issueops/issueopscli/remotecmd"
-	"issueops/cmd/issueops/jsonout"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"issueops/cmd/issueops/cliflag"
+	"issueops/cmd/issueops/issueopscli/remotecmd"
+	"issueops/cmd/issueops/jsonout"
 
 	model "issueops/internal/contract/issueops"
 	"issueops/internal/port"
@@ -707,7 +709,7 @@ func executionGeneration(execution *model.Execution) uint64 {
 }
 
 func parse(fs *flag.FlagSet, args []string) (bool, error) {
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return true, nil
 		}

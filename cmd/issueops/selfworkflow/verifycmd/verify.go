@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"issueops/cmd/issueops/cliflag"
 	"issueops/cmd/issueops/selfworkflow/llmeval"
 	"issueops/cmd/issueops/selfworkflow/progress"
 	application "issueops/internal/application/selfverify"
@@ -38,7 +39,7 @@ func Run(args []string, deps Deps) error {
 	llmEvalMode := fs.String("llm-eval-mode", "advisory", "LLM evaluation mode: advisory or gate")
 	jsonOut := fs.Bool("json", false, "print JSON summary")
 	collectAll := fs.Bool("collect-all-steps", false, "run every gate in the evidence pass and surface ALL failures (concurrent regression diagnosis); default fail-fast. Never weakens the gate — any failure still fails self-verify")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	if *targetScore < 0 || *targetScore >= 100 {

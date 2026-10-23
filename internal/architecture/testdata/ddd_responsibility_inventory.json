@@ -156,6 +156,14 @@
       ]
     },
     {
+      "path": "cmd/issueops/cliflag/cliflag.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func Parse"
+      ]
+    },
+    {
       "path": "cmd/issueops/commandstep/result.go",
       "owner": "inbound",
       "task": "T20",

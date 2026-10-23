@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"issueops/cmd/issueops/cliflag"
 	"issueops/cmd/issueops/hookcli/hookinput"
 	hookcontract "issueops/internal/contract/hookprompt"
 )
@@ -28,7 +29,7 @@ func RunSessionStart(args []string, config Config) error {
 	repo := fs.String("repo", "", "target repository path; defaults to hook stdin JSON or cwd")
 	hostFlag := fs.String("host", "", "hook host (codex or claude); controls user-visible compatibility fields")
 	jsonOut := fs.Bool("json", false, "print raw analysis JSON instead of host hook JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	stdin, _ := io.ReadAll(os.Stdin)
@@ -61,7 +62,7 @@ func RunSubagentStart(args []string, config Config) error {
 	repo := fs.String("repo", "", "target repository path; defaults to hook stdin JSON or cwd")
 	hostFlag := fs.String("host", "", "hook host (codex or claude); controls user-visible compatibility fields")
 	jsonOut := fs.Bool("json", false, "print raw analysis JSON instead of host hook JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	stdin, _ := io.ReadAll(os.Stdin)
@@ -90,7 +91,7 @@ func RunPostCompact(args []string, config Config) error {
 	repo := fs.String("repo", "", "target repository path; defaults to hook stdin JSON or cwd")
 	fs.String("host", "", "hook host (codex or claude); controls user-visible compatibility fields")
 	jsonOut := fs.Bool("json", false, "print raw analysis JSON instead of host hook JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	stdin, _ := io.ReadAll(os.Stdin)

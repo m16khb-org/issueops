@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 
+	"issueops/cmd/issueops/cliflag"
 	contract "issueops/internal/contract/selfaugment"
 )
 
@@ -19,7 +20,7 @@ func Run(args []string, deps Deps) error {
 	confirm := fs.Bool("confirm", false, "write baseline-key; omitted means dry-run")
 	allowFailedSource := fs.Bool("allow-failed-source", false, "promote even when the source snapshot did not pass the gate (baseline-poisoning override; off by default)")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	result, err := deps.Promote(*fromKey, *baselineKey, *confirm, *allowFailedSource)

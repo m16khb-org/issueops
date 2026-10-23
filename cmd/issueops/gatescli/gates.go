@@ -7,10 +7,12 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"issueops/cmd/issueops/jsonout"
-	gatescontract "issueops/internal/contract/gates"
 	"os"
 	"strings"
+
+	"issueops/cmd/issueops/cliflag"
+	"issueops/cmd/issueops/jsonout"
+	gatescontract "issueops/internal/contract/gates"
 )
 
 // UnmetError는 게이트가 남아있는 상태의 종료 오류이다(exit 1).
@@ -103,7 +105,7 @@ func parseCheckFlags(name string, args []string) (checkFlags, bool, error) {
 	fs.BoolVar(&flags.WriteAllowed, "write", true, "allow workspace-write commands for CHECK execution")
 	fs.BoolVar(&flags.NetworkAllowed, "network", false, "allow network access for CHECK execution")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return flags, false, err
 	}
 	if fs.NArg() > 0 {
@@ -186,7 +188,7 @@ func runInit(deps Dependencies, args []string) error {
 	var gateSpecs repeatedStrings
 	fs.Var(&gateSpecs, "gate", `gate spec: "ID: outcome | CHECK: cmd | EXPECT: expect" (repeatable)`)
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	result, err := deps.Init(gatescontract.InitRequest{File: *file, Scope: *scope, Gates: gateSpecs})
@@ -199,7 +201,7 @@ func runAbandon(deps Dependencies, args []string) error {
 	gateID := fs.String("gate", "", "gate id to abandon (e.g. G2)")
 	reason := fs.String("reason", "", "honest abandon reason")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	result, err := deps.Abandon(gatescontract.AbandonRequest{File: *file, GateID: *gateID, Reason: *reason})
@@ -218,7 +220,7 @@ func runLint(deps Dependencies, args []string) error {
 	write := fs.Bool("write", true, "judge CHECKs as gates check --write would run them")
 	network := fs.Bool("network", false, "judge CHECKs as gates check --network would run them")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	if fs.NArg() > 0 {

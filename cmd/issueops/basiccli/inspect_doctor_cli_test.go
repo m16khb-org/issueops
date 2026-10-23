@@ -258,7 +258,7 @@ func TestRunDoctorOperationalInventoryFailureHasJSONTextParity(t *testing.T) {
 }
 
 func TestRunDoctorOperationalHelpListsPreserveFlags(t *testing.T) {
-	out, err := testsupport.CaptureStderrAndError(t, func() error {
+	out, err := testsupport.CaptureStdoutAndError(t, func() error {
 		return testRunDoctor([]string{"--help"})
 	})
 	if !errors.Is(err, flag.ErrHelp) {

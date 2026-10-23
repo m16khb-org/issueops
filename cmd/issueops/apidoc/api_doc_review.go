@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"issueops/cmd/issueops/cliflag"
 	app "issueops/internal/application/apidoc"
 )
 
@@ -45,7 +46,7 @@ func (c Command) runAPIDocReview(args []string) error {
 	promptFile := fs.String("prompt-file", "", "append project-specific review instructions from file")
 	resultFile := fs.String("result", "", "read host-agent JSON review result from file")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	root := c.ResolveTarget(*repo)

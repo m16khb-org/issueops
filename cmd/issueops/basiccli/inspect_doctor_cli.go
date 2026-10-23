@@ -4,11 +4,13 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"sort"
+	"strings"
+
+	"issueops/cmd/issueops/cliflag"
 	doctorcontract "issueops/internal/contract/doctor"
 	inspectcontract "issueops/internal/contract/inspect"
 	"issueops/internal/domain/operationalhealth"
-	"sort"
-	"strings"
 )
 
 type doctorRepeatedFlag []string
@@ -27,7 +29,7 @@ func (command Command) RunInspect(args []string) error {
 	jsonOut := fs.Bool("json", false, "print JSON")
 	repo := fs.String("repo", "", "target repo/workspace")
 	hostReceipts := fs.String("host-receipts", "", "host receipt JSON file (schema_version 1) for discovered/connected/protocol observations")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	if *repo == "" && fs.NArg() > 0 {
@@ -64,7 +66,7 @@ func (command Doctor) Run(args []string) error {
 		fmt.Fprintln(fs.Output(), "Usage: issueops doctor [--repo PATH] [--static-only] [--preserve-cycle ID]... [--json]")
 		fs.PrintDefaults()
 	}
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	if fs.NArg() > 0 {

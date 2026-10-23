@@ -3,6 +3,8 @@ package historycompare
 import (
 	"flag"
 	"fmt"
+
+	"issueops/cmd/issueops/cliflag"
 	contract "issueops/internal/contract/selfaugment"
 )
 
@@ -19,7 +21,7 @@ func RunSelfVerifyCompare(args []string, deps CLIDeps) error {
 	maxElapsedRegressionPct := fs.Float64("max-elapsed-regression-pct", 20, "allowed elapsed_ms increase percentage before regression")
 	failOnRegression := fs.Bool("fail-on-regression", false, "return non-zero when comparison reports a regression")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	result, err := deps.Compare(*baselineKey, *candidateKey, *maxElapsedRegressionPct)
@@ -57,7 +59,7 @@ func RunSelfVerifyHistory(args []string, deps CLIDeps) error {
 	pruneRetention := fs.Bool("prune-retention", false, "delete retention candidates; dry-run unless --confirm is also set")
 	confirm := fs.Bool("confirm", false, "confirm deletion when used with --prune-retention")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	result, err := deps.History(*prefix, *limit, contract.SelfAugmentHistoryRetentionOptions{

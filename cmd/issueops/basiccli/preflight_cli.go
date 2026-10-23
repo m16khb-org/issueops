@@ -3,12 +3,14 @@ package basiccli
 import (
 	"flag"
 	"fmt"
+
+	"issueops/cmd/issueops/cliflag"
 )
 
 func (command Command) RunPreflight(args []string) error {
 	fs := flag.NewFlagSet("preflight", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", true, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	target := ""

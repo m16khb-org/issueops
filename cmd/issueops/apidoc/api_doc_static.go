@@ -3,6 +3,7 @@ package apidoc
 import (
 	"flag"
 
+	"issueops/cmd/issueops/cliflag"
 	app "issueops/internal/application/apidoc"
 )
 
@@ -11,7 +12,7 @@ func (c Command) runAPIDocStaticCheck(args []string) error {
 	repo := fs.String("repo", "", "target git repository; defaults to current working directory")
 	all := fs.Bool("all", false, "check all tracked API documentation candidate files instead of staged changes")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	result, err := c.Service.Static.Check(app.StaticOptions{Repo: c.ResolveTarget(*repo), Files: fs.Args(), All: *all, JSON: *jsonOut})

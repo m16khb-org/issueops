@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 
+	"issueops/cmd/issueops/cliflag"
 	"issueops/cmd/issueops/jsonout"
 	clicontract "issueops/internal/contract/cli"
 	mcpcontract "issueops/internal/contract/mcp"
@@ -66,7 +67,7 @@ func contractUsage() {
 func runContractSchema(args []string, commands []clicontract.Command, tools []map[string]any) error {
 	fs := flag.NewFlagSet("contract schema", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	contract := BuildCompatibilityContract(commands, tools)
@@ -83,7 +84,7 @@ func runContractSchema(args []string, commands []clicontract.Command, tools []ma
 func runContractCheck(args []string, commands []clicontract.Command, tools []map[string]any) error {
 	fs := flag.NewFlagSet("contract check", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	contract := BuildCompatibilityContract(commands, tools)

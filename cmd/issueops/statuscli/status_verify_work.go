@@ -3,6 +3,8 @@ package statuscli
 import (
 	"flag"
 	"fmt"
+
+	"issueops/cmd/issueops/cliflag"
 	"issueops/cmd/issueops/jsonout"
 	verifyworkapp "issueops/internal/application/verifywork"
 )
@@ -12,7 +14,7 @@ func RunVerifyWork(service verifyworkapp.Service, args []string) error {
 	repo := fs.String("repo", ".", "target repository path")
 	all := fs.Bool("all", false, "guard all relevant files instead of staged files")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	result := service.Run(*repo, *all, fs.Args())

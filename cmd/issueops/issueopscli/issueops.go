@@ -5,13 +5,15 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"issueops/cmd/issueops/cliflag"
 	"issueops/cmd/issueops/issueopscli/feedbackcleanup"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
 	issueopscontract "issueops/internal/contract/issueops"
 	provenanceport "issueops/internal/port/issueopsprovenance"
-	"os"
-	"path/filepath"
-	"strings"
 
 	"issueops/internal/domain/commandparse"
 )
@@ -171,7 +173,7 @@ func issueOpsRemoteDepsWithPublication(publication remotecmd.PublicationHandlers
 }
 
 func parseIssueOpsFlags(fs *flag.FlagSet, args []string) (bool, error) {
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return true, nil
 		}

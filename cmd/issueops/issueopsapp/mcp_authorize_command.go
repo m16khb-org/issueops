@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"strings"
 
+	"issueops/cmd/issueops/cliflag"
 	"issueops/cmd/issueops/issueopscli/executioncmd"
 	"issueops/cmd/issueops/jsonout"
 	issueopscore "issueops/internal/adapter/issueops"
@@ -50,7 +51,7 @@ func (command mcpAuthorizeCommand) Run(args []string) error {
 	executable := fs.String("session-executable", "", "native session executable identity")
 	cwd := fs.String("cwd", "", "optional caller cwd; must be inside --workspace-root")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	// With --json every refusal is one {"ok":false,"error":...} document.

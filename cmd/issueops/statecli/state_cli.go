@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 
+	"issueops/cmd/issueops/cliflag"
 	"issueops/cmd/issueops/jsonout"
 )
 
@@ -26,7 +27,7 @@ func runStateWrite(deps Dependencies, args []string) error {
 	input := fs.String("input", "", "read state content from file")
 	stdin := fs.Bool("stdin", false, "read state content from stdin")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	if *key == "" && fs.NArg() > 0 {
@@ -78,7 +79,7 @@ func runStateRead(deps Dependencies, args []string) error {
 	fs := flag.NewFlagSet("state read", flag.ContinueOnError)
 	key := fs.String("key", "", "state key")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	if *key == "" && fs.NArg() > 0 {
@@ -98,7 +99,7 @@ func runStateRead(deps Dependencies, args []string) error {
 func runStateList(deps Dependencies, args []string) error {
 	fs := flag.NewFlagSet("state list", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}
 	result, err := deps.List()

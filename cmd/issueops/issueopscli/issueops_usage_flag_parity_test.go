@@ -113,7 +113,7 @@ func usageFlagName(field string) string {
 // 부작용이 없다. 그 규율이 깨지면 이 테스트가 먼저 알려준다.
 func registeredFlags(t *testing.T, args []string) map[string]bool {
 	t.Helper()
-	output := testsupport.CaptureStderr(t, func() error {
+	output := testsupport.CaptureStdout(t, func() error {
 		_ = runIssueOps(append(append([]string{}, args...), "--help"))
 		return nil
 	})

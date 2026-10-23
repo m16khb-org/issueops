@@ -4,9 +4,11 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"strings"
+
+	"issueops/cmd/issueops/cliflag"
 	"issueops/cmd/issueops/jsonout"
 	app "issueops/internal/application/issueopsbenchmark"
-	"strings"
 )
 
 type Command struct{ Service *app.Service }
@@ -28,7 +30,7 @@ func (c Command) Run(args []string) error {
 }
 
 func parseFlags(fs *flag.FlagSet, args []string) (bool, error) {
-	if err := fs.Parse(args); err != nil {
+	if err := cliflag.Parse(fs, args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return true, nil
 		}
