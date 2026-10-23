@@ -63,7 +63,7 @@ func Route(root, task string, effects RouteEffects) projectdocscontract.ProjectD
 	}
 	return projectdocscontract.ProjectDocsRouteResult{
 		OK: true, Kind: "project_docs_route", RepoRoot: root, Task: normalizedTask,
-		GeneratedAt: effects.Now().Format(time.RFC3339), Docs: entries, Warnings: warnings,
+		GeneratedAt: effects.Now().UTC().Format(time.RFC3339), Docs: entries, Warnings: warnings,
 	}
 }
 

@@ -15,7 +15,7 @@ type ReadEffects interface {
 func Read(root, rel, path string, effects ReadEffects) (projectdocscontract.ProjectDocsReadResult, error) {
 	result := projectdocscontract.ProjectDocsReadResult{
 		OK: true, Kind: "project_docs_read", RepoRoot: root, RelPath: rel, Path: path,
-		GeneratedAt: effects.Now().Format(time.RFC3339),
+		GeneratedAt: effects.Now().UTC().Format(time.RFC3339),
 	}
 	content, exists, err := effects.Read(path)
 	if err != nil {

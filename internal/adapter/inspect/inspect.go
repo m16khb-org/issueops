@@ -56,7 +56,7 @@ func (observer Observer) Inspect(root, target, home, version, skillName string, 
 			MCPBinaryPath:          mcpBinary,
 			Hosts:                  hosts,
 		},
-		GeneratedAt: observer.now().Format(time.RFC3339),
+		GeneratedAt: observer.now().UTC().Format(time.RFC3339),
 	}
 }
 

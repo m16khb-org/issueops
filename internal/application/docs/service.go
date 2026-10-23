@@ -122,5 +122,5 @@ func (s Service) index(root, version string, includeHistory bool) docscontract.D
 		}
 	}
 	sort.Slice(docs, func(i, j int) bool { return docs[i].RelPath < docs[j].RelPath })
-	return docscontract.DocsIndexResult{OK: true, Version: version, IssueOpsRoot: root, Docs: docs, HistoryOmitted: omitted, GeneratedAt: s.Now().Format(time.RFC3339)}
+	return docscontract.DocsIndexResult{OK: true, Version: version, IssueOpsRoot: root, Docs: docs, HistoryOmitted: omitted, GeneratedAt: s.Now().UTC().Format(time.RFC3339)}
 }

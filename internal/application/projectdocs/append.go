@@ -49,7 +49,7 @@ func Append(root string, request projectdocscontract.ProjectDocsAppendRequest, e
 	}
 	return projectdocscontract.ProjectDocsAppendResult{
 		OK: true, Kind: "project_docs_append", RecordKind: plan.Kind, RepoRoot: root,
-		RelPath: rel, Path: filePath, GeneratedAt: effects.Now().Format(time.RFC3339),
+		RelPath: rel, Path: filePath, GeneratedAt: effects.Now().UTC().Format(time.RFC3339),
 		BytesAppended: len([]byte(content)), SHA256: projectdocdomain.SHA256Hex(content),
 		Warnings: linkFromOverview(root, family, request.Title, rel, effects),
 	}, nil

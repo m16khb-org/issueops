@@ -37,7 +37,7 @@ func Revise(request projectdocscontract.ProjectDocsReviseRequest, root, rel, pat
 	return projectdocscontract.ProjectDocsReviseResult{
 		OK: true, Kind: "project_docs_revise", RepoRoot: root, RelPath: rel, Path: path,
 		Action: plan.Action, Confirmed: request.Confirm, DryRun: !request.Confirm,
-		GeneratedAt: effects.Now().Format(time.RFC3339), CurrentSHA256: plan.CurrentSHA256,
+		GeneratedAt: effects.Now().UTC().Format(time.RFC3339), CurrentSHA256: plan.CurrentSHA256,
 		NextSHA256: plan.NextSHA256, Bytes: len([]byte(plan.Content)), Summary: plan.Summary,
 		Evidence: plan.Evidence, Warnings: plan.Warnings,
 	}, nil

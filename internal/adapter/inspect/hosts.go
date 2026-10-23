@@ -40,7 +40,7 @@ func (observer Observer) observeHosts(root, home, skillName string, options insp
 		{inspectcontract.HostOmp, filepath.Join(home, ".omp", "agent", "mcp.json"), filepath.Join(home, ".omp", "agent", "skills", skillName), readJSONEntry},
 		{inspectcontract.HostOpencode, filepath.Join(opencodeConfigRoot, "opencode.json"), filepath.Join(opencodeConfigRoot, "skills", skillName), readOpencodeEntry},
 	}
-	observedAt := observer.now().Format(time.RFC3339)
+	observedAt := observer.now().UTC().Format(time.RFC3339)
 	hosts := make([]inspectcontract.HostIntegration, 0, len(specs))
 	entries := make([]hostEntry, 0, len(specs))
 	for _, spec := range specs {

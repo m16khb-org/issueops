@@ -63,7 +63,7 @@ func Bootstrap(request projectbootstrapcontract.ProjectDocsBootstrapRequest, eff
 	}
 	return projectbootstrapcontract.ProjectDocsBootstrapResult{
 		OK: true, Kind: "project_docs_bootstrap", RepoRoot: root, DocsDir: effects.JoinPath(root, projectdoc.ProjectDocsDir),
-		Write: request.Write, Sync: request.Sync, DryRun: !request.Write, GeneratedAt: effects.Now().Format(time.RFC3339),
+		Write: request.Write, Sync: request.Sync, DryRun: !request.Write, GeneratedAt: effects.Now().UTC().Format(time.RFC3339),
 		Signals: signals, Files: run.files, LifecycleState: lifecycleState, Warnings: run.warnings,
 	}, nil
 }
