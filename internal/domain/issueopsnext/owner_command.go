@@ -33,7 +33,7 @@ func prefixOwnerCommand(id, key string) (string, bool) {
 	switch {
 	case strings.HasPrefix(key, "plan_prep_"):
 		return "issueops plan-prep record --id " + id +
-			" --decisions-evidence <TEXT> --related-score-ref <TEXT> --web-research-evidence <TEXT> --codebase-survey-evidence <TEXT>", true
+			" --decisions-evidence <TEXT> --related-score-ref <TEXT> --web-research-evidence <TEXT> --codebase-survey-evidence <TEXT> $RECORD_ACTOR_FLAGS", true
 	case strings.HasPrefix(key, "architecture_") && key != "architecture_artifact":
 		return architectureReviewCommand(id), true
 	case strings.HasPrefix(key, "compatibility_"):
@@ -46,17 +46,18 @@ func prefixOwnerCommand(id, key string) (string, bool) {
 	return "", false
 }
 
-// intakeOwnerCommand는 1단계(의도·도메인·분할·이슈·브랜치) 키의 명령이다.
+// intakeOwnerCommand는 1단계(의도·도메인·분할·이슈·브랜치) 키의 명령이다. record
+// 명령은 usage대로 RECORD_ACTOR_FLAGS 자리를 둔다.
 func intakeOwnerCommand(id, key string) (string, bool) {
 	switch key {
 	case "intent_contract", "raw_request", "interpreted_intent", "success_criteria":
 		return "issueops intent record --id " + id +
-			" --raw-request <TEXT> --interpreted-intent <TEXT> --success-criteria <TEXT>", true
+			" --raw-request <TEXT> --interpreted-intent <TEXT> --success-criteria <TEXT> $RECORD_ACTOR_FLAGS", true
 	case "domain_review":
-		return "issueops domain-review record --id " + id + " --model-fit <TEXT>", true
+		return "issueops domain-review record --id " + id + " --model-fit <TEXT> $RECORD_ACTOR_FLAGS", true
 	case "split_decision":
 		return "issueops decision add --id " + id +
-			" --kind scope --title <TEXT> --body <TEXT>", true
+			" --kind scope --title <TEXT> --body <TEXT> $RECORD_ACTOR_FLAGS", true
 	case "issue_url":
 		// An issue comes from remote create-issue (this preview, then the
 		// same request with --confirm); link-issue only records an issue that
@@ -64,8 +65,10 @@ func intakeOwnerCommand(id, key string) (string, bool) {
 		return "issueops remote create-issue --id " + id +
 			" --provider <github|gitlab> --title <TEXT> --template <KIND> --body-file <PATH> --label <LABEL> --assignee <USER> --json", true
 	case "branch", "branch_prepare":
+		// --link-verified asserts that the provider's issue↔branch link was
+		// read back; it is a choice, not a default to copy.
 		return "issueops branch prepare --id " + id +
-			" --provider <github|gitlab> --issue-url <URL> --branch <NAME> --base-branch <REF> --base-sha <SHA> --link-verified", true
+			" --provider <github|gitlab> --issue-url <URL> --branch <NAME> --base-branch <REF> --base-sha <SHA> [--link-verified] $RECORD_ACTOR_FLAGS", true
 	}
 	return "", false
 }
@@ -81,11 +84,11 @@ func planningOwnerCommand(id, key string) (string, bool) {
 		return compatibilityReviewCommand(id), true
 	case "devils_advocate_review", "devils_advocate_review_stale":
 		return "issueops devils-advocate review --id " + id +
-			" --reviewer-context subagent --verdict <pass|revise|stop> --finding <TEXT>", true
+			" --reviewer-context subagent --verdict <pass|revise|stop> --finding <TEXT> $RECORD_ACTOR_FLAGS", true
 	case "plan_artifact":
 		return "issueops artifact stage --id " + id + " --name plan --file <PATH>", true
 	case "plan_path", "plan_exists", "plan_in_worktree":
-		return "issueops link-plan --id " + id + " --plan-path <PATH>", true
+		return "issueops link-plan --id " + id + " --plan-path <PATH> $RECORD_ACTOR_FLAGS", true
 	}
 	return "", false
 }
@@ -147,17 +150,17 @@ func publicationOwnerCommand(id, key string) (string, bool) {
 func architectureReviewCommand(id string) string {
 	return "issueops architecture review --id " + id +
 		" --problem-summary <TEXT> --proposed-architecture <TEXT> --refactor-plan <TEXT>" +
-		" --alternative <TEXT> --risk <TEXT> --verification <TEXT> --reviewer-context subagent --approved"
+		" --alternative <TEXT> --risk <TEXT> --verification <TEXT> --reviewer-context subagent --approved $RECORD_ACTOR_FLAGS"
 }
 
 func compatibilityReviewCommand(id string) string {
 	return "issueops compatibility review --id " + id +
-		" --backward-compatibility <TEXT> --side-effect <TEXT> --rollback-plan <TEXT> --verification <TEXT> --approved"
+		" --backward-compatibility <TEXT> --side-effect <TEXT> --rollback-plan <TEXT> --verification <TEXT> --approved $RECORD_ACTOR_FLAGS"
 }
 
 func aiSlopCleanCommand(id string) string {
 	return "issueops ai-slop-clean record --id " + id +
-		" --category <TEXT> --verification <TEXT>"
+		" --category <TEXT> --verification <TEXT> $RECORD_ACTOR_FLAGS"
 }
 
 func executionStatusCommand(id string) string {

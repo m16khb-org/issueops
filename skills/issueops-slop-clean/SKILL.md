@@ -122,13 +122,13 @@ Output:
 정리는 동작을 바꿀 수 있다. 마지막 pass 뒤에 다시 확인한다.
 
 ```bash
-issueops gates check --file "$LEDGER" --cwd "$WORKTREE" --workspace-root "$WORKTREE" --write --json
+issueops gates check --file "$LEDGER" --cwd "$WORKTREE" --workspace-root "$WORKTREE" --json
 git -C "$WORKTREE" diff --check
 # 변경 범위의 focused 테스트를 다시 실행한다.
 ```
 
-focused 테스트가 원장의 CHECK에 포함되어 있으면 위 `gates check`의 실행 결과를
-사용한다. 같은 pass에서 같은 입력에 같은 테스트를 별도로 한 번 더 실행하지 않는다.
+`gates check`는 아직 충족되지 않은 게이트만 실행한다. 정리 전에 이미 충족된 게이트는 다시 돌지
+않으므로 그 CHECK 명령(특히 focused 테스트)은 직접 다시 실행해 결과를 확인한다.
 
 verified-execution report를 확정한다. report는 워크트리 **안**의 정규 파일이어야 하고, 형식은
 [`verified-execution`](../verified-execution/SKILL.md)의 보고 계약을 따른다. 이번 변경의 **side effect 목록**과

@@ -114,7 +114,7 @@ blocker 근거는 기록 직전에 한 번 더 확인한다. 확인 규칙은 [�
 
 구현에 적용한 문서 규칙은 verified-execution report의 `## 적용한 문서 규칙` 절에 규칙마다
 `| 문서 경로 | 해당 문장 인용 | 이 구현에서 바뀐 결정 |` 한 행으로 적는다. 게이트 원장 EVIDENCE는
-`gates check --write`가 명령 출력으로 채우므로 여기에 쓰지 않는다. 읽었지만 적용할 규칙이 없으면
+`gates check`가 명령 출력으로 채우므로 여기에 쓰지 않는다. 읽었지만 적용할 규칙이 없으면
 그 절에 대조한 문서 목록을 적는다.
 
 ## 구현 루프
@@ -129,7 +129,7 @@ blocker 근거는 기록 직전에 한 번 더 확인한다. 확인 규칙은 [�
   이어간다. 원래 요청에서 허용된 issue branch의 publication을 다시 묻지 않는다.
 - API/DTO/OpenAPI 변경은 `.issueops/OPEN_API_SPEC.md` gate를 적용한다. 문서가 없는 대상의 처리는 [보충 규칙](references/gate-extras.md)을 따른다.
 - RED/GREEN 증거는 [`gates-ledger`](../gates-ledger/SKILL.md)로
-  `.issueops/issues/<n>/gates.md`에 `gates check --write`로 채운다.
+  `.issueops/issues/<n>/gates.md`에 `gates check`로 채운다.
 - 코드를 바꾸기 직전에 그 변경을 정한 문서 규칙을 `## 적용한 문서 규칙` 절에 한 행 추가한다.
 
 계획과 코드베이스를 존중하는 네 규칙:

@@ -131,8 +131,8 @@ prepare가 스테이징한 계획을 워크트리 안에 materialize하고, 4단
 계획의 수용 기준을 [`gates-ledger`](../gates-ledger/SKILL.md)의 형식대로 `G1..Gn`
 (CHECK/EXPECT)으로 계획 안에 적어 둔다. 게이트마다 `gates init`에 그대로 넘길 한 줄 spec
 (`- G1: <결과> | CHECK: <명령> | EXPECT: <기대>`)으로 쓴다. 원장 **파일**은 워크트리 안에 있어야 하므로
-여기서 만들지 않는다. 4단계가 파일을 만들고 `--write`로 EVIDENCE를 채우며, 5단계가
-정리 뒤 다시 채우고, 7단계는 증거 유효성을 확인해 읽거나 필요한 검사를 재실행한다.
+여기서 만들지 않는다. 4단계가 파일을 만들고 `gates check`로 EVIDENCE를 채운다. 5단계는 정리 뒤
+충족된 게이트의 CHECK를 직접 다시 실행하고, 7단계는 `gates status`로 원장을 읽어 증거 유효성을 확인한다.
 
 게이트 중 적어도 하나는 이슈의 완료 조건, 곧 보고된 실패가 사라진 최종 상태를 직접 관측해야 한다. fake를 쓴 unit 테스트는 그 게이트를 대신하지 못한다. smoke 명령과 테스트 관측 규칙은 [세부 규칙](references/gates-and-review-details.md)을 연다.
 

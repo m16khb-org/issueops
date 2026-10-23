@@ -71,11 +71,14 @@ issueops gates lint --plan "$PLAN" --cwd "$WORKTREE" --json   # 또는 --gate SP
 ## 검사
 
 ```bash
-issueops gates check --file "$LEDGER" --cwd "$WORKTREE" --workspace-root "$WORKTREE" --write --json
+issueops gates check --file "$LEDGER" --cwd "$WORKTREE" --workspace-root "$WORKTREE" --json
 ```
 
-- `--write`가 각 게이트의 EVIDENCE를 실제 출력으로 채운다. 이것이 원장을 채우는
-  유일한 방법이다.
+- `gates check`는 아직 충족되지 않았거나 EVIDENCE가 비어 있는 게이트만 CHECK를 실행하고,
+  통과하면 체크와 EVIDENCE를 원장 파일에 바로 쓴다. 이것이 원장을 채우는 유일한 방법이다.
+  이미 충족된 게이트는 다시 실행하지 않는다.
+- `--write`(기본 켜짐)는 CHECK 명령이 작업공간에 쓰도록 허용하는 정책 스위치다. 원장 기록과는
+  관계없다. 원장을 바꾸지 않고 읽기만 하려면 `gates status`를 쓴다.
 - 네트워크가 필요한 CHECK는 `--network`를 붙인다. 붙이지 않으면 정책이 막는다.
 - 오래 걸리는 CHECK는 `--timeout-seconds N`으로 한도를 올린다.
 - 종료 코드 1은 미충족 게이트가 남았다는 뜻이다. 실패가 아니라 아직 아니라는 뜻이므로
@@ -108,9 +111,9 @@ EXPECT를 느슨하게 고쳐 통과시키지 않는다. 그렇게 하면 원장
   원장은 warning으로 건너뛴다.
 - 미충족 게이트가 남으면 `gates_incomplete:<file>`로 pr 진입이 막힌다. 원장이 아예
   없으면 이 요구는 추가되지 않는다.
-- 단계별 소유: 3단계 계획이 원장을 만들고, 4단계 구현이 `--write`로 EVIDENCE를 채우며,
-  5단계 정리 뒤 다시 `--write`로 재실행한다. 7단계는 `issueops-verify`의 증거 재사용
-  조건을 확인해 `status`로 읽거나 `check`로 재실행한다.
+- 단계별 소유: 3단계 계획이 원장을 만들고, 4단계 구현이 `gates check`로 EVIDENCE를 채운다.
+  5단계 정리 뒤에는 이미 충족된 게이트가 다시 돌지 않으므로 그 CHECK 명령을 직접 다시 실행해
+  확인한다. 7단계는 `issueops-verify`의 증거 재사용 조건을 확인해 `gates status`로 읽는다.
 - 원장 파일은 변경 집합에 포함되므로 `ai-slop-clean record` 이후에 원장을 고치면
   fingerprint가 바뀌어 `ai_slop_clean_stale`이 된다. 원장 갱신은 봉인 전에 끝낸다.
 
