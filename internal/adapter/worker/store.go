@@ -19,9 +19,18 @@ func (store Store) open() (StateDatabase, error) {
 	return store.OpenDatabase(store.FilesystemDirectory)
 }
 
+// jobNotFound names the missing job and where ids come from; it still
+// matches fs.ErrNotExist for callers that branch on absence.
+type jobNotFound struct{ id string }
+
+func (e jobNotFound) Error() string {
+	return fmt.Sprintf("worker job %q not found; run `issueops worker list --json` for job ids", e.id)
+}
+func (jobNotFound) Unwrap() error { return fs.ErrNotExist }
+
 func (store Store) Read(id string) (workercontract.WorkerJob, error) {
 	if !workerdomain.ValidID(id) {
-		return workercontract.WorkerJob{OK: false, ID: id}, fmt.Errorf("invalid worker job id")
+		return workercontract.WorkerJob{OK: false, ID: id}, fmt.Errorf("invalid worker job id %q; run `issueops worker list --json` for job ids", id)
 	}
 	dir, err := store.Dir()
 	if err != nil {
@@ -36,7 +45,7 @@ func (store Store) Read(id string) (workercontract.WorkerJob, error) {
 		return workercontract.WorkerJob{OK: false, ID: id, WorkerDir: dir}, err
 	}
 	if !ok {
-		return workercontract.WorkerJob{OK: false, ID: id, WorkerDir: dir}, fmt.Errorf("worker job %s: %w", id, fs.ErrNotExist)
+		return workercontract.WorkerJob{OK: false, ID: id, WorkerDir: dir}, jobNotFound{id: id}
 	}
 	var job workercontract.WorkerJob
 	if err := json.Unmarshal(b, &job); err != nil {

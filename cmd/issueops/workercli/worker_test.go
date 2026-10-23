@@ -34,9 +34,9 @@ func TestExportedCommandsDelegateToWorkerSubcommands(t *testing.T) {
 		{name: "Run", run: Run, wantErr: "missing worker subcommand"},
 		{name: "RunEnqueue", run: RunEnqueue, wantErr: "worker job kind is required"},
 		{name: "RunReadOnly", run: RunReadOnly, wantErr: "requires --read-only"},
-		{name: "RunStatus", run: RunStatus, args: []string{"--id", "missing"}, wantErr: "file does not exist"},
+		{name: "RunStatus", run: RunStatus, args: []string{"--id", "missing"}, wantErr: `worker job "missing" not found; run ` + "`issueops worker list --json`"},
 		{name: "RunList", run: RunList, args: []string{"--bad"}, wantErr: "flag provided but not defined"},
-		{name: "RunCancel", run: RunCancel, args: []string{"--id", "missing"}, wantErr: "file does not exist"},
+		{name: "RunCancel", run: RunCancel, args: []string{"--id", "missing"}, wantErr: `worker job "missing" not found`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

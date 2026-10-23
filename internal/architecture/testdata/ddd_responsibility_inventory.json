@@ -7877,7 +7877,10 @@
         "func ResolveDirectory",
         "func Store.Read",
         "func Store.Write",
-        "func Store.open"
+        "func Store.open",
+        "func jobNotFound.Error",
+        "func jobNotFound.Unwrap",
+        "type jobNotFound"
       ]
     },
     {
