@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"issueops/internal/adapter/outbound/sqlstore"
@@ -61,12 +63,23 @@ func TestReadIssueOpsMissingRecordPreservesErrorIdentity(t *testing.T) {
 	if _, err := sqlstore.Open(stateRoot); err != nil {
 		t.Fatal(err)
 	}
-	for _, read := range []func(string, string) (issueops.IssueOpsRecord, error){ReadIssueOps, ReadIssueOpsExisting} {
-		got, err := read(stateRoot, "io-missing")
+	absentStore := filepath.Join(t.TempDir(), "never-created")
+	cases := []struct {
+		name string
+		read func(string, string) (issueops.IssueOpsRecord, error)
+		root string
+	}{
+		{"read, existing store", ReadIssueOps, stateRoot},
+		{"read existing, existing store", ReadIssueOpsExisting, stateRoot},
+		{"read existing, absent store", ReadIssueOpsExisting, absentStore},
+	}
+	for _, tc := range cases {
+		got, err := tc.read(tc.root, "io-missing")
 		want := issueops.IssueOpsRecord{ID: "io-missing"}
-		if !errors.Is(err, fs.ErrNotExist) || err.Error() != "issueops record io-missing: file does not exist" ||
+		// The answer names the cycle and how to list cycles, never the store path.
+		if !errors.Is(err, fs.ErrNotExist) || !strings.Contains(err.Error(), "issueops record io-missing not found") || strings.Contains(err.Error(), "sqlstore") ||
 			!reflect.DeepEqual(got, want) {
-			t.Fatalf("record = %+v, error = %v, want %+v and not-exist error", got, err, want)
+			t.Fatalf("%s: record = %+v, error = %v, want %+v and not-exist error", tc.name, got, err, want)
 		}
 	}
 }

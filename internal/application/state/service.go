@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -77,11 +78,13 @@ func (service *Service) Read(key string) (statecontract.StateResult, error) {
 func (service *Service) read(dir, key string) (statecontract.StateResult, error) {
 	path := service.dependencies.StatePath(dir, key)
 	raw, ok, err := service.dependencies.ExistingRecords.GetExisting(dir, stateBucket, key)
-	if err != nil {
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return statecontract.StateResult{OK: false, StateDir: dir, Path: path}, err
 	}
-	if !ok {
-		return statecontract.StateResult{OK: false, StateDir: dir, Path: path}, &fs.PathError{Op: "read", Path: path, Err: fs.ErrNotExist}
+	// A missing store answers like a missing key; the store path stays in
+	// result.Path, not in the message the agent acts on.
+	if err != nil || !ok {
+		return statecontract.StateResult{OK: false, StateDir: dir, Path: path}, fmt.Errorf("state key %q not found; list keys with `issueops state list --json`: %w", key, fs.ErrNotExist)
 	}
 	record, err := DecodeRecord(key, raw)
 	if err != nil {

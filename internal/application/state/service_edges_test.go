@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"slices"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -71,8 +72,8 @@ func TestReadMissingRecordReportsNotExistWithPath(t *testing.T) {
 	if !errors.Is(err, fs.ErrNotExist) || result.OK || result.Path != "/state/absent.json" {
 		t.Fatalf("Read(missing) = %+v, %v", result, err)
 	}
-	if pathErr, ok := errors.AsType[*fs.PathError](err); !ok || pathErr.Path != "/state/absent.json" {
-		t.Fatalf("error is not a *fs.PathError carrying the record path: %v", err)
+	if !strings.Contains(err.Error(), `state key "absent" not found`) {
+		t.Fatalf("missing key must be named in the error: %v", err)
 	}
 }
 

@@ -32,13 +32,20 @@ func ReadIssueOpsExisting(stateRoot, id string) (issueops.IssueOpsRecord, error)
 		return issueops.IssueOpsRecord{OK: false}, err
 	}
 	b, ok, err := sqlstore.GetExisting(stateRoot, issueOpsBucket, id)
-	if err != nil {
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return issueops.IssueOpsRecord{OK: false, ID: id}, err
 	}
-	if !ok {
-		return issueops.IssueOpsRecord{OK: false, ID: id}, fmt.Errorf("issueops record %s: %w", id, fs.ErrNotExist)
+	// A missing store answers like a missing record: the caller asked for a
+	// cycle, and the store path is an implementation detail.
+	if err != nil || !ok {
+		return issueops.IssueOpsRecord{OK: false, ID: id}, recordNotFound(id)
 	}
 	return decodeIssueOpsRecord(id, b)
+}
+
+// recordNotFound names the cycle and the command that lists the existing ones.
+func recordNotFound(id string) error {
+	return fmt.Errorf("issueops record %s not found; list cycles with `issueops list --json`: %w", id, fs.ErrNotExist)
 }
 
 func ReadIssueOps(stateRoot, id string) (issueops.IssueOpsRecord, error) {
@@ -55,7 +62,7 @@ func ReadIssueOps(stateRoot, id string) (issueops.IssueOpsRecord, error) {
 		return issueops.IssueOpsRecord{OK: false, ID: id}, err
 	}
 	if !ok {
-		return issueops.IssueOpsRecord{OK: false, ID: id}, fmt.Errorf("issueops record %s: %w", id, fs.ErrNotExist)
+		return issueops.IssueOpsRecord{OK: false, ID: id}, recordNotFound(id)
 	}
 	return decodeIssueOpsRecord(id, b)
 }

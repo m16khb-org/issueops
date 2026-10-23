@@ -130,6 +130,21 @@ func TestHelpRequestedStopsAtPassthroughSeparator(t *testing.T) {
 	}
 }
 
+func TestUnknownCommandSuggestsClosestFirst(t *testing.T) {
+	var stderr bytes.Buffer
+	cmd := testCommand(&bytes.Buffer{}, &stderr)
+	for _, name := range []string{"status", "state", "start", "inspect", "next"} {
+		cmd.Runners[name] = func([]string) error { return nil }
+	}
+	if code := cmd.Run([]string{"statu"}); code != 2 {
+		t.Fatalf("exit code = %d, want 2", code)
+	}
+	// "status" extends the typo, "state" is one edit away, "start" two; "inspect" and "next" are unrelated.
+	if !strings.Contains(stderr.String(), "Did you mean: status, state, start\n") {
+		t.Fatalf("stderr = %q", stderr.String())
+	}
+}
+
 func captureRootCommandOutput(args []string) (string, string, int) {
 	var stdout, stderr bytes.Buffer
 	cmd := testCommand(&stdout, &stderr)

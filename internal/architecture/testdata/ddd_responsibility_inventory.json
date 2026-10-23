@@ -4861,6 +4861,7 @@
         "func newIndependentIssueOpsID",
         "func newIssueOpsID",
         "func normalizeIssueOpsID",
+        "func recordNotFound",
         "func scanIssueOpsRows",
         "func validateIssueOpsRecord",
         "func writeIssueOps"

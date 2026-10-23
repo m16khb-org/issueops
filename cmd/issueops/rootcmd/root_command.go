@@ -54,16 +54,32 @@ func (c Command) printUnknownCommand(name string) {
 	fmt.Fprintln(c.stderr(), "Run 'issueops --help' for the full usage.")
 }
 
+// suggest returns up to three known commands closest to name: prefix matches
+// first, then by edit distance (at most 2), ties by name.
 func (c Command) suggest(name string) []string {
-	var out []string
+	type candidate struct {
+		name string
+		rank int
+	}
+	var found []candidate
 	for known := range c.Runners {
-		if strings.HasPrefix(known, name) || strings.HasPrefix(name, known) || editDistance(name, known) <= 2 {
-			out = append(out, known)
+		rank := editDistance(name, known)
+		if strings.HasPrefix(known, name) || strings.HasPrefix(name, known) {
+			rank = 0
+		}
+		if rank <= 2 {
+			found = append(found, candidate{known, rank})
 		}
 	}
-	sort.Strings(out)
-	if len(out) > 5 {
-		out = out[:5]
+	sort.Slice(found, func(i, j int) bool {
+		if found[i].rank != found[j].rank {
+			return found[i].rank < found[j].rank
+		}
+		return found[i].name < found[j].name
+	})
+	out := make([]string, 0, min(len(found), 3))
+	for _, candidate := range found[:min(len(found), 3)] {
+		out = append(out, candidate.name)
 	}
 	return out
 }
