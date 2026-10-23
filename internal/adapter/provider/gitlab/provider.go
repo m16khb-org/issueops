@@ -64,7 +64,7 @@ func (Provider) CreateIssueContext(ctx context.Context, req port.IssueProviderCr
 			Preview: providerutil.DryRunPreview("glab", args...),
 		}, nil
 	}
-	return runGlabJSONContext(ctx, args, req.Repo, "issue")
+	return runGlabJSONContext(ctx, args, req.Repo)
 }
 
 func (Provider) FindIssueCreateCandidates(ctx context.Context, req port.IssueProviderFindIssueCreateCandidatesRequest) (port.IssueProviderFindIssueCreateCandidatesResult, error) {

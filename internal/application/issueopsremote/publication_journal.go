@@ -15,10 +15,10 @@ import (
 type PublicationJournal struct {
 	store       PublicationStore
 	environment PublicationEnvironment
-	authority   PublicationAuthority
+	authority   Authority
 }
 
-func NewPublicationJournal(store PublicationStore, environment PublicationEnvironment, authority PublicationAuthority) *PublicationJournal {
+func NewPublicationJournal(store PublicationStore, environment PublicationEnvironment, authority Authority) *PublicationJournal {
 	return &PublicationJournal{store: store, environment: environment, authority: authority}
 }
 

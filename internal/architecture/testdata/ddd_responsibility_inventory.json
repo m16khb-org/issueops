@@ -8353,8 +8353,8 @@
         "func childLinkIndices",
         "func collectChildOutcomes",
         "func firstChildValue",
-        "type ChildCleanupRecords",
         "type ChildrenCloser",
+        "type LockedRecords",
         "type closeChildOutcome"
       ]
     },
@@ -8446,8 +8446,7 @@
       "task": "T08",
       "symbols": [
         "func LinkedBranchAuditRecorder.Record",
-        "type LinkedBranchAuditRecorder",
-        "type LinkedBranchAuditRecords"
+        "type LinkedBranchAuditRecorder"
       ]
     },
     {
@@ -9193,7 +9192,6 @@
         "func NewArtifactVerificationService",
         "func projectRemoteArtifact",
         "type ArtifactLiveVerifier",
-        "type ArtifactVerificationAuthority",
         "type ArtifactVerificationService",
         "type ArtifactVerificationStore"
       ]
@@ -9361,8 +9359,8 @@
       "owner": "application",
       "task": "T07",
       "symbols": [
+        "type Authority",
         "type PreparationObserver",
-        "type PublicationAuthority",
         "type PublicationEnvironment",
         "type PublicationStore",
         "type RecordStore",
@@ -9461,7 +9459,6 @@
         "func ReviewReflectionService.Reflect",
         "type AncestryObserver",
         "type ReviewProviderResolver",
-        "type ReviewReflectionAuthority",
         "type ReviewReflectionProvider",
         "type ReviewReflectionService",
         "type ReviewReflectionStore"
@@ -12153,7 +12150,7 @@
         "func BraceDepthDelta",
         "func CheckNestDTO",
         "func apiPropertyHasRequiredKey",
-        "func apiPropertyObjectFlag",
+        "func apiPropertyRequiredFlag",
         "func clearsPendingDecorators",
         "func isDTOPropertyLine",
         "func nestDTOScanner.addViolation",

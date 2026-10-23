@@ -719,7 +719,7 @@ func TestRunCleanupRemoteBranchDisciplineAndDispatch(t *testing.T) {
 		service.Read = func(string) (issueopscontract.IssueOpsRecord, error) {
 			return record, nil
 		}
-		service.RunRemoteBranch = func(_ context.Context, req issueopscontract.CleanupRemoteBranchRequest, _ port.IssueProvider) (issueopscontract.CleanupRemoteBranchResult, error) {
+		service.RunRemoteBranch = func(_ context.Context, req issueopscontract.CleanupRemoteBranchRequest) (issueopscontract.CleanupRemoteBranchResult, error) {
 			requests = append(requests, req)
 			return issueopscontract.CleanupRemoteBranchResult{OK: true, ID: req.ID, Fingerprint: "abc"}, nil
 		}

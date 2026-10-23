@@ -15,11 +15,11 @@ import (
 
 type CreatePreparation struct {
 	observer  PreparationObserver
-	authority PublicationAuthority
+	authority Authority
 	verifier  authorityport.ActorVerifier
 }
 
-func NewCreatePreparation(observer PreparationObserver, authority PublicationAuthority, verifier authorityport.ActorVerifier) *CreatePreparation {
+func NewCreatePreparation(observer PreparationObserver, authority Authority, verifier authorityport.ActorVerifier) *CreatePreparation {
 	return &CreatePreparation{observer: observer, authority: authority, verifier: verifier}
 }
 

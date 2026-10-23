@@ -535,7 +535,7 @@ func TestRunCleanupInvocationFailuresRenderOnlyTheOriginalCause(t *testing.T) {
 					t.Fatal("runner reached after an invocation failure")
 					return issueopscontract.CleanupFinishResult{}, nil
 				}
-				inv.RunRemoteBranch = func(context.Context, issueopscontract.CleanupRemoteBranchRequest, port.IssueProvider) (issueopscontract.CleanupRemoteBranchResult, error) {
+				inv.RunRemoteBranch = func(context.Context, issueopscontract.CleanupRemoteBranchRequest) (issueopscontract.CleanupRemoteBranchResult, error) {
 					t.Fatal("runner reached after an invocation failure")
 					return issueopscontract.CleanupRemoteBranchResult{}, nil
 				}
@@ -582,7 +582,7 @@ func TestRunCleanupRemoteBranchRendersOutcomeAndJSONContract(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var runErr error
 			command := stubbedCleanupCommand(func(inv *cleanupapp.Invocation, _ *CleanupDeps) {
-				inv.RunRemoteBranch = func(context.Context, issueopscontract.CleanupRemoteBranchRequest, port.IssueProvider) (issueopscontract.CleanupRemoteBranchResult, error) {
+				inv.RunRemoteBranch = func(context.Context, issueopscontract.CleanupRemoteBranchRequest) (issueopscontract.CleanupRemoteBranchResult, error) {
 					return tt.result, runErr
 				}
 			})

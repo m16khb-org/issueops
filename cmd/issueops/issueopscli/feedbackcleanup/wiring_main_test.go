@@ -45,7 +45,7 @@ func testCleanupCommand() Command {
 			NewAttempt: issueopscore.NewCleanupAttempt, Stop: runtime.Stop, Directory: (issueopscore.CleanupFinishEnvironment{}).Directory, Git: runtime.Command, Now: time.Now,
 		}).Run(ctx, req)
 	}
-	remoteBranch := func(ctx context.Context, stateRoot string, req issueopscontract.CleanupRemoteBranchRequest, d Deps, prov port.IssueProvider) (issueopscontract.CleanupRemoteBranchResult, error) {
+	remoteBranch := func(ctx context.Context, stateRoot string, req issueopscontract.CleanupRemoteBranchRequest, d Deps) (issueopscontract.CleanupRemoteBranchResult, error) {
 		return (cleanupapp.RemoteBranchCleaner{
 			Records: issueopscore.CleanupRecordStore{StateRoot: stateRoot},
 			Acquire: (issueopscore.CleanupLifetimeLock{StateRoot: stateRoot}).Acquire, NewAttempt: issueopscore.NewCleanupAttempt,
@@ -62,8 +62,8 @@ func testCleanupCommand() Command {
 			RunFinish: func(ctx context.Context, req issueopscontract.CleanupFinishRequest, prov port.IssueProvider) (issueopscontract.CleanupFinishResult, error) {
 				return finish(ctx, stateRoot, req, d, prov)
 			},
-			RunRemoteBranch: func(ctx context.Context, req issueopscontract.CleanupRemoteBranchRequest, prov port.IssueProvider) (issueopscontract.CleanupRemoteBranchResult, error) {
-				return remoteBranch(ctx, stateRoot, req, d, prov)
+			RunRemoteBranch: func(ctx context.Context, req issueopscontract.CleanupRemoteBranchRequest) (issueopscontract.CleanupRemoteBranchResult, error) {
+				return remoteBranch(ctx, stateRoot, req, d)
 			},
 			RunAbandon: func(ctx context.Context, req issueopscontract.CleanupAbandonRequest) (issueopscontract.CleanupAbandonResult, error) {
 				return abandon(ctx, stateRoot, req, d)

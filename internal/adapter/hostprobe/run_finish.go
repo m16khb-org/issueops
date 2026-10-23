@@ -30,7 +30,7 @@ func (f hookEpisodeFinish) finish(output CommandOutput, runErr error) port.HostP
 	if err != nil {
 		return fail(normalizedCaptureFailure(err))
 	}
-	result := completedResult(f.name, "", f.request, f.started, f.deps, capture)
+	result := completedResult(f.name, f.request, f.started, f.deps, capture)
 	observation, err := observeHostStream(output.Stdout)
 	if err != nil {
 		return fail("transport", "host_stream_invalid")
@@ -92,7 +92,7 @@ func (f omoEpisodeFinish) finish(output CommandOutput, runErr error) port.HostPr
 	if capture.CallCount != 1 || observation.MCPCallCount != 1 {
 		return fail("transport", "probe_call_cardinality_invalid")
 	}
-	result := completedResult(f.name, "", f.request, f.started, f.deps, capture)
+	result := completedResult(f.name, f.request, f.started, f.deps, capture)
 	result.ObservedModel = observation.Model
 	// The private guard extension blocks this exact MCP tool unless the managed
 	// lifecycle extension injected one hidden project-doc message first.

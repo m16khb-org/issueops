@@ -14,9 +14,6 @@ type ReviewReflectionStore interface {
 	IssueRecordReader
 	RecordStore
 }
-type ReviewReflectionAuthority interface {
-	Authorize(context.Context, model.IssueOpsRecord, model.IssueOpsActor) error
-}
 type ReviewReflectionProvider interface {
 	UpdateIssueBodySection(context.Context, port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error)
 }
@@ -25,13 +22,13 @@ type AncestryObserver func() ([]model.NativeProcessReceipt, error)
 
 type ReviewReflectionService struct {
 	store     ReviewReflectionStore
-	authority ReviewReflectionAuthority
+	authority Authority
 	resolve   ReviewProviderResolver
 	observe   AncestryObserver
 	now       func() time.Time
 }
 
-func NewReviewReflectionService(store ReviewReflectionStore, authority ReviewReflectionAuthority, resolve ReviewProviderResolver, observe AncestryObserver, now func() time.Time) *ReviewReflectionService {
+func NewReviewReflectionService(store ReviewReflectionStore, authority Authority, resolve ReviewProviderResolver, observe AncestryObserver, now func() time.Time) *ReviewReflectionService {
 	return &ReviewReflectionService{store: store, authority: authority, resolve: resolve, observe: observe, now: now}
 }
 

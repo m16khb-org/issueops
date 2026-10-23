@@ -36,7 +36,7 @@ func requireBindingFailure(t *testing.T, err error) {
 
 func TestRemoteBranchInvocationRefusesBeforeRunningCleanup(t *testing.T) {
 	readFailure, providerFailure := errors.New("record unreadable"), errors.New("provider unavailable")
-	runner := func(context.Context, model.CleanupRemoteBranchRequest, port.IssueProvider) (model.CleanupRemoteBranchResult, error) {
+	runner := func(context.Context, model.CleanupRemoteBranchRequest) (model.CleanupRemoteBranchResult, error) {
 		t.Fatal("remote branch cleanup ran despite a refused precondition")
 		return model.CleanupRemoteBranchResult{}, nil
 	}
@@ -89,7 +89,7 @@ func TestRemoteBranchInvocationBindsNextCommandToRecordGeneration(t *testing.T) 
 				Provider:                   func(name string) (port.IssueProvider, error) { return nil, nil },
 				MergeVerificationAvailable: true,
 				Provenance:                 invocationObserver{&observed, tc.observeErr},
-				RunRemoteBranch: func(_ context.Context, req model.CleanupRemoteBranchRequest, provider port.IssueProvider) (model.CleanupRemoteBranchResult, error) {
+				RunRemoteBranch: func(_ context.Context, req model.CleanupRemoteBranchRequest) (model.CleanupRemoteBranchResult, error) {
 					return model.CleanupRemoteBranchResult{ID: req.ID, NextCommand: "issueops cleanup remote-branch --id cycle --preview"}, runFailure
 				},
 			}

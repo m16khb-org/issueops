@@ -8,14 +8,8 @@ import (
 	domain "issueops/internal/domain/issueops"
 )
 
-type LinkedBranchAuditRecords interface {
-	WithinLock(context.Context, string, func(context.Context) error) error
-	Load(string) (model.IssueOpsRecord, error)
-	Save(context.Context, model.IssueOpsRecord) (model.IssueOpsRecord, error)
-}
-
 type LinkedBranchAuditRecorder struct {
-	Records LinkedBranchAuditRecords
+	Records LockedRecords
 	Now     func() time.Time
 }
 

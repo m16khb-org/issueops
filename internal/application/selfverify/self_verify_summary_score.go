@@ -7,18 +7,7 @@ import (
 )
 
 func MapGoalScores(result augment.SelfAugmentResult, targetScore float64) []verify.SelfVerificationGoalScore {
-	definitions := domain.GoalDefinitions()
-	goals := make([]verify.SelfVerificationGoalDefinition, 0, len(definitions))
-	for _, definition := range definitions {
-		goals = append(goals, verify.SelfVerificationGoalDefinition(definition))
-	}
-	runs := projectRuns(result)
-	domainScores := domain.ScoreGoals(goals, runs, result.Iterations, targetScore)
-	scores := make([]verify.SelfVerificationGoalScore, 0, len(domainScores))
-	for _, score := range domainScores {
-		scores = append(scores, verify.SelfVerificationGoalScore(score))
-	}
-	return scores
+	return domain.ScoreGoals(domain.GoalDefinitions(), projectRuns(result), result.Iterations, targetScore)
 }
 
 func projectRuns(result augment.SelfAugmentResult) []domain.Run {

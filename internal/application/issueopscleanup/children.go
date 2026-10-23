@@ -13,14 +13,14 @@ import (
 	"issueops/internal/port"
 )
 
-type ChildCleanupRecords interface {
+type LockedRecords interface {
 	WithinLock(context.Context, string, func(context.Context) error) error
 	Load(string) (model.IssueOpsRecord, error)
 	Save(context.Context, model.IssueOpsRecord) (model.IssueOpsRecord, error)
 }
 
 type ChildrenCloser struct {
-	Records      ChildCleanupRecords
+	Records      LockedRecords
 	Provider     func(string) (port.IssueProvider, error)
 	VerifyMerged func(model.IssueOpsRemoteArtifactVerification) error
 	Now          func() time.Time

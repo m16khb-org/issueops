@@ -10,7 +10,7 @@ import (
 
 type ChildCreateIntents struct {
 	Store     RecordStore
-	Authority PublicationAuthority
+	Authority Authority
 	Now       func() time.Time
 }
 

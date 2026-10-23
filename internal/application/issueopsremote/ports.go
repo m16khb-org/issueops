@@ -35,6 +35,6 @@ type RecordStore interface {
 	Update(context.Context, string, RecordTransition) (model.IssueOpsRecord, error)
 }
 
-type PublicationAuthority interface {
+type Authority interface {
 	Authorize(context.Context, model.IssueOpsRecord, model.IssueOpsActor) error
 }

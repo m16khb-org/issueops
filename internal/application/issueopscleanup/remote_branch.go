@@ -49,7 +49,7 @@ func (s RemoteBranchCleaner) Run(ctx context.Context, req model.CleanupRemoteBra
 	}
 	var stop bool
 	if !result.RemoteBranchPresent {
-		result, stop, err = planAbsentBranch(record, req, result)
+		result, stop = planAbsentBranch(record, req, result)
 	} else {
 		result, stop, err = planPresentBranch(record, req, inventory, result)
 	}
@@ -89,18 +89,18 @@ func (s RemoteBranchCleaner) Run(ctx context.Context, req model.CleanupRemoteBra
 }
 
 // planAbsentBranch handles an already-absent remote branch. stop reports that Run must return the result as is.
-func planAbsentBranch(record model.IssueOpsRecord, req model.CleanupRemoteBranchRequest, result model.CleanupRemoteBranchResult) (model.CleanupRemoteBranchResult, bool, error) {
+func planAbsentBranch(record model.IssueOpsRecord, req model.CleanupRemoteBranchRequest, result model.CleanupRemoteBranchResult) (model.CleanupRemoteBranchResult, bool) {
 	// Absence still precedes confirmation and fingerprint. Only an explicit
 	// apply may release a crashed same-operation attempt; preview never writes.
 	result.AlreadyAbsent = true
 	if record.CleanupAttempt == nil {
-		return result, true, nil
+		return result, true
 	}
 	if !req.Apply {
 		result.NextCommand = fmt.Sprintf("issueops cleanup remote-branch --id %s --apply --json", record.ID)
-		return result, true, nil
+		return result, true
 	}
-	return result, false, nil
+	return result, false
 }
 
 // releaseAttempt drains the lifetime once and releases the armed record, folding any failure into the result.

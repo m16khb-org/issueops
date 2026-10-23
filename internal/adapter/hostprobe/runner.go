@@ -404,16 +404,13 @@ func validSHA256(value string) bool {
 	return err == nil
 }
 
-func completedResult(host, version string, request port.HostProbeRequest, started time.Time, deps Dependencies, capture episodeCapture) port.HostProbeResult {
-	if version == "" {
-		version = request.HostVersion
-	}
+func completedResult(host string, request port.HostProbeRequest, started time.Time, deps Dependencies, capture episodeCapture) port.HostProbeResult {
 	arguments, _ := json.Marshal(capture.CanonicalArguments)
 	diagnostics, _ := json.Marshal(capture.Diagnostics)
 	return port.HostProbeResult{
 		Completed:              true,
 		Host:                   host,
-		HostVersion:            version,
+		HostVersion:            request.HostVersion,
 		RequestedModel:         request.Model,
 		FixtureID:              request.FixtureID,
 		SchemaSHA256:           capture.SchemaSHA256,

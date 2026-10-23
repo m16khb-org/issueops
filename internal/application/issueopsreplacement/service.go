@@ -35,7 +35,7 @@ func (s Service) Run(ctx context.Context, req issueops.ExecutionReplaceRequest) 
 	case issueops.ExecutionReplacePreview:
 		return s.previewExecutionReplacement(ctx, req)
 	case issueops.ExecutionReplaceFinalizePreview:
-		return s.previewExecutionFinalization(ctx, req)
+		return s.previewExecutionFinalization(req)
 	case issueops.ExecutionReplaceRevoke, issueops.ExecutionReplaceFinalize:
 		if !req.Confirm {
 			return issueops.ExecutionReplaceResult{OK: false, ID: req.ID, Action: req.Action}, fmt.Errorf("%s requires confirm", req.Action)
@@ -117,7 +117,7 @@ func observeCompletedExecutionBase(ctx context.Context, record issueops.IssueOps
 	return nil
 }
 
-func (s Service) previewExecutionFinalization(ctx context.Context, req issueops.ExecutionReplaceRequest) (issueops.ExecutionReplaceResult, error) {
+func (s Service) previewExecutionFinalization(req issueops.ExecutionReplaceRequest) (issueops.ExecutionReplaceResult, error) {
 	record, err := s.recordAtGeneration(req.ID, req.ExpectedGeneration)
 	if err != nil {
 		return issueops.ExecutionReplaceResult{OK: false, ID: req.ID, Action: req.Action}, err

@@ -14,21 +14,17 @@ type ArtifactVerificationStore interface {
 	WithinTransaction(context.Context, string, func(context.Context) error) error
 }
 
-type ArtifactVerificationAuthority interface {
-	Authorize(context.Context, model.IssueOpsRecord, model.IssueOpsActor) error
-}
-
 type ArtifactLiveVerifier func(context.Context, model.IssueOpsRemoteArtifactVerificationRequest) error
 
 type ArtifactVerificationService struct {
 	store     ArtifactVerificationStore
-	authority ArtifactVerificationAuthority
+	authority Authority
 	verify    ArtifactLiveVerifier
 	observe   AncestryObserver
 	now       func() time.Time
 }
 
-func NewArtifactVerificationService(store ArtifactVerificationStore, authority ArtifactVerificationAuthority, verify ArtifactLiveVerifier, observe AncestryObserver, now func() time.Time) *ArtifactVerificationService {
+func NewArtifactVerificationService(store ArtifactVerificationStore, authority Authority, verify ArtifactLiveVerifier, observe AncestryObserver, now func() time.Time) *ArtifactVerificationService {
 	return &ArtifactVerificationService{store: store, authority: authority, verify: verify, observe: observe, now: now}
 }
 

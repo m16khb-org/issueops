@@ -323,7 +323,7 @@ func reviewedRecord() model.IssueOpsRecord {
 	}
 }
 
-func newReviewService(store ReviewReflectionStore, auth ReviewReflectionAuthority, provider ReviewReflectionProvider, now time.Time) *ReviewReflectionService {
+func newReviewService(store ReviewReflectionStore, auth Authority, provider ReviewReflectionProvider, now time.Time) *ReviewReflectionService {
 	return NewReviewReflectionService(store, auth, func(string) (ReviewReflectionProvider, error) { return provider, nil }, func() ([]model.NativeProcessReceipt, error) { return nil, nil }, func() time.Time { return now })
 }
 

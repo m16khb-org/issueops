@@ -102,8 +102,8 @@ func (s *nestDTOScanner) checkProperty(i int, line, name string) {
 	deco := strings.Join(s.decorators, "\n")
 	hasIsOptional := strings.Contains(deco, "@IsOptional")
 	tsOptional := strings.Contains(line, "?:") || hasIsOptional
-	swaggerOptional := strings.Contains(deco, "@ApiPropertyOptional") || apiPropertyObjectFlag(deco, "required", "false")
-	swaggerRequiredExplicit := strings.Contains(deco, "@ApiProperty") && !strings.Contains(deco, "@ApiPropertyOptional") && (apiPropertyObjectFlag(deco, "required", "true") || !apiPropertyHasRequiredKey(deco))
+	swaggerOptional := strings.Contains(deco, "@ApiPropertyOptional") || apiPropertyRequiredFlag(deco, "false")
+	swaggerRequiredExplicit := strings.Contains(deco, "@ApiProperty") && !strings.Contains(deco, "@ApiPropertyOptional") && (apiPropertyRequiredFlag(deco, "true") || !apiPropertyHasRequiredKey(deco))
 	lineNo := i + 1
 	s.checkRequiredOptionalMismatch(lineNo, name, tsOptional, swaggerOptional, swaggerRequiredExplicit)
 	if !tsOptional {
@@ -144,11 +144,11 @@ func BraceDepthDelta(line string) int {
 
 var apiPropertyObjectValueRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`required\s*:\s*(true|false)`) })
 
-// apiPropertyObjectFlag reports whether a @ApiProperty(...) decorator object
+// apiPropertyRequiredFlag reports whether a @ApiProperty(...) decorator object
 // sets the required key to the given boolean. Plain string search stays
 // decorator-safe because other decorators on the same property do not carry a
 // required key.
-func apiPropertyObjectFlag(deco, key, want string) bool {
+func apiPropertyRequiredFlag(deco, want string) bool {
 	if !strings.Contains(deco, "@ApiProperty") || strings.Contains(deco, "@ApiPropertyOptional") {
 		return false
 	}

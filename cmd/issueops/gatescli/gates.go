@@ -184,7 +184,7 @@ func runInit(deps Dependencies, args []string) error {
 		return err
 	}
 	result, err := deps.Init(gatescontract.InitRequest{File: *file, Scope: *scope, Gates: gateSpecs})
-	return printSimpleResult(result, result.OK, err, *jsonOut)
+	return printSimpleResult(result, err, *jsonOut)
 }
 
 func runAbandon(deps Dependencies, args []string) error {
@@ -197,7 +197,7 @@ func runAbandon(deps Dependencies, args []string) error {
 		return err
 	}
 	result, err := deps.Abandon(gatescontract.AbandonRequest{File: *file, GateID: *gateID, Reason: *reason})
-	return printSimpleResult(result, result.OK, err, *jsonOut)
+	return printSimpleResult(result, err, *jsonOut)
 }
 
 func runLint(deps Dependencies, args []string) error {
@@ -279,7 +279,7 @@ func classifyCheckError(err error) error {
 	return err
 }
 
-func printSimpleResult(result any, ok bool, err error, jsonOut bool) error {
+func printSimpleResult(result any, err error, jsonOut bool) error {
 	if jsonOut {
 		if printErr := printJSON(result); printErr != nil {
 			return printErr

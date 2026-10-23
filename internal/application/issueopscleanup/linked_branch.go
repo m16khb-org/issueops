@@ -15,7 +15,7 @@ import (
 )
 
 type LinkedBranchCleaner struct {
-	Records               LinkedBranchAuditRecords
+	Records               LockedRecords
 	RemoteRef             func(context.Context, string, string) (string, error)
 	ObserveLinkedBranches func(context.Context, string) (linkedbranch.Observation, error)
 	DeleteLinkedBranch    func(context.Context, string, string) error

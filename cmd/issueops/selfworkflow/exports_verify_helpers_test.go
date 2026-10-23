@@ -21,19 +21,9 @@ func EmitSelfVerifyLoopEnd(progress *progress.SelfVerifyProgressReporter, loopKi
 }
 
 func SelfVerificationCoverageDefinitions() []verifycontract.SelfVerificationCoverageDefinition {
-	definitions := verifydomain.CoverageDefinitions()
-	out := make([]verifycontract.SelfVerificationCoverageDefinition, 0, len(definitions))
-	for _, definition := range definitions {
-		out = append(out, verifycontract.SelfVerificationCoverageDefinition(definition))
-	}
-	return out
+	return verifydomain.CoverageDefinitions()
 }
 
 func SelfVerificationGoalDefinitions() []verifycontract.SelfVerificationGoalDefinition {
-	definitions := verifydomain.GoalDefinitions()
-	out := make([]verifycontract.SelfVerificationGoalDefinition, 0, len(definitions))
-	for _, definition := range definitions {
-		out = append(out, verifycontract.SelfVerificationGoalDefinition(definition))
-	}
-	return out
+	return verifydomain.GoalDefinitions()
 }

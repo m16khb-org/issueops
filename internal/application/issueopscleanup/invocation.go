@@ -21,7 +21,7 @@ type Invocation struct {
 	Provenance                 provenanceport.Observer
 	MergeVerificationAvailable bool
 	RunFinish                  func(context.Context, model.CleanupFinishRequest, port.IssueProvider) (model.CleanupFinishResult, error)
-	RunRemoteBranch            func(context.Context, model.CleanupRemoteBranchRequest, port.IssueProvider) (model.CleanupRemoteBranchResult, error)
+	RunRemoteBranch            func(context.Context, model.CleanupRemoteBranchRequest) (model.CleanupRemoteBranchResult, error)
 	RunAbandon                 func(context.Context, model.CleanupAbandonRequest) (model.CleanupAbandonResult, error)
 	RunLinkedBranch            func(context.Context, model.CleanupLinkedBranchRequest) (model.CleanupLinkedBranchResult, error)
 }
@@ -69,14 +69,13 @@ func (s Invocation) RemoteBranch(ctx context.Context, req model.CleanupRemoteBra
 	if name == "" {
 		return empty, &port.CleanupInvocationError{Err: fmt.Errorf("cannot determine provider from IssueOps record")}
 	}
-	provider, err := s.Provider(name)
-	if err != nil {
+	if _, err := s.Provider(name); err != nil {
 		return empty, &port.CleanupInvocationError{Err: err}
 	}
 	if !s.MergeVerificationAvailable {
 		return empty, &port.CleanupInvocationError{Err: fmt.Errorf("merge verification is not configured")}
 	}
-	result, err := s.RunRemoteBranch(ctx, req, provider)
+	result, err := s.RunRemoteBranch(ctx, req)
 	bound, bindErr := BindNextCommand(ctx, result.NextCommand, domain.CleanupCommandGeneration(record), s.Provenance)
 	if bindErr != nil {
 		return result, &port.CleanupInvocationError{Err: bindErr}

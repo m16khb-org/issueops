@@ -458,7 +458,7 @@ func opencodeEpisodeFinish(name string, request port.HostProbeRequest, started t
 	if capture.CallCount != 1 {
 		return fail("transport", "probe_call_cardinality_invalid")
 	}
-	result := completedResult(name, "", request, started, deps, capture)
+	result := completedResult(name, request, started, deps, capture)
 	// The guard plugin lets the probe tool run only after the managed plugin
 	// put the catalog into that session's model request.
 	result.SessionStartObserved = true

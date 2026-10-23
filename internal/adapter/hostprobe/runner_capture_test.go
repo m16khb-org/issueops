@@ -403,7 +403,7 @@ func TestFailedAndCompletedResultFallBackToRequestVersion(t *testing.T) {
 		t.Fatalf("version = %q", got.HostVersion)
 	}
 	capture := episodeCapture{FixtureID: "fx", CallCount: 2, RawSHA256: "r", CanonicalArguments: map[string]any{"a": 1}, SchemaSHA256: "s", RunTokenSHA256: "t", Classification: "multiple_calls", Diagnostics: nil}
-	done := completedResult("codex", "", request, now, deps, capture)
+	done := completedResult("codex", request, now, deps, capture)
 	if !done.Completed || done.HostVersion != "req-v" || done.CallCount != 2 || done.CanonicalArgumentsJSON != `{"a":1}` || done.DiagnosticsJSON != "null" || done.EvidenceID != "t" || done.Classification != "multiple_calls" || done.DurationMS != 1500 {
 		t.Fatalf("completed = %+v", done)
 	}

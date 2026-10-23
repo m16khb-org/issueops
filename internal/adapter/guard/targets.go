@@ -10,7 +10,7 @@ import (
 
 func guardTargetFiles(root string, req guardcontract.GuardCheckRequest) []string {
 	if len(req.Files) > 0 {
-		return cleanGuardFiles(root, req.Files)
+		return cleanGuardFiles(req.Files)
 	}
 	if req.All {
 		files := []string{}
@@ -34,10 +34,10 @@ func guardTargetFiles(root string, req guardcontract.GuardCheckRequest) []string
 		return uniqSorted(files)
 	}
 	out := splitLines(gitOut(root, "diff", "--cached", "--name-only", "--diff-filter=ACMR"))
-	return cleanGuardFiles(root, out)
+	return cleanGuardFiles(out)
 }
 
-func cleanGuardFiles(root string, files []string) []string {
+func cleanGuardFiles(files []string) []string {
 	out := []string{}
 	for _, file := range files {
 		file = filepath.ToSlash(strings.TrimSpace(file))

@@ -60,7 +60,7 @@ func dedupeTraceFindings(findings []Finding) []Finding {
 		finding.FailureCause = NormalizeCause(finding.FailureCause)
 		finding.FailureCauseEvidence = NormalizeEvidence(finding.FailureCauseEvidence)
 		keys = append(keys, traceclassification.FindingKey{
-			Index: len(normalized), FailureClass: finding.FailureClass, FailureCause: string(finding.FailureCause),
+			Index: len(normalized), FailureClass: finding.FailureClass, FailureCause: finding.FailureCause,
 			RecurringPattern: finding.RecurringPattern, ProposedKnob: finding.ProposedKnob,
 			OverfitRisk: finding.OverfitRisk, VerificationCommand: finding.VerificationCommand,
 		})

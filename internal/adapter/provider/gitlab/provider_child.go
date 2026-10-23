@@ -3,6 +3,7 @@ package gitlab
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	executionissue "issueops/internal/contract/executionissue"
 	policy "issueops/internal/domain/policy"
@@ -404,13 +405,13 @@ const gitlabChildVerifyQuery = `query childVerify($childId: WorkItemID!) { workI
 const gitlabWorkItemCloseMutation = `mutation workItemUpdate($childId: WorkItemID!) { workItemUpdate(input: { id: $childId, stateEvent: CLOSE }) { workItem { id iid webUrl state } errors } }`
 const gitlabChildCloseVerifyQuery = `query childCloseVerify($childId: WorkItemID!) { workItem(id: $childId) { id iid webUrl state } }`
 
-func runGlabJSONContext(ctx context.Context, args []string, repo string, kind string) (port.IssueProviderCreateIssueResult, error) {
+func runGlabJSONContext(ctx context.Context, args []string, repo string) (port.IssueProviderCreateIssueResult, error) {
 	out, invoked, err := providerutil.RunBoundedMutationContext(ctx, repo, "glab", args...)
 	url, number := parseGlabOutput(string(out))
 	result := port.IssueProviderCreateIssueResult{OK: err == nil, URL: url, Number: number}
 	if err == nil {
 		if strings.TrimSpace(url) == "" {
-			return port.IssueProviderCreateIssueResult{OK: false}, &port.IssueProviderCreateError{Invoked: true, Err: fmt.Errorf("glab %s creation returned no canonical URL; do not retry", kind)}
+			return port.IssueProviderCreateIssueResult{OK: false}, &port.IssueProviderCreateError{Invoked: true, Err: errors.New("glab issue creation returned no canonical URL; do not retry")}
 		}
 		return result, nil
 	}
@@ -423,9 +424,9 @@ func runGlabJSONContext(ctx context.Context, args []string, repo string, kind st
 	}
 	diagnostic := strings.TrimPrefix(policy.BoundedDiagnostic(err.Error(), 384), "command failed after start: ")
 	if strings.TrimSpace(url) != "" {
-		return result, &port.IssueProviderCreateError{Invoked: true, Err: fmt.Errorf("glab %s create failed: %s; outcome unknown with a canonical URL returned separately; do not retry", kind, diagnostic)}
+		return result, &port.IssueProviderCreateError{Invoked: true, Err: fmt.Errorf("glab issue create failed: %s; outcome unknown with a canonical URL returned separately; do not retry", diagnostic)}
 	}
-	return port.IssueProviderCreateIssueResult{OK: false}, &port.IssueProviderCreateError{Invoked: true, Err: fmt.Errorf("glab %s create failed: %s; outcome unknown; do not retry", kind, diagnostic)}
+	return port.IssueProviderCreateIssueResult{OK: false}, &port.IssueProviderCreateError{Invoked: true, Err: fmt.Errorf("glab issue create failed: %s; outcome unknown; do not retry", diagnostic)}
 }
 
 func runGlabMRJSON(ctx context.Context, args []string, repo string) (executionissue.IssueProviderCreatePullRequestResult, error) {
