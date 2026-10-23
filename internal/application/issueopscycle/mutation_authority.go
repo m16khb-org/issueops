@@ -46,7 +46,8 @@ func AuthorizeHolder(ctx context.Context, record model.IssueOpsRecord, actor *mo
 	if !needsPath {
 		return nil
 	}
-	return authorization.ValidateCWD(pathsMatch != nil && pathsMatch(actor.CWD, record.Execution.Workspace.Root))
+	root := record.Execution.Workspace.Root
+	return authorization.ValidateCWD(pathsMatch != nil && pathsMatch(actor.CWD, root), actor.CWD, root)
 }
 
 // verifyHolderCaller builds the native verification input from the caller's

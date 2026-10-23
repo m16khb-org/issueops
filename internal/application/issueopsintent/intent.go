@@ -23,8 +23,8 @@ func RecordIntent(store intentport.Store, stateRoot, id string, req model.IssueO
 		return record, err
 	}
 	record.Intent = &model.IssueOpsIntentContract{RawRequest: intent.RawRequest, InterpretedIntent: intent.InterpretedIntent, SuccessCriteria: intent.SuccessCriteria, Constraints: intent.Constraints, Ambiguities: intent.Ambiguities, NonGoals: intent.NonGoals, IntentClass: intentClass, RecordedAt: store.Now()}
-	if secretdetection.Contains(intentdomain.Render(IntentDocument(record))) {
-		return model.IssueOpsRecord{OK: false}, fmt.Errorf("intent contains secret-like values; redact them before recording")
+	if match, found := secretdetection.Find(intentdomain.Render(IntentDocument(record))); found {
+		return model.IssueOpsRecord{OK: false}, fmt.Errorf("intent contains a secret-like value (%s); redact it before recording", match.Kind)
 	}
 	return store.TouchWrite(stateRoot, record)
 }

@@ -135,9 +135,9 @@ func materializeStagedArtifacts(stateRoot string, record issueops.IssueOpsRecord
 	// 달라진 재봉인은 plan과 똑같이 불변 writer가 거부한다.
 	if record.Intent != nil {
 		content := []byte(issueopsintent.Render(intentapp.IntentDocument(record)))
-		if secretdetection.Contains(string(content)) {
+		if match, found := secretdetection.Find(string(content)); found {
 			// 오류가 staging 표면을 가리키면 사용자가 엉뚱한 곳을 고치므로 record 쪽 명령을 안내한다.
-			return nil, fmt.Errorf("materialize artifact intent: record.intent contains secret-like values; rerun `issueops intent record` with the value redacted, then rerun execution prepare")
+			return nil, fmt.Errorf("materialize artifact intent: record.intent contains a secret-like value (%s); rerun `issueops intent record` with the value redacted, then rerun execution prepare", match.Kind)
 		}
 		if err := writeSealedArtifact(root, sealedArtifactPath(record, root, "intent"), content); err != nil {
 			return nil, fmt.Errorf("materialize artifact intent: %w", err)

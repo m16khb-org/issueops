@@ -15479,7 +15479,10 @@
       "owner": "domain",
       "task": "T20",
       "symbols": [
-        "func Contains"
+        "func Contains",
+        "func Find",
+        "type Match",
+        "type pattern"
       ]
     },
     {

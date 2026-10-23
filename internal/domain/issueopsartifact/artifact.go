@@ -25,8 +25,8 @@ func ValidateContent(content []byte) error {
 	if len(content) > issueopsartifactcontract.MaxBytes {
 		return fmt.Errorf("artifact exceeds %d bytes", issueopsartifactcontract.MaxBytes)
 	}
-	if secretdetection.Contains(string(content)) {
-		return fmt.Errorf("artifact content contains secret-like values; redact them before staging")
+	if match, found := secretdetection.Find(string(content)); found {
+		return fmt.Errorf("artifact content contains a secret-like value (%s) at line %d; redact it before staging", match.Kind, match.Line)
 	}
 	return nil
 }

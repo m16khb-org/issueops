@@ -67,10 +67,10 @@ func TestMutationHolderRequiresCurrentLeaseAndVerifiedProcess(t *testing.T) {
 	if _, err := ValidateHolder(record, &actor, &verified); err == nil || !strings.Contains(err.Error(), "no active write lease") {
 		t.Fatalf("released error=%v", err)
 	}
-	if err := ValidateCWD(false); err == nil {
-		t.Fatal("foreign cwd accepted")
+	if err := ValidateCWD(false, "/repo", "/repo.worktrees/1"); err == nil || !strings.Contains(err.Error(), `--cwd "/repo", worktree "/repo.worktrees/1"`) {
+		t.Fatalf("foreign cwd error=%v", err)
 	}
-	if err := ValidateCWD(true); err != nil {
+	if err := ValidateCWD(true, "/repo.worktrees/1", "/repo.worktrees/1"); err != nil {
 		t.Fatal(err)
 	}
 }
