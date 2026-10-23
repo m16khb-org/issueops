@@ -20,12 +20,19 @@ func newReadinessGit() core.ReadinessGit {
 	return core.ReadinessGit{Run: preflight.GitCmd, Output: preflight.GitOut}
 }
 func newCycleReadiness() cycle.Readiness {
+	return newCycleReadinessReading(preflight.GitCmd)
+}
+
+// newCycleReadinessReading runs the scoped readiness git probes through run,
+// so a caller that already observed the repository in the same request can
+// share its reads.
+func newCycleReadinessReading(run func(string, ...string) (int, string, string)) cycle.Readiness {
 	changes := newChangeReader()
 	observer := review.LocalChangeObserver{Source: reviewport.LocalChangeSource{BaseRef: changes.DiffBaseRef, Paths: changes.ObservedPathsIn, Fingerprint: implementation.FingerprintSnapshot}}
 	return cycle.Readiness{Paths: core.ReadinessPathObservations(), Git: newReadinessGit(), HasEvidence: changes.HasEvidence,
 		ObserveChanges: observer.Observe, ChangedPaths: changes.ChangedPaths,
 		NewObservationScope: func(s cycle.Readiness) cycle.Readiness {
-			s.Git, s.ClearGitObservations = core.NewReadinessGitObservations(preflight.GitCmd)
+			s.Git, s.ClearGitObservations = core.NewReadinessGitObservations(run)
 			return s
 		},
 		ChildMissing: (delegation.ChildGates{Scan: core.ScanReadableIssueOps}).PRMissing}

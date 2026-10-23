@@ -31,10 +31,10 @@ func issueOpsNextHandler(
 	string,
 ) (issueopsnextcontract.Result, error) {
 	listCycles := issueOpsInventoryListHandler(observers...)
-	readiness := newCycleReadiness()
 	changes := newChangeReader()
 	return func(stateRoot, cwd, id string) (issueopsnextcontract.Result, error) {
 		git := newNextGitObservation(preflightadapter.GitCmd)
+		readiness := newCycleReadinessReading(git.read)
 		localObservation := nextLocalReadinessObservation{
 			observe:  readiness.ObserveLocalPR,
 			fallback: changes.ObservedChangedPaths,
@@ -136,27 +136,45 @@ func observeIssueOpsHolderLiveness(receipt issueopscontract.NativeProcessReceipt
 	}
 }
 
-// nextGitObservation is created per Next call. Within that call it reuses the
-// branch read and the worktree probe (toplevel, branch, HEAD) for the same
-// exact root string: the repository check on the cwd and the execution
-// worktree probe are usually the same directory. Nothing outlives the call.
+// nextGitObservation is created per Next call. Within that call it answers
+// the identity reads (toplevel, branch, HEAD) once per exact root string: the
+// repository check on the cwd, the execution worktree probe, and the PR
+// readiness observation usually read the same directory. Every other probe
+// runs fresh, and nothing outlives the call.
 type nextGitObservation struct {
-	run       func(string, ...string) (int, string, string)
-	branches  map[string]string
-	worktrees map[string]nextWorktreeState
+	run   func(string, ...string) (int, string, string)
+	reads map[nextGitRead]nextGitResult
 }
 
-type nextWorktreeState struct {
-	present      bool
-	branch, head string
+type nextGitRead struct{ root, argv string }
+
+type nextGitResult struct {
+	code        int
+	out, stderr string
 }
 
 func newNextGitObservation(run func(string, ...string) (int, string, string)) *nextGitObservation {
-	return &nextGitObservation{run: run, branches: map[string]string{}, worktrees: map[string]nextWorktreeState{}}
+	return &nextGitObservation{run: run, reads: map[nextGitRead]nextGitResult{}}
+}
+
+func (observation *nextGitObservation) read(root string, args ...string) (int, string, string) {
+	argv := strings.Join(args, " ")
+	switch argv {
+	case "rev-parse --show-toplevel", "branch --show-current", "rev-parse HEAD":
+	default:
+		return observation.run(root, args...)
+	}
+	key := nextGitRead{root: root, argv: argv}
+	if result, ok := observation.reads[key]; ok {
+		return result.code, result.out, result.stderr
+	}
+	code, out, stderr := observation.run(root, args...)
+	observation.reads[key] = nextGitResult{code: code, out: out, stderr: stderr}
+	return code, out, stderr
 }
 
 func (observation *nextGitObservation) out(root string, args ...string) string {
-	code, out, _ := observation.run(root, args...)
+	code, out, _ := observation.read(root, args...)
 	if code != 0 {
 		return ""
 	}
@@ -164,25 +182,15 @@ func (observation *nextGitObservation) out(root string, args ...string) string {
 }
 
 func (observation *nextGitObservation) currentBranch(root string) string {
-	if branch, ok := observation.branches[root]; ok {
-		return branch
-	}
-	branch := observation.out(root, "branch", "--show-current")
-	observation.branches[root] = branch
-	return branch
+	return observation.out(root, "branch", "--show-current")
 }
 
 func (observation *nextGitObservation) worktreeState(root string) (bool, string, string) {
 	if strings.TrimSpace(root) == "" {
 		return false, "", ""
 	}
-	if state, ok := observation.worktrees[root]; ok {
-		return state.present, state.branch, state.head
+	if observation.out(root, "rev-parse", "--show-toplevel") == "" {
+		return false, "", ""
 	}
-	var state nextWorktreeState
-	if code, out, _ := observation.run(root, "rev-parse", "--show-toplevel"); code == 0 && strings.TrimSpace(out) != "" {
-		state = nextWorktreeState{present: true, branch: observation.currentBranch(root), head: observation.out(root, "rev-parse", "HEAD")}
-	}
-	observation.worktrees[root] = state
-	return state.present, state.branch, state.head
+	return true, observation.currentBranch(root), observation.out(root, "rev-parse", "HEAD")
 }
