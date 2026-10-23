@@ -8320,6 +8320,7 @@
       "symbols": [
         "func LinkAwaiter.Await",
         "func LinkAwaiter.observe",
+        "func readbackNotFound",
         "type LinkAwaiter"
       ]
     },

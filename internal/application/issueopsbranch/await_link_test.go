@@ -222,6 +222,22 @@ func TestAwaitLinkTreatsReadbackFailureAsAmbiguousAndRetries(t *testing.T) {
 	}
 }
 
+// A provider that says the repository or issue does not exist will not change
+// its answer; await-link stops after one readback instead of polling to the
+// timeout. A transient failure (above) still retries.
+func TestAwaitLinkStopsWhenTheProviderCannotFindTheIssue(t *testing.T) {
+	h := newAwaitHarness(awaitRecord())
+	h.script = []func() (linkedbranch.Observation, error){
+		func() (linkedbranch.Observation, error) {
+			return linkedbranch.Observation{}, errors.New("gh: Could not resolve to a Repository with the name 'example/hello'.")
+		},
+	}
+	res, err := h.awaiter.Await(t.Context(), issueopscontract.AwaitBranchLinkRequest{ID: "io-await"})
+	if err == nil || !strings.Contains(err.Error(), "cannot find the issue") || res.OK || res.Linked || res.TimedOut || res.Attempts != 1 || h.sleeps != 0 {
+		t.Fatalf("res=%+v err=%v sleeps=%d", res, err, h.sleeps)
+	}
+}
+
 func TestAwaitLinkReportsReadbackFailureReasonOnTimeout(t *testing.T) {
 	h := newAwaitHarness(awaitRecord())
 	h.script = []func() (linkedbranch.Observation, error){

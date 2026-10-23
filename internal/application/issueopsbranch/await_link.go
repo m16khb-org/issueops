@@ -64,6 +64,13 @@ func (s LinkAwaiter) Await(ctx context.Context, req issueopscontract.AwaitBranch
 			result.OK = false
 			return result, fmt.Errorf("linked branch does not match the sealed identity: %s", reason)
 		}
+		// The provider answered that the repository or issue does not exist:
+		// waiting cannot make the link appear, so stop instead of polling to
+		// the timeout (10m by default).
+		if state == linkedbranch.StateAmbiguous && readbackNotFound(reason) {
+			result.OK = false
+			return result, fmt.Errorf("the provider cannot find the issue %s, so its linked branch cannot be verified; --link-verified stays unrecorded: %s", prepare.IssueURL, reason)
+		}
 		if !s.Now().Before(deadline) {
 			result.OK, result.TimedOut = false, true
 			return result, fmt.Errorf(
@@ -94,4 +101,16 @@ func (s LinkAwaiter) observe(ctx context.Context, record issueopscontract.IssueO
 		return linkedbranch.StateAmbiguous, linkedbranch.Node{}, err.Error()
 	}
 	return linkedbranch.Classify(observation)
+}
+
+// readbackNotFound reports a linked-branch readback that the provider refused
+// because the repository or issue does not exist (GitHub GraphQL NOT_FOUND,
+// GitLab 404), as opposed to a transient failure worth retrying.
+func readbackNotFound(reason string) bool {
+	for _, marker := range []string{"Could not resolve to a Repository", "Could not resolve to an Issue", "404 Not Found", "HTTP 404"} {
+		if strings.Contains(reason, marker) {
+			return true
+		}
+	}
+	return false
 }
