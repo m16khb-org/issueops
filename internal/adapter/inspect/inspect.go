@@ -78,26 +78,10 @@ func ListSkills(root, skillName string) []inspectcontract.SkillInfo {
 			HasSkillMD: Exists(filepath.Join(p, "SKILL.md")),
 			HasOpenAI:  Exists(filepath.Join(p, "agents", "openai.yaml")),
 		}
-		s.Description = readSkillDescription(filepath.Join(p, "SKILL.md"))
 		out = append(out, s)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out
-}
-
-func readSkillDescription(path string) string {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return ""
-	}
-	lines := strings.SplitSeq(string(b), "\n")
-	for line := range lines {
-		line = strings.TrimSpace(line)
-		if after, ok := strings.CutPrefix(line, "description:"); ok {
-			return strings.Trim(strings.TrimSpace(after), `"'`)
-		}
-	}
-	return ""
 }
 
 func CodexMCPConfigured(path string) bool {

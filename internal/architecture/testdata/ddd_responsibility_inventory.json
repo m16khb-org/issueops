@@ -3977,7 +3977,6 @@
         "func Exists",
         "func ListSkills",
         "func Observer.Inspect",
-        "func readSkillDescription",
         "type Observer"
       ]
     },

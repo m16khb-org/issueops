@@ -90,7 +90,6 @@ func InspectOutputSchema() map[string]any {
 		"path":            schemaString(),
 		"has_skill_md":    schemaBool(),
 		"has_openai_yaml": schemaBool(),
-		"description":     schemaString(),
 	}, "name", "path", "has_skill_md", "has_openai_yaml")
 	integration := schemaObject(map[string]any{
 		"codex_skill_path":          schemaString(),

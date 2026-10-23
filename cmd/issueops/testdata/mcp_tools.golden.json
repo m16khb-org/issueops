@@ -189,9 +189,6 @@
         "skill": {
           "additionalProperties": false,
           "properties": {
-            "description": {
-              "type": "string"
-            },
             "has_openai_yaml": {
               "type": "boolean"
             },

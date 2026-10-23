@@ -23,21 +23,21 @@
               "kind": "agy_project_mcp_config",
               "path": "$ROOT/.agents/mcp_config.json",
               "written": true,
-              "content_sha256": "28c25b81f08dd88529a7c75408f1049526c094e73cb0b2739917b17e1068511c",
+              "content_sha256": "d0480b440dfed7a564958ce6cf341c5900a8fd9eaae1feddc16f4741edeeb370",
               "content": ""
             },
             {
               "kind": "agy_project_mcp_template",
               "path": "$ROOT/configs/agy/mcp_config.json",
               "written": true,
-              "content_sha256": "28c25b81f08dd88529a7c75408f1049526c094e73cb0b2739917b17e1068511c",
+              "content_sha256": "d0480b440dfed7a564958ce6cf341c5900a8fd9eaae1feddc16f4741edeeb370",
               "content": ""
             },
             {
               "kind": "agy_user_mcp_config",
               "path": "$HOME/.gemini/config/mcp_config.json",
               "written": true,
-              "content_sha256": "ab3975df614d7de8936f1ff8324eb794e3e160de1eefe116fa6d5cb156756066",
+              "content_sha256": "a1074156d61d2b0c334e3665de70b70dca44c9fab8a2638ca998121142309d55",
               "content": ""
             }
           ],
@@ -213,14 +213,14 @@
               "kind": "omo_project_mcp_config",
               "path": "$ROOT/.omo/mcp.json",
               "written": true,
-              "content_sha256": "28c25b81f08dd88529a7c75408f1049526c094e73cb0b2739917b17e1068511c",
+              "content_sha256": "d0480b440dfed7a564958ce6cf341c5900a8fd9eaae1feddc16f4741edeeb370",
               "content": ""
             },
             {
               "kind": "omo_project_mcp_template",
               "path": "$ROOT/configs/omo/mcp.json",
               "written": true,
-              "content_sha256": "28c25b81f08dd88529a7c75408f1049526c094e73cb0b2739917b17e1068511c",
+              "content_sha256": "d0480b440dfed7a564958ce6cf341c5900a8fd9eaae1feddc16f4741edeeb370",
               "content": ""
             },
             {
@@ -234,7 +234,7 @@
               "kind": "omo_user_mcp_config",
               "path": "$HOME/.omo/mcp.json",
               "written": true,
-              "content_sha256": "ab3975df614d7de8936f1ff8324eb794e3e160de1eefe116fa6d5cb156756066",
+              "content_sha256": "a1074156d61d2b0c334e3665de70b70dca44c9fab8a2638ca998121142309d55",
               "content": ""
             }
           ],
@@ -281,14 +281,14 @@
               "kind": "omp_project_mcp_config",
               "path": "$ROOT/.omp/mcp.json",
               "written": true,
-              "content_sha256": "1167b849a6b8d48f218e544477a594fad28203065fd0d32408bac5f892057000",
+              "content_sha256": "a29b029be3042d58bebab8d6e504a292cd46dd0b245c96574860090b6f5ec040",
               "content": ""
             },
             {
               "kind": "omp_project_mcp_template",
               "path": "$ROOT/configs/omp/mcp.json",
               "written": true,
-              "content_sha256": "1167b849a6b8d48f218e544477a594fad28203065fd0d32408bac5f892057000",
+              "content_sha256": "a29b029be3042d58bebab8d6e504a292cd46dd0b245c96574860090b6f5ec040",
               "content": ""
             },
             {
@@ -302,7 +302,7 @@
               "kind": "omp_user_mcp_config",
               "path": "$HOME/.omp/agent/mcp.json",
               "written": true,
-              "content_sha256": "e1adea3d3f3e6884244f7e3f05d6f480baa96305cbb4d316678da275cb2aae48",
+              "content_sha256": "aef1b24e3a590fc22b121eb9a4fc5bdc9a961b92ac6d5e211354085a47dd66ef",
               "content": ""
             }
           ],
@@ -349,14 +349,14 @@
               "kind": "opencode_project_mcp_config",
               "path": "$ROOT/.opencode/opencode.json",
               "written": true,
-              "content_sha256": "d2a574d29a7999249be511ade0abc324783d87d1f26777f5637e9fccbf882189",
+              "content_sha256": "8392e00abfbc01076a44bb9a55f991e2f13bacc0120d985acfe87fa4525e52fb",
               "content": ""
             },
             {
               "kind": "opencode_project_mcp_template",
               "path": "$ROOT/configs/opencode/opencode.json",
               "written": true,
-              "content_sha256": "d2a574d29a7999249be511ade0abc324783d87d1f26777f5637e9fccbf882189",
+              "content_sha256": "8392e00abfbc01076a44bb9a55f991e2f13bacc0120d985acfe87fa4525e52fb",
               "content": ""
             },
             {
@@ -370,7 +370,7 @@
               "kind": "opencode_user_mcp_config",
               "path": "$HOME/.config/opencode/opencode.json",
               "written": true,
-              "content_sha256": "2a7b3109e489c2068cfae56e6102f4e8de7246ff9b7405cf29d5023794d6c642",
+              "content_sha256": "5e613eb010ea37e3740ee55b8c140040ef5012c51b0dea590d2994d44f6d46ea",
               "content": ""
             }
           ],
@@ -434,14 +434,14 @@
               "kind": "agy_project_mcp_template",
               "path": "$ROOT/configs/agy/mcp_config.json",
               "written": true,
-              "content_sha256": "28c25b81f08dd88529a7c75408f1049526c094e73cb0b2739917b17e1068511c",
+              "content_sha256": "d0480b440dfed7a564958ce6cf341c5900a8fd9eaae1feddc16f4741edeeb370",
               "content": ""
             },
             {
               "kind": "agy_user_mcp_config",
               "path": "$HOME/.gemini/config/mcp_config.json",
               "written": true,
-              "content_sha256": "ab3975df614d7de8936f1ff8324eb794e3e160de1eefe116fa6d5cb156756066",
+              "content_sha256": "a1074156d61d2b0c334e3665de70b70dca44c9fab8a2638ca998121142309d55",
               "content": ""
             }
           ],
@@ -610,7 +610,7 @@
               "kind": "omo_project_mcp_template",
               "path": "$ROOT/configs/omo/mcp.json",
               "written": true,
-              "content_sha256": "28c25b81f08dd88529a7c75408f1049526c094e73cb0b2739917b17e1068511c",
+              "content_sha256": "d0480b440dfed7a564958ce6cf341c5900a8fd9eaae1feddc16f4741edeeb370",
               "content": ""
             },
             {
@@ -624,7 +624,7 @@
               "kind": "omo_user_mcp_config",
               "path": "$HOME/.omo/mcp.json",
               "written": true,
-              "content_sha256": "ab3975df614d7de8936f1ff8324eb794e3e160de1eefe116fa6d5cb156756066",
+              "content_sha256": "a1074156d61d2b0c334e3665de70b70dca44c9fab8a2638ca998121142309d55",
               "content": ""
             }
           ],
@@ -671,7 +671,7 @@
               "kind": "omp_project_mcp_template",
               "path": "$ROOT/configs/omp/mcp.json",
               "written": true,
-              "content_sha256": "1167b849a6b8d48f218e544477a594fad28203065fd0d32408bac5f892057000",
+              "content_sha256": "a29b029be3042d58bebab8d6e504a292cd46dd0b245c96574860090b6f5ec040",
               "content": ""
             },
             {
@@ -685,7 +685,7 @@
               "kind": "omp_user_mcp_config",
               "path": "$HOME/.omp/agent/mcp.json",
               "written": true,
-              "content_sha256": "e1adea3d3f3e6884244f7e3f05d6f480baa96305cbb4d316678da275cb2aae48",
+              "content_sha256": "aef1b24e3a590fc22b121eb9a4fc5bdc9a961b92ac6d5e211354085a47dd66ef",
               "content": ""
             }
           ],
@@ -732,7 +732,7 @@
               "kind": "opencode_project_mcp_template",
               "path": "$ROOT/configs/opencode/opencode.json",
               "written": true,
-              "content_sha256": "d2a574d29a7999249be511ade0abc324783d87d1f26777f5637e9fccbf882189",
+              "content_sha256": "8392e00abfbc01076a44bb9a55f991e2f13bacc0120d985acfe87fa4525e52fb",
               "content": ""
             },
             {
@@ -746,7 +746,7 @@
               "kind": "opencode_user_mcp_config",
               "path": "$HOME/.config/opencode/opencode.json",
               "written": true,
-              "content_sha256": "2a7b3109e489c2068cfae56e6102f4e8de7246ff9b7405cf29d5023794d6c642",
+              "content_sha256": "5e613eb010ea37e3740ee55b8c140040ef5012c51b0dea590d2994d44f6d46ea",
               "content": ""
             }
           ],

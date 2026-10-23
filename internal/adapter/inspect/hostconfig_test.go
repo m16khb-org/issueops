@@ -374,7 +374,7 @@ func TestReadArtifactFactsInterpretsHostEventShapes(t *testing.T) {
 	}
 }
 
-func TestListSkillsOnlyIndexesDirectoriesAndReadsFrontmatterDescription(t *testing.T) {
+func TestListSkillsOnlyIndexesDirectoriesAndReportsTheirFiles(t *testing.T) {
 	root := t.TempDir()
 	write := func(rel, body string) {
 		path := filepath.Join(root, "skills", rel)
@@ -395,10 +395,10 @@ func TestListSkillsOnlyIndexesDirectoriesAndReadsFrontmatterDescription(t *testi
 	if len(got) != 2 || got[0].Name != "alpha" || got[1].Name != "zeta" {
 		t.Fatalf("skills must be directories sorted by name: %+v", got)
 	}
-	if got[0].Description != "" || !got[0].HasSkillMD || got[0].HasOpenAI {
+	if !got[0].HasSkillMD || got[0].HasOpenAI {
 		t.Fatalf("alpha = %+v", got[0])
 	}
-	if got[1].Description != "Zeta skill" || !got[1].HasSkillMD || !got[1].HasOpenAI {
+	if !got[1].HasSkillMD || !got[1].HasOpenAI {
 		t.Fatalf("zeta = %+v", got[1])
 	}
 	if ListSkills(t.TempDir(), "x") != nil {

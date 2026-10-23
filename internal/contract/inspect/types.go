@@ -96,9 +96,8 @@ type HostReceipts struct {
 }
 
 type SkillInfo struct {
-	Name        string `json:"name"`
-	Path        string `json:"path"`
-	HasSkillMD  bool   `json:"has_skill_md"`
-	HasOpenAI   bool   `json:"has_openai_yaml"`
-	Description string `json:"description,omitempty"`
+	Name       string `json:"name"`
+	Path       string `json:"path"`
+	HasSkillMD bool   `json:"has_skill_md"`
+	HasOpenAI  bool   `json:"has_openai_yaml"`
 }

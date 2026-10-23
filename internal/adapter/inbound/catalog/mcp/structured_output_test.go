@@ -132,7 +132,7 @@ func TestInspectOutputSchemaModelsInspectInfo(t *testing.T) {
 	resolved := resolvedOutputSchema(t, "harness_inspect")
 	observation := inspectcontract.Observation{Status: "verified", Features: []string{"tools"}}
 	populated := inspectcontract.InspectInfo{
-		OK: true, Skills: []inspectcontract.SkillInfo{{Name: "s", Path: "/p", HasSkillMD: true, Description: "d"}},
+		OK: true, Skills: []inspectcontract.SkillInfo{{Name: "s", Path: "/p", HasSkillMD: true}},
 		Docs: []string{"a.md"},
 		Integration: inspectcontract.IntegrationStatus{Hosts: []inspectcontract.HostIntegration{{
 			Host: "codex", Installed: observation, Linked: observation, Configured: observation,
