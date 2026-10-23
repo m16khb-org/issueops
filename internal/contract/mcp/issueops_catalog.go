@@ -5,7 +5,7 @@ func IssueOpsBasicTools() []Tool {
 	return []Tool{{
 		Name:        "issueops_execution",
 		Annotations: UnclaimedWriteAnnotations(),
-		Description: "Prepare, inspect, claim, release, replace, reconcile, or complete the single IssueOps v1 execution lease. The action selects one shared CLI/MCP DTO; mutations require the exact native actor, generation, canonical cwd, and explicit confirmation.",
+		Description: "Prepare, inspect, claim, release, replace, reconcile, or complete the single IssueOps v1 execution lease. The action selects one shared CLI/MCP DTO; status needs only id; mutations require the exact native actor, generation, canonical cwd, and explicit confirmation.",
 		InputSchema: issueOpsExecutionSchema(),
 	}}
 }
@@ -16,7 +16,7 @@ func issueOpsExecutionSchema() map[string]any {
 		"required": []string{"action", "id"},
 		"properties": map[string]any{
 			"action":                   map[string]any{"type": "string", "enum": []string{"prepare", "status", "claim", "release", "replace", "reconcile", "complete"}},
-			"id":                       map[string]any{"type": "string"},
+			"id":                       map[string]any{"type": "string", "description": "Cycle id such as io-1a2b3c4d5e6f; `issueops next --json` or `issueops list --repo PATH --json` shows it."},
 			"host":                     map[string]any{"type": "string", "enum": []string{"codex", "claude", "omo", "omp", "opencode"}},
 			"session_id":               map[string]any{"type": "string"},
 			"agent_id":                 map[string]any{"type": "string"},

@@ -65,7 +65,10 @@ func NormalizeID(id string) (string, error) {
 	if id == "" {
 		return "", fmt.Errorf("id is required")
 	}
-	if !strings.HasPrefix(id, "io-") || strings.Contains(id, "..") || strings.ContainsAny(id, `/\`) {
+	if !strings.HasPrefix(id, "io-") {
+		return "", fmt.Errorf("invalid issueops id %q: %s", id, issueopscontract.IDFormatHint)
+	}
+	if strings.Contains(id, "..") || strings.ContainsAny(id, `/\`) {
 		return "", fmt.Errorf("invalid issueops id %q", id)
 	}
 	return id, nil

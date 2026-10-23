@@ -213,7 +213,7 @@ func normalizeIssueOpsID(id string) (string, error) {
 		return "", fmt.Errorf("id is required")
 	}
 	if !strings.HasPrefix(id, "io-") {
-		return "", fmt.Errorf("invalid issueops id %q", id)
+		return "", fmt.Errorf("invalid issueops id %q: %s", id, issueops.IDFormatHint)
 	}
 	if strings.Contains(id, "..") || strings.ContainsAny(id, `/\`) {
 		return "", fmt.Errorf("invalid issueops id %q", id)

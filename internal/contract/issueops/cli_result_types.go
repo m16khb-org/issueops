@@ -79,6 +79,10 @@ func StatusView(record IssueOpsRecord) IssueOpsRecord {
 // 아키텍처 검토 증거 예시 문구는 CLI 도움말과 어댑터가 함께 쓰는 어휘다.
 const IssueOpsArchitectureReviewEvidenceExample = "architecture review checked alternatives and risks"
 
+// IDFormatHint follows an id that is not a cycle id: what one looks like and
+// where to find it, for callers (an MCP-only agent) that guessed one.
+const IDFormatHint = "cycle ids look like io-1a2b3c4d5e6f; find them with `issueops next --json` or `issueops list --repo PATH --json`"
+
 // IssueOpsReviewMetricsCycle는 사이클 하나의 적대 리뷰 지표 파생값이다. 살아
 // 있는 record에서는 그 record가 이미 들고 있는 원자료(devil's-advocate
 // history, regress 이벤트, phase ledger)의 읽기 전용 projection이다. Outcome이

@@ -96,7 +96,7 @@ func TestStoreRejectsInvalidIDsBeforeTouchingState(t *testing.T) {
 	}
 	for _, tc := range []struct{ id, want string }{
 		{"   ", "id is required"},
-		{"issue-1", `invalid issueops id "issue-1"`},
+		{"issue-1", `invalid issueops id "issue-1": `+issueopscontract.IDFormatHint},
 		{"io-a/b", `invalid issueops id "io-a/b"`},
 		{"io-..x", `invalid issueops id "io-..x"`},
 	} {
@@ -313,7 +313,7 @@ func TestDeleteIfUnchangedRejectsInvalidExpectedRecord(t *testing.T) {
 
 func TestEncodeRejectsInvalidID(t *testing.T) {
 	record := baseRecord("not-an-id")
-	if _, err := Encode(record); err == nil || err.Error() != `invalid issueops id "not-an-id"` {
+	if _, err := Encode(record); err == nil || err.Error() != `invalid issueops id "not-an-id": `+issueopscontract.IDFormatHint {
 		t.Fatalf("error = %v", err)
 	}
 }

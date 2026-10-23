@@ -985,7 +985,7 @@
     "annotations": {
       "readOnlyHint": false
     },
-    "description": "Prepare, inspect, claim, release, replace, reconcile, or complete the single IssueOps v1 execution lease. The action selects one shared CLI/MCP DTO; mutations require the exact native actor, generation, canonical cwd, and explicit confirmation.",
+    "description": "Prepare, inspect, claim, release, replace, reconcile, or complete the single IssueOps v1 execution lease. The action selects one shared CLI/MCP DTO; status needs only id; mutations require the exact native actor, generation, canonical cwd, and explicit confirmation.",
     "inputSchema": {
       "properties": {
         "action": {
@@ -1045,6 +1045,7 @@
           "type": "string"
         },
         "id": {
+          "description": "Cycle id such as io-1a2b3c4d5e6f; `issueops next --json` or `issueops list --repo PATH --json` shows it.",
           "type": "string"
         },
         "inventory_fingerprint": {
