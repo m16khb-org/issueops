@@ -451,12 +451,12 @@ func TestExecRunnerReportsFailureKindsWithInvocationState(t *testing.T) {
 		started := time.Now()
 		// The background sleep inherits stdout; without a group kill and
 		// WaitDelay, Wait blocks until it exits and then it writes the marker.
-		script := "(sleep 3; touch " + marker + ") & sleep 30"
+		script := "(sleep 1; touch " + marker + ") & sleep 30"
 		output, err := ExecRunner{}.Run(t.Context(), CommandRequest{Executable: "/bin/sh", Args: []string{"-c", script}, Timeout: 100 * time.Millisecond})
 		if err == nil || !output.Invoked || time.Since(started) > 2500*time.Millisecond {
 			t.Fatalf("output=%+v err=%v elapsed=%s", output, err, time.Since(started))
 		}
-		time.Sleep(3500 * time.Millisecond)
+		time.Sleep(1500 * time.Millisecond)
 		if _, statErr := os.Stat(marker); !os.IsNotExist(statErr) {
 			t.Fatal("the grandchild survived the deadline")
 		}
