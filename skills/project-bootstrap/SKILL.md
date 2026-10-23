@@ -62,8 +62,9 @@ project-docs-bootstrap  ->  project-docs-update  ->  project-docs-optimize
 
    MCP alternative: `project_docs_bootstrap_plan`.
 
-2. Inspect `signals.files`, `signals.languages`, `signals.test_commands`,
-   `signals.profile`, and each planned `files[].action`.
+2. Inspect `signals.languages`, `signals.test_commands`, `signals.profile`, and each
+   planned `files[].action`. `signals.files` lists at most 100 scanned files;
+   `signals.files_total` gives the full count when there were more.
 
 3. Write files and repo profile metadata when the plan is acceptable:
 

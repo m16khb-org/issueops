@@ -1,7 +1,10 @@
 package projectdoc
 
 type ProjectSignals struct {
-	Files               []string          `json:"files"`
+	Files []string `json:"files"`
+	// FilesTotal is set when a result lists only the first files of a larger
+	// scan; the plan echoes evidence, not the whole tree.
+	FilesTotal          int               `json:"files_total,omitempty"`
 	Languages           []string          `json:"languages"`
 	PackageManagers     []string          `json:"package_managers"`
 	Profile             ProjectProfile    `json:"profile"`

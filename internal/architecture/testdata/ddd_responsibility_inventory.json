@@ -15357,6 +15357,14 @@
       ]
     },
     {
+      "path": "internal/domain/projectdoc/signal_summary.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func EchoedSignals"
+      ]
+    },
+    {
       "path": "internal/domain/projectdoc/signal_types.go",
       "owner": "domain",
       "task": "T20",
