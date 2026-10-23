@@ -23,6 +23,26 @@ func (s Service) List(root string) []string {
 	return selected()
 }
 
+// ListCurrent is List without the dated history records (see
+// docsdomain.HistoryRecord): the documents an agent applies.
+func (s Service) ListCurrent(root string) []string {
+	candidates, selected := s.startList(root)
+	history := make(map[string]bool)
+	for _, candidate := range candidates {
+		if docsdomain.HistoryRecord(candidate.RelPath) {
+			history[candidate.Path] = true
+		}
+	}
+	paths := selected()
+	current := paths[:0]
+	for _, path := range paths {
+		if !history[path] {
+			current = append(current, path)
+		}
+	}
+	return current
+}
+
 // startList walks the doc roots while Git resolves the tracked set in the
 // background; selected waits for Git and returns the chosen candidate paths.
 func (s Service) startList(root string) ([]docscontract.Candidate, func() []string) {

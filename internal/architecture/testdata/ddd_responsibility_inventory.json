@@ -8000,6 +8000,7 @@
         "func Service.Index",
         "func Service.IndexScoped",
         "func Service.List",
+        "func Service.ListCurrent",
         "func Service.index",
         "func Service.startList",
         "type Service"

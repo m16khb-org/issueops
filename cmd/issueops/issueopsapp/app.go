@@ -47,7 +47,9 @@ func scopedHarnessInspector(defaultTarget string) func(string, string) any {
 func harnessInspectorWithDefault(defaultTarget, receiptRoot string) func(string, inspectcontract.Options) inspectcontract.InspectInfo {
 	root := issueOpsRoot()
 	home, _ := os.UserHomeDir()
-	observer := inspect.Observer{ListDocs: newDocsService().List, HostVersion: inspect.CommandHostVersion, ReceiptRoot: receiptRoot, OpencodeConfigRoot: opencodeConfigRoot}
+	// inspect reports the rule documents; dated history records live in
+	// `docs --all` (the full list was 2/3 of inspect's payload).
+	observer := inspect.Observer{ListDocs: newDocsService().ListCurrent, HostVersion: inspect.CommandHostVersion, ReceiptRoot: receiptRoot, OpencodeConfigRoot: opencodeConfigRoot}
 	return func(target string, options inspectcontract.Options) inspectcontract.InspectInfo {
 		if target == "" {
 			target = defaultTarget
