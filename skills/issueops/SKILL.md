@@ -47,11 +47,8 @@ issueops next --json
   worktree의 새 Herdr 세션으로 인계한다. Herdr를 쓸 수 없으면 현재 세션에서 이어가거나,
   사용자가 직접 연 두 번째 터미널에서 수동 인계한다.
   바이너리 설치 여부만으로 ready라고 판단하지 않는다.
-- 결정 기록(`decision add`)·인계 자료·전달 관찰 규칙은 [handoff-observation.md](references/handoff-observation.md)를,
-  launcher recipe는 [session-choice.md](references/session-choice.md)를 본문 계약으로 적용한다. 제출 전 staging observation을 기록하고
-  입력 수락을 native turn이나 owner claim 증거로 삼지 않으며, 모호한 결과는 reconcile한다. 인계 전 새 dispatch를 멈추고 writer와 자손의 실제 종료를
-  확인한 뒤 release/status로 해제를 확인한다. 런처 설치·서버 시작과 모호한 launch의 재전송·우회는 하지 않는다.
-  이전 callback은 쓰기나 pass 근거가 아니다.
+- 인계 절차(결정 기록·인계 자료·전달 관찰, launcher)는 [handoff-observation.md](references/handoff-observation.md)와
+  [session-choice.md](references/session-choice.md)가 본문 계약이다. 인계할 때 그 둘을 읽고 따른다.
 - 자동 분기는 실행 위치만 정한다. 원래 요청의 승인 범위·종료점을 그대로 유지하며,
   구현만 요청한 작업에 commit·push·PR/MR 발행 권한을 추가하지 않는다.
   phase·claim·`--approved`도 승인 근거가 아니다.
