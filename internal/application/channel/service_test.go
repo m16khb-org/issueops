@@ -109,3 +109,15 @@ func TestRecvWaitReturnsWhenContextCancelled(t *testing.T) {
 		t.Fatalf("result=%+v polls=%d err=%v", result, len(f.sinceSeen), err)
 	}
 }
+
+// A wait that times out is a success with an empty list, so a consumer can
+// iterate `.messages[]` without a null check.
+func TestRecvWaitTimeoutReturnsEmptyMessageList(t *testing.T) {
+	start := time.Date(2026, 10, 8, 0, 0, 0, 0, time.UTC)
+	f := &fakeEffects{now: start}
+	f.wait = func(context.Context, time.Duration) error { f.now = start.Add(time.Hour); return nil }
+	result, err := (Service{Effects: f}).Recv(t.Context(), channelcontract.RecvRequest{Channel: "target", Wait: true, TimeoutSeconds: 1})
+	if err != nil || !result.OK || !result.TimedOut || result.Messages == nil || len(result.Messages) != 0 {
+		t.Fatalf("result=%+v err=%v, want ok timed-out result with messages []", result, err)
+	}
+}

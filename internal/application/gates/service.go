@@ -39,10 +39,10 @@ func (service Service) Check(request gatescontract.CheckRequest) (gatescontract.
 		var err error
 		files, err = service.Store.Discover(cwd)
 		if err != nil {
-			return gatescontract.CheckResult{}, err
+			return gatescontract.CheckResult{Files: []gatescontract.FileResult{}}, err
 		}
 		if len(files) == 0 {
-			return gatescontract.CheckResult{}, gatescontract.ErrNoGateFiles
+			return gatescontract.CheckResult{Files: []gatescontract.FileResult{}}, gatescontract.ErrNoGateFiles
 		}
 	}
 	result := gatescontract.CheckResult{

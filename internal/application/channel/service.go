@@ -55,7 +55,7 @@ func (service Service) Send(req channelcontract.SendRequest) (channelcontract.Se
 
 func (service Service) Recv(ctx context.Context, req channelcontract.RecvRequest) (channelcontract.RecvResult, error) {
 	req, err := channeldomain.NormalizeRecv(req)
-	result := channelcontract.RecvResult{SchemaVersion: channelcontract.SchemaVersion, Channel: req.Channel}
+	result := channelcontract.RecvResult{SchemaVersion: channelcontract.SchemaVersion, Channel: req.Channel, Messages: []channelcontract.Message{}}
 	if err != nil {
 		result.Error = err.Error()
 		return result, err
