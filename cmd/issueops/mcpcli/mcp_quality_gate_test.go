@@ -50,7 +50,7 @@ export class UsersController {
 		t.Fatal("quality gate failure must not be a tool error")
 	}
 	text := extractSingleTextResult(t, payload)
-	if !strings.Contains(text, `"ok": false`) || !strings.Contains(text, `"violations"`) || !strings.Contains(text, `"missing_api_param"`) {
+	if !strings.Contains(text, `"ok":false`) || !strings.Contains(text, `"violations"`) || !strings.Contains(text, `"missing_api_param"`) {
 		t.Fatalf("unexpected payload: %s", text)
 	}
 }
@@ -74,7 +74,7 @@ func TestQualityGateSentinelsAreRecognizedAsNormalMCPOutcomes(t *testing.T) {
 		if payload.(map[string]any)["isError"] == true {
 			t.Fatalf("%s gate became tool error", mode)
 		}
-		if text := extractSingleTextResult(t, payload); !strings.Contains(text, `"ok": false`) {
+		if text := extractSingleTextResult(t, payload); !strings.Contains(text, `"ok":false`) {
 			t.Fatalf("%s gate outcome=%s", mode, text)
 		}
 	}

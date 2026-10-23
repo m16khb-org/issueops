@@ -57,10 +57,10 @@ func TestServeMCPStreamAdvertisesAndRunsChannelTools(t *testing.T) {
 		t.Fatalf("channel_recv over SDK failed: err=%v result=%+v", err, recvResult)
 	}
 	content := toolResultText(recvResult)
-	if !strings.Contains(content, `"from": "server"`) || !strings.Contains(content, `{id,name,email}`) {
+	if !strings.Contains(content, `"from":"server"`) || !strings.Contains(content, `{id,name,email}`) {
 		t.Fatalf("channel_recv SDK payload unexpected:\n%s", content)
 	}
-	if strings.Contains(content, `"timed_out": true`) {
+	if strings.Contains(content, `"timed_out":true`) {
 		t.Fatalf("existing message must not time out:\n%s", content)
 	}
 }

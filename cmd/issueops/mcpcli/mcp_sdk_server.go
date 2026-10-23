@@ -2,6 +2,7 @@ package mcpcli
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -78,7 +79,7 @@ func sdkToolHandlerWithContext(
 		if outcome.Direct {
 			return sdkDirectToolResult(outcome.Result), nil
 		}
-		b, marshalErr := json.MarshalIndent(outcome.Payload, "", "  ")
+		b, marshalErr := compactJSON(outcome.Payload)
 		result := &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: string(b)}},
 			IsError: outcome.IsError,
@@ -146,8 +147,21 @@ func sdkDirectToolResult(direct any) *mcp.CallToolResult {
 			return result
 		}
 	}
-	b, _ := json.MarshalIndent(direct, "", "  ")
+	b, _ := compactJSON(direct)
 	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: string(b)}}}
+}
+
+// compactJSON is the model-facing text of an MCP result: no indentation and
+// no HTML escaping, about a fifth fewer bytes than indented JSON for the same
+// value. Hosts parse it or pass it to the model; neither needs the whitespace.
+func compactJSON(value any) ([]byte, error) {
+	var buf bytes.Buffer
+	encoder := json.NewEncoder(&buf)
+	encoder.SetEscapeHTML(false)
+	if err := encoder.Encode(value); err != nil {
+		return nil, err
+	}
+	return bytes.TrimSuffix(buf.Bytes(), []byte("\n")), nil
 }
 
 // compileToolOutputSchema resolves the catalog outputSchema of a tool once, so
@@ -310,7 +324,7 @@ func sdkResourceHandler(config resources.Config) mcp.ResourceHandler {
 				return sdkReadResourceResult(contents[0]), nil
 			}
 		}
-		b, _ := json.MarshalIndent(result, "", "  ")
+		b, _ := compactJSON(result)
 		return &mcp.ReadResourceResult{
 			Contents: []*mcp.ResourceContents{{URI: req.Params.URI, MIMEType: "application/json", Text: string(b)}},
 		}, nil

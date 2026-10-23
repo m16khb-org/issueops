@@ -245,7 +245,7 @@ func TestSDKCallToolRoutesClaimToInjectedHandler(t *testing.T) {
 		t.Fatalf("claim MCP response type=%T", response)
 	}
 	content, ok := payload["content"].([]map[string]any)
-	if !ok || len(content) != 1 || !strings.Contains(content[0]["text"].(string), `"id": "io-aaaaaaaaaaaa"`) {
+	if !ok || len(content) != 1 || !strings.Contains(content[0]["text"].(string), `"id":"io-aaaaaaaaaaaa"`) {
 		t.Fatalf("claim MCP response=%#v", response)
 	}
 }

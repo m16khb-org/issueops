@@ -62,7 +62,7 @@ func TestServeMCPStreamAdvertisesAndRunsGatesTools(t *testing.T) {
 		t.Fatalf("gates_check over SDK failed: err=%v result=%+v", err, checkResult)
 	}
 	content := toolResultText(checkResult)
-	if !strings.Contains(content, `"complete": false`) || !strings.Contains(content, `"total_met": 1`) {
+	if !strings.Contains(content, `"complete":false`) || !strings.Contains(content, `"total_met":1`) {
 		t.Fatalf("gates_check SDK payload unexpected:\n%s", content)
 	}
 
@@ -89,7 +89,7 @@ func TestServeMCPStreamAdvertisesAndRunsGatesTools(t *testing.T) {
 	if err != nil || finalResult.IsError {
 		t.Fatalf("gates_status over SDK failed: err=%v result=%+v", err, finalResult)
 	}
-	if content := toolResultText(finalResult); !strings.Contains(content, `"complete": true`) {
+	if content := toolResultText(finalResult); !strings.Contains(content, `"complete":true`) {
 		t.Fatalf("gates_status must report complete after abandon:\n%s", content)
 	}
 }

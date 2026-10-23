@@ -50,10 +50,10 @@ func TestSDKDirectToolResultRendersContentMapsAndFallsBackToJSON(t *testing.T) {
 		t.Fatalf("[]any content result = %+v", loose)
 	}
 	fallback := sdkDirectToolResult(map[string]any{"a": 1})
-	if fallback.IsError || len(fallback.Content) != 1 || text(fallback)[0] != "{\n  \"a\": 1\n}" {
+	if fallback.IsError || len(fallback.Content) != 1 || text(fallback)[0] != `{"a":1}` {
 		t.Fatalf("fallback = %v", text(fallback))
 	}
-	if got := text(sdkDirectToolResult([]int{1})); !reflect.DeepEqual(got, []string{"[\n  1\n]"}) {
+	if got := text(sdkDirectToolResult([]int{1})); !reflect.DeepEqual(got, []string{"[1]"}) {
 		t.Fatalf("non-map fallback = %v", got)
 	}
 }

@@ -2101,6 +2101,7 @@
       "symbols": [
         "func HandleResourceRead",
         "func ServeMCPStreamContextWithDependencies",
+        "func compactJSON",
         "func compileToolOutputSchema",
         "func decodeSDKToolArguments",
         "func initSDKServerWithDiagnostics",

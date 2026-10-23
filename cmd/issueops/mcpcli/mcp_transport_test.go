@@ -30,7 +30,7 @@ func TestRunMCPWithDependenciesUsesItsReleaseHandlerOnDirectTransport(t *testing
 	if !called {
 		t.Fatal("direct MCP transport did not invoke its injected release handler")
 	}
-	if len(result.Content) != 1 || !strings.Contains(result.Content[0].(*mcp.TextContent).Text, `"id": "io-mcp-direct"`) {
+	if len(result.Content) != 1 || !strings.Contains(result.Content[0].(*mcp.TextContent).Text, `"id":"io-mcp-direct"`) {
 		t.Fatalf("direct MCP response did not use injected handler result: %#v", result)
 	}
 }
