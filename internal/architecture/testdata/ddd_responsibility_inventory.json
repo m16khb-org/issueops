@@ -9160,6 +9160,7 @@
         "func isRepository",
         "func markInvalidSelection",
         "func matchOne",
+        "func needsLocalReadiness",
         "func placeholder",
         "func recordEntry",
         "func requestedCycleID",

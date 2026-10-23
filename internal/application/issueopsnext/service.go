@@ -211,14 +211,24 @@ func (service *Service) buildInput(
 			input.HolderLive = ports.ProcessLive(*holder.SessionProcess)
 		}
 	}
-	// local readiness는 fetch가 없어도 git을 읽으므로 실제로 필요한 두
-	// phase에서만 부른다.
-	if ports.LocalReadiness != nil &&
-		(record.Phase == issueopscontract.IssueOpsPhaseAISlopClean || record.Phase == issueopscontract.IssueOpsPhaseFeedback) {
+	// local readiness는 fetch가 없어도 git을 읽으므로 실제로 필요한 phase에서만
+	// 부른다: 정리·피드백, 그리고 create-pr이 strict readiness를 다시 볼 pr(아직
+	// 아티팩트가 없을 때).
+	if ports.LocalReadiness != nil && needsLocalReadiness(record) {
 		readiness := ports.LocalReadiness(record)
 		input.Local = &issueopsnextdomain.Readiness{Ready: readiness.Ready, Missing: readiness.Missing, Warnings: readiness.Warnings}
 	}
 	return input
+}
+
+func needsLocalReadiness(record issueopscontract.IssueOpsRecord) bool {
+	switch record.Phase {
+	case issueopscontract.IssueOpsPhaseAISlopClean, issueopscontract.IssueOpsPhaseFeedback:
+		return true
+	case issueopscontract.IssueOpsPhasePR:
+		return record.RemoteArtifact == nil
+	}
+	return false
 }
 
 // selectCycle은 설계의 선택 우선순위를 그대로 따른다. 정확히 하나로 좁혀지지

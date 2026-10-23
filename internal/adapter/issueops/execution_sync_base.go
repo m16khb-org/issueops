@@ -112,7 +112,7 @@ func syncExecutionBase(ctx context.Context, stateRoot string, req issueops.Execu
 	result.Fingerprint = fingerprint
 	if mode == issueops.ExecutionSyncBasePreview {
 		result.NextCommand = fmt.Sprintf(
-			"%s --apply --confirm --fingerprint %s ACTOR_FLAGS --json",
+			"%s --apply --confirm --fingerprint %s $ACTOR_FLAGS --json",
 			executionSyncBaseCommandPrefix(record), fingerprint)
 		return result, nil
 	}
@@ -233,8 +233,8 @@ func applyExecutionSyncBase(ctx context.Context, stateRoot string, record issueo
 	}
 	if outcome.ConflictPaused {
 		prefix := executionSyncBaseCommandPrefix(record)
-		result.NextCommand = prefix + " --finalize ACTOR_FLAGS --json"
-		result.AbortCommand = prefix + " --abort ACTOR_FLAGS --json"
+		result.NextCommand = prefix + " --finalize $ACTOR_FLAGS --json"
+		result.AbortCommand = prefix + " --abort $ACTOR_FLAGS --json"
 	}
 	return *result, nil
 }

@@ -388,6 +388,17 @@ func classifyPublication(in Input, decision Decision, index int) (Decision, bool
 	id := record.ID
 	if record.Phase == issueopsnextcontract.PhasePR && record.Execution != nil {
 		if record.RemoteArtifact == nil {
+			// create-pr runs the strict readiness. A gate gone unmet since the
+			// pr transition (a sync-base merge that staled the seals, an edit,
+			// an unpushed commit) means a new head: going back through
+			// ai-slop-clean and `phase --to pr` reseals pr_head, which
+			// completion checks; re-recording the seals inside pr would not.
+			if in.Local != nil && len(in.Local.Missing) > 0 {
+				decision.Stage = stage(issueopsnextcontract.StageClean, 5)
+				decision.Missing = append([]string{}, in.Local.Missing...)
+				decision.NextCommand = "issueops phase --id " + id + " --to ai-slop-clean $ACTOR_FLAGS --json"
+				return decision, true
+			}
 			decision.Stage = stage(issueopsnextcontract.StagePRCreate, 9)
 			decision.Missing = []string{"remote_artifact"}
 			decision.NextCommand = "issueops remote create-pr --id " + id +

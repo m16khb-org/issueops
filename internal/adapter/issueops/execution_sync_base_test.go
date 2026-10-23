@@ -871,7 +871,7 @@ func TestExecutionSyncBaseActiveHolderAuthorityRemainsSupported(t *testing.T) {
 
 func assertReleasedSyncBaseCommand(t *testing.T, text string, fixture syncBaseFixture, mode string) {
 	t.Helper()
-	if strings.Contains(text, "ACTOR_FLAGS") {
+	if strings.Contains(text, "$ACTOR_FLAGS") {
 		process := fixture.actor.SessionProcess
 		actorFlags := "--host " + quoteShellArg(fixture.actor.Host) +
 			" --session-id " + quoteShellArg(fixture.actor.SessionID) +
@@ -879,7 +879,7 @@ func assertReleasedSyncBaseCommand(t *testing.T, text string, fixture syncBaseFi
 			" --session-started-at " + quoteShellArg(process.StartedAt) +
 			" --session-executable " + quoteShellArg(process.Executable) +
 			" --cwd " + quoteShellArg(fixture.worktree)
-		text = strings.Replace(text, "ACTOR_FLAGS", actorFlags, 1)
+		text = strings.Replace(text, "$ACTOR_FLAGS", actorFlags, 1)
 	}
 	tokens := shelltoken.SplitCommandTokens(text)
 	if len(tokens) == 0 {

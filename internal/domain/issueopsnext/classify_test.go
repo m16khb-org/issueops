@@ -209,6 +209,10 @@ func TestClassifyStages(t *testing.T) {
 		{"pushed and clean", withLocal(withSelfHolder(baseRecord(issueopsnextcontract.PhaseAISlopClean))), "commit-push", 8},
 		{"unmatched local key falls back", withLocal(withSelfHolder(baseRecord(issueopsnextcontract.PhaseFeedback)), "branch_match"), "unknown", 7},
 		{"pr without artifact", withSelfHolder(baseRecord(issueopsnextcontract.PhasePR)), "pr.create", 9},
+		// A sync-base merge after the pr transition stales the seals; create-pr
+		// would refuse, so next returns to the stage that reseals.
+		{"pr with stale seal returns to clean", withLocal(withSelfHolder(baseRecord(issueopsnextcontract.PhasePR)), "ai_slop_clean_stale", "implementation_review_stale"), "clean", 5},
+		{"pr with ready readiness creates", withLocal(withSelfHolder(baseRecord(issueopsnextcontract.PhasePR))), "pr.create", 9},
 		{"pr with artifact", withArtifact(withSelfHolder(baseRecord(issueopsnextcontract.PhasePR))), "pr.complete", 9},
 		{"pr without execution", withIssue(baseRecord(issueopsnextcontract.PhasePR)), "unknown", 9},
 		{"done", baseRecord(issueopsnextcontract.PhaseDone), "done", 10},
@@ -690,5 +694,15 @@ func TestClassifyDelegatedChildSkipsArchitectureStage(t *testing.T) {
 	child.Record.ArchitectureReview.ReviewerContext = "subagent"
 	if got := Classify(child); got.Stage.Key != "plan.architecture" {
 		t.Fatalf("a reviewed child without its own staged architecture stays in plan.architecture, got %q", got.Stage.Key)
+	}
+}
+
+// After a sync-base merge in pr the seals are stale and the head moved; the way
+// back is phase --to ai-slop-clean, so the later `phase --to pr` reseals pr_head
+// (completion compares against it). Re-recording seals inside pr would not.
+func TestClassifyPRWithStaleSealsGoesBackThroughClean(t *testing.T) {
+	got := Classify(withLocal(withSelfHolder(baseRecord(issueopsnextcontract.PhasePR)), "ai_slop_clean_stale"))
+	if got.Stage.Key != "clean" || got.NextCommand != "issueops phase --id io-test --to ai-slop-clean $ACTOR_FLAGS --json" {
+		t.Fatalf("stage=%s next=%q", got.Stage.Key, got.NextCommand)
 	}
 }
