@@ -53,6 +53,37 @@ func TestCredentialFileIsImmutableOwnerOnlyAndRoundTrips(t *testing.T) {
 	}
 }
 
+// Prune keeps exactly the named digest of the key and tolerates a key that
+// was never written.
+func TestCredentialPruneKeepsOnlyTheNamedDigest(t *testing.T) {
+	files, key, first := credentialFixture(t)
+	firstPath, err := files.Write(context.Background(), key, first)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second := domain.ComposeToken(key, "c2Vjb25kLXZhbHVl")
+	secondPath, err := files.Write(context.Background(), key, second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := files.Prune(context.Background(), key, filepath.Base(secondPath)); err != nil {
+		t.Fatal(err)
+	}
+	entries, err := os.ReadDir(filepath.Dir(secondPath))
+	if err != nil || len(entries) != 1 || entries[0].Name() != filepath.Base(secondPath) {
+		t.Fatalf("key dir entries=%v err=%v, want only %s", entries, err, filepath.Base(secondPath))
+	}
+	if _, err := os.Lstat(firstPath); !os.IsNotExist(err) {
+		t.Fatalf("superseded credential still present: %v", err)
+	}
+	if _, gotToken, err := files.Read(context.Background(), secondPath); err != nil || gotToken != second {
+		t.Fatalf("kept credential unreadable: %v", err)
+	}
+	if err := files.Prune(context.Background(), strings.Repeat("c", 64), ""); err != nil {
+		t.Fatalf("pruning an unwritten key: %v", err)
+	}
+}
+
 func TestCredentialReadRejectsUnmanagedPaths(t *testing.T) {
 	files, key, token := credentialFixture(t)
 	path, err := files.Write(context.Background(), key, token)

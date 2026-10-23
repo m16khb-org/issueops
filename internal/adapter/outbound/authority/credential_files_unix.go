@@ -54,6 +54,46 @@ func (f CredentialFiles) Write(ctx context.Context, key, token string) (string, 
 	return filepath.Join(f.grantsDir(), key, digest), nil
 }
 
+// Prune unlinks the key's credential files other than keepDigest. The caller
+// runs it under the grant lock with the current record's digest, so removed
+// files hold tokens that can no longer authorize; re-authorizing keeps at most
+// the current and the new credential per key instead of growing the directory.
+func (f CredentialFiles) Prune(ctx context.Context, key, keepDigest string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if !domain.ValidKey(key) {
+		return errCredentialPath
+	}
+	fds, err := f.openGrantDirs(key, false)
+	if errors.Is(err, unix.ENOENT) {
+		return nil
+	}
+	if err != nil {
+		return errCredentialPath
+	}
+	defer closeFDs(fds)
+	keyFD := fds[len(fds)-1]
+	dupFD, err := unix.Dup(keyFD)
+	if err != nil {
+		return err
+	}
+	dir := os.NewFile(uintptr(dupFD), key)
+	defer dir.Close()
+	names, err := dir.Readdirnames(-1)
+	if err != nil {
+		return err
+	}
+	for _, name := range names {
+		if name != keepDigest {
+			if err := unix.Unlinkat(keyFD, name, 0); err != nil && !errors.Is(err, unix.ENOENT) {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func writeCredential(file *os.File, token string) error {
 	defer file.Close()
 	if err := file.Chmod(0o600); err != nil {

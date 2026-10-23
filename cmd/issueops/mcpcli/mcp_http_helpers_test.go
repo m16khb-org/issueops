@@ -224,6 +224,8 @@ func (f fakeCredentials) Read(_ context.Context, path string) (string, string, e
 	return path, "token:" + path, nil
 }
 
+func (f fakeCredentials) Prune(context.Context, string, string) error { return nil }
+
 // withFakeAuthority wires the real request scope and dispatch pipeline to an
 // in-memory grant table that enforces scope like the authority service.
 func withFakeAuthority(deps MCPDependencies, grants map[string]fakeGrant, records map[string][]string) MCPDependencies {

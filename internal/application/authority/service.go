@@ -73,8 +73,18 @@ func (s *Service) Issue(ctx context.Context, request contract.IssueRequest) (con
 	token := domain.ComposeToken(key, base64.RawURLEncoding.EncodeToString(secret))
 	record := domain.NewRecord(key, scope, verified.Identity, domain.TokenDigest(token), s.now())
 	var path string
-	err = s.repository.Within(ctx, key, func(*contract.Record) (*contract.Record, error) {
+	err = s.repository.Within(ctx, key, func(current *contract.Record) (*contract.Record, error) {
 		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		// Only the current record's token can still authorize; earlier files
+		// for this key are dead. Keeping that one means a failed commit below
+		// leaves the current credential usable.
+		keep := ""
+		if current != nil {
+			keep = current.TokenSHA256
+		}
+		if err := s.files.Prune(ctx, key, keep); err != nil {
 			return nil, err
 		}
 		written, err := s.files.Write(ctx, key, token)

@@ -5492,6 +5492,7 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
+        "func CredentialFiles.Prune",
         "func CredentialFiles.Read",
         "func CredentialFiles.Write",
         "func CredentialFiles.openGrantDirs",

@@ -33,6 +33,10 @@ type ProcessArgumentsInspector interface {
 type CredentialFiles interface {
 	Write(ctx context.Context, key, token string) (path string, err error)
 	Read(ctx context.Context, path string) (key, token string, err error)
+	// Prune removes the key's credential files other than keepDigest (the
+	// token the current grant record names; empty when there is none). Files
+	// it removes hold tokens that can no longer authorize.
+	Prune(ctx context.Context, key, keepDigest string) error
 }
 
 type ScopeResolver interface {

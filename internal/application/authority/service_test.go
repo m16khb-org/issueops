@@ -82,6 +82,18 @@ func (f *memoryFiles) Read(_ context.Context, path string) (string, string, erro
 	return key, token, nil
 }
 
+func (f *memoryFiles) Prune(_ context.Context, key, keepDigest string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	prefix := "/state/mcp-http/grants/" + key + "/"
+	for path := range f.files {
+		if strings.HasPrefix(path, prefix) && path != prefix+keepDigest {
+			delete(f.files, path)
+		}
+	}
+	return nil
+}
+
 type scopes map[string]contract.Scope
 
 func (s scopes) Resolve(_ context.Context, root, cwd string) (contract.Scope, error) {
@@ -243,6 +255,30 @@ func TestIssueBeforeAnyLeaseStoresOnlyIdentityHashScopeAndExpiry(t *testing.T) {
 	}
 	if record.Actor.ProcessAncestry != nil || record.GitCommonDir != "/repo/.git" || record.TokenSHA256 != domain.TokenDigest(token) {
 		t.Fatalf("record=%+v", record)
+	}
+}
+
+// Re-authorizing one session keeps at most the current and the new credential
+// for its key; older files, whose tokens no longer match the grant, are pruned.
+func TestReauthorizingKeepsCredentialFilesBounded(t *testing.T) {
+	h := newHarness()
+	actor := h.nativeActor("session", 4242)
+	var receipts []contract.Receipt
+	for range 4 {
+		receipt, err := h.service.Issue(context.Background(), contract.IssueRequest{WorkspaceRoot: "/repo", Actor: actor})
+		if err != nil {
+			t.Fatal(err)
+		}
+		receipts = append(receipts, receipt)
+	}
+	if len(h.files.files) != 2 {
+		t.Fatalf("credential files after 4 authorizations = %d, want 2", len(h.files.files))
+	}
+	if _, ok := h.files.files[receipts[0].AuthorityFile]; ok {
+		t.Fatal("the oldest credential was kept")
+	}
+	if _, _, err := h.files.Read(context.Background(), receipts[3].AuthorityFile); err != nil {
+		t.Fatalf("latest credential missing: %v", err)
 	}
 }
 
