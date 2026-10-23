@@ -723,3 +723,14 @@ func TestClassifyPRRefreshSequenceAfterAMovedHead(t *testing.T) {
 		}
 	}
 }
+
+// Right after `phase --to implement` nothing is implemented yet; the stage
+// names what the exit transition still needs instead of an empty missing next
+// to the exit command (an agent nearly skipped the implementation).
+func TestClassifyImplementNamesWhatTheExitNeeds(t *testing.T) {
+	in := withCompletionMissing(withSelfHolder(withBranch(withIssue(baseRecord(issueopsnextcontract.PhaseImplement)))), issueopsnextcontract.PhaseImplement, "implementation_changes")
+	got := Classify(in)
+	if got.Stage.Key != "implement" || !slices.Equal(got.Missing, []string{"implementation_changes"}) || !strings.Contains(got.NextCommand, "--to ai-slop-clean") {
+		t.Fatalf("stage=%s missing=%v next=%q", got.Stage.Key, got.Missing, got.NextCommand)
+	}
+}

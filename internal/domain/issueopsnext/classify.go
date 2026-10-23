@@ -339,6 +339,12 @@ func classifyHolderImplement(in Input, decision Decision) (Decision, bool) {
 		return decision, true
 	case issueopsnextcontract.PhaseImplement:
 		decision.Stage = stage(issueopsnextcontract.StageImplement, 4)
+		// The transition needs the implementation itself (changes, focused
+		// evidence); naming the gaps keeps an agent that just entered
+		// implement from running the exit command before writing any code.
+		if in.Completion != nil {
+			decision.Missing = append([]string{}, in.Completion(issueopsnextcontract.PhaseImplement).Missing...)
+		}
 		decision.NextCommand = "issueops phase --id " + id + " --to ai-slop-clean $ACTOR_FLAGS --json"
 		return decision, true
 	}
