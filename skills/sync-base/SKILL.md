@@ -29,7 +29,9 @@ or ambiguous ownership/base evidence does. Report it and ask rather than guess.
    `issueops list --repo "$PWD" --json`. If a cycle owns this
    branch, stop and route to `issueops execution sync-base`. That
    surface is merge-based and bound to the execution lease generation; syncing
-   here bypasses the lease and the recorded PR head.
+   here bypasses the lease and the recorded PR head. After an apply, follow
+   `issueops next`: the merge moved the head, so the cycle goes back through
+   ai-slop-clean and reseals before the PR.
    If IssueOps is unavailable and no cycle context is present, standalone Git
    work needs no installation; any evidence of cycle ownership blocks this lane
    until the owning stage verifies lifecycle ID, generation, native actor, and
