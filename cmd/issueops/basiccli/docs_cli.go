@@ -13,7 +13,7 @@ func (command Command) RunDocs(args []string) error {
 	}
 	fs := flag.NewFlagSet("docs", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", false, "print JSON")
-	all := fs.Bool("all", false, "also list dated history records (.issueops/issues, research, plans, archive, verified-execution)")
+	all := fs.Bool("all", false, "also list dated history records (.issueops/issues, research, plans, archive, verified-execution, and dated adr/ and cautions/ files)")
 	if err := cliflag.ParseNoArgs(fs, args); err != nil {
 		return err
 	}

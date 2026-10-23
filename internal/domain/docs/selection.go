@@ -1,10 +1,12 @@
 package docs
 
 import (
-	docscontract "issueops/internal/contract/docs"
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
+
+	docscontract "issueops/internal/contract/docs"
 )
 
 func Roots() []string {
@@ -58,6 +60,13 @@ func excluded(relativePath string) bool {
 // not rules an agent applies, and they are most of the index by size.
 var historyDirs = []string{".issueops/issues/", ".issueops/research/", ".issueops/plans/", ".issueops/archive/", ".issueops/verified-execution/"}
 
+// datedRecordDirs hold one dated file per decision or caution
+// (YYYY-MM-DD-slug.md). The family modules in the same directories carry the
+// rules and link the records, and project_docs_route picks the records a task
+// touches; listing every record made the default index too large for an MCP
+// result (Claude Code refused 58K characters).
+var datedRecordDirs = []string{".issueops/adr/", ".issueops/cautions/"}
+
 // HistoryRecord reports whether relativePath is a dated or retired record that
 // the default docs index leaves out (callers opt in to see them).
 func HistoryRecord(relativePath string) bool {
@@ -67,7 +76,21 @@ func HistoryRecord(relativePath string) bool {
 			return true
 		}
 	}
+	for _, dir := range datedRecordDirs {
+		if name, ok := strings.CutPrefix(relativePath, dir); ok && !strings.Contains(name, "/") && datedName(name) {
+			return true
+		}
+	}
 	return false
+}
+
+// datedName reports whether name starts with a YYYY-MM-DD- date prefix.
+func datedName(name string) bool {
+	if len(name) < len("2006-01-02-") || name[10] != '-' {
+		return false
+	}
+	_, err := time.Parse("2006-01-02", name[:10])
+	return err == nil
 }
 
 type authoringScope struct{ moduleDirs []string }

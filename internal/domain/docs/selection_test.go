@@ -58,13 +58,19 @@ func TestHistoryRecordSeparatesDatedRecordsFromRules(t *testing.T) {
 		".issueops/plans/brief.md":            true,
 		".issueops/archive/issueops-audit.md": true,
 		".issueops/verified-execution/548.md": true,
-		".issueops/cautions/2026-10-24-x.md":  false,
-		".issueops/adr/2026-10-02-http.md":    false,
-		".issueops/testing/unit.md":           false,
-		".issueops/CAUTIONS.md":               false,
-		".issueops/issues-guide.md":           false,
-		"AGENTS.md":                           false,
-		"skills/self-verify/SKILL.md":         false,
+		// Dated decision and caution records are counted, not listed; their
+		// family modules (overview, security, …) stay in the index.
+		".issueops/cautions/2026-10-24-x.md":   true,
+		".issueops/adr/2026-10-02-http.md":     true,
+		".issueops/cautions/security.md":       false,
+		".issueops/adr/roadmap.md":             false,
+		".issueops/adr/2026-13-02-not-date.md": false,
+		".issueops/adr/sub/2026-10-02-x.md":    false,
+		".issueops/testing/unit.md":            false,
+		".issueops/CAUTIONS.md":                false,
+		".issueops/issues-guide.md":            false,
+		"AGENTS.md":                            false,
+		"skills/self-verify/SKILL.md":          false,
 	} {
 		if got := HistoryRecord(path); got != want {
 			t.Errorf("HistoryRecord(%q) = %v, want %v", path, got, want)
