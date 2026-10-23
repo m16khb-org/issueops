@@ -42,7 +42,7 @@ var workspaceScopedTools = map[string]bool{
 }
 
 var authorityFieldDescriptions = map[string]string{
-	authorityFileField: "Credential file from `issueops mcp authorize`; required on the shared HTTP server.",
+	authorityFileField: "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
 	workspaceRootField: "Absolute workspace root; must match repo/path and the record.",
 	cwdField:           "Working directory in the workspace (default: workspace root).",
 }
