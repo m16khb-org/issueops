@@ -8425,11 +8425,12 @@
       "symbols": [
         "func FinishPreviewer.Plan",
         "func FinishPreviewer.observeBranch",
-        "func FinishPreviewer.observeMergedBaseRefs",
+        "func FinishPreviewer.observeRemoteRefs",
         "func FinishPreviewer.verifySupersedingArtifact",
         "type FinishEnvironment",
         "type FinishPreviewer",
-        "type FinishWorkspaceObservation"
+        "type FinishWorkspaceObservation",
+        "type finishRemoteRefs"
       ]
     },
     {

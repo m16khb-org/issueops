@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -33,24 +34,23 @@ func (g *fakeFinishGit) run(dir string, args ...string) (int, string) {
 		if g.lsRemoteFail {
 			return 128, "fatal: 'origin' does not appear to be a git repository"
 		}
-		if len(args) > 1 && args[1] == "--symref" {
-			if g.defaultRef == "" {
-				return 0, ""
+		// One ls-remote may ask for origin HEAD (--symref) and several refs;
+		// an absent ref is simply not advertised (exit 0, measured).
+		var out strings.Builder
+		if slices.Contains(args, "--symref") && g.defaultRef != "" {
+			out.WriteString("ref: " + g.defaultRef + "\tHEAD\nabc\tHEAD\n")
+		}
+		for _, ref := range args[1:] {
+			switch {
+			case ref == "refs/heads/80-finish":
+				if g.remoteBranchOID != "" {
+					out.WriteString(g.remoteBranchOID + "\trefs/heads/80-finish\n")
+				}
+			case strings.HasPrefix(ref, "refs/heads/") && g.basePresent:
+				out.WriteString("base123\t" + ref + "\n")
 			}
-			return 0, "ref: " + g.defaultRef + "\tHEAD\nabc\tHEAD\n"
 		}
-		ref := args[len(args)-1]
-		if ref != "refs/heads/80-finish" {
-			// 준비 base 브랜치 관측: 부재는 exit 0 + 빈 출력이다(실측).
-			if g.basePresent {
-				return 0, "base123\t" + ref + "\n"
-			}
-			return 0, ""
-		}
-		if g.remoteBranchOID == "" {
-			return 0, ""
-		}
-		return 0, g.remoteBranchOID + "\trefs/heads/80-finish\n"
+		return 0, out.String()
 	case "status":
 		return 0, g.statusOut
 	case "rev-parse":

@@ -3,6 +3,7 @@ package issueopscleanup
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	model "issueops/internal/contract/issueops"
@@ -37,8 +38,20 @@ func (s FinishPreviewer) Plan(ctx context.Context, record model.IssueOpsRecord, 
 			inventory.SupersededBy = strings.TrimSpace(req.SupersededBy)
 		}
 	}
-	if base := domain.PreparedBaseBranch(record); base != "" && strings.TrimSpace(req.MergedBaseBranch) != "" && inventory.SupersededBy == "" {
-		facts.DefaultBranch, facts.PreparedBasePresent, facts.BaseObserved = s.observeMergedBaseRefs(record.Repo, base)
+	base := domain.PreparedBaseBranch(record)
+	observeBase := base != "" && strings.TrimSpace(req.MergedBaseBranch) != "" && inventory.SupersededBy == ""
+	var refs []string
+	if observeBase {
+		refs = append(refs, "refs/heads/"+base)
+	}
+	if inventory.Branch != "" {
+		refs = append(refs, "refs/heads/"+inventory.Branch)
+	}
+	remote := s.observeRemoteRefs(record.Repo, observeBase, refs)
+	if observeBase && remote.readable {
+		_, facts.PreparedBasePresent = remote.oids["refs/heads/"+base]
+		facts.DefaultBranch = remote.defaultBranch
+		facts.BaseObserved = remote.defaultBranch != ""
 	}
 	if linked := strings.TrimSpace(record.WorktreePath); linked != "" {
 		facts.WorktreeIdentityConflict = !s.Environment.SamePath(inventory.WorktreeRoot, linked)
@@ -61,11 +74,13 @@ func (s FinishPreviewer) Plan(ctx context.Context, record model.IssueOpsRecord, 
 	}
 	if inventory.Branch != "" {
 		s.observeBranch(record.Repo, &inventory, &facts)
+		facts.RemoteReadable = remote.readable
+		facts.RemoteOID = remote.oids["refs/heads/"+inventory.Branch]
 	}
 	return inventory, domain.BuildCleanupFinishPreview(record, req, inventory, facts)
 }
 
-// observeBranch는 로컬 브랜치 OID와 origin 원격 브랜치 상태를 관찰해 inventory와 facts에 기록한다.
+// observeBranch는 로컬 브랜치 OID를 관찰해 inventory와 facts에 기록한다.
 func (s FinishPreviewer) observeBranch(repo string, inventory *model.CleanupFinishInventory, facts *domain.CleanupFinishObservation) {
 	code, out := s.Environment.Git(repo, "rev-parse", "--verify", "--quiet", "refs/heads/"+inventory.Branch)
 	oid := strings.TrimSpace(out)
@@ -73,33 +88,49 @@ func (s FinishPreviewer) observeBranch(repo string, inventory *model.CleanupFini
 	if code == 0 {
 		inventory.BranchOID = oid
 	}
-	code, out = s.Environment.Git(repo, "ls-remote", "--heads", "origin", "refs/heads/"+inventory.Branch)
-	facts.RemoteReadable = code == 0
-	if fields := strings.Fields(strings.TrimSpace(out)); len(fields) > 0 {
-		facts.RemoteOID = fields[0]
-	}
 }
 
-func (s FinishPreviewer) observeMergedBaseRefs(repo, base string) (string, bool, bool) {
-	code, out := s.Environment.Git(repo, "ls-remote", "--heads", "origin", "refs/heads/"+base)
-	if code != 0 {
-		return "", false, false
+// finishRemoteRefs is what one `git ls-remote origin` advertised.
+type finishRemoteRefs struct {
+	readable      bool
+	oids          map[string]string // exact ref name -> OID
+	defaultBranch string            // origin HEAD target when requested
+}
+
+// observeRemoteRefs answers the merged-base and remote-branch questions with
+// a single network round trip instead of one `ls-remote` per question. Refs are
+// matched by exact name, never by ls-remote's tail-match patterns.
+func (s FinishPreviewer) observeRemoteRefs(repo string, withHEAD bool, refs []string) finishRemoteRefs {
+	if !withHEAD && len(refs) == 0 {
+		return finishRemoteRefs{}
 	}
-	present := len(strings.Fields(strings.TrimSpace(out))) > 0
-	code, out = s.Environment.Git(repo, "ls-remote", "--symref", "origin", "HEAD")
+	args := []string{"ls-remote"}
+	if withHEAD {
+		args = append(args, "--symref")
+	}
+	args = append(args, "origin")
+	if withHEAD {
+		args = append(args, "HEAD")
+	}
+	args = append(args, refs...)
+	code, out := s.Environment.Git(repo, args...)
+	observed := finishRemoteRefs{readable: code == 0, oids: map[string]string{}}
 	if code != 0 {
-		return "", present, false
+		return observed
 	}
 	for line := range strings.SplitSeq(strings.TrimSpace(out), "\n") {
-		rest, found := strings.CutPrefix(strings.TrimSpace(line), "ref: refs/heads/")
-		if !found {
+		line = strings.TrimSpace(line)
+		if rest, found := strings.CutPrefix(line, "ref: refs/heads/"); found {
+			if target, ref, ok := strings.Cut(rest, "\t"); ok && strings.TrimSpace(ref) == "HEAD" {
+				observed.defaultBranch = strings.TrimSpace(target)
+			}
 			continue
 		}
-		if name := strings.TrimSpace(strings.SplitN(rest, "\t", 2)[0]); name != "" {
-			return name, present, true
+		if oid, ref, ok := strings.Cut(line, "\t"); ok && slices.Contains(refs, strings.TrimSpace(ref)) {
+			observed.oids[strings.TrimSpace(ref)] = strings.TrimSpace(oid)
 		}
 	}
-	return "", present, false
+	return observed
 }
 
 func (s FinishPreviewer) verifySupersedingArtifact(record model.IssueOpsRecord, candidate string) error {

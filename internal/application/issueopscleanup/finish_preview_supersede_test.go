@@ -81,21 +81,21 @@ func TestFinishPreviewRefusesUnprovableSupersedingArtifact(t *testing.T) {
 
 func TestFinishPreviewClassifiesMergedBaseFromOriginRefs(t *testing.T) {
 	const symrefMain = "ref: refs/heads/main\tHEAD\nabc\tHEAD\n"
+	// One `ls-remote --symref origin HEAD refs/heads/<base> ...` answers both
+	// questions: is the prepared base still advertised, and where does HEAD point.
 	cases := []struct {
 		name         string
-		headsCode    int
-		headsOut     string
-		symrefCode   int
-		symrefOut    string
+		code         int
+		out          string
 		wantMissing  []string
 		wantRetarget bool
 	}{
-		{name: "prepared base gone and default branch merged into", symrefOut: symrefMain, wantRetarget: true},
-		{name: "prepared base still exists remotely", headsOut: "abc\trefs/heads/parent", symrefOut: symrefMain, wantMissing: []string{"base_branch_drifted"}},
-		{name: "prepared base lookup fails", headsCode: 2, wantMissing: []string{"base_branch_drifted", "merged_base_remote_unobserved"}},
-		{name: "default branch lookup fails", symrefCode: 2, wantMissing: []string{"base_branch_drifted", "merged_base_remote_unobserved"}},
-		{name: "no symref line", symrefOut: "abc\tHEAD\n", wantMissing: []string{"base_branch_drifted", "merged_base_remote_unobserved"}},
-		{name: "empty symref branch", symrefOut: "ref: refs/heads/\tHEAD\n", wantMissing: []string{"base_branch_drifted", "merged_base_remote_unobserved"}},
+		{name: "prepared base gone and default branch merged into", out: symrefMain, wantRetarget: true},
+		{name: "prepared base still exists remotely", out: symrefMain + "abc\trefs/heads/parent\n", wantMissing: []string{"base_branch_drifted"}},
+		{name: "only a tail-matching ref is advertised", out: symrefMain + "abc\trefs/heads/team/refs/heads/parent\n", wantRetarget: true},
+		{name: "remote lookup fails", code: 2, wantMissing: []string{"base_branch_drifted", "merged_base_remote_unobserved"}},
+		{name: "no symref line", out: "abc\tHEAD\n", wantMissing: []string{"base_branch_drifted", "merged_base_remote_unobserved"}},
+		{name: "empty symref branch", out: "ref: refs/heads/\tHEAD\n", wantMissing: []string{"base_branch_drifted", "merged_base_remote_unobserved"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -103,10 +103,10 @@ func TestFinishPreviewClassifiesMergedBaseFromOriginRefs(t *testing.T) {
 				if args[0] != "ls-remote" {
 					return 0, ""
 				}
-				if args[1] == "--symref" {
-					return tc.symrefCode, tc.symrefOut
+				if !slices.Equal(args, []string{"ls-remote", "--symref", "origin", "HEAD", "refs/heads/parent"}) {
+					t.Fatalf("ls-remote args = %q, want one combined round trip", args)
 				}
-				return tc.headsCode, tc.headsOut
+				return tc.code, tc.out
 			}}
 			record := finishSupersedeRecord()
 			record.BranchPrepare = &model.IssueOpsBranchPrepare{BaseBranch: "parent"}

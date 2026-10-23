@@ -54,7 +54,7 @@ func TestFinishPreviewRequiresObservableLocalBranch(t *testing.T) {
 			if slices.Contains(result.Missing, "local_branch_observable") != tc.blocked || result.OK == tc.blocked {
 				t.Fatalf("result=%+v", result)
 			}
-			if !reflect.DeepEqual(env.calls, []string{"rev-parse", "ls-remote"}) {
+			if !reflect.DeepEqual(env.calls, []string{"ls-remote", "rev-parse"}) {
 				t.Fatalf("calls=%v", env.calls)
 			}
 		})
@@ -97,7 +97,8 @@ func TestFinishPreviewPreservesObservationOrderAndBoundTargets(t *testing.T) {
 	if !result.OK || result.RetargetedBase == nil || inventory.Branch != "123-cleanup" || inventory.BranchOID != "head" || len(inventory.WorkspaceProcesses) != 1 || len(result.WorkspaceProcesses) != 1 {
 		t.Fatalf("inventory=%+v result=%+v", inventory, result)
 	}
-	if !reflect.DeepEqual(env.calls, []string{"ls-remote", "ls-remote", "workspace", "status", "rev-parse", "ls-remote"}) {
+	// One remote round trip covers the merged base, origin HEAD, and the branch.
+	if !reflect.DeepEqual(env.calls, []string{"ls-remote", "workspace", "status", "rev-parse"}) {
 		t.Fatalf("calls=%v", env.calls)
 	}
 }
