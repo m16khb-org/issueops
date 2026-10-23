@@ -44,7 +44,6 @@ func readinessForEffects(t *testing.T, locked *bool, events *[]string) (Readines
 			return review.LocalChangeObservation{Paths: []string{"src.go"}, Fingerprint: "fingerprint", Verified: true}
 		},
 		ChangedPaths: func(model.IssueOpsRecord) []string { *events = append(*events, "paths"); return []string{"src.go"} },
-		Cleanup:      func(model.IssueOpsRecord) model.IssueOpsCleanupStatus { return model.IssueOpsCleanupStatus{} },
 		ChildMissing: func(string, model.IssueOpsRecord) ([]string, []string) { return nil, nil },
 	}
 	return ready, git

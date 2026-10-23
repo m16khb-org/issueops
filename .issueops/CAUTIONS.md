@@ -76,7 +76,7 @@ footer; older notes also live in `archive/cautions-incidents.md`.
 
 | Date | Lesson |
 |---|---|
-| 2026-10-24 | [PR readiness의 cleanup 관측은 네트워크 `ls-remote`를 부르므로 `status`·`next`의 phase 완료 판정은 cleanup 없는 `localPR`을 쓴다](cautions/2026-10-24-readiness-cleanup-observation-is-network.md) |
+| 2026-10-24 | [PR readiness가 읽는 곳 없는 cleanup 관측(네트워크 `ls-remote`)을 실어 `status`·`next`·`pr-readiness`가 매번 그 비용을 냈다. cleanup 판정은 `cleanup status`만 맡는다](cautions/2026-10-24-readiness-cleanup-observation-is-network.md) |
 | 2026-10-24 | [스킬 description의 일반 YAML 값에 `: `가 들어가면 엄격한 host(Codex)가 스킬을 건너뛴다](cautions/2026-10-24-skill-description-plain-yaml-colon.md) |
 | 2026-10-24 | [MCP HTTP 서버에 ReadTimeout을 두면 오래 걸리는 도구 호출이 취소되고, TestMain·이름 없는 subtest는 TMPDIR에 디렉터리를 남긴다](cautions/2026-10-24-mcp-http-readtimeout-and-test-tmpdir-leaks.md) |
 | 2026-10-19 | [게이트 CHECK는 긴 출력 뒤에 찍은 기대 문자열이 잘려 불일치가 되고, `--file` 없는 `gates check`는 모든 원장을 실행한다](cautions/2026-10-19-gate-check-output-is-truncated-before-expect-is-matched-and.md) |

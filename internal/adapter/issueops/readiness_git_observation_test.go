@@ -4,9 +4,6 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-
-	cleanup "issueops/internal/application/issueopscleanup"
-	model "issueops/internal/contract/issueops"
 )
 
 func TestGitObservationPreservesTuplesAndOutput(t *testing.T) {
@@ -30,7 +27,7 @@ func TestGitObservationPreservesTuplesAndOutput(t *testing.T) {
 				}
 				return tc.code, tc.out, tc.stderr
 			}
-			git, env, _ := NewReadinessGitObservations(run)
+			git, _ := NewReadinessGitObservations(run)
 			want := ""
 			if tc.code == 0 {
 				want = strings.TrimSpace(tc.out)
@@ -38,53 +35,9 @@ func TestGitObservationPreservesTuplesAndOutput(t *testing.T) {
 			if out := git.Branch("/repo"); out != want {
 				t.Fatalf("Output=%q want=%q", out, want)
 			}
-			code, out, stderr := env.Git("/repo", "branch", "--show-current")
-			if code != tc.code || out != tc.out || stderr != tc.stderr || env.GitOutput("/repo", "branch", "--show-current") != want || calls != 1 {
+			code, out, stderr := git.Run("/repo", "branch", "--show-current")
+			if code != tc.code || out != tc.out || stderr != tc.stderr || git.Output("/repo", "branch", "--show-current") != want || calls != 1 {
 				t.Fatalf("tuple=(%d,%q,%q) calls=%d", code, out, stderr, calls)
-			}
-		})
-	}
-}
-
-func TestGitObservationSharesCleanupWithoutChangingResults(t *testing.T) {
-	t.Parallel()
-
-	for _, code := range []int{0, 23} {
-		t.Run(string(rune('a'+code)), func(t *testing.T) {
-			calls := map[string]int{}
-			run := func(_ string, args ...string) (int, string, string) {
-				command := strings.Join(args, " ")
-				calls[command]++
-				switch command {
-				case "branch --show-current":
-					return 0, " topic\n", ""
-				case "remote":
-					return 0, "origin\n", ""
-				case "status --porcelain=v1":
-					return code, "", "status error"
-				default:
-					return 0, "", ""
-				}
-			}
-			output := func(root string, args ...string) string {
-				code, out, _ := run(root, args...)
-				if code != 0 {
-					return ""
-				}
-				return strings.TrimSpace(out)
-			}
-			record := model.IssueOpsRecord{WorktreePath: t.TempDir(), Branch: "topic"}
-			want := (cleanup.StructuralStatus{Environment: CleanupStatusEnvironment{RunGit: run, ReadGit: output}}).ForRecord(record, model.IssueOpsCleanupStatusRequest{})
-			clear(calls)
-			git, env, _ := NewReadinessGitObservations(run)
-			got := (cleanup.StructuralStatus{Environment: env}).ForRecord(record, model.IssueOpsCleanupStatusRequest{})
-			if !reflect.DeepEqual(got, want) || git.Branch(record.WorktreePath) != "topic" || !git.Clean(record.WorktreePath) {
-				t.Fatalf("changed cleanup/output semantics: got=%+v want=%+v", got, want)
-			}
-			for _, command := range []string{"branch --show-current", "status --porcelain=v1"} {
-				if calls[command] != 1 {
-					t.Fatalf("%q calls=%d", command, calls[command])
-				}
 			}
 		})
 	}
@@ -102,13 +55,15 @@ func TestGitObservationExactRootsArgumentsAndFetchBoundaries(t *testing.T) {
 		}
 		return 0, phase, ""
 	}
-	git, env, reset := NewReadinessGitObservations(run)
+	git, reset := NewReadinessGitObservations(run)
 	for _, root := range []string{"/repo", "/repo/."} {
 		git.Branch(root)
 		git.Branch(root)
-		env.Git(root, "branch", "--show-current", "extra")
-		env.Git(root, "branch", "--show-current", "extra")
-		if calls[root+" branch --show-current"] != 1 || calls[root+" branch --show-current extra"] != 2 {
+		git.Clean(root)
+		git.Clean(root)
+		git.Run(root, "branch", "--show-current", "extra")
+		git.Run(root, "branch", "--show-current", "extra")
+		if calls[root+" branch --show-current"] != 1 || calls[root+" status --porcelain=v1"] != 1 || calls[root+" branch --show-current extra"] != 2 {
 			t.Fatalf("root/argv identity lost: %v", calls)
 		}
 	}
@@ -134,7 +89,7 @@ func TestGitObservationKeepsRefAndHeadProbesFresh(t *testing.T) {
 		calls[root+" "+strings.Join(args, " ")]++
 		return 0, "", ""
 	}
-	git, _, _ := NewReadinessGitObservations(run)
+	git, _ := NewReadinessGitObservations(run)
 	for range 2 {
 		git.BaseAdvanced("/repo", "origin/main")
 		git.BaseAdvanced("/repo", "origin/other")

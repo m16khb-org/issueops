@@ -13,9 +13,10 @@ type ReadinessGit struct {
 	Output func(string, ...string) string
 }
 
-// NewReadinessGitObservations pairs readiness and cleanup for one operation.
-// Only their overlapping branch/status facts are reused; all other probes stay fresh.
-func NewReadinessGitObservations(run func(string, ...string) (int, string, string)) (ReadinessGit, CleanupStatusEnvironment, func()) {
+// NewReadinessGitObservations dedupes the branch and porcelain status reads of
+// one readiness operation; all other probes stay fresh, and a fetch starts a
+// new phase.
+func NewReadinessGitObservations(run func(string, ...string) (int, string, string)) (ReadinessGit, func()) {
 	type result struct {
 		code        int
 		out, stderr string
@@ -50,7 +51,7 @@ func NewReadinessGitObservations(run func(string, ...string) (int, string, strin
 		}
 		return strings.TrimSpace(out)
 	}
-	return ReadinessGit{Run: observe, Output: output}, CleanupStatusEnvironment{RunGit: observe, ReadGit: output}, reset
+	return ReadinessGit{Run: observe, Output: output}, reset
 }
 
 func (ReadinessGit) Root(record model.IssueOpsRecord) string {

@@ -1785,15 +1785,6 @@
     },
     "issueops_pr_readiness": {
       "branch": "1-contract-branch",
-      "cleanup_missing": [
-        "branch",
-        "child_tasks_closed",
-        "pr_phase",
-        "remote_artifact",
-        "remote_artifact_merged",
-        "remote_branch_check_unavailable",
-        "worktree_git_status"
-      ],
       "issue_url": "https://gitlab.example/group/project/-/issues/1",
       "missing": [
         "ai_slop_clean",

@@ -3,7 +3,6 @@ package issueops
 import (
 	"issueops/internal/adapter/issueops/implementation"
 	"issueops/internal/adapter/preflight"
-	cleanup "issueops/internal/application/issueopscleanup"
 	cycle "issueops/internal/application/issueopscycle"
 	delegation "issueops/internal/application/issueopsdelegation"
 	materialapp "issueops/internal/application/issueopsremote"
@@ -21,12 +20,8 @@ func testReadinessGit() ReadinessGit      { return ReadinessGit{Run: GitCmd, Out
 func testCycleReadiness() cycle.Readiness { return testCycleReadinessWithChanges(testChangeReader()) }
 func testCycleReadinessWithChanges(changes implementation.Reader) cycle.Readiness {
 	observer := review.LocalChangeObserver{Source: reviewport.LocalChangeSource{BaseRef: changes.DiffBaseRef, Paths: changes.ObservedPathsIn, Fingerprint: implementation.FingerprintSnapshot}}
-	cleanupStatus := cleanup.StructuralStatus{Environment: CleanupStatusEnvironment{RunGit: GitCmd, ReadGit: GitOut}}
 	return cycle.Readiness{Paths: ReadinessPathObservations(), Git: testReadinessGit(), HasEvidence: changes.HasEvidence,
 		ObserveChanges: observer.Observe, ChangedPaths: changes.ChangedPaths,
-		Cleanup: func(record model.IssueOpsRecord) model.IssueOpsCleanupStatus {
-			return cleanupStatus.ForRecord(record, model.IssueOpsCleanupStatusRequest{Merged: false})
-		},
 		ChildMissing: (delegation.ChildGates{Scan: ScanReadableIssueOps}).PRMissing}
 }
 func testCyclePhaseService(actor *model.IssueOpsActor) cycle.PhaseService {

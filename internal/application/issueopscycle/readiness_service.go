@@ -19,7 +19,6 @@ type Readiness struct {
 	HasEvidence          func(model.IssueOpsRecord) bool
 	ObserveChanges       func(model.IssueOpsRecord, string) review.LocalChangeObservation
 	ChangedPaths         func(model.IssueOpsRecord) []string
-	Cleanup              func(model.IssueOpsRecord) model.IssueOpsCleanupStatus
 	ChildMissing         func(string, model.IssueOpsRecord) ([]string, []string)
 }
 
@@ -54,31 +53,24 @@ func (s Readiness) AISlopClean(record model.IssueOpsRecord) model.IssueOpsReadin
 	ready.Ready = len(ready.Missing) == 0
 	return ready
 }
+
+// PR is the local PR readiness. Post-merge cleanup readiness is not part of
+// it: it can never be ready before the merge and costs a network ls-remote;
+// `issueops cleanup status` owns it.
 func (s Readiness) PR(record model.IssueOpsRecord) model.IssueOpsReadiness {
 	s = s.scoped()
-	ready := s.localPR(record)
-	cleanup := s.Cleanup(record)
-	ready.CleanupReady, ready.CleanupMissing = cleanup.Ready, cleanup.Missing
-	return ready
-}
-
-// localPR is the PR readiness a phase completion reads (ready and missing).
-// It skips the cleanup observation, which costs git status/branch/remote and a
-// network ls-remote, and whose cleanup_* fields only pr-readiness prints.
-func (s Readiness) localPR(record model.IssueOpsRecord) model.IssueOpsReadiness {
 	missing := stringlist.UniqueSorted(LocalPRReadinessMissing(record, s.Paths))
 	return model.IssueOpsReadiness{OK: true, Ready: len(missing) == 0, Missing: missing, Warnings: domain.PRReadinessWarnings(record), IssueURL: record.IssueURL, PlanPath: record.PlanPath, WorktreePath: record.WorktreePath, Branch: record.Branch}
 }
 func (s Readiness) Completion(record model.IssueOpsRecord, phase model.IssueOpsPhase) model.IssueOpsReadiness {
 	s = s.scoped()
-	return PhaseCompletion(record, phase, port.PhaseCompletionReadiness{Compatibility: s.Compatibility, AISlopClean: s.AISlopClean, PR: s.localPR, RemoteArtifactMissing: domain.RemoteArtifactMissing})
+	return PhaseCompletion(record, phase, port.PhaseCompletionReadiness{Compatibility: s.Compatibility, AISlopClean: s.AISlopClean, PR: s.PR, RemoteArtifactMissing: domain.RemoteArtifactMissing})
 }
 
-// ObserveLocalPR is the fetch-free, network-free PR readiness `next` reads:
-// no upstream fetch and no cleanup observation (its ls-remote is network).
+// ObserveLocalPR is the fetch-free, network-free PR readiness `next` reads.
 func (s Readiness) ObserveLocalPR(record model.IssueOpsRecord) (model.IssueOpsReadiness, review.LocalChangeObservation) {
 	s = s.scoped()
-	return s.observePR(record, nil, s.localPR(record))
+	return s.observePR(record, nil)
 }
 func (s Readiness) StrictPRWithState(root string, record model.IssueOpsRecord) model.IssueOpsReadiness {
 	s = s.scoped()
@@ -86,7 +78,7 @@ func (s Readiness) StrictPRWithState(root string, record model.IssueOpsRecord) m
 }
 func (s Readiness) StrictPRWithFetch(root string, record model.IssueOpsRecord, fetch func(string) review.UpstreamFetch) model.IssueOpsReadiness {
 	s = s.scoped()
-	ready, _ := s.observePR(record, fetch, s.PR(record))
+	ready, _ := s.observePR(record, fetch)
 	missing, warnings := s.ChildMissing(root, record)
 	if len(missing) == 0 && len(warnings) == 0 {
 		return ready
@@ -109,8 +101,9 @@ func (s Readiness) PrefetchUpstream(record model.IssueOpsRecord) func(string) re
 		return fetched
 	}
 }
-func (s Readiness) observePR(record model.IssueOpsRecord, fetch func(string) review.UpstreamFetch, ready model.IssueOpsReadiness) (model.IssueOpsReadiness, review.LocalChangeObservation) {
+func (s Readiness) observePR(record model.IssueOpsRecord, fetch func(string) review.UpstreamFetch) (model.IssueOpsReadiness, review.LocalChangeObservation) {
 	syncUpstream := fetch != nil
+	ready := s.PR(record)
 	ready.Strict = syncUpstream
 	head, fingerprint := "", ""
 	changes := review.LocalChangeObservation{}

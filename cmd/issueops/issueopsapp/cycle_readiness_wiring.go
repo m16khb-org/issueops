@@ -4,7 +4,6 @@ import (
 	core "issueops/internal/adapter/issueops"
 	"issueops/internal/adapter/issueops/implementation"
 	"issueops/internal/adapter/preflight"
-	cleanup "issueops/internal/application/issueopscleanup"
 	cycle "issueops/internal/application/issueopscycle"
 	delegation "issueops/internal/application/issueopsdelegation"
 	materialapp "issueops/internal/application/issueopsremote"
@@ -26,11 +25,7 @@ func newCycleReadiness() cycle.Readiness {
 	return cycle.Readiness{Paths: core.ReadinessPathObservations(), Git: newReadinessGit(), HasEvidence: changes.HasEvidence,
 		ObserveChanges: observer.Observe, ChangedPaths: changes.ChangedPaths,
 		NewObservationScope: func(s cycle.Readiness) cycle.Readiness {
-			git, environment, reset := core.NewReadinessGitObservations(preflight.GitCmd)
-			s.Git, s.ClearGitObservations = git, reset
-			s.Cleanup = func(record model.IssueOpsRecord) model.IssueOpsCleanupStatus {
-				return (cleanup.StructuralStatus{Environment: environment}).ForRecord(record, model.IssueOpsCleanupStatusRequest{Merged: false})
-			}
+			s.Git, s.ClearGitObservations = core.NewReadinessGitObservations(preflight.GitCmd)
 			return s
 		},
 		ChildMissing: (delegation.ChildGates{Scan: core.ScanReadableIssueOps}).PRMissing}

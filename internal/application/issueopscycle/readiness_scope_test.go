@@ -33,20 +33,16 @@ func TestReadinessPublicOperationsCreateOneScope(t *testing.T) {
 		t.Run(operation.name, func(t *testing.T) {
 			locked, events := false, []string{}
 			s, git := readinessForEffects(t, &locked, &events)
-			scopes, cleanups := 0, 0
+			scopes := 0
 			s.NewObservationScope = func(copy Readiness) Readiness {
 				scopes++
 				copy.Git = git
-				copy.Cleanup = func(model.IssueOpsRecord) model.IssueOpsCleanupStatus {
-					cleanups++
-					return model.IssueOpsCleanupStatus{}
-				}
 				return copy
 			}
 			record := model.IssueOpsRecord{Repo: "/repo", Branch: "feature", Phase: model.IssueOpsPhaseFeedback, Execution: &model.Execution{}}
 			operation.run(s, record)
-			if scopes != 1 || cleanups > 1 || s.NewObservationScope == nil {
-				t.Fatalf("scopes=%d cleanups=%d original factory cleared=%v", scopes, cleanups, s.NewObservationScope == nil)
+			if scopes != 1 || s.NewObservationScope == nil {
+				t.Fatalf("scopes=%d original factory cleared=%v", scopes, s.NewObservationScope == nil)
 			}
 		})
 	}
@@ -56,9 +52,16 @@ type scopedReadinessGit struct {
 	readinessGitFixture
 	head   string
 	counts func(string) string
+	// block, when set, holds Head so concurrent operations overlap.
+	block func()
 }
 
-func (g *scopedReadinessGit) Head(model.IssueOpsRecord) string { return g.head }
+func (g *scopedReadinessGit) Head(model.IssueOpsRecord) string {
+	if g.block != nil {
+		g.block()
+	}
+	return g.head
+}
 func (g *scopedReadinessGit) Counts(root string) string {
 	if g.counts != nil {
 		return g.counts(root)
@@ -74,16 +77,13 @@ func TestReadinessSameInstanceReobservesChangedState(t *testing.T) {
 	s.NewObservationScope = func(copy Readiness) Readiness {
 		scopes++
 		copy.Git = &scopedReadinessGit{readinessGitFixture: *git, head: head}
-		copy.Cleanup = func(model.IssueOpsRecord) model.IssueOpsCleanupStatus {
-			return model.IssueOpsCleanupStatus{Missing: []string{head}}
-		}
 		return copy
 	}
 	record := model.IssueOpsRecord{Repo: "/repo", Branch: "feature"}
-	first := observedPRForTest(s, record)
+	first, _ := s.ObserveLocalPR(record)
 	head = "second"
-	second := observedPRForTest(s, record)
-	if scopes != 2 || first.CurrentHead != "first" || second.CurrentHead != "second" || first.CleanupMissing[0] != "first" || second.CleanupMissing[0] != "second" {
+	second, _ := s.ObserveLocalPR(record)
+	if scopes != 2 || first.CurrentHead != "first" || second.CurrentHead != "second" {
 		t.Fatalf("stale operation state: scopes=%d first=%+v second=%+v", scopes, first, second)
 	}
 }
@@ -101,25 +101,26 @@ func TestReadinessConcurrentOperationsHaveIndependentScopes(t *testing.T) {
 	var scopes atomic.Int32
 	s.NewObservationScope = func(copy Readiness) Readiness {
 		head := fmt.Sprint(scopes.Add(1))
-		copy.Git = &scopedReadinessGit{readinessGitFixture: *git, head: head}
-		copy.Cleanup = func(model.IssueOpsRecord) model.IssueOpsCleanupStatus {
+		copy.Git = &scopedReadinessGit{readinessGitFixture: *git, head: head, block: func() {
 			started <- head
 			select {
 			case <-release:
 			case <-ctx.Done():
 			}
-			return model.IssueOpsCleanupStatus{Missing: []string{head}}
-		}
+		}}
 		return copy
 	}
 	for range 2 {
-		go func() { done <- observedPRForTest(s, model.IssueOpsRecord{Repo: "/repo", Branch: "feature"}) }()
+		go func() {
+			ready, _ := s.ObserveLocalPR(model.IssueOpsRecord{Repo: "/repo", Branch: "feature"})
+			done <- ready
+		}()
 	}
 	for range 2 {
 		select {
 		case <-started:
 		case <-ctx.Done():
-			t.Fatal("concurrent scopes did not enter cleanup")
+			t.Fatal("concurrent scopes did not overlap")
 		}
 	}
 	close(release)
@@ -127,9 +128,6 @@ func TestReadinessConcurrentOperationsHaveIndependentScopes(t *testing.T) {
 	for range 2 {
 		select {
 		case result := <-done:
-			if result.CurrentHead != result.CleanupMissing[0] {
-				t.Fatalf("Git/cleanup scope mismatch: %+v", result)
-			}
 			heads[result.CurrentHead] = true
 		case <-ctx.Done():
 			t.Fatal("concurrent observations did not finish")
