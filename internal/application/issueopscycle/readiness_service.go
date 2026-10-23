@@ -73,6 +73,7 @@ func (s Readiness) Completion(record model.IssueOpsRecord, phase model.IssueOpsP
 	s = s.scoped()
 	return PhaseCompletion(record, phase, port.PhaseCompletionReadiness{Compatibility: s.Compatibility, AISlopClean: s.AISlopClean, PR: s.localPR, RemoteArtifactMissing: domain.RemoteArtifactMissing})
 }
+
 // ObserveLocalPR is the fetch-free, network-free PR readiness `next` reads:
 // no upstream fetch and no cleanup observation (its ls-remote is network).
 func (s Readiness) ObserveLocalPR(record model.IssueOpsRecord) (model.IssueOpsReadiness, review.LocalChangeObservation) {
