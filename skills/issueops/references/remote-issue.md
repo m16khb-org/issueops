@@ -21,7 +21,9 @@ Provider candidate gathering:
 
 Always inspect the current issue list and label list before deciding whether to create a new issue, link an existing issue, or create/update labels. If an existing issue already matches the requested work, link or update that issue instead of creating a duplicate. If the scoring gate selects a label that does not exist on the provider, create the missing label before issue creation or issue edit, then apply it. Do not create labels that were not selected by the scoring gate.
 
-Run the deterministic score first:
+Run the deterministic score first. `issueops remote score --example` prints a valid
+input request (`issue`, `issue_candidates`, `label_candidates`, `threshold`); unknown
+keys are rejected:
 
 ```bash
 issueops remote score --input issueops-remote-score.json --judge none --json

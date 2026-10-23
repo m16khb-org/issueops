@@ -22,7 +22,7 @@ func ScoreIssueOpsRemoteCandidates(req IssueOpsRemoteScoringRequest) (IssueOpsRe
 	}
 	issueText := strings.TrimSpace(req.Issue.Title + "\n" + req.Issue.Body)
 	if issueText == "" {
-		return IssueOpsRemoteScoringResult{OK: false, Provider: provider, Threshold: threshold}, fmt.Errorf("issue title or body is required")
+		return IssueOpsRemoteScoringResult{OK: false, Provider: provider, Threshold: threshold}, fmt.Errorf("issue.title or issue.body is required in the scoring request")
 	}
 	issueTokens := issueOpsRemoteTokens(issueText)
 	result := normalizeIssueOpsRemoteScoringResult(IssueOpsRemoteScoringResult{OK: true, Provider: provider, Threshold: threshold})

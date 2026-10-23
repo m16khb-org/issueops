@@ -479,7 +479,7 @@ func TestScoreIssueOpsRemoteCandidatesRejectsInvalidRequests(t *testing.T) {
 		{"unsupported provider", IssueOpsRemoteScoringRequest{Provider: " Bitbucket ", Issue: IssueOpsRemoteArtifact{Title: "t"}}, "unsupported", "bitbucket"},
 		{"provider falls back to issue provider", IssueOpsRemoteScoringRequest{Issue: IssueOpsRemoteArtifact{Provider: "svn", Title: "t"}}, "unsupported", "svn"},
 		{"threshold above one", IssueOpsRemoteScoringRequest{Threshold: 1.01, Issue: IssueOpsRemoteArtifact{Title: "t"}}, "threshold", "github"},
-		{"blank issue", IssueOpsRemoteScoringRequest{Issue: IssueOpsRemoteArtifact{Title: " ", Body: "\n"}}, "title or body", "github"},
+		{"blank issue", IssueOpsRemoteScoringRequest{Issue: IssueOpsRemoteArtifact{Title: " ", Body: "\n"}}, "issue.title or issue.body", "github"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			res, err := ScoreIssueOpsRemoteCandidates(tc.req)

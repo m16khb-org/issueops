@@ -1,6 +1,7 @@
 package remotecmd
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -29,7 +30,7 @@ type Deps struct {
 
 var remoteUsageLines = []string{
 	"Usage:",
-	"  issueops remote score --input PATH [--judge none|prompt|file] [--judge-file PATH] [--json]",
+	"  issueops remote score (--input PATH [--judge none|prompt|file] [--judge-file PATH] | --example) [--json]",
 	"  issueops remote render-template --kind issue|child|pr --template KIND --title TEXT --provider github|gitlab --field key=value... [--score-file PATH] [--json]",
 	"  issueops remote verify-artifact --id ID --provider github|gitlab --kind pr|mr --url URL --target-branch BRANCH --label LABEL --assignee USER RECORD_ACTOR_FLAGS [--json]",
 	"  issueops remote create-issue --id ID --title TEXT [--provider github|gitlab] [--body TEXT|--body-file PATH] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... [--confirm] [--json]",
@@ -118,18 +119,26 @@ func (command Command) runRemoteScore(args []string, deps Deps) error {
 	judge := fs.String("judge", "none", "judge backend: none, prompt, or file")
 	judgeFile := fs.String("judge-file", "", "host-agent remote score result JSON path for --judge file")
 	jsonOut := fs.Bool("json", false, "print JSON")
+	example := fs.Bool("example", false, "print an example --input request and exit")
 	if help, err := parseFlags(fs, args); help || err != nil {
 		return err
 	}
+	if *example {
+		return deps.printJSON(remoteScoreExampleRequest())
+	}
 	req, err := readIssueOpsRemoteScoringRequestFile(*input)
 	if err != nil {
-		return deps.printErrorResult(*jsonOut, err)
+		return deps.printErrorResult(*jsonOut, fmt.Errorf("%w; run `issueops remote score --example` for the input shape", err))
 	}
 	if *judge == "prompt" {
 		return printRemoteScorePrompt(deps, req, *jsonOut)
 	}
 	result, err := scoreRemoteByJudge(req, *judge, *judgeFile)
 	if err != nil {
+		if *judge == "none" {
+			// The deterministic scorer only fails on the request itself.
+			err = fmt.Errorf("%w; run `issueops remote score --example` for the input shape", err)
+		}
 		return deps.printErrorResult(*jsonOut, err)
 	}
 	if *jsonOut {
@@ -306,17 +315,38 @@ func formatIssueOpsRemoteIssueRef(issue issueopsremote.IssueOpsRemoteScoredItem)
 	return fmt.Sprintf("%s (%s)", ref, title)
 }
 
+// remoteScoreExampleRequest is the `remote score --example` output: a minimal
+// valid request built from the real types, so it cannot drift from the parser.
+func remoteScoreExampleRequest() issueopsremote.IssueOpsRemoteScoringRequest {
+	return issueopsremote.IssueOpsRemoteScoringRequest{
+		Provider:  "github",
+		Threshold: 0.7,
+		Issue:     issueopsremote.IssueOpsRemoteArtifact{Title: "Login times out after 30 seconds", Body: "Users on slow networks are logged out while the form is open."},
+		IssueCandidates: []issueopsremote.IssueOpsRemoteIssueCandidate{
+			{ID: "#12", Title: "Session expires too early", URL: "https://github.com/owner/repo/issues/12", State: "open", Labels: []string{"bug"}},
+		},
+		LabelCandidates: []issueopsremote.IssueOpsRemoteLabelCandidate{
+			{Name: "bug", Description: "Something is not working"},
+			{Name: "auth", Description: "Login and sessions", Aliases: []string{"login"}},
+		},
+	}
+}
+
 func readIssueOpsRemoteScoringRequestFile(path string) (issueopsremote.IssueOpsRemoteScoringRequest, error) {
 	path = strings.TrimSpace(path)
 	if path == "" {
-		return issueopsremote.IssueOpsRemoteScoringRequest{}, fmt.Errorf("input is required")
+		return issueopsremote.IssueOpsRemoteScoringRequest{}, fmt.Errorf("--input is required")
 	}
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return issueopsremote.IssueOpsRemoteScoringRequest{}, err
 	}
+	// Unknown fields are an error: a misspelled key otherwise surfaces later as
+	// the unrelated "issue.title or issue.body is required".
+	decoder := json.NewDecoder(bytes.NewReader(b))
+	decoder.DisallowUnknownFields()
 	var req issueopsremote.IssueOpsRemoteScoringRequest
-	if err := json.Unmarshal(b, &req); err != nil {
+	if err := decoder.Decode(&req); err != nil {
 		return issueopsremote.IssueOpsRemoteScoringRequest{}, fmt.Errorf("parse input file %s: %w", path, err)
 	}
 	return req, nil

@@ -1834,6 +1834,7 @@
         "func printRemoteUsage",
         "func readIssueOpsRemoteJudgeFile",
         "func readIssueOpsRemoteScoringRequestFile",
+        "func remoteScoreExampleRequest",
         "func repeatedFlag.Set",
         "func repeatedFlag.String",
         "func scoreRemoteByJudge",

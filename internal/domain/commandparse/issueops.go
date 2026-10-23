@@ -331,7 +331,7 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 	},
 	"remote score": {
 		values:   []string{"--input", "--judge", "--judge-file"},
-		booleans: []string{"--json"},
+		booleans: []string{"--json", "--example"},
 	},
 	"implementation-review record": {
 		values:     []string{"--id", "--verdict", "--finding", "--evidence", "--reviewer-host", "--reviewer-model", "--reviewer-effort", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
