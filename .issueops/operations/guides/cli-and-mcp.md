@@ -204,7 +204,10 @@ issueops mcp cleanup --apply --json
 
 기본 HTTP 설치에서 다섯 host는 `issueops mcp --http`(서비스 제어는 `issueops mcp service start|stop|status --json`)에
 연결하고, HTTP로 workspace 도구를 부르기 전에 native 세션에서 `issueops mcp authorize`를 실행해
-`authority_file`을 받는다. stdio `issueops mcp`는 host 세션 안에서 in-process로 동작한다.
+`authority_file`을 받는다. 세션 플래그 다섯 개(`--host`, `--session-id`, `--session-pid`,
+`--session-started-at`, `--session-executable`)를 모두 생략하면 `execution whoami`가 보고하는 현재
+세션을 쓴다(`issueops mcp authorize --workspace-root "$PWD" --json`). 일부만 주면 거부한다.
+stdio `issueops mcp`는 host 세션 안에서 in-process로 동작한다.
 
 `mcp cleanup`은 기본 dry-run이다. Darwin의 `--apply`만 현재 checkout의 exact `issueops mcp` 명령, `PPID=1`, 확인된 executable/start time을 모두 만족하고 signal 직전 동일 identity가 다시 확인된 고아를 종료한다. Linux 컨테이너처럼 `PPID=1`이 살아 있는 host일 수 있는 플랫폼은 `skip-unsupported-platform`으로 거부한다. 살아 있는 host proxy, 다른 checkout, 외부 MCP, identity 미확정 프로세스는 건드리지 않는다.
 

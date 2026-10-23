@@ -345,6 +345,23 @@ func reusableNativeProcessAncestry(host string, currentPID int, ancestry []model
 	return nil, fmt.Errorf("reusable %s host process ancestry is unavailable", host)
 }
 
+// CurrentNativeSessionReceipt resolves the current native session from the
+// environment and the observed ancestry: host, session id, and the first
+// reusable host process receipt, i.e. the first claim vector `execution
+// whoami` prints. Callers that accept omitted actor flags use it so agents do
+// not compute receipts by hand.
+func CurrentNativeSessionReceipt(getenv func(string) string, currentPID int, ancestry []model.NativeProcessReceipt) (string, string, model.NativeProcessReceipt, error) {
+	identity, err := nativeSessionIdentityFromEnv(getenv)
+	if err != nil {
+		return "", "", model.NativeProcessReceipt{}, err
+	}
+	reusable, err := reusableNativeProcessAncestry(identity.Host, currentPID, ancestry)
+	if err != nil {
+		return "", "", model.NativeProcessReceipt{}, err
+	}
+	return identity.Host, identity.SessionID, reusable[0], nil
+}
+
 func nativeHostProcessExecutable(host, executable string) bool {
 	normalized := strings.ToLower(filepath.ToSlash(strings.TrimSpace(executable)))
 	base := strings.TrimSuffix(filepath.Base(normalized), ".exe")

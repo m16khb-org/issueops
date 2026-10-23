@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"strings"
 
+	"issueops/cmd/issueops/issueopscli/executioncmd"
 	issueopscore "issueops/internal/adapter/issueops"
 	authorityoutbound "issueops/internal/adapter/outbound/authority"
 	authoritycontract "issueops/internal/contract/authority"
@@ -24,13 +25,14 @@ type mcpAuthorizeCommand struct {
 	issuer  authorityIssuer
 	observe func(int) ([]model.NativeProcessReceipt, error)
 	pid     func() int
+	getenv  func(string) string
 	stdout  io.Writer
 }
 
 func runMCPAuthorize(args []string) error {
 	return mcpAuthorizeCommand{
 		issuer: newAuthorityService(), observe: issueopscore.ObserveNativeProcessAncestry,
-		pid: os.Getpid, stdout: os.Stdout,
+		pid: os.Getpid, getenv: os.Getenv, stdout: os.Stdout,
 	}.Run(args)
 }
 
@@ -54,19 +56,48 @@ func (command mcpAuthorizeCommand) Run(args []string) error {
 	if fs.NArg() > 0 {
 		return fmt.Errorf("unexpected mcp authorize argument %q", fs.Arg(0))
 	}
-	for _, field := range []struct{ name, value string }{
-		{"workspace-root", *workspaceRoot},
-		{"host", *host},
-		{"session-id", *sessionID},
-		{"session-started-at", *startedAt},
-		{"session-executable", *executable},
-	} {
-		if strings.TrimSpace(field.value) == "" {
-			return fmt.Errorf("mcp authorize requires --%s", field.name)
+	if strings.TrimSpace(*workspaceRoot) == "" {
+		return fmt.Errorf("mcp authorize requires --workspace-root")
+	}
+	ancestry, err := command.observe(command.pid())
+	if err != nil {
+		return fmt.Errorf("observe native process ancestry: %w", err)
+	}
+	// The five session flags come together or not at all. Without them the
+	// command uses the session `execution whoami` reports; the issuer still
+	// checks that receipt against the live ancestry.
+	sessionFlags := []struct{ name, value string }{
+		{"host", *host}, {"session-id", *sessionID}, {"session-started-at", *startedAt}, {"session-executable", *executable},
+	}
+	given := 0
+	for _, field := range sessionFlags {
+		if strings.TrimSpace(field.value) != "" {
+			given++
 		}
 	}
-	if *sessionPID <= 0 {
-		return fmt.Errorf("mcp authorize requires --session-pid")
+	if *sessionPID > 0 {
+		given++
+	}
+	switch given {
+	case 0:
+		getenv := command.getenv
+		if getenv == nil {
+			getenv = os.Getenv
+		}
+		var current model.NativeProcessReceipt
+		*host, *sessionID, current, err = executioncmd.CurrentNativeSessionReceipt(getenv, command.pid(), ancestry)
+		if err != nil {
+			return fmt.Errorf("mcp authorize: resolve the current native session (or pass --host --session-id --session-pid --session-started-at --session-executable): %w", err)
+		}
+		*sessionPID, *startedAt, *executable = current.PID, current.StartedAt, current.Executable
+	case len(sessionFlags) + 1:
+	default:
+		for _, field := range sessionFlags {
+			if strings.TrimSpace(field.value) == "" {
+				return fmt.Errorf("mcp authorize requires --%s with the other session flags (or omit all five)", field.name)
+			}
+		}
+		return fmt.Errorf("mcp authorize requires --session-pid with the other session flags (or omit all five)")
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
@@ -74,10 +105,6 @@ func (command mcpAuthorizeCommand) Run(args []string) error {
 		if _, err := (authorityoutbound.ScopeResolver{}).Resolve(ctx, strings.TrimSpace(*workspaceRoot), strings.TrimSpace(*cwd)); err != nil {
 			return fmt.Errorf("mcp authorize: %w", err)
 		}
-	}
-	ancestry, err := command.observe(command.pid())
-	if err != nil {
-		return fmt.Errorf("observe native process ancestry: %w", err)
 	}
 	receipt, err := command.issuer.Issue(ctx, authoritycontract.IssueRequest{
 		WorkspaceRoot: strings.TrimSpace(*workspaceRoot),

@@ -83,7 +83,7 @@ Usage:
   issueops mcp [cleanup [--dry-run|--apply] [--json]]
   issueops mcp --http [--addr 127.0.0.1:47831]
   issueops mcp service start|stop|status [--json]
-  issueops mcp authorize --workspace-root PATH --host codex|claude|omo|omp|opencode --session-id ID [--agent-id ID] --session-pid PID --session-started-at RFC3339 --session-executable PATH [--cwd PATH] [--json]
+  issueops mcp authorize --workspace-root PATH [--host codex|claude|omo|omp|opencode --session-id ID --session-pid PID --session-started-at RFC3339 --session-executable PATH] [--agent-id ID] [--cwd PATH] [--json]
   issueops model show [--host claude|codex|omo|omp|opencode] [--repo PATH] [--json]
   issueops model set --scope global|local --host claude|codex|omo|omp|opencode --role ROLE [--model MODEL] [--effort EFFORT] [--repo PATH] [--json]
   issueops model unset --scope global|local --host claude|codex|omo|omp|opencode --role ROLE [--field model|effort] [--repo PATH] [--json]

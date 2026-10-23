@@ -112,6 +112,39 @@ func TestMCPAuthorizeRequiresPositiveSessionPID(t *testing.T) {
 	}
 }
 
+func TestMCPAuthorizeDerivesTheCurrentSessionOnlyWhenEverySessionFlagIsOmitted(t *testing.T) {
+	session := model.NativeProcessReceipt{PID: 42, StartedAt: "2026-10-24T00:00:00Z", Executable: "/usr/local/bin/codex"}
+	run := func(args ...string) (*recordingAuthorityIssuer, error) {
+		issuer := &recordingAuthorityIssuer{}
+		err := mcpAuthorizeCommand{
+			issuer:  issuer,
+			observe: func(int) ([]model.NativeProcessReceipt, error) { return []model.NativeProcessReceipt{{PID: 7, Executable: "/bin/zsh"}, session}, nil },
+			pid:     func() int { return 1 },
+			getenv: func(key string) string {
+				if key == "CODEX_THREAD_ID" {
+					return "thread-1"
+				}
+				return ""
+			},
+			stdout: &bytes.Buffer{},
+		}.Run(append([]string{"--workspace-root", t.TempDir()}, args...))
+		return issuer, err
+	}
+	issuer, err := run()
+	if err != nil || len(issuer.calls) != 1 {
+		t.Fatalf("omitted flags: err=%v issued=%d", err, len(issuer.calls))
+	}
+	actor := issuer.calls[0].Actor
+	if actor.Host != "codex" || actor.SessionID != "thread-1" || *actor.SessionProcess != session {
+		t.Fatalf("derived actor = %+v, want the whoami session", actor)
+	}
+	// A partial set never mixes typed and derived identity.
+	issuer, err = run("--host", "codex")
+	if err == nil || !strings.Contains(err.Error(), "--session-id") || len(issuer.calls) != 0 {
+		t.Fatalf("partial flags: err=%v issued=%d, want fail closed", err, len(issuer.calls))
+	}
+}
+
 func TestMCPAuthorizeRejectsCWDOutsideWorkspaceRoot(t *testing.T) {
 	outside := t.TempDir()
 	issuer, _, err := runAuthorizeWithFakes(t, "--session-pid", "1", "--cwd", outside)
