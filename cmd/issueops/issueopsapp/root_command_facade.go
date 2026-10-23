@@ -2,12 +2,14 @@ package issueopsapp
 
 import (
 	"errors"
-	policycontract "issueops/internal/contract/policy"
 	"os"
 	"sync"
 
+	policycontract "issueops/internal/contract/policy"
+
 	"issueops/cmd/issueops/channelcli"
 	"issueops/cmd/issueops/gatescli"
+	"issueops/cmd/issueops/jsonout"
 	"issueops/cmd/issueops/modelcli"
 	"issueops/cmd/issueops/rootcmd"
 	clicontract "issueops/internal/contract/cli"
@@ -82,6 +84,7 @@ func rootCommand() rootcmd.Command {
 }
 
 func rootSubcommandErrorExitCode(name string, err error) int {
+	err = jsonout.Unreported(err)
 	switch name {
 	case "policy":
 		if policycontract.IsPolicyDenied(err) {

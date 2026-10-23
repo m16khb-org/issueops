@@ -63,6 +63,15 @@ func IsReported(err error) bool {
 	return ok
 }
 
+// Unreported strips the reported marker so exit-code mapping sees the same
+// error with and without --json. Any other wrapping is kept.
+func Unreported(err error) error {
+	if reported, ok := err.(reportedError); ok { //nolint:errorlint // only the direct marker is presentation, not meaning
+		return reported.err
+	}
+	return err
+}
+
 // PrintError prints the {"ok":false,"error":...} envelope for err on stdout
 // and returns err marked as reported. If printing fails, that error wins.
 func PrintError(err error) error {

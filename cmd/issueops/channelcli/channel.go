@@ -68,6 +68,9 @@ func runSend(deps Dependencies, args []string) error {
 	}
 	result, err := deps.Send(channelcontract.SendRequest{Channel: *channelName, From: *from, Body: *message, Origin: channelcontract.OriginCLI})
 	if *jsonOut {
+		if err != nil {
+			return jsonout.PrintResultError(os.Stdout, result, err)
+		}
 		return printJSON(result)
 	}
 	if err != nil {

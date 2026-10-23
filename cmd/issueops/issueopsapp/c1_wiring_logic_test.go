@@ -10,6 +10,7 @@ import (
 
 	"issueops/cmd/issueops/channelcli"
 	"issueops/cmd/issueops/gatescli"
+	"issueops/cmd/issueops/jsonout"
 	"issueops/cmd/issueops/modelcli"
 	issueopsadapter "issueops/internal/adapter/issueops"
 	guard "issueops/internal/contract/guard"
@@ -29,6 +30,10 @@ func TestRootSubcommandErrorExitCodeMapsTypedErrorsPerSubcommand(t *testing.T) {
 	}{
 		{"policy denied", "policy", policycontract.PolicyDeniedError{Reasons: []string{"x"}}, 3},
 		{"guard blocked", "guard", guard.GuardBlockedError{}, 3},
+		// --json prints the denial envelope and marks the error reported; the
+		// exit code must stay the same as in text mode.
+		{"policy denied under --json", "policy", jsonout.Reported(policycontract.PolicyDeniedError{Reasons: []string{"x"}}), 3},
+		{"policy denial wrapped beyond the marker", "policy", jsonout.Reported(fmt.Errorf("wrap: %w", policycontract.PolicyDeniedError{})), 1},
 		{"gates usage", "gates", gatescli.UsageError{Message: "bad"}, 2},
 		{"wrapped gates usage", "gates", fmt.Errorf("wrap: %w", gatescli.UsageError{Message: "bad"}), 2},
 		{"channel timeout", "channel", channelcli.TimedOutError{}, 1},

@@ -1967,6 +1967,7 @@
         "func PrintTo",
         "func Reported",
         "func ResetStdoutDocument",
+        "func Unreported",
         "func WithError",
         "func WroteStdoutDocument",
         "func reportedError.Error",

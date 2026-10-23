@@ -37,6 +37,10 @@ func TestChannelCLIUsageErrors(t *testing.T) {
 	if err := Run(deps(), []string{"send", "--channel", "c", "--message", "x"}); err == nil {
 		t.Fatal("missing --from must fail")
 	}
+	// --json prints the failure document but still fails the command.
+	if err := Run(deps(), []string{"send", "--channel", "c", "--message", "x", "--json"}); err == nil {
+		t.Fatal("missing --from must fail under --json too")
+	}
 	if err := Run(deps(), []string{"recv"}); err == nil {
 		t.Fatal("missing --channel must fail")
 	}
