@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"issueops/cmd/issueops/issueopscli/actorreceipt"
+	"issueops/cmd/issueops/issueopscli/actorflags"
 	"issueops/cmd/issueops/jsonout"
 	issueopscontract "issueops/internal/contract/issueops"
 	artifacttemplate "issueops/internal/domain/artifacttemplate"
@@ -185,11 +185,7 @@ func (command Command) runRemoteVerifyArtifact(args []string, deps Deps) error {
 	fs.Var(&labels, "labels", "verified remote label; may be repeated")
 	fs.Var(&assignees, "assignee", "verified remote assignee; may be repeated")
 	fs.Var(&assignees, "assignees", "verified remote assignee; may be repeated")
-	host := fs.String("host", "", "native holder host")
-	sessionID := fs.String("session-id", "", "native holder session id")
-	agentID := fs.String("agent-id", "", "optional native holder agent id")
-	cwd := fs.String("cwd", "", "canonical holder worktree cwd")
-	receipt := actorreceipt.Add(fs)
+	actor := actorflags.Add(fs)
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseFlags(fs, args); help || err != nil {
 		return err
@@ -202,9 +198,7 @@ func (command Command) runRemoteVerifyArtifact(args []string, deps Deps) error {
 		Labels:       labels,
 		Assignees:    assignees,
 	}
-	record, err := command.Operations.VerifyRemoteArtifact(context.Background(), command.Operations.IssueOpsStateRoot(), *id, req, issueopscontract.IssueOpsActor{
-		Host: *host, SessionID: *sessionID, AgentID: *agentID, CWD: *cwd,
-	}, deps.verifyLive, receipt.Observer(deps.observeNativeProcessAncestry))
+	record, err := command.Operations.VerifyRemoteArtifact(context.Background(), command.Operations.IssueOpsStateRoot(), *id, req, actor.Actor(), deps.verifyLive, actor.Observer(deps.observeNativeProcessAncestry))
 	return deps.printResult(record, *jsonOut, err)
 }
 
@@ -212,19 +206,13 @@ func (command Command) runRemoteReflectDevilsAdvocate(args []string, deps Deps) 
 	fs := flag.NewFlagSet("issueops remote reflect-devils-advocate", flag.ContinueOnError)
 	id := fs.String("id", "", "IssueOps id")
 	providerOverride := fs.String("provider", "", "remote provider override: github or gitlab")
-	host := fs.String("host", "", "native holder host")
-	sessionID := fs.String("session-id", "", "native holder session id")
-	agentID := fs.String("agent-id", "", "optional native holder agent id")
-	cwd := fs.String("cwd", "", "canonical holder worktree cwd")
-	receipt := actorreceipt.Add(fs)
+	actor := actorflags.Add(fs)
 	confirm := fs.Bool("confirm", false, "write to the remote issue; without this, dry-run preview only")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseFlags(fs, args); help || err != nil {
 		return err
 	}
-	_, result, err := command.Operations.ReflectReviewFindings(context.Background(), command.Operations.IssueOpsStateRoot(), *id, *providerOverride, *confirm, issueopscontract.IssueOpsActor{
-		Host: *host, SessionID: *sessionID, AgentID: *agentID, CWD: *cwd,
-	}, receipt.Observer(deps.observeNativeProcessAncestry))
+	_, result, err := command.Operations.ReflectReviewFindings(context.Background(), command.Operations.IssueOpsStateRoot(), *id, *providerOverride, *confirm, actor.Actor(), actor.Observer(deps.observeNativeProcessAncestry))
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}

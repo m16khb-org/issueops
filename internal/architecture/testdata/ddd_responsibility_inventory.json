@@ -1413,11 +1413,13 @@
       ]
     },
     {
-      "path": "cmd/issueops/issueopscli/actorreceipt/actorreceipt.go",
+      "path": "cmd/issueops/issueopscli/actorflags/actorflags.go",
       "owner": "inbound",
       "task": "T20",
       "symbols": [
         "func Add",
+        "func Flags.Actor",
+        "func Flags.ActorWithAncestry",
         "func Flags.Filter",
         "func Flags.Observer",
         "type Flags"

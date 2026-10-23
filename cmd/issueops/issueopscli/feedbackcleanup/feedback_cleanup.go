@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"issueops/cmd/issueops/issueopscli/actorreceipt"
+	"issueops/cmd/issueops/issueopscli/actorflags"
 	"issueops/cmd/issueops/jsonout"
 	issueopscontract "issueops/internal/contract/issueops"
 	orphancontract "issueops/internal/contract/issueopsorphancleanup"
@@ -54,42 +54,31 @@ func (command Command) RunFeedback(args []string, deps Deps) error {
 		source := fs.String("source", "", "feedback source")
 		body := fs.String("body", "", "feedback body")
 		classification := fs.String("classification", "", "optional feedback classification, such as contract_change, defect, question, or noise")
-		host := fs.String("host", "", "native actor host")
-		sessionID := fs.String("session-id", "", "native actor session id")
-		agentID := fs.String("agent-id", "", "native actor agent id")
-		cwd := fs.String("cwd", "", "canonical actor cwd")
-		receipt := actorreceipt.Add(fs)
+		actor := actorflags.Add(fs)
 		jsonOut := fs.Bool("json", false, "print JSON")
 		if help, err := deps.ParseFlags(fs, args[1:]); help || err != nil {
 			return err
 		}
-		record, err := command.Operations.AddIssueOpsFeedbackWithActor(command.Operations.IssueOpsStateRoot(), *id, *source, *body, *classification, command.localActor(*host, *sessionID, *agentID, *cwd, receipt))
+		record, err := command.Operations.AddIssueOpsFeedbackWithActor(command.Operations.IssueOpsStateRoot(), *id, *source, *body, *classification, command.localActor(actor))
 		return deps.PrintResult(record, *jsonOut, err)
 	case "mark-issue-updated":
 		fs := flag.NewFlagSet("issueops feedback mark-issue-updated", flag.ContinueOnError)
 		id := fs.String("id", "", "issueops id")
-		host := fs.String("host", "", "native actor host")
-		sessionID := fs.String("session-id", "", "native actor session id")
-		agentID := fs.String("agent-id", "", "native actor agent id")
-		cwd := fs.String("cwd", "", "canonical actor cwd")
-		receipt := actorreceipt.Add(fs)
+		actor := actorflags.Add(fs)
 		jsonOut := fs.Bool("json", false, "print JSON")
 		if help, err := deps.ParseFlags(fs, args[1:]); help || err != nil {
 			return err
 		}
-		record, err := command.Operations.MarkIssueOpsContractFeedbackIssueUpdatedWithActor(command.Operations.IssueOpsStateRoot(), *id, command.localActor(*host, *sessionID, *agentID, *cwd, receipt))
+		record, err := command.Operations.MarkIssueOpsContractFeedbackIssueUpdatedWithActor(command.Operations.IssueOpsStateRoot(), *id, command.localActor(actor))
 		return deps.PrintResult(record, *jsonOut, err)
 	default:
 		return fmt.Errorf("unknown issueops feedback subcommand")
 	}
 }
 
-func (command Command) localActor(host, sessionID, agentID, cwd string, receipt actorreceipt.Flags) issueopscontract.IssueOpsActor {
+func (command Command) localActor(actor actorflags.Flags) issueopscontract.IssueOpsActor {
 	ancestry, _ := command.Operations.ObserveNativeProcessAncestry(os.Getpid())
-	return issueopscontract.IssueOpsActor{
-		Host: host, SessionID: sessionID, AgentID: agentID, CWD: cwd,
-		NativeProcessAncestry: receipt.Filter(ancestry),
-	}
+	return actor.ActorWithAncestry(ancestry)
 }
 
 func (command Command) RunCleanup(args []string, deps Deps) error {

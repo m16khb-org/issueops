@@ -6,9 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"issueops/cmd/issueops/issueopscli/actorreceipt"
+	"issueops/cmd/issueops/issueopscli/actorflags"
 	remoteapp "issueops/internal/application/issueopsremote"
-	issueopscontract "issueops/internal/contract/issueops"
 	bodysynccontract "issueops/internal/contract/issueopsbodysync"
 )
 
@@ -34,11 +33,7 @@ func (command Command) runBodySyncCommand(ctx context.Context, name, kind string
 	template := fs.String("template", "", "body contract of the replacement; inferred from its sections when omitted")
 	expectedBodySHA := fs.String("expected-body-sha256", "", "digest of the live body the replacement was built on; required with --confirm")
 	acceptRemoteEdits := fs.Bool("accept-remote-edits", false, "acknowledge that the body was edited outside the harness and the replacement preserves those edits")
-	host := fs.String("host", "", "native holder host")
-	sessionID := fs.String("session-id", "", "native holder session id")
-	agentID := fs.String("agent-id", "", "optional native holder agent id")
-	cwd := fs.String("cwd", "", "canonical holder worktree cwd")
-	receipt := actorreceipt.Add(fs)
+	actor := actorflags.Add(fs)
 	confirm := fs.Bool("confirm", false, "write to the remote artifact; without this, dry-run preview only")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	var expectedGeneration *uint64
@@ -63,8 +58,8 @@ func (command Command) runBodySyncCommand(ctx context.Context, name, kind string
 	}
 	_, result, err := command.Operations.SyncRemoteBody(ctx, command.Operations.IssueOpsStateRoot(), remoteapp.BodySyncInput{
 		Provider: *providerOverride, BodyFile: *bodyFile, Command: cmd,
-		Actor: issueopscontract.IssueOpsActor{Host: *host, SessionID: *sessionID, AgentID: *agentID, CWD: *cwd},
-	}, receipt.Observer(deps.observeNativeProcessAncestry))
+		Actor: actor.Actor(),
+	}, actor.Observer(deps.observeNativeProcessAncestry))
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}

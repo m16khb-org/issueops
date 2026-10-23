@@ -1,4 +1,4 @@
-package actorreceipt
+package actorflags
 
 import (
 	"flag"
