@@ -52,18 +52,23 @@ func Run(deps Dependencies, args []string) error {
 		return nil
 	}
 	ctx := context.Background()
+	var err error
 	switch args[0] {
 	case "show":
-		return runShow(ctx, deps, args[1:])
+		err = runShow(ctx, deps, args[1:])
 	case "set":
-		return runSet(ctx, deps, args[1:])
+		err = runSet(ctx, deps, args[1:])
 	case "unset":
-		return runUnset(ctx, deps, args[1:])
+		err = runUnset(ctx, deps, args[1:])
 	case "resolve":
-		return runResolve(ctx, deps, args[1:])
+		err = runResolve(ctx, deps, args[1:])
 	default:
 		return UsageError{Message: fmt.Sprintf("unknown model subcommand %q\n%s", args[0], usage)}
 	}
+	if errors.Is(err, flag.ErrHelp) {
+		fmt.Fprint(deps.Stdout, usage)
+	}
+	return err
 }
 
 func newFlagSet(name string) *flag.FlagSet {
@@ -74,6 +79,9 @@ func newFlagSet(name string) *flag.FlagSet {
 
 func parse(fs *flag.FlagSet, args []string) error {
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return err
+		}
 		return UsageError{Message: err.Error()}
 	}
 	if fs.NArg() > 0 {

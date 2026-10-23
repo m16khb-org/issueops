@@ -2699,6 +2699,7 @@
         "func RunWithDeps",
         "func loadFixtureFile",
         "func loadFixtures",
+        "func parseFlags",
         "func runBenchmark",
         "func runFetch",
         "type Deps"

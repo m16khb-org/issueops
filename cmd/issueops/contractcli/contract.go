@@ -41,6 +41,10 @@ func Run(args []string, commands []clicontract.Command, tools []map[string]any, 
 	case "check":
 		return runContractCheck(args[1:], commands, tools)
 	case "conformance":
+		if len(args) > 1 && (args[1] == "-h" || args[1] == "--help" || args[1] == "help") {
+			contractUsage()
+			return flag.ErrHelp
+		}
 		return conformance.Run(args[1:])
 	case "-h", "--help", "help":
 		contractUsage()

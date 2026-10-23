@@ -3,6 +3,7 @@ package webfetchcli
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -47,7 +48,7 @@ func runFetch(args []string, deps Deps) error {
 	timeoutText := fs.String("timeout", "30s", "request timeout")
 	maxChars := fs.Int("max-chars", 0, "maximum content characters")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := parseFlags(fs, args, deps); err != nil {
 		return err
 	}
 	if *rawURL == "" {
@@ -83,7 +84,7 @@ func runBenchmark(args []string, deps Deps) error {
 	live := fs.Bool("live", false, "run opt-in live benchmark")
 	compareBaseline := fs.String("compare-baseline", "", "optional baseline comparator executable")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := fs.Parse(args); err != nil {
+	if err := parseFlags(fs, args, deps); err != nil {
 		return err
 	}
 	if *fixturesPath == "" {
@@ -107,6 +108,17 @@ func runBenchmark(args []string, deps Deps) error {
 	}
 	fmt.Fprintf(deps.Stdout, "web-fetch benchmark score %.1f fixture_count=%d ok=%v\n", result.Score, result.FixtureCount, result.OK)
 	return nil
+}
+
+// parseFlags keeps parse errors quiet (the root reports them once) but prints
+// the flag list on --help so `web-fetch fetch --help` answers on stdout.
+func parseFlags(fs *flag.FlagSet, args []string, deps Deps) error {
+	err := fs.Parse(args)
+	if errors.Is(err, flag.ErrHelp) {
+		fs.SetOutput(deps.Stdout)
+		fs.Usage()
+	}
+	return err
 }
 
 var printJSON = jsonout.PrintTo

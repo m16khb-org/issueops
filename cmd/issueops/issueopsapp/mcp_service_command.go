@@ -28,6 +28,10 @@ func (command mcpServiceCommand) Run(args []string) error {
 		return fmt.Errorf("issueops mcp service requires start, stop, or status")
 	}
 	action := args[0]
+	if action == "--help" || action == "-h" || action == "help" {
+		fmt.Fprintln(command.stdout, "Usage: issueops mcp service start|stop|status [--json]")
+		return flag.ErrHelp
+	}
 	fs := flag.NewFlagSet("issueops mcp service "+action, flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	jsonOut := fs.Bool("json", false, "print JSON")
