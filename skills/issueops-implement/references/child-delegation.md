@@ -1,5 +1,16 @@
 # Child 위임 세부 규칙
 
+```bash
+issueops child start --parent "$ISSUEOPS_ID" \
+  --branch "$CHILD_BRANCH" --title "$TITLE" \
+  --scope "$SCOPE" --acceptance "$CRITERION" \
+  --host claude --session-id "$SESSION_ID" --cwd "$WORKER_PATH" --json
+issueops child status --parent "$ISSUEOPS_ID" \
+  --host claude --session-id "$SESSION_ID" --cwd "$WORKER_PATH" --json
+```
+
+- verdict는 `accept`·`reject`·`drop` 셋뿐이다. child scope를 고치는 amend 명령은
+  없으므로 찾거나 발명하지 않는다.
 - accept 전 rubric: 위임한 scope·expected worktree 준수, acceptance별 증거,
   선언한 검증 명령의 실행 결과, 무관한 diff·secret·stale scaffold 없음. 하나라도
   모호하면 accept하지 않는다.

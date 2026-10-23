@@ -185,24 +185,15 @@ lease 부재·다른 holder·모호한 mutation은 아래에서 시작해 반환
 devil's-advocate 리뷰가 approved 또는 waive다, plan이 sub-agent pattern·scope·acceptance·
 verification·fallback·tradeoff·기대 이득을 기록한다.
 
-```bash
-issueops child start --parent "$ISSUEOPS_ID" \
-  --branch "$CHILD_BRANCH" --title "$TITLE" \
-  --scope "$SCOPE" --acceptance "$CRITERION" \
-  --host claude --session-id "$SESSION_ID" --cwd "$WORKER_PATH" --json
-issueops child status --parent "$ISSUEOPS_ID" \
-  --host claude --session-id "$SESSION_ID" --cwd "$WORKER_PATH" --json
-```
+위임하면 [Child 위임 세부 규칙](references/child-delegation.md)을 읽고 따른다. `child start`·`child status`
+명령, verdict(`accept`·`reject`·`drop`뿐이고 amend는 없다), branch·worktree·lease 소유권과 scope drift
+처리가 거기에 있다. parent가 child worktree를 직접 만들지 않는다.
 
-- verdict는 `accept`·`reject`·`drop` 셋뿐이다. child scope를 고치는 amend 명령은
-  없으므로 찾거나 발명하지 않는다.
-- child의 branch·worktree·lease 소유권과 scope drift 처리는 [Child 위임 세부 규칙](references/child-delegation.md)을 읽고 따른다. parent가 child worktree를 직접 만들지 않는다.
 - 인계 준비나 최신 사용자 취소·범위 축소 뒤에는 새 쓰기 작업과 하위 작업 dispatch를
   중지한다. 이 스킬이 시작한 child나 worker는 인계 자료에 소유자, 실행 핸들, 입력 리비전,
   쓰기 범위, 결과 위치, 읽기 작업인지 쓰기 작업인지의 분류를 남기고, writer와 자손
   프로세스가 실제로 종료됐는지 확인한다. 사용자의 최신 취소나 범위 변경이 우선하며,
   이전 세션의 callback이나 결과는 source 변경이나 pass 기록의 근거가 될 수 없다.
-- accept 전 rubric, child prompt, 기록 규칙은 [Child 위임 세부 규칙](references/child-delegation.md)을 읽고 따른다. parent는 child record를 대신 수정하지 않는다.
 
 ## 종료 게이트
 
