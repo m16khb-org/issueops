@@ -41,7 +41,7 @@ func (s *ReleaseService) Release(ctx context.Context, request ReleaseRequest) (R
 	}
 	validate := func(before Record) error {
 		canonicalCWD := s.paths != nil && s.paths.Matches(request.CWD, before.CanonicalRoot)
-		release := issueopslease.ReleaseRequest{Generation: request.Generation, Actor: actor, AuthorityVerified: true, CanonicalCWD: canonicalCWD}
+		release := issueopslease.ReleaseRequest{Generation: request.Generation, Actor: actor, AuthorityVerified: true, CanonicalCWD: canonicalCWD, CanonicalRoot: before.CanonicalRoot}
 		return issueopslease.ValidateRelease(toDomainLease(before.Lease), release)
 	}
 	after, err := s.repository.Update(ctx, request.ID, validate, func(before Record) (Record, error) {

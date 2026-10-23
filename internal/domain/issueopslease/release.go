@@ -18,11 +18,27 @@ const (
 type Denial struct {
 	Code  DenyCode
 	Cause error
+	// CanonicalRoot names the worktree a canonical_cwd denial expected, so
+	// the public error can say where to rerun.
+	CanonicalRoot string
 }
 
 func (e *Denial) Error() string             { return fmt.Sprintf("%s: %v", e.Code, e.Cause) }
 func (e *Denial) Unwrap() error             { return e.Cause }
 func Deny(code DenyCode, cause error) error { return &Denial{Code: code, Cause: cause} }
+
+// DenyCWD is the canonical_cwd denial naming the expected worktree.
+func DenyCWD(root string, cause error) error {
+	return &Denial{Code: DenyCanonicalCWD, Cause: cause, CanonicalRoot: root}
+}
+
+// CanonicalRootOf returns the worktree a canonical_cwd denial expected.
+func CanonicalRootOf(err error) string {
+	if denial, ok := errors.AsType[*Denial](err); ok && denial.Code == DenyCanonicalCWD {
+		return denial.CanonicalRoot
+	}
+	return ""
+}
 func DenyCodeOf(err error) DenyCode {
 	if denial, ok := errors.AsType[*Denial](err); ok {
 		return denial.Code
@@ -52,6 +68,7 @@ type ReleaseRequest struct {
 	Actor             Actor
 	AuthorityVerified bool
 	CanonicalCWD      bool
+	CanonicalRoot     string
 }
 
 func ValidateRelease(lease Lease, request ReleaseRequest) error {
@@ -59,7 +76,7 @@ func ValidateRelease(lease Lease, request ReleaseRequest) error {
 		return Deny(DenyLeaseAuthority, fmt.Errorf("requester is not the active generation holder"))
 	}
 	if !request.CanonicalCWD {
-		return Deny(DenyCanonicalCWD, fmt.Errorf("release cwd is not canonical"))
+		return DenyCWD(request.CanonicalRoot, fmt.Errorf("release cwd is not canonical"))
 	}
 	return nil
 }

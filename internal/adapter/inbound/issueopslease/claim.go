@@ -37,7 +37,7 @@ func publicClaimError(err error, generation uint64, id string) error {
 	case leasedomain.DenyLeaseClaimable:
 		return claimableDenyError(generation, id)
 	case leasedomain.DenyCanonicalCWD:
-		return fmt.Errorf("claim cwd must be the canonical worktree")
+		return canonicalCWDError("claim", err)
 	case leasedomain.DenyClaimToken:
 		return fmt.Errorf("claim token does not match the current generation")
 	}
@@ -62,4 +62,13 @@ func claimableDenyError(generation uint64, id string) error {
 		"lease is not claimable at generation %d: a released or superseded lease must be reseeded before any session can claim it; run `issueops execution replace --id %s --expected-generation %d --preview` and follow the next_command it renders",
 		generation, id, generation,
 	)
+}
+
+// canonicalCWDError names the worktree to rerun from when the denial knows it,
+// the way other IssueOps mutations report a non-canonical cwd.
+func canonicalCWDError(verb string, err error) error {
+	if root := leasedomain.CanonicalRootOf(err); root != "" {
+		return fmt.Errorf("%s cwd must be the canonical worktree: rerun with --cwd %q", verb, root)
+	}
+	return fmt.Errorf("%s cwd must be the canonical worktree", verb)
 }

@@ -29,7 +29,7 @@ func ClaimWithinTransaction(ctx context.Context, transaction ClaimTransaction, r
 	}
 	canonicalCWD := transaction.CanonicalCWD(request.CWD, before.CanonicalRoot)
 	claim := leasedomain.ClaimRequest{
-		Generation: request.Generation, Actor: request.Actor, AuthorityVerified: true, CanonicalCWD: canonicalCWD, TokenVerified: true,
+		Generation: request.Generation, Actor: request.Actor, AuthorityVerified: true, CanonicalCWD: canonicalCWD, CanonicalRoot: before.CanonicalRoot, TokenVerified: true,
 	}
 	if err := leasedomain.ValidateClaim(lease, claim); err != nil {
 		return RepositoryResult{}, err

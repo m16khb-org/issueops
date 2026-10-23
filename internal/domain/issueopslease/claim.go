@@ -30,6 +30,7 @@ type ClaimRequest struct {
 	Actor             Actor
 	AuthorityVerified bool
 	CanonicalCWD      bool
+	CanonicalRoot     string
 	TokenVerified     bool
 }
 
@@ -52,7 +53,7 @@ func ValidateClaim(lease Lease, request ClaimRequest) error {
 		return Deny(DenyLeaseClaimable, fmt.Errorf("lease is not claimable at generation %d", request.Generation))
 	}
 	if !request.CanonicalCWD {
-		return Deny(DenyCanonicalCWD, fmt.Errorf("claim cwd is not canonical"))
+		return DenyCWD(request.CanonicalRoot, fmt.Errorf("claim cwd is not canonical"))
 	}
 	if !request.TokenVerified {
 		return Deny(DenyClaimToken, fmt.Errorf("claim token does not match the current generation"))

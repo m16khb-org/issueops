@@ -3809,6 +3809,7 @@
       "symbols": [
         "func ClaimHandler.Handle",
         "func NewClaimHandler",
+        "func canonicalCWDError",
         "func claimableDenyError",
         "func publicClaimError",
         "type ClaimHandler"
@@ -14224,9 +14225,11 @@
       "task": "T20",
       "symbols": [
         "func ApplyRelease",
+        "func CanonicalRootOf",
         "func Denial.Error",
         "func Denial.Unwrap",
         "func Deny",
+        "func DenyCWD",
         "func DenyCodeOf",
         "func ValidateRelease",
         "func sameActor",

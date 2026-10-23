@@ -76,7 +76,7 @@ func publicReleaseError(err error, generation uint64) error {
 	if code := leasedomain.DenyCodeOf(err); code == leasedomain.DenyLeaseAuthority {
 		return fmt.Errorf("only the current holder may release generation %d", generation)
 	} else if code == leasedomain.DenyCanonicalCWD {
-		return fmt.Errorf("release cwd must be the canonical worktree")
+		return canonicalCWDError("release", err)
 	}
 	failure, ok := errors.AsType[*leasecontract.Failure](err)
 	if !ok {

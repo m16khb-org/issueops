@@ -17,6 +17,7 @@ func TestClaimInboundContract(t *testing.T) {
 	}{
 		{name: "lease", err: leasedomain.Deny(leasedomain.DenyLeaseClaimable, errors.New("internal")), want: "lease is not claimable at generation 7: a released or superseded lease must be reseeded before any session can claim it; run `issueops execution replace --id io-demo --expected-generation 7 --preview` and follow the next_command it renders"},
 		{name: "cwd", err: leasedomain.Deny(leasedomain.DenyCanonicalCWD, errors.New("internal")), want: "claim cwd must be the canonical worktree"},
+		{name: "cwd names the worktree", err: leasedomain.ValidateClaim(leasedomain.Lease{Status: "claimable", Generation: 7}, leasedomain.ClaimRequest{Generation: 7, AuthorityVerified: true, CanonicalRoot: "/repo.worktrees/7-x"}), want: `claim cwd must be the canonical worktree: rerun with --cwd "/repo.worktrees/7-x"`},
 		{name: "token", err: leasedomain.Deny(leasedomain.DenyClaimToken, errors.New("internal")), want: "claim token does not match the current generation"},
 		{name: "persistence", err: leasecontract.Fail(leasecontract.FailurePersistence, errors.New("holder index is unavailable")), want: "holder index is unavailable"},
 	} {
