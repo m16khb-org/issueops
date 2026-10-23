@@ -57,9 +57,11 @@ type IssueOpsBranchPrepareAck struct {
 }
 
 // BranchPrepareAck projects record onto the branch prepare acknowledgement.
+// The link-creation steps are left out once the link is recorded verified:
+// creating a link next to "verified" reads as a contradiction.
 func BranchPrepareAck(record IssueOpsRecord) IssueOpsBranchPrepareAck {
 	ack := IssueOpsBranchPrepareAck{IssueOpsMutationAck: MutationAck(record)}
-	if record.BranchPrepare != nil {
+	if record.BranchPrepare != nil && !record.BranchPrepare.LinkVerified {
 		ack.Steps = record.BranchPrepare.Steps
 	}
 	return ack

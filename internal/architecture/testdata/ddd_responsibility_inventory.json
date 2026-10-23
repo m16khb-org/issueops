@@ -8950,6 +8950,7 @@
       "symbols": [
         "func ChildStarter.Start",
         "func ChildStarter.startLocked",
+        "func childStartGuidance",
         "type ChildIdentity",
         "type ChildRecords",
         "type ChildStarter"

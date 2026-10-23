@@ -448,7 +448,7 @@ func TestClassifyMissingIssueURLOnlyClassifiesProblemAndGrill(t *testing.T) {
 
 func TestClassifyBranchPrepareCommandDependsOnPhase(t *testing.T) {
 	problem := Classify(withIssue(baseRecord(issueopsnextcontract.PhaseProblem)))
-	if problem.Stage.Key != "prepare" || problem.NextCommand != "issueops phase --id io-test --to grill --json" {
+	if problem.Stage.Key != "prepare" || problem.NextCommand != "issueops phase --id io-test --to grill $RECORD_ACTOR_FLAGS --json" {
 		t.Fatalf("problem with issue: got %s %q", problem.Stage.Key, problem.NextCommand)
 	}
 	if len(problem.Missing) != 1 || problem.Missing[0] != "intent_contract" {

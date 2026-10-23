@@ -198,7 +198,8 @@ verification·fallback·tradeoff·기대 이득을 기록한다.
 ## 종료 게이트
 
 1. focused verification 증거가 명령·결과로 남아 있고, 위임한 child가 전부 accepted
-   또는 dropped다. `child_incomplete`·`child_unvalidated`가 남으면 전이가 거부된다.
+   또는 dropped다. ai-slop-clean 전이는 이를 검사하지 않지만 `child_incomplete`·`child_unvalidated`가
+   남으면 pr 진입(strict readiness)이 거부되므로 여기서 끝낸다.
 2. verified-execution report 초안을 워크트리 **안**에 쓴다. 경로는
    워크트리 내부 상대 경로로 기록한다. 최종 확정은 5단계 정리가 한다.
 3. `issueops phase --id ID --to ai-slop-clean $RECORD_ACTOR_FLAGS --json`

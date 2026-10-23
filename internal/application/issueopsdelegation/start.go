@@ -96,5 +96,17 @@ func (s ChildStarter) startLocked(ctx context.Context, req model.IssueOpsChildSt
 	if err != nil {
 		return model.IssueOpsChildStartResult{}, err
 	}
-	return model.IssueOpsChildStartResult{OK: true, ParentID: parent.ID, Child: child, ParentRef: ref, Guidance: "base_branch=" + parent.Branch + "; create an isolated worktree for " + child.Branch + " and export ISSUEOPS_EXPECTED_WORKTREE after linking it"}, nil
+	return model.IssueOpsChildStartResult{OK: true, ParentID: parent.ID, Child: child, ParentRef: ref, Guidance: childStartGuidance(parent, child)}, nil
+}
+
+// childStartGuidance tells the parent how the child session begins. The child
+// cycle owns its branch and worktree (its own branch prepare and execution
+// prepare create them); the parent does not make the worktree for it.
+func childStartGuidance(parent, child model.IssueOpsRecord) string {
+	guidance := "base_branch=" + parent.Branch + "; start the child session in the source checkout: its own `branch prepare --id " + child.ID +
+		" --base-branch " + parent.Branch
+	if parent.Execution != nil && parent.Execution.Workspace.Root != "" {
+		guidance += " --parent-worktree " + parent.Execution.Workspace.Root
+	}
+	return guidance + "` and `execution prepare` create the child branch and worktree"
 }

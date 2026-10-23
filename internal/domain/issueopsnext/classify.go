@@ -271,7 +271,7 @@ func classifyBranchPrepare(in Input, decision Decision) (Decision, bool) {
 	decision.Stage = stage(issueopsnextcontract.StagePrepare, 2)
 	if record.Phase == issueopsnextcontract.PhaseProblem {
 		decision.Missing = stageOneMissing(in)
-		decision.NextCommand = "issueops phase --id " + record.ID + " --to grill --json"
+		decision.NextCommand = "issueops phase --id " + record.ID + " --to grill $RECORD_ACTOR_FLAGS --json"
 		return decision, true
 	}
 	key := branchEvidenceKey(record)

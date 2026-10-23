@@ -52,10 +52,10 @@ func TestRunIssueOpsLifecycle(t *testing.T) {
 	if err := json.Unmarshal([]byte(prepareOut), &prepareAck); err != nil {
 		t.Fatalf("branch prepare should return JSON: %v\n%s", err, prepareOut)
 	}
-	// #306: 생성 뒤 linked-branch readback 두 단계가 더해져 5단계다. 단계는
-	// branch prepare 응답에만 실리고 status에는 다시 싣지 않는다.
-	if steps, ok := prepareAck["steps"].([]any); !ok || len(steps) != 5 || prepareAck["id"] != id {
-		t.Fatalf("branch prepare ack should carry the fallback and readback steps: %#v", prepareAck)
+	// The link-creation steps go out only while the link is unverified; a
+	// prepare that records --link-verified does not tell the caller to create it.
+	if _, hasSteps := prepareAck["steps"]; hasSteps || prepareAck["id"] != id {
+		t.Fatalf("a verified branch prepare must not carry link-creation steps: %#v", prepareAck)
 	}
 	branchRecord := statusRecordForTest(t, id)
 	prepare, ok := branchRecord["branch_prepare"].(map[string]any)

@@ -36,7 +36,7 @@ func TestRunIssueOpsChildLifecycle(t *testing.T) {
 	if !started.OK || started.ParentID != parent.ID || started.Child.ID == "" || started.ParentRef.CycleID != started.Child.ID {
 		t.Fatalf("unexpected child start result: %#v", started)
 	}
-	if !strings.Contains(started.Guidance, parent.Branch) || !strings.Contains(started.Guidance, "ISSUEOPS_EXPECTED_WORKTREE") {
+	if !strings.Contains(started.Guidance, parent.Branch) || !strings.Contains(started.Guidance, "execution prepare") || strings.Contains(started.Guidance, "create an isolated worktree") {
 		t.Fatalf("child start should surface core delegation guidance, got %q", started.Guidance)
 	}
 
