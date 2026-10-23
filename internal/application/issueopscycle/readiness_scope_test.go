@@ -80,9 +80,9 @@ func TestReadinessSameInstanceReobservesChangedState(t *testing.T) {
 		return copy
 	}
 	record := model.IssueOpsRecord{Repo: "/repo", Branch: "feature"}
-	first := localPRForTest(s, record)
+	first := observedPRForTest(s, record)
 	head = "second"
-	second := localPRForTest(s, record)
+	second := observedPRForTest(s, record)
 	if scopes != 2 || first.CurrentHead != "first" || second.CurrentHead != "second" || first.CleanupMissing[0] != "first" || second.CleanupMissing[0] != "second" {
 		t.Fatalf("stale operation state: scopes=%d first=%+v second=%+v", scopes, first, second)
 	}
@@ -113,7 +113,7 @@ func TestReadinessConcurrentOperationsHaveIndependentScopes(t *testing.T) {
 		return copy
 	}
 	for range 2 {
-		go func() { done <- localPRForTest(s, model.IssueOpsRecord{Repo: "/repo", Branch: "feature"}) }()
+		go func() { done <- observedPRForTest(s, model.IssueOpsRecord{Repo: "/repo", Branch: "feature"}) }()
 	}
 	for range 2 {
 		select {

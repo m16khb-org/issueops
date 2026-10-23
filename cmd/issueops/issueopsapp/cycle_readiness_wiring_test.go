@@ -52,8 +52,14 @@ func TestCycleReadinessSameInstanceMatchesUnsharedResultsAcrossGitChanges(t *tes
 	}
 	second, _ := readiness.ObserveLocalPR(record)
 	want, _ = baseline.ObserveLocalPR(record)
-	if !reflect.DeepEqual(second, want) || !slices.Contains(second.Missing, "branch_match") || !slices.Contains(second.Missing, "worktree_clean") || !slices.Contains(second.CleanupMissing, "branch_match") || !slices.Contains(second.CleanupMissing, "worktree_clean") {
+	if !reflect.DeepEqual(second, want) || !slices.Contains(second.Missing, "branch_match") || !slices.Contains(second.Missing, "worktree_clean") {
 		t.Fatalf("same readiness instance reused prior Git state: got=%+v want=%+v", second, want)
+	}
+	// The cleanup status is observed only by pr-readiness (next and status
+	// stay network-free), and it must see the changed Git state too.
+	cleanupGot, cleanupWant := readiness.PR(record), baseline.PR(record)
+	if !reflect.DeepEqual(cleanupGot.CleanupMissing, cleanupWant.CleanupMissing) || !slices.Contains(cleanupGot.CleanupMissing, "branch_match") || !slices.Contains(cleanupGot.CleanupMissing, "worktree_clean") || second.CleanupMissing != nil {
+		t.Fatalf("cleanup observation: pr=%v want=%v local=%v", cleanupGot.CleanupMissing, cleanupWant.CleanupMissing, second.CleanupMissing)
 	}
 }
 

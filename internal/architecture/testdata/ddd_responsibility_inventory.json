@@ -8852,6 +8852,7 @@
         "func Readiness.PrefetchUpstream",
         "func Readiness.StrictPRWithFetch",
         "func Readiness.StrictPRWithState",
+        "func Readiness.localPR",
         "func Readiness.observePR",
         "func Readiness.scoped",
         "type Readiness"
