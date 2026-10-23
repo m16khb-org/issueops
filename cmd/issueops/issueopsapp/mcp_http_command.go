@@ -25,6 +25,16 @@ func runMCPHTTP(args []string) error {
 	fs.SetOutput(os.Stderr)
 	httpMode := fs.Bool("http", false, "serve the shared Streamable HTTP endpoint")
 	address := fs.String("addr", mcpcli.DefaultHTTPAddress, "loopback host:port to listen on")
+	fs.Usage = func() {
+		fmt.Fprint(fs.Output(), `Usage:
+  issueops mcp                              serve MCP over stdio (host session process)
+  issueops mcp --http [--addr HOST:PORT]    serve the shared Streamable HTTP endpoint
+  issueops mcp service start|stop|status    manage the shared HTTP service
+  issueops mcp authorize                    issue a caller capability (authority_file)
+  issueops mcp cleanup --dry-run|--apply    stop orphaned MCP proxy processes
+`)
+		fs.PrintDefaults()
+	}
 	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}

@@ -1,8 +1,9 @@
 package issueopsapp
 
 import (
-	"fmt"
 	"strings"
+
+	"issueops/cmd/issueops/cliflag"
 )
 
 func runMCPCommand(args []string) error {
@@ -20,7 +21,7 @@ func runMCPCommand(args []string) error {
 		if strings.HasPrefix(args[0], "-") {
 			return runMCPHTTP(args)
 		}
-		return fmt.Errorf("unknown mcp subcommand %q", args[0])
+		return cliflag.UnknownSubcommand("mcp", args[0], "service", "authorize", "cleanup")
 	}
 }
 

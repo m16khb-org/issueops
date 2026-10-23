@@ -11,7 +11,7 @@ import (
 type Command struct{ Service statusapp.Service }
 
 func (command Command) Run(args []string) error {
-	fs := flag.NewFlagSet("status", flag.ContinueOnError)
+	fs := flag.NewFlagSet("system-status", flag.ContinueOnError)
 	repo := fs.String("repo", ".", "target repository path")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if err := cliflag.Parse(fs, args); err != nil {
