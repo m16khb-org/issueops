@@ -123,8 +123,26 @@ func LintStatic(candidate LintCandidate) (result model.LintGate, argv []string) 
 		result.Warnings = append(result.Warnings, "no EXPECT: exit code 0 alone marks this gate met")
 	case !isRegex && strings.HasPrefix(expect, "/"):
 		result.Warnings = append(result.Warnings, "EXPECT starts with / but is not /pattern/flags, so it is matched as a literal line")
+	case !isRegex && len(expect) > 2 && strings.HasPrefix(expect, "^") && strings.HasSuffix(expect, "$"):
+		result.Problems = append(result.Problems, fmt.Sprintf("EXPECT %s is an anchored regex but is matched as a literal line, so it never matches; write /%s/", expect, expect))
+	case !isRegex && literalLooksLikeRegex(expect):
+		result.Warnings = append(result.Warnings, fmt.Sprintf("EXPECT %s looks like a regex but is matched as a literal line; write /pattern/ if a regex is meant", expect))
 	}
 	return result, argv
+}
+
+// literalLooksLikeRegex reports regex syntax that a literal EXPECT keeps as
+// characters: an anchor at either end or an escape/wildcard sequence.
+func literalLooksLikeRegex(expect string) bool {
+	if strings.HasPrefix(expect, "^") || (strings.HasSuffix(expect, "$") && !strings.HasSuffix(expect, `\$`)) {
+		return true
+	}
+	for _, token := range []string{`\.`, `\d`, `\s`, `\w`, `.*`, `.+`} {
+		if strings.Contains(expect, token) {
+			return true
+		}
+	}
+	return false
 }
 
 // DeniedLint는 command policy가 거부한 CHECK를 문제로 기록한다.

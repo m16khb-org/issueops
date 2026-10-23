@@ -19,6 +19,7 @@ func TestDecideCheckRequiresExitZeroAndMatchingExpect(t *testing.T) {
 		{"matched", "ok", 0, false, true, ""},
 		{"nonzero with match", "ok", 1, false, false, "exit code 1: ok"},
 		{"missing match", "other", 0, false, false, "expect not matched: ok"},
+		{"regex-looking literal names the regex form", "^o.*", 0, false, false, "expect not matched: ok (EXPECT is matched as a literal line; write /^o.*/ for a regex)"},
 		{"timeout", "ok", 0, true, false, "check timed out: ok"},
 	}
 	for _, tc := range cases {

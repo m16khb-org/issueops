@@ -19,6 +19,7 @@ func TestLintStaticFlagsGatesThatCanNeverBeMet(t *testing.T) {
 		{"gate without CHECK stays unchecked", "G4: x | EXPECT: ok", "no CHECK", false},
 		{"markdown backticks stay in argv", "G5: x | CHECK: `go test ./...` | EXPECT: ok", "markdown backticks", true},
 		{"backtick-wrapped EXPECT is matched literally", "G6: x | CHECK: printf ok | EXPECT: `ok`", "wrapped in markdown backticks", true},
+		{"anchored regex without slashes is a literal that never matches", `G7: x | CHECK: printf ok | EXPECT: ^ok$`, "write /^ok$/", true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -75,5 +76,22 @@ func TestPlanLintCandidatesReadsSpecAndLedgerGatesAndReportsTheRest(t *testing.T
 	}
 	if want := []int{8}; !reflect.DeepEqual(unparsed, want) {
 		t.Fatalf("unparsed = %v, want %v", unparsed, want)
+	}
+}
+
+// Regex syntax in a literal EXPECT is kept as characters; lint says so
+// without failing a literal that only happens to contain a dollar sign.
+func TestLintStaticWarnsOnRegexLookingLiteralExpect(t *testing.T) {
+	for _, expect := range []string{"^hello", "hello 0\\.1", "v1.*"} {
+		result, _ := LintStatic(LintSpecCandidate("spec", "G1: x | CHECK: printf ok | EXPECT: "+expect))
+		if len(result.Problems) != 0 || len(result.Warnings) != 1 || !strings.Contains(result.Warnings[0], "looks like a regex") {
+			t.Fatalf("%q: problems=%q warnings=%q", expect, result.Problems, result.Warnings)
+		}
+	}
+	for _, expect := range []string{"cost 5\\$", "ok", "/^ok$/"} {
+		result, _ := LintStatic(LintSpecCandidate("spec", "G1: x | CHECK: printf ok | EXPECT: "+expect))
+		if len(result.Problems) != 0 || len(result.Warnings) != 0 {
+			t.Fatalf("%q: problems=%q warnings=%q", expect, result.Problems, result.Warnings)
+		}
 	}
 }

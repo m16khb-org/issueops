@@ -77,3 +77,23 @@ func TestParseRejectsAValueFlagSwallowingAFlag(t *testing.T) {
 		}
 	}
 }
+
+// A near-miss flag name names the flag the command has; an unrelated one
+// does not guess.
+func TestParseSuggestsTheClosestDefinedFlag(t *testing.T) {
+	parse := func(arg string) error {
+		fs := flag.NewFlagSet("demo", flag.ContinueOnError)
+		fs.String("file", "", "ledger")
+		fs.Bool("json", false, "json")
+		return Parse(fs, []string{arg})
+	}
+	if err := parse("--files"); err == nil || !strings.HasSuffix(err.Error(), "(did you mean --file?)") {
+		t.Fatalf("--files: %v", err)
+	}
+	if err := parse("--josn"); err == nil || !strings.HasSuffix(err.Error(), "(did you mean --json?)") {
+		t.Fatalf("--josn: %v", err)
+	}
+	if err := parse("--zzzzzz"); err == nil || strings.Contains(err.Error(), "did you mean") {
+		t.Fatalf("--zzzzzz: %v", err)
+	}
+}

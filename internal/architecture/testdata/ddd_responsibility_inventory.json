@@ -162,7 +162,9 @@
       "symbols": [
         "func Parse",
         "func ParseNoArgs",
+        "func Suggest",
         "func UnknownSubcommand",
+        "func editDistance",
         "func flagToken",
         "func isBoolFlag",
         "func swallowedFlag"
@@ -2520,7 +2522,6 @@
         "func Command.suggest",
         "func HelpRequested",
         "func JSONRequested",
-        "func editDistance",
         "type Command",
         "type Runner"
       ]
@@ -12629,6 +12630,7 @@
         "func PlanLintCandidates",
         "func SummarizeLint",
         "func UnparsedWarning",
+        "func literalLooksLikeRegex",
         "func specID",
         "func unwrapSpec",
         "type LintCandidate"

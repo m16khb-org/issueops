@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -36,7 +37,64 @@ func Parse(fs *flag.FlagSet, args []string) error {
 		fs.SetOutput(os.Stdout)
 		fs.Usage()
 	}
+	if name, undefined := strings.CutPrefix(fmt.Sprint(err), "flag provided but not defined: -"); undefined {
+		var known []string
+		fs.VisitAll(func(f *flag.Flag) { known = append(known, f.Name) })
+		if closest := Suggest(name, known, 1); len(closest) == 1 {
+			return fmt.Errorf("%w (did you mean --%s?)", err, closest[0])
+		}
+	}
 	return err
+}
+
+// Suggest returns up to limit known names closest to name: prefix matches
+// first, then by edit distance (at most 2), ties by name.
+func Suggest(name string, known []string, limit int) []string {
+	type candidate struct {
+		name string
+		rank int
+	}
+	var found []candidate
+	for _, candidateName := range known {
+		rank := editDistance(name, candidateName)
+		if strings.HasPrefix(candidateName, name) || strings.HasPrefix(name, candidateName) {
+			rank = 0
+		}
+		if rank <= 2 {
+			found = append(found, candidate{candidateName, rank})
+		}
+	}
+	sort.Slice(found, func(i, j int) bool {
+		if found[i].rank != found[j].rank {
+			return found[i].rank < found[j].rank
+		}
+		return found[i].name < found[j].name
+	})
+	out := make([]string, 0, min(len(found), limit))
+	for _, candidate := range found[:min(len(found), limit)] {
+		out = append(out, candidate.name)
+	}
+	return out
+}
+
+func editDistance(a, b string) int {
+	prev := make([]int, len(b)+1)
+	for j := range prev {
+		prev[j] = j
+	}
+	for i := 1; i <= len(a); i++ {
+		cur := make([]int, len(b)+1)
+		cur[0] = i
+		for j := 1; j <= len(b); j++ {
+			cost := 1
+			if a[i-1] == b[j-1] {
+				cost = 0
+			}
+			cur[j] = min(prev[j]+1, cur[j-1]+1, prev[j-1]+cost)
+		}
+		prev = cur
+	}
+	return prev[len(b)]
 }
 
 // swallowedFlag walks args the way flag.Parse does (up to "--" or the first

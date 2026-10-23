@@ -2,6 +2,7 @@ package gates
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	model "issueops/internal/contract/gates"
@@ -25,6 +26,18 @@ func NormalizeCheck(req model.CheckRequest) model.CheckRequest {
 	}
 	if req.TimeoutSeconds <= 0 {
 		req.TimeoutSeconds = model.TimeoutDefaultSeconds
+	}
+	// --cwd is the gate file directory: a relative --file names a ledger
+	// under it, the same place discovery looks, not under the process cwd.
+	if req.CWD != "" && len(req.Files) > 0 {
+		files := make([]string, len(req.Files))
+		for i, file := range req.Files {
+			if file != "" && !filepath.IsAbs(file) {
+				file = filepath.Join(req.CWD, file)
+			}
+			files[i] = file
+		}
+		req.Files = files
 	}
 	return req
 }
