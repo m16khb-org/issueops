@@ -87,8 +87,14 @@ One document per update. Never rewrite multiple documents in one pass.
    (user instruction, files, commands), `confirm=true` — or
    `project_docs_append(kind=caution|adr)` for append-only knowledge.
 
-CLI fallback: `issueops project append --kind caution|adr` covers
-records. There is no CLI for full-document revision; when MCP is unavailable,
+CLI fallback for records (no `--help` needed):
+
+```bash
+issueops project append --repo . --kind caution --title "<problem>" --summary "<what happened>" --context "<trigger>" --resolution "<fix>" --json
+issueops project append --repo . --kind adr --title "<decision>" --summary "<why>" --context "<forces>" --decision "<choice>" --consequences "<follow-up>" --json
+```
+
+There is no CLI for full-document revision; when MCP is unavailable,
 edit the file directly with the same evidence discipline and state that MCP
 was bypassed in the report.
 
