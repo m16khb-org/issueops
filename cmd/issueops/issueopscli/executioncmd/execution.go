@@ -304,12 +304,20 @@ func ResolveNativeSessionIdentity(getenv func(string) string) (host, sessionID, 
 
 func nativeSessionIdentityFromEnv(getenv func(string) string) (nativeSessionIdentity, error) {
 	identity := nativeSessionIdentity{}
+	omoSession := getenv("PI_SESSION_ID")
+	// omp now also exports PI_SESSION_ID to its shells, with the same value
+	// the issueops extension puts in ISSUEOPS_OMP_SESSION_ID. Equal values are
+	// one omp session, not an omo session wrapping omp; different values stay
+	// ambiguous.
+	if omp := getenv("ISSUEOPS_OMP_SESSION_ID"); omp != "" && omoSession == omp {
+		omoSession = ""
+	}
 	for _, candidate := range []nativeSessionIdentity{
 		{Host: "codex", SessionID: getenv("CODEX_THREAD_ID"), Source: "CODEX_THREAD_ID"},
 		{Host: "claude", SessionID: getenv("CLAUDE_CODE_SESSION_ID"), Source: "CLAUDE_CODE_SESSION_ID"},
-		{Host: "omo", SessionID: getenv("PI_SESSION_ID"), Source: "PI_SESSION_ID"},
-		// omp exports no session id to its shells; the issueops lifecycle
-		// extension sets this one from the main session it runs in.
+		{Host: "omo", SessionID: omoSession, Source: "PI_SESSION_ID"},
+		// The issueops lifecycle extension sets this one from the main omp
+		// session it runs in.
 		{Host: "omp", SessionID: getenv("ISSUEOPS_OMP_SESSION_ID"), Source: "ISSUEOPS_OMP_SESSION_ID"},
 		// opencode exports the session id to every shell tool itself; a
 		// subagent shell carries its child session id and fails the lease check.

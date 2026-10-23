@@ -210,6 +210,24 @@ func TestNativeSessionIdentityFromEnvRejectsOmoAndOmpTogether(t *testing.T) {
 	}
 }
 
+// A current omp shell exports PI_SESSION_ID with the same session id the
+// issueops extension sets; that is one omp session, observed in a live omp
+// shell where whoami had answered "ambiguous".
+func TestNativeSessionIdentityFromEnvTreatsOmpOwnPiSessionAsOmp(t *testing.T) {
+	values := map[string]string{
+		"PI_SESSION_ID":           "01a16919-fc94-7618-a826-8360c3916e81",
+		"ISSUEOPS_OMP_SESSION_ID": "01a16919-fc94-7618-a826-8360c3916e81",
+	}
+	identity, err := nativeSessionIdentityFromEnv(func(key string) string { return values[key] })
+	if err != nil || identity.Host != "omp" || identity.Source != "ISSUEOPS_OMP_SESSION_ID" {
+		t.Fatalf("omp shell identity = %+v, %v", identity, err)
+	}
+	values["CLAUDE_CODE_SESSION_ID"] = "claude-session"
+	if _, err := nativeSessionIdentityFromEnv(func(key string) string { return values[key] }); err == nil || !strings.Contains(err.Error(), "ambiguous") {
+		t.Fatalf("omp inside another host must still fail closed: %v", err)
+	}
+}
+
 func TestNativeSessionIdentityFromEnvSupportsOpencode(t *testing.T) {
 	values := map[string]string{
 		"ISSUEOPS_OMP_SESSION_ID": "",
