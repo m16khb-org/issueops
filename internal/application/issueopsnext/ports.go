@@ -40,6 +40,9 @@ type Ports struct {
 	// 소유하므로 application 계층은 filepath를 직접 import하지 않는다.
 	CleanPath     func(path string) string
 	WorktreeState func(root string) (present bool, branch, head string)
+	// Repository reports whether cwd is inside a Git worktree; next asks it
+	// before listing cycles and needs neither the branch nor the HEAD.
+	Repository    func(cwd string) bool
 	CurrentBranch func(cwd string) string
 	Env           func(key string) string
 	Now           func() time.Time

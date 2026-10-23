@@ -870,6 +870,7 @@
         "func nextGitObservation.currentBranch",
         "func nextGitObservation.out",
         "func nextGitObservation.read",
+        "func nextGitObservation.repository",
         "func nextGitObservation.worktreeState",
         "func nextLocalReadinessObservation.changedPaths",
         "func nextLocalReadinessObservation.localReadiness",

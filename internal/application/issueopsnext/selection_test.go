@@ -17,7 +17,7 @@ import (
 
 func TestNextOutsideRepositoryNeverListsCycles(t *testing.T) {
 	ports := testPorts([]issueopsinventorycontract.ListEntry{{ID: "io-a", Phase: issueopscontract.IssueOpsPhasePlan}}, nil)
-	ports.WorktreeState = func(string) (bool, string, string) { return false, "", "" }
+	ports.Repository = func(string) bool { return false }
 	ports.ListCycles = func(context.Context, string, string) (issueopsinventorycontract.ListResult, error) {
 		t.Fatal("a non-repository cwd must not enumerate cycles")
 		return issueopsinventorycontract.ListResult{}, nil

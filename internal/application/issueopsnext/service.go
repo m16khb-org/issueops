@@ -374,11 +374,10 @@ func sameDir(ports Ports, left, right string) bool {
 // isRepository는 관측기가 없으면 참으로 본다. 테스트 배선처럼 git 관측을
 // 꽂지 않은 곳에서 모든 디렉터리를 저장소 밖으로 몰지 않기 위해서다.
 func isRepository(ports Ports, cwd string) bool {
-	if ports.WorktreeState == nil {
+	if ports.Repository == nil {
 		return true
 	}
-	present, _, _ := ports.WorktreeState(cwd)
-	return present
+	return ports.Repository(cwd)
 }
 
 func cleanPath(ports Ports, path string) string {

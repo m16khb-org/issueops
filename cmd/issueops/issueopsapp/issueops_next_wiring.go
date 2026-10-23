@@ -63,6 +63,7 @@ func issueOpsNextHandler(
 			SourceRoot:    issueopsinventoryoutbound.CleanPath{}.Normalize,
 			CleanPath:     issueopsinventoryoutbound.Canonical,
 			WorktreeState: git.worktreeState,
+			Repository:    git.repository,
 			CurrentBranch: git.currentBranch,
 			Env:           os.Getenv,
 			Now:           time.Now,
@@ -183,6 +184,12 @@ func (observation *nextGitObservation) out(root string, args ...string) string {
 
 func (observation *nextGitObservation) currentBranch(root string) string {
 	return observation.out(root, "branch", "--show-current")
+}
+
+// repository is the cwd check before listing cycles: the top-level alone,
+// memoized like worktreeState's first probe, without branch or HEAD.
+func (observation *nextGitObservation) repository(root string) bool {
+	return strings.TrimSpace(root) != "" && observation.out(root, "rev-parse", "--show-toplevel") != ""
 }
 
 func (observation *nextGitObservation) worktreeState(root string) (bool, string, string) {
