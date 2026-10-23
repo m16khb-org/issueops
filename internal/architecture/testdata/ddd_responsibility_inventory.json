@@ -7116,6 +7116,7 @@
         "func boundedBuffer.String",
         "func boundedBuffer.Write",
         "func boundedDiagnostic",
+        "func needsShellQuote",
         "func runBoundedCommandContext",
         "type boundedBuffer"
       ]

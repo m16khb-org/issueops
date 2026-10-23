@@ -1873,7 +1873,7 @@
     "issueops_remote_create_child": {
       "hierarchy_verified": false,
       "ok": true,
-      "preview": "[dry-run] would execute: glab api graphql --hostname gitlab.example --field project=group/project --field parent_iid=1 --field title=contract child --field description=contract child body --field label=contract --field assignee=octocat; resolve Task workItem type; workItemCreate; workItemHierarchyAddChildrenItems; verify children, labels, assignees",
+      "preview": "[dry-run] would execute: glab api graphql --hostname gitlab.example --field project=group/project --field parent_iid=1 --field 'title=contract child' --field 'description=contract child body' --field label=contract --field assignee=octocat; resolve Task workItem type; workItemCreate; workItemHierarchyAddChildrenItems; verify children, labels, assignees",
       "provider": "gitlab",
       "readability": {
         "critical": [
@@ -1902,7 +1902,7 @@
         "contract"
       ],
       "ok": true,
-      "preview": "[dry-run] would execute: glab issue create --title contract issue --description contract body --label contract",
+      "preview": "[dry-run] would execute: glab issue create --title 'contract issue' --description 'contract body' --label contract",
       "provider": "gitlab",
       "readability": {
         "critical": [
@@ -1926,7 +1926,7 @@
     "issueops_remote_create_pr": {
       "number": "",
       "ok": true,
-      "preview": "[dry-run] would execute: gh pr create --title contract PR --head 69-cli-execution-contract --base main --repo github.com/example/repo --draft --label contract --assignee octocat",
+      "preview": "[dry-run] would execute: gh pr create --title 'contract PR' --head 69-cli-execution-contract --base main --repo github.com/example/repo --draft --label contract --assignee octocat",
       "readability": {
         "critical": [
           {

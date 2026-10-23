@@ -9,6 +9,7 @@ import (
 
 	"issueops/internal/adapter/outbound/processlease"
 	"issueops/internal/domain/policy"
+	"issueops/internal/domain/shelltoken"
 )
 
 const (
@@ -31,13 +32,29 @@ func RunBoundedMutationWithOutputLimitContext(ctx context.Context, repo, name st
 	return runBoundedCommandContext(ctx, repo, name, args, providerMutationTimeout, outputLimit)
 }
 
+// DryRunPreview renders the command a confirm would run, quoting each word
+// that a shell would split or expand, so a title like `hello.sh --version`
+// does not read as a flag.
 func DryRunPreview(name string, args ...string) string {
-	argv := append([]string{name}, args...)
-	value := strings.Join(policy.RedactArgv(argv), " ")
+	argv := policy.RedactArgv(append([]string{name}, args...))
+	for i, word := range argv {
+		if word == "" || strings.ContainsFunc(word, needsShellQuote) {
+			argv[i] = shelltoken.QuoteWord(word)
+		}
+	}
+	value := strings.Join(argv, " ")
 	if len(value) > providerDiagnosticLimit {
 		value = policy.TruncateBytes(value, providerDiagnosticLimit) + "...[truncated]"
 	}
 	return "[dry-run] would execute: " + value
+}
+
+func needsShellQuote(r rune) bool {
+	switch {
+	case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+		return false
+	}
+	return !strings.ContainsRune("_@%+=:,./-", r)
 }
 
 func runBoundedCommandContext(parent context.Context, repo, name string, args []string, timeout time.Duration, outputLimit int) ([]byte, bool, error) {
