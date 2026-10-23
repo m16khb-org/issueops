@@ -82,10 +82,9 @@ type ProjectDocsRouteResult struct {
 	Warnings    []string               `json:"warnings,omitempty"`
 }
 
-// ProjectDocRouteEntry names a document by RelPath under the result's
-// repo_root; the absolute path is that join, so it is not repeated.
 type ProjectDocRouteEntry struct {
 	RelPath string `json:"rel_path"`
+	Path    string `json:"path"`
 	Reason  string `json:"reason"`
 	Exists  bool   `json:"exists"`
 }

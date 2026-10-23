@@ -34,13 +34,15 @@ func Route(root, task string, effects RouteEffects) projectdocscontract.ProjectD
 	entries := make([]projectdocscontract.ProjectDocRouteEntry, 0, len(rels)*2)
 	var families []projectdocdomain.DocFamily
 	for _, doc := range rels {
-		entries = append(entries, projectdocscontract.ProjectDocRouteEntry{RelPath: doc.Rel, Reason: doc.Reason, Exists: effects.Exists(effects.Path(root, doc.Rel))})
+		filePath := effects.Path(root, doc.Rel)
+		entries = append(entries, projectdocscontract.ProjectDocRouteEntry{RelPath: doc.Rel, Path: filePath, Reason: doc.Reason, Exists: effects.Exists(filePath)})
 		if family, ok := projectdocdomain.FamilyByRoot(path.Base(doc.Rel)); ok {
 			families = append(families, family)
 			overviewRel := path.Join(projectdocdomain.ProjectDocsDir, family.OverviewRel())
-			if effects.Exists(effects.Path(root, overviewRel)) {
+			overviewPath := effects.Path(root, overviewRel)
+			if effects.Exists(overviewPath) {
 				entries = append(entries, projectdocscontract.ProjectDocRouteEntry{
-					RelPath: overviewRel, Reason: "family module detail for " + family.Root, Exists: true,
+					RelPath: overviewRel, Path: overviewPath, Reason: "family module detail for " + family.Root, Exists: true,
 				})
 			}
 		}
@@ -52,12 +54,12 @@ func Route(root, task string, effects RouteEffects) projectdocscontract.ProjectD
 	modules, moduleWarnings := readModules(root, families, effects)
 	warnings = append(warnings, moduleWarnings...)
 	for _, doc := range projectdocdomain.MatchModules(normalizedTask, modules, maxRoutedModules) {
-		entries = append(entries, projectdocscontract.ProjectDocRouteEntry{RelPath: doc.Rel, Reason: doc.Reason, Exists: true})
+		entries = append(entries, projectdocscontract.ProjectDocRouteEntry{RelPath: doc.Rel, Path: effects.Path(root, doc.Rel), Reason: doc.Reason, Exists: true})
 	}
 	records, readWarnings := readRecords(root, effects)
 	warnings = append(warnings, readWarnings...)
 	for _, doc := range projectdocdomain.MatchRecords(normalizedTask, records, maxRoutedRecords) {
-		entries = append(entries, projectdocscontract.ProjectDocRouteEntry{RelPath: doc.Rel, Reason: doc.Reason, Exists: true})
+		entries = append(entries, projectdocscontract.ProjectDocRouteEntry{RelPath: doc.Rel, Path: effects.Path(root, doc.Rel), Reason: doc.Reason, Exists: true})
 	}
 	return projectdocscontract.ProjectDocsRouteResult{
 		OK: true, Kind: "project_docs_route", RepoRoot: root, Task: normalizedTask,
