@@ -68,9 +68,14 @@ func (g ReadinessGit) Head(record model.IssueOpsRecord) string {
 	}
 	return strings.TrimSpace(out)
 }
+
+// IsWorktree asks for the top-level rather than --is-inside-work-tree: the
+// answer is the same for readiness (a bare repo or a .git directory fails
+// both), and next's observation already read the top-level of this root, so
+// the probe is not another git process.
 func (g ReadinessGit) IsWorktree(root string) bool {
-	code, out, _ := g.Run(root, "rev-parse", "--is-inside-work-tree")
-	return code == 0 && strings.TrimSpace(out) == "true"
+	code, out, _ := g.Run(root, "rev-parse", "--show-toplevel")
+	return code == 0 && strings.TrimSpace(out) != ""
 }
 func (g ReadinessGit) Branch(root string) string {
 	return strings.TrimSpace(g.Output(root, "branch", "--show-current"))

@@ -100,7 +100,7 @@ func TestGitObservationKeepsRefAndHeadProbesFresh(t *testing.T) {
 		"/repo rev-parse --verify --end-of-options origin/other^{commit}": 2,
 		"/repo merge-base --is-ancestor origin/main HEAD":                 2,
 		"/repo merge-base --is-ancestor origin/other HEAD":                2,
-		"/repo rev-parse --is-inside-work-tree":                           2,
+		"/repo rev-parse --show-toplevel":                                 2,
 	} {
 		if calls[command] != want {
 			t.Fatalf("%q calls=%d want=%d: %v", command, calls[command], want, calls)

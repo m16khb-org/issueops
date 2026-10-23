@@ -217,8 +217,8 @@ func stubIssueOpsGit(t *testing.T, commands *[]string) func() {
 	GitCmd = func(dir string, args ...string) (int, string, string) {
 		*commands = append(*commands, strings.Join(args, " "))
 		switch {
-		case len(args) > 0 && args[0] == "rev-parse" && len(args) > 1 && args[1] == "--is-inside-work-tree":
-			return 0, "true", ""
+		case len(args) > 1 && args[0] == "rev-parse" && args[1] == "--show-toplevel":
+			return 0, dir, ""
 		default:
 			return 0, "", ""
 		}
