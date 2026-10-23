@@ -467,6 +467,11 @@ func (ExecRunner) Run(ctx context.Context, request CommandRequest) (CommandOutpu
 	defer cancel()
 	command := exec.CommandContext(runCtx, request.Executable, request.Args...)
 	command.Env = commandEnvironment(request.Env)
+	// On timeout kill the whole process group, and stop waiting for output a
+	// grandchild may keep open, so a stuck cmux helper neither hangs this
+	// call nor survives it.
+	configureProcessGroup(command)
+	command.WaitDelay = 2 * time.Second
 	var stdout, stderr boundedBuffer
 	// Hide bytes.Buffer.ReadFrom: io.Copy must use the bounded Write method.
 	command.Stdout, command.Stderr = struct{ io.Writer }{&stdout}, struct{ io.Writer }{&stderr}

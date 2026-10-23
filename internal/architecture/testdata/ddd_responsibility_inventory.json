@@ -3055,6 +3055,14 @@
       ]
     },
     {
+      "path": "internal/adapter/cmux/process_group_unix.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func configureProcessGroup"
+      ]
+    },
+    {
       "path": "internal/adapter/cmux/prompt.go",
       "owner": "adapter",
       "task": "T20",

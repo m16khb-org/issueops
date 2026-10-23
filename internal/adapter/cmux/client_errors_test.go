@@ -2,6 +2,8 @@ package cmux
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -442,6 +444,21 @@ func TestExecRunnerReportsFailureKindsWithInvocationState(t *testing.T) {
 		output, err := ExecRunner{}.Run(t.Context(), CommandRequest{Executable: "/bin/sh", Args: []string{"-c", "exec sleep 30"}, Timeout: 100 * time.Millisecond})
 		if err == nil || !output.Invoked || time.Since(started) > 10*time.Second {
 			t.Fatalf("output=%+v err=%v elapsed=%s", output, err, time.Since(started))
+		}
+	})
+	t.Run("deadline kills a grandchild that holds the output pipe", func(t *testing.T) {
+		marker := filepath.Join(t.TempDir(), "survived")
+		started := time.Now()
+		// The background sleep inherits stdout; without a group kill and
+		// WaitDelay, Wait blocks until it exits and then it writes the marker.
+		script := "(sleep 3; touch " + marker + ") & sleep 30"
+		output, err := ExecRunner{}.Run(t.Context(), CommandRequest{Executable: "/bin/sh", Args: []string{"-c", script}, Timeout: 100 * time.Millisecond})
+		if err == nil || !output.Invoked || time.Since(started) > 2500*time.Millisecond {
+			t.Fatalf("output=%+v err=%v elapsed=%s", output, err, time.Since(started))
+		}
+		time.Sleep(3500 * time.Millisecond)
+		if _, statErr := os.Stat(marker); !os.IsNotExist(statErr) {
+			t.Fatal("the grandchild survived the deadline")
 		}
 	})
 }
