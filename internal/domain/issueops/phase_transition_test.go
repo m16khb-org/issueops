@@ -26,3 +26,19 @@ func TestApplyPhaseTransitionPreservesExistingCleanupStamp(t *testing.T) {
 		t.Fatalf("cleanup transition=%+v", result)
 	}
 }
+
+// A cycle is created in problem with no ledger entry; leaving problem records
+// that it was entered at creation, not at the moment it was left.
+func TestApplyPhaseTransitionDatesProblemFromRecordCreation(t *testing.T) {
+	record := NewCycleRecord("io-1", "/repo", "", "2026-10-24T01:00:00Z")
+	result := ApplyPhaseTransition(record, model.IssueOpsPhaseGrill, "2026-10-24T01:05:00Z", "", "", nil)
+	problem := result.PhaseLedger[model.IssueOpsPhaseProblem]
+	if problem.EnteredAt != "2026-10-24T01:00:00Z" || problem.CompletedAt != "2026-10-24T01:05:00Z" {
+		t.Fatalf("problem ledger=%+v", problem)
+	}
+	// An already dated entry is not rewritten.
+	record.PhaseLedger = model.IssueOpsPhaseLedger{model.IssueOpsPhaseProblem: {EnteredAt: "2026-10-24T01:02:00Z"}}
+	if got := ApplyPhaseTransition(record, model.IssueOpsPhaseGrill, "2026-10-24T01:05:00Z", "", "", nil).PhaseLedger[model.IssueOpsPhaseProblem].EnteredAt; got != "2026-10-24T01:02:00Z" {
+		t.Fatalf("existing entered_at rewritten: %s", got)
+	}
+}

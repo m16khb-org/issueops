@@ -220,9 +220,10 @@ plan-prep 네 항목은 waive로 채우지 않는다. 조사 결과나 불필요
    raw provider CLI/MCP 쓰기로 우회하지 않는다. 둘 이상의 artifact면 중단한다.
 
 ```bash
+# create-issue는 actor 플래그를 받지 않는다(넘기면 flag 오류). 미리보기 뒤 같은 요청에 --confirm.
 issueops remote create-issue --id "$ISSUEOPS_ID" --provider "$PROVIDER" \
   --title "$TITLE" --template "$TEMPLATE" --body-file "$BODY_FILE" \
-  --label "$LABEL" --assignee "$ASSIGNEE" $ACTOR_FLAGS --json
+  --label "$LABEL" --assignee "$ASSIGNEE" --json
 ```
 
 child는 parent URL이 record에 연결되고 umbrella branch gate가 통과한 뒤 만든다.

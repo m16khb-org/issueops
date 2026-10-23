@@ -58,7 +58,11 @@ func intakeOwnerCommand(id, key string) (string, bool) {
 		return "issueops decision add --id " + id +
 			" --kind scope --title <TEXT> --body <TEXT>", true
 	case "issue_url":
-		return "issueops link-issue --id " + id + " --issue-url <URL>", true
+		// An issue comes from remote create-issue (this preview, then the
+		// same request with --confirm); link-issue only records an issue that
+		// already exists, so it is not the default next step.
+		return "issueops remote create-issue --id " + id +
+			" --provider <github|gitlab> --title <TEXT> --template <KIND> --body-file <PATH> --label <LABEL> --assignee <USER> --json", true
 	case "branch", "branch_prepare":
 		return "issueops branch prepare --id " + id +
 			" --provider <github|gitlab> --issue-url <URL> --branch <NAME> --base-branch <REF> --base-sha <SHA> --link-verified", true

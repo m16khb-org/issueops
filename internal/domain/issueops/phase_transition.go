@@ -19,6 +19,16 @@ func ApplyPhaseTransition(record model.IssueOpsRecord, phase model.IssueOpsPhase
 	if phase == model.IssueOpsPhasePR {
 		record.PRHead = head
 	}
+	// A cycle starts in problem without a ledger entry; it was entered when the
+	// record was created, not when it is left.
+	if previous == model.IssueOpsPhaseProblem && record.PhaseLedger[previous].EnteredAt == "" && record.CreatedAt != "" {
+		if record.PhaseLedger == nil {
+			record.PhaseLedger = model.IssueOpsPhaseLedger{}
+		}
+		entry := record.PhaseLedger[previous]
+		entry.EnteredAt = record.CreatedAt
+		record.PhaseLedger[previous] = entry
+	}
 	record.PhaseLedger = StampForwardTransition(record.PhaseLedger, previous, phase, now, completedArtifacts)
 	return record
 }
