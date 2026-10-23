@@ -14,6 +14,11 @@ func RunVerifyWork(service verifyworkapp.Service, args []string) error {
 	repo := fs.String("repo", ".", "target repository path")
 	all := fs.Bool("all", false, "guard all relevant files instead of staged files")
 	jsonOut := fs.Bool("json", false, "print JSON")
+	fs.Usage = func() {
+		fmt.Fprintln(fs.Output(), "Usage: issueops verify-work [--repo PATH] [--all] [--json] [-- COMMAND ARG...]")
+		fmt.Fprintln(fs.Output(), "\nCollects git, preflight, and guard evidence. A COMMAND after -- runs under the read-only command policy (allowlisted read-only tools only); run project scripts and tests as gates instead: issueops gates check.")
+		fs.PrintDefaults()
+	}
 	if err := cliflag.Parse(fs, args); err != nil {
 		return err
 	}

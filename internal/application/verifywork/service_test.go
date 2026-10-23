@@ -49,7 +49,7 @@ func TestServicePreservesCheckOrderAndFailureEvidence(t *testing.T) {
 			if command {
 				argv = []string{"sh", "-c", "true"}
 				wantCalls = append(wantCalls, "command")
-				wantWarnings = append(wantWarnings, "read-only verification command failed or was denied")
+				wantWarnings = append(wantWarnings, "read-only verification command failed or was denied (verify-work runs only allowlisted read-only tools; run project scripts and tests as gates: issueops gates check)")
 			}
 			wantCalls = append(wantCalls, "signals")
 			result := service.Run(".", true, argv)

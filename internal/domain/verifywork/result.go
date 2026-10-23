@@ -43,7 +43,7 @@ func Evaluate(facts Observation) Decision {
 	evidenceMatrix = append(evidenceMatrix, verifyWorkEvidenceItem("guard_check", facts.GuardOK, fmt.Sprintf("guard check completed in %s mode for %d file(s)", facts.GuardMode, facts.GuardFileCount)))
 	if facts.CommandPresent {
 		if !facts.CommandOK {
-			warnings = append(warnings, "read-only verification command failed or was denied")
+			warnings = append(warnings, "read-only verification command failed or was denied (verify-work runs only allowlisted read-only tools; run project scripts and tests as gates: issueops gates check)")
 		}
 		evidenceMatrix = append(evidenceMatrix, verifyWorkEvidenceItemWithCommand("read_only_command", facts.CommandOK, "read-only verification command completed", strings.Join(facts.Argv, " ")))
 	} else {
