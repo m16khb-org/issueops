@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"io"
 	"os"
 	"regexp"
@@ -38,30 +39,58 @@ func TestEveryListedCommandPathAnswersHelpOnStdout(t *testing.T) {
 		t.Fatalf("usage yielded only %d command paths", len(paths))
 	}
 	for name, path := range paths {
-		code, stdout := runCapturingStdout(t, append(path, "--help"))
+		code, stdout, _ := runCapturing(t, append(path, "--help"))
 		if code != 0 || strings.TrimSpace(stdout) == "" {
 			t.Errorf("issueops %s --help: exit %d, stdout %d bytes", name, code, len(stdout))
 		}
 	}
+	// A command group given a subcommand it lacks fails with one JSON
+	// document under --json and nothing on stderr, so `2>&1 | json.load`
+	// still parses.
+	for name, path := range paths {
+		if !isGroup(paths, name) {
+			continue
+		}
+		code, stdout, stderr := runCapturing(t, append(path, "no-such-subcommand", "--json"))
+		var doc map[string]any
+		decoder := json.NewDecoder(strings.NewReader(stdout))
+		if code == 0 || decoder.Decode(&doc) != nil || decoder.More() || doc["error"] == nil || strings.TrimSpace(stderr) != "" {
+			t.Errorf("issueops %s no-such-subcommand --json: exit %d, stdout %q, stderr %q", name, code, stdout, stderr)
+		}
+	}
 }
 
-func runCapturingStdout(t *testing.T, args []string) (int, string) {
-	t.Helper()
-	read, write, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
+func isGroup(paths map[string][]string, name string) bool {
+	for other := range paths {
+		if strings.HasPrefix(other, name+" ") {
+			return true
+		}
 	}
+	return false
+}
+
+func runCapturing(t *testing.T, args []string) (int, string, string) {
+	t.Helper()
+	capture := func() (*os.File, <-chan string) {
+		read, write, err := os.Pipe()
+		if err != nil {
+			t.Fatal(err)
+		}
+		done := make(chan string, 1)
+		go func() {
+			data, _ := io.ReadAll(read)
+			_ = read.Close()
+			done <- string(data)
+		}()
+		return write, done
+	}
+	outWrite, outDone := capture()
+	errWrite, errDone := capture()
 	stdout, stderr := os.Stdout, os.Stderr
-	os.Stdout, os.Stderr = write, write
-	done := make(chan string)
-	go func() {
-		data, _ := io.ReadAll(read)
-		done <- string(data)
-	}()
+	os.Stdout, os.Stderr = outWrite, errWrite
 	code := issueopsapp.RunRootCommand(args)
 	os.Stdout, os.Stderr = stdout, stderr
-	_ = write.Close()
-	out := <-done
-	_ = read.Close()
-	return code, out
+	_ = outWrite.Close()
+	_ = errWrite.Close()
+	return code, <-outDone, <-errDone
 }

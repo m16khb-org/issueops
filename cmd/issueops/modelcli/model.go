@@ -64,7 +64,7 @@ func Run(deps Dependencies, args []string) error {
 	case "resolve":
 		err = runResolve(ctx, deps, args[1:])
 	default:
-		return UsageError{Message: fmt.Sprintf("unknown model subcommand %q\n%s", args[0], usage)}
+		return UsageError{Message: cliflag.UnknownSubcommand("model", args[0], "show", "set", "unset", "resolve").Error()}
 	}
 	if errors.Is(err, flag.ErrHelp) {
 		fmt.Fprint(deps.Stdout, usage)

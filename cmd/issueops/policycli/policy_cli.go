@@ -3,9 +3,11 @@ package policycli
 import (
 	"flag"
 	"fmt"
+	"os"
+
+	"issueops/cmd/issueops/cliflag"
 	"issueops/cmd/issueops/jsonout"
 	policydomain "issueops/internal/contract/policy"
-	"os"
 )
 
 func (command Command) Run(args []string) error {
@@ -26,8 +28,7 @@ func (command Command) Run(args []string) error {
 		policyUsage()
 		return flag.ErrHelp
 	default:
-		policyUsage()
-		return fmt.Errorf("unknown policy subcommand %q", args[0])
+		return cliflag.UnknownSubcommand("policy", args[0], "check", "fake-run", "run", "audit")
 	}
 }
 

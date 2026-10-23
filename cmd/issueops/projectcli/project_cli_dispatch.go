@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+
+	"issueops/cmd/issueops/cliflag"
 )
 
 func Run(deps Dependencies, args []string) error {
@@ -28,8 +30,7 @@ func Run(deps Dependencies, args []string) error {
 		projectUsage()
 		return flag.ErrHelp
 	default:
-		projectUsage()
-		return fmt.Errorf("unknown project subcommand %q", args[0])
+		return cliflag.UnknownSubcommand("project", args[0], "bootstrap", "docs", "route-docs", "append", "commit-suggest", "lint-diagnose")
 	}
 }
 

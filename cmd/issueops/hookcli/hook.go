@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"issueops/cmd/issueops/cliflag"
 	"issueops/cmd/issueops/hookcli/hookcatalog"
 	"issueops/cmd/issueops/hookcli/hookenv"
 )
@@ -40,8 +41,7 @@ func RunHook(args []string, config hookcatalog.Config) error {
 	case "post-compact":
 		return hookcatalog.RunPostCompact(args[1:], config)
 	default:
-		hookUsage()
-		return fmt.Errorf("unknown hook subcommand %q", args[0])
+		return cliflag.UnknownSubcommand("hook", args[0], "session-start", "subagent-start", "post-compact")
 	}
 }
 

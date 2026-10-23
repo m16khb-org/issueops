@@ -111,7 +111,7 @@ func runProjectAppend(docs docsapp.Service, args []string) error {
 	consequences := fs.String("consequences", "", "consequences for ADR records")
 	source := fs.String("source", "cli", "append source")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := cliflag.Parse(fs, args); err != nil {
+	if err := cliflag.ParseNoArgs(fs, args); err != nil {
 		return err
 	}
 	result, err := docs.Append(projectdocscontract.ProjectDocsAppendRequest{

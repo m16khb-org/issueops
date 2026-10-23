@@ -21,8 +21,7 @@ func (command Command) RunGuard(args []string) error {
 		guardUsage()
 		return flag.ErrHelp
 	default:
-		guardUsage()
-		return fmt.Errorf("unknown guard subcommand %q", args[0])
+		return cliflag.UnknownSubcommand("guard", args[0], "check")
 	}
 }
 

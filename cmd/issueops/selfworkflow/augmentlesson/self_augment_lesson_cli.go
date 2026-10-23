@@ -22,7 +22,7 @@ func Run(args []string, deps Deps) error {
 	severity := fs.String("severity", "info", "lesson severity: info, warning, or error")
 	stateKey := fs.String("state-key", "", "state key; defaults to self-augment-lesson-<candidate>-<timestamp>")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := cliflag.Parse(fs, args); err != nil {
+	if err := cliflag.ParseNoArgs(fs, args); err != nil {
 		return err
 	}
 	result, err := deps.Save(contract.SelfAugmentLessonRequest{

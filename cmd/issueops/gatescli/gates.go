@@ -66,8 +66,7 @@ func Run(deps Dependencies, args []string) error {
 	case "lint":
 		return runLint(deps, args[1:])
 	default:
-		gatesUsage()
-		return UsageError{Message: fmt.Sprintf("unknown gates subcommand %q", args[0])}
+		return UsageError{Message: cliflag.UnknownSubcommand("gates", args[0], "init", "check", "status", "report", "abandon", "lint").Error()}
 	}
 }
 
@@ -188,7 +187,7 @@ func runInit(deps Dependencies, args []string) error {
 	var gateSpecs repeatedStrings
 	fs.Var(&gateSpecs, "gate", `gate spec: "ID: outcome | CHECK: cmd | EXPECT: expect" (repeatable)`)
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := cliflag.Parse(fs, args); err != nil {
+	if err := cliflag.ParseNoArgs(fs, args); err != nil {
 		return err
 	}
 	result, err := deps.Init(gatescontract.InitRequest{File: *file, Scope: *scope, Gates: gateSpecs})
@@ -201,7 +200,7 @@ func runAbandon(deps Dependencies, args []string) error {
 	gateID := fs.String("gate", "", "gate id to abandon (e.g. G2)")
 	reason := fs.String("reason", "", "honest abandon reason")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := cliflag.Parse(fs, args); err != nil {
+	if err := cliflag.ParseNoArgs(fs, args); err != nil {
 		return err
 	}
 	result, err := deps.Abandon(gatescontract.AbandonRequest{File: *file, GateID: *gateID, Reason: *reason})

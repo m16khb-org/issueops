@@ -51,8 +51,7 @@ func Run(args []string, commands []clicontract.Command, tools []map[string]any, 
 		contractUsage()
 		return flag.ErrHelp
 	default:
-		contractUsage()
-		return fmt.Errorf("unknown contract subcommand %q", args[0])
+		return cliflag.UnknownSubcommand("contract", args[0], "schema", "check", "conformance")
 	}
 }
 
@@ -67,7 +66,7 @@ func contractUsage() {
 func runContractSchema(args []string, commands []clicontract.Command, tools []map[string]any) error {
 	fs := flag.NewFlagSet("contract schema", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := cliflag.Parse(fs, args); err != nil {
+	if err := cliflag.ParseNoArgs(fs, args); err != nil {
 		return err
 	}
 	contract := BuildCompatibilityContract(commands, tools)
@@ -84,7 +83,7 @@ func runContractSchema(args []string, commands []clicontract.Command, tools []ma
 func runContractCheck(args []string, commands []clicontract.Command, tools []map[string]any) error {
 	fs := flag.NewFlagSet("contract check", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := cliflag.Parse(fs, args); err != nil {
+	if err := cliflag.ParseNoArgs(fs, args); err != nil {
 		return err
 	}
 	contract := BuildCompatibilityContract(commands, tools)

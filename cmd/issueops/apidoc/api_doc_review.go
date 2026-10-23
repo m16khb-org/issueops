@@ -25,8 +25,7 @@ func (c Command) runAPIDoc(args []string) error {
 		apiDocUsage()
 		return flag.ErrHelp
 	default:
-		apiDocUsage()
-		return fmt.Errorf("unknown api-doc subcommand %q", args[0])
+		return cliflag.UnknownSubcommand("api-doc", args[0], "review", "static-check", "check")
 	}
 }
 

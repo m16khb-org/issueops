@@ -16,7 +16,7 @@ func runProjectCommitSuggest(service app.Service, args []string) error {
 	staged := fs.Bool("staged", false, "suggest commit based on staged changes (git diff --cached)")
 	jsonOut := fs.Bool("json", false, "print JSON")
 
-	if err := cliflag.Parse(fs, args); err != nil {
+	if err := cliflag.ParseNoArgs(fs, args); err != nil {
 		return err
 	}
 

@@ -160,7 +160,9 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func Parse"
+        "func Parse",
+        "func ParseNoArgs",
+        "func UnknownSubcommand"
       ]
     },
     {

@@ -174,7 +174,7 @@ func (c *Conformance) evaluateSyntheticBaseline() (int, bool, error) {
 func (c *Conformance) runConformanceBaseline(args []string) error {
 	fs := flag.NewFlagSet("contract conformance baseline", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := cliflag.Parse(fs, args); err != nil {
+	if err := cliflag.ParseNoArgs(fs, args); err != nil {
 		return err
 	}
 	report, err := c.evaluateBaselineReport()
@@ -295,7 +295,7 @@ func parseLiveRequest(args []string) (LiveRequest, bool, error) {
 	jsonOut := fs.Bool("json", false, "print JSON")
 	var models stringSlice
 	fs.Var(&models, "model", "host=value")
-	if err := cliflag.Parse(fs, args); err != nil {
+	if err := cliflag.ParseNoArgs(fs, args); err != nil {
 		return LiveRequest{}, false, err
 	}
 	if *profile != "clean" && *profile != "context-pressure" {
@@ -507,7 +507,7 @@ func (c *Conformance) runConformanceReplay(args []string) error {
 	fs := flag.NewFlagSet("contract conformance replay", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", false, "print JSON")
 	fixture := fs.String("fixture", "", "fixture")
-	if err := cliflag.Parse(fs, args); err != nil {
+	if err := cliflag.ParseNoArgs(fs, args); err != nil {
 		return err
 	}
 	if *fixture == "" {
@@ -560,7 +560,7 @@ func (c *Conformance) runConformanceServe(args []string) error {
 	id := fs.String("fixture-id", "", "fixture id")
 	path := fs.String("result-file", "", "result file")
 	token := fs.String("run-token", "", "run token")
-	if err := cliflag.Parse(fs, args); err != nil {
+	if err := cliflag.ParseNoArgs(fs, args); err != nil {
 		return err
 	}
 	if *id == "" || *path == "" || *token == "" {

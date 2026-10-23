@@ -23,10 +23,10 @@ func TestHelpPrintsUsageForEveryHelpSpelling(t *testing.T) {
 	}
 }
 
-func TestUnknownSubcommandErrorNamesItAndShowsUsage(t *testing.T) {
+func TestUnknownSubcommandErrorNamesItAndTheValidOnes(t *testing.T) {
 	_, err := run(t, newFakeFiles(), "bogus")
 	usageErr, ok := errors.AsType[UsageError](err)
-	if !ok || !strings.Contains(usageErr.Message, `unknown model subcommand "bogus"`) || !strings.Contains(usageErr.Message, "Usage:") {
+	if !ok || usageErr.Message != `unknown model subcommand "bogus" (want show|set|unset|resolve)` {
 		t.Fatalf("err = %v", err)
 	}
 }

@@ -99,7 +99,7 @@ func runStateRead(deps Dependencies, args []string) error {
 func runStateList(deps Dependencies, args []string) error {
 	fs := flag.NewFlagSet("state list", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := cliflag.Parse(fs, args); err != nil {
+	if err := cliflag.ParseNoArgs(fs, args); err != nil {
 		return err
 	}
 	result, err := deps.List()

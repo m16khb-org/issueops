@@ -40,8 +40,7 @@ func Run(deps Dependencies, args []string) error {
 	case "stop":
 		return runStop(deps, args[1:])
 	default:
-		loopUsage()
-		return fmt.Errorf("unknown loop subcommand %q", args[0])
+		return cliflag.UnknownSubcommand("loop", args[0], "start", "record-attempt", "status", "stop")
 	}
 }
 
@@ -81,7 +80,7 @@ func runRecordAttempt(deps Dependencies, args []string) error {
 	var evidence repeatedFlag
 	fs.Var(&evidence, "evidence", "observable evidence")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := cliflag.Parse(fs, args); err != nil {
+	if err := cliflag.ParseNoArgs(fs, args); err != nil {
 		return err
 	}
 	result, err := deps.RecordAttempt(context.Background(), *id, loopruncontract.RecordAttemptRequest{
@@ -97,7 +96,7 @@ func runStatus(deps Dependencies, args []string) error {
 	repo := fs.String("repo", "", "repository path")
 	name := fs.String("name", "", "loop name")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := cliflag.Parse(fs, args); err != nil {
+	if err := cliflag.ParseNoArgs(fs, args); err != nil {
 		return err
 	}
 	loopID := *id
@@ -118,7 +117,7 @@ func runStop(deps Dependencies, args []string) error {
 	success := fs.Bool("success", false, "mark loop succeeded")
 	reason := fs.String("reason", "", "stop reason for non-successful stop")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := cliflag.Parse(fs, args); err != nil {
+	if err := cliflag.ParseNoArgs(fs, args); err != nil {
 		return err
 	}
 	if *success && *reason != "" {

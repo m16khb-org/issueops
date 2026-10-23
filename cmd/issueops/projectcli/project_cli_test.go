@@ -130,12 +130,13 @@ func TestRunProjectRecord_recordsADR_whenRequiredFieldsAreProvided(t *testing.T)
 
 func TestRunProject_rejectsMissingAndUnknownSubcommands(t *testing.T) {
 	tests := []struct {
-		name    string
-		args    []string
-		wantErr string
+		name      string
+		args      []string
+		wantErr   string
+		wantUsage bool
 	}{
-		{name: "missing", args: nil, wantErr: "missing project subcommand"},
-		{name: "unknown", args: []string{"missing-command"}, wantErr: `unknown project subcommand "missing-command"`},
+		{name: "missing", args: nil, wantErr: "missing project subcommand", wantUsage: true},
+		{name: "unknown", args: []string{"missing-command"}, wantErr: `unknown project subcommand "missing-command" (want bootstrap|`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -148,8 +149,8 @@ func TestRunProject_rejectsMissingAndUnknownSubcommands(t *testing.T) {
 			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
 				t.Fatalf("expected %q error, got %v", tt.wantErr, err)
 			}
-			if !strings.Contains(stderr, "issueops project bootstrap") {
-				t.Fatalf("expected usage on stderr, got:\n%s", stderr)
+			if usage := strings.Contains(stderr, "issueops project bootstrap"); usage != tt.wantUsage {
+				t.Fatalf("usage on stderr = %v, want %v:\n%s", usage, tt.wantUsage, stderr)
 			}
 		})
 	}

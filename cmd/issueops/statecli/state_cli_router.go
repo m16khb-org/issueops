@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+
+	"issueops/cmd/issueops/cliflag"
 )
 
 func Run(deps Dependencies, args []string) error {
@@ -28,8 +30,7 @@ func Run(deps Dependencies, args []string) error {
 		stateUsage()
 		return flag.ErrHelp
 	default:
-		stateUsage()
-		return fmt.Errorf("unknown state subcommand %q", args[0])
+		return cliflag.UnknownSubcommand("state", args[0], "write", "read", "list", "prune", "doctor", "maintain")
 	}
 }
 

@@ -282,7 +282,7 @@ func (deps Deps) verifyLive(ctx context.Context, req issueopscontract.IssueOpsRe
 }
 
 func parseFlags(fs *flag.FlagSet, args []string) (bool, error) {
-	if err := cliflag.Parse(fs, args); err != nil {
+	if err := cliflag.ParseNoArgs(fs, args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return true, nil
 		}

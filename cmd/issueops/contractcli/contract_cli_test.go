@@ -11,12 +11,15 @@ import (
 
 func TestRunContractRejectsMissingAndUnknownSubcommands(t *testing.T) {
 	tests := []struct {
-		name    string
-		args    []string
-		wantErr string
+		name      string
+		args      []string
+		wantErr   string
+		wantUsage bool
 	}{
-		{name: "missing", args: nil, wantErr: "missing contract subcommand"},
-		{name: "unknown", args: []string{"missing-command"}, wantErr: `unknown contract subcommand "missing-command"`},
+		{name: "missing", args: nil, wantErr: "missing contract subcommand", wantUsage: true},
+		// An unknown subcommand names the valid ones in the error and keeps
+		// stderr clear, so a --json error stays the only document.
+		{name: "unknown", args: []string{"missing-command"}, wantErr: `unknown contract subcommand "missing-command" (want schema|check|conformance)`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -27,8 +30,8 @@ func TestRunContractRejectsMissingAndUnknownSubcommands(t *testing.T) {
 			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
 				t.Fatalf("expected %q error, got %v", tt.wantErr, err)
 			}
-			if !strings.Contains(stderr, "issueops contract schema") || !strings.Contains(stderr, "issueops contract check") {
-				t.Fatalf("expected contract usage on stderr, got:\n%s", stderr)
+			if usage := strings.Contains(stderr, "issueops contract schema"); usage != tt.wantUsage {
+				t.Fatalf("usage on stderr = %v, want %v:\n%s", usage, tt.wantUsage, stderr)
 			}
 		})
 	}

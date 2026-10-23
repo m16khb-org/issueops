@@ -34,8 +34,7 @@ func (command Command) Run(args []string) error {
 		workerUsage()
 		return flag.ErrHelp
 	default:
-		workerUsage()
-		return fmt.Errorf("unknown worker subcommand %q", args[0])
+		return cliflag.UnknownSubcommand("worker", args[0], "enqueue", "run", "status", "list", "cleanup-stuck", "cancel")
 	}
 }
 

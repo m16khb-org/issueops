@@ -28,8 +28,7 @@ func (command Command) RunTrace(args []string) error {
 		traceUsage()
 		return flag.ErrHelp
 	default:
-		traceUsage()
-		return fmt.Errorf("unknown trace subcommand %q", args[0])
+		return cliflag.UnknownSubcommand("trace", args[0], "analyze", "handoff-delivery")
 	}
 }
 
