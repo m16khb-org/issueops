@@ -16,7 +16,7 @@ func TestIssueOpsRecordObserverEmitsScopedActionableEvent(t *testing.T) {
 		Operation: "routing.update",
 		Outcome:   "success",
 		Contended: true,
-		WaitMS:    2,
+		WaitMS:    40,
 		HoldMS:    1,
 	})
 

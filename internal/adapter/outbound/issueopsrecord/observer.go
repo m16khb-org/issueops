@@ -65,7 +65,12 @@ func (observer *jsonLineObserver) Observe(observation SpanObservation) {
 		return
 	}
 	thresholdMS := observer.slowThreshold.Milliseconds()
-	fast := !observation.Contended && observation.WaitMS < thresholdMS && observation.HoldMS < thresholdMS
+	// Contention is actionable when the span waited noticeably for the lock;
+	// a millisecond handoff between two writers is normal, and printing it on
+	// stderr broke `--json 2>&1` parsing for an agent (decision add, wait 1ms).
+	contendedFloorMS := max(1, thresholdMS/10)
+	contended := observation.Contended && observation.WaitMS >= contendedFloorMS
+	fast := !contended && observation.WaitMS < thresholdMS && observation.HoldMS < thresholdMS
 	// A fast, uncontended span is noise when it succeeded, and also when it
 	// failed after acquiring the lock: that failure is the command's own
 	// error, which the caller already reports (as the JSON error envelope on

@@ -26,12 +26,22 @@ func TestJSONLineObserverEmitsOnlyActionableRedactedSpanEvents(t *testing.T) {
 	if output.Len() != 0 {
 		t.Fatalf("fast uncontended span emitted noise: %q", output.String())
 	}
+	// A brief lock handoff is not actionable either.
+	observer.Observe(SpanObservation{
+		Operation: "decision.update",
+		Outcome:   "success",
+		Contended: true,
+		WaitMS:    1,
+	})
+	if output.Len() != 0 {
+		t.Fatalf("1ms contended wait emitted noise: %q", output.String())
+	}
 
 	observer.Observe(SpanObservation{
 		Operation: "routing.update",
 		Outcome:   "success",
 		Contended: true,
-		WaitMS:    4,
+		WaitMS:    40,
 		HoldMS:    2,
 	})
 	line := strings.TrimSpace(output.String())
