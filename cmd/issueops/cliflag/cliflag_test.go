@@ -46,3 +46,34 @@ func captureStdoutAndStderr(t *testing.T, fn func() error) (string, error) {
 	_ = write.Close()
 	return <-done, runErr
 }
+
+// An empty shell variable (`--id $ID --json`) must not turn the next flag into
+// the value; anything that is not one of the command's flags still is a value.
+func TestParseRejectsAValueFlagSwallowingAFlag(t *testing.T) {
+	parse := func(args ...string) (string, bool, error) {
+		fs := flag.NewFlagSet("demo", flag.ContinueOnError)
+		id := fs.String("id", "", "cycle id")
+		jsonOut := fs.Bool("json", false, "json")
+		err := Parse(fs, args)
+		return *id, *jsonOut, err
+	}
+	for _, args := range [][]string{{"--id", "--json"}, {"-id", "-json=true"}, {"--json", "--id", "--json"}} {
+		if _, _, err := parse(args...); err == nil || !strings.Contains(err.Error(), "-id needs a value") {
+			t.Fatalf("%q: err=%v", args, err)
+		}
+	}
+	for _, tc := range []struct {
+		args []string
+		id   string
+	}{
+		{[]string{"--id", "--not-a-flag", "--json"}, "--not-a-flag"},
+		{[]string{"--id=--json", "--json"}, "--json"},
+		{[]string{"--id", "-", "--json"}, "-"},
+		{[]string{"--json", "--", "--id", "--json"}, ""},
+	} {
+		id, jsonOut, err := parse(tc.args...)
+		if err != nil || id != tc.id || !jsonOut {
+			t.Fatalf("%q: id=%q json=%v err=%v", tc.args, id, jsonOut, err)
+		}
+	}
+}

@@ -162,7 +162,10 @@
       "symbols": [
         "func Parse",
         "func ParseNoArgs",
-        "func UnknownSubcommand"
+        "func UnknownSubcommand",
+        "func flagToken",
+        "func isBoolFlag",
+        "func swallowedFlag"
       ]
     },
     {
