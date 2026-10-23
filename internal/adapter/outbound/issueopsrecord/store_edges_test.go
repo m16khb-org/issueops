@@ -96,7 +96,7 @@ func TestStoreRejectsInvalidIDsBeforeTouchingState(t *testing.T) {
 	}
 	for _, tc := range []struct{ id, want string }{
 		{"   ", "id is required"},
-		{"issue-1", `invalid issueops id "issue-1": `+issueopscontract.IDFormatHint},
+		{"issue-1", `invalid issueops id "issue-1": ` + issueopscontract.IDFormatHint},
 		{"io-a/b", `invalid issueops id "io-a/b"`},
 		{"io-..x", `invalid issueops id "io-..x"`},
 	} {
