@@ -400,9 +400,12 @@ func executionWhoamiResult(
 	if err != nil {
 		return ExecutionWhoamiResult{}, err
 	}
+	// Only the nearest host process is a usable session receipt; the shells,
+	// terminal, and launchd above it are never claim identities, so they are
+	// not reported.
 	result := ExecutionWhoamiResult{
 		OK: true, Host: identity.Host, SessionID: identity.SessionID,
-		SessionIDSource: identity.Source, Ancestry: ancestry,
+		SessionIDSource: identity.Source, Ancestry: ancestry[:1],
 	}
 	// record 계열 하위명령은 RECORD_ACTOR_FLAGS(host/session-id/cwd)를 받고,
 	// claim 벡터의 receipt 플래그도 선택적으로 받는다(라이브 ancestry와 대조).
