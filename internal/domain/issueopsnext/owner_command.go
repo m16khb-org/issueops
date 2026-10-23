@@ -89,7 +89,7 @@ func planningOwnerCommand(id, key string) (string, bool) {
 		return compatibilityReviewCommand(id), true
 	case "devils_advocate_review", "devils_advocate_review_stale":
 		return "issueops devils-advocate review --id " + id +
-			" --reviewer-context subagent --verdict <pass|revise|stop> --finding <TEXT> $RECORD_ACTOR_FLAGS", true
+			" --reviewer-context <subagent|inline> --verdict <pass|revise|stop> --finding <TEXT> $RECORD_ACTOR_FLAGS", true
 	case "plan_artifact":
 		return "issueops artifact stage --id " + id + " --name plan --file <PATH>", true
 	case "plan_path", "plan_exists", "plan_in_worktree":
@@ -155,7 +155,7 @@ func publicationOwnerCommand(id, key string) (string, bool) {
 func architectureReviewCommand(id string) string {
 	return "issueops architecture review --id " + id +
 		" --problem-summary <TEXT> --proposed-architecture <TEXT> --refactor-plan <TEXT>" +
-		" --alternative <TEXT> --risk <TEXT> --verification <TEXT> --reviewer-context subagent --approved $RECORD_ACTOR_FLAGS"
+		" --alternative <TEXT> --risk <TEXT> --verification <TEXT> --reviewer-context <subagent|inline> --approved $RECORD_ACTOR_FLAGS"
 }
 
 func compatibilityReviewCommand(id string) string {
