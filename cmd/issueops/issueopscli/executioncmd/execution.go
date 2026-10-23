@@ -409,16 +409,17 @@ func executionWhoamiResult(
 	result.RecordActorFlags = fmt.Sprintf(
 		"--host %s --session-id %s --cwd %s",
 		identity.Host, shellQuoteClaimValue(identity.SessionID), shellQuoteClaimValue(cwd))
-	for _, receipt := range ancestry {
-		// claim/release/complete 등 실행 리스 전환은 ACTOR_FLAGS "all or none"
-		// 규칙을 검사한다. whoami 벡터에서 --cwd를 빼면 복붙한 명령이 그 규칙에
-		// 걸려 바로 거부되므로, claim 벡터도 전체 ACTOR_FLAGS를 담아야 한다.
-		result.ClaimActorFlags = append(result.ClaimActorFlags, fmt.Sprintf(
-			"--host %s --session-id %s --session-pid %d --session-started-at %s --session-executable %s --cwd %s",
-			identity.Host, shellQuoteClaimValue(identity.SessionID), receipt.PID,
-			shellQuoteClaimValue(receipt.StartedAt), shellQuoteClaimValue(receipt.Executable),
-			shellQuoteClaimValue(cwd)))
-	}
+	// claim/release/complete 등 실행 리스 전환은 ACTOR_FLAGS "all or none"
+	// 규칙을 검사한다. whoami 벡터에서 --cwd를 빼면 복붙한 명령이 그 규칙에
+	// 걸려 바로 거부되므로, claim 벡터도 전체 ACTOR_FLAGS를 담아야 한다.
+	// 벡터는 가장 가까운 host 프로세스 하나다. 그 위의 shell·terminal·launchd
+	// receipt로 claim하면 lease가 세션과 함께 죽지 않으므로 내놓지 않는다.
+	receipt := ancestry[0]
+	result.ClaimActorFlags = []string{fmt.Sprintf(
+		"--host %s --session-id %s --session-pid %d --session-started-at %s --session-executable %s --cwd %s",
+		identity.Host, shellQuoteClaimValue(identity.SessionID), receipt.PID,
+		shellQuoteClaimValue(receipt.StartedAt), shellQuoteClaimValue(receipt.Executable),
+		shellQuoteClaimValue(cwd))}
 	return result, nil
 }
 
