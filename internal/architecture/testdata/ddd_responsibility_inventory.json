@@ -583,6 +583,7 @@
         "func newChangeReader",
         "func newCyclePhaseService",
         "func newCycleReadiness",
+        "func newCycleReadinessReading",
         "func newReadinessGit"
       ]
     },
@@ -861,15 +862,17 @@
         "func newNextGitObservation",
         "func nextGitObservation.currentBranch",
         "func nextGitObservation.out",
+        "func nextGitObservation.read",
         "func nextGitObservation.worktreeState",
         "func nextLocalReadinessObservation.changedPaths",
         "func nextLocalReadinessObservation.localReadiness",
         "func nextObservationRecordOf",
         "func observeIssueOpsHolderLiveness",
         "type nextGitObservation",
+        "type nextGitRead",
+        "type nextGitResult",
         "type nextLocalReadinessObservation",
-        "type nextObservationRecord",
-        "type nextWorktreeState"
+        "type nextObservationRecord"
       ]
     },
     {
