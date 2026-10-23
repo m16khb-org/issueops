@@ -22,25 +22,40 @@ func TestMutationHolderRequiresCurrentLeaseAndVerifiedProcess(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
 		change func(*model.IssueOpsActor, *model.VerifiedActor) *model.VerifiedActor
+		detail string
 	}{
+		{"no actor flags", func(a *model.IssueOpsActor, v *model.VerifiedActor) *model.VerifiedActor {
+			*a = model.IssueOpsActor{}
+			return v
+		}, "no actor flags were passed"},
+		{"foreign host", func(a *model.IssueOpsActor, v *model.VerifiedActor) *model.VerifiedActor {
+			a.Host = "claude"
+			return v
+		}, `caller host "claude", holder host "codex"`},
 		{"foreign session", func(a *model.IssueOpsActor, v *model.VerifiedActor) *model.VerifiedActor {
 			a.SessionID = "other"
 			return v
-		}},
-		{"unverified caller", func(*model.IssueOpsActor, *model.VerifiedActor) *model.VerifiedActor { return nil }},
+		}, `caller session id "other", holder session id "session"`},
+		{"foreign agent", func(a *model.IssueOpsActor, v *model.VerifiedActor) *model.VerifiedActor {
+			a.AgentID = ""
+			return v
+		}, `caller agent id "", holder agent id "agent"`},
+		{"unverified caller", func(*model.IssueOpsActor, *model.VerifiedActor) *model.VerifiedActor { return nil }, "verified session process"},
 		{"verified other session", func(_ *model.IssueOpsActor, v *model.VerifiedActor) *model.VerifiedActor {
 			v.Identity.SessionID = "other"
 			return v
-		}},
+		}, "verified session process"},
 		{"reused pid", func(_ *model.IssueOpsActor, v *model.VerifiedActor) *model.VerifiedActor {
 			v.Identity.SessionProcess = &model.NativeProcessReceipt{PID: 1, StartedAt: "other", Executable: "/bin/codex"}
 			return v
-		}},
+		}, "verified session process"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			a, v := actor, verified
-			if _, err := ValidateHolder(record, &a, tc.change(&a, &v)); err == nil {
-				t.Fatal("unauthorized holder accepted")
+			_, err := ValidateHolder(record, &a, tc.change(&a, &v))
+			// The refusal names the mismatch and the recovery command.
+			if err == nil || !strings.Contains(err.Error(), tc.detail) || !strings.Contains(err.Error(), "execution whoami --json") {
+				t.Fatalf("err=%v, want %q and the whoami recovery step", err, tc.detail)
 			}
 		})
 	}

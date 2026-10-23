@@ -27,7 +27,7 @@ func ValidateHolder(record issueopsauthorizationcontract.Record, actor *issueops
 		return fmt.Errorf("IssueOps execution mutation requires the current write lease holder: %s; run `issueops execution whoami --json` in the holder session and pass its claim flags", detail)
 	}
 	switch {
-	case actor == nil:
+	case actor == nil || strings.TrimSpace(actor.Host) == "" && strings.TrimSpace(actor.SessionID) == "":
 		return false, holderRequired("no actor flags were passed")
 	case !strings.EqualFold(strings.TrimSpace(actor.Host), lease.Holder.Host):
 		return false, holderRequired(fmt.Sprintf("caller host %q, holder host %q", strings.TrimSpace(actor.Host), lease.Holder.Host))
