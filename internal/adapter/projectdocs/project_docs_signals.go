@@ -8,7 +8,12 @@ import (
 
 func AnalyzeProjectSignals(root string) projectdoc.ProjectSignals {
 	files := listInterestingFiles(root)
-	s := projectdoc.ProjectSignals{Files: files}
+	// Lists start empty so the bootstrap plan JSON never carries null lists.
+	s := projectdoc.ProjectSignals{
+		Files: append([]string{}, files...), Languages: []string{}, PackageManagers: []string{},
+		TestCommands: []projectdoc.EvidenceCommand{}, BuildCommands: []projectdoc.EvidenceCommand{}, LintCommands: []projectdoc.EvidenceCommand{},
+		ExistingAgentDocs: []string{}, GitHubWorkflows: []string{}, DetectedConventions: []string{},
+	}
 	for _, rel := range files {
 		applyRootSignal(&s, rel)
 		applyNestedManifestSignal(&s, rel)

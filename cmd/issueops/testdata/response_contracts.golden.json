@@ -2282,17 +2282,17 @@
           "subject": "docs(contract): add fixture"
         }
       ],
-      "remotes": null,
+      "remotes": [],
       "repo_root": "$GIT_REPO",
       "secret_like_paths": [
         ".env"
       ],
-      "staged_files": null,
+      "staged_files": [],
       "status_lines": [
         "## main",
         "?? .env"
       ],
-      "unstaged_files": null,
+      "unstaged_files": [],
       "untracked_files": [
         ".env"
       ],
@@ -4302,17 +4302,17 @@
             "subject": "docs(contract): add fixture"
           }
         ],
-        "remotes": null,
+        "remotes": [],
         "repo_root": "$GIT_REPO",
         "secret_like_paths": [
           ".env"
         ],
-        "staged_files": null,
+        "staged_files": [],
         "status_lines": [
           "## main",
           "?? .env"
         ],
-        "unstaged_files": null,
+        "unstaged_files": [],
         "untracked_files": [
           ".env"
         ],
@@ -4392,17 +4392,17 @@
                 "subject": "docs(contract): add fixture"
               }
             ],
-            "remotes": null,
+            "remotes": [],
             "repo_root": "$GIT_REPO",
             "secret_like_paths": [
               ".env"
             ],
-            "staged_files": null,
+            "staged_files": [],
             "status_lines": [
               "## main",
               "?? .env"
             ],
-            "unstaged_files": null,
+            "unstaged_files": [],
             "untracked_files": [
               ".env"
             ],

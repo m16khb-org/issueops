@@ -9895,6 +9895,7 @@
       "task": "T09",
       "symbols": [
         "func Service.Check",
+        "func list",
         "type Observation",
         "type Observer",
         "type Service"
