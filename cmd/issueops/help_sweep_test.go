@@ -20,7 +20,7 @@ func TestEveryListedCommandPathAnswersHelpOnStdout(t *testing.T) {
 	t.Chdir(t.TempDir())
 	word := regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
 	paths := map[string][]string{}
-	for _, line := range strings.Split(clicatalog.Usage("test"), "\n") {
+	for line := range strings.SplitSeq(clicatalog.Usage("test"), "\n") {
 		fields := strings.Fields(line)
 		if !strings.HasPrefix(line, "  issueops ") || len(fields) < 2 {
 			continue
