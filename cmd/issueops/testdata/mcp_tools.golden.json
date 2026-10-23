@@ -8,11 +8,11 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "description": "Credential file from `issueops mcp authorize`; required on the shared HTTP server.",
           "type": "string"
         },
         "cwd": {
-          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "host_receipts": {
@@ -24,7 +24,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
+          "description": "Absolute workspace root; must match repo/path and the record.",
           "type": "string"
         }
       },
@@ -276,11 +276,11 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "description": "Credential file from `issueops mcp authorize`; required on the shared HTTP server.",
           "type": "string"
         },
         "cwd": {
-          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "path": {
@@ -288,7 +288,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
+          "description": "Absolute workspace root; must match repo/path and the record.",
           "type": "string"
         }
       },
@@ -412,11 +412,11 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "description": "Credential file from `issueops mcp authorize`; required on the shared HTTP server.",
           "type": "string"
         },
         "cwd": {
-          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "repo": {
@@ -428,7 +428,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
+          "description": "Absolute workspace root; must match repo/path and the record.",
           "type": "string"
         }
       },
@@ -445,11 +445,11 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "description": "Credential file from `issueops mcp authorize`; required on the shared HTTP server.",
           "type": "string"
         },
         "cwd": {
-          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "repo": {
@@ -457,7 +457,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
+          "description": "Absolute workspace root; must match repo/path and the record.",
           "type": "string"
         }
       },
@@ -474,11 +474,11 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "description": "Credential file from `issueops mcp authorize`; required on the shared HTTP server.",
           "type": "string"
         },
         "cwd": {
-          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "rel_path": {
@@ -490,7 +490,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
+          "description": "Absolute workspace root; must match repo/path and the record.",
           "type": "string"
         }
       },
@@ -510,7 +510,7 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "description": "Credential file from `issueops mcp authorize`; required on the shared HTTP server.",
           "type": "string"
         },
         "confirm": {
@@ -522,7 +522,7 @@
           "type": "string"
         },
         "cwd": {
-          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "evidence": {
@@ -549,7 +549,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
+          "description": "Absolute workspace root; must match repo/path and the record.",
           "type": "string"
         }
       },
@@ -579,7 +579,7 @@
           "type": "array"
         },
         "authority_file": {
-          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "description": "Credential file from `issueops mcp authorize`; required on the shared HTTP server.",
           "type": "string"
         },
         "consequences": {
@@ -591,7 +591,7 @@
           "type": "string"
         },
         "cwd": {
-          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "decision": {
@@ -630,7 +630,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
+          "description": "Absolute workspace root; must match repo/path and the record.",
           "type": "string"
         }
       },
@@ -656,11 +656,11 @@
           "type": "boolean"
         },
         "authority_file": {
-          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "description": "Credential file from `issueops mcp authorize`; required on the shared HTTP server.",
           "type": "string"
         },
         "cwd": {
-          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "diff_file": {
@@ -687,7 +687,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
+          "description": "Absolute workspace root; must match repo/path and the record.",
           "type": "string"
         }
       },
@@ -708,11 +708,11 @@
           "type": "boolean"
         },
         "authority_file": {
-          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "description": "Credential file from `issueops mcp authorize`; required on the shared HTTP server.",
           "type": "string"
         },
         "cwd": {
-          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "files": {
@@ -727,7 +727,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
+          "description": "Absolute workspace root; must match repo/path and the record.",
           "type": "string"
         }
       },
@@ -755,7 +755,7 @@
           "type": "string"
         },
         "authority_file": {
-          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "description": "Credential file from `issueops mcp authorize`; required on the shared HTTP server.",
           "type": "string"
         },
         "cwd": {
@@ -823,7 +823,7 @@
           "type": "string"
         },
         "authority_file": {
-          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "description": "Credential file from `issueops mcp authorize`; required on the shared HTTP server.",
           "type": "string"
         },
         "cwd": {
@@ -1003,7 +1003,7 @@
           "type": "string"
         },
         "authority_file": {
-          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "description": "Credential file from `issueops mcp authorize`; required on the shared HTTP server.",
           "type": "string"
         },
         "claim_current_token": {
@@ -1094,7 +1094,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
+          "description": "Absolute workspace root; must match repo/path and the record.",
           "type": "string"
         }
       },
@@ -1117,11 +1117,11 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "description": "Credential file from `issueops mcp authorize`; required on the shared HTTP server.",
           "type": "string"
         },
         "cwd": {
-          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "goal": {
@@ -1148,7 +1148,7 @@
           "type": "array"
         },
         "workspace_root": {
-          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
+          "description": "Absolute workspace root; must match repo/path and the record.",
           "type": "string"
         }
       },
@@ -1170,11 +1170,11 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "description": "Credential file from `issueops mcp authorize`; required on the shared HTTP server.",
           "type": "string"
         },
         "cwd": {
-          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "evidence": {
@@ -1193,7 +1193,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
+          "description": "Absolute workspace root; must match repo/path and the record.",
           "type": "string"
         }
       },
@@ -1215,11 +1215,11 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "description": "Credential file from `issueops mcp authorize`; required on the shared HTTP server.",
           "type": "string"
         },
         "cwd": {
-          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "id": {
@@ -1227,7 +1227,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
+          "description": "Absolute workspace root; must match repo/path and the record.",
           "type": "string"
         }
       },
@@ -1247,11 +1247,11 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "description": "Credential file from `issueops mcp authorize`; required on the shared HTTP server.",
           "type": "string"
         },
         "cwd": {
-          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "id": {
@@ -1267,7 +1267,7 @@
           "type": "boolean"
         },
         "workspace_root": {
-          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
+          "description": "Absolute workspace root; must match repo/path and the record.",
           "type": "string"
         }
       },
@@ -1286,7 +1286,7 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "description": "Credential file from `issueops mcp authorize`; required on the shared HTTP server.",
           "type": "string"
         },
         "cwd": {
@@ -1337,7 +1337,7 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "description": "Credential file from `issueops mcp authorize`; required on the shared HTTP server.",
           "type": "string"
         },
         "cwd": {
@@ -1369,7 +1369,7 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "description": "Credential file from `issueops mcp authorize`; required on the shared HTTP server.",
           "type": "string"
         },
         "cwd": {
@@ -1402,11 +1402,11 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "description": "Credential file from `issueops mcp authorize`; required on the shared HTTP server.",
           "type": "string"
         },
         "cwd": {
-          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "file": {
@@ -1422,7 +1422,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
+          "description": "Absolute workspace root; must match repo/path and the record.",
           "type": "string"
         }
       },
@@ -1445,11 +1445,11 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "description": "Credential file from `issueops mcp authorize`; required on the shared HTTP server.",
           "type": "string"
         },
         "cwd": {
-          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "file": {
@@ -1468,7 +1468,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
+          "description": "Absolute workspace root; must match repo/path and the record.",
           "type": "string"
         }
       },
@@ -1489,7 +1489,7 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "description": "Credential file from `issueops mcp authorize`; required on the shared HTTP server.",
           "type": "string"
         },
         "cwd": {
@@ -1887,7 +1887,7 @@
           "type": "array"
         },
         "authority_file": {
-          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "description": "Credential file from `issueops mcp authorize`; required on the shared HTTP server.",
           "type": "string"
         },
         "cwd": {
@@ -1994,7 +1994,7 @@
           "type": "string"
         },
         "authority_file": {
-          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "description": "Credential file from `issueops mcp authorize`; required on the shared HTTP server.",
           "type": "string"
         },
         "cwd": {
@@ -2051,11 +2051,11 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "description": "Credential file from `issueops mcp authorize`; required on the shared HTTP server.",
           "type": "string"
         },
         "cwd": {
-          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "repo": {
@@ -2067,7 +2067,7 @@
           "type": "boolean"
         },
         "workspace_root": {
-          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
+          "description": "Absolute workspace root; must match repo/path and the record.",
           "type": "string"
         }
       },
@@ -2083,7 +2083,7 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "description": "Credential file from `issueops mcp authorize`; required on the shared HTTP server.",
           "type": "string"
         },
         "command_argv": {
@@ -2094,7 +2094,7 @@
           "type": "array"
         },
         "cwd": {
-          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "repo": {
@@ -2102,7 +2102,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
+          "description": "Absolute workspace root; must match repo/path and the record.",
           "type": "string"
         }
       },

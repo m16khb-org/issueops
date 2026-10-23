@@ -25,7 +25,7 @@ func initSDKServerWithDiagnostics(deps MCPDependencies, diagnostics io.Writer) *
 	return newSDKServer(deps, sdkServerOptionsWithDiagnostics(diagnostics), transportStdio, nil)
 }
 
-const httpServerInstructions = "This MCP endpoint is the shared local service used by every host session, not a per-host process. Workspace tools need an authority_file issued by 'issueops mcp authorize'. Use harness tools for shared Codex/Claude inspection, atomic commit preflight, state checkpoints, self-verification, self-augmentation, and commit policy context. External wiki or knowledge-base workflows belong to their own separately installed servers, not issueops."
+const httpServerInstructions = "This MCP endpoint is the shared local service used by every host session, not a per-host process. Workspace tools need an authority_file issued by 'issueops mcp authorize'; workspace_root and cwd scope each request, and relative paths resolve against cwd. Wiki or knowledge-base workflows are not issueops tools."
 
 func newSDKServer(deps MCPDependencies, options *mcp.ServerOptions, transport serverTransport, access *slog.Logger) *mcp.Server {
 	if transport == transportHTTP {
@@ -43,7 +43,7 @@ func sdkServerOptionsWithDiagnostics(diagnostics io.Writer) *mcp.ServerOptions {
 
 func sdkServerOptionsWithLogger(logger *slog.Logger) *mcp.ServerOptions {
 	return &mcp.ServerOptions{
-		Instructions: "This MCP endpoint runs the issueops harness in-process for the calling host session. Use harness tools for shared Codex/Claude inspection, atomic commit preflight, state checkpoints, self-verification, self-augmentation, and commit policy context. External wiki or knowledge-base workflows belong to their own separately installed servers, not issueops.",
+		Instructions: "This MCP endpoint runs the issueops harness in-process for the calling host session. Wiki or knowledge-base workflows are not issueops tools.",
 		Logger:       logger,
 		Capabilities: &mcp.ServerCapabilities{},
 	}

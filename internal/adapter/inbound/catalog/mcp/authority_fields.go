@@ -42,9 +42,9 @@ var workspaceScopedTools = map[string]bool{
 }
 
 var authorityFieldDescriptions = map[string]string{
-	authorityFileField: "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
-	workspaceRootField: "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
-	cwdField:           "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+	authorityFileField: "Credential file from `issueops mcp authorize`; required on the shared HTTP server.",
+	workspaceRootField: "Absolute workspace root; must match repo/path and the record.",
+	cwdField:           "Working directory in the workspace (default: workspace root).",
 }
 
 // withAuthorityFields advertises the request authority inputs on every
