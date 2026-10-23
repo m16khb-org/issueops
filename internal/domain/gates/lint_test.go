@@ -106,4 +106,8 @@ func TestDeniedMessageNamesTheShellInterpreterRemedy(t *testing.T) {
 	if got := DeniedMessage([]string{"network_not_allowed"}); got != "check denied by policy: network_not_allowed" {
 		t.Fatalf("other denial: %q", got)
 	}
+	// A Codex run checked a worktree ledger with the source checkout as root.
+	if got := DeniedMessage([]string{"cwd_outside_workspace", "path_outside_workspace"}); !strings.Contains(got, "canonical worktree as both") {
+		t.Fatalf("workspace denial: %q", got)
+	}
 }

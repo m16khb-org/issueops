@@ -153,13 +153,18 @@ func DeniedLint(result model.LintGate, denyReasons []string) model.LintGate {
 	return result
 }
 
-// DeniedMessage names the policy denial, with the remedy for a shell
-// interpreter: CHECK runs one argv without a shell, so `sh script.sh`, the
-// form project docs often give, is refused while the script itself runs.
+// DeniedMessage names the policy denial with the remedy for the denials an
+// agent can fix itself: a shell interpreter (CHECK runs one argv without a
+// shell, so `sh script.sh`, the form project docs often give, is refused
+// while the script itself runs) and a cwd or path outside the workspace root
+// (a cycle ledger is checked from its canonical worktree).
 func DeniedMessage(denyReasons []string) string {
 	message := "check denied by policy: " + strings.Join(denyReasons, "; ")
 	if slices.Contains(denyReasons, "shell_interpreter_not_allowed") {
 		message += " (CHECK runs one argv without a shell; run an executable script directly, e.g. ./script.sh, instead of sh/bash script.sh)"
+	}
+	if slices.Contains(denyReasons, "cwd_outside_workspace") || slices.Contains(denyReasons, "path_outside_workspace") {
+		message += " (--cwd and every path must sit inside --workspace-root; for a cycle ledger pass the canonical worktree as both)"
 	}
 	return message
 }
