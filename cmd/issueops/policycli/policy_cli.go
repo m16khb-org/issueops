@@ -1,6 +1,7 @@
 package policycli
 
 import (
+	"flag"
 	"fmt"
 	policydomain "issueops/internal/contract/policy"
 	"os"
@@ -20,6 +21,9 @@ func (command Command) Run(args []string) error {
 		return command.RunReadOnly(args[1:])
 	case "audit":
 		return command.AuditPolicy(args[1:])
+	case "-h", "--help", "help":
+		policyUsage()
+		return flag.ErrHelp
 	default:
 		policyUsage()
 		return fmt.Errorf("unknown policy subcommand %q", args[0])

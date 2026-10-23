@@ -27,6 +27,9 @@ func (command Command) Run(args []string) error {
 		return command.RunCleanupStuck(args[1:])
 	case "cancel":
 		return command.RunCancel(args[1:])
+	case "-h", "--help", "help":
+		workerUsage()
+		return flag.ErrHelp
 	default:
 		workerUsage()
 		return fmt.Errorf("unknown worker subcommand %q", args[0])

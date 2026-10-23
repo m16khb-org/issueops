@@ -21,6 +21,9 @@ func (command Command) RunTrace(args []string) error {
 		return command.runTraceAnalyze(args[1:])
 	case "handoff-delivery":
 		return command.runTraceHandoffDeliveryObserve(args[1:])
+	case "-h", "--help", "help":
+		traceUsage()
+		return flag.ErrHelp
 	default:
 		traceUsage()
 		return fmt.Errorf("unknown trace subcommand %q", args[0])

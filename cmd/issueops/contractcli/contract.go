@@ -42,6 +42,9 @@ func Run(args []string, commands []clicontract.Command, tools []map[string]any, 
 		return runContractCheck(args[1:], commands, tools)
 	case "conformance":
 		return conformance.Run(args[1:])
+	case "-h", "--help", "help":
+		contractUsage()
+		return flag.ErrHelp
 	default:
 		contractUsage()
 		return fmt.Errorf("unknown contract subcommand %q", args[0])

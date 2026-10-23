@@ -15,6 +15,9 @@ func (command Command) RunGuard(args []string) error {
 	switch args[0] {
 	case "check":
 		return command.runGuardCheck(args[1:])
+	case "-h", "--help", "help":
+		guardUsage()
+		return flag.ErrHelp
 	default:
 		guardUsage()
 		return fmt.Errorf("unknown guard subcommand %q", args[0])

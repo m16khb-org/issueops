@@ -20,6 +20,9 @@ func (c Command) runAPIDoc(args []string) error {
 		return c.runAPIDocReview(args[1:])
 	case "static-check":
 		return c.runAPIDocStaticCheck(args[1:])
+	case "-h", "--help", "help":
+		apiDocUsage()
+		return flag.ErrHelp
 	default:
 		apiDocUsage()
 		return fmt.Errorf("unknown api-doc subcommand %q", args[0])

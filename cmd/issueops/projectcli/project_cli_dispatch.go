@@ -1,6 +1,7 @@
 package projectcli
 
 import (
+	"flag"
 	"fmt"
 	"os"
 )
@@ -23,6 +24,9 @@ func Run(deps Dependencies, args []string) error {
 		return runProjectCommitSuggest(deps.Commit, args[1:])
 	case "lint-diagnose":
 		return runProjectLintDiagnose(deps.Lint, args[1:])
+	case "-h", "--help", "help":
+		projectUsage()
+		return flag.ErrHelp
 	default:
 		projectUsage()
 		return fmt.Errorf("unknown project subcommand %q", args[0])

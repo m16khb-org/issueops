@@ -24,6 +24,9 @@ func Run(deps Dependencies, args []string) error {
 		return runStateDoctor(deps, args[1:])
 	case "maintain":
 		return runStateMaintain(deps, args[1:])
+	case "-h", "--help", "help":
+		stateUsage()
+		return flag.ErrHelp
 	default:
 		stateUsage()
 		return fmt.Errorf("unknown state subcommand %q", args[0])
