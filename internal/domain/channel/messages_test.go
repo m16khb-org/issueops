@@ -15,6 +15,9 @@ func TestSendAdmissionPreservesBodyAndErrorPrecedence(t *testing.T) {
 		{model.SendRequest{}, "channel_required"},
 		{model.SendRequest{Channel: " c "}, "from_required"},
 		{model.SendRequest{Channel: " c ", From: " sender ", Body: " \n "}, "body_required"},
+		// The transport must name itself; a sender cannot leave origin blank or invent one.
+		{model.SendRequest{Channel: "c", From: "sender", Body: "x"}, "origin_unknown"},
+		{model.SendRequest{Channel: "c", From: "sender", Body: "x", Origin: "trusted-lead"}, "origin_unknown"},
 	} {
 		_, err := NormalizeSend(tc.req)
 		if err == nil || err.Error() != tc.want {
@@ -24,9 +27,12 @@ func TestSendAdmissionPreservesBodyAndErrorPrecedence(t *testing.T) {
 			t.Fatal("lost public error identity")
 		}
 	}
-	req, err := NormalizeSend(model.SendRequest{Channel: " c ", From: " sender ", Body: "  exact body\n"})
+	req, err := NormalizeSend(model.SendRequest{Channel: " c ", From: " sender ", Body: "  exact body\n", Origin: model.OriginMCP})
 	if err != nil || req.Channel != "c" || req.From != "sender" || req.Body != "  exact body\n" {
 		t.Fatalf("request=%+v error=%v", req, err)
+	}
+	if msg := SentMessage(req, "m1", time.Unix(0, 0)); msg.Origin != model.OriginMCP {
+		t.Fatalf("stored message lost its origin: %+v", msg)
 	}
 }
 

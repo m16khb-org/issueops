@@ -60,7 +60,7 @@ func TestSendValidatesBeforeOpeningStore(t *testing.T) {
 func TestSendPrunesAtRetentionCutoffAfterWrite(t *testing.T) {
 	now := time.Date(2026, 10, 8, 12, 0, 0, 0, time.UTC)
 	f := &fakeEffects{now: now, pruneErr: errors.New("busy")}
-	result, err := (Service{Effects: f}).Send(channelcontract.SendRequest{Channel: "c", From: "a", Body: "x"})
+	result, err := (Service{Effects: f}).Send(channelcontract.SendRequest{Channel: "c", From: "a", Body: "x", Origin: channelcontract.OriginCLI})
 	if err != nil || !result.OK || result.Message.ID != "msg-new" {
 		t.Fatalf("prune failure changed send result: result=%+v err=%v", result, err)
 	}

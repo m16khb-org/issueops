@@ -23,13 +23,13 @@ func TestSendRecvRoundTripAcrossChannelIsolation(t *testing.T) {
 
 	effects := storeForTest()
 	service := channelapp.Service{Effects: &effects}
-	if _, err := service.Send(channelcontract.SendRequest{Channel: "contract", From: "server", Body: "GET /users -> 200 {id,name}"}); err != nil {
+	if _, err := service.Send(channelcontract.SendRequest{Channel: "contract", From: "server", Body: "GET /users -> 200 {id,name}", Origin: channelcontract.OriginCLI}); err != nil {
 		t.Fatalf("send 1: %v", err)
 	}
-	if _, err := service.Send(channelcontract.SendRequest{Channel: "contract", From: "front", Body: "need email too"}); err != nil {
+	if _, err := service.Send(channelcontract.SendRequest{Channel: "contract", From: "front", Body: "need email too", Origin: channelcontract.OriginMCP}); err != nil {
 		t.Fatalf("send 2: %v", err)
 	}
-	if _, err := service.Send(channelcontract.SendRequest{Channel: "other", From: "server", Body: "noise"}); err != nil {
+	if _, err := service.Send(channelcontract.SendRequest{Channel: "other", From: "server", Body: "noise", Origin: channelcontract.OriginCLI}); err != nil {
 		t.Fatalf("send 3: %v", err)
 	}
 	recv, err := service.Recv(context.Background(), channelcontract.RecvRequest{Channel: "contract"})
@@ -41,6 +41,9 @@ func TestSendRecvRoundTripAcrossChannelIsolation(t *testing.T) {
 	}
 	if recv.Messages[0].From != "server" || recv.Messages[0].Body != "GET /users -> 200 {id,name}" {
 		t.Fatalf("first message wrong: %+v", recv.Messages[0])
+	}
+	if recv.Messages[0].Origin != channelcontract.OriginCLI || recv.Messages[1].Origin != channelcontract.OriginMCP {
+		t.Fatalf("stored origin lost: %+v", recv.Messages)
 	}
 	if recv.LastID != recv.Messages[1].ID {
 		t.Fatalf("LastID must be the newest message: %q vs %q", recv.LastID, recv.Messages[1].ID)
@@ -57,8 +60,8 @@ func TestRecvSinceIDReturnsOnlyNewMessages(t *testing.T) {
 
 	effects := storeForTest()
 	service := channelapp.Service{Effects: &effects}
-	first, _ := service.Send(channelcontract.SendRequest{Channel: "c", From: "a", Body: "1"})
-	if _, err := service.Send(channelcontract.SendRequest{Channel: "c", From: "a", Body: "2"}); err != nil {
+	first, _ := service.Send(channelcontract.SendRequest{Channel: "c", From: "a", Body: "1", Origin: channelcontract.OriginCLI})
+	if _, err := service.Send(channelcontract.SendRequest{Channel: "c", From: "a", Body: "2", Origin: channelcontract.OriginCLI}); err != nil {
 		t.Fatal(err)
 	}
 	recv, err := service.Recv(context.Background(), channelcontract.RecvRequest{Channel: "c", SinceID: first.Message.ID})
@@ -84,7 +87,7 @@ func TestRecvLimitBoundsResult(t *testing.T) {
 	effects := storeForTest()
 	service := channelapp.Service{Effects: &effects}
 	for _, body := range []string{"1", "2", "3"} {
-		if _, err := service.Send(channelcontract.SendRequest{Channel: "c", From: "a", Body: body}); err != nil {
+		if _, err := service.Send(channelcontract.SendRequest{Channel: "c", From: "a", Body: body, Origin: channelcontract.OriginCLI}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -102,7 +105,7 @@ func TestRecvWaitReturnsImmediatelyWhenMessageExists(t *testing.T) {
 
 	effects := storeForTest()
 	service := channelapp.Service{Effects: &effects}
-	if _, err := service.Send(channelcontract.SendRequest{Channel: "c", From: "server", Body: "ready"}); err != nil {
+	if _, err := service.Send(channelcontract.SendRequest{Channel: "c", From: "server", Body: "ready", Origin: channelcontract.OriginCLI}); err != nil {
 		t.Fatal(err)
 	}
 	started := time.Now()
@@ -160,7 +163,7 @@ func TestRecvWaitBlocksUntilConcurrentSend(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("receiver did not enter the exact wait seam")
 	}
-	if _, err := service.Send(channelcontract.SendRequest{Channel: "contract", From: "server", Body: "contract v1"}); err != nil {
+	if _, err := service.Send(channelcontract.SendRequest{Channel: "contract", From: "server", Body: "contract v1", Origin: channelcontract.OriginCLI}); err != nil {
 		t.Fatalf("send: %v", err)
 	}
 	close(resume)
@@ -229,7 +232,7 @@ func TestSendPrunesMessagesPastRetention(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if _, err := service.Send(channelcontract.SendRequest{Channel: "c", From: "a", Body: "now"}); err != nil {
+	if _, err := service.Send(channelcontract.SendRequest{Channel: "c", From: "a", Body: "now", Origin: channelcontract.OriginCLI}); err != nil {
 		t.Fatal(err)
 	}
 	recv, err := service.Recv(context.Background(), channelcontract.RecvRequest{Channel: "c"})

@@ -18,6 +18,8 @@ func NormalizeSend(req model.SendRequest) (model.SendRequest, error) {
 		return req, model.ErrFromRequired
 	case strings.TrimSpace(req.Body) == "":
 		return req, errors.New("body_required")
+	case req.Origin != model.OriginCLI && req.Origin != model.OriginMCP:
+		return req, errors.New("origin_unknown")
 	}
 	return req, nil
 }
@@ -30,7 +32,7 @@ func NormalizeRecv(req model.RecvRequest) (model.RecvRequest, error) {
 	return req, nil
 }
 func SentMessage(req model.SendRequest, id string, now time.Time) model.Message {
-	return model.Message{OK: true, SchemaVersion: model.SchemaVersion, ID: id, Channel: req.Channel, From: req.From, Body: req.Body, CreatedAt: now.UTC().Format(time.RFC3339Nano)}
+	return model.Message{OK: true, SchemaVersion: model.SchemaVersion, ID: id, Channel: req.Channel, From: req.From, Origin: req.Origin, Body: req.Body, CreatedAt: now.UTC().Format(time.RFC3339Nano)}
 }
 func WaitTimeout(seconds int) time.Duration {
 	if seconds <= 0 {

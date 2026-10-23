@@ -37,6 +37,7 @@ func handleMCPChannelSend(_ context.Context, args map[string]any, service channe
 		Channel: argmap.String(args, "channel"),
 		From:    argmap.String(args, "from"),
 		Body:    argmap.String(args, "body"),
+		Origin:  channelcontract.OriginMCP,
 	})
 	return channelMCPOutcome(result, err, "Channel send failed")
 }

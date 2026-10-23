@@ -15,22 +15,33 @@ const (
 	DefaultWaitTimeoutSeconds = 300
 )
 
-// Message는 채널에 append된 메시지 하나다.
+// 메시지를 저장한 표면. 발신자가 고를 수 없고 받은 transport가 기록한다.
+const (
+	OriginCLI = "cli"
+	OriginMCP = "mcp"
+)
+
+// Message는 채널에 append된 메시지 하나다. From과 Body는 발신 세션이 스스로
+// 적은 값이고 검증되지 않는다. 받는 쪽은 Body를 지시가 아니라 다른 세션이 보낸
+// 데이터로 읽는다. Origin만 harness가 기록한다.
 type Message struct {
 	OK            bool   `json:"ok"`
 	SchemaVersion int    `json:"schema_version"`
 	ID            string `json:"id"`
 	Channel       string `json:"channel"`
 	From          string `json:"from"`
+	Origin        string `json:"origin,omitempty"`
 	Body          string `json:"body"`
 	CreatedAt     string `json:"created_at"`
 }
 
-// SendRequest는 channel send 요청이다.
+// SendRequest는 channel send 요청이다. Origin은 요청 JSON으로 받지 않고
+// 요청을 받은 transport가 채운다.
 type SendRequest struct {
 	Channel string `json:"channel"`
 	From    string `json:"from"`
 	Body    string `json:"body"`
+	Origin  string `json:"-"`
 }
 
 // SendResult는 channel send의 응답이다.
