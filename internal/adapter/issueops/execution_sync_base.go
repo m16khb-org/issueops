@@ -165,9 +165,10 @@ func executionSyncBaseGates(ctx context.Context, record issueops.IssueOpsRecord,
 		run.observeWorkTip()
 		return run.inventory, run.missing
 	}
+	fetched := run.startBaseFetch()
 	run.observeRemoteBranch()
 	run.observeMergeState()
-	run.resolveBaseTip()
+	run.resolveBaseTip(fetched)
 	run.observeWorkTip()
 	result.BaseOID = run.inventory.BaseOID
 	run.observeAncestry()

@@ -4707,6 +4707,7 @@
         "func executionSyncBaseGateRun.predictConflicts",
         "func executionSyncBaseGateRun.resolveBaseTip",
         "func executionSyncBaseGateRun.resolveOID",
+        "func executionSyncBaseGateRun.startBaseFetch",
         "func executionSyncBaseRecordFacts",
         "func fillExecutionSyncBaseInventory",
         "type executionSyncBaseGateRun"

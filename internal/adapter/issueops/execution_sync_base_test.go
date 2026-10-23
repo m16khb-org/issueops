@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	"issueops/internal/contract/issueops"
@@ -28,7 +29,10 @@ type syncBaseGitCall struct {
 
 // fakeSyncBaseGit은 주입된 Git 표면 전체를 대체해 호출 순서와 인자를 기록한다.
 // 실제 git을 쓰지 않으므로 fetch→merge-tree→merge→push 계약을 결정적으로
-// 검증할 수 있다.
+// 검증할 수 있다. base fetch는 다른 관측과 겹쳐 돌므로 run은 잠금 아래에서
+// 기록한다(케이스가 fake를 값 복사하므로 잠금은 fake 밖에 둔다).
+var fakeSyncBaseGitMu sync.Mutex
+
 type fakeSyncBaseGit struct {
 	gitDir string
 	calls  []syncBaseGitCall
@@ -63,6 +67,8 @@ type fakeSyncBaseGit struct {
 }
 
 func (g *fakeSyncBaseGit) run(_ context.Context, dir string, args ...string) (int, string) {
+	fakeSyncBaseGitMu.Lock()
+	defer fakeSyncBaseGitMu.Unlock()
 	g.calls = append(g.calls, syncBaseGitCall{dir: dir, args: append([]string(nil), args...)})
 	switch args[0] {
 	case "branch":

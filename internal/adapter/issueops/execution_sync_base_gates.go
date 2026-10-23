@@ -100,11 +100,30 @@ func (g *executionSyncBaseGateRun) observeRemoteBranch() {
 	g.result.RemoteBranchPresent = g.inventory.RemoteBranchPresent
 }
 
-// resolveBaseTip은 모드별로 base tip을 확정한다.
-func (g *executionSyncBaseGateRun) resolveBaseTip() {
+// startBaseFetch begins the preview/apply base fetch so its network round
+// trip overlaps the remote-branch ls-remote and the local merge-state reads,
+// which touch neither FETCH_HEAD nor the fetched refs. The returned wait
+// yields the fetch exit code; it is nil when the mode or record needs no
+// fetch.
+func (g *executionSyncBaseGateRun) startBaseFetch() func() int {
+	if g.mode != issueops.ExecutionSyncBasePreview && g.mode != issueops.ExecutionSyncBaseApply || g.inventory.BaseBranch == "" {
+		return nil
+	}
+	ctx, git, root, base := g.ctx, g.deps.Git, g.inventory.Root, g.inventory.BaseBranch
+	done := make(chan int, 1)
+	go func() {
+		code, _ := git(ctx, root, "fetch", "--quiet", "origin", base)
+		done <- code
+	}()
+	return func() int { return <-done }
+}
+
+// resolveBaseTip은 모드별로 base tip을 확정한다. fetched는 startBaseFetch가
+// 돌려준 대기 함수다.
+func (g *executionSyncBaseGateRun) resolveBaseTip(fetched func() int) {
 	switch g.mode {
 	case issueops.ExecutionSyncBasePreview, issueops.ExecutionSyncBaseApply:
-		g.fetchBaseTip()
+		g.fetchBaseTip(fetched)
 	case issueops.ExecutionSyncBaseFinalize:
 		// finalize는 진행 중인 머지를 마무리한다 — 대상 base tip은 MERGE_HEAD가
 		// 그대로 들고 있다. 재fetch하면 진행 중 머지의 base가 바뀐 값으로 기록될
@@ -119,11 +138,11 @@ func (g *executionSyncBaseGateRun) resolveBaseTip() {
 
 // fetchBaseTip은 fetch 선행(preview·apply)으로 stale base 머지를 방지한다
 // (architecture-review F6 — pr-readiness strict 선례). base tip은 반드시 fetch 이후 값이어야 한다.
-func (g *executionSyncBaseGateRun) fetchBaseTip() {
-	if g.inventory.BaseBranch == "" {
+func (g *executionSyncBaseGateRun) fetchBaseTip(fetched func() int) {
+	if fetched == nil {
 		return
 	}
-	if code, _ := g.deps.Git(g.ctx, g.inventory.Root, "fetch", "--quiet", "origin", g.inventory.BaseBranch); code != 0 {
+	if fetched() != 0 {
 		g.missing = append(g.missing, "base_fetch")
 	} else if oid, ok := g.resolveOID("rev-parse", "FETCH_HEAD"); ok {
 		g.inventory.BaseOID = oid
