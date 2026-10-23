@@ -118,3 +118,23 @@ func TestHasUnquotedControlOperatorSingleQuotedBackslash(t *testing.T) {
 		t.Fatal("escaped double quote must keep the semicolon quoted")
 	}
 }
+
+// Expansions a shell would perform are reported wherever a shell expands them
+// (bare or double-quoted); single quotes, escapes, and a `$` that starts no
+// expansion stay literal on purpose.
+func TestHasShellExpansion(t *testing.T) {
+	for command, want := range map[string]bool{
+		`test "$(./hello.sh)" = hello`:     true,
+		`echo ${HOME}`:                     true,
+		`printf "%s" "$HOME"`:              true,
+		`python3 -c 'print("$(x) $HOME")'`: false,
+		`grep -q "foo$" file`:              false,
+		`echo \$HOME`:                      false,
+		`go test -run 'TestX$' ./...`:      false,
+		`echo cost 5$`:                     false,
+	} {
+		if got := HasShellExpansion(command); got != want {
+			t.Errorf("HasShellExpansion(%q) = %v, want %v", command, got, want)
+		}
+	}
+}

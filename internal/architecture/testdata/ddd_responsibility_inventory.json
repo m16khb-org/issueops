@@ -15892,6 +15892,7 @@
       "owner": "domain",
       "task": "T20",
       "symbols": [
+        "func HasShellExpansion",
         "func HasUnquotedControlOperator",
         "func QuoteWord",
         "func SplitCommandTokens",

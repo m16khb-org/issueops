@@ -20,6 +20,7 @@ func TestLintStaticFlagsGatesThatCanNeverBeMet(t *testing.T) {
 		{"markdown backticks stay in argv", "G5: x | CHECK: `go test ./...` | EXPECT: ok", "markdown backticks", true},
 		{"backtick-wrapped EXPECT is matched literally", "G6: x | CHECK: printf ok | EXPECT: `ok`", "wrapped in markdown backticks", true},
 		{"anchored regex without slashes is a literal that never matches", `G7: x | CHECK: printf ok | EXPECT: ^ok$`, "write /^ok$/", true},
+		{"shell expansion is passed through literally", `G8: x | CHECK: test "$(./hello.sh --version)" = "hello 0.1.0" | EXPECT: ok`, "shell expansion", false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

@@ -1,6 +1,9 @@
 package shelltoken
 
-import "strings"
+import (
+	"strings"
+	"unicode"
+)
 
 func SplitCommandTokens(command string) []string {
 	s := &tokenSplitter{runes: []rune(command), tokens: []string{}}
@@ -109,6 +112,46 @@ func HasUnquotedControlOperator(command string) bool {
 		switch r {
 		case ';', '&', '|', '\n', '\r':
 			return true
+		}
+	}
+	return false
+}
+
+// HasShellExpansion reports a `$(...)`, `${...}`, or `$NAME` outside single
+// quotes. Argv execution passes it through as characters, so a command that
+// relies on the shell to expand it silently runs with the literal text.
+func HasShellExpansion(command string) bool {
+	var quote rune
+	escaped := false
+	runes := []rune(command)
+	for i, r := range runes {
+		if escaped {
+			escaped = false
+			continue
+		}
+		if r == '\\' && quote != '\'' {
+			escaped = true
+			continue
+		}
+		if quote == '\'' {
+			if r == quote {
+				quote = 0
+			}
+			continue
+		}
+		if r == '\'' || r == '"' {
+			if quote == r {
+				quote = 0
+			} else if quote == 0 {
+				quote = r
+			}
+			continue
+		}
+		if r == '$' && i+1 < len(runes) {
+			next := runes[i+1]
+			if next == '(' || next == '{' || next == '_' || unicode.IsLetter(next) {
+				return true
+			}
 		}
 	}
 	return false

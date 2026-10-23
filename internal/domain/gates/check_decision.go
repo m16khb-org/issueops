@@ -11,6 +11,9 @@ func CheckArgv(check string) ([]string, string) {
 	if shelltoken.HasUnquotedControlOperator(check) {
 		return nil, "CHECK contains shell syntax that argv execution does not honor (&&, ||, |, ;, 2>&1): wrap the sequence in one script or python3 -c"
 	}
+	if shelltoken.HasShellExpansion(check) {
+		return nil, "CHECK contains a shell expansion ($(...), ${...}, $NAME) that argv execution passes through literally: run the command directly or put it in one script"
+	}
 	argv := shelltoken.SplitCommandTokens(check)
 	if len(argv) == 0 {
 		return nil, "empty CHECK command"
