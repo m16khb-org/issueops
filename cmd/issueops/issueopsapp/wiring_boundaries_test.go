@@ -142,7 +142,7 @@ func TestMCPAuthorizeDerivesTheCurrentSessionOnlyWhenEverySessionFlagIsOmitted(t
 	}
 	// A partial set never mixes typed and derived identity.
 	issuer, err = run("--host", "codex")
-	if err == nil || !strings.Contains(err.Error(), "--session-id") || len(issuer.calls) != 0 {
+	if err == nil || !strings.Contains(err.Error(), "missing --session-id --session-started-at --session-executable --session-pid") || len(issuer.calls) != 0 {
 		t.Fatalf("partial flags: err=%v issued=%d, want fail closed", err, len(issuer.calls))
 	}
 }

@@ -123,7 +123,11 @@ func (c Command) runSubcommand(name string, args []string) (bool, int) {
 			// command that already printed its JSON result keeps stdout to
 			// that one document and the error goes to stderr.
 			if JSONRequested(args) && !jsonout.WroteStdoutDocument() {
-				_ = jsonout.PrintTo(c.stdout(), map[string]any{"ok": false, "error": name + ": " + err.Error()})
+				message := err.Error()
+				if !strings.HasPrefix(message, name+" ") && !strings.HasPrefix(message, name+":") {
+					message = name + ": " + message
+				}
+				_ = jsonout.PrintTo(c.stdout(), map[string]any{"ok": false, "error": message})
 			} else {
 				fmt.Fprintln(c.stderr(), name+":", err)
 			}

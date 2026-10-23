@@ -21,13 +21,16 @@ func Print(value any) error {
 	return PrintTo(os.Stdout, value)
 }
 
-// PrintTo writes value to w as two-space indented JSON.
+// PrintTo writes value to w as two-space indented JSON. `<`, `>` and `&`
+// stay literal (no \u003c): the reader is a terminal or a JSON parser, never
+// an HTML page.
 func PrintTo(w io.Writer, value any) error {
 	if file, ok := w.(*os.File); ok && file == os.Stdout {
 		stdoutDocument.Store(true)
 	}
 	encoder := json.NewEncoder(w)
 	encoder.SetIndent("", "  ")
+	encoder.SetEscapeHTML(false)
 	return encoder.Encode(value)
 }
 

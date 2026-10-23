@@ -102,12 +102,16 @@ func (command mcpAuthorizeCommand) Run(args []string) error {
 		*sessionPID, *startedAt, *executable = current.PID, current.StartedAt, current.Executable
 	case len(sessionFlags) + 1:
 	default:
+		var missing []string
 		for _, field := range sessionFlags {
 			if strings.TrimSpace(field.value) == "" {
-				return fail(fmt.Errorf("mcp authorize requires --%s with the other session flags (or omit all five)", field.name))
+				missing = append(missing, "--"+field.name)
 			}
 		}
-		return fail(fmt.Errorf("mcp authorize requires --session-pid with the other session flags (or omit all five)"))
+		if *sessionPID <= 0 {
+			missing = append(missing, "--session-pid")
+		}
+		return fail(fmt.Errorf("mcp authorize: the session flags --host --session-id --session-pid --session-started-at --session-executable go together; missing %s (or omit all five to use the current session)", strings.Join(missing, " ")))
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
