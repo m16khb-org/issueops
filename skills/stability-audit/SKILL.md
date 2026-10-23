@@ -1,6 +1,6 @@
 ---
 name: stability-audit
-description: Run an exhaustive issueops stability audit from install/update through hooks, MCP, worker, state, process hygiene, memory-growth signals, zombie/orphan processes, and regression verification. Use when the user asks for E2E stability checks, full operational sweep, hook/MCP reliability, install verification, memory leak investigation, zombie process investigation, or “전수조사/안정성 점검”.
+description: Run an exhaustive issueops stability audit across install/update, hooks, MCP, worker, state, and processes. Use when the user asks for E2E stability checks, a full operational sweep, hook/MCP reliability, install verification, memory leak or zombie process investigation, or “전수조사/안정성 점검”.
 ---
 
 # Stability Audit

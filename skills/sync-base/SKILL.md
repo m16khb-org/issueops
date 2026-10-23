@@ -1,6 +1,6 @@
 ---
 name: sync-base
-description: Use when a base or release branch moved ahead and the feature branch must catch up, or for "베이스 브랜치 최신화", "release 브랜치 반영", "브랜치 최신으로 맞춰줘", "rebase onto parent", "sync with base branch". Picks merge or rebase from evidence, keeps a backup ref, proves no commit was lost, then pushes. An issueops-owned branch uses `issueops execution sync-base` instead.
+description: Use when a base or release branch moved ahead and the feature branch must catch up (merge or rebase with a backup ref and no lost commits), or for "베이스 브랜치 최신화", "release 브랜치 반영", "브랜치 최신으로 맞춰줘", "rebase onto parent", "sync with base branch". An issueops-owned branch uses `issueops execution sync-base` instead.
 ---
 
 # Sync Base

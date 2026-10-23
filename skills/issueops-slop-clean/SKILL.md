@@ -1,6 +1,6 @@
 ---
 name: issueops-slop-clean
-description: Run the IssueOps ai-slop-clean stage on the canonical worktree. Confirm the phase, remove lazy agent residue from the task diff one pass at a time while preserving behavior, measure before and after with code-quality-metrics, re-run the gate ledger and the focused verification, and record the cleanup evidence that seals the change fingerprint. Use when "issueops next" reports clean, or when the user says "AI slop 정리", "slop 치워줘", "정리 단계".
+description: 'Run the IssueOps ai-slop-clean stage: remove agent residue from the task diff without changing behavior, re-verify, and record the cleanup evidence. Use when "issueops next" reports clean, or when the user says "AI slop 정리", "slop 치워줘", "정리 단계".'
 ---
 
 # IssueOps Slop Clean

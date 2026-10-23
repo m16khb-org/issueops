@@ -65,6 +65,16 @@ class ValidateSkillTest(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIn("hyphen-case", message)
 
+    def test_rejects_plain_description_that_strict_yaml_rejects(self) -> None:
+        # Hosts load frontmatter with a strict YAML parser; "Triggers: x" in a
+        # plain scalar is a mapping-value error there and drops the skill.
+        for description in ("Use it. Triggers: a, b.", "Use it #now"):
+            ok, message = validate_skill.validate_skill(self.write_skill(self.frontmatter(description)))
+            self.assertFalse(ok, description)
+            self.assertIn("quote the value", message)
+        ok, _ = validate_skill.validate_skill(self.write_skill(self.frontmatter("'Use it. Triggers: a, b.'")))
+        self.assertTrue(ok)
+
     def frontmatter(self, description: str = "sample") -> str:
         return f"---\nname: sample-skill\ndescription: {description}\n---\n"
 

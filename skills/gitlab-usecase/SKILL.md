@@ -1,6 +1,6 @@
 ---
 name: gitlab-usecase
-description: Use before GitLab, glab, GitLab MCP, IssueOps remote issue/MR, linked-item, child-item, work-item, Kody/Kodus review, issue-body update, branch-target, or cleanup work. Prevents repeated GitLab mistakes by distinguishing native linked items from child items, enforcing body-of-record rules, authenticated CLI/MCP fallback, labels/assignee/target-branch checks, and review-thread verification.
+description: Use before GitLab, glab, GitLab MCP, IssueOps remote issue/MR, linked-item, child-item, work-item, Kody/Kodus review, issue-body update, branch-target, or cleanup work, to avoid repeated GitLab mistakes (linked vs child items, body of record, labels/assignee/target branch, review threads).
 ---
 
 # GitLab Usecase

@@ -50,6 +50,10 @@ def _parse_scalar(raw: str):
             return ast.literal_eval(value)
         except (SyntaxError, ValueError) as exc:
             raise FrontmatterError(f"invalid quoted scalar: {exc}") from exc
+    # Hosts parse frontmatter as strict YAML: a plain scalar may not contain
+    # ": " (mapping value) or " #" (comment), so such a value must be quoted.
+    if ": " in value or value.endswith(":") or " #" in value:
+        raise FrontmatterError("plain scalar contains ': ' or ' #'; quote the value")
     return value
 
 

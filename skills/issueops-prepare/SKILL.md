@@ -1,6 +1,6 @@
 ---
 name: issueops-prepare
-description: Give an IssueOps cycle its branch identity. Resolve and pin the exact base SHA, record it with "issueops branch prepare", create and verify the provider-side branch link, and move the cycle to the plan phase. Creating the worktree is not this skill's job — "issueops execution prepare" owns it. Use when the user says "준비", "브랜치 만들어줘", "prepare the issue branch", or when "issueops next" reports stage prepare.
+description: 'Give an IssueOps cycle its branch identity: pin the base SHA, record "issueops branch prepare", and verify the provider branch link (the worktree belongs to "issueops execution prepare"). Use when the user says "준비", "브랜치 만들어줘", "prepare the issue branch", or when "issueops next" reports stage prepare.'
 ---
 
 # IssueOps Prepare
