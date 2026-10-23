@@ -103,7 +103,7 @@ apply는 원격 효과를 record 삭제보다 **먼저** 실행한다. record가
 | missing | 뜻 | 해소 |
 |---|---|---|
 | `reason_required` | 사유가 없거나 금지 문자가 들어 있다 | 사실 문장으로 다시 쓴다 |
-| `lease_terminal` | 살아 있는 writer가 있다(active·revoking) | 홀더면 release, 아니면 라우터의 인수 체인을 완주한다 |
+| `lease_terminal` | 살아 있는 writer가 있다(active·revoking). claimable·released는 막지 않으므로 claim하지 않는다 | 홀더면 release, 아니면 라우터의 인수 체인을 완주한다 |
 | `worktree_clean` | 커밋하지 않은 변경이 있다 | 아래 `## dirty 워크트리 선택지` |
 | `requester_occupies_worktree` | 지우려는 워크트리 **안에서** 폐기를 실행했다 | source checkout으로 나온 뒤 다시 실행한다 |
 | `remote_artifact_unmerged` | 아티팩트가 머지됐거나 미머지를 관측하지 못했다 | 머지됐으면 `issueops-cleanup`이 맞다. 관측 실패면 provider 접근을 고친다 |

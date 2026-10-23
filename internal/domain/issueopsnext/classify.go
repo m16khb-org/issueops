@@ -511,7 +511,7 @@ func leaseView(in Input) issueopsnextcontract.Lease {
 func exits(in Input) issueopsnextcontract.Exits {
 	id := in.Record.ID
 	out := issueopsnextcontract.Exits{
-		AbandonCommand: "issueops cleanup abandon --id " + id + " --reason <TEXT> --preview",
+		AbandonCommand: "issueops cleanup abandon --id " + id + " --reason <TEXT> --preview --json",
 	}
 	if in.Record.Execution == nil {
 		return out
@@ -520,7 +520,7 @@ func exits(in Input) issueopsnextcontract.Exits {
 	generation := generationText(in)
 	if lease.Status == issueopsnextcontract.LeaseStatusActive && holderIsSelf(in) {
 		out.PauseCommand = "issueops execution release --id " + id +
-			" --generation " + generation + " $ACTOR_FLAGS"
+			" --generation " + generation + " $ACTOR_FLAGS --json"
 	}
 	if (lease.Status == issueopsnextcontract.LeaseStatusActive && lease.Holder != nil && !holderIsSelf(in) && !live(in.HolderLive)) ||
 		lease.Status == issueopsnextcontract.LeaseStatusRevoking {
