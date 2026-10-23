@@ -22,8 +22,10 @@ type FinishExecutor struct {
 	NewAttempt      func(model.CleanupOperation) (model.IssueOpsCleanupAttempt, error)
 	Stop            func(context.Context, model.CleanupFinishInventory, []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, error)
 	Directory       func(string) (bool, error)
-	Git             func(context.Context, string, ...string) (int, string)
-	Now             func() time.Time
+	// PruneWorktreesParent removes the emptied `<repo>.worktrees` parent; optional.
+	PruneWorktreesParent func(string)
+	Git                  func(context.Context, string, ...string) (int, string)
+	Now                  func() time.Time
 }
 
 // finishRun carries the state shared by the phases of one finish execution.
@@ -174,11 +176,9 @@ func (r *finishRun) removeWorktree() error {
 	if err := r.s.Records.Check(r.ctx, r.snapshot); err != nil {
 		return err
 	}
-	if code, out := r.s.Git(r.ctx, r.record.Repo, "worktree", "remove", r.inventory.WorktreeRoot); code != 0 {
-		present, observeErr := r.s.Directory(r.inventory.WorktreeRoot)
-		if observeErr != nil || present {
-			return errors.Join(fmt.Errorf("git worktree remove: %s", out), observeErr)
-		}
+	removal := worktreeRemoval{Git: r.s.Git, Directory: r.s.Directory, PruneParent: r.s.PruneWorktreesParent}
+	if err := removal.remove(r.ctx, r.record.Repo, r.inventory.WorktreeRoot); err != nil {
+		return err
 	}
 	r.result.WorktreeRemoved = true
 	return nil

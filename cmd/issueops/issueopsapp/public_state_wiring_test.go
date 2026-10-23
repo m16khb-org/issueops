@@ -155,7 +155,8 @@ func TestPublicStateRefusalAndMissingReadsDoNotCreateStores(t *testing.T) {
 
 func TestPublicStateUnknownSchemaIsRefusedWithoutRewriting(t *testing.T) {
 	for _, schema := range []string{"", `"schema_version":0,`, `"schema_version":2,`} {
-		t.Run(schema, func(t *testing.T) {
+		// A named subtest: an empty name leaves an orphan t.TempDir parent.
+		t.Run("schema="+schema, func(t *testing.T) {
 			dir := t.TempDir()
 			t.Setenv("ISSUEOPS_STATE_DIR", dir)
 			raw := []byte(`{` + schema + `"key":"future","content":"abc","updated_at":"2000-01-01T00:00:00Z","bytes":3}`)

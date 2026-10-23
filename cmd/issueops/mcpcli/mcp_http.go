@@ -23,6 +23,12 @@ const (
 	httpMaxRequestBodyBytes = 4 << 20
 	httpShutdownDrain       = 10 * time.Second
 	httpReadHeaderTimeout   = 10 * time.Second
+	// No ReadTimeout or WriteTimeout: net/http cancels the request context
+	// when a connection read deadline expires mid-handler, and tool calls such
+	// as gates_check legitimately run for minutes. Hosts keep one connection
+	// per session; an idle keep-alive connection is
+	// closed after this so abandoned sessions do not pin goroutines and FDs.
+	httpIdleTimeout = 2 * time.Minute
 )
 
 type HTTPOptions struct {
@@ -164,6 +170,7 @@ func ServeHTTP(ctx context.Context, listener net.Listener, handler http.Handler)
 	server := &http.Server{
 		Handler:           handler,
 		ReadHeaderTimeout: httpReadHeaderTimeout,
+		IdleTimeout:       httpIdleTimeout,
 		BaseContext:       func(net.Listener) context.Context { return base },
 		ErrorLog:          log.New(io.Discard, "", 0),
 	}

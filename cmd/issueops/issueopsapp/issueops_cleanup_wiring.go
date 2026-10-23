@@ -31,7 +31,7 @@ func newIssueOpsCleanup(root string) feedbackcleanup.Command {
 			},
 			Fingerprint: issueopscore.CleanupFinishFingerprint, NewAttempt: issueopscore.NewCleanupAttempt,
 
-			Stop: runtime.Stop, Directory: (issueopscore.CleanupFinishEnvironment{}).Directory, Git: runtime.Git, Now: time.Now,
+			Stop: runtime.Stop, Directory: (issueopscore.CleanupFinishEnvironment{}).Directory, PruneWorktreesParent: (issueopscore.CleanupFinishEnvironment{}).RemoveEmptyWorktreesParent, Git: runtime.Git, Now: time.Now,
 		}).Run(ctx, req)
 	}
 	abandon := func(ctx context.Context, stateRoot string, req issueopscontract.CleanupAbandonRequest, d feedbackcleanup.Deps) (issueopscontract.CleanupAbandonResult, error) {
@@ -43,7 +43,7 @@ func newIssueOpsCleanup(root string) feedbackcleanup.Command {
 				Environment: runtime, ReadChild: runtime.ReadChild, Workspace: runtime.Workspace,
 				Remote: cleanupapp.AbandonRemoteObserver{RemoteRef: (issueopscore.LinkedBranchRemoteRef{RunGit: runtime.Command}).Observe},
 			}).Plan,
-			NewAttempt: issueopscore.NewCleanupAttempt, Stop: runtime.Stop, Directory: (issueopscore.CleanupFinishEnvironment{}).Directory, Git: runtime.Command, Now: time.Now,
+			NewAttempt: issueopscore.NewCleanupAttempt, Stop: runtime.Stop, Directory: (issueopscore.CleanupFinishEnvironment{}).Directory, PruneWorktreesParent: (issueopscore.CleanupFinishEnvironment{}).RemoveEmptyWorktreesParent, Git: runtime.Command, Now: time.Now,
 		}).Run(ctx, req)
 	}
 	remoteBranch := func(ctx context.Context, stateRoot string, req issueopscontract.CleanupRemoteBranchRequest, d feedbackcleanup.Deps) (issueopscontract.CleanupRemoteBranchResult, error) {

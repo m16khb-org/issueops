@@ -17,5 +17,7 @@ func TestMain(m *testing.M) {
 	}
 	os.Setenv("XDG_CONFIG_HOME", xdg)
 	wireDependencies()
-	os.Exit(m.Run())
+	code := m.Run()
+	_ = os.RemoveAll(xdg)
+	os.Exit(code)
 }

@@ -21,8 +21,10 @@ type AbandonExecutor struct {
 	NewAttempt func(model.CleanupOperation) (model.IssueOpsCleanupAttempt, error)
 	Stop       func(context.Context, model.CleanupAbandonInventory, []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, error)
 	Directory  func(string) (bool, error)
-	Git        func(context.Context, string, ...string) (int, string)
-	Now        func() time.Time
+	// PruneWorktreesParent removes the emptied `<repo>.worktrees` parent; optional.
+	PruneWorktreesParent func(string)
+	Git                  func(context.Context, string, ...string) (int, string)
+	Now                  func() time.Time
 }
 
 // abandonRun carries the state shared by the phases of one abandon execution.
@@ -213,14 +215,9 @@ func (r *abandonRun) removeWorktree() error {
 	if err := r.s.Records.Check(r.ctx, r.snapshot); err != nil {
 		return err
 	}
-	if code, out := r.s.Git(r.ctx, r.record.Repo, "worktree", "remove", r.inventory.WorktreeRoot); code != 0 {
-		if err := r.ctx.Err(); err != nil {
-			return err
-		}
-		present, observeErr := r.s.Directory(r.inventory.WorktreeRoot)
-		if observeErr != nil || present {
-			return errors.Join(fmt.Errorf("git worktree remove: %s", out), observeErr)
-		}
+	removal := worktreeRemoval{Git: r.s.Git, Directory: r.s.Directory, PruneParent: r.s.PruneWorktreesParent, HonorCancel: true}
+	if err := removal.remove(r.ctx, r.record.Repo, r.inventory.WorktreeRoot); err != nil {
+		return err
 	}
 	r.result.WorktreeRemoved = true
 	return nil
