@@ -8,6 +8,7 @@ import (
 	"io"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
 	shelltoken "issueops/internal/domain/shelltoken"
+	"slices"
 
 	"issueops/cmd/issueops/mcpcli"
 	ownerdomain "issueops/internal/domain/issueops"
@@ -154,6 +155,9 @@ func sameGeneratedExecutionCommand(got, raw string, generation uint64) bool {
 		return false
 	}
 	want := shelltoken.SplitCommandTokens(raw)
+	if !slices.Contains(want, "--json") {
+		want = append(want, "--json") // bound commands always answer JSON
+	}
 	return len(want) > 1 && strings.Join(clean, "\x00") == strings.Join(want[1:], "\x00")
 }
 

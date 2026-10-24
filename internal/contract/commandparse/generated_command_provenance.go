@@ -47,6 +47,12 @@ func BindGeneratedCommand(command string, provenance GeneratedCommandProvenance)
 		return "", &GeneratedCommandProvenanceError{Code: "generated_command_provenance_invalid", Message: "generated command executable token is invalid", Expected: provenance}
 	}
 	command = quoteGeneratedCommandArg(provenance.ExecutablePath) + tail
+	// Every bound command answers JSON with --json; the reseed and claim
+	// commands came without it and printed a text line that agents could not
+	// parse (GitLab child QA).
+	if !strings.Contains(" "+tail+" ", " --json ") {
+		command += " --json"
+	}
 	return command +
 		" " + GeneratedByExecutableFlag + " " + quoteGeneratedCommandArg(provenance.ExecutablePath) +
 		" " + GeneratedBySHA256Flag + " " + provenance.ExecutableSHA256 +

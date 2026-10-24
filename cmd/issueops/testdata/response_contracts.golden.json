@@ -1647,7 +1647,7 @@
         }
       },
       "id": "$ISSUEOPS_ID",
-      "next_command": "'$ISSUEOPS_EXECUTABLE' execution claim --id '$CLI_EXECUTION_ID' --generation 1 --claim-current-token --generated-by-executable '$ISSUEOPS_EXECUTABLE' --generated-by-sha256 $ISSUEOPS_EXECUTABLE_SHA256 --generated-for-generation 1",
+      "next_command": "'$ISSUEOPS_EXECUTABLE' execution claim --id '$CLI_EXECUTION_ID' --generation 1 --claim-current-token --json --generated-by-executable '$ISSUEOPS_EXECUTABLE' --generated-by-sha256 $ISSUEOPS_EXECUTABLE_SHA256 --generated-for-generation 1",
       "ok": true
     },
     "issueops_feedback_add": {
@@ -5980,7 +5980,7 @@
               }
             },
             "id": "$MCP_EXECUTION_ID",
-            "next_command": "'$ISSUEOPS_EXECUTABLE' execution claim --id '$MCP_EXECUTION_ID' --generation 1 --claim-current-token --generated-by-executable '$ISSUEOPS_EXECUTABLE' --generated-by-sha256 $ISSUEOPS_EXECUTABLE_SHA256 --generated-for-generation 1",
+            "next_command": "'$ISSUEOPS_EXECUTABLE' execution claim --id '$MCP_EXECUTION_ID' --generation 1 --claim-current-token --json --generated-by-executable '$ISSUEOPS_EXECUTABLE' --generated-by-sha256 $ISSUEOPS_EXECUTABLE_SHA256 --generated-for-generation 1",
             "ok": true
           },
           "type": "text"
