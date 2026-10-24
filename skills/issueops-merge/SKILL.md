@@ -65,7 +65,7 @@ issueops next --id "$ISSUEOPS_ID" --json
 ## 프로젝트 문서 확인
 
 머지와 원격 브랜치 삭제는 되돌리기 어렵다. 미리보기 전에 `.issueops/CAUTIONS.md` 색인을
-읽고, `project_docs_route`(MCP를 쓸 수 없으면 `issueops project route-docs --repo "$PWD"
+읽고(없으면 열지 않고 "파일 없음"으로 적는다), `project_docs_route`(MCP를 쓸 수 없으면 `issueops project route-docs --repo "$PWD"
 --task "<작업 요약>" --json`)에 "PR 머지와 원격 브랜치 삭제" 같은 작업 요약을 넣어 머지·브랜치·
 정리에 관한 `cautions/`·`adr/` 기록을 고른다. `.issueops/VCS.md`가 있으면 provider별 머지
 방식과 제약을 거기서 확인한다. 확인 ①에서 사용자에게 보여 줄 때 해당되는 주의사항을

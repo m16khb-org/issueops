@@ -60,7 +60,7 @@ issueops next --id "$ISSUEOPS_ID" --json
 
 ## 프로젝트 문서 확인
 
-브랜치와 provider 링크를 만들기 전에 `.issueops/CAUTIONS.md` 색인을 읽고,
+브랜치와 provider 링크를 만들기 전에 `.issueops/CAUTIONS.md` 색인을 읽고(없으면 열지 않고 "파일 없음"으로 적는다),
 `project_docs_route`(MCP를 쓸 수 없으면 `issueops project route-docs --repo "$SOURCE_ROOT"
 --task "<작업 요약>" --json`)에 "봉인한 base SHA에서 이슈 브랜치 준비" 같은 작업 요약을 넣어
 브랜치·base에 관한 `cautions/`·`adr/` 기록을 고른다. `.issueops/VCS.md`가 있으면 provider별

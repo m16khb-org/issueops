@@ -76,7 +76,7 @@ through `issueops cleanup remote-branch` before handing off here.
 
 ## Project docs
 
-Before the preview, read the `.issueops/CAUTIONS.md` index and route the task through
+Before the preview, read the `.issueops/CAUTIONS.md` index (when absent, write "파일 없음" instead of opening it) and route the task through
 `project_docs_route` (or `issueops project route-docs --repo "$PWD" --task "<cleanup
 summary>" --json` when MCP is unavailable) to pick the dated `cautions/` and `adr/`
 records about cleanup, worktree processes, and remote branches. Recorded cleanup
