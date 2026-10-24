@@ -27,7 +27,7 @@ Naming preferences, optional refactors, minor duplication, speculative future sc
 
 ## Subagent-Only Mandate (non-negotiable)
 
-**Architecture Review MUST run as a sub-agent with an isolated context — never inline in the author's session.**
+**Architecture Review MUST run as a sub-agent with an isolated context — never inline in the author's session.** The one exception is a user who explicitly asks for inline review without sub-agents: then the author session reviews under the same output contract, records `--reviewer-context inline`, and reports that the review was not independent.
 
 A devil's advocate is worthless when it shares the author's context. The agent that wrote the plan carries sunk cost, knows the rationalizations, and will unconsciously defend its own design. Independence is the entire mechanism: a fresh context with no investment in the plan is what lets Architecture Review see the flaw the author cannot.
 
@@ -132,7 +132,7 @@ issueops devils-advocate review --id "$ISSUEOPS_ID" \
 The record is bound to the plan it reviewed and keeps its own history:
 
 - `reviewed_plan_digest` is the sha256 of the linked plan file (or the staged plan artifact when no file is linked) at record time. Implement entry and the first owner preparation reject a verdict whose digest no longer matches the plan (`devils_advocate_review_stale`). **If the plan changed after the review, the final plan needs a fresh recorded round** — that is the whole point: nobody else looks at the final plan otherwise. Plan edits during implementation are not gated.
-- `reviewer_context` (`subagent` | `inline`) is an audit field, required on every record. The harness cannot verify it; the sub-agent mandate above stays a skill rule, and an inline record is a visible violation, not a silent one.
+- `reviewer_context` (`subagent` | `inline`) is an audit field, required on every record. The harness cannot verify it; the sub-agent mandate above stays a skill rule, and an inline record without the user's explicit request is a visible violation, not a silent one.
 - Every `pass` needs at least one finding — what was attacked and why the attack failed. A pass with no findings is a rubber stamp and is rejected.
 - Earlier rounds of the same plan phase are kept under `history` (oldest first) instead of being overwritten.
 - `--waive` means "override this verdict on purpose", never "I addressed the findings". Addressed findings are proven by re-running the review on the revised plan and recording the new verdict.

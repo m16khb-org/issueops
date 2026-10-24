@@ -99,6 +99,8 @@ record 기록은 `RECORD_ACTOR_FLAGS`, lease 전이와 publication은 `ACTOR_FLA
 두 축약의 정의는 `issueops --help`의 legend가 소유한다. 불일치는 stop이다. 사용자의
 "그 세션은 내가 껐어"는 quiescence 증거가 아니다. 모호한 결과는 재실행하지 않고 reconcile한다.
 lease 전의 준비 기록은 source checkout의 native actor로, 구현은 active holder의 canonical cwd로 한다.
+lease를 잡은 뒤(execution prepare·claim 다음)에는 `cd <worktree> && issueops execution whoami --json`으로
+플래그를 다시 받는다. source checkout의 플래그는 `--cwd`가 달라 거부된다.
 
 **(d) 편집 대상 확인.** 편집 배치마다 셸 프롬프트를 믿지 말고 실측한다.
 

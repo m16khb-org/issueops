@@ -146,7 +146,8 @@ issueops schema-evidence record --id "$ISSUEOPS_ID" \
 `--target diff`는 CLI 명령이 아니라 그 스킬의 대상 구분이다(`issueops review` 명령은 없다). 리뷰는 이 세션이
 지금 delegation 도구로 띄우는 빈 컨텍스트 서브에이전트이며, 명령 파일에 적어 두고 끝내지 않는다. 띄울 수
 없으면 판정 없이 그 사실과 이유를 보고한다. 판정은 서브에이전트가 돌려준 결과로만
-`issueops implementation-review record`에 기록한다. 루프 절차는 그 스킬이 소유한다. 이 단계가 아는 것은 여섯이다.
+`issueops implementation-review record`에 기록한다. 사용자가 서브에이전트 없이 inline 리뷰를 명시적으로 지시한 경우만
+예외이고, 그 기록 방법은 `issueops-review`가 정한다. 루프 절차는 그 스킬이 소유한다. 이 단계가 아는 것은 여섯이다.
 
 - 리뷰어에게 diff와 **계획을 함께** 준다. 무엇을 하기로 했는지 모르는 리뷰어는 구현이
   계획에서 벗어났는지 판정할 수 없다.
