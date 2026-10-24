@@ -9,3 +9,4 @@ type Actor = issueopscontract.IssueOpsActor
 type VerifiedActor = issueopscontract.VerifiedActor
 
 const LeaseStatusActive = issueopscontract.LeaseStatusActive
+const LeaseStatusReleased = issueopscontract.LeaseStatusReleased

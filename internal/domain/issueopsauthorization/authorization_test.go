@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	issueopscontract "issueops/internal/contract/issueops"
+	issueopsauthorizationcontract "issueops/internal/contract/issueopsauthorization"
 )
 
 func TestAuthorizeRequiresExactLeaseHolderProcessAndWorkspace(t *testing.T) {
@@ -46,5 +47,21 @@ func TestAuthorizeRequiresExactLeaseHolderProcessAndWorkspace(t *testing.T) {
 	capability := &issueopscontract.VerifiedActor{Identity: *record.Execution.Lease.Holder, Method: issueopscontract.VerifiedByCapability}
 	if needsPath, err := ValidateHolder(record, actor, capability); err != nil || !needsPath {
 		t.Fatalf("capability-verified holder must not need observed ancestry: %v", err)
+	}
+}
+
+// A write without an active lease names the way back: the replacement chain
+// for a released generation, next for the other states.
+func TestValidateHolderReleasedLeaseNamesTheWayBack(t *testing.T) {
+	record := issueopsauthorizationcontract.Record{ID: "io-7", Execution: &issueopscontract.Execution{
+		Lease: issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusReleased},
+	}}
+	_, err := ValidateHolder(record, nil, nil)
+	if err == nil || !strings.Contains(err.Error(), "status released") || !strings.Contains(err.Error(), "issueops execution replace --id io-7 --expected-generation 1 --preview --json") {
+		t.Fatalf("released: err=%v", err)
+	}
+	record.Execution.Lease.Status = issueopscontract.LeaseStatusClaimable
+	if _, err := ValidateHolder(record, nil, nil); err == nil || !strings.Contains(err.Error(), "issueops next --id io-7 --json") {
+		t.Fatalf("claimable: err=%v", err)
 	}
 }

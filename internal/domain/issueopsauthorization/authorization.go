@@ -16,10 +16,14 @@ func ValidateHolder(record issueopsauthorizationcontract.Record, actor *issueops
 	}
 	lease := record.Execution.Lease
 	if lease.Status != issueopsauthorizationcontract.LeaseStatusActive || lease.Holder == nil {
-		return false, fmt.Errorf(
-			"IssueOps execution generation %d has no active write lease",
-			lease.Generation,
-		)
+		// QA agents had to find the way back to a lease in the skill docs. A
+		// released generation (completed or not) is reclaimed through the
+		// replacement chain; other states are routed by next.
+		remedy := "run `issueops next --id " + record.ID + " --json` and follow its next_command to take the lease before writing"
+		if lease.Status == issueopsauthorizationcontract.LeaseStatusReleased {
+			remedy = fmt.Sprintf("to write again, take a new generation: `issueops execution replace --id %s --expected-generation %d --preview --json`, then the --reseed and claim commands it returns", record.ID, lease.Generation)
+		}
+		return false, fmt.Errorf("IssueOps execution generation %d has no active write lease (status %s); %s", lease.Generation, lease.Status, remedy)
 	}
 	// The refusal names the first mismatch and the recovery step; holder
 	// identity is already public in `status`.
