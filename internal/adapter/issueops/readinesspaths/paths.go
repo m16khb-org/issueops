@@ -54,14 +54,17 @@ func PlanPathInsideWorktree(worktree, planPath string) bool {
 	if !filepath.IsAbs(planPath) {
 		return true
 	}
-	if !pathutil.PathWithin(planPath, worktree) {
-		return false
-	}
-	resolvedPlan, err := filepath.EvalSymlinks(planPath)
+	resolvedWorktree, err := filepath.EvalSymlinks(worktree)
 	if err != nil {
 		return false
 	}
-	resolvedWorktree, err := filepath.EvalSymlinks(worktree)
+	// The plan path is written under the worktree as recorded or under its
+	// resolved spelling (macOS reports /tmp as /private/tmp to whoami and
+	// pwd -P); any other alias that only resolves inside is still refused.
+	if !pathutil.PathWithin(planPath, worktree) && !pathutil.PathWithin(planPath, resolvedWorktree) {
+		return false
+	}
+	resolvedPlan, err := filepath.EvalSymlinks(planPath)
 	if err != nil {
 		return false
 	}

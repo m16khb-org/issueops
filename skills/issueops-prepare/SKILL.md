@@ -112,6 +112,7 @@ issueops branch prepare --id "$ISSUEOPS_ID" --provider "$PROVIDER" \
   --issue-url "$ISSUE_URL" --branch "$BRANCH" --base-branch "$BASE_BRANCH" \
   --base-sha "$BASE_SHA" --link-verified $RECORD_ACTOR_FLAGS --json
 
+# link-issue가 이미 plan으로 올렸으면 생략한다(같은 phase로의 전이는 아무것도 바꾸지 않는다).
 issueops phase --id "$ISSUEOPS_ID" --to plan $RECORD_ACTOR_FLAGS --json
 ```
 

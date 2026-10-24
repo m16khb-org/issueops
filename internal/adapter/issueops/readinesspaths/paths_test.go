@@ -63,6 +63,20 @@ func TestPlanPathInsideWorktree(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	real := filepath.Join(dir, "real")
+	alias, other := filepath.Join(dir, "alias"), filepath.Join(dir, "other")
+	if err := os.MkdirAll(filepath.Join(real, "sub"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, link := range []string{alias, other} {
+		if err := os.Symlink(real, link); err != nil {
+			t.Fatal(err)
+		}
+	}
+	resolvedReal, err := filepath.EvalSymlinks(real)
+	if err != nil {
+		t.Fatal(err)
+	}
 	tests := []struct {
 		name     string
 		worktree string
@@ -72,6 +86,11 @@ func TestPlanPathInsideWorktree(t *testing.T) {
 		{"relative plan inside", dir, "plan.md", true},
 		{"absolute subdir inside", dir, sub, true},
 		{"empty path rejected", dir, "", false},
+		// macOS: the worktree is recorded as /tmp/… but whoami and pwd -P give
+		// /private/tmp/…; the resolved spelling of the same worktree is inside.
+		{"resolved spelling of the worktree", alias, filepath.Join(resolvedReal, "sub"), true},
+		// Another alias that merely resolves inside is not the worktree.
+		{"other alias resolving inside", alias, filepath.Join(other, "sub"), false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
