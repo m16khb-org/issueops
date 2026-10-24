@@ -125,8 +125,8 @@ func syncExecutionBase(ctx context.Context, stateRoot string, req issueops.Execu
 			return result, nil
 		}
 		result.NextCommand = fmt.Sprintf(
-			"%s --apply --confirm --fingerprint %s $ACTOR_FLAGS --json",
-			executionSyncBaseCommandPrefix(record), fingerprint)
+			"%s --apply --confirm --fingerprint %s %s --json",
+			executionSyncBaseCommandPrefix(record), fingerprint, executionSyncBaseActorFlags(req.Actor, req.CWD))
 		return result, nil
 	}
 	// --confirm은 파괴적 머지 커밋과 push를 만드는 apply에만 요구한다
@@ -246,8 +246,9 @@ func applyExecutionSyncBase(ctx context.Context, stateRoot string, record issueo
 	}
 	if outcome.ConflictPaused {
 		prefix := executionSyncBaseCommandPrefix(record)
-		result.NextCommand = prefix + " --finalize $ACTOR_FLAGS --json"
-		result.AbortCommand = prefix + " --abort $ACTOR_FLAGS --json"
+		flags := executionSyncBaseActorFlags(req.Actor, req.CWD)
+		result.NextCommand = prefix + " --finalize " + flags + " --json"
+		result.AbortCommand = prefix + " --abort " + flags + " --json"
 	}
 	return *result, nil
 }
@@ -637,6 +638,24 @@ func executionSyncBaseCommandPrefix(record issueops.IssueOpsRecord) string {
 		command += " --completion-generation " + strconv.FormatUint(record.Execution.Completion.Generation, 10)
 	}
 	return command
+}
+
+// executionSyncBaseActorFlags renders the caller's own complete actor vector
+// for the follow-up command, so the agent runs it as printed (QA: agents filled
+// a literal $ACTOR_FLAGS by hand). A partial or absent vector keeps the
+// placeholder; the follow-up verifies the live session either way.
+func executionSyncBaseActorFlags(actor issueops.NativeActor, cwd string) string {
+	process := actor.SessionProcess
+	if strings.TrimSpace(actor.Host) == "" || strings.TrimSpace(actor.SessionID) == "" || process == nil ||
+		process.PID <= 0 || strings.TrimSpace(process.StartedAt) == "" || strings.TrimSpace(process.Executable) == "" || strings.TrimSpace(cwd) == "" {
+		return "$ACTOR_FLAGS"
+	}
+	flags := "--host " + quoteShellArg(actor.Host) + " --session-id " + quoteShellArg(actor.SessionID)
+	if agent := strings.TrimSpace(actor.AgentID); agent != "" {
+		flags += " --agent-id " + quoteShellArg(agent)
+	}
+	return flags + " --session-pid " + strconv.Itoa(process.PID) + " --session-started-at " + quoteShellArg(process.StartedAt) +
+		" --session-executable " + quoteShellArg(process.Executable) + " --cwd " + quoteShellArg(cwd)
 }
 
 func executionSyncBasePreviewCommand(record issueops.IssueOpsRecord) string {

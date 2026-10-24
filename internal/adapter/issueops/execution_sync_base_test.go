@@ -929,3 +929,21 @@ func TestExecutionSyncBaseRejectsUnknownMode(t *testing.T) {
 		t.Fatal("unsupported mode must be rejected; rebase is explicitly out of scope")
 	}
 }
+
+// The follow-up command carries the caller's complete actor vector so it runs
+// as printed; a partial vector keeps the placeholder rather than a command that
+// fails closed on partial ACTOR_FLAGS.
+func TestExecutionSyncBaseActorFlagsRendersOnlyACompleteVector(t *testing.T) {
+	actor := issueops.NativeActor{Host: "omp", SessionID: "s 1", SessionProcess: &issueops.NativeProcessReceipt{
+		PID: 42, StartedAt: "2026-10-24T00:00:00Z", Executable: "/bin/omp",
+	}}
+	got := executionSyncBaseActorFlags(actor, "/tmp/w t")
+	want := "--host 'omp' --session-id 's 1' --session-pid 42 --session-started-at '2026-10-24T00:00:00Z' --session-executable '/bin/omp' --cwd '/tmp/w t'"
+	if got != want {
+		t.Fatalf("flags = %q, want %q", got, want)
+	}
+	actor.SessionProcess = nil
+	if got := executionSyncBaseActorFlags(actor, "/tmp/w"); got != "$ACTOR_FLAGS" {
+		t.Fatalf("partial vector rendered %q", got)
+	}
+}

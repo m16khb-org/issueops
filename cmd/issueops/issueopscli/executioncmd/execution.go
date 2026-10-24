@@ -731,6 +731,18 @@ func runSyncBase(args []string, deps Deps) error {
 		ID: *id, Mode: mode, CompletionGeneration: *completionGeneration,
 		Actor: actor.actor(), CWD: *actor.cwd, Confirm: *confirm, Fingerprint: *fingerprint,
 	}, model.ExecutionSyncBaseDeps{})
+	if err == nil && strings.Contains(result.NextCommand+result.AbortCommand, "$ACTOR_FLAGS") {
+		// A flagless preview: fill the follow-up with this session's whoami
+		// claim vector, the same one an agent would paste by hand.
+		cwd := strings.TrimSpace(*actor.cwd)
+		if cwd == "" {
+			cwd, _ = os.Getwd()
+		}
+		if flags := ClaimActorFlags(os.Getenv, deps.Runtime.ObserveNativeProcessAncestry, cwd); flags != "" {
+			result.NextCommand = strings.ReplaceAll(result.NextCommand, "$ACTOR_FLAGS", flags)
+			result.AbortCommand = strings.ReplaceAll(result.AbortCommand, "$ACTOR_FLAGS", flags)
+		}
+	}
 	return output(result, *jsonOut, err, deps)
 }
 

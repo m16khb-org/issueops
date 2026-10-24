@@ -4678,6 +4678,7 @@
         "func executionStatusCommandForSyncBase",
         "func executionSyncBaseAbortEffects.AbortMerge",
         "func executionSyncBaseAbortEffects.ClearResolution",
+        "func executionSyncBaseActorFlags",
         "func executionSyncBaseActorLabel",
         "func executionSyncBaseApplyEffects.AbortMerge",
         "func executionSyncBaseApplyEffects.Head",
