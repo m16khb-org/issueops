@@ -734,3 +734,15 @@ func TestClassifyImplementNamesWhatTheExitNeeds(t *testing.T) {
 		t.Fatalf("stage=%s missing=%v next=%q", got.Stage.Key, got.Missing, got.NextCommand)
 	}
 }
+
+// The commit-push step is git, which issueops does not run; four agents read
+// the readiness re-check as the action. The stage names the git step.
+func TestClassifyCommitPushNamesTheGitStep(t *testing.T) {
+	in := withLocal(withSelfHolder(baseRecord(issueopsnextcontract.PhaseAISlopClean)), "upstream", "worktree_clean")
+	in.Record.Branch = "12-a"
+	got := Classify(in)
+	joined := strings.Join(got.Warnings, "\n")
+	if got.Stage.Key != "commit-push" || !strings.Contains(joined, "commit the worktree changes") || !strings.Contains(joined, "git push -u origin 12-a") {
+		t.Fatalf("stage=%s warnings=%q", got.Stage.Key, got.Warnings)
+	}
+}

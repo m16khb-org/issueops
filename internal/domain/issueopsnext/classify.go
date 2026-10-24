@@ -379,6 +379,14 @@ func classifyLocalGates(in Input, decision Decision) (Decision, bool) {
 		decision.Stage = stage(issueopsnextcontract.StageCommitPush, 8)
 		decision.Missing = append([]string{}, local...)
 		decision.NextCommand = "issueops pr-readiness --id " + id + " --strict --json"
+		// The step itself is git, which issueops does not run; say which one
+		// so the readiness re-check is not mistaken for the action.
+		if slices.Contains(local, "worktree_clean") {
+			decision.Warnings = append(decision.Warnings, "commit the worktree changes (atomic-commit-push skill), then re-check")
+		}
+		if slices.Contains(local, "upstream") {
+			decision.Warnings = append(decision.Warnings, "push the branch with an upstream: git push -u origin "+placeholder(in.Record.Branch, "<branch>")+", then re-check")
+		}
 		if len(local) == 0 {
 			// Committed and pushed: the pr transition is the next step (it runs
 			// the strict readiness itself), not another readiness read.
