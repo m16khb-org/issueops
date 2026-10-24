@@ -100,7 +100,10 @@ func BuildCleanupStatus(record model.IssueOpsRecord, req model.IssueOpsCleanupSt
 	}
 	status.Missing = append(status.Missing, RemoteArtifactMissing(record)...)
 	if !req.Merged {
+		// QA: an agent read this key next to merge-pr's already_merged:true
+		// as "the merge was not recorded"; status does not read the PR.
 		status.Missing = append(status.Missing, "remote_artifact_merged")
+		status.Warnings = append(status.Warnings, "remote_artifact_merged is the caller's --merged assertion (status does not read the PR): re-run with --merged once the PR/MR reads back merged, e.g. remote merge-pr answers already_merged")
 	}
 	if hasUnverifiedChildClose(record) {
 		status.Missing = append(status.Missing, "child_tasks_closed")
