@@ -1,6 +1,6 @@
 ---
 name: self-verify
-description: Run or interpret the issueops self-verification loop. Use when the user asks to verify the harness, run the 95-point gate, inspect self-verification candidates, compare or promote verification baselines, or confirm CLI/MCP/native integration health.
+description: 'Run or interpret the issueops self-verification loop: verify the harness, run the 95-point gate, inspect candidates, compare or promote baselines, confirm CLI/MCP/native integration health.'
 ---
 
 # Self-verification loop

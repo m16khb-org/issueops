@@ -1,6 +1,6 @@
 ---
 name: meeting-notes
-description: "Use when converting meeting transcripts, Clova Note exports, Slack huddle notes, speaker-labeled records, or AI summaries into Korean meeting minutes, Slack Canvas documents, action tables, Slack List registrations, or reusable meeting-minutes prompts."
+description: 'Use to turn meeting transcripts, Clova Note exports, Slack huddle notes, or AI summaries into Korean minutes, Slack Canvas documents, action tables, Slack List entries, or reusable minutes prompts.'
 ---
 
 # Meeting Notes

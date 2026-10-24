@@ -1,6 +1,6 @@
 ---
 name: issueops-complete
-description: Use when a cycle sits in the pr phase with an active lease after the draft PR/MR is published and verified, or for "완료 처리해줘", "사이클 끝내줘", "execution complete", "완료 기록해줘". Records completion and releases the lease.
+description: 'Use when a cycle in the pr phase has a published, verified draft PR/MR and an active lease, or for "완료 처리해줘", "사이클 끝내줘", "execution complete": records completion and releases the lease.'
 ---
 
 # IssueOps Complete

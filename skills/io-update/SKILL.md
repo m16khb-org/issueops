@@ -1,6 +1,6 @@
 ---
 name: io-update
-description: "Use when the user requests io update, issueops update, native skill refresh, or reinstalling the current IssueOps source checkout. Updates the binary and Codex, Claude, Omo, omp, and opencode integration without fetching source or changing Git history."
+description: 'Use for io update, issueops update, native skill refresh, or reinstalling the current IssueOps checkout: updates the binary and the Codex, Claude, Omo, omp, opencode integration without fetching source.'
 ---
 
 # IO Update

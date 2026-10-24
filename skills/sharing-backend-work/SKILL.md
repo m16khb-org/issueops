@@ -1,6 +1,6 @@
 ---
 name: sharing-backend-work
-description: Use when writing a Slack post that shares backend work (API contract or endpoint change, deploy, environment notice, investigation result, MR merge approval request, incident, report to the backend lead) with the dev team, backend peers, or the backend lead.
+description: 'Use to write a Slack post sharing backend work (API or endpoint change, deploy, environment notice, investigation result, MR approval request, incident, report to the backend lead) with the dev team or backend peers.'
 ---
 
 # Sharing Backend Work
