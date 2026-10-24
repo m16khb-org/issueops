@@ -86,3 +86,14 @@ func TestGitHubMergePullRequestRequiresHead(t *testing.T) {
 		t.Fatal("a merge without the expected head must be refused before calling gh")
 	}
 }
+
+// A standing change request blocks the merge like GitLab's requested_changes,
+// even when GitHub itself would allow it; approval or no review does not.
+func TestParseGhMergeStateBlocksOnChangesRequested(t *testing.T) {
+	for decision, blocked := range map[string]bool{"CHANGES_REQUESTED": true, "APPROVED": false, "REVIEW_REQUIRED": false, "": false} {
+		state, err := parseGhMergeState([]byte(`{"state":"OPEN","mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","reviewDecision":"` + decision + `","statusCheckRollup":[]}`))
+		if err != nil || (state.Blocked != "") != blocked {
+			t.Fatalf("decision %q: blocked=%q err=%v", decision, state.Blocked, err)
+		}
+	}
+}

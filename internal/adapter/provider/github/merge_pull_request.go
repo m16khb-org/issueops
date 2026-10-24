@@ -11,7 +11,7 @@ import (
 	"issueops/internal/port"
 )
 
-const ghMergeStateFields = "url,state,isDraft,headRefOid,baseRefName,mergeable,mergeStateStatus,statusCheckRollup,mergeCommit"
+const ghMergeStateFields = "url,state,isDraft,headRefOid,baseRefName,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup,mergeCommit"
 
 // ReadPullRequestMergeState reads draft, head, checks and mergeability in one
 // `gh pr view` so the merge decision never mixes two observations.
@@ -75,6 +75,7 @@ func parseGhMergeState(out []byte) (model.RemotePullRequestMergeState, error) {
 		BaseRefName      string    `json:"baseRefName"`
 		Mergeable        string    `json:"mergeable"`
 		MergeStateStatus string    `json:"mergeStateStatus"`
+		ReviewDecision   string    `json:"reviewDecision"`
 		Checks           []ghCheck `json:"statusCheckRollup"`
 		MergeCommit      *struct {
 			OID string `json:"oid"`
@@ -117,6 +118,13 @@ func parseGhMergeState(out []byte) (model.RemotePullRequestMergeState, error) {
 	// checks do not already explain the block.
 	if strings.EqualFold(payload.MergeStateStatus, "BLOCKED") && state.Checks != model.RemoteChecksFailing && state.Checks != model.RemoteChecksPending {
 		state.Blocked = "BLOCKED (required review or branch protection)"
+	}
+	// GitHub merges over a change request when no protection rule requires a
+	// review, unlike GitLab's requested_changes status (QA: an agent merged a
+	// PR whose reviewer still requested changes). The reviewer re-approves or
+	// dismisses the review first.
+	if strings.EqualFold(payload.ReviewDecision, "CHANGES_REQUESTED") {
+		state.Blocked = "CHANGES_REQUESTED (a reviewer requested changes; ask for a re-review or a dismissal)"
 	}
 	return state, nil
 }

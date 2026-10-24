@@ -104,7 +104,7 @@ issueops remote merge-pr --id "$ISSUEOPS_ID" --json
 | `checks_failing` | CI가 실패했다 | 아래 두 갈래 중 하나를 사용자와 정한다 |
 | `head_mismatch` | completion 뒤에 커밋이 더 올라갔다 | 검증되지 않은 head다. 사이클을 다시 연다 |
 | `merge_conflict` | base와 충돌한다 | base를 먼저 동기화한 뒤 사이클을 다시 연다 |
-| `merge_blocked` | 리뷰 승인이나 브랜치 보호가 막는다 | 사람이 provider에서 해결한 뒤 미리보기를 다시 실행한다. `--admin`으로 우회하지 않는다 |
+| `merge_blocked` | 리뷰 승인이나 브랜치 보호가 막는다. 변경 요청(`CHANGES_REQUESTED`·`requested_changes`)도 여기다 | 지적을 반영해야 하면 아래 **코드 결함** 갈래로 사이클을 다시 연다. 반영 뒤에도 리뷰어가 provider에서 재승인하거나 dismiss해야 풀린다. 사람이 해결한 뒤 미리보기를 다시 실행한다. `--admin`으로 우회하지 않는다 |
 | `pr_not_open` | PR/MR이 닫혔다 | 멈춘다. 폐기할지는 사용자가 정하고 [`issueops-abandon`](../issueops-abandon/SKILL.md)이 맡는다 |
 
 ### 체크 실패의 두 갈래
