@@ -182,11 +182,29 @@ func BuildPlan(recordedSHA, live, proposed string) (contract.Plan, error) {
 		MergedBody:       merged,
 		MergedBodySHA256: SHA256Body(merged),
 	}
-	plan.Drift = ClassifyDrift(recordedSHA, plan.RemoteBodySHA256, plan.MergedBodySHA256)
+	recorded := strings.TrimSpace(recordedSHA)
+	if recorded != "" && recorded != plan.RemoteBodySHA256 && recorded == SHA256Body(withoutHarnessSections(live, regions)) {
+		// The only difference is a section the harness itself added after the
+		// recorded write (plan review, completion): not an outside edit.
+		recorded = plan.RemoteBodySHA256
+	}
+	plan.Drift = ClassifyDrift(recorded, plan.RemoteBodySHA256, plan.MergedBodySHA256)
 	for _, region := range regions {
 		plan.PreservedSections = append(plan.PreservedSections, region.Name)
 	}
 	return plan, nil
+}
+
+// withoutHarnessSections removes the regions the harness writes after an
+// issue is published. The issue-create marker stays: it is part of the
+// published body the baseline digest covers.
+func withoutHarnessSections(live string, regions []contract.Region) string {
+	for _, region := range regions {
+		if region.Name != RegionIssueCreate {
+			live = strings.Replace(live, region.Block, "", 1)
+		}
+	}
+	return live
 }
 
 // ValidateWrite decides whether a confirmed sync may write.

@@ -14033,7 +14033,8 @@
         "func ValidateProposal",
         "func ValidateWrite",
         "func containsManagedMarker",
-        "func shortSHA"
+        "func shortSHA",
+        "func withoutHarnessSections"
       ]
     },
     {

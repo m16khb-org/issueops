@@ -131,6 +131,22 @@ func TestClassifyDrift(t *testing.T) {
 	}
 }
 
+// An agent's first sync after reflect-devils-advocate read remote_edited: the
+// only difference from the published body was the harness's own section.
+func TestBuildPlanDoesNotCountHarnessSectionsAsRemoteEdits(t *testing.T) {
+	published := "## 요약\n본문\n"
+	daBlock := devilsAdvocateStart + "\n## 계획 검토\n계획 검토: 1차 통과\n" + devilsAdvocateEnd
+	live := strings.TrimRight(published, "\n") + "\n\n" + daBlock + "\n"
+	plan, err := BuildPlan(SHA256Body(published), live, "## 요약\n새 본문\n")
+	if err != nil || plan.Drift != contract.DriftStale {
+		t.Fatalf("drift = %q err=%v", plan.Drift, err)
+	}
+	edited := strings.Replace(live, "본문", "사람이 고친 본문", 1)
+	if plan, _ := BuildPlan(SHA256Body(published), edited, "## 요약\n새 본문\n"); plan.Drift != contract.DriftRemoteEdited {
+		t.Fatalf("a human edit next to the harness section must stay remote_edited: %q", plan.Drift)
+	}
+}
+
 func TestBuildPlanReportsDigestsAndRegions(t *testing.T) {
 	live := "## 문제\n옛 본문\n\n" + completionBlock + "\n"
 	plan, err := BuildPlan(SHA256Body(live), live, "## 문제\n새 본문\n")

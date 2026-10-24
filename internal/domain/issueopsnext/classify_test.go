@@ -764,3 +764,17 @@ func TestClassifyPRCreateAndReconcileTemplatesNameWhatTheCommandsRequire(t *test
 		t.Fatalf("reconcile template %q", got)
 	}
 }
+
+// A delegated child sat in grill after `branch prepare --link-verified`, and
+// next kept handing back the same branch prepare: only the phase was behind.
+func TestClassifyGrillWithVerifiedBranchMovesToPlan(t *testing.T) {
+	got := Classify(withBranch(withIssue(baseRecord(issueopsnextcontract.PhaseGrill))))
+	if got.Stage.Key != "prepare" || got.NextCommand != "issueops phase --id io-test --to plan $RECORD_ACTOR_FLAGS --json" {
+		t.Fatalf("stage=%s next=%q", got.Stage.Key, got.NextCommand)
+	}
+	unverified := withBranch(withIssue(baseRecord(issueopsnextcontract.PhaseGrill)))
+	unverified.Record.BranchPrepare.LinkVerified = false
+	if got := Classify(unverified); !strings.Contains(got.NextCommand, "--link-verified") {
+		t.Fatalf("unverified link must still ask for the readback: %q", got.NextCommand)
+	}
+}

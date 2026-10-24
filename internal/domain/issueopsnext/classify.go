@@ -274,6 +274,12 @@ func classifyBranchPrepare(in Input, decision Decision) (Decision, bool) {
 		decision.NextCommand = "issueops phase --id " + record.ID + " --to grill $RECORD_ACTOR_FLAGS --json"
 		return decision, true
 	}
+	if bp := record.BranchPrepare; bp != nil && strings.TrimSpace(bp.BaseSHA) != "" && bp.LinkVerified {
+		// Only the phase is behind (a child cycle starts in grill, and link-issue
+		// does not advance it): re-preparing would loop on the same evidence.
+		decision.NextCommand = "issueops phase --id " + record.ID + " --to plan $RECORD_ACTOR_FLAGS --json"
+		return decision, true
+	}
 	key := branchEvidenceKey(record)
 	decision.Missing = []string{key}
 	decision.NextCommand = OwnerCommand(record.ID, key)
