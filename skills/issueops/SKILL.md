@@ -155,6 +155,8 @@ done을 기록한다. hook은 SessionStart의 project-doc context만 제공한�
 - behavior change는 focused failing test에서 시작해
   `RED→GREEN→SURFACE→CLEAN` 순서로 검증한다.
 - 작업은 canonical worktree에서만 한다. source checkout에 구현하지 않는다.
+- 단계 스킬이 이름으로 가리키는 `.issueops/` 문서(`AGENT_WORKFLOW.md`, `VCS.md` 등)가 저장소에 없으면
+  "파일 없음"으로 기록하고 그 문서 없이 진행한다. 없는 문서는 막힘이 아니다.
 - API/DTO/OpenAPI 변경은 `.issueops/OPEN_API_SPEC.md` gate를 적용한다.
 - live runtime, review reply, completion hygiene가 요청 범위라면 테스트 통과만으로
   완료를 선언하지 않는다.
