@@ -165,7 +165,9 @@
         "func Suggest",
         "func UnknownSubcommand",
         "func editDistance",
+        "func expandActorFlagsArgument",
         "func flagToken",
+        "func identityFlagWords",
         "func isBoolFlag",
         "func literalQuotes",
         "func swallowedFlag"

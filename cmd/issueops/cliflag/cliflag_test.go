@@ -98,15 +98,29 @@ func TestParseSuggestsTheClosestDefinedFlag(t *testing.T) {
 	}
 }
 
-// zsh passes an unquoted flags variable as one argument; the error says so
-// instead of suggesting the first flag name inside it.
-func TestParseExplainsAnUnsplitFlagsVariable(t *testing.T) {
-	fs := flag.NewFlagSet("demo", flag.ContinueOnError)
-	fs.String("host", "", "host")
-	fs.String("session-id", "", "session")
-	err := Parse(fs, []string{"--host claude --session-id s-1"})
-	if err == nil || !strings.Contains(err.Error(), "one argument holds several flags") || !strings.Contains(err.Error(), "eval") {
-		t.Fatalf("err=%v", err)
+// zsh passes an unquoted flags variable as one argument. Actor flags inside it
+// are split as bash would split them; anything else still gets the hint.
+func TestParseSplitsAnUnsplitActorFlagsVariable(t *testing.T) {
+	newFS := func() (*flag.FlagSet, *string, *string, *string, *string) {
+		fs := flag.NewFlagSet("demo", flag.ContinueOnError)
+		host, session, cwd := fs.String("host", "", "host"), fs.String("session-id", "", "session"), fs.String("cwd", "", "cwd")
+		evidence := fs.String("evidence", "", "evidence")
+		fs.Bool("json", false, "json")
+		return fs, host, session, cwd, evidence
+	}
+	fs, host, session, cwd, _ := newFS()
+	if err := Parse(fs, []string{"--host claude --session-id 's-1' --cwd '/tmp/a b'", "--json"}); err != nil || *host != "claude" || *session != "s-1" || *cwd != "/tmp/a b" {
+		t.Fatalf("split: err=%v host=%q session=%q cwd=%q", err, *host, *session, *cwd)
+	}
+	// A value that merely contains flags stays a value.
+	fs, host, _, _, evidence := newFS()
+	if err := Parse(fs, []string{"--evidence", "--host x --session-id y"}); err != nil || *evidence != "--host x --session-id y" || *host != "" {
+		t.Fatalf("value: err=%v evidence=%q host=%q", err, *evidence, *host)
+	}
+	// A non-identity flag inside the argument is not guessed at.
+	fs, _, _, _, _ = newFS()
+	if err := Parse(fs, []string{"--host claude --evidence e"}); err == nil || !strings.Contains(err.Error(), "one argument holds several flags") || !strings.Contains(err.Error(), "eval") {
+		t.Fatalf("mixed: err=%v", err)
 	}
 }
 

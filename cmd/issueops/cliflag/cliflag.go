@@ -11,8 +11,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"sort"
 	"strings"
+
+	"issueops/internal/domain/shelltoken"
 )
 
 // UnknownSubcommand is the one-line error for a group that got a subcommand it
@@ -29,6 +32,7 @@ func UnknownSubcommand(group, got string, want ...string) error {
 // look up a cycle named "--json" and drop --json.
 func Parse(fs *flag.FlagSet, args []string) error {
 	fs.SetOutput(io.Discard)
+	args = expandActorFlagsArgument(fs, args)
 	if err := swallowedFlag(fs, args); err != nil {
 		return err
 	}
@@ -53,6 +57,54 @@ func Parse(fs *flag.FlagSet, args []string) error {
 		return literalQuotes(fs)
 	}
 	return err
+}
+
+// expandActorFlagsArgument splits an argument that holds several actor flags,
+// the way bash would have split the unquoted variable. zsh passes
+// `$RECORD_ACTOR_FLAGS` as one argument; every QA agent's first record
+// command failed on that. Only an argument in flag position whose words are
+// all identity flags of this command, each with a value, is expanded, so a
+// flag value that merely contains "--host" is never touched.
+func expandActorFlagsArgument(fs *flag.FlagSet, args []string) []string {
+	out := make([]string, 0, len(args))
+	expectValue := false
+	for i, arg := range args {
+		if arg == "--" {
+			return append(out, args[i:]...)
+		}
+		if !expectValue && strings.HasPrefix(arg, "--") && strings.ContainsAny(arg, " \t") {
+			if words, ok := identityFlagWords(fs, arg); ok {
+				out = append(out, words...)
+				continue
+			}
+		}
+		out = append(out, arg)
+		if expectValue {
+			expectValue = false
+			continue
+		}
+		if name := strings.TrimLeft(arg, "-"); name != arg && !strings.Contains(name, "=") {
+			if f := fs.Lookup(name); f != nil {
+				boolFlag, isBool := f.Value.(interface{ IsBoolFlag() bool })
+				expectValue = !isBool || !boolFlag.IsBoolFlag()
+			}
+		}
+	}
+	return out
+}
+
+func identityFlagWords(fs *flag.FlagSet, arg string) ([]string, bool) {
+	words := shelltoken.SplitCommandTokens(arg)
+	if len(words) == 0 || len(words)%2 != 0 {
+		return nil, false
+	}
+	for i := 0; i < len(words); i += 2 {
+		name, ok := strings.CutPrefix(words[i], "--")
+		if !ok || !slices.Contains(identityFlags, name) || fs.Lookup(name) == nil || strings.HasPrefix(words[i+1], "-") {
+			return nil, false
+		}
+	}
+	return words, true
 }
 
 // quotedFlagsRemedy says how to pass the shell-quoted actor flag text whoami
