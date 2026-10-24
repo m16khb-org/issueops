@@ -168,29 +168,36 @@ func TestBuildPlanReportsDigestsAndRegions(t *testing.T) {
 }
 
 func TestValidateWriteIsFailClosed(t *testing.T) {
-	stale := contract.Plan{Drift: contract.DriftStale, RemoteBodySHA256: "live"}
-	edited := contract.Plan{Drift: contract.DriftRemoteEdited, RemoteBodySHA256: "live"}
-	inSync := contract.Plan{Drift: contract.DriftInSync, RemoteBodySHA256: "live"}
+	live, other := SHA256Body("live"), SHA256Body("other")
+	stale := contract.Plan{Drift: contract.DriftStale, RemoteBodySHA256: live}
+	edited := contract.Plan{Drift: contract.DriftRemoteEdited, RemoteBodySHA256: live}
+	inSync := contract.Plan{Drift: contract.DriftInSync, RemoteBodySHA256: live}
 
 	if err := ValidateWrite(stale, "", false); err == nil ||
 		!strings.Contains(err.Error(), "expected-body-sha256") {
 		t.Fatalf("a missing expectation must be refused, got %v", err)
 	}
-	if err := ValidateWrite(stale, "other", false); err == nil ||
+	if err := ValidateWrite(stale, other, false); err == nil ||
 		!strings.Contains(err.Error(), "changed") {
 		t.Fatalf("a stale expectation must be refused, got %v", err)
 	}
-	if err := ValidateWrite(edited, "live", false); err == nil ||
+	// A digest with one extra character is a typo, not a moved body: the old
+	// message showed two identical short digests.
+	if err := ValidateWrite(stale, live+"2", false); err == nil ||
+		!strings.Contains(err.Error(), "must be 64 hex characters (got 65)") {
+		t.Fatalf("a malformed expectation must be named, got %v", err)
+	}
+	if err := ValidateWrite(edited, live, false); err == nil ||
 		!strings.Contains(err.Error(), "accept-remote-edits") {
 		t.Fatalf("an unacknowledged remote edit must be refused, got %v", err)
 	}
-	if err := ValidateWrite(edited, "live", true); err != nil {
+	if err := ValidateWrite(edited, live, true); err != nil {
 		t.Fatalf("an acknowledged remote edit must pass, got %v", err)
 	}
-	if err := ValidateWrite(stale, "live", false); err != nil {
+	if err := ValidateWrite(stale, strings.ToUpper(live), false); err != nil {
 		t.Fatalf("a matching expectation must pass, got %v", err)
 	}
-	if err := ValidateWrite(inSync, "live", false); !errors.Is(err, ErrAlreadyInSync) {
+	if err := ValidateWrite(inSync, live, false); !errors.Is(err, ErrAlreadyInSync) {
 		t.Fatalf("an in-sync plan must report ErrAlreadyInSync, got %v", err)
 	}
 }

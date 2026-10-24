@@ -218,6 +218,11 @@ func ValidateWrite(plan contract.Plan, expectedSHA string, acceptRemoteEdits boo
 	if expectedSHA == "" {
 		return fmt.Errorf("--expected-body-sha256 is required for a confirmed sync; run the preview and pass the expected_body_sha256 it reports")
 	}
+	// A mistyped digest (one extra character in QA) used to read as a moved
+	// body with two identical short digests; name the malformed input instead.
+	if len(expectedSHA) != 64 || strings.Trim(expectedSHA, "0123456789abcdef") != "" {
+		return fmt.Errorf("--expected-body-sha256 must be 64 hex characters (got %d); copy expected_body_sha256 from the preview", len(expectedSHA))
+	}
 	if expectedSHA != plan.RemoteBodySHA256 {
 		return fmt.Errorf("remote body changed since it was read (expected %s, live %s); re-run the preview and rebuild the body on the current content",
 			shortSHA(expectedSHA), shortSHA(plan.RemoteBodySHA256))
