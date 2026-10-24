@@ -123,7 +123,9 @@ done을 기록한다. hook은 SessionStart의 project-doc context만 제공한�
 
 ## 단계 표
 
-`stage.key`를 스킬과 label로 바꾸는 유일한 표다. CLI는 이 표를 모른다.
+`stage.key`를 스킬과 label로 바꾸는 유일한 표다. CLI는 이 표를 모른다. record의 `phase`는 기록된
+durable 단계이고 `stage.key`는 `next`가 고른 다음 할 일이라 둘이 다를 수 있다(예: phase `ai-slop-clean`에서
+stage `verify`·`commit-push`). 기록 명령의 응답에 phase가 그대로여도 실패가 아니다. 진행은 `next`로 읽는다.
 
 | stage.key | 스킬 | label |
 |---|---|---|
