@@ -315,7 +315,7 @@ func TestAbandonExecutorRemoteEffectsRunBeforeLocalAndAreReported(t *testing.T) 
 		t.Fatal(err)
 	}
 	wantEffects := []string{"close_pr:already_closed", "close_issue", "remote_branch_delete"}
-	if !reflect.DeepEqual(result.RemoteEffects, wantEffects) || !result.PRClosed || !result.IssueClosed || !result.RemoteBranchDeleted || result.RemoteArtifactState != "closed" || result.IssueState != "closed" {
+	if !reflect.DeepEqual(result.RemoteEffects, wantEffects) || !result.PRClosed || !result.IssueClosed || !result.RemoteBranchDeleted || result.RemoteBranchDeletion != "deleted" || result.RemoteArtifactState != "closed" || result.IssueState != "closed" {
 		t.Fatalf("result=%+v", result)
 	}
 	var order []string

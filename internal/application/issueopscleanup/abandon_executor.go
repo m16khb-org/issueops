@@ -368,6 +368,9 @@ func (s AbandonExecutor) deleteRemoteBranch(ctx context.Context, snapshot model.
 			return model.CleanupFailureStepRemoteBranchDelete, fmt.Errorf("%s", strings.TrimSpace(out))
 		}
 		result.RemoteBranchDeleted = true
+		// The preview's "planned" would contradict remote_branch_deleted:true
+		// in the apply result (QA read the two fields as inconsistent).
+		result.RemoteBranchDeletion = "deleted"
 	}
 	result.RemoteEffects = append(result.RemoteEffects, effect)
 	return "", nil

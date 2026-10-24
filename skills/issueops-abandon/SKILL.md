@@ -71,10 +71,11 @@ self active도 막는다. 이미 self active면 `issueops execution release`로 
 ## 프로젝트 문서 확인
 
 폐기는 record·워크트리·로컬 브랜치를 지우고, 고른 원격 효과는 되돌릴 수 없다. preview
-전에 `.issueops/CAUTIONS.md` 색인을 읽고, `project_docs_route`(MCP를 쓸 수 없으면
-`issueops project route-docs --repo "$PWD" --task "<작업 요약>" --json`)에 "미머지 사이클 폐기와
-원격 브랜치 정리" 같은 작업 요약을 넣어 폐기·잔여물·원격 브랜치에 관한 `cautions/` 기록을
-고른다. 원격 정리 선택지를 물을 때 해당 주의사항을 문서 경로와 함께 적는다.
+전에 `project_docs_route`(MCP를 쓸 수 없으면 `issueops project route-docs --repo "$PWD"
+--task "<작업 요약>" --json`)에 "미머지 사이클 폐기와 원격 브랜치 정리" 같은 작업 요약을 넣는다.
+돌아온 `CAUTIONS.md` 색인과 폐기·잔여물·원격 브랜치에 관한 `cautions/` 기록을 읽는다. 없다고
+보고된 문서는 열지 않고 "파일 없음"으로 적는다. 원격 정리 선택지를 물을 때 해당 주의사항을
+문서 경로와 함께 적는다.
 
 ## 폐기
 
