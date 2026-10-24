@@ -18,9 +18,11 @@ type CycleRecords interface {
 	Save(context.Context, model.IssueOpsRecord) (model.IssueOpsRecord, error)
 }
 
-// RetiredCycles names the IDs of cycles that cleanup already deleted.
+// RetiredCycles names the cycles a plain start must not resume: the IDs
+// cleanup already deleted, and live cycles that are already done.
 type RetiredCycles interface {
 	RetiredIDs() (map[string]bool, error)
+	Done(id string) bool
 }
 
 type StartIdentity interface {
@@ -86,18 +88,26 @@ func (s Starter) Start(ctx context.Context, req model.IssueOpsStartRequest) (mod
 }
 
 // resumableID is the first stable ID for repo and branch that no cleaned-up
-// cycle used. Cleanup keeps the outcome row under the deleted record's ID, so
-// a new cycle reusing it would share the old cycle's audit lines and
-// overwrite its outcome (QA: #42 got #41's ID right after cleanup). The
-// successors are derived, so a repeated start still resumes the same cycle.
+// cycle used and no completed cycle holds. Cleanup keeps the outcome row under
+// the deleted record's ID, so a new cycle reusing it would share the old
+// cycle's audit lines and overwrite its outcome (QA: #42 got #41's ID right
+// after cleanup). A done cycle awaiting merge takes no new work either; plain
+// start used to return it, so a second task in the same checkout was attached
+// to the finished cycle. The successors are derived, so a repeated start still
+// resumes the same unfinished cycle.
 func (s Starter) resumableID(repo, branch string) (string, error) {
 	retired, err := s.Retired.RetiredIDs()
 	if err != nil {
 		return "", err
 	}
 	for n := 0; ; n++ {
-		if id := s.Identity.SuccessorID(repo, branch, n); !retired[id] {
-			return id, nil
+		id := s.Identity.SuccessorID(repo, branch, n)
+		if retired[id] {
+			continue
 		}
+		if s.Retired.Done(id) {
+			continue
+		}
+		return id, nil
 	}
 }

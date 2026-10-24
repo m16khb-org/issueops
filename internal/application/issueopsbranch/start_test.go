@@ -131,6 +131,7 @@ type startFake struct {
 	NormalizeRepo func(string) string
 	Independent   func(string) (string, error)
 	Retired       map[string]bool
+	DoneIDs       map[string]bool
 	LockError     error
 	Events        []string
 	Locked        bool
@@ -178,6 +179,10 @@ func (f *startFake) RetiredIDs() (map[string]bool, error) {
 	f.Events = append(f.Events, "retired")
 	return f.Retired, nil
 }
+func (f *startFake) Done(id string) bool {
+	f.Events = append(f.Events, "done?:"+id)
+	return f.DoneIDs[id]
+}
 func (f *startFake) IndependentID(repo string) (string, error) {
 	f.Events = append(f.Events, "independent:"+repo)
 	if f.Independent != nil {
@@ -197,7 +202,7 @@ func TestStartSerializesCanonicalRecordAndFreezesIndependentID(t *testing.T) {
 				t.Fatal(err)
 			}
 			id := "io-stable"
-			want := []string{"normalize: /worktree ", "retired", "stable:/source::0", "lock:io-stable", "normalize:/worktree", "read:io-stable", "write:io-stable", "unlock"}
+			want := []string{"normalize: /worktree ", "retired", "stable:/source::0", "done?:io-stable", "lock:io-stable", "normalize:/worktree", "read:io-stable", "write:io-stable", "unlock"}
 			if fresh {
 				id = "io-fresh"
 				want = []string{"normalize: /worktree ", "independent:/source", "lock:io-fresh", "normalize:/worktree", "read:io-fresh", "write:io-fresh", "unlock"}
@@ -291,5 +296,22 @@ func TestStartSkipsIDsOfCleanedUpCycles(t *testing.T) {
 	again, err := startWithFake(f, model.IssueOpsStartRequest{Repo: "/source"})
 	if err != nil || again.ID != first.ID || len(created) != 1 {
 		t.Fatalf("repeat start must resume %s: got %+v err=%v created=%d", first.ID, again, err, len(created))
+	}
+}
+
+// A done cycle awaiting merge takes no new work: plain start moves to the next
+// successor instead of returning the finished cycle (QA: a second task in the
+// same checkout was attached to the done cycle).
+func TestStartSkipsADoneCycle(t *testing.T) {
+	var saved model.IssueOpsRecord
+	store := &startFake{
+		Read:    func(string, string) (model.IssueOpsRecord, error) { return model.IssueOpsRecord{}, fs.ErrNotExist },
+		Write:   func(_ string, r model.IssueOpsRecord) (model.IssueOpsRecord, error) { saved = r; return r, nil },
+		NewID:   func(string, string) string { return "io-stable" },
+		DoneIDs: map[string]bool{"io-stable": true},
+	}
+	got, err := startWithFake(store, model.IssueOpsStartRequest{Repo: "/repo"})
+	if err != nil || got.ID != "io-stable-1" || saved.ID != "io-stable-1" || got.Phase != model.IssueOpsPhaseProblem {
+		t.Fatalf("got=%+v err=%v", got, err)
 	}
 }

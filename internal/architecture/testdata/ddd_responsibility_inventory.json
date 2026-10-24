@@ -4478,6 +4478,7 @@
       "owner": "adapter",
       "task": "T08",
       "symbols": [
+        "func CycleRecordStore.Done",
         "func CycleRecordStore.Load",
         "func CycleRecordStore.RetiredIDs",
         "func CycleRecordStore.Save",

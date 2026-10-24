@@ -53,6 +53,13 @@ func (s CycleRecordStore) RetiredIDs() (map[string]bool, error) {
 	return retired, nil
 }
 
+// Done reports a live record already in the done phase; a missing or
+// unreadable record is not done (start then decides under the lock).
+func (s CycleRecordStore) Done(id string) bool {
+	record, err := ReadIssueOps(s.StateRoot, id)
+	return err == nil && record.Phase == model.IssueOpsPhaseDone
+}
+
 type CycleStartIdentity struct {
 	RunGit func(string, ...string) (int, string, string)
 }
