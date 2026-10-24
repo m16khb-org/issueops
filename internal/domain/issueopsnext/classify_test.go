@@ -458,7 +458,7 @@ func TestClassifyBranchPrepareCommandDependsOnPhase(t *testing.T) {
 	if grill.Stage.Key != "prepare" || strings.Contains(grill.NextCommand, "--to grill") {
 		t.Fatalf("grill with issue must not re-advance to grill, got %s %q", grill.Stage.Key, grill.NextCommand)
 	}
-	if grill.NextCommand != OwnerCommand("io-test", "branch_prepare") {
+	if grill.NextCommand != OwnerCommand("io-test", "branch_prepare")+" --json" {
 		t.Fatalf("grill next command %q want owner command for branch_prepare", grill.NextCommand)
 	}
 	if len(grill.Missing) != 1 || grill.Missing[0] != "branch_prepare" {
@@ -477,7 +477,7 @@ func TestClassifyUnverifiedBranchLinkStaysInPrepare(t *testing.T) {
 	}
 	plan := classifyTemplate(unverified(withIssue(baseRecord(issueopsnextcontract.PhasePlan))))
 	if plan.Stage.Key != "prepare" || len(plan.Missing) != 1 || plan.Missing[0] != "branch_link_verified" ||
-		plan.NextCommand != OwnerCommand("io-test", "branch_link_verified") || !strings.Contains(plan.NextCommand, " --link-verified ") {
+		plan.NextCommand != OwnerCommand("io-test", "branch_link_verified")+" --json" || !strings.Contains(plan.NextCommand, " --link-verified ") {
 		t.Fatalf("plan with unverified link: %s %v %q", plan.Stage.Key, plan.Missing, plan.NextCommand)
 	}
 	holder := classifyTemplate(withSelfHolder(unverified(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))
@@ -494,12 +494,12 @@ func TestClassifyUnverifiedBranchLinkStaysInPrepare(t *testing.T) {
 // plan_path step names that file instead of a <PATH> the agent must hunt for.
 func TestClassifyPlanPathNamesTheSealedPlan(t *testing.T) {
 	in := withSelfHolder(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan))))
-	if got := classifyTemplate(in).NextCommand; got != OwnerCommand("io-test", "plan_path") {
+	if got := classifyTemplate(in).NextCommand; got != OwnerCommand("io-test", "plan_path")+" --json" {
 		t.Fatalf("without artifact_dir: %q", got)
 	}
 	in.Record.Execution.Workspace.Root = "/repo.worktrees/9-x"
 	in.Record.Execution.Workspace.ArtifactDir = ".issueops/issues/9/artifact"
-	if got := classifyTemplate(in).NextCommand; got != "issueops link-plan --id io-test --plan-path '/repo.worktrees/9-x/.issueops/issues/9/artifact/plan.md' $RECORD_ACTOR_FLAGS" {
+	if got := classifyTemplate(in).NextCommand; got != "issueops link-plan --id io-test --plan-path '/repo.worktrees/9-x/.issueops/issues/9/artifact/plan.md' $RECORD_ACTOR_FLAGS --json" {
 		t.Fatalf("with artifact_dir: %q", got)
 	}
 }
@@ -509,11 +509,11 @@ func TestClassifyPlanPathNamesTheSealedPlan(t *testing.T) {
 // token. (It used to answer `execution status`, an extra round trip.)
 func TestClassifyClaimStageStartsTheChain(t *testing.T) {
 	released := classifyTemplate(withReleasedLease(withBranch(withIssue(baseRecord(issueopsnextcontract.PhaseImplement)))))
-	if released.Stage.Key != "claim" || released.NextCommand != "issueops execution replace --id 'io-test' --expected-generation 1 --preview" {
+	if released.Stage.Key != "claim" || released.NextCommand != "issueops execution replace --id 'io-test' --expected-generation 1 --preview --json" {
 		t.Fatalf("released: %s %q", released.Stage.Key, released.NextCommand)
 	}
 	claimable := classifyTemplate(withClaimableLease(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))
-	if claimable.Stage.Key != "claim" || claimable.NextCommand != "issueops execution claim --id 'io-test' --generation 1 --claim-current-token" {
+	if claimable.Stage.Key != "claim" || claimable.NextCommand != "issueops execution claim --id 'io-test' --generation 1 --claim-current-token --json" {
 		t.Fatalf("claimable: %s %q", claimable.Stage.Key, claimable.NextCommand)
 	}
 }
@@ -526,7 +526,7 @@ func TestClassifyRevokingLeaseOffersTakeover(t *testing.T) {
 	if got.Stage.Key != "takeover" {
 		t.Fatalf("revoking lease stage %s want takeover", got.Stage.Key)
 	}
-	const replace = "issueops execution replace --id io-test --expected-generation 4 --preview"
+	const replace = "issueops execution replace --id io-test --expected-generation 4 --preview --json"
 	if got.NextCommand != replace || got.Exits.TakeoverCommand != replace {
 		t.Fatalf("next %q takeover exit %q want %q", got.NextCommand, got.Exits.TakeoverCommand, replace)
 	}
@@ -547,11 +547,11 @@ func TestClassifyRevokingLeaseOffersTakeover(t *testing.T) {
 func TestClassifyTakeoverPrefersWriterlessRecovery(t *testing.T) {
 	in := withHolder(baseRecord(issueopsnextcontract.PhaseImplement), "codex", "s-2", false)
 	in.WriterlessRecovery = "  issueops execution recover --id io-test  "
-	if got := classifyTemplate(in); got.NextCommand != "issueops execution recover --id io-test" {
+	if got := classifyTemplate(in); got.NextCommand != "issueops execution recover --id io-test --json" {
 		t.Fatalf("writerless recovery must win, got %q", got.NextCommand)
 	}
 	in.WriterlessRecovery = "   "
-	if got := classifyTemplate(in); got.NextCommand != "issueops execution replace --id io-test --expected-generation 1 --preview" {
+	if got := classifyTemplate(in); got.NextCommand != "issueops execution replace --id io-test --expected-generation 1 --preview --json" {
 		t.Fatalf("blank recovery must fall back to replace, got %q", got.NextCommand)
 	}
 }
@@ -579,7 +579,7 @@ func TestClassifyIssueStageFallsBackToIntentContractWithoutMissingGates(t *testi
 	if got.Stage.Key != "issue" {
 		t.Fatalf("stage %s want issue", got.Stage.Key)
 	}
-	if got.NextCommand != OwnerCommand("io-test", "intent_contract") {
+	if got.NextCommand != OwnerCommand("io-test", "intent_contract")+" --json" {
 		t.Fatalf("next command %q want owner command for intent_contract", got.NextCommand)
 	}
 }
@@ -715,7 +715,7 @@ func TestClassifyPRRefreshSequenceAfterAMovedHead(t *testing.T) {
 		stage, cmd string
 	}{
 		{pr("new", "ai_slop_clean_stale", "implementation_review_stale"), "clean", "issueops phase --id io-test --to ai-slop-clean $RECORD_ACTOR_FLAGS --json"},
-		{pr("new", "implementation_review_stale"), "verify", OwnerCommand("io-test", "implementation_review_stale")},
+		{pr("new", "implementation_review_stale"), "verify", OwnerCommand("io-test", "implementation_review_stale") + " --json"},
 		{pr("new"), "commit-push", "issueops phase --id io-test --to pr $RECORD_ACTOR_FLAGS --json"},
 		{pr("old"), "pr.create", ""},
 	}
@@ -877,7 +877,7 @@ func TestFinishRendersClaimFlagsForTheHolderAtTheWorktree(t *testing.T) {
 	got := Classify(in)
 	root := in.Record.Execution.Workspace.Root
 	if got.Stage.Key != "pr.create" || askedCWD != root || strings.Contains(got.NextCommand, "ACTOR_FLAGS") ||
-		!strings.HasSuffix(got.NextCommand, "--session-pid 7 --cwd "+root) || got.NextCommandKind != issueopsnextcontract.NextCommandKindTemplate {
+		!strings.HasSuffix(got.NextCommand, "--session-pid 7 --cwd "+root+" --json") || got.NextCommandKind != issueopsnextcontract.NextCommandKindTemplate {
 		t.Fatalf("stage=%q kind=%q cwd=%q command=%q", got.Stage.Key, got.NextCommandKind, askedCWD, got.NextCommand)
 	}
 }
@@ -891,7 +891,7 @@ func TestClassifyResumedSessionWithDeadReceiptTakesOver(t *testing.T) {
 	in.HolderLive = &dead
 	got := classifyTemplate(in)
 	if got.Stage.Key != "takeover" || got.Lease.HolderIsSelf ||
-		got.NextCommand != "issueops execution replace --id io-test --expected-generation 1 --preview" {
+		got.NextCommand != "issueops execution replace --id io-test --expected-generation 1 --preview --json" {
 		t.Fatalf("stage=%q self=%v command=%q", got.Stage.Key, got.Lease.HolderIsSelf, got.NextCommand)
 	}
 	alive := true

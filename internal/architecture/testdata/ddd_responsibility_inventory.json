@@ -14374,6 +14374,7 @@
         "func takeoverCommand",
         "func unknownDecision",
         "func warnings",
+        "func withJSON",
         "type Decision",
         "type Input",
         "type Readiness"

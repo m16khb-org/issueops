@@ -505,12 +505,27 @@ func finish(in Input, decision Decision) Decision {
 			}
 		}
 	}
+	// Every issueops command answers JSON with --json; several owner commands
+	// were rendered without it, and an agent running link-plan as printed got
+	// a one-line text answer it could not check (two QA runs).
+	decision.NextCommand = withJSON(decision.NextCommand)
+	decision.Exits.PauseCommand = withJSON(decision.Exits.PauseCommand)
+	decision.Exits.AbandonCommand = withJSON(decision.Exits.AbandonCommand)
+	decision.Exits.TakeoverCommand = withJSON(decision.Exits.TakeoverCommand)
 	if strings.Contains(decision.NextCommand, "<") || strings.Contains(decision.NextCommand, "ACTOR_FLAGS") {
 		decision.NextCommandKind = issueopsnextcontract.NextCommandKindTemplate
 		return decision
 	}
 	decision.NextCommandKind = issueopsnextcontract.NextCommandKindExact
 	return decision
+}
+
+// withJSON appends --json to an issueops command that lacks it.
+func withJSON(command string) string {
+	if strings.HasPrefix(command, "issueops ") && !strings.Contains(command, " --json") {
+		return command + " --json"
+	}
+	return command
 }
 
 // actorCWD is the cwd whoami would be run from to get the caller's vectors
