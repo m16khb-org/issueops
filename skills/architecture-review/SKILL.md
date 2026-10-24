@@ -1,6 +1,6 @@
 ---
 name: architecture-review
-description: "Use when an architecture document, plan, or scope decision needs independent adversarial review before implementation, especially for excessive complexity or optimistic schedules. Run as an isolated sub-agent; inline only on explicit user request."
+description: "Use when an architecture document, plan, or scope decision needs independent adversarial review before implementation, especially for excessive complexity or optimistic schedules. Run as an isolated sub-agent."
 ---
 
 # Architecture Review
