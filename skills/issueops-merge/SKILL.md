@@ -175,6 +175,8 @@ draft를 해제했는지, `merge_commit_oid`는 base에 생긴 커밋을 알려 
 - `merge was not verified`로 끝나면 머지가 대기열에 들어갔거나 provider가 아직
   반영하지 않은 것이다. 같은 명령을 반복하지 말고 잠시 뒤 미리보기로 상태를 읽는다.
   `already_merged: true`가 나오면 성공으로 이어 간다.
+- confirm이 출력 없이 끝나면(호출 프로세스 종료, exit 137 등) 위와 같이 다룬다. 다시 confirm하지
+  않고 미리보기를 읽는다. `already_merged: true`와 `merge_commit_oid`가 머지 증거다.
 
 ## 6 원격 브랜치 삭제
 
