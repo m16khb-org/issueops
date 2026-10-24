@@ -88,6 +88,9 @@ issueops gates check --file "$LEDGER" --cwd "$WORKTREE" --workspace-root "$WORKT
 - 오래 걸리는 CHECK는 `--timeout-seconds N`으로 한도를 올린다.
 - 종료 코드 1은 미충족 게이트가 남았다는 뜻이다. 실패가 아니라 아직 아니라는 뜻이므로
   원장을 고치지 말고 구현을 고친다.
+- 예외: 오류가 EXPECT 표기 문제라고 알리면(줄 중간 리터럴, 정규식 표기 누락) 뜻은 그대로 두고
+  원장의 그 EXPECT 줄만 고친다. 예: `fail 0` → `/fail 0/`. IssueOps 사이클이면 고친 이유를 `decision add`로 남긴다.
+  기대값을 바꾸는 수정은 아래 "포기"의 규칙을 따른다.
 
 ## 상태와 보고
 
