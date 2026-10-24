@@ -74,7 +74,14 @@ func (service *Service) Next(ctx context.Context, stateRoot, cwd, id string) (is
 	}
 	if selected == nil {
 		decision := issueopsnextdomain.Classify(issueopsnextdomain.Input{SourceRoot: sourceRoot})
-		return applyDecision(result, decision), nil
+		result = applyDecision(result, decision)
+		// Done cycles are not picked here (new work may start beside them),
+		// but they still await merge and cleanup: an agent with two done,
+		// unmerged cycles read "none" as finished.
+		if done := doneCycleIDs(listing.Entries); len(done) > 0 {
+			result.Warnings = append(result.Warnings, fmt.Sprintf("%d cycle(s) in done still await merge and cleanup: %s (issueops next --id ID --json)", len(done), strings.Join(done, ", ")))
+		}
+		return result, nil
 	}
 	result.Selected = entryOf(*selected)
 	if selected.Invalid {
@@ -400,4 +407,16 @@ func commandKind(command string) string {
 		return issueopsnextcontract.NextCommandKindTemplate
 	}
 	return issueopsnextcontract.NextCommandKindExact
+}
+
+// doneCycleIDs lists the readable cycles in done: completed, but their PR
+// merge and cleanup are still ahead.
+func doneCycleIDs(entries []issueopsinventorycontract.ListEntry) []string {
+	var ids []string
+	for _, entry := range entries {
+		if !entry.Invalid && entry.Phase == issueopscontract.IssueOpsPhaseDone {
+			ids = append(ids, entry.ID)
+		}
+	}
+	return ids
 }

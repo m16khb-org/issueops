@@ -105,6 +105,19 @@ func TestNextIgnoresDoneCyclesWhenAutoSelecting(t *testing.T) {
 	}
 }
 
+// Two done, unmerged cycles made next answer "none" and offer start; an agent
+// read that as finished. next still offers start but names what is waiting.
+func TestNextNamesDoneCyclesThatStillAwaitMerge(t *testing.T) {
+	entries := []issueopsinventorycontract.ListEntry{
+		{ID: "io-a", Phase: issueopscontract.IssueOpsPhaseDone, Branch: "41-a"},
+		{ID: "io-b", Phase: issueopscontract.IssueOpsPhaseDone, Branch: "42-b"},
+	}
+	result, err := NewService(testPorts(entries, nil)).Next(context.Background(), "/state", "/repo", "")
+	if err != nil || result.Stage.Key != "none" || len(result.Warnings) != 1 || !strings.Contains(result.Warnings[0], "2 cycle(s) in done still await merge and cleanup: io-a, io-b") {
+		t.Fatalf("result = %+v err=%v", result, err)
+	}
+}
+
 // local readiness는 git을 읽으므로 5~8단계 phase에서만 호출해야 한다.
 func TestNextReadsLocalReadinessOnlyAfterImplement(t *testing.T) {
 	calls := 0

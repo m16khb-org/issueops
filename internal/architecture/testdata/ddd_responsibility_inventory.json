@@ -9160,6 +9160,7 @@
         "func cleanPath",
         "func commandKind",
         "func cwdRole",
+        "func doneCycleIDs",
         "func entryOf",
         "func isRepository",
         "func markInvalidSelection",
