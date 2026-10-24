@@ -33,11 +33,17 @@ func (service StaticService) Check(options StaticOptions) (contract.StaticResult
 	if len(files) == 0 && options.All {
 		files = service.Effects.TrackedFiles(options.Repo)
 	}
+	summary := "No API documentation candidate files."
 	if len(files) == 0 && !options.All {
 		files = service.Effects.StagedFiles(options.Repo)
+		// QA: run before the commit, the staged default saw nothing and the
+		// skip read as a pass while the changed controller went unchecked.
+		if len(options.Files) == 0 {
+			summary = "No staged API documentation candidate files: the default scope is the staged diff; before a commit, pass the changed files as arguments (issueops api-doc check --json FILE...)."
+		}
 	}
 	if len(files) == 0 {
-		return contract.StaticResult{OK: true, Summary: "No API documentation candidate files.", Files: []string{}, Violations: []contract.Violation{}, Skipped: true, Reason: "no_api_doc_candidate_files"}, nil
+		return contract.StaticResult{OK: true, Summary: summary, Files: []string{}, Violations: []contract.Violation{}, Skipped: true, Reason: "no_api_doc_candidate_files"}, nil
 	}
 	if service.Effects.Mode(options.Repo) == "contract-tests" {
 		return contract.StaticResult{

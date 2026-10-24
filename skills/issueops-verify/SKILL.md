@@ -112,7 +112,8 @@ MCP를 사용하면 같은 값을 `self_verify`의 `base_ref`에 전달한다. r
 tree까지의 변경과 staged·unstaged·untracked 경로의 합집합이다.
 
 - endpoint·DTO·OpenAPI가 바뀌었으면 `.issueops/OPEN_API_SPEC.md` 게이트를 적용하고
-  `issueops api-doc check --json`을 실행한다. 대상 저장소에
+  `issueops api-doc check --json <바뀐 controller·DTO 파일...>`을 실행한다. 인자가 없으면 staged
+  변경만 보므로 커밋 전에는 건너뛰어 통과처럼 보인다. 대상 저장소에
   `npm run swagger:check` 같은 wrapper가 있으면 그것을 먼저 실행한다.
 - `verify-work`와 이 단계에서 직접 실행한 검증은 명령과 결과를 evidence로 남긴다. 게이트 결과는
   `gates status`의 EVIDENCE를 인용한다. 실행하지 않은 검증을 pass로 적지 않는다.

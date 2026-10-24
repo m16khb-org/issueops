@@ -214,3 +214,33 @@ func TestCheckNestDTOIgnoresBlocksAfterClassCloses(t *testing.T) {
 		t.Fatalf("properties outside a class must be ignored, got %+v", vs)
 	}
 }
+
+// A statement in a method body that looks like `name(` (an if, a call) is not
+// a route member: it must not open a block that swallows the next route's
+// decorators. Only the two real methods are checked; the second route keeps
+// its real missing @ApiParam.
+func TestCheckNestControllerIgnoresMethodBodyStatements(t *testing.T) {
+	text := `@Controller('users')
+export class UsersController {
+  @Get()
+  @ApiOperation({ summary: 'List', description: '### Purpose\n- list' })
+  @ApiQuery({ name: 'active', required: false })
+  @ApiResponse({ status: 400, description: 'bad active' })
+  findAll(@Query('active') active?: string) {
+    if (active !== undefined && active !== 'true') throw new BadRequestException();
+    validate(active);
+    return [];
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'One', description: '### Purpose\n- one' })
+  findOne(@Param('id') id: string) {
+    return id;
+  }
+}
+`
+	vs := CheckNestController("f.ts", text)
+	if len(vs) != 1 || vs[0].Code != "missing_api_param" || vs[0].Line != 15 {
+		t.Fatalf("violations = %+v", vs)
+	}
+}

@@ -40,10 +40,27 @@ var methodNameRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustComp
 var queryNamedRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`@Query\s*\(\s*["'\x60]([^"'\x60]+)["'\x60]`) })
 var bodyNamedRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`@Body\s*\(\s*["'\x60]([^"'\x60]+)["'\x60]`) })
 
+var classDeclRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`\bclass\s+[A-Za-z_$]`) })
+
 func CheckNestController(file, text string) []contract.Violation {
 	lines := strings.Split(text, "\n")
 	var violations []contract.Violation
+	// Route methods sit directly in the class body. A statement in a method
+	// body such as `if (active !== ...)` also looks like `name(`; QA saw it
+	// open a "route block" that ran into the next method's decorators and
+	// reported a false missing @ApiParam. Track the brace depth and accept
+	// member lines only at class-body depth (any depth when no class is seen).
+	depth, memberDepth := 0, -1
 	for i := range lines {
+		lineDepth := depth
+		depth += BraceDepthDelta(lines[i])
+		if classDeclRe().MatchString(lines[i]) && strings.Contains(lines[i], "{") {
+			memberDepth = lineDepth + 1
+			continue
+		}
+		if memberDepth >= 0 && lineDepth != memberDepth {
+			continue
+		}
 		if !methodNameRe().MatchString(lines[i]) {
 			continue
 		}
@@ -114,7 +131,7 @@ func apiOperationViolation(block string) (code, message string, found bool) {
 	case !strings.Contains(block, "description"):
 		return "missing_api_operation_description", "@ApiOperation is missing description", true
 	case !strings.Contains(block, "### "):
-		return "invalid_api_operation_description_format", "@ApiOperation.description must use the project sectioned Markdown format", true
+		return "invalid_api_operation_description_format", "@ApiOperation.description must use the project sectioned Markdown format: `### ` headings such as `### Purpose`, `### Request Rules` or `### Processing`, and `### Auth/Notes`, each followed by bullets", true
 	}
 	return "", "", false
 }
