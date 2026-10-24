@@ -134,7 +134,9 @@ func renderGateSpec(spec string) (string, error) {
 			}
 			lines = append(lines, "  CHECK: "+check)
 		case strings.HasPrefix(upper, "EXPECT:"):
-			lines = append(lines, "  EXPECT: "+strings.TrimSpace(segment[len("EXPECT:"):]))
+			// An empty EXPECT (exit code only) must not leave a trailing
+			// space: QA's `git diff --check` failed on the committed ledger.
+			lines = append(lines, strings.TrimRight("  EXPECT: "+strings.TrimSpace(segment[len("EXPECT:"):]), " "))
 		case strings.HasPrefix(upper, "EVIDENCE:"):
 			lines = append(lines, "  EVIDENCE: "+strings.TrimSpace(segment[len("EVIDENCE:"):]))
 			sawEvidence = true

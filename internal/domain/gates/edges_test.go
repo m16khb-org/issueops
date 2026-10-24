@@ -122,3 +122,20 @@ func TestGateFileSlugDropsLeadingSeparators(t *testing.T) {
 		t.Fatalf("got %q", got)
 	}
 }
+
+// An exit-code-only gate (empty EXPECT) leaves no trailing space for
+// `git diff --check` to reject in the committed ledger.
+func TestRenderGateSpecEmptyExpectHasNoTrailingSpace(t *testing.T) {
+	out, err := renderGateSpec("G1: parses | CHECK: sh -n a.sh | EXPECT:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for line := range strings.SplitSeq(out, "\n") {
+		if strings.HasSuffix(line, " ") {
+			t.Fatalf("trailing space in %q", line)
+		}
+	}
+	if !strings.Contains(out, "\n  EXPECT:\n") {
+		t.Fatalf("ledger = %q", out)
+	}
+}

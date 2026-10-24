@@ -412,3 +412,21 @@ func TestChildStartAlreadyLinkedChildIsNotAWarning(t *testing.T) {
 		t.Fatalf("got=%+v err=%v", got, err)
 	}
 }
+
+// An issue-less child writes the parent issue's tracked files; the guidance
+// says so and names the child-issue route. A child with its own issue does not
+// get that warning.
+func TestChildStartGuidanceWarnsAnIssuelessChild(t *testing.T) {
+	got, err := newStarter(newDelegationStore(readyParent())).Start(context.Background(), startRequest(), nil)
+	if err != nil || !strings.Contains(got.Guidance, "has no issue of its own") || !strings.Contains(got.Guidance, "--child-issue-url") {
+		t.Fatalf("guidance=%q err=%v", got.Guidance, err)
+	}
+	parent := readyParent()
+	parent.IssueURL = "https://github.com/o/r/issues/1"
+	req := startRequest()
+	req.ChildIssueURL = "https://github.com/o/r/issues/2"
+	got, err = newStarter(newDelegationStore(parent)).Start(context.Background(), req, nil)
+	if err != nil || strings.Contains(got.Guidance, "has no issue of its own") {
+		t.Fatalf("guidance=%q err=%v", got.Guidance, err)
+	}
+}

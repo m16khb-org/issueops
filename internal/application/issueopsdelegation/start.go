@@ -110,5 +110,12 @@ func childStartGuidance(parent, child model.IssueOpsRecord) string {
 	if parent.Execution != nil && parent.Execution.Workspace.Root != "" {
 		guidance += " --parent-worktree " + parent.Execution.Workspace.Root
 	}
-	return guidance + "` and `execution prepare` create the child branch and worktree"
+	guidance += "` and `execution prepare` create the child branch and worktree"
+	// QA (GitLab, no child issue): every issue-less child wrote the parent's
+	// .issueops/issues/<n>/ files, so the second child PR conflicted with the
+	// first after it merged into the parent branch.
+	if child.Delegation != nil && strings.TrimSpace(child.Delegation.ChildIssueURL) == "" {
+		guidance += "; this child has no issue of its own, so it writes the parent issue's .issueops/issues/ files and its PR conflicts with sibling children there: create a child issue (issueops remote create-child) and pass --child-issue-url to keep them apart"
+	}
+	return guidance
 }
