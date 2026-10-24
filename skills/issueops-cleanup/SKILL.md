@@ -7,8 +7,6 @@ description: 'Use after an IssueOps cycle merged, or for "이슈옵스 정리", 
 
 Finish one record-backed, merged IssueOps cycle through harness-owned surfaces.
 
-**User's request:** $ARGUMENTS
-
 Exactly three effects are authorized after target confirmation: close and verify
 the linked parent issue, remove the recorded local worktree, delete its local branch.
 Remote branch deletion is a separate decision and `cleanup remote-branch` flow.

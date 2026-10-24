@@ -13,8 +13,6 @@ backend availability, and side-effect risk.
 
 `uv` is the only prerequisite. `slack_delegate.py` declares its dependencies in a PEP-723 header (`pydantic==2.11.7`, `typer==0.27.1`, `requires-python >=3.13`), and `uv run` provisions them into an ephemeral environment on each call, so nothing is installed system-wide. Always invoke the scripts through `uv run` as shown below. Calling them with a bare `python3` bypasses that header and fails at import with `ModuleNotFoundError: No module named 'typer'` (verified 2026-08-27, as is the working `uv run` path).
 
-**User's request:** $ARGUMENTS
-
 ## Route the request
 
 1. Read `capabilities.json`.

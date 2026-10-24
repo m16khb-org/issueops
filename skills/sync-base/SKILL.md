@@ -7,8 +7,6 @@ description: 'Use when a base or release branch moved and the feature branch mus
 
 ## Activation and Scope
 
-**User's request:** $ARGUMENTS
-
 Git records no base-branch identity. Resolve and confirm it from evidence, prove
 it advanced, report the merge/rebase decision row, sync with a verified backup,
 then optionally push after explicit confirmation. Interactive history editing,
