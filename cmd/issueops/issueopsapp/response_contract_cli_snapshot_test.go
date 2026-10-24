@@ -180,6 +180,9 @@ func buildCLIResponseContractSnapshot(t *testing.T, replacements map[string]stri
 	cliSnapshot["issueops_feedback_resolve"] = runCLIJSONContract(t, replacements, func() error {
 		return runIssueOps([]string{"feedback", "resolve", "--id", issueopsID, "--index", "0", "--resolution", "valid-defect", "--json"})
 	})
+	// create-issue resolves the project authority from origin, preview included.
+	runGitForContract(t, workspaceDir, "init", "-q", "-b", "main")
+	runGitForContract(t, workspaceDir, "remote", "add", "origin", "https://gitlab.example/group/project.git")
 	cliSnapshot["issueops_remote_create_issue"] = runCLIJSONContract(t, replacements, func() error {
 		return runIssueOps([]string{"remote", "create-issue", "--id", issueopsID, "--title", "contract issue", "--body", "contract body", "--label", "contract", "--json"})
 	})

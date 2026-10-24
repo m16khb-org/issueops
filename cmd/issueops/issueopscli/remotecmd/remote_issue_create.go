@@ -14,7 +14,7 @@ func (command Command) runRemoteCreateIssue(ctx context.Context, args []string, 
 	title := fs.String("title", "", "issue title")
 	body := fs.String("body", "", "issue body (markdown)")
 	bodyFile := fs.String("body-file", "", "issue body markdown file")
-	template := fs.String("template", "", "template kind")
+	template := fs.String("template", "", "template kind: bug, feature, proposal, or implementation_task")
 	providerOverride := fs.String("provider", "", "remote provider override: github or gitlab")
 	scoreFile := fs.String("score-file", "", "IssueOps remote score result JSON")
 	confirm := fs.Bool("confirm", false, "execute creation; without this, dry-run preview only")

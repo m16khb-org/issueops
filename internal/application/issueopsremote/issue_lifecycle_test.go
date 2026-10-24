@@ -109,6 +109,21 @@ func TestIssueCreatePreviewInvokesProviderWithoutSealingIntent(t *testing.T) {
 	}
 }
 
+// A preview that passes and then fails at --confirm on an unresolvable origin
+// hides the one problem it exists to show.
+func TestIssueCreatePreviewFailsWhereConfirmWouldOnProjectAuthority(t *testing.T) {
+	h := newCreateHarness(t, port.IssueProviderCreateIssueResult{OK: true, Preview: "dry"}, nil)
+	h.env.authorityErr = errors.New("cannot determine project authority: git remote URL must be HTTPS, SSH, or SCP syntax")
+	cmd := confirmCmd()
+	cmd.Confirm, cmd.Template = false, ""
+	if _, err := h.creator.Create(context.Background(), cmd); err == nil || !strings.Contains(err.Error(), "project authority") {
+		t.Fatalf("err = %v", err)
+	}
+	if len(h.requests) != 0 {
+		t.Fatalf("provider was invoked: %+v", h.requests)
+	}
+}
+
 func TestIssueCreateConfirmSealsIntentAndCompletesAfterLiveVerification(t *testing.T) {
 	h := newCreateHarness(t, port.IssueProviderCreateIssueResult{OK: true, URL: testIssueURL, Number: "5"}, nil)
 	result, err := h.creator.Create(context.Background(), confirmCmd())

@@ -82,6 +82,11 @@ func (s *IssueCreator) Create(ctx context.Context, cmd IssueCreateCommand) (Issu
 		if err != nil {
 			return result, err
 		}
+	} else if _, err = s.environment.ProjectAuthority(record.Repo, providerName); err != nil {
+		// The confirmed request resolves the same authority before it creates
+		// anything; a preview that would pass and then fail at --confirm
+		// hides the one problem the preview exists to show.
+		return result, err
 	}
 	invokeContext := ctx
 	if !cmd.Confirm {

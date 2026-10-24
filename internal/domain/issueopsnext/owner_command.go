@@ -81,7 +81,7 @@ func intakeOwnerCommand(id, key string) (string, bool) {
 		// same request with --confirm); link-issue only records an issue that
 		// already exists, so it is not the default next step.
 		return "issueops remote create-issue --id " + id +
-			" --provider <github|gitlab> --title <TEXT> --template <KIND> --body-file <PATH> --label <LABEL> --assignee <USER> --json", true
+			" --provider <github|gitlab> --title <TEXT> --template <bug|feature|proposal|implementation_task> --body-file <PATH> --label <LABEL> --assignee <USER> --json", true
 	case "branch", "branch_prepare":
 		// --link-verified asserts that the provider's issue↔branch link was
 		// read back; it is a choice, not a default to copy.

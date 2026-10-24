@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -16,6 +17,7 @@ import (
 func TestRemoteCLIInstancesKeepCapturedState(t *testing.T) {
 	roots := []string{t.TempDir(), t.TempDir(), t.TempDir()}
 	repo := makeGitRepoForContract(t)
+	runGitForContract(t, repo, "remote", "add", "origin", "https://github.com/acme/repo.git")
 	var deps [2]issueopscli.Dependencies
 	var records [2]model.IssueOpsRecord
 	for i := range deps {
@@ -28,7 +30,16 @@ func TestRemoteCLIInstancesKeepCapturedState(t *testing.T) {
 		deps[i] = issueOpsCLIDependencies()
 	}
 	t.Setenv("ISSUEOPS_STATE_DIR", roots[2])
-	t.Setenv("PATH", t.TempDir())
+	// Only git stays reachable: the preview reads origin, never the provider CLI.
+	gitBin, err := exec.LookPath("git")
+	if err != nil {
+		t.Fatal(err)
+	}
+	gitOnly := t.TempDir()
+	if err := os.Symlink(gitBin, filepath.Join(gitOnly, "git")); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", gitOnly)
 	for _, i := range []int{0, 1, 0} {
 		raw := captureStdoutForContract(t, func() error {
 			return issueopscli.RunIssueOpsWithDependencies([]string{"remote", "create-issue", "--id", records[i].ID, "--provider", "github", "--title", "Preview", "--body", "Body", "--label", "bug", "--assignee", "test", "--json"}, deps[i])

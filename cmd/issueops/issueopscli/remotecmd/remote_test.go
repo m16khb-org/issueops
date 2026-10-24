@@ -64,6 +64,7 @@ func TestRunScoreWithJudgeNoneAndErrorPaths(t *testing.T) {
 func TestRunVerifyArtifactAndRemoteCreateDryRuns(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := remoteIssueOpsRecord(t)
+	addOriginForTest(t, record.Repo)
 	var records []issueopscontract.IssueOpsRecord
 	var printed []any
 	deps := Deps{
@@ -635,6 +636,33 @@ func remoteIssueOpsRecordWithoutChild(t *testing.T) issueopscontract.IssueOpsRec
 		t.Fatalf("PrepareIssueOpsBranch: %v", err)
 	}
 	return record
+}
+
+// addOriginForTest makes repo a git repository with a GitHub origin, which
+// create-issue resolves its project authority from (preview included).
+func addOriginForTest(t *testing.T, repo string) {
+	t.Helper()
+	testsupport.IsolateGitConfig(t)
+	for _, args := range [][]string{{"init", "-q"}, {"remote", "add", "origin", "https://github.com/acme/repo.git"}} {
+		if out, err := exec.Command("git", append([]string{"-C", repo}, args...)...).CombinedOutput(); err != nil {
+			t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
+		}
+	}
+}
+
+// gitOnlyPATH leaves only git reachable, so any provider CLI call fails loudly
+// while the origin read still works.
+func gitOnlyPATH(t *testing.T) {
+	t.Helper()
+	gitBin, err := exec.LookPath("git")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	if err := os.Symlink(gitBin, filepath.Join(dir, "git")); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir)
 }
 
 func remoteIssueOpsRecordForCreate(t *testing.T) issueopscontract.IssueOpsRecord {

@@ -90,9 +90,9 @@ func writeBodyFile(t *testing.T, body string) string {
 func TestRemoteCreateIssueRefusesCriticalReadability(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := remoteIssueOpsRecordForCreate(t)
-	// An empty PATH makes any provider call fail loudly, so a refusal that
-	// happened after a provider call could not pass as a readability refusal.
-	t.Setenv("PATH", t.TempDir())
+	// Only git stays reachable, so any provider call fails loudly and a refusal
+	// that happened after a provider call could not pass as a readability refusal.
+	gitOnlyPATH(t)
 	deps := Deps{PrintJSON: func(any) error { return nil }, PrintError: func(error) error { return nil }}
 
 	assertNoIntent := func(t *testing.T) {
