@@ -182,6 +182,14 @@ func classifyLease(in Input, decision Decision, index int) (Decision, bool) {
 		decision.NextCommand = issueopsdomain.ReplacementPreviewCommand(id, lease.Generation)
 		if lease.Status == issueopsnextcontract.LeaseStatusClaimable {
 			decision.NextCommand = issueopsdomain.ReplacementClaimCommand(id, lease.Generation)
+			// The actor-free claim works only from the canonical worktree, and
+			// QA agents distrusted an "exact" claim without flags. With an
+			// observable receipt, pin this session's vector and the worktree.
+			if root := strings.TrimSpace(execution.Workspace.Root); root != "" && in.ClaimActorFlags != nil {
+				if flags := in.ClaimActorFlags(root); flags != "" {
+					decision.NextCommand += " " + flags
+				}
+			}
 		}
 		return decision, true
 	}

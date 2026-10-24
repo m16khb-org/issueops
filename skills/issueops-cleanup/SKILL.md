@@ -117,6 +117,12 @@ before steps 1-2; only afterward must both previews be clear.
 The close-issue dry-run must report `ok: true`. Any other missing gate or provider
 error blocks closure: report it and stop before writing.
 
+A parent with delegated child cycles closes their provider tasks first:
+`issueops cleanup close-children --id "$ISSUEOPS_ID" --merged` (preview, then `--confirm`)
+satisfies `child_tasks_closed`; remote-branch cleanup comes after it. Each child
+cycle then runs this skill on its own ID: reflect-completion, close-issue
+(already closed is success), finish.
+
 From these results, state:
 
 - lifecycle ID and issue URL;

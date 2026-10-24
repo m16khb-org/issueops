@@ -948,3 +948,20 @@ func TestClassifyImplementParentRoutesToUnintegratedChildren(t *testing.T) {
 		t.Fatalf("resolved children: next %q", got.NextCommand)
 	}
 }
+
+// The claim stage pins the caller's vector with the canonical worktree as
+// --cwd, so the claim also runs from the source checkout; without an observable
+// receipt it stays the actor-free claim.
+func TestClassifyClaimPinsTheCallersVectorAtTheWorktree(t *testing.T) {
+	in := withClaimableLease(baseRecord(issueopsnextcontract.PhaseImplement))
+	root := in.Record.Execution.Workspace.Root
+	in.ClaimActorFlags = func(cwd string) string { return "--host claude --cwd '" + cwd + "'" }
+	got := classifyTemplate(in)
+	if !strings.HasSuffix(strings.TrimSuffix(got.NextCommand, " --json"), " --claim-current-token --host claude --cwd '"+root+"'") {
+		t.Fatalf("claim %q", got.NextCommand)
+	}
+	in.ClaimActorFlags = func(string) string { return "" }
+	if got := classifyTemplate(in); !strings.HasSuffix(strings.TrimSuffix(got.NextCommand, " --json"), " --claim-current-token") {
+		t.Fatalf("receipt-less claim %q", got.NextCommand)
+	}
+}
