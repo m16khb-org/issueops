@@ -69,6 +69,10 @@ type RemoteMergeResult struct {
 	Merged          bool                 `json:"merged"`
 	AlreadyMerged   bool                 `json:"already_merged,omitempty"`
 	MarkedReady     bool                 `json:"marked_ready,omitempty"`
-	MergeCommitOID  string               `json:"merge_commit_oid,omitempty"`
-	NextCommand     string               `json:"next_command,omitempty"`
+	// MarkReadyOnConfirm is the preview's promise that --confirm clears the
+	// draft first; a status-only reader saw draft:true with no blockers and
+	// could not tell whether the merge would go through.
+	MarkReadyOnConfirm bool   `json:"mark_ready_on_confirm,omitempty"`
+	MergeCommitOID     string `json:"merge_commit_oid,omitempty"`
+	NextCommand        string `json:"next_command,omitempty"`
 }

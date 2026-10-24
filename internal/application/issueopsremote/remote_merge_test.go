@@ -94,7 +94,9 @@ func TestRemoteMergeSquashesDraftPinnedToCompletedHead(t *testing.T) {
 		after:  openState(func(s *model.RemotePullRequestMergeState) { s.State, s.MergeCommitOID = "merged", "abc" }),
 	}
 	preview, err := runMerge(t, completedMergeRecord(), merger, "", false)
-	if err != nil || !preview.OK || preview.Method != model.RemoteMergeMethodSquash || !strings.Contains(preview.NextCommand, "--method squash --confirm") || len(merger.merges) != 0 {
+	// The preview says the draft will be cleared; draft:true with no blockers
+	// read as "this merge may fail".
+	if err != nil || !preview.OK || !preview.MarkReadyOnConfirm || preview.Method != model.RemoteMergeMethodSquash || !strings.Contains(preview.NextCommand, "--method squash --confirm") || len(merger.merges) != 0 {
 		t.Fatalf("preview = %+v err=%v merges=%d", preview, err, len(merger.merges))
 	}
 	result, err := runMerge(t, completedMergeRecord(), merger, "", true)

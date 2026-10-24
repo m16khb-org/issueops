@@ -27,14 +27,13 @@ issueops next --json
    `selected.id` 또는 `start` 결과의 ID를 이후 명령·인계·압축 요약에 유지한다.
 2. `stage.key`를 아래 `## 단계 표`로 바꾸고 해당 스킬을 실행한다. 단계가 끝나면 같은
    ID로 `next`를 다시 읽고 다음 단계로 이어간다. 단계 선택 메뉴를 반복해서 묻지 않는다.
-3. `next_command_kind=template`의 값은 record·whoami·계획·저장소에서 채운다. `next`는 확인할 수 있는
-   record 플래그(`--host --session-id --cwd`)를 이미 채워 준다. 남은 `$RECORD_ACTOR_FLAGS`·`$ACTOR_FLAGS`만
-   whoami 값으로 채운다. 명령의 placeholder나 `--confirm` 자체는 사용자 질문 사유가 아니다.
+3. actor 플래그는 아래 공통 불변식 (b)를 따른다. 나머지 placeholder는 record·계획·저장소에서 채운다.
+   명령의 placeholder나 `--confirm` 자체는 사용자 질문 사유가 아니다.
 
 - `ambiguous`라도 대화에 지정된 ID가 있으면 그 ID로 다시 읽는다. ID가 없고 후보를
   구별할 근거도 없을 때만 고르게 한다. 다른 사이클을 임의로 선택하거나 정리하지 않는다.
 - `none`이면 요청 범위에 맞게 이슈 단계로 들어간다. 본문 초안이나 상태 조회만 요청했으면
-  그 결과만 제공한다. 사용자가 새 사이클을 요청하면 기존 후보와 별개로 시작한다.
+  그 결과만 제공한다. 상태 조회는 `issueops list --repo "$PWD" --json`이 저장소의 모든 사이클을 한 번에 보여 준다. 사용자가 새 사이클을 요청하면 기존 후보와 별개로 시작한다.
 - `blocked.*`는 아래 중단 규칙을 따른다. 다른 holder의 작업을 대신하거나 상태를 우회하지 않는다.
 
 ## 환경별 자동 세션 인계

@@ -61,6 +61,7 @@ func (s *RemoteMergeService) Merge(ctx context.Context, id, method string, confi
 	}
 	if !confirm {
 		result.OK = true
+		result.MarkReadyOnConfirm = before.Draft
 		result.NextCommand = fmt.Sprintf("issueops remote merge-pr --id %s --method %s --confirm --json", record.ID, method)
 		return result, nil
 	}
