@@ -219,6 +219,15 @@ func TestCovCFFinishCommands(t *testing.T) {
 	if got := CleanupFinishRemedyCommand("c1", []string{"phase_done"}); got != "" {
 		t.Fatalf("unrelated remedy = %q", got)
 	}
+	// The remedy follows the cleanup order an agent walks: remote branch,
+	// completion reflection, issue close.
+	all := []string{"issue_closed", "completion_reflected", "remote_branch_absent"}
+	for _, want := range []string{"cleanup remote-branch --id c1 --preview", "remote reflect-completion --id c1", "remote close-issue --id c1 --json"} {
+		if got := CleanupFinishRemedyCommand("c1", all); !strings.Contains(got, want) {
+			t.Fatalf("remedy for %q = %q, want %q", all, got, want)
+		}
+		all = all[:len(all)-1]
+	}
 	if got := CleanupFinishApplyCommand("c1", "fp", "", false); got != "issueops cleanup finish --id c1 --apply --confirm --fingerprint fp --json" {
 		t.Fatalf("plain = %q", got)
 	}

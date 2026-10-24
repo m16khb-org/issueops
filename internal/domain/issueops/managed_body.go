@@ -52,7 +52,13 @@ func RenderDevilsAdvocateSection(req SectionInput) string {
 		}
 		step := fmt.Sprintf("%d차 %s", i+1, planReviewVerdictLabel(round.Verdict))
 		if round.Findings > 0 {
-			step += fmt.Sprintf("(지적 %d건)", round.Findings)
+			// A passing round's findings are the reviewer's notes; only a
+			// revise or stop round's findings are objections (지적).
+			noun := "지적"
+			if round.Verdict == "pass" {
+				noun = "의견"
+			}
+			step += fmt.Sprintf("(%s %d건)", noun, round.Findings)
 		}
 		steps = append(steps, step)
 	}

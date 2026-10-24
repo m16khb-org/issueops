@@ -200,7 +200,7 @@ func FinalizeCleanupStatus(status model.IssueOpsCleanupStatus) model.IssueOpsCle
 		}
 	} else {
 		status.Choices = []string{
-			"1. 차단 해소: missing 항목의 merge/worktree/remote branch 증거를 먼저 보강합니다. (추천)",
+			"1. 차단 해소: missing에 적힌 항목을 먼저 채웁니다. (추천)",
 			"2. 보류: worktree는 유지하고 나중에 다시 확인합니다.",
 			"3. 확장 점검: merged/stale IssueOps worktree 전체를 점검하고 정리 후보를 제시합니다.",
 		}

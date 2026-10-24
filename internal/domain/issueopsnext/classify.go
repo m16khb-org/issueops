@@ -412,7 +412,7 @@ func classifyPublication(in Input, decision Decision, index int) (Decision, bool
 			decision.NextCommand = "issueops remote create-pr --id " + id +
 				" --expected-generation " + generationText(in) +
 				" --title <TEXT> --head " + placeholder(record.Branch, "<BRANCH>") + " --base " + placeholder(prBase(record), "<BRANCH>") +
-				" --label <LABEL> --assignee <USER> $ACTOR_FLAGS"
+				" --body-file <PATH> --label <LABEL> --assignee <USER> $ACTOR_FLAGS"
 			return decision, true
 		}
 		if record.Execution.Completion == nil {
@@ -426,8 +426,9 @@ func classifyPublication(in Input, decision Decision, index int) (Decision, bool
 	}
 	if record.Phase == issueopsnextcontract.PhaseDone {
 		decision.Stage = stage(issueopsnextcontract.StageDone, 10)
-		decision.NextCommand = "issueops cleanup status --id " + id + " --merged --json"
-		decision.Warnings = append(decision.Warnings, "merge state requires provider readback")
+		// next does not read the provider. merge-pr's preview does: it gives the
+		// merge command, or points to cleanup when the PR is already merged.
+		decision.NextCommand = "issueops remote merge-pr --id " + id + " --json"
 		return decision, true
 	}
 	_ = index

@@ -8,9 +8,17 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
+// CleanupFinishRemedyCommand names the command that fills the first missing
+// finish gate an agent can fill, in the cleanup order: remote branch, then
+// completion reflection, then the issue close.
 func CleanupFinishRemedyCommand(id string, missing []string) string {
-	if slices.Contains(missing, "completion_reflected") {
+	switch {
+	case slices.Contains(missing, "remote_branch_absent"):
+		return fmt.Sprintf("issueops cleanup remote-branch --id %s --preview --json", id)
+	case slices.Contains(missing, "completion_reflected"):
 		return fmt.Sprintf("issueops remote reflect-completion --id %s --body-file <PROGRESS_REPORT_FILE> --confirm --json", id)
+	case slices.Contains(missing, "issue_closed"):
+		return fmt.Sprintf("issueops remote close-issue --id %s --json", id)
 	}
 	return ""
 }

@@ -144,7 +144,9 @@ func TestPlanReviewSectionSummarizesRounds(t *testing.T) {
 	if !strings.Contains(got, "## 계획 검토\n") {
 		t.Fatalf("the region is headed 계획 검토: %q", got)
 	}
-	if !strings.Contains(got, "계획 검토: 1차 수정 요청(지적 3건) → 계획 수정 → 2차 통과(지적 1건)") {
+	// A passing round's findings are notes, not objections: a reader saw
+	// "통과(지적 4건)" for a review whose four findings were pass rationales.
+	if !strings.Contains(got, "계획 검토: 1차 수정 요청(지적 3건) → 계획 수정 → 2차 통과(의견 1건)") {
 		t.Fatalf("the rounds read as one flow line: %q", got)
 	}
 	if strings.Contains(got, "구현 메모") || strings.Contains(got, "Devil") {

@@ -252,7 +252,7 @@ func TestClassifyNextCommandTable(t *testing.T) {
 		{"stop verdict regresses", withDAStop(withArchitecture(withStagedPlan(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))), "issueops regress --id io-test", "template"},
 		{"commit-push checks strict readiness", withLocal(withSelfHolder(baseRecord(issueopsnextcontract.PhaseAISlopClean)), "upstream"), "issueops pr-readiness --id io-test --strict", "exact"},
 		{"pushed and clean transitions to pr", withLocal(withSelfHolder(baseRecord(issueopsnextcontract.PhaseAISlopClean))), "issueops phase --id io-test --to pr $RECORD_ACTOR_FLAGS", "template"},
-		{"done checks cleanup", baseRecord(issueopsnextcontract.PhaseDone), "issueops cleanup status --id io-test --merged", "exact"},
+		{"done previews the merge", baseRecord(issueopsnextcontract.PhaseDone), "issueops remote merge-pr --id io-test --json", "exact"},
 		{"unknown falls back to status", withLocal(withSelfHolder(baseRecord(issueopsnextcontract.PhaseFeedback)), "branch_match"), "issueops status --id io-test", "exact"},
 	}
 	for _, testCase := range cases {

@@ -371,6 +371,23 @@ func TestExecutionSyncBasePreviewReportsConflictsAndIssuesFingerprint(t *testing
 	}
 }
 
+// An agent got merge_needed:false and an --apply command at once. With the
+// base already merged and the branch pushed there is nothing to apply.
+func TestExecutionSyncBasePreviewWithNothingToSyncDoesNotHandOutApply(t *testing.T) {
+	t.Parallel()
+
+	fixture := newReleasedSyncBaseFixture(t, "114-noop")
+	fixture.git.ancestor[syncBaseBaseOID] = true
+	fixture.git.remoteRef = syncBaseWorkOID + "\trefs/heads/114-noop"
+	result, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBasePreview))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.MergeNeeded || strings.Contains(result.NextCommand, "--apply") || !strings.Contains(result.NextCommand, "issueops next --id") {
+		t.Fatalf("merge_needed=%v next_command=%q", result.MergeNeeded, result.NextCommand)
+	}
+}
+
 // 무충돌 fast 경로: fetch→merge-tree→merge→push 순서와 인자를 전수 검증한다.
 func TestExecutionSyncBaseApplyRunsFetchMergePushInOrder(t *testing.T) {
 	t.Parallel()

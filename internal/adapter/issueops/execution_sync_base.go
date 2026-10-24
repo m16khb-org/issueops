@@ -111,6 +111,12 @@ func syncExecutionBase(ctx context.Context, stateRoot string, req issueops.Execu
 	}
 	result.Fingerprint = fingerprint
 	if mode == issueops.ExecutionSyncBasePreview {
+		if !result.MergeNeeded && inventory.RemoteWorkOID != "" && strings.EqualFold(inventory.RemoteWorkOID, inventory.WorkOID) {
+			// The base is already in the branch and the branch is pushed: an
+			// apply would only record a no-op sync, so do not hand one out.
+			result.NextCommand = "issueops next --id " + record.ID + " --json"
+			return result, nil
+		}
 		result.NextCommand = fmt.Sprintf(
 			"%s --apply --confirm --fingerprint %s $ACTOR_FLAGS --json",
 			executionSyncBaseCommandPrefix(record), fingerprint)
