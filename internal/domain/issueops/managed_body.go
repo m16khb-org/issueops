@@ -9,11 +9,13 @@ import (
 
 // SectionInput carries managed content without provider or transport fields.
 type SectionInput struct {
-	Section    string
-	Findings   []string
-	Verdict    string
-	Rounds     []completionmodel.PlanReviewRound
-	Completion *completionmodel.RemoteCompletionSection
+	Section  string
+	Findings []string
+	Verdict  string
+	Rounds   []completionmodel.PlanReviewRound
+	// ReviewerContext "inline" marks a review by the authoring session.
+	ReviewerContext string
+	Completion      *completionmodel.RemoteCompletionSection
 }
 
 const (
@@ -62,7 +64,13 @@ func RenderDevilsAdvocateSection(req SectionInput) string {
 		}
 		steps = append(steps, step)
 	}
-	b.WriteString("계획 검토: " + strings.Join(steps, " → ") + "\n")
+	line := "계획 검토: " + strings.Join(steps, " → ")
+	if strings.TrimSpace(req.ReviewerContext) == "inline" {
+		// QA: the issue showed "1차 통과" with nothing saying the author
+		// reviewed its own plan.
+		line += " (작성 세션이 직접 검토)"
+	}
+	b.WriteString(line + "\n")
 	if req.Verdict == "stop" {
 		b.WriteString("\n중단 이유:\n")
 		for _, f := range req.Findings {

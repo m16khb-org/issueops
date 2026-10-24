@@ -212,3 +212,15 @@ func TestReviewMetricsNamesOneBasedRoundOfUnparseableTimestamp(t *testing.T) {
 		t.Fatalf("warnings=%v", warnings)
 	}
 }
+
+// An inline plan review says so in the issue: readers otherwise take
+// "1차 통과" for an independent review.
+func TestRenderDevilsAdvocateSectionNamesAnInlineReview(t *testing.T) {
+	inline := RenderDevilsAdvocateSection(SectionInput{Verdict: "pass", Findings: []string{"a"}, ReviewerContext: "inline"})
+	if !strings.Contains(inline, "계획 검토: 1차 통과(의견 1건) (작성 세션이 직접 검토)") {
+		t.Fatalf("inline section: %q", inline)
+	}
+	if sub := RenderDevilsAdvocateSection(SectionInput{Verdict: "pass", ReviewerContext: "subagent"}); strings.Contains(sub, "작성 세션") {
+		t.Fatalf("subagent section marked inline: %q", sub)
+	}
+}

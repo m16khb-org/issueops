@@ -195,14 +195,17 @@ type IssueProviderCloseChildResult struct {
 // delimited section (devils-advocate | completion) of an existing remote issue
 // body. Exactly the payload matching Section is consumed.
 type IssueProviderUpdateIssueBodySectionRequest struct {
-	Repo       string                                   `json:"repo"`               // local repo path for provider auth context
-	IssueURL   string                                   `json:"issue_url"`          // issue whose body is updated
-	Section    string                                   `json:"section"`            // devils-advocate | completion
-	Findings   []string                                 `json:"findings,omitempty"` // devils-advocate payload
-	Verdict    string                                   `json:"verdict,omitempty"`
-	Rounds     []completionmodel.PlanReviewRound        `json:"rounds,omitempty"`
-	Completion *completionmodel.RemoteCompletionSection `json:"completion,omitempty"` // completion payload
-	Confirm    bool                                     `json:"confirm"`              // must be true to write; false = dry-run preview
+	Repo     string                            `json:"repo"`               // local repo path for provider auth context
+	IssueURL string                            `json:"issue_url"`          // issue whose body is updated
+	Section  string                            `json:"section"`            // devils-advocate | completion
+	Findings []string                          `json:"findings,omitempty"` // devils-advocate payload
+	Verdict  string                            `json:"verdict,omitempty"`
+	Rounds   []completionmodel.PlanReviewRound `json:"rounds,omitempty"`
+	// ReviewerContext is the plan review's reviewer context (inline = the
+	// authoring session reviewed its own plan; readers should know).
+	ReviewerContext string                                   `json:"reviewer_context,omitempty"`
+	Completion      *completionmodel.RemoteCompletionSection `json:"completion,omitempty"` // completion payload
+	Confirm         bool                                     `json:"confirm"`              // must be true to write; false = dry-run preview
 }
 
 // IssueProviderUpdateIssueBodySectionResult reports the outcome of a body update.

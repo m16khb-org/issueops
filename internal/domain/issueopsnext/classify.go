@@ -508,6 +508,15 @@ func classifyPublication(in Input, decision Decision, index int) (Decision, bool
 	}
 	if record.Phase == issueopsnextcontract.PhaseDone {
 		decision.Stage = stage(issueopsnextcontract.StageDone, 10)
+		// QA (Go cycle): after the merge and the remote-branch delete, next
+		// kept sending the agent to merge-pr, whose preview names the
+		// remote-branch step again. Reflecting the completion or closing the
+		// issue requires the merge readback, so either receipt means the
+		// merge is behind us: the finish preview reads what cleanup is left.
+		if completion := record.RemoteCompletion; completion != nil && (completion.ReflectedAt != "" || completion.IssueClosedAt != "") {
+			decision.NextCommand = "issueops cleanup finish --id " + id + " --preview --json"
+			return decision, true
+		}
 		// next does not read the provider. merge-pr's preview does: it gives the
 		// merge command, or points to cleanup when the PR is already merged.
 		decision.NextCommand = "issueops remote merge-pr --id " + id + " --json"

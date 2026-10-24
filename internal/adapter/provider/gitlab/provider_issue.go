@@ -18,7 +18,7 @@ func (Provider) UpdateIssueBodySection(ctx context.Context, req port.IssueProvid
 	if err != nil {
 		return port.IssueProviderUpdateIssueBodySectionResult{OK: false}, err
 	}
-	sectionInput := issuebody.SectionInput{Section: req.Section, Findings: req.Findings, Verdict: req.Verdict, Rounds: req.Rounds, Completion: req.Completion}
+	sectionInput := issuebody.SectionInput{Section: req.Section, Findings: req.Findings, Verdict: req.Verdict, Rounds: req.Rounds, ReviewerContext: req.ReviewerContext, Completion: req.Completion}
 	endpoint := "projects/" + url.PathEscape(projectPath) + "/issues/" + iid
 	if !req.Confirm {
 		if _, _, _, err := issuebody.RenderSection(sectionInput, gitLabIssueBodyLimit); err != nil {

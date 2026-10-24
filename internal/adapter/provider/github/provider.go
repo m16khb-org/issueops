@@ -466,7 +466,7 @@ func (Provider) UpdateIssueBodySection(ctx context.Context, req port.IssueProvid
 	if issueURL == "" {
 		return port.IssueProviderUpdateIssueBodySectionResult{OK: false}, fmt.Errorf("issue url is required")
 	}
-	sectionInput := issuebody.SectionInput{Section: req.Section, Findings: req.Findings, Verdict: req.Verdict, Rounds: req.Rounds, Completion: req.Completion}
+	sectionInput := issuebody.SectionInput{Section: req.Section, Findings: req.Findings, Verdict: req.Verdict, Rounds: req.Rounds, ReviewerContext: req.ReviewerContext, Completion: req.Completion}
 	if !req.Confirm {
 		// preview는 네트워크 없이 payload 유효성만 검증한다.
 		if _, _, _, err := issuebody.RenderSection(sectionInput, gitHubIssueBodyLimit); err != nil {

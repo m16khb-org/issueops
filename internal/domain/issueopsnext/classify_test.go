@@ -1058,3 +1058,15 @@ func TestClassifyUnfinishedCleanupResumesAtItsPreview(t *testing.T) {
 		}
 	}
 }
+
+// A done cycle whose completion was reflected or whose issue was closed is
+// past the merge: next continues at the cleanup finish preview.
+func TestClassifyDoneAfterCompletionReceiptGoesToFinishPreview(t *testing.T) {
+	in := Input{Record: issueopsnextcontract.Record{ID: "io-1", Phase: issueopsnextcontract.PhaseDone}}
+	for _, completion := range []issueopscontract.IssueOpsRemoteCompletion{{ReflectedAt: "t"}, {IssueClosedAt: "t"}} {
+		in.Record.RemoteCompletion = &completion
+		if got := Classify(in); got.NextCommand != "issueops cleanup finish --id io-1 --preview --json" {
+			t.Fatalf("%+v: %q", completion, got.NextCommand)
+		}
+	}
+}
