@@ -41,10 +41,13 @@ var workspaceScopedTools = map[string]bool{
 	"worker_run_read_only":        true,
 }
 
+// authorityFieldDescriptions repeats on every workspace tool, so it stays
+// minimal: the field names say what cwd and workspace_root are, and refusals
+// name the expected paths.
 var authorityFieldDescriptions = map[string]string{
 	authorityFileField: "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
-	workspaceRootField: "Absolute workspace root; must match repo/path and the record.",
-	cwdField:           "Working directory in the workspace (default: workspace root).",
+	workspaceRootField: "Absolute workspace root.",
+	cwdField:           "",
 }
 
 // withAuthorityFields advertises the request authority inputs on every
@@ -65,7 +68,11 @@ func withAuthorityFields(tools []map[string]any) []map[string]any {
 		}
 		for field, description := range authorityFieldDescriptions {
 			if _, exists := properties[field]; !exists {
-				properties[field] = map[string]any{"type": "string", "description": description}
+				property := map[string]any{"type": "string"}
+				if description != "" {
+					property["description"] = description
+				}
+				properties[field] = property
 			}
 		}
 		schema = maps.Clone(schema)

@@ -12,7 +12,6 @@
           "type": "string"
         },
         "cwd": {
-          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "host_receipts": {
@@ -24,7 +23,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root; must match repo/path and the record.",
+          "description": "Absolute workspace root.",
           "type": "string"
         }
       },
@@ -277,7 +276,6 @@
           "type": "string"
         },
         "cwd": {
-          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "path": {
@@ -285,7 +283,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root; must match repo/path and the record.",
+          "description": "Absolute workspace root.",
           "type": "string"
         }
       },
@@ -417,7 +415,6 @@
           "type": "string"
         },
         "cwd": {
-          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "repo": {
@@ -429,7 +426,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root; must match repo/path and the record.",
+          "description": "Absolute workspace root.",
           "type": "string"
         }
       },
@@ -450,7 +447,6 @@
           "type": "string"
         },
         "cwd": {
-          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "repo": {
@@ -458,7 +454,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root; must match repo/path and the record.",
+          "description": "Absolute workspace root.",
           "type": "string"
         }
       },
@@ -479,7 +475,6 @@
           "type": "string"
         },
         "cwd": {
-          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "rel_path": {
@@ -491,7 +486,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root; must match repo/path and the record.",
+          "description": "Absolute workspace root.",
           "type": "string"
         }
       },
@@ -523,7 +518,6 @@
           "type": "string"
         },
         "cwd": {
-          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "evidence": {
@@ -550,7 +544,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root; must match repo/path and the record.",
+          "description": "Absolute workspace root.",
           "type": "string"
         }
       },
@@ -592,7 +586,6 @@
           "type": "string"
         },
         "cwd": {
-          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "decision": {
@@ -631,7 +624,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root; must match repo/path and the record.",
+          "description": "Absolute workspace root.",
           "type": "string"
         }
       },
@@ -661,7 +654,6 @@
           "type": "string"
         },
         "cwd": {
-          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "diff_file": {
@@ -688,7 +680,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root; must match repo/path and the record.",
+          "description": "Absolute workspace root.",
           "type": "string"
         }
       },
@@ -713,7 +705,6 @@
           "type": "string"
         },
         "cwd": {
-          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "files": {
@@ -728,7 +719,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root; must match repo/path and the record.",
+          "description": "Absolute workspace root.",
           "type": "string"
         }
       },
@@ -1096,7 +1087,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root; must match repo/path and the record.",
+          "description": "Absolute workspace root.",
           "type": "string"
         }
       },
@@ -1123,7 +1114,6 @@
           "type": "string"
         },
         "cwd": {
-          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "goal": {
@@ -1150,7 +1140,7 @@
           "type": "array"
         },
         "workspace_root": {
-          "description": "Absolute workspace root; must match repo/path and the record.",
+          "description": "Absolute workspace root.",
           "type": "string"
         }
       },
@@ -1176,7 +1166,6 @@
           "type": "string"
         },
         "cwd": {
-          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "evidence": {
@@ -1195,7 +1184,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root; must match repo/path and the record.",
+          "description": "Absolute workspace root.",
           "type": "string"
         }
       },
@@ -1221,7 +1210,6 @@
           "type": "string"
         },
         "cwd": {
-          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "id": {
@@ -1229,7 +1217,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root; must match repo/path and the record.",
+          "description": "Absolute workspace root.",
           "type": "string"
         }
       },
@@ -1253,7 +1241,6 @@
           "type": "string"
         },
         "cwd": {
-          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "id": {
@@ -1269,7 +1256,7 @@
           "type": "boolean"
         },
         "workspace_root": {
-          "description": "Absolute workspace root; must match repo/path and the record.",
+          "description": "Absolute workspace root.",
           "type": "string"
         }
       },
@@ -1408,7 +1395,6 @@
           "type": "string"
         },
         "cwd": {
-          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "file": {
@@ -1424,7 +1410,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root; must match repo/path and the record.",
+          "description": "Absolute workspace root.",
           "type": "string"
         }
       },
@@ -1451,7 +1437,6 @@
           "type": "string"
         },
         "cwd": {
-          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "file": {
@@ -1470,7 +1455,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root; must match repo/path and the record.",
+          "description": "Absolute workspace root.",
           "type": "string"
         }
       },
@@ -2057,7 +2042,6 @@
           "type": "string"
         },
         "cwd": {
-          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "repo": {
@@ -2069,7 +2053,7 @@
           "type": "boolean"
         },
         "workspace_root": {
-          "description": "Absolute workspace root; must match repo/path and the record.",
+          "description": "Absolute workspace root.",
           "type": "string"
         }
       },
@@ -2096,7 +2080,6 @@
           "type": "array"
         },
         "cwd": {
-          "description": "Working directory in the workspace (default: workspace root).",
           "type": "string"
         },
         "repo": {
@@ -2104,7 +2087,7 @@
           "type": "string"
         },
         "workspace_root": {
-          "description": "Absolute workspace root; must match repo/path and the record.",
+          "description": "Absolute workspace root.",
           "type": "string"
         }
       },
