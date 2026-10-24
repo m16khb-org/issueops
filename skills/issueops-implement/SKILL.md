@@ -149,6 +149,14 @@ blocker 근거는 기록 직전에 한 번 더 확인한다. 확인 규칙은 [�
 
 같은 focused test가 **두 번** GREEN에 실패하면 세 번째를 추측으로 시도하지 않고 [`issueops-debugging`](../issueops-debugging/SKILL.md)으로 넘긴다. 세 번째 실패는 `verified-execution`의 목표 종료와 같은 카운터이며 4단계를 멈추고 보고한다. 세부는 [GREEN 실패 처리](references/green-failure.md)를 읽고 따른다.
 
+구현 도중 사용자가 요구사항을 바꾸면(완료 기준·범위 변경) 이 순서로 반영한다:
+`feedback add --classification contract_change` → 이슈 본문 갱신(`issueops-sync-issue`) →
+`feedback mark-issue-updated` → 새 기준으로 `intent record` → 워크트리의 추적 계획
+(`.issueops/issues/<n>/plan.md`)과 게이트 원장 수정 → `decision add`로 바뀐 점 기록 → 구현·검증 뒤
+`feedback resolve`.
+`.issueops/issues/<n>/artifact/`는 prepare가 봉인한 승인 시점의 사본이다. 고치거나 덮어쓰지 않는다
+(`artifact stage`도 prepare 뒤에는 거부된다). `regress`는 plan·compatibility-review에서만 되므로 구현 중에는 쓰지 않는다.
+
 ## Lease fencing
 
 `execution whoami --json`의 `record_actor_flags`를 `$RECORD_ACTOR_FLAGS`로,
