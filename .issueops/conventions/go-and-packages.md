@@ -18,6 +18,7 @@
 - 테스트 파일은 대상 파일 가까이에 `*_test.go`로 둔다.
 - CLI 명령의 들여쓴 JSON 출력은 leaf 패키지 `cmd/issueops/jsonout`(`Print`, `PrintTo`)을 쓴다. 명령 패키지마다 `json.Encoder`를 다시 만들지 않는다.
 - 파일이 없는지 판정할 때는 `errors.Is(err, fs.ErrNotExist)`를 쓴다. `os.IsNotExist`는 `%w`로 감싼 에러를 풀지 못한다(#550에서 production 호출을 모두 바꿨다).
+- adapter가 git을 실행할 때는 `exec.Command(gitbin.Path(), ...)`(`internal/adapter/outbound/gitbin`)를 쓴다. macOS의 `/usr/bin/git`은 xcrun shim이라 호출마다 약 5 ms가 더 들고, `gitbin`은 shim이 실행할 바로 그 바이너리로 바꿔 준다. 그 밖의 환경에서는 PATH의 git을 그대로 쓴다.
 
 현재 구조(대표 경로):
 
