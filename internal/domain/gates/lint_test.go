@@ -98,12 +98,12 @@ func TestLintStaticWarnsOnRegexLookingLiteralExpect(t *testing.T) {
 }
 
 // `sh script.sh` (the form project docs often give) is denied; the message
-// names the form that runs. Other denials carry no such hint.
+// names the form that runs. Denials without a remedy carry no hint.
 func TestDeniedMessageNamesTheShellInterpreterRemedy(t *testing.T) {
 	if got := DeniedMessage([]string{"command_not_in_read_only_allowlist", "shell_interpreter_not_allowed"}); !strings.Contains(got, "run an executable script directly") {
 		t.Fatalf("shell denial: %q", got)
 	}
-	if got := DeniedMessage([]string{"network_not_allowed"}); got != "check denied by policy: network_not_allowed" {
+	if got := DeniedMessage([]string{"write_not_allowed"}); got != "check denied by policy: write_not_allowed" {
 		t.Fatalf("other denial: %q", got)
 	}
 	// A Codex run checked a worktree ledger with the source checkout as root.
@@ -135,5 +135,11 @@ func TestLintStaticFlagsNewlineBeforeEndAnchor(t *testing.T) {
 	result, _ := LintStatic(LintCandidate{Source: "g.md", Gate: gate})
 	if len(result.Problems) != 1 || !strings.Contains(result.Problems[0], `drop the \n before \z`) {
 		t.Fatalf("problems = %q", result.Problems)
+	}
+}
+
+func TestDeniedMessageNamesTheNetworkRemedy(t *testing.T) {
+	if got := DeniedMessage([]string{"network_not_allowed"}); !strings.Contains(got, "node --test") || !strings.Contains(got, "--network") {
+		t.Fatalf("message %q", got)
 	}
 }

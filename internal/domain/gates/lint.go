@@ -175,6 +175,11 @@ func DeniedMessage(denyReasons []string) string {
 	if slices.Contains(denyReasons, "shell_interpreter_not_allowed") {
 		message += " (CHECK runs one argv without a shell; run an executable script directly, e.g. ./script.sh, instead of sh/bash script.sh; a syntax check sh -n FILE is allowed)"
 	}
+	if slices.Contains(denyReasons, "network_not_allowed") {
+		// QA (Node repo): `npm test` was refused with no remedy; npm, pnpm,
+		// yarn, pip, and gh count as network commands.
+		message += " (package managers such as npm/pnpm/yarn/pip count as network commands; run the test runner directly, e.g. node --test or python3 -m unittest, or pass --network to gates lint/check when the CHECK needs it)"
+	}
 	if slices.Contains(denyReasons, "cwd_outside_workspace") || slices.Contains(denyReasons, "path_outside_workspace") {
 		message += " (--cwd and every path must sit inside --workspace-root; for a cycle ledger pass the canonical worktree as both)"
 	}
