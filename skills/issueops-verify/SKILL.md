@@ -85,9 +85,11 @@ issueops gates status --file "$LEDGER" --cwd "$WORKTREE" --workspace-root "$WORK
 # 새 실행이 필요하면 CHECK를 실행하되 원장은 바꾸지 않는다.
 issueops gates check --file "$LEDGER" --cwd "$WORKTREE" --workspace-root "$WORKTREE" --json
 
-# 게이트 CHECK에서 이미 실행한 명령은 중복 실행하지 않는다.
-# 저장소의 필수 검증 중 아직 유효한 성공 증거가 없는 명령만 실행한다.
-issueops verify-work --json -- "$VERIFY_COMMAND"
+# 게이트 CHECK에서 이미 실행한 명령은 중복 실행하지 않는다. 필수 검증 중 게이트에 없는
+# 테스트·스크립트가 남으면 4단계로 돌아가 게이트로 올린다(원장은 4·5단계 소유).
+# verify-work는 git·preflight·guard 증거를 모으고, `--` 뒤에는 읽기 전용 allowlist
+# 명령만 받는다(프로젝트 스크립트와 테스트는 정책이 거부한다).
+issueops verify-work --json
 ```
 
 위 명령은 모두 순서대로 실행하는 목록이 아니다. 재사용할 때는 원래 명령·결과·시점과
@@ -112,8 +114,8 @@ tree까지의 변경과 staged·unstaged·untracked 경로의 합집합이다.
 - endpoint·DTO·OpenAPI가 바뀌었으면 `.issueops/OPEN_API_SPEC.md` 게이트를 적용하고
   `issueops api-doc check --json`을 실행한다. 대상 저장소에
   `npm run swagger:check` 같은 wrapper가 있으면 그것을 먼저 실행한다.
-- `verify-work`는 실행한 명령과 결과를 evidence로 남긴다. 실행하지 않은 검증을 pass로
-  적지 않는다.
+- `verify-work`와 `gates check`는 실행한 명령과 결과를 evidence로 남긴다. 실행하지 않은
+  검증을 pass로 적지 않는다.
 - report의 검증 절은 명령마다 한 행을 쓴다:
   `| 요구한 문서 경로 | 그 문서의 해당 문장 인용 | 명령 | 결과 또는 Not Run 사유 |`.
   문서가 요구하지 않았지만 실행한 명령은 문서 칸에 `게이트 원장`이나 `스킬`처럼 실제 출처를 적는다.
