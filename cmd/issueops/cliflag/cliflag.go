@@ -41,7 +41,7 @@ func Parse(fs *flag.FlagSet, args []string) error {
 		// zsh does not word-split an unquoted $VAR, so `$RECORD_ACTOR_FLAGS`
 		// arrives as one argument holding several flags.
 		if strings.ContainsAny(name, " \t") {
-			return fmt.Errorf("one argument holds several flags (%q): the shell passed a flags variable unsplit; in zsh write ${=VAR} or use an array", "--"+name)
+			return fmt.Errorf("one argument holds several flags (%q): the shell passed a flags variable unsplit; %s", "--"+name, quotedFlagsRemedy)
 		}
 		var known []string
 		fs.VisitAll(func(f *flag.Flag) { known = append(known, f.Name) })
@@ -49,7 +49,34 @@ func Parse(fs *flag.FlagSet, args []string) error {
 			return fmt.Errorf("%w (did you mean --%s?)", err, closest[0])
 		}
 	}
+	if err == nil {
+		return literalQuotes(fs)
+	}
 	return err
+}
+
+// quotedFlagsRemedy says how to pass the shell-quoted actor flag text whoami
+// returns. zsh's ${=VAR} splits on blanks but keeps the quote characters, so
+// '--session-id' arrives as "'abc'" (QA: a Codex session lost a receipt that
+// way after following the old hint).
+const quotedFlagsRemedy = "the flags text is shell-quoted, so paste it into the command itself or run the command through eval (eval \"issueops ... $VAR\"); zsh ${=VAR} keeps the quote characters"
+
+// identityFlags never hold a literal quote; one wrapped in quotes means the
+// shell split a quoted flags string without unquoting it.
+var identityFlags = []string{"host", "session-id", "agent-id", "session-pid", "session-started-at", "session-executable", "cwd"}
+
+func literalQuotes(fs *flag.FlagSet) error {
+	for _, name := range identityFlags {
+		f := fs.Lookup(name)
+		if f == nil {
+			continue
+		}
+		value := f.Value.String()
+		if len(value) >= 2 && (value[0] == '\'' || value[0] == '"') && value[len(value)-1] == value[0] {
+			return fmt.Errorf("--%s value %s still carries its quote characters: %s", name, value, quotedFlagsRemedy)
+		}
+	}
+	return nil
 }
 
 // Suggest returns up to limit known names closest to name: prefix matches

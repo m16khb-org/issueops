@@ -167,6 +167,7 @@
         "func editDistance",
         "func flagToken",
         "func isBoolFlag",
+        "func literalQuotes",
         "func swallowedFlag"
       ]
     },

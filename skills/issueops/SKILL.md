@@ -90,7 +90,8 @@ issueops next --json
 
 **(b) actor 플래그.** `issueops execution whoami --json`이 돌려주는 값을 그대로 쓴다:
 `$RECORD_ACTOR_FLAGS` = `record_actor_flags`(문자열), `$ACTOR_FLAGS` = `claim_actor_flags[0]`(배열의 첫 항목). 손으로 조립하지 않는다.
-변수에 담아 쓰면 zsh는 따옴표 없는 `$VAR`도 한 인자로 넘기므로 `${=VAR}`로 펼친다.
+두 값은 셸 따옴표가 붙은 문자열이다. 명령 본문에 그대로 붙여 넣거나 `eval "issueops ... $VAR"`로 실행한다.
+zsh의 `${=VAR}`는 공백에서 나누지만 따옴표 문자를 그대로 남겨 세션 값이 깨진다.
 
 **(c) lease fencing.** durable mutation(phase 전이, record 기록, artifact stage) 전마다
 exact lifecycle ID·generation·native actor·canonical cwd를 현재 record와 대조한다.

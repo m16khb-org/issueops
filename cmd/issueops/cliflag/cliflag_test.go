@@ -105,7 +105,25 @@ func TestParseExplainsAnUnsplitFlagsVariable(t *testing.T) {
 	fs.String("host", "", "host")
 	fs.String("session-id", "", "session")
 	err := Parse(fs, []string{"--host claude --session-id s-1"})
-	if err == nil || !strings.Contains(err.Error(), "one argument holds several flags") || !strings.Contains(err.Error(), "${=VAR}") {
+	if err == nil || !strings.Contains(err.Error(), "one argument holds several flags") || !strings.Contains(err.Error(), "eval") {
 		t.Fatalf("err=%v", err)
+	}
+}
+
+// whoami's flags text is shell-quoted; zsh ${=VAR} splits it but keeps the
+// quotes, so the session id arrived as 'abc' and the receipt failed later
+// with no hint. Identity flags refuse literal quotes; other flags keep them.
+func TestParseRefusesIdentityValuesStillCarryingQuotes(t *testing.T) {
+	newFS := func() *flag.FlagSet {
+		fs := flag.NewFlagSet("demo", flag.ContinueOnError)
+		fs.String("session-id", "", "session")
+		fs.String("evidence", "", "evidence")
+		return fs
+	}
+	if err := Parse(newFS(), []string{"--session-id", "'abc'"}); err == nil || !strings.Contains(err.Error(), "--session-id value 'abc' still carries its quote characters") {
+		t.Fatalf("quoted identity: %v", err)
+	}
+	if err := Parse(newFS(), []string{"--session-id", "abc", "--evidence", "'quoted'"}); err != nil {
+		t.Fatalf("plain identity with quoted evidence: %v", err)
 	}
 }
