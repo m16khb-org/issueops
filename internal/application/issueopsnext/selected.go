@@ -16,6 +16,7 @@ func (service *Service) nextSelected(
 	stateRoot, sourceRoot, id string,
 	result issueopsnextcontract.Result,
 	actorHost, actorSession string,
+	fromEnv bool,
 ) (issueopsnextcontract.Result, error) {
 	ports := service.ports
 	if ports.ReadSelected == nil || ports.SourceRoot == nil {
@@ -38,6 +39,15 @@ func (service *Service) nextSelected(
 		result.Selected = entryOf(issueopsinventorycontract.ListEntry{ID: id, Invalid: true})
 		result.Stage = issueopsnextcontract.Stage{Key: issueopsnextcontract.StageInvalid}
 		result.NextCommand = "issueops status --id " + id + " --json"
+		if record.Invalid {
+			// status cannot read a missing record either; list shows what exists.
+			result.NextCommand = "issueops list --repo " + placeholder(sourceRoot, "<source_root>") + " --json"
+			warning := "no readable record for " + id + " (cleaned up, abandoned, or in another state dir)"
+			if fromEnv {
+				warning += "; the id came from ISSUEOPS_ID: unset it so next picks the cycle itself"
+			}
+			result.Warnings = append(result.Warnings, warning)
+		}
 		result.NextCommandKind = commandKind(result.NextCommand)
 		return result, nil
 	}

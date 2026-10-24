@@ -58,7 +58,7 @@ func (service *Service) Next(ctx context.Context, stateRoot, cwd, id string) (is
 	}
 
 	if selectedID := requestedCycleID(ports, id); selectedID != "" {
-		return service.nextSelected(ctx, stateRoot, sourceRoot, selectedID, result, actorHost, actorSession)
+		return service.nextSelected(ctx, stateRoot, sourceRoot, selectedID, result, actorHost, actorSession, strings.TrimSpace(id) == "")
 	}
 	listing, err := ports.ListCycles(ctx, stateRoot, sourceRoot)
 	if err != nil {

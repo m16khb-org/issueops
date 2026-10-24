@@ -87,13 +87,35 @@ func TestNextSelectedRepositoryFence(t *testing.T) {
 
 			result, err := NewService(ports).Next(context.Background(), "/state", "/repo", "io-selected")
 
-			if err != nil || result.Stage.Key != scenario.wantStage || result.Selected.ID != "io-selected" || len(result.Warnings) != 0 {
+			if err != nil || result.Stage.Key != scenario.wantStage || result.Selected.ID != "io-selected" || (len(result.Warnings) != 0) != scenario.invalid {
 				t.Fatalf("result = %+v, err = %v", result, err)
+			}
+			// An unreadable record cannot answer status either: an agent with a
+			// stale ISSUEOPS_ID was sent to a status call that failed.
+			if scenario.invalid && (!strings.HasPrefix(result.NextCommand, "issueops list --repo /repo") || !strings.Contains(result.Warnings[0], "no readable record for io-selected")) {
+				t.Fatalf("unreadable selection: next=%q warnings=%q", result.NextCommand, result.Warnings)
 			}
 			if scenario.wantStage == "invalid" && result.Selected.Branch != "" {
 				t.Fatalf("invalid selection leaked record metadata: %+v", result.Selected)
 			}
 		})
+	}
+}
+
+func TestNextNamesAStaleIssueOpsIDFromTheEnvironment(t *testing.T) {
+	ports := testPorts(nil, nil)
+	ports.Env = func(key string) string {
+		if key == "ISSUEOPS_ID" {
+			return "io-gone"
+		}
+		return ""
+	}
+	ports.ReadSelected = func(context.Context, string, string) (issueopscontract.IssueOpsRecord, error) {
+		return issueopscontract.IssueOpsRecord{ID: "io-gone", Invalid: true}, nil
+	}
+	result, err := NewService(ports).Next(context.Background(), "/state", "/repo", "")
+	if err != nil || len(result.Warnings) != 1 || !strings.Contains(result.Warnings[0], "unset it") {
+		t.Fatalf("result = %+v, err = %v", result, err)
 	}
 }
 

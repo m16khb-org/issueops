@@ -87,6 +87,23 @@ func TestCleanupAbandonPreviewKeepsUnknownResourcesBlocked(t *testing.T) {
 	}
 }
 
+// An agent saw remote_effects plan remote_branch_delete while
+// remote_branch_deletion said not_planned; the two now agree.
+func TestCleanupAbandonPreviewRemoteBranchDeletionFollowsRemoteEffects(t *testing.T) {
+	record := model.IssueOpsRecord{ID: "io-example", Branch: "task"}
+	inventory := CleanupAbandonTargets(record)
+	for effects, want := range map[string]string{
+		"close_pr,remote_branch_delete":           "planned",
+		"close_issue,remote_branch_delete:absent": "already_absent",
+		"close_issue": "not_planned",
+	} {
+		observed := CleanupAbandonObservation{BranchObservable: true, RemoteEffects: strings.Split(effects, ",")}
+		if _, result := BuildCleanupAbandonPreview(record, model.CleanupAbandonRequest{Reason: "cancel"}, inventory, observed); result.RemoteBranchDeletion != want {
+			t.Fatalf("%s: remote_branch_deletion=%q, want %q", effects, result.RemoteBranchDeletion, want)
+		}
+	}
+}
+
 func TestCleanupAbandonPreviewPreservesAllRefusalReasons(t *testing.T) {
 	record := model.IssueOpsRecord{ID: "io-example", Branch: "task", RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/1"}}
 	inventory := model.CleanupAbandonInventory{Branch: "task", WorktreePresent: true, WorktreeHead: "first", BranchOID: "second"}

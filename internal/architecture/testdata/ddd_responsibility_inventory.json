@@ -12972,6 +12972,7 @@
       "task": "T20",
       "symbols": [
         "func BuildCleanupAbandonPreview",
+        "func abandonRemoteBranchDeletion",
         "func cleanupAbandonPreviewBuilder.add",
         "func cleanupAbandonPreviewBuilder.checkBranchObservation",
         "func cleanupAbandonPreviewBuilder.checkFailureReceipt",

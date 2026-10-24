@@ -26,7 +26,7 @@ func BuildCleanupAbandonPreview(record model.IssueOpsRecord, req model.CleanupAb
 	b := &cleanupAbandonPreviewBuilder{record: &record, req: &req, inventory: inventory, observed: &observed}
 	b.result = model.CleanupAbandonResult{
 		OK: true, ID: record.ID, Preview: !req.Apply, Reason: strings.TrimSpace(req.Reason),
-		RemoteBranchDeletion: "not_planned", Missing: []string{},
+		RemoteBranchDeletion: abandonRemoteBranchDeletion(observed.RemoteEffects), Missing: []string{},
 		WorktreePath: inventory.WorktreeRoot, Branch: inventory.Branch,
 		WorktreePresent: inventory.WorktreePresent, WorktreeCanonical: inventory.WorktreeCanonical,
 		WorktreeClean: inventory.WorktreeClean, WorktreeHead: inventory.WorktreeHead,
@@ -47,6 +47,21 @@ func BuildCleanupAbandonPreview(record model.IssueOpsRecord, req model.CleanupAb
 	b.result.Missing = b.missing
 	b.result.OK = len(b.missing) == 0
 	return b.inventory, b.result
+}
+
+// abandonRemoteBranchDeletion names what abandon does to the remote branch, from
+// the same remote effects the result lists (it used to say not_planned while
+// remote_effects planned the deletion).
+func abandonRemoteBranchDeletion(effects []string) string {
+	for _, effect := range effects {
+		switch effect {
+		case "remote_branch_delete":
+			return "planned"
+		case "remote_branch_delete:absent":
+			return "already_absent"
+		}
+	}
+	return "not_planned"
 }
 
 // cleanupAbandonPreviewBuilder accumulates the missing-gate list in the order

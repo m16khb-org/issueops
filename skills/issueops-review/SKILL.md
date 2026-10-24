@@ -83,12 +83,9 @@ issueops next --id "$ISSUEOPS_ID" --json
 
 ## 지적을 실행한다
 
-리뷰어가 낸 CHECK는 호출자가 실행한다. 실행 결과는 다음 라운드의 **입력**이지
-판정이 아니다.
-
-```bash
-issueops verify-work --json -- <CHECK>
-```
+리뷰어가 낸 CHECK는 호출자가 worktree에서 그대로 실행한다. 실행 결과는 다음 라운드의
+**입력**이지 판정이 아니다. `verify-work -- <CHECK>`는 읽기 전용 allowlist 명령만 받아
+테스트·스크립트 CHECK를 거부하므로 쓰지 않는다.
 
 - `--target architecture`, `--target plan`, `--target diff` 모두 이 경로로 실행한다. 계획 단계에는 아직 게이트
   원장 파일이 없다(원장은 4단계 진입의 `gates init`이 만든다). 그러니 여기서 `gates`
