@@ -1,6 +1,6 @@
 ---
 name: aside-visual-qa
-description: "Use for UI/UX QA through the Aside CLI: whether a page, flow, or responsive state matches design intent, meets accessibility and usability standards, and feels coherent, with an evidence-backed report. Triggers: UI QA, UX/visual review, accessibility review, 어색한지 확인, 화면 QA, UI/UX 검수."
+description: 'Use for UI/UX QA through the Aside CLI: design intent, accessibility, usability, responsive states, with an evidence-backed report (UI QA, UX review, 접근성 검토, 화면 QA, UI/UX 검수).'
 ---
 
 # Aside Visual QA

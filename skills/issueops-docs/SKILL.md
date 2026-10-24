@@ -1,6 +1,6 @@
 ---
 name: issueops-docs
-description: Use when "issueops next" reports docs, or for "문서 반영", "ADR 남겨줘", "주의사항 기록", "update the project docs" inside an IssueOps cycle. Reflects the finished diff into the .issueops documents it touches, re-seals the ai-slop-clean fingerprint, and records the project-docs-review verdict.
+description: 'Use when `issueops next` reports docs, or for "문서 반영", "ADR 남겨줘", "주의사항 기록" in an IssueOps cycle: reflects the diff into the .issueops docs it touches, re-seals ai-slop-clean, records the project-docs-review verdict.'
 ---
 
 # IssueOps Docs

@@ -1,6 +1,6 @@
 ---
 name: diagram-design
-description: 'MUST USE when creating or improving any diagram or visual explanation (mermaid flowchart/sequence/state/ER, architecture sketch, gantt, timeline, chart, ASCII art, rendered HTML). Triggers: 다이어그램, 그림, 시각화, diagram, flowchart, mermaid, chart. Picks the best form and verifies it renders.'
+description: 'MUST USE for any diagram or visual explanation (mermaid flowchart/sequence/state/ER, architecture sketch, gantt, chart, ASCII art): 다이어그램, 그림, 시각화, diagram, mermaid. Picks the best form and verifies it renders.'
 license: MIT
 metadata:
   routing_source: https://github.com/melodic-software/claude-code-plugins (visualize skill)

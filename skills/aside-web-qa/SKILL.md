@@ -1,6 +1,6 @@
 ---
 name: aside-web-qa
-description: "Use for combined web QA through the Aside CLI: behavior verification plus UI/UX review in one engagement with one merged client report (통합 QA, 종합 QA, 웹 QA 오케스트레이션, 클라이언트 QA 총점검). Behavior-only asks go to aside-functional-qa; design/UX-only asks to aside-visual-qa."
+description: 'Use for combined web QA through the Aside CLI, behavior plus UI/UX in one merged client report (통합 QA, 종합 QA, 웹 QA). Behavior only: aside-functional-qa; design/UX only: aside-visual-qa.'
 ---
 
 # Aside Web QA (Orchestration)
