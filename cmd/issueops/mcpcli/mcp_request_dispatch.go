@@ -71,7 +71,9 @@ func authorizeMCPRequest(ctx context.Context, call MCPToolCall, deps MCPDependen
 	}
 	key, token, err := deps.Credentials.Read(ctx, file)
 	if err != nil {
-		return nil, MCPDependencies{}, nil, authorityInvalid("authority_file is not a readable managed credential")
+		// A credential written under another state dir (ISSUEOPS_STATE_DIR set
+		// for the CLI but not for the shared service) lands here.
+		return nil, MCPDependencies{}, nil, authorityInvalid("authority_file is not a readable managed credential: run `issueops mcp authorize` with the same ISSUEOPS_STATE_DIR as the MCP service and pass the path it prints")
 	}
 	bound, verified, err := deps.BindAuthority(ctx, authoritycontract.Use{
 		Key: key, Token: token, WorkspaceRoot: scope.WorkspaceRoot, CWD: scope.CWD,
