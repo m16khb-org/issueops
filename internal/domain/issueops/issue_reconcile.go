@@ -19,10 +19,10 @@ func ValidateIssueReconcileIntent(intent *model.IssueOpsIssueCreateIntent) error
 
 func ValidateIssueReconcileSearch(truncated bool, count int) error {
 	if truncated {
-		return fmt.Errorf("issue create reconciliation search was truncated; uniqueness is indeterminate")
+		return fmt.Errorf("create reconciliation search was truncated; uniqueness is indeterminate")
 	}
 	if count != 1 {
-		return fmt.Errorf("issue create reconciliation found %d live candidates; exactly one is required", count)
+		return fmt.Errorf("create reconciliation found %d live candidates; exactly one is required", count)
 	}
 	return nil
 }

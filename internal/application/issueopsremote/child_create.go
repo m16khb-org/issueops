@@ -212,6 +212,10 @@ func ChildRecoveryCommand(id, operation string, actors ...model.IssueOpsActor) s
 		if actor.AgentID != "" {
 			command += " --agent-id " + quote(actor.AgentID)
 		}
+	} else {
+		// QA: the preview ran without actor flags and its command lacked
+		// them, while --confirm requires them.
+		command += " $RECORD_ACTOR_FLAGS"
 	}
 	return command + " --confirm --json"
 }

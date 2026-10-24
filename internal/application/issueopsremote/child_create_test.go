@@ -264,8 +264,8 @@ func TestChildRecoveryCommandQuotesArgumentsAndIncludesActorOnlyWhenIdentified(t
 		actors []model.IssueOpsActor
 		want   string
 	}{
-		{"no actor", nil, base + " --confirm --json"},
-		{"actor without host", []model.IssueOpsActor{{SessionID: "s", CWD: "/w"}}, base + " --confirm --json"},
+		{"no actor", nil, base + " $RECORD_ACTOR_FLAGS --confirm --json"},
+		{"actor without host", []model.IssueOpsActor{{SessionID: "s", CWD: "/w"}}, base + " $RECORD_ACTOR_FLAGS --confirm --json"},
 		{"actor without agent", []model.IssueOpsActor{{Host: "codex", SessionID: "s", CWD: "/w"}}, base + " --host 'codex' --session-id 's' --cwd '/w' --confirm --json"},
 		{"actor with agent", []model.IssueOpsActor{{Host: "codex", SessionID: "s", CWD: "/w", AgentID: "a1"}}, base + " --host 'codex' --session-id 's' --cwd '/w' --agent-id 'a1' --confirm --json"},
 		{"only first actor used", []model.IssueOpsActor{{Host: "codex", SessionID: "s", CWD: "/w"}, {Host: "claude", SessionID: "x", CWD: "/x"}}, base + " --host 'codex' --session-id 's' --cwd '/w' --confirm --json"},

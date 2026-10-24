@@ -130,6 +130,8 @@ func (s ChildReconciler) releaseCrashedChild(ctx context.Context, cmd ChildRecon
 		if err != nil {
 			hint += " (settlement: " + err.Error() + ")"
 		}
+		// The confirm command is for after the wait; the hint says when.
+		result.RecoveryCommand = ""
 		return result, true, fmt.Errorf("%w: %s", cause, hint)
 	}
 	if !cmd.Confirm {
