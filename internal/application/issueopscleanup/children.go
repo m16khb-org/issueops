@@ -64,7 +64,7 @@ func (s ChildrenCloser) Close(ctx context.Context, id string, requested, confirm
 			if req.Confirm {
 				// QA (lost close response): the provider may have closed it;
 				// a re-run observes already-closed children and records them.
-				return fmt.Errorf("%w; the provider may still have closed it: re-run this same command, which is idempotent (an already closed child is success)", firstErr)
+				return domain.IdempotentConfirmRetry(firstErr, "an already closed child")
 			}
 			return firstErr
 		}

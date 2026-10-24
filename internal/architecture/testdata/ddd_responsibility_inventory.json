@@ -13188,6 +13188,14 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/confirm_retry.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func IdempotentConfirmRetry"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/delegation.go",
       "owner": "domain",
       "task": "T08",

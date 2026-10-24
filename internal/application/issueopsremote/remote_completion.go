@@ -121,13 +121,12 @@ func (s *RemoteCompletionService) Close(ctx context.Context, id, providerOverrid
 	return record, result, err
 }
 
-// idempotentRetryHint tells a caller whose confirmed write failed that the
-// provider may still have applied it and that re-running the same command
-// settles it (QA, lost responses: the agent had to read the issue back to
-// learn that the section was written and the issue closed).
+// idempotentRetryHint names the way back after a confirmed write failed (QA,
+// lost responses: the agent had to read the issue back to learn that the
+// section was written and the issue closed). Previews keep their error.
 func idempotentRetryHint(err error, confirm bool, state string) error {
 	if !confirm {
 		return err
 	}
-	return fmt.Errorf("%w; the provider may still have applied it: re-run this same command, which is idempotent (an issue already %s is success)", err, state)
+	return domain.IdempotentConfirmRetry(err, "an issue already "+state)
 }
