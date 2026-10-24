@@ -336,3 +336,17 @@ func TestShellQuoteClaimValuePreservesApostrophe(t *testing.T) {
 		t.Fatalf("shellQuoteClaimValue() = %q, want %q", got, want)
 	}
 }
+
+// Claude Code started from an omp shell inherits omp's variables; the refusal
+// names every set variable so the stale one can be unset.
+func TestNativeSessionIdentityAmbiguityNamesTheSetVariables(t *testing.T) {
+	values := map[string]string{
+		"CLAUDE_CODE_SESSION_ID":  "claude-1",
+		"PI_SESSION_ID":           "omp-1",
+		"ISSUEOPS_OMP_SESSION_ID": "omp-1",
+	}
+	_, err := nativeSessionIdentityFromEnv(func(key string) string { return values[key] })
+	if err == nil || !strings.Contains(err.Error(), "CLAUDE_CODE_SESSION_ID, ISSUEOPS_OMP_SESSION_ID are all set") || strings.Contains(err.Error(), "PI_SESSION_ID,") {
+		t.Fatalf("ambiguity error = %v", err)
+	}
+}

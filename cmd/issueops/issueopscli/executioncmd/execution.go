@@ -315,6 +315,7 @@ func nativeSessionIdentityFromEnv(getenv func(string) string) (nativeSessionIden
 	if omp := getenv("ISSUEOPS_OMP_SESSION_ID"); omp != "" && omoSession == omp {
 		omoSession = ""
 	}
+	var set []string
 	for _, candidate := range []nativeSessionIdentity{
 		{Host: "codex", SessionID: getenv("CODEX_THREAD_ID"), Source: "CODEX_THREAD_ID"},
 		{Host: "claude", SessionID: getenv("CLAUDE_CODE_SESSION_ID"), Source: "CLAUDE_CODE_SESSION_ID"},
@@ -329,10 +330,16 @@ func nativeSessionIdentityFromEnv(getenv func(string) string) (nativeSessionIden
 		if candidate.SessionID == "" {
 			continue
 		}
-		if identity.Host != "" {
-			return nativeSessionIdentity{}, fmt.Errorf("native host session identity is ambiguous")
+		set = append(set, candidate.Source)
+		if identity.Host == "" {
+			identity = candidate
 		}
-		identity = candidate
+	}
+	if len(set) > 1 {
+		// A host started from another host's shell inherits that host's
+		// variable; naming them is the only way an agent can tell which one
+		// is stale (QA: the bare message sent it searching the references).
+		return nativeSessionIdentity{}, fmt.Errorf("native host session identity is ambiguous: %s are all set; a session started from another host's shell inherits its id, so unset the variables of the hosts this session is not (env -u NAME issueops ...)", strings.Join(set, ", "))
 	}
 	if identity.Host == "" {
 		return nativeSessionIdentity{}, fmt.Errorf("native host session identity is unavailable")

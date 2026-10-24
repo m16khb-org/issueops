@@ -180,8 +180,10 @@ strict readiness `warnings`의 `base_advanced`는 차단이 아니다. 그 경�
 뒤로 미루고 그 사실을 report에 적는다. apply는 봉인된 변경 집합에 base의
 파일을 끌어들여 fingerprint를 바꾸고, 정리·구현 리뷰·문서 반영 판정이 한꺼번에 stale이
 되어 5단계부터 다시 밟게 만든다. 머지는 PR 병합 시점에 provider가 한다. 충돌이 있으면 그
-사실을 PR 본문의 위험 절에 적는다. 예외는 둘이다: 사용자가 base 반영을 명시적으로 요청했거나
-`remote merge-pr`가 `merge_conflict`를 보고한 경우다. 그때는 preview가 준 apply를 실행하고
+사실을 PR 본문의 위험 절에 적는다. 예외는 셋이다: 사용자가 base 반영을 명시적으로 요청했거나,
+`remote merge-pr`가 `merge_conflict`를 보고했거나, preview의 `conflict_files`가 비어 있지 않고
+머지까지가 승인 범위인 경우다. 마지막은 머지가 어차피 `merge_conflict`로 막히므로 PR 전에 한 번만
+재봉인하는 편이 낫다. 그때는 preview가 준 apply를 실행하고
 `issueops next`가 안내하는 재봉인 순서(정리 → 리뷰 → `phase --to pr`)를 그대로 밟는다.
 
 구현된 diff가 계획 시점의 compatibility review와 다르면 durable 판정을 최신으로 맞춘다.

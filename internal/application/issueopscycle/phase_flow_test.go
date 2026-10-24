@@ -147,7 +147,7 @@ func TestAdvanceReportAISlopCleanRefreshSaysThePhaseStays(t *testing.T) {
 	p := &phaseFlow{record: record}
 	service := flowService(p, Readiness{Paths: readyPaths(), HasEvidence: func(model.IssueOpsRecord) bool { return true }})
 	got, materials, err := service.AdvanceReport("state", "io-1", "ai-slop-clean")
-	if err != nil || got.Phase != model.IssueOpsPhasePR || len(materials.Warnings) != 1 || !strings.Contains(materials.Warnings[0], "phase stays pr") {
+	if err != nil || got.Phase != model.IssueOpsPhasePR || len(materials.Warnings) != 1 || !strings.HasPrefix(materials.Warnings[0], "done: ") || !strings.Contains(materials.Warnings[0], "phase stays pr") {
 		t.Fatalf("got=%+v materials=%+v err=%v", got, materials, err)
 	}
 }
