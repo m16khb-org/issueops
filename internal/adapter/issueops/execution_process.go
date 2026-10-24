@@ -93,7 +93,7 @@ func observeNativeProcessSnapshot() (map[int]nativeProcessSnapshotEntry, error) 
 	ctx, cancel := context.WithTimeout(context.Background(), nativeProcessProbeTimeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "ps", "-ww", "-axo", "pid=,ppid=,lstart=,comm=")
-	cmd.Env = append(os.Environ(), "LC_ALL=C", "LANG=C")
+	cmd.Env = append(os.Environ(), "LC_ALL=C", "LANG=C", psUTC)
 	output, err := cmd.Output()
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
@@ -166,10 +166,16 @@ func nativeProcessAncestryFromSnapshot(snapshot map[int]nativeProcessSnapshotEnt
 	return nil, fmt.Errorf("native process ancestry exceeds %d entries", maxNativeProcessAncestry)
 }
 
+// psUTC makes ps render lstart in UTC, parsed back with time.UTC. Rendering in
+// the caller's zone and parsing with Go's time.Local broke on a POSIX TZ such
+// as KST-9: libc applied it, Go fell back to UTC, and the receipt moved by
+// nine hours, so another session saw a live holder as a different process.
+const psUTC = "TZ=UTC0"
+
 func parseNativeProcessStart(value string) (time.Time, error) {
 	value = strings.TrimSpace(value)
 	for _, layout := range []string{"Mon Jan _2 15:04:05 2006", "Mon Jan 2 15:04:05 2006"} {
-		if started, err := time.ParseInLocation(layout, value, time.Local); err == nil {
+		if started, err := time.ParseInLocation(layout, value, time.UTC); err == nil {
 			return started, nil
 		}
 	}
@@ -241,7 +247,7 @@ func processField(pid int, field string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), nativeProcessProbeTimeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "ps", "-p", strconv.Itoa(pid), "-o", field)
-	cmd.Env = append(os.Environ(), "LC_ALL=C", "LANG=C")
+	cmd.Env = append(os.Environ(), "LC_ALL=C", "LANG=C", psUTC)
 	output, err := cmd.Output()
 	if ctx.Err() != nil {
 		return "", ctx.Err()
@@ -265,7 +271,7 @@ func nativeProcessArguments(receipt issueops.NativeProcessReceipt) ([]string, er
 	ctx, cancel := context.WithTimeout(context.Background(), nativeProcessProbeTimeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "ps", "-ww", "-p", strconv.Itoa(receipt.PID), "-o", "lstart=,args=")
-	cmd.Env = append(os.Environ(), "LC_ALL=C", "LANG=C")
+	cmd.Env = append(os.Environ(), "LC_ALL=C", "LANG=C", psUTC)
 	output, err := cmd.Output()
 	if ctx.Err() != nil {
 		return nil, ctx.Err()

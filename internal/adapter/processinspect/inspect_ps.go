@@ -24,7 +24,7 @@ func (observer Inspector) Inspect(pid int) (contract.Identity, error) {
 	if err != nil {
 		return contract.Identity{}, fmt.Errorf("read process executable: %w", err)
 	}
-	start, err := domain.CanonicalStartTime(string(startOut), time.Local)
+	start, err := domain.CanonicalStartTime(string(startOut), time.UTC)
 	if err != nil {
 		return contract.Identity{}, err
 	}
@@ -46,11 +46,13 @@ func (observer Inspector) processFieldWithCLocale(pid int, field string) ([]byte
 	for _, value := range observer.Environment {
 		if strings.HasPrefix(value, "LANG=") ||
 			strings.HasPrefix(value, "LC_ALL=") ||
-			strings.HasPrefix(value, "LC_TIME=") {
+			strings.HasPrefix(value, "LC_TIME=") ||
+			strings.HasPrefix(value, "TZ=") {
 			continue
 		}
 		env = append(env, value)
 	}
-	cmd.Env = append(env, "LANG=C", "LC_ALL=C", "LC_TIME=C")
+	// lstart in UTC, parsed with time.UTC: independent of the caller's TZ.
+	cmd.Env = append(env, "LANG=C", "LC_ALL=C", "LC_TIME=C", "TZ=UTC0")
 	return cmd.Output()
 }

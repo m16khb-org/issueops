@@ -84,7 +84,7 @@ func TestParseProcessStartAcceptsPaddedAndUnpaddedDays(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%q: %v", value, err)
 		}
-		if got.Year() != 2026 || got.Month() != time.January || got.Day() != 5 || got.Hour() != 3 || got.Location() != time.Local {
+		if got.Year() != 2026 || got.Month() != time.January || got.Day() != 5 || got.Hour() != 3 || got.Location() != time.UTC {
 			t.Fatalf("%q parsed as %v", value, got)
 		}
 	}

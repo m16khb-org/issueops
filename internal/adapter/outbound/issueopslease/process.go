@@ -62,7 +62,8 @@ func observeReceipt(ctx context.Context, pid int) (leasedomain.ProcessReceipt, e
 }
 func processField(ctx context.Context, pid int, field string) (string, error) {
 	cmd := exec.CommandContext(ctx, "ps", "-p", strconv.Itoa(pid), "-o", field)
-	cmd.Env = append(os.Environ(), "LC_ALL=C", "LANG=C")
+	// lstart in UTC, parsed with time.UTC: independent of the caller's TZ.
+	cmd.Env = append(os.Environ(), "LC_ALL=C", "LANG=C", "TZ=UTC0")
 	output, err := cmd.Output()
 	if ctx.Err() != nil {
 		return "", ctx.Err()
@@ -79,7 +80,7 @@ func processField(ctx context.Context, pid int, field string) (string, error) {
 func parseProcessStart(value string) (time.Time, error) {
 	value = strings.TrimSpace(value)
 	for _, layout := range []string{"Mon Jan _2 15:04:05 2006", "Mon Jan 2 15:04:05 2006"} {
-		if started, err := time.ParseInLocation(layout, value, time.Local); err == nil {
+		if started, err := time.ParseInLocation(layout, value, time.UTC); err == nil {
 			return started, nil
 		}
 	}

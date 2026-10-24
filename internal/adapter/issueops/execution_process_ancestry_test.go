@@ -75,3 +75,28 @@ func TestObserveNativeProcessAncestryIncludesCurrentExactReceipt(t *testing.T) {
 	}
 	t.Fatalf("current process receipt %+v not found in ancestry %+v", want, got)
 }
+
+// A caller's TZ must not move a receipt: with TZ=KST-9 (a POSIX string Go
+// does not load, libc does) ps used to render nine hours ahead while Go
+// parsed in its cached zone, so another session saw a live holder as a
+// different process and next offered a takeover.
+func TestNativeProcessReceiptIgnoresTheCallersTimeZone(t *testing.T) {
+	want, err := ObserveNativeProcessReceipt(os.Getpid())
+	if err != nil {
+		t.Skipf("ps unavailable: %v", err)
+	}
+	for _, zone := range []string{"KST-9", "EST5EDT", "UTC0"} {
+		t.Setenv("TZ", zone)
+		got, err := ObserveNativeProcessReceipt(os.Getpid())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.StartedAt != want.StartedAt {
+			t.Fatalf("TZ=%s: started_at %s, want %s", zone, got.StartedAt, want.StartedAt)
+		}
+		snapshot, err := ObserveNativeProcessAncestry(os.Getpid())
+		if err != nil || len(snapshot) == 0 || snapshot[0].StartedAt != want.StartedAt {
+			t.Fatalf("TZ=%s: ancestry %+v err=%v, want started_at %s", zone, snapshot, err, want.StartedAt)
+		}
+	}
+}
