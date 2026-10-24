@@ -352,8 +352,12 @@ func TestChildReconcileReleasesASettledCrashedCreate(t *testing.T) {
 		settled bool
 	}{{model.IssueCreateIntentPending, false}, {model.IssueCreateIntentInvokedUnknown, true}} {
 		store, _, _, reconciler, cmd, op := crashed(t, tc.status, tc.settled)
-		if _, err := reconciler.Reconcile(context.Background(), ChildReconcileCommand{ID: cmd.ID, OperationID: op.OperationID, Confirm: true}, nil); err == nil || store.read().ChildCreateOperations[0].Status != tc.status {
+		_, err := reconciler.Reconcile(context.Background(), ChildReconcileCommand{ID: cmd.ID, OperationID: op.OperationID, Confirm: true}, nil)
+		if err == nil || store.read().ChildCreateOperations[0].Status != tc.status {
 			t.Fatalf("%s settled=%v: err=%v status=%s", tc.status, tc.settled, err, store.read().ChildCreateOperations[0].Status)
+		}
+		if waits := strings.Contains(err.Error(), "2 minutes old"); waits != (tc.status == model.IssueCreateIntentPending) {
+			t.Fatalf("%s: wait hint shown=%v: %v", tc.status, waits, err)
 		}
 	}
 }

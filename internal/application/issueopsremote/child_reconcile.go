@@ -49,7 +49,7 @@ func (s ChildReconciler) Reconcile(ctx context.Context, cmd ChildReconcileComman
 	if err != nil {
 		// QA (killed create-child): a pending operation with no candidate
 		// had no exit but abandon; release it once settled.
-		if released, ok, releaseErr := s.releaseCrashedChild(ctx, cmd, run, result); ok {
+		if released, ok, releaseErr := s.releaseCrashedChild(ctx, cmd, run, result, err); ok {
 			return released, releaseErr
 		}
 		return result, err
@@ -115,15 +115,22 @@ func (s ChildReconciler) beginChildRecovery(ctx context.Context, cmd ChildReconc
 
 // releaseCrashedChild releases a pending child create that found no candidate
 // when the settlement proves nothing was or will be created. ok is false when
-// the release does not apply, leaving the caller's error in place.
-func (s ChildReconciler) releaseCrashedChild(ctx context.Context, cmd ChildReconcileCommand, run childRecoveryRun, result model.ChildReconcileResult) (model.ChildReconcileResult, bool, error) {
+// the release does not apply, leaving cause in place; an unsettled crash
+// returns cause with the wait named.
+func (s ChildReconciler) releaseCrashedChild(ctx context.Context, cmd ChildReconcileCommand, run childRecoveryRun, result model.ChildReconcileResult, cause error) (model.ChildReconcileResult, bool, error) {
 	op := run.op
 	if s.Settled == nil || result.CandidateCount != 0 || op.CanonicalURL != "" || op.Status != model.IssueCreateIntentPending {
 		return result, false, nil
 	}
 	settled, err := s.Settled(ctx, run.record, op)
 	if err != nil || !settled {
-		return result, false, nil
+		// QA: an agent retried within the quiet period and read the bare
+		// "exactly one is required" as a dead end; name the wait.
+		hint := "a pending child create whose caller died is released once it is 2 minutes old, no create for it is running, and the provider lists no child with its marker; re-run this reconcile then"
+		if err != nil {
+			hint += " (settlement: " + err.Error() + ")"
+		}
+		return result, true, fmt.Errorf("%w: %s", cause, hint)
 	}
 	if !cmd.Confirm {
 		result.OK = true

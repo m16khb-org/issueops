@@ -1006,3 +1006,16 @@ func TestClassifyPendingWithADeadHolderRoutesToTakeover(t *testing.T) {
 		t.Fatalf("claimable with pending: %+v", got)
 	}
 }
+
+// An unsettled child create surfaces on every stage; a completed one does not.
+func TestClassifyWarnsAboutAnUnsettledChildCreate(t *testing.T) {
+	in := Input{Record: issueopsnextcontract.Record{ID: "io-1", Phase: issueopsnextcontract.PhasePlan}}
+	in.Record.ChildCreateOperations = []issueopscontract.ChildCreateOperation{{IssueOpsIssueCreateIntent: issueopscontract.IssueOpsIssueCreateIntent{OperationID: "op1", Status: issueopsnextcontract.IssueCreateIntentPending}}}
+	if got := Classify(in); !slices.ContainsFunc(got.Warnings, func(w string) bool { return strings.Contains(w, "reconcile-child --id io-1 --operation-id op1") }) {
+		t.Fatalf("warnings %q", got.Warnings)
+	}
+	in.Record.ChildCreateOperations[0].Status = issueopscontract.IssueCreateIntentCompleted
+	if got := Classify(in); slices.ContainsFunc(got.Warnings, func(w string) bool { return strings.Contains(w, "reconcile-child") }) {
+		t.Fatalf("settled child still warns: %q", got.Warnings)
+	}
+}

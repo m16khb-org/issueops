@@ -735,6 +735,13 @@ func warnings(in Input) []string {
 	if in.Local != nil && len(in.Local.Warnings) > 0 {
 		out = append(out, in.Local.Warnings...)
 	}
+	// QA (killed create-child): next kept naming the plan stage while a
+	// child create stayed pending, and create-child refuses until it settles.
+	for _, op := range in.Record.ChildCreateOperations {
+		if issueCreateUnsettled(&op.IssueOpsIssueCreateIntent) {
+			out = append(out, "child create "+op.OperationID+" is unsettled ("+op.Status+"); before any create-child run: issueops remote reconcile-child --id "+in.Record.ID+" --operation-id "+op.OperationID+" $RECORD_ACTOR_FLAGS --json")
+		}
+	}
 	execution := in.Record.Execution
 	if execution == nil {
 		return out

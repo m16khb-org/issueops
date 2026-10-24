@@ -18,7 +18,9 @@ child는 양쪽 모두 native hierarchy를 확인하며 sibling/body 목록으�
 
 ## child 생성
 
-child는 parent URL이 record에 연결되고 umbrella branch gate가 통과한 뒤 만든다.
+child는 parent URL이 record에 연결되고 umbrella branch gate가 통과한 뒤 만든다. 이 gate는
+parent의 branch prepare(원격 branch 생성·연결 포함)다. 구현 없이 child만 만드는 요청도 이
+단계를 먼저 거친다. create-issue와 달리 create-child는 record 명령이라 `$RECORD_ACTOR_FLAGS`를 붙인다.
 
 ```bash
 issueops remote create-child --id "$ISSUEOPS_ID" --title "$CHILD_TITLE" \
@@ -36,6 +38,9 @@ child가 생겨도 이 결합은 유지된다. 미해결 operation은 새 ID로�
 digest·type·계층·metadata를 확인한 뒤 같은 요청에 `--confirm`을 붙인다. 현재
 execution holder만 confirm할 수 있고, generation이 바뀐 작업은 자동 replay 대신
 명시적 reconcile로 복구한다. 복구는 기존 child를 조회·연결하며 생성하지 않는다.
+호출 프로세스가 죽어 후보가 0개인 `pending` 작업은 2분이 지나고 생성 프로세스가 없으면
+reconcile이 풀어 준다(`released: true`). 그 뒤 같은 요청을 다시 실행한다(explicit이면 같은 `--operation-id`).
+2분 전에는 오류에 대기 조건이 나온다. 기다린 뒤 reconcile을 다시 실행한다.
 
 child 본문의 요약에는 parent 링크와 이 child가 맡는 부분을, 선행 조건과 병합 조건
 절에는 `[p]`/`[s]`, prerequisite, wave, 병합 조건을 쓴다. confirmed child 결과의
