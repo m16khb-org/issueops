@@ -187,6 +187,6 @@ issueops ai-slop-clean record --id "$ISSUEOPS_ID" \
 - `issueops status --id "$ISSUEOPS_ID" --json`의 `ai_slop_clean_at`,
   `ai_slop_clean_head`, `ai_slop_clean_fingerprint`가 채워져 있다.
 - `git -C "$WORKTREE" diff --check`가 통과하고, source checkout의
-  `git status --short`가 비어 있다.
+  `git status --short`가 사이클 시작 때와 같다(사용자의 미커밋 변경은 그대로 남는다).
 - verified-execution report가 워크트리 안 정규 파일로 존재하고 side effect 목록과 성능 측정값을
   담고 있다.

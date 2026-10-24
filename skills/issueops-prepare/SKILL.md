@@ -35,8 +35,8 @@ issueops next --id "$ISSUEOPS_ID" --json
   [`issueops`](../issueops/SKILL.md)의 환경별 자동 세션 인계 규칙을 따른다.
 - 이미 있는 로컬·원격 브랜치 이름을 재사용하지 않는다. 충돌이면 멈추고 보고한다.
   자리를 비우려고 지우지 않는다.
-- source checkout은 시작할 때 깨끗해야 하고 끝까지 그대로여야 한다. 브랜치도 바뀌지
-  않는다.
+- source checkout은 시작할 때 상태 그대로 끝까지 둔다. 브랜치도 바뀌지 않는다. 사용자의 미커밋
+  변경이 있으면 stash·commit·삭제하지 않고 그대로 두며, 작업은 worktree에서만 한다.
 - force 연산, 기본 브랜치 변경, `gh issue develop`을 쓰지 않는다. `gh issue develop`은
   링크 시점의 base branch HEAD를 쓰므로 봉인한 SHA와 갈라진다.
 
