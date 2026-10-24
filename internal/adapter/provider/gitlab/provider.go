@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"issueops/internal/adapter/provider/providerutil"
 	"issueops/internal/domain/remoteparse"
@@ -349,4 +350,39 @@ func glabCapabilityAtLeast182(value string) bool {
 
 func gitlabCreatedMergeRequestError(_ string, err error) error {
 	return fmt.Errorf("created merge request has unknown state with a canonical URL returned separately and needs reconciliation; creation was not retried: %s", policy.BoundedDiagnostic(err.Error(), 384))
+}
+
+// RecentIssuesLackMarker lists the issues created since a little before
+// req.SinceRFC3339 (no search index) and reports whether none carries the
+// marker; a full page is indeterminate.
+func (Provider) RecentIssuesLackMarker(ctx context.Context, req port.IssueProviderRecentIssuesRequest) (bool, error) {
+	const limit = 100
+	since, err := time.Parse(time.RFC3339Nano, strings.TrimSpace(req.SinceRFC3339))
+	if err != nil || strings.TrimSpace(req.Marker) == "" {
+		return false, fmt.Errorf("recent issue listing needs a start time and a marker")
+	}
+	host, path, ok := strings.Cut(strings.TrimSpace(req.ProjectAuthority), "/")
+	if !ok || host == "" || path == "" {
+		return false, fmt.Errorf("gitlab authority %q has no host/path", req.ProjectAuthority)
+	}
+	// Newest first, like GitHub: a full page must reach back before since, so
+	// local clock skew cannot drop the created issue from the window.
+	endpoint := "projects/" + url.PathEscape(path) + "/issues?scope=all&order_by=created_at&sort=desc&per_page=" + strconv.Itoa(limit)
+	out, _, err := providerutil.RunBoundedMutationWithOutputLimitContext(ctx, req.Repo, "glab", 8<<20, "api", endpoint, "--hostname", host)
+	if err != nil {
+		return false, fmt.Errorf("list recent GitLab issues: %w", err)
+	}
+	var rows []struct {
+		Description string    `json:"description"`
+		CreatedAt   time.Time `json:"created_at"`
+	}
+	if err := json.Unmarshal(out, &rows); err != nil {
+		return false, fmt.Errorf("parse recent GitLab issues: %w", err)
+	}
+	for _, row := range rows {
+		if strings.Contains(row.Description, req.Marker) {
+			return false, nil
+		}
+	}
+	return len(rows) < limit || rows[len(rows)-1].CreatedAt.Before(since.Add(-time.Minute)), nil
 }

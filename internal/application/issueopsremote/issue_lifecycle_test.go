@@ -503,3 +503,60 @@ func TestIssueCreateJoinsOutcomePersistenceFailureWithProviderError(t *testing.T
 		t.Fatalf("err=%v; want both provider and persistence failures", err)
 	}
 }
+
+// A pending create whose caller died (no candidate) is released for the same
+// create-issue only when the settlement proves nothing was or will be
+// created; an unsettled or invoked_unknown intent keeps the refusal.
+func TestIssueReconcileReleasesASettledCrashedCreate(t *testing.T) {
+	crashed := func(t *testing.T, status string) *createHarness {
+		h, _ := strandedIntent(t)
+		record := h.store.records["io-create"]
+		intent := *record.IssueCreateIntent
+		intent.Status, intent.Failure = status, ""
+		if status != model.IssueCreateIntentPending {
+			intent.Failure = "timeout"
+		}
+		record.IssueCreateIntent = &intent
+		h.store.records["io-create"] = record
+		return h
+	}
+	none := &candidateFake{}
+	settled := func(context.Context, model.IssueOpsRecord) (bool, error) { return true, nil }
+
+	h := crashed(t, model.IssueCreateIntentPending)
+	preview, err := newReconciler(h, none).WithCrashSettlement(settled).Reconcile(context.Background(), "io-create", false)
+	if err != nil || preview.NextCommand != "issueops remote reconcile-issue --id io-create --confirm --json" || h.intent().Status != model.IssueCreateIntentPending {
+		t.Fatalf("preview=%+v err=%v status=%s", preview, err, h.intent().Status)
+	}
+	confirmed, err := newReconciler(h, none).WithCrashSettlement(settled).Reconcile(context.Background(), "io-create", true)
+	if err != nil || h.intent().Status != model.IssueCreateIntentNotInvoked || confirmed.NextCommand != "issueops next --id io-create --json" {
+		t.Fatalf("confirmed=%+v err=%v status=%s", confirmed, err, h.intent().Status)
+	}
+
+	// A newer attempt (another reconcile released and create-issue started
+	// again) must not be overwritten by a release settled on the old one.
+	h = crashed(t, model.IssueCreateIntentPending)
+	racing := func(_ context.Context, record model.IssueOpsRecord) (bool, error) {
+		newer := h.store.records["io-create"]
+		intent := *newer.IssueCreateIntent
+		intent.Attempt++
+		intent.UpdatedAt = "2026-10-25T00:09:00Z"
+		newer.IssueCreateIntent = &intent
+		h.store.records["io-create"] = newer
+		return true, nil
+	}
+	if _, err := newReconciler(h, none).WithCrashSettlement(racing).Reconcile(context.Background(), "io-create", true); err == nil || !strings.Contains(err.Error(), "changed since it was settled") || h.intent().Status != model.IssueCreateIntentPending {
+		t.Fatalf("racing release: err=%v status=%s", err, h.intent().Status)
+	}
+
+	h = crashed(t, model.IssueCreateIntentPending)
+	unsettled := func(context.Context, model.IssueOpsRecord) (bool, error) { return false, nil }
+	if _, err := newReconciler(h, none).WithCrashSettlement(unsettled).Reconcile(context.Background(), "io-create", true); err == nil || !strings.Contains(err.Error(), "re-run this reconcile") || h.intent().Status != model.IssueCreateIntentPending {
+		t.Fatalf("unsettled: err=%v status=%s", err, h.intent().Status)
+	}
+
+	h = crashed(t, model.IssueCreateIntentInvokedUnknown)
+	if _, err := newReconciler(h, none).WithCrashSettlement(settled).Reconcile(context.Background(), "io-create", true); err == nil || h.intent().Status != model.IssueCreateIntentInvokedUnknown {
+		t.Fatalf("invoked_unknown must stay refused: err=%v status=%s", err, h.intent().Status)
+	}
+}

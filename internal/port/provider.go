@@ -33,6 +33,22 @@ type IssueProviderIssueCreateReconciler interface {
 	FindIssueCreateCandidates(context.Context, IssueProviderFindIssueCreateCandidatesRequest) (IssueProviderFindIssueCreateCandidatesResult, error)
 }
 
+// IssueProviderRecentIssuesRequest asks for the issues created since SinceRFC3339.
+type IssueProviderRecentIssuesRequest struct {
+	Repo             string
+	ProjectAuthority string
+	Marker           string
+	SinceRFC3339     string
+}
+
+// IssueProviderRecentIssueLister proves an issue create left nothing: it reads
+// the newest issues by listing (database order, not the eventually consistent
+// search) and reports whether every issue created since the time is covered
+// and none carries the marker. An indeterminate page answers false.
+type IssueProviderRecentIssueLister interface {
+	RecentIssuesLackMarker(context.Context, IssueProviderRecentIssuesRequest) (bool, error)
+}
+
 type IssueProviderFindIssueCreateCandidatesResult struct {
 	Candidates []IssueProviderIssueCreateCandidate
 	Truncated  bool

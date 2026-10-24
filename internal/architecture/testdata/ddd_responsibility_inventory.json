@@ -4775,6 +4775,18 @@
       ]
     },
     {
+      "path": "internal/adapter/issueops/issue_create_settlement.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func HoldIssueCreate",
+        "func IssueCreateCrashSettlement",
+        "func firstNonEmptyString",
+        "func issueCreateInFlight",
+        "func issueCreateLockKey"
+      ]
+    },
+    {
       "path": "internal/adapter/issueops/issue_creation_environment.go",
       "owner": "adapter",
       "task": "T07",
@@ -6965,6 +6977,7 @@
         "func Provider.CreatePullRequestContext",
         "func Provider.FindIssueCreateCandidates",
         "func Provider.Name",
+        "func Provider.RecentIssuesLackMarker",
         "func Provider.ReconcilePullRequest",
         "func Provider.ReconcilePullRequestContext",
         "func Provider.UpdateIssueBodySection",
@@ -7063,6 +7076,7 @@
         "func Provider.CreatePullRequestContext",
         "func Provider.FindIssueCreateCandidates",
         "func Provider.Name",
+        "func Provider.RecentIssuesLackMarker",
         "func Provider.ReconcilePullRequest",
         "func Provider.ReconcilePullRequestContext",
         "func compareGitLabMergeRequestReadback",
@@ -9483,6 +9497,7 @@
         "func IssueCreateIntents.Begin",
         "func IssueCreateIntents.Complete",
         "func IssueCreateIntents.Outcome",
+        "func IssueCreateIntents.ReleaseCrashed",
         "func IssueCreateIntents.update",
         "func NewIssueCreateIntents",
         "func issueCreateProject",
@@ -9506,9 +9521,12 @@
       "task": "T07",
       "symbols": [
         "func IssueReconciler.Reconcile",
+        "func IssueReconciler.WithCrashSettlement",
         "func IssueReconciler.recordFailure",
+        "func IssueReconciler.releaseCrashedCreate",
         "func NewIssueReconciler",
         "type IssueCandidateSource",
+        "type IssueCreateSettlement",
         "type IssueLiveVerifier",
         "type IssueReconciler",
         "type IssueRecordReader"
@@ -16729,6 +16747,8 @@
         "type IssueProviderPullRequestCloser",
         "type IssueProviderPullRequestMergeRequest",
         "type IssueProviderPullRequestMerger",
+        "type IssueProviderRecentIssueLister",
+        "type IssueProviderRecentIssuesRequest",
         "type IssueProviderReconcilePullRequestCandidate",
         "type IssueProviderReconcilePullRequestRequest",
         "type IssueProviderReconcilePullRequestResult",

@@ -17,5 +17,5 @@ func newIssueReconciler(root string, resolve func(string) (port.IssueProvider, e
 }
 
 func reconcileIssueCreate(ctx context.Context, root, id string, confirm bool, verify application.IssueLiveVerifier) (model.IssueOpsIssueCreateReconcileResult, error) {
-	return newIssueReconciler(root, provider.Resolve, verify, time.Now).Reconcile(ctx, id, confirm)
+	return newIssueReconciler(root, provider.Resolve, verify, time.Now).WithCrashSettlement(issueops.IssueCreateCrashSettlement(root, provider.Resolve, time.Now)).Reconcile(ctx, id, confirm)
 }

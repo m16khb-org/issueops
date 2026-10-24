@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 
 	"issueops/internal/adapter/provider/providerutil"
 	issuebody "issueops/internal/domain/issueops"
@@ -601,4 +602,34 @@ func ghExecStderr(err error) string {
 		}
 	}
 	return err.Error()
+}
+
+// RecentIssuesLackMarker lists the newest issues (no search index) and
+// reports whether none carries the marker and the page reaches back before
+// req.SinceRFC3339 (a full page that does not is indeterminate).
+func (Provider) RecentIssuesLackMarker(ctx context.Context, req port.IssueProviderRecentIssuesRequest) (bool, error) {
+	const limit = 100
+	since, err := time.Parse(time.RFC3339Nano, strings.TrimSpace(req.SinceRFC3339))
+	if err != nil || strings.TrimSpace(req.Marker) == "" {
+		return false, fmt.Errorf("recent issue listing needs a start time and a marker")
+	}
+	// 100 bodies can exceed the default readback limit; a cut page would fail
+	// every settlement, so this read gets 8 MiB.
+	out, _, err := providerutil.RunBoundedMutationWithOutputLimitContext(ctx, req.Repo, "gh", 8<<20, "issue", "list", "--repo", strings.TrimSpace(req.ProjectAuthority), "--state", "all", "--limit", strconv.Itoa(limit), "--json", "body,createdAt")
+	if err != nil {
+		return false, fmt.Errorf("list recent GitHub issues: %w", err)
+	}
+	var rows []struct {
+		Body      string    `json:"body"`
+		CreatedAt time.Time `json:"createdAt"`
+	}
+	if err := json.Unmarshal(out, &rows); err != nil {
+		return false, fmt.Errorf("parse recent GitHub issues: %w", err)
+	}
+	for _, row := range rows {
+		if strings.Contains(row.Body, req.Marker) {
+			return false, nil
+		}
+	}
+	return len(rows) < limit || rows[len(rows)-1].CreatedAt.Before(since.Add(-time.Minute)), nil
 }

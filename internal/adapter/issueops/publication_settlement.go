@@ -29,7 +29,8 @@ func publicationLockKey(repo, head string) string {
 // another create for the head is running: the call is refused before the
 // provider is invoked.
 func HoldPublicationCreate(ctx context.Context, stateRoot, repo, head string) (context.Context, func(), error) {
-	lease, err := processlease.Acquire(ctx, filepath.Join(stateRoot, publicationLockDirectory), publicationLockKey(repo, head))
+	// The lock does not wait; cancellation stays the provider call's to report.
+	lease, err := processlease.Acquire(context.WithoutCancel(ctx), filepath.Join(stateRoot, publicationLockDirectory), publicationLockKey(repo, head))
 	if errors.Is(err, processlease.ErrBusy) {
 		return ctx, func() {}, &port.IssueProviderCreateError{Invoked: false, Err: fmt.Errorf("another PR/MR create for head %s is still running", head)}
 	}
