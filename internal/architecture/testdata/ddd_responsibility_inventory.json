@@ -12585,6 +12585,7 @@
         "func CheckArgv",
         "func DecideCheck",
         "func ShouldRun",
+        "func lineContaining",
         "func lineStartingWith",
         "type CheckDecision"
       ]
