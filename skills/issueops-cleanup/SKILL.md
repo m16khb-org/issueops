@@ -210,7 +210,9 @@ If `worktree_present=true`, repeat all four live Git checks after closure and be
 If a prior typed apply removed the worktree but retained the record (`worktree_present=false`):
 
 - do not run `git -C "$WORKTREE_PATH"` commands;
-- require prior-result/record evidence of successful worktree removal;
+- require evidence of the worktree removal: the prior apply result, or, when that
+  apply was killed without output, the record's `cleanup_attempt` (operation
+  `finish`) together with this preview's `worktree_present=false`;
 - require `git worktree list --porcelain` not to contain `$WORKTREE_PATH`;
 - when `branch_present` is true, re-read `refs/heads/$BRANCH` and require its
   OID to equal the OID previously confirmed by the user;

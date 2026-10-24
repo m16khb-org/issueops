@@ -35,6 +35,9 @@ const (
 
 type IssueCreateIntent = issueopscontract.IssueOpsIssueCreateIntent
 
+// CleanupOperationFinish names a cleanup finish attempt (record.cleanup_attempt).
+const CleanupOperationFinish = issueopscontract.CleanupOperationFinish
+
 const (
 	IssueCreateIntentPending            = issueopscontract.IssueCreateIntentPending
 	IssueCreateIntentInvokedUnknown     = issueopscontract.IssueCreateIntentInvokedUnknown

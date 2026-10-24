@@ -104,7 +104,7 @@ issueops start --repo "$SOURCE_ROOT" --json      # ISSUEOPS_ID를 받는다
 issueops intent record --id "$ISSUEOPS_ID" \
   --raw-request "<사용자 원문>" --interpreted-intent "<해석>" \
   --success-criteria "<검증 가능한 기준>" --intent-class trivial|standard \
-  $RECORD_ACTOR_FLAGS --json
+  [--non-goal "<하지 않을 것>"] $RECORD_ACTOR_FLAGS --json   # --non-goal은 반복 가능, 봉인된 intent.md의 비목표
 
 issueops domain-review record --id "$ISSUEOPS_ID" \
   --model-fit "<도메인 모델과 이 변경의 관계>" $RECORD_ACTOR_FLAGS --json

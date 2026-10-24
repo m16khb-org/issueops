@@ -505,6 +505,13 @@ func classifyPublication(in Input, decision Decision, index int) (Decision, bool
 	}
 	if record.Phase == issueopsnextcontract.PhaseDone {
 		decision.Stage = stage(issueopsnextcontract.StageDone, 10)
+		// QA (killed cleanup finish): the worktree was gone, the record and
+		// branch stayed, and next still sent the agent back to merge-pr.
+		if attempt := record.CleanupAttempt; attempt != nil && attempt.Operation == issueopsnextcontract.CleanupOperationFinish {
+			decision.NextCommand = "issueops cleanup finish --id " + id + " --preview --json"
+			decision.Warnings = append(decision.Warnings, "a cleanup finish started at "+attempt.StartedAt+" did not finish; its preview reads what is left (worktree_present, branch_present) and issues a new fingerprint")
+			return decision, true
+		}
 		// next does not read the provider. merge-pr's preview does: it gives the
 		// merge command, or points to cleanup when the PR is already merged.
 		decision.NextCommand = "issueops remote merge-pr --id " + id + " --json"

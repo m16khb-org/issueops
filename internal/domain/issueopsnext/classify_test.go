@@ -1034,3 +1034,16 @@ func TestFillBranchPrepareIssue(t *testing.T) {
 		}
 	}
 }
+
+// A done cycle whose cleanup finish stopped midway resumes at the finish
+// preview instead of merge-pr.
+func TestClassifyDoneWithAnUnfinishedCleanupResumesTheFinishPreview(t *testing.T) {
+	in := Input{Record: issueopsnextcontract.Record{ID: "io-1", Phase: issueopsnextcontract.PhaseDone}}
+	if got := Classify(in); !strings.HasPrefix(got.NextCommand, "issueops remote merge-pr") {
+		t.Fatalf("done without attempt: %q", got.NextCommand)
+	}
+	in.Record.CleanupAttempt = &issueopscontract.IssueOpsCleanupAttempt{Operation: issueopscontract.CleanupOperationFinish, Token: "t", StartedAt: "2026-10-25T00:00:00Z"}
+	if got := Classify(in); got.NextCommand != "issueops cleanup finish --id io-1 --preview --json" {
+		t.Fatalf("done with finish attempt: %q", got.NextCommand)
+	}
+}
