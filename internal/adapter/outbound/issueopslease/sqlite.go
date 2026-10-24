@@ -130,7 +130,7 @@ func (transaction claimTransaction) Persist(ctx context.Context, record leasecon
 			return leaseapp.RepositoryResult{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("unsupported lease-holder index schema %d", index.SchemaVersion))
 		}
 		if index.LifecycleID != record.ID || index.Generation != record.Execution.Lease.Generation {
-			return leaseapp.RepositoryResult{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("native session already holds active lease %s generation %d", index.LifecycleID, index.Generation))
+			return leaseapp.RepositoryResult{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("native session already holds active lease %s generation %d; a session holds one lease at a time: release it first (issueops execution release --id %s --generation %d $ACTOR_FLAGS --json), then retry", index.LifecycleID, index.Generation, index.LifecycleID, index.Generation))
 		}
 	} else {
 		mutations = append(mutations, port.RecordMutation{Bucket: holderBucket, ID: indexKey, Data: indexData, RequireAbsent: true})

@@ -152,7 +152,7 @@ func requireLeaseIndexAvailable(db *sqlstore.DB, lifecycleID string, generation 
 	if existing.LifecycleID == lifecycleID && existing.Generation == generation {
 		return true, nil
 	}
-	return false, fmt.Errorf("native session already holds active lease %s generation %d", existing.LifecycleID, existing.Generation)
+	return false, fmt.Errorf("native session already holds active lease %s generation %d; a session holds one lease at a time: release it first (issueops execution release --id %s --generation %d $ACTOR_FLAGS --json), then retry", existing.LifecycleID, existing.Generation, existing.LifecycleID, existing.Generation)
 }
 
 func leaseIndexDeleteMutation(db *sqlstore.DB, lifecycleID string, actor issueops.NativeActor) (*port.RecordMutation, error) {
