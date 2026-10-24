@@ -69,6 +69,9 @@ type IssueOpsIssueCreateReconcileResult struct {
 	WouldAdopt        bool                       `json:"would_adopt"`
 	IssueURL          string                     `json:"issue_url"`
 	IssueCreateIntent *IssueOpsIssueCreateIntent `json:"issue_create_intent"`
+	// NextCommand is the --confirm adoption a preview that found the one
+	// matching issue hands back.
+	NextCommand string `json:"next_command,omitempty"`
 }
 
 func ValidateIssueCreateIntent(intent IssueOpsIssueCreateIntent) error {

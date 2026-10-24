@@ -33,6 +33,16 @@ const (
 	LeaseStatusReleased  = issueopscontract.LeaseStatusReleased
 )
 
+type IssueCreateIntent = issueopscontract.IssueOpsIssueCreateIntent
+
+const (
+	IssueCreateIntentPending            = issueopscontract.IssueCreateIntentPending
+	IssueCreateIntentInvokedUnknown     = issueopscontract.IssueCreateIntentInvokedUnknown
+	IssueCreateIntentURLObserved        = issueopscontract.IssueCreateIntentURLObserved
+	IssueCreateIntentVerificationFailed = issueopscontract.IssueCreateIntentVerificationFailed
+	IssueCreateIntentReceiptFailed      = issueopscontract.IssueCreateIntentReceiptFailed
+)
+
 // NextCommandKind는 next_command를 그대로 실행해도 되는지를 말한다. template은
 // `<...>`나 `$ACTOR_FLAGS` 자리표시자가 남아 있어 사람이 값을 채워야 한다.
 const (

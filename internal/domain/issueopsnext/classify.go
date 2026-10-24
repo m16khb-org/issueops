@@ -276,7 +276,29 @@ func classifyIssueMissing(in Input, decision Decision) (Decision, bool) {
 	decision.Stage = stage(issueopsnextcontract.StageIssue, 1)
 	decision.Missing = stageOneMissing(in)
 	decision.NextCommand = OwnerCommand(record.ID, firstOr(decision.Missing, "intent_contract"))
+	// QA (lost create response): after "outcome unknown; do not retry", next
+	// still offered create-issue, which could open a duplicate issue. An
+	// unsettled create intent goes to the read-only reconcile preview first.
+	if issueCreateUnsettled(record.IssueCreateIntent) {
+		decision.Missing = append([]string{"issue_create_unsettled"}, decision.Missing...)
+		decision.NextCommand = "issueops remote reconcile-issue --id " + record.ID + " --json"
+	}
 	return decision, true
+}
+
+// issueCreateUnsettled reports a create-issue whose provider outcome is not
+// recorded as settled (the same statuses operational health flags).
+func issueCreateUnsettled(intent *issueopsnextcontract.IssueCreateIntent) bool {
+	if intent == nil {
+		return false
+	}
+	switch intent.Status {
+	case issueopsnextcontract.IssueCreateIntentPending, issueopsnextcontract.IssueCreateIntentInvokedUnknown,
+		issueopsnextcontract.IssueCreateIntentURLObserved, issueopsnextcontract.IssueCreateIntentVerificationFailed,
+		issueopsnextcontract.IssueCreateIntentReceiptFailed:
+		return true
+	}
+	return false
 }
 
 // branchPrepareNeeded는 이슈 URL이 있는 사이클이 아직 2단계(브랜치 준비)에 머무는지 판정한다.

@@ -69,7 +69,11 @@ func (s *RemoteMergeService) Merge(ctx context.Context, id, method string, confi
 		Repo: record.Repo, URL: target.URL, Method: method, HeadOID: target.ExpectedHead, MarkReady: before.Draft,
 	})
 	if err != nil {
-		return result, err
+		// QA (lost merge response): the merge had happened while the CLI
+		// reported a failure. The preview re-reads the provider and reports
+		// already_merged, so it is the next step, never a second --confirm.
+		result.NextCommand = fmt.Sprintf("issueops remote merge-pr --id %s --json", record.ID)
+		return result, fmt.Errorf("%w; the merge may still have happened: read the state with the preview (issueops remote merge-pr --id %s --json) before anything else and do not repeat --confirm", err, record.ID)
 	}
 	result = projectMergeResult(record.ID, target, method, after)
 	result.MarkedReady = before.Draft

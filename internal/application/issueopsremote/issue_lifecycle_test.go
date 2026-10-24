@@ -317,6 +317,9 @@ func TestIssueReconcilePreviewReportsAdoptionWithoutMutation(t *testing.T) {
 	if !result.OK || !result.WouldAdopt || result.CandidateURL != testIssueURL || result.CandidateCount != 1 || result.IssueURL != "" {
 		t.Fatalf("result = %+v", result)
 	}
+	if result.NextCommand != "issueops remote reconcile-issue --id io-create --confirm --json" {
+		t.Fatalf("preview next_command = %q", result.NextCommand)
+	}
 	if h.intent().Status != model.IssueCreateIntentInvokedUnknown || len(h.verified) != 0 {
 		t.Fatalf("preview must not mutate or verify: %+v", h.intent())
 	}
@@ -332,7 +335,7 @@ func TestIssueReconcileConfirmAdoptsVerifiedCandidate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.WouldAdopt || result.IssueURL != testIssueURL || result.IssueCreateIntent.Status != model.IssueCreateIntentCompleted {
+	if result.WouldAdopt || result.NextCommand != "" || result.IssueURL != testIssueURL || result.IssueCreateIntent.Status != model.IssueCreateIntentCompleted {
 		t.Fatalf("result = %+v", result)
 	}
 	if h.store.records["io-create"].IssueURL != testIssueURL {

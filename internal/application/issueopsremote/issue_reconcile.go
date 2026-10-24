@@ -66,7 +66,13 @@ func (s *IssueReconciler) Reconcile(ctx context.Context, id string, confirm bool
 			return result, err
 		}
 	}
-	return model.IssueOpsIssueCreateReconcileResult{OK: true, CandidateCount: 1, CandidateURL: candidate.URL, WouldAdopt: !confirm, IssueURL: record.IssueURL, IssueCreateIntent: record.IssueCreateIntent}, nil
+	result = model.IssueOpsIssueCreateReconcileResult{OK: true, CandidateCount: 1, CandidateURL: candidate.URL, WouldAdopt: !confirm, IssueURL: record.IssueURL, IssueCreateIntent: record.IssueCreateIntent}
+	if !confirm {
+		// QA: the preview showed would_adopt with no command, and the skill
+		// did not name --confirm.
+		result.NextCommand = "issueops remote reconcile-issue --id " + record.ID + " --confirm --json"
+	}
+	return result, nil
 }
 
 func (s *IssueReconciler) recordFailure(ctx context.Context, id, url string, cause error) error {

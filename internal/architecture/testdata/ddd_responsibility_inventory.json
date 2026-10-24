@@ -11378,6 +11378,7 @@
       "symbols": [
         "type Entry",
         "type Exits",
+        "type IssueCreateIntent",
         "type Lease",
         "type Phase",
         "type Record",
@@ -14365,6 +14366,7 @@
         "func generationText",
         "func holderIsSelf",
         "func intersect",
+        "func issueCreateUnsettled",
         "func leaseView",
         "func live",
         "func phaseIndex",

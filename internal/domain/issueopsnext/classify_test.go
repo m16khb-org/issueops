@@ -965,3 +965,20 @@ func TestClassifyClaimPinsTheCallersVectorAtTheWorktree(t *testing.T) {
 		t.Fatalf("receipt-less claim %q", got.NextCommand)
 	}
 }
+
+// After a create-issue whose provider outcome is unknown, next sends the
+// cycle to the read-only reconcile preview instead of offering create-issue
+// again (a second create could open a duplicate issue).
+func TestClassifyIssueStageRoutesAnUnsettledCreateToReconcile(t *testing.T) {
+	in := baseRecord(issueopsnextcontract.PhaseGrill)
+	in.Record.IssueURL = ""
+	in.Record.IssueCreateIntent = &issueopsnextcontract.IssueCreateIntent{Status: issueopsnextcontract.IssueCreateIntentInvokedUnknown}
+	got := classifyTemplate(in)
+	if got.Stage.Key != issueopsnextcontract.StageIssue || !strings.HasPrefix(got.NextCommand, "issueops remote reconcile-issue --id "+in.Record.ID) || !slices.Contains(got.Missing, "issue_create_unsettled") {
+		t.Fatalf("decision %+v", got)
+	}
+	in.Record.IssueCreateIntent.Status = "completed"
+	if got := classifyTemplate(in); strings.Contains(got.NextCommand, "reconcile-issue") {
+		t.Fatalf("settled intent still reconciles: %q", got.NextCommand)
+	}
+}
