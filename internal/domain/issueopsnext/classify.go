@@ -127,7 +127,7 @@ func classifyBlockedExecution(in Input, decision Decision, index int) (Decision,
 	execution := in.Record.Execution
 	if execution != nil && execution.Pending != nil {
 		decision.Stage = stage(issueopsnextcontract.StageBlockedPending, index)
-		decision.NextCommand = "issueops execution reconcile --id " + in.Record.ID + " --preview"
+		decision.NextCommand = "issueops execution reconcile --id " + in.Record.ID + " --preview $ACTOR_FLAGS --json"
 		return decision, true
 	}
 	if execution == nil && issueopsdomain.IssueOpsPhaseRank(in.Record.Phase) >= issueopsdomain.IssueOpsPhaseRank(issueopsnextcontract.PhasePlan) &&
@@ -407,9 +407,12 @@ func classifyPublication(in Input, decision Decision, index int) (Decision, bool
 			}
 			decision.Stage = stage(issueopsnextcontract.StagePRCreate, 9)
 			decision.Missing = []string{"remote_artifact"}
+			// create-pr requires canonical labels and assignees; the head and
+			// base are the sealed branch and base, so they are filled in.
 			decision.NextCommand = "issueops remote create-pr --id " + id +
 				" --expected-generation " + generationText(in) +
-				" --title <TEXT> --head <BRANCH> --base <BRANCH> $ACTOR_FLAGS"
+				" --title <TEXT> --head " + placeholder(record.Branch, "<BRANCH>") + " --base " + placeholder(prBase(record), "<BRANCH>") +
+				" --label <LABEL> --assignee <USER> $ACTOR_FLAGS"
 			return decision, true
 		}
 		if record.Execution.Completion == nil {
@@ -688,4 +691,12 @@ func firstOr(list []string, fallback string) string {
 		return list[0]
 	}
 	return fallback
+}
+
+// prBase is the branch the cycle's PR targets: the sealed base branch.
+func prBase(record issueopsnextcontract.Record) string {
+	if record.BranchPrepare == nil {
+		return ""
+	}
+	return record.BranchPrepare.BaseBranch
 }

@@ -746,3 +746,21 @@ func TestClassifyCommitPushNamesTheGitStep(t *testing.T) {
 		t.Fatalf("stage=%s warnings=%q", got.Stage.Key, got.Warnings)
 	}
 }
+
+// create-pr refuses without canonical labels and assignees, and its head/base
+// are the sealed branch and base; a pending intent's reconcile needs the
+// actor. An agent hit both refusals following the bare templates.
+func TestClassifyPRCreateAndReconcileTemplatesNameWhatTheCommandsRequire(t *testing.T) {
+	in := withBranch(withSelfHolder(baseRecord(issueopsnextcontract.PhasePR)))
+	in.Record.Branch = "12-a"
+	got := Classify(in).NextCommand
+	for _, want := range []string{"--head 12-a", "--base main", "--label <LABEL>", "--assignee <USER>", "$ACTOR_FLAGS"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("create-pr template %q lacks %q", got, want)
+		}
+	}
+	in.Record.Execution.Pending = &issueopscontract.ExternalIntent{}
+	if got := Classify(in).NextCommand; !strings.Contains(got, "reconcile --id io-test --preview $ACTOR_FLAGS") {
+		t.Fatalf("reconcile template %q", got)
+	}
+}
