@@ -12,6 +12,8 @@ issueops child status --parent "$ISSUEOPS_ID" \
 - 이슈 단계의 `remote create-child`는 provider의 child 이슈를 만들고, `child start`는 로컬 child
   사이클을 만든다. `--child-issue-url`로 둘을 잇는다. 이슈 없는 child는 parent 이슈의
   `.issueops/issues/<n>/` 파일을 같이 써서 sibling child PR끼리 충돌한다.
+- `child start`는 parent의 domain·architecture·compatibility 리뷰를 상속하고 plan-prep과
+  devil's-advocate를 parent 판정으로 waive한다. child 계획이 parent 계획 범위 밖이면 scope drift다.
 - verdict는 `accept`·`reject`·`drop` 셋뿐이다. child scope를 고치는 amend 명령은
   없으므로 찾거나 발명하지 않는다.
 - accept 전 rubric: 위임한 scope·expected worktree 준수, acceptance별 증거,

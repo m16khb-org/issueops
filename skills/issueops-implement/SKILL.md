@@ -197,7 +197,8 @@ verification·fallback·tradeoff·기대 이득을 기록한다.
 
 위임하면 [Child 위임 세부 규칙](references/child-delegation.md)을 읽고 따른다. `child start`·`child status`
 명령, verdict(`accept`·`reject`·`drop`뿐이고 amend는 없다), branch·worktree·lease 소유권과 scope drift
-처리가 거기에 있다. parent가 child worktree를 직접 만들지 않는다.
+처리가 거기에 있다. parent가 child worktree를 직접 만들지 않는다. 한 세션이 child까지 직접 하면 그 문서의
+"한 세션이 child까지 직접 할 때" 순서를 따른다.
 
 - 인계 준비나 최신 사용자 취소·범위 축소 뒤에는 새 쓰기 작업과 하위 작업 dispatch를
   중지한다. 이 스킬이 시작한 child나 worker는 인계 자료에 소유자, 실행 핸들, 입력 리비전,
