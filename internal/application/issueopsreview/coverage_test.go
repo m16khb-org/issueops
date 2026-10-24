@@ -620,8 +620,8 @@ func TestResolveFeedbackValidatesResolutionAndIndex(t *testing.T) {
 	}{
 		"unknown resolution": {0, "fixed", `unknown feedback resolution "fixed"`},
 		"empty resolution":   {0, " ", "unknown feedback resolution"},
-		"negative index":     {-1, "valid-defect", "feedback index -1 out of range (have 1 items)"},
-		"index past end":     {1, "valid-defect", "feedback index 1 out of range (have 1 items)"},
+		"negative index":     {-1, "valid-defect", "feedback index -1 out of range (have 1 items; indexes start at 0)"},
+		"index past end":     {1, "valid-defect", "feedback index 1 out of range (have 1 items; indexes start at 0)"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			m := &memStore{rec: seed}

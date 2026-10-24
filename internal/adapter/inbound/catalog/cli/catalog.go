@@ -31,3 +31,18 @@ func ChildUsage() string {
 		strings.Join(lines, "\n") + "\n\n" +
 		contract.IssueOpsActorFlagLegend
 }
+
+// RemoteUsage is `issueops remote --help`: every `remote` line of the
+// catalog. The group used to keep its own copy, which drifted (create-pr
+// lacked --body-file, --provider and --score-file that next_command uses).
+func RemoteUsage() string {
+	var lines []string
+	for _, line := range IssueOpsUsageLines() {
+		if strings.HasPrefix(clidomain.IssueOpsUsageKey(line), "remote ") {
+			lines = append(lines, line)
+		}
+	}
+	return "Usage:\n" +
+		strings.Join(lines, "\n") + "\n\n" +
+		contract.IssueOpsActorFlagLegend
+}

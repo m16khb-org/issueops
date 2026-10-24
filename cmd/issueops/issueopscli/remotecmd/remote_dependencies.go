@@ -10,7 +10,12 @@ import (
 	"issueops/internal/port"
 )
 
-type Command struct{ Operations RemoteDeps }
+// Command runs `issueops remote`. Usage is the `remote` projection of the
+// shared usage catalog, injected by the composition root.
+type Command struct {
+	Operations RemoteDeps
+	Usage      string
+}
 type RemoteDeps struct {
 	ReconcileChild               func(context.Context, string, remoteapp.ChildReconcileCommand, remoteapp.AncestryObserver) (issueopscontract.ChildReconcileResult, error)
 	CreateChild                  func(context.Context, string, remoteapp.ChildCreateCommand, remoteapp.AncestryObserver) (remoteapp.ChildCreateResult, error)

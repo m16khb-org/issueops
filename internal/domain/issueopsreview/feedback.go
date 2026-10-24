@@ -22,7 +22,8 @@ func FeedbackPhaseAfterAdd(phase string, hasCleanEvidence bool) (string, error) 
 
 func ValidateFeedbackIndex(index, count int) error {
 	if index < 0 || index >= count {
-		return fmt.Errorf("feedback index %d out of range (have %d items)", index, count)
+		// QA: an agent passed 1 for the only item; say indexes start at 0.
+		return fmt.Errorf("feedback index %d out of range (have %d items; indexes start at 0)", index, count)
 	}
 	return nil
 }

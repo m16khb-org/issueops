@@ -29,29 +29,8 @@ type Deps struct {
 	Publication            PublicationHandlers
 }
 
-var remoteUsageLines = []string{
-	"Usage:",
-	"  issueops remote score (--input PATH [--judge none|prompt|file] [--judge-file PATH] | --example) [--json]",
-	"  issueops remote render-template --kind issue|child|pr --template KIND --title TEXT --provider github|gitlab --field key=value... [--score-file PATH] [--json]",
-	"  issueops remote verify-artifact --id ID --provider github|gitlab --kind pr|mr --url URL --target-branch BRANCH --label LABEL --assignee USER RECORD_ACTOR_FLAGS [--json]",
-	"  issueops remote create-issue --id ID --title TEXT [--provider github|gitlab] [--body TEXT|--body-file PATH] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... [--confirm] [--json]",
-	"  issueops remote reconcile-issue --id ID [--confirm] [--json]",
-	"  issueops remote reconcile-child --id ID --operation-id HEX [--host HOST --session-id SESSION --agent-id ID --cwd WORKTREE [--session-pid PID --session-started-at RFC3339 --session-executable PATH]] [--confirm] [--json]",
-	"  issueops remote create-child --id ID [--operation-id HEX] --title TEXT [--body TEXT|--body-file PATH] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... --host codex|claude|omo|omp|opencode --session-id SESSION [--agent-id ID] --cwd WORKER_PATH [--confirm] [--json]",
-	"  issueops remote create-pr --id ID --expected-generation N --title TEXT --head BRANCH --base BRANCH [--body TEXT] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... --host codex|claude|omo|omp|opencode --session-id SESSION [--agent-id ID] --session-pid PID --session-started-at RFC3339 --session-executable PATH --cwd WORKER_PATH [--confirm] [--json]",
-	"  issueops remote sync-graph --id ID [--confirm] [--json]",
-	"  issueops remote sync-issue --id ID [--provider github|gitlab] [--url CHILD_URL] [--body TEXT|--body-file PATH] [--expected-body-sha256 SHA] [--accept-remote-edits] [--host codex|claude|omo|omp|opencode] [--session-id SESSION] [--agent-id ID] [--cwd WORKER_PATH] [--confirm] [--json]",
-	"  issueops remote sync-pr --id ID --expected-generation N [--provider github|gitlab] [--body TEXT|--body-file PATH] [--expected-body-sha256 SHA] [--accept-remote-edits] --host codex|claude|omo|omp|opencode --session-id SESSION [--agent-id ID] --cwd WORKER_PATH [--confirm] [--json]",
-	"  issueops remote reflect-devils-advocate --id ID [--provider github|gitlab] --host codex|claude|omo|omp|opencode --session-id SESSION [--agent-id ID] --cwd WORKER_PATH [--confirm] [--json]",
-	"  issueops remote reflect-completion --id ID [--provider github|gitlab] [--confirm] [--json]",
-	"  issueops remote close-issue --id ID [--provider github|gitlab] [--confirm] [--json]",
-	"  issueops remote merge-pr --id ID [--method squash|merge|rebase] [--confirm] [--json]",
-}
-
-func printRemoteUsage() {
-	for _, line := range remoteUsageLines {
-		fmt.Println(line)
-	}
+func (command Command) printRemoteUsage() {
+	fmt.Println(strings.TrimRight(command.Usage, "\n"))
 }
 
 func (command Command) Run(args []string, deps Deps) error {
@@ -59,7 +38,7 @@ func (command Command) Run(args []string, deps Deps) error {
 		deps.ObserveProcessAncestry = command.Operations.ObserveNativeProcessAncestry
 	}
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
-		printRemoteUsage()
+		command.printRemoteUsage()
 		return nil
 	}
 	if args[0] == "remote-score" {

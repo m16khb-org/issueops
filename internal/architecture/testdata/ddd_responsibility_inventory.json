@@ -1845,6 +1845,7 @@
         "func Command.Run",
         "func Command.dispatchRemote",
         "func Command.dispatchRemoteLifecycle",
+        "func Command.printRemoteUsage",
         "func Command.runRemoteReflectDevilsAdvocate",
         "func Command.runRemoteRenderTemplate",
         "func Command.runRemoteScore",
@@ -1859,7 +1860,6 @@
         "func parseFlags",
         "func printRemoteScorePrompt",
         "func printRemoteScoreSummary",
-        "func printRemoteUsage",
         "func readIssueOpsRemoteJudgeFile",
         "func readIssueOpsRemoteScoringRequestFile",
         "func remoteScoreExampleRequest",
@@ -3733,7 +3733,8 @@
         "func ChildUsage",
         "func Commands",
         "func IssueOpsUsageLines",
-        "func LifecycleUsage"
+        "func LifecycleUsage",
+        "func RemoteUsage"
       ]
     },
     {
