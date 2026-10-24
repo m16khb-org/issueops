@@ -32,10 +32,13 @@ func (command CleanupCommand) Run(args []string) error {
 
 	result, err := updateapp.CleanupMCPProxies(command.Effects, !*apply)
 	if *jsonOut {
-		if printErr := printJSON(result); printErr != nil {
-			return printErr
+		if err != nil {
+			if printErr := printJSON(jsonout.WithError(result, err)); printErr != nil {
+				return printErr
+			}
+			return jsonout.Reported(err)
 		}
-		return err
+		return printJSON(result)
 	}
 	fmt.Printf("%s: matched=%d terminated=%d dry_run=%v\n", result.Message, result.Matched, result.Terminated, result.DryRun)
 	return err

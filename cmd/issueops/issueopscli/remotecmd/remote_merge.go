@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"issueops/cmd/issueops/jsonout"
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
@@ -25,10 +26,14 @@ func (command Command) runRemoteMergePR(args []string, deps Deps) error {
 	// A refused or unverified merge still prints the observation: the
 	// blockers are what the caller acts on.
 	if *jsonOut {
-		if printErr := deps.printJSON(result); printErr != nil {
-			return printErr
+		if err != nil {
+			// One document under --json 2>&1: the refusal joins the observation.
+			if printErr := deps.printJSON(jsonout.WithError(result, err)); printErr != nil {
+				return printErr
+			}
+			return jsonout.Reported(err)
 		}
-		return err
+		return deps.printJSON(result)
 	}
 	printRemoteMergeResult(result)
 	return err

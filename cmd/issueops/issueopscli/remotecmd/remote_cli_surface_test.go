@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"issueops/cmd/issueops/jsonout"
 	remoteapp "issueops/internal/application/issueopsremote"
 	reportcontract "issueops/internal/contract/artifactreadability"
 	issueopscontract "issueops/internal/contract/issueops"
@@ -160,14 +161,19 @@ func TestRemoteMergePRPassesFlagsAndRoutesErrors(t *testing.T) {
 		t.Fatalf("defaults must be squash preview, got method=%q confirm=%v", gotMethod, gotConfirm)
 	}
 
-	// A refusal that carries a URL still emits the observation in JSON and returns the error.
+	// A refusal that carries a URL emits the observation with the error inside
+	// it as the one JSON document and reports the error, so the root does not
+	// print a second line under --json 2>&1.
 	fail = errors.New("not mergeable")
 	sink = &jsonSink{}
-	if err := command.Run([]string{"merge-pr", "--id", "c9", "--json"}, sink.deps()); !errors.Is(err, fail) {
-		t.Fatalf("expected refusal error, got %v", err)
+	if err := command.Run([]string{"merge-pr", "--id", "c9", "--json"}, sink.deps()); !errors.Is(err, fail) || !jsonout.IsReported(err) {
+		t.Fatalf("expected reported refusal error, got %v", err)
 	}
 	if len(sink.values) != 1 || len(sink.errors) != 0 {
 		t.Fatalf("observation must be printed as the result, not as an error payload: %#v %#v", sink.values, sink.errors)
+	}
+	if doc, _ := sink.values[0].(map[string]any); doc["url"] != "https://x/pr/9" || doc["error"] != "not mergeable" {
+		t.Fatalf("refusal document = %#v", sink.values[0])
 	}
 
 	// Without a URL there is no observation, so the failure is the error payload.
