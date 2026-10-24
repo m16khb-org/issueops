@@ -46,8 +46,18 @@ func (service Service) Lint(req model.LintRequest) (model.LintResult, error) {
 		if err != nil {
 			return model.LintResult{SchemaVersion: model.SchemaVersion}, err
 		}
-		candidates = append(candidates, domain.LedgerLintCandidates(file, string(data))...)
+		found := domain.LedgerLintCandidates(file, string(data))
+		candidates = append(candidates, found...)
 		warnings = append(warnings, domain.LedgerFormatWarnings(file, domain.Parse(string(data)))...)
+		if len(found) == 0 {
+			// QA: a hand-written ledger without the checkbox form linted clean
+			// with zero gates, and check would then have nothing to run.
+			warnings = append(warnings, file+": no ledger gates found; a ledger gate is \"- [ ] G1: outcome\" with indented CHECK:/EXPECT: lines (gates init writes this form)")
+			_, unparsed := domain.PlanLintCandidates(file, string(data))
+			for _, line := range unparsed {
+				unparsedLines = append(unparsedLines, file+":"+strconv.Itoa(line))
+			}
+		}
 	}
 	results := make([]model.LintGate, 0, len(candidates))
 	for _, candidate := range candidates {

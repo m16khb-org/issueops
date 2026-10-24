@@ -55,3 +55,16 @@ func TestLintPlanWithUnreadableGateLinesIsNotClean(t *testing.T) {
 		t.Fatalf("result = %+v, want not clean because plan.md:2 could not be read as a gate", result)
 	}
 }
+
+// A hand-written ledger without the checkbox form has no ledger gates; lint
+// says so and is not clean, instead of passing a file check would skip.
+func TestLintLedgerWithoutLedgerGatesIsNotClean(t *testing.T) {
+	ledger := "# Gates\n\nG1: hello prints\nCHECK: ./hello.sh\nEXPECT: hello\n"
+	result, err := (Service{Store: &mutationStore{data: []byte(ledger)}}).Lint(model.LintRequest{CWD: "/repo", Files: []string{"gates.md"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Clean || result.TotalGates != 0 || len(result.UnparsedLines) == 0 || len(result.Warnings) == 0 || !strings.Contains(result.Warnings[len(result.Warnings)-1], "no ledger gates found") {
+		t.Fatalf("result = %+v", result)
+	}
+}
