@@ -138,7 +138,7 @@ func (s *ReconcileService) preserve(ctx context.Context, intent contract.Intent,
 		recordFailure = true
 	case "unknown-invocation":
 		code = "remote_reconcile_zero_unproven"
-		cause = fmt.Errorf("authoritative zero cannot clear an invocation whose absence was not proven; intent retained")
+		cause = fmt.Errorf("authoritative zero cannot clear an invocation whose absence was not proven; intent retained: re-run this reconcile once the create is 2 minutes old, no gh/glab create for its head is still running, and no PR URL is known")
 	case "retry-exhausted":
 		code = "remote_reconcile_retry_exhausted"
 		cause = fmt.Errorf("remote create pre-invocation retry is unavailable or already consumed")
