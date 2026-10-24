@@ -134,6 +134,8 @@ issueops phase --id "$ISSUEOPS_ID" --to grill $RECORD_ACTOR_FLAGS --json
 
 `remote create-issue` 뒤 `status --json`에 `issue_url`이 없을 때만
 `issueops link-issue --id "$ISSUEOPS_ID" --issue-url "$ISSUE_URL" $RECORD_ACTOR_FLAGS --json`을 실행한다.
+사용자가 기존 이슈(번호나 URL)를 처리하라고 하면 새로 만들지 않는다. 그 이슈를 읽어 intent를 기록하고
+같은 `link-issue`로 붙인다. 본문에 완료 기준이 없거나 범위가 바뀌면 [`issueops-sync-issue`](../issueops-sync-issue/SKILL.md)로 갱신한다.
 
 이슈만 요청했으면 다음 세 줄로 완료 보고한다. 전체 작업 요청이면 진행 상황으로 알린 뒤
 같은 ID로 `issueops-prepare`를 실행한다. worktree 준비 후 환경별 자동 세션 인계를 적용한다.
