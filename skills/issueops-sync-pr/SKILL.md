@@ -65,6 +65,8 @@ issueops remote sync-pr \
 
 PR/MR은 리뷰어가 본문에 체크리스트나 메모를 직접 추가하는 일이 잦다.
 `remote_edited`를 "덮어써도 되는 잡음"으로 취급하지 않는다.
+예외: `remote_body_sha256`과 `merged_body_sha256`이 같으면 앞선 confirm이 쓰고 기록 전에
+끊긴 것이다. 같은 요청에 `--accept-remote-edits`를 붙여 기준선을 기록한다.
 
 ## Body 형식
 
