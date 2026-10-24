@@ -86,22 +86,11 @@ issueops branch prepare --id "$ISSUEOPS_ID" --provider "$PROVIDER" \
 규약이 아니라 요구다. GitLab은 `<iid>-` 접두 브랜치를 이슈에 자동으로 연결하고,
 GitHub 경로도 같은 이름 규칙을 요구한다.
 
-**provider 링크**(외부 write, 승인된 준비 범위 안):
-
-```bash
-# GitHub — 봉인한 SHA에서 linked branch를 만든다.
-ISSUE_ID=$(gh issue view <number> --json id -q .id)
-gh api graphql -f query='
-  mutation($issueId: ID!, $oid: GitObjectID!, $name: String!) {
-    createLinkedBranch(input: {issueId: $issueId, oid: $oid, name: $name}) {
-      linkedBranch { ref { name } }
-    }
-  }' -f issueId="$ISSUE_ID" -f oid="$BASE_SHA" -f name="$BRANCH"
-
-# GitLab — 봉인한 SHA에서 원격 브랜치를 만든다. `<iid>-` 접두가 연결을 만든다.
-glab api --method POST "projects/:id/repository/branches" \
-  -f branch="$BRANCH" -f ref="$BASE_SHA"
-```
+**provider 링크**(외부 write, 승인된 준비 범위 안): `branch prepare` 응답의 `steps`가 봉인한
+SHA에서 링크 브랜치를 만드는 명령을 값이 채워진 형태로 순서대로 준다(GitHub: 이슈 node ID 조회 →
+`createLinkedBranch`, GitLab: `<iid>-` 접두 브랜치 생성). 그 명령을 그대로 실행하고, 앞 단계 출력의
+값(node ID)은 다음 명령에 직접 옮겨 적는다. `$(...)` 명령 치환으로 합치지 않는다. 치환이 든 명령은
+lifecycle guard가 정적으로 분류하지 못해 거부한다.
 
 `--link-verified`는 provider가 링크를 돌려준 것을 본 뒤에만 붙인다. `await-link`는 봉인된
 브랜치를 읽으므로 먼저 `--link-verified` 없이 봉인하고, 링크를 읽어 `linked: true`일 때만

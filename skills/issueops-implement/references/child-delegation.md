@@ -4,9 +4,9 @@
 issueops child start --parent "$ISSUEOPS_ID" \
   --branch "$CHILD_BRANCH" --title "$TITLE" \
   --scope "$SCOPE" --acceptance "$CRITERION" \
-  --host claude --session-id "$SESSION_ID" --cwd "$WORKER_PATH" --json
+  --host "$HOST" --session-id "$SESSION_ID" --cwd "$WORKER_PATH" --json
 issueops child status --parent "$ISSUEOPS_ID" \
-  --host claude --session-id "$SESSION_ID" --cwd "$WORKER_PATH" --json
+  --host "$HOST" --session-id "$SESSION_ID" --cwd "$WORKER_PATH" --json
 ```
 
 - verdict는 `accept`·`reject`·`drop` 셋뿐이다. child scope를 고치는 amend 명령은

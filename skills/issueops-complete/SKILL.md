@@ -109,14 +109,11 @@ issueops execution complete --id "$ISSUEOPS_ID" \
   --verification-report "$REPORT_REL" \
   --remote-artifact-url "$ARTIFACT_URL" \
   --verification "$COMMAND_AND_RESULT" \
-  --host claude --session-id "$SESSION_ID" \
-  --session-pid "$PID" --session-started-at "$STARTED_AT" \
-  --session-executable "$EXECUTABLE" --cwd "$WORKTREE" \
-  --confirm --json
+  $ACTOR_FLAGS --confirm --json
 ```
 
-`$GENERATION`은 기억이 아니라 `execution status`의 현재 값이다. actor 값은
-`execution whoami --json`이 돌려주는 그대로 채운다.
+`$GENERATION`은 기억이 아니라 `execution status`의 현재 값이다. `$ACTOR_FLAGS`는 워크트리에서
+실행한 `execution whoami --json`의 `claim_actor_flags[0]`를 그대로 쓴다.
 
 ## 멱등성과 실패 처리
 

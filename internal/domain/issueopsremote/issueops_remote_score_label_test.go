@@ -83,3 +83,24 @@ func TestScoreIssueOpsRemoteLabelWithoutKeywordRuleKeepsOverlapScore(t *testing.
 		t.Fatalf("question score = %v, want 0.65*overlap", question.Score)
 	}
 }
+
+// One matched type token is below the evidence floor, so the scorer abstains;
+// the rejection says so instead of reading like a failed score.
+func TestScoreIssueOpsRemoteLabelNamesAbstentionOnThinEvidence(t *testing.T) {
+	res, err := ScoreIssueOpsRemoteCandidates(IssueOpsRemoteScoringRequest{
+		Issue:           IssueOpsRemoteArtifact{Title: "hello.sh에 --upper 옵션 추가", Body: "--upper 옵션을 주면 HELLO를 대문자로 출력한다."},
+		LabelCandidates: githubDefaultLabelCandidates(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range res.RejectedLabels {
+		if item.Name == "enhancement" {
+			if item.Score != 0 || item.RejectReason != "abstained: 1 type-evidence token(s), scoring needs 2; choose the label manually" {
+				t.Fatalf("enhancement = %+v", item)
+			}
+			return
+		}
+	}
+	t.Fatalf("enhancement not rejected: %+v", res)
+}

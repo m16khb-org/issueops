@@ -121,11 +121,17 @@ func scoreIssueOpsRemoteIssue(provider string, threshold float64, issueTokens ma
 func scoreIssueOpsRemoteLabel(provider string, threshold float64, issueTokens map[string]bool, typeEvidence issueOpsRemoteTypeEvidence, candidate IssueOpsRemoteLabelCandidate) IssueOpsRemoteScoredItem {
 	score := scorePtr(candidate.Score)
 	evidence := []string{}
+	rejectReason := "score below threshold"
 	if candidate.Score != nil {
 		evidence = append(evidence, "explicit score provided")
 	} else if typeScore, matched, ok := issueOpsRemoteLabelEvidenceScore(typeEvidence, candidate); ok {
 		score = clampScore(typeScore)
 		evidence = append(evidence, fmt.Sprintf("type_evidence=%d/%d", len(matched), typeEvidence.total), "matched_tokens="+strings.Join(matched, ","))
+		if typeEvidence.total < issueOpsRemoteMinLabelEvidence {
+			// A matched token next to score 0 read as a scoring bug (QA); say
+			// that the scorer abstains on thin evidence by design.
+			rejectReason = fmt.Sprintf("abstained: %d type-evidence token(s), scoring needs %d; choose the label manually", typeEvidence.total, issueOpsRemoteMinLabelEvidence)
+		}
 	} else {
 		labelText := strings.TrimSpace(candidate.Name + "\n" + candidate.Description + "\n" + strings.Join(candidate.Aliases, " "))
 		overlap := issueOpsRemoteOverlap(issueTokens, issueOpsRemoteTokens(labelText))
@@ -143,7 +149,7 @@ func scoreIssueOpsRemoteLabel(provider string, threshold float64, issueTokens ma
 	if selected {
 		item.ApplyHint = issueOpsRemoteLabelApplyHint(provider, item.Name)
 	} else {
-		item.RejectReason = "score below threshold"
+		item.RejectReason = rejectReason
 	}
 	return item
 }
