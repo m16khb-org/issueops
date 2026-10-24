@@ -101,7 +101,7 @@ lease 전의 준비 기록은 source checkout의 native actor로, 구현은 acti
 
 **(d) 편집 대상 확인.** 편집 배치마다 셸 프롬프트를 믿지 말고 실측한다.
 
-`pwd`, branch, HEAD, `test "$PWD" = "$EXPECTED_WORKTREE"`, 두 checkout의 `git status --short`를 실측한다
+`pwd`, branch, HEAD, 물리 경로 비교(`pwd -P`), 두 checkout의 `git status --short`를 실측한다
 ([명령·복구 절차](references/edit-target-check.md)). 도구가 다른 체크아웃에 썼으면 멈춘다.
 worker 프롬프트에는 exact lifecycle ID, generation, branch, worktree, 허용 경로, 수락 기준,
 중단 규칙을 넣는다.

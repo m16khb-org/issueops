@@ -139,6 +139,19 @@ func TestAdvanceReportRefusesAISlopCleanRefreshWhenNotReady(t *testing.T) {
 	}
 }
 
+// Codex read an ack still saying phase pr after `phase --to ai-slop-clean` as a
+// no-op; the refresh now says the phase stays and what it re-took.
+func TestAdvanceReportAISlopCleanRefreshSaysThePhaseStays(t *testing.T) {
+	record := implementReadyRecord()
+	record.Phase, record.AISlopCleanAt = model.IssueOpsPhasePR, "old"
+	p := &phaseFlow{record: record}
+	service := flowService(p, Readiness{Paths: readyPaths(), HasEvidence: func(model.IssueOpsRecord) bool { return true }})
+	got, materials, err := service.AdvanceReport("state", "io-1", "ai-slop-clean")
+	if err != nil || got.Phase != model.IssueOpsPhasePR || len(materials.Warnings) != 1 || !strings.Contains(materials.Warnings[0], "phase stays pr") {
+		t.Fatalf("got=%+v materials=%+v err=%v", got, materials, err)
+	}
+}
+
 func TestAdvanceReportRefusesBackwardAndUnreadyEntriesWithoutWriting(t *testing.T) {
 	for _, tc := range []struct {
 		name string

@@ -100,6 +100,11 @@ func (s PhaseService) advanceLocked(stateRoot, id, to string, upstream func(stri
 	}
 	if issueopsdomain.ShouldRefreshAISlopClean(record, phase) {
 		record, err = s.Refresh(stateRoot, record)
+		if err == nil {
+			// Agents read the unchanged phase in the ack as a no-op.
+			materials.Warnings = append(materials.Warnings, fmt.Sprintf(
+				"phase stays %s: from a later phase this re-takes the ai-slop-clean seal at the current head; issueops next names the reviews that are now stale", record.Phase))
+		}
 		return record, materials, err
 	}
 	if err := ValidatePhaseEntry(s.entryReadiness(stateRoot, upstream), record, phase); err != nil {

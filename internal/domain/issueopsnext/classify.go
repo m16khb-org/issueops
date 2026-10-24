@@ -435,6 +435,8 @@ func classifyPublication(in Input, decision Decision, index int) (Decision, bool
 		// next does not read the provider. merge-pr's preview does: it gives the
 		// merge command, or points to cleanup when the PR is already merged.
 		decision.NextCommand = "issueops remote merge-pr --id " + id + " --json"
+		// Agents read a repeated merge-pr after the merge as "not merged yet".
+		decision.Warnings = append(decision.Warnings, "next does not read the PR: this preview reports already_merged after a merge and then names the cleanup command")
 		return decision, true
 	}
 	_ = index

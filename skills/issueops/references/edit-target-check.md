@@ -4,7 +4,8 @@
 pwd
 git branch --show-current
 git rev-parse HEAD
-test "$PWD" = "$EXPECTED_WORKTREE"
+# 물리 경로로 비교한다(/tmp와 /private/tmp처럼 같은 디렉터리의 다른 표기가 있다).
+test "$(pwd -P)" = "$(cd "$EXPECTED_WORKTREE" && pwd -P)"
 git -C "$SOURCE_CHECKOUT" status --short
 git status --short
 ```
