@@ -382,10 +382,10 @@ func classifyLocalGates(in Input, decision Decision) (Decision, bool) {
 		// The step itself is git, which issueops does not run; say which one
 		// so the readiness re-check is not mistaken for the action.
 		if slices.Contains(local, "worktree_clean") {
-			decision.Warnings = append(decision.Warnings, "commit the worktree changes (atomic-commit-push skill), then re-check")
+			decision.Warnings = append(decision.Warnings, "to do: commit the changes (atomic-commit-push skill)")
 		}
 		if slices.Contains(local, "upstream") {
-			decision.Warnings = append(decision.Warnings, "push the branch with an upstream: git push -u origin "+placeholder(in.Record.Branch, "<branch>")+", then re-check")
+			decision.Warnings = append(decision.Warnings, "to do: git push -u origin "+placeholder(in.Record.Branch, "<branch>"))
 		}
 		if len(local) == 0 {
 			// Committed and pushed: the pr transition is the next step (it runs

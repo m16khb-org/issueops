@@ -742,7 +742,7 @@ func TestClassifyCommitPushNamesTheGitStep(t *testing.T) {
 	in.Record.Branch = "12-a"
 	got := Classify(in)
 	joined := strings.Join(got.Warnings, "\n")
-	if got.Stage.Key != "commit-push" || !strings.Contains(joined, "commit the worktree changes") || !strings.Contains(joined, "git push -u origin 12-a") {
+	if got.Stage.Key != "commit-push" || !strings.Contains(joined, "commit the changes") || !strings.Contains(joined, "git push -u origin 12-a") {
 		t.Fatalf("stage=%s warnings=%q", got.Stage.Key, got.Warnings)
 	}
 }
