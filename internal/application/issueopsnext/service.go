@@ -224,8 +224,8 @@ func (service *Service) buildInput(
 		input.RootConflictID = rootConflict(ports, record, sourceRoot, entries)
 	} else {
 		if ports.WorktreeState != nil {
-			present, _, head := ports.WorktreeState(record.Execution.Workspace.Root)
-			input.WorktreePresent, input.WorktreeHead = present, head
+			present, branch, head := ports.WorktreeState(record.Execution.Workspace.Root)
+			input.WorktreePresent, input.WorktreeBranch, input.WorktreeHead = present, branch, head
 		}
 		if holder := record.Execution.Lease.Holder; holder != nil && holder.SessionProcess != nil && ports.ProcessLive != nil {
 			input.HolderLive = ports.ProcessLive(*holder.SessionProcess)

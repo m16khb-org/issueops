@@ -56,7 +56,10 @@ type Input struct {
 	HolderLive      *bool
 	WorktreePresent bool
 	WorktreeHead    string
-	SourceRoot      string
+	// WorktreeBranch is the branch checked out in the canonical worktree
+	// ("" when detached or not observed).
+	WorktreeBranch string
+	SourceRoot     string
 }
 
 type Decision struct {
@@ -673,6 +676,12 @@ func warnings(in Input) []string {
 			warning += "; issueops does not rebuild it (the sealed plan artifacts lived there): restore that directory, or release the lease (exits.pause_command, --cwd still that path) and end the cycle with exits.abandon_command"
 		}
 		out = append(out, warning)
+	}
+	// Probe: after `git checkout -b other` in the worktree, link-plan and the
+	// record commands still succeeded and commits would land on the wrong
+	// branch, discovered only at publication.
+	if branch, want := strings.TrimSpace(in.WorktreeBranch), strings.TrimSpace(execution.Workspace.Branch); in.WorktreePresent && branch != "" && want != "" && branch != want {
+		out = append(out, "canonical worktree is on branch "+branch+", not the cycle branch "+want+": switch back with git -C "+strings.TrimSpace(execution.Workspace.Root)+" switch "+want)
 	}
 	if head := strings.TrimSpace(in.WorktreeHead); head != "" && execution.Completion != nil &&
 		strings.TrimSpace(execution.Completion.FinalHead) != "" &&

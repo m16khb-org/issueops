@@ -900,3 +900,20 @@ func TestClassifyResumedSessionWithDeadReceiptTakesOver(t *testing.T) {
 		t.Fatalf("live self holder: stage=%q self=%v", got.Stage.Key, got.Lease.HolderIsSelf)
 	}
 }
+
+// A worktree switched to another branch is named with the command that puts it
+// back; detached or unobserved branches stay silent.
+func TestClassifyWarnsWhenTheWorktreeIsOnAnotherBranch(t *testing.T) {
+	in := withSelfHolder(baseRecord(issueopsnextcontract.PhaseImplement))
+	in.WorktreeBranch = "wrong"
+	want := "canonical worktree is on branch wrong, not the cycle branch 12-test: switch back with git -C /repo.worktrees/12-test switch 12-test"
+	if got := classifyTemplate(in).Warnings; !slices.Contains(got, want) {
+		t.Fatalf("warnings %q", got)
+	}
+	for _, branch := range []string{"", "12-test"} {
+		in.WorktreeBranch = branch
+		if got := classifyTemplate(in).Warnings; len(got) != 0 {
+			t.Fatalf("branch %q: warnings %q", branch, got)
+		}
+	}
+}
