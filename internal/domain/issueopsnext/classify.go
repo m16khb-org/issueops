@@ -37,6 +37,9 @@ type Input struct {
 	StagedArchitecture bool
 	// ArchitectureReviewStale은 승인한 아키텍처 문서가 스테이징된 문서와 달라졌다는 관측이다.
 	ArchitectureReviewStale bool
+	// DevilsAdvocatePlanStale는 계획 리뷰가 묶인 digest와 스테이징된 계획이 달라졌다는
+	// 관측이다. link-plan 전에는 implement readiness가 이것을 보지 못한다.
+	DevilsAdvocatePlanStale bool
 	// RootConflictID는 이 사이클의 canonical worktree root를 이미 점유한 다른
 	// 사이클의 id다. 없으면 빈 문자열이다.
 	RootConflictID string
@@ -687,8 +690,9 @@ func stageOneMissing(in Input) []string {
 	return out
 }
 
-// devilsAdvocateGate는 판정 자체를 다시 계산하지 않는다. digest 비교는 adapter의
-// 게이트가 이미 하므로 그 결과인 missing 키만 읽는다.
+// devilsAdvocateGate는 판정 자체를 다시 계산하지 않는다. 연결된 계획의 digest
+// 비교는 adapter의 게이트가 하고, 연결 전 스테이징 계획의 비교는 service가
+// DevilsAdvocatePlanStale로 넘긴다. 여기서는 그 결과만 읽는다.
 func devilsAdvocateGate(in Input) string {
 	if in.Completion == nil {
 		return ""
@@ -698,6 +702,9 @@ func devilsAdvocateGate(in Input) string {
 		if slices.Contains(missing, key) {
 			return key
 		}
+	}
+	if in.DevilsAdvocatePlanStale {
+		return "devils_advocate_review_stale"
 	}
 	return ""
 }

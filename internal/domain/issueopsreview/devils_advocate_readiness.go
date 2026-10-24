@@ -32,3 +32,16 @@ func DevilsAdvocateReviewMissing(review *reviewcontract.DevilsAdvocateReview, ch
 	}
 	return missing
 }
+
+// DevilsAdvocateStagedPlanStale reports that the staged plan changed after the
+// plan review bound its digest. Before link-plan the implement readiness has
+// no linked plan to compare, so a plan revised after the review reached
+// plan.handoff unnoticed. Reviews without a digest or inherited from the parent
+// are not judged here.
+func DevilsAdvocateStagedPlanStale(review *reviewcontract.DevilsAdvocateReview, stagedPlan string) bool {
+	if !DevilsAdvocatePlanDigestRequired(review, true, true) {
+		return false
+	}
+	digest, err := StagedReviewPlanDigest(stagedPlan)
+	return err != nil || !strings.EqualFold(digest, review.ReviewedPlanDigest)
+}

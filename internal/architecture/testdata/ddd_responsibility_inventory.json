@@ -14830,7 +14830,8 @@
       "symbols": [
         "func DevilsAdvocateDigestExempt",
         "func DevilsAdvocatePlanDigestRequired",
-        "func DevilsAdvocateReviewMissing"
+        "func DevilsAdvocateReviewMissing",
+        "func DevilsAdvocateStagedPlanStale"
       ]
     },
     {

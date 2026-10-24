@@ -392,3 +392,35 @@ func TestCommandKindTreatsPlaceholdersAsTemplates(t *testing.T) {
 		}
 	}
 }
+
+// A staged plan edited after the plan review sends next back to plan.review
+// before link-plan, instead of handing off a plan nobody reviewed.
+func TestNextReportsStagedPlanChangedAfterReview(t *testing.T) {
+	architecture := strings.Join(append(append([]string{}, issueopsdomain.RequiredArchitectureSections...), ""), "\n본문\n")
+	archDigest, err := reviewdomain.ArchitectureDocumentDigest(architecture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	planDigest, err := reviewdomain.StagedReviewPlanDigest("# plan")
+	if err != nil {
+		t.Fatal(err)
+	}
+	record := issueopscontract.IssueOpsRecord{
+		ID: "io-a", Repo: "/repo", Branch: "12-a", Phase: issueopscontract.IssueOpsPhasePlan,
+		IssueURL:             "https://example.test/issues/12",
+		BranchPrepare:        &issueopscontract.IssueOpsBranchPrepare{BaseSHA: "deadbeef", LinkVerified: true},
+		ArchitectureReview:   &reviewcontract.ArchitectureReview{Approved: true, ReviewerContext: "subagent", ReviewedArchitectureDigest: archDigest},
+		DevilsAdvocateReview: &reviewcontract.DevilsAdvocateReview{Verdict: "pass", RecordedAt: "now", ReviewedPlanDigest: planDigest},
+	}
+	entries := []issueopsinventorycontract.ListEntry{{ID: "io-a", Phase: issueopscontract.IssueOpsPhasePlan, Branch: "12-a"}}
+	for plan, want := range map[string]string{"# plan": issueopsnextcontract.StagePlanHandoff, "# plan edited": issueopsnextcontract.StagePlanReview} {
+		ports := testPorts(entries, map[string]issueopscontract.IssueOpsRecord{"io-a": record})
+		ports.StagedArtifacts = func(string, string) (map[string]string, error) {
+			return map[string]string{"plan": plan, "architecture": architecture}, nil
+		}
+		result, err := NewService(ports).Next(t.Context(), "/state", "/repo", "")
+		if err != nil || result.Stage.Key != want {
+			t.Fatalf("plan %q: stage=%q missing=%v err=%v, want %q", plan, result.Stage.Key, result.Missing, err, want)
+		}
+	}
+}

@@ -157,8 +157,12 @@ issueops regress --id "$ISSUEOPS_ID" --reason "<리뷰 결론>" $RECORD_ACTOR_FL
 
 `regress`는 사이클을 grill로 되돌리고 아키텍처 승인도 지운다. 다시 조사하고 이슈 본문을 갱신한 뒤
 `phase --to plan`으로 올라와 계획을 다시 쓴다. 판정은 계획 파일의 sha256에 묶이므로,
-판정 뒤 계획을 고치면 `devils_advocate_review_stale`이 되어 인계가 막힌다. 고쳤으면
+판정 뒤 계획을 고치면 `devils_advocate_review_stale`이 되어 `next`가 plan.review로 돌아간다. 고쳤으면
 다시 검토한다.
+
+plan.handoff에서 사용자가 계획을 바꾸라고 하면 `execution prepare`로 가지 않는다. 바뀐 내용이
+아키텍처에 닿으면 아키텍처 문서를 다시 스테이징하고 리뷰를 다시 기록한다. 그다음 계획을 다시
+스테이징하고 위 검토를 다시 기록한다. 이슈 본문의 사실이 바뀌면 아래 `contract_change`도 기록한다.
 
 검토가 이슈 본문의 사실(완료 기준, 범위, 원인 설명, 작업 구조)을 틀렸다고 판정하면 계획만 고치고 끝내지 않고 `feedback add --classification contract_change`로 기록한다. 명령 형식과 이후 게이트는 [세부 규칙](references/gates-and-review-details.md)을 연다.
 

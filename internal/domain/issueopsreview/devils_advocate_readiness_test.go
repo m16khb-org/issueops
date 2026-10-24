@@ -59,3 +59,25 @@ func TestDevilsAdvocatePlanDigestRequiredOnlyWhenObserved(t *testing.T) {
 		})
 	}
 }
+
+func TestDevilsAdvocateStagedPlanStaleComparesTheReviewedDigest(t *testing.T) {
+	reviewed, err := StagedReviewPlanDigest("# plan v1\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	review := &reviewcontract.DevilsAdvocateReview{Verdict: "pass", RecordedAt: "now", ReviewedPlanDigest: reviewed}
+	if DevilsAdvocateStagedPlanStale(review, "# plan v1\n") {
+		t.Fatal("unchanged plan reported stale")
+	}
+	if !DevilsAdvocateStagedPlanStale(review, "# plan v2\n") {
+		t.Fatal("revised plan not reported stale")
+	}
+	if DevilsAdvocateStagedPlanStale(nil, "# plan v2\n") {
+		t.Fatal("no review is the missing gate, not stale")
+	}
+	inherited := *review
+	inherited.ReviewerPattern = issueopsdomain.ParentReviewPattern
+	if DevilsAdvocateStagedPlanStale(&inherited, "# plan v2\n") {
+		t.Fatal("parent-inherited review is digest exempt")
+	}
+}

@@ -826,3 +826,17 @@ func TestClassifyRendersRecordActorFlagsWhenTheVectorIsKnown(t *testing.T) {
 		}
 	}
 }
+
+// A plan revised after its review stays in plan.review before link-plan; the
+// implement readiness only compares a linked plan.
+func TestClassifyStagedPlanChangedAfterReviewStaysInPlanReview(t *testing.T) {
+	in := withDA(withStagedPlan(withArchitecture(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan))))))
+	in.DevilsAdvocatePlanStale = true
+	got := classifyTemplate(in)
+	if got.Stage.Key != "plan.review" || !slices.Equal(got.Missing, []string{"devils_advocate_review_stale"}) {
+		t.Fatalf("stage=%q missing=%v", got.Stage.Key, got.Missing)
+	}
+	if !strings.HasPrefix(got.NextCommand, "issueops devils-advocate review --id io-test") {
+		t.Fatalf("next_command=%q", got.NextCommand)
+	}
+}

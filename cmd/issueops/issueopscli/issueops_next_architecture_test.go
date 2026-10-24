@@ -84,4 +84,19 @@ func TestIssueOpsNextWalksArchitectureBeforePlan(t *testing.T) {
 	if key, missing := next(); key != "plan.architecture" || !slices.Equal(missing, []string{"architecture_review_stale"}) {
 		t.Fatalf("editing the architecture after approval must make it stale: stage=%q missing=%v", key, missing)
 	}
+
+	// The plan review binds the staged plan; editing the plan before link-plan
+	// goes back to plan.review instead of handing off an unreviewed plan.
+	stage("architecture", architecture)
+	recordIssueOpsCLIArchitectureForTest(t, id)
+	captureStdoutForContract(t, func() error {
+		return runIssueOps([]string{"devils-advocate", "review", "--id", id, "--verdict", "pass", "--reviewer-context", "subagent", "--finding", "attacked gate 3: no second caller exists", "--json"})
+	})
+	if key, missing := next(); key != "plan.handoff" {
+		t.Fatalf("reviewed plan must reach handoff: stage=%q missing=%v", key, missing)
+	}
+	stage("plan", "# plan v2\n"+strings.Join(issueopsdomain.RequiredPlanSections, "\n본문\n")+"\n본문\n")
+	if key, missing := next(); key != "plan.review" || !slices.Equal(missing, []string{"devils_advocate_review_stale"}) {
+		t.Fatalf("editing the plan after review must make it stale: stage=%q missing=%v", key, missing)
+	}
 }

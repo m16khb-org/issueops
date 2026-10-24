@@ -203,7 +203,11 @@ func (service *Service) buildInput(
 	}
 	if ports.StagedArtifacts != nil {
 		if staged, err := ports.StagedArtifacts(stateRoot, record.ID); err == nil {
-			_, input.StagedPlan = staged["plan"]
+			plan, hasPlan := staged["plan"]
+			input.StagedPlan = hasPlan
+			if hasPlan && record.Execution == nil && strings.TrimSpace(record.PlanPath) == "" {
+				input.DevilsAdvocatePlanStale = reviewdomain.DevilsAdvocateStagedPlanStale(record.DevilsAdvocateReview, plan)
+			}
 			architecture, hasArchitecture := staged["architecture"]
 			input.StagedArchitecture = hasArchitecture
 			if hasArchitecture && record.Execution == nil {
