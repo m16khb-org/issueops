@@ -932,3 +932,19 @@ func TestClassifyMissingWorktreeWithoutHolderNamesTheTakeoverWay(t *testing.T) {
 		t.Fatalf("pause=%q warnings=%q", got.Exits.PauseCommand, got.Warnings)
 	}
 }
+
+// A parent in implement whose children are not integrated goes to child
+// status first; with every child resolved it gets the ai-slop-clean
+// transition again.
+func TestClassifyImplementParentRoutesToUnintegratedChildren(t *testing.T) {
+	in := withSelfHolder(baseRecord(issueopsnextcontract.PhaseImplement))
+	in.ChildGateMissing = []string{"child_incomplete:io-child"}
+	got := classifyTemplate(in)
+	if !strings.HasPrefix(got.NextCommand, "issueops child status --parent "+in.Record.ID+" ") || !slices.Contains(got.Missing, "child_incomplete:io-child") {
+		t.Fatalf("decision %+v", got)
+	}
+	in.ChildGateMissing = nil
+	if got := classifyTemplate(in); !strings.Contains(got.NextCommand, " --to ai-slop-clean ") {
+		t.Fatalf("resolved children: next %q", got.NextCommand)
+	}
+}

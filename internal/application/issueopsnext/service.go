@@ -102,7 +102,7 @@ func (service *Service) Next(ctx context.Context, stateRoot, cwd, id string) (is
 		return result, nil
 	}
 	result.Selected = recordEntry(record)
-	decided := applyDecision(result, issueopsnextdomain.Classify(service.buildInput(stateRoot, sourceRoot, record, listing.Entries, actorHost, actorSession)))
+	decided := applyDecision(result, issueopsnextdomain.Classify(service.buildInput(ctx, stateRoot, sourceRoot, record, listing.Entries, actorHost, actorSession)))
 	return service.applyReviewTier(decided, record, actorHost), nil
 }
 
@@ -185,6 +185,7 @@ func (service *Service) applyReviewModel(result issueopsnextcontract.Result, act
 }
 
 func (service *Service) buildInput(
+	ctx context.Context,
 	stateRoot, sourceRoot string,
 	record issueopscontract.IssueOpsRecord,
 	entries []issueopsinventorycontract.ListEntry,
@@ -220,6 +221,9 @@ func (service *Service) buildInput(
 	if ports.WriterlessCommand != nil {
 		input.WriterlessRecovery = ports.WriterlessCommand(record)
 	}
+	if record.Phase == issueopscontract.IssueOpsPhaseImplement && len(record.ChildCycles) > 0 {
+		input.ChildGateMissing = childGateMissing(ctx, ports, stateRoot, record)
+	}
 	if record.Execution == nil {
 		input.RootConflictID = rootConflict(ports, record, sourceRoot, entries)
 	} else {
@@ -239,6 +243,24 @@ func (service *Service) buildInput(
 		input.Local = &issueopsnextdomain.Readiness{Ready: readiness.Ready, Missing: readiness.Missing, Warnings: readiness.Warnings}
 	}
 	return input
+}
+
+// childGateMissing is the parent PR gate's child keys (the same
+// issueopsdomain rules the PR readiness applies), read from one record scan.
+// A failed scan reports nothing: next only routes, the PR gate still refuses.
+func childGateMissing(ctx context.Context, ports Ports, stateRoot string, parent issueopscontract.IssueOpsRecord) []string {
+	if ports.ScanRecords == nil {
+		return nil
+	}
+	var records []issueopscontract.IssueOpsRecord
+	if err := ports.ScanRecords(ctx, stateRoot, func(record issueopscontract.IssueOpsRecord) error {
+		records = append(records, record)
+		return nil
+	}); err != nil {
+		return nil
+	}
+	status := issueopsdomain.BuildChildStatus(parent, issueopsdomain.SelectChildren(parent, records))
+	return issueopsdomain.ChildPRGateMissing(status.Children)
 }
 
 func needsLocalReadiness(record issueopscontract.IssueOpsRecord) bool {

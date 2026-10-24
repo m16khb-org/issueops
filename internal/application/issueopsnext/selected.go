@@ -52,7 +52,7 @@ func (service *Service) nextSelected(
 		return result, nil
 	}
 	result.Selected = recordEntry(record)
-	input := service.buildInput(stateRoot, sourceRoot, record, nil, actorHost, actorSession)
+	input := service.buildInput(ctx, stateRoot, sourceRoot, record, nil, actorHost, actorSession)
 	if record.Execution == nil && strings.TrimSpace(record.Branch) != "" {
 		if ports.ScanRecords == nil {
 			return issueopsnextcontract.Result{OK: false}, fmt.Errorf("issueops next conflict lookup dependency is required")

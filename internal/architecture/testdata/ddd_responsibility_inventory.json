@@ -9189,6 +9189,7 @@
         "func Service.buildInput",
         "func actorIdentity",
         "func applyDecision",
+        "func childGateMissing",
         "func cleanPath",
         "func commandKind",
         "func cwdRole",

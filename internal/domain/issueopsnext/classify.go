@@ -60,6 +60,10 @@ type Input struct {
 	// ("" when detached or not observed).
 	WorktreeBranch string
 	SourceRoot     string
+	// ChildGateMissing holds the PR-gate keys of delegated children that are
+	// not integrated yet (child_incomplete:<id>, child_unvalidated:<id>, ...),
+	// observed only for a parent in implement.
+	ChildGateMissing []string
 }
 
 type Decision struct {
@@ -360,6 +364,14 @@ func classifyHolderImplement(in Input, decision Decision) (Decision, bool) {
 		// implement from running the exit command before writing any code.
 		if in.Completion != nil {
 			decision.Missing = append([]string{}, in.Completion(issueopsnextcontract.PhaseImplement).Missing...)
+		}
+		// QA (child delegation): the parent got `phase --to ai-slop-clean`
+		// while its children were not merged or accepted; the PR gate refuses
+		// later and the cleanup seals go stale. Route to the children first.
+		if len(in.ChildGateMissing) > 0 {
+			decision.Missing = append(decision.Missing, in.ChildGateMissing...)
+			decision.NextCommand = "issueops child status --parent " + id + " $RECORD_ACTOR_FLAGS --json"
+			return decision, true
 		}
 		decision.NextCommand = "issueops phase --id " + id + " --to ai-slop-clean $RECORD_ACTOR_FLAGS --json"
 		return decision, true
