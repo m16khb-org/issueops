@@ -251,7 +251,7 @@ func TestClassifyNextCommandTable(t *testing.T) {
 		{"handoff prepares execution", withDA(withArchitecture(withStagedPlan(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))), "issueops execution prepare", "template"},
 		{"stop verdict regresses", withDAStop(withArchitecture(withStagedPlan(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))), "issueops regress --id io-test", "template"},
 		{"commit-push checks strict readiness", withLocal(withSelfHolder(baseRecord(issueopsnextcontract.PhaseAISlopClean)), "upstream"), "issueops pr-readiness --id io-test --strict", "exact"},
-		{"pushed and clean transitions to pr", withLocal(withSelfHolder(baseRecord(issueopsnextcontract.PhaseAISlopClean))), "issueops phase --id io-test --to pr $ACTOR_FLAGS", "template"},
+		{"pushed and clean transitions to pr", withLocal(withSelfHolder(baseRecord(issueopsnextcontract.PhaseAISlopClean))), "issueops phase --id io-test --to pr $RECORD_ACTOR_FLAGS", "template"},
 		{"done checks cleanup", baseRecord(issueopsnextcontract.PhaseDone), "issueops cleanup status --id io-test --merged", "exact"},
 		{"unknown falls back to status", withLocal(withSelfHolder(baseRecord(issueopsnextcontract.PhaseFeedback)), "branch_match"), "issueops status --id io-test", "exact"},
 	}
@@ -711,9 +711,9 @@ func TestClassifyPRRefreshSequenceAfterAMovedHead(t *testing.T) {
 		in         Input
 		stage, cmd string
 	}{
-		{pr("new", "ai_slop_clean_stale", "implementation_review_stale"), "clean", "issueops phase --id io-test --to ai-slop-clean $ACTOR_FLAGS --json"},
+		{pr("new", "ai_slop_clean_stale", "implementation_review_stale"), "clean", "issueops phase --id io-test --to ai-slop-clean $RECORD_ACTOR_FLAGS --json"},
 		{pr("new", "implementation_review_stale"), "verify", OwnerCommand("io-test", "implementation_review_stale")},
-		{pr("new"), "commit-push", "issueops phase --id io-test --to pr $ACTOR_FLAGS --json"},
+		{pr("new"), "commit-push", "issueops phase --id io-test --to pr $RECORD_ACTOR_FLAGS --json"},
 		{pr("old"), "pr.create", ""},
 	}
 	for i, step := range steps {

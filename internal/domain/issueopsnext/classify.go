@@ -334,7 +334,7 @@ func classifyHolderImplement(in Input, decision Decision) (Decision, bool) {
 			decision.Missing = []string{"compatibility_review"}
 			decision.NextCommand = OwnerCommand(id, "compatibility_review")
 		default:
-			decision.NextCommand = "issueops phase --id " + id + " --to implement $ACTOR_FLAGS --json"
+			decision.NextCommand = "issueops phase --id " + id + " --to implement $RECORD_ACTOR_FLAGS --json"
 		}
 		return decision, true
 	case issueopsnextcontract.PhaseImplement:
@@ -345,7 +345,7 @@ func classifyHolderImplement(in Input, decision Decision) (Decision, bool) {
 		if in.Completion != nil {
 			decision.Missing = append([]string{}, in.Completion(issueopsnextcontract.PhaseImplement).Missing...)
 		}
-		decision.NextCommand = "issueops phase --id " + id + " --to ai-slop-clean $ACTOR_FLAGS --json"
+		decision.NextCommand = "issueops phase --id " + id + " --to ai-slop-clean $RECORD_ACTOR_FLAGS --json"
 		return decision, true
 	}
 	return decision, false
@@ -382,7 +382,7 @@ func classifyLocalGates(in Input, decision Decision) (Decision, bool) {
 		if len(local) == 0 {
 			// Committed and pushed: the pr transition is the next step (it runs
 			// the strict readiness itself), not another readiness read.
-			decision.NextCommand = "issueops phase --id " + id + " --to pr $ACTOR_FLAGS --json"
+			decision.NextCommand = "issueops phase --id " + id + " --to pr $RECORD_ACTOR_FLAGS --json"
 		}
 		return decision, true
 	}
@@ -434,7 +434,7 @@ func classifyPRRefresh(in Input, decision Decision) (Decision, bool) {
 		if len(intersect(in.Local.Missing, cleanLocalKeys)) > 0 {
 			decision.Stage = stage(issueopsnextcontract.StageClean, 5)
 			decision.Missing = append([]string{}, in.Local.Missing...)
-			decision.NextCommand = "issueops phase --id " + id + " --to ai-slop-clean $ACTOR_FLAGS --json"
+			decision.NextCommand = "issueops phase --id " + id + " --to ai-slop-clean $RECORD_ACTOR_FLAGS --json"
 			return decision, true
 		}
 		return classifyLocalGates(in, decision)
@@ -443,7 +443,7 @@ func classifyPRRefresh(in Input, decision Decision) (Decision, bool) {
 	if in.Local != nil && prHead != "" && head != "" && prHead != head {
 		decision.Stage = stage(issueopsnextcontract.StageCommitPush, 8)
 		decision.Missing = []string{"pr_head_stale"}
-		decision.NextCommand = "issueops phase --id " + id + " --to pr $ACTOR_FLAGS --json"
+		decision.NextCommand = "issueops phase --id " + id + " --to pr $RECORD_ACTOR_FLAGS --json"
 		return decision, true
 	}
 	return decision, false
