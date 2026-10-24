@@ -138,7 +138,7 @@ verified-execution report를 확정한다. report는 워크트리 **안**의 정
 
 봉인하기 **전에** 정리 프롬프트 출력의 `Project rules applied` 항목을 verified-execution report의
 `## 적용한 문서 규칙` 절에 `| 문서 경로 | 해당 문장 인용 | 이 규칙으로 지운·합친 것 |` 행으로 옮긴다.
-아래 명령이 report까지 봉인하므로, 기록 뒤에 옮기면 `ai_slop_clean_stale`이 된다.
+report는 봉인 fingerprint에 들어가지 않으므로 기록 뒤에 옮겨도 stale이 되지 않지만, 정리 결과와 함께 남도록 기록 전에 옮긴다.
 
 ```bash
 issueops ai-slop-clean record --id "$ISSUEOPS_ID" \
@@ -153,9 +153,10 @@ issueops ai-slop-clean record --id "$ISSUEOPS_ID" \
 공격 대상이 된다. 지운 것이 하나도 없으면 점검한 분류를 적고 `--verification`에
 "점검했으나 제거 없음"을 분명히 쓴다(CLI는 분류를 한 개 이상 요구하고, 그 값은 "점검했거나 정리한 분류"다).
 
-이 명령이 change fingerprint를 현재 diff로 봉인한다. fingerprint에는 gates.md, verified-execution
-report, 문서까지 **변경된 모든 파일과 untracked 파일**이 들어간다. 그래서 기록 뒤에
-어떤 파일이라도 고치면 `ai_slop_clean_stale`이 되어 pr 진입과 create-pr이 막힌다.
+이 명령이 change fingerprint를 현재 diff로 봉인한다. fingerprint에는 gates.md, 문서까지 **변경된
+모든 파일과 untracked 파일**이 들어간다. 예외는 `.issueops/issues/<n>/verified-execution-report.md` 하나다
+(정리 뒤에 쓰는 과정 기록이라 뺀다). 그 밖의 어떤 파일이라도 기록 뒤에 고치면 `ai_slop_clean_stale`이
+되어 pr 진입과 create-pr이 막힌다.
 
 - 6단계 [`issueops-docs`](../issueops-docs/SKILL.md)가 운영 문서를 고쳤으면 **그 단계가**
   이 명령을 다시 실행해 재봉인한다.

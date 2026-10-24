@@ -102,6 +102,7 @@ Use the Goal-Driven Execution principle from AGENTS.md, plus these verification 
 
 - If a commit is needed, follow .issueops/COMMIT_POLICY.md.
 - Record resolved false cases or structural decisions with MCP project_docs_append when useful.
+- Reports to the user (progress, completion, stop, questions) follow the ASD-STE100-based report rules in the fluent-korean skill (references/report-ste100.md): result first, then changes, checks, warnings/cautions, and what the user must do.
 `
 }
 

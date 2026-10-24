@@ -62,6 +62,7 @@ cleanup은 승인에 포함하지 않는다. 일반 테스트 실패와 stale �
 
 - 커밋이 필요하면 `.issueops/COMMIT_POLICY.md`를 따른다.
 - 해결한 false case나 구조 결정은 필요한 경우 MCP `project_docs_append`로 기록한다. IssueOps 사이클이라면 그 기록의 시점과 재봉인은 문서 단계(`skills/issueops-docs/SKILL.md`)가 소유하고, publication 게이트 `project_docs_review`는 `no-change`에도 실제로 읽은 `--reviewed-doc` 경로를 요구한다.
+- 사용자에게 하는 진행·완료·중단 보고와 질문은 ASD-STE100 기반 보고 규칙(`skills/fluent-korean/references/report-ste100.md`)을 따른다. `결과` → `변경한 것` → `확인한 것` → `경고`·`주의` → `사용자가 할 일` 순서로 쓴다.
 
 ## Hook context injection and lifecycle observation
 

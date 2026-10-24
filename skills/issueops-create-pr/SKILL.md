@@ -128,9 +128,7 @@ issueops remote create-pr \
   --head "$HEAD_BRANCH" --base "$BASE_BRANCH" \
   --template pull_request --body-file "$BODY_FILE" \
   --label enhancement --assignee "$ASSIGNEE" \
-  --host "$HOST" --session-id "$SESSION_ID" --agent-id "$AGENT_ID" \
-  --session-pid "$SESSION_PID" --session-started-at "$SESSION_STARTED_AT" \
-  --session-executable "$SESSION_EXECUTABLE" --cwd "$WORKER_PATH" --json
+  $ACTOR_FLAGS --json
 ```
 
 preview와 같은 명령에만 `--confirm`을 추가한다. 성공 후
@@ -142,11 +140,12 @@ issueops remote verify-artifact \
   --id "$ISSUEOPS_ID" --provider "$PROVIDER" --kind "$ARTIFACT_KIND" \
   --url "$PR_OR_MR_URL" --target-branch "$BASE_BRANCH" \
   --label enhancement --assignee "$ASSIGNEE" \
-  --host "$HOST" --session-id "$SESSION_ID" --agent-id "$AGENT_ID" \
-  --cwd "$WORKER_PATH" --json
+  $RECORD_ACTOR_FLAGS --json
 ```
 
-`verify-artifact`는 검증 결과를 record에 쓰므로 활성 lease의 holder로만 실행된다. actor 플래그(`RECORD_ACTOR_FLAGS`)를
+`verify-artifact`는 검증 결과를 record에 쓰므로 활성 lease의 holder로만 실행된다. 두 플래그 묶음은 워크트리에서 실행한
+`execution whoami --json`의 `claim_actor_flags[0]`(create-pr)과 `record_actor_flags`(verify-artifact)를 그대로 쓴다.
+손으로 조립하지 않는다. `--agent-id`는 whoami가 주지 않으면 붙이지 않는다. actor 플래그를
 빼면 holder 확인에서 거부된다. `ARTIFACT_KIND`는 GitHub에서 `pr`, GitLab에서 `mr`이다. 생성 command 이름과
 검증 artifact kind를 혼동하지 않는다.
 
