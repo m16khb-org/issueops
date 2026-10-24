@@ -61,6 +61,11 @@ func (s ChildrenCloser) Close(ctx context.Context, id string, requested, confirm
 		outcomes := s.closeConcurrently(record, indices, req)
 		changed, firstErr := collectChildOutcomes(&result, outcomes, indices)
 		if firstErr != nil {
+			if req.Confirm {
+				// QA (lost close response): the provider may have closed it;
+				// a re-run observes already-closed children and records them.
+				return fmt.Errorf("%w; the provider may still have closed it: re-run this same command, which is idempotent (an already closed child is success)", firstErr)
+			}
 			return firstErr
 		}
 		if req.Confirm && len(changed) > 0 {

@@ -26,8 +26,8 @@ issueops remote create-child --id "$ISSUEOPS_ID" --title "$CHILD_TITLE" \
   --label "$LABEL" --assignee "$ASSIGNEE" $RECORD_ACTOR_FLAGS --json
 ```
 
-같은 본문으로 의도적인 새 child를 만들려면 ID를 한 번 생성해 저장하고 최초 요청과
-재시도에 같은 값을 `--operation-id`로 넘긴다.
+같은 본문으로 의도적인 새 child를 만들려면 ID(32자 소문자 hex, 예: `openssl rand -hex 16`)를
+한 번 생성해 저장하고 최초 요청과 재시도에 같은 값을 `--operation-id`로 넘긴다.
 
 무ID 재시도는 완료 뒤에도 최초 implicit child를 반환한다. 같은 본문의 explicit 새
 child가 생겨도 이 결합은 유지된다. 미해결 operation은 새 ID로도 생성하지 않으며,

@@ -120,8 +120,8 @@ error blocks closure: report it and stop before writing.
 A parent with delegated child cycles closes their provider tasks first:
 `issueops cleanup close-children --id "$ISSUEOPS_ID" --merged` (preview, then `--confirm`)
 satisfies `child_tasks_closed`; remote-branch cleanup comes after it. Each child
-cycle then runs this skill on its own ID: reflect-completion, close-issue
-(already closed is success), finish.
+cycle then runs this skill on its own ID: remote-branch, reflect-completion,
+close-issue (already closed is success), finish.
 
 From these results, state:
 

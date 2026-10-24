@@ -117,10 +117,10 @@ func validateIssueCreateDigestsAndProvider(intent IssueOpsIssueCreateIntent) err
 	}
 	if len(intent.OperationID) != 32 ||
 		intent.OperationID != strings.ToLower(intent.OperationID) {
-		return fmt.Errorf("issue create intent operation_id must be 32 lowercase hexadecimal characters")
+		return fmt.Errorf("issue create intent operation_id must be 32 lowercase hexadecimal characters (for example `openssl rand -hex 16`)")
 	}
 	if _, err := hex.DecodeString(intent.OperationID); err != nil {
-		return fmt.Errorf("issue create intent operation_id must be 32 lowercase hexadecimal characters")
+		return fmt.Errorf("issue create intent operation_id must be 32 lowercase hexadecimal characters (for example `openssl rand -hex 16`)")
 	}
 	if _, err := hex.DecodeString(intent.BodySHA256); err != nil {
 		return fmt.Errorf("issue create intent body_sha256 must be lowercase hexadecimal")

@@ -84,6 +84,10 @@ func TestChildrenCloserDoesNotPersistPartialOrUnverifiedReceipts(t *testing.T) {
 			if err == nil || len(result.Children) != 2 {
 				t.Fatalf("result=%+v err=%v", result, err)
 			}
+			// A failed provider close may still have landed; the re-run is the way back.
+			if failure == "provider" && !strings.Contains(err.Error(), "re-run this same command") {
+				t.Fatalf("provider failure lacks the retry hint: %v", err)
+			}
 			if !reflect.DeepEqual(records.record.IssueLinks, original) || !reflect.DeepEqual(record.IssueLinks, original) {
 				t.Fatal("failed closure mutated stored or observed record")
 			}
