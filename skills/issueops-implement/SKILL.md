@@ -200,8 +200,8 @@ verification·fallback·tradeoff·기대 이득을 기록한다.
 1. focused verification 증거가 명령·결과로 남아 있고, 위임한 child가 전부 accepted
    또는 dropped다. ai-slop-clean 전이는 이를 검사하지 않지만 `child_incomplete`·`child_unvalidated`가
    남으면 pr 진입(strict readiness)이 거부되므로 여기서 끝낸다.
-2. verified-execution report 초안을 워크트리 **안**에 쓴다. 경로는
-   워크트리 내부 상대 경로로 기록한다. 최종 확정은 5단계 정리가 한다.
+2. verified-execution report 초안을 워크트리 **안** `.issueops/issues/<n>/verified-execution-report.md`에 쓴다.
+   이 이름만 봉인 fingerprint에서 빠지므로 뒤 단계가 고쳐도 봉인이 stale이 되지 않는다. 최종 확정은 5단계 정리가 한다.
 3. `issueops phase --id ID --to ai-slop-clean $RECORD_ACTOR_FLAGS --json`
    으로 전이한다. 다음은 [`issueops-slop-clean`](../issueops-slop-clean/SKILL.md)이다.
 4. 이 단계에서는 커밋·푸시나 ai-slop-clean·구현 리뷰 기록을 하지 않는다. 정리·문서·검증이

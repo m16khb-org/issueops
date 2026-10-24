@@ -234,6 +234,10 @@ issueops cleanup finish --id "$ISSUEOPS_ID" \
   --apply --confirm --fingerprint "$FINGERPRINT" --json
 ```
 
+The emitted command may also carry `--generated-by-executable`, `--generated-by-sha256`, and
+`--generated-for-generation`. They bind it to the binary and generation that produced it; keep
+them as emitted (a different binary or generation refuses it instead of running a stale command).
+
 Never substitute raw `git worktree remove`, `git branch -d/-D`, `git update-ref`,
 `git push origin --delete`, or manual terminal/process stops.
 The fingerprint binds worktree, branch OID and occupant receipts.
