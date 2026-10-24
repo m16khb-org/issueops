@@ -38,6 +38,7 @@ func TestCatalogTreatsOnlyShellSyntaxChecksAsNonShell(t *testing.T) {
 		"sh -n -c echo":           true,
 		"bash -n -O extglob a.sh": true,
 		"sh -nx a.sh":             true,
+		"fish -n a.fish":          true,
 	} {
 		if got := builtin.Classify(strings.Fields(argv)).ShellCommand; got != shell {
 			t.Errorf("%q: ShellCommand=%v want %v", argv, got, shell)

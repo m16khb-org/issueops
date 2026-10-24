@@ -110,9 +110,11 @@ func (catalog Catalog) Classify(argv []string) CommandClassification {
 // syntaxCheckOnly reports `sh -n FILE...`: the shell parses the files and
 // executes nothing (POSIX -n, noexec), so it is not a shell execution.
 // Repositories document `sh -n script.sh` as their lint step, and gate CHECKs
-// could not run it. Any other flag or a missing file keeps the denial.
+// could not run it. Any other flag or a missing file keeps the denial. Checked
+// on macOS: sh, bash (BASH_ENV), and zsh (~/.zshenv) run no startup file under
+// -n; fish is left out because its startup behavior under -n is unverified.
 func syntaxCheckOnly(argv []string) bool {
-	if len(argv) < 3 || argv[1] != "-n" {
+	if len(argv) < 3 || argv[1] != "-n" || strings.ToLower(filepath.Base(argv[0])) == "fish" {
 		return false
 	}
 	for _, arg := range argv[2:] {
