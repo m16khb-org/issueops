@@ -118,7 +118,7 @@ func githubSteps(issueURL, branch, baseBranch, baseSHA string) []model.IssueOpsB
 	steps := []model.IssueOpsBranchPrepareStep{{
 		Order:       1,
 		Strategy:    "mcp_unavailable",
-		Description: "No GitHub MCP branch-creation tool is currently exposed in this harness session; do not silently create a local branch.",
+		Description: "Note, nothing to run and not a failure: there is no GitHub MCP branch-creation tool, so create the branch with the gh steps below; do not silently create a local branch.",
 	}}
 	if baseSHA == "" {
 		// base SHA 없이는 oid를 못박을 수 없다. 종전 경로로 떨어지되 그 사실을
