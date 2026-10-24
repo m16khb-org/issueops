@@ -213,7 +213,8 @@ func TestCovCFValidateCleanupSupersedeInput(t *testing.T) {
 }
 
 func TestCovCFFinishCommands(t *testing.T) {
-	if got := CleanupFinishRemedyCommand("c1", []string{"phase_done", "completion_reflected"}); got != "issueops remote reflect-completion --id c1 --body-file <PROGRESS_REPORT_FILE> --confirm --json" {
+	// The remedy is the preview; an agent was handed --confirm and skipped it.
+	if got := CleanupFinishRemedyCommand("c1", []string{"phase_done", "completion_reflected"}); got != "issueops remote reflect-completion --id c1 --body-file <PROGRESS_REPORT_FILE> --json" {
 		t.Fatalf("remedy = %q", got)
 	}
 	if got := CleanupFinishRemedyCommand("c1", []string{"phase_done"}); got != "" {

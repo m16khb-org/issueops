@@ -54,8 +54,8 @@ MCP를 쓸 수 없으면 같은 요약으로 `issueops project route-docs --repo
 
 route 결과는 **더하는** 후보이고 아래 네 문서를 대신하지 않는다. 2절의 문서 → 구현 대조에 쓰는
 `CONSTITUTION.md`, `CONVENTIONS.md`, `ARCHITECTURE.md`, `CAUTIONS.md`는 route가 무엇을 돌려주든 직접
-열고, 5절 판정 기록의 `--reviewed-doc`에 실제로 연 문서만 넣는다. 네 문서 중 열지 않은 것이
-있으면 판정을 기록하지 않는다.
+열고, 5절 판정 기록의 `--reviewed-doc`에 실제로 연 문서만 넣는다. 네 문서 중 있는데 열지 않은 것이
+있으면 판정을 기록하지 않는다. 저장소에 없는 문서는 없다는 사실을 evidence에 적는다.
 
 ## 2 양방향 대조
 

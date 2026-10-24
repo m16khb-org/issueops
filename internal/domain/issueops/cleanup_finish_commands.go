@@ -19,7 +19,8 @@ func CleanupFinishRemedyCommand(id string, missing []string) string {
 	case slices.Contains(missing, "remote_branch_absent"):
 		return fmt.Sprintf("issueops cleanup remote-branch --id %s --preview --json", id)
 	case slices.Contains(missing, "completion_reflected"):
-		return fmt.Sprintf("issueops remote reflect-completion --id %s --body-file <PROGRESS_REPORT_FILE> --confirm --json", id)
+		// The preview first, like every other remedy: the skill confirms after it.
+		return fmt.Sprintf("issueops remote reflect-completion --id %s --body-file <PROGRESS_REPORT_FILE> --json", id)
 	case slices.Contains(missing, "issue_closed"):
 		return fmt.Sprintf("issueops remote close-issue --id %s --json", id)
 	}
