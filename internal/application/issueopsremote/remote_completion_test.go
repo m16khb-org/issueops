@@ -229,3 +229,19 @@ func TestRemoteCompletionCloseRefusalsAndProviderFailure(t *testing.T) {
 		t.Fatalf("reflect err = %v", err)
 	}
 }
+
+// A confirmed write whose provider call failed may still have landed; the
+// error says to re-run the same idempotent command. A preview error stays as is.
+func TestRemoteCompletionFailedConfirmSaysTheRetryIsIdempotent(t *testing.T) {
+	lost := errors.New("context deadline exceeded")
+	h := newCompletionHarness(completionRecord(), &completionProviderFake{closeErr: lost, updateErr: lost})
+	if _, _, err := h.service.Close(context.Background(), "io-done", "", true); !errors.Is(err, lost) || !strings.Contains(err.Error(), "re-run this same command") || !strings.Contains(err.Error(), "already closed") {
+		t.Fatalf("close err = %v", err)
+	}
+	if _, _, _, err := h.service.Reflect(context.Background(), "io-done", "", completionReport, true); !errors.Is(err, lost) || !strings.Contains(err.Error(), "already reflected") {
+		t.Fatalf("reflect err = %v", err)
+	}
+	if _, _, err := h.service.Close(context.Background(), "io-done", "", false); err == nil || strings.Contains(err.Error(), "re-run") {
+		t.Fatalf("preview err = %v", err)
+	}
+}

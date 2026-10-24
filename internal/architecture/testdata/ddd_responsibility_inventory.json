@@ -9577,6 +9577,7 @@
         "func RemoteCompletionService.Close",
         "func RemoteCompletionService.Reflect",
         "func RemoteCompletionService.prepare",
+        "func idempotentRetryHint",
         "type CompletionProvider",
         "type CompletionProviderResolver",
         "type MergeVerifier",

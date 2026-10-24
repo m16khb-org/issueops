@@ -88,7 +88,7 @@ func (s *RemoteCompletionService) Reflect(ctx context.Context, id, providerOverr
 	completion.ResultBody = resultBody
 	result, err = provider.UpdateIssueBodySection(ctx, port.IssueProviderUpdateIssueBodySectionRequest{Repo: record.Repo, IssueURL: record.IssueURL, Section: model.IssueBodySectionCompletion, Completion: &completion, Confirm: confirm})
 	if err != nil {
-		return model.IssueOpsRecord{}, result, report, err
+		return model.IssueOpsRecord{}, result, report, idempotentRetryHint(err, confirm, "reflected")
 	}
 	if !confirm || !result.Updated {
 		return record, result, report, nil
@@ -112,11 +112,22 @@ func (s *RemoteCompletionService) Close(ctx context.Context, id, providerOverrid
 	}
 	result, err = provider.CloseIssue(ctx, port.IssueProviderCloseIssueRequest{Repo: record.Repo, IssueURL: record.IssueURL, Confirm: confirm})
 	if err != nil {
-		return model.IssueOpsRecord{}, result, err
+		return model.IssueOpsRecord{}, result, idempotentRetryHint(err, confirm, "closed")
 	}
 	if !confirm || !result.Closed {
 		return record, result, nil
 	}
 	record, err = s.receipts.Closed(ctx, id)
 	return record, result, err
+}
+
+// idempotentRetryHint tells a caller whose confirmed write failed that the
+// provider may still have applied it and that re-running the same command
+// settles it (QA, lost responses: the agent had to read the issue back to
+// learn that the section was written and the issue closed).
+func idempotentRetryHint(err error, confirm bool, state string) error {
+	if !confirm {
+		return err
+	}
+	return fmt.Errorf("%w; the provider may still have applied it: re-run this same command, which is idempotent (an issue already %s is success)", err, state)
 }
