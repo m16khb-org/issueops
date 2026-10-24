@@ -54,6 +54,10 @@ type executionSyncBaseInventory struct {
 	RemoteBranchPresent  bool   `json:"remote_branch_present"`
 
 	Root string `json:"-"`
+	// BaseOnRemote: the pushed work branch already contains the base tip,
+	// so unpushed commits are the branch's own work, not a sync to retry
+	// (derived from BaseOID and RemoteWorkOID, which the fingerprint covers).
+	BaseOnRemote bool `json:"-"`
 }
 
 // VerifiedSyncExecutionBase는 게이트 10종을 fail-closed로 평가하고, 모드별 절차를
@@ -118,9 +122,10 @@ func syncExecutionBase(ctx context.Context, stateRoot string, req issueops.Execu
 	}
 	result.Fingerprint = fingerprint
 	if mode == issueops.ExecutionSyncBasePreview {
-		if !result.MergeNeeded && inventory.RemoteWorkOID != "" && strings.EqualFold(inventory.RemoteWorkOID, inventory.WorkOID) {
-			// The base is already in the branch and the branch is pushed: an
-			// apply would only record a no-op sync, so do not hand one out.
+		if !result.MergeNeeded && inventory.RemoteWorkOID != "" && (strings.EqualFold(inventory.RemoteWorkOID, inventory.WorkOID) || inventory.BaseOnRemote) {
+			// The base is already in the pushed branch: an apply would only
+			// record a no-op sync (or push the branch's own commits, which is
+			// the commit-push stage's job), so do not hand one out.
 			result.NextCommand = "issueops next --id " + record.ID + " --json"
 			return result, nil
 		}

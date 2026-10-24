@@ -48,6 +48,9 @@ type fakeSyncBaseGit struct {
 	cherryPickHead bool
 	rebaseHead     bool
 	ancestor       map[string]bool
+	// notAncestor names "ancestor..descendant" pairs that are not ancestry,
+	// overriding the per-ancestor answer above.
+	notAncestor map[string]bool
 
 	fetchCode     int
 	mergeTreeCode int
@@ -82,6 +85,9 @@ func (g *fakeSyncBaseGit) run(_ context.Context, dir string, args ...string) (in
 	case "fetch":
 		return g.fetchCode, ""
 	case "merge-base":
+		if g.notAncestor[args[len(args)-2]+".."+args[len(args)-1]] {
+			return 1, ""
+		}
 		if g.ancestor[args[len(args)-2]] {
 			return 0, ""
 		}
@@ -498,7 +504,9 @@ func TestExecutionSyncBaseApplyPushFailureConvergesIdempotently(t *testing.T) {
 	assertReleasedSyncBaseCommand(t, result.NextCommand, fixture, "--preview")
 
 	// 병합은 이미 반영됐다 — 재preview는 merge 불필요 + ahead를 보고해야 한다.
+	// The push failed, so the remote branch still lacks the base.
 	fixture.git.ancestor[syncBaseBaseOID] = true
+	fixture.git.notAncestor = map[string]bool{syncBaseBaseOID + ".." + syncBaseRemoteOID: true}
 	fixture.git.pushCode, fixture.git.pushOut = 0, ""
 	fixture.git.calls = nil
 	retryPreview, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBasePreview))
@@ -529,6 +537,31 @@ func TestExecutionSyncBaseApplyPushFailureConvergesIdempotently(t *testing.T) {
 	}
 	if len(persisted.Execution.SyncBaseEvents) != 1 {
 		t.Fatalf("exactly one durable event must survive the retry: %#v", persisted.Execution.SyncBaseEvents)
+	}
+}
+
+// QA: the base already on the pushed branch plus unpushed work commits is not
+// a failed sync push; the preview hands out next, not an apply.
+func TestExecutionSyncBasePreviewTreatsUnpushedWorkOnASyncedBranchAsNoOp(t *testing.T) {
+	t.Parallel()
+
+	fixture := newReleasedSyncBaseFixture(t, "114-synced-ahead")
+	const pushedOID = "4444444444444444444444444444444444444444"
+	fixture.git.remoteRef = pushedOID + "\trefs/heads/114-synced-ahead"
+	fixture.git.ancestor[pushedOID] = true
+	fixture.git.ancestor[syncBaseBaseOID] = true
+	preview, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBasePreview))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if preview.MergeNeeded || preview.PushRetryRequired || !strings.HasPrefix(preview.NextCommand, "issueops next --id ") {
+		t.Fatalf("synced branch with own commits must not offer an apply: %#v", preview)
+	}
+	// Without the base on the pushed branch the same ahead state is a retry.
+	fixture.git.notAncestor = map[string]bool{syncBaseBaseOID + ".." + pushedOID: true}
+	retry, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBasePreview))
+	if err != nil || !retry.PushRetryRequired || !strings.Contains(retry.NextCommand, "--apply") {
+		t.Fatalf("unpushed sync must still offer the push retry: err=%v %#v", err, retry)
 	}
 }
 

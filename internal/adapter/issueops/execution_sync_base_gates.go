@@ -161,6 +161,14 @@ func (g *executionSyncBaseGateRun) observeAncestry() {
 	}
 	if inv.RemoteWorkOID != "" && inv.WorkOID != "" && !strings.EqualFold(inv.RemoteWorkOID, inv.WorkOID) {
 		if code, _ := g.deps.Git(g.ctx, inv.Root, "merge-base", "--is-ancestor", inv.RemoteWorkOID, inv.WorkOID); code == 0 {
+			// QA: with the base already on the pushed branch, unpushed work
+			// commits read as a failed sync push and the preview offered apply.
+			if inv.BaseOID != "" && !g.result.MergeNeeded {
+				if code, _ := g.deps.Git(g.ctx, inv.Root, "merge-base", "--is-ancestor", inv.BaseOID, inv.RemoteWorkOID); code == 0 {
+					g.inventory.BaseOnRemote = true
+					return
+				}
+			}
 			g.result.PushRetryRequired = true
 		}
 	}
