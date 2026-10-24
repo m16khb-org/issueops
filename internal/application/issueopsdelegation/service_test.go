@@ -398,3 +398,17 @@ func TestStatusErrors(t *testing.T) {
 		t.Fatalf("got=%+v err=%v", got, err)
 	}
 }
+
+// create-child links the child issue first; child start with the same URL
+// finds the link in place, which is success, not a warning.
+func TestChildStartAlreadyLinkedChildIsNotAWarning(t *testing.T) {
+	parent := readyParent()
+	parent.IssueURL = "https://github.com/o/r/issues/1"
+	parent.IssueLinks = []model.IssueOpsIssueLink{{Type: "child", URL: "https://github.com/o/r/issues/2"}}
+	req := startRequest()
+	req.ChildIssueURL = "https://github.com/o/r/issues/2"
+	got, err := newStarter(newDelegationStore(parent)).Start(context.Background(), req, nil)
+	if err != nil || !got.OK || got.ChildLinkWarning != "" {
+		t.Fatalf("got=%+v err=%v", got, err)
+	}
+}

@@ -1,6 +1,7 @@
 package issueops
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -43,11 +44,15 @@ func ValidateChildLinkParent(record model.IssueOpsRecord) error {
 	return nil
 }
 
+// ErrChildIssueAlreadyLinked reports that the exact child link is already on
+// the record; callers that only ensure the link treat it as done.
+var ErrChildIssueAlreadyLinked = errors.New("child issue already linked")
+
 func AppendIssueRelation(record model.IssueOpsRecord, link model.IssueOpsIssueLink, now string) (model.IssueOpsRecord, error) {
 	for _, existing := range record.IssueLinks {
 		if existing.Type == link.Type && existing.URL == link.URL {
 			if link.Type == "child" {
-				return model.IssueOpsRecord{OK: false}, fmt.Errorf("child issue already linked: %s", link.URL)
+				return model.IssueOpsRecord{OK: false}, fmt.Errorf("%w: %s", ErrChildIssueAlreadyLinked, link.URL)
 			}
 			return model.IssueOpsRecord{OK: false}, fmt.Errorf("related issue already linked as %s: %s", link.Type, link.URL)
 		}

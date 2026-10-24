@@ -47,7 +47,9 @@ func (s ChildStarter) Start(ctx context.Context, req model.IssueOpsChildStartReq
 		return model.IssueOpsChildStartResult{OK: false}, err
 	}
 	if req.ChildIssueURL != "" {
-		if _, err := s.Links.Child(ctx, result.ParentID, req.ChildIssueURL, req.Title, actor); err != nil {
+		// create-child already linked this URL; the link is there, which is the
+		// whole request (QA read the "already linked" warning as a problem).
+		if _, err := s.Links.Child(ctx, result.ParentID, req.ChildIssueURL, req.Title, actor); err != nil && !errors.Is(err, domain.ErrChildIssueAlreadyLinked) {
 			result.ChildLinkWarning = err.Error()
 		}
 	}
