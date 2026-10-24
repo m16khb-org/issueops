@@ -39,7 +39,9 @@ func applyRootSignal(s *projectdoc.ProjectSignals, rel string) {
 	case "go.mod":
 		addLang("Go")
 		s.TestCommands = append(s.TestCommands, projectdoc.EvidenceCommand{Command: "go test ./...", Evidence: []string{"go.mod"}, Confidence: "high"})
-		s.BuildCommands = append(s.BuildCommands, projectdoc.EvidenceCommand{Command: "go build ./...", Evidence: []string{"go.mod"}, Confidence: "medium"})
+		// -o /dev/null: with one main package, plain `go build ./...` writes a
+		// binary into the checkout (or fails when a directory has its name).
+		s.BuildCommands = append(s.BuildCommands, projectdoc.EvidenceCommand{Command: "go build -o /dev/null ./...", Evidence: []string{"go.mod"}, Confidence: "medium"})
 		s.LintCommands = append(s.LintCommands, projectdoc.EvidenceCommand{Command: "go vet ./...", Evidence: []string{"go.mod"}, Confidence: "medium"})
 	case "package.json":
 		addLang("JavaScript/TypeScript")

@@ -110,6 +110,11 @@ See `PROMPT.md` for the full fill targets per document.
    clean code, error/exception handling, OpenAPI/Swagger, testing best
    practices, and adjacent topics) and maps every evidence-confirmed topic
    to its single owning document per the catalog's topic-to-doc map.
+   The MCP workspace tools take an `authority_file` from
+   `issueops mcp authorize --workspace-root "$PWD" --json`, issued with the same
+   `ISSUEOPS_STATE_DIR` as the MCP service. When that path is unavailable,
+   edit the docs directly as `PROMPT.md` allows and report that the MCP path
+   was not used.
 
 5. Verify:
 

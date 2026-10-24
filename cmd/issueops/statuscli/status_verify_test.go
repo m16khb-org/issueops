@@ -90,7 +90,7 @@ func TestBuildVerifyWorkIncludesEvidenceMatrixAndSuggestions(t *testing.T) {
 	assertEvidenceItem(t, result.EvidenceMatrix, "read_only_command", "passed")
 
 	assertSuggestedCommand(t, result.SuggestedCommands, []string{"go", "test", "./..."})
-	assertSuggestedCommand(t, result.SuggestedCommands, []string{"go", "build", "./..."})
+	assertSuggestedCommand(t, result.SuggestedCommands, []string{"go", "build", "-o", "/dev/null", "./..."})
 	assertSuggestedCommand(t, result.SuggestedCommands, []string{"go", "vet", "./..."})
 }
 
