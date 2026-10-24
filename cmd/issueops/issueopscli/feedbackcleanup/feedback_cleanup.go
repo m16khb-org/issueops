@@ -291,9 +291,11 @@ func (command Command) runCleanupFinish(args []string, deps Deps) error {
 	}
 	if err != nil {
 		if *jsonOut {
-			if printErr := deps.PrintJSON(result); printErr != nil {
+			// One document under --json 2>&1: the error goes into the result.
+			if printErr := deps.PrintJSON(jsonout.WithError(result, err)); printErr != nil {
 				return printErr
 			}
+			return jsonout.Reported(err)
 		}
 		return err
 	}
@@ -342,9 +344,10 @@ func (command Command) runCleanupRemoteBranch(args []string, deps Deps) error {
 	}
 	if err != nil {
 		if *jsonOut {
-			if printErr := deps.PrintJSON(result); printErr != nil {
+			if printErr := deps.PrintJSON(jsonout.WithError(result, err)); printErr != nil {
 				return printErr
 			}
+			return jsonout.Reported(err)
 		}
 		return err
 	}
@@ -405,10 +408,11 @@ func (command Command) runCleanupAbandon(args []string, deps Deps) error {
 	if err != nil {
 		if *jsonOut {
 			// 게이트 결과와 레코드 전문이 담긴 result를 그대로 흘린다 —
-			// 이 JSON이 유일한 감사 채널이다.
-			if printErr := deps.PrintJSON(result); printErr != nil {
+			// 이 JSON이 유일한 감사 채널이다. 오류도 같은 문서에 담는다.
+			if printErr := deps.PrintJSON(jsonout.WithError(result, err)); printErr != nil {
 				return printErr
 			}
+			return jsonout.Reported(err)
 		}
 		return err
 	}
@@ -487,9 +491,10 @@ func (command Command) runCleanupLinkedBranch(args []string, deps Deps) error {
 	}
 	if err != nil {
 		if *jsonOut {
-			if printErr := deps.PrintJSON(result); printErr != nil {
+			if printErr := deps.PrintJSON(jsonout.WithError(result, err)); printErr != nil {
 				return printErr
 			}
+			return jsonout.Reported(err)
 		}
 		return err
 	}

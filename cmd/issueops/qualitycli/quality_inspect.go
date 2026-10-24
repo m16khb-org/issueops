@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"issueops/cmd/issueops/cliflag"
+	"issueops/cmd/issueops/jsonout"
 	application "issueops/internal/application/quality"
 	contract "issueops/internal/contract/quality"
 	quality "issueops/internal/domain/quality"
@@ -54,10 +55,14 @@ func RunInspect(args []string, deps Deps) error {
 		gateErr = fmt.Errorf("%w: collection=%s health=%s", ErrQualityGateBlocked, result.CollectionStatus, result.HealthStatus)
 	}
 	if *jsonOut {
-		if err := deps.PrintJSON(result); err != nil {
-			return err
+		if gateErr != nil {
+			// One document under --json 2>&1: the gate refusal joins the result.
+			if err := deps.PrintJSON(jsonout.WithError(result, gateErr)); err != nil {
+				return err
+			}
+			return jsonout.Reported(gateErr)
 		}
-		return gateErr
+		return deps.PrintJSON(result)
 	}
 	fmt.Fprintf(deps.Output, "quality inspect: ok=%v repo=%s candidates=%d warnings=%d\n", result.OK, result.IssueOpsRoot, len(result.Candidates), len(result.Warnings))
 	fmt.Fprintf(deps.Output, "quality status: collection=%s health=%s gate=%s\n", result.CollectionStatus, result.HealthStatus, result.GateStatus)

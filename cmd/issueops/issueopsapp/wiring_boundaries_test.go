@@ -207,7 +207,7 @@ func TestQualityInspectCommandInspectsAbsoluteTargetNotDefaultRoot(t *testing.T)
 	}
 	deps := newQualityDependencies(defaultRoot, t.TempDir())
 	var result contract.InspectResult
-	deps.PrintJSON = func(value any) error { result = value.(contract.InspectResult); return nil }
+	deps.PrintJSON = printedInspectResult(&result)
 	t.Chdir(filepath.Dir(target))
 	// A blocked gate is irrelevant here; only the inspected root is observed.
 	_ = qualitycli.Run([]string{"inspect", "--repo", filepath.Base(target), "--json"}, deps)

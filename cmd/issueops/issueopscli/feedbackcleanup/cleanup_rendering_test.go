@@ -463,12 +463,13 @@ func TestRunCleanupFinishErrorAndJSONContracts(t *testing.T) {
 		}
 	})
 
-	// JSON: the gate result is the audit channel and precedes the error.
+	// JSON: one document carries the gate result and the error, so
+	// `--json 2>&1` parses; the error is reported, not printed again.
 	outputs := &cleanupOutputs{}
-	if err := command.RunCleanup([]string{"finish", "--id", "io-1", "--preview", "--json"}, outputs.deps()); err != gateErr {
+	if err := command.RunCleanup([]string{"finish", "--id", "io-1", "--preview", "--json"}, outputs.deps()); !errors.Is(err, gateErr) || !jsonout.IsReported(err) {
 		t.Fatalf("error=%v", err)
 	}
-	if len(outputs.json) != 1 || !reflect.DeepEqual(outputs.json[0], result) || len(outputs.errors) != 0 {
+	if len(outputs.json) != 1 || !reflect.DeepEqual(outputs.json[0], jsonout.WithError(result, gateErr)) || len(outputs.errors) != 0 {
 		t.Fatalf("json=%v errors=%v", outputs.json, outputs.errors)
 	}
 	// Text: the error alone is returned and nothing is emitted as JSON.
@@ -600,10 +601,11 @@ func TestRunCleanupRemoteBranchRendersOutcomeAndJSONContract(t *testing.T) {
 			if err := command.RunCleanup([]string{"remote-branch", "--id", "io-1", "--preview", "--json"}, outputs.deps()); err != nil || len(outputs.json) != 1 || !reflect.DeepEqual(outputs.json[0], tt.result) {
 				t.Fatalf("json err=%v json=%v", err, outputs.json)
 			}
-			// A runner error keeps the result in JSON and returns the error alone in text.
+			// A runner error keeps the result in the one JSON document, with the
+			// error inside it, and returns the error alone in text.
 			runErr = errors.New("remote delete refused")
 			outputs = &cleanupOutputs{}
-			if err := command.RunCleanup([]string{"remote-branch", "--id", "io-1", "--apply", "--confirm", "--fingerprint", "fp", "--json"}, outputs.deps()); err != runErr || len(outputs.json) != 1 {
+			if err := command.RunCleanup([]string{"remote-branch", "--id", "io-1", "--apply", "--confirm", "--fingerprint", "fp", "--json"}, outputs.deps()); !errors.Is(err, runErr) || len(outputs.json) != 1 || outputs.json[0].(map[string]any)["error"] != "remote delete refused" {
 				t.Fatalf("json failure err=%v json=%v", err, outputs.json)
 			}
 			outputs = &cleanupOutputs{}
@@ -685,10 +687,10 @@ func TestRunCleanupAbandonErrorKeepsResultAsTheAuditChannelInJSON(t *testing.T) 
 		}
 	})
 	outputs := &cleanupOutputs{}
-	if err := command.RunCleanup([]string{"abandon", "--id", "io-1", "--reason", "r", "--preview", "--json"}, outputs.deps()); err != gateErr {
+	if err := command.RunCleanup([]string{"abandon", "--id", "io-1", "--reason", "r", "--preview", "--json"}, outputs.deps()); !errors.Is(err, gateErr) || !jsonout.IsReported(err) {
 		t.Fatalf("error=%v", err)
 	}
-	if len(outputs.json) != 1 || !reflect.DeepEqual(outputs.json[0], result) {
+	if len(outputs.json) != 1 || !reflect.DeepEqual(outputs.json[0], jsonout.WithError(result, gateErr)) {
 		t.Fatalf("json=%v", outputs.json)
 	}
 	outputs = &cleanupOutputs{}
@@ -746,7 +748,7 @@ func TestRunCleanupLinkedBranchRendersEachClassification(t *testing.T) {
 			}
 			runErr = errors.New("graphql refused")
 			outputs = &cleanupOutputs{}
-			if err := command.RunCleanup([]string{"linked-branch", "--id", "io-1", "--preview", "--json"}, outputs.deps()); err != runErr || len(outputs.json) != 1 {
+			if err := command.RunCleanup([]string{"linked-branch", "--id", "io-1", "--preview", "--json"}, outputs.deps()); !errors.Is(err, runErr) || len(outputs.json) != 1 || outputs.json[0].(map[string]any)["error"] != "graphql refused" {
 				t.Fatalf("json failure err=%v json=%v", err, outputs.json)
 			}
 			out, err = captureCleanupStdout(t, func() error {

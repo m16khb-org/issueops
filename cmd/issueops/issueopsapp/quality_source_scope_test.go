@@ -35,7 +35,7 @@ func TestQualityProductionSourceWiringAndCLI(t *testing.T) {
 	}
 	deps := newQualityDependencies(root, t.TempDir())
 	var result contract.InspectResult
-	deps.PrintJSON = func(value any) error { result = value.(contract.InspectResult); return nil }
+	deps.PrintJSON = printedInspectResult(&result)
 	// Fixture packages have no coverage tests, so health may block independently
 	// of a successful collection. Preserve that distinction.
 	if err := qualitycli.Run([]string{"inspect", "--repo", root, "--json"}, deps); err != nil && !errors.Is(err, qualitycli.ErrQualityGateBlocked) {

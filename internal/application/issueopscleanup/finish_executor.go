@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -106,7 +107,13 @@ func (r *finishRun) plan(failed model.CleanupFinishResult) (res model.CleanupFin
 	if len(r.result.Missing) > 0 {
 		r.result.OK = false
 		r.result.NextCommand = domain.CleanupFinishRemedyCommand(r.record.ID, r.result.Missing)
-		return r.result, true, fmt.Errorf("cleanup finish is not ready; unmet gates: %s", strings.Join(r.result.Missing, ", "))
+		err := fmt.Errorf("cleanup finish is not ready; unmet gates: %s", strings.Join(r.result.Missing, ", "))
+		if slices.Contains(r.result.Missing, "cwd_outside_worktree") || slices.Contains(r.result.Missing, "requester_occupies_worktree") {
+			// finish removes the worktree, so it cannot run from a session that
+			// lives in it; an agent that started there could only guess.
+			err = fmt.Errorf("%w; finish removes the worktree, so run it from a session started in the source checkout %q, not inside the worktree", err, r.record.Repo)
+		}
+		return r.result, true, err
 	}
 	fingerprint, err := r.s.Fingerprint(inventory)
 	if err != nil {

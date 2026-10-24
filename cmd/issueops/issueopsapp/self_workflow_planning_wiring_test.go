@@ -161,7 +161,7 @@ func TestQualityCLIInstancesCollectAndSaveTheirOwnRepository(t *testing.T) {
 			defer wg.Done()
 			deps := newQualityDependencies(roots[i], dirs[i])
 			var result qualitycontract.InspectResult
-			deps.PrintJSON = func(value any) error { result = value.(qualitycontract.InspectResult); return nil }
+			deps.PrintJSON = printedInspectResult(&result)
 			if err := deps.SaveSNRBaseline(roots[i], 1); err != nil {
 				t.Error(err)
 				return

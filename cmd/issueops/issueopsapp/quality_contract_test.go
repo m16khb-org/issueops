@@ -1,6 +1,7 @@
 package issueopsapp
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -71,7 +72,7 @@ func TestQualityAuditCollectorCLIStates(t *testing.T) {
 			var result qualitycontract.InspectResult
 			err := qualitycli.Run([]string{"inspect", "--repo", root, "--json"}, qualitycli.Deps{
 				Inspect:   func(root string) qualitycontract.InspectResult { return inspectQualityForTest(root, deps) },
-				PrintJSON: func(value any) error { result = value.(qualitycontract.InspectResult); return nil },
+				PrintJSON: printedInspectResult(&result),
 			})
 			valid := name == "valid zero" || name == "current document"
 			if valid {
@@ -114,5 +115,18 @@ func TestQualityContractFixtureSeparatesHealthFromCollection(t *testing.T) {
 	}
 	if len(result.Findings) != 1 || result.Findings[0].ID != "low-coverage-packages" {
 		t.Fatalf("findings = %+v", result.Findings)
+	}
+}
+
+// printedInspectResult captures what quality inspect prints. A blocked gate
+// prints the result and its error as one map document, so the value is
+// decoded rather than type-asserted.
+func printedInspectResult(result *qualitycontract.InspectResult) func(any) error {
+	return func(value any) error {
+		data, err := json.Marshal(value)
+		if err != nil {
+			return err
+		}
+		return json.Unmarshal(data, result)
 	}
 }
