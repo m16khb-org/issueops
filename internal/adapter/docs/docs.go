@@ -2,6 +2,7 @@ package docs
 
 import (
 	"io/fs"
+	"issueops/internal/adapter/outbound/gitbin"
 	docscontract "issueops/internal/contract/docs"
 	"os"
 	"os/exec"
@@ -46,7 +47,7 @@ func (Observer) Candidates(root string, roots []string) []docscontract.Candidate
 // Korean) filenames match WalkDir's UTF-8 paths byte-for-byte, and never builds
 // absolute paths (which would diverge from WalkDir under a symlinked root).
 func (Observer) TrackedPaths(root string) (map[string]bool, bool) {
-	out, err := exec.Command("git", "-C", root, "-c", "core.quotepath=false", "ls-files", "-z").Output()
+	out, err := exec.Command(gitbin.Path(), "-C", root, "-c", "core.quotepath=false", "ls-files", "-z").Output()
 	if err != nil {
 		return nil, false
 	}

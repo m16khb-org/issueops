@@ -1,6 +1,10 @@
 package commitsuggest
 
-import "os/exec"
+import (
+	"os/exec"
+
+	"issueops/internal/adapter/outbound/gitbin"
+)
 
 type Effects struct{ Normalize func(string) (string, error) }
 
@@ -11,6 +15,6 @@ func (Effects) Diff(root string, staged bool) (string, error) {
 	if staged {
 		args = append(args, "--cached")
 	}
-	output, err := exec.Command("git", args...).Output()
+	output, err := exec.Command(gitbin.Path(), args...).Output()
 	return string(output), err
 }

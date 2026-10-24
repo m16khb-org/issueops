@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"issueops/internal/adapter/outbound/gitbin"
 	cmuxcontract "issueops/internal/contract/cmux"
 	issueopscontract "issueops/internal/contract/issueops"
 	port "issueops/internal/port/cmux"
@@ -86,7 +87,7 @@ func ValidateHostExecutable(path string) error {
 func GitTop(root string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	output, err := exec.CommandContext(ctx, "git", "-C", root, "rev-parse", "--show-toplevel").Output()
+	output, err := exec.CommandContext(ctx, gitbin.Path(), "-C", root, "rev-parse", "--show-toplevel").Output()
 	return strings.TrimSpace(string(output)), err
 }
 

@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"issueops/internal/adapter/outbound/gitbin"
 	upstreamcontract "issueops/internal/contract/upstream"
 )
 
@@ -120,7 +121,7 @@ func (s GitSkillStore) link(target, path string) error {
 }
 
 func runGit(ctx context.Context, dir string, args ...string) error {
-	cmd := exec.CommandContext(ctx, "git", args...)
+	cmd := exec.CommandContext(ctx, gitbin.Path(), args...)
 	cmd.Dir = dir
 	// An upstream fetch runs inside install; a credential prompt would hang it.
 	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")

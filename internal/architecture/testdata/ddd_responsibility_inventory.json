@@ -5551,6 +5551,16 @@
       ]
     },
     {
+      "path": "internal/adapter/outbound/gitbin/gitbin.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Path",
+        "func executable",
+        "func shimTarget"
+      ]
+    },
+    {
       "path": "internal/adapter/outbound/gitexclude/gitexclude.go",
       "owner": "adapter",
       "task": "T20",

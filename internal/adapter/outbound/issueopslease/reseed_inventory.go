@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 
+	"issueops/internal/adapter/outbound/gitbin"
 	leaseapp "issueops/internal/application/issueopslease"
 	leasecontract "issueops/internal/contract/issueopslease"
 	leasedomain "issueops/internal/domain/issueopslease"
@@ -194,7 +195,7 @@ func reseedGitOutput(root string, args ...string) (string, error) {
 }
 
 func reseedGitRaw(root string, args ...string) (int, string, string) {
-	command := exec.Command("git", args...)
+	command := exec.Command(gitbin.Path(), args...)
 	command.Dir = root
 	var stdout, stderr bytes.Buffer
 	command.Stdout = &stdout

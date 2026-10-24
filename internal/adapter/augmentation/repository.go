@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"issueops/internal/adapter/outbound/gitbin"
 	port "issueops/internal/port/selfaugment"
 )
 
@@ -19,7 +20,7 @@ func (Repository) ReadGeniusThink(root string) (string, string, error) {
 	return path, string(content), err
 }
 func (Repository) HasImplementationDelta(root string) bool {
-	cmd := exec.Command("git", "status", "--porcelain")
+	cmd := exec.Command(gitbin.Path(), "status", "--porcelain")
 	cmd.Dir = root
 	out, err := cmd.Output()
 	return err == nil && strings.TrimSpace(string(out)) != ""

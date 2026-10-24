@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"issueops/internal/adapter/outbound/gitbin"
 	contract "issueops/internal/contract/quality"
 	policy "issueops/internal/domain/quality"
 	"os"
@@ -224,7 +225,7 @@ func hashCoverageFileContent(hasher io.Writer, path string) error {
 }
 
 func gitCoverageFingerprintInput(root string, args ...string) ([]byte, error) {
-	command := exec.Command("git", args...)
+	command := exec.Command(gitbin.Path(), args...)
 	command.Dir = root
 	output := NewBoundedQualityBuffer(coverageFingerprintGitOutputLimit)
 	command.Stdout = &output

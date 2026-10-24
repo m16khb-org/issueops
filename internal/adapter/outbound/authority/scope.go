@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"issueops/internal/adapter/outbound/gitbin"
 	contract "issueops/internal/contract/authority"
 	authorityport "issueops/internal/port/authority"
 )
@@ -59,7 +60,7 @@ func (r ScopeResolver) Resolve(ctx context.Context, workspaceRoot, cwd string) (
 func (r ScopeResolver) gitIdentity(ctx context.Context, root string) (string, string, bool, error) {
 	git := r.Git
 	if git == "" {
-		git = "git"
+		git = gitbin.Path()
 	}
 	command := exec.CommandContext(ctx, git, "-C", root, "rev-parse", "--path-format=absolute", "--git-common-dir", "--show-toplevel")
 	command.Env = withoutGitEnvironment(os.Environ())

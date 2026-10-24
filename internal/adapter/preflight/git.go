@@ -5,6 +5,8 @@ import (
 	"errors"
 	"os/exec"
 	"strings"
+
+	"issueops/internal/adapter/outbound/gitbin"
 )
 
 func GitCmd(dir string, args ...string) (int, string, string) {
@@ -15,7 +17,7 @@ func GitCmd(dir string, args ...string) (int, string, string) {
 // GitCmdRaw preserves stdout byte-for-byte for machine-delimited Git output
 // such as -z path lists. Human-facing callers should continue using GitCmd.
 func GitCmdRaw(dir string, args ...string) (int, string, string) {
-	cmd := exec.Command("git", args...)
+	cmd := exec.Command(gitbin.Path(), args...)
 	cmd.Dir = dir
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

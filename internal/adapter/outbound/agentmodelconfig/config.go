@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"issueops/internal/adapter/outbound/gitbin"
 	"issueops/internal/adapter/outbound/gitexclude"
 	contract "issueops/internal/contract/agentmodel"
 	"issueops/internal/domain/agentmodel"
@@ -52,7 +53,7 @@ func LocalPath(ctx context.Context, repo string) (Local, error) {
 	if info, err := os.Stat(repo); err != nil || !info.IsDir() {
 		return Local{}, nil
 	}
-	command := exec.CommandContext(ctx, "git", "-C", repo, "rev-parse", "--path-format=absolute", "--git-common-dir")
+	command := exec.CommandContext(ctx, gitbin.Path(), "-C", repo, "rev-parse", "--path-format=absolute", "--git-common-dir")
 	command.Env = withoutGitEnvironment(os.Environ())
 	var stdout, stderr bytes.Buffer
 	command.Stdout, command.Stderr = &stdout, &stderr

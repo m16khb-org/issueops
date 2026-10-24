@@ -11,6 +11,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"issueops/internal/adapter/outbound/gitbin"
 )
 
 // WorkspaceStateLine excludes the runtime state issueops keeps inside a
@@ -48,7 +50,7 @@ func Ensure(commonDir, line string) (bool, error) {
 // EnsureWorkspaceState excludes .issueops/state/ in the repository that owns
 // worktree. Linked worktrees share the common dir, so one line covers all.
 func EnsureWorkspaceState(worktree string) error {
-	out, err := exec.Command("git", "-C", worktree, "rev-parse", "--path-format=absolute", "--git-common-dir").Output()
+	out, err := exec.Command(gitbin.Path(), "-C", worktree, "rev-parse", "--path-format=absolute", "--git-common-dir").Output()
 	if err != nil {
 		return fmt.Errorf("resolve git common dir for %s: %w", worktree, err)
 	}

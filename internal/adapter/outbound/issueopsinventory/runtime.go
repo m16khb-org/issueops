@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"issueops/internal/adapter/outbound/gitbin"
 	"issueops/internal/domain/repoidentity"
 )
 
@@ -51,7 +52,7 @@ func (CleanPath) Normalize(path string) string {
 	if clean == "" {
 		return ""
 	}
-	command := exec.Command("git", "rev-parse", "--path-format=relative", "--git-common-dir")
+	command := exec.Command(gitbin.Path(), "rev-parse", "--path-format=relative", "--git-common-dir")
 	command.Dir = clean
 	commonDir, err := command.Output()
 	if err != nil {

@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"issueops/internal/adapter/outbound/gitbin"
 	basesyncport "issueops/internal/port/issueopsbasesync"
 )
 
@@ -85,7 +86,7 @@ func (i *Inspector) requireOutput(ctx context.Context, worktree, step string, ar
 }
 
 func RunGit(ctx context.Context, dir string, args ...string) (int, string, string, error) {
-	command := exec.CommandContext(ctx, "git", args...)
+	command := exec.CommandContext(ctx, gitbin.Path(), args...)
 	command.Dir = dir
 	command.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
 	var stdout bytes.Buffer

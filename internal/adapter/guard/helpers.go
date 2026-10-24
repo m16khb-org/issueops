@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"issueops/internal/adapter/outbound/gitbin"
 )
 
 func absOrOriginal(path string) string {
@@ -18,7 +20,7 @@ func absOrOriginal(path string) string {
 }
 
 func gitCmd(dir string, args ...string) (int, string, string) {
-	cmd := exec.Command("git", args...)
+	cmd := exec.Command(gitbin.Path(), args...)
 	cmd.Dir = dir
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

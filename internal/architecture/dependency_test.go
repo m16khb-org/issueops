@@ -1127,7 +1127,7 @@ func forbiddenEdges(edges []dependencyEdge) []dependencyEdge {
 			(isAdapter(edge.importer) && isCore(edge.imported) && !isMigratedInboundAdapter(edge.importer)) ||
 			(isAdapter(edge.imported) && !isCompositionRoot(edge.importer) && !isSameCapabilityAdapter(edge.importer, edge.imported) &&
 				!isSharedStorageEngineEdge(edge.importer, edge.imported) && !isProcessLifetimeEdge(edge.importer, edge.imported) &&
-				!isGitExcludeEdge(edge.importer, edge.imported)) {
+				!isGitExcludeEdge(edge.importer, edge.imported) && !isGitBinaryEdge(edge.imported)) {
 			forbidden = append(forbidden, edge)
 		}
 	}
@@ -1262,6 +1262,13 @@ func isGitExcludeEdge(importer, imported string) bool {
 	default:
 		return false
 	}
+}
+
+// gitbin only names the git executable (resolving macOS's xcrun shim to the
+// binary it would exec). It holds no policy and no state, so any adapter that
+// spawns git may import it.
+func isGitBinaryEdge(imported string) bool {
+	return imported == "internal/adapter/outbound/gitbin"
 }
 
 func isInboundAdapter(path string) bool {

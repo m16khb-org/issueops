@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"issueops/internal/adapter/outbound/gitbin"
 	riskqacontract "issueops/internal/contract/riskqa"
 )
 
@@ -71,7 +72,7 @@ func gitScopedPaths(root, baseRef string) ([]string, *riskqacontract.Scope) {
 func riskGit(root string, args ...string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", root}, args...)...)
+	cmd := exec.CommandContext(ctx, gitbin.Path(), append([]string{"-C", root}, args...)...)
 	out, err := cmd.Output()
 	if ctx.Err() != nil {
 		return nil, fmt.Errorf("git observation timed out: %w", ctx.Err())

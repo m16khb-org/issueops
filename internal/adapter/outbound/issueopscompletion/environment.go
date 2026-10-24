@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"issueops/internal/adapter/outbound/gitbin"
 )
 
 type Environment struct{}
@@ -32,7 +34,7 @@ func (Environment) PathsMatch(left, right string) bool {
 }
 
 func (Environment) CurrentHead(ctx context.Context, root string) (string, error) {
-	command := exec.CommandContext(ctx, "git", "-C", root, "rev-parse", "HEAD")
+	command := exec.CommandContext(ctx, gitbin.Path(), "-C", root, "rev-parse", "HEAD")
 	output, err := command.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("git rev-parse HEAD: %s", strings.TrimSpace(string(output)))
@@ -75,7 +77,7 @@ func (Environment) VerifyReport(root, path string) (string, error) {
 }
 
 func (Environment) ChangedPathsSince(ctx context.Context, root, from, to, report string) ([]string, error) {
-	command := exec.CommandContext(ctx, "git", "-C", root, "diff", "--name-only", "--no-renames", strings.TrimSpace(from), strings.TrimSpace(to), "--")
+	command := exec.CommandContext(ctx, gitbin.Path(), "-C", root, "diff", "--name-only", "--no-renames", strings.TrimSpace(from), strings.TrimSpace(to), "--")
 	output, err := command.Output()
 	if err != nil {
 		return nil, fmt.Errorf("git diff --name-only %s %s: %w", from, to, err)

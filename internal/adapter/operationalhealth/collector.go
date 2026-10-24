@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"issueops/internal/adapter/outbound/gitbin"
 	operationalhealthcontract "issueops/internal/contract/operationalhealth"
 	"os"
 	"os/exec"
@@ -39,7 +40,7 @@ func (runner ExecGitRunner) Run(ctx context.Context, repo string, args ...string
 	}
 	commandCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	command := exec.CommandContext(commandCtx, "git", args...)
+	command := exec.CommandContext(commandCtx, gitbin.Path(), args...)
 	command.Dir = repo
 	command.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0", "GIT_TERMINAL_PROMPT=0", "GCM_INTERACTIVE=Never", "SSH_ASKPASS_REQUIRE=never")
 	output, err := command.Output()

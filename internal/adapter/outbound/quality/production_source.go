@@ -14,6 +14,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"issueops/internal/adapter/outbound/gitbin"
 )
 
 const sourceGitTimeout = 10 * time.Second
@@ -230,7 +232,7 @@ func regularSourcePath(root, relative string) (bool, error) {
 }
 
 func sourceGitOutput(ctx context.Context, root string, limit int, args ...string) (string, error) {
-	command := exec.CommandContext(ctx, "git", args...)
+	command := exec.CommandContext(ctx, gitbin.Path(), args...)
 	command.Dir = root
 	stdout := NewBoundedQualityBuffer(limit)
 	stderr := NewBoundedQualityBuffer(64 * 1024)

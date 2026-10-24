@@ -10,10 +10,12 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"issueops/internal/adapter/outbound/gitbin"
 )
 
 func ListTrackedGoFiles(ctx context.Context, root string) ([]string, error) {
-	cmd := exec.CommandContext(ctx, "git", "-C", root, "ls-files", "-z", "--", "*.go")
+	cmd := exec.CommandContext(ctx, gitbin.Path(), "-C", root, "ls-files", "-z", "--", "*.go")
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	out, err := cmd.Output()
