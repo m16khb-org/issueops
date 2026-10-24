@@ -122,7 +122,8 @@ blocker 근거는 기록 직전에 한 번 더 확인한다. 확인 규칙은 [�
 
 - behavior change는 focused failing test에서 시작한다:
   RED→GREEN→SURFACE→CLEAN. RED에서 새 테스트가 곧바로 통과하면 버그 이해가
-  틀린 것이므로 수정에 착수하지 않고 보고한다.
+  틀린 것이므로 수정에 착수하지 않고 보고한다. 테스트 프레임워크가 없으면 수정 전에 실패하는
+  gate CHECK(예: `.issueops/TESTING.md` 실행 명령의 기대 출력)가 RED다.
 - 크기·시간과 무관하게 canonical worktree에서만 수정한다. source checkout 구현은 금지다.
 - focused 검증 명령·결과를 그대로 기록한다. 실행하지 않은 검증은 `pass`가 아니다.
 - `phase --to implement`·`ai-slop-clean` 전이는 추적 사본을 `.issueops/issues/<n>/`에 쓴다. 보고 방식과 첫 커밋 포함 규칙은 [보충 규칙](references/gate-extras.md)을 읽고 따른다.
