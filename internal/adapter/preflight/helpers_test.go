@@ -1,6 +1,10 @@
 package preflight
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 func TestRedactRemoteRedactsCredentials(t *testing.T) {
 	tests := []struct {
@@ -50,5 +54,24 @@ func TestAtoiParsesLeadingIntegerOrZero(t *testing.T) {
 		if got := atoi(tt.in); got != tt.want {
 			t.Fatalf("atoi(%q) = %d, want %d", tt.in, got, tt.want)
 		}
+	}
+}
+
+// A repository with its own commit policy is pointed at it; otherwise the
+// harness policy is the fallback.
+func TestCommitPolicyPathPrefersTheRepositoryPolicy(t *testing.T) {
+	repo, harness := t.TempDir(), t.TempDir()
+	if got := commitPolicyPath(repo, harness); got != filepath.Join(harness, ".issueops", "COMMIT_POLICY.md") {
+		t.Fatalf("fallback = %q", got)
+	}
+	own := filepath.Join(repo, ".issueops", "COMMIT_POLICY.md")
+	if err := os.MkdirAll(filepath.Dir(own), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(own, []byte("# policy\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := commitPolicyPath(repo, harness); got != own {
+		t.Fatalf("own policy = %q", got)
 	}
 }

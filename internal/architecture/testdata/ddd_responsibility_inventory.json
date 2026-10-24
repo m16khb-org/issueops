@@ -6587,6 +6587,7 @@
       "task": "T09",
       "symbols": [
         "func GitObserver.Observe",
+        "func commitPolicyPath",
         "type GitObserver"
       ]
     },
@@ -12338,9 +12339,9 @@
         "func addStructural",
         "func blankCode",
         "func blankManagedRegions",
+        "func clip",
         "func countEnglishWords",
         "func firstDuplicateSentence",
-        "func hedgeOrIntroCount",
         "func hexWords",
         "func isASCII",
         "func isASCIILetter",
@@ -12349,6 +12350,7 @@
         "func isHexByte",
         "func isWordRune",
         "func scoreLanguage",
+        "func slopPatternFinding",
         "func sortFindings",
         "func splitSentences",
         "func templateKindFor",

@@ -37,3 +37,20 @@ issueops child status --parent "$ISSUEOPS_ID" \
 - child가 scope drift를 보고하면 child를 조용히 넓히지 않는다. 사용자가
   승인해도 경로는 두 가지뿐이다: 새 scope를 **새 child**로 분리하거나, plan을
   개정하고 plan hash에 묶인 리뷰 freshness를 다시 확인한다.
+
+## 한 세션이 child까지 직접 할 때
+
+한 세션은 lease를 하나만 쥔다. `child start`는 parent lease가 active여야 하고, child의
+`execution prepare`는 그 세션이 다른 lease를 쥐고 있지 않아야 한다. 그래서 순서는 다음과 같다.
+
+1. parent lease를 쥔 채 `child start`로 child 사이클을 만든다(child마다).
+2. 각 child의 `branch prepare`·계획 스테이징을 마친다(lease 전 단계라 parent lease와 무관하다).
+3. `execution release`로 parent lease를 내려놓는다.
+4. child 하나씩 `execution prepare` → 구현 → PR(base는 parent 브랜치) → `execution complete`.
+5. parent의 `next`가 주는 `replace --preview` → `--reseed` → `claim` 체인으로 parent lease를 되찾는다.
+6. child의 증거를 확인하고 `child accept`로 판정을 기록한다.
+7. accept한 child PR을 parent 브랜치에 머지하고(`issueops remote merge-pr --id <child> --confirm`,
+   승인 범위 안일 때), parent 워크트리를 원격 parent 브랜치로 fast-forward한다.
+
+child PR은 기본 브랜치가 아닌 parent 브랜치로 머지되므로 PR 본문의 `Closes #n`이 child 이슈를
+닫지 않는다. 정리 단계의 `cleanup close-children`이 그것을 닫는다(`child_tasks_closed`).

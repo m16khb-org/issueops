@@ -1,6 +1,7 @@
 package preflight
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -79,6 +80,18 @@ func (observer GitObserver) Observe(target, issueOpsRoot string) preflightapp.Ob
 		RecentCommits:    history.commits(5),
 		StyleCommits:     history.commits(10),
 		CommitBodies:     history.bodies(),
-		CommitPolicyPath: filepath.Join(issueOpsRoot, ".issueops", "COMMIT_POLICY.md"),
+		CommitPolicyPath: commitPolicyPath(root, issueOpsRoot),
 	}
+}
+
+// commitPolicyPath names the repository's own commit policy when it has one;
+// otherwise the harness policy that atomic-commit-push falls back to. A QA run
+// in a target repository was pointed at the harness checkout's file.
+func commitPolicyPath(repoRoot, issueOpsRoot string) string {
+	if own := filepath.Join(repoRoot, ".issueops", "COMMIT_POLICY.md"); repoRoot != "" {
+		if info, err := os.Stat(own); err == nil && info.Mode().IsRegular() {
+			return own
+		}
+	}
+	return filepath.Join(issueOpsRoot, ".issueops", "COMMIT_POLICY.md")
 }

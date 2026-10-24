@@ -118,11 +118,11 @@ func Check(input Input) reportcontract.Report {
 	}
 	addLineFindings(&report, lines, input.Kind == KindCompletion)
 	addSectionWarnings(&report, input, prose)
-	if hedgeOrIntroCount(code) > 0 || strings.Count(code, "—") >= 3 || strings.Count(code, "→") >= 3 {
-		report.Warnings = append(report.Warnings, reportcontract.Finding{Code: "slop_pattern", Message: "fluent-korean이 잡는 AI 작문 패턴이 있습니다."})
+	if finding, ok := slopPatternFinding(code); ok {
+		report.Warnings = append(report.Warnings, finding)
 	}
-	if firstDuplicateSentence(code) != "" {
-		report.Warnings = append(report.Warnings, reportcontract.Finding{Code: "duplicate_sentence", Message: "같은 문장이 두 절 이상에 반복됩니다."})
+	if sentence := firstDuplicateSentence(code); sentence != "" {
+		report.Warnings = append(report.Warnings, reportcontract.Finding{Code: "duplicate_sentence", Message: "같은 문장이 두 절 이상에 반복됩니다: " + clip(sentence, 60)})
 	}
 	if input.Kind == KindCompletion && utf8.RuneCountInString(strings.TrimSpace(prose)) > completionMaxRunes {
 		report.Critical = append(report.Critical, reportcontract.Finding{Code: "result_too_long", Message: "진행 결과 원고가 2,000자를 넘습니다."})
@@ -352,15 +352,32 @@ func isASCII(s string) bool {
 	return true
 }
 
-func hedgeOrIntroCount(body string) int {
-	count := 0
-	for _, p := range slopHedgePatterns {
-		count += strings.Count(body, p)
+// slopPatternFinding names where the AI-writing pattern is: the first line
+// with a hedge or intro phrase, or the arrow/dash count. QA agents had to
+// bisect the body by deleting lines when the warning named nothing.
+func slopPatternFinding(body string) (reportcontract.Finding, bool) {
+	for i, line := range strings.Split(body, "\n") {
+		for _, p := range append(append([]string{}, slopHedgePatterns...), slopIntroPatterns...) {
+			if strings.Contains(line, p) {
+				return reportcontract.Finding{Code: "slop_pattern", Line: i + 1,
+					Message: fmt.Sprintf("fluent-korean이 잡는 AI 작문 패턴이 있습니다: %q", p)}, true
+			}
+		}
 	}
-	for _, p := range slopIntroPatterns {
-		count += strings.Count(body, p)
+	for _, mark := range []string{"→", "—"} {
+		if n := strings.Count(body, mark); n >= 3 {
+			return reportcontract.Finding{Code: "slop_pattern",
+				Message: fmt.Sprintf("fluent-korean이 잡는 AI 작문 패턴이 있습니다: %s가 %d번 나옵니다(3번 이상). 문장으로 풀어 씁니다", mark, n)}, true
+		}
 	}
-	return count
+	return reportcontract.Finding{}, false
+}
+
+func clip(s string, runes int) string {
+	if utf8.RuneCountInString(s) <= runes {
+		return s
+	}
+	return string([]rune(s)[:runes]) + "…"
 }
 
 // firstDuplicateSentence reports the first sentence that appears in more

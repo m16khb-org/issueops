@@ -591,3 +591,19 @@ func TestCheckFindingsAreSortedByCodeThenLine(t *testing.T) {
 		t.Fatalf("line 1 warnings = %v, want %v", firstLine, want)
 	}
 }
+
+// The slop warning names the line and phrase (or the arrow count), so the
+// author fixes that sentence instead of bisecting the body.
+func TestSlopPatternFindingNamesWhereThePatternIs(t *testing.T) {
+	got, ok := slopPatternFinding("첫 줄입니다.\n둘째 줄입니다.\n이 방법이 낫다고 할 수 있습니다.\n")
+	if !ok || got.Line != 3 || !strings.Contains(got.Message, `"고 할 수 있습니다"`) {
+		t.Fatalf("hedge = %+v", got)
+	}
+	got, ok = slopPatternFinding("a → b, c → d, e → f\n")
+	if !ok || got.Line != 0 || !strings.Contains(got.Message, "→가 3번") {
+		t.Fatalf("arrows = %+v", got)
+	}
+	if _, ok := slopPatternFinding("평범한 문장입니다.\n"); ok {
+		t.Fatal("plain text flagged")
+	}
+}
