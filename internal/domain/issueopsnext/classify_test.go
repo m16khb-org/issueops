@@ -1048,8 +1048,13 @@ func TestClassifyUnfinishedCleanupResumesAtItsPreview(t *testing.T) {
 		issueopscontract.CleanupOperationRemoteBranch: "issueops cleanup remote-branch --id io-1 --preview --json",
 	} {
 		in.Record.CleanupAttempt = &issueopscontract.IssueOpsCleanupAttempt{Operation: op, Token: "t", StartedAt: "2026-10-25T00:00:00Z"}
-		if got := Classify(in); got.NextCommand != want || got.Stage.Key != issueopsnextcontract.StageCleanupResume {
+		in.Record.Execution = &issueopscontract.Execution{Workspace: issueopscontract.Workspace{Root: "/wt"}}
+		got := Classify(in)
+		if got.NextCommand != want || got.Stage.Key != issueopsnextcontract.StageCleanupResume {
 			t.Fatalf("%s: %s %q", op, got.Stage.Key, got.NextCommand)
+		}
+		if slices.ContainsFunc(got.Warnings, func(w string) bool { return strings.Contains(w, "canonical worktree is missing") }) {
+			t.Fatalf("%s: removed worktree still reads as lost: %q", op, got.Warnings)
 		}
 	}
 }

@@ -750,7 +750,9 @@ func warnings(in Input) []string {
 	if execution == nil {
 		return out
 	}
-	if root := strings.TrimSpace(execution.Workspace.Root); root != "" && !in.WorktreePresent {
+	// A cleanup attempt removes the worktree on purpose; the restore/takeover
+	// advice below would contradict cleanup.resume.
+	if root := strings.TrimSpace(execution.Workspace.Root); root != "" && !in.WorktreePresent && in.Record.CleanupAttempt == nil {
 		warning := "canonical worktree is missing at " + root
 		if execution.Completion == nil {
 			// Probed: a worktree recreated with git worktree add lacks the
