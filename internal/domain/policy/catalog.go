@@ -100,11 +100,27 @@ func (catalog Catalog) Classify(argv []string) CommandClassification {
 	}
 	base := strings.ToLower(filepath.Base(argv[0]))
 	return CommandClassification{
-		ShellCommand:    catalog.shellInterpreters[base],
+		ShellCommand:    catalog.shellInterpreters[base] && !syntaxCheckOnly(argv),
 		UsesNetwork:     catalog.networkCommands[base] || subcommandAllowed(catalog.networkSubcommands, base, argv),
 		Writes:          catalog.writeCommands[base] || subcommandAllowed(catalog.writeSubcommands, base, argv),
 		ReadOnlyAllowed: catalog.readOnlyCommands[base] || subcommandAllowed(catalog.readOnlySubcommands, base, argv),
 	}
+}
+
+// syntaxCheckOnly reports `sh -n FILE...`: the shell parses the files and
+// executes nothing (POSIX -n, noexec), so it is not a shell execution.
+// Repositories document `sh -n script.sh` as their lint step, and gate CHECKs
+// could not run it. Any other flag or a missing file keeps the denial.
+func syntaxCheckOnly(argv []string) bool {
+	if len(argv) < 3 || argv[1] != "-n" {
+		return false
+	}
+	for _, arg := range argv[2:] {
+		if arg == "" || strings.HasPrefix(arg, "-") {
+			return false
+		}
+	}
+	return true
 }
 
 func (catalog Catalog) Snapshot() CatalogSnapshot {

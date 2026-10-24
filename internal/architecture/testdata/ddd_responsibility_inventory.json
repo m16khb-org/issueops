@@ -15152,6 +15152,7 @@
         "func sortedSubcommandCatalog",
         "func stringSet",
         "func subcommandAllowed",
+        "func syntaxCheckOnly",
         "type Catalog",
         "type CatalogSnapshot",
         "type CommandClassification"

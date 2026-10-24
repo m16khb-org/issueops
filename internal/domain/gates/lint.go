@@ -173,7 +173,7 @@ func DeniedLint(result model.LintGate, denyReasons []string) model.LintGate {
 func DeniedMessage(denyReasons []string) string {
 	message := "check denied by policy: " + strings.Join(denyReasons, "; ")
 	if slices.Contains(denyReasons, "shell_interpreter_not_allowed") {
-		message += " (CHECK runs one argv without a shell; run an executable script directly, e.g. ./script.sh, instead of sh/bash script.sh)"
+		message += " (CHECK runs one argv without a shell; run an executable script directly, e.g. ./script.sh, instead of sh/bash script.sh; a syntax check sh -n FILE is allowed)"
 	}
 	if slices.Contains(denyReasons, "cwd_outside_workspace") || slices.Contains(denyReasons, "path_outside_workspace") {
 		message += " (--cwd and every path must sit inside --workspace-root; for a cycle ledger pass the canonical worktree as both)"

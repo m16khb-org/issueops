@@ -45,7 +45,7 @@ issueops gates init --file "$WORKTREE/.issueops/issues/$ISSUE/gates.md" --scope 
   않는다. 실패해야 하는 동작(`--bogus`가 종료 코드 2)은 `python3 -c`로 감싸 종료 코드를
   출력하게 한다: `CHECK: python3 -c "import subprocess;print(subprocess.run(['./hello.sh','--bogus']).returncode)"`,
   `EXPECT: 2`. 출력이 비어야 하는 동작은 바이트 수를 출력한다(`print(len(subprocess.run([...],capture_output=True).stdout))`,
-  `EXPECT: 0`). 빈 EXPECT는 종료 코드만 본다. `sh -c`는 정책이 거부한다.
+  `EXPECT: 0`). 빈 EXPECT는 종료 코드만 본다. `sh -c`는 정책이 거부하고, 문법 검사 `sh -n FILE`은 허용한다.
 - EXPECT는 부분 문자열이 아니다. 세 형식 중 하나여야 통과한다(`internal/domain/gates/evaluate.go`
   `ExpectMatches`): 출력의 어느 한 **줄 전체**가 EXPECT와 같거나, 어느 한 줄이 EXPECT로
   **시작하고 바로 뒤가 공백·탭**이거나(`EXPECT: ok`가 `ok  	issueops/...` 줄에 맞는 이유),
