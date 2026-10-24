@@ -56,6 +56,8 @@ issueops gates init --file "$WORKTREE/.issueops/issues/$ISSUE/gates.md" --scope 
   `python3 -c`로 감싸 출력을 캡처하고 종료 코드만 `ALL_PASS` 같은 한 줄로 바꿔 내보낸다.
 - 자동으로 관찰할 수 없는 결과는 게이트로 쓰지 않는다. 그런 것은 수동 확인 기록으로
   남기고 EVIDENCE에 관측 시각과 관측값을 적는다.
+- CHECK가 워크트리에 남긴 생성물(`__pycache__` 등)은 변경 fingerprint에 들어가서, 지우면 봉인이
+  stale이 된다. Python은 `python3 -B`로 실행해 바이트코드를 쓰지 않게 한다.
 
 원장을 만들기 전에, 그리고 계획에 게이트를 적거나 고칠 때마다 실행 없이 검사한다.
 

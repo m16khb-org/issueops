@@ -14,12 +14,17 @@ func RecordProjectDocsReview(store reviewport.ProjectDocsReviewStore, stateRoot,
 	docs := cleanReviewValues(req.Docs)
 	evidence := cleanReviewValues(req.Evidence)
 	reviewedDocs := cleanReviewValues(req.ReviewedDocs)
-	if err := reviewdomain.ValidateProjectDocsReviewRecord(verdict, len(docs), len(evidence), len(reviewedDocs)); err != nil {
+	// The request alone decides everything but a no-change without reviewed
+	// docs, which depends on whether the worktree has any project doc.
+	if err := reviewdomain.ValidateProjectDocsReviewRecord(verdict, len(docs), len(evidence), len(reviewedDocs), false); err != nil {
 		return model.IssueOpsRecord{OK: false}, err
 	}
 	observed, err := store.Read(stateRoot, id)
 	if err != nil {
 		return model.IssueOpsRecord{OK: false}, err
+	}
+	if verdict == "no-change" && len(reviewedDocs) == 0 && (store.ProjectDocsPresent == nil || store.ProjectDocsPresent(store.Root(observed))) {
+		return model.IssueOpsRecord{OK: false}, reviewdomain.ValidateProjectDocsReviewRecord(verdict, len(docs), len(evidence), 0, true)
 	}
 	fingerprint := store.Fingerprint(observed)
 	normalized, normalizeErr := normalizeUpdatedDocuments(store, observed, docs)

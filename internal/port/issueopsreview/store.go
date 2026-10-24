@@ -38,6 +38,8 @@ type ProjectDocsReviewStore struct {
 	Root         func(model.IssueOpsRecord) string
 	RelativePath func(string, string) string
 	FileExists   func(string, string) bool
+	// ProjectDocsPresent reports whether the root has any project doc.
+	ProjectDocsPresent func(string) bool
 }
 
 type ReviewMutationStore struct {

@@ -36,9 +36,20 @@ func TestValidateProjectDocsReviewRecord(t *testing.T) {
 		{"no-change", 1, 1, 1, "project docs review verdict no-change must not list updated docs"},
 		{"no-change", 0, 1, 0, "project docs review verdict no-change requires at least one --reviewed-doc path that was actually read"},
 	} {
-		if err := ValidateProjectDocsReviewRecord(test.verdict, test.docs, test.evidence, test.reviewed); errorText(err) != test.wantError {
+		if err := ValidateProjectDocsReviewRecord(test.verdict, test.docs, test.evidence, test.reviewed, true); errorText(err) != test.wantError {
 			t.Fatalf("ValidateProjectDocsReviewRecord(%q, %d, %d, %d) = %v", test.verdict, test.docs, test.evidence, test.reviewed, err)
 		}
+	}
+}
+
+// A worktree without any project doc has nothing to cite: no-change then
+// stands on its evidence alone; evidence is still required.
+func TestValidateProjectDocsReviewRecordWithoutProjectDocs(t *testing.T) {
+	if err := ValidateProjectDocsReviewRecord("no-change", 0, 1, 0, false); err != nil {
+		t.Fatalf("no project docs: %v", err)
+	}
+	if err := ValidateProjectDocsReviewRecord("no-change", 0, 0, 0, false); errorText(err) != "project docs review requires at least one evidence entry" {
+		t.Fatalf("no evidence: %v", err)
 	}
 }
 

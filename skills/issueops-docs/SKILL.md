@@ -144,6 +144,9 @@ issueops project-docs-review record --id "$ISSUEOPS_ID" \
   하나 이상 적어야 통과한다. 경로는 `.issueops/` 아래이거나 루트 `AGENTS.md`여야 하고
   지금 존재해야 한다. "대조했으나 없음"과 "대조하지 않음"을 코드가 구분하는 근거가
   이 경로 목록이다. `updated`에도 같은 규칙으로 `--reviewed-doc`을 덧붙일 수 있다.
+  워크트리에 project doc이 하나도 없으면(`AGENTS.md`도, `issues/`·`gates/` 밖의 `.issueops/` 문서도
+  없음) `--reviewed-doc` 없이 `no-change`를 기록하고 evidence에 그 사실을 적는다. 사이클 자료
+  (`.issueops/issues/<n>/`)를 읽은 문서로 대신 적지 않는다.
 - 이 기록도 변경 집합 fingerprint를 봉인한다. 이후 diff가 바뀌면
   `project_docs_review_stale`이 되고 `next`가 이 단계로 되돌린다.
 
@@ -160,7 +163,7 @@ issueops project-docs-review record --id "$ISSUEOPS_ID" \
 | 문서를 고치고 재봉인을 생략한다 | `ai_slop_clean_stale`로 이후 단계가 전부 막힌다 |
 | 구현이 규칙을 어겼는데 규칙을 고쳐 덮는다 | 문서가 코드를 따라가면 문서는 아무것도 제약하지 못한다 |
 | ADR의 기존 항목을 고친다 | ADR은 append-only다. 뒤집는 결정은 새 항목으로 적는다 |
-| `no-change`를 `--reviewed-doc` 없이 기록한다 | 거부된다. 읽지 않은 것과 읽었는데 없는 것을 구분할 수 없다 |
+| project doc이 있는데 `no-change`를 `--reviewed-doc` 없이 기록한다 | 거부된다. 읽지 않은 것과 읽었는데 없는 것을 구분할 수 없다 |
 | 존재하지 않거나 `.issueops/` 밖의 경로를 `--reviewed-doc`에 적는다 | 거부된다. 읽은 project doc만 적는다 |
 | 이 단계에서 코드를 고친다 | 그 변경은 정리와 검증을 다시 통과해야 한다. 4단계로 돌아간다 |
 

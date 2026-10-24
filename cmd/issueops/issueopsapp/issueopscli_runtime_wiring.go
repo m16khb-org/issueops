@@ -99,7 +99,7 @@ func newIssueOpsCLIRuntime(stateRoot string) issueopscli.IssueOpsCLIDeps {
 			return reviewapp.RecordImplementationReview(issueopscore.NewEvidenceReviewStore(&actor, changes.ChangeFingerprint), root, id, req)
 		},
 		RecordIssueOpsProjectDocsReviewWithActor: func(root, id string, req issueopscontract.IssueOpsProjectDocsReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
-			return reviewapp.RecordProjectDocsReview(reviewport.ProjectDocsReviewStore{EvidenceReviewStore: issueopscore.NewEvidenceReviewStore(&actor, changes.ChangeFingerprint), ChangedPaths: changes.ChangedPaths, Root: issueopscore.ReviewDocumentPaths{}.Root, RelativePath: issueopscore.ReviewDocumentPaths{}.RelativePath, FileExists: issueopscore.ReviewDocumentPaths{}.FileExists}, root, id, req)
+			return reviewapp.RecordProjectDocsReview(reviewport.ProjectDocsReviewStore{EvidenceReviewStore: issueopscore.NewEvidenceReviewStore(&actor, changes.ChangeFingerprint), ChangedPaths: changes.ChangedPaths, Root: issueopscore.ReviewDocumentPaths{}.Root, RelativePath: issueopscore.ReviewDocumentPaths{}.RelativePath, FileExists: issueopscore.ReviewDocumentPaths{}.FileExists, ProjectDocsPresent: issueopscore.ReviewDocumentPaths{}.ProjectDocsPresent}, root, id, req)
 		},
 		RecordIssueOpsSchemaEvidenceWithActor: func(root, id string, req issueopscontract.IssueOpsSchemaEvidenceRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
 			return reviewapp.RecordSchemaEvidence(issueopscore.NewEvidenceReviewStore(&actor, changes.ChangeFingerprint), root, id, req)

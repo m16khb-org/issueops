@@ -19,7 +19,11 @@ func ValidateImplementationReviewRecord(verdict string, findings, evidence int) 
 	return nil
 }
 
-func ValidateProjectDocsReviewRecord(verdict string, docs, evidence, reviewed int) error {
+// ValidateProjectDocsReviewRecord checks a docs verdict. projectDocsPresent is
+// whether the worktree has any project doc (AGENTS.md or .issueops/ docs
+// outside cycle material): a repo with none has nothing to cite, so no-change
+// then needs only the evidence that says so.
+func ValidateProjectDocsReviewRecord(verdict string, docs, evidence, reviewed int, projectDocsPresent bool) error {
 	if verdict != "updated" && verdict != "no-change" {
 		return fmt.Errorf("project docs review verdict must be updated|no-change")
 	}
@@ -32,7 +36,7 @@ func ValidateProjectDocsReviewRecord(verdict string, docs, evidence, reviewed in
 	if verdict == "no-change" && docs > 0 {
 		return fmt.Errorf("project docs review verdict no-change must not list updated docs")
 	}
-	if verdict == "no-change" && reviewed == 0 {
+	if verdict == "no-change" && reviewed == 0 && projectDocsPresent {
 		return fmt.Errorf("project docs review verdict no-change requires at least one --reviewed-doc path that was actually read")
 	}
 	return nil

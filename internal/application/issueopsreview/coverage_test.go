@@ -851,16 +851,32 @@ func docsStore(m *memStore) reviewport.ProjectDocsReviewStore {
 	}
 }
 
+// no-change without a reviewed doc is refused while the worktree has project
+// docs and accepted (evidence only) in a worktree without any.
+func TestRecordProjectDocsReviewNoChangeWithoutReviewedDocsFollowsTheWorktree(t *testing.T) {
+	req := model.IssueOpsProjectDocsReviewRequest{Verdict: "no-change", Evidence: []string{"repo has no project docs"}}
+	for _, present := range []bool{true, false} {
+		m := &memStore{rec: model.IssueOpsRecord{ID: "io", Phase: model.IssueOpsPhaseImplement}}
+		store := docsStore(m)
+		store.ProjectDocsPresent = func(string) bool { return present }
+		_, err := RecordProjectDocsReview(store, "s", "io", req)
+		if present {
+			wantErr(t, err, "requires at least one --reviewed-doc")
+		} else if err != nil {
+			t.Fatalf("no project docs: %v", err)
+		}
+	}
+}
+
 func TestRecordProjectDocsReviewRejectsInvalidRequestBeforeReading(t *testing.T) {
 	for name, tc := range map[string]struct {
 		req  model.IssueOpsProjectDocsReviewRequest
 		want string
 	}{
-		"bad verdict":            {model.IssueOpsProjectDocsReviewRequest{Verdict: "done", Evidence: []string{"e"}}, "verdict must be updated|no-change"},
-		"no evidence":            {model.IssueOpsProjectDocsReviewRequest{Verdict: "no-change", ReviewedDocs: []string{"AGENTS.md"}}, "requires at least one evidence entry"},
-		"updated without docs":   {model.IssueOpsProjectDocsReviewRequest{Verdict: "updated", Evidence: []string{"e"}}, "requires at least one --doc"},
-		"no-change lists docs":   {model.IssueOpsProjectDocsReviewRequest{Verdict: "no-change", Docs: []string{"a"}, Evidence: []string{"e"}}, "must not list updated docs"},
-		"no-change reviewed nil": {model.IssueOpsProjectDocsReviewRequest{Verdict: "no-change", Evidence: []string{"e"}}, "requires at least one --reviewed-doc"},
+		"bad verdict":          {model.IssueOpsProjectDocsReviewRequest{Verdict: "done", Evidence: []string{"e"}}, "verdict must be updated|no-change"},
+		"no evidence":          {model.IssueOpsProjectDocsReviewRequest{Verdict: "no-change", ReviewedDocs: []string{"AGENTS.md"}}, "requires at least one evidence entry"},
+		"updated without docs": {model.IssueOpsProjectDocsReviewRequest{Verdict: "updated", Evidence: []string{"e"}}, "requires at least one --doc"},
+		"no-change lists docs": {model.IssueOpsProjectDocsReviewRequest{Verdict: "no-change", Docs: []string{"a"}, Evidence: []string{"e"}}, "must not list updated docs"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			m := &memStore{rec: model.IssueOpsRecord{ID: "io", Phase: model.IssueOpsPhaseImplement}}

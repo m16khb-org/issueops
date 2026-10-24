@@ -5065,6 +5065,7 @@
       "task": "T20",
       "symbols": [
         "func ReviewDocumentPaths.FileExists",
+        "func ReviewDocumentPaths.ProjectDocsPresent",
         "func ReviewDocumentPaths.RelativePath",
         "func ReviewDocumentPaths.Root",
         "type ReviewDocumentPaths"

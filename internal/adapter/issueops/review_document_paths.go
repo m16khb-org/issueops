@@ -1,6 +1,7 @@
 package issueops
 
 import (
+	"io/fs"
 	"issueops/internal/adapter/issueops/readinesspaths"
 	model "issueops/internal/contract/issueops"
 	"os"
@@ -34,6 +35,37 @@ func (ReviewDocumentPaths) RelativePath(root, path string) string {
 		return ""
 	}
 	return path
+}
+
+// ProjectDocsPresent reports AGENTS.md or any markdown under .issueops/ other
+// than cycle material (issues/, gates/). An empty root reports true so the
+// caller keeps requiring a reviewed doc it cannot disprove.
+func (ReviewDocumentPaths) ProjectDocsPresent(root string) bool {
+	if strings.TrimSpace(root) == "" {
+		return true
+	}
+	if info, err := os.Stat(filepath.Join(root, "AGENTS.md")); err == nil && !info.IsDir() {
+		return true
+	}
+	docs := filepath.Join(root, ".issueops")
+	found := false
+	_ = filepath.WalkDir(docs, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return filepath.SkipDir
+		}
+		if entry.IsDir() {
+			if rel, _ := filepath.Rel(docs, path); rel == "issues" || rel == "gates" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if strings.EqualFold(filepath.Ext(path), ".md") {
+			found = true
+			return fs.SkipAll
+		}
+		return nil
+	})
+	return found
 }
 
 func (ReviewDocumentPaths) FileExists(root, relative string) bool {
