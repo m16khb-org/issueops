@@ -117,6 +117,9 @@ func Classify(in Input) Decision {
 
 	index := phaseIndex(in.Record.Phase)
 
+	if decided, ok := classifyCleanupResume(in, decision, index); ok {
+		return finish(in, decided)
+	}
 	if decided, ok := classifyBlockedExecution(in, decision, index); ok {
 		return finish(in, decided)
 	}
@@ -505,13 +508,6 @@ func classifyPublication(in Input, decision Decision, index int) (Decision, bool
 	}
 	if record.Phase == issueopsnextcontract.PhaseDone {
 		decision.Stage = stage(issueopsnextcontract.StageDone, 10)
-		// QA (killed cleanup finish): the worktree was gone, the record and
-		// branch stayed, and next still sent the agent back to merge-pr.
-		if attempt := record.CleanupAttempt; attempt != nil && attempt.Operation == issueopsnextcontract.CleanupOperationFinish {
-			decision.NextCommand = "issueops cleanup finish --id " + id + " --preview --json"
-			decision.Warnings = append(decision.Warnings, "a cleanup finish started at "+attempt.StartedAt+" did not finish; its preview reads what is left (worktree_present, branch_present) and issues a new fingerprint")
-			return decision, true
-		}
 		// next does not read the provider. merge-pr's preview does: it gives the
 		// merge command, or points to cleanup when the PR is already merged.
 		decision.NextCommand = "issueops remote merge-pr --id " + id + " --json"
@@ -920,4 +916,30 @@ func shellSafeURL(raw string) bool {
 		}
 	}
 	return true
+}
+
+// classifyCleanupResume routes a record that still holds a cleanup attempt to
+// that operation's preview. QA (killed applies): after a killed cleanup
+// finish next sent the agent back to merge-pr, and after a killed abandon it
+// offered the takeover chain; the preview reads what is left and issues a new
+// fingerprint.
+func classifyCleanupResume(in Input, decision Decision, index int) (Decision, bool) {
+	attempt := in.Record.CleanupAttempt
+	if attempt == nil {
+		return decision, false
+	}
+	id := in.Record.ID
+	switch attempt.Operation {
+	case issueopsnextcontract.CleanupOperationFinish:
+		decision.NextCommand = "issueops cleanup finish --id " + id + " --preview --json"
+	case issueopsnextcontract.CleanupOperationAbandon:
+		decision.NextCommand = "issueops cleanup abandon --id " + id + " --reason <TEXT> --preview --json"
+	case issueopsnextcontract.CleanupOperationRemoteBranch:
+		decision.NextCommand = "issueops cleanup remote-branch --id " + id + " --preview --json"
+	default:
+		return decision, false
+	}
+	decision.Stage = stage(issueopsnextcontract.StageCleanupResume, index)
+	decision.Warnings = append(decision.Warnings, "a cleanup "+string(attempt.Operation)+" started at "+attempt.StartedAt+" did not finish (or is still running); its preview reads what is left and issues a new fingerprint")
+	return decision, true
 }

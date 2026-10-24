@@ -14398,6 +14398,7 @@
         "func branchPrepareNeeded",
         "func classifyBlockedExecution",
         "func classifyBranchPrepare",
+        "func classifyCleanupResume",
         "func classifyHolderImplement",
         "func classifyImplementation",
         "func classifyIssueMissing",

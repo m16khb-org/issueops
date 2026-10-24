@@ -35,8 +35,12 @@ const (
 
 type IssueCreateIntent = issueopscontract.IssueOpsIssueCreateIntent
 
-// CleanupOperationFinish names a cleanup finish attempt (record.cleanup_attempt).
-const CleanupOperationFinish = issueopscontract.CleanupOperationFinish
+// Cleanup operations a record.cleanup_attempt names.
+const (
+	CleanupOperationFinish       = issueopscontract.CleanupOperationFinish
+	CleanupOperationAbandon      = issueopscontract.CleanupOperationAbandon
+	CleanupOperationRemoteBranch = issueopscontract.CleanupOperationRemoteBranch
+)
 
 const (
 	IssueCreateIntentPending            = issueopscontract.IssueCreateIntentPending
@@ -148,5 +152,6 @@ const (
 	StagePRCreate          = "pr.create"
 	StagePRComplete        = "pr.complete"
 	StageDone              = "done"
+	StageCleanupResume     = "cleanup.resume"
 	StageUnknown           = "unknown"
 )

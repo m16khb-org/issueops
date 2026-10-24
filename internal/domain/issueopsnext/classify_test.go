@@ -1035,15 +1035,21 @@ func TestFillBranchPrepareIssue(t *testing.T) {
 	}
 }
 
-// A done cycle whose cleanup finish stopped midway resumes at the finish
-// preview instead of merge-pr.
-func TestClassifyDoneWithAnUnfinishedCleanupResumesTheFinishPreview(t *testing.T) {
+// A record that still holds a cleanup attempt resumes at that operation's
+// preview, whatever its phase or lease.
+func TestClassifyUnfinishedCleanupResumesAtItsPreview(t *testing.T) {
 	in := Input{Record: issueopsnextcontract.Record{ID: "io-1", Phase: issueopsnextcontract.PhaseDone}}
 	if got := Classify(in); !strings.HasPrefix(got.NextCommand, "issueops remote merge-pr") {
 		t.Fatalf("done without attempt: %q", got.NextCommand)
 	}
-	in.Record.CleanupAttempt = &issueopscontract.IssueOpsCleanupAttempt{Operation: issueopscontract.CleanupOperationFinish, Token: "t", StartedAt: "2026-10-25T00:00:00Z"}
-	if got := Classify(in); got.NextCommand != "issueops cleanup finish --id io-1 --preview --json" {
-		t.Fatalf("done with finish attempt: %q", got.NextCommand)
+	for op, want := range map[issueopscontract.CleanupOperation]string{
+		issueopscontract.CleanupOperationFinish:       "issueops cleanup finish --id io-1 --preview --json",
+		issueopscontract.CleanupOperationAbandon:      "issueops cleanup abandon --id io-1 --reason <TEXT> --preview --json",
+		issueopscontract.CleanupOperationRemoteBranch: "issueops cleanup remote-branch --id io-1 --preview --json",
+	} {
+		in.Record.CleanupAttempt = &issueopscontract.IssueOpsCleanupAttempt{Operation: op, Token: "t", StartedAt: "2026-10-25T00:00:00Z"}
+		if got := Classify(in); got.NextCommand != want || got.Stage.Key != issueopsnextcontract.StageCleanupResume {
+			t.Fatalf("%s: %s %q", op, got.Stage.Key, got.NextCommand)
+		}
 	}
 }

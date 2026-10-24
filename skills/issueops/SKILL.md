@@ -142,7 +142,8 @@ stage `verify`·`commit-push`). 기록 명령의 응답에 phase가 그대로여
 | `pr.create` | `issueops-create-pr` | PR/MR 발행·완료 |
 | `pr.complete` | `issueops-complete` | PR/MR 발행·완료 |
 | `done` | 머지 전이면 `issueops-merge`, 머지 뒤면 `issueops-cleanup`. 구분은 `issueops remote merge-pr --id ID --json`의 `already_merged`로 한다 | 머지·정리 |
-| `takeover` | 스킬 없음. `next_command`를 실행하고 결과가 돌려주는 `next_command`를 따라간다. 죽은 홀더 인수는 `issueops-abandon`이 설명한다 | 현재 index의 label |
+| `cleanup.resume` | 중단된 cleanup의 preview(`next_command`)부터. abandon은 `issueops-abandon`, 그 외는 `issueops-cleanup` | 머지·정리 |
+| `takeover` | 스킬 없음. `next_command`와 그 결과의 `next_command`를 따라간다. 죽은 홀더 인수는 `issueops-abandon`이 설명한다 | 현재 index의 label |
 | `blocked.pending`, `blocked.holder_live` | 없음. `next_command`로 상태를 다시 읽는다 | 현재 index의 label |
 | `blocked.root_conflict` | 충돌 사이클을 `issueops-cleanup`(머지됨) 또는 `issueops-abandon`(미머지)으로 먼저 정리한다 | 현재 index의 label |
 | `unknown`, `invalid` | 없음. `next_command`로 record를 읽고 `warnings`의 missing 키를 사용자에게 보여 준다 | 현재 index의 label |
@@ -161,8 +162,6 @@ stage `verify`·`commit-push`). 기록 명령의 응답에 phase가 그대로여
 - 단계 스킬이 이름으로 가리키는 `.issueops/` 문서(`AGENT_WORKFLOW.md`, `VCS.md` 등)가 저장소에 없으면
   "파일 없음"으로 기록하고 그 문서 없이 진행한다. 없는 문서는 막힘이 아니다.
 - API/DTO/OpenAPI 변경은 `.issueops/OPEN_API_SPEC.md` gate를 적용한다.
-- live runtime, review reply, completion hygiene가 요청 범위라면 테스트 통과만으로
-  완료를 선언하지 않는다.
 - ai-slop-clean은 실제 diff가 생긴 뒤 실행하고, cleanup 후 관련 검증을 다시
   실행한다.
 - publication 전에 구현 diff를 project docs와 양방향으로 대조하고, 스키마 변경이 있으면 실측 증거를 기록한다.
