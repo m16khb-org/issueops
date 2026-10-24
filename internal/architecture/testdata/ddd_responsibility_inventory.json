@@ -5828,6 +5828,7 @@
       "symbols": [
         "func NewSQLiteRepository",
         "func SQLiteRepository.CommitDirect",
+        "func SQLiteRepository.EnsureActorHoldsNoLease",
         "func SQLiteRepository.EnsureRootUnclaimed",
         "func SQLiteRepository.Load",
         "func cleanAbsPath",

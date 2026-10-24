@@ -9,10 +9,13 @@ import (
 )
 
 // CleanupFinishRemedyCommand names the command that fills the first missing
-// finish gate an agent can fill, in the cleanup order: remote branch, then
-// completion reflection, then the issue close.
+// cleanup gate an agent can fill, in the cleanup order: child tasks (the
+// remote-branch step requires them closed), remote branch, completion
+// reflection, then the issue close.
 func CleanupFinishRemedyCommand(id string, missing []string) string {
 	switch {
+	case slices.Contains(missing, "child_tasks_closed"):
+		return fmt.Sprintf("issueops cleanup close-children --id %s --merged --json", id)
 	case slices.Contains(missing, "remote_branch_absent"):
 		return fmt.Sprintf("issueops cleanup remote-branch --id %s --preview --json", id)
 	case slices.Contains(missing, "completion_reflected"):

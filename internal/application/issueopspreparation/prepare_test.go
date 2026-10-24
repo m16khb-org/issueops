@@ -108,6 +108,22 @@ func TestDirectPreparationRejectsIssueURLWithoutNumberBeforeProvisioning(t *test
 	}
 }
 
+// An agent holding the parent's lease prepared a child: the preview passed and
+// the confirm failed at commit with a worktree already provisioned.
+func TestDirectPreparationRefusesAnActorHoldingAnotherLeaseBeforeProvisioning(t *testing.T) {
+	for _, confirm := range []bool{false, true} {
+		fixture := newDirectServiceFixture()
+		fixture.repository.holderErr = errors.New("this session already holds the execution lease of io-parent")
+		result, err := fixture.service.Prepare(context.Background(), directCommand(confirm))
+		if err == nil || result.OK || !strings.Contains(err.Error(), "io-parent") {
+			t.Fatalf("confirm=%v result=%+v err=%v", confirm, result, err)
+		}
+		if traceIndex(fixture.trace, "direct.prepare") >= 0 || fixture.repository.commit != nil {
+			t.Fatalf("confirm=%v reached provisioning: %v", confirm, fixture.trace)
+		}
+	}
+}
+
 func TestPreparationDecisionShortCircuitsDirectEffects(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -185,6 +201,7 @@ type applicationRepositoryFake struct {
 	trace     *[]string
 	snapshot  preparationcontract.Snapshot
 	rootErr   error
+	holderErr error
 	commitErr error
 	commit    *DirectCommit
 }
@@ -197,6 +214,10 @@ func (fake *applicationRepositoryFake) Load(context.Context, string) (preparatio
 func (fake *applicationRepositoryFake) EnsureRootUnclaimed(context.Context, string, string) error {
 	*fake.trace = append(*fake.trace, "root")
 	return fake.rootErr
+}
+
+func (fake *applicationRepositoryFake) EnsureActorHoldsNoLease(context.Context, leasecontract.Actor) error {
+	return fake.holderErr
 }
 
 func (fake *applicationRepositoryFake) CommitDirect(_ context.Context, commit DirectCommit) (preparationcontract.Result, error) {

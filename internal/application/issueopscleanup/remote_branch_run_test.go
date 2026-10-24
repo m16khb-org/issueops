@@ -210,6 +210,11 @@ func TestRemoteBranchCleanerFailuresReleaseOnceAndPointToPreview(t *testing.T) {
 					t.Fatalf("err=%v does not wrap %v", err, want)
 				}
 			}
+			// A deleted branch whose attempt was not released reads as done-but-unreleased,
+			// not as a failed deletion (an agent saw exit 1 next to deleted:true).
+			if tc.deleted != strings.Contains(err.Error(), "remote branch deleted") {
+				t.Fatalf("deleted=%v err=%v", tc.deleted, err)
+			}
 			if result.NextCommand != "issueops cleanup remote-branch --id io-test --preview --json" {
 				t.Fatalf("next=%q", result.NextCommand)
 			}

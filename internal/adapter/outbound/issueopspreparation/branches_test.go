@@ -129,6 +129,23 @@ func TestEnsureRootUnclaimedUsesExecutionRootAndExcludesSelf(t *testing.T) {
 	}
 }
 
+// The holder index CommitDirect inserts is what refuses a second prepare by
+// the same session; the check reads it before anything is provisioned.
+func TestEnsureActorHoldsNoLeaseNamesTheHeldCycle(t *testing.T) {
+	ctx := context.Background()
+	_, repository, commit := preparedRepositoryFixture(t)
+	holder := commit.Command.Actor
+	err := repository.EnsureActorHoldsNoLease(ctx, holder)
+	if err == nil || !strings.Contains(err.Error(), "lease of io-prepared (generation 1)") || !strings.Contains(err.Error(), "execution release --id io-prepared") {
+		t.Fatalf("holder err = %v", err)
+	}
+	other := holder
+	other.SessionID = "another-session"
+	if err := repository.EnsureActorHoldsNoLease(ctx, other); err != nil {
+		t.Fatalf("another session must pass: %v", err)
+	}
+}
+
 type inventoryErrStore struct {
 	*preparationStore
 	err error

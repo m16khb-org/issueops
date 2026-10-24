@@ -45,6 +45,7 @@ func (s RemoteBranchCleaner) Run(ctx context.Context, req model.CleanupRemoteBra
 	}
 	inventory, result := s.Preview.Plan(ctx, record, req)
 	if len(result.Missing) > 0 {
+		result.NextCommand = domain.CleanupFinishRemedyCommand(record.ID, result.Missing)
 		return result, fmt.Errorf("cleanup remote-branch is not ready; unmet gates: %s", strings.Join(result.Missing, ", "))
 	}
 	var stop bool
@@ -118,6 +119,11 @@ func (s RemoteBranchCleaner) releaseAttempt(ctx context.Context, lifetime Cleanu
 		}
 		result.FailedStep = step
 		result.NextCommand = fmt.Sprintf("issueops cleanup remote-branch --id %s --preview --json", id)
+		if cause == nil && result.Deleted {
+			// The deletion happened; only the attempt release did not. The
+			// preview sees the branch absent and its --apply releases it.
+			err = fmt.Errorf("remote branch deleted, but the cleanup attempt was not released (%w); run next_command, then its --apply", err)
+		}
 		return next, result, err
 	}
 	return next, result, nil

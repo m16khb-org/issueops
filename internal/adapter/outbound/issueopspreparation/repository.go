@@ -63,6 +63,26 @@ func (repository *SQLiteRepository) EnsureRootUnclaimed(_ context.Context, selfI
 	return ensureRootUnclaimed(repository.store, selfID, root)
 }
 
+// EnsureActorHoldsNoLease reads the actor's lease-holder index row. Commit
+// inserts it with RequireAbsent, so without this check a session holding
+// another cycle's lease got a store precondition error only after the
+// worktree was provisioned.
+func (repository *SQLiteRepository) EnsureActorHoldsNoLease(_ context.Context, actor leasecontract.Actor) error {
+	if repository.store == nil {
+		return fmt.Errorf("preparation record store is unavailable")
+	}
+	data, exists, err := repository.store.Get(holderBucket, holderIndexKey(actor))
+	if err != nil || !exists {
+		return err
+	}
+	var index holderIndex
+	if err := json.Unmarshal(data, &index); err != nil {
+		return fmt.Errorf("decode active lease-holder index: %w", err)
+	}
+	return fmt.Errorf("this session already holds the execution lease of %s (generation %d) and a session holds one lease at a time: release it first (issueops execution release --id %s --generation %d $ACTOR_FLAGS --json), prepare this cycle, and claim %s again later",
+		index.LifecycleID, index.Generation, index.LifecycleID, index.Generation, index.LifecycleID)
+}
+
 func (repository *SQLiteRepository) CommitDirect(ctx context.Context, commit preparationapp.DirectCommit) (preparationcontract.Result, error) {
 	if repository.store == nil {
 		return preparationcontract.Result{ID: commit.Command.ID}, fmt.Errorf("preparation record store is unavailable")
