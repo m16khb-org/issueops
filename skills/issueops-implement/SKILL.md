@@ -126,7 +126,7 @@ blocker 근거는 기록 직전에 한 번 더 확인한다. 확인 규칙은 [�
   gate CHECK(예: `.issueops/TESTING.md` 실행 명령의 기대 출력)가 RED다.
 - 크기·시간과 무관하게 canonical worktree에서만 수정한다. source checkout 구현은 금지다.
 - focused 검증 명령·결과를 그대로 기록한다. 실행하지 않은 검증은 `pass`가 아니다.
-- `phase --to implement`·`ai-slop-clean` 전이는 추적 사본을 `.issueops/issues/<n>/`에 쓴다. 보고 방식과 첫 커밋 포함 규칙은 [보충 규칙](references/gate-extras.md)을 읽고 따른다.
+- `phase --to implement`·`ai-slop-clean` 전이는 추적 사본을 `.issueops/issues/<n>/`에 쓴다. 사본을 직접 고치면 다음 전이가 봉인 원본으로 되돌린다. 보고 방식과 첫 커밋 포함 규칙은 [보충 규칙](references/gate-extras.md)을 읽고 따른다.
 - commit·push는 승인된 종료점에 포함되어 있으면 [`atomic-commit-push`](../atomic-commit-push/SKILL.md)로
   이어간다. 원래 요청에서 허용된 issue branch의 publication을 다시 묻지 않는다.
 - API/DTO/OpenAPI 변경은 `.issueops/OPEN_API_SPEC.md` gate를 적용한다. 문서가 없는 대상의 처리는 [보충 규칙](references/gate-extras.md)을 따른다.
