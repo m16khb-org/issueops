@@ -77,6 +77,28 @@ func TestGatesCLIInitDefaultsToScopeNamespacedFile(t *testing.T) {
 	}
 }
 
+// The help says --cwd and --workspace-root default to the current directory;
+// without them check found no ledger and the CHECK policy had no directory.
+func TestGatesCLICheckDefaultsToProcessDirectory(t *testing.T) {
+	deps := cliDeps()
+	t.Chdir(t.TempDir())
+	if err := Run(deps, []string{"init", "--scope", "here", "--gate", "G1: here | CHECK: printf here-ok | EXPECT: here-ok"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := Run(deps, []string{"check", "--env", "PATH"}); err != nil {
+		t.Fatalf("check without --cwd: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(".issueops", "gates", "here.md"))
+	if err != nil || !strings.Contains(string(data), "EVIDENCE: here-ok") {
+		t.Fatalf("ledger not checked: err=%v\n%s", err, data)
+	}
+	for _, sub := range []string{"status", "report"} {
+		if err := Run(deps, []string{sub}); err != nil {
+			t.Fatalf("%s without --cwd: %v", sub, err)
+		}
+	}
+}
+
 func TestGatesCLIJSONOutput(t *testing.T) {
 	deps := cliDeps()
 	dir := t.TempDir()

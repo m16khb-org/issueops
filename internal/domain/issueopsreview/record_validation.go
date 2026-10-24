@@ -27,7 +27,7 @@ func ValidateProjectDocsReviewRecord(verdict string, docs, evidence, reviewed in
 		return fmt.Errorf("project docs review requires at least one evidence entry")
 	}
 	if verdict == "updated" && docs == 0 {
-		return fmt.Errorf("project docs review verdict updated requires at least one --doc path")
+		return fmt.Errorf("project docs review verdict updated requires at least one --doc path (a doc changed in this cycle; --reviewed-doc is for no-change)")
 	}
 	if verdict == "no-change" && docs > 0 {
 		return fmt.Errorf("project docs review verdict no-change must not list updated docs")

@@ -32,7 +32,7 @@ func TestValidateProjectDocsReviewRecord(t *testing.T) {
 		{"no-change", 0, 1, 1, ""},
 		{"unknown", 0, 0, 0, "project docs review verdict must be updated|no-change"},
 		{"updated", 1, 0, 0, "project docs review requires at least one evidence entry"},
-		{"updated", 0, 1, 0, "project docs review verdict updated requires at least one --doc path"},
+		{"updated", 0, 1, 0, "project docs review verdict updated requires at least one --doc path (a doc changed in this cycle; --reviewed-doc is for no-change)"},
 		{"no-change", 1, 1, 1, "project docs review verdict no-change must not list updated docs"},
 		{"no-change", 0, 1, 0, "project docs review verdict no-change requires at least one --reviewed-doc path that was actually read"},
 	} {

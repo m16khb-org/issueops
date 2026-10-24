@@ -140,7 +140,7 @@ func reviewOwnerCommand(id, key string) (string, bool) {
 			" --verdict <pass|revise|stop> --reviewer-context <subagent|inline> --finding <TEXT> --evidence <TEXT> $RECORD_ACTOR_FLAGS", true
 	case "project_docs_review", "project_docs_review_stale":
 		return "issueops project-docs-review record --id " + id +
-			" --verdict <updated|no-change> --reviewed-doc <PATH> --evidence <TEXT> $RECORD_ACTOR_FLAGS", true
+			" --verdict <updated --doc CHANGED_PATH|no-change --reviewed-doc READ_PATH> --evidence <TEXT> $RECORD_ACTOR_FLAGS", true
 	case "schema_evidence", "schema_evidence_stale":
 		return "issueops schema-evidence record --id " + id +
 			" --measurement <TEXT> --source <TEXT> $RECORD_ACTOR_FLAGS", true

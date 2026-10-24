@@ -110,6 +110,16 @@ func parseCheckFlags(name string, args []string) (checkFlags, bool, error) {
 	if fs.NArg() > 0 {
 		return flags, false, UsageError{Message: fmt.Sprintf("unexpected positional argument %q", fs.Arg(0))}
 	}
+	// The flags document "(defaults to cwd)": without either, discovery and
+	// the CHECK policy had no directory and refused ("no gate files found",
+	// cwd_required), the same default lint already applies.
+	if strings.TrimSpace(flags.CWD) == "" && strings.TrimSpace(flags.WorkspaceRoot) == "" {
+		wd, err := os.Getwd()
+		if err != nil {
+			return flags, false, err
+		}
+		flags.CWD = wd
+	}
 	flags.EnvAllowlist = strings.Join(splitCSV(flags.EnvAllowlist), ",")
 	return flags, *jsonOut, nil
 }
