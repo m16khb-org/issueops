@@ -38,14 +38,16 @@ func ReadIssueOpsExisting(stateRoot, id string) (issueops.IssueOpsRecord, error)
 	// A missing store answers like a missing record: the caller asked for a
 	// cycle, and the store path is an implementation detail.
 	if err != nil || !ok {
-		return issueops.IssueOpsRecord{OK: false, ID: id}, recordNotFound(id)
+		return issueops.IssueOpsRecord{OK: false, ID: id}, recordNotFound(stateRoot, id)
 	}
 	return decodeIssueOpsRecord(id, b)
 }
 
-// recordNotFound names the cycle and the command that lists the existing ones.
-func recordNotFound(id string) error {
-	return fmt.Errorf("issueops record %s not found; list cycles with `issueops list --json`: %w", id, fs.ErrNotExist)
+// recordNotFound names the cycle, the state it looked in, and the command that
+// lists the existing ones. QA: an agent's shell lost ISSUEOPS_STATE_DIR and
+// the bare "not found" did not say which state was read.
+func recordNotFound(stateRoot, id string) error {
+	return fmt.Errorf("issueops record %s not found in state %s (ISSUEOPS_STATE_DIR selects the state); list cycles with `issueops list --json`: %w", id, stateRoot, fs.ErrNotExist)
 }
 
 func ReadIssueOps(stateRoot, id string) (issueops.IssueOpsRecord, error) {
@@ -62,7 +64,7 @@ func ReadIssueOps(stateRoot, id string) (issueops.IssueOpsRecord, error) {
 		return issueops.IssueOpsRecord{OK: false, ID: id}, err
 	}
 	if !ok {
-		return issueops.IssueOpsRecord{OK: false, ID: id}, recordNotFound(id)
+		return issueops.IssueOpsRecord{OK: false, ID: id}, recordNotFound(stateRoot, id)
 	}
 	return decodeIssueOpsRecord(id, b)
 }
