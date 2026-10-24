@@ -153,7 +153,8 @@ The latest user message must confirm these exact targets; generic "cleanup" auth
 ### 1. Reflect completion into the issue
 
 Preserve the team's progress report before closing; otherwise finish blocks on
-`completion_reflected`. Every remote write uses preview → identical confirm →
+`completion_reflected` (`issueops list` shows the same gap as `completion_unreflected: true`).
+Every remote write uses preview → identical confirm →
 readback. Changed body means a new preview; uncertain results mean reconcile,
 never repeat a create/write or bypass the harness with raw provider mutations.
 
