@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"issueops/cmd/issueops/cliflag"
+	"issueops/cmd/issueops/jsonout"
 	"issueops/cmd/issueops/selfworkflow/llmeval"
 	"issueops/cmd/issueops/selfworkflow/progress"
 	application "issueops/internal/application/selfverify"
@@ -76,7 +77,14 @@ func Run(args []string, deps Deps) error {
 		SaveSummary:  deps.SaveSummary,
 	})
 	if *jsonOut {
-		_ = deps.PrintJSON(result)
+		if err != nil {
+			// One document under --json 2>&1: the gate failure joins the summary.
+			if printErr := deps.PrintJSON(jsonout.WithError(result, err)); printErr != nil {
+				return printErr
+			}
+			return jsonout.Reported(err)
+		}
+		return deps.PrintJSON(result)
 	}
 	return err
 }

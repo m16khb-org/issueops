@@ -32,7 +32,14 @@ func TestSelfVerificationInstancesKeepActualFailuresAndSavedRootsSeparate(t *tes
 			var cli contract.SelfAugmentResult
 			err := verifycmd.Run([]string{"--seed", "42", "--llm-eval=false", "--save-state", "--state-key", "cli", "--json"}, verifycmd.Deps{Verify: execute, SaveSummary: func(result *contract.SelfAugmentResult, key string) error {
 				return state.SaveSummary(context.Background(), result, key)
-			}, PrintJSON: func(value any) error { cli = value.(contract.SelfAugmentResult); return nil }})
+			}, PrintJSON: func(value any) error {
+				// A failed gate prints the summary with its error as one map document.
+				data, err := json.Marshal(value)
+				if err != nil {
+					return err
+				}
+				return json.Unmarshal(data, &cli)
+			}})
 			if !errors.Is(err, app.ErrSelfVerificationGateFailed) {
 				t.Errorf("instance %d CLI lost real gate error: %v", i, err)
 				return
