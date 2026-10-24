@@ -121,7 +121,7 @@ func runStop(deps Dependencies, args []string) error {
 		return err
 	}
 	if *success && *reason != "" {
-		return printLoopResult(loopruncontract.LoopRun{OK: false}, fmt.Errorf("success_and_reason_conflict"), *jsonOut)
+		return printLoopResult(loopruncontract.LoopRun{OK: false}, fmt.Errorf("success_and_reason_conflict: pass --success alone, or --reason without --success for a non-successful stop"), *jsonOut)
 	}
 	result, err := deps.Stop(context.Background(), *id, *success, *reason)
 	return printLoopResult(result, err, *jsonOut)

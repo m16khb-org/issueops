@@ -207,7 +207,8 @@ plan-prep 네 항목은 waive로 채우지 않는다. 조사 결과나 불필요
    assignee를 확인한다(`@me` 금지). 설치된 `issueops-remote-write`를 활용할 수 있다.
 4. body file을 읽고 preview의 `readability`를 확인한다. critical은 수정 후 재preview,
    warning은 수정하거나 이유를 기록한다. preview와 동일한 요청에만 `--confirm`을 붙인다.
-5. URL·상태·본문 hash·label·assignee·hierarchy와 `status.body_syncs` baseline을 readback한다.
+5. URL·상태·본문 hash·label·assignee·hierarchy를 readback한다. 새 이슈의 본문 baseline은
+   `status.issue_create_intent.body_sha256`이다. `body_syncs`는 첫 `sync-issue` 뒤에 생긴다.
    모호한 issue 생성은 `remote reconcile-issue --id ID --json`으로 확인하며 재생성하지 않는다.
    raw provider CLI/MCP 쓰기로 우회하지 않는다. 둘 이상의 artifact면 중단한다.
 

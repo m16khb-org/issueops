@@ -78,8 +78,8 @@ func gitlabSteps(branch, baseBranch, baseSHA string) []model.IssueOpsBranchPrepa
 				},
 			},
 			Description: "Create the issue-prefixed branch through the GitLab MCP authenticated API tool. " +
-				"The branch starts from " + base +
-				" glab_api takes the endpoint as a positional `args` entry and everything else inside " +
+				"The branch starts from " + base + " When this session does not expose the tool, use step 2 instead; that is not a failure. " +
+				"glab_api takes the endpoint as a positional `args` entry and everything else inside " +
 				"`flags`; `raw_field` is glab's --raw-field string parameter, not the inferred-type --field.",
 		},
 		{
