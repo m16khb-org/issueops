@@ -218,16 +218,35 @@ func TestReplacementPreconditionsRefuseUnsafeFinalization(t *testing.T) {
 }
 
 func TestValidateReplacementQuiescenceFinalizesOnlyDeadHolders(t *testing.T) {
-	receipt := model.NativeProcessReceipt{PID: 42, Executable: "/bin/codex"}
-	if err := ValidateReplacementQuiescence(receipt, "dead"); err != nil {
+	receipt := model.NativeProcessReceipt{PID: 42, StartedAt: "2026-10-01T00:00:00Z", Executable: "/bin/codex"}
+	none := model.NativeProcessReceipt{}
+	if err := ValidateReplacementQuiescence(receipt, "dead", none); err != nil {
 		t.Fatal(err)
 	}
-	if err := ValidateReplacementQuiescence(receipt, "live"); err == nil || !strings.Contains(err.Error(), "still live: pid=42 executable=/bin/codex") {
+	if err := ValidateReplacementQuiescence(receipt, "live", receipt); err == nil || !strings.Contains(err.Error(), "still live: pid=42 executable=/bin/codex") {
 		t.Fatalf("live: %v", err)
 	}
 	for _, status := range []string{"unknown", "reused", ""} {
-		if err := ValidateReplacementQuiescence(receipt, status); err == nil || !strings.Contains(err.Error(), "unsafe to finalize") {
+		if err := ValidateReplacementQuiescence(receipt, status, none); err == nil || !strings.Contains(err.Error(), "unsafe to finalize") {
 			t.Fatalf("status %q: %v", status, err)
+		}
+	}
+	// A reused PID (another start time) proves the recorded process is gone.
+	reused := model.NativeProcessReceipt{PID: 42, StartedAt: "2026-10-24T09:00:00Z", Executable: "/usr/sbin/cron"}
+	if err := ValidateReplacementQuiescence(receipt, "identity-mismatch", reused); err != nil {
+		t.Fatalf("reused pid: %v", err)
+	}
+	// Same start, other executable (an exec in place); another start with the
+	// same executable (a TZ or clock difference on a live holder); or an
+	// unreadable start stays unsafe.
+	for _, observed := range []model.NativeProcessReceipt{
+		{PID: 42, StartedAt: receipt.StartedAt, Executable: "/bin/other"},
+		{PID: 42, StartedAt: "2026-10-01T09:00:00Z", Executable: "/bin/codex"},
+		{PID: 42, Executable: "/bin/other"},
+		{PID: 43, StartedAt: "2026-10-24T09:00:00Z", Executable: "/bin/codex"},
+	} {
+		if err := ValidateReplacementQuiescence(receipt, "identity-mismatch", observed); err == nil || !strings.Contains(err.Error(), "unsafe to finalize") {
+			t.Fatalf("observed %+v: %v", observed, err)
 		}
 	}
 }

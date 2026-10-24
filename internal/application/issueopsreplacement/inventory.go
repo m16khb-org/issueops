@@ -40,11 +40,11 @@ func (s Service) quiescence(record issueops.IssueOpsRecord, requester issueops.N
 		return "", err
 	}
 	processSnapshot := s.ObserveProcesses()
-	processStatus, _, err := processSnapshot.Inspect(*holder.SessionProcess)
+	processStatus, observed, err := processSnapshot.Inspect(*holder.SessionProcess)
 	if err != nil {
 		return "", err
 	}
-	if err := domain.ValidateReplacementQuiescence(*holder.SessionProcess, processStatus); err != nil {
+	if err := domain.ValidateReplacementQuiescence(*holder.SessionProcess, processStatus, observed); err != nil {
 		return "", err
 	}
 	if err := s.requireQuiescentWorkspaceProcesses(record, processSnapshot, requester); err != nil {

@@ -13707,7 +13707,8 @@
         "func ValidateReplacementCWD",
         "func ValidateReplacementHolderProcess",
         "func ValidateReplacementQuiescence",
-        "func ValidateReplacementSelfRevoke"
+        "func ValidateReplacementSelfRevoke",
+        "func pidReused"
       ]
     },
     {
