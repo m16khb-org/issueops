@@ -36,6 +36,17 @@ func TestNextOutsideRepositoryNeverListsCycles(t *testing.T) {
 	}
 }
 
+// An agent ran `next --id X` from a scratch directory and read "none" plus
+// `issueops start` as "the cycle is gone".
+func TestNextOutsideRepositoryWithAnIDPointsToStatus(t *testing.T) {
+	ports := testPorts(nil, nil)
+	ports.Repository = func(string) bool { return false }
+	result, err := NewService(ports).Next(t.Context(), "/state", "/tmp/elsewhere", "io-a")
+	if err != nil || result.NextCommand != "issueops status --id io-a --json" || !slices.Contains(result.Warnings, "run next from io-a's repository or worktree (status shows both)") {
+		t.Fatalf("result = %+v err=%v", result, err)
+	}
+}
+
 func TestNextActorFailureWarnsButStillClassifies(t *testing.T) {
 	ports := testPorts(nil, nil)
 	ports.Actor = func() (string, string, error) { return "", "", errors.New("no session") }

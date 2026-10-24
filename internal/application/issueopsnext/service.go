@@ -54,7 +54,15 @@ func (service *Service) Next(ctx context.Context, stateRoot, cwd, id string) (is
 		result.CWDRole = issueopsnextcontract.CWDRoleOther
 		result.SourceRoot = ""
 		result.Warnings = append(result.Warnings, "not a git repository: "+cwd)
-		return applyDecision(result, issueopsnextdomain.Classify(issueopsnextdomain.Input{})), nil
+		decided := applyDecision(result, issueopsnextdomain.Classify(issueopsnextdomain.Input{}))
+		if selectedID := requestedCycleID(ports, id); selectedID != "" {
+			// "none" plus `issueops start` read as "the cycle is gone"; the
+			// cycle is only out of reach from here.
+			decided.NextCommand = "issueops status --id " + selectedID + " --json"
+			decided.NextCommandKind = commandKind(decided.NextCommand)
+			decided.Warnings = append(decided.Warnings, "run next from "+selectedID+"'s repository or worktree (status shows both)")
+		}
+		return decided, nil
 	}
 
 	if selectedID := requestedCycleID(ports, id); selectedID != "" {
