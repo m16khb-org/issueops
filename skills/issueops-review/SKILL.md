@@ -1,6 +1,6 @@
 ---
 name: issueops-review
-description: Use when issueops-plan or issueops-verify needs an independent review of a cycle architecture document, plan, or implementation diff, or when the user asks for "아키텍처 검토", "계획 검토", "구현 리뷰", "architecture-review", or "devil's advocate" within an IssueOps cycle.
+description: 'Use when issueops-plan or issueops-verify needs an independent review of a cycle architecture document, plan, or implementation diff, or for "아키텍처 검토", "계획 검토", "구현 리뷰", "devil''s advocate" in an IssueOps cycle.'
 ---
 
 # IssueOps Architecture, Plan, and Implementation Review

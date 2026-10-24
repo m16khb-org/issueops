@@ -1,6 +1,6 @@
 ---
 name: gates-ledger
-description: Use when a task needs a gate ledger, or for "게이트 원장", "gates 만들어줘", "수용 기준 체크". Turns acceptance criteria into G-numbered CHECK/EXPECT gates under .issueops/issues/<n>/gates.md or .issueops/gates/, fills EVIDENCE through the issueops gates CLI, and abandons gates honestly.
+description: 'Use when a task needs a gate ledger ("게이트 원장", "gates 만들어줘", "수용 기준 체크"): turns acceptance criteria into G-numbered CHECK/EXPECT gates, fills EVIDENCE through `issueops gates`, abandons gates honestly.'
 ---
 
 # Gates Ledger

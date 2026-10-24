@@ -1,6 +1,6 @@
 ---
 name: issueops-merge
-description: Use for "머지해줘", "PR 머지하고 정리", "#123 머지", "merge the PR", "land this cycle" on a completed IssueOps cycle. Previews checks and mergeability with `issueops remote merge-pr`, squash-merges pinned to the completed head, deletes the remote branch, then hands off to issueops-cleanup.
+description: 'Use for "머지해줘", "PR 머지하고 정리", "merge the PR", "land this cycle" on a completed IssueOps cycle: previews checks with `issueops remote merge-pr`, squash-merges pinned to the completed head, deletes the remote branch, hands off to issueops-cleanup.'
 ---
 
 # IssueOps Merge

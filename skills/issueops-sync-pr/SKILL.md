@@ -1,6 +1,6 @@
 ---
 name: issueops-sync-pr
-description: Refresh the body of a GitHub pull request or GitLab merge request this cycle already published, with generation and actor fencing, drift classification, a fail-closed body compare-and-swap, and explicit good and bad examples. Use when the diff moved on and the PR/MR description did not.
+description: 'Refresh the body of a PR/MR this cycle already published, with generation and actor fencing, drift classification, and a fail-closed body compare-and-swap. Use when the diff moved on and the PR/MR description did not.'
 ---
 
 # IssueOps Sync PR

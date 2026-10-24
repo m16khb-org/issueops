@@ -1,6 +1,6 @@
 ---
 name: ui-ux-craft
-description: "Use to build or redesign polished React/Next.js interfaces (landing pages, dashboards, AI chat or agent UIs) by composing shadcn/ui, shadcnblocks, Magic UI, Aceternity UI, and similar libraries into one coherent design, including interaction, animation, responsive design, and accessibility QA."
+description: 'Use to build or redesign polished React/Next.js interfaces (landing pages, dashboards, AI chat or agent UIs) by composing shadcn/ui, Magic UI, Aceternity UI and similar libraries into one coherent, responsive, accessible design.'
 ---
 
 # UI/UX Craft

@@ -1,6 +1,6 @@
 ---
 name: pr-review
-description: "Use when reviewing, inspecting, or commenting on a GitHub pull request or GitLab merge request by number, URL, or branch, including a second review after an automated reviewer. Use review-agent-feedback for replies to existing bot threads; this skill does not review uncommitted local diffs."
+description: 'Use to review or comment on a GitHub PR or GitLab MR by number, URL, or branch, including a second review after an automated reviewer. Replies to existing bot threads: review-agent-feedback. Not for uncommitted local diffs.'
 ---
 
 # PR Review
