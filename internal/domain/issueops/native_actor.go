@@ -13,9 +13,15 @@ import (
 // agents copying the shorter record flags into execution commands hit this.
 const ActorReceiptRemedy = "pass every ACTOR_FLAG, including --session-pid, --session-started-at, and --session-executable (issueops execution whoami --json prints them as claim_actor_flags)"
 
+// EmptyActorHostMessage answers an empty --host: in QA it came from an unset
+// shell variable, which "must be codex, claude, ..." did not point at.
+const EmptyActorHostMessage = "native actor host is empty: pass --host codex|claude|omo|omp|opencode; issueops execution whoami --json prints the whole flag set"
+
 func ValidateNativeActor(actor model.NativeActor) error {
 	switch actor.Host {
 	case "codex", "claude", "omo", "omp", "opencode":
+	case "":
+		return fmt.Errorf("%s", EmptyActorHostMessage)
 	default:
 		return fmt.Errorf("native actor host must be codex, claude, omo, omp, or opencode")
 	}

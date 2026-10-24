@@ -85,3 +85,16 @@ func TestNormalizeNativeActorBindsOpencodeHostToOpencodeReceipt(t *testing.T) {
 		}
 	}
 }
+
+// An empty host (an unset shell variable in QA) names the missing flag and
+// whoami instead of only listing the valid hosts.
+func TestValidateNativeActorNamesAnEmptyHost(t *testing.T) {
+	err := ValidateNativeActor(model.NativeActor{SessionID: "s"})
+	if err == nil || err.Error() != EmptyActorHostMessage {
+		t.Fatalf("err = %v", err)
+	}
+	err = ValidateNativeActor(model.NativeActor{Host: "other", SessionID: "s"})
+	if err == nil || err.Error() != "native actor host must be codex, claude, omo, omp, or opencode" {
+		t.Fatalf("err = %v", err)
+	}
+}
