@@ -10,6 +10,7 @@ import (
 
 	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
+	issueopsdomain "issueops/internal/domain/issueops"
 	reconciledomain "issueops/internal/domain/issueopsreconcile"
 )
 
@@ -58,6 +59,9 @@ func (s Service) Reconcile(ctx context.Context, stateRoot string, req issueops.E
 	}
 	if req.Preview {
 		result.Code = decision.PreviewCode
+		if decision.Route == reconciledomain.RouteRemotePR {
+			result.NextCommand = issueopsdomain.ReconcileConfirmCommand(record.ID, actor, req.CWD)
+		}
 		return result, nil
 	}
 	return dispatchReconcileRoute(ctx, stateRoot, req, deps, record, decision, result)

@@ -61,6 +61,11 @@ func executionNextCommand(value any) (string, uint64, func(string) any) {
 			result.NextCommand = command
 			return result
 		}
+	case issueopscontract.ExecutionReconcileResult:
+		return result.NextCommand, result.Execution.Lease.Generation, func(command string) any {
+			result.NextCommand = command
+			return result
+		}
 	case issueopscontract.ExecutionReplaceResult:
 		return result.NextCommand, result.Execution.Lease.Generation, func(command string) any {
 			result.NextCommand = command

@@ -13689,6 +13689,7 @@
       "owner": "domain",
       "task": "T20",
       "symbols": [
+        "func ReconcileConfirmCommand",
         "func ReplacementClaimCommand",
         "func ReplacementClaimCommandAs",
         "func ReplacementFinalizeCommand",

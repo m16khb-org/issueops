@@ -62,6 +62,13 @@ func ReplacementFinalizeCommand(id string, generation uint64, quiescenceFingerpr
 		replacementActorFlags(actor, cwd) + " --confirm"
 }
 
+// ReconcileConfirmCommand is the confirm step a reconcile preview hands back,
+// with the previewing actor's flags (QA: the preview gave no command and the
+// agent had to find --confirm in the docs).
+func ReconcileConfirmCommand(id string, actor issueops.NativeActor, cwd string) string {
+	return "issueops execution reconcile --id " + quoteReplacementArg(id) + " --confirm" + replacementActorFlags(actor, cwd) + " --json"
+}
+
 func replacementActorFlags(actor issueops.NativeActor, cwd string) string {
 	flags := " --host " + quoteReplacementArg(actor.Host) +
 		" --session-id " + quoteReplacementArg(actor.SessionID)

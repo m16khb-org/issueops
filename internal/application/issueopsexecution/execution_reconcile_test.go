@@ -83,6 +83,10 @@ func TestReconcilePreviewCodes(t *testing.T) {
 			if tc.kind == "" && !got.Reconciled {
 				t.Fatal("no pending intent must report reconciled")
 			}
+			// Only a reconcilable intent hands back its --confirm step.
+			if wantNext := tc.kind == "remote_pr_create"; wantNext != strings.Contains(got.NextCommand, "execution reconcile --id 'cycle' --confirm ") {
+				t.Fatalf("next_command=%q", got.NextCommand)
+			}
 		})
 	}
 }
