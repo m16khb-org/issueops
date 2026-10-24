@@ -697,9 +697,6 @@ func warnings(in Input) []string {
 			} else {
 				warning += "the takeover chain reaches a released lease (stop after --finalize; do not claim)"
 			}
-			// Probed: git still lists the deleted worktree, so abandon refused
-			// with branch_checked_out_elsewhere until it was pruned.
-			warning += " and git -C " + strings.TrimSpace(execution.Workspace.SourceRoot) + " worktree prune"
 		}
 		out = append(out, warning)
 	}

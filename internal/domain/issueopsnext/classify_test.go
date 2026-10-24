@@ -585,7 +585,7 @@ func TestClassifyIssueStageFallsBackToIntentContractWithoutMissingGates(t *testi
 }
 
 func TestClassifyWarningsPassThroughLocalAndWorktreeObservations(t *testing.T) {
-	const missingRoot = "canonical worktree is missing at /repo.worktrees/12-test; issueops does not rebuild it (the sealed plan artifacts lived there): restore that directory, or end the cycle with exits.abandon_command after releasing the lease (exits.pause_command, --cwd still that path) and git -C /repo worktree prune"
+	const missingRoot = "canonical worktree is missing at /repo.worktrees/12-test; issueops does not rebuild it (the sealed plan artifacts lived there): restore that directory, or end the cycle with exits.abandon_command after releasing the lease (exits.pause_command, --cwd still that path)"
 	const missingAfterCompletion = "canonical worktree is missing at /repo.worktrees/12-test"
 	withHead := func(finalHead, observed string) Input {
 		in := withSelfHolder(baseRecord(issueopsnextcontract.PhaseImplement))
@@ -927,7 +927,7 @@ func TestClassifyMissingWorktreeWithoutHolderNamesTheTakeoverWay(t *testing.T) {
 	in.WorktreePresent = false
 	got := classifyTemplate(in)
 	if got.Exits.PauseCommand != "" || !slices.ContainsFunc(got.Warnings, func(w string) bool {
-		return strings.HasSuffix(w, "after the takeover chain reaches a released lease (stop after --finalize; do not claim) and git -C /repo worktree prune")
+		return strings.HasSuffix(w, "after the takeover chain reaches a released lease (stop after --finalize; do not claim)")
 	}) {
 		t.Fatalf("pause=%q warnings=%q", got.Exits.PauseCommand, got.Warnings)
 	}
