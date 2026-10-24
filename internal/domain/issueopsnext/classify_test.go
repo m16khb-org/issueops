@@ -877,4 +877,7 @@ func TestFinishRendersClaimFlagsForTheHolderAtTheWorktree(t *testing.T) {
 		!strings.HasSuffix(got.NextCommand, "--session-pid 7 --cwd "+root) || got.NextCommandKind != issueopsnextcontract.NextCommandKindTemplate {
 		t.Fatalf("stage=%q kind=%q cwd=%q command=%q", got.Stage.Key, got.NextCommandKind, askedCWD, got.NextCommand)
 	}
+	if want := "issueops execution release --id io-test --generation 1 --host claude --session-id s-1 --session-pid 7 --cwd " + root; got.Exits.PauseCommand != want {
+		t.Fatalf("pause command = %q, want %q", got.Exits.PauseCommand, want)
+	}
 }
