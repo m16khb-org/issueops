@@ -45,7 +45,7 @@ var workspaceScopedTools = map[string]bool{
 // minimal: the field names say what cwd and workspace_root are, and refusals
 // name the expected paths.
 var authorityFieldDescriptions = map[string]string{
-	authorityFileField: "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
+	authorityFileField: "HTTP only: from `issueops mcp authorize`; omit over stdio.",
 	workspaceRootField: "Absolute workspace root.",
 	cwdField:           "",
 }

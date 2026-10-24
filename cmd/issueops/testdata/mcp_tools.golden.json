@@ -8,7 +8,7 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
+          "description": "HTTP only: from `issueops mcp authorize`; omit over stdio.",
           "type": "string"
         },
         "cwd": {
@@ -272,7 +272,7 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
+          "description": "HTTP only: from `issueops mcp authorize`; omit over stdio.",
           "type": "string"
         },
         "cwd": {
@@ -411,7 +411,7 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
+          "description": "HTTP only: from `issueops mcp authorize`; omit over stdio.",
           "type": "string"
         },
         "cwd": {
@@ -443,7 +443,7 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
+          "description": "HTTP only: from `issueops mcp authorize`; omit over stdio.",
           "type": "string"
         },
         "cwd": {
@@ -471,7 +471,7 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
+          "description": "HTTP only: from `issueops mcp authorize`; omit over stdio.",
           "type": "string"
         },
         "cwd": {
@@ -506,7 +506,7 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
+          "description": "HTTP only: from `issueops mcp authorize`; omit over stdio.",
           "type": "string"
         },
         "confirm": {
@@ -574,7 +574,7 @@
           "type": "array"
         },
         "authority_file": {
-          "description": "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
+          "description": "HTTP only: from `issueops mcp authorize`; omit over stdio.",
           "type": "string"
         },
         "consequences": {
@@ -650,7 +650,7 @@
           "type": "boolean"
         },
         "authority_file": {
-          "description": "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
+          "description": "HTTP only: from `issueops mcp authorize`; omit over stdio.",
           "type": "string"
         },
         "cwd": {
@@ -701,7 +701,7 @@
           "type": "boolean"
         },
         "authority_file": {
-          "description": "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
+          "description": "HTTP only: from `issueops mcp authorize`; omit over stdio.",
           "type": "string"
         },
         "cwd": {
@@ -747,7 +747,7 @@
           "type": "string"
         },
         "authority_file": {
-          "description": "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
+          "description": "HTTP only: from `issueops mcp authorize`; omit over stdio.",
           "type": "string"
         },
         "cwd": {
@@ -815,7 +815,7 @@
           "type": "string"
         },
         "authority_file": {
-          "description": "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
+          "description": "HTTP only: from `issueops mcp authorize`; omit over stdio.",
           "type": "string"
         },
         "cwd": {
@@ -995,7 +995,7 @@
           "type": "string"
         },
         "authority_file": {
-          "description": "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
+          "description": "HTTP only: from `issueops mcp authorize`; omit over stdio.",
           "type": "string"
         },
         "claim_current_token": {
@@ -1110,7 +1110,7 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
+          "description": "HTTP only: from `issueops mcp authorize`; omit over stdio.",
           "type": "string"
         },
         "cwd": {
@@ -1162,7 +1162,7 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
+          "description": "HTTP only: from `issueops mcp authorize`; omit over stdio.",
           "type": "string"
         },
         "cwd": {
@@ -1206,7 +1206,7 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
+          "description": "HTTP only: from `issueops mcp authorize`; omit over stdio.",
           "type": "string"
         },
         "cwd": {
@@ -1237,7 +1237,7 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
+          "description": "HTTP only: from `issueops mcp authorize`; omit over stdio.",
           "type": "string"
         },
         "cwd": {
@@ -1275,7 +1275,7 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
+          "description": "HTTP only: from `issueops mcp authorize`; omit over stdio.",
           "type": "string"
         },
         "cwd": {
@@ -1326,7 +1326,7 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
+          "description": "HTTP only: from `issueops mcp authorize`; omit over stdio.",
           "type": "string"
         },
         "cwd": {
@@ -1358,7 +1358,7 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
+          "description": "HTTP only: from `issueops mcp authorize`; omit over stdio.",
           "type": "string"
         },
         "cwd": {
@@ -1391,7 +1391,7 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
+          "description": "HTTP only: from `issueops mcp authorize`; omit over stdio.",
           "type": "string"
         },
         "cwd": {
@@ -1433,7 +1433,7 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
+          "description": "HTTP only: from `issueops mcp authorize`; omit over stdio.",
           "type": "string"
         },
         "cwd": {
@@ -1476,7 +1476,7 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
+          "description": "HTTP only: from `issueops mcp authorize`; omit over stdio.",
           "type": "string"
         },
         "cwd": {
@@ -1874,7 +1874,7 @@
           "type": "array"
         },
         "authority_file": {
-          "description": "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
+          "description": "HTTP only: from `issueops mcp authorize`; omit over stdio.",
           "type": "string"
         },
         "cwd": {
@@ -1981,7 +1981,7 @@
           "type": "string"
         },
         "authority_file": {
-          "description": "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
+          "description": "HTTP only: from `issueops mcp authorize`; omit over stdio.",
           "type": "string"
         },
         "cwd": {
@@ -2038,7 +2038,7 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
+          "description": "HTTP only: from `issueops mcp authorize`; omit over stdio.",
           "type": "string"
         },
         "cwd": {
@@ -2069,7 +2069,7 @@
     "inputSchema": {
       "properties": {
         "authority_file": {
-          "description": "From `issueops mcp authorize`; required over HTTP, not needed over stdio.",
+          "description": "HTTP only: from `issueops mcp authorize`; omit over stdio.",
           "type": "string"
         },
         "command_argv": {
