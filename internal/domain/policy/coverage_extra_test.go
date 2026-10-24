@@ -145,13 +145,23 @@ func TestValidateRemoteCreateInputsRejectsSecretsInEveryField(t *testing.T) {
 	}
 	for _, tt := range tests {
 		err := ValidateRemoteCreateInputs("pr", tt.title, tt.body, tt.labels, tt.assignees)
-		want := "pr " + tt.field + " contains secret-like content"
-		if err == nil || err.Error() != want {
+		want := "pr " + tt.field + " contains secret-like content (line 1: an assignment such as token="
+		if err == nil || !strings.HasPrefix(err.Error(), want) {
 			t.Errorf("field %s: err=%v want %q", tt.field, err, want)
 		}
 		if err != nil && strings.Contains(err.Error(), "abc123") {
 			t.Errorf("error leaks secret: %v", err)
 		}
+	}
+}
+
+// The refusal names the line and the rule, never the value, so the author
+// rewrites one line instead of guessing.
+func TestValidateRemoteCreateInputsNamesTheLineAndRule(t *testing.T) {
+	body := "## 문제\n토큰이 ps에 보인다.\n\n재현: ./fetch.sh ghp_abcdefghijklmnopqrstuvwxyz0123456789\n"
+	err := ValidateRemoteCreateInputs("issue create", "t", body, nil, nil)
+	if err == nil || !strings.Contains(err.Error(), "(line 4: a provider token format") || strings.Contains(err.Error(), "ghp_abc") {
+		t.Fatalf("err=%v", err)
 	}
 }
 

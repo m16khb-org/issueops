@@ -15230,7 +15230,8 @@
       "owner": "domain",
       "task": "T07",
       "symbols": [
-        "func ValidateRemoteCreateInputs"
+        "func ValidateRemoteCreateInputs",
+        "func secretLikeLocation"
       ]
     },
     {
