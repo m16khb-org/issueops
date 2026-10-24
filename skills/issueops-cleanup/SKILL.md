@@ -43,7 +43,7 @@ recording belongs to this stage. `quality inspect` is not a semantic skill runne
 5. Dirty worktree, branch mismatch, unreadable provider state
    or pending external intent blocks cleanup. Occupants do NOT block: preview
    lists `workspace_processes` (pid, command, start time, descendant/collateral
-   counts); typed apply stops them.
+   counts); typed apply stops them. An omitted `workspace_processes` means none.
    Requester occupancy still blocks: `requester_occupies_worktree` includes
    ancestors. `worktree_is_source_checkout` also
    blocks. Use a different terminal/worktree, never manual process killing.
@@ -215,7 +215,7 @@ If a prior typed apply removed the worktree but retained the record (`worktree_p
 Require:
 
 - `ok: true`;
-- an empty `missing` list;
+- an empty `missing` list (the field is omitted when empty);
 - a non-empty `fingerprint`;
 - `worktree_path` and `branch` equal the targets the user confirmed;
 - when the worktree remains present, its live HEAD OID and local branch OID

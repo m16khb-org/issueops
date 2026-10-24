@@ -65,3 +65,13 @@ func TestCheckArgvRejectsLeadingEnvironmentAssignment(t *testing.T) {
 		t.Fatalf("a flag with = in a later argument is not an assignment: %q", err)
 	}
 }
+
+// A prefix followed by punctuation does not match; the refusal names the line
+// and the two forms that do.
+func TestDecideCheckNamesALinePrefixThatIsNotFollowedByABlank(t *testing.T) {
+	got := DecideCheck("PASS", "PASS: --lower rejects extra arguments\n", "", 0, false)
+	want := `expect not matched: PASS: --lower rejects extra arguments (the line "PASS: --lower rejects extra arguments" starts with EXPECT but a prefix matches only when a space or tab follows; write the whole line or /^PASS/)`
+	if got.Passed || got.Error != want {
+		t.Fatalf("decision = %+v", got)
+	}
+}

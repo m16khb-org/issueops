@@ -27,7 +27,9 @@ func ApplyGateLedgers(ready model.IssueOpsReadiness, root, issueNumber string, p
 		for _, file := range skipped {
 			relative = append(relative, cycledomain.GateLedgerRelativePath(root, file))
 		}
-		warnings = append(warnings, fmt.Sprintf("gates_skipped:%d (%s)", len(skipped), strings.Join(relative, ", ")))
+		// QA: the bare count read as a problem to fix; it is other issues'
+		// ledgers, which this cycle's readiness does not judge.
+		warnings = append(warnings, fmt.Sprintf("gates_skipped:%d (%s): other issues' ledgers, not judged for this cycle; no action needed", len(skipped), strings.Join(relative, ", ")))
 	}
 	for _, file := range files {
 		relative := cycledomain.GateLedgerRelativePath(root, file)
