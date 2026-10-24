@@ -61,6 +61,10 @@ func DecideCheck(expect, stdout, stderr string, exitCode int, timedOut bool) Che
 			// QA: `EXPECT: PASS` against "PASS: ..." read as a substring
 			// match; a prefix only counts when a blank follows it.
 			decision.Error += fmt.Sprintf(" (the line %q starts with EXPECT but a prefix matches only when a space or tab follows; write the whole line or /^%s/)", line, regexp.QuoteMeta(trimmed))
+		} else if line, ok := lineContaining(output, trimmed); ok && trimmed != "" && !strings.HasPrefix(trimmed, "/") {
+			// QA: `EXPECT: mod` against grep -n's "5:Operations: ... mod"
+			// was read as a substring match.
+			decision.Error += fmt.Sprintf(" (the line %q contains EXPECT mid-line, but a literal EXPECT matches a whole line or a line prefix followed by a space; write /%s/ to match anywhere)", line, regexp.QuoteMeta(trimmed))
 		}
 	default:
 		decision.Passed = true
@@ -71,6 +75,15 @@ func DecideCheck(expect, stdout, stderr string, exitCode int, timedOut bool) Che
 func lineStartingWith(output, prefix string) (string, bool) {
 	for line := range strings.SplitSeq(strings.ReplaceAll(output, "\r\n", "\n"), "\n") {
 		if line = strings.TrimSpace(line); strings.HasPrefix(line, prefix) {
+			return line, true
+		}
+	}
+	return "", false
+}
+
+func lineContaining(output, text string) (string, bool) {
+	for line := range strings.SplitSeq(strings.ReplaceAll(output, "\r\n", "\n"), "\n") {
+		if line = strings.TrimSpace(line); strings.Contains(line, text) {
 			return line, true
 		}
 	}

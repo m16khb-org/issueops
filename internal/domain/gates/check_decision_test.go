@@ -75,3 +75,13 @@ func TestDecideCheckNamesALinePrefixThatIsNotFollowedByABlank(t *testing.T) {
 		t.Fatalf("decision = %+v", got)
 	}
 }
+
+// A literal found mid-line (grep -n prefixes the line number) does not match;
+// the refusal names the line and the regex form that does.
+func TestDecideCheckNamesALineThatContainsExpectMidLine(t *testing.T) {
+	got := DecideCheck("mod", "5:Operations: add, div, mod\n", "", 0, false)
+	want := `expect not matched: 5:Operations: add, div, mod (the line "5:Operations: add, div, mod" contains EXPECT mid-line, but a literal EXPECT matches a whole line or a line prefix followed by a space; write /mod/ to match anywhere)`
+	if got.Passed || got.Error != want {
+		t.Fatalf("decision = %+v", got)
+	}
+}
