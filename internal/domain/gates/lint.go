@@ -78,11 +78,20 @@ func PlanLintCandidates(file, text string) (candidates []LintCandidate, unparsed
 // 실행되지 않으므로 뺀다.
 func LedgerLintCandidates(file, text string) []LintCandidate {
 	var candidates []LintCandidate
+	seen := map[string]int{}
 	for _, gate := range Parse(text).Gates {
+		var problems []string
+		// gates check, abandon, and evidence address a gate by its ID, so a
+		// repeated ID leaves one of the gates unreachable.
+		if first, dup := seen[gate.ID]; dup && gate.ID != "" {
+			problems = append(problems, fmt.Sprintf("gate ID %s repeats line %d: gates are addressed by ID, so one of them is unreachable; renumber", gate.ID, first+1))
+		} else {
+			seen[gate.ID] = gate.CheckboxLine
+		}
 		if gate.Abandoned {
 			continue
 		}
-		candidates = append(candidates, LintCandidate{Source: file, Gate: gate})
+		candidates = append(candidates, LintCandidate{Source: file, Gate: gate, Problems: problems})
 	}
 	return candidates
 }
@@ -120,6 +129,9 @@ func LintStatic(candidate LintCandidate) (result model.LintGate, argv []string) 
 	switch _, isRegex, err := expectRegex(expect); {
 	case isRegex && err != nil:
 		result.Problems = append(result.Problems, fmt.Sprintf("EXPECT regex does not compile (RE2), so it never matches: %v", err))
+	case isRegex && strings.Contains(expect, `\n\z`):
+		// DecideCheck trims trailing newlines before matching.
+		result.Problems = append(result.Problems, `EXPECT regex requires a newline before \z, but output is matched with trailing newlines trimmed, so it never matches; drop the \n before \z`)
 	case expect == "":
 		result.Warnings = append(result.Warnings, "no EXPECT: exit code 0 alone marks this gate met")
 	case !isRegex && strings.HasPrefix(expect, "/"):

@@ -111,3 +111,29 @@ func TestDeniedMessageNamesTheShellInterpreterRemedy(t *testing.T) {
 		t.Fatalf("workspace denial: %q", got)
 	}
 }
+
+// An agent's edit left two G2 gates; lint passed both, and check/abandon,
+// which address gates by ID, could reach only one.
+func TestLedgerLintCandidatesFlagsRepeatedGateID(t *testing.T) {
+	text := "- [ ] G1: a\n  CHECK: echo a\n- [ ] G2: b\n  CHECK: echo b\n- [ ] G2: c\n  CHECK: echo c\n"
+	got := LedgerLintCandidates("gates.md", text)
+	if len(got) != 3 || len(got[1].Problems) != 0 || len(got[2].Problems) != 1 || !strings.Contains(got[2].Problems[0], "gate ID G2 repeats line 3") {
+		t.Fatalf("candidates = %+v", got)
+	}
+	if result, argv := LintStatic(got[2]); argv != nil || len(result.Problems) != 1 {
+		t.Fatalf("lint result = %+v argv=%v", result, argv)
+	}
+}
+
+// `/\Ahello\n\z/` linted clean and then never matched: check trims trailing
+// newlines before matching.
+func TestLintStaticFlagsNewlineBeforeEndAnchor(t *testing.T) {
+	gate := Gate{ID: "G1", CheckCmd: "./hello.sh", Expect: `/\Ahello\n\z/`}
+	if DecideCheck(gate.Expect, "hello\n", "", 0, false).Passed {
+		t.Fatal("premise: the pattern matches trimmed output")
+	}
+	result, _ := LintStatic(LintCandidate{Source: "g.md", Gate: gate})
+	if len(result.Problems) != 1 || !strings.Contains(result.Problems[0], `drop the \n before \z`) {
+		t.Fatalf("problems = %q", result.Problems)
+	}
+}

@@ -185,6 +185,9 @@ issueops remote render-template --kind issue --template "$TEMPLATE" \
   --provider "$PROVIDER" --title "$TITLE" --json
 ```
 
+child 본문은 `--kind child --template child_task`로 렌더한다(`--kind issue`는 child_task를 거부한다).
+빈 골격의 `ok:false`는 아직 채우지 않은 필수 필드 목록이며 실패가 아니다.
+
 로그는 secret을 제거한 짧은 code block으로만 붙인다. 긴 로그 전체나
 스크린샷 대신 재현에 필요한 줄과 파일·명령을 적는다. 해시, 커밋 SHA 전문,
 라벨 점수, plan 원문·repo-local plan 경로·`Plan Link`·`TBD`는 본문에 넣지 않는다.

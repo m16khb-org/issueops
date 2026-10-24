@@ -23,7 +23,7 @@ child는 parent URL이 record에 연결되고 umbrella branch gate가 통과한 
 ```bash
 issueops remote create-child --id "$ISSUEOPS_ID" --title "$CHILD_TITLE" \
   --template child_task --body-file "$CHILD_BODY" \
-  --label "$LABEL" --assignee "$ASSIGNEE" $ACTOR_FLAGS --json
+  --label "$LABEL" --assignee "$ASSIGNEE" $RECORD_ACTOR_FLAGS --json
 ```
 
 같은 본문으로 의도적인 새 child를 만들려면 ID를 한 번 생성해 저장하고 최초 요청과

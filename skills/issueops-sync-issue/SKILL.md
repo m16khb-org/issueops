@@ -65,11 +65,12 @@ flowchart LR
 
 ## drift를 읽는 법
 
-preview는 `--confirm` 없이 실행하며 provider를 변경하지 않는다.
+preview는 `--confirm` 없이 실행하며 provider를 변경하지 않는다. 그래도 lease holder만
+실행할 수 있으므로 actor 플래그를 붙인다.
 
 ```bash
 issueops remote sync-issue \
-  --id "$ISSUEOPS_ID" --body-file "$BODY_FILE" --json
+  --id "$ISSUEOPS_ID" --body-file "$BODY_FILE" $RECORD_ACTOR_FLAGS --json
 ```
 
 | `drift` | 뜻 | 다음 행동 |
@@ -135,7 +136,7 @@ preview → 본문 재작성 → 같은 sha로 confirm 순서를 지킨다.
 ```bash
 issueops remote sync-issue \
   --id "$ISSUEOPS_ID" --provider "$PROVIDER" \
-  --template implementation_task --body-file "$BODY_FILE" --json
+  --template implementation_task --body-file "$BODY_FILE" $RECORD_ACTOR_FLAGS --json
 ```
 
 preview가 돌려준 `expected_body_sha256`을 그대로 넘겨 확정한다.
