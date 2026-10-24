@@ -109,3 +109,16 @@ func TestSummarizeCountsAndComplete(t *testing.T) {
 		t.Fatalf("met+abandoned must be complete: %+v", allResolved)
 	}
 }
+
+// A passing gate's evidence shows the line its EXPECT matched, not only the
+// output tail (QA: "PASS | ok pkg" for EXPECT /--- PASS: TestReverse/).
+func TestDecideCheckEvidenceShowsTheMatchedLine(t *testing.T) {
+	out := "=== RUN   TestReverse\n--- PASS: TestReverse (0.00s)\nPASS\nok  \texample.com/hello/strutil\t0.079s\n"
+	got := DecideCheck("/--- PASS: TestReverse/", out, "", 0, false)
+	if !got.Passed || got.Evidence != "--- PASS: TestReverse (0.00s) | PASS | ok  \texample.com/hello/strutil\t0.079s" {
+		t.Fatalf("evidence %q", got.Evidence)
+	}
+	if tail := DecideCheck("PASS", out, "", 0, false); tail.Evidence != "PASS | ok  \texample.com/hello/strutil\t0.079s" {
+		t.Fatalf("match already in the tail: %q", tail.Evidence)
+	}
+}

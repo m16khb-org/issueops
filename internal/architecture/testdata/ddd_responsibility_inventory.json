@@ -12635,6 +12635,7 @@
         "func ShouldRun",
         "func lineContaining",
         "func lineStartingWith",
+        "func matchedLine",
         "type CheckDecision"
       ]
     },

@@ -68,6 +68,11 @@ func DecideCheck(expect, stdout, stderr string, exitCode int, timedOut bool) Che
 		}
 	default:
 		decision.Passed = true
+		// QA: EXPECT /--- PASS: TestReverse/ passed with evidence "PASS | ok
+		// pkg 0.079s": a reader of the ledger could not see what matched.
+		if line, ok := matchedLine(expect, output); ok && !strings.Contains(evidence, line) {
+			decision.Evidence = EvidenceTail(line+"\n"+evidence, 200)
+		}
 	}
 	return decision
 }
@@ -84,6 +89,38 @@ func lineStartingWith(output, prefix string) (string, bool) {
 func lineContaining(output, text string) (string, bool) {
 	for line := range strings.SplitSeq(strings.ReplaceAll(output, "\r\n", "\n"), "\n") {
 		if line = strings.TrimSpace(line); strings.Contains(line, text) {
+			return line, true
+		}
+	}
+	return "", false
+}
+
+// matchedLine returns the trimmed output line an EXPECT matched (the line
+// holding a regex's first match, or the literal's line).
+func matchedLine(expect, output string) (string, bool) {
+	expect = strings.TrimSpace(expect)
+	if expect == "" {
+		return "", false
+	}
+	output = strings.ReplaceAll(output, "\r\n", "\n")
+	if re, isRegex, err := expectRegex(expect); isRegex {
+		if err != nil {
+			return "", false
+		}
+		loc := re.FindStringIndex(output)
+		if loc == nil {
+			return "", false
+		}
+		start := strings.LastIndex(output[:loc[0]], "\n") + 1
+		end := len(output)
+		if i := strings.Index(output[loc[0]:], "\n"); i >= 0 {
+			end = loc[0] + i
+		}
+		line := strings.TrimSpace(output[start:end])
+		return line, line != ""
+	}
+	for line := range strings.SplitSeq(output, "\n") {
+		if line = strings.TrimSpace(line); ExpectMatches(expect, line) {
 			return line, true
 		}
 	}
