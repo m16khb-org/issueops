@@ -3,6 +3,7 @@ package issueops
 import (
 	"context"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	authorityapp "issueops/internal/application/authority"
@@ -63,17 +64,35 @@ func samePath(a, b string) bool {
 	if err != nil {
 		return false
 	}
-	if resolved, resolveErr := filepath.EvalSymlinks(left); resolveErr == nil {
-		left = resolved
-	}
 	right, err := filepath.Abs(strings.TrimSpace(b))
 	if err != nil {
 		return false
 	}
-	if resolved, resolveErr := filepath.EvalSymlinks(right); resolveErr == nil {
-		right = resolved
+	return resolveExistingPrefix(left) == resolveExistingPrefix(right)
+}
+
+// resolveExistingPrefix resolves symlinks in the longest existing prefix of an
+// absolute path and keeps the missing rest. A deleted worktree is still listed
+// by git under its resolved spelling (/private/tmp/...) while the record keeps
+// /tmp/...; resolving only existing paths made the two differ, and abandon
+// refused with branch_checked_out_elsewhere for the cycle's own worktree.
+func resolveExistingPrefix(path string) string {
+	path = filepath.Clean(path)
+	var missing []string
+	for current := path; ; {
+		if resolved, err := filepath.EvalSymlinks(current); err == nil {
+			for _, name := range slices.Backward(missing) {
+				resolved = filepath.Join(resolved, name)
+			}
+			return resolved
+		}
+		parent := filepath.Dir(current)
+		if parent == current {
+			return path
+		}
+		missing = append(missing, filepath.Base(current))
+		current = parent
 	}
-	return filepath.Clean(left) == filepath.Clean(right)
 }
 
 func inspectNativeProcessReceiptForRollover(

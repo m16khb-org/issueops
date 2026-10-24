@@ -4506,6 +4506,7 @@
         "func NativeProcessInspector.Arguments",
         "func NativeProcessInspector.Inspect",
         "func inspectNativeProcessReceiptForRollover",
+        "func resolveExistingPrefix",
         "func sameNativeActor",
         "func sameNativeActorIdentity",
         "func sameNativeProcessReceipt",
