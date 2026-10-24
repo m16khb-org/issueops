@@ -24,7 +24,7 @@ func TestRecordImplementationReviewObservesBeforeLockAndWritesOnce(t *testing.T)
 		Now: func() string { return at },
 	}
 	out, err := RecordImplementationReview(store, "state", record.ID, model.IssueOpsImplementationReviewRequest{
-		Verdict: "PASS", Findings: []string{" finding "}, Evidence: []string{" test "}, ReviewerHost: " CODEX ",
+		Verdict: "PASS", Findings: []string{" finding "}, Evidence: []string{" test "}, ReviewerHost: " CODEX ", ReviewerContext: " Inline ",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -34,8 +34,25 @@ func TestRecordImplementationReviewObservesBeforeLockAndWritesOnce(t *testing.T)
 	}
 	if out.ImplementationReview == nil || out.ImplementationReview.Verdict != "pass" ||
 		out.ImplementationReview.ReviewedFingerprint != "fingerprint" || out.ImplementationReview.ReviewerHost != "codex" ||
+		out.ImplementationReview.ReviewerContext != "inline" ||
 		out.UpdatedAt != at {
 		t.Fatalf("recorded review = %+v", out)
+	}
+}
+
+// Plan reviews record how they ran; implementation reviews could not, so
+// agents told to review inline wrote it into finding text. An unknown context
+// is refused before any read, like the plan reviews.
+func TestRecordImplementationReviewRefusesUnknownReviewerContext(t *testing.T) {
+	store := reviewport.EvidenceReviewStore{Read: func(_, _ string) (model.IssueOpsRecord, error) {
+		t.Fatal("refusal must come before the read")
+		return model.IssueOpsRecord{}, nil
+	}}
+	_, err := RecordImplementationReview(store, "state", "io-review", model.IssueOpsImplementationReviewRequest{
+		Verdict: "pass", Findings: []string{"f"}, Evidence: []string{"e"}, ReviewerContext: "pair",
+	})
+	if err == nil || !strings.Contains(err.Error(), "subagent or inline") {
+		t.Fatalf("err = %v", err)
 	}
 }
 

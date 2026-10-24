@@ -334,7 +334,7 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 		booleans: []string{"--json", "--example"},
 	},
 	"implementation-review record": {
-		values:     []string{"--id", "--verdict", "--finding", "--evidence", "--reviewer-host", "--reviewer-model", "--reviewer-effort", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
+		values:     []string{"--id", "--verdict", "--finding", "--evidence", "--reviewer-context", "--reviewer-host", "--reviewer-model", "--reviewer-effort", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		repeatable: []string{"--finding", "--evidence"},
 		booleans:   []string{"--json"},
 	},

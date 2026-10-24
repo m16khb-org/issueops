@@ -458,7 +458,7 @@ func (cli command) runIssueOpsArtifactStage(args []string) error {
 // 기록이며 게이트는 verdict pass + 실질 내용만 본다(설계 v5 WS5).
 func (cli command) runIssueOpsImplementationReview(args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
-		fmt.Println("Usage: issueops implementation-review record --id ID --verdict pass|revise|stop --finding TEXT... --evidence TEXT... [--reviewer-host codex|claude|omo|omp|opencode] [--reviewer-model MODEL] [--reviewer-effort EFFORT] [--json]")
+		fmt.Println("Usage: issueops implementation-review record --id ID --verdict pass|revise|stop --finding TEXT... --evidence TEXT... [--reviewer-context subagent|inline] [--reviewer-host codex|claude|omo|omp|opencode] [--reviewer-model MODEL] [--reviewer-effort EFFORT] [--json]")
 		return nil
 	}
 	if args[0] != "record" {
@@ -473,6 +473,7 @@ func (cli command) runIssueOpsImplementationReview(args []string) error {
 	reviewerHost := fs.String("reviewer-host", "", "reviewer host (audit only)")
 	reviewerModel := fs.String("reviewer-model", "", "reviewer model (audit only)")
 	reviewerEffort := fs.String("reviewer-effort", "", "reviewer effort (audit only)")
+	reviewerContext := fs.String("reviewer-context", "", "how the review ran: subagent|inline (audit only)")
 	actor := cli.addIssueOpsActorFlags(fs)
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
@@ -480,7 +481,7 @@ func (cli command) runIssueOpsImplementationReview(args []string) error {
 	}
 	record, err := cli.Runtime.RecordIssueOpsImplementationReviewWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsImplementationReviewRequest{
 		Verdict: *verdict, Findings: findings, Evidence: evidence,
-		ReviewerHost: *reviewerHost, ReviewerModel: *reviewerModel, ReviewerEffort: *reviewerEffort,
+		ReviewerHost: *reviewerHost, ReviewerModel: *reviewerModel, ReviewerEffort: *reviewerEffort, ReviewerContext: *reviewerContext,
 	}, actor.actor())
 	return printIssueOpsResult(record, *jsonOut, err)
 }

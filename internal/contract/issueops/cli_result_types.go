@@ -3,12 +3,13 @@ package issueops
 
 // IssueOpsImplementationReviewRequest는 구현 diff에 대한 architecture-review 리뷰 기록이다.
 type IssueOpsImplementationReviewRequest struct {
-	Verdict        string
-	Findings       []string
-	Evidence       []string
-	ReviewerHost   string
-	ReviewerModel  string
-	ReviewerEffort string
+	Verdict         string
+	Findings        []string
+	Evidence        []string
+	ReviewerHost    string
+	ReviewerModel   string
+	ReviewerEffort  string
+	ReviewerContext string // subagent | inline, like the plan reviews (audit only)
 }
 
 // IssueOpsProjectDocsReviewRequest는 publication 직전 project-doc 반영 판정이다.

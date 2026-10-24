@@ -21,7 +21,7 @@ issueops devils-advocate review --id "$ISSUEOPS_ID" \
 
 # --target diff
 issueops implementation-review record --id "$ISSUEOPS_ID" \
-  --verdict pass --finding "<finding>" --evidence "<evidence>" \
+  --verdict pass --reviewer-context subagent --finding "<finding>" --evidence "<evidence>" \
   --reviewer-host "$HOST" --reviewer-model "$REVIEWER_MODEL" --reviewer-effort "$REVIEWER_EFFORT" \
   $RECORD_ACTOR_FLAGS --json
 ```

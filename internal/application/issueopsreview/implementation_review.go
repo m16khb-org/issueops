@@ -21,6 +21,10 @@ func RecordImplementationReview(store reviewport.EvidenceReviewStore, stateRoot,
 	if err := reviewdomain.ValidateImplementationReviewRecord(verdict, len(findings), len(evidence)); err != nil {
 		return model.IssueOpsRecord{OK: false}, err
 	}
+	reviewerContext := strings.ToLower(strings.TrimSpace(req.ReviewerContext))
+	if reviewerContext != "" && reviewerContext != "subagent" && reviewerContext != "inline" {
+		return model.IssueOpsRecord{OK: false}, fmt.Errorf("reviewer_context must be subagent or inline")
+	}
 	observed, err := store.Read(stateRoot, id)
 	if err != nil {
 		return model.IssueOpsRecord{OK: false}, err
@@ -48,6 +52,7 @@ func RecordImplementationReview(store reviewport.EvidenceReviewStore, stateRoot,
 			ReviewerHost:        strings.ToLower(strings.TrimSpace(req.ReviewerHost)),
 			ReviewerModel:       strings.TrimSpace(req.ReviewerModel),
 			ReviewerEffort:      strings.TrimSpace(req.ReviewerEffort),
+			ReviewerContext:     reviewerContext,
 			RecordedAt:          now,
 		}
 		current.UpdatedAt = now

@@ -395,6 +395,7 @@ type IssueOpsImplementationReview struct {
 	ReviewerHost        string `json:"reviewer_host,omitempty"`
 	ReviewerModel       string `json:"reviewer_model,omitempty"`
 	ReviewerEffort      string `json:"reviewer_effort,omitempty"`
+	ReviewerContext     string `json:"reviewer_context,omitempty"`
 	RecordedAt          string `json:"recorded_at"`
 }
 
