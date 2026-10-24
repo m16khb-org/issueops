@@ -249,11 +249,11 @@ func (c *Conformance) runConformanceLive(args []string) error {
 		return err
 	}
 	if os.Getenv("ISSUEOPS_TOOL_CONFORMANCE_LIVE") != "1" {
-		return fmt.Errorf("live_opt_in_required")
+		return fmt.Errorf("live_opt_in_required: live runs call real host models and spend their quota; set ISSUEOPS_TOOL_CONFORMANCE_LIVE=1 to run them")
 	}
 	baseline, err := c.evaluateBaselineReport()
 	if err != nil || !baseline.OK {
-		return fmt.Errorf("baseline_failed_before_live")
+		return fmt.Errorf("baseline_failed_before_live: run `issueops contract conformance baseline` and fix it before live runs")
 	}
 	if request.ResumeReport != "" {
 		previous, loadErr := loadBenchmarkReport(request.ResumeReport)
@@ -313,7 +313,7 @@ func parseLiveRequest(args []string) (LiveRequest, bool, error) {
 		MaxAttemptsPerCase: *maxAttempts, EvidenceDir: *evidenceDir,
 	}
 	if len(request.Hosts) == 0 {
-		return LiveRequest{}, false, fmt.Errorf("hosts_required")
+		return LiveRequest{}, false, fmt.Errorf("hosts_required: pass --hosts codex,claude,omp,omo,opencode (comma-separated subset)")
 	}
 	return request, *jsonOut, nil
 }
@@ -511,7 +511,7 @@ func (c *Conformance) runConformanceReplay(args []string) error {
 		return err
 	}
 	if *fixture == "" {
-		return fmt.Errorf("fixture_required")
+		return fmt.Errorf("fixture_required: pass --fixture <path to a regression fixture JSON>")
 	}
 	outcome, err := c.replayFixture(*fixture)
 	if err != nil {

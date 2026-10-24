@@ -66,7 +66,7 @@ func TestConformanceRunRejectsMissingAndUnknownSubcommandsAndDispatches(t *testi
 		"live":   "live_opt_in_required",
 	} {
 		t.Setenv("ISSUEOPS_TOOL_CONFORMANCE_LIVE", "")
-		if err := c.Run([]string{sub}); err == nil || err.Error() != want {
+		if err := c.Run([]string{sub}); err == nil || !strings.HasPrefix(err.Error(), want) {
 			t.Fatalf("%s: err=%v want %q", sub, err, want)
 		}
 	}
@@ -337,7 +337,7 @@ func TestRunConformanceLiveStopsOnEachFailureBeforeOrAfterProcess(t *testing.T) 
 		"baseline not ok": newC(false, nil, run(liveReport("r", true, tc.GateDeferHardening), nil)),
 		"baseline error":  newC(true, errors.New("x"), run(liveReport("r", true, tc.GateDeferHardening), nil)),
 	} {
-		if err := c.runConformanceLive(nil); err == nil || err.Error() != "baseline_failed_before_live" {
+		if err := c.runConformanceLive(nil); err == nil || !strings.HasPrefix(err.Error(), "baseline_failed_before_live: ") {
 			t.Fatalf("%s: err=%v", name, err)
 		}
 	}
@@ -665,7 +665,7 @@ func TestRunConformanceReplayReportsUnsafeOutcomesAndPrintsJSON(t *testing.T) {
 	if err := newC(okOutcome(), nil).runConformanceReplay([]string{"--nope"}); err == nil {
 		t.Fatal("unknown flag accepted")
 	}
-	if err := newC(okOutcome(), nil).runConformanceReplay(nil); err == nil || err.Error() != "fixture_required" {
+	if err := newC(okOutcome(), nil).runConformanceReplay(nil); err == nil || !strings.HasPrefix(err.Error(), "fixture_required: ") {
 		t.Fatalf("missing fixture: %v", err)
 	}
 	boom := errors.New("replay boom")

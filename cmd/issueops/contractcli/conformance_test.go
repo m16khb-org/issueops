@@ -3,6 +3,7 @@ package contractcli
 import (
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	fixturecontract "issueops/internal/contract/toolconformance"
+	"strings"
 
 	"context"
 	"crypto/sha256"
@@ -96,7 +97,7 @@ func TestConformanceLiveRequiresExplicitOptInBeforeInjectedProcess(t *testing.T)
 		processCalls++
 		return fixturecontract.BenchmarkReport{}, nil
 	}})
-	if err := runtime.runConformanceLive([]string{"--hosts", "codex", "--model", "codex=default", "--profile", "clean", "--target-completed", "1", "--max-attempts-per-case", "3"}); err == nil || err.Error() != "live_opt_in_required" {
+	if err := runtime.runConformanceLive([]string{"--hosts", "codex", "--model", "codex=default", "--profile", "clean", "--target-completed", "1", "--max-attempts-per-case", "3"}); err == nil || !strings.HasPrefix(err.Error(), "live_opt_in_required: ") {
 		t.Fatalf("err=%v", err)
 	}
 	if processCalls != 0 {
