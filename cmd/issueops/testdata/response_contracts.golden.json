@@ -1822,6 +1822,10 @@
           {
             "code": "summary_section_missing",
             "message": "첫 절이 ## 요약이고 비어 있지 않아야 합니다."
+          },
+          {
+            "code": "template_missing",
+            "message": "--confirm requires --template bug|feature|proposal|implementation_task; preview with it to check that template's required sections"
           }
         ],
         "ok": false,

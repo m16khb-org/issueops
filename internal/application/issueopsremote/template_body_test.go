@@ -69,3 +69,19 @@ func TestTemplateResolveEmptyIssuePreviewReportsFindingsButConfirmRefuses(t *tes
 		t.Fatalf("confirm must refuse an unreadable body: %+v err=%v", refused, err)
 	}
 }
+
+// An agent's untemplated preview of a body missing 배경/범위 came back clean,
+// then --confirm refused for the template and its required sections.
+func TestTemplateResolveUntemplatedIssuePreviewIsNotAPass(t *testing.T) {
+	resolver := NewTemplateBodyResolver(os.ReadFile)
+	preview, err := resolver.Resolve(TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, Title: "제목", Body: "## 요약\n\n짧은 요약입니다.\n"})
+	if err != nil || preview.Readability.OK || len(preview.Readability.Critical) == 0 || preview.Readability.Critical[len(preview.Readability.Critical)-1].Code != "template_missing" {
+		t.Fatalf("preview = %+v err=%v", preview.Readability, err)
+	}
+	child, err := resolver.Resolve(TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactChild, Title: "제목", Body: "## 요약\n\n짧은 요약입니다.\n"})
+	for _, finding := range child.Readability.Critical {
+		if err != nil || finding.Code == "template_missing" {
+			t.Fatalf("child kinds have a single template: %+v err=%v", child.Readability, err)
+		}
+	}
+}

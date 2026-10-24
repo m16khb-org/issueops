@@ -82,6 +82,27 @@ func TestEnvironmentChangedPathsSinceLeavesOutOnlyTheReport(t *testing.T) {
 	}
 }
 
+// An agent in the source checkout passed --verification-report as a worktree-
+// relative path with --cwd <worktree> and was refused: the path was resolved
+// against the process cwd. It names a file in the canonical worktree.
+func TestVerifyReportResolvesRelativePathAgainstTheWorktree(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "r"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "r", "report.md"), []byte("x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(t.TempDir())
+	got, err := NewEnvironment().VerifyReport(root, "r/report.md")
+	if err != nil || filepath.Base(got) != "report.md" {
+		t.Fatalf("got %q err=%v", got, err)
+	}
+	if _, err := NewEnvironment().VerifyReport(root, "../outside.md"); err == nil {
+		t.Fatal("a relative path escaping the worktree must be refused")
+	}
+}
+
 func mustCombinedOutput(t *testing.T, dir string, args ...string) string {
 	t.Helper()
 	out, err := exec.Command("git", append([]string{"-C", dir}, args...)...).CombinedOutput()

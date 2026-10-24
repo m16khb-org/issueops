@@ -45,7 +45,14 @@ func (Environment) VerifyReport(root, path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	path, err = filepath.Abs(strings.TrimSpace(path))
+	// A relative report path names a file in the canonical worktree (the
+	// request's --cwd, which completion requires to be that root), not in the
+	// process cwd: over MCP the process cwd is the service's.
+	path = strings.TrimSpace(path)
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(root, path)
+	}
+	path, err = filepath.Abs(path)
 	if err != nil {
 		return "", err
 	}

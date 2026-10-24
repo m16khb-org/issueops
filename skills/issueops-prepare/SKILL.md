@@ -103,15 +103,17 @@ glab api --method POST "projects/:id/repository/branches" \
   -f branch="$BRANCH" -f ref="$BASE_SHA"
 ```
 
-`--link-verified`는 provider가 링크를 돌려준 것을 본 뒤에만 붙인다. 링크를 만든 다음
-`issueops branch await-link --id "$ISSUEOPS_ID" --timeout 1m --json`으로 읽어 보고 `linked: true`일
-때만 기록한다. provider에 닿지 못하거나 링크가 보이지 않으면 붙이지 않고 그 사실을 보고하며 멈춘다.
+`--link-verified`는 provider가 링크를 돌려준 것을 본 뒤에만 붙인다. `await-link`는 봉인된
+브랜치를 읽으므로 먼저 `--link-verified` 없이 봉인하고, 링크를 읽어 `linked: true`일 때만
+같은 명령을 `--link-verified`로 다시 기록한다. provider에 닿지 못하거나 링크가 보이지 않으면
+붙이지 않고 그 사실을 보고하며 멈춘다.
 
 ```bash
 issueops branch prepare --id "$ISSUEOPS_ID" --provider "$PROVIDER" \
   --issue-url "$ISSUE_URL" --branch "$BRANCH" --base-branch "$BASE_BRANCH" \
-  --base-sha "$BASE_SHA" --link-verified $RECORD_ACTOR_FLAGS --json
-
+  --base-sha "$BASE_SHA" $RECORD_ACTOR_FLAGS --json
+issueops branch await-link --id "$ISSUEOPS_ID" --timeout 1m --json   # linked: true 확인
+issueops branch prepare ... --link-verified $RECORD_ACTOR_FLAGS --json  # 같은 인자 + --link-verified
 # link-issue가 이미 plan으로 올렸으면 생략한다(같은 phase로의 전이는 아무것도 바꾸지 않는다).
 issueops phase --id "$ISSUEOPS_ID" --to plan $RECORD_ACTOR_FLAGS --json
 ```

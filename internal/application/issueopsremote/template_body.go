@@ -92,6 +92,16 @@ func (s TemplateBodyResolver) Resolve(req TemplateBodyRequest) (ResolvedTemplate
 			Fields:   fields,
 		}),
 	}
+	if template == "" && req.Kind == artifacttemplate.IssueOpsArtifactIssue {
+		// Without a template the preview cannot check the sections the
+		// confirmed request will require, so a clean preview would be a
+		// false pass: say so where the preview reports readability.
+		resolved.Readability.OK = false
+		resolved.Readability.Critical = append(resolved.Readability.Critical, reportcontract.Finding{
+			Code:    "template_missing",
+			Message: "--confirm requires --template bug|feature|proposal|implementation_task; preview with it to check that template's required sections",
+		})
+	}
 	if req.Confirm && !resolved.Readability.OK {
 		return resolved, artifactreadability.RefusalError(resolved.Readability)
 	}
