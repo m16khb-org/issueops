@@ -119,7 +119,7 @@ reports. Unlike upstream unlazy, CHECK commands never run through a raw shell:
 they are tokenized to argv and executed through the command policy engine
 (workspace boundary, env allowlist — default `HOME,PATH`, secret redaction,
 timeout, audit log, shell interpreters denied except the syntax-only form
-`sh -n FILE...`). Exit codes follow unlazy: `0`
+`sh -n FILE` with exactly one file operand). Exit codes follow unlazy: `0`
 all met or abandoned, `1` unmet remain, `2` usage error.
 
 `gates init` no longer writes a shared root file by default. With no `--file`,

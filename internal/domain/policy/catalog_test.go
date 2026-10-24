@@ -31,7 +31,12 @@ func TestCatalogTreatsOnlyShellSyntaxChecksAsNonShell(t *testing.T) {
 	builtin := BuiltinCatalog()
 	for argv, shell := range map[string]bool{
 		"sh -n fetch.sh":          false,
-		"bash -n a.sh b.sh":       false,
+		"bash -n lint.sh":         false,
+		"bash -n a.sh b.sh":       true,
+		"sh -n +n x.sh":           true,
+		"bash -n +nc touch":       true,
+		"bash -n +o noexec x.sh":  true,
+		"sh -n +x.sh":             true,
 		"sh fetch.sh":             true,
 		"sh -c echo":              true,
 		"sh -n":                   true,
