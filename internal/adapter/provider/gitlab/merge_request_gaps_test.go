@@ -274,3 +274,32 @@ func TestGlabCapabilityAtLeast182ParsesVersionBanners(t *testing.T) {
 		}
 	}
 }
+
+// `glab mr create --draft` prefixes the title with "Draft: "; the readback of
+// a draft carries the marker and still matches the request. A non-draft MR
+// whose title merely starts with "Draft:" is still a mismatch.
+func TestGitLabCreatePullRequestAcceptsGlabDraftTitlePrefix(t *testing.T) {
+	for _, tc := range []struct {
+		name, view string
+		draft      bool
+		wantErr    string
+	}{
+		{"draft readback", gapMRView([2]string{"title", `"Draft: MR"`}), true, ""},
+		{"prefix on a non-draft", gapMRView([2]string{"title", `"Draft: MR"`}, [2]string{"draft", "false"}), false, "title or rendered body"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := installGlab(t, `case "$*" in
+  "mr create"*) printf '`+gapMRURL+`\n'; exit 0 ;;
+  "mr view"*) printf '%s' '`+tc.view+`'; exit 0 ;;
+esac
+exit 2
+`)
+			req := gapMRRequest(repo)
+			req.Draft = tc.draft
+			_, err := NewProvider().CreatePullRequest(req)
+			if tc.wantErr == "" && err != nil || tc.wantErr != "" && (err == nil || !strings.Contains(err.Error(), tc.wantErr)) {
+				t.Fatalf("err = %v, want %q", err, tc.wantErr)
+			}
+		})
+	}
+}

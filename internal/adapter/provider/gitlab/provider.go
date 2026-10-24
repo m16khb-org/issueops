@@ -247,7 +247,14 @@ func compareGitLabMergeRequestReadback(req port.IssueProviderCreatePullRequestRe
 	if strings.TrimSpace(got.WebURL) != createdURL || strings.TrimSpace(got.SourceBranch) != strings.TrimSpace(req.HeadBranch) || strings.TrimSpace(got.TargetBranch) != strings.TrimSpace(req.BaseBranch) || got.Draft != req.Draft {
 		return fmt.Errorf("created merge request identity or draft status does not match the request")
 	}
-	if strings.TrimSpace(got.Title) != strings.TrimSpace(req.Title) || got.Description != req.Body {
+	// `glab mr create --draft` prefixes the title with "Draft: " (glab
+	// internal/commands/mr/create/mr_create.go), so a draft readback carries
+	// the marker the request never had; reconcile strips it the same way.
+	title := strings.TrimSpace(got.Title)
+	if got.Draft {
+		title = strings.TrimSpace(gitLabDraftTitle.ReplaceAllString(title, ""))
+	}
+	if title != strings.TrimSpace(req.Title) || got.Description != req.Body {
 		return fmt.Errorf("created merge request title or rendered body does not match the request")
 	}
 	if strings.TrimSpace(req.ProjectKey) != "" && gitLabSourceProjectKey(req.ProjectKey, got) != strings.TrimSpace(req.ProjectKey) {
