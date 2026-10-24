@@ -110,6 +110,12 @@ func (s *RemoteCompletionService) Close(ctx context.Context, id, providerOverrid
 	if err := domain.ValidateCloseIssue(record); err != nil {
 		return model.IssueOpsRecord{}, result, err
 	}
+	// QA: a preview after the confirmed close still said closed:false and
+	// "would execute gh issue close"; the record already holds the receipt.
+	if !confirm && record.RemoteCompletion != nil && record.RemoteCompletion.IssueClosedAt != "" {
+		return record, port.IssueProviderCloseIssueResult{OK: true, Provider: firstNonEmpty(providerOverride, domain.ResolveRecordProvider(record)), IssueURL: record.IssueURL, Closed: true, AlreadyClosed: true,
+			Preview: "already closed at " + record.RemoteCompletion.IssueClosedAt + " (recorded receipt); nothing to run"}, nil
+	}
 	result, err = provider.CloseIssue(ctx, port.IssueProviderCloseIssueRequest{Repo: record.Repo, IssueURL: record.IssueURL, Confirm: confirm})
 	if err != nil {
 		return model.IssueOpsRecord{}, result, idempotentRetryHint(err, confirm, "closed")

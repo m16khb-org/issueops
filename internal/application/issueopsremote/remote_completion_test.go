@@ -245,3 +245,16 @@ func TestRemoteCompletionFailedConfirmSaysTheRetryIsIdempotent(t *testing.T) {
 		t.Fatalf("preview err = %v", err)
 	}
 }
+
+// After a confirmed close, a preview answers from the receipt instead of
+// offering the close again; it does not call the provider.
+func TestRemoteCompletionClosePreviewAfterReceiptReportsAlreadyClosed(t *testing.T) {
+	h := newCompletionHarness(completionRecord(), &completionProviderFake{closeResult: port.IssueProviderCloseIssueResult{OK: true, Closed: true}})
+	if _, _, err := h.service.Close(context.Background(), "io-done", "", true); err != nil {
+		t.Fatal(err)
+	}
+	_, preview, err := h.service.Close(context.Background(), "io-done", "", false)
+	if err != nil || !preview.Closed || !preview.AlreadyClosed || preview.Provider != "github" || len(h.provider.closes) != 1 {
+		t.Fatalf("preview=%+v err=%v closes=%d", preview, err, len(h.provider.closes))
+	}
+}
