@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -102,7 +103,12 @@ func syncExecutionBase(ctx context.Context, stateRoot string, req issueops.Execu
 	if len(missing) > 0 {
 		result.OK = false
 		result.NextCommand = executionStatusCommandForSyncBase(record.ID)
-		return result, fmt.Errorf("execution sync-base %s is not ready; unmet gates: %s", mode, strings.Join(missing, ", "))
+		err := fmt.Errorf("execution sync-base %s is not ready; unmet gates: %s", mode, strings.Join(missing, ", "))
+		if slices.Contains(missing, "cwd_canonical") && inventory.Root != "" {
+			// An agent ran it from the source checkout as the replace step is.
+			err = fmt.Errorf("%w; run it from the canonical worktree %q, with --cwd %q", err, inventory.Root, inventory.Root)
+		}
+		return result, err
 	}
 	fingerprint, err := executionSyncBaseFingerprint(inventory)
 	if err != nil {

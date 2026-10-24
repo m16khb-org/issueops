@@ -146,7 +146,7 @@ func normalizeActor(actor leasecontract.Actor) (leasecontract.Actor, error) {
 		return actor, fmt.Errorf("native actor session_id is required")
 	}
 	if actor.SessionProcess == nil || actor.SessionProcess.PID <= 0 || actor.SessionProcess.StartedAt == "" || actor.SessionProcess.Executable == "" {
-		return actor, fmt.Errorf("native actor requires a PID reuse-safe session_process receipt")
+		return actor, fmt.Errorf("native actor requires a PID reuse-safe session_process receipt: pass every ACTOR_FLAG, including --session-pid, --session-started-at, and --session-executable (issueops execution whoami --json prints them as claim_actor_flags)")
 	}
 	return actor, nil
 }

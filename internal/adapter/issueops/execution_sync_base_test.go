@@ -315,6 +315,11 @@ func TestExecutionSyncBaseGatesRejectEveryMissingPrecondition(t *testing.T) {
 			if err == nil || !containsString(result.Missing, tc.missing) {
 				t.Fatalf("expected missing %q: err=%v missing=%v", tc.missing, err, result.Missing)
 			}
+			// An agent ran sync-base from the source checkout as the merge
+			// skill's replace step is; the refusal names where to run it.
+			if tc.missing == "cwd_canonical" && !strings.Contains(err.Error(), "run it from the canonical worktree") {
+				t.Fatalf("cwd refusal does not name the worktree: %v", err)
+			}
 		})
 	}
 

@@ -142,9 +142,10 @@ generation을 기록에 보관하고 phase를 `implement`로 되돌리며 lease�
 issueops execution sync-base --id "$ISSUEOPS_ID" --completion-generation "$COMPLETION_GENERATION" --preview $ACTOR_FLAGS --json
 ```
 
-`$ACTOR_FLAGS`는 `issueops execution whoami --json`이 돌려준 값을 쓴다. 동기화가 PR head를
-옮기므로 그 뒤의 미리보기는 `head_mismatch`를 보고한다. 그때 위의 reseed 경로로
-사이클을 다시 열어 검증과 완료를 새 head로 다시 받는다.
+sync-base는 replace와 달리 canonical worktree에서 실행한다(소스 체크아웃에서는
+`cwd_canonical`로 거부된다). `$ACTOR_FLAGS`는 그 worktree에서 받은 `issueops execution whoami --json`
+값을 쓴다. 동기화가 PR head를 옮기므로 그 뒤의 미리보기는 `head_mismatch`를 보고한다. 그때 위의
+reseed 경로로 사이클을 다시 열어 검증과 완료를 새 head로 다시 받는다.
 
 ## 4 확인 경계
 

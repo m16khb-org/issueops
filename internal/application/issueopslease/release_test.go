@@ -17,7 +17,7 @@ func TestReleaseKeepsNativeActorValidationErrorsPublic(t *testing.T) {
 		want  string
 	}{
 		{name: "missing session", actor: leasedomain.Actor{Host: "codex"}, want: "native actor session_id is required"},
-		{name: "missing receipt", actor: leasedomain.Actor{Host: "codex", SessionID: "missing-receipt"}, want: "native actor requires a PID reuse-safe session_process receipt"},
+		{name: "missing receipt", actor: leasedomain.Actor{Host: "codex", SessionID: "missing-receipt"}, want: "native actor requires a PID reuse-safe session_process receipt: pass every ACTOR_FLAG, including --session-pid, --session-started-at, and --session-executable (issueops execution whoami --json prints them as claim_actor_flags)"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := service.Release(context.Background(), ReleaseRequest{ID: "io-actor-receipt", Generation: 1, Actor: tc.actor})

@@ -123,7 +123,7 @@ func TestReleaseHandlerKeepsPublicNativeActorValidationText(t *testing.T) {
 	}{
 		{name: "invalid host", actor: issueopscontract.NativeActor{Host: "other"}, want: "native actor host must be codex, claude, omo, omp, or opencode"},
 		{name: "missing session", actor: issueopscontract.NativeActor{Host: "codex"}, want: "native actor session_id is required"},
-		{name: "missing receipt", actor: issueopscontract.NativeActor{Host: "codex", SessionID: "missing-receipt"}, want: "native actor requires a PID reuse-safe session_process receipt"},
+		{name: "missing receipt", actor: issueopscontract.NativeActor{Host: "codex", SessionID: "missing-receipt"}, want: "native actor requires a PID reuse-safe session_process receipt: pass every ACTOR_FLAG, including --session-pid, --session-started-at, and --session-executable (issueops execution whoami --json prints them as claim_actor_flags)"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := handler(context.Background(), "/unused", issueopscontract.ExecutionReleaseRequest{ID: "io-native-actor", Generation: 1, Actor: tc.actor})

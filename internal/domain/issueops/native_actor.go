@@ -9,6 +9,10 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
+// ActorReceiptRemedy names what a caller missing the session receipt passes:
+// agents copying the shorter record flags into execution commands hit this.
+const ActorReceiptRemedy = "pass every ACTOR_FLAG, including --session-pid, --session-started-at, and --session-executable (issueops execution whoami --json prints them as claim_actor_flags)"
+
 func ValidateNativeActor(actor model.NativeActor) error {
 	switch actor.Host {
 	case "codex", "claude", "omo", "omp", "opencode":
@@ -19,7 +23,7 @@ func ValidateNativeActor(actor model.NativeActor) error {
 		return fmt.Errorf("native actor session_id is required")
 	}
 	if actor.SessionProcess == nil || actor.SessionProcess.PID <= 0 || actor.SessionProcess.StartedAt == "" || actor.SessionProcess.Executable == "" {
-		return fmt.Errorf("native actor requires a PID reuse-safe session_process receipt")
+		return fmt.Errorf("native actor requires a PID reuse-safe session_process receipt: %s", ActorReceiptRemedy)
 	}
 	return nil
 }
