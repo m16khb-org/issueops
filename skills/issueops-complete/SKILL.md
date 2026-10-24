@@ -129,7 +129,8 @@ issueops execution complete --id "$ISSUEOPS_ID" \
 `complete`가 성공해도 갱신되는 것은 durable record뿐이고 사용자 화면에는 JSON
 한 덩어리만 남는다. 그래서 completion 직후 아래 다섯 블록을 출력한다. 이 보고는
 스킬의 마지막 산출물이며, 생략하면 사용자가 무엇이 봉인됐는지 확인할 방법이
-`--json`을 직접 읽는 것밖에 없다.
+`--json`을 직접 읽는 것밖에 없다. 블록 안의 문장과 블록 뒤의 설명은
+[ASD-STE100 기반 보고 규칙](../fluent-korean/references/report-ste100.md)을 따른다.
 
 ```text
 최종 결과

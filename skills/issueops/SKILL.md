@@ -112,6 +112,10 @@ worker 프롬프트에는 exact lifecycle ID, generation, branch, worktree, 허�
 **(e) 코드베이스 존중.** 새로 만들기보다 기존 구현의 확장과 재사용을 먼저 보고, 하위 호환성·성능 영향·side effect를
 계획·구현 루프·리뷰에서 명시한다([세 곳의 기준](references/codebase-respect.md)).
 
+**(f) 사용자 보고.** 진행·완료·중단 보고와 질문은 ASD-STE100 기반 보고 규칙
+([report-ste100.md](../fluent-korean/references/report-ste100.md))을 따른다. 결론부터 쓰고, 한 대상에는 한 용어만 쓰며,
+사용자에게 지시하는 문장에는 지시를 하나만 넣는다. 되돌릴 수 없는 위험은 `경고`로 먼저 밝힌다.
+
 ## Core contract
 
 durable phase는 `problem`, `grill`, `plan`, `compatibility-review`, `implement`,
