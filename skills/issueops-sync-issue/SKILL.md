@@ -94,6 +94,10 @@ confirm 뒤의 새 기준은 `merged_body_sha256`이다. 원격 sha가 기록 sh
 3. `--accept-remote-edits`를 붙여 그 편집을 확인했음을 명시한다. 이 플래그
    없이는 confirm이 거부된다.
 
+예외: `remote_edited`인데 `remote_body_sha256`과 `merged_body_sha256`이 같으면, 앞선 confirm이
+본문은 썼지만 기록 전에 끊긴 것이다. 원격이 이미 새 본문과 같으므로 같은 요청에
+`--accept-remote-edits`를 붙여 confirm한다. 이 confirm이 기준선을 기록한다.
+
 ## 읽기 좋은 body
 
 본문 형식은 `issueops remote render-template` 골격과

@@ -227,6 +227,11 @@ func ValidateWrite(plan contract.Plan, expectedSHA string, acceptRemoteEdits boo
 		return fmt.Errorf("remote body changed since it was read (expected %s, live %s); re-run the preview and rebuild the body on the current content",
 			shortSHA(expectedSHA), shortSHA(plan.RemoteBodySHA256))
 	}
+	if plan.Drift == contract.DriftRemoteEdited && !acceptRemoteEdits && plan.MergedBodySHA256 == plan.RemoteBodySHA256 {
+		// A killed confirm writes the body but not the baseline; the rerun
+		// then sees its own write as an outside edit.
+		return fmt.Errorf("remote body differs from the recorded baseline but already equals this merged body (a previous confirm may have written it without recording its receipt); pass --accept-remote-edits to record it as the baseline")
+	}
 	if plan.Drift == contract.DriftRemoteEdited && !acceptRemoteEdits {
 		return fmt.Errorf("remote body was edited outside the harness; fold those edits into the proposed body, then pass --accept-remote-edits to confirm you preserved them")
 	}

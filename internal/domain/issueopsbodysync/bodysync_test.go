@@ -228,3 +228,16 @@ func TestMergedBodySurvivesAProviderRoundTrip(t *testing.T) {
 		t.Fatalf("re-syncing an unchanged artifact must be in_sync, got %q", next.Drift)
 	}
 }
+
+// A rerun after a killed confirm meets its own write as an outside edit; the
+// refusal names --accept-remote-edits as the way to record the baseline.
+func TestValidateWriteNamesTheBaselineRecoveryWhenLiveAlreadyEqualsTheMerge(t *testing.T) {
+	live := strings.Repeat("b", 64)
+	plan := contract.Plan{Drift: contract.DriftRemoteEdited, RemoteBodySHA256: live, MergedBodySHA256: live}
+	if err := ValidateWrite(plan, live, false); err == nil || !strings.Contains(err.Error(), "already equals this merged body") {
+		t.Fatalf("err = %v", err)
+	}
+	if err := ValidateWrite(plan, live, true); err != nil {
+		t.Fatalf("accepted: %v", err)
+	}
+}
