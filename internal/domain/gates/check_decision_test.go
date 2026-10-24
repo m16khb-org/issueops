@@ -1,6 +1,9 @@
 package gates
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestShouldRunRequiresUncheckedOrPendingEvidence(t *testing.T) {
 	if !ShouldRun(Gate{}) || !ShouldRun(Gate{Checked: true, Evidence: "pending"}) || ShouldRun(Gate{Checked: true, Evidence: "measured"}) {
@@ -46,5 +49,19 @@ func TestCheckArgvRejectsUnquotedShellControlOperators(t *testing.T) {
 	argv, err := CheckArgv("printf 'ok; still one argument'")
 	if err != "" || len(argv) != 2 || argv[1] != "ok; still one argument" {
 		t.Fatalf("quoted shell character was rejected: argv=%v err=%q", argv, err)
+	}
+}
+
+// An agent's `HELLO_GREETING=hi ./hello.sh` linted clean; without a shell the
+// assignment is the program name, so the gate could never pass.
+func TestCheckArgvRejectsLeadingEnvironmentAssignment(t *testing.T) {
+	if _, err := CheckArgv("HELLO_GREETING=hi ./hello.sh"); !strings.Contains(err, "write env HELLO_GREETING=hi ./hello.sh") {
+		t.Fatalf("err = %q", err)
+	}
+	if argv, err := CheckArgv("env HELLO_GREETING=hi ./hello.sh"); err != "" || argv[0] != "env" {
+		t.Fatalf("env form refused: %v %q", argv, err)
+	}
+	if _, err := CheckArgv("go test -run=TestX ./..."); err != "" {
+		t.Fatalf("a flag with = in a later argument is not an assignment: %q", err)
 	}
 }

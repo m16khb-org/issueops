@@ -41,7 +41,7 @@ func Parse(fs *flag.FlagSet, args []string) error {
 		// zsh does not word-split an unquoted $VAR, so `$RECORD_ACTOR_FLAGS`
 		// arrives as one argument holding several flags.
 		if strings.ContainsAny(name, " \t") {
-			return fmt.Errorf("one argument holds several flags (%q): the shell passed a flags variable unsplit; in zsh write ${=VAR} or use an array", "-"+name)
+			return fmt.Errorf("one argument holds several flags (%q): the shell passed a flags variable unsplit; in zsh write ${=VAR} or use an array", "--"+name)
 		}
 		var known []string
 		fs.VisitAll(func(f *flag.Flag) { known = append(known, f.Name) })

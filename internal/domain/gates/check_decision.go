@@ -2,6 +2,7 @@ package gates
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"issueops/internal/domain/shelltoken"
@@ -18,8 +19,14 @@ func CheckArgv(check string) ([]string, string) {
 	if len(argv) == 0 {
 		return nil, "empty CHECK command"
 	}
+	if name, _, ok := strings.Cut(argv[0], "="); ok && envNameRe.MatchString(name) {
+		// Without a shell, NAME=value is not an assignment but the program name.
+		return nil, fmt.Sprintf("CHECK starts with the assignment %s, which argv execution runs as a program name, not an environment variable: write env %s", argv[0], strings.Join(argv, " "))
+	}
 	return argv, ""
 }
+
+var envNameRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
 func ShouldRun(gate Gate) bool {
 	return !gate.Checked || EvidencePending(gate.Evidence)
