@@ -228,3 +228,26 @@ func TestFinishExecutorSkipsStopWhenNothingOccupiesTheWorktree(t *testing.T) {
 		}
 	}
 }
+
+// A worktree directory deleted by hand leaves git's registration behind;
+// finish drops it while the directory is still absent and never touches a
+// directory that reappeared since the preview.
+func TestFinishExecutorUnregistersAMissingWorktreeOnlyWhileItIsAbsent(t *testing.T) {
+	for _, present := range []bool{false, true} {
+		executor, _, _, _ := finishExecutorFixture(t)
+		withInventory(&executor, model.CleanupFinishInventory{WorktreePresent: false, WorktreeRoot: "/gone"})
+		var calls []string
+		executor.Git = func(_ context.Context, _ string, args ...string) (int, string) {
+			calls = append(calls, strings.Join(args, " "))
+			return 0, ""
+		}
+		executor.Directory = func(string) (bool, error) { return present, nil }
+		result, err := executor.Run(t.Context(), finishApplyRequest())
+		if err != nil || !result.RecordDeleted || result.WorktreeRemoved {
+			t.Fatalf("present=%v: result=%+v err=%v", present, result, err)
+		}
+		if got := slices.Contains(calls, "worktree remove /gone"); got == present {
+			t.Fatalf("present=%v: git calls %q", present, calls)
+		}
+	}
+}

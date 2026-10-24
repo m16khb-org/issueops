@@ -8670,6 +8670,7 @@
       "task": "T08",
       "symbols": [
         "func worktreeRemoval.remove",
+        "func worktreeRemoval.unregisterMissing",
         "type worktreeRemoval"
       ]
     },

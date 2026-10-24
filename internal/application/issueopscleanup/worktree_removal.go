@@ -35,3 +35,23 @@ func (w worktreeRemoval) remove(ctx context.Context, repo, root string) error {
 	}
 	return nil
 }
+
+// unregisterMissing drops git's registration of a worktree whose directory is
+// already gone. Probe: after a deleted worktree, finish and abandon removed
+// the record and branch but git kept listing the path as prunable, so the
+// same branch or path could not be added again. `git worktree remove` on a
+// missing path only drops that entry; it runs only while the directory is
+// still observably absent, so a directory recreated since the preview is
+// never removed here.
+func (w worktreeRemoval) unregisterMissing(ctx context.Context, repo, root string) {
+	if root == "" {
+		return
+	}
+	if present, err := w.Directory(root); err != nil || present {
+		return
+	}
+	_, _ = w.Git(ctx, repo, "worktree", "remove", root)
+	if w.PruneParent != nil {
+		w.PruneParent(root)
+	}
+}

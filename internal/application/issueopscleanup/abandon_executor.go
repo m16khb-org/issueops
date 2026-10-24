@@ -210,6 +210,13 @@ func (r *abandonRun) stopWorkspaceProcesses() error {
 
 func (r *abandonRun) removeWorktree() error {
 	if !r.inventory.WorktreePresent {
+		if r.inventory.WorktreeRoot == "" {
+			return nil
+		}
+		if err := r.s.Records.Check(r.ctx, r.snapshot); err != nil {
+			return err
+		}
+		(worktreeRemoval{Git: r.s.Git, Directory: r.s.Directory, PruneParent: r.s.PruneWorktreesParent, HonorCancel: true}).unregisterMissing(r.ctx, r.record.Repo, r.inventory.WorktreeRoot)
 		return nil
 	}
 	if err := r.s.Records.Check(r.ctx, r.snapshot); err != nil {
