@@ -688,7 +688,18 @@ func warnings(in Input) []string {
 			// Probed: a worktree recreated with git worktree add lacks the
 			// sealed artifacts prepare wrote, so link-plan and the holder
 			// commands fail there and nothing in issueops rebuilds them.
-			warning += "; issueops does not rebuild it (the sealed plan artifacts lived there): restore that directory, or release the lease (exits.pause_command, --cwd still that path) and end the cycle with exits.abandon_command"
+			// Abandon needs a lease without a writer: the holder releases it;
+			// anyone else (a resumed session too) has no pause command and
+			// gets there through the takeover chain up to finalize.
+			warning += "; issueops does not rebuild it (the sealed plan artifacts lived there): restore that directory, or end the cycle with exits.abandon_command after "
+			if holderIsSelf(in) {
+				warning += "releasing the lease (exits.pause_command, --cwd still that path)"
+			} else {
+				warning += "the takeover chain reaches a released lease (stop after --finalize; do not claim)"
+			}
+			// Probed: git still lists the deleted worktree, so abandon refused
+			// with branch_checked_out_elsewhere until it was pruned.
+			warning += " and git -C " + strings.TrimSpace(execution.Workspace.SourceRoot) + " worktree prune"
 		}
 		out = append(out, warning)
 	}
