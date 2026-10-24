@@ -130,7 +130,7 @@ func renderGateSpec(spec string) (string, error) {
 		case strings.HasPrefix(upper, "CHECK:"):
 			check := strings.TrimSpace(segment[len("CHECK:"):])
 			if shelltoken.HasUnquotedControlOperator(check) {
-				return "", fmt.Errorf("gate spec %q: CHECK must be one argv command; shell syntax is not executed (&&, ;) — wrap the sequence in one script or python3 -c", spec)
+				return "", fmt.Errorf("gate spec %q: CHECK must be one argv command; shell syntax is not executed (&&, ;) — put the sequence in a script file and run that file directly, or use python3 -c (sh -c and bash -c are refused)", spec)
 			}
 			lines = append(lines, "  CHECK: "+check)
 		case strings.HasPrefix(upper, "EXPECT:"):

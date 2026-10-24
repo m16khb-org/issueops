@@ -10,10 +10,10 @@ import (
 
 func CheckArgv(check string) ([]string, string) {
 	if shelltoken.HasUnquotedControlOperator(check) {
-		return nil, "CHECK contains shell syntax that argv execution does not honor (&&, ||, |, ;, 2>&1): wrap the sequence in one script or python3 -c"
+		return nil, "CHECK contains shell syntax that argv execution does not honor (&&, ||, |, ;, 2>&1): put the sequence in a script file and run that file directly, or use python3 -c (sh -c and bash -c are refused)"
 	}
 	if shelltoken.HasShellExpansion(check) {
-		return nil, "CHECK contains a shell expansion ($(...), ${...}, $NAME) that argv execution passes through literally: run the command directly or put it in one script"
+		return nil, "CHECK contains a shell expansion ($(...), ${...}, $NAME) that argv execution passes through literally: run the command directly, or put it in a script file and run that file directly"
 	}
 	argv := shelltoken.SplitCommandTokens(check)
 	if len(argv) == 0 {
