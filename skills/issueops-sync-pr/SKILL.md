@@ -60,7 +60,7 @@ issueops remote sync-pr \
 | `drift` | 뜻 | 다음 행동 |
 |---|---|---|
 | `in_sync` | 제안 본문이 원격과 같다 | 쓰지 않는다 |
-| `stale` | 원격은 하네스가 마지막에 쓴 그대로다 | 그대로 confirm |
+| `stale` | 하네스 관리 블록을 빼면 원격은 하네스가 마지막에 쓴 그대로다 | 그대로 confirm |
 | `remote_edited` | 리뷰어나 봇이 본문을 고쳤다 | 그 편집을 새 본문에 반영한 뒤 `--accept-remote-edits` |
 
 PR/MR은 리뷰어가 본문에 체크리스트나 메모를 직접 추가하는 일이 잦다.

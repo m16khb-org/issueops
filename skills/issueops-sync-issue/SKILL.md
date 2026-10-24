@@ -76,11 +76,12 @@ issueops remote sync-issue \
 | `drift` | 뜻 | 다음 행동 |
 |---|---|---|
 | `in_sync` | 제안 본문이 원격과 같다 | 쓰지 않는다. 최신화할 것이 없다 |
-| `stale` | 원격은 하네스가 마지막에 쓴 그대로고, 제안이 앞선다 | 그대로 confirm |
+| `stale` | 하네스 관리 블록을 빼면 원격은 하네스가 마지막에 쓴 그대로고, 제안이 앞선다 | 그대로 confirm |
 | `remote_edited` | 원격 본문이 하네스 기록과 다르다 | 사람이 손댄 것이다. 아래 절차 |
 
 `expected_body_sha256`은 confirm에 그대로 넘길 값이고, `preserved_sections`는
-하네스가 보존할 관리 블록 목록이다.
+하네스가 보존할 관리 블록 목록이다. `recorded_body_sha256`은 비교 기준이 된 이전 기록이다.
+confirm 뒤의 새 기준은 `merged_body_sha256`이다. 원격 sha가 기록 sha와 달라도 차이가 관리 블록뿐이면 `stale`이다.
 
 ## 사람이 수정한 본문
 
