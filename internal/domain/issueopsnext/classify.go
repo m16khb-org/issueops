@@ -496,13 +496,9 @@ func finish(in Input, decision Decision) Decision {
 	}
 	if cwd := actorCWD(in); cwd != "" {
 		decision.NextCommand = strings.ReplaceAll(decision.NextCommand, "$RECORD_ACTOR_FLAGS", recordActorFlags(in))
-		// The holder's pause command (execution release) needs the same claim
-		// vector; a QA agent pausing for the day filled it by hand.
-		pause := decision.Exits.PauseCommand
-		if in.ClaimActorFlags != nil && (strings.Contains(decision.NextCommand, "$ACTOR_FLAGS") || strings.Contains(pause, "$ACTOR_FLAGS")) {
+		if in.ClaimActorFlags != nil && strings.Contains(decision.NextCommand, "$ACTOR_FLAGS") {
 			if claim := in.ClaimActorFlags(cwd); claim != "" {
 				decision.NextCommand = strings.ReplaceAll(decision.NextCommand, "$ACTOR_FLAGS", claim)
-				decision.Exits.PauseCommand = strings.ReplaceAll(pause, "$ACTOR_FLAGS", claim)
 			}
 		}
 	}
