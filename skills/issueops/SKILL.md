@@ -88,8 +88,8 @@ issueops next --json
 `stage.key`가 자기 단계인지 확인한다. 아니면 표가 지목하는 스킬로 안내한다. `blocked.*`
 면 중단한다. phase를 추정하지 않는다.
 
-**(b) actor 플래그.** `issueops execution whoami --json`이 돌려주는
-`record_actor_flags`(문자열)와 `claim_actor_flags[0]`(배열의 첫 항목)을 그대로 쓴다. 손으로 조립하지 않는다.
+**(b) actor 플래그.** `issueops execution whoami --json`이 돌려주는 값을 그대로 쓴다:
+`$RECORD_ACTOR_FLAGS` = `record_actor_flags`(문자열), `$ACTOR_FLAGS` = `claim_actor_flags[0]`(배열의 첫 항목). 손으로 조립하지 않는다.
 변수에 담아 쓰면 zsh는 따옴표 없는 `$VAR`도 한 인자로 넘기므로 `${=VAR}`로 펼친다.
 
 **(c) lease fencing.** durable mutation(phase 전이, record 기록, artifact stage) 전마다

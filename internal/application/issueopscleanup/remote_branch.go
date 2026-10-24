@@ -95,6 +95,7 @@ func planAbsentBranch(record model.IssueOpsRecord, req model.CleanupRemoteBranch
 	// apply may release a crashed same-operation attempt; preview never writes.
 	result.AlreadyAbsent = true
 	if record.CleanupAttempt == nil {
+		result.NextCommand = cleanupStatusAfterRemoteBranch(record.ID)
 		return result, true
 	}
 	if !req.Apply {
@@ -126,7 +127,14 @@ func (s RemoteBranchCleaner) releaseAttempt(ctx context.Context, lifetime Cleanu
 		}
 		return next, result, err
 	}
+	result.NextCommand = cleanupStatusAfterRemoteBranch(id)
 	return next, result, nil
+}
+
+// cleanupStatusAfterRemoteBranch is where the remote-branch step hands off:
+// the merged cycle's local cleanup (reflect, close, finish) starts from status.
+func cleanupStatusAfterRemoteBranch(id string) string {
+	return fmt.Sprintf("issueops cleanup status --id %s --merged --json", id)
 }
 
 // planPresentBranch fingerprints a present remote branch and validates the apply request.

@@ -8583,6 +8583,7 @@
         "func RemoteBranchCleaner.Run",
         "func RemoteBranchCleaner.releaseAttempt",
         "func cleanupRemoteBranchFingerprint",
+        "func cleanupStatusAfterRemoteBranch",
         "func cleanupSupersededByFlag",
         "func planAbsentBranch",
         "func planPresentBranch",
@@ -9557,7 +9558,7 @@
         "func NewRemoteMergeService",
         "func RemoteMergeService.Merge",
         "func blockerCodes",
-        "func cleanupStatusCommand",
+        "func postMergeCommand",
         "func projectMergeResult",
         "type MergeProviderResolver",
         "type RemoteMergeService"

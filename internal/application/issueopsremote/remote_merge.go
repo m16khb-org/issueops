@@ -50,7 +50,7 @@ func (s *RemoteMergeService) Merge(ctx context.Context, id, method string, confi
 	result := projectMergeResult(record.ID, target, method, before)
 	if before.State == "merged" {
 		result.OK, result.Merged, result.AlreadyMerged = true, true, true
-		result.NextCommand = cleanupStatusCommand(record.ID)
+		result.NextCommand = postMergeCommand(record.ID)
 		return result, nil
 	}
 	if len(result.Blockers) > 0 {
@@ -76,7 +76,7 @@ func (s *RemoteMergeService) Merge(ctx context.Context, id, method string, confi
 		return result, fmt.Errorf("merge was not verified: state=%s", after.State)
 	}
 	result.OK, result.Merged = true, true
-	result.NextCommand = cleanupStatusCommand(record.ID)
+	result.NextCommand = postMergeCommand(record.ID)
 	return result, nil
 }
 
@@ -89,8 +89,11 @@ func projectMergeResult(id string, target domain.MergeTarget, method string, sta
 	}
 }
 
-func cleanupStatusCommand(id string) string {
-	return fmt.Sprintf("issueops cleanup status --id %s --merged --json", id)
+// postMergeCommand is the step after a merge. The remote branch goes first
+// (agents following cleanup status skipped it); its preview hands off to
+// cleanup status, also when the branch is already gone.
+func postMergeCommand(id string) string {
+	return fmt.Sprintf("issueops cleanup remote-branch --id %s --preview --json", id)
 }
 
 func blockerCodes(blockers []model.RemoteMergeBlocker) string {

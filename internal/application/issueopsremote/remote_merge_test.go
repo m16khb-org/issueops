@@ -98,7 +98,9 @@ func TestRemoteMergeSquashesDraftPinnedToCompletedHead(t *testing.T) {
 		t.Fatalf("preview = %+v err=%v merges=%d", preview, err, len(merger.merges))
 	}
 	result, err := runMerge(t, completedMergeRecord(), merger, "", true)
-	if err != nil || !result.OK || !result.Merged || !result.MarkedReady || result.MergeCommitOID != "abc" || !strings.Contains(result.NextCommand, "cleanup status") {
+	// After the merge the remote branch goes first; an agent following
+	// "cleanup status" here skipped the merge skill's remote-branch step.
+	if err != nil || !result.OK || !result.Merged || !result.MarkedReady || result.MergeCommitOID != "abc" || !strings.Contains(result.NextCommand, "cleanup remote-branch --id io-merge --preview") {
 		t.Fatalf("result = %+v err=%v", result, err)
 	}
 	if len(merger.merges) != 1 || merger.merges[0].HeadOID != mergeTestHead || !merger.merges[0].MarkReady || merger.merges[0].Method != model.RemoteMergeMethodSquash {

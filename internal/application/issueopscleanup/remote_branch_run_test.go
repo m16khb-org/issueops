@@ -171,6 +171,10 @@ func TestRemoteBranchCleanerDeletesObservedOIDAndReleasesAfterDrain(t *testing.T
 	if err != nil || !result.OK || !result.Deleted || result.DeletedAt != "2026-09-29T01:02:03Z" {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
+	// The remote branch is the first post-merge step; it hands off to status.
+	if result.NextCommand != "issueops cleanup status --id io-test --merged --json" {
+		t.Fatalf("next=%q", result.NextCommand)
+	}
 	if !slices.Equal(f.env.deleted, []string{"/repo:123-work@tip"}) {
 		t.Fatalf("deleted=%v", f.env.deleted)
 	}

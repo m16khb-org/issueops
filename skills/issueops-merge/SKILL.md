@@ -121,7 +121,7 @@ issueops execution status --id "$ISSUEOPS_ID" --json
 issueops execution replace --id "$ISSUEOPS_ID" --expected-generation "$GENERATION" --preview $ACTOR_FLAGS --json
 ```
 
-`$ACTOR_FLAGS`는 `issueops execution whoami --json`이 돌려준 값을 쓰고, 소스 체크아웃에서
+`$ACTOR_FLAGS`는 `issueops execution whoami --json`의 `claim_actor_flags[0]`을 쓰고(`record_actor_flags`는 거부된다), 소스 체크아웃에서
 실행한다. `replace --preview`가 돌려준 `--reseed` 명령을 그대로 실행한다. reseed는 완료된
 generation을 기록에 보관하고 phase를 `implement`로 되돌리며 lease를 claimable로 만든다.
 보관된 PR 연결은 그대로 남는다. 이어서 워크트리 세션에 결과의 claim 명령을 넘기고,
