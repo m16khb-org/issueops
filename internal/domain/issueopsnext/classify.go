@@ -665,7 +665,14 @@ func warnings(in Input) []string {
 		return out
 	}
 	if root := strings.TrimSpace(execution.Workspace.Root); root != "" && !in.WorktreePresent {
-		out = append(out, "canonical worktree is missing at "+root)
+		warning := "canonical worktree is missing at " + root
+		if execution.Completion == nil {
+			// Probed: a worktree recreated with git worktree add lacks the
+			// sealed artifacts prepare wrote, so link-plan and the holder
+			// commands fail there and nothing in issueops rebuilds them.
+			warning += "; issueops does not rebuild it (the sealed plan artifacts lived there): restore that directory, or release the lease (exits.pause_command, --cwd still that path) and end the cycle with exits.abandon_command"
+		}
+		out = append(out, warning)
 	}
 	if head := strings.TrimSpace(in.WorktreeHead); head != "" && execution.Completion != nil &&
 		strings.TrimSpace(execution.Completion.FinalHead) != "" &&

@@ -585,7 +585,8 @@ func TestClassifyIssueStageFallsBackToIntentContractWithoutMissingGates(t *testi
 }
 
 func TestClassifyWarningsPassThroughLocalAndWorktreeObservations(t *testing.T) {
-	const missingRoot = "canonical worktree is missing at /repo.worktrees/12-test"
+	const missingRoot = "canonical worktree is missing at /repo.worktrees/12-test; issueops does not rebuild it (the sealed plan artifacts lived there): restore that directory, or release the lease (exits.pause_command, --cwd still that path) and end the cycle with exits.abandon_command"
+	const missingAfterCompletion = "canonical worktree is missing at /repo.worktrees/12-test"
 	withHead := func(finalHead, observed string) Input {
 		in := withSelfHolder(baseRecord(issueopsnextcontract.PhaseImplement))
 		in.Record.Execution.Completion = &issueopscontract.ExecutionCompletion{FinalHead: finalHead}
@@ -609,6 +610,8 @@ func TestClassifyWarningsPassThroughLocalAndWorktreeObservations(t *testing.T) {
 		{"observed head blank", withHead("abc", "  "), nil},
 		{"recorded head blank", withHead("  ", "def"), nil},
 		{"no completion recorded", noCompletion, nil},
+		// After completion only cleanup is left, and it handles a missing worktree.
+		{"worktree missing after completion", func() Input { in := withHead("abc", ""); in.WorktreePresent = false; return in }(), []string{missingAfterCompletion}},
 	}
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
