@@ -4473,11 +4473,13 @@
       "task": "T08",
       "symbols": [
         "func CycleRecordStore.Load",
+        "func CycleRecordStore.RetiredIDs",
         "func CycleRecordStore.Save",
         "func CycleRecordStore.WithinLock",
         "func CycleStartIdentity.CanonicalRepo",
         "func CycleStartIdentity.IndependentID",
         "func CycleStartIdentity.StableID",
+        "func CycleStartIdentity.SuccessorID",
         "type CycleRecordStore",
         "type CycleStartIdentity"
       ]
@@ -8382,7 +8384,9 @@
       "task": "T08",
       "symbols": [
         "func Starter.Start",
+        "func Starter.resumableID",
         "type CycleRecords",
+        "type RetiredCycles",
         "type StartIdentity",
         "type Starter"
       ]

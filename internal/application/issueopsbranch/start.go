@@ -18,14 +18,20 @@ type CycleRecords interface {
 	Save(context.Context, model.IssueOpsRecord) (model.IssueOpsRecord, error)
 }
 
+// RetiredCycles names the IDs of cycles that cleanup already deleted.
+type RetiredCycles interface {
+	RetiredIDs() (map[string]bool, error)
+}
+
 type StartIdentity interface {
 	CanonicalRepo(string) string
-	StableID(string, string) string
+	SuccessorID(repo, branch string, n int) string
 	IndependentID(string) (string, error)
 }
 
 type Starter struct {
 	Records  CycleRecords
+	Retired  RetiredCycles
 	Identity StartIdentity
 	Now      func() time.Time
 }
@@ -44,7 +50,11 @@ func (s Starter) Start(ctx context.Context, req model.IssueOpsStartRequest) (mod
 			return model.IssueOpsRecord{OK: false}, err
 		}
 	} else {
-		id = s.Identity.StableID(repo, branch)
+		var err error
+		id, err = s.resumableID(repo, branch)
+		if err != nil {
+			return model.IssueOpsRecord{OK: false}, err
+		}
 	}
 	var record model.IssueOpsRecord
 	err := s.Records.WithinLock(ctx, id, func(spanCtx context.Context) error {
@@ -60,9 +70,6 @@ func (s Starter) Start(ctx context.Context, req model.IssueOpsStartRequest) (mod
 			return err
 		}
 		recordID := id
-		if !req.New {
-			recordID = s.Identity.StableID(repo, branch)
-		}
 		existing, readErr := s.Records.Load(recordID)
 		reuse, err := domain.ReuseStartRecord(recordID, req.New, readErr, errors.Is(readErr, fs.ErrNotExist))
 		if err != nil {
@@ -76,4 +83,21 @@ func (s Starter) Start(ctx context.Context, req model.IssueOpsStartRequest) (mod
 		return err
 	})
 	return record, err
+}
+
+// resumableID is the first stable ID for repo and branch that no cleaned-up
+// cycle used. Cleanup keeps the outcome row under the deleted record's ID, so
+// a new cycle reusing it would share the old cycle's audit lines and
+// overwrite its outcome (QA: #42 got #41's ID right after cleanup). The
+// successors are derived, so a repeated start still resumes the same cycle.
+func (s Starter) resumableID(repo, branch string) (string, error) {
+	retired, err := s.Retired.RetiredIDs()
+	if err != nil {
+		return "", err
+	}
+	for n := 0; ; n++ {
+		if id := s.Identity.SuccessorID(repo, branch, n); !retired[id] {
+			return id, nil
+		}
+	}
 }

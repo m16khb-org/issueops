@@ -3,6 +3,7 @@ package issueopsbranch
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/fs"
 	"reflect"
 	"strings"
@@ -129,6 +130,7 @@ type startFake struct {
 	NewID         func(string, string) string
 	NormalizeRepo func(string) string
 	Independent   func(string) (string, error)
+	Retired       map[string]bool
 	LockError     error
 	Events        []string
 	Locked        bool
@@ -164,9 +166,17 @@ func (f *startFake) CanonicalRepo(repo string) string {
 	}
 	return repo
 }
-func (f *startFake) StableID(repo, branch string) string {
-	f.Events = append(f.Events, "stable:"+repo+":"+branch)
-	return f.NewID(repo, branch)
+func (f *startFake) SuccessorID(repo, branch string, n int) string {
+	f.Events = append(f.Events, fmt.Sprintf("stable:%s:%s:%d", repo, branch, n))
+	id := f.NewID(repo, branch)
+	if n > 0 {
+		id += fmt.Sprintf("-%d", n)
+	}
+	return id
+}
+func (f *startFake) RetiredIDs() (map[string]bool, error) {
+	f.Events = append(f.Events, "retired")
+	return f.Retired, nil
 }
 func (f *startFake) IndependentID(repo string) (string, error) {
 	f.Events = append(f.Events, "independent:"+repo)
@@ -176,7 +186,7 @@ func (f *startFake) IndependentID(repo string) (string, error) {
 	return f.NewID(repo, ""), nil
 }
 func startWithFake(f *startFake, req model.IssueOpsStartRequest) (model.IssueOpsRecord, error) {
-	return (Starter{Records: f, Identity: f, Now: func() time.Time { return time.Date(2026, 9, 28, 1, 2, 3, 4, time.UTC) }}).Start(context.Background(), req)
+	return (Starter{Records: f, Retired: f, Identity: f, Now: func() time.Time { return time.Date(2026, 9, 28, 1, 2, 3, 4, time.UTC) }}).Start(context.Background(), req)
 }
 func TestStartSerializesCanonicalRecordAndFreezesIndependentID(t *testing.T) {
 	for _, fresh := range []bool{false, true} {
@@ -187,7 +197,7 @@ func TestStartSerializesCanonicalRecordAndFreezesIndependentID(t *testing.T) {
 				t.Fatal(err)
 			}
 			id := "io-stable"
-			want := []string{"normalize: /worktree ", "stable:/source:", "lock:io-stable", "normalize:/worktree", "stable:/source:", "read:io-stable", "write:io-stable", "unlock"}
+			want := []string{"normalize: /worktree ", "retired", "stable:/source::0", "lock:io-stable", "normalize:/worktree", "read:io-stable", "write:io-stable", "unlock"}
 			if fresh {
 				id = "io-fresh"
 				want = []string{"normalize: /worktree ", "independent:/source", "lock:io-fresh", "normalize:/worktree", "read:io-fresh", "write:io-fresh", "unlock"}
@@ -244,7 +254,7 @@ func TestStartFailureOrderAndNoWrite(t *testing.T) {
 func TestStartResumePreservesWholeRecordAndDoesNotReadClock(t *testing.T) {
 	existing := model.IssueOpsRecord{OK: true, SchemaVersion: 1, ID: "io-stable", Repo: "/repo", Phase: model.IssueOpsPhasePlan, CreatedAt: "original", UpdatedAt: "unchanged", IssueURL: "https://github.com/acme/repo/issues/5"}
 	f := &startFake{NewID: func(string, string) string { return existing.ID }, Read: func(string, string) (model.IssueOpsRecord, error) { return existing, nil }, Write: func(string, model.IssueOpsRecord) (model.IssueOpsRecord, error) { panic("resume rewrote record") }}
-	got, err := (Starter{Records: f, Identity: f, Now: func() time.Time { panic("resume read clock") }}).Start(context.Background(), model.IssueOpsStartRequest{Repo: "/repo"})
+	got, err := (Starter{Records: f, Retired: f, Identity: f, Now: func() time.Time { panic("resume read clock") }}).Start(context.Background(), model.IssueOpsStartRequest{Repo: "/repo"})
 	if err != nil || !reflect.DeepEqual(got, existing) {
 		t.Fatalf("record=%+v error=%v", got, err)
 	}
@@ -255,5 +265,31 @@ func TestStartReturnsWriteFailureAndUnlocks(t *testing.T) {
 	got, err := startWithFake(f, model.IssueOpsStartRequest{Repo: "/repo"})
 	if !errors.Is(err, cause) || got.OK || f.Locked || f.Events[len(f.Events)-1] != "unlock" {
 		t.Fatalf("record=%+v err=%v events=%v", got, err, f.Events)
+	}
+}
+
+// Cleanup keeps an outcome row under a deleted record's ID; a later start in
+// the same repo and branch must not reuse that ID, and repeating it resumes
+// the same successor.
+func TestStartSkipsIDsOfCleanedUpCycles(t *testing.T) {
+	created := map[string]model.IssueOpsRecord{}
+	f := &startFake{
+		NewID:   func(string, string) string { return "io-stable" },
+		Retired: map[string]bool{"io-stable": true, "io-stable-1": true},
+		Read: func(_ string, id string) (model.IssueOpsRecord, error) {
+			if r, ok := created[id]; ok {
+				return r, nil
+			}
+			return model.IssueOpsRecord{}, fs.ErrNotExist
+		},
+		Write: func(_ string, r model.IssueOpsRecord) (model.IssueOpsRecord, error) { created[r.ID] = r; return r, nil },
+	}
+	first, err := startWithFake(f, model.IssueOpsStartRequest{Repo: "/source"})
+	if err != nil || first.ID != "io-stable-2" {
+		t.Fatalf("first=%+v err=%v", first, err)
+	}
+	again, err := startWithFake(f, model.IssueOpsStartRequest{Repo: "/source"})
+	if err != nil || again.ID != first.ID || len(created) != 1 {
+		t.Fatalf("repeat start must resume %s: got %+v err=%v created=%d", first.ID, again, err, len(created))
 	}
 }

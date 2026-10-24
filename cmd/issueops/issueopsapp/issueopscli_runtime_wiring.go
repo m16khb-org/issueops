@@ -124,7 +124,7 @@ func newIssueOpsCLIRuntime(stateRoot string) issueopscli.IssueOpsCLIDeps {
 		StageIssueOpsArtifact:       artifacts.Stage,
 		StagedIssueOpsArtifactNames: artifacts.Names,
 		StartIssueOps: func(stateRoot string, req issueopscontract.IssueOpsStartRequest) (issueopscontract.IssueOpsRecord, error) {
-			return (branchapp.Starter{Records: issueopscore.CycleRecordStore{StateRoot: stateRoot}, Identity: issueopscore.CycleStartIdentity{RunGit: branchpreflight.GitCmd}, Now: time.Now}).Start(context.Background(), req)
+			return (branchapp.Starter{Records: issueopscore.CycleRecordStore{StateRoot: stateRoot}, Retired: issueopscore.CycleRecordStore{StateRoot: stateRoot}, Identity: issueopscore.CycleStartIdentity{RunGit: branchpreflight.GitCmd}, Now: time.Now}).Start(context.Background(), req)
 		},
 		StartIssueOpsChildWithActor: func(root string, req issueopscontract.IssueOpsChildStartRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildStartResult, error) {
 			return newChildStarter(root).Start(context.Background(), req, &actor)
