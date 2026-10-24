@@ -50,7 +50,7 @@ func NormalizeNativeActor(actor model.NativeActor) (model.NativeActor, error) {
 	if slices.Contains(actor.ProcessAncestry, *actor.SessionProcess) {
 		return actor, nil
 	}
-	return actor, fmt.Errorf("native session process receipt is not in the local process ancestry")
+	return actor, fmt.Errorf("native session process receipt is not in the local process ancestry: pass the claim_actor_flags that `issueops execution whoami --json` prints in this session; if this session was resumed after the process that took the lease exited, `issueops next --id <ID> --json` routes it to the takeover chain")
 }
 
 func ValidateObservedNativeProcess(receipt model.NativeProcessReceipt, status string, observed model.NativeProcessReceipt) error {

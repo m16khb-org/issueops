@@ -596,6 +596,11 @@ func postImplementPhase(phase issueopsnextcontract.Phase) bool {
 	return phase == issueopsnextcontract.PhaseAISlopClean || phase == issueopsnextcontract.PhaseFeedback
 }
 
+// holderIsSelf is the caller's own session holding the lease through a live
+// process. A resumed session (same host and session id, new process, e.g.
+// `claude --resume`) is not the holder: every mutation is refused because the
+// recorded receipt is not in its ancestry, so next must route it to the
+// takeover chain like any dead holder instead of to holder commands.
 func holderIsSelf(in Input) bool {
 	if in.Record.Execution == nil || in.Record.Execution.Lease.Holder == nil {
 		return false
@@ -603,7 +608,8 @@ func holderIsSelf(in Input) bool {
 	holder := in.Record.Execution.Lease.Holder
 	return strings.EqualFold(strings.TrimSpace(holder.Host), strings.TrimSpace(in.ActorHost)) &&
 		strings.TrimSpace(holder.SessionID) == strings.TrimSpace(in.ActorSessionID) &&
-		strings.TrimSpace(in.ActorSessionID) != ""
+		strings.TrimSpace(in.ActorSessionID) != "" &&
+		(in.HolderLive == nil || *in.HolderLive)
 }
 
 // live는 관측하지 못한 홀더를 살아 있는 것으로 본다. 확인하지 않은 세션의

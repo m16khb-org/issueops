@@ -878,3 +878,22 @@ func TestFinishRendersClaimFlagsForTheHolderAtTheWorktree(t *testing.T) {
 		t.Fatalf("stage=%q kind=%q cwd=%q command=%q", got.Stage.Key, got.NextCommandKind, askedCWD, got.NextCommand)
 	}
 }
+
+// A resumed session (same host and session id, new process) cannot write
+// through the dead process's lease: next routes it to the takeover chain
+// instead of holder commands that the CLI refuses.
+func TestClassifyResumedSessionWithDeadReceiptTakesOver(t *testing.T) {
+	in := withSelfHolder(baseRecord(issueopsnextcontract.PhaseImplement))
+	dead := false
+	in.HolderLive = &dead
+	got := classifyTemplate(in)
+	if got.Stage.Key != "takeover" || got.Lease.HolderIsSelf ||
+		got.NextCommand != "issueops execution replace --id io-test --expected-generation 1 --preview" {
+		t.Fatalf("stage=%q self=%v command=%q", got.Stage.Key, got.Lease.HolderIsSelf, got.NextCommand)
+	}
+	alive := true
+	in.HolderLive = &alive
+	if got := classifyTemplate(in); got.Stage.Key == "takeover" || !got.Lease.HolderIsSelf {
+		t.Fatalf("live self holder: stage=%q self=%v", got.Stage.Key, got.Lease.HolderIsSelf)
+	}
+}
