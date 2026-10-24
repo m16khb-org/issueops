@@ -24,4 +24,6 @@ issueops feedback add --id "$ISSUEOPS_ID" --source plan-review --classification 
 
 `--reviewer-context`는 `subagent` 또는 `inline`이며 감사 필드다. 하네스는 자기신고를 검증할 수
 없으므로 `inline`도 기록되지만, 저자 세션이 직접 검토한 기록은 리뷰가 아니라 규칙 위반이다.
-독립 서브에이전트가 돌려준 판정만 `subagent`로 기록한다.
+독립 서브에이전트가 돌려준 판정만 `subagent`로 기록한다. 예외는 사용자가 서브에이전트 없이
+inline 리뷰를 명시적으로 지시한 경우 하나다. 그때는 `inline`으로 기록하고 독립 리뷰가 아니라는
+사실을 보고에 남긴다.

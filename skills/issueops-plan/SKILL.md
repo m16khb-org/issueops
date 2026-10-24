@@ -54,7 +54,7 @@ route 결과는 아래 목록에 **더하는** 후보이고 목록을 대신하�
 다음 여섯 문서는 직접 열고, 색인이 이 변경의 모듈을 가리키면 그 모듈 파일도 연다:
 `CONSTITUTION.md`, `ARCHITECTURE.md`, `CONVENTIONS.md`, `CAUTIONS.md`, `ADR.md`, `TESTING.md`.
 
-여섯 문서와 route가 더한 문서마다 한 줄씩 적용 여부를 계획의 `## 적용되는 결정과 주의사항` 절에 적는다. 여섯 문서는 "열지 않음"을 쓸 수 없고, 한 줄이라도 빠지면 읽지 않은 것이다. 한 줄의 형식, "대조했으나 없음"과 "열지 않음"을 쓰는 조건, 이 절이 흘러가는 곳은 [세부 규칙](references/project-docs-check.md)을 연다.
+여섯 문서와 route가 더한 문서마다 한 줄씩 적용 여부를 계획의 `## 적용되는 결정과 주의사항` 절에 적는다. 여섯 문서는 "열지 않음"을 쓸 수 없고, 한 줄이라도 빠지면 읽지 않은 것이다. 저장소에 없는 문서는 "파일 없음"으로 적는다. 한 줄의 형식, "대조했으나 없음"과 "열지 않음"을 쓰는 조건, 이 절이 흘러가는 곳은 [세부 규칙](references/project-docs-check.md)을 연다.
 
 ## 아키텍처 작성과 스테이징
 
@@ -95,7 +95,7 @@ issueops record-routing --id "$ISSUEOPS_ID" --phase plan --skill implementation-
   거부된다.
 - `--verification`에는 "아키텍처"와 "검토"가 함께 들어가야 한다(영어면 "architecture"와
   "review"). 그 두 단어가 없으면 `architecture_review_evidence`가 통과하지 않는다.
-- `--reviewer-context`는 `subagent` 또는 `inline`인 감사 필드다. 저자 세션이 직접 검토한 기록은 리뷰가 아니라 규칙 위반이고, 독립 서브에이전트가 돌려준 판정만 `subagent`로 기록한다. 이유는 [세부 규칙](references/gates-and-review-details.md)을 연다.
+- `--reviewer-context`는 `subagent` 또는 `inline`인 감사 필드다. 독립 서브에이전트가 돌려준 판정만 `subagent`로 기록한다. 저자 세션의 검토는 사용자가 inline 리뷰를 명시적으로 지시했을 때만 `inline`으로 기록하고, 그 외에는 리뷰가 아니라 규칙 위반이다. 이유는 [세부 규칙](references/gates-and-review-details.md)을 연다.
 - `--refactor-plan`, `--alternative`, `--risk`는 각각 하나 이상 필요하고, open question은
   0이어야 승인된다. 열린 질문이 남았으면 그것을 먼저 닫는다.
 - `revise`면 문서를 고쳐 다시 스테이징하고 다시 검토한다. `stop`이면 승인을 기록하지 않고

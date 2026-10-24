@@ -167,8 +167,10 @@ done을 기록한다. hook은 SessionStart의 project-doc context만 제공한�
 ## 원격 쓰기
 
 `issueops-remote-write`가 설치되어 있으면 사용한다. 단독 실행 순서와 계약 변경 feedback 규칙은
-[remote-write-standalone.md](references/remote-write-standalone.md)를 따른다. raw provider 쓰기로
-우회하지 않고, 모호한 write는 reconcile하며 중복 생성하지 않는다.
+[remote-write-standalone.md](references/remote-write-standalone.md)를 따른다. `issueops remote`
+명령이 있는 쓰기(이슈·PR 본문, 댓글, 답글)는 raw provider 쓰기로 우회하지 않고, 모호한 write는
+reconcile하며 중복 생성하지 않는다. `branch prepare`의 `steps`가 넘겨 준 링크 브랜치 생성처럼
+CLI가 provider 명령을 직접 안내한 단계는 그 명령을 쓴다.
 
 ## Reference map
 

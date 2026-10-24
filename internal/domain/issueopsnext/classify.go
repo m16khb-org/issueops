@@ -386,12 +386,18 @@ func classifyLocalGates(in Input, decision Decision) (Decision, bool) {
 		decision.Missing = append([]string{}, local...)
 		decision.NextCommand = "issueops pr-readiness --id " + id + " --strict --json"
 		// The step itself is git, which issueops does not run; say which one
-		// so the readiness re-check is not mistaken for the action.
+		// so the readiness re-check is not mistaken for the action (two QA
+		// agents still read next_command as the step when the to-dos were
+		// separate lines).
+		var todo []string
 		if slices.Contains(local, "worktree_clean") {
-			decision.Warnings = append(decision.Warnings, "to do: commit the changes (atomic-commit-push skill)")
+			todo = append(todo, "commit the changes (atomic-commit-push skill)")
 		}
 		if slices.Contains(local, "upstream") {
-			decision.Warnings = append(decision.Warnings, "to do: git push -u origin "+placeholder(in.Record.Branch, "<branch>"))
+			todo = append(todo, "git push -u origin "+placeholder(in.Record.Branch, "<branch>"))
+		}
+		if len(todo) > 0 {
+			decision.Warnings = append(decision.Warnings, "do first: "+strings.Join(todo, ", then ")+"; next_command only re-checks readiness afterwards")
 		}
 		if len(local) == 0 {
 			// Committed and pushed: the pr transition is the next step (it runs

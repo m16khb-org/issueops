@@ -53,6 +53,9 @@ issueops next --id "$ISSUEOPS_ID" --json
 도착할 때까지 기다린다. 시작됐다는 응답(실행 ID, launch 안내)은 판정이 아니다. 저자 세션이 먼저 읽고 내린
 판단은 판정이 아니므로 기록하지 않는다. 서브에이전트를 띄우지 못했으면 판정 없이 그 사실과
 이유를 보고한다. `--reviewer-context subagent`는 서브에이전트가 실제로 돌려준 판정에만 쓴다.
+사용자가 서브에이전트 없이 inline 리뷰를 명시적으로 지시했으면 이 세션이 같은 출력 계약으로
+검토하고 `--reviewer-context inline`으로 기록한다. reviewer 모델과 effort는 이 세션의 값을 적고,
+독립 리뷰가 아니라는 사실을 보고에 남긴다.
 필수 수정의 기준은 [`architecture-review`의 Blocking threshold](../architecture-review/SKILL.md#blocking-threshold)를
 따른다. `architecture`는 아키텍처 문서의 결정과 계약을, `plan`은 계획을, `diff`는 구현 동작과 영향받은 계약을 확인한다.
 리뷰가 지적을 냈다는 이유만으로 수정하지 않고, 발생 조건·위반한 요구사항·근거가
