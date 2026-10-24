@@ -153,8 +153,8 @@ blocker 근거는 기록 직전에 한 번 더 확인한다. 확인 규칙은 [�
 
 구현 도중 사용자가 요구사항을 바꾸면(완료 기준·범위 변경) 이 순서로 반영한다:
 `feedback add --classification contract_change` → 이슈 본문 갱신(`issueops-sync-issue`) →
-`feedback mark-issue-updated` → 새 기준으로 `intent record` → 워크트리의 추적 계획
-(`.issueops/issues/<n>/plan.md`)과 게이트 원장 수정 → `decision add`로 바뀐 점 기록 → 구현·검증 뒤
+`feedback mark-issue-updated` → 새 기준으로 `intent record` → 게이트 원장 수정 → `decision add`로 바뀐
+계획 기록(추적 `plan.md`는 승인 시점 사본이라 고치지 않는다) → 구현·검증 뒤
 `feedback resolve`.
 `.issueops/issues/<n>/artifact/`는 prepare가 봉인한 승인 시점의 사본이다. 고치거나 덮어쓰지 않는다
 (`artifact stage`도 prepare 뒤에는 거부된다). `regress`는 plan·compatibility-review에서만 되므로 구현 중에는 쓰지 않는다.
