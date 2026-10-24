@@ -455,6 +455,26 @@ func RecordActorFlags(getenv func(string) string, cwd string) string {
 	return recordActorFlags(identity, cwd)
 }
 
+// ClaimActorFlags is whoami's claim vector for this process with the given
+// cwd, or "" when the identity or the host receipt cannot be observed. It is
+// the same function whoami prints, so a command filled with it runs as
+// returned.
+func ClaimActorFlags(getenv func(string) string, observe func(int) ([]model.NativeProcessReceipt, error), cwd string) string {
+	identity, err := nativeSessionIdentityFromEnv(getenv)
+	if err != nil || observe == nil || strings.TrimSpace(cwd) == "" {
+		return ""
+	}
+	ancestry, err := observe(os.Getpid())
+	if err != nil {
+		return ""
+	}
+	result, err := executionWhoamiResult(identity, os.Getpid(), ancestry, cwd)
+	if err != nil || len(result.ClaimActorFlags) != 1 {
+		return ""
+	}
+	return result.ClaimActorFlags[0]
+}
+
 func recordActorFlags(identity nativeSessionIdentity, cwd string) string {
 	return fmt.Sprintf("--host %s --session-id %s --cwd %s",
 		identity.Host, shellQuoteClaimValue(identity.SessionID), shellQuoteClaimValue(cwd))

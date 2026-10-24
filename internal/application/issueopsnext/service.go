@@ -192,10 +192,11 @@ func (service *Service) buildInput(
 ) issueopsnextdomain.Input {
 	ports := service.ports
 	input := issueopsnextdomain.Input{
-		Record:         record,
-		SourceRoot:     sourceRoot,
-		ActorHost:      actorHost,
-		ActorSessionID: actorSession,
+		Record:          record,
+		SourceRoot:      sourceRoot,
+		ActorHost:       actorHost,
+		ActorSessionID:  actorSession,
+		ClaimActorFlags: ports.ClaimActorFlags,
 		Completion: func(phase issueopscontract.IssueOpsPhase) issueopsnextdomain.Readiness {
 			readiness := ports.Completion(record, phase)
 			return issueopsnextdomain.Readiness{Ready: readiness.Ready, Missing: readiness.Missing}

@@ -32,6 +32,10 @@ type Ports struct {
 	ChangedPaths    func(record issueopscontract.IssueOpsRecord) (paths []string, observed bool)
 	StagedArtifacts func(stateRoot, id string) (map[string]string, error)
 	Actor           func() (host, sessionID string, err error)
+	// ClaimActorFlags is the caller's whoami claim vector at cwd ("" when the
+	// host receipt cannot be observed); next calls it only to fill the
+	// execution prepare handoff.
+	ClaimActorFlags func(cwd string) string
 	// ProcessLive는 홀더 프로세스 관측이다. 관측하지 못하면 nil을 돌려주고,
 	// 분류기는 그것을 "살아 있다"로 본다.
 	ProcessLive func(receipt issueopscontract.NativeProcessReceipt) *bool

@@ -40,6 +40,9 @@ type Input struct {
 	// DevilsAdvocatePlanStale는 계획 리뷰가 묶인 digest와 스테이징된 계획이 달라졌다는
 	// 관측이다. link-plan 전에는 implement readiness가 이것을 보지 못한다.
 	DevilsAdvocatePlanStale bool
+	// ClaimActorFlags는 호출 세션의 claim 벡터(whoami claim_actor_flags)를 주어진
+	// cwd로 만든다. host 영수증을 관측할 수 없으면 ""다. finish가 필요할 때만 부른다.
+	ClaimActorFlags func(cwd string) string
 	// RootConflictID는 이 사이클의 canonical worktree root를 이미 점유한 다른
 	// 사이클의 id다. 없으면 빈 문자열이다.
 	RootConflictID string
@@ -483,15 +486,24 @@ func stage(key string, index int) issueopsnextcontract.Stage {
 	return issueopsnextcontract.Stage{Key: key, Index: index}
 }
 
-// finish fills $RECORD_ACTOR_FLAGS when next knows the caller's record vector
-// and then sets next_command_kind from the placeholders that remain. One owner
-// keeps rules from hand-writing the kind.
+// finish fills $RECORD_ACTOR_FLAGS when next knows the caller's record vector,
+// and $ACTOR_FLAGS before a lease exists (the execution prepare handoff) when
+// the caller's host receipt can be observed, and then sets next_command_kind
+// from the placeholders that remain. One owner keeps rules from hand-writing
+// the kind.
 func finish(in Input, decision Decision) Decision {
 	if strings.TrimSpace(decision.NextCommand) == "" {
 		return decision
 	}
 	if flags := recordActorFlags(in); flags != "" {
 		decision.NextCommand = strings.ReplaceAll(decision.NextCommand, "$RECORD_ACTOR_FLAGS", flags)
+		// Before a lease the caller is the preparer, so its own claim vector
+		// at the source checkout is the one the command needs.
+		if in.Record.Execution == nil && in.ClaimActorFlags != nil && strings.Contains(decision.NextCommand, "$ACTOR_FLAGS") {
+			if claim := in.ClaimActorFlags(in.Record.Repo); claim != "" {
+				decision.NextCommand = strings.ReplaceAll(decision.NextCommand, "$ACTOR_FLAGS", claim)
+			}
+		}
 	}
 	if strings.Contains(decision.NextCommand, "<") || strings.Contains(decision.NextCommand, "ACTOR_FLAGS") {
 		decision.NextCommandKind = issueopsnextcontract.NextCommandKindTemplate

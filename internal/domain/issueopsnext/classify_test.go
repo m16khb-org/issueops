@@ -840,3 +840,24 @@ func TestClassifyStagedPlanChangedAfterReviewStaysInPlanReview(t *testing.T) {
 		t.Fatalf("next_command=%q", got.NextCommand)
 	}
 }
+
+// Before a lease the caller is the preparer: the handoff renders its own claim
+// vector at the source checkout and becomes exact; without an observable host
+// receipt the $ACTOR_FLAGS template stays.
+func TestFinishRendersClaimFlagsAtTheHandoff(t *testing.T) {
+	in := withDA(withStagedPlan(withArchitecture(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan))))))
+	var askedCWD string
+	in.ClaimActorFlags = func(cwd string) string {
+		askedCWD = cwd
+		return "--host claude --session-id s-1 --session-pid 7 --session-started-at t0 --session-executable /bin/claude --cwd " + cwd
+	}
+	got := Classify(in)
+	want := "issueops execution prepare --id io-test --host claude --session-id s-1 --session-pid 7 --session-started-at t0 --session-executable /bin/claude --cwd /repo --json"
+	if got.Stage.Key != "plan.handoff" || got.NextCommand != want || got.NextCommandKind != issueopsnextcontract.NextCommandKindExact || askedCWD != "/repo" {
+		t.Fatalf("stage=%q kind=%q command=%q cwd=%q", got.Stage.Key, got.NextCommandKind, got.NextCommand, askedCWD)
+	}
+	in.ClaimActorFlags = func(string) string { return "" }
+	if got := Classify(in); !strings.Contains(got.NextCommand, "$ACTOR_FLAGS") || got.NextCommandKind != issueopsnextcontract.NextCommandKindTemplate {
+		t.Fatalf("unobservable receipt: kind=%q command=%q", got.NextCommandKind, got.NextCommand)
+	}
+}

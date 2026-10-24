@@ -59,6 +59,9 @@ func issueOpsNextHandler(
 				host, sessionID, _, err := executioncmd.ResolveNativeSessionIdentity(os.Getenv)
 				return host, sessionID, err
 			},
+			ClaimActorFlags: func(cwd string) string {
+				return executioncmd.ClaimActorFlags(os.Getenv, issueopscore.ObserveNativeProcessAncestry, cwd)
+			},
 			ProcessLive:   observeIssueOpsHolderLiveness,
 			SourceRoot:    issueopsinventoryoutbound.CleanPath{}.Normalize,
 			CleanPath:     issueopsinventoryoutbound.Canonical,
