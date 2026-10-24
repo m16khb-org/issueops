@@ -11,6 +11,7 @@ import (
 
 	issueopsnextcontract "issueops/internal/contract/issueopsnext"
 	issueopsdomain "issueops/internal/domain/issueops"
+	"issueops/internal/domain/shelltoken"
 )
 
 // Readiness는 주입된 게이트 판정이다. adapter의 IssueOpsReadiness에서 이
@@ -479,12 +480,15 @@ func stage(key string, index int) issueopsnextcontract.Stage {
 	return issueopsnextcontract.Stage{Key: key, Index: index}
 }
 
-// finish는 자리표시자가 남아 있는지로 next_command_kind를 정한다. 소유자를
-// 하나로 두어 규칙마다 kind를 손으로 적는 실수를 없앤다.
+// finish fills $RECORD_ACTOR_FLAGS when next knows the caller's record vector
+// and then sets next_command_kind from the placeholders that remain. One owner
+// keeps rules from hand-writing the kind.
 func finish(in Input, decision Decision) Decision {
-	_ = in
 	if strings.TrimSpace(decision.NextCommand) == "" {
 		return decision
+	}
+	if flags := recordActorFlags(in); flags != "" {
+		decision.NextCommand = strings.ReplaceAll(decision.NextCommand, "$RECORD_ACTOR_FLAGS", flags)
 	}
 	if strings.Contains(decision.NextCommand, "<") || strings.Contains(decision.NextCommand, "ACTOR_FLAGS") {
 		decision.NextCommandKind = issueopsnextcontract.NextCommandKindTemplate
@@ -492,6 +496,40 @@ func finish(in Input, decision Decision) Decision {
 	}
 	decision.NextCommandKind = issueopsnextcontract.NextCommandKindExact
 	return decision
+}
+
+// recordActorFlags is the record vector (--host --session-id --cwd) the caller
+// would get from whoami at the cycle's canonical cwd: the source checkout before
+// a lease, the worktree while the caller holds it. Passing the shell variable
+// was the step every QA agent failed first (zsh does not split it), so next
+// renders it whenever it is sure; otherwise the template stays.
+func recordActorFlags(in Input) string {
+	host, session := strings.TrimSpace(in.ActorHost), strings.TrimSpace(in.ActorSessionID)
+	if host == "" || session == "" {
+		return ""
+	}
+	var cwd string
+	switch execution := in.Record.Execution; {
+	case execution == nil:
+		cwd = in.Record.Repo
+	case execution.Lease.Status == issueopsnextcontract.LeaseStatusActive && holderIsSelf(in) &&
+		strings.TrimSpace(execution.Lease.Holder.AgentID) == "":
+		cwd = execution.Workspace.Root
+	}
+	if cwd = strings.TrimSpace(cwd); cwd == "" {
+		return ""
+	}
+	return "--host " + shellWord(host) + " --session-id " + shellWord(session) + " --cwd " + shellWord(cwd)
+}
+
+// shellWord quotes value only when the shell would otherwise split or expand it.
+func shellWord(value string) string {
+	for _, r := range value {
+		if !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || strings.ContainsRune("._/:@+=,-", r)) {
+			return shelltoken.QuoteWord(value)
+		}
+	}
+	return value
 }
 
 func placeholder(value, fallback string) string {

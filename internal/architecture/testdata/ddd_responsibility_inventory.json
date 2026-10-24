@@ -14356,6 +14356,8 @@
         "func postImplementPhase",
         "func prBase",
         "func prefixed",
+        "func recordActorFlags",
+        "func shellWord",
         "func stage",
         "func stageOneMissing",
         "func subset",

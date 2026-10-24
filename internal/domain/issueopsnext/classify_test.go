@@ -219,7 +219,7 @@ func TestClassifyStages(t *testing.T) {
 	}
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
-			got := Classify(testCase.in)
+			got := classifyTemplate(testCase.in)
 			if got.Stage.Key != testCase.key || got.Stage.Index != testCase.idx {
 				t.Fatalf("got %s/%d want %s/%d", got.Stage.Key, got.Stage.Index, testCase.key, testCase.idx)
 			}
@@ -230,7 +230,7 @@ func TestClassifyStages(t *testing.T) {
 // 규칙 순서가 뒤집히면 done 사이클이 미해결 pending을 숨긴다. 규칙 2가 규칙
 // 21보다 먼저여야 한다.
 func TestClassifyChecksPendingBeforePhase(t *testing.T) {
-	got := Classify(withPending(baseRecord(issueopsnextcontract.PhaseDone)))
+	got := classifyTemplate(withPending(baseRecord(issueopsnextcontract.PhaseDone)))
 	if got.Stage.Key != "blocked.pending" {
 		t.Fatalf("pending intent must win over the done phase, got %s", got.Stage.Key)
 	}
@@ -257,7 +257,7 @@ func TestClassifyNextCommandTable(t *testing.T) {
 	}
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
-			got := Classify(testCase.in)
+			got := classifyTemplate(testCase.in)
 			if !strings.HasPrefix(got.NextCommand, testCase.prefix) {
 				t.Fatalf("next command %q must start with %q", got.NextCommand, testCase.prefix)
 			}
@@ -269,7 +269,7 @@ func TestClassifyNextCommandTable(t *testing.T) {
 }
 
 func TestClassifyHandoffRendersThePrepareCommandWithoutRunSelection(t *testing.T) {
-	got := Classify(withDA(withArchitecture(withStagedPlan(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))))
+	got := classifyTemplate(withDA(withArchitecture(withStagedPlan(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))))
 	if want := "issueops execution prepare --id io-test $ACTOR_FLAGS --json"; got.NextCommand != want {
 		t.Fatalf("next command %q want %q", got.NextCommand, want)
 	}
@@ -277,7 +277,7 @@ func TestClassifyHandoffRendersThePrepareCommandWithoutRunSelection(t *testing.T
 
 // 1단계는 missing을 알파벳 순으로 쓰면 안 된다. branch는 2단계 항목이다.
 func TestClassifyIssueStageNeverRecommendsBranchPrepare(t *testing.T) {
-	got := Classify(baseRecord(issueopsnextcontract.PhaseGrill))
+	got := classifyTemplate(baseRecord(issueopsnextcontract.PhaseGrill))
 	if strings.Contains(got.NextCommand, "branch prepare") {
 		t.Fatalf("stage 1 must not recommend branch prepare, got %q", got.NextCommand)
 	}
@@ -287,18 +287,18 @@ func TestClassifyIssueStageNeverRecommendsBranchPrepare(t *testing.T) {
 }
 
 func TestClassifyExits(t *testing.T) {
-	self := Classify(withSelfHolder(baseRecord(issueopsnextcontract.PhaseImplement)))
+	self := classifyTemplate(withSelfHolder(baseRecord(issueopsnextcontract.PhaseImplement)))
 	if !strings.HasPrefix(self.Exits.PauseCommand, "issueops execution release") {
 		t.Fatalf("self holder must be able to pause, got %q", self.Exits.PauseCommand)
 	}
-	stale := Classify(withHolder(baseRecord(issueopsnextcontract.PhaseImplement), "codex", "s-2", false))
+	stale := classifyTemplate(withHolder(baseRecord(issueopsnextcontract.PhaseImplement), "codex", "s-2", false))
 	if !strings.HasPrefix(stale.Exits.TakeoverCommand, "issueops execution replace") {
 		t.Fatalf("stale holder must be replaceable, got %q", stale.Exits.TakeoverCommand)
 	}
 	if !strings.HasPrefix(self.Exits.AbandonCommand, "issueops cleanup abandon --id io-test --reason") {
 		t.Fatalf("abandon must always be offered, got %q", self.Exits.AbandonCommand)
 	}
-	none := Classify(Input{})
+	none := classifyTemplate(Input{})
 	if none.Exits.AbandonCommand != "" {
 		t.Fatalf("without a cycle there is nothing to abandon, got %q", none.Exits.AbandonCommand)
 	}
@@ -309,7 +309,7 @@ func TestClassifyExits(t *testing.T) {
 func TestClassifyTreatsUnobservedHolderAsLive(t *testing.T) {
 	in := withHolder(baseRecord(issueopsnextcontract.PhaseImplement), "codex", "s-2", true)
 	in.HolderLive = nil
-	if got := Classify(in); got.Stage.Key != "blocked.holder_live" {
+	if got := classifyTemplate(in); got.Stage.Key != "blocked.holder_live" {
 		t.Fatalf("an unobserved holder must block, got %s", got.Stage.Key)
 	}
 }
@@ -382,7 +382,7 @@ func TestClassifyRootConflictBlocksOnlyExecutionlessCyclesFromPlanOnward(t *test
 		t.Run(testCase.name, func(t *testing.T) {
 			in := testCase.in
 			in.RootConflictID = " io-other "
-			got := Classify(in)
+			got := classifyTemplate(in)
 			if (got.Stage.Key == blockedRoot) != testCase.want {
 				t.Fatalf("stage %s, blocked.root_conflict want %v", got.Stage.Key, testCase.want)
 			}
@@ -402,13 +402,13 @@ func TestClassifyRootConflictBlocksOnlyExecutionlessCyclesFromPlanOnward(t *test
 	}
 	blank := withIssue(baseRecord(issueopsnextcontract.PhasePlan))
 	blank.RootConflictID = "  "
-	if got := Classify(blank); got.Stage.Key == blockedRoot {
+	if got := classifyTemplate(blank); got.Stage.Key == blockedRoot {
 		t.Fatal("a blank root conflict id must not block")
 	}
 }
 
 func TestClassifyUnknownReportsUnmatchedLocalGates(t *testing.T) {
-	got := Classify(withLocal(withSelfHolder(baseRecord(issueopsnextcontract.PhaseFeedback)), "branch_match", "other"))
+	got := classifyTemplate(withLocal(withSelfHolder(baseRecord(issueopsnextcontract.PhaseFeedback)), "branch_match", "other"))
 	if got.Stage.Key != "unknown" {
 		t.Fatalf("stage %s want unknown", got.Stage.Key)
 	}
@@ -423,7 +423,7 @@ func TestClassifyUnknownReportsUnmatchedLocalGates(t *testing.T) {
 		"no local readiness":    withIssue(baseRecord(issueopsnextcontract.PhasePR)),
 		"empty local readiness": withLocal(withIssue(baseRecord(issueopsnextcontract.PhasePR))),
 	} {
-		got := Classify(in)
+		got := classifyTemplate(in)
 		if got.Stage.Key != "unknown" {
 			t.Fatalf("%s: stage %s want unknown", name, got.Stage.Key)
 		}
@@ -435,26 +435,26 @@ func TestClassifyUnknownReportsUnmatchedLocalGates(t *testing.T) {
 
 func TestClassifyMissingIssueURLOnlyClassifiesProblemAndGrill(t *testing.T) {
 	for _, phase := range []issueopsnextcontract.Phase{issueopsnextcontract.PhaseProblem, issueopsnextcontract.PhaseGrill} {
-		got := Classify(baseRecord(phase))
+		got := classifyTemplate(baseRecord(phase))
 		if got.Stage.Key != "issue" || got.Stage.Index != 1 {
 			t.Fatalf("%s without issue: got %s/%d want issue/1", phase, got.Stage.Key, got.Stage.Index)
 		}
 	}
-	got := Classify(baseRecord(issueopsnextcontract.PhasePlan))
+	got := classifyTemplate(baseRecord(issueopsnextcontract.PhasePlan))
 	if got.Stage.Key != "unknown" {
 		t.Fatalf("plan without issue url must not be treated as stage 1, got %s", got.Stage.Key)
 	}
 }
 
 func TestClassifyBranchPrepareCommandDependsOnPhase(t *testing.T) {
-	problem := Classify(withIssue(baseRecord(issueopsnextcontract.PhaseProblem)))
+	problem := classifyTemplate(withIssue(baseRecord(issueopsnextcontract.PhaseProblem)))
 	if problem.Stage.Key != "prepare" || problem.NextCommand != "issueops phase --id io-test --to grill $RECORD_ACTOR_FLAGS --json" {
 		t.Fatalf("problem with issue: got %s %q", problem.Stage.Key, problem.NextCommand)
 	}
 	if len(problem.Missing) != 1 || problem.Missing[0] != "intent_contract" {
 		t.Fatalf("problem with issue must surface stage-one gates, got %v", problem.Missing)
 	}
-	grill := Classify(withIssue(baseRecord(issueopsnextcontract.PhaseGrill)))
+	grill := classifyTemplate(withIssue(baseRecord(issueopsnextcontract.PhaseGrill)))
 	if grill.Stage.Key != "prepare" || strings.Contains(grill.NextCommand, "--to grill") {
 		t.Fatalf("grill with issue must not re-advance to grill, got %s %q", grill.Stage.Key, grill.NextCommand)
 	}
@@ -475,16 +475,16 @@ func TestClassifyUnverifiedBranchLinkStaysInPrepare(t *testing.T) {
 		in.Record.BranchPrepare.LinkVerified = false
 		return in
 	}
-	plan := Classify(unverified(withIssue(baseRecord(issueopsnextcontract.PhasePlan))))
+	plan := classifyTemplate(unverified(withIssue(baseRecord(issueopsnextcontract.PhasePlan))))
 	if plan.Stage.Key != "prepare" || len(plan.Missing) != 1 || plan.Missing[0] != "branch_link_verified" ||
 		plan.NextCommand != OwnerCommand("io-test", "branch_link_verified") || !strings.Contains(plan.NextCommand, " --link-verified ") {
 		t.Fatalf("plan with unverified link: %s %v %q", plan.Stage.Key, plan.Missing, plan.NextCommand)
 	}
-	holder := Classify(withSelfHolder(unverified(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))
+	holder := classifyTemplate(withSelfHolder(unverified(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))
 	if holder.Stage.Key != "prepare" || len(holder.Missing) != 1 || holder.Missing[0] != "branch_link_verified" {
 		t.Fatalf("holder at plan with unverified link: %s %v %q", holder.Stage.Key, holder.Missing, holder.NextCommand)
 	}
-	verified := Classify(withSelfHolder(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))
+	verified := classifyTemplate(withSelfHolder(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))
 	if verified.Stage.Key != "implement.enter" || len(verified.Missing) != 1 || verified.Missing[0] != "plan_path" {
 		t.Fatalf("holder at plan with verified link: %s %v", verified.Stage.Key, verified.Missing)
 	}
@@ -494,12 +494,12 @@ func TestClassifyUnverifiedBranchLinkStaysInPrepare(t *testing.T) {
 // plan_path step names that file instead of a <PATH> the agent must hunt for.
 func TestClassifyPlanPathNamesTheSealedPlan(t *testing.T) {
 	in := withSelfHolder(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan))))
-	if got := Classify(in).NextCommand; got != OwnerCommand("io-test", "plan_path") {
+	if got := classifyTemplate(in).NextCommand; got != OwnerCommand("io-test", "plan_path") {
 		t.Fatalf("without artifact_dir: %q", got)
 	}
 	in.Record.Execution.Workspace.Root = "/repo.worktrees/9-x"
 	in.Record.Execution.Workspace.ArtifactDir = ".issueops/issues/9/artifact"
-	if got := Classify(in).NextCommand; got != "issueops link-plan --id io-test --plan-path '/repo.worktrees/9-x/.issueops/issues/9/artifact/plan.md' $RECORD_ACTOR_FLAGS" {
+	if got := classifyTemplate(in).NextCommand; got != "issueops link-plan --id io-test --plan-path '/repo.worktrees/9-x/.issueops/issues/9/artifact/plan.md' $RECORD_ACTOR_FLAGS" {
 		t.Fatalf("with artifact_dir: %q", got)
 	}
 }
@@ -508,11 +508,11 @@ func TestClassifyPlanPathNamesTheSealedPlan(t *testing.T) {
 // starts with replace --preview, a claimable one is claimed with the current
 // token. (It used to answer `execution status`, an extra round trip.)
 func TestClassifyClaimStageStartsTheChain(t *testing.T) {
-	released := Classify(withReleasedLease(withBranch(withIssue(baseRecord(issueopsnextcontract.PhaseImplement)))))
+	released := classifyTemplate(withReleasedLease(withBranch(withIssue(baseRecord(issueopsnextcontract.PhaseImplement)))))
 	if released.Stage.Key != "claim" || released.NextCommand != "issueops execution replace --id 'io-test' --expected-generation 1 --preview" {
 		t.Fatalf("released: %s %q", released.Stage.Key, released.NextCommand)
 	}
-	claimable := Classify(withClaimableLease(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))
+	claimable := classifyTemplate(withClaimableLease(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))
 	if claimable.Stage.Key != "claim" || claimable.NextCommand != "issueops execution claim --id 'io-test' --generation 1 --claim-current-token" {
 		t.Fatalf("claimable: %s %q", claimable.Stage.Key, claimable.NextCommand)
 	}
@@ -522,7 +522,7 @@ func TestClassifyRevokingLeaseOffersTakeover(t *testing.T) {
 	revoking := withExecution(baseRecord(issueopsnextcontract.PhaseImplement), issueopscontract.WriteLease{
 		Generation: 4, Status: issueopsnextcontract.LeaseStatusRevoking,
 	})
-	got := Classify(revoking)
+	got := classifyTemplate(revoking)
 	if got.Stage.Key != "takeover" {
 		t.Fatalf("revoking lease stage %s want takeover", got.Stage.Key)
 	}
@@ -534,11 +534,11 @@ func TestClassifyRevokingLeaseOffersTakeover(t *testing.T) {
 		t.Fatalf("a revoking lease cannot be paused, got %q", got.Exits.PauseCommand)
 	}
 
-	self := Classify(withSelfHolder(baseRecord(issueopsnextcontract.PhaseImplement)))
+	self := classifyTemplate(withSelfHolder(baseRecord(issueopsnextcontract.PhaseImplement)))
 	if self.Exits.TakeoverCommand != "" {
 		t.Fatalf("an active self holder must not be offered takeover, got %q", self.Exits.TakeoverCommand)
 	}
-	live := Classify(withHolder(baseRecord(issueopsnextcontract.PhaseImplement), "codex", "s-2", true))
+	live := classifyTemplate(withHolder(baseRecord(issueopsnextcontract.PhaseImplement), "codex", "s-2", true))
 	if live.Exits.TakeoverCommand != "" {
 		t.Fatalf("a live foreign holder must not be offered takeover, got %q", live.Exits.TakeoverCommand)
 	}
@@ -547,11 +547,11 @@ func TestClassifyRevokingLeaseOffersTakeover(t *testing.T) {
 func TestClassifyTakeoverPrefersWriterlessRecovery(t *testing.T) {
 	in := withHolder(baseRecord(issueopsnextcontract.PhaseImplement), "codex", "s-2", false)
 	in.WriterlessRecovery = "  issueops execution recover --id io-test  "
-	if got := Classify(in); got.NextCommand != "issueops execution recover --id io-test" {
+	if got := classifyTemplate(in); got.NextCommand != "issueops execution recover --id io-test" {
 		t.Fatalf("writerless recovery must win, got %q", got.NextCommand)
 	}
 	in.WriterlessRecovery = "   "
-	if got := Classify(in); got.NextCommand != "issueops execution replace --id io-test --expected-generation 1 --preview" {
+	if got := classifyTemplate(in); got.NextCommand != "issueops execution replace --id io-test --expected-generation 1 --preview" {
 		t.Fatalf("blank recovery must fall back to replace, got %q", got.NextCommand)
 	}
 }
@@ -562,11 +562,11 @@ func TestClassifyRendersGenerationInTakeoverCommands(t *testing.T) {
 			Generation: generation, Status: issueopsnextcontract.LeaseStatusRevoking,
 		})
 	}
-	if got := Classify(revoking(12)); !strings.Contains(got.NextCommand, "--expected-generation 12 ") ||
+	if got := classifyTemplate(revoking(12)); !strings.Contains(got.NextCommand, "--expected-generation 12 ") ||
 		!strings.Contains(got.Exits.TakeoverCommand, "--expected-generation 12 ") {
 		t.Fatalf("generation 12 must render, got next %q exit %q", got.NextCommand, got.Exits.TakeoverCommand)
 	}
-	if got := Classify(revoking(0)); !strings.Contains(got.NextCommand, "--expected-generation <N> ") ||
+	if got := classifyTemplate(revoking(0)); !strings.Contains(got.NextCommand, "--expected-generation <N> ") ||
 		!strings.Contains(got.Exits.TakeoverCommand, "--expected-generation <N> ") {
 		t.Fatalf("unknown generation must render a placeholder, got next %q exit %q", got.NextCommand, got.Exits.TakeoverCommand)
 	}
@@ -575,7 +575,7 @@ func TestClassifyRendersGenerationInTakeoverCommands(t *testing.T) {
 func TestClassifyIssueStageFallsBackToIntentContractWithoutMissingGates(t *testing.T) {
 	in := baseRecord(issueopsnextcontract.PhaseGrill)
 	in.Completion = func(issueopsnextcontract.Phase) Readiness { return Readiness{Ready: true} }
-	got := Classify(in)
+	got := classifyTemplate(in)
 	if got.Stage.Key != "issue" {
 		t.Fatalf("stage %s want issue", got.Stage.Key)
 	}
@@ -612,7 +612,7 @@ func TestClassifyWarningsPassThroughLocalAndWorktreeObservations(t *testing.T) {
 	}
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
-			got := Classify(testCase.in).Warnings
+			got := classifyTemplate(testCase.in).Warnings
 			if strings.Join(got, "|") != strings.Join(testCase.want, "|") {
 				t.Fatalf("warnings %q want %q", got, testCase.want)
 			}
@@ -621,17 +621,17 @@ func TestClassifyWarningsPassThroughLocalAndWorktreeObservations(t *testing.T) {
 
 	local := withSelfHolder(baseRecord(issueopsnextcontract.PhaseImplement))
 	local.Local = &Readiness{Warnings: []string{"base drift"}}
-	if got := Classify(local).Warnings; len(got) != 1 || got[0] != "base drift" {
+	if got := classifyTemplate(local).Warnings; len(got) != 1 || got[0] != "base drift" {
 		t.Fatalf("local warnings must pass through, got %q", got)
 	}
 	local.WorktreePresent = false
-	if got := Classify(local).Warnings; len(got) != 2 || got[0] != "base drift" || got[1] != missingRoot {
+	if got := classifyTemplate(local).Warnings; len(got) != 2 || got[0] != "base drift" || got[1] != missingRoot {
 		t.Fatalf("local warnings must precede worktree warnings, got %q", got)
 	}
 	blankRoot := withSelfHolder(baseRecord(issueopsnextcontract.PhaseImplement))
 	blankRoot.Record.Execution.Workspace.Root = "  "
 	blankRoot.WorktreePresent = false
-	if got := Classify(blankRoot).Warnings; len(got) != 0 {
+	if got := classifyTemplate(blankRoot).Warnings; len(got) != 0 {
 		t.Fatalf("a blank workspace root has no worktree to miss, got %q", got)
 	}
 }
@@ -654,7 +654,7 @@ func TestClassifyPlanStagesArchitectureFirst(t *testing.T) {
 		{"devils advocate recorded", withDA(withStagedPlan(withArchitecture(plan))), "plan.handoff", "", "issueops execution prepare --id io-test"},
 	} {
 		t.Run(step.name, func(t *testing.T) {
-			got := Classify(step.in)
+			got := classifyTemplate(step.in)
 			if got.Stage.Key != step.stage || !strings.HasPrefix(got.NextCommand, step.command) {
 				t.Fatalf("stage=%q command=%q, want %q starting with %q", got.Stage.Key, got.NextCommand, step.stage, step.command)
 			}
@@ -667,11 +667,11 @@ func TestClassifyPlanStagesArchitectureFirst(t *testing.T) {
 
 func TestClassifyArchitectureReviewStaleStaysInArchitectureStage(t *testing.T) {
 	in := withDA(withStagedPlan(withArchitecture(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan))))))
-	if got := Classify(in); got.Stage.Key != "plan.handoff" {
+	if got := classifyTemplate(in); got.Stage.Key != "plan.handoff" {
 		t.Fatalf("fresh approval must reach handoff, got %q", got.Stage.Key)
 	}
 	in.ArchitectureReviewStale = true
-	got := Classify(in)
+	got := classifyTemplate(in)
 	if got.Stage.Key != "plan.architecture" || !slices.Equal(got.Missing, []string{"architecture_review_stale"}) {
 		t.Fatalf("stale approval must stay in plan.architecture: stage=%q missing=%v", got.Stage.Key, got.Missing)
 	}
@@ -688,11 +688,11 @@ func TestClassifyDelegatedChildSkipsArchitectureStage(t *testing.T) {
 		Approved:     true, ReviewerContext: issueopsdomain.ParentReviewPattern, ReviewedAt: "2026-09-05T00:00:00Z",
 	}
 	child.ArchitectureReviewStale = true
-	if got := Classify(child); got.Stage.Key != "plan.review" {
+	if got := classifyTemplate(child); got.Stage.Key != "plan.review" {
 		t.Fatalf("inherited approval must skip the architecture stage, got %q missing=%v", got.Stage.Key, got.Missing)
 	}
 	child.Record.ArchitectureReview.ReviewerContext = "subagent"
-	if got := Classify(child); got.Stage.Key != "plan.architecture" {
+	if got := classifyTemplate(child); got.Stage.Key != "plan.architecture" {
 		t.Fatalf("a reviewed child without its own staged architecture stays in plan.architecture, got %q", got.Stage.Key)
 	}
 }
@@ -717,7 +717,7 @@ func TestClassifyPRRefreshSequenceAfterAMovedHead(t *testing.T) {
 		{pr("old"), "pr.create", ""},
 	}
 	for i, step := range steps {
-		got := Classify(step.in)
+		got := classifyTemplate(step.in)
 		if got.Stage.Key != step.stage || (step.cmd != "" && got.NextCommand != step.cmd) {
 			t.Fatalf("step %d: stage=%s next=%q", i, got.Stage.Key, got.NextCommand)
 		}
@@ -729,7 +729,7 @@ func TestClassifyPRRefreshSequenceAfterAMovedHead(t *testing.T) {
 // to the exit command (an agent nearly skipped the implementation).
 func TestClassifyImplementNamesWhatTheExitNeeds(t *testing.T) {
 	in := withCompletionMissing(withSelfHolder(withBranch(withIssue(baseRecord(issueopsnextcontract.PhaseImplement)))), issueopsnextcontract.PhaseImplement, "implementation_changes")
-	got := Classify(in)
+	got := classifyTemplate(in)
 	if got.Stage.Key != "implement" || !slices.Equal(got.Missing, []string{"implementation_changes"}) || !strings.Contains(got.NextCommand, "--to ai-slop-clean") {
 		t.Fatalf("stage=%s missing=%v next=%q", got.Stage.Key, got.Missing, got.NextCommand)
 	}
@@ -740,7 +740,7 @@ func TestClassifyImplementNamesWhatTheExitNeeds(t *testing.T) {
 func TestClassifyCommitPushNamesTheGitStep(t *testing.T) {
 	in := withLocal(withSelfHolder(baseRecord(issueopsnextcontract.PhaseAISlopClean)), "upstream", "worktree_clean")
 	in.Record.Branch = "12-a"
-	got := Classify(in)
+	got := classifyTemplate(in)
 	joined := strings.Join(got.Warnings, "\n")
 	if got.Stage.Key != "commit-push" || !strings.Contains(joined, "commit the changes") || !strings.Contains(joined, "git push -u origin 12-a") {
 		t.Fatalf("stage=%s warnings=%q", got.Stage.Key, got.Warnings)
@@ -753,14 +753,14 @@ func TestClassifyCommitPushNamesTheGitStep(t *testing.T) {
 func TestClassifyPRCreateAndReconcileTemplatesNameWhatTheCommandsRequire(t *testing.T) {
 	in := withBranch(withSelfHolder(baseRecord(issueopsnextcontract.PhasePR)))
 	in.Record.Branch = "12-a"
-	got := Classify(in).NextCommand
+	got := classifyTemplate(in).NextCommand
 	for _, want := range []string{"--head 12-a", "--base main", "--label <LABEL>", "--assignee <USER>", "$ACTOR_FLAGS"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("create-pr template %q lacks %q", got, want)
 		}
 	}
 	in.Record.Execution.Pending = &issueopscontract.ExternalIntent{}
-	if got := Classify(in).NextCommand; !strings.Contains(got, "reconcile --id io-test --preview $ACTOR_FLAGS") {
+	if got := classifyTemplate(in).NextCommand; !strings.Contains(got, "reconcile --id io-test --preview $ACTOR_FLAGS") {
 		t.Fatalf("reconcile template %q", got)
 	}
 }
@@ -768,13 +768,61 @@ func TestClassifyPRCreateAndReconcileTemplatesNameWhatTheCommandsRequire(t *test
 // A delegated child sat in grill after `branch prepare --link-verified`, and
 // next kept handing back the same branch prepare: only the phase was behind.
 func TestClassifyGrillWithVerifiedBranchMovesToPlan(t *testing.T) {
-	got := Classify(withBranch(withIssue(baseRecord(issueopsnextcontract.PhaseGrill))))
+	got := classifyTemplate(withBranch(withIssue(baseRecord(issueopsnextcontract.PhaseGrill))))
 	if got.Stage.Key != "prepare" || got.NextCommand != "issueops phase --id io-test --to plan $RECORD_ACTOR_FLAGS --json" {
 		t.Fatalf("stage=%s next=%q", got.Stage.Key, got.NextCommand)
 	}
 	unverified := withBranch(withIssue(baseRecord(issueopsnextcontract.PhaseGrill)))
 	unverified.Record.BranchPrepare.LinkVerified = false
-	if got := Classify(unverified); !strings.Contains(got.NextCommand, "--link-verified") {
+	if got := classifyTemplate(unverified); !strings.Contains(got.NextCommand, "--link-verified") {
 		t.Fatalf("unverified link must still ask for the readback: %q", got.NextCommand)
+	}
+}
+
+// classifyTemplate classifies and puts the record placeholder back, so rule
+// tests pin which command a rule picks, not the caller's rendered flags; the
+// rendering has its own test.
+func classifyTemplate(in Input) Decision {
+	decision := Classify(in)
+	if flags := recordActorFlags(in); flags != "" && strings.Contains(decision.NextCommand, flags) {
+		decision.NextCommand = strings.ReplaceAll(decision.NextCommand, flags, "$RECORD_ACTOR_FLAGS")
+		decision.NextCommandKind = issueopsnextcontract.NextCommandKindTemplate
+	}
+	return decision
+}
+
+// next renders the record vector only where it knows the canonical cwd and the
+// caller: before a lease (source checkout) and while the caller holds it
+// (worktree). Another holder, a holder with an agent id, or no session keeps
+// the template.
+func TestClassifyRendersRecordActorFlagsWhenTheVectorIsKnown(t *testing.T) {
+	holder := func(in Input, host, session, agent string) Input {
+		in.Record.Execution = &issueopscontract.Execution{
+			Workspace: issueopscontract.Workspace{Root: "/repo.worktrees/12 test"},
+			Lease: issueopscontract.WriteLease{Status: issueopsnextcontract.LeaseStatusActive,
+				Holder: &issueopscontract.NativeActor{Host: host, SessionID: session, AgentID: agent}},
+		}
+		return in
+	}
+	problem := withIssue(baseRecord(issueopsnextcontract.PhaseProblem))
+	if got := Classify(problem); got.NextCommand != "issueops phase --id io-test --to grill --host claude --session-id s-1 --cwd /repo --json" || got.NextCommandKind != "exact" {
+		t.Fatalf("pre-lease: %q %s", got.NextCommand, got.NextCommandKind)
+	}
+	if got := recordActorFlags(holder(problem, "claude", "s-1", "")); got != "--host claude --session-id s-1 --cwd '/repo.worktrees/12 test'" {
+		t.Fatalf("holder vector = %q", got)
+	}
+	for name, in := range map[string]Input{
+		"other holder":    holder(problem, "codex", "t-9", ""),
+		"agent-id holder": holder(problem, "claude", "s-1", "sub-1"),
+		"no session":      func() Input { in := problem; in.ActorSessionID = ""; return in }(),
+		"released lease": func() Input {
+			in := holder(problem, "claude", "s-1", "")
+			in.Record.Execution.Lease.Status = issueopsnextcontract.LeaseStatusReleased
+			return in
+		}(),
+	} {
+		if got := recordActorFlags(in); got != "" {
+			t.Fatalf("%s: rendered %q, want the template kept", name, got)
+		}
 	}
 }
