@@ -53,22 +53,22 @@ func ObserveNativeProcessReceipt(pid int) (issueops.NativeProcessReceipt, error)
 	if !alive {
 		return issueops.NativeProcessReceipt{}, fmt.Errorf("native process pid %d is not live", pid)
 	}
-	startedRaw, err := processField(pid, "lstart=")
+	// One ps call for both fields: two calls cost a spawn more (next checks the
+	// holder on every call) and could straddle a PID reuse. The row splits like
+	// a snapshot row, so the receipt compares equal to whoami's.
+	row, err := processField(pid, "lstart=,comm=")
 	if err != nil {
-		return issueops.NativeProcessReceipt{}, fmt.Errorf("read native process start identity: %w", err)
+		return issueops.NativeProcessReceipt{}, fmt.Errorf("read native process identity: %w", err)
 	}
-	started, err := parseNativeProcessStart(startedRaw)
+	fields := strings.Fields(row)
+	if len(fields) < 6 {
+		return issueops.NativeProcessReceipt{}, fmt.Errorf("native process executable identity is empty")
+	}
+	started, err := parseNativeProcessStart(strings.Join(fields[:5], " "))
 	if err != nil {
 		return issueops.NativeProcessReceipt{}, fmt.Errorf("parse native process start identity: %w", err)
 	}
-	executable, err := processField(pid, "comm=")
-	if err != nil {
-		return issueops.NativeProcessReceipt{}, fmt.Errorf("read native process executable identity: %w", err)
-	}
-	executable = strings.TrimSpace(executable)
-	if executable == "" {
-		return issueops.NativeProcessReceipt{}, fmt.Errorf("native process executable identity is empty")
-	}
+	executable := strings.Join(fields[5:], " ")
 	return issueops.NativeProcessReceipt{
 		PID: pid, StartedAt: started.UTC().Format(time.RFC3339), Executable: executable,
 	}, nil

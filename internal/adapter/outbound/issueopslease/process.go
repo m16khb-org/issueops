@@ -43,22 +43,21 @@ func observeReceipt(ctx context.Context, pid int) (leasedomain.ProcessReceipt, e
 	}
 	probe, cancel := context.WithTimeout(ctx, processProbeTimeout)
 	defer cancel()
-	startedRaw, err := processField(probe, pid, "lstart=")
+	// One ps call reads both fields (a spawn fewer, no PID-reuse gap between
+	// them); the row splits like the whoami snapshot row.
+	row, err := processField(probe, pid, "lstart=,comm=")
 	if err != nil {
 		return leasedomain.ProcessReceipt{}, err
 	}
-	started, err := parseProcessStart(startedRaw)
-	if err != nil {
-		return leasedomain.ProcessReceipt{}, err
-	}
-	executable, err := processField(probe, pid, "comm=")
-	if err != nil {
-		return leasedomain.ProcessReceipt{}, err
-	}
-	executable = strings.TrimSpace(executable)
-	if executable == "" {
+	fields := strings.Fields(row)
+	if len(fields) < 6 {
 		return leasedomain.ProcessReceipt{}, fmt.Errorf("native process executable identity is empty")
 	}
+	started, err := parseProcessStart(strings.Join(fields[:5], " "))
+	if err != nil {
+		return leasedomain.ProcessReceipt{}, err
+	}
+	executable := strings.Join(fields[5:], " ")
 	return leasedomain.ProcessReceipt{PID: pid, StartedAt: started.UTC().Format(time.RFC3339), Executable: executable}, nil
 }
 func processField(ctx context.Context, pid int, field string) (string, error) {
