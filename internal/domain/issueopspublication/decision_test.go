@@ -19,6 +19,10 @@ func TestDecideReconcile(t *testing.T) {
 		{name: "unknown invocation", facts: ReconcileFacts{AuthoritativeZero: true, Invocation: contract.InvocationUnknown}, action: ActionPreserve, reason: "unknown-invocation"},
 		{name: "first proven retry", facts: ReconcileFacts{AuthoritativeZero: true, Invocation: contract.InvocationNotInvokedProven}, action: ActionRetry},
 		{name: "retry exhausted", facts: ReconcileFacts{AuthoritativeZero: true, Invocation: contract.InvocationNotInvokedProven, RetryCount: 1}, action: ActionPreserve, reason: "retry-exhausted"},
+		{name: "crash settled unknown invocation retries once", facts: ReconcileFacts{AuthoritativeZero: true, Invocation: contract.InvocationUnknown, CrashSettled: true}, action: ActionRetry},
+		{name: "crash settled after the one retry", facts: ReconcileFacts{AuthoritativeZero: true, Invocation: contract.InvocationUnknown, CrashSettled: true, RetryCount: 1}, action: ActionPreserve, reason: "retry-exhausted"},
+		{name: "crash settled but non-authoritative zero", facts: ReconcileFacts{Invocation: contract.InvocationUnknown, CrashSettled: true}, action: ActionPreserve, reason: "non-authoritative-zero"},
+		{name: "crash settled with a candidate adopts", facts: ReconcileFacts{CandidateCount: 1, Invocation: contract.InvocationUnknown, CrashSettled: true}, action: ActionAdopt},
 	}
 
 	for _, test := range tests {

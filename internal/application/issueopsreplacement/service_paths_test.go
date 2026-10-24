@@ -398,10 +398,6 @@ func TestFinalizeRefusals(t *testing.T) {
 		want   string
 	}{
 		{"lease not revoking", func(_ *Service, _ *replacementFixture, _ *model.ExecutionReplaceRequest) {}, "finalize requires a revoking lease"},
-		{"pending external intent", func(_ *Service, f *replacementFixture, _ *model.ExecutionReplaceRequest) {
-			f.record.Execution.Lease.Status = model.LeaseStatusRevoking
-			f.record.Execution.Pending = &model.ExternalIntent{}
-		}, "pending external intent"},
 		{"stale generation", func(_ *Service, f *replacementFixture, r *model.ExecutionReplaceRequest) {
 			f.record.Execution.Lease.Status = model.LeaseStatusRevoking
 			r.ExpectedGeneration = 2

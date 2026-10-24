@@ -19,6 +19,11 @@ type ReconcileFacts struct {
 	AuthoritativeZero bool
 	Invocation        contract.InvocationState
 	RetryCount        int
+	// CrashSettled says an unknown invocation can no longer land: the create
+	// is older than the quiet period and no provider create or issueops
+	// create-pr for this head is alive. A caller that died inside the create
+	// otherwise left the intent with no exit but abandon (QA, killed process).
+	CrashSettled bool
 }
 
 type Decision struct {
@@ -40,7 +45,7 @@ func DecideReconcile(facts ReconcileFacts) (Decision, error) {
 	if !facts.AuthoritativeZero {
 		return Decision{Action: ActionPreserve, Reason: "non-authoritative-zero"}, nil
 	}
-	if facts.Invocation != contract.InvocationNotInvokedProven {
+	if facts.Invocation != contract.InvocationNotInvokedProven && !facts.CrashSettled {
 		return Decision{Action: ActionPreserve, Reason: "unknown-invocation"}, nil
 	}
 	if facts.RetryCount != 0 {

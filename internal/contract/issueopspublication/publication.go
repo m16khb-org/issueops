@@ -177,6 +177,8 @@ type Intent struct {
 	KnownURL        string
 	Eligibility     CreateEligibility
 	Raw             []byte
+	// PendingStartedAt is when the pending create was recorded (RFC3339).
+	PendingStartedAt string
 }
 
 func (i Intent) Clone() Intent {

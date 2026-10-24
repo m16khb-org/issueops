@@ -242,7 +242,11 @@ func (j *PublicationJournal) loadSnapshot(ctx context.Context, record model.Issu
 	if err != nil {
 		return contract.Intent{}, err
 	}
-	return contract.Intent{Record: snapshot, Raw: raw, OperationID: payload.OperationID, Generation: payload.Generation, Provider: payload.Provider, Kind: payload.Kind, Request: payload.Request.Clone(), InvocationState: contract.InvocationState(payload.InvocationState), RetryCount: payload.RetryCount, KnownURL: payload.KnownURL, Eligibility: eligibility}, nil
+	intent := contract.Intent{Record: snapshot, Raw: raw, OperationID: payload.OperationID, Generation: payload.Generation, Provider: payload.Provider, Kind: payload.Kind, Request: payload.Request.Clone(), InvocationState: contract.InvocationState(payload.InvocationState), RetryCount: payload.RetryCount, KnownURL: payload.KnownURL, Eligibility: eligibility}
+	if record.Execution != nil && record.Execution.Pending != nil {
+		intent.PendingStartedAt = record.Execution.Pending.StartedAt
+	}
+	return intent, nil
 }
 
 func pendingFacts(record model.IssueOpsRecord, expected string) domain.PendingIntentFacts {

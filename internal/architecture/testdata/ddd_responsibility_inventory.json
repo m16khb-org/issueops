@@ -5006,6 +5006,15 @@
       ]
     },
     {
+      "path": "internal/adapter/issueops/publication_settlement.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func PublicationCrashSettlement",
+        "func publicationCreateInFlight"
+      ]
+    },
+    {
       "path": "internal/adapter/issueops/readiness_git.go",
       "owner": "adapter",
       "task": "T20",
@@ -9320,11 +9329,13 @@
       "symbols": [
         "func NewReconcileService",
         "func ReconcileService.Reconcile",
+        "func ReconcileService.WithCrashSettlement",
         "func ReconcileService.adopt",
         "func ReconcileService.failed",
         "func ReconcileService.preserve",
         "func ReconcileService.retry",
         "func reconciledResult",
+        "type CrashSettlement",
         "type ReconcileService"
       ]
     },

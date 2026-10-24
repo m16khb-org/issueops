@@ -147,9 +147,11 @@ func (s Service) mutateExecutionReplacement(ctx context.Context, req issueops.Ex
 		if err != nil {
 			return err
 		}
-		if record.Execution.Pending != nil {
-			return fmt.Errorf("execution replacement is blocked by a pending external intent; run execution reconcile")
-		}
+		// A pending external intent stays on the record and passes to the
+		// new holder, who reconciles it: reconcile needs the live holder, so
+		// refusing here left a cycle whose holder died inside the write with
+		// no exit (QA, killed create-pr). Finalize still requires the old
+		// holder to be gone.
 		lease := &record.Execution.Lease
 		if err := s.validateCWD(record, req.CWD); err != nil {
 			return err
@@ -218,6 +220,11 @@ func (s Service) finalizeReplacement(spanCtx context.Context, req issueops.Execu
 	// terminal 상태인 released가 정확하다. 이 lifecycle은 폐기하거나
 	// 처음부터 다시 prepare해야 하며, 두 경로 모두 released에서 열린다.
 	if s.Artifacts.WorkspaceAbsent(record.Execution.Workspace.Root) {
+		// released keeps no holder who could reconcile, and reseed, abandon,
+		// and prepare all refuse a pending intent: stay revoking instead.
+		if record.Execution.Pending != nil {
+			return fmt.Errorf("execution replacement is blocked by a pending external intent while the workspace is missing; restore the workspace so the next holder can reconcile")
+		}
 		*lease = domain.FinalizeReplacement(*lease, true, "")
 		*persisted, err = s.Records.Persist(spanCtx, record, nil)
 		return err

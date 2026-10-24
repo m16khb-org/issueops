@@ -423,3 +423,47 @@ func assertReconcileFailure(t *testing.T, result contract.ReconcileResult, err e
 		t.Fatalf("result=%#v err=%v wantCode=%q wantInspected=%v wantErr=%q", result, err, code, inspected, wantErr)
 	}
 }
+
+// A create whose caller died (invocation unknown) and an authoritative zero:
+// with a settlement proving nothing can still land, reconcile takes the one
+// retry; without it, or when settlement says no, the intent is kept.
+func TestReconcileCrashSettlementUnlocksTheSingleRetry(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		settled CrashSettlement
+		creates int
+		code    string
+	}{
+		{"settled", func(context.Context, contract.Intent) (bool, error) { return true, nil }, 1, "remote_reconcile_retry_succeeded"},
+		{"still in flight", func(context.Context, contract.Intent) (bool, error) { return false, nil }, 0, "remote_reconcile_zero_unproven"},
+		{"observation failed", func(context.Context, contract.Intent) (bool, error) { return true, errors.New("ps failed") }, 0, "remote_reconcile_zero_unproven"},
+		{"known url contradicts the empty list", nil, 0, "remote_reconcile_zero_unproven"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repository := newFakeRepository(t)
+			intent := validIntent()
+			settled := tc.settled
+			if settled == nil {
+				intent.KnownURL = "https://github.com/acme/repo/pull/9"
+				settled = func(context.Context, contract.Intent) (bool, error) { return true, nil }
+			}
+			repository.load = func(context.Context, string) (contract.Intent, error) { return intent, nil }
+			repository.markRetry = func(context.Context, contract.Intent) (contract.Intent, error) { return retryIntent(), nil }
+			repository.complete = func(context.Context, contract.Intent, string, bool) (contract.RecordSnapshot, error) {
+				return validRecord(), nil
+			}
+			repository.latest = latestRecordFunc(t, reconcileLatestRecord())
+			provider := newFakeProvider(t)
+			provider.inspect = authoritativeZero
+			provider.create = func(context.Context, string, contract.ProviderCreateRequest) (contract.ProviderCreateResult, contract.InvocationState, error) {
+				return successfulResult(), contract.InvocationUnknown, nil
+			}
+			verifier := acceptingVerifier(t)
+			verifier.live = func(context.Context, contract.Intent, string) error { return nil }
+			result, _ := NewReconcileService(repository, provider, verifier).WithCrashSettlement(settled).Reconcile(context.Background(), "io-1")
+			if provider.createCalls != tc.creates || result.Code != tc.code {
+				t.Fatalf("createCalls=%d code=%q", provider.createCalls, result.Code)
+			}
+		})
+	}
+}

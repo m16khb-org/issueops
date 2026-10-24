@@ -140,6 +140,21 @@ func Classify(in Input) Decision {
 func classifyBlockedExecution(in Input, decision Decision, index int) (Decision, bool) {
 	execution := in.Record.Execution
 	if execution != nil && execution.Pending != nil {
+		// Reconcile needs the live lease holder. When the holder died inside
+		// the write (QA: a killed create-pr), take the lease over first; the
+		// new holder reconciles the pending intent it inherits.
+		lease := execution.Lease
+		if (lease.Status == issueopsnextcontract.LeaseStatusActive && lease.Holder != nil && !holderIsSelf(in) && !live(in.HolderLive)) ||
+			lease.Status == issueopsnextcontract.LeaseStatusRevoking {
+			decision.Stage = stage(issueopsnextcontract.StageTakeover, index)
+			decision.NextCommand = takeoverCommand(in)
+			return decision, true
+		}
+		if lease.Status == issueopsnextcontract.LeaseStatusClaimable {
+			// The takeover finalized with the intent carried over: claim
+			// first; the claimed lease then shows blocked.pending.
+			return decision, false
+		}
 		decision.Stage = stage(issueopsnextcontract.StageBlockedPending, index)
 		decision.NextCommand = "issueops execution reconcile --id " + in.Record.ID + " --preview $ACTOR_FLAGS --json"
 		return decision, true

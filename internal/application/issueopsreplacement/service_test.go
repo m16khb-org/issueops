@@ -124,9 +124,6 @@ func TestReplacementRefusalsNeverPersist(t *testing.T) {
 		{"confirm", func(_ *replacementFixture, r *model.ExecutionReplaceRequest) { r.Confirm = false }, "requires confirm"},
 		{"generation", func(_ *replacementFixture, r *model.ExecutionReplaceRequest) { r.ExpectedGeneration = 6 }, "stale lease generation"},
 		{"zero generation", func(_ *replacementFixture, r *model.ExecutionReplaceRequest) { r.ExpectedGeneration = 0 }, "stale lease generation"},
-		{"pending", func(f *replacementFixture, _ *model.ExecutionReplaceRequest) {
-			f.record.Execution.Pending = &model.ExternalIntent{}
-		}, "pending external intent"},
 		{"cwd", func(_ *replacementFixture, r *model.ExecutionReplaceRequest) { r.CWD = "/outside" }, "cwd must"},
 		{"reason", func(_ *replacementFixture, r *model.ExecutionReplaceRequest) { r.Reason = " " }, "active lease and a reason"},
 		{"inventory", func(_ *replacementFixture, r *model.ExecutionReplaceRequest) { r.InventoryFingerprint = "changed" }, "stale replacement inventory"},
@@ -251,5 +248,48 @@ func TestQuiescenceExcludesRequesterChildButRejectsOtherSession(t *testing.T) {
 	result, err = service.Run(context.Background(), req)
 	if err == nil || !strings.Contains(err.Error(), "pid=300 command=external-session") || result.OK || f.saved != nil {
 		t.Fatalf("external session did not block: result=%+v err=%v", result, err)
+	}
+}
+
+// A pending external intent does not block the takeover of a dead holder:
+// reconcile needs a live holder, so the intent passes with the lease to the
+// new holder, who reconciles it.
+func TestFinalizeCarriesAPendingIntentToTheNextHolder(t *testing.T) {
+	service, f, req := fixtureService()
+	f.record.Execution.Lease.Status = model.LeaseStatusRevoking
+	pending := &model.ExternalIntent{OperationID: "op", Kind: "remote_pr_create", Marker: "m", StartedAt: "t"}
+	f.record.Execution.Pending = pending
+	req.Action = model.ExecutionReplaceFinalizePreview
+	preview, err := service.Run(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Action = model.ExecutionReplaceFinalize
+	req.QuiescenceFingerprint = preview.QuiescenceFingerprint
+	result, err := service.Run(context.Background(), req)
+	if err != nil || result.Execution.Lease.Status != model.LeaseStatusClaimable {
+		t.Fatalf("result=%+v err=%v", result, err)
+	}
+	if f.saved == nil || f.saved.Execution.Pending == nil || *f.saved.Execution.Pending != *pending {
+		t.Fatalf("pending intent not carried: %+v", f.saved)
+	}
+}
+
+// Without a workspace finalize would release the lease, and nothing reconciles
+// a pending intent on a released lease: the lease stays revoking instead.
+func TestFinalizeWithAPendingIntentKeepsAMissingWorkspaceRevoking(t *testing.T) {
+	service, f, req := fixtureService()
+	f.record.Execution.Lease.Status = model.LeaseStatusRevoking
+	f.record.Execution.Pending = &model.ExternalIntent{OperationID: "op", Kind: "remote_pr_create", Marker: "m", StartedAt: "t"}
+	f.absent = true
+	req.Action = model.ExecutionReplaceFinalizePreview
+	preview, err := service.Run(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Action = model.ExecutionReplaceFinalize
+	req.QuiescenceFingerprint = preview.QuiescenceFingerprint
+	if _, err := service.Run(context.Background(), req); err == nil || !strings.Contains(err.Error(), "workspace is missing") || f.saved != nil {
+		t.Fatalf("err=%v saved=%+v", err, f.saved)
 	}
 }

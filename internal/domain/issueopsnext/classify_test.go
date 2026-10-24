@@ -982,3 +982,27 @@ func TestClassifyIssueStageRoutesAnUnsettledCreateToReconcile(t *testing.T) {
 		t.Fatalf("settled intent still reconciles: %q", got.NextCommand)
 	}
 }
+
+// Reconcile needs the live holder; with a dead holder the pending intent is
+// reached through the takeover chain first, while a live holder (self) still
+// gets the reconcile preview.
+func TestClassifyPendingWithADeadHolderRoutesToTakeover(t *testing.T) {
+	in := withPending(baseRecord(issueopsnextcontract.PhasePR))
+	in.Record.Execution.Lease.Holder = &issueopscontract.NativeActor{Host: "codex", SessionID: "s-gone"}
+	dead := false
+	in.HolderLive = &dead
+	got := classifyTemplate(in)
+	if got.Stage.Key != issueopsnextcontract.StageTakeover || !strings.Contains(got.NextCommand, "execution replace --id") {
+		t.Fatalf("dead holder: %+v", got)
+	}
+	in = withPending(baseRecord(issueopsnextcontract.PhasePR))
+	if got := classifyTemplate(in); got.Stage.Key != issueopsnextcontract.StageBlockedPending || !strings.Contains(got.NextCommand, "execution reconcile") {
+		t.Fatalf("live self holder: %+v", got)
+	}
+	// After the takeover finalized with the intent carried over: claim first.
+	in.Record.Execution.Lease.Status = issueopsnextcontract.LeaseStatusClaimable
+	in.Record.Execution.Lease.Holder = nil
+	if got := classifyTemplate(in); got.Stage.Key != issueopsnextcontract.StageClaim || !strings.Contains(got.NextCommand, "execution claim --id") {
+		t.Fatalf("claimable with pending: %+v", got)
+	}
+}

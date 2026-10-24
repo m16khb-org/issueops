@@ -3,6 +3,7 @@ package issueopspublication
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	contract "issueops/internal/contract/issueopspublication"
 	domain "issueops/internal/domain/issueopspublication"
@@ -12,6 +13,18 @@ type ReconcileService struct {
 	repository Repository
 	provider   Provider
 	verifier   Verifier
+	settled    CrashSettlement
+}
+
+// CrashSettlement reports whether a pending create whose invocation is unknown
+// can no longer land (see domain ReconcileFacts.CrashSettled).
+type CrashSettlement func(ctx context.Context, intent contract.Intent) (bool, error)
+
+// WithCrashSettlement lets reconcile retry a create whose caller died inside
+// the provider call once the settlement proves nothing can still land.
+func (s *ReconcileService) WithCrashSettlement(settled CrashSettlement) *ReconcileService {
+	s.settled = settled
+	return s
 }
 
 func NewReconcileService(repository Repository, provider Provider, verifier Verifier) *ReconcileService {
@@ -34,12 +47,20 @@ func (s *ReconcileService) Reconcile(ctx context.Context, id string) (contract.R
 		return s.failed(ctx, intent, "remote_reconcile_ambiguous", attempted, cause)
 	}
 
-	decision, err := domain.DecideReconcile(domain.ReconcileFacts{
+	facts := domain.ReconcileFacts{
 		CandidateCount:    len(inventory.Candidates),
 		AuthoritativeZero: inventory.AuthoritativeZero,
 		Invocation:        intent.InvocationState,
 		RetryCount:        intent.RetryCount,
-	})
+	}
+	// A known URL with an empty authoritative list is contradictory evidence:
+	// keep the intent rather than retry (security review 2026-10-25).
+	if s.settled != nil && facts.AuthoritativeZero && facts.CandidateCount == 0 && facts.Invocation != contract.InvocationNotInvokedProven && strings.TrimSpace(intent.KnownURL) == "" {
+		// An observation error leaves the intent preserved (fail closed).
+		settled, settleErr := s.settled(ctx, intent)
+		facts.CrashSettled = settled && settleErr == nil
+	}
+	decision, err := domain.DecideReconcile(facts)
 	if err != nil {
 		return s.failed(ctx, intent, "remote_reconcile_ambiguous", attempted, err)
 	}

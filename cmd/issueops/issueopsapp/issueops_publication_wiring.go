@@ -69,7 +69,8 @@ func newIssueOpsPublicationServices(stateRoot string, deps issueOpsPublicationCo
 	gateway := publicationoutbound.NewProviderGateway(providerAdapter.create, providerAdapter.inspect)
 	verifier := remoteapp.NewPublicationVerifier(issueops.RemotePublicationStore{StateRoot: stateRoot}, deps.VerifyLive)
 	preparer := remoteapp.NewCreatePreparation(observer, authority, issueOpsActorVerifier())
-	return publicationapp.NewCreateService(preparer, repository, gateway, verifier), publicationapp.NewReconcileService(repository, gateway, verifier)
+	reconcile := publicationapp.NewReconcileService(repository, gateway, verifier).WithCrashSettlement(issueops.PublicationCrashSettlement(time.Now))
+	return publicationapp.NewCreateService(preparer, repository, gateway, verifier), reconcile
 }
 
 type publicationProviderAdapter struct {
