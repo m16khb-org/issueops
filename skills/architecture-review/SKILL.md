@@ -1,6 +1,6 @@
 ---
 name: architecture-review
-description: "Use when an architecture document, plan, or scope decision needs independent adversarial review before implementation, especially for excessive complexity or optimistic schedules. Run as an isolated sub-agent, never inline."
+description: "Use when an architecture document, plan, or scope decision needs independent adversarial review before implementation, especially for excessive complexity or optimistic schedules. Run as an isolated sub-agent; inline only on explicit user request."
 ---
 
 # Architecture Review
@@ -25,9 +25,9 @@ If an affected required behavior depends on an unverified assumption, identify t
 
 Naming preferences, optional refactors, minor duplication, speculative future scale, and unrelated pre-existing debt do not block delivery. Omit optional improvement lists unless requested. Apply the lenses below only to consequences that meet this threshold; checking a lens does not create a requirement to redesign the artifact.
 
-## Subagent-Only Mandate (non-negotiable)
+## Sub-agent mandate (one user-requested exception)
 
-**Architecture Review MUST run as a sub-agent with an isolated context — never inline in the author's session.** The one exception is a user who explicitly asks for inline review without sub-agents: then the author session reviews under the same output contract, records `--reviewer-context inline`, and reports that the review was not independent.
+**Architecture Review MUST run as a sub-agent with an isolated context.** It does not run inline in the author's session, with one exception: a user who explicitly asks for inline review without sub-agents. Then the author session reviews under the same output contract, records `--reviewer-context inline`, and reports that the review was not independent.
 
 A devil's advocate is worthless when it shares the author's context. The agent that wrote the plan carries sunk cost, knows the rationalizations, and will unconsciously defend its own design. Independence is the entire mechanism: a fresh context with no investment in the plan is what lets Architecture Review see the flaw the author cannot.
 
@@ -165,4 +165,4 @@ A `revise` or unwaived `stop` verdict remains recorded evidence for the cycle's 
 
 - Mechanical changes with a single obvious implementation (a typo fix, a dependency bump) — there is no design to attack.
 - For a general post-implementation code-quality audit. IssueOps's explicit `--target diff` integration above is limited to necessary behavior and contract checks.
-- As the author's own self-check — that is not adversarial. Architecture Review must be an independent sub-agent.
+- As the author's own self-check — that is not adversarial. Architecture Review must be an independent sub-agent unless the user explicitly asked for inline review.
