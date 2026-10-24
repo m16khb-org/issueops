@@ -221,10 +221,3 @@ issueops cleanup remote-branch --id "$ISSUEOPS_ID" --apply --confirm --fingerpri
 | `merge was not verified` 뒤 confirm 반복 | 대기열에 들어간 머지를 두 번 요청한다. 미리보기로 상태를 읽는다 |
 | 원격 브랜치를 `git push origin --delete`로 삭제 | fingerprint와 감사 기록을 우회한다 |
 | 머지 확인 하나로 워크트리와 이슈까지 정리 | cleanup의 fingerprint는 이슈를 닫은 뒤 새로 발급된다. 확인 ②를 따로 받는다 |
-
-## 검증
-
-```bash
-python3 scripts/validate-skill.py skills/issueops-merge
-python3 scripts/verify-skill-shell.py skills/issueops-merge
-```

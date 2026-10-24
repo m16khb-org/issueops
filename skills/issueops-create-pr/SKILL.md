@@ -160,13 +160,6 @@ provider 결과가 불명확하면 create를 반복하지 않는다. execution�
 - 성능: publication 단계에서 issue creation과 전체 lifecycle reference를
   중복 로드하지 않는다. 변경 전후 byte 수와 focused 검증 시간을 기록할 수
   있지만 측정 없는 latency 개선 주장은 하지 않는다.
-- 검증:
-
-```bash
-python3 scripts/validate-skill.py skills/issueops-create-pr
-python3 scripts/verify-skill-shell.py skills/issueops-create-pr
-wc -c skills/issueops-create-pr/SKILL.md
-```
 
 linked Issue, lease, branch pair, owner identity, body validation, provider
 authority, label/assignee, 또는 live readback이 모호하면 publish하지 않는다.

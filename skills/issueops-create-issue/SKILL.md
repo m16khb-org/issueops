@@ -226,12 +226,6 @@ issueops remote create-issue --id "$ISSUEOPS_ID" --provider "$PROVIDER" \
 - 성능: issue 단계에서만 이 스킬을 로드한다. PR/MR reference를 함께
   중복 로드하지 않는다. 변경 전후 byte 수와 focused 검증 시간을 기록하되
   측정 없는 성능 개선을 주장하지 않는다.
-- 검증:
-```bash
-python3 scripts/validate-skill.py skills/issueops-create-issue
-python3 scripts/verify-skill-shell.py skills/issueops-create-issue
-wc -c skills/issueops-create-issue/SKILL.md
-```
 
 provider, project authority, owner, body, label/assignee, hierarchy, 또는
 durable intent가 모호하면 쓰지 않는다.

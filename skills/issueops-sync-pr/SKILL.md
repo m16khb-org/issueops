@@ -122,13 +122,6 @@ readback한다. 본문 최신화는 완료 기록이 아니다. 완료 증거 �
   secret redaction, live readback.
 - 성능: 최신화 단계에서만 이 스킬을 로드한다. issue 생성·완료 reference를
   함께 중복 로드하지 않는다.
-- 검증:
-
-```bash
-python3 scripts/validate-skill.py skills/issueops-sync-pr
-python3 scripts/verify-skill-shell.py skills/issueops-sync-pr
-wc -c skills/issueops-sync-pr/SKILL.md
-```
 
 generation, actor, artifact 상태, 리뷰어 편집 반영 여부, body 완성도, 또는
 live readback이 모호하면 쓰지 않는다.

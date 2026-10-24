@@ -215,13 +215,7 @@ completion은 generation을 반납하고 record를 `done`으로 옮긴다. 그�
 | 지나지 않은 phase까지 routing 줄에 나열 | 보고가 record와 어긋난다. 실제 전이만 적는다 |
 | 예시의 id·SHA·테스트 개수를 그대로 복사 | 보고가 다른 cycle의 값을 말한다. 출처 표의 명령에서 읽는다 |
 
-## 검증
-
-```bash
-python3 scripts/validate-skill.py skills/issueops-complete
-python3 scripts/verify-skill-shell.py skills/issueops-complete
-wc -c skills/issueops-complete/SKILL.md
-```
+## 모호할 때
 
 phase, 봉인된 artifact, generation, actor receipt, final head, 보고서 경로 중
 하나라도 모호하면 `--confirm`을 붙이지 않고 현재 상태와 막힌 지점을 보고한다.

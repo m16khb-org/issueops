@@ -172,13 +172,6 @@ confirm 결과의 `updated`, `remote_body_sha256`, `preserved_sections`를 확�
   compare-and-swap sha 일치, child hierarchy 검증, secret redaction, readback.
 - 성능: 최신화 단계에서만 이 스킬을 로드한다. 생성 스킬과 PR reference를
   함께 중복 로드하지 않는다.
-- 검증:
-
-```bash
-python3 scripts/validate-skill.py skills/issueops-sync-issue
-python3 scripts/verify-skill-shell.py skills/issueops-sync-issue
-wc -c skills/issueops-sync-issue/SKILL.md
-```
 
 provider, 대상 URL, 사람 편집 반영 여부, body 완성도, 또는 관리 블록 보존이
 모호하면 쓰지 않는다.

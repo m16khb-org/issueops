@@ -218,13 +218,7 @@ verification·fallback·tradeoff·기대 이득을 기록한다.
 `execution complete`는 pr phase의 검증된 remote artifact URL·final head·report가 있어야 한다.
 "구현 완료"는 여기서 phase 전이이며 complete 호출이 아니다.
 
-## 검증
-
-```bash
-python3 scripts/validate-skill.py skills/issueops-implement
-python3 scripts/verify-skill-shell.py skills/issueops-implement
-wc -c skills/issueops-implement/SKILL.md
-```
+## 모호할 때
 
 시작 게이트·lease·child verdict·리뷰 게이트·종료 게이트 중 하나라도 모호하면
 durable mutation을 하지 않고 현재 상태와 막힌 지점을 보고한다.
