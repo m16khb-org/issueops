@@ -562,6 +562,7 @@ func finish(in Input, decision Decision) Decision {
 			}
 		}
 	}
+	decision.NextCommand = fillBranchPrepareIssue(decision.NextCommand, in.Record.IssueURL)
 	// Every issueops command answers JSON with --json; several owner commands
 	// were rendered without it, and an agent running link-plan as printed got
 	// a one-line text answer it could not check (two QA runs).
@@ -883,4 +884,33 @@ func prBase(record issueopsnextcontract.Record) string {
 		return ""
 	}
 	return record.BranchPrepare.BaseBranch
+}
+
+// fillBranchPrepareIssue fills the branch prepare template with the issue the
+// record already links (QA: agents copied the URL and guessed the provider
+// by hand). Only shell-safe URLs are spliced; the rest stays a placeholder.
+func fillBranchPrepareIssue(command, issueURL string) string {
+	if !strings.HasPrefix(command, "issueops branch prepare ") || !shellSafeURL(issueURL) {
+		return command
+	}
+	command = strings.Replace(command, "--issue-url <URL>", "--issue-url "+issueURL, 1)
+	switch {
+	case strings.HasPrefix(issueURL, "https://github.com/"):
+		command = strings.Replace(command, "--provider <github|gitlab>", "--provider github", 1)
+	case strings.Contains(issueURL, "/-/issues/") || strings.Contains(issueURL, "/-/work_items/"):
+		command = strings.Replace(command, "--provider <github|gitlab>", "--provider gitlab", 1)
+	}
+	return command
+}
+
+func shellSafeURL(raw string) bool {
+	if !strings.HasPrefix(raw, "https://") {
+		return false
+	}
+	for _, r := range raw {
+		if !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || strings.ContainsRune(":/._-", r)) {
+			return false
+		}
+	}
+	return true
 }

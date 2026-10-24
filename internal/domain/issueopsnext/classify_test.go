@@ -458,7 +458,7 @@ func TestClassifyBranchPrepareCommandDependsOnPhase(t *testing.T) {
 	if grill.Stage.Key != "prepare" || strings.Contains(grill.NextCommand, "--to grill") {
 		t.Fatalf("grill with issue must not re-advance to grill, got %s %q", grill.Stage.Key, grill.NextCommand)
 	}
-	if grill.NextCommand != OwnerCommand("io-test", "branch_prepare")+" --json" {
+	if grill.NextCommand != fillBranchPrepareIssue(OwnerCommand("io-test", "branch_prepare"), "https://github.com/acme/repo/issues/12")+" --json" {
 		t.Fatalf("grill next command %q want owner command for branch_prepare", grill.NextCommand)
 	}
 	if len(grill.Missing) != 1 || grill.Missing[0] != "branch_prepare" {
@@ -477,7 +477,7 @@ func TestClassifyUnverifiedBranchLinkStaysInPrepare(t *testing.T) {
 	}
 	plan := classifyTemplate(unverified(withIssue(baseRecord(issueopsnextcontract.PhasePlan))))
 	if plan.Stage.Key != "prepare" || len(plan.Missing) != 1 || plan.Missing[0] != "branch_link_verified" ||
-		plan.NextCommand != OwnerCommand("io-test", "branch_link_verified")+" --json" || !strings.Contains(plan.NextCommand, " --link-verified ") {
+		plan.NextCommand != fillBranchPrepareIssue(OwnerCommand("io-test", "branch_link_verified"), "https://github.com/acme/repo/issues/12")+" --json" || !strings.Contains(plan.NextCommand, " --link-verified ") {
 		t.Fatalf("plan with unverified link: %s %v %q", plan.Stage.Key, plan.Missing, plan.NextCommand)
 	}
 	holder := classifyTemplate(withSelfHolder(unverified(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))
@@ -1017,5 +1017,20 @@ func TestClassifyWarnsAboutAnUnsettledChildCreate(t *testing.T) {
 	in.Record.ChildCreateOperations[0].Status = issueopscontract.IssueCreateIntentCompleted
 	if got := Classify(in); slices.ContainsFunc(got.Warnings, func(w string) bool { return strings.Contains(w, "reconcile-child") }) {
 		t.Fatalf("settled child still warns: %q", got.Warnings)
+	}
+}
+
+func TestFillBranchPrepareIssue(t *testing.T) {
+	template := "issueops branch prepare --id io-1 --provider <github|gitlab> --issue-url <URL> --branch <NAME>"
+	for _, tc := range []struct{ url, want string }{
+		{"https://github.com/acme/repo/issues/41", "--provider github --issue-url https://github.com/acme/repo/issues/41 --branch <NAME>"},
+		{"https://gitlab.example.com/g/r/-/issues/7", "--provider gitlab --issue-url https://gitlab.example.com/g/r/-/issues/7 "},
+		{"https://ghe.example.com/acme/repo/issues/41", "--provider <github|gitlab> --issue-url https://ghe.example.com/acme/repo/issues/41 "},
+		{"https://github.com/acme/repo/issues/41;rm", "--provider <github|gitlab> --issue-url <URL>"},
+		{"", "--issue-url <URL>"},
+	} {
+		if got := fillBranchPrepareIssue(template, tc.url); !strings.Contains(got, tc.want) {
+			t.Fatalf("%q: %q", tc.url, got)
+		}
 	}
 }
