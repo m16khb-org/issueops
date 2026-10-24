@@ -177,23 +177,23 @@ func githubSteps(issueURL, branch, baseBranch, baseSHA string) []model.IssueOpsB
 // 검증은 두 축이다. issue 쪽 `linkedBranches`와 원격 `refs/heads/<branch>`가
 // 서로를 확인한다 — 한쪽만 보면 provider 레코드와 실제 ref의 불일치를 놓친다.
 func githubLinkedBranchReadbackSteps(issueURL, branch, baseSHA string, firstOrder int) []model.IssueOpsBranchPrepareStep {
-	expectation := "Confirm that the node's `ref` is not null and that `ref.name` is exactly " + branch + "."
+	// omp cuts lines over 768 bytes, and a JSON string is one line: QA lost
+	// the tail of this description (the recovery commands).
+	expectation := "`ref` must be non-null with `ref.name` exactly " + branch
 	if baseSHA != "" {
-		expectation += " Confirm that `ref.target.oid` is exactly the sealed base " + baseSHA + "."
+		expectation += " and `ref.target.oid` exactly the sealed base " + baseSHA
 	}
+	expectation += "."
 	return []model.IssueOpsBranchPrepareStep{
 		{
 			Order:    firstOrder,
 			Strategy: "verify_linked_branch",
 			Command: []string{"gh", "api", "graphql", "-f",
 				"query=" + githubLinkedBranchReadbackQuery(issueURL)},
-			Description: "Read the issue's linked branches back. " + expectation +
-				" A null `ref` is a partial success, not a failure to retry: the mutation already created a " +
-				"LinkedBranch record, so running it again does not fix the state and may add a second orphan. " +
-				"Recover with `issueops cleanup linked-branch --id <id> --preview`, which classifies " +
-				"the record and issues a fingerprint bound to the exact node; never delete it with raw GraphQL. " +
-				"An owner that reaches this step before the coordinator has created the link is early, not blocked: " +
-				"`issueops branch await-link --id <id>` waits for it within a bounded window.",
+			Description: "Read the linked branches back: " + expectation +
+				" A null `ref` is a partial success: the LinkedBranch record exists, so do not rerun the mutation " +
+				"(it may add a second orphan); recover with `issueops cleanup linked-branch --id <id> --preview`, never raw GraphQL. " +
+				"Here before the coordinator linked it? `issueops branch await-link --id <id>` waits for it.",
 		},
 		{
 			Order:    firstOrder + 1,
