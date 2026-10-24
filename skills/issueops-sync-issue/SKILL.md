@@ -1,6 +1,6 @@
 ---
 name: issueops-sync-issue
-description: Refresh the body of an issue or provider-native child this cycle already published, with drift classification, managed-section preservation, a fail-closed body compare-and-swap, and explicit good and bad examples. Use when a linked issue's text no longer matches the cycle it describes.
+description: 'Refresh the body of an issue or provider-native child this cycle already published, with drift classification, managed-section preservation, and a fail-closed body compare-and-swap. Use when a linked issue no longer matches its cycle.'
 ---
 
 # IssueOps Sync Issue

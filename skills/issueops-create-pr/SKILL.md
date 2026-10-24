@@ -1,6 +1,6 @@
 ---
 name: issueops-create-pr
-description: Create and verify a linked GitHub pull request or GitLab merge request from an IssueOps execution lease with a readable Korean body, branch and actor fencing, scored metadata, safe recovery, and explicit good and bad examples. Use during the PR or MR publication phase.
+description: 'Create and verify the linked GitHub PR or GitLab MR from an IssueOps execution lease, with a readable Korean body, branch and actor fencing, scored metadata, and safe recovery. Use in the PR/MR publication phase.'
 ---
 
 # IssueOps Create PR

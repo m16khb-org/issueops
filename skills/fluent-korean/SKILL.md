@@ -1,6 +1,6 @@
 ---
 name: fluent-korean
-description: MUST USE whenever writing, revising, or reviewing Korean text, or when replying to a user in Korean. Produces clear and natural Korean while preserving code conventions and established technical terms, and removes AI-style writing patterns (AI티/slop) from Korean output.
+description: 'MUST USE whenever writing, revising, or reviewing Korean text or replying in Korean: clear, natural Korean that keeps code conventions and technical terms and removes AI-style patterns (AI티/slop).'
 license: MIT
 metadata:
   source: https://github.com/snflkd/fluent-korean

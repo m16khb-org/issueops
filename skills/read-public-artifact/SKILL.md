@@ -1,6 +1,6 @@
 ---
 name: read-public-artifact
-description: "Use when a claude.ai/code/artifact link or other iframe-rendered page must be read and Artifact read/WebFetch fail (public-reader notice, sign-in or SPA shell, Cloudflare 403). Triggers: 아티팩트 읽어줘, 공유 아티팩트, public artifact, 이 링크 내용 확인."
+description: 'Use when a claude.ai/code/artifact link or other iframe-rendered page must be read and Artifact read/WebFetch fail (public-reader notice, SPA shell, Cloudflare 403): 아티팩트 읽어줘, 공유 아티팩트, public artifact.'
 ---
 
 # Read Public Artifact

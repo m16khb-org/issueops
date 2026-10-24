@@ -1,6 +1,6 @@
 ---
 name: explain
-description: Use when explaining concepts, code, plans, decisions, investigation findings, or work outcomes in terms the reader can understand, especially for "설명해줘", "쉽게 설명해줘", "어떤 근거야", "왜 이렇게 했어", "뭔 소린지 모르겠다", or "explain how this works".
+description: 'Use to explain concepts, code, plans, decisions, findings, or outcomes in the reader''s terms: "설명해줘", "쉽게 설명해줘", "어떤 근거야", "왜 이렇게 했어", "모르겠다", "explain how this works".'
 ---
 
 # Explain
