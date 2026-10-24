@@ -861,3 +861,20 @@ func TestFinishRendersClaimFlagsAtTheHandoff(t *testing.T) {
 		t.Fatalf("unobservable receipt: kind=%q command=%q", got.NextCommandKind, got.NextCommand)
 	}
 }
+
+// While the caller holds the lease, holder commands get its claim vector at the
+// worktree; the other placeholders keep the command a template.
+func TestFinishRendersClaimFlagsForTheHolderAtTheWorktree(t *testing.T) {
+	in := withLocal(withSelfHolder(baseRecord(issueopsnextcontract.PhasePR)))
+	var askedCWD string
+	in.ClaimActorFlags = func(cwd string) string {
+		askedCWD = cwd
+		return "--host claude --session-id s-1 --session-pid 7 --cwd " + cwd
+	}
+	got := Classify(in)
+	root := in.Record.Execution.Workspace.Root
+	if got.Stage.Key != "pr.create" || askedCWD != root || strings.Contains(got.NextCommand, "ACTOR_FLAGS") ||
+		!strings.HasSuffix(got.NextCommand, "--session-pid 7 --cwd "+root) || got.NextCommandKind != issueopsnextcontract.NextCommandKindTemplate {
+		t.Fatalf("stage=%q kind=%q cwd=%q command=%q", got.Stage.Key, got.NextCommandKind, askedCWD, got.NextCommand)
+	}
+}

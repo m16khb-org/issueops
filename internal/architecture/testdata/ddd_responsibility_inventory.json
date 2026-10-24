@@ -14335,6 +14335,7 @@
       "task": "T20",
       "symbols": [
         "func Classify",
+        "func actorCWD",
         "func architectureGate",
         "func branchEvidenceKey",
         "func branchPrepareNeeded",

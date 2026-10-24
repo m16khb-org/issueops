@@ -486,21 +486,18 @@ func stage(key string, index int) issueopsnextcontract.Stage {
 	return issueopsnextcontract.Stage{Key: key, Index: index}
 }
 
-// finish fills $RECORD_ACTOR_FLAGS when next knows the caller's record vector,
-// and $ACTOR_FLAGS before a lease exists (the execution prepare handoff) when
-// the caller's host receipt can be observed, and then sets next_command_kind
-// from the placeholders that remain. One owner keeps rules from hand-writing
-// the kind.
+// finish fills $RECORD_ACTOR_FLAGS and $ACTOR_FLAGS when next knows the
+// caller's vectors at the cycle's canonical cwd ($ACTOR_FLAGS also needs an
+// observable host receipt), and then sets next_command_kind from the
+// placeholders that remain. One owner keeps rules from hand-writing the kind.
 func finish(in Input, decision Decision) Decision {
 	if strings.TrimSpace(decision.NextCommand) == "" {
 		return decision
 	}
-	if flags := recordActorFlags(in); flags != "" {
-		decision.NextCommand = strings.ReplaceAll(decision.NextCommand, "$RECORD_ACTOR_FLAGS", flags)
-		// Before a lease the caller is the preparer, so its own claim vector
-		// at the source checkout is the one the command needs.
-		if in.Record.Execution == nil && in.ClaimActorFlags != nil && strings.Contains(decision.NextCommand, "$ACTOR_FLAGS") {
-			if claim := in.ClaimActorFlags(in.Record.Repo); claim != "" {
+	if cwd := actorCWD(in); cwd != "" {
+		decision.NextCommand = strings.ReplaceAll(decision.NextCommand, "$RECORD_ACTOR_FLAGS", recordActorFlags(in))
+		if in.ClaimActorFlags != nil && strings.Contains(decision.NextCommand, "$ACTOR_FLAGS") {
+			if claim := in.ClaimActorFlags(cwd); claim != "" {
 				decision.NextCommand = strings.ReplaceAll(decision.NextCommand, "$ACTOR_FLAGS", claim)
 			}
 		}
@@ -513,14 +510,13 @@ func finish(in Input, decision Decision) Decision {
 	return decision
 }
 
-// recordActorFlags is the record vector (--host --session-id --cwd) the caller
-// would get from whoami at the cycle's canonical cwd: the source checkout before
-// a lease, the worktree while the caller holds it. Passing the shell variable
-// was the step every QA agent failed first (zsh does not split it), so next
-// renders it whenever it is sure; otherwise the template stays.
-func recordActorFlags(in Input) string {
-	host, session := strings.TrimSpace(in.ActorHost), strings.TrimSpace(in.ActorSessionID)
-	if host == "" || session == "" {
+// actorCWD is the cwd whoami would be run from to get the caller's vectors
+// for this cycle, or "" when next is not sure the caller acts on it: the
+// source checkout before a lease (the caller is the preparer), the worktree
+// while the caller holds the lease itself. Passing the shell variables was
+// the step every QA agent failed first (zsh does not split them).
+func actorCWD(in Input) string {
+	if strings.TrimSpace(in.ActorHost) == "" || strings.TrimSpace(in.ActorSessionID) == "" {
 		return ""
 	}
 	var cwd string
@@ -531,10 +527,17 @@ func recordActorFlags(in Input) string {
 		strings.TrimSpace(execution.Lease.Holder.AgentID) == "":
 		cwd = execution.Workspace.Root
 	}
-	if cwd = strings.TrimSpace(cwd); cwd == "" {
+	return strings.TrimSpace(cwd)
+}
+
+// recordActorFlags is the record vector (--host --session-id --cwd) whoami
+// prints at actorCWD, or "" when that cwd is unknown.
+func recordActorFlags(in Input) string {
+	cwd := actorCWD(in)
+	if cwd == "" {
 		return ""
 	}
-	return "--host " + shellWord(host) + " --session-id " + shellWord(session) + " --cwd " + shellWord(cwd)
+	return "--host " + shellWord(strings.TrimSpace(in.ActorHost)) + " --session-id " + shellWord(strings.TrimSpace(in.ActorSessionID)) + " --cwd " + shellWord(cwd)
 }
 
 // shellWord quotes value only when the shell would otherwise split or expand it.
