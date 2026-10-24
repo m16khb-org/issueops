@@ -37,7 +37,7 @@ ID가 없고 후보를 구별할 근거가 없을 때만 사용자에게 선택�
 
 편집 대상을 실측한다.
 ```bash
-issueops execution whoami --json
+cd "$WORKTREE" && issueops execution whoami --json   # cd와 같은 명령에서 실행한다. 호출마다 셸 cwd가 초기화되는 호스트(Claude Code)에서도 --cwd가 워크트리로 나온다
 git -C "$WORKTREE" rev-parse --abbrev-ref HEAD
 git -C "$WORKTREE" status --porcelain
 ```

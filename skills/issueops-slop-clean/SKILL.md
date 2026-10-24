@@ -149,9 +149,9 @@ issueops ai-slop-clean record --id "$ISSUEOPS_ID" \
 
 `--category`에는 위 분류표의 여섯 이름(`dead-code`, `duplication`,
 `needless-abstraction`, `boundary-violation`, `weak-artifact`, `unsupported-claim`)
-중 **실제로 제거한 것만** 쓴다. 하지 않은 정리를 적으면 그 기록이 다음 리뷰의 첫 공격
-대상이 된다. 지운 것이 없으면 CLI가 한 개 이상을 요구하므로 점검한 분류를 적고
-`--verification`에 "점검했으나 제거 없음"을 분명히 쓴다.
+중 실제로 제거한 것을 쓴다. 하지 않은 정리를 제거했다고 적으면 그 기록이 다음 리뷰의 첫
+공격 대상이 된다. 지운 것이 하나도 없으면 점검한 분류를 적고 `--verification`에
+"점검했으나 제거 없음"을 분명히 쓴다(CLI는 분류를 한 개 이상 요구하고, 그 값은 "점검했거나 정리한 분류"다).
 
 이 명령이 change fingerprint를 현재 diff로 봉인한다. fingerprint에는 gates.md, verified-execution
 report, 문서까지 **변경된 모든 파일과 untracked 파일**이 들어간다. 그래서 기록 뒤에
