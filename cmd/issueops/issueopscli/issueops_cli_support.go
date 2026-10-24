@@ -5,7 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
+	"issueops/cmd/issueops/issueopscli/executioncmd"
 	"issueops/cmd/issueops/jsonout"
 	issueopscontract "issueops/internal/contract/issueops"
 )
@@ -156,6 +158,15 @@ func (cli command) runIssueOpsBranchAwaitLink(args []string) error {
 			return jsonout.PrintResultError(os.Stdout, result, err)
 		}
 		return err
+	}
+	// The --link-verified record runs from this checkout; hand it back with
+	// this process's whoami record vector so it runs as printed.
+	if strings.Contains(result.NextCommand, "$RECORD_ACTOR_FLAGS") {
+		if wd, wdErr := os.Getwd(); wdErr == nil {
+			if flags := executioncmd.RecordActorFlags(os.Getenv, wd); flags != "" {
+				result.NextCommand = strings.ReplaceAll(result.NextCommand, "$RECORD_ACTOR_FLAGS", flags)
+			}
+		}
 	}
 	if *jsonOut {
 		return printJSON(result)

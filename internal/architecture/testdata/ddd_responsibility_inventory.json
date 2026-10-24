@@ -1516,6 +1516,7 @@
       "symbols": [
         "func CurrentNativeSessionReceipt",
         "func Deps.actionDeps",
+        "func RecordActorFlags",
         "func ResolveNativeSessionIdentity",
         "func Run",
         "func actorFlags.actor",
@@ -1534,6 +1535,7 @@
         "func parse",
         "func printText",
         "func processCommandLine",
+        "func recordActorFlags",
         "func repeatedString.Set",
         "func repeatedString.String",
         "func resolveNativeActor",

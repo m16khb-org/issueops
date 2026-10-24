@@ -350,3 +350,16 @@ func TestNativeSessionIdentityAmbiguityNamesTheSetVariables(t *testing.T) {
 		t.Fatalf("ambiguity error = %v", err)
 	}
 }
+
+// Commands that hand back a record command fill it with whoami's record
+// vector; an unresolvable identity leaves the placeholder to the caller.
+func TestRecordActorFlagsMatchesWhoamiOrIsEmpty(t *testing.T) {
+	env := map[string]string{"CLAUDE_CODE_SESSION_ID": "s-1"}
+	if got := RecordActorFlags(func(k string) string { return env[k] }, "/tmp/a b"); got != "--host claude --session-id 's-1' --cwd '/tmp/a b'" {
+		t.Fatalf("flags = %q", got)
+	}
+	env["CODEX_THREAD_ID"] = "t-1"
+	if got := RecordActorFlags(func(k string) string { return env[k] }, "/tmp"); got != "" {
+		t.Fatalf("ambiguous identity rendered %q", got)
+	}
+}
