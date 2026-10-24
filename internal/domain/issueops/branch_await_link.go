@@ -59,3 +59,27 @@ func AwaitBranchLinkTimeout(raw string) (time.Duration, error) {
 	}
 	return timeout, nil
 }
+
+// BranchLinkVerifiedCommand is the exact re-record of the sealed branch with
+// --link-verified, filled from the prepare record that await-link just read
+// back. await-link stays a read-only observer; the holder records the
+// attestation with the values it observed instead of retyping them.
+func BranchLinkVerifiedCommand(record issueopscontract.IssueOpsRecord) string {
+	prepare := record.BranchPrepare
+	if prepare == nil {
+		return ""
+	}
+	parts := []string{"issueops branch prepare --id", record.ID,
+		"--provider", quoteReplacementArg(prepare.Provider),
+		"--issue-url", quoteReplacementArg(prepare.IssueURL),
+		"--branch", quoteReplacementArg(prepare.Branch),
+		"--base-branch", quoteReplacementArg(prepare.BaseBranch),
+		"--base-sha", quoteReplacementArg(prepare.BaseSHA)}
+	if prepare.ParentWorktree != "" {
+		parts = append(parts, "--parent-worktree", quoteReplacementArg(prepare.ParentWorktree))
+	}
+	if prepare.CodeProjectKey != "" {
+		parts = append(parts, "--code-project-key", quoteReplacementArg(prepare.CodeProjectKey))
+	}
+	return strings.Join(append(parts, "--link-verified $RECORD_ACTOR_FLAGS --json"), " ")
+}

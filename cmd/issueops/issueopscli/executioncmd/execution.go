@@ -6,9 +6,12 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
+	"time"
 
 	"issueops/cmd/issueops/cliflag"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
@@ -346,13 +349,48 @@ func shellQuoteClaimValue(value string) string {
 }
 
 func reusableNativeProcessAncestry(host string, currentPID int, ancestry []model.NativeProcessReceipt) ([]model.NativeProcessReceipt, error) {
+	return reusableNativeProcessAncestryWith(host, currentPID, ancestry, processCommandLine)
+}
+
+func reusableNativeProcessAncestryWith(host string, currentPID int, ancestry []model.NativeProcessReceipt, commandLine func(int) string) ([]model.NativeProcessReceipt, error) {
 	for index, receipt := range ancestry {
-		if receipt.PID == currentPID || !nativeHostProcessExecutable(host, receipt.Executable) {
+		if receipt.PID == currentPID || !nativeHostProcess(host, receipt, commandLine) {
 			continue
 		}
 		return append([]model.NativeProcessReceipt(nil), ancestry[index:]...), nil
 	}
 	return nil, fmt.Errorf("reusable %s host process ancestry is unavailable", host)
+}
+
+// nativeHostProcess accepts a receipt as the host's session process. Omo 5.1
+// runs its RPC host as `bun .../senpi/.../cli.js`, so the OS names it `bun`
+// like omp's; for Omo a bun process counts only when its command line is the
+// senpi or omo-ai entry, so an omp session's bun is never taken as Omo.
+func nativeHostProcess(host string, receipt model.NativeProcessReceipt, commandLine func(int) string) bool {
+	if nativeHostProcessExecutable(host, receipt.Executable) {
+		return true
+	}
+	if host != "omo" || commandLine == nil || executableBase(receipt.Executable) != "bun" {
+		return false
+	}
+	line := strings.ToLower(filepath.ToSlash(commandLine(receipt.PID)))
+	return strings.Contains(line, "/senpi/") || strings.Contains(line, "/omo-ai/")
+}
+
+func executableBase(executable string) string {
+	return strings.TrimSuffix(filepath.Base(strings.ToLower(filepath.ToSlash(strings.TrimSpace(executable)))), ".exe")
+}
+
+// processCommandLine reads one process's argv. Only an Omo bun candidate
+// needs it, so the ancestry snapshot itself stays a single ps call.
+func processCommandLine(pid int) string {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "ps", "-ww", "-o", "args=", "-p", strconv.Itoa(pid)).Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
 }
 
 // CurrentNativeSessionReceipt resolves the current native session from the

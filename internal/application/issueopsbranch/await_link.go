@@ -55,7 +55,7 @@ func (s LinkAwaiter) Await(ctx context.Context, req issueopscontract.AwaitBranch
 		result.State, result.StateReason = string(state), reason
 		if state == linkedbranch.StateHealthy {
 			result.Linked, result.LinkedBranchID, result.ObservedOID = true, node.ID, node.RefOID
-			result.NextCommand = "record the verified link with issueops branch prepare --link-verified for " + record.ID
+			result.NextCommand = domain.BranchLinkVerifiedCommand(record)
 			return result, nil
 		}
 		// mismatched는 기다린다고 낫지 않는다. 링크는 있는데 봉인값과 다르므로

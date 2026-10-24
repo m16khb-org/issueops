@@ -175,12 +175,14 @@ issueops schema-evidence record --id "$ISSUEOPS_ID" \
 
 strict readiness `warnings`의 `base_advanced`는 차단이 아니다. 그 경고가 있을 때만
 `issueops execution sync-base --id "$ISSUEOPS_ID" --preview $ACTOR_FLAGS --json`으로 충돌
-유무를 확인해 report에 적고 **apply하지 않는다.** preview는 원격 작업 브랜치가 있어야 하므로,
+유무를 확인해 report에 적고 **스스로 apply하지 않는다.** preview는 원격 작업 브랜치가 있어야 하므로,
 아직 push 전이면 `unmet gates: remote_branch_present`로 멈춘다. 그때는 충돌 확인을 push
 뒤로 미루고 그 사실을 report에 적는다. apply는 봉인된 변경 집합에 base의
 파일을 끌어들여 fingerprint를 바꾸고, 정리·구현 리뷰·문서 반영 판정이 한꺼번에 stale이
 되어 5단계부터 다시 밟게 만든다. 머지는 PR 병합 시점에 provider가 한다. 충돌이 있으면 그
-사실을 PR 본문의 위험 절에 적는다.
+사실을 PR 본문의 위험 절에 적는다. 예외는 둘이다: 사용자가 base 반영을 명시적으로 요청했거나
+`remote merge-pr`가 `merge_conflict`를 보고한 경우다. 그때는 preview가 준 apply를 실행하고
+`issueops next`가 안내하는 재봉인 순서(정리 → 리뷰 → `phase --to pr`)를 그대로 밟는다.
 
 구현된 diff가 계획 시점의 compatibility review와 다르면 durable 판정을 최신으로 맞춘다.
 1절의 `## 의도 대조`에 미충족 항목이 있으면 approved로 기록하지 않는다.
@@ -212,6 +214,8 @@ plan.md, gates.md, verified-execution report, 문서, 구현을 커밋·푸시�
 - 검증 단계에서 `gates check`를 실행한다. 미충족 게이트가 있으면 원장이 바뀌어 봉인이 stale이 된다.
 
 전체 표는 [나쁜 예](references/bad-examples.md)에 있다. 이 단계에서 파일을 고치거나 커밋하지 않는다.
+예외는 보고서 `.issueops/issues/<n>/verified-execution-report.md` 하나다. 그 파일은 봉인 fingerprint에서
+빠지므로 검증 절을 써도 정리·리뷰 봉인이 stale이 되지 않는다. 다른 이름으로 쓰면 이 예외가 적용되지 않는다.
 
 ## 검증
 

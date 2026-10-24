@@ -162,8 +162,12 @@ func TestAwaitLinkReturnsHealthyLinkAfterWaitingForCoordinator(t *testing.T) {
 	if res.TimeoutSeconds != 300 {
 		t.Fatalf("TimeoutSeconds=%d", res.TimeoutSeconds)
 	}
-	if !strings.Contains(res.NextCommand, "io-await") {
-		t.Fatalf("NextCommand=%q", res.NextCommand)
+	// The next step is the sealed prepare re-recorded with --link-verified, as
+	// one runnable command: agents retyped the values and got them wrong.
+	for _, want := range []string{"issueops branch prepare --id io-await", "--base-sha '" + awaitSealedBase + "'", "--link-verified $RECORD_ACTOR_FLAGS"} {
+		if !strings.Contains(res.NextCommand, want) {
+			t.Fatalf("NextCommand=%q lacks %q", res.NextCommand, want)
+		}
 	}
 }
 

@@ -210,6 +210,23 @@ func IsTrackedMaterialPath(issueURL, relPath string) bool {
 	return false
 }
 
+// VerificationReportName is the cycle's verification report under
+// .issueops/issues/<n>/. Verify, docs, and complete all write to it after the
+// clean seal, so it is a process record rather than part of the reviewed
+// change: counting it made every report edit stale the seals and reviews.
+const VerificationReportName = "verified-execution-report.md"
+
+// IsVerificationReportPath reports whether relPath (worktree-relative) is a
+// cycle's report, .issueops/issues/<n>/verified-execution-report.md.
+func IsVerificationReportPath(relPath string) bool {
+	rest, ok := strings.CutPrefix(strings.ReplaceAll(relPath, "\\", "/"), ".issueops/issues/")
+	if !ok {
+		return false
+	}
+	n, name, ok := strings.Cut(rest, "/")
+	return ok && n != "" && name == VerificationReportName
+}
+
 // IssueArtifactDir은 linked issue URL로 결정하는 봉인 아티팩트 디렉터리
 // (워크트리 상대, slash)다: `.issueops/issues/<n>/artifact`. 번호를 알 수
 // 없으면 빈 문자열이며, execution prepare는 그 경우를 거부한다(#482).

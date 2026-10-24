@@ -333,3 +333,31 @@ func TestHasEvidenceTreatsTrackedMaterialFromBranchPrepareIssueURLAsPlanning(t *
 		t.Fatal("material copy of a different issue must count as implementation evidence")
 	}
 }
+
+// Verify, docs, and complete write the report after the clean seal; editing it
+// used to stale the seal and every review. A code edit still changes it.
+func TestFingerprintIgnoresTheVerificationReportOnly(t *testing.T) {
+	root := t.TempDir()
+	write := func(rel, body string) {
+		t.Helper()
+		if err := os.MkdirAll(filepath.Dir(filepath.Join(root, rel)), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(root, rel), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	report := ".issueops/issues/41/verified-execution-report.md"
+	paths := []string{"hello.sh", report}
+	write("hello.sh", "echo hi\n")
+	write(report, "draft\n")
+	before, _ := FingerprintSnapshot(root, paths)
+	write(report, "draft\n\n## 검증\n| ... |\n")
+	if after, _ := FingerprintSnapshot(root, paths); after != before {
+		t.Fatal("a report edit changed the change fingerprint")
+	}
+	write("hello.sh", "echo hello\n")
+	if after, _ := FingerprintSnapshot(root, paths); after == before {
+		t.Fatal("a code edit must change the fingerprint")
+	}
+}

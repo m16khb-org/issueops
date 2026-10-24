@@ -133,13 +133,38 @@ func TestReusableNativeProcessAncestryRecognizesBunOmpRuntime(t *testing.T) {
 	}
 }
 
+// An omp session's bun (its command line is the omp script) is never an Omo
+// host, even though Omo 5.1's own host is also a bun process.
 func TestReusableNativeProcessAncestryDoesNotUseBunForAnotherHost(t *testing.T) {
-	_, err := reusableNativeProcessAncestry("omo", 101, []model.NativeProcessReceipt{
+	ompLine := func(int) string { return "bun /Users/u/.bun/bin/omp" }
+	_, err := reusableNativeProcessAncestryWith("omo", 101, []model.NativeProcessReceipt{
 		{PID: 101, StartedAt: "2026-10-08T00:00:01Z", Executable: "issueops"},
 		{PID: 202, StartedAt: "2026-10-08T00:00:00Z", Executable: "bun"},
-	})
+	}, ompLine)
 	if err == nil {
 		t.Fatal("bun process was accepted as an Omo host")
+	}
+}
+
+// Observed on Omo 5.1: the tool shell's parent is
+// `/Users/u/.bun/bin/bun .../@code-yeongyu/senpi/dist/bundle/cli.js`, and an omp
+// session's bun sits further up. The senpi bun is the Omo receipt.
+func TestReusableNativeProcessAncestryAcceptsTheOmoSenpiBunHost(t *testing.T) {
+	lines := map[int]string{
+		202: "/Users/u/.bun/bin/bun /Users/u/.bun/install/global/node_modules/@code-yeongyu/senpi/dist/bundle/cli.js --extension x",
+		303: "bun /Users/u/.bun/bin/omp",
+	}
+	got, err := reusableNativeProcessAncestryWith("omo", 101, []model.NativeProcessReceipt{
+		{PID: 101, Executable: "issueops"},
+		{PID: 150, Executable: "/bin/sh"},
+		{PID: 202, StartedAt: "s", Executable: "/Users/u/.bun/bin/bun"},
+		{PID: 303, StartedAt: "t", Executable: "bun"},
+	}, func(pid int) string { return lines[pid] })
+	if err != nil || len(got) != 2 || got[0].PID != 202 {
+		t.Fatalf("omo senpi ancestry = %+v err=%v", got, err)
+	}
+	if _, err := reusableNativeProcessAncestryWith("omp", 101, []model.NativeProcessReceipt{{PID: 202, Executable: "bun"}}, nil); err != nil {
+		t.Fatalf("omp still accepts bun without reading argv: %v", err)
 	}
 }
 

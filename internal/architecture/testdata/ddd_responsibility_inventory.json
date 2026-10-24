@@ -1519,19 +1519,23 @@
         "func addActorFlags",
         "func cmuxHandoffHasEveryIdentityFence",
         "func defaultNativeActorObservation",
+        "func executableBase",
         "func execute",
         "func executionGeneration",
         "func executionWhoamiResult",
         "func isHelp",
+        "func nativeHostProcess",
         "func nativeHostProcessExecutable",
         "func nativeSessionIdentityFromEnv",
         "func output",
         "func parse",
         "func printText",
+        "func processCommandLine",
         "func repeatedString.Set",
         "func repeatedString.String",
         "func resolveNativeActor",
         "func reusableNativeProcessAncestry",
+        "func reusableNativeProcessAncestryWith",
         "func runClaim",
         "func runComplete",
         "func runHandoffCmux",
@@ -12822,7 +12826,8 @@
       "task": "T08",
       "symbols": [
         "func AwaitBranchLinkGates",
-        "func AwaitBranchLinkTimeout"
+        "func AwaitBranchLinkTimeout",
+        "func BranchLinkVerifiedCommand"
       ]
     },
     {
@@ -14599,6 +14604,7 @@
       "task": "T20",
       "symbols": [
         "func IsTrackedMaterialPath",
+        "func IsVerificationReportPath",
         "func IssueArtifactDir",
         "func IssueNumber",
         "func ProjectKey",

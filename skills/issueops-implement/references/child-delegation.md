@@ -30,6 +30,10 @@ issueops child status --parent "$ISSUEOPS_ID" \
   `execution prepare`가 소유한다. worktree provisioning은 `execution prepare`
   몫이며, legacy `worktree prepare` 계열 명령은 v1 카탈로그에서 제거되었다.
   parent가 child worktree를 직접 만들지 않는다.
+- parent의 `branch_link_verified`는 child로 넘어가지 않는다. child 이슈와 child 브랜치의
+  링크는 별개의 provider 사실이므로 child도 prepare 스킬대로 `branch await-link`로 읽고
+  `--link-verified`를 기록한다. child는 자기 PR(base는 parent 브랜치)을 완료해야 `done`이 되고,
+  그 뒤에 parent가 `child accept`한다.
 - child가 scope drift를 보고하면 child를 조용히 넓히지 않는다. 사용자가
   승인해도 경로는 두 가지뿐이다: 새 scope를 **새 child**로 분리하거나, plan을
   개정하고 plan hash에 묶인 리뷰 freshness를 다시 확인한다.

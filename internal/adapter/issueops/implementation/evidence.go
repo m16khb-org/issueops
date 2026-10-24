@@ -137,6 +137,11 @@ func fingerprintPaths(
 	var b strings.Builder
 	b.WriteString("issueops-ai-slop-clean:v1\n")
 	for _, rel := range ordered {
+		if remote.IsVerificationReportPath(rel) {
+			// The report is written after the clean seal by verify, docs, and
+			// complete; it is not part of the reviewed change.
+			continue
+		}
 		abs := filepath.Join(gitRoot, rel)
 		info, err := os.Stat(abs)
 		if err != nil {
