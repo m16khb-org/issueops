@@ -137,7 +137,7 @@ func reviewOwnerCommand(id, key string) (string, bool) {
 	switch key {
 	case "implementation_review", "implementation_review_stale":
 		return "issueops implementation-review record --id " + id +
-			" --verdict <pass|revise|stop> --reviewer-context <subagent|inline> [--reviewer-host <HOST> --reviewer-model <MODEL> --reviewer-effort <EFFORT>] --finding <TEXT> --evidence <TEXT> $RECORD_ACTOR_FLAGS", true
+			" --verdict <pass|revise|stop> --reviewer-context <subagent|inline> [--reviewer-host <REVIEWER_HOST> --reviewer-model <REVIEWER_MODEL> --reviewer-effort <REVIEWER_EFFORT>] --finding <TEXT> --evidence <TEXT> $RECORD_ACTOR_FLAGS", true
 	case "project_docs_review", "project_docs_review_stale":
 		return "issueops project-docs-review record --id " + id +
 			" --verdict <updated --doc CHANGED_PATH|no-change --reviewed-doc READ_PATH> --evidence <TEXT> $RECORD_ACTOR_FLAGS", true
