@@ -65,16 +65,17 @@ func newIssueOpsPublicationServices(stateRoot string, deps issueOpsPublicationCo
 	observer := issueops.RemotePublicationObserver{CurrentFingerprint: newChangeReader().ChangeFingerprint, CurrentHead: newReadinessGit().Head, StateRoot: stateRoot, Clock: deps.Now, OperationIDFactory: deps.NewOperationID}
 	authority := cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, issueOpsActorVerifier())
 	repository := remoteapp.NewPublicationJournal(issueops.RemotePublicationStore{StateRoot: stateRoot}, observer, authority)
-	providerAdapter := &publicationProviderAdapter{deps: deps}
+	providerAdapter := &publicationProviderAdapter{deps: deps, stateRoot: stateRoot}
 	gateway := publicationoutbound.NewProviderGateway(providerAdapter.create, providerAdapter.inspect)
 	verifier := remoteapp.NewPublicationVerifier(issueops.RemotePublicationStore{StateRoot: stateRoot}, deps.VerifyLive)
 	preparer := remoteapp.NewCreatePreparation(observer, authority, issueOpsActorVerifier())
-	reconcile := publicationapp.NewReconcileService(repository, gateway, verifier).WithCrashSettlement(issueops.PublicationCrashSettlement(time.Now))
+	reconcile := publicationapp.NewReconcileService(repository, gateway, verifier).WithCrashSettlement(issueops.PublicationCrashSettlement(stateRoot, time.Now))
 	return publicationapp.NewCreateService(preparer, repository, gateway, verifier), reconcile
 }
 
 type publicationProviderAdapter struct {
-	deps issueOpsPublicationCompositionDeps
+	deps      issueOpsPublicationCompositionDeps
+	stateRoot string
 }
 
 func (e *publicationProviderAdapter) create(ctx context.Context, providerName string, request publicationcontract.ProviderCreateRequest) (publicationcontract.ProviderCreateResult, error) {
@@ -84,6 +85,14 @@ func (e *publicationProviderAdapter) create(ctx context.Context, providerName st
 	resolved, err := e.deps.Resolve(providerName)
 	if err != nil {
 		return publicationcontract.ProviderCreateResult{}, err
+	}
+	if request.Confirm {
+		held, release, err := issueops.HoldPublicationCreate(ctx, e.stateRoot, request.Repo, request.HeadBranch)
+		if err != nil {
+			return publicationcontract.ProviderCreateResult{}, err
+		}
+		defer release()
+		ctx = held
 	}
 	result, err := issueops.CreateRemotePullRequestViaProviderContext(ctx, portPublicationRequest(request), resolved)
 	return publicationcontract.ProviderCreateResult{

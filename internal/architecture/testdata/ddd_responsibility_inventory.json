@@ -5010,8 +5010,10 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
+        "func HoldPublicationCreate",
         "func PublicationCrashSettlement",
-        "func publicationCreateInFlight"
+        "func publicationCreateInFlight",
+        "func publicationLockKey"
       ]
     },
     {
