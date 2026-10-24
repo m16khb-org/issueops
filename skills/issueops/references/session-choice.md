@@ -16,9 +16,10 @@
 `HERDR_SOCKET_PATH`가 가리키는 서버로 고정한다. 다른 서버를 찾거나 시작하지 않는다. 사용
 가능하면 Herdr의 `new-session`을 선택한다. Herdr 세션이 아니거나 Herdr가 사용 불가임이
 확인됐으면 Herdr를 다시 확인하지 않는다.
-비대화형 실행(`claude -p`, `codex exec`, `omp -p`처럼 이 세션이 최종 결과를 호출자에게 돌려줘야
-하는 실행)은 Herdr가 사용 가능해도 `current`다. 새 pane에는 결과를 받을 사람이 없고 호출자는 이
-세션의 응답을 기다린다. 이 선택과 이유를 결정 기록에 남긴다.
+비대화형 실행(`claude -p`, `codex exec`, `omp -p`, `opencode run`처럼 이 세션이 최종 결과를 호출자에게
+돌려줘야 하는 실행)은 Herdr가 사용 가능해도 `current`다. 새 pane에는 결과를 받을 사람이 없고 호출자는 이
+세션의 응답을 기다린다. 판별은 whoami `ancestry[0].pid`의 실행 인자(`ps -o args= -p <pid>`)로 한다.
+이 선택과 이유를 결정 기록에 남긴다.
 인계받은 새 세션도 같은 env를 갖지만 환경 판별을 다시 시작하지 않는다.
 
 ```bash

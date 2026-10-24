@@ -182,6 +182,9 @@ issueops execution prepare --id "$ISSUEOPS_ID" $ACTOR_FLAGS --json        # prev
 workspace root, branch, 계획을 확인한 뒤
 [`issueops`](../issueops/SKILL.md)의 **환경별 자동 세션 인계**를 적용한다.
 
+비대화형 실행(`claude -p`, `codex exec`, `omp -p`, `opencode run`)은 Herdr가 있어도 인계하지 않고
+현재 세션에서 구현으로 이어간다. 판별은 whoami `ancestry[0].pid`의 실행 인자(`ps -o args= -p <pid>`)로 한다.
+
 [session-choice.md](../issueops/references/session-choice.md)에 따라 준비 세션이 Herdr 세션이면
 Herdr의 서버·호환성·현재 native host 실행 가능 여부를 확인하고, 사용 가능하면 아래와 같은
 release·새 세션 인계 절차를 적용한다.
