@@ -53,7 +53,7 @@ func (command Command) RunFeedback(args []string, deps Deps) error {
 		id := fs.String("id", "", "issueops id")
 		source := fs.String("source", "", "feedback source")
 		body := fs.String("body", "", "feedback body")
-		classification := fs.String("classification", "", "optional feedback classification, such as contract_change, defect, question, or noise")
+		classification := fs.String("classification", "", "optional: contract_change, defect, question, noise, valid_review, stale_review, rollout_evidence_missing, or environment_debt (resolve takes the separate --resolution values)")
 		actor := actorflags.Add(fs)
 		jsonOut := fs.Bool("json", false, "print JSON")
 		if help, err := deps.ParseFlags(fs, args[1:]); help || err != nil {

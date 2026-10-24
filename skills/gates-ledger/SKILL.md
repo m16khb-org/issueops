@@ -42,7 +42,9 @@ issueops gates init --file "$WORKTREE/.issueops/issues/$ISSUE/gates.md" --scope 
 - CHECK는 command policy를 지나므로 셸 확장과 파이프 우회를 넣지 않는다.
   `$(...)`, 백틱, `&&`로 이어 붙인 우회는 정책이 거부한다. 한 게이트에 명령 하나다.
 - 통과 조건은 EXPECT 일치와 종료 코드 0 **둘 다**이다. 한쪽만으로는 통과하지
-  않는다.
+  않는다. 실패해야 하는 동작(`--bogus`가 종료 코드 2)은 `python3 -c`로 감싸 종료 코드를
+  출력하게 한다: `CHECK: python3 -c "import subprocess;print(subprocess.run(['./hello.sh','--bogus']).returncode)"`,
+  `EXPECT: 2`. `sh -c`는 정책이 거부한다.
 - EXPECT는 부분 문자열이 아니다. 세 형식 중 하나여야 통과한다(`internal/domain/gates/evaluate.go`
   `ExpectMatches`): 출력의 어느 한 **줄 전체**가 EXPECT와 같거나, 어느 한 줄이 EXPECT로
   **시작하고 바로 뒤가 공백·탭**이거나(`EXPECT: ok`가 `ok  	issueops/...` 줄에 맞는 이유),
