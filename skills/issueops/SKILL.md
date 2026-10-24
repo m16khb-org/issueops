@@ -32,7 +32,8 @@ issueops next --json
 
 - `ambiguous`라도 대화에 지정된 ID가 있으면 그 ID로 다시 읽는다. ID가 없고 후보를
   구별할 근거도 없을 때만 고르게 한다. 다른 사이클을 임의로 선택하거나 정리하지 않는다.
-- `none`이면 요청 범위에 맞게 이슈 단계로 들어간다. 본문 초안이나 상태 조회만 요청했으면
+- `none`이면 요청 범위에 맞게 이슈 단계로 들어간다. 단, 요청이 `warnings`가 가리키는 머지 대기
+  사이클(그 PR·리뷰·머지)에 관한 것이면 `issueops next --id <그 ID> --json`으로 다시 읽는다. 본문 초안이나 상태 조회만 요청했으면
   그 결과만 제공한다. 상태 조회는 `issueops list --repo "$PWD" --json`이 저장소의 모든 사이클을 한 번에 보여 준다. 사용자가 새 사이클을 요청하면 기존 후보와 별개로 시작한다.
 - `blocked.*`는 아래 중단 규칙을 따른다. 다른 holder의 작업을 대신하거나 상태를 우회하지 않는다.
 
@@ -82,8 +83,6 @@ issueops next --json
 
 ## 공통 불변식
 
-각 독립 단계의 본문에도 실행에 필요한 최소 계약을 유지한다.
-
 **(a) 단계 판별.** 모든 단계 스킬은 선택한 ID의 `issueops next --id "$ISSUEOPS_ID" --json`으로 시작하고
 `stage.key`가 자기 단계인지 확인한다. 아니면 표가 지목하는 스킬로 안내한다. `blocked.*`
 면 중단한다. phase를 추정하지 않는다.
@@ -95,8 +94,7 @@ issueops next --json
 
 **(c) lease fencing.** durable mutation(phase 전이, record 기록, artifact stage) 전마다
 exact lifecycle ID·generation·native actor·canonical cwd를 현재 record와 대조한다.
-record 기록은 `RECORD_ACTOR_FLAGS`, lease 전이와 publication은 `ACTOR_FLAGS`를 쓴다.
-두 축약의 정의는 `issueops --help`의 legend가 소유한다. 불일치는 stop이다. 사용자의
+record 기록은 `RECORD_ACTOR_FLAGS`, lease 전이와 publication은 `ACTOR_FLAGS`를 쓴다. 불일치는 stop이다. 사용자의
 "그 세션은 내가 껐어"는 quiescence 증거가 아니다. 모호한 결과는 재실행하지 않고 reconcile한다.
 lease 전의 준비 기록은 source checkout의 native actor로, 구현은 active holder의 canonical cwd로 한다.
 lease를 잡은 뒤 whoami는 `cd <worktree> && issueops execution whoami --json`으로 다시 받는다(source checkout 값은 `--cwd`가 달라 거부된다).
