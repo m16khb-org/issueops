@@ -304,3 +304,56 @@ func TestChildConcurrentNotInvokedRetryUsesSelectedOperationBody(t *testing.T) {
 		t.Fatalf("adopt=%+v err=%v creates=%d", adopted, e, p.calls)
 	}
 }
+
+// A pending child create whose caller died (no URL, no candidate) is released
+// to not_invoked only when settled, the same create-child then runs again, and
+// an unsettled or invoked_unknown operation keeps the refusal.
+func TestChildReconcileReleasesASettledCrashedCreate(t *testing.T) {
+	crashed := func(t *testing.T, status string, settled bool) (*testChildStore, *recoveryChildProvider, ChildCreator, ChildReconciler, ChildCreateCommand, model.ChildCreateOperation) {
+		store, p, creator, reconciler, cmd := childRecoveryFixture("github")
+		p.fail = errors.New("killed")
+		_, _ = creator.Create(context.Background(), cmd, nil)
+		store.mu.Lock()
+		store.record.ChildCreateOperations[0].CanonicalURL = ""
+		store.record.ChildCreateOperations[0].Status = status
+		store.record.ChildCreateOperations[0].Failure = ""
+		if status != model.IssueCreateIntentPending {
+			store.record.ChildCreateOperations[0].Failure = "timeout"
+		}
+		store.mu.Unlock()
+		p.search.Candidates, p.fail = nil, nil
+		reconciler.Settled = func(context.Context, model.IssueOpsRecord, model.ChildCreateOperation) (bool, error) {
+			return settled, nil
+		}
+		return store, p, creator, reconciler, cmd, store.read().ChildCreateOperations[0]
+	}
+
+	store, p, creator, reconciler, cmd, op := crashed(t, model.IssueCreateIntentPending, true)
+	preview, err := reconciler.Reconcile(context.Background(), ChildReconcileCommand{ID: cmd.ID, OperationID: op.OperationID}, nil)
+	if err != nil || !preview.OK || preview.Released || store.read().ChildCreateOperations[0].Status != model.IssueCreateIntentPending {
+		t.Fatalf("preview=%+v err=%v", preview, err)
+	}
+	released, err := reconciler.Reconcile(context.Background(), ChildReconcileCommand{ID: cmd.ID, OperationID: op.OperationID, Confirm: true}, nil)
+	if err != nil || !released.Released || store.read().ChildCreateOperations[0].Status != model.IssueCreateIntentNotInvoked {
+		t.Fatalf("released=%+v err=%v ops=%+v", released, err, store.read().ChildCreateOperations)
+	}
+	cmd.OperationID = op.OperationID
+	time.Sleep(2 * time.Millisecond)
+	if result, err := creator.Create(context.Background(), cmd, nil); err != nil || !result.OK || p.calls != 2 {
+		t.Fatalf("retry after release: result=%+v err=%v calls=%d", result, err, p.calls)
+	}
+	// The restarted attempt starts its quiet period anew.
+	if retried := store.read().ChildCreateOperations[0]; retried.Attempt != op.Attempt+1 || retried.StartedAt == op.StartedAt {
+		t.Fatalf("restart kept the old start: before=%+v after=%+v", op, retried)
+	}
+
+	for _, tc := range []struct {
+		status  string
+		settled bool
+	}{{model.IssueCreateIntentPending, false}, {model.IssueCreateIntentInvokedUnknown, true}} {
+		store, _, _, reconciler, cmd, op := crashed(t, tc.status, tc.settled)
+		if _, err := reconciler.Reconcile(context.Background(), ChildReconcileCommand{ID: cmd.ID, OperationID: op.OperationID, Confirm: true}, nil); err == nil || store.read().ChildCreateOperations[0].Status != tc.status {
+			t.Fatalf("%s settled=%v: err=%v status=%s", tc.status, tc.settled, err, store.read().ChildCreateOperations[0].Status)
+		}
+	}
+}

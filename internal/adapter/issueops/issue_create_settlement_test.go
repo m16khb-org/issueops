@@ -19,6 +19,9 @@ func TestIssueCreateInFlight(t *testing.T) {
 		{"/usr/local/bin/issueops remote create-issue --id io-1 --title x --confirm", true},
 		{"/opt/homebrew/bin/gh issue create --title other --body <!-- issueops:issue-create:ffffffffffffffffffffffffffffffff -->", false},
 		{"/opt/homebrew/bin/gh issue list --search " + op, false},
+		{"glab api graphql -f query=mutation workItemCreate { workItemCreate(input: { description: \"<!-- issueops:issue-create:" + op + " -->\" }) }", true},
+		{"glab api graphql -f query=query childRecoverySearch($marker: String!) {...} -f marker=" + op, false},
+		{"/usr/local/bin/issueops remote create-child --id=io-1 --title x --confirm", true},
 		{"/usr/local/bin/issueops remote reconcile-issue --id io-1 --confirm", false},
 	} {
 		if got := issueCreateInFlight(tc.rows, op, "io-1"); got != tc.want {

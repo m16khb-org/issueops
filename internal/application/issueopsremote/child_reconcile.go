@@ -21,6 +21,9 @@ type ChildReconciler struct {
 	Records IssueRecordReader
 	Resolve func(string) (port.IssueProviderChildCreateRecovery, error)
 	Intents *ChildCreateIntents
+	// Settled proves that a pending child create whose caller died created
+	// nothing and can no longer create anything (nil: never release).
+	Settled func(context.Context, model.IssueOpsRecord, model.ChildCreateOperation) (bool, error)
 }
 
 // childRecoveryRun은 Reconcile 한 번 동안 고정되는 기록·작업·행위자·자식 URL이다.
@@ -44,6 +47,11 @@ func (s ChildReconciler) Reconcile(ctx context.Context, cmd ChildReconcileComman
 	}
 	run.childURL, err = s.locateRecoveryChild(ctx, provider, run, &result)
 	if err != nil {
+		// QA (killed create-child): a pending operation with no candidate
+		// had no exit but abandon; release it once settled.
+		if released, ok, releaseErr := s.releaseCrashedChild(ctx, cmd, run, result); ok {
+			return released, releaseErr
+		}
 		return result, err
 	}
 	record, op, childURL := run.record, run.op, run.childURL
@@ -103,6 +111,32 @@ func (s ChildReconciler) beginChildRecovery(ctx context.Context, cmd ChildReconc
 	}
 	// Preview authorizes the reader but never records a replacement or receipt.
 	return run, s.Intents.Authority.Authorize(ctx, record, run.actor)
+}
+
+// releaseCrashedChild releases a pending child create that found no candidate
+// when the settlement proves nothing was or will be created. ok is false when
+// the release does not apply, leaving the caller's error in place.
+func (s ChildReconciler) releaseCrashedChild(ctx context.Context, cmd ChildReconcileCommand, run childRecoveryRun, result model.ChildReconcileResult) (model.ChildReconcileResult, bool, error) {
+	op := run.op
+	if s.Settled == nil || result.CandidateCount != 0 || op.CanonicalURL != "" || op.Status != model.IssueCreateIntentPending {
+		return result, false, nil
+	}
+	settled, err := s.Settled(ctx, run.record, op)
+	if err != nil || !settled {
+		return result, false, nil
+	}
+	if !cmd.Confirm {
+		result.OK = true
+		return result, true, nil
+	}
+	if err := s.reauthorizeChildRecovery(ctx, cmd.ID, run); err != nil {
+		return result, true, err
+	}
+	if err := s.Intents.ReleaseCrashed(ctx, run.record, op, run.actor); err != nil {
+		return result, true, err
+	}
+	result.OK, result.Released, result.RecoveryCommand = true, true, ""
+	return result, true, nil
 }
 
 // locateRecoveryChild는 작업에 기록된 자식 URL을 쓰거나, 없으면 marker 후보 검색으로 찾는다.

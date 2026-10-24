@@ -368,6 +368,9 @@ func (Provider) RecentIssuesLackMarker(ctx context.Context, req port.IssueProvid
 	// Newest first, like GitHub: a full page must reach back before since, so
 	// local clock skew cannot drop the created issue from the window.
 	endpoint := "projects/" + url.PathEscape(path) + "/issues?scope=all&order_by=created_at&sort=desc&per_page=" + strconv.Itoa(limit)
+	if issueType := strings.TrimSpace(req.IssueType); issueType != "" {
+		endpoint += "&issue_type=" + url.QueryEscape(issueType)
+	}
 	out, _, err := providerutil.RunBoundedMutationWithOutputLimitContext(ctx, req.Repo, "glab", 8<<20, "api", endpoint, "--hostname", host)
 	if err != nil {
 		return false, fmt.Errorf("list recent GitLab issues: %w", err)

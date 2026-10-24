@@ -84,4 +84,8 @@ type ChildReconcileResult struct {
 	WouldAdopt        bool   `json:"would_adopt"`
 	HierarchyVerified bool   `json:"hierarchy_verified"`
 	RecoveryCommand   string `json:"recovery_command,omitempty"`
+	// Released reports that a pending create whose caller died was settled
+	// as never created and released (not_invoked): re-run the same
+	// create-child with this operation ID.
+	Released bool `json:"released,omitempty"`
 }

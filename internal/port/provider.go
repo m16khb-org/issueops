@@ -39,6 +39,9 @@ type IssueProviderRecentIssuesRequest struct {
 	ProjectAuthority string
 	Marker           string
 	SinceRFC3339     string
+	// IssueType narrows the listing to a provider work item type ("task" for
+	// GitLab child tasks); empty lists issues.
+	IssueType string
 }
 
 // IssueProviderRecentIssueLister proves an issue create left nothing: it reads

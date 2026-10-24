@@ -63,6 +63,32 @@ func (s *ChildCreateIntents) Complete(ctx context.Context, expected model.IssueO
 	return err
 }
 
+// childCrashReleased is the failure a settled crash records: not_invoked lets
+// the same create-child run again.
+const childCrashReleased = "the create-child caller died before the provider created the child; settled: no candidate, no create running, quiet period passed"
+
+// ReleaseCrashed records not_invoked for the exact pending attempt that was
+// settled (compare-and-swap on status, attempt, and updated_at).
+func (s *ChildCreateIntents) ReleaseCrashed(ctx context.Context, observed model.IssueOpsRecord, op model.ChildCreateOperation, actor model.IssueOpsActor) error {
+	_, err := s.update(ctx, observed.ID, actor, func(record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+		if !sameChildRecoveryAuthority(observed, record) {
+			return record, fmt.Errorf("child recovery authority changed")
+		}
+		current, ok := domain.FindChildOperation(record, op.OperationID, "")
+		if !ok || current.Status != model.IssueCreateIntentPending || current.Attempt != op.Attempt || current.UpdatedAt != op.UpdatedAt || current.CanonicalURL != "" {
+			return record, fmt.Errorf("child operation changed since it was settled; run reconcile-child again")
+		}
+		// The dead caller's lease was often taken over: bind the operation to
+		// the current holder first, like the other recovery outcomes.
+		rebound, err := domain.RebindChildOperation(record, op.OperationID)
+		if err != nil {
+			return record, err
+		}
+		return domain.RecordChildOutcome(rebound, op.OperationID, model.IssueCreateIntentNotInvoked, "", childCrashReleased, s.timestamp())
+	})
+	return err
+}
+
 func (s *ChildCreateIntents) RecoveryFailure(ctx context.Context, observed model.IssueOpsRecord, op model.ChildCreateOperation, url, status, failure string, actor model.IssueOpsActor) error {
 	_, err := s.update(ctx, observed.ID, actor, func(record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
 		if !sameChildRecoveryAuthority(observed, record) {

@@ -38,6 +38,7 @@ and supersession rules live in [adr/README.md](adr/README.md).
 
 | Date | Decision | Record |
 |---|---|---|
+| 2026-10-25 | `reconcile-child` releases a pending child create with no URL and no candidate (`released: true`, compare-and-swap, rebound to the current holder) when the issue-create settlement holds; the same create-child re-runs with its operation ID | [record](adr/2026-10-25-release-a-child-create-whose-caller-died.md) |
 | 2026-10-25 | `reconcile-issue` releases a pending issue create whose caller died (`pending` → `not_invoked`, compare-and-swap on the attempt) when a settlement proves nothing was or will be created: lifetime lock free, no in-flight create, and a provider listing (not search) without the marker | [record](adr/2026-10-25-release-an-issue-create-whose-caller-died.md) |
 | 2026-10-25 | A pending PR/MR create passes through the takeover chain to the next holder, who reconciles it; reconcile takes the single retry after an authoritative empty list only with crash settlement (no known URL, create ≥ 2 minutes old, no local provider create or `create-pr` process) | [record](adr/2026-10-25-recover-a-pr-create-whose-caller-died.md) |
 | 2026-10-25 | `remote merge-pr` treats a standing GitHub `CHANGES_REQUESTED` review decision as `merge_blocked`, matching GitLab's `requested_changes`; the reviewer re-approves or dismisses before the merge | [record](adr/2026-10-25-github-change-request-blocks-merge-pr.md) |

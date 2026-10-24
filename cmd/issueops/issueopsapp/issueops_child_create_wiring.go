@@ -17,8 +17,14 @@ import (
 func newChildCreator(root string) app.ChildCreator {
 	return app.ChildCreator{
 		Records: adapter.RemoteRecordStore{StateRoot: root},
-		Resolve: func(name string) (app.ChildProvider, error) { return provider.Resolve(name) },
-		Bodies:  app.NewTemplateBodyResolver(os.ReadFile),
+		Resolve: func(name string) (app.ChildProvider, error) {
+			resolved, err := provider.Resolve(name)
+			if err != nil {
+				return nil, err
+			}
+			return adapter.LockedChildCreator{Inner: resolved, StateRoot: root}, nil
+		},
+		Bodies: app.NewTemplateBodyResolver(os.ReadFile),
 		Authorize: func(ctx context.Context, id string, actor model.IssueOpsActor) error {
 			return adapter.ValidateIssueOpsMutationActor(ctx, root, id, actor, issueOpsActorVerifier())
 		},
@@ -39,5 +45,5 @@ func newChildReconciler(root string) app.ChildReconciler {
 			return nil, fmt.Errorf("provider lacks child recovery")
 		}
 		return recovery, nil
-	}}
+	}, Settled: adapter.ChildCreateCrashSettlement(root, provider.Resolve, time.Now)}
 }

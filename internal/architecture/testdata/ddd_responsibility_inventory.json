@@ -4779,11 +4779,17 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
+        "func ChildCreateCrashSettlement",
         "func HoldIssueCreate",
         "func IssueCreateCrashSettlement",
+        "func LockedChildCreator.CreateChild",
         "func firstNonEmptyString",
         "func issueCreateInFlight",
-        "func issueCreateLockKey"
+        "func issueCreateLockKey",
+        "func providerReadRow",
+        "func settleIssueCreate",
+        "type ChildCreator",
+        "type LockedChildCreator"
       ]
     },
     {
@@ -9411,6 +9417,7 @@
         "func ChildCreateIntents.Complete",
         "func ChildCreateIntents.Outcome",
         "func ChildCreateIntents.RecoveryFailure",
+        "func ChildCreateIntents.ReleaseCrashed",
         "func ChildCreateIntents.timestamp",
         "func ChildCreateIntents.update",
         "type ChildCreateIntents"
@@ -9427,6 +9434,7 @@
         "func ChildReconciler.locateRecoveryChild",
         "func ChildReconciler.reauthorizeChildRecovery",
         "func ChildReconciler.recoveryFailure",
+        "func ChildReconciler.releaseCrashedChild",
         "func containsChildValues",
         "func sameChildRecoveryAuthority",
         "func validateChildSnapshot",

@@ -87,10 +87,16 @@ func BeginChildOperation(record model.IssueOpsRecord, request model.ChildCreateO
 		if op.Status != model.IssueCreateIntentNotInvoked {
 			return record, op, false, fmt.Errorf("unresolved child operation; reconcile before creating")
 		}
+		// The restarted attempt starts now: a crash settlement measures its
+		// quiet period from UpdatedAt (security review 2026-10-25).
+		startedAt := request.UpdatedAt
 		request = op
 		request.Status = model.IssueCreateIntentPending
 		request.Failure = ""
 		request.Attempt++
+		if startedAt != "" {
+			request.StartedAt, request.UpdatedAt = startedAt, startedAt
+		}
 	}
 	for _, op := range record.ChildCreateOperations {
 		if op.OperationID != request.OperationID && op.Status != model.IssueCreateIntentCompleted {
