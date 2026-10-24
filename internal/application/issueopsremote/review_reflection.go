@@ -65,7 +65,7 @@ func (s *ReviewReflectionService) Reflect(ctx context.Context, id, providerOverr
 	}
 	result, err = provider.UpdateIssueBodySection(ctx, port.IssueProviderUpdateIssueBodySectionRequest{Repo: record.Repo, IssueURL: record.IssueURL, Section: model.IssueBodySectionDevilsAdvocate, Findings: record.DevilsAdvocateReview.Findings, Verdict: record.DevilsAdvocateReview.Verdict, Rounds: domain.PlanReviewRounds(record.DevilsAdvocateReview), Confirm: confirm})
 	if err != nil {
-		return model.IssueOpsRecord{}, result, err
+		return model.IssueOpsRecord{}, result, idempotentRetryHint(err, confirm, "reflected")
 	}
 	if !confirm || !result.Updated {
 		return record, result, nil
