@@ -39,6 +39,16 @@ func (c Command) Run(args []string) int {
 	if ok, exitCode := c.runSubcommand(args[0], args[1:]); ok {
 		return exitCode
 	}
+	if JSONRequested(args[1:]) {
+		// QA (codex): `issueops project-docs-route --json` left stdout empty;
+		// under --json the refusal is the one JSON document there too.
+		message := fmt.Sprintf("unknown command %q", args[0])
+		if suggestions := c.suggest(args[0]); len(suggestions) > 0 {
+			message += "; did you mean: " + strings.Join(suggestions, ", ")
+		}
+		_ = jsonout.PrintTo(c.stdout(), map[string]any{"ok": false, "error": message + " (issueops --help lists commands)"})
+		return 2
+	}
 	c.printUnknownCommand(args[0])
 	return 2
 }

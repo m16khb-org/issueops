@@ -45,6 +45,12 @@ func TestRunRootCommandUsageAndVersionSurface(t *testing.T) {
 			wantCode: 2,
 			wantErr:  "issueops: unknown command \"statu\"\nDid you mean: status\nRun 'issueops --help' for the full usage.\n",
 		},
+		{
+			name:     "unknown under --json answers one JSON document on stdout",
+			args:     []string{"statu", "--json"},
+			wantCode: 2,
+			wantOut:  `"error": "unknown command \"statu\"; did you mean: status (issueops --help lists commands)"`,
+		},
 	}
 
 	for _, tc := range cases {
