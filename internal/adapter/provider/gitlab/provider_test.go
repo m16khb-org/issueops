@@ -668,9 +668,11 @@ func TestParseGlabOutput(t *testing.T) {
 		wantNumber string
 	}{
 		{"empty", "", "", ""},
-		{"plain url", "creating...\nhttps://gitlab.com/g/p/-/issues/9\n", "https://gitlab.com/g/p/-/issues/9", ""},
-		// glab create never emits JSON, so a JSON line is not an https line and is
-		// ignored; the IID/number branch was removed, so number is always empty.
+		// glab create prints the bare URL; the IID comes from that URL, as the
+		// GitHub provider derives its number.
+		{"issue url", "creating...\nhttps://gitlab.com/g/p/-/issues/9\n", "https://gitlab.com/g/p/-/issues/9", "9"},
+		{"merge request url", "!3 title (feat)\n https://gitlab.com/g/sub/p/-/merge_requests/3\n", "https://gitlab.com/g/sub/p/-/merge_requests/3", "3"},
+		// glab create never emits JSON, so a JSON line is not an https line and is ignored.
 		{"json no longer parsed", `{"web_url":"https://gitlab.com/g/p/-/issues/9","iid":9}`, "", ""},
 	}
 	for _, tc := range cases {
@@ -762,7 +764,7 @@ printf 'https://gitlab.com/g/p/-/issues/9\n'
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !got.OK || got.URL != "https://gitlab.com/g/p/-/issues/9" || got.Number != "" {
+	if !got.OK || got.URL != "https://gitlab.com/g/p/-/issues/9" || got.Number != "9" {
 		t.Fatalf("result=%+v", got)
 	}
 	log, err := os.ReadFile(logPath)
@@ -793,7 +795,7 @@ exit 2
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !mr.OK || mr.URL != "https://gitlab.com/g/p/-/merge_requests/4" || mr.Number != "" {
+	if !mr.OK || mr.URL != "https://gitlab.com/g/p/-/merge_requests/4" || mr.Number != "4" {
 		t.Fatalf("mr result=%+v", mr)
 	}
 

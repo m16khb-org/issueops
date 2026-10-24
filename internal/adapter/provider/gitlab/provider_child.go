@@ -458,10 +458,24 @@ func parseGlabOutput(out string) (url string, number string) {
 	for line := range strings.SplitSeq(out, "\n") {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "https://") {
-			return line, ""
+			return line, gitLabCreatedIID(line)
 		}
 	}
 	return "", ""
+}
+
+// gitLabCreatedIID reads the IID from a created issue or merge request URL,
+// as the GitHub provider reads the number from its URL; agents otherwise had
+// to cut it out of issue_url themselves (QA: issue_number was always empty).
+func gitLabCreatedIID(raw string) string {
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.Host == "" {
+		return ""
+	}
+	if parts := remoteparse.SplitGitLabIssuePath(parsed.EscapedPath()); parts.IID != "" {
+		return parts.IID
+	}
+	return remoteparse.SplitGitLabMRPath(parsed.EscapedPath()).IID
 }
 
 func resolveGitLabTaskTypeID(repo, hostname, projectPath string) (string, error) {

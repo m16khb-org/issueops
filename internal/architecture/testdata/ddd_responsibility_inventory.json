@@ -7081,6 +7081,7 @@
         "func buildGitLabWorkItemCreateQuery",
         "func closeGitLabChildWorkItem",
         "func createGitLabChildWorkItem",
+        "func gitLabCreatedIID",
         "func gitlabAssigneeUsernames",
         "func gitlabAssigneeUsernamesFromRequest",
         "func gitlabChildByIID",
