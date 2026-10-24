@@ -38,9 +38,10 @@ child가 생겨도 이 결합은 유지된다. 미해결 operation은 새 ID로�
 digest·type·계층·metadata를 확인한 뒤 같은 요청에 `--confirm`을 붙인다. 현재
 execution holder만 confirm할 수 있고, generation이 바뀐 작업은 자동 replay 대신
 명시적 reconcile로 복구한다. 복구는 기존 child를 조회·연결하며 생성하지 않는다.
-호출 프로세스가 죽어 후보가 0개인 `pending` 작업은 2분이 지나고 생성 프로세스가 없으면
-reconcile이 풀어 준다(`released: true`). 그 뒤 같은 요청을 다시 실행한다(explicit이면 같은 `--operation-id`).
-2분 전에는 오류에 대기 조건이 나온다. 기다린 뒤 reconcile을 다시 실행한다.
+호출 프로세스가 죽어 후보가 0개인 `pending` 작업은 2분이 지나고 생성 프로세스가 없으면 풀 수 있다.
+미리보기가 `ok`와 `--confirm`이 붙은 `recovery_command`를 돌려준다. 그 명령이 작업을 푼다(`released: true`).
+그 뒤 같은 요청을 다시 실행한다(explicit이면 같은 `--operation-id`).
+2분 전에는 오류에 대기 조건이 나온다. 기다린 뒤 미리보기를 다시 실행한다.
 
 child 본문의 요약에는 parent 링크와 이 child가 맡는 부분을, 선행 조건과 병합 조건
 절에는 `[p]`/`[s]`, prerequisite, wave, 병합 조건을 쓴다. confirmed child 결과의
