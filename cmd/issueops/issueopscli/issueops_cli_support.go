@@ -159,13 +159,21 @@ func (cli command) runIssueOpsBranchAwaitLink(args []string) error {
 		}
 		return err
 	}
-	// The --link-verified record runs from this checkout; hand it back with
-	// this process's whoami record vector so it runs as printed.
+	// The --link-verified record is a pre-lease record, so it gets this
+	// process's whoami record vector at the cycle's source checkout, the cwd
+	// next renders too (a run from a subdirectory used to mix two --cwd values).
 	if strings.Contains(result.NextCommand, "$RECORD_ACTOR_FLAGS") {
-		if wd, wdErr := os.Getwd(); wdErr == nil {
-			if flags := executioncmd.RecordActorFlags(os.Getenv, wd); flags != "" {
-				result.NextCommand = strings.ReplaceAll(result.NextCommand, "$RECORD_ACTOR_FLAGS", flags)
+		cwd := ""
+		if cli.Runtime.ReadIssueOps != nil {
+			if record, readErr := cli.Runtime.ReadIssueOps(cli.Runtime.IssueOpsStateRoot(), *id); readErr == nil {
+				cwd = record.Repo
 			}
+		}
+		if cwd == "" {
+			cwd, _ = os.Getwd()
+		}
+		if flags := executioncmd.RecordActorFlags(os.Getenv, cwd); flags != "" {
+			result.NextCommand = strings.ReplaceAll(result.NextCommand, "$RECORD_ACTOR_FLAGS", flags)
 		}
 	}
 	if *jsonOut {

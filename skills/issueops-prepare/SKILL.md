@@ -70,8 +70,9 @@ issueops next --id "$ISSUEOPS_ID" --json
 ## 절차
 
 ```bash
-COMMON_GIT_DIR=$(git rev-parse --path-format=absolute --git-common-dir)
-SOURCE_ROOT=$(dirname "$COMMON_GIT_DIR")
+# SOURCE_ROOT는 `issueops next --json`의 `source_root`다. 하위 디렉터리에서 시작해도 저장소 루트이고,
+# record의 repo와 같은 표기다(git rev-parse는 macOS에서 /tmp를 /private/tmp로 풀어 다르게 보인다).
+SOURCE_ROOT="<next의 source_root>"
 BRANCH="<issue-number>-<kebab-slug>"
 
 git -C "$SOURCE_ROOT" fetch origin "$BASE_BRANCH"

@@ -202,6 +202,7 @@ func TestNextClassifiesCWDRoleFromSourceRoot(t *testing.T) {
 	}{
 		{"/repo", issueopsnextcontract.CWDRoleSource},
 		{"/repo/", issueopsnextcontract.CWDRoleSource},
+		{"/repo/tools/greet", issueopsnextcontract.CWDRoleSource},
 		{"/repo.worktrees/13-b/sub", issueopsnextcontract.CWDRoleWorktree},
 		{"/repository", issueopsnextcontract.CWDRoleOther},
 	} {

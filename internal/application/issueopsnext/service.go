@@ -375,7 +375,9 @@ func cwdRole(ports Ports, cwd, sourceRoot string) string {
 	if strings.TrimSpace(sourceRoot) == "" {
 		return issueopsnextcontract.CWDRoleOther
 	}
-	if sameDir(ports, cwd, sourceRoot) {
+	// A subdirectory of the source checkout is the source checkout too; a QA
+	// agent started in repo/tools/greet read "other" as a warning.
+	if sameDir(ports, cwd, sourceRoot) || strings.HasPrefix(cleanPath(ports, cwd)+"/", cleanPath(ports, sourceRoot)+"/") {
 		return issueopsnextcontract.CWDRoleSource
 	}
 	if strings.HasPrefix(cleanPath(ports, cwd)+"/", cleanPath(ports, sourceRoot)+".worktrees/") {
