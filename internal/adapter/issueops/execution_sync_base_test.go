@@ -53,6 +53,7 @@ type fakeSyncBaseGit struct {
 	notAncestor map[string]bool
 
 	fetchCode     int
+	fetchOut      string
 	mergeTreeCode int
 	mergeTreeOut  string
 	mergeCode     int
@@ -83,7 +84,7 @@ func (g *fakeSyncBaseGit) run(_ context.Context, dir string, args ...string) (in
 	case "status":
 		return 0, g.statusOut
 	case "fetch":
-		return g.fetchCode, ""
+		return g.fetchCode, g.fetchOut
 	case "merge-base":
 		if g.notAncestor[args[len(args)-2]+".."+args[len(args)-1]] {
 			return 1, ""
@@ -996,5 +997,19 @@ func TestExecutionSyncBaseRefusesABaseTipWithoutTheSealedBase(t *testing.T) {
 	_, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBasePreview))
 	if err == nil || !strings.Contains(err.Error(), "sealed_base_on_base_tip") || !strings.Contains(err.Error(), "no longer contains the sealed base") {
 		t.Fatalf("preview over a rewritten base = %v", err)
+	}
+}
+
+// Probed: with the base branch deleted on origin the refusal named only
+// the base_fetch gate.
+func TestExecutionSyncBaseFetchFailureNamesGitsMessage(t *testing.T) {
+	t.Parallel()
+
+	fixture := newReleasedSyncBaseFixture(t, "114-nobase")
+	fixture.git.fetchCode = 128
+	fixture.git.fetchOut = "fatal: couldn't find remote ref main"
+	_, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBasePreview))
+	if err == nil || !strings.Contains(err.Error(), "base_fetch; git fetch origin") || !strings.Contains(err.Error(), "couldn't find remote ref main") {
+		t.Fatalf("preview with a failed base fetch = %v", err)
 	}
 }

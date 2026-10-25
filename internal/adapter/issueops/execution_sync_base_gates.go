@@ -106,22 +106,29 @@ func (g *executionSyncBaseGateRun) observeRemoteBranch() {
 // which touch neither FETCH_HEAD nor the fetched refs. The returned wait
 // yields the fetch exit code; it is nil when the mode or record needs no
 // fetch.
-func (g *executionSyncBaseGateRun) startBaseFetch() func() int {
+func (g *executionSyncBaseGateRun) startBaseFetch() func() (int, string) {
 	if g.mode != issueops.ExecutionSyncBasePreview && g.mode != issueops.ExecutionSyncBaseApply || g.inventory.BaseBranch == "" {
 		return nil
 	}
 	ctx, git, root, base := g.ctx, g.deps.Git, g.inventory.Root, g.inventory.BaseBranch
-	done := make(chan int, 1)
+	type fetchResult struct {
+		code int
+		out  string
+	}
+	done := make(chan fetchResult, 1)
 	go func() {
-		code, _ := git(ctx, root, "fetch", "--quiet", "origin", base)
-		done <- code
+		code, out := git(ctx, root, "fetch", "--quiet", "origin", base)
+		done <- fetchResult{code, out}
 	}()
-	return func() int { return <-done }
+	return func() (int, string) {
+		r := <-done
+		return r.code, r.out
+	}
 }
 
 // resolveBaseTip은 모드별로 base tip을 확정한다. fetched는 startBaseFetch가
 // 돌려준 대기 함수다.
-func (g *executionSyncBaseGateRun) resolveBaseTip(fetched func() int) {
+func (g *executionSyncBaseGateRun) resolveBaseTip(fetched func() (int, string)) {
 	switch g.mode {
 	case issueops.ExecutionSyncBasePreview, issueops.ExecutionSyncBaseApply:
 		g.fetchBaseTip(fetched)
@@ -139,12 +146,13 @@ func (g *executionSyncBaseGateRun) resolveBaseTip(fetched func() int) {
 
 // fetchBaseTip은 fetch 선행(preview·apply)으로 stale base 머지를 방지한다
 // (architecture-review F6 — pr-readiness strict 선례). base tip은 반드시 fetch 이후 값이어야 한다.
-func (g *executionSyncBaseGateRun) fetchBaseTip(fetched func() int) {
+func (g *executionSyncBaseGateRun) fetchBaseTip(fetched func() (int, string)) {
 	if fetched == nil {
 		return
 	}
-	if fetched() != 0 {
+	if code, out := fetched(); code != 0 {
 		g.missing = append(g.missing, "base_fetch")
+		g.inventory.BaseFetchOutput = out
 	} else if oid, ok := g.resolveOID("rev-parse", "FETCH_HEAD"); ok {
 		g.inventory.BaseOID = oid
 	} else {

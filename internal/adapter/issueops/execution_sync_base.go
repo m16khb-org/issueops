@@ -60,6 +60,8 @@ type executionSyncBaseInventory struct {
 	BaseOnRemote bool `json:"-"`
 	// SealedBaseOID is BranchPrepare.BaseSHA, the base the branch was cut from.
 	SealedBaseOID string `json:"-"`
+	// BaseFetchOutput is git's message when the base fetch failed.
+	BaseFetchOutput string `json:"-"`
 }
 
 // VerifiedSyncExecutionBase는 게이트 10종을 fail-closed로 평가하고, 모드별 절차를
@@ -114,6 +116,10 @@ func syncExecutionBase(ctx context.Context, stateRoot string, req issueops.Execu
 		if slices.Contains(missing, "cwd_canonical") && inventory.Root != "" {
 			// An agent ran it from the source checkout as the replace step is.
 			err = fmt.Errorf("%w; run it from the canonical worktree %q, with --cwd %q", err, inventory.Root, inventory.Root)
+		}
+		if slices.Contains(missing, "base_fetch") {
+			// Probed: a base branch deleted on origin showed only "base_fetch".
+			err = fmt.Errorf("%w; git fetch origin %s failed: %s (check that the base branch still exists on origin)", err, inventory.BaseBranch, strings.TrimSpace(inventory.BaseFetchOutput))
 		}
 		if slices.Contains(missing, "sealed_base_on_base_tip") {
 			err = fmt.Errorf("%w; origin/%s no longer contains the sealed base %.10s (the base was rewritten, e.g. force-pushed), so merging it would bring the commits the base dropped back through this branch's PR. Stop and ask the user: keep the current base and skip the sync, or start a new cycle from the rewritten base", err, inventory.BaseBranch, inventory.SealedBaseOID)
