@@ -58,6 +58,12 @@ func TestRunRootCommandUsageAndVersionSurface(t *testing.T) {
 			wantErr:  "devils-advocate review, implementation-review record",
 		},
 		{
+			name:     "a group subcommand typed alone names its group path",
+			args:     []string{"sync-pr"},
+			wantCode: 2,
+			wantErr:  "Did you mean: remote sync-pr",
+		},
+		{
 			name:     "unknown under --json answers one JSON document on stdout",
 			args:     []string{"statu", "--json"},
 			wantCode: 2,

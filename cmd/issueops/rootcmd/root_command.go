@@ -184,8 +184,13 @@ func (c Command) errorExitCode(name string, err error) int {
 // commandPathsContainingWord lists catalog command paths that hold word as one
 // of their space- or hyphen-separated parts, up to six, in catalog order.
 func commandPathsContainingWord(word string) []string {
-	if len(word) < 3 || strings.ContainsAny(word, " -") {
+	if len(word) < 3 || strings.Contains(word, " ") {
 		return nil
+	}
+	if strings.Contains(word, "-") {
+		// QA: `issueops sync-pr` (the subcommand without its group) got no
+		// suggestion; name the group path that ends with it.
+		return commandPathsEndingWith(word)
 	}
 	var paths []string
 	for line := range strings.SplitSeq(clicontract.IssueOpsUsageCatalog, "\n") {
@@ -198,6 +203,19 @@ func commandPathsContainingWord(word string) []string {
 			if len(paths) == 6 {
 				break
 			}
+		}
+	}
+	return paths
+}
+
+// commandPathsEndingWith lists catalog paths whose last part is name, such as
+// "remote sync-pr" for sync-pr.
+func commandPathsEndingWith(name string) []string {
+	var paths []string
+	for line := range strings.SplitSeq(clicontract.IssueOpsUsageCatalog, "\n") {
+		path := cliparse.IssueOpsUsageKey(strings.TrimSpace(line))
+		if strings.HasSuffix(path, " "+name) && !slices.Contains(paths, path) {
+			paths = append(paths, path)
 		}
 	}
 	return paths

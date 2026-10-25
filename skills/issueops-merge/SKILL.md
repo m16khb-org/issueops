@@ -108,7 +108,7 @@ issueops remote merge-pr --id "$ISSUEOPS_ID" --json
 | `pr_not_open` | PR/MR이 닫혔다 | 멈춘다. 폐기할지는 사용자가 정하고 [`issueops-abandon`](../issueops-abandon/SKILL.md)이 맡는다 |
 
 `checks_failing`·`head_mismatch`·`merge_conflict`·`merge_blocked`의 복구 절차(일시적 실패 재실행, reseed로 사이클 다시 열기,
-base 동기화)는 [차단 사유별 복구 절차](references/blocker-recovery.md)를 읽고 따른다.
+base 동기화)는 [차단 사유별 복구 절차](references/blocker-recovery.md)(`issueops-merge/references/blocker-recovery.md`)를 읽고 따른다.
 
 ## 4 확인 경계
 

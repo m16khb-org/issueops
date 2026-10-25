@@ -2543,6 +2543,7 @@
         "func HelpRequested",
         "func JSONRequested",
         "func commandPathsContainingWord",
+        "func commandPathsEndingWith",
         "type Command",
         "type Runner"
       ]
