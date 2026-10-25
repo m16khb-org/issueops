@@ -109,10 +109,10 @@ issueops intent record --id "$ISSUEOPS_ID" \
 issueops domain-review record --id "$ISSUEOPS_ID" \
   --model-fit "<도메인 모델과 이 변경의 관계>" $RECORD_ACTOR_FLAGS --json
 
-# 분할하지 않는 경우: 그 근거를 결정으로 남긴다.
+# 분할 여부를 지금 결정으로 남긴다(split_decision). 분할하지 않으면 그 근거를 쓴다.
 issueops decision add --id "$ISSUEOPS_ID" --kind scope \
   --title "no split" --body "<한 owner·한 리뷰로 끝나는 근거>" $RECORD_ACTOR_FLAGS --json
-# 분할하는 경우: remote create-child로 child를 만든다(아래 Parent와 child).
+# 분할하면 title을 "split: <child 목록>"으로 쓴다. child는 branch prepare 뒤에 만든다(아래 Parent와 child).
 
 # 관련 이슈·라벨 점수는 plan-prep보다 먼저 만든다. 그 요약이 --related-score-ref다.
 # 입력 JSON 형식은 `issueops remote score --example`이 출력한다. 후보는 provider의 열린 이슈·라벨 목록이다.
