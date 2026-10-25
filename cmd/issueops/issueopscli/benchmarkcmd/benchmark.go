@@ -21,7 +21,7 @@ func (c Command) Run(args []string) error {
 	handlers := map[string]func([]string) error{"run": c.runBenchmarkRun, "compare": c.runBenchmarkCompare, "gate": c.runBenchmarkGate, "reliability": c.runBenchmarkReliability, "consensus": c.runBenchmarkConsensus}
 	handler, ok := handlers[args[0]]
 	if !ok {
-		return fmt.Errorf("unknown issueops benchmark subcommand %q", args[0])
+		return cliflag.UnknownSubcommand("issueops benchmark", args[0], "run", "compare", "gate", "reliability", "consensus")
 	}
 	if c.Service == nil {
 		return errors.New("issueops benchmark is not configured")

@@ -3,6 +3,7 @@ package issueopscli
 import (
 	"flag"
 	"fmt"
+	"issueops/cmd/issueops/cliflag"
 	reviewcontract "issueops/internal/contract/issueopsreview"
 )
 
@@ -12,7 +13,7 @@ func (cli command) runIssueOpsCompatibility(args []string) error {
 		return nil
 	}
 	if args[0] != "review" {
-		return fmt.Errorf("unknown issueops compatibility subcommand %q", args[0])
+		return cliflag.UnknownSubcommand("issueops compatibility", args[0], "review")
 	}
 	fs := flag.NewFlagSet("issueops compatibility review", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")

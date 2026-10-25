@@ -135,7 +135,7 @@ func (c *Conformance) Run(args []string) error {
 	case "serve":
 		return c.runConformanceServe(args[1:])
 	default:
-		return fmt.Errorf("unknown conformance subcommand %q", args[0])
+		return cliflag.UnknownSubcommand("conformance", args[0], "baseline", "live", "replay", "serve")
 	}
 }
 

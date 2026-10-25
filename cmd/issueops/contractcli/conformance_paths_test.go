@@ -56,7 +56,7 @@ func TestConformanceRunRejectsMissingAndUnknownSubcommandsAndDispatches(t *testi
 	if err := c.Run(nil); err == nil || err.Error() != "missing conformance subcommand" {
 		t.Fatalf("missing: %v", err)
 	}
-	if err := c.Run([]string{"bogus"}); err == nil || err.Error() != `unknown conformance subcommand "bogus"` {
+	if err := c.Run([]string{"bogus"}); err == nil || err.Error() != `unknown conformance subcommand "bogus" (want baseline|live|replay|serve)` {
 		t.Fatalf("unknown: %v", err)
 	}
 	// Each known subcommand reaches its own handler (distinguished by its error).

@@ -3,6 +3,7 @@ package issueopscli
 import (
 	"flag"
 	"fmt"
+	"issueops/cmd/issueops/cliflag"
 
 	issueopscontract "issueops/internal/contract/issueops"
 )
@@ -13,7 +14,7 @@ func (cli command) runIssueOpsDecision(args []string) error {
 		return nil
 	}
 	if args[0] != "add" {
-		return fmt.Errorf("unknown issueops decision subcommand %q", args[0])
+		return cliflag.UnknownSubcommand("issueops decision", args[0], "add")
 	}
 	fs := flag.NewFlagSet("issueops decision add", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")

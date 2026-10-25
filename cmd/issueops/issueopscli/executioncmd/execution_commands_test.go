@@ -48,7 +48,7 @@ func TestRunPrintsUsageForEmptyAndHelpAndRejectsUnknownSubcommand(t *testing.T) 
 			t.Fatalf("args=%v out=%q", args, out)
 		}
 	}
-	if err := Run([]string{"bogus"}, Deps{}); err == nil || err.Error() != `unknown issueops execution subcommand "bogus"` {
+	if err := Run([]string{"bogus"}, Deps{}); err == nil || !strings.HasPrefix(err.Error(), `unknown issueops execution subcommand "bogus" (want prepare|`) {
 		t.Fatalf("err=%v", err)
 	}
 }

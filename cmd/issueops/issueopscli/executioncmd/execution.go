@@ -101,7 +101,7 @@ func Run(args []string, deps Deps) error {
 	case "handoff-cmux":
 		return runHandoffCmux(args[1:], deps)
 	default:
-		return fmt.Errorf("unknown issueops execution subcommand %q", args[0])
+		return cliflag.UnknownSubcommand("issueops execution", args[0], "prepare", "status", "whoami", "claim", "release", "replace", "reconcile", "complete", "sync-base", "handoff-cmux")
 	}
 }
 

@@ -88,7 +88,7 @@ func TestRunContractSchemaTextListsWarningsForBrokenSurface(t *testing.T) {
 func TestRunContractConformanceRoutesToConformanceRunner(t *testing.T) {
 	c := NewConformance(ConformanceDependencies{})
 	err := Run([]string{"conformance", "bogus"}, nil, nil, c)
-	if err == nil || err.Error() != `unknown conformance subcommand "bogus"` {
+	if err == nil || err.Error() != `unknown conformance subcommand "bogus" (want baseline|live|replay|serve)` {
 		t.Fatalf("err=%v", err)
 	}
 }

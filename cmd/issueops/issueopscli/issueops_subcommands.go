@@ -3,6 +3,7 @@ package issueopscli
 import (
 	"flag"
 	"fmt"
+	"issueops/cmd/issueops/cliflag"
 	"os"
 	"strings"
 
@@ -131,7 +132,7 @@ func (cli command) runIssueOpsChild(args []string, usage string) error {
 	case "drop":
 		return cli.runIssueOpsChildDrop(args[1:])
 	default:
-		return fmt.Errorf("unknown issueops child subcommand %q", args[0])
+		return cliflag.UnknownSubcommand("issueops child", args[0], "start", "status", "list", "accept", "reject", "drop")
 	}
 }
 
@@ -403,7 +404,7 @@ func (cli command) runIssueOpsArtifact(args []string) error {
 	case "stage":
 		return cli.runIssueOpsArtifactStage(args[1:])
 	default:
-		return fmt.Errorf("unknown issueops artifact subcommand %q", args[0])
+		return cliflag.UnknownSubcommand("issueops artifact", args[0], "stage", "unstage")
 	}
 }
 
