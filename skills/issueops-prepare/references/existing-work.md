@@ -11,4 +11,6 @@
 3. implement 단계 worktree에서 `git merge --ff-only <사용자 브랜치>`로 커밋을 가져온다. 새 커밋을 만들지 않으므로
    "implement에서는 커밋하지 않는다" 규칙에 걸리지 않는다. fast-forward가 안 되면(사용자 브랜치가 다른 base에서
    갈라졌으면) 멈추고 사용자에게 묻는다. 손으로 rebase하지 않는다.
-4. base가 그 사이 앞서 나갔으면 `execution sync-base --preview`로 합친다.
+4. base가 그 사이 앞서 나갔으면(사용자 브랜치를 만든 뒤 base에 커밋이 쌓였으면) `execution sync-base --preview`로
+   합친다. 같은 파일을 고쳤으면 충돌이 나므로 [sync-base 규칙](../../issueops-implement/references/sync-base.md)의
+   충돌 절차를 따른다.

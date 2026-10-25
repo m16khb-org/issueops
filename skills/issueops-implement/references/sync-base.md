@@ -15,7 +15,10 @@ issueops execution sync-base --id "$ISSUEOPS_ID" --preview $ACTOR_FLAGS --json
   사이클의 diff·티어·리뷰 대상에 들어온다. 그 사실을 계획의
   `## 하위 호환성과 side effect` 절에 적는다. 이미 추적 중인 미커밋 변경이 있으면
   `worktree_clean`으로 거부되므로 변경이 없는 이 시점에 한다.
-- `conflict_files`가 있으면 계획의 영향 범위를 다시 보고 사용자에게 알린다.
+- `conflict_files`가 있으면 계획의 영향 범위를 다시 보고 사용자에게 알린다. apply는 충돌에서 병합을 연 채
+  `ok: true`, `merge_in_progress: true`로 멈춘다. 성공이 아니다. 충돌 파일을 고치고 `git add`한 뒤 응답의
+  `next_command`(`--finalize`)를 실행하면 병합 커밋을 만들고 push까지 한다. 되돌리려면 `abort_command`를 쓴다.
+  양쪽 변경을 모두 살리는 해결이 분명할 때만 직접 해결하고 보고에 적는다. 한쪽을 버려야 하면 사용자에게 묻는다.
 - `sealed_base_on_base_tip`으로 거부되면 base가 다시 쓰였다(force-push 등). 쌓은 부모 PR이 squash merge된 뒤
   PR을 retarget(`branch retarget`)한 경우는 부모 내용이 새 base에 있으면 거부하지 않는다. 병합하면 base가 뺀 커밋이
   PR로 되살아나므로 사용자에게 묻는다: 동기화 없이 진행할지, 새 base에서 새 사이클을 시작할지.
