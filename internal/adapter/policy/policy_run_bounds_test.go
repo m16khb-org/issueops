@@ -144,8 +144,13 @@ func TestCommandExecutorPreservesExitAndStartFailure(t *testing.T) {
 		}
 	}
 	result := (CommandExecutor{}).Execute(policycontract.CommandPolicyRequest{Argv: []string{filepath.Join(t.TempDir(), "missing")}}, time.Second)
-	if result.Err == nil || result.ExitCode != 1 || result.TimedOut {
+	if result.Err == nil || result.ExitCode != 1 || result.TimedOut || !strings.HasPrefix(result.Stderr, "command did not start: ") {
 		t.Fatalf("start failure: %+v", result)
+	}
+	// A command name not on PATH (a typo in a gate CHECK) reads like sh: 127.
+	result = (CommandExecutor{}).Execute(policycontract.CommandPolicyRequest{Argv: []string{"issueops-no-such-command-xyz"}}, time.Second)
+	if result.ExitCode != 127 || !strings.Contains(result.Stderr, "executable file not found") {
+		t.Fatalf("not found: %+v", result)
 	}
 }
 

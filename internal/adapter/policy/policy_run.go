@@ -55,7 +55,13 @@ func (CommandExecutor) Execute(request policycontract.CommandPolicyRequest, time
 		return policyapp.Execution{Err: err, ExitCode: 1, TimedOut: errors.Is(err, context.DeadlineExceeded)}
 	}
 	if err = cmd.Start(); err != nil {
-		return policyapp.Execution{Err: err, ExitCode: 1, TimedOut: ctx.Err() == context.DeadlineExceeded}
+		// A command that never started (a typo in its name) used to surface
+		// as "exit code 1: (no output)"; 127 and the reason follow sh.
+		exitCode := 1
+		if errors.Is(err, exec.ErrNotFound) {
+			exitCode = 127
+		}
+		return policyapp.Execution{Err: err, ExitCode: exitCode, Stderr: "command did not start: " + err.Error() + "\n", TimedOut: ctx.Err() == context.DeadlineExceeded}
 	}
 	_ = outWrite.Close()
 	_ = errWrite.Close()
