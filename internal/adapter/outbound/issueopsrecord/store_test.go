@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io/fs"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -318,5 +320,26 @@ func TestStoreScansValidAndInvalidRowsInOneInventory(t *testing.T) {
 		diagnostics[0].ID != "io-invalid" ||
 		diagnostics[0].Code != "invalid_state" {
 		t.Fatalf("diagnostics = %+v", diagnostics)
+	}
+}
+
+// Probe: `status --id io-69864` (a truncated id) said only "file does not
+// exist"; the error names the stored ids it is a prefix of.
+func TestReadNotFoundSuggestsIDsWithThePrefix(t *testing.T) {
+	stateRoot := filepath.Join(t.TempDir(), "issueops_v1")
+	database, err := sqlstore.Open(stateRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := database.Put(bucket, "io-6986473fe689", []byte("{}")); err != nil {
+		t.Fatal(err)
+	}
+	_, err = Store{}.Read(context.Background(), stateRoot, "io-69864")
+	if !errors.Is(err, fs.ErrNotExist) || !strings.Contains(err.Error(), "did you mean io-6986473fe689?") {
+		t.Fatalf("err = %v", err)
+	}
+	_, err = Store{}.Read(context.Background(), stateRoot, "io-ffff")
+	if !errors.Is(err, fs.ErrNotExist) || strings.Contains(err.Error(), "did you mean") {
+		t.Fatalf("err = %v", err)
 	}
 }

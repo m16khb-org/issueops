@@ -6018,6 +6018,7 @@
         "func Store.ScanEach",
         "func Store.Update",
         "func Store.UpdateRelated",
+        "func notFound",
         "func open",
         "func readLocked",
         "type Mutation",

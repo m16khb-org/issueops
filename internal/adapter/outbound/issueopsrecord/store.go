@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"strings"
 
 	"issueops/internal/adapter/outbound/sqlstore"
 	issueopscontract "issueops/internal/contract/issueops"
@@ -51,13 +52,29 @@ func (Store) Read(
 		return issueopscontract.IssueOpsRecord{OK: false, ID: id}, err
 	}
 	if !found {
-		return issueopscontract.IssueOpsRecord{OK: false, ID: id}, fmt.Errorf(
-			"issueops record %s: %w",
-			id,
-			fs.ErrNotExist,
-		)
+		return issueopscontract.IssueOpsRecord{OK: false, ID: id}, notFound(ctx, stateRoot, id)
 	}
 	return Decode(id, data)
+}
+
+// notFound suggests, for a truncated or mistyped id, the stored ids it is a
+// prefix of. Probe: `status --id io-69864` said only "file does not exist".
+func notFound(ctx context.Context, stateRoot, id string) error {
+	err := fmt.Errorf("issueops record %s: %w", id, fs.ErrNotExist)
+	ids, listErr := (Store{}).ListIDs(ctx, stateRoot)
+	if listErr != nil {
+		return err
+	}
+	var matches []string
+	for _, candidate := range ids {
+		if strings.HasPrefix(candidate, id) {
+			matches = append(matches, candidate)
+		}
+	}
+	if len(matches) > 0 && len(matches) <= 3 {
+		return fmt.Errorf("%w; did you mean %s?", err, strings.Join(matches, ", "))
+	}
+	return err
 }
 
 func (Store) ListIDs(ctx context.Context, stateRoot string) ([]string, error) {
