@@ -1,6 +1,7 @@
 package policy
 
 import (
+	"bytes"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -95,10 +96,54 @@ func SecretLikeArg(arg string) bool {
 }
 
 // SecretLikeBytes is SecretLikeArg without converting the bytes to a string,
-// for scanning a stream chunk by chunk.
+// for scanning a stream chunk by chunk. The regexes cost about 150 ms per MB,
+// so ASCII text without any keyword they require skips them.
 func SecretLikeBytes(value []byte) bool {
+	if !mayHoldSecret(value) {
+		return false
+	}
 	if filepath.Separator != '/' {
 		return SecretLikeArg(string(value))
 	}
 	return secretArgRe().Match(value) || knownTokenRe().Match(value) || secretPathRe().Match(value)
+}
+
+// secretKeywords holds, lowercased, a literal every alternative of
+// secretArgRe, knownTokenRe and secretPathRe requires. Keep it in step with
+// those patterns (TestSecretKeywordsCoverEveryPattern).
+var secretKeywords = [][]byte{
+	[]byte("token"), []byte("passw"), []byte("secret"), []byte("api"), []byte("credential"), []byte("authorization"),
+	[]byte("ghp_"), []byte("gho_"), []byte("ghu_"), []byte("ghs_"), []byte("ghr_"), []byte("github_pat_"),
+	[]byte("xox"), []byte("sk-"), []byte("akia"),
+	[]byte(".env"), []byte("id_rsa"), []byte("id_dsa"), []byte("id_ecdsa"), []byte("id_ed25519"),
+	[]byte(".pem"), []byte(".key"), []byte(".p12"), []byte(".pfx"),
+}
+
+// mayHoldSecret reports whether value could match a secret pattern: it holds a
+// non-ASCII byte ((?i) also folds non-ASCII letters such as the Kelvin sign
+// onto k, so those always take the regex path) or, ASCII-lowercased, one of
+// secretKeywords. It allocates nothing.
+func mayHoldSecret(value []byte) bool {
+	const block, overlap = 4096, 32
+	var buf [block + overlap]byte
+	for start := 0; start < len(value); start += block {
+		end := min(start+block+overlap, len(value))
+		n := 0
+		for _, c := range value[start:end] {
+			if c >= 0x80 {
+				return true
+			}
+			if 'A' <= c && c <= 'Z' {
+				c += 'a' - 'A'
+			}
+			buf[n] = c
+			n++
+		}
+		for _, keyword := range secretKeywords {
+			if bytes.Contains(buf[:n], keyword) {
+				return true
+			}
+		}
+	}
+	return false
 }

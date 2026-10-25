@@ -67,3 +67,35 @@ func TestRedactArgvRedactsOnlySecretArgs(t *testing.T) {
 		t.Fatalf("nil argv must produce an empty slice: %v", got)
 	}
 }
+
+// The keyword prefilter must never hide a match: every input that the
+// regexes flag also passes mayHoldSecret, and SecretLikeBytes agrees with
+// SecretLikeArg on all of them.
+func TestSecretKeywordsCoverEveryPattern(t *testing.T) {
+	flagged := []string{
+		"TOKEN=x", "Password=x", "passwd=x", "Secret=x", "API_KEY=x", "apikey=x", "api-key=x", "credential=x",
+		"Authorization: Bearer abc", "authorization=x",
+		"ghp_" + strings.Repeat("a", 20), "GHO_" + strings.Repeat("a", 20), "ghu_" + strings.Repeat("a", 20),
+		"ghs_" + strings.Repeat("a", 20), "ghr_" + strings.Repeat("a", 20), "github_pat_" + strings.Repeat("a", 20),
+		"xoxb-" + strings.Repeat("a", 20), "sk-" + strings.Repeat("a", 20), "AKIA" + strings.Repeat("A", 16),
+		".env", "a/.env.local", "id_rsa", "x/id_dsa", "id_ecdsa", "id_ed25519", "cert.pem", "a.KEY", "b.p12", "c.pfx",
+		"aws_credentials", "my-secret-file", "x/\u212Aey.pem",
+	}
+	for _, value := range flagged {
+		if !SecretLikeArg(value) {
+			t.Fatalf("fixture %q is not secret-like", value)
+		}
+		if !mayHoldSecret([]byte(value)) || !SecretLikeBytes([]byte(value)) {
+			t.Errorf("prefilter hides %q", value)
+		}
+		long := []byte(strings.Repeat("ok line\n", 1000) + value)
+		if SecretLikeBytes(long) != SecretLikeArg(string(long)) {
+			t.Errorf("prefilter changes the verdict for %q after 8 KB", value)
+		}
+	}
+	for _, value := range []string{"ok  issueops/internal 0.2s\n", strings.Repeat("PASS\n", 5000)} {
+		if mayHoldSecret([]byte(value)) || SecretLikeBytes([]byte(value)) {
+			t.Errorf("plain output %q flagged", value[:min(20, len(value))])
+		}
+	}
+}

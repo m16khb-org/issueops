@@ -15326,6 +15326,7 @@
         "func SecretLikeArg",
         "func SecretLikeBytes",
         "func ValidEnvName",
+        "func mayHoldSecret",
         "func validEnvNameRune"
       ]
     },
