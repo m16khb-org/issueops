@@ -27,7 +27,7 @@ func PrepareChildVerdict(verdict, reason string, evidence []string) (string, []s
 
 func ValidateChildValidationIDs(parentID, childID string) error {
 	if parentID == "" {
-		return fmt.Errorf("parent_id is required")
+		return fmt.Errorf("parent_id is required (--parent: the parent cycle's io-… id)")
 	}
 	if childID == "" {
 		return fmt.Errorf("child_id is required")

@@ -104,7 +104,7 @@ func TestCovBranchChildVerdictPreparation(t *testing.T) {
 }
 
 func TestCovBranchChildVerdictValidation(t *testing.T) {
-	if err := ValidateChildValidationIDs("", "c"); err == nil || err.Error() != "parent_id is required" {
+	if err := ValidateChildValidationIDs("", "c"); err == nil || !strings.HasPrefix(err.Error(), "parent_id is required") {
 		t.Fatalf("parent = %v", err)
 	}
 	if err := ValidateChildValidationIDs("p", ""); err == nil || err.Error() != "child_id is required" {
@@ -234,7 +234,7 @@ func TestCovBranchChildPrepareChildStart(t *testing.T) {
 	for _, tc := range cases {
 		req := full
 		tc.mutate(&req)
-		if _, err := PrepareChildStart(req); err == nil || err.Error() != tc.want {
+		if _, err := PrepareChildStart(req); err == nil || !strings.HasPrefix(err.Error(), tc.want) {
 			t.Fatalf("want %q got %v", tc.want, err)
 		}
 	}

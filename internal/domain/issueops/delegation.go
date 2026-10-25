@@ -133,7 +133,7 @@ func cleanDelegationValues(values []string) []string {
 func PrepareChildStart(req model.IssueOpsChildStartRequest) (model.IssueOpsChildStartRequest, error) {
 	req.ParentID = strings.TrimSpace(req.ParentID)
 	if req.ParentID == "" {
-		return req, fmt.Errorf("parent_id is required")
+		return req, fmt.Errorf("parent_id is required (--parent: the parent cycle's io-… id)")
 	}
 	req.Branch = strings.TrimSpace(req.Branch)
 	req.Title = strings.TrimSpace(req.Title)

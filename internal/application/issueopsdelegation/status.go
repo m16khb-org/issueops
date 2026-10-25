@@ -26,7 +26,7 @@ type StatusService struct {
 func (s StatusService) Status(ctx context.Context, parentID string, repair bool, actor *model.IssueOpsActor) (model.IssueOpsChildStatusResult, error) {
 	parentID = strings.TrimSpace(parentID)
 	if parentID == "" {
-		return model.IssueOpsChildStatusResult{OK: false}, fmt.Errorf("parent_id is required")
+		return model.IssueOpsChildStatusResult{OK: false}, fmt.Errorf("parent_id is required (--parent: the parent cycle's io-… id)")
 	}
 	var parent model.IssueOpsRecord
 	err := s.Records.WithinLock(ctx, parentID, func(spanCtx context.Context) error {
