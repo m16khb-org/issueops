@@ -38,7 +38,7 @@ func RunWithDeps(args []string, deps Deps) error {
 	case "benchmark":
 		return runBenchmark(args[1:], deps)
 	default:
-		return fmt.Errorf("unknown web-fetch subcommand %q", args[0])
+		return cliflag.UnknownSubcommand("web-fetch", args[0], "fetch", "benchmark")
 	}
 }
 

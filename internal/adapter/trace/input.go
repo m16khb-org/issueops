@@ -7,6 +7,7 @@ import (
 	statecontract "issueops/internal/contract/state"
 	tracecontract "issueops/internal/contract/trace"
 	"os"
+	"strings"
 )
 
 type Source struct {
@@ -22,8 +23,14 @@ func (source Source) Load(input, format string) (string, []byte, bool, error) {
 		body, err := os.ReadFile("/dev/stdin")
 		return "stdin", body, false, err
 	}
-	if body, err := os.ReadFile(input); err == nil {
+	body, fileErr := os.ReadFile(input)
+	if fileErr == nil {
 		return "file", body, false, nil
+	}
+	if strings.ContainsAny(input, `/\`) {
+		// Probe: a missing path fell through to the state lookup and
+		// answered "invalid state key"; a path is never a state key.
+		return "", nil, false, fileErr
 	}
 	state, err := source.ReadState(input)
 	if err != nil {

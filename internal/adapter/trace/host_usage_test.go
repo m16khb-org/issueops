@@ -481,7 +481,9 @@ func TestHostLoadRequiresExplicitInputAndNeverFallsBackToState(t *testing.T) {
 	if calls != 0 {
 		t.Fatalf("host formats must not read state keys, ReadState calls=%d", calls)
 	}
-	if _, _, _, err := source.Load(filepath.Join(t.TempDir(), "missing.jsonl"), tracecontract.InputFormatIssueOps); err != nil || calls != 1 {
+	// A state key never holds a path separator, so the fallback applies to a
+	// bare name; a missing path is reported as a missing file.
+	if _, _, _, err := source.Load("trace-key", tracecontract.InputFormatIssueOps); err != nil || calls != 1 {
 		t.Errorf("default mode keeps the state-key fallback: err=%v calls=%d", err, calls)
 	}
 }
