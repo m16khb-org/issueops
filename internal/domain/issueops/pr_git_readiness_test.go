@@ -25,11 +25,19 @@ func TestPRGitReadinessMissingPreservesObservationOrder(t *testing.T) {
 		"current branch other does not match IssueOps branch feature",
 		"base_advanced: origin/main is not an ancestor of HEAD; run issueops execution sync-base --id io-1 --preview",
 		"failed to fetch upstream: offline",
-		"branch divergence against upstream: ahead=1 behind=2",
+		"branch divergence against upstream: ahead=1 behind=2; the remote branch has commits this worktree lacks (pushed from elsewhere): never force-push. Read them (git log HEAD..@{u}), then merge them with git pull --no-rebase, or ask the user whose they are",
 		"source_misdirect_warnings:2",
 	}
 	if !reflect.DeepEqual(missing, wantMissing) || !reflect.DeepEqual(warnings, wantWarnings) {
 		t.Fatalf("missing=%v warnings=%v", missing, warnings)
+	}
+}
+
+// Ahead only is an ordinary unpushed commit: no remedy text.
+func TestPRGitReadinessAheadOnlyKeepsTheBareCounts(t *testing.T) {
+	facts := PRGitFacts{RootAvailable: true, GitWorktree: true, FingerprintVerified: true, WorktreeClean: true, Upstream: "origin/feature", SyncUpstream: true, UpstreamCounts: "2 0"}
+	if _, warnings := PRGitReadiness(model.IssueOpsRecord{}, facts); !reflect.DeepEqual(warnings, []string{"branch divergence against upstream: ahead=2 behind=0"}) {
+		t.Fatalf("warnings=%v", warnings)
 	}
 }
 

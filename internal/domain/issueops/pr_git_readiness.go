@@ -78,7 +78,13 @@ func prUpstreamSyncReadiness(facts PRGitFacts, missing, warnings []string) ([]st
 	if len(counts) != 2 || counts[0] != "0" || counts[1] != "0" {
 		missing = append(missing, "upstream_synced")
 		if len(counts) == 2 {
-			warnings = append(warnings, "branch divergence against upstream: ahead="+counts[0]+" behind="+counts[1])
+			warning := "branch divergence against upstream: ahead=" + counts[0] + " behind=" + counts[1]
+			if counts[1] != "0" {
+				// Probe: someone else pushed to the cycle branch; the bare counts
+				// left the agent between a rejected push and a force-push.
+				warning += "; the remote branch has commits this worktree lacks (pushed from elsewhere): never force-push. Read them (git log HEAD..@{u}), then merge them with git pull --no-rebase, or ask the user whose they are"
+			}
+			warnings = append(warnings, warning)
 		}
 	}
 	return missing, warnings
