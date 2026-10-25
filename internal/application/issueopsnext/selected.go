@@ -47,6 +47,14 @@ func (service *Service) nextSelected(
 				warning += "; the id came from ISSUEOPS_ID: unset it so next picks the cycle itself"
 			}
 			result.Warnings = append(result.Warnings, warning)
+		} else {
+			// Probe: a valid cycle of another repository read as stage
+			// "invalid" with no reason, as if the record were broken.
+			warning := id + " belongs to " + record.Repo + ", not this repository; run next from there (or its worktree)"
+			if fromEnv {
+				warning += "; the id came from ISSUEOPS_ID: unset it for this repository"
+			}
+			result.Warnings = append(result.Warnings, warning)
 		}
 		result.NextCommandKind = commandKind(result.NextCommand)
 		return result, nil

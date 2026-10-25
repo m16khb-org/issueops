@@ -87,13 +87,17 @@ func TestNextSelectedRepositoryFence(t *testing.T) {
 
 			result, err := NewService(ports).Next(context.Background(), "/state", "/repo", "io-selected")
 
-			if err != nil || result.Stage.Key != scenario.wantStage || result.Selected.ID != "io-selected" || (len(result.Warnings) != 0) != scenario.invalid {
+			if err != nil || result.Stage.Key != scenario.wantStage || result.Selected.ID != "io-selected" || (len(result.Warnings) != 0) != (scenario.wantStage == "invalid") {
 				t.Fatalf("result = %+v, err = %v", result, err)
 			}
 			// An unreadable record cannot answer status either: an agent with a
 			// stale ISSUEOPS_ID was sent to a status call that failed.
 			if scenario.invalid && (!strings.HasPrefix(result.NextCommand, "issueops list --repo /repo") || !strings.Contains(result.Warnings[0], "no readable record for io-selected")) {
 				t.Fatalf("unreadable selection: next=%q warnings=%q", result.NextCommand, result.Warnings)
+			}
+			// A readable cycle of another repository names that repository.
+			if scenario.name == "foreign" && !strings.Contains(result.Warnings[0], "belongs to /foreign") {
+				t.Fatalf("foreign selection: warnings=%q", result.Warnings)
 			}
 			if scenario.wantStage == "invalid" && result.Selected.Branch != "" {
 				t.Fatalf("invalid selection leaked record metadata: %+v", result.Selected)
