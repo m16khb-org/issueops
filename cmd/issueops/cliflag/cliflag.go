@@ -52,6 +52,11 @@ func Parse(fs *flag.FlagSet, args []string) error {
 		if closest := Suggest(name, known, 1); len(closest) == 1 {
 			return fmt.Errorf("%w (did you mean --%s?)", err, closest[0])
 		}
+		if len(known) > 0 && len(known) <= 8 {
+			// Probe: `gates abandon --id G9` (the flag is --gate) named
+			// nothing to use instead.
+			return fmt.Errorf("%w (flags: --%s)", err, strings.Join(known, ", --"))
+		}
 	}
 	if err == nil {
 		return literalQuotes(fs)

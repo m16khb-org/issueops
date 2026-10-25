@@ -93,7 +93,9 @@ func TestParseSuggestsTheClosestDefinedFlag(t *testing.T) {
 	if err := parse("--josn"); err == nil || !strings.HasSuffix(err.Error(), "(did you mean --json?)") {
 		t.Fatalf("--josn: %v", err)
 	}
-	if err := parse("--zzzzzz"); err == nil || strings.Contains(err.Error(), "did you mean") {
+	// No close match: a short flag set is listed instead (gates abandon --id
+	// for --gate named nothing to use).
+	if err := parse("--zzzzzz"); err == nil || strings.Contains(err.Error(), "did you mean") || !strings.HasSuffix(err.Error(), "(flags: --file, --json)") {
 		t.Fatalf("--zzzzzz: %v", err)
 	}
 }
