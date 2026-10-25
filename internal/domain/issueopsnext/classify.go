@@ -427,6 +427,11 @@ func classifyHolderImplement(in Input, decision Decision) (Decision, bool) {
 			return decision, true
 		}
 		decision.NextCommand = "issueops phase --id " + id + " --to ai-slop-clean $RECORD_ACTOR_FLAGS --json"
+		if slices.Contains(decision.Missing, "implementation_changes") {
+			// QA (revert cycle): right after entering implement the exit
+			// transition read like the next step of work.
+			decision.Warnings = append(decision.Warnings, "do first: implement the plan with focused evidence (issueops-implement skill); next_command is the exit transition, run it once missing is empty")
+		}
 		return decision, true
 	}
 	return decision, false
