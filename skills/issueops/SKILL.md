@@ -195,7 +195,7 @@ stale 판정이나 테스트 실패 자체를 사용자에게 진행 여부를 �
 
 - provider, credentials, project, Issue owner가 모호하다. target branch는
   Execution ownership의 base 선택 순서로 해소하고 질문 사유로 삼지 않는다.
-  [`issueops-prepare`](../issueops-prepare/SKILL.md)는 추가 설명이며 필수 dependency가 아니다.
+- 사용자가 이슈 없이 하라고 한다(사이클은 늘 이슈에 묶인다). `start` 전에 묻는다.
 - intent·success criteria·domain term 해석이 구현을 바꿀 만큼 갈린다.
 - architecture open question, compatibility blocker, stale review(`architecture_review_stale` 포함)가 남아 있다.
 - branch/worktree/plan/generation/actor가 current record와 맞지 않는다.
