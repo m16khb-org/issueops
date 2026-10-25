@@ -58,6 +58,8 @@ type executionSyncBaseInventory struct {
 	// so unpushed commits are the branch's own work, not a sync to retry
 	// (derived from BaseOID and RemoteWorkOID, which the fingerprint covers).
 	BaseOnRemote bool `json:"-"`
+	// SealedBaseOID is BranchPrepare.BaseSHA, the base the branch was cut from.
+	SealedBaseOID string `json:"-"`
 }
 
 // VerifiedSyncExecutionBase는 게이트 10종을 fail-closed로 평가하고, 모드별 절차를
@@ -112,6 +114,9 @@ func syncExecutionBase(ctx context.Context, stateRoot string, req issueops.Execu
 		if slices.Contains(missing, "cwd_canonical") && inventory.Root != "" {
 			// An agent ran it from the source checkout as the replace step is.
 			err = fmt.Errorf("%w; run it from the canonical worktree %q, with --cwd %q", err, inventory.Root, inventory.Root)
+		}
+		if slices.Contains(missing, "sealed_base_on_base_tip") {
+			err = fmt.Errorf("%w; origin/%s no longer contains the sealed base %.10s (the base was rewritten, e.g. force-pushed), so merging it would bring the commits the base dropped back through this branch's PR. Stop and ask the user: keep the current base and skip the sync, or start a new cycle from the rewritten base", err, inventory.BaseBranch, inventory.SealedBaseOID)
 		}
 		return result, err
 	}

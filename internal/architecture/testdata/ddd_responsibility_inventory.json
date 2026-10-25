@@ -4737,6 +4737,7 @@
       "task": "T06",
       "symbols": [
         "func executionSyncBaseGateRun.checkHeadOnRecordedBranch",
+        "func executionSyncBaseGateRun.checkSealedBaseKept",
         "func executionSyncBaseGateRun.fetchBaseTip",
         "func executionSyncBaseGateRun.observeAncestry",
         "func executionSyncBaseGateRun.observeMergeState",

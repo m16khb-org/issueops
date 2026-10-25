@@ -31,6 +31,7 @@ func fillExecutionSyncBaseInventory(inventory *executionSyncBaseInventory, recor
 	inventory.Root = strings.TrimSpace(execution.Workspace.Root)
 	if record.BranchPrepare != nil {
 		inventory.BaseBranch = strings.TrimSpace(record.BranchPrepare.BaseBranch)
+		inventory.SealedBaseOID = strings.TrimSpace(record.BranchPrepare.BaseSHA)
 	}
 }
 
@@ -157,6 +158,7 @@ func (g *executionSyncBaseGateRun) observeAncestry() {
 	if inv.BaseOID != "" && inv.WorkOID != "" {
 		if code, _ := g.deps.Git(g.ctx, inv.Root, "merge-base", "--is-ancestor", inv.BaseOID, inv.WorkOID); code != 0 {
 			g.result.MergeNeeded = true
+			g.checkSealedBaseKept()
 		}
 	}
 	if inv.RemoteWorkOID != "" && inv.WorkOID != "" && !strings.EqualFold(inv.RemoteWorkOID, inv.WorkOID) {
@@ -171,6 +173,20 @@ func (g *executionSyncBaseGateRun) observeAncestry() {
 			}
 			g.result.PushRetryRequired = true
 		}
+	}
+}
+
+// checkSealedBaseKept refuses a merge from a base tip that no longer
+// contains the sealed base. Probed: after main was force-pushed (B dropped,
+// C added), preview offered a clean merge, and the PR would have carried B
+// back into main. finalize reads MERGE_HEAD and is not checked here.
+func (g *executionSyncBaseGateRun) checkSealedBaseKept() {
+	inv := g.inventory
+	if g.mode != issueops.ExecutionSyncBasePreview && g.mode != issueops.ExecutionSyncBaseApply || inv.SealedBaseOID == "" {
+		return
+	}
+	if code, _ := g.deps.Git(g.ctx, inv.Root, "merge-base", "--is-ancestor", inv.SealedBaseOID, inv.BaseOID); code != 0 {
+		g.missing = append(g.missing, "sealed_base_on_base_tip")
 	}
 }
 

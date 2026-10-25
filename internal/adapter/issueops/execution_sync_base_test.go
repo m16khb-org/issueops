@@ -207,6 +207,10 @@ func newReleasedSyncBaseFixture(t *testing.T, branch string) syncBaseFixture {
 		mergeHeadOID:  syncBaseBaseOID,
 		ancestor:      map[string]bool{syncBaseRemoteOID: true},
 	}
+	if record.BranchPrepare != nil && record.BranchPrepare.BaseSHA != "" {
+		// The base tip keeps the sealed base unless a case rewrites it.
+		git.ancestor[record.BranchPrepare.BaseSHA] = true
+	}
 	return syncBaseFixture{stateRoot: stateRoot, record: record, worktree: claimable.worktree, branch: branch, actor: actor, git: git}
 }
 
@@ -978,5 +982,19 @@ func TestExecutionSyncBaseActorFlagsRendersOnlyACompleteVector(t *testing.T) {
 	actor.SessionProcess = nil
 	if got := executionSyncBaseActorFlags(actor, "/tmp/w"); got != "$ACTOR_FLAGS" {
 		t.Fatalf("partial vector rendered %q", got)
+	}
+}
+
+// Probed: main was force-pushed (a sealed-base commit dropped) and preview
+// offered a clean merge that would carry the dropped commit back via the PR.
+func TestExecutionSyncBaseRefusesABaseTipWithoutTheSealedBase(t *testing.T) {
+	t.Parallel()
+
+	fixture := newReleasedSyncBaseFixture(t, "114-rewritten")
+	sealed := fixture.record.BranchPrepare.BaseSHA
+	fixture.git.notAncestor = map[string]bool{sealed + ".." + syncBaseBaseOID: true}
+	_, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBasePreview))
+	if err == nil || !strings.Contains(err.Error(), "sealed_base_on_base_tip") || !strings.Contains(err.Error(), "no longer contains the sealed base") {
+		t.Fatalf("preview over a rewritten base = %v", err)
 	}
 }
