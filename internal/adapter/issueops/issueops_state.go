@@ -212,7 +212,8 @@ func encodeIssueOpsRecord(record issueops.IssueOpsRecord) (issueops.IssueOpsReco
 func normalizeIssueOpsID(id string) (string, error) {
 	id = strings.TrimSpace(id)
 	if id == "" {
-		return "", fmt.Errorf("id is required")
+		// Probe: `status --json` without --id said only "id is required".
+		return "", fmt.Errorf("id is required (--id): %s", issueops.IDFormatHint)
 	}
 	if !strings.HasPrefix(id, "io-") {
 		return "", fmt.Errorf("invalid issueops id %q: %s", id, issueops.IDFormatHint)
