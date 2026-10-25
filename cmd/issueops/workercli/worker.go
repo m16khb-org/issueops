@@ -65,6 +65,10 @@ func (command Command) RunReadOnly(args []string) error {
 	if !*readOnly {
 		return fmt.Errorf("worker run currently requires --read-only")
 	}
+	if fs.NArg() == 0 {
+		// Probe: an empty argv still recorded a failed job (argv_required).
+		return fmt.Errorf("worker run --read-only needs the command after the flags, e.g. issueops worker run --read-only --json -- git status --short")
+	}
 	root := *workspaceRoot
 	if root == "" {
 		root = command.ResolveTarget("")

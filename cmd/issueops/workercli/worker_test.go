@@ -34,6 +34,8 @@ func TestExportedCommandsDelegateToWorkerSubcommands(t *testing.T) {
 		{name: "Run", run: Run, wantErr: "missing worker subcommand"},
 		{name: "RunEnqueue", run: RunEnqueue, wantErr: "worker job kind is required"},
 		{name: "RunReadOnly", run: RunReadOnly, wantErr: "requires --read-only"},
+		// An empty argv used to record a failed job; it is refused before any job.
+		{name: "RunReadOnly empty argv", run: RunReadOnly, args: []string{"--read-only"}, wantErr: "needs the command after the flags"},
 		{name: "RunStatus", run: RunStatus, args: []string{"--id", "missing"}, wantErr: `worker job "missing" not found; run ` + "`issueops worker list --json`"},
 		{name: "RunList", run: RunList, args: []string{"--bad"}, wantErr: "flag provided but not defined"},
 		{name: "RunCancel", run: RunCancel, args: []string{"--id", "missing"}, wantErr: `worker job "missing" not found`},
