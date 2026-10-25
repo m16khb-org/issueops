@@ -89,6 +89,12 @@ func (service *Service) Next(ctx context.Context, stateRoot, cwd, id string) (is
 		if done := doneCycleIDs(listing.Entries); len(done) > 0 {
 			result.Warnings = append(result.Warnings, fmt.Sprintf("%d cycle(s) in done still await merge and cleanup: %s (issueops next --id ID --json)", len(done), strings.Join(done, ", ")))
 		}
+		// Probe: a damaged record has no readable repository, so the listing
+		// dropped it and next offered `start`, which opened a second cycle
+		// beside the one the user may be in the middle of.
+		if len(listing.UnreadableIDs) > 0 {
+			result.Warnings = append(result.Warnings, fmt.Sprintf("%d issueops record(s) could not be read, so their repository is unknown and one may be this repository's cycle: %s; tell the user before starting a new cycle", len(listing.UnreadableIDs), strings.Join(listing.UnreadableIDs, ", ")))
+		}
 		return result, nil
 	}
 	result.Selected = entryOf(*selected)

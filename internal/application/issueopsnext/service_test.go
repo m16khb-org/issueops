@@ -144,3 +144,19 @@ func TestNextRejectsMissingDependencies(t *testing.T) {
 		t.Fatal("an unconfigured service must fail closed")
 	}
 }
+
+// Probe: a damaged record has no readable repository, so the listing drops it
+// and next offers start; the warning names it before a second cycle opens.
+func TestNextWarnsAboutUnreadableRecordsBeforeStart(t *testing.T) {
+	ports := testPorts(nil, nil)
+	ports.ListCycles = func(context.Context, string, string) (issueopsinventorycontract.ListResult, error) {
+		return issueopsinventorycontract.ListResult{OK: true, UnreadableIDs: []string{"io-broken"}}, nil
+	}
+	result, err := NewService(ports).Next(context.Background(), "/state", "/repo", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Stage.Key != "none" || len(result.Warnings) != 1 || !strings.Contains(result.Warnings[0], "io-broken") {
+		t.Fatalf("stage=%q warnings=%q", result.Stage.Key, result.Warnings)
+	}
+}
