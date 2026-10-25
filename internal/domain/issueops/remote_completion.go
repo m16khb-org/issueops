@@ -22,7 +22,7 @@ func ProjectRemoteCompletion(record model.IssueOpsRecord) model.RemoteCompletion
 
 func ValidateCompletionMerge(record model.IssueOpsRecord) error {
 	if record.RemoteArtifact == nil {
-		return fmt.Errorf("cannot verify merge evidence before a verified remote artifact")
+		return fmt.Errorf("cannot verify merge evidence before a verified remote artifact: publish the PR/MR first (remote create-pr, then remote verify-artifact), or end an unpublished cycle with cleanup abandon")
 	}
 	return nil
 }

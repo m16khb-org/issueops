@@ -21,7 +21,8 @@ type FinishEvidenceReader struct {
 // reject a record change made while these external observations were in flight.
 func (s FinishEvidenceReader) Observe(ctx context.Context, record model.IssueOpsRecord, req model.CleanupFinishRequest) (model.CleanupFinishRequest, error) {
 	if record.RemoteArtifact == nil {
-		return req, fmt.Errorf("cleanup finish requires a verified remote artifact")
+		// Probe: finish on an unpublished cycle named no way out.
+		return req, fmt.Errorf("cleanup finish requires a verified remote artifact (the cycle's merged PR/MR); a cycle without a published PR/MR ends with issueops cleanup abandon --id %s --reason TEXT --preview", record.ID)
 	}
 	if s.VerifyMergedHead == nil {
 		return req, fmt.Errorf("merge verification is not configured")
