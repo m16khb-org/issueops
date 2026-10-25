@@ -1233,3 +1233,14 @@ func TestRunRemoteCreatePRTextOutputPrintsPreviewOrCreatedURL(t *testing.T) {
 		t.Fatalf("confirmed text output = %q", created)
 	}
 }
+
+// An unknown remote subcommand names the closest ones, and a listing request
+// says where provider reads go.
+func TestUnknownRemoteSubcommandSuggests(t *testing.T) {
+	if err := unknownRemoteSubcommand("create-isue"); !strings.Contains(err.Error(), "did you mean: create-issue") {
+		t.Fatalf("typo: %v", err)
+	}
+	if err := unknownRemoteSubcommand("list-issues"); !strings.Contains(err.Error(), "gh issue list") {
+		t.Fatalf("listing: %v", err)
+	}
+}

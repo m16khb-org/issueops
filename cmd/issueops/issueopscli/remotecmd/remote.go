@@ -89,8 +89,25 @@ func (command Command) dispatchRemoteLifecycle(args []string, deps Deps) error {
 	case "merge-pr":
 		return command.runRemoteMergePR(args[1:], deps)
 	default:
-		return fmt.Errorf("unknown issueops remote subcommand %q", args[0])
+		return unknownRemoteSubcommand(args[0])
 	}
+}
+
+var remoteSubcommands = []string{"score", "verify-artifact", "render-template", "create-issue", "reconcile-issue",
+	"reconcile-child", "create-child", "create-pr", "sync-graph", "sync-issue", "sync-pr",
+	"reflect-devils-advocate", "reflect-completion", "close-issue", "merge-pr"}
+
+// unknownRemoteSubcommand names the closest subcommands. QA: two agents ran
+// `remote list-issues` to find related issues; issueops writes to the
+// provider but has no listing command, so that read goes through gh/glab.
+func unknownRemoteSubcommand(name string) error {
+	message := fmt.Sprintf("unknown issueops remote subcommand %q", name)
+	if strings.Contains(name, "list") || strings.Contains(name, "search") || strings.Contains(name, "find") {
+		message += "; issueops has no provider listing: read open issues and labels with gh issue list / glab issue list (read-only)"
+	} else if suggestions := cliflag.Suggest(name, remoteSubcommands, 3); len(suggestions) > 0 {
+		message += "; did you mean: " + strings.Join(suggestions, ", ")
+	}
+	return fmt.Errorf("%s (issueops remote --help lists them)", message)
 }
 
 func (command Command) runRemoteScore(args []string, deps Deps) error {

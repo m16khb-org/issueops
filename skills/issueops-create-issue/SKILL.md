@@ -116,6 +116,7 @@ issueops decision add --id "$ISSUEOPS_ID" --kind scope \
 
 # 관련 이슈·라벨 점수는 plan-prep보다 먼저 만든다. 그 요약이 --related-score-ref다.
 # 입력 JSON 형식은 `issueops remote score --example`이 출력한다. 후보는 provider의 열린 이슈·라벨 목록이다.
+# issueops에는 목록 조회 명령이 없다. gh issue list / gh label list(GitLab은 glab)로 읽기만 한다.
 issueops remote score --input "$SCORE_INPUT" --judge none --json > "$SCORE_FILE"
 # 선택하거나 거절한 라벨과 threshold는 본문이 아니라 record에 남긴다.
 issueops decision add --id "$ISSUEOPS_ID" --kind review --title "라벨 판단" \

@@ -1879,6 +1879,7 @@
         "func repeatedFlag.Set",
         "func repeatedFlag.String",
         "func scoreRemoteByJudge",
+        "func unknownRemoteSubcommand",
         "type Deps",
         "type repeatedFlag"
       ]
