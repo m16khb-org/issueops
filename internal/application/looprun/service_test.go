@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/fs"
 	"reflect"
+	"strings"
 	"testing"
 
 	loopcontract "issueops/internal/contract/looprun"
@@ -75,7 +76,7 @@ func TestServiceRejectsInvalidAttemptBeforeLockAndTerminalRestartWithoutWrite(t 
 	if len(store.events) != 0 {
 		t.Fatalf("invalid attempt touched store: %v", store.events)
 	}
-	if _, err := service.Start(context.Background(), loopcontract.StartLoopRequest{Repo: "/repo", Name: "test", Goal: "finish"}); err == nil || err.Error() != "loop_terminal" {
+	if _, err := service.Start(context.Background(), loopcontract.StartLoopRequest{Repo: "/repo", Name: "test", Goal: "finish"}); err == nil || !strings.HasPrefix(err.Error(), "loop_terminal: loop ") {
 		t.Fatalf("terminal restart error = %v", err)
 	}
 	if !reflect.DeepEqual(store.events, []string{"lock", "read"}) {

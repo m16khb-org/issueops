@@ -58,7 +58,9 @@ func New(id, repo string, request Start, at string, schemaVersion int) loopcontr
 
 func Resume(existing loopcontract.LoopRun) error {
 	if existing.Status != "active" {
-		return fmt.Errorf("loop_terminal")
+		// MCP QA: a bare "loop_terminal" left the agent guessing the loop id
+		// and what to do; name both.
+		return fmt.Errorf("loop_terminal: loop %s (%s) is already %s; start a new loop under another name, or read this one with loop status --id %s", existing.ID, existing.Name, existing.Status, existing.ID)
 	}
 	return nil
 }
