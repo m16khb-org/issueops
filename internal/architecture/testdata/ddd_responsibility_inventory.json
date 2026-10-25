@@ -12764,6 +12764,7 @@
         "func ValidateExistingIdentity",
         "func ValidateLocation",
         "func ValidateRequired",
+        "func shortOID",
         "type BranchCandidate"
       ]
     },

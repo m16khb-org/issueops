@@ -219,3 +219,39 @@ func worktreeCount(t *testing.T, repo string) int {
 	out := preflight.GitOut(repo, "worktree", "list", "--porcelain")
 	return strings.Count(out, "worktree ")
 }
+
+// A branch that already moved past the sealed base is refused, and the
+// worktree this call added is removed so a retry is not refused by a
+// leftover mismatched worktree. The pre-existing branch itself is kept.
+func TestPrepareRemovesTheWorktreeItAddedWhenTheBranchIsPastTheBase(t *testing.T) {
+	repo := initAccessRepo(t)
+	baseHead := preflight.GitOut(repo, "rev-parse", "HEAD")
+	for _, args := range [][]string{{"branch", "70-ahead"}, {"commit", "-q", "--allow-empty", "-m", "ahead"}} {
+		if args[0] == "commit" {
+			if code, _, stderr := preflight.GitCmd(repo, "checkout", "-q", "70-ahead"); code != 0 {
+				t.Fatal(stderr)
+			}
+		}
+		if code, _, stderr := preflight.GitCmd(repo, args...); code != 0 {
+			t.Fatalf("git %v: %s", args, stderr)
+		}
+	}
+	if code, _, stderr := preflight.GitCmd(repo, "checkout", "-q", "main"); code != 0 {
+		t.Fatal(stderr)
+	}
+	base := repo + ".worktrees"
+	if err := os.Mkdir(base, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	req := port.ExecutionWorkspaceRequest{LifecycleID: "io-70", SourceRoot: repo, Root: filepath.Join(base, "70-ahead"), Branch: "70-ahead", BaseBranch: "main", BaseHead: baseHead, Confirm: true}
+	_, err := testProvisioner().Prepare(context.Background(), req)
+	if err == nil || !strings.Contains(err.Error(), "sealed base_head is "+baseHead[:10]) {
+		t.Fatalf("prepare = %v", err)
+	}
+	if _, statErr := os.Lstat(req.Root); !os.IsNotExist(statErr) {
+		t.Fatalf("refused prepare left the worktree: %v", statErr)
+	}
+	if preflight.GitOut(repo, "rev-parse", "--verify", "-q", "refs/heads/70-ahead") == "" {
+		t.Fatal("pre-existing branch was deleted")
+	}
+}

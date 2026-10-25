@@ -35,3 +35,13 @@ func TestCanonicalWorktreeLocationAndIdentityPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestValidateExistingIdentityNamesBothCommits(t *testing.T) {
+	err := ValidateExistingIdentity(true, "1-x", "1-x", "aaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbb")
+	if err == nil || !strings.Contains(err.Error(), "at aaaaaaaaaa but the sealed base_head is bbbbbbbbbb") {
+		t.Fatalf("err = %v", err)
+	}
+	if err := ValidateExistingIdentity(true, "1-x", "1-x", "same", "same"); err != nil {
+		t.Fatal(err)
+	}
+}

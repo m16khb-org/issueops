@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	domain "issueops/internal/domain/gitworktree"
@@ -67,6 +68,13 @@ func (p Provisioner) Prepare(ctx context.Context, req port.ExecutionWorkspaceReq
 		return receipt, fmt.Errorf("git %s: %s", strings.Join(args, " "), stderr)
 	}
 	if _, err := p.inspectExisting(receipt); err != nil {
+		// The worktree was added by this call and has no work in it: remove
+		// it (and a branch this call created) so a refused prepare does not
+		// leave a mismatched worktree that every retry refuses again.
+		_, _, _ = p.GitCmd(receipt.SourceRoot, "worktree", "remove", receipt.Root)
+		if slices.Contains(args, "-b") {
+			_, _, _ = p.GitCmd(receipt.SourceRoot, "branch", "-D", receipt.Branch)
+		}
 		return receipt, err
 	}
 	receipt.Exists = true
