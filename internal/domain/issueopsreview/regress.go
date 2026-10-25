@@ -12,7 +12,7 @@ const regressCap = 5
 func NormalizeRegressionReason(reason string) (string, error) {
 	reason = strings.TrimSpace(reason)
 	if reason == "" {
-		return "", fmt.Errorf("regression reason is required (the Brooks stop verdict)")
+		return "", fmt.Errorf("regression reason is required (the Brooks stop verdict; --reason TEXT)")
 	}
 	return reason, nil
 }
