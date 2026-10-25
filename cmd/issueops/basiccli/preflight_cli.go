@@ -10,12 +10,9 @@ import (
 func (command Command) RunPreflight(args []string) error {
 	fs := flag.NewFlagSet("preflight", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", true, "print JSON")
-	if err := cliflag.Parse(fs, args); err != nil {
+	target, err := cliflag.ParseOptionalPositional(fs, args)
+	if err != nil {
 		return err
-	}
-	target := ""
-	if fs.NArg() > 0 {
-		target = fs.Arg(0)
 	}
 	if command.Preflight.Observer == nil {
 		return fmt.Errorf("git preflight is not configured")

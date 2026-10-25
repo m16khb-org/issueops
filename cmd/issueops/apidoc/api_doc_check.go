@@ -15,11 +15,12 @@ func (c Command) runAPIDocCheck(args []string) error {
 	promptFile := fs.String("prompt-file", "", "append project-specific review instructions from file")
 	resultFile := fs.String("result", "", "read host-agent JSON review result from file")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := cliflag.Parse(fs, args); err != nil {
+	files, err := cliflag.ParseInterspersed(fs, args)
+	if err != nil {
 		return err
 	}
 	root := c.ResolveTarget(*repo)
-	result, err := c.Service.Check(app.StaticOptions{Repo: root, Files: fs.Args(), All: *all, JSON: true}, app.ReviewOptions{Repo: root, Files: fs.Args(), All: *all, DiffFile: *diffFile, PromptFile: *promptFile, ResultFile: *resultFile, JSON: true})
+	result, err := c.Service.Check(app.StaticOptions{Repo: root, Files: files, All: *all, JSON: true}, app.ReviewOptions{Repo: root, Files: files, All: *all, DiffFile: *diffFile, PromptFile: *promptFile, ResultFile: *resultFile, JSON: true})
 	if *jsonOut {
 		_ = printJSON(result)
 		return err

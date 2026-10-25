@@ -14,11 +14,12 @@ func (command Command) Run(args []string) error {
 	fs := flag.NewFlagSet("system-status", flag.ContinueOnError)
 	repo := fs.String("repo", ".", "target repository path")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := cliflag.Parse(fs, args); err != nil {
+	positional, err := cliflag.ParseOptionalPositional(fs, args)
+	if err != nil {
 		return err
 	}
-	if fs.NArg() > 0 {
-		*repo = fs.Arg(0)
+	if positional != "" {
+		*repo = positional
 	}
 	status := command.Service.Run(*repo)
 	if *jsonOut {

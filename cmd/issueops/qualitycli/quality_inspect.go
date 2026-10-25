@@ -39,11 +39,12 @@ func RunInspect(args []string, deps Deps) error {
 	jsonOut := fs.Bool("json", false, "print JSON")
 	saveBaseline := fs.Bool("save-baseline", false, "persist the current code-SNR as the trend baseline in issueops state")
 	trend := fs.Bool("trend", false, "report the code-SNR delta versus the saved baseline")
-	if err := cliflag.Parse(fs, args); err != nil {
+	positional, err := cliflag.ParseOptionalPositional(fs, args)
+	if err != nil {
 		return err
 	}
-	if fs.NArg() > 0 {
-		*repo = fs.Arg(0)
+	if positional != "" {
+		*repo = positional
 	}
 	if deps.Output == nil {
 		deps.Output = os.Stdout

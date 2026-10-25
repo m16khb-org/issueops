@@ -161,6 +161,7 @@
       "task": "T20",
       "symbols": [
         "func Parse",
+        "func ParseInterspersed",
         "func ParseNoArgs",
         "func ParseOptionalPositional",
         "func Suggest",

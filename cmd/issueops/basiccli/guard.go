@@ -37,10 +37,10 @@ func (command Command) runGuardCheck(args []string) error {
 	staged := fs.Bool("staged", true, "check staged files")
 	all := fs.Bool("all", false, "check all relevant files")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := cliflag.Parse(fs, args); err != nil {
+	files, err := cliflag.ParseInterspersed(fs, args)
+	if err != nil {
 		return err
 	}
-	files := fs.Args()
 	if len(files) > 0 {
 		*staged = false
 	}

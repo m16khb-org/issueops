@@ -259,3 +259,26 @@ func ParseOptionalPositional(fs *flag.FlagSet, args []string) (string, error) {
 	}
 	return positional, nil
 }
+
+// ParseInterspersed parses fs and returns every positional argument (a file
+// list), reading flags wherever they appear. Probe: `guard check f --json`
+// treated --json as a file and printed text. Everything after a literal --
+// is positional, so a file whose name starts with - is still reachable.
+func ParseInterspersed(fs *flag.FlagSet, args []string) ([]string, error) {
+	positionals := []string{}
+	rest := args
+	for {
+		if err := Parse(fs, rest); err != nil {
+			return nil, err
+		}
+		remaining := fs.Args()
+		if len(remaining) == 0 {
+			return positionals, nil
+		}
+		if consumed := len(rest) - len(remaining); consumed > 0 && rest[consumed-1] == "--" {
+			return append(positionals, remaining...), nil
+		}
+		positionals = append(positionals, remaining[0])
+		rest = remaining[1:]
+	}
+}

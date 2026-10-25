@@ -164,3 +164,14 @@ func TestParseOptionalPositionalReadsFlagsAfterIt(t *testing.T) {
 		t.Fatalf("second positional: err=%v", err)
 	}
 }
+
+// Probe: `guard check f --json` treated --json as a file. Flags are read
+// anywhere; after a literal -- everything is a file.
+func TestParseInterspersedReadsFlagsBetweenFiles(t *testing.T) {
+	fs := flag.NewFlagSet("demo", flag.ContinueOnError)
+	jsonOut := fs.Bool("json", false, "json")
+	files, err := ParseInterspersed(fs, []string{"a.go", "--json", "b.go", "--", "-c.go", "--json"})
+	if err != nil || !*jsonOut || strings.Join(files, " ") != "a.go b.go -c.go --json" {
+		t.Fatalf("files=%q json=%v err=%v", files, *jsonOut, err)
+	}
+}
