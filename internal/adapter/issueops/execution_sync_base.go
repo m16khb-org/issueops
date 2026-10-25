@@ -492,7 +492,14 @@ func executionSyncBaseFail(record issueops.IssueOpsRecord, result *issueops.Exec
 		result.OK = false
 		result.FailedStep = step
 		result.NextCommand = executionSyncBasePreviewCommand(record)
-		return *result, fmt.Errorf("execution sync-base step %s failed (re-run --preview then retry): %w", step, stepErr)
+		err := fmt.Errorf("execution sync-base step %s failed (re-run --preview then retry): %w", step, stepErr)
+		if strings.Contains(stepErr.Error(), "failed to sign") {
+			// Probe: commit.gpgsign with a signer that cannot run here (no TTY
+			// for pinentry) left the merge open with no conflicts, and the
+			// generic advice read as a conflict to resolve.
+			err = fmt.Errorf("%w; the merge commit could not be signed (commit.gpgsign is on and the signer failed in this non-interactive shell): make signing work (unlock the key, or ask the user), then run the --finalize the preview names; or drop the merge with --abort", err)
+		}
+		return *result, err
 	}
 }
 

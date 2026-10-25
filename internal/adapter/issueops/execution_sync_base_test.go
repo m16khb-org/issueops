@@ -1082,3 +1082,22 @@ func TestExecutionSyncBasePreviewDuringAMergeHandsOutFinalize(t *testing.T) {
 		t.Fatalf("next=%q abort=%q", result.NextCommand, result.AbortCommand)
 	}
 }
+
+// Probe: a signer that cannot run here failed the merge commit; the refusal
+// names signing instead of reading like a conflict.
+func TestExecutionSyncBaseNamesAFailedCommitSignature(t *testing.T) {
+	t.Parallel()
+
+	fixture := newReleasedSyncBaseFixture(t, "114-gpg")
+	preview, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBasePreview))
+	if err != nil {
+		t.Fatal(err)
+	}
+	fixture.git.mergeCode = 128
+	fixture.git.mergeOut = "error: gpg failed to sign the data\nfatal: failed to write commit object"
+	req := fixture.request(issueops.ExecutionSyncBaseApply)
+	req.Confirm, req.Fingerprint = true, preview.Fingerprint
+	if _, err := fixture.run(t, req); err == nil || !strings.Contains(err.Error(), "could not be signed") {
+		t.Fatalf("apply = %v", err)
+	}
+}
