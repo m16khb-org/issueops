@@ -77,7 +77,8 @@ func (s *IssueReconciler) Reconcile(ctx context.Context, id string, confirm bool
 	}
 	if err := domain.ValidateIssueReconcileSearch(search.Truncated, len(search.Candidates)); err != nil {
 		if len(search.Candidates) == 0 && !search.Truncated && intent.Status == model.IssueCreateIntentPending && s.settled != nil {
-			hint := "a pending create whose caller died is released once it is 2 minutes old, no issue create for it is running, and the provider lists no issue with its marker; re-run this reconcile then"
+			// QA: agents read the conditions as requirements they could not meet.
+			hint := "not settled yet, wait and re-run this reconcile: a pending create whose caller died is released once it is 2 minutes old (started " + intent.UpdatedAt + "), no issue create for it is running, and the provider lists no issue with its marker"
 			if settleErr != nil {
 				hint += " (settlement: " + settleErr.Error() + ")"
 			}
@@ -113,6 +114,8 @@ func (s *IssueReconciler) Reconcile(ctx context.Context, id string, confirm bool
 func (s *IssueReconciler) releaseCrashedCreate(ctx context.Context, record model.IssueOpsRecord, confirm bool) (model.IssueOpsIssueCreateReconcileResult, error) {
 	result := model.IssueOpsIssueCreateReconcileResult{OK: true, IssueURL: record.IssueURL, IssueCreateIntent: record.IssueCreateIntent}
 	if !confirm {
+		// QA: ok + candidate_count 0 + would_adopt false read as "nothing to do".
+		result.WouldRelease = true
 		result.NextCommand = "issueops remote reconcile-issue --id " + record.ID + " --confirm --json"
 		return result, nil
 	}

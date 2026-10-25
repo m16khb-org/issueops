@@ -72,6 +72,9 @@ type IssueOpsIssueCreateReconcileResult struct {
 	// NextCommand is the --confirm adoption a preview that found the one
 	// matching issue hands back.
 	NextCommand string `json:"next_command,omitempty"`
+	// WouldRelease marks a preview whose next_command releases a pending
+	// create whose caller died (settled: nothing was or will be created).
+	WouldRelease bool `json:"would_release,omitempty"`
 }
 
 func ValidateIssueCreateIntent(intent IssueOpsIssueCreateIntent) error {

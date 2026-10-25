@@ -525,7 +525,7 @@ func TestIssueReconcileReleasesASettledCrashedCreate(t *testing.T) {
 
 	h := crashed(t, model.IssueCreateIntentPending)
 	preview, err := newReconciler(h, none).WithCrashSettlement(settled).Reconcile(context.Background(), "io-create", false)
-	if err != nil || preview.NextCommand != "issueops remote reconcile-issue --id io-create --confirm --json" || h.intent().Status != model.IssueCreateIntentPending {
+	if err != nil || !preview.WouldRelease || preview.NextCommand != "issueops remote reconcile-issue --id io-create --confirm --json" || h.intent().Status != model.IssueCreateIntentPending {
 		t.Fatalf("preview=%+v err=%v status=%s", preview, err, h.intent().Status)
 	}
 	confirmed, err := newReconciler(h, none).WithCrashSettlement(settled).Reconcile(context.Background(), "io-create", true)

@@ -123,7 +123,7 @@ issueops feedback mark-issue-updated --id "$ISSUEOPS_ID" $RECORD_ACTOR_FLAGS --j
 ## 검증
 
 - write 뒤 readback 응답의 URL·상태·본문 해시가 방금 쓴 것과 같은지 확인한다.
-- `issueops status --id "$ISSUEOPS_ID" --json`의 `body_syncs`에 이번 write의
-  baseline이 남았는지 확인한다.
+- `issueops status --id "$ISSUEOPS_ID" --json`에 이번 write의 baseline이 남았는지 확인한다.
+  sync-issue·sync-pr은 `body_syncs`, 새 이슈(create-issue)는 `issue_create_intent.body_sha256`이다.
 - 모호한 결과를 만났다면 reconcile 결과가 정확히 하나의 아티팩트를 지목했는지 확인한다.
   둘 이상이면 사람이 판단할 때까지 멈춘다.

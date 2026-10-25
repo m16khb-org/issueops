@@ -88,4 +88,6 @@ type ChildReconcileResult struct {
 	// as never created and released (not_invoked): re-run the same
 	// create-child with this operation ID.
 	Released bool `json:"released,omitempty"`
+	// WouldRelease marks a preview whose recovery_command releases it.
+	WouldRelease bool `json:"would_release,omitempty"`
 }

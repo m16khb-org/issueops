@@ -330,7 +330,7 @@ func TestChildReconcileReleasesASettledCrashedCreate(t *testing.T) {
 
 	store, p, creator, reconciler, cmd, op := crashed(t, model.IssueCreateIntentPending, true)
 	preview, err := reconciler.Reconcile(context.Background(), ChildReconcileCommand{ID: cmd.ID, OperationID: op.OperationID}, nil)
-	if err != nil || !preview.OK || preview.Released || store.read().ChildCreateOperations[0].Status != model.IssueCreateIntentPending {
+	if err != nil || !preview.OK || !preview.WouldRelease || preview.Released || store.read().ChildCreateOperations[0].Status != model.IssueCreateIntentPending {
 		t.Fatalf("preview=%+v err=%v", preview, err)
 	}
 	released, err := reconciler.Reconcile(context.Background(), ChildReconcileCommand{ID: cmd.ID, OperationID: op.OperationID, Confirm: true}, nil)

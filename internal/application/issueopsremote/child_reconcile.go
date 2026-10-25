@@ -126,7 +126,7 @@ func (s ChildReconciler) releaseCrashedChild(ctx context.Context, cmd ChildRecon
 	if err != nil || !settled {
 		// QA: an agent retried within the quiet period and read the bare
 		// "exactly one is required" as a dead end; name the wait.
-		hint := "a pending child create whose caller died is released once it is 2 minutes old, no create for it is running, and the provider lists no child with its marker; re-run this reconcile then"
+		hint := "not settled yet, wait and re-run this reconcile: a pending child create whose caller died is released once it is 2 minutes old (started " + op.UpdatedAt + "), no create for it is running, and the provider lists no child with its marker"
 		if err != nil {
 			hint += " (settlement: " + err.Error() + ")"
 		}
@@ -135,7 +135,7 @@ func (s ChildReconciler) releaseCrashedChild(ctx context.Context, cmd ChildRecon
 		return result, true, fmt.Errorf("%w: %s", cause, hint)
 	}
 	if !cmd.Confirm {
-		result.OK = true
+		result.OK, result.WouldRelease = true, true
 		return result, true, nil
 	}
 	if err := s.reauthorizeChildRecovery(ctx, cmd.ID, run); err != nil {
