@@ -15,11 +15,11 @@ type IntentDraft struct {
 func PrepareIntent(req IntentDraft) (*IntentDraft, error) {
 	rawRequest := strings.TrimSpace(req.RawRequest)
 	if rawRequest == "" {
-		return nil, fmt.Errorf("raw_request is required")
+		return nil, fmt.Errorf("raw_request is required (--raw-request: the user's request as given)")
 	}
 	interpretedIntent := strings.TrimSpace(req.InterpretedIntent)
 	if interpretedIntent == "" {
-		return nil, fmt.Errorf("interpreted_intent is required")
+		return nil, fmt.Errorf("interpreted_intent is required (--interpreted-intent: your restatement, materially different from the request)")
 	}
 	if interpretedIntent == rawRequest {
 		return nil, fmt.Errorf("interpreted_intent must differ from raw_request")

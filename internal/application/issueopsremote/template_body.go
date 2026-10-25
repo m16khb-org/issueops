@@ -80,6 +80,10 @@ func (s TemplateBodyResolver) Resolve(req TemplateBodyRequest) (ResolvedTemplate
 		}
 	}
 	if len(inputErrors) > 0 {
+		if choice := artifacttemplate.ChoiceError(string(req.Kind), template); choice != nil {
+			// Probe: --template bogus answered the bare code.
+			return ResolvedTemplateBody{}, fmt.Errorf("template validation failed: %s: %w", strings.Join(inputErrors, ","), choice)
+		}
 		return ResolvedTemplateBody{}, fmt.Errorf("template validation failed: %s", strings.Join(inputErrors, ","))
 	}
 	resolved := ResolvedTemplateBody{

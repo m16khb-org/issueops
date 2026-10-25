@@ -10,7 +10,7 @@ import (
 
 func ValidateIssueCreateTitle(title string) error {
 	if strings.TrimSpace(title) == "" {
-		return fmt.Errorf("issue title is required")
+		return fmt.Errorf("issue title is required (--title)")
 	}
 	return nil
 }

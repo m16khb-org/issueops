@@ -4,7 +4,7 @@ import "fmt"
 
 func ValidateDomainReviewRecord(modelFit string, terminologyCount int) error {
 	if modelFit == "" && terminologyCount == 0 {
-		return fmt.Errorf("domain review requires model_fit or terminology")
+		return fmt.Errorf("domain review requires model_fit or terminology (--model-fit TEXT or --terminology TEXT)")
 	}
 	return nil
 }

@@ -1,6 +1,9 @@
 package issueopsreview
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestValidateImplementationReviewRecord(t *testing.T) {
 	for _, test := range []struct {
@@ -74,7 +77,7 @@ func TestValidateSchemaEvidenceRecord(t *testing.T) {
 }
 
 func TestValidateDomainReviewRecord(t *testing.T) {
-	if err := ValidateDomainReviewRecord("", 0); errorText(err) != "domain review requires model_fit or terminology" {
+	if err := ValidateDomainReviewRecord("", 0); !strings.HasPrefix(errorText(err), "domain review requires model_fit or terminology") {
 		t.Fatalf("empty domain review = %v", err)
 	}
 	if err := ValidateDomainReviewRecord("model fits", 0); err != nil {
