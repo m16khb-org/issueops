@@ -28,6 +28,19 @@ func (e BranchPreparationEnvironment) ResolveBaseCommit(repo, revision string) (
 	return resolved, nil
 }
 
+// IsAncestor reports whether ancestor is an ancestor of (or equal to) descendant.
+func (e BranchPreparationEnvironment) IsAncestor(repo, ancestor, descendant string) (bool, error) {
+	code, _, stderr := e.RunGit(repo, "merge-base", "--is-ancestor", ancestor, descendant)
+	switch code {
+	case 0:
+		return true, nil
+	case 1:
+		return false, nil
+	default:
+		return false, fmt.Errorf("git merge-base --is-ancestor failed: %s", strings.TrimSpace(stderr))
+	}
+}
+
 func (e BranchPreparationEnvironment) ObserveCodeProjectKey(repo, provider string) (string, error) {
 	if e.RunGit == nil {
 		return "", fmt.Errorf("git command adapter is unavailable")

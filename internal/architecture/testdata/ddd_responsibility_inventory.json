@@ -4306,6 +4306,7 @@
       "task": "T08",
       "symbols": [
         "func BranchPreparationEnvironment.CleanParentPath",
+        "func BranchPreparationEnvironment.IsAncestor",
         "func BranchPreparationEnvironment.ObserveCodeProjectKey",
         "func BranchPreparationEnvironment.ResolveBaseCommit",
         "type BranchPreparationEnvironment"
@@ -8414,9 +8415,11 @@
       "task": "T08",
       "symbols": [
         "func Preparer.Prepare",
+        "func Preparer.guardBaseChange",
         "func Preparer.normalizeRequest",
         "func Preparer.resolveBaseSHA",
         "func Preparer.validateUmbrella",
+        "func shortOID",
         "type Preparer"
       ]
     },

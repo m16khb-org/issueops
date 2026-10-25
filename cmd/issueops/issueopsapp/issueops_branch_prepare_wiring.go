@@ -18,6 +18,7 @@ func newBranchPreparer(root string) branchapp.Preparer {
 		Authority:             cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, issueOpsActorVerifier()),
 		CleanParentPath:       environment.CleanParentPath,
 		ResolveBaseCommit:     environment.ResolveBaseCommit,
+		IsAncestor:            environment.IsAncestor,
 		UmbrellaForChildIssue: newActiveCycleReader(root).UmbrellaForChildIssue,
 		ObserveCodeProjectKey: environment.ObserveCodeProjectKey,
 		Steps:                 branchinstructions.Steps, Now: time.Now,

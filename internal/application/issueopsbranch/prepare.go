@@ -13,10 +13,13 @@ import (
 )
 
 type Preparer struct {
-	Records               CycleRecords
-	Authority             cycleapp.MutationAuthority
-	CleanParentPath       func(string) (string, bool)
-	ResolveBaseCommit     func(string, string) (string, error)
+	Records           CycleRecords
+	Authority         cycleapp.MutationAuthority
+	CleanParentPath   func(string) (string, bool)
+	ResolveBaseCommit func(string, string) (string, error)
+	// IsAncestor(repo, ancestor, descendant) guards a base change after the
+	// worktree exists (nil refuses such a change).
+	IsAncestor            func(string, string, string) (bool, error)
 	UmbrellaForChildIssue func(string, string) (model.IssueOpsRecord, bool)
 	ObserveCodeProjectKey func(string, string) (string, error)
 	Steps                 func(string, string, string, string, string) []model.IssueOpsBranchPrepareStep
@@ -46,6 +49,9 @@ func (s Preparer) Prepare(ctx context.Context, id string, req model.IssueOpsBran
 		}
 		req.BaseSHA, err = s.resolveBaseSHA(record.Repo, req.BaseSHA)
 		if err != nil {
+			return err
+		}
+		if err := s.guardBaseChange(record, req); err != nil {
 			return err
 		}
 		var observed string
@@ -127,4 +133,35 @@ func (s Preparer) resolveBaseSHA(repo, baseSHA string) (string, error) {
 		return "", fmt.Errorf("base_sha %q resolved to an empty commit OID", baseSHA)
 	}
 	return strings.TrimSpace(resolved), nil
+}
+
+// guardBaseChange refuses a new base the worktree branch cannot reach by a
+// merge alone. The branch was cut from the old base; when the new base lacks
+// commits of the old one (main -> a develop that diverged), sync-base would
+// merge the new base in and the PR would carry those foreign commits
+// (probed: m.txt from main showed up in the develop diff).
+func (s Preparer) guardBaseChange(record model.IssueOpsRecord, req model.IssueOpsBranchPrepareRequest) error {
+	prior := record.BranchPrepare
+	if record.Execution == nil || prior == nil || strings.TrimSpace(prior.BaseSHA) == "" || req.BaseSHA == "" || req.BaseSHA == prior.BaseSHA {
+		return nil
+	}
+	if s.IsAncestor == nil {
+		return fmt.Errorf("base change after execution prepare needs an ancestry check, which is unavailable")
+	}
+	contains, err := s.IsAncestor(record.Repo, prior.BaseSHA, req.BaseSHA)
+	if err != nil {
+		return fmt.Errorf("base change after execution prepare: %w", err)
+	}
+	if !contains {
+		return fmt.Errorf("new base %s (%s) does not contain the old base %s (%s) the worktree branch was cut from; merging it with sync-base would carry the old base's extra commits into the PR. Start a new cycle from %s instead (end this one with exits.abandon_command), or keep %s",
+			req.BaseBranch, shortOID(req.BaseSHA), prior.BaseBranch, shortOID(prior.BaseSHA), req.BaseBranch, prior.BaseBranch)
+	}
+	return nil
+}
+
+func shortOID(oid string) string {
+	if len(oid) > 10 {
+		return oid[:10]
+	}
+	return oid
 }
