@@ -1,6 +1,7 @@
 package issueopscli
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"issueops/cmd/issueops/cliflag"
@@ -591,6 +592,14 @@ func (cli command) runIssueOpsList(args []string) error {
 	result, err := cli.Runtime.ListIssueOpsCycles(cli.Runtime.IssueOpsStateRoot(), *repo)
 	if err != nil {
 		return err
+	}
+	if repoPath := strings.TrimSpace(*repo); repoPath != "" && len(result.Entries) == 0 {
+		// Probe: a mistyped --repo answered an empty list, which reads as
+		// "no cycles here". A deleted repository that still has cycles keeps
+		// listing them, so only an empty answer for a missing path refuses.
+		if _, statErr := os.Stat(repoPath); errors.Is(statErr, os.ErrNotExist) {
+			return fmt.Errorf("--repo %s does not exist; pass the repository root (git rev-parse --show-toplevel), or omit --repo to list every cycle", repoPath)
+		}
 	}
 	if *jsonOut {
 		return printJSON(result)

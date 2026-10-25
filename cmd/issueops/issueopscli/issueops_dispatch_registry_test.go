@@ -63,3 +63,17 @@ func TestIssueOpsUsageRegistryBidirectionalParity(t *testing.T) {
 		}
 	}
 }
+
+// Probe: a mistyped --repo answered an empty list ("no cycles here"); a
+// missing path with no matching cycle is refused, an existing one is not.
+func TestIssueOpsListRefusesAMissingRepoPath(t *testing.T) {
+	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
+	missing := t.TempDir() + "/nope"
+	if err := runIssueOps([]string{"list", "--repo", missing}); err == nil || !strings.Contains(err.Error(), "does not exist") {
+		t.Fatalf("missing repo: err = %v", err)
+	}
+	existing := t.TempDir()
+	if err := runIssueOps([]string{"list", "--repo", existing}); err != nil {
+		t.Fatalf("existing repo: err = %v", err)
+	}
+}
