@@ -27,6 +27,10 @@ type field struct{ value, source string }
 // or one effort rung above the review.
 func Resolve(in ResolveInput) (contract.Resolution, error) {
 	host := strings.ToLower(strings.TrimSpace(in.Host))
+	if host == "" {
+		// Probe: `model resolve` without --host read as an unknown host "".
+		return contract.Resolution{}, fmt.Errorf("--host is required (claude, codex, omo, omp, or opencode; issueops execution whoami --json prints this session's)")
+	}
 	if !KnownHost(host) {
 		return contract.Resolution{}, fmt.Errorf("unknown host %q (use claude, codex, omo, omp, or opencode)", in.Host)
 	}
