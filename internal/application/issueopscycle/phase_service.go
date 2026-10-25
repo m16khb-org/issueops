@@ -75,7 +75,13 @@ func (s PhaseService) advanceLocked(stateRoot, id, to string, upstream func(stri
 	var materials issueops.IssueOpsTrackedMaterials
 	phase := issueops.IssueOpsPhase(strings.TrimSpace(to))
 	if !issueopsdomain.KnownIssueOpsPhase(phase) {
-		return issueops.IssueOpsRecord{OK: false}, materials, fmt.Errorf("unknown issueops phase %q", to)
+		// Probe: `--to verify` (a next stage, not a phase) and a missing --to
+		// named nothing to use instead.
+		names := make([]string, 0, len(issueops.IssueOpsPhases))
+		for _, known := range issueops.IssueOpsPhases {
+			names = append(names, string(known))
+		}
+		return issueops.IssueOpsRecord{OK: false}, materials, fmt.Errorf("unknown issueops phase %q (--to wants %s; next's stage.key is not a phase, follow its next_command)", to, strings.Join(names, "|"))
 	}
 	record, err := s.Store.Read(stateRoot, id)
 	if err != nil {

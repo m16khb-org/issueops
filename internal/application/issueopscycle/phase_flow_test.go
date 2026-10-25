@@ -88,7 +88,7 @@ func TestProblemAndGrillReadinessReportMissingIntentAndGrill(t *testing.T) {
 func TestAdvanceReportRejectsUnknownPhaseWithoutWriting(t *testing.T) {
 	p := &phaseFlow{record: model.IssueOpsRecord{ID: "io-1", Phase: model.IssueOpsPhaseProblem}}
 	_, _, err := flowService(p, Readiness{}).AdvanceReport("state", "io-1", "launch")
-	if err == nil || !strings.Contains(err.Error(), `unknown issueops phase "launch"`) || len(p.writes) != 0 {
+	if err == nil || !strings.Contains(err.Error(), `unknown issueops phase "launch" (--to wants problem|grill|plan|`) || len(p.writes) != 0 {
 		t.Fatalf("err=%v writes=%d", err, len(p.writes))
 	}
 }
