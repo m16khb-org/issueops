@@ -2,6 +2,7 @@ package gates
 
 import (
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
@@ -122,6 +123,11 @@ func LintStatic(candidate LintCandidate) (result model.LintGate, argv []string) 
 		result.Warnings = append(result.Warnings, fmt.Sprintf(
 			"the argv tokenizer consumed %d backslash(es): inside double quotes \\X becomes X and \\n a newline; use single quotes to keep a regex or escape as written (see argv)", consumed))
 	}
+	if pythonWritesBytecode(argv) {
+		// QA (opencode): a python3 -c CHECK left __pycache__ in the worktree;
+		// removing it after the clean seal made the seal stale.
+		result.Warnings = append(result.Warnings, "python without -B writes __pycache__ into the worktree, which enters the change fingerprint (removing it later stales the clean seal); run python3 -B")
+	}
 	expect := strings.TrimSpace(gate.Expect)
 	if len(expect) >= 2 && strings.HasPrefix(expect, "`") && strings.HasSuffix(expect, "`") {
 		result.Problems = append(result.Problems, "EXPECT is wrapped in markdown backticks, which are matched literally, so it never matches command output. Write the bare text")
@@ -221,4 +227,25 @@ func unwrapSpec(spec, open string) string {
 		return spec[1 : len(spec)-1]
 	}
 	return spec
+}
+
+// pythonWritesBytecode reports a python CHECK that may write __pycache__:
+// no -B among the interpreter options (before -c, -m, or the script).
+func pythonWritesBytecode(argv []string) bool {
+	if len(argv) == 0 {
+		return false
+	}
+	base := strings.ToLower(filepath.Base(argv[0]))
+	if base != "python" && !strings.HasPrefix(base, "python3") {
+		return false
+	}
+	for _, arg := range argv[1:] {
+		if !strings.HasPrefix(arg, "-") || arg == "-c" || arg == "-m" {
+			return true
+		}
+		if arg != "--" && !strings.HasPrefix(arg, "--") && strings.Contains(arg[1:], "B") {
+			return false
+		}
+	}
+	return true
 }

@@ -12727,6 +12727,7 @@
         "func SummarizeLint",
         "func UnparsedWarning",
         "func literalLooksLikeRegex",
+        "func pythonWritesBytecode",
         "func specID",
         "func unwrapSpec",
         "type LintCandidate"

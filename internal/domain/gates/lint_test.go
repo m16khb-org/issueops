@@ -2,6 +2,7 @@ package gates
 
 import (
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -36,14 +37,14 @@ func TestLintStaticFlagsGatesThatCanNeverBeMet(t *testing.T) {
 }
 
 func TestLintStaticPassesRunnableGateAndWarnsOnConsumedBackslashes(t *testing.T) {
-	clean, argv := LintStatic(LintSpecCandidate("spec", `G1: x | CHECK: python3 -c 'print(r"\d")' | EXPECT: /\\d/`))
+	clean, argv := LintStatic(LintSpecCandidate("spec", `G1: x | CHECK: python3 -B -c 'print(r"\d")' | EXPECT: /\\d/`))
 	if len(clean.Problems) != 0 || len(clean.Warnings) != 0 {
 		t.Fatalf("single-quoted backslash gate: problems %q warnings %q, want none", clean.Problems, clean.Warnings)
 	}
-	if want := []string{"python3", "-c", `print(r"\d")`}; !reflect.DeepEqual(argv, want) {
+	if want := []string{"python3", "-B", "-c", `print(r"\d")`}; !reflect.DeepEqual(argv, want) {
 		t.Fatalf("argv = %q, want %q", argv, want)
 	}
-	consumed, _ := LintStatic(LintSpecCandidate("spec", `G2: x | CHECK: python3 -c "import re;print(re.search('\d','1'))" | EXPECT: /Match/`))
+	consumed, _ := LintStatic(LintSpecCandidate("spec", `G2: x | CHECK: python3 -B -c "import re;print(re.search('\d','1'))" | EXPECT: /Match/`))
 	if len(consumed.Problems) != 0 || len(consumed.Warnings) != 1 || !strings.Contains(consumed.Warnings[0], "consumed 1 backslash") {
 		t.Fatalf("double-quoted backslash gate: problems %q warnings %q, want one backslash warning", consumed.Problems, consumed.Warnings)
 	}
@@ -141,5 +142,22 @@ func TestLintStaticFlagsNewlineBeforeEndAnchor(t *testing.T) {
 func TestDeniedMessageNamesTheNetworkRemedy(t *testing.T) {
 	if got := DeniedMessage([]string{"network_not_allowed"}); !strings.Contains(got, "node --test") || !strings.Contains(got, "--network") {
 		t.Fatalf("message %q", got)
+	}
+}
+
+func TestLintWarnsAboutPythonWithoutDashB(t *testing.T) {
+	for check, warns := range map[string]bool{
+		"python3 -c 'print(1)'":                    true,
+		"python3 -m unittest discover -s tests":    true,
+		"python3 -B -m unittest discover -s tests": false,
+		"python3 -Bc 'print(1)'":                   false,
+		"/usr/bin/python3.12 tests/run.py":         true,
+		"node --test":                              false,
+	} {
+		result, _ := LintStatic(LintSpecCandidate("spec", "G1: x | CHECK: "+check+" | EXPECT: 1"))
+		got := slices.ContainsFunc(result.Warnings, func(w string) bool { return strings.Contains(w, "python3 -B") })
+		if got != warns {
+			t.Fatalf("%q: warned=%v (%v)", check, got, result.Warnings)
+		}
 	}
 }
