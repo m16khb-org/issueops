@@ -7,7 +7,8 @@ claimable은 `released_completion_authority`로 거부되므로 재개 세션도
 issueops execution sync-base --id "$ISSUEOPS_ID" --preview $ACTOR_FLAGS --json
 ```
 
-- `merge_needed`가 false면 그대로 진행한다.
+- `merge_needed`가 false면 그대로 진행한다. `push_retry_required: true`는 병합은 끝났지만 그 결과가
+  아직 원격 브랜치에 올라가지 않았다는 뜻이다. preview가 준 apply 명령으로 push를 마친다.
 - true이고 `conflict_files`가 비었으면 `--apply --confirm --fingerprint <preview의 값> $ACTOR_FLAGS`로
   반영한다. **이 apply는 지금, 즉 봉인이 하나도 없는 4단계 진입에서만 한다.** 반영하면
   변경 집합이 봉인된 `BranchPrepare.BaseSHA` 기준으로 잡히므로 base가 바꾼 파일이 이

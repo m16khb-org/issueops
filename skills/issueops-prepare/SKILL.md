@@ -58,6 +58,15 @@ issueops next --id "$ISSUEOPS_ID" --json
 있다" 같은 가능성은 묻는 근거가 아니다. 릴리스 흐름을 건너뛰는 base는 사용자가 명시한
 경우에만 쓴다. 관례와 다르게 정했으면 그 사실을 보고에 적는다.
 
+준비가 끝난 뒤 base를 바꿔야 하면(예: main → develop) 단계에 따라 길이 다르다.
+
+- PR/MR을 만들기 전: lease holder가 같은 branch로 `branch prepare`를 새 `--base-branch`·`--base-sha`로
+  다시 기록한다(링크 확인 포함, lease가 있으면 worktree에서 그 actor로). worktree가 이미 있으면
+  이어서 `execution sync-base --preview`로 새 base를 병합한다([sync-base 규칙](../issueops-implement/references/sync-base.md)).
+  손으로 rebase하지 않는다.
+- PR/MR을 만든 뒤: provider에서 대상 브랜치를 바꾸고 `issueops branch retarget --id ID --base-branch REF
+  --reason TEXT $RECORD_ACTOR_FLAGS`로 기록한다.
+
 ## 프로젝트 문서 확인
 
 브랜치와 provider 링크를 만들기 전에 `.issueops/CAUTIONS.md` 색인을 읽고(없으면 열지 않고 "파일 없음"으로 적는다),
