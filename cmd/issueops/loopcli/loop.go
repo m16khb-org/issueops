@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"issueops/cmd/issueops/cliflag"
 	"issueops/cmd/issueops/jsonout"
@@ -101,6 +102,11 @@ func runStatus(deps Dependencies, args []string) error {
 	}
 	loopID := *id
 	var err error
+	if loopID == "" && strings.TrimSpace(*repo) == "" {
+		// Probe: bare `loop status` answered "repo is required" although
+		// --id is the other form.
+		return printLoopResult(loopruncontract.StatusResult{OK: false}, fmt.Errorf("pass --id LOOP_ID (loop start prints it), or --repo PATH --name NAME"), *jsonOut)
+	}
 	if loopID == "" {
 		loopID, err = deps.ResolveID(*repo, *name)
 		if err != nil {

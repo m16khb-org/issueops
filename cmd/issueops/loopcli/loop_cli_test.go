@@ -97,3 +97,13 @@ func unmarshalLoopJSON(t *testing.T, out string, target any) {
 		t.Fatalf("unmarshal loop JSON: %v\n%s", err, out)
 	}
 }
+
+// Probe: bare `loop status` answered "repo is required" although --id is the
+// other form; the error names both.
+func TestRunLoopStatusWithoutSelectorNamesBothForms(t *testing.T) {
+	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
+	err := Run(testDependencies(), []string{"status"})
+	if err == nil || err.Error() != "pass --id LOOP_ID (loop start prints it), or --repo PATH --name NAME" {
+		t.Fatalf("err = %v", err)
+	}
+}

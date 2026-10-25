@@ -141,7 +141,7 @@ func normalizeLoopID(id string) (string, error) {
 		return "", fmt.Errorf("loop_id is required")
 	}
 	if !strings.HasPrefix(id, "loop-") || strings.Contains(id, "..") || strings.ContainsAny(id, `/\`) {
-		return "", fmt.Errorf("invalid loop id %q", id)
+		return "", fmt.Errorf("invalid loop id %q: loop ids look like loop-1a2b3c4d5e6f (loop start prints it; loop status --repo PATH --name NAME finds it)", id)
 	}
 	return id, nil
 }
