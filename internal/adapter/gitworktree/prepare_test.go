@@ -270,3 +270,20 @@ func TestPrepareNamesAPlainDirectoryAtTheCanonicalPath(t *testing.T) {
 		t.Fatalf("prepare = %v", err)
 	}
 }
+
+// Probe: the source checkout was on the cycle branch; the refusal names the
+// switch that frees it.
+func TestPrepareNamesABranchCheckedOutInTheSourceCheckout(t *testing.T) {
+	repo := initAccessRepo(t)
+	if code, _, stderr := preflight.GitCmd(repo, "switch", "-q", "-c", "72-busy"); code != 0 {
+		t.Fatal(stderr)
+	}
+	req := port.ExecutionWorkspaceRequest{LifecycleID: "io-72", SourceRoot: repo, Root: filepath.Join(repo+".worktrees", "72-busy"), Branch: "72-busy", BaseBranch: "main", BaseHead: preflight.GitOut(repo, "rev-parse", "HEAD"), Confirm: true}
+	if err := os.MkdirAll(repo+".worktrees", 0o700); err != nil {
+		t.Fatal(err)
+	}
+	_, err := testProvisioner().Prepare(context.Background(), req)
+	if err == nil || !strings.Contains(err.Error(), "is checked out elsewhere") {
+		t.Fatalf("prepare = %v", err)
+	}
+}

@@ -65,7 +65,13 @@ func (p Provisioner) Prepare(ctx context.Context, req port.ExecutionWorkspaceReq
 	}
 	args := p.worktreeAddArgs(receipt)
 	if code, _, stderr := p.GitCmd(receipt.SourceRoot, args...); code != 0 {
-		return receipt, fmt.Errorf("git %s: %s", strings.Join(args, " "), stderr)
+		err := fmt.Errorf("git %s: %s", strings.Join(args, " "), stderr)
+		if strings.Contains(stderr, "is already used by worktree at") {
+			// Probe: the source checkout was on the cycle branch, and the raw
+			// git refusal did not say which checkout to move.
+			err = fmt.Errorf("%w; branch %s is checked out elsewhere (the path git names). Switch that checkout to another branch (for the source checkout: git -C %s switch <base branch>), keeping its uncommitted changes, then rerun execution prepare", err, receipt.Branch, receipt.SourceRoot)
+		}
+		return receipt, err
 	}
 	if _, err := p.inspectExisting(receipt); err != nil {
 		// The worktree was added by this call and has no work in it: remove
