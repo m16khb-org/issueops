@@ -68,11 +68,11 @@ func Resume(existing loopcontract.LoopRun) error {
 func PrepareAttempt(request loopcontract.RecordAttemptRequest) (Attempt, error) {
 	verdict := strings.TrimSpace(request.Verdict)
 	if verdict != "pass" && verdict != "fail" {
-		return Attempt{}, fmt.Errorf("verdict_invalid")
+		return Attempt{}, errVerdictInvalid
 	}
 	evidence := cleanStrings(request.Evidence)
 	if len(evidence) == 0 {
-		return Attempt{}, fmt.Errorf("evidence_required")
+		return Attempt{}, errEvidenceRequired
 	}
 	for i := range evidence {
 		evidence[i] = redactFreeform(evidence[i])
@@ -80,15 +80,22 @@ func PrepareAttempt(request loopcontract.RecordAttemptRequest) (Attempt, error) 
 	return Attempt{verdict: verdict, evidence: evidence}, nil
 }
 
+// Probe (MCP loop_record_attempt verdict "maybe"): bare codes named no valid
+// value. Each code stays the message prefix.
+var (
+	errVerdictInvalid   = fmt.Errorf("verdict_invalid: verdict must be pass or fail")
+	errEvidenceRequired = fmt.Errorf("evidence_required: pass the output you saw when you ran the verify command")
+)
+
 func ApplyAttempt(current loopcontract.LoopRun, attempt Attempt, at string) (loopcontract.LoopRun, error) {
 	if current.Status != "active" {
-		return loopcontract.LoopRun{}, fmt.Errorf("loop_not_active")
+		return loopcontract.LoopRun{}, fmt.Errorf("loop_not_active: loop %s is %s; attempts are recorded only on an active loop (start a new loop under another name)", current.ID, current.Status)
 	}
 	if attempt.verdict != "pass" && attempt.verdict != "fail" {
-		return loopcontract.LoopRun{}, fmt.Errorf("verdict_invalid")
+		return loopcontract.LoopRun{}, errVerdictInvalid
 	}
 	if len(attempt.evidence) == 0 {
-		return loopcontract.LoopRun{}, fmt.Errorf("evidence_required")
+		return loopcontract.LoopRun{}, errEvidenceRequired
 	}
 	next := current
 	next.Attempts = append(append([]loopcontract.LoopAttempt(nil), current.Attempts...), loopcontract.LoopAttempt{
@@ -109,13 +116,13 @@ func Stop(current loopcontract.LoopRun, success bool, reason, at string) (loopco
 	next := current
 	if success {
 		if len(current.Attempts) == 0 || current.Attempts[len(current.Attempts)-1].Verdict != "pass" {
-			return loopcontract.LoopRun{}, fmt.Errorf("loop_success_requires_pass")
+			return loopcontract.LoopRun{}, fmt.Errorf("loop_success_requires_pass: the latest attempt must be a pass; record one with loop record-attempt --verdict pass, or stop with --reason TEXT")
 		}
 		next.Status = "succeeded"
 	} else {
 		reason = redactFreeform(reason)
 		if len(reason) < 10 {
-			return loopcontract.LoopRun{}, fmt.Errorf("stop_reason_too_short")
+			return loopcontract.LoopRun{}, fmt.Errorf("stop_reason_too_short: a non-success stop needs a reason of at least 10 characters")
 		}
 		next.Status = "stopped"
 		next.StopReason = reason

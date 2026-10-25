@@ -38,10 +38,10 @@ func TestApplyAttemptAndStopPreserveTransitionAndInput(t *testing.T) {
 		strings.Contains(next.Attempts[0].Evidence[0], "secret-value") {
 		t.Fatalf("attempt transition changed input or redaction: before=%+v after=%+v", current, next)
 	}
-	if _, err := ApplyAttempt(next, prepared, "later"); err == nil || err.Error() != "loop_not_active" {
+	if _, err := ApplyAttempt(next, prepared, "later"); err == nil || !strings.HasPrefix(err.Error(), "loop_not_active") {
 		t.Fatalf("exhausted loop accepted attempt: %v", err)
 	}
-	if _, err := Stop(current, true, "", "now"); err == nil || err.Error() != "loop_success_requires_pass" {
+	if _, err := Stop(current, true, "", "now"); err == nil || !strings.HasPrefix(err.Error(), "loop_success_requires_pass") {
 		t.Fatalf("pass requirement error=%v", err)
 	}
 	pass, err := PrepareAttempt(loopcontract.RecordAttemptRequest{Verdict: "pass", Evidence: []string{"green"}})
