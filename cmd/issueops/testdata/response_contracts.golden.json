@@ -1846,7 +1846,10 @@
         "ok": false,
         "warnings": []
       },
-      "url": ""
+      "url": "",
+      "warnings": [
+        "issue_state_unread: could not read the state of https://github.com/example/repo/issues/69: gh issue snapshot read failed: command failed after start: unexpected gh call: issue view [REDACTED_URL] --json url,body,state\n exit status 2"
+      ]
     },
     "issueops_remote_reflect_devils_advocate": {
       "ok": true,

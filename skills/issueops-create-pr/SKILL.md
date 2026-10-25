@@ -132,6 +132,9 @@ issueops remote create-pr \
   $ACTOR_FLAGS --json
 ```
 
+preview의 `warnings`에 `issue_closed`가 있으면 confirm하지 않는다. 이슈가 닫힌 이유(마지막 댓글)를 읽고
+사용자에게 다시 열지, 다른 이슈에 연결할지, 사이클을 멈출지 묻는다.
+
 preview와 같은 명령에만 `--confirm`을 추가한다. 성공 후
 `remote verify-artifact`와 provider readback으로 URL, source/target branch,
 Issue linkage, labels, assignee, body를 확인한다.

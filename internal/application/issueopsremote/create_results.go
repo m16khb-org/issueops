@@ -19,4 +19,5 @@ type ChildCreateResult struct {
 type PublicationResult struct {
 	executionissue.IssueProviderCreatePullRequestResult
 	Readability reportcontract.Report `json:"readability"`
+	Warnings    []string              `json:"warnings,omitempty"`
 }

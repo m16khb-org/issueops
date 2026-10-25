@@ -23,7 +23,14 @@ func newPublicationCommand(root string, publish model.RemotePullRequestCreateHan
 	return application.NewPublicationCommandService(core.RemoteRecordStore{StateRoot: root}, application.NewTemplateBodyResolver(os.ReadFile), observe, func(ctx context.Context, actor model.NativeActor) (model.NativeActor, error) {
 		verified, err := issueOpsActorVerifier().Verify(ctx, actor)
 		return verified.Identity, err
-	}, invoke)
+	}, invoke).WithIssueState(func(ctx context.Context, record model.IssueOpsRecord, name string) (string, error) {
+		prov, err := provider.Resolve(name)
+		if err != nil {
+			return "", err
+		}
+		snapshot, err := core.ReadRemoteIssueSnapshot(ctx, prov, executionissue.ExecutionIssueSnapshotRequest{Repo: record.Repo, URL: record.IssueURL})
+		return snapshot.State, err
+	})
 }
 
 func createPublication(ctx context.Context, root string, input application.PublicationInput, publish model.RemotePullRequestCreateHandler, observe application.AncestryObserver) (application.PublicationResult, error) {

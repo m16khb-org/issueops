@@ -9593,6 +9593,8 @@
       "symbols": [
         "func NewPublicationCommandService",
         "func PublicationCommandService.Create",
+        "func PublicationCommandService.WithIssueState",
+        "func PublicationCommandService.issueWarnings",
         "type PublicationCommandService",
         "type PublicationInput",
         "type PublicationInvoker"

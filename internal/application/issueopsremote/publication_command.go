@@ -3,6 +3,7 @@ package issueopsremote
 import (
 	"context"
 	executionissue "issueops/internal/contract/executionissue"
+	"strings"
 
 	model "issueops/internal/contract/issueops"
 	"issueops/internal/domain/artifacttemplate"
@@ -25,6 +26,15 @@ type PublicationCommandService struct {
 	observe   AncestryObserver
 	normalize func(context.Context, model.NativeActor) (model.NativeActor, error)
 	publish   PublicationInvoker
+	// issueState reads the linked issue's provider state for the preview.
+	issueState func(ctx context.Context, record model.IssueOpsRecord, provider string) (string, error)
+}
+
+// WithIssueState lets the preview read the linked issue's state, so a PR is
+// not prepared for an issue someone closed meanwhile without saying so.
+func (s *PublicationCommandService) WithIssueState(read func(ctx context.Context, record model.IssueOpsRecord, provider string) (string, error)) *PublicationCommandService {
+	s.issueState = read
+	return s
 }
 
 func NewPublicationCommandService(records IssueRecordReader, bodies TemplateBodyResolver, observe AncestryObserver, normalize func(context.Context, model.NativeActor) (model.NativeActor, error), publish PublicationInvoker) *PublicationCommandService {
@@ -55,6 +65,9 @@ func (s *PublicationCommandService) Create(ctx context.Context, input Publicatio
 	if err := remote.ValidateConfirmCreateMetadata(req.Confirm, req.Labels, req.Assignees); err != nil {
 		return result, err
 	}
+	if !req.Confirm {
+		result.Warnings = s.issueWarnings(ctx, record, req.Provider)
+	}
 	if req.Confirm {
 		req.Actor.ProcessAncestry, err = s.observe()
 		if err != nil {
@@ -72,4 +85,21 @@ func (s *PublicationCommandService) Create(ctx context.Context, input Publicatio
 	}
 	result.IssueProviderCreatePullRequestResult, err = s.publish(ctx, req)
 	return result, err
+}
+
+// issueWarnings names a linked issue that is no longer open. QA: an issue
+// closed as a duplicate between sessions went unnoticed, and the next session
+// built and published a PR that "Closes" it.
+func (s *PublicationCommandService) issueWarnings(ctx context.Context, record model.IssueOpsRecord, provider string) []string {
+	if s.issueState == nil || strings.TrimSpace(record.IssueURL) == "" {
+		return nil
+	}
+	state, err := s.issueState(ctx, record, provider)
+	if err != nil {
+		return []string{"issue_state_unread: could not read the state of " + record.IssueURL + ": " + err.Error()}
+	}
+	if strings.EqualFold(strings.TrimSpace(state), "closed") {
+		return []string{"issue_closed: " + record.IssueURL + " is closed on the provider. Read why (its last comments) and ask the user before creating a PR for it: reopen it, link another issue, or stop the cycle"}
+	}
+	return nil
 }

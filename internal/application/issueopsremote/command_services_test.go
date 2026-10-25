@@ -447,3 +447,28 @@ func (s *vanishingReviewStore) Update(ctx context.Context, id string, transition
 	s.records[id] = record
 	return s.artifactStoreForTest.Update(ctx, id, transition)
 }
+
+// QA: an issue closed as a duplicate between sessions went unnoticed and the
+// next session published a PR that "Closes" it. The preview names the state.
+func TestPublicationPreviewWarnsWhenTheIssueIsClosed(t *testing.T) {
+	record := publicationRecord()
+	publish := func(context.Context, model.RemotePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
+		return executionissue.IssueProviderCreatePullRequestResult{OK: true, Preview: "preview"}, nil
+	}
+	for _, tc := range []struct {
+		state string
+		err   error
+		want  string
+	}{{"CLOSED", nil, "issue_closed: "}, {"closed", nil, "issue_closed: "}, {"OPEN", nil, ""}, {"", errors.New("gh down"), "issue_state_unread: "}} {
+		store, _ := newArtifactStoreForTest(record)
+		service := NewPublicationCommandService(store, NewTemplateBodyResolver(os.ReadFile), nil, nil, publish).
+			WithIssueState(func(context.Context, model.IssueOpsRecord, string) (string, error) { return tc.state, tc.err })
+		result, err := service.Create(context.Background(), PublicationInput{Request: model.RemotePullRequestRequest{ID: "io-pub", Title: "제목", Body: koreanBody}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tc.want == "" && len(result.Warnings) != 0 || tc.want != "" && (len(result.Warnings) != 1 || !strings.HasPrefix(result.Warnings[0], tc.want)) {
+			t.Fatalf("state %q: warnings %q", tc.state, result.Warnings)
+		}
+	}
+}
