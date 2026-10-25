@@ -9,7 +9,8 @@ description: 'Create and verify the linked GitHub PR or GitLab MR from an IssueO
 Issue와 child는 [`issueops-create-issue`](../issueops-create-issue/SKILL.md)가
 만든다. 전체 lifecycle은 [`issueops`](../issueops/SKILL.md)가 소유한다.
 
-publish는 완료가 아니다. 이 스킬이 만드는 것은 draft이며, 그 draft를 근거로
+publish는 완료가 아니다. 이 스킬이 만드는 것은 draft이며(`--draft` 플래그는 없다. `remote create-pr`이
+항상 draft로 만들고, preview의 provider 명령에 `--draft`가 보인다), 그 draft를 근거로
 완료 증거를 봉인하고 generation을 반납하는 단계는
 [`issueops-complete`](../issueops-complete/SKILL.md)가 소유한다.
 
