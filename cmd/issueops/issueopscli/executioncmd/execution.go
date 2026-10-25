@@ -342,7 +342,9 @@ func nativeSessionIdentityFromEnv(getenv func(string) string) (nativeSessionIden
 		return nativeSessionIdentity{}, fmt.Errorf("native host session identity is ambiguous: %s are all set; a session started from another host's shell inherits its id, so unset the variables of the hosts this session is not (env -u NAME issueops ...)", strings.Join(set, ", "))
 	}
 	if identity.Host == "" {
-		return nativeSessionIdentity{}, fmt.Errorf("native host session identity is unavailable")
+		// Rust QA: whoami run from a python subprocess failed with no hint;
+		// naming the variables shows what the process lost.
+		return nativeSessionIdentity{}, fmt.Errorf("native host session identity is unavailable: none of CODEX_THREAD_ID, CLAUDE_CODE_SESSION_ID, PI_SESSION_ID, ISSUEOPS_OMP_SESSION_ID, OPENCODE_SESSION_ID is set in this process; run issueops from the host's own shell tool (a script or subprocess that drops the environment loses them)")
 	}
 	if identity.SessionID != strings.TrimSpace(identity.SessionID) ||
 		strings.ContainsAny(identity.SessionID, "\r\n\x00") {
