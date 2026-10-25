@@ -2,6 +2,7 @@ package guard
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	guardcontract "issueops/internal/contract/guard"
@@ -30,5 +31,18 @@ func TestServiceSkipsSecretContentObservationAndUsesDomainAnalysis(t *testing.T)
 	}
 	if !reflect.DeepEqual(source.reads, []string{"cmd/app/main.go"}) {
 		t.Fatalf("content reads = %v", source.reads)
+	}
+}
+
+// Probe: `guard check -- leak.txt` answered ok with nothing checked and no
+// hint; an explicitly requested file guard skips is named.
+func TestServiceNamesExplicitFilesItDidNotCheck(t *testing.T) {
+	source := &sourceStub{files: []string{"cmd/app/main.go"}}
+	result := (Service{Source: source}).Check(guardcontract.GuardCheckRequest{RepoRoot: "/repo", Files: []string{"leak.txt", "cmd/app/main.go"}})
+	if len(result.Warnings) != 1 || !strings.HasPrefix(result.Warnings[0], "not checked: leak.txt (") {
+		t.Fatalf("warnings = %q", result.Warnings)
+	}
+	if got := (Service{Source: source}).Check(guardcontract.GuardCheckRequest{RepoRoot: "/repo", Files: source.files}).Warnings; len(got) != 0 {
+		t.Fatalf("all checked: warnings = %q", got)
 	}
 }

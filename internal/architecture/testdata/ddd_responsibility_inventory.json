@@ -8225,6 +8225,7 @@
       "symbols": [
         "func Service.Check",
         "func Service.CheckForCommand",
+        "func skippedFileWarnings",
         "type Service",
         "type Source"
       ]

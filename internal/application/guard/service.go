@@ -1,6 +1,8 @@
 package guard
 
 import (
+	"strings"
+
 	guardcontract "issueops/internal/contract/guard"
 	guarddomain "issueops/internal/domain/guard"
 )
@@ -30,8 +32,28 @@ func (service Service) Check(request guardcontract.GuardCheckRequest) guardcontr
 	analysis := guarddomain.Analyze(observed, existingSymbols)
 	return guardcontract.GuardCheckResult{
 		OK: analysis.OK, RepoRoot: root, Mode: guarddomain.Mode(request), CheckedFiles: files,
-		Findings: analysis.Findings, Summary: analysis.Summary, Warnings: []string{},
+		Findings: analysis.Findings, Summary: analysis.Summary, Warnings: skippedFileWarnings(request.Files, files),
 	}
+}
+
+// skippedFileWarnings names explicitly requested files guard did not read.
+// Probe: `guard check -- leak.txt` answered ok with checked_files [] and no
+// hint that the file was never scanned (.txt is outside guard's scope).
+func skippedFileWarnings(requested, checked []string) []string {
+	seen := map[string]bool{}
+	for _, file := range checked {
+		seen[file] = true
+	}
+	var skipped []string
+	for _, file := range requested {
+		if clean := strings.TrimSpace(file); clean != "" && !seen[clean] {
+			skipped = append(skipped, clean)
+		}
+	}
+	if len(skipped) == 0 {
+		return []string{}
+	}
+	return []string{"not checked: " + strings.Join(skipped, ", ") + " (guard reads repo-relative source, config, and docs files plus secret-like paths; other extensions, absolute paths, and paths outside the repo are skipped)"}
 }
 
 func (service Service) CheckForCommand(request guardcontract.GuardCheckRequest) (guardcontract.GuardCheckResult, error) {

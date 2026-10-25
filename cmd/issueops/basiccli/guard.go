@@ -64,6 +64,9 @@ func (command Command) runGuardCheck(args []string) error {
 			}
 			fmt.Printf("%s %s %s: %s\n", finding.Severity, finding.Rule, location, finding.Message)
 		}
+		for _, warning := range result.Warnings {
+			fmt.Printf("warning: %s\n", warning)
+		}
 	}
 	return checkErr
 }
