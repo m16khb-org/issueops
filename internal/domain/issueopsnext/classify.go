@@ -59,9 +59,10 @@ type Input struct {
 	// WorktreeBranch is the branch checked out in the canonical worktree
 	// ("" when detached or not observed).
 	WorktreeBranch string
-	// MergeInProgress is an unfinished merge in the canonical worktree.
-	MergeInProgress bool
-	SourceRoot      string
+	// GitOperation is an unfinished merge, rebase, cherry-pick or revert in the
+	// canonical worktree ("" when none).
+	GitOperation string
+	SourceRoot   string
 	// ChildGateMissing holds the PR-gate keys of delegated children that are
 	// not integrated yet (child_incomplete:<id>, child_unvalidated:<id>, ...),
 	// observed only for a parent in implement.
@@ -795,6 +796,12 @@ func warnings(in Input) []string {
 	if branch, want := strings.TrimSpace(in.WorktreeBranch), strings.TrimSpace(execution.Workspace.Branch); in.WorktreePresent && branch != "" && want != "" && branch != want {
 		out = append(out, "canonical worktree is on branch "+branch+", not the cycle branch "+want+": switch back with git -C "+strings.TrimSpace(execution.Workspace.Root)+" switch "+want)
 	}
+	switch op := in.GitOperation; op {
+	case "rebase", "cherry-pick", "revert":
+		// issueops never starts these; one left open (detached HEAD for a
+		// rebase) makes every record and seal read a half-applied tree.
+		out = append(out, "a git "+op+" is in progress in the canonical worktree: finish it or run git -C "+strings.TrimSpace(execution.Workspace.Root)+" "+op+" --abort before continuing")
+	}
 	if head := strings.TrimSpace(in.WorktreeHead); head != "" && execution.Completion != nil &&
 		strings.TrimSpace(execution.Completion.FinalHead) != "" &&
 		strings.TrimSpace(execution.Completion.FinalHead) != head {
@@ -970,7 +977,7 @@ func classifyCleanupResume(in Input, decision Decision, index int) (Decision, bo
 // next named link-plan, which would have recorded over conflict markers.
 func classifyMergeInProgress(in Input, decision Decision) (Decision, bool) {
 	execution := in.Record.Execution
-	if !in.MergeInProgress || execution == nil || execution.Lease.Status != issueopsnextcontract.LeaseStatusActive || !holderIsSelf(in) {
+	if in.GitOperation != "merge" || execution == nil || execution.Lease.Status != issueopsnextcontract.LeaseStatusActive || !holderIsSelf(in) {
 		return decision, false
 	}
 	// The work happens in the worktree, as implement's does; no new stage key.

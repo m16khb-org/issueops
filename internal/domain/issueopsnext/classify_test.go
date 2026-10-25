@@ -1090,15 +1090,26 @@ func TestClassifyGrillAfterRegressNamesTheReGrill(t *testing.T) {
 // would have recorded over conflict markers. The holder is sent to finalize.
 func TestClassifyRoutesAnUnfinishedMergeToFinalize(t *testing.T) {
 	in := withSelfHolder(baseRecord(issueopsnextcontract.PhaseImplement))
-	in.MergeInProgress = true
+	in.GitOperation = "merge"
 	got := classifyTemplate(in)
 	if got.Stage.Key != "implement" || !slices.Equal(got.Missing, []string{"merge_in_progress"}) ||
 		!strings.HasPrefix(got.NextCommand, "issueops execution sync-base --id io-test --finalize ") ||
 		!slices.ContainsFunc(got.Warnings, func(w string) bool { return strings.Contains(w, "--abort") }) {
 		t.Fatalf("stage=%q missing=%v command=%q warnings=%q", got.Stage.Key, got.Missing, got.NextCommand, got.Warnings)
 	}
-	in.MergeInProgress = false
+	in.GitOperation = ""
 	if got := classifyTemplate(in); slices.Contains(got.Missing, "merge_in_progress") {
 		t.Fatalf("no merge: %+v", got)
+	}
+}
+
+// A rebase, cherry-pick or revert left open is named with its abort command;
+// issueops never starts one, so next does not route to it.
+func TestClassifyWarnsAboutAnOpenRebase(t *testing.T) {
+	in := withSelfHolder(baseRecord(issueopsnextcontract.PhaseImplement))
+	in.GitOperation = "rebase"
+	want := "a git rebase is in progress in the canonical worktree: finish it or run git -C /repo.worktrees/12-test rebase --abort before continuing"
+	if got := classifyTemplate(in); !slices.Contains(got.Warnings, want) || slices.Contains(got.Missing, "merge_in_progress") {
+		t.Fatalf("warnings=%q missing=%v", got.Warnings, got.Missing)
 	}
 }

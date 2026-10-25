@@ -63,15 +63,15 @@ func issueOpsNextHandler(
 			ClaimActorFlags: func(cwd string) string {
 				return executioncmd.ClaimActorFlags(os.Getenv, issueopscore.ObserveNativeProcessAncestry, cwd)
 			},
-			ProcessLive:     observeIssueOpsHolderLiveness,
-			SourceRoot:      issueopsinventoryoutbound.CleanPath{}.Normalize,
-			CleanPath:       issueopsinventoryoutbound.Canonical,
-			WorktreeState:   git.worktreeState,
-			MergeInProgress: pathutil.GitMergeInProgress,
-			Repository:      git.repository,
-			CurrentBranch:   git.currentBranch,
-			Env:             os.Getenv,
-			Now:             time.Now,
+			ProcessLive:   observeIssueOpsHolderLiveness,
+			SourceRoot:    issueopsinventoryoutbound.CleanPath{}.Normalize,
+			CleanPath:     issueopsinventoryoutbound.Canonical,
+			WorktreeState: git.worktreeState,
+			GitOperation:  pathutil.GitOperationInProgress,
+			Repository:    git.repository,
+			CurrentBranch: git.currentBranch,
+			Env:           os.Getenv,
+			Now:           time.Now,
 		})
 		return issueopsnextinbound.NewNextHandler(service)(stateRoot, cwd, id)
 	}

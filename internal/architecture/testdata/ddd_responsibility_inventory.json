@@ -5036,7 +5036,7 @@
       "symbols": [
         "func CleanAbsPath",
         "func GitBranchFromHead",
-        "func GitMergeInProgress",
+        "func GitOperationInProgress",
         "func PathWithin",
         "func gitDir"
       ]

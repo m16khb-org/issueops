@@ -60,14 +60,22 @@ func gitDir(repo string) string {
 	return gitPath
 }
 
-// GitMergeInProgress reports an unfinished merge (MERGE_HEAD) in a checkout.
-func GitMergeInProgress(repo string) bool {
+// GitOperationInProgress names an unfinished merge, rebase, cherry-pick or
+// revert in a checkout from the state files git leaves behind, or "".
+func GitOperationInProgress(repo string) string {
 	dir := gitDir(repo)
 	if dir == "" {
-		return false
+		return ""
 	}
-	_, err := os.Stat(filepath.Join(dir, "MERGE_HEAD"))
-	return err == nil
+	for _, state := range []struct{ file, operation string }{
+		{"MERGE_HEAD", "merge"}, {"rebase-merge", "rebase"}, {"rebase-apply", "rebase"},
+		{"CHERRY_PICK_HEAD", "cherry-pick"}, {"REVERT_HEAD", "revert"},
+	} {
+		if _, err := os.Stat(filepath.Join(dir, state.file)); err == nil {
+			return state.operation
+		}
+	}
+	return ""
 }
 
 func GitBranchFromHead(repo string) string {
