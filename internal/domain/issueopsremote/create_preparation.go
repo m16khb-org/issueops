@@ -82,7 +82,7 @@ func PrepareCreateRequest(authority CreateBranchAuthority, request CreateRequest
 	request.ProjectKey = EffectiveProjectKey(authority.CodeProjectKey, authority.IssueURL, request.Provider)
 	request.Head, request.Base = strings.TrimSpace(request.Head), strings.TrimSpace(request.Base)
 	if request.ProjectKey == "" || request.Provider != strings.ToLower(strings.TrimSpace(authority.Provider)) || request.Head != authority.WorkspaceBranch || request.Base != strings.TrimSpace(authority.BaseBranch) {
-		return CreateRequest{}, fmt.Errorf("remote create request does not match execution workspace and linked issue authority")
+		return CreateRequest{}, createAuthorityMismatch(authority, request)
 	}
 	request.Title, request.Body = strings.TrimSpace(request.Title), strings.TrimSpace(request.Body)
 	if request.Title == "" || len(request.Title) > 1024 || len(request.Body) > 1<<20 {
@@ -108,4 +108,24 @@ func ValidateCreateHead(head string) error {
 		}
 	}
 	return fmt.Errorf("remote create requires a resolvable canonical worktree HEAD")
+}
+
+// createAuthorityMismatch names the fields that differ. QA: --base main
+// against a cycle prepared on master read only "does not match execution
+// workspace and linked issue authority".
+func createAuthorityMismatch(authority CreateBranchAuthority, request CreateRequest) error {
+	var fields []string
+	if request.ProjectKey == "" {
+		fields = append(fields, "project key unresolved")
+	}
+	if provider := strings.ToLower(strings.TrimSpace(authority.Provider)); request.Provider != provider {
+		fields = append(fields, fmt.Sprintf("provider %q, prepared %q", request.Provider, provider))
+	}
+	if request.Head != authority.WorkspaceBranch {
+		fields = append(fields, fmt.Sprintf("head %q, workspace branch %q", request.Head, authority.WorkspaceBranch))
+	}
+	if base := strings.TrimSpace(authority.BaseBranch); request.Base != base {
+		fields = append(fields, fmt.Sprintf("base %q, prepared base %q (to change the base, see the issueops-prepare base-change reference)", request.Base, base))
+	}
+	return fmt.Errorf("remote create request does not match execution workspace and linked issue authority: %s", strings.Join(fields, "; "))
 }

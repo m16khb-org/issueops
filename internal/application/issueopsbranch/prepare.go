@@ -51,6 +51,9 @@ func (s Preparer) Prepare(ctx context.Context, id string, req model.IssueOpsBran
 		if err != nil {
 			return err
 		}
+		if err := domain.RequireSealedPreparationKept(record, req); err != nil {
+			return err
+		}
 		if err := s.guardBaseChange(record, req); err != nil {
 			return err
 		}

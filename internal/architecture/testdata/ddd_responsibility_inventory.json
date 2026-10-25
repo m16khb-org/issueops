@@ -12942,6 +12942,8 @@
       "symbols": [
         "func AdoptPreparedBranch",
         "func ApplyBranchPreparation",
+        "func BaseRerecordCommand",
+        "func RequireSealedPreparationKept",
         "func ValidatePreparationNames",
         "func ValidatePreparationParentPath",
         "func ValidatePreparationUmbrella"
@@ -14676,6 +14678,7 @@
         "func ValidateCreateHead",
         "func ValidateCreatePending",
         "func ValidateCreateReview",
+        "func createAuthorityMismatch",
         "type CreateAuthority",
         "type CreateBranchAuthority",
         "type CreateRequest"

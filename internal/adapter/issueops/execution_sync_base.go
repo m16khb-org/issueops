@@ -123,7 +123,12 @@ func syncExecutionBase(ctx context.Context, stateRoot string, req issueops.Execu
 		}
 		if slices.Contains(missing, "base_fetch") {
 			// Probed: a base branch deleted on origin showed only "base_fetch".
-			err = fmt.Errorf("%w; git fetch origin %s failed: %s (check that the base branch still exists on origin; if it was merged and deleted, record the PR's new base with issueops branch retarget first)", err, inventory.BaseBranch, strings.TrimSpace(inventory.BaseFetchOutput))
+			remedy := "if it was merged and deleted, record the PR's new base with issueops branch retarget first"
+			if record.RemoteArtifact == nil {
+				// QA: a default branch renamed before the PR; retarget needs a PR.
+				remedy = "if it was renamed or replaced before the PR, re-record the new base keeping the sealed facts: " + issueopsdomain.BaseRerecordCommand(record, "<NEW_BASE>") + ", then rerun this preview"
+			}
+			err = fmt.Errorf("%w; git fetch origin %s failed: %s (check that the base branch still exists on origin; %s)", err, inventory.BaseBranch, strings.TrimSpace(inventory.BaseFetchOutput), remedy)
 		}
 		if slices.Contains(missing, "sealed_base_on_base_tip") {
 			err = fmt.Errorf("%w; origin/%s no longer contains the sealed base %.10s or its content (the base was rewritten, e.g. force-pushed), so merging it would bring the commits the base dropped back through this branch's PR. Stop and ask the user: keep the current base and skip the sync, or start a new cycle from the rewritten base", err, inventory.BaseBranch, inventory.SealedBaseOID)

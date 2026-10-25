@@ -11,5 +11,8 @@
   2. 포함하면, 링크 브랜치가 옛 base에서 만들어졌으므로 옛 base 그대로 `execution prepare`까지 마친다.
   3. lease holder가 worktree에서 `branch prepare`를 새 base로 다시 기록하고 `execution sync-base --preview`로
      병합한다([sync-base 규칙](../../issueops-implement/references/sync-base.md)). 손으로 rebase하지 않는다.
+     다시 기록할 때 `--base-sha`는 옛 봉인 값 그대로 두고 `--link-verified`도 그대로 붙인다(branch prepare는
+     준비 기록 전체를 바꾸므로 빠진 플래그는 지워진다). 빠뜨리면 거부 메시지가 정확한 명령을 돌려준다.
+     기본 브랜치 이름이 바뀐 경우(master → main)도 같은 길이다.
 - PR/MR을 만든 뒤: provider에서 대상 브랜치를 바꾸고 `issueops branch retarget --id ID --base-branch REF
   --reason TEXT $RECORD_ACTOR_FLAGS`로 기록한다.

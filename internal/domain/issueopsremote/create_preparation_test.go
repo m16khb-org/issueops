@@ -67,8 +67,8 @@ func TestPrepareCreateRequestBindsBranchAndCanonicalMetadata(t *testing.T) {
 		want   string
 	}{
 		{"unprepared", func(a *CreateBranchAuthority, _ *CreateRequest) { a.Prepared = false }, false, "branch preparation"},
-		{"head", func(_ *CreateBranchAuthority, c *CreateRequest) { c.Head = "other" }, false, "linked issue authority"},
-		{"base", func(_ *CreateBranchAuthority, c *CreateRequest) { c.Base = "other" }, false, "linked issue authority"},
+		{"head", func(_ *CreateBranchAuthority, c *CreateRequest) { c.Head = "other" }, false, `head "other", workspace branch`},
+		{"base", func(_ *CreateBranchAuthority, c *CreateRequest) { c.Base = "other" }, false, `base "other", prepared base`},
 		{"title", func(_ *CreateBranchAuthority, c *CreateRequest) { c.Title = " " }, false, "title is required"},
 		{"body limit", func(_ *CreateBranchAuthority, c *CreateRequest) { c.Body = strings.Repeat("x", 1<<20+1) }, true, "body must not exceed"},
 		{"secret", func(_ *CreateBranchAuthority, _ *CreateRequest) {}, true, "secret-like content"},
