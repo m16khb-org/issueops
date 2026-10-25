@@ -57,7 +57,11 @@ func DecideCheck(expect, stdout, stderr string, exitCode int, timedOut bool) Che
 		decision.Error = fmt.Sprintf("exit code %d: %s", exitCode, evidence)
 	case strings.TrimSpace(expect) != "" && !ExpectMatches(expect, output):
 		decision.Error = "expect not matched: " + evidence
-		if trimmed := strings.TrimSpace(expect); !strings.HasPrefix(trimmed, "/") && literalLooksLikeRegex(trimmed) {
+		if truncatedOutput(stdout) || truncatedOutput(stderr) {
+			// Probe: a summary line after 32 KiB of output was cut off, so an
+			// EXPECT on it could never match.
+			decision.Error += " (the output was truncated and only its head was kept, so a summary line at the end is lost; wrap the command so it prints one short result line, as gates-ledger shows)"
+		} else if trimmed := strings.TrimSpace(expect); !strings.HasPrefix(trimmed, "/") && literalLooksLikeRegex(trimmed) {
 			decision.Error += " (EXPECT is matched as a literal line; write /" + trimmed + "/ for a regex)"
 		} else if line, ok := lineStartingWith(output, trimmed); ok && !strings.HasPrefix(trimmed, "/") {
 			// QA: `EXPECT: PASS` against "PASS: ..." read as a substring
@@ -129,4 +133,10 @@ func matchedLine(expect, output string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// truncatedOutput reports the "<truncated>" marker the policy runner appends
+// after cutting an output stream.
+func truncatedOutput(stream string) bool {
+	return strings.HasSuffix(strings.TrimRight(stream, "\n"), "\n<truncated>")
 }

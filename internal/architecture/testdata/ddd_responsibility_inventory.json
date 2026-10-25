@@ -12656,6 +12656,7 @@
         "func lineContaining",
         "func lineStartingWith",
         "func matchedLine",
+        "func truncatedOutput",
         "type CheckDecision"
       ]
     },

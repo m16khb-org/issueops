@@ -90,3 +90,14 @@ func TestDecideCheckNamesALineThatContainsExpectMidLine(t *testing.T) {
 		t.Fatalf("decision = %+v", got)
 	}
 }
+
+// Probe: the summary after 32 KiB of output was cut, so EXPECT could not match.
+func TestDecideCheckNamesTruncatedOutput(t *testing.T) {
+	got := DecideCheck("ALL_PASS", "1111\n2222\n<truncated>\n", "", 0, false)
+	if got.Passed || !strings.Contains(got.Error, "the output was truncated") {
+		t.Fatalf("decision = %+v", got)
+	}
+	if got := DecideCheck("ALL_PASS", "line mentioning <truncated> inside\n", "", 0, false); strings.Contains(got.Error, "was truncated") {
+		t.Fatalf("a literal marker mid-output is not truncation: %+v", got)
+	}
+}
