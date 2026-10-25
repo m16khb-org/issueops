@@ -106,7 +106,7 @@ issueops remote merge-pr --id "$ISSUEOPS_ID" --json
 | `merge_conflict` | base와 충돌한다 | base를 먼저 동기화한 뒤 사이클을 다시 연다 |
 | `merge_blocked` | 리뷰 승인이나 브랜치 보호가 막는다. 변경 요청(`CHANGES_REQUESTED`·`requested_changes`)도 여기다 | 지적을 반영해야 하면 아래 복구 절차의 **코드 결함** 갈래로 사이클을 다시 연다. 반영 뒤에도 리뷰어가 provider에서 재승인하거나 dismiss해야 풀린다. 사람이 해결한 뒤 미리보기를 다시 실행한다. `--admin`으로 우회하지 않는다 |
 | `base_mismatch` | provider가 PR 대상 브랜치를 바꿨다(쌓은 부모 브랜치가 머지·삭제됨) | 메시지의 `branch retarget`으로 새 base를 기록하고 `merge_conflict`와 같은 동기화 경로를 밟는다 |
-| `pr_not_open` | PR/MR이 닫혔다 | 멈춘다. 폐기할지는 사용자가 정하고 [`issueops-abandon`](../issueops-abandon/SKILL.md)이 맡는다 |
+| `pr_not_open` | PR/MR이 닫혔다 | 멈춘다. 폐기할지는 사용자가 정하고 [`issueops-abandon`](../issueops-abandon/SKILL.md)이 맡는다. 재오픈은 [재오픈 조건](references/blocker-recovery.md#닫힌-prmr-재오픈)을 따른다 |
 
 `checks_failing`·`head_mismatch`·`merge_conflict`·`base_mismatch`·`merge_blocked`의 복구 절차(일시적 실패 재실행, reseed로 사이클 다시 열기,
 base 동기화)는 [차단 사유별 복구 절차](references/blocker-recovery.md)(`issueops-merge/references/blocker-recovery.md`)를 읽고 따른다.

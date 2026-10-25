@@ -47,3 +47,16 @@ sync-base는 replace와 달리 canonical worktree에서 실행한다(소스 체�
 `--finalize` 명령을 실행한다. 의도가 갈려 판단할 수 없으면 `--abort`로 되돌리고 사용자에게 묻는다.
 동기화가 PR head를 옮기므로 그 뒤의 미리보기는 `head_mismatch`를 보고한다. 그때 위의
 reseed 경로로 사이클을 다시 열어 검증과 완료를 새 head로 다시 받는다.
+
+## 닫힌 PR/MR 재오픈
+
+issueops에는 재오픈 명령이 없다. 아래 조건을 모두 만족할 때만 provider CLI로 다시 연다.
+
+1. 사용자가 record의 PR/MR을 번호(같은 저장소)나 URL로 지목해 재오픈을 승인했다. merge 승인이나 원래 요청은
+   재오픈 승인이 아니다. 지목한 PR이 record와 다르거나 모호하면 다시 확인받는다.
+2. 누가 왜 닫았는지(타임라인·닫기 코멘트)를 사용자에게 보여 줬다. 다른 사람이 일부러 닫았으면 그 사실을 알린
+   뒤 승인을 받는다.
+3. 원격 브랜치가 있고, 그 head가 completion head와 같다. 브랜치가 없거나 head가 다르면 재오픈하지 않고 멈춘다.
+
+그다음 `gh pr reopen <URL>` 또는 `glab mr reopen <URL>`을 실행하고 3단계 미리보기부터 다시 한다. 재오픈한 PR의
+merge에는 4절의 확인 생략 예외를 쓰지 않는다. 확인을 다시 받는다.
