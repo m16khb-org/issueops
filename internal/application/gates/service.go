@@ -57,7 +57,7 @@ func (service Service) Check(request gatescontract.CheckRequest) (gatescontract.
 }
 
 func (service Service) checkFile(root, cwd string, request gatescontract.CheckRequest, file string) (gatescontract.FileResult, []string) {
-	fileResult := gatescontract.FileResult{File: file}
+	fileResult := gatescontract.FileResult{File: file, Gates: []gatescontract.GateResult{}}
 	warnings := []string{}
 	data, err := service.Store.Read(file)
 	if err != nil {

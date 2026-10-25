@@ -196,3 +196,15 @@ func TestGatesCLIReportListsEvidenceAndAbandons(t *testing.T) {
 		}
 	}
 }
+
+// Probe: a missing --file ended with "0 unmet gate(s) remain", which reads
+// as nothing left to do; the summary names the unreadable file instead.
+func TestUnmetErrorNamesUnreadableGateFiles(t *testing.T) {
+	result := gatescontract.CheckResult{TotalUnmet: 0, Files: []gatescontract.FileResult{{File: "a.md", Error: "open a.md: no such file"}, {File: "b.md"}}}
+	if got := unmetError(result).Error(); got != "1 gate file(s) could not be read (see the error above); 0 unmet gate(s) in the rest" {
+		t.Fatalf("got %q", got)
+	}
+	if got := unmetError(gatescontract.CheckResult{TotalUnmet: 2}).Error(); got != "2 unmet gate(s) remain" {
+		t.Fatalf("got %q", got)
+	}
+}

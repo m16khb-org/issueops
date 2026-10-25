@@ -264,6 +264,7 @@
         "func runLint",
         "func runReport",
         "func splitCSV",
+        "func unmetError",
         "type Dependencies",
         "type LintError",
         "type UnmetError",

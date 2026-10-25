@@ -17,11 +17,27 @@ import (
 
 // UnmetError는 게이트가 남아있는 상태의 종료 오류이다(exit 1).
 type UnmetError struct {
-	Unmet int
+	Unmet      int
+	Unreadable int
 }
 
 func (e UnmetError) Error() string {
+	if e.Unreadable > 0 {
+		// Probe: a missing --file ended with "0 unmet gate(s) remain",
+		// which reads as nothing left to do.
+		return fmt.Sprintf("%d gate file(s) could not be read (see the error above); %d unmet gate(s) in the rest", e.Unreadable, e.Unmet)
+	}
 	return fmt.Sprintf("%d unmet gate(s) remain", e.Unmet)
+}
+
+func unmetError(result gatescontract.CheckResult) UnmetError {
+	failure := UnmetError{Unmet: result.TotalUnmet}
+	for _, file := range result.Files {
+		if file.Error != "" {
+			failure.Unreadable++
+		}
+	}
+	return failure
 }
 
 // UsageError는 잘못된 사용법 오류이다(exit 2).
@@ -154,7 +170,7 @@ func runCheck(deps Dependencies, args []string, statusOnly bool) error {
 		return classifyCheckError(err)
 	}
 	if !result.Complete {
-		return reportedIf(jsonOut, UnmetError{Unmet: result.TotalUnmet})
+		return reportedIf(jsonOut, unmetError(result))
 	}
 	return nil
 }
@@ -185,7 +201,7 @@ func runReport(deps Dependencies, args []string) error {
 		return classifyCheckError(err)
 	}
 	if !result.Complete {
-		return reportedIf(jsonOut, UnmetError{Unmet: result.TotalUnmet})
+		return reportedIf(jsonOut, unmetError(result))
 	}
 	return nil
 }
