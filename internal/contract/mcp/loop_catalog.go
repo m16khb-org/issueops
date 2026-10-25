@@ -19,7 +19,7 @@ func LoopTools() []Tool {
 				"repo":         stringProp("Repository path."),
 				"name":         stringProp("Stable loop name. Same repo+name resumes an active loop."),
 				"goal":         stringProp("Loop goal text."),
-				"verify_argv":  stringArrayProp("Command argv to record as intended verification; harness never executes it."),
+				"verify_argv":  stringArrayProp("Verification argv you run yourself; the harness records it and never runs it."),
 				"max_attempts": map[string]any{"type": "integer", "description": "Maximum fail attempts before auto-exhaustion."},
 			}},
 		},
@@ -30,7 +30,7 @@ func LoopTools() []Tool {
 			InputSchema: map[string]any{"type": "object", "required": []string{"id", "verdict", "evidence"}, "properties": map[string]any{
 				"id":       stringProp("Loop id."),
 				"verdict":  stringProp("Attempt verdict: pass or fail."),
-				"evidence": stringArrayProp("Observable evidence for this attempt."),
+				"evidence": stringArrayProp("Output you saw when you ran the verify command."),
 			}},
 		},
 		{

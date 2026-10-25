@@ -1133,7 +1133,7 @@
           "type": "string"
         },
         "verify_argv": {
-          "description": "Command argv to record as intended verification; harness never executes it.",
+          "description": "Verification argv you run yourself; the harness records it and never runs it.",
           "items": {
             "type": "string"
           },
@@ -1169,7 +1169,7 @@
           "type": "string"
         },
         "evidence": {
-          "description": "Observable evidence for this attempt.",
+          "description": "Output you saw when you ran the verify command.",
           "items": {
             "type": "string"
           },
