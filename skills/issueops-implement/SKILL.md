@@ -97,8 +97,7 @@ issueops phase --id "$ISSUEOPS_ID" --to implement $RECORD_ACTOR_FLAGS --json
 
 blocker가 하나라도 있으면 compatibility review는 승인되지 않는다. blocker를 먼저 없앤다.
 
-저장소에 `.gitmodules`가 있으면 worktree에서 `git submodule update --init`을 먼저 한다. worktree는 submodule을
-빈 디렉터리로 만들므로, 그대로 두면 테스트가 엉뚱한 이유로 실패한다. 초기화해도 `git status`는 깨끗하다.
+저장소에 `.gitmodules`가 있거나 source checkout이 sparse checkout이면 [저장소 형태별 준비](references/repo-shapes.md)를 따른다.
 
 compatibility review를 기록하기 전에 계획이 고치거나 재사용한다고 적은 코드를 열어 계획의 단언을 확인한다. 계획이 문서 규칙이나 실제 코드와 충돌하면 구현하지 않고 `--blocker`로 기록해 [`issueops-plan`](../issueops-plan/SKILL.md)의 검토 루프로 돌려보낸다. 충돌 기록 절차는 [근거 확인 규칙](references/plan-conflict-evidence.md)을 읽고 따른다.
 
