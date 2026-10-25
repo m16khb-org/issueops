@@ -12,8 +12,10 @@ type PRGitObservations interface {
 	Branch(string) string
 	Clean(string) bool
 	BaseAdvanced(root, ref string) bool
-	// Contains reports whether ref contains (descends from) commit.
-	Contains(root, ref, commit string) bool
+	// IsAncestor reports whether commit is an ancestor of ref.
+	IsAncestor(root, commit, ref string) bool
+	// ContentAbsorbed reports whether merging commit into ref changes nothing.
+	ContentAbsorbed(root, ref, commit string) bool
 	Upstream(string) string
 	Fetch(string) review.UpstreamFetch
 	Counts(string) string

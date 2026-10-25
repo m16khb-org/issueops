@@ -52,8 +52,10 @@ type fakeSyncBaseGit struct {
 	// overriding the per-ancestor answer above.
 	notAncestor map[string]bool
 
-	fetchCode     int
-	fetchOut      string
+	fetchCode int
+	fetchOut  string
+	// trees answers rev-parse <oid>^{tree}.
+	trees         map[string]string
 	mergeTreeCode int
 	mergeTreeOut  string
 	mergeCode     int
@@ -140,6 +142,9 @@ func (g *fakeSyncBaseGit) revParse(args []string) (int, string) {
 	case "FETCH_HEAD":
 		return 0, g.fetchHeadOID
 	default:
+		if tree, ok := g.trees[target]; ok {
+			return 0, tree
+		}
 		return 0, ""
 	}
 }
@@ -1011,5 +1016,53 @@ func TestExecutionSyncBaseFetchFailureNamesGitsMessage(t *testing.T) {
 	_, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBasePreview))
 	if err == nil || !strings.Contains(err.Error(), "base_fetch; git fetch origin") || !strings.Contains(err.Error(), "couldn't find remote ref main") {
 		t.Fatalf("preview with a failed base fetch = %v", err)
+	}
+}
+
+// Stacked QA: the parent PR was squash-merged and the branch retargeted to
+// main, so the sealed base (the parent's tip) is not an ancestor of main,
+// but its content is in main. Merging main brings only this cycle's change.
+// Without a retarget the same tree-equal shape is a same-branch history
+// rewrite (a purge) and stays refused; a base tip merged in earlier that the
+// new base dropped is refused too.
+func TestExecutionSyncBaseAcceptsASquashMergedParentOnlyAfterARetarget(t *testing.T) {
+	t.Parallel()
+
+	setup := func(t *testing.T, name string, retarget bool, mergedEarlier string) syncBaseFixture {
+		fixture := newReleasedSyncBaseFixture(t, name)
+		fixture.rewrite(t, func(r *issueops.IssueOpsRecord) {
+			if retarget {
+				url := ""
+				if r.RemoteArtifact != nil {
+					url = r.RemoteArtifact.URL
+				}
+				r.BranchPrepare.Retargets = []issueops.IssueOpsBranchRetarget{{FromBase: "parent", ToBase: r.BranchPrepare.BaseBranch, Reason: "parent squash-merged", ArtifactURL: url, ObservedAt: "2026-07-25T00:00:00Z"}}
+			}
+			if mergedEarlier != "" {
+				r.Execution.SyncBaseEvents = []issueops.ExecutionSyncBaseEvent{{Mode: issueops.ExecutionSyncBaseEventApply, BaseBranch: "parent", BaseOID: mergedEarlier, MergeCommit: strings.Repeat("c", 40), Actor: "codex", At: "2026-07-25T00:00:00Z"}}
+			}
+		})
+		sealed := fixture.record.BranchPrepare.BaseSHA
+		fixture.git.notAncestor = map[string]bool{sealed + ".." + syncBaseBaseOID: true, strings.Repeat("a", 40) + ".." + syncBaseBaseOID: true}
+		fixture.git.mergeTreeOut = "basetree\n"
+		fixture.git.trees = map[string]string{syncBaseBaseOID + "^{tree}": "basetree"}
+		return fixture
+	}
+	fixture := setup(t, "114-stacked", true, "")
+	if result, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBasePreview)); err != nil || !result.MergeNeeded {
+		t.Fatalf("retargeted squash-merged parent = %+v, %v", result, err)
+	}
+	fixture = setup(t, "114-purge", false, "")
+	if _, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBasePreview)); err == nil || !strings.Contains(err.Error(), "sealed_base_on_base_tip") {
+		t.Fatalf("same-branch tree-equal rewrite must stay refused: %v", err)
+	}
+	// The sealed base is held by ancestry; a parent tip merged in earlier is
+	// neither an ancestor of main nor held by content (the parent dropped
+	// something before its squash merge).
+	fixture = setup(t, "114-earlier", true, strings.Repeat("a", 40))
+	fixture.git.notAncestor = map[string]bool{strings.Repeat("a", 40) + ".." + syncBaseBaseOID: true}
+	fixture.git.mergeTreeOut = "othertree\n"
+	if _, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBasePreview)); err == nil || !strings.Contains(err.Error(), "sealed_base_on_base_tip") {
+		t.Fatalf("an earlier merged base tip the new base dropped must be refused: %v", err)
 	}
 }

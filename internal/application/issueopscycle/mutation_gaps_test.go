@@ -200,7 +200,8 @@ func TestAdvanceReportWritesTrackedMaterialsWhenEnteringImplementIfHookWired(t *
 
 type rewrittenBaseGit struct{ baseAdvancedGit }
 
-func (g *rewrittenBaseGit) Contains(string, string, string) bool { return false }
+func (g *rewrittenBaseGit) IsAncestor(string, string, string) bool      { return false }
+func (g *rewrittenBaseGit) ContentAbsorbed(string, string, string) bool { return false }
 
 // Probed: origin/main was force-pushed past the sealed base; readiness
 // pointed at sync-base as for an advanced base, while the PR would carry

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"issueops/internal/contract/issueops"
+	issueopsdomain "issueops/internal/domain/issueops"
 	basesyncdomain "issueops/internal/domain/issueopsbasesync"
 )
 
@@ -32,6 +33,7 @@ func fillExecutionSyncBaseInventory(inventory *executionSyncBaseInventory, recor
 	if record.BranchPrepare != nil {
 		inventory.BaseBranch = strings.TrimSpace(record.BranchPrepare.BaseBranch)
 		inventory.SealedBaseOID = strings.TrimSpace(record.BranchPrepare.BaseSHA)
+		inventory.WorkBaseCommits = issueopsdomain.BaseCommitsInWork(record)
 	}
 }
 
@@ -184,16 +186,28 @@ func (g *executionSyncBaseGateRun) observeAncestry() {
 	}
 }
 
-// checkSealedBaseKept refuses a merge from a base tip that no longer
-// contains the sealed base. Probed: after main was force-pushed (B dropped,
+// checkSealedBaseKept refuses a merge from a base tip that does not hold the
+// branch's base-side commits (issueopsdomain.BaseHoldsWorkBase). Probed: after main was force-pushed (B dropped,
 // C added), preview offered a clean merge, and the PR would have carried B
 // back into main. finalize reads MERGE_HEAD and is not checked here.
 func (g *executionSyncBaseGateRun) checkSealedBaseKept() {
 	inv := g.inventory
-	if g.mode != issueops.ExecutionSyncBasePreview && g.mode != issueops.ExecutionSyncBaseApply || inv.SealedBaseOID == "" {
+	if g.mode != issueops.ExecutionSyncBasePreview && g.mode != issueops.ExecutionSyncBaseApply || len(inv.WorkBaseCommits) == 0 {
 		return
 	}
-	if code, _ := g.deps.Git(g.ctx, inv.Root, "merge-base", "--is-ancestor", inv.SealedBaseOID, inv.BaseOID); code != 0 {
+	ancestor := func(commit string) bool {
+		code, _ := g.deps.Git(g.ctx, inv.Root, "merge-base", "--is-ancestor", commit, inv.BaseOID)
+		return code == 0
+	}
+	absorbed := func(commit string) bool {
+		code, merged := g.deps.Git(g.ctx, inv.Root, "merge-tree", "--write-tree", inv.BaseOID, commit)
+		if code != 0 || firstLine(merged) == "" {
+			return false
+		}
+		treeCode, tree := g.deps.Git(g.ctx, inv.Root, "rev-parse", "--verify", inv.BaseOID+"^{tree}")
+		return treeCode == 0 && firstLine(merged) == strings.TrimSpace(tree)
+	}
+	if !issueopsdomain.BaseHoldsWorkBase(inv.WorkBaseCommits, ancestor, absorbed) {
 		g.missing = append(g.missing, "sealed_base_on_base_tip")
 	}
 }
@@ -211,4 +225,9 @@ func (g *executionSyncBaseGateRun) predictConflicts() {
 	} else {
 		g.result.ConflictFiles = conflicts
 	}
+}
+
+func firstLine(out string) string {
+	line, _, _ := strings.Cut(strings.TrimSpace(out), "\n")
+	return strings.TrimSpace(line)
 }

@@ -16,6 +16,7 @@ issueops execution sync-base --id "$ISSUEOPS_ID" --preview $ACTOR_FLAGS --json
   `## 하위 호환성과 side effect` 절에 적는다. 이미 추적 중인 미커밋 변경이 있으면
   `worktree_clean`으로 거부되므로 변경이 없는 이 시점에 한다.
 - `conflict_files`가 있으면 계획의 영향 범위를 다시 보고 사용자에게 알린다.
-- `sealed_base_on_base_tip`으로 거부되면 base가 다시 쓰였다(force-push 등). 병합하면 base가 뺀 커밋이
+- `sealed_base_on_base_tip`으로 거부되면 base가 다시 쓰였다(force-push 등). 쌓은 부모 PR이 squash merge된 뒤
+  PR을 retarget(`branch retarget`)한 경우는 부모 내용이 새 base에 있으면 거부하지 않는다. 병합하면 base가 뺀 커밋이
   PR로 되살아나므로 사용자에게 묻는다: 동기화 없이 진행할지, 새 base에서 새 사이클을 시작할지.
 - rebase하지 않는다. 봉인된 base identity와 기존 증거를 보존한다.

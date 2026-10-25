@@ -4749,6 +4749,7 @@
         "func executionSyncBaseGateRun.startBaseFetch",
         "func executionSyncBaseRecordFacts",
         "func fillExecutionSyncBaseInventory",
+        "func firstLine",
         "type executionSyncBaseGateRun"
       ]
     },
@@ -5056,10 +5057,11 @@
         "func ReadinessGit.BaseAdvanced",
         "func ReadinessGit.Branch",
         "func ReadinessGit.Clean",
-        "func ReadinessGit.Contains",
+        "func ReadinessGit.ContentAbsorbed",
         "func ReadinessGit.Counts",
         "func ReadinessGit.Fetch",
         "func ReadinessGit.Head",
+        "func ReadinessGit.IsAncestor",
         "func ReadinessGit.IsWorktree",
         "func ReadinessGit.Root",
         "func ReadinessGit.Upstream",
@@ -13153,7 +13155,6 @@
         "func CleanupFinishTargets",
         "func PreparedBaseBranch",
         "func PreparedBaseRef",
-        "func PreparedBaseSHA",
         "func ValidateCleanupSupersedeInput",
         "func cleanupFinishBaseMissing",
         "func cleanupFinishBranchMissing",
@@ -13410,6 +13411,16 @@
         "func manualClaimCandidates",
         "func manualClaimFromHolderProcess",
         "func manualOwnerClaimObservation"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/held_base.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func BaseCommitsInWork",
+        "func BaseHoldsWorkBase",
+        "type WorkBaseCommit"
       ]
     },
     {

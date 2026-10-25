@@ -123,8 +123,10 @@ func (s Readiness) observePR(record model.IssueOpsRecord, fetch func(string) rev
 			ref := "origin/" + base
 			if s.Git.BaseAdvanced(root, ref) {
 				facts.BaseRemoteRef, facts.BaseAdvanced = ref, true
-				if sealed := domain.PreparedBaseSHA(record); sealed != "" {
-					facts.BaseRewritten = !s.Git.Contains(root, ref, sealed)
+				if commits := domain.BaseCommitsInWork(record); len(commits) > 0 {
+					facts.BaseRewritten = !domain.BaseHoldsWorkBase(commits,
+						func(commit string) bool { return s.Git.IsAncestor(root, commit, ref) },
+						func(commit string) bool { return s.Git.ContentAbsorbed(root, ref, commit) })
 				}
 			}
 		}

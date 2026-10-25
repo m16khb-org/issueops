@@ -163,8 +163,8 @@ func (s Preparer) guardBaseChange(record model.IssueOpsRecord, req model.IssueOp
 		return fmt.Errorf("base change after execution prepare: %w", err)
 	}
 	if !contains {
-		return fmt.Errorf("new base %s (%s) does not contain the old base %s (%s) the worktree branch was cut from; merging it with sync-base would carry the old base's extra commits into the PR. Start a new cycle from %s instead (end this one with exits.abandon_command), or keep %s",
-			req.BaseBranch, shortOID(req.BaseSHA), prior.BaseBranch, shortOID(prior.BaseSHA), req.BaseBranch, prior.BaseBranch)
+		return fmt.Errorf("new base %s (%s) does not contain the old base %s (%s) the worktree branch was cut from; merging it with sync-base would carry the old base's extra commits into the PR. Start a new cycle from %s instead (end this one with exits.abandon_command), or keep %s. If %s was squash-merged into %s (stacked work), keep it as the base, open the PR against it, and retarget the PR afterwards (branch retarget keeps the fork point)",
+			req.BaseBranch, shortOID(req.BaseSHA), prior.BaseBranch, shortOID(prior.BaseSHA), req.BaseBranch, prior.BaseBranch, prior.BaseBranch, req.BaseBranch)
 	}
 	return nil
 }
