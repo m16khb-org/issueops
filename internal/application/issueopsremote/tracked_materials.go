@@ -67,6 +67,11 @@ func (s TrackedMaterials) Write(record issueops.IssueOpsRecord) issueops.IssueOp
 		}
 		out.Written = append(out.Written, dir+"/"+material.name)
 	}
+	if len(out.Written) > 0 && s.Files.Ignored(root, out.Written[0]) {
+		// Probe: a repository that ignores .issueops/ silently kept the
+		// tracked copies out of every commit, so the PR had no plan or ledger.
+		out.Warnings = append(out.Warnings, "tracked_materials_ignored: "+dir+"/ is ignored by this repository's .gitignore, so the plan, gates ledger and report will not reach the PR; ask the user whether to un-ignore it (for example .issueops/* with !.issueops/issues/ in .gitignore) or keep them local")
+	}
 	return out
 }
 
@@ -167,6 +172,8 @@ type MaterialFiles interface {
 	MkdirAll(string, fs.FileMode) error
 	Stat(string) (fs.FileInfo, error)
 	ArtifactPath(issueops.IssueOpsRecord, string, string) string
+	// Ignored reports whether the repository at root ignores rel.
+	Ignored(root, rel string) bool
 }
 type TrackedMaterials struct{ Files MaterialFiles }
 

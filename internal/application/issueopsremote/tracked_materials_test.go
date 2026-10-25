@@ -15,7 +15,10 @@ type memoryMaterialFiles struct {
 	files    map[string][]byte
 	writeErr map[string]error
 	writes   []string
+	ignored  bool
 }
+
+func (f *memoryMaterialFiles) Ignored(string, string) bool { return f.ignored }
 
 func newMemoryMaterialFiles() *memoryMaterialFiles {
 	return &memoryMaterialFiles{files: map[string][]byte{}, writeErr: map[string]error{}}
@@ -196,5 +199,17 @@ func TestTrackedMaterialsMissingDetectsLegacyCycles(t *testing.T) {
 	}
 	if svc.Missing(model.IssueOpsRecord{}) {
 		t.Fatal("record without workspace cannot be missing copies")
+	}
+}
+
+// Probe: a repository that ignores .issueops/ kept the copies out of every
+// commit; the write names it once.
+func TestTrackedMaterialsWriteWarnsWhenTheRepositoryIgnoresTheCopies(t *testing.T) {
+	files := newMemoryMaterialFiles()
+	files.files[trackedSealed+"/plan.md"] = []byte("# plan\n")
+	files.ignored = true
+	got := TrackedMaterials{Files: files}.Write(trackedRecord())
+	if len(got.Written) != 1 || len(got.Warnings) != 1 || !strings.HasPrefix(got.Warnings[0], "tracked_materials_ignored: .issueops/issues/7/ is ignored") {
+		t.Fatalf("got=%+v", got)
 	}
 }

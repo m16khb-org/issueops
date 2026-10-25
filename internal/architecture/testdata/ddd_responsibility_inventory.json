@@ -4990,6 +4990,7 @@
       "task": "T20",
       "symbols": [
         "func MaterialFiles.ArtifactPath",
+        "func MaterialFiles.Ignored",
         "func MaterialFiles.Join",
         "func MaterialFiles.MkdirAll",
         "func MaterialFiles.Parent",
