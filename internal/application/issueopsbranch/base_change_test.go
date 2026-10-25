@@ -21,6 +21,12 @@ func TestGuardBaseChangeRefusesABaseWithoutTheOldOne(t *testing.T) {
 	}
 	record.Execution = nil
 	if err := s.guardBaseChange(record, model.IssueOpsBranchPrepareRequest{BaseBranch: "develop", BaseSHA: "diverged"}); err != nil {
-		t.Fatalf("before execution prepare any base is fine: %v", err)
+		t.Fatalf("before the branch link any base is fine: %v", err)
+	}
+	// The provider branch was cut from the old base: no new base_sha until
+	// execution prepare has checked it out.
+	record.BranchPrepare.LinkVerified = true
+	if err := s.guardBaseChange(record, model.IssueOpsBranchPrepareRequest{BaseBranch: "main", BaseSHA: "ahead"}); err == nil || !strings.Contains(err.Error(), "linked branch") {
+		t.Fatalf("linked branch at old base: %v", err)
 	}
 }

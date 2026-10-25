@@ -60,9 +60,10 @@ issueops next --id "$ISSUEOPS_ID" --json
 
 준비가 끝난 뒤 base를 바꿔야 하면(예: main → develop) 단계에 따라 길이 다르다.
 
-- PR/MR을 만들기 전: lease holder가 같은 branch로 `branch prepare`를 새 `--base-branch`·`--base-sha`로
-  다시 기록한다(링크 확인 포함, lease가 있으면 worktree에서 그 actor로). worktree가 이미 있으면
-  이어서 `execution sync-base --preview`로 새 base를 병합한다([sync-base 규칙](../issueops-implement/references/sync-base.md)).
+- 링크 브랜치를 만들기 전: 새 `--base-branch`·`--base-sha`로 `branch prepare`를 다시 기록하면 된다.
+- 링크 브랜치를 만든 뒤, PR/MR 전: 링크 브랜치가 옛 base에서 만들어졌으므로 먼저 옛 base 그대로
+  `execution prepare`까지 마친다. 그다음 lease holder가 worktree에서 `branch prepare`를 새 base로 다시
+  기록하고 `execution sync-base --preview`로 병합한다([sync-base 규칙](../issueops-implement/references/sync-base.md)).
   손으로 rebase하지 않는다. 새 base가 옛 base를 포함하지 않으면(main과 갈라진 develop) 병합이 옛 base의
   커밋을 PR에 싣게 되므로 `branch prepare`가 거부한다. 그때는 이 사이클을 폐기하고 새 base에서 새 사이클을 시작한다.
 - PR/MR을 만든 뒤: provider에서 대상 브랜치를 바꾸고 `issueops branch retarget --id ID --base-branch REF

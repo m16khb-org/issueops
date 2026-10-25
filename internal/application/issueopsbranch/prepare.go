@@ -142,8 +142,18 @@ func (s Preparer) resolveBaseSHA(repo, baseSHA string) (string, error) {
 // (probed: m.txt from main showed up in the develop diff).
 func (s Preparer) guardBaseChange(record model.IssueOpsRecord, req model.IssueOpsBranchPrepareRequest) error {
 	prior := record.BranchPrepare
-	if record.Execution == nil || prior == nil || strings.TrimSpace(prior.BaseSHA) == "" || req.BaseSHA == "" || req.BaseSHA == prior.BaseSHA {
+	if prior == nil || strings.TrimSpace(prior.BaseSHA) == "" || req.BaseSHA == "" || req.BaseSHA == prior.BaseSHA {
 		return nil
+	}
+	if record.Execution == nil {
+		if !prior.LinkVerified {
+			return nil
+		}
+		// Probed: the provider branch was cut from the old base, execution
+		// prepare checks it out, and its identity check (HEAD == base_head)
+		// then refuses forever with a worktree left behind.
+		return fmt.Errorf("the linked branch %s was created at the old base %s (%s); a new base_sha now would make execution prepare refuse the checked-out branch. Keep %s, run execution prepare, then re-record the new base (it must contain the old one) and merge it with execution sync-base, or start a new cycle from %s",
+			req.Branch, prior.BaseBranch, shortOID(prior.BaseSHA), shortOID(prior.BaseSHA), req.BaseBranch)
 	}
 	if s.IsAncestor == nil {
 		return fmt.Errorf("base change after execution prepare needs an ancestry check, which is unavailable")
