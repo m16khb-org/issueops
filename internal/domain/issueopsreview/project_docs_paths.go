@@ -22,6 +22,11 @@ func ValidateReviewedDocumentPath(input, relative string, rootAvailable bool) er
 	if relative != "AGENTS.md" && !strings.HasPrefix(relative, ".issueops/") {
 		return fmt.Errorf("project docs review reviewed path %s is not a project doc (expected .issueops/... or AGENTS.md)", relative)
 	}
+	// Cycle material is not a project doc (ProjectDocsPresent skips it too).
+	// QA: an agent with no project docs passed .issueops/issues/<n>/plan.md.
+	if strings.HasPrefix(relative, ".issueops/issues/") || strings.HasPrefix(relative, ".issueops/gates/") {
+		return fmt.Errorf("project docs review reviewed path %s is cycle material, not a project doc", relative)
+	}
 	if !rootAvailable {
 		return fmt.Errorf("project docs review cannot verify reviewed path %s without a worktree or repo root", relative)
 	}

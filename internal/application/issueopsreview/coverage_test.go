@@ -868,6 +868,22 @@ func TestRecordProjectDocsReviewNoChangeWithoutReviewedDocsFollowsTheWorktree(t 
 	}
 }
 
+// QA: with no project doc, an agent tried README.md, then missing docs, then
+// the cycle plan; the refusal says no-change needs no reviewed doc there, and
+// cycle material is never a reviewed project doc.
+func TestRecordProjectDocsReviewRefusalNamesTheNoProjectDocPath(t *testing.T) {
+	for _, tc := range []struct{ doc, want string }{
+		{"README.md", "record no-change without --reviewed-doc"},
+		{".issueops/issues/41/plan.md", "cycle material"},
+	} {
+		m := &memStore{rec: model.IssueOpsRecord{ID: "io", Phase: model.IssueOpsPhaseImplement}}
+		store := docsStore(m)
+		store.ProjectDocsPresent = func(string) bool { return false }
+		_, err := RecordProjectDocsReview(store, "s", "io", model.IssueOpsProjectDocsReviewRequest{Verdict: "no-change", Evidence: []string{"e"}, ReviewedDocs: []string{tc.doc}})
+		wantErr(t, err, tc.want)
+	}
+}
+
 func TestRecordProjectDocsReviewRejectsInvalidRequestBeforeReading(t *testing.T) {
 	for name, tc := range map[string]struct {
 		req  model.IssueOpsProjectDocsReviewRequest

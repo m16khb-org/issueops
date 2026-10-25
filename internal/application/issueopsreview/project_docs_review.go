@@ -1,6 +1,7 @@
 package issueopsreview
 
 import (
+	"fmt"
 	"strings"
 
 	model "issueops/internal/contract/issueops"
@@ -29,6 +30,11 @@ func RecordProjectDocsReview(store reviewport.ProjectDocsReviewStore, stateRoot,
 	fingerprint := store.Fingerprint(observed)
 	normalized, normalizeErr := normalizeUpdatedDocuments(store, observed, docs)
 	reviewed, reviewedErr := normalizeReviewedDocuments(store, observed, reviewedDocs)
+	if reviewedErr != nil && verdict == "no-change" && store.ProjectDocsPresent != nil && !store.ProjectDocsPresent(store.Root(observed)) {
+		// QA: with no project doc, agents tried README.md, missing paths,
+		// then a cycle plan, before learning no-change needs no reviewed doc.
+		reviewedErr = fmt.Errorf("%w; this worktree has no project doc (AGENTS.md or .issueops/*.md outside issues/ and gates/), so record no-change without --reviewed-doc", reviewedErr)
+	}
 	var result model.IssueOpsRecord
 	err = store.WithLock(stateRoot, id, func() error {
 		current, err := store.Read(stateRoot, id)
