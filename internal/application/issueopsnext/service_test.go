@@ -2,6 +2,7 @@ package issueopsnext
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -158,5 +159,21 @@ func TestNextWarnsAboutUnreadableRecordsBeforeStart(t *testing.T) {
 	}
 	if result.Stage.Key != "none" || len(result.Warnings) != 1 || !strings.Contains(result.Warnings[0], "io-broken") {
 		t.Fatalf("stage=%q warnings=%q", result.Stage.Key, result.Warnings)
+	}
+}
+
+// Probe: 300 active cycles made next 21 KB of candidates. The most recently
+// updated 20 are kept, and a warning names the total.
+func TestNextBoundsAmbiguousCandidatesToTheMostRecent(t *testing.T) {
+	var entries []issueopsinventorycontract.ListEntry
+	for i := range 25 {
+		entries = append(entries, issueopsinventorycontract.ListEntry{ID: fmt.Sprintf("io-%02d", i), Phase: issueopscontract.IssueOpsPhasePlan, UpdatedAt: fmt.Sprintf("2026-10-25T00:00:%02dZ", i)})
+	}
+	result, err := NewService(testPorts(entries, nil)).Next(context.Background(), "/state", "/repo", "")
+	if err != nil || len(result.Candidates) != 20 || result.Candidates[0].ID != "io-24" || result.Candidates[19].ID != "io-05" {
+		t.Fatalf("candidates = %+v err = %v", result.Candidates, err)
+	}
+	if len(result.Warnings) != 1 || !strings.Contains(result.Warnings[0], "20 most recently updated of 25 active cycles") {
+		t.Fatalf("warnings = %q", result.Warnings)
 	}
 }

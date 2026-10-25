@@ -77,6 +77,9 @@ func (service *Service) Next(ctx context.Context, stateRoot, cwd, id string) (is
 		result.Stage = issueopsnextcontract.Stage{Key: issueopsnextcontract.StageAmbiguous}
 		result.Candidates = candidates
 		result.NextCommand = "issueops list --repo " + placeholder(sourceRoot, "<source_root>") + " --json"
+		if total := activeCount(listing.Entries); total > len(candidates) {
+			result.Warnings = append(result.Warnings, fmt.Sprintf("candidates are the %d most recently updated of %d active cycles; next_command lists them all", len(candidates), total))
+		}
 		result.NextCommandKind = commandKind(result.NextCommand)
 		return result, nil
 	}
@@ -87,7 +90,11 @@ func (service *Service) Next(ctx context.Context, stateRoot, cwd, id string) (is
 		// but they still await merge and cleanup: an agent with two done,
 		// unmerged cycles read "none" as finished.
 		if done := doneCycleIDs(listing.Entries); len(done) > 0 {
-			result.Warnings = append(result.Warnings, fmt.Sprintf("%d cycle(s) in done still await merge and cleanup: %s (issueops next --id ID --json)", len(done), strings.Join(done, ", ")))
+			shown, more := done, ""
+			if len(done) > maxCandidates {
+				shown, more = done[:maxCandidates], fmt.Sprintf(" and %d more (issueops list --repo %s --json)", len(done)-maxCandidates, placeholder(sourceRoot, "<source_root>"))
+			}
+			result.Warnings = append(result.Warnings, fmt.Sprintf("%d cycle(s) in done still await merge and cleanup: %s%s (issueops next --id ID --json)", len(done), strings.Join(shown, ", "), more))
 		}
 		// Probe: a damaged record has no readable repository, so the listing
 		// dropped it and next offered `start`, which opened a second cycle
@@ -321,12 +328,33 @@ func selectCycle(
 	case 1:
 		return &active[0], nil
 	default:
+		// Probe: 300 active cycles made next 21 KB of candidates. Keep the
+		// most recently updated ones; the caller names the rest.
+		if len(active) > maxCandidates {
+			slices.SortStableFunc(active, func(a, b issueopsinventorycontract.ListEntry) int {
+				return strings.Compare(b.UpdatedAt, a.UpdatedAt)
+			})
+			active = active[:maxCandidates]
+		}
 		candidates := make([]issueopsnextcontract.Entry, 0, len(active))
 		for _, entry := range active {
 			candidates = append(candidates, *entryOf(entry))
 		}
 		return nil, candidates
 	}
+}
+
+// maxCandidates bounds next's ambiguous candidates and its done-cycle list.
+const maxCandidates = 20
+
+func activeCount(entries []issueopsinventorycontract.ListEntry) int {
+	count := 0
+	for _, entry := range entries {
+		if entry.Phase != issueopscontract.IssueOpsPhaseDone {
+			count++
+		}
+	}
+	return count
 }
 
 func matchOne(

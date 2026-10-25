@@ -9246,6 +9246,7 @@
         "func Service.applyReviewModel",
         "func Service.applyReviewTier",
         "func Service.buildInput",
+        "func activeCount",
         "func actorIdentity",
         "func applyDecision",
         "func childGateMissing",
