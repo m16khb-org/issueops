@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"issueops/cmd/issueops/cliflag"
 	"os"
 	"strings"
 
@@ -30,7 +31,7 @@ func (cli command) runIssueOpsBranch(args []string) error {
 		return cli.runIssueOpsBranchRetarget(args[1:])
 	}
 	if args[0] != "prepare" {
-		return fmt.Errorf("unknown issueops branch subcommand")
+		return cliflag.UnknownSubcommand("issueops branch", args[0], "prepare", "await-link", "retarget")
 	}
 	fs := flag.NewFlagSet("issueops branch prepare", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")

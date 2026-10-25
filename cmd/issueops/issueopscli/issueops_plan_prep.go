@@ -3,6 +3,7 @@ package issueopscli
 import (
 	"flag"
 	"fmt"
+	"issueops/cmd/issueops/cliflag"
 
 	issueopscontract "issueops/internal/contract/issueops"
 )
@@ -13,7 +14,7 @@ func (cli command) runIssueOpsPlanPrep(args []string) error {
 		return nil
 	}
 	if args[0] != "record" {
-		return fmt.Errorf("unknown issueops plan-prep subcommand")
+		return cliflag.UnknownSubcommand("issueops plan-prep", args[0], "record")
 	}
 	fs := flag.NewFlagSet("issueops plan-prep record", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")

@@ -3,6 +3,7 @@ package issueopscli
 import (
 	"flag"
 	"fmt"
+	"issueops/cmd/issueops/cliflag"
 	reviewcontract "issueops/internal/contract/issueopsreview"
 
 	issueopscontract "issueops/internal/contract/issueops"
@@ -14,7 +15,7 @@ func (cli command) runIssueOpsIntent(args []string) error {
 		return nil
 	}
 	if args[0] != "record" {
-		return fmt.Errorf("unknown issueops intent subcommand")
+		return cliflag.UnknownSubcommand("issueops intent", args[0], "record")
 	}
 	fs := flag.NewFlagSet("issueops intent record", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
@@ -52,7 +53,7 @@ func (cli command) runIssueOpsArchitecture(args []string) error {
 		return nil
 	}
 	if args[0] != "review" {
-		return fmt.Errorf("unknown issueops architecture subcommand")
+		return cliflag.UnknownSubcommand("issueops architecture", args[0], "review")
 	}
 	if len(args) > 1 && (args[1] == "--help" || args[1] == "-h" || args[1] == "help") {
 		printIssueOpsArchitectureReviewUsage()

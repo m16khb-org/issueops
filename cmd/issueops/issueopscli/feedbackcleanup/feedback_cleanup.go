@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"issueops/cmd/issueops/cliflag"
 	"os"
 	"strings"
 
@@ -72,7 +73,7 @@ func (command Command) RunFeedback(args []string, deps Deps) error {
 		record, err := command.Operations.MarkIssueOpsContractFeedbackIssueUpdatedWithActor(command.Operations.IssueOpsStateRoot(), *id, command.localActor(actor))
 		return deps.PrintResult(record, *jsonOut, err)
 	default:
-		return fmt.Errorf("unknown issueops feedback subcommand")
+		return cliflag.UnknownSubcommand("issueops feedback", args[0], "add", "resolve", "mark-issue-updated")
 	}
 }
 
@@ -102,7 +103,7 @@ func (command Command) RunCleanup(args []string, deps Deps) error {
 	case "orphan":
 		return runOrphanCleanup(args[1:], deps)
 	default:
-		return fmt.Errorf("unknown issueops cleanup subcommand")
+		return cliflag.UnknownSubcommand("issueops cleanup", args[0], "status", "remote-branch", "linked-branch", "finish", "abandon", "close-children", "orphan")
 	}
 }
 
