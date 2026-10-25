@@ -138,6 +138,11 @@ func LintStatic(candidate LintCandidate) (result model.LintGate, argv []string) 
 	case isRegex && strings.Contains(expect, `\n\z`):
 		// DecideCheck trims trailing newlines before matching.
 		result.Problems = append(result.Problems, `EXPECT regex requires a newline before \z, but output is matched with trailing newlines trimmed, so it never matches; drop the \n before \z`)
+	case isRegex && strings.HasPrefix(expect, "/^") && !strings.HasSuffix(expect, "$/") && !strings.Contains(expect[strings.LastIndex(expect, "/"):], "m"):
+		// Rust QA: /^test result: ok/ never matched; cargo prints the summary
+		// after other lines and ^ without m anchors the whole output.
+		// /^…$/ (the whole output) stays quiet.
+		result.Warnings = append(result.Warnings, "EXPECT regex starts with ^ but has no m flag, so ^ anchors the start of the whole output, not each line; add m (/^…/m) unless the first output line is meant")
 	case expect == "":
 		result.Warnings = append(result.Warnings, "no EXPECT: exit code 0 alone marks this gate met")
 	case !isRegex && strings.HasPrefix(expect, "/"):

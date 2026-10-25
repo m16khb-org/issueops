@@ -50,7 +50,10 @@ issueops gates init --file "$WORKTREE/.issueops/issues/$ISSUE/gates.md" --scope 
   `ExpectMatches`): 출력의 어느 한 **줄 전체**가 EXPECT와 같거나, 어느 한 줄이 EXPECT로
   **시작하고 바로 뒤가 공백·탭**이거나(`EXPECT: ok`가 `ok  	issueops/...` 줄에 맞는 이유),
   `/정규식/` 형식(`/Skill is valid/`, `/^ok\s/m`처럼 `i`·`m`·`s` 플래그 가능)이 출력에
-  매치돼야 한다. `grep -n`처럼 줄 앞에 번호가 붙는 출력은 정규식 형식으로 쓴다.
+  매치돼야 한다. `grep -n`처럼 줄 앞에 번호가 붙는 출력은 정규식 형식으로 쓴다. 바로 뒤가 구두점이면
+  줄 머리로 맞지 않는다(`test result: ok.` 줄에는 `/^test result: ok\./m`; `^`로 줄 머리를 잡으려면 `m`이 필요하다).
+- 테스트 이름 필터를 쓰는 CHECK(`cargo test NAME`, `go test -run NAME`, `pytest -k NAME`)는 이름이 틀려
+  0개를 실행해도 성공한다. EXPECT에 실행 개수를 넣는다(`/^test result: ok\. [1-9]/m`).
 - 출력에 자격 증명처럼 보이는 값이 하나라도 있으면 EVIDENCE 전체가 `<redacted>`로
   바뀌어 어떤 EXPECT도 매치되지 않는다. `go test ./...`처럼 긴 출력은
   `python3 -c`로 감싸 출력을 캡처하고 종료 코드만 `ALL_PASS` 같은 한 줄로 바꿔 내보낸다.

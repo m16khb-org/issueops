@@ -59,8 +59,10 @@ func DecideCheck(expect, stdout, stderr string, exitCode int, timedOut bool) Che
 			decision.Error += " (EXPECT is matched as a literal line; write /" + trimmed + "/ for a regex)"
 		} else if line, ok := lineStartingWith(output, trimmed); ok && !strings.HasPrefix(trimmed, "/") {
 			// QA: `EXPECT: PASS` against "PASS: ..." read as a substring
-			// match; a prefix only counts when a blank follows it.
-			decision.Error += fmt.Sprintf(" (the line %q starts with EXPECT but a prefix matches only when a space or tab follows; write the whole line or /^%s/)", line, regexp.QuoteMeta(trimmed))
+			// match; a prefix only counts when a blank follows it. The
+			// suggested regex carries m: without it ^ anchors the whole
+			// output, and a cargo test summary line is never first (Rust QA).
+			decision.Error += fmt.Sprintf(" (the line %q starts with EXPECT but a prefix matches only when a space or tab follows; write the whole line or /^%s/m)", line, regexp.QuoteMeta(trimmed))
 		} else if line, ok := lineContaining(output, trimmed); ok && trimmed != "" && !strings.HasPrefix(trimmed, "/") {
 			// QA: `EXPECT: mod` against grep -n's "5:Operations: ... mod"
 			// was read as a substring match.

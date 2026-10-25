@@ -70,9 +70,14 @@ func TestCheckArgvRejectsLeadingEnvironmentAssignment(t *testing.T) {
 // and the two forms that do.
 func TestDecideCheckNamesALinePrefixThatIsNotFollowedByABlank(t *testing.T) {
 	got := DecideCheck("PASS", "PASS: --lower rejects extra arguments\n", "", 0, false)
-	want := `expect not matched: PASS: --lower rejects extra arguments (the line "PASS: --lower rejects extra arguments" starts with EXPECT but a prefix matches only when a space or tab follows; write the whole line or /^PASS/)`
+	want := `expect not matched: PASS: --lower rejects extra arguments (the line "PASS: --lower rejects extra arguments" starts with EXPECT but a prefix matches only when a space or tab follows; write the whole line or /^PASS/m)`
 	if got.Passed || got.Error != want {
 		t.Fatalf("decision = %+v", got)
+	}
+	// The suggested regex must match when the line is not the first one.
+	output := "running 1 test\ntest result: ok. 1 passed; 0 failed\n"
+	if !ExpectMatches(`/^test result: ok/m`, output) || DecideCheck("test result: ok", output, "", 0, false).Passed {
+		t.Fatal("the suggested /^…/m form must match a later line")
 	}
 }
 

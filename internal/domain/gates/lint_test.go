@@ -90,7 +90,7 @@ func TestLintStaticWarnsOnRegexLookingLiteralExpect(t *testing.T) {
 			t.Fatalf("%q: problems=%q warnings=%q", expect, result.Problems, result.Warnings)
 		}
 	}
-	for _, expect := range []string{"cost 5\\$", "ok", "/^ok$/"} {
+	for _, expect := range []string{"cost 5\\$", "ok", "/^ok$/", "/^ok/m"} {
 		result, _ := LintStatic(LintSpecCandidate("spec", "G1: x | CHECK: printf ok | EXPECT: "+expect))
 		if len(result.Problems) != 0 || len(result.Warnings) != 0 {
 			t.Fatalf("%q: problems=%q warnings=%q", expect, result.Problems, result.Warnings)
@@ -159,5 +159,14 @@ func TestLintWarnsAboutPythonWithoutDashB(t *testing.T) {
 		if got != warns {
 			t.Fatalf("%q: warned=%v (%v)", check, got, result.Warnings)
 		}
+	}
+}
+
+// Rust QA: /^test result: ok/ anchors the start of the whole output, and
+// cargo's summary line is never first.
+func TestLintStaticWarnsOnLineAnchorWithoutMultilineFlag(t *testing.T) {
+	result, _ := LintStatic(LintSpecCandidate("spec", "G1: x | CHECK: printf ok | EXPECT: /^test result: ok/"))
+	if len(result.Problems) != 0 || len(result.Warnings) != 1 || !strings.Contains(result.Warnings[0], "no m flag") {
+		t.Fatalf("problems=%q warnings=%q", result.Problems, result.Warnings)
 	}
 }
