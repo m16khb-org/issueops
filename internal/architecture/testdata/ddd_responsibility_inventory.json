@@ -162,6 +162,7 @@
       "symbols": [
         "func Parse",
         "func ParseNoArgs",
+        "func ParseOptionalPositional",
         "func Suggest",
         "func UnknownSubcommand",
         "func editDistance",

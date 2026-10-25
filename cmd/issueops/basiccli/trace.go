@@ -43,11 +43,12 @@ func (command Command) runTraceHandoffDeliveryObserve(args []string) error {
 	fs := flag.NewFlagSet("trace handoff-delivery", flag.ContinueOnError)
 	input := fs.String("input", "", "delivery observation JSON path or '-' for stdin")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := cliflag.Parse(fs, args); err != nil {
+	positional, err := cliflag.ParseOptionalPositional(fs, args)
+	if err != nil {
 		return err
 	}
-	if *input == "" && fs.NArg() > 0 {
-		*input = fs.Arg(0)
+	if *input == "" && positional != "" {
+		*input = positional
 	}
 	if *input == "" || command.Handoff == nil {
 		return fmt.Errorf("handoff delivery observation input and adapter are required")
@@ -97,11 +98,12 @@ func (command Command) runTraceAnalyze(args []string) error {
 	input := fs.String("input", "", "trace input path, '-' for stdin, or issueops state key (host formats accept only a file or '-')")
 	inputFormat := fs.String("input-format", tracecontract.InputFormatIssueOps, "input format: issueops, claude-stream, codex-exec, omo-json, omp-json or opencode-json")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	if err := cliflag.Parse(fs, args); err != nil {
+	positional, err := cliflag.ParseOptionalPositional(fs, args)
+	if err != nil {
 		return err
 	}
-	if *input == "" && fs.NArg() > 0 {
-		*input = fs.Arg(0)
+	if *input == "" && positional != "" {
+		*input = positional
 	}
 	result, err := command.Trace.Analyze(tracecontract.TraceAnalyzeRequest{Input: *input, InputFormat: *inputFormat})
 	if err != nil {

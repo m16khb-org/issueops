@@ -143,3 +143,24 @@ func TestParseRefusesIdentityValuesStillCarryingQuotes(t *testing.T) {
 		t.Fatalf("plain identity with quoted evidence: %v", err)
 	}
 }
+
+// Probe: `inspect bogus --json` took bogus as the repo and silently dropped
+// --json (the standard parser stops at the first positional).
+func TestParseOptionalPositionalReadsFlagsAfterIt(t *testing.T) {
+	newFS := func() (*flag.FlagSet, *bool) {
+		fs := flag.NewFlagSet("demo", flag.ContinueOnError)
+		return fs, fs.Bool("json", false, "json")
+	}
+	fs, jsonOut := newFS()
+	if got, err := ParseOptionalPositional(fs, []string{"repo", "--json"}); err != nil || got != "repo" || !*jsonOut {
+		t.Fatalf("got=%q json=%v err=%v", got, *jsonOut, err)
+	}
+	fs, jsonOut = newFS()
+	if got, err := ParseOptionalPositional(fs, []string{"--json"}); err != nil || got != "" || !*jsonOut {
+		t.Fatalf("no positional: got=%q json=%v err=%v", got, *jsonOut, err)
+	}
+	fs, _ = newFS()
+	if _, err := ParseOptionalPositional(fs, []string{"a", "b"}); err == nil || !strings.Contains(err.Error(), `unexpected positional argument "b"`) {
+		t.Fatalf("second positional: err=%v", err)
+	}
+}

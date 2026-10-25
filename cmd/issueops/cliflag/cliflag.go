@@ -238,3 +238,24 @@ func ParseNoArgs(fs *flag.FlagSet, args []string) error {
 	}
 	return nil
 }
+
+// ParseOptionalPositional parses fs and at most one positional argument,
+// reading flags on both sides of it. The standard parser stops at the first
+// positional, so `inspect bogus --json` silently dropped --json and printed
+// text. A second positional is refused.
+func ParseOptionalPositional(fs *flag.FlagSet, args []string) (string, error) {
+	if err := Parse(fs, args); err != nil {
+		return "", err
+	}
+	if fs.NArg() == 0 {
+		return "", nil
+	}
+	positional := fs.Arg(0)
+	if err := Parse(fs, fs.Args()[1:]); err != nil {
+		return "", err
+	}
+	if fs.NArg() > 0 {
+		return "", fmt.Errorf("unexpected positional argument %q (this command takes at most one, %q)", fs.Arg(0), positional)
+	}
+	return positional, nil
+}

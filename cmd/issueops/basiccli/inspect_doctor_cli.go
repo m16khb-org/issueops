@@ -29,11 +29,12 @@ func (command Command) RunInspect(args []string) error {
 	jsonOut := fs.Bool("json", false, "print JSON")
 	repo := fs.String("repo", "", "target repo/workspace")
 	hostReceipts := fs.String("host-receipts", "", "host receipt JSON file (schema_version 1) for discovered/connected/protocol observations")
-	if err := cliflag.Parse(fs, args); err != nil {
+	positional, err := cliflag.ParseOptionalPositional(fs, args)
+	if err != nil {
 		return err
 	}
-	if *repo == "" && fs.NArg() > 0 {
-		*repo = fs.Arg(0)
+	if *repo == "" && positional != "" {
+		*repo = positional
 	}
 	info := command.InspectHarness(*repo, inspectcontract.Options{HostReceipts: *hostReceipts})
 	if *jsonOut {
@@ -66,11 +67,12 @@ func (command Doctor) Run(args []string) error {
 		fmt.Fprintln(fs.Output(), "Usage: issueops doctor [--repo PATH] [--static-only] [--preserve-cycle ID]... [--json]")
 		fs.PrintDefaults()
 	}
-	if err := cliflag.Parse(fs, args); err != nil {
+	positional, err := cliflag.ParseOptionalPositional(fs, args)
+	if err != nil {
 		return err
 	}
-	if fs.NArg() > 0 {
-		*repo = fs.Arg(0)
+	if positional != "" {
+		*repo = positional
 	}
 	cycleIDs, err := normalizeDoctorPreserve(preserveCycles, "--preserve-cycle")
 	if err != nil {
