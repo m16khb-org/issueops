@@ -799,6 +799,12 @@ func warnings(in Input) []string {
 	if branch, want := strings.TrimSpace(in.WorktreeBranch), strings.TrimSpace(execution.Workspace.Branch); in.WorktreePresent && branch != "" && want != "" && branch != want {
 		out = append(out, "canonical worktree is on branch "+branch+", not the cycle branch "+want+": switch back with git -C "+strings.TrimSpace(execution.Workspace.Root)+" switch "+want)
 	}
+	// Probe: a detached HEAD (git checkout <sha>) read as "" and went
+	// unwarned; commits made there belong to no branch. A rebase detaches
+	// too and has its own warning below.
+	if want := strings.TrimSpace(execution.Workspace.Branch); in.WorktreePresent && strings.TrimSpace(in.WorktreeBranch) == "" && strings.TrimSpace(in.WorktreeHead) != "" && want != "" && in.GitOperation != "rebase" {
+		out = append(out, "canonical worktree is on a detached HEAD ("+shortHead(in.WorktreeHead)+"), not the cycle branch "+want+": switch back with git -C "+strings.TrimSpace(execution.Workspace.Root)+" switch "+want+" (note the SHAs of any commits made while detached first)")
+	}
 	switch op := in.GitOperation; op {
 	case "rebase", "cherry-pick", "revert":
 		// issueops never starts these; one left open (detached HEAD for a
@@ -1008,4 +1014,11 @@ func releasedMergeResolution(in Input) bool {
 	execution := in.Record.Execution
 	return in.GitOperation == "merge" && execution != nil && execution.Lease.Status == issueopsnextcontract.LeaseStatusReleased &&
 		execution.Completion != nil && execution.Completion.Generation != 0
+}
+
+func shortHead(oid string) string {
+	if oid = strings.TrimSpace(oid); len(oid) > 10 {
+		return oid[:10]
+	}
+	return oid
 }

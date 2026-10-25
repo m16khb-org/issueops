@@ -590,11 +590,11 @@ func TestClassifyWarningsPassThroughLocalAndWorktreeObservations(t *testing.T) {
 	withHead := func(finalHead, observed string) Input {
 		in := withSelfHolder(baseRecord(issueopsnextcontract.PhaseImplement))
 		in.Record.Execution.Completion = &issueopscontract.ExecutionCompletion{FinalHead: finalHead}
-		in.WorktreeHead = observed
+		in.WorktreeHead, in.WorktreeBranch = observed, "12-test"
 		return in
 	}
 	noCompletion := withSelfHolder(baseRecord(issueopsnextcontract.PhaseImplement))
-	noCompletion.WorktreeHead = "def"
+	noCompletion.WorktreeHead, noCompletion.WorktreeBranch = "def", "12-test"
 	missing := withSelfHolder(baseRecord(issueopsnextcontract.PhaseImplement))
 	missing.WorktreePresent = false
 	cases := []struct {
@@ -902,7 +902,7 @@ func TestClassifyResumedSessionWithDeadReceiptTakesOver(t *testing.T) {
 }
 
 // A worktree switched to another branch is named with the command that puts it
-// back; detached or unobserved branches stay silent.
+// back; an unobserved branch (no head either) stays silent.
 func TestClassifyWarnsWhenTheWorktreeIsOnAnotherBranch(t *testing.T) {
 	in := withSelfHolder(baseRecord(issueopsnextcontract.PhaseImplement))
 	in.WorktreeBranch = "wrong"
@@ -914,6 +914,18 @@ func TestClassifyWarnsWhenTheWorktreeIsOnAnotherBranch(t *testing.T) {
 		in.WorktreeBranch = branch
 		if got := classifyTemplate(in).Warnings; len(got) != 0 {
 			t.Fatalf("branch %q: warnings %q", branch, got)
+		}
+	}
+	// Detached HEAD: a head without a branch. A rebase detaches too and is
+	// reported by its own warning instead.
+	in.WorktreeBranch, in.WorktreeHead = "", "0123456789abcdef"
+	if got := classifyTemplate(in).Warnings; len(got) != 1 || !strings.Contains(got[0], "detached HEAD (0123456789), not the cycle branch 12-test") {
+		t.Fatalf("detached: warnings %q", got)
+	}
+	in.GitOperation = "rebase"
+	for _, warning := range classifyTemplate(in).Warnings {
+		if strings.Contains(warning, "detached HEAD") {
+			t.Fatalf("rebase reported as detached: %q", warning)
 		}
 	}
 }
