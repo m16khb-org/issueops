@@ -15,10 +15,10 @@ func AddFeedback(store reviewport.ReviewMutationStore, stateRoot, id, source, bo
 		body = strings.TrimSpace(body)
 		classification = strings.ToLower(strings.TrimSpace(classification))
 		if source == "" {
-			return fmt.Errorf("feedback source is required")
+			return fmt.Errorf("feedback source is required (--source: who gave it, e.g. reviewer or user)")
 		}
 		if body == "" {
-			return fmt.Errorf("feedback body is required")
+			return fmt.Errorf("feedback body is required (--body TEXT)")
 		}
 		if !model.KnownFeedbackClassification(classification) {
 			return fmt.Errorf("unknown issueops feedback classification %q; use contract_change, defect, question, noise, valid_review, stale_review, rollout_evidence_missing, or environment_debt", classification)

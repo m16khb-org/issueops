@@ -23,10 +23,10 @@ func RetargetRequiresHolder(record model.IssueOpsRecord) (bool, error) {
 
 func ValidateRetargetRequest(base, reason string) error {
 	if base == "" {
-		return fmt.Errorf("base_branch is required")
+		return fmt.Errorf("base_branch is required (--base-branch: the PR's new target branch)")
 	}
 	if reason == "" {
-		return fmt.Errorf("reason is required")
+		return fmt.Errorf("reason is required (--reason TEXT)")
 	}
 	return nil
 }

@@ -18,7 +18,7 @@ func TestValidatePreparationNamesChecksBranchBeforeBase(t *testing.T) {
 	}
 	for _, tc := range cases {
 		err := ValidatePreparationNames(tc.branch, tc.base)
-		if err == nil || err.Error() != tc.want {
+		if err == nil || !strings.HasPrefix(err.Error(), tc.want) {
 			t.Errorf("(%q,%q) = %v, want %s", tc.branch, tc.base, err, tc.want)
 		}
 	}
@@ -141,7 +141,7 @@ func TestValidateRetargetRequest(t *testing.T) {
 		{"", "", "base_branch is required"},
 		{"b", "", "reason is required"},
 	} {
-		if err := ValidateRetargetRequest(tc.base, tc.reason); err == nil || err.Error() != tc.want {
+		if err := ValidateRetargetRequest(tc.base, tc.reason); err == nil || !strings.HasPrefix(err.Error(), tc.want) {
 			t.Errorf("(%q,%q) = %v", tc.base, tc.reason, err)
 		}
 	}

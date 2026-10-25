@@ -9,7 +9,7 @@ import (
 
 func ValidateWorkspaceLinkPath(field, path string) error {
 	if path == "" {
-		return fmt.Errorf("%s is required", field)
+		return fmt.Errorf("%s is required (--%s)", field, strings.ReplaceAll(field, "_", "-"))
 	}
 	if strings.Contains(path, "\x00") || strings.Contains(path, "..") {
 		return fmt.Errorf("%s must not contain path traversal", field)

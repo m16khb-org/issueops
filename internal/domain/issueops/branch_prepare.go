@@ -9,13 +9,13 @@ import (
 
 func ValidatePreparationNames(branch, base string) error {
 	if branch == "" {
-		return fmt.Errorf("branch is required")
+		return fmt.Errorf("branch is required (--branch <issue number>-<slug>)")
 	}
 	if err := ValidateBranch(branch); err != nil {
 		return err
 	}
 	if base == "" {
-		return fmt.Errorf("base_branch is required")
+		return fmt.Errorf("base_branch is required (--base-branch)")
 	}
 	return nil
 }
