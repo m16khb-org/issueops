@@ -52,7 +52,7 @@ contract_change`로 기록한다([`issueops-plan`](../../issueops-plan/SKILL.md)
 절차로 다음을 실행한다.
 
 ```bash
-issueops remote reflect-devils-advocate --id "$ISSUEOPS_ID" --confirm --json
+issueops remote reflect-devils-advocate --id "$ISSUEOPS_ID" --confirm $RECORD_ACTOR_FLAGS --json
 ```
 
 이슈에는 라운드 흐름 한 줄("1차 수정 요청(지적 3건) → 계획 수정 → 2차 통과")이

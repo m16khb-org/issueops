@@ -59,6 +59,7 @@ issueops next --id "$ISSUEOPS_ID" --json
 경우에만 쓴다. 관례와 다르게 정했으면 그 사실을 보고에 적는다.
 
 준비가 끝난 뒤 base를 바꿔야 하면(예: main → develop) [base 바꾸기](references/base-change.md)를 따른다.
+사용자가 다른 이름의 브랜치에 커밋해 둔 작업을 이어받으면 [기존 작업 이어받기](references/existing-work.md)를 따른다.
 
 ## 프로젝트 문서 확인
 

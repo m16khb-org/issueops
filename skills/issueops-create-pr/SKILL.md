@@ -137,7 +137,8 @@ preview의 `warnings`에 `issue_closed`가 있으면 confirm하지 않는다. �
 
 preview와 같은 명령에만 `--confirm`을 추가한다. 성공 후
 `remote verify-artifact`와 provider readback으로 URL, source/target branch,
-Issue linkage, labels, assignee, body를 확인한다.
+Issue linkage, labels, assignee, body를 확인한다. body 끝의 `<!-- issueops:... -->` 한 줄은 issueops가
+붙이는 작업 표지이므로 차이로 보지 않는다.
 
 ```bash
 issueops remote verify-artifact \
