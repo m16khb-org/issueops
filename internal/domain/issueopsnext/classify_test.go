@@ -1070,3 +1070,18 @@ func TestClassifyDoneAfterCompletionReceiptGoesToFinishPreview(t *testing.T) {
 		}
 	}
 }
+
+// After a stop and regress, the grill step names the re-grill work before
+// the phase move back to plan.
+func TestClassifyGrillAfterRegressNamesTheReGrill(t *testing.T) {
+	in := withBranch(withIssue(baseRecord(issueopsnextcontract.PhaseGrill)))
+	got := classifyTemplate(in)
+	if slices.ContainsFunc(got.Warnings, func(w string) bool { return strings.Contains(w, "regressed") }) {
+		t.Fatalf("no regress yet: %q", got.Warnings)
+	}
+	in.Record.RegressEvents = []issueopscontract.IssueOpsRegressEvent{{Reason: "stop", FromPhase: issueopsnextcontract.PhasePlan}}
+	got = classifyTemplate(in)
+	if !strings.Contains(got.NextCommand, "--to plan") || !slices.ContainsFunc(got.Warnings, func(w string) bool { return strings.Contains(w, "contract_change") }) {
+		t.Fatalf("after regress: %q %q", got.NextCommand, got.Warnings)
+	}
+}

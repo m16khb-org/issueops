@@ -340,6 +340,11 @@ func classifyBranchPrepare(in Input, decision Decision) (Decision, bool) {
 		// Only the phase is behind (a child cycle starts in grill, and link-issue
 		// does not advance it): re-preparing would loop on the same evidence.
 		decision.NextCommand = "issueops phase --id " + record.ID + " --to plan $RECORD_ACTOR_FLAGS --json"
+		if record.Phase == issueopsnextcontract.PhaseGrill && len(record.RegressEvents) > 0 {
+			// QA (stop + regress): next showed only `phase --to plan`, as if the
+			// stop asked for nothing before re-planning.
+			decision.Warnings = append(decision.Warnings, "regressed from a plan stop: re-investigate first; when the requirement changed, record feedback add --classification contract_change, update the issue (sync-issue), feedback mark-issue-updated, and intent record, then run this phase --to plan and re-plan")
+		}
 		return decision, true
 	}
 	key := branchEvidenceKey(record)

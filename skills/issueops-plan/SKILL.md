@@ -152,11 +152,14 @@ issueops gates lint --plan "$TMP_PLAN" --cwd "$SOURCE_ROOT" --json
 - **stop 판정**: 이 단계가 되돌린다.
 
 ```bash
+issueops remote reflect-devils-advocate --id "$ISSUEOPS_ID" --confirm $RECORD_ACTOR_FLAGS --json  # 먼저 이슈에 반영
 issueops regress --id "$ISSUEOPS_ID" --reason "<리뷰 결론>" $RECORD_ACTOR_FLAGS --json
 ```
 
-`regress`는 사이클을 grill로 되돌리고 아키텍처 승인도 지운다. 다시 조사하고 이슈 본문을 갱신한 뒤
-`phase --to plan`으로 올라와 계획을 다시 쓴다. 판정은 계획 파일의 sha256에 묶이므로,
+`regress`는 사이클을 grill로 되돌리고 아키텍처 승인도 지운다. grill에서 다시 조사한다. 요구가 바뀌면
+`feedback add --classification contract_change` → 이슈 본문 갱신(`issueops-sync-issue`) →
+`feedback mark-issue-updated` → 새 기준으로 `intent record` 순서로 반영한다. 그 뒤
+`phase --to plan`으로 올라와 아키텍처와 계획을 다시 쓰고 다시 검토한다. 판정은 계획 파일의 sha256에 묶이므로,
 판정 뒤 계획을 고치면 `devils_advocate_review_stale`이 되어 `next`가 plan.review로 돌아간다. 고쳤으면
 다시 검토한다.
 
