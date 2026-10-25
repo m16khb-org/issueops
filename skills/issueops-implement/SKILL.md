@@ -131,7 +131,8 @@ blocker 근거는 기록 직전에 한 번 더 확인한다. 확인 규칙은 [�
   이어간다. 원래 요청에서 허용된 issue branch의 publication을 다시 묻지 않는다.
 - API/DTO/OpenAPI 변경은 `.issueops/OPEN_API_SPEC.md` gate를 적용한다. 문서가 없는 대상의 처리는 [보충 규칙](references/gate-extras.md)을 따른다.
 - RED/GREEN 증거는 [`gates-ledger`](../gates-ledger/SKILL.md)로
-  `.issueops/issues/<n>/gates.md`에 `gates check`로 채운다.
+  `.issueops/issues/<n>/gates.md`에 `gates check --file .issueops/issues/<n>/gates.md`로 채운다. `--file`이 없으면
+  base에 커밋된 다른 사이클의 원장까지 함께 읽어 보고한다.
 - 코드를 바꾸기 직전에 그 변경을 정한 문서 규칙을 `## 적용한 문서 규칙` 절에 한 행 추가한다.
 
 계획과 코드베이스를 존중하는 네 규칙:
