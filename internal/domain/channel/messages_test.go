@@ -3,6 +3,7 @@ package channel
 import (
 	"errors"
 	model "issueops/internal/contract/channel"
+	"strings"
 	"testing"
 	"time"
 )
@@ -20,7 +21,7 @@ func TestSendAdmissionPreservesBodyAndErrorPrecedence(t *testing.T) {
 		{model.SendRequest{Channel: "c", From: "sender", Body: "x", Origin: "trusted-lead"}, "origin_unknown"},
 	} {
 		_, err := NormalizeSend(tc.req)
-		if err == nil || err.Error() != tc.want {
+		if err == nil || !strings.HasPrefix(err.Error(), tc.want) {
 			t.Fatalf("request=%+v error=%v", tc.req, err)
 		}
 		if tc.want == "from_required" && !errors.Is(err, model.ErrFromRequired) {

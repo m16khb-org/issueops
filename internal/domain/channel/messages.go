@@ -2,22 +2,27 @@ package channel
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
 	model "issueops/internal/contract/channel"
 )
 
+// Probe: `channel send --json` answered bare codes; each now names the
+// field on both surfaces. The code stays the message prefix.
+var errChannelRequired = errors.New("channel_required: name the channel both sides use (CLI --channel, MCP channel)")
+
 func NormalizeSend(req model.SendRequest) (model.SendRequest, error) {
 	req.Channel = strings.TrimSpace(req.Channel)
 	req.From = strings.TrimSpace(req.From)
 	switch {
 	case req.Channel == "":
-		return req, errors.New("channel_required")
+		return req, errChannelRequired
 	case req.From == "":
-		return req, model.ErrFromRequired
+		return req, fmt.Errorf("%w: name the sender, e.g. this session id (CLI --from, MCP from)", model.ErrFromRequired)
 	case strings.TrimSpace(req.Body) == "":
-		return req, errors.New("body_required")
+		return req, errors.New("body_required: the message text is empty (CLI --message, MCP body)")
 	case req.Origin != model.OriginCLI && req.Origin != model.OriginMCP:
 		return req, errors.New("origin_unknown")
 	}
@@ -27,7 +32,7 @@ func NormalizeRecv(req model.RecvRequest) (model.RecvRequest, error) {
 	req.Channel = strings.TrimSpace(req.Channel)
 	req.SinceID = strings.TrimSpace(req.SinceID)
 	if req.Channel == "" {
-		return req, errors.New("channel_required")
+		return req, errChannelRequired
 	}
 	return req, nil
 }
