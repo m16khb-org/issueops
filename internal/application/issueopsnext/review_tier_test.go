@@ -89,11 +89,31 @@ func TestNextDoesNotObserveChangedPathsBeforeImplement(t *testing.T) {
 	if calls != 0 {
 		t.Fatalf("plan phase must not read git, got %d calls", calls)
 	}
-	if result.Review.Tier != "default" {
-		t.Fatalf("tier = %q, want default before implement", result.Review.Tier)
+	if result.Review.Tier != "" || result.Review.Lenses != nil {
+		t.Fatalf("no change set yet, so no tier or lenses: %+v", result.Review)
 	}
 	if result.Review.Effort != "high" {
 		t.Fatalf("effort = %q, want the host planner default", result.Review.Effort)
+	}
+}
+
+// QA: right after entering implement only the tracked .issueops copies
+// exist; reporting docs-only then would narrow the review. Without
+// implementation_changes there is no change set: no git read, no tier.
+func TestNextReportsNoTierWhileImplementationChangesAreMissing(t *testing.T) {
+	calls := 0
+	record := implementRecordForTier()
+	record.Execution = &issueopscontract.Execution{Lease: issueopscontract.WriteLease{Status: issueopscontract.LeaseStatusActive, Holder: &issueopscontract.NativeActor{Host: "claude", SessionID: "session-1"}}}
+	ports := reviewTierPorts(record, []string{".issueops/issues/9/plan.md"}, true, &calls)
+	ports.Completion = func(issueopscontract.IssueOpsRecord, issueopscontract.IssueOpsPhase) issueopscontract.IssueOpsReadiness {
+		return issueopscontract.IssueOpsReadiness{Missing: []string{"implementation_changes"}}
+	}
+	result, err := NewService(ports).Next(context.Background(), "/state", "/repo", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if calls != 0 || result.Review.Tier != "" || result.Review.Lenses != nil || result.Review.Effort != "high" {
+		t.Fatalf("calls=%d review=%+v missing=%v stage=%v", calls, result.Review, result.Missing, result.Stage)
 	}
 }
 

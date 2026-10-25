@@ -136,17 +136,27 @@ func markInvalidSelection(result issueopsnextcontract.Result, id string) issueop
 }
 
 // applyReviewTier는 선택된 사이클의 변경 집합으로 리뷰 티어·렌즈·effort를 채운다.
-// implement 이전 phase에는 봉인할 변경 집합이 없으므로 git을 읽지 않는다. 관측에
-// 실패하면 추정하지 않고 기본 티어와 경고를 남긴다.
+// 변경 집합이 아직 없으면(implement 이전 phase, 또는 implement인데
+// implementation_changes가 비어 있음) git을 읽지 않고 티어·렌즈를 비워 둔다.
+// QA: implement 진입 직후 tracked 사본만 보고 docs-only가 나와 리뷰 범위를
+// 좁게 읽을 수 있었다. 관측에 실패하면 추정하지 않고 기본 티어와 경고를 남긴다.
 func (service *Service) applyReviewTier(
 	result issueopsnextcontract.Result,
 	record issueopscontract.IssueOpsRecord,
 	actorHost string,
 ) issueopsnextcontract.Result {
 	ports := service.ports
-	tier := issueopsdomain.ChangeTierDefault
 	implementRank := issueopsdomain.IssueOpsPhaseRank(issueopscontract.IssueOpsPhaseImplement)
-	if issueopsdomain.IssueOpsPhaseRank(record.Phase) >= implementRank && ports.ChangedPaths != nil {
+	role := agentmodelcontract.RolePlanReview
+	if issueopsdomain.IssueOpsPhaseRank(record.Phase) >= implementRank {
+		role = agentmodelcontract.RoleDiffReview
+	}
+	if issueopsdomain.IssueOpsPhaseRank(record.Phase) < implementRank ||
+		record.Phase == issueopscontract.IssueOpsPhaseImplement && slices.Contains(result.Missing, "implementation_changes") {
+		return service.applyReviewModel(result, actorHost, role, "", result.CWD)
+	}
+	tier := issueopsdomain.ChangeTierDefault
+	if ports.ChangedPaths != nil {
 		paths, observed := ports.ChangedPaths(record)
 		if observed {
 			tier = issueopsdomain.ClassifyChangeTier(paths)
@@ -157,10 +167,6 @@ func (service *Service) applyReviewTier(
 	}
 	result.Review.Tier = string(tier)
 	result.Review.Lenses = issueopsdomain.ReviewLensesForTier(tier)
-	role := agentmodelcontract.RolePlanReview
-	if issueopsdomain.IssueOpsPhaseRank(record.Phase) >= implementRank {
-		role = agentmodelcontract.RoleDiffReview
-	}
 	return service.applyReviewModel(result, actorHost, role, string(tier), result.CWD)
 }
 

@@ -53,8 +53,8 @@
    바꾸지 않는다([`architecture-review`의 Blocking threshold](../../architecture-review/SKILL.md#blocking-threshold)).
 5. 대상에 맞는 렌즈. `architecture`에는 architecture-review의 아키텍처 문서 렌즈를 적용한다.
    `plan`에는 architecture-review의 계획 렌즈와 아래 코드베이스 존중
-   렌즈를 적용한다. 구현 전 `next.review.tier`는 변경 경로를 조회하지 않은 `default`이므로
-   계획의 위험 분류로 해석하지 않는다. 계획에 명시한 인증·스키마 등 필수 계약을 확인한다.
+   렌즈를 적용한다. 변경 집합이 생기기 전에는 `next.review.tier`와 `lenses`가 비어 있으므로
+   계획의 위험 분류는 계획 자체에서 읽는다. 계획에 명시한 인증·스키마 등 필수 계약을 확인한다.
    `diff`에는 `next.review.tier`와 `lenses`를 전달하고 선택된 렌즈만 적용한다.
    `docs-only`의 코드베이스 존중 렌즈는 `side-effect` 하나다. frontend 추가 렌즈는
    호출한 검증 단계의 규칙을 따른다.

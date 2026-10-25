@@ -88,7 +88,8 @@ type Review struct {
 	Model  string `json:"model,omitempty"`
 	Effort string `json:"effort,omitempty"`
 	// Tier는 변경 집합의 성격이다(docs-only|contract|schema-auth|default).
-	// implement 이후 phase에서만 관측하며, 그 전에는 default다.
+	// 변경 집합이 생긴 뒤(implementation_changes 충족 이후)에만 채우며, 그 전에는
+	// Lenses와 함께 비어 있다.
 	Tier string `json:"tier,omitempty"`
 	// Lenses는 그 티어에서 적용할 코드베이스 존중 렌즈다. 병렬 리뷰 허용 여부는
 	// 담지 않는다 — 그 판단은 issueops-verify 스킬 문장이 소유한다.
