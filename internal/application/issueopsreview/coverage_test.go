@@ -380,7 +380,7 @@ func TestPlanningRecorderArchitectureExplainsMissingApprovalEvidence(t *testing.
 func TestPlanningRecorderArchitecturePassesThroughOtherErrorsUnchanged(t *testing.T) {
 	m := &memStore{rec: model.IssueOpsRecord{ID: "io"}}
 	_, err := m.planning().Architecture("s", "io", reviewcontract.ArchitectureReviewRequest{})
-	if err == nil || err.Error() != "problem_summary is required" {
+	if err == nil || err.Error() != "problem_summary is required (--problem-summary TEXT)" {
 		t.Fatalf("err=%v", err)
 	}
 }

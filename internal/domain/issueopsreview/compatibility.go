@@ -39,7 +39,11 @@ func ValidateCompatibilityReview(req reviewcontract.CompatibilityReviewRequest, 
 func requiredReviewValues(field string, values []string) ([]string, error) {
 	out := cleanReviewValues(values)
 	if len(out) == 0 {
-		return nil, fmt.Errorf("%s requires at least one entry", field)
+		flag := map[string]string{"backward_compatibility": "--backward-compatibility", "side_effects": "--side-effect", "verification": "--verification"}[field]
+		if flag == "" {
+			return nil, fmt.Errorf("%s requires at least one entry", field)
+		}
+		return nil, fmt.Errorf("%s requires at least one entry (%s TEXT, repeatable)", field, flag)
 	}
 	return out, nil
 }

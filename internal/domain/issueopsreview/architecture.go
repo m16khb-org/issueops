@@ -17,15 +17,15 @@ var ErrMissingArchitectureReviewEvidence = errors.New("approved architecture rev
 func PrepareArchitectureReview(req reviewcontract.ArchitectureReviewRequest) (reviewcontract.ArchitectureReview, error) {
 	problemSummary := strings.TrimSpace(req.ProblemSummary)
 	if problemSummary == "" {
-		return reviewcontract.ArchitectureReview{}, fmt.Errorf("problem_summary is required")
+		return reviewcontract.ArchitectureReview{}, fmt.Errorf("problem_summary is required (--problem-summary TEXT)")
 	}
 	proposedArchitecture := strings.TrimSpace(req.ProposedArchitecture)
 	if proposedArchitecture == "" {
-		return reviewcontract.ArchitectureReview{}, fmt.Errorf("proposed_architecture is required")
+		return reviewcontract.ArchitectureReview{}, fmt.Errorf("proposed_architecture is required (--proposed-architecture TEXT)")
 	}
 	verification := cleanArchitectureValues(req.Verification)
 	if len(verification) == 0 {
-		return reviewcontract.ArchitectureReview{}, fmt.Errorf("verification is required")
+		return reviewcontract.ArchitectureReview{}, fmt.Errorf("verification is required (--verification TEXT, repeatable)")
 	}
 	openQuestions := cleanArchitectureValues(req.OpenQuestions)
 	if req.Approved && len(openQuestions) > 0 {
@@ -33,7 +33,7 @@ func PrepareArchitectureReview(req reviewcontract.ArchitectureReviewRequest) (re
 	}
 	reviewerContext := strings.ToLower(strings.TrimSpace(req.ReviewerContext))
 	if reviewerContext != "subagent" && reviewerContext != "inline" {
-		return reviewcontract.ArchitectureReview{}, fmt.Errorf("reviewer_context must be subagent or inline")
+		return reviewcontract.ArchitectureReview{}, fmt.Errorf("reviewer_context must be subagent or inline (--reviewer-context subagent|inline)")
 	}
 	return reviewcontract.ArchitectureReview{
 		ProblemSummary:       policy.RedactFreeform(problemSummary),

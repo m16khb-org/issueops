@@ -131,7 +131,7 @@ func TestPrepareArchitectureReviewRequiredFieldsInOrder(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			req := valid
 			tc.mutate(&req)
-			if _, err := PrepareArchitectureReview(req); err == nil || err.Error() != tc.want {
+			if _, err := PrepareArchitectureReview(req); err == nil || !strings.HasPrefix(err.Error(), tc.want) {
 				t.Fatalf("error = %v, want %q", err, tc.want)
 			}
 		})
@@ -255,7 +255,7 @@ func TestValidateCompatibilityReviewRejectionOrder(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			req := valid
 			tc.mutate(&req)
-			if _, err := ValidateCompatibilityReview(req, "now"); err == nil || err.Error() != tc.want {
+			if _, err := ValidateCompatibilityReview(req, "now"); err == nil || !strings.HasPrefix(err.Error(), tc.want) {
 				t.Fatalf("error = %v, want %q", err, tc.want)
 			}
 		})

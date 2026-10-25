@@ -14,10 +14,10 @@ func NewEntry(phase, skill string, at time.Time) (issueopsroutingcontract.Entry,
 	phase = strings.TrimSpace(phase)
 	skill = strings.TrimSpace(skill)
 	if phase == "" {
-		return issueopsroutingcontract.Entry{}, fmt.Errorf("routing phase is required")
+		return issueopsroutingcontract.Entry{}, fmt.Errorf("routing phase is required (--phase)")
 	}
 	if skill == "" {
-		return issueopsroutingcontract.Entry{}, fmt.Errorf("routing skill is required")
+		return issueopsroutingcontract.Entry{}, fmt.Errorf("routing skill is required (--skill)")
 	}
 	if len(phase) > 64 || len(skill) > 64 {
 		return issueopsroutingcontract.Entry{}, fmt.Errorf(
