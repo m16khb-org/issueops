@@ -10,7 +10,7 @@ import "errors"
 var ErrNoGateFiles = errors.New("no gate files found (.issueops/issues/<n>/gates.md or .issueops/gates/*.md)")
 
 // ErrNothingToLint는 lint할 게이트 출처가 하나도 없을 때의 사용법 오류다(exit 2).
-var ErrNothingToLint = errors.New("give at least one --gate spec, --plan file, or --file ledger to lint")
+var ErrNothingToLint = errors.New("give at least one --gate spec, --plan file, or --file ledger to lint (MCP: gates, plan_file, files)")
 
 // SchemaVersion는 gates 응답 계약의 현재 버전이다.
 const SchemaVersion = 1

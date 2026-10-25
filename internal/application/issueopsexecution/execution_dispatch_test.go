@@ -37,7 +37,7 @@ func TestExecuteReportsMissingHandlerPerAction(t *testing.T) {
 
 func TestExecuteRejectsUnsupportedAction(t *testing.T) {
 	got, err := Service{}.Execute(t.Context(), "state", model.ExecutionActionRequest{ID: "cycle", Action: "bogus"}, port.ExecutionActionDependencies{})
-	if got != nil || err == nil || err.Error() != `unsupported issueops execution action "bogus"` {
+	if got != nil || err == nil || err.Error() != `unsupported issueops execution action "bogus" (want prepare|status|claim|release|replace|reconcile|complete)` {
 		t.Fatalf("got=%v err=%v", got, err)
 	}
 }

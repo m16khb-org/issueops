@@ -344,9 +344,20 @@ func validateArray(s map[string]any, v any, p string, out *[]toolconformancecont
 }
 
 // validateEnum는 enum 키워드가 없거나 값이 일치하면 true를, 불일치 진단을 추가했으면 false를 반환한다.
+//
+// Catalog schemas are Go literals whose enums are []string; only []any (a
+// JSON-decoded schema) was read, so the MCP server never enforced an enum
+// (probe: issueops_execution action "bogus" reached the handler).
 func validateEnum(s map[string]any, v any, p string, out *[]toolconformancecontract.Diagnostic) bool {
-	values, ok := s["enum"].([]any)
-	if !ok {
+	var values []any
+	switch enum := s["enum"].(type) {
+	case []any:
+		values = enum
+	case []string:
+		for _, value := range enum {
+			values = append(values, value)
+		}
+	default:
 		return true
 	}
 	for _, value := range values {

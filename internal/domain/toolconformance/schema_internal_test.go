@@ -220,3 +220,16 @@ func TestValidatorAcceptsBoundaryValuesForMinimumAndMaxLength(t *testing.T) {
 		t.Fatalf("boundary values rejected: %#v err=%v", diagnostics, err)
 	}
 }
+
+// Catalog schemas carry []string enums (Go literals); they must be enforced
+// like JSON-decoded []any enums.
+func TestValidateEnforcesStringSliceEnums(t *testing.T) {
+	schema := map[string]any{"type": "object", "properties": map[string]any{"action": map[string]any{"type": "string", "enum": []string{"status", "claim"}}}}
+	got, err := Validate(schema, map[string]any{"action": "bogus"})
+	if err != nil || len(got) != 1 || got[0].Code != "enum_mismatch" || got[0].Path != "/action" {
+		t.Fatalf("diagnostics = %+v err = %v", got, err)
+	}
+	if got, err := Validate(schema, map[string]any{"action": "claim"}); err != nil || len(got) != 0 {
+		t.Fatalf("valid value: diagnostics = %+v err = %v", got, err)
+	}
+}

@@ -49,7 +49,8 @@ func (s Service) Execute(ctx context.Context, stateRoot string, req model.Execut
 			Verification: req.Verification, RemoteArtifactURL: req.RemoteArtifactURL, Confirm: req.Confirm,
 		})
 	default:
-		return nil, fmt.Errorf("unsupported issueops execution action %q", req.Action)
+		// Probe: an MCP call with action "bogus" named no valid action.
+		return nil, fmt.Errorf("unsupported issueops execution action %q (want prepare|status|claim|release|replace|reconcile|complete)", req.Action)
 	}
 }
 
