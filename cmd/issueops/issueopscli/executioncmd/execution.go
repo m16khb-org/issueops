@@ -580,6 +580,9 @@ func runRelease(args []string, deps Deps) error {
 	if done, err := parse(fs, args); done || err != nil {
 		return err
 	}
+	if *generation == 0 {
+		return output(model.ExecutionResult{ID: *id}, *jsonOut, fmt.Errorf("--generation is required: the lease generation you hold (issueops execution status --id ID --json shows lease.generation)"), deps)
+	}
 	result, err := execute(model.ExecutionActionRequest{
 		Action: model.ExecutionActionRelease, ID: *id, Generation: *generation, Actor: actor.actor(), CWD: *actor.cwd,
 	}, deps)

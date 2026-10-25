@@ -25,7 +25,7 @@ func (h ReleaseHandler) Handle(ctx context.Context, _ string, request issueopsco
 	}
 	result, err := h.service.Release(ctx, leaseapp.ReleaseRequest{ID: request.ID, Generation: request.Generation, Actor: toDomainActor(request.Actor), Ancestry: toProcessAncestry(request.Actor), CWD: request.CWD})
 	if err != nil {
-		return issueopscontract.ExecutionResult{ID: request.ID}, publicReleaseError(err, request.Generation)
+		return issueopscontract.ExecutionResult{ID: request.ID}, publicReleaseError(err, request.ID, request.Generation)
 	}
 	return issueopscontract.ExecutionResult{OK: result.OK, ID: result.ID, Execution: toCoreExecution(result.Execution)}, nil
 }
@@ -72,9 +72,11 @@ func toCoreLease(lease leasecontract.Lease) issueopscontract.WriteLease {
 	return result
 }
 
-func publicReleaseError(err error, generation uint64) error {
+func publicReleaseError(err error, id string, generation uint64) error {
 	if code := leasedomain.DenyCodeOf(err); code == leasedomain.DenyLeaseAuthority {
-		return fmt.Errorf("only the current holder may release generation %d", generation)
+		// Probe: the holder itself passed a stale --generation (9 for 2) and
+		// read that someone else held the lease.
+		return fmt.Errorf("only the current holder may release generation %d: release needs an active lease held by this actor at exactly that generation; issueops execution status --id %s --json shows lease.status, lease.generation and lease.holder", generation, id)
 	} else if code == leasedomain.DenyCanonicalCWD {
 		return canonicalCWDError("release", err)
 	}

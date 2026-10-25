@@ -67,14 +67,14 @@ func TestPublicReleaseErrorRetainsCompatibilityText(t *testing.T) {
 		err  error
 		want string
 	}{
-		{name: "holder", err: leasedomain.Deny(leasedomain.DenyLeaseAuthority, errors.New("internal")), want: "only the current holder may release generation 7"},
+		{name: "holder", err: leasedomain.Deny(leasedomain.DenyLeaseAuthority, errors.New("internal")), want: "only the current holder may release generation 7: release needs an active lease held by this actor at exactly that generation; issueops execution status --id io-1 --json shows lease.status, lease.generation and lease.holder"},
 		{name: "cwd", err: leasedomain.Deny(leasedomain.DenyCanonicalCWD, errors.New("internal")), want: "release cwd must be the canonical worktree"},
 		{name: "invalid state", err: leasecontract.Fail(leasecontract.FailureInvalidState, statecontract.ErrInvalidState), want: "invalid state"},
 		{name: "persistence", err: leasecontract.Fail(leasecontract.FailurePersistence, errors.New("holder index is unavailable")), want: "holder index is unavailable"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := publicReleaseError(tc.err, 7).Error(); got != tc.want {
+			if got := publicReleaseError(tc.err, "io-1", 7).Error(); got != tc.want {
 				t.Fatalf("public error=%q want=%q", got, tc.want)
 			}
 		})
