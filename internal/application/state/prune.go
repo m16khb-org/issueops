@@ -24,7 +24,7 @@ func (service *Service) PrunePrefix(ctx context.Context, prefix string, maxAge t
 func (service *Service) prune(ctx context.Context, prefix string, maxAge time.Duration, maxRecords int, confirm bool) (statecontract.StatePruneResult, error) {
 	result := service.newPruneResult(maxAge, confirm)
 	if maxAge <= 0 {
-		return result, fmt.Errorf("max age must be positive")
+		return result, fmt.Errorf("max age must be positive: pass a Go duration such as 720h (CLI --max-age, MCP max_age)")
 	}
 	if maxRecords < 0 {
 		return result, fmt.Errorf("max records must be non-negative")

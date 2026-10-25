@@ -26,7 +26,7 @@ func isAlnum(c byte) bool {
 func NormalizeKey(key string) (string, error) {
 	key = strings.TrimSpace(key)
 	if key == "" {
-		return "", fmt.Errorf("state key is required")
+		return "", fmt.Errorf("state key is required (CLI --key, MCP key); list existing keys with issueops state list --json")
 	}
 	if strings.Contains(key, "..") || strings.ContainsAny(key, `/\`) || !validKey(key) {
 		return "", fmt.Errorf("invalid state key %q; use [A-Za-z0-9._-] without path separators or '..', max 128 chars", key)
