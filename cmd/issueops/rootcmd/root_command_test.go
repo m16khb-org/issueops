@@ -52,6 +52,12 @@ func TestRunRootCommandUsageAndVersionSurface(t *testing.T) {
 			wantErr:  "Did you mean: project <subcommand> (issueops project --help lists them)",
 		},
 		{
+			name:     "a word that is part of command paths lists those paths",
+			args:     []string{"review"},
+			wantCode: 2,
+			wantErr:  "devils-advocate review, implementation-review record",
+		},
+		{
 			name:     "unknown under --json answers one JSON document on stdout",
 			args:     []string{"statu", "--json"},
 			wantCode: 2,

@@ -10,6 +10,8 @@ import (
 
 	"issueops/cmd/issueops/cliflag"
 	"issueops/cmd/issueops/jsonout"
+	clicontract "issueops/internal/contract/cli"
+	cliparse "issueops/internal/domain/cli"
 )
 
 type Runner func([]string) error
@@ -72,6 +74,12 @@ func (c Command) suggest(name string) []string {
 		known = append(known, command)
 	}
 	suggestions := cliflag.Suggest(name, known, 3)
+	// QA: `issueops review` (the skill is issueops-review) suggested only
+	// review-metrics; the commands that record reviews hold the word as a
+	// part of their path (devils-advocate review, implementation-review record).
+	if paths := commandPathsContainingWord(name); len(paths) > 0 {
+		suggestions = append(paths, slices.DeleteFunc(suggestions, func(s string) bool { return slices.Contains(paths, s) })...)
+	}
 	// QA: `project-docs` and `project-docs-route` were the MCP tool names
 	// (project_docs_*) spelled as one command; the group is `project`.
 	if prefix, rest, ok := strings.Cut(name, "-"); ok && rest != "" && c.Runners[prefix] != nil {
@@ -171,4 +179,26 @@ func (c Command) errorExitCode(name string, err error) int {
 		return 1
 	}
 	return c.ErrorExitCode(name, err)
+}
+
+// commandPathsContainingWord lists catalog command paths that hold word as one
+// of their space- or hyphen-separated parts, up to six, in catalog order.
+func commandPathsContainingWord(word string) []string {
+	if len(word) < 3 || strings.ContainsAny(word, " -") {
+		return nil
+	}
+	var paths []string
+	for line := range strings.SplitSeq(clicontract.IssueOpsUsageCatalog, "\n") {
+		path := cliparse.IssueOpsUsageKey(strings.TrimSpace(line))
+		if path == "" || path == word || slices.Contains(paths, path) {
+			continue
+		}
+		if slices.Contains(strings.FieldsFunc(path, func(r rune) bool { return r == ' ' || r == '-' }), word) {
+			paths = append(paths, path)
+			if len(paths) == 6 {
+				break
+			}
+		}
+	}
+	return paths
 }

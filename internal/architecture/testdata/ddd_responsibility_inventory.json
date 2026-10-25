@@ -2541,6 +2541,7 @@
         "func Command.suggest",
         "func HelpRequested",
         "func JSONRequested",
+        "func commandPathsContainingWord",
         "type Command",
         "type Runner"
       ]
