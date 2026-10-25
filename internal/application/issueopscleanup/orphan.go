@@ -32,11 +32,11 @@ func (s OrphanCleaner) normalize(request contract.Request) (contract.Request, er
 	var err error
 	request.RepoRoot, err = s.Environment.CanonicalPath(request.RepoRoot)
 	if err != nil {
-		return contract.Request{}, fmt.Errorf("orphan cleanup repo root: %w", err)
+		return contract.Request{}, fmt.Errorf("orphan cleanup repo root (--repo): %w", err)
 	}
 	request.WorktreePath, err = s.Environment.CanonicalPath(request.WorktreePath)
 	if err != nil {
-		return contract.Request{}, fmt.Errorf("orphan cleanup worktree path: %w", err)
+		return contract.Request{}, fmt.Errorf("orphan cleanup worktree path (--worktree): %w", err)
 	}
 	return domain.NormalizeRequest(request)
 }

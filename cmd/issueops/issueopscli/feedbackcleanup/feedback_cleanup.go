@@ -228,6 +228,13 @@ func runOrphanCleanup(args []string, deps Deps) error {
 		}
 		result, err = deps.OrphanPreview(context.Background(), request)
 	}
+	// A request refused before preview has no lists; keep them [] (not null).
+	if result.Missing == nil {
+		result.Missing = []string{}
+	}
+	if result.Warnings == nil {
+		result.Warnings = []string{}
+	}
 	if *jsonOut {
 		if err == nil {
 			return deps.PrintJSON(result)

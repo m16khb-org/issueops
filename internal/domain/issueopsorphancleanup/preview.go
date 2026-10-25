@@ -17,13 +17,13 @@ func NormalizeRequest(request contract.Request) (contract.Request, error) {
 	request.Artifact.Kind = strings.ToLower(strings.TrimSpace(request.Artifact.Kind))
 	request.Artifact.URL = strings.TrimSpace(request.Artifact.URL)
 	if request.ID == "" {
-		return contract.Request{}, fmt.Errorf("orphan cleanup id is required")
+		return contract.Request{}, fmt.Errorf("orphan cleanup id is required (--id: the cycle id whose record is gone)")
 	}
 	if request.Branch == "" {
-		return contract.Request{}, fmt.Errorf("orphan cleanup branch is required")
+		return contract.Request{}, fmt.Errorf("orphan cleanup branch is required (--branch)")
 	}
 	if request.Artifact.Provider == "" || request.Artifact.Kind == "" || request.Artifact.URL == "" {
-		return contract.Request{}, fmt.Errorf("orphan cleanup provider, artifact kind, and artifact URL are required")
+		return contract.Request{}, fmt.Errorf("orphan cleanup provider, artifact kind, and artifact URL are required (--provider github|gitlab --kind pr|mr --artifact-url URL)")
 	}
 	return request, nil
 }
