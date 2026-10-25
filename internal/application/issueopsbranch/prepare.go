@@ -22,7 +22,7 @@ type Preparer struct {
 	IsAncestor            func(string, string, string) (bool, error)
 	UmbrellaForChildIssue func(string, string) (model.IssueOpsRecord, bool)
 	ObserveCodeProjectKey func(string, string) (string, error)
-	Steps                 func(string, string, string, string, string) []model.IssueOpsBranchPrepareStep
+	Steps                 func(string, string, string, string, string, string) []model.IssueOpsBranchPrepareStep
 	Now                   func() time.Time
 }
 
@@ -67,7 +67,7 @@ func (s Preparer) Prepare(ctx context.Context, id string, req model.IssueOpsBran
 			return err
 		}
 		req.RemoteBranchURL = strings.TrimSpace(req.RemoteBranchURL)
-		steps := s.Steps(req.Provider, req.IssueURL, req.Branch, req.BaseBranch, req.BaseSHA)
+		steps := s.Steps(req.Provider, req.IssueURL, req.Branch, req.BaseBranch, req.BaseSHA, codeProject)
 		result, err = s.Records.Save(spanCtx, domain.ApplyBranchPreparation(record, req, codeProject, steps, s.Now().UTC().Format(time.RFC3339Nano), s.Now().UTC().Format(time.RFC3339Nano)))
 		return err
 	})

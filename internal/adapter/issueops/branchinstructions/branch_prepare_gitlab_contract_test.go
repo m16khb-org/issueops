@@ -45,7 +45,7 @@ const (
 // ① baseSHA를 주면 두 경로 모두 그 SHA를 ref로 넘겨야 한다. base 브랜치 이름을
 // 넘기면 봉인 base와 갈릴 수 있다.
 func TestGitLabPinsRefToTheSealedBaseSHA(t *testing.T) {
-	steps := Steps("gitlab", gitlabIssueURL, gitlabBranch, "main", gitlabBaseSHA)
+	steps := Steps("gitlab", gitlabIssueURL, gitlabBranch, "main", gitlabBaseSHA, "")
 	if len(steps) == 0 {
 		t.Fatal("gitlab steps must exist")
 	}
@@ -72,7 +72,7 @@ func TestGitLabPinsRefToTheSealedBaseSHA(t *testing.T) {
 // baseSHA가 없으면 못박을 값이 없다. 종전 경로로 떨어지되 왜 고정하지 못하는지
 // 밝혀야 한다 — GitHub 분기와 같은 계약이다.
 func TestGitLabWithoutBaseSHAExplainsWhyItCannotPin(t *testing.T) {
-	steps := Steps("gitlab", gitlabIssueURL, gitlabBranch, "main", "")
+	steps := Steps("gitlab", gitlabIssueURL, gitlabBranch, "main", "", "")
 
 	fallback := gitlabFallbackStep(t, steps)
 	joined := strings.Join(fallback.Command, " ")
@@ -92,7 +92,7 @@ func TestGitLabWithoutBaseSHAExplainsWhyItCannotPin(t *testing.T) {
 // ② MCP 인자는 glab_api의 실제 스키마를 따라야 한다. 최상위 endpoint/method/field는
 // 그 스키마에 없어 검증에서 실패한다.
 func TestGitLabMCPArgumentsMatchTheGlabAPISchema(t *testing.T) {
-	steps := Steps("gitlab", gitlabIssueURL, gitlabBranch, "main", gitlabBaseSHA)
+	steps := Steps("gitlab", gitlabIssueURL, gitlabBranch, "main", gitlabBaseSHA, "")
 	mcp := gitlabMCPStep(t, steps)
 
 	if mcp.Tool != "mcp__glab.glab_api" {
@@ -125,7 +125,7 @@ func TestGitLabMCPArgumentsMatchTheGlabAPISchema(t *testing.T) {
 // ③ MCP 단계와 CLI 폴백이 같은 플래그를 지시해야 한다. field는 추론형이고
 // raw-field가 문자열 파라미터다.
 func TestGitLabMCPAndFallbackAgreeOnRawField(t *testing.T) {
-	steps := Steps("gitlab", gitlabIssueURL, gitlabBranch, "main", gitlabBaseSHA)
+	steps := Steps("gitlab", gitlabIssueURL, gitlabBranch, "main", gitlabBaseSHA, "")
 
 	mcp := gitlabMCPStep(t, steps)
 	flags, ok := mcp.ToolArguments["flags"].(map[string]any)
@@ -150,7 +150,7 @@ func TestGitLabMCPAndFallbackAgreeOnRawField(t *testing.T) {
 
 // 세 결함을 고쳐도 단계 수와 전략 어휘는 그대로다. GitLab은 사전 조회가 필요 없다.
 func TestGitLabKeepsThreeStepsAndItsStrategies(t *testing.T) {
-	steps := Steps("gitlab", gitlabIssueURL, gitlabBranch, "main", gitlabBaseSHA)
+	steps := Steps("gitlab", gitlabIssueURL, gitlabBranch, "main", gitlabBaseSHA, "")
 	if len(steps) != 3 {
 		t.Fatalf("GitLab은 사전 조회가 없어 3단계다: %d", len(steps))
 	}

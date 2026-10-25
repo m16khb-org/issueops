@@ -17,7 +17,7 @@ import (
 // 만들어지는 것을 실측했다.
 func TestGitHubStepsPinTheSealedBaseSHA(t *testing.T) {
 	const baseSHA = "2a56f2cc4d2e6b7b4fa99e3cdd71e3673ae060d2"
-	steps := Steps("github", "https://github.com/acme/repo/issues/16", "16-demo", "main", baseSHA)
+	steps := Steps("github", "https://github.com/acme/repo/issues/16", "16-demo", "main", baseSHA, "")
 	var joined strings.Builder
 	for _, step := range steps {
 		joined.WriteString(step.Description + " " + strings.Join(step.Command, " ") + "\n")
@@ -33,7 +33,7 @@ func TestGitHubStepsPinTheSealedBaseSHA(t *testing.T) {
 // node ID 조회가 별도 단계여야 한다. mutation 하나에 셸 치환을 넣으면 가드가
 // 정적으로 분류할 수 없고, 이 저장소는 그런 명령을 거부한다.
 func TestGitHubStepsResolveTheIssueNodeIDSeparately(t *testing.T) {
-	steps := Steps("github", "https://github.com/acme/repo/issues/16", "16-demo", "main", "deadbeef")
+	steps := Steps("github", "https://github.com/acme/repo/issues/16", "16-demo", "main", "deadbeef", "")
 	var nodeIDStep, mutationStep bool
 	for _, step := range steps {
 		command := strings.Join(step.Command, " ")
@@ -55,7 +55,7 @@ func TestGitHubStepsResolveTheIssueNodeIDSeparately(t *testing.T) {
 // base SHA가 없으면 oid를 고정할 수 없다. 그 경우 종전 경로로 떨어지되 왜
 // 그런지 안내해야 한다 — 조용히 브랜치 이름을 쓰면 #147의 갈림이 재발한다.
 func TestGitHubStepsFallBackWhenTheBaseSHAIsAbsent(t *testing.T) {
-	steps := Steps("github", "https://github.com/acme/repo/issues/16", "16-demo", "main", "")
+	steps := Steps("github", "https://github.com/acme/repo/issues/16", "16-demo", "main", "", "")
 	var joined strings.Builder
 	for _, step := range steps {
 		joined.WriteString(step.Description + " " + strings.Join(step.Command, " ") + "\n")
@@ -75,7 +75,7 @@ func TestGitHubStepsFallBackWhenTheBaseSHAIsAbsent(t *testing.T) {
 // 확장 검사가 명령을 거부한다(tokens.go의 `$` 검사, 단일 인용 안은 건너뛴다).
 // 그 전제를 안내에 담지 않으면 실행 주체가 그대로 붙여넣어 막힌다.
 func TestGitHubStepsWarnAboutQuotingTheQuery(t *testing.T) {
-	steps := Steps("github", "https://github.com/acme/repo/issues/16", "16-demo", "main", "deadbeef")
+	steps := Steps("github", "https://github.com/acme/repo/issues/16", "16-demo", "main", "deadbeef", "")
 	var joined strings.Builder
 	for _, step := range steps {
 		joined.WriteString(step.Description + "\n")
@@ -89,11 +89,37 @@ func TestGitHubStepsWarnAboutQuotingTheQuery(t *testing.T) {
 // 수단이 다르다 — GraphQL mutation도 node id 조회도 쓰지 않고 `ref`에 SHA를 넘긴다.
 // 그 경로를 검증하는 것은 branch_prepare_gitlab_contract_test.go다.
 func TestGitLabStepsAreUntouchedByTheOIDChange(t *testing.T) {
-	steps := Steps("gitlab", "https://gitlab.example.com/acme/repo/-/issues/16", "16-demo", "main", "deadbeef")
+	steps := Steps("gitlab", "https://gitlab.example.com/acme/repo/-/issues/16", "16-demo", "main", "deadbeef", "")
 	for _, step := range steps {
 		command := strings.Join(step.Command, " ")
 		if strings.Contains(command, "createLinkedBranch") || strings.Contains(command, "node_id") {
 			t.Fatalf("gitlab 경로는 이 이슈의 대상이 아니다: %q", command)
 		}
+	}
+}
+
+// A cross-project cycle (issue in acme/tracker, code in acme/app) sealed
+// code_project_key, but the steps created the linked branch in the issue's
+// repository: createLinkedBranch defaults repositoryId to it, and so does
+// gh issue develop without --branch-repo.
+func TestGitHubStepsCreateTheBranchInTheCodeRepository(t *testing.T) {
+	steps := Steps("github", "https://github.com/acme/tracker/issues/7", "7-demo", "main", "deadbeef", "github.com/acme/app")
+	var repoNode, mutation bool
+	for _, step := range steps {
+		command := strings.Join(step.Command, " ")
+		repoNode = repoNode || command == "gh api repos/acme/app --jq .node_id"
+		mutation = mutation || (strings.Contains(command, "repositoryId:$repositoryId") && strings.Contains(command, "repositoryId=<repository-node-id-from-previous-step>"))
+	}
+	if !repoNode || !mutation {
+		t.Fatalf("cross-project steps do not target acme/app: %+v", steps)
+	}
+	for i, step := range steps {
+		if step.Order != i+1 {
+			t.Fatalf("step %d has order %d", i, step.Order)
+		}
+	}
+	develop := Steps("github", "https://github.com/acme/tracker/issues/7", "7-demo", "main", "", "github.com/acme/app")
+	if got := strings.Join(develop[1].Command, " "); !strings.HasSuffix(got, "--branch-repo acme/app") {
+		t.Fatalf("gh issue develop = %q", got)
 	}
 }

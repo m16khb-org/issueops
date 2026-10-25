@@ -24,7 +24,7 @@ func TestGitHubStepsRequireALinkedBranchReadback(t *testing.T) {
 		{"base SHA 없음", ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			steps := githubSteps(readbackIssueURL, readbackBranch, "main", tc.baseSHA)
+			steps := githubSteps(readbackIssueURL, readbackBranch, "main", tc.baseSHA, "")
 
 			issueReadback, remoteReadback := "", ""
 			for _, step := range steps {
@@ -55,7 +55,7 @@ func TestGitHubStepsRequireALinkedBranchReadback(t *testing.T) {
 // 확인해야 하는지, 그리고 무엇을 하면 안 되는지 밝히는지 고정한다.
 // "다시 읽어라"만으로는 ref:null을 성공으로 넘긴다.
 func TestGitHubReadbackNamesThePartialSuccessAndForbidsRetry(t *testing.T) {
-	steps := githubSteps(readbackIssueURL, readbackBranch, "main", readbackBaseSHA)
+	steps := githubSteps(readbackIssueURL, readbackBranch, "main", readbackBaseSHA, "")
 
 	var description strings.Builder
 	for _, step := range steps {
@@ -76,7 +76,7 @@ func TestGitHubReadbackNamesThePartialSuccessAndForbidsRetry(t *testing.T) {
 // 밀어내지 않음을 고정한다. 마지막 단계는 언제나 "여기서 멈춰라"여야 한다.
 func TestGitHubStepsKeepFailAsTheLastStep(t *testing.T) {
 	for _, baseSHA := range []string{readbackBaseSHA, ""} {
-		steps := githubSteps(readbackIssueURL, readbackBranch, "main", baseSHA)
+		steps := githubSteps(readbackIssueURL, readbackBranch, "main", baseSHA, "")
 		last := steps[len(steps)-1]
 		if last.Strategy != "fail" {
 			t.Fatalf("마지막 단계는 fail이어야 한다: %+v", last)
@@ -102,7 +102,7 @@ func TestGitHubStepsDeriveIssueCoordinatesFromTheIssueURL(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var nodeCommand, readback string
-			for _, step := range Steps("github", tc.issueURL, "16-demo", "main", "deadbeef") {
+			for _, step := range Steps("github", tc.issueURL, "16-demo", "main", "deadbeef", "") {
 				command := strings.Join(step.Command, " ")
 				switch {
 				case strings.HasPrefix(command, "gh api ") && strings.Contains(command, ".node_id"):

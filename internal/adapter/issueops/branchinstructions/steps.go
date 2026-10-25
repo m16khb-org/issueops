@@ -11,12 +11,17 @@ import (
 // baseSHA는 두 provider 모두에서 새 브랜치의 base를 못박는 데 쓴다. 비어 있으면
 // base 브랜치 이름으로 떨어지고, 그 경우 provider가 **그 시점** 브랜치 HEAD를
 // 쓰므로 봉인한 base와 갈릴 수 있다(#176 GitHub, #180 GitLab).
-func Steps(provider, issueURL, branch, baseBranch, baseSHA string) []model.IssueOpsBranchPrepareStep {
+//
+// codeProject is the sealed code_project_key: set only when the code lives in
+// another project than the issue. GitHub then creates the linked branch in the
+// issue's repository unless told otherwise (createLinkedBranch repositoryId,
+// gh issue develop --branch-repo), so the steps name the code repository.
+func Steps(provider, issueURL, branch, baseBranch, baseSHA, codeProject string) []model.IssueOpsBranchPrepareStep {
 	switch provider {
 	case "gitlab":
 		return gitlabSteps(branch, baseBranch, baseSHA)
 	case "github":
-		return githubSteps(issueURL, branch, baseBranch, baseSHA)
+		return githubSteps(issueURL, branch, baseBranch, baseSHA, githubRepoPath(codeProject))
 	default:
 		return nil
 	}
@@ -114,7 +119,7 @@ func gitlabSteps(branch, baseBranch, baseSHA string) []model.IssueOpsBranchPrepa
 // node ID 조회를 별도 단계로 두는 이유는 가드다. 한 명령에 셸 치환을 넣으면
 // 정적으로 분류할 수 없고 이 저장소는 그런 명령을 거부한다. `fallback_api`는
 // 지금도 사람이나 에이전트가 실행하는 안내이므로 값을 옮기는 것이 그 주체의 일이다.
-func githubSteps(issueURL, branch, baseBranch, baseSHA string) []model.IssueOpsBranchPrepareStep {
+func githubSteps(issueURL, branch, baseBranch, baseSHA, codeRepo string) []model.IssueOpsBranchPrepareStep {
 	steps := []model.IssueOpsBranchPrepareStep{{
 		Order:       1,
 		Strategy:    "mcp_unavailable",
@@ -123,10 +128,14 @@ func githubSteps(issueURL, branch, baseBranch, baseSHA string) []model.IssueOpsB
 	if baseSHA == "" {
 		// base SHA 없이는 oid를 못박을 수 없다. 종전 경로로 떨어지되 그 사실을
 		// 밝힌다 — 조용히 브랜치 이름을 쓰면 #147의 base 갈림이 재발한다.
+		develop := []string{"gh", "issue", "develop", issueURL, "--base", baseBranch, "--name", branch}
+		if codeRepo != "" {
+			develop = append(develop, "--branch-repo", codeRepo)
+		}
 		steps = append(steps, model.IssueOpsBranchPrepareStep{
 			Order:    2,
 			Strategy: "fallback_api",
-			Command:  []string{"gh", "issue", "develop", issueURL, "--base", baseBranch, "--name", branch},
+			Command:  develop,
 			Description: "Create a GitHub linked development branch through gh issue develop. " +
 				"Recorded base_sha is empty, so the linked branch takes whatever " + baseBranch +
 				" points at when this runs — it can diverge from the sealed base (#176).",
@@ -143,15 +152,31 @@ func githubSteps(issueURL, branch, baseBranch, baseSHA string) []model.IssueOpsB
 			Order:    2,
 			Strategy: "resolve_issue_node",
 			Command:  []string{"gh", "api", githubIssueAPIPath(issueURL), "--jq", ".node_id"},
-			Description: "Read the issue's GraphQL node id. The next step needs it as createLinkedBranch's issueId; " +
+			Description: "Read the issue's GraphQL node id. The create step needs it as createLinkedBranch's issueId; " +
 				"substitute the printed value literally instead of piping, because a command with shell substitution " +
 				"cannot be statically classified by the lifecycle guard.",
 		},
+	)
+	order := 3
+	query := githubCreateLinkedBranchQuery
+	create := []string{"-F", "issueId=<node-id-from-previous-step>", "-F", "oid=" + baseSHA, "-F", "name=" + branch}
+	if codeRepo != "" {
+		steps = append(steps, model.IssueOpsBranchPrepareStep{
+			Order:    order,
+			Strategy: "resolve_repository_node",
+			Command:  []string{"gh", "api", "repos/" + codeRepo, "--jq", ".node_id"},
+			Description: "The code lives in " + codeRepo + ", not in the issue's repository; read its GraphQL node id. " +
+				"Without it createLinkedBranch creates the branch in the issue's repository.",
+		})
+		order++
+		query = githubCreateLinkedBranchInRepoQuery
+		create = []string{"-F", "issueId=<issue-node-id>", "-F", "repositoryId=<repository-node-id-from-previous-step>", "-F", "oid=" + baseSHA, "-F", "name=" + branch}
+	}
+	steps = append(steps,
 		model.IssueOpsBranchPrepareStep{
-			Order:    3,
+			Order:    order,
 			Strategy: "fallback_api",
-			Command: []string{"gh", "api", "graphql", "-f", "query=" + githubCreateLinkedBranchQuery,
-				"-F", "issueId=<node-id-from-previous-step>", "-F", "oid=" + baseSHA, "-F", "name=" + branch},
+			Command:  append([]string{"gh", "api", "graphql", "-f", "query=" + query}, create...),
 			Description: "Create the linked development branch pinned to the sealed base " + baseSHA + ". " +
 				"gh issue develop cannot do this: its --base flag takes a branch name and GitHub resolves that " +
 				"branch's current HEAD, which diverges from the sealed base once " + baseBranch + " moves (#176). " +
@@ -159,9 +184,9 @@ func githubSteps(issueURL, branch, baseBranch, baseSHA string) []model.IssueOpsB
 				"as shell parameter expansion otherwise and the lifecycle guard rejects the command.",
 		},
 	)
-	steps = append(steps, githubLinkedBranchReadbackSteps(issueURL, branch, baseSHA, 4)...)
+	steps = append(steps, githubLinkedBranchReadbackSteps(issueURL, branch, baseSHA, order+1)...)
 	return append(steps, model.IssueOpsBranchPrepareStep{
-		Order:       6,
+		Order:       order + 3,
 		Strategy:    "fail",
 		Description: "Stop the IssueOps branch preparation if the linked development branch cannot be created or the readback does not match.",
 	})
@@ -227,6 +252,22 @@ func githubIssueCoordinates(issueURL string) (string, string, string) {
 
 const githubCreateLinkedBranchQuery = "mutation($issueId:ID!,$oid:GitObjectID!,$name:String!)" +
 	"{createLinkedBranch(input:{issueId:$issueId,oid:$oid,name:$name}){linkedBranch{ref{name target{oid}}}}}"
+
+// githubCreateLinkedBranchInRepoQuery adds repositoryId ("ID of the repository
+// to create the branch in. Defaults to the issue repository.", schema
+// introspection) for a code repository other than the issue's.
+const githubCreateLinkedBranchInRepoQuery = "mutation($issueId:ID!,$repositoryId:ID!,$oid:GitObjectID!,$name:String!)" +
+	"{createLinkedBranch(input:{issueId:$issueId,repositoryId:$repositoryId,oid:$oid,name:$name}){linkedBranch{ref{name target{oid}}}}}"
+
+// githubRepoPath turns a code project key (github.com/OWNER/REPO) into
+// OWNER/REPO; an empty key (same project as the issue) stays empty.
+func githubRepoPath(codeProject string) string {
+	parts := strings.Split(strings.Trim(strings.TrimSpace(codeProject), "/"), "/")
+	if len(parts) < 3 {
+		return ""
+	}
+	return parts[len(parts)-2] + "/" + parts[len(parts)-1]
+}
 
 // githubIssueAPIPath는 이슈 URL을 REST 경로로 바꾼다. node id를 그 경로에서 읽는다.
 func githubIssueAPIPath(issueURL string) string {

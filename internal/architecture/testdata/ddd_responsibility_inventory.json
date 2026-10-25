@@ -4322,6 +4322,7 @@
         "func githubIssueCoordinates",
         "func githubLinkedBranchReadbackQuery",
         "func githubLinkedBranchReadbackSteps",
+        "func githubRepoPath",
         "func githubSteps",
         "func gitlabSteps"
       ]
