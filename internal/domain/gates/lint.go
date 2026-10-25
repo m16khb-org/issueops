@@ -129,6 +129,11 @@ func LintStatic(candidate LintCandidate) (result model.LintGate, argv []string) 
 		result.Warnings = append(result.Warnings, "python without -B writes __pycache__ into the worktree, which enters the change fingerprint (removing it later stales the clean seal); run python3 -B")
 	}
 	expect := strings.TrimSpace(gate.Expect)
+	if name, ok := testNameFilter(argv); ok && expect != "" && !strings.ContainsAny(expect, "123456789") && !strings.Contains(expect, name) {
+		// Rust QA: `cargo test char_count` named no test (the test was
+		// counts_chars), ran zero tests and still printed "test result: ok".
+		result.Warnings = append(result.Warnings, fmt.Sprintf("CHECK selects tests by name (%s); a name that matches nothing runs zero tests and still succeeds, so make EXPECT require a test count or the test's own line", name))
+	}
 	if len(expect) >= 2 && strings.HasPrefix(expect, "`") && strings.HasSuffix(expect, "`") {
 		result.Problems = append(result.Problems, "EXPECT is wrapped in markdown backticks, which are matched literally, so it never matches command output. Write the bare text")
 	}
@@ -253,4 +258,44 @@ func pythonWritesBytecode(argv []string) bool {
 		}
 	}
 	return true
+}
+
+// testNameFilter returns the test-name filter of a go test -run, cargo test
+// NAME, pytest -k, or jest/vitest -t/--testNamePattern CHECK.
+func testNameFilter(argv []string) (string, bool) {
+	if len(argv) < 2 {
+		return "", false
+	}
+	tool := strings.ToLower(filepath.Base(argv[0]))
+	flagValue := func(names ...string) (string, bool) {
+		for i, arg := range argv {
+			for _, name := range names {
+				if arg == name && i+1 < len(argv) {
+					return argv[i+1], true
+				}
+				if value, ok := strings.CutPrefix(arg, name+"="); ok {
+					return value, true
+				}
+			}
+		}
+		return "", false
+	}
+	switch {
+	case tool == "go" && argv[1] == "test":
+		return flagValue("-run", "--run")
+	case tool == "cargo" && argv[1] == "test":
+		for _, arg := range argv[2:] {
+			if arg == "--" {
+				break
+			}
+			if !strings.HasPrefix(arg, "-") {
+				return arg, true
+			}
+		}
+	case slices.Contains(argv, "pytest") || tool == "pytest":
+		return flagValue("-k")
+	case slices.ContainsFunc(argv, func(arg string) bool { return arg == "jest" || arg == "vitest" }) || tool == "jest" || tool == "vitest":
+		return flagValue("-t", "--testNamePattern")
+	}
+	return "", false
 }

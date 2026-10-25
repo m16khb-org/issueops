@@ -12737,6 +12737,7 @@
         "func literalLooksLikeRegex",
         "func pythonWritesBytecode",
         "func specID",
+        "func testNameFilter",
         "func unwrapSpec",
         "type LintCandidate"
       ]

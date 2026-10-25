@@ -170,3 +170,29 @@ func TestLintStaticWarnsOnLineAnchorWithoutMultilineFlag(t *testing.T) {
 		t.Fatalf("problems=%q warnings=%q", result.Problems, result.Warnings)
 	}
 }
+
+// Rust QA: a name filter that matches nothing runs zero tests and still
+// succeeds; lint asks for a count or the test's own line in EXPECT.
+func TestLintStaticWarnsOnNameFilteredCheckWithoutCountOrName(t *testing.T) {
+	for _, spec := range []string{
+		"cargo test char_count | EXPECT: /^test result: ok/m",
+		"go test -run TestX ./... | EXPECT: ok",
+		"python3 -B -m pytest -k dec | EXPECT: /passed/",
+		"npx jest -t adds | EXPECT: /Tests:/",
+	} {
+		result, _ := LintStatic(LintSpecCandidate("spec", "G1: x | CHECK: "+spec))
+		if !slices.ContainsFunc(result.Warnings, func(w string) bool { return strings.Contains(w, "selects tests by name") }) {
+			t.Fatalf("%q: warnings=%q", spec, result.Warnings)
+		}
+	}
+	for _, spec := range []string{
+		"cargo test counts_chars | EXPECT: /^test result: ok\\. [1-9]/m",
+		"go test -v -run TestDec ./... | EXPECT: /--- PASS: TestDec/",
+		"cargo test --offline | EXPECT: /^test result: ok/m",
+	} {
+		result, _ := LintStatic(LintSpecCandidate("spec", "G1: x | CHECK: "+spec))
+		if slices.ContainsFunc(result.Warnings, func(w string) bool { return strings.Contains(w, "selects tests by name") }) {
+			t.Fatalf("%q: warnings=%q", spec, result.Warnings)
+		}
+	}
+}
