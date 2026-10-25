@@ -14465,6 +14465,7 @@
         "func prBase",
         "func prefixed",
         "func recordActorFlags",
+        "func releasedMergeResolution",
         "func shellSafeURL",
         "func shellWord",
         "func stage",

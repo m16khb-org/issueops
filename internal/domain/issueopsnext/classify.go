@@ -625,6 +625,9 @@ func actorCWD(in Input) string {
 	case execution.Lease.Status == issueopsnextcontract.LeaseStatusActive && holderIsSelf(in) &&
 		strings.TrimSpace(execution.Lease.Holder.AgentID) == "":
 		cwd = execution.Workspace.Root
+	case releasedMergeResolution(in):
+		// sync-base finalize runs in the canonical worktree (cwd_canonical).
+		cwd = execution.Workspace.Root
 	}
 	return strings.TrimSpace(cwd)
 }
@@ -977,13 +980,32 @@ func classifyCleanupResume(in Input, decision Decision, index int) (Decision, bo
 // next named link-plan, which would have recorded over conflict markers.
 func classifyMergeInProgress(in Input, decision Decision) (Decision, bool) {
 	execution := in.Record.Execution
-	if in.GitOperation != "merge" || execution == nil || execution.Lease.Status != issueopsnextcontract.LeaseStatusActive || !holderIsSelf(in) {
+	if in.GitOperation != "merge" || execution == nil {
 		return decision, false
 	}
-	// The work happens in the worktree, as implement's does; no new stage key.
-	decision.Stage = stage(issueopsnextcontract.StageImplement, 4)
+	prefix := "issueops execution sync-base --id " + in.Record.ID
+	switch {
+	case execution.Lease.Status == issueopsnextcontract.LeaseStatusActive && holderIsSelf(in):
+		// The work happens in the worktree, as implement's does; no new stage key.
+		decision.Stage = stage(issueopsnextcontract.StageImplement, 4)
+	case releasedMergeResolution(in):
+		// Probe: a merge_conflict recovery on a completed cycle paused on
+		// conflicts, and next still offered merge-pr.
+		decision.Stage = stage(issueopsnextcontract.StageDone, 10)
+		prefix += " --completion-generation " + strconv.FormatUint(execution.Completion.Generation, 10)
+	default:
+		return decision, false
+	}
 	decision.Missing = []string{"merge_in_progress"}
-	decision.NextCommand = "issueops execution sync-base --id " + in.Record.ID + " --finalize $ACTOR_FLAGS"
-	decision.Warnings = append(decision.Warnings, "a merge is in progress in the worktree: resolve the conflict files, then finalize; to drop the merge run issueops execution sync-base --id "+in.Record.ID+" --abort $ACTOR_FLAGS --json")
+	decision.NextCommand = prefix + " --finalize $ACTOR_FLAGS"
+	decision.Warnings = append(decision.Warnings, "a merge is in progress in the worktree: resolve the conflict files, then finalize; to drop the merge run "+prefix+" --abort $ACTOR_FLAGS --json")
 	return decision, true
+}
+
+// releasedMergeResolution is a completed cycle whose worktree holds the
+// unfinished merge of a sync-base run under the released completion.
+func releasedMergeResolution(in Input) bool {
+	execution := in.Record.Execution
+	return in.GitOperation == "merge" && execution != nil && execution.Lease.Status == issueopsnextcontract.LeaseStatusReleased &&
+		execution.Completion != nil && execution.Completion.Generation != 0
 }

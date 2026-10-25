@@ -1113,3 +1113,21 @@ func TestClassifyWarnsAboutAnOpenRebase(t *testing.T) {
 		t.Fatalf("warnings=%q missing=%v", got.Warnings, got.Missing)
 	}
 }
+
+// Probe: merge_conflict recovery on a completed cycle (released lease) paused
+// on conflicts and next still offered merge-pr. It routes to the finalize of
+// the released completion, with actor flags for the worktree.
+func TestClassifyRoutesAReleasedCompletionMergeToFinalize(t *testing.T) {
+	in := withReleasedLease(baseRecord(issueopsnextcontract.PhaseDone))
+	in.Record.Execution.Completion = &issueopscontract.ExecutionCompletion{Generation: 1, FinalHead: "abc"}
+	in.GitOperation = "merge"
+	got := classifyTemplate(in)
+	if got.Stage.Key != "done" || !slices.Equal(got.Missing, []string{"merge_in_progress"}) ||
+		!strings.HasPrefix(got.NextCommand, "issueops execution sync-base --id io-test --completion-generation 1 --finalize ") {
+		t.Fatalf("stage=%q missing=%v command=%q", got.Stage.Key, got.Missing, got.NextCommand)
+	}
+	in.ActorHost, in.ActorSessionID = "claude", "s-9"
+	if cwd := actorCWD(in); cwd != in.Record.Execution.Workspace.Root {
+		t.Fatalf("actor cwd = %q, want the worktree", cwd)
+	}
+}
