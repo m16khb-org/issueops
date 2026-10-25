@@ -95,9 +95,10 @@ func (g ReadinessGit) IsAncestor(root, commit, ref string) bool {
 	return code == 0
 }
 func (g ReadinessGit) ContentAbsorbed(root, ref, commit string) bool {
-	code, merged, _ := g.Run(root, "merge-tree", "--write-tree", ref, commit)
-	tree, _, _ := strings.Cut(strings.TrimSpace(merged), "\n")
-	return code == 0 && tree != "" && tree == strings.TrimSpace(g.Output(root, "rev-parse", "--verify", ref+"^{tree}"))
+	return gitContentAbsorbed(func(args ...string) (int, string) {
+		code, stdout, _ := g.Run(root, args...)
+		return code, stdout
+	}, ref, commit)
 }
 func (g ReadinessGit) Upstream(root string) string {
 	return strings.TrimSpace(g.Output(root, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"))

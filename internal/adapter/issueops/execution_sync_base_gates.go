@@ -200,12 +200,7 @@ func (g *executionSyncBaseGateRun) checkSealedBaseKept() {
 		return code == 0
 	}
 	absorbed := func(commit string) bool {
-		code, merged := g.deps.Git(g.ctx, inv.Root, "merge-tree", "--write-tree", inv.BaseOID, commit)
-		if code != 0 || firstLine(merged) == "" {
-			return false
-		}
-		treeCode, tree := g.deps.Git(g.ctx, inv.Root, "rev-parse", "--verify", inv.BaseOID+"^{tree}")
-		return treeCode == 0 && firstLine(merged) == strings.TrimSpace(tree)
+		return gitContentAbsorbed(func(args ...string) (int, string) { return g.deps.Git(g.ctx, inv.Root, args...) }, inv.BaseOID, commit)
 	}
 	if !issueopsdomain.BaseHoldsWorkBase(inv.WorkBaseCommits, ancestor, absorbed) {
 		g.missing = append(g.missing, "sealed_base_on_base_tip")
@@ -225,6 +220,18 @@ func (g *executionSyncBaseGateRun) predictConflicts() {
 	} else {
 		g.result.ConflictFiles = conflicts
 	}
+}
+
+// gitContentAbsorbed reports whether merging commit into ref changes nothing
+// (ref already holds commit's content, as after a squash merge). run returns
+// the exit code and stdout of one git invocation.
+func gitContentAbsorbed(run func(...string) (int, string), ref, commit string) bool {
+	code, merged := run("merge-tree", "--write-tree", ref, commit)
+	if code != 0 || firstLine(merged) == "" {
+		return false
+	}
+	treeCode, tree := run("rev-parse", "--verify", ref+"^{tree}")
+	return treeCode == 0 && firstLine(merged) == strings.TrimSpace(tree)
 }
 
 func firstLine(out string) string {
