@@ -524,6 +524,17 @@ func nextSpanRetryGap(current time.Duration) time.Duration {
 	return min(current*2, spanLockMaxRetryGap)
 }
 
+// explainContention names the remedy for a write that waited out the busy
+// timeout. Probe: with another process holding the write lock, a mutation
+// failed after 10 s with only "database is locked (5) (SQLITE_BUSY)".
+func (d *DB) explainContention(err error) error {
+	if !isSQLiteLockContention(err) {
+		return err
+	}
+	path := filepath.Join(d.dir, dataDBFile)
+	return fmt.Errorf("%w: the issueops state database %s stayed locked by another writer past the busy timeout (another issueops command still running, or a stuck process); retry, and if it repeats find the holder with lsof %s", err, path, path)
+}
+
 func isSQLiteLockContention(err error) bool {
 	sqliteErr, ok := errors.AsType[*sqlite.Error](err)
 	if !ok {
@@ -556,7 +567,7 @@ func (d *DB) Put(bucket, id string, data []byte) error {
 	return d.unattributedWrite(func() error {
 		_, err := d.data.Exec(`INSERT INTO records (bucket, id, data) VALUES (?, ?, ?)
 		ON CONFLICT (bucket, id) DO UPDATE SET data = excluded.data`, bucket, id, data)
-		return err
+		return d.explainContention(err)
 	})
 }
 
@@ -589,7 +600,7 @@ func (d *DB) Apply(ctx context.Context, mutations []port.RecordMutation) error {
 	defer release()
 	tx, err := d.data.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return d.explainContention(err)
 	}
 	defer func() { _ = tx.Rollback() }()
 	if err := applyMutationsTx(ctx, tx, mutations); err != nil {
@@ -629,7 +640,7 @@ func (d *DB) CompareAndApplyFunc(ctx context.Context, expected []port.ExpectedRe
 	defer release()
 	tx, err := d.data.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return d.explainContention(err)
 	}
 	defer func() { _ = tx.Rollback() }()
 	if err := verifyExpectedRecordsTx(ctx, tx, expected); err != nil {
@@ -726,7 +737,7 @@ func (d *DB) Delete(bucket, id string) error {
 	defer release()
 	return d.unattributedWrite(func() error {
 		_, err := d.data.Exec(`DELETE FROM records WHERE bucket = ? AND id = ?`, bucket, id)
-		return err
+		return d.explainContention(err)
 	})
 }
 
@@ -743,7 +754,7 @@ func (d *DB) DeleteBefore(ctx context.Context, bucket, beforeID string) error {
 	defer release()
 	return d.unattributedWrite(func() error {
 		_, err := d.data.ExecContext(ctx, `DELETE FROM records WHERE bucket = ? AND id < ?`, bucket, beforeID)
-		return err
+		return d.explainContention(err)
 	})
 }
 

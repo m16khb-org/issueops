@@ -6368,6 +6368,7 @@
         "func DB.beginSpanTx",
         "func DB.beginSpanTxAfterContention",
         "func DB.commitData",
+        "func DB.explainContention",
         "func DB.runSpan",
         "func DB.unattributedWrite",
         "func DB.withSpan",
