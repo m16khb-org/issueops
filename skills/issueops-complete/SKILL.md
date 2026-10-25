@@ -88,6 +88,8 @@ worktree HEAD`로 거부된다.
    커밋하지 않으면 워크트리가 dirty로 남아 이후 `cleanup finish`가 막힌다.
    PR 본문이 가리키는 증거를 리뷰어가 볼 수 있게 하는 것도 커밋의 이유다.
 3. 커밋 뒤 HEAD를 읽는다. 보고서가 이미 앞선 커밋에 들어 있어 새 커밋이 없으면 지금 HEAD를 쓴다.
+   재작업(reseed)으로 PR 본문의 사실(변경 내용, 테스트 수, 검증)이 바뀌었으면 complete 전에
+   [`issueops-sync-pr`](../issueops-sync-pr/SKILL.md)로 본문을 갱신한다.
 
 ```bash
 git -C "$WORKTREE" add "$REPORT_REL"
