@@ -89,6 +89,8 @@ issueops gates check --file "$LEDGER" --cwd "$WORKTREE" --workspace-root "$WORKT
   관계없다. 원장을 바꾸지 않고 읽기만 하려면 `gates status`를 쓴다.
 - 네트워크가 필요한 CHECK는 `--network`를 붙인다. 붙이지 않으면 정책이 막는다.
 - 오래 걸리는 CHECK는 `--timeout-seconds N`으로 한도를 올린다.
+- CHECK는 환경 변수 `HOME`·`PATH`만 받는다. 테스트가 다른 변수(예: `DATABASE_URL`, `GOFLAGS`)를 읽으면
+  `--env HOME,PATH,DATABASE_URL`처럼 이름을 더한다. 빠지면 EXPECT가 안 맞는 이유가 출력에 드러나지 않는다.
 - 종료 코드 1은 미충족 게이트가 남았다는 뜻이다. 실패가 아니라 아직 아니라는 뜻이므로
   원장을 고치지 말고 구현을 고친다.
 - 예외: 오류가 EXPECT 표기 문제라고 알리면(줄 중간 리터럴, 정규식 표기 누락) 뜻은 그대로 두고
