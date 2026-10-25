@@ -123,6 +123,9 @@ func (s Readiness) observePR(record model.IssueOpsRecord, fetch func(string) rev
 			ref := "origin/" + base
 			if s.Git.BaseAdvanced(root, ref) {
 				facts.BaseRemoteRef, facts.BaseAdvanced = ref, true
+				if sealed := domain.PreparedBaseSHA(record); sealed != "" {
+					facts.BaseRewritten = !s.Git.Contains(root, ref, sealed)
+				}
 			}
 		}
 		facts.Upstream = s.Git.Upstream(root)

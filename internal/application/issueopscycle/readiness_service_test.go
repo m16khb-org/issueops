@@ -18,14 +18,15 @@ type readinessGitFixture struct {
 	t      *testing.T
 }
 
-func (g *readinessGitFixture) Root(model.IssueOpsRecord) string { return g.root }
-func (g *readinessGitFixture) Head(model.IssueOpsRecord) string { return "head" }
-func (g *readinessGitFixture) IsWorktree(string) bool           { return true }
-func (g *readinessGitFixture) Branch(string) string             { return "feature" }
-func (g *readinessGitFixture) Clean(string) bool                { return true }
-func (g *readinessGitFixture) BaseAdvanced(string, string) bool { return false }
-func (g *readinessGitFixture) Upstream(string) string           { return "origin/feature" }
-func (g *readinessGitFixture) Counts(string) string             { return "0 0" }
+func (g *readinessGitFixture) Root(model.IssueOpsRecord) string     { return g.root }
+func (g *readinessGitFixture) Head(model.IssueOpsRecord) string     { return "head" }
+func (g *readinessGitFixture) IsWorktree(string) bool               { return true }
+func (g *readinessGitFixture) Branch(string) string                 { return "feature" }
+func (g *readinessGitFixture) Clean(string) bool                    { return true }
+func (g *readinessGitFixture) BaseAdvanced(string, string) bool     { return false }
+func (g *readinessGitFixture) Contains(string, string, string) bool { return true }
+func (g *readinessGitFixture) Upstream(string) string               { return "origin/feature" }
+func (g *readinessGitFixture) Counts(string) string                 { return "0 0" }
 func (g *readinessGitFixture) Fetch(root string) review.UpstreamFetch {
 	if *g.locked {
 		g.t.Fatal("network fetch executed under lifecycle lock")

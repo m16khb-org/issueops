@@ -12,6 +12,8 @@ type PRGitObservations interface {
 	Branch(string) string
 	Clean(string) bool
 	BaseAdvanced(root, ref string) bool
+	// Contains reports whether ref contains (descends from) commit.
+	Contains(root, ref, commit string) bool
 	Upstream(string) string
 	Fetch(string) review.UpstreamFetch
 	Counts(string) string

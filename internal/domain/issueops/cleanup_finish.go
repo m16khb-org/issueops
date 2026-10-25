@@ -169,6 +169,14 @@ func PreparedBaseBranch(record model.IssueOpsRecord) string {
 	return strings.TrimSpace(record.BranchPrepare.BaseBranch)
 }
 
+// PreparedBaseSHA is the sealed base commit the branch was cut from.
+func PreparedBaseSHA(record model.IssueOpsRecord) string {
+	if record.BranchPrepare == nil {
+		return ""
+	}
+	return strings.TrimSpace(record.BranchPrepare.BaseSHA)
+}
+
 func PreparedBaseRef(record model.IssueOpsRecord) string {
 	base := strings.TrimPrefix(PreparedBaseBranch(record), "refs/heads/")
 	return strings.TrimSpace(strings.TrimPrefix(base, "origin/"))

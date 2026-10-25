@@ -15,11 +15,13 @@ type PRGitFacts struct {
 	WorktreeClean       bool
 	BaseRemoteRef       string
 	BaseAdvanced        bool
-	Upstream            string
-	SyncUpstream        bool
-	FetchFailed         bool
-	FetchStderr         string
-	UpstreamCounts      string
+	// BaseRewritten: the base ref no longer contains the sealed base.
+	BaseRewritten  bool
+	Upstream       string
+	SyncUpstream   bool
+	FetchFailed    bool
+	FetchStderr    string
+	UpstreamCounts string
 }
 
 func PRGitReadiness(record model.IssueOpsRecord, facts PRGitFacts) ([]string, []string) {
@@ -50,7 +52,9 @@ func prWorktreeReadiness(record model.IssueOpsRecord, facts PRGitFacts, missing,
 	if !facts.WorktreeClean {
 		missing = append(missing, "worktree_clean")
 	}
-	if facts.BaseAdvanced {
+	if facts.BaseRewritten {
+		warnings = append(warnings, "base_rewritten: "+facts.BaseRemoteRef+" no longer contains the sealed base (rewritten, e.g. force-pushed); a PR from this branch would bring the dropped commits back. Ask the user before opening or merging it: keep the base as is, or start a new cycle from the rewritten base")
+	} else if facts.BaseAdvanced {
 		warnings = append(warnings, "base_advanced: "+facts.BaseRemoteRef+" is not an ancestor of HEAD; run issueops execution sync-base --id "+record.ID+" --preview")
 	}
 	if facts.Upstream == "" {

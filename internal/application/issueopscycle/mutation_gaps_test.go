@@ -197,3 +197,24 @@ func TestAdvanceReportWritesTrackedMaterialsWhenEnteringImplementIfHookWired(t *
 		})
 	}
 }
+
+type rewrittenBaseGit struct{ baseAdvancedGit }
+
+func (g *rewrittenBaseGit) Contains(string, string, string) bool { return false }
+
+// Probed: origin/main was force-pushed past the sealed base; readiness
+// pointed at sync-base as for an advanced base, while the PR would carry
+// the commits the base dropped.
+func TestStrictPRReadinessNamesARewrittenBase(t *testing.T) {
+	locked, events := false, []string{}
+	ready, _ := readinessForEffects(t, &locked, &events)
+	git := &rewrittenBaseGit{baseAdvancedGit: baseAdvancedGit{readinessGitFixture: *ready.Git.(*readinessGitFixture)}}
+	ready.Git = git
+	record := feedbackRecord()
+	record.BranchPrepare = &model.IssueOpsBranchPrepare{BaseBranch: "main", BaseSHA: "sealed"}
+	got, _ := ready.observePR(record, nil)
+	joined := strings.Join(got.Warnings, "\n")
+	if !strings.Contains(joined, "base_rewritten: origin/main") || strings.Contains(joined, "base_advanced") {
+		t.Fatalf("warnings = %q", got.Warnings)
+	}
+}

@@ -90,6 +90,10 @@ func (g ReadinessGit) BaseAdvanced(root, ref string) bool {
 	code, _, _ := g.Run(root, "merge-base", "--is-ancestor", ref, "HEAD")
 	return code != 0
 }
+func (g ReadinessGit) Contains(root, ref, commit string) bool {
+	code, _, _ := g.Run(root, "merge-base", "--is-ancestor", commit, ref)
+	return code == 0
+}
 func (g ReadinessGit) Upstream(root string) string {
 	return strings.TrimSpace(g.Output(root, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"))
 }
