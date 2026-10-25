@@ -339,8 +339,9 @@ func TestFinalVerificationBatteryPinsSingleOwnerContract(t *testing.T) {
 			t.Fatalf("unit-and-contract final battery guidance missing %q", want)
 		}
 	}
-	for _, skill := range []string{"self-verify", "issueops-verify"} {
-		body := readRepoFileForTest(t, filepath.Join("skills", skill, "SKILL.md"))
+	// issueops-verify keeps the harness-repo battery in a reference its body links.
+	for skill, file := range map[string]string{"self-verify": "SKILL.md", "issueops-verify": "references/issueops-self-verify.md"} {
+		body := readRepoFileForTest(t, filepath.Join("skills", skill, file))
 		for _, want := range []string{
 			`issueops status --id "$ISSUEOPS_ID" --json`,
 			"branch_prepare.base_sha",
