@@ -22,7 +22,7 @@ type Artifact struct {
 
 func ProjectArtifact(authority ArtifactAuthority, candidate Artifact) (Artifact, error) {
 	if authority.Phase != "pr" {
-		return Artifact{}, fmt.Errorf("cannot verify remote artifact before pr phase")
+		return Artifact{}, fmt.Errorf("cannot verify remote artifact before pr phase (current phase %q); verify-artifact follows remote create-pr", authority.Phase)
 	}
 	provider := strings.ToLower(strings.TrimSpace(candidate.Provider))
 	if provider != "github" && provider != "gitlab" {

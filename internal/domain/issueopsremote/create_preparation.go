@@ -24,8 +24,12 @@ func ValidateCreateAuthority(facts CreateAuthority) (string, string, error) {
 	} else if provider != "github" {
 		return "", "", fmt.Errorf("remote provider must be github or gitlab")
 	}
-	if !facts.PhasePR || facts.Artifact {
-		return "", "", fmt.Errorf("remote create requires phase pr and no existing remote artifact")
+	// Probe: the joint message did not say which half failed.
+	if facts.Artifact {
+		return "", "", fmt.Errorf("remote create requires phase pr and no existing remote artifact: this cycle already has one (issueops status shows remote_artifact.url); do not create a second, follow issueops next --id ID --json")
+	}
+	if !facts.PhasePR {
+		return "", "", fmt.Errorf("remote create requires phase pr and no existing remote artifact: the cycle is not in phase pr yet; follow issueops next --id ID --json until it routes to create-pr")
 	}
 	if facts.Confirm {
 		if !facts.Execution {
