@@ -20,11 +20,11 @@ func issueOpsRemoteApplyInstructions(provider string, issues, labels []IssueOpsR
 		for _, label := range labels {
 			names = append(names, label.Name)
 		}
-		switch provider {
-		case "github":
-			instructions = append(instructions, "apply selected labels with gh issue create --label or gh issue edit --add-label: "+strings.Join(names, ","))
-		case "gitlab":
-			instructions = append(instructions, "apply selected labels with the GitLab issue labels field or glab issue create --label: "+strings.Join(names, ","))
+		// QA (two existing issues in one PR): the raw gh issue edit
+		// --add-label advice contradicted the remote-write rule against raw
+		// provider writes; labels go through the issueops create commands.
+		if provider == "github" || provider == "gitlab" {
+			instructions = append(instructions, "pass selected labels as --label to issueops remote create-issue, create-child or create-pr: "+strings.Join(names, ",")+"; issueops does not relabel an existing issue, so report the suggestion instead")
 		}
 	}
 	return instructions

@@ -39,8 +39,9 @@ func TestScoreIssueOpsRemoteCandidatesSelectsThresholdMatches(t *testing.T) {
 	if len(result.SelectedLabels) != 1 || result.SelectedLabels[0].Name != "enhancement" {
 		t.Fatalf("expected only enhancement selected: %+v", result.SelectedLabels)
 	}
-	if !containsFold(strings.Join(result.ApplyInstructions, "\n"), "gh issue") {
-		t.Fatalf("expected GitHub apply instruction: %+v", result.ApplyInstructions)
+	// Labels go through issueops create commands, never a raw provider write.
+	if joined := strings.Join(result.ApplyInstructions, "\n"); !containsFold(joined, "issueops remote create-issue") || containsFold(joined, "gh issue edit") {
+		t.Fatalf("expected the issueops label route: %+v", result.ApplyInstructions)
 	}
 	if result.ExecutionClass != "background_join" || !result.ReadOnly {
 		t.Fatalf("expected background join read-only classification: %+v", result)
@@ -63,8 +64,8 @@ func TestScoreIssueOpsRemoteCandidatesSupportsGitLabInstructions(t *testing.T) {
 	if len(result.SelectedLabels) != 1 {
 		t.Fatalf("expected selected GitLab label: %+v", result)
 	}
-	if !containsFold(strings.Join(result.ApplyInstructions, "\n"), "glab issue create") {
-		t.Fatalf("expected GitLab apply instruction: %+v", result.ApplyInstructions)
+	if joined := strings.Join(result.ApplyInstructions, "\n"); !containsFold(joined, "issueops remote create-issue") || containsFold(joined, "glab issue") {
+		t.Fatalf("expected the issueops label route: %+v", result.ApplyInstructions)
 	}
 }
 
