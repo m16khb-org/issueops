@@ -12751,6 +12751,7 @@
         "func pythonWritesBytecode",
         "func specID",
         "func testNameFilter",
+        "func unquotedSearchWords",
         "func unwrapSpec",
         "type LintCandidate"
       ]

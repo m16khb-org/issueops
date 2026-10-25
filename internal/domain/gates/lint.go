@@ -128,6 +128,11 @@ func LintStatic(candidate LintCandidate) (result model.LintGate, argv []string) 
 		// removing it after the clean seal made the seal stale.
 		result.Warnings = append(result.Warnings, "python without -B writes __pycache__ into the worktree, which enters the change fingerprint (removing it later stales the clean seal); run python3 -B")
 	}
+	if pattern, words, ok := unquotedSearchWords(argv); ok {
+		// QA (README typo): `grep -c This library adds numbers README.md`
+		// searched for "This" in files named library, adds, numbers.
+		result.Warnings = append(result.Warnings, fmt.Sprintf("%s reads %q as the pattern and %s as files; if a multi-word pattern was meant, quote it ('%s %s')", argv[0], pattern, strings.Join(words, ", "), pattern, strings.Join(words, " ")))
+	}
 	expect := strings.TrimSpace(gate.Expect)
 	if name, ok := testNameFilter(argv); ok && expect != "" && !strings.ContainsAny(expect, "123456789") && !strings.Contains(expect, name) {
 		// Rust QA: `cargo test char_count` named no test (the test was
@@ -298,4 +303,50 @@ func testNameFilter(argv []string) (string, bool) {
 		return flagValue("-t", "--testNamePattern")
 	}
 	return "", false
+}
+
+// unquotedSearchWords spots a grep/rg CHECK whose pattern was split by the
+// argv tokenizer: bare words between the pattern and a path-like operand
+// ("This library adds numbers README.md"). Plain directory operands without
+// a later path-like file (grep -r foo src lib) stay quiet.
+func unquotedSearchWords(argv []string) (string, []string, bool) {
+	if len(argv) < 4 {
+		return "", nil, false
+	}
+	switch filepath.Base(argv[0]) {
+	case "grep", "egrep", "fgrep", "rg":
+	default:
+		return "", nil, false
+	}
+	valueFlags := map[string]bool{"-m": true, "-A": true, "-B": true, "-C": true, "-g": true, "-t": true, "-T": true, "--max-count": true, "--glob": true, "--type": true}
+	var operands []string
+	for i := 1; i < len(argv); i++ {
+		arg := argv[i]
+		switch {
+		case arg == "-e" || arg == "-f" || arg == "--regexp" || arg == "--file" || strings.HasPrefix(arg, "--regexp=") || strings.HasPrefix(arg, "--file="):
+			return "", nil, false // the pattern is given explicitly
+		case valueFlags[arg]:
+			i++
+		case arg == "--":
+			operands = append(operands, argv[i+1:]...)
+			i = len(argv)
+		case strings.HasPrefix(arg, "-") && arg != "-":
+		default:
+			operands = append(operands, arg)
+		}
+	}
+	if len(operands) < 3 || !strings.ContainsAny(operands[len(operands)-1], "/.*") {
+		return "", nil, false
+	}
+	var words []string
+	for _, operand := range operands[1 : len(operands)-1] {
+		if strings.ContainsAny(operand, "/.*") {
+			break
+		}
+		words = append(words, operand)
+	}
+	if len(words) == 0 {
+		return "", nil, false
+	}
+	return operands[0], words, true
 }

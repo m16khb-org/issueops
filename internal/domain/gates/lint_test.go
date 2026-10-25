@@ -196,3 +196,22 @@ func TestLintStaticWarnsOnNameFilteredCheckWithoutCountOrName(t *testing.T) {
 		}
 	}
 }
+
+// QA (README typo fix): an unquoted multi-word grep pattern lint said clean.
+func TestLintWarnsAboutAnUnquotedMultiWordSearchPattern(t *testing.T) {
+	for check, warns := range map[string]bool{
+		"grep -c This library adds numbers README.md":   true,
+		"rg -c foo bar src/x.go":                        true,
+		"grep -c 'This library adds numbers' README.md": false,
+		"grep -r foo src lib":                           false,
+		"grep -m 1 foo README.md":                       false,
+		"grep -e foo -e bar README.md docs/a.md":        false,
+		"grep foo README.md docs/a.md":                  false,
+	} {
+		result, _ := LintStatic(LintSpecCandidate("spec", "G1: x | CHECK: "+check+" | EXPECT: 1"))
+		got := slices.ContainsFunc(result.Warnings, func(w string) bool { return strings.Contains(w, "multi-word pattern") })
+		if got != warns {
+			t.Fatalf("%q: warned=%v (%v)", check, got, result.Warnings)
+		}
+	}
+}
