@@ -182,6 +182,22 @@ func supportedArtifactKind(kind IssueOpsArtifactKind) bool {
 	}
 }
 
+// ChoiceError refuses an artifact kind or template that has no body
+// contract, naming the valid values. Probe: `render-template --kind bogus`
+// and `--kind pr --template nope` rendered another template's skeleton
+// (only validation.critical said unsupported_*), which an agent could copy.
+func ChoiceError(kind, template string) error {
+	input := normalizeInput(IssueOpsTemplateInput{Kind: IssueOpsArtifactKind(kind), Template: IssueOpsTemplateKind(template)})
+	if !supportedArtifactKind(input.Kind) {
+		return fmt.Errorf("unsupported artifact kind %q: want issue|child|pr", kind)
+	}
+	if SupportsTemplate(input.Kind, input.Template) {
+		return nil
+	}
+	want := map[IssueOpsArtifactKind]string{IssueOpsArtifactIssue: "bug|feature|proposal|implementation_task", IssueOpsArtifactChild: "child_task", IssueOpsArtifactPR: "pull_request"}[input.Kind]
+	return fmt.Errorf("unsupported template %q for kind %s: want %s", template, input.Kind, want)
+}
+
 // SupportsTemplate reports whether template is one of kind's body contracts.
 func SupportsTemplate(kind IssueOpsArtifactKind, template IssueOpsTemplateKind) bool {
 	switch kind {

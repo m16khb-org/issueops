@@ -376,6 +376,9 @@ func (command Command) runRemoteRenderTemplate(args []string, deps Deps) error {
 	if help, err := parseFlags(fs, args); help || err != nil {
 		return err
 	}
+	if err := artifacttemplate.ChoiceError(*kind, *template); err != nil {
+		return deps.printErrorResult(*jsonOut, err)
+	}
 	fieldMap, err := artifacttemplate.ParseFieldAssignments(fields)
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)

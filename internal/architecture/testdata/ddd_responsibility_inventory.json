@@ -12442,6 +12442,7 @@
       "owner": "domain",
       "task": "T20",
       "symbols": [
+        "func ChoiceError",
         "func InferTemplateKind",
         "func IssueOpsTemplateValidation.validateRequiredSections",
         "func OptionalSectionTitles",
