@@ -26,10 +26,13 @@ func (r Reader) HasEvidence(record model.IssueOpsRecord) bool {
 		return false
 	}
 	if code, out, _ := r.GitCmd(worktree, "rev-parse", "--is-inside-work-tree"); code == 0 && strings.TrimSpace(out) == "true" {
-		if r.gitStatusHasImplementationChange(record, worktree) {
+		// Committed changes first: the base..HEAD name diff is cheap, while the
+		// untracked-inclusive status stats the whole tree (30 ms on a 20k-file
+		// repo, measured). Either one is evidence, so the order only skips work.
+		if r.gitHeadDiffersFromBase(record, worktree) {
 			return true
 		}
-		return r.gitHeadDiffersFromBase(record, worktree)
+		return r.gitStatusHasImplementationChange(record, worktree)
 	}
 	return fileTreeHasImplementationChange(record, worktree)
 }
