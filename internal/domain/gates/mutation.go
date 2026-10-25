@@ -121,6 +121,11 @@ func renderGateSpec(spec string) (string, error) {
 	if heading == "" {
 		return "", fmt.Errorf("gate spec %q has no title", spec)
 	}
+	// Probe: `gates init --gate nonsense` created a gate with no id (it
+	// became "line3", which no plan or abandon refers to).
+	if token, _, ok := strings.Cut(heading, ":"); !ok || token == "" || strings.ContainsAny(token, " \t") {
+		return "", fmt.Errorf("gate spec %q: start with an id, e.g. \"G1: outcome | CHECK: command | EXPECT: text\"", spec)
+	}
 	lines := []string{"- [ ] " + heading}
 	sawEvidence := false
 	for _, raw := range parts[1:] {
@@ -131,6 +136,9 @@ func renderGateSpec(spec string) (string, error) {
 			check := strings.TrimSpace(segment[len("CHECK:"):])
 			if shelltoken.HasUnquotedControlOperator(check) {
 				return "", fmt.Errorf("gate spec %q: CHECK must be one argv command; shell syntax is not executed (&&, ;) — put the sequence in a script file and run that file directly, or use python3 -c (sh -c and bash -c are refused)", spec)
+			}
+			if check == "" {
+				return "", fmt.Errorf("gate spec %q: CHECK is empty; give the command that observes the outcome", spec)
 			}
 			lines = append(lines, "  CHECK: "+check)
 		case strings.HasPrefix(upper, "EXPECT:"):
