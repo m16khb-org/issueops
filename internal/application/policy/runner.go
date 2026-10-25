@@ -116,7 +116,9 @@ func capturedOutput(text string, truncated bool) string {
 	if len(text) > 32*1024 {
 		return budgetOutput(text)
 	}
-	if truncated {
+	// The command executor marks the omitted middle itself; other executors
+	// get the marker appended.
+	if truncated && !strings.Contains("\n"+text, "\n<truncated>\n") {
 		return text + "\n<truncated>\n"
 	}
 	return text

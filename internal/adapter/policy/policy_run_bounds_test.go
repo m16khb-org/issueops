@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	policydomain "issueops/internal/domain/policy"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -169,29 +170,46 @@ func TestBoundedOutputDropsUnexaminedSecretTail(t *testing.T) {
 					t.Fatal("discard must report the full write length")
 				}
 			}
-			if !output.truncated || output.String() != "safe\n" {
-				t.Errorf("incomplete line exposed (%d bytes)", len(output.String()))
+			// The secret line straddles the omitted middle. A secret-looking
+			// value anywhere redacts the whole stream; otherwise only complete
+			// lines on either side survive.
+			want := "safe\n<truncated>\nmore\n"
+			if policydomain.SecretLikeArg(tail) {
+				want = "<redacted>\n<truncated>\n"
+			}
+			if got := output.String(); !output.truncated || got != want || strings.Contains(got, tail) {
+				t.Errorf("incomplete line exposed: %q", got)
 			}
 		})
 	}
 }
 
 func TestBoundedOutputBoundaryAndUTF8(t *testing.T) {
-	for _, size := range []int{(64 << 10) - 1, 64 << 10, (64 << 10) + 1} {
+	limit := headCapturedOutputBytes + tailCapturedOutputBytes
+	for _, size := range []int{limit - 1, limit, limit + 1} {
 		var output boundedOutput
 		value := strings.Repeat("x", size-1) + "\n"
 		_, _ = io.WriteString(&output, value)
-		if output.buffer.Len() > 64<<10 || output.truncated != (size > 64<<10) {
-			t.Fatalf("boundary %d retained=%d truncated=%v", size, output.buffer.Len(), output.truncated)
+		if output.truncated != (size > limit) {
+			t.Fatalf("boundary %d truncated=%v", size, output.truncated)
 		}
-		if size <= 64<<10 && output.String() != value {
+		if size <= limit && output.String() != value {
 			t.Fatalf("boundary %d changed output", size)
 		}
 	}
 	var output boundedOutput
 	_, _ = io.WriteString(&output, "가\n"+strings.Repeat("나", 30000))
-	if output.String() != "가\n" {
+	if output.String() != "가\n<truncated>\n" {
 		t.Fatal("UTF-8 partial line was retained")
+	}
+	// The last lines of a long stream survive, so a closing summary can match.
+	output = boundedOutput{}
+	for i := range 20000 {
+		_, _ = io.WriteString(&output, "line "+strconv.Itoa(i)+"\n")
+	}
+	_, _ = io.WriteString(&output, "ALL_PASS\n")
+	if got := output.String(); !strings.HasPrefix(got, "line 0\n") || !strings.HasSuffix(got, "\nline 19999\nALL_PASS\n") || !strings.Contains(got, "\n<truncated>\n") || len(got) > 32<<10 {
+		t.Fatalf("head and tail: %d bytes", len(got))
 	}
 }
 
@@ -205,7 +223,7 @@ func TestPolicyRunActualOutputAndTimeoutContracts(t *testing.T) {
 		if !result.OK || result.ExitCode != 0 || !result.Executed || strings.Contains(result.Stdout, "fake-value") || !utf8.ValidString(result.Stdout) || len(result.Stdout) > 32*1024+len("\n<truncated>\n") {
 			t.Fatalf("real output contract failed: exit=%d bytes=%d", result.ExitCode, len(result.Stdout))
 		}
-		if len(value) > 32*1024 && !strings.HasSuffix(result.Stdout, "\n<truncated>\n") {
+		if len(value) > 32*1024 && !strings.Contains("\n"+result.Stdout, "\n<truncated>\n") {
 			t.Error("real output lost truncation marker")
 		}
 	}
@@ -230,5 +248,26 @@ func TestCommandExecutorRejectsExpiredDeadlineBeforeStart(t *testing.T) {
 	public := runReadOnlyCommand(policycontract.CommandPolicyRequest{WorkspaceRoot: root, CWD: root, Argv: []string{"true"}, Timeout: "1ns"})
 	if public.OK || !public.Executed || !public.TimedOut || public.ExitCode != 124 {
 		t.Fatalf("expired public timeout contract: %+v", public)
+	}
+}
+
+// Only a fully secret-scanned stream publishes its tail: past the scan limit
+// the capture keeps the head, as the head-only capture did (security review).
+func TestBoundedOutputKeepsTheTailOnlyWhenTheWholeStreamWasScanned(t *testing.T) {
+	var output boundedOutput
+	line := strings.Repeat("x", 99) + "\n"
+	for range (secretScanLimitBytes / len(line)) + 10 {
+		_, _ = io.WriteString(&output, line)
+	}
+	_, _ = io.WriteString(&output, "token=fake-value\nALL_PASS\n")
+	got := output.String()
+	if strings.Contains(got, "ALL_PASS") || strings.Contains(got, "fake-value") || !strings.HasSuffix(got, "\n<truncated>\n") {
+		t.Fatalf("unscanned tail published: %q", got[max(0, len(got)-80):])
+	}
+	// A secret anywhere in the scanned part redacts the stream, middle included.
+	output = boundedOutput{}
+	_, _ = io.WriteString(&output, "head\n"+strings.Repeat("y\n", 15000)+"password=fake-value\n"+strings.Repeat("z\n", 15000)+"ALL_PASS\n")
+	if got := output.String(); got != "<redacted>\n<truncated>\n" {
+		t.Fatalf("secret in the omitted middle: %q", got)
 	}
 }

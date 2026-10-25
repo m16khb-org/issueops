@@ -121,32 +121,103 @@ func superviseCommand(ctx context.Context, cmd *exec.Cmd, outRead, errRead *os.F
 	return result
 }
 
-// Retain a fixed prefix while accepting all writes so pipe readers keep draining.
+// Retain the head and the tail of a stream while accepting all writes so pipe
+// readers keep draining. The tail matters: a gate EXPECT usually targets the
+// summary line a test runner prints last, which a head-only capture lost
+// (probe: ~88 KB of output, then ALL_PASS). Together with the marker the
+// result stays under the policy runner's 32 KiB budget.
 // Do not embed bytes.Buffer: its ReadFrom would bypass the bounded Write method.
-const maxCapturedOutputBytes = 64 << 10
+const (
+	headCapturedOutputBytes = 20 << 10
+	tailCapturedOutputBytes = 12<<10 - 64
+)
 
 type boundedOutput struct {
-	buffer    bytes.Buffer
+	buffer bytes.Buffer
+	// tail grows to twice its cap before it is compacted, so a stream of tiny
+	// writes does not copy the whole window on every write.
+	tail      []byte
+	compacted bool
 	truncated bool
+	// secret is set when any part of the stream, including the omitted middle,
+	// looks like a secret; carry overlaps chunk borders for that scan.
+	secret  bool
+	carry   []byte
+	scratch []byte
+	// scanned counts the bytes the secret scan has covered. The scan runs at
+	// about 6 MB/s, so it stops at secretScanLimitBytes; a stream longer than
+	// that keeps only its head, as before, because its tail was not scanned.
+	scanned   int
+	unscanned bool
 }
+
+const (
+	secretScanOverlapBytes = 512
+	secretScanLimitBytes   = 4 << 20
+)
 
 func (output *boundedOutput) Write(value []byte) (int, error) {
 	size := len(value)
-	remaining := maxCapturedOutputBytes - output.buffer.Len()
-	if len(value) > remaining {
-		value = value[:remaining]
-		output.truncated = true
+	output.scan(value)
+	if remaining := headCapturedOutputBytes - output.buffer.Len(); remaining > 0 {
+		head := value[:min(remaining, len(value))]
+		if _, err := output.buffer.Write(head); err != nil {
+			return size, err
+		}
+		value = value[len(head):]
 	}
-	_, err := output.buffer.Write(value)
-	return size, err
+	if len(value) > 0 {
+		output.tail = append(output.tail, value...)
+		if len(output.tail) > 2*tailCapturedOutputBytes {
+			output.tail = append(output.tail[:0], output.tail[len(output.tail)-tailCapturedOutputBytes:]...)
+			output.compacted = true
+		}
+		output.truncated = output.compacted || len(output.tail) > tailCapturedOutputBytes
+	}
+	return size, nil
+}
+
+// scan keeps the whole-stream secret check the head-only capture had: the
+// policy runner redacts the entire output when any part looks like a secret,
+// and a signal in the omitted middle must still count (security review).
+func (output *boundedOutput) scan(value []byte) {
+	if output.secret || output.unscanned {
+		return
+	}
+	if output.scanned += len(value); output.scanned > secretScanLimitBytes {
+		output.unscanned = true
+		return
+	}
+	output.scratch = append(append(output.scratch[:0], output.carry...), value...)
+	if policydomain.SecretLikeBytes(output.scratch) {
+		output.secret = true
+		return
+	}
+	output.carry = append(output.carry[:0], output.scratch[max(0, len(output.scratch)-secretScanOverlapBytes):]...)
 }
 
 func (output *boundedOutput) String() string {
-	value := output.buffer.String()
-	if output.truncated {
-		// The unfinished line may contain the start of a secret whose identifying
-		// suffix was discarded. Only complete lines are safe to redact and publish.
-		value = value[:strings.LastIndexByte(value, '\n')+1]
+	if output.secret {
+		if output.truncated {
+			return "<redacted>\n<truncated>\n"
+		}
+		return "<redacted>"
 	}
-	return value
+	head := output.buffer.String()
+	if !output.truncated {
+		return head + string(output.tail)
+	}
+	// Only complete lines are safe to redact and publish: the unfinished head
+	// line and the tail's first line may each hold part of a secret whose
+	// identifying rest was discarded.
+	head = head[:strings.LastIndexByte(head, '\n')+1]
+	if output.unscanned {
+		return head + "<truncated>\n"
+	}
+	window := string(output.tail[max(0, len(output.tail)-tailCapturedOutputBytes):])
+	_, tail, found := strings.Cut(window, "\n")
+	if !found {
+		tail = ""
+	}
+	return head + "<truncated>\n" + tail
 }

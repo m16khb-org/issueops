@@ -93,3 +93,12 @@ func BoundedDiagnostic(value string, limit int) string {
 func SecretLikeArg(arg string) bool {
 	return secretArgRe().MatchString(arg) || knownTokenRe().MatchString(arg) || secretPathRe().MatchString(filepath.ToSlash(arg))
 }
+
+// SecretLikeBytes is SecretLikeArg without converting the bytes to a string,
+// for scanning a stream chunk by chunk.
+func SecretLikeBytes(value []byte) bool {
+	if filepath.Separator != '/' {
+		return SecretLikeArg(string(value))
+	}
+	return secretArgRe().Match(value) || knownTokenRe().Match(value) || secretPathRe().Match(value)
+}

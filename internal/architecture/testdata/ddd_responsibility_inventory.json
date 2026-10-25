@@ -6582,6 +6582,7 @@
         "func Evaluator.service",
         "func boundedOutput.String",
         "func boundedOutput.Write",
+        "func boundedOutput.scan",
         "func superviseCommand",
         "type Clock",
         "type CommandExecutor",
@@ -15319,6 +15320,7 @@
         "func RedactDiagnostic",
         "func RedactFreeform",
         "func SecretLikeArg",
+        "func SecretLikeBytes",
         "func ValidEnvName",
         "func validEnvNameRune"
       ]
