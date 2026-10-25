@@ -151,8 +151,7 @@ issueops remote sync-issue \
   --id "$ISSUEOPS_ID" --provider "$PROVIDER" \
   --body-file "$BODY_FILE" \
   --expected-body-sha256 "$EXPECTED_BODY_SHA256" \
-  --host "$HOST" --session-id "$SESSION_ID" --cwd "$WORKER_PATH" \
-  --confirm --json
+  $RECORD_ACTOR_FLAGS --confirm --json
 ```
 
 provider-native child는 `--url`로 지정한다. hierarchy 검증을 통과한 URL만 쓴다.
@@ -162,8 +161,7 @@ issueops remote sync-issue \
   --id "$ISSUEOPS_ID" --url "$CHILD_URL" \
   --body-file "$CHILD_BODY_FILE" \
   --expected-body-sha256 "$EXPECTED_BODY_SHA256" \
-  --host "$HOST" --session-id "$SESSION_ID" --cwd "$WORKER_PATH" \
-  --confirm --json
+  $RECORD_ACTOR_FLAGS --confirm --json
 ```
 
 confirm 결과의 `updated`, `remote_body_sha256`, `preserved_sections`를 확인하고,

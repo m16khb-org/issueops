@@ -4,9 +4,9 @@
 issueops child start --parent "$ISSUEOPS_ID" \
   --branch "$CHILD_BRANCH" --title "$TITLE" \
   --scope "$SCOPE" --acceptance "$CRITERION" \
-  --host "$HOST" --session-id "$SESSION_ID" --cwd "$WORKER_PATH" --json
+  $RECORD_ACTOR_FLAGS --json
 issueops child status --parent "$ISSUEOPS_ID" \
-  --host "$HOST" --session-id "$SESSION_ID" --cwd "$WORKER_PATH" --json
+  $RECORD_ACTOR_FLAGS --json
 ```
 
 - 이슈 단계의 `remote create-child`는 provider의 child 이슈를 만들고, `child start`는 로컬 child

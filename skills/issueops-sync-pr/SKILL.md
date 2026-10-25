@@ -104,8 +104,7 @@ issueops remote sync-pr \
   --id "$ISSUEOPS_ID" --expected-generation "$GENERATION" \
   --provider "$PROVIDER" --body-file "$BODY_FILE" \
   --expected-body-sha256 "$EXPECTED_BODY_SHA256" \
-  --host "$HOST" --session-id "$SESSION_ID" --agent-id "$AGENT_ID" \
-  --cwd "$WORKER_PATH" --confirm --json
+  $RECORD_ACTOR_FLAGS --confirm --json
 ```
 
 `$EXPECTED_BODY_SHA256`은 같은 `--body-file`로 돌린 preview 응답의 `expected_body_sha256`을 그대로 쓴다. 이 값은

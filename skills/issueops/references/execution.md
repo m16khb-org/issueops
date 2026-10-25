@@ -282,7 +282,7 @@ issueops artifact stage --id "$ISSUEOPS_ID" --name verified-execution-loop --fil
 두 기록 모두 변경 집합 fingerprint를 봉인하므로 문서 수정이 기록보다 먼저다.
 
 ```bash
-issueops project-docs-review record --id "$ISSUEOPS_ID"   --verdict updated --doc "<고친 문서 경로>" --evidence "..."   --host codex --session-id "$SESSION" --cwd "$WORKTREE" --json
+issueops project-docs-review record --id "$ISSUEOPS_ID"   --verdict updated --doc "<고친 문서 경로>" --evidence "..."   $RECORD_ACTOR_FLAGS --json
 ```
 
 - 게이트: `project_docs_review`. verdict는 `updated|no-change`, evidence는 항상
@@ -292,7 +292,7 @@ issueops project-docs-review record --id "$ISSUEOPS_ID"   --verdict updated --do
   create-pr·strict readiness가 거부한다.
 
 ```bash
-issueops schema-evidence record --id "$ISSUEOPS_ID"   --measurement "orders: 8.4M rows(reltuples), idx_orders_user_id 없음"   --source "mcp db-bc-prod execute_sql_bc_prod_market"   --host codex --session-id "$SESSION" --cwd "$WORKTREE" --json
+issueops schema-evidence record --id "$ISSUEOPS_ID"   --measurement "orders: 8.4M rows(reltuples), idx_orders_user_id 없음"   --source "mcp db-bc-prod execute_sql_bc_prod_market"   $RECORD_ACTOR_FLAGS --json
 ```
 
 - 게이트: `schema_evidence`. 변경 집합에 마이그레이션·엔티티·`.sql`·
@@ -307,7 +307,7 @@ issueops schema-evidence record --id "$ISSUEOPS_ID"   --measurement "orders: 8.4
 구현 diff의 architecture-review 적대 리뷰를 수행하고 결과를 기록해야 한다:
 
 ```bash
-issueops implementation-review record --id "$ISSUEOPS_ID"   --verdict pass --finding "..." --evidence "..."   --reviewer-host codex --reviewer-model gpt-6-astra   --host codex --session-id "$SESSION" --cwd "$WORKTREE" --json
+issueops implementation-review record --id "$ISSUEOPS_ID"   --verdict pass --finding "..." --evidence "..."   --reviewer-context subagent --reviewer-host "$REVIEWER_HOST" --reviewer-model "$REVIEWER_MODEL" --reviewer-effort "$REVIEWER_EFFORT"   $RECORD_ACTOR_FLAGS --json
 ```
 
 - 게이트: `verdict==pass` + findings/evidence 실질 내용. 기록은 implement phase
