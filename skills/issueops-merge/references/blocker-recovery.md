@@ -31,6 +31,9 @@ generation을 기록에 보관하고 phase를 `implement`로 되돌리며 lease�
 
 ## 충돌과 head 불일치
 
+`base_mismatch`면 먼저 메시지의 `issueops branch retarget`으로 provider가 바꾼 base를 기록한다. 그다음은
+`merge_conflict`와 같다. 쌓은 부모가 squash merge됐으면 동기화가 부모 내용을 그대로 받아들인다.
+
 `merge_conflict`면 reseed보다 base 동기화가 먼저다. 완료된 사이클에서도 동기화할 수 있다.
 
 ```bash

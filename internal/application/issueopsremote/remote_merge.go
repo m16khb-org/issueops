@@ -90,7 +90,7 @@ func projectMergeResult(id string, target domain.MergeTarget, method string, sta
 		ID: id, Provider: target.Provider, URL: target.URL, Method: method,
 		State: state.State, Draft: state.Draft, HeadOID: state.HeadOID, ExpectedHeadOID: target.ExpectedHead,
 		BaseBranch: state.BaseBranch, Checks: state.Checks, FailingChecks: state.Failing, PendingChecks: state.Pending,
-		Blockers: domain.MergeBlockers(state, target.ExpectedHead), MergeCommitOID: state.MergeCommitOID,
+		Blockers: domain.MergeBlockers(state, target), MergeCommitOID: state.MergeCommitOID,
 	}
 }
 

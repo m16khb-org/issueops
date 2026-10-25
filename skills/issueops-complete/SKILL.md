@@ -190,7 +190,8 @@ MR: https://gitlab.example.com/group/project/-/merge_requests/5657
 
 ## 종료 경계
 
-completion은 generation을 반납하고 record를 `done`으로 옮긴다. 그것이 전부다.
+completion은 generation을 반납하고 record를 `done`으로 옮긴다. 그것이 전부다. 이때 `issueops list`의
+`completion_unreflected: true`는 정상이다. 머지 뒤 cleanup의 `reflect-completion`이 이 값을 지운다.
 
 - **머지하지 않는다.** `remote create-pr`이 만드는 것은 draft다. 개발자가 PR을 확인한 뒤
   메인 세션에서 [`issueops-merge`](../issueops-merge/SKILL.md)가 draft 해제와 머지를 맡는다.

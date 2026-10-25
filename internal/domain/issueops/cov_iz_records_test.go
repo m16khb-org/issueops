@@ -87,21 +87,21 @@ func covIZBlockerCodes(blockers []model.RemoteMergeBlocker) []string {
 
 func TestMergeBlockersReportsEveryObservedReasonInOrder(t *testing.T) {
 	clean := model.RemotePullRequestMergeState{State: "open", HeadOID: " ABC123 ", Checks: model.RemoteChecksPassing}
-	if got := MergeBlockers(clean, "abc123"); got == nil || len(got) != 0 {
+	if got := MergeBlockers(clean, MergeTarget{ExpectedHead: "abc123"}); got == nil || len(got) != 0 {
 		t.Fatalf("clean PR has blockers (or nil slice): %#v", got)
 	}
-	if got := MergeBlockers(model.RemotePullRequestMergeState{State: "open", HeadOID: "abc", Checks: model.RemoteChecksNone}, "abc"); len(got) != 0 {
+	if got := MergeBlockers(model.RemotePullRequestMergeState{State: "open", HeadOID: "abc", Checks: model.RemoteChecksNone}, MergeTarget{ExpectedHead: "abc"}); len(got) != 0 {
 		t.Fatalf("PR without checks blocked: %v", got)
 	}
 	merged := model.RemotePullRequestMergeState{State: "merged", HeadOID: "other", Checks: model.RemoteChecksFailing, Conflict: true, Blocked: "review"}
-	if got := MergeBlockers(merged, "abc"); got == nil || len(got) != 0 {
+	if got := MergeBlockers(merged, MergeTarget{ExpectedHead: "abc"}); got == nil || len(got) != 0 {
 		t.Fatalf("merged artifact must have no blockers: %#v", got)
 	}
 
 	worst := model.RemotePullRequestMergeState{
 		State: "closed", HeadOID: "def456", Checks: model.RemoteChecksFailing, Failing: []string{"lint", "unit"}, Conflict: true, Blocked: " needs review ",
 	}
-	got := MergeBlockers(worst, "abc123")
+	got := MergeBlockers(worst, MergeTarget{ExpectedHead: "abc123"})
 	want := []string{model.RemoteMergeBlockerNotOpen, model.RemoteMergeBlockerHeadMismatch, model.RemoteMergeBlockerChecksFailing, model.RemoteMergeBlockerConflict, model.RemoteMergeBlocked}
 	if !slices.Equal(covIZBlockerCodes(got), want) {
 		t.Fatalf("codes=%v want %v", covIZBlockerCodes(got), want)
@@ -112,7 +112,7 @@ func TestMergeBlockersReportsEveryObservedReasonInOrder(t *testing.T) {
 		}
 	}
 
-	pending := MergeBlockers(model.RemotePullRequestMergeState{State: "open", HeadOID: "abc", Checks: model.RemoteChecksPending, Pending: []string{"e2e"}}, "abc")
+	pending := MergeBlockers(model.RemotePullRequestMergeState{State: "open", HeadOID: "abc", Checks: model.RemoteChecksPending, Pending: []string{"e2e"}}, MergeTarget{ExpectedHead: "abc"})
 	if len(pending) != 1 || pending[0].Code != model.RemoteMergeBlockerChecksPending || !strings.Contains(pending[0].Message, "e2e") {
 		t.Fatalf("pending=%+v", pending)
 	}
@@ -645,5 +645,18 @@ func TestPlanReviewRoundsKeepsStopsBeforeARegress(t *testing.T) {
 	}
 	if line := RenderDevilsAdvocateSection(SectionInput{Verdict: "pass", Rounds: got}); !strings.Contains(line, "계획 검토: 1차 중단 → 계획 수정 → 2차 통과(의견 2건)") {
 		t.Fatalf("section = %q", line)
+	}
+}
+
+// Stacked QA: the provider retargeted the PR after its parent branch was
+// merged and deleted; the merge must wait for branch retarget.
+func TestMergeBlockersNameAProviderRetargetedBase(t *testing.T) {
+	state := model.RemotePullRequestMergeState{State: "open", HeadOID: "abc", BaseBranch: "main", Checks: model.RemoteChecksNone}
+	got := MergeBlockers(state, MergeTarget{ID: "io-1", ExpectedHead: "abc", ExpectedBase: "41-parent"})
+	if len(got) != 1 || got[0].Code != model.RemoteMergeBlockerBaseMismatch || !strings.Contains(got[0].Message, "branch retarget --id io-1 --base-branch main") {
+		t.Fatalf("blockers = %+v", got)
+	}
+	if got := MergeBlockers(state, MergeTarget{ExpectedHead: "abc", ExpectedBase: "main"}); len(got) != 0 {
+		t.Fatalf("matching base: %+v", got)
 	}
 }

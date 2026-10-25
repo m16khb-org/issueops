@@ -23,6 +23,7 @@ const (
 	RemoteMergeBlockerChecksFailing = "checks_failing"
 	RemoteMergeBlockerChecksPending = "checks_pending"
 	RemoteMergeBlockerConflict      = "merge_conflict"
+	RemoteMergeBlockerBaseMismatch  = "base_mismatch"
 	RemoteMergeBlocked              = "merge_blocked"
 )
 

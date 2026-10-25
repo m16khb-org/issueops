@@ -24,6 +24,8 @@ func NormalizeMergeMethod(raw string) (string, error) {
 // completion sealed.
 type MergeTarget struct {
 	Provider, URL, ExpectedHead string
+	// ID and ExpectedBase are the cycle and the base it was verified against.
+	ID, ExpectedBase string
 }
 
 // ResolveMergeTarget admits only a completed cycle: the worktree session owns
@@ -46,12 +48,14 @@ func ResolveMergeTarget(record model.IssueOpsRecord) (MergeTarget, error) {
 	if completed := strings.TrimSpace(record.Execution.Completion.RemoteArtifactURL); completed != "" && completed != strings.TrimSpace(artifact.URL) {
 		return MergeTarget{}, fmt.Errorf("completion artifact %s does not match the verified remote artifact %s", completed, artifact.URL)
 	}
-	return MergeTarget{Provider: artifact.Provider, URL: strings.TrimSpace(artifact.URL), ExpectedHead: strings.TrimSpace(record.Execution.Completion.FinalHead)}, nil
+	return MergeTarget{Provider: artifact.Provider, URL: strings.TrimSpace(artifact.URL), ExpectedHead: strings.TrimSpace(record.Execution.Completion.FinalHead),
+		ID: record.ID, ExpectedBase: PreparedBaseRef(record)}, nil
 }
 
 // MergeBlockers lists every reason the observed PR/MR must not be merged now.
 // A merged artifact has no blockers; the caller reports it as already merged.
-func MergeBlockers(state model.RemotePullRequestMergeState, expectedHead string) []model.RemoteMergeBlocker {
+func MergeBlockers(state model.RemotePullRequestMergeState, target MergeTarget) []model.RemoteMergeBlocker {
+	expectedHead := target.ExpectedHead
 	blockers := []model.RemoteMergeBlocker{}
 	if state.State == "merged" {
 		return blockers
@@ -61,6 +65,12 @@ func MergeBlockers(state model.RemotePullRequestMergeState, expectedHead string)
 	}
 	if state.State != "open" {
 		add(model.RemoteMergeBlockerNotOpen, fmt.Sprintf("the pull or merge request is %s", state.State))
+	}
+	if base, want := strings.TrimSpace(state.BaseBranch), target.ExpectedBase; base != "" && want != "" && base != want {
+		// Stacked QA: the provider retargeted the PR to main after its parent
+		// branch was merged and deleted; the cycle was verified against the
+		// parent, and nothing named the branch retarget step.
+		add(model.RemoteMergeBlockerBaseMismatch, fmt.Sprintf("the PR targets %s but the cycle was verified against %s; record the provider's base with issueops branch retarget --id %s --base-branch %s --reason TEXT $RECORD_ACTOR_FLAGS, then bring it in with execution sync-base", base, want, target.ID, base))
 	}
 	if !strings.EqualFold(strings.TrimSpace(state.HeadOID), strings.TrimSpace(expectedHead)) {
 		add(model.RemoteMergeBlockerHeadMismatch, fmt.Sprintf("head %s is not the completed final head %s", state.HeadOID, expectedHead))
