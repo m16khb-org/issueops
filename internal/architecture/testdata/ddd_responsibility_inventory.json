@@ -1510,6 +1510,14 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopscli/catalog_help.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func catalogHelp"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopscli/executioncmd/execution.go",
       "owner": "inbound",
       "task": "T20",

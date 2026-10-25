@@ -16,7 +16,7 @@ func issueOpsUsage(usage string) {
 	fmt.Fprint(os.Stderr, usage)
 }
 
-const issueOpsBranchPrepareUsage = "Usage: issueops branch prepare --id ID --provider github|gitlab --issue-url URL --branch NAME --base-branch REF [--base-sha SHA] [--parent-worktree PATH] [--remote-branch-url URL] [--code-project-key HOST/PROJECT] [--link-verified] [--json]\n       issueops branch await-link --id ID [--timeout DURATION] [--json]\n       issueops branch retarget --id ID --base-branch REF --reason TEXT [--json]"
+var issueOpsBranchPrepareUsage = catalogHelp("branch prepare", "branch await-link", "branch retarget")
 
 func (cli command) runIssueOpsBranch(args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {

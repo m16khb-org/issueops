@@ -9,7 +9,7 @@ import (
 
 func (cli command) runIssueOpsDecision(args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
-		fmt.Println("Usage: issueops decision add --id ID --title TEXT --body TEXT --kind product|architecture|implementation|test|review|scope|follow-up [--rationale TEXT] [--alternative TEXT]... [--affected-link URL]... [--affected-artifact issue|plan|test|implementation|review|pr_mr|follow-up]... [--json]")
+		fmt.Print(catalogHelp("decision add"))
 		return nil
 	}
 	if args[0] != "add" {

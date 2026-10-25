@@ -10,7 +10,7 @@ import (
 
 func (cli command) runIssueOpsIntent(args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
-		fmt.Println("Usage: issueops intent record --id ID --raw-request TEXT --interpreted-intent TEXT --success-criteria TEXT [--constraint TEXT] [--ambiguity TEXT] [--non-goal TEXT] [--intent-class CLASS] [--json]")
+		fmt.Print(catalogHelp("intent record"))
 		return nil
 	}
 	if args[0] != "record" {
@@ -93,7 +93,7 @@ func (cli command) runIssueOpsArchitecture(args []string) error {
 }
 
 func printIssueOpsArchitectureReviewUsage() {
-	fmt.Println("Usage: issueops architecture review --id ID --problem-summary TEXT --proposed-architecture TEXT --verification TEXT --reviewer-context subagent|inline [--refactor-plan TEXT] [--alternative TEXT] [--risk TEXT] [--open-question TEXT] [--approved] [--json]")
+	fmt.Print(catalogHelp("architecture review"))
 	fmt.Println()
 	fmt.Println("Approved reviews require --refactor-plan, at least one --alternative, at least one --risk, no --open-question, and one architecture-review evidence verification item.")
 	fmt.Printf("Use a verification item such as --verification %q alongside test commands.\n", issueopscontract.IssueOpsArchitectureReviewEvidenceExample)

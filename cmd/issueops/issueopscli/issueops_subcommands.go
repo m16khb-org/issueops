@@ -458,7 +458,7 @@ func (cli command) runIssueOpsArtifactStage(args []string) error {
 // 기록이며 게이트는 verdict pass + 실질 내용만 본다(설계 v5 WS5).
 func (cli command) runIssueOpsImplementationReview(args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
-		fmt.Println("Usage: issueops implementation-review record --id ID --verdict pass|revise|stop --finding TEXT... --evidence TEXT... [--reviewer-context subagent|inline] [--reviewer-host codex|claude|omo|omp|opencode] [--reviewer-model MODEL] [--reviewer-effort EFFORT] [--json]")
+		fmt.Print(catalogHelp("implementation-review record"))
 		return nil
 	}
 	if args[0] != "record" {
@@ -491,7 +491,7 @@ func (cli command) runIssueOpsImplementationReview(args []string) error {
 // 통과하고, no-change는 실제로 읽은 --reviewed-doc 경로를 최소 하나 요구한다.
 func (cli command) runIssueOpsProjectDocsReview(args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
-		fmt.Println("Usage: issueops project-docs-review record --id ID --verdict updated|no-change [--doc PATH...] [--reviewed-doc PATH...] --evidence TEXT... [--json]")
+		fmt.Print(catalogHelp("project-docs-review record"))
 		return nil
 	}
 	if args[0] != "record" {
@@ -519,7 +519,7 @@ func (cli command) runIssueOpsProjectDocsReview(args []string) error {
 // 요구되는 실측 근거 기록 표면이다.
 func (cli command) runIssueOpsSchemaEvidence(args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
-		fmt.Println("Usage: issueops schema-evidence record --id ID --measurement TEXT... --source TEXT... [--waive --waiver-rationale TEXT] [--json]")
+		fmt.Print(catalogHelp("schema-evidence record"))
 		return nil
 	}
 	if args[0] != "record" {

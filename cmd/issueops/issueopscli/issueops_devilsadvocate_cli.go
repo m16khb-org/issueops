@@ -8,7 +8,7 @@ import (
 
 func (cli command) runIssueOpsDevilsAdvocate(args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
-		fmt.Println("Usage: issueops devils-advocate review --id ID --verdict pass|revise|stop --reviewer-context subagent|inline [--finding TEXT]... [--waive --waiver-rationale TEXT] [--json]")
+		fmt.Print(catalogHelp("devils-advocate review"))
 		return nil
 	}
 	if args[0] != "review" {

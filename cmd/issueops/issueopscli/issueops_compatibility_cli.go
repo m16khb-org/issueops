@@ -8,7 +8,7 @@ import (
 
 func (cli command) runIssueOpsCompatibility(args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
-		fmt.Println("Usage: issueops compatibility review --id ID --backward-compatibility TEXT --side-effect TEXT --rollback-plan TEXT --verification TEXT [--blocker TEXT] [--approved] [--json]")
+		fmt.Print(catalogHelp("compatibility review"))
 		return nil
 	}
 	if args[0] != "review" {

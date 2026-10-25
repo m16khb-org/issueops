@@ -9,7 +9,7 @@ import (
 
 func (cli command) runIssueOpsPlanPrep(args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
-		fmt.Println("Usage: issueops plan-prep record --id ID [--decisions-evidence TEXT | --decisions-waive REASON] [--related-score-ref TEXT | --related-waive REASON] [--web-research-evidence TEXT | --web-research-waive REASON] [--codebase-survey-evidence TEXT | --codebase-survey-waive REASON] [--json]")
+		fmt.Print(catalogHelp("plan-prep record"))
 		return nil
 	}
 	if args[0] != "record" {

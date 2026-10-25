@@ -9,7 +9,7 @@ import (
 
 func (cli command) runIssueOpsDomainReview(args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
-		fmt.Println("Usage: issueops domain-review record --id ID --model-fit TEXT [--terminology TEXT] [--risk TEXT] [--uncertainty TEXT] [--json]")
+		fmt.Print(catalogHelp("domain-review record"))
 		return nil
 	}
 	if args[0] != "record" {
@@ -40,7 +40,7 @@ func (cli command) runIssueOpsDomainReview(args []string) error {
 
 func (cli command) runIssueOpsAISlopClean(args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
-		fmt.Println("Usage: issueops ai-slop-clean record --id ID --category TEXT --verification TEXT --host HOST --session-id SESSION --cwd PATH [--agent-id ID] [--json]")
+		fmt.Print(catalogHelp("ai-slop-clean record"))
 		return nil
 	}
 	if args[0] != "record" {
@@ -63,7 +63,7 @@ func (cli command) runIssueOpsAISlopClean(args []string) error {
 
 func (cli command) runIssueOpsRegress(args []string) error {
 	if len(args) > 0 && (args[0] == "--help" || args[0] == "-h" || args[0] == "help") {
-		fmt.Println("Usage: issueops regress --id ID --reason TEXT [--json]  (Brooks stop -> regress to grill for re-plan)")
+		fmt.Print(catalogHelp("regress"))
 		return nil
 	}
 	fs := flag.NewFlagSet("issueops regress", flag.ContinueOnError)
@@ -80,7 +80,7 @@ func (cli command) runIssueOpsRegress(args []string) error {
 
 func (cli command) runIssueOpsFeedbackResolve(args []string) error {
 	if len(args) > 0 && (args[0] == "--help" || args[0] == "-h" || args[0] == "help") {
-		fmt.Println("Usage: issueops feedback resolve --id ID --index N --resolution valid-defect|question-answered|noise-dismissed RECORD_ACTOR_FLAGS [--json]")
+		fmt.Print(catalogHelp("feedback resolve"))
 		fmt.Println("--index is 0-based: the first feedback item is 0.")
 		return nil
 	}
