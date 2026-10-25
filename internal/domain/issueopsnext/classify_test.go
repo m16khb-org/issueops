@@ -1085,3 +1085,20 @@ func TestClassifyGrillAfterRegressNamesTheReGrill(t *testing.T) {
 		t.Fatalf("after regress: %q %q", got.NextCommand, got.Warnings)
 	}
 }
+
+// Probe: after sync-base apply paused on conflicts, next named link-plan and
+// would have recorded over conflict markers. The holder is sent to finalize.
+func TestClassifyRoutesAnUnfinishedMergeToFinalize(t *testing.T) {
+	in := withSelfHolder(baseRecord(issueopsnextcontract.PhaseImplement))
+	in.MergeInProgress = true
+	got := classifyTemplate(in)
+	if got.Stage.Key != "implement" || !slices.Equal(got.Missing, []string{"merge_in_progress"}) ||
+		!strings.HasPrefix(got.NextCommand, "issueops execution sync-base --id io-test --finalize ") ||
+		!slices.ContainsFunc(got.Warnings, func(w string) bool { return strings.Contains(w, "--abort") }) {
+		t.Fatalf("stage=%q missing=%v command=%q warnings=%q", got.Stage.Key, got.Missing, got.NextCommand, got.Warnings)
+	}
+	in.MergeInProgress = false
+	if got := classifyTemplate(in); slices.Contains(got.Missing, "merge_in_progress") {
+		t.Fatalf("no merge: %+v", got)
+	}
+}

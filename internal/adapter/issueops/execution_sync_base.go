@@ -144,6 +144,16 @@ func syncExecutionBase(ctx context.Context, stateRoot string, req issueops.Execu
 			result.NextCommand = "issueops next --id " + record.ID + " --json"
 			return result, nil
 		}
+		if inventory.MergeInProgress {
+			// Probe: after an apply paused on conflicts, a preview handed out
+			// another apply (refused while the merge is open). The way on is
+			// resolving and finalizing, or aborting.
+			prefix := executionSyncBaseCommandPrefix(record)
+			flags := executionSyncBaseActorFlags(req.Actor, req.CWD)
+			result.NextCommand = prefix + " --finalize " + flags + " --json"
+			result.AbortCommand = prefix + " --abort " + flags + " --json"
+			return result, nil
+		}
 		result.NextCommand = fmt.Sprintf(
 			"%s --apply --confirm --fingerprint %s %s --json",
 			executionSyncBaseCommandPrefix(record), fingerprint, executionSyncBaseActorFlags(req.Actor, req.CWD))

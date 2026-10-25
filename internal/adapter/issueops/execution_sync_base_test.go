@@ -1066,3 +1066,19 @@ func TestExecutionSyncBaseAcceptsASquashMergedParentOnlyAfterARetarget(t *testin
 		t.Fatalf("an earlier merged base tip the new base dropped must be refused: %v", err)
 	}
 }
+
+// Probe: a preview after an apply paused on conflicts handed out another apply.
+// While the merge is open the way on is finalize (or abort).
+func TestExecutionSyncBasePreviewDuringAMergeHandsOutFinalize(t *testing.T) {
+	t.Parallel()
+
+	fixture := newReleasedSyncBaseFixture(t, "114-open-merge")
+	fixture.git.mergeHead = true
+	result, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBasePreview))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.MergeInProgress || !strings.Contains(result.NextCommand, " --finalize ") || strings.Contains(result.NextCommand, "--apply") || !strings.Contains(result.AbortCommand, " --abort ") {
+		t.Fatalf("next=%q abort=%q", result.NextCommand, result.AbortCommand)
+	}
+}

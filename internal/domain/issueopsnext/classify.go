@@ -59,7 +59,9 @@ type Input struct {
 	// WorktreeBranch is the branch checked out in the canonical worktree
 	// ("" when detached or not observed).
 	WorktreeBranch string
-	SourceRoot     string
+	// MergeInProgress is an unfinished merge in the canonical worktree.
+	MergeInProgress bool
+	SourceRoot      string
 	// ChildGateMissing holds the PR-gate keys of delegated children that are
 	// not integrated yet (child_incomplete:<id>, child_unvalidated:<id>, ...),
 	// observed only for a parent in implement.
@@ -118,6 +120,9 @@ func Classify(in Input) Decision {
 	index := phaseIndex(in.Record.Phase)
 
 	if decided, ok := classifyCleanupResume(in, decision, index); ok {
+		return finish(in, decided)
+	}
+	if decided, ok := classifyMergeInProgress(in, decision); ok {
 		return finish(in, decided)
 	}
 	if decided, ok := classifyBlockedExecution(in, decision, index); ok {
@@ -957,5 +962,21 @@ func classifyCleanupResume(in Input, decision Decision, index int) (Decision, bo
 	}
 	decision.Stage = stage(issueopsnextcontract.StageCleanupResume, index)
 	decision.Warnings = append(decision.Warnings, "a cleanup "+string(attempt.Operation)+" started at "+attempt.StartedAt+" did not finish (or is still running); its preview reads what is left and issues a new fingerprint")
+	return decision, true
+}
+
+// classifyMergeInProgress routes a holder whose worktree has an unfinished
+// merge to finishing it. Probe: after sync-base apply paused on conflicts,
+// next named link-plan, which would have recorded over conflict markers.
+func classifyMergeInProgress(in Input, decision Decision) (Decision, bool) {
+	execution := in.Record.Execution
+	if !in.MergeInProgress || execution == nil || execution.Lease.Status != issueopsnextcontract.LeaseStatusActive || !holderIsSelf(in) {
+		return decision, false
+	}
+	// The work happens in the worktree, as implement's does; no new stage key.
+	decision.Stage = stage(issueopsnextcontract.StageImplement, 4)
+	decision.Missing = []string{"merge_in_progress"}
+	decision.NextCommand = "issueops execution sync-base --id " + in.Record.ID + " --finalize $ACTOR_FLAGS"
+	decision.Warnings = append(decision.Warnings, "a merge is in progress in the worktree: resolve the conflict files, then finalize; to drop the merge run issueops execution sync-base --id "+in.Record.ID+" --abort $ACTOR_FLAGS --json")
 	return decision, true
 }

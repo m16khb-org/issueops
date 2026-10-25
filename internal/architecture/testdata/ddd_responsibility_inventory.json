@@ -5036,7 +5036,9 @@
       "symbols": [
         "func CleanAbsPath",
         "func GitBranchFromHead",
-        "func PathWithin"
+        "func GitMergeInProgress",
+        "func PathWithin",
+        "func gitDir"
       ]
     },
     {
@@ -14440,6 +14442,7 @@
         "func classifyIssueMissing",
         "func classifyLease",
         "func classifyLocalGates",
+        "func classifyMergeInProgress",
         "func classifyPRRefresh",
         "func classifyPreparation",
         "func classifyPublication",

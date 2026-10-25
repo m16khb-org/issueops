@@ -237,6 +237,9 @@ func (service *Service) buildInput(
 			present, branch, head := ports.WorktreeState(record.Execution.Workspace.Root)
 			input.WorktreePresent, input.WorktreeBranch, input.WorktreeHead = present, branch, head
 		}
+		if ports.MergeInProgress != nil && input.WorktreePresent {
+			input.MergeInProgress = ports.MergeInProgress(record.Execution.Workspace.Root)
+		}
 		if holder := record.Execution.Lease.Holder; holder != nil && holder.SessionProcess != nil && ports.ProcessLive != nil {
 			input.HolderLive = ports.ProcessLive(*holder.SessionProcess)
 		}

@@ -37,13 +37,14 @@ func PathWithin(path, root string) bool {
 	return rel != "." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) && rel != ".."
 }
 
-func GitBranchFromHead(repo string) string {
+// gitDir resolves a checkout's git directory without running git: .git
+// itself, or the directory a linked worktree's .git file points to.
+func gitDir(repo string) string {
 	root := CleanAbsPath(repo)
 	if root == "" {
 		return ""
 	}
 	gitPath := filepath.Join(root, ".git")
-	headPath := filepath.Join(gitPath, "HEAD")
 	if info, err := os.Stat(gitPath); err == nil && !info.IsDir() {
 		if b, err := os.ReadFile(gitPath); err == nil {
 			line := strings.TrimSpace(string(b))
@@ -52,11 +53,29 @@ func GitBranchFromHead(repo string) string {
 				if !filepath.IsAbs(resolved) {
 					resolved = filepath.Join(root, resolved)
 				}
-				headPath = filepath.Join(resolved, "HEAD")
+				return resolved
 			}
 		}
 	}
-	b, err := os.ReadFile(headPath)
+	return gitPath
+}
+
+// GitMergeInProgress reports an unfinished merge (MERGE_HEAD) in a checkout.
+func GitMergeInProgress(repo string) bool {
+	dir := gitDir(repo)
+	if dir == "" {
+		return false
+	}
+	_, err := os.Stat(filepath.Join(dir, "MERGE_HEAD"))
+	return err == nil
+}
+
+func GitBranchFromHead(repo string) string {
+	dir := gitDir(repo)
+	if dir == "" {
+		return ""
+	}
+	b, err := os.ReadFile(filepath.Join(dir, "HEAD"))
 	if err != nil {
 		return ""
 	}

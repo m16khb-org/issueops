@@ -44,6 +44,9 @@ type Ports struct {
 	// 소유하므로 application 계층은 filepath를 직접 import하지 않는다.
 	CleanPath     func(path string) string
 	WorktreeState func(root string) (present bool, branch, head string)
+	// MergeInProgress reports an unfinished merge (a sync-base apply paused on
+	// conflicts) in the canonical worktree, without running git.
+	MergeInProgress func(root string) bool
 	// Repository reports whether cwd is inside a Git worktree; next asks it
 	// before listing cycles and needs neither the branch nor the HEAD.
 	Repository    func(cwd string) bool
