@@ -64,6 +64,12 @@ func TestRunRootCommandUsageAndVersionSurface(t *testing.T) {
 			wantErr:  "Did you mean: remote sync-pr",
 		},
 		{
+			name:     "a skill name typed as a command names the command it runs",
+			args:     []string{"issueops-abandon"},
+			wantCode: 2,
+			wantErr:  "Did you mean: cleanup abandon",
+		},
+		{
 			name:     "unknown under --json answers one JSON document on stdout",
 			args:     []string{"statu", "--json"},
 			wantCode: 2,

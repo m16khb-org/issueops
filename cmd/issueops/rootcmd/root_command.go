@@ -69,6 +69,11 @@ func (c Command) printUnknownCommand(name string) {
 
 // suggest returns up to three known commands closest to name.
 func (c Command) suggest(name string) []string {
+	// QA: `issueops issueops-abandon` was the skill name typed as a command;
+	// the word after the prefix names the command (cleanup abandon).
+	if rest, ok := strings.CutPrefix(name, "issueops-"); ok && rest != "" {
+		name = rest
+	}
 	known := make([]string, 0, len(c.Runners))
 	for command := range c.Runners {
 		known = append(known, command)

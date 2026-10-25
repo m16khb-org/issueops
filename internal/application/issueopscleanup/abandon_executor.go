@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -122,7 +123,13 @@ func (r *abandonRun) plan(failed model.CleanupAbandonResult) (model.CleanupAband
 	inventory, result := r.s.Plan(r.ctx, r.record, r.req, r.provider)
 	r.inventory, r.result = inventory, result
 	if len(result.Missing) > 0 {
-		return result, fmt.Errorf("cleanup abandon is not ready; unmet gates: %s", strings.Join(result.Missing, ", "))
+		err := fmt.Errorf("cleanup abandon is not ready; unmet gates: %s", strings.Join(result.Missing, ", "))
+		if slices.Contains(result.Missing, "requester_occupies_worktree") {
+			// QA: an agent ran the preview from inside the worktree and could
+			// only guess why it was refused (finish already says this).
+			err = fmt.Errorf("%w; abandon removes the worktree, so run it from a session started in the source checkout %q, not inside the worktree", err, r.record.Repo)
+		}
+		return result, err
 	}
 	fingerprint, err := CleanupAbandonFingerprint(inventory)
 	if err != nil {
