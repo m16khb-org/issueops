@@ -2169,6 +2169,7 @@
         "conventional_subjects": 1,
         "lore_bodies": 1,
         "message_policy_doc_path": "$ISSUEOPS_ROOT/.issueops/COMMIT_POLICY.md",
+        "message_policy_source": "issueops_default",
         "recent_count": 1,
         "recommended": "conventional_subject_plus_lore_body"
       },
@@ -4189,6 +4190,7 @@
           "conventional_subjects": 1,
           "lore_bodies": 1,
           "message_policy_doc_path": "$ISSUEOPS_ROOT/.issueops/COMMIT_POLICY.md",
+          "message_policy_source": "issueops_default",
           "recent_count": 1,
           "recommended": "conventional_subject_plus_lore_body"
         },
@@ -4281,6 +4283,7 @@
               "conventional_subjects": 1,
               "lore_bodies": 1,
               "message_policy_doc_path": "$ISSUEOPS_ROOT/.issueops/COMMIT_POLICY.md",
+              "message_policy_source": "issueops_default",
               "recent_count": 1,
               "recommended": "conventional_subject_plus_lore_body"
             },

@@ -17,7 +17,7 @@ Turn local changes into one or more atomic commits, verify each commit as approp
   draft PR/MR publication includes commits and pushes to that cycle's issue branch; do not
   request the same approval again. A request limited to local edits does not authorize publication.
 - Read the repo's nearest `AGENTS.md`/`CLAUDE.md` and relevant project docs before committing. When `.issueops/TESTING.md` exists, it decides which checks a commit must pass; if it is an index whose module table hands a topic (for example the changed language's basic checks) to a module file, open that module too. Open the `.issueops/CAUTIONS.md` modules for secrets and commit identity when they exist.
-- If `.issueops/COMMIT_POLICY.md` exists, use it as the commit-message source of truth.
+- If `.issueops/COMMIT_POLICY.md` exists, use it as the commit-message source of truth. Otherwise preflight's `message_policy_doc_path` names the issueops default (`message_policy_source: issueops_default`); follow it unless the repo's history shows another convention.
 - Never use `git add .` or `git commit -a`. Stage exact files, and use `git add -p` when a file mixes unrelated changes.
 - Do not discard, stash, reformat, or rewrite user changes unless the user explicitly asks.
 - Treat `.env`, private keys, credentials, local state, logs, and generated secrets as blockers until inspected or excluded.

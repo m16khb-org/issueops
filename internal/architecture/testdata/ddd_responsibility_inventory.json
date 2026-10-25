@@ -15323,7 +15323,8 @@
       "owner": "domain",
       "task": "T09",
       "symbols": [
-        "func CommitStyleHints"
+        "func CommitStyleHints",
+        "func commitPolicySource"
       ]
     },
     {

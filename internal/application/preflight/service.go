@@ -53,7 +53,7 @@ func (service Service) Check(target, issueOpsRoot string) preflightcontract.Pref
 		Remotes:          list(facts.Remotes),
 		LastCommit:       facts.LastCommit,
 		RecentCommits:    list(facts.RecentCommits),
-		CommitStyleHints: preflightdomain.CommitStyleHints(facts.StyleCommits, facts.CommitBodies, facts.CommitPolicyPath),
+		CommitStyleHints: preflightdomain.CommitStyleHints(facts.StyleCommits, facts.CommitBodies, facts.CommitPolicyPath, facts.RepoRoot),
 		StagedFiles:      list(status.Staged),
 		UnstagedFiles:    list(status.Unstaged),
 		UntrackedFiles:   list(status.Untracked),
