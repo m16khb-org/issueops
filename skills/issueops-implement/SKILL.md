@@ -213,9 +213,12 @@ verification·fallback·tradeoff·기대 이득을 기록한다.
    남으면 pr 진입(strict readiness)이 거부되므로 여기서 끝낸다.
 2. verified-execution report 초안을 워크트리 **안** `.issueops/issues/<n>/verified-execution-report.md`에 쓴다.
    이 이름만 봉인 fingerprint에서 빠지므로 뒤 단계가 고쳐도 봉인이 stale이 되지 않는다. 최종 확정은 5단계 정리가 한다.
-3. `issueops phase --id ID --to ai-slop-clean $RECORD_ACTOR_FLAGS --json`
+3. 저장소에 커밋 훅이 있으면(`.git/hooks/pre-commit`, `core.hooksPath`, `.pre-commit-config.yaml`, husky)
+   worktree에서 `git add -A && git hook run pre-commit`으로 지금 돌린다. 훅이 파일을 고치면 확인하고
+   테스트를 다시 돌린다. 8단계 커밋에서 훅이 처음 파일을 고치면 정리·문서·구현 리뷰 봉인이 모두 stale이 된다.
+4. `issueops phase --id ID --to ai-slop-clean $RECORD_ACTOR_FLAGS --json`
    으로 전이한다. 다음은 [`issueops-slop-clean`](../issueops-slop-clean/SKILL.md)이다.
-4. 이 단계에서는 커밋·푸시나 ai-slop-clean·구현 리뷰 기록을 하지 않는다. 정리·문서·검증이
+5. 이 단계에서는 커밋·푸시나 ai-slop-clean·구현 리뷰 기록을 하지 않는다. 정리·문서·검증이
    먼저이고 커밋은 8단계다. 승인된 종료점까지 같은 ID의 `next`로 이어간다.
 
 `execution complete`는 pr phase의 검증된 remote artifact URL·final head·report가 있어야 한다.
