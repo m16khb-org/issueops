@@ -193,7 +193,7 @@ func githubLinkedBranchReadbackSteps(issueURL, branch, baseSHA string, firstOrde
 			Description: "Read the linked branches back: " + expectation +
 				" A null `ref` is a partial success: the LinkedBranch record exists, so do not rerun the mutation " +
 				"(it may add a second orphan); recover with `issueops cleanup linked-branch --id <id> --preview`, never raw GraphQL. " +
-				"Here before the coordinator linked it? `issueops branch await-link --id <id>` waits for it.",
+				"If the coordinator has not linked it yet, `issueops branch await-link --id <id>` waits for it.",
 		},
 		{
 			Order:    firstOrder + 1,

@@ -19,8 +19,9 @@ live matrix에서는 source diff와 실제 DB/config/env/pod/log 증거를 분�
 failure path를 한 원인으로 합치지 않는다. local-only 관측과 same-network/in-workload
 관측을 구분하며, 실제 runtime 확인 가능 여부와 여러 수정의 순서를 기록한다.
 feedback classification은 contract_change/defect/question/noise/valid_review/stale_review/
-rollout_evidence_missing/environment_debt, resolution은 unresolved/fixed/resolved/obsolete/
-split to follow-up으로 남긴다. 검증된 feedback만 적용하고 수용 기준·non-goals·검증·labels·
+rollout_evidence_missing/environment_debt다. `feedback resolve --resolution`은 CLI 값 셋 중 하나다:
+반영한 지적과 계약 변경은 `valid-defect`, 답한 질문은 `question-answered`, 근거를 남겨 기각한 것은
+`noise-dismissed`. 다음 작업으로 넘긴 것은 `decision add --kind follow-up`으로 남긴다. 검증된 feedback만 적용하고 수용 기준·non-goals·검증·labels·
 링크·구현 범위가 바뀌면 계속 진행하기 전에 remote issue body를 갱신한다.
 
 ready/done을 보고하기 전에 actual diff, source/target branch, remote issue/PR/MR body의

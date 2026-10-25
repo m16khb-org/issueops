@@ -272,10 +272,10 @@ func TestReviewReflectionStampAndRounds(t *testing.T) {
 		History: []model.IssueOpsDevilsAdvocateRound{{Verdict: "revise", Findings: []string{"a", "b", "c"}}, {Verdict: "revise", Findings: []string{"d"}}},
 	}
 	want := []model.PlanReviewRound{{Verdict: "revise", Findings: 3}, {Verdict: "revise", Findings: 1}, {Verdict: "pass", Findings: 0}}
-	if got := PlanReviewRounds(review); !slices.Equal(got, want) {
+	if got := PlanReviewRounds(review, 0); !slices.Equal(got, want) {
 		t.Fatalf("rounds=%+v want=%+v", got, want)
 	}
-	if got := PlanReviewRounds(&model.IssueOpsDevilsAdvocateReview{Verdict: "stop", Findings: []string{"x"}}); !slices.Equal(got, []model.PlanReviewRound{{Verdict: "stop", Findings: 1}}) {
+	if got := PlanReviewRounds(&model.IssueOpsDevilsAdvocateReview{Verdict: "stop", Findings: []string{"x"}}, 0); !slices.Equal(got, []model.PlanReviewRound{{Verdict: "stop", Findings: 1}}) {
 		t.Fatalf("single round=%+v", got)
 	}
 }
@@ -633,5 +633,17 @@ func TestPlanReviewVerdictLabelKeepsUnknownVerdicts(t *testing.T) {
 		if got := planReviewVerdictLabel(verdict); got != want {
 			t.Fatalf("label(%q)=%q want %q", verdict, got, want)
 		}
+	}
+}
+
+// A regressed cycle keeps its earlier stop in the issue's plan-review line.
+func TestPlanReviewRoundsKeepsStopsBeforeARegress(t *testing.T) {
+	got := PlanReviewRounds(&model.IssueOpsDevilsAdvocateReview{Verdict: "pass", Findings: []string{"a", "b"}}, 1)
+	want := []model.PlanReviewRound{{Verdict: "stop"}, {Verdict: "pass", Findings: 2}}
+	if !slices.Equal(got, want) {
+		t.Fatalf("rounds = %+v", got)
+	}
+	if line := RenderDevilsAdvocateSection(SectionInput{Verdict: "pass", Rounds: got}); !strings.Contains(line, "계획 검토: 1차 중단 → 계획 수정 → 2차 통과(의견 2건)") {
+		t.Fatalf("section = %q", line)
 	}
 }

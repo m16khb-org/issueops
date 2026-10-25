@@ -35,8 +35,17 @@ func MarkReviewReflected(record model.IssueOpsRecord, now string) model.IssueOps
 }
 
 // PlanReviewRounds lists every recorded round in chronological order.
-func PlanReviewRounds(review *model.IssueOpsDevilsAdvocateReview) []model.PlanReviewRound {
-	rounds := make([]model.PlanReviewRound, 0, len(review.History)+1)
+//
+// regressed is the number of stop→re-plan regressions before this review:
+// regress clears the review, so without them the issue section (rewritten on
+// the next reflect) showed "1차 통과" and lost the stop the team had seen
+// (QA). Each regress follows exactly one reflected stop; its finding count
+// is gone with the cleared review, so the round carries none.
+func PlanReviewRounds(review *model.IssueOpsDevilsAdvocateReview, regressed int) []model.PlanReviewRound {
+	rounds := make([]model.PlanReviewRound, 0, regressed+len(review.History)+1)
+	for range regressed {
+		rounds = append(rounds, model.PlanReviewRound{Verdict: "stop"})
+	}
 	for _, round := range review.History {
 		rounds = append(rounds, model.PlanReviewRound{Verdict: round.Verdict, Findings: len(round.Findings)})
 	}
