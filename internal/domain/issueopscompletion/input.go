@@ -11,7 +11,7 @@ import (
 
 func PrepareEvidence(confirm bool, values []string, remoteURL string) ([]string, error) {
 	if !confirm {
-		return nil, fmt.Errorf("execution complete requires confirm")
+		return nil, fmt.Errorf("execution complete requires confirm (--confirm; it records the completion and releases the lease, so check execution status first)")
 	}
 	verification, err := normalizeVerification(values)
 	if err != nil {

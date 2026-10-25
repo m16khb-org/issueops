@@ -613,13 +613,13 @@ func runReplace(args []string, deps Deps) error {
 	for candidate, selected := range actions {
 		if selected {
 			if action != "" {
-				return output(nil, *jsonOut, fmt.Errorf("execution replace requires exactly one action"), deps)
+				return output(nil, *jsonOut, fmt.Errorf("execution replace requires exactly one action (--preview|--revoke|--finalize-preview|--finalize|--reseed; start with --preview)"), deps)
 			}
 			action = candidate
 		}
 	}
 	if action == "" {
-		return output(nil, *jsonOut, fmt.Errorf("execution replace requires exactly one action"), deps)
+		return output(nil, *jsonOut, fmt.Errorf("execution replace requires exactly one action (--preview|--revoke|--finalize-preview|--finalize|--reseed; start with --preview)"), deps)
 	}
 	observation := defaultNativeActorObservation(deps)
 	if deps.nativeActorObservation != nil {
@@ -708,13 +708,13 @@ func runSyncBase(args []string, deps Deps) error {
 	for candidate, selected := range modes {
 		if selected {
 			if mode != "" {
-				return output(nil, *jsonOut, fmt.Errorf("execution sync-base requires exactly one mode"), deps)
+				return output(nil, *jsonOut, fmt.Errorf("execution sync-base requires exactly one mode (--preview | --apply --confirm --fingerprint SHA256 | --finalize | --abort; start with --preview)"), deps)
 			}
 			mode = candidate
 		}
 	}
 	if mode == "" {
-		return output(nil, *jsonOut, fmt.Errorf("execution sync-base requires exactly one mode"), deps)
+		return output(nil, *jsonOut, fmt.Errorf("execution sync-base requires exactly one mode (--preview | --apply --confirm --fingerprint SHA256 | --finalize | --abort; start with --preview)"), deps)
 	}
 	if mode != model.ExecutionSyncBasePreview {
 		processCWD, err := os.Getwd()

@@ -3,6 +3,7 @@ package issueopsexecution
 import (
 	"context"
 	"reflect"
+	"strings"
 	"testing"
 
 	model "issueops/internal/contract/issueops"
@@ -31,7 +32,7 @@ func TestReconcileRejectsAmbiguousIntentBeforeObservations(t *testing.T) {
 	service := Service{}
 	for _, confirm := range []bool{false, true} {
 		got, err := service.Reconcile(t.Context(), "state", model.ExecutionReconcileRequest{ID: "cycle", Preview: confirm, Confirm: confirm}, port.ExecutionReconcileDependencies{})
-		if got.ID != "cycle" || got.OK || err == nil || err.Error() != "execution reconcile requires exactly one of preview or confirm" {
+		if got.ID != "cycle" || got.OK || err == nil || !strings.HasPrefix(err.Error(), "execution reconcile requires exactly one of preview or confirm") {
 			t.Fatalf("got=%+v err=%v", got, err)
 		}
 	}

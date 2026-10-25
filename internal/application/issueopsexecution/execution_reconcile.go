@@ -16,7 +16,7 @@ import (
 
 func (s Service) Reconcile(ctx context.Context, stateRoot string, req issueops.ExecutionReconcileRequest, deps issueopsport.ExecutionReconcileDependencies) (issueops.ExecutionReconcileResult, error) {
 	if req.Preview == req.Confirm {
-		return issueops.ExecutionReconcileResult{OK: false, ID: req.ID}, fmt.Errorf("execution reconcile requires exactly one of preview or confirm")
+		return issueops.ExecutionReconcileResult{OK: false, ID: req.ID}, fmt.Errorf("execution reconcile requires exactly one of preview or confirm (--preview, then the --confirm it returns)")
 	}
 	if s.Verifier == nil {
 		return issueops.ExecutionReconcileResult{OK: false, ID: req.ID}, fmt.Errorf("execution reconcile actor verifier is required")

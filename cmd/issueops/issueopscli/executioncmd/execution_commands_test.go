@@ -215,7 +215,7 @@ func TestReplaceRequiresExactlyOneActionAndExplicitOrNoActor(t *testing.T) {
 		"none": {"replace", "--id", "io-1"},
 		"two":  {"replace", "--id", "io-1", "--preview", "--revoke"},
 	} {
-		if err := Run(args, deps); err == nil || err.Error() != "execution replace requires exactly one action" {
+		if err := Run(args, deps); err == nil || !strings.HasPrefix(err.Error(), "execution replace requires exactly one action") {
 			t.Fatalf("%s: %v", name, err)
 		}
 	}
@@ -407,7 +407,7 @@ func TestSyncBaseRequiresExactlyOneModeAndConfiguredRuntime(t *testing.T) {
 		"none": {"sync-base", "--id", "io-1"},
 		"two":  {"sync-base", "--id", "io-1", "--preview", "--abort"},
 	} {
-		if err := Run(args, deps); err == nil || err.Error() != "execution sync-base requires exactly one mode" {
+		if err := Run(args, deps); err == nil || !strings.HasPrefix(err.Error(), "execution sync-base requires exactly one mode") {
 			t.Fatalf("%s: %v", name, err)
 		}
 	}

@@ -23,7 +23,7 @@ func TestCompletionEvidenceRejectsUnconfirmedOrEmptyEvidence(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := PrepareEvidence(tc.confirm, tc.values, tc.url)
-			if err == nil || err.Error() != tc.want {
+			if err == nil || !strings.HasPrefix(err.Error(), tc.want) {
 				t.Fatalf("error=%v want=%s", err, tc.want)
 			}
 		})

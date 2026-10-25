@@ -327,7 +327,7 @@ func TestCompleteRefusalsPreserveEffectOrder(t *testing.T) {
 			tc.change(&request, &record, env)
 			repository := &repositoryFake{record: record, trace: &trace}
 			_, err := NewService(repository, env, fixedClock{fixedCompletionTime}, tracedLiveInspector(&trace)).Complete(context.Background(), request)
-			if err == nil || err.Error() != tc.want {
+			if err == nil || !strings.HasPrefix(err.Error(), tc.want) {
 				t.Fatalf("error=%v want=%s", err, tc.want)
 			}
 			if repository.commits != 0 || !reflect.DeepEqual(trace, tc.trace) {
