@@ -55,7 +55,8 @@ issueops next --id "$ISSUEOPS_ID" --json
 이유를 보고한다. `--reviewer-context subagent`는 서브에이전트가 실제로 돌려준 판정에만 쓴다.
 사용자가 서브에이전트 없이 inline 리뷰를 명시적으로 지시했으면 이 세션이 같은 출력 계약으로
 검토하고 `--reviewer-context inline`으로 기록한다. reviewer 모델과 effort는 이 세션의 값을 적고,
-독립 리뷰가 아니라는 사실을 보고에 남긴다.
+독립 리뷰가 아니라는 사실을 보고에 남긴다. "리뷰는 inline"이나 "서브에이전트 금지" 같은 지시는 그 사이클의
+모든 리뷰(architecture·plan·diff)에 적용한다. 특정 리뷰만 지정했으면 그 리뷰에만 적용한다.
 필수 수정의 기준은 [`architecture-review`의 Blocking threshold](../architecture-review/SKILL.md#blocking-threshold)를
 따른다. `architecture`는 아키텍처 문서의 결정과 계약을, `plan`은 계획을, `diff`는 구현 동작과 영향받은 계약을 확인한다.
 리뷰가 지적을 냈다는 이유만으로 수정하지 않고, 발생 조건·위반한 요구사항·근거가
