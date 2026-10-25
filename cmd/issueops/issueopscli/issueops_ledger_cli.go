@@ -80,7 +80,8 @@ func (cli command) runIssueOpsRegress(args []string) error {
 
 func (cli command) runIssueOpsFeedbackResolve(args []string) error {
 	if len(args) > 0 && (args[0] == "--help" || args[0] == "-h" || args[0] == "help") {
-		fmt.Println("Usage: issueops feedback resolve --id ID --index N --resolution valid-defect|question-answered|noise-dismissed [--json]")
+		fmt.Println("Usage: issueops feedback resolve --id ID --index N --resolution valid-defect|question-answered|noise-dismissed RECORD_ACTOR_FLAGS [--json]")
+		fmt.Println("--index is 0-based: the first feedback item is 0.")
 		return nil
 	}
 	fs := flag.NewFlagSet("issueops feedback resolve", flag.ContinueOnError)
