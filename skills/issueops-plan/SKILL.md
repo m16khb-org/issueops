@@ -130,7 +130,8 @@ prepare가 스테이징한 계획을 워크트리 안에 materialize하고, 4단
 
 계획의 수용 기준을 [`gates-ledger`](../gates-ledger/SKILL.md)의 형식대로 `G1..Gn`
 (CHECK/EXPECT)으로 계획 안에 적어 둔다. 게이트마다 `gates init`에 그대로 넘길 한 줄 spec
-(`- G1: <결과> | CHECK: <명령> | EXPECT: <기대>`)으로 쓴다. 원장 **파일**은 워크트리 안에 있어야 하므로
+(`- G1: <결과> | CHECK: <명령> | EXPECT: <기대>`)으로 쓴다. 명령과 기대는 백틱으로 감싸지 않는다(문자 그대로
+실행·비교된다). 원장 **파일**은 워크트리 안에 있어야 하므로
 여기서 만들지 않는다. 4단계가 파일을 만들고 `gates check`로 EVIDENCE를 채운다. 5단계는 정리 뒤
 충족된 게이트의 CHECK를 직접 다시 실행하고, 7단계는 `gates status`로 원장을 읽어 증거 유효성을 확인한다.
 
