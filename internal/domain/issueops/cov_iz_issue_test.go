@@ -226,6 +226,19 @@ func TestValidateIssueURLRequiresHTTPURLWithHost(t *testing.T) {
 	if err := ValidateIssueURL(""); err == nil || !strings.Contains(err.Error(), "required") {
 		t.Fatalf("empty url error=%v", err)
 	}
+	// Probe: link-issue accepted these; each failed only at branch prepare
+	// or a readback comparison.
+	for bad, want := range map[string]string{
+		"https://github.com/a/b/pull/3":                  "pull/merge request",
+		"https://gitlab.com/g/p/-/merge_requests/3":      "pull/merge request",
+		"https://github.com/a/b/issues/abc":              "issue number",
+		"https://github.com/a/b/issues/3#issuecomment-1": "https://github.com/a/b/issues/3",
+		"https://gitlab.com/g/p/-/issues/3?show=1":       "https://gitlab.com/g/p/-/issues/3",
+	} {
+		if err := ValidateIssueURL(bad); err == nil || !strings.Contains(err.Error(), want) {
+			t.Fatalf("url %q error=%v want %q", bad, err, want)
+		}
+	}
 }
 
 func TestApplyIssueLinkValidatesURLAndAdvancesReadyPlan(t *testing.T) {

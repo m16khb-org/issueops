@@ -132,13 +132,13 @@ func TestLinkChildPersistsProviderNeutralGraph(t *testing.T) {
 	if _, err := store.Child(context.Background(), parent.ID, "https://github.com/other/repo/issues/12", "other repo child", nil); err == nil || !strings.Contains(err.Error(), "parent issue project") {
 		t.Fatalf("GitHub child from another repo should be rejected, got %v", err)
 	}
-	if _, err := store.Child(context.Background(), parent.ID, "https://github.com/example/repo/issues/not-a-number", "bad child", nil); err == nil || !strings.Contains(err.Error(), "numeric github issue or work item URL") {
+	if _, err := store.Child(context.Background(), parent.ID, "https://github.com/example/repo/issues/not-a-number", "bad child", nil); err == nil || !strings.Contains(err.Error(), "does not end in an issue number") {
 		t.Fatalf("GitHub child with nonnumeric issue should be rejected, got %v", err)
 	}
 	if _, err := store.Child(context.Background(), gitlab.ID, "https://gitlab.example/other/project/-/issues/21", "other project child", nil); err == nil || !strings.Contains(err.Error(), "parent issue project") {
 		t.Fatalf("GitLab child from another project should be rejected, got %v", err)
 	}
-	if _, err := store.Child(context.Background(), gitlab.ID, "https://gitlab.example/group/project/-/issues/not-a-number", "bad child", nil); err == nil || !strings.Contains(err.Error(), "numeric gitlab issue or work item URL") {
+	if _, err := store.Child(context.Background(), gitlab.ID, "https://gitlab.example/group/project/-/issues/not-a-number", "bad child", nil); err == nil || !strings.Contains(err.Error(), "does not end in an issue number") {
 		t.Fatalf("GitLab child with nonnumeric issue should be rejected, got %v", err)
 	}
 	if _, err := store.Child(context.Background(), gitlab.ID, "https://gitlab.example/group/project/-/issues/21", "same project child", nil); err != nil {

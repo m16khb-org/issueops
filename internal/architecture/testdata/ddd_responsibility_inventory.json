@@ -13523,7 +13523,8 @@
       "owner": "domain",
       "task": "T08",
       "symbols": [
-        "func ValidateIssueURL"
+        "func ValidateIssueURL",
+        "func allDigits"
       ]
     },
     {
