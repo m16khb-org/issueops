@@ -50,7 +50,9 @@ func DecideCheck(expect, stdout, stderr string, exitCode int, timedOut bool) Che
 	decision := CheckDecision{Evidence: evidence}
 	switch {
 	case timedOut:
-		decision.Error = "check timed out: " + evidence
+		// A slow but valid CHECK only needs a longer limit; the bare message
+		// did not name the flag.
+		decision.Error = "check timed out: " + evidence + " (if the command is legitimately slow, rerun gates check with a larger --timeout-seconds (MCP timeout_seconds); default 120)"
 	case exitCode != 0:
 		decision.Error = fmt.Sprintf("exit code %d: %s", exitCode, evidence)
 	case strings.TrimSpace(expect) != "" && !ExpectMatches(expect, output):

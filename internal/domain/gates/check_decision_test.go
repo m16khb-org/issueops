@@ -23,7 +23,7 @@ func TestDecideCheckRequiresExitZeroAndMatchingExpect(t *testing.T) {
 		{"nonzero with match", "ok", 1, false, false, "exit code 1: ok"},
 		{"missing match", "other", 0, false, false, "expect not matched: ok"},
 		{"regex-looking literal names the regex form", "^o.*", 0, false, false, "expect not matched: ok (EXPECT is matched as a literal line; write /^o.*/ for a regex)"},
-		{"timeout", "ok", 0, true, false, "check timed out: ok"},
+		{"timeout names the limit flag", "ok", 0, true, false, "check timed out: ok (if the command is legitimately slow, rerun gates check with a larger --timeout-seconds (MCP timeout_seconds); default 120)"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
