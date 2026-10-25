@@ -46,6 +46,12 @@ func TestRunRootCommandUsageAndVersionSurface(t *testing.T) {
 			wantErr:  "issueops: unknown command \"statu\"\nDid you mean: status\nRun 'issueops --help' for the full usage.\n",
 		},
 		{
+			name:     "a hyphenated group and subcommand points at the group's help",
+			args:     []string{"project-docs"},
+			wantCode: 2,
+			wantErr:  "Did you mean: project <subcommand> (issueops project --help lists them)",
+		},
+		{
 			name:     "unknown under --json answers one JSON document on stdout",
 			args:     []string{"statu", "--json"},
 			wantCode: 2,
@@ -226,6 +232,7 @@ func captureRootCommandOutput(args []string) (string, string, int) {
 	var stdout, stderr bytes.Buffer
 	cmd := testCommand(&stdout, &stderr)
 	cmd.Runners["status"] = func([]string) error { return nil }
+	cmd.Runners["project"] = func([]string) error { return nil }
 	code := cmd.Run(args)
 	return stdout.String(), stderr.String(), code
 }

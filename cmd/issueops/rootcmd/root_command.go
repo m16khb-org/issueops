@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 
 	"issueops/cmd/issueops/cliflag"
@@ -70,7 +71,13 @@ func (c Command) suggest(name string) []string {
 	for command := range c.Runners {
 		known = append(known, command)
 	}
-	return cliflag.Suggest(name, known, 3)
+	suggestions := cliflag.Suggest(name, known, 3)
+	// QA: `project-docs` and `project-docs-route` were the MCP tool names
+	// (project_docs_*) spelled as one command; the group is `project`.
+	if prefix, rest, ok := strings.Cut(name, "-"); ok && rest != "" && c.Runners[prefix] != nil {
+		suggestions = append([]string{prefix + " <subcommand> (issueops " + prefix + " --help lists them)"}, slices.DeleteFunc(suggestions, func(s string) bool { return s == prefix })...)
+	}
+	return suggestions
 }
 
 func (c Command) runSubcommand(name string, args []string) (bool, int) {
