@@ -108,6 +108,9 @@ begin_activation() {
       "$executable" install --path-mode=skip --json >"$receipt" || begin_status=$?
   fi
   if ((begin_status != 0)); then
+    # Under --json the install error is the JSON document on stdout, which
+    # went to the receipt file; show it before dropping the file.
+    cat -- "$receipt" >&2
     rm -f -- "$receipt"
     return 1
   fi
