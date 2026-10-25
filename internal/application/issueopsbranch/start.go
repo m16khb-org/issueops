@@ -35,12 +35,19 @@ type Starter struct {
 	Records  CycleRecords
 	Retired  RetiredCycles
 	Identity StartIdentity
-	Now      func() time.Time
+	// IsGitRepo refuses a repo outside git (nil skips the check). Probe:
+	// `start --repo <plain dir>` created a cycle that could only fail later,
+	// at branch prepare.
+	IsGitRepo func(string) bool
+	Now       func() time.Time
 }
 
 func (s Starter) Start(ctx context.Context, req model.IssueOpsStartRequest) (model.IssueOpsRecord, error) {
 	if err := domain.ValidateNewCycleRequest(req); err != nil {
 		return model.IssueOpsRecord{OK: false}, err
+	}
+	if repo := strings.TrimSpace(req.Repo); repo != "" && s.IsGitRepo != nil && !s.IsGitRepo(repo) {
+		return model.IssueOpsRecord{OK: false}, fmt.Errorf("repo %s is not a git repository; an issueops cycle needs one: pass the repository root (git rev-parse --show-toplevel), or git init first", repo)
 	}
 	repo := s.Identity.CanonicalRepo(req.Repo)
 	branch := strings.TrimSpace(req.Branch)

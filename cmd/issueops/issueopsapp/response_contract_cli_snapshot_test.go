@@ -46,6 +46,8 @@ func buildCLIResponseContractSnapshot(t *testing.T, replacements map[string]stri
 	cliSnapshot["state_list"] = runCLIJSONContract(t, replacements, func() error {
 		return runState([]string{"list", "--json"})
 	})
+	// start refuses a directory outside git.
+	runGitForContract(t, workspaceDir, "init", "-q", "-b", "main")
 	issueopsStartStdout := captureStdoutForContract(t, func() error {
 		return runIssueOps([]string{"start", "--repo", workspaceDir, "--branch", "1-contract-branch", "--json"})
 	})

@@ -315,3 +315,13 @@ func TestStartSkipsADoneCycle(t *testing.T) {
 		t.Fatalf("got=%+v err=%v", got, err)
 	}
 }
+
+// Probe: `start --repo <plain dir>` created a cycle that could only fail at
+// branch prepare; a repo outside git is refused before any ID or write.
+func TestStartRefusesARepoOutsideGit(t *testing.T) {
+	f := &startFake{NewID: func(string, string) string { panic("refused start derived an id") }, Write: func(string, model.IssueOpsRecord) (model.IssueOpsRecord, error) { panic("refused start wrote") }}
+	starter := Starter{Records: f, Retired: f, Identity: f, IsGitRepo: func(string) bool { return false }, Now: time.Now}
+	if _, err := starter.Start(context.Background(), model.IssueOpsStartRequest{Repo: "/plain"}); err == nil || !strings.Contains(err.Error(), "repo /plain is not a git repository") {
+		t.Fatalf("err = %v", err)
+	}
+}
