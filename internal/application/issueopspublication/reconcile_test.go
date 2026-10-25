@@ -104,7 +104,7 @@ func TestReconcilePreserveMatrix(t *testing.T) {
 		},
 		{
 			name: "zero without invocation proof", intent: validIntent(), inventory: contract.Inventory{AuthoritativeZero: true},
-			wantCode: "remote_reconcile_zero_unproven", wantErr: "authoritative zero cannot clear an invocation whose absence was not proven; intent retained: re-run this reconcile once the create is 2 minutes old, no gh/glab create for its head is still running, and no PR URL is known",
+			wantCode: "remote_reconcile_zero_unproven", wantErr: "not settled yet, wait and re-run this reconcile: authoritative zero cannot clear an invocation whose absence was not proven; intent retained until the create is 2 minutes old, no gh/glab create for its head is still running, and no PR URL is known",
 		},
 		{
 			name: "retry exhausted", intent: retryExhausted, inventory: contract.Inventory{AuthoritativeZero: true},
