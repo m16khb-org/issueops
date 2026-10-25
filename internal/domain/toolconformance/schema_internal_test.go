@@ -77,7 +77,7 @@ func TestValidatorSupportsNestedUnknownEscapesNumbersEnumsAndMixedArrays(t *test
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []toolconformancecontract.Diagnostic{{Path: "/list/1", Code: "wrong_type", Expected: "string", Actual: "boolean"}, {Path: "/list/2", Code: "wrong_type", Expected: "string", Actual: "number"}, {Path: "/mode", Code: "enum_mismatch", Expected: "enum", Actual: "string"}, {Path: "/nested/a~0~1b", Code: "wrong_type", Expected: "integer", Actual: "number"}, {Path: "/nested/extra", Code: "unknown_key", Expected: "declared property", Actual: "boolean"}}
+	want := []toolconformancecontract.Diagnostic{{Path: "/list/1", Code: "wrong_type", Expected: "string", Actual: "boolean"}, {Path: "/list/2", Code: "wrong_type", Expected: "string", Actual: "number"}, {Path: "/mode", Code: "enum_mismatch", Expected: "one of safe", Actual: "string"}, {Path: "/nested/a~0~1b", Code: "wrong_type", Expected: "integer", Actual: "number"}, {Path: "/nested/extra", Code: "unknown_key", Expected: "declared property", Actual: "boolean"}}
 	if !reflect.DeepEqual(diagnostics, want) {
 		t.Fatalf("got=%#v want=%#v", diagnostics, want)
 	}
@@ -226,7 +226,7 @@ func TestValidatorAcceptsBoundaryValuesForMinimumAndMaxLength(t *testing.T) {
 func TestValidateEnforcesStringSliceEnums(t *testing.T) {
 	schema := map[string]any{"type": "object", "properties": map[string]any{"action": map[string]any{"type": "string", "enum": []string{"status", "claim"}}}}
 	got, err := Validate(schema, map[string]any{"action": "bogus"})
-	if err != nil || len(got) != 1 || got[0].Code != "enum_mismatch" || got[0].Path != "/action" {
+	if err != nil || len(got) != 1 || got[0].Code != "enum_mismatch" || got[0].Path != "/action" || got[0].Expected != "one of status|claim" {
 		t.Fatalf("diagnostics = %+v err = %v", got, err)
 	}
 	if got, err := Validate(schema, map[string]any{"action": "claim"}); err != nil || len(got) != 0 {

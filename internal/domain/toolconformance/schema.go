@@ -365,7 +365,13 @@ func validateEnum(s map[string]any, v any, p string, out *[]toolconformancecontr
 			return true
 		}
 	}
-	*out = append(*out, toolconformancecontract.Diagnostic{Path: p, Code: "enum_mismatch", Expected: "enum", Actual: typeOf(v)})
+	// Like minimum/maxLength, name the allowed values (an MCP caller read
+	// only "expected: enum" and had to reread the tool schema).
+	allowed := make([]string, 0, len(values))
+	for _, value := range values {
+		allowed = append(allowed, fmt.Sprint(value))
+	}
+	*out = append(*out, toolconformancecontract.Diagnostic{Path: p, Code: "enum_mismatch", Expected: "one of " + strings.Join(allowed, "|"), Actual: typeOf(v)})
 	return false
 }
 
