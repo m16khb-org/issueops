@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"golang.org/x/sys/unix"
@@ -37,7 +38,9 @@ func acquire(ctx context.Context, directory, key string, mode int) (*Lease, erro
 	}
 	dirFD, err := unix.Open(directory, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
 	if err != nil {
-		return nil, err
+		// Probe: a read-only state directory failed a mutation with only
+		// "permission denied"; the path says which directory to fix.
+		return nil, &os.PathError{Op: "open", Path: directory, Err: err}
 	}
 	defer unix.Close(dirFD)
 	if err := validateLockDirectory(dirFD); err != nil {
@@ -46,7 +49,7 @@ func acquire(ctx context.Context, directory, key string, mode int) (*Lease, erro
 	name := fmt.Sprintf("%x.lock", sha256.Sum256([]byte(key)))
 	fd, err := unix.Openat(dirFD, name, unix.O_RDWR|unix.O_CREAT|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0600)
 	if err != nil {
-		return nil, err
+		return nil, &os.PathError{Op: "open", Path: filepath.Join(directory, name), Err: err}
 	}
 	file := os.NewFile(uintptr(fd), name)
 	keep := false

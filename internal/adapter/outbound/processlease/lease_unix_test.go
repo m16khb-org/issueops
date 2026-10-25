@@ -250,3 +250,29 @@ func TestProcessLeaseHelper(t *testing.T) {
 	}
 	os.Exit(0)
 }
+
+// Probe: a read-only state directory failed a mutation with only
+// "permission denied"; the error names the lock file and stays a
+// permission error.
+func TestLeaseNamesTheLockFileItCannotOpen(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores directory permissions")
+	}
+	dir := filepath.Join(t.TempDir(), "leases")
+	lease, err := Acquire(context.Background(), dir, "cycle")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lease.Close()
+	entries, err := os.ReadDir(dir)
+	if err != nil || len(entries) != 1 {
+		t.Fatalf("entries=%v err=%v", entries, err)
+	}
+	if err := os.Chmod(filepath.Join(dir, entries[0].Name()), 0o400); err != nil {
+		t.Fatal(err)
+	}
+	_, err = Acquire(context.Background(), dir, "cycle")
+	if err == nil || !errors.Is(err, os.ErrPermission) || !strings.Contains(err.Error(), dir+string(filepath.Separator)) {
+		t.Fatalf("err = %v", err)
+	}
+}
