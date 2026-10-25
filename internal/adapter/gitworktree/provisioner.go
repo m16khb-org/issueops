@@ -114,7 +114,12 @@ func (p Provisioner) inspectExisting(receipt port.ExecutionWorkspaceReceipt) (bo
 	top := p.GitOut(receipt.Root, "rev-parse", "--show-toplevel")
 	branch := p.GitOut(receipt.Root, "branch", "--show-current")
 	head := p.GitOut(receipt.Root, "rev-parse", "HEAD")
-	if err := domain.ValidateExistingIdentity(sameResolvedPath(top, receipt.Root), branch, receipt.Branch, head, receipt.BaseHead); err != nil {
+	if !sameResolvedPath(top, receipt.Root) {
+		// Probe: a leftover directory at the canonical path refused with the
+		// branch/base_head message, which pointed at the wrong problem.
+		return false, fmt.Errorf("canonical worktree path %s already exists but is not a git worktree of its own; move or remove that directory (check it holds nothing needed), then rerun execution prepare", receipt.Root)
+	}
+	if err := domain.ValidateExistingIdentity(true, branch, receipt.Branch, head, receipt.BaseHead); err != nil {
 		return false, err
 	}
 	return true, nil

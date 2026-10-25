@@ -255,3 +255,18 @@ func TestPrepareRemovesTheWorktreeItAddedWhenTheBranchIsPastTheBase(t *testing.T
 		t.Fatal("pre-existing branch was deleted")
 	}
 }
+
+// Probe: a leftover plain directory at the canonical path refused with the
+// branch/base_head message; the refusal names the directory instead.
+func TestPrepareNamesAPlainDirectoryAtTheCanonicalPath(t *testing.T) {
+	repo := initAccessRepo(t)
+	root := filepath.Join(repo+".worktrees", "71-occupied")
+	if err := os.MkdirAll(root, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	req := port.ExecutionWorkspaceRequest{LifecycleID: "io-71", SourceRoot: repo, Root: root, Branch: "71-occupied", BaseBranch: "main", BaseHead: preflight.GitOut(repo, "rev-parse", "HEAD"), Confirm: true}
+	_, err := testProvisioner().Prepare(context.Background(), req)
+	if err == nil || !strings.Contains(err.Error(), "is not a git worktree of its own") {
+		t.Fatalf("prepare = %v", err)
+	}
+}

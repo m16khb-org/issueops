@@ -21,8 +21,11 @@ func ValidateLocation(source, root, parent string) error {
 }
 
 func ValidateExistingIdentity(sameRoot bool, actualBranch, branch, actualHead, baseHead string) error {
-	if !sameRoot || actualBranch != branch {
+	if !sameRoot {
 		return fmt.Errorf("existing canonical worktree identity does not match branch and base_head")
+	}
+	if actualBranch != branch {
+		return fmt.Errorf("existing canonical worktree identity does not match branch and base_head: it is on branch %q, not %s; switch it back to %s (git switch %s) or start a new cycle", actualBranch, branch, branch, branch)
 	}
 	if actualHead != baseHead {
 		// Probed: the branch (local or origin) already moved past the sealed
