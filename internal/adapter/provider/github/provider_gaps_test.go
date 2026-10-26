@@ -363,6 +363,7 @@ func TestParseGhMergeStateClassifiesChecksAndBlocking(t *testing.T) {
 		{"pending wins over passing", `{"state":"OPEN","statusCheckRollup":[{"__typename":"CheckRun","name":"slow","status":"IN_PROGRESS"},{"__typename":"StatusContext","context":"exp","state":"EXPECTED"},{"__typename":"StatusContext","context":"fine","state":"SUCCESS"}]}`, "pending", "", nil, []string{"slow", "exp"}, false},
 		{"all passing incl neutral and skipped", `{"state":"OPEN","statusCheckRollup":[{"name":"a","status":"completed","conclusion":"neutral"},{"name":"b","status":"COMPLETED","conclusion":"SKIPPED"}]}`, "passing", "", nil, nil, false},
 		{"no checks but blocked by review", `{"state":"OPEN","mergeStateStatus":"BLOCKED"}`, "none", "BLOCKED (required review or branch protection)", nil, nil, false},
+		{"blocked by a required review", `{"state":"OPEN","mergeStateStatus":"BLOCKED","reviewDecision":"REVIEW_REQUIRED"}`, "none", "REVIEW_REQUIRED (branch protection requires an approving review; ask a reviewer other than the PR author to approve)", nil, nil, false},
 		{"blocked explained by failing checks", `{"state":"OPEN","mergeStateStatus":"blocked","statusCheckRollup":[{"name":"x","status":"COMPLETED","conclusion":"CANCELLED"}]}`, "failing", "", []string{"x"}, nil, false},
 	}
 	for _, tc := range cases {

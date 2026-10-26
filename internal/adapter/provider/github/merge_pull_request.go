@@ -118,6 +118,9 @@ func parseGhMergeState(out []byte) (model.RemotePullRequestMergeState, error) {
 	// checks do not already explain the block.
 	if strings.EqualFold(payload.MergeStateStatus, "BLOCKED") && state.Checks != model.RemoteChecksFailing && state.Checks != model.RemoteChecksPending {
 		state.Blocked = "BLOCKED (required review or branch protection)"
+		if strings.EqualFold(payload.ReviewDecision, "REVIEW_REQUIRED") {
+			state.Blocked = "REVIEW_REQUIRED (branch protection requires an approving review; ask a reviewer other than the PR author to approve)"
+		}
 	}
 	// GitHub merges over a change request when no protection rule requires a
 	// review, unlike GitLab's requested_changes status (QA: an agent merged a
