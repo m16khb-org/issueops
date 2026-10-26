@@ -21,6 +21,12 @@ type Artifact struct {
 }
 
 func ProjectArtifact(authority ArtifactAuthority, candidate Artifact) (Artifact, error) {
+	if authority.Phase == "done" {
+		// QA: agents re-ran verify-artifact on completed cycles to refresh
+		// labels/assignees; the record keeps publication-time values and the
+		// remote commands' readback is the live state.
+		return Artifact{}, fmt.Errorf("the cycle is done; its PR/MR was verified at publication (status --field remote_artifact). For current labels, assignees, reviewers or title, read the PR/MR with gh/glab; remote label/assign/retitle/milestone read them back themselves")
+	}
 	if authority.Phase != "pr" {
 		return Artifact{}, fmt.Errorf("cannot verify remote artifact before pr phase (current phase %q); verify-artifact follows remote create-pr", authority.Phase)
 	}
