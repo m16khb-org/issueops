@@ -115,7 +115,8 @@ issueops architecture review --id "$ISSUEOPS_ID" \
   --problem-summary "<problem>" --proposed-architecture "<decision>" \
   --refactor-plan "<boundary decision>" --alternative "<rejected option>" --risk "<risk>" \
   --verification "architecture review checked alternatives and risks" \
-  --reviewer-context subagent --approved --json
+  --reviewer-context subagent --reviewer-host "$HOST" --reviewer-model "$REVIEWER_MODEL" \
+  --reviewer-effort "$REVIEWER_EFFORT" --approved --json
 ```
 
 The approval is bound to the sha256 of the staged architecture document. Editing the document afterwards makes the approval stale (`architecture_review_stale`) and the cycle stays in `plan.architecture` until a fresh review is recorded.
@@ -125,6 +126,7 @@ When an IssueOps cycle records this independent review of the plan, use the `iss
 ```bash
 issueops devils-advocate review --id "$ISSUEOPS_ID" \
   --verdict pass|revise|stop --reviewer-context subagent|inline \
+  --reviewer-host "$HOST" --reviewer-model "$REVIEWER_MODEL" --reviewer-effort "$REVIEWER_EFFORT" \
   --finding "<what was attacked and what the evidence showed>" ... \
   [--waive --waiver-rationale "<why the verdict is intentionally overridden>"] --json
 ```

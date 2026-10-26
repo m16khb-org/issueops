@@ -61,11 +61,7 @@ route 결과는 아래 목록에 **더하는** 후보이고 목록을 대신하�
 계획보다 먼저 **아키텍처 문서**를 쓴다. 문서는 구현 순서가 아니라 구조와 경계에 대한 결정을
 담는다. 저장 위치는 `$(mktemp -d)/architecture.md`처럼 source checkout 밖이다.
 
-다섯 절(`## 요구사항과 규모`, `## 데이터와 API 계약`, `## 구조와 흐름`, `## 병목과 장애`, `## 절충점과 기각한 대안`)이 반드시 있고 본문이 비어 있지 않아야 한다. 절별 내용은 [필수 절](references/architecture-and-plan-sections.md)을 연다.
-
-변경과 관계없는 절에는 "해당 없음: <근거>"를 쓴다. 근거 없이 비워 둔 절은 `architecture review`가
-`architecture is missing required sections: <제목>`으로 거부한다. 제목은 `## ` 깊이로 정확히
-써야 하고, `### ` 아래에 쓴 내용은 그 절의 본문으로 센다.
+다섯 절(`## 요구사항과 규모`, `## 데이터와 API 계약`, `## 구조와 흐름`, `## 병목과 장애`, `## 절충점과 기각한 대안`)이 반드시 있고 본문이 비어 있지 않아야 한다(관계없는 절은 "해당 없음: <근거>"). 절별 내용과 거부 규칙은 [필수 절](references/architecture-and-plan-sections.md)을 연다.
 
 ```bash
 issueops artifact stage --id "$ISSUEOPS_ID" --name architecture --file "$TMP_ARCHITECTURE" --json
@@ -85,7 +81,8 @@ issueops architecture review --id "$ISSUEOPS_ID" \
   --problem-summary "<문제>" --proposed-architecture "<아키텍처 결정>" --refactor-plan "<리팩터 계획>" \
   --alternative "<기각한 대안과 이유>" --risk "<위 문서 확인에서 온 제약>" \
   --verification "아키텍처 검토로 대안과 위험을 확인했다" \
-  --reviewer-context subagent --approved $RECORD_ACTOR_FLAGS --json
+  --reviewer-context subagent --reviewer-host "$HOST" --reviewer-model "$REVIEWER_MODEL" --reviewer-effort "$REVIEWER_EFFORT" \
+  --approved $RECORD_ACTOR_FLAGS --json
 
 issueops record-routing --id "$ISSUEOPS_ID" --phase plan --skill implementation-planning \
   $RECORD_ACTOR_FLAGS --json
@@ -131,7 +128,8 @@ prepare가 스테이징한 계획을 워크트리 안에 materialize하고, 4단
 계획의 수용 기준을 [`gates-ledger`](../gates-ledger/SKILL.md)의 형식대로 `G1..Gn`
 (CHECK/EXPECT)으로 계획 안에 적어 둔다. 게이트마다 `gates init`에 그대로 넘길 한 줄 spec
 (`- G1: <결과> | CHECK: <명령> | EXPECT: <기대>`)으로 쓴다. 명령과 기대는 백틱으로 감싸지 않는다(문자 그대로
-실행·비교된다). 원장 **파일**은 워크트리 안에 있어야 하므로
+실행·비교된다). 문자 그대로의 EXPECT는 출력의 한 줄 전체나 줄 머리(뒤에 공백)와만 맞으므로 줄 중간은 `/정규식/`으로
+쓰고, 형식은 명령을 한 번 실행해 실제 출력으로 확인한다. CHECK가 읽는 경로는 모두 워크트리 안이어야 한다. 원장 **파일**은 워크트리 안에 있어야 하므로
 여기서 만들지 않는다. 4단계가 파일을 만들고 `gates check`로 EVIDENCE를 채운다. 5단계는 정리 뒤
 충족된 게이트의 CHECK를 직접 다시 실행하고, 7단계는 `gates status`로 원장을 읽어 증거 유효성을 확인한다.
 
