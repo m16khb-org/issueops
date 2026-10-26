@@ -95,6 +95,9 @@ func PrepareCreateRequest(authority CreateBranchAuthority, request CreateRequest
 	if err := ValidateProviderTitleLength("PR/MR", request.Title); err != nil {
 		return CreateRequest{}, err
 	}
+	if err := ValidateProviderBodyLength(request.Provider, "PR/MR", request.Body); err != nil {
+		return CreateRequest{}, err
+	}
 	if secretLike {
 		return CreateRequest{}, fmt.Errorf("remote create title or body contains secret-like content")
 	}

@@ -79,6 +79,9 @@ func (s *IssueCreator) Create(ctx context.Context, cmd IssueCreateCommand) (Issu
 	if err := validateCreateInputs(cmd, body, labels, assignees); err != nil {
 		return result, err
 	}
+	if err := remote.ValidateProviderBodyLength(providerName, "issue", body); err != nil {
+		return result, err
+	}
 	authority := ""
 	if cmd.Confirm {
 		authority, body, err = s.beginConfirmedIntent(record, providerName, cmd.Title, labels, assignees, body)

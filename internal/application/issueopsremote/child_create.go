@@ -120,6 +120,9 @@ func (s ChildCreator) prepareChildCreate(ctx context.Context, cmd ChildCreateCom
 	}
 	plan.body = resolved.Body
 	result.Readability = resolved.Readability
+	if err := remote.ValidateProviderBodyLength(plan.providerName, "child", plan.body); err != nil {
+		return plan, err
+	}
 	return plan, policy.ValidateRemoteCreateInputs("child create", cmd.Title, plan.body, plan.labels, plan.assignees)
 }
 

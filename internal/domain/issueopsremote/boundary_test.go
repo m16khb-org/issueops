@@ -22,18 +22,25 @@ func TestValidateCreateAuthorityConfirmRequiresMatchingNonZeroGeneration(t *test
 
 func TestPrepareCreateRequestSizeLimitsAreInclusive(t *testing.T) {
 	for _, tc := range []struct {
-		name    string
-		title   string
-		body    string
-		wantErr bool
+		name     string
+		provider string
+		title    string
+		body     string
+		wantErr  bool
 	}{
-		{"title at limit", strings.Repeat("가", 255), "Body", false},
-		{"title over limit", strings.Repeat("t", 256), "Body", true},
-		{"body at limit", "Title", strings.Repeat("b", 1<<20), false},
-		{"body over limit", "Title", strings.Repeat("b", 1<<20+1), true},
+		{"title at limit", "github", strings.Repeat("가", 255), "Body", false},
+		{"title over limit", "github", strings.Repeat("t", 256), "Body", true},
+		{"github body at limit", "github", "Title", strings.Repeat("가", 65536-128), false},
+		{"github body over limit", "github", "Title", strings.Repeat("가", 65536-127), true},
+		{"gitlab body at limit", "gitlab", "Title", strings.Repeat("b", 1<<20-128), false},
+		{"gitlab body over limit", "gitlab", "Title", strings.Repeat("b", 1<<20-127), true},
+		{"body over byte cap", "gitlab", "Title", strings.Repeat("가", 400000), true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			authority, request := createRequestFixture()
+			if tc.provider == "gitlab" {
+				authority.Provider, authority.IssueURL, request.Provider = "gitlab", "https://gitlab.com/team/repo/-/issues/42", "gitlab"
+			}
 			request.Title, request.Body = tc.title, tc.body
 			_, err := PrepareCreateRequest(authority, request, false)
 			if (err != nil) != tc.wantErr {
