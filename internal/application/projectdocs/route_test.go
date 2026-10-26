@@ -88,11 +88,12 @@ func TestRouteWarnsAboutRoutedDocsTheRepoLacks(t *testing.T) {
 	result := Route("/repo", "cleanup the merged branch", fake)
 	var absent []string
 	for _, doc := range result.Docs {
-		if !doc.Exists {
+		if !doc.Exists && doc.RelPath != ".issueops/VCS.md" {
 			absent = append(absent, doc.RelPath)
 		}
 	}
-	if len(absent) == 0 || len(result.Warnings) != 1 || !strings.HasSuffix(result.Warnings[0], ": "+strings.Join(absent, ", ")) || strings.Contains(result.Warnings[0], "AGENTS.md") {
+	// VCS.md is optional: absent where it does not apply, never "created by bootstrap".
+	if len(absent) == 0 || len(result.Warnings) != 1 || !strings.HasSuffix(result.Warnings[0], ": "+strings.Join(absent, ", ")) || strings.Contains(result.Warnings[0], "AGENTS.md") || strings.Contains(result.Warnings[0], "VCS.md") {
 		t.Fatalf("absent=%v warnings=%v", absent, result.Warnings)
 	}
 }

@@ -71,9 +71,13 @@ func Route(root, task string, effects RouteEffects) projectdocscontract.ProjectD
 }
 
 func absentRoutedDocs(entries []projectdocscontract.ProjectDocRouteEntry) []string {
+	// Optional docs (VCS.md, DESIGN.md) exist only where they apply, so an
+	// absent one is not something bootstrap would create (QA: the warning
+	// listed DESIGN.md in a library without a client surface).
+	optional := projectdocdomain.OptionalProjectDocNames()
 	var absent []string
 	for _, entry := range entries {
-		if !entry.Exists {
+		if !entry.Exists && !slices.Contains(optional, path.Base(entry.RelPath)) {
 			absent = append(absent, entry.RelPath)
 		}
 	}
