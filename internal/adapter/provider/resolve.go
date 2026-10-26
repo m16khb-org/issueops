@@ -25,6 +25,19 @@ func Resolve(name string) (port.IssueProvider, error) {
 	}
 }
 
+// ResolveAssigner returns the assignee capability of the named provider.
+func ResolveAssigner(name string) (port.IssueProviderAssigner, error) {
+	resolved, err := Resolve(name)
+	if err != nil {
+		return nil, err
+	}
+	assigner, ok := resolved.(port.IssueProviderAssigner)
+	if !ok {
+		return nil, fmt.Errorf("provider %q cannot add assignees", name)
+	}
+	return assigner, nil
+}
+
 // ResolveRetitler returns the title capability of the named provider.
 func ResolveRetitler(name string) (port.IssueProviderRetitler, error) {
 	resolved, err := Resolve(name)

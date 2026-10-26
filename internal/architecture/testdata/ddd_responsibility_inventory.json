@@ -993,6 +993,7 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
+        "func assignRemote",
         "func closeRemoteIssue",
         "func commentRemote",
         "func labelRemote",
@@ -1889,6 +1890,14 @@
         "func unknownRemoteSubcommand",
         "type Deps",
         "type repeatedFlag"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopscli/remotecmd/remote_assign.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func Command.runRemoteAssign"
       ]
     },
     {
@@ -6968,6 +6977,14 @@
       "symbols": []
     },
     {
+      "path": "internal/adapter/provider/github/assign.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Provider.AddAssignees"
+      ]
+    },
+    {
       "path": "internal/adapter/provider/github/child.go",
       "owner": "adapter",
       "task": "T20",
@@ -7122,6 +7139,14 @@
       "task": "T20",
       "symbols": [
         "func Provider.Retitle"
+      ]
+    },
+    {
+      "path": "internal/adapter/provider/gitlab/assign.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Provider.AddAssignees"
       ]
     },
     {
@@ -7336,6 +7361,7 @@
       "task": "T20",
       "symbols": [
         "func Resolve",
+        "func ResolveAssigner",
         "func ResolveCommenter",
         "func ResolveLabeler",
         "func ResolvePullRequestMerger",
@@ -9745,6 +9771,17 @@
       ]
     },
     {
+      "path": "internal/application/issueopsremote/remote_assign.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func NewRemoteAssignService",
+        "func RemoteAssignService.AddAssignees",
+        "type AssignProviderResolver",
+        "type RemoteAssignService"
+      ]
+    },
+    {
       "path": "internal/application/issueopsremote/remote_comment.go",
       "owner": "application",
       "task": "T07",
@@ -11345,6 +11382,14 @@
         "func validateRecordRegressEvents",
         "func validateRecordRemoteArtifact",
         "func validateRecordRoutingTrace"
+      ]
+    },
+    {
+      "path": "internal/contract/issueops/remote_assign.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type RemoteAssignResult"
       ]
     },
     {
@@ -17008,6 +17053,7 @@
         "type IssueProviderArtifactBodyReader",
         "type IssueProviderArtifactBodyReplacer",
         "type IssueProviderArtifactBodyRequest",
+        "type IssueProviderAssigner",
         "type IssueProviderChildHierarchyRequest",
         "type IssueProviderChildHierarchyResult",
         "type IssueProviderChildHierarchyVerifier",

@@ -318,6 +318,12 @@ type IssueProviderRetitler interface {
 	Retitle(ctx context.Context, repo, targetURL, kind, title string) (string, error)
 }
 
+// IssueProviderAssigner adds assignees (usernames) to an issue (kind "issue")
+// or a PR/MR (kind "pr") and returns the assignees read back. It never removes.
+type IssueProviderAssigner interface {
+	AddAssignees(ctx context.Context, repo, targetURL, kind string, users []string) ([]string, error)
+}
+
 // IssueProvider is implemented by provider-specific adapters such as GitHub and GitLab.
 // Every mutating operation requires Confirm=true; without it, only a dry-run preview
 // is returned.

@@ -17,6 +17,8 @@ description: Use before any governed "issueops remote ..." write (issue, child t
   추가만 한다. 저장소에 없는 라벨은 만들지 않고 사용자에게 알린다.
 - 사용자가 요청한 제목 변경: `issueops remote retitle --id "$ISSUEOPS_ID" --on issue|pr --title "$TITLE" --json`(preview) → `next_command`.
   GitLab draft MR은 `Draft:` 접두사를 유지한다(해제는 `remote mark-ready`).
+- 사용자가 요청한 담당자 추가: `issueops remote assign --id "$ISSUEOPS_ID" --on issue|pr --add "$USER" --json`(preview) → `next_command`.
+  추가만 하며 계정은 사용자가 이름으로 지정한 것만 쓴다.
 - 한국어 문체: [`fluent-korean`](../fluent-korean/SKILL.md)
 - 본문 작성 지침: [`references/readable-body.md`](references/readable-body.md)
 
