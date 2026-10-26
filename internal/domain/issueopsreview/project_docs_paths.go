@@ -20,7 +20,8 @@ func ValidateReviewedDocumentPath(input, relative string, rootAvailable bool) er
 		return fmt.Errorf("project docs review reviewed path %q must be inside the worktree", input)
 	}
 	if relative != "AGENTS.md" && !strings.HasPrefix(relative, ".issueops/") {
-		return fmt.Errorf("project docs review reviewed path %s is not a project doc (expected .issueops/... or AGENTS.md)", relative)
+		// QA: agents in repos without project docs passed README.md.
+		return fmt.Errorf("project docs review reviewed path %s is not a project doc (expected .issueops/... or AGENTS.md); when the worktree has no project doc, record no-change without --reviewed-doc", relative)
 	}
 	// Cycle material is not a project doc (ProjectDocsPresent skips it too).
 	// QA: an agent with no project docs passed .issueops/issues/<n>/plan.md.
