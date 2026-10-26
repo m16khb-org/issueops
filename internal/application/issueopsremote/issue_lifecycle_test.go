@@ -241,6 +241,7 @@ func TestIssueCreateRefusesInvalidInputsBeforeProvider(t *testing.T) {
 	}{
 		{"missing record", func(c *IssueCreateCommand, _ *createEnv) { c.ID = "io-missing" }, "file does not exist"},
 		{"blank title", func(c *IssueCreateCommand, _ *createEnv) { c.Title = "  " }, "issue title is required"},
+		{"title over provider limit", func(c *IssueCreateCommand, _ *createEnv) { c.Title = strings.Repeat("가", 256) }, "shorten --title"},
 		{"provider inference fails", func(_ *IssueCreateCommand, e *createEnv) { e.inferred, e.inferErr = "", boom }, "boom"},
 		{"provider resolve fails", func(_ *IssueCreateCommand, e *createEnv) { e.resolveErr = boom }, "boom"},
 		{"confirm needs template", func(c *IssueCreateCommand, _ *createEnv) { c.Template = "" }, "--template is required"},

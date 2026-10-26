@@ -59,6 +59,9 @@ func (s *IssueCreator) Create(ctx context.Context, cmd IssueCreateCommand) (Issu
 	if err := domain.ValidateIssueCreateTitle(cmd.Title); err != nil {
 		return result, err
 	}
+	if err := remote.ValidateProviderTitleLength("issue", cmd.Title); err != nil {
+		return result, err
+	}
 	providerName, err := s.resolveProviderName(cmd, record)
 	if err != nil {
 		return result, err

@@ -14677,7 +14677,8 @@
       "owner": "domain",
       "task": "T07",
       "symbols": [
-        "func ValidateConfirmCreateMetadata"
+        "func ValidateConfirmCreateMetadata",
+        "func ValidateProviderTitleLength"
       ]
     },
     {

@@ -103,6 +103,9 @@ func (s ChildCreator) prepareChildCreate(ctx context.Context, cmd ChildCreateCom
 	if err := domain.ValidateChildCreation(record, cmd.Title, plan.labels, plan.assignees); err != nil {
 		return plan, err
 	}
+	if err := remote.ValidateProviderTitleLength("child", cmd.Title); err != nil {
+		return plan, err
+	}
 	plan.providerName = firstNonEmpty(cmd.Provider, domain.ResolveRecordProvider(record))
 	if plan.providerName == "" {
 		return plan, fmt.Errorf("cannot determine provider from IssueOps record; ensure issue_url is set")

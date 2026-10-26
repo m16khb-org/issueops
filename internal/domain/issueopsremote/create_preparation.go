@@ -89,8 +89,11 @@ func PrepareCreateRequest(authority CreateBranchAuthority, request CreateRequest
 		return CreateRequest{}, createAuthorityMismatch(authority, request)
 	}
 	request.Title, request.Body = strings.TrimSpace(request.Title), strings.TrimSpace(request.Body)
-	if request.Title == "" || len(request.Title) > 1024 || len(request.Body) > 1<<20 {
+	if request.Title == "" || len(request.Body) > 1<<20 {
 		return CreateRequest{}, fmt.Errorf("remote create title is required and body must not exceed 1048576 bytes")
+	}
+	if err := ValidateProviderTitleLength("PR/MR", request.Title); err != nil {
+		return CreateRequest{}, err
 	}
 	if secretLike {
 		return CreateRequest{}, fmt.Errorf("remote create title or body contains secret-like content")

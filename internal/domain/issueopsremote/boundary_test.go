@@ -27,8 +27,8 @@ func TestPrepareCreateRequestSizeLimitsAreInclusive(t *testing.T) {
 		body    string
 		wantErr bool
 	}{
-		{"title at limit", strings.Repeat("t", 1024), "Body", false},
-		{"title over limit", strings.Repeat("t", 1025), "Body", true},
+		{"title at limit", strings.Repeat("가", 255), "Body", false},
+		{"title over limit", strings.Repeat("t", 256), "Body", true},
 		{"body at limit", "Title", strings.Repeat("b", 1<<20), false},
 		{"body over limit", "Title", strings.Repeat("b", 1<<20+1), true},
 	} {
