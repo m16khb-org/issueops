@@ -49,6 +49,11 @@ func Parse(fs *flag.FlagSet, args []string) error {
 		}
 		var known []string
 		fs.VisitAll(func(f *flag.Flag) { known = append(known, f.Name) })
+		if slices.Contains(identityFlags, name) && fs.Lookup("host") == nil {
+			// QA: agents pass $RECORD_ACTOR_FLAGS to every command, including
+			// the actor-free post-completion ones (close-issue, merge-pr, cleanup).
+			return fmt.Errorf("%w: this command takes no actor flags; drop $ACTOR_FLAGS/$RECORD_ACTOR_FLAGS (flags: --%s)", err, strings.Join(known, ", --"))
+		}
 		if closest := Suggest(name, known, 1); len(closest) == 1 {
 			return fmt.Errorf("%w (did you mean --%s?)", err, closest[0])
 		}

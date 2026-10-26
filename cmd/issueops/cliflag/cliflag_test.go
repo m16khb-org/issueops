@@ -175,3 +175,18 @@ func TestParseInterspersedReadsFlagsBetweenFiles(t *testing.T) {
 		t.Fatalf("files=%q json=%v err=%v", files, *jsonOut, err)
 	}
 }
+
+// Actor flags on an actor-free command name that the command takes none.
+func TestParseNamesActorFlagsOnActorFreeCommands(t *testing.T) {
+	fs := flag.NewFlagSet("x", flag.ContinueOnError)
+	fs.String("id", "", "")
+	fs.Bool("confirm", false, "")
+	if err := Parse(fs, []string{"--host", "codex"}); err == nil || !strings.Contains(err.Error(), "takes no actor flags") {
+		t.Fatalf("err = %v", err)
+	}
+	withActor := flag.NewFlagSet("y", flag.ContinueOnError)
+	withActor.String("host", "", "")
+	if err := Parse(withActor, []string{"--cwd", "/tmp"}); err == nil || strings.Contains(err.Error(), "takes no actor flags") {
+		t.Fatalf("a command with actor flags must not say it takes none: %v", err)
+	}
+}
