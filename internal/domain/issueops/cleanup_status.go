@@ -53,12 +53,21 @@ func WithCleanupFinishEvidence(req model.CleanupFinishRequest, body, state strin
 }
 
 func CleanupStatusFromFinish(structural model.IssueOpsCleanupStatus, result model.CleanupFinishResult) model.IssueOpsCleanupStatus {
-	return FinalizeCleanupStatus(model.IssueOpsCleanupStatus{
+	status := FinalizeCleanupStatus(model.IssueOpsCleanupStatus{
 		OK: true, Ready: result.OK && len(result.Missing) == 0, ID: result.ID, Merged: true,
 		Missing:  append([]string(nil), result.Missing...),
 		Warnings: CleanupStatusWarnings(result), WorktreePath: result.WorktreePath, Branch: result.Branch,
 		RemoteArtifactURL: structural.RemoteArtifactURL,
 	})
+	// QA: status listed completion_reflected and issue_closed without a next
+	// step; the agent had to find reflect-completion → close-issue → finish
+	// in the skill. The finish preview's remedy chain already orders them.
+	if status.Ready {
+		status.NextCommand = fmt.Sprintf("issueops cleanup finish --id %s --preview --json", status.ID)
+	} else {
+		status.NextCommand = CleanupFinishRemedyCommand(status.ID, status.Missing)
+	}
+	return status
 }
 
 func RemoteArtifactMissing(record model.IssueOpsRecord) []string {

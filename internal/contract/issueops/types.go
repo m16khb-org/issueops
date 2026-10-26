@@ -514,6 +514,9 @@ type IssueOpsCleanupStatus struct {
 	WorktreePath      string   `json:"worktree_path,omitempty"`
 	Branch            string   `json:"branch,omitempty"`
 	RemoteArtifactURL string   `json:"remote_artifact_url,omitempty"`
+	// NextCommand is the remedy for the first blocking missing key, or the
+	// finish preview once ready; set only after the merge readback (--merged).
+	NextCommand string `json:"next_command,omitempty"`
 }
 
 type IssueOpsCloseChildrenRequest struct {

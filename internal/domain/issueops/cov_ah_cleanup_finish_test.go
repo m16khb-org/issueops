@@ -556,9 +556,14 @@ func TestCovCFStatusFinishEvidenceAndConversion(t *testing.T) {
 		t.Fatalf("choices = %v", status.Choices)
 	}
 
-	ready := CleanupStatusFromFinish(model.IssueOpsCleanupStatus{}, model.CleanupFinishResult{OK: true})
-	if !ready.Ready || len(ready.Missing) != 0 || !strings.Contains(ready.Choices[0], "정리 진행") {
+	ready := CleanupStatusFromFinish(model.IssueOpsCleanupStatus{}, model.CleanupFinishResult{OK: true, ID: "c"})
+	if !ready.Ready || len(ready.Missing) != 0 || !strings.Contains(ready.Choices[0], "정리 진행") || ready.NextCommand != "issueops cleanup finish --id c --preview --json" {
 		t.Fatalf("ready = %+v", ready)
+	}
+	// The remedy chain orders reflect-completion before close-issue.
+	blocked := CleanupStatusFromFinish(model.IssueOpsCleanupStatus{}, model.CleanupFinishResult{ID: "c", Missing: []string{"issue_closed", "completion_reflected"}})
+	if !strings.HasPrefix(blocked.NextCommand, "issueops remote reflect-completion --id c ") {
+		t.Fatalf("blocked next_command = %q", blocked.NextCommand)
 	}
 	// OK=true with leftover Missing must not be ready.
 	contradictory := CleanupStatusFromFinish(model.IssueOpsCleanupStatus{}, model.CleanupFinishResult{OK: true, Missing: []string{"x"}})
