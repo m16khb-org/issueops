@@ -208,7 +208,9 @@ plan-prep 네 항목은 waive로 채우지 않는다. 조사 결과나 불필요
    독립 agent가 없거나 비활성화했으면 deterministic 결과를 쓰고 그 선택을 기록한다.
 3. 한국어 본문을 다듬는다. `fluent-korean`이 있으면 호출하고, 없으면 명확한 주어·완성된
    문장·검증 가능한 결과·불필요한 수식 제거를 직접 검토한다. secret을 제거하고 실제
-   assignee를 확인한다(`@me` 금지). 설치된 `issueops-remote-write`를 활용할 수 있다.
+   assignee를 확인한다(`@me` 금지). 사용자가 따로 정하지 않았으면 인증된 사용자를 쓴다:
+   `gh api user --jq .login` 또는 `glab api user`의 `username`. git 이메일에서 추측하지 않는다.
+   설치된 `issueops-remote-write`를 활용할 수 있다.
 4. body file을 읽고 preview의 `readability`를 확인한다. critical은 수정 후 재preview,
    warning은 수정하거나 이유를 기록한다. preview와 동일한 요청에만 `--confirm`을 붙인다.
 5. URL·상태·본문 hash·label·assignee·hierarchy를 readback한다. 새 이슈의 본문 baseline은

@@ -35,7 +35,8 @@ description: Use before any governed "issueops remote ..." write (issue, child t
 7. **secret 원문을 남기지 않는다.** 로그·명령 출력·환경값을 붙일 때는 토큰과 자격
    증명을 지운 뒤 붙인다. 원격 본문은 지워도 이력에 남는다.
 8. **label과 concrete assignee 없이 쓰지 않는다.** 스코어 결과의 threshold 이상 label만
-   적용하고, assignee는 실제 사용자 이름이어야 한다. `@me`는 사용자 이름이 아니다.
+   적용하고, assignee는 실제 사용자 이름이어야 한다. `@me`는 사용자 이름이 아니다. 지정이 없으면
+   `gh api user --jq .login`(GitLab은 `glab api user`의 `username`)으로 인증된 사용자를 읽는다.
 
 ## 절차
 
