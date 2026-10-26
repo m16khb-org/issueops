@@ -286,3 +286,35 @@ func TestReadGitOriginURLReadsOnlyTheOriginRemote(t *testing.T) {
 		t.Fatalf("a url key without a value yields nothing: %q", got)
 	}
 }
+
+// QA: a manifest-less Python repository bootstrapped with no language and no
+// test command although its README named the command. Test files mark the
+// language; README/CONTRIBUTING code spans give the documented command.
+func TestAnalyzeProjectSignalsReadsDocumentedTestCommandAndPythonTests(t *testing.T) {
+	root := t.TempDir()
+	for rel, body := range map[string]string{
+		"README.md":          "# calc\n\nTests: `python3 -B -m unittest discover -s tests`\n\n```bash\npytest -x\n```\nUse `make` and `go testify`.\n",
+		"CONTRIBUTING.md":    "Run `python3 -B -m unittest discover -s tests` and `cargo test --all` first.\n",
+		"tests/test_calc.py": "import unittest\n",
+		"calc/__init__.py":   "def add(a, b): return a + b\n",
+	} {
+		path := filepath.Join(root, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	signals := AnalyzeProjectSignals(root)
+	if !slices.Equal(signals.Languages, []string{"Python"}) {
+		t.Fatalf("languages = %v", signals.Languages)
+	}
+	var got []string
+	for _, c := range signals.TestCommands {
+		got = append(got, c.Command+"@"+c.Evidence[0])
+	}
+	if want := []string{"python3 -B -m unittest discover -s tests@README.md", "cargo test --all@CONTRIBUTING.md"}; !slices.Equal(got, want) {
+		t.Fatalf("test commands = %v, want %v", got, want)
+	}
+}

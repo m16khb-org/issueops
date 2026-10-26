@@ -6912,8 +6912,13 @@
       "task": "T13",
       "symbols": [
         "func AnalyzeProjectSignals",
+        "func applyDocumentedTestCommands",
         "func applyNestedManifestSignal",
-        "func applyRootSignal"
+        "func applyRootSignal",
+        "func documentedCommands",
+        "func hasEvidenceCommand",
+        "func isPythonTestFile",
+        "func readSmallFile"
       ]
     },
     {

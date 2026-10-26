@@ -1,9 +1,13 @@
 package projectdocs
 
 import (
-	projectdoc "issueops/internal/domain/projectdoc"
+	"io"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
+
+	projectdoc "issueops/internal/domain/projectdoc"
 )
 
 func AnalyzeProjectSignals(root string) projectdoc.ProjectSignals {
@@ -20,7 +24,13 @@ func AnalyzeProjectSignals(root string) projectdoc.ProjectSignals {
 		if strings.HasPrefix(rel, ".github/workflows/") {
 			s.GitHubWorkflows = projectdoc.AppendUnique(s.GitHubWorkflows, rel)
 		}
+		if isPythonTestFile(rel) {
+			// QA: a manifest-less Python repo (calc/, tests/test_*.py)
+			// bootstrapped with "Could not auto-confirm languages".
+			s.Languages = projectdoc.AppendUnique(s.Languages, "Python")
+		}
 	}
+	applyDocumentedTestCommands(&s, root)
 	sort.Strings(s.Languages)
 	sort.Strings(s.PackageManagers)
 	sort.Strings(s.ExistingAgentDocs)
@@ -86,4 +96,70 @@ func applyNestedManifestSignal(s *projectdoc.ProjectSignals, rel string) {
 		addLang("Rust")
 		addPM("cargo")
 	}
+}
+
+func isPythonTestFile(rel string) bool {
+	base := rel[strings.LastIndex(rel, "/")+1:]
+	return strings.HasSuffix(base, ".py") && (strings.HasPrefix(base, "test_") || strings.HasSuffix(base, "_test.py"))
+}
+
+// documentedTestRunners are command prefixes that run a project's tests.
+var documentedTestRunners = []string{
+	"pytest", "python -m pytest", "python3 -m pytest", "python -m unittest", "python3 -m unittest",
+	"python -B -m unittest", "python3 -B -m unittest", "go test", "npm test", "npm run test", "pnpm test",
+	"yarn test", "cargo test", "make test", "prove", "bundle exec rspec", "rspec", "rake test", "deno test",
+	"bun test", "mvn test", "gradle test", "./gradlew test", "dotnet test", "swift test", "mix test",
+}
+
+// applyDocumentedTestCommands adds test commands the root README.md or
+// CONTRIBUTING.md names in inline code, so a repository without a manifest
+// still gets the command its own docs give.
+func applyDocumentedTestCommands(s *projectdoc.ProjectSignals, root string) {
+	for _, name := range []string{"README.md", "CONTRIBUTING.md"} {
+		for _, command := range documentedCommands(readSmallFile(filepath.Join(root, name), 64*1024)) {
+			if !hasEvidenceCommand(s.TestCommands, command) {
+				s.TestCommands = append(s.TestCommands, projectdoc.EvidenceCommand{Command: command, Evidence: []string{name}, Confidence: "medium"})
+			}
+		}
+	}
+}
+
+func documentedCommands(text string) []string {
+	var out []string
+	pieces := strings.Split(text, "`")
+	for i := 1; i < len(pieces); i += 2 {
+		span := strings.TrimSpace(pieces[i])
+		if span == "" || strings.Contains(span, "\n") {
+			continue
+		}
+		for _, runner := range documentedTestRunners {
+			if span == runner || strings.HasPrefix(span, runner+" ") {
+				out = append(out, span)
+				break
+			}
+		}
+	}
+	return out
+}
+
+func hasEvidenceCommand(commands []projectdoc.EvidenceCommand, command string) bool {
+	for _, c := range commands {
+		if c.Command == command {
+			return true
+		}
+	}
+	return false
+}
+
+func readSmallFile(path string, limit int64) string {
+	file, err := os.Open(path)
+	if err != nil {
+		return ""
+	}
+	defer file.Close()
+	data, err := io.ReadAll(io.LimitReader(file, limit))
+	if err != nil {
+		return ""
+	}
+	return string(data)
 }
