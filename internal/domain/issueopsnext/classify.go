@@ -532,7 +532,9 @@ func classifyPublication(in Input, decision Decision, index int) (Decision, bool
 		// merge command, or points to cleanup when the PR is already merged.
 		decision.NextCommand = "issueops remote merge-pr --id " + id + " --json"
 		// Agents read a repeated merge-pr after the merge as "not merged yet".
-		decision.Warnings = append(decision.Warnings, "next does not read the PR: this preview reports already_merged after a merge and then names the cleanup command")
+		// QA: the old wording ("reports already_merged after a merge") read as
+		// "already merged" before the merge too; state both answers.
+		decision.Warnings = append(decision.Warnings, "next does not read the PR, so it names merge-pr before and after the merge: the preview answers merged:false with the merge command, or already_merged:true with the cleanup command")
 		return decision, true
 	}
 	_ = index
