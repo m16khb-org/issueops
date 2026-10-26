@@ -96,6 +96,11 @@ func runProjectRouteDocs(docs docsapp.Service, args []string) error {
 		}
 		fmt.Printf("%s [%s] — %s\n", doc.RelPath, status, doc.Reason)
 	}
+	// QA: the text form dropped the warnings (missing docs, bootstrap hint)
+	// that only the JSON form showed.
+	for _, warning := range result.Warnings {
+		fmt.Printf("warning: %s\n", warning)
+	}
 	return nil
 }
 
