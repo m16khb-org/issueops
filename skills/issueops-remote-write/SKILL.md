@@ -1,6 +1,6 @@
 ---
 name: issueops-remote-write
-description: Use before any governed "issueops remote ..." write (issue, child task, PR/MR body, comment, review reply) or for "원격에 써줘", "이슈 본문 올려줘", "PR 본문 갱신". Renders, polishes, confirms, and reads back the body.
+description: Use before any governed "issueops remote ..." write (issue, child task, PR/MR body, comment, label, title, review reply) or for "원격에 써줘", "PR 본문 갱신". Renders, polishes, confirms, and reads back.
 ---
 
 # IssueOps Remote Write

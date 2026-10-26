@@ -1,6 +1,6 @@
 ---
 name: self-augment
-description: 'Use for self-augmentation, autonomous repo improvement, 95-point gate loops, or choosing the next valuable improvement: picks one change from repo evidence and GENIUS_THINK.md, implements one safe diff, verifies it with self-verify.'
+description: 'Use for self-augmentation, autonomous repo improvement, 95-point gate loops, or choosing the next valuable improvement: picks one change from repo evidence and GENIUS_THINK.md, implements it, verifies with self-verify.'
 ---
 
 # Self-augmentation loop
