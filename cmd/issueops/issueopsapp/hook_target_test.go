@@ -89,3 +89,23 @@ func TestHookConfigsKeepIndependentDefaultRepositories(t *testing.T) {
 		}
 	}
 }
+
+// A session started in a subdirectory gets the repository root's catalog,
+// byte for byte, so its system prefix (and prompt cache) matches root sessions.
+func TestHookCatalogFromASubdirectoryMatchesTheRoot(t *testing.T) {
+	t.Setenv("ISSUEOPS_DISABLE_HOOKS", "")
+	repo := t.TempDir()
+	for _, dir := range []string{".git", ".issueops", "src/pkg"} {
+		if err := os.MkdirAll(filepath.Join(repo, dir), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(repo, ".issueops", "ARCHITECTURE.md"), []byte("# Test document\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	build := newHookConfig().BuildCatalog
+	root, sub := build(repo), build(filepath.Join(repo, "src", "pkg"))
+	if !sub.ShouldInject || sub.Compact != root.Compact || sub.UserView != root.UserView {
+		t.Fatalf("subdirectory catalog = %+v, root = %+v", sub, root)
+	}
+}

@@ -658,6 +658,7 @@
       "task": "T20",
       "symbols": [
         "func hookRepoName",
+        "func hookWorkTreeRoot",
         "func newHookConfig",
         "func runHook"
       ]
