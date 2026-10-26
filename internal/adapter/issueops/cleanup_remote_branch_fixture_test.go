@@ -21,6 +21,6 @@ func remoteBranchPreviewer(deps CleanupRemoteBranchDeps) cleanupapp.RemoteBranch
 	return cleanupapp.RemoteBranchPreviewer{Environment: CleanupRemoteBranchEnvironment{RunGit: deps.Git}, VerifyMergedArtifact: deps.VerifyMergedArtifact, ObserveArtifact: deps.ObserveArtifact}
 }
 func CleanupRemoteBranch(ctx context.Context, root string, req issueops.CleanupRemoteBranchRequest, deps CleanupRemoteBranchDeps) (issueops.CleanupRemoteBranchResult, error) {
-	s := cleanupapp.RemoteBranchCleaner{Records: CleanupRecordStore{StateRoot: root}, Acquire: (CleanupLifetimeLock{StateRoot: root}).Acquire, NewAttempt: NewCleanupAttempt, Preview: remoteBranchPreviewer(deps), Now: time.Now}
+	s := cleanupapp.RemoteBranchCleaner{Records: CleanupRecordStore{StateRoot: root}, Acquire: (CleanupLifetimeLock{StateRoot: root, Wait: -1}).Acquire, NewAttempt: NewCleanupAttempt, Preview: remoteBranchPreviewer(deps), Now: time.Now}
 	return s.Run(ctx, req)
 }

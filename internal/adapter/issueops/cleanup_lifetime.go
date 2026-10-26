@@ -14,7 +14,12 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-type CleanupLifetimeLock struct{ StateRoot string }
+type CleanupLifetimeLock struct {
+	StateRoot string
+	// Wait bounds how long a busy lock is retried; zero means
+	// cleanupLifetimeWait and a negative value refuses at once.
+	Wait time.Duration
+}
 
 func (s CleanupLifetimeLock) Acquire(ctx context.Context, id string) (cleanupapp.CleanupLifetime, error) {
 	normalized, err := normalizeIssueOpsID(id)
@@ -28,7 +33,11 @@ func (s CleanupLifetimeLock) Acquire(ctx context.Context, id string) (cleanupapp
 	// finish --preview started together, and every one but the first failed
 	// at once. A short wait lets concurrent previews take turns; a long-lived
 	// holder (an apply, or a child it left behind) still refuses.
-	deadline := time.Now().Add(cleanupLifetimeWait)
+	wait := s.Wait
+	if wait == 0 {
+		wait = cleanupLifetimeWait
+	}
+	deadline := time.Now().Add(wait)
 	for {
 		lease, err := processlease.Acquire(ctx, directory, normalized)
 		if err == nil {

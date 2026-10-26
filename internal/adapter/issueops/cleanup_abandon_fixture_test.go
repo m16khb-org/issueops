@@ -21,7 +21,7 @@ func CleanupAbandon(ctx context.Context, root string, req model.CleanupAbandonRe
 func abandonExecutorForTests(root string, deps CleanupAbandonDeps) cleanupapp.AbandonExecutor {
 	runtime := CleanupAbandonRuntime{StateRoot: root, Git: deps.Git, Processes: deps.Processes}
 	return cleanupapp.AbandonExecutor{
-		Records: CleanupRecordStore{StateRoot: root}, Acquire: (CleanupLifetimeLock{StateRoot: root}).Acquire,
+		Records: CleanupRecordStore{StateRoot: root}, Acquire: (CleanupLifetimeLock{StateRoot: root, Wait: -1}).Acquire,
 		Provider: func(string) (port.IssueProvider, error) { return deps.Remote, nil },
 		Observe: func(_ context.Context, _ model.IssueOpsRecord, r model.CleanupAbandonRequest, _ port.IssueProvider) (model.CleanupAbandonRequest, error) {
 			return r, nil

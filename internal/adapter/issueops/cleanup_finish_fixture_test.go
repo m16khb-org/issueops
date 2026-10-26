@@ -30,7 +30,7 @@ func finishExecutorForTests(stateRoot string, deps CleanupFinishDeps) cleanupapp
 	runtime := CleanupFinishRuntime{RunGit: deps.Git, Processes: deps.Processes}
 	executor := cleanupapp.FinishExecutor{
 		MaterialWarning: (materialapp.TrackedMaterials{Files: MaterialFiles{}}).Warning,
-		Records:         CleanupRecordStore{StateRoot: stateRoot}, Acquire: (CleanupLifetimeLock{StateRoot: stateRoot}).Acquire,
+		Records:         CleanupRecordStore{StateRoot: stateRoot}, Acquire: (CleanupLifetimeLock{StateRoot: stateRoot, Wait: -1}).Acquire,
 		Observe: func(_ context.Context, _ issueops.IssueOpsRecord, r issueops.CleanupFinishRequest) (issueops.CleanupFinishRequest, error) {
 			return r, nil
 		},

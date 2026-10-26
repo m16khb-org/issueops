@@ -76,7 +76,7 @@ exit 0
 	stop()
 	deadline := time.Now().Add(3 * time.Second)
 	for {
-		lease, err := (CleanupLifetimeLock{StateRoot: root}).Acquire(context.Background(), record.ID)
+		lease, err := (CleanupLifetimeLock{StateRoot: root, Wait: -1}).Acquire(context.Background(), record.ID)
 		if err == nil {
 			_ = lease.Close()
 			break

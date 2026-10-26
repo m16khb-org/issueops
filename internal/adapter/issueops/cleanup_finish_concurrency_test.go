@@ -75,7 +75,7 @@ func TestCleanupFinishRecoversCrashedAttemptOnlyAfterExclusiveAcquisition(t *tes
 	if err := db.Put(issueOpsBucket, record.ID, raw); err != nil {
 		t.Fatal(err)
 	}
-	lock, err := (CleanupLifetimeLock{StateRoot: root}).Acquire(context.Background(), record.ID)
+	lock, err := (CleanupLifetimeLock{StateRoot: root, Wait: -1}).Acquire(context.Background(), record.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
