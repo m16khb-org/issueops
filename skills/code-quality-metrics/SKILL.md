@@ -149,9 +149,17 @@ No-input/N/A results must remain explicit, not masquerade as measured example ze
 
 ## Phase 1: Regression Against History
 
-Load the previous snapshot from IssueOps state or the ignored evidence directory;
-`issueops state read --key code-quality-metrics-latest` is the state read form.
-Distinguish absent history from a failed read; never fabricate a prior measurement.
+Load the previous snapshot from IssueOps state or the ignored evidence directory.
+State is shared by every repository, so the key names this one:
+
+```bash
+KEY="code-quality-metrics-$(git rev-parse --show-toplevel | shasum | cut -c1-12)"
+issueops state read --key "$KEY" --json          # exit 1 "not found" = no history yet
+issueops state write --key "$KEY" --input "$SNAPSHOT" --json   # after the remeasurement
+```
+
+`not found` is absent history, not a failure: record that no baseline existed. Any other
+error is a failed read. Never fabricate a prior measurement.
 Record improvements. Block PR on:
 
 - SNR drop >0.10; target recovery first.

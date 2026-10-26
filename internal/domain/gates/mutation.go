@@ -45,7 +45,7 @@ func RenderInitialLedger(req model.InitRequest) (string, error) {
 }
 func ValidateCreate(file string, exists bool) error {
 	if exists {
-		return fmt.Errorf("gate file already exists: %s", file)
+		return fmt.Errorf("gate file already exists: %s; init never overwrites a ledger: check it with `issueops gates status --file %s --json`, or edit it and run `issueops gates lint --file %s --json`", file, file, file)
 	}
 	return nil
 }

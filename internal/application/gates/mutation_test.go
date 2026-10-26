@@ -40,7 +40,7 @@ func (s *mutationStore) Create(_ string, data []byte) error {
 func TestInitExistingFilePrecedesMalformedSpecWithoutWriting(t *testing.T) {
 	store := &mutationStore{exists: true, data: []byte("unchanged")}
 	result, err := (Service{Store: store}).Init(model.InitRequest{File: "gates.md", Scope: "scope", Gates: []string{"| INVALID: bad"}})
-	if err == nil || err.Error() != "gate file already exists: gates.md" || result.OK || string(store.data) != "unchanged" || strings.Join(store.calls, ",") != "exists" {
+	if err == nil || !strings.HasPrefix(err.Error(), "gate file already exists: gates.md; init never overwrites") || result.OK || string(store.data) != "unchanged" || strings.Join(store.calls, ",") != "exists" {
 		t.Fatalf("result=%+v calls=%v err=%v", result, store.calls, err)
 	}
 }
