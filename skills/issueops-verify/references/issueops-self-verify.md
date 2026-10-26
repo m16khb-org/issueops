@@ -3,7 +3,7 @@
 issueops 하네스 저장소 자체를 바꾸는 사이클에서만 읽는다.
 
 이 issueops 저장소의 self-verify 배터리를 실행할 때는 먼저
-`issueops status --id "$ISSUEOPS_ID" --json`을 읽고, 해당 사이클의
+`issueops status --id "$ISSUEOPS_ID" --field branch_prepare --json`을 읽고, 해당 사이클의
 `branch_prepare.base_sha`를 `BASE_SHA`로 사용한다. 커밋 후 worktree가 깨끗해도
 기준을 전달한다. base가 없으면 검증을 중단하고 준비 기록을 확인하며, 무기준 실행이나
 다른 사이클·origin/main 추론으로 우회하지 않는다.

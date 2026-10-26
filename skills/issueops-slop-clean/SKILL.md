@@ -184,7 +184,7 @@ issueops ai-slop-clean record --id "$ISSUEOPS_ID" \
 
 - `issueops next --id "$ISSUEOPS_ID" --json`의 `stage.key`가 `docs`이거나
   그 뒤 단계다. 여전히 `clean`이면 `missing`이 무엇이 남았는지 말한다.
-- `issueops status --id "$ISSUEOPS_ID" --json`의 `ai_slop_clean_at`,
+- `issueops status --id "$ISSUEOPS_ID" --field ai_slop_clean_at --field ai_slop_clean_head --field ai_slop_clean_fingerprint --json`의 `ai_slop_clean_at`,
   `ai_slop_clean_head`, `ai_slop_clean_fingerprint`가 채워져 있다.
 - `git -C "$WORKTREE" diff --check`가 통과하고, source checkout의
   `git status --short`가 사이클 시작 때와 같다(사용자의 미커밋 변경은 그대로 남는다).

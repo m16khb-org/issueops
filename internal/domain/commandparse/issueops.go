@@ -157,7 +157,7 @@ func toBoolMap(names []string) map[string]bool {
 
 var issueOpsCommandSpecs = map[string]issueOpsSpec{
 	"status": {
-		values:   []string{"--id"},
+		values:   []string{"--id", "--field"},
 		booleans: []string{"--json"},
 	},
 	"list": {

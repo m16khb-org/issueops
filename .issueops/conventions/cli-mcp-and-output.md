@@ -19,7 +19,7 @@
 - 명령 플래그는 `fs.Parse` 대신 `cliflag.Parse(fs, args)`로 파싱한다. 잘못된 플래그는 Go의 플래그 목록 덤프 없이 오류 한 줄(또는 `--json`이면 JSON 문서 하나)로 끝나고, `--help`는 플래그 목록을 stdout에 낸다(`cmd/issueops/cliflag`).
 - 위치 인자를 받지 않는 명령은 `cliflag.ParseNoArgs`를 쓴다. Go 파서는 첫 위치 인자에서 멈추므로, 쓰지 않으면 `next io-1 --json`이 ID와 `--json`을 조용히 버리고 다른 사이클을 고른다. 이제는 `unexpected positional argument` 오류다.
 - 명령 그룹이 모르는 subcommand를 받으면 usage 블록을 stderr에 찍지 않고 `cliflag.UnknownSubcommand`로 유효한 subcommand 목록을 담은 오류 한 줄을 돌려준다. `--json`이면 stdout의 JSON 오류 문서 하나만 남는다(`TestEveryListedCommandPathAnswersHelpOnStdout`이 모든 그룹을 확인한다). subcommand 없이 그룹만 부르면 usage를 그대로 보여 준다.
-- record mutation(`intent record`, `phase`, `decision add`, `link-plan` 등)의 `--json` 성공 응답은 `{ok, schema_version, id, phase, branch, worktree_path, updated_at}` 확인 응답이다(`issueopscontract.MutationAck`). 전체 record는 `issueops status --id ID --json`이 돌려준다. `start`도 전체 record를 낸다.
+- record mutation(`intent record`, `phase`, `decision add`, `link-plan` 등)의 `--json` 성공 응답은 `{ok, schema_version, id, phase, branch, worktree_path, updated_at}` 확인 응답이다(`issueopscontract.MutationAck`). 전체 record는 `issueops status --id ID --json`이 돌려준다. 필드 하나만 필요하면 `--field NAME`(반복 가능, 최상위 필드)으로 `{ok, id, phase, <필드>, absent}`만 받는다. 스킬이 특정 필드만 읽는 곳은 `--field`를 쓴다. `start`도 전체 record를 낸다.
 - `--help`·`-h`·선두 `help`의 usage는 stdout으로 나간다(`issueops X --help | grep`). 알 수 없는 top-level 명령은 전체 usage 대신 한 줄 오류와 가까운 명령 후보를 stderr에 낸다.
 - record 계열 명령의 RECORD_ACTOR_FLAGS는 `cmd/issueops/issueopscli/actorflags` 한 곳에서 선언한다. `execution whoami`의 claim 벡터(receipt 플래그 포함)도 받으며, receipt는 라이브 native ancestry의 한 항목과 세 필드가 모두 맞아야 하고 아니면 ancestry를 비워 fail-closed로 거부된다.
 - exit code는 의미 있게 유지한다(`cmd/issueops/issueopsapp/root_command_facade.go`, `cmd/issueops/rootcmd/root_command.go`).

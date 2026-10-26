@@ -142,7 +142,7 @@ issueops schema-evidence record --id "$ISSUEOPS_ID" \
 - `pass`만 통과한다. `revise`면 지적을 고쳐야 하므로 4단계로 돌아간다. 이 단계에서
   고치면 fingerprint가 바뀌어 앞 판정이 전부 stale이 된다.
 - 모드에 따른 면제는 없다. execution이 있는 사이클은 전부 이 게이트의 대상이다.
-- **계획 리뷰가 남긴 주장을 함께 준다.** `issueops status --id "$ISSUEOPS_ID" --json`의
+- **계획 리뷰가 남긴 주장을 함께 준다.** `issueops status --id "$ISSUEOPS_ID" --field devils_advocate_review --json`의
   `devils_advocate_review.findings`와 `history`의 finding을 "검증할 주장 목록"으로
   프롬프트에 넣는다. 리뷰어는 diff 전체를 탐색하기 전에 그 주장이 실제로 지켜졌는지
   확인한다. 계획 리뷰에서 살아남은 위험이 구현에서 되살아났는지가 가장 싸게 잡히는 결함이다.
@@ -212,7 +212,7 @@ plan.md, gates.md, verified-execution report, 문서, 구현을 커밋·푸시�
 
 - `issueops pr-readiness --id "$ISSUEOPS_ID" --strict --json`의 `missing`이
   커밋·푸시로 해소되는 키만 남았다.
-- `issueops status --id "$ISSUEOPS_ID" --json`의 `implementation_review`와
+- `issueops status --id "$ISSUEOPS_ID" --field implementation_review --field schema_evidence --json`의 `implementation_review`와
   `schema_evidence`(활성화된 경우)가 현재 fingerprint에 묶여 있다.
 - `git -C "$WORKTREE" status --porcelain`이 이 단계 시작 때와 같다. 달라졌으면 이 단계가
   파일을 바꾼 것이다.

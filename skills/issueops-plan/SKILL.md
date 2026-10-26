@@ -214,7 +214,7 @@ Herdr를 쓸 수 없으면 lease를 유지하고 현재 세션에서 구현으�
 
 ## 검증
 
-- `issueops status --id "$ISSUEOPS_ID" --json`의 `architecture_review.approved`가
+- `issueops status --id "$ISSUEOPS_ID" --field architecture_review --field devils_advocate_review --json`의 `architecture_review.approved`가
   true이고 `reviewed_architecture_digest`가 현재 아키텍처 문서의 sha256과 같으며, `devils_advocate_review.verdict`가 `pass`이며 그 digest가 현재 계획과 같다.
 - `issueops next --id "$ISSUEOPS_ID" --json`의 `stage.key`가 `plan.handoff`
   이거나, 인계 뒤라면 `claim` 또는 `implement.enter`다.

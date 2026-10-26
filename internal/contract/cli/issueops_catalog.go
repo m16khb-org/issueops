@@ -16,7 +16,7 @@ package cli
 // exact spec과 같은 flag 집합인지는 issueopscli의
 // TestIssueOpsCommandGrammarAgreesAcrossCatalogFlagSetAndSpec가 검사한다.
 const IssueOpsUsageCatalog = `  issueops start --repo PATH [--branch NAME | --new] [--json]
-  issueops status --id ID [--json]
+  issueops status --id ID [--field NAME]... [--json]
   issueops list [--repo PATH] [--json]
   issueops review-metrics (--id ID | --repo PATH) [--json]
   issueops next [--id ID] [--cwd PATH] [--json]

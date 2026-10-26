@@ -28,7 +28,7 @@ Usage:
   issueops state doctor [--json]
   issueops state maintain [--json]
   issueops start --repo PATH [--branch NAME | --new] [--json]
-  issueops status --id ID [--json]
+  issueops status --id ID [--field NAME]... [--json]
   issueops list [--repo PATH] [--json]
   issueops review-metrics (--id ID | --repo PATH) [--json]
   issueops next [--id ID] [--cwd PATH] [--json]

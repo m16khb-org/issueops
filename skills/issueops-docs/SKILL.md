@@ -169,7 +169,7 @@ issueops project-docs-review record --id "$ISSUEOPS_ID" \
 
 ## 검증
 
-- `issueops status --id "$ISSUEOPS_ID" --json`의 `project_docs_review`에
+- `issueops status --id "$ISSUEOPS_ID" --field project_docs_review --json`의 `project_docs_review`에
   이번 판정이 있고 `reviewed_fingerprint`가 현재 변경 집합과 같다.
 - `issueops next --id "$ISSUEOPS_ID" --json`의 `stage.key`가 `verify`이거나
   그 뒤 단계다. `docs`나 `clean`으로 남아 있으면 `missing`이 이유를 말한다.

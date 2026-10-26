@@ -35,11 +35,23 @@ func (cli command) runIssueOpsStart(args []string) error {
 func (cli command) runIssueOpsStatus(args []string) error {
 	fs := flag.NewFlagSet("issueops status", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
+	var fields repeatedFlag
+	fs.Var(&fields, "field", "print only this top-level record field with id and phase (repeatable)")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
 	}
 	record, err := cli.Runtime.IssueOpsStatus(cli.Runtime.IssueOpsStateRoot(), *id)
+	if err == nil && len(fields) > 0 {
+		projection, projectErr := statusProjection(issueopscontract.StatusView(record), fields)
+		if projectErr != nil {
+			if *jsonOut {
+				return reportIssueOpsError(projectErr)
+			}
+			return projectErr
+		}
+		return printJSON(projection)
+	}
 	return printIssueOpsRecord(issueopscontract.StatusView(record), *jsonOut, err)
 }
 

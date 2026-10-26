@@ -127,7 +127,7 @@ branch는 부모 사이클의 브랜치이고, base SHA는 부모 워크트리�
 
 ## 검증
 
-- `issueops status --id "$ISSUEOPS_ID" --json`의 `branch_prepare`에
+- `issueops status --id "$ISSUEOPS_ID" --field branch_prepare --json`의 `branch_prepare`에
   `provider`, `issue_url`, `branch`, `base_branch`, `base_sha`가 있고 `phase`가 `plan`이다.
 - provider 링크가 실제로 보인다. GitHub은 이슈의 `linkedBranches` GraphQL 조회에 브랜치가
   있고, GitLab은 `glab api "projects/:id/repository/branches/<branch>"`가 원격 브랜치를

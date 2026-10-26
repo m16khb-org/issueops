@@ -343,7 +343,7 @@ func TestFinalVerificationBatteryPinsSingleOwnerContract(t *testing.T) {
 	for skill, file := range map[string]string{"self-verify": "SKILL.md", "issueops-verify": "references/issueops-self-verify.md"} {
 		body := readRepoFileForTest(t, filepath.Join("skills", skill, file))
 		for _, want := range []string{
-			`issueops status --id "$ISSUEOPS_ID" --json`,
+			`issueops status --id "$ISSUEOPS_ID" --field branch_prepare --json`,
 			"branch_prepare.base_sha",
 			`self-verify --base-ref "$BASE_SHA" --seed=100 --target-score=95 --llm-eval=false --json`,
 		} {

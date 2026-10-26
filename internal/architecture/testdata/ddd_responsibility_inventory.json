@@ -2032,6 +2032,15 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopscli/status_projection.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func recordFieldNames",
+        "func statusProjection"
+      ]
+    },
+    {
       "path": "cmd/issueops/jsonout/jsonout.go",
       "owner": "inbound",
       "task": "T20",

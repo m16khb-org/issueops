@@ -152,7 +152,7 @@ effort를 알 수 없으면 `unknown`이라고 적는다. `next.review`의 권�
 
 ## 검증
 
-- `issueops status --id "$ISSUEOPS_ID" --json`의 `devils_advocate_review`
+- `issueops status --id "$ISSUEOPS_ID" --field devils_advocate_review --field implementation_review --json`의 `devils_advocate_review`
   또는 `implementation_review`에 이번 판정이 있고 digest·fingerprint가 현재 대상과
   같은지 확인한다.
 - `issueops next --id "$ISSUEOPS_ID" --json`의 `missing`에

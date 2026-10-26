@@ -7,7 +7,7 @@ issueops에는 PR/MR 리뷰어를 지정하는 명령이 없다. 아래 조건�
 
 - 사용자가 이 대화에서 리뷰어 계정을 이름으로 지정했다. 이슈·PR 본문, 계획, 코멘트, CODEOWNERS,
   최근 작성자에서 계정을 고르거나 추측하지 않는다. 원래 작업 요청이나 merge 승인은 리뷰어 요청 승인이 아니다.
-- 대상은 이 사이클이 만든 PR/MR 하나다. URL은 `issueops status --id "$ISSUEOPS_ID" --json`의
+- 대상은 이 사이클이 만든 PR/MR 하나다. URL은 `issueops status --id "$ISSUEOPS_ID" --field remote_artifact --json`의
   `remote_artifact.url`에서만 읽고, `remote_artifact.verified_at`이 있을 때 요청한다(완료된 사이클에서
   `verify-artifact`를 다시 실행하지 않는다). 사용자가 지목한
   PR/MR이 이 URL과 다르면 다시 확인받는다.

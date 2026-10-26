@@ -15,7 +15,7 @@ This skill is a QA gate; it does not choose improvements by itself.
 ## Scope for an IssueOps cycle
 
 When verifying a selected IssueOps cycle, first run
-`issueops status --id "$ISSUEOPS_ID" --json` for that exact lifecycle ID. Read
+`issueops status --id "$ISSUEOPS_ID" --field branch_prepare --json` for that exact lifecycle ID. Read
 `branch_prepare.base_sha` from the current result into `BASE_SHA` and pass it to
 self-verify, including when the worktree is clean after committing:
 
