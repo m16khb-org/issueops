@@ -8,6 +8,7 @@ import (
 
 	model "issueops/internal/contract/issueops"
 	domain "issueops/internal/domain/issueops"
+	"issueops/internal/domain/secretdetection"
 	"issueops/internal/port"
 )
 
@@ -44,6 +45,11 @@ func (s *RemoteLabelService) AddLabels(ctx context.Context, id, on string, label
 	if len(add) == 0 {
 		return result, fmt.Errorf("--add LABEL is required (repeatable)")
 	}
+	for _, label := range add {
+		if match, found := secretdetection.Find(label); found {
+			return result, fmt.Errorf("label %q looks like a secret (%s); labels are public", label, match.Kind)
+		}
+	}
 	if !confirm {
 		result.OK = true
 		return result, nil
@@ -54,7 +60,7 @@ func (s *RemoteLabelService) AddLabels(ctx context.Context, id, on string, label
 	}
 	readback, err := labeler.AddLabels(ctx, record.Repo, target, on, add)
 	if err != nil {
-		return result, fmt.Errorf("%w; adding a label again is harmless, but read the %s's labels first: the provider refuses a label the repository does not define", err, on)
+		return result, fmt.Errorf("%w; adding a label again is harmless, but read the %s's labels first; a label the repository does not define is refused, never created", err, on)
 	}
 	result.Labels = readback
 	for _, label := range add {

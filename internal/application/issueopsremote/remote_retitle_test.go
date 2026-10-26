@@ -41,4 +41,7 @@ func TestRemoteRetitlePreviewsThenRequiresTheReadback(t *testing.T) {
 	if err := run(ok, "a\nb", false); err == nil || !strings.Contains(err.Error(), "one line") {
 		t.Fatalf("multi-line err = %v", err)
 	}
+	if err := run(ok, "token ghp_abcdefghijklmnopqrstuvwxyz0123456789AB", false); err == nil || !strings.Contains(err.Error(), "secret") {
+		t.Fatalf("secret title err = %v", err)
+	}
 }

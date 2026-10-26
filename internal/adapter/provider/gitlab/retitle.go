@@ -23,6 +23,9 @@ func (Provider) Retitle(ctx context.Context, repo, targetURL, kind, title string
 		}
 		hostname, endpoint = host, "projects/"+url.PathEscape(project)+"/issues/"+iid
 	case "pr":
+		if gitLabDraftTitle.MatchString(title) {
+			return "", fmt.Errorf("the title starts with a draft marker; draft state is not changed by a rename (mark-ready clears it)")
+		}
 		host, mergeRequest, err := gitLabMergeRequestEndpoint(targetURL)
 		if err != nil {
 			return "", err
@@ -36,7 +39,7 @@ func (Provider) Retitle(ctx context.Context, repo, targetURL, kind, title string
 		if err != nil {
 			return "", err
 		}
-		if state.Draft && !gitLabDraftTitle.MatchString(title) {
+		if state.Draft {
 			title = "Draft: " + title
 		}
 	default:
@@ -52,5 +55,8 @@ func (Provider) Retitle(ctx context.Context, repo, targetURL, kind, title string
 	if err := json.Unmarshal(out, &payload); err != nil {
 		return "", fmt.Errorf("parse gitlab %s title: %w", kind, err)
 	}
-	return gitLabDraftTitle.ReplaceAllString(payload.Title, ""), nil
+	if kind == "pr" {
+		return gitLabDraftTitle.ReplaceAllString(payload.Title, ""), nil
+	}
+	return payload.Title, nil
 }

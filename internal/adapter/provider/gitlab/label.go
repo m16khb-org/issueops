@@ -8,28 +8,34 @@ import (
 	"strings"
 )
 
-// AddLabels sends add_labels (add only) and reads the labels from the
-// updated issue or merge request the API returns.
+// AddLabels checks that every label exists in the project, sends add_labels
+// (add only), and reads the labels from the updated issue or merge request
+// the API returns. GitLab creates a missing project label on add_labels, so a
+// typo would add a new label to the whole project; such labels are refused.
 func (Provider) AddLabels(ctx context.Context, repo, targetURL, kind string, labels []string) ([]string, error) {
 	targetURL = strings.TrimSpace(targetURL)
-	var hostname, endpoint string
+	var hostname, project, iid, collection string
+	var err error
 	switch kind {
 	case "issue":
-		host, project, iid, err := parseGitLabIssueURL(targetURL)
-		if err != nil {
-			return nil, err
-		}
-		hostname, endpoint = host, "projects/"+url.PathEscape(project)+"/issues/"+iid
+		hostname, project, iid, err = parseGitLabIssueURL(targetURL)
+		collection = "issues"
 	case "pr":
-		host, mergeRequest, err := gitLabMergeRequestEndpoint(targetURL)
-		if err != nil {
-			return nil, err
-		}
-		hostname, endpoint = host, mergeRequest
+		hostname, project, iid, err = parseGitLabMergeRequestURL(targetURL)
+		collection = "merge_requests"
 	default:
 		return nil, fmt.Errorf("unsupported gitlab label target %q (want issue|pr)", kind)
 	}
-	out, err := runGlabAPIContext(ctx, repo, hostname, endpoint, "--method", "PUT", "-f", "add_labels="+strings.Join(labels, ","))
+	if err != nil {
+		return nil, err
+	}
+	projectEndpoint := "projects/" + url.PathEscape(project)
+	for _, label := range labels {
+		if _, err := runGlabAPIContext(ctx, repo, hostname, projectEndpoint+"/labels/"+url.PathEscape(label)); err != nil {
+			return nil, fmt.Errorf("label %q is not defined in the project (add_labels would create it): %w", label, err)
+		}
+	}
+	out, err := runGlabAPIContext(ctx, repo, hostname, projectEndpoint+"/"+collection+"/"+iid, "--method", "PUT", "-f", "add_labels="+strings.Join(labels, ","))
 	if err != nil {
 		return nil, err
 	}

@@ -37,3 +37,29 @@ echo '{"web_url":"`+glMergeTestURL+`","title":"Draft: old","state":"opened","dra
 		t.Fatalf("calls = %s", calls)
 	}
 }
+
+// A draft marker in the requested title is refused before any write (a rename
+// would otherwise draft a ready MR), and an issue title keeps a leading
+// "Draft:" in its readback.
+func TestGitLabRetitleRefusesADraftMarkerAndKeepsIssueTitles(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fake glab shell script is POSIX-only")
+	}
+	binDir := t.TempDir()
+	log := filepath.Join(t.TempDir(), "glab.log")
+	writeFakeGlab(t, binDir, `#!/bin/sh
+echo "$*" >> `+log+`
+echo '{"title":"Draft: plan notes"}'
+`)
+	t.Setenv("PATH", binDir)
+	if _, err := NewProvider().Retitle(context.Background(), "", glMergeTestURL, "pr", "Draft: x"); err == nil || !strings.Contains(err.Error(), "mark-ready") {
+		t.Fatalf("draft marker err = %v", err)
+	}
+	if _, err := os.Stat(log); err == nil {
+		t.Fatal("a refused rename must not call glab")
+	}
+	got, err := NewProvider().Retitle(context.Background(), "", "https://gitlab.example/group/repo/-/issues/3", "issue", "Draft: plan notes")
+	if err != nil || got != "Draft: plan notes" {
+		t.Fatalf("issue readback = %q, err %v", got, err)
+	}
+}

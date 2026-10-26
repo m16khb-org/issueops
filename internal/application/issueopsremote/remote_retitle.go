@@ -8,6 +8,7 @@ import (
 	model "issueops/internal/contract/issueops"
 	domain "issueops/internal/domain/issueops"
 	remotedomain "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/secretdetection"
 	"issueops/internal/port"
 )
 
@@ -49,6 +50,9 @@ func (s *RemoteRetitleService) Retitle(ctx context.Context, id, on, title string
 	if err := remotedomain.ValidateProviderTitleLength(on, title); err != nil {
 		return result, err
 	}
+	if match, found := secretdetection.Find(title); found {
+		return result, fmt.Errorf("--title contains a secret-like value (%s); remove it", match.Kind)
+	}
 	if !confirm {
 		result.OK = true
 		return result, nil
@@ -59,7 +63,7 @@ func (s *RemoteRetitleService) Retitle(ctx context.Context, id, on, title string
 	}
 	readback, err := retitler.Retitle(ctx, record.Repo, target, on, title)
 	if err != nil {
-		return result, fmt.Errorf("%w; setting the same title again is harmless, but read the %s first", err, on)
+		return result, fmt.Errorf("%w; read the %s's current title before setting it again", err, on)
 	}
 	result.ReadBack = readback
 	if strings.TrimSpace(readback) != title {

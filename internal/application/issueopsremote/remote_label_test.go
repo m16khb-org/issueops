@@ -43,4 +43,7 @@ func TestRemoteLabelPreviewsThenAddsAndRequiresTheReadback(t *testing.T) {
 	if _, err := runLabel(t, labeler, nil, false); err == nil || !strings.Contains(err.Error(), "--add LABEL") {
 		t.Fatalf("empty err = %v", err)
 	}
+	if _, err := runLabel(t, labeler, []string{"ghp_abcdefghijklmnopqrstuvwxyz0123456789AB"}, false); err == nil || !strings.Contains(err.Error(), "secret") {
+		t.Fatalf("secret label err = %v", err)
+	}
 }

@@ -70,7 +70,8 @@ func needsShellQuote(r rune) bool {
 func confirmCommand(subcommand string, args []string) string {
 	words := []string{"issueops", "remote", subcommand}
 	for _, arg := range args {
-		if arg == "" || strings.ContainsFunc(arg, needsShellQuote) {
+		// A leading = is zsh's EQUALS expansion (=cmd becomes its path).
+		if arg == "" || strings.HasPrefix(arg, "=") || strings.ContainsFunc(arg, needsShellQuote) {
 			arg = shelltoken.QuoteWord(arg)
 		}
 		words = append(words, arg)
