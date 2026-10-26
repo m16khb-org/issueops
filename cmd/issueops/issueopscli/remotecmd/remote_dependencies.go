@@ -25,6 +25,7 @@ type RemoteDeps struct {
 	MergeRemotePullRequest       func(ctx context.Context, stateRoot, id, method string, confirm bool) (issueopscontract.RemoteMergeResult, error)
 	MarkRemotePullRequestReady   func(ctx context.Context, stateRoot, id string, confirm bool) (issueopscontract.RemoteReadyResult, error)
 	CommentRemote                func(ctx context.Context, stateRoot, id, on, body string, confirm bool) (issueopscontract.RemoteCommentResult, error)
+	LabelRemote                  func(ctx context.Context, stateRoot, id, on string, labels []string, confirm bool) (issueopscontract.RemoteLabelResult, error)
 	CreateIssue                  func(context.Context, string, remoteapp.IssueCreateCommand, remoteapp.IssueLiveVerifier) (remoteapp.IssueCreateResult, error)
 	ReadScoreSummaryFile         func(string) (string, error)
 	ReconcileIssueCreate         func(context.Context, string, string, bool, remoteapp.IssueLiveVerifier) (issueopscontract.IssueOpsIssueCreateReconcileResult, error)

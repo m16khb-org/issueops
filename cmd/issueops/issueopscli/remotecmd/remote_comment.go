@@ -38,7 +38,7 @@ func (command Command) runRemoteComment(args []string, deps Deps) error {
 		return deps.printErrorResult(*jsonOut, err)
 	}
 	if err == nil && !*confirm {
-		result.NextCommand = confirmCommand(args)
+		result.NextCommand = confirmCommand("comment", args)
 	}
 	if *jsonOut {
 		if err != nil {
@@ -67,8 +67,8 @@ func needsShellQuote(r rune) bool {
 
 // confirmCommand repeats the previewed request with --confirm, so the posted
 // text is the previewed text.
-func confirmCommand(args []string) string {
-	words := []string{"issueops", "remote", "comment"}
+func confirmCommand(subcommand string, args []string) string {
+	words := []string{"issueops", "remote", subcommand}
 	for _, arg := range args {
 		if arg == "" || strings.ContainsFunc(arg, needsShellQuote) {
 			arg = shelltoken.QuoteWord(arg)

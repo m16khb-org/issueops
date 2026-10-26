@@ -13,6 +13,8 @@ description: Use before any governed "issueops remote ..." write (issue, child t
 - 본문 동기화: [`issueops-sync-issue`](../issueops-sync-issue/SKILL.md), [`issueops-sync-pr`](../issueops-sync-pr/SKILL.md)
 - 사용자가 요청한 댓글: `issueops remote comment --id "$ISSUEOPS_ID" --on issue|pr --body-file "$FILE" --json`(preview)
   → 응답의 `next_command`(같은 요청 + `--confirm`). fluent-korean·secret 규칙은 같다. 실패한 게시는 댓글 목록을 읽기 전에 다시 쓰지 않는다.
+- 사용자가 요청한 라벨 추가: `issueops remote label --id "$ISSUEOPS_ID" --on issue|pr --add "$LABEL" --json`(preview) → `next_command`.
+  추가만 한다. 저장소에 없는 라벨은 만들지 않고 사용자에게 알린다.
 - 한국어 문체: [`fluent-korean`](../fluent-korean/SKILL.md)
 - 본문 작성 지침: [`references/readable-body.md`](references/readable-body.md)
 

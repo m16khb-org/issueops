@@ -995,6 +995,7 @@
       "symbols": [
         "func closeRemoteIssue",
         "func commentRemote",
+        "func labelRemote",
         "func markRemotePullRequestReady",
         "func mergeRemotePullRequest",
         "func newRemoteCompletionService",
@@ -1968,6 +1969,14 @@
       "task": "T20",
       "symbols": [
         "func Command.runRemoteReconcileIssue"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopscli/remotecmd/remote_label.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func Command.runRemoteLabel"
       ]
     },
     {
@@ -7021,6 +7030,14 @@
       ]
     },
     {
+      "path": "internal/adapter/provider/github/label.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Provider.AddLabels"
+      ]
+    },
+    {
       "path": "internal/adapter/provider/github/merge_pull_request.go",
       "owner": "adapter",
       "task": "T20",
@@ -7128,6 +7145,14 @@
         "func Provider.ReadIssueSnapshot",
         "func gitLabSnapshotAuthority",
         "func sameGitLabIssueSnapshotIdentity"
+      ]
+    },
+    {
+      "path": "internal/adapter/provider/gitlab/label.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Provider.AddLabels"
       ]
     },
     {
@@ -7287,6 +7312,7 @@
       "symbols": [
         "func Resolve",
         "func ResolveCommenter",
+        "func ResolveLabeler",
         "func ResolvePullRequestMerger"
       ]
     },
@@ -9720,6 +9746,18 @@
       ]
     },
     {
+      "path": "internal/application/issueopsremote/remote_label.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func NewRemoteLabelService",
+        "func RemoteLabelService.AddLabels",
+        "func cleanLabels",
+        "type LabelProviderResolver",
+        "type RemoteLabelService"
+      ]
+    },
+    {
       "path": "internal/application/issueopsremote/remote_merge.go",
       "owner": "application",
       "task": "T07",
@@ -11286,6 +11324,14 @@
       "symbols": [
         "type PlanReviewRound",
         "type RemoteCompletionSection"
+      ]
+    },
+    {
+      "path": "internal/contract/issueops/remote_label.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type RemoteLabelResult"
       ]
     },
     {
@@ -16936,6 +16982,7 @@
         "type IssueProviderFindIssueCreateCandidatesResult",
         "type IssueProviderIssueCreateCandidate",
         "type IssueProviderIssueCreateReconciler",
+        "type IssueProviderLabeler",
         "type IssueProviderPullRequestCloser",
         "type IssueProviderPullRequestMergeRequest",
         "type IssueProviderPullRequestMerger",

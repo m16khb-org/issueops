@@ -25,6 +25,19 @@ func Resolve(name string) (port.IssueProvider, error) {
 	}
 }
 
+// ResolveLabeler returns the label capability of the named provider.
+func ResolveLabeler(name string) (port.IssueProviderLabeler, error) {
+	resolved, err := Resolve(name)
+	if err != nil {
+		return nil, err
+	}
+	labeler, ok := resolved.(port.IssueProviderLabeler)
+	if !ok {
+		return nil, fmt.Errorf("provider %q cannot add labels", name)
+	}
+	return labeler, nil
+}
+
 // ResolveCommenter returns the comment capability of the named provider.
 func ResolveCommenter(name string) (port.IssueProviderCommenter, error) {
 	resolved, err := Resolve(name)

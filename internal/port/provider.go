@@ -306,6 +306,12 @@ type IssueProviderCommenter interface {
 	Comment(ctx context.Context, repo, targetURL, kind, body string) (string, error)
 }
 
+// IssueProviderLabeler adds labels to an issue (kind "issue") or a PR/MR (kind
+// "pr") and returns the labels read back afterwards. It never removes labels.
+type IssueProviderLabeler interface {
+	AddLabels(ctx context.Context, repo, targetURL, kind string, labels []string) ([]string, error)
+}
+
 // IssueProvider is implemented by provider-specific adapters such as GitHub and GitLab.
 // Every mutating operation requires Confirm=true; without it, only a dry-run preview
 // is returned.
