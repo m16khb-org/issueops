@@ -54,19 +54,8 @@ recording belongs to this stage. `quality inspect` is not a semantic skill runne
      and provider link keep it discoverable; finish does not write the issue body.
    A remote that cannot be read blocks the same way and takes the same two
    exits; `--keep-remote-branch` records `state: "unreadable"` instead of an OID.
-7. Prepared and provider-observed merged base must match (`base_branch_drifted`).
-   Exemption: the prepared base is observed **absent from origin** AND the merged
-   base is the repository default. Preview reports `retargeted_base` with both
-   bases, default branch and absence evidence. Failed observation blocks with
-   `merged_base_remote_unobserved`; no flag may assert a base.
-   A deliberate retarget must be recorded **before** finish with
-   `issueops branch retarget --id ID --base-branch REF --reason TEXT`: it accepts
-   only a base the provider currently shows as the PR/MR target and that exists on
-   `origin`, then appends `branch_prepare.retargets[]` and moves the prepared base,
-   so finish compares against that recorded decision.
-   Check absence with `git ls-remote --heads origin
-   refs/heads/<prepared-base>` (empty output means gone); do not reach for
-   `ls-remote --symref`, which the command policy rejects.
+7. Prepared and provider-observed merged base must match. On `base_branch_drifted`,
+   `retargeted_base` or `merged_base_remote_unobserved`, read [base drift](references/base-drift.md).
 
 Unmerged retirement (draft PR/MR, issue and remote branch closure) belongs to
 `issueops-abandon`/typed `cleanup abandon`, not this path. An unmerged PR/MR the
