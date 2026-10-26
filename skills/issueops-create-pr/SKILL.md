@@ -132,6 +132,9 @@ issueops remote create-pr \
   $ACTOR_FLAGS --json
 ```
 
+squash 머지는 PR 제목을 base 브랜치의 커밋 제목으로 쓴다. 저장소 문서(`CONTRIBUTING.md`,
+커밋 정책 등)가 커밋 제목 형식을 정하면 PR 제목도 그 형식을 따른다.
+
 preview의 `warnings`에 `issue_closed`가 있으면 confirm하지 않는다. 이슈가 닫힌 이유(마지막 댓글)를 읽고
 사용자에게 다시 열지, 다른 이슈에 연결할지, 사이클을 멈출지 묻는다.
 

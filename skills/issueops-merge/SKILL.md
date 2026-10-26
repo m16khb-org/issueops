@@ -79,7 +79,8 @@ issueops remote merge-pr --id "$ISSUEOPS_ID" --json
 
 기본 방식은 `squash`다. 사용자가 다른 방식을 원할 때만 `--method merge` 또는
 `--method rebase`를 붙인다. GitLab은 프로젝트 설정이 merge commit과 fast-forward를
-정하므로 `rebase`를 받지 않는다.
+정하므로 `rebase`를 받지 않는다. squash는 PR 제목을 커밋 제목으로 쓰므로, 저장소가 정한
+커밋 제목 형식과 PR 제목이 다르면 머지 전에 사용자에게 알린다.
 
 응답에서 다음 값을 사용자에게 보여 준다.
 
