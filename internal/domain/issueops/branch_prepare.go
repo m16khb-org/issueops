@@ -17,6 +17,13 @@ func ValidatePreparationNames(branch, base string) error {
 	if base == "" {
 		return fmt.Errorf("base_branch is required (--base-branch)")
 	}
+	reason := refNameViolation(base)
+	if reason == "" && strings.HasPrefix(base, "-") {
+		reason = "start with -"
+	}
+	if reason != "" {
+		return fmt.Errorf("base_branch contains invalid characters: %s (git branch names cannot %s; pass the remote branch name such as main)", base, reason)
+	}
 	return nil
 }
 

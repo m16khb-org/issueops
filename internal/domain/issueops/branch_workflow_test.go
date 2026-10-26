@@ -30,6 +30,14 @@ func TestValidatePreparationNamesChecksBranchBeforeBase(t *testing.T) {
 	if err := ValidatePreparationNames("bad branch", ""); err == nil || !strings.HasPrefix(err.Error(), want) {
 		t.Fatalf("got %v, want error starting %q", err, want)
 	}
+	for _, base := range []string{"ma in", "main~1", "-main", "main.lock"} {
+		if err := ValidatePreparationNames("12-fix-x", base); err == nil || !strings.HasPrefix(err.Error(), "base_branch contains invalid characters") {
+			t.Errorf("base %q = %v, want base_branch refusal", base, err)
+		}
+	}
+	if err := ValidatePreparationNames("12-fix-x", "release/1.2"); err != nil {
+		t.Fatalf("slash base rejected: %v", err)
+	}
 }
 
 func TestValidateBranchRefusesNamesGitRefuses(t *testing.T) {
