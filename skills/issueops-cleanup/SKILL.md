@@ -145,7 +145,7 @@ Obtain one explicit confirmation naming all three destructive/external effects:
 이슈 <URL>을 닫고, HEAD <WORKTREE_HEAD_OID>인 로컬 워크트리 <PATH>와
 OID <BRANCH_OID>인 로컬 브랜치 <BRANCH>를 삭제할까요?
 apply가 먼저 종료하는 것: 프로세스 <N>개(<pid:command …>).
-원격 브랜치는 삭제하지 않습니다.
+원격 브랜치는 삭제하지 않습니다(merge 단계에서 이미 지웠으면 "원격 브랜치는 merge 단계에서 삭제했습니다").
 주의사항: <Project docs에서 고른 caution마다 "문서 경로: 해당 문장 인용", 없으면 "열어 본 caution <경로 목록>, 해당 없음">
 ```
 

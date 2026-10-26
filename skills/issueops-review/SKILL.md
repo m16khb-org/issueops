@@ -109,8 +109,8 @@ issueops next --id "$ISSUEOPS_ID" --json
 기록 명령(target별 `architecture review`·`devils-advocate review`·`implementation-review record`),
 감사 필드, finding 작성 규칙, stale 규칙, 이슈 반영은
 [기록 명령과 이슈 반영](references/record-and-issue.md)을 따른다. 핵심: `--reviewer-model`·`--reviewer-effort`
-플래그는 `implementation-review record`에만 있다. `architecture review`·`devils-advocate review`는 같은 값을
-finding 첫 줄에 적는다. 값은 실제 리뷰 실행에 넘긴 것이다. inline 리뷰는 별도 실행이 없으므로 현재 세션의 모델과 effort를 적고,
+플래그는 `implementation-review record`에만 있다. `devils-advocate review`는 같은 값을 `--finding` 첫 줄에,
+`architecture review`(`--finding` 없음)는 첫 `--verification` 항목에 적는다. 값은 실제 리뷰 실행에 넘긴 것이다. inline 리뷰는 별도 실행이 없으므로 현재 세션의 모델과 effort를 적고,
 effort를 알 수 없으면 `unknown`이라고 적는다. `next.review`의 권장 모델로 바꿔 적지 않는다. 승인은 문서 sha256에 묶이며(리뷰 뒤 수정하면 stale), `reviewer_*`는 감사 필드이지
 증명이 아니므로 사실대로 적는 것은 실행자의 책임이다. 계획 판정은 `issueops remote reflect-devils-advocate --confirm`으로
 반영하고 `stop` 판정일 때 특히 중요하다.
