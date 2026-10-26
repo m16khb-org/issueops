@@ -149,7 +149,7 @@ issueops gates lint --plan "$TMP_PLAN" --cwd "$SOURCE_ROOT" --json
 절차는 그 스킬이 소유하므로 여기 복사하지 않는다. 이 단계가 알아야 하는 것은 셋이다.
 
 - **입력**: 스테이징한 계획 전체. 위 `## 적용되는 결정과 주의사항` 절과 승인된 아키텍처 문서 전문이 함께 간다.
-- **종료 조건**: `pass` 판정이 finding 하나 이상과 함께 기록됐다.
+- **종료 조건**: `pass` 판정이 finding 하나 이상과 함께 기록됐다. pass도 아래 `reflect-devils-advocate`로 이슈에 반영한다.
 - **stop 판정**: 이 단계가 되돌린다.
 
 ```bash
