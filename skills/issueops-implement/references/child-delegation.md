@@ -9,6 +9,9 @@ issueops child status --parent "$ISSUEOPS_ID" \
   $RECORD_ACTOR_FLAGS --json
 ```
 
+- parent lease를 잡은 뒤의 쓰기 명령(`remote create-child --confirm`, `child start` 포함)은 parent
+  canonical worktree에서 실행하고 actor 플래그의 `--cwd`도 그 worktree로 준다. source checkout에서
+  실행하면 `requires the canonical worktree cwd`로 거부된다.
 - 이슈 단계의 `remote create-child`는 provider의 child 이슈를 만들고, `child start`는 로컬 child
   사이클을 만든다. `--child-issue-url`로 둘을 잇는다. 이슈 없는 child는 parent 이슈의
   `.issueops/issues/<n>/` 파일을 같이 써서 sibling child PR끼리 충돌한다.

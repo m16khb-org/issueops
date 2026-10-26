@@ -38,8 +38,12 @@ func ValidatePhase(phase string) error {
 }
 
 func ValidateFinalHead(requested, observed string) error {
-	if !validFullCommitSHA(requested) || !strings.EqualFold(strings.TrimSpace(requested), observed) {
-		return fmt.Errorf("final_head must match canonical worktree HEAD")
+	if !validFullCommitSHA(requested) {
+		// QA: a short SHA read as "does not match" though it named HEAD.
+		return fmt.Errorf("final_head must match canonical worktree HEAD: pass the full 40-hex SHA (git rev-parse HEAD in the worktree), got %q", strings.TrimSpace(requested))
+	}
+	if !strings.EqualFold(strings.TrimSpace(requested), observed) {
+		return fmt.Errorf("final_head must match canonical worktree HEAD (%s); commit and push first, then pass that SHA", observed)
 	}
 	return nil
 }
