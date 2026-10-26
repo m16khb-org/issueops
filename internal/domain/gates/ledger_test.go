@@ -121,8 +121,9 @@ func TestMarkPassInsertsEvidenceLineWhenMissing(t *testing.T) {
 	ledger := Parse(text)
 	MarkPass(&ledger, 0, "ok")
 	rendered := Render(ledger)
-	if !strings.Contains(rendered, "- [x] G1: outcome\n  EVIDENCE: ok\n") {
-		t.Fatalf("evidence line not inserted after checkbox:\n%s", rendered)
+	// EVIDENCE follows the gate's CHECK/EXPECT lines (QA: it had landed above CHECK).
+	if !strings.Contains(rendered, "- [x] G1: outcome\n  CHECK: true\n  EVIDENCE: ok\n") {
+		t.Fatalf("evidence line not inserted after the gate's attributes:\n%s", rendered)
 	}
 	if ledger.Gates[1].CheckboxLine != 4 {
 		t.Fatalf("later gate checkbox index not reindexed: %+v", ledger.Gates[1])

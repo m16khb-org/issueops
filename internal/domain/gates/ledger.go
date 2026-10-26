@@ -121,7 +121,7 @@ func Render(ledger Ledger) string {
 }
 
 // MarkPass는 게이트의 체크박스를 [x]로 바꾸고 EVIDENCE 라인에 증거를 기록한다.
-// EVIDENCE 라인이 없던 게이트는 체크박스 라인 바로 아래에 삽입한다 — unlazy
+// EVIDENCE 라인이 없던 게이트는 그 게이트의 CHECK/EXPECT 라인 뒤에 삽입한다 — unlazy
 // gate-check.mjs는 이 경우 증거 라인을 만들지 않아 "checked but evidence pending"
 // 상태가 파일에 남지만, 하네스는 checked+evidence 불변식을 파일까지 유지한다.
 func MarkPass(ledger *Ledger, gateIndex int, evidence string) {
@@ -135,8 +135,14 @@ func MarkPass(ledger *Ledger, gateIndex int, evidence string) {
 	}
 	indent := attrIndent(ledger.Lines, gate.CheckboxLine)
 	if gate.EvidenceLine < 0 {
-		ledger.Lines = append(ledger.Lines[:gate.CheckboxLine+1], append([]string{indent + "EVIDENCE: " + evidence}, ledger.Lines[gate.CheckboxLine+1:]...)...)
-		gate.EvidenceLine = gate.CheckboxLine + 1
+		// QA: inserting right under the checkbox put EVIDENCE before CHECK
+		// and EXPECT in a hand-added gate; keep the CHECK/EXPECT/EVIDENCE order.
+		insertAt := gate.CheckboxLine + 1
+		for insertAt < len(ledger.Lines) && attrLineRe().MatchString(ledger.Lines[insertAt]) {
+			insertAt++
+		}
+		ledger.Lines = append(ledger.Lines[:insertAt], append([]string{indent + "EVIDENCE: " + evidence}, ledger.Lines[insertAt:]...)...)
+		gate.EvidenceLine = insertAt
 		reindexAfterInsert(ledger, gate.EvidenceLine, gateIndex)
 	} else {
 		ledger.Lines[gate.EvidenceLine] = indent + "EVIDENCE: " + evidence
