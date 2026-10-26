@@ -24,7 +24,7 @@ type RemoteDeps struct {
 	ReflectRemoteCompletion      func(context.Context, string, string, string, string, bool, remoteapp.MergeVerifier) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, reportcontract.Report, error)
 	MergeRemotePullRequest       func(ctx context.Context, stateRoot, id, method string, confirm bool) (issueopscontract.RemoteMergeResult, error)
 	MarkRemotePullRequestReady   func(ctx context.Context, stateRoot, id string, confirm bool) (issueopscontract.RemoteReadyResult, error)
-	CommentRemote                func(ctx context.Context, stateRoot, id, on, body string, confirm bool) (issueopscontract.RemoteCommentResult, error)
+	CommentRemote                func(ctx context.Context, stateRoot, id, on, body, expectedSHA256 string, confirm bool) (issueopscontract.RemoteCommentResult, error)
 	LabelRemote                  func(ctx context.Context, stateRoot, id, on string, labels []string, confirm bool) (issueopscontract.RemoteLabelResult, error)
 	RetitleRemote                func(ctx context.Context, stateRoot, id, on, title string, confirm bool) (issueopscontract.RemoteRetitleResult, error)
 	AssignRemote                 func(ctx context.Context, stateRoot, id, on string, users []string, confirm bool) (issueopscontract.RemoteAssignResult, error)

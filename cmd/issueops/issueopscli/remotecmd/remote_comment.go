@@ -17,6 +17,7 @@ func (command Command) runRemoteComment(args []string, deps Deps) error {
 	on := fs.String("on", "", "comment target: issue or pr (a GitLab MR is pr)")
 	body := fs.String("body", "", "comment text (Korean)")
 	bodyFile := fs.String("body-file", "", "comment markdown file (Korean)")
+	expectedSHA := fs.String("expected-body-sha256", "", "body_sha256 from the preview; --confirm refuses other text")
 	confirm := fs.Bool("confirm", false, "post the comment; without this, preview only")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseFlags(fs, args); help || err != nil {
@@ -33,12 +34,16 @@ func (command Command) runRemoteComment(args []string, deps Deps) error {
 		}
 		text = string(data)
 	}
-	result, err := command.Operations.CommentRemote(context.Background(), command.Operations.IssueOpsStateRoot(), *id, *on, text, *confirm)
+	result, err := command.Operations.CommentRemote(context.Background(), command.Operations.IssueOpsStateRoot(), *id, *on, text, *expectedSHA, *confirm)
 	if result.TargetURL == "" {
 		return deps.printErrorResult(*jsonOut, err)
 	}
 	if err == nil && !*confirm {
-		result.NextCommand = confirmCommand("comment", args)
+		confirmArgs := args
+		if strings.TrimSpace(*expectedSHA) == "" {
+			confirmArgs = append(append([]string{}, args...), "--expected-body-sha256", result.BodySHA256)
+		}
+		result.NextCommand = confirmCommand("comment", confirmArgs)
 	}
 	if *jsonOut {
 		if err != nil {

@@ -23,7 +23,7 @@ func (f *fakeCommenter) Comment(_ context.Context, _, target, kind, body string)
 func runComment(t *testing.T, record model.IssueOpsRecord, commenter *fakeCommenter, on string, confirm bool) (model.RemoteCommentResult, error) {
 	t.Helper()
 	service := NewRemoteCommentService(mergeRecordReader{record}, func(string) (port.IssueProviderCommenter, error) { return commenter, nil })
-	return service.Comment(context.Background(), record.ID, on, "리뷰 부탁드립니다.", confirm)
+	return service.Comment(context.Background(), record.ID, on, "리뷰 부탁드립니다.", "", confirm)
 }
 
 func TestRemoteCommentPreviewsThenPostsOnTheCycleTarget(t *testing.T) {
@@ -50,5 +50,24 @@ func TestRemoteCommentRefusesAMissingTargetAndWarnsAfterAFailedPost(t *testing.T
 	failing := &fakeCommenter{err: errors.New("502")}
 	if _, err := runComment(t, record, failing, "issue", true); err == nil || !strings.Contains(err.Error(), "may have been posted") {
 		t.Fatalf("failed post err = %v", err)
+	}
+}
+
+// A --body-file edited after the preview no longer matches the previewed
+// digest, so confirm refuses it without posting.
+func TestRemoteCommentRefusesTextThatChangedSinceThePreview(t *testing.T) {
+	record := completedMergeRecord()
+	record.IssueURL = "https://github.com/acme/repo/issues/3"
+	commenter := &fakeCommenter{}
+	service := NewRemoteCommentService(mergeRecordReader{record}, func(string) (port.IssueProviderCommenter, error) { return commenter, nil })
+	preview, err := service.Comment(context.Background(), record.ID, "issue", "리뷰 부탁드립니다.", "", false)
+	if err != nil || preview.BodySHA256 == "" {
+		t.Fatalf("preview = %+v, err = %v", preview, err)
+	}
+	if _, err := service.Comment(context.Background(), record.ID, "issue", "다른 내용입니다.", preview.BodySHA256, true); err == nil || !strings.Contains(err.Error(), "changed since the preview") || len(commenter.posts) != 0 {
+		t.Fatalf("err = %v, posts = %v", err, commenter.posts)
+	}
+	if _, err := service.Comment(context.Background(), record.ID, "issue", "리뷰 부탁드립니다.", preview.BodySHA256, true); err != nil || len(commenter.posts) != 1 {
+		t.Fatalf("matching confirm err = %v, posts = %v", err, commenter.posts)
 	}
 }

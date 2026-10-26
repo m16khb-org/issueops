@@ -37,8 +37,8 @@ func labelRemote(ctx context.Context, root, id, on string, labels []string, conf
 	return application.NewRemoteLabelService(issueops.RemoteRecordStore{StateRoot: root}, provider.ResolveLabeler).AddLabels(ctx, id, on, labels, confirm)
 }
 
-func commentRemote(ctx context.Context, root, id, on, body string, confirm bool) (model.RemoteCommentResult, error) {
-	return application.NewRemoteCommentService(issueops.RemoteRecordStore{StateRoot: root}, provider.ResolveCommenter).Comment(ctx, id, on, body, confirm)
+func commentRemote(ctx context.Context, root, id, on, body, expectedSHA256 string, confirm bool) (model.RemoteCommentResult, error) {
+	return application.NewRemoteCommentService(issueops.RemoteRecordStore{StateRoot: root}, provider.ResolveCommenter).Comment(ctx, id, on, body, expectedSHA256, confirm)
 }
 
 func markRemotePullRequestReady(ctx context.Context, root, id string, confirm bool) (model.RemoteReadyResult, error) {

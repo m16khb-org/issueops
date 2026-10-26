@@ -2,6 +2,8 @@ package issueopsremote
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"unicode/utf8"
@@ -29,7 +31,7 @@ func NewRemoteCommentService(records IssueRecordReader, resolve CommentProviderR
 
 // Comment previews without confirm. A failed post is not retried: whether the
 // provider stored the comment is unknown, and a second post duplicates it.
-func (s *RemoteCommentService) Comment(ctx context.Context, id, on, body string, confirm bool) (model.RemoteCommentResult, error) {
+func (s *RemoteCommentService) Comment(ctx context.Context, id, on, body, expectedSHA256 string, confirm bool) (model.RemoteCommentResult, error) {
 	record, err := s.records.Read(ctx, id)
 	if err != nil {
 		return model.RemoteCommentResult{}, err
@@ -42,7 +44,10 @@ func (s *RemoteCommentService) Comment(ctx context.Context, id, on, body string,
 	if provider == "" {
 		return model.RemoteCommentResult{}, fmt.Errorf("cannot determine provider from IssueOps record; ensure issue_url is set")
 	}
-	result := model.RemoteCommentResult{ID: record.ID, Provider: provider, On: on, TargetURL: target, BodyChars: utf8.RuneCountInString(strings.TrimSpace(body))}
+	text := strings.TrimSpace(body)
+	digest := sha256.Sum256([]byte(text))
+	result := model.RemoteCommentResult{ID: record.ID, Provider: provider, On: on, TargetURL: target,
+		BodyChars: utf8.RuneCountInString(text), BodySHA256: hex.EncodeToString(digest[:])}
 	if err := remotedomain.ValidateComment(provider, body); err != nil {
 		return result, err
 	}
@@ -50,11 +55,14 @@ func (s *RemoteCommentService) Comment(ctx context.Context, id, on, body string,
 		result.OK = true
 		return result, nil
 	}
+	if expected := strings.TrimSpace(expectedSHA256); expected != "" && expected != result.BodySHA256 {
+		return result, fmt.Errorf("the comment text changed since the preview (body sha256 %s, expected %s); preview again", result.BodySHA256, expected)
+	}
 	commenter, err := s.resolve(provider)
 	if err != nil {
 		return result, err
 	}
-	url, err := commenter.Comment(ctx, record.Repo, target, on, strings.TrimSpace(body))
+	url, err := commenter.Comment(ctx, record.Repo, target, on, text)
 	if err != nil {
 		return result, fmt.Errorf("%w; the comment may have been posted: read the %s's comments before posting again", err, on)
 	}
