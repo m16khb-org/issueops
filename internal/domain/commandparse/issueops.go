@@ -232,7 +232,7 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 		booleans:   []string{"--json"},
 	},
 	"architecture review": {
-		values:     []string{"--id", "--problem-summary", "--proposed-architecture", "--refactor-plan", "--alternative", "--risk", "--verification", "--open-question", "--reviewer-context", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
+		values:     []string{"--id", "--problem-summary", "--proposed-architecture", "--refactor-plan", "--alternative", "--risk", "--verification", "--open-question", "--reviewer-context", "--reviewer-host", "--reviewer-model", "--reviewer-effort", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable"},
 		repeatable: []string{"--alternative", "--risk", "--verification", "--open-question"},
 		booleans:   []string{"--approved", "--json"},
 	},
@@ -284,7 +284,7 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 		booleans:   []string{"--approved", "--json"},
 	},
 	"devils-advocate review": {
-		values:     []string{"--id", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable", "--verdict", "--reviewer-context", "--finding", "--waiver-rationale"},
+		values:     []string{"--id", "--host", "--session-id", "--agent-id", "--cwd", "--session-pid", "--session-started-at", "--session-executable", "--verdict", "--reviewer-context", "--reviewer-host", "--reviewer-model", "--reviewer-effort", "--finding", "--waiver-rationale"},
 		repeatable: []string{"--finding"},
 		booleans:   []string{"--waive", "--json"},
 	},

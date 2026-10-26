@@ -42,6 +42,9 @@ func PrepareArchitectureReview(req reviewcontract.ArchitectureReviewRequest) (re
 		Alternatives:         cleanArchitectureValues(req.Alternatives), Risks: cleanArchitectureValues(req.Risks),
 		Verification: verification, OpenQuestions: openQuestions, Approved: req.Approved,
 		ReviewerContext: reviewerContext,
+		ReviewerHost:    strings.ToLower(strings.TrimSpace(req.ReviewerHost)),
+		ReviewerModel:   strings.TrimSpace(req.ReviewerModel),
+		ReviewerEffort:  strings.TrimSpace(req.ReviewerEffort),
 	}, nil
 }
 
@@ -114,6 +117,7 @@ func ApplyArchitectureReview(previous *reviewcontract.ArchitectureReview, next r
 	next.History = append(append([]reviewcontract.ArchitectureReviewRound{}, previous.History...), reviewcontract.ArchitectureReviewRound{
 		Approved: previous.Approved, Verification: previous.Verification, OpenQuestions: previous.OpenQuestions,
 		ReviewerContext: previous.ReviewerContext, ReviewedArchitectureDigest: previous.ReviewedArchitectureDigest,
+		ReviewerHost: previous.ReviewerHost, ReviewerModel: previous.ReviewerModel, ReviewerEffort: previous.ReviewerEffort,
 		ReviewedAt: previous.ReviewedAt,
 	})
 	return next

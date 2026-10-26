@@ -19,6 +19,9 @@ func (cli command) runIssueOpsDevilsAdvocate(args []string) error {
 	actor := cli.addIssueOpsActorFlags(fs)
 	verdict := fs.String("verdict", "", "devil's-advocate verdict: pass|revise|stop")
 	reviewerContext := fs.String("reviewer-context", "", "how the review ran: subagent|inline (audit field, required)")
+	reviewerHost := fs.String("reviewer-host", "", "reviewer host (audit only)")
+	reviewerModel := fs.String("reviewer-model", "", "model the review ran with (audit only)")
+	reviewerEffort := fs.String("reviewer-effort", "", "effort the review ran with, or unknown (audit only)")
 	waive := fs.Bool("waive", false, "explicitly waive a stop/revise verdict")
 	rationale := fs.String("waiver-rationale", "", "rationale required when --waive is set")
 	jsonOut := fs.Bool("json", false, "print JSON")
@@ -36,6 +39,7 @@ func (cli command) runIssueOpsDevilsAdvocate(args []string) error {
 		Waived:          *waive,
 		WaiverRationale: *rationale,
 		ReviewerContext: *reviewerContext,
+		ReviewerHost:    *reviewerHost, ReviewerModel: *reviewerModel, ReviewerEffort: *reviewerEffort,
 	}, actor.actor())
 	return printIssueOpsResult(record, *jsonOut, err)
 }

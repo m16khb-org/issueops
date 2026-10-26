@@ -34,7 +34,7 @@
   ```
 
   사용자가 reviewer 모델을 이름으로 지정했으면 그 값을 `--model`로 함께 넘긴다. 실제로 넘긴 두
-  값을 `--reviewer-model`·`--reviewer-effort`(diff) 또는 첫 finding 문장 앞(plan)에 적는다. 그 안에
+  값을 기록 명령의 `--reviewer-model`·`--reviewer-effort`에 적는다. 그 안에
   통과하지 못하면 남은 결함과 시도한 수정을 보고한다.
   - 서브에이전트 도구는 effort를 받지 않는다. 그러므로 `.argv`로 빈 컨텍스트 세션을 띄운다.
     Claude는 `.argv`에 `--allowedTools

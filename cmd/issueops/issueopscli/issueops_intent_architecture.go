@@ -74,6 +74,9 @@ func (cli command) runIssueOpsArchitecture(args []string) error {
 	fs.Var(&verification, "verification", "verification step; repeatable")
 	fs.Var(&openQuestions, "open-question", "open architecture question; repeatable")
 	reviewerContext := fs.String("reviewer-context", "", "reviewer context: subagent|inline")
+	reviewerHost := fs.String("reviewer-host", "", "reviewer host (audit only)")
+	reviewerModel := fs.String("reviewer-model", "", "model the review ran with (audit only)")
+	reviewerEffort := fs.String("reviewer-effort", "", "effort the review ran with, or unknown (audit only)")
 	approved := fs.Bool("approved", false, "mark architecture reviewed and approved for implementation")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
@@ -89,6 +92,7 @@ func (cli command) runIssueOpsArchitecture(args []string) error {
 		OpenQuestions:        []string(openQuestions),
 		Approved:             *approved,
 		ReviewerContext:      *reviewerContext,
+		ReviewerHost:         *reviewerHost, ReviewerModel: *reviewerModel, ReviewerEffort: *reviewerEffort,
 	}, actor.actor())
 	return printIssueOpsResult(record, *jsonOut, err)
 }

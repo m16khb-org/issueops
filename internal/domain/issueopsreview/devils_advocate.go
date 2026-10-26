@@ -36,6 +36,9 @@ func ValidateReview(req reviewcontract.DevilsAdvocateReviewRequest, recordedAt s
 		Verdict: verdict, Findings: findings, Waived: req.Waived,
 		WaiverRationale: policy.RedactFreeform(rationale), ReviewerPattern: "devils-advocate-review",
 		ReviewerContext: reviewerContext, RecordedAt: recordedAt,
+		ReviewerHost:   strings.ToLower(strings.TrimSpace(req.ReviewerHost)),
+		ReviewerModel:  strings.TrimSpace(req.ReviewerModel),
+		ReviewerEffort: strings.TrimSpace(req.ReviewerEffort),
 	}, nil
 }
 
@@ -87,6 +90,7 @@ func roundOf(review reviewcontract.DevilsAdvocateReview) reviewcontract.DevilsAd
 	return reviewcontract.DevilsAdvocateRound{
 		Verdict: review.Verdict, Findings: review.Findings, Waived: review.Waived,
 		WaiverRationale: review.WaiverRationale, ReviewerContext: review.ReviewerContext,
+		ReviewerHost: review.ReviewerHost, ReviewerModel: review.ReviewerModel, ReviewerEffort: review.ReviewerEffort,
 		ReviewedPlanDigest: review.ReviewedPlanDigest, RecordedAt: review.RecordedAt,
 	}
 }

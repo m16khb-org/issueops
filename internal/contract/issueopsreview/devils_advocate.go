@@ -8,6 +8,9 @@ type DevilsAdvocateReview struct {
 	WaiverRationale    string                `json:"waiver_rationale,omitempty"`
 	ReviewerPattern    string                `json:"reviewer_pattern,omitempty"`
 	ReviewerContext    string                `json:"reviewer_context,omitempty"`
+	ReviewerHost       string                `json:"reviewer_host,omitempty"`
+	ReviewerModel      string                `json:"reviewer_model,omitempty"`
+	ReviewerEffort     string                `json:"reviewer_effort,omitempty"`
 	ReviewedPlanDigest string                `json:"reviewed_plan_digest,omitempty"`
 	History            []DevilsAdvocateRound `json:"history,omitempty"`
 	RecordedAt         string                `json:"recorded_at"`
@@ -20,6 +23,9 @@ type DevilsAdvocateRound struct {
 	Waived             bool     `json:"waived,omitempty"`
 	WaiverRationale    string   `json:"waiver_rationale,omitempty"`
 	ReviewerContext    string   `json:"reviewer_context,omitempty"`
+	ReviewerHost       string   `json:"reviewer_host,omitempty"`
+	ReviewerModel      string   `json:"reviewer_model,omitempty"`
+	ReviewerEffort     string   `json:"reviewer_effort,omitempty"`
 	ReviewedPlanDigest string   `json:"reviewed_plan_digest,omitempty"`
 	RecordedAt         string   `json:"recorded_at"`
 }
@@ -30,6 +36,9 @@ type DevilsAdvocateReviewRequest struct {
 	Waived          bool
 	WaiverRationale string
 	ReviewerContext string
+	// Reviewer* are audit fields: the model and effort the review actually
+	// ran with (the session's own for an inline review).
+	ReviewerHost, ReviewerModel, ReviewerEffort string
 }
 
 // RegressionPreconditions is the pure snapshot needed before child liveness is read.

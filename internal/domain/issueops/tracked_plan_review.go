@@ -15,9 +15,13 @@ func RenderTrackedPlanReview(review *issueops.IssueOpsDevilsAdvocateReview) stri
 	b.WriteString("# 계획 검토 기록\n")
 	rounds := append(append([]issueops.IssueOpsDevilsAdvocateRound{}, review.History...), issueops.IssueOpsDevilsAdvocateRound{
 		Verdict: review.Verdict, Findings: review.Findings, Waived: review.Waived, WaiverRationale: review.WaiverRationale,
+		ReviewerModel: review.ReviewerModel, ReviewerEffort: review.ReviewerEffort,
 	})
 	for i, round := range rounds {
 		fmt.Fprintf(&b, "\n## %d차: %s\n", i+1, planReviewVerdictLabel(round.Verdict))
+		if model := strings.TrimSpace(round.ReviewerModel); model != "" {
+			fmt.Fprintf(&b, "\n리뷰어: %s, effort %s\n", model, firstNonEmptyValue(strings.TrimSpace(round.ReviewerEffort), "unknown"))
+		}
 		if round.Waived {
 			fmt.Fprintf(&b, "\n생략: %s\n", maskHarnessValues(strings.TrimSpace(round.WaiverRationale)))
 		}
@@ -32,4 +36,11 @@ func RenderTrackedPlanReview(review *issueops.IssueOpsDevilsAdvocateReview) stri
 		}
 	}
 	return b.String()
+}
+
+func firstNonEmptyValue(value, fallback string) string {
+	if value == "" {
+		return fallback
+	}
+	return value
 }

@@ -12,11 +12,13 @@
 issueops architecture review --id "$ISSUEOPS_ID" \
   --problem-summary "<문제>" --proposed-architecture "<아키텍처 결정>" --refactor-plan "<리팩터 계획>" \
   --alternative "<기각한 대안>" --risk "<위험>" --verification "아키텍처 검토로 대안과 위험을 확인했다" \
-  --reviewer-context subagent --approved $RECORD_ACTOR_FLAGS --json
+  --reviewer-context subagent --reviewer-host "$HOST" --reviewer-model "$REVIEWER_MODEL" --reviewer-effort "$REVIEWER_EFFORT" \
+  --approved $RECORD_ACTOR_FLAGS --json
 
 # --target plan
 issueops devils-advocate review --id "$ISSUEOPS_ID" \
   --verdict pass --reviewer-context subagent \
+  --reviewer-host "$HOST" --reviewer-model "$REVIEWER_MODEL" --reviewer-effort "$REVIEWER_EFFORT" \
   --finding "<무엇을 공격했고 왜 살아남았는가>" $RECORD_ACTOR_FLAGS --json
 
 # --target diff

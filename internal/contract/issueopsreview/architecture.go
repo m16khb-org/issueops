@@ -13,6 +13,9 @@ type ArchitectureReview struct {
 	OpenQuestions              []string                  `json:"open_questions,omitempty"`
 	Approved                   bool                      `json:"approved"`
 	ReviewerContext            string                    `json:"reviewer_context,omitempty"`
+	ReviewerHost               string                    `json:"reviewer_host,omitempty"`
+	ReviewerModel              string                    `json:"reviewer_model,omitempty"`
+	ReviewerEffort             string                    `json:"reviewer_effort,omitempty"`
 	ReviewedArchitectureDigest string                    `json:"reviewed_architecture_digest,omitempty"`
 	History                    []ArchitectureReviewRound `json:"history,omitempty"`
 	ReviewedAt                 string                    `json:"reviewed_at"`
@@ -24,6 +27,9 @@ type ArchitectureReviewRound struct {
 	Verification               []string `json:"verification,omitempty"`
 	OpenQuestions              []string `json:"open_questions,omitempty"`
 	ReviewerContext            string   `json:"reviewer_context,omitempty"`
+	ReviewerHost               string   `json:"reviewer_host,omitempty"`
+	ReviewerModel              string   `json:"reviewer_model,omitempty"`
+	ReviewerEffort             string   `json:"reviewer_effort,omitempty"`
 	ReviewedArchitectureDigest string   `json:"reviewed_architecture_digest,omitempty"`
 	ReviewedAt                 string   `json:"reviewed_at"`
 }
@@ -38,4 +44,6 @@ type ArchitectureReviewRequest struct {
 	OpenQuestions        []string
 	Approved             bool
 	ReviewerContext      string
+	// Reviewer* are audit fields: the model and effort the review ran with.
+	ReviewerHost, ReviewerModel, ReviewerEffort string
 }

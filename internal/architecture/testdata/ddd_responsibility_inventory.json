@@ -14119,7 +14119,8 @@
       "owner": "domain",
       "task": "T20",
       "symbols": [
-        "func RenderTrackedPlanReview"
+        "func RenderTrackedPlanReview",
+        "func firstNonEmptyValue"
       ]
     },
     {
