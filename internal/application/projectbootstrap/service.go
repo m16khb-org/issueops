@@ -64,7 +64,9 @@ func Bootstrap(request projectbootstrapcontract.ProjectDocsBootstrapRequest, eff
 		run.warnings = append(run.warnings, "commit_before_cycles: the created docs are uncommitted; IssueOps worktrees start from the base commit, so cycles see AGENTS.md/.issueops only after they are committed and pushed to the base branch")
 	}
 	if !request.Write {
-		run.warnings = append(run.warnings, "dry_run_only: rerun without --dry-run to create missing AGENTS.md/.issueops docs and repo metadata; add --sync to refresh existing docs")
+		// QA (omp MCP): "rerun without --dry-run" named CLI flags the MCP
+		// plan tool lacks; the write is the CLI command on either surface.
+		run.warnings = append(run.warnings, "dry_run_only: write the missing AGENTS.md/.issueops docs and repo metadata with `issueops project bootstrap --repo "+root+" --json` (add --sync to refresh existing docs); the MCP plan tool never writes")
 	}
 	return projectbootstrapcontract.ProjectDocsBootstrapResult{
 		OK: true, Kind: "project_docs_bootstrap", RepoRoot: root, DocsDir: effects.JoinPath(root, projectdoc.ProjectDocsDir),
