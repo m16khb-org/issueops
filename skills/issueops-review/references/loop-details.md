@@ -18,7 +18,7 @@
      서로 맞는지 본다.
   2. 수정이 새로 단언하는 사실(명령·플래그 존재, 설치된 버전의 동작, `파일:줄`)을 명령으로 확인한다.
      리뷰어가 처방한 수정도 확인 전에는 가설이다. 처방이 틀렸으면 근거와 함께 다른 수정을 쓴다.
-  3. 게이트를 고쳤으면 `issueops gates lint --plan <대상> --cwd <워크트리> --json`이 problems 없이
+  3. 게이트를 고쳤으면 `issueops gates lint --plan <대상> --cwd <워크트리, 준비 전이면 source checkout> --json`이 problems 없이
      끝나야 한다.
 
   세 점검의 결과(고친 곳, 확인한 명령과 출력, lint 결과)를 delta 리뷰 입력에 함께 넣는다.
@@ -34,7 +34,7 @@
   ```
 
   사용자가 reviewer 모델을 이름으로 지정했으면 그 값을 `--model`로 함께 넘긴다. 실제로 넘긴 두
-  값을 `--reviewer-model`·`--reviewer-effort`(diff) 또는 finding 첫 줄(plan)에 적는다. 그 안에
+  값을 `--reviewer-model`·`--reviewer-effort`(diff) 또는 첫 finding 문장 앞(plan)에 적는다. 그 안에
   통과하지 못하면 남은 결함과 시도한 수정을 보고한다.
   - 서브에이전트 도구는 effort를 받지 않는다. 그러므로 `.argv`로 빈 컨텍스트 세션을 띄운다.
     Claude는 `.argv`에 `--allowedTools

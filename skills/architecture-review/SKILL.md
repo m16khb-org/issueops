@@ -106,7 +106,7 @@ If the plan survives all five gates, say so plainly and return `proceed` — a d
 
 ## IssueOps Integration
 
-For IssueOps `--target architecture`, use the Architecture Document Lens above and the independence rules. For IssueOps `--target plan`, use the plan lenses above. For `--target diff`, use the same independence and blocking threshold to check the implemented behavior and affected contracts through `issueops-review`; do not re-open the whole design for code-quality preferences. Map `proceed` to IssueOps `pass`.
+For IssueOps `--target architecture`, use the Architecture Document Lens above and the independence rules. For IssueOps `--target plan`, use the plan lenses above. For `--target diff`, use the same independence and blocking threshold to check the implemented behavior and affected contracts through `issueops-review`; do not re-open the whole design for code-quality preferences. Map `proceed` to IssueOps `pass` (for `--target architecture`, `architecture review --approved`).
 
 When an IssueOps cycle records an independent review of the architecture document, use `issueops architecture review` (a `pass` verdict maps to `--approved`; `revise` or `stop` is recorded without `--approved` only after the author has acted on it):
 
