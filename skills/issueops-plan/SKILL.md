@@ -153,7 +153,8 @@ issueops gates lint --plan "$TMP_PLAN" --cwd "$SOURCE_ROOT" --json
 - **stop 판정**: 이 단계가 되돌린다.
 
 ```bash
-issueops remote reflect-devils-advocate --id "$ISSUEOPS_ID" --confirm $RECORD_ACTOR_FLAGS --json  # 먼저 이슈에 반영
+issueops remote reflect-devils-advocate --id "$ISSUEOPS_ID" $RECORD_ACTOR_FLAGS --json  # 미리보기
+issueops remote reflect-devils-advocate --id "$ISSUEOPS_ID" --confirm $RECORD_ACTOR_FLAGS --json  # 이슈에 반영
 issueops regress --id "$ISSUEOPS_ID" --reason "<리뷰 결론>" $RECORD_ACTOR_FLAGS --json
 ```
 

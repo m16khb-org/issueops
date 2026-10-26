@@ -203,6 +203,8 @@ plan-prep 네 항목은 waive로 채우지 않는다. 조사 결과나 불필요
    연결/갱신한다. score의 기본 threshold는 0.70(더 강한 repo/user 값 우선)이며 선택된
    label·관련 이슈만 적용한다. 없는 label도 선택된 것만 먼저 만든다. 미선택 label을
    적용하려면 근거 있는 override를 decision/feedback에 기록한다. 무라벨 발행은 하지 않는다.
+   모든 후보가 threshold 미만이거나 `abstained`이면, 사용자가 말한 유형("버그로", "기능 추가")이나
+   요청 내용에 맞는 label 하나를 고르고 그 근거를 같은 decision에 override로 적는다.
 2. deterministic score 뒤 semantic 판단이 필요하면 `remote score --judge prompt`를
    fresh 독립 read-only agent에게 주고 결과 JSON을 `--judge file --judge-file`로 검증한다.
    독립 agent가 없거나 비활성화했으면 deterministic 결과를 쓰고 그 선택을 기록한다.
