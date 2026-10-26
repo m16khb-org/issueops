@@ -32,7 +32,8 @@ issueops next --id "$ISSUEOPS_ID" --json
 ```
 
 이 값은 리뷰 역할(implement 전은 `plan-review`, 이후는 `diff-review`)을 `issueops model`
-설정(local > global > 내장 기본값)으로 해석한 model·effort와 현재 변경 집합 티어다. 스킬 본문에
+설정(local > global > 내장 기본값)으로 해석한 model·effort와 현재 변경 집합 티어다. 서브에이전트
+리뷰어에게 넘길 권장값이며, inline 리뷰의 감사 기록에는 이 값이 아니라 현재 세션의 모델을 적는다. 스킬 본문에
 모델 이름 표를 복사하지 않는다. 조회에 실패하거나 review의 model/effort가 누락되면
 진행하지 않고 조회 실패나 누락 필드를 보고한다. tier/lenses는 변경 집합이 생기기 전(계획 리뷰)에는 비어 있는 것이 정상이다. `review.model`이 비어 있고 `warnings`에
 `agent model settings are invalid`가 있으면 그 파일 경로를 보고하고 멈춘다. 경고 없이 비어
