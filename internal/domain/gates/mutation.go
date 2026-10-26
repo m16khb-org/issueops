@@ -116,7 +116,7 @@ func gateFileSlug(scope string) string {
 }
 
 func renderGateSpec(spec string) (string, error) {
-	parts := strings.Split(spec, "|")
+	parts := specSegments(spec)
 	heading := strings.TrimSpace(parts[0])
 	if heading == "" {
 		return "", fmt.Errorf("gate spec %q has no title", spec)
@@ -156,4 +156,26 @@ func renderGateSpec(spec string) (string, error) {
 		lines = append(lines, "  EVIDENCE: pending")
 	}
 	return strings.Join(lines, "\n"), nil
+}
+
+// specSegments splits a gate spec on |, then rejoins the pieces that follow
+// EXPECT: up to the next keyword segment, so a regex alternation such as
+// /^(a|b)$/m survives. Deno QA: EXPECT /ok|passed/ failed with "unknown
+// segment". CHECK keeps the plain split: a | there is a shell pipe, which
+// CHECK refuses anyway.
+func specSegments(spec string) []string {
+	raw := strings.Split(spec, "|")
+	parts := []string{raw[0]}
+	inExpect := false
+	for _, piece := range raw[1:] {
+		upper := strings.ToUpper(strings.TrimSpace(piece))
+		keyword := strings.HasPrefix(upper, "CHECK:") || strings.HasPrefix(upper, "EXPECT:") || strings.HasPrefix(upper, "EVIDENCE:")
+		if inExpect && !keyword {
+			parts[len(parts)-1] += "|" + piece
+			continue
+		}
+		inExpect = strings.HasPrefix(upper, "EXPECT:")
+		parts = append(parts, piece)
+	}
+	return parts
 }

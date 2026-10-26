@@ -23,3 +23,15 @@ func TestRenderInitialLedgerRefusesIDlessAndEmptyCheckSpecs(t *testing.T) {
 		t.Fatalf("valid specs refused: %v", err)
 	}
 }
+
+// Deno QA: EXPECT /ok|passed/ was split on | and refused as an unknown
+// segment. Pieces after EXPECT: up to the next keyword rejoin it.
+func TestRenderInitialLedgerKeepsAPipeInsideExpect(t *testing.T) {
+	body, err := RenderInitialLedger(model.InitRequest{Scope: "x", Gates: []string{"G1: a | CHECK: true | EXPECT: /^(ok|passed)$/m | EVIDENCE: pending"}})
+	if err != nil || !strings.Contains(body, "  EXPECT: /^(ok|passed)$/m\n  EVIDENCE: pending") {
+		t.Fatalf("body=%q err=%v", body, err)
+	}
+	if _, err := RenderInitialLedger(model.InitRequest{Scope: "x", Gates: []string{"G1: a | CHECK: true | BOGUS: y"}}); err == nil || !strings.Contains(err.Error(), "unknown segment") {
+		t.Fatalf("unknown segment outside EXPECT: err=%v", err)
+	}
+}

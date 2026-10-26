@@ -14,7 +14,6 @@ func TestLintStaticFlagsGatesThatCanNeverBeMet(t *testing.T) {
 		problem  string
 		runnable bool // CHECK still reaches the policy judgment, so every problem shows in one pass
 	}{
-		{"pipe inside an EXPECT regex splits the spec", "G1: x | CHECK: printf ok | EXPECT: /a|b/", `unknown segment "b/"`, false},
 		{"shell chaining is not executed", "G2: x | CHECK: go vet ./... && go test ./... | EXPECT: ok", "one argv command", false},
 		{"EXPECT regex that RE2 rejects never matches", "G3: x | CHECK: printf ok | EXPECT: /a(b/", "does not compile", true},
 		{"gate without CHECK stays unchecked", "G4: x | EXPECT: ok", "no CHECK", false},

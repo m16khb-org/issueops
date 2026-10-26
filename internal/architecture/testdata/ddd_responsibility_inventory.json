@@ -12775,7 +12775,8 @@
         "func RenderInitialLedger",
         "func ValidateCreate",
         "func gateFileSlug",
-        "func renderGateSpec"
+        "func renderGateSpec",
+        "func specSegments"
       ]
     },
     {
