@@ -572,6 +572,15 @@ func TestCovCFStatusFinishEvidenceAndConversion(t *testing.T) {
 	}
 }
 
+// Run from inside the worktree, the caller's own shell is in the list; the
+// summary says so instead of announcing that apply stops it.
+func TestCovCFStatusWarningsNameTheRequesterInsideTheWorktree(t *testing.T) {
+	got := CleanupStatusWarnings(model.CleanupFinishResult{Missing: []string{"requester_occupies_worktree"}, WorkspaceProcesses: []model.CleanupWorkspaceProcess{{PID: 4, Command: "zsh", StartedAt: "t"}}})
+	if len(got) != 2 || !strings.Contains(got[1], "source checkout에서 다시 실행") {
+		t.Fatalf("warnings = %v", got)
+	}
+}
+
 func TestCovCFStatusWarningsOnlyForProcesses(t *testing.T) {
 	if got := CleanupStatusWarnings(model.CleanupFinishResult{}); len(got) != 0 {
 		t.Fatalf("none = %v", got)

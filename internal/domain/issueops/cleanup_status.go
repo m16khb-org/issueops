@@ -225,7 +225,12 @@ func CleanupStatusWarnings(result model.CleanupFinishResult) []string {
 	for _, process := range result.WorkspaceProcesses {
 		warnings = append(warnings, fmt.Sprintf("%d:%s:%s", process.PID, process.Command, process.StartedAt))
 	}
-	if len(result.WorkspaceProcesses) > 0 {
+	switch {
+	case len(result.WorkspaceProcesses) > 0 && slices.Contains(result.Missing, "requester_occupies_worktree"):
+		// QA: run from inside the worktree, the list held the caller's own
+		// shell and issueops, read as "apply will stop my session".
+		warnings = append(warnings, "이 명령을 워크트리 안에서 실행해 호출한 셸도 목록에 들어 있습니다; source checkout에서 다시 실행하면 실제로 종료할 프로세스만 보입니다")
+	case len(result.WorkspaceProcesses) > 0:
 		warnings = append(warnings, fmt.Sprintf("apply가 프로세스 %d개를 종료합니다", len(result.WorkspaceProcesses)))
 	}
 	return warnings
