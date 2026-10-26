@@ -120,8 +120,7 @@ durable phase는 `problem`, `grill`, `plan`, `compatibility-review`, `implement`
 `ai-slop-clean`, `feedback`, `pr`, `done`이다. `issue`는 linkage, `cleanup`은 done 뒤 후처리다.
 한 cycle은 exact ID·canonical worktree·generation-fenced holder·linked Issue·검증된 PR/MR을 갖는다.
 CLI `issueops ... --json`/MCP `issueops_execution`이 state를 소유하고 `execution complete`만
-done을 기록한다. hook은 SessionStart의 project-doc context만 제공한다. Issue 생성·편집·
-테스트·대기·branch/worktree 준비·publication·reply·merge·cleanup을 hook에 맡기지 않는다.
+done을 기록한다. hook은 SessionStart의 project-doc context만 제공하며 작업을 맡지 않는다.
 
 ## 단계 표
 
@@ -142,7 +141,7 @@ stage `verify`·`commit-push`). 기록 명령의 응답에 phase가 그대로여
 | `commit-push` | `atomic-commit-push` | 커밋·푸시 |
 | `pr.create` | `issueops-create-pr` | PR/MR 발행·완료 |
 | `pr.complete` | `issueops-complete` | PR/MR 발행·완료 |
-| `done` | 머지 전이면 `issueops-merge`, 머지 뒤면 `issueops-cleanup`. 구분은 `issueops remote merge-pr --id ID --json`의 `already_merged`로 한다 | 머지·정리 |
+| `done` | 머지 전이면 `issueops-merge`(draft 해제만이면 `remote mark-ready`), 머지 뒤면 `issueops-cleanup`. 구분은 `issueops remote merge-pr --id ID --json`의 `already_merged`로 한다 | 머지·정리 |
 | `cleanup.resume` | 중단된 cleanup의 preview(`next_command`)부터. abandon은 `issueops-abandon`, 그 외는 `issueops-cleanup` | 머지·정리 |
 | `takeover` | 스킬 없음. `next_command`와 그 결과의 `next_command`를 따라간다. 죽은 홀더 인수는 `issueops-abandon`이 설명한다 | 현재 index의 label |
 | `blocked.pending`, `blocked.holder_live` | 없음. `next_command`로 상태를 다시 읽는다 | 현재 index의 label |
