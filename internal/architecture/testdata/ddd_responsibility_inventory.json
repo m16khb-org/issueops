@@ -17172,6 +17172,11 @@
       "task": "T21"
     },
     {
+      "path": "skills/agent-usability-loop/SKILL.md",
+      "owner": "skill-contract",
+      "task": "T21"
+    },
+    {
       "path": "skills/algorithm-optimization/SKILL.md",
       "owner": "skill-contract",
       "task": "T21"

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agent Usability Loop"
+  short_description: "Measure and improve how agents use a CLI or harness"
+  default_prompt: "Use $agent-usability-loop to measure model-facing output, run real host agents in a sandbox, and keep or revert one change per run."

@@ -1249,6 +1249,12 @@
         {
           "has_openai_yaml": true,
           "has_skill_md": true,
+          "name": "agent-usability-loop",
+          "path": "$ISSUEOPS_ROOT/skills/agent-usability-loop"
+        },
+        {
+          "has_openai_yaml": true,
+          "has_skill_md": true,
           "name": "algorithm-optimization",
           "path": "$ISSUEOPS_ROOT/skills/algorithm-optimization"
         },
@@ -3273,6 +3279,7 @@
         "has_worker_mvp": true,
         "has_worker_stuck_running_detection": true,
         "skills": [
+          "agent-usability-loop",
           "algorithm-optimization",
           "architecture-review",
           "aside-functional-qa",
@@ -5638,6 +5645,12 @@
               {
                 "has_openai_yaml": true,
                 "has_skill_md": true,
+                "name": "agent-usability-loop",
+                "path": "$ISSUEOPS_ROOT/skills/agent-usability-loop"
+              },
+              {
+                "has_openai_yaml": true,
+                "has_skill_md": true,
                 "name": "algorithm-optimization",
                 "path": "$ISSUEOPS_ROOT/skills/algorithm-optimization"
               },
@@ -6901,6 +6914,7 @@
               "has_worker_mvp": true,
               "has_worker_stuck_running_detection": true,
               "skills": [
+                "agent-usability-loop",
                 "algorithm-optimization",
                 "architecture-review",
                 "aside-functional-qa",
