@@ -49,6 +49,11 @@ func Parse(fs *flag.FlagSet, args []string) error {
 		}
 		var known []string
 		fs.VisitAll(func(f *flag.Flag) { known = append(known, f.Name) })
+		if name == "preview" && fs.Lookup("confirm") != nil {
+			// QA: agents carry --preview over from execution/cleanup commands;
+			// remote commands preview whenever --confirm is absent.
+			return fmt.Errorf("%w: this command previews when --confirm is omitted; drop --preview", err)
+		}
 		if slices.Contains(identityFlags, name) && fs.Lookup("host") == nil {
 			// QA: agents pass $RECORD_ACTOR_FLAGS to every command, including
 			// the actor-free post-completion ones (close-issue, merge-pr, cleanup).

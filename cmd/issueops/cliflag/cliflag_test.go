@@ -190,3 +190,12 @@ func TestParseNamesActorFlagsOnActorFreeCommands(t *testing.T) {
 		t.Fatalf("a command with actor flags must not say it takes none: %v", err)
 	}
 }
+
+// --preview on a command that previews without --confirm says so.
+func TestParseNamesTheImplicitPreview(t *testing.T) {
+	fs := flag.NewFlagSet("x", flag.ContinueOnError)
+	fs.Bool("confirm", false, "")
+	if err := Parse(fs, []string{"--preview"}); err == nil || !strings.Contains(err.Error(), "previews when --confirm is omitted") {
+		t.Fatalf("err = %v", err)
+	}
+}
