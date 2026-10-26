@@ -175,6 +175,9 @@ Large Issue Breakdown Gate: no split
 
 - 한 Issue에 두면 독립된 delivery·rollback·review가 숨겨진다.
 - 사용자가 병렬 ownership 또는 assignee 분리를 명시했다.
+- 같은 수정을 여러 base 브랜치에 넣는다(release hotfix와 main 반영 같은 backport). 브랜치마다 PR이 따로
+  나오므로 child로 나눈다. 한 이슈에 사이클 둘을 걸면 첫 사이클의 정리가 이슈를 닫고, 이슈 본문의
+  계획 검토·진행 결과 구간을 두 사이클이 번갈아 덮어쓴다.
 
 split하면 [분할 절차](references/child-split.md)를 읽고 따른다. `[p]`/`[s]` 실행 class, parent의
 `## 하위 Task` 기록, `remote create-child`와 `--operation-id`·reconcile 복구가 거기에 있다.
