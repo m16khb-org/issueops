@@ -158,7 +158,7 @@ func resolveExistingAncestor(path string) (string, error) {
 }
 
 func explicitRequestRoot(args map[string]any, spec toolAuthority, cwd string) (string, error) {
-	var root string
+	var root, rootField string
 	for _, field := range append([]string{argWorkspaceRoot}, spec.rootArgs...) {
 		value := strings.TrimSpace(argmap.String(args, field))
 		if value == "" {
@@ -175,9 +175,11 @@ func explicitRequestRoot(args map[string]any, spec toolAuthority, cwd string) (s
 			return "", authorityInvalid(fmt.Sprintf("%s: %v", field, err))
 		}
 		if root != "" && canonical != root {
-			return "", authorityInvalid(field + " conflicts with another workspace root input")
+			// QA (opencode): the bare conflict did not say which inputs
+			// differed; the agent had authorized the repo's parent directory.
+			return "", authorityInvalid(fmt.Sprintf("%s %s and %s %s name different roots; pass one root (the repository) for both, authorized with issueops mcp authorize --workspace-root <that root>", rootField, root, field, canonical))
 		}
-		root = canonical
+		root, rootField = canonical, field
 	}
 	return root, nil
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	authoritycontract "issueops/internal/contract/authority"
@@ -114,5 +115,19 @@ func TestEnsureHTTPBearerIsOwnerOnlyStableAndRejectsUnsafeFiles(t *testing.T) {
 	}
 	if _, err := EnsureHTTPBearer(state); !errors.Is(err, errHTTPBearerFile) {
 		t.Fatalf("symlinked bearer err=%v", err)
+	}
+}
+
+// QA (opencode): the bare "conflicts with another workspace root input" did
+// not name the inputs; the refusal names both roots and the remedy.
+func TestExplicitRequestRootNamesBothConflictingRoots(t *testing.T) {
+	parent := t.TempDir()
+	repo := filepath.Join(parent, "repo")
+	if err := os.Mkdir(repo, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	_, err := explicitRequestRoot(map[string]any{"workspace_root": parent, "path": repo}, toolAuthority{rootArgs: []string{"path"}}, "")
+	if err == nil || !strings.Contains(err.Error(), "workspace_root ") || !strings.Contains(err.Error(), "path ") || !strings.Contains(err.Error(), "name different roots") {
+		t.Fatalf("err = %v", err)
 	}
 }

@@ -48,3 +48,11 @@ func TestCommandDecisionNamesTheWriteTierForAReadOnlyRefusal(t *testing.T) {
 		t.Fatalf("decision=%+v", decision)
 	}
 }
+
+// A read-only run cannot take write_allowed, so its warning names gates.
+func TestForcedReadOnlyWarningsReplaceTheWriteTierHint(t *testing.T) {
+	got := ForcedReadOnlyWarnings([]string{"policy_override_parse_failed", readOnlyTierWarning})
+	if !reflect.DeepEqual(got, []string{"policy_override_parse_failed", forcedReadOnlyWarning}) {
+		t.Fatalf("warnings = %v", got)
+	}
+}

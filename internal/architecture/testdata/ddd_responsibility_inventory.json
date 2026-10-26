@@ -15321,6 +15321,7 @@
       "task": "T09",
       "symbols": [
         "func EvaluateCommandDecision",
+        "func ForcedReadOnlyWarnings",
         "func appendCommandDenies",
         "func appendShellDecision",
         "func argumentDenies",

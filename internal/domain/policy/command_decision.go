@@ -127,6 +127,24 @@ func appendCommandDenies(denies, warnings []string, req policycontract.CommandPo
 
 const readOnlyTierWarning = "evaluated in the read-only tier: set write_allowed (CLI --write) for a command that writes only inside the workspace, such as a test runner; gates CHECK runs with write allowed by default"
 
+// forcedReadOnlyWarning replaces readOnlyTierWarning on a read-only run
+// (worker run --read-only), which cannot grant writes. QA (opencode MCP): the
+// write_allowed hint named a field worker_run_read_only does not take.
+const forcedReadOnlyWarning = "this run is read-only by design and cannot grant writes; run a test command as a gates CHECK (gates check / gates_check), which allows workspace writes"
+
+// ForcedReadOnlyWarnings swaps the write-tier hint for the read-only run's
+// remedy.
+func ForcedReadOnlyWarnings(warnings []string) []string {
+	out := make([]string, 0, len(warnings))
+	for _, warning := range warnings {
+		if warning == readOnlyTierWarning {
+			warning = forcedReadOnlyWarning
+		}
+		out = append(out, warning)
+	}
+	return out
+}
+
 // appendShellDecision은 셸 인터프리터 허용 여부와 사유 필요 여부를 판정한다.
 func appendShellDecision(denies, warnings []string, req policycontract.CommandPolicyRequest) ([]string, []string) {
 	if !req.ShellAllowed {

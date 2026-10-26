@@ -48,7 +48,9 @@ func (service Service) RunReadOnly(request policycontract.CommandPolicyRequest) 
 	request.WriteAllowed = false
 	request.NetworkAllowed = false
 	request.ShellAllowed = false
-	return service.run(request, "read_only")
+	result := service.run(request, "read_only")
+	result.Policy.Warnings = policydomain.ForcedReadOnlyWarnings(result.Policy.Warnings)
+	return result
 }
 
 func (service Service) Run(request policycontract.CommandPolicyRequest) policycontract.CommandRunResult {
