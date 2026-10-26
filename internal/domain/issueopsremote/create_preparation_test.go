@@ -13,7 +13,7 @@ func TestCreateAuthorityPreservesGateOrder(t *testing.T) {
 	}{
 		{"provider", CreateAuthority{Provider: "unknown"}, "remote provider must be github or gitlab"},
 		{"phase", CreateAuthority{Provider: "github"}, "not in phase pr yet"},
-		{"existing artifact", CreateAuthority{Provider: "github", PhasePR: true, Artifact: true}, "already has one"},
+		{"existing artifact", CreateAuthority{Provider: "github", PhasePR: true, Artifact: true}, "already has its PR/MR"},
 		{"execution", CreateAuthority{Provider: "github", PhasePR: true, Confirm: true}, "requires IssueOps execution v1"},
 		{"generation", CreateAuthority{Provider: "github", PhasePR: true, Confirm: true, Execution: true, Generation: 2, ExpectedGeneration: 1}, "current=2 expected=1"},
 	} {
