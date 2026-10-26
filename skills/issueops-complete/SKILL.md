@@ -84,6 +84,7 @@ worktree HEAD`로 거부된다.
    상대 경로여야 하고, 심볼릭 링크나 상위 탈출은 거부된다. `/tmp` 같은
    worktree 밖 경로는 받지 않는다. 경로는 `REPORT_REL=.issueops/issues/<n>/verified-execution-report.md`로
    쓴다. 이 이름만 봉인 fingerprint에서 빠지므로 검증·문서 단계에서 고쳐도 봉인이 stale이 되지 않는다.
+   구현 단계에서 쓴 초안이면 지금 확정한다: 제목·본문의 "초안" 표시를 지우고 PR URL과 최종 검증 결과를 넣는다.
 2. 보고서를 커밋한다. `complete` 자체는 커밋 여부를 검사하지 않지만,
    커밋하지 않으면 워크트리가 dirty로 남아 이후 `cleanup finish`가 막힌다.
    PR 본문이 가리키는 증거를 리뷰어가 볼 수 있게 하는 것도 커밋의 이유다.
