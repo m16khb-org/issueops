@@ -60,7 +60,10 @@ func authorizeMCPRequest(ctx context.Context, call MCPToolCall, deps MCPDependen
 	}
 	file := strings.TrimSpace(argmap.String(call.Arguments, argAuthorityFile))
 	if file == "" {
-		return nil, MCPDependencies{}, nil, authorityRequired("authority_file is required for workspace tools")
+		// QA (opencode, MCP only): the agent read "omit over stdio" in the
+		// field description and could not tell it was on the shared HTTP
+		// service, nor how to get a file. Only HTTP reaches this branch.
+		return nil, MCPDependencies{}, nil, authorityRequired("authority_file is required for workspace tools on the shared HTTP MCP service (this connection): run `issueops mcp authorize --workspace-root <ROOT> --json` in a shell and pass the authority_file it prints")
 	}
 	if deps.RequestScope == nil || deps.Credentials == nil || deps.BindAuthority == nil || deps.ForRequest == nil {
 		return nil, MCPDependencies{}, nil, authorityInvalid("request authority is not configured")
