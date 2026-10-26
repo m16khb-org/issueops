@@ -1083,12 +1083,12 @@ func TestClassifyDoneAfterCompletionReceiptGoesToFinishPreview(t *testing.T) {
 	}
 }
 
-// merge-pr recorded the merge readback: next names the remote-branch preview
-// instead of merge-pr (QA: every agent read a repeated merge-pr as "not merged").
+// merge-pr recorded the merge readback: next names cleanup status --merged
+// (which routes the remaining steps) instead of merge-pr (QA: every agent read a repeated merge-pr as "not merged").
 func TestClassifyDoneAfterMergeReceiptGoesToRemoteBranchPreview(t *testing.T) {
 	in := Input{Record: issueopsnextcontract.Record{ID: "io-1", Phase: issueopsnextcontract.PhaseDone,
 		RemoteCompletion: &issueopscontract.IssueOpsRemoteCompletion{MergedAt: "t"}}}
-	if got := Classify(in); got.NextCommand != "issueops cleanup remote-branch --id io-1 --preview --json" || len(got.Warnings) != 0 {
+	if got := Classify(in); got.NextCommand != "issueops cleanup status --id io-1 --merged --json" || len(got.Warnings) != 0 {
 		t.Fatalf("next = %q warnings=%v", got.NextCommand, got.Warnings)
 	}
 	in.Record.RemoteCompletion = &issueopscontract.IssueOpsRemoteCompletion{MergedAt: "t", IssueClosedAt: "t"}

@@ -528,10 +528,12 @@ func classifyPublication(in Input, decision Decision, index int) (Decision, bool
 			decision.NextCommand = "issueops cleanup finish --id " + id + " --preview --json"
 			return decision, true
 		}
-		// merge-pr recorded the merge readback: the remote branch comes next,
-		// and its preview hands off to cleanup status, also when it is gone.
+		// merge-pr recorded the merge readback. cleanup status --merged reads
+		// what is left (remote branch, completion, issue close) and names its
+		// next_command; a fixed remote-branch preview repeated after the branch
+		// was gone (QA).
 		if completion := record.RemoteCompletion; completion != nil && completion.MergedAt != "" {
-			decision.NextCommand = "issueops cleanup remote-branch --id " + id + " --preview --json"
+			decision.NextCommand = "issueops cleanup status --id " + id + " --merged --json"
 			return decision, true
 		}
 		// next does not read the provider. merge-pr's preview does: it gives the
