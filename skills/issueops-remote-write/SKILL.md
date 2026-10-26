@@ -70,8 +70,9 @@ issueops execution reconcile --id "$ISSUEOPS_ID" --preview $ACTOR_FLAGS --json  
 
 provider CLI(`gh`, `glab`)와 provider MCP 도구(GitHub MCP, glab MCP)는 사이클 안에서
 원격에 쓰는 데 쓰지 않는다. 직접 쓰면 가독성 검사를 건너뛰고, pending intent가 기록되지
-않아 모호한 결과를 회복할 방법도 사라진다. 예외는 issueops 명령이 없는 PR/MR 재오픈 하나이며,
-조건과 절차는 [`issueops-merge`](../issueops-merge/SKILL.md)의 `pr_not_open` 행이 정한다.
+않아 모호한 결과를 회복할 방법도 사라진다. 예외는 issueops 명령이 없는 두 가지다. PR/MR 재오픈은
+[`issueops-merge`](../issueops-merge/SKILL.md)의 `pr_not_open` 행이 정한다. 리뷰어 요청은
+[reviewer-request.md](references/reviewer-request.md)를 따른다.
 
 ## 가독성 검사
 

@@ -160,6 +160,8 @@ issueops remote verify-artifact \
 provider 결과가 불명확하면 create를 반복하지 않는다. execution의 reconcile
 경로에서 후보를 검증한 뒤 하나만 연결한다.
 
+사용자가 리뷰어 계정을 지정했으면 verify-artifact 뒤 [리뷰어 요청](../issueops-remote-write/references/reviewer-request.md)을 따른다.
+
 ## 품질·성능 게이트
 
 - 품질: linked Issue, generation-CAS, head/base, actor, `readability.critical` 0과 warning 처리,
