@@ -12,11 +12,29 @@ import (
 
 type MergeProviderResolver func(string) (port.IssueProviderPullRequestMerger, error)
 
-// RemoteMergeService merges the PR/MR of a completed cycle. It never writes the
-// record: cleanup re-reads the merged state from the provider itself.
+// RemoteMergeService merges the PR/MR of a completed cycle. Cleanup re-reads
+// the merged state from the provider itself; the record only gets a merged
+// receipt so next can route past the merge.
 type RemoteMergeService struct {
 	records IssueRecordReader
 	resolve MergeProviderResolver
+	merged  func(context.Context, string) (model.IssueOpsRecord, error)
+}
+
+// WithMergedReceipt records merged_at once the provider reads the PR/MR back
+// merged. A failed receipt write never turns a done merge into an error.
+func (s *RemoteMergeService) WithMergedReceipt(record func(context.Context, string) (model.IssueOpsRecord, error)) *RemoteMergeService {
+	s.merged = record
+	return s
+}
+
+func (s *RemoteMergeService) recordMerged(ctx context.Context, record model.IssueOpsRecord, result *model.RemoteMergeResult) {
+	if s.merged == nil || (record.RemoteCompletion != nil && record.RemoteCompletion.MergedAt != "") {
+		return
+	}
+	if _, err := s.merged(ctx, record.ID); err != nil {
+		result.Warnings = append(result.Warnings, "merged_receipt_not_recorded: "+err.Error()+"; next may name merge-pr again, whose preview answers already_merged")
+	}
 }
 
 func NewRemoteMergeService(records IssueRecordReader, resolve MergeProviderResolver) *RemoteMergeService {
@@ -51,6 +69,7 @@ func (s *RemoteMergeService) Merge(ctx context.Context, id, method string, confi
 	if before.State == "merged" {
 		result.OK, result.Merged, result.AlreadyMerged = true, true, true
 		result.NextCommand = postMergeCommand(record.ID)
+		s.recordMerged(ctx, record, &result)
 		return result, nil
 	}
 	if len(result.Blockers) > 0 {
@@ -82,6 +101,7 @@ func (s *RemoteMergeService) Merge(ctx context.Context, id, method string, confi
 	}
 	result.OK, result.Merged = true, true
 	result.NextCommand = postMergeCommand(record.ID)
+	s.recordMerged(context.WithoutCancel(ctx), record, &result)
 	return result, nil
 }
 

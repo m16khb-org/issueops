@@ -67,3 +67,19 @@ func MarkRemoteIssueClosed(record model.IssueOpsRecord, now string) model.IssueO
 	record.UpdatedAt = now
 	return record
 }
+
+// MarkRemoteMerged records that merge-pr read the PR/MR back merged. QA: every
+// agent saw next name merge-pr again after the merge; next does not read the
+// provider, so the merge needs a receipt of its own.
+func MarkRemoteMerged(record model.IssueOpsRecord, now string) model.IssueOpsRecord {
+	receipt := model.IssueOpsRemoteCompletion{}
+	if record.RemoteCompletion != nil {
+		receipt = *record.RemoteCompletion
+	}
+	if receipt.MergedAt == "" {
+		receipt.MergedAt = now
+	}
+	record.RemoteCompletion = &receipt
+	record.UpdatedAt = now
+	return record
+}

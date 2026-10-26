@@ -9486,6 +9486,7 @@
       "task": "T07",
       "symbols": [
         "func CompletionReceipts.Closed",
+        "func CompletionReceipts.Merged",
         "func CompletionReceipts.Reflected",
         "func CompletionReceipts.update",
         "func NewCompletionReceipts",
@@ -9671,6 +9672,8 @@
       "symbols": [
         "func NewRemoteMergeService",
         "func RemoteMergeService.Merge",
+        "func RemoteMergeService.WithMergedReceipt",
+        "func RemoteMergeService.recordMerged",
         "func blockerCodes",
         "func postMergeCommand",
         "func projectMergeResult",
@@ -13767,6 +13770,7 @@
       "symbols": [
         "func MarkRemoteCompletionReflected",
         "func MarkRemoteIssueClosed",
+        "func MarkRemoteMerged",
         "func ProjectRemoteCompletion",
         "func ValidateCloseIssue",
         "func ValidateCompletionMerge",

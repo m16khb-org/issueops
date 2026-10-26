@@ -26,5 +26,8 @@ func closeRemoteIssue(ctx context.Context, root, id, providerOverride string, co
 }
 
 func mergeRemotePullRequest(ctx context.Context, root, id, method string, confirm bool) (model.RemoteMergeResult, error) {
-	return application.NewRemoteMergeService(issueops.RemoteRecordStore{StateRoot: root}, provider.ResolvePullRequestMerger).Merge(ctx, id, method, confirm)
+	store := issueops.RemoteRecordStore{StateRoot: root}
+	return application.NewRemoteMergeService(store, provider.ResolvePullRequestMerger).
+		WithMergedReceipt(application.NewCompletionReceipts(store, time.Now).Merged).
+		Merge(ctx, id, method, confirm)
 }

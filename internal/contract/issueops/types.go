@@ -472,6 +472,9 @@ type IssueOpsCleanupAbandonFailure struct {
 type IssueOpsRemoteCompletion struct {
 	ReflectedAt   string `json:"reflected_at,omitempty"`
 	IssueClosedAt string `json:"issue_closed_at,omitempty"`
+	// MergedAt is when remote merge-pr read the PR/MR back merged, so next
+	// can route past the merge without reading the provider.
+	MergedAt string `json:"merged_at,omitempty"`
 }
 
 // SkillRoutingEntry records that a pioneer/CS skill fired at a given IssueOps

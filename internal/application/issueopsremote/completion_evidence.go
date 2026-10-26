@@ -25,6 +25,10 @@ func (s CompletionReceipts) Closed(ctx context.Context, id string) (model.IssueO
 	return s.update(ctx, id, domain.MarkRemoteIssueClosed)
 }
 
+func (s CompletionReceipts) Merged(ctx context.Context, id string) (model.IssueOpsRecord, error) {
+	return s.update(ctx, id, domain.MarkRemoteMerged)
+}
+
 func (s CompletionReceipts) update(ctx context.Context, id string, apply func(model.IssueOpsRecord, string) model.IssueOpsRecord) (model.IssueOpsRecord, error) {
 	record, err := s.store.Update(ctx, id, func(record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
 		return apply(record, s.now().UTC().Format(time.RFC3339Nano)), nil

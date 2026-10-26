@@ -2,6 +2,7 @@ package issueopsremote
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -107,6 +108,40 @@ func TestRemoteMergeSquashesDraftPinnedToCompletedHead(t *testing.T) {
 	}
 	if len(merger.merges) != 1 || merger.merges[0].HeadOID != mergeTestHead || !merger.merges[0].MarkReady || merger.merges[0].Method != model.RemoteMergeMethodSquash {
 		t.Fatalf("merge request = %+v", merger.merges)
+	}
+}
+
+// A verified merge (or an already merged readback) records merged_at once;
+// a failed receipt write is a warning, never an error after a done merge.
+func TestRemoteMergeRecordsMergedReceipt(t *testing.T) {
+	for _, before := range []model.RemotePullRequestMergeState{openState(nil), openState(func(s *model.RemotePullRequestMergeState) { s.State = "merged" })} {
+		merger := &fakeMerger{before: before, after: openState(func(s *model.RemotePullRequestMergeState) { s.State = "merged" })}
+		var recorded []string
+		service := NewRemoteMergeService(mergeRecordReader{completedMergeRecord()}, func(string) (port.IssueProviderPullRequestMerger, error) { return merger, nil }).
+			WithMergedReceipt(func(_ context.Context, id string) (model.IssueOpsRecord, error) {
+				recorded = append(recorded, id)
+				return model.IssueOpsRecord{}, nil
+			})
+		if result, err := service.Merge(context.Background(), "io-merge", "", true); err != nil || !result.Merged || len(recorded) != 1 || recorded[0] != "io-merge" {
+			t.Fatalf("before=%s result=%+v err=%v recorded=%v", before.State, result, err, recorded)
+		}
+	}
+	preview := &fakeMerger{before: openState(nil)}
+	service := NewRemoteMergeService(mergeRecordReader{completedMergeRecord()}, func(string) (port.IssueProviderPullRequestMerger, error) { return preview, nil }).
+		WithMergedReceipt(func(context.Context, string) (model.IssueOpsRecord, error) {
+			t.Fatal("an open preview must not record a merge")
+			return model.IssueOpsRecord{}, nil
+		})
+	if _, err := service.Merge(context.Background(), "io-merge", "", false); err != nil {
+		t.Fatal(err)
+	}
+	failing := &fakeMerger{before: openState(func(s *model.RemotePullRequestMergeState) { s.State = "merged" })}
+	service = NewRemoteMergeService(mergeRecordReader{completedMergeRecord()}, func(string) (port.IssueProviderPullRequestMerger, error) { return failing, nil }).
+		WithMergedReceipt(func(context.Context, string) (model.IssueOpsRecord, error) {
+			return model.IssueOpsRecord{}, errors.New("locked")
+		})
+	if result, err := service.Merge(context.Background(), "io-merge", "", false); err != nil || !result.AlreadyMerged || len(result.Warnings) != 1 || !strings.HasPrefix(result.Warnings[0], "merged_receipt_not_recorded: locked") {
+		t.Fatalf("result=%+v err=%v", result, err)
 	}
 }
 
