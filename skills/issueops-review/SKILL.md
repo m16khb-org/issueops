@@ -118,33 +118,10 @@ effort를 알 수 없으면 `unknown`이라고 적는다. `next.review`의 권�
 
 ## 루프 규칙
 
-- 첫 라운드는 대상 전체를 검토한다. 수정 뒤의 라운드는 **delta 리뷰**다. 대상 전체를
-  다시 읽히지 않고 직전 지적, 각 CHECK의 실행 결과, 대상의 delta, 영향받은 계약만
-  새 컨텍스트 서브에이전트에 넘긴다. 판정과 기록할 finding은 그 서브에이전트가 정하고
-  호출자는 받은 verdict를 그대로 기록한다. CHECK가 전부 통과했다는 사실은 delta 리뷰의
-  입력이지 호출자가 `pass`를 정할 근거가 아니다.
-  호출자는 다음 규칙을 delta 리뷰 프롬프트에 넣는다. delta 리뷰어는 직전 지적마다 해결됨 또는 남음만
-  판정하고, 남음이면 남은 위치와 이유를 적는다. 반증 자료로 철회된 지적은 해결됨으로 적고 반증 근거를
-  붙인다. 새 필수 결함은 delta와 영향받은 계약에서만 찾는다. 직전 라운드에 나온 지적을 다른 말로 다시
-  내지 않는다.
-- delta 리뷰를 띄우기 **전에** 호출자가 수정한 대상을 직접 점검한다(옛 값 검색, 새 단언 사실 확인,
-  `issueops gates lint` 통과). 세부는 [루프 세부 규칙](references/loop-details.md)을 읽고, 세 점검의
-  결과를 delta 리뷰 입력에 함께 넣는다.
-- 구조나 범위가 바뀌면 전체 리뷰를 다시 띄운다. 필수 검증 공백은 그 확인 결과와
-  영향받은 계약을 delta 리뷰에 포함한다. CHECK 형식이 없다는 이유만으로 전체를 반복하지 않는다.
-- 같은 대상의 수정·재리뷰는 최대 5라운드다. 3라운드부터 5라운드까지는 상향된 리뷰 모델로
-  띄운다. model과 effort는 다음 명령의 결과를 그대로 쓴다. `review-escalate` 설정이 있으면 그
-  값이, 없으면 원래 리뷰 모델에 effort 한 단계 상향이 나온다. architecture와 plan 대상이면 `--role plan-review`다.
-
-  ```bash
-  issueops model resolve --host "$HOST" --role diff-review --tier "$TIER" --round "$ROUND" --json
-  # .model, .effort, .argv
-  ```
-
-  사용자가 reviewer 모델을 이름으로 지정했으면 그 값을 `--model`로 함께 넘긴다. 실제로 넘긴 두
-  값을 `--reviewer-model`·`--reviewer-effort`(diff) 또는 finding 첫 줄(plan)에 적는다. 그 안에
-  통과하지 못하면 남은 결함과 시도한 수정을 보고한다.
-  상향 모델 해석, 빈 컨텍스트 세션 `.argv` 실행, Fable 5 금지는 [루프 세부 규칙](references/loop-details.md)을 따른다.
+- 첫 라운드는 대상 전체를 검토한다. 수정 뒤의 라운드는 **delta 리뷰**이며, 띄우기 전에
+  [루프 세부 규칙](references/loop-details.md)을 읽고 따른다. 그 문서가 delta 리뷰 입력, 호출자의 수정 직접 점검
+  세 가지(옛 값 검색, 새 단언 확인, `gates lint`), 전체 재리뷰 조건, 최대 5라운드와 3라운드부터의
+  상향 모델(`issueops model resolve --round`)을 정한다. CHECK가 전부 통과했다는 사실은 호출자가 `pass`를 정할 근거가 아니다.
 - 같은 plan phase의 비-waived `revise`는 다섯 번까지다. 여섯 번째는 CLI가
   `revise round cap reached`로 거부한다. stop 판정 뒤의 `regress` 재계획도 사이클당 다섯 번까지다. 그때의 탈출은 `stop`을 기록하고
   `issueops remote reflect-devils-advocate --confirm`으로 반영한 뒤 `regress`로

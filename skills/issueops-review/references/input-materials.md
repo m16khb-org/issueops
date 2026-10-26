@@ -21,20 +21,4 @@ grep으로 색인의 한 줄만 본 것은 연 것이 아니다.
 문서 발췌에 넣는다. 결함·회귀 수정이면 문제 해결 원칙의 근본 원인 두 문장
 (`.issueops/CONSTITUTION.md:69-70`)을 넣는다.
 
-리뷰를 실행하기 직전에 exact lifecycle ID로 다음 명령을 읽는다. 준비 자료의
-reviewer 메타데이터는 준비 당시 기본값이며 현재 리뷰 설정을 대신하지 않는다.
-
-```bash
-issueops next --id "$ISSUEOPS_ID" --json
-# .review.model, .review.effort, .review.tier, .review.lenses
-```
-
-이 값은 리뷰 역할(implement 전은 `plan-review`, 이후는 `diff-review`)을 `issueops model`
-설정(local > global > 내장 기본값)으로 해석한 model·effort와 현재 변경 집합 티어다. 스킬 본문에
-모델 이름 표를 복사하지 않는다. 조회에 실패하거나 review의 model/effort/tier/lenses가 누락되면
-진행하지 않고 조회 실패나 누락 필드를 보고한다. `review.model`이 비어 있고 `warnings`에
-`agent model settings are invalid`가 있으면 그 파일 경로를 보고하고 멈춘다. 경고 없이 비어
-있으면 이 호스트의 기본값이 없으므로 어떤 모델로 리뷰할지 사용자에게 묻는다.
-사용자가 reviewer 모델이나 effort를 명시했다면 해당 값에만 그 지시를 우선하고,
-지정하지 않은 값은 현재 출력을 따른다. owner-model/owner-effort override는 구현자
-선택이며 reviewer 지정으로 해석하지 않는다.
+리뷰 모델·effort·tier·lenses는 `SKILL.md`의 `## 입력`대로 리뷰 직전 `issueops next --id`에서 읽는다.
