@@ -172,7 +172,7 @@ func TestBootstrapWriteCreatesMissingFamilyModulesAndManifest(t *testing.T) {
 	fake := &memEffects{rendered: map[string]string{
 		".issueops/adr/overview.md": "adr module",
 	}}
-	_, err := Bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo", Write: true}, fake)
+	result, err := Bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo", Write: true}, fake)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,6 +183,14 @@ func TestBootstrapWriteCreatesMissingFamilyModulesAndManifest(t *testing.T) {
 	}
 	if fake.files["/repo/.issueops/documentation/manifest.json"] != projectdoc.ManifestJSON() {
 		t.Error("manifest content must be the domain manifest")
+	}
+	// Created docs are uncommitted; a cycle's worktree would not see them.
+	if !slices.ContainsFunc(result.Warnings, func(w string) bool { return strings.HasPrefix(w, "commit_before_cycles:") }) {
+		t.Errorf("warnings = %v, want commit_before_cycles", result.Warnings)
+	}
+	again, err := Bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo", Write: true}, fake)
+	if err != nil || slices.ContainsFunc(again.Warnings, func(w string) bool { return strings.HasPrefix(w, "commit_before_cycles:") }) {
+		t.Errorf("a run that creates nothing must not warn: %v %v", again.Warnings, err)
 	}
 }
 

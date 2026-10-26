@@ -58,6 +58,11 @@ func Bootstrap(request projectbootstrapcontract.ProjectDocsBootstrapRequest, eff
 			return projectbootstrapcontract.ProjectDocsBootstrapResult{}, err
 		}
 	}
+	if request.Write && run.created() {
+		// QA: docs bootstrapped but left uncommitted were absent from the next
+		// cycle's worktree, which starts from the base commit.
+		run.warnings = append(run.warnings, "commit_before_cycles: the created docs are uncommitted; IssueOps worktrees start from the base commit, so cycles see AGENTS.md/.issueops only after they are committed and pushed to the base branch")
+	}
 	if !request.Write {
 		run.warnings = append(run.warnings, "dry_run_only: rerun without --dry-run to create missing AGENTS.md/.issueops docs and repo metadata; add --sync to refresh existing docs")
 	}
@@ -156,6 +161,15 @@ func (r *bootstrapRun) planManifest() error {
 		})
 	}
 	return nil
+}
+
+func (r *bootstrapRun) created() bool {
+	for _, file := range r.files {
+		if file.Action == "create" {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *bootstrapRun) appendSummaryWarnings(manifestExisted bool) {

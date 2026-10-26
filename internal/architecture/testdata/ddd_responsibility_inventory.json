@@ -10088,6 +10088,7 @@
       "symbols": [
         "func Bootstrap",
         "func bootstrapRun.appendSummaryWarnings",
+        "func bootstrapRun.created",
         "func bootstrapRun.decide",
         "func bootstrapRun.ensureMetaFrontmatter",
         "func bootstrapRun.planFamilyOverviews",
