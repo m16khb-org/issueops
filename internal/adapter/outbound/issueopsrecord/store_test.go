@@ -343,3 +343,21 @@ func TestReadNotFoundSuggestsIDsWithThePrefix(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 }
+
+// QA: after abandon, `status --id` said only "file does not exist"; a cycle
+// whose record cleanup removed names its kept outcome instead.
+func TestReadNotFoundNamesTheRetainedOutcome(t *testing.T) {
+	stateRoot := filepath.Join(t.TempDir(), "issueops_v1")
+	database, err := sqlstore.Open(stateRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	outcome := []byte(`{"schema_version":1,"id":"io-gone","outcome":"abandoned","retained_at":"2026-10-26T15:00:17Z"}`)
+	if err := database.Put(cycleOutcomeBucket, "io-gone", outcome); err != nil {
+		t.Fatal(err)
+	}
+	_, err = Store{}.Read(context.Background(), stateRoot, "io-gone")
+	if !errors.Is(err, fs.ErrNotExist) || !strings.Contains(err.Error(), "cleanup removed it (outcome abandoned at 2026-10-26T15:00:17Z)") {
+		t.Fatalf("err = %v", err)
+	}
+}

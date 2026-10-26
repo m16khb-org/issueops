@@ -47,6 +47,14 @@ func ReadIssueOpsExisting(stateRoot, id string) (issueops.IssueOpsRecord, error)
 // lists the existing ones. QA: an agent's shell lost ISSUEOPS_STATE_DIR and
 // the bare "not found" did not say which state was read.
 func recordNotFound(stateRoot, id string) error {
+	if data, ok, err := sqlstore.GetExisting(stateRoot, cycleOutcomeBucket, id); err == nil && ok {
+		var outcome issueops.IssueOpsCycleOutcome
+		if json.Unmarshal(data, &outcome) == nil {
+			if note := issueopsdomain.RetiredCycleNote(outcome); note != "" {
+				return fmt.Errorf("issueops record %s: %s: %w", id, note, fs.ErrNotExist)
+			}
+		}
+	}
 	return fmt.Errorf("issueops record %s not found in state %s (ISSUEOPS_STATE_DIR selects the state); list cycles with `issueops list --json`: %w", id, stateRoot, fs.ErrNotExist)
 }
 

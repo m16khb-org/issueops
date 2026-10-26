@@ -2,6 +2,7 @@ package issueopsrecord
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -61,6 +62,9 @@ func (Store) Read(
 // prefix of. Probe: `status --id io-69864` said only "file does not exist".
 func notFound(ctx context.Context, stateRoot, id string) error {
 	err := fmt.Errorf("issueops record %s: %w", id, fs.ErrNotExist)
+	if retired := retiredOutcome(sqlstore.GetExisting(stateRoot, cycleOutcomeBucket, id)); retired != "" {
+		return fmt.Errorf("%w; %s", err, retired)
+	}
 	ids, listErr := (Store{}).ListIDs(ctx, stateRoot)
 	if listErr != nil {
 		return err
@@ -75,6 +79,24 @@ func notFound(ctx context.Context, stateRoot, id string) error {
 		return fmt.Errorf("%w; did you mean %s?", err, strings.Join(matches, ", "))
 	}
 	return err
+}
+
+// cycleOutcomeBucket mirrors the bucket cleanup writes a deleted cycle's
+// outcome to (adapter/issueops); both derive from the outcome schema version.
+var cycleOutcomeBucket = fmt.Sprintf("issueops_cycle_outcome_v%d", issueopscontract.IssueOpsCycleOutcomeSchemaVersion)
+
+// retiredOutcome names how a deleted cycle ended. QA: after abandon, `status
+// --id` said only "file does not exist", which reads like a failure rather
+// than the confirmation the agent was looking for.
+func retiredOutcome(data []byte, ok bool, err error) string {
+	if err != nil || !ok {
+		return ""
+	}
+	var outcome issueopscontract.IssueOpsCycleOutcome
+	if json.Unmarshal(data, &outcome) != nil {
+		return ""
+	}
+	return issueopsdomain.RetiredCycleNote(outcome)
 }
 
 func (Store) ListIDs(ctx context.Context, stateRoot string) ([]string, error) {
@@ -344,11 +366,11 @@ func readLocked(
 		return issueopscontract.IssueOpsRecord{OK: false, ID: id}, err
 	}
 	if !found {
-		return issueopscontract.IssueOpsRecord{OK: false, ID: id}, fmt.Errorf(
-			"issueops record %s: %w",
-			id,
-			fs.ErrNotExist,
-		)
+		err := fmt.Errorf("issueops record %s: %w", id, fs.ErrNotExist)
+		if retired := retiredOutcome(database.Get(cycleOutcomeBucket, id)); retired != "" {
+			err = fmt.Errorf("%w; %s", err, retired)
+		}
+		return issueopscontract.IssueOpsRecord{OK: false, ID: id}, err
 	}
 	record, err := Decode(id, data)
 	if err != nil {

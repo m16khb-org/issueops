@@ -6025,6 +6025,7 @@
         "func notFound",
         "func open",
         "func readLocked",
+        "func retiredOutcome",
         "type Mutation",
         "type RelatedMutation",
         "type ScanDiagnostic",
@@ -13828,6 +13829,14 @@
         "func ValidateReplacementQuiescence",
         "func ValidateReplacementSelfRevoke",
         "func pidReused"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/retired_cycle.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func RetiredCycleNote"
       ]
     },
     {
