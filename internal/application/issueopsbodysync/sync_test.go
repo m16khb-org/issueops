@@ -130,6 +130,9 @@ func TestSyncConfirmWritesAndRecordsTheVerifiedBaseline(t *testing.T) {
 	if last.ToSHA256 != bodysync.SHA256Body(provider.body) || last.FromSHA256 != bodysync.SHA256Body(syncLiveBody) {
 		t.Fatalf("baseline = %+v", last)
 	}
+	if result.RecordedBodySHA256 != last.ToSHA256 || result.RecordedAt != last.SyncedAt {
+		t.Fatalf("result echoes the old baseline: %s at %s", result.RecordedBodySHA256, result.RecordedAt)
+	}
 }
 
 func TestSyncChildRefusesAnUnverifiedHierarchyBeforeReadingTheBody(t *testing.T) {

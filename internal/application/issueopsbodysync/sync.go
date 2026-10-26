@@ -204,6 +204,9 @@ func (s *Service) confirmSync(ctx context.Context, id string, record issueops.Is
 	if err != nil {
 		return issueops.IssueOpsRecord{OK: false}, result, err
 	}
+	// QA: the confirm answer echoed the pre-write baseline; the recorded
+	// baseline is now the body just written.
+	result.RecordedBodySHA256, result.RecordedAt, result.AgeDays = entry.ToSHA256, entry.SyncedAt, 0
 	return stamped, result, nil
 }
 
