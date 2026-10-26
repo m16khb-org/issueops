@@ -32,6 +32,22 @@ func TestValidatePreparationNamesChecksBranchBeforeBase(t *testing.T) {
 	}
 }
 
+func TestValidateBranchRefusesNamesGitRefuses(t *testing.T) {
+	// 각 사례는 git check-ref-format --branch 결과와 같다.
+	refused := []string{"7-fix~1", "7-fix^", "7-fix:x", "7-fix?", "7-fix*", "7-fix[x", "7-fix\\x",
+		"7-fix..x", "7-fix@{u}", "7-fix/", "7-fix//x", "7-fix.", "7-fix/.hidden", "7-fix.lock", "7-fix.lock/x", "7-fix\x01"}
+	for _, branch := range refused {
+		if err := ValidateBranch(branch); err == nil || !strings.Contains(err.Error(), "git branch names cannot") {
+			t.Errorf("ValidateBranch(%q) = %v, want git ref-name refusal", branch, err)
+		}
+	}
+	for _, branch := range []string{"7-로그인-수정", "7-fix/sub", "7-fix.v2", "7-fix@x", "7-fix-lock"} {
+		if err := ValidateBranch(branch); err != nil {
+			t.Errorf("ValidateBranch(%q) = %v, want accepted", branch, err)
+		}
+	}
+}
+
 func TestValidatePreparationParentPathRequiresAbsolute(t *testing.T) {
 	if err := ValidatePreparationParentPath(false); err == nil || err.Error() != "parent_worktree must be an absolute path" {
 		t.Fatalf("relative path error = %v", err)

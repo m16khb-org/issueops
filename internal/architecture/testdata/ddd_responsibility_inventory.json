@@ -12931,7 +12931,8 @@
       "task": "T08",
       "symbols": [
         "func ValidateBranch",
-        "func isDecimalString"
+        "func isDecimalString",
+        "func refNameViolation"
       ]
     },
     {
