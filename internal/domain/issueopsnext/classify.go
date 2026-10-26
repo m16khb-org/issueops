@@ -409,6 +409,18 @@ func classifyHolderImplement(in Input, decision Decision) (Decision, bool) {
 		case strings.TrimSpace(record.PlanPath) == "":
 			decision.Missing = []string{"plan_path"}
 			decision.NextCommand = linkPlanCommand(record)
+			if devilsAdvocateGate(in) != "" {
+				decision.Warnings = append(decision.Warnings, revisePlanAfterPrepareWarning)
+			}
+		case devilsAdvocateGate(in) != "":
+			// QA (Codex): a revise verdict recorded after execution prepare
+			// still routed to compatibility review and phase --to implement,
+			// which refuses; the agent found no way to change the plan.
+			key := devilsAdvocateGate(in)
+			decision.Stage = stage(issueopsnextcontract.StagePlanReview, 3)
+			decision.Missing = []string{key}
+			decision.NextCommand = devilsAdvocateCommand(in)
+			decision.Warnings = append(decision.Warnings, revisePlanAfterPrepareWarning)
 		case record.CompatibilityReview == nil || !record.CompatibilityReview.Approved:
 			decision.Missing = []string{"compatibility_review"}
 			decision.NextCommand = OwnerCommand(id, "compatibility_review")
@@ -883,6 +895,11 @@ func devilsAdvocateGate(in Input) string {
 	}
 	return ""
 }
+
+// revisePlanAfterPrepareWarning names where a plan is revised once
+// execution prepare has run: artifact stage refuses then, and the linked plan
+// is edited in place until the cycle enters implement.
+const revisePlanAfterPrepareWarning = "the plan review is not passed: after execution prepare, revise the linked plan file (plan_path, link-plan first) in place, then record a fresh devil's-advocate review; artifact stage no longer applies"
 
 func devilsAdvocateCommand(in Input) string {
 	review := in.Record.DevilsAdvocateReview

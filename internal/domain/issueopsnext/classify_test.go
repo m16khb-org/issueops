@@ -1157,3 +1157,17 @@ func TestClassifyRoutesAReleasedCompletionMergeToFinalize(t *testing.T) {
 		t.Fatalf("actor cwd = %q, want the worktree", cwd)
 	}
 }
+
+// A revise verdict recorded after execution prepare routes back to the plan
+// review with the in-place revision note, not to compatibility review.
+func TestClassifyImplementEnterRoutesAReviseVerdictToThePlanReview(t *testing.T) {
+	in := withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))
+	in.Record.PlanPath = "/w/plan.md"
+	in.Completion = func(issueopsnextcontract.Phase) Readiness {
+		return Readiness{Missing: []string{"devils_advocate_review"}}
+	}
+	got, ok := classifyHolderImplement(in, Decision{})
+	if !ok || got.Stage.Key != issueopsnextcontract.StagePlanReview || len(got.Warnings) != 1 || !strings.Contains(got.Warnings[0], "in place") {
+		t.Fatalf("decision = %+v", got)
+	}
+}

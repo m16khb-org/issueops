@@ -160,8 +160,7 @@ blocker 근거는 기록 직전에 한 번 더 확인한다. 확인 규칙은 [�
 `feedback mark-issue-updated` → 새 기준으로 `intent record` → 게이트 원장 수정 → `decision add`로 바뀐
 계획 기록(추적 `plan.md`는 승인 시점 사본이라 고치지 않는다) → 구현·검증 뒤
 `feedback resolve`.
-`.issueops/issues/<n>/artifact/`는 prepare가 봉인한 승인 시점의 사본이다. 고치거나 덮어쓰지 않는다
-(`artifact stage`도 prepare 뒤에는 거부된다). `regress`는 plan·compatibility-review에서만 되므로 구현 중에는 쓰지 않는다.
+구현 진입 뒤 `artifact/`는 승인 사본이라 고치지 않는다. 진입 전 revise면 연결한 계획을 고치고 다시 리뷰한다. `regress`는 plan·compatibility-review에서만 되므로 구현 중에는 쓰지 않는다.
 
 ## Lease fencing
 
