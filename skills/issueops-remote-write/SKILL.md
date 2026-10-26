@@ -19,6 +19,8 @@ description: Use before any governed "issueops remote ..." write (issue, child t
   GitLab draft MR은 `Draft:` 접두사를 유지한다(해제는 `remote mark-ready`).
 - 사용자가 요청한 담당자 추가: `issueops remote assign --id "$ISSUEOPS_ID" --on issue|pr --add "$USER" --json`(preview) → `next_command`.
   추가만 하며 계정은 사용자가 이름으로 지정한 것만 쓴다.
+- 사용자가 요청한 마일스톤: `issueops remote milestone --id "$ISSUEOPS_ID" --on issue|pr --set "$TITLE" --json`(preview) → `next_command`.
+  저장소에 이미 있는 마일스톤만 쓰며 새로 만들지 않는다.
   record의 `remote_artifact` 라벨·담당자는 발행 시점 값이다. 변경 뒤 상태는 각 명령의 readback이 기준이며 `verify-artifact`를 다시 실행하지 않는다.
 - 한국어 문체: [`fluent-korean`](../fluent-korean/SKILL.md)
 - 본문 작성 지침: [`references/readable-body.md`](references/readable-body.md)

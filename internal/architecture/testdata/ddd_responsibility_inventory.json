@@ -999,6 +999,7 @@
         "func labelRemote",
         "func markRemotePullRequestReady",
         "func mergeRemotePullRequest",
+        "func milestoneRemote",
         "func newRemoteCompletionService",
         "func reflectRemoteCompletion",
         "func retitleRemote"
@@ -1996,6 +1997,14 @@
       "symbols": [
         "func Command.runRemoteMergePR",
         "func printRemoteMergeResult"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopscli/remotecmd/remote_milestone.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func Command.runRemoteMilestone"
       ]
     },
     {
@@ -7088,6 +7097,14 @@
       ]
     },
     {
+      "path": "internal/adapter/provider/github/milestone.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Provider.SetMilestone"
+      ]
+    },
+    {
       "path": "internal/adapter/provider/github/provider.go",
       "owner": "adapter",
       "task": "T20",
@@ -7219,6 +7236,14 @@
         "func gitLabMergeRequestEndpoint",
         "func markMergeRequestReady",
         "func parseGlabMergeState"
+      ]
+    },
+    {
+      "path": "internal/adapter/provider/gitlab/milestone.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Provider.SetMilestone"
       ]
     },
     {
@@ -7375,6 +7400,7 @@
         "func ResolveAssigner",
         "func ResolveCommenter",
         "func ResolveLabeler",
+        "func ResolveMilestoneSetter",
         "func ResolvePullRequestMerger",
         "func ResolveRetitler"
       ]
@@ -9849,6 +9875,17 @@
       ]
     },
     {
+      "path": "internal/application/issueopsremote/remote_milestone.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func NewRemoteMilestoneService",
+        "func RemoteMilestoneService.SetMilestone",
+        "type MilestoneProviderResolver",
+        "type RemoteMilestoneService"
+      ]
+    },
+    {
       "path": "internal/application/issueopsremote/remote_ready.go",
       "owner": "application",
       "task": "T07",
@@ -11437,6 +11474,14 @@
         "type RemoteMergeResult",
         "type RemotePullRequestMergeState",
         "type RemoteReadyResult"
+      ]
+    },
+    {
+      "path": "internal/contract/issueops/remote_milestone.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type RemoteMilestoneResult"
       ]
     },
     {
@@ -17088,6 +17133,7 @@
         "type IssueProviderIssueCreateCandidate",
         "type IssueProviderIssueCreateReconciler",
         "type IssueProviderLabeler",
+        "type IssueProviderMilestoneSetter",
         "type IssueProviderPullRequestCloser",
         "type IssueProviderPullRequestMergeRequest",
         "type IssueProviderPullRequestMerger",

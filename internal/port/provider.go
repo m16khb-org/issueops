@@ -324,6 +324,13 @@ type IssueProviderAssigner interface {
 	AddAssignees(ctx context.Context, repo, targetURL, kind string, users []string) ([]string, error)
 }
 
+// IssueProviderMilestoneSetter puts an issue (kind "issue") or a PR/MR (kind
+// "pr") on an existing milestone by title and returns the milestone title read
+// back afterwards.
+type IssueProviderMilestoneSetter interface {
+	SetMilestone(ctx context.Context, repo, targetURL, kind, title string) (string, error)
+}
+
 // IssueProvider is implemented by provider-specific adapters such as GitHub and GitLab.
 // Every mutating operation requires Confirm=true; without it, only a dry-run preview
 // is returned.

@@ -25,6 +25,19 @@ func Resolve(name string) (port.IssueProvider, error) {
 	}
 }
 
+// ResolveMilestoneSetter returns the milestone capability of the named provider.
+func ResolveMilestoneSetter(name string) (port.IssueProviderMilestoneSetter, error) {
+	resolved, err := Resolve(name)
+	if err != nil {
+		return nil, err
+	}
+	setter, ok := resolved.(port.IssueProviderMilestoneSetter)
+	if !ok {
+		return nil, fmt.Errorf("provider %q cannot set milestones", name)
+	}
+	return setter, nil
+}
+
 // ResolveAssigner returns the assignee capability of the named provider.
 func ResolveAssigner(name string) (port.IssueProviderAssigner, error) {
 	resolved, err := Resolve(name)

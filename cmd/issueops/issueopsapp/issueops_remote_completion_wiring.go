@@ -25,6 +25,10 @@ func closeRemoteIssue(ctx context.Context, root, id, providerOverride string, co
 	return newRemoteCompletionService(root, provider.Resolve, verify, time.Now).Close(ctx, id, providerOverride, confirm)
 }
 
+func milestoneRemote(ctx context.Context, root, id, on, title string, confirm bool) (model.RemoteMilestoneResult, error) {
+	return application.NewRemoteMilestoneService(issueops.RemoteRecordStore{StateRoot: root}, provider.ResolveMilestoneSetter).SetMilestone(ctx, id, on, title, confirm)
+}
+
 func assignRemote(ctx context.Context, root, id, on string, users []string, confirm bool) (model.RemoteAssignResult, error) {
 	return application.NewRemoteAssignService(issueops.RemoteRecordStore{StateRoot: root}, provider.ResolveAssigner).AddAssignees(ctx, id, on, users, confirm)
 }

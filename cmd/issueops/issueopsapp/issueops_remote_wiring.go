@@ -30,6 +30,7 @@ func newIssueOpsRemote(root string) remotecmd.Command {
 		LabelRemote:                labelRemote,
 		RetitleRemote:              retitleRemote,
 		AssignRemote:               assignRemote,
+		MilestoneRemote:            milestoneRemote,
 
 		CreateIssue:                  createIssue,
 		ReadScoreSummaryFile:         remoteapp.NewTemplateBodyResolver(os.ReadFile).ScoreSummary,

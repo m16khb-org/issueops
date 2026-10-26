@@ -98,6 +98,8 @@ func (command Command) dispatchRemoteLifecycle(args []string, deps Deps) error {
 		return command.runRemoteRetitle(args[1:], deps)
 	case "assign":
 		return command.runRemoteAssign(args[1:], deps)
+	case "milestone":
+		return command.runRemoteMilestone(args[1:], deps)
 	default:
 		return unknownRemoteSubcommand(args[0])
 	}
@@ -105,7 +107,7 @@ func (command Command) dispatchRemoteLifecycle(args []string, deps Deps) error {
 
 var remoteSubcommands = []string{"score", "verify-artifact", "render-template", "create-issue", "reconcile-issue",
 	"reconcile-child", "create-child", "create-pr", "sync-graph", "sync-issue", "sync-pr",
-	"reflect-devils-advocate", "reflect-completion", "close-issue", "merge-pr", "mark-ready", "comment", "label", "retitle", "assign"}
+	"reflect-devils-advocate", "reflect-completion", "close-issue", "merge-pr", "mark-ready", "comment", "label", "retitle", "assign", "milestone"}
 
 // unknownRemoteSubcommand names the closest subcommands. QA: two agents ran
 // `remote list-issues` to find related issues; issueops writes to the
