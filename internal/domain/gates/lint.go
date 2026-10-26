@@ -179,7 +179,8 @@ func literalLooksLikeRegex(expect string) bool {
 	if strings.HasPrefix(expect, "^") || (strings.HasSuffix(expect, "$") && !strings.HasSuffix(expect, `\$`)) {
 		return true
 	}
-	for _, token := range []string{`\.`, `\d`, `\s`, `\w`, `.*`, `.+`} {
+	// QA: `int f\(const char \*s\);` (escaped metacharacters) failed as a literal.
+	for _, token := range []string{`\.`, `\d`, `\s`, `\w`, `.*`, `.+`, `\(`, `\)`, `\*`, `\[`, `\+`, `\?`, `\|`} {
 		if strings.Contains(expect, token) {
 			return true
 		}

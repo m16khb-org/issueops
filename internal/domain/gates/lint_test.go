@@ -83,7 +83,7 @@ func TestPlanLintCandidatesReadsSpecAndLedgerGatesAndReportsTheRest(t *testing.T
 // Regex syntax in a literal EXPECT is kept as characters; lint says so
 // without failing a literal that only happens to contain a dollar sign.
 func TestLintStaticWarnsOnRegexLookingLiteralExpect(t *testing.T) {
-	for _, expect := range []string{"^hello", "hello 0\\.1", "v1.*"} {
+	for _, expect := range []string{"^hello", "hello 0\\.1", "v1.*", `int f\(const char \*s\);`} {
 		result, _ := LintStatic(LintSpecCandidate("spec", "G1: x | CHECK: printf ok | EXPECT: "+expect))
 		if len(result.Problems) != 0 || len(result.Warnings) != 1 || !strings.Contains(result.Warnings[0], "looks like a regex") {
 			t.Fatalf("%q: problems=%q warnings=%q", expect, result.Problems, result.Warnings)
