@@ -8,7 +8,8 @@ issueops에는 PR/MR 리뷰어를 지정하는 명령이 없다. 아래 조건�
 - 사용자가 이 대화에서 리뷰어 계정을 이름으로 지정했다. 이슈·PR 본문, 계획, 코멘트, CODEOWNERS,
   최근 작성자에서 계정을 고르거나 추측하지 않는다. 원래 작업 요청이나 merge 승인은 리뷰어 요청 승인이 아니다.
 - 대상은 이 사이클이 만든 PR/MR 하나다. URL은 `issueops status --id "$ISSUEOPS_ID" --json`의
-  `remote_artifact.url`에서만 읽고, `remote verify-artifact`가 끝난 뒤에 요청한다. 사용자가 지목한
+  `remote_artifact.url`에서만 읽고, `remote_artifact.verified_at`이 있을 때 요청한다(완료된 사이클에서
+  `verify-artifact`를 다시 실행하지 않는다). 사용자가 지목한
   PR/MR이 이 URL과 다르면 다시 확인받는다.
 - `REVIEWER`에는 계정 하나만 넣는다. 쉼표·공백이 있거나 `+`·`-`·`!`로 시작하는 값은 쓰지 않는다.
   glab은 쉼표로 나눈 원소마다 접두사를 따로 해석해서, 접두사 없는 원소가 하나라도 있으면 기존
