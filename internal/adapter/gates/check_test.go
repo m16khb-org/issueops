@@ -1,6 +1,7 @@
 package gates
 
 import (
+	"errors"
 	gatescontract "issueops/internal/contract/gates"
 	"os"
 	"os/exec"
@@ -258,7 +259,7 @@ func TestCheckRequiresExitZeroEvenWhenExpectMatches(t *testing.T) {
 func TestCheckNoFilesIsUsageError(t *testing.T) {
 	dir := t.TempDir()
 	_, err := Check(gatescontract.CheckRequest{WorkspaceRoot: dir, CWD: dir})
-	if err != gatescontract.ErrNoGateFiles {
+	if !errors.Is(err, gatescontract.ErrNoGateFiles) {
 		t.Fatalf("expected ErrNoGateFiles, got %v", err)
 	}
 }

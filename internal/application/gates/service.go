@@ -42,7 +42,9 @@ func (service Service) Check(request gatescontract.CheckRequest) (gatescontract.
 			return gatescontract.CheckResult{Files: []gatescontract.FileResult{}}, err
 		}
 		if len(files) == 0 {
-			return gatescontract.CheckResult{Files: []gatescontract.FileResult{}}, gatescontract.ErrNoGateFiles
+			// QA (MCP): "no gate files found" read the same for a missing
+			// ledger and a wrong cwd; name where discovery looked.
+			return gatescontract.CheckResult{Files: []gatescontract.FileResult{}}, fmt.Errorf("%w under %s", gatescontract.ErrNoGateFiles, cwd)
 		}
 	}
 	result := gatescontract.CheckResult{
