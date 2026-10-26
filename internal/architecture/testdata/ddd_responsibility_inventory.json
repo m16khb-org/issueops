@@ -2585,6 +2585,7 @@
       "symbols": [
         "func Command.Run",
         "func Command.errorExitCode",
+        "func Command.printIndex",
         "func Command.printUnknownCommand",
         "func Command.printUsage",
         "func Command.runSubcommand",
@@ -3809,7 +3810,8 @@
       "owner": "adapter",
       "task": "T19",
       "symbols": [
-        "func Usage"
+        "func Usage",
+        "func UsageIndex"
       ]
     },
     {

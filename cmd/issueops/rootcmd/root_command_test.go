@@ -22,14 +22,20 @@ func TestRunRootCommandUsageAndVersionSurface(t *testing.T) {
 		wantErr  string
 	}{
 		{
-			name:     "no args prints usage to stderr",
+			name:     "no args prints the command index to stderr",
 			args:     []string{},
 			wantCode: 2,
-			wantErr:  "issueops 0.1.0",
+			wantErr:  "Commands:",
 		},
 		{
-			name:     "help prints usage to stderr",
+			name:     "help prints the command index",
 			args:     []string{"help"},
+			wantCode: 0,
+			wantErr:  "Commands:",
+		},
+		{
+			name:     "help --all prints the full usage",
+			args:     []string{"--help", "--all"},
 			wantCode: 0,
 			wantErr:  "issueops 0.1.0",
 		},
@@ -43,7 +49,7 @@ func TestRunRootCommandUsageAndVersionSurface(t *testing.T) {
 			name:     "unknown prints a short error with suggestions",
 			args:     []string{"statu"},
 			wantCode: 2,
-			wantErr:  "issueops: unknown command \"statu\"\nDid you mean: status\nRun 'issueops --help' for the full usage.\n",
+			wantErr:  "issueops: unknown command \"statu\"\nDid you mean: status\nRun 'issueops --help' to list commands.\n",
 		},
 		{
 			name:     "a hyphenated group and subcommand points at the group's help",
@@ -260,6 +266,9 @@ func testCommand(stdout, stderr *bytes.Buffer) Command {
 		Version: "0.1.0",
 		Usage: func() {
 			stderr.WriteString("issueops 0.1.0\n")
+		},
+		Index: func() {
+			stderr.WriteString("Commands:\n")
 		},
 		Stdout:  stdout,
 		Stderr:  stderr,

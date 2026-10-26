@@ -94,7 +94,9 @@ Skill-quality scorecards and dogfood evaluations are research records under
    `self-verify/self-augment/web-fetch`), plus 36 IssueOps lifecycle commands
    registered flat at the top level (`start`, `status`, `next`, `execution`,
    `remote`, `cleanup`, ...; `internal/contract/cli.LifecycleCommands`) and the
-   built-in `help`/`version`. `issueops --help` is the canonical list.
+   built-in `help`/`version`. `issueops --help` is the canonical list (command
+   paths only); `issueops <command> --help` gives one command's flags and
+   `issueops help --all` the full grammar.
 4. Loop contracts: `issueops loop start/record-attempt/status/stop` records
    verify-until-done state and strict readiness gates without executing
    verification commands.

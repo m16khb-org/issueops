@@ -12,6 +12,7 @@ import (
 	"issueops/cmd/issueops/jsonout"
 	"issueops/cmd/issueops/modelcli"
 	"issueops/cmd/issueops/rootcmd"
+	cliadapter "issueops/internal/adapter/inbound/catalog/cli"
 	clicontract "issueops/internal/contract/cli"
 	guard "issueops/internal/contract/guard"
 )
@@ -43,6 +44,7 @@ func rootCommand() rootcmd.Command {
 	command := rootcmd.Command{
 		Version: version,
 		Usage:   usage,
+		Index:   func() { fprintString(os.Stderr, cliadapter.UsageIndex(version)) },
 		Stdout:  os.Stdout,
 		Stderr:  os.Stderr,
 		Runners: map[string]rootcmd.Runner{

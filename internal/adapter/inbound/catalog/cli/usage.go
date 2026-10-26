@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	contract "issueops/internal/contract/cli"
+	"slices"
 	"strings"
 )
 
@@ -94,4 +95,54 @@ Usage:
 
 %s
 `, version, strings.Join(IssueOpsUsageLines(), "\n"), "", contract.IssueOpsActorFlagLegend)
+}
+
+// UsageIndex lists every command path, grouped by top-level command, without
+// flags. QA transcripts: `issueops --help` was the most called help (about one
+// session in ten) and returned the full 18 KB grammar when the agent wanted a
+// command name; flags come from `issueops <command> --help`. It is derived
+// from Usage, so the two cannot list different commands.
+func UsageIndex(version string) string {
+	type group struct {
+		name string
+		subs []string
+	}
+	var groups []*group
+	byName := map[string]*group{}
+	for line := range strings.SplitSeq(Usage(version), "\n") {
+		rest, ok := strings.CutPrefix(line, "  issueops ")
+		if !ok {
+			continue
+		}
+		var path []string
+		for word := range strings.FieldsSeq(rest) {
+			if strings.ContainsAny(word[:1], "-[(<") || strings.ToUpper(word) == word {
+				break
+			}
+			path = append(path, word)
+		}
+		if len(path) == 0 {
+			continue
+		}
+		g := byName[path[0]]
+		if g == nil {
+			g = &group{name: path[0]}
+			byName[path[0]] = g
+			groups = append(groups, g)
+		}
+		if sub := strings.Join(path[1:], " "); sub != "" && !slices.Contains(g.subs, sub) {
+			g.subs = append(g.subs, sub)
+		}
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "issueops %s\n\nCommands:\n", version)
+	for _, g := range groups {
+		b.WriteString("  " + g.name)
+		if len(g.subs) > 0 {
+			b.WriteString(": " + strings.Join(g.subs, ", "))
+		}
+		b.WriteString("\n")
+	}
+	b.WriteString("\nFlags of one command: issueops <command> [<subcommand>] --help\nEvery command with its flags: issueops help --all\n")
+	return b.String()
 }

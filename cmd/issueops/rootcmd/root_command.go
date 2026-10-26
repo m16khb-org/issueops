@@ -17,8 +17,10 @@ import (
 type Runner func([]string) error
 
 type Command struct {
-	Version       string
-	Usage         func()
+	Version string
+	Usage   func()
+	// Index prints the command list without flags; nil falls back to Usage.
+	Index         func()
 	Stdout        io.Writer
 	Stderr        io.Writer
 	Runners       map[string]Runner
@@ -27,13 +29,17 @@ type Command struct {
 
 func (c Command) Run(args []string) int {
 	if len(args) < 1 {
-		c.printUsage()
+		c.printIndex()
 		return 2
 	}
 
 	switch args[0] {
 	case "help", "--help", "-h":
-		c.printUsage()
+		if slices.Contains(args[1:], "--all") {
+			c.printUsage()
+		} else {
+			c.printIndex()
+		}
 		return 0
 	case "version", "--version", "-v":
 		fmt.Fprintln(c.stdout(), "issueops", c.Version)
@@ -64,7 +70,7 @@ func (c Command) printUnknownCommand(name string) {
 	if suggestions := c.suggest(name); len(suggestions) > 0 {
 		fmt.Fprintf(c.stderr(), "Did you mean: %s\n", strings.Join(suggestions, ", "))
 	}
-	fmt.Fprintln(c.stderr(), "Run 'issueops --help' for the full usage.")
+	fmt.Fprintln(c.stderr(), "Run 'issueops --help' to list commands.")
 }
 
 // suggest returns up to three known commands closest to name.
@@ -156,6 +162,14 @@ func JSONRequested(args []string) bool {
 		}
 	}
 	return false
+}
+
+func (c Command) printIndex() {
+	if c.Index == nil {
+		c.printUsage()
+		return
+	}
+	c.Index()
 }
 
 func (c Command) printUsage() {
