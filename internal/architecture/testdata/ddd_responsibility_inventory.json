@@ -8451,6 +8451,7 @@
       "symbols": [
         "func NewService",
         "func Service.Sync",
+        "func Service.authorize",
         "func Service.confirmSync",
         "func Service.previewSync",
         "func Service.readLiveBody",
@@ -14348,6 +14349,7 @@
       "task": "T07",
       "symbols": [
         "func IsPublicationKind",
+        "func PostCompletion",
         "func RejectClosedPublication",
         "func ResolveTarget",
         "func SameArtifactURL",

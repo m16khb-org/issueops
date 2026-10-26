@@ -64,6 +64,17 @@ func ValidateGeneration(prepared bool, current, expected uint64) error {
 	return nil
 }
 
+// PostCompletion reports a completed cycle whose lease was released by
+// `execution complete`. Its issue and PR/MR bodies are edited from the main
+// session without a lease, like merge-pr and reflect-completion: the
+// completion sealed the head, not the bodies. QA: asked to add a section to a
+// completed cycle's PR body, an agent reseeded the cycle (completion pushed to
+// history, phase back to implement) only to get a lease for the edit.
+func PostCompletion(phase, leaseStatus string, completed bool) bool {
+	// Literal values: this domain package must not import contract/issueops.
+	return phase == "done" && leaseStatus == "released" && completed
+}
+
 func RejectClosedPublication(kind, state string) error {
 	if !IsPublicationKind(kind) {
 		return nil

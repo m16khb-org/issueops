@@ -66,7 +66,8 @@ flowchart LR
 ## drift를 읽는 법
 
 preview는 `--confirm` 없이 실행하며 provider를 변경하지 않는다. 그래도 lease holder만
-실행할 수 있으므로 actor 플래그를 붙인다.
+실행할 수 있으므로 actor 플래그를 붙인다. 완료된 사이클(phase `done`, lease `released`, completion 있음)은
+lease 없이 메인 세션에서 실행한다. reseed하지 않는다.
 
 ```bash
 issueops remote sync-issue \

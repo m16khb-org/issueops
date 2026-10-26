@@ -18,7 +18,8 @@ func (command Command) runRemoteSyncIssue(ctx context.Context, args []string, de
 }
 
 // runRemoteSyncPR refreshes the body of the PR/MR this cycle published. It is
-// fenced by the execution lease generation, like create-pr.
+// fenced by the execution lease generation, like create-pr; a completed,
+// released cycle is edited without the holder (bodysync.PostCompletion).
 func (command Command) runRemoteSyncPR(ctx context.Context, args []string, deps Deps) error {
 	return command.runBodySyncCommand(ctx, "issueops remote sync-pr", bodysynccontract.KindPR, args, deps)
 }

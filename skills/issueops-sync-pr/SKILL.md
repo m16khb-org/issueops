@@ -44,6 +44,8 @@ draft를 올린 뒤에도 커밋은 쌓인다. 다음 중 하나가 사실이면
 - 현재 `Execution`의 generation과 native holder. `--expected-generation`은
   현재 lease와 같아야 한다.
 - canonical worktree에서의 실행. `--cwd`는 실제 프로세스 cwd와 같아야 한다.
+- 예외: 완료된 사이클(phase `done`, lease `released`, completion 있음)은 lease 없이 메인 세션에서
+  고친다. 이때도 `--expected-generation`은 반납된 generation이다. reseed하지 않는다.
 - 원격 본문을 읽은 뒤 확정한 새 본문. preview 없이 본문을 고정하지 않는다.
 
 `--url`로 다른 PR/MR을 가리키지 않는다. 이 스킬은 **이 사이클이 검증한 artifact

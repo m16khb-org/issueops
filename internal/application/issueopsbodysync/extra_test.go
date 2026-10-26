@@ -537,3 +537,25 @@ const syncPRBody = `## 요약
 ## 리뷰 포인트
 
 - 관리 구간이 보존되는지 봐 주세요.`
+
+// QA: an agent reseeded a completed cycle only to edit its PR body. A done
+// cycle with a released lease is edited without the holder check; any other
+// lease state still goes through the authority.
+func TestSyncAdmitsACompletedReleasedCycleWithoutTheHolderCheck(t *testing.T) {
+	completed := prRecord(1)
+	completed.Phase = issueops.IssueOpsPhaseDone
+	completed.Execution.Lease.Status = issueops.LeaseStatusReleased
+	completed.Execution.Completion = &issueops.ExecutionCompletion{Generation: 1}
+	provider := &scriptedProvider{body: syncLiveBody, state: "OPEN"}
+	service, _ := newScripted(completed, provider, &denyAfter{})
+	cmd := bodysynccontract.Command{Kind: bodysynccontract.KindPR, ProposedBody: syncNewBody, ExpectedGeneration: 1}
+	if _, _, err := service.Sync(t.Context(), "io-sync", cmd, issueops.IssueOpsActor{}); err != nil {
+		t.Fatalf("completed cycle refused: %v", err)
+	}
+	reseeded := completed
+	reseeded.Execution = &issueops.Execution{Lease: issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased}}
+	service, _ = newScripted(reseeded, provider, &denyAfter{})
+	if _, _, err := service.Sync(t.Context(), "io-sync", cmd, issueops.IssueOpsActor{}); !errors.Is(err, errBoom) {
+		t.Fatalf("released lease without completion err = %v, want the authority refusal", err)
+	}
+}

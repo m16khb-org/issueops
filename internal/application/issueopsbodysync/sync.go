@@ -34,7 +34,7 @@ func (s *Service) Sync(ctx context.Context, id string, cmd bodysynccontract.Comm
 	if err != nil {
 		return record, bodysynccontract.Result{}, err
 	}
-	if err := s.authority.Authorize(ctx, record, actor); err != nil {
+	if err := s.authorize(ctx, record, actor); err != nil {
 		return syncFailure(err)
 	}
 	target, err := resolveSyncTarget(record, cmd)
@@ -207,6 +207,19 @@ func (s *Service) confirmSync(ctx context.Context, id string, record issueops.Is
 	return stamped, result, nil
 }
 
+// authorize admits the lease holder, or anyone once the cycle is completed
+// and released (bodysync.PostCompletion). Confirm re-reads the record and
+// calls it on entry, so a reseed between preview and confirm is refused; the
+// re-check inside the locked update only stops the baseline record, not a
+// remote write already sent.
+func (s *Service) authorize(ctx context.Context, record issueops.IssueOpsRecord, actor issueops.IssueOpsActor) error {
+	if execution := record.Execution; execution != nil &&
+		bodysync.PostCompletion(string(record.Phase), string(execution.Lease.Status), execution.Completion != nil) {
+		return nil
+	}
+	return s.authority.Authorize(ctx, record, actor)
+}
+
 func (s *Service) verifyChild(ctx context.Context, record issueops.IssueOpsRecord, childURL string) error {
 	result, err := s.provider.VerifyChildHierarchy(ctx, port.IssueProviderChildHierarchyRequest{Repo: record.Repo, ParentIssueURL: record.IssueURL, ChildURL: childURL})
 	if err != nil {
@@ -217,7 +230,7 @@ func (s *Service) verifyChild(ctx context.Context, record issueops.IssueOpsRecor
 
 func (s *Service) recordBaseline(ctx context.Context, id string, entry issueops.IssueOpsRemoteBodySync, actor issueops.IssueOpsActor) (issueops.IssueOpsRecord, error) {
 	return s.repository.Update(ctx, id, func(rec issueops.IssueOpsRecord) (issueops.IssueOpsRecord, error) {
-		if err := s.authority.Authorize(ctx, rec, actor); err != nil {
+		if err := s.authorize(ctx, rec, actor); err != nil {
 			return rec, err
 		}
 		urls := make([]string, len(rec.BodySyncs))
