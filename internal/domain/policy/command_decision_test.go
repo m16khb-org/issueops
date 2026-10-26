@@ -37,3 +37,14 @@ func TestCommandDecisionRequiresObservedRootAndCWD(t *testing.T) {
 		t.Fatalf("missing input decision=%+v", decision)
 	}
 }
+
+// QA (Codex MCP): command_policy_check refused a test runner that gates_check
+// ran; the read-only refusal names the write tier.
+func TestCommandDecisionNamesTheWriteTierForAReadOnlyRefusal(t *testing.T) {
+	decision := EvaluateCommandDecision(policycontract.CommandPolicyRequest{
+		WorkspaceRoot: "/repo", CWD: "/repo", Argv: []string{"python3", "-m", "unittest"}, Timeout: "30s",
+	}, CommandFacts{RootDirectory: true, CWDDirectory: true, CWDWithinRoot: true, Timeout: 30 * time.Second, TimeoutValid: true})
+	if decision.Allowed || len(decision.Warnings) != 1 || decision.Warnings[0] != readOnlyTierWarning {
+		t.Fatalf("decision=%+v", decision)
+	}
+}

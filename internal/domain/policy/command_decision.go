@@ -112,12 +112,20 @@ func appendCommandDenies(denies, warnings []string, req policycontract.CommandPo
 	if !req.WriteAllowed && !facts.ReadOnlyAllowed {
 		denies = append(denies, "command_not_in_read_only_allowlist")
 	}
+	if !req.WriteAllowed && !facts.ShellCommand && (!facts.ReadOnlyAllowed || facts.Writes) {
+		// QA (Codex MCP): a test runner was refused by command_policy_check
+		// while gates_check ran it; nothing said the check used the read-only
+		// tier that gates leave by default.
+		warnings = append(warnings, readOnlyTierWarning)
+	}
 	if facts.PRTargetDeny != "" {
 		denies = append(denies, facts.PRTargetDeny)
 		warnings = append(warnings, "pr_target_branch_expected="+facts.PRTargetExpected)
 	}
 	return denies, warnings
 }
+
+const readOnlyTierWarning = "evaluated in the read-only tier: set write_allowed (CLI --write) for a command that writes only inside the workspace, such as a test runner; gates CHECK runs with write allowed by default"
 
 // appendShellDecision은 셸 인터프리터 허용 여부와 사유 필요 여부를 판정한다.
 func appendShellDecision(denies, warnings []string, req policycontract.CommandPolicyRequest) ([]string, []string) {
