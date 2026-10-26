@@ -312,6 +312,12 @@ type IssueProviderLabeler interface {
 	AddLabels(ctx context.Context, repo, targetURL, kind string, labels []string) ([]string, error)
 }
 
+// IssueProviderRetitler sets the title of an issue (kind "issue") or a PR/MR
+// (kind "pr") and returns the title read back afterwards.
+type IssueProviderRetitler interface {
+	Retitle(ctx context.Context, repo, targetURL, kind, title string) (string, error)
+}
+
 // IssueProvider is implemented by provider-specific adapters such as GitHub and GitLab.
 // Every mutating operation requires Confirm=true; without it, only a dry-run preview
 // is returned.

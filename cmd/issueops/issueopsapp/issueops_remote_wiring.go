@@ -28,6 +28,7 @@ func newIssueOpsRemote(root string) remotecmd.Command {
 		MarkRemotePullRequestReady: markRemotePullRequestReady,
 		CommentRemote:              commentRemote,
 		LabelRemote:                labelRemote,
+		RetitleRemote:              retitleRemote,
 
 		CreateIssue:                  createIssue,
 		ReadScoreSummaryFile:         remoteapp.NewTemplateBodyResolver(os.ReadFile).ScoreSummary,

@@ -999,7 +999,8 @@
         "func markRemotePullRequestReady",
         "func mergeRemotePullRequest",
         "func newRemoteCompletionService",
-        "func reflectRemoteCompletion"
+        "func reflectRemoteCompletion",
+        "func retitleRemote"
       ]
     },
     {
@@ -2011,6 +2012,14 @@
       "symbols": [
         "func Command.runRemoteMarkReady",
         "func printRemoteReadyResult"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopscli/remotecmd/remote_retitle.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func Command.runRemoteRetitle"
       ]
     },
     {
@@ -7108,6 +7117,14 @@
       ]
     },
     {
+      "path": "internal/adapter/provider/github/retitle.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Provider.Retitle"
+      ]
+    },
+    {
       "path": "internal/adapter/provider/gitlab/child_recovery.go",
       "owner": "adapter",
       "task": "T20",
@@ -7279,6 +7296,14 @@
       ]
     },
     {
+      "path": "internal/adapter/provider/gitlab/retitle.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Provider.Retitle"
+      ]
+    },
+    {
       "path": "internal/adapter/provider/providerutil/bounded_command.go",
       "owner": "adapter",
       "task": "T20",
@@ -7313,7 +7338,8 @@
         "func Resolve",
         "func ResolveCommenter",
         "func ResolveLabeler",
-        "func ResolvePullRequestMerger"
+        "func ResolvePullRequestMerger",
+        "func ResolveRetitler"
       ]
     },
     {
@@ -9784,6 +9810,17 @@
       ]
     },
     {
+      "path": "internal/application/issueopsremote/remote_retitle.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func NewRemoteRetitleService",
+        "func RemoteRetitleService.Retitle",
+        "type RemoteRetitleService",
+        "type RetitleProviderResolver"
+      ]
+    },
+    {
       "path": "internal/application/issueopsremote/review_reflection.go",
       "owner": "application",
       "task": "T07",
@@ -11344,6 +11381,14 @@
         "type RemoteMergeResult",
         "type RemotePullRequestMergeState",
         "type RemoteReadyResult"
+      ]
+    },
+    {
+      "path": "internal/contract/issueops/remote_retitle.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type RemoteRetitleResult"
       ]
     },
     {
@@ -16997,6 +17042,7 @@
         "type IssueProviderRemoteCreateReconciler",
         "type IssueProviderReplaceArtifactBodyRequest",
         "type IssueProviderReplaceArtifactBodyResult",
+        "type IssueProviderRetitler",
         "type IssueProviderUpdateIssueBodySectionRequest",
         "type IssueProviderUpdateIssueBodySectionResult"
       ]

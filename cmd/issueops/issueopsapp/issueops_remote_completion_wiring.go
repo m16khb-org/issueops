@@ -25,6 +25,10 @@ func closeRemoteIssue(ctx context.Context, root, id, providerOverride string, co
 	return newRemoteCompletionService(root, provider.Resolve, verify, time.Now).Close(ctx, id, providerOverride, confirm)
 }
 
+func retitleRemote(ctx context.Context, root, id, on, title string, confirm bool) (model.RemoteRetitleResult, error) {
+	return application.NewRemoteRetitleService(issueops.RemoteRecordStore{StateRoot: root}, provider.ResolveRetitler).Retitle(ctx, id, on, title, confirm)
+}
+
 func labelRemote(ctx context.Context, root, id, on string, labels []string, confirm bool) (model.RemoteLabelResult, error) {
 	return application.NewRemoteLabelService(issueops.RemoteRecordStore{StateRoot: root}, provider.ResolveLabeler).AddLabels(ctx, id, on, labels, confirm)
 }

@@ -25,6 +25,19 @@ func Resolve(name string) (port.IssueProvider, error) {
 	}
 }
 
+// ResolveRetitler returns the title capability of the named provider.
+func ResolveRetitler(name string) (port.IssueProviderRetitler, error) {
+	resolved, err := Resolve(name)
+	if err != nil {
+		return nil, err
+	}
+	retitler, ok := resolved.(port.IssueProviderRetitler)
+	if !ok {
+		return nil, fmt.Errorf("provider %q cannot change titles", name)
+	}
+	return retitler, nil
+}
+
 // ResolveLabeler returns the label capability of the named provider.
 func ResolveLabeler(name string) (port.IssueProviderLabeler, error) {
 	resolved, err := Resolve(name)
