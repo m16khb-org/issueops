@@ -46,6 +46,26 @@ esac
 	}
 }
 
+// The preview reads the state: an issue another step closed is not reported
+// as closed:false with a close command (QA: two cycles on one issue).
+func TestGitHubCloseIssuePreviewReportsAnAlreadyClosedIssue(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fake gh shell script is POSIX-only")
+	}
+	binDir := t.TempDir()
+	writeFakeGh(t, binDir, `#!/bin/sh
+case "$1 $2" in
+"issue view") echo '{"state":"CLOSED"}' ;;
+*) echo "preview must not mutate" >&2; exit 9 ;;
+esac
+`)
+	t.Setenv("PATH", binDir)
+	res, err := NewProvider().CloseIssue(context.Background(), port.IssueProviderCloseIssueRequest{IssueURL: "https://github.com/acme/repo/issues/12"})
+	if err != nil || !res.Closed || !res.AlreadyClosed || strings.Contains(res.Preview, "gh issue close") {
+		t.Fatalf("res=%+v err=%v", res, err)
+	}
+}
+
 func TestGitHubCloseIssueVerifiesReadbackState(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("fake gh shell script is POSIX-only")

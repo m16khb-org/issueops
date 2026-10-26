@@ -65,6 +65,12 @@ func (Provider) CloseIssue(ctx context.Context, req port.IssueProviderCloseIssue
 	}
 	endpoint := "projects/" + url.PathEscape(projectPath) + "/issues/" + iid
 	if !req.Confirm {
+		// The preview reads the state once so an issue closed elsewhere does
+		// not read as closed:false; a failed read keeps the plain dry-run.
+		if state, err := readGlabIssueState(ctx, req.Repo, hostname, endpoint); err == nil && strings.EqualFold(state, "closed") {
+			return port.IssueProviderCloseIssueResult{OK: true, Provider: "gitlab", IssueURL: req.IssueURL, Closed: true, AlreadyClosed: true, State: state,
+				Preview: "already closed on the provider; --confirm only records the receipt"}, nil
+		}
 		return port.IssueProviderCloseIssueResult{
 			OK: true, Provider: "gitlab", IssueURL: req.IssueURL,
 			Preview: fmt.Sprintf("[dry-run] would execute: glab api %s --hostname %s --method PUT -f state_event=close; then readback state", endpoint, hostname),

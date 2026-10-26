@@ -508,6 +508,13 @@ func (Provider) CloseIssue(ctx context.Context, req port.IssueProviderCloseIssue
 		return port.IssueProviderCloseIssueResult{OK: false, Provider: "github"}, err
 	}
 	if !req.Confirm {
+		// QA (two cycles on one issue, child closed by its parent): the preview
+		// said closed:false for an issue another step had already closed. One
+		// read tells; a failed read keeps the plain dry-run.
+		if state, err := readGhIssueState(ctx, req.Repo, issueURL); err == nil && strings.EqualFold(state, "CLOSED") {
+			return port.IssueProviderCloseIssueResult{OK: true, Provider: "github", IssueURL: issueURL, Closed: true, AlreadyClosed: true, State: state,
+				Preview: "already closed on the provider; --confirm only records the receipt"}, nil
+		}
 		return port.IssueProviderCloseIssueResult{
 			OK: true, Provider: "github", IssueURL: issueURL,
 			Preview: fmt.Sprintf("[dry-run] would execute: gh issue close %s --reason %s; gh issue view %s --json state", issueURL, ghQuoteReason(reason), issueURL),
