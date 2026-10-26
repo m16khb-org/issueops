@@ -211,8 +211,8 @@ plan-prep 네 항목은 waive로 채우지 않는다. 조사 결과나 불필요
 2. deterministic score 뒤 semantic 판단이 필요하면 `remote score --judge prompt`를
    fresh 독립 read-only agent에게 주고 결과 JSON을 `--judge file --judge-file`로 검증한다.
    독립 agent가 없거나 비활성화했으면 deterministic 결과를 쓰고 그 선택을 기록한다.
-3. 한국어 본문을 다듬는다. `fluent-korean`이 있으면 호출하고, 없으면 명확한 주어·완성된
-   문장·검증 가능한 결과·불필요한 수식 제거를 직접 검토한다. secret을 제거하고 실제
+3. 한국어 본문을 `fluent-korean` 스킬로 다듬는다. issueops와 함께 설치되므로 생략하지 않는다(원격 쓰기의
+   선행 조건, `issueops-remote-write` 규칙 2). secret을 제거하고 실제
    assignee를 확인한다(`@me` 금지). 사용자가 따로 정하지 않았으면 인증된 사용자를 쓴다:
    `gh api user --jq .login` 또는 `glab api user`의 `username`. git 이메일에서 추측하지 않는다.
    설치된 `issueops-remote-write`를 활용할 수 있다.
@@ -233,7 +233,7 @@ issueops remote create-issue --id "$ISSUEOPS_ID" --provider "$PROVIDER" \
 ## 품질·성능 게이트
 
 - 품질: preview의 `readability.critical` 0, warning 처리 기록, 원격 write 전
-  한국어 검토(설치된 `fluent-korean` 호출), 라벨 판단 decision 기록, secret redaction,
+  한국어 검토(`fluent-korean` 호출), 라벨 판단 decision 기록, secret redaction,
   hierarchy/label/assignee readback.
 - 성능: issue 단계에서만 이 스킬을 로드한다. PR/MR reference를 함께
   중복 로드하지 않는다. 변경 전후 byte 수와 focused 검증 시간을 기록하되

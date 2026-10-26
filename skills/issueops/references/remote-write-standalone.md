@@ -1,7 +1,6 @@
 # 원격 쓰기 단독 실행 순서
 
-render-template 골격 → 한국어 다듬기(`fluent-korean`이 있으면 호출, 없으면 완성된 문장·
-명확한 주어·검증 가능한 결과·불필요한 수식 제거를 직접 검토) → secret 제거 →
+render-template 골격 → `fluent-korean` 스킬로 한국어 다듬기(issueops와 함께 설치되므로 생략하지 않는다) → secret 제거 →
 threshold로 선택한 label·실제 assignee(`@me` 금지) → preview의 readability 확인 →
 같은 요청에만 confirm → URL·상태·본문·metadata readback. critical은 수정 후 재preview하고,
 warning은 수정하거나 이유를 기록한다. 승인된 원문/범위가 바뀌면 사용자에게 확인한다.
