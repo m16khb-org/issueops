@@ -20,13 +20,14 @@ IssueOps는 이슈, 브랜치, 계획, 실행 lease, 검증 증거, PR/MR을 dur
 issueops next --json
 ```
 
-읽기 전용이며 record·로컬 관측만 쓴다(fetch/provider 호출 없음).
+읽기 전용이다(fetch/provider 호출 없음).
 
 1. 사용자나 현재 대화가 지정한 lifecycle ID가 있으면 처음부터
    `issueops next --id "$ISSUEOPS_ID" --json`을 실행한다. 없을 때만 자동 선택한다.
    `selected.id` 또는 `start` 결과의 ID를 이후 명령·인계·압축 요약에 유지한다.
 2. `stage.key`를 아래 `## 단계 표`로 바꾸고 해당 스킬을 실행한다. 단계가 끝나면 같은
-   ID로 `next`를 다시 읽고 다음 단계로 이어간다. 단계 선택 메뉴를 반복해서 묻지 않는다.
+   ID로 `next`를 다시 읽고 다음 단계로 이어간다. 단계 선택 메뉴를 묻지 않는다.
+   중단·취소 요청이면 `next_command`(머지 포함) 대신 `issueops-abandon`(`exits.abandon_command`)으로 간다.
 3. actor 플래그는 아래 공통 불변식 (b)를 따른다. 나머지 placeholder는 record·계획·저장소에서 채운다.
    명령의 placeholder나 `--confirm` 자체는 사용자 질문 사유가 아니다.
 
@@ -34,7 +35,7 @@ issueops next --json
   구별할 근거도 없을 때만 고르게 한다. 다른 사이클을 임의로 선택하거나 정리하지 않는다.
 - `none`이면 요청 범위에 맞게 이슈 단계로 들어간다. 단, 요청이 `warnings`가 가리키는 머지 대기
   사이클(그 PR·리뷰·머지)에 관한 것이면 `issueops next --id <그 ID> --json`으로 다시 읽는다. 본문 초안이나 상태 조회만 요청했으면
-  그 결과만 제공한다. 상태 조회는 `issueops list --repo "$PWD" --json`이 저장소의 모든 사이클을 한 번에 보여 준다. 사용자가 새 사이클을 요청하면 기존 후보와 별개로 시작한다.
+  그 결과만 제공한다. 상태 조회는 `issueops list --repo "$PWD" --json`으로 모든 사이클을 본다. 사용자가 새 사이클을 요청하면 기존 후보와 별개로 시작한다.
 - `blocked.*`는 아래 중단 규칙을 따른다. 다른 holder의 작업을 대신하거나 상태를 우회하지 않는다.
 
 ## 환경별 자동 세션 인계
@@ -47,7 +48,7 @@ issueops next --json
   Herdr 세션이고 실행 중인 서버·호환성·현재 native host 실행 가능 여부가 확인되면 같은
   worktree의 새 Herdr 세션으로 인계한다. Herdr를 쓸 수 없으면 현재 세션에서 이어가거나,
   사용자가 직접 연 두 번째 터미널에서 수동 인계한다. 결과를 호출자에게 돌려줘야 하는 비대화형
-  실행(`-p`, `exec`)은 Herdr가 있어도 현재 세션에서 이어간다. 바이너리 설치 여부만으로 ready라고 판단하지 않는다.
+  실행(`-p`, `exec`)은 Herdr가 있어도 현재 세션에서 이어간다. 설치 여부만으로 ready라 보지 않는다.
 - 인계 절차(결정 기록·인계 자료·전달 관찰, launcher)는 [handoff-observation.md](references/handoff-observation.md)와
   [session-choice.md](references/session-choice.md)가 본문 계약이다. 인계할 때 그 둘을 읽고 따른다.
 - 자동 분기는 실행 위치만 정한다. 원래 요청의 승인 범위·종료점을 그대로 유지하며,
@@ -70,7 +71,7 @@ issueops next --json
 8단계의 history 수술은 `git-operations`다. 공용 협업은 `gates-ledger`(3·4·5·7),
 `issueops-review`(3·7), `issueops-remote-write`(1·9·10·동기화), `explain`(사용자 보고)이다.
 낡은 본문은 `issueops-sync-issue`/`issueops-sync-pr`로 관리 블록을 보존해 갱신한다.
-탈출은 `issueops-abandon`이다. Issue와 PR/MR 생성 스킬을 동시에 읽지 않는다.
+Issue와 PR/MR 생성 스킬을 동시에 읽지 않는다.
 
 ## 세션 경계
 

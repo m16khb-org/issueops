@@ -114,7 +114,7 @@ func TestNextNamesDoneCyclesThatStillAwaitMerge(t *testing.T) {
 		{ID: "io-b", Phase: issueopscontract.IssueOpsPhaseDone, Branch: "42-b"},
 	}
 	result, err := NewService(testPorts(entries, nil)).Next(context.Background(), "/state", "/repo", "")
-	if err != nil || result.Stage.Key != "none" || len(result.Warnings) != 1 || !strings.Contains(result.Warnings[0], "2 cycle(s) in done still await merge and cleanup: io-a, io-b") {
+	if err != nil || result.Stage.Key != "none" || len(result.Warnings) != 1 || !strings.Contains(result.Warnings[0], "2 cycle(s) in done still await merge and cleanup, or abandon: io-a, io-b") {
 		t.Fatalf("result = %+v err=%v", result, err)
 	}
 }

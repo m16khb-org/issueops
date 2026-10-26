@@ -94,7 +94,7 @@ func (service *Service) Next(ctx context.Context, stateRoot, cwd, id string) (is
 			if len(done) > maxCandidates {
 				shown, more = done[:maxCandidates], fmt.Sprintf(" and %d more (issueops list --repo %s --json)", len(done)-maxCandidates, placeholder(sourceRoot, "<source_root>"))
 			}
-			result.Warnings = append(result.Warnings, fmt.Sprintf("%d cycle(s) in done still await merge and cleanup: %s%s (issueops next --id ID --json)", len(done), strings.Join(shown, ", "), more))
+			result.Warnings = append(result.Warnings, fmt.Sprintf("%d cycle(s) in done still await merge and cleanup, or abandon: %s%s (issueops next --id ID --json)", len(done), strings.Join(shown, ", "), more))
 		}
 		// Probe: a damaged record has no readable repository, so the listing
 		// dropped it and next offered `start`, which opened a second cycle
