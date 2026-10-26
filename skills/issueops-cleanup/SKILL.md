@@ -159,7 +159,9 @@ sentence (e.g. "merge하고 정리까지 끝내줘 ... 정리는 승인함") and
 stopped it, that approval stands in for the confirmation only if all of these hold: the preview's
 worktree, branch, and issue are the record's; the worktree HEAD and local branch OID equal the
 merged head; the worktree has no uncommitted or untracked changes; and `workspace_processes`
-lists nothing to stop (descendant and collateral counts zero). Such an approval also covers the
+lists nothing to stop (descendant and collateral counts zero). The finish preview reports
+`workspace_processes` even while `completion_reflected` or `issue_closed` is still missing (exit 1),
+so read it there before those writes. Such an approval also covers the
 issue close and completion reflection writes, which still run as preview then the same confirm.
 Print the confirmation text above (with the `주의사항:` line) as the record even when not asking.
 If anything differs or cannot be determined, show the targets and ask again.
