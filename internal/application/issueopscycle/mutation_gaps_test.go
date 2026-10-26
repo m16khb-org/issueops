@@ -15,9 +15,9 @@ type baseAdvancedGit struct {
 	refs []string
 }
 
-func (g *baseAdvancedGit) BaseAdvanced(_, ref string) bool {
+func (g *baseAdvancedGit) BaseState(_, ref string) (bool, bool) {
 	g.refs = append(g.refs, ref)
-	return true
+	return true, true
 }
 
 func feedbackRecord() model.IssueOpsRecord {

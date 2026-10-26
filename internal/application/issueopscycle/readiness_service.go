@@ -119,18 +119,9 @@ func (s Readiness) observePR(record model.IssueOpsRecord, fetch func(string) rev
 		facts.FingerprintVerified = changes.Verified
 		facts.CurrentBranch = s.Git.Branch(root)
 		facts.WorktreeClean = s.Git.Clean(root)
-		if base := domain.PreparedBaseRef(record); base != "" {
-			ref := "origin/" + base
-			if s.Git.BaseAdvanced(root, ref) {
-				facts.BaseRemoteRef, facts.BaseAdvanced = ref, true
-				if commits := domain.BaseCommitsInWork(record); len(commits) > 0 {
-					facts.BaseRewritten = !domain.BaseHoldsWorkBase(commits,
-						func(commit string) bool { return s.Git.IsAncestor(root, commit, ref) },
-						func(commit string) bool { return s.Git.ContentAbsorbed(root, ref, commit) })
-				}
-			}
-		}
+		// Fetch first so the base is compared with what origin holds now.
 		facts.Upstream = s.Git.Upstream(root)
+		originFetched := false
 		if facts.Upstream != "" && syncUpstream {
 			if s.ClearGitObservations != nil {
 				s.ClearGitObservations()
@@ -140,6 +131,10 @@ func (s Readiness) observePR(record model.IssueOpsRecord, fetch func(string) rev
 				s.ClearGitObservations()
 			}
 			facts.FetchFailed, facts.FetchStderr = fetched.Failed, fetched.Stderr
+			originFetched = !fetched.Failed && strings.HasPrefix(facts.Upstream, "origin/")
+		}
+		s.observeBase(record, root, originFetched, &facts)
+		if facts.Upstream != "" && syncUpstream {
 			facts.UpstreamCounts = s.Git.Counts(root)
 		}
 	}
@@ -154,4 +149,30 @@ func (s Readiness) observePR(record model.IssueOpsRecord, fetch func(string) rev
 		artifacts.WorktreeValid = s.Paths.WorktreePathValid(path)
 	}
 	return ComposeObservedPRReadiness(record, ready, ObservedPRReadinessFacts{Git: facts, Artifact: artifacts, CurrentHead: head, CurrentFingerprint: fingerprint}), changes
+}
+
+// observeBase compares origin/<prepared base> with HEAD. A missing ref is a
+// fact only after a pruning fetch of origin; otherwise it is skipped.
+func (s Readiness) observeBase(record model.IssueOpsRecord, root string, originFetched bool, facts *domain.PRGitFacts) {
+	base := domain.PreparedBaseRef(record)
+	if base == "" {
+		return
+	}
+	ref := "origin/" + base
+	present, advanced := s.Git.BaseState(root, ref)
+	if !present {
+		if originFetched {
+			facts.BaseRemoteRef, facts.BaseMissing = ref, true
+		}
+		return
+	}
+	if !advanced {
+		return
+	}
+	facts.BaseRemoteRef, facts.BaseAdvanced = ref, true
+	if commits := domain.BaseCommitsInWork(record); len(commits) > 0 {
+		facts.BaseRewritten = !domain.BaseHoldsWorkBase(commits,
+			func(commit string) bool { return s.Git.IsAncestor(root, commit, ref) },
+			func(commit string) bool { return s.Git.ContentAbsorbed(root, ref, commit) })
+	}
 }

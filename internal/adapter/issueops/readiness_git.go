@@ -83,12 +83,12 @@ func (g ReadinessGit) Branch(root string) string {
 func (g ReadinessGit) Clean(root string) bool {
 	return strings.TrimSpace(g.Output(root, "status", "--porcelain=v1")) == ""
 }
-func (g ReadinessGit) BaseAdvanced(root, ref string) bool {
+func (g ReadinessGit) BaseState(root, ref string) (bool, bool) {
 	if code, _, _ := g.Run(root, "rev-parse", "--verify", "--end-of-options", ref+"^{commit}"); code != 0 {
-		return false
+		return false, false
 	}
 	code, _, _ := g.Run(root, "merge-base", "--is-ancestor", ref, "HEAD")
-	return code != 0
+	return true, code != 0
 }
 func (g ReadinessGit) IsAncestor(root, commit, ref string) bool {
 	code, _, _ := g.Run(root, "merge-base", "--is-ancestor", commit, ref)
@@ -104,7 +104,7 @@ func (g ReadinessGit) Upstream(root string) string {
 	return strings.TrimSpace(g.Output(root, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"))
 }
 func (g ReadinessGit) Fetch(root string) review.UpstreamFetch {
-	code, _, stderr := g.Run(root, "fetch", "--quiet")
+	code, _, stderr := g.Run(root, "fetch", "--quiet", "--prune")
 	return review.UpstreamFetch{Root: root, Failed: code != 0, Stderr: strings.TrimSpace(stderr)}
 }
 func (g ReadinessGit) Counts(root string) string {

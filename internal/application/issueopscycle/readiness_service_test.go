@@ -23,7 +23,7 @@ func (g *readinessGitFixture) Head(model.IssueOpsRecord) string            { ret
 func (g *readinessGitFixture) IsWorktree(string) bool                      { return true }
 func (g *readinessGitFixture) Branch(string) string                        { return "feature" }
 func (g *readinessGitFixture) Clean(string) bool                           { return true }
-func (g *readinessGitFixture) BaseAdvanced(string, string) bool            { return false }
+func (g *readinessGitFixture) BaseState(string, string) (bool, bool)       { return true, false }
 func (g *readinessGitFixture) IsAncestor(string, string, string) bool      { return true }
 func (g *readinessGitFixture) ContentAbsorbed(string, string, string) bool { return true }
 func (g *readinessGitFixture) Upstream(string) string                      { return "origin/feature" }

@@ -71,7 +71,7 @@ func TestGitObservationExactRootsArgumentsAndFetchBoundaries(t *testing.T) {
 		git.Counts("/repo")
 		git.Fetch("/repo")
 	}
-	if git.Counts("/repo") != "after" || git.Branch("/repo") != "after" || calls["/repo fetch --quiet"] != 2 || calls["/repo rev-list --left-right --count HEAD...@{u}"] != 3 || calls["/repo branch --show-current"] != 2 {
+	if git.Counts("/repo") != "after" || git.Branch("/repo") != "after" || calls["/repo fetch --quiet --prune"] != 2 || calls["/repo rev-list --left-right --count HEAD...@{u}"] != 3 || calls["/repo branch --show-current"] != 2 {
 		t.Fatalf("fetch/post-fetch observations were reused: %v", calls)
 	}
 	phase = "external"
@@ -91,8 +91,8 @@ func TestGitObservationKeepsRefAndHeadProbesFresh(t *testing.T) {
 	}
 	git, _ := NewReadinessGitObservations(run)
 	for range 2 {
-		git.BaseAdvanced("/repo", "origin/main")
-		git.BaseAdvanced("/repo", "origin/other")
+		git.BaseState("/repo", "origin/main")
+		git.BaseState("/repo", "origin/other")
 		git.IsWorktree("/repo")
 	}
 	for command, want := range map[string]int{

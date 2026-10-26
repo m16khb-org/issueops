@@ -11,7 +11,8 @@ type PRGitObservations interface {
 	IsWorktree(string) bool
 	Branch(string) string
 	Clean(string) bool
-	BaseAdvanced(root, ref string) bool
+	// BaseState reports whether ref resolves and, if so, whether it is not an ancestor of HEAD.
+	BaseState(root, ref string) (present, advanced bool)
 	// IsAncestor reports whether commit is an ancestor of ref.
 	IsAncestor(root, commit, ref string) bool
 	// ContentAbsorbed reports whether merging commit into ref changes nothing.

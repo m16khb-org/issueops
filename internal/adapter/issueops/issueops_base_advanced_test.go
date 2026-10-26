@@ -98,8 +98,46 @@ func TestStrictReadinessSkipsBaseObservationWithoutAComparableRef(t *testing.T) 
 	if hasBaseAdvancedWarning(IssueOpsStrictPRReadiness(noPrepare)) {
 		t.Fatal("a record without branch prepare has no base to compare")
 	}
-	// 로컬에 없는 base ref는 문서화된 false negative다.
+	// 로컬에 없는 base ref를 앞서 나간 base로 추정하지 않는다.
 	if hasBaseAdvancedWarning(IssueOpsStrictPRReadiness(baseAdvancedRecord(repo, "nope"))) {
-		t.Fatal("an absent local ref must be skipped silently, not guessed")
+		t.Fatal("an absent ref must never be reported as advanced")
 	}
+}
+
+// origin에서 base가 지워지면(삭제·이름 변경) prune fetch 뒤 base_missing을 경고한다.
+// 그대로 두면 오래된 origin/<base>가 남아 PR 생성이 provider에서야 실패한다.
+func TestStrictReadinessWarnsWhenBaseWasDeletedOnOrigin(t *testing.T) {
+	t.Parallel()
+
+	repo := initIssueOpsRepo(t)
+	code, origin, stderr := preflight.GitCmd(repo, "remote", "get-url", "origin")
+	if code != 0 {
+		t.Fatalf("remote get-url failed: %s", stderr)
+	}
+	if code, _, stderr := preflight.GitCmd(repo, "push", "-q", "origin", "main:release"); code != 0 {
+		t.Fatalf("push failed: %s", stderr)
+	}
+	if code, _, stderr := preflight.GitCmd(repo, "fetch", "-q", "origin"); code != 0 {
+		t.Fatalf("fetch failed: %s", stderr)
+	}
+	record := baseAdvancedRecord(repo, "release")
+	if hasWarningPrefix(IssueOpsStrictPRReadiness(record), "base_missing:") {
+		t.Fatal("an existing base must not warn")
+	}
+	if code, _, stderr := preflight.GitCmd(strings.TrimSpace(origin), "branch", "-D", "release"); code != 0 {
+		t.Fatalf("delete on origin failed: %s", stderr)
+	}
+	ready := IssueOpsStrictPRReadiness(record)
+	if !hasWarningPrefix(ready, "base_missing: origin/release") || hasBaseAdvancedWarning(ready) {
+		t.Fatalf("a base deleted on origin must warn base_missing only: %+v", ready.Warnings)
+	}
+}
+
+func hasWarningPrefix(ready issueops.IssueOpsReadiness, prefix string) bool {
+	for _, warning := range ready.Warnings {
+		if strings.HasPrefix(warning, prefix) {
+			return true
+		}
+	}
+	return false
 }

@@ -17,7 +17,9 @@ type PRGitFacts struct {
 	BaseAdvanced        bool
 	// BaseRewritten: the base ref holds neither the sealed base nor its
 	// content (a squash-merged parent's content counts as held).
-	BaseRewritten  bool
+	BaseRewritten bool
+	// BaseMissing: origin no longer has the base branch (seen after a pruning fetch).
+	BaseMissing    bool
 	Upstream       string
 	SyncUpstream   bool
 	FetchFailed    bool
@@ -53,7 +55,9 @@ func prWorktreeReadiness(record model.IssueOpsRecord, facts PRGitFacts, missing,
 	if !facts.WorktreeClean {
 		missing = append(missing, "worktree_clean")
 	}
-	if facts.BaseRewritten {
+	if facts.BaseMissing {
+		warnings = append(warnings, "base_missing: "+facts.BaseRemoteRef+" no longer exists on origin (deleted or renamed); run issueops execution sync-base --id "+record.ID+" --preview, which names how to re-record the new base")
+	} else if facts.BaseRewritten {
 		warnings = append(warnings, "base_rewritten: "+facts.BaseRemoteRef+" no longer contains the sealed base or its content (rewritten, e.g. force-pushed); a PR from this branch would bring the dropped commits back. Ask the user before opening or merging it: keep the base as is, or start a new cycle from the rewritten base")
 	} else if facts.BaseAdvanced {
 		warnings = append(warnings, "base_advanced: "+facts.BaseRemoteRef+" is not an ancestor of HEAD; run issueops execution sync-base --id "+record.ID+" --preview")
