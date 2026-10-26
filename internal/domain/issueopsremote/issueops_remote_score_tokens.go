@@ -95,7 +95,7 @@ func issueOpsRemoteLabelEvidence(issueTokens map[string]bool) issueOpsRemoteType
 // issueOpsRemoteLabelEvidenceScore는 규칙 라벨의 점수를 돌려준다. 이름에 규칙이 없으면 ok가 false다.
 // 전체 근거가 최소 개수 미만이면 0이다.
 func issueOpsRemoteLabelEvidenceScore(evidence issueOpsRemoteTypeEvidence, candidate IssueOpsRemoteLabelCandidate) (score float64, matched []string, ok bool) {
-	matched, ok = evidence.matched[strings.ToLower(strings.TrimSpace(candidate.Name))]
+	matched, ok = evidence.matched[issueOpsRemoteRuleLabel(candidate.Name)]
 	if !ok {
 		return 0, nil, false
 	}
@@ -103,4 +103,23 @@ func issueOpsRemoteLabelEvidenceScore(evidence issueOpsRemoteTypeEvidence, candi
 		return 0, matched, true
 	}
 	return float64(len(matched)) / float64(evidence.total), matched, true
+}
+
+// issueOpsRemoteRuleSynonyms maps the type word of common label schemes to
+// the keyword rule it scores with.
+var issueOpsRemoteRuleSynonyms = map[string]string{
+	"bug": "bug", "enhancement": "enhancement", "feature": "enhancement",
+	"documentation": "documentation", "docs": "documentation",
+}
+
+// issueOpsRemoteRuleLabel resolves a label name to its keyword rule. QA: a
+// repository labelled kind/feature, kind/bug scored every label 0 because
+// rules matched only the bare GitHub default names. The type word is the
+// part after the last "/" or ":" (kind/feature, type: bug, docs).
+func issueOpsRemoteRuleLabel(name string) string {
+	word := strings.ToLower(strings.TrimSpace(name))
+	if i := strings.LastIndexAny(word, "/:"); i >= 0 {
+		word = strings.TrimSpace(word[i+1:])
+	}
+	return issueOpsRemoteRuleSynonyms[word]
 }

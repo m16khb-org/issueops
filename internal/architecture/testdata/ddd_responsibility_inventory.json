@@ -14809,6 +14809,7 @@
         "func issueOpsRemoteLabelEvidence",
         "func issueOpsRemoteLabelEvidenceScore",
         "func issueOpsRemoteOverlap",
+        "func issueOpsRemoteRuleLabel",
         "func issueOpsRemoteTokens",
         "type issueOpsRemoteTypeEvidence"
       ]

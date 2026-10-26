@@ -84,6 +84,30 @@ func TestScoreIssueOpsRemoteLabelWithoutKeywordRuleKeepsOverlapScore(t *testing.
 	}
 }
 
+// QA: kind/feature, kind/bug scored 0 because keyword rules matched only the
+// bare default names; the type word after "/" or ":" now selects the rule.
+func TestScoreIssueOpsRemoteLabelResolvesPrefixedTypeLabels(t *testing.T) {
+	res, err := ScoreIssueOpsRemoteCandidates(IssueOpsRemoteScoringRequest{
+		Issue: IssueOpsRemoteArtifact{Title: "calc에 절댓값 함수 absval(x) 추가", Body: "calc 패키지에 absval(x) 기능과 단위 테스트를 추가한다. 새로운 기능이다."},
+		LabelCandidates: []IssueOpsRemoteLabelCandidate{
+			{Name: "kind/feature", Description: "New capability"},
+			{Name: "type: bug", Description: "Defect fix"},
+			{Name: "area/calc", Description: "calc package"},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.SelectedLabels) != 1 || res.SelectedLabels[0].Name != "kind/feature" {
+		t.Fatalf("selected = %+v, rejected = %+v", res.SelectedLabels, res.RejectedLabels)
+	}
+	for name, want := range map[string]string{"kind/feature": "enhancement", "type: bug": "bug", "docs": "documentation", "Feature": "enhancement", "area/calc": "", "featureflag": ""} {
+		if got := issueOpsRemoteRuleLabel(name); got != want {
+			t.Errorf("issueOpsRemoteRuleLabel(%q) = %q, want %q", name, got, want)
+		}
+	}
+}
+
 // One matched type token is below the evidence floor, so the scorer abstains;
 // the rejection says so instead of reading like a failed score.
 func TestScoreIssueOpsRemoteLabelNamesAbstentionOnThinEvidence(t *testing.T) {
