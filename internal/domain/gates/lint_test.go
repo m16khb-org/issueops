@@ -97,6 +97,25 @@ func TestLintStaticWarnsOnRegexLookingLiteralExpect(t *testing.T) {
 	}
 }
 
+// QA: EXPECT "exit 0" on a silent assertion failed the gate; EXPECT reads
+// output lines and exit code 0 is always required.
+func TestLintStaticWarnsWhenExpectDescribesAnExitStatus(t *testing.T) {
+	for _, expect := range []string{"exit 0", "Exit code 0", "exit status: 0", "rc=0", "return code 0"} {
+		result, _ := LintStatic(LintSpecCandidate("spec", "G1: x | CHECK: printf ok | EXPECT: "+expect))
+		if len(result.Problems) != 0 || len(result.Warnings) != 1 || !strings.Contains(result.Warnings[0], "not its exit status") {
+			t.Fatalf("%q: problems=%q warnings=%q", expect, result.Problems, result.Warnings)
+		}
+	}
+	for _, expect := range []string{"0", "exit 1", "exited cleanly", "/exit 0/"} {
+		result, _ := LintStatic(LintSpecCandidate("spec", "G1: x | CHECK: printf ok | EXPECT: "+expect))
+		for _, warning := range result.Warnings {
+			if strings.Contains(warning, "not its exit status") {
+				t.Fatalf("%q must not warn: %q", expect, warning)
+			}
+		}
+	}
+}
+
 // `sh script.sh` (the form project docs often give) is denied; the message
 // names the form that runs. Denials without a remedy carry no hint.
 func TestDeniedMessageNamesTheShellInterpreterRemedy(t *testing.T) {

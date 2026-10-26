@@ -159,11 +159,19 @@ func LintStatic(candidate LintCandidate) (result model.LintGate, argv []string) 
 		result.Warnings = append(result.Warnings, "EXPECT starts with / but is not /pattern/flags, so it is matched as a literal line")
 	case !isRegex && len(expect) > 2 && strings.HasPrefix(expect, "^") && strings.HasSuffix(expect, "$"):
 		result.Problems = append(result.Problems, fmt.Sprintf("EXPECT %s is an anchored regex but is matched as a literal line, so it never matches; write /%s/", expect, expect))
+	case !isRegex && exitStatusExpect.MatchString(expect):
+		// QA: EXPECT "exit 0" on a silent assertion failed the gate; EXPECT
+		// matches output lines, and exit code 0 is already required.
+		result.Warnings = append(result.Warnings, fmt.Sprintf("EXPECT %q is matched against the command's output, not its exit status (exit code 0 is always required); leave EXPECT empty for a silent command, or print a value and expect it", expect))
 	case !isRegex && literalLooksLikeRegex(expect):
 		result.Warnings = append(result.Warnings, fmt.Sprintf("EXPECT %s looks like a regex but is matched as a literal line; write /pattern/ if a regex is meant", expect))
 	}
 	return result, argv
 }
+
+// exitStatusExpect matches EXPECT values that describe an exit status
+// instead of an output line.
+var exitStatusExpect = regexp.MustCompile(`(?i)^(?:exit(?:\s*(?:code|status))?|return\s*code|rc)\s*[:=]?\s*0$`)
 
 // literalLooksLikeRegex reports regex syntax that a literal EXPECT keeps as
 // characters: an anchor at either end or an escape/wildcard sequence.
