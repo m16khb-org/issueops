@@ -47,14 +47,26 @@ func (p Provider) MergePullRequest(ctx context.Context, req port.IssueProviderPu
 		return model.RemotePullRequestMergeState{}, fmt.Errorf("merge method must be squash, merge, or rebase")
 	}
 	if req.MarkReady {
-		if _, _, err := providerutil.RunBoundedMutationContext(ctx, req.Repo, "gh", "pr", "ready", artifactURL); err != nil {
-			return model.RemotePullRequestMergeState{}, fmt.Errorf("gh pr ready failed: %w", err)
+		if err := p.MarkPullRequestReady(ctx, req.Repo, artifactURL); err != nil {
+			return model.RemotePullRequestMergeState{}, err
 		}
 	}
 	if _, _, err := providerutil.RunBoundedMutationContext(ctx, req.Repo, "gh", "pr", "merge", artifactURL, methodFlag, "--match-head-commit", head); err != nil {
 		return model.RemotePullRequestMergeState{}, fmt.Errorf("gh pr merge failed: %w", err)
 	}
 	return p.ReadPullRequestMergeState(ctx, req.Repo, artifactURL)
+}
+
+// MarkPullRequestReady clears the draft state; the caller reads it back.
+func (Provider) MarkPullRequestReady(ctx context.Context, repo, artifactURL string) error {
+	artifactURL = strings.TrimSpace(artifactURL)
+	if !validCanonicalGitHubPullRequestURL(artifactURL) {
+		return fmt.Errorf("pull request url must be a canonical https://<host>/<owner>/<repo>/pull/<number> url")
+	}
+	if _, _, err := providerutil.RunBoundedMutationContext(ctx, repo, "gh", "pr", "ready", artifactURL); err != nil {
+		return fmt.Errorf("gh pr ready failed: %w", err)
+	}
+	return nil
 }
 
 type ghCheck struct {

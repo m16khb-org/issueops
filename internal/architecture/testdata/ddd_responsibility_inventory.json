@@ -994,6 +994,7 @@
       "task": "T20",
       "symbols": [
         "func closeRemoteIssue",
+        "func markRemotePullRequestReady",
         "func mergeRemotePullRequest",
         "func newRemoteCompletionService",
         "func reflectRemoteCompletion"
@@ -1981,6 +1982,15 @@
       "task": "T20",
       "symbols": [
         "type reflectCompletionResponse"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopscli/remotecmd/remote_ready.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func Command.runRemoteMarkReady",
+        "func printRemoteReadyResult"
       ]
     },
     {
@@ -6996,6 +7006,7 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
+        "func Provider.MarkPullRequestReady",
         "func Provider.MergePullRequest",
         "func Provider.ReadPullRequestMergeState",
         "func ghCheckOutcome",
@@ -7097,9 +7108,11 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
+        "func Provider.MarkPullRequestReady",
         "func Provider.MergePullRequest",
         "func Provider.ReadPullRequestMergeState",
         "func gitLabMergeRequestEndpoint",
+        "func markMergeRequestReady",
         "func parseGlabMergeState"
       ]
     },
@@ -9683,6 +9696,15 @@
       ]
     },
     {
+      "path": "internal/application/issueopsremote/remote_ready.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func RemoteMergeService.MarkReady",
+        "func projectReadyResult"
+      ]
+    },
+    {
       "path": "internal/application/issueopsremote/review_reflection.go",
       "owner": "application",
       "task": "T07",
@@ -11225,7 +11247,8 @@
       "symbols": [
         "type RemoteMergeBlocker",
         "type RemoteMergeResult",
-        "type RemotePullRequestMergeState"
+        "type RemotePullRequestMergeState",
+        "type RemoteReadyResult"
       ]
     },
     {
@@ -13787,6 +13810,8 @@
         "func MergeMethodRefusedAlternative",
         "func NormalizeMergeMethod",
         "func ResolveMergeTarget",
+        "func ResolveReadyTarget",
+        "func resolveCompletedArtifact",
         "type MergeTarget"
       ]
     },
@@ -16857,6 +16882,7 @@
         "type IssueProviderPullRequestCloser",
         "type IssueProviderPullRequestMergeRequest",
         "type IssueProviderPullRequestMerger",
+        "type IssueProviderPullRequestReadier",
         "type IssueProviderRecentIssueLister",
         "type IssueProviderRecentIssuesRequest",
         "type IssueProviderReconcilePullRequestCandidate",

@@ -89,6 +89,7 @@ const IssueOpsUsageCatalog = `  issueops start --repo PATH [--branch NAME | --ne
   issueops remote reflect-completion --id ID [--provider github|gitlab] [--body-file PATH] [--confirm] [--json]
   issueops remote close-issue --id ID [--provider github|gitlab] [--confirm] [--json]
   issueops remote merge-pr --id ID [--method squash|merge|rebase] [--confirm] [--json]
+  issueops remote mark-ready --id ID [--confirm] [--json]
   issueops benchmark run --fixtures PATH [--judge none|file] [--judge-file PATH] [--json]
   issueops benchmark compare --baseline KEY --candidate KEY [--json]
   issueops benchmark gate --baseline KEY --candidate KEY --candidate-file PATH [--changed-path PATH]... [--json]

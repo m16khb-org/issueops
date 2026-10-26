@@ -21,10 +21,11 @@ func newIssueOpsRemote(root string) remotecmd.Command {
 		CreateChild: func(ctx context.Context, root string, cmd remoteapp.ChildCreateCommand, observe remoteapp.AncestryObserver) (remoteapp.ChildCreateResult, error) {
 			return newChildCreator(root).Create(ctx, cmd, observe)
 		},
-		VerifyRemoteArtifact:    verifyRemoteArtifact,
-		ReflectRemoteCompletion: reflectRemoteCompletion,
-		CloseRemoteIssue:        closeRemoteIssue,
-		MergeRemotePullRequest:  mergeRemotePullRequest,
+		VerifyRemoteArtifact:       verifyRemoteArtifact,
+		ReflectRemoteCompletion:    reflectRemoteCompletion,
+		CloseRemoteIssue:           closeRemoteIssue,
+		MergeRemotePullRequest:     mergeRemotePullRequest,
+		MarkRemotePullRequestReady: markRemotePullRequestReady,
 
 		CreateIssue:                  createIssue,
 		ReadScoreSummaryFile:         remoteapp.NewTemplateBodyResolver(os.ReadFile).ScoreSummary,

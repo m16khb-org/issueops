@@ -65,19 +65,7 @@ func (p Provider) MergePullRequest(ctx context.Context, req port.IssueProviderPu
 		return model.RemotePullRequestMergeState{}, fmt.Errorf("merge method must be squash, merge, or rebase")
 	}
 	if req.MarkReady {
-		out, err := runGlabAPIContext(ctx, req.Repo, hostname, endpoint)
-		if err != nil {
-			return model.RemotePullRequestMergeState{}, err
-		}
-		_, title, err := parseGlabMergeState(out)
-		if err != nil {
-			return model.RemotePullRequestMergeState{}, err
-		}
-		ready := gitLabDraftTitle.ReplaceAllString(title, "")
-		if ready == title {
-			return model.RemotePullRequestMergeState{}, fmt.Errorf("merge request is a draft but its title %q has no draft prefix to remove", title)
-		}
-		if _, err := runGlabAPIContext(ctx, req.Repo, hostname, endpoint, "--method", "PUT", "-f", "title="+ready); err != nil {
+		if err := markMergeRequestReady(ctx, req.Repo, hostname, endpoint); err != nil {
 			return model.RemotePullRequestMergeState{}, err
 		}
 	}
@@ -86,6 +74,33 @@ func (p Provider) MergePullRequest(ctx context.Context, req port.IssueProviderPu
 		return model.RemotePullRequestMergeState{}, err
 	}
 	return p.ReadPullRequestMergeState(ctx, req.Repo, req.URL)
+}
+
+// MarkPullRequestReady removes the draft title prefix (the update API has no
+// draft attribute); the caller reads the state back.
+func (Provider) MarkPullRequestReady(ctx context.Context, repo, artifactURL string) error {
+	hostname, endpoint, err := gitLabMergeRequestEndpoint(artifactURL)
+	if err != nil {
+		return err
+	}
+	return markMergeRequestReady(ctx, repo, hostname, endpoint)
+}
+
+func markMergeRequestReady(ctx context.Context, repo, hostname, endpoint string) error {
+	out, err := runGlabAPIContext(ctx, repo, hostname, endpoint)
+	if err != nil {
+		return err
+	}
+	_, title, err := parseGlabMergeState(out)
+	if err != nil {
+		return err
+	}
+	ready := gitLabDraftTitle.ReplaceAllString(title, "")
+	if ready == title {
+		return fmt.Errorf("merge request is a draft but its title %q has no draft prefix to remove", title)
+	}
+	_, err = runGlabAPIContext(ctx, repo, hostname, endpoint, "--method", "PUT", "-f", "title="+ready)
+	return err
 }
 
 func gitLabMergeRequestEndpoint(artifactURL string) (string, string, error) {

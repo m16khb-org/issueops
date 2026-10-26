@@ -293,6 +293,12 @@ type IssueProviderPullRequestMerger interface {
 	MergePullRequest(context.Context, IssueProviderPullRequestMergeRequest) (completionmodel.RemotePullRequestMergeState, error)
 }
 
+// IssueProviderPullRequestReadier clears a PR/MR's draft state without merging.
+// Optional for the same reason as IssueProviderPullRequestMerger.
+type IssueProviderPullRequestReadier interface {
+	MarkPullRequestReady(ctx context.Context, repo, url string) error
+}
+
 // IssueProvider is implemented by provider-specific adapters such as GitHub and GitLab.
 // Every mutating operation requires Confirm=true; without it, only a dry-run preview
 // is returned.

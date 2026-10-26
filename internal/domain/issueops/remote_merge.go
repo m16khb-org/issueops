@@ -33,18 +33,28 @@ type MergeTarget struct {
 // everything up to `execution complete`, and merging an artifact whose
 // completion is missing would merge unverified commits.
 func ResolveMergeTarget(record model.IssueOpsRecord) (MergeTarget, error) {
+	return resolveCompletedArtifact(record, "merge-pr")
+}
+
+// ResolveReadyTarget admits the same completed cycle as merge-pr: marking a
+// draft ready asks for review of the sealed completion head.
+func ResolveReadyTarget(record model.IssueOpsRecord) (MergeTarget, error) {
+	return resolveCompletedArtifact(record, "mark-ready")
+}
+
+func resolveCompletedArtifact(record model.IssueOpsRecord, command string) (MergeTarget, error) {
 	if record.Phase != model.IssueOpsPhaseDone {
-		return MergeTarget{}, fmt.Errorf("merge-pr requires a completed cycle (phase done); current phase is %s", record.Phase)
+		return MergeTarget{}, fmt.Errorf("%s requires a completed cycle (phase done); current phase is %s", command, record.Phase)
 	}
 	if record.Execution == nil || record.Execution.Completion == nil || strings.TrimSpace(record.Execution.Completion.FinalHead) == "" {
-		return MergeTarget{}, fmt.Errorf("merge-pr requires a recorded execution completion")
+		return MergeTarget{}, fmt.Errorf("%s requires a recorded execution completion", command)
 	}
 	if record.Execution.Lease.Status != model.LeaseStatusReleased {
-		return MergeTarget{}, fmt.Errorf("merge-pr requires a released execution lease; current lease is %s", record.Execution.Lease.Status)
+		return MergeTarget{}, fmt.Errorf("%s requires a released execution lease; current lease is %s", command, record.Execution.Lease.Status)
 	}
 	artifact := record.RemoteArtifact
 	if artifact == nil || strings.TrimSpace(artifact.URL) == "" || strings.TrimSpace(artifact.Provider) == "" {
-		return MergeTarget{}, fmt.Errorf("merge-pr requires a verified remote artifact")
+		return MergeTarget{}, fmt.Errorf("%s requires a verified remote artifact", command)
 	}
 	if completed := strings.TrimSpace(record.Execution.Completion.RemoteArtifactURL); completed != "" && completed != strings.TrimSpace(artifact.URL) {
 		return MergeTarget{}, fmt.Errorf("completion artifact %s does not match the verified remote artifact %s", completed, artifact.URL)

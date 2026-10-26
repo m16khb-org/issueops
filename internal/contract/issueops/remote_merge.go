@@ -51,6 +51,23 @@ type RemoteMergeBlocker struct {
 	Message string `json:"message"`
 }
 
+// RemoteReadyResult is the output of `issueops remote mark-ready`: a completed
+// cycle's draft PR/MR made ready for review without merging it.
+type RemoteReadyResult struct {
+	OK              bool     `json:"ok"`
+	ID              string   `json:"id"`
+	Provider        string   `json:"provider"`
+	URL             string   `json:"url"`
+	State           string   `json:"state"`
+	Draft           bool     `json:"draft"`
+	HeadOID         string   `json:"head_oid"`
+	ExpectedHeadOID string   `json:"expected_head_oid"`
+	AlreadyReady    bool     `json:"already_ready,omitempty"`
+	MarkedReady     bool     `json:"marked_ready,omitempty"`
+	NextCommand     string   `json:"next_command,omitempty"`
+	Warnings        []string `json:"warnings,omitempty"`
+}
+
 // RemoteMergeResult is the CLI/MCP-neutral output of `issueops remote merge-pr`.
 type RemoteMergeResult struct {
 	OK              bool                 `json:"ok"`
