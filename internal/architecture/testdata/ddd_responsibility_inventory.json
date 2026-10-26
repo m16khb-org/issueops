@@ -994,6 +994,7 @@
       "task": "T20",
       "symbols": [
         "func closeRemoteIssue",
+        "func commentRemote",
         "func markRemotePullRequestReady",
         "func mergeRemotePullRequest",
         "func newRemoteCompletionService",
@@ -1915,6 +1916,16 @@
       "task": "T20",
       "symbols": [
         "func Command.runRemoteReconcileChild"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopscli/remotecmd/remote_comment.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func Command.runRemoteComment",
+        "func confirmCommand",
+        "func needsShellQuote"
       ]
     },
     {
@@ -6986,6 +6997,14 @@
       ]
     },
     {
+      "path": "internal/adapter/provider/github/comment.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Provider.Comment"
+      ]
+    },
+    {
       "path": "internal/adapter/provider/github/created_artifact_number.go",
       "owner": "adapter",
       "task": "T20",
@@ -7091,6 +7110,14 @@
       "symbols": [
         "func Provider.ClosePullRequest",
         "func readGlabMergeRequestState"
+      ]
+    },
+    {
+      "path": "internal/adapter/provider/gitlab/comment.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Provider.Comment"
       ]
     },
     {
@@ -7259,6 +7286,7 @@
       "task": "T20",
       "symbols": [
         "func Resolve",
+        "func ResolveCommenter",
         "func ResolvePullRequestMerger"
       ]
     },
@@ -9664,6 +9692,18 @@
       ]
     },
     {
+      "path": "internal/application/issueopsremote/remote_comment.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func NewRemoteCommentService",
+        "func RemoteCommentService.Comment",
+        "func commentTarget",
+        "type CommentProviderResolver",
+        "type RemoteCommentService"
+      ]
+    },
+    {
       "path": "internal/application/issueopsremote/remote_completion.go",
       "owner": "application",
       "task": "T07",
@@ -11229,6 +11269,14 @@
         "func validateRecordRegressEvents",
         "func validateRecordRemoteArtifact",
         "func validateRecordRoutingTrace"
+      ]
+    },
+    {
+      "path": "internal/contract/issueops/remote_comment.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type RemoteCommentResult"
       ]
     },
     {
@@ -14721,6 +14769,14 @@
       ]
     },
     {
+      "path": "internal/domain/issueopsremote/comment.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ValidateComment"
+      ]
+    },
+    {
       "path": "internal/domain/issueopsremote/create_metadata.go",
       "owner": "domain",
       "task": "T07",
@@ -16868,6 +16924,7 @@
         "type IssueProviderCloseIssueResult",
         "type IssueProviderClosePullRequestRequest",
         "type IssueProviderClosePullRequestResult",
+        "type IssueProviderCommenter",
         "type IssueProviderCreateChildRequest",
         "type IssueProviderCreateChildResult",
         "type IssueProviderCreateError",

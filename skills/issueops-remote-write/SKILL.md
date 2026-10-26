@@ -11,6 +11,8 @@ description: Use before any governed "issueops remote ..." write (issue, child t
 - 이슈 생성: [`issueops-create-issue`](../issueops-create-issue/SKILL.md)
 - PR/MR 생성: [`issueops-create-pr`](../issueops-create-pr/SKILL.md)
 - 본문 동기화: [`issueops-sync-issue`](../issueops-sync-issue/SKILL.md), [`issueops-sync-pr`](../issueops-sync-pr/SKILL.md)
+- 사용자가 요청한 댓글: `issueops remote comment --id "$ISSUEOPS_ID" --on issue|pr --body-file "$FILE" --json`(preview)
+  → 응답의 `next_command`(같은 요청 + `--confirm`). fluent-korean·secret 규칙은 같다. 실패한 게시는 댓글 목록을 읽기 전에 다시 쓰지 않는다.
 - 한국어 문체: [`fluent-korean`](../fluent-korean/SKILL.md)
 - 본문 작성 지침: [`references/readable-body.md`](references/readable-body.md)
 

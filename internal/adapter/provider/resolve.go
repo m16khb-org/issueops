@@ -25,6 +25,19 @@ func Resolve(name string) (port.IssueProvider, error) {
 	}
 }
 
+// ResolveCommenter returns the comment capability of the named provider.
+func ResolveCommenter(name string) (port.IssueProviderCommenter, error) {
+	resolved, err := Resolve(name)
+	if err != nil {
+		return nil, err
+	}
+	commenter, ok := resolved.(port.IssueProviderCommenter)
+	if !ok {
+		return nil, fmt.Errorf("provider %q cannot post comments", name)
+	}
+	return commenter, nil
+}
+
 // ResolvePullRequestMerger returns the merge capability of the named provider.
 func ResolvePullRequestMerger(name string) (port.IssueProviderPullRequestMerger, error) {
 	resolved, err := Resolve(name)

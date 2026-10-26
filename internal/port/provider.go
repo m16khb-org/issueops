@@ -299,6 +299,13 @@ type IssueProviderPullRequestReadier interface {
 	MarkPullRequestReady(ctx context.Context, repo, url string) error
 }
 
+// IssueProviderCommenter posts one comment on an issue (kind "issue") or a
+// PR/MR (kind "pr") and returns the comment URL the provider reported.
+// Optional for the same reason as IssueProviderPullRequestMerger.
+type IssueProviderCommenter interface {
+	Comment(ctx context.Context, repo, targetURL, kind, body string) (string, error)
+}
+
 // IssueProvider is implemented by provider-specific adapters such as GitHub and GitLab.
 // Every mutating operation requires Confirm=true; without it, only a dry-run preview
 // is returned.
