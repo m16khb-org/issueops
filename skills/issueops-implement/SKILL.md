@@ -44,7 +44,8 @@ git -C "$WORKTREE" status --porcelain
 
 holder/generation 불일치는 아래 회복 표를 따른다. branch·HEAD 불일치나 무관한 dirty 변경은 stop이다.
 
-진입 전에 인계 결정 기록과 원래 요청의 승인 범위·종료점을 `status`로 대조한다.
+진입 전에 인계 결정 기록과 원래 요청의 승인 범위·종료점을 `status`로 대조한다. 나중에 받은 더 넓은
+승인이 계획의 종료점보다 우선하며, 계획은 고치지 않고 `decision add --kind scope`로 남긴다.
 새 세션은 이전 holder의 release 확인 후 자기 lease로 인수하며, 이미 인계받았으면
 재인계하지 않는다. 보류·phase·claim·`--approved`는 구현이나 publication 승인이 아니다.
 준비 세션은 같은 worktree에서 Herdr를 먼저 확인한다. 준비 세션이 Herdr 세션이고 실행 중인
