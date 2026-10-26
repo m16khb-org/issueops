@@ -1,6 +1,6 @@
 ---
 name: issueops-abandon
-description: 'Use to pause or abandon an unmerged IssueOps cycle ("중단", "탈출", "일시 중단", "abandon the cycle", or an abandon exit in "issueops next"). Pause releases the lease; abandon closes PR/MR and issue and removes branch, worktree, record. Merged: issueops-cleanup.'
+description: 'Use to pause or abandon an unmerged IssueOps cycle ("중단", "탈출", "일시 중단", "abandon the cycle"). Pause releases the lease; abandon closes PR/MR and issue and removes branch, worktree, record. Merged: issueops-cleanup.'
 ---
 
 # IssueOps Abandon

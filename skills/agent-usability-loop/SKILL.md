@@ -1,6 +1,6 @@
 ---
 name: agent-usability-loop
-description: 'Use to improve how coding agents use a CLI, MCP server, or harness ("에이전트 사용성 개선", "agent QA 돌려줘", "autoresearch"): measures model-facing output, runs real host agents in sandboxes with provider stand-ins and fault injection, keeps or reverts one change per run.'
+description: 'Use to improve how coding agents use a CLI, MCP server, or harness ("에이전트 사용성 개선", "agent QA 돌려줘", "autoresearch"): measures model-facing output, runs host agents in sandboxes, keeps or reverts one change per run.'
 ---
 
 # Agent Usability Loop
