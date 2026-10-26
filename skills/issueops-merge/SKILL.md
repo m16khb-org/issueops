@@ -73,6 +73,9 @@ issueops next --id "$ISSUEOPS_ID" --json
 
 ## 3 미리보기
 
+사용자가 PR 리뷰 반영을 함께 요청했으면 미리보기 전에 [`review-agent-feedback`](../review-agent-feedback/SKILL.md)으로
+지적마다 판정한다. 반영할 지적은 `references/blocker-recovery.md`의 **코드 결함** 갈래(reseed)로 고친 뒤 미리보기를 다시 한다.
+
 ```bash
 issueops remote merge-pr --id "$ISSUEOPS_ID" --json
 ```
