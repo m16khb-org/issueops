@@ -472,3 +472,37 @@ func TestPublicationPreviewWarnsWhenTheIssueIsClosed(t *testing.T) {
 		}
 	}
 }
+
+// QA: a body with only the issueops sections was published in a repository
+// whose PR template asked for What, Risk and a checklist.
+func TestPublicationPreviewNamesRepositoryTemplateSectionsTheBodyLacks(t *testing.T) {
+	record := publicationRecord()
+	record.Repo, record.WorktreePath = "/repo", "/repo.worktrees/7-demo"
+	publish := func(context.Context, model.RemotePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
+		return executionissue.IssueProviderCreatePullRequestResult{OK: true, Preview: "preview"}, nil
+	}
+	files := map[string]string{}
+	read := func(path string) ([]byte, error) {
+		if content, ok := files[path]; ok {
+			return []byte(content), nil
+		}
+		return nil, os.ErrNotExist
+	}
+	root := record.WorktreePath
+	create := func() []string {
+		store, _ := newArtifactStoreForTest(record)
+		service := NewPublicationCommandService(store, NewTemplateBodyResolver(os.ReadFile), nil, nil, publish).WithRepoTemplates(read)
+		result, err := service.Create(context.Background(), PublicationInput{Request: model.RemotePullRequestRequest{ID: "io-pub", Title: "제목", Body: koreanBody}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return result.Warnings
+	}
+	if got := create(); len(got) != 0 {
+		t.Fatalf("no repository template must not warn: %q", got)
+	}
+	files[root+"/.github/pull_request_template.md"] = "## What\n\n## Risk\n"
+	if got := create(); len(got) != 1 || !strings.HasPrefix(got[0], "repo_template_sections_missing: .github/pull_request_template.md asks for sections the body lacks: What, Risk.") {
+		t.Fatalf("warnings = %q", got)
+	}
+}

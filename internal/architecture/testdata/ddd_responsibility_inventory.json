@@ -9603,7 +9603,9 @@
         "func NewPublicationCommandService",
         "func PublicationCommandService.Create",
         "func PublicationCommandService.WithIssueState",
+        "func PublicationCommandService.WithRepoTemplates",
         "func PublicationCommandService.issueWarnings",
+        "func PublicationCommandService.templateWarnings",
         "type PublicationCommandService",
         "type PublicationInput",
         "type PublicationInvoker"
@@ -14849,6 +14851,16 @@
       "task": "T07",
       "symbols": [
         "func PublicationFailureDiagnostic"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsremote/repo_template.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func RepoPullRequestTemplatePaths",
+        "func TemplateSectionsMissing",
+        "func markdownHeadings"
       ]
     },
     {

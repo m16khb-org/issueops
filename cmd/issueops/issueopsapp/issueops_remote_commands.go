@@ -30,7 +30,7 @@ func newPublicationCommand(root string, publish model.RemotePullRequestCreateHan
 		}
 		snapshot, err := core.ReadRemoteIssueSnapshot(ctx, prov, executionissue.ExecutionIssueSnapshotRequest{Repo: record.Repo, URL: record.IssueURL})
 		return snapshot.State, err
-	})
+	}).WithRepoTemplates(os.ReadFile)
 }
 
 func createPublication(ctx context.Context, root string, input application.PublicationInput, publish model.RemotePullRequestCreateHandler, observe application.AncestryObserver) (application.PublicationResult, error) {

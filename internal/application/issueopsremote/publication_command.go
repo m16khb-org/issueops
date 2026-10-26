@@ -28,12 +28,21 @@ type PublicationCommandService struct {
 	publish   PublicationInvoker
 	// issueState reads the linked issue's provider state for the preview.
 	issueState func(ctx context.Context, record model.IssueOpsRecord, provider string) (string, error)
+	// readFile reads the repository's own PR/MR template for the preview.
+	readFile func(string) ([]byte, error)
 }
 
 // WithIssueState lets the preview read the linked issue's state, so a PR is
 // not prepared for an issue someone closed meanwhile without saying so.
 func (s *PublicationCommandService) WithIssueState(read func(ctx context.Context, record model.IssueOpsRecord, provider string) (string, error)) *PublicationCommandService {
 	s.issueState = read
+	return s
+}
+
+// WithRepoTemplates lets the preview compare the body with the
+// repository's own PR/MR template.
+func (s *PublicationCommandService) WithRepoTemplates(read func(string) ([]byte, error)) *PublicationCommandService {
+	s.readFile = read
 	return s
 }
 
@@ -66,7 +75,7 @@ func (s *PublicationCommandService) Create(ctx context.Context, input Publicatio
 		return result, err
 	}
 	if !req.Confirm {
-		result.Warnings = s.issueWarnings(ctx, record, req.Provider)
+		result.Warnings = append(s.issueWarnings(ctx, record, req.Provider), s.templateWarnings(record, req.Provider, req.Body)...)
 	}
 	if req.Confirm {
 		req.Actor.ProcessAncestry, err = s.observe()
@@ -100,6 +109,37 @@ func (s *PublicationCommandService) issueWarnings(ctx context.Context, record mo
 	}
 	if strings.EqualFold(strings.TrimSpace(state), "closed") {
 		return []string{"issue_closed: " + record.IssueURL + " is closed on the provider. Read why (its last comments) and ask the user before creating a PR for it: reopen it, link another issue, or stop the cycle"}
+	}
+	return nil
+}
+
+// templateWarnings names repository PR/MR template sections the body lacks.
+// QA: an agent published a body with only the issueops sections in a
+// repository whose template asked for What, Risk and a checklist.
+func (s *PublicationCommandService) templateWarnings(record model.IssueOpsRecord, provider, body string) []string {
+	if s.readFile == nil {
+		return nil
+	}
+	root := strings.TrimSpace(record.WorktreePath)
+	if record.Execution != nil && strings.TrimSpace(record.Execution.Workspace.Root) != "" {
+		root = strings.TrimSpace(record.Execution.Workspace.Root)
+	}
+	if root == "" {
+		root = strings.TrimSpace(record.Repo)
+	}
+	if root == "" {
+		return nil
+	}
+	for _, rel := range remote.RepoPullRequestTemplatePaths(provider) {
+		content, err := s.readFile(strings.TrimRight(root, "/") + "/" + rel)
+		if err != nil {
+			continue
+		}
+		missing := remote.TemplateSectionsMissing(string(content), body)
+		if len(missing) == 0 {
+			return nil
+		}
+		return []string{"repo_template_sections_missing: " + rel + " asks for sections the body lacks: " + strings.Join(missing, ", ") + ". Keep the required sections and add these after them; check a checklist item only for what you did"}
 	}
 	return nil
 }
