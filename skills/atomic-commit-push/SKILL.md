@@ -1,6 +1,6 @@
 ---
 name: atomic-commit-push
-description: 'Use to commit, split changes into atomic commits, or push a branch: stages narrowly, writes a Conventional Commit subject with a Lore body, avoids secrets, keeps unrelated work. Rebase, bisect, conflicts, cherry-pick, worktrees: git-operations.'
+description: 'Use to commit, split changes into atomic commits, or push a branch: narrow staging, Conventional Commit subject with a Lore body, no secrets. Rebase, bisect, conflicts, cherry-pick, worktrees: git-operations.'
 ---
 
 # Atomic Commit Push

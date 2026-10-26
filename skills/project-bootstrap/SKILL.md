@@ -1,6 +1,6 @@
 ---
 name: project-bootstrap
-description: "Use to bootstrap a repository for issueops: AGENTS.md routing block, repo profile metadata, and the .issueops document family (via project-docs-bootstrap), with routing to project-docs-update and project-docs-optimize for later upkeep."
+description: "Use to bootstrap a repository for issueops: AGENTS.md routing block, repo profile metadata, and the .issueops documents (via project-docs-bootstrap); later upkeep goes to project-docs-update and project-docs-optimize."
 ---
 
 # Project Bootstrap (Orchestration)

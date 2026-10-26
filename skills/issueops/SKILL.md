@@ -1,6 +1,6 @@
 ---
 name: issueops
-description: 'Route an issue-driven work cycle to its current stage skill with `issueops next` and hold the invariants every stage shares. Use to start, resume, or continue an issue cycle or when the stage is unclear: "이슈옵스", "이슈 작업 시작", "이어서 진행".'
+description: 'Route an issue-driven work cycle to its current stage skill with `issueops next` and hold the invariants every stage shares. Use to start, resume, or continue an issue cycle: "이슈옵스", "이슈 작업 시작", "이어서 진행".'
 ---
 
 # IssueOps

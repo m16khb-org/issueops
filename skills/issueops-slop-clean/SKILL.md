@@ -1,6 +1,6 @@
 ---
 name: issueops-slop-clean
-description: 'Run the IssueOps ai-slop-clean stage: remove agent residue from the task diff without changing behavior, re-verify, record the evidence. Use when `issueops next` reports clean, or for "AI slop 정리", "slop 치워줘", "정리 단계".'
+description: 'Run the IssueOps ai-slop-clean stage: remove agent residue from the task diff without changing behavior, re-verify, record evidence. Use when `issueops next` reports clean, or for "AI slop 정리", "정리 단계".'
 ---
 
 # IssueOps Slop Clean

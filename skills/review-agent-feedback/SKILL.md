@@ -1,6 +1,6 @@
 ---
 name: review-agent-feedback
-description: 'Use when a PR/MR has bot review threads (Kody, CodeRabbit, Copilot, Gemini) to verify against the code, reply, rate, and resolve: "봇 리뷰 검증해줘", "CodeRabbit 지적 맞는지 확인", "리뷰 스레드 resolve". New reviews: pr-review.'
+description: 'Use when a PR/MR has bot review threads (Kody, CodeRabbit, Copilot, Gemini) to verify against the code, reply, rate, and resolve: "봇 리뷰 검증해줘", "리뷰 스레드 resolve". New reviews: pr-review.'
 ---
 
 # Review Agent Feedback
