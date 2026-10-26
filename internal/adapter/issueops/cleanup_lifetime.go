@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
+	"fmt"
 	"path/filepath"
 	"time"
 
@@ -21,12 +23,32 @@ func (s CleanupLifetimeLock) Acquire(ctx context.Context, id string) (cleanupapp
 	}
 	// Keep the physical namespace stable across binary updates; inherited
 	// children may still hold descriptors opened by the earlier finish executor.
-	lease, err := processlease.Acquire(ctx, filepath.Join(s.StateRoot, "cleanup-finish-locks"), normalized)
-	if err != nil {
-		return nil, err
+	directory := filepath.Join(s.StateRoot, "cleanup-finish-locks")
+	// QA (Codex runs tool calls in parallel): cleanup status --merged and
+	// finish --preview started together, and every one but the first failed
+	// at once. A short wait lets concurrent previews take turns; a long-lived
+	// holder (an apply, or a child it left behind) still refuses.
+	deadline := time.Now().Add(cleanupLifetimeWait)
+	for {
+		lease, err := processlease.Acquire(ctx, directory, normalized)
+		if err == nil {
+			return cleanupLifetime{lease}, nil
+		}
+		if !errors.Is(err, processlease.ErrBusy) {
+			return nil, err
+		}
+		if time.Now().After(deadline) {
+			return nil, fmt.Errorf("%w: another cleanup command for %s (finish, remote-branch, abandon, or cleanup status --merged), or a process it started, still holds the cleanup lock; let it finish, then rerun", err, normalized)
+		}
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(50 * time.Millisecond):
+		}
 	}
-	return cleanupLifetime{lease}, nil
 }
+
+const cleanupLifetimeWait = 2 * time.Second
 
 type cleanupLifetime struct{ lease *processlease.Lease }
 
