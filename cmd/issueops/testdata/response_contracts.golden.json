@@ -1813,7 +1813,7 @@
         "contract"
       ],
       "ok": true,
-      "preview": "[dry-run] would execute: glab issue create --title 'contract issue' --description 'contract body' --label contract",
+      "preview": "[dry-run] would execute: glab issue create --title 'contract issue' --description '\u003cbody: 13 chars\u003e' --label contract",
       "provider": "gitlab",
       "readability": {
         "critical": [

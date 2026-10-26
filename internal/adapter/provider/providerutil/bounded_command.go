@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"issueops/internal/adapter/outbound/processlease"
 	"issueops/internal/domain/policy"
@@ -34,13 +35,20 @@ func RunBoundedMutationWithOutputLimitContext(ctx context.Context, repo, name st
 
 // DryRunPreview renders the command a confirm would run, quoting each word
 // that a shell would split or expand, so a title like `hello.sh --version`
-// does not read as a flag.
+// does not read as a flag. A --body/--description value is shown as its
+// length: the caller wrote that body and the readability report checks it,
+// and the shell-quoted copy (up to the 4 KB cap, often cut) repeated it in
+// every preview (opencode QA read it as a broken body).
 func DryRunPreview(name string, args ...string) string {
 	argv := policy.RedactArgv(append([]string{name}, args...))
 	for i, word := range argv {
-		if word == "" || strings.ContainsFunc(word, needsShellQuote) {
-			argv[i] = shelltoken.QuoteWord(word)
+		if i > 0 && (argv[i-1] == "--body" || argv[i-1] == "--description") && word != "-" {
+			word = fmt.Sprintf("<body: %d chars>", utf8.RuneCountInString(args[i-1]))
 		}
+		if word == "" || strings.ContainsFunc(word, needsShellQuote) {
+			word = shelltoken.QuoteWord(word)
+		}
+		argv[i] = word
 	}
 	value := strings.Join(argv, " ")
 	if len(value) > providerDiagnosticLimit {

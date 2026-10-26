@@ -40,7 +40,7 @@ func TestGitLabCreateIssueDryRun(t *testing.T) {
 		t.Errorf("expected dry-run preview, got %q", res.Preview)
 	}
 	if !strings.Contains(res.Preview, "issue create") ||
-		!strings.Contains(res.Preview, "--description details") ||
+		!strings.Contains(res.Preview, "--description '<body: 7 chars>'") ||
 		!strings.Contains(res.Preview, "--repo https://gitlab.com/acme/repo") {
 		t.Errorf("preview missing expected args: %q", res.Preview)
 	}
@@ -111,7 +111,7 @@ func TestGitLabCreateMRDryRunRedactsSecretArgv(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(res.Preview, "opaque-") || !strings.Contains(res.Preview, "<redacted>") {
+	if strings.Contains(res.Preview, "opaque-") || !strings.Contains(res.Preview, "--description '<body: ") {
 		t.Fatalf("GitLab dry-run preview was not redacted: %q", res.Preview)
 	}
 }

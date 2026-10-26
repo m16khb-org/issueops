@@ -81,7 +81,7 @@ func TestGitHubCreateChildDryRunDoesNotExecute(t *testing.T) {
 func TestGitHubCreateChildDryRunRedactsSecretArgv(t *testing.T) {
 	secret := "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	res, err := NewProvider().CreateChild(port.IssueProviderCreateChildRequest{Repo: t.TempDir(), ParentIssueURL: "https://github.com/acme/repo/issues/12", Title: "child", Body: "token=" + secret, Labels: []string{"bug"}, Assignees: []string{"octocat"}})
-	if err != nil || strings.Contains(res.Preview, secret) || !strings.Contains(res.Preview, "<redacted>") {
+	if err != nil || strings.Contains(res.Preview, secret) || !strings.Contains(res.Preview, "--body '<body: ") {
 		t.Fatalf("GitHub child preview leaked secret: %q err=%v", res.Preview, err)
 	}
 }
@@ -114,7 +114,7 @@ func TestGitHubCreatePullRequestDryRunRedactsSecretArgv(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(res.Preview, "opaque-") || !strings.Contains(res.Preview, "<redacted>") {
+	if strings.Contains(res.Preview, "opaque-") || !strings.Contains(res.Preview, "--body '<body: ") {
 		t.Fatalf("GitHub dry-run preview was not redacted: %q", res.Preview)
 	}
 }

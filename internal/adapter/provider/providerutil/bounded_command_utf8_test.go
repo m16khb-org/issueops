@@ -9,7 +9,7 @@ import (
 )
 
 func TestDryRunPreviewUTF8Safe(t *testing.T) {
-	got := DryRunPreview("gh", "issue", "create", "--body", strings.Repeat("가", 2000))
+	got := DryRunPreview("gh", "issue", "create", "--title", strings.Repeat("가", 2000))
 	if !utf8.ValidString(got) {
 		t.Fatalf("preview is not valid UTF-8: %q", got[len(got)-32:])
 	}
@@ -44,5 +44,17 @@ func TestBoundedCommandStderrUTF8Safe(t *testing.T) {
 	}
 	if strings.Contains(string(encoded), `�`) {
 		t.Fatalf("JSON diagnostic contains a replacement character")
+	}
+}
+
+// The body value is shown as its length; the shell-quoted copy repeated the
+// file the caller wrote in every preview. A stdin body ("-") stays literal.
+func TestDryRunPreviewShowsBodyLength(t *testing.T) {
+	got := DryRunPreview("gh", "pr", "create", "--title", "t", "--body", "## 요약\n\nit's done")
+	if got != "[dry-run] would execute: gh pr create --title t --body '<body: 16 chars>'" {
+		t.Fatalf("preview = %q", got)
+	}
+	if got := DryRunPreview("gh", "pr", "edit", "u", "--body-file", "-"); got != "[dry-run] would execute: gh pr edit u --body-file -" {
+		t.Fatalf("stdin preview = %q", got)
 	}
 }
