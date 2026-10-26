@@ -13783,6 +13783,7 @@
       "task": "T20",
       "symbols": [
         "func MergeBlockers",
+        "func MergeMethodRefusedAlternative",
         "func NormalizeMergeMethod",
         "func ResolveMergeTarget",
         "type MergeTarget"

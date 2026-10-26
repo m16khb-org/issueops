@@ -2,6 +2,7 @@ package issueops
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	model "issueops/internal/contract/issueops"
@@ -88,4 +89,20 @@ func MergeBlockers(state model.RemotePullRequestMergeState, target MergeTarget) 
 		add(model.RemoteMergeBlocked, "the provider blocks the merge: "+blocked)
 	}
 	return blockers
+}
+
+var mergeMethodRefusal = regexp.MustCompile(`(?i)(squash merges|rebase merges|merge commits|merge method)[^.]*not allowed`)
+
+// MergeMethodRefusedAlternative reports whether the provider refused the merge
+// method itself (repository settings), which happens before any merge, and the
+// method to preview instead. QA probe: the refusal got the "the merge may
+// still have happened, do not repeat --confirm" answer, a dead end.
+func MergeMethodRefusedAlternative(err error, method string) (string, bool) {
+	if err == nil || !mergeMethodRefusal.MatchString(err.Error()) {
+		return "", false
+	}
+	if method == model.RemoteMergeMethodSquash {
+		return model.RemoteMergeMethodMerge, true
+	}
+	return model.RemoteMergeMethodSquash, true
 }

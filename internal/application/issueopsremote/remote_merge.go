@@ -87,6 +87,10 @@ func (s *RemoteMergeService) Merge(ctx context.Context, id, method string, confi
 	after, err := merger.MergePullRequest(ctx, port.IssueProviderPullRequestMergeRequest{
 		Repo: record.Repo, URL: target.URL, Method: method, HeadOID: target.ExpectedHead, MarkReady: before.Draft,
 	})
+	if alternative, refused := domain.MergeMethodRefusedAlternative(err, method); refused {
+		result.NextCommand = fmt.Sprintf("issueops remote merge-pr --id %s --method %s --json", record.ID, alternative)
+		return result, fmt.Errorf("%w; the repository does not allow --method %s, so nothing was merged: preview another method the repository allows (merge, rebase, squash), e.g. %s", err, method, result.NextCommand)
+	}
 	if err != nil {
 		// QA (lost merge response): the merge had happened while the CLI
 		// reported a failure. The preview re-reads the provider and reports

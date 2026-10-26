@@ -21,6 +21,7 @@ func (r mergeRecordReader) Read(context.Context, string) (model.IssueOpsRecord, 
 type fakeMerger struct {
 	before, after model.RemotePullRequestMergeState
 	merges        []port.IssueProviderPullRequestMergeRequest
+	mergeErr      error
 }
 
 func (f *fakeMerger) ReadPullRequestMergeState(context.Context, string, string) (model.RemotePullRequestMergeState, error) {
@@ -29,7 +30,7 @@ func (f *fakeMerger) ReadPullRequestMergeState(context.Context, string, string) 
 
 func (f *fakeMerger) MergePullRequest(_ context.Context, req port.IssueProviderPullRequestMergeRequest) (model.RemotePullRequestMergeState, error) {
 	f.merges = append(f.merges, req)
-	return f.after, nil
+	return f.after, f.mergeErr
 }
 
 func completedMergeRecord() model.IssueOpsRecord {
@@ -142,6 +143,20 @@ func TestRemoteMergeRecordsMergedReceipt(t *testing.T) {
 		})
 	if result, err := service.Merge(context.Background(), "io-merge", "", false); err != nil || !result.AlreadyMerged || len(result.Warnings) != 1 || !strings.HasPrefix(result.Warnings[0], "merged_receipt_not_recorded: locked") {
 		t.Fatalf("result=%+v err=%v", result, err)
+	}
+}
+
+// A refused merge method happened before any merge: the error says so and
+// names a preview with another method instead of "do not repeat --confirm".
+func TestRemoteMergeNamesAnotherMethodWhenTheRepositoryRefusesIt(t *testing.T) {
+	merger := &fakeMerger{before: openState(nil), mergeErr: errors.New("gh pr merge failed: GraphQL: Squash merges are not allowed on this repository. (mergePullRequest)")}
+	result, err := runMerge(t, completedMergeRecord(), merger, "", true)
+	if err == nil || !strings.Contains(err.Error(), "does not allow --method squash, so nothing was merged") || result.NextCommand != "issueops remote merge-pr --id io-merge --method merge --json" {
+		t.Fatalf("result=%+v err=%v", result, err)
+	}
+	other := &fakeMerger{before: openState(nil), mergeErr: errors.New("context deadline exceeded")}
+	if _, err := runMerge(t, completedMergeRecord(), other, "", true); err == nil || !strings.Contains(err.Error(), "may still have happened") {
+		t.Fatalf("an unknown failure keeps the may-have-merged answer: %v", err)
 	}
 }
 
