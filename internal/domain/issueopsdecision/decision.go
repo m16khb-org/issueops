@@ -22,7 +22,7 @@ func Build(
 	}
 	title := strings.TrimSpace(request.Title)
 	if title == "" {
-		return issueopsdecisioncontract.Decision{}, fmt.Errorf("decision title is required")
+		return issueopsdecisioncontract.Decision{}, fmt.Errorf("decision title is required (--title TEXT)")
 	}
 	if len(title) > 512 {
 		return issueopsdecisioncontract.Decision{}, fmt.Errorf(
@@ -31,7 +31,7 @@ func Build(
 	}
 	body := strings.TrimSpace(request.Body)
 	if body == "" {
-		return issueopsdecisioncontract.Decision{}, fmt.Errorf("decision body is required")
+		return issueopsdecisioncontract.Decision{}, fmt.Errorf("decision body is required (--body TEXT)")
 	}
 	if len(body) > 65536 {
 		return issueopsdecisioncontract.Decision{}, fmt.Errorf(

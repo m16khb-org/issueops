@@ -174,6 +174,8 @@ plan.handoff에서 사용자가 계획을 바꾸라고 하면 `execution prepare
 사용자 요청이 계획 작성·검토까지라면 여기서 계획과 검토 결과를 보고하고 종료한다.
 아래 `execution prepare`, lease 발급, 새 세션 실행이나 구현 진입은 하지 않는다.
 이 경우 아래 인계 후 검증 항목도 적용하지 않는다.
+워크트리 준비와 다음 세션 인계까지만 요청했으면 아래 `execution prepare --confirm` 뒤 `execution release`로
+보류하고 끝낸다(새 세션을 띄우지 않는다). 다음 세션이 `next`의 회복 체인으로 이어받는다.
 
 ```bash
 issueops execution whoami --json   # ACTOR_FLAGS 원문
