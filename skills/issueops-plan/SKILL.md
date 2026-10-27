@@ -189,18 +189,10 @@ workspace root, branch, 계획을 확인한 뒤
 현재 세션에서 구현으로 이어간다. 판별은 whoami `ancestry[0].pid`의 실행 인자(`ps -o args= -p <pid>`)로 한다.
 
 [session-choice.md](../issueops/references/session-choice.md)에 따라 준비 세션이 Herdr 세션이면
-Herdr의 서버·호환성·현재 native host 실행 가능 여부를 확인하고, 사용 가능하면 아래와 같은
-release·새 세션 인계 절차를 적용한다.
-현재 holder가 결정 기록, 인계 자료 봉인, writer 정리를 마친 뒤 release하고
-같은 worktree에 새 세션 하나를 띄운다. 이때 새 쓰기 작업과 하위 작업 dispatch를 중지하고,
-소유자, 실행 핸들, 입력 리비전, 쓰기 범위, 결과 위치, 읽기 작업인지 쓰기 작업인지의 분류,
-대기 중인 writer가 0이라는 재확인, 자손 프로세스가 실제로 종료됐다는 관측, 늦게 도착한
-결과는 격리했다는 기록을 인계 자료와 release 이전 증거로 남긴다.
-새 세션은 자기 native actor로 `execution replace --id ID --expected-generation N --preview`를
-실행하고, 반환된 `--reseed` 명령을 거쳐 `claim --claim-current-token`으로 lease를 넘겨받는다.
-Herdr를 쓸 수 없으면 lease를 유지하고 현재 세션에서 구현으로 이어가거나, 사용자가 직접 연
-두 번째 터미널에서 같은 인수 체인으로 수동 인계한다. Herdr는 기존 worktree를 열 뿐
-재생성하지 않는다. 진행 방식을 묻지 않는다. 명시적인 보류·범위 제한은 우선한다.
+Herdr 사용 가능 여부를 확인하고, 사용 가능하면 그 문서의 release·새 세션 인계 절차(인계 자료, writer 정리,
+`replace --preview` → `--reseed` → `claim --claim-current-token`)를 따른다. Herdr를 쓸 수 없으면 lease를 유지하고
+현재 세션에서 구현으로 이어가거나, 사용자가 직접 연 두 번째 터미널에서 같은 체인으로 수동 인계한다.
+worktree는 재생성하지 않고 진행 방식을 묻지 않는다. 명시적인 보류·범위 제한은 우선한다.
 
 ## 의존성과 로컬 설정
 
