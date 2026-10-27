@@ -48,16 +48,10 @@ holder/generation 불일치는 아래 회복 표를 따른다. branch·HEAD 불�
 승인이 계획의 종료점보다 우선하며, 계획은 고치지 않고 `decision add --kind scope`로 남긴다.
 새 세션은 이전 holder의 release 확인 후 자기 lease로 인수하며, 이미 인계받았으면
 재인계하지 않는다. 보류·phase·claim·`--approved`는 구현이나 publication 승인이 아니다.
-준비 세션은 같은 worktree에서 Herdr를 먼저 확인한다. 준비 세션이 Herdr 세션이고 실행 중인
-서버·호환성·현재 native host 실행 가능 여부가 확인되면 Herdr로 인계한다. Herdr를 쓸 수
-없으면 현재 세션에서 이어가거나, 사용자가 직접 연 두 번째 터미널에서 수동으로 인계한다.
-설치만으로 ready라 판단하거나 실행 방식 메뉴를 묻지 않는다. 최신 명시적 current/new-session/hold가 우선한다.
-인계 시 아래 writer 종료 규칙을 지키고 ID·generation·경로·요청/대화 근거·승인 범위·종료점,
-목적/비목표·base/full HEAD·diff·계획 digest·검증 입력/명령/시각/환경/실패·미완료 결과 위치·
-exact resume/조회 명령·자료 digest를 남긴다. secret/token은 제외한다. release/status로
-해제를 확인한 뒤 현재 native host의 세션 하나만 열고 수신을 확인하면 기존 세션은 끝낸다.
-런처 설치·worktree 재생성·모호한 launch 재시도는 금지한다. 세부 recipe가 있으면
-[`session-choice.md`](../issueops/references/session-choice.md)를 사용한다.
+준비 세션은 같은 worktree에서 Herdr를 먼저 확인한다. 선택 순서와 인계 자료·release·새 세션 절차는
+[`session-choice.md`](../issueops/references/session-choice.md)와
+[`handoff-observation.md`](../issueops/references/handoff-observation.md)를 따른다. 실행 방식 메뉴를 묻지 않고,
+최신 명시적 current/new-session/hold가 우선한다. 런처 설치·worktree 재생성·모호한 launch 재시도는 금지한다.
 인계문이 있으면 현재 HEAD, 계획 digest, 인계 자료 digest를 현재 worktree와 대조한다.
 stale하거나 누락된 근거는 필요한 범위만 다시 확인한다. 서로 다른 host의 session ID는
 이식 가능한 identity가 아니다. 인계 자료와 status를 검증한 뒤 claim 복구 체인을 따른다.
