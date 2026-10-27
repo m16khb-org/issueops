@@ -185,7 +185,7 @@ func TestIssueOpsHandoffPrefersHerdrInsideHerdrSession(t *testing.T) {
 		path []string
 		want string
 	}{
-		"issueops":           {[]string{"skills", "issueops", "SKILL.md"}, "준비한 뒤 herdr를 확인한다"},
+		"issueops":           {[]string{"skills", "issueops", "SKILL.md"}, "선택 순서(herdr 확인 →"},
 		"issueops-plan":      {[]string{"skills", "issueops-plan", "SKILL.md"}, "준비 세션이 herdr 세션이면"},
 		"issueops-implement": {[]string{"skills", "issueops-implement", "SKILL.md"}, "herdr를 먼저 확인한다"},
 		"workflow":           {[]string{".issueops", "AGENT_WORKFLOW.md"}, "herdr 세션이면 herdr를 먼저 확인"},
@@ -204,18 +204,16 @@ func TestIssueOpsAutomaticSessionSelectionOrderAndTakeoverChain(t *testing.T) {
 
 	normalize := func(text string) string { return strings.Join(strings.Fields(text), " ") }
 	skill := normalize(readIssueOpsContractFile(t, "skills", "issueops", "SKILL.md"))
-	_, section, found := strings.Cut(skill, "## 환경별 자동 세션 인계")
-	if !found {
-		t.Fatal("issueops skill is missing the automatic session handoff section")
-	}
-	section, _, _ = strings.Cut(section, " ## ")
-	herdr := strings.Index(section, "준비한 뒤 Herdr를 확인한다")
-	current := strings.Index(section, "Herdr를 쓸 수 없으면 현재 세션에서 이어가거나, 사용자가 직접 연 두 번째 터미널에서 수동 인계한다")
-	if herdr < 0 || current < 0 || herdr >= current {
-		t.Fatalf("Herdr check must precede the current-session or manual second-terminal fallback: herdr=%d current=%d", herdr, current)
+	if !strings.Contains(skill, "## 환경별 자동 세션 인계") || !strings.Contains(skill, "references/session-choice.md") {
+		t.Fatal("issueops skill must keep the automatic session handoff section pointing at session-choice.md")
 	}
 
 	sessionChoice := normalize(readSessionChoiceContract(t))
+	herdr := strings.Index(sessionChoice, "브랜치·worktree 준비 뒤 Herdr를 확인한다")
+	current := strings.Index(sessionChoice, "Herdr를 쓸 수 없음이 확인됐으면 현재 세션에서 이어가는 `current`다")
+	if herdr < 0 || current < 0 || herdr >= current {
+		t.Fatalf("Herdr check must precede the current-session or manual second-terminal fallback: herdr=%d current=%d", herdr, current)
+	}
 	const chain = "`execution replace --id ID --expected-generation N --preview`를 실행한 뒤, 반환된 `--reseed` 명령과 `claim --claim-current-token`으로 인수한다"
 	if !strings.Contains(sessionChoice, chain) {
 		t.Fatalf("session-choice must pin the replace --preview -> --reseed -> claim --claim-current-token chain %q", chain)

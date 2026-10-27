@@ -44,13 +44,9 @@ issueops next --json
 세션 선택 메뉴는 묻지 않는다. 전체 사이클은 draft PR/MR 발행·execution complete에서,
 이슈 작성·계획만 요청했거나 더 좁은 종료점을 정했으면 그 범위에서 끝낸다.
 
-- `issueops-plan`이 워크트리를 먼저 준비한다. 준비한 뒤 Herdr를 확인한다. 준비 세션이
-  Herdr 세션이고 실행 중인 서버·호환성·현재 native host 실행 가능 여부가 확인되면 같은
-  worktree의 새 Herdr 세션으로 인계한다. Herdr를 쓸 수 없으면 현재 세션에서 이어가거나,
-  사용자가 직접 연 두 번째 터미널에서 수동 인계한다. 결과를 호출자에게 돌려줘야 하는 비대화형
-  실행(`-p`, `exec`)은 Herdr가 있어도 현재 세션에서 이어간다. 설치 여부만으로 ready라 보지 않는다.
-- 인계 절차(결정 기록·인계 자료·전달 관찰, launcher)는 [handoff-observation.md](references/handoff-observation.md)와
-  [session-choice.md](references/session-choice.md)가 본문 계약이다. 인계할 때 그 둘을 읽고 따른다.
+- `issueops-plan`이 워크트리를 준비한 뒤 실행 세션을 고른다. 선택 순서(Herdr 확인 → 현재 세션 또는
+  수동 두 번째 터미널, 비대화형 실행은 현재 세션)와 인계 절차는 [session-choice.md](references/session-choice.md)와
+  [handoff-observation.md](references/handoff-observation.md)가 본문 계약이다. 인계할 때 그 둘을 읽고 따른다.
 - 자동 분기는 실행 위치만 정한다. 원래 요청의 승인 범위·종료점을 그대로 유지하며,
   구현만 요청한 작업에 commit·push·PR/MR 발행 권한을 추가하지 않는다.
   phase·claim·`--approved`도 승인 근거가 아니다.
