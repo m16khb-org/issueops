@@ -147,7 +147,8 @@ issueops gates lint --plan "$TMP_PLAN" --cwd "$SOURCE_ROOT" --json
 절차는 그 스킬이 소유하므로 여기 복사하지 않는다. 이 단계가 알아야 하는 것은 셋이다.
 
 - **입력**: 스테이징한 계획 전체. 위 `## 적용되는 결정과 주의사항` 절과 승인된 아키텍처 문서 전문이 함께 간다.
-- **종료 조건**: `pass` 판정이 finding 하나 이상과 함께 기록됐다. pass도 아래 `reflect-devils-advocate`로 이슈에 반영한다.
+- **revise**: 고친 계획을 **다시 스테이징한 뒤** 재리뷰한다. 판정은 스테이징된 계획 digest에 묶인다.
+- **종료 조건**: `pass` 판정이 finding 하나 이상과 함께 기록됐다. 마지막 판정도 아래 `reflect-devils-advocate`로 이슈에 반영한다.
 - **stop 판정**: 이 단계가 되돌린다.
 
 ```bash
@@ -159,9 +160,8 @@ issueops regress --id "$ISSUEOPS_ID" --reason "<리뷰 결론>" $RECORD_ACTOR_FL
 `regress`는 사이클을 grill로 되돌리고 아키텍처 승인도 지운다. grill에서 다시 조사한다. 요구가 바뀌면
 `feedback add --classification contract_change` → 이슈 본문 갱신(`issueops-sync-issue`) →
 `feedback mark-issue-updated` → 새 기준으로 `intent record` 순서로 반영한다. 그 뒤
-`phase --to plan`으로 올라와 아키텍처와 계획을 다시 쓰고 다시 검토한다. 판정은 계획 파일의 sha256에 묶이므로,
-판정 뒤 계획을 고치면 `devils_advocate_review_stale`이 되어 `next`가 plan.review로 돌아간다. 고쳤으면
-다시 검토한다.
+`phase --to plan`으로 올라와 아키텍처와 계획을 다시 쓰고 다시 검토한다. 판정 뒤 계획을 고치면
+`devils_advocate_review_stale`이 되어 `next`가 plan.review로 돌아간다.
 
 plan.handoff에서 사용자가 계획을 바꾸라고 하면 `execution prepare`로 가지 않는다. 바뀐 내용이
 아키텍처에 닿으면 아키텍처 문서를 다시 스테이징하고 리뷰를 다시 기록한다. 그다음 계획을 다시
