@@ -143,9 +143,12 @@ source checkout의 준비 세션이, 4단계 이후는 canonical worktree의 구
 `execution prepare --id ID $ACTOR_FLAGS`를 preview로 확인한 뒤 `--confirm`으로 만들고,
 `skills/issueops/references/session-choice.md`를 따른다. 준비 세션이 Herdr 세션이고 실행 중인
 서버·호환성·현재 native host 실행 가능 여부가 확인되면 같은 worktree의 새 Herdr 세션으로
-인계한다. Herdr를 쓸 수 없으면 현재 세션에서 이어가거나 사용자가 직접 연 두 번째
-터미널에서 수동으로 인계한다. Claude Code·Codex·Omo·omp·opencode host를 유지하며
-Herdr에서는 `worktree create` 대신 `worktree open`으로 준비된 checkout을 등록한다.
+인계한다. Herdr 세션은 Herdr 터미널(`HERDR_ENV=1`·`HERDR_SOCKET_PATH`)과 Herdr 앱
+(`HC_TERMINAL_SOCKET`·`HC_TERMINAL_ID`) 두 가지다. Herdr를 쓸 수 없으면 현재 세션에서 이어가거나
+사용자가 직접 연 두 번째 터미널에서 수동으로 인계한다. Claude Code·Codex·Omo·omp·opencode host를
+유지하며 Herdr 터미널에서는 `worktree create` 대신 `worktree open`으로 준비된 checkout을 등록한다.
+Herdr 앱은 worktree를 자동으로 보여 주지 않으므로 `herdr-app do space.new --folder <worktree>`로
+space를 만든 뒤 그 terminal에 `hc send`로 host를 실행한다.
 세션 인계는 기존 세션이 `release`로 lease를 해제하고, 새 세션이 자기 native actor로
 `execution replace --id ID --expected-generation N --preview`를 실행해 반환된 `--reseed`
 명령을 따른 뒤 `claim --claim-current-token`을 실행하는 체인으로만 이루어진다. 어느 단계에서든

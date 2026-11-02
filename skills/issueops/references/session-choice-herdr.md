@@ -10,6 +10,11 @@ producer로 사용한다. 이 명령은 user-state audit에 관측만 추가하�
 identity, terminal/pane, generation, prompt와 material digest를 넣는다. `unknown`, `pending`,
 runtime ID를 복사한 server ID 같은 대체값을 만들지 않는다.
 
+Herdr 앱에서는 herdr-core `hc`가 입력을 받는다. launcher에는 `name` `herdr`, `command -v hc`의
+절대경로, `hc --version` 값을 넣는다. `runtime_id`는 `hc server status`의 core `pid`와 그 프로세스의
+시작 시각, `machine_id`는 IOPlatformUUID, `server_id`는 같은 응답의 `core.id`다. target은 아래
+**Herdr 앱 실행**에서 만든 terminal(`tN`)과 `herdr-app ls`가 보여 주는 그 terminal의 `pane`이다.
+
 외부 호출 직전에는 안전한 임시 파일에 다음 observation을 만들고 producer 성공을 확인한다.
 `created_at`, `updated_at`, `call_staged.observed_at`에는 같은 RFC3339Nano 시각을 쓴다.
 
@@ -192,4 +197,56 @@ IssueOps lease를 소유하지 않는다. 실제 Herdr 호출 전후에는 위
 명령 계약은 설치된 `--help`와 [Herdr CLI 문서](https://herdr.dev/docs/cli-reference/)를
 함께 확인한다. Herdr workspace/pane ID는 실행 위치 식별자이지 IssueOps actor가 아니다.
 인수하는 세션은 공통 인계문의 `whoami`·`next` 복구 절차를 그대로 따른다.
+
+## Herdr 앱 실행
+
+이 절은 [세션 인계](session-choice.md)의 release가 확인된 뒤 Herdr 앱 세션에서만 실행한다. Herdr 앱
+창은 이미 만든 space만 보여 주며 `git worktree list`를 읽어 space를 추가하지 않는다. 인계할 worktree를
+폴더로 하는 space를 만들어야 창의 spaces 목록에서 저장소 space 아래에 표시된다. `herdr worktree open`과
+`herdr agent`·`pane` 명령은 Herdr 터미널 서버를 대상으로 하므로 이 절에서 쓰지 않는다. 실제 전송
+전후에는 위 `trace handoff-delivery` producer를 사용한다.
+
+1. `herdr-app ls`에 `folder`가 canonical worktree인 space가 있는지 먼저 확인한다. 없으면 space 하나를
+   만든다. 이름은 기본값에 기대지 않고 worktree 디렉터리 이름을 쓴다.
+
+   ```bash
+   herdr-app do space.new --name "$(basename "$WORKTREE")" --folder "$WORKTREE"
+   ```
+
+   응답의 `space`·`tab`·`terminal`을 사용한다. 새 space는 바로 화면에 표시된다. `{"error": ...}`이면
+   다른 런처나 current로 바꾸지 않고 보고한다. space가 이미 있으면 새로 만들지 않는다. 앞선 인계가
+   이미 실행됐는지 그 space의 terminal을 `hc get`·`hc read`와 native 세션 기록으로 먼저 확인하고,
+   기존 에이전트나 사용자 shell 작업에 입력을 보내지 않는다. 이 인계의 세션이 없고 기존 terminal이
+   사용 중이면 `herdr-app do tab.new --space "$SPACE_ID" --name issueops-handoff --folder "$WORKTREE"`로
+   빈 shell tab 하나를 만들고 반환된 `terminal`을 이후 대상으로 쓴다.
+2. `hc get "$TERMINAL" --json`으로 `cwd`가 canonical worktree이고 `foreground`가 빈 대화형 shell인지
+   확인한다. `foreground.cwd`는 심볼릭 링크를 해석한 경로이므로 같은 방식으로 해석한 경로와 비교한다.
+   shell이 막 시작되면 `foreground`가 비어 있을 수 있으므로 유한한 횟수만 다시 관측한다.
+   `herdr-app ls`에서 같은 terminal의 `pane`을 읽어 observation target에 쓴다.
+3. 인계문을 worktree 밖의 비공개 임시 파일(`umask 077` 뒤 `mktemp`)에 쓴다. 현재 native host별
+   launch 명령을 `hc send "$TERMINAL" "$LAUNCH_COMMAND" --json`으로 **한 번** 보낸다.
+   `LAUNCH_COMMAND`는 `command -v`로 확인한 host 절대경로와 각 인자를 shell-quote하고, 마지막
+   프롬프트 인자는 `"$(cat '<인계문 파일>')"`로 넘긴다. 명령 치환 결과는 다시 평가되지 않으므로
+   인계문의 따옴표·개행·`$`·backtick이 그대로 전달된다. 모델·effort는
+   `issueops model resolve --host "$HOST" --role implement --agents --json`(child cycle은
+   `--role child-implement`)의 `model`·`effort`다. Claude Code와 Codex는 같은 응답의 `agent_args`를
+   `--` 바로 앞에 원소 그대로 붙인다. 인자 순서는 cmux 인계와 같다.
+
+   - Claude Code: `<claude> --model M --effort E --dangerously-skip-permissions <agent_args> -- "$(cat …)"`
+   - Codex: `<codex> --model M -c model_reasoning_effort=E --dangerously-bypass-approvals-and-sandbox
+     --no-daemon <agent_args> -- "$(cat …)"`. `hc --skill`은 Codex에 `--no-daemon`을 요구한다. 이 플래그가
+     없으면 Codex 명령이 hc terminal 밖의 공유 daemon에서 실행된다.
+   - Omo: `<omo> --model M:E --permission-preset full-access -- "$(cat …)"`
+   - omp: `<omp> --model M --thinking E --auto-approve -- "$(cat …)"`
+   - opencode: `/usr/bin/env OPENCODE_CONFIG_CONTENT='{"model":"M"}' <opencode> --standalone --auto --prompt "$(cat …)"`.
+     effort는 넣지 않는다.
+4. `hc send` 응답은 입력 제출 영수증이다. `input_accepted`에는 `launcher_receipt`로 기록한다.
+   `hc get "$TERMINAL" --json`의 `foreground.pid`·`argv`·`cwd`로 새 host 프로세스를 확인하고,
+   시작 시각과 절대 실행 파일은 `ps -o lstart= -o comm= -p "$PID"`로 확인해 두 번째 observation의
+   `target.process`에 넣는다. Herdr 앱의 `idle`·`working` 상태만으로 인계 수신을 판단하지 않는다.
+   전달 완료 판정, 모호한 결과 처리, 재전송 제한은 위 **Herdr 실행** 3·4항을 따른다. 인계문 임시
+   파일은 native 기록에서 수신을 확인한 뒤 지운다.
+
+명령 계약은 설치된 `herdr-app commands`, `herdr-app --skill`, `hc --skill`, `hc <command> --help`로
+확인한다. Herdr 앱의 space·tab·terminal ID는 실행 위치 식별자이지 IssueOps actor가 아니다.
 

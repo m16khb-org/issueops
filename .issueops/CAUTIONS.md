@@ -76,6 +76,7 @@ footer; older notes also live in `archive/cautions-incidents.md`.
 
 | Date | Lesson |
 |---|---|
+| 2026-11-02 | [Herdr 앱 터미널에는 `HERDR_ENV`가 없어 Herdr 세션 판별이 `current`로 빠지고, 앱 창은 worktree를 자동으로 보여 주지 않는다](cautions/2026-11-02-herdr-app-is-not-herdr-tui.md) |
 | 2026-10-24 | [PR readiness가 읽는 곳 없는 cleanup 관측(네트워크 `ls-remote`)을 실어 `status`·`next`·`pr-readiness`가 매번 그 비용을 냈다. cleanup 판정은 `cleanup status`만 맡는다](cautions/2026-10-24-readiness-cleanup-observation-is-network.md) |
 | 2026-10-24 | [스킬 description의 일반 YAML 값에 `: `가 들어가면 엄격한 host(Codex)가 스킬을 건너뛴다](cautions/2026-10-24-skill-description-plain-yaml-colon.md) |
 | 2026-10-24 | [MCP HTTP 서버에 ReadTimeout을 두면 오래 걸리는 도구 호출이 취소되고, TestMain·이름 없는 subtest는 TMPDIR에 디렉터리를 남긴다](cautions/2026-10-24-mcp-http-readtimeout-and-test-tmpdir-leaks.md) |

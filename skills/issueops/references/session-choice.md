@@ -10,12 +10,18 @@
 이미 인계받은 세션은 기존 기록과 승인 범위를 대조한 뒤 이어간다. 환경 판별부터 다시
 시작해 새 세션을 연쇄 생성하지 않는다.
 
-브랜치·worktree 준비 뒤 Herdr를 확인한다. `HERDR_ENV=1`이고
-`HERDR_SOCKET_PATH`가 있으면 Herdr 세션이다. env는 먼저 확인할 런처만 정한다. 사용 가능
-여부는 아래 Herdr 확인 명령과 조건으로 실측해 판단하고, 대상은 그 세션의
-`HERDR_SOCKET_PATH`가 가리키는 서버로 고정한다. 다른 서버를 찾거나 시작하지 않는다. 사용
-가능하면 Herdr의 `new-session`을 선택한다. Herdr 세션이 아니거나 Herdr가 사용 불가임이
-확인됐으면 Herdr를 다시 확인하지 않는다.
+브랜치·worktree 준비 뒤 Herdr를 확인한다. Herdr에는 두 front-end가 있고 env로 구분한다.
+
+- Herdr 터미널(`herdr` TUI): `HERDR_ENV=1`이고 `HERDR_SOCKET_PATH`가 있다. 대상은 그 세션의
+  `HERDR_SOCKET_PATH`가 가리키는 서버로 고정한다.
+- Herdr 앱(`dev.herdr.app`, `herdr-app`과 herdr-core `hc`): `HC_TERMINAL_SOCKET`과 `HC_TERMINAL_ID`가
+  있고 `HERDR_ENV`는 없다. 대상은 그 세션의 `HC_TERMINAL_SOCKET`이 가리키는 core와 그 core를 보여 주는
+  창으로 고정한다.
+
+두 env가 함께 있으면 Herdr 앱 터미널 안에서 Herdr 터미널을 실행한 것이므로 안쪽인 Herdr 터미널로
+판별한다. env는 먼저 확인할 런처만 정한다. 사용 가능 여부는 아래 확인 명령과 조건으로 실측해 판단한다.
+다른 서버나 core를 찾거나 시작하지 않는다. 사용 가능하면 Herdr의 `new-session`을 선택한다.
+Herdr 세션이 아니거나 Herdr가 사용 불가임이 확인됐으면 Herdr를 다시 확인하지 않는다.
 비대화형 실행(`claude -p`, `codex exec`, `omp -p`, `opencode run`처럼 이 세션이 최종 결과를 호출자에게
 돌려줘야 하는 실행)은 Herdr가 사용 가능해도 `current`다. 새 pane에는 결과를 받을 사람이 없고 호출자는 이
 세션의 응답을 기다린다. 판별은 whoami `ancestry[0].pid`의 실행 인자(`ps -o args= -p <pid>`)로 한다.
@@ -23,19 +29,31 @@
 인계받은 새 세션도 같은 env를 갖지만 환경 판별을 다시 시작하지 않는다.
 
 ```bash
+# Herdr 터미널
 command -v herdr
 herdr status
 herdr worktree open --help
 herdr pane run --help
+# Herdr 앱
+command -v herdr-app hc
+herdr-app status
+hc server status
+hc get "$HC_TERMINAL_ID" --json
 ```
 
-Herdr는 실행 중인 서버가 있고 client/server endpoint가 호환되며, 기존 worktree를
+Herdr 터미널은 실행 중인 서버가 있고 client/server endpoint가 호환되며, 기존 worktree를
 열고 **현재 native host**를 실행할 수 있을 때 `new-session`을 선택한다. Herdr 전송도 아래
 `trace handoff-delivery` producer로 호출 전후를 기록한다. Claude·Codex는
 설치된 `herdr agent start --help`의 kind와 해당 실행 파일을 확인하고, Omo는
 `omo --help`의 초기 프롬프트 지원과 `pane run`을 확인한다. `herdr status`는
 사람용 출력이므로 존재하지 않는 JSON 필드나 `--json` 옵션을 가정하지 않는다.
 별도 세션/socket 환경을 쓰면 모든 명령에 같은 대상을 유지한다.
+
+Herdr 앱은 `herdr-app status`가 `errors` 없이 열린 창을 보고하고, `hc server status`가 실행 중인
+core를 보고하고, `hc get`의 `labels."herdr.space"`로 이 세션이 그 창의 space에 표시됨을 확인하고,
+**현재 native host** 실행 파일이 있을 때 `new-session`을 선택한다. 인자 없는 `herdr-app`은 창을 열거나
+앞으로 가져오므로 확인에 쓰지 않는다. `herdr worktree open`은 Herdr 터미널 서버만 대상으로 하므로
+Herdr 앱 창에 space를 만들지 않는다.
 
 Herdr를 쓸 수 없음이 확인됐으면 현재 세션에서 이어가는 `current`다. 사용자가 직접 연 두 번째
 터미널에서 이어가길 원하면 같은 release와 인수 체인으로 수동 인계한다. 바이너리 설치 여부만으로
@@ -62,7 +80,8 @@ issueops decision add --id "$ISSUEOPS_ID" --kind implementation \
 ```
 
 `CHOICE_RECORD`에는 `current|new-session|hold`, 자동 결정인지 명시적 지시인지,
-선택한 런처(`herdr|none`, 명시적 지시일 때만 `cmux|manual`)와 확인한 status·host 실행 가능 관찰값(없으면 부재 근거),
+선택한 런처(`herdr|none`, 명시적 지시일 때만 `cmux|manual`)와 Herdr front-end(`herdr` 또는 `herdr-app`),
+확인한 status·host 실행 가능 관찰값(없으면 부재 근거),
 원래 사용자 요청과 그 대화 위치,
 선택 시점의 lifecycle ID·issue URL·branch·worktree·계획 경로, 승인 범위·종료점과
 현재 generation을 적는다. `hold`의 승인 범위는 보류다. 이 기록의 created_at과 내용을
@@ -124,7 +143,8 @@ release로 lease를 해제하고, 새 세션이 자기 native actor로 `executio
    `--help`에서 플래그 지원을 확인한 뒤 호출한다. opencode는 공유 서비스 세션이 lease를 쥘 수
    없으므로 `--standalone`을 빼지 않는다.
    사용자가 직접 연 두 번째 터미널로 인계하겠다고 명시한 경우에만 경로와 인계문을 제공하고 종료한다.
-   Herdr는 [session-choice-herdr.md](session-choice-herdr.md)의 **Herdr 실행** 절을 따른다. raw launcher를
+   Herdr 터미널은 [session-choice-herdr.md](session-choice-herdr.md)의 **Herdr 실행** 절을, Herdr 앱은
+   같은 문서의 **Herdr 앱 실행** 절을 따른다. raw launcher를
    호출하기 직전과 receipt를 읽은 직후에는 같은 문서의 producer를 호출한다. staged 관측 기록이
    실패하면 launcher를 호출하지 않는다. 호출 뒤 관측 기록이 실패하면 같은 입력을 다시
    보내지 않고 기존 terminal/session을 확인한다. worktree를 다시 만드는 것은 이 인계의
@@ -143,8 +163,8 @@ preview가 반환한 `--reseed` 명령을 실행한 뒤 `claim --claim-current-t
 ### Herdr 전송과 실행
 
 Herdr `new-session`을 선택했으면 [session-choice-herdr.md](session-choice-herdr.md)의
-raw launcher 전송 관측과 Herdr 실행 절을 따른다. 현재 세션이나 보류를 고른 세션은 그
-문서를 읽지 않는다.
+raw launcher 전송 관측과, front-end에 맞는 **Herdr 실행** 또는 **Herdr 앱 실행** 절을 따른다.
+현재 세션이나 보류를 고른 세션은 그 문서를 읽지 않는다.
 
 ## 3 보류
 
