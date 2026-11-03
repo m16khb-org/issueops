@@ -2,8 +2,10 @@ package basiccli
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
+	"testing"
 	"time"
 
 	doctoradapter "issueops/internal/adapter/doctor"
@@ -14,6 +16,25 @@ import (
 	doctordomain "issueops/internal/domain/doctor"
 	"issueops/internal/domain/operationalhealth"
 )
+
+// TestMain gives the package a scratch HOME. Doctor probes every loopback MCP
+// gateway in ~/.claude.json and counts its FDs with lsof; against a developer's
+// real HOME that made the package spend seconds of CPU per doctor call and tie
+// results to the machine.
+func TestMain(m *testing.M) {
+	home, err := os.MkdirTemp("", "issueops-basiccli-home-")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	if err := os.Setenv("HOME", home); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	code := m.Run()
+	_ = os.RemoveAll(home)
+	os.Exit(code)
+}
 
 func testDoctorService() doctorapp.Service {
 	stateDir := statestore.StateDir()
