@@ -14,7 +14,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"syscall"
 )
 
 const (
@@ -43,6 +42,13 @@ type managedCommandIdentity struct {
 	sha256 string
 	mode   os.FileMode
 	size   int64
+	device uint64
+	inode  uint64
+	uid    uint32
+	links  uint64
+}
+
+type managedCommandStatFields struct {
 	device uint64
 	inode  uint64
 	uid    uint32
@@ -85,6 +91,9 @@ func prepareManagedCommandPathCandidateWithDeps(target, candidatePath, path stri
 	plan := install.ManagedCommandPathPlan{Path: path, Target: target, AdoptionApproved: adopt}
 	if !adopt {
 		return nil, plan, fmt.Errorf("refusing to adopt regular command file without --adopt-command-file: %s", path)
+	}
+	if err := managedCommandAdoptionSupport(path); err != nil {
+		return nil, plan, err
 	}
 	if deps.readBuildInfo == nil || deps.randomSuffix == nil || deps.syncDir == nil || deps.exchangePaths == nil {
 		return nil, plan, fmt.Errorf("managed command path dependencies are unavailable")
@@ -377,13 +386,13 @@ func inspectManagedCommand(path string, readBuildInfo func(string) (managedBuild
 	if err != nil {
 		return managedCommandIdentity{}, err
 	}
-	stat, ok := info.Sys().(*syscall.Stat_t)
+	stat, ok := managedCommandStat(info)
 	if !ok || !acceptableManagedCommandFile(info, stat) {
 		return managedCommandIdentity{}, fmt.Errorf("managed command must be a current-user executable single-link regular file within the size limit")
 	}
 	identity := managedCommandIdentity{
-		path: path, mode: info.Mode(), size: info.Size(), device: uint64(stat.Dev), inode: uint64(stat.Ino),
-		uid: uint32(stat.Uid), links: uint64(stat.Nlink),
+		path: path, mode: info.Mode(), size: info.Size(), device: stat.device, inode: stat.inode,
+		uid: stat.uid, links: stat.links,
 	}
 	identity.sha256, err = hashManagedCommand(path, info, identity)
 	if err != nil {
@@ -400,9 +409,9 @@ func inspectManagedCommand(path string, readBuildInfo func(string) (managedBuild
 	return identity, nil
 }
 
-func acceptableManagedCommandFile(info os.FileInfo, stat *syscall.Stat_t) bool {
+func acceptableManagedCommandFile(info os.FileInfo, stat managedCommandStatFields) bool {
 	return info.Mode().IsRegular() && info.Mode()&os.ModeSymlink == 0 && info.Mode().Perm()&0o111 != 0 &&
-		info.Size() > 0 && info.Size() <= managedCommandMaxSize && uint32(stat.Uid) == uint32(os.Geteuid()) && uint64(stat.Nlink) == 1
+		info.Size() > 0 && info.Size() <= managedCommandMaxSize && stat.uid == uint32(os.Geteuid()) && stat.links == 1
 }
 
 func hashManagedCommand(path string, expected os.FileInfo, identity managedCommandIdentity) (string, error) {
@@ -431,10 +440,10 @@ func hashManagedCommand(path string, expected os.FileInfo, identity managedComma
 }
 
 func sameManagedCommandIdentity(actual, expected os.FileInfo, identity managedCommandIdentity) bool {
-	stat, ok := actual.Sys().(*syscall.Stat_t)
+	stat, ok := managedCommandStat(actual)
 	return ok && actual.Mode() == expected.Mode() && actual.Size() == expected.Size() &&
-		uint64(stat.Dev) == identity.device && uint64(stat.Ino) == identity.inode &&
-		uint32(stat.Uid) == identity.uid && uint64(stat.Nlink) == identity.links
+		stat.device == identity.device && stat.inode == identity.inode &&
+		stat.uid == identity.uid && stat.links == identity.links
 }
 
 func copyManagedCommandFile(source, destination string, mode os.FileMode, expected *managedCommandIdentity) error {

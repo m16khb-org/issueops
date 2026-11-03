@@ -14,9 +14,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
+	"issueops/internal/adapter/outbound/osfile"
 	activationcontract "issueops/internal/contract/nativeactivation"
 	activationdomain "issueops/internal/domain/nativeactivation"
 	"issueops/internal/port"
@@ -270,7 +270,7 @@ func validatePaths(stateRoot, issueOpsRoot, targetBinary string) error {
 	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 		return fmt.Errorf("native activation harness root must be a physical directory")
 	}
-	if targetBinary != filepath.Join(issueOpsRoot, "bin", "issueops") {
+	if targetBinary != filepath.Join(issueOpsRoot, "bin", osfile.ExecutableName("issueops")) {
 		return fmt.Errorf("native activation target must be the canonical harness binary")
 	}
 	return requireTargetNotSymlink(targetBinary)
@@ -323,8 +323,8 @@ func binaryIdentityFromPath(path string) (binaryIdentity, error) {
 	if err != nil {
 		return binaryIdentity{}, err
 	}
-	physical, ok := physicalIdentity(info)
-	if !ok || !validBinaryFile(info, physical) {
+	physical, ok := physicalIdentity(path, nil, info)
+	if !ok || !validBinaryFile(path, info, physical) {
 		return binaryIdentity{}, fmt.Errorf("activation binary must be an executable single-link regular file")
 	}
 	hash, err := hashStableBinary(path, info, physical)
@@ -347,7 +347,7 @@ func hashStableBinary(path string, expected os.FileInfo, physical physicalFileId
 	if err != nil {
 		return "", err
 	}
-	if !samePhysicalFile(openedBefore, expected, physical) {
+	if !samePhysicalFile(path, file, openedBefore, expected, physical) {
 		return "", fmt.Errorf("activation binary has no stable physical identity")
 	}
 	hash := sha256.New()
@@ -362,28 +362,34 @@ func hashStableBinary(path string, expected os.FileInfo, physical physicalFileId
 	if err != nil {
 		return "", err
 	}
-	if !samePhysicalFile(openedAfter, expected, physical) || !samePhysicalFile(pathAfter, expected, physical) {
+	if !samePhysicalFile(path, file, openedAfter, expected, physical) || !samePhysicalFile(path, nil, pathAfter, expected, physical) {
 		return "", fmt.Errorf("activation binary identity changed during hashing")
 	}
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
-func validBinaryFile(info os.FileInfo, physical physicalFileIdentity) bool {
+func validBinaryFile(path string, info os.FileInfo, physical physicalFileIdentity) bool {
 	return physical.device != 0 && physical.inode != 0 && physical.links == 1 &&
-		info.Mode().IsRegular() && info.Mode()&os.ModeSymlink == 0 && info.Mode().Perm()&0o111 != 0
+		info.Mode().IsRegular() && info.Mode()&os.ModeSymlink == 0 && osfile.Perm(path, info)&0o111 != 0
 }
 
-func samePhysicalFile(actual, expected os.FileInfo, physical physicalFileIdentity) bool {
-	actualPhysical, ok := physicalIdentity(actual)
+// samePhysicalFile compares actual, read from file when open or else from
+// path, with the expected entry.
+func samePhysicalFile(path string, file *os.File, actual, expected os.FileInfo, physical physicalFileIdentity) bool {
+	actualPhysical, ok := physicalIdentity(path, file, actual)
 	return ok && actualPhysical == physical && actual.Mode() == expected.Mode() && actual.Size() == expected.Size()
 }
 
-func physicalIdentity(info os.FileInfo) (physicalFileIdentity, bool) {
-	stat, ok := info.Sys().(*syscall.Stat_t)
-	if !ok {
-		return physicalFileIdentity{}, false
+// physicalIdentity reads the identity of file when it is open, else of path.
+func physicalIdentity(path string, file *os.File, info os.FileInfo) (physicalFileIdentity, bool) {
+	var identity osfile.Identity
+	var ok bool
+	if file != nil {
+		identity, ok = osfile.FileIdentity(file, info)
+	} else {
+		identity, ok = osfile.PathIdentity(path, info)
 	}
-	return physicalFileIdentity{device: uint64(stat.Dev), inode: uint64(stat.Ino), links: uint64(stat.Nlink)}, true
+	return physicalFileIdentity{device: identity.Device, inode: identity.Inode, links: identity.Links}, ok
 }
 
 func decodeExact[T any](data []byte) (T, error) {

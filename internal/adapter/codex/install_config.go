@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/port"
 )
 
@@ -41,13 +42,13 @@ func (installer Installer) writeGlobalConfig(path string, req port.NativeInstall
 		file.WouldWrite = true
 		return file, nil
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := osfile.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return file, err
 	}
 	if err := restrictToOwner(path, req); err != nil {
 		return file, err
 	}
-	if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
+	if err := osfile.WriteFile(path, []byte(text), 0o600); err != nil {
 		return file, err
 	}
 	file.Written = true
@@ -68,7 +69,7 @@ func readGlobalConfigWithBackup(path string, req port.NativeInstallRequest) (str
 	if !req.DryRun {
 		backup := path + ".harness.bak"
 		if _, statErr := os.Stat(backup); errors.Is(statErr, fs.ErrNotExist) {
-			if writeErr := os.WriteFile(backup, b, 0o600); writeErr != nil {
+			if writeErr := osfile.WriteFile(backup, b, 0o600); writeErr != nil {
 				return "", writeErr
 			}
 		}
@@ -99,7 +100,7 @@ func restrictToOwner(path string, req port.NativeInstallRequest) error {
 	if req.MCPTransport != mcpTransportHTTP || req.DryRun {
 		return nil
 	}
-	if err := os.Chmod(path, 0o600); err != nil && !errors.Is(err, fs.ErrNotExist) {
+	if err := osfile.Chmod(path, 0o600); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
 	return nil

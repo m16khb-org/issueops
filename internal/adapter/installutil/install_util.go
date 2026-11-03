@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/port"
 )
 
@@ -115,7 +116,7 @@ func WriteTextPlan(path, kind, content string, perm os.FileMode, dryRun bool) (p
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return file, err
 	}
-	if err := os.WriteFile(path, []byte(content), perm); err != nil {
+	if err := osfile.WriteFile(path, []byte(content), perm); err != nil {
 		return file, err
 	}
 	file.Written = true

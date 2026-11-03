@@ -3,6 +3,7 @@ package installdryrun
 import (
 	"encoding/json"
 	"path/filepath"
+	"runtime"
 	"time"
 
 	verifycontract "issueops/internal/contract/selfverify"
@@ -42,6 +43,10 @@ func validateInstallDryRunSmokeWithDeps(binary, root string, seed int64, deps in
 		"CODEX_HOME=" + filepath.Join(tempHome, ".codex"),
 		"XDG_CONFIG_HOME=" + filepath.Join(tempHome, ".config"),
 		"ISSUEOPS_ROOT=" + tempRoot,
+	}
+	if runtime.GOOS == "windows" {
+		// Windows resolves the user home from USERPROFILE, not HOME.
+		env = append(env, "USERPROFILE="+tempHome)
 	}
 	step := deps.run(root, "install dry-run smoke", 30*time.Second, "", env, binary, "install", "--dry-run", "--project-local", "--json")
 	if !step.OK {

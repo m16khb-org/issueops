@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"issueops/internal/adapter/outbound/osfile"
 )
 
 func nativeIntegrationRequiredPaths(root, home, opencodeConfigRoot string, codexSkills, claudeSkills, omoSkills, ompSkills, opencodeSkills []string) []string {
@@ -128,7 +130,7 @@ func nativeIntegrationLifecycleHostErrors(root string, deps nativeIntegrationVal
 	if err != nil {
 		return []string{"resolve stable native root for " + host.label + ": " + err.Error()}
 	}
-	expectedBinary := filepath.Join(stableRoot, "bin", "issueops")
+	expectedBinary := filepath.Join(stableRoot, "bin", osfile.ExecutableName("issueops"))
 	errs := []string{}
 	hasMCP := host.hasMCP
 	if hasMCP == nil {
@@ -235,7 +237,7 @@ func (deps nativeIntegrationValidationDeps) canonicalHarnessBinary(root string) 
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(stableRoot, "bin", "issueops"), nil
+	return filepath.Join(stableRoot, "bin", osfile.ExecutableName("issueops")), nil
 }
 
 func (deps nativeIntegrationValidationDeps) canonicalStableNativeRoot(root string) (string, error) {

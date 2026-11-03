@@ -3,12 +3,13 @@ package codex
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/domain/shelltoken"
 	"issueops/internal/port"
 )
@@ -36,10 +37,10 @@ func (installer Installer) writeCodexHooks(path string, req port.NativeInstallRe
 		file.WouldWrite = true
 		return file, messages, nil
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := osfile.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return file, messages, err
 	}
-	if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
+	if err := osfile.WriteFile(path, []byte(text), 0o600); err != nil {
 		return file, messages, err
 	}
 	file.Written = true
@@ -70,9 +71,14 @@ func (installer Installer) hookDriftMessages(config map[string]any, binPath stri
 	return messages
 }
 
-func HooksConfig(binPath string) map[string]any {
+// HooksConfig is the hook catalog this OS installs for binPath.
+func HooksConfig(binPath string) map[string]any { return hooksConfig(binPath, runtime.GOOS) }
+
+// hooksConfig builds the catalog for goos; the tracked template passes ""
+// so it stays the same whichever OS regenerates it.
+func hooksConfig(binPath, goos string) map[string]any {
 	hooks := map[string]any{}
-	for _, spec := range codexLifecycleHookSpecs(binPath) {
+	for _, spec := range codexLifecycleHookSpecs(binPath, goos) {
 		hooks[spec.Event] = []any{codexHookGroup(spec)}
 	}
 	return map[string]any{"hooks": hooks}
@@ -83,41 +89,50 @@ type codexLifecycleHookSpec struct {
 	Event      string
 	Subcommand string
 	Timeout    int
+	GOOS       string
 }
 
-func codexLifecycleHookSpecs(binPath string) []codexLifecycleHookSpec {
+func codexLifecycleHookSpecs(binPath, goos string) []codexLifecycleHookSpec {
 	// SessionStart carries the catalog for the main session: Codex re-runs it
 	// with source "compact" after compaction, and its post-compact.command.output
 	// schema has no hookSpecificOutput (verified against codex-cli 0.150.1).
 	// SubagentStart gives each subagent the same catalog (subagent-start output
 	// accepts additionalContext in codex-cli 0.161.0).
 	return []codexLifecycleHookSpec{
-		{BinPath: binPath, Event: "SessionStart", Subcommand: "session-start", Timeout: 5},
-		{BinPath: binPath, Event: "SubagentStart", Subcommand: "subagent-start", Timeout: 5},
+		{BinPath: binPath, Event: "SessionStart", Subcommand: "session-start", Timeout: 5, GOOS: goos},
+		{BinPath: binPath, Event: "SubagentStart", Subcommand: "subagent-start", Timeout: 5, GOOS: goos},
 	}
 }
 
 func codexHookGroup(spec codexLifecycleHookSpec) map[string]any {
-	return map[string]any{
-		"hooks": []any{
-			map[string]any{
-				"type":    "command",
-				"command": codexHookCommand(spec.BinPath, spec.Subcommand),
-				"timeout": spec.Timeout,
-			},
-		},
-	}
+	return map[string]any{"hooks": []any{codexHookHandler(spec)}}
 }
 
-func codexHookCommand(binPath, subcommand string) string {
-	cmd := fmt.Sprintf("%s hook %s", shelltoken.QuoteWord(binPath), subcommand)
+// codexHookHandler keeps the shell-form command on every OS. Codex on Windows
+// runs hooks through PowerShell, where a quoted path is a string expression,
+// so Windows also gets commandWindows with the & call operator.
+func codexHookHandler(spec codexLifecycleHookSpec) map[string]any {
+	args := codexHookArgs(spec.Subcommand)
+	handler := map[string]any{
+		"type":    "command",
+		"command": shelltoken.QuoteWord(spec.BinPath) + " " + strings.Join(args, " "),
+		"timeout": spec.Timeout,
+	}
+	if spec.GOOS == "windows" {
+		handler["commandWindows"] = "& '" + strings.ReplaceAll(spec.BinPath, "'", "''") + "' " + strings.Join(args, " ")
+	}
+	return handler
+}
+
+func codexHookArgs(subcommand string) []string {
+	args := []string{"hook", subcommand}
 	// additionalContext가 Codex TUI에 렌더링되는 이벤트는 --host codex를 넘겨
 	// systemMessage를 생략한다.
 	switch subcommand {
 	case "session-start", "subagent-start", "post-compact":
-		cmd += " --host codex"
+		args = append(args, "--host", "codex")
 	}
-	return cmd
+	return args
 }
 
 func (installer Installer) mergeHookConfig(config map[string]any, binPath string) map[string]any {
@@ -130,7 +145,7 @@ func (installer Installer) mergeHookConfig(config map[string]any, binPath string
 		config["hooks"] = hooks
 	}
 	desired := map[string]codexLifecycleHookSpec{}
-	for _, spec := range codexLifecycleHookSpecs(binPath) {
+	for _, spec := range codexLifecycleHookSpecs(binPath, runtime.GOOS) {
 		desired[spec.Event] = spec
 	}
 	for _, event := range codexLifecycleHookEvents {

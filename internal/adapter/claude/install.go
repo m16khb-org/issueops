@@ -3,6 +3,7 @@ package claude
 import (
 	"path/filepath"
 
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/port"
 )
 
@@ -25,17 +26,16 @@ func (installer Installer) Install(req port.NativeInstallRequest) (port.HostInst
 	plan.Messages(hookMessages)
 	plan.File(installer.writeClaudeUserMCP(filepath.Join(req.Home, ".claude.json"), req))
 
-	mcpConfig := claudeProjectMCPConfig()
-	plan.File(installer.deps.WriteJSONPlan(filepath.Join(req.Root, "configs", "claude", "mcp.project.json"), "claude_project_mcp_template", mcpConfig, 0o644, req.DryRun))
+	plan.File(installer.deps.WriteJSONPlan(filepath.Join(req.Root, "configs", "claude", "mcp.project.json"), "claude_project_mcp_template", claudeProjectMCPConfig("./bin/issueops"), 0o644, req.DryRun))
 
 	hooksTemplatePath := filepath.Join(req.Root, "configs", "claude", "hooks.settings.json")
-	plan.File(installer.deps.WriteJSONPlan(hooksTemplatePath, "claude_hooks_template", installer.claudeSettingsConfig("./bin/issueops"), 0o644, req.DryRun))
+	plan.File(installer.deps.WriteJSONPlan(hooksTemplatePath, "claude_hooks_template", installer.claudeSettingsConfigFor("./bin/issueops", ""), 0o644, req.DryRun))
 
 	if req.ProjectLocal && req.MCPTransport == mcpTransportHTTP {
 		plan.File(installer.removeClaudeProjectMCP(filepath.Join(req.Root, ".mcp.json"), req.DryRun))
 		plan.Message("project-local Claude MCP uses the user-scope issueops HTTP entry; no project entry or secret is written")
 	} else if req.ProjectLocal {
-		plan.File(installer.deps.WriteJSONPlan(filepath.Join(req.Root, ".mcp.json"), "claude_project_mcp_config", mcpConfig, 0o644, req.DryRun))
+		plan.File(installer.deps.WriteJSONPlan(filepath.Join(req.Root, ".mcp.json"), "claude_project_mcp_config", claudeProjectMCPConfig("./bin/"+osfile.ExecutableName("issueops")), 0o644, req.DryRun))
 	}
 
 	if req.DryRun {
@@ -45,12 +45,12 @@ func (installer Installer) Install(req port.NativeInstallRequest) (port.HostInst
 	return plan.Finish()
 }
 
-func claudeProjectMCPConfig() map[string]any {
+func claudeProjectMCPConfig(command string) map[string]any {
 	return map[string]any{
 		"mcpServers": map[string]any{
 			"issueops_project": map[string]any{
 				"type":    "stdio",
-				"command": "./bin/issueops",
+				"command": command,
 				"args":    []string{"mcp"},
 				"env": map[string]any{
 					"ISSUEOPS_ROOT": ".",

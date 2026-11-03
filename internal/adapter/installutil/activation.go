@@ -9,8 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"syscall"
 
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/port"
 )
 
@@ -113,32 +113,32 @@ func CaptureNativeActivationEvidence(host, surface, path, semanticSHA256 string)
 	if err != nil {
 		return port.NativeActivationEvidence{}, err
 	}
-	openedStat, ok := opened.Sys().(*syscall.Stat_t)
+	openedStat, ok := osfile.FileIdentity(file, opened)
 	if !ok || !sameActivationReadback(opened, openedStat, info, stat) {
 		return port.NativeActivationEvidence{}, fmt.Errorf("activation evidence changed during readback: %s", path)
 	}
 	return port.NativeActivationEvidence{
 		Host: host, Surface: surface, Path: path, SemanticSHA256: semanticSHA256,
 		SHA256: hex.EncodeToString(hash.Sum(nil)), Mode: uint32(opened.Mode()), Size: opened.Size(),
-		Device: uint64(openedStat.Dev), Inode: uint64(openedStat.Ino),
+		Device: openedStat.Device, Inode: openedStat.Inode,
 	}, nil
 }
 
 // lstatPhysicalRegularFile lstat이 돌려준 경로가 물리적 단일 링크 일반 파일인지 확인한다.
-func lstatPhysicalRegularFile(path string) (os.FileInfo, *syscall.Stat_t, error) {
+func lstatPhysicalRegularFile(path string) (os.FileInfo, osfile.Identity, error) {
 	info, err := os.Lstat(path)
 	if err != nil {
-		return nil, nil, err
+		return nil, osfile.Identity{}, err
 	}
-	stat, ok := info.Sys().(*syscall.Stat_t)
-	if !ok || stat.Dev == 0 || stat.Ino == 0 || stat.Nlink != 1 || !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
-		return nil, nil, fmt.Errorf("activation evidence must be a physical single-link regular file: %s", path)
+	stat, ok := osfile.PathIdentity(path, info)
+	if !ok || stat.Device == 0 || stat.Inode == 0 || stat.Links != 1 || !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
+		return nil, osfile.Identity{}, fmt.Errorf("activation evidence must be a physical single-link regular file: %s", path)
 	}
 	return info, stat, nil
 }
 
-func sameActivationReadback(opened os.FileInfo, openedStat *syscall.Stat_t, info os.FileInfo, stat *syscall.Stat_t) bool {
-	return openedStat.Dev == stat.Dev && openedStat.Ino == stat.Ino && opened.Size() == info.Size()
+func sameActivationReadback(opened os.FileInfo, openedStat osfile.Identity, info os.FileInfo, stat osfile.Identity) bool {
+	return openedStat.Device == stat.Device && openedStat.Inode == stat.Inode && opened.Size() == info.Size()
 }
 
 func canonicalJSONEqual(left, right any) bool {

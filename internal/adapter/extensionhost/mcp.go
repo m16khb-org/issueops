@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/port"
 )
 
@@ -27,7 +27,7 @@ func (installer Installer) writeUserMCP(path string, req port.NativeInstallReque
 		return file, err
 	}
 	if req.MCPTransport == mcpTransportHTTP && !req.DryRun {
-		if err := os.Chmod(path, 0o600); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		if err := osfile.Chmod(path, 0o600); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return file, err
 		}
 	}
@@ -43,9 +43,9 @@ func (installer Installer) removeProjectMCP(path string, dryRun bool) (port.Inst
 	return installer.deps.WriteJSONPlan(path, file.Kind, config, 0o644, dryRun)
 }
 
-func (installer Installer) writeProjectMCP(path, kind string, dryRun bool) (port.InstallFile, error) {
+func (installer Installer) writeProjectMCP(path, kind, command string, dryRun bool) (port.InstallFile, error) {
 	file := port.InstallFile{Path: path, Kind: kind}
-	config, err := installer.projectMCPConfig()
+	config, err := installer.projectMCPConfig(command)
 	if err != nil {
 		return file, err
 	}
@@ -85,8 +85,8 @@ func (installer Installer) catalogSHA256() (string, error) {
 	return catalogSHA256, nil
 }
 
-func (installer Installer) projectMCPConfig() (map[string]any, error) {
-	server, err := installer.mcpServer("./bin/issueops", ".")
+func (installer Installer) projectMCPConfig(command string) (map[string]any, error) {
+	server, err := installer.mcpServer(command, ".")
 	if err != nil {
 		return nil, err
 	}

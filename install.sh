@@ -3,6 +3,9 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN="$ROOT/bin/issueops"
+case "$(uname -s)" in
+  MINGW* | MSYS* | CYGWIN* | Windows_NT) BIN="$BIN.exe" ;;
+esac
 SKIP_BUILD=0
 ARGS=()
 

@@ -7,7 +7,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"syscall"
 	"time"
 
 	statedomain "issueops/internal/domain/state"
@@ -73,10 +72,5 @@ func legacyDaemonRunning(dir string) bool {
 	if json.Unmarshal(data, &record) != nil || record.PID <= 0 {
 		return false
 	}
-	process, err := os.FindProcess(record.PID)
-	if err != nil {
-		return false
-	}
-	err = process.Signal(syscall.Signal(0))
-	return err == nil || errors.Is(err, syscall.EPERM)
+	return legacyPIDAlive(record.PID)
 }

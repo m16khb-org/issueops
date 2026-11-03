@@ -1,6 +1,7 @@
 package inspect
 
 import (
+	"issueops/internal/adapter/outbound/osfile"
 	inspectcontract "issueops/internal/contract/inspect"
 	"os"
 	"path/filepath"
@@ -27,7 +28,7 @@ func (observer Observer) Inspect(root, target, home, version, skillName string, 
 	codexSkill := filepath.Join(home, ".codex", "skills", skillName)
 	claudeSkill := filepath.Join(home, ".claude", "skills", skillName)
 	projectClaudeSkill := filepath.Join(root, ".claude", "skills", skillName)
-	mcpBinary := filepath.Join(root, "bin", "issueops")
+	mcpBinary := filepath.Join(root, "bin", osfile.ExecutableName("issueops"))
 	// The docs listing waits on git; observe the rest of the install meanwhile.
 	var (
 		docs []string

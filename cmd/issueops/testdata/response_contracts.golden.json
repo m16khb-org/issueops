@@ -2623,7 +2623,7 @@
           "novelty": 70,
           "risk": 24,
           "satisfaction_evidence": [
-            "scripts/release-build-matrix.sh builds the supported darwin/linux amd64/arm64 matrix",
+            "scripts/release-build-matrix.sh builds the supported darwin/linux amd64/arm64 and windows/amd64 matrix",
             "release reproducibility docs record the cross-platform matrix",
             "testing docs list the release build matrix smoke"
           ],
@@ -6258,7 +6258,7 @@
                 "novelty": 70,
                 "risk": 24,
                 "satisfaction_evidence": [
-                  "scripts/release-build-matrix.sh builds the supported darwin/linux amd64/arm64 matrix",
+                  "scripts/release-build-matrix.sh builds the supported darwin/linux amd64/arm64 and windows/amd64 matrix",
                   "release reproducibility docs record the cross-platform matrix",
                   "testing docs list the release build matrix smoke"
                 ],

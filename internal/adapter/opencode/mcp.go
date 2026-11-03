@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/port"
 )
 
@@ -36,7 +37,7 @@ func (installer Installer) writeUserMCP(path string, req port.NativeInstallReque
 	}
 	// The HTTP entry holds a bearer token, so an existing file is narrowed too.
 	if req.MCPTransport == mcpTransportHTTP && !req.DryRun {
-		if err := os.Chmod(path, 0o600); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		if err := osfile.Chmod(path, 0o600); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return file, err
 		}
 	}
@@ -58,9 +59,9 @@ func (installer Installer) removeProjectMCP(path string, dryRun bool) (port.Inst
 	return installer.deps.WriteJSONPlan(path, file.Kind, config, 0o644, dryRun)
 }
 
-func (installer Installer) writeProjectMCP(path, kind string, dryRun bool) (port.InstallFile, error) {
+func (installer Installer) writeProjectMCP(path, kind, command string, dryRun bool) (port.InstallFile, error) {
 	file := port.InstallFile{Path: path, Kind: kind}
-	server, err := installer.localMCPServer("./bin/issueops", ".")
+	server, err := installer.localMCPServer(command, ".")
 	if err != nil {
 		return file, err
 	}

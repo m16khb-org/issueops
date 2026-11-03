@@ -5,6 +5,7 @@ package extensionhost
 import (
 	"path/filepath"
 
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/port"
 )
 
@@ -67,6 +68,7 @@ func (installer Installer) Install(req port.NativeInstallRequest) (port.HostInst
 	plan.File(installer.writeProjectMCP(
 		filepath.Join(req.Root, "configs", host, "mcp.json"),
 		host+"_project_mcp_template",
+		"./bin/issueops",
 		req.DryRun,
 	))
 	plan.File(installer.deps.WriteTextPlan(
@@ -84,6 +86,7 @@ func (installer Installer) Install(req port.NativeInstallRequest) (port.HostInst
 		plan.File(installer.writeProjectMCP(
 			filepath.Join(req.Root, "."+host, "mcp.json"),
 			host+"_project_mcp_config",
+			"./bin/"+osfile.ExecutableName("issueops"),
 			req.DryRun,
 		))
 	}

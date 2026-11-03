@@ -9,6 +9,7 @@ import (
 	"slices"
 	"sort"
 
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/port"
 )
 
@@ -158,7 +159,9 @@ func captureInstallHostPath(path string, kind installHostPathKind) (installHostP
 	if !info.Mode().IsRegular() {
 		return snapshot, fmt.Errorf("native install rollback cannot snapshot non-file path: %s", path)
 	}
-	snapshot.mode = info.Mode()
+	// Windows reports 0666 for every writable file; osfile.Perm recovers whether
+	// the file was owner-only so the rollback restores that privacy.
+	snapshot.mode = info.Mode()&^fs.ModePerm | osfile.Perm(path, info)
 	snapshot.content, err = os.ReadFile(path)
 	return snapshot, err
 }
@@ -198,10 +201,10 @@ func removeInstallPathIfPresent(path string) error {
 
 // writeInstallHostSnapshotContent writes the snapshot content and enforces its permission bits.
 func writeInstallHostSnapshotContent(snapshot installHostPathSnapshot) error {
-	if err := os.WriteFile(snapshot.path, snapshot.content, snapshot.mode.Perm()); err != nil {
+	if err := osfile.WriteFile(snapshot.path, snapshot.content, snapshot.mode.Perm()); err != nil {
 		return err
 	}
-	return os.Chmod(snapshot.path, snapshot.mode.Perm())
+	return osfile.Chmod(snapshot.path, snapshot.mode.Perm())
 }
 
 // removeNonRegularInstallHostPath removes path only when it exists and is not a regular file.

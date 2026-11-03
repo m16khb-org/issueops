@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"issueops/internal/adapter/outbound/osfile"
 	doctordomain "issueops/internal/domain/doctor"
 	"issueops/internal/domain/projectdoc"
 )
@@ -128,7 +129,7 @@ func ObserveBinaryDrift(root string) doctordomain.BinaryObservation {
 	if root == "" {
 		return observation
 	}
-	observation.Path = filepath.Join(root, "bin", "issueops")
+	observation.Path = filepath.Join(root, "bin", osfile.ExecutableName("issueops"))
 	info, err := os.Stat(observation.Path)
 	if err != nil {
 		return observation

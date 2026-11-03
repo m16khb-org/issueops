@@ -79,6 +79,11 @@ func containsRetiredNameOutsideRuntimePaths(text, root string) bool {
 			continue
 		}
 		sanitized = strings.ReplaceAll(sanitized, runtimePath, "$RUNTIME_PATH")
+		// The inspect output is JSON, where Windows path separators appear
+		// escaped as `\\`.
+		if escaped := strings.ReplaceAll(runtimePath, `\`, `\\`); escaped != runtimePath {
+			sanitized = strings.ReplaceAll(sanitized, escaped, "$RUNTIME_PATH")
+		}
 	}
 	for _, needle := range retiredNameNeedles() {
 		if strings.Contains(sanitized, needle) {

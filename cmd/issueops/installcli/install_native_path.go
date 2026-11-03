@@ -6,13 +6,11 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 
+	"issueops/internal/adapter/outbound/osfile"
 	installcontract "issueops/internal/contract/install"
 	"issueops/internal/port"
 )
-
-const shellPathRCMarker = "# issueops: add user-local bin to PATH"
 
 type installPathTransaction struct {
 	ensureSymlinkPlan func(string, string, bool) (port.InstallLink, error)
@@ -32,8 +30,8 @@ type installPathTransaction struct {
 
 func (c Command) prepareInstallPathPlanFromCandidate(result *port.NativeInstallResult, req port.NativeInstallRequest, candidatePath, mode string) (*installPathTransaction, error) {
 	userBin := filepath.Join(req.Home, ".local", "bin")
-	commandPath := filepath.Join(userBin, "issueops")
-	shortCommandPath := filepath.Join(userBin, "io")
+	commandPath := filepath.Join(userBin, osfile.ExecutableName("issueops"))
+	shortCommandPath := filepath.Join(userBin, osfile.ExecutableName("io"))
 	transaction := &installPathTransaction{
 		req:               req,
 		ensureSymlinkPlan: c.EnsureSymlinkPlan,
@@ -219,36 +217,20 @@ func managedCommandPathResult(plan installcontract.ManagedCommandPathPlan) *port
 }
 
 func planShellPath(result *port.NativeInstallResult, req port.NativeInstallRequest, mode string) error {
-	commandPath := filepath.Join(req.Home, ".local", "bin", "issueops")
-	shortCommandPath := filepath.Join(req.Home, ".local", "bin", "io")
+	commandPath := filepath.Join(req.Home, ".local", "bin", osfile.ExecutableName("issueops"))
+	shortCommandPath := filepath.Join(req.Home, ".local", "bin", osfile.ExecutableName("io"))
 	if mode == "manual" {
-		result.Messages = append(result.Messages, `path-mode=manual: command shims are planned at `+commandPath+` and `+shortCommandPath+`; run export PATH="$HOME/.local/bin:$PATH" for this shell or add it to your shell rc`)
+		result.Messages = append(result.Messages, `path-mode=manual: command shims are planned at `+commandPath+` and `+shortCommandPath+`; `+manualLocalBinPathHint)
 		return nil
 	}
 	if mode == "skip" {
-		result.Messages = append(result.Messages, "path-mode=skip: shell rc PATH update skipped; command shims still use "+commandPath+" and "+shortCommandPath)
+		result.Messages = append(result.Messages, "path-mode=skip: "+localBinPathKind+" PATH update skipped; command shims still use "+commandPath+" and "+shortCommandPath)
 		return nil
 	}
 	if localBinInPath(req.Home) {
 		return nil
 	}
-	rcPath := preferredShellRC(req.Home)
-	if shellRCAlreadyAddsLocalBin(rcPath, req.Home) {
-		return nil
-	}
-	file, err := appendShellPathLinePlan(rcPath, req.DryRun)
-	if file.Path != "" && (file.WouldWrite || file.Written) {
-		result.Files = append(result.Files, file)
-	}
-	if err != nil {
-		return err
-	}
-	if file.WouldWrite {
-		result.Messages = append(result.Messages, "dry-run: would add ~/.local/bin to PATH in "+rcPath)
-	} else if file.Written {
-		result.Messages = append(result.Messages, `added ~/.local/bin to PATH in `+rcPath+`; restart shell or run: export PATH="$HOME/.local/bin:$PATH"`)
-	}
-	return nil
+	return addLocalBinToPath(result, req)
 }
 
 func ensureShortCommandShimPlan(target, path string, dryRun bool, ensureSymlinkPlan func(string, string, bool) (port.InstallLink, error)) (port.InstallLink, error) {
@@ -273,22 +255,6 @@ func ensureShortCommandShimPlan(target, path string, dryRun bool, ensureSymlinkP
 	return link, nil
 }
 
-func preferredShellRC(home string) string {
-	switch filepath.Base(os.Getenv("SHELL")) {
-	case "zsh":
-		return filepath.Join(home, ".zshrc")
-	case "bash":
-		return filepath.Join(home, ".bashrc")
-	}
-	for _, name := range []string{".zshrc", ".bashrc"} {
-		path := filepath.Join(home, name)
-		if _, err := os.Stat(path); err == nil {
-			return path
-		}
-	}
-	return filepath.Join(home, ".profile")
-}
-
 func localBinInPath(home string) bool {
 	localBin := filepath.Clean(filepath.Join(home, ".local", "bin"))
 	for _, entry := range filepath.SplitList(os.Getenv("PATH")) {
@@ -297,36 +263,4 @@ func localBinInPath(home string) bool {
 		}
 	}
 	return false
-}
-
-func shellRCAlreadyAddsLocalBin(path, home string) bool {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return false
-	}
-	text := string(b)
-	return strings.Contains(text, shellPathRCMarker) ||
-		strings.Contains(text, `export PATH="$HOME/.local/bin:$PATH"`) ||
-		strings.Contains(text, `export PATH="`+filepath.Join(home, ".local", "bin")+`:$PATH"`)
-}
-
-func appendShellPathLinePlan(path string, dryRun bool) (port.InstallFile, error) {
-	file := port.InstallFile{Path: path, Kind: "shell_path_rc"}
-	if dryRun {
-		file.WouldWrite = true
-		return file, nil
-	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return file, err
-	}
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
-	if err != nil {
-		return file, err
-	}
-	defer f.Close()
-	if _, err := fmt.Fprintf(f, "\n%s\n%s\n", shellPathRCMarker, `export PATH="$HOME/.local/bin:$PATH"`); err != nil {
-		return file, err
-	}
-	file.Written = true
-	return file, nil
 }

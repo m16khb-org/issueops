@@ -42,7 +42,7 @@ func HookGroupContainsAgentHarness(group any) bool {
 		if !ok {
 			continue
 		}
-		if cmd, ok := hm["command"].(string); ok && isAgentHarnessHookCommand(cmd) {
+		if target, ok := hookEntryTarget(hm); ok && isAgentHarnessExecutable(target) {
 			return true
 		}
 	}
@@ -70,7 +70,6 @@ func HookGroupContainsCommand(group any, commandPrefix string) bool {
 	return false
 }
 
-func isAgentHarnessHookCommand(command string) bool {
-	executable, ok := hookCommandTarget(command)
-	return ok && filepath.Base(executable) == "issueops"
+func isAgentHarnessExecutable(executable string) bool {
+	return strings.TrimSuffix(filepath.Base(executable), ".exe") == "issueops"
 }

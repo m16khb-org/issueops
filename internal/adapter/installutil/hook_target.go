@@ -63,16 +63,30 @@ func hookGroupTargets(group any) []string {
 		if !ok {
 			continue
 		}
-		command, ok := hm["command"].(string)
-		if !ok {
-			continue
-		}
-		target, ok := hookCommandTarget(command)
+		target, ok := hookEntryTarget(hm)
 		if ok {
 			targets = append(targets, target)
 		}
 	}
 	return targets
+}
+
+// hookEntryTarget returns the executable of an issueops-shaped hook handler:
+// a shell-form command whose second word is `hook`, or an exec-form command
+// whose args start with `hook`.
+func hookEntryTarget(handler map[string]any) (string, bool) {
+	command, ok := handler["command"].(string)
+	if !ok {
+		return "", false
+	}
+	if args, present := handler["args"]; present {
+		list, _ := args.([]any)
+		if len(list) == 0 || list[0] != "hook" || strings.TrimSpace(command) == "" {
+			return "", false
+		}
+		return command, true
+	}
+	return hookCommandTarget(command)
 }
 
 func hookCommandTarget(command string) (string, bool) {

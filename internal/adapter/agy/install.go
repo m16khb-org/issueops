@@ -3,6 +3,7 @@ package agy
 import (
 	"path/filepath"
 
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/port"
 )
 
@@ -30,6 +31,7 @@ func (installer Installer) Install(req port.NativeInstallRequest) (port.HostInst
 	plan.File(installer.writeAgyProjectMCP(
 		filepath.Join(req.Root, "configs", "agy", "mcp_config.json"),
 		"agy_project_mcp_template",
+		"./bin/issueops",
 		req.DryRun,
 	))
 
@@ -37,6 +39,7 @@ func (installer Installer) Install(req port.NativeInstallRequest) (port.HostInst
 		plan.File(installer.writeAgyProjectMCP(
 			filepath.Join(req.Root, ".agents", "mcp_config.json"),
 			"agy_project_mcp_config",
+			"./bin/"+osfile.ExecutableName("issueops"),
 			req.DryRun,
 		))
 	}

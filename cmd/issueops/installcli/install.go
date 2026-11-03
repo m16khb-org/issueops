@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"issueops/cmd/issueops/cliflag"
+	"issueops/internal/adapter/outbound/osfile"
 	installapp "issueops/internal/application/install"
 	activationapp "issueops/internal/application/nativeactivation"
 	activationcontract "issueops/internal/contract/nativeactivation"
@@ -47,7 +48,7 @@ func (c Command) runInstall(args []string) error {
 	if c.NativeInstallRequest == nil || c.InstallNative == nil {
 		return fmt.Errorf("native installer is not configured")
 	}
-	req := c.NativeInstallRequest(root, home, codexHome, filepath.Join(root, "bin", "issueops"))
+	req := c.NativeInstallRequest(root, home, codexHome, filepath.Join(root, "bin", osfile.ExecutableName("issueops")))
 	req.ProjectLocal = *projectLocal
 	req.DryRun = *dryRun
 	req.AdoptCommandFile = *adoptCommandFile

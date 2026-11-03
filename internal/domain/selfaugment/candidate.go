@@ -114,7 +114,7 @@ func candidateSatisfactionRules() []candidateSatisfactionRule {
 			return evidenceWhen(signals.HasReleaseUserReadme, "README contains install and update commands", "README links canonical release reproducibility and rollback criteria", "README omits copyable destructive rollback commands")
 		}},
 		{"cross-platform-build-matrix", func(signals contract.SelfAugmentRepoSignals) []string {
-			return evidenceWhen(signals.HasCrossPlatformBuildMatrix, "scripts/release-build-matrix.sh builds the supported darwin/linux amd64/arm64 matrix", "release reproducibility docs record the cross-platform matrix", "testing docs list the release build matrix smoke")
+			return evidenceWhen(signals.HasCrossPlatformBuildMatrix, "scripts/release-build-matrix.sh builds the supported darwin/linux amd64/arm64 and windows/amd64 matrix", "release reproducibility docs record the cross-platform matrix", "testing docs list the release build matrix smoke")
 		}},
 		{"distribution-decision-record", func(signals contract.SelfAugmentRepoSignals) []string {
 			return evidenceWhen(signals.HasDistributionDecision, "ADR records the tarball/manual archive versus Homebrew decision gate", "release reproducibility docs define rollback criteria", "README exposes the current distribution decision")

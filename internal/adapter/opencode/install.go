@@ -5,6 +5,7 @@ package opencode
 import (
 	"path/filepath"
 
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/port"
 )
 
@@ -55,6 +56,7 @@ func (installer Installer) Install(req port.NativeInstallRequest) (port.HostInst
 	plan.File(installer.writeProjectMCP(
 		filepath.Join(req.Root, "configs", host, "opencode.json"),
 		"opencode_project_mcp_template",
+		"./bin/issueops",
 		req.DryRun,
 	))
 	plan.File(installer.deps.WriteTextPlan(
@@ -70,7 +72,7 @@ func (installer Installer) Install(req port.NativeInstallRequest) (port.HostInst
 		plan.File(installer.removeProjectMCP(projectConfig, req.DryRun))
 		plan.Message("project-local opencode MCP uses the user-scope issueops HTTP entry; no project entry or secret is written")
 	} else if req.ProjectLocal {
-		plan.File(installer.writeProjectMCP(projectConfig, "opencode_project_mcp_config", req.DryRun))
+		plan.File(installer.writeProjectMCP(projectConfig, "opencode_project_mcp_config", "./bin/"+osfile.ExecutableName("issueops"), req.DryRun))
 	}
 
 	if req.DryRun {

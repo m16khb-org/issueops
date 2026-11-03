@@ -19,9 +19,9 @@ func (installer Installer) writeAgyUserMCP(path string, req port.NativeInstallRe
 	return installer.deps.WriteJSONPlan(path, file.Kind, config, 0o600, req.DryRun)
 }
 
-func (installer Installer) writeAgyProjectMCP(path, kind string, dryRun bool) (port.InstallFile, error) {
+func (installer Installer) writeAgyProjectMCP(path, kind, command string, dryRun bool) (port.InstallFile, error) {
 	file := port.InstallFile{Path: path, Kind: kind}
-	config, err := installer.agyProjectMCPConfig()
+	config, err := installer.agyProjectMCPConfig(command)
 	if err != nil {
 		return file, err
 	}
@@ -32,8 +32,8 @@ func (installer Installer) agyUserMCPServer(req port.NativeInstallRequest) (map[
 	return installer.agyMCPServer(req.BinPath, req.Root)
 }
 
-func (installer Installer) agyProjectMCPConfig() (map[string]any, error) {
-	server, err := installer.agyMCPServer("./bin/issueops", ".")
+func (installer Installer) agyProjectMCPConfig(command string) (map[string]any, error) {
+	server, err := installer.agyMCPServer(command, ".")
 	if err != nil {
 		return nil, err
 	}

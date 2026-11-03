@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="${ISSUEOPS_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
-TARGETS="${ISSUEOPS_RELEASE_TARGETS:-darwin/arm64 darwin/amd64 linux/amd64 linux/arm64}"
+TARGETS="${ISSUEOPS_RELEASE_TARGETS:-darwin/arm64 darwin/amd64 linux/amd64 linux/arm64 windows/amd64}"
 OUT_DIR="${ISSUEOPS_RELEASE_OUT_DIR:-}"
 KEEP_TMP="${ISSUEOPS_RELEASE_KEEP_TMP:-0}"
 
@@ -78,6 +78,9 @@ for target in $TARGETS; do
     exit 2
   fi
   out="$OUT_DIR/issueops-${os}-${arch}"
+  if [[ "$os" == "windows" ]]; then
+    out="$out.exe"
+  fi
   log "building ${target}"
   (cd "$ROOT" && GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "$out" ./cmd/issueops)
   if [[ ! -s "$out" ]]; then

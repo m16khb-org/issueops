@@ -3,6 +3,7 @@ package update
 import (
 	"fmt"
 	"io"
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/contract/processidentity"
 	contract "issueops/internal/contract/update"
 	"os"
@@ -38,19 +39,6 @@ type Runtime struct {
 	InspectProcess      func(int) (processidentity.Identity, error)
 }
 
-func (r Runtime) Install(root string, args []string) error {
-	script := filepath.Join(root, "scripts", "install-native.sh")
-	if _, err := os.Stat(script); err != nil {
-		return fmt.Errorf("install script not found at %s: %w", script, err)
-	}
-	command := exec.Command(script, args...)
-	command.Dir = root
-	command.Env = r.Environment
-	command.Stdin = r.Input
-	command.Stdout = r.Output
-	command.Stderr = r.Diagnostics
-	return command.Run()
-}
 func (Runtime) CurrentPID() int                 { return os.Getpid() }
 func (Runtime) SupportsOrphanTermination() bool { return runtime.GOOS == "darwin" }
 func (Runtime) Terminate(pid int) error {
@@ -62,11 +50,11 @@ func (Runtime) Terminate(pid int) error {
 }
 
 func (r Runtime) List() ([]contract.MCPProxyProcess, error) {
-	out, err := r.ProcessTable.Read("-axo", "pid=,ppid=,command=")
+	out, err := r.processRows()
 	if err != nil {
 		return nil, fmt.Errorf("MCP proxy inventory failed: %w", err)
 	}
-	binary := filepath.Join(r.Root, "bin", "issueops")
+	binary := filepath.Join(r.Root, "bin", osfile.ExecutableName("issueops"))
 	canonicalBinary, err := filepath.EvalSymlinks(binary)
 	if err != nil {
 		return nil, fmt.Errorf("resolve MCP proxy binary: %w", err)

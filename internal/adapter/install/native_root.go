@@ -7,9 +7,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"issueops/internal/adapter/outbound/osfile"
 )
 
-const nativeBinaryName = "issueops"
+var nativeBinaryName = osfile.ExecutableName("issueops")
 
 // ResolveStableNativeRoot maps a linked Git worktree to the source checkout
 // that owns the common .git directory. Normal checkouts remain unchanged.
