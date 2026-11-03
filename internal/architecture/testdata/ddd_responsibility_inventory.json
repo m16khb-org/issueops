@@ -12887,6 +12887,7 @@
       "task": "T20",
       "symbols": [
         "func Eligible",
+        "func ExcludedDir",
         "func HistoryRecord",
         "func Roots",
         "func Select",

@@ -51,6 +51,27 @@ func TestEmptySelectionPreservesGitAvailabilityShape(t *testing.T) {
 	}
 }
 
+// Discovery skips a directory only when Select would drop everything under it.
+func TestExcludedDirIsSkippableOnlyWhenWholeSubtreeIsExcluded(t *testing.T) {
+	for path, want := range map[string]bool{
+		".issueops/evidence":                    true,
+		".issueops/evidence/run":                false,
+		".issueops/evidence-other":              false,
+		".issueops/state":                       false,
+		".issueops/tmp":                         false,
+		".issueops":                             false,
+		"evidence":                              false,
+		"skills/self-verify/.issueops/evidence": false,
+	} {
+		if got := ExcludedDir(path); got != want {
+			t.Errorf("ExcludedDir(%q) = %v, want %v", path, got, want)
+		}
+		if want && !excluded(path+"/anything.md") {
+			t.Errorf("skipped dir %q must exclude every file under it", path)
+		}
+	}
+}
+
 func TestHistoryRecordSeparatesDatedRecordsFromRules(t *testing.T) {
 	for path, want := range map[string]bool{
 		".issueops/issues/561/plan.md":        true,

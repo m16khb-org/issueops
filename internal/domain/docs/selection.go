@@ -2,6 +2,7 @@ package docs
 
 import (
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -50,9 +51,23 @@ func Eligible(candidates []docscontract.Candidate) []docscontract.Candidate {
 	return out
 }
 
+// excludedDirs are runtime-evidence directories the index never includes: the
+// directory and everything under it is excluded wholesale.
+var excludedDirs = []string{".issueops/evidence"}
+
+// ExcludedDir reports whether relativePath is a directory whose whole subtree
+// is excluded from the index, so discovery can skip descending into it.
+func ExcludedDir(relativePath string) bool {
+	return slices.Contains(excludedDirs, relativePath)
+}
+
 func excluded(relativePath string) bool {
-	const evidenceDir = ".issueops/evidence"
-	return relativePath == evidenceDir || strings.HasPrefix(relativePath, evidenceDir+"/")
+	for _, dir := range excludedDirs {
+		if relativePath == dir || strings.HasPrefix(relativePath, dir+"/") {
+			return true
+		}
+	}
+	return false
 }
 
 // historyDirs hold dated, per-cycle, or retired records: plans, research

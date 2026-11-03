@@ -4,6 +4,7 @@ import (
 	"fmt"
 	docsapp "issueops/internal/application/docs"
 	docscontract "issueops/internal/contract/docs"
+	docsdomain "issueops/internal/domain/docs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -160,6 +161,51 @@ func TestDocsIndexExcludesEvidence(t *testing.T) {
 	if docIndexContains(index.Docs, ".issueops/evidence/pioneer-skills-quality/baseline.md") {
 		t.Fatalf("DocsIndex included gitignored evidence doc: %+v", index.Docs)
 	}
+}
+
+// Candidates must ignore the excluded evidence tree: the result matches a tree
+// without evidence, even with an unreadable subdirectory inside it, while other
+// runtime directories are still walked.
+func TestCandidatesSkipEvidenceTreeWithoutChangingResult(t *testing.T) {
+	root := t.TempDir()
+	mustWrite(t, filepath.Join(root, "AGENTS.md"), "# Rules\n")
+	mustWrite(t, filepath.Join(root, ".issueops", "CAUTIONS.md"), "# Cautions\n")
+	mustWrite(t, filepath.Join(root, ".issueops", "documentation", "README.md"), "# Docs\n")
+	mustWrite(t, filepath.Join(root, ".issueops", "state", "note.md"), "# State\n")
+	want := Observer{}.Candidates(root, docsdomain.Roots())
+
+	mustWrite(t, filepath.Join(root, ".issueops", "evidence", "x.md"), "# Evidence\n")
+	mustWrite(t, filepath.Join(root, ".issueops", "evidence", "run", "y.md"), "# Evidence\n")
+	locked := filepath.Join(root, ".issueops", "evidence", "locked")
+	if err := os.MkdirAll(locked, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(locked, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(locked, 0o755) })
+
+	got := Observer{}.Candidates(root, docsdomain.Roots())
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("candidates changed by evidence tree:\n got %+v\nwant %+v", got, want)
+	}
+	for _, c := range got {
+		if strings.HasPrefix(c.RelPath, ".issueops/evidence") {
+			t.Fatalf("evidence candidate leaked: %+v", c)
+		}
+	}
+	if !candidatesContain(got, ".issueops/state/note.md") {
+		t.Fatalf("non-evidence runtime dir must still be walked: %+v", got)
+	}
+}
+
+func candidatesContain(candidates []docscontract.Candidate, relPath string) bool {
+	for _, c := range candidates {
+		if c.RelPath == relPath {
+			return true
+		}
+	}
+	return false
 }
 
 func docIndexContains(docs []docscontract.DocIndexInfo, relPath string) bool {

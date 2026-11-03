@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"issueops/internal/adapter/outbound/gitbin"
 	docscontract "issueops/internal/contract/docs"
+	docsdomain "issueops/internal/domain/docs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -32,7 +33,16 @@ func (Observer) Candidates(root string, roots []string) []docscontract.Candidate
 			continue
 		}
 		_ = filepath.WalkDir(full, func(path string, d fs.DirEntry, err error) error {
-			if err == nil && !d.IsDir() && strings.HasSuffix(path, ".md") {
+			if err != nil {
+				return nil
+			}
+			if d.IsDir() {
+				if rel, relErr := filepath.Rel(root, path); relErr == nil && docsdomain.ExcludedDir(filepath.ToSlash(rel)) {
+					return fs.SkipDir
+				}
+				return nil
+			}
+			if strings.HasSuffix(path, ".md") {
 				appendPath(path)
 			}
 			return nil
