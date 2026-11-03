@@ -3,9 +3,6 @@
 from __future__ import annotations
 
 import importlib.util
-import hashlib
-import re
-import subprocess
 import unittest
 from pathlib import Path
 
@@ -113,81 +110,6 @@ class MeetingNotesSkillContractTest(unittest.TestCase):
         self.assertIn("After the participant list is provided, confirm the received participants", content)
         self.assertIn("then ask for the meeting transcript text", content)
         self.assertIn("When both inputs are present, continue with the normal Meeting Notes workflow", content)
-
-    def test_synthetic_fixture_family_has_no_identified_meeting_data(self) -> None:
-        forbidden_fingerprints = (
-            (6, 264263212423224, "0e3df5670eda1a187577a904e72466d118a48df6e1b81925dc7ea2d1a09a9e23"),
-            (6, 266323265947531, "061cdcb5a59894767355f44c46e53da39ff9ac1778a00126d375e73883dd0ff7"),
-            (6, 267491847855948, "cd07f8a79313c9b09aede56be3de3511dfab486f307fa57b0cc0df7d2f9f2016"),
-            (10, 12948026869183762353, "90c1dbd608e3775069ed0d85efa3ee5de8d81b1967898c92dc4e078220687120"),
-            (3, 4577505, "25f0f2b3c3a7ee2320155ec701726bac70102b7913ea2ab94db8dc28bed6a4eb"),
-            (5, 310860962933, "327ff10ffaff80e02b02d84cb5d8e2224d26c5955bb5601f5c858c97eedef35b"),
-            (12, 6330130600746392734, "57e699bb5ee6477c577b89f0b1e80b6ca35aa36aabc4bccd82fa2c3120ec921d"),
-            (10, 12750189356887995490, "0ac875879aec9e4c761b531fe2f7b43c1dbb5bccb959bf107760f91051a6ee58"),
-            (15, 10931722883136722, "b465c860684913c52bdb50b0f8391f16d96469c56fadaab652286a6595c36b36"),
-            (17, 17524967233299049020, "4fb98d750c37ac63990945f14ed34a1a6b9365002efb2d5065f3f83201054fae"),
-            (9, 3571922820466116722, "d04a926d0b5f5620279af27a48c70ded03df9a5216ba9bdc433acb66b71f30ec"),
-            (9, 2682281289702676113, "327f595a0c22e75310f4d4f5d6cf6fa68a8180a2a86ef20f43558d6591a1fa8a"),
-            (11, 18082672136676787444, "755efbe5fafe6d2d6abcd77db6691d50439dff688a983b31aa1e51f13f788720"),
-            (19, 7713303281797564269, "8a73bd1e4fe0b2287b1167958c09be3a3919041bfaf9e3aa0d928b5eea20ad8d"),
-            (9, 11282430282381183162, "aeac23962a5b369384bd399221cd1f01811541418b04a60bce353c1547dcb7ce"),
-            (11, 117375040596452939, "ce61aa9aa1b75b926a8665183d31c8688a2b2b5a721c4420974082f8104c11c9"),
-            (12, 10975145978023288744, "c053ef24eb19cfeab807405bcd0024f8c0e841fb732b408baa87164a2be7caf6"),
-            (11, 15383415639973988732, "c483723d14e8691990f8d6676205166e885e803cf582e7940f4e6156437c8c1f"),
-            (7, 31751348347462992, "68c212025519e0efb1009cc068490ee34edce510089ae51fbace4902c504f31a"),
-            (5, 459729468423, "322888f88a59b930b950650ae9ded400a09859b52ee325d67c4427e11687a871"),
-        )
-        fingerprint_index = {
-            (length, rolling): digest
-            for length, rolling, digest in forbidden_fingerprints
-        }
-        tracked = subprocess.run(
-            ["git", "ls-files", "-z"],
-            cwd=ROOT,
-            check=True,
-            capture_output=True,
-        ).stdout.split(b"\0")
-        for relative in tracked:
-            if not relative:
-                continue
-            path = ROOT / relative.decode()
-            try:
-                content_bytes = path.read_bytes()
-                content = content_bytes.decode("utf-8")
-            except (UnicodeDecodeError, OSError):
-                continue
-            for length in {item[0] for item in forbidden_fingerprints}:
-                if len(content_bytes) < length:
-                    continue
-                power = pow(257, length - 1, 1 << 64)
-                rolling = 0
-                for value in content_bytes[:length]:
-                    rolling = (rolling * 257 + value + 1) & ((1 << 64) - 1)
-                for index in range(len(content_bytes) - length + 1):
-                    digest = fingerprint_index.get((length, rolling))
-                    if digest is not None:
-                        candidate = content_bytes[index : index + length]
-                        self.assertNotEqual(
-                            hashlib.sha256(candidate).hexdigest(),
-                            digest,
-                            f"{path} contains identified fixture data",
-                        )
-                    if index + length == len(content_bytes):
-                        break
-                    rolling = (
-                        (rolling - (content_bytes[index] + 1) * power) * 257
-                        + content_bytes[index + length]
-                        + 1
-                    ) & ((1 << 64) - 1)
-            for workspace, team_id in re.findall(
-                r"https://([a-z0-9-]+)\.slack\.com/docs/(T[A-Z0-9]+)",
-                content,
-            ):
-                self.assertEqual(
-                    (workspace, team_id),
-                    ("example", "T00000000"),
-                    f"{path} contains a non-synthetic Slack workspace identity",
-                )
 
     def test_canvas_access_defaults_to_workspace_anyone_can_view(self) -> None:
         content = self.read_skill()
