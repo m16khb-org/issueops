@@ -1,0 +1,4 @@
+# Keep LF on every platform. Git for Windows defaults to core.autocrlf=true,
+# which would check out CRLF: bash then fails on install.sh and scripts/*.sh,
+# and golden files and generated config templates no longer match byte-for-byte.
+* text=auto eol=lf
