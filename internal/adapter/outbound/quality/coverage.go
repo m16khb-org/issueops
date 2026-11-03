@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"issueops/internal/adapter/outbound/gitbin"
+	"issueops/internal/adapter/outbound/osfile"
 	contract "issueops/internal/contract/quality"
 	policy "issueops/internal/domain/quality"
 	"os"
@@ -181,7 +182,7 @@ func hashCoverageUntrackedFiles(hasher io.Writer, root string, paths [][]byte) e
 			continue
 		}
 		relative := filepath.Clean(string(rawPath))
-		if relative == "." || filepath.IsAbs(relative) || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		if relative == "." || !repoRelative(relative) || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
 			return fmt.Errorf("coverage fingerprint path escapes repository: %s", relative)
 		}
 		path := filepath.Join(root, relative)
@@ -284,7 +285,7 @@ func readCoverageCache(root, fingerprint string, cacheBase func() (string, error
 
 func writeCoverageCache(root, fingerprint, output string, cacheBase func() (string, error)) {
 	path, err := CoverageCachePath(root, cacheBase)
-	if err != nil || os.MkdirAll(filepath.Dir(path), 0o700) != nil {
+	if err != nil || osfile.MkdirAll(filepath.Dir(path), 0o700) != nil {
 		return
 	}
 	packages := policy.ParseCoveragePackages(output, 101)
@@ -305,7 +306,7 @@ func writeCoverageCache(root, fingerprint, output string, cacheBase func() (stri
 	}
 	temporaryPath := temporary.Name()
 	defer os.Remove(temporaryPath)
-	if err := temporary.Chmod(0o600); err != nil {
+	if err := osfile.FileChmod(temporary, 0o600); err != nil {
 		_ = temporary.Close()
 		return
 	}

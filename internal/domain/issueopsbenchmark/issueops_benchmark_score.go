@@ -2,6 +2,7 @@ package issueopsbenchmark
 
 import (
 	"maps"
+	"path/filepath"
 	"strings"
 
 	issueopscontract "issueops/internal/contract/issueopsbenchmark"
@@ -211,7 +212,7 @@ func prDraftQualityComplete(artifact issueopscontract.IssueOpsBenchmarkArtifact)
 }
 
 func branchWorktreeGateComplete(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
-	return strings.HasPrefix(artifact.BranchName, "feature/") && strings.Contains(artifact.WorktreePath, ".worktrees/")
+	return strings.HasPrefix(artifact.BranchName, "feature/") && strings.Contains(filepath.ToSlash(artifact.WorktreePath), ".worktrees/")
 }
 
 func worktreeCleanupComplete(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {

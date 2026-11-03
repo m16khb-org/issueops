@@ -3,6 +3,7 @@ package audit
 import (
 	"encoding/json"
 	"fmt"
+	"issueops/internal/adapter/outbound/osfile"
 	auditcontract "issueops/internal/contract/audit"
 	"os"
 	"path/filepath"
@@ -26,10 +27,10 @@ func NewCommandWriter() CommandWriter {
 func (writer CommandWriter) Path() (string, error) { return writer.Filename, writer.ResolveError }
 
 func (CommandWriter) Append(path string, record auditcontract.CommandAuditRecord) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+	if err := osfile.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+	f, err := osfile.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
 		return err
 	}

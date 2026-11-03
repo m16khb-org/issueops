@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"issueops/internal/adapter/outbound/osfile"
 	domain "issueops/internal/domain/gitworktree"
 	"issueops/internal/port"
 )
@@ -151,7 +152,7 @@ func createRealDirectories(sourceRoot, target string) error {
 	}
 	info, err := os.Lstat(target)
 	if errors.Is(err, os.ErrNotExist) {
-		return os.Mkdir(target, 0o700)
+		return osfile.Mkdir(target, 0o700)
 	}
 	if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
 		return fmt.Errorf("canonical worktree base must be a real directory")
@@ -165,7 +166,7 @@ func ensureProbeBase(sourceRoot, target string) (bool, error) {
 	}
 	info, err := os.Lstat(target)
 	if errors.Is(err, os.ErrNotExist) {
-		return true, os.Mkdir(target, 0o700)
+		return true, osfile.Mkdir(target, 0o700)
 	}
 	if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
 		return false, fmt.Errorf("canonical worktree base must be a real directory")

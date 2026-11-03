@@ -160,7 +160,14 @@ func (f *productionFileFilter) add(relative string) {
 }
 
 func escapesSourceRoot(relative string) bool {
-	return filepath.IsAbs(relative) || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator))
+	return !repoRelative(relative) || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator))
+}
+
+// repoRelative reports whether a cleaned path can only name something below
+// the root it is joined onto. On Windows a rooted path such as \etc or C:x is
+// not absolute yet still ignores or escapes that root.
+func repoRelative(relative string) bool {
+	return !filepath.IsAbs(relative) && filepath.VolumeName(relative) == "" && !strings.HasPrefix(relative, string(filepath.Separator))
 }
 
 // productionGoCandidate는 제외 경로, 비Go 파일, 테스트 파일을 걸러낸다.

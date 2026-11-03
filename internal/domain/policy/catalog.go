@@ -37,7 +37,7 @@ type CatalogSnapshot struct {
 
 func BuiltinCatalog() Catalog {
 	return Catalog{
-		shellInterpreters: stringSet("sh", "bash", "zsh", "fish", "dash", "ksh"),
+		shellInterpreters: stringSet("sh", "bash", "zsh", "fish", "dash", "ksh", "cmd", "powershell", "pwsh"),
 		networkCommands:   stringSet("curl", "wget", "ssh", "scp", "sftp", "rsync", "gh", "brew", "npm", "pnpm", "yarn", "pip", "pip3"),
 		networkSubcommands: map[string]map[string]bool{
 			"git": stringSet("clone", "fetch", "pull", "push", "ls-remote", "submodule"),
@@ -84,13 +84,26 @@ func (catalog Catalog) Classify(argv []string) CommandClassification {
 	if len(argv) == 0 {
 		return CommandClassification{}
 	}
-	base := strings.ToLower(filepath.Base(argv[0]))
+	base := commandBase(argv[0])
 	return CommandClassification{
 		ShellCommand:    catalog.shellInterpreters[base] && !syntaxCheckOnly(argv),
 		UsesNetwork:     catalog.networkCommands[base] || subcommandAllowed(catalog.networkSubcommands, base, argv),
 		Writes:          catalog.writeCommands[base] || subcommandAllowed(catalog.writeSubcommands, base, argv) || writeCapableArguments(base, argv),
 		ReadOnlyAllowed: catalog.readOnlyCommands[base] || subcommandAllowed(catalog.readOnlySubcommands, base, argv),
 	}
+}
+
+// commandBase names argv[0] the way the catalog lists commands: the lowercase
+// file name without a Windows executable extension, so C:\Git\bin\bash.exe
+// and BASH.EXE classify as bash.
+func commandBase(argv0 string) string {
+	base := strings.ToLower(filepath.Base(argv0))
+	for _, extension := range []string{".exe", ".com", ".bat", ".cmd"} {
+		if trimmed, ok := strings.CutSuffix(base, extension); ok && trimmed != "" {
+			return trimmed
+		}
+	}
+	return base
 }
 
 // syntaxCheckOnly reports `sh -n FILE`: the shell parses FILE and executes
@@ -103,7 +116,7 @@ func (catalog Catalog) Classify(argv []string) CommandClassification {
 // run no startup file under -n; fish is left out because its startup behavior
 // under -n is unverified.
 func syntaxCheckOnly(argv []string) bool {
-	if len(argv) != 3 || argv[1] != "-n" || strings.ToLower(filepath.Base(argv[0])) == "fish" {
+	if len(argv) != 3 || argv[1] != "-n" || commandBase(argv[0]) == "fish" {
 		return false
 	}
 	file := argv[2]

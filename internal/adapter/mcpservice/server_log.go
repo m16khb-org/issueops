@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"sync"
 
 	"golang.org/x/sys/unix"
@@ -15,10 +14,6 @@ import (
 // serviceLogLimit bounds server.log; with the one rotated copy the log uses
 // about twice this much disk.
 const serviceLogLimit = 8 << 20
-
-// ServiceLogPath is the file the launchd and systemd units append the server's
-// stdout and stderr to.
-func ServiceLogPath(stateDir string) string { return filepath.Join(httpDir(stateDir), "server.log") }
 
 // ServiceLogWriter wraps stderr with a size cap when the supervisor pointed
 // stderr at the service log; any other stderr (a terminal, a pipe) is returned

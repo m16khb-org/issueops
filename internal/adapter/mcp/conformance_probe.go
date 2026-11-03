@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 
+	"issueops/internal/adapter/outbound/osfile"
 	toolconformancecontract "issueops/internal/contract/toolconformance"
 	"issueops/internal/domain/policy"
 	toolconformancedomain "issueops/internal/domain/toolconformance"
@@ -261,10 +262,10 @@ func writeCapture(path string, capture ConformanceCapture) error {
 		return fmt.Errorf("result_collision")
 	}
 	parent := filepath.Dir(path)
-	if err := os.MkdirAll(parent, 0o700); err != nil {
+	if err := osfile.MkdirAll(parent, 0o700); err != nil {
 		return err
 	}
-	if err := os.Chmod(parent, 0o700); err != nil {
+	if err := osfile.Chmod(parent, 0o700); err != nil {
 		return err
 	}
 	b, err := json.Marshal(capture)
@@ -277,7 +278,7 @@ func writeCapture(path string, capture ConformanceCapture) error {
 	}
 	name := tmp.Name()
 	defer os.Remove(name)
-	if err := tmp.Chmod(0o600); err != nil {
+	if err := osfile.FileChmod(tmp, 0o600); err != nil {
 		tmp.Close()
 		return err
 	}
@@ -305,10 +306,10 @@ func writeMultipleCallMarker(path, runToken string, callCount int) error {
 
 func writePrivateJSON(path string, value any) error {
 	parent := filepath.Dir(path)
-	if err := os.MkdirAll(parent, 0o700); err != nil {
+	if err := osfile.MkdirAll(parent, 0o700); err != nil {
 		return err
 	}
-	if err := os.Chmod(parent, 0o700); err != nil {
+	if err := osfile.Chmod(parent, 0o700); err != nil {
 		return err
 	}
 	data, err := json.Marshal(value)
@@ -321,7 +322,7 @@ func writePrivateJSON(path string, value any) error {
 	}
 	name := temp.Name()
 	defer os.Remove(name)
-	if err := temp.Chmod(0o600); err != nil {
+	if err := osfile.FileChmod(temp, 0o600); err != nil {
 		temp.Close()
 		return err
 	}

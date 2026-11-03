@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -72,9 +70,7 @@ func PublicationCrashSettlement(stateRoot string, now func() time.Time) func(con
 			return false, err
 		}
 		_ = lease.Close()
-		cmd := exec.CommandContext(ctx, "ps", "-axww", "-o", "args=")
-		cmd.Env = append(os.Environ(), "LC_ALL=C", "LANG=C")
-		out, err := cmd.Output()
+		out, err := processTableArguments(ctx)
 		if err != nil {
 			return false, err
 		}
@@ -82,7 +78,7 @@ func PublicationCrashSettlement(stateRoot string, now func() time.Time) func(con
 	}
 }
 
-// publicationCreateInFlight scans `ps -o args=` rows for a live create that
+// publicationCreateInFlight scans process argument rows for a live create that
 // could still land: a provider create for head, or issueops create-pr for id.
 func publicationCreateInFlight(rows, head, id string) bool {
 	head, id = strings.TrimSpace(head), strings.TrimSpace(id)
@@ -109,7 +105,7 @@ func publicationCreateInFlight(rows, head, id string) bool {
 // argvHasProviderBinary reports whether any argv word is the gh or glab binary.
 func argvHasProviderBinary(fields []string) bool {
 	for _, field := range fields {
-		if base := filepath.Base(field); base == "gh" || base == "glab" {
+		if base := strings.TrimSuffix(filepath.Base(field), ".exe"); base == "gh" || base == "glab" {
 			return true
 		}
 	}

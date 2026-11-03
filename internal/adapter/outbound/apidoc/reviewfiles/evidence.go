@@ -102,7 +102,7 @@ func isControllerLike(file string) bool {
 
 func (e *evidenceExtractor) readRepoFile(rel string) (string, bool) {
 	clean := filepath.Clean(rel)
-	if filepath.IsAbs(clean) || strings.HasPrefix(clean, "..") {
+	if !repoRelative(clean) || strings.HasPrefix(clean, "..") {
 		return "", false
 	}
 	b, err := os.ReadFile(filepath.Join(e.repo, clean))

@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"issueops/internal/adapter/outbound/gitexclude"
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/contract/issueops"
 )
 
@@ -141,9 +142,10 @@ func writeUntrackedFingerprint(hash fingerprintWriter, root, relative string) er
 	if err != nil || entry.Mode()&os.ModeSymlink != 0 || !entry.Mode().IsRegular() {
 		return fmt.Errorf("untracked path must be a regular file: %s", relative)
 	}
+	listed, listedKnown := osfile.PathIdentity(path, entry)
 	writeFingerprintPart(hash, relative)
 	writeFingerprintPart(hash, entry.Mode().String())
-	return writeFingerprintFile(hash, path, entry)
+	return writeFingerprintFile(hash, path, entry, listed, listedKnown)
 }
 
 func (reader LeaseWorkspaceSnapshot) gitOutput(root string, args ...string) (string, error) {
@@ -169,7 +171,10 @@ func writeFingerprintBytes(hash fingerprintWriter, value []byte) {
 	_, _ = hash.Write([]byte{0})
 }
 
-func writeFingerprintFile(hash fingerprintWriter, path string, entry os.FileInfo) (err error) {
+// listed is the identity of the entry when it was listed. Unix reads it from
+// entry; Windows os.FileInfo resolves file identity lazily by path, so only an
+// identity captured at listing time can tell a replaced file from the listed one.
+func writeFingerprintFile(hash fingerprintWriter, path string, entry os.FileInfo, listed osfile.Identity, listedKnown bool) (err error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return err
@@ -185,6 +190,11 @@ func writeFingerprintFile(hash fingerprintWriter, path string, entry os.FileInfo
 	}
 	if !os.SameFile(entry, opened) || !opened.Mode().IsRegular() || opened.Size() != entry.Size() {
 		return fmt.Errorf("untracked file changed while snapshotting: %s", path)
+	}
+	if listedKnown {
+		if current, ok := osfile.FileIdentity(file, opened); !ok || current.Device != listed.Device || current.Inode != listed.Inode {
+			return fmt.Errorf("untracked file changed while snapshotting: %s", path)
+		}
 	}
 	_, _ = hash.Write([]byte(strconv.FormatInt(opened.Size(), 10)))
 	_, _ = hash.Write([]byte{0})
@@ -217,7 +227,7 @@ func createClaimToken(record issueops.IssueOpsRecord) (string, string, error) {
 	// Best effort: the token must not show up as an untracked change in a
 	// target repo; a failure here only leaves git status noisier.
 	_ = gitexclude.EnsureWorkspaceState(record.Execution.Workspace.Root)
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	file, err := osfile.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return "", "", err
 	}
@@ -323,7 +333,7 @@ func runtimeTokenRelative(root, target string) (string, string, error) {
 func secureMkdirStep(current string) error {
 	info, err := os.Lstat(current)
 	if errors.Is(err, os.ErrNotExist) {
-		return os.Mkdir(current, 0o700)
+		return osfile.Mkdir(current, 0o700)
 	}
 	if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
 		return fmt.Errorf("runtime token directory must contain only real directories")

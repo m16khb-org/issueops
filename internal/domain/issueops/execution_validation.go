@@ -3,6 +3,7 @@ package issueops
 import (
 	"encoding/hex"
 	"fmt"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -91,11 +92,11 @@ func validateExecutionSyncBaseResolution(execution issueopscontract.Execution, r
 		return err
 	}
 	seen := map[string]bool{}
-	for _, path := range resolution.ConflictFiles {
-		if !validSyncBaseConflictPath(path) || seen[filepath.Clean(path)] {
+	for _, file := range resolution.ConflictFiles {
+		if !validSyncBaseConflictPath(file) || seen[file] {
 			return fmt.Errorf("execution sync-base resolution conflict path is invalid")
 		}
-		seen[filepath.Clean(path)] = true
+		seen[file] = true
 	}
 	return nil
 }
@@ -106,10 +107,11 @@ func syncBaseResolutionBindsCompletion(execution issueopscontract.Execution, res
 		resolution.CompletionGeneration != 0 && resolution.CompletionGeneration == execution.Completion.Generation
 }
 
-// validSyncBaseConflictPath는 정규화된 상대 경로이면서 작업 트리 밖으로 나가지 않는지 확인한다.
-func validSyncBaseConflictPath(path string) bool {
-	clean := filepath.Clean(path)
-	return path != "" && path == clean && !filepath.IsAbs(path) && clean != "." && clean != ".." && !strings.HasPrefix(clean, ".."+string(filepath.Separator))
+// validSyncBaseConflictPath는 git이 보고하는 슬래시 구분 상대 경로가 정규화되어 있고 작업 트리 밖으로 나가지 않는지 확인한다.
+// Windows 드라이브 경로도 거부하기 위해 호스트 볼륨 이름을 함께 검사한다.
+func validSyncBaseConflictPath(p string) bool {
+	clean := path.Clean(p)
+	return p != "" && p == clean && !path.IsAbs(p) && filepath.VolumeName(p) == "" && clean != "." && clean != ".." && !strings.HasPrefix(clean, "../")
 }
 
 func validateExecutionCompletion(completion issueopscontract.ExecutionCompletion) error {

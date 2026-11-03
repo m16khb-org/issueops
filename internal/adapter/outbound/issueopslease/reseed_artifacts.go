@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"issueops/internal/adapter/outbound/gitexclude"
+	"issueops/internal/adapter/outbound/osfile"
 	leaseapp "issueops/internal/application/issueopslease"
 	leasecontract "issueops/internal/contract/issueopslease"
 )
@@ -41,7 +42,7 @@ func (a *ReseedArtifacts) Prepare(_ context.Context, record leasecontract.Record
 		return leaseapp.ReseedArtifactReceipt{}, err
 	}
 	token := fmt.Sprintf("%x", raw)
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	file, err := osfile.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return leaseapp.ReseedArtifactReceipt{}, err
 	}
@@ -245,7 +246,7 @@ func reseedMkdirWalk(root, rel string) error {
 		current = filepath.Join(current, part)
 		info, err := os.Lstat(current)
 		if errors.Is(err, fs.ErrNotExist) {
-			if err := os.Mkdir(current, 0o700); err != nil {
+			if err := osfile.Mkdir(current, 0o700); err != nil {
 				return err
 			}
 			continue

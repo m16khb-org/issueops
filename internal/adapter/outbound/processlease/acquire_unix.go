@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -25,6 +26,8 @@ func AcquireShared(ctx context.Context, directory, key string) (*SharedLease, er
 	}
 	return &SharedLease{file: lease.file}, nil
 }
+
+func inherit(cmd *exec.Cmd, file *os.File) { cmd.ExtraFiles = append(cmd.ExtraFiles, file) }
 
 func acquire(ctx context.Context, directory, key string, mode int) (*Lease, error) {
 	if err := ctx.Err(); err != nil {

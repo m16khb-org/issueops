@@ -48,7 +48,7 @@ func FullContent(repo string, files []string) (string, error) {
 	var b strings.Builder
 	for _, file := range files {
 		clean := filepath.Clean(file)
-		if filepath.IsAbs(clean) || strings.HasPrefix(clean, ".."+string(filepath.Separator)) || clean == ".." {
+		if !repoRelative(clean) || strings.HasPrefix(clean, ".."+string(filepath.Separator)) || clean == ".." {
 			return "", fmt.Errorf("unsafe file path %q", file)
 		}
 		content, err := os.ReadFile(filepath.Join(repo, clean))
@@ -64,6 +64,13 @@ func FullContent(repo string, files []string) (string, error) {
 		}
 	}
 	return b.String(), nil
+}
+
+// repoRelative reports whether a cleaned path can only name something below
+// the repository root. On Windows a rooted path such as \etc or C:x is not
+// absolute yet still ignores or escapes the directory it is joined onto.
+func repoRelative(clean string) bool {
+	return !filepath.IsAbs(clean) && filepath.VolumeName(clean) == "" && !strings.HasPrefix(clean, string(filepath.Separator))
 }
 
 func (f Files) Staged(repo string) []string {

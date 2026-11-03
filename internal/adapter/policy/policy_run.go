@@ -35,7 +35,7 @@ func (CommandExecutor) Execute(request policycontract.CommandPolicyRequest, time
 	cmd := exec.Command(request.Argv[0], request.Argv[1:]...)
 	configureProcessGroup(cmd)
 	cmd.Dir = request.CWD
-	cmd.Env = policydomain.CommandEnvironment(os.Environ(), request.EnvAllowlist)
+	cmd.Env = commandEnvironment(os.Environ(), request.EnvAllowlist)
 	// Own both pipes: Cmd.Wait must reap the parent without closing readers or
 	// losing buffered output. Completion includes EOF on both inherited pipes.
 	outRead, outWrite, err := os.Pipe()

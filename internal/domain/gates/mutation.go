@@ -2,6 +2,7 @@ package gates
 
 import (
 	"fmt"
+	"path"
 	"path/filepath"
 	"strings"
 	"unicode"
@@ -17,14 +18,16 @@ func PrepareInit(req model.InitRequest) (model.InitRequest, model.InitResult, er
 		return req, result, fmt.Errorf("scope is required")
 	}
 	req.File = strings.TrimSpace(req.File)
+	result.File = req.File
 	if req.File == "" {
 		slug := gateFileSlug(req.Scope)
 		if slug == "" {
 			return req, result, fmt.Errorf("scope must contain a letter or number")
 		}
-		req.File = filepath.Join(".issueops", "gates", slug+".md")
+		// The reported default is repo-relative and slash-separated on every OS.
+		result.File = path.Join(".issueops", "gates", slug+".md")
+		req.File = filepath.FromSlash(result.File)
 	}
-	result.File = req.File
 	if len(req.Gates) == 0 {
 		return req, result, fmt.Errorf("at least one --gate spec is required")
 	}

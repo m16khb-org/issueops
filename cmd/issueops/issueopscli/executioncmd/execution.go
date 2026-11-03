@@ -6,12 +6,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"strings"
-	"time"
 
 	"issueops/cmd/issueops/cliflag"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
@@ -403,18 +400,6 @@ func nativeHostProcess(host string, receipt model.NativeProcessReceipt, commandL
 
 func executableBase(executable string) string {
 	return strings.TrimSuffix(filepath.Base(strings.ToLower(filepath.ToSlash(strings.TrimSpace(executable)))), ".exe")
-}
-
-// processCommandLine reads one process's argv. Only an Omo bun candidate
-// needs it, so the ancestry snapshot itself stays a single ps call.
-func processCommandLine(pid int) string {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-	out, err := exec.CommandContext(ctx, "ps", "-ww", "-o", "args=", "-p", strconv.Itoa(pid)).Output()
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(string(out))
 }
 
 // CurrentNativeSessionReceipt resolves the current native session from the

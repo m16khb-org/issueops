@@ -45,7 +45,9 @@ func cleanGuardFiles(files []string) []string {
 	out := []string{}
 	for _, file := range files {
 		file = filepath.ToSlash(strings.TrimSpace(file))
-		if file == "" || strings.HasPrefix(file, "../") || filepath.IsAbs(file) || !guarddomain.RelevantPath(file) {
+		// A rooted path without a drive ("/tmp/x" on Windows) is not
+		// filepath.IsAbs there, yet it still escapes the repository root.
+		if file == "" || strings.HasPrefix(file, "../") || strings.HasPrefix(file, "/") || filepath.VolumeName(file) != "" || filepath.IsAbs(file) || !guarddomain.RelevantPath(file) {
 			continue
 		}
 		out = append(out, file)

@@ -19,10 +19,16 @@ type RiskQAEvidence struct {
 
 // Check before importing repository helpers, then exec the suite runner with
 // the same interpreter. The existing runner owns the timeout and output budget.
+// Windows has no exec: os.execv starts the child and exits the parent with
+// status 0 at once, which would hide a failing suite, so Windows waits for the
+// child and returns its exit status instead.
 const pythonRuntimeDiscovery = `import os, sys
 print("Python runtime: " + sys.version.split()[0] + " (requires Python 3.10+)", flush=True)
 if sys.version_info < (3, 10):
     sys.exit("Python script tests require Python 3.10+; found " + sys.version.split()[0])
+if os.name == "nt":
+    import subprocess
+    sys.exit(subprocess.call([sys.executable] + sys.argv[1:]))
 os.execv(sys.executable, [sys.executable] + sys.argv[1:])
 `
 

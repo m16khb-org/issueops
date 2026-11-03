@@ -12,13 +12,13 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/port"
 )
 
@@ -325,7 +325,12 @@ func prepareOpencodeEpisode(root, lifecyclePlugin, targetTool string, request po
 		return fmt.Errorf("episode_path_invalid")
 	}
 	for _, directory := range []string{"home", "data", "state", "cache"} {
-		if err := os.MkdirAll(filepath.Join(root, directory), 0o700); err != nil {
+		if err := osfile.MkdirAll(filepath.Join(root, directory), 0o700); err != nil {
+			return err
+		}
+	}
+	for _, directory := range isolatedHomeSubdirs(filepath.Join(root, "home")) {
+		if err := osfile.MkdirAll(directory, 0o700); err != nil {
 			return err
 		}
 	}
@@ -393,9 +398,8 @@ func isolatedOpencodeEnv(deps Dependencies, root, password string) []string {
 			keys = append(keys, name)
 		}
 	}
-	environment := isolatedHostEnv(deps, append(keys, "TERM")...)
+	environment := withIsolatedHome(isolatedHostEnv(deps, append(keys, "TERM")...), filepath.Join(root, "home"))
 	for _, value := range [][2]string{
-		{"HOME", filepath.Join(root, "home")},
 		{"XDG_CONFIG_HOME", filepath.Join(root, "config")},
 		{"XDG_DATA_HOME", filepath.Join(root, "data")},
 		{"XDG_STATE_HOME", filepath.Join(root, "state")},

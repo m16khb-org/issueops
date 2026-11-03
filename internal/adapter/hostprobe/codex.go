@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/port"
 )
 
@@ -145,7 +146,7 @@ func prepareCodexLiveHome(root, harnessBinary, observationPath string, deps Depe
 
 func writeCodexProbeHome(root, sourceHome string, document codexSmokeHookDocument) (string, error) {
 	runtimeHome := filepath.Join(root, "codex-home")
-	if err := os.Mkdir(runtimeHome, 0o700); err != nil {
+	if err := osfile.Mkdir(runtimeHome, 0o700); err != nil {
 		return "", err
 	}
 	if err := linkCodexSmokeAuth(runtimeHome, sourceHome); err != nil {
@@ -157,7 +158,7 @@ func writeCodexProbeHome(root, sourceHome string, document codexSmokeHookDocumen
 	}
 	data = append(data, '\n')
 	hooksPath := filepath.Join(runtimeHome, "hooks.json")
-	file, err := os.OpenFile(hooksPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	file, err := osfile.OpenFile(hooksPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return "", err
 	}
@@ -172,12 +173,7 @@ func writeCodexProbeHome(root, sourceHome string, document codexSmokeHookDocumen
 	if err := file.Close(); err != nil {
 		return "", err
 	}
-	directory, err := os.Open(runtimeHome)
-	if err != nil {
-		return "", err
-	}
-	defer directory.Close()
-	if err := directory.Sync(); err != nil {
+	if err := syncDirectory(runtimeHome); err != nil {
 		return "", err
 	}
 	return runtimeHome, nil
@@ -186,7 +182,7 @@ func writeCodexProbeHome(root, sourceHome string, document codexSmokeHookDocumen
 func resolveCodexSourceHome(deps Dependencies) (string, error) {
 	sourceHome := strings.TrimSpace(deps.Getenv("CODEX_HOME"))
 	if sourceHome == "" {
-		home := strings.TrimSpace(deps.Getenv("HOME"))
+		home := hostHome(deps)
 		if !filepath.IsAbs(home) {
 			return "", fmt.Errorf("codex_home_invalid")
 		}
@@ -287,7 +283,7 @@ func linkCodexSmokeAuth(runtimeHome, sourceHome string) error {
 		}
 		return err
 	}
-	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 || info.Mode().Perm() != 0o600 {
+	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 || osfile.Perm(authPath, info) != 0o600 {
 		return fmt.Errorf("codex_auth_invalid")
 	}
 	return os.Symlink(authPath, filepath.Join(runtimeHome, "auth.json"))

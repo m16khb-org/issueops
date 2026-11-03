@@ -8,8 +8,9 @@ import (
 )
 
 // URLs are opaque at this boundary, including their path, query, and fragment.
+// A scheme has two or more characters, so a drive path such as C:\work is not a URL.
 var publicMaterialURL = sync.OnceValue(func() *regexp.Regexp {
-	return regexp.MustCompile("(^|[\\s`'\"(<\\[=:])([A-Za-z][A-Za-z0-9+.-]*:[^\\s<>\"`]+|//[^\\s<>\"`]+)")
+	return regexp.MustCompile("(^|[\\s`'\"(<\\[=:])([A-Za-z][A-Za-z0-9+.-]+:[^\\s<>\"`]+|//[^\\s<>\"`]+)")
 })
 
 type publicMaterialRoot struct{ root, label string }
@@ -18,6 +19,10 @@ type publicMaterialRoot struct{ root, label string }
 func publicMaterialRoots(sourceRoot, worktreeRoot string) []publicMaterialRoot {
 	var roots []publicMaterialRoot
 	for _, candidate := range []publicMaterialRoot{{sourceRoot, "$SOURCE_ROOT"}, {worktreeRoot, "$WORKTREE"}} {
+		if drivePublicMaterialRoot(candidate.root) {
+			roots = append(roots, drivePublicMaterialRoots(candidate)...)
+			continue
+		}
 		candidate.root = strings.TrimRight(candidate.root, "/")
 		if !strings.HasPrefix(candidate.root, "/") || strings.HasPrefix(candidate.root, "//") {
 			continue
@@ -32,6 +37,29 @@ func publicMaterialRoots(sourceRoot, worktreeRoot string) []publicMaterialRoot {
 	return roots
 }
 
+// drivePublicMaterialRoot reports a Windows drive root such as C:\work or C:/work.
+func drivePublicMaterialRoot(root string) bool {
+	return len(root) >= 3 && root[1] == ':' && (root[2] == '\\' || root[2] == '/') &&
+		(root[0] >= 'A' && root[0] <= 'Z' || root[0] >= 'a' && root[0] <= 'z')
+}
+
+// drivePublicMaterialRoots relabels a Windows root in both separator forms,
+// since Windows tools print backslashes and Git prints forward slashes, and
+// relabels C:\Users\<name> as $HOME.
+func drivePublicMaterialRoots(candidate publicMaterialRoot) []publicMaterialRoot {
+	native := strings.TrimRight(strings.ReplaceAll(candidate.root, "/", `\`), `\`)
+	if len(native) < 3 {
+		return nil
+	}
+	roots := []publicMaterialRoot{{native, candidate.label}, {strings.ReplaceAll(native, `\`, "/"), candidate.label}}
+	parts := strings.SplitN(native, `\`, 4)
+	if len(parts) >= 3 && strings.EqualFold(parts[1], "Users") && parts[2] != "" && parts[2] != "." && parts[2] != ".." {
+		home := parts[0] + `\` + parts[1] + `\` + parts[2]
+		roots = append(roots, publicMaterialRoot{home, "$HOME"}, publicMaterialRoot{strings.ReplaceAll(home, `\`, "/"), "$HOME"})
+	}
+	return roots
+}
+
 // matchPublicMaterialRoot reports the root label and end offset when a root starts at text[i].
 func matchPublicMaterialRoot(text string, i int, roots []publicMaterialRoot) (string, int, bool) {
 	if i != 0 && !strings.ContainsRune(" \t\r\n`'\"(<[=:", rune(text[i-1])) {
@@ -39,7 +67,7 @@ func matchPublicMaterialRoot(text string, i int, roots []publicMaterialRoot) (st
 	}
 	for _, root := range roots {
 		end := i + len(root.root)
-		if strings.HasPrefix(text[i:], root.root) && (end == len(text) || strings.ContainsRune("/ \t\r\n`'\")>],;:", rune(text[end]))) {
+		if strings.HasPrefix(text[i:], root.root) && (end == len(text) || strings.ContainsRune("/\\ \t\r\n`'\")>],;:", rune(text[end]))) {
 			return root.label, end, true
 		}
 	}

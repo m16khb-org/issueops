@@ -3,6 +3,7 @@ package issueopslease
 import (
 	"encoding/hex"
 	"fmt"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -173,9 +174,9 @@ func validateSyncBaseResolution(execution leasecontract.Execution, resolution *l
 		return err
 	}
 	seen := map[string]bool{}
-	for _, path := range resolution.ConflictFiles {
-		clean := filepath.Clean(path)
-		if !validSyncBaseConflictPath(path, clean) || seen[clean] {
+	for _, file := range resolution.ConflictFiles {
+		clean := path.Clean(file)
+		if !validSyncBaseConflictPath(file, clean) || seen[clean] {
 			return fmt.Errorf("execution sync-base resolution conflict path is invalid")
 		}
 		seen[clean] = true
@@ -189,8 +190,8 @@ func syncBaseResolutionMatchesExecution(execution leasecontract.Execution, resol
 		resolution.CompletionGeneration != 0 && resolution.CompletionGeneration == execution.Completion.Generation
 }
 
-func validSyncBaseConflictPath(path, clean string) bool {
-	return path != "" && path == clean && !filepath.IsAbs(path) && clean != "." && clean != ".." && !strings.HasPrefix(clean, ".."+string(filepath.Separator))
+func validSyncBaseConflictPath(p, clean string) bool {
+	return p != "" && p == clean && !path.IsAbs(p) && filepath.VolumeName(p) == "" && clean != "." && clean != ".." && !strings.HasPrefix(clean, "../")
 }
 
 func validateSyncBaseEvent(event leasecontract.SyncBaseEvent) error {

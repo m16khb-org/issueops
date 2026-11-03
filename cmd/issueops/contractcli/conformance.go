@@ -11,12 +11,14 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
 
 	"issueops/cmd/issueops/cliflag"
 	"issueops/cmd/issueops/jsonout"
+	"issueops/internal/adapter/outbound/osfile"
 	toolconformancecontract "issueops/internal/contract/toolconformance"
 	toolconformancedomain "issueops/internal/domain/toolconformance"
 
@@ -344,14 +346,16 @@ func (c *Conformance) persistLiveReport(report *toolconformancecontract.Benchmar
 		return fmt.Errorf("evidence_dir_outside_issueops_root")
 	}
 	runDir := filepath.Join(evidenceRoot, safeRunID(report.RunID))
-	if err := os.MkdirAll(runDir, 0o700); err != nil {
+	if err := osfile.MkdirAll(runDir, 0o700); err != nil {
 		return err
 	}
-	if err := os.Chmod(runDir, 0o700); err != nil {
+	if err := osfile.Chmod(runDir, 0o700); err != nil {
 		return err
 	}
-	relativeRunDir := filepath.Join(relative, safeRunID(report.RunID))
-	report.Evidence.ReportPath = filepath.Join(relativeRunDir, "report.json")
+	// Report paths are repo-relative and slash-separated on every OS, like the
+	// paths git prints, so a report reads the same wherever it was produced.
+	relativeRunDir := path.Join(filepath.ToSlash(relative), safeRunID(report.RunID))
+	report.Evidence.ReportPath = path.Join(relativeRunDir, "report.json")
 	if report.Gate.Decision == toolconformancecontract.GateAuthorizeHardening {
 		candidate, tracked, buildErr := c.buildCandidateRegression(*report)
 		if buildErr != nil {
@@ -361,7 +365,7 @@ func (c *Conformance) persistLiveReport(report *toolconformancecontract.Benchmar
 		if err := writePrivateJSONFile(candidatePath, candidate); err != nil {
 			return err
 		}
-		report.Evidence.CandidateRegressionPath = filepath.Join(relativeRunDir, "candidate-regression.json")
+		report.Evidence.CandidateRegressionPath = path.Join(relativeRunDir, "candidate-regression.json")
 		report.Evidence.TrackedFixturePath = tracked
 	}
 	return writePrivateJSONFile(filepath.Join(runDir, "report.json"), report)
@@ -386,7 +390,7 @@ func writePrivateJSONFile(path string, value any) error {
 		return err
 	}
 	parent := filepath.Dir(path)
-	if err := os.MkdirAll(parent, 0o700); err != nil {
+	if err := osfile.MkdirAll(parent, 0o700); err != nil {
 		return err
 	}
 	temp, err := os.CreateTemp(parent, ".report-")
@@ -395,7 +399,7 @@ func writePrivateJSONFile(path string, value any) error {
 	}
 	name := temp.Name()
 	defer os.Remove(name)
-	if err := temp.Chmod(0o600); err != nil {
+	if err := osfile.FileChmod(temp, 0o600); err != nil {
 		temp.Close()
 		return err
 	}
@@ -457,7 +461,7 @@ func (c *Conformance) buildCandidateRegression(report toolconformancecontract.Be
 		ExpectedStateUnchanged:   true,
 	}
 	name := matches[0].Host + "-" + fixture.ID + "-" + firstN(signature, 12) + ".json"
-	tracked := filepath.Join("internal", "adapter", "toolconformance", "testdata", "regressions", name)
+	tracked := path.Join("internal", "adapter", "toolconformance", "testdata", "regressions", name)
 	return regression, tracked, nil
 }
 
@@ -549,7 +553,7 @@ func (c *Conformance) replayFixture(fixture string) (ReplayOutcome, error) {
 		return ReplayOutcome{}, err
 	}
 	defer os.RemoveAll(stateDir)
-	if err := os.Chmod(stateDir, 0o700); err != nil {
+	if err := osfile.Chmod(stateDir, 0o700); err != nil {
 		return ReplayOutcome{}, err
 	}
 	return c.deps.Replay(context.Background(), fixture, stateDir)

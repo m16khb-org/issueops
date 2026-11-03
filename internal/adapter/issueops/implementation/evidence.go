@@ -274,7 +274,7 @@ func FingerprintSnapshot(root string, paths []string) (string, bool) {
 
 func cleanRelativePath(path string) string {
 	path = filepath.Clean(strings.TrimSpace(path))
-	if path == "" || path == "." || filepath.IsAbs(path) || strings.HasPrefix(path, ".."+string(filepath.Separator)) || path == ".." {
+	if path == "" || path == "." || filepath.IsAbs(path) || filepath.VolumeName(path) != "" || os.IsPathSeparator(path[0]) || strings.HasPrefix(path, ".."+string(filepath.Separator)) || path == ".." {
 		return ""
 	}
 	return filepath.ToSlash(path)

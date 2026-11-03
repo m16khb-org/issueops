@@ -13,10 +13,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
 
+	"issueops/internal/adapter/outbound/osfile"
 	toolconformancecontract "issueops/internal/contract/toolconformance"
 	"issueops/internal/domain/policy"
 	"issueops/internal/port"
@@ -267,7 +269,7 @@ func newEpisodeRoot(deps Dependencies, host string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := os.Chmod(root, 0o700); err != nil {
+	if err := osfile.Chmod(root, 0o700); err != nil {
 		if cleanupErr := deps.RemoveAll(root); cleanupErr != nil {
 			return "", errPrivateRootCleanup
 		}
@@ -465,7 +467,7 @@ func validateChildSmokeObservationPath(path string) error {
 		return fmt.Errorf("child_smoke_observation_path_invalid")
 	}
 	parentInfo, err := os.Lstat(filepath.Dir(path))
-	if err != nil || !parentInfo.IsDir() || parentInfo.Mode()&os.ModeSymlink != 0 || parentInfo.Mode().Perm() != 0o700 {
+	if err != nil || !parentInfo.IsDir() || parentInfo.Mode()&os.ModeSymlink != 0 || osfile.Perm(filepath.Dir(path), parentInfo) != 0o700 {
 		return fmt.Errorf("child_smoke_observation_path_invalid")
 	}
 	if _, err := os.Lstat(path); !errors.Is(err, fs.ErrNotExist) {
@@ -475,7 +477,7 @@ func validateChildSmokeObservationPath(path string) error {
 }
 
 func writeChildSmokeObservationFile(path string, data []byte) error {
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	file, err := osfile.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return fmt.Errorf("child_smoke_observation_write_failed")
 	}
@@ -517,10 +519,20 @@ func failedResult(host, version string, request port.HostProbeRequest, started t
 }
 
 func writePrivateFile(path string, data []byte) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+	if err := osfile.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0o600)
+	return osfile.WriteFile(path, data, 0o600)
+}
+
+// hostHome is the user home directory the host probes read credentials from:
+// HOME, or on Windows, where HOME is normally unset, USERPROFILE.
+func hostHome(deps Dependencies) string {
+	home := strings.TrimSpace(deps.Getenv("HOME"))
+	if home == "" && runtime.GOOS == "windows" {
+		home = strings.TrimSpace(deps.Getenv("USERPROFILE"))
+	}
+	return home
 }
 
 func jsonString(value string) string {

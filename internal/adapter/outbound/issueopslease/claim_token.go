@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"issueops/internal/adapter/outbound/osfile"
 	leasecontract "issueops/internal/contract/issueopslease"
 )
 
@@ -63,14 +64,14 @@ func requirePrivateRegularFile(root, path string, maxSize int64) error {
 			}
 			continue
 		}
-		return requirePrivateTokenLeaf(info, maxSize)
+		return requirePrivateTokenLeaf(current, info, maxSize)
 	}
 	return nil
 }
 
 // requirePrivateTokenLeaf는 경로의 마지막 구성요소가 크기 제한 안의 0600 일반 파일인지 확인한다.
-func requirePrivateTokenLeaf(info os.FileInfo, maxSize int64) error {
-	if !info.Mode().IsRegular() || info.Mode().Perm() != 0o600 {
+func requirePrivateTokenLeaf(path string, info os.FileInfo, maxSize int64) error {
+	if !info.Mode().IsRegular() || osfile.Perm(path, info) != 0o600 {
 		return fmt.Errorf("claim token file must be a 0600 regular file")
 	}
 	if info.Size() > maxSize {

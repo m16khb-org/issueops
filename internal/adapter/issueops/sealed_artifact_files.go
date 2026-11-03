@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"issueops/internal/adapter/outbound/osfile"
 	leasecontract "issueops/internal/contract/issueopslease"
 )
 
@@ -18,7 +19,7 @@ func writeSealedArtifact(root, path string, value []byte) error {
 	if err := ensureSealedArtifactDirectory(root, filepath.Dir(path)); err != nil {
 		return err
 	}
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	file, err := osfile.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if errors.Is(err, os.ErrExist) {
 		return verifyExistingSealedArtifact(path, value)
 	}
@@ -39,7 +40,7 @@ func writeSealedArtifact(root, path string, value []byte) error {
 func verifyExistingSealedArtifact(path string, value []byte) error {
 	current, readErr := os.ReadFile(path)
 	info, statErr := os.Lstat(path)
-	if readErr != nil || statErr != nil || !info.Mode().IsRegular() || info.Mode().Perm() != 0o600 || !strings.EqualFold(digestBytes(current), digestBytes(value)) {
+	if readErr != nil || statErr != nil || !info.Mode().IsRegular() || osfile.Perm(path, info) != 0o600 || !strings.EqualFold(digestBytes(current), digestBytes(value)) {
 		return fmt.Errorf("immutable sealed artifact already exists with different identity")
 	}
 	return nil
@@ -56,7 +57,7 @@ func ensureSealedArtifactDirectory(root, target string) error {
 		current = filepath.Join(current, part)
 		info, statErr := os.Lstat(current)
 		if errors.Is(statErr, os.ErrNotExist) {
-			if mkdirErr := os.Mkdir(current, 0o700); mkdirErr != nil && !errors.Is(mkdirErr, os.ErrExist) {
+			if mkdirErr := osfile.Mkdir(current, 0o700); mkdirErr != nil && !errors.Is(mkdirErr, os.ErrExist) {
 				return mkdirErr
 			}
 			info, statErr = os.Lstat(current)

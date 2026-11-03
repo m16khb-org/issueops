@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/port"
 
 	_ "modernc.org/sqlite"
@@ -239,7 +240,7 @@ func prepareOmpEpisode(root, lifecycleExtension, targetTool string, request port
 	if err := writePrivateFile(filepath.Join(root, ".issueops", "CONSTITUTION.md"), []byte(projectDoc)); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Join(root, "sessions"), 0o700); err != nil {
+	if err := osfile.MkdirAll(filepath.Join(root, "sessions"), 0o700); err != nil {
 		return err
 	}
 	serve := serveArgv(request, resultPath)
@@ -256,7 +257,7 @@ func prepareOmpEpisode(root, lifecycleExtension, targetTool string, request port
 func resolveOmpAuth(deps Dependencies) (string, error) {
 	sourceAgentDir := strings.TrimSpace(deps.Getenv("PI_CODING_AGENT_DIR"))
 	if sourceAgentDir == "" {
-		home := strings.TrimSpace(deps.Getenv("HOME"))
+		home := hostHome(deps)
 		if home == "" {
 			return "", nil
 		}
@@ -276,7 +277,7 @@ func resolveOmpAuth(deps Dependencies) (string, error) {
 		}
 		return "", err
 	}
-	if !info.Mode().IsRegular() || info.Mode().Perm() != 0o600 {
+	if !info.Mode().IsRegular() || osfile.Perm(source, info) != 0o600 {
 		return "", fmt.Errorf("omp_auth_invalid")
 	}
 	return source, nil
@@ -356,7 +357,7 @@ func readOmpAuthSchema(ctx context.Context, tx *sql.Tx) ([]string, error) {
 
 // createPrivateEmptyFile exclusively creates an empty 0600 file.
 func createPrivateEmptyFile(path string) error {
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	file, err := osfile.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return err
 	}
@@ -364,8 +365,9 @@ func createPrivateEmptyFile(path string) error {
 }
 
 func prepareOmpPrivateState(root string) error {
-	for _, directory := range []string{filepath.Join(root, "home"), filepath.Join(root, "agent")} {
-		if err := os.MkdirAll(directory, 0o700); err != nil {
+	home := filepath.Join(root, "home")
+	for _, directory := range append([]string{home, filepath.Join(root, "agent")}, isolatedHomeSubdirs(home)...) {
+		if err := osfile.MkdirAll(directory, 0o700); err != nil {
 			return err
 		}
 	}
@@ -377,7 +379,7 @@ func prepareOmpPrivateState(root string) error {
 // PI_CODING_AGENT_DIR selects the private agent dir. OMP_MCP_REQUIRE_READY makes
 // an unavailable probe server fail the run instead of reaching the model.
 func isolatedOmpEnv(deps Dependencies, root string) []string {
-	environment := replaceEnvironmentValue(isolatedHostEnv(deps), "HOME", filepath.Join(root, "home"))
+	environment := withIsolatedHome(isolatedHostEnv(deps), filepath.Join(root, "home"))
 	environment = replaceEnvironmentValue(environment, "PI_CODING_AGENT_DIR", filepath.Join(root, "agent"))
 	return replaceEnvironmentValue(environment, "OMP_MCP_REQUIRE_READY", "1")
 }

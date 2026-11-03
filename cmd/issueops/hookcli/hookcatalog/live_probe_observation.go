@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"issueops/internal/adapter/outbound/osfile"
 )
 
 const maxLiveProbeHookInput = 64 << 10
@@ -42,7 +44,7 @@ func recordLiveProbeSessionStart(input []byte) error {
 // liveProbeObservationDirOK는 관찰 파일의 부모가 심볼릭 링크가 아닌 0700 디렉터리인지 확인한다.
 func liveProbeObservationDirOK(dir string) bool {
 	info, err := os.Lstat(dir)
-	return err == nil && info.IsDir() && info.Mode()&os.ModeSymlink == 0 && info.Mode().Perm() == 0o700
+	return err == nil && info.IsDir() && info.Mode()&os.ModeSymlink == 0 && osfile.Perm(dir, info) == 0o700
 }
 
 // decodeLiveProbeSessionStartModel은 SessionStart 페이로드를 검증하고 model을 돌려준다.
@@ -61,7 +63,7 @@ func decodeLiveProbeSessionStartModel(input []byte) (string, bool) {
 
 // writeLiveProbeMarker는 마커 파일을 배타적으로 만들고 실패 시 제거한다.
 func writeLiveProbeMarker(markerPath string, data []byte) error {
-	file, err := os.OpenFile(markerPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	file, err := osfile.OpenFile(markerPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return errLiveProbeObservationInvalid
 	}

@@ -10,6 +10,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"issueops/internal/adapter/outbound/osfile"
 )
 
 const (
@@ -44,14 +46,14 @@ func httpStateDir(stateDir string) (string, error) {
 		return "", fmt.Errorf("mcp http state dir must be absolute")
 	}
 	dir := filepath.Join(filepath.Clean(stateDir), httpStateDirName)
-	if err := os.MkdirAll(dir, 0o700); err != nil {
+	if err := osfile.MkdirAll(dir, 0o700); err != nil {
 		return "", err
 	}
 	info, err := os.Lstat(dir)
 	if err != nil {
 		return "", err
 	}
-	if !info.IsDir() || info.Mode().Perm()&0o077 != 0 {
+	if !info.IsDir() || osfile.Perm(dir, info)&0o077 != 0 {
 		return "", fmt.Errorf("mcp http state dir must be an owner-only directory")
 	}
 	return dir, nil
@@ -69,7 +71,7 @@ func createHTTPBearer(dir, path string) error {
 		return err
 	}
 	defer os.Remove(temp.Name())
-	if err := temp.Chmod(0o600); err != nil {
+	if err := osfile.FileChmod(temp, 0o600); err != nil {
 		temp.Close()
 		return err
 	}
@@ -92,7 +94,7 @@ func readHTTPBearer(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if !before.Mode().IsRegular() || before.Mode().Perm()&0o077 != 0 {
+	if !before.Mode().IsRegular() || osfile.Perm(path, before)&0o077 != 0 {
 		return "", errHTTPBearerFile
 	}
 	file, err := os.Open(path)

@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 	"unicode"
 
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/domain/policy"
 	"issueops/internal/port"
 )
@@ -239,7 +239,7 @@ func prepareOmoEpisode(root, lifecycleExtension, targetTool string, request port
 	if err := writePrivateFile(filepath.Join(root, ".issueops", "CONSTITUTION.md"), []byte(projectDoc)); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Join(root, "sessions"), 0o700); err != nil {
+	if err := osfile.MkdirAll(filepath.Join(root, "sessions"), 0o700); err != nil {
 		return err
 	}
 	serve := serveArgv(request, resultPath)
@@ -269,7 +269,7 @@ func prepareOmoEpisode(root, lifecycleExtension, targetTool string, request port
 func resolveOmoAuth(deps Dependencies) (omoAuthSnapshot, error) {
 	sourceAgentDir := strings.TrimSpace(deps.Getenv("OMO_CODING_AGENT_DIR"))
 	if sourceAgentDir == "" {
-		home := strings.TrimSpace(deps.Getenv("HOME"))
+		home := hostHome(deps)
 		if home == "" {
 			return omoAuthSnapshot{}, nil
 		}
@@ -293,8 +293,9 @@ func resolveOmoAuth(deps Dependencies) (omoAuthSnapshot, error) {
 }
 
 func prepareOmoPrivateState(root string, auth omoAuthSnapshot) error {
-	for _, directory := range []string{filepath.Join(root, "home"), filepath.Join(root, "agent")} {
-		if err := os.MkdirAll(directory, 0o700); err != nil {
+	home := filepath.Join(root, "home")
+	for _, directory := range append([]string{home, filepath.Join(root, "agent")}, isolatedHomeSubdirs(home)...) {
+		if err := osfile.MkdirAll(directory, 0o700); err != nil {
 			return err
 		}
 	}
@@ -305,7 +306,7 @@ func prepareOmoPrivateState(root string, auth omoAuthSnapshot) error {
 }
 
 func isolatedOmoEnv(deps Dependencies, root string) []string {
-	environment := replaceEnvironmentValue(isolatedHostEnv(deps, "OMO_CODING_AGENT_DIR"), "HOME", filepath.Join(root, "home"))
+	environment := withIsolatedHome(isolatedHostEnv(deps, "OMO_CODING_AGENT_DIR"), filepath.Join(root, "home"))
 	return replaceEnvironmentValue(environment, "OMO_CODING_AGENT_DIR", filepath.Join(root, "agent"))
 }
 

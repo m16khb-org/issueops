@@ -509,7 +509,9 @@ func (vetter *receiptVetter) hostVersion() string {
 
 func (vetter *receiptVetter) artifact(source string) (string, string) {
 	trimmed := strings.TrimSpace(source)
-	if trimmed == "" || schemePattern().MatchString(trimmed) {
+	// A Windows drive path ("C:\x") also matches the scheme pattern; an
+	// absolute path is a file, never a URL.
+	if trimmed == "" || (!filepath.IsAbs(trimmed) && schemePattern().MatchString(trimmed)) {
 		return source, "receipt_source_not_artifact"
 	}
 	if strings.Contains(strings.ToLower(filepath.Base(trimmed)), "synthetic") {

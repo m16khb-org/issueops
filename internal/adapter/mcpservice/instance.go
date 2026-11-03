@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/contract/processidentity"
 )
 
@@ -47,11 +48,15 @@ type Instance struct {
 
 func httpDir(stateDir string) string { return filepath.Join(stateDir, httpStateDirName) }
 
+// ServiceLogPath is the file the launchd and systemd units append the server's
+// stdout and stderr to.
+func ServiceLogPath(stateDir string) string { return filepath.Join(httpDir(stateDir), "server.log") }
+
 // AcquireInstance takes the non-blocking OS lock. It never waits: a held lock
 // is a conflict, not something to retry on another port.
 func AcquireInstance(stateDir string) (*Instance, error) {
 	dir := httpDir(stateDir)
-	if err := os.MkdirAll(dir, 0o700); err != nil {
+	if err := osfile.MkdirAll(dir, 0o700); err != nil {
 		return nil, err
 	}
 	lock, err := os.OpenFile(filepath.Join(dir, lockFileName), os.O_RDWR|os.O_CREATE, 0o600)
@@ -173,7 +178,7 @@ func writeRecord(path string, record Record) error {
 		return err
 	}
 	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, append(raw, '\n'), 0o600); err != nil {
+	if err := osfile.WriteFile(tmp, append(raw, '\n'), 0o600); err != nil {
 		return err
 	}
 	if err := os.Rename(tmp, path); err != nil {
@@ -194,7 +199,7 @@ func ReadBearer(stateDir string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if !info.Mode().IsRegular() || info.Mode().Perm()&0o077 != 0 {
+	if !info.Mode().IsRegular() || osfile.Perm(path, info)&0o077 != 0 {
 		return "", fmt.Errorf("mcp http bearer file must be an owner-only regular file")
 	}
 	raw, err := os.ReadFile(path)

@@ -25,6 +25,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/port"
 	stateport "issueops/internal/port/state"
 
@@ -245,7 +246,7 @@ func touchPrivate(path string) error {
 	if err != nil {
 		return err
 	}
-	if err := f.Chmod(0o600); err != nil {
+	if err := osfile.FileChmod(f, 0o600); err != nil {
 		f.Close()
 		return err
 	}
@@ -255,7 +256,7 @@ func touchPrivate(path string) error {
 func ensurePrivateRoot(dir string) error {
 	info, err := os.Lstat(dir)
 	if err != nil || !info.IsDir() {
-		if err := os.MkdirAll(dir, 0o700); err != nil {
+		if err := osfile.MkdirAll(dir, 0o700); err != nil {
 			return err
 		}
 		info, err = os.Lstat(dir)
@@ -266,8 +267,8 @@ func ensurePrivateRoot(dir string) error {
 	if !info.IsDir() {
 		return fmt.Errorf("refusing non-directory state root %s", dir)
 	}
-	if info.Mode().Perm() != 0o700 {
-		if err := os.Chmod(dir, 0o700); err != nil {
+	if osfile.Perm(dir, info) != 0o700 {
+		if err := osfile.Chmod(dir, 0o700); err != nil {
 			return err
 		}
 	}
@@ -290,10 +291,10 @@ func repairPrivateSQLiteFiles(dir string) ([]string, error) {
 			if !info.Mode().IsRegular() {
 				return nil, fmt.Errorf("sqlstore refusing non-regular SQLite file %s", path)
 			}
-			if info.Mode().Perm() == 0o600 {
+			if osfile.Perm(path, info) == 0o600 {
 				continue
 			}
-			if err := os.Chmod(path, 0o600); err != nil {
+			if err := osfile.Chmod(path, 0o600); err != nil {
 				if errors.Is(err, fs.ErrNotExist) {
 					continue
 				}
@@ -314,6 +315,7 @@ func openSQLite(path, params string) (*sql.DB, error) {
 		db.Close()
 		return nil, err
 	}
+	releaseIdleFileHandles(db)
 	return db, nil
 }
 

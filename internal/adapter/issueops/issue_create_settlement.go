@@ -3,8 +3,6 @@ package issueops
 import (
 	"context"
 	"fmt"
-	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -67,9 +65,7 @@ func settleIssueCreate(ctx context.Context, stateRoot string, resolve func(strin
 		return false, err
 	}
 	_ = lease.Close()
-	cmd := exec.CommandContext(ctx, "ps", "-axww", "-o", "args=")
-	cmd.Env = append(os.Environ(), "LC_ALL=C", "LANG=C")
-	rows, err := cmd.Output()
+	rows, err := processTableArguments(ctx)
 	if err != nil {
 		return false, err
 	}

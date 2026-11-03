@@ -33,7 +33,7 @@ func (l *Lease) Context(ctx context.Context) context.Context {
 // descriptor open; they do not read or write it.
 func Attach(ctx context.Context, cmd *exec.Cmd) {
 	if file, ok := ctx.Value(contextKey{}).(*os.File); ok {
-		cmd.ExtraFiles = append(cmd.ExtraFiles, file)
+		inherit(cmd, file)
 	}
 }
 

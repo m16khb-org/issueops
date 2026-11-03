@@ -2,6 +2,7 @@ package issueops
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 )
 
@@ -26,9 +27,10 @@ func GateLedgerFileReadiness(relativePath string, complete bool, gates []GateLed
 
 func GateLedgerRelativePath(root, file string) string {
 	relative := strings.TrimPrefix(file, root)
+	relative = strings.TrimPrefix(relative, string(filepath.Separator))
 	relative = strings.TrimPrefix(relative, "/")
 	if relative == "" {
 		return file
 	}
-	return relative
+	return filepath.ToSlash(relative)
 }

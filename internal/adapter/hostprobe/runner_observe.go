@@ -12,6 +12,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"issueops/internal/adapter/outbound/osfile"
 )
 
 type hostStreamObservation struct {
@@ -357,7 +359,7 @@ func observeRecordedHookEvents(observationPath string) (hostStreamObservation, e
 		}
 		return hostStreamObservation{}, fmt.Errorf("hook_observation_invalid")
 	}
-	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 || info.Mode().Perm() != 0o600 {
+	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 || osfile.Perm(markerPath, info) != 0o600 {
 		return hostStreamObservation{}, fmt.Errorf("hook_observation_invalid")
 	}
 	data, err := readBoundedEvidenceFile(markerPath)

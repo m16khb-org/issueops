@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"issueops/internal/adapter/outbound/gitbin"
+	"issueops/internal/adapter/outbound/osfile"
 	leaseapp "issueops/internal/application/issueopslease"
 	leasecontract "issueops/internal/contract/issueopslease"
 	leasedomain "issueops/internal/domain/issueopslease"
@@ -183,7 +184,8 @@ func reseedWriteUntrackedFingerprint(hash io.Writer, root, relative string) erro
 	}
 	reseedWriteFingerprintPart(hash, relative)
 	reseedWriteFingerprintPart(hash, entry.Mode().String())
-	return reseedWriteFingerprintFile(hash, path, entry)
+	identity, known := osfile.PathIdentity(path, entry)
+	return reseedWriteFingerprintFile(hash, path, entry, identity, known)
 }
 
 func reseedGitOutput(root string, args ...string) (string, error) {
@@ -221,7 +223,7 @@ func reseedWriteFingerprintBytes(hash interface{ Write([]byte) (int, error) }, v
 	_, _ = hash.Write([]byte{0})
 }
 
-func reseedWriteFingerprintFile(hash interface{ Write([]byte) (int, error) }, path string, entry os.FileInfo) (err error) {
+func reseedWriteFingerprintFile(hash interface{ Write([]byte) (int, error) }, path string, entry os.FileInfo, identity osfile.Identity, known bool) (err error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return err
@@ -234,6 +236,13 @@ func reseedWriteFingerprintFile(hash interface{ Write([]byte) (int, error) }, pa
 	opened, err := file.Stat()
 	if err != nil {
 		return err
+	}
+	// SameFile alone cannot prove the path was not replaced: Windows resolves a
+	// Lstat result's file identity lazily, from the path as it is now, so the
+	// identity taken at Lstat time is compared as well.
+	if openedIdentity, openedKnown := osfile.FileIdentity(file, opened); known && openedKnown &&
+		(openedIdentity.Device != identity.Device || openedIdentity.Inode != identity.Inode) {
+		return fmt.Errorf("untracked file changed while snapshotting: %s", path)
 	}
 	if !os.SameFile(entry, opened) || !opened.Mode().IsRegular() || opened.Size() != entry.Size() {
 		return fmt.Errorf("untracked file changed while snapshotting: %s", path)

@@ -132,7 +132,7 @@ func (s TrackedMaterials) planSource(record issueops.IssueOpsRecord, root string
 	}
 	planPath = s.Files.Resolve(root, planPath)
 	rel, err := s.Files.Relative(sealedDir, planPath)
-	if err != nil || rel == ".." || strings.HasPrefix(rel, "../") {
+	if err != nil || rel == ".." || strings.HasPrefix(rel, "../") || strings.HasPrefix(rel, `..\`) {
 		return "", false
 	}
 	return planPath, true

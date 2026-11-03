@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"issueops/internal/adapter/lifecycle/model"
+	"issueops/internal/adapter/outbound/osfile"
 	lifecyclecontract "issueops/internal/contract/lifecycle"
 	lifecycledomain "issueops/internal/domain/lifecycle"
 )
@@ -43,7 +44,7 @@ func (files ProfileFiles) Paths(root string, projectFingerprint lifecyclecontrac
 func (files ProfileFiles) ReadProfile(path string) (lifecyclecontract.ProjectLifecycleProfile, error) {
 	return readProjectLifecycleProfile(path)
 }
-func (files ProfileFiles) Mkdir(path string) error { return os.MkdirAll(path, 0o700) }
+func (files ProfileFiles) Mkdir(path string) error { return osfile.MkdirAll(path, 0o700) }
 func (files ProfileFiles) Create(path string, profile lifecyclecontract.ProjectLifecycleProfile) error {
 	return createJSONAtomic(path, profile, 0o600)
 }
@@ -65,7 +66,7 @@ func readProjectLifecycleProfile(path string) (lifecyclecontract.ProjectLifecycl
 }
 
 func writeJSONAtomic(path string, value any, perm os.FileMode) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+	if err := osfile.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
 	b, err := json.MarshalIndent(value, "", "  ")
@@ -81,7 +82,7 @@ func writeJSONAtomic(path string, value any, perm os.FileMode) error {
 		if _, err := tmp.Write(append(b, '\n')); err != nil {
 			return err
 		}
-		if err := tmp.Chmod(perm); err != nil {
+		if err := osfile.FileChmod(tmp, perm); err != nil {
 			return err
 		}
 		return tmp.Close()
@@ -91,7 +92,7 @@ func writeJSONAtomic(path string, value any, perm os.FileMode) error {
 		_ = os.Remove(tmpName)
 		return writeErr
 	}
-	if err := os.Rename(tmpName, path); err != nil {
+	if err := osfile.Replace(tmpName, path); err != nil {
 		_ = os.Remove(tmpName)
 		return err
 	}
@@ -99,7 +100,7 @@ func writeJSONAtomic(path string, value any, perm os.FileMode) error {
 }
 
 func createJSONAtomic(path string, value any, perm os.FileMode) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+	if err := osfile.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
 	b, err := json.MarshalIndent(value, "", "  ")
@@ -116,7 +117,7 @@ func createJSONAtomic(path string, value any, perm os.FileMode) error {
 		if _, err := tmp.Write(append(b, '\n')); err != nil {
 			return err
 		}
-		if err := tmp.Chmod(perm); err != nil {
+		if err := osfile.FileChmod(tmp, perm); err != nil {
 			return err
 		}
 		return tmp.Close()

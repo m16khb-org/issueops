@@ -62,7 +62,13 @@ func DiscoverProjectDocsReport(repoRoot string) ([]projectdocdomain.ProjectDocCa
 	}
 	defer root.Close()
 	docsInfo, err := root.Lstat(".issueops")
-	if err != nil || !docsInfo.IsDir() || docsInfo.Mode()&os.ModeSymlink != 0 {
+	if err != nil {
+		// Only a missing directory means "no docs". Windows denies Lstat itself
+		// on an unreadable directory, where Unix lets Lstat succeed and fails at Open.
+		omissions.ScanTruncated = !errors.Is(err, os.ErrNotExist)
+		return nil, omissions, stats
+	}
+	if !docsInfo.IsDir() || docsInfo.Mode()&os.ModeSymlink != 0 {
 		return nil, omissions, stats
 	}
 	docsDir, err := root.Open(".issueops")
