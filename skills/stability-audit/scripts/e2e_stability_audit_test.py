@@ -472,6 +472,10 @@ for line in sys.stdin:
         print(json.dumps({"jsonrpc": "2.0", "id": request["id"], "error": {"code": -32603, "message": 1}}), flush=True)
     else:
         print(json.dumps({"jsonrpc": "2.0", "id": request["id"], "result": {}}), flush=True)
+    # Modes that can never satisfy every expected id exit right after
+    # responding so the parent sees EOF instead of waiting for its deadline.
+    if mode not in ("success", "reordered", "error"):
+        break
 '''
 
 
@@ -506,7 +510,7 @@ class MCPJSONRPCProcessTest(unittest.TestCase):
                     result = audit.run_mcp_jsonrpc_process(
                         [sys.executable, "-u", "-c", _child_program(), mode],
                         calls,
-                        timeout=1,
+                        timeout=0.2 if mode == "timeout" else 1,
                     )
                     self.assertEqual(want_ok, result["ok"], result)
                     if want_problem:
