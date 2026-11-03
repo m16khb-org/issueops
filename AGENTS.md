@@ -164,6 +164,7 @@ python3 scripts/validate-skill.py skills/atomic-commit-push
 ./scripts/install-native.sh --dry-run --json
 gofmt -l $(git ls-files '*.go')
 go vet ./...
+./scripts/lint-local.sh
 go test ./... -count=1
 go test ./cmd/issueops/contractgolden -run Golden -count=1
 go test ./cmd/issueops/issueopsapp -run TestResponseContractsGolden -count=1

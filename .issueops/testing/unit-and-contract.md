@@ -44,11 +44,11 @@ quickfix(QF))는 버그를 잡지 않고 코드만 흔들어서 켜지 않는다
 켜지 않는다. 테스트 파일에서는 errorlint와 unparam을 끈다. 테스트는 오류 동일성을 일부러
 `==`로 비교하고, fake는 주입 시그니처를 따라야 하기 때문이다. 의도한 예외는 설정을 넓히지 않고
 해당 줄에 사유를 붙인 `//nolint:<linter> // <사유>`로 남긴다. 기존 제외 preset과 전체 issue
-출력 설정은 유지한다. 로컬 린터도 `go.mod`의 toolchain을 사용한다:
-`GOTOOLCHAIN="go$(go list -m -f '{{.GoVersion}}')" golangci-lint run ./...`.
-CI runner가 Linux이므로 같은 명령에 `GOOS=linux`를 추가해 실행한다(플랫폼
-build tag 분기에서만 unused가 되는 심볼을 찾는다). 린터는 해당 Go 버전 이상으로
-빌드해야 하며, 더 최신인 로컬 Go의 표준 라이브러리를 구버전 analyzer에 넘기지 않는다.
+출력 설정은 유지한다. 로컬 린터는 CI와 같은 `scripts/lint-local.sh`로 실행한다. 이 스크립트가
+버전(v2.12.2)을 고정하고 `go.mod`의 toolchain(`GOTOOLCHAIN="go$(go list -m -f '{{.GoVersion}}')"`)으로
+`golangci-lint run ./...`을 실행한다. CI runner가 Linux이므로 Linux가 아닌 머신에서는 `GOOS=linux`
+변형도 함께 실행한다(플랫폼 build tag 분기에서만 unused가 되는 심볼을 찾는다). 린터는 해당 Go 버전
+이상으로 빌드해야 하며, 더 최신인 로컬 Go의 표준 라이브러리를 구버전 analyzer에 넘기지 않는다.
 이 도구는 install/update/self-verify
 readiness 경로에는 필요하지 않고, CI와 개발자 게이트에서만 사용한다.
 

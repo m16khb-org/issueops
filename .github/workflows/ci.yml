@@ -2,9 +2,11 @@ name: CI
 
 # Mirrors the repo's already-deterministic local verification gate (AGENTS.md §9)
 # on every branch push and pull request.
-# The self-verify gate runs with --judge none (LLM eval off by default) and a
-# pinned --seed, so this is pure wiring of existing commands: no live-skill
-# invocation and no model is required in CI.
+# The gate is split into independent parallel jobs: lint (static checks), race
+# (Go race suite) and self-verify (build, deterministic self-verify, HTTP MCP
+# install refusal). The self-verify gate runs with --llm-eval=false (LLM eval
+# off) and a pinned --seed, so this is pure wiring of existing commands: no
+# live-skill invocation and no model is required in CI.
 on:
   workflow_dispatch:
   push:
@@ -19,7 +21,7 @@ permissions:
   contents: read
 
 jobs:
-  verify:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -29,8 +31,6 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - uses: oven-sh/setup-bun@v2
-
       # setup-uv stopped publishing major and minor tags at v8; pin the
       # immutable release tag.
       - uses: astral-sh/setup-uv@v10.2.0
@@ -38,12 +38,6 @@ jobs:
           version: "0.8.8"
           enable-cache: true
           cache-dependency-glob: scripts/python_test_requirements.txt
-
-      - name: Prepare declared skill test dependencies
-        run: |
-          uv venv --python 3.13 "$RUNNER_TEMP/issueops-python"
-          uv pip install --python "$RUNNER_TEMP/issueops-python/bin/python" -r scripts/python_test_requirements.txt
-          printf '%s\n' "$RUNNER_TEMP/issueops-python/bin" >> "$GITHUB_PATH"
 
       - name: Format check (gofmt)
         # gofmt does not understand the `./...` package pattern, so check the
@@ -57,25 +51,26 @@ jobs:
       - name: Vet
         run: go vet ./...
 
+      - name: Install golangci-lint v2 (version pinned by scripts/lint-local.sh)
+        # scripts/lint-local.sh owns the pinned version so local lint and CI
+        # cannot drift. Build with the toolchain selected from go.mod.
+        run: |
+          version="$(./scripts/lint-local.sh --print-version)"
+          go install "github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${version}"
+          printf '%s\n' "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
       - name: Lint (golangci-lint v2)
-        # Build with the toolchain selected from go.mod. Local lint uses the
-        # same toolchain so a newer ambient GOROOT cannot break its analyzers.
-        uses: golangci/golangci-lint-action@v9
-        with:
-          version: v2.12.2
-          install-mode: goinstall
-          # The action runs `config verify` before linting, and that fetches the
-          # JSON schema from golangci-lint.run. When the host is slow the fetch
-          # times out and the job dies before a single linter runs (run
-          # 33489702571). The config check moves to the next step, where an
-          # unreachable host is a warning and a real schema violation still fails.
-          verify: false
+        # Runs the same script developers run locally: it checks the pinned
+        # version and builds with the toolchain selected from go.mod.
+        run: ./scripts/lint-local.sh
 
       - name: Verify .golangci.yml against the golangci-lint schema
         # `golangci-lint run` silently ignores unknown config keys (checked on
         # v1.64.8: a bogus key exits 0 with no output), so a typo here would
         # disable the caps this repo depends on without any signal. `config
-        # verify` catches it. Retry schema retrieval, then let an
+        # verify` catches it. It fetches the JSON schema from golangci-lint.run,
+        # and a slow host timed out the former action-run verify before a single
+        # linter ran (run 33489702571). Retry schema retrieval, then let an
         # unreachable host pass with a warning: an external service is not a
         # readiness gate for this repo (AGENTS.md philosophy).
         run: |
@@ -115,18 +110,72 @@ jobs:
             python3 scripts/validate-skill.py "$dir"
           done
 
-      - name: Build
-        run: go build -o bin/issueops ./cmd/issueops
+      - name: Docs structure check (.issueops tree and links)
+        # Same documentation check .issueops/OPERATIONS.md asks for before
+        # committing; exits non-zero on a broken link or family violation.
+        run: uv run --directory skills/project-docs-optimize python -m scripts.check --root "$PWD" --mode check --json
+
+  race:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version: "0.8.8"
+          enable-cache: true
+          cache-dependency-glob: scripts/python_test_requirements.txt
+
+      - name: Prepare declared skill test dependencies
+        run: |
+          uv venv --python 3.13 "$RUNNER_TEMP/issueops-python"
+          uv pip install --python "$RUNNER_TEMP/issueops-python/bin/python" -r scripts/python_test_requirements.txt
+          printf '%s\n' "$RUNNER_TEMP/issueops-python/bin" >> "$GITHUB_PATH"
 
       - name: Race test all packages
         run: go test -race ./... -count=1
 
+  self-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version: "0.8.8"
+          enable-cache: true
+          cache-dependency-glob: scripts/python_test_requirements.txt
+
+      - name: Prepare declared skill test dependencies
+        run: |
+          uv venv --python 3.13 "$RUNNER_TEMP/issueops-python"
+          uv pip install --python "$RUNNER_TEMP/issueops-python/bin/python" -r scripts/python_test_requirements.txt
+          printf '%s\n' "$RUNNER_TEMP/issueops-python/bin" >> "$GITHUB_PATH"
+
+      - name: Build
+        run: go build -o bin/issueops ./cmd/issueops
+
       # Owns Python discovery and the normal Go suite (including golden tests)
-      # once, in the same temporary HOME as native integration. Race stays above.
-      # The runner's user systemd manager looks for units under its own HOME, so
-      # the HTTP MCP unit written under the temporary HOME never loads; ADR
-      # 2026-10-02 forbids falling back to stdio silently, so CI picks it here.
-      - name: Deterministic self-verify gate (seed-pinned, --judge none)
+      # once, in the same temporary HOME as native integration. Race runs in
+      # its own job. The runner's user systemd manager looks for units under its
+      # own HOME, so the HTTP MCP unit written under the temporary HOME never
+      # loads; ADR 2026-10-02 forbids falling back to stdio silently, so CI
+      # picks it here.
+      - name: Deterministic self-verify gate (seed-pinned, --llm-eval=false)
         run: |
           tmp_home="$(mktemp -d)"
           cleanup() {

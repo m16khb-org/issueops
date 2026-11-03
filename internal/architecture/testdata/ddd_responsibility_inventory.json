@@ -17444,6 +17444,11 @@
       "task": "T11"
     },
     {
+      "path": "scripts/lint-local.sh",
+      "owner": "execution-script",
+      "task": "T20"
+    },
+    {
       "path": "scripts/measure_efficiency.py",
       "owner": "execution-script",
       "task": "T17"

@@ -13,22 +13,59 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def run_blocks():
-    """Read the name/run subset used by this workflow, without a YAML dependency."""
+def job_sections():
+    """Split the workflow into {job id: text} in file order, without a YAML dependency."""
+    text = (ROOT / ".github/workflows/ci.yml").read_text()
+    parts = re.split(r"^  ([a-z][a-z-]*):\n", text.split("\njobs:\n", 1)[1], flags=re.M)
+    return dict(zip(parts[1::2], parts[2::2]))
+
+
+def run_blocks(*jobs):
+    """Read the name/run subset of the given jobs (default: every job), in file order."""
     steps = []
-    for section in re.split(r"^      - ", (ROOT / ".github/workflows/ci.yml").read_text(), flags=re.M)[1:]:
-        name = re.match(r"name: (.+)", section)
-        run = re.search(r"^        run: (.+)\n?", section, re.M)
-        if not name or not run:
+    for job, text in job_sections().items():
+        if jobs and job not in jobs:
             continue
-        body = run[1]
-        if body == "|":
-            body = textwrap.dedent(section[run.end():])
-        steps.append((name[1], body))
+        for section in re.split(r"^      - ", text, flags=re.M)[1:]:
+            name = re.match(r"name: (.+)", section)
+            run = re.search(r"^        run: (.+)\n?", section, re.M)
+            if not name or not run:
+                continue
+            body = run[1]
+            if body == "|":
+                body = textwrap.dedent(section[run.end():])
+            steps.append((name[1], body))
     return steps
 
 
 class CIWorkflowTests(unittest.TestCase):
+    def test_jobs_run_in_parallel(self):
+        self.assertEqual(list(job_sections()), ["lint", "race", "self-verify"])
+        for job, text in job_sections().items():
+            self.assertNotRegex(text, r"^    needs:", job)
+
+    def test_lint_job_owns_static_checks(self):
+        lint = run_blocks("lint")
+        self.assertEqual(sum(body.startswith("unformatted=\"$(gofmt -l ") for _, body in lint), 1)
+        self.assertEqual(sum(body.strip() == "go vet ./..." for _, body in lint), 1)
+        self.assertEqual(sum(body.strip() == "./scripts/lint-local.sh" for _, body in lint), 1)
+        self.assertEqual(sum(body.strip() == "shellcheck install.sh scripts/*.sh" for _, body in lint), 1)
+        self.assertEqual(sum("scripts/validate-skill.py" in body for _, body in lint), 1)
+        docs = [body for _, body in lint if "python -m scripts.check" in body]
+        self.assertEqual(len(docs), 1)
+        self.assertIn("--directory skills/project-docs-optimize", docs[0])
+        self.assertIn("--mode check", docs[0])
+        # The pinned linter version lives only in scripts/lint-local.sh, and the
+        # lint run goes through that script so CI and local lint cannot drift.
+        everything = (ROOT / ".github/workflows/ci.yml").read_text()
+        self.assertFalse([body for _, body in run_blocks() if re.search(r"golangci-lint\"? run\b", body)])
+        self.assertNotRegex(everything, r"v2\.\d+\.\d+")
+        self.assertRegex((ROOT / "scripts/lint-local.sh").read_text(), r'GOLANGCI_LINT_VERSION="v2\.\d+\.\d+"')
+        for job in ("race", "self-verify"):
+            for _, body in run_blocks(job):
+                self.assertNotIn("golangci-lint", body)
+                self.assertNotIn("shellcheck", body)
+
     def test_verification_ownership(self):
         blocks = run_blocks()
         self.assertEqual(sum("unittest discover" in body for _, body in blocks), 0)
@@ -36,6 +73,11 @@ class CIWorkflowTests(unittest.TestCase):
         self.assertEqual(sum(body.strip() == "go test -race ./... -count=1" for _, body in blocks), 1)
         self.assertEqual(sum(body.strip() == "go build -o bin/issueops ./cmd/issueops" for _, body in blocks), 1)
         self.assertEqual(sum("./bin/issueops self-verify" in body for _, body in blocks), 1)
+        # Each owner lives in exactly one job: race alone, build and self-verify together.
+        self.assertEqual([body.strip() for _, body in run_blocks("race") if "go test" in body], ["go test -race ./... -count=1"])
+        self.assertEqual(sum(body.strip() == "go build -o bin/issueops ./cmd/issueops" for _, body in run_blocks("self-verify")), 1)
+        self.assertEqual(sum("./bin/issueops self-verify" in body for _, body in run_blocks("self-verify")), 1)
+        self.assertEqual(sum("--mcp-transport=http" in body for _, body in run_blocks("self-verify")), 1)
         selfverify = next(body for _, body in blocks if "./bin/issueops self-verify" in body)
         self.assertIn("--llm-eval=false", selfverify)
         install = next(line for line in selfverify.splitlines() if "./scripts/install-native.sh" in line)
@@ -85,7 +127,9 @@ class CIWorkflowTests(unittest.TestCase):
                            HOME=str(ambient_home), CODEX_HOME=str(ambient_home / ".codex"),
                            EVENTS=str(events), FAIL_AT=fail_at)
                 result = None
-                for _, body in run_blocks():
+                # Jobs are independent in CI; chaining them here still proves each
+                # job's blocks propagate failures and keep native HOME isolated.
+                for _, body in run_blocks("race", "self-verify"):
                     if not any(command in body for command in ("unittest discover", "go build -o bin/issueops", "go test", "./bin/issueops self-verify")):
                         continue
                     result = subprocess.run(["bash", "--noprofile", "--norc", "-e", "-o", "pipefail", "-c", body],
@@ -99,7 +143,7 @@ class CIWorkflowTests(unittest.TestCase):
                 if fail_at:
                     self.assertEqual(labels[-1], fail_at)
                 else:
-                    self.assertEqual(labels, ['build', 'race', 'install', 'self-verify', 'python', 'go', 'golden', 'native'])
+                    self.assertEqual(labels, ['race', 'build', 'install', 'self-verify', 'python', 'go', 'golden', 'native'])
                 installed = [event for event in observed if event['label'] == 'install']
                 if installed:
                     isolated_home = installed[0]['home']
