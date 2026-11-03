@@ -40,6 +40,55 @@ func TestMatchRecordsPrefersNewerRecordOnTie(t *testing.T) {
 	}
 }
 
+func TestLatinTermConvergesPluralAndSingular(t *testing.T) {
+	for _, pair := range [][2]string{
+		{"crashes", "crash"}, {"retries", "retry"}, {"policies", "policy"}, {"queries", "query"},
+		{"indexes", "index"}, {"batches", "batch"}, {"processes", "process"}, {"classes", "class"},
+		{"dishes", "dish"}, {"boxes", "box"}, {"searches", "search"},
+		// Plain -s plurals, -ed, -ing, and -ment keep their old stems.
+		{"locks", "lock"}, {"crashed", "crash"}, {"crashing", "crash"}, {"deployment", "deploy"},
+		// A singular that ends in "e" still meets its plural.
+		{"caches", "cache"}, {"sizes", "size"}, {"databases", "database"},
+		{"zombies", "zombie"}, {"cookies", "cookie"}, {"avalanches", "avalanche"},
+		// Inflections of a consonant+y verb meet the base form.
+		{"retrying", "retry"}, {"retried", "retry"}, {"entries", "entry"}, {"copies", "copy"},
+		// The vowel+y and vowel+che bases are left alone.
+		{"played", "play"}, {"headaches", "headache"},
+	} {
+		plural, ok1 := latinTerm(pair[0])
+		singular, ok2 := latinTerm(pair[1])
+		if !ok1 || !ok2 || plural != singular {
+			t.Errorf("latinTerm(%q)=%q, latinTerm(%q)=%q; want one term", pair[0], plural, pair[1], singular)
+		}
+	}
+	for word, want := range map[string]string{"crashes": "crash", "locks": "lock", "class": "class", "ties": "ties", "axes": "axes"} {
+		if got, _ := latinTerm(word); got != want {
+			t.Errorf("latinTerm(%q)=%q, want %q", word, got, want)
+		}
+	}
+}
+
+func TestMatchRecordsReachesSingularRecordFromPluralTask(t *testing.T) {
+	records := []Record{
+		{Rel: "adr/2026-01-01-recover-a-create-whose-caller-died.md", Title: "Recover a create whose caller crash left a retry policy"},
+		{Rel: "adr/2026-01-02-unrelated.md", Title: "Docker image extraction"},
+	}
+	for _, task := range []string{
+		"callers crashes and retries need a policies review",
+		"a caller crash with a retry policy",
+	} {
+		docs := MatchRecords(task, records, 5)
+		if len(docs) != 1 || docs[0].Rel != records[0].Rel {
+			t.Fatalf("task %q: docs=%v", task, docs)
+		}
+	}
+	// The reverse direction: a plural record title, a singular task.
+	plural := []Record{{Rel: "adr/2026-01-03-p.md", Title: "Stdio processes host indexes"}}
+	if docs := MatchRecords("stdio process host index", plural, 5); len(docs) != 1 {
+		t.Fatalf("plural record not reached by singular task: %v", docs)
+	}
+}
+
 func TestParseRecordStripsDateAndFallsBackToDescription(t *testing.T) {
 	got := ParseRecord("cautions/2026-07-02-x.md", "---\nname: x\ndescription: Dated lesson about locks.\n---\n\n# 2026-07-02 — Re-verify locks\n\n- Source: review\n")
 	want := Record{Rel: "cautions/2026-07-02-x.md", Title: "Re-verify locks", Summary: "Dated lesson about locks.", Source: "review"}

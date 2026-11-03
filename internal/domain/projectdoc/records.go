@@ -277,7 +277,11 @@ func addHangulTerms(terms map[string]bool, word string) {
 	mapped := false
 	for korean, english := range koreanTerms {
 		if strings.Contains(word, korean) {
-			terms[english] = true
+			// The English side goes through the same stemming as Latin text,
+			// so a Korean task meets a record that spells the word in English.
+			if term, ok := latinTerm(english); ok {
+				terms[term] = true
+			}
 			mapped = true
 		}
 	}
@@ -290,17 +294,59 @@ func addHangulTerms(terms map[string]bool, word string) {
 	}
 }
 
+// latinTerm lightly stems one lowercase Latin word so a plural, its singular,
+// and common inflections reach the same term. After the suffix is dropped, a
+// final consonant+"y" and a final "ie" both become "i" ("retry", "retries",
+// "retried", "retrying" -> "retri"; "zombie", "zombies" -> "zombi"), and a final
+// consonant+"che" drops its "e" to meet the "-ches" plural ("avalanche",
+// "avalanches" -> "avalanch"). The -es rules drop "es" only after ss, x, sh, or
+// a consonant+ch; "caches" and "sizes" fall through to the plain -s rule, so
+// they still meet "cache" and "size".
 func latinTerm(word string) (string, bool) {
 	if len(word) < 3 || englishStopWords[word] {
 		return "", false
+	}
+	return normalizeLatinEnding(dropLatinSuffix(word)), true
+}
+
+func dropLatinSuffix(word string) string {
+	if len(word) > 4 {
+		switch {
+		case strings.HasSuffix(word, "ies"):
+			return word[:len(word)-3] + "i"
+		case strings.HasSuffix(word, "sses"), strings.HasSuffix(word, "xes"), strings.HasSuffix(word, "shes"), consonantBefore(word, "ches"):
+			return word[:len(word)-2]
+		}
 	}
 	for _, suffix := range []struct {
 		text   string
 		minLen int
 	}{{"ment", 7}, {"ing", 6}, {"ed", 5}, {"s", 4}} {
 		if len(word) > suffix.minLen && strings.HasSuffix(word, suffix.text) && !(suffix.text == "s" && strings.HasSuffix(word, "ss")) {
-			return word[:len(word)-len(suffix.text)], true
+			return word[:len(word)-len(suffix.text)]
 		}
 	}
-	return word, true
+	return word
+}
+
+func normalizeLatinEnding(stem string) string {
+	switch {
+	case len(stem) >= 4 && consonantBefore(stem, "y"):
+		return stem[:len(stem)-1] + "i"
+	case len(stem) > 4 && strings.HasSuffix(stem, "ie"):
+		return stem[:len(stem)-1]
+	case len(stem) > 5 && consonantBefore(stem, "che"):
+		return stem[:len(stem)-1]
+	}
+	return stem
+}
+
+// consonantBefore reports whether word ends in suffix preceded by a consonant:
+// "batches" and "branches" for "ches", "retry" for "y". After a vowel the base
+// differs ("caches" is "cache", "key" stays "key").
+func consonantBefore(word, suffix string) bool {
+	if !strings.HasSuffix(word, suffix) || len(word) <= len(suffix) {
+		return false
+	}
+	return !strings.ContainsRune("aeiou", rune(word[len(word)-len(suffix)-1]))
 }
