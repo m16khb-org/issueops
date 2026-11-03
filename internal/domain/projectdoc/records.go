@@ -209,6 +209,13 @@ func ParseModule(rel, content string) Record {
 	return record
 }
 
+// recordMatch is a record that shares at least two terms with the task.
+type recordMatch struct {
+	record Record
+	score  float64
+	shared []string
+}
+
 func matchRecords(task string, records []Record, limit int, reasonFormat string, skipCommon bool) []RouteDoc {
 	taskTerms := routeTerms(task)
 	if len(taskTerms) < 2 || len(records) == 0 || limit <= 0 {
@@ -222,26 +229,12 @@ func matchRecords(task string, records []Record, limit int, reasonFormat string,
 			df[term]++
 		}
 	}
-	type match struct {
-		record Record
-		score  float64
-		shared []string
-	}
-	var matches []match
+	var matches []recordMatch
 	for i, record := range records {
-		var shared []string
-		score := 0.0
-		for term := range taskTerms {
-			// For modules, a term a third of the candidates carry (the project's own
-			// name, for one) cannot tell them apart, so it does not count toward the two.
-			if recordTerms[i][term] && (!skipCommon || df[term]*3 <= len(records)) {
-				shared = append(shared, term)
-				score += math.Log(float64(len(records)) / float64(df[term]))
-			}
-		}
+		shared, score := sharedRecordTerms(taskTerms, recordTerms[i], df, len(records), skipCommon)
 		if len(shared) >= 2 {
 			sort.Strings(shared)
-			matches = append(matches, match{record, score, shared})
+			matches = append(matches, recordMatch{record, score, shared})
 		}
 	}
 	sort.Slice(matches, func(a, b int) bool {
@@ -255,6 +248,22 @@ func matchRecords(task string, records []Record, limit int, reasonFormat string,
 		docs = append(docs, RouteDoc{m.record.Rel, fmt.Sprintf(reasonFormat, m.record.Title, strings.Join(m.shared, ", "))})
 	}
 	return docs
+}
+
+// sharedRecordTerms returns the task terms one record carries and their summed
+// inverse-document-frequency score.
+func sharedRecordTerms(taskTerms, recordTerms map[string]bool, df map[string]int, total int, skipCommon bool) ([]string, float64) {
+	var shared []string
+	score := 0.0
+	for term := range taskTerms {
+		// For modules, a term a third of the candidates carry (the project's own
+		// name, for one) cannot tell them apart, so it does not count toward the two.
+		if recordTerms[term] && (!skipCommon || df[term]*3 <= total) {
+			shared = append(shared, term)
+			score += math.Log(float64(total) / float64(df[term]))
+		}
+	}
+	return shared, score
 }
 
 // koreanTerms maps Korean words to the English term records use, so a Korean

@@ -35,14 +35,7 @@ func (s *CreatePreparation) Prepare(ctx context.Context, command contract.Create
 	if err != nil {
 		return contract.PreparedCreate{}, err
 	}
-	facts := remote.CreateAuthority{
-		Provider: command.Provider, PhasePR: record.Phase == model.IssueOpsPhasePR,
-		Artifact: record.RemoteArtifact != nil, Confirm: command.Confirm,
-		Execution: record.Execution != nil, ExpectedGeneration: command.ExpectedGeneration,
-	}
-	if record.Execution != nil {
-		facts.Generation = record.Execution.Lease.Generation
-	}
+	facts := createAuthorityFacts(record, command)
 	provider, kind, err := remote.ValidateCreateAuthority(facts)
 	if err != nil {
 		return contract.PreparedCreate{}, err
@@ -76,13 +69,31 @@ func (s *CreatePreparation) Prepare(ctx context.Context, command contract.Create
 			Draft: true, ExpectedHeadSHA: head, Confirm: command.Confirm,
 			Host: command.Actor.Host, SessionID: command.Actor.SessionID, AgentID: command.Actor.AgentID, CWD: command.CWD,
 		},
-		Eligibility: contract.CreateEligibility{
-			Provider: provider, Kind: kind, Confirm: command.Confirm, PhasePR: facts.PhasePR, NoArtifact: !facts.Artifact,
-			ExecutionActive: record.Execution != nil && record.Execution.Lease.Status == model.LeaseStatusActive,
-			NoPending:       record.Execution == nil || record.Execution.Pending == nil,
-			BranchAuthority: true, CanonicalLabelsAssignees: true,
-		},
+		Eligibility: createEligibility(record, command, facts, provider, kind),
 	}, nil
+}
+
+// createAuthorityFacts는 레코드와 명령에서 생성 권한 판단에 쓰는 사실을 모은다.
+func createAuthorityFacts(record model.IssueOpsRecord, command contract.CreateCommand) remote.CreateAuthority {
+	facts := remote.CreateAuthority{
+		Provider: command.Provider, PhasePR: record.Phase == model.IssueOpsPhasePR,
+		Artifact: record.RemoteArtifact != nil, Confirm: command.Confirm,
+		Execution: record.Execution != nil, ExpectedGeneration: command.ExpectedGeneration,
+	}
+	if record.Execution != nil {
+		facts.Generation = record.Execution.Lease.Generation
+	}
+	return facts
+}
+
+// createEligibility는 준비된 생성 요청의 적격 조건을 기록한다.
+func createEligibility(record model.IssueOpsRecord, command contract.CreateCommand, facts remote.CreateAuthority, provider, kind string) contract.CreateEligibility {
+	return contract.CreateEligibility{
+		Provider: provider, Kind: kind, Confirm: command.Confirm, PhasePR: facts.PhasePR, NoArtifact: !facts.Artifact,
+		ExecutionActive: record.Execution != nil && record.Execution.Lease.Status == model.LeaseStatusActive,
+		NoPending:       record.Execution == nil || record.Execution.Pending == nil,
+		BranchAuthority: true, CanonicalLabelsAssignees: true,
+	}
 }
 
 // authorizeConfirmedCreate는 확정 생성 전에 권한, 대기 상태, 구현 리뷰 증거를 순서대로 검증한다.

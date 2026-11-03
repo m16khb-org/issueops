@@ -55,14 +55,7 @@ func (service *Service) Prune(
 	for _, id := range ids {
 		record, err := service.repository.ReadUnchecked(ctx, stateRoot, id)
 		if err != nil {
-			result.ReadErrors++
-			if len(result.Unreadable) < unreadableReportLimit {
-				result.Unreadable = append(result.Unreadable, id)
-				result.UnreadableDiagnostics = append(result.UnreadableDiagnostics, issueopsretentioncontract.UnreadableRecordDiagnostic{
-					ID:   id,
-					Code: "read_failed",
-				})
-			}
+			noteUnreadable(&result, id)
 			continue
 		}
 		if !issueopsretentiondomain.IsPrunable(record, cutoff) {
@@ -71,14 +64,7 @@ func (service *Service) Prune(
 		}
 		if confirm {
 			if err := service.repository.DeleteIfUnchanged(ctx, stateRoot, id, record); err != nil {
-				result.DeleteErrors++
-				if len(result.Failed) < unreadableReportLimit {
-					result.Failed = append(result.Failed, id)
-					result.DeleteDiagnostics = append(
-						result.DeleteDiagnostics,
-						issueopsretentioncontract.DeleteFailureDiagnostic{ID: id, Code: "delete_failed"},
-					)
-				}
+				noteDeleteFailure(&result, id)
 				result.Error = ErrIncomplete.Error()
 				return result, fmt.Errorf("%w: delete %s: %v", ErrIncomplete, id, err) //nolint:errorlint // callers classify on ErrIncomplete alone; the delete failure is diagnostic text
 			}
@@ -91,4 +77,26 @@ func (service *Service) Prune(
 	}
 	result.OK = true
 	return result, nil
+}
+
+func noteUnreadable(result *issueopsretentioncontract.Result, id string) {
+	result.ReadErrors++
+	if len(result.Unreadable) < unreadableReportLimit {
+		result.Unreadable = append(result.Unreadable, id)
+		result.UnreadableDiagnostics = append(result.UnreadableDiagnostics, issueopsretentioncontract.UnreadableRecordDiagnostic{
+			ID:   id,
+			Code: "read_failed",
+		})
+	}
+}
+
+func noteDeleteFailure(result *issueopsretentioncontract.Result, id string) {
+	result.DeleteErrors++
+	if len(result.Failed) < unreadableReportLimit {
+		result.Failed = append(result.Failed, id)
+		result.DeleteDiagnostics = append(
+			result.DeleteDiagnostics,
+			issueopsretentioncontract.DeleteFailureDiagnostic{ID: id, Code: "delete_failed"},
+		)
+	}
 }

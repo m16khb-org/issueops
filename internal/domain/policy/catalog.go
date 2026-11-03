@@ -56,41 +56,27 @@ func BuiltinCatalog() Catalog {
 }
 
 func (catalog *Catalog) Apply(overrides policycontract.PolicyOverrides) {
-	for _, value := range overrides.AdditionalShellInterpreters {
-		catalog.shellInterpreters[value] = true
+	addToSet(catalog.shellInterpreters, overrides.AdditionalShellInterpreters)
+	addToSet(catalog.networkCommands, overrides.AdditionalNetworkCommands)
+	addSubcommands(catalog.networkSubcommands, overrides.AdditionalNetworkSubcommands)
+	addToSet(catalog.writeCommands, overrides.AdditionalWriteCommands)
+	addSubcommands(catalog.writeSubcommands, overrides.AdditionalWriteSubcommands)
+	addToSet(catalog.readOnlyCommands, overrides.AdditionalReadOnlyCommands)
+	addSubcommands(catalog.readOnlySubcommands, overrides.AdditionalReadOnlySubcommands)
+}
+
+func addToSet(set map[string]bool, values []string) {
+	for _, value := range values {
+		set[value] = true
 	}
-	for _, value := range overrides.AdditionalNetworkCommands {
-		catalog.networkCommands[value] = true
-	}
-	for command, subcommands := range overrides.AdditionalNetworkSubcommands {
-		if catalog.networkSubcommands[command] == nil {
-			catalog.networkSubcommands[command] = map[string]bool{}
+}
+
+func addSubcommands(catalog map[string]map[string]bool, additions map[string][]string) {
+	for command, subcommands := range additions {
+		if catalog[command] == nil {
+			catalog[command] = map[string]bool{}
 		}
-		for _, subcommand := range subcommands {
-			catalog.networkSubcommands[command][subcommand] = true
-		}
-	}
-	for _, value := range overrides.AdditionalWriteCommands {
-		catalog.writeCommands[value] = true
-	}
-	for command, subcommands := range overrides.AdditionalWriteSubcommands {
-		if catalog.writeSubcommands[command] == nil {
-			catalog.writeSubcommands[command] = map[string]bool{}
-		}
-		for _, subcommand := range subcommands {
-			catalog.writeSubcommands[command][subcommand] = true
-		}
-	}
-	for _, value := range overrides.AdditionalReadOnlyCommands {
-		catalog.readOnlyCommands[value] = true
-	}
-	for command, subcommands := range overrides.AdditionalReadOnlySubcommands {
-		if catalog.readOnlySubcommands[command] == nil {
-			catalog.readOnlySubcommands[command] = map[string]bool{}
-		}
-		for _, subcommand := range subcommands {
-			catalog.readOnlySubcommands[command][subcommand] = true
-		}
+		addToSet(catalog[command], subcommands)
 	}
 }
 

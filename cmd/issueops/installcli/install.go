@@ -57,15 +57,9 @@ func (c Command) runInstall(args []string) error {
 	}
 	stateDir := filepath.Dir(c.StateRoot)
 	activationRequest := activationcontract.Request{StateRoot: stateDir, IssueOpsRoot: req.Root, TargetBinary: req.BinPath}
-	if !req.DryRun && c.ActivationBackend == nil {
-		return fmt.Errorf("native activation backend is unavailable")
-	}
-	activationStep, err := installdomain.ActivationStep(req.DryRun, os.Getenv("ISSUEOPS_NATIVE_ACTIVATION_STEP"))
+	activationStep, err := c.resolveActivationStep(req.DryRun)
 	if err != nil {
 		return err
-	}
-	if c.ActivationReadback == nil {
-		return fmt.Errorf("native activation readback is not configured")
 	}
 	if err := c.applyMCPTransport(context.Background(), &req, mcpTransport, activationStep); err != nil {
 		return err
@@ -73,6 +67,22 @@ func (c Command) runInstall(args []string) error {
 	readback := c.ActivationReadback(req)
 	activationService := activationapp.NewService(c.ActivationBackend, readback)
 	return c.executeInstall(req, candidatePath, *pathMode, activationStep, *jsonOut, activationService, activationRequest)
+}
+
+// resolveActivationStep validates the native activation wiring and resolves
+// the requested activation step.
+func (c Command) resolveActivationStep(dryRun bool) (string, error) {
+	if !dryRun && c.ActivationBackend == nil {
+		return "", fmt.Errorf("native activation backend is unavailable")
+	}
+	activationStep, err := installdomain.ActivationStep(dryRun, os.Getenv("ISSUEOPS_NATIVE_ACTIVATION_STEP"))
+	if err != nil {
+		return "", err
+	}
+	if c.ActivationReadback == nil {
+		return "", fmt.Errorf("native activation readback is not configured")
+	}
+	return activationStep, nil
 }
 
 func codexHomeDir(home string) string {

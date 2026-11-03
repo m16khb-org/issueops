@@ -216,7 +216,7 @@ func runGhPRCreate(ctx context.Context, args []string, repo string) (ghResult, e
 func validCanonicalGitHubPullRequestURL(raw string) bool {
 	raw = strings.TrimSpace(raw)
 	parsed, err := url.Parse(raw)
-	if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" || parsed.String() != raw || strings.Contains(parsed.EscapedPath(), "%") {
+	if err != nil || !canonicalGitHubPullRequestURLShape(parsed, raw) {
 		return false
 	}
 	parts := strings.Split(strings.Trim(parsed.Path, "/"), "/")
@@ -225,6 +225,12 @@ func validCanonicalGitHubPullRequestURL(raw string) bool {
 	}
 	number, err := strconv.Atoi(parts[3])
 	return err == nil && number > 0
+}
+
+// canonicalGitHubPullRequestURLShape reports whether parsed is the exact https
+// form of raw with no userinfo, query, fragment, or escaped path bytes.
+func canonicalGitHubPullRequestURLShape(parsed *url.URL, raw string) bool {
+	return parsed.Scheme == "https" && parsed.Host != "" && parsed.User == nil && parsed.RawQuery == "" && parsed.Fragment == "" && parsed.String() == raw && !strings.Contains(parsed.EscapedPath(), "%")
 }
 
 func githubProjectSelector(projectKey string) (string, error) {
@@ -240,10 +246,16 @@ func githubProjectSelector(projectKey string) (string, error) {
 		return "", fmt.Errorf("GitHub project authority is malformed")
 	}
 	parts := strings.Split(strings.Trim(parsed.Path, "/"), "/")
-	if parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" || len(parts) != 2 || parts[0] == "" || parts[1] == "" || parsed.Host+"/"+strings.Join(parts, "/") != projectKey {
+	if githubProjectAuthorityMalformed(parsed, parts, projectKey) {
 		return "", fmt.Errorf("GitHub project authority is malformed")
 	}
 	return projectKey, nil
+}
+
+// githubProjectAuthorityMalformed reports whether parsed is anything other than
+// a bare host/owner/repo authority equal to projectKey.
+func githubProjectAuthorityMalformed(parsed *url.URL, parts []string, projectKey string) bool {
+	return parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" || len(parts) != 2 || parts[0] == "" || parts[1] == "" || parsed.Host+"/"+strings.Join(parts, "/") != projectKey
 }
 
 func githubPullRequestProjectKey(raw string) string {

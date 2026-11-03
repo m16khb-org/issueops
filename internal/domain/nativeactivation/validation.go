@@ -41,20 +41,11 @@ func ReadbackOrder(catalogSHA256 string, evidence []activationcontract.Evidence)
 	if !ValidSHA256(catalogSHA256) {
 		return nil, fmt.Errorf("native activation readback digest is invalid")
 	}
-	expected := map[string]bool{
-		"codex\x00mcp": true, "codex\x00hooks": true,
-		"claude\x00mcp": true, "claude\x00hooks": true,
-		"omo\x00mcp": true, "omo\x00hooks": true,
-		"omp\x00mcp": true, "omp\x00hooks": true,
-		"opencode\x00mcp": true, "opencode\x00hooks": true,
-		"agy\x00mcp": true,
-	}
+	expected := expectedReadbackSurfaces()
 	paths := map[string]bool{}
 	for _, item := range evidence {
 		key := item.Host + "\x00" + item.Surface
-		if item.Host != strings.TrimSpace(item.Host) || item.Surface != strings.TrimSpace(item.Surface) ||
-			item.Path != strings.TrimSpace(item.Path) || !expected[key] || item.Path == "" || paths[item.Path] ||
-			!ValidSHA256(item.SemanticSHA256) || !ValidSHA256(item.SHA256) {
+		if !validReadbackEvidence(item, key, expected, paths) {
 			return nil, fmt.Errorf("native activation requires one valid readback for each first-party MCP/hook surface")
 		}
 		delete(expected, key)
@@ -72,4 +63,21 @@ func ReadbackOrder(catalogSHA256 string, evidence []activationcontract.Evidence)
 		return a.Host+"\x00"+a.Surface < b.Host+"\x00"+b.Surface
 	})
 	return order, nil
+}
+
+func expectedReadbackSurfaces() map[string]bool {
+	return map[string]bool{
+		"codex\x00mcp": true, "codex\x00hooks": true,
+		"claude\x00mcp": true, "claude\x00hooks": true,
+		"omo\x00mcp": true, "omo\x00hooks": true,
+		"omp\x00mcp": true, "omp\x00hooks": true,
+		"opencode\x00mcp": true, "opencode\x00hooks": true,
+		"agy\x00mcp": true,
+	}
+}
+
+func validReadbackEvidence(item activationcontract.Evidence, key string, expected, paths map[string]bool) bool {
+	return item.Host == strings.TrimSpace(item.Host) && item.Surface == strings.TrimSpace(item.Surface) &&
+		item.Path == strings.TrimSpace(item.Path) && expected[key] && item.Path != "" && !paths[item.Path] &&
+		ValidSHA256(item.SemanticSHA256) && ValidSHA256(item.SHA256)
 }

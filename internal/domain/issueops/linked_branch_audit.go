@@ -9,12 +9,7 @@ import (
 // ApplyLinkedBranchCleanupAudit binds an observation to its original cycle and
 // prepared target while preserving unrelated changes in the current record.
 func ApplyLinkedBranchCleanupAudit(observed, current model.IssueOpsRecord, result model.CleanupLinkedBranchResult, now string) (model.IssueOpsRecord, error) {
-	before, after := observed.BranchPrepare, current.BranchPrepare
-	if observed.ID != current.ID || observed.Repo != current.Repo ||
-		observed.CreatedAt != current.CreatedAt || observed.IssueURL != current.IssueURL || observed.Branch != current.Branch ||
-		before == nil || after == nil || before.Provider != after.Provider ||
-		before.IssueURL != after.IssueURL || before.Branch != after.Branch ||
-		before.BaseSHA != after.BaseSHA || before.BaseBranch != after.BaseBranch || before.CreatedAt != after.CreatedAt {
+	if !linkedBranchAuditTargetUnchanged(observed, current) {
 		return current, fmt.Errorf("linked branch cleanup audit target changed during observation")
 	}
 	current.LinkedBranchCleanup = &model.IssueOpsLinkedBranchCleanup{
@@ -23,4 +18,16 @@ func ApplyLinkedBranchCleanupAudit(observed, current model.IssueOpsRecord, resul
 		Deleted: result.Deleted, AlreadyAbsent: result.AlreadyAbsent, FailedStep: result.FailedStep, ObservedAt: now,
 	}
 	return current, nil
+}
+
+func linkedBranchAuditTargetUnchanged(observed, current model.IssueOpsRecord) bool {
+	return observed.ID == current.ID && observed.Repo == current.Repo &&
+		observed.CreatedAt == current.CreatedAt && observed.IssueURL == current.IssueURL && observed.Branch == current.Branch &&
+		linkedBranchPrepareUnchanged(observed.BranchPrepare, current.BranchPrepare)
+}
+
+func linkedBranchPrepareUnchanged(before, after *model.IssueOpsBranchPrepare) bool {
+	return before != nil && after != nil && before.Provider == after.Provider &&
+		before.IssueURL == after.IssueURL && before.Branch == after.Branch &&
+		before.BaseSHA == after.BaseSHA && before.BaseBranch == after.BaseBranch && before.CreatedAt == after.CreatedAt
 }

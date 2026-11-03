@@ -342,11 +342,19 @@ func (p *codexIssueOpsTableParser) consumeKeyValue(line string, lines []string, 
 	if err != nil {
 		return i, err
 	}
+	if err := p.storeValue(inParent, inTable, key, value); err != nil {
+		return i, err
+	}
+	return i, nil
+}
+
+// storeValue는 파싱한 값을 현재 표 위치에 맞게 issueops 누적 상태에 저장한다.
+func (p *codexIssueOpsTableParser) storeValue(inParent, inTable bool, key string, value any) error {
 	switch {
 	case inParent:
 		inline, ok := value.(map[string]any)
 		if !ok {
-			return i, errors.New("issueops must be a table")
+			return errors.New("issueops must be a table")
 		}
 		p.count++
 		maps.Copy(p.entry, inline)
@@ -361,7 +369,7 @@ func (p *codexIssueOpsTableParser) consumeKeyValue(line string, lines []string, 
 		}
 		nested[key] = value
 	}
-	return i, nil
+	return nil
 }
 
 func stripTOMLComment(line string) string {

@@ -88,21 +88,8 @@ func (s PhaseService) advanceLocked(stateRoot, id, to string, upstream func(stri
 		return record, materials, err
 	}
 	if record.Phase == phase {
-		switch phase {
-		case issueops.IssueOpsPhaseAISlopClean:
-			record, err = s.Refresh(stateRoot, record)
-			return record, materials, err
-		case issueops.IssueOpsPhasePR:
-			// pr 안에서 코드를 고치고 정리·문서·검증 봉인을 새 head로 다시 받은 뒤의 재봉인이다.
-			// pr 진입과 같은 strict 판정을 통과해야 completion이 비교할 pr_head가 바뀐다.
-			if err := ValidatePhaseEntry(s.entryReadiness(stateRoot, upstream), record, phase); err != nil {
-				return issueops.IssueOpsRecord{OK: false}, materials, err
-			}
-			record.PRHead = s.Transitions.Head(record)
-			record, err = s.touchWrite(stateRoot, record)
-			return record, materials, err
-		}
-		return record, materials, nil
+		record, err = s.resealSamePhase(stateRoot, record, phase, upstream)
+		return record, materials, err
 	}
 	if issueopsdomain.ShouldRefreshAISlopClean(record, phase) {
 		record, err = s.Refresh(stateRoot, record)
@@ -126,6 +113,24 @@ func (s PhaseService) advanceLocked(stateRoot, id, to string, upstream func(stri
 	}, record, phase)
 	record, err = s.touchWrite(stateRoot, record)
 	return record, materials, err
+}
+
+// resealSamePhase handles `--to` naming the phase the record is already in:
+// only ai-slop-clean and pr re-take their seal, every other phase is a no-op.
+func (s PhaseService) resealSamePhase(stateRoot string, record issueops.IssueOpsRecord, phase issueops.IssueOpsPhase, upstream func(string) review.UpstreamFetch) (issueops.IssueOpsRecord, error) {
+	switch phase {
+	case issueops.IssueOpsPhaseAISlopClean:
+		return s.Refresh(stateRoot, record)
+	case issueops.IssueOpsPhasePR:
+		// pr 안에서 코드를 고치고 정리·문서·검증 봉인을 새 head로 다시 받은 뒤의 재봉인이다.
+		// pr 진입과 같은 strict 판정을 통과해야 completion이 비교할 pr_head가 바뀐다.
+		if err := ValidatePhaseEntry(s.entryReadiness(stateRoot, upstream), record, phase); err != nil {
+			return issueops.IssueOpsRecord{OK: false}, err
+		}
+		record.PRHead = s.Transitions.Head(record)
+		return s.touchWrite(stateRoot, record)
+	}
+	return record, nil
 }
 
 // entryReadiness는 span 안에서 불린다. pr 진입 판정은 upstream

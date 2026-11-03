@@ -244,7 +244,13 @@ func verifyCreatedGitLabMergeRequest(ctx context.Context, req port.IssueProvider
 
 // compareGitLabMergeRequestReadback는 읽어 온 MR이 요청과 정확히 일치하는지 순서대로 검사한다.
 func compareGitLabMergeRequestReadback(req port.IssueProviderCreatePullRequestRequest, createdURL string, got gitlabMergeRequestProjection) error {
-	assignees := gitlabAssigneeUsernames(got.Assignees)
+	if err := compareGitLabMergeRequestContent(req, createdURL, got); err != nil {
+		return err
+	}
+	return compareGitLabMergeRequestAuthority(req, got)
+}
+
+func compareGitLabMergeRequestContent(req port.IssueProviderCreatePullRequestRequest, createdURL string, got gitlabMergeRequestProjection) error {
 	if strings.TrimSpace(got.WebURL) != createdURL || strings.TrimSpace(got.SourceBranch) != strings.TrimSpace(req.HeadBranch) || strings.TrimSpace(got.TargetBranch) != strings.TrimSpace(req.BaseBranch) || got.Draft != req.Draft {
 		return fmt.Errorf("created merge request identity or draft status does not match the request")
 	}
@@ -258,6 +264,10 @@ func compareGitLabMergeRequestReadback(req port.IssueProviderCreatePullRequestRe
 	if title != strings.TrimSpace(req.Title) || got.Description != req.Body {
 		return fmt.Errorf("created merge request title or rendered body does not match the request")
 	}
+	return nil
+}
+
+func compareGitLabMergeRequestAuthority(req port.IssueProviderCreatePullRequestRequest, got gitlabMergeRequestProjection) error {
 	if strings.TrimSpace(req.ProjectKey) != "" && gitLabSourceProjectKey(req.ProjectKey, got) != strings.TrimSpace(req.ProjectKey) {
 		return fmt.Errorf("created merge request source project does not match published project authority")
 	}
@@ -267,7 +277,7 @@ func compareGitLabMergeRequestReadback(req port.IssueProviderCreatePullRequestRe
 	if !providerutil.SameStrings(req.Labels, got.Labels) {
 		return fmt.Errorf("created merge request labels do not exactly match the request")
 	}
-	if !providerutil.SameStrings(req.Assignees, assignees) {
+	if !providerutil.SameStrings(req.Assignees, gitlabAssigneeUsernames(got.Assignees)) {
 		return fmt.Errorf("created merge request assignees do not exactly match the request")
 	}
 	return nil

@@ -94,18 +94,22 @@ func publicationCreateInFlight(rows, head, id string) bool {
 		args := " " + strings.Join(fields, " ") + " "
 		// Any argv word may be the provider binary (a shim runs
 		// `bash /path/gh pr create ...`).
-		provider := false
-		for _, field := range fields {
-			if base := filepath.Base(field); base == "gh" || base == "glab" {
-				provider = true
-				break
-			}
-		}
+		provider := argvHasProviderBinary(fields)
 		if provider && head != "" && strings.Contains(args, " "+head+" ") &&
 			(strings.Contains(args, " pr create ") || strings.Contains(args, " mr create ")) {
 			return true
 		}
 		if strings.Contains(args, " remote create-pr ") && id != "" && strings.Contains(args, id) {
+			return true
+		}
+	}
+	return false
+}
+
+// argvHasProviderBinary reports whether any argv word is the gh or glab binary.
+func argvHasProviderBinary(fields []string) bool {
+	for _, field := range fields {
+		if base := filepath.Base(field); base == "gh" || base == "glab" {
 			return true
 		}
 	}

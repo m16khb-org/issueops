@@ -112,22 +112,34 @@ func ExactFlags(command ExactIssueOpsCommand, values, booleans, repeatable map[s
 			}
 			parsed[name] = []string{"true"}
 		case values[name] || generatedCommandProvenanceValueFlag(name):
-			if !hasValue {
-				if i+1 >= len(command.Tokens) || strings.HasPrefix(command.Tokens[i+1], "--") {
-					return nil, false
-				}
-				i++
-				value = command.Tokens[i]
-			}
-			if !repeatable[name] && len(parsed[name]) > 0 {
+			next, ok := collectExactValueFlag(parsed, command.Tokens, i, name, value, hasValue, repeatable[name])
+			if !ok {
 				return nil, false
 			}
-			parsed[name] = append(parsed[name], value)
+			i = next
 		default:
 			return nil, false
 		}
 	}
 	return parsed, true
+}
+
+// collectExactValueFlag records one value flag, taking its value from the
+// next token when it was not given inline. It returns the index of the last
+// token consumed.
+func collectExactValueFlag(parsed map[string][]string, tokens []string, i int, name, value string, hasValue, repeatable bool) (int, bool) {
+	if !hasValue {
+		if i+1 >= len(tokens) || strings.HasPrefix(tokens[i+1], "--") {
+			return i, false
+		}
+		i++
+		value = tokens[i]
+	}
+	if !repeatable && len(parsed[name]) > 0 {
+		return i, false
+	}
+	parsed[name] = append(parsed[name], value)
+	return i, true
 }
 
 func generatedCommandProvenanceValueFlag(name string) bool {

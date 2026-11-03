@@ -417,13 +417,8 @@ func (command Command) runCleanupAbandon(args []string, deps Deps) error {
 	if help, err := deps.ParseFlags(fs, args); help || err != nil {
 		return err
 	}
-	// finish와 동일한 모드 배타 규율(C2-F3): 파괴 실행 요청에 preview가 섞이면
-	// 안전한 쪽을 고르는 대신 명시적으로 거부한다.
-	if *preview && *apply {
-		return fmt.Errorf("cleanup abandon --preview and --apply are mutually exclusive")
-	}
-	if !*preview && !*apply {
-		return fmt.Errorf("cleanup abandon requires exactly one mode: --preview or --apply --confirm --fingerprint SHA256")
+	if err := validateCleanupAbandonMode(*preview, *apply); err != nil {
+		return err
 	}
 	result, err := command.Invoke(deps).Abandon(context.Background(), issueopscontract.CleanupAbandonRequest{
 		ID:                 *id,
@@ -452,18 +447,34 @@ func (command Command) runCleanupAbandon(args []string, deps Deps) error {
 	if *jsonOut {
 		return deps.PrintJSON(result)
 	}
+	printCleanupAbandonResult(result)
+	return nil
+}
+
+// validateCleanupAbandonMode는 finish와 동일한 모드 배타 규율(C2-F3)을 적용한다:
+// 파괴 실행 요청에 preview가 섞이면 안전한 쪽을 고르는 대신 명시적으로 거부한다.
+func validateCleanupAbandonMode(preview, apply bool) error {
+	if preview && apply {
+		return fmt.Errorf("cleanup abandon --preview and --apply are mutually exclusive")
+	}
+	if !preview && !apply {
+		return fmt.Errorf("cleanup abandon requires exactly one mode: --preview or --apply --confirm --fingerprint SHA256")
+	}
+	return nil
+}
+
+func printCleanupAbandonResult(result issueopscontract.CleanupAbandonResult) {
 	if result.RecordDeleted {
 		fmt.Printf("cleanup abandoned: worktree_removed=%t branch_deleted=%t record_deleted=%t intent_rows=%d at=%s\n",
 			result.WorktreeRemoved, result.BranchDeleted, result.RecordDeleted, len(result.IntentRowsDeleted), result.AbandonedAt)
 		printCleanupAbandonRemoteEffects(result)
-	} else {
-		fmt.Printf("fingerprint: %s\n", result.Fingerprint)
-		printCleanupAbandonRemoteEffects(result)
-		if result.NextCommand != "" {
-			fmt.Printf("next: %s\n", result.NextCommand)
-		}
+		return
 	}
-	return nil
+	fmt.Printf("fingerprint: %s\n", result.Fingerprint)
+	printCleanupAbandonRemoteEffects(result)
+	if result.NextCommand != "" {
+		fmt.Printf("next: %s\n", result.NextCommand)
+	}
 }
 
 // printCleanupAbandonRemoteEffects는 승인 대상을 명시한다. 원격 효과는 되돌릴

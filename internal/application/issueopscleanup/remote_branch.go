@@ -43,18 +43,8 @@ func (s RemoteBranchCleaner) Run(ctx context.Context, req model.CleanupRemoteBra
 	if err := domain.ValidateCleanupOperationAccess(record, model.CleanupOperationRemoteBranch); err != nil {
 		return failed, err
 	}
-	inventory, result := s.Preview.Plan(ctx, record, req)
-	if len(result.Missing) > 0 {
-		result.NextCommand = domain.CleanupFinishRemedyCommand(record.ID, result.Missing)
-		return result, fmt.Errorf("cleanup remote-branch is not ready; unmet gates: %s", strings.Join(result.Missing, ", "))
-	}
-	var stop bool
-	if !result.RemoteBranchPresent {
-		result, stop = planAbsentBranch(record, req, result)
-	} else {
-		result, stop, err = planPresentBranch(record, req, inventory, result)
-	}
-	if stop || err != nil {
+	inventory, result, stop, err := s.planRun(ctx, record, req)
+	if stop {
 		return result, err
 	}
 	attempt, err := s.NewAttempt(model.CleanupOperationRemoteBranch)
@@ -87,6 +77,23 @@ func (s RemoteBranchCleaner) Run(ctx context.Context, req model.CleanupRemoteBra
 	result.Deleted, result.DeletedAt = true, s.Now().UTC().Format(time.RFC3339)
 	result.Audit = fmt.Sprintf("원격 브랜치 삭제: branch=%s oid=%s at=%s", inventory.Branch, inventory.RemoteOID, result.DeletedAt)
 	return finalize("", nil)
+}
+
+// planRun previews the branch and plans an absent or present remote branch. stop reports that Run must return result and err as is.
+func (s RemoteBranchCleaner) planRun(ctx context.Context, record model.IssueOpsRecord, req model.CleanupRemoteBranchRequest) (model.CleanupRemoteBranchInventory, model.CleanupRemoteBranchResult, bool, error) {
+	inventory, result := s.Preview.Plan(ctx, record, req)
+	if len(result.Missing) > 0 {
+		result.NextCommand = domain.CleanupFinishRemedyCommand(record.ID, result.Missing)
+		return inventory, result, true, fmt.Errorf("cleanup remote-branch is not ready; unmet gates: %s", strings.Join(result.Missing, ", "))
+	}
+	var stop bool
+	var err error
+	if !result.RemoteBranchPresent {
+		result, stop = planAbsentBranch(record, req, result)
+	} else {
+		result, stop, err = planPresentBranch(record, req, inventory, result)
+	}
+	return inventory, result, stop || err != nil, err
 }
 
 // planAbsentBranch handles an already-absent remote branch. stop reports that Run must return the result as is.

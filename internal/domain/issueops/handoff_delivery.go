@@ -19,6 +19,30 @@ const handoffDeliveryFieldLimit = 1024
 const handoffDeliveryManualLineagePrefix = "manual-direct:"
 
 func ValidateHandoffDeliveryObservation(observation issueopscontract.IssueOpsHandoffDeliveryObservation) error {
+	if err := validateHandoffDeliveryEnvelope(observation); err != nil {
+		return err
+	}
+	createdAt, updatedAt, err := validateHandoffDeliveryTimestamps(observation.CreatedAt, observation.UpdatedAt)
+	if err != nil {
+		return err
+	}
+	if err := validateHandoffDeliveryComponents(observation); err != nil {
+		return err
+	}
+	if err := validateHandoffDeliveryStates(observation, createdAt, updatedAt); err != nil {
+		return err
+	}
+	if err := validateHandoffDeliveryConsistency(observation); err != nil {
+		return err
+	}
+	if !handoffDeliveryHasEvidence(observation) {
+		return fmt.Errorf("delivery observation requires at least one observed evidence state")
+	}
+	return nil
+}
+
+// validateHandoffDeliveryEnvelope checks the identifiers, request, and source generation.
+func validateHandoffDeliveryEnvelope(observation issueopscontract.IssueOpsHandoffDeliveryObservation) error {
 	if err := validateHandoffDeliveryIdentifiers(observation); err != nil {
 		return err
 	}
@@ -28,10 +52,11 @@ func ValidateHandoffDeliveryObservation(observation issueopscontract.IssueOpsHan
 	if observation.SourceGeneration == 0 {
 		return fmt.Errorf("delivery observation source generation is required")
 	}
-	createdAt, updatedAt, err := validateHandoffDeliveryTimestamps(observation.CreatedAt, observation.UpdatedAt)
-	if err != nil {
-		return err
-	}
+	return nil
+}
+
+// validateHandoffDeliveryComponents checks the receipt, launcher, target, and timing.
+func validateHandoffDeliveryComponents(observation issueopscontract.IssueOpsHandoffDeliveryObservation) error {
 	if err := validateHandoffDeliveryReceipt(observation.Receipt); err != nil {
 		return err
 	}
@@ -41,25 +66,18 @@ func ValidateHandoffDeliveryObservation(observation issueopscontract.IssueOpsHan
 	if err := validateHandoffDeliveryTarget(observation); err != nil {
 		return err
 	}
-	if err := validateHandoffDeliveryTiming(observation.Timing); err != nil {
-		return err
-	}
-	if err := validateHandoffDeliveryStates(observation, createdAt, updatedAt); err != nil {
-		return err
-	}
+	return validateHandoffDeliveryTiming(observation.Timing)
+}
+
+// validateHandoffDeliveryConsistency checks owner identity, claim consistency, and mode evidence.
+func validateHandoffDeliveryConsistency(observation issueopscontract.IssueOpsHandoffDeliveryObservation) error {
 	if err := validateHandoffDeliveryOwnerIdentity(observation); err != nil {
 		return err
 	}
 	if err := validateHandoffDeliveryClaimConsistency(observation); err != nil {
 		return err
 	}
-	if err := validateHandoffDeliveryModeEvidence(observation); err != nil {
-		return err
-	}
-	if !handoffDeliveryHasEvidence(observation) {
-		return fmt.Errorf("delivery observation requires at least one observed evidence state")
-	}
-	return nil
+	return validateHandoffDeliveryModeEvidence(observation)
 }
 
 // validateHandoffDeliveryIdentifiers checks the schema version, attempt/lineage/lifecycle ids and the prompt/material digests.

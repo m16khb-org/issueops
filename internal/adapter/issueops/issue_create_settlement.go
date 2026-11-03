@@ -94,13 +94,7 @@ func issueCreateInFlight(rows, operationID, id string) bool {
 	operationID, id = strings.TrimSpace(operationID), strings.TrimSpace(id)
 	for row := range strings.SplitSeq(rows, "\n") {
 		fields := strings.Fields(row)
-		provider := false
-		for _, field := range fields {
-			if base := filepath.Base(field); base == "gh" || base == "glab" {
-				provider = true
-				break
-			}
-		}
+		provider := argvHasProviderBinary(fields)
 		args := " " + strings.Join(fields, " ") + " "
 		// Any gh/glab call carrying the operation ID (the random value in the
 		// create marker) is a create in flight: GitLab children use `glab api

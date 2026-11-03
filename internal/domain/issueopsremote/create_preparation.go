@@ -91,17 +91,8 @@ func PrepareCreateRequest(authority CreateBranchAuthority, request CreateRequest
 		return CreateRequest{}, createAuthorityMismatch(authority, request)
 	}
 	request.Title, request.Body = strings.TrimSpace(request.Title), strings.TrimSpace(request.Body)
-	if request.Title == "" || len(request.Body) > 1<<20 {
-		return CreateRequest{}, fmt.Errorf("remote create title is required and body must not exceed 1048576 bytes")
-	}
-	if err := ValidateProviderTitleLength("PR/MR", request.Title); err != nil {
+	if err := validateCreateContent(request, secretLike); err != nil {
 		return CreateRequest{}, err
-	}
-	if err := ValidateProviderBodyLength(request.Provider, "PR/MR", request.Body); err != nil {
-		return CreateRequest{}, err
-	}
-	if secretLike {
-		return CreateRequest{}, fmt.Errorf("remote create title or body contains secret-like content")
 	}
 	request.Labels, request.Assignees = CleanValues(request.Labels), CleanValues(request.Assignees)
 	if len(request.Labels) == 0 || len(request.Assignees) == 0 {
@@ -111,6 +102,22 @@ func PrepareCreateRequest(authority CreateBranchAuthority, request CreateRequest
 		return CreateRequest{}, fmt.Errorf("remote create assignee must not be placeholder %q", invalid)
 	}
 	return request, nil
+}
+
+func validateCreateContent(request CreateRequest, secretLike bool) error {
+	if request.Title == "" || len(request.Body) > 1<<20 {
+		return fmt.Errorf("remote create title is required and body must not exceed 1048576 bytes")
+	}
+	if err := ValidateProviderTitleLength("PR/MR", request.Title); err != nil {
+		return err
+	}
+	if err := ValidateProviderBodyLength(request.Provider, "PR/MR", request.Body); err != nil {
+		return err
+	}
+	if secretLike {
+		return fmt.Errorf("remote create title or body contains secret-like content")
+	}
+	return nil
 }
 
 func ValidateCreateHead(head string) error {

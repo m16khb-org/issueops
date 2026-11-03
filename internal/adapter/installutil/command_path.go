@@ -461,19 +461,8 @@ func copyManagedCommandFile(source, destination string, mode os.FileMode, expect
 			_ = os.Remove(destination)
 		}
 	}()
-	writer := io.Writer(output)
-	var digest hash.Hash
-	if expected != nil {
-		digest = sha256.New()
-		writer = io.MultiWriter(output, digest)
-	}
-	if _, err := io.Copy(writer, input); err != nil {
+	if err := copyManagedCommandBody(output, input, source, before, expected); err != nil {
 		return err
-	}
-	if expected != nil {
-		if err := verifyManagedCommandBackupSource(input, source, before, *expected, digest); err != nil {
-			return err
-		}
 	}
 	if err := output.Chmod(mode); err != nil {
 		return err
@@ -486,6 +475,21 @@ func copyManagedCommandFile(source, destination string, mode os.FileMode, expect
 	}
 	clean = false
 	return nil
+}
+
+// copyManagedCommandBody copies input into output. When an identity is
+// expected it also hashes the copied bytes and verifies the source stayed
+// unchanged during the copy.
+func copyManagedCommandBody(output io.Writer, input *os.File, source string, before os.FileInfo, expected *managedCommandIdentity) error {
+	if expected == nil {
+		_, err := io.Copy(output, input)
+		return err
+	}
+	digest := sha256.New()
+	if _, err := io.Copy(io.MultiWriter(output, digest), input); err != nil {
+		return err
+	}
+	return verifyManagedCommandBackupSource(input, source, before, *expected, digest)
 }
 
 func verifyManagedCommandBackupSource(input *os.File, source string, before os.FileInfo, expected managedCommandIdentity, digest hash.Hash) error {

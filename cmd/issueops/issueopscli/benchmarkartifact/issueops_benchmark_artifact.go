@@ -149,39 +149,28 @@ func routingTraceFor(fixture benchmark.IssueOpsBenchmarkFixture) []benchmark.Ski
 	return trace
 }
 
+// pioneerEvidenceBySkill maps a normalized pioneer skill target to its
+// distinctive-method evidence.
+var pioneerEvidenceBySkill = map[string]string{
+	"implementation-planning":      "Repo grounding: AGENTS.md and benchmark code inspected\nDecision-complete plan: tasks have owners and dependencies\nAssumptions/defaults: default fixture path recorded\nUnresolved questions: none blocking; deferred risks named\nAcceptance criteria: validation commands and artifacts listed",
+	"verified-execution":           "Success criteria: every requirement mapped to pass/fail\nEvidence artifact: command stdout captured\nCleanup receipt: temp dir removed and verified\nVerification mode: proportionate CLI check\nSkipped checks: browser QA skipped with reason",
+	"web-research":                 "Source fan-out: official docs, changelog, package index\nSource index: cited URLs with retrieval timestamp\nClaim verification: confirmed/single-sourced/disputed table\nAccess boundary: protected source inaccessible without bypass",
+	"algorithm-optimization":       "Hot path: pprof shows matcher at 87% CPU\nComplexity: O(n^2) -> O(n log n)\nScaling evidence: N=100/1000/10000 table\nCorrectness invariant: sorted candidates preserve matches\nBefore/after measurement: baseline 4.1s after 0.2s",
+	"database-schema-architecture": "Schema/row count: orders has 12M rows\nEXPLAIN evidence: seq scan before index scan after\nIndex tradeoff: covering index with write penalty +8% insert cost\nNormalization rationale: 3NF retained no update anomaly",
+	"issueops-debugging":           "Reproduction: go test exits 1\nFailure signature: intermittent webhook retry timeout\nRoot cause hypothesis: retry timer races\nIsolation: trace diff narrowed to scheduler\nMinimal fix boundary: retry timer only\nVerification: regression test rerun passed",
+	"code-quality-metrics":         "Diff inventory: staged unstaged and untracked files listed\nSNR before/after: 0.62 -> 0.81\nSecondary metric: entropy and redundancy re-measured\nHeuristic caveat: shell metrics approximate\nNo-input guard: total=0 reports insufficient-input",
+	"prompt-engineering":           "Input/output contract: prompt receives issue text returns JSON\nTest suite: 3 happy cases and 2 edge cases\nAdversarial cases: hidden reasoning and fake tool injection\nOne-variable iteration: only moved output spec\nPrivacy/tool truth: no hidden chain-of-thought; tools verified or illustrative",
+	"git-operations":               "Git state proof: status branch log and worktree list captured\nRecovery path: backup ref verified\nDestructive confirmation gate: exact reset command requires approval\nAtomic scope: one intent per commit\nForce-with-lease rule: no raw force push",
+	"requirements-analysis":        "Document scope: Korean planning document and embedded visuals\nOCR evidence: small text marked uncertain\nRequirement ledger: body table and implementation requirements mapped\nContradiction: email-only table conflicts with social-login body\nRisk-driven recommendation: confirm conflict before implementation",
+	"architecture-review":          "Essential complexity: one bounded CLI behavior change\nAccidental complexity: workflow engine queue and policy DSL removed\nSecond-system effect: broad platform rewrite rejected\nConceptual integrity: one existing command path retained\nGO/NO-GO verdict: NO-GO broad plan; GO narrowed change",
+	"meeting-notes":                "Source fidelity: synthetic transcript preserved without invented facts\nDecision log: production deployment remains undecided\nAction owners: backend owner checks the error dashboard\nUncertainty: deployment date is explicitly unknown\nCanvas handoff: minutes and tracking fields prepared",
+	"issueops":                     "Durable state record: issueops id and readiness gates recorded\nPhase routing: problem issue plan implement feedback pr cleanup\nFlow evidence: issue plan TDD subagent decision feedback PR linked\nHook boundary: hooks do not create issues edit files or run tests\nCleanup/readiness evidence: strict readiness and cleanup choices recorded",
+}
+
 // pioneerEvidenceFor returns distinctive-method evidence satisfying the
 // targeted pioneer skill's signature detector. Non-targeted fixtures get an
 // empty string: fabricating pioneer evidence for them would defeat the
 // dimension's honest N/A handling.
 func pioneerEvidenceFor(target string) string {
-	switch strings.ToLower(strings.TrimSpace(target)) {
-	case "implementation-planning":
-		return "Repo grounding: AGENTS.md and benchmark code inspected\nDecision-complete plan: tasks have owners and dependencies\nAssumptions/defaults: default fixture path recorded\nUnresolved questions: none blocking; deferred risks named\nAcceptance criteria: validation commands and artifacts listed"
-	case "verified-execution":
-		return "Success criteria: every requirement mapped to pass/fail\nEvidence artifact: command stdout captured\nCleanup receipt: temp dir removed and verified\nVerification mode: proportionate CLI check\nSkipped checks: browser QA skipped with reason"
-	case "web-research":
-		return "Source fan-out: official docs, changelog, package index\nSource index: cited URLs with retrieval timestamp\nClaim verification: confirmed/single-sourced/disputed table\nAccess boundary: protected source inaccessible without bypass"
-	case "algorithm-optimization":
-		return "Hot path: pprof shows matcher at 87% CPU\nComplexity: O(n^2) -> O(n log n)\nScaling evidence: N=100/1000/10000 table\nCorrectness invariant: sorted candidates preserve matches\nBefore/after measurement: baseline 4.1s after 0.2s"
-	case "database-schema-architecture":
-		return "Schema/row count: orders has 12M rows\nEXPLAIN evidence: seq scan before index scan after\nIndex tradeoff: covering index with write penalty +8% insert cost\nNormalization rationale: 3NF retained no update anomaly"
-	case "issueops-debugging":
-		return "Reproduction: go test exits 1\nFailure signature: intermittent webhook retry timeout\nRoot cause hypothesis: retry timer races\nIsolation: trace diff narrowed to scheduler\nMinimal fix boundary: retry timer only\nVerification: regression test rerun passed"
-	case "code-quality-metrics":
-		return "Diff inventory: staged unstaged and untracked files listed\nSNR before/after: 0.62 -> 0.81\nSecondary metric: entropy and redundancy re-measured\nHeuristic caveat: shell metrics approximate\nNo-input guard: total=0 reports insufficient-input"
-	case "prompt-engineering":
-		return "Input/output contract: prompt receives issue text returns JSON\nTest suite: 3 happy cases and 2 edge cases\nAdversarial cases: hidden reasoning and fake tool injection\nOne-variable iteration: only moved output spec\nPrivacy/tool truth: no hidden chain-of-thought; tools verified or illustrative"
-	case "git-operations":
-		return "Git state proof: status branch log and worktree list captured\nRecovery path: backup ref verified\nDestructive confirmation gate: exact reset command requires approval\nAtomic scope: one intent per commit\nForce-with-lease rule: no raw force push"
-	case "requirements-analysis":
-		return "Document scope: Korean planning document and embedded visuals\nOCR evidence: small text marked uncertain\nRequirement ledger: body table and implementation requirements mapped\nContradiction: email-only table conflicts with social-login body\nRisk-driven recommendation: confirm conflict before implementation"
-	case "architecture-review":
-		return "Essential complexity: one bounded CLI behavior change\nAccidental complexity: workflow engine queue and policy DSL removed\nSecond-system effect: broad platform rewrite rejected\nConceptual integrity: one existing command path retained\nGO/NO-GO verdict: NO-GO broad plan; GO narrowed change"
-	case "meeting-notes":
-		return "Source fidelity: synthetic transcript preserved without invented facts\nDecision log: production deployment remains undecided\nAction owners: backend owner checks the error dashboard\nUncertainty: deployment date is explicitly unknown\nCanvas handoff: minutes and tracking fields prepared"
-	case "issueops":
-		return "Durable state record: issueops id and readiness gates recorded\nPhase routing: problem issue plan implement feedback pr cleanup\nFlow evidence: issue plan TDD subagent decision feedback PR linked\nHook boundary: hooks do not create issues edit files or run tests\nCleanup/readiness evidence: strict readiness and cleanup choices recorded"
-	default:
-		return ""
-	}
+	return pioneerEvidenceBySkill[strings.ToLower(strings.TrimSpace(target))]
 }

@@ -141,21 +141,9 @@ func (r OmpRunner) resolveExecutable() (string, error) {
 
 func (r OmpRunner) Run(ctx context.Context, request port.HostProbeRequest) (result port.HostProbeResult) {
 	started := r.deps.Now()
-	if r.harnessBinary == "" {
-		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "harness_binary_missing")
-	}
-	if strings.TrimSpace(r.lifecycleExtension) == "" {
-		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "lifecycle_extension_missing")
-	}
-	if !r.validLifecycleExtension() {
-		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "mock_extension_invalid")
-	}
-	if !explicitOmoModel(request.Model) {
-		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "explicit_model_required")
-	}
-	targetTool, ok := ompProbeToolName(request.ProbeTool)
-	if !ok {
-		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "probe_tool_name_too_long")
+	targetTool, code := r.precheckRun(request)
+	if code != "" {
+		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", code)
 	}
 	harnessBinary, err := filepath.Abs(r.harnessBinary)
 	if err != nil {
@@ -202,6 +190,28 @@ func (r OmpRunner) Run(ctx context.Context, request port.HostProbeRequest) (resu
 		name: r.Name(), request: request, started: started, deps: r.deps,
 		resultPath: resultPath, targetTool: targetTool,
 	}.finish(output, err)
+}
+
+// precheckRun은 실행할 수 없는 요청의 첫 실패 코드를 돌려주고, 실행 가능하면
+// 대상 도구 이름과 빈 코드를 돌려준다.
+func (r OmpRunner) precheckRun(request port.HostProbeRequest) (targetTool, code string) {
+	if r.harnessBinary == "" {
+		return "", "harness_binary_missing"
+	}
+	if strings.TrimSpace(r.lifecycleExtension) == "" {
+		return "", "lifecycle_extension_missing"
+	}
+	if !r.validLifecycleExtension() {
+		return "", "mock_extension_invalid"
+	}
+	if !explicitOmoModel(request.Model) {
+		return "", "explicit_model_required"
+	}
+	targetTool, ok := ompProbeToolName(request.ProbeTool)
+	if !ok {
+		return "", "probe_tool_name_too_long"
+	}
+	return targetTool, ""
 }
 
 func (r OmpRunner) validLifecycleExtension() bool {

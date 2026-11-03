@@ -41,27 +41,7 @@ func (service HistoryService) History(ctx context.Context, prefix string, limit 
 		if prefix != "" && !strings.HasPrefix(record.Key, prefix) {
 			continue
 		}
-		state, err := service.Read(record.Key)
-		if err != nil {
-			result.Skipped = append(result.Skipped, contract.SelfAugmentHistorySkipped{Key: record.Key, Reason: "state_read:" + err.Error()})
-			continue
-		}
-		var snapshot contract.SelfAugmentStateSnapshot
-		if err := json.Unmarshal([]byte(state.Record.Content), &snapshot); err != nil {
-			result.Skipped = append(result.Skipped, contract.SelfAugmentHistorySkipped{Key: record.Key, Reason: "not_json_summary"})
-			continue
-		}
-		skip, warning := domain.HistorySnapshotDiagnostics(record.Key, snapshot)
-		if skip != "" {
-			result.Skipped = append(result.Skipped, contract.SelfAugmentHistorySkipped{Key: record.Key, Reason: skip})
-			continue
-		}
-		if warning != "" {
-			result.Warnings = append(result.Warnings, warning)
-		}
-		entry := domain.NewHistoryEntry(snapshot)
-		entry.Key, entry.UpdatedAt, entry.Bytes = record.Key, record.UpdatedAt, record.Bytes
-		result.Entries = append(result.Entries, entry)
+		service.collectRecord(&result, record)
 	}
 	domain.SortHistoryEntries(result.Entries)
 	sort.Slice(result.Skipped, func(i, j int) bool { return result.Skipped[i].Key < result.Skipped[j].Key })
@@ -133,4 +113,30 @@ func (service HistoryService) Compare(baselineKey, candidateKey string, maxElaps
 		return result, fmt.Errorf("read candidate summary: %w", err)
 	}
 	return domain.CompareSnapshots(baselineKey, candidateKey, maxElapsedRegressionPct, baseline, candidate, service.StateDir()), nil
+}
+
+// collectRecord reads one state record and appends it to the history result as
+// an entry, or as a skipped record when it cannot be used.
+func (service HistoryService) collectRecord(result *contract.SelfAugmentHistoryResult, record state.StateListEntry) {
+	state, err := service.Read(record.Key)
+	if err != nil {
+		result.Skipped = append(result.Skipped, contract.SelfAugmentHistorySkipped{Key: record.Key, Reason: "state_read:" + err.Error()})
+		return
+	}
+	var snapshot contract.SelfAugmentStateSnapshot
+	if err := json.Unmarshal([]byte(state.Record.Content), &snapshot); err != nil {
+		result.Skipped = append(result.Skipped, contract.SelfAugmentHistorySkipped{Key: record.Key, Reason: "not_json_summary"})
+		return
+	}
+	skip, warning := domain.HistorySnapshotDiagnostics(record.Key, snapshot)
+	if skip != "" {
+		result.Skipped = append(result.Skipped, contract.SelfAugmentHistorySkipped{Key: record.Key, Reason: skip})
+		return
+	}
+	if warning != "" {
+		result.Warnings = append(result.Warnings, warning)
+	}
+	entry := domain.NewHistoryEntry(snapshot)
+	entry.Key, entry.UpdatedAt, entry.Bytes = record.Key, record.UpdatedAt, record.Bytes
+	result.Entries = append(result.Entries, entry)
 }

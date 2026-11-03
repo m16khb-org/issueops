@@ -90,14 +90,6 @@ func gitHasFlag(args, long []string, shortLetters string) bool {
 // operand creates a branch, so it is a write unless a list-mode flag makes the
 // operand a pattern or commit (`--contains HEAD`, `-l 'feat/*'`).
 func gitBranchWrites(args []string) bool {
-	writeLong := []string{
-		"--delete", "--move", "--copy", "--set-upstream-to", "--unset-upstream", "--edit-description",
-		"--force", "--track", "--no-track", "--create-reflog", "--recurse-submodules",
-	}
-	listLong := map[string]bool{
-		"--list": true, "--all": true, "--remotes": true, "--contains": true, "--no-contains": true,
-		"--merged": true, "--no-merged": true, "--points-at": true, "--show-current": true,
-	}
 	list, operand := false, false
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
@@ -106,25 +98,51 @@ func gitBranchWrites(args []string) bool {
 			break
 		}
 		if name, ok := longFlagName(arg); ok {
-			if abbreviatesAny(name, writeLong) {
+			write, isList, takesValue := gitBranchLongFlag(name, arg)
+			if write {
 				return true
 			}
-			list = list || listLong[name]
-			if (name == "--sort" || name == "--format") && !strings.Contains(arg, "=") {
+			list = list || isList
+			if takesValue {
 				i++
 			}
 			continue
 		}
 		if letters, ok := shortCluster(arg); ok {
-			if strings.ContainsAny(letters, "dDmMcCuft") {
+			write, isList := gitBranchShortFlags(letters)
+			if write {
 				return true
 			}
-			list = list || strings.ContainsAny(letters, "lar")
+			list = list || isList
 			continue
 		}
 		operand = true
 	}
 	return operand && !list
+}
+
+// gitBranchLongFlag classifies a `git branch` long flag: write for a flag that
+// modifies branches, list for a list-mode flag, and takesValue when the next
+// argument is the flag's value (`--sort key`, not `--sort=key`).
+func gitBranchLongFlag(name, arg string) (write, list, takesValue bool) {
+	writeLong := []string{
+		"--delete", "--move", "--copy", "--set-upstream-to", "--unset-upstream", "--edit-description",
+		"--force", "--track", "--no-track", "--create-reflog", "--recurse-submodules",
+	}
+	listLong := map[string]bool{
+		"--list": true, "--all": true, "--remotes": true, "--contains": true, "--no-contains": true,
+		"--merged": true, "--no-merged": true, "--points-at": true, "--show-current": true,
+	}
+	if abbreviatesAny(name, writeLong) {
+		return true, false, false
+	}
+	takesValue = (name == "--sort" || name == "--format") && !strings.Contains(arg, "=")
+	return false, listLong[name], takesValue
+}
+
+// gitBranchShortFlags classifies a `git branch` short-option cluster.
+func gitBranchShortFlags(letters string) (write, list bool) {
+	return strings.ContainsAny(letters, "dDmMcCuft"), strings.ContainsAny(letters, "lar")
 }
 
 // gitConfigWrites treats `git config` as read-only only for an explicit read

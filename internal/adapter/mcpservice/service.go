@@ -359,20 +359,8 @@ func (s *Service) Stop(ctx context.Context) (mcpservice.Status, error) {
 		return status, err
 	}
 	observed := s.observe(ctx)
-	switch observed.status.Status {
-	case mcpservice.StatusStopped:
-		return s.unloadIdle(ctx, observed.status)
-	case mcpservice.StatusStale:
-		if observed.holder != 0 {
-			return observed.status, observed.err
-		}
-		if err := s.removeStaleRecord(); err != nil {
-			return s.fail(observed.status, CodeStateUnreadable, err)
-		}
-		return s.unloadIdle(ctx, s.result(mcpservice.StatusStopped, 0, ""))
-	case mcpservice.StatusRunning:
-	default:
-		return observed.status, observed.err
+	if observed.status.Status != mcpservice.StatusRunning {
+		return s.stopNotRunning(ctx, observed)
 	}
 	loaded, supervisedPID, err := s.supervisor.supervised(ctx)
 	if err != nil {
@@ -391,6 +379,25 @@ func (s *Service) Stop(ctx context.Context) (mcpservice.Status, error) {
 		_ = os.Remove(s.recordPath())
 	}
 	return s.result(mcpservice.StatusStopped, 0, ""), nil
+}
+
+// stopNotRunning은 실행 중이 아닌 관측 결과를 정리한다. stopped/stale은 유휴
+// job을 내리고 나머지 상태는 관측 결과를 그대로 돌려준다.
+func (s *Service) stopNotRunning(ctx context.Context, observed observation) (mcpservice.Status, error) {
+	switch observed.status.Status {
+	case mcpservice.StatusStopped:
+		return s.unloadIdle(ctx, observed.status)
+	case mcpservice.StatusStale:
+		if observed.holder != 0 {
+			return observed.status, observed.err
+		}
+		if err := s.removeStaleRecord(); err != nil {
+			return s.fail(observed.status, CodeStateUnreadable, err)
+		}
+		return s.unloadIdle(ctx, s.result(mcpservice.StatusStopped, 0, ""))
+	default:
+		return observed.status, observed.err
+	}
 }
 
 // awaitLockReleased는 StopTimeout 안에서 서비스 락 보유자가 사라질 때까지 기다린다.

@@ -17,12 +17,15 @@ func ValidID(id string) bool {
 		return false
 	}
 	for i := range len(id) {
-		c := id[i]
-		if !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '.' || c == '_' || c == '-') {
+		if !validIDByte(id[i]) {
 			return false
 		}
 	}
 	return true
+}
+
+func validIDByte(c byte) bool {
+	return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '.' || c == '_' || c == '-'
 }
 
 func MakeID(kind, payload string, at time.Time) string {

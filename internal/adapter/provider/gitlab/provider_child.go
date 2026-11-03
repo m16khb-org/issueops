@@ -171,20 +171,33 @@ func gitlabAssigneeUsernamesFromRequest(assignees []string) []string {
 }
 
 func (Provider) CloseChild(req port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
-	hostname, projectPath, parentIID, err := parseGitLabIssueURL(req.ParentIssueURL)
+	hostname, projectPath, parentIID, childIID, err := parseGitLabCloseChildTarget(req)
 	if err != nil {
 		return port.IssueProviderCloseChildResult{OK: false, Provider: "gitlab"}, err
-	}
-	childHostname, childProjectPath, childIID, err := parseGitLabWorkItemURL(req.ChildURL)
-	if err != nil {
-		return port.IssueProviderCloseChildResult{OK: false, Provider: "gitlab"}, err
-	}
-	if childHostname != hostname || childProjectPath != projectPath {
-		return port.IssueProviderCloseChildResult{OK: false, Provider: "gitlab"}, fmt.Errorf("child issue url must match linked parent issue project")
 	}
 	if !req.Confirm {
 		return previewCloseGitLabChild(req, hostname, projectPath, parentIID, childIID), nil
 	}
+	return closeConfirmedGitLabChild(req, hostname, projectPath, parentIID, childIID)
+}
+
+// parseGitLabCloseChildTarget는 부모와 자식 URL을 파싱하고 같은 프로젝트인지 확인한다.
+func parseGitLabCloseChildTarget(req port.IssueProviderCloseChildRequest) (hostname, projectPath, parentIID, childIID string, err error) {
+	hostname, projectPath, parentIID, err = parseGitLabIssueURL(req.ParentIssueURL)
+	if err != nil {
+		return "", "", "", "", err
+	}
+	childHostname, childProjectPath, childIID, err := parseGitLabWorkItemURL(req.ChildURL)
+	if err != nil {
+		return "", "", "", "", err
+	}
+	if childHostname != hostname || childProjectPath != projectPath {
+		return "", "", "", "", fmt.Errorf("child issue url must match linked parent issue project")
+	}
+	return hostname, projectPath, parentIID, childIID, nil
+}
+
+func closeConfirmedGitLabChild(req port.IssueProviderCloseChildRequest, hostname, projectPath, parentIID, childIID string) (port.IssueProviderCloseChildResult, error) {
 	parent, err := runGlabGraphQL[gitlabParentIssueResponse](req.Repo, hostname, gitlabParentIssueQuery, map[string]string{
 		"projectPath": projectPath,
 		"parentIid":   parentIID,

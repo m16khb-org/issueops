@@ -160,34 +160,44 @@ func (cli command) runIssueOpsBranchAwaitLink(args []string) error {
 		}
 		return err
 	}
-	// The --link-verified record is a pre-lease record, so it gets this
-	// process's whoami record vector at the cycle's source checkout, the cwd
-	// next renders too (a run from a subdirectory used to mix two --cwd values).
-	if strings.Contains(result.NextCommand, "$RECORD_ACTOR_FLAGS") {
-		cwd := ""
-		if cli.Runtime.ReadIssueOps != nil {
-			if record, readErr := cli.Runtime.ReadIssueOps(cli.Runtime.IssueOpsStateRoot(), *id); readErr == nil {
-				cwd = record.Repo
-			}
-		}
-		if cwd == "" {
-			cwd, _ = os.Getwd()
-		}
-		if flags := executioncmd.RecordActorFlags(os.Getenv, cwd); flags != "" {
-			result.NextCommand = strings.ReplaceAll(result.NextCommand, "$RECORD_ACTOR_FLAGS", flags)
-		}
-	}
+	cli.expandAwaitLinkRecordActorFlags(&result, *id)
 	if *jsonOut {
 		return printJSON(result)
 	}
-	switch {
-	case result.AlreadyVerified:
-		fmt.Printf("branch link already recorded: branch=%s\n", result.Branch)
-	default:
-		fmt.Printf("branch link observed: branch=%s oid=%s attempts=%d\n", result.Branch, result.ObservedOID, result.Attempts)
-		if result.NextCommand != "" {
-			fmt.Printf("next: %s\n", result.NextCommand)
+	printAwaitLinkResult(result)
+	return nil
+}
+
+// expandAwaitLinkRecordActorFlags fills the $RECORD_ACTOR_FLAGS placeholder in
+// the rendered next command.
+func (cli command) expandAwaitLinkRecordActorFlags(result *issueopscontract.AwaitBranchLinkResult, id string) {
+	// The --link-verified record is a pre-lease record, so it gets this
+	// process's whoami record vector at the cycle's source checkout, the cwd
+	// next renders too (a run from a subdirectory used to mix two --cwd values).
+	if !strings.Contains(result.NextCommand, "$RECORD_ACTOR_FLAGS") {
+		return
+	}
+	cwd := ""
+	if cli.Runtime.ReadIssueOps != nil {
+		if record, readErr := cli.Runtime.ReadIssueOps(cli.Runtime.IssueOpsStateRoot(), id); readErr == nil {
+			cwd = record.Repo
 		}
 	}
-	return nil
+	if cwd == "" {
+		cwd, _ = os.Getwd()
+	}
+	if flags := executioncmd.RecordActorFlags(os.Getenv, cwd); flags != "" {
+		result.NextCommand = strings.ReplaceAll(result.NextCommand, "$RECORD_ACTOR_FLAGS", flags)
+	}
+}
+
+func printAwaitLinkResult(result issueopscontract.AwaitBranchLinkResult) {
+	if result.AlreadyVerified {
+		fmt.Printf("branch link already recorded: branch=%s\n", result.Branch)
+		return
+	}
+	fmt.Printf("branch link observed: branch=%s oid=%s attempts=%d\n", result.Branch, result.ObservedOID, result.Attempts)
+	if result.NextCommand != "" {
+		fmt.Printf("next: %s\n", result.NextCommand)
+	}
 }

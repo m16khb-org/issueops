@@ -23,14 +23,8 @@ func ValidateReview(req reviewcontract.DevilsAdvocateReviewRequest, recordedAt s
 	}
 	findings := cleanReviewValues(req.Findings)
 	rationale := strings.TrimSpace(req.WaiverRationale)
-	if req.Waived && rationale == "" {
-		return reviewcontract.DevilsAdvocateReview{}, fmt.Errorf("waived review requires waiver_rationale")
-	}
-	if verdict == "pass" && len(findings) == 0 {
-		return reviewcontract.DevilsAdvocateReview{}, fmt.Errorf("pass verdict requires at least one finding (what was attacked and why it failed)")
-	}
-	if (verdict == "stop" || verdict == "revise") && !req.Waived && len(findings) == 0 {
-		return reviewcontract.DevilsAdvocateReview{}, fmt.Errorf("%s verdict requires findings or an explicit waiver", verdict)
+	if err := validateReviewFindings(verdict, req.Waived, rationale, findings); err != nil {
+		return reviewcontract.DevilsAdvocateReview{}, err
 	}
 	return reviewcontract.DevilsAdvocateReview{
 		Verdict: verdict, Findings: findings, Waived: req.Waived,
@@ -40,6 +34,19 @@ func ValidateReview(req reviewcontract.DevilsAdvocateReviewRequest, recordedAt s
 		ReviewerModel:  strings.TrimSpace(req.ReviewerModel),
 		ReviewerEffort: strings.TrimSpace(req.ReviewerEffort),
 	}, nil
+}
+
+func validateReviewFindings(verdict string, waived bool, rationale string, findings []string) error {
+	if waived && rationale == "" {
+		return fmt.Errorf("waived review requires waiver_rationale")
+	}
+	if verdict == "pass" && len(findings) == 0 {
+		return fmt.Errorf("pass verdict requires at least one finding (what was attacked and why it failed)")
+	}
+	if (verdict == "stop" || verdict == "revise") && !waived && len(findings) == 0 {
+		return fmt.Errorf("%s verdict requires findings or an explicit waiver", verdict)
+	}
+	return nil
 }
 
 func cleanReviewValues(values []string) []string {

@@ -103,6 +103,17 @@ func appendCommandDenies(denies, warnings []string, req policycontract.CommandPo
 	if facts.ShellCommand {
 		denies, warnings = appendShellDecision(denies, warnings, req)
 	}
+	denies = appendAccessDenies(denies, req, facts)
+	warnings = appendReadOnlyTierWarning(warnings, req, facts)
+	if facts.PRTargetDeny != "" {
+		denies = append(denies, facts.PRTargetDeny)
+		warnings = append(warnings, "pr_target_branch_expected="+facts.PRTargetExpected)
+	}
+	return denies, warnings
+}
+
+// appendAccessDenies는 네트워크·쓰기 권한과 읽기 전용 허용 목록 위반 사유를 더한다.
+func appendAccessDenies(denies []string, req policycontract.CommandPolicyRequest, facts CommandFacts) []string {
 	if facts.UsesNetwork && !req.NetworkAllowed {
 		denies = append(denies, "network_not_allowed")
 	}
@@ -112,17 +123,18 @@ func appendCommandDenies(denies, warnings []string, req policycontract.CommandPo
 	if !req.WriteAllowed && !facts.ReadOnlyAllowed {
 		denies = append(denies, "command_not_in_read_only_allowlist")
 	}
+	return denies
+}
+
+// appendReadOnlyTierWarning은 읽기 전용 계층에서 평가됐다는 안내를 더한다.
+func appendReadOnlyTierWarning(warnings []string, req policycontract.CommandPolicyRequest, facts CommandFacts) []string {
 	if !req.WriteAllowed && !facts.ShellCommand && (!facts.ReadOnlyAllowed || facts.Writes) {
 		// QA (Codex MCP): a test runner was refused by command_policy_check
 		// while gates_check ran it; nothing said the check used the read-only
 		// tier that gates leave by default.
 		warnings = append(warnings, readOnlyTierWarning)
 	}
-	if facts.PRTargetDeny != "" {
-		denies = append(denies, facts.PRTargetDeny)
-		warnings = append(warnings, "pr_target_branch_expected="+facts.PRTargetExpected)
-	}
-	return denies, warnings
+	return warnings
 }
 
 const readOnlyTierWarning = "evaluated in the read-only tier: set write_allowed (CLI --write) for a command that writes only inside the workspace, such as a test runner; gates CHECK runs with write allowed by default"

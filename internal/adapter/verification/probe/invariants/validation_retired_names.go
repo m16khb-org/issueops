@@ -37,14 +37,7 @@ func ForbiddenNameHits(root string) []string {
 			}
 			return nil
 		}
-		if name == ".git" {
-			return nil
-		}
-		if name == "LICENSE" {
-			return nil
-		}
-		info, statErr := d.Info()
-		if statErr != nil || info.Size() > 2*1024*1024 {
+		if !shouldScanForbiddenNameFile(d) {
 			return nil
 		}
 		reads.Go(func() error {
@@ -68,6 +61,15 @@ func ForbiddenNameHits(root string) []string {
 		return hits[:20]
 	}
 	return hits
+}
+
+func shouldScanForbiddenNameFile(d fs.DirEntry) bool {
+	name := d.Name()
+	if name == ".git" || name == "LICENSE" {
+		return false
+	}
+	info, statErr := d.Info()
+	return statErr == nil && info.Size() <= 2*1024*1024
 }
 
 func firstRetiredNameNeedle(content, owner []byte, needles [][]byte, needleNames []string) string {

@@ -18,36 +18,18 @@ func (s Service) Reconcile(ctx context.Context, stateRoot string, req issueops.E
 	if req.Preview == req.Confirm {
 		return issueops.ExecutionReconcileResult{OK: false, ID: req.ID}, fmt.Errorf("execution reconcile requires exactly one of preview or confirm (--preview, then the --confirm it returns)")
 	}
-	if s.Verifier == nil {
-		return issueops.ExecutionReconcileResult{OK: false, ID: req.ID}, fmt.Errorf("execution reconcile actor verifier is required")
-	}
-	verified, err := s.Verifier.Verify(ctx, req.Actor)
+	record, actor, err := s.loadReconcileTarget(ctx, stateRoot, req)
 	if err != nil {
 		return issueops.ExecutionReconcileResult{OK: false, ID: req.ID}, err
 	}
-	actor := verified.Identity
 	req.Actor = actor
-	record, err := s.ReadRecord(stateRoot, req.ID)
-	if err != nil {
-		return issueops.ExecutionReconcileResult{OK: false, ID: req.ID}, err
-	}
-	if record.Execution == nil {
-		return issueops.ExecutionReconcileResult{OK: false, ID: req.ID}, fmt.Errorf("IssueOps execution v1 is not prepared")
-	}
-	if !s.SamePath(req.CWD, record.Execution.Workspace.SourceRoot) && !s.SamePath(req.CWD, record.Execution.Workspace.Root) {
-		return issueops.ExecutionReconcileResult{OK: false, ID: req.ID}, fmt.Errorf("execution reconcile cwd must be source_root or the canonical worktree")
-	}
 	kind := ""
 	if record.Execution.Pending != nil {
 		kind = record.Execution.Pending.Kind
 	}
 	decision := reconciledomain.DecidePending(kind, record.Execution.Pending != nil)
 	if req.Confirm {
-		mutationActor := issueops.IssueOpsActor{
-			Host: actor.Host, SessionID: actor.SessionID, AgentID: actor.AgentID, CWD: req.CWD,
-			NativeProcessAncestry: actor.ProcessAncestry,
-		}
-		if err := cycleapp.NewMutationAuthority(s.SamePath, s.Verifier).Validate(ctx, record, &mutationActor); err != nil {
+		if err := s.authorizeReconcileConfirm(ctx, record, req, actor); err != nil {
 			return issueops.ExecutionReconcileResult{OK: false, ID: req.ID}, err
 		}
 	}
@@ -58,13 +40,51 @@ func (s Service) Reconcile(ctx context.Context, stateRoot string, req issueops.E
 		return result, nil
 	}
 	if req.Preview {
-		result.Code = decision.PreviewCode
-		if decision.Route == reconciledomain.RouteRemotePR {
-			result.NextCommand = issueopsdomain.ReconcileConfirmCommand(record.ID, actor, req.CWD)
-		}
-		return result, nil
+		return previewReconcileResult(result, record, decision, actor, req.CWD), nil
 	}
 	return dispatchReconcileRoute(ctx, stateRoot, req, deps, record, decision, result)
+}
+
+// loadReconcileTarget verifies the actor and reads the record, then checks
+// that the record is prepared and req.CWD names its source root or worktree.
+func (s Service) loadReconcileTarget(ctx context.Context, stateRoot string, req issueops.ExecutionReconcileRequest) (issueops.IssueOpsRecord, issueops.NativeActor, error) {
+	if s.Verifier == nil {
+		return issueops.IssueOpsRecord{}, issueops.NativeActor{}, fmt.Errorf("execution reconcile actor verifier is required")
+	}
+	verified, err := s.Verifier.Verify(ctx, req.Actor)
+	if err != nil {
+		return issueops.IssueOpsRecord{}, issueops.NativeActor{}, err
+	}
+	actor := verified.Identity
+	record, err := s.ReadRecord(stateRoot, req.ID)
+	if err != nil {
+		return issueops.IssueOpsRecord{}, actor, err
+	}
+	if record.Execution == nil {
+		return issueops.IssueOpsRecord{}, actor, fmt.Errorf("IssueOps execution v1 is not prepared")
+	}
+	if !s.SamePath(req.CWD, record.Execution.Workspace.SourceRoot) && !s.SamePath(req.CWD, record.Execution.Workspace.Root) {
+		return issueops.IssueOpsRecord{}, actor, fmt.Errorf("execution reconcile cwd must be source_root or the canonical worktree")
+	}
+	return record, actor, nil
+}
+
+// authorizeReconcileConfirm는 확정 reconcile 전에 호출자가 실행 권한을 가졌는지 검증한다.
+func (s Service) authorizeReconcileConfirm(ctx context.Context, record issueops.IssueOpsRecord, req issueops.ExecutionReconcileRequest, actor issueops.NativeActor) error {
+	mutationActor := issueops.IssueOpsActor{
+		Host: actor.Host, SessionID: actor.SessionID, AgentID: actor.AgentID, CWD: req.CWD,
+		NativeProcessAncestry: actor.ProcessAncestry,
+	}
+	return cycleapp.NewMutationAuthority(s.SamePath, s.Verifier).Validate(ctx, record, &mutationActor)
+}
+
+// previewReconcileResult는 미리보기 결과에 판정 코드와 확정 명령을 채운다.
+func previewReconcileResult(result issueops.ExecutionReconcileResult, record issueops.IssueOpsRecord, decision reconciledomain.Decision, actor issueops.NativeActor, cwd string) issueops.ExecutionReconcileResult {
+	result.Code = decision.PreviewCode
+	if decision.Route == reconciledomain.RouteRemotePR {
+		result.NextCommand = issueopsdomain.ReconcileConfirmCommand(record.ID, actor, cwd)
+	}
+	return result
 }
 
 // dispatchReconcileRoute는 결정된 경로에 맞는 reconcile 핸들러를 호출한다.
