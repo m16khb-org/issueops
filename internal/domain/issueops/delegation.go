@@ -16,10 +16,10 @@ func ChildStartMissingPreconditions(parent model.IssueOpsRecord, req model.Issue
 	if parent.ArchitectureReview == nil || !parent.ArchitectureReview.Approved {
 		missing = append(missing, "parent_architecture_review_unapproved")
 	}
-	if parent.CompatibilityReview == nil || !parent.CompatibilityReview.Approved || len(cleanDelegationValues(parent.CompatibilityReview.Blockers)) > 0 {
+	if parentCompatibilityUnapproved(parent) {
 		missing = append(missing, "parent_compatibility_unapproved")
 	}
-	if parent.DevilsAdvocateReview == nil || strings.TrimSpace(parent.DevilsAdvocateReview.RecordedAt) == "" || ((parent.DevilsAdvocateReview.Verdict == "stop" || parent.DevilsAdvocateReview.Verdict == "revise") && !parent.DevilsAdvocateReview.Waived) {
+	if parentDevilsAdvocateMissing(parent) {
 		missing = append(missing, "parent_devils_advocate_missing")
 	}
 	if parent.Delegation != nil {
@@ -29,6 +29,14 @@ func ChildStartMissingPreconditions(parent model.IssueOpsRecord, req model.Issue
 		missing = append(missing, "child_branch_equals_parent")
 	}
 	return missing
+}
+
+func parentCompatibilityUnapproved(parent model.IssueOpsRecord) bool {
+	return parent.CompatibilityReview == nil || !parent.CompatibilityReview.Approved || len(cleanDelegationValues(parent.CompatibilityReview.Blockers)) > 0
+}
+
+func parentDevilsAdvocateMissing(parent model.IssueOpsRecord) bool {
+	return parent.DevilsAdvocateReview == nil || strings.TrimSpace(parent.DevilsAdvocateReview.RecordedAt) == "" || ((parent.DevilsAdvocateReview.Verdict == "stop" || parent.DevilsAdvocateReview.Verdict == "revise") && !parent.DevilsAdvocateReview.Waived)
 }
 
 // ParentReviewPattern identifies a delegated child's inherited review. Its own

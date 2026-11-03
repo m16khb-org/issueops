@@ -1,7 +1,8 @@
 package selfaugment
 
 import (
-	"sort"
+	"cmp"
+	"slices"
 
 	contract "issueops/internal/contract/selfaugment"
 )
@@ -58,14 +59,8 @@ func SummarizeSteps(runs []SummaryRun, targetScore float64) contract.SelfAugment
 			durationsByLabel[step.Label] = append(durationsByLabel[step.Label], step.DurationMS)
 		}
 	}
-	sort.Slice(summary.SlowestSteps, func(i, j int) bool {
-		if summary.SlowestSteps[i].DurationMS != summary.SlowestSteps[j].DurationMS {
-			return summary.SlowestSteps[i].DurationMS > summary.SlowestSteps[j].DurationMS
-		}
-		if summary.SlowestSteps[i].Iteration != summary.SlowestSteps[j].Iteration {
-			return summary.SlowestSteps[i].Iteration < summary.SlowestSteps[j].Iteration
-		}
-		return summary.SlowestSteps[i].Label < summary.SlowestSteps[j].Label
+	slices.SortFunc(summary.SlowestSteps, func(a, b contract.SelfAugmentSlowStep) int {
+		return cmp.Or(cmp.Compare(b.DurationMS, a.DurationMS), cmp.Compare(a.Iteration, b.Iteration), cmp.Compare(a.Label, b.Label))
 	})
 	if len(summary.SlowestSteps) > 5 {
 		summary.SlowestSteps = summary.SlowestSteps[:5]

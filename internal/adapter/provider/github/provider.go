@@ -216,7 +216,7 @@ func runGhPRCreate(ctx context.Context, args []string, repo string) (ghResult, e
 func validCanonicalGitHubPullRequestURL(raw string) bool {
 	raw = strings.TrimSpace(raw)
 	parsed, err := url.Parse(raw)
-	if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" || parsed.String() != raw || strings.Contains(parsed.EscapedPath(), "%") {
+	if err != nil || !canonicalGitHubPullRequestURLShape(parsed, raw) {
 		return false
 	}
 	parts := strings.Split(strings.Trim(parsed.Path, "/"), "/")
@@ -225,6 +225,12 @@ func validCanonicalGitHubPullRequestURL(raw string) bool {
 	}
 	number, err := strconv.Atoi(parts[3])
 	return err == nil && number > 0
+}
+
+// canonicalGitHubPullRequestURLShape reports whether parsed is the exact https
+// form of raw with no userinfo, query, fragment, or escaped path bytes.
+func canonicalGitHubPullRequestURLShape(parsed *url.URL, raw string) bool {
+	return parsed.Scheme == "https" && parsed.Host != "" && parsed.User == nil && parsed.RawQuery == "" && parsed.Fragment == "" && parsed.String() == raw && !strings.Contains(parsed.EscapedPath(), "%")
 }
 
 func githubProjectSelector(projectKey string) (string, error) {
@@ -240,10 +246,16 @@ func githubProjectSelector(projectKey string) (string, error) {
 		return "", fmt.Errorf("GitHub project authority is malformed")
 	}
 	parts := strings.Split(strings.Trim(parsed.Path, "/"), "/")
-	if parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" || len(parts) != 2 || parts[0] == "" || parts[1] == "" || parsed.Host+"/"+strings.Join(parts, "/") != projectKey {
+	if githubProjectAuthorityMalformed(parsed, parts, projectKey) {
 		return "", fmt.Errorf("GitHub project authority is malformed")
 	}
 	return projectKey, nil
+}
+
+// githubProjectAuthorityMalformed reports whether parsed is anything other than
+// a bare host/owner/repo authority equal to projectKey.
+func githubProjectAuthorityMalformed(parsed *url.URL, parts []string, projectKey string) bool {
+	return parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" || len(parts) != 2 || parts[0] == "" || parts[1] == "" || parsed.Host+"/"+strings.Join(parts, "/") != projectKey
 }
 
 func githubPullRequestProjectKey(raw string) string {
@@ -313,11 +325,8 @@ func verifyCreatedGitHubPullRequest(ctx context.Context, req port.IssueProviderC
 
 // checkCreatedGitHubPullRequestFields는 assignee를 제외한 readback 필드를 요청과 순서대로 대조한다.
 func checkCreatedGitHubPullRequestFields(req port.IssueProviderCreatePullRequestRequest, got githubPullRequestProjection, createdURL string) error {
-	labels := make([]string, 0, len(got.Labels))
-	for _, label := range got.Labels {
-		labels = append(labels, label.Name)
-	}
-	if strings.TrimSpace(got.URL) != createdURL || strings.TrimSpace(got.HeadRefName) != strings.TrimSpace(req.HeadBranch) || strings.TrimSpace(got.BaseRefName) != strings.TrimSpace(req.BaseBranch) || got.IsDraft != req.Draft {
+	labels := githubReadbackLabelNames(got.Labels)
+	if !githubPullRequestIdentityMatches(req, got, createdURL) {
 		return fmt.Errorf("created pull request identity or draft status does not match the request")
 	}
 	if strings.TrimSpace(got.Title) != strings.TrimSpace(req.Title) || got.Body != req.Body {
@@ -333,6 +342,20 @@ func checkCreatedGitHubPullRequestFields(req port.IssueProviderCreatePullRequest
 		return fmt.Errorf("created pull request labels do not exactly match the request")
 	}
 	return nil
+}
+
+// githubReadbackLabelNames returns every label name in readback order, including blank ones.
+func githubReadbackLabelNames(labels []githubLabel) []string {
+	names := make([]string, 0, len(labels))
+	for _, label := range labels {
+		names = append(names, label.Name)
+	}
+	return names
+}
+
+// githubPullRequestIdentityMatches reports whether the readback URL, head/base branches, and draft flag match the request.
+func githubPullRequestIdentityMatches(req port.IssueProviderCreatePullRequestRequest, got githubPullRequestProjection, createdURL string) bool {
+	return strings.TrimSpace(got.URL) == createdURL && strings.TrimSpace(got.HeadRefName) == strings.TrimSpace(req.HeadBranch) && strings.TrimSpace(got.BaseRefName) == strings.TrimSpace(req.BaseBranch) && got.IsDraft == req.Draft
 }
 
 func githubReadbackAssignees(ctx context.Context, repo string, requested []string) ([]string, error) {
@@ -377,10 +400,7 @@ func (Provider) ReconcilePullRequestContext(ctx context.Context, req port.IssueP
 	}
 	result := port.IssueProviderReconcilePullRequestResult{AuthoritativeZero: len(rows) == 0}
 	for _, row := range rows {
-		labels := make([]string, 0, len(row.Labels))
-		for _, label := range row.Labels {
-			labels = append(labels, label.Name)
-		}
+		labels := githubReadbackLabelNames(row.Labels)
 		result.Candidates = append(result.Candidates, port.IssueProviderReconcilePullRequestCandidate{
 			URL: row.URL, ProjectKey: githubPullRequestProjectKey(row.URL), SourceProjectKey: githubSourceProjectKey(selector, row), HeadBranch: row.HeadRefName, BaseBranch: row.BaseRefName,
 			HeadSHA: row.HeadRefOID, Title: strings.TrimSpace(row.Title), BodySHA256: providerBodySHA256(row.Body), Labels: labels, Assignees: githubAssigneeLogins(row.Assignees), Draft: row.IsDraft, State: strings.TrimSpace(row.State),

@@ -53,29 +53,10 @@ func (service Service) Analyze(req tracecontract.TraceAnalyzeRequest) (tracecont
 			tracedomain.NoteUsageLoss(inputFacts.Usage, "input_truncated")
 		}
 	}
-	if inputFacts.Document != nil {
-		summary := &inputFacts.Document.Summary
-		evidence := make([]failurecontract.Evidence, 0, len(summary.Evidence))
-		for _, e := range tracedomain.NormalizeEvidence(summary.Evidence) {
-			evidence = append(evidence, failurecontract.Evidence{Cause: failurecontract.Cause(e.Cause), Code: e.Code, Source: e.Source})
-		}
-		classified := failurecausedomain.Classify(true, evidence)
-		summary.Cause = string(classified.Cause)
-		summary.Evidence = make([]tracedomain.Evidence, 0, len(classified.Evidence))
-		for _, e := range classified.Evidence {
-			summary.Evidence = append(summary.Evidence, tracedomain.Evidence{Cause: string(e.Cause), Code: e.Code, Source: e.Source})
-		}
-	}
+	classifyDocument(inputFacts.Document)
 	analysis := tracedomain.Analyze(inputFacts)
 	result.TraceTypes = analysis.Types
-	result.Findings = make([]tracecontract.TraceAnalysisFinding, 0, len(analysis.Findings))
-	for _, f := range analysis.Findings {
-		finding := tracecontract.TraceAnalysisFinding{FailureClass: f.FailureClass, FailureCause: failurecontract.Cause(f.FailureCause), FailureCauseEvidence: make([]failurecontract.Evidence, 0, len(f.FailureCauseEvidence)), RecurringPattern: f.RecurringPattern, ProposedKnob: f.ProposedKnob, OverfitRisk: f.OverfitRisk, VerificationCommand: f.VerificationCommand}
-		for _, e := range f.FailureCauseEvidence {
-			finding.FailureCauseEvidence = append(finding.FailureCauseEvidence, failurecontract.Evidence{Cause: failurecontract.Cause(e.Cause), Code: e.Code, Source: e.Source})
-		}
-		result.Findings = append(result.Findings, finding)
-	}
+	result.Findings = toContractFindings(analysis.Findings)
 	result.FindingCount = len(result.Findings)
 	result.Warnings = analysis.Warnings
 	result.Complete = !analysis.Incomplete
@@ -90,4 +71,35 @@ func supportedInputFormat(format string) bool {
 		return true
 	}
 	return false
+}
+
+// classifyDocument rewrites the document summary cause and evidence through
+// the failure-cause classifier. A nil document is left alone.
+func classifyDocument(document *tracedomain.Document) {
+	if document == nil {
+		return
+	}
+	summary := &document.Summary
+	evidence := make([]failurecontract.Evidence, 0, len(summary.Evidence))
+	for _, e := range tracedomain.NormalizeEvidence(summary.Evidence) {
+		evidence = append(evidence, failurecontract.Evidence{Cause: failurecontract.Cause(e.Cause), Code: e.Code, Source: e.Source})
+	}
+	classified := failurecausedomain.Classify(true, evidence)
+	summary.Cause = string(classified.Cause)
+	summary.Evidence = make([]tracedomain.Evidence, 0, len(classified.Evidence))
+	for _, e := range classified.Evidence {
+		summary.Evidence = append(summary.Evidence, tracedomain.Evidence{Cause: string(e.Cause), Code: e.Code, Source: e.Source})
+	}
+}
+
+func toContractFindings(findings []tracedomain.Finding) []tracecontract.TraceAnalysisFinding {
+	out := make([]tracecontract.TraceAnalysisFinding, 0, len(findings))
+	for _, f := range findings {
+		finding := tracecontract.TraceAnalysisFinding{FailureClass: f.FailureClass, FailureCause: failurecontract.Cause(f.FailureCause), FailureCauseEvidence: make([]failurecontract.Evidence, 0, len(f.FailureCauseEvidence)), RecurringPattern: f.RecurringPattern, ProposedKnob: f.ProposedKnob, OverfitRisk: f.OverfitRisk, VerificationCommand: f.VerificationCommand}
+		for _, e := range f.FailureCauseEvidence {
+			finding.FailureCauseEvidence = append(finding.FailureCauseEvidence, failurecontract.Evidence{Cause: failurecontract.Cause(e.Cause), Code: e.Code, Source: e.Source})
+		}
+		out = append(out, finding)
+	}
+	return out
 }

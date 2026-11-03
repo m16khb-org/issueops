@@ -20,6 +20,17 @@ func handleProjectMCPToolCall(call MCPToolCall, deps MCPDependencies) MCPToolOut
 		return mcpToolPayload(deps.Skills(deps.Resources.IssueOpsRoot, deps.Resources.SkillName))
 	case "docs_index":
 		return mcpToolPayload(deps.Resources.DocsIndex(deps.Resources.IssueOpsRoot, deps.Resources.Version, argmap.Bool(call.Arguments, "include_history")))
+	case "api_doc_review":
+		return handleAPIDocReviewTool(call, deps)
+	case "api_doc_static_check":
+		return handleAPIDocStaticCheckTool(call, deps)
+	default:
+		return handleProjectDocsMCPToolCall(call, deps)
+	}
+}
+
+func handleProjectDocsMCPToolCall(call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
+	switch call.Name {
 	case "project_docs_route":
 		result, err := deps.ProjectDocs.Route(argmap.String(call.Arguments, "repo"), argmap.StringDefault(call.Arguments, "task", "general"))
 		return mcpPayloadOrFailure(result, err, -32602, "Project docs route failed")
@@ -33,10 +44,6 @@ func handleProjectMCPToolCall(call MCPToolCall, deps MCPDependencies) MCPToolOut
 		return handleProjectDocsReviseTool(call, deps)
 	case "project_docs_append":
 		return handleProjectDocsAppendTool(call, deps)
-	case "api_doc_review":
-		return handleAPIDocReviewTool(call, deps)
-	case "api_doc_static_check":
-		return handleAPIDocStaticCheckTool(call, deps)
 	default:
 		return MCPToolOutcome{}
 	}

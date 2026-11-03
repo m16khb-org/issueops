@@ -23,26 +23,36 @@ func DeriveWorkspaceLayout(record model.IssueOpsRecord) (WorkspaceLayout, error)
 	}
 	branch := strings.TrimSpace(record.Branch)
 	leaf := strings.ReplaceAll(branch, "/", "-")
-	if leaf == "" || leaf == "." || leaf == ".." {
+	if invalidWorktreeLeaf(leaf) {
 		return WorkspaceLayout{}, fmt.Errorf("execution branch is invalid")
 	}
-	parent := strings.TrimSpace(record.BranchPrepare.ParentWorktree)
-	delegated := record.Delegation != nil && strings.TrimSpace(record.Delegation.ParentCycleID) != ""
-	expected := ""
-	if parent != "" || delegated {
-		parentLeaf := strings.ReplaceAll(strings.TrimSpace(record.BranchPrepare.BaseBranch), "/", "-")
-		if parentLeaf == "" || parentLeaf == "." || parentLeaf == ".." {
-			return WorkspaceLayout{}, fmt.Errorf("parent execution base branch is invalid")
-		}
-		canonical := filepath.Join(record.Repo+".worktrees", parentLeaf)
-		if parent == "" {
-			parent = canonical
-		} else {
-			parent = filepath.Clean(parent)
-			expected = canonical
-		}
+	parent, expected, err := deriveParentWorktree(record, strings.TrimSpace(record.BranchPrepare.ParentWorktree))
+	if err != nil {
+		return WorkspaceLayout{}, err
 	}
 	return WorkspaceLayout{Root: filepath.Join(record.Repo+".worktrees", leaf), Branch: branch, BaseBranch: strings.TrimSpace(record.BranchPrepare.BaseBranch), BaseHead: strings.TrimSpace(record.BranchPrepare.BaseSHA), ParentWorktree: parent, ExpectedParent: expected}, nil
+}
+
+// invalidWorktreeLeaf는 worktree 디렉터리 이름으로 쓸 수 없는 값인지 판단한다.
+func invalidWorktreeLeaf(leaf string) bool {
+	return leaf == "" || leaf == "." || leaf == ".."
+}
+
+// deriveParentWorktree는 상위 worktree 경로와 canonical 기대 경로를 정한다. 상위가 없고 위임도 아니면 둘 다 비어 있다.
+func deriveParentWorktree(record model.IssueOpsRecord, parent string) (string, string, error) {
+	delegated := record.Delegation != nil && strings.TrimSpace(record.Delegation.ParentCycleID) != ""
+	if parent == "" && !delegated {
+		return parent, "", nil
+	}
+	parentLeaf := strings.ReplaceAll(strings.TrimSpace(record.BranchPrepare.BaseBranch), "/", "-")
+	if invalidWorktreeLeaf(parentLeaf) {
+		return "", "", fmt.Errorf("parent execution base branch is invalid")
+	}
+	canonical := filepath.Join(record.Repo+".worktrees", parentLeaf)
+	if parent == "" {
+		return canonical, "", nil
+	}
+	return filepath.Clean(parent), canonical, nil
 }
 
 func ValidateWorkspaceParent(layout WorkspaceLayout, matches bool) error {

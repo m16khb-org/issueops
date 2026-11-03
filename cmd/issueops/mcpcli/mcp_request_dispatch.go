@@ -51,12 +51,8 @@ func requiresCapability(spec toolAuthority, args map[string]any, transport serve
 }
 
 func authorizeMCPRequest(ctx context.Context, call MCPToolCall, deps MCPDependencies, spec toolAuthority, transport serverTransport) (context.Context, MCPDependencies, map[string]any, error) {
-	if transport == transportHTTP {
-		for _, field := range actorArguments {
-			if _, present := call.Arguments[field]; present {
-				return nil, MCPDependencies{}, nil, authorityInvalid("actor identity fields cannot accompany a capability on shared HTTP")
-			}
-		}
+	if err := rejectActorArgumentsOnHTTP(call, transport); err != nil {
+		return nil, MCPDependencies{}, nil, err
 	}
 	file := strings.TrimSpace(argmap.String(call.Arguments, argAuthorityFile))
 	if file == "" {
@@ -65,7 +61,7 @@ func authorizeMCPRequest(ctx context.Context, call MCPToolCall, deps MCPDependen
 		// service, nor how to get a file. Only HTTP reaches this branch.
 		return nil, MCPDependencies{}, nil, authorityRequired("authority_file is required for workspace tools on the shared HTTP MCP service (this connection): run `issueops mcp authorize --workspace-root <ROOT> --json` in a shell (ROOT = the repository root you pass as workspace_root) and pass the authority_file it prints")
 	}
-	if deps.RequestScope == nil || deps.Credentials == nil || deps.BindAuthority == nil || deps.ForRequest == nil {
+	if !deps.requestAuthorityConfigured() {
 		return nil, MCPDependencies{}, nil, authorityInvalid("request authority is not configured")
 	}
 	scope, err := deps.RequestScope(ctx, call.Name, call.Arguments)
@@ -91,6 +87,24 @@ func authorizeMCPRequest(ctx context.Context, call MCPToolCall, deps MCPDependen
 	}
 	requestDeps.Caller = &verified
 	return requestCtx, requestDeps, scopedArguments(call.Arguments, spec, scope), nil
+}
+
+// rejectActorArgumentsOnHTTP refuses actor identity fields next to a capability
+// on shared HTTP.
+func rejectActorArgumentsOnHTTP(call MCPToolCall, transport serverTransport) error {
+	if transport != transportHTTP {
+		return nil
+	}
+	for _, field := range actorArguments {
+		if _, present := call.Arguments[field]; present {
+			return authorityInvalid("actor identity fields cannot accompany a capability on shared HTTP")
+		}
+	}
+	return nil
+}
+
+func (deps MCPDependencies) requestAuthorityConfigured() bool {
+	return deps.RequestScope != nil && deps.Credentials != nil && deps.BindAuthority != nil && deps.ForRequest != nil
 }
 
 func authorityErrorPayload(err error) map[string]any {

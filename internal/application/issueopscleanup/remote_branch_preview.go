@@ -26,26 +26,7 @@ type RemoteBranchPreviewer struct {
 func (s RemoteBranchPreviewer) Plan(ctx context.Context, record model.IssueOpsRecord, req model.CleanupRemoteBranchRequest) (model.CleanupRemoteBranchInventory, model.CleanupRemoteBranchResult) {
 	inventory := domain.CleanupRemoteBranchTargets(record)
 	facts := domain.CleanupRemoteBranchObservation{MergeConfigured: s.VerifyMergedArtifact != nil}
-	if artifact := record.RemoteArtifact; artifact != nil {
-		if facts.MergeConfigured {
-			facts.Head, facts.MergeError = s.VerifyMergedArtifact(*artifact)
-			if facts.MergeError != nil {
-				facts.ArtifactSupersedeError = s.verifySuperseding(record, req.SupersededBy)
-				if facts.ArtifactSupersedeError == nil {
-					facts.ArtifactSupersededBy = strings.TrimSpace(req.SupersededBy)
-				}
-			}
-		}
-		key, err := remote.CleanupBranchArtifactProject(artifact.URL, artifact.Provider, artifact.Kind)
-		if err == nil {
-			var origin string
-			origin, err = s.Environment.OriginURL(ctx, record.Repo)
-			if err == nil {
-				err = remote.ValidateCleanupBranchOrigin(key, origin, artifact.Provider)
-			}
-		}
-		facts.IdentityError = err
-	}
+	s.observeArtifactFacts(ctx, record, req, &facts)
 	if inventory.Branch != "" {
 		facts.RemoteOID, facts.RemoteError = s.Environment.RemoteRef(ctx, record.Repo, inventory.Branch)
 	}
@@ -63,6 +44,32 @@ func (s RemoteBranchPreviewer) Plan(ctx context.Context, record model.IssueOpsRe
 		}
 	}
 	return domain.BuildCleanupRemoteBranchPreview(record, req, inventory, facts)
+}
+
+// observeArtifactFacts records the merged-artifact, superseding and identity evidence for the record's remote artifact.
+func (s RemoteBranchPreviewer) observeArtifactFacts(ctx context.Context, record model.IssueOpsRecord, req model.CleanupRemoteBranchRequest, facts *domain.CleanupRemoteBranchObservation) {
+	artifact := record.RemoteArtifact
+	if artifact == nil {
+		return
+	}
+	if facts.MergeConfigured {
+		facts.Head, facts.MergeError = s.VerifyMergedArtifact(*artifact)
+		if facts.MergeError != nil {
+			facts.ArtifactSupersedeError = s.verifySuperseding(record, req.SupersededBy)
+			if facts.ArtifactSupersedeError == nil {
+				facts.ArtifactSupersededBy = strings.TrimSpace(req.SupersededBy)
+			}
+		}
+	}
+	key, err := remote.CleanupBranchArtifactProject(artifact.URL, artifact.Provider, artifact.Kind)
+	if err == nil {
+		var origin string
+		origin, err = s.Environment.OriginURL(ctx, record.Repo)
+		if err == nil {
+			err = remote.ValidateCleanupBranchOrigin(key, origin, artifact.Provider)
+		}
+	}
+	facts.IdentityError = err
 }
 
 func (s RemoteBranchPreviewer) verifySuperseding(record model.IssueOpsRecord, candidate string) error {

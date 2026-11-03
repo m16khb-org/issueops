@@ -19,6 +19,30 @@ const handoffDeliveryFieldLimit = 1024
 const handoffDeliveryManualLineagePrefix = "manual-direct:"
 
 func ValidateHandoffDeliveryObservation(observation issueopscontract.IssueOpsHandoffDeliveryObservation) error {
+	if err := validateHandoffDeliveryEnvelope(observation); err != nil {
+		return err
+	}
+	createdAt, updatedAt, err := validateHandoffDeliveryTimestamps(observation.CreatedAt, observation.UpdatedAt)
+	if err != nil {
+		return err
+	}
+	if err := validateHandoffDeliveryComponents(observation); err != nil {
+		return err
+	}
+	if err := validateHandoffDeliveryStates(observation, createdAt, updatedAt); err != nil {
+		return err
+	}
+	if err := validateHandoffDeliveryConsistency(observation); err != nil {
+		return err
+	}
+	if !handoffDeliveryHasEvidence(observation) {
+		return fmt.Errorf("delivery observation requires at least one observed evidence state")
+	}
+	return nil
+}
+
+// validateHandoffDeliveryEnvelope checks the identifiers, request, and source generation.
+func validateHandoffDeliveryEnvelope(observation issueopscontract.IssueOpsHandoffDeliveryObservation) error {
 	if err := validateHandoffDeliveryIdentifiers(observation); err != nil {
 		return err
 	}
@@ -28,10 +52,11 @@ func ValidateHandoffDeliveryObservation(observation issueopscontract.IssueOpsHan
 	if observation.SourceGeneration == 0 {
 		return fmt.Errorf("delivery observation source generation is required")
 	}
-	createdAt, updatedAt, err := validateHandoffDeliveryTimestamps(observation.CreatedAt, observation.UpdatedAt)
-	if err != nil {
-		return err
-	}
+	return nil
+}
+
+// validateHandoffDeliveryComponents checks the receipt, launcher, target, and timing.
+func validateHandoffDeliveryComponents(observation issueopscontract.IssueOpsHandoffDeliveryObservation) error {
 	if err := validateHandoffDeliveryReceipt(observation.Receipt); err != nil {
 		return err
 	}
@@ -41,25 +66,18 @@ func ValidateHandoffDeliveryObservation(observation issueopscontract.IssueOpsHan
 	if err := validateHandoffDeliveryTarget(observation); err != nil {
 		return err
 	}
-	if err := validateHandoffDeliveryTiming(observation.Timing); err != nil {
-		return err
-	}
-	if err := validateHandoffDeliveryStates(observation, createdAt, updatedAt); err != nil {
-		return err
-	}
+	return validateHandoffDeliveryTiming(observation.Timing)
+}
+
+// validateHandoffDeliveryConsistency checks owner identity, claim consistency, and mode evidence.
+func validateHandoffDeliveryConsistency(observation issueopscontract.IssueOpsHandoffDeliveryObservation) error {
 	if err := validateHandoffDeliveryOwnerIdentity(observation); err != nil {
 		return err
 	}
 	if err := validateHandoffDeliveryClaimConsistency(observation); err != nil {
 		return err
 	}
-	if err := validateHandoffDeliveryModeEvidence(observation); err != nil {
-		return err
-	}
-	if !handoffDeliveryHasEvidence(observation) {
-		return fmt.Errorf("delivery observation requires at least one observed evidence state")
-	}
-	return nil
+	return validateHandoffDeliveryModeEvidence(observation)
 }
 
 // validateHandoffDeliveryIdentifiers checks the schema version, attempt/lineage/lifecycle ids and the prompt/material digests.
@@ -246,17 +264,12 @@ func validateHandoffDeliveryLauncher(launcher issueopscontract.IssueOpsHandoffDe
 	default:
 		return fmt.Errorf("delivery observation launcher is invalid")
 	}
-	for _, field := range []struct{ name, value string }{
+	if err := validateHandoffDeliveryRequiredFields([]struct{ name, value string }{
 		{"launcher name", launcher.Name},
 		{"launcher version", launcher.Version},
 		{"launcher path", launcher.Path},
-	} {
-		if strings.TrimSpace(field.value) == "" {
-			return fmt.Errorf("delivery observation %s is required", field.name)
-		}
-		if len(field.value) > handoffDeliveryFieldLimit {
-			return fmt.Errorf("delivery observation %s is too large", field.name)
-		}
+	}); err != nil {
+		return err
 	}
 	if launcher.Name == issueopscontract.IssueOpsHandoffDeliveryLauncherCmux {
 		if launcher.RuntimeID != "" || launcher.MachineID != "" || launcher.ServerID != "" {
@@ -267,11 +280,16 @@ func validateHandoffDeliveryLauncher(launcher issueopscontract.IssueOpsHandoffDe
 	if launcher.EndpointIncarnation != nil {
 		return fmt.Errorf("delivery observation endpoint incarnation is only valid for cmux")
 	}
-	for _, field := range []struct{ name, value string }{
+	return validateHandoffDeliveryRequiredFields([]struct{ name, value string }{
 		{"launcher runtime_id", launcher.RuntimeID},
 		{"launcher machine_id", launcher.MachineID},
 		{"launcher server_id", launcher.ServerID},
-	} {
+	})
+}
+
+// validateHandoffDeliveryRequiredFields는 각 필드가 비어 있지 않고 길이 한도를 넘지 않는지 순서대로 검사한다.
+func validateHandoffDeliveryRequiredFields(fields []struct{ name, value string }) error {
+	for _, field := range fields {
 		if strings.TrimSpace(field.value) == "" {
 			return fmt.Errorf("delivery observation %s is required", field.name)
 		}
@@ -402,7 +420,16 @@ func validateHandoffDeliveryState(name string, state issueopscontract.IssueOpsHa
 }
 
 func handoffDeliveryIdentityMismatch(current, next issueopscontract.IssueOpsHandoffDeliveryObservation) string {
-	requestReason := handoffDeliveryRequestIdentityMismatch(current.Request, next.Request)
+	if reason := handoffDeliveryDigestIdentityMismatch(current, next); reason != "" {
+		return reason
+	}
+	if reason := handoffDeliveryRequestIdentityMismatch(current.Request, next.Request); reason != "" {
+		return reason
+	}
+	return handoffDeliveryProvenanceMismatch(current, next)
+}
+
+func handoffDeliveryDigestIdentityMismatch(current, next issueopscontract.IssueOpsHandoffDeliveryObservation) string {
 	switch {
 	case current.AttemptID != next.AttemptID:
 		return "delivery observation attempt identity changed"
@@ -414,23 +441,31 @@ func handoffDeliveryIdentityMismatch(current, next issueopscontract.IssueOpsHand
 		return "delivery observation prompt digest changed"
 	case current.MaterialSHA256 != next.MaterialSHA256:
 		return "delivery observation material digest changed"
-	case requestReason != "":
-		return requestReason
-	case current.CreatedAt != next.CreatedAt:
-		return "delivery observation created timestamp changed"
-	case current.SourceGeneration != next.SourceGeneration:
-		return "delivery observation source generation changed"
-	case !reflect.DeepEqual(current.Launcher, next.Launcher):
-		return "delivery observation launcher identity changed"
-	case handoffDeliveryTargetMismatch(current.Launcher.Name, current.Target, next.Target) != "":
-		return handoffDeliveryTargetMismatch(current.Launcher.Name, current.Target, next.Target)
-	case handoffDeliveryTimingMismatch(current.Timing, next.Timing):
-		return "delivery observation timing changed"
-	case current.OwnerActor != nil && next.OwnerActor != nil && !reflect.DeepEqual(current.OwnerActor, next.OwnerActor):
-		return "delivery observation owner identity changed"
 	default:
 		return ""
 	}
+}
+
+func handoffDeliveryProvenanceMismatch(current, next issueopscontract.IssueOpsHandoffDeliveryObservation) string {
+	if current.CreatedAt != next.CreatedAt {
+		return "delivery observation created timestamp changed"
+	}
+	if current.SourceGeneration != next.SourceGeneration {
+		return "delivery observation source generation changed"
+	}
+	if !reflect.DeepEqual(current.Launcher, next.Launcher) {
+		return "delivery observation launcher identity changed"
+	}
+	if reason := handoffDeliveryTargetMismatch(current.Launcher.Name, current.Target, next.Target); reason != "" {
+		return reason
+	}
+	if handoffDeliveryTimingMismatch(current.Timing, next.Timing) {
+		return "delivery observation timing changed"
+	}
+	if current.OwnerActor != nil && next.OwnerActor != nil && !reflect.DeepEqual(current.OwnerActor, next.OwnerActor) {
+		return "delivery observation owner identity changed"
+	}
+	return ""
 }
 
 func validateHandoffDeliveryOwnerClaim(current issueopscontract.IssueOpsHandoffDeliveryObservation, claim issueopscontract.IssueOpsHandoffDeliveryOwnerClaim) error {
@@ -668,6 +703,24 @@ func handoffDeliveryProcessCountersChanged(current, next issueopscontract.IssueO
 }
 
 func mergeHandoffDeliveryTarget(current, next issueopscontract.IssueOpsHandoffDeliveryTarget) issueopscontract.IssueOpsHandoffDeliveryTarget {
+	current = mergeHandoffDeliveryTargetIdentity(current, next)
+	if current.PromptGeneration == nil && next.PromptGeneration != nil {
+		value := *next.PromptGeneration
+		current.PromptGeneration = &value
+	}
+	if current.BaselineWorkingSequence == nil && next.BaselineWorkingSequence != nil {
+		value := *next.BaselineWorkingSequence
+		current.BaselineWorkingSequence = &value
+	}
+	if current.Process == nil && next.Process != nil {
+		process := *next.Process
+		current.Process = &process
+	}
+	return current
+}
+
+// mergeHandoffDeliveryTargetIdentity는 비어 있는 문자열 식별자만 next 값으로 채운다. PaneID는 next가 비어 있지 않으면 덮어쓴다.
+func mergeHandoffDeliveryTargetIdentity(current, next issueopscontract.IssueOpsHandoffDeliveryTarget) issueopscontract.IssueOpsHandoffDeliveryTarget {
 	if current.WindowID == "" {
 		current.WindowID = next.WindowID
 	}
@@ -685,18 +738,6 @@ func mergeHandoffDeliveryTarget(current, next issueopscontract.IssueOpsHandoffDe
 	}
 	if current.ProcessIncarnation == "" {
 		current.ProcessIncarnation = next.ProcessIncarnation
-	}
-	if current.PromptGeneration == nil && next.PromptGeneration != nil {
-		value := *next.PromptGeneration
-		current.PromptGeneration = &value
-	}
-	if current.BaselineWorkingSequence == nil && next.BaselineWorkingSequence != nil {
-		value := *next.BaselineWorkingSequence
-		current.BaselineWorkingSequence = &value
-	}
-	if current.Process == nil && next.Process != nil {
-		process := *next.Process
-		current.Process = &process
 	}
 	return current
 }

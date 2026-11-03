@@ -53,33 +53,9 @@ func (command Command) runTraceHandoffDeliveryObserve(args []string) error {
 	if *input == "" || command.Handoff == nil {
 		return fmt.Errorf("handoff delivery observation input and adapter are required")
 	}
-	var reader io.Reader
-	if *input == "-" {
-		reader = os.Stdin
-	} else {
-		file, err := os.Open(*input)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-		reader = file
-	}
-	data, err := io.ReadAll(io.LimitReader(reader, 256*1024+1))
+	observation, err := readHandoffDeliveryObservation(*input)
 	if err != nil {
 		return err
-	}
-	if len(data) == 0 || len(data) > 256*1024 {
-		return fmt.Errorf("handoff delivery observation input is empty or oversized")
-	}
-	var observation issueopscontract.IssueOpsHandoffDeliveryObservation
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&observation); err != nil {
-		return fmt.Errorf("decode handoff delivery observation: %w", err)
-	}
-	var trailing any
-	if err := decoder.Decode(&trailing); err != io.EOF {
-		return fmt.Errorf("handoff delivery observation contains trailing JSON")
 	}
 	record, err := command.Handoff.ObserveManual(observation)
 	result := tracecontract.HandoffDeliveryObserveResult{OK: err == nil, Kind: record.Kind, AuditLogID: record.AuditLogID, Observation: record.Observation}
@@ -91,6 +67,40 @@ func (command Command) runTraceHandoffDeliveryObserve(args []string) error {
 	}
 	fmt.Printf("handoff delivery observation: %s receipt=%s\n", result.AuditLogID, result.Observation.Receipt.Location)
 	return nil
+}
+
+// readHandoffDeliveryObservation reads and strictly decodes one bounded
+// observation document from a file path or '-' for stdin.
+func readHandoffDeliveryObservation(input string) (issueopscontract.IssueOpsHandoffDeliveryObservation, error) {
+	var observation issueopscontract.IssueOpsHandoffDeliveryObservation
+	var reader io.Reader
+	if input == "-" {
+		reader = os.Stdin
+	} else {
+		file, err := os.Open(input)
+		if err != nil {
+			return observation, err
+		}
+		defer file.Close()
+		reader = file
+	}
+	data, err := io.ReadAll(io.LimitReader(reader, 256*1024+1))
+	if err != nil {
+		return observation, err
+	}
+	if len(data) == 0 || len(data) > 256*1024 {
+		return observation, fmt.Errorf("handoff delivery observation input is empty or oversized")
+	}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&observation); err != nil {
+		return observation, fmt.Errorf("decode handoff delivery observation: %w", err)
+	}
+	var trailing any
+	if err := decoder.Decode(&trailing); err != io.EOF {
+		return observation, fmt.Errorf("handoff delivery observation contains trailing JSON")
+	}
+	return observation, nil
 }
 
 func (command Command) runTraceAnalyze(args []string) error {

@@ -83,6 +83,18 @@ func token(s string) string {
 	if s == "<redacted>" || strings.Contains(s, "[REDACTED") {
 		return "redacted"
 	}
+	value := strings.Trim(tokenSlug(s), "_")
+	if value == "" {
+		value = "unknown"
+	}
+	if len(value) > 96 {
+		return value[:96]
+	}
+	return value
+}
+
+// tokenSlug는 허용 문자만 남기고 나머지 연속 구간을 '_' 하나로 접는다.
+func tokenSlug(s string) string {
 	var out strings.Builder
 	separator := false
 	for _, r := range strings.ToLower(strings.TrimSpace(s)) {
@@ -98,12 +110,5 @@ func token(s string) string {
 			separator = true
 		}
 	}
-	value := strings.Trim(out.String(), "_")
-	if value == "" {
-		value = "unknown"
-	}
-	if len(value) > 96 {
-		return value[:96]
-	}
-	return value
+	return out.String()
 }

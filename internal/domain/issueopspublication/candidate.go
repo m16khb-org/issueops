@@ -43,17 +43,27 @@ func CandidateDraftMatches(candidate contract.Candidate, expectedDraft bool) boo
 }
 
 func ValidateCandidate(request contract.ProviderCreateRequest, candidate contract.Candidate, knownURL string) error {
-	if strings.TrimSpace(candidate.ProjectKey) != request.ProjectKey || strings.TrimSpace(candidate.SourceProjectKey) != request.ProjectKey ||
-		strings.TrimSpace(candidate.HeadBranch) != request.HeadBranch || strings.TrimSpace(candidate.BaseBranch) != request.BaseBranch ||
-		strings.TrimSpace(candidate.HeadSHA) != request.ExpectedHeadSHA || CandidateTitle(candidate) != request.Title ||
-		strings.TrimSpace(candidate.BodySHA256) != BodySHA256(request.Body) || !CandidateDraftMatches(candidate, request.Draft) ||
-		!sameCanonicalSet(candidate.Labels, request.Labels) || !sameCanonicalSet(candidate.Assignees, request.Assignees) {
+	if !candidateLocationMatches(request, candidate) || !candidateContentMatches(request, candidate) {
 		return fmt.Errorf("remote reconcile candidate does not match the exact durable intent")
 	}
 	if knownURL != "" && strings.TrimSpace(candidate.URL) != knownURL {
 		return fmt.Errorf("remote reconcile candidate URL differs from the durable known URL")
 	}
 	return nil
+}
+
+// candidateLocationMatches는 후보의 프로젝트, 브랜치, 헤드 SHA가 요청과 같은지 검사한다.
+func candidateLocationMatches(request contract.ProviderCreateRequest, candidate contract.Candidate) bool {
+	return strings.TrimSpace(candidate.ProjectKey) == request.ProjectKey && strings.TrimSpace(candidate.SourceProjectKey) == request.ProjectKey &&
+		strings.TrimSpace(candidate.HeadBranch) == request.HeadBranch && strings.TrimSpace(candidate.BaseBranch) == request.BaseBranch &&
+		strings.TrimSpace(candidate.HeadSHA) == request.ExpectedHeadSHA
+}
+
+// candidateContentMatches는 후보의 제목, 본문, 초안 여부, 라벨, 담당자가 요청과 같은지 검사한다.
+func candidateContentMatches(request contract.ProviderCreateRequest, candidate contract.Candidate) bool {
+	return CandidateTitle(candidate) == request.Title &&
+		strings.TrimSpace(candidate.BodySHA256) == BodySHA256(request.Body) && CandidateDraftMatches(candidate, request.Draft) &&
+		sameCanonicalSet(candidate.Labels, request.Labels) && sameCanonicalSet(candidate.Assignees, request.Assignees)
 }
 
 func sameCanonicalSet(left, right []string) bool {

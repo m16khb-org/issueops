@@ -90,6 +90,15 @@ func Run(args []string, deps Deps) error {
 		return runClaim(args[1:], deps)
 	case "release":
 		return runRelease(args[1:], deps)
+	default:
+		return runLeaseTransition(args, deps)
+	}
+}
+
+// runLeaseTransition dispatches the subcommands that move an existing lease
+// (replace, reconcile, complete, sync-base, handoff-cmux) and rejects the rest.
+func runLeaseTransition(args []string, deps Deps) error {
+	switch args[0] {
 	case "replace":
 		return runReplace(args[1:], deps)
 	case "reconcile":
@@ -218,6 +227,12 @@ func resolveNativeActor(operation string, flags actorFlags, visited map[string]b
 		}
 		return flags.actor(), strings.TrimSpace(*flags.cwd), nil
 	}
+	return observeNativeActor(operation, observation)
+}
+
+// observeNativeActor derives the actor from the observed process environment
+// when no explicit ACTOR_FLAGS were supplied.
+func observeNativeActor(operation string, observation nativeActorObservation) (model.NativeActor, string, error) {
 	if observation.Getenv == nil || observation.Getwd == nil || observation.PID == nil || observation.ObserveAncestry == nil {
 		return model.NativeActor{}, "", fmt.Errorf("execution %s native actor observation is unavailable", operation)
 	}
@@ -698,32 +713,17 @@ func runSyncBase(args []string, deps Deps) error {
 	if done, err := parse(fs, args); done || err != nil {
 		return err
 	}
-	modes := map[string]bool{
+	mode, err := syncBaseMode(map[string]bool{
 		model.ExecutionSyncBasePreview:  *preview,
 		model.ExecutionSyncBaseApply:    *apply,
 		model.ExecutionSyncBaseFinalize: *finalize,
 		model.ExecutionSyncBaseAbort:    *abort,
+	})
+	if err == nil && mode != model.ExecutionSyncBasePreview {
+		err = requireSyncBaseProcessCWD(*actor.cwd)
 	}
-	mode := ""
-	for candidate, selected := range modes {
-		if selected {
-			if mode != "" {
-				return output(nil, *jsonOut, fmt.Errorf("execution sync-base requires exactly one mode (--preview | --apply --confirm --fingerprint SHA256 | --finalize | --abort; start with --preview)"), deps)
-			}
-			mode = candidate
-		}
-	}
-	if mode == "" {
-		return output(nil, *jsonOut, fmt.Errorf("execution sync-base requires exactly one mode (--preview | --apply --confirm --fingerprint SHA256 | --finalize | --abort; start with --preview)"), deps)
-	}
-	if mode != model.ExecutionSyncBasePreview {
-		processCWD, err := os.Getwd()
-		if err != nil {
-			return output(nil, *jsonOut, fmt.Errorf("observe execution sync-base process working directory: %w", err), deps)
-		}
-		if !sameExistingExecutionPath(processCWD, *actor.cwd) {
-			return output(nil, *jsonOut, fmt.Errorf("execution sync-base process working directory must match --cwd before mutation"), deps)
-		}
+	if err != nil {
+		return output(nil, *jsonOut, err, deps)
 	}
 	if deps.StateRoot == nil {
 		return output(nil, *jsonOut, fmt.Errorf("IssueOps state root is unavailable"), deps)
@@ -737,18 +737,55 @@ func runSyncBase(args []string, deps Deps) error {
 		Actor: actor.actor(), CWD: *actor.cwd, Confirm: *confirm, Fingerprint: *fingerprint,
 	}, model.ExecutionSyncBaseDeps{})
 	if err == nil && strings.Contains(result.NextCommand+result.AbortCommand, "$ACTOR_FLAGS") {
-		// A flagless preview: fill the follow-up with this session's whoami
-		// claim vector, the same one an agent would paste by hand.
-		cwd := strings.TrimSpace(*actor.cwd)
-		if cwd == "" {
-			cwd, _ = os.Getwd()
-		}
-		if flags := ClaimActorFlags(os.Getenv, deps.Runtime.ObserveNativeProcessAncestry, cwd); flags != "" {
-			result.NextCommand = strings.ReplaceAll(result.NextCommand, "$ACTOR_FLAGS", flags)
-			result.AbortCommand = strings.ReplaceAll(result.AbortCommand, "$ACTOR_FLAGS", flags)
-		}
+		fillSyncBaseActorFlags(&result, *actor.cwd, deps)
 	}
 	return output(result, *jsonOut, err, deps)
+}
+
+const syncBaseModeRequired = "execution sync-base requires exactly one mode (--preview | --apply --confirm --fingerprint SHA256 | --finalize | --abort; start with --preview)"
+
+// syncBaseMode returns the single selected mode; zero or several selected
+// modes are refused.
+func syncBaseMode(modes map[string]bool) (string, error) {
+	mode := ""
+	for candidate, selected := range modes {
+		if selected {
+			if mode != "" {
+				return "", errors.New(syncBaseModeRequired)
+			}
+			mode = candidate
+		}
+	}
+	if mode == "" {
+		return "", errors.New(syncBaseModeRequired)
+	}
+	return mode, nil
+}
+
+// requireSyncBaseProcessCWD refuses a mutating mode whose process working
+// directory differs from --cwd.
+func requireSyncBaseProcessCWD(cwdFlag string) error {
+	processCWD, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("observe execution sync-base process working directory: %w", err)
+	}
+	if !sameExistingExecutionPath(processCWD, cwdFlag) {
+		return fmt.Errorf("execution sync-base process working directory must match --cwd before mutation")
+	}
+	return nil
+}
+
+// fillSyncBaseActorFlags fills a flagless preview's follow-up with this
+// session's whoami claim vector, the same one an agent would paste by hand.
+func fillSyncBaseActorFlags(result *model.ExecutionSyncBaseResult, cwdFlag string, deps Deps) {
+	cwd := strings.TrimSpace(cwdFlag)
+	if cwd == "" {
+		cwd, _ = os.Getwd()
+	}
+	if flags := ClaimActorFlags(os.Getenv, deps.Runtime.ObserveNativeProcessAncestry, cwd); flags != "" {
+		result.NextCommand = strings.ReplaceAll(result.NextCommand, "$ACTOR_FLAGS", flags)
+		result.AbortCommand = strings.ReplaceAll(result.AbortCommand, "$ACTOR_FLAGS", flags)
+	}
 }
 
 func sameExistingExecutionPath(left, right string) bool {

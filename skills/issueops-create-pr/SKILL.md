@@ -116,6 +116,25 @@ body 초안을 만든 다음, `remote create-pr`을 실행하기 전에 `fluent-
 | timeout 뒤 create-pr 재실행 | duplicate PR/MR 위험이 있다 |
 | 긴 로그와 token 첨부 | durable body에 secret이 남는다 |
 
+### `remote create-pr`이 표현할 수 없는 PR
+
+`remote create-pr`은 같은 저장소의 head 브랜치만 다룬다. 포크에서 올린 head는 readback에서
+`source project`로 거부한다. label·assignee를 정확히 맞춰야 하고, 본문은 한국어 가독성 검사를
+통과해야 한다. 그래서 외부 저장소에 포크로 기여하거나, label을 달 권한이 없거나, upstream
+템플릿이 다른 언어인 PR은 이 명령으로 만들 수 없다.
+
+이런 PR은 다음 순서로 처리한다.
+
+1. 사용자에게 직접 생성(`gh pr create` 등)을 허락받는다. 허락 없이 우회하지 않는다.
+2. 생성하기 전에 `issueops decision add --kind scope`로 사유를 남긴다. 사유에는 CLI가 거부하는
+   조건(포크 head, 권한 없음, 템플릿 언어)을 적는다.
+3. 이 사이클에는 publication receipt가 생기지 않으므로 `execution complete`로 끝나지 않는다.
+   PR 생성 뒤 정리 방법은 사용자에게 묻고, 정리할 때는 `issueops-abandon`을 쓴다. worktree를
+   `git worktree remove`로 직접 지우지 않는다.
+
+hook은 이 우회를 막지 않는다. 근거는
+[2026-11-03 ADR](../../.issueops/adr/2026-11-03-no-enforcement-hook-for-out-of-cli-actions.md)에 있다.
+
 ## Canonical publication
 
 body file을 먼저 작성하고, 다음 명령은 preview로 실행한다. `--confirm` 없는

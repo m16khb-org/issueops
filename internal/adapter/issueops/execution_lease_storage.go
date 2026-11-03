@@ -46,15 +46,8 @@ func (reader LeaseWorkspaceSnapshot) Snapshot(workspace issueops.Workspace) (str
 	if err != nil {
 		return "", err
 	}
-	indexPath, err := reader.gitOutput(workspace.Root, "rev-parse", "--git-path", "index")
+	indexBytes, err := reader.workspaceIndexBytes(workspace.Root)
 	if err != nil {
-		return "", err
-	}
-	if !filepath.IsAbs(indexPath) {
-		indexPath = filepath.Join(workspace.Root, indexPath)
-	}
-	indexBytes, err := os.ReadFile(indexPath)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return "", err
 	}
 	tracked, staged, untracked, err := reader.workspaceDiffs(workspace.Root)
@@ -75,6 +68,22 @@ func (reader LeaseWorkspaceSnapshot) Snapshot(workspace issueops.Workspace) (str
 		}
 	}
 	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+// workspaceIndexBytes는 Git index 파일 내용을 읽는다. index가 없으면 nil이다.
+func (reader LeaseWorkspaceSnapshot) workspaceIndexBytes(root string) ([]byte, error) {
+	indexPath, err := reader.gitOutput(root, "rev-parse", "--git-path", "index")
+	if err != nil {
+		return nil, err
+	}
+	if !filepath.IsAbs(indexPath) {
+		indexPath = filepath.Join(root, indexPath)
+	}
+	indexBytes, err := os.ReadFile(indexPath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+	return indexBytes, nil
 }
 
 type workspaceGitIdentity struct{ branch, head, commonDir string }
@@ -273,17 +282,9 @@ func removeReplacementRuntimeFile(root, path string) error {
 }
 
 func secureMkdirAll(root, target string) error {
-	root, err := filepath.Abs(root)
+	root, relative, err := runtimeTokenRelative(root, target)
 	if err != nil {
 		return err
-	}
-	target, err = filepath.Abs(target)
-	if err != nil {
-		return err
-	}
-	relative, err := filepath.Rel(root, target)
-	if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
-		return fmt.Errorf("runtime token directory escapes the canonical worktree")
 	}
 	current := root
 	for part := range strings.SplitSeq(relative, string(filepath.Separator)) {
@@ -291,16 +292,41 @@ func secureMkdirAll(root, target string) error {
 			continue
 		}
 		current = filepath.Join(current, part)
-		info, err := os.Lstat(current)
-		if errors.Is(err, os.ErrNotExist) {
-			if err := os.Mkdir(current, 0o700); err != nil {
-				return err
-			}
-			continue
+		if err := secureMkdirStep(current); err != nil {
+			return err
 		}
-		if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
-			return fmt.Errorf("runtime token directory must contain only real directories")
-		}
+	}
+	return nil
+}
+
+// runtimeTokenRelative resolves root and target to absolute paths and returns
+// the absolute root with target's path relative to it, refusing a target that
+// escapes root.
+func runtimeTokenRelative(root, target string) (string, string, error) {
+	root, err := filepath.Abs(root)
+	if err != nil {
+		return "", "", err
+	}
+	target, err = filepath.Abs(target)
+	if err != nil {
+		return "", "", err
+	}
+	relative, err := filepath.Rel(root, target)
+	if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return "", "", fmt.Errorf("runtime token directory escapes the canonical worktree")
+	}
+	return root, relative, nil
+}
+
+// secureMkdirStep creates one missing directory component and accepts an
+// existing one only when it is a real directory.
+func secureMkdirStep(current string) error {
+	info, err := os.Lstat(current)
+	if errors.Is(err, os.ErrNotExist) {
+		return os.Mkdir(current, 0o700)
+	}
+	if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+		return fmt.Errorf("runtime token directory must contain only real directories")
 	}
 	return nil
 }

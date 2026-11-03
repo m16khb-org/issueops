@@ -37,103 +37,141 @@ func runMCPAuthorize(args []string) error {
 	}.Run(args)
 }
 
-// Run issues a pre-lease caller capability from CLI-observed native ancestry.
-// Only the managed credential path and expiry are printed, never the token.
-func (command mcpAuthorizeCommand) Run(args []string) error {
+// mcpAuthorizeOptions holds the parsed `mcp authorize` flags.
+type mcpAuthorizeOptions struct {
+	workspaceRoot string
+	host          string
+	sessionID     string
+	agentID       string
+	sessionPID    int
+	startedAt     string
+	executable    string
+	cwd           string
+	jsonOut       bool
+	args          []string
+}
+
+func parseMCPAuthorizeOptions(args []string) (mcpAuthorizeOptions, error) {
 	fs := flag.NewFlagSet("issueops mcp authorize", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
-	workspaceRoot := fs.String("workspace-root", "", "absolute repository or workspace root to authorize")
-	host := fs.String("host", "", "native host: codex, claude, omo, omp, or opencode")
-	sessionID := fs.String("session-id", "", "native session id")
-	agentID := fs.String("agent-id", "", "optional native agent id")
-	sessionPID := fs.Int("session-pid", 0, "native session process id")
-	startedAt := fs.String("session-started-at", "", "native session process start identity")
-	executable := fs.String("session-executable", "", "native session executable identity")
-	cwd := fs.String("cwd", "", "optional caller cwd; must be inside --workspace-root")
-	jsonOut := fs.Bool("json", false, "print JSON")
+	var opts mcpAuthorizeOptions
+	fs.StringVar(&opts.workspaceRoot, "workspace-root", "", "absolute repository or workspace root to authorize")
+	fs.StringVar(&opts.host, "host", "", "native host: codex, claude, omo, omp, or opencode")
+	fs.StringVar(&opts.sessionID, "session-id", "", "native session id")
+	fs.StringVar(&opts.agentID, "agent-id", "", "optional native agent id")
+	fs.IntVar(&opts.sessionPID, "session-pid", 0, "native session process id")
+	fs.StringVar(&opts.startedAt, "session-started-at", "", "native session process start identity")
+	fs.StringVar(&opts.executable, "session-executable", "", "native session executable identity")
+	fs.StringVar(&opts.cwd, "cwd", "", "optional caller cwd; must be inside --workspace-root")
+	fs.BoolVar(&opts.jsonOut, "json", false, "print JSON")
 	if err := cliflag.Parse(fs, args); err != nil {
+		return mcpAuthorizeOptions{}, err
+	}
+	opts.args = fs.Args()
+	return opts, nil
+}
+
+// fail reports a refusal. With --json every refusal is one
+// {"ok":false,"error":...} document.
+func (command mcpAuthorizeCommand) fail(jsonOut bool, err error) error {
+	if !jsonOut {
 		return err
 	}
-	// With --json every refusal is one {"ok":false,"error":...} document.
-	fail := func(err error) error {
-		if !*jsonOut {
-			return err
-		}
-		if printErr := jsonout.PrintTo(command.stdout, map[string]any{"ok": false, "error": err.Error()}); printErr != nil {
-			return printErr
-		}
-		return jsonout.Reported(err)
+	if printErr := jsonout.PrintTo(command.stdout, map[string]any{"ok": false, "error": err.Error()}); printErr != nil {
+		return printErr
 	}
-	if fs.NArg() > 0 {
-		return fail(fmt.Errorf("unexpected mcp authorize argument %q", fs.Arg(0)))
+	return jsonout.Reported(err)
+}
+
+// sessionFlagFields lists the string session flags that must come together
+// with --session-pid.
+func (opts mcpAuthorizeOptions) sessionFlagFields() []struct{ name, value string } {
+	return []struct{ name, value string }{
+		{"host", opts.host}, {"session-id", opts.sessionID}, {"session-started-at", opts.startedAt}, {"session-executable", opts.executable},
 	}
-	if strings.TrimSpace(*workspaceRoot) == "" {
-		return fail(fmt.Errorf("mcp authorize requires --workspace-root"))
-	}
-	ancestry, err := command.observe(command.pid())
-	if err != nil {
-		return fail(fmt.Errorf("observe native process ancestry: %w", err))
-	}
-	// The five session flags come together or not at all. Without them the
-	// command uses the session `execution whoami` reports; the issuer still
-	// checks that receipt against the live ancestry.
-	sessionFlags := []struct{ name, value string }{
-		{"host", *host}, {"session-id", *sessionID}, {"session-started-at", *startedAt}, {"session-executable", *executable},
-	}
-	given := 0
-	for _, field := range sessionFlags {
-		if strings.TrimSpace(field.value) != "" {
-			given++
+}
+
+// missingSessionFlags names the session flags left unset, in flag order.
+func (opts mcpAuthorizeOptions) missingSessionFlags() []string {
+	var missing []string
+	for _, field := range opts.sessionFlagFields() {
+		if strings.TrimSpace(field.value) == "" {
+			missing = append(missing, "--"+field.name)
 		}
 	}
-	if *sessionPID > 0 {
-		given++
+	if opts.sessionPID <= 0 {
+		missing = append(missing, "--session-pid")
 	}
-	switch given {
+	return missing
+}
+
+// resolveSession fills the session flags. The five session flags come
+// together or not at all. Without them the command uses the session
+// `execution whoami` reports; the issuer still checks that receipt against
+// the live ancestry.
+func (command mcpAuthorizeCommand) resolveSession(opts *mcpAuthorizeOptions, ancestry []model.NativeProcessReceipt) error {
+	missing := opts.missingSessionFlags()
+	switch len(missing) {
 	case 0:
+		return nil
+	case len(opts.sessionFlagFields()) + 1:
 		getenv := command.getenv
 		if getenv == nil {
 			getenv = os.Getenv
 		}
-		var current model.NativeProcessReceipt
-		*host, *sessionID, current, err = executioncmd.CurrentNativeSessionReceipt(getenv, command.pid(), ancestry)
+		host, sessionID, current, err := executioncmd.CurrentNativeSessionReceipt(getenv, command.pid(), ancestry)
 		if err != nil {
-			return fail(fmt.Errorf("mcp authorize: resolve the current native session (or pass --host --session-id --session-pid --session-started-at --session-executable): %w", err))
+			return fmt.Errorf("mcp authorize: resolve the current native session (or pass --host --session-id --session-pid --session-started-at --session-executable): %w", err)
 		}
-		*sessionPID, *startedAt, *executable = current.PID, current.StartedAt, current.Executable
-	case len(sessionFlags) + 1:
+		opts.host, opts.sessionID = host, sessionID
+		opts.sessionPID, opts.startedAt, opts.executable = current.PID, current.StartedAt, current.Executable
+		return nil
 	default:
-		var missing []string
-		for _, field := range sessionFlags {
-			if strings.TrimSpace(field.value) == "" {
-				missing = append(missing, "--"+field.name)
-			}
-		}
-		if *sessionPID <= 0 {
-			missing = append(missing, "--session-pid")
-		}
-		return fail(fmt.Errorf("mcp authorize: the session flags --host --session-id --session-pid --session-started-at --session-executable go together; missing %s (or omit all five to use the current session)", strings.Join(missing, " ")))
+		return fmt.Errorf("mcp authorize: the session flags --host --session-id --session-pid --session-started-at --session-executable go together; missing %s (or omit all five to use the current session)", strings.Join(missing, " "))
+	}
+}
+
+// Run issues a pre-lease caller capability from CLI-observed native ancestry.
+// Only the managed credential path and expiry are printed, never the token.
+func (command mcpAuthorizeCommand) Run(args []string) error {
+	opts, err := parseMCPAuthorizeOptions(args)
+	if err != nil {
+		return err
+	}
+	if len(opts.args) > 0 {
+		return command.fail(opts.jsonOut, fmt.Errorf("unexpected mcp authorize argument %q", opts.args[0]))
+	}
+	if strings.TrimSpace(opts.workspaceRoot) == "" {
+		return command.fail(opts.jsonOut, fmt.Errorf("mcp authorize requires --workspace-root"))
+	}
+	ancestry, err := command.observe(command.pid())
+	if err != nil {
+		return command.fail(opts.jsonOut, fmt.Errorf("observe native process ancestry: %w", err))
+	}
+	if err := command.resolveSession(&opts, ancestry); err != nil {
+		return command.fail(opts.jsonOut, err)
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
-	if strings.TrimSpace(*cwd) != "" {
-		if _, err := (authorityoutbound.ScopeResolver{}).Resolve(ctx, strings.TrimSpace(*workspaceRoot), strings.TrimSpace(*cwd)); err != nil {
-			return fail(fmt.Errorf("mcp authorize: %w", err))
+	workspaceRoot := strings.TrimSpace(opts.workspaceRoot)
+	if cwd := strings.TrimSpace(opts.cwd); cwd != "" {
+		if _, err := (authorityoutbound.ScopeResolver{}).Resolve(ctx, workspaceRoot, cwd); err != nil {
+			return command.fail(opts.jsonOut, fmt.Errorf("mcp authorize: %w", err))
 		}
 	}
 	receipt, err := command.issuer.Issue(ctx, authoritycontract.IssueRequest{
-		WorkspaceRoot: strings.TrimSpace(*workspaceRoot),
+		WorkspaceRoot: workspaceRoot,
 		Actor: model.NativeActor{
-			Host: *host, SessionID: *sessionID, AgentID: *agentID,
-			SessionProcess:  &model.NativeProcessReceipt{PID: *sessionPID, StartedAt: *startedAt, Executable: *executable},
+			Host: opts.host, SessionID: opts.sessionID, AgentID: opts.agentID,
+			SessionProcess:  &model.NativeProcessReceipt{PID: opts.sessionPID, StartedAt: opts.startedAt, Executable: opts.executable},
 			ProcessAncestry: ancestry,
 		},
 	})
 	if err != nil {
 		// The receipt has no error field; the envelope names the refusal.
-		return fail(err)
+		return command.fail(opts.jsonOut, err)
 	}
-	if *jsonOut {
+	if opts.jsonOut {
 		return jsonout.PrintTo(command.stdout, receipt)
 	}
 	_, err = fmt.Fprintf(command.stdout, "authority_file: %s\nexpires_at: %s\n", receipt.AuthorityFile, receipt.ExpiresAt)

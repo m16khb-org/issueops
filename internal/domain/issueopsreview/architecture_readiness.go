@@ -21,22 +21,37 @@ func ArchitectureReviewMissing(review *reviewcontract.ArchitectureReview) []stri
 	if len(cleanArchitectureValues(review.Verification)) == 0 {
 		missing = append(missing, "architecture_verification")
 	}
-	if review.Approved && !HasArchitectureReviewEvidence(review.Verification) {
-		missing = append(missing, "architecture_review_evidence")
-	}
-	if !review.Approved {
-		missing = append(missing, "architecture_approval")
-	}
+	missing = append(missing, architectureApprovalMissing(review)...)
 	if len(cleanArchitectureValues(review.OpenQuestions)) > 0 {
 		missing = append(missing, "architecture_open_questions")
 	}
-	if review.Approved && strings.TrimSpace(review.RefactorPlan) == "" {
+	if review.Approved {
+		missing = append(missing, architectureApprovedPlanMissing(review)...)
+	}
+	return missing
+}
+
+// architectureApprovalMissing은 승인 여부에 따라 빠진 승인 근거 키를 돌려준다.
+func architectureApprovalMissing(review *reviewcontract.ArchitectureReview) []string {
+	if !review.Approved {
+		return []string{"architecture_approval"}
+	}
+	if !HasArchitectureReviewEvidence(review.Verification) {
+		return []string{"architecture_review_evidence"}
+	}
+	return nil
+}
+
+// architectureApprovedPlanMissing은 승인된 리뷰에서 비어 있는 계획 필드를 돌려준다.
+func architectureApprovedPlanMissing(review *reviewcontract.ArchitectureReview) []string {
+	var missing []string
+	if strings.TrimSpace(review.RefactorPlan) == "" {
 		missing = append(missing, "refactor_plan")
 	}
-	if review.Approved && len(cleanArchitectureValues(review.Alternatives)) == 0 {
+	if len(cleanArchitectureValues(review.Alternatives)) == 0 {
 		missing = append(missing, "alternatives")
 	}
-	if review.Approved && len(cleanArchitectureValues(review.Risks)) == 0 {
+	if len(cleanArchitectureValues(review.Risks)) == 0 {
 		missing = append(missing, "risks")
 	}
 	return missing

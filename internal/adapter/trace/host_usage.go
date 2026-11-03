@@ -208,20 +208,7 @@ var claudeKnownEvents = map[string]bool{
 func (c *hostCollector) claude(events []hostEvent) {
 	versions := map[string]bool{}
 	for _, event := range events {
-		switch kind := text(event, "type"); kind {
-		case "system":
-			if version := text(event, "claude_code_version"); version != "" && len(version) <= maxIdentityBytes {
-				versions[version] = true
-			}
-		case "result":
-			c.claudeResult(event)
-		default:
-			if claudeKnownEvents[kind] {
-				c.intermediate = c.intermediate || carriesUsage(event)
-			} else if hasUsageKey(event) {
-				c.warn("usage_unknown_event")
-			}
-		}
+		c.claudeEvent(event, versions)
 	}
 	if len(c.observations) == 0 && c.intermediate {
 		c.warn("usage_final_missing")
@@ -231,6 +218,23 @@ func (c *hostCollector) claude(events []hostEvent) {
 			for index := range c.observations {
 				c.observations[index].Version = version
 			}
+		}
+	}
+}
+
+func (c *hostCollector) claudeEvent(event hostEvent, versions map[string]bool) {
+	switch kind := text(event, "type"); kind {
+	case "system":
+		if version := text(event, "claude_code_version"); version != "" && len(version) <= maxIdentityBytes {
+			versions[version] = true
+		}
+	case "result":
+		c.claudeResult(event)
+	default:
+		if claudeKnownEvents[kind] {
+			c.intermediate = c.intermediate || carriesUsage(event)
+		} else if hasUsageKey(event) {
+			c.warn("usage_unknown_event")
 		}
 	}
 }

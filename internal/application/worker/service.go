@@ -133,32 +133,39 @@ func (service Service) DetectStuck(ctx context.Context) (workercontract.WorkerLi
 		if readErr != nil || job.Status != workercontract.WorkerStatusRunning || service.Effects.PIDAlive(job.PID) {
 			continue
 		}
-		fixed := false
-		lockErr := service.Effects.WithLock(ctx, dir, id, func(spanCtx context.Context) error {
-			current, reReadErr := service.Effects.Read(id)
-			if reReadErr != nil {
-				return reReadErr
-			}
-			if current.Status != workercontract.WorkerStatusRunning || service.Effects.PIDAlive(current.PID) {
-				return nil
-			}
-			next, changed := workerdomain.MarkStuck(current, false, service.Effects.Now().UTC().Format(time.RFC3339Nano))
-			if !changed {
-				return nil
-			}
-			if err := service.Effects.Write(spanCtx, next); err != nil {
-				return err
-			}
-			job = next
-			fixed = true
-			return nil
-		})
-		if lockErr == nil && fixed {
-			result.Jobs = append(result.Jobs, job)
+		if next, fixed := service.markStuckLocked(ctx, dir, id); fixed {
+			result.Jobs = append(result.Jobs, next)
 		}
 	}
 	sort.Slice(result.Jobs, func(i, j int) bool { return result.Jobs[i].CreatedAt > result.Jobs[j].CreatedAt })
 	return result, nil
+}
+
+// markStuckLocked re-reads one running job under its lock and records it as
+// stuck when its PID is still dead. fixed reports whether the job was rewritten.
+func (service Service) markStuckLocked(ctx context.Context, dir, id string) (workercontract.WorkerJob, bool) {
+	var job workercontract.WorkerJob
+	fixed := false
+	lockErr := service.Effects.WithLock(ctx, dir, id, func(spanCtx context.Context) error {
+		current, reReadErr := service.Effects.Read(id)
+		if reReadErr != nil {
+			return reReadErr
+		}
+		if current.Status != workercontract.WorkerStatusRunning || service.Effects.PIDAlive(current.PID) {
+			return nil
+		}
+		next, changed := workerdomain.MarkStuck(current, false, service.Effects.Now().UTC().Format(time.RFC3339Nano))
+		if !changed {
+			return nil
+		}
+		if err := service.Effects.Write(spanCtx, next); err != nil {
+			return err
+		}
+		job = next
+		fixed = true
+		return nil
+	})
+	return job, lockErr == nil && fixed
 }
 
 func (service Service) Read(id string) (workercontract.WorkerJob, error) {

@@ -69,42 +69,20 @@ func HandleResourceRead(params json.RawMessage, config Config) (any, *ReadError)
 	if err := json.Unmarshal(params, &req); err != nil {
 		return nil, &ReadError{Code: -32602, Message: "Invalid params", Data: err.Error()}
 	}
-	if req.URI == "issueops://docs" {
-		if config.DocsIndex == nil {
-			return nil, &ReadError{Code: -32000, Message: "Cannot read docs index", Data: "docs index reader is not configured"}
-		}
-		result := config.DocsIndex(config.IssueOpsRoot, config.Version, false)
-		b, _ := json.MarshalIndent(result, "", "  ")
-		return content(req.URI, "application/json", string(b)), nil
-	}
-	if req.URI == "issueops://project-docs" {
-		result, err := config.RouteProjectDocs(".", "general")
-		if err != nil {
-			return nil, &ReadError{Code: -32000, Message: "Cannot read project docs route", Data: err.Error()}
-		}
-		b, _ := json.MarshalIndent(result, "", "  ")
-		return content(req.URI, "application/json", string(b)), nil
-	}
-	if req.URI == "issueops://project-doc-upkeep" {
+	switch req.URI {
+	case "issueops://docs":
+		return readDocsIndexResource(req.URI, config)
+	case "issueops://project-docs":
+		return readProjectDocsResource(req.URI, config)
+	case "issueops://project-doc-upkeep":
 		return content(req.URI, "text/markdown", projectDocUpkeepText()), nil
-	}
-	if req.URI == "issueops://api-doc-guidance" {
+	case "issueops://api-doc-guidance":
 		return content(req.URI, "text/markdown", apiDocGuidanceText()), nil
-	}
-	if req.URI == "issueops://command-policy" {
+	case "issueops://command-policy":
 		b, _ := json.MarshalIndent(config.CommandPolicySummary(), "", "  ")
 		return content(req.URI, "application/json", string(b)), nil
-	}
-	if req.URI == "issueops://state" {
-		if config.StateList == nil {
-			return nil, &ReadError{Code: -32000, Message: "Cannot read state index", Data: "state index reader is not configured"}
-		}
-		result, err := config.StateList()
-		if err != nil {
-			return nil, &ReadError{Code: -32000, Message: "Cannot read state index", Data: err.Error()}
-		}
-		b, _ := json.MarshalIndent(result, "", "  ")
-		return content(req.URI, "application/json", string(b)), nil
+	case "issueops://state":
+		return readStateResource(req.URI, config)
 	}
 	rel, ok := harnessFileResource(req.URI, config.SkillName)
 	if !ok {
@@ -115,6 +93,36 @@ func HandleResourceRead(params json.RawMessage, config Config) (any, *ReadError)
 		return nil, &ReadError{Code: -32000, Message: "Cannot read resource", Data: err.Error()}
 	}
 	return content(req.URI, "text/markdown", text), nil
+}
+
+func readDocsIndexResource(uri string, config Config) (any, *ReadError) {
+	if config.DocsIndex == nil {
+		return nil, &ReadError{Code: -32000, Message: "Cannot read docs index", Data: "docs index reader is not configured"}
+	}
+	result := config.DocsIndex(config.IssueOpsRoot, config.Version, false)
+	b, _ := json.MarshalIndent(result, "", "  ")
+	return content(uri, "application/json", string(b)), nil
+}
+
+func readProjectDocsResource(uri string, config Config) (any, *ReadError) {
+	result, err := config.RouteProjectDocs(".", "general")
+	if err != nil {
+		return nil, &ReadError{Code: -32000, Message: "Cannot read project docs route", Data: err.Error()}
+	}
+	b, _ := json.MarshalIndent(result, "", "  ")
+	return content(uri, "application/json", string(b)), nil
+}
+
+func readStateResource(uri string, config Config) (any, *ReadError) {
+	if config.StateList == nil {
+		return nil, &ReadError{Code: -32000, Message: "Cannot read state index", Data: "state index reader is not configured"}
+	}
+	result, err := config.StateList()
+	if err != nil {
+		return nil, &ReadError{Code: -32000, Message: "Cannot read state index", Data: err.Error()}
+	}
+	b, _ := json.MarshalIndent(result, "", "  ")
+	return content(uri, "application/json", string(b)), nil
 }
 
 func content(uri string, mimeType string, text string) map[string]any {

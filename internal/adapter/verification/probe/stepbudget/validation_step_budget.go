@@ -30,17 +30,13 @@ type StepBudgetValidationDeps struct {
 
 func (deps StepBudgetValidationDeps) withDefaults() StepBudgetValidationDeps {
 	if deps.MakeTempState == nil {
-		deps.MakeTempState = func(seed int64) (string, error) {
-			return os.MkdirTemp("", fmt.Sprintf("issueops-budget-%d-*", seed))
-		}
+		deps.MakeTempState = verification.SeededTempState("issueops-budget")
 	}
 	if deps.RemoveAll == nil {
 		deps.RemoveAll = os.RemoveAll
 	}
 	if deps.Run == nil {
-		deps.Run = func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) verifycontract.StepResult {
-			return verification.RunEnv(dir, label, timeout, stdin, env, commandOutputBudgetBytes, name, args...)
-		}
+		deps.Run = verification.BudgetedRunEnv(commandOutputBudgetBytes)
 	}
 	return deps
 }

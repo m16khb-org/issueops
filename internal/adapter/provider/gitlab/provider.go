@@ -244,7 +244,13 @@ func verifyCreatedGitLabMergeRequest(ctx context.Context, req port.IssueProvider
 
 // compareGitLabMergeRequestReadback는 읽어 온 MR이 요청과 정확히 일치하는지 순서대로 검사한다.
 func compareGitLabMergeRequestReadback(req port.IssueProviderCreatePullRequestRequest, createdURL string, got gitlabMergeRequestProjection) error {
-	assignees := gitlabAssigneeUsernames(got.Assignees)
+	if err := compareGitLabMergeRequestContent(req, createdURL, got); err != nil {
+		return err
+	}
+	return compareGitLabMergeRequestAuthority(req, got)
+}
+
+func compareGitLabMergeRequestContent(req port.IssueProviderCreatePullRequestRequest, createdURL string, got gitlabMergeRequestProjection) error {
 	if strings.TrimSpace(got.WebURL) != createdURL || strings.TrimSpace(got.SourceBranch) != strings.TrimSpace(req.HeadBranch) || strings.TrimSpace(got.TargetBranch) != strings.TrimSpace(req.BaseBranch) || got.Draft != req.Draft {
 		return fmt.Errorf("created merge request identity or draft status does not match the request")
 	}
@@ -258,6 +264,10 @@ func compareGitLabMergeRequestReadback(req port.IssueProviderCreatePullRequestRe
 	if title != strings.TrimSpace(req.Title) || got.Description != req.Body {
 		return fmt.Errorf("created merge request title or rendered body does not match the request")
 	}
+	return nil
+}
+
+func compareGitLabMergeRequestAuthority(req port.IssueProviderCreatePullRequestRequest, got gitlabMergeRequestProjection) error {
 	if strings.TrimSpace(req.ProjectKey) != "" && gitLabSourceProjectKey(req.ProjectKey, got) != strings.TrimSpace(req.ProjectKey) {
 		return fmt.Errorf("created merge request source project does not match published project authority")
 	}
@@ -267,7 +277,7 @@ func compareGitLabMergeRequestReadback(req port.IssueProviderCreatePullRequestRe
 	if !providerutil.SameStrings(req.Labels, got.Labels) {
 		return fmt.Errorf("created merge request labels do not exactly match the request")
 	}
-	if !providerutil.SameStrings(req.Assignees, assignees) {
+	if !providerutil.SameStrings(req.Assignees, gitlabAssigneeUsernames(got.Assignees)) {
 		return fmt.Errorf("created merge request assignees do not exactly match the request")
 	}
 	return nil
@@ -305,20 +315,26 @@ func (Provider) ReconcilePullRequestContext(ctx context.Context, req port.IssueP
 	}
 	result := port.IssueProviderReconcilePullRequestResult{AuthoritativeZero: len(rows) == 0}
 	for _, row := range rows {
-		parsed, _ := url.Parse(strings.TrimSpace(row.WebURL))
-		projectKey := ""
-		if parsed != nil {
-			parts := remoteparse.SplitGitLabMRPath(parsed.EscapedPath())
-			if parts.Project != "" {
-				projectKey = strings.ToLower(parsed.Host + "/" + parts.Project)
-			}
-		}
+		projectKey := gitLabMergeRequestProjectKey(row.WebURL)
 		result.Candidates = append(result.Candidates, port.IssueProviderReconcilePullRequestCandidate{
 			URL: row.WebURL, ProjectKey: projectKey, SourceProjectKey: gitLabSourceProjectKey(projectKey, row), HeadBranch: row.SourceBranch, BaseBranch: row.TargetBranch,
 			HeadSHA: row.SHA, Title: strings.TrimSpace(row.Title), BodySHA256: gitLabBodySHA256(row.Description), Labels: append([]string(nil), row.Labels...), Assignees: gitlabAssigneeUsernames(row.Assignees), Draft: row.Draft, State: strings.TrimSpace(row.State),
 		})
 	}
 	return result, nil
+}
+
+// gitLabMergeRequestProjectKey derives the lower-cased host/project key from a merge request web URL, or "" when the URL carries no project path.
+func gitLabMergeRequestProjectKey(webURL string) string {
+	parsed, _ := url.Parse(strings.TrimSpace(webURL))
+	if parsed == nil {
+		return ""
+	}
+	parts := remoteparse.SplitGitLabMRPath(parsed.EscapedPath())
+	if parts.Project == "" {
+		return ""
+	}
+	return strings.ToLower(parsed.Host + "/" + parts.Project)
 }
 
 func gitLabBodySHA256(body string) string {

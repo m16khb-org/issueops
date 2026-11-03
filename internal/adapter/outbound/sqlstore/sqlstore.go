@@ -474,10 +474,7 @@ func (d *DB) beginSpanTxAfterContention(
 ) (*sql.Tx, bool, error) {
 	maxWait := time.NewTimer(spanLockMaxWait)
 	defer maxWait.Stop()
-	retry := time.NewTimer(time.Hour)
-	if !retry.Stop() {
-		<-retry.C
-	}
+	retry := newStoppedTimer()
 	defer retry.Stop()
 
 	contended := false
@@ -518,6 +515,15 @@ func (d *DB) beginSpanTxAfterContention(
 			retryGap = nextSpanRetryGap(retryGap)
 		}
 	}
+}
+
+// newStoppedTimer returns an idle timer with its channel drained, ready for Reset.
+func newStoppedTimer() *time.Timer {
+	timer := time.NewTimer(time.Hour)
+	if !timer.Stop() {
+		<-timer.C
+	}
+	return timer
 }
 
 func nextSpanRetryGap(current time.Duration) time.Duration {

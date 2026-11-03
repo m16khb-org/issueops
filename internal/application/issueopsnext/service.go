@@ -25,8 +25,7 @@ func NewService(ports Ports) *Service { return &Service{ports: ports} }
 // Next는 현재 단계를 판정한다. 읽기만 한다 — record를 쓰지 않고, fetch도
 // provider 호출도 하지 않는다.
 func (service *Service) Next(ctx context.Context, stateRoot, cwd, id string) (issueopsnextcontract.Result, error) {
-	if service == nil || service.ports.ListCycles == nil || service.ports.ReadRecord == nil ||
-		service.ports.Completion == nil || service.ports.Now == nil {
+	if service.dependenciesMissing() {
 		return issueopsnextcontract.Result{OK: false}, fmt.Errorf("issueops next dependencies are required")
 	}
 	ports := service.ports
@@ -51,18 +50,7 @@ func (service *Service) Next(ctx context.Context, stateRoot, cwd, id string) (is
 	// 저장소 밖에서는 고를 사이클이 없다. repo 필터가 빈 값이면 목록이 모든
 	// 사이클을 돌려주므로, 여기서 먼저 끊어야 무관한 사이클을 고르지 않는다.
 	if !isRepository(ports, cwd) {
-		result.CWDRole = issueopsnextcontract.CWDRoleOther
-		result.SourceRoot = ""
-		result.Warnings = append(result.Warnings, "not a git repository: "+cwd)
-		decided := applyDecision(result, issueopsnextdomain.Classify(issueopsnextdomain.Input{}))
-		if selectedID := requestedCycleID(ports, id); selectedID != "" {
-			// "none" plus `issueops start` read as "the cycle is gone"; the
-			// cycle is only out of reach from here.
-			decided.NextCommand = "issueops status --id " + selectedID + " --json"
-			decided.NextCommandKind = commandKind(decided.NextCommand)
-			decided.Warnings = append(decided.Warnings, "run next from "+selectedID+"'s repository or worktree (status shows both)")
-		}
-		return decided, nil
+		return outsideRepository(ports, result, cwd, id), nil
 	}
 
 	if selectedID := requestedCycleID(ports, id); selectedID != "" {
@@ -74,35 +62,10 @@ func (service *Service) Next(ctx context.Context, stateRoot, cwd, id string) (is
 	}
 	selected, candidates := selectCycle(ports, listing.Entries, cwd)
 	if len(candidates) > 0 {
-		result.Stage = issueopsnextcontract.Stage{Key: issueopsnextcontract.StageAmbiguous}
-		result.Candidates = candidates
-		result.NextCommand = "issueops list --repo " + placeholder(sourceRoot, "<source_root>") + " --json"
-		if total := activeCount(listing.Entries); total > len(candidates) {
-			result.Warnings = append(result.Warnings, fmt.Sprintf("candidates are the %d most recently updated of %d active cycles; next_command lists them all", len(candidates), total))
-		}
-		result.NextCommandKind = commandKind(result.NextCommand)
-		return result, nil
+		return ambiguousResult(result, sourceRoot, candidates, listing.Entries), nil
 	}
 	if selected == nil {
-		decision := issueopsnextdomain.Classify(issueopsnextdomain.Input{SourceRoot: sourceRoot})
-		result = applyDecision(result, decision)
-		// Done cycles are not picked here (new work may start beside them),
-		// but they still await merge and cleanup: an agent with two done,
-		// unmerged cycles read "none" as finished.
-		if done := doneCycleIDs(listing.Entries); len(done) > 0 {
-			shown, more := done, ""
-			if len(done) > maxCandidates {
-				shown, more = done[:maxCandidates], fmt.Sprintf(" and %d more (issueops list --repo %s --json)", len(done)-maxCandidates, placeholder(sourceRoot, "<source_root>"))
-			}
-			result.Warnings = append(result.Warnings, fmt.Sprintf("%d cycle(s) in done still await merge and cleanup, or abandon: %s%s (issueops next --id ID --json)", len(done), strings.Join(shown, ", "), more))
-		}
-		// Probe: a damaged record has no readable repository, so the listing
-		// dropped it and next offered `start`, which opened a second cycle
-		// beside the one the user may be in the middle of.
-		if len(listing.UnreadableIDs) > 0 {
-			result.Warnings = append(result.Warnings, fmt.Sprintf("%d issueops record(s) could not be read, so their repository is unknown and one may be this repository's cycle: %s; tell the user before starting a new cycle", len(listing.UnreadableIDs), strings.Join(listing.UnreadableIDs, ", ")))
-		}
-		return result, nil
+		return noSelectionResult(result, sourceRoot, listing), nil
 	}
 	result.Selected = entryOf(*selected)
 	if selected.Invalid {
@@ -117,6 +80,68 @@ func (service *Service) Next(ctx context.Context, stateRoot, cwd, id string) (is
 	result.Selected = recordEntry(record)
 	decided := applyDecision(result, issueopsnextdomain.Classify(service.buildInput(ctx, stateRoot, sourceRoot, record, listing.Entries, actorHost, actorSession)))
 	return service.applyReviewTier(decided, record, actorHost), nil
+}
+
+// dependenciesMissing reports whether a port Next cannot run without is unset.
+func (service *Service) dependenciesMissing() bool {
+	return service == nil || service.ports.ListCycles == nil || service.ports.ReadRecord == nil ||
+		service.ports.Completion == nil || service.ports.Now == nil
+}
+
+// outsideRepository는 저장소 밖에서의 결과를 만든다.
+func outsideRepository(ports Ports, result issueopsnextcontract.Result, cwd, id string) issueopsnextcontract.Result {
+	result.CWDRole = issueopsnextcontract.CWDRoleOther
+	result.SourceRoot = ""
+	result.Warnings = append(result.Warnings, "not a git repository: "+cwd)
+	decided := applyDecision(result, issueopsnextdomain.Classify(issueopsnextdomain.Input{}))
+	if selectedID := requestedCycleID(ports, id); selectedID != "" {
+		// "none" plus `issueops start` read as "the cycle is gone"; the
+		// cycle is only out of reach from here.
+		decided.NextCommand = "issueops status --id " + selectedID + " --json"
+		decided.NextCommandKind = commandKind(decided.NextCommand)
+		decided.Warnings = append(decided.Warnings, "run next from "+selectedID+"'s repository or worktree (status shows both)")
+	}
+	return decided
+}
+
+// ambiguousResult는 후보가 여럿일 때 사용자가 --id로 고르게 하는 결과를 만든다.
+func ambiguousResult(
+	result issueopsnextcontract.Result,
+	sourceRoot string,
+	candidates []issueopsnextcontract.Entry,
+	entries []issueopsinventorycontract.ListEntry,
+) issueopsnextcontract.Result {
+	result.Stage = issueopsnextcontract.Stage{Key: issueopsnextcontract.StageAmbiguous}
+	result.Candidates = candidates
+	result.NextCommand = "issueops list --repo " + placeholder(sourceRoot, "<source_root>") + " --json"
+	if total := activeCount(entries); total > len(candidates) {
+		result.Warnings = append(result.Warnings, fmt.Sprintf("candidates are the %d most recently updated of %d active cycles; next_command lists them all", len(candidates), total))
+	}
+	result.NextCommandKind = commandKind(result.NextCommand)
+	return result
+}
+
+// noSelectionResult는 고를 사이클이 없을 때의 결과와 남은 사이클 경고를 만든다.
+func noSelectionResult(result issueopsnextcontract.Result, sourceRoot string, listing issueopsinventorycontract.ListResult) issueopsnextcontract.Result {
+	decision := issueopsnextdomain.Classify(issueopsnextdomain.Input{SourceRoot: sourceRoot})
+	result = applyDecision(result, decision)
+	// Done cycles are not picked here (new work may start beside them),
+	// but they still await merge and cleanup: an agent with two done,
+	// unmerged cycles read "none" as finished.
+	if done := doneCycleIDs(listing.Entries); len(done) > 0 {
+		shown, more := done, ""
+		if len(done) > maxCandidates {
+			shown, more = done[:maxCandidates], fmt.Sprintf(" and %d more (issueops list --repo %s --json)", len(done)-maxCandidates, placeholder(sourceRoot, "<source_root>"))
+		}
+		result.Warnings = append(result.Warnings, fmt.Sprintf("%d cycle(s) in done still await merge and cleanup, or abandon: %s%s (issueops next --id ID --json)", len(done), strings.Join(shown, ", "), more))
+	}
+	// Probe: a damaged record has no readable repository, so the listing
+	// dropped it and next offered `start`, which opened a second cycle
+	// beside the one the user may be in the middle of.
+	if len(listing.UnreadableIDs) > 0 {
+		result.Warnings = append(result.Warnings, fmt.Sprintf("%d issueops record(s) could not be read, so their repository is unknown and one may be this repository's cycle: %s; tell the user before starting a new cycle", len(listing.UnreadableIDs), strings.Join(listing.UnreadableIDs, ", ")))
+	}
+	return result
 }
 
 // actorIdentity는 native 세션 신원을 읽는다. 읽지 못하면 빈 신원과 경고를 돌려준다.
@@ -222,21 +247,7 @@ func (service *Service) buildInput(
 			return issueopsnextdomain.Readiness{Ready: readiness.Ready, Missing: readiness.Missing}
 		},
 	}
-	if ports.StagedArtifacts != nil {
-		if staged, err := ports.StagedArtifacts(stateRoot, record.ID); err == nil {
-			plan, hasPlan := staged["plan"]
-			input.StagedPlan = hasPlan
-			if hasPlan && record.Execution == nil && strings.TrimSpace(record.PlanPath) == "" {
-				input.DevilsAdvocatePlanStale = reviewdomain.DevilsAdvocateStagedPlanStale(record.DevilsAdvocateReview, plan)
-			}
-			architecture, hasArchitecture := staged["architecture"]
-			input.StagedArchitecture = hasArchitecture
-			if hasArchitecture && record.Execution == nil {
-				digest, digestErr := reviewdomain.ArchitectureDocumentDigest(architecture)
-				input.ArchitectureReviewStale = reviewdomain.ArchitectureReviewStale(record.ArchitectureReview, digest, digestErr)
-			}
-		}
-	}
+	applyStagedArtifacts(&input, ports, stateRoot, record)
 	if ports.WriterlessCommand != nil {
 		input.WriterlessRecovery = ports.WriterlessCommand(record)
 	}
@@ -246,16 +257,7 @@ func (service *Service) buildInput(
 	if record.Execution == nil {
 		input.RootConflictID = rootConflict(ports, record, sourceRoot, entries)
 	} else {
-		if ports.WorktreeState != nil {
-			present, branch, head := ports.WorktreeState(record.Execution.Workspace.Root)
-			input.WorktreePresent, input.WorktreeBranch, input.WorktreeHead = present, branch, head
-		}
-		if ports.GitOperation != nil && input.WorktreePresent {
-			input.GitOperation = ports.GitOperation(record.Execution.Workspace.Root)
-		}
-		if holder := record.Execution.Lease.Holder; holder != nil && holder.SessionProcess != nil && ports.ProcessLive != nil {
-			input.HolderLive = ports.ProcessLive(*holder.SessionProcess)
-		}
+		applyExecutionState(&input, ports, record)
 	}
 	// local readiness는 fetch가 없어도 git을 읽으므로 실제로 필요한 phase에서만
 	// 부른다: 정리·피드백, 그리고 create-pr이 strict readiness를 다시 볼 pr(아직
@@ -265,6 +267,44 @@ func (service *Service) buildInput(
 		input.Local = &issueopsnextdomain.Readiness{Ready: readiness.Ready, Missing: readiness.Missing, Warnings: readiness.Warnings}
 	}
 	return input
+}
+
+// applyStagedArtifacts fills the staged plan/architecture facts and their
+// stale flags. An unreadable staging area leaves the input untouched.
+func applyStagedArtifacts(input *issueopsnextdomain.Input, ports Ports, stateRoot string, record issueopscontract.IssueOpsRecord) {
+	if ports.StagedArtifacts == nil {
+		return
+	}
+	staged, err := ports.StagedArtifacts(stateRoot, record.ID)
+	if err != nil {
+		return
+	}
+	plan, hasPlan := staged["plan"]
+	input.StagedPlan = hasPlan
+	if hasPlan && record.Execution == nil && strings.TrimSpace(record.PlanPath) == "" {
+		input.DevilsAdvocatePlanStale = reviewdomain.DevilsAdvocateStagedPlanStale(record.DevilsAdvocateReview, plan)
+	}
+	architecture, hasArchitecture := staged["architecture"]
+	input.StagedArchitecture = hasArchitecture
+	if hasArchitecture && record.Execution == nil {
+		digest, digestErr := reviewdomain.ArchitectureDocumentDigest(architecture)
+		input.ArchitectureReviewStale = reviewdomain.ArchitectureReviewStale(record.ArchitectureReview, digest, digestErr)
+	}
+}
+
+// applyExecutionState observes the worktree, git operation and lease holder
+// of a record that already has an execution.
+func applyExecutionState(input *issueopsnextdomain.Input, ports Ports, record issueopscontract.IssueOpsRecord) {
+	if ports.WorktreeState != nil {
+		present, branch, head := ports.WorktreeState(record.Execution.Workspace.Root)
+		input.WorktreePresent, input.WorktreeBranch, input.WorktreeHead = present, branch, head
+	}
+	if ports.GitOperation != nil && input.WorktreePresent {
+		input.GitOperation = ports.GitOperation(record.Execution.Workspace.Root)
+	}
+	if holder := record.Execution.Lease.Holder; holder != nil && holder.SessionProcess != nil && ports.ProcessLive != nil {
+		input.HolderLive = ports.ProcessLive(*holder.SessionProcess)
+	}
 }
 
 // childGateMissing is the parent PR gate's child keys (the same

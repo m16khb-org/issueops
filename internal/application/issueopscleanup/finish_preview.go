@@ -53,6 +53,18 @@ func (s FinishPreviewer) Plan(ctx context.Context, record model.IssueOpsRecord, 
 		facts.DefaultBranch = remote.defaultBranch
 		facts.BaseObserved = remote.defaultBranch != ""
 	}
+	s.observeWorktree(ctx, record, req, &inventory, &facts)
+	if inventory.Branch != "" {
+		s.observeBranch(record.Repo, &inventory, &facts)
+		facts.RemoteReadable = remote.readable
+		facts.RemoteOID = remote.oids["refs/heads/"+inventory.Branch]
+	}
+	return inventory, domain.BuildCleanupFinishPreview(record, req, inventory, facts)
+}
+
+// observeWorktree는 연결된 worktree의 정체성, 존재, 점유, 청결을 관찰해
+// inventory와 facts에 기록한다.
+func (s FinishPreviewer) observeWorktree(ctx context.Context, record model.IssueOpsRecord, req model.CleanupFinishRequest, inventory *model.CleanupFinishInventory, facts *domain.CleanupFinishObservation) {
 	if linked := strings.TrimSpace(record.WorktreePath); linked != "" {
 		facts.WorktreeIdentityConflict = !s.Environment.SamePath(inventory.WorktreeRoot, linked)
 	}
@@ -72,12 +84,6 @@ func (s FinishPreviewer) Plan(ctx context.Context, record model.IssueOpsRecord, 
 		code, out := s.Environment.Git(inventory.WorktreeRoot, "status", "--porcelain=v1")
 		facts.WorktreeClean = code == 0 && strings.TrimSpace(out) == ""
 	}
-	if inventory.Branch != "" {
-		s.observeBranch(record.Repo, &inventory, &facts)
-		facts.RemoteReadable = remote.readable
-		facts.RemoteOID = remote.oids["refs/heads/"+inventory.Branch]
-	}
-	return inventory, domain.BuildCleanupFinishPreview(record, req, inventory, facts)
 }
 
 // observeBranch는 로컬 브랜치 OID를 관찰해 inventory와 facts에 기록한다.

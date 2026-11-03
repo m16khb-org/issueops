@@ -44,12 +44,8 @@ func (s *RemoteAssignService) AddAssignees(ctx context.Context, id, on string, u
 	if len(add) == 0 {
 		return result, fmt.Errorf("--add USER is required (repeatable)")
 	}
-	for _, user := range add {
-		// A leading @, +, - or ! is CLI syntax (glab reads -/! as removal),
-		// never part of a username.
-		if strings.ContainsAny(user[:1], "@+-!") || strings.ContainsAny(user, " \t") {
-			return result, fmt.Errorf("--add takes a bare username, got %q", user)
-		}
+	if err := validateAssigneeNames(add); err != nil {
+		return result, err
 	}
 	if !confirm {
 		result.OK = true
@@ -64,11 +60,29 @@ func (s *RemoteAssignService) AddAssignees(ctx context.Context, id, on string, u
 		return result, fmt.Errorf("%w; adding an assignee again is harmless, but read the %s first", err, on)
 	}
 	result.Assignees = readback
-	for _, user := range add {
-		if !slices.Contains(readback, user) {
-			return result, fmt.Errorf("assignee %q was not read back on the %s", user, on)
-		}
+	if err := requireAssigneesRead(add, readback, on); err != nil {
+		return result, err
 	}
 	result.OK, result.Assigned = true, true
 	return result, nil
+}
+
+func validateAssigneeNames(add []string) error {
+	for _, user := range add {
+		// A leading @, +, - or ! is CLI syntax (glab reads -/! as removal),
+		// never part of a username.
+		if strings.ContainsAny(user[:1], "@+-!") || strings.ContainsAny(user, " \t") {
+			return fmt.Errorf("--add takes a bare username, got %q", user)
+		}
+	}
+	return nil
+}
+
+func requireAssigneesRead(add, readback []string, on string) error {
+	for _, user := range add {
+		if !slices.Contains(readback, user) {
+			return fmt.Errorf("assignee %q was not read back on the %s", user, on)
+		}
+	}
+	return nil
 }

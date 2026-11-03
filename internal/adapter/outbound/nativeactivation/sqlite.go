@@ -94,16 +94,9 @@ func (backend Backend) Begin(ctx context.Context, request activationport.BeginRe
 		(candidate.Executable != request.TargetBinary && !strings.HasPrefix(filepath.Base(candidate.Executable), ".issueops.activate-")) {
 		return activationport.Result{}, fmt.Errorf("native activation candidate must be the canonical target or a same-directory staged binary")
 	}
-	if backend.now == nil {
-		return activationport.Result{}, fmt.Errorf("native activation clock is unavailable")
-	}
-	startedAt := backend.now().UTC().Format(time.RFC3339Nano)
-	if backend.transition == nil {
-		return activationport.Result{}, fmt.Errorf("native activation transition ID generator is unavailable")
-	}
-	transitionID, err := backend.transition()
-	if err != nil || !validTransitionID(transitionID) {
-		return activationport.Result{}, fmt.Errorf("generate native activation transition ID")
+	startedAt, transitionID, err := backend.beginTransition()
+	if err != nil {
+		return activationport.Result{}, err
 	}
 	record := pendingRecord{
 		SchemaVersion: activationdomain.RecordSchemaVersion, StateRoot: request.StateRoot, IssueOpsRoot: request.IssueOpsRoot,
@@ -280,12 +273,33 @@ func validatePaths(stateRoot, issueOpsRoot, targetBinary string) error {
 	if targetBinary != filepath.Join(issueOpsRoot, "bin", "issueops") {
 		return fmt.Errorf("native activation target must be the canonical harness binary")
 	}
+	return requireTargetNotSymlink(targetBinary)
+}
+
+// requireTargetNotSymlink는 대상 바이너리가 없거나 심볼릭 링크가 아님을 확인한다.
+func requireTargetNotSymlink(targetBinary string) error {
 	if info, err := os.Lstat(targetBinary); err == nil && info.Mode()&os.ModeSymlink != 0 {
 		return fmt.Errorf("native activation target must not be a symbolic link")
 	} else if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
 	return nil
+}
+
+// beginTransition은 pending 기록에 쓸 시작 시각과 새 transition ID를 만든다.
+func (backend Backend) beginTransition() (string, string, error) {
+	if backend.now == nil {
+		return "", "", fmt.Errorf("native activation clock is unavailable")
+	}
+	startedAt := backend.now().UTC().Format(time.RFC3339Nano)
+	if backend.transition == nil {
+		return "", "", fmt.Errorf("native activation transition ID generator is unavailable")
+	}
+	transitionID, err := backend.transition()
+	if err != nil || !validTransitionID(transitionID) {
+		return "", "", fmt.Errorf("generate native activation transition ID")
+	}
+	return startedAt, transitionID, nil
 }
 
 func (backend Backend) activeBinary() (binaryIdentity, error) {

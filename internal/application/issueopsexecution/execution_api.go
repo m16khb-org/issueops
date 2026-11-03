@@ -20,19 +20,9 @@ func (s Service) Execute(ctx context.Context, stateRoot string, req model.Execut
 		}
 		return deps.Status(ctx, stateRoot, req.ID)
 	case model.ExecutionActionClaim:
-		if deps.Claim == nil {
-			return model.ExecutionResult{OK: false, ID: req.ID}, model.ErrClaimHandlerUnavailable
-		}
-		return deps.Claim(ctx, stateRoot, model.ExecutionClaimRequest{
-			ID: req.ID, Generation: req.Generation, Actor: req.Actor, CWD: req.CWD, TokenFile: req.TokenFile, ClaimCurrentToken: req.ClaimCurrentToken,
-		})
+		return executeClaim(ctx, stateRoot, req, deps)
 	case model.ExecutionActionRelease:
-		if deps.Release == nil {
-			return model.ExecutionResult{OK: false, ID: req.ID}, model.ErrReleaseHandlerUnavailable
-		}
-		return deps.Release(ctx, stateRoot, model.ExecutionReleaseRequest{
-			ID: req.ID, Generation: req.Generation, Actor: req.Actor, CWD: req.CWD,
-		})
+		return executeRelease(ctx, stateRoot, req, deps)
 	case model.ExecutionActionReplace:
 		return executeReplace(ctx, stateRoot, req, deps)
 	case model.ExecutionActionReconcile:
@@ -40,18 +30,40 @@ func (s Service) Execute(ctx context.Context, stateRoot string, req model.Execut
 			ID: req.ID, Preview: req.Preview, Confirm: req.Confirm, Actor: req.Actor, CWD: req.CWD,
 		}, port.ExecutionReconcileDependencies{RemoteReconcile: deps.RemoteReconcile})
 	case model.ExecutionActionComplete:
-		if deps.Complete == nil {
-			return model.ExecutionResult{OK: false, ID: req.ID}, model.ErrCompleteHandlerUnavailable
-		}
-		return deps.Complete(ctx, stateRoot, model.ExecutionCompleteRequest{
-			ID: req.ID, Generation: req.Generation, Actor: req.Actor, CWD: req.CWD,
-			FinalHead: req.FinalHead, VerificationReportPath: req.VerificationReportPath,
-			Verification: req.Verification, RemoteArtifactURL: req.RemoteArtifactURL, Confirm: req.Confirm,
-		})
+		return executeComplete(ctx, stateRoot, req, deps)
 	default:
 		// Probe: an MCP call with action "bogus" named no valid action.
 		return nil, fmt.Errorf("unsupported issueops execution action %q (want prepare|status|claim|release|replace|reconcile|complete)", req.Action)
 	}
+}
+
+func executeClaim(ctx context.Context, stateRoot string, req model.ExecutionActionRequest, deps port.ExecutionActionDependencies) (any, error) {
+	if deps.Claim == nil {
+		return model.ExecutionResult{OK: false, ID: req.ID}, model.ErrClaimHandlerUnavailable
+	}
+	return deps.Claim(ctx, stateRoot, model.ExecutionClaimRequest{
+		ID: req.ID, Generation: req.Generation, Actor: req.Actor, CWD: req.CWD, TokenFile: req.TokenFile, ClaimCurrentToken: req.ClaimCurrentToken,
+	})
+}
+
+func executeRelease(ctx context.Context, stateRoot string, req model.ExecutionActionRequest, deps port.ExecutionActionDependencies) (any, error) {
+	if deps.Release == nil {
+		return model.ExecutionResult{OK: false, ID: req.ID}, model.ErrReleaseHandlerUnavailable
+	}
+	return deps.Release(ctx, stateRoot, model.ExecutionReleaseRequest{
+		ID: req.ID, Generation: req.Generation, Actor: req.Actor, CWD: req.CWD,
+	})
+}
+
+func executeComplete(ctx context.Context, stateRoot string, req model.ExecutionActionRequest, deps port.ExecutionActionDependencies) (any, error) {
+	if deps.Complete == nil {
+		return model.ExecutionResult{OK: false, ID: req.ID}, model.ErrCompleteHandlerUnavailable
+	}
+	return deps.Complete(ctx, stateRoot, model.ExecutionCompleteRequest{
+		ID: req.ID, Generation: req.Generation, Actor: req.Actor, CWD: req.CWD,
+		FinalHead: req.FinalHead, VerificationReportPath: req.VerificationReportPath,
+		Verification: req.Verification, RemoteArtifactURL: req.RemoteArtifactURL, Confirm: req.Confirm,
+	})
 }
 
 func executeReplace(ctx context.Context, stateRoot string, req model.ExecutionActionRequest, deps port.ExecutionActionDependencies) (any, error) {

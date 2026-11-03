@@ -49,43 +49,8 @@ func (r *ReseedRepository) CommitReseed(ctx context.Context, snapshot leaseapp.R
 	var result leaseapp.RepositoryResult
 	var operationErr error
 	spanErr := r.store.WithSpan(ctx, func(spanCtx context.Context) error {
-		data, ok, err := r.store.Get(recordBucket, snapshot.Record.ID)
-		if err != nil {
-			operationErr = leasecontract.Fail(leasecontract.FailurePersistence, err)
-			return operationErr
-		}
-		if !ok {
-			operationErr = leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("issueops record %s not found", snapshot.Record.ID))
-			return operationErr
-		}
-		if !bytes.Equal(data, snapshot.Raw) {
-			operationErr = fmt.Errorf("stale raw record snapshot")
-			return operationErr
-		}
-		current, err := decodeMutableLeaseRecord(snapshot.Record.ID, data)
-		if err != nil {
-			operationErr = err
-			return err
-		}
-		if current.Execution == nil {
-			operationErr = leasecontract.Fail(leasecontract.FailurePersistence, leasecontract.ErrExecutionNotPrepared)
-			return operationErr
-		}
-		if current.Execution.Lease.Generation != snapshot.Record.Lease.Generation {
-			operationErr = fmt.Errorf("stale lease generation: current=%d expected=%d", current.Execution.Lease.Generation, snapshot.Record.Lease.Generation)
-			return operationErr
-		}
-		encoded, err := recordcodec.EncodeLease(next.Stable)
-		if err != nil {
-			operationErr = leasecontract.Fail(leasecontract.FailurePersistence, err)
-			return operationErr
-		}
-		if err := r.store.Apply(spanCtx, []port.RecordMutation{{Bucket: recordBucket, ID: next.ID, Data: encoded}}); err != nil {
-			operationErr = leasecontract.Fail(leasecontract.FailurePersistence, err)
-			return operationErr
-		}
-		result = leaseapp.RepositoryResult{Record: next, Execution: *next.Stable.Execution}
-		return nil
+		result, operationErr = r.commitReseedWithinSpan(spanCtx, snapshot, next)
+		return operationErr
 	})
 	if operationErr != nil {
 		return leaseapp.RepositoryResult{}, operationErr
@@ -94,4 +59,35 @@ func (r *ReseedRepository) CommitReseed(ctx context.Context, snapshot leaseapp.R
 		return leaseapp.RepositoryResult{}, leasecontract.Fail(leasecontract.FailurePersistence, spanErr)
 	}
 	return result, nil
+}
+
+func (r *ReseedRepository) commitReseedWithinSpan(spanCtx context.Context, snapshot leaseapp.ReseedSnapshot, next leaseapp.Record) (leaseapp.RepositoryResult, error) {
+	data, ok, err := r.store.Get(recordBucket, snapshot.Record.ID)
+	if err != nil {
+		return leaseapp.RepositoryResult{}, leasecontract.Fail(leasecontract.FailurePersistence, err)
+	}
+	if !ok {
+		return leaseapp.RepositoryResult{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("issueops record %s not found", snapshot.Record.ID))
+	}
+	if !bytes.Equal(data, snapshot.Raw) {
+		return leaseapp.RepositoryResult{}, fmt.Errorf("stale raw record snapshot")
+	}
+	current, err := decodeMutableLeaseRecord(snapshot.Record.ID, data)
+	if err != nil {
+		return leaseapp.RepositoryResult{}, err
+	}
+	if current.Execution == nil {
+		return leaseapp.RepositoryResult{}, leasecontract.Fail(leasecontract.FailurePersistence, leasecontract.ErrExecutionNotPrepared)
+	}
+	if current.Execution.Lease.Generation != snapshot.Record.Lease.Generation {
+		return leaseapp.RepositoryResult{}, fmt.Errorf("stale lease generation: current=%d expected=%d", current.Execution.Lease.Generation, snapshot.Record.Lease.Generation)
+	}
+	encoded, err := recordcodec.EncodeLease(next.Stable)
+	if err != nil {
+		return leaseapp.RepositoryResult{}, leasecontract.Fail(leasecontract.FailurePersistence, err)
+	}
+	if err := r.store.Apply(spanCtx, []port.RecordMutation{{Bucket: recordBucket, ID: next.ID, Data: encoded}}); err != nil {
+		return leaseapp.RepositoryResult{}, leasecontract.Fail(leasecontract.FailurePersistence, err)
+	}
+	return leaseapp.RepositoryResult{Record: next, Execution: *next.Stable.Execution}, nil
 }

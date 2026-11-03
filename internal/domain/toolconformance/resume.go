@@ -31,7 +31,7 @@ func ResumeHostReport(previous *contract.BenchmarkReport, host, requestedModel, 
 	if matched.Version != hostVersion || matched.RequestedModel != requestedModel {
 		return nil, errInvalidPreviousEvidence()
 	}
-	if matched.AttemptCount != len(matched.Cases) || matched.CompletedEpisodes != CountCompleted(matched.Cases) || matched.AttemptCount < 0 || matched.CompletedEpisodes < 0 {
+	if !hostCountsConsistent(matched) {
 		return nil, errInvalidPreviousEvidence()
 	}
 	fixturesByID := make(map[string]contract.Fixture, len(fixtures))
@@ -46,12 +46,28 @@ func ResumeHostReport(previous *contract.BenchmarkReport, host, requestedModel, 
 	if err := validatePreviousHostStatus(matched, observedModel); err != nil {
 		return nil, err
 	}
-	for _, pair := range selected {
-		if pair.Host == host && CompletedForFixture(matched.Cases, pair.Fixture.ID) > targetCompleted {
-			return nil, errInvalidPreviousEvidence()
-		}
+	if selectionExceedsTarget(matched, host, selected, targetCompleted) {
+		return nil, errInvalidPreviousEvidence()
 	}
 	return matched, nil
+}
+
+// hostCountsConsistent reports whether the recorded attempt and completed counts match the recorded episodes.
+func hostCountsConsistent(matched *contract.HostReport) bool {
+	if matched.AttemptCount != len(matched.Cases) || matched.CompletedEpisodes != CountCompleted(matched.Cases) {
+		return false
+	}
+	return matched.AttemptCount >= 0 && matched.CompletedEpisodes >= 0
+}
+
+// selectionExceedsTarget reports whether a selected fixture of the host already has more completed episodes than the target.
+func selectionExceedsTarget(matched *contract.HostReport, host string, selected []SelectedFixturePair, targetCompleted int) bool {
+	for _, pair := range selected {
+		if pair.Host == host && CompletedForFixture(matched.Cases, pair.Fixture.ID) > targetCompleted {
+			return true
+		}
+	}
+	return false
 }
 
 func findHostReport(previous *contract.BenchmarkReport, host string) *contract.HostReport {
@@ -125,14 +141,17 @@ func validatePreviousHostStatus(matched *contract.HostReport, observedModel stri
 		matched.Evidence.LiveVerified != hasCompleted || !hasLiveAttempts || matched.ObservedModel != observedModel {
 		return errInvalidPreviousEvidence()
 	}
-	if hasCompleted {
-		if matched.Status != "supported" || strings.TrimSpace(matched.ObservedModel) == "" || matched.Evidence.StatusReason != "" {
-			return errInvalidPreviousEvidence()
-		}
-	} else if matched.Status != "unavailable" || matched.Evidence.StatusReason != "live_probe_incomplete" {
+	if !previousHostStatusConsistent(matched, hasCompleted) {
 		return errInvalidPreviousEvidence()
 	}
 	return nil
+}
+
+func previousHostStatusConsistent(matched *contract.HostReport, hasCompleted bool) bool {
+	if hasCompleted {
+		return matched.Status == "supported" && strings.TrimSpace(matched.ObservedModel) != "" && matched.Evidence.StatusReason == ""
+	}
+	return matched.Status == "unavailable" && matched.Evidence.StatusReason == "live_probe_incomplete"
 }
 
 func ValidatePreviousSelection(previous *contract.BenchmarkReport, selected []SelectedFixturePair) error {

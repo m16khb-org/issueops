@@ -13,28 +13,32 @@ func guardTargetFiles(root string, req guardcontract.GuardCheckRequest) []string
 		return cleanGuardFiles(req.Files)
 	}
 	if req.All {
-		files := []string{}
-		_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
-			if err != nil {
-				return nil
-			}
-			name := d.Name()
-			if d.IsDir() {
-				if name == ".git" || name == "bin" || name == ".cache" || name == ".codex" || name == ".codegraph" || name == ".omx" || name == ".omc" {
-					return filepath.SkipDir
-				}
-				return nil
-			}
-			rel, err := filepath.Rel(root, path)
-			if err == nil && guarddomain.RelevantPath(rel) {
-				files = append(files, filepath.ToSlash(rel))
-			}
-			return nil
-		})
-		return uniqSorted(files)
+		return uniqSorted(walkGuardFiles(root))
 	}
 	out := splitLines(gitOut(root, "diff", "--cached", "--name-only", "--diff-filter=ACMR"))
 	return cleanGuardFiles(out)
+}
+
+func walkGuardFiles(root string) []string {
+	files := []string{}
+	_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		name := d.Name()
+		if d.IsDir() {
+			if guardSkippedDir(name) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		rel, err := filepath.Rel(root, path)
+		if err == nil && guarddomain.RelevantPath(rel) {
+			files = append(files, filepath.ToSlash(rel))
+		}
+		return nil
+	})
+	return files
 }
 
 func cleanGuardFiles(files []string) []string {

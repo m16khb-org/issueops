@@ -57,6 +57,11 @@ func Run(args []string, deps Deps) error {
 	if *jsonOut {
 		return deps.PrintJSON(result)
 	}
+	printPlanText(deps, result)
+	return nil
+}
+
+func printPlanText(deps Deps, result augmentcontract.SelfAugmentPlanResult) {
 	_, _ = fmt.Fprintf(deps.Output, "%s plan: %d candidate(s), selected=%s, termination_eligible=%v\n", result.KoreanName, len(result.Candidates), deps.SelectedCandidateID(result.SelectedCandidate), result.TerminationEligible)
 	for _, goal := range result.Goals {
 		_, _ = fmt.Fprintf(deps.Output, "- %s score=%.1f target>%.1f passed=%v\n", goal.KoreanName, goal.Score, goal.TargetScore, goal.Passed)
@@ -64,7 +69,6 @@ func Run(args []string, deps Deps) error {
 	if result.SelectedCandidate != nil {
 		_, _ = fmt.Fprintf(deps.Output, "selected: %s \u2014 %s\n", result.SelectedCandidate.ID, result.SelectedCandidate.Title)
 	}
-	return nil
 }
 
 func (deps Deps) withDefaults() Deps {

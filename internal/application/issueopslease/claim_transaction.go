@@ -34,14 +34,7 @@ func ClaimWithinTransaction(ctx context.Context, transaction ClaimTransaction, r
 	if err := leasedomain.ValidateClaim(lease, claim); err != nil {
 		return RepositoryResult{}, err
 	}
-	if (request.TokenFile == "") == !request.ClaimCurrentToken {
-		return RepositoryResult{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("exactly one claim token selector is required"))
-	}
-	tokenPath := request.TokenFile
-	if request.ClaimCurrentToken {
-		tokenPath = transaction.CurrentTokenPath(before.Stable)
-	}
-	token, err := transaction.ReadToken(before.Stable, tokenPath)
+	tokenPath, token, err := readClaimToken(transaction, before.Stable, request)
 	if err != nil {
 		return RepositoryResult{}, err
 	}
@@ -65,6 +58,22 @@ func ClaimWithinTransaction(ctx context.Context, transaction ClaimTransaction, r
 	}
 	transaction.RemoveToken(tokenPath)
 	return result, nil
+}
+
+// readClaimToken selects the claim token path from the request and reads it through the transaction.
+func readClaimToken(transaction ClaimTransaction, record leasecontract.Record, request ClaimRepositoryRequest) (string, string, error) {
+	if (request.TokenFile == "") == !request.ClaimCurrentToken {
+		return "", "", leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("exactly one claim token selector is required"))
+	}
+	tokenPath := request.TokenFile
+	if request.ClaimCurrentToken {
+		tokenPath = transaction.CurrentTokenPath(record)
+	}
+	token, err := transaction.ReadToken(record, tokenPath)
+	if err != nil {
+		return "", "", err
+	}
+	return tokenPath, token, nil
 }
 
 func claimContractActor(actor leasedomain.Actor) *leasecontract.Actor {

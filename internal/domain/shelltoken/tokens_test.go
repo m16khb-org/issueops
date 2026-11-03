@@ -132,6 +132,20 @@ func TestHasShellExpansion(t *testing.T) {
 		`echo \$HOME`:                      false,
 		`go test -run 'TestX$' ./...`:      false,
 		`echo cost 5$`:                     false,
+		`echo $`:                           false,
+		`echo $_x`:                         true,
+		`echo $é`:                          true,
+		`echo $1`:                          false,
+		`echo $ HOME`:                      false,
+		`echo "'$HOME'"`:                   true,
+		`echo '"' $HOME`:                   true,
+		`echo '$HOME' $(x)`:                true,
+		`echo "a" $HOME`:                   true,
+		`echo "\"$HOME"`:                   true,
+		`echo "\$HOME"`:                    false,
+		`echo '\' $HOME`:                   true,
+		`echo '\$HOME'`:                    false,
+		`echo "$HOME`:                      true,
 	} {
 		if got := HasShellExpansion(command); got != want {
 			t.Errorf("HasShellExpansion(%q) = %v, want %v", command, got, want)

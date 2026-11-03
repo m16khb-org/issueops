@@ -39,13 +39,7 @@ type CheckDecision struct {
 }
 
 func DecideCheck(expect, stdout, stderr string, exitCode int, timedOut bool) CheckDecision {
-	output := strings.TrimRight(stdout, "\n")
-	if stderr != "" {
-		if output != "" {
-			output += "\n"
-		}
-		output += strings.TrimRight(stderr, "\n")
-	}
+	output := combinedOutput(stdout, stderr)
 	evidence := EvidenceTail(output, 200)
 	decision := CheckDecision{Evidence: evidence}
 	switch {
@@ -56,24 +50,7 @@ func DecideCheck(expect, stdout, stderr string, exitCode int, timedOut bool) Che
 	case exitCode != 0:
 		decision.Error = fmt.Sprintf("exit code %d: %s", exitCode, evidence)
 	case strings.TrimSpace(expect) != "" && !ExpectMatches(expect, output):
-		decision.Error = "expect not matched: " + evidence
-		if truncatedOutput(stdout) || truncatedOutput(stderr) {
-			// Probe: a summary line after 32 KiB of output was cut off, so an
-			// EXPECT on it could never match.
-			decision.Error += " (the output was truncated: only its first and last lines were kept, so a line in between is lost; wrap the command so it prints one short result line, as gates-ledger shows)"
-		} else if trimmed := strings.TrimSpace(expect); !strings.HasPrefix(trimmed, "/") && literalLooksLikeRegex(trimmed) {
-			decision.Error += " (EXPECT is matched as a literal line; write /" + trimmed + "/ for a regex)"
-		} else if line, ok := lineStartingWith(output, trimmed); ok && !strings.HasPrefix(trimmed, "/") {
-			// QA: `EXPECT: PASS` against "PASS: ..." read as a substring
-			// match; a prefix only counts when a blank follows it. The
-			// suggested regex carries m: without it ^ anchors the whole
-			// output, and a cargo test summary line is never first (Rust QA).
-			decision.Error += fmt.Sprintf(" (the line %q starts with EXPECT but a prefix matches only when a space or tab follows; write the whole line or /^%s/m)", line, regexp.QuoteMeta(trimmed))
-		} else if line, ok := lineContaining(output, trimmed); ok && trimmed != "" && !strings.HasPrefix(trimmed, "/") {
-			// QA: `EXPECT: mod` against grep -n's "5:Operations: ... mod"
-			// was read as a substring match.
-			decision.Error += fmt.Sprintf(" (the line %q contains EXPECT mid-line, but a literal EXPECT matches a whole line or a line prefix followed by a space; write /%s/ to match anywhere)", line, regexp.QuoteMeta(trimmed))
-		}
+		decision.Error = "expect not matched: " + evidence + expectMismatchHint(expect, output, stdout, stderr)
 	default:
 		decision.Passed = true
 		// QA: EXPECT /--- PASS: TestReverse/ passed with evidence "PASS | ok
@@ -83,6 +60,45 @@ func DecideCheck(expect, stdout, stderr string, exitCode int, timedOut bool) Che
 		}
 	}
 	return decision
+}
+
+// combinedOutput joins stdout and stderr with trailing newlines trimmed.
+func combinedOutput(stdout, stderr string) string {
+	output := strings.TrimRight(stdout, "\n")
+	if stderr != "" {
+		if output != "" {
+			output += "\n"
+		}
+		output += strings.TrimRight(stderr, "\n")
+	}
+	return output
+}
+
+// expectMismatchHint returns the suffix that explains why an unmatched EXPECT
+// missed, or "" when no known cause applies.
+func expectMismatchHint(expect, output, stdout, stderr string) string {
+	if truncatedOutput(stdout) || truncatedOutput(stderr) {
+		// Probe: a summary line after 32 KiB of output was cut off, so an
+		// EXPECT on it could never match.
+		return " (the output was truncated: only its first and last lines were kept, so a line in between is lost; wrap the command so it prints one short result line, as gates-ledger shows)"
+	}
+	trimmed := strings.TrimSpace(expect)
+	if !strings.HasPrefix(trimmed, "/") && literalLooksLikeRegex(trimmed) {
+		return " (EXPECT is matched as a literal line; write /" + trimmed + "/ for a regex)"
+	}
+	if line, ok := lineStartingWith(output, trimmed); ok && !strings.HasPrefix(trimmed, "/") {
+		// QA: `EXPECT: PASS` against "PASS: ..." read as a substring
+		// match; a prefix only counts when a blank follows it. The
+		// suggested regex carries m: without it ^ anchors the whole
+		// output, and a cargo test summary line is never first (Rust QA).
+		return fmt.Sprintf(" (the line %q starts with EXPECT but a prefix matches only when a space or tab follows; write the whole line or /^%s/m)", line, regexp.QuoteMeta(trimmed))
+	}
+	if line, ok := lineContaining(output, trimmed); ok && trimmed != "" && !strings.HasPrefix(trimmed, "/") {
+		// QA: `EXPECT: mod` against grep -n's "5:Operations: ... mod"
+		// was read as a substring match.
+		return fmt.Sprintf(" (the line %q contains EXPECT mid-line, but a literal EXPECT matches a whole line or a line prefix followed by a space; write /%s/ to match anywhere)", line, regexp.QuoteMeta(trimmed))
+	}
+	return ""
 }
 
 func lineStartingWith(output, prefix string) (string, bool) {

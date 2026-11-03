@@ -162,6 +162,26 @@ func countGatewayFDsBatch(ports []int, run func(args ...string) ([]byte, error))
 		return results
 	}
 	listeners := parseLsofListeners(listenOut)
+	pidByPort, pids := resolveGatewayListenerPIDs(ports, listeners, results)
+	if len(pids) == 0 {
+		return results
+	}
+	fdOut, err := run("-p", strings.Join(pids, ","), "-Fpf")
+	if err != nil && len(fdOut) == 0 {
+		for port, pid := range pidByPort {
+			results[port] = GatewayFDResult{Err: fmt.Errorf("fd listing failed for pid %d: %w", pid, err)}
+		}
+		return results
+	}
+	counts := parseLsofFDCounts(fdOut)
+	recordGatewayFDCounts(pidByPort, counts, results)
+	return results
+}
+
+// resolveGatewayListenerPIDs records a "no listener" result for each port
+// without a listener and returns the port-to-pid map plus the de-duplicated
+// pid list in first-seen port order.
+func resolveGatewayListenerPIDs(ports []int, listeners map[int]int, results map[int]GatewayFDResult) (map[int]int, []string) {
 	pidByPort := make(map[int]int, len(ports))
 	pidSeen := map[int]bool{}
 	pids := []string{}
@@ -177,17 +197,12 @@ func countGatewayFDsBatch(ports []int, run func(args ...string) ([]byte, error))
 			pids = append(pids, strconv.Itoa(pid))
 		}
 	}
-	if len(pids) == 0 {
-		return results
-	}
-	fdOut, err := run("-p", strings.Join(pids, ","), "-Fpf")
-	if err != nil && len(fdOut) == 0 {
-		for port, pid := range pidByPort {
-			results[port] = GatewayFDResult{Err: fmt.Errorf("fd listing failed for pid %d: %w", pid, err)}
-		}
-		return results
-	}
-	counts := parseLsofFDCounts(fdOut)
+	return pidByPort, pids
+}
+
+// recordGatewayFDCounts stores each port's FD count, or an error result when
+// lsof reported no records for its listener pid.
+func recordGatewayFDCounts(pidByPort, counts map[int]int, results map[int]GatewayFDResult) {
 	for port, pid := range pidByPort {
 		count, ok := counts[pid]
 		if !ok {
@@ -196,7 +211,6 @@ func countGatewayFDsBatch(ports []int, run func(args ...string) ([]byte, error))
 		}
 		results[port] = GatewayFDResult{Count: count}
 	}
-	return results
 }
 
 // parseLsofListeners maps each listening port to the first pid lsof reported

@@ -140,21 +140,36 @@ func HasShellExpansion(command string) bool {
 			continue
 		}
 		if r == '\'' || r == '"' {
-			if quote == r {
-				quote = 0
-			} else if quote == 0 {
-				quote = r
-			}
+			quote = toggleQuote(quote, r)
 			continue
 		}
-		if r == '$' && i+1 < len(runes) {
-			next := runes[i+1]
-			if next == '(' || next == '{' || next == '_' || unicode.IsLetter(next) {
-				return true
-			}
+		if r == '$' && startsExpansion(runes, i) {
+			return true
 		}
 	}
 	return false
+}
+
+// toggleQuote closes quote when r matches it and opens r when no quote is
+// open; inside the other quote kind r is literal.
+func toggleQuote(quote, r rune) rune {
+	if quote == r {
+		return 0
+	}
+	if quote == 0 {
+		return r
+	}
+	return quote
+}
+
+// startsExpansion reports whether the `$` at runes[i] is followed by `(`, `{`,
+// or a name start.
+func startsExpansion(runes []rune, i int) bool {
+	if i+1 >= len(runes) {
+		return false
+	}
+	next := runes[i+1]
+	return next == '(' || next == '{' || next == '_' || unicode.IsLetter(next)
 }
 
 func isShellBlank(r rune) bool {

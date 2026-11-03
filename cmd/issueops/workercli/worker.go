@@ -10,6 +10,7 @@ import (
 	"issueops/cmd/issueops/cliflag"
 	"issueops/cmd/issueops/jsonout"
 	policy "issueops/internal/contract/policy"
+	workercontract "issueops/internal/contract/worker"
 )
 
 func (command Command) Run(args []string) error {
@@ -49,7 +50,19 @@ func workerUsage() {
 `)
 }
 
-func (command Command) RunReadOnly(args []string) error {
+// readOnlyOptions holds the parsed `worker run` flags and trailing argv.
+type readOnlyOptions struct {
+	kind          string
+	payload       string
+	workspaceRoot string
+	cwd           string
+	timeout       time.Duration
+	envAllowlist  string
+	jsonOut       bool
+	argv          []string
+}
+
+func parseReadOnlyOptions(args []string) (readOnlyOptions, error) {
 	fs := flag.NewFlagSet("worker run", flag.ContinueOnError)
 	kind := fs.String("kind", "read-only-command", "job kind")
 	payload := fs.String("payload", "", "redacted job payload")
@@ -60,65 +73,91 @@ func (command Command) RunReadOnly(args []string) error {
 	envAllowlist := fs.String("env", "", "comma-separated environment variable allowlist")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if err := cliflag.Parse(fs, args); err != nil {
-		return err
+		return readOnlyOptions{}, err
 	}
 	if !*readOnly {
-		return fmt.Errorf("worker run currently requires --read-only")
+		return readOnlyOptions{}, fmt.Errorf("worker run currently requires --read-only")
 	}
 	if fs.NArg() == 0 {
 		// Probe: an empty argv still recorded a failed job (argv_required).
-		return fmt.Errorf("worker run --read-only needs the command after the flags, e.g. issueops worker run --read-only --json -- git status --short")
+		return readOnlyOptions{}, fmt.Errorf("worker run --read-only needs the command after the flags, e.g. issueops worker run --read-only --json -- git status --short")
 	}
-	root := *workspaceRoot
+	return readOnlyOptions{
+		kind: *kind, payload: *payload, workspaceRoot: *workspaceRoot, cwd: *cwd,
+		timeout: *timeout, envAllowlist: *envAllowlist, jsonOut: *jsonOut, argv: fs.Args(),
+	}, nil
+}
+
+func (command Command) readOnlyRequest(opts readOnlyOptions) policy.CommandPolicyRequest {
+	root := opts.workspaceRoot
 	if root == "" {
 		root = command.ResolveTarget("")
 	}
-	workDir := *cwd
+	workDir := opts.cwd
 	if workDir == "" {
 		workDir = root
 	}
-	req := policy.CommandPolicyRequest{
+	return policy.CommandPolicyRequest{
 		WorkspaceRoot: root,
 		CWD:           workDir,
-		Argv:          fs.Args(),
-		Timeout:       timeout.String(),
-		EnvAllowlist:  splitCSV(*envAllowlist),
+		Argv:          opts.argv,
+		Timeout:       opts.timeout.String(),
+		EnvAllowlist:  splitCSV(opts.envAllowlist),
 	}
-	job, err := command.Service.RunReadOnly(context.Background(), *kind, *payload, req)
-	if *jsonOut {
-		if err != nil {
-			return jsonout.PrintResultError(os.Stdout, job, err)
-		}
-		if printErr := printJSON(job); printErr != nil {
-			return printErr
-		}
+}
+
+// printReadOnlyJob renders a successful job: the JSON document, or the
+// summary line plus the captured stdout/stderr.
+func printReadOnlyJob(job workercontract.WorkerJob, jsonOut bool) error {
+	if jsonOut {
+		return printJSON(job)
 	}
-	if err == nil && !*jsonOut {
-		fmt.Printf("%s %s exit=%d\n", job.ID, job.Status, job.Result.ExitCode)
-		if job.Result.Stdout != "" {
-			fmt.Print(job.Result.Stdout)
-		}
-		if job.Result.Stderr != "" {
-			fmt.Fprint(os.Stderr, job.Result.Stderr)
-		}
+	fmt.Printf("%s %s exit=%d\n", job.ID, job.Status, job.Result.ExitCode)
+	if job.Result.Stdout != "" {
+		fmt.Print(job.Result.Stdout)
 	}
+	if job.Result.Stderr != "" {
+		fmt.Fprint(os.Stderr, job.Result.Stderr)
+	}
+	return nil
+}
+
+// readOnlyOutcome maps a printed job to the command's exit error. With
+// --json the printed job already carries the refusal, so the error is only
+// marked reported.
+func readOnlyOutcome(job workercontract.WorkerJob, jsonOut bool) error {
+	if job.Result == nil {
+		return nil
+	}
+	var failure error
+	switch {
+	case !job.Result.Policy.Allowed:
+		failure = policy.PolicyDeniedError{Reasons: job.Result.Policy.DenyReasons}
+	case job.Result.ExitCode != 0:
+		failure = fmt.Errorf("worker read-only command exited %d", job.Result.ExitCode)
+	default:
+		return nil
+	}
+	if jsonOut {
+		return jsonout.Reported(failure)
+	}
+	return failure
+}
+
+func (command Command) RunReadOnly(args []string) error {
+	opts, err := parseReadOnlyOptions(args)
 	if err != nil {
 		return err
 	}
-	if job.Result != nil && !job.Result.Policy.Allowed {
-		denied := error(policy.PolicyDeniedError{Reasons: job.Result.Policy.DenyReasons})
-		if *jsonOut {
-			return jsonout.Reported(denied)
+	job, err := command.Service.RunReadOnly(context.Background(), opts.kind, opts.payload, command.readOnlyRequest(opts))
+	if err != nil {
+		if opts.jsonOut {
+			return jsonout.PrintResultError(os.Stdout, job, err)
 		}
-		return denied
+		return err
 	}
-	if job.Result != nil && job.Result.ExitCode != 0 {
-		exited := fmt.Errorf("worker read-only command exited %d", job.Result.ExitCode)
-		if *jsonOut {
-			// The printed job carries the exit code.
-			return jsonout.Reported(exited)
-		}
-		return exited
+	if printErr := printReadOnlyJob(job, opts.jsonOut); printErr != nil {
+		return printErr
 	}
-	return nil
+	return readOnlyOutcome(job, opts.jsonOut)
 }

@@ -127,8 +127,7 @@ func ProjectTypes(root string, languages, frameworks []string, monorepo bool, ad
 	}
 	frontend := containsAnyString(frameworks, "React", "Next.js", "Vite", "Vue", "Svelte", "Angular", "Nuxt", "Astro")
 	desktopClient := containsAnyString(frameworks, "Tauri", "Electron")
-	backend := containsAnyString(frameworks, "Express", "NestJS", "Fastify", "Gin", "chi", "Echo") || containsAnyString(languages, "Go")
-	cli := containsAnyString(frameworks, "Cobra")
+	backend := isBackendProject(languages, frameworks)
 	if frontend {
 		addType("frontend", "")
 	}
@@ -141,13 +140,23 @@ func ProjectTypes(root string, languages, frameworks []string, monorepo bool, ad
 	if frontend && backend {
 		addType("fullstack", "")
 	}
-	if cli || dirExists(filepath.Join(root, "cmd")) {
+	if hasCLIEntrypoint(root, frameworks) {
 		addType("cli", "cmd/")
 	}
 	if len(types) == 0 && len(languages) > 0 {
 		addType("library", "")
 	}
 	return types
+}
+
+// isBackendProject reports whether the detected frameworks or languages indicate a backend service.
+func isBackendProject(languages, frameworks []string) bool {
+	return containsAnyString(frameworks, "Express", "NestJS", "Fastify", "Gin", "chi", "Echo") || containsAnyString(languages, "Go")
+}
+
+// hasCLIEntrypoint reports whether the project uses a CLI framework or has a top-level cmd directory.
+func hasCLIEntrypoint(root string, frameworks []string) bool {
+	return containsAnyString(frameworks, "Cobra") || dirExists(filepath.Join(root, "cmd"))
 }
 
 func appendUnique(values []string, value string) []string {

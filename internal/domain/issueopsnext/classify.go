@@ -153,8 +153,7 @@ func classifyBlockedExecution(in Input, decision Decision, index int) (Decision,
 		// the write (QA: a killed create-pr), take the lease over first; the
 		// new holder reconciles the pending intent it inherits.
 		lease := execution.Lease
-		if (lease.Status == issueopsnextcontract.LeaseStatusActive && lease.Holder != nil && !holderIsSelf(in) && !live(in.HolderLive)) ||
-			lease.Status == issueopsnextcontract.LeaseStatusRevoking {
+		if writerlessLease(in) {
 			decision.Stage = stage(issueopsnextcontract.StageTakeover, index)
 			decision.NextCommand = takeoverCommand(in)
 			return decision, true
@@ -187,37 +186,57 @@ func classifyLease(in Input, decision Decision, index int) (Decision, bool) {
 	}
 	id := in.Record.ID
 	lease := execution.Lease
-	holderOther := lease.Holder != nil && !holderIsSelf(in)
-	if lease.Status == issueopsnextcontract.LeaseStatusActive && holderOther && live(in.HolderLive) {
+	switch {
+	case lease.Status == issueopsnextcontract.LeaseStatusActive && holderIsOther(in) && live(in.HolderLive):
 		decision.Stage = stage(issueopsnextcontract.StageBlockedHolderLive, index)
 		decision.NextCommand = "issueops execution status --id " + id + " --json"
 		return decision, true
-	}
-	if (lease.Status == issueopsnextcontract.LeaseStatusActive && holderOther && !live(in.HolderLive)) ||
-		lease.Status == issueopsnextcontract.LeaseStatusRevoking {
+	case writerlessLease(in):
 		decision.Stage = stage(issueopsnextcontract.StageTakeover, index)
 		decision.NextCommand = takeoverCommand(in)
 		return decision, true
-	}
-	if (lease.Status == issueopsnextcontract.LeaseStatusClaimable || lease.Status == issueopsnextcontract.LeaseStatusReleased) &&
-		execution.Completion == nil {
+	case (lease.Status == issueopsnextcontract.LeaseStatusClaimable || lease.Status == issueopsnextcontract.LeaseStatusReleased) &&
+		execution.Completion == nil:
 		decision.Stage = stage(issueopsnextcontract.StageClaim, index)
-		// The chain's first command, not a status read that only returns it.
-		decision.NextCommand = issueopsdomain.ReplacementPreviewCommand(id, lease.Generation)
-		if lease.Status == issueopsnextcontract.LeaseStatusClaimable {
-			decision.NextCommand = issueopsdomain.ReplacementClaimCommand(id, lease.Generation)
-			// The actor-free claim works only from the canonical worktree, and
-			// QA agents distrusted an "exact" claim without flags. With an
-			// observable receipt, pin this session's vector and the worktree.
-			if root := strings.TrimSpace(execution.Workspace.Root); root != "" && in.ClaimActorFlags != nil {
-				if flags := in.ClaimActorFlags(root); flags != "" {
-					decision.NextCommand += " " + flags
-				}
-			}
-		}
+		decision.NextCommand = claimCommand(in)
 		return decision, true
 	}
 	return decision, false
+}
+
+// holderIsOther는 lease에 자기가 아닌 holder가 기록돼 있는 상태다. 호출자는
+// execution이 있음을 보장한다.
+func holderIsOther(in Input) bool {
+	return in.Record.Execution.Lease.Holder != nil && !holderIsSelf(in)
+}
+
+// writerlessLease는 쓰기 주체가 없어 takeover 체인으로 가야 하는 lease다:
+// 죽은 다른 holder가 쥔 active이거나 revoking. 호출자는 execution이 있음을 보장한다.
+func writerlessLease(in Input) bool {
+	status := in.Record.Execution.Lease.Status
+	return (status == issueopsnextcontract.LeaseStatusActive && holderIsOther(in) && !live(in.HolderLive)) ||
+		status == issueopsnextcontract.LeaseStatusRevoking
+}
+
+// claimCommand는 claim 단계의 첫 명령이다. 호출자는 execution이 있음을 보장한다.
+func claimCommand(in Input) string {
+	execution := in.Record.Execution
+	lease := execution.Lease
+	id := in.Record.ID
+	// The chain's first command, not a status read that only returns it.
+	if lease.Status != issueopsnextcontract.LeaseStatusClaimable {
+		return issueopsdomain.ReplacementPreviewCommand(id, lease.Generation)
+	}
+	command := issueopsdomain.ReplacementClaimCommand(id, lease.Generation)
+	// The actor-free claim works only from the canonical worktree, and
+	// QA agents distrusted an "exact" claim without flags. With an
+	// observable receipt, pin this session's vector and the worktree.
+	if root := strings.TrimSpace(execution.Workspace.Root); root != "" && in.ClaimActorFlags != nil {
+		if flags := in.ClaimActorFlags(root); flags != "" {
+			command += " " + flags
+		}
+	}
+	return command
 }
 
 // unknownDecision은 어느 규칙도 맞지 않을 때의 status 안내다.
@@ -769,8 +788,7 @@ func exits(in Input) issueopsnextcontract.Exits {
 		out.PauseCommand = "issueops execution release --id " + id +
 			" --generation " + generation + " $ACTOR_FLAGS"
 	}
-	if (lease.Status == issueopsnextcontract.LeaseStatusActive && lease.Holder != nil && !holderIsSelf(in) && !live(in.HolderLive)) ||
-		lease.Status == issueopsnextcontract.LeaseStatusRevoking {
+	if writerlessLease(in) {
 		out.TakeoverCommand = "issueops execution replace --id " + id +
 			" --expected-generation " + generation + " --preview"
 	}
@@ -784,61 +802,116 @@ func warnings(in Input) []string {
 	if in.Local != nil && len(in.Local.Warnings) > 0 {
 		out = append(out, in.Local.Warnings...)
 	}
-	// QA (killed create-child): next kept naming the plan stage while a
-	// child create stayed pending, and create-child refuses until it settles.
+	out = append(out, childCreateWarnings(in)...)
+	if in.Record.Execution == nil {
+		return out
+	}
+	for _, rule := range worktreeWarningRules {
+		if warning := rule(in); warning != "" {
+			out = append(out, warning)
+		}
+	}
+	return out
+}
+
+// childCreateWarnings는 아직 정착하지 않은 child create 작업마다 경고 하나를 낸다.
+// QA (killed create-child): next kept naming the plan stage while a
+// child create stayed pending, and create-child refuses until it settles.
+func childCreateWarnings(in Input) []string {
+	var out []string
 	for _, op := range in.Record.ChildCreateOperations {
 		if issueCreateUnsettled(&op.IssueOpsIssueCreateIntent) {
 			out = append(out, "child create "+op.OperationID+" is unsettled ("+op.Status+"); before any create-child run: issueops remote reconcile-child --id "+in.Record.ID+" --operation-id "+op.OperationID+" $RECORD_ACTOR_FLAGS --json")
 		}
 	}
+	return out
+}
+
+// worktreeWarningRules는 execution이 있는 사이클의 worktree 경고 규칙이며, 경고
+// 순서는 이 목록 순서와 같다. 각 규칙은 해당 없으면 빈 문자열을 돌려준다.
+var worktreeWarningRules = []func(Input) string{
+	worktreeMissingWarning,
+	worktreeBranchWarning,
+	worktreeDetachedWarning,
+	gitOperationWarning,
+	completionHeadWarning,
+}
+
+// worktreeMissingWarning은 canonical worktree가 사라졌을 때의 경고다.
+// A cleanup attempt removes the worktree on purpose; the restore/takeover
+// advice below would contradict cleanup.resume.
+func worktreeMissingWarning(in Input) string {
 	execution := in.Record.Execution
-	if execution == nil {
-		return out
+	root := strings.TrimSpace(execution.Workspace.Root)
+	if root == "" || in.WorktreePresent || in.Record.CleanupAttempt != nil {
+		return ""
 	}
-	// A cleanup attempt removes the worktree on purpose; the restore/takeover
-	// advice below would contradict cleanup.resume.
-	if root := strings.TrimSpace(execution.Workspace.Root); root != "" && !in.WorktreePresent && in.Record.CleanupAttempt == nil {
-		warning := "canonical worktree is missing at " + root
-		if execution.Completion == nil {
-			// Probed: a worktree recreated with git worktree add lacks the
-			// sealed artifacts prepare wrote, so link-plan and the holder
-			// commands fail there and nothing in issueops rebuilds them.
-			// Abandon needs a lease without a writer: the holder releases it;
-			// anyone else (a resumed session too) has no pause command and
-			// gets there through the takeover chain up to finalize.
-			warning += "; issueops does not rebuild it (the sealed plan artifacts lived there): restore that directory, or end the cycle with exits.abandon_command after "
-			if holderIsSelf(in) {
-				warning += "releasing the lease (exits.pause_command, --cwd still that path)"
-			} else {
-				warning += "the takeover chain reaches a released lease (stop after --finalize; do not claim)"
-			}
-		}
-		out = append(out, warning)
+	warning := "canonical worktree is missing at " + root
+	if execution.Completion != nil {
+		return warning
 	}
-	// Probe: after `git checkout -b other` in the worktree, link-plan and the
-	// record commands still succeeded and commits would land on the wrong
-	// branch, discovered only at publication.
-	if branch, want := strings.TrimSpace(in.WorktreeBranch), strings.TrimSpace(execution.Workspace.Branch); in.WorktreePresent && branch != "" && want != "" && branch != want {
-		out = append(out, "canonical worktree is on branch "+branch+", not the cycle branch "+want+": switch back with git -C "+strings.TrimSpace(execution.Workspace.Root)+" switch "+want)
+	// Probed: a worktree recreated with git worktree add lacks the
+	// sealed artifacts prepare wrote, so link-plan and the holder
+	// commands fail there and nothing in issueops rebuilds them.
+	// Abandon needs a lease without a writer: the holder releases it;
+	// anyone else (a resumed session too) has no pause command and
+	// gets there through the takeover chain up to finalize.
+	warning += "; issueops does not rebuild it (the sealed plan artifacts lived there): restore that directory, or end the cycle with exits.abandon_command after "
+	if holderIsSelf(in) {
+		return warning + "releasing the lease (exits.pause_command, --cwd still that path)"
 	}
-	// Probe: a detached HEAD (git checkout <sha>) read as "" and went
-	// unwarned; commits made there belong to no branch. A rebase detaches
-	// too and has its own warning below.
-	if want := strings.TrimSpace(execution.Workspace.Branch); in.WorktreePresent && strings.TrimSpace(in.WorktreeBranch) == "" && strings.TrimSpace(in.WorktreeHead) != "" && want != "" && in.GitOperation != "rebase" {
-		out = append(out, "canonical worktree is on a detached HEAD ("+shortHead(in.WorktreeHead)+"), not the cycle branch "+want+": switch back with git -C "+strings.TrimSpace(execution.Workspace.Root)+" switch "+want+" (note the SHAs of any commits made while detached first)")
+	return warning + "the takeover chain reaches a released lease (stop after --finalize; do not claim)"
+}
+
+// worktreeBranchWarning은 worktree가 사이클 branch가 아닌 다른 branch에 있을 때의 경고다.
+// Probe: after `git checkout -b other` in the worktree, link-plan and the
+// record commands still succeeded and commits would land on the wrong
+// branch, discovered only at publication.
+func worktreeBranchWarning(in Input) string {
+	workspace := in.Record.Execution.Workspace
+	branch, want := strings.TrimSpace(in.WorktreeBranch), strings.TrimSpace(workspace.Branch)
+	if !in.WorktreePresent || branch == "" || want == "" || branch == want {
+		return ""
 	}
+	return "canonical worktree is on branch " + branch + ", not the cycle branch " + want + ": switch back with git -C " + strings.TrimSpace(workspace.Root) + " switch " + want
+}
+
+// worktreeDetachedWarning은 worktree가 detached HEAD일 때의 경고다.
+// Probe: a detached HEAD (git checkout <sha>) read as "" and went
+// unwarned; commits made there belong to no branch. A rebase detaches
+// too and has its own warning below.
+func worktreeDetachedWarning(in Input) string {
+	workspace := in.Record.Execution.Workspace
+	want := strings.TrimSpace(workspace.Branch)
+	if !in.WorktreePresent || strings.TrimSpace(in.WorktreeBranch) != "" || strings.TrimSpace(in.WorktreeHead) == "" || want == "" || in.GitOperation == "rebase" {
+		return ""
+	}
+	return "canonical worktree is on a detached HEAD (" + shortHead(in.WorktreeHead) + "), not the cycle branch " + want + ": switch back with git -C " + strings.TrimSpace(workspace.Root) + " switch " + want + " (note the SHAs of any commits made while detached first)"
+}
+
+// gitOperationWarning은 worktree에 열려 있는 git 작업이 있을 때의 경고다.
+// issueops never starts these; one left open (detached HEAD for a
+// rebase) makes every record and seal read a half-applied tree.
+func gitOperationWarning(in Input) string {
 	switch op := in.GitOperation; op {
 	case "rebase", "cherry-pick", "revert":
-		// issueops never starts these; one left open (detached HEAD for a
-		// rebase) makes every record and seal read a half-applied tree.
-		out = append(out, "a git "+op+" is in progress in the canonical worktree: finish it or run git -C "+strings.TrimSpace(execution.Workspace.Root)+" "+op+" --abort before continuing")
+		return "a git " + op + " is in progress in the canonical worktree: finish it or run git -C " + strings.TrimSpace(in.Record.Execution.Workspace.Root) + " " + op + " --abort before continuing"
 	}
-	if head := strings.TrimSpace(in.WorktreeHead); head != "" && execution.Completion != nil &&
-		strings.TrimSpace(execution.Completion.FinalHead) != "" &&
-		strings.TrimSpace(execution.Completion.FinalHead) != head {
-		out = append(out, "worktree head "+head+" differs from the recorded completion head "+strings.TrimSpace(execution.Completion.FinalHead))
+	return ""
+}
+
+// completionHeadWarning은 worktree head가 기록된 completion head와 다를 때의 경고다.
+func completionHeadWarning(in Input) string {
+	completion := in.Record.Execution.Completion
+	head := strings.TrimSpace(in.WorktreeHead)
+	if head == "" || completion == nil {
+		return ""
 	}
-	return out
+	final := strings.TrimSpace(completion.FinalHead)
+	if final == "" || final == head {
+		return ""
+	}
+	return "worktree head " + head + " differs from the recorded completion head " + final
 }
 
 func takeoverCommand(in Input) string {

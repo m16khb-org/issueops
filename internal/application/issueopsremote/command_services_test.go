@@ -506,3 +506,28 @@ func TestPublicationPreviewNamesRepositoryTemplateSectionsTheBodyLacks(t *testin
 		t.Fatalf("warnings = %q", got)
 	}
 }
+
+// secondCallAuthority passes the pre-write check and refuses the one inside
+// the stamp transaction, as a lease takeover between them would.
+type secondCallAuthority struct {
+	calls int
+	err   error
+}
+
+func (a *secondCallAuthority) Authorize(context.Context, model.IssueOpsRecord, model.IssueOpsActor) error {
+	a.calls++
+	if a.calls > 1 {
+		return a.err
+	}
+	return nil
+}
+
+func TestReviewReflectionStampRefusedWhenAuthorityLostAfterRemoteUpdate(t *testing.T) {
+	store, _ := newArtifactStoreForTest(reviewedRecord())
+	provider := &reviewProviderFake{result: port.IssueProviderUpdateIssueBodySectionResult{OK: true, Updated: true}}
+	lost := errors.New("lease lost")
+	_, result, err := newReviewService(store, &secondCallAuthority{err: lost}, provider, time.Now()).Reflect(context.Background(), "io-review", "", true, model.IssueOpsActor{})
+	if !errors.Is(err, lost) || !result.Updated || store.records["io-review"].DevilsAdvocateReview.IssueReflectedAt != "" {
+		t.Fatalf("result=%+v err=%v stamp=%q", result, err, store.records["io-review"].DevilsAdvocateReview.IssueReflectedAt)
+	}
+}

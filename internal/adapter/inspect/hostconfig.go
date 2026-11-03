@@ -342,11 +342,19 @@ func (p *codexIssueOpsTableParser) consumeKeyValue(line string, lines []string, 
 	if err != nil {
 		return i, err
 	}
+	if err := p.storeValue(inParent, inTable, key, value); err != nil {
+		return i, err
+	}
+	return i, nil
+}
+
+// storeValue는 파싱한 값을 현재 표 위치에 맞게 issueops 누적 상태에 저장한다.
+func (p *codexIssueOpsTableParser) storeValue(inParent, inTable bool, key string, value any) error {
 	switch {
 	case inParent:
 		inline, ok := value.(map[string]any)
 		if !ok {
-			return i, errors.New("issueops must be a table")
+			return errors.New("issueops must be a table")
 		}
 		p.count++
 		maps.Copy(p.entry, inline)
@@ -361,52 +369,61 @@ func (p *codexIssueOpsTableParser) consumeKeyValue(line string, lines []string, 
 		}
 		nested[key] = value
 	}
-	return i, nil
+	return nil
 }
 
+// stripTOMLComment는 따옴표 밖의 첫 `#`부터 줄 끝까지를 잘라낸다. 따옴표
+// 상태는 bracketScanner와 같은 규칙으로 추적한다.
 func stripTOMLComment(line string) string {
-	var quote byte
-	escaped := false
+	var scanner bracketScanner
 	for i := range len(line) {
 		c := line[i]
-		switch {
-		case quote == '"' && escaped:
-			escaped = false
-		case quote == '"' && c == '\\':
-			escaped = true
-		case quote != 0 && c == quote:
-			quote = 0
-		case quote == 0 && (c == '"' || c == '\''):
-			quote = c
-		case quote == 0 && c == '#':
+		if scanner.quote == 0 && c == '#' {
 			return line[:i]
 		}
+		scanner.step(c)
 	}
 	return line
 }
 
+type bracketScanner struct {
+	depth   int
+	quote   byte
+	escaped bool
+}
+
 func bracketDepth(text string) int {
-	depth := 0
-	var quote byte
-	escaped := false
+	var scanner bracketScanner
 	for i := range len(text) {
-		c := text[i]
-		switch {
-		case quote == '"' && escaped:
-			escaped = false
-		case quote == '"' && c == '\\':
-			escaped = true
-		case quote != 0 && c == quote:
-			quote = 0
-		case quote == 0 && (c == '"' || c == '\''):
-			quote = c
-		case quote == 0 && (c == '[' || c == '{'):
-			depth++
-		case quote == 0 && (c == ']' || c == '}'):
-			depth--
-		}
+		scanner.step(text[i])
 	}
-	return depth
+	return scanner.depth
+}
+
+func (scanner *bracketScanner) step(c byte) {
+	if scanner.quote != 0 {
+		scanner.stepQuoted(c)
+		return
+	}
+	switch c {
+	case '"', '\'':
+		scanner.quote = c
+	case '[', '{':
+		scanner.depth++
+	case ']', '}':
+		scanner.depth--
+	}
+}
+
+func (scanner *bracketScanner) stepQuoted(c byte) {
+	switch {
+	case scanner.quote == '"' && scanner.escaped:
+		scanner.escaped = false
+	case scanner.quote == '"' && c == '\\':
+		scanner.escaped = true
+	case c == scanner.quote:
+		scanner.quote = 0
+	}
 }
 
 func parseTOMLValue(text string) (any, error) {

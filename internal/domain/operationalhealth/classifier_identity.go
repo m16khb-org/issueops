@@ -17,17 +17,21 @@ func validateCanonicalSource(builder *findingBuilder, snapshot Snapshot) {
 	if !snapshot.SourceClean {
 		builder.add(operationalhealthcontract.FindingInventoryUnknown, "source", repo, "canonical source checkout is not clean", repo)
 	}
-	canonicalWorktrees := make([]operationalhealthcontract.GitWorktree, 0, 1)
-	for _, worktree := range snapshot.GitWorktrees {
-		if worktree.Canonical || clean(worktree.Path) == repo {
-			canonicalWorktrees = append(canonicalWorktrees, worktree)
-		}
-	}
-	if len(canonicalWorktrees) != 1 || clean(canonicalWorktrees[0].Path) != repo || !canonicalWorktrees[0].Canonical || strings.TrimSpace(canonicalWorktrees[0].Branch) != branch || strings.TrimSpace(canonicalWorktrees[0].Head) != head || !canonicalWorktrees[0].Clean {
+	if !hasSingleCleanCanonicalWorktree(snapshot.GitWorktrees, repo, branch, head) {
 		builder.add(operationalhealthcontract.FindingInventoryUnknown, "source_worktree", repo, "canonical Git worktree must occur once and match the clean source branch and HEAD", repo)
 	}
 	validateCanonicalRef(builder, snapshot.LocalRefs, "local", branch, head)
 	validateCanonicalRef(builder, snapshot.RemoteRefs, "remote", branch, head)
+}
+
+func hasSingleCleanCanonicalWorktree(worktrees []operationalhealthcontract.GitWorktree, repo, branch, head string) bool {
+	canonicalWorktrees := make([]operationalhealthcontract.GitWorktree, 0, 1)
+	for _, worktree := range worktrees {
+		if worktree.Canonical || clean(worktree.Path) == repo {
+			canonicalWorktrees = append(canonicalWorktrees, worktree)
+		}
+	}
+	return len(canonicalWorktrees) == 1 && clean(canonicalWorktrees[0].Path) == repo && canonicalWorktrees[0].Canonical && strings.TrimSpace(canonicalWorktrees[0].Branch) == branch && strings.TrimSpace(canonicalWorktrees[0].Head) == head && canonicalWorktrees[0].Clean
 }
 
 func validateCanonicalRef(builder *findingBuilder, refs []operationalhealthcontract.GitRef, location, branch, head string) {

@@ -90,14 +90,6 @@ func gitHasFlag(args, long []string, shortLetters string) bool {
 // operand creates a branch, so it is a write unless a list-mode flag makes the
 // operand a pattern or commit (`--contains HEAD`, `-l 'feat/*'`).
 func gitBranchWrites(args []string) bool {
-	writeLong := []string{
-		"--delete", "--move", "--copy", "--set-upstream-to", "--unset-upstream", "--edit-description",
-		"--force", "--track", "--no-track", "--create-reflog", "--recurse-submodules",
-	}
-	listLong := map[string]bool{
-		"--list": true, "--all": true, "--remotes": true, "--contains": true, "--no-contains": true,
-		"--merged": true, "--no-merged": true, "--points-at": true, "--show-current": true,
-	}
 	list, operand := false, false
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
@@ -106,25 +98,51 @@ func gitBranchWrites(args []string) bool {
 			break
 		}
 		if name, ok := longFlagName(arg); ok {
-			if abbreviatesAny(name, writeLong) {
+			write, isList, takesValue := gitBranchLongFlag(name, arg)
+			if write {
 				return true
 			}
-			list = list || listLong[name]
-			if (name == "--sort" || name == "--format") && !strings.Contains(arg, "=") {
+			list = list || isList
+			if takesValue {
 				i++
 			}
 			continue
 		}
 		if letters, ok := shortCluster(arg); ok {
-			if strings.ContainsAny(letters, "dDmMcCuft") {
+			write, isList := gitBranchShortFlags(letters)
+			if write {
 				return true
 			}
-			list = list || strings.ContainsAny(letters, "lar")
+			list = list || isList
 			continue
 		}
 		operand = true
 	}
 	return operand && !list
+}
+
+// gitBranchLongFlag classifies a `git branch` long flag: write for a flag that
+// modifies branches, list for a list-mode flag, and takesValue when the next
+// argument is the flag's value (`--sort key`, not `--sort=key`).
+func gitBranchLongFlag(name, arg string) (write, list, takesValue bool) {
+	writeLong := []string{
+		"--delete", "--move", "--copy", "--set-upstream-to", "--unset-upstream", "--edit-description",
+		"--force", "--track", "--no-track", "--create-reflog", "--recurse-submodules",
+	}
+	listLong := map[string]bool{
+		"--list": true, "--all": true, "--remotes": true, "--contains": true, "--no-contains": true,
+		"--merged": true, "--no-merged": true, "--points-at": true, "--show-current": true,
+	}
+	if abbreviatesAny(name, writeLong) {
+		return true, false, false
+	}
+	takesValue = (name == "--sort" || name == "--format") && !strings.Contains(arg, "=")
+	return false, listLong[name], takesValue
+}
+
+// gitBranchShortFlags classifies a `git branch` short-option cluster.
+func gitBranchShortFlags(letters string) (write, list bool) {
+	return strings.ContainsAny(letters, "dDmMcCuft"), strings.ContainsAny(letters, "lar")
 }
 
 // gitConfigWrites treats `git config` as read-only only for an explicit read
@@ -134,32 +152,37 @@ func gitBranchWrites(args []string) bool {
 // take the next argument as a file name (`git config -f --get k v` sets k).
 func gitConfigWrites(args []string) bool {
 	writeLong := []string{"--add", "--unset", "--unset-all", "--replace-all", "--rename-section", "--remove-section", "--edit"}
+	subcommand := ""
 	if len(args) > 0 {
-		switch strings.ToLower(args[0]) {
-		case "set", "unset", "rename-section", "remove-section", "edit":
-			return true
-		}
+		subcommand = strings.ToLower(args[0])
+	}
+	switch subcommand {
+	case "set", "unset", "rename-section", "remove-section", "edit":
+		return true
 	}
 	if gitHasFlag(args, writeLong, "e") {
 		return true
 	}
-	if len(args) > 0 {
-		switch strings.ToLower(args[0]) {
-		case "get", "list":
-			return false
-		}
+	switch subcommand {
+	case "get", "list":
+		return false
 	}
+	read, operands := scanGitConfigArgs(args)
+	return !read && operands != 1
+}
+
+// scanGitConfigArgs reports whether args select a read mode and how many
+// operands follow the options (0 when the scan ends without reaching one).
+func scanGitConfigArgs(args []string) (read bool, operands int) {
 	readLong := map[string]bool{
 		"--get": true, "--get-all": true, "--get-regexp": true, "--get-urlmatch": true,
 		"--get-color": true, "--get-colorbool": true, "--list": true,
 	}
 	valueLong := map[string]bool{"--file": true, "--blob": true, "--type": true, "--default": true, "--comment": true}
-	read, operands := false, 0
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		if arg == "--" {
-			operands = len(args) - i - 1
-			break
+			return read, len(args) - i - 1
 		}
 		if name, ok := longFlagName(arg); ok {
 			read = read || readLong[name]
@@ -177,22 +200,14 @@ func gitConfigWrites(args []string) bool {
 		}
 		// The first operand ends option parsing: every later argument is an
 		// operand, flag-shaped or not.
-		operands = len(args) - i
-		break
+		return read, len(args) - i
 	}
-	return !read && operands != 1
+	return read, 0
 }
 
 func goArgumentsWrite(subcommand string, args []string) bool {
-	var flags map[string]bool
-	switch subcommand {
-	case "env":
-		flags = map[string]bool{"w": true, "u": true}
-	case "list":
-		// -export and -compiled build packages like go build; -mod=mod lets the
-		// go command rewrite go.mod and go.sum.
-		flags = map[string]bool{"toolexec": true, "exec": true, "export": true, "compiled": true}
-	default:
+	flags, ok := goWriteFlags(subcommand)
+	if !ok {
 		return false
 	}
 	for i, arg := range args {
@@ -206,17 +221,36 @@ func goArgumentsWrite(subcommand string, args []string) bool {
 		if flags[name] {
 			return true
 		}
-		if subcommand == "list" && name == "mod" {
-			value, hasValue := strings.CutPrefix(strings.TrimLeft(arg, "-"), "mod=")
-			if !hasValue && i+1 < len(args) {
-				value = args[i+1]
-			}
-			if value != "readonly" && value != "vendor" {
-				return true
-			}
+		if subcommand == "list" && name == "mod" && goListModWrites(arg, args, i) {
+			return true
 		}
 	}
 	return false
+}
+
+// goWriteFlags returns the flags that make a go subcommand write, and false
+// for subcommands that never do.
+func goWriteFlags(subcommand string) (map[string]bool, bool) {
+	switch subcommand {
+	case "env":
+		return map[string]bool{"w": true, "u": true}, true
+	case "list":
+		// -export and -compiled build packages like go build; -mod=mod lets the
+		// go command rewrite go.mod and go.sum.
+		return map[string]bool{"toolexec": true, "exec": true, "export": true, "compiled": true}, true
+	default:
+		return nil, false
+	}
+}
+
+// goListModWrites reports whether the -mod flag at args[i] selects anything
+// other than readonly or vendor.
+func goListModWrites(arg string, args []string, i int) bool {
+	value, hasValue := strings.CutPrefix(strings.TrimLeft(arg, "-"), "mod=")
+	if !hasValue && i+1 < len(args) {
+		value = args[i+1]
+	}
+	return value != "readonly" && value != "vendor"
 }
 
 // goFlagName returns the flag name of -name, --name, -name=value or

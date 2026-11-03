@@ -40,24 +40,30 @@ func Classify(observation toolconformancecontract.CallObservation, schema map[st
 		}
 		return result, nil
 	}
+	result.Classification = classifyDiagnostics(canonical, expected, arguments)
+	return result, nil
+}
+
+// classifyDiagnostics maps a non-empty canonical diagnostic list to its drift classification.
+func classifyDiagnostics(canonical []toolconformancecontract.Diagnostic, expected, arguments any) toolconformancecontract.Classification {
 	allUnknown := true
 	for _, d := range canonical {
 		if d.Code != "unknown_key" {
 			allUnknown = false
 		}
 	}
-	if allUnknown {
-		result.Classification = toolconformancecontract.UnknownKey
-	} else if only(canonical, "missing_required") {
-		result.Classification = toolconformancecontract.MissingRequired
-	} else if only(canonical, "enum_mismatch") {
-		result.Classification = toolconformancecontract.EnumMismatch
-	} else if only(canonical, "wrong_type") && coercible(expected, arguments) {
-		result.Classification = toolconformancecontract.CoercibleTypeDrift
-	} else {
-		result.Classification = toolconformancecontract.NoncoercibleTypeDrift
+	switch {
+	case allUnknown:
+		return toolconformancecontract.UnknownKey
+	case only(canonical, "missing_required"):
+		return toolconformancecontract.MissingRequired
+	case only(canonical, "enum_mismatch"):
+		return toolconformancecontract.EnumMismatch
+	case only(canonical, "wrong_type") && coercible(expected, arguments):
+		return toolconformancecontract.CoercibleTypeDrift
+	default:
+		return toolconformancecontract.NoncoercibleTypeDrift
 	}
-	return result, nil
 }
 func only(diagnostics []toolconformancecontract.Diagnostic, code string) bool {
 	for _, d := range diagnostics {
@@ -210,29 +216,37 @@ func supportedKeyword(key string, value any) error {
 	case "properties":
 		return supportedProperties(value)
 	case "items":
-		child, ok := value.(map[string]any)
-		if !ok {
-			return fmt.Errorf("invalid_schema_keyword_shape: items")
-		}
-		return supported(child)
+		return supportedItems(value)
 	case "additionalProperties":
-		if _, ok := value.(bool); !ok {
-			return fmt.Errorf("invalid_schema_keyword_shape: additionalProperties")
-		}
+		_, ok := value.(bool)
+		return keywordShapeError(key, ok)
 	case "required":
-		if _, ok := stringValues(value); !ok {
-			return fmt.Errorf("invalid_schema_keyword_shape: required")
-		}
+		_, ok := stringValues(value)
+		return keywordShapeError(key, ok)
 	case "minimum":
-		if _, ok := numericValue(value); !ok {
-			return fmt.Errorf("invalid_schema_keyword_shape: minimum")
-		}
+		_, ok := numericValue(value)
+		return keywordShapeError(key, ok)
 	case "maxLength":
 		return supportedMaxLength(value)
 	case "pattern":
 		return supportedPattern(value)
 	default:
 		return fmt.Errorf("schema keyword is not supported: %s", key)
+	}
+}
+
+func supportedItems(value any) error {
+	child, ok := value.(map[string]any)
+	if !ok {
+		return fmt.Errorf("invalid_schema_keyword_shape: items")
+	}
+	return supported(child)
+}
+
+// keywordShapeError는 값의 모양이 올바르지 않으면 invalid_schema_keyword_shape 오류를 돌려준다.
+func keywordShapeError(key string, ok bool) error {
+	if !ok {
+		return fmt.Errorf("invalid_schema_keyword_shape: %s", key)
 	}
 	return nil
 }

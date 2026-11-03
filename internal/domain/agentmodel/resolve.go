@@ -26,18 +26,8 @@ type field struct{ value, source string }
 // built-in review effort, and review rounds 3 and later use review-escalate
 // or one effort rung above the review.
 func Resolve(in ResolveInput) (contract.Resolution, error) {
-	host := strings.ToLower(strings.TrimSpace(in.Host))
-	if host == "" {
-		// Probe: `model resolve` without --host read as an unknown host "".
-		return contract.Resolution{}, fmt.Errorf("--host is required (claude, codex, omo, omp, or opencode; issueops execution whoami --json prints this session's)")
-	}
-	if !KnownHost(host) {
-		return contract.Resolution{}, fmt.Errorf("unknown host %q (use claude, codex, omo, omp, or opencode)", in.Host)
-	}
-	if !knownRole(in.Role) {
-		return contract.Resolution{}, fmt.Errorf("unknown role %q (use %s)", in.Role, joinRoles())
-	}
-	if err := validateLayer(host, in.Flag); err != nil {
+	host, err := validateResolveRequest(in)
+	if err != nil {
 		return contract.Resolution{}, err
 	}
 	role, round := in.Role, in.Round
@@ -46,14 +36,7 @@ func Resolve(in ResolveInput) (contract.Resolution, error) {
 	}
 	model, effort := resolveRole(host, role, in)
 	if (role == contract.RolePlanReview || role == contract.RoleDiffReview) && round >= 3 {
-		escModel, escEffort := configured(host, contract.RoleReviewEscalate, in)
-		if escModel.source == "" {
-			escModel = field{model.value, contract.SourceInherited}
-		}
-		if escEffort.source == "" {
-			escEffort = field{stepEffort(host, effort.value), contract.SourceInherited}
-		}
-		model, effort = escModel, escEffort
+		model, effort = escalateReview(host, in, model, effort)
 	}
 	if in.Flag.Model != "" {
 		model = field{in.Flag.Model, contract.SourceFlag}
@@ -66,6 +49,40 @@ func Resolve(in ResolveInput) (contract.Resolution, error) {
 		Model: model.value, Effort: effort.value,
 		ModelSource: model.source, EffortSource: effort.source,
 	}, nil
+}
+
+// validateResolveRequest checks the host, role and flag layer and returns the
+// normalized host.
+func validateResolveRequest(in ResolveInput) (string, error) {
+	host := strings.ToLower(strings.TrimSpace(in.Host))
+	if host == "" {
+		// Probe: `model resolve` without --host read as an unknown host "".
+		return "", fmt.Errorf("--host is required (claude, codex, omo, omp, or opencode; issueops execution whoami --json prints this session's)")
+	}
+	if !KnownHost(host) {
+		return "", fmt.Errorf("unknown host %q (use claude, codex, omo, omp, or opencode)", in.Host)
+	}
+	if !knownRole(in.Role) {
+		return "", fmt.Errorf("unknown role %q (use %s)", in.Role, joinRoles())
+	}
+	if err := validateLayer(host, in.Flag); err != nil {
+		return "", err
+	}
+	return host, nil
+}
+
+// escalateReview applies the review-escalate layer to a review round 3 or
+// later, inheriting the review model and one effort rung above its effort for
+// whatever the layer leaves unset.
+func escalateReview(host string, in ResolveInput, model, effort field) (field, field) {
+	escModel, escEffort := configured(host, contract.RoleReviewEscalate, in)
+	if escModel.source == "" {
+		escModel = field{model.value, contract.SourceInherited}
+	}
+	if escEffort.source == "" {
+		escEffort = field{stepEffort(host, effort.value), contract.SourceInherited}
+	}
+	return escModel, escEffort
 }
 
 func resolveRole(host string, role contract.Role, in ResolveInput) (field, field) {

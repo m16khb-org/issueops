@@ -22,7 +22,11 @@ func ValidateIssueURL(issueURL string) error {
 		clean.RawQuery, clean.Fragment = "", ""
 		return fmt.Errorf("issue_url %s carries a query or #anchor; pass the issue URL itself: %s", issueURL, clean.String())
 	}
-	parts := strings.Split(strings.Trim(parsed.Path, "/"), "/")
+	return validateIssueURLPath(issueURL, strings.Split(strings.Trim(parsed.Path, "/"), "/"))
+}
+
+// validateIssueURLPath는 경로 조각이 PR/MR이 아니라 이슈 번호로 끝나는 이슈 경로인지 검사한다.
+func validateIssueURLPath(issueURL string, parts []string) error {
 	for i, part := range parts {
 		switch part {
 		case "pull", "pulls", "merge_requests":

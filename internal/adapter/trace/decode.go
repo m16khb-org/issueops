@@ -67,35 +67,56 @@ func observeDocument(doc map[string]any) tracedomain.Document {
 	}
 	observed := tracedomain.Document{HasSummary: hasSummary, HasGuard: nestedMap(doc, "guard") != nil, TopFailureClass: stringField(doc, "failure_class"), TopFailedSteps: intField(doc, "failed_steps"), Event: stringField(doc, "event"), Step: stringField(doc, "step"), OK: boolField(doc, "ok")}
 	observed.Summary = tracedomain.Summary{FailedSteps: intField(summary, "failed_steps"), FailedStep: stringField(summary, "failed_step"), FailureClass: stringField(summary, "failure_class"), RerunCommands: stringSliceField(summary, "rerun_commands")}
-	if clusters, ok := summary["failure_clusters"].([]any); ok {
-		for _, raw := range clusters {
-			if cluster, ok := raw.(map[string]any); ok {
-				observed.Summary.Clusters = append(observed.Summary.Clusters, tracedomain.Cluster{Step: stringField(cluster, "step"), Count: intField(cluster, "count")})
-			}
-		}
-	}
-	if items, ok := summary["failure_cause_evidence"].([]any); ok {
-		for _, raw := range items {
-			if entry, ok := raw.(map[string]any); ok {
-				observed.Summary.Evidence = append(observed.Summary.Evidence, tracedomain.Evidence{Cause: stringField(entry, "cause"), Code: stringField(entry, "code"), Source: stringField(entry, "source")})
-			}
-		}
-	}
+	observed.Summary.Clusters = observeClusters(summary)
+	observed.Summary.Evidence = observeEvidence(summary)
 	guard := nestedMap(doc, "guard")
 	if guard == nil {
 		guard = doc
 	}
-	if findings, ok := guard["findings"].([]any); ok {
-		for _, raw := range findings {
-			if finding, ok := raw.(map[string]any); ok {
-				observed.GuardRules = append(observed.GuardRules, stringField(finding, "rule"))
-			}
-		}
-	}
+	observed.GuardRules = observeGuardRules(guard)
 	event := nestedMap(doc, "event")
 	if event == nil {
 		event = doc
 	}
 	observed.Upkeep = tracedomain.Upkeep{Kind: stringField(event, "kind"), Summary: stringField(event, "summary"), TargetDocs: stringSliceField(event, "target_docs")}
 	return observed
+}
+
+// observeClusters collects the well-formed failure_clusters entries of a summary.
+func observeClusters(summary map[string]any) []tracedomain.Cluster {
+	var clusters []tracedomain.Cluster
+	if raws, ok := summary["failure_clusters"].([]any); ok {
+		for _, raw := range raws {
+			if cluster, ok := raw.(map[string]any); ok {
+				clusters = append(clusters, tracedomain.Cluster{Step: stringField(cluster, "step"), Count: intField(cluster, "count")})
+			}
+		}
+	}
+	return clusters
+}
+
+// observeEvidence collects the well-formed failure_cause_evidence entries of a summary.
+func observeEvidence(summary map[string]any) []tracedomain.Evidence {
+	var evidence []tracedomain.Evidence
+	if items, ok := summary["failure_cause_evidence"].([]any); ok {
+		for _, raw := range items {
+			if entry, ok := raw.(map[string]any); ok {
+				evidence = append(evidence, tracedomain.Evidence{Cause: stringField(entry, "cause"), Code: stringField(entry, "code"), Source: stringField(entry, "source")})
+			}
+		}
+	}
+	return evidence
+}
+
+// observeGuardRules collects the rule of each well-formed guard finding.
+func observeGuardRules(guard map[string]any) []string {
+	var rules []string
+	if findings, ok := guard["findings"].([]any); ok {
+		for _, raw := range findings {
+			if finding, ok := raw.(map[string]any); ok {
+				rules = append(rules, stringField(finding, "rule"))
+			}
+		}
+	}
+	return rules
 }

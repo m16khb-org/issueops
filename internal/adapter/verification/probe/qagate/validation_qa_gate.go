@@ -13,6 +13,24 @@ import (
 func validateQAGateWithDeps(root string, deps docsValidationDeps) selfverify.StepResult {
 	deps = deps.withDefaults()
 	started := time.Now()
+	errs := qaGateRequiredDocErrors(root, deps)
+	skills, err := deps.listSkills(root)
+	if err != nil {
+		errs = append(errs, "list skills: "+err.Error())
+	}
+	for _, want := range []string{"atomic-commit-push", "self-augment"} {
+		if !slices.Contains(skills, want) {
+			errs = append(errs, "missing shared skill "+want)
+		}
+	}
+	for _, skill := range skills {
+		errs = append(errs, qaGateSkillErrors(root, skill, deps)...)
+	}
+	errs = append(errs, validateMermaidDocsWithDeps(root, deps)...)
+	return assertionStep("QA gate", started, errs)
+}
+
+func qaGateRequiredDocErrors(root string, deps docsValidationDeps) []string {
 	errs := []string{}
 	requiredDocs := map[string][]string{
 		filepath.Join(root, "GENIUS_THINK.md"):                                {"천재적 사고", "Mermaid"},
@@ -37,34 +55,26 @@ func validateQAGateWithDeps(root string, deps docsValidationDeps) selfverify.Ste
 			}
 		}
 	}
-	skills, err := deps.listSkills(root)
+	return errs
+}
+
+func qaGateSkillErrors(root, skill string, deps docsValidationDeps) []string {
+	skillDir := filepath.Join(root, "skills", skill)
+	skillMD := filepath.Join(skillDir, "SKILL.md")
+	b, err := deps.readFile(skillMD)
 	if err != nil {
-		errs = append(errs, "list skills: "+err.Error())
+		return []string{"missing skill file " + skillMD}
 	}
-	for _, want := range []string{"atomic-commit-push", "self-augment"} {
-		if !slices.Contains(skills, want) {
-			errs = append(errs, "missing shared skill "+want)
-		}
+	var errs []string
+	text := string(b)
+	if !strings.Contains(text, "\nname:") && !strings.HasPrefix(text, "---\nname:") {
+		errs = append(errs, "skill missing name frontmatter "+skill)
 	}
-	for _, skill := range skills {
-		skillDir := filepath.Join(root, "skills", skill)
-		skillMD := filepath.Join(skillDir, "SKILL.md")
-		b, err := deps.readFile(skillMD)
-		if err != nil {
-			errs = append(errs, "missing skill file "+skillMD)
-			continue
-		}
-		text := string(b)
-		if !strings.Contains(text, "\nname:") && !strings.HasPrefix(text, "---\nname:") {
-			errs = append(errs, "skill missing name frontmatter "+skill)
-		}
-		if !strings.Contains(text, "\ndescription:") {
-			errs = append(errs, "skill missing description frontmatter "+skill)
-		}
-		if !deps.exists(filepath.Join(skillDir, "agents", "openai.yaml")) {
-			errs = append(errs, "skill missing agents/openai.yaml "+skill)
-		}
+	if !strings.Contains(text, "\ndescription:") {
+		errs = append(errs, "skill missing description frontmatter "+skill)
 	}
-	errs = append(errs, validateMermaidDocsWithDeps(root, deps)...)
-	return assertionStep("QA gate", started, errs)
+	if !deps.exists(filepath.Join(skillDir, "agents", "openai.yaml")) {
+		errs = append(errs, "skill missing agents/openai.yaml "+skill)
+	}
+	return errs
 }

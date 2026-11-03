@@ -30,33 +30,13 @@ func (service *Service) ListCycles(
 	if err := ctx.Err(); err != nil {
 		return issueopsinventorycontract.ListResult{OK: false}, err
 	}
-	rawRepo := repo
-	repo = service.paths.Normalize(repo)
-	normalizedRecordPaths := map[string]string{rawRepo: repo}
-	// Lexical identities that differ may still name one directory through a
-	// symlink (/tmp vs /private/tmp on macOS); resolve each once.
-	canonical := map[string]string{}
-	canonicalOf := func(path string) string {
-		resolved, ok := canonical[path]
-		if !ok {
-			resolved = service.paths.Canonical(path)
-			canonical[path] = resolved
-		}
-		return resolved
-	}
+	matchesRepo := service.repoFilter(repo)
 	entries := []issueopsinventorycontract.ListEntry{}
 	scannedRecords := 0
 	diagnostics, err := service.repository.ScanEach(ctx, stateRoot, func(record issueopsinventorycontract.Record) error {
 		scannedRecords++
-		if repo != "" {
-			normalizedRepo, ok := normalizedRecordPaths[record.Repo]
-			if !ok {
-				normalizedRepo = service.paths.Normalize(record.Repo)
-				normalizedRecordPaths[record.Repo] = normalizedRepo
-			}
-			if normalizedRepo != repo && canonicalOf(normalizedRepo) != canonicalOf(repo) {
-				return nil
-			}
+		if !matchesRepo(record.Repo) {
+			return nil
 		}
 		entries = append(entries, issueopsinventorydomain.ProjectEntry(record))
 		return nil
@@ -77,4 +57,32 @@ func (service *Service) ListCycles(
 		result.UnreadableIDs = append(result.UnreadableIDs, diagnostic.ID)
 	}
 	return result, nil
+}
+
+// repoFilter returns a predicate reporting whether a record's repo is the requested repo; an empty request matches every record.
+func (service *Service) repoFilter(rawRepo string) func(recordRepo string) bool {
+	repo := service.paths.Normalize(rawRepo)
+	normalizedRecordPaths := map[string]string{rawRepo: repo}
+	// Lexical identities that differ may still name one directory through a
+	// symlink (/tmp vs /private/tmp on macOS); resolve each once.
+	canonical := map[string]string{}
+	canonicalOf := func(path string) string {
+		resolved, ok := canonical[path]
+		if !ok {
+			resolved = service.paths.Canonical(path)
+			canonical[path] = resolved
+		}
+		return resolved
+	}
+	return func(recordRepo string) bool {
+		if repo == "" {
+			return true
+		}
+		normalizedRepo, ok := normalizedRecordPaths[recordRepo]
+		if !ok {
+			normalizedRepo = service.paths.Normalize(recordRepo)
+			normalizedRecordPaths[recordRepo] = normalizedRepo
+		}
+		return normalizedRepo == repo || canonicalOf(normalizedRepo) == canonicalOf(repo)
+	}
 }

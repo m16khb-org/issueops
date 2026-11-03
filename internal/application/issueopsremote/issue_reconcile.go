@@ -65,8 +65,9 @@ func (s *IssueReconciler) Reconcile(ctx context.Context, id string, confirm bool
 	if err != nil {
 		return result, err
 	}
+	crashSettleable := s.crashSettleable(intent, search)
 	var settleErr error
-	if len(search.Candidates) == 0 && !search.Truncated && intent.Status == model.IssueCreateIntentPending && s.settled != nil {
+	if crashSettleable {
 		// QA (killed create-issue): the intent stayed pending, reconcile
 		// needed exactly one candidate, and create-issue refused a pending
 		// intent: no exit but abandon.
@@ -76,31 +77,15 @@ func (s *IssueReconciler) Reconcile(ctx context.Context, id string, confirm bool
 		}
 	}
 	if err := domain.ValidateIssueReconcileSearch(search.Truncated, len(search.Candidates)); err != nil {
-		if len(search.Candidates) == 0 && !search.Truncated && intent.Status == model.IssueCreateIntentPending && s.settled != nil {
-			// QA: agents read the conditions as requirements they could not meet.
-			hint := "not settled yet, wait and re-run this reconcile: a pending create whose caller died is released once it is 2 minutes old (started " + intent.UpdatedAt + "), no issue create for it is running, and the provider lists no issue with its marker"
-			if settleErr != nil {
-				hint += " (settlement: " + settleErr.Error() + ")"
-			}
-			return result, fmt.Errorf("%w: %s", err, hint)
+		if crashSettleable {
+			return result, unsettledCrashError(err, intent, settleErr)
 		}
 		return result, err
 	}
 	candidate := search.Candidates[0]
-	if err := domain.ValidateIssueReconcileCandidate(*intent, remote.ProjectKey(candidate.URL, intent.Provider, "issue"), candidate.Title, candidate.Body); err != nil {
-		if confirm {
-			err = s.recordFailure(ctx, record.ID, candidate.URL, err)
-		}
+	record, err = s.adoptCandidate(ctx, record, candidate, confirm)
+	if err != nil {
 		return result, err
-	}
-	if confirm {
-		if err := s.verify(ctx, model.IssueOpsRemoteArtifactVerificationRequest{Provider: intent.Provider, Kind: "issue", URL: candidate.URL, Labels: intent.Labels, Assignees: intent.Assignees}); err != nil {
-			return result, s.recordFailure(ctx, record.ID, candidate.URL, err)
-		}
-		record, err = s.intents.Complete(ctx, record.ID, candidate.URL, s.now().UTC().Format(time.RFC3339Nano))
-		if err != nil {
-			return result, err
-		}
 	}
 	result = model.IssueOpsIssueCreateReconcileResult{OK: true, CandidateCount: 1, CandidateURL: candidate.URL, WouldAdopt: !confirm, IssueURL: record.IssueURL, IssueCreateIntent: record.IssueCreateIntent}
 	if !confirm {
@@ -109,6 +94,42 @@ func (s *IssueReconciler) Reconcile(ctx context.Context, id string, confirm bool
 		result.NextCommand = "issueops remote reconcile-issue --id " + record.ID + " --confirm --json"
 	}
 	return result, nil
+}
+
+// crashSettleable reports whether a pending create found no candidate and a
+// settlement is wired, so its caller may have died inside the provider call.
+func (s *IssueReconciler) crashSettleable(intent *model.IssueOpsIssueCreateIntent, search port.IssueProviderFindIssueCreateCandidatesResult) bool {
+	return len(search.Candidates) == 0 && !search.Truncated && intent.Status == model.IssueCreateIntentPending && s.settled != nil
+}
+
+// unsettledCrashError appends the settlement hint to the no-candidate search error.
+func unsettledCrashError(err error, intent *model.IssueOpsIssueCreateIntent, settleErr error) error {
+	// QA: agents read the conditions as requirements they could not meet.
+	hint := "not settled yet, wait and re-run this reconcile: a pending create whose caller died is released once it is 2 minutes old (started " + intent.UpdatedAt + "), no issue create for it is running, and the provider lists no issue with its marker"
+	if settleErr != nil {
+		hint += " (settlement: " + settleErr.Error() + ")"
+	}
+	return fmt.Errorf("%w: %s", err, hint)
+}
+
+// adoptCandidate validates the single candidate against the intent and, on
+// confirm, verifies it live and completes the intent. A preview returns the
+// record unchanged.
+func (s *IssueReconciler) adoptCandidate(ctx context.Context, record model.IssueOpsRecord, candidate port.IssueProviderIssueCreateCandidate, confirm bool) (model.IssueOpsRecord, error) {
+	intent := record.IssueCreateIntent
+	if err := domain.ValidateIssueReconcileCandidate(*intent, remote.ProjectKey(candidate.URL, intent.Provider, "issue"), candidate.Title, candidate.Body); err != nil {
+		if confirm {
+			err = s.recordFailure(ctx, record.ID, candidate.URL, err)
+		}
+		return record, err
+	}
+	if !confirm {
+		return record, nil
+	}
+	if err := s.verify(ctx, model.IssueOpsRemoteArtifactVerificationRequest{Provider: intent.Provider, Kind: "issue", URL: candidate.URL, Labels: intent.Labels, Assignees: intent.Assignees}); err != nil {
+		return record, s.recordFailure(ctx, record.ID, candidate.URL, err)
+	}
+	return s.intents.Complete(ctx, record.ID, candidate.URL, s.now().UTC().Format(time.RFC3339Nano))
 }
 
 func (s *IssueReconciler) releaseCrashedCreate(ctx context.Context, record model.IssueOpsRecord, confirm bool) (model.IssueOpsIssueCreateReconcileResult, error) {

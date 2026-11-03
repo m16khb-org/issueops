@@ -64,20 +64,7 @@ func (observer *jsonLineObserver) Observe(observation SpanObservation) {
 	if observer == nil || observer.writer == nil {
 		return
 	}
-	thresholdMS := observer.slowThreshold.Milliseconds()
-	// Contention is actionable when the span waited noticeably for the lock;
-	// a millisecond handoff between two writers is normal, and printing it on
-	// stderr broke `--json 2>&1` parsing for an agent (decision add, wait 1ms).
-	contendedFloorMS := max(1, thresholdMS/10)
-	contended := observation.Contended && observation.WaitMS >= contendedFloorMS
-	fast := !contended && observation.WaitMS < thresholdMS && observation.HoldMS < thresholdMS
-	// A fast, uncontended span is noise when it succeeded, and also when it
-	// failed after acquiring the lock: that failure is the command's own
-	// error, which the caller already reports (as the JSON error envelope on
-	// stdout under --json). Lock failures and slow or contended spans stay
-	// visible.
-	if fast && (observation.Outcome == sqlstore.SpanOutcomeSuccess ||
-		(observation.Outcome == sqlstore.SpanOutcomeError && observation.Acquired)) {
+	if observer.isQuietSpan(observation) {
 		return
 	}
 	observation.Event = "issueops_record_span"
@@ -93,6 +80,24 @@ func (observer *jsonLineObserver) Observe(observation SpanObservation) {
 	if _, err := observer.writer.Write(append(line, '\n')); err != nil && observer.writer != os.Stderr {
 		_, _ = fmt.Fprintf(os.Stderr, "issueops span observability write failed: %v\n", err)
 	}
+}
+
+// isQuietSpan reports whether the span is too fast and uncontended to print.
+func (observer *jsonLineObserver) isQuietSpan(observation SpanObservation) bool {
+	thresholdMS := observer.slowThreshold.Milliseconds()
+	// Contention is actionable when the span waited noticeably for the lock;
+	// a millisecond handoff between two writers is normal, and printing it on
+	// stderr broke `--json 2>&1` parsing for an agent (decision add, wait 1ms).
+	contendedFloorMS := max(1, thresholdMS/10)
+	contended := observation.Contended && observation.WaitMS >= contendedFloorMS
+	fast := !contended && observation.WaitMS < thresholdMS && observation.HoldMS < thresholdMS
+	// A fast, uncontended span is noise when it succeeded, and also when it
+	// failed after acquiring the lock: that failure is the command's own
+	// error, which the caller already reports (as the JSON error envelope on
+	// stdout under --json). Lock failures and slow or contended spans stay
+	// visible.
+	return fast && (observation.Outcome == sqlstore.SpanOutcomeSuccess ||
+		(observation.Outcome == sqlstore.SpanOutcomeError && observation.Acquired))
 }
 
 // ObserveSpans arms the store observer for every sqlstore span opened with the

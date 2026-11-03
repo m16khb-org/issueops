@@ -63,6 +63,11 @@ func updateWithinSpan(ctx context.Context, store port.TransactionalRecordStore, 
 		}
 		return completionapp.RepositoryResult{Record: before, Execution: *record.Execution}, nil
 	}
+	return commitCompletionTransition(ctx, store, record, after)
+}
+
+// commitCompletionTransition persists a changed snapshot and drops the holder index of the lease it ends.
+func commitCompletionTransition(ctx context.Context, store port.TransactionalRecordStore, record leasecontract.Record, after completioncontract.RecordSnapshot) (completionapp.RepositoryResult, error) {
 	if record.Execution == nil {
 		return completionapp.RepositoryResult{}, leasecontract.ErrExecutionNotPrepared
 	}

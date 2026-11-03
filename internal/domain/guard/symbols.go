@@ -33,6 +33,23 @@ func NormalizeSymbol(symbol string) string {
 	if symbol == "" {
 		return ""
 	}
+	filtered := []string{}
+	for _, token := range splitSymbolTokens(symbol) {
+		token = strings.TrimSuffix(token, "s")
+		if len(token) > 2 {
+			filtered = append(filtered, token)
+		}
+	}
+	if len(filtered) == 0 {
+		return ""
+	}
+	sort.Strings(filtered)
+	b, _ := json.Marshal(filtered)
+	return string(b)
+}
+
+// splitSymbolTokens는 snake/kebab/camel 경계에서 심볼을 소문자 토큰으로 자른다.
+func splitSymbolTokens(symbol string) []string {
 	var tokens []string
 	var current strings.Builder
 	var previousLower bool
@@ -56,17 +73,5 @@ func NormalizeSymbol(symbol string) string {
 	if current.Len() > 0 {
 		tokens = append(tokens, strings.ToLower(current.String()))
 	}
-	filtered := []string{}
-	for _, token := range tokens {
-		token = strings.TrimSuffix(token, "s")
-		if len(token) > 2 {
-			filtered = append(filtered, token)
-		}
-	}
-	if len(filtered) == 0 {
-		return ""
-	}
-	sort.Strings(filtered)
-	b, _ := json.Marshal(filtered)
-	return string(b)
+	return tokens
 }

@@ -57,12 +57,8 @@ func DecideReconcile(facts ReconcileFacts) (Decision, error) {
 type EligibilityReason string
 
 func ValidateCreateEligibility(facts contract.CreateEligibility) (EligibilityReason, error) {
-	if facts.Provider != "github" && facts.Provider != "gitlab" {
-		return "provider", fmt.Errorf("publication eligibility: provider")
-	}
-	if (facts.Provider == "github" && facts.Kind != "pr") ||
-		(facts.Provider == "gitlab" && facts.Kind != "mr") {
-		return "kind", fmt.Errorf("publication eligibility: kind")
+	if reason, err := validateEligibilityTarget(facts); err != nil {
+		return reason, err
 	}
 	checks := []struct {
 		ok     bool
@@ -78,6 +74,23 @@ func ValidateCreateEligibility(facts contract.CreateEligibility) (EligibilityRea
 			return check.reason, fmt.Errorf("publication eligibility: %s", check.reason)
 		}
 	}
+	return validateConfirmEligibility(facts)
+}
+
+// validateEligibilityTarget은 provider가 지원되는 값이고 kind가 provider와 맞는지 검사한다.
+func validateEligibilityTarget(facts contract.CreateEligibility) (EligibilityReason, error) {
+	if facts.Provider != "github" && facts.Provider != "gitlab" {
+		return "provider", fmt.Errorf("publication eligibility: provider")
+	}
+	if (facts.Provider == "github" && facts.Kind != "pr") ||
+		(facts.Provider == "gitlab" && facts.Kind != "mr") {
+		return "kind", fmt.Errorf("publication eligibility: kind")
+	}
+	return "", nil
+}
+
+// validateConfirmEligibility는 확정 실행일 때만 실행 활성 상태와 대기 작업 없음을 검사한다.
+func validateConfirmEligibility(facts contract.CreateEligibility) (EligibilityReason, error) {
 	if facts.Confirm && !facts.ExecutionActive {
 		return "execution", fmt.Errorf("publication eligibility: execution")
 	}

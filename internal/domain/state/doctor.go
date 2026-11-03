@@ -1,6 +1,8 @@
 package state
 
 import (
+	"cmp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -46,14 +48,8 @@ func InspectDoctor(dir string, entries []DoctorEntry, rows []DoctorRecord) state
 	}
 	sort.Strings(result.ValidKeys)
 	sort.Slice(result.Valid, func(i, j int) bool { return result.Valid[i].Key < result.Valid[j].Key })
-	sort.Slice(result.Issues, func(i, j int) bool {
-		if result.Issues[i].Path != result.Issues[j].Path {
-			return result.Issues[i].Path < result.Issues[j].Path
-		}
-		if result.Issues[i].Code != result.Issues[j].Code {
-			return result.Issues[i].Code < result.Issues[j].Code
-		}
-		return result.Issues[i].Message < result.Issues[j].Message
+	slices.SortFunc(result.Issues, func(a, b statecontract.StateDoctorIssue) int {
+		return cmp.Or(cmp.Compare(a.Path, b.Path), cmp.Compare(a.Code, b.Code), cmp.Compare(a.Message, b.Message))
 	})
 	result.OK = true
 	result.Healthy = len(result.Issues) == 0

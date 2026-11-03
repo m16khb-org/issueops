@@ -33,15 +33,9 @@ func IsUnsafeHost(host string, allowPrivate bool) bool {
 	if lower == "localhost" || strings.HasSuffix(lower, ".localhost") {
 		return !allowPrivate
 	}
-	ip := parseIPAddress(lower)
-	if !ip.IsValid() {
-		// A zoned literal such as fe80::1%eth0 is not a public hostname: classify the
-		// address without its zone instead of letting it pass as a name.
-		zoned, err := netip.ParseAddr(lower)
-		if err != nil || zoned.Zone() == "" {
-			return false
-		}
-		ip = zoned.WithZone("").Unmap()
+	ip, ok := literalHostIP(lower)
+	if !ok {
+		return false
 	}
 	if isMetadataIP(ip) {
 		return true
@@ -49,11 +43,32 @@ func IsUnsafeHost(host string, allowPrivate bool) bool {
 	if isReservedIP(ip) {
 		return true
 	}
-	if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() ||
-		ip.IsMulticast() || ip.IsUnspecified() {
+	if isPrivateClassIP(ip) {
 		return !allowPrivate
 	}
 	return false
+}
+
+// literalHostIP returns the IP address a host literal names, without any zone.
+func literalHostIP(lower string) (netip.Addr, bool) {
+	ip := parseIPAddress(lower)
+	if ip.IsValid() {
+		return ip, true
+	}
+	// A zoned literal such as fe80::1%eth0 is not a public hostname: classify the
+	// address without its zone instead of letting it pass as a name.
+	zoned, err := netip.ParseAddr(lower)
+	if err != nil || zoned.Zone() == "" {
+		return netip.Addr{}, false
+	}
+	return zoned.WithZone("").Unmap(), true
+}
+
+// isPrivateClassIP reports loopback, private, link-local, multicast, and
+// unspecified addresses, which are blocked unless private hosts are allowed.
+func isPrivateClassIP(ip netip.Addr) bool {
+	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() ||
+		ip.IsMulticast() || ip.IsUnspecified()
 }
 
 func isMetadataIP(ip netip.Addr) bool {

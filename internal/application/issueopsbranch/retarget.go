@@ -48,31 +48,36 @@ func (s Retargeter) Retarget(ctx context.Context, id string, req model.IssueOpsB
 		if err := s.authorize(ctx, record, &actor); err != nil {
 			return err
 		}
-		if err := domain.ValidateRetargetRequest(base, reason); err != nil {
-			return err
-		}
-		if s.TargetBranch == nil || s.OriginPresent == nil {
-			return fmt.Errorf("retarget observation is unavailable")
-		}
-		if err := domain.ValidateRetargetRecord(record, base); err != nil {
-			return err
-		}
-		if err := domain.ValidateRetargetArtifact(observation.artifact, *record.RemoteArtifact); err != nil {
-			return fmt.Errorf("remote artifact target observation failed: %w", err)
-		}
-		if observation.targetErr != nil {
-			return fmt.Errorf("remote artifact target observation failed: %w", observation.targetErr)
-		}
-		if err := domain.ValidateRetargetTarget(base, observation.target); err != nil {
-			return err
-		}
-		if err := domain.ValidateRetargetOrigin(record.Repo, base, observation.repo, observation.branch, observation.presentStated, observation.present, observation.presentErr); err != nil {
+		if err := s.validateRetarget(record, base, reason, observation); err != nil {
 			return err
 		}
 		result, err = s.Records.Save(spanCtx, domain.ApplyBranchRetarget(record, base, reason, s.Now().UTC().Format(time.RFC3339Nano), s.Now().UTC().Format(time.RFC3339Nano)))
 		return err
 	})
 	return result, err
+}
+
+// validateRetarget checks the request, the fresh record and the pre-lock remote observations before the retarget is applied.
+func (s Retargeter) validateRetarget(record model.IssueOpsRecord, base, reason string, observation retargetObservation) error {
+	if err := domain.ValidateRetargetRequest(base, reason); err != nil {
+		return err
+	}
+	if s.TargetBranch == nil || s.OriginPresent == nil {
+		return fmt.Errorf("retarget observation is unavailable")
+	}
+	if err := domain.ValidateRetargetRecord(record, base); err != nil {
+		return err
+	}
+	if err := domain.ValidateRetargetArtifact(observation.artifact, *record.RemoteArtifact); err != nil {
+		return fmt.Errorf("remote artifact target observation failed: %w", err)
+	}
+	if observation.targetErr != nil {
+		return fmt.Errorf("remote artifact target observation failed: %w", observation.targetErr)
+	}
+	if err := domain.ValidateRetargetTarget(base, observation.target); err != nil {
+		return err
+	}
+	return domain.ValidateRetargetOrigin(record.Repo, base, observation.repo, observation.branch, observation.presentStated, observation.present, observation.presentErr)
 }
 
 type retargetObservation struct {

@@ -68,23 +68,40 @@ func (cli command) generatedDelegatedBootstrapAuthority(args []string, child iss
 	if !ok {
 		return generatedProvenanceInvalid("generated delegated child bootstrap command is malformed")
 	}
+	parent, ok := cli.generatedActiveParent(child)
+	if !ok {
+		return generatedProvenanceInvalid("generated delegated child bootstrap requires an active referenced parent execution")
+	}
+	if message := generatedBootstrapTopologyMismatch(command.Path, flags, child, parent); message != "" {
+		return generatedProvenanceInvalid(message)
+	}
+	return parent, nil
+}
+
+// generatedActiveParent는 자식이 참조하는 활성 부모 실행 기록을 읽어 돌려준다.
+func (cli command) generatedActiveParent(child issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, bool) {
 	parentID := strings.TrimSpace(child.Delegation.ParentCycleID)
 	parent, err := cli.Runtime.ReadIssueOps(cli.Runtime.IssueOpsStateRoot(), parentID)
 	if err != nil || parent.Execution == nil || parent.Execution.Lease.Status != issueopscontract.LeaseStatusActive ||
 		!generatedParentReferencesChild(parent, child.ID) {
-		return generatedProvenanceInvalid("generated delegated child bootstrap requires an active referenced parent execution")
+		return issueopscontract.IssueOpsRecord{}, false
 	}
-	switch command.Path {
+	return parent, true
+}
+
+// generatedBootstrapTopologyMismatch는 부트스트랩 명령이 부모 토폴로지와 어긋날 때 사유를, 일치하면 빈 문자열을 돌려준다.
+func generatedBootstrapTopologyMismatch(path string, flags map[string][]string, child, parent issueopscontract.IssueOpsRecord) string {
+	switch path {
 	case "branch prepare":
 		if !generatedBranchPrepareMatchesParent(flags, child, parent) {
-			return generatedProvenanceInvalid("generated delegated child branch preparation does not match parent topology")
+			return "generated delegated child branch preparation does not match parent topology"
 		}
 	case "execution prepare":
 		if !generatedExecutionPrepareMatchesParent(child, parent) {
-			return generatedProvenanceInvalid("generated delegated child execution preparation does not match parent topology")
+			return "generated delegated child execution preparation does not match parent topology"
 		}
 	}
-	return parent, nil
+	return ""
 }
 
 // generatedBranchPrepareMatchesParent는 branch prepare 플래그가 자식 브랜치와 부모 토폴로지에 일치하는지 확인한다.

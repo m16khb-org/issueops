@@ -142,15 +142,7 @@ func (s *Service) observe(ctx context.Context) observation {
 	record, recordErr := readRecord(s.recordPath())
 	recordMissing := errors.Is(recordErr, os.ErrNotExist)
 	if holder == 0 {
-		if !recordMissing {
-			status, err := s.fail(s.result(mcpservice.StatusStale, record.PID, record.BuildID), CodeStaleRecord, fmt.Errorf("mcp http instance record names a process that no longer holds the service lock"))
-			return observation{status: status, err: err}
-		}
-		if s.portInUse() {
-			status, err := s.fail(s.result(mcpservice.StatusConflict, 0, ""), CodePortInUse, fmt.Errorf("%s is held by a process outside the issueops service lock (conflict)", s.cfg.Address))
-			return observation{status: status, err: err}
-		}
-		return observation{status: s.result(mcpservice.StatusStopped, 0, "")}
+		return s.observeUnheld(record, recordMissing)
 	}
 	mismatch := func(detail string) observation {
 		status, err := s.fail(s.result(mcpservice.StatusConflict, holder, ""), CodeIdentityMismatch, fmt.Errorf("mcp http lock holder %d does not match the published instance: %s", holder, detail))
@@ -178,6 +170,20 @@ func (s *Service) observe(ctx context.Context) observation {
 		return mismatch("authenticated response pid " + strconv.Itoa(pid) + " or build_id differs from the record")
 	}
 	return observation{status: s.result(mcpservice.StatusRunning, holder, buildID), holder: holder}
+}
+
+// observeUnheld classifies a service whose lock has no holder: a leftover
+// record is stale, an occupied port is a conflict, otherwise it is stopped.
+func (s *Service) observeUnheld(record Record, recordMissing bool) observation {
+	if !recordMissing {
+		status, err := s.fail(s.result(mcpservice.StatusStale, record.PID, record.BuildID), CodeStaleRecord, fmt.Errorf("mcp http instance record names a process that no longer holds the service lock"))
+		return observation{status: status, err: err}
+	}
+	if s.portInUse() {
+		status, err := s.fail(s.result(mcpservice.StatusConflict, 0, ""), CodePortInUse, fmt.Errorf("%s is held by a process outside the issueops service lock (conflict)", s.cfg.Address))
+		return observation{status: status, err: err}
+	}
+	return observation{status: s.result(mcpservice.StatusStopped, 0, "")}
 }
 
 func (s *Service) portInUse() bool {
@@ -359,20 +365,8 @@ func (s *Service) Stop(ctx context.Context) (mcpservice.Status, error) {
 		return status, err
 	}
 	observed := s.observe(ctx)
-	switch observed.status.Status {
-	case mcpservice.StatusStopped:
-		return s.unloadIdle(ctx, observed.status)
-	case mcpservice.StatusStale:
-		if observed.holder != 0 {
-			return observed.status, observed.err
-		}
-		if err := s.removeStaleRecord(); err != nil {
-			return s.fail(observed.status, CodeStateUnreadable, err)
-		}
-		return s.unloadIdle(ctx, s.result(mcpservice.StatusStopped, 0, ""))
-	case mcpservice.StatusRunning:
-	default:
-		return observed.status, observed.err
+	if observed.status.Status != mcpservice.StatusRunning {
+		return s.stopNotRunning(ctx, observed)
 	}
 	loaded, supervisedPID, err := s.supervisor.supervised(ctx)
 	if err != nil {
@@ -391,6 +385,25 @@ func (s *Service) Stop(ctx context.Context) (mcpservice.Status, error) {
 		_ = os.Remove(s.recordPath())
 	}
 	return s.result(mcpservice.StatusStopped, 0, ""), nil
+}
+
+// stopNotRunning은 실행 중이 아닌 관측 결과를 정리한다. stopped/stale은 유휴
+// job을 내리고 나머지 상태는 관측 결과를 그대로 돌려준다.
+func (s *Service) stopNotRunning(ctx context.Context, observed observation) (mcpservice.Status, error) {
+	switch observed.status.Status {
+	case mcpservice.StatusStopped:
+		return s.unloadIdle(ctx, observed.status)
+	case mcpservice.StatusStale:
+		if observed.holder != 0 {
+			return observed.status, observed.err
+		}
+		if err := s.removeStaleRecord(); err != nil {
+			return s.fail(observed.status, CodeStateUnreadable, err)
+		}
+		return s.unloadIdle(ctx, s.result(mcpservice.StatusStopped, 0, ""))
+	default:
+		return observed.status, observed.err
+	}
 }
 
 // awaitLockReleased는 StopTimeout 안에서 서비스 락 보유자가 사라질 때까지 기다린다.

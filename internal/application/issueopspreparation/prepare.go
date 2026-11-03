@@ -70,16 +70,8 @@ func (service *Service) prepareDirect(ctx context.Context, snapshot preparationc
 	if service.direct == nil {
 		return failedResult(command.ID), fmt.Errorf("direct Git worktree provisioner is unavailable")
 	}
-	if command.Confirm {
-		access, err := service.direct.ProbeAccess(ctx, workspace, actor.Host)
-		if err != nil {
-			return failedResult(command.ID), err
-		}
-		if !access.Allowed {
-			return preparationcontract.Result{
-				ID: command.ID, Workspace: workspaceResult(workspace, ""), NextCommand: access.RelaunchCommand,
-			}, fmt.Errorf("canonical worktree base is not accessible; relaunch with: %s", access.RelaunchCommand)
-		}
+	if result, err := service.requireDirectAccess(ctx, command, workspace, actor.Host); err != nil {
+		return result, err
 	}
 	receipt, err := service.direct.Prepare(ctx, workspace)
 	if err != nil {
@@ -109,6 +101,23 @@ func (service *Service) prepareDirect(ctx context.Context, snapshot preparationc
 		return failedResult(command.ID), err
 	}
 	return persisted, nil
+}
+
+// requireDirectAccess probes the canonical worktree base on confirm and fails when it is not accessible.
+func (service *Service) requireDirectAccess(ctx context.Context, command preparationcontract.Command, workspace preparationcontract.WorkspaceRequest, host string) (preparationcontract.Result, error) {
+	if !command.Confirm {
+		return preparationcontract.Result{}, nil
+	}
+	access, err := service.direct.ProbeAccess(ctx, workspace, host)
+	if err != nil {
+		return failedResult(command.ID), err
+	}
+	if !access.Allowed {
+		return preparationcontract.Result{
+			ID: command.ID, Workspace: workspaceResult(workspace, ""), NextCommand: access.RelaunchCommand,
+		}, fmt.Errorf("canonical worktree base is not accessible; relaunch with: %s", access.RelaunchCommand)
+	}
+	return preparationcontract.Result{}, nil
 }
 
 func (service *Service) resolveExisting(snapshot preparationcontract.Snapshot, command preparationcontract.Command, decision preparationdomain.Decision) (preparationcontract.Result, error) {

@@ -23,6 +23,16 @@ func ValidateBranch(branch string) error {
 // refNameViolation applies git check-ref-format --branch rules so a name git
 // would refuse is rejected before any record or remote branch carries it.
 func refNameViolation(branch string) string {
+	if reason := refNameCharViolation(branch); reason != "" {
+		return reason
+	}
+	if reason := refNameShapeViolation(branch); reason != "" {
+		return reason
+	}
+	return refNameComponentViolation(branch)
+}
+
+func refNameCharViolation(branch string) string {
 	for _, r := range branch {
 		if r < 0x20 || r == 0x7f || r == ' ' {
 			return "contain spaces or control characters"
@@ -31,6 +41,10 @@ func refNameViolation(branch string) string {
 			return "contain " + string(r)
 		}
 	}
+	return ""
+}
+
+func refNameShapeViolation(branch string) string {
 	switch {
 	case strings.Contains(branch, ".."):
 		return "contain .."
@@ -43,6 +57,10 @@ func refNameViolation(branch string) string {
 	case strings.HasSuffix(branch, "."):
 		return "end with ."
 	}
+	return ""
+}
+
+func refNameComponentViolation(branch string) string {
 	for component := range strings.SplitSeq(branch, "/") {
 		if strings.HasPrefix(component, ".") {
 			return "have a path component starting with ."

@@ -109,31 +109,43 @@ func (repo Repository) verificationRules() []repoSignalRule {
 func (repo Repository) coverageRules() []repoSignalRule {
 	return []repoSignalRule{
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
-			signals.HasMCPResourceCoverage = FileContainsTerm(root, filepath.Join("internal", "adapter", "inbound", "catalog", "mcp", "resource_catalog_test.go"), "TestResourcesExposeStableDescriptors") &&
-				FileContainsTerm(root, filepath.Join("internal", "adapter", "inbound", "catalog", "mcp", "catalog_assembly_test.go"), "TestResourceMapsPreserveDescriptorShape") &&
-				FileContainsTerm(root, filepath.Join("cmd", "issueops", "mcpcli", "resources", "resources_test.go"), "TestHandleResourceReadReportsInvalidUnknownAndReadErrors") &&
-				FileContainsTerm(root, filepath.Join("cmd", "issueops", "mcpcli", "resources", "resources_test.go"), "TestHandleResourceReadUsesCatalogSkillNameWhenConfigSkillNameIsEmpty") &&
-				FileContainsTerm(root, filepath.Join("cmd", "issueops", "mcpcli", "resources", "context_determinism_test.go"), "TestResourcesContextIsByteDeterministic")
+			signals.HasMCPResourceCoverage = hasMCPResourceCoverage(root)
 		}},
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
 			signals.HasHostJudgementCoverage = FileContainsTerm(root, filepath.Join("internal", "domain", "judgement", "structured_test.go"), "TestDecodeStructuredJSONObjectRejectsMalformedOutputs") &&
 				FileContainsTerm(root, filepath.Join("internal", "domain", "judgement", "structured_test.go"), "TestDecodeStructuredJSONObjectBoundsLargeErrorOutput")
 		}},
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
-			signals.HasIssueOpsLinkingBoundaryCoverage = FileContainsTerm(root, filepath.Join("internal", "application", "issueopsbranch", "link_test.go"), "TestLinkIssueRejectsInvalidURL") &&
-				FileContainsTerm(root, filepath.Join("internal", "application", "issueopsbranch", "workspace_link_test.go"), "TestLinkPlanRejectsBoundaryViolations") &&
-				FileContainsTerm(root, filepath.Join("internal", "application", "issueopsbranch", "workspace_link_test.go"), "plan_path does not exist") &&
-				FileContainsTerm(root, filepath.Join("internal", "application", "issueopsbranch", "workspace_link_test.go"), "plan_path must be inside linked worktree") &&
-				FileContainsTerm(root, filepath.Join("internal", "application", "issueopsbranch", "workspace_link_test.go"), "TestValidateIssueURL")
+			signals.HasIssueOpsLinkingBoundaryCoverage = hasIssueOpsLinkingBoundaryCoverage(root)
 		}},
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
-			signals.HasStateWriteLocking = FileContainsTerm(root, filepath.Join("internal", "application", "state", "service.go"), "func (service *Service) Write(ctx context.Context, key, content string)") &&
-				FileContainsTerm(root, filepath.Join("internal", "application", "state", "service.go"), "store.WithSpan(ctx, func(spanCtx context.Context) error {") &&
-				FileContainsTerm(root, filepath.Join("internal", "application", "state", "service.go"), "service.writeRecord(spanCtx, store, dir, key, record)") &&
-				FileContainsTerm(root, filepath.Join("internal", "adapter", "outbound", "state", "state_io.go"), "func NewService() *stateapplication.Service {") &&
-				FileContainsTerm(root, filepath.Join("internal", "adapter", "outbound", "state", "state_test.go"), "TestStateWriteWaitsForKeyLock")
+			signals.HasStateWriteLocking = hasStateWriteLocking(root)
 		}},
 	}
+}
+
+func hasMCPResourceCoverage(root string) bool {
+	return FileContainsTerm(root, filepath.Join("internal", "adapter", "inbound", "catalog", "mcp", "resource_catalog_test.go"), "TestResourcesExposeStableDescriptors") &&
+		FileContainsTerm(root, filepath.Join("internal", "adapter", "inbound", "catalog", "mcp", "catalog_assembly_test.go"), "TestResourceMapsPreserveDescriptorShape") &&
+		FileContainsTerm(root, filepath.Join("cmd", "issueops", "mcpcli", "resources", "resources_test.go"), "TestHandleResourceReadReportsInvalidUnknownAndReadErrors") &&
+		FileContainsTerm(root, filepath.Join("cmd", "issueops", "mcpcli", "resources", "resources_test.go"), "TestHandleResourceReadUsesCatalogSkillNameWhenConfigSkillNameIsEmpty") &&
+		FileContainsTerm(root, filepath.Join("cmd", "issueops", "mcpcli", "resources", "context_determinism_test.go"), "TestResourcesContextIsByteDeterministic")
+}
+
+func hasIssueOpsLinkingBoundaryCoverage(root string) bool {
+	return FileContainsTerm(root, filepath.Join("internal", "application", "issueopsbranch", "link_test.go"), "TestLinkIssueRejectsInvalidURL") &&
+		FileContainsTerm(root, filepath.Join("internal", "application", "issueopsbranch", "workspace_link_test.go"), "TestLinkPlanRejectsBoundaryViolations") &&
+		FileContainsTerm(root, filepath.Join("internal", "application", "issueopsbranch", "workspace_link_test.go"), "plan_path does not exist") &&
+		FileContainsTerm(root, filepath.Join("internal", "application", "issueopsbranch", "workspace_link_test.go"), "plan_path must be inside linked worktree") &&
+		FileContainsTerm(root, filepath.Join("internal", "application", "issueopsbranch", "workspace_link_test.go"), "TestValidateIssueURL")
+}
+
+func hasStateWriteLocking(root string) bool {
+	return FileContainsTerm(root, filepath.Join("internal", "application", "state", "service.go"), "func (service *Service) Write(ctx context.Context, key, content string)") &&
+		FileContainsTerm(root, filepath.Join("internal", "application", "state", "service.go"), "store.WithSpan(ctx, func(spanCtx context.Context) error {") &&
+		FileContainsTerm(root, filepath.Join("internal", "application", "state", "service.go"), "service.writeRecord(spanCtx, store, dir, key, record)") &&
+		FileContainsTerm(root, filepath.Join("internal", "adapter", "outbound", "state", "state_io.go"), "func NewService() *stateapplication.Service {") &&
+		FileContainsTerm(root, filepath.Join("internal", "adapter", "outbound", "state", "state_test.go"), "TestStateWriteWaitsForKeyLock")
 }
 
 func (repo Repository) workerAndInboundRules() []repoSignalRule {
@@ -159,7 +171,7 @@ func (repo Repository) workerAndInboundRules() []repoSignalRule {
 }
 
 func (repo Repository) cliAndOperationsRules() []repoSignalRule {
-	return []repoSignalRule{
+	return append([]repoSignalRule{
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
 			signals.HasToolConformanceTransportCoverage = FileContainsTerm(root, filepath.Join("internal", "contract", "toolconformance", "types_test.go"), "TestClassificationsCoverAllContractCases") &&
 				FileContainsTerm(root, filepath.Join("internal", "contract", "toolconformance", "types_test.go"), "TestBenchmarkReportJSONRoundTripPreservesTypedEnums") &&
@@ -183,6 +195,11 @@ func (repo Repository) cliAndOperationsRules() []repoSignalRule {
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
 			signals.HasMCPAdapterCatalog = hasMCPAdapterCatalog(root)
 		}},
+	}, repo.compatibilityAndAuditRules()...)
+}
+
+func (repo Repository) compatibilityAndAuditRules() []repoSignalRule {
+	return []repoSignalRule{
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
 			signals.HasCompatibilityContract = FileContainsTerm(root, filepath.Join("cmd", "issueops", "issueopsapp", "misc_facade.go"), "CompatibilityContract") &&
 				FileContainsTerm(root, filepath.Join("cmd", "issueops", "issueopsapp", "root_command_facade.go"), `"contract":`)
@@ -294,28 +311,33 @@ func rootWiresMCPCatalog(root string) bool {
 			return true
 		}
 		for _, element := range literal.Elts {
-			field, ok := element.(*ast.KeyValueExpr)
-			if !ok {
-				continue
-			}
-			key, ok := field.Key.(*ast.Ident)
-			if !ok || key.Name != "Catalog" {
-				continue
-			}
-			call, ok := field.Value.(*ast.CallExpr)
-			if !ok {
-				continue
-			}
-			selector, ok := call.Fun.(*ast.SelectorExpr)
-			if !ok || selector.Sel.Name != "Build" {
-				continue
-			}
-			pkg, ok := selector.X.(*ast.Ident)
-			if ok && pkg.Name == "mcpcatalog" {
+			if isMCPCatalogBuildAssignment(element) {
 				found = true
 			}
 		}
 		return true
 	})
 	return found
+}
+
+// isMCPCatalogBuildAssignment reports whether element is `Catalog: mcpcatalog.Build(...)`.
+func isMCPCatalogBuildAssignment(element ast.Expr) bool {
+	field, ok := element.(*ast.KeyValueExpr)
+	if !ok {
+		return false
+	}
+	key, ok := field.Key.(*ast.Ident)
+	if !ok || key.Name != "Catalog" {
+		return false
+	}
+	call, ok := field.Value.(*ast.CallExpr)
+	if !ok {
+		return false
+	}
+	selector, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok || selector.Sel.Name != "Build" {
+		return false
+	}
+	pkg, ok := selector.X.(*ast.Ident)
+	return ok && pkg.Name == "mcpcatalog"
 }

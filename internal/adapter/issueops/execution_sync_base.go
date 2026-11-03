@@ -85,13 +85,10 @@ func syncExecutionBase(ctx context.Context, stateRoot string, req issueops.Execu
 		deps.Git = defaultExecutionSyncBaseGit
 	}
 	mode := strings.TrimSpace(req.Mode)
-	switch mode {
-	case issueops.ExecutionSyncBasePreview, issueops.ExecutionSyncBaseApply, issueops.ExecutionSyncBaseFinalize, issueops.ExecutionSyncBaseAbort:
-	default:
+	if !executionSyncBaseKnownMode(mode) {
 		return issueops.ExecutionSyncBaseResult{OK: false, ID: req.ID, Mode: mode},
 			fmt.Errorf("execution sync-base requires exactly one mode: --preview, --apply, --finalize, or --abort")
 	}
-	mutating := mode != issueops.ExecutionSyncBasePreview
 	record, err := ReadIssueOps(stateRoot, req.ID)
 	if err != nil {
 		return issueops.ExecutionSyncBaseResult{OK: false, ID: req.ID, Mode: mode}, err
@@ -100,40 +97,17 @@ func syncExecutionBase(ctx context.Context, stateRoot string, req issueops.Execu
 	if record.Execution != nil {
 		result.LeaseGeneration = record.Execution.Lease.Generation
 	}
-	// preview는 released 사이클과 비-holder 세션의 진단 채널이므로 actor를
-	// 요구하지 않는다. 변형 3모드만 live process receipt까지 정규화한다.
-	var actor issueops.NativeActor
-	if mutating {
-		verified, verifyErr := verifier.Verify(ctx, req.Actor)
-		if verifyErr != nil {
-			result.OK = false
-			return result, verifyErr
-		}
-		actor = verified.Identity
+	actor, err := executionSyncBaseVerifyActor(ctx, verifier, req, mode)
+	if err != nil {
+		result.OK = false
+		return result, err
 	}
 	inventory, missing := executionSyncBaseGates(ctx, record, req, mode, actor, deps, &result)
 	result.Missing = missing
 	if len(missing) > 0 {
 		result.OK = false
 		result.NextCommand = executionStatusCommandForSyncBase(record.ID)
-		err := fmt.Errorf("execution sync-base %s is not ready; unmet gates: %s", mode, strings.Join(missing, ", "))
-		if slices.Contains(missing, "cwd_canonical") && inventory.Root != "" {
-			// An agent ran it from the source checkout as the replace step is.
-			err = fmt.Errorf("%w; run it from the canonical worktree %q, with --cwd %q", err, inventory.Root, inventory.Root)
-		}
-		if slices.Contains(missing, "base_fetch") {
-			// Probed: a base branch deleted on origin showed only "base_fetch".
-			remedy := "if it was merged and deleted, record the PR's new base with issueops branch retarget first"
-			if record.RemoteArtifact == nil {
-				// QA: a default branch renamed before the PR; retarget needs a PR.
-				remedy = "if it was renamed or replaced before the PR, re-record the new base keeping the sealed facts: " + issueopsdomain.BaseRerecordCommand(record, "<NEW_BASE>") + ", then rerun this preview"
-			}
-			err = fmt.Errorf("%w; git fetch origin %s failed: %s (check that the base branch still exists on origin; %s)", err, inventory.BaseBranch, strings.TrimSpace(inventory.BaseFetchOutput), remedy)
-		}
-		if slices.Contains(missing, "sealed_base_on_base_tip") {
-			err = fmt.Errorf("%w; origin/%s no longer contains the sealed base %.10s or its content (the base was rewritten, e.g. force-pushed), so merging it would bring the commits the base dropped back through this branch's PR. Stop and ask the user: keep the current base and skip the sync, or start a new cycle from the rewritten base", err, inventory.BaseBranch, inventory.SealedBaseOID)
-		}
-		return result, err
+		return result, executionSyncBaseNotReadyError(record, mode, inventory, missing)
 	}
 	fingerprint, err := executionSyncBaseFingerprint(inventory)
 	if err != nil {
@@ -142,42 +116,99 @@ func syncExecutionBase(ctx context.Context, stateRoot string, req issueops.Execu
 	}
 	result.Fingerprint = fingerprint
 	if mode == issueops.ExecutionSyncBasePreview {
-		if !result.MergeNeeded && inventory.RemoteWorkOID != "" && (strings.EqualFold(inventory.RemoteWorkOID, inventory.WorkOID) || inventory.BaseOnRemote) {
-			// The base is already in the pushed branch: an apply would only
-			// record a no-op sync (or push the branch's own commits, which is
-			// the commit-push stage's job), so do not hand one out.
-			result.NextCommand = "issueops next --id " + record.ID + " --json"
-			return result, nil
-		}
-		if inventory.MergeInProgress {
-			// Probe: after an apply paused on conflicts, a preview handed out
-			// another apply (refused while the merge is open). The way on is
-			// resolving and finalizing, or aborting.
-			prefix := executionSyncBaseCommandPrefix(record)
-			flags := executionSyncBaseActorFlags(req.Actor, req.CWD)
-			result.NextCommand = prefix + " --finalize " + flags + " --json"
-			result.AbortCommand = prefix + " --abort " + flags + " --json"
-			return result, nil
-		}
-		result.NextCommand = fmt.Sprintf(
-			"%s --apply --confirm --fingerprint %s %s --json",
-			executionSyncBaseCommandPrefix(record), fingerprint, executionSyncBaseActorFlags(req.Actor, req.CWD))
+		executionSyncBasePreviewNextCommands(record, req, inventory, fingerprint, &result)
 		return result, nil
 	}
+	return runExecutionSyncBaseMutation(ctx, stateRoot, record, req, actor, inventory, fingerprint, deps, &result)
+}
+
+// runExecutionSyncBaseMutation은 변형 3모드를 모드별 절차로 분기한다.
+func runExecutionSyncBaseMutation(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, req issueops.ExecutionSyncBaseRequest,
+	actor issueops.NativeActor, inventory executionSyncBaseInventory, fingerprint string,
+	deps issueops.ExecutionSyncBaseDeps, result *issueops.ExecutionSyncBaseResult) (issueops.ExecutionSyncBaseResult, error) {
 	// --confirm은 파괴적 머지 커밋과 push를 만드는 apply에만 요구한다
 	// (설계 v2 4모드 표기 그대로 — finalize/abort는 플래그 자체가 명시 의사다).
-	if mode == issueops.ExecutionSyncBaseApply && !req.Confirm {
+	if result.Mode == issueops.ExecutionSyncBaseApply && !req.Confirm {
 		result.OK = false
-		return result, fmt.Errorf("execution sync-base --apply requires --confirm")
+		return *result, fmt.Errorf("execution sync-base --apply requires --confirm")
 	}
-	switch mode {
+	switch result.Mode {
 	case issueops.ExecutionSyncBaseApply:
-		return applyExecutionSyncBase(ctx, stateRoot, record, req, actor, inventory, fingerprint, deps, &result)
+		return applyExecutionSyncBase(ctx, stateRoot, record, req, actor, inventory, fingerprint, deps, result)
 	case issueops.ExecutionSyncBaseFinalize:
-		return finalizeExecutionSyncBase(ctx, stateRoot, record, actor, inventory, deps, &result)
+		return finalizeExecutionSyncBase(ctx, stateRoot, record, actor, inventory, deps, result)
 	default:
-		return abortExecutionSyncBase(ctx, stateRoot, record, inventory, deps, &result)
+		return abortExecutionSyncBase(ctx, stateRoot, record, inventory, deps, result)
 	}
+}
+
+func executionSyncBaseKnownMode(mode string) bool {
+	switch mode {
+	case issueops.ExecutionSyncBasePreview, issueops.ExecutionSyncBaseApply, issueops.ExecutionSyncBaseFinalize, issueops.ExecutionSyncBaseAbort:
+		return true
+	}
+	return false
+}
+
+// executionSyncBaseVerifyActor는 변형 3모드에서만 actor를 검증한다.
+// preview는 released 사이클과 비-holder 세션의 진단 채널이므로 actor를
+// 요구하지 않는다. 변형 3모드만 live process receipt까지 정규화한다.
+func executionSyncBaseVerifyActor(ctx context.Context, verifier authorityport.ActorVerifier, req issueops.ExecutionSyncBaseRequest, mode string) (issueops.NativeActor, error) {
+	if mode == issueops.ExecutionSyncBasePreview {
+		return issueops.NativeActor{}, nil
+	}
+	verified, err := verifier.Verify(ctx, req.Actor)
+	if err != nil {
+		return issueops.NativeActor{}, err
+	}
+	return verified.Identity, nil
+}
+
+// executionSyncBaseNotReadyError는 unmet gate 목록을 기본 오류로 만들고,
+// 게이트별 복구 안내를 같은 순서로 덧붙인다.
+func executionSyncBaseNotReadyError(record issueops.IssueOpsRecord, mode string, inventory executionSyncBaseInventory, missing []string) error {
+	err := fmt.Errorf("execution sync-base %s is not ready; unmet gates: %s", mode, strings.Join(missing, ", "))
+	if slices.Contains(missing, "cwd_canonical") && inventory.Root != "" {
+		// An agent ran it from the source checkout as the replace step is.
+		err = fmt.Errorf("%w; run it from the canonical worktree %q, with --cwd %q", err, inventory.Root, inventory.Root)
+	}
+	if slices.Contains(missing, "base_fetch") {
+		// Probed: a base branch deleted on origin showed only "base_fetch".
+		remedy := "if it was merged and deleted, record the PR's new base with issueops branch retarget first"
+		if record.RemoteArtifact == nil {
+			// QA: a default branch renamed before the PR; retarget needs a PR.
+			remedy = "if it was renamed or replaced before the PR, re-record the new base keeping the sealed facts: " + issueopsdomain.BaseRerecordCommand(record, "<NEW_BASE>") + ", then rerun this preview"
+		}
+		err = fmt.Errorf("%w; git fetch origin %s failed: %s (check that the base branch still exists on origin; %s)", err, inventory.BaseBranch, strings.TrimSpace(inventory.BaseFetchOutput), remedy)
+	}
+	if slices.Contains(missing, "sealed_base_on_base_tip") {
+		err = fmt.Errorf("%w; origin/%s no longer contains the sealed base %.10s or its content (the base was rewritten, e.g. force-pushed), so merging it would bring the commits the base dropped back through this branch's PR. Stop and ask the user: keep the current base and skip the sync, or start a new cycle from the rewritten base", err, inventory.BaseBranch, inventory.SealedBaseOID)
+	}
+	return err
+}
+
+// executionSyncBasePreviewNextCommands는 preview 결과에 다음 명령(들)을 채운다.
+func executionSyncBasePreviewNextCommands(record issueops.IssueOpsRecord, req issueops.ExecutionSyncBaseRequest, inventory executionSyncBaseInventory, fingerprint string, result *issueops.ExecutionSyncBaseResult) {
+	if !result.MergeNeeded && inventory.RemoteWorkOID != "" && (strings.EqualFold(inventory.RemoteWorkOID, inventory.WorkOID) || inventory.BaseOnRemote) {
+		// The base is already in the pushed branch: an apply would only
+		// record a no-op sync (or push the branch's own commits, which is
+		// the commit-push stage's job), so do not hand one out.
+		result.NextCommand = "issueops next --id " + record.ID + " --json"
+		return
+	}
+	if inventory.MergeInProgress {
+		// Probe: after an apply paused on conflicts, a preview handed out
+		// another apply (refused while the merge is open). The way on is
+		// resolving and finalizing, or aborting.
+		prefix := executionSyncBaseCommandPrefix(record)
+		flags := executionSyncBaseActorFlags(req.Actor, req.CWD)
+		result.NextCommand = prefix + " --finalize " + flags + " --json"
+		result.AbortCommand = prefix + " --abort " + flags + " --json"
+		return
+	}
+	result.NextCommand = fmt.Sprintf(
+		"%s --apply --confirm --fingerprint %s %s --json",
+		executionSyncBaseCommandPrefix(record), fingerprint, executionSyncBaseActorFlags(req.Actor, req.CWD))
 }
 
 // executionSyncBaseGates는 설계 v2의 게이트 10종을 순서대로 평가하고 missing을

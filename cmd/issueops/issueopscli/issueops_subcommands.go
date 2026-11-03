@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	issueopscontract "issueops/internal/contract/issueops"
+	issueopsinventorycontract "issueops/internal/contract/issueopsinventory"
 	issueopsroutingcontract "issueops/internal/contract/issueopsrouting"
 )
 
@@ -55,43 +56,53 @@ func (cli command) runIssueOpsStatus(args []string) error {
 	return printIssueOpsRecord(issueopscontract.StatusView(record), *jsonOut, err)
 }
 
-func (cli command) runIssueOpsLinkIssue(args []string) error {
-	fs := flag.NewFlagSet("issueops link-issue", flag.ContinueOnError)
+// issueOpsLinkSpec describes a `link-*` subcommand that takes one string value
+// next to --id and the actor flags and records it through one runtime call.
+type issueOpsLinkSpec struct {
+	name     string
+	flagName string
+	usage    string
+	link     func(stateRoot, id, value string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
+}
+
+func (cli command) runIssueOpsLinkValue(args []string, spec issueOpsLinkSpec) error {
+	fs := flag.NewFlagSet(spec.name, flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
 	actor := cli.addIssueOpsActorFlags(fs)
-	issueURL := fs.String("issue-url", "", "GitHub/GitLab issue URL")
+	value := fs.String(spec.flagName, "", spec.usage)
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
 	}
-	record, err := cli.Runtime.LinkIssueOpsIssueWithActor(cli.Runtime.IssueOpsStateRoot(), *id, *issueURL, actor.actor())
+	record, err := spec.link(cli.Runtime.IssueOpsStateRoot(), *id, *value, actor.actor())
 	return printIssueOpsResult(record, *jsonOut, err)
+}
+
+func (cli command) runIssueOpsLinkIssue(args []string) error {
+	return cli.runIssueOpsLinkValue(args, issueOpsLinkSpec{
+		name:     "issueops link-issue",
+		flagName: "issue-url",
+		usage:    "GitHub/GitLab issue URL",
+		link:     cli.Runtime.LinkIssueOpsIssueWithActor,
+	})
 }
 
 func (cli command) runIssueOpsLinkPlan(args []string) error {
-	fs := flag.NewFlagSet("issueops link-plan", flag.ContinueOnError)
-	id := fs.String("id", "", "issueops id")
-	actor := cli.addIssueOpsActorFlags(fs)
-	planPath := fs.String("plan-path", "", "issue-driven plan path")
-	jsonOut := fs.Bool("json", false, "print JSON")
-	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
-		return err
-	}
-	record, err := cli.Runtime.LinkIssueOpsPlanWithActor(cli.Runtime.IssueOpsStateRoot(), *id, *planPath, actor.actor())
-	return printIssueOpsResult(record, *jsonOut, err)
+	return cli.runIssueOpsLinkValue(args, issueOpsLinkSpec{
+		name:     "issueops link-plan",
+		flagName: "plan-path",
+		usage:    "issue-driven plan path",
+		link:     cli.Runtime.LinkIssueOpsPlanWithActor,
+	})
 }
 
 func (cli command) runIssueOpsLinkWorktree(args []string) error {
-	fs := flag.NewFlagSet("issueops link-worktree", flag.ContinueOnError)
-	id := fs.String("id", "", "issueops id")
-	actor := cli.addIssueOpsActorFlags(fs)
-	worktreePath := fs.String("worktree-path", "", "issue-driven worktree path")
-	jsonOut := fs.Bool("json", false, "print JSON")
-	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
-		return err
-	}
-	record, err := cli.Runtime.LinkIssueOpsWorktreeWithActor(cli.Runtime.IssueOpsStateRoot(), *id, *worktreePath, actor.actor())
-	return printIssueOpsResult(record, *jsonOut, err)
+	return cli.runIssueOpsLinkValue(args, issueOpsLinkSpec{
+		name:     "issueops link-worktree",
+		flagName: "worktree-path",
+		usage:    "issue-driven worktree path",
+		link:     cli.Runtime.LinkIssueOpsWorktreeWithActor,
+	})
 }
 
 func (cli command) runIssueOpsLinkChild(args []string) error {
@@ -220,32 +231,32 @@ func (cli command) runIssueOpsChildAccept(args []string) error {
 	return printIssueOpsChildValue(result, *jsonOut, err)
 }
 
-func (cli command) runIssueOpsChildReject(args []string) error {
-	fs := flag.NewFlagSet("issueops child reject", flag.ContinueOnError)
+// runIssueOpsChildReason는 child reject와 child drop이 공유한다. 둘 다 parent/child
+// id와 사유 하나를 받아 runtime 호출 한 번으로 처리한다.
+func (cli command) runIssueOpsChildReason(args []string, name, reasonUsage string, apply func(parentID, childID, reason string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildValidationResult, error)) error {
+	fs := flag.NewFlagSet(name, flag.ContinueOnError)
 	parentID := fs.String("parent", "", "parent issueops id")
 	actor := cli.addIssueOpsActorFlags(fs)
 	childID := fs.String("child", "", "child issueops id")
-	reason := fs.String("reason", "", "rejection reason")
+	reason := fs.String("reason", "", reasonUsage)
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
 	}
-	result, err := cli.Runtime.RejectIssueOpsChildWithActor(cli.Runtime.IssueOpsStateRoot(), *parentID, *childID, *reason, nil, actor.actor())
+	result, err := apply(*parentID, *childID, *reason, actor.actor())
 	return printIssueOpsChildValue(result, *jsonOut, err)
 }
 
+func (cli command) runIssueOpsChildReject(args []string) error {
+	return cli.runIssueOpsChildReason(args, "issueops child reject", "rejection reason", func(parentID, childID, reason string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildValidationResult, error) {
+		return cli.Runtime.RejectIssueOpsChildWithActor(cli.Runtime.IssueOpsStateRoot(), parentID, childID, reason, nil, actor)
+	})
+}
+
 func (cli command) runIssueOpsChildDrop(args []string) error {
-	fs := flag.NewFlagSet("issueops child drop", flag.ContinueOnError)
-	parentID := fs.String("parent", "", "parent issueops id")
-	actor := cli.addIssueOpsActorFlags(fs)
-	childID := fs.String("child", "", "child issueops id")
-	reason := fs.String("reason", "", "drop reason")
-	jsonOut := fs.Bool("json", false, "print JSON")
-	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
-		return err
-	}
-	result, err := cli.Runtime.DropIssueOpsChildWithActor(cli.Runtime.IssueOpsStateRoot(), *parentID, *childID, *reason, actor.actor())
-	return printIssueOpsChildValue(result, *jsonOut, err)
+	return cli.runIssueOpsChildReason(args, "issueops child drop", "drop reason", func(parentID, childID, reason string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildValidationResult, error) {
+		return cli.Runtime.DropIssueOpsChildWithActor(cli.Runtime.IssueOpsStateRoot(), parentID, childID, reason, actor)
+	})
 }
 
 func printIssueOpsChildValue(value any, jsonOut bool, err error) error {
@@ -605,17 +616,31 @@ func (cli command) runIssueOpsList(args []string) error {
 	if err != nil {
 		return err
 	}
-	if repoPath := strings.TrimSpace(*repo); repoPath != "" && len(result.Entries) == 0 {
-		// Probe: a mistyped --repo answered an empty list, which reads as
-		// "no cycles here". A deleted repository that still has cycles keeps
-		// listing them, so only an empty answer for a missing path refuses.
-		if _, statErr := os.Stat(repoPath); errors.Is(statErr, os.ErrNotExist) {
-			return fmt.Errorf("--repo %s does not exist; pass the repository root (git rev-parse --show-toplevel), or omit --repo to list every cycle", repoPath)
-		}
+	if err := checkIssueOpsListRepo(*repo, len(result.Entries)); err != nil {
+		return err
 	}
 	if *jsonOut {
 		return printJSON(result)
 	}
+	printIssueOpsList(result)
+	return nil
+}
+
+func checkIssueOpsListRepo(repo string, entries int) error {
+	repoPath := strings.TrimSpace(repo)
+	if repoPath == "" || entries != 0 {
+		return nil
+	}
+	// Probe: a mistyped --repo answered an empty list, which reads as
+	// "no cycles here". A deleted repository that still has cycles keeps
+	// listing them, so only an empty answer for a missing path refuses.
+	if _, statErr := os.Stat(repoPath); errors.Is(statErr, os.ErrNotExist) {
+		return fmt.Errorf("--repo %s does not exist; pass the repository root (git rev-parse --show-toplevel), or omit --repo to list every cycle", repoPath)
+	}
+	return nil
+}
+
+func printIssueOpsList(result issueopsinventorycontract.ListResult) {
 	fmt.Printf(
 		"cycles: %d (scanned %d records, unreadable %d at %s)\n",
 		len(result.Entries),
@@ -624,29 +649,32 @@ func (cli command) runIssueOpsList(args []string) error {
 		result.GeneratedAt,
 	)
 	for _, entry := range result.Entries {
-		flags := ""
-		if entry.Claimable {
-			flags += " [claimable]"
-		}
-		if entry.CleanupCandidate {
-			flags += " [cleanup]"
-		}
-		if entry.CompletionUnreflected {
-			flags += " [unreflected]"
-		}
-		if entry.PendingKind != "" {
-			flags += " [pending:" + entry.PendingKind + "]"
-		}
-		if entry.FailureCode != "" {
-			flags += " [failed:" + entry.FailureCode + "]"
-		}
-		if entry.CleanupFailureStep != "" {
-			flags += " [cleanup-failed:" + entry.CleanupFailureStep + "]"
-		}
-		if entry.IssueCreateStatus != "" {
-			flags += " [issue-create:" + entry.IssueCreateStatus + "]"
-		}
-		fmt.Printf("- %s %s phase=%s lease=%s%s\n", entry.ID, entry.Branch, entry.Phase, entry.LeaseStatus, flags)
+		fmt.Printf("- %s %s phase=%s lease=%s%s\n", entry.ID, entry.Branch, entry.Phase, entry.LeaseStatus, issueOpsListFlags(entry))
 	}
-	return nil
+}
+
+func issueOpsListFlags(entry issueopsinventorycontract.ListEntry) string {
+	flags := ""
+	if entry.Claimable {
+		flags += " [claimable]"
+	}
+	if entry.CleanupCandidate {
+		flags += " [cleanup]"
+	}
+	if entry.CompletionUnreflected {
+		flags += " [unreflected]"
+	}
+	if entry.PendingKind != "" {
+		flags += " [pending:" + entry.PendingKind + "]"
+	}
+	if entry.FailureCode != "" {
+		flags += " [failed:" + entry.FailureCode + "]"
+	}
+	if entry.CleanupFailureStep != "" {
+		flags += " [cleanup-failed:" + entry.CleanupFailureStep + "]"
+	}
+	if entry.IssueCreateStatus != "" {
+		flags += " [issue-create:" + entry.IssueCreateStatus + "]"
+	}
+	return flags
 }

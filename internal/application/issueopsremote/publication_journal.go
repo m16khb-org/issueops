@@ -130,23 +130,7 @@ func (j *PublicationJournal) Complete(ctx context.Context, intent contract.Inten
 		if err != nil {
 			return err
 		}
-		facts := domain.ReceiptAuthorityFacts{Prepared: current.Execution != nil, ExpectedOperationID: payload.OperationID, ExpectedGeneration: payload.Generation}
-		if current.Execution != nil {
-			facts.Pending = current.Execution.Pending != nil
-			if facts.Pending {
-				facts.PendingOperationID = current.Execution.Pending.OperationID
-			}
-			lease := current.Execution.Lease
-			facts.Generation, facts.LeaseStatus = lease.Generation, string(lease.Status)
-			facts.ExpectedHost, facts.ExpectedSessionID, facts.ExpectedAgentID = payload.Request.Host, payload.Request.SessionID, payload.Request.AgentID
-			if enforceOriginalGeneration && facts.Pending && facts.PendingOperationID == payload.OperationID {
-				facts.CWDMatches = j.environment.PathsMatch(payload.Request.CWD, current.Execution.Workspace.Root)
-			}
-			if lease.Holder != nil {
-				facts.HolderPresent = true
-				facts.HolderHost, facts.HolderSessionID, facts.HolderAgentID = lease.Holder.Host, lease.Holder.SessionID, lease.Holder.AgentID
-			}
-		}
+		facts := j.receiptAuthorityFacts(current, payload, enforceOriginalGeneration)
 		if err := domain.ValidateReceiptAuthority(facts, enforceOriginalGeneration); err != nil {
 			return err
 		}
@@ -247,6 +231,27 @@ func (j *PublicationJournal) loadSnapshot(ctx context.Context, record model.Issu
 		intent.PendingStartedAt = record.Execution.Pending.StartedAt
 	}
 	return intent, nil
+}
+
+func (j *PublicationJournal) receiptAuthorityFacts(current model.IssueOpsRecord, payload contract.IntentPayload, enforceOriginalGeneration bool) domain.ReceiptAuthorityFacts {
+	facts := domain.ReceiptAuthorityFacts{Prepared: current.Execution != nil, ExpectedOperationID: payload.OperationID, ExpectedGeneration: payload.Generation}
+	if current.Execution != nil {
+		facts.Pending = current.Execution.Pending != nil
+		if facts.Pending {
+			facts.PendingOperationID = current.Execution.Pending.OperationID
+		}
+		lease := current.Execution.Lease
+		facts.Generation, facts.LeaseStatus = lease.Generation, string(lease.Status)
+		facts.ExpectedHost, facts.ExpectedSessionID, facts.ExpectedAgentID = payload.Request.Host, payload.Request.SessionID, payload.Request.AgentID
+		if enforceOriginalGeneration && facts.Pending && facts.PendingOperationID == payload.OperationID {
+			facts.CWDMatches = j.environment.PathsMatch(payload.Request.CWD, current.Execution.Workspace.Root)
+		}
+		if lease.Holder != nil {
+			facts.HolderPresent = true
+			facts.HolderHost, facts.HolderSessionID, facts.HolderAgentID = lease.Holder.Host, lease.Holder.SessionID, lease.Holder.AgentID
+		}
+	}
+	return facts
 }
 
 func pendingFacts(record model.IssueOpsRecord, expected string) domain.PendingIntentFacts {

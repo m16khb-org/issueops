@@ -119,54 +119,89 @@ func LintStatic(candidate LintCandidate) (result model.LintGate, argv []string) 
 	if strings.Contains(gate.CheckCmd, "`") {
 		result.Problems = append(result.Problems, "CHECK contains markdown backticks; argv keeps them as characters (see argv), so the command cannot run as intended. Write the bare command")
 	}
-	if consumed := strings.Count(gate.CheckCmd, `\`) - strings.Count(strings.Join(argv, " "), `\`); consumed > 0 {
-		result.Warnings = append(result.Warnings, fmt.Sprintf(
+	expect := strings.TrimSpace(gate.Expect)
+	result.Warnings = append(result.Warnings, lintCheckWarnings(gate.CheckCmd, argv, expect)...)
+	if len(expect) >= 2 && strings.HasPrefix(expect, "`") && strings.HasSuffix(expect, "`") {
+		result.Problems = append(result.Problems, "EXPECT is wrapped in markdown backticks, which are matched literally, so it never matches command output. Write the bare text")
+	}
+	problem, warning := lintExpectForm(expect)
+	if problem != "" {
+		result.Problems = append(result.Problems, problem)
+	}
+	if warning != "" {
+		result.Warnings = append(result.Warnings, warning)
+	}
+	return result, argv
+}
+
+// lintCheckWarnings collects the CHECK warnings that follow a successful
+// argv conversion, in report order.
+func lintCheckWarnings(checkCmd string, argv []string, expect string) []string {
+	var warnings []string
+	if consumed := strings.Count(checkCmd, `\`) - strings.Count(strings.Join(argv, " "), `\`); consumed > 0 {
+		warnings = append(warnings, fmt.Sprintf(
 			"the argv tokenizer consumed %d backslash(es): inside double quotes \\X becomes X and \\n a newline; use single quotes to keep a regex or escape as written (see argv)", consumed))
 	}
 	if pythonWritesBytecode(argv) {
 		// QA (opencode): a python3 -c CHECK left __pycache__ in the worktree;
 		// removing it after the clean seal made the seal stale.
-		result.Warnings = append(result.Warnings, "python without -B writes __pycache__ into the worktree, which enters the change fingerprint (removing it later stales the clean seal); run python3 -B")
+		warnings = append(warnings, "python without -B writes __pycache__ into the worktree, which enters the change fingerprint (removing it later stales the clean seal); run python3 -B")
 	}
 	if pattern, words, ok := unquotedSearchWords(argv); ok {
 		// QA (README typo): `grep -c This library adds numbers README.md`
 		// searched for "This" in files named library, adds, numbers.
-		result.Warnings = append(result.Warnings, fmt.Sprintf("%s reads %q as the pattern and %s as files; if a multi-word pattern was meant, quote it ('%s %s')", argv[0], pattern, strings.Join(words, ", "), pattern, strings.Join(words, " ")))
+		warnings = append(warnings, fmt.Sprintf("%s reads %q as the pattern and %s as files; if a multi-word pattern was meant, quote it ('%s %s')", argv[0], pattern, strings.Join(words, ", "), pattern, strings.Join(words, " ")))
 	}
-	expect := strings.TrimSpace(gate.Expect)
 	if name, ok := testNameFilter(argv); ok && expect != "" && !strings.ContainsAny(expect, "123456789") && !strings.Contains(expect, name) {
 		// Rust QA: `cargo test char_count` named no test (the test was
 		// counts_chars), ran zero tests and still printed "test result: ok".
-		result.Warnings = append(result.Warnings, fmt.Sprintf("CHECK selects tests by name (%s); a name that matches nothing runs zero tests and still succeeds, so make EXPECT require a test count or the test's own line", name))
+		warnings = append(warnings, fmt.Sprintf("CHECK selects tests by name (%s); a name that matches nothing runs zero tests and still succeeds, so make EXPECT require a test count or the test's own line", name))
 	}
-	if len(expect) >= 2 && strings.HasPrefix(expect, "`") && strings.HasSuffix(expect, "`") {
-		result.Problems = append(result.Problems, "EXPECT is wrapped in markdown backticks, which are matched literally, so it never matches command output. Write the bare text")
+	return warnings
+}
+
+// lintExpectForm judges the shape of a trimmed EXPECT. At most one of problem
+// and warning is set.
+func lintExpectForm(expect string) (problem, warning string) {
+	_, isRegex, err := expectRegex(expect)
+	if isRegex {
+		return lintRegexExpect(expect, err)
 	}
-	switch _, isRegex, err := expectRegex(expect); {
-	case isRegex && err != nil:
-		result.Problems = append(result.Problems, fmt.Sprintf("EXPECT regex does not compile (RE2), so it never matches: %v", err))
-	case isRegex && strings.Contains(expect, `\n\z`):
+	return lintLiteralExpect(expect)
+}
+
+func lintRegexExpect(expect string, compileErr error) (problem, warning string) {
+	switch {
+	case compileErr != nil:
+		return fmt.Sprintf("EXPECT regex does not compile (RE2), so it never matches: %v", compileErr), ""
+	case strings.Contains(expect, `\n\z`):
 		// DecideCheck trims trailing newlines before matching.
-		result.Problems = append(result.Problems, `EXPECT regex requires a newline before \z, but output is matched with trailing newlines trimmed, so it never matches; drop the \n before \z`)
-	case isRegex && strings.HasPrefix(expect, "/^") && !strings.HasSuffix(expect, "$/") && !strings.Contains(expect[strings.LastIndex(expect, "/"):], "m"):
+		return `EXPECT regex requires a newline before \z, but output is matched with trailing newlines trimmed, so it never matches; drop the \n before \z`, ""
+	case strings.HasPrefix(expect, "/^") && !strings.HasSuffix(expect, "$/") && !strings.Contains(expect[strings.LastIndex(expect, "/"):], "m"):
 		// Rust QA: /^test result: ok/ never matched; cargo prints the summary
 		// after other lines and ^ without m anchors the whole output.
 		// /^…$/ (the whole output) stays quiet.
-		result.Warnings = append(result.Warnings, "EXPECT regex starts with ^ but has no m flag, so ^ anchors the start of the whole output, not each line; add m (/^…/m) unless the first output line is meant")
+		return "", "EXPECT regex starts with ^ but has no m flag, so ^ anchors the start of the whole output, not each line; add m (/^…/m) unless the first output line is meant"
+	}
+	return "", ""
+}
+
+func lintLiteralExpect(expect string) (problem, warning string) {
+	switch {
 	case expect == "":
-		result.Warnings = append(result.Warnings, "no EXPECT: exit code 0 alone marks this gate met")
-	case !isRegex && strings.HasPrefix(expect, "/"):
-		result.Warnings = append(result.Warnings, "EXPECT starts with / but is not /pattern/flags, so it is matched as a literal line")
-	case !isRegex && len(expect) > 2 && strings.HasPrefix(expect, "^") && strings.HasSuffix(expect, "$"):
-		result.Problems = append(result.Problems, fmt.Sprintf("EXPECT %s is an anchored regex but is matched as a literal line, so it never matches; write /%s/", expect, expect))
-	case !isRegex && exitStatusExpect.MatchString(expect):
+		return "", "no EXPECT: exit code 0 alone marks this gate met"
+	case strings.HasPrefix(expect, "/"):
+		return "", "EXPECT starts with / but is not /pattern/flags, so it is matched as a literal line"
+	case len(expect) > 2 && strings.HasPrefix(expect, "^") && strings.HasSuffix(expect, "$"):
+		return fmt.Sprintf("EXPECT %s is an anchored regex but is matched as a literal line, so it never matches; write /%s/", expect, expect), ""
+	case exitStatusExpect.MatchString(expect):
 		// QA: EXPECT "exit 0" on a silent assertion failed the gate; EXPECT
 		// matches output lines, and exit code 0 is already required.
-		result.Warnings = append(result.Warnings, fmt.Sprintf("EXPECT %q is matched against the command's output, not its exit status (exit code 0 is always required); leave EXPECT empty for a silent command, or print a value and expect it", expect))
-	case !isRegex && literalLooksLikeRegex(expect):
-		result.Warnings = append(result.Warnings, fmt.Sprintf("EXPECT %s looks like a regex but is matched as a literal line; write /pattern/ if a regex is meant", expect))
+		return "", fmt.Sprintf("EXPECT %q is matched against the command's output, not its exit status (exit code 0 is always required); leave EXPECT empty for a silent command, or print a value and expect it", expect)
+	case literalLooksLikeRegex(expect):
+		return "", fmt.Sprintf("EXPECT %s looks like a regex but is matched as a literal line; write /pattern/ if a regex is meant", expect)
 	}
-	return result, argv
+	return "", ""
 }
 
 // exitStatusExpect matches EXPECT values that describe an exit status
@@ -281,37 +316,51 @@ func testNameFilter(argv []string) (string, bool) {
 		return "", false
 	}
 	tool := strings.ToLower(filepath.Base(argv[0]))
-	flagValue := func(names ...string) (string, bool) {
-		for i, arg := range argv {
-			for _, name := range names {
-				if arg == name && i+1 < len(argv) {
-					return argv[i+1], true
-				}
-				if value, ok := strings.CutPrefix(arg, name+"="); ok {
-					return value, true
-				}
-			}
-		}
-		return "", false
-	}
 	switch {
 	case tool == "go" && argv[1] == "test":
-		return flagValue("-run", "--run")
+		return flagValue(argv, "-run", "--run")
 	case tool == "cargo" && argv[1] == "test":
-		for _, arg := range argv[2:] {
-			if arg == "--" {
-				break
-			}
-			if !strings.HasPrefix(arg, "-") {
-				return arg, true
-			}
-		}
+		return cargoTestName(argv[2:])
 	case slices.Contains(argv, "pytest") || tool == "pytest":
-		return flagValue("-k")
-	case slices.ContainsFunc(argv, func(arg string) bool { return arg == "jest" || arg == "vitest" }) || tool == "jest" || tool == "vitest":
-		return flagValue("-t", "--testNamePattern")
+		return flagValue(argv, "-k")
+	case runsJestOrVitest(argv, tool):
+		return flagValue(argv, "-t", "--testNamePattern")
 	}
 	return "", false
+}
+
+// flagValue returns the value of the first argv flag spelled `name value` or
+// `name=value` for any of names.
+func flagValue(argv []string, names ...string) (string, bool) {
+	for i, arg := range argv {
+		for _, name := range names {
+			if arg == name && i+1 < len(argv) {
+				return argv[i+1], true
+			}
+			if value, ok := strings.CutPrefix(arg, name+"="); ok {
+				return value, true
+			}
+		}
+	}
+	return "", false
+}
+
+// cargoTestName returns the first positional argument after `cargo test`,
+// stopping at the `--` that starts the test binary's own arguments.
+func cargoTestName(args []string) (string, bool) {
+	for _, arg := range args {
+		if arg == "--" {
+			break
+		}
+		if !strings.HasPrefix(arg, "-") {
+			return arg, true
+		}
+	}
+	return "", false
+}
+
+func runsJestOrVitest(argv []string, tool string) bool {
+	return slices.ContainsFunc(argv, func(arg string) bool { return arg == "jest" || arg == "vitest" }) || tool == "jest" || tool == "vitest"
 }
 
 // unquotedSearchWords spots a grep/rg CHECK whose pattern was split by the
@@ -327,24 +376,8 @@ func unquotedSearchWords(argv []string) (string, []string, bool) {
 	default:
 		return "", nil, false
 	}
-	valueFlags := map[string]bool{"-m": true, "-A": true, "-B": true, "-C": true, "-g": true, "-t": true, "-T": true, "--max-count": true, "--glob": true, "--type": true}
-	var operands []string
-	for i := 1; i < len(argv); i++ {
-		arg := argv[i]
-		switch {
-		case arg == "-e" || arg == "-f" || arg == "--regexp" || arg == "--file" || strings.HasPrefix(arg, "--regexp=") || strings.HasPrefix(arg, "--file="):
-			return "", nil, false // the pattern is given explicitly
-		case valueFlags[arg]:
-			i++
-		case arg == "--":
-			operands = append(operands, argv[i+1:]...)
-			i = len(argv)
-		case strings.HasPrefix(arg, "-") && arg != "-":
-		default:
-			operands = append(operands, arg)
-		}
-	}
-	if len(operands) < 3 || !strings.ContainsAny(operands[len(operands)-1], "/.*") {
+	operands, ok := searchOperands(argv)
+	if !ok || len(operands) < 3 || !strings.ContainsAny(operands[len(operands)-1], "/.*") {
 		return "", nil, false
 	}
 	var words []string
@@ -358,4 +391,30 @@ func unquotedSearchWords(argv []string) (string, []string, bool) {
 		return "", nil, false
 	}
 	return operands[0], words, true
+}
+
+// searchOperands collects the non-flag operands of a grep/rg argv. ok is
+// false when the pattern is given explicitly (-e, -f), so no word was split.
+func searchOperands(argv []string) (operands []string, ok bool) {
+	valueFlags := map[string]bool{"-m": true, "-A": true, "-B": true, "-C": true, "-g": true, "-t": true, "-T": true, "--max-count": true, "--glob": true, "--type": true}
+	for i := 1; i < len(argv); i++ {
+		arg := argv[i]
+		switch {
+		case isExplicitPatternFlag(arg):
+			return nil, false
+		case valueFlags[arg]:
+			i++
+		case arg == "--":
+			operands = append(operands, argv[i+1:]...)
+			i = len(argv)
+		case strings.HasPrefix(arg, "-") && arg != "-":
+		default:
+			operands = append(operands, arg)
+		}
+	}
+	return operands, true
+}
+
+func isExplicitPatternFlag(arg string) bool {
+	return arg == "-e" || arg == "-f" || arg == "--regexp" || arg == "--file" || strings.HasPrefix(arg, "--regexp=") || strings.HasPrefix(arg, "--file=")
 }

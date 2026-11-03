@@ -198,15 +198,18 @@ func resolveCodexSourceHome(deps Dependencies) (string, error) {
 	return sourceHome, nil
 }
 
+// codexSmokeSourceGroup is one hook group as read from the installed hooks.json.
+type codexSmokeSourceGroup struct {
+	Hooks []map[string]json.RawMessage `json:"hooks"`
+}
+
 func projectActivatedCodexSmokeHooks(sourcePath, harnessBinary, observationPath string) (codexSmokeHookDocument, error) {
 	data, err := os.ReadFile(sourcePath)
 	if err != nil {
 		return codexSmokeHookDocument{}, err
 	}
 	var source struct {
-		Hooks map[string][]struct {
-			Hooks []map[string]json.RawMessage `json:"hooks"`
-		} `json:"hooks"`
+		Hooks map[string][]codexSmokeSourceGroup `json:"hooks"`
 	}
 	if err := json.Unmarshal(data, &source); err != nil {
 		return codexSmokeHookDocument{}, err
@@ -220,30 +223,10 @@ func projectActivatedCodexSmokeHooks(sourcePath, harnessBinary, observationPath 
 	}{
 		{event: "SessionStart", subcommand: "session-start", expected: shellSingleQuote(harnessBinary) + " hook session-start --host codex"},
 	} {
-		var candidates []codexSmokeHook
 		managedPrefix := shellSingleQuote(harnessBinary) + " hook " + contract.subcommand
-		for _, group := range source.Hooks[contract.event] {
-			for _, rawHook := range group.Hooks {
-				var command string
-				if err := json.Unmarshal(rawHook["command"], &command); err != nil || !strings.HasPrefix(command, managedPrefix) {
-					continue
-				}
-				if len(rawHook) != 3 {
-					return codexSmokeHookDocument{}, fmt.Errorf("codex_smoke_hook_structure_invalid")
-				}
-				encoded, err := json.Marshal(rawHook)
-				if err != nil {
-					return codexSmokeHookDocument{}, err
-				}
-				var hook codexSmokeHook
-				if err := json.Unmarshal(encoded, &hook); err != nil {
-					return codexSmokeHookDocument{}, err
-				}
-				if hook.Type != "command" || hook.Timeout != 5 || hook.Command != contract.expected {
-					return codexSmokeHookDocument{}, fmt.Errorf("codex_smoke_hook_contract_invalid")
-				}
-				candidates = append(candidates, hook)
-			}
+		candidates, err := collectCodexSmokeHooks(source.Hooks[contract.event], managedPrefix, contract.expected)
+		if err != nil {
+			return codexSmokeHookDocument{}, err
 		}
 		if len(candidates) != 1 {
 			return codexSmokeHookDocument{}, fmt.Errorf("codex_smoke_hook_cardinality_invalid")
@@ -253,6 +236,46 @@ func projectActivatedCodexSmokeHooks(sourcePath, harnessBinary, observationPath 
 		projected.Hooks[contract.event] = []codexSmokeHookGroup{{Hooks: []codexSmokeHook{hook}}}
 	}
 	return projected, nil
+}
+
+// collectCodexSmokeHooks returns every managed hook in groups after checking its structure and contract.
+func collectCodexSmokeHooks(groups []codexSmokeSourceGroup, managedPrefix, expectedCommand string) ([]codexSmokeHook, error) {
+	var candidates []codexSmokeHook
+	for _, group := range groups {
+		for _, rawHook := range group.Hooks {
+			hook, managed, err := parseManagedCodexSmokeHook(rawHook, managedPrefix, expectedCommand)
+			if err != nil {
+				return nil, err
+			}
+			if managed {
+				candidates = append(candidates, hook)
+			}
+		}
+	}
+	return candidates, nil
+}
+
+// parseManagedCodexSmokeHook decodes one raw hook; managed is false when its command is not a managed one.
+func parseManagedCodexSmokeHook(rawHook map[string]json.RawMessage, managedPrefix, expectedCommand string) (codexSmokeHook, bool, error) {
+	var command string
+	if err := json.Unmarshal(rawHook["command"], &command); err != nil || !strings.HasPrefix(command, managedPrefix) {
+		return codexSmokeHook{}, false, nil
+	}
+	if len(rawHook) != 3 {
+		return codexSmokeHook{}, false, fmt.Errorf("codex_smoke_hook_structure_invalid")
+	}
+	encoded, err := json.Marshal(rawHook)
+	if err != nil {
+		return codexSmokeHook{}, false, err
+	}
+	var hook codexSmokeHook
+	if err := json.Unmarshal(encoded, &hook); err != nil {
+		return codexSmokeHook{}, false, err
+	}
+	if hook.Type != "command" || hook.Timeout != 5 || hook.Command != expectedCommand {
+		return codexSmokeHook{}, false, fmt.Errorf("codex_smoke_hook_contract_invalid")
+	}
+	return hook, true, nil
 }
 
 func linkCodexSmokeAuth(runtimeHome, sourceHome string) error {

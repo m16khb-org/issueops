@@ -27,48 +27,71 @@ func RecordProjectDocsReview(store reviewport.ProjectDocsReviewStore, stateRoot,
 	if verdict == "no-change" && len(reviewedDocs) == 0 && (store.ProjectDocsPresent == nil || store.ProjectDocsPresent(store.Root(observed))) {
 		return model.IssueOpsRecord{OK: false}, reviewdomain.ValidateProjectDocsReviewRecord(verdict, len(docs), len(evidence), 0, true)
 	}
-	fingerprint := store.Fingerprint(observed)
-	normalized, normalizeErr := normalizeUpdatedDocuments(store, observed, docs)
-	reviewed, reviewedErr := normalizeReviewedDocuments(store, observed, reviewedDocs)
-	if reviewedErr != nil && verdict == "no-change" && store.ProjectDocsPresent != nil && !store.ProjectDocsPresent(store.Root(observed)) {
+	plan := projectDocsReviewPlan{
+		observed:    observed,
+		verdict:     verdict,
+		evidence:    evidence,
+		fingerprint: store.Fingerprint(observed),
+	}
+	plan.normalized, plan.normalizeErr = normalizeUpdatedDocuments(store, observed, docs)
+	plan.reviewed, plan.reviewedErr = normalizeReviewedDocuments(store, observed, reviewedDocs)
+	if plan.reviewedErr != nil && verdict == "no-change" && store.ProjectDocsPresent != nil && !store.ProjectDocsPresent(store.Root(observed)) {
 		// QA: with no project doc, agents tried README.md, missing paths,
 		// then a cycle plan, before learning no-change needs no reviewed doc.
-		reviewedErr = fmt.Errorf("%w; this worktree has no project doc (AGENTS.md or .issueops/*.md outside issues/ and gates/), so record no-change without --reviewed-doc", reviewedErr)
+		plan.reviewedErr = fmt.Errorf("%w; this worktree has no project doc (AGENTS.md or .issueops/*.md outside issues/ and gates/), so record no-change without --reviewed-doc", plan.reviewedErr)
 	}
 	var result model.IssueOpsRecord
 	err = store.WithLock(stateRoot, id, func() error {
-		current, err := store.Read(stateRoot, id)
-		if err != nil {
-			return err
-		}
-		if err := store.ValidateMutation(current); err != nil {
-			return err
-		}
-		if err := issueopsdomain.ValidateEvidenceRecordingPhase(current.Phase, "project docs review"); err != nil {
-			return err
-		}
-		if err := validateCurrentChangeObservation(observed, current); err != nil {
-			return err
-		}
-		if normalizeErr != nil {
-			return normalizeErr
-		}
-		if reviewedErr != nil {
-			return reviewedErr
-		}
-		now := store.Now()
-		current.ProjectDocsReview = &model.IssueOpsProjectDocsReview{
-			Verdict: verdict, Docs: normalized, ReviewedDocs: reviewed, Evidence: evidence,
-			ReviewedFingerprint: fingerprint, RecordedAt: now,
-		}
-		current.UpdatedAt = now
-		result, err = store.Write(stateRoot, current)
+		var err error
+		result, err = plan.commit(store, stateRoot, id)
 		return err
 	})
 	if err != nil {
 		return model.IssueOpsRecord{OK: false}, err
 	}
 	return result, nil
+}
+
+// projectDocsReviewPlan carries everything observed before the lifecycle lock,
+// including the deferred path errors, into the locked commit.
+type projectDocsReviewPlan struct {
+	observed     model.IssueOpsRecord
+	verdict      string
+	normalized   []string
+	normalizeErr error
+	reviewed     []string
+	reviewedErr  error
+	evidence     []string
+	fingerprint  string
+}
+
+func (p projectDocsReviewPlan) commit(store reviewport.ProjectDocsReviewStore, stateRoot, id string) (model.IssueOpsRecord, error) {
+	current, err := store.Read(stateRoot, id)
+	if err != nil {
+		return model.IssueOpsRecord{}, err
+	}
+	if err := store.ValidateMutation(current); err != nil {
+		return model.IssueOpsRecord{}, err
+	}
+	if err := issueopsdomain.ValidateEvidenceRecordingPhase(current.Phase, "project docs review"); err != nil {
+		return model.IssueOpsRecord{}, err
+	}
+	if err := validateCurrentChangeObservation(p.observed, current); err != nil {
+		return model.IssueOpsRecord{}, err
+	}
+	if p.normalizeErr != nil {
+		return model.IssueOpsRecord{}, p.normalizeErr
+	}
+	if p.reviewedErr != nil {
+		return model.IssueOpsRecord{}, p.reviewedErr
+	}
+	now := store.Now()
+	current.ProjectDocsReview = &model.IssueOpsProjectDocsReview{
+		Verdict: p.verdict, Docs: p.normalized, ReviewedDocs: p.reviewed, Evidence: p.evidence,
+		ReviewedFingerprint: p.fingerprint, RecordedAt: now,
+	}
+	current.UpdatedAt = now
+	return store.Write(stateRoot, current)
 }
 
 // Path observations happen before the lifecycle lock; their errors are returned
