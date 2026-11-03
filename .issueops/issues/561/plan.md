@@ -92,7 +92,7 @@
 - .issueops/CONVENTIONS.md 이슈 산출물 레이아웃: "이 표가 유일한 규정이다." -> 측정 데이터와 스크립트를 `.issueops/issues/561/`에 두지 않고 `scripts/autoresearch/`에 둔다.
 - .issueops/CAUTIONS.md Universal summary: "`.issueops/*.md` 편집은 response-contract golden을 드리프트시킨다." -> 이 계획은 `.issueops/*.md`를 고치지 않는다. 문서 단계에서 고치게 되면 golden을 다시 만든다.
 - .issueops/ADR.md -> .issueops/adr/2026-07-07-standalone-harness-policy.md: "issueops consumes them only through ordinary inspectable boundaries such as local files, command output, or already-configured MCP data." -> 외부 모델을 core에 넣지 않는다. 측정 스크립트도 core 경로가 아니다.
-- .issueops/TESTING.md 최소 완료 기준: "Go 코드 변경의 기본 검증(`gofmt -l`, `go test -race ./...`, `go vet ./...`, architecture ratchet, operational-health 위임, golden 갱신 조건)은 [unit-and-contract.md](testing/unit-and-contract.md)가 소유하고" -> 검증 단계에서 gofmt·vet·race·architecture를 실행한다.
+- .issueops/TESTING.md 최소 완료 기준: "Go 코드 변경의 기본 검증(`gofmt -l`, `go test -race ./...`, `go vet ./...`, architecture ratchet, operational-health 위임, golden 갱신 조건)은 [unit-and-contract.md](../../testing/unit-and-contract.md)가 소유하고" -> 검증 단계에서 gofmt·vet·race·architecture를 실행한다.
 - .issueops/testing/unit-and-contract.md: "실패해도 원인을 알 수 없는 거대한 fixture나 broad snapshot만 둔다." (피해야 할 예) -> 품질 표는 번호 232 미만 이슈에서만 뽑은 짧은 발췌 10건 안팎으로 두고, 229개 원문(1.4MB)은 커밋하지 않는다.
 - .issueops/TECH_STACK.md: "Python 검증은 stdlib suite runner와 스킬에 이미 선언된 Pydantic/Typer를 사용한다." -> 측정 스크립트는 stdlib만 쓴다.
 - .issueops/AGENT_WORKFLOW.md Work 절: 대조했으나 이 변경의 범위를 정하는 항목 없음.
