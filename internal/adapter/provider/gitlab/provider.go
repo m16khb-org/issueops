@@ -315,20 +315,26 @@ func (Provider) ReconcilePullRequestContext(ctx context.Context, req port.IssueP
 	}
 	result := port.IssueProviderReconcilePullRequestResult{AuthoritativeZero: len(rows) == 0}
 	for _, row := range rows {
-		parsed, _ := url.Parse(strings.TrimSpace(row.WebURL))
-		projectKey := ""
-		if parsed != nil {
-			parts := remoteparse.SplitGitLabMRPath(parsed.EscapedPath())
-			if parts.Project != "" {
-				projectKey = strings.ToLower(parsed.Host + "/" + parts.Project)
-			}
-		}
+		projectKey := gitLabMergeRequestProjectKey(row.WebURL)
 		result.Candidates = append(result.Candidates, port.IssueProviderReconcilePullRequestCandidate{
 			URL: row.WebURL, ProjectKey: projectKey, SourceProjectKey: gitLabSourceProjectKey(projectKey, row), HeadBranch: row.SourceBranch, BaseBranch: row.TargetBranch,
 			HeadSHA: row.SHA, Title: strings.TrimSpace(row.Title), BodySHA256: gitLabBodySHA256(row.Description), Labels: append([]string(nil), row.Labels...), Assignees: gitlabAssigneeUsernames(row.Assignees), Draft: row.Draft, State: strings.TrimSpace(row.State),
 		})
 	}
 	return result, nil
+}
+
+// gitLabMergeRequestProjectKey derives the lower-cased host/project key from a merge request web URL, or "" when the URL carries no project path.
+func gitLabMergeRequestProjectKey(webURL string) string {
+	parsed, _ := url.Parse(strings.TrimSpace(webURL))
+	if parsed == nil {
+		return ""
+	}
+	parts := remoteparse.SplitGitLabMRPath(parsed.EscapedPath())
+	if parts.Project == "" {
+		return ""
+	}
+	return strings.ToLower(parsed.Host + "/" + parts.Project)
 }
 
 func gitLabBodySHA256(body string) string {

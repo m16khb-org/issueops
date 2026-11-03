@@ -42,36 +42,45 @@ func Parse(fs *flag.FlagSet, args []string) error {
 		fs.Usage()
 	}
 	if name, undefined := strings.CutPrefix(fmt.Sprint(err), "flag provided but not defined: -"); undefined {
-		// zsh does not word-split an unquoted $VAR, so `$RECORD_ACTOR_FLAGS`
-		// arrives as one argument holding several flags.
-		if strings.ContainsAny(name, " \t") {
-			return fmt.Errorf("one argument holds several flags (%q): the shell passed a flags variable unsplit; %s", "--"+name, quotedFlagsRemedy)
-		}
-		var known []string
-		fs.VisitAll(func(f *flag.Flag) { known = append(known, f.Name) })
-		if name == "preview" && fs.Lookup("confirm") != nil {
-			// QA: agents carry --preview over from execution/cleanup commands;
-			// remote commands preview whenever --confirm is absent.
-			return fmt.Errorf("%w: this command previews when --confirm is omitted; drop --preview", err)
-		}
-		if slices.Contains(identityFlags, name) && fs.Lookup("host") == nil {
-			// QA: agents pass $RECORD_ACTOR_FLAGS to every command, including
-			// the actor-free post-completion ones (close-issue, merge-pr, cleanup).
-			return fmt.Errorf("%w: this command takes no actor flags; drop $ACTOR_FLAGS/$RECORD_ACTOR_FLAGS (flags: --%s)", err, strings.Join(known, ", --"))
-		}
-		if closest := Suggest(name, known, 1); len(closest) == 1 {
-			return fmt.Errorf("%w (did you mean --%s?)", err, closest[0])
-		}
-		if len(known) > 0 && len(known) <= 8 {
-			// Probe: `gates abandon --id G9` (the flag is --gate) named
-			// nothing to use instead.
-			return fmt.Errorf("%w (flags: --%s)", err, strings.Join(known, ", --"))
+		if hinted := undefinedFlagError(fs, name, err); hinted != nil {
+			return hinted
 		}
 	}
 	if err == nil {
 		return literalQuotes(fs)
 	}
 	return err
+}
+
+// undefinedFlagError explains a "flag provided but not defined" parse error
+// with the remedy that fits the flag name, or returns nil when none applies.
+func undefinedFlagError(fs *flag.FlagSet, name string, err error) error {
+	// zsh does not word-split an unquoted $VAR, so `$RECORD_ACTOR_FLAGS`
+	// arrives as one argument holding several flags.
+	if strings.ContainsAny(name, " \t") {
+		return fmt.Errorf("one argument holds several flags (%q): the shell passed a flags variable unsplit; %s", "--"+name, quotedFlagsRemedy)
+	}
+	var known []string
+	fs.VisitAll(func(f *flag.Flag) { known = append(known, f.Name) })
+	if name == "preview" && fs.Lookup("confirm") != nil {
+		// QA: agents carry --preview over from execution/cleanup commands;
+		// remote commands preview whenever --confirm is absent.
+		return fmt.Errorf("%w: this command previews when --confirm is omitted; drop --preview", err)
+	}
+	if slices.Contains(identityFlags, name) && fs.Lookup("host") == nil {
+		// QA: agents pass $RECORD_ACTOR_FLAGS to every command, including
+		// the actor-free post-completion ones (close-issue, merge-pr, cleanup).
+		return fmt.Errorf("%w: this command takes no actor flags; drop $ACTOR_FLAGS/$RECORD_ACTOR_FLAGS (flags: --%s)", err, strings.Join(known, ", --"))
+	}
+	if closest := Suggest(name, known, 1); len(closest) == 1 {
+		return fmt.Errorf("%w (did you mean --%s?)", err, closest[0])
+	}
+	if len(known) > 0 && len(known) <= 8 {
+		// Probe: `gates abandon --id G9` (the flag is --gate) named
+		// nothing to use instead.
+		return fmt.Errorf("%w (flags: --%s)", err, strings.Join(known, ", --"))
+	}
+	return nil
 }
 
 // expandActorFlagsArgument splits an argument that holds several actor flags,

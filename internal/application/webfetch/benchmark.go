@@ -108,18 +108,22 @@ func (service Benchmark) runLiveBenchmark(ctx context.Context, req webfetchcontr
 		result.FixtureResults = append(result.FixtureResults, run)
 	}
 
-	if len(req.Fixtures) > 0 {
-		result.LiveParityReport.SuccessRate = domain.Percent(successes, len(req.Fixtures))
+	summarizeLiveParity(&result, len(req.Fixtures), successes, comparable, agreements, latencies)
+	if req.CompareCommand != "" {
+		service.compareBaseline(ctx, req.CompareCommand, req.Fixtures, candidateCategories, timeout, &result)
+	}
+	return domain.CompleteBenchmark(result, true, req.CompareCommand), nil
+}
+
+func summarizeLiveParity(result *webfetchcontract.BenchmarkResult, fixtureCount, successes, comparable, agreements int, latencies []int64) {
+	if fixtureCount > 0 {
+		result.LiveParityReport.SuccessRate = domain.Percent(successes, fixtureCount)
 	}
 	if comparable > 0 {
 		result.LiveParityReport.CategoryAgreement = domain.Percent(agreements, comparable)
 	}
 	result.LiveParityReport.LatencyP50MS = domain.PercentileLatency(latencies, 50)
 	result.LiveParityReport.LatencyP95MS = domain.PercentileLatency(latencies, 95)
-	if req.CompareCommand != "" {
-		service.compareBaseline(ctx, req.CompareCommand, req.Fixtures, candidateCategories, timeout, &result)
-	}
-	return domain.CompleteBenchmark(result, true, req.CompareCommand), nil
 }
 
 func (service Benchmark) compareBaseline(ctx context.Context, command string, fixtures []webfetchcontract.BenchmarkFixture, candidateCategories map[string]string, timeout time.Duration, result *webfetchcontract.BenchmarkResult) {

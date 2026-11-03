@@ -90,6 +90,15 @@ func Run(args []string, deps Deps) error {
 		return runClaim(args[1:], deps)
 	case "release":
 		return runRelease(args[1:], deps)
+	default:
+		return runLeaseTransition(args, deps)
+	}
+}
+
+// runLeaseTransition dispatches the subcommands that move an existing lease
+// (replace, reconcile, complete, sync-base, handoff-cmux) and rejects the rest.
+func runLeaseTransition(args []string, deps Deps) error {
+	switch args[0] {
 	case "replace":
 		return runReplace(args[1:], deps)
 	case "reconcile":

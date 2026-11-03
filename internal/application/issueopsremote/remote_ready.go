@@ -43,12 +43,17 @@ func (s *RemoteMergeService) MarkReady(ctx context.Context, id string, confirm b
 	if head := strings.TrimSpace(before.HeadOID); head != target.ExpectedHead {
 		return result, fmt.Errorf("mark-ready refused: the PR/MR head %s is not the completion head %s, so reviewers would see commits the completion did not verify; reseed the cycle to verify them first", head, target.ExpectedHead)
 	}
-	preview := fmt.Sprintf("issueops remote mark-ready --id %s --json", record.ID)
 	if !confirm {
 		result.OK = true
 		result.NextCommand = fmt.Sprintf("issueops remote mark-ready --id %s --confirm --json", record.ID)
 		return result, nil
 	}
+	return markReadyConfirmed(ctx, merger, record, target, result)
+}
+
+// markReadyConfirmed clears the draft state and requires the readback to show it cleared.
+func markReadyConfirmed(ctx context.Context, merger port.IssueProviderPullRequestMerger, record model.IssueOpsRecord, target domain.MergeTarget, result model.RemoteReadyResult) (model.RemoteReadyResult, error) {
+	preview := fmt.Sprintf("issueops remote mark-ready --id %s --json", record.ID)
 	readier, ok := merger.(port.IssueProviderPullRequestReadier)
 	if !ok {
 		return result, fmt.Errorf("provider %q cannot mark a pull request ready", target.Provider)

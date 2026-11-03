@@ -68,30 +68,12 @@ func Parse(text string) Ledger {
 	abandons := map[string]string{}
 	for i, line := range lines {
 		if m := gateLineRe().FindStringSubmatch(line); m != nil {
-			title := strings.TrimSpace(m[2])
-			id := gateID(title, i)
-			ledger.Gates = append(ledger.Gates, Gate{
-				ID:           id,
-				Title:        stripGateIDPrefix(title),
-				Checked:      strings.ToLower(m[1]) == "x",
-				CheckboxLine: i,
-				EvidenceLine: -1,
-			})
+			ledger.Gates = append(ledger.Gates, newParsedGate(m, i))
 			current = len(ledger.Gates) - 1
 			continue
 		}
 		if m := attrLineRe().FindStringSubmatch(line); m != nil && current >= 0 {
-			gate := &ledger.Gates[current]
-			value := strings.TrimSpace(m[2])
-			switch m[1] {
-			case "CHECK":
-				gate.CheckCmd = value
-			case "EXPECT":
-				gate.Expect = value
-			case "EVIDENCE":
-				gate.Evidence = value
-				gate.EvidenceLine = i
-			}
+			applyGateAttr(&ledger.Gates[current], m, i)
 			continue
 		}
 		if m := abandonLineRe().FindStringSubmatch(line); m != nil {
@@ -112,6 +94,32 @@ func Parse(text string) Ledger {
 		}
 	}
 	return ledger
+}
+
+// newParsedGate는 체크박스 라인 매치(m)로 i번째 라인의 게이트를 만든다.
+func newParsedGate(m []string, i int) Gate {
+	title := strings.TrimSpace(m[2])
+	return Gate{
+		ID:           gateID(title, i),
+		Title:        stripGateIDPrefix(title),
+		Checked:      strings.ToLower(m[1]) == "x",
+		CheckboxLine: i,
+		EvidenceLine: -1,
+	}
+}
+
+// applyGateAttr는 i번째 라인의 CHECK/EXPECT/EVIDENCE 속성 매치(m)를 게이트에 기록한다.
+func applyGateAttr(gate *Gate, m []string, i int) {
+	value := strings.TrimSpace(m[2])
+	switch m[1] {
+	case "CHECK":
+		gate.CheckCmd = value
+	case "EXPECT":
+		gate.Expect = value
+	case "EVIDENCE":
+		gate.Evidence = value
+		gate.EvidenceLine = i
+	}
 }
 
 // Render는 라인 배열을 다시 파일 원문으로 합친다. Parse와 함께 round-trip하면

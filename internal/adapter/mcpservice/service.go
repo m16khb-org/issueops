@@ -142,15 +142,7 @@ func (s *Service) observe(ctx context.Context) observation {
 	record, recordErr := readRecord(s.recordPath())
 	recordMissing := errors.Is(recordErr, os.ErrNotExist)
 	if holder == 0 {
-		if !recordMissing {
-			status, err := s.fail(s.result(mcpservice.StatusStale, record.PID, record.BuildID), CodeStaleRecord, fmt.Errorf("mcp http instance record names a process that no longer holds the service lock"))
-			return observation{status: status, err: err}
-		}
-		if s.portInUse() {
-			status, err := s.fail(s.result(mcpservice.StatusConflict, 0, ""), CodePortInUse, fmt.Errorf("%s is held by a process outside the issueops service lock (conflict)", s.cfg.Address))
-			return observation{status: status, err: err}
-		}
-		return observation{status: s.result(mcpservice.StatusStopped, 0, "")}
+		return s.observeUnheld(record, recordMissing)
 	}
 	mismatch := func(detail string) observation {
 		status, err := s.fail(s.result(mcpservice.StatusConflict, holder, ""), CodeIdentityMismatch, fmt.Errorf("mcp http lock holder %d does not match the published instance: %s", holder, detail))
@@ -178,6 +170,20 @@ func (s *Service) observe(ctx context.Context) observation {
 		return mismatch("authenticated response pid " + strconv.Itoa(pid) + " or build_id differs from the record")
 	}
 	return observation{status: s.result(mcpservice.StatusRunning, holder, buildID), holder: holder}
+}
+
+// observeUnheld classifies a service whose lock has no holder: a leftover
+// record is stale, an occupied port is a conflict, otherwise it is stopped.
+func (s *Service) observeUnheld(record Record, recordMissing bool) observation {
+	if !recordMissing {
+		status, err := s.fail(s.result(mcpservice.StatusStale, record.PID, record.BuildID), CodeStaleRecord, fmt.Errorf("mcp http instance record names a process that no longer holds the service lock"))
+		return observation{status: status, err: err}
+	}
+	if s.portInUse() {
+		status, err := s.fail(s.result(mcpservice.StatusConflict, 0, ""), CodePortInUse, fmt.Errorf("%s is held by a process outside the issueops service lock (conflict)", s.cfg.Address))
+		return observation{status: status, err: err}
+	}
+	return observation{status: s.result(mcpservice.StatusStopped, 0, "")}
 }
 
 func (s *Service) portInUse() bool {

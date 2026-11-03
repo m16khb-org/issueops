@@ -216,29 +216,37 @@ func supportedKeyword(key string, value any) error {
 	case "properties":
 		return supportedProperties(value)
 	case "items":
-		child, ok := value.(map[string]any)
-		if !ok {
-			return fmt.Errorf("invalid_schema_keyword_shape: items")
-		}
-		return supported(child)
+		return supportedItems(value)
 	case "additionalProperties":
-		if _, ok := value.(bool); !ok {
-			return fmt.Errorf("invalid_schema_keyword_shape: additionalProperties")
-		}
+		_, ok := value.(bool)
+		return keywordShapeError(key, ok)
 	case "required":
-		if _, ok := stringValues(value); !ok {
-			return fmt.Errorf("invalid_schema_keyword_shape: required")
-		}
+		_, ok := stringValues(value)
+		return keywordShapeError(key, ok)
 	case "minimum":
-		if _, ok := numericValue(value); !ok {
-			return fmt.Errorf("invalid_schema_keyword_shape: minimum")
-		}
+		_, ok := numericValue(value)
+		return keywordShapeError(key, ok)
 	case "maxLength":
 		return supportedMaxLength(value)
 	case "pattern":
 		return supportedPattern(value)
 	default:
 		return fmt.Errorf("schema keyword is not supported: %s", key)
+	}
+}
+
+func supportedItems(value any) error {
+	child, ok := value.(map[string]any)
+	if !ok {
+		return fmt.Errorf("invalid_schema_keyword_shape: items")
+	}
+	return supported(child)
+}
+
+// keywordShapeError는 값의 모양이 올바르지 않으면 invalid_schema_keyword_shape 오류를 돌려준다.
+func keywordShapeError(key string, ok bool) error {
+	if !ok {
+		return fmt.Errorf("invalid_schema_keyword_shape: %s", key)
 	}
 	return nil
 }

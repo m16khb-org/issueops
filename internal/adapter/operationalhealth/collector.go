@@ -110,17 +110,38 @@ func (collector Collector) CollectLocal(ctx context.Context, repo string) corehe
 	return snapshot
 }
 
+type gitInventoryCommand struct {
+	source string
+	code   string
+	args   []string
+	apply  func([]byte) error
+}
+
 func (collector Collector) collectGit(ctx context.Context, snapshot *corehealth.Snapshot, includeRemote bool) {
 	if collector.Git == nil {
 		addProblem(snapshot, "git", "git_runner_missing", "Git inventory reader is unavailable")
 		return
 	}
-	commands := []struct {
-		source string
-		code   string
-		args   []string
-		apply  func([]byte) error
-	}{
+	for _, command := range gitInventoryCommands(snapshot) {
+		if !includeRemote && command.source == "git_remote_refs" {
+			continue
+		}
+		output, err := collector.Git.Run(ctx, snapshot.RepoRoot, command.args...)
+		if err != nil {
+			addProblem(snapshot, command.source, command.code, command.source+" inventory failed")
+			continue
+		}
+		if err := command.apply(output); err != nil {
+			addProblem(snapshot, command.source, command.code, command.source+" inventory is malformed")
+		}
+	}
+	checkCanonicalWorktrees(snapshot)
+}
+
+// gitInventoryCommands lists the Git reads that populate snapshot, in the order
+// they run.
+func gitInventoryCommands(snapshot *corehealth.Snapshot) []gitInventoryCommand {
+	return []gitInventoryCommand{
 		{
 			source: "git_branch", code: "git_symbolic_ref_failed",
 			args: []string{"symbolic-ref", "--quiet", "--short", "HEAD"},
@@ -179,19 +200,9 @@ func (collector Collector) collectGit(ctx context.Context, snapshot *corehealth.
 			},
 		},
 	}
-	for _, command := range commands {
-		if !includeRemote && command.source == "git_remote_refs" {
-			continue
-		}
-		output, err := collector.Git.Run(ctx, snapshot.RepoRoot, command.args...)
-		if err != nil {
-			addProblem(snapshot, command.source, command.code, command.source+" inventory failed")
-			continue
-		}
-		if err := command.apply(output); err != nil {
-			addProblem(snapshot, command.source, command.code, command.source+" inventory is malformed")
-		}
-	}
+}
+
+func checkCanonicalWorktrees(snapshot *corehealth.Snapshot) {
 	for index := range snapshot.GitWorktrees {
 		if snapshot.GitWorktrees[index].Canonical {
 			snapshot.GitWorktrees[index].Clean = snapshot.SourceClean
@@ -275,26 +286,38 @@ func cycleFromRecordAt(record issueopscontract.IssueOpsRecord, inspect NativePro
 	cycle.Generation = execution.Lease.Generation
 	cycle.CompletionPresent = execution.Completion != nil
 	mergeWorktreePath(execution.Workspace.Root)
-	if execution.Lease.Holder != nil {
-		cycle.HolderHost = strings.TrimSpace(execution.Lease.Holder.Host)
-		cycle.HolderSessionID = strings.TrimSpace(execution.Lease.Holder.SessionID)
-		cycle.HolderAgentID = strings.TrimSpace(execution.Lease.Holder.AgentID)
-		if execution.Lease.Holder.SessionProcess != nil {
-			receipt := *execution.Lease.Holder.SessionProcess
-			cycle.HolderPID = receipt.PID
-			cycle.HolderStartedAt = strings.TrimSpace(receipt.StartedAt)
-			cycle.HolderExecutable = strings.TrimSpace(receipt.Executable)
-			if inspect != nil && execution.Lease.Status == issueopscontract.LeaseStatusActive {
-				status, _, err := inspect(receipt)
-				cycle.HolderProcessStatus = strings.TrimSpace(status)
-				if err != nil {
-					cycle.HolderProcessStatus = operationalhealthcontract.ProcessStatusUnknown
-					problems = append(problems, operationalhealthcontract.InventoryProblem{Source: "issueops_process", Code: "issueops_process_probe_failed", Detail: "IssueOps record " + cycle.ID + " native process identity could not be observed"})
-				}
-			}
-		}
-	}
+	problems = append(problems, applyCycleHolder(&cycle, execution, inspect)...)
 	return cycle, problems
+}
+
+// applyCycleHolder copies the lease holder identity onto cycle and, for an
+// active lease with a session process receipt, observes that process. It
+// returns the problem raised when the probe fails.
+func applyCycleHolder(cycle *operationalhealthcontract.Cycle, execution *issueopscontract.Execution, inspect NativeProcessInspector) []operationalhealthcontract.InventoryProblem {
+	holder := execution.Lease.Holder
+	if holder == nil {
+		return nil
+	}
+	cycle.HolderHost = strings.TrimSpace(holder.Host)
+	cycle.HolderSessionID = strings.TrimSpace(holder.SessionID)
+	cycle.HolderAgentID = strings.TrimSpace(holder.AgentID)
+	if holder.SessionProcess == nil {
+		return nil
+	}
+	receipt := *holder.SessionProcess
+	cycle.HolderPID = receipt.PID
+	cycle.HolderStartedAt = strings.TrimSpace(receipt.StartedAt)
+	cycle.HolderExecutable = strings.TrimSpace(receipt.Executable)
+	if inspect == nil || execution.Lease.Status != issueopscontract.LeaseStatusActive {
+		return nil
+	}
+	status, _, err := inspect(receipt)
+	cycle.HolderProcessStatus = strings.TrimSpace(status)
+	if err != nil {
+		cycle.HolderProcessStatus = operationalhealthcontract.ProcessStatusUnknown
+		return []operationalhealthcontract.InventoryProblem{{Source: "issueops_process", Code: "issueops_process_probe_failed", Detail: "IssueOps record " + cycle.ID + " native process identity could not be observed"}}
+	}
+	return nil
 }
 
 func issueCreateIntentNeedsReconciliationAt(intent *issueopscontract.IssueOpsIssueCreateIntent, now time.Time) bool {
@@ -330,20 +353,26 @@ func parseWorktrees(output []byte, repo string) ([]operationalhealthcontract.Git
 			}
 			continue
 		}
-		key, value, _ := strings.Cut(line, " ")
-		switch key {
-		case "worktree":
-			current.Path = canonicalInventoryPath(value)
-		case "HEAD":
-			current.Head = strings.TrimSpace(value)
-		case "branch":
-			current.Branch = strings.TrimPrefix(strings.TrimSpace(value), "refs/heads/")
-		}
+		applyWorktreeLine(&current, line)
 	}
 	if err := flush(); err != nil {
 		return result, err
 	}
 	return result, nil
+}
+
+// applyWorktreeLine records one non-empty porcelain attribute on the worktree
+// being assembled; unknown keys are ignored.
+func applyWorktreeLine(current *operationalhealthcontract.GitWorktree, line string) {
+	key, value, _ := strings.Cut(line, " ")
+	switch key {
+	case "worktree":
+		current.Path = canonicalInventoryPath(value)
+	case "HEAD":
+		current.Head = strings.TrimSpace(value)
+	case "branch":
+		current.Branch = strings.TrimPrefix(strings.TrimSpace(value), "refs/heads/")
+	}
 }
 
 func parseLocalRefs(output []byte) ([]operationalhealthcontract.GitRef, error) {

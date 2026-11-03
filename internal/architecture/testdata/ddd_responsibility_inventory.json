@@ -173,7 +173,8 @@
         "func identityFlagWords",
         "func isBoolFlag",
         "func literalQuotes",
-        "func swallowedFlag"
+        "func swallowedFlag",
+        "func undefinedFlagError"
       ]
     },
     {
@@ -1579,6 +1580,7 @@
         "func runClaim",
         "func runComplete",
         "func runHandoffCmux",
+        "func runLeaseTransition",
         "func runPrepare",
         "func runReconcile",
         "func runRelease",
@@ -2230,9 +2232,11 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
+        "func MCPDependencies.requestAuthorityConfigured",
         "func authorityErrorPayload",
         "func authorizeMCPRequest",
         "func dispatchMCPToolCall",
+        "func rejectActorArgumentsOnHTTP",
         "func requiresCapability",
         "type serverTransport"
       ]
@@ -2412,6 +2416,7 @@
         "func handleAPIDocStaticCheckTool",
         "func handleCommitPolicyTool",
         "func handleProjectDocsAppendTool",
+        "func handleProjectDocsMCPToolCall",
         "func handleProjectDocsReviseTool",
         "func handleProjectMCPToolCall",
         "func mcpPayloadOrFailure"
@@ -2679,6 +2684,7 @@
       "symbols": [
         "func Deps.withDefaults",
         "func Run",
+        "func printPlanText",
         "type Deps"
       ]
     },
@@ -2707,6 +2713,7 @@
       "symbols": [
         "func RunSelfVerifyCompare",
         "func RunSelfVerifyHistory",
+        "func printSelfVerifyHistoryText",
         "type CLIDeps"
       ]
     },
@@ -3056,6 +3063,7 @@
       "symbols": [
         "func Repository.CollectSignals",
         "func Repository.cliAndOperationsRules",
+        "func Repository.compatibilityAndAuditRules",
         "func Repository.coverageRules",
         "func Repository.releaseDistributionRules",
         "func Repository.releaseGuideRules",
@@ -3198,6 +3206,7 @@
         "func validateCapabilities",
         "func validateIdentify",
         "func validatePreflightRequest",
+        "func validateSendAcceptance",
         "func workspaceName",
         "type Client",
         "type CommandOutput",
@@ -3251,9 +3260,11 @@
         "func promptRelativeEscapesRoot",
         "func promptRelativeParts",
         "func promptWalk.readLeaf",
+        "func readBoundedPromptLeaf",
         "func readPromptPlatform",
         "func samePromptIdentity",
         "func samePromptStat",
+        "func statPromptLeafBeforeRead",
         "func validatePromptLeafStat",
         "type promptOpenedComponent",
         "type promptWalk"
@@ -3639,6 +3650,8 @@
         "func omoContextGuardExtension",
         "func omoProbeToolName",
         "func omoStreamFailure",
+        "func omoStreamState.allExecutionsEnded",
+        "func omoStreamState.allExecutionsTarget",
         "func omoStreamState.consume",
         "func omoStreamState.finish",
         "func omoStreamState.observeMessage",
@@ -3694,6 +3707,8 @@
         "func OmpRunner.precheckRun",
         "func OmpRunner.resolveExecutable",
         "func OmpRunner.validLifecycleExtension",
+        "func createPrivateEmptyFile",
+        "func finishOmpPreflight",
         "func isolatedOmpEnv",
         "func ompArgv",
         "func ompProbeToolName",
@@ -3796,7 +3811,9 @@
         "func readEpisodeCapture",
         "func serveArgv",
         "func validSHA256",
+        "func validateChildSmokeObservationPath",
         "func validateEpisodeCapture",
+        "func writeChildSmokeObservationFile",
         "func writePrivateFile",
         "type CommandOutput",
         "type CommandRequest",
@@ -3814,7 +3831,10 @@
       "symbols": [
         "func decodeHookMarkerEvents",
         "func mergeHookObservation",
+        "func observeClaudeToolUses",
+        "func observeCodexItem",
         "func observeHookEvent",
+        "func observeHostEvent",
         "func observeHostStream",
         "func observeRecordedHookEvents",
         "func observeStructuredModel",
@@ -4164,6 +4184,8 @@
         "func Observer.resolveReceiptPath",
         "func artifactEvidence",
         "func artifactScan.consume",
+        "func artifactScan.consumeClaudeBlock",
+        "func artifactScan.consumeClaudeInit",
         "func artifactScan.consumeClaudeStream",
         "func artifactScan.consumeCodexStep",
         "func artifactScan.consumeCodexToolResult",
@@ -4180,6 +4202,7 @@
         "func receiptVetter.hostVersion",
         "func receiptVetter.staleReason",
         "func receiptVetter.vet",
+        "func verifiedEvidenceReason",
         "type artifactFacts",
         "type artifactScan",
         "type receiptVetter"
@@ -4692,6 +4715,7 @@
         "func LeaseWorkspaceSnapshot.gitOutput",
         "func LeaseWorkspaceSnapshot.workspaceDiffs",
         "func LeaseWorkspaceSnapshot.workspaceGitIdentity",
+        "func LeaseWorkspaceSnapshot.workspaceIndexBytes",
         "func claimTokenPath",
         "func cleanupReplacementGeneration",
         "func createClaimToken",
@@ -5327,6 +5351,7 @@
         "func ensureSealedArtifactDirectory",
         "func ensureSealedArtifactIgnore",
         "func quoteShellArg",
+        "func verifyExistingSealedArtifact",
         "func writeSealedArtifact"
       ]
     },
@@ -5514,6 +5539,7 @@
         "func Service.loadFreshJob",
         "func Service.lockPath",
         "func Service.observe",
+        "func Service.observeUnheld",
         "func Service.portInUse",
         "func Service.probe",
         "func Service.recordPath",
@@ -5618,9 +5644,13 @@
         "func Collector.collectIssueOps",
         "func ExecGitRunner.Run",
         "func addProblem",
+        "func applyCycleHolder",
+        "func applyWorktreeLine",
         "func canonicalInventoryPath",
+        "func checkCanonicalWorktrees",
         "func cycleFromRecord",
         "func cycleFromRecordAt",
+        "func gitInventoryCommands",
         "func issueCreateIntentNeedsReconciliationAt",
         "func orderedBefore",
         "func parseLocalRefs",
@@ -5632,7 +5662,8 @@
         "type Collector",
         "type ExecGitRunner",
         "type GitRunner",
-        "type NativeProcessInspector"
+        "type NativeProcessInspector",
+        "type gitInventoryCommand"
       ]
     },
     {
@@ -6049,6 +6080,7 @@
         "func claimTransaction.ReadToken",
         "func claimTransaction.RemoveToken",
         "func decodeMutableLeaseRecord",
+        "func holderIndexDeletion",
         "func holderIndexKey",
         "func toApplicationRecord",
         "func updateWithinSpan",
@@ -6258,6 +6290,7 @@
         "func Backend.Begin",
         "func Backend.Seal",
         "func Backend.activeBinary",
+        "func Backend.beginTransition",
         "func Backend.sealPending",
         "func NewBackend",
         "func backendStore",
@@ -6271,6 +6304,7 @@
         "func pendingSnapshot",
         "func physicalIdentity",
         "func receiptSnapshot",
+        "func requireTargetNotSymlink",
         "func sameAbortPending",
         "func samePending",
         "func samePhysicalFile",
@@ -6558,6 +6592,7 @@
         "func newDB",
         "func newDBWithRetry",
         "func newSpanGate",
+        "func newStoppedTimer",
         "func nextSpanRetryGap",
         "func openSQLite",
         "func pruneRemovedHandlesLocked",
@@ -6762,6 +6797,7 @@
         "func boundedOutput.Write",
         "func boundedOutput.scan",
         "func superviseCommand",
+        "func supervisedExecution",
         "type Clock",
         "type CommandExecutor",
         "type boundedOutput"
@@ -6917,7 +6953,9 @@
         "func ProjectTypes",
         "func addGoModuleFrameworks",
         "func addPackageDependencyFrameworks",
-        "func appendUnique"
+        "func appendUnique",
+        "func hasCLIEntrypoint",
+        "func isBackendProject"
       ]
     },
     {
@@ -7242,8 +7280,10 @@
         "func githubPRCreateArgs",
         "func githubProjectAuthorityMalformed",
         "func githubProjectSelector",
+        "func githubPullRequestIdentityMatches",
         "func githubPullRequestProjectKey",
         "func githubReadbackAssignees",
+        "func githubReadbackLabelNames",
         "func githubSourceProjectKey",
         "func parseGhOutput",
         "func providerBodySHA256",
@@ -7379,6 +7419,7 @@
         "func compareGitLabMergeRequestReadback",
         "func gitLabBodySHA256",
         "func gitLabMRCreateArgs",
+        "func gitLabMergeRequestProjectKey",
         "func gitLabProjectRequiresGlab182",
         "func gitLabProjectURL",
         "func gitLabSourceProjectKey",
@@ -7571,7 +7612,10 @@
       "symbols": [
         "func Source.Decode",
         "func decodeIssueOps",
-        "func observeDocument"
+        "func observeClusters",
+        "func observeDocument",
+        "func observeEvidence",
+        "func observeGuardRules"
       ]
     },
     {
@@ -7674,6 +7718,8 @@
         "func CandidateExportValidationErrors",
         "func ValidateSelfVerifyCandidateExport",
         "func ValidateSelfVerifyCandidateExportWithDeps",
+        "func candidateExportCheckpointOK",
+        "func candidateExportIdentityOK",
         "func candidateExportSnapshotErrors",
         "func implementedCandidatesSatisfied",
         "type CandidateExportCommandRunner",
@@ -7947,10 +7993,12 @@
       "owner": "adapter",
       "task": "T18",
       "symbols": [
+        "func parallelIsolationProbeDeps.stageArtifact",
         "func parallelIsolationProbeDeps.withDefaults",
         "func runCommandStepEnv",
         "func runParallelIsolationProbe",
         "func runParallelIsolationProbeWithDeps",
+        "func stateListIsolationError",
         "type parallelIsolationProbeDeps"
       ]
     },
@@ -8746,6 +8794,7 @@
         "func Retargeter.Retarget",
         "func Retargeter.authorize",
         "func Retargeter.observe",
+        "func Retargeter.validateRetarget",
         "type Retargeter",
         "type retargetObservation"
       ]
@@ -8756,6 +8805,7 @@
       "task": "T08",
       "symbols": [
         "func Starter.Start",
+        "func Starter.cycleID",
         "func Starter.resumableID",
         "type CycleRecords",
         "type RetiredCycles",
@@ -8989,6 +9039,7 @@
       "task": "T08",
       "symbols": [
         "func RemoteBranchPreviewer.Plan",
+        "func RemoteBranchPreviewer.observeArtifactFacts",
         "func RemoteBranchPreviewer.verifySuperseding",
         "type RemoteBranchEnvironment",
         "type RemoteBranchPreviewer"
@@ -9084,6 +9135,7 @@
         "func Service.completeRecord",
         "func Service.ready",
         "func Service.retryIsIdempotent",
+        "func Service.verifyChangesSincePR",
         "func fromDomainOutcome",
         "func publicDomainError",
         "func toDomainSnapshot",
@@ -9383,6 +9435,9 @@
       "task": "T20",
       "symbols": [
         "func Service.Execute",
+        "func executeClaim",
+        "func executeComplete",
+        "func executeRelease",
         "func executeReplace"
       ]
     },
@@ -9443,6 +9498,7 @@
       "symbols": [
         "func NewService",
         "func Service.ListCycles",
+        "func Service.repoFilter",
         "type Service"
       ]
     },
@@ -9464,7 +9520,8 @@
       "task": "T20",
       "symbols": [
         "func ClaimWithinTransaction",
-        "func claimContractActor"
+        "func claimContractActor",
+        "func readClaimToken"
       ]
     },
     {
@@ -9512,7 +9569,9 @@
       "symbols": [
         "func NewReseedService",
         "func ReseedService.Reseed",
+        "func ReseedService.commitReseed",
         "func ReseedService.observeCompletedBase",
+        "func ReseedService.requireFreshInventory",
         "func ReseedService.reseedWithinFence",
         "func ReseedService.reseededRecord",
         "func ReseedService.validateReseedPreconditions",
@@ -9644,6 +9703,7 @@
         "func NewService",
         "func Service.Prepare",
         "func Service.prepareDirect",
+        "func Service.requireDirectAccess",
         "func Service.resolveExisting",
         "func cloneExecution",
         "func failedResult",
@@ -9976,6 +10036,8 @@
       "symbols": [
         "func NewRemoteAssignService",
         "func RemoteAssignService.AddAssignees",
+        "func requireAssigneesRead",
+        "func validateAssigneeNames",
         "type AssignProviderResolver",
         "type RemoteAssignService"
       ]
@@ -10028,6 +10090,7 @@
         "func NewRemoteMergeService",
         "func RemoteMergeService.Merge",
         "func RemoteMergeService.WithMergedReceipt",
+        "func RemoteMergeService.mergeConfirmed",
         "func RemoteMergeService.recordMerged",
         "func blockerCodes",
         "func postMergeCommand",
@@ -10053,6 +10116,7 @@
       "task": "T07",
       "symbols": [
         "func RemoteMergeService.MarkReady",
+        "func markReadyConfirmed",
         "func projectReadyResult"
       ]
     },
@@ -10768,6 +10832,7 @@
         "func NewLoopResult",
         "func emit",
         "func emitEnd",
+        "func runPlannedSteps",
         "type LoopDeps",
         "type LoopRequest",
         "type ProgressReporter"
@@ -11016,6 +11081,7 @@
         "func Benchmark.Run",
         "func Benchmark.compareBaseline",
         "func Benchmark.runLiveBenchmark",
+        "func summarizeLiveParity",
         "type Benchmark"
       ]
     },
@@ -11026,8 +11092,10 @@
       "symbols": [
         "func Fetch",
         "func applyValidation",
+        "func fetchNow",
         "func followRedirect",
         "func newFetchResult",
+        "func redirectStopped",
         "func requestTimeout",
         "func serviceRetryDelay",
         "func shouldRetryAfter",
@@ -12795,9 +12863,11 @@
       "symbols": [
         "func Resolve",
         "func configured",
+        "func escalateReview",
         "func hostLayers",
         "func joinRoles",
         "func resolveRole",
+        "func validateResolveRequest",
         "type ResolveInput",
         "type field"
       ]
@@ -13195,9 +13265,11 @@
         "func Parse",
         "func Render",
         "func abandonReason",
+        "func applyGateAttr",
         "func attrIndent",
         "func gateID",
         "func indentOf",
+        "func newParsedGate",
         "func reindexAfterInsert",
         "func stripGateIDPrefix",
         "type Gate",
@@ -13845,6 +13917,8 @@
       "symbols": [
         "func DeriveWorkspaceLayout",
         "func ValidateWorkspaceParent",
+        "func deriveParentWorktree",
+        "func invalidWorktreeLeaf",
         "type WorkspaceLayout"
       ]
     },
@@ -13892,6 +13966,7 @@
         "func handoffDeliveryTimingMismatch",
         "func mergeHandoffDeliveryState",
         "func mergeHandoffDeliveryTarget",
+        "func mergeHandoffDeliveryTargetIdentity",
         "func mergeHandoffDeliveryTiming",
         "func validHandoffDeliveryEvidenceForState",
         "func validateHandoffDeliveryActorBounds",
@@ -13907,6 +13982,7 @@
         "func validateHandoffDeliveryOwnerIdentity",
         "func validateHandoffDeliveryReceipt",
         "func validateHandoffDeliveryRequest",
+        "func validateHandoffDeliveryRequiredFields",
         "func validateHandoffDeliveryState",
         "func validateHandoffDeliveryStateTimestamp",
         "func validateHandoffDeliveryStates",
@@ -14027,7 +14103,8 @@
       "task": "T08",
       "symbols": [
         "func ValidateIssueURL",
-        "func allDigits"
+        "func allDigits",
+        "func validateIssueURLPath"
       ]
     },
     {
@@ -14748,6 +14825,7 @@
         "func recognizableIssueProvider",
         "func splitPath",
         "func validateArtifactLabelsAndAssignees",
+        "func validateArtifactPath",
         "func validateArtifactProvider",
         "func validateArtifactURL",
         "func validateArtifactVerified"
@@ -15101,6 +15179,7 @@
         "func ValidateBeginAuthority",
         "func ValidateOperationID",
         "func ValidateReceiptAuthority",
+        "func receiptGenerationStale",
         "type BeginAuthorityFacts",
         "type ReceiptAuthorityFacts"
       ]
@@ -15114,6 +15193,8 @@
         "func CandidateDraftMatches",
         "func CandidateTitle",
         "func ValidateCandidate",
+        "func candidateContentMatches",
+        "func candidateLocationMatches",
         "func canonicalSet",
         "func sameCanonicalSet"
       ]
@@ -15126,6 +15207,8 @@
         "func DecideReconcile",
         "func DecideRetryOutcome",
         "func ValidateCreateEligibility",
+        "func validateConfirmEligibility",
+        "func validateEligibilityTarget",
         "type Action",
         "type Decision",
         "type EligibilityReason",
@@ -15165,6 +15248,8 @@
       "symbols": [
         "func ProjectArtifact",
         "func normalizeArtifactKind",
+        "func requiredArtifactPeople",
+        "func validateArtifactPhase",
         "type Artifact",
         "type ArtifactAuthority"
       ]
@@ -15950,6 +16035,8 @@
         "func gitHasFlag",
         "func goArgumentsWrite",
         "func goFlagName",
+        "func goListModWrites",
+        "func goWriteFlags",
         "func hasExactArgument",
         "func longFlagName",
         "func scanGitConfigArgs",
@@ -16828,6 +16915,7 @@
         "func findHostReport",
         "func hostCountsConsistent",
         "func previousEpisodeMatchesRun",
+        "func previousHostStatusConsistent",
         "func selectionExceedsTarget",
         "func validatePreviousEpisodes",
         "func validatePreviousHostStatus",
@@ -16854,6 +16942,7 @@
         "func isInteger",
         "func isNumber",
         "func isString",
+        "func keywordShapeError",
         "func numericValue",
         "func only",
         "func pointer",
@@ -16862,6 +16951,7 @@
         "func splitCSV",
         "func stringValues",
         "func supported",
+        "func supportedItems",
         "func supportedKeyword",
         "func supportedMaxLength",
         "func supportedPattern",
@@ -16965,7 +17055,8 @@
       "owner": "domain",
       "task": "T20",
       "symbols": [
-        "func ParseTraceparent"
+        "func ParseTraceparent",
+        "func isLowerHex"
       ]
     },
     {
@@ -17592,8 +17683,10 @@
       "symbols": [
         "func NormalizeContractValue",
         "func NormalizeMCPTextJSON",
+        "func contractBytesPlaceholder",
         "func contractIDPlaceholder",
         "func contractPlaceholder",
+        "func contractScorePlaceholder",
         "func isDynamicStateRecordKey",
         "func isDynamicTimeKey",
         "func isRFC3339Like",

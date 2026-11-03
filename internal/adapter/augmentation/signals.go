@@ -171,7 +171,7 @@ func (repo Repository) workerAndInboundRules() []repoSignalRule {
 }
 
 func (repo Repository) cliAndOperationsRules() []repoSignalRule {
-	return []repoSignalRule{
+	return append([]repoSignalRule{
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
 			signals.HasToolConformanceTransportCoverage = FileContainsTerm(root, filepath.Join("internal", "contract", "toolconformance", "types_test.go"), "TestClassificationsCoverAllContractCases") &&
 				FileContainsTerm(root, filepath.Join("internal", "contract", "toolconformance", "types_test.go"), "TestBenchmarkReportJSONRoundTripPreservesTypedEnums") &&
@@ -195,6 +195,11 @@ func (repo Repository) cliAndOperationsRules() []repoSignalRule {
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
 			signals.HasMCPAdapterCatalog = hasMCPAdapterCatalog(root)
 		}},
+	}, repo.compatibilityAndAuditRules()...)
+}
+
+func (repo Repository) compatibilityAndAuditRules() []repoSignalRule {
+	return []repoSignalRule{
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
 			signals.HasCompatibilityContract = FileContainsTerm(root, filepath.Join("cmd", "issueops", "issueopsapp", "misc_facade.go"), "CompatibilityContract") &&
 				FileContainsTerm(root, filepath.Join("cmd", "issueops", "issueopsapp", "root_command_facade.go"), `"contract":`)

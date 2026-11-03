@@ -51,22 +51,12 @@ func (s Starter) Start(ctx context.Context, req model.IssueOpsStartRequest) (mod
 	}
 	repo := s.Identity.CanonicalRepo(req.Repo)
 	branch := strings.TrimSpace(req.Branch)
-	var id string
-	if req.New {
-		var err error
-		id, err = s.Identity.IndependentID(repo)
-		if err != nil {
-			return model.IssueOpsRecord{OK: false}, err
-		}
-	} else {
-		var err error
-		id, err = s.resumableID(repo, branch)
-		if err != nil {
-			return model.IssueOpsRecord{OK: false}, err
-		}
+	id, err := s.cycleID(repo, branch, req.New)
+	if err != nil {
+		return model.IssueOpsRecord{OK: false}, err
 	}
 	var record model.IssueOpsRecord
-	err := s.Records.WithinLock(ctx, id, func(spanCtx context.Context) error {
+	err = s.Records.WithinLock(ctx, id, func(spanCtx context.Context) error {
 		repo := strings.TrimSpace(req.Repo)
 		if repo == "" {
 			return fmt.Errorf("repo is required")
@@ -92,6 +82,14 @@ func (s Starter) Start(ctx context.Context, req model.IssueOpsStartRequest) (mod
 		return err
 	})
 	return record, err
+}
+
+// cycleID picks the ID for a new independent cycle, or the resumable ID for repo and branch.
+func (s Starter) cycleID(repo, branch string, independent bool) (string, error) {
+	if independent {
+		return s.Identity.IndependentID(repo)
+	}
+	return s.resumableID(repo, branch)
 }
 
 // resumableID is the first stable ID for repo and branch that no cleaned-up

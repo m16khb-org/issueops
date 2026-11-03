@@ -171,16 +171,22 @@ func (vetter *receiptVetter) vet(observed inspectcontract.Observation, requiredF
 	if observed.Status != inspectcontract.ObservationVerified {
 		return result
 	}
-	if requiredFeature != "" && !slices.Contains(observed.Features, requiredFeature) {
-		return demote(result, "receipt_missing_"+strings.ReplaceAll(requiredFeature, "/", "_"))
-	}
-	if requiredFeature == "" && observed.RequestedRevision == "" && observed.NegotiatedRevision == "" {
-		return demote(result, "receipt_missing_revision")
-	}
-	if reason := artifactEvidence(source, requiredFeature, observed); reason != "" {
+	if reason := verifiedEvidenceReason(source, requiredFeature, observed); reason != "" {
 		return demote(result, reason)
 	}
 	return result
+}
+
+// verifiedEvidenceReason은 verified 관측이 요구 feature·revision을 갖췄는지와
+// artifact 근거를 차례로 확인하고, 어긋나면 강등 사유를 돌려준다.
+func verifiedEvidenceReason(source, requiredFeature string, observed inspectcontract.Observation) string {
+	if requiredFeature != "" && !slices.Contains(observed.Features, requiredFeature) {
+		return "receipt_missing_" + strings.ReplaceAll(requiredFeature, "/", "_")
+	}
+	if requiredFeature == "" && observed.RequestedRevision == "" && observed.NegotiatedRevision == "" {
+		return "receipt_missing_revision"
+	}
+	return artifactEvidence(source, requiredFeature, observed)
 }
 
 // artifactEvidence는 verified 관측의 근거를 artifact의 JSONL 이벤트 의미로 확인한다. 발견은 host
@@ -347,38 +353,49 @@ func (scan *artifactScan) consumeCodexToolResult(result map[string]any) {
 func (scan *artifactScan) consumeClaudeStream(event map[string]any) {
 	switch event["type"] {
 	case "system":
-		if event["subtype"] != "init" {
-			return
-		}
-		tools, _ := event["tools"].([]any)
-		for _, tool := range tools {
-			if name, _ := tool.(string); isDocsIndexTool(name) {
-				scan.facts.catalogListsDocs = true
-			}
-		}
+		scan.consumeClaudeInit(event)
 	case "assistant", "user":
 		message, _ := event["message"].(map[string]any)
 		content, _ := message["content"].([]any)
 		for _, item := range content {
 			block, _ := item.(map[string]any)
-			switch block["type"] {
-			case "tool_use":
-				name, _ := block["name"].(string)
-				id, _ := block["id"].(string)
-				if isDocsIndexTool(name) && id != "" {
-					scan.claudeCalls[id] = true
-				}
-			case "tool_result":
-				id, _ := block["tool_use_id"].(string)
-				if !scan.claudeCalls[id] {
-					continue
-				}
-				if failed, _ := block["is_error"].(bool); failed {
-					scan.facts.docsFailed = true
-				} else {
-					scan.facts.docsSucceeded = true
-				}
-			}
+			scan.consumeClaudeBlock(block)
+		}
+	}
+}
+
+// consumeClaudeInit는 init 이벤트의 tools 목록에 docs_index가 있는지 본다.
+func (scan *artifactScan) consumeClaudeInit(event map[string]any) {
+	if event["subtype"] != "init" {
+		return
+	}
+	tools, _ := event["tools"].([]any)
+	for _, tool := range tools {
+		if name, _ := tool.(string); isDocsIndexTool(name) {
+			scan.facts.catalogListsDocs = true
+		}
+	}
+}
+
+// consumeClaudeBlock는 메시지 content 블록의 tool_use를 기억하고, 기억한
+// docs_index 호출의 tool_result로 성공·실패를 기록한다.
+func (scan *artifactScan) consumeClaudeBlock(block map[string]any) {
+	switch block["type"] {
+	case "tool_use":
+		name, _ := block["name"].(string)
+		id, _ := block["id"].(string)
+		if isDocsIndexTool(name) && id != "" {
+			scan.claudeCalls[id] = true
+		}
+	case "tool_result":
+		id, _ := block["tool_use_id"].(string)
+		if !scan.claudeCalls[id] {
+			return
+		}
+		if failed, _ := block["is_error"].(bool); failed {
+			scan.facts.docsFailed = true
+		} else {
+			scan.facts.docsSucceeded = true
 		}
 	}
 }

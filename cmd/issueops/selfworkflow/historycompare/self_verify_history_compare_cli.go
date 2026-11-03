@@ -76,6 +76,11 @@ func RunSelfVerifyHistory(args []string, deps CLIDeps) error {
 		}
 		return deps.PrintJSON(result)
 	}
+	printSelfVerifyHistoryText(result)
+	return nil
+}
+
+func printSelfVerifyHistoryText(result contract.SelfAugmentHistoryResult) {
 	fmt.Printf("self-verify history: %d/%d entries from %s (prefix=%q)\n", result.Returned, result.TotalMatches, result.StateDir, result.Prefix)
 	for _, entry := range result.Entries {
 		status := "fail"
@@ -98,5 +103,4 @@ func RunSelfVerifyHistory(args []string, deps CLIDeps) error {
 		}
 		fmt.Printf("retention: retain=%d candidates=%d %s=%d\n", retention.Limit, len(retention.CandidateKeys), action, len(retention.DeletedKeys))
 	}
-	return nil
 }

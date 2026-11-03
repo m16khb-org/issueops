@@ -171,20 +171,9 @@ func updateWithinSpan(
 		return leaseapp.RepositoryResult{}, err
 	}
 	indexKey := holderIndexKey(*before.Lease.Holder)
-	indexData, indexExists, err := store.Get(holderBucket, indexKey)
+	mutations, err := holderIndexDeletion(store, indexKey, before.ID)
 	if err != nil {
-		return leaseapp.RepositoryResult{}, leasecontract.Fail(leasecontract.FailurePersistence, err)
-	}
-	mutations := []port.RecordMutation{}
-	if indexExists {
-		var index holderIndex
-		if err := json.Unmarshal(indexData, &index); err != nil {
-			return leaseapp.RepositoryResult{}, leasecontract.Fail(leasecontract.FailurePersistence, err)
-		}
-		if index.LifecycleID != before.ID {
-			return leaseapp.RepositoryResult{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("refusing to delete another lifecycle's lease-holder index"))
-		}
-		mutations = append(mutations, port.RecordMutation{Bucket: holderBucket, ID: indexKey, Delete: true})
+		return leaseapp.RepositoryResult{}, err
 	}
 	after, err := transition(before)
 	if err != nil {
@@ -200,6 +189,26 @@ func updateWithinSpan(
 		return leaseapp.RepositoryResult{}, leasecontract.Fail(leasecontract.FailurePersistence, err)
 	}
 	return leaseapp.RepositoryResult{Record: after, Execution: *record.Execution}, nil
+}
+
+// holderIndexDeletion은 lifecycle이 소유한 lease-holder index가 있으면 그 삭제 mutation을 돌려준다.
+func holderIndexDeletion(store port.TransactionalRecordStore, indexKey, lifecycleID string) ([]port.RecordMutation, error) {
+	indexData, indexExists, err := store.Get(holderBucket, indexKey)
+	if err != nil {
+		return nil, leasecontract.Fail(leasecontract.FailurePersistence, err)
+	}
+	mutations := []port.RecordMutation{}
+	if indexExists {
+		var index holderIndex
+		if err := json.Unmarshal(indexData, &index); err != nil {
+			return nil, leasecontract.Fail(leasecontract.FailurePersistence, err)
+		}
+		if index.LifecycleID != lifecycleID {
+			return nil, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("refusing to delete another lifecycle's lease-holder index"))
+		}
+		mutations = append(mutations, port.RecordMutation{Bucket: holderBucket, ID: indexKey, Delete: true})
+	}
+	return mutations, nil
 }
 
 type holderIndex struct {

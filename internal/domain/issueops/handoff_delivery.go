@@ -264,17 +264,12 @@ func validateHandoffDeliveryLauncher(launcher issueopscontract.IssueOpsHandoffDe
 	default:
 		return fmt.Errorf("delivery observation launcher is invalid")
 	}
-	for _, field := range []struct{ name, value string }{
+	if err := validateHandoffDeliveryRequiredFields([]struct{ name, value string }{
 		{"launcher name", launcher.Name},
 		{"launcher version", launcher.Version},
 		{"launcher path", launcher.Path},
-	} {
-		if strings.TrimSpace(field.value) == "" {
-			return fmt.Errorf("delivery observation %s is required", field.name)
-		}
-		if len(field.value) > handoffDeliveryFieldLimit {
-			return fmt.Errorf("delivery observation %s is too large", field.name)
-		}
+	}); err != nil {
+		return err
 	}
 	if launcher.Name == issueopscontract.IssueOpsHandoffDeliveryLauncherCmux {
 		if launcher.RuntimeID != "" || launcher.MachineID != "" || launcher.ServerID != "" {
@@ -285,11 +280,16 @@ func validateHandoffDeliveryLauncher(launcher issueopscontract.IssueOpsHandoffDe
 	if launcher.EndpointIncarnation != nil {
 		return fmt.Errorf("delivery observation endpoint incarnation is only valid for cmux")
 	}
-	for _, field := range []struct{ name, value string }{
+	return validateHandoffDeliveryRequiredFields([]struct{ name, value string }{
 		{"launcher runtime_id", launcher.RuntimeID},
 		{"launcher machine_id", launcher.MachineID},
 		{"launcher server_id", launcher.ServerID},
-	} {
+	})
+}
+
+// validateHandoffDeliveryRequiredFields는 각 필드가 비어 있지 않고 길이 한도를 넘지 않는지 순서대로 검사한다.
+func validateHandoffDeliveryRequiredFields(fields []struct{ name, value string }) error {
+	for _, field := range fields {
 		if strings.TrimSpace(field.value) == "" {
 			return fmt.Errorf("delivery observation %s is required", field.name)
 		}
@@ -703,6 +703,24 @@ func handoffDeliveryProcessCountersChanged(current, next issueopscontract.IssueO
 }
 
 func mergeHandoffDeliveryTarget(current, next issueopscontract.IssueOpsHandoffDeliveryTarget) issueopscontract.IssueOpsHandoffDeliveryTarget {
+	current = mergeHandoffDeliveryTargetIdentity(current, next)
+	if current.PromptGeneration == nil && next.PromptGeneration != nil {
+		value := *next.PromptGeneration
+		current.PromptGeneration = &value
+	}
+	if current.BaselineWorkingSequence == nil && next.BaselineWorkingSequence != nil {
+		value := *next.BaselineWorkingSequence
+		current.BaselineWorkingSequence = &value
+	}
+	if current.Process == nil && next.Process != nil {
+		process := *next.Process
+		current.Process = &process
+	}
+	return current
+}
+
+// mergeHandoffDeliveryTargetIdentity는 비어 있는 문자열 식별자만 next 값으로 채운다. PaneID는 next가 비어 있지 않으면 덮어쓴다.
+func mergeHandoffDeliveryTargetIdentity(current, next issueopscontract.IssueOpsHandoffDeliveryTarget) issueopscontract.IssueOpsHandoffDeliveryTarget {
 	if current.WindowID == "" {
 		current.WindowID = next.WindowID
 	}
@@ -720,18 +738,6 @@ func mergeHandoffDeliveryTarget(current, next issueopscontract.IssueOpsHandoffDe
 	}
 	if current.ProcessIncarnation == "" {
 		current.ProcessIncarnation = next.ProcessIncarnation
-	}
-	if current.PromptGeneration == nil && next.PromptGeneration != nil {
-		value := *next.PromptGeneration
-		current.PromptGeneration = &value
-	}
-	if current.BaselineWorkingSequence == nil && next.BaselineWorkingSequence != nil {
-		value := *next.BaselineWorkingSequence
-		current.BaselineWorkingSequence = &value
-	}
-	if current.Process == nil && next.Process != nil {
-		process := *next.Process
-		current.Process = &process
 	}
 	return current
 }

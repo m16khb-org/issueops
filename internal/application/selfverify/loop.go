@@ -97,28 +97,7 @@ func ExecuteLoop(request LoopRequest, deps LoopDeps) (selfaugmentcontract.SelfAu
 	}
 	plannedSteps := PlannedSteps(result.IssueOpsRoot, tempBin, seed, &goTestStep, stepDeps)
 	emit(request.Reporter, selfverifycontract.ProgressEvent{Event: "iteration_start", LoopKind: result.LoopKind, Iteration: iteration, Iterations: iterations, Seed: seed, StepCount: len(plannedSteps)})
-	failed := false
-	var firstFailure selfverifycontract.StepResult
-	for index, plannedStep := range plannedSteps {
-		emit(request.Reporter, selfverifycontract.ProgressEvent{Event: "step_start", LoopKind: result.LoopKind, Iteration: iteration, Iterations: iterations, Seed: seed, StepIndex: index + 1, StepCount: len(plannedSteps), Step: plannedStep.Label})
-		step := plannedStep.Run()
-		run.Steps = append(run.Steps, step)
-		if request.Reporter != nil {
-			request.Reporter.EmitStepEnd(result.LoopKind, iteration, iterations, seed, index+1, len(plannedSteps), step)
-		}
-		if request.Verbose {
-			deps.PrintStep(step)
-		}
-		if !step.OK {
-			if !failed {
-				firstFailure = step
-			}
-			failed = true
-			if !selfverifydomain.ContinueAfterFailure(request.CollectAllSteps) {
-				break
-			}
-		}
-	}
+	failed, firstFailure := runPlannedSteps(request, deps, result.LoopKind, plannedSteps, seed, iterations, iteration, &run)
 	result.Runs = append(result.Runs, run)
 	result.ElapsedMS = deps.Now().Sub(started).Milliseconds()
 	if failed {
@@ -138,6 +117,33 @@ func ExecuteLoop(request LoopRequest, deps LoopDeps) (selfaugmentcontract.SelfAu
 	}
 	emitEnd(request.Reporter, result.LoopKind, iterations, request.BaseSeed, result.OK, "")
 	return result, nil
+}
+
+// runPlannedSteps executes the planned steps in order, appending each result to run.Steps, and reports whether any step failed and the first failure.
+func runPlannedSteps(request LoopRequest, deps LoopDeps, loopKind string, plannedSteps []SelfVerifyPlannedStep, seed int64, iterations, iteration int, run *selfaugmentcontract.SelfAugmentIteration) (bool, selfverifycontract.StepResult) {
+	failed := false
+	var firstFailure selfverifycontract.StepResult
+	for index, plannedStep := range plannedSteps {
+		emit(request.Reporter, selfverifycontract.ProgressEvent{Event: "step_start", LoopKind: loopKind, Iteration: iteration, Iterations: iterations, Seed: seed, StepIndex: index + 1, StepCount: len(plannedSteps), Step: plannedStep.Label})
+		step := plannedStep.Run()
+		run.Steps = append(run.Steps, step)
+		if request.Reporter != nil {
+			request.Reporter.EmitStepEnd(loopKind, iteration, iterations, seed, index+1, len(plannedSteps), step)
+		}
+		if request.Verbose {
+			deps.PrintStep(step)
+		}
+		if !step.OK {
+			if !failed {
+				firstFailure = step
+			}
+			failed = true
+			if !selfverifydomain.ContinueAfterFailure(request.CollectAllSteps) {
+				break
+			}
+		}
+	}
+	return failed, firstFailure
 }
 
 func emit(reporter ProgressReporter, event selfverifycontract.ProgressEvent) {

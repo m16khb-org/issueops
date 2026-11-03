@@ -24,10 +24,7 @@ type Dependencies struct {
 
 func Fetch(ctx context.Context, request webfetchcontract.Request, dependencies Dependencies) (webfetchcontract.Result, error) {
 	started := time.Now()
-	now := started
-	if dependencies.Now != nil {
-		now = dependencies.Now()
-	}
+	now := fetchNow(started, dependencies)
 	result := newFetchResult(request, now)
 	timeout := requestTimeout(request)
 	ctx, cancel := context.WithTimeout(ctx, timeout)
@@ -69,10 +66,7 @@ func Fetch(ctx context.Context, request webfetchcontract.Request, dependencies D
 			_ = response.Body.Close()
 			next, stop := followRedirect(ctx, dependencies, request, current, location)
 			if stop != nil {
-				if stop.err != nil {
-					result.Warnings = append(result.Warnings, stop.err.Error())
-				}
-				return stopped(result, request.MaxChars, started, stop.category, stop.reason, stop.skipped), nil
+				return redirectStopped(result, request.MaxChars, started, stop), nil
 			}
 			current = next
 			result.FinalURL = webfetchdomain.SanitizeURL(current)
@@ -101,6 +95,21 @@ func Fetch(ctx context.Context, request webfetchcontract.Request, dependencies D
 		return FinalizeResult(result, request.MaxChars, started), nil
 	}
 	return stopped(result, request.MaxChars, started, webfetchcontract.CategoryUnknown, webfetchcontract.StopReasonRedirectLoop, "redirect_loop"), nil
+}
+
+func fetchNow(started time.Time, dependencies Dependencies) time.Time {
+	if dependencies.Now != nil {
+		return dependencies.Now()
+	}
+	return started
+}
+
+// redirectStopped ends the fetch at a redirect hop, recording the stop error as a warning when one is set.
+func redirectStopped(result webfetchcontract.Result, maxChars int, started time.Time, stop *redirectStop) webfetchcontract.Result {
+	if stop.err != nil {
+		result.Warnings = append(result.Warnings, stop.err.Error())
+	}
+	return stopped(result, maxChars, started, stop.category, stop.reason, stop.skipped)
 }
 
 func requestTimeout(request webfetchcontract.Request) time.Duration {

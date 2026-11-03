@@ -109,16 +109,22 @@ func (r OmpRunner) Preflight(ctx context.Context, request port.HostProbeRequest)
 		result.Code = "version_probe_failed"
 		return result
 	}
+	return finishOmpPreflight(result, string(output.Stdout), r.validLifecycleExtension(), request.Model)
+}
+
+// finishOmpPreflight records the probed version and downgrades readiness when
+// the lifecycle extension or the requested model is unusable.
+func finishOmpPreflight(result port.HostProbePreflight, versionOutput string, extensionValid bool, model string) port.HostProbePreflight {
 	result.Ready = true
-	result.Version = boundedVersion(string(output.Stdout))
-	result.MockExtensionVerified = r.validLifecycleExtension()
+	result.Version = boundedVersion(versionOutput)
+	result.MockExtensionVerified = extensionValid
 	if result.Ready && !result.MockExtensionVerified {
 		result.Ready = false
 		result.Cause = "harness_environment"
 		result.Code = "mock_extension_invalid"
 		result.EvidenceSource = "omp_preflight"
 	}
-	if result.Ready && !explicitOmoModel(request.Model) {
+	if result.Ready && !explicitOmoModel(model) {
 		result.Ready = false
 		result.Cause = "harness_environment"
 		result.Code = "explicit_model_required"
@@ -284,11 +290,7 @@ func snapshotOmpAuth(ctx context.Context, source, destination string) error {
 	if source == "" {
 		return nil
 	}
-	file, err := os.OpenFile(destination, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
-	if err != nil {
-		return err
-	}
-	if err := file.Close(); err != nil {
+	if err := createPrivateEmptyFile(destination); err != nil {
 		return err
 	}
 	db, err := sql.Open("sqlite", "file:"+destination+"?_pragma=busy_timeout(5000)")
@@ -350,6 +352,15 @@ func readOmpAuthSchema(ctx context.Context, tx *sql.Tx) ([]string, error) {
 		return nil, err
 	}
 	return schema, nil
+}
+
+// createPrivateEmptyFile exclusively creates an empty 0600 file.
+func createPrivateEmptyFile(path string) error {
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return err
+	}
+	return file.Close()
 }
 
 func prepareOmpPrivateState(root string) error {

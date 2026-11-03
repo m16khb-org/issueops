@@ -44,6 +44,26 @@ func runCommandStepEnv(root, label string, timeout time.Duration, input string, 
 	return verification.RunEnv(root, label, timeout, input, env, 32*1024, name, args...)
 }
 
+// stageArtifact creates the isolated build directory and writes the placeholder artifact into it.
+func (deps parallelIsolationProbeDeps) stageArtifact(buildDir, artifactPath string) error {
+	if err := deps.mkdirAll(buildDir, 0o700); err != nil {
+		return err
+	}
+	return deps.writeFile(artifactPath, []byte("parallel isolation artifact\n"), 0o600)
+}
+
+// stateListIsolationError parses the state list output and returns the probe error message, or "" when only the worker's own key is listed.
+func stateListIsolationError(stdout, key string) string {
+	var listResult statecontract.StateListResult
+	if err := json.Unmarshal([]byte(stdout), &listResult); err != nil {
+		return "state list parse failed: " + err.Error()
+	}
+	if len(listResult.Keys) != 1 || listResult.Keys[0] != key {
+		return fmt.Sprintf("state list leaked keys across workers: %v", listResult.Keys)
+	}
+	return ""
+}
+
 func runParallelIsolationProbe(binary, root string, seed int64, worker int) parallelIsolationProbe {
 	return runParallelIsolationProbeWithDeps(binary, root, seed, worker, parallelIsolationProbeDeps{})
 }
@@ -61,11 +81,7 @@ func runParallelIsolationProbeWithDeps(binary, root string, seed int64, worker i
 	probe.StateDir = filepath.Join(tempRoot, "state")
 	buildDir := filepath.Join(tempRoot, "build")
 	probe.ArtifactPath = filepath.Join(buildDir, "issueops")
-	if err := deps.mkdirAll(buildDir, 0o700); err != nil {
-		probe.Error = err.Error()
-		return probe
-	}
-	if err := deps.writeFile(probe.ArtifactPath, []byte("parallel isolation artifact\n"), 0o600); err != nil {
+	if err := deps.stageArtifact(buildDir, probe.ArtifactPath); err != nil {
 		probe.Error = err.Error()
 		return probe
 	}
@@ -98,13 +114,8 @@ func runParallelIsolationProbeWithDeps(binary, root string, seed int64, worker i
 		probe.Error = "state list failed: " + list.Error
 		return probe
 	}
-	var listResult statecontract.StateListResult
-	if err := json.Unmarshal([]byte(list.Stdout), &listResult); err != nil {
-		probe.Error = "state list parse failed: " + err.Error()
-		return probe
-	}
-	if len(listResult.Keys) != 1 || listResult.Keys[0] != probe.Key {
-		probe.Error = fmt.Sprintf("state list leaked keys across workers: %v", listResult.Keys)
+	if msg := stateListIsolationError(list.Stdout, probe.Key); msg != "" {
+		probe.Error = msg
 		return probe
 	}
 	return probe

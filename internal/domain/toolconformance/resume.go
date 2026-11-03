@@ -141,14 +141,17 @@ func validatePreviousHostStatus(matched *contract.HostReport, observedModel stri
 		matched.Evidence.LiveVerified != hasCompleted || !hasLiveAttempts || matched.ObservedModel != observedModel {
 		return errInvalidPreviousEvidence()
 	}
-	if hasCompleted {
-		if matched.Status != "supported" || strings.TrimSpace(matched.ObservedModel) == "" || matched.Evidence.StatusReason != "" {
-			return errInvalidPreviousEvidence()
-		}
-	} else if matched.Status != "unavailable" || matched.Evidence.StatusReason != "live_probe_incomplete" {
+	if !previousHostStatusConsistent(matched, hasCompleted) {
 		return errInvalidPreviousEvidence()
 	}
 	return nil
+}
+
+func previousHostStatusConsistent(matched *contract.HostReport, hasCompleted bool) bool {
+	if hasCompleted {
+		return matched.Status == "supported" && strings.TrimSpace(matched.ObservedModel) != "" && matched.Evidence.StatusReason == ""
+	}
+	return matched.Status == "unavailable" && matched.Evidence.StatusReason == "live_probe_incomplete"
 }
 
 func ValidatePreviousSelection(previous *contract.BenchmarkReport, selected []SelectedFixturePair) error {

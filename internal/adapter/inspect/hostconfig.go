@@ -372,23 +372,16 @@ func (p *codexIssueOpsTableParser) storeValue(inParent, inTable bool, key string
 	return nil
 }
 
+// stripTOMLComment는 따옴표 밖의 첫 `#`부터 줄 끝까지를 잘라낸다. 따옴표
+// 상태는 bracketScanner와 같은 규칙으로 추적한다.
 func stripTOMLComment(line string) string {
-	var quote byte
-	escaped := false
+	var scanner bracketScanner
 	for i := range len(line) {
 		c := line[i]
-		switch {
-		case quote == '"' && escaped:
-			escaped = false
-		case quote == '"' && c == '\\':
-			escaped = true
-		case quote != 0 && c == quote:
-			quote = 0
-		case quote == 0 && (c == '"' || c == '\''):
-			quote = c
-		case quote == 0 && c == '#':
+		if scanner.quote == 0 && c == '#' {
 			return line[:i]
 		}
+		scanner.step(c)
 	}
 	return line
 }

@@ -108,19 +108,25 @@ func (s *Service) completeRecord(ctx context.Context, request Request, command c
 	if err != nil {
 		return before, false, err
 	}
-	if before.PRHead != "" {
-		changed, err := s.environment.ChangedPathsSince(ctx, before.CanonicalRoot, before.PRHead, head, report)
-		if err != nil {
-			return before, false, err
-		}
-		if err := completiondomain.ValidateVerifiedSincePR(before.PRHead, changed); err != nil {
-			return before, false, err
-		}
+	if err := s.verifyChangesSincePR(ctx, before, head, report); err != nil {
+		return before, false, err
 	}
 	completedAt := s.clock.Now()
 	transitionedAt := s.clock.Now()
 	outcome := completiondomain.ApplyAt(toDomainSnapshot(before), command, report, completedAt, transitionedAt)
 	return fromDomainOutcome(before, outcome), true, nil
+}
+
+// verifyChangesSincePR requires that nothing verified-relevant changed since the PR head was recorded.
+func (s *Service) verifyChangesSincePR(ctx context.Context, before completioncontract.RecordSnapshot, head, report string) error {
+	if before.PRHead == "" {
+		return nil
+	}
+	changed, err := s.environment.ChangedPathsSince(ctx, before.CanonicalRoot, before.PRHead, head, report)
+	if err != nil {
+		return err
+	}
+	return completiondomain.ValidateVerifiedSincePR(before.PRHead, changed)
 }
 
 func toDomainSnapshot(record completioncontract.RecordSnapshot) completiondomain.Snapshot {

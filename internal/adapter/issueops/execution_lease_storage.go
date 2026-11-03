@@ -46,15 +46,8 @@ func (reader LeaseWorkspaceSnapshot) Snapshot(workspace issueops.Workspace) (str
 	if err != nil {
 		return "", err
 	}
-	indexPath, err := reader.gitOutput(workspace.Root, "rev-parse", "--git-path", "index")
+	indexBytes, err := reader.workspaceIndexBytes(workspace.Root)
 	if err != nil {
-		return "", err
-	}
-	if !filepath.IsAbs(indexPath) {
-		indexPath = filepath.Join(workspace.Root, indexPath)
-	}
-	indexBytes, err := os.ReadFile(indexPath)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return "", err
 	}
 	tracked, staged, untracked, err := reader.workspaceDiffs(workspace.Root)
@@ -75,6 +68,22 @@ func (reader LeaseWorkspaceSnapshot) Snapshot(workspace issueops.Workspace) (str
 		}
 	}
 	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+// workspaceIndexBytes는 Git index 파일 내용을 읽는다. index가 없으면 nil이다.
+func (reader LeaseWorkspaceSnapshot) workspaceIndexBytes(root string) ([]byte, error) {
+	indexPath, err := reader.gitOutput(root, "rev-parse", "--git-path", "index")
+	if err != nil {
+		return nil, err
+	}
+	if !filepath.IsAbs(indexPath) {
+		indexPath = filepath.Join(root, indexPath)
+	}
+	indexBytes, err := os.ReadFile(indexPath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+	return indexBytes, nil
 }
 
 type workspaceGitIdentity struct{ branch, head, commonDir string }

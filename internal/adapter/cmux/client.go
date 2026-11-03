@@ -172,24 +172,33 @@ func (client Client) Send(ctx context.Context, request cmuxcontract.SendRequest)
 	if err != nil {
 		return receipt, &cmuxport.MutationError{Phase: "input_send", Ambiguous: output.Invoked, Cause: err}
 	}
-	var accepted struct {
-		WindowID    string `json:"window_id"`
-		WorkspaceID string `json:"workspace_id"`
-		SurfaceID   string `json:"surface_id"`
-		Queued      *bool  `json:"queued"`
-	}
-	if err := decodeStrict(output.Stdout, &accepted); err != nil {
-		return receipt, &cmuxport.MutationError{Phase: "input_send", Ambiguous: true, Cause: fmt.Errorf("malformed send response: %w", err)}
-	}
-	if accepted.WindowID != created.WindowID || accepted.WorkspaceID != created.WorkspaceID ||
-		accepted.SurfaceID != created.SurfaceID || accepted.Queued == nil {
-		return receipt, &cmuxport.MutationError{Phase: "input_send", Ambiguous: true, Cause: fmt.Errorf("cmux send receipt target identity is incomplete or mismatched")}
+	if err := validateSendAcceptance(output.Stdout, created); err != nil {
+		return receipt, err
 	}
 	if err := client.ensureEndpoint(created.Preflight); err != nil {
 		return receipt, &cmuxport.MutationError{Phase: "input_send", Ambiguous: true, Cause: err}
 	}
 	receipt.Accepted = true
 	return receipt, nil
+}
+
+// validateSendAcceptance decodes the send response and checks that it names the
+// created target and reports a queued flag.
+func validateSendAcceptance(stdout []byte, created cmuxcontract.CreatedWorkspace) error {
+	var accepted struct {
+		WindowID    string `json:"window_id"`
+		WorkspaceID string `json:"workspace_id"`
+		SurfaceID   string `json:"surface_id"`
+		Queued      *bool  `json:"queued"`
+	}
+	if err := decodeStrict(stdout, &accepted); err != nil {
+		return &cmuxport.MutationError{Phase: "input_send", Ambiguous: true, Cause: fmt.Errorf("malformed send response: %w", err)}
+	}
+	if accepted.WindowID != created.WindowID || accepted.WorkspaceID != created.WorkspaceID ||
+		accepted.SurfaceID != created.SurfaceID || accepted.Queued == nil {
+		return &cmuxport.MutationError{Phase: "input_send", Ambiguous: true, Cause: fmt.Errorf("cmux send receipt target identity is incomplete or mismatched")}
+	}
+	return nil
 }
 
 func (client Client) resolveCreatedTarget(ctx context.Context, name, createdHandle string, result *cmuxcontract.CreatedWorkspace) error {

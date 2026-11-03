@@ -441,15 +441,8 @@ func persistChildSmokeObservation(deps Dependencies, result port.HostProbeResult
 	if path == "" {
 		return nil
 	}
-	if !filepath.IsAbs(path) {
-		return fmt.Errorf("child_smoke_observation_path_invalid")
-	}
-	parentInfo, err := os.Lstat(filepath.Dir(path))
-	if err != nil || !parentInfo.IsDir() || parentInfo.Mode()&os.ModeSymlink != 0 || parentInfo.Mode().Perm() != 0o700 {
-		return fmt.Errorf("child_smoke_observation_path_invalid")
-	}
-	if _, err := os.Lstat(path); !errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("child_smoke_observation_path_invalid")
+	if err := validateChildSmokeObservationPath(path); err != nil {
+		return err
 	}
 	observation := hostStreamObservation{
 		SessionStartObserved: result.SessionStartObserved,
@@ -464,6 +457,24 @@ func persistChildSmokeObservation(deps Dependencies, result port.HostProbeResult
 		return fmt.Errorf("child_smoke_observation_encode_failed")
 	}
 	data = append(data, '\n')
+	return writeChildSmokeObservationFile(path, data)
+}
+
+func validateChildSmokeObservationPath(path string) error {
+	if !filepath.IsAbs(path) {
+		return fmt.Errorf("child_smoke_observation_path_invalid")
+	}
+	parentInfo, err := os.Lstat(filepath.Dir(path))
+	if err != nil || !parentInfo.IsDir() || parentInfo.Mode()&os.ModeSymlink != 0 || parentInfo.Mode().Perm() != 0o700 {
+		return fmt.Errorf("child_smoke_observation_path_invalid")
+	}
+	if _, err := os.Lstat(path); !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("child_smoke_observation_path_invalid")
+	}
+	return nil
+}
+
+func writeChildSmokeObservationFile(path string, data []byte) error {
 	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return fmt.Errorf("child_smoke_observation_write_failed")

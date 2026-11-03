@@ -20,12 +20,7 @@ func writeSealedArtifact(root, path string, value []byte) error {
 	}
 	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if errors.Is(err, os.ErrExist) {
-		current, readErr := os.ReadFile(path)
-		info, statErr := os.Lstat(path)
-		if readErr != nil || statErr != nil || !info.Mode().IsRegular() || info.Mode().Perm() != 0o600 || !strings.EqualFold(digestBytes(current), digestBytes(value)) {
-			return fmt.Errorf("immutable sealed artifact already exists with different identity")
-		}
-		return nil
+		return verifyExistingSealedArtifact(path, value)
 	}
 	if err != nil {
 		return err
@@ -37,6 +32,17 @@ func writeSealedArtifact(root, path string, value []byte) error {
 		err = closeErr
 	}
 	return err
+}
+
+// verifyExistingSealedArtifact accepts a pre-existing artifact only when it is a
+// private regular file whose digest matches value.
+func verifyExistingSealedArtifact(path string, value []byte) error {
+	current, readErr := os.ReadFile(path)
+	info, statErr := os.Lstat(path)
+	if readErr != nil || statErr != nil || !info.Mode().IsRegular() || info.Mode().Perm() != 0o600 || !strings.EqualFold(digestBytes(current), digestBytes(value)) {
+		return fmt.Errorf("immutable sealed artifact already exists with different identity")
+	}
+	return nil
 }
 
 func ensureSealedArtifactDirectory(root, target string) error {

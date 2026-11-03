@@ -108,7 +108,11 @@ func validateArtifactURL(raw, provider, kind string) error {
 	if err != nil || !isPlainHTTPSURL(parsed) || parsed.String() != raw {
 		return fmt.Errorf("remote artifact url must be a canonical HTTPS URL")
 	}
-	parts := splitPath(parsed.EscapedPath())
+	return validateArtifactPath(provider, kind, parsed, splitPath(parsed.EscapedPath()))
+}
+
+// validateArtifactPath는 provider/kind 조합별로 URL 호스트와 경로 형태를 검사한다.
+func validateArtifactPath(provider, kind string, parsed *url.URL, parts []string) error {
 	switch provider + ":" + kind {
 	case "github:pr":
 		if len(parts) != 4 || parts[2] != "pull" || !decimal(parts[3]) {

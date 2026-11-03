@@ -486,18 +486,14 @@ func (s *omoStreamState) finish() error {
 	if len(s.executions) == 0 {
 		return fmt.Errorf("host_stream_no_call")
 	}
-	for _, execution := range s.executions {
-		if !execution.ended {
-			return fmt.Errorf("host_stream_invalid")
-		}
+	if !s.allExecutionsEnded() {
+		return fmt.Errorf("host_stream_invalid")
 	}
 	if s.observation.AmbientToolCount != 1 {
 		return fmt.Errorf("host_stream_multiple_calls")
 	}
-	for _, execution := range s.executions {
-		if execution.name != s.targetTool {
-			return fmt.Errorf("host_stream_non_target_call")
-		}
+	if !s.allExecutionsTarget() {
+		return fmt.Errorf("host_stream_non_target_call")
 	}
 	if s.observation.MCPCallCount != 1 || len(s.results) != 1 {
 		return fmt.Errorf("host_stream_invalid")
@@ -512,6 +508,24 @@ func (s *omoStreamState) finish() error {
 	s.observation.MCPCallCount = 1
 	s.observation.ResponseSHA256 = digest
 	return nil
+}
+
+func (s *omoStreamState) allExecutionsEnded() bool {
+	for _, execution := range s.executions {
+		if !execution.ended {
+			return false
+		}
+	}
+	return true
+}
+
+func (s *omoStreamState) allExecutionsTarget() bool {
+	for _, execution := range s.executions {
+		if execution.name != s.targetTool {
+			return false
+		}
+	}
+	return true
 }
 
 func omoStreamFailure(err error) (string, string) {

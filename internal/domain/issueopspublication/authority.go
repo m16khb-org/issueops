@@ -61,11 +61,16 @@ func ValidateReceiptAuthority(facts ReceiptAuthorityFacts, enforceOriginalGenera
 	if !facts.Prepared || !facts.Pending || facts.PendingOperationID != facts.ExpectedOperationID {
 		return fmt.Errorf("external intent changed before remote receipt CAS")
 	}
-	if enforceOriginalGeneration && (facts.ExpectedGeneration == 0 || facts.Generation != facts.ExpectedGeneration ||
-		facts.LeaseStatus != "active" || !facts.HolderPresent ||
-		!strings.EqualFold(facts.HolderHost, facts.ExpectedHost) || facts.HolderSessionID != facts.ExpectedSessionID ||
-		facts.HolderAgentID != facts.ExpectedAgentID || !facts.CWDMatches) {
+	if enforceOriginalGeneration && receiptGenerationStale(facts) {
 		return fmt.Errorf("remote receipt belongs to a stale execution generation; execution reconcile is required")
 	}
 	return nil
+}
+
+// receiptGenerationStale은 영수증 소유 실행 세대가 기대한 세대·보유자와 다른지 판단한다.
+func receiptGenerationStale(facts ReceiptAuthorityFacts) bool {
+	return facts.ExpectedGeneration == 0 || facts.Generation != facts.ExpectedGeneration ||
+		facts.LeaseStatus != "active" || !facts.HolderPresent ||
+		!strings.EqualFold(facts.HolderHost, facts.ExpectedHost) || facts.HolderSessionID != facts.ExpectedSessionID ||
+		facts.HolderAgentID != facts.ExpectedAgentID || !facts.CWDMatches
 }

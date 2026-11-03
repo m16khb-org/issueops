@@ -61,12 +61,7 @@ func contractPlaceholder(key string, child any, kind contractMapKind) (any, bool
 			return "$DURATION_MS", true
 		}
 	case "bytes":
-		if kind.stateCheckpoint {
-			return "$STATE_BYTES", true
-		}
-		if kind.stateRecord {
-			return "$STATE_RECORD_BYTES", true
-		}
+		return contractBytesPlaceholder(kind)
 	case "audit_log_id":
 		return "$AUDIT_ID", true
 	case "project_claude_skill", "project_codex_skill":
@@ -80,9 +75,24 @@ func contractPlaceholder(key string, child any, kind contractMapKind) (any, bool
 	case "head", "sha":
 		return "$GIT_SHA", true
 	case "score":
-		if score, ok := child.(float64); ok {
-			return math.Round(score*100) / 100, true
-		}
+		return contractScorePlaceholder(child)
+	}
+	return nil, false
+}
+
+func contractBytesPlaceholder(kind contractMapKind) (any, bool) {
+	if kind.stateCheckpoint {
+		return "$STATE_BYTES", true
+	}
+	if kind.stateRecord {
+		return "$STATE_RECORD_BYTES", true
+	}
+	return nil, false
+}
+
+func contractScorePlaceholder(child any) (any, bool) {
+	if score, ok := child.(float64); ok {
+		return math.Round(score*100) / 100, true
 	}
 	return nil, false
 }

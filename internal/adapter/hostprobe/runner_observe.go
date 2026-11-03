@@ -55,20 +55,8 @@ func observeHostStream(data []byte) (hostStreamObservation, error) {
 			return hostStreamObservation{}, fmt.Errorf("host_stream_invalid")
 		}
 		events++
-		observeStructuredModel(event, &observation)
-		if err := observeHookEvent(event, &observation); err != nil {
+		if err := observeHostEvent(event, claudeProbeCalls, &observation, &results); err != nil {
 			return hostStreamObservation{}, err
-		}
-		if err := observeToolCalls(event, claudeProbeCalls, &observation); err != nil {
-			return hostStreamObservation{}, err
-		}
-		for _, result := range observedClaudeProbeResults(event, claudeProbeCalls) {
-			observation.MCPCallCount++
-			results = append(results, result)
-		}
-		if result, ok := observedMCPResult(event); ok {
-			observation.MCPCallCount++
-			results = append(results, result)
 		}
 	}
 	if events == 0 {
@@ -105,24 +93,36 @@ func observeToolCalls(value any, claudeCalls map[string]bool, observation *hostS
 	if !ok {
 		return nil
 	}
-	if event["type"] == "item.completed" {
-		item, _ := event["item"].(map[string]any)
-		typeName, _ := item["type"].(string)
-		switch typeName {
-		case "reasoning", "agent_message", "todo_list":
-		case "error":
-			if item["message"] != "`--dangerously-bypass-hook-trust` is enabled. Enabled hooks may run without review for this invocation." {
-				return fmt.Errorf("host_stream_invalid")
-			}
-		case "":
-			return fmt.Errorf("host_stream_invalid")
-		default:
-			observation.AmbientToolCount++
-		}
+	if err := observeCodexItem(event, observation); err != nil {
+		return err
 	}
 	if event["type"] != "assistant" {
 		return nil
 	}
+	return observeClaudeToolUses(event, claudeCalls, observation)
+}
+
+func observeCodexItem(event map[string]any, observation *hostStreamObservation) error {
+	if event["type"] != "item.completed" {
+		return nil
+	}
+	item, _ := event["item"].(map[string]any)
+	typeName, _ := item["type"].(string)
+	switch typeName {
+	case "reasoning", "agent_message", "todo_list":
+	case "error":
+		if item["message"] != "`--dangerously-bypass-hook-trust` is enabled. Enabled hooks may run without review for this invocation." {
+			return fmt.Errorf("host_stream_invalid")
+		}
+	case "":
+		return fmt.Errorf("host_stream_invalid")
+	default:
+		observation.AmbientToolCount++
+	}
+	return nil
+}
+
+func observeClaudeToolUses(event map[string]any, claudeCalls map[string]bool, observation *hostStreamObservation) error {
 	message, _ := event["message"].(map[string]any)
 	content, _ := message["content"].([]any)
 	for _, rawBlock := range content {
@@ -140,6 +140,27 @@ func observeToolCalls(value any, claudeCalls map[string]bool, observation *hostS
 		}
 		claudeCalls[id] = strings.Contains(name, "issueops_probe")
 		observation.AmbientToolCount++
+	}
+	return nil
+}
+
+// observeHostEvent folds one decoded stream event into the observation and
+// the collected MCP results.
+func observeHostEvent(event any, claudeProbeCalls map[string]bool, observation *hostStreamObservation, results *[]any) error {
+	observeStructuredModel(event, observation)
+	if err := observeHookEvent(event, observation); err != nil {
+		return err
+	}
+	if err := observeToolCalls(event, claudeProbeCalls, observation); err != nil {
+		return err
+	}
+	for _, result := range observedClaudeProbeResults(event, claudeProbeCalls) {
+		observation.MCPCallCount++
+		*results = append(*results, result)
+	}
+	if result, ok := observedMCPResult(event); ok {
+		observation.MCPCallCount++
+		*results = append(*results, result)
 	}
 	return nil
 }

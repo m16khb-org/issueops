@@ -91,12 +91,8 @@ func (s *ReseedService) reseedWithinFence(ctx context.Context, request ReseedReq
 	if err := s.observeCompletedBase(ctx, before.Stable, completionGeneration); err != nil {
 		return ReseedResult{}, err
 	}
-	fingerprint, err := s.inventory.Observe(ctx, before.Stable, actor)
-	if err != nil {
+	if err := s.requireFreshInventory(ctx, before.Stable, actor, request.InventoryFingerprint); err != nil {
 		return ReseedResult{}, err
-	}
-	if fingerprint != request.InventoryFingerprint {
-		return ReseedResult{}, fmt.Errorf("stale replacement inventory fingerprint")
 	}
 	next, err := s.reseededRecord(before, request, completionGeneration)
 	if err != nil {
@@ -107,16 +103,37 @@ func (s *ReseedService) reseedWithinFence(ctx context.Context, request ReseedReq
 		return ReseedResult{}, err
 	}
 	applyPreparedReseedToken(&next, prepared)
-	after, err := s.repository.CommitReseed(ctx, snapshot, next)
+	after, err := s.commitReseed(ctx, snapshot, next, prepared)
 	if err != nil {
-		if rollbackErr := s.artifacts.Rollback(ctx, prepared); rollbackErr != nil {
-			return ReseedResult{}, fmt.Errorf("%w; replacement residue cleanup failed: %v", err, rollbackErr) //nolint:errorlint // only the commit failure belongs in the chain; the cleanup failure is diagnostic text
-		}
 		return ReseedResult{}, err
 	}
 	_ = s.artifacts.CleanupSuperseded(ctx, before.Stable)
 	prepared.Receipt.Execution = after.Execution
 	return ReseedResult{OK: true, ID: request.ID, Receipt: prepared.Receipt, Execution: after.Execution}, nil
+}
+
+// requireFreshInventory rejects a reseed whose observed replacement inventory no longer matches the requested fingerprint.
+func (s *ReseedService) requireFreshInventory(ctx context.Context, record leasecontract.Record, actor leasedomain.Actor, expected string) error {
+	fingerprint, err := s.inventory.Observe(ctx, record, actor)
+	if err != nil {
+		return err
+	}
+	if fingerprint != expected {
+		return fmt.Errorf("stale replacement inventory fingerprint")
+	}
+	return nil
+}
+
+// commitReseed persists the replacement record, rolling the prepared artifacts back when the commit fails.
+func (s *ReseedService) commitReseed(ctx context.Context, snapshot ReseedSnapshot, next Record, prepared ReseedArtifactReceipt) (RepositoryResult, error) {
+	after, err := s.repository.CommitReseed(ctx, snapshot, next)
+	if err != nil {
+		if rollbackErr := s.artifacts.Rollback(ctx, prepared); rollbackErr != nil {
+			return RepositoryResult{}, fmt.Errorf("%w; replacement residue cleanup failed: %v", err, rollbackErr) //nolint:errorlint // only the commit failure belongs in the chain; the cleanup failure is diagnostic text
+		}
+		return RepositoryResult{}, err
+	}
+	return after, nil
 }
 
 // validateReseedPreconditions checks the loaded record and request before any

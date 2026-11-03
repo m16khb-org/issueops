@@ -100,7 +100,7 @@ func ValidateSelfVerifyCandidateExportWithDeps(binary, root string, seed int64, 
 
 func CandidateExportValidationErrors(key string, exportResult augmentcontract.SelfVerificationCandidateExportResult, snapshot augmentcontract.SelfVerificationCandidateExportStateSnapshot) []string {
 	errs := []string{}
-	if !exportResult.OK || exportResult.Kind != augmentcontract.SelfVerificationCandidateExportKind || exportResult.LoopKind != "self_verification" {
+	if !candidateExportIdentityOK(exportResult) {
 		errs = append(errs, "candidate export identity mismatch")
 	}
 	if exportResult.CandidateCount < 10 || len(exportResult.Candidates) != exportResult.CandidateCount {
@@ -112,10 +112,20 @@ func CandidateExportValidationErrors(key string, exportResult augmentcontract.Se
 	if !implementedCandidatesSatisfied(exportResult.OpenCandidateIDs, exportResult.SatisfiedCandidateIDs) {
 		errs = append(errs, "candidate export did not mark implemented candidates satisfied")
 	}
-	if exportResult.StateCheckpoint == nil || !exportResult.StateCheckpoint.OK || exportResult.StateCheckpoint.Key != key {
+	if !candidateExportCheckpointOK(exportResult, key) {
 		errs = append(errs, "candidate export did not save the requested state checkpoint")
 	}
 	return append(errs, candidateExportSnapshotErrors(exportResult, snapshot)...)
+}
+
+// candidateExportIdentityOK reports whether the export result is an OK self-verification candidate export.
+func candidateExportIdentityOK(exportResult augmentcontract.SelfVerificationCandidateExportResult) bool {
+	return exportResult.OK && exportResult.Kind == augmentcontract.SelfVerificationCandidateExportKind && exportResult.LoopKind == "self_verification"
+}
+
+// candidateExportCheckpointOK reports whether the export saved an OK state checkpoint under the requested key.
+func candidateExportCheckpointOK(exportResult augmentcontract.SelfVerificationCandidateExportResult, key string) bool {
+	return exportResult.StateCheckpoint != nil && exportResult.StateCheckpoint.OK && exportResult.StateCheckpoint.Key == key
 }
 
 // candidateExportSnapshotErrors는 저장된 상태 스냅샷이 export 결과와 일치하는지 검사한다.

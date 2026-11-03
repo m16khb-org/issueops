@@ -84,6 +84,11 @@ func (s *RemoteMergeService) Merge(ctx context.Context, id, method string, confi
 		result.NextCommand = fmt.Sprintf("issueops remote merge-pr --id %s --method %s --confirm --json", record.ID, method)
 		return result, nil
 	}
+	return s.mergeConfirmed(ctx, merger, record, target, method, before, result)
+}
+
+// mergeConfirmed merges pinned to the completed head and requires the readback to show the merge.
+func (s *RemoteMergeService) mergeConfirmed(ctx context.Context, merger port.IssueProviderPullRequestMerger, record model.IssueOpsRecord, target domain.MergeTarget, method string, before model.RemotePullRequestMergeState, result model.RemoteMergeResult) (model.RemoteMergeResult, error) {
 	after, err := merger.MergePullRequest(ctx, port.IssueProviderPullRequestMergeRequest{
 		Repo: record.Repo, URL: target.URL, Method: method, HeadOID: target.ExpectedHead, MarkReady: before.Draft,
 	})

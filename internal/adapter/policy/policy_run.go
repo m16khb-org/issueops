@@ -108,6 +108,12 @@ func superviseCommand(ctx context.Context, cmd *exec.Cmd, outRead, errRead *os.F
 	if grace != nil {
 		grace.Stop()
 	}
+	return supervisedExecution(&stdout, &stderr, timedOut, err)
+}
+
+// supervisedExecution maps the drained streams and the process wait outcome to the executor result:
+// a deadline hit reports context.DeadlineExceeded, and any error exits 1 unless it carries a real exit code.
+func supervisedExecution(stdout, stderr *boundedOutput, timedOut bool, err error) policyapp.Execution {
 	if timedOut {
 		err = context.DeadlineExceeded
 	}

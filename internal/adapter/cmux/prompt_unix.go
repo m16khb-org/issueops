@@ -123,23 +123,14 @@ func (walk *promptWalk) readLeaf(path, leafName, expectedDigest string, afterOpe
 		return nil, fmt.Errorf("open cmux prompt file handle")
 	}
 	defer file.Close()
-	var before unix.Stat_t
-	if err := unix.Fstat(leafFD, &before); err != nil {
-		return nil, fmt.Errorf("stat cmux prompt file: %w", err)
-	}
 	expectedUID := uint32(os.Geteuid())
-	if err := validatePromptLeafStat(before, expectedUID); err != nil {
-		return nil, err
-	}
-	if afterOpen != nil {
-		afterOpen()
-	}
-	value, err := io.ReadAll(io.LimitReader(file, MaximumPromptBytes+1))
+	before, err := statPromptLeafBeforeRead(leafFD, expectedUID, afterOpen)
 	if err != nil {
 		return nil, err
 	}
-	if len(value) > MaximumPromptBytes {
-		return nil, fmt.Errorf("cmux prompt file exceeds the safe maximum")
+	value, err := readBoundedPromptLeaf(file)
+	if err != nil {
+		return nil, err
 	}
 	var after unix.Stat_t
 	if err := unix.Fstat(leafFD, &after); err != nil {
@@ -154,6 +145,33 @@ func (walk *promptWalk) readLeaf(path, leafName, expectedDigest string, afterOpe
 	}
 	if err := validatePromptBytes(value, expectedDigest); err != nil {
 		return nil, err
+	}
+	return value, nil
+}
+
+// statPromptLeafBeforeRead stats and validates the opened leaf, then runs the
+// optional afterOpen hook.
+func statPromptLeafBeforeRead(leafFD int, expectedUID uint32, afterOpen func()) (unix.Stat_t, error) {
+	var before unix.Stat_t
+	if err := unix.Fstat(leafFD, &before); err != nil {
+		return before, fmt.Errorf("stat cmux prompt file: %w", err)
+	}
+	if err := validatePromptLeafStat(before, expectedUID); err != nil {
+		return before, err
+	}
+	if afterOpen != nil {
+		afterOpen()
+	}
+	return before, nil
+}
+
+func readBoundedPromptLeaf(file *os.File) ([]byte, error) {
+	value, err := io.ReadAll(io.LimitReader(file, MaximumPromptBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(value) > MaximumPromptBytes {
+		return nil, fmt.Errorf("cmux prompt file exceeds the safe maximum")
 	}
 	return value, nil
 }

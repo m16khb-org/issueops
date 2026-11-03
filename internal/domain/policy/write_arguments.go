@@ -206,15 +206,8 @@ func scanGitConfigArgs(args []string) (read bool, operands int) {
 }
 
 func goArgumentsWrite(subcommand string, args []string) bool {
-	var flags map[string]bool
-	switch subcommand {
-	case "env":
-		flags = map[string]bool{"w": true, "u": true}
-	case "list":
-		// -export and -compiled build packages like go build; -mod=mod lets the
-		// go command rewrite go.mod and go.sum.
-		flags = map[string]bool{"toolexec": true, "exec": true, "export": true, "compiled": true}
-	default:
+	flags, ok := goWriteFlags(subcommand)
+	if !ok {
 		return false
 	}
 	for i, arg := range args {
@@ -228,17 +221,36 @@ func goArgumentsWrite(subcommand string, args []string) bool {
 		if flags[name] {
 			return true
 		}
-		if subcommand == "list" && name == "mod" {
-			value, hasValue := strings.CutPrefix(strings.TrimLeft(arg, "-"), "mod=")
-			if !hasValue && i+1 < len(args) {
-				value = args[i+1]
-			}
-			if value != "readonly" && value != "vendor" {
-				return true
-			}
+		if subcommand == "list" && name == "mod" && goListModWrites(arg, args, i) {
+			return true
 		}
 	}
 	return false
+}
+
+// goWriteFlags returns the flags that make a go subcommand write, and false
+// for subcommands that never do.
+func goWriteFlags(subcommand string) (map[string]bool, bool) {
+	switch subcommand {
+	case "env":
+		return map[string]bool{"w": true, "u": true}, true
+	case "list":
+		// -export and -compiled build packages like go build; -mod=mod lets the
+		// go command rewrite go.mod and go.sum.
+		return map[string]bool{"toolexec": true, "exec": true, "export": true, "compiled": true}, true
+	default:
+		return nil, false
+	}
+}
+
+// goListModWrites reports whether the -mod flag at args[i] selects anything
+// other than readonly or vendor.
+func goListModWrites(arg string, args []string, i int) bool {
+	value, hasValue := strings.CutPrefix(strings.TrimLeft(arg, "-"), "mod=")
+	if !hasValue && i+1 < len(args) {
+		value = args[i+1]
+	}
+	return value != "readonly" && value != "vendor"
 }
 
 // goFlagName returns the flag name of -name, --name, -name=value or
