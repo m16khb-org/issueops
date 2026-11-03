@@ -402,7 +402,16 @@ func validateHandoffDeliveryState(name string, state issueopscontract.IssueOpsHa
 }
 
 func handoffDeliveryIdentityMismatch(current, next issueopscontract.IssueOpsHandoffDeliveryObservation) string {
-	requestReason := handoffDeliveryRequestIdentityMismatch(current.Request, next.Request)
+	if reason := handoffDeliveryDigestIdentityMismatch(current, next); reason != "" {
+		return reason
+	}
+	if reason := handoffDeliveryRequestIdentityMismatch(current.Request, next.Request); reason != "" {
+		return reason
+	}
+	return handoffDeliveryProvenanceMismatch(current, next)
+}
+
+func handoffDeliveryDigestIdentityMismatch(current, next issueopscontract.IssueOpsHandoffDeliveryObservation) string {
 	switch {
 	case current.AttemptID != next.AttemptID:
 		return "delivery observation attempt identity changed"
@@ -414,23 +423,31 @@ func handoffDeliveryIdentityMismatch(current, next issueopscontract.IssueOpsHand
 		return "delivery observation prompt digest changed"
 	case current.MaterialSHA256 != next.MaterialSHA256:
 		return "delivery observation material digest changed"
-	case requestReason != "":
-		return requestReason
-	case current.CreatedAt != next.CreatedAt:
-		return "delivery observation created timestamp changed"
-	case current.SourceGeneration != next.SourceGeneration:
-		return "delivery observation source generation changed"
-	case !reflect.DeepEqual(current.Launcher, next.Launcher):
-		return "delivery observation launcher identity changed"
-	case handoffDeliveryTargetMismatch(current.Launcher.Name, current.Target, next.Target) != "":
-		return handoffDeliveryTargetMismatch(current.Launcher.Name, current.Target, next.Target)
-	case handoffDeliveryTimingMismatch(current.Timing, next.Timing):
-		return "delivery observation timing changed"
-	case current.OwnerActor != nil && next.OwnerActor != nil && !reflect.DeepEqual(current.OwnerActor, next.OwnerActor):
-		return "delivery observation owner identity changed"
 	default:
 		return ""
 	}
+}
+
+func handoffDeliveryProvenanceMismatch(current, next issueopscontract.IssueOpsHandoffDeliveryObservation) string {
+	if current.CreatedAt != next.CreatedAt {
+		return "delivery observation created timestamp changed"
+	}
+	if current.SourceGeneration != next.SourceGeneration {
+		return "delivery observation source generation changed"
+	}
+	if !reflect.DeepEqual(current.Launcher, next.Launcher) {
+		return "delivery observation launcher identity changed"
+	}
+	if reason := handoffDeliveryTargetMismatch(current.Launcher.Name, current.Target, next.Target); reason != "" {
+		return reason
+	}
+	if handoffDeliveryTimingMismatch(current.Timing, next.Timing) {
+		return "delivery observation timing changed"
+	}
+	if current.OwnerActor != nil && next.OwnerActor != nil && !reflect.DeepEqual(current.OwnerActor, next.OwnerActor) {
+		return "delivery observation owner identity changed"
+	}
+	return ""
 }
 
 func validateHandoffDeliveryOwnerClaim(current issueopscontract.IssueOpsHandoffDeliveryObservation, claim issueopscontract.IssueOpsHandoffDeliveryOwnerClaim) error {

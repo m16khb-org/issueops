@@ -40,24 +40,30 @@ func Classify(observation toolconformancecontract.CallObservation, schema map[st
 		}
 		return result, nil
 	}
+	result.Classification = classifyDiagnostics(canonical, expected, arguments)
+	return result, nil
+}
+
+// classifyDiagnostics maps a non-empty canonical diagnostic list to its drift classification.
+func classifyDiagnostics(canonical []toolconformancecontract.Diagnostic, expected, arguments any) toolconformancecontract.Classification {
 	allUnknown := true
 	for _, d := range canonical {
 		if d.Code != "unknown_key" {
 			allUnknown = false
 		}
 	}
-	if allUnknown {
-		result.Classification = toolconformancecontract.UnknownKey
-	} else if only(canonical, "missing_required") {
-		result.Classification = toolconformancecontract.MissingRequired
-	} else if only(canonical, "enum_mismatch") {
-		result.Classification = toolconformancecontract.EnumMismatch
-	} else if only(canonical, "wrong_type") && coercible(expected, arguments) {
-		result.Classification = toolconformancecontract.CoercibleTypeDrift
-	} else {
-		result.Classification = toolconformancecontract.NoncoercibleTypeDrift
+	switch {
+	case allUnknown:
+		return toolconformancecontract.UnknownKey
+	case only(canonical, "missing_required"):
+		return toolconformancecontract.MissingRequired
+	case only(canonical, "enum_mismatch"):
+		return toolconformancecontract.EnumMismatch
+	case only(canonical, "wrong_type") && coercible(expected, arguments):
+		return toolconformancecontract.CoercibleTypeDrift
+	default:
+		return toolconformancecontract.NoncoercibleTypeDrift
 	}
-	return result, nil
 }
 func only(diagnostics []toolconformancecontract.Diagnostic, code string) bool {
 	for _, d := range diagnostics {

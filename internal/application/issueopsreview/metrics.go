@@ -31,18 +31,11 @@ func (reader MetricsReader) Read(stateRoot, id, repo string) (issueops.IssueOpsR
 	}
 	ids := []string{id}
 	if repo != "" {
-		if reader.ListCycleIDs == nil {
-			return issueops.IssueOpsReviewMetricsResult{OK: false}, fmt.Errorf("review metrics repo listing is unavailable")
-		}
-		listed, unreadable, err := reader.ListCycleIDs(stateRoot, repo)
+		listed, err := reader.listRepoCycleIDs(stateRoot, repo, &result)
 		if err != nil {
 			return issueops.IssueOpsReviewMetricsResult{OK: false}, err
 		}
 		ids = listed
-		for _, cycleID := range unreadable {
-			result.ReadErrors++
-			result.Warnings = append(result.Warnings, fmt.Sprintf("%s: unreadable record, excluded from the aggregate", cycleID))
-		}
 	}
 	live := map[string]bool{}
 	for _, cycleID := range ids {
@@ -64,23 +57,49 @@ func (reader MetricsReader) Read(stateRoot, id, repo string) (issueops.IssueOpsR
 		result.Warnings = append(result.Warnings, warnings...)
 	}
 	if repo != "" && reader.ListOutcomes != nil {
-		outcomes, unreadable, err := reader.ListOutcomes(stateRoot, repo)
-		if err != nil {
+		if err := reader.appendRetainedOutcomes(stateRoot, repo, live, &result); err != nil {
 			return issueops.IssueOpsReviewMetricsResult{OK: false}, err
-		}
-		for _, cycleID := range unreadable {
-			result.ReadErrors++
-			result.Warnings = append(result.Warnings, fmt.Sprintf("%s: unreadable retained outcome, excluded from the aggregate", cycleID))
-		}
-		for _, outcome := range outcomes {
-			// 같은 ID의 live record가 있으면 그것이 최신 관측이다.
-			if !live[outcome.ID] {
-				result.Cycles = append(result.Cycles, outcome.Metrics)
-			}
 		}
 	}
 	result.Aggregate = issueopsdomain.AggregateReviewMetrics(result.Cycles)
 	return result, nil
+}
+
+// listRepoCycleIDs lists the cycles of repo and records every unreadable one as
+// a read error and warning on result.
+func (reader MetricsReader) listRepoCycleIDs(stateRoot, repo string, result *issueops.IssueOpsReviewMetricsResult) ([]string, error) {
+	if reader.ListCycleIDs == nil {
+		return nil, fmt.Errorf("review metrics repo listing is unavailable")
+	}
+	listed, unreadable, err := reader.ListCycleIDs(stateRoot, repo)
+	if err != nil {
+		return nil, err
+	}
+	for _, cycleID := range unreadable {
+		result.ReadErrors++
+		result.Warnings = append(result.Warnings, fmt.Sprintf("%s: unreadable record, excluded from the aggregate", cycleID))
+	}
+	return listed, nil
+}
+
+// appendRetainedOutcomes adds the outcomes cleanup retained for repo, skipping
+// any cycle that still has a live record.
+func (reader MetricsReader) appendRetainedOutcomes(stateRoot, repo string, live map[string]bool, result *issueops.IssueOpsReviewMetricsResult) error {
+	outcomes, unreadable, err := reader.ListOutcomes(stateRoot, repo)
+	if err != nil {
+		return err
+	}
+	for _, cycleID := range unreadable {
+		result.ReadErrors++
+		result.Warnings = append(result.Warnings, fmt.Sprintf("%s: unreadable retained outcome, excluded from the aggregate", cycleID))
+	}
+	for _, outcome := range outcomes {
+		// 같은 ID의 live record가 있으면 그것이 최신 관측이다.
+		if !live[outcome.ID] {
+			result.Cycles = append(result.Cycles, outcome.Metrics)
+		}
+	}
+	return nil
 }
 
 // readRetained answers a single-cycle query whose record is gone from the

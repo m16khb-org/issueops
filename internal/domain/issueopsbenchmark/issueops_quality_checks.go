@@ -113,20 +113,33 @@ func detectIssueOpsQualityCriticalFailures(fixture issueopscontract.IssueOpsBenc
 	var failures []string
 	for _, rule := range fixture.CriticalFailures {
 		ruleText := strings.ToLower(rule)
-		switch {
-		case strings.Contains(ruleText, "intelligent label") && !issueOpsLabelDecisionEvidenceComplete(artifact):
-			failures = append(failures, rule)
-		case strings.Contains(ruleText, "large issue hierarchy") && !issueOpsHierarchyEvidenceComplete(artifact):
-			failures = append(failures, rule)
-		case strings.Contains(ruleText, "draft issue completion") && !issueOpsDraftIssueCompletionEvidenceComplete(artifact):
-			failures = append(failures, rule)
-		case strings.Contains(ruleText, "review-agent threads") && !issueOpsReviewAgentThreadEvidenceComplete(artifact):
-			failures = append(failures, rule)
-		case strings.Contains(ruleText, "skips pioneer method") && !PioneerSkillEvidenceComplete(fixture, artifact):
-			failures = append(failures, rule)
-		case strings.Contains(ruleText, "skips expected routing") && len(fixture.ExpectedRouting) > 0 && !routingComplete:
+		if issueOpsArtifactCriticalFailure(ruleText, artifact) || issueOpsFixtureCriticalFailure(ruleText, fixture, artifact, routingComplete) {
 			failures = append(failures, rule)
 		}
 	}
 	return failures
+}
+
+func issueOpsArtifactCriticalFailure(ruleText string, artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
+	switch {
+	case strings.Contains(ruleText, "intelligent label") && !issueOpsLabelDecisionEvidenceComplete(artifact):
+		return true
+	case strings.Contains(ruleText, "large issue hierarchy") && !issueOpsHierarchyEvidenceComplete(artifact):
+		return true
+	case strings.Contains(ruleText, "draft issue completion") && !issueOpsDraftIssueCompletionEvidenceComplete(artifact):
+		return true
+	case strings.Contains(ruleText, "review-agent threads") && !issueOpsReviewAgentThreadEvidenceComplete(artifact):
+		return true
+	}
+	return false
+}
+
+func issueOpsFixtureCriticalFailure(ruleText string, fixture issueopscontract.IssueOpsBenchmarkFixture, artifact issueopscontract.IssueOpsBenchmarkArtifact, routingComplete bool) bool {
+	switch {
+	case strings.Contains(ruleText, "skips pioneer method") && !PioneerSkillEvidenceComplete(fixture, artifact):
+		return true
+	case strings.Contains(ruleText, "skips expected routing") && len(fixture.ExpectedRouting) > 0 && !routingComplete:
+		return true
+	}
+	return false
 }

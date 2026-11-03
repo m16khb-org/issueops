@@ -134,33 +134,44 @@ func (installer Installer) mergeHookConfig(config map[string]any, binPath string
 		desired[spec.Event] = spec
 	}
 	for _, event := range codexLifecycleHookEvents {
-		groups := []any{}
-		replaced := false
-		if existing, ok := hooks[event].([]any); ok {
-			for _, group := range existing {
-				if !hookGroupHasHooks(group) {
-					continue
-				}
-				if installer.deps.HookGroupContainsAgentHarness(group) || installer.deps.HookGroupContainsCommand(group, shelltoken.QuoteWord(binPath)+" hook ") {
-					if spec, desiredEvent := desired[event]; desiredEvent && !replaced {
-						groups = append(groups, codexHookGroup(spec))
-						replaced = true
-					}
-					continue
-				}
-				groups = append(groups, group)
-			}
-		}
-		if spec, ok := desired[event]; ok && !replaced {
-			groups = append(groups, codexHookGroup(spec))
-		}
-		if len(groups) == 0 {
-			delete(hooks, event)
-			continue
-		}
-		hooks[event] = groups
+		installer.mergeHookEvent(hooks, event, binPath, desired)
 	}
 	return config
+}
+
+// mergeHookEvent rewrites the groups registered under one event: it drops
+// issueops-managed groups, keeps the others, and appends the desired group.
+func (installer Installer) mergeHookEvent(hooks map[string]any, event, binPath string, desired map[string]codexLifecycleHookSpec) {
+	groups := []any{}
+	replaced := false
+	if existing, ok := hooks[event].([]any); ok {
+		for _, group := range existing {
+			if !hookGroupHasHooks(group) {
+				continue
+			}
+			if installer.isManagedHookGroup(group, binPath) {
+				if spec, desiredEvent := desired[event]; desiredEvent && !replaced {
+					groups = append(groups, codexHookGroup(spec))
+					replaced = true
+				}
+				continue
+			}
+			groups = append(groups, group)
+		}
+	}
+	if spec, ok := desired[event]; ok && !replaced {
+		groups = append(groups, codexHookGroup(spec))
+	}
+	if len(groups) == 0 {
+		delete(hooks, event)
+		return
+	}
+	hooks[event] = groups
+}
+
+// isManagedHookGroup reports whether group was registered by an issueops install.
+func (installer Installer) isManagedHookGroup(group any, binPath string) bool {
+	return installer.deps.HookGroupContainsAgentHarness(group) || installer.deps.HookGroupContainsCommand(group, shelltoken.QuoteWord(binPath)+" hook ")
 }
 
 // codexLifecycleHookEvents lists every event an earlier install may have

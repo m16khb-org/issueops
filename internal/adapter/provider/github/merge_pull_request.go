@@ -104,7 +104,15 @@ func parseGhMergeState(out []byte) (model.RemotePullRequestMergeState, error) {
 	if payload.MergeCommit != nil {
 		state.MergeCommitOID = payload.MergeCommit.OID
 	}
-	for _, check := range payload.Checks {
+	applyGhChecks(&state, payload.Checks)
+	applyGhBlocked(&state, payload.MergeStateStatus, payload.ReviewDecision)
+	return state, nil
+}
+
+// applyGhChecks sorts the check rollup into failing and pending names and sets
+// the folded checks outcome.
+func applyGhChecks(state *model.RemotePullRequestMergeState, checks []ghCheck) {
+	for _, check := range checks {
 		name := check.Name
 		if name == "" {
 			name = check.Context
@@ -121,16 +129,21 @@ func parseGhMergeState(out []byte) (model.RemotePullRequestMergeState, error) {
 		state.Checks = model.RemoteChecksFailing
 	case len(state.Pending) > 0:
 		state.Checks = model.RemoteChecksPending
-	case len(payload.Checks) > 0:
+	case len(checks) > 0:
 		state.Checks = model.RemoteChecksPassing
 	default:
 		state.Checks = model.RemoteChecksNone
 	}
+}
+
+// applyGhBlocked sets the human-readable block reason from the merge state
+// status and the review decision.
+func applyGhBlocked(state *model.RemotePullRequestMergeState, mergeStateStatus, reviewDecision string) {
 	// BLOCKED also covers failing required checks; report it only when the
 	// checks do not already explain the block.
-	if strings.EqualFold(payload.MergeStateStatus, "BLOCKED") && state.Checks != model.RemoteChecksFailing && state.Checks != model.RemoteChecksPending {
+	if strings.EqualFold(mergeStateStatus, "BLOCKED") && state.Checks != model.RemoteChecksFailing && state.Checks != model.RemoteChecksPending {
 		state.Blocked = "BLOCKED (required review or branch protection)"
-		if strings.EqualFold(payload.ReviewDecision, "REVIEW_REQUIRED") {
+		if strings.EqualFold(reviewDecision, "REVIEW_REQUIRED") {
 			state.Blocked = "REVIEW_REQUIRED (branch protection requires an approving review; ask a reviewer other than the PR author to approve)"
 		}
 	}
@@ -138,10 +151,9 @@ func parseGhMergeState(out []byte) (model.RemotePullRequestMergeState, error) {
 	// review, unlike GitLab's requested_changes status (QA: an agent merged a
 	// PR whose reviewer still requested changes). The reviewer re-approves or
 	// dismisses the review first.
-	if strings.EqualFold(payload.ReviewDecision, "CHANGES_REQUESTED") {
+	if strings.EqualFold(reviewDecision, "CHANGES_REQUESTED") {
 		state.Blocked = "CHANGES_REQUESTED (a reviewer requested changes; ask for a re-review or a dismissal)"
 	}
-	return state, nil
 }
 
 // ghCheckOutcome folds a CheckRun or a legacy StatusContext into one outcome.

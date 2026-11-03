@@ -69,21 +69,8 @@ func Classify(observation Observation) (State, Node, string) {
 			"the issue reports %d linked branches but the readback carried %d; a truncated page is not evidence of absence",
 			observation.TotalCount, len(observation.Nodes))
 	}
-	for _, node := range observation.Nodes {
-		if node.RefNull() || node.RefName != observation.RequestedBranch {
-			continue
-		}
-		// 이름이 맞는 ref가 있으면 그것이 이 lifecycle의 링크다. 고아 판정은
-		// 여기서 끝난다 — 남은 질문은 봉인값과 일치하는지뿐이다.
-		if node.RefOID != observation.SealedBase {
-			return StateMismatched, node, fmt.Sprintf(
-				"linked branch %s points at %s but the lifecycle sealed %s", node.RefName, node.RefOID, observation.SealedBase)
-		}
-		if observation.RemoteOID != observation.SealedBase {
-			return StateMismatched, node, fmt.Sprintf(
-				"the linked branch is sealed at %s but refs/heads/%s reads %s", observation.SealedBase, observation.RequestedBranch, remoteDescription(observation.RemoteOID))
-		}
-		return StateHealthy, node, ""
+	if state, node, reason, found := classifyNamedLink(observation); found {
+		return state, node, reason
 	}
 
 	orphans := make([]Node, 0, len(observation.Nodes))
@@ -112,6 +99,28 @@ func Classify(observation Observation) (State, Node, string) {
 			"a null-ref linked branch coexists with refs/heads/%s at %s; the link may still be converging", observation.RequestedBranch, observation.RemoteOID)
 	}
 	return StateOrphan, orphans[0], ""
+}
+
+// classifyNamedLink는 요청한 이름의 ref를 가진 노드를 찾아 봉인값과 대조한다.
+// 그런 노드가 없으면 found는 false다.
+func classifyNamedLink(observation Observation) (State, Node, string, bool) {
+	for _, node := range observation.Nodes {
+		if node.RefNull() || node.RefName != observation.RequestedBranch {
+			continue
+		}
+		// 이름이 맞는 ref가 있으면 그것이 이 lifecycle의 링크다. 고아 판정은
+		// 여기서 끝난다 — 남은 질문은 봉인값과 일치하는지뿐이다.
+		if node.RefOID != observation.SealedBase {
+			return StateMismatched, node, fmt.Sprintf(
+				"linked branch %s points at %s but the lifecycle sealed %s", node.RefName, node.RefOID, observation.SealedBase), true
+		}
+		if observation.RemoteOID != observation.SealedBase {
+			return StateMismatched, node, fmt.Sprintf(
+				"the linked branch is sealed at %s but refs/heads/%s reads %s", observation.SealedBase, observation.RequestedBranch, remoteDescription(observation.RemoteOID)), true
+		}
+		return StateHealthy, node, "", true
+	}
+	return "", Node{}, "", false
 }
 
 // Deletable은 이 상태에서 typed 삭제가 허용되는지 보고한다.

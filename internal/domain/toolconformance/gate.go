@@ -11,18 +11,36 @@ type SelectedPair struct {
 	FixtureID string
 }
 
+type signatureCount struct {
+	Host      string
+	FixtureID string
+	Signature string
+	Count     int
+}
+
 func DecideGate(report contract.BenchmarkReport, selected []SelectedPair, target int) contract.GateReport {
 	for _, pair := range selected {
 		if completedForPair(report, pair.Host, pair.FixtureID) < target {
 			return contract.GateReport{Decision: contract.GateInconclusive}
 		}
 	}
-	type signatureCount struct {
-		Host      string
-		FixtureID string
-		Signature string
-		Count     int
+	ordered := orderedDriftSignatures(report)
+	for _, count := range ordered {
+		if count.Count >= 2 {
+			return contract.GateReport{Decision: contract.GateAuthorizeHardening, ConfirmedSignature: count.Signature, ConfirmedCount: count.Count}
+		}
 	}
+	if len(ordered) == 0 {
+		return contract.GateReport{Decision: contract.GateDeferHardening}
+	}
+	if target >= 20 {
+		return contract.GateReport{Decision: contract.GateUnreproducedObservation}
+	}
+	return contract.GateReport{Decision: contract.GateNeedsReproduction, NextReproductionTarget: ordered[0].Host + ":" + ordered[0].FixtureID}
+}
+
+// orderedDriftSignatures counts completed schema-drift episodes per host, fixture and diagnostic signature in stable order.
+func orderedDriftSignatures(report contract.BenchmarkReport) []*signatureCount {
 	counts := map[string]*signatureCount{}
 	for _, host := range report.Hosts {
 		for _, episode := range host.Cases {
@@ -49,18 +67,7 @@ func DecideGate(report contract.BenchmarkReport, selected []SelectedPair, target
 		}
 		return ordered[i].Signature < ordered[j].Signature
 	})
-	for _, count := range ordered {
-		if count.Count >= 2 {
-			return contract.GateReport{Decision: contract.GateAuthorizeHardening, ConfirmedSignature: count.Signature, ConfirmedCount: count.Count}
-		}
-	}
-	if len(ordered) == 0 {
-		return contract.GateReport{Decision: contract.GateDeferHardening}
-	}
-	if target >= 20 {
-		return contract.GateReport{Decision: contract.GateUnreproducedObservation}
-	}
-	return contract.GateReport{Decision: contract.GateNeedsReproduction, NextReproductionTarget: ordered[0].Host + ":" + ordered[0].FixtureID}
+	return ordered
 }
 
 func SchemaDriftClassification(classification contract.Classification) bool {

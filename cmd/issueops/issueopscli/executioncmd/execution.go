@@ -218,6 +218,12 @@ func resolveNativeActor(operation string, flags actorFlags, visited map[string]b
 		}
 		return flags.actor(), strings.TrimSpace(*flags.cwd), nil
 	}
+	return observeNativeActor(operation, observation)
+}
+
+// observeNativeActor derives the actor from the observed process environment
+// when no explicit ACTOR_FLAGS were supplied.
+func observeNativeActor(operation string, observation nativeActorObservation) (model.NativeActor, string, error) {
 	if observation.Getenv == nil || observation.Getwd == nil || observation.PID == nil || observation.ObserveAncestry == nil {
 		return model.NativeActor{}, "", fmt.Errorf("execution %s native actor observation is unavailable", operation)
 	}

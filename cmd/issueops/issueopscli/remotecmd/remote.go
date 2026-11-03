@@ -90,6 +90,13 @@ func (command Command) dispatchRemoteLifecycle(args []string, deps Deps) error {
 		return command.runRemoteMergePR(args[1:], deps)
 	case "mark-ready":
 		return command.runRemoteMarkReady(args[1:], deps)
+	default:
+		return command.dispatchRemoteMetadata(args, deps)
+	}
+}
+
+func (command Command) dispatchRemoteMetadata(args []string, deps Deps) error {
+	switch args[0] {
 	case "comment":
 		return command.runRemoteComment(args[1:], deps)
 	case "label":

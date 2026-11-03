@@ -327,6 +327,11 @@ func (command Command) runCleanupFinish(args []string, deps Deps) error {
 	if *jsonOut {
 		return deps.PrintJSON(result)
 	}
+	printCleanupFinishResult(result)
+	return nil
+}
+
+func printCleanupFinishResult(result issueopscontract.CleanupFinishResult) {
 	if result.RecordDeleted {
 		fmt.Printf("cleanup finished: worktree=%v branch=%v record deleted\n", result.WorktreeRemoved, result.BranchDeleted)
 		if kept := result.KeptRemoteBranch; kept != nil {
@@ -338,7 +343,6 @@ func (command Command) runCleanupFinish(args []string, deps Deps) error {
 			fmt.Printf("next: %s\n", result.NextCommand)
 		}
 	}
-	return nil
 }
 
 // runCleanupRemoteBranch는 머지 검증된 사이클의 원격 브랜치를 typed 경로로
@@ -379,6 +383,11 @@ func (command Command) runCleanupRemoteBranch(args []string, deps Deps) error {
 	if *jsonOut {
 		return deps.PrintJSON(result)
 	}
+	printCleanupRemoteBranchResult(result)
+	return nil
+}
+
+func printCleanupRemoteBranchResult(result issueopscontract.CleanupRemoteBranchResult) {
 	switch {
 	case result.Deleted:
 		fmt.Printf("remote branch deleted: branch=%s oid=%s at=%s\n", result.Branch, result.RemoteOID, result.DeletedAt)
@@ -390,7 +399,6 @@ func (command Command) runCleanupRemoteBranch(args []string, deps Deps) error {
 			fmt.Printf("next: %s\n", result.NextCommand)
 		}
 	}
-	return nil
 }
 
 // runCleanupAbandon parses and renders; the executor owns all observations.

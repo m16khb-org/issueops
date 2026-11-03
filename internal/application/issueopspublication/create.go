@@ -35,7 +35,12 @@ func (s *CreateService) Create(ctx context.Context, command contract.CreateComma
 		result, _, err := s.provider.Create(ctx, prepared.Eligibility.Provider, prepared.Request)
 		return result, err
 	}
+	return s.createConfirmed(ctx, prepared)
+}
 
+// createConfirmed journals the intent, invokes the provider once, and records
+// the receipt or the failure that execution reconcile must resolve.
+func (s *CreateService) createConfirmed(ctx context.Context, prepared contract.PreparedCreate) (contract.ProviderCreateResult, error) {
 	intent, err := s.repository.BeginCreate(ctx, prepared)
 	if err != nil {
 		return contract.ProviderCreateResult{}, err

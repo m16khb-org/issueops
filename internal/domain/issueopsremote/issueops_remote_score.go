@@ -27,22 +27,8 @@ func ScoreIssueOpsRemoteCandidates(req IssueOpsRemoteScoringRequest) (IssueOpsRe
 	issueTokens := issueOpsRemoteTokens(issueText)
 	result := normalizeIssueOpsRemoteScoringResult(IssueOpsRemoteScoringResult{OK: true, Provider: provider, Threshold: threshold})
 	typeEvidence := issueOpsRemoteLabelEvidence(issueTokens)
-	for _, candidate := range req.IssueCandidates {
-		item := scoreIssueOpsRemoteIssue(provider, threshold, issueTokens, candidate)
-		if item.Selected {
-			result.SelectedRelatedIssues = append(result.SelectedRelatedIssues, item)
-		} else {
-			result.RejectedRelatedIssues = append(result.RejectedRelatedIssues, item)
-		}
-	}
-	for _, candidate := range req.LabelCandidates {
-		item := scoreIssueOpsRemoteLabel(provider, threshold, issueTokens, typeEvidence, candidate)
-		if item.Selected {
-			result.SelectedLabels = append(result.SelectedLabels, item)
-		} else {
-			result.RejectedLabels = append(result.RejectedLabels, item)
-		}
-	}
+	scoreIssueOpsRemoteIssueCandidates(&result, provider, threshold, issueTokens, req.IssueCandidates)
+	scoreIssueOpsRemoteLabelCandidates(&result, provider, threshold, issueTokens, typeEvidence, req.LabelCandidates)
 	sortIssueOpsRemoteScoredItems(result.SelectedRelatedIssues)
 	sortIssueOpsRemoteScoredItems(result.RejectedRelatedIssues)
 	sortIssueOpsRemoteScoredItems(result.SelectedLabels)
@@ -56,6 +42,28 @@ func ScoreIssueOpsRemoteCandidates(req IssueOpsRemoteScoringRequest) (IssueOpsRe
 		result.ApplyInstructions = append(result.ApplyInstructions, "stop before remote artifact writes and choose an explicit manual label or rerun scoring with corrected candidates; do not create an unlabeled issue, pull request, or merge request")
 	}
 	return normalizeIssueOpsRemoteScoringResult(result), nil
+}
+
+func scoreIssueOpsRemoteIssueCandidates(result *IssueOpsRemoteScoringResult, provider string, threshold float64, issueTokens map[string]bool, candidates []IssueOpsRemoteIssueCandidate) {
+	for _, candidate := range candidates {
+		item := scoreIssueOpsRemoteIssue(provider, threshold, issueTokens, candidate)
+		if item.Selected {
+			result.SelectedRelatedIssues = append(result.SelectedRelatedIssues, item)
+		} else {
+			result.RejectedRelatedIssues = append(result.RejectedRelatedIssues, item)
+		}
+	}
+}
+
+func scoreIssueOpsRemoteLabelCandidates(result *IssueOpsRemoteScoringResult, provider string, threshold float64, issueTokens map[string]bool, typeEvidence issueOpsRemoteTypeEvidence, candidates []IssueOpsRemoteLabelCandidate) {
+	for _, candidate := range candidates {
+		item := scoreIssueOpsRemoteLabel(provider, threshold, issueTokens, typeEvidence, candidate)
+		if item.Selected {
+			result.SelectedLabels = append(result.SelectedLabels, item)
+		} else {
+			result.RejectedLabels = append(result.RejectedLabels, item)
+		}
+	}
 }
 
 func normalizeIssueOpsRemoteScoringResult(result IssueOpsRemoteScoringResult) IssueOpsRemoteScoringResult {

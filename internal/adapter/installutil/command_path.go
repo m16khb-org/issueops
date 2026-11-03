@@ -117,42 +117,19 @@ func (transaction *ManagedCommandPathTransaction) Apply() (install.ManagedComman
 	if err := transaction.revalidate(); err != nil {
 		return transaction.plan, err
 	}
-	if err := copyManagedCommandFile(transaction.plan.Path, transaction.plan.BackupPath, 0o600, &transaction.existing); err != nil {
-		return transaction.plan, fmt.Errorf("create private command backup: %w", err)
-	}
-	transaction.plan.BackupRetained = true
 	directory := filepath.Dir(transaction.plan.Path)
-	if err := transaction.deps.syncDir(directory); err != nil {
-		_ = os.Remove(transaction.plan.BackupPath)
-		transaction.plan.BackupRetained = false
-		return transaction.plan, fmt.Errorf("sync private command backup directory: %w", err)
+	if err := transaction.createBackup(directory); err != nil {
+		return transaction.plan, err
 	}
 	if err := transaction.revalidate(); err != nil {
 		return transaction.plan, err
 	}
-	temporaryLink := transaction.plan.Path + ".activate-" + filepath.Base(transaction.plan.BackupPath)
-	if err := os.Symlink(transaction.plan.Target, temporaryLink); err != nil {
-		_ = os.Remove(transaction.plan.BackupPath)
-		transaction.plan.BackupRetained = false
-		return transaction.plan, fmt.Errorf("create temporary command symlink: %w", err)
+	temporaryLink, err := transaction.exchangeSymlinkIntoPlace()
+	if err != nil {
+		return transaction.plan, err
 	}
-	if err := transaction.deps.exchangePaths(temporaryLink, transaction.plan.Path); err != nil {
-		_ = os.Remove(temporaryLink)
-		_ = os.Remove(transaction.plan.BackupPath)
-		transaction.plan.BackupRetained = false
-		return transaction.plan, fmt.Errorf("atomically exchange managed command path: %w", err)
-	}
-	displaced, inspectErr := inspectManagedCommand(temporaryLink, transaction.deps.readBuildInfo)
-	if inspectErr != nil || !sameManagedCommandSnapshot(displaced, transaction.existing) {
-		restoreErr := transaction.restoreDisplacedPath(temporaryLink)
-		return transaction.plan, errors.Join(
-			fmt.Errorf("existing managed command identity changed during replacement; recovery backup retained at %s", transaction.plan.BackupPath),
-			restoreErr,
-		)
-	}
-	if err := verifyManagedCommandSymlink(transaction.plan.Path, transaction.plan.Target); err != nil {
-		_ = os.Remove(temporaryLink)
-		return transaction.plan, fmt.Errorf("managed command path changed immediately after replacement; recovery backup retained at %s: %w", transaction.plan.BackupPath, err)
+	if err := transaction.verifyReplacement(temporaryLink); err != nil {
+		return transaction.plan, err
 	}
 	transaction.applied = true
 	transaction.plan.Adopted = true
@@ -164,6 +141,59 @@ func (transaction *ManagedCommandPathTransaction) Apply() (install.ManagedComman
 		return transaction.plan, fmt.Errorf("post-rename directory sync failure: %w", err)
 	}
 	return transaction.plan, nil
+}
+
+// createBackup copies the existing command to the private backup path and syncs the directory.
+// A failed sync removes the backup again.
+func (transaction *ManagedCommandPathTransaction) createBackup(directory string) error {
+	if err := copyManagedCommandFile(transaction.plan.Path, transaction.plan.BackupPath, 0o600, &transaction.existing); err != nil {
+		return fmt.Errorf("create private command backup: %w", err)
+	}
+	transaction.plan.BackupRetained = true
+	if err := transaction.deps.syncDir(directory); err != nil {
+		transaction.discardBackup()
+		return fmt.Errorf("sync private command backup directory: %w", err)
+	}
+	return nil
+}
+
+// discardBackup removes the private backup after a failed pre-replacement step.
+func (transaction *ManagedCommandPathTransaction) discardBackup() {
+	_ = os.Remove(transaction.plan.BackupPath)
+	transaction.plan.BackupRetained = false
+}
+
+// exchangeSymlinkIntoPlace atomically swaps a temporary managed symlink with the command path.
+// It returns the temporary path that now holds the displaced command.
+func (transaction *ManagedCommandPathTransaction) exchangeSymlinkIntoPlace() (string, error) {
+	temporaryLink := transaction.plan.Path + ".activate-" + filepath.Base(transaction.plan.BackupPath)
+	if err := os.Symlink(transaction.plan.Target, temporaryLink); err != nil {
+		transaction.discardBackup()
+		return "", fmt.Errorf("create temporary command symlink: %w", err)
+	}
+	if err := transaction.deps.exchangePaths(temporaryLink, transaction.plan.Path); err != nil {
+		_ = os.Remove(temporaryLink)
+		transaction.discardBackup()
+		return "", fmt.Errorf("atomically exchange managed command path: %w", err)
+	}
+	return temporaryLink, nil
+}
+
+// verifyReplacement checks that the displaced command matches the snapshot and the new symlink is in place.
+func (transaction *ManagedCommandPathTransaction) verifyReplacement(temporaryLink string) error {
+	displaced, inspectErr := inspectManagedCommand(temporaryLink, transaction.deps.readBuildInfo)
+	if inspectErr != nil || !sameManagedCommandSnapshot(displaced, transaction.existing) {
+		restoreErr := transaction.restoreDisplacedPath(temporaryLink)
+		return errors.Join(
+			fmt.Errorf("existing managed command identity changed during replacement; recovery backup retained at %s", transaction.plan.BackupPath),
+			restoreErr,
+		)
+	}
+	if err := verifyManagedCommandSymlink(transaction.plan.Path, transaction.plan.Target); err != nil {
+		_ = os.Remove(temporaryLink)
+		return fmt.Errorf("managed command path changed immediately after replacement; recovery backup retained at %s: %w", transaction.plan.BackupPath, err)
+	}
+	return nil
 }
 
 func (transaction *ManagedCommandPathTransaction) Rollback() (install.ManagedCommandPathPlan, error) {

@@ -130,3 +130,20 @@ func TestMetricsReaderAddsRetainedOutcomesWithoutDoubleCountingLiveRecords(t *te
 		t.Fatalf("unknown id must keep the record error: %v", err)
 	}
 }
+
+func TestMetricsReaderFailsRepoQueryWhenRetainedOutcomesCannotBeListed(t *testing.T) {
+	listErr := errors.New("outcome store unavailable")
+	service := MetricsReader{
+		Now:          time.Now,
+		ListCycleIDs: func(string, string) ([]string, []string, error) { return nil, nil, nil },
+		ReadRecord: func(string, string) (contract.IssueOpsRecord, error) {
+			t.Fatal("no cycle to read")
+			return contract.IssueOpsRecord{}, nil
+		},
+		ListOutcomes: func(string, string) ([]contract.IssueOpsCycleOutcome, []string, error) { return nil, nil, listErr },
+	}
+	got, err := service.Read("state", "", "/repo")
+	if !errors.Is(err, listErr) || got.OK {
+		t.Fatalf("got=%+v err=%v", got, err)
+	}
+}

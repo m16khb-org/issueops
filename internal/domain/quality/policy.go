@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -223,33 +224,9 @@ func QualityStatuses(warnings []string, findings []contract.Finding) (string, st
 func ParseCoveragePackages(output string, threshold float64) []contract.CoveragePackage {
 	var packages []contract.CoveragePackage
 	for line := range strings.SplitSeq(output, "\n") {
-		if !strings.Contains(line, "coverage:") || !strings.Contains(line, "% of statements") {
-			continue
+		if pkg, ok := parseLowCoverageLine(line, threshold); ok {
+			packages = append(packages, pkg)
 		}
-		fields := strings.Fields(line)
-		if len(fields) < 2 {
-			continue
-		}
-		coverageIdx := -1
-		for i, field := range fields {
-			if field == "coverage:" {
-				coverageIdx = i
-				break
-			}
-		}
-		if coverageIdx < 0 || coverageIdx+1 >= len(fields) {
-			continue
-		}
-		valueText := strings.TrimSuffix(fields[coverageIdx+1], "%")
-		value, err := strconv.ParseFloat(valueText, 64)
-		if err != nil || value >= threshold {
-			continue
-		}
-		packageName := fields[0]
-		if (fields[0] == "ok" || fields[0] == "?") && len(fields) > 1 {
-			packageName = fields[1]
-		}
-		packages = append(packages, contract.CoveragePackage{Package: packageName, Coverage: value})
 	}
 	sort.Slice(packages, func(i, j int) bool {
 		if packages[i].Coverage != packages[j].Coverage {
@@ -258,6 +235,31 @@ func ParseCoveragePackages(output string, threshold float64) []contract.Coverage
 		return packages[i].Package < packages[j].Package
 	})
 	return packages
+}
+
+// parseLowCoverageLine extracts the package of one `go test -cover` line whose coverage is below threshold.
+func parseLowCoverageLine(line string, threshold float64) (contract.CoveragePackage, bool) {
+	if !strings.Contains(line, "coverage:") || !strings.Contains(line, "% of statements") {
+		return contract.CoveragePackage{}, false
+	}
+	fields := strings.Fields(line)
+	if len(fields) < 2 {
+		return contract.CoveragePackage{}, false
+	}
+	coverageIdx := slices.Index(fields, "coverage:")
+	if coverageIdx < 0 || coverageIdx+1 >= len(fields) {
+		return contract.CoveragePackage{}, false
+	}
+	valueText := strings.TrimSuffix(fields[coverageIdx+1], "%")
+	value, err := strconv.ParseFloat(valueText, 64)
+	if err != nil || value >= threshold {
+		return contract.CoveragePackage{}, false
+	}
+	packageName := fields[0]
+	if (fields[0] == "ok" || fields[0] == "?") && len(fields) > 1 {
+		packageName = fields[1]
+	}
+	return contract.CoveragePackage{Package: packageName, Coverage: value}, true
 }
 
 // FailedTestPackages returns the distinct packages named by `go test`'s

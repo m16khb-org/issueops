@@ -70,9 +70,14 @@ func (s *ReviewReflectionService) Reflect(ctx context.Context, id, providerOverr
 	if !confirm || !result.Updated {
 		return record, result, nil
 	}
+	return s.markReflected(ctx, id, actor, result)
+}
+
+// markReflected stamps the reflection receipt after a confirmed remote update.
+func (s *ReviewReflectionService) markReflected(ctx context.Context, id string, actor model.IssueOpsActor, result port.IssueProviderUpdateIssueBodySectionResult) (model.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error) {
 	// A confirmed remote update must retain the existing uncancelled receipt write.
 	persist := context.WithoutCancel(ctx)
-	record, err = s.store.Update(persist, id, func(current model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+	record, err := s.store.Update(persist, id, func(current model.IssueOpsRecord) (model.IssueOpsRecord, error) {
 		if err := domain.ValidateReviewReflectionStamp(current); err != nil {
 			return current, err
 		}

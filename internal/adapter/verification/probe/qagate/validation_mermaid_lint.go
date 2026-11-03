@@ -12,46 +12,66 @@ var mermaidUnquotedBracketTextRe = sync.OnceValue(func() *regexp.Regexp { return
 func LintMermaidBlocks(relPath, text string) []string {
 	errs := []string{}
 	lines := strings.Split(text, "\n")
-	inMermaid := false
-	ignoreBlock := false
-	currentHeading := ""
-	ignoreNextMermaid := false
+	var state mermaidLintState
 	for i, line := range lines {
-		lineNo := i + 1
 		trimmed := strings.TrimSpace(line)
-		if strings.Contains(trimmed, "harness:mermaid-lint ignore") {
-			ignoreNextMermaid = true
-		}
-		if strings.HasPrefix(trimmed, "#") {
-			currentHeading = trimmed
-		}
-		if strings.HasPrefix(trimmed, "```") {
-			if !inMermaid {
-				if strings.HasPrefix(trimmed, "```mermaid") {
-					inMermaid = true
-					ignoreBlock = ignoreNextMermaid || strings.Contains(currentHeading, "잘못된 예시")
-					ignoreNextMermaid = false
-				}
-				continue
-			}
-			inMermaid = false
-			ignoreBlock = false
+		if state.consumeFence(trimmed) {
 			continue
 		}
-		if !inMermaid || ignoreBlock {
+		if !state.inMermaid || state.ignoreBlock {
 			continue
 		}
-		if strings.Contains(line, "<br>") {
-			errs = append(errs, fmt.Sprintf("%s:%d mermaid uses <br>; use <br/>", relPath, lineNo))
+		errs = append(errs, lintMermaidLine(relPath, i+1, line, trimmed)...)
+	}
+	return errs
+}
+
+// mermaidLintState tracks which fenced block the scanner is inside.
+type mermaidLintState struct {
+	inMermaid         bool
+	ignoreBlock       bool
+	currentHeading    string
+	ignoreNextMermaid bool
+}
+
+// consumeFence updates the scanner state for one trimmed line and reports
+// whether the line is a code fence that must not be linted.
+func (state *mermaidLintState) consumeFence(trimmed string) bool {
+	if strings.Contains(trimmed, "harness:mermaid-lint ignore") {
+		state.ignoreNextMermaid = true
+	}
+	if strings.HasPrefix(trimmed, "#") {
+		state.currentHeading = trimmed
+	}
+	if !strings.HasPrefix(trimmed, "```") {
+		return false
+	}
+	if !state.inMermaid {
+		if strings.HasPrefix(trimmed, "```mermaid") {
+			state.inMermaid = true
+			state.ignoreBlock = state.ignoreNextMermaid || strings.Contains(state.currentHeading, "잘못된 예시")
+			state.ignoreNextMermaid = false
 		}
-		if mermaidUnquotedBracketTextRe().MatchString(line) {
-			errs = append(errs, fmt.Sprintf("%s:%d mermaid node text must start with a quote", relPath, lineNo))
-		}
-		if after, ok := strings.CutPrefix(trimmed, "subgraph "); ok {
-			title := strings.TrimSpace(after)
-			if title != "" && !strings.HasPrefix(title, `"`) {
-				errs = append(errs, fmt.Sprintf("%s:%d mermaid subgraph title must be quoted", relPath, lineNo))
-			}
+		return true
+	}
+	state.inMermaid = false
+	state.ignoreBlock = false
+	return true
+}
+
+// lintMermaidLine returns the mermaid style errors for one line inside a linted block.
+func lintMermaidLine(relPath string, lineNo int, line, trimmed string) []string {
+	var errs []string
+	if strings.Contains(line, "<br>") {
+		errs = append(errs, fmt.Sprintf("%s:%d mermaid uses <br>; use <br/>", relPath, lineNo))
+	}
+	if mermaidUnquotedBracketTextRe().MatchString(line) {
+		errs = append(errs, fmt.Sprintf("%s:%d mermaid node text must start with a quote", relPath, lineNo))
+	}
+	if after, ok := strings.CutPrefix(trimmed, "subgraph "); ok {
+		title := strings.TrimSpace(after)
+		if title != "" && !strings.HasPrefix(title, `"`) {
+			errs = append(errs, fmt.Sprintf("%s:%d mermaid subgraph title must be quoted", relPath, lineNo))
 		}
 	}
 	return errs

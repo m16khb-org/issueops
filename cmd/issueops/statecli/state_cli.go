@@ -34,35 +34,9 @@ func runStateWrite(deps Dependencies, args []string) error {
 		*key = fs.Arg(0)
 	}
 	valueProvided := flagProvided(fs, "value")
-	sourceCount := 0
-	if valueProvided {
-		sourceCount++
-	}
-	if *input != "" {
-		sourceCount++
-	}
-	if *stdin {
-		sourceCount++
-	}
-	if sourceCount != 1 {
-		return fmt.Errorf("provide exactly one content source: --value, --input, or --stdin")
-	}
-	var content string
-	switch {
-	case valueProvided:
-		content = *value
-	case *input != "":
-		b, err := os.ReadFile(*input)
-		if err != nil {
-			return err
-		}
-		content = string(b)
-	case *stdin:
-		b, err := io.ReadAll(os.Stdin)
-		if err != nil {
-			return err
-		}
-		content = string(b)
+	content, err := readStateWriteContent(*value, valueProvided, *input, *stdin)
+	if err != nil {
+		return err
 	}
 	result, err := deps.Write(context.Background(), *key, content)
 	if err != nil {
@@ -73,6 +47,39 @@ func runStateWrite(deps Dependencies, args []string) error {
 	}
 	fmt.Printf("state %q written (%d bytes) to %s\n", result.Record.Key, result.Record.Bytes, result.StateDir)
 	return nil
+}
+
+// readStateWriteContent resolves the single content source of `state write`.
+func readStateWriteContent(value string, valueProvided bool, input string, stdin bool) (string, error) {
+	sourceCount := 0
+	if valueProvided {
+		sourceCount++
+	}
+	if input != "" {
+		sourceCount++
+	}
+	if stdin {
+		sourceCount++
+	}
+	if sourceCount != 1 {
+		return "", fmt.Errorf("provide exactly one content source: --value, --input, or --stdin")
+	}
+	switch {
+	case valueProvided:
+		return value, nil
+	case input != "":
+		b, err := os.ReadFile(input)
+		if err != nil {
+			return "", err
+		}
+		return string(b), nil
+	default:
+		b, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			return "", err
+		}
+		return string(b), nil
+	}
 }
 
 func runStateRead(deps Dependencies, args []string) error {

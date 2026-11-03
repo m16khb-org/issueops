@@ -41,25 +41,42 @@ func validateLease(lease leasecontract.Lease) error {
 	}
 	switch lease.Status {
 	case "active":
-		if lease.Holder == nil || lease.ClaimTokenSHA256 != "" || lease.ClaimedAt == "" {
-			return fmt.Errorf("active lease requires one holder and no token hash")
-		}
-		return ValidatePersistedActor(*lease.Holder)
+		return validateActiveLease(lease)
 	case "revoking":
-		if lease.Holder == nil || lease.ClaimTokenSHA256 != "" {
-			return fmt.Errorf("revoking lease requires a holder and no token hash")
-		}
-		return ValidatePersistedActor(*lease.Holder)
+		return validateRevokingLease(lease)
 	case "claimable":
-		if lease.Holder != nil || !validHexDigest(lease.ClaimTokenSHA256, 64) {
-			return fmt.Errorf("claimable lease requires no holder and one token hash")
-		}
+		return validateClaimableLease(lease)
 	case "released":
-		if lease.Holder != nil || lease.ClaimTokenSHA256 != "" {
-			return fmt.Errorf("released lease must not retain a holder or token hash")
-		}
+		return validateReleasedLease(lease)
 	default:
 		return fmt.Errorf("unsupported lease status %q", lease.Status)
+	}
+}
+
+func validateActiveLease(lease leasecontract.Lease) error {
+	if lease.Holder == nil || lease.ClaimTokenSHA256 != "" || lease.ClaimedAt == "" {
+		return fmt.Errorf("active lease requires one holder and no token hash")
+	}
+	return ValidatePersistedActor(*lease.Holder)
+}
+
+func validateRevokingLease(lease leasecontract.Lease) error {
+	if lease.Holder == nil || lease.ClaimTokenSHA256 != "" {
+		return fmt.Errorf("revoking lease requires a holder and no token hash")
+	}
+	return ValidatePersistedActor(*lease.Holder)
+}
+
+func validateClaimableLease(lease leasecontract.Lease) error {
+	if lease.Holder != nil || !validHexDigest(lease.ClaimTokenSHA256, 64) {
+		return fmt.Errorf("claimable lease requires no holder and one token hash")
+	}
+	return nil
+}
+
+func validateReleasedLease(lease leasecontract.Lease) error {
+	if lease.Holder != nil || lease.ClaimTokenSHA256 != "" {
+		return fmt.Errorf("released lease must not retain a holder or token hash")
 	}
 	return nil
 }

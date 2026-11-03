@@ -165,26 +165,43 @@ func validateWriteLease(lease issueopscontract.WriteLease) error {
 	}
 	switch lease.Status {
 	case issueopscontract.LeaseStatusClaimable:
-		if lease.Holder != nil || !validSHA256(lease.ClaimTokenSHA256) {
-			return fmt.Errorf("claimable lease requires no holder and one token hash")
-		}
+		return validateClaimableWriteLease(lease)
 	case issueopscontract.LeaseStatusActive:
-		if lease.Holder == nil || lease.ClaimTokenSHA256 != "" || lease.ClaimedAt == "" {
-			return fmt.Errorf("active lease requires one holder and no token hash")
-		}
-		return ValidateNativeActor(*lease.Holder)
+		return validateActiveWriteLease(lease)
 	case issueopscontract.LeaseStatusRevoking:
-		// 이전 holder는 quiescence 진단에만 남고 이 상태에서는 writer가 아니다.
-		if lease.Holder == nil || lease.ClaimTokenSHA256 != "" {
-			return fmt.Errorf("revoking lease requires the fenced holder and no token hash")
-		}
-		return ValidateNativeActor(*lease.Holder)
+		return validateRevokingWriteLease(lease)
 	case issueopscontract.LeaseStatusReleased:
-		if lease.Holder != nil || lease.ClaimTokenSHA256 != "" {
-			return fmt.Errorf("released lease must not retain a holder or token hash")
-		}
+		return validateReleasedWriteLease(lease)
 	default:
 		return fmt.Errorf("unsupported lease status %q", lease.Status)
+	}
+}
+
+func validateClaimableWriteLease(lease issueopscontract.WriteLease) error {
+	if lease.Holder != nil || !validSHA256(lease.ClaimTokenSHA256) {
+		return fmt.Errorf("claimable lease requires no holder and one token hash")
+	}
+	return nil
+}
+
+func validateActiveWriteLease(lease issueopscontract.WriteLease) error {
+	if lease.Holder == nil || lease.ClaimTokenSHA256 != "" || lease.ClaimedAt == "" {
+		return fmt.Errorf("active lease requires one holder and no token hash")
+	}
+	return ValidateNativeActor(*lease.Holder)
+}
+
+func validateRevokingWriteLease(lease issueopscontract.WriteLease) error {
+	// 이전 holder는 quiescence 진단에만 남고 이 상태에서는 writer가 아니다.
+	if lease.Holder == nil || lease.ClaimTokenSHA256 != "" {
+		return fmt.Errorf("revoking lease requires the fenced holder and no token hash")
+	}
+	return ValidateNativeActor(*lease.Holder)
+}
+
+func validateReleasedWriteLease(lease issueopscontract.WriteLease) error {
+	if lease.Holder != nil || lease.ClaimTokenSHA256 != "" {
+		return fmt.Errorf("released lease must not retain a holder or token hash")
 	}
 	return nil
 }

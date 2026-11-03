@@ -57,21 +57,35 @@ type promptWalk struct {
 
 // promptRelativeParts는 경로 입력을 검증하고 root 기준 상대 경로 구성요소를 반환한다.
 func promptRelativeParts(root, path, expectedDigest string) ([]string, error) {
-	if !filepath.IsAbs(root) || filepath.Clean(root) != root || !filepath.IsAbs(path) || filepath.Clean(path) != path ||
-		strings.ContainsRune(root+path, 0) || !validDigest(expectedDigest) {
+	if !promptInputsClean(root, path, expectedDigest) {
 		return nil, fmt.Errorf("cmux prompt file must be a clean path inside the canonical worktree")
 	}
 	relative, err := filepath.Rel(root, path)
-	if err != nil || relative == "." || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+	if err != nil || promptRelativeEscapesRoot(relative) {
 		return nil, fmt.Errorf("cmux prompt file must be inside the canonical worktree")
 	}
 	parts := strings.Split(relative, string(filepath.Separator))
-	for _, part := range parts {
-		if part == "" || part == "." || part == ".." {
-			return nil, fmt.Errorf("cmux prompt file path is unsafe")
-		}
+	if slices.ContainsFunc(parts, promptPartUnsafe) {
+		return nil, fmt.Errorf("cmux prompt file path is unsafe")
 	}
 	return parts, nil
+}
+
+// promptInputsClean은 root와 path가 NUL 없는 정규 절대 경로이고 digest 형식이 올바른지 확인한다.
+func promptInputsClean(root, path, expectedDigest string) bool {
+	return filepath.IsAbs(root) && filepath.Clean(root) == root &&
+		filepath.IsAbs(path) && filepath.Clean(path) == path &&
+		!strings.ContainsRune(root+path, 0) && validDigest(expectedDigest)
+}
+
+// promptRelativeEscapesRoot은 상대 경로가 root 자신이거나 root 밖을 가리키는지 확인한다.
+func promptRelativeEscapesRoot(relative string) bool {
+	return relative == "." || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator))
+}
+
+// promptPartUnsafe는 경로 구성요소가 비었거나 현재·상위 디렉터리를 가리키는지 확인한다.
+func promptPartUnsafe(part string) bool {
+	return part == "" || part == "." || part == ".."
 }
 
 // openPromptDirectories는 rootFD 아래 디렉터리를 순서대로 열고 마지막 디렉터리 fd를 반환한다.
