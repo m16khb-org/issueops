@@ -35,7 +35,7 @@ func (h ReseedHandler) Handle(ctx context.Context, _ string, request issueopscon
 		return issueopscontract.ExecutionReplaceResult{ID: request.ID, Action: issueopscontract.ExecutionReplaceReseed}, publicReseedError(err)
 	}
 	response := issueopscontract.ExecutionReplaceResult{
-		OK: true, ID: result.ID, Action: issueopscontract.ExecutionReplaceReseed, Execution: toCoreExecution(result.Execution),
+		OK: true, ID: result.ID, Action: issueopscontract.ExecutionReplaceReseed, Execution: result.Execution.ToIssueOps(),
 		ClaimTokenPath: result.Receipt.ClaimTokenPath,
 	}
 	response.NextCommand = h.nextCommand(result.ID, result.Execution.Lease.Generation, request.Actor, response.Execution.Workspace.Root)

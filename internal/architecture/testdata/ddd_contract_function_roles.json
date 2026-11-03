@@ -295,6 +295,36 @@
     "role": "codec"
   },
   {
+    "path": "internal/contract/issueopslease/convert.go",
+    "symbol": "func Execution.ToIssueOps",
+    "role": "projection"
+  },
+  {
+    "path": "internal/contract/issueopslease/convert.go",
+    "symbol": "func Workspace.ToIssueOps",
+    "role": "projection"
+  },
+  {
+    "path": "internal/contract/issueopslease/convert.go",
+    "symbol": "func Lease.toIssueOps",
+    "role": "projection"
+  },
+  {
+    "path": "internal/contract/issueopslease/convert.go",
+    "symbol": "func Actor.toIssueOps",
+    "role": "projection"
+  },
+  {
+    "path": "internal/contract/issueopslease/convert.go",
+    "symbol": "func Completion.toIssueOps",
+    "role": "projection"
+  },
+  {
+    "path": "internal/contract/issueopslease/convert.go",
+    "symbol": "func cloneStrings",
+    "role": "clone"
+  },
+  {
     "path": "internal/contract/issueopspreparation/prepare.go",
     "symbol": "func Command.Clone",
     "role": "clone"

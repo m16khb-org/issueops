@@ -27,49 +27,7 @@ func (h ReleaseHandler) Handle(ctx context.Context, _ string, request issueopsco
 	if err != nil {
 		return issueopscontract.ExecutionResult{ID: request.ID}, publicReleaseError(err, request.ID, request.Generation)
 	}
-	return issueopscontract.ExecutionResult{OK: result.OK, ID: result.ID, Execution: toCoreExecution(result.Execution)}, nil
-}
-
-func toCoreExecution(execution leasecontract.Execution) issueopscontract.Execution {
-	result := issueopscontract.Execution{
-		Workspace: issueopscontract.Workspace{
-			SourceRoot: execution.Workspace.SourceRoot, Root: execution.Workspace.Root, Branch: execution.Workspace.Branch,
-			BaseHead: execution.Workspace.BaseHead, ParentWorktree: execution.Workspace.ParentWorktree, LinkedAt: execution.Workspace.LinkedAt, ArtifactDir: execution.Workspace.ArtifactDir,
-		},
-		Lease: toCoreLease(execution.Lease),
-	}
-	if execution.Pending != nil {
-		result.Pending = &issueopscontract.ExternalIntent{OperationID: execution.Pending.OperationID, Kind: execution.Pending.Kind, Marker: execution.Pending.Marker, StartedAt: execution.Pending.StartedAt}
-	}
-	if execution.Completion != nil {
-		result.Completion = &issueopscontract.ExecutionCompletion{Generation: execution.Completion.Generation, FinalHead: execution.Completion.FinalHead, VerificationReportPath: execution.Completion.VerificationReportPath, Verification: append([]string(nil), execution.Completion.Verification...), RemoteArtifactURL: execution.Completion.RemoteArtifactURL, CompletedAt: execution.Completion.CompletedAt}
-	}
-	for _, entry := range execution.CompletionHistory {
-		result.CompletionHistory = append(result.CompletionHistory, issueopscontract.ExecutionCompletionHistory{
-			Generation: entry.Generation,
-			Completion: issueopscontract.ExecutionCompletion{Generation: entry.Completion.Generation, FinalHead: entry.Completion.FinalHead, VerificationReportPath: entry.Completion.VerificationReportPath, Verification: append([]string(nil), entry.Completion.Verification...), RemoteArtifactURL: entry.Completion.RemoteArtifactURL, CompletedAt: entry.Completion.CompletedAt},
-			Reason:     entry.Reason,
-			ReopenedAt: entry.ReopenedAt,
-		})
-	}
-	if execution.Failure != nil {
-		result.Failure = &issueopscontract.ExecutionFailure{OperationID: execution.Failure.OperationID, Code: execution.Failure.Code, Message: execution.Failure.Message, At: execution.Failure.At}
-	}
-	for _, event := range execution.SyncBaseEvents {
-		result.SyncBaseEvents = append(result.SyncBaseEvents, issueopscontract.ExecutionSyncBaseEvent{Mode: event.Mode, BaseBranch: event.BaseBranch, BaseOID: event.BaseOID, MergeCommit: event.MergeCommit, ConflictFiles: event.ConflictFiles, Actor: event.Actor, At: event.At})
-	}
-	return result
-}
-
-func toCoreLease(lease leasecontract.Lease) issueopscontract.WriteLease {
-	result := issueopscontract.WriteLease{Generation: lease.Generation, Status: issueopscontract.LeaseStatus(lease.Status), ClaimTokenSHA256: lease.ClaimTokenSHA256, ClaimedAt: lease.ClaimedAt, ReleasedAt: lease.ReleasedAt, ReplacedAt: lease.ReplacedAt, ReplacementReason: lease.ReplacementReason}
-	if lease.Holder != nil {
-		result.Holder = &issueopscontract.NativeActor{Host: lease.Holder.Host, SessionID: lease.Holder.SessionID, AgentID: lease.Holder.AgentID}
-		if lease.Holder.SessionProcess != nil {
-			result.Holder.SessionProcess = &issueopscontract.NativeProcessReceipt{PID: lease.Holder.SessionProcess.PID, StartedAt: lease.Holder.SessionProcess.StartedAt, Executable: lease.Holder.SessionProcess.Executable}
-		}
-	}
-	return result
+	return issueopscontract.ExecutionResult{OK: result.OK, ID: result.ID, Execution: result.Execution.ToIssueOps()}, nil
 }
 
 func publicReleaseError(err error, id string, generation uint64) error {

@@ -2,8 +2,10 @@ package issueopspreparation
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
 
 	model "issueops/internal/contract/issueops"
@@ -44,7 +46,7 @@ func TestHandlerMapsEveryRequestAndResultField(t *testing.T) {
 	}
 	want := model.ExecutionPrepareResult{
 		OK: true, ID: request.ID, Preview: true,
-		Workspace: coreWorkspace(execution.Workspace), Execution: coreExecution(&execution),
+		Workspace: execution.Workspace.ToIssueOps(), Execution: wantExecution(&execution),
 		ClaimTokenPath: "/tokens/199", NextCommand: "issueops next",
 	}
 	if !reflect.DeepEqual(got, want) {
@@ -90,7 +92,7 @@ func (fake *serviceFake) Prepare(_ context.Context, command preparationcontract.
 
 func fullContractExecution() leasecontract.Execution {
 	return leasecontract.Execution{
-		Workspace: leasecontract.Workspace{SourceRoot: "/source", Root: "/worktree", Branch: "199-vertical", BaseHead: "base", ParentWorktree: "/parent", LinkedAt: "2026-08-02T02:03:04Z"},
+		Workspace: leasecontract.Workspace{SourceRoot: "/source", Root: "/worktree", Branch: "199-vertical", BaseHead: "base", ParentWorktree: "/parent", LinkedAt: "2026-08-02T02:03:04Z", ArtifactDir: ".issueops/artifacts/io-199"},
 		Lease: leasecontract.Lease{
 			Generation: 3, Status: "active",
 			Holder:           &leasecontract.Actor{Host: "claude", SessionID: "owner", AgentID: "agent", SessionProcess: &leasecontract.ProcessReceipt{PID: 200, StartedAt: "2026-08-02T02:03:05Z", Executable: "/bin/claude"}},
@@ -104,6 +106,34 @@ func fullContractExecution() leasecontract.Execution {
 		Failure:        &leasecontract.FailureDetail{OperationID: "operation", Code: "failed", Message: "redacted", At: "failed-at"},
 		SyncBaseEvents: []leasecontract.SyncBaseEvent{{Mode: "merge", BaseBranch: "main", BaseOID: "base", MergeCommit: "merge", ConflictFiles: 2, Actor: "codex", At: "synced"}},
 	}
+}
+
+// 응답 workspace가 저장 record의 ArtifactDir을 조용히 버리면 `execution prepare --json`
+// 소비자가 봉인 아티팩트 위치를 읽지 못한다.
+func TestHandlerResponseCarriesArtifactDirInWorkspaceAndExecution(t *testing.T) {
+	execution := fullContractExecution()
+	service := &serviceFake{result: preparationcontract.Result{ID: "io-199", Workspace: execution.Workspace, Execution: &execution}}
+
+	got, err := NewHandler(service)(context.Background(), "/state", model.ExecutionPrepareRequest{ID: "io-199"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	const want = ".issueops/artifacts/io-199"
+	if got.Workspace.ArtifactDir != want || got.Execution == nil || got.Execution.Workspace.ArtifactDir != want {
+		t.Fatalf("artifact_dir dropped: workspace=%q execution=%+v", got.Workspace.ArtifactDir, got.Execution)
+	}
+	encoded, err := json.Marshal(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Count(string(encoded), `"artifact_dir":"`+want+`"`) != 2 {
+		t.Fatalf("response JSON must carry artifact_dir in workspace and execution.workspace: %s", encoded)
+	}
+}
+
+func wantExecution(execution *leasecontract.Execution) *model.Execution {
+	converted := execution.ToIssueOps()
+	return &converted
 }
 
 func TestHandlerMapsEachOptionalExecutionSectionToExpectedValues(t *testing.T) {

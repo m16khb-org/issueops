@@ -3880,8 +3880,6 @@
         "func NewHandler",
         "func completionActor",
         "func completionAncestry",
-        "func coreExecution",
-        "func coreLease",
         "func publicError",
         "type Handler",
         "type service"
@@ -3925,8 +3923,6 @@
         "func NewReleaseHandler",
         "func ReleaseHandler.Handle",
         "func publicReleaseError",
-        "func toCoreExecution",
-        "func toCoreLease",
         "func toDomainActor",
         "func toProcessAncestry",
         "type ReleaseHandler"
@@ -3959,10 +3955,7 @@
       "symbols": [
         "func Handler.Handle",
         "func NewHandler",
-        "func cloneStrings",
-        "func coreExecution",
         "func coreResult",
-        "func coreWorkspace",
         "func preparationActor",
         "func publicError",
         "type Handler",
@@ -11680,6 +11673,19 @@
       "owner": "contract",
       "task": "T02",
       "symbols": []
+    },
+    {
+      "path": "internal/contract/issueopslease/convert.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "func Actor.toIssueOps",
+        "func Completion.toIssueOps",
+        "func Execution.ToIssueOps",
+        "func Lease.toIssueOps",
+        "func Workspace.ToIssueOps",
+        "func cloneStrings"
+      ]
     },
     {
       "path": "internal/contract/issueopslease/execution_sidecars.go",

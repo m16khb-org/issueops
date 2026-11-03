@@ -71,37 +71,6 @@ func TestPublicReseedErrorUnwrapsDenials(t *testing.T) {
 	}
 }
 
-func TestToCoreLeaseCopiesHolderAndProcessSafely(t *testing.T) {
-	bare := toCoreLease(leasecontract.Lease{Generation: 2, Status: "released"})
-	if bare.Holder != nil || bare.Generation != 2 || bare.Status != issueopscontract.LeaseStatus("released") {
-		t.Fatalf("bare lease mapping drifted: %+v", bare)
-	}
-
-	domain := leasecontract.Lease{
-		Generation: 3,
-		Status:     "active",
-		Holder: &leasecontract.Actor{
-			Host:           "codex",
-			SessionID:      "s-1",
-			AgentID:        "a-1",
-			SessionProcess: &leasecontract.ProcessReceipt{PID: 7, StartedAt: "t", Executable: "/bin/codex"},
-		},
-	}
-	core := toCoreLease(domain)
-	if core.Holder == nil || core.Holder.Host != "codex" || core.Holder.AgentID != "a-1" {
-		t.Fatalf("holder mapping drifted: %+v", core.Holder)
-	}
-	if core.Holder.SessionProcess == nil || core.Holder.SessionProcess.PID != 7 {
-		t.Fatalf("process receipt mapping drifted: %+v", core.Holder.SessionProcess)
-	}
-
-	noProcess := domain
-	noProcess.Holder.SessionProcess = nil
-	if mapped := toCoreLease(noProcess); mapped.Holder.SessionProcess != nil {
-		t.Fatalf("nil process must stay nil: %+v", mapped.Holder)
-	}
-}
-
 func TestHandlersFailClosedWhenOnlyServiceIsMissing(t *testing.T) {
 	ctx := context.Background()
 

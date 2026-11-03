@@ -29,7 +29,7 @@ func (h ClaimHandler) Handle(ctx context.Context, _ string, request issueopscont
 	if err != nil {
 		return issueopscontract.ExecutionResult{ID: request.ID}, publicClaimError(err, request.Generation, request.ID)
 	}
-	return issueopscontract.ExecutionResult{OK: result.OK, ID: result.ID, Execution: toCoreExecution(result.Execution)}, nil
+	return issueopscontract.ExecutionResult{OK: result.OK, ID: result.ID, Execution: result.Execution.ToIssueOps()}, nil
 }
 
 func publicClaimError(err error, generation uint64, id string) error {
