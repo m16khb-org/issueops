@@ -31,9 +31,10 @@ func issueOpsNextHandler(
 	string,
 	string,
 ) (issueopsnextcontract.Result, error) {
-	listCycles := issueOpsInventoryListHandler(observers...)
 	changes := newChangeReader()
 	return func(stateRoot, cwd, id string) (issueopsnextcontract.Result, error) {
+		paths := newCallPathNormalizer(issueopsinventoryoutbound.CleanPath{})
+		listCycles := issueOpsInventoryListHandlerWithPaths(paths, observers...)
 		git := newNextGitObservation(preflightadapter.GitCmd)
 		readiness := newCycleReadinessReading(git.read)
 		localObservation := nextLocalReadinessObservation{
@@ -64,8 +65,8 @@ func issueOpsNextHandler(
 				return executioncmd.ClaimActorFlags(os.Getenv, issueopscore.ObserveNativeProcessAncestry, cwd)
 			},
 			ProcessLive:   observeIssueOpsHolderLiveness,
-			SourceRoot:    issueopsinventoryoutbound.CleanPath{}.Normalize,
-			CleanPath:     issueopsinventoryoutbound.Canonical,
+			SourceRoot:    paths.Normalize,
+			CleanPath:     paths.Canonical,
 			WorktreeState: git.worktreeState,
 			GitOperation:  pathutil.GitOperationInProgress,
 			Repository:    git.repository,

@@ -835,9 +835,14 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
+        "func callPathNormalizer.Canonical",
+        "func callPathNormalizer.Normalize",
         "func issueOpsCycleIDLister",
         "func issueOpsCycleOutcomeLister",
-        "func issueOpsInventoryListHandler"
+        "func issueOpsInventoryListHandler",
+        "func issueOpsInventoryListHandlerWithPaths",
+        "func newCallPathNormalizer",
+        "type callPathNormalizer"
       ]
     },
     {

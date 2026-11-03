@@ -16,14 +16,57 @@ func issueOpsInventoryListHandler(
 	string,
 	string,
 ) (issueopsinventorycontract.ListResult, error) {
+	return issueOpsInventoryListHandlerWithPaths(issueopsinventoryoutbound.CleanPath{}, observers...)
+}
+
+func issueOpsInventoryListHandlerWithPaths(
+	paths issueopsinventoryapplication.PathNormalizer,
+	observers ...issueopsrecord.Observer,
+) func(
+	string,
+	string,
+) (issueopsinventorycontract.ListResult, error) {
 	service := issueopsinventoryapplication.NewService(
 		issueopsinventoryoutbound.Repository{
 			Store: issueOpsRecordStore("inventory", observers...),
 		},
 		issueopsinventoryoutbound.SystemClock{},
-		issueopsinventoryoutbound.CleanPath{},
+		paths,
 	)
 	return issueopsinventoryinbound.NewListHandler(service)
+}
+
+// callPathNormalizer answers Normalize and Canonical once per path for one
+// request. Normalize runs git to find the main worktree, and one `next` call
+// asks it for the cwd twice (the source root and the inventory filter). The
+// memo lives only for that call, so a long-running MCP service never serves a
+// stale repository identity.
+type callPathNormalizer struct {
+	base       issueopsinventoryapplication.PathNormalizer
+	normalized map[string]string
+	canonical  map[string]string
+}
+
+func newCallPathNormalizer(base issueopsinventoryapplication.PathNormalizer) *callPathNormalizer {
+	return &callPathNormalizer{base: base, normalized: map[string]string{}, canonical: map[string]string{}}
+}
+
+func (paths *callPathNormalizer) Normalize(path string) string {
+	if hit, ok := paths.normalized[path]; ok {
+		return hit
+	}
+	resolved := paths.base.Normalize(path)
+	paths.normalized[path] = resolved
+	return resolved
+}
+
+func (paths *callPathNormalizer) Canonical(path string) string {
+	if hit, ok := paths.canonical[path]; ok {
+		return hit
+	}
+	resolved := paths.base.Canonical(path)
+	paths.canonical[path] = resolved
+	return resolved
 }
 
 // issueOpsCycleIDLister는 저장소 필터를 inventory list에 위임하고 ID만 돌려준다.
