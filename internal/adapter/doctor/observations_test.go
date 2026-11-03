@@ -9,9 +9,11 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	doctordomain "issueops/internal/domain/doctor"
 	"issueops/internal/domain/projectdoc"
 )
 
@@ -134,22 +136,24 @@ func TestGatewaysObserveProbesLoopbackEndpointsAndCountsFDsPerUniquePort(t *test
 		"remote":{"type":"http","url":"https://example.com/mcp"},
 		"stdio":{"type":"stdio","url":"http://127.0.0.1:7003"}}}`)
 	probeErr := errors.New("refused")
+	var mu sync.Mutex
 	var probed []string
 	var counted []int
 	gateways := Gateways{
 		Probe: func(target string) error {
+			mu.Lock()
 			probed = append(probed, target)
+			mu.Unlock()
 			if strings.Contains(target, "7002") {
 				return probeErr
 			}
 			return nil
 		},
-		CountFDs: func(port int) (int, error) {
-			counted = append(counted, port)
-			if port == 7002 {
-				return 0, errors.New("no lsof")
-			}
-			return 12, nil
+		CountFDs: func(ports []int) map[int]GatewayFDResult {
+			mu.Lock()
+			counted = append(counted, ports...)
+			mu.Unlock()
+			return map[int]GatewayFDResult{7001: {Count: 12}, 7002: {Err: errors.New("no lsof")}}
 		},
 	}
 	got := gateways.Observe(home)
@@ -159,7 +163,8 @@ func TestGatewaysObserveProbesLoopbackEndpointsAndCountsFDsPerUniquePort(t *test
 	if got.Endpoints[0].Error != nil || got.Endpoints[1].Error != nil || !errors.Is(got.Endpoints[2].Error, probeErr) {
 		t.Fatalf("probe errors not attributed per endpoint: %+v", got.Endpoints)
 	}
-	if !slices.Equal(probed, []string{"http://localhost:7001/sse", "http://127.0.0.1:7001/mcp", "http://[::1]:7002/mcp"}) {
+	slices.Sort(probed)
+	if !slices.Equal(probed, []string{"http://127.0.0.1:7001/mcp", "http://[::1]:7002/mcp", "http://localhost:7001/sse"}) {
 		t.Fatalf("probed targets = %v", probed)
 	}
 	if !slices.Equal(counted, []int{7001, 7002}) || len(got.FDs) != 2 {
@@ -170,12 +175,77 @@ func TestGatewaysObserveProbesLoopbackEndpointsAndCountsFDsPerUniquePort(t *test
 	}
 }
 
+func TestGatewaysObserveProbesEndpointsConcurrentlyInEndpointOrder(t *testing.T) {
+	home := t.TempDir()
+	writeFileForTest(t, filepath.Join(home, ".claude.json"), `{"mcpServers":{
+		"a":{"type":"http","url":"http://127.0.0.1:7001/mcp"},
+		"b":{"type":"http","url":"http://127.0.0.1:7002/mcp"},
+		"c":{"type":"http","url":"http://127.0.0.1:7003/mcp"}}}`)
+	// Each probe waits for all three to be in flight, so a sequential
+	// implementation can never get past the first one.
+	var inFlight sync.WaitGroup
+	inFlight.Add(3)
+	gateways := Gateways{
+		Probe: func(target string) error {
+			inFlight.Done()
+			done := make(chan struct{})
+			go func() { inFlight.Wait(); close(done) }()
+			select {
+			case <-done:
+			case <-time.After(5 * time.Second):
+				return errors.New("probes ran sequentially")
+			}
+			if strings.Contains(target, "7002") {
+				return errors.New("refused")
+			}
+			return nil
+		},
+		CountFDs: func(ports []int) map[int]GatewayFDResult { return map[int]GatewayFDResult{} },
+	}
+	got := gateways.Observe(home)
+	if len(got.Endpoints) != 3 {
+		t.Fatalf("endpoints = %+v", got.Endpoints)
+	}
+	for i, want := range []string{"a", "b", "c"} {
+		if got.Endpoints[i].Name != want {
+			t.Fatalf("endpoint %d = %q, want %q (name order)", i, got.Endpoints[i].Name, want)
+		}
+	}
+	if got.Endpoints[0].Error != nil || got.Endpoints[1].Error == nil || got.Endpoints[1].Error.Error() != "refused" || got.Endpoints[2].Error != nil {
+		t.Fatalf("probe errors = %+v", got.Endpoints)
+	}
+}
+
+func TestGatewaysObserveCountsFDsOnceForAllPorts(t *testing.T) {
+	home := t.TempDir()
+	writeFileForTest(t, filepath.Join(home, ".claude.json"), `{"mcpServers":{
+		"a":{"type":"http","url":"http://127.0.0.1:7002/mcp"},
+		"b":{"type":"http","url":"http://127.0.0.1:7001/mcp"},
+		"c":{"type":"http","url":"http://127.0.0.1:7003/mcp"}}}`)
+	var batches [][]int
+	gateways := Gateways{
+		Probe: func(string) error { return nil },
+		CountFDs: func(ports []int) map[int]GatewayFDResult {
+			batches = append(batches, slices.Clone(ports))
+			return map[int]GatewayFDResult{7001: {Count: 5}, 7002: {Err: errors.New("no listener")}}
+		},
+	}
+	got := gateways.Observe(home)
+	if len(batches) != 1 || !slices.Equal(batches[0], []int{7001, 7002, 7003}) {
+		t.Fatalf("batch calls = %v, want one call with every unique port in order", batches)
+	}
+	want := []doctordomain.GatewayFD{{Port: 7001, Count: 5, Available: true}, {Port: 7002}, {Port: 7003}}
+	if !slices.Equal(got.FDs, want) {
+		t.Fatalf("fds = %+v, want %+v (a port the batch omits is unavailable)", got.FDs, want)
+	}
+}
+
 func TestGatewaysObserveReportsUnparsableConfigWithoutProbing(t *testing.T) {
 	home := t.TempDir()
 	writeFileForTest(t, filepath.Join(home, ".claude.json"), "{not json")
 	gateways := Gateways{
 		Probe:    func(string) error { t.Error("probed despite a broken config"); return nil },
-		CountFDs: func(int) (int, error) { t.Error("counted despite a broken config"); return 0, nil },
+		CountFDs: func([]int) map[int]GatewayFDResult { t.Error("counted despite a broken config"); return nil },
 	}
 	got := gateways.Observe(home)
 	if got.ConfigError == nil || len(got.Endpoints) != 0 {

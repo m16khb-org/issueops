@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -28,13 +29,16 @@ const loopbackGatewayConfigForTest = `{
 func TestHarnessDoctorReportsMCPGatewayCheck(t *testing.T) {
 	home := t.TempDir()
 	writeClaudeMCPConfigForTest(t, home, loopbackGatewayConfigForTest)
+	var mu sync.Mutex
 	probed := []string{}
 	oldProbe, oldCount := probeMCPGateway, countMCPGatewayFDs
 	probeMCPGateway = func(target string) error {
+		mu.Lock()
 		probed = append(probed, target)
+		mu.Unlock()
 		return nil
 	}
-	countMCPGatewayFDs = func(port int) (int, error) { return 24, nil }
+	countMCPGatewayFDs = fixedGatewayFDCountForTest(24)
 	t.Cleanup(func() { probeMCPGateway, countMCPGatewayFDs = oldProbe, oldCount })
 
 	result, err := HarnessDoctor(doctorcontract.HarnessDoctorRequest{RepoRoot: t.TempDir(), IssueOpsRoot: t.TempDir(), Home: home, Version: "test"})
@@ -61,7 +65,7 @@ func TestHarnessDoctorWarnsOnUnreachableMCPGateway(t *testing.T) {
 	writeClaudeMCPConfigForTest(t, home, loopbackGatewayConfigForTest)
 	oldProbe, oldCount := probeMCPGateway, countMCPGatewayFDs
 	probeMCPGateway = func(target string) error { return os.ErrDeadlineExceeded }
-	countMCPGatewayFDs = func(port int) (int, error) { return 24, nil }
+	countMCPGatewayFDs = fixedGatewayFDCountForTest(24)
 	t.Cleanup(func() { probeMCPGateway, countMCPGatewayFDs = oldProbe, oldCount })
 
 	result, err := HarnessDoctor(doctorcontract.HarnessDoctorRequest{RepoRoot: t.TempDir(), IssueOpsRoot: t.TempDir(), Home: home, Version: "test"})
@@ -82,7 +86,7 @@ func TestHarnessDoctorWarnsOnMCPGatewayFDPressure(t *testing.T) {
 	writeClaudeMCPConfigForTest(t, home, loopbackGatewayConfigForTest)
 	oldProbe, oldCount := probeMCPGateway, countMCPGatewayFDs
 	probeMCPGateway = func(target string) error { return nil }
-	countMCPGatewayFDs = func(port int) (int, error) { return doctordomain.MCPGatewayFDWarningThreshold, nil }
+	countMCPGatewayFDs = fixedGatewayFDCountForTest(doctordomain.MCPGatewayFDWarningThreshold)
 	t.Cleanup(func() { probeMCPGateway, countMCPGatewayFDs = oldProbe, oldCount })
 
 	result, err := HarnessDoctor(doctorcontract.HarnessDoctorRequest{RepoRoot: t.TempDir(), IssueOpsRoot: t.TempDir(), Home: home, Version: "test"})
@@ -109,5 +113,15 @@ func TestHarnessDoctorSkipsMCPGatewayWithoutConfig(t *testing.T) {
 	}
 	if hasHarnessDoctorIssueForTest(result.Issues, "mcp_gateway_unreachable") {
 		t.Fatalf("did not expect gateway issues without config: %+v", result.Issues)
+	}
+}
+
+func fixedGatewayFDCountForTest(count int) func([]int) map[int]GatewayFDResult {
+	return func(ports []int) map[int]GatewayFDResult {
+		counted := make(map[int]GatewayFDResult, len(ports))
+		for _, port := range ports {
+			counted[port] = GatewayFDResult{Count: count}
+		}
+		return counted
 	}
 }

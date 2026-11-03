@@ -3328,8 +3328,13 @@
         "func CountGatewayFDsViaLsof",
         "func MeasurePipeCapacity",
         "func ProbeGatewayHTTP",
+        "func countGatewayFDsBatch",
         "func loopbackMCPEndpoints",
+        "func parseLsofFDCounts",
+        "func parseLsofListeners",
+        "func runLsof",
         "func uniqueMCPGatewayPorts",
+        "type GatewayFDResult",
         "type mcpGatewayEndpoint"
       ]
     },
@@ -3339,6 +3344,8 @@
       "task": "T15",
       "symbols": [
         "func Gateways.Observe",
+        "func Gateways.countFDs",
+        "func Gateways.probeEndpoints",
         "func ObserveBinaryDrift",
         "func ObserveNativeIntegrations",
         "func ObserveProjectDocs",

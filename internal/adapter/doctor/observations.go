@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	doctordomain "issueops/internal/domain/doctor"
 	"issueops/internal/domain/projectdoc"
@@ -34,9 +35,16 @@ func ObserveRuntimeState(root string) doctordomain.RuntimeStateObservation {
 	return observation
 }
 
+// maxConcurrentGatewayProbes bounds the loopback HTTP probes in flight; a doctor
+// run sees a handful of gateways, so this only guards a pathological config.
+const maxConcurrentGatewayProbes = 8
+
+// Gateways observes the loopback MCP gateways. Probe and the FD counter are
+// injected so tests stay hermetic. CountFDs counts every port's listener FDs in
+// one call.
 type Gateways struct {
 	Probe    func(string) error
-	CountFDs func(int) (int, error)
+	CountFDs func([]int) map[int]GatewayFDResult
 }
 
 func (gateways Gateways) Observe(home string) doctordomain.GatewayObservation {
@@ -49,15 +57,55 @@ func (gateways Gateways) Observe(home string) doctordomain.GatewayObservation {
 		observation.ConfigError = err
 		return observation
 	}
-	for _, endpoint := range endpoints {
-		target := endpoint.URL.String()
-		observation.Endpoints = append(observation.Endpoints, doctordomain.GatewayEndpoint{Name: endpoint.Name, URL: target, Error: gateways.Probe(target)})
-	}
-	for _, port := range uniqueMCPGatewayPorts(endpoints) {
-		count, err := gateways.CountFDs(port)
-		observation.FDs = append(observation.FDs, doctordomain.GatewayFD{Port: port, Count: count, Available: err == nil})
+	ports := uniqueMCPGatewayPorts(endpoints)
+	var fdResults []GatewayFDResult
+	var fds sync.WaitGroup
+	fds.Go(func() { fdResults = gateways.countFDs(ports) })
+	observation.Endpoints = gateways.probeEndpoints(endpoints)
+	fds.Wait()
+	for i, port := range ports {
+		observation.FDs = append(observation.FDs, doctordomain.GatewayFD{Port: port, Count: fdResults[i].Count, Available: fdResults[i].Err == nil})
 	}
 	return observation
+}
+
+// probeEndpoints probes the endpoints concurrently, at most
+// maxConcurrentGatewayProbes at a time, and returns them in endpoint order.
+func (gateways Gateways) probeEndpoints(endpoints []mcpGatewayEndpoint) []doctordomain.GatewayEndpoint {
+	var observed []doctordomain.GatewayEndpoint
+	if len(endpoints) == 0 {
+		return observed
+	}
+	observed = make([]doctordomain.GatewayEndpoint, len(endpoints))
+	slots := make(chan struct{}, maxConcurrentGatewayProbes)
+	var probes sync.WaitGroup
+	for i, endpoint := range endpoints {
+		slots <- struct{}{}
+		probes.Go(func() {
+			defer func() { <-slots }()
+			target := endpoint.URL.String()
+			observed[i] = doctordomain.GatewayEndpoint{Name: endpoint.Name, URL: target, Error: gateways.Probe(target)}
+		})
+	}
+	probes.Wait()
+	return observed
+}
+
+// countFDs returns one result per port, in port order.
+func (gateways Gateways) countFDs(ports []int) []GatewayFDResult {
+	results := make([]GatewayFDResult, len(ports))
+	if len(ports) == 0 {
+		return results
+	}
+	counted := gateways.CountFDs(ports)
+	for i, port := range ports {
+		result, ok := counted[port]
+		if !ok {
+			result = GatewayFDResult{Err: errors.New("no fd count for port")}
+		}
+		results[i] = result
+	}
+	return results
 }
 
 func ObserveNativeIntegrations(home string) doctordomain.NativeObservation {

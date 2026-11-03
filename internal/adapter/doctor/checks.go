@@ -130,25 +130,124 @@ func ProbeGatewayHTTP(target string) error {
 	return resp.Body.Close()
 }
 
-func CountGatewayFDsViaLsof(port int) (int, error) {
-	pidOut, err := exec.Command("lsof", "-nP", fmt.Sprintf("-iTCP:%d", port), "-sTCP:LISTEN", "-t").Output()
-	if err != nil {
-		return 0, fmt.Errorf("listener pid lookup failed: %w", err)
+// GatewayFDResult is one port's lsof answer: the listener's open-FD count, or
+// the reason the count is unavailable.
+type GatewayFDResult struct {
+	Count int
+	Err   error
+}
+
+// CountGatewayFDsViaLsof counts the FDs of each port's listener with two lsof
+// calls in total, one listener scan and one FD listing over every listener pid,
+// instead of two calls per port. The first listener pid wins for a port with
+// several listeners.
+func CountGatewayFDsViaLsof(ports []int) map[int]GatewayFDResult {
+	return countGatewayFDsBatch(ports, runLsof)
+}
+
+func runLsof(args ...string) ([]byte, error) {
+	return exec.Command("lsof", args...).Output()
+}
+
+func countGatewayFDsBatch(ports []int, run func(args ...string) ([]byte, error)) map[int]GatewayFDResult {
+	results := make(map[int]GatewayFDResult, len(ports))
+	if len(ports) == 0 {
+		return results
 	}
-	pid := strings.TrimSpace(string(pidOut))
-	if pid == "" {
-		return 0, errors.New("no listener process found")
+	listenOut, err := run("-nP", "-iTCP", "-sTCP:LISTEN", "-Fpn")
+	if err != nil && len(listenOut) == 0 {
+		for _, port := range ports {
+			results[port] = GatewayFDResult{Err: fmt.Errorf("listener pid lookup failed: %w", err)}
+		}
+		return results
 	}
-	if i := strings.IndexByte(pid, '\n'); i >= 0 {
-		pid = pid[:i]
+	listeners := parseLsofListeners(listenOut)
+	pidByPort := make(map[int]int, len(ports))
+	pidSeen := map[int]bool{}
+	pids := []string{}
+	for _, port := range ports {
+		pid, ok := listeners[port]
+		if !ok {
+			results[port] = GatewayFDResult{Err: errors.New("no listener process found")}
+			continue
+		}
+		pidByPort[port] = pid
+		if !pidSeen[pid] {
+			pidSeen[pid] = true
+			pids = append(pids, strconv.Itoa(pid))
+		}
 	}
-	fdOut, err := exec.Command("lsof", "-p", pid).Output()
-	if err != nil {
-		return 0, fmt.Errorf("fd listing failed for pid %s: %w", pid, err)
+	if len(pids) == 0 {
+		return results
 	}
-	lines := strings.Count(string(fdOut), "\n")
-	if lines > 0 {
-		lines-- // drop the lsof header row
+	fdOut, err := run("-p", strings.Join(pids, ","), "-Fpf")
+	if err != nil && len(fdOut) == 0 {
+		for port, pid := range pidByPort {
+			results[port] = GatewayFDResult{Err: fmt.Errorf("fd listing failed for pid %d: %w", pid, err)}
+		}
+		return results
 	}
-	return lines, nil
+	counts := parseLsofFDCounts(fdOut)
+	for port, pid := range pidByPort {
+		count, ok := counts[pid]
+		if !ok {
+			results[port] = GatewayFDResult{Err: fmt.Errorf("fd listing failed for pid %d: no lsof records", pid)}
+			continue
+		}
+		results[port] = GatewayFDResult{Count: count}
+	}
+	return results
+}
+
+// parseLsofListeners maps each listening port to the first pid lsof reported
+// for it, from `lsof -Fpn` records (`p<pid>` then `n<addr>:<port>`).
+func parseLsofListeners(out []byte) map[int]int {
+	listeners := map[int]int{}
+	pid := 0
+	for line := range strings.SplitSeq(string(out), "\n") {
+		switch {
+		case strings.HasPrefix(line, "p"):
+			parsed, err := strconv.Atoi(line[1:])
+			if err != nil {
+				pid = 0
+				continue
+			}
+			pid = parsed
+		case strings.HasPrefix(line, "n") && pid != 0:
+			colon := strings.LastIndexByte(line, ':')
+			if colon < 0 {
+				continue
+			}
+			port, err := strconv.Atoi(line[colon+1:])
+			if err != nil {
+				continue
+			}
+			if _, ok := listeners[port]; !ok {
+				listeners[port] = pid
+			}
+		}
+	}
+	return listeners
+}
+
+// parseLsofFDCounts counts open files per pid from `lsof -Fpf` records. A pid
+// lsof listed without files maps to zero; a pid it did not list is absent.
+func parseLsofFDCounts(out []byte) map[int]int {
+	counts := map[int]int{}
+	pid := 0
+	for line := range strings.SplitSeq(string(out), "\n") {
+		switch {
+		case strings.HasPrefix(line, "p"):
+			parsed, err := strconv.Atoi(line[1:])
+			if err != nil {
+				pid = 0
+				continue
+			}
+			pid = parsed
+			counts[pid] += 0
+		case strings.HasPrefix(line, "f") && pid != 0:
+			counts[pid]++
+		}
+	}
+	return counts
 }
