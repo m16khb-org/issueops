@@ -227,7 +227,11 @@ func TestPolicyRunActualOutputAndTimeoutContracts(t *testing.T) {
 			t.Error("real output lost truncation marker")
 		}
 	}
-	result := runReadOnlyCommand(policycontract.CommandPolicyRequest{WorkspaceRoot: root, CWD: root, Argv: []string{"awk", "BEGIN { while (1) {} }"}, Timeout: "100ms"})
+	if err := os.WriteFile(filepath.Join(root, "follow.txt"), []byte("x\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	// tail -f never exits on its own, so only the deadline can end it.
+	result := runReadOnlyCommand(policycontract.CommandPolicyRequest{WorkspaceRoot: root, CWD: root, Argv: []string{"tail", "-f", "follow.txt"}, Timeout: "100ms"})
 	if result.OK || !result.Executed || !result.TimedOut || result.ExitCode != 124 || !strings.HasSuffix(result.Stderr, "command timed out\n") {
 		t.Fatalf("real timeout contract: %+v", result)
 	}

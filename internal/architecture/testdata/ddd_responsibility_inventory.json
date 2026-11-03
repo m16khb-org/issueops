@@ -15684,6 +15684,24 @@
       ]
     },
     {
+      "path": "internal/domain/policy/write_arguments.go",
+      "owner": "domain",
+      "task": "T09",
+      "symbols": [
+        "func abbreviatesAny",
+        "func gitArgumentsWrite",
+        "func gitBranchWrites",
+        "func gitConfigWrites",
+        "func gitHasFlag",
+        "func goArgumentsWrite",
+        "func goFlagName",
+        "func hasExactArgument",
+        "func longFlagName",
+        "func shortCluster",
+        "func writeCapableArguments"
+      ]
+    },
+    {
       "path": "internal/domain/preflight/commit_style.go",
       "owner": "domain",
       "task": "T09",

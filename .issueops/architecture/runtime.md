@@ -163,6 +163,7 @@ actor model live in [`issueops.md`](issueops.md).
 - shell interpreter(`sh`, `bash`, `zsh` 등) without reason
 - `network_allowed=false`에서 network성 명령
 - `write_allowed=false`에서 write성 명령
+- `write_allowed=false`에서 read-only allowlist 명령이 write·exec 가능 인자를 쓰는 요청(`write_not_allowed`)
 - read-only allowlist 밖 명령
 - secret-like path/argument
 
@@ -170,8 +171,9 @@ actor model live in [`issueops.md`](issueops.md).
 
 - shell interpreters: `sh`, `bash`, `zsh`, `fish`, `dash`, `ksh`
 - network commands/subcommands: `curl`, `wget`, `ssh`, package manager류, `git fetch/pull/push/clone` 등
-- write commands/subcommands: 파일 변경 명령, `go build/test/run`, `git add/commit/reset/...` 등
-- read-only commands/subcommands: `ls`, `cat`, `rg`, `git status/diff/log`, `go env/list/version` 등
+- write commands/subcommands: 파일 변경 명령, 프로그래밍 가능한 도구(`sed`, `awk`, `perl`, `python`, `node` 등), `go build/test/run`, `git add/commit/reset/...` 등
+- read-only commands/subcommands: `ls`, `cat`, `rg`, `find`, `git status/diff/log`, `go env/list/version` 등
+- write·exec 가능 인자(`internal/domain/policy/write_arguments.go`): read-only allowlist 명령이라도 `find -delete/-exec/-fprint*`, `rg --pre`, 이름 operand나 `-d/-m/-c/-u/-f`가 있는 `git branch`, 명시적 읽기 모드가 없는 `git config`, `git remote add/set-url/...`, `git grep -O`, `git diff/log/show --ext-diff/--output`, `go env -w/-u`, `go list -toolexec`는 write로 분류한다. 새 명령을 allowlist에 넣을 때는 그 명령의 write·exec 플래그를 먼저 확인한다.
 
 ## MCP tool design guidance
 

@@ -67,7 +67,7 @@ func TestCommandPolicyDeniesPathArgsOutsideWorkspace(t *testing.T) {
 	}{
 		{name: "relative parent escape", argv: []string{"cat", filepath.Join("..", "..", filepath.Base(outside), "note.txt")}},
 		{name: "absolute outside path", argv: []string{"cat", outsideFile}},
-		{name: "flag value outside path", argv: []string{"sed", "--file=" + outsideFile}},
+		{name: "flag value outside path", argv: []string{"rg", "--file=" + outsideFile}},
 		{name: "symlink escape path", argv: []string{"cat", filepath.Join(link, "note.txt")}},
 		{name: "home shorthand escape", argv: []string{"cat", "~/note.txt"}},
 	}
@@ -142,10 +142,33 @@ func TestRunReadOnlyCommandExecutesAllowedArgvOnly(t *testing.T) {
 	}
 }
 
+// A read-only run refuses the write-capable forms of allowlisted commands
+// before executing anything, so `find -delete` leaves the file in place.
+func TestRunReadOnlyCommandRefusesWriteCapableArguments(t *testing.T) {
+	root := t.TempDir()
+	target := filepath.Join(root, "keep.txt")
+	if err := os.WriteFile(target, []byte("keep\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, argv := range [][]string{
+		{"find", target, "-delete"},
+		{"find", root, "-name", "keep.txt", "-exec", "rm", "{}", ";"},
+		{"sed", "-i", "s/keep/gone/", target},
+	} {
+		result := runReadOnlyCommand(policydomain.CommandPolicyRequest{WorkspaceRoot: root, CWD: root, Argv: argv, Timeout: "30s"})
+		if result.OK || result.Executed || result.ExitCode != 3 || !containsString(result.Policy.DenyReasons, "write_not_allowed") {
+			t.Fatalf("%v was not refused by the read-only runner: %+v", argv, result)
+		}
+		if data, err := os.ReadFile(target); err != nil || string(data) != "keep\n" {
+			t.Fatalf("%v changed the file: %q %v", argv, data, err)
+		}
+	}
+}
+
 func TestRunReadOnlyCommandUsesEmptyEnvUnlessAllowlisted(t *testing.T) {
 	root := t.TempDir()
-	t.Setenv("ISSUEOPS_ENV_LEAK_TEST", "leaked")
-	argv := []string{"awk", `BEGIN { print ENVIRON["ISSUEOPS_ENV_LEAK_TEST"] }`}
+	t.Setenv("GOFLAGS", "-mod=mod")
+	argv := []string{"go", "env", "GOFLAGS"}
 
 	defaultEnv := runReadOnlyCommand(policydomain.CommandPolicyRequest{
 		WorkspaceRoot: root,
@@ -162,9 +185,9 @@ func TestRunReadOnlyCommandUsesEmptyEnvUnlessAllowlisted(t *testing.T) {
 		CWD:           root,
 		Argv:          argv,
 		Timeout:       "30s",
-		EnvAllowlist:  []string{"ISSUEOPS_ENV_LEAK_TEST"},
+		EnvAllowlist:  []string{"GOFLAGS"},
 	})
-	if !allowlisted.OK || allowlisted.Stdout != "leaked\n" {
+	if !allowlisted.OK || allowlisted.Stdout != "-mod=mod\n" {
 		t.Fatalf("allowlisted env was not exposed: %+v", allowlisted)
 	}
 }

@@ -42,12 +42,12 @@ func BuiltinCatalog() Catalog {
 		networkSubcommands: map[string]map[string]bool{
 			"git": stringSet("clone", "fetch", "pull", "push", "ls-remote", "submodule"),
 		},
-		writeCommands: stringSet("touch", "mkdir", "rmdir", "rm", "mv", "cp", "install", "chmod", "chown", "tee", "python", "python3", "node", "ruby", "perl"),
+		writeCommands: stringSet("touch", "mkdir", "rmdir", "rm", "mv", "cp", "install", "chmod", "chown", "tee", "python", "python3", "node", "ruby", "perl", "sed", "awk"),
 		writeSubcommands: map[string]map[string]bool{
 			"git": stringSet("add", "commit", "reset", "clean", "checkout", "switch", "merge", "rebase", "cherry-pick", "revert", "push", "pull", "apply", "am", "stash"),
 			"go":  stringSet("build", "test", "run", "install", "mod", "work", "generate"),
 		},
-		readOnlyCommands: stringSet("pwd", "ls", "cat", "grep", "rg", "find", "sed", "awk", "head", "tail", "wc", "test", "stat", "true", "false"),
+		readOnlyCommands: stringSet("pwd", "ls", "cat", "grep", "rg", "find", "head", "tail", "wc", "test", "stat", "true", "false"),
 		readOnlySubcommands: map[string]map[string]bool{
 			"git": stringSet("status", "diff", "log", "show", "rev-parse", "branch", "remote", "ls-files", "grep", "describe", "merge-base", "config"),
 			"go":  stringSet("version", "env", "list"),
@@ -102,7 +102,7 @@ func (catalog Catalog) Classify(argv []string) CommandClassification {
 	return CommandClassification{
 		ShellCommand:    catalog.shellInterpreters[base] && !syntaxCheckOnly(argv),
 		UsesNetwork:     catalog.networkCommands[base] || subcommandAllowed(catalog.networkSubcommands, base, argv),
-		Writes:          catalog.writeCommands[base] || subcommandAllowed(catalog.writeSubcommands, base, argv),
+		Writes:          catalog.writeCommands[base] || subcommandAllowed(catalog.writeSubcommands, base, argv) || writeCapableArguments(base, argv),
 		ReadOnlyAllowed: catalog.readOnlyCommands[base] || subcommandAllowed(catalog.readOnlySubcommands, base, argv),
 	}
 }
