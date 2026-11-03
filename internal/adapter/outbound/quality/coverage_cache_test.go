@@ -6,10 +6,12 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
 
+	"issueops/internal/adapter/outbound/osfile"
 	contract "issueops/internal/contract/quality"
 	"issueops/internal/testsupport"
 )
@@ -132,7 +134,7 @@ func TestCoverageFingerprintFailsWithoutUsableGitHead(t *testing.T) {
 func TestHashCoverageUntrackedFilesRejectsEscapesAndMissingFiles(t *testing.T) {
 	root := t.TempDir()
 	writeProductFixture(t, root, "ok.txt", "x")
-	for _, bad := range []string{"../outside", "/abs/path", ".", "a/../../outside"} {
+	for _, bad := range []string{"../outside", testsupport.AbsPath("abs", "path"), ".", "a/../../outside"} {
 		var sink strings.Builder
 		err := hashCoverageUntrackedFiles(&sink, root, [][]byte{[]byte(bad)})
 		if err == nil || !strings.Contains(err.Error(), "escapes repository") {
@@ -237,7 +239,12 @@ func TestCoverageCachePathIsStablePerRootAndPropagatesBaseErrors(t *testing.T) {
 
 func TestDefaultCoverageCacheBaseUsesUserCacheDir(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	// os.UserCacheDir reads $HOME on Unix and %LocalAppData% on Windows.
+	cacheRoot := "HOME"
+	if runtime.GOOS == "windows" {
+		cacheRoot = "LocalAppData"
+	}
+	t.Setenv(cacheRoot, home)
 	t.Setenv("XDG_CACHE_HOME", "")
 	got, err := DefaultCoverageCacheBase()
 	if err != nil {
@@ -246,7 +253,7 @@ func TestDefaultCoverageCacheBaseUsesUserCacheDir(t *testing.T) {
 	if !strings.HasPrefix(got, home) || !strings.HasSuffix(got, filepath.Join("issueops", "quality-coverage")) {
 		t.Fatalf("base = %s", got)
 	}
-	t.Setenv("HOME", "")
+	t.Setenv(cacheRoot, "")
 	if _, err := DefaultCoverageCacheBase(); err == nil {
 		t.Fatal("expected error when no cache dir can be determined")
 	}
@@ -398,8 +405,8 @@ func TestWriteCoverageCacheStoresPrivateFileWithoutTemporaries(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info.Mode().Perm() != 0o600 {
-		t.Errorf("mode = %v", info.Mode().Perm())
+	if got := osfile.Perm(path, info); got != 0o600 {
+		t.Errorf("mode = %v", got)
 	}
 	entries, _ := os.ReadDir(base)
 	if len(entries) != 1 {

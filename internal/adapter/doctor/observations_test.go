@@ -15,6 +15,7 @@ import (
 
 	doctordomain "issueops/internal/domain/doctor"
 	"issueops/internal/domain/projectdoc"
+	"issueops/internal/testsupport"
 )
 
 func writeFileForTest(t *testing.T, path, content string) {
@@ -85,7 +86,7 @@ func TestObserveBinaryDriftTracksNewestGoSourceAgainstBinary(t *testing.T) {
 		t.Fatalf("empty root observation = %+v", got)
 	}
 	root := t.TempDir()
-	if got := ObserveBinaryDrift(root); got.Found || got.Path != filepath.Join(root, "bin", "issueops") {
+	if got := ObserveBinaryDrift(root); got.Found || got.Path != filepath.Join(root, "bin", testsupport.ExecutableName("issueops")) {
 		t.Fatalf("no binary observation = %+v", got)
 	}
 	built := time.Date(2026, 5, 1, 12, 0, 0, 0, time.UTC)
@@ -95,7 +96,7 @@ func TestObserveBinaryDriftTracksNewestGoSourceAgainstBinary(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	binary := filepath.Join(root, "bin", "issueops")
+	binary := filepath.Join(root, "bin", testsupport.ExecutableName("issueops"))
 	writeFileForTest(t, binary, "bin")
 	setTime(binary, built)
 	older := filepath.Join(root, "cmd", "issueops", "main.go")

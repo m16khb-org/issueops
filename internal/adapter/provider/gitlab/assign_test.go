@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 )
@@ -12,13 +11,10 @@ import (
 // Each assignee goes with a + prefix: an unprefixed glab value replaces every
 // existing assignee.
 func TestGitLabAddAssigneesUsesTheAddPrefix(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake glab shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	log := filepath.Join(t.TempDir(), "glab.log")
 	writeFakeGlab(t, binDir, `#!/bin/sh
-echo "$*" >> `+log+`
+echo "$*" >> `+filepath.ToSlash(log)+`
 case "$1" in
 api) echo '{"assignees":[{"username":"me"},{"username":"kim"}]}' ;;
 esac

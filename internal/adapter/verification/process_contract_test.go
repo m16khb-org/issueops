@@ -7,12 +7,14 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"issueops/internal/testsupport"
 )
 
 func TestRunCommandStepEnvWithBudgetCoversSuccessFailureAndOutputBudget(t *testing.T) {
 	root := t.TempDir()
 	helperTimeout := 15 * time.Second
-	wrapperBin := writeCommandStepExecutable(t, root, "wrapper.sh", "#!/bin/sh\nprintf 'wrapper stdout'\n")
+	wrapperBin := writeCommandStepExecutable(t, root, "wrapper", "#!/bin/sh\nprintf 'wrapper stdout'\n")
 	wrapper := Run(root, "helper wrapper", helperTimeout, "", 32*1024, wrapperBin)
 	if !wrapper.OK || wrapper.Label != "helper wrapper" || !strings.Contains(wrapper.Stdout, "wrapper stdout") {
 		t.Fatalf("unexpected wrapper step: %+v", wrapper)
@@ -63,9 +65,5 @@ func TestCommandStepHelperProcess(t *testing.T) {
 
 func writeCommandStepExecutable(t *testing.T, root, name, content string) string {
 	t.Helper()
-	path := root + string(os.PathSeparator) + name
-	if err := os.WriteFile(path, []byte(content), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	return path
+	return testsupport.WriteFakeCommand(t, root, name, content)
 }

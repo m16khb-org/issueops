@@ -4,7 +4,11 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"issueops/internal/testsupport"
 )
+
+var testBinary = testsupport.AbsPath("repo", "bin", testsupport.ExecutableName("issueops"))
 
 func TestBindGeneratedCommandRequiresCompleteBinaryProvenance(t *testing.T) {
 	command, err := BindGeneratedCommand(
@@ -23,7 +27,7 @@ func TestBindGeneratedCommandUsesCanonicalExecutableAndAddsBoundedEvidence(t *te
 	command, err := BindGeneratedCommand(
 		"issueops execution replace --id io-1 --expected-generation 7 --preview",
 		GeneratedCommandProvenance{
-			ExecutablePath:   "/repo/bin/issueops",
+			ExecutablePath:   testBinary,
 			ExecutableSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 			LeaseGeneration:  7,
 		},
@@ -31,11 +35,11 @@ func TestBindGeneratedCommandUsesCanonicalExecutableAndAddsBoundedEvidence(t *te
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(command, "'/repo/bin/issueops' execution replace ") {
+	if !strings.HasPrefix(command, "'"+testBinary+"' execution replace ") {
 		t.Fatalf("generated command did not select its observed executable: %q", command)
 	}
 	for _, want := range []string{
-		"--generated-by-executable '/repo/bin/issueops'",
+		"--generated-by-executable '" + testBinary + "'",
 		"--generated-by-sha256 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 		"--generated-for-generation 7",
 	} {
@@ -59,7 +63,7 @@ func TestConsumeGeneratedCommandProvenanceKeepsManualPATHCommandUnchanged(t *tes
 func TestConsumeGeneratedCommandProvenanceRemovesOnlyCompleteEnvelope(t *testing.T) {
 	args := []string{
 		"execution", "release", "--id", "io-1", "--generation", "7",
-		GeneratedByExecutableFlag, "/repo/bin/issueops",
+		GeneratedByExecutableFlag, testBinary,
 		GeneratedBySHA256Flag, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 		GeneratedForGenerationFlag, "7", "--json",
 	}
@@ -67,7 +71,7 @@ func TestConsumeGeneratedCommandProvenanceRemovesOnlyCompleteEnvelope(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !present || evidence.LeaseGeneration != 7 || evidence.ExecutablePath != "/repo/bin/issueops" {
+	if !present || evidence.LeaseGeneration != 7 || evidence.ExecutablePath != testBinary {
 		t.Fatalf("parsed evidence = %+v present=%t", evidence, present)
 	}
 	want := []string{"execution", "release", "--id", "io-1", "--generation", "7", "--json"}

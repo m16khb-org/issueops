@@ -3,6 +3,7 @@ package claude
 import (
 	"encoding/json"
 	install "issueops/internal/adapter/install"
+	"issueops/internal/adapter/outbound/osfile"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -44,8 +45,8 @@ func TestClaudeHTTPInstallMergesOnlyIssueOpsEntryOwnerOnly(t *testing.T) {
 	if !reflect.DeepEqual(user, want) {
 		t.Fatalf("user config = %#v", user)
 	}
-	if info, err := os.Stat(userPath); err != nil || info.Mode().Perm() != 0o600 {
-		t.Fatalf("user config mode = %v, %v", info.Mode().Perm(), err)
+	if info, err := os.Stat(userPath); err != nil || osfile.Perm(userPath, info) != 0o600 {
+		t.Fatalf("user config mode = %v, %v", osfile.Perm(userPath, info), err)
 	}
 	project := readClaudeJSON(t, projectPath)
 	if !reflect.DeepEqual(project, map[string]any{"mcpServers": map[string]any{"keep": map[string]any{"command": "keep"}}}) {

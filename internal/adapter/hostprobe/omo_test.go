@@ -36,7 +36,7 @@ func TestOmoRunnerPreflightUsesNativeOmoAndRequiresExplicitModel(t *testing.T) {
 	t.Parallel()
 
 	process := &omoFakeProcess{run: func(_ context.Context, request CommandRequest) (CommandOutput, error) {
-		if !reflect.DeepEqual(request.Argv, []string{"/opt/bin/omo", "--version"}) {
+		if !reflect.DeepEqual(request.Argv, []string{fixturePath("opt", "bin", "omo"), "--version"}) {
 			t.Fatalf("argv = %#v", request.Argv)
 		}
 		home := environmentValue(t, request.Env, "HOME")
@@ -46,13 +46,13 @@ func TestOmoRunnerPreflightUsesNativeOmoAndRequiresExplicitModel(t *testing.T) {
 		}
 		return CommandOutput{Stdout: []byte("omo 5.0.0-0.beta.22 (engine: senpi 2026.8.26-2)\n")}, nil
 	}}
-	runner := newTestOmoRunner("/opt/bin/issueops", hostprotocol.OmoLifecycleExtension("/opt/bin/issueops"), Dependencies{
+	runner := newTestOmoRunner(fixturePath("opt", "bin", "issueops"), hostprotocol.OmoLifecycleExtension(fixturePath("opt", "bin", "issueops")), Dependencies{
 		Process: process,
 		LookPath: func(name string) (string, error) {
 			if name != "omo" {
 				t.Fatalf("looked up %q, want native omo", name)
 			}
-			return "/opt/bin/omo", nil
+			return fixturePath("opt", "bin", "omo"), nil
 		},
 		Environ: func() []string {
 			return []string{"PATH=/opt/bin", "HOME=/private/home", "OPENAI_API_KEY=secret"}
@@ -72,7 +72,7 @@ func TestOmoRunnerPreflightUsesNativeOmoAndRequiresExplicitModel(t *testing.T) {
 func TestOmoRunnerPreflightRejectsUnverifiedLifecycleContract(t *testing.T) {
 	t.Parallel()
 
-	runner := newTestOmoRunner("/opt/bin/issueops", "export default function issueops() {}\n", Dependencies{
+	runner := newTestOmoRunner(fixturePath("opt", "bin", "issueops"), "export default function issueops() {}\n", Dependencies{
 		Process: &omoFakeProcess{run: func(_ context.Context, _ CommandRequest) (CommandOutput, error) {
 			return CommandOutput{Stdout: []byte("omo 5.0.0-0.beta.22\n")}, nil
 		}},
@@ -86,7 +86,7 @@ func TestOmoRunnerPreflightRejectsUnverifiedLifecycleContract(t *testing.T) {
 }
 
 func TestOmoRunnerPreflightBindsExactCanonicalLifecycleModule(t *testing.T) {
-	canonical := hostprotocol.OmoLifecycleExtension("/opt/bin/issueops")
+	canonical := hostprotocol.OmoLifecycleExtension(fixturePath("opt", "bin", "issueops"))
 	mutations := []struct {
 		name string
 		old  string
@@ -102,7 +102,7 @@ func TestOmoRunnerPreflightBindsExactCanonicalLifecycleModule(t *testing.T) {
 			if source == canonical {
 				t.Fatalf("mutation target %q missing", mutation.old)
 			}
-			runner := newTestOmoRunner("/opt/bin/issueops", source, Dependencies{
+			runner := newTestOmoRunner(fixturePath("opt", "bin", "issueops"), source, Dependencies{
 				Process: &omoFakeProcess{run: func(_ context.Context, _ CommandRequest) (CommandOutput, error) {
 					return CommandOutput{Stdout: []byte("omo 5.0.0-0.beta.22\n")}, nil
 				}},
@@ -120,7 +120,7 @@ func TestOmoRunnerPreflightBindsExactCanonicalLifecycleModule(t *testing.T) {
 func TestOmoRunnerPreflightKeepsInstalledEvidenceWhenVersionProbeFails(t *testing.T) {
 	t.Parallel()
 
-	runner := newTestOmoRunner("/opt/bin/issueops", omoTestLifecycleExtension("/opt/bin/issueops"), Dependencies{
+	runner := newTestOmoRunner(fixturePath("opt", "bin", "issueops"), omoTestLifecycleExtension(fixturePath("opt", "bin", "issueops")), Dependencies{
 		Process: &omoFakeProcess{run: func(_ context.Context, _ CommandRequest) (CommandOutput, error) {
 			return CommandOutput{}, errors.New("version unavailable")
 		}},
@@ -135,7 +135,7 @@ func TestOmoRunnerPreflightKeepsInstalledEvidenceWhenVersionProbeFails(t *testin
 
 func TestOmoRunnerPreflightFailsClosedWhenPrivateRootCleanupFails(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "preflight")
-	runner := newTestOmoRunner("/opt/bin/issueops", omoTestLifecycleExtension("/opt/bin/issueops"), Dependencies{
+	runner := newTestOmoRunner(fixturePath("opt", "bin", "issueops"), omoTestLifecycleExtension(fixturePath("opt", "bin", "issueops")), Dependencies{
 		Process: &omoFakeProcess{run: func(_ context.Context, _ CommandRequest) (CommandOutput, error) {
 			return CommandOutput{Stdout: []byte("omo 5.0.0-0.beta.22\n")}, nil
 		}},
@@ -227,16 +227,17 @@ func TestOmoRunnerRunUsesIsolatedNativeProbeAndCapturesEvidence(t *testing.T) {
 		if command.Cwd != episodeRoot || command.Timeout != EpisodeTimeout {
 			t.Fatalf("command = %+v", command)
 		}
-		if !reflect.DeepEqual(command.Env, []string{
-			"HOME=" + filepath.Join(episodeRoot, "home"),
-			"OMO_CODING_AGENT_DIR=" + filepath.Join(episodeRoot, "agent"),
+		if !reflect.DeepEqual(command.Env, isolatedEnvWithHome(filepath.Join(episodeRoot, "home"),
+			"OMO_CODING_AGENT_DIR="+filepath.Join(episodeRoot, "agent"),
 			"PATH=/test/bin",
 			"USER=tester",
-		}) {
+		)) {
 			t.Fatalf("env = %#v", command.Env)
 		}
+		assertIsolatedHome(t, command.Env, filepath.Join(episodeRoot, "home"))
+		assertIsolatedHomeDirs(t, filepath.Join(episodeRoot, "home"))
 		wantArgv := []string{
-			"/test/bin/omo",
+			fixturePath("test", "bin", "omo"),
 			"--mode", "json", "--print",
 			"--model", request.Model,
 			"--system-prompt", omoProbeSystemPrompt,
@@ -253,7 +254,7 @@ func TestOmoRunnerRunUsesIsolatedNativeProbeAndCapturesEvidence(t *testing.T) {
 		}
 
 		rootInfo, err := os.Stat(episodeRoot)
-		if err != nil || rootInfo.Mode().Perm() != 0o700 {
+		if err != nil || filePerm(episodeRoot, rootInfo) != 0o700 {
 			t.Fatalf("episode root info=%v err=%v", rootInfo, err)
 		}
 		assertPrivateFileEquals(t, filepath.Join(episodeRoot, "issueops-lifecycle.js"), lifecycleSource)
@@ -272,7 +273,7 @@ func TestOmoRunnerRunUsesIsolatedNativeProbeAndCapturesEvidence(t *testing.T) {
 			if name != "omo" {
 				t.Fatalf("looked up %q", name)
 			}
-			return "/test/bin/omo", nil
+			return fixturePath("test", "bin", "omo"), nil
 		},
 		TempDir: func(_, pattern string) (string, error) {
 			if pattern != "issueops-conformance-omo-" {
@@ -555,7 +556,7 @@ func omoStreamWithoutModel(request port.HostProbeRequest) []byte {
 func assertPrivateFileEquals(t *testing.T, path, want string) {
 	t.Helper()
 	info, err := os.Stat(path)
-	if err != nil || info.Mode().Perm() != 0o600 {
+	if err != nil || dataFilePerm(path, info) != 0o600 {
 		t.Fatalf("private file %s info=%v err=%v", path, info, err)
 	}
 	body, err := os.ReadFile(path)
@@ -594,7 +595,7 @@ func assertOmoProbeProjectDoc(t *testing.T, root string) {
 func assertOmoProbeConfig(t *testing.T, path, harnessBinary, episodeRoot string, request port.HostProbeRequest) {
 	t.Helper()
 	info, err := os.Stat(path)
-	if err != nil || info.Mode().Perm() != 0o600 {
+	if err != nil || filePerm(path, info) != 0o600 {
 		t.Fatalf("config info=%v err=%v", info, err)
 	}
 	body, err := os.ReadFile(path)

@@ -1,6 +1,7 @@
 package extensionhost
 
 import (
+	"issueops/internal/adapter/outbound/osfile"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -42,8 +43,8 @@ func TestHTTPInstallMergesOnlyIssueOpsEntryOwnerOnly(t *testing.T) {
 		if got := readTestJSON(t, userPath); !reflect.DeepEqual(got, want) {
 			t.Fatalf("user config = %#v", got)
 		}
-		if info, err := os.Stat(userPath); err != nil || info.Mode().Perm() != 0o600 {
-			t.Fatalf("user config mode = %v, %v", info.Mode().Perm(), err)
+		if info, err := os.Stat(userPath); err != nil || osfile.Perm(userPath, info) != 0o600 {
+			t.Fatalf("user config mode = %v, %v", osfile.Perm(userPath, info), err)
 		}
 		if got := readTestJSON(t, projectPath); !reflect.DeepEqual(got, map[string]any{"mcpServers": map[string]any{"keep": map[string]any{"command": "keep"}}}) {
 			t.Fatalf("project config must drop only the duplicate issueops entry: %#v", got)

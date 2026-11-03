@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -29,7 +30,7 @@ func TestObserveDirectoryRejectsRelativeUncleanMissingAndFilePaths(t *testing.T)
 	}
 	for name, path := range map[string]string{
 		"relative": "relative/dir",
-		"unclean":  root + "/../" + filepath.Base(root),
+		"unclean":  uncleanPath(root),
 		"missing":  filepath.Join(root, "missing"),
 		"file":     file,
 	} {
@@ -74,6 +75,9 @@ func TestObservedDirectoryResolvesSymlinksAndDetectsReplacement(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer pin.Close()
+	// Windows refuses to rename a directory while the pin holds it open, so
+	// the pin cannot be compared against a replacement there.
+	pinSurvivesReplacement := runtime.GOOS != "windows"
 	again, err := ObserveDirectory(work)
 	if err != nil {
 		t.Fatal(err)
@@ -85,6 +89,9 @@ func TestObservedDirectoryResolvesSymlinksAndDetectsReplacement(t *testing.T) {
 		t.Fatal("pin matched a directory implementation it did not observe")
 	}
 
+	if !pinSurvivesReplacement {
+		pin.Close()
+	}
 	if err := os.Rename(work, filepath.Join(root, "moved")); err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +102,7 @@ func TestObservedDirectoryResolvesSymlinksAndDetectsReplacement(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if pin.Matches(replaced) {
+	if pinSurvivesReplacement && pin.Matches(replaced) {
 		t.Fatal("pin matched a replacement directory at the same path")
 	}
 	if observed.SamePath(work) {
@@ -123,6 +130,9 @@ func TestPinFailsWhenDirectoryDisappeared(t *testing.T) {
 }
 
 func TestValidateHostExecutableRequiresCleanAbsoluteExecutableRegularFile(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows file modes carry no execute bit, and cmux is unsupported on windows")
+	}
 	root := canonicalTempDir(t)
 	exe := filepath.Join(root, "host")
 	if err := os.WriteFile(exe, []byte("#!/bin/sh\n"), 0o700); err != nil {
@@ -137,7 +147,7 @@ func TestValidateHostExecutableRequiresCleanAbsoluteExecutableRegularFile(t *tes
 	}
 	for name, path := range map[string]string{
 		"relative":       "host",
-		"unclean":        root + "/./host",
+		"unclean":        root + string(filepath.Separator) + "." + string(filepath.Separator) + "host",
 		"missing":        filepath.Join(root, "missing"),
 		"not executable": plain,
 		"directory":      root,
@@ -203,8 +213,9 @@ func TestSamePathComparesResolvedTargetsAndRejectsMissingPaths(t *testing.T) {
 }
 
 func TestCmuxShellProcessRecognizesInteractiveShellsOnly(t *testing.T) {
+	// A backslash separates path elements only on Windows.
 	for path, want := range map[string]bool{
-		"/bin/sh": true, "/bin/BASH": true, "/usr/bin/zsh": true, "/bin/dash": true, `C:\x\sh.exe`: false, "/bin/sh.exe": true,
+		"/bin/sh": true, "/bin/BASH": true, "/usr/bin/zsh": true, "/bin/dash": true, `C:\x\sh.exe`: runtime.GOOS == "windows", "/bin/sh.exe": true,
 		"/opt/native/codex": false, "/usr/bin/fish": false, "/opt/shell": false,
 	} {
 		if got := cmuxShellProcess(path); got != want {
@@ -221,8 +232,8 @@ func receiptBytes(r BootstrapReceipt, pid string) []byte {
 func bootstrapFixture(t *testing.T) (cmuxcontract.PreparedLauncher, cmuxcontract.BootstrapExpectation, BootstrapReceipt) {
 	t.Helper()
 	expected := cmuxcontract.BootstrapExpectation{
-		CWD: "/repo/worktree", WindowID: testWindow, WorkspaceID: testWorkspace, SurfaceID: testSurface, SocketPath: socketPath,
-		HostExecutable: "/opt/native/codex", HostArgvSHA256: strings.Repeat("c", 64), PromptSHA256: strings.Repeat("a", 64), MaterialSHA256: strings.Repeat("b", 64),
+		CWD: worktreePath, WindowID: testWindow, WorkspaceID: testWorkspace, SurfaceID: testSurface, SocketPath: socketPath,
+		HostExecutable: testsupport.AbsPath("opt", "native", "codex"), HostArgvSHA256: strings.Repeat("c", 64), PromptSHA256: strings.Repeat("a", 64), MaterialSHA256: strings.Repeat("b", 64),
 	}
 	receipt := BootstrapReceipt{Status: "ok", CWD: expected.CWD, WindowID: expected.WindowID, WorkspaceID: expected.WorkspaceID, SurfaceID: expected.SurfaceID,
 		SocketPath: expected.SocketPath, HostExecutable: expected.HostExecutable, PromptSHA256: expected.PromptSHA256, MaterialSHA256: expected.MaterialSHA256, HostArgvSHA256: expected.HostArgvSHA256}
@@ -277,8 +288,9 @@ func TestAwaitBootstrapReceiptFailsFastOnReceiptReportingMismatchOrMalformedFile
 func TestAwaitBootstrapReceiptKeepsWaitingUntilContextEndsWhileReceiverIsShellOrUnobservable(t *testing.T) {
 	t.Run("receiver still a shell", func(t *testing.T) {
 		prepared, expected, receipt := bootstrapFixture(t)
-		expected.HostExecutable = "/bin/sh"
-		receipt.HostExecutable = "/bin/sh"
+		shell := testsupport.AbsPath("bin", "sh")
+		expected.HostExecutable = shell
+		receipt.HostExecutable = shell
 		if err := os.WriteFile(prepared.ReceiptPath, receiptBytes(receipt, "4242"), 0o600); err != nil {
 			t.Fatal(err)
 		}
@@ -288,7 +300,7 @@ func TestAwaitBootstrapReceiptKeepsWaitingUntilContextEndsWhileReceiverIsShellOr
 		_, err := AwaitBootstrapReceipt(ctx, prepared, expected, func(int) (issueopscontract.NativeProcessReceipt, error) {
 			calls++
 			cancel()
-			return issueopscontract.NativeProcessReceipt{PID: 4242, StartedAt: "t", Executable: "/bin/sh"}, nil
+			return issueopscontract.NativeProcessReceipt{PID: 4242, StartedAt: "t", Executable: testsupport.AbsPath("bin", "sh")}, nil
 		})
 		if !errors.Is(err, context.Canceled) || calls == 0 {
 			t.Fatalf("err=%v calls=%d", err, calls)

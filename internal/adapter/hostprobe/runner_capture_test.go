@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"issueops/internal/port"
+	"issueops/internal/testsupport"
 )
 
 func captureRequest() port.HostProbeRequest {
@@ -235,13 +236,15 @@ func TestExecRunnerReportsStartExitAndCancellationFailures(t *testing.T) {
 	if _, err := (ExecRunner{}).Run(ctx, CommandRequest{Argv: []string{filepath.Join(t.TempDir(), "nope")}}); err == nil || err.Error() != "command_failed" {
 		t.Fatalf("start failure err = %v", err)
 	}
-	out, err := (ExecRunner{}).Run(ctx, CommandRequest{Argv: []string{"/bin/sh", "-c", "echo hi; exit 3"}, Env: []string{}})
+	exitThree := testsupport.WriteFakeCommand(t, t.TempDir(), "exit-three", "#!/bin/sh\necho hi\nexit 3\n")
+	out, err := (ExecRunner{}).Run(ctx, CommandRequest{Argv: []string{exitThree}, Env: []string{}})
 	if err == nil || err.Error() != "command_failed" || out.ExitCode != 3 || strings.TrimSpace(string(out.Stdout)) != "hi" {
 		t.Fatalf("exit failure: out=%+v err=%v", out, err)
 	}
 	cancelled, cancel := context.WithCancel(ctx)
 	cancel()
-	if _, err := (ExecRunner{}).Run(cancelled, CommandRequest{Argv: []string{"/bin/sh", "-c", "sleep 30"}}); err == nil || err.Error() != "command_cancelled" {
+	sleeper := testsupport.WriteFakeCommand(t, t.TempDir(), "sleeper", "#!/bin/sh\nsleep 30\n")
+	if _, err := (ExecRunner{}).Run(cancelled, CommandRequest{Argv: []string{sleeper}}); err == nil || err.Error() != "command_cancelled" {
 		t.Fatalf("cancel err = %v", err)
 	}
 }
@@ -262,8 +265,10 @@ func TestPersistChildSmokeObservation(t *testing.T) {
 		if err := os.Mkdir(dir, 0o700); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.Chmod(dir, mode); err != nil {
-			t.Fatal(err)
+		if mode&0o077 != 0 {
+			testsupport.MakePermissive(t, dir, mode)
+		} else {
+			makePrivate(t, dir, mode)
 		}
 		return dir
 	}
@@ -278,7 +283,7 @@ func TestPersistChildSmokeObservation(t *testing.T) {
 			t.Fatal(err)
 		}
 		info, err := os.Stat(path)
-		if err != nil || info.Mode().Perm() != 0o600 {
+		if err != nil || filePerm(path, info) != 0o600 {
 			t.Fatalf("stat = %v, %v", info, err)
 		}
 		data, _ := os.ReadFile(path)

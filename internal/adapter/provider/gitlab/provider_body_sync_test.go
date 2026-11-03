@@ -4,19 +4,11 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
 	"issueops/internal/port"
 )
-
-func skipOnWindows(t *testing.T) {
-	t.Helper()
-	if runtime.GOOS == "windows" {
-		t.Skip("fake glab shell script is POSIX-only")
-	}
-}
 
 func TestGitLabArtifactEndpointResolvesKinds(t *testing.T) {
 	tests := []struct {
@@ -59,7 +51,6 @@ func TestGitLabArtifactEndpointResolvesKinds(t *testing.T) {
 }
 
 func TestGitLabReadArtifactBodyReturnsDescriptionAndState(t *testing.T) {
-	skipOnWindows(t)
 	binDir, repo := t.TempDir(), t.TempDir()
 	writeFakeGlab(t, binDir, `#!/bin/sh
 printf '{"description":"본문","state":"opened","web_url":"https://gitlab.example.com/acme/repo/-/merge_requests/9"}'
@@ -95,7 +86,6 @@ func TestGitLabReplaceArtifactBodyPreviewDoesNotExecute(t *testing.T) {
 }
 
 func TestGitLabReplaceArtifactBodyWritesAndVerifies(t *testing.T) {
-	skipOnWindows(t)
 	binDir, repo := t.TempDir(), t.TempDir()
 	writeFakeGlab(t, binDir, `#!/bin/sh
 case "$*" in
@@ -129,7 +119,6 @@ exit 0
 }
 
 func TestGitLabReplaceArtifactBodyFailsWhenReadbackDiffers(t *testing.T) {
-	skipOnWindows(t)
 	binDir, repo := t.TempDir(), t.TempDir()
 	writeFakeGlab(t, binDir, `#!/bin/sh
 case "$*" in

@@ -8,6 +8,9 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+
+	"issueops/internal/adapter/outbound/osfile"
+	"issueops/internal/testsupport"
 )
 
 func assertManagedCommandFixtureContract(t *testing.T) {
@@ -40,7 +43,7 @@ func assertManagedCommandFixtureBuildsOnceForIsolatedCopies(t *testing.T) {
 
 	destinations := make([]string, 14)
 	for index := range destinations {
-		destinations[index] = filepath.Join(t.TempDir(), "issueops")
+		destinations[index] = filepath.Join(t.TempDir(), testsupport.ExecutableName("issueops"))
 	}
 	var wait sync.WaitGroup
 	errorsByCopy := make(chan error, len(destinations))
@@ -65,7 +68,7 @@ func assertManagedCommandFixtureBuildsOnceForIsolatedCopies(t *testing.T) {
 		if readErr != nil || statErr != nil {
 			t.Fatalf("read isolated copy %s: readErr=%v statErr=%v", destination, readErr, statErr)
 		}
-		if gotHash := sha256.Sum256(body); gotHash != wantHash || info.Mode().Perm() != 0o755 {
+		if gotHash := sha256.Sum256(body); gotHash != wantHash || osfile.Perm(destination, info) != wantFixturePerm {
 			t.Fatalf("isolated copy %s: hash=%x wantHash=%x mode=%v", destination, gotHash, wantHash, info.Mode())
 		}
 	}
@@ -109,8 +112,8 @@ func assertManagedCommandFixturePropagatesFirstBuildFailure(t *testing.T) {
 
 func assertManagedCommandFixtureCopiesRealBinary(t *testing.T) {
 	t.Helper()
-	first := filepath.Join(t.TempDir(), "issueops")
-	second := filepath.Join(t.TempDir(), "issueops")
+	first := filepath.Join(t.TempDir(), testsupport.ExecutableName("issueops"))
+	second := filepath.Join(t.TempDir(), testsupport.ExecutableName("issueops"))
 	buildManagedCommandAt(t, first)
 	buildManagedCommandAt(t, second)
 
@@ -129,7 +132,7 @@ func assertManagedCommandFixtureCopiesRealBinary(t *testing.T) {
 		if readErr != nil || statErr != nil {
 			t.Fatalf("read real managed command copy %s: readErr=%v statErr=%v", path, readErr, statErr)
 		}
-		if gotHash := sha256.Sum256(body); gotHash != sourceHash || info.Mode().Perm() != sourceInfo.Mode().Perm() || info.Mode().Perm()&0o111 == 0 {
+		if gotHash := sha256.Sum256(body); gotHash != sourceHash || osfile.Perm(path, info) != osfile.Perm(managedTestCommandSource.source, sourceInfo) || osfile.Perm(path, info)&0o111 == 0 {
 			t.Fatalf("real managed command copy %s: hash=%x wantHash=%x mode=%v wantMode=%v", path, gotHash, sourceHash, info.Mode(), sourceInfo.Mode())
 		}
 		if os.SameFile(sourceInfo, info) {

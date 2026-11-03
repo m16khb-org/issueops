@@ -13,6 +13,7 @@ import (
 	model "issueops/internal/contract/issueops"
 	domain "issueops/internal/domain/authority"
 	authorityport "issueops/internal/port/authority"
+	"issueops/internal/testsupport"
 )
 
 type memoryGrants struct {
@@ -180,10 +181,20 @@ type harness struct {
 	service *Service
 }
 
+// Fixture roots are absolute on every OS: the authority domain rejects
+// stored grants whose source root or Git common dir is not absolute.
 var (
-	repoScope  = contract.Scope{WorkspaceRoot: "/repo", CWD: "/repo", SourceRoot: "/repo", GitCommonDir: "/repo/.git"}
-	treeScope  = contract.Scope{WorkspaceRoot: "/repo.worktrees/a", CWD: "/repo.worktrees/a", SourceRoot: "/repo.worktrees/a", GitCommonDir: "/repo/.git"}
-	otherScope = contract.Scope{WorkspaceRoot: "/other", CWD: "/other", SourceRoot: "/other", GitCommonDir: "/other/.git"}
+	repoRoot    = testsupport.AbsPath("repo")
+	treeRoot    = testsupport.AbsPath("repo.worktrees", "a")
+	otherRoot   = testsupport.AbsPath("other")
+	repoGitDir  = testsupport.AbsPath("repo", ".git")
+	otherGitDir = testsupport.AbsPath("other", ".git")
+)
+
+var (
+	repoScope  = contract.Scope{WorkspaceRoot: repoRoot, CWD: repoRoot, SourceRoot: repoRoot, GitCommonDir: repoGitDir}
+	treeScope  = contract.Scope{WorkspaceRoot: treeRoot, CWD: treeRoot, SourceRoot: treeRoot, GitCommonDir: repoGitDir}
+	otherScope = contract.Scope{WorkspaceRoot: otherRoot, CWD: otherRoot, SourceRoot: otherRoot, GitCommonDir: otherGitDir}
 )
 
 func newHarness() *harness {
@@ -198,7 +209,7 @@ func newHarness() *harness {
 }
 
 func (h *harness) restart() *Service {
-	return New(h.grants, h.procs, h.files, h.clock.Now, scopes{"/repo": repoScope, "/repo.worktrees/a": treeScope, "/other": otherScope}, &counterEntropy{})
+	return New(h.grants, h.procs, h.files, h.clock.Now, scopes{repoRoot: repoScope, treeRoot: treeScope, otherRoot: otherScope}, &counterEntropy{})
 }
 
 func (h *harness) nativeActor(session string, pid int) model.NativeActor {
@@ -234,7 +245,7 @@ func requireCode(t *testing.T, err error, code string) {
 func TestIssueBeforeAnyLeaseStoresOnlyIdentityHashScopeAndExpiry(t *testing.T) {
 	h := newHarness()
 	actor := h.nativeActor("session", 4242)
-	receipt, err := h.service.Issue(context.Background(), contract.IssueRequest{WorkspaceRoot: "/repo", Actor: actor})
+	receipt, err := h.service.Issue(context.Background(), contract.IssueRequest{WorkspaceRoot: repoRoot, Actor: actor})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -253,7 +264,7 @@ func TestIssueBeforeAnyLeaseStoresOnlyIdentityHashScopeAndExpiry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if record.Actor.ProcessAncestry != nil || record.GitCommonDir != "/repo/.git" || record.TokenSHA256 != domain.TokenDigest(token) {
+	if record.Actor.ProcessAncestry != nil || record.GitCommonDir != repoGitDir || record.TokenSHA256 != domain.TokenDigest(token) {
 		t.Fatalf("record=%+v", record)
 	}
 }
@@ -265,7 +276,7 @@ func TestReauthorizingKeepsCredentialFilesBounded(t *testing.T) {
 	actor := h.nativeActor("session", 4242)
 	var receipts []contract.Receipt
 	for range 4 {
-		receipt, err := h.service.Issue(context.Background(), contract.IssueRequest{WorkspaceRoot: "/repo", Actor: actor})
+		receipt, err := h.service.Issue(context.Background(), contract.IssueRequest{WorkspaceRoot: repoRoot, Actor: actor})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -286,17 +297,17 @@ func TestIssueRequiresObservedAncestryAndLiveSession(t *testing.T) {
 	h := newHarness()
 	forged := h.nativeActor("session", 4242)
 	forged.ProcessAncestry = []model.NativeProcessReceipt{{PID: 1, StartedAt: "init", Executable: "/sbin/init"}}
-	if _, err := h.service.Issue(context.Background(), contract.IssueRequest{WorkspaceRoot: "/repo", Actor: forged}); err == nil || !strings.Contains(err.Error(), "ancestry") {
+	if _, err := h.service.Issue(context.Background(), contract.IssueRequest{WorkspaceRoot: repoRoot, Actor: forged}); err == nil || !strings.Contains(err.Error(), "ancestry") {
 		t.Fatalf("issue outside ancestry err=%v", err)
 	}
 	dead := h.nativeActor("dead", 5151)
 	h.procs.kill(5151)
-	if _, err := h.service.Issue(context.Background(), contract.IssueRequest{WorkspaceRoot: "/repo", Actor: dead}); err == nil || !strings.Contains(err.Error(), "not live") {
+	if _, err := h.service.Issue(context.Background(), contract.IssueRequest{WorkspaceRoot: repoRoot, Actor: dead}); err == nil || !strings.Contains(err.Error(), "not live") {
 		t.Fatalf("dead session err=%v", err)
 	}
 	omo := h.nativeActor("omo-session", 6161)
 	omo.Host = "omo"
-	if _, err := h.service.Issue(context.Background(), contract.IssueRequest{WorkspaceRoot: "/repo", Actor: omo}); err != nil {
+	if _, err := h.service.Issue(context.Background(), contract.IssueRequest{WorkspaceRoot: repoRoot, Actor: omo}); err != nil {
 		t.Fatalf("omo native actor refused: %v", err)
 	}
 	if len(h.grants.records) != 1 {
@@ -306,8 +317,8 @@ func TestIssueRequiresObservedAncestryAndLiveSession(t *testing.T) {
 
 func TestBindVerifiesCapabilityWithNilAncestry(t *testing.T) {
 	h := newHarness()
-	use := h.issue(t, h.nativeActor("session", 4242), "/repo")
-	use.WorkspaceRoot = "/repo.worktrees/a"
+	use := h.issue(t, h.nativeActor("session", 4242), repoRoot)
+	use.WorkspaceRoot = treeRoot
 	ctx, verified, err := h.service.Bind(context.Background(), use)
 	if err != nil {
 		t.Fatalf("same-repository worktree bind: %v", err)
@@ -328,21 +339,21 @@ func TestBindVerifiesCapabilityWithNilAncestry(t *testing.T) {
 	if _, _, err := h.service.Bind(ctx, use); err == nil {
 		t.Fatal("second capability bound onto one request")
 	}
-	if _, err := h.service.Issue(ctx, contract.IssueRequest{WorkspaceRoot: "/repo", Actor: h.nativeActor("session", 4242)}); err == nil {
+	if _, err := h.service.Issue(ctx, contract.IssueRequest{WorkspaceRoot: repoRoot, Actor: h.nativeActor("session", 4242)}); err == nil {
 		t.Fatal("capability-bound request issued a new grant")
 	}
 }
 
 func TestBindRejectsMissingMalformedForeignAndWrongCredential(t *testing.T) {
 	h := newHarness()
-	use := h.issue(t, h.nativeActor("session", 4242), "/repo")
-	_, _, err := h.service.Bind(context.Background(), contract.Use{WorkspaceRoot: "/repo"})
+	use := h.issue(t, h.nativeActor("session", 4242), repoRoot)
+	_, _, err := h.service.Bind(context.Background(), contract.Use{WorkspaceRoot: repoRoot})
 	requireCode(t, err, contract.CodeRequired)
 	for name, mutate := range map[string]func(*contract.Use){
 		"key mismatch":    func(u *contract.Use) { u.Key = strings.Repeat("0", 64) },
 		"malformed token": func(u *contract.Use) { u.Token = "garbage" },
 		"wrong secret":    func(u *contract.Use) { u.Token = use.Key + ".d3Jvbmc" },
-		"foreign repo":    func(u *contract.Use) { u.WorkspaceRoot = "/other" },
+		"foreign repo":    func(u *contract.Use) { u.WorkspaceRoot = otherRoot },
 		"unknown root":    func(u *contract.Use) { u.WorkspaceRoot = "/elsewhere" },
 	} {
 		candidate := use
@@ -356,12 +367,12 @@ func TestBindRejectsMissingMalformedForeignAndWrongCredential(t *testing.T) {
 func TestReissueRevokesPreviousCredential(t *testing.T) {
 	h := newHarness()
 	actor := h.nativeActor("session", 4242)
-	first := h.issue(t, actor, "/repo")
+	first := h.issue(t, actor, repoRoot)
 	ctx, _, err := h.service.Bind(context.Background(), first)
 	if err != nil {
 		t.Fatal(err)
 	}
-	second := h.issue(t, actor, "/repo")
+	second := h.issue(t, actor, repoRoot)
 	if second.Key != first.Key || second.Token == first.Token {
 		t.Fatalf("reissue must rotate the same key: first=%s second=%s", first.Key, second.Key)
 	}
@@ -376,7 +387,7 @@ func TestReissueRevokesPreviousCredential(t *testing.T) {
 
 func TestCredentialExpiresAtTTL(t *testing.T) {
 	h := newHarness()
-	use := h.issue(t, h.nativeActor("session", 4242), "/repo")
+	use := h.issue(t, h.nativeActor("session", 4242), repoRoot)
 	ctx, _, err := h.service.Bind(context.Background(), use)
 	if err != nil {
 		t.Fatal(err)
@@ -395,7 +406,7 @@ func TestCredentialExpiresAtTTL(t *testing.T) {
 func TestServerRestartKeepsGrantButHostRestartAndPIDReuseRevoke(t *testing.T) {
 	h := newHarness()
 	actor := h.nativeActor("session", 4242)
-	use := h.issue(t, actor, "/repo")
+	use := h.issue(t, actor, repoRoot)
 	restarted := h.restart()
 	if _, _, err := restarted.Bind(context.Background(), use); err != nil {
 		t.Fatalf("server restart lost the persisted grant: %v", err)
@@ -410,7 +421,7 @@ func TestServerRestartKeepsGrantButHostRestartAndPIDReuseRevoke(t *testing.T) {
 
 func TestUnsupportedStoredSchemaFailsClosed(t *testing.T) {
 	h := newHarness()
-	use := h.issue(t, h.nativeActor("session", 4242), "/repo")
+	use := h.issue(t, h.nativeActor("session", 4242), repoRoot)
 	valid := string(h.grants.records[use.Key])
 	for name, raw := range map[string]string{
 		"malformed": "{",
@@ -421,7 +432,7 @@ func TestUnsupportedStoredSchemaFailsClosed(t *testing.T) {
 		if _, _, err := h.service.Bind(context.Background(), use); !errors.Is(err, contract.ErrInvalidState) {
 			t.Fatalf("%s grant err=%v", name, err)
 		}
-		if _, err := h.service.Issue(context.Background(), contract.IssueRequest{WorkspaceRoot: "/repo", Actor: h.nativeActor("session", 4242)}); !errors.Is(err, contract.ErrInvalidState) {
+		if _, err := h.service.Issue(context.Background(), contract.IssueRequest{WorkspaceRoot: repoRoot, Actor: h.nativeActor("session", 4242)}); !errors.Is(err, contract.ErrInvalidState) {
 			t.Fatalf("%s grant was silently overwritten: %v", name, err)
 		}
 	}
@@ -448,7 +459,7 @@ func TestUnboundVerifyUsesNativeAncestryAndLiveProcess(t *testing.T) {
 func TestBindSpanRechecksThroughLockedReaderAndSerializesRotation(t *testing.T) {
 	h := newHarness()
 	actor := h.nativeActor("session", 4242)
-	use := h.issue(t, actor, "/repo")
+	use := h.issue(t, actor, repoRoot)
 	unbound := context.Background()
 	if got, err := h.service.BindSpan(unbound, nil); err != nil || got != unbound {
 		t.Fatalf("unbound span must pass through: ctx=%v err=%v", got, err)
@@ -469,7 +480,7 @@ func TestBindSpanRechecksThroughLockedReaderAndSerializesRotation(t *testing.T) 
 	if h.grants.reads != before || locked.reads != 2 {
 		t.Fatalf("span verify must reuse the locked reader: unspanned=%d locked=%d", h.grants.reads-before, locked.reads)
 	}
-	h.issue(t, actor, "/repo")
+	h.issue(t, actor, repoRoot)
 	rotated := &memoryGrants{records: map[string][]byte{use.Key: h.grants.records[use.Key]}}
 	_, err = h.service.BindSpan(ctx, rotated)
 	requireCode(t, err, contract.CodeInvalid)
@@ -482,8 +493,8 @@ func TestBindSpanRechecksThroughLockedReaderAndSerializesRotation(t *testing.T) 
 
 func TestConcurrentRequestsKeepCapabilitiesIsolated(t *testing.T) {
 	h := newHarness()
-	alice := h.issue(t, h.nativeActor("alice", 4001), "/repo")
-	bob := h.issue(t, h.nativeActor("bob", 4002), "/other")
+	alice := h.issue(t, h.nativeActor("alice", 4001), repoRoot)
+	bob := h.issue(t, h.nativeActor("bob", 4002), otherRoot)
 	start := make(chan struct{})
 	errs := make(chan error, 64)
 	var wg sync.WaitGroup

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"issueops/internal/adapter/outbound/osfile"
 	leasecontract "issueops/internal/contract/issueopslease"
 )
 
@@ -19,7 +20,7 @@ func TestReseedArtifactsPrepareAndRollbackOnlyTargetGeneration(t *testing.T) {
 		t.Fatalf("prepare: %v", err)
 	}
 	info, err := os.Stat(receipt.Receipt.ClaimTokenPath)
-	if err != nil || info.Mode().Perm() != 0o600 || !info.Mode().IsRegular() {
+	if err != nil || osfile.Perm(receipt.Receipt.ClaimTokenPath, info) != 0o600 || !info.Mode().IsRegular() {
 		t.Fatalf("token info=%v err=%v", info, err)
 	}
 	if receipt.TokenSHA256 == "" {

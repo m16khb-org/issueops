@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	issueopscore "issueops/internal/adapter/issueops"
+	"issueops/internal/testsupport"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,10 +14,7 @@ import (
 func TestRunIssueOpsLifecycle(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	bin := t.TempDir()
-	codegraph := filepath.Join(bin, "codegraph")
-	if err := os.WriteFile(codegraph, []byte("#!/bin/sh\ncase \"$1\" in\nstatus) exit 0 ;;\ninit) exit 0 ;;\n*) exit 0 ;;\nesac\n"), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	testsupport.WriteFakeCommand(t, bin, "codegraph", "#!/bin/sh\ncase \"$1\" in\nstatus) exit 0 ;;\ninit) exit 0 ;;\n*) exit 0 ;;\nesac\n")
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 
 	repo := makeIssueOpsCLIRepoForTest(t, "example")
@@ -62,7 +60,7 @@ func TestRunIssueOpsLifecycle(t *testing.T) {
 	if !ok || prepare["provider"] != "github" || prepare["branch"] != "1-provider-linked-branch" {
 		t.Fatalf("branch prepare should persist provider-linked contract: %#v", branchRecord)
 	}
-	if prepare["parent_worktree"] != repo+".worktrees/main" {
+	if prepare["parent_worktree"] != filepath.FromSlash(repo+".worktrees/main") {
 		t.Fatalf("branch prepare should persist explicit parent worktree: %#v", prepare)
 	}
 	if _, shown := prepare["steps"]; shown {

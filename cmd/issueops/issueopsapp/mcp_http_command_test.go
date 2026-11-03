@@ -247,8 +247,22 @@ func TestMCPHTTPServesTwoClientsWithRequestScopedAuthority(t *testing.T) {
 		})
 	}
 	wait.Wait()
+	// Git reports repo roots slash-separated on every OS, and JSON escapes
+	// backslashes, so match both the native and the slash form of a path.
+	mentions := func(encoded []byte, path string) bool {
+		for _, form := range []string{path, filepath.ToSlash(path)} {
+			quoted, err := json.Marshal(form)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if strings.Contains(string(encoded), strings.Trim(string(quoted), `"`)) {
+				return true
+			}
+		}
+		return false
+	}
 	for index, repo := range []string{repoA, repoB} {
-		if encoded, _ := json.Marshal(routes[index]); !strings.Contains(string(encoded), repo) || strings.Contains(string(encoded), []string{repoB, repoA}[index]) {
+		if encoded, _ := json.Marshal(routes[index]); !mentions(encoded, repo) || mentions(encoded, []string{repoB, repoA}[index]) {
 			t.Fatalf("client %d preflight crossed workspaces: %s", index, encoded)
 		}
 	}

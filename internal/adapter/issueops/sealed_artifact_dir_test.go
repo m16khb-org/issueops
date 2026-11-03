@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/contract/issueops"
 )
 
@@ -63,7 +64,7 @@ func TestMaterializeStagedArtifactsWritesIntoRecordedArtifactDir(t *testing.T) {
 	}
 	path := filepath.Join(root, ".issueops", "issues", "480", "artifact", "plan.md")
 	info, err := os.Lstat(path)
-	if err != nil || info.Mode().Perm() != 0o600 {
+	if err != nil || osfile.Perm(path, info) != 0o600 {
 		t.Fatalf("plan must be sealed 0600 at the recorded dir: %v %v", err, info)
 	}
 	if _, ok := manifest["plan"]; !ok {

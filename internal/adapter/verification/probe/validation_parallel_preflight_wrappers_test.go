@@ -3,14 +3,13 @@ package probe
 import (
 	"encoding/json"
 	parallelisolation "issueops/internal/adapter/verification/probe/parallelisolation"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	preflightadapter "issueops/internal/adapter/preflight"
 	"issueops/internal/adapter/verification/probe/preflightfuzz"
 	preflightcontract "issueops/internal/contract/preflight"
+	"issueops/internal/testsupport"
 )
 
 func TestValidationParallelPreflightWrappersUseDefaultSurfaces(t *testing.T) {
@@ -99,11 +98,7 @@ case "$1" in
     ;;
 esac
 `
-	path := filepath.Join(dir, "fake-issueops")
-	if err := os.WriteFile(path, []byte(script), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	return path
+	return testsupport.WriteFakeCommand(t, dir, "fake-issueops", script)
 }
 
 func mustMarshalParallelPreflight(t *testing.T, value any) string {

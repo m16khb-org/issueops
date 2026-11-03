@@ -6,11 +6,12 @@ import (
 
 	"encoding/json"
 	"errors"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"issueops/internal/testsupport"
 
 	"issueops/cmd/issueops/contractcli"
 	"issueops/internal/contract/cli"
@@ -95,7 +96,6 @@ func TestValidateContractAuditWorkerWrappersUseExecutableSurface(t *testing.T) {
 
 func writeContractAuditWorkerFakeBinary(t *testing.T, dir string) string {
 	t.Helper()
-	path := filepath.Join(dir, "fake-harness")
 	body := `#!/bin/sh
 set -eu
 case "$*" in
@@ -121,10 +121,7 @@ case "$*" in
     ;;
 esac
 `
-	if err := os.WriteFile(path, []byte(body), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	return path
+	return testsupport.WriteFakeCommand(t, dir, "fake-harness", body)
 }
 
 func TestValidateContractCheckWithDepsCoversSuccessParseAndContractFailures(t *testing.T) {

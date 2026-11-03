@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -23,10 +24,7 @@ func TestValidateRiskQATierWrapperRunsElevatedDefaultCommands(t *testing.T) {
 	writeFileForWrapperTest(t, filepath.Join(root, "cmd", "issueops", "risk_qa.go"), "package main\n")
 	runRiskQATestCommand(t, root, "git", "add", "cmd/issueops/risk_qa.go")
 	fakeBin := t.TempDir()
-	writeFileForWrapperTest(t, filepath.Join(fakeBin, "go"), "#!/bin/sh\ncase \"$*\" in 'test -race ./... -count=1'|'vet ./...') printf 'fake go %s\\n' \"$*\";; *) exit 64;; esac\n")
-	if err := os.Chmod(filepath.Join(fakeBin, "go"), 0o700); err != nil {
-		t.Fatal(err)
-	}
+	testsupport.WriteFakeCommand(t, fakeBin, "go", "#!/bin/sh\ncase \"$*\" in 'test -race ./... -count=1'|'vet ./...') printf 'fake go %s\\n' \"$*\";; *) exit 64;; esac\n")
 	t.Setenv("PATH", fakeBin+string(os.PathListSeparator)+os.Getenv("PATH"))
 
 	step := ValidateWithDeps(root, defaultDeps())
@@ -222,6 +220,13 @@ func TestScopedPlanUnionPreservesNULPathsAndRenameSources(t *testing.T) {
 	runRiskQATestCommand(t, root, "git", "-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-qm", "base")
 	runRiskQATestCommand(t, root, "git", "mv", "internal/old.go", "internal/new.txt")
 	committed := []string{"plain.txt", " plain.txt", "plain.txt ", "\nplain.txt\n", "quote\".go", "space name.go"}
+	untracked := "untracked\n.go"
+	if runtime.GOOS == "windows" {
+		// Windows file names cannot contain `"` or newlines, and a trailing
+		// space is stripped (it would collide with "plain.txt").
+		committed = []string{"plain.txt", " plain.txt", "space name.go"}
+		untracked = "untracked.go"
+	}
 	for _, name := range committed {
 		writeFileForWrapperTest(t, filepath.Join(root, name), "committed\n")
 	}
@@ -230,10 +235,10 @@ func TestScopedPlanUnionPreservesNULPathsAndRenameSources(t *testing.T) {
 	writeFileForWrapperTest(t, filepath.Join(root, "staged.txt"), "staged\n")
 	runRiskQATestCommand(t, root, "git", "add", "staged.txt")
 	writeFileForWrapperTest(t, filepath.Join(root, "unstaged.txt"), "unstaged\n")
-	writeFileForWrapperTest(t, filepath.Join(root, "untracked\n.go"), "untracked\n")
+	writeFileForWrapperTest(t, filepath.Join(root, untracked), "untracked\n")
 	runRiskQATestCommand(t, root, "git", "mv", "internal/new.txt", "internal/renamed.txt")
 	plan := PlanWithScope(root, "HEAD~1")
-	for _, name := range append(committed, "internal/old.go", "internal/new.txt", "internal/renamed.txt", "staged.txt", "unstaged.txt", "untracked\n.go") {
+	for _, name := range append(committed, "internal/old.go", "internal/new.txt", "internal/renamed.txt", "staged.txt", "unstaged.txt", untracked) {
 		if !containsString(plan.ChangedPaths, name) {
 			t.Errorf("lost exact path %q: %#v", name, plan.ChangedPaths)
 		}
@@ -299,9 +304,7 @@ func TestScopedPlanUsesTreeRangeAndPreservesObservationFailures(t *testing.T) {
 		t.Run(failure, func(t *testing.T) {
 			fake := t.TempDir()
 			script := "#!/bin/sh\ncase \"$3\" in rev-parse) printf 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\\n';; " + failure + ") exit 7;; diff|status) :;; *) exit 8;; esac\n"
-			if err := os.WriteFile(filepath.Join(fake, "git"), []byte(script), 0700); err != nil {
-				t.Fatal(err)
-			}
+			testsupport.WriteFakeCommand(t, fake, "git", script)
 			t.Setenv("PATH", fake+string(os.PathListSeparator)+os.Getenv("PATH"))
 			plan := PlanWithScope(root, "base-side")
 			if plan.Scope == nil || plan.Scope.Error == "" || len(plan.Scope.BaseSHA) != 40 || len(plan.Scope.HeadSHA) != 40 || riskqadomain.CoversFullGoTest(plan) {

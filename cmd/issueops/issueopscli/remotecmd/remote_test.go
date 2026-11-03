@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -658,6 +659,12 @@ func gitOnlyPATH(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if runtime.GOOS == "windows" {
+		// A symlink needs a privilege and git.exe cannot be copied away from its
+		// install tree; the Git directory holds git but no provider CLI.
+		t.Setenv("PATH", filepath.Dir(gitBin))
+		return
+	}
 	dir := t.TempDir()
 	if err := os.Symlink(gitBin, filepath.Join(dir, "git")); err != nil {
 		t.Fatal(err)
@@ -721,7 +728,6 @@ func activateRemoteIssueOpsRecordForCurrentProcess(t *testing.T, record *issueop
 
 func writeFakeGhForCreateChild(t *testing.T, binDir string) {
 	t.Helper()
-	path := filepath.Join(binDir, "gh")
 	script := `#!/bin/sh
 if [ "$3" = "--help" ]; then echo "  --parent string"; exit 0; fi
 if [ "$1 $2" = "issue create" ]; then
@@ -743,9 +749,7 @@ fi
 echo "unexpected gh call: $*" >&2
 exit 2
 `
-	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	testsupport.WriteFakeCommand(t, binDir, "gh", script)
 }
 
 func TestRunRemoteCreateIssueConfirmVerifiesLiveIssue(t *testing.T) {
@@ -1009,7 +1013,6 @@ func remoteIssueOpsRecordWithCreateIntent(t *testing.T) (issueopscontract.IssueO
 
 func writeFakeGhForReconcileIssue(t *testing.T, binDir string) {
 	t.Helper()
-	path := filepath.Join(binDir, "gh")
 	script := `#!/bin/sh
 if [ "$1 $2" = "issue list" ]; then
   printf '%s' "$RECONCILE_JSON"
@@ -1018,14 +1021,11 @@ fi
 echo "unexpected gh call: $*" >&2
 exit 2
 `
-	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	testsupport.WriteFakeCommand(t, binDir, "gh", script)
 }
 
 func writeFakeGhForCreateIssue(t *testing.T, binDir string) {
 	t.Helper()
-	path := filepath.Join(binDir, "gh")
 	script := `#!/bin/sh
 if [ "$1 $2" = "issue create" ]; then
   printf 'https://github.com/acme/repo/issues/77\n'
@@ -1034,9 +1034,7 @@ fi
 echo "unexpected gh call: $*" >&2
 exit 2
 `
-	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	testsupport.WriteFakeCommand(t, binDir, "gh", script)
 }
 
 // RemoteCompletionService는 completion 계열 명령의 fail-closed 전제를
@@ -1141,9 +1139,7 @@ if [ "$1 $2" = "issue edit" ]; then
 fi
 exit 2
 `
-	if err := os.WriteFile(filepath.Join(bin, "gh"), []byte(script), 0700); err != nil {
-		t.Fatal(err)
-	}
+	testsupport.WriteFakeCommand(t, bin, "gh", script)
 	var result port.IssueProviderUpdateIssueBodySectionResult
 	observations := 0
 	deps := Deps{PrintJSON: func(value any) error { result = value.(port.IssueProviderUpdateIssueBodySectionResult); return nil }, ObserveProcessAncestry: func(int) ([]issueopscontract.NativeProcessReceipt, error) {

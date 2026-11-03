@@ -138,10 +138,10 @@ func manualCmuxHandoffObservation(lifecycleID string, generation uint64) issueop
 		MaterialSHA256: strings.Repeat("b", 64),
 		Launcher: issueopscontract.IssueOpsHandoffDeliveryLauncher{
 			Name: issueopscontract.IssueOpsHandoffDeliveryLauncherCmux, Version: "0.64.10",
-			Path: "/Applications/cmux.app/Contents/Resources/bin/cmux",
+			Path: cmuxPath,
 			EndpointIncarnation: &issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation{
-				Path: "/private/tmp/cmux-test.sock", Kind: "unix_socket", Device: 1, Inode: 2, CTimeNS: 3,
-				OwnerUID: 501, OwnerGID: 20, Mode: 0o600, ParentPath: "/private/tmp", ParentDevice: 1,
+				Path: socketPath, Kind: "unix_socket", Device: 1, Inode: 2, CTimeNS: 3,
+				OwnerUID: 501, OwnerGID: 20, Mode: 0o600, ParentPath: filepath.Dir(socketPath), ParentDevice: 1,
 				ParentInode: 1, ParentOwnerUID: 0, ParentOwnerGID: 0, ParentMode: 0o1777,
 			},
 		},

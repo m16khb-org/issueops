@@ -7,10 +7,13 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"sort"
 	"strings"
 	"testing"
 	"time"
+
+	"issueops/internal/testsupport"
 )
 
 const productSource = "package fixture\nfunc Product() { if true {} }\n"
@@ -71,7 +74,11 @@ func assertProductCollectors(t *testing.T, root string, wanted []string) {
 func TestProductionSourceGitScope(t *testing.T) {
 	root := t.TempDir()
 	sourceGit(t, root, "init", "-q")
-	wanted := []string{"tracked.go", "tracked-ignored.go", "fresh.go", "space name.go", "newline\nname.go", "ordinary.go", "src/nested.go"}
+	wanted := []string{"tracked.go", "tracked-ignored.go", "fresh.go", "space name.go", "ordinary.go", "src/nested.go"}
+	if runtime.GOOS != "windows" {
+		// Windows file names cannot contain a newline.
+		wanted = append(wanted, "newline\nname.go")
+	}
 	for _, name := range wanted {
 		writeProductFixture(t, root, name, productSource)
 	}
@@ -168,10 +175,7 @@ func TestProductionSourceReadErrorPreservesPartialBranches(t *testing.T) {
 	writeProductFixture(t, root, "healthy.go", productSource)
 	writeProductFixture(t, root, "unreadable.go", productSource)
 	path := filepath.Join(root, "unreadable.go")
-	if err := os.Chmod(path, 0); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.Chmod(path, 0644) })
+	testsupport.MakeUnreadable(t, path, 0o644)
 	functions, warnings := CollectBranchFunctions(root)
 	if len(warnings) == 0 || len(functions) != 1 || functions[0].File != "healthy.go" {
 		t.Fatalf("partial result lost: functions=%v warnings=%v", functions, warnings)

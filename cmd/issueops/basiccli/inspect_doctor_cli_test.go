@@ -121,7 +121,7 @@ func TestRunDoctor_printsJSON_whenJSONFlagIsSet(t *testing.T) {
 
 func TestRunDoctorStaticOnlySkipsLiveOperationalChecks(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	t.Setenv("HOME", t.TempDir())
+	testsupport.SetHome(t, t.TempDir())
 	repo := t.TempDir()
 	command := testDoctorCommand()
 	command.CollectOperationalHealth = func(context.Context, string) operationalhealth.Snapshot {
@@ -350,7 +350,7 @@ func TestRunDoctor_doesNotRequireRealHome(t *testing.T) {
 	// 준비
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	testsupport.SetHome(t, home)
 	repo := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(home, ".codex"), 0o755); err != nil {
 		t.Fatal(err)

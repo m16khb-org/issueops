@@ -16,6 +16,7 @@ import (
 	leasecontract "issueops/internal/contract/issueopslease"
 	leasedomain "issueops/internal/domain/issueopslease"
 	"issueops/internal/port"
+	"issueops/internal/testsupport"
 )
 
 func TestInspectNativeProcessClassifiesLiveMismatchedAndDeadProcesses(t *testing.T) {
@@ -110,9 +111,7 @@ func TestReadCurrentClaimTokenRejectsUnsafeTokenFiles(t *testing.T) {
 		},
 		"group-readable mode": {
 			prepare: func(t *testing.T, _ leasecontract.Record, path string) {
-				if err := os.Chmod(path, 0o640); err != nil {
-					t.Fatal(err)
-				}
+				testsupport.MakePermissive(t, path, 0o640)
 			},
 			want: "0600 regular file",
 		},

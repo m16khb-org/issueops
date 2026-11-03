@@ -15,7 +15,6 @@ import (
 // returned repo directory.
 func installGlab(t *testing.T, body string) string {
 	t.Helper()
-	skipOnWindows(t)
 	binDir, repo := t.TempDir(), t.TempDir()
 	writeFakeGlab(t, binDir, "#!/bin/sh\nprintf '%s\\n' \"$*\" >> glab.calls\n"+body)
 	t.Setenv("PATH", binDir)

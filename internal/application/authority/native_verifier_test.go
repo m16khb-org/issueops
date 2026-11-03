@@ -11,7 +11,7 @@ import (
 func TestNativeOnlyVerifierRejectsBoundCapabilitiesWithoutPanic(t *testing.T) {
 	h := newHarness()
 	actor := h.nativeActor("caller", 101)
-	use := h.issue(t, actor, "/repo")
+	use := h.issue(t, actor, repoRoot)
 	bound, _, err := h.service.Bind(context.Background(), use)
 	if err != nil {
 		t.Fatal(err)

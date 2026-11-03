@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"issueops/internal/adapter/outbound/osfile"
 	leasecontract "issueops/internal/contract/issueopslease"
 )
 
@@ -48,9 +49,10 @@ func TestReseedWriteFingerprintFileRejectsChangedUntrackedFile(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			identity, known := osfile.PathIdentity(path, entry)
 			test.change(t, path)
 
-			err = reseedWriteFingerprintFile(sha256.New(), path, entry)
+			err = reseedWriteFingerprintFile(sha256.New(), path, entry, identity, known)
 			if err == nil || !strings.Contains(err.Error(), "untracked file changed while snapshotting") {
 				t.Fatalf("error = %v", err)
 			}

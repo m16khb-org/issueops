@@ -2,6 +2,7 @@ package issueopsapp
 
 import (
 	"maps"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -57,7 +58,7 @@ func inspectContractProjection(value any) map[string]any {
 	for _, item := range docs {
 		path, _ := item.(string)
 		for _, rel := range docsIndexRequiredDocs {
-			if path == rel || strings.HasSuffix(path, "/"+rel) {
+			if path == rel || strings.HasSuffix(filepath.ToSlash(path), "/"+rel) {
 				seen[rel] = true
 			}
 		}

@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"issueops/internal/port"
+	"issueops/internal/testsupport"
 )
 
 func installCommandFixture(t *testing.T, home string) (Command, string) {
@@ -24,14 +25,14 @@ func installCommandFixture(t *testing.T, home string) (Command, string) {
 	if err != nil {
 		t.Fatalf("resolve harness root: %v", err)
 	}
-	t.Setenv("HOME", home)
+	testsupport.SetHome(t, home)
 	t.Setenv("CODEX_HOME", filepath.Join(home, ".codex"))
 	t.Setenv("ISSUEOPS_ROOT", root)
 	t.Setenv("SHELL", "/bin/zsh")
-	t.Setenv("PATH", "/usr/bin:/bin")
+	t.Setenv("PATH", isolatedPATH())
 	cli := testInstallCommand(t, Deps{
 		IssueOpsRoot:         func() string { return root },
-		ExecutablePath:       func() (string, error) { return filepath.Join(root, "bin", "issueops"), nil },
+		ExecutablePath:       func() (string, error) { return filepath.Join(root, "bin", testsupport.ExecutableName("issueops")), nil },
 		NativeInstallRequest: install.DefaultNativeInstallRequest,
 		InstallNative: func(req port.NativeInstallRequest) (port.NativeInstallResult, error) {
 			return installNativeForTest(req, testCodexInstaller(), testClaudeInstaller())

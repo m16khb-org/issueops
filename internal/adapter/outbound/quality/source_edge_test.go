@@ -123,10 +123,7 @@ func TestProductionSourceWalkReportsUnreadableDirectoryButKeepsRest(t *testing.T
 	writeProductFixture(t, root, "ok.go", productSource)
 	writeProductFixture(t, root, "locked/hidden.go", productSource)
 	locked := filepath.Join(root, "locked")
-	if err := os.Chmod(locked, 0); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.Chmod(locked, 0o755) })
+	testsupport.MakeUnreadable(t, locked, 0o755)
 	functions, warnings := CollectBranchFunctions(root)
 	if len(functions) != 1 || functions[0].File != "ok.go" || len(warnings) == 0 {
 		t.Fatalf("functions=%v warnings=%v", functions, warnings)
@@ -164,7 +161,7 @@ func TestProductionSourceSkipsTrackedFilesThatNoLongerExistOrLostTheirDirectory(
 func TestProductionFileFilterRejectsPathsEscapingRoot(t *testing.T) {
 	root := t.TempDir()
 	filter := &productionFileFilter{root: root, seen: map[string]bool{}, files: []string{}}
-	for _, relative := range []string{"../outside.go", "..", "/etc/passwd.go"} {
+	for _, relative := range []string{"../outside.go", "..", testsupport.AbsPath("etc", "passwd.go")} {
 		filter.add(relative)
 	}
 	filter.add("")

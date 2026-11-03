@@ -12,6 +12,7 @@ import (
 
 	loopruncontract "issueops/internal/contract/looprun"
 	"issueops/internal/port"
+	"issueops/internal/testsupport"
 )
 
 // fakeDB is an in-memory StateDatabase that records what the Store asks of it.
@@ -224,7 +225,8 @@ func TestIdentityNormalizeRepo(t *testing.T) {
 	if _, err := identity.NormalizeRepo("  "); err == nil || !strings.Contains(err.Error(), "repo is required") {
 		t.Fatalf("empty repo err=%v", err)
 	}
-	if got, err := identity.NormalizeRepo(" /a/b/../c "); err != nil || got != filepath.Join(string(filepath.Separator), "a", "c") {
+	absolute := testsupport.AbsPath("a", "b") + string(filepath.Separator) + ".." + string(filepath.Separator) + "c"
+	if got, err := identity.NormalizeRepo(" " + absolute + " "); err != nil || got != testsupport.AbsPath("a", "c") {
 		t.Fatalf("absolute repo = %q err=%v", got, err)
 	}
 	if got, err := identity.NormalizeRepo("rel/repo"); err != nil || got != filepath.Join(base, "rel", "repo") {
@@ -236,7 +238,7 @@ func TestIdentityNormalizeRepo(t *testing.T) {
 		t.Fatalf("relative repo with broken base err=%v", err)
 	}
 	// an absolute path does not need the base directory at all.
-	if got, err := broken.NormalizeRepo("/abs"); err != nil || got != filepath.Join(string(filepath.Separator), "abs") {
+	if got, err := broken.NormalizeRepo(testsupport.AbsPath("abs")); err != nil || got != testsupport.AbsPath("abs") {
 		t.Fatalf("absolute with broken base = %q err=%v", got, err)
 	}
 }

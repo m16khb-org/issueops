@@ -93,8 +93,8 @@ func TestCodexRunnerRunUsesIsolatedProbe(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if info.Mode().Perm() != 0o700 {
-			t.Errorf("episode root mode = %#o, want 0700", info.Mode().Perm())
+		if filePerm(request.Cwd, info) != 0o700 {
+			t.Errorf("episode root mode = %#o, want 0700", filePerm(request.Cwd, info))
 		}
 		resultPath := filepath.Join(request.Cwd, "result.json")
 		serve := []string{
@@ -149,6 +149,7 @@ func TestCodexRunnerRunUsesIsolatedProbe(t *testing.T) {
 		TempDir: func(_, pattern string) (string, error) {
 			return os.MkdirTemp(parent, pattern)
 		},
+		Getenv: sealedHome(parent),
 		Environ: func() []string {
 			return []string{"PATH=/opt/bin", "TOKEN=secret", "ZAI_API_KEY=gjc-secret", "CODEX_HOME=/private/codex"}
 		},
@@ -321,6 +322,7 @@ func TestCodexRunnerRunModelSelection(t *testing.T) {
 				Process:  process,
 				LookPath: func(string) (string, error) { return filepath.Join(parent, "codex"), nil },
 				TempDir:  os.MkdirTemp,
+				Getenv:   sealedHome(parent),
 			})
 
 			result := runner.Run(context.Background(), codexRequest(test.model))
@@ -339,6 +341,7 @@ func TestCodexRunnerRunMissingCaptureIsTransportFailure(t *testing.T) {
 		Process:  &codexFakeProcess{},
 		LookPath: func(string) (string, error) { return filepath.Join(parent, "codex"), nil },
 		TempDir:  os.MkdirTemp,
+		Getenv:   sealedHome(parent),
 	})
 
 	result := runner.Run(context.Background(), codexRequest("default"))

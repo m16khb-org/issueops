@@ -1,13 +1,16 @@
 package codex
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	install "issueops/internal/adapter/install"
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/port"
+	"issueops/internal/testsupport"
 )
 
 func edgeRequest(t *testing.T) (port.NativeInstallRequest, string) {
@@ -20,7 +23,8 @@ func edgeRequest(t *testing.T) (port.NativeInstallRequest, string) {
 }
 
 func stdioBlock(req port.NativeInstallRequest) string {
-	return "[mcp_servers.issueops]\ncommand = " + `"` + req.BinPath + `"` + "\nargs = [\"mcp\"]\nstartup_timeout_sec = 30\n\n[mcp_servers.issueops.env]\nISSUEOPS_ROOT = " + `"` + req.Root + `"` + "\n"
+	toml := testDependencies().TOMLString
+	return "[mcp_servers.issueops]\ncommand = " + toml(req.BinPath) + "\nargs = [\"mcp\"]\nstartup_timeout_sec = 30\n\n[mcp_servers.issueops.env]\nISSUEOPS_ROOT = " + toml(req.Root) + "\n"
 }
 
 func fileFor(t *testing.T, result port.HostInstallResult, kind string) port.InstallFile {
@@ -149,14 +153,12 @@ func TestCodexInstallRefusesToOverwriteUnreadableHooksFile(t *testing.T) {
 	req, codexHome := edgeRequest(t)
 	path := filepath.Join(codexHome, "hooks.json")
 	writeFile(t, path, `{"hooks":{}}`)
-	if err := os.Chmod(path, 0o200); err != nil {
-		t.Fatal(err)
-	}
+	testsupport.MakeUnreadable(t, path, 0o600)
 	result, err := testInstaller().Install(req)
 	if err == nil || result.OK {
 		t.Fatalf("unreadable hooks file must fail the install: ok=%v err=%v", result.OK, err)
 	}
-	if err := os.Chmod(path, 0o600); err != nil {
+	if err := osfile.Chmod(path, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	got, readErr := os.ReadFile(path)
@@ -208,8 +210,13 @@ func TestCodexInstallReportsUnchangedFilesAsNotWritten(t *testing.T) {
 func TestCodexInstallReportsHookBuildGenerationMismatch(t *testing.T) {
 	setup := func(t *testing.T) port.NativeInstallRequest {
 		req, codexHome := edgeRequest(t)
-		writeFile(t, filepath.Join(codexHome, "hooks.json"),
-			`{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"'`+req.BinPath+`' hook session-start --host codex"}]}]}}`)
+		hook, err := json.Marshal(map[string]any{"hooks": map[string]any{"SessionStart": []any{map[string]any{"hooks": []any{map[string]any{
+			"type": "command", "command": "'" + req.BinPath + "' hook session-start --host codex",
+		}}}}}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		writeFile(t, filepath.Join(codexHome, "hooks.json"), string(hook))
 		return req
 	}
 	t.Run("reported when every dependency is wired", func(t *testing.T) {

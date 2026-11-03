@@ -1,11 +1,16 @@
 package nativeintegration
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"issueops/internal/adapter/codex"
 	"issueops/internal/adapter/hostprotocol"
+	"issueops/internal/domain/shelltoken"
+	"issueops/internal/testsupport"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -42,23 +47,23 @@ func TestValidateNativeIntegrationWithDepsCoversSuccessAndMissingPaths(t *testin
 		readFile: func(path string) ([]byte, error) {
 			switch {
 			case path == filepath.Join(home, ".omo", "mcp.json"):
-				return fmt.Appendf(nil, `{"mcpServers":{"issueops":{"command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, filepath.Join(root, "bin", "issueops"), root), nil
+				return fmt.Appendf(nil, `{"mcpServers":{"issueops":{"command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, nativeTestBinary(root), root), nil
 			case path == filepath.Join(home, ".omo", "extensions", "issueops.js"):
-				return []byte(hostprotocol.OmoLifecycleExtension(filepath.Join(root, "bin", "issueops"))), nil
+				return []byte(hostprotocol.OmoLifecycleExtension(nativeTestBinary(root))), nil
 			case path == filepath.Join(home, ".omp", "agent", "mcp.json"):
-				return fmt.Appendf(nil, `{"mcpServers":{"issueops":{"type":"stdio","command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, filepath.Join(root, "bin", "issueops"), root), nil
+				return fmt.Appendf(nil, `{"mcpServers":{"issueops":{"type":"stdio","command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, nativeTestBinary(root), root), nil
 			case path == filepath.Join(home, ".omp", "agent", "extensions", "issueops.js"):
-				return []byte(hostprotocol.OmpLifecycleExtension(filepath.Join(root, "bin", "issueops"))), nil
+				return []byte(hostprotocol.OmpLifecycleExtension(nativeTestBinary(root))), nil
 			case path == filepath.Join(home, ".config", "opencode", "opencode.json"):
-				return fmt.Appendf(nil, `{"model":"m","mcp":{"servers":{"issueops":{"type":"local","command":[%q,"mcp"],"environment":{"ISSUEOPS_ROOT":%q},"codemode":false}}}}`, filepath.Join(root, "bin", "issueops"), root), nil
+				return fmt.Appendf(nil, `{"model":"m","mcp":{"servers":{"issueops":{"type":"local","command":[%q,"mcp"],"environment":{"ISSUEOPS_ROOT":%q},"codemode":false}}}}`, nativeTestBinary(root), root), nil
 			case path == filepath.Join(home, ".config", "opencode", "plugins", "issueops.js"):
-				return []byte(hostprotocol.OpencodeLifecyclePlugin(filepath.Join(root, "bin", "issueops"))), nil
+				return []byte(hostprotocol.OpencodeLifecyclePlugin(nativeTestBinary(root))), nil
 			}
 			switch filepath.Base(path) {
 			case "config.toml":
 				return []byte("[mcp_servers.issueops]\ncommand = \"issueops\"\n"), nil
 			case "hooks.json":
-				return fmt.Appendf(nil, `{"hooks":{"SessionStart":[{"hooks":[{"command":"'%[1]s' hook session-start --host codex","timeout":5,"type":"command"}]}],"SubagentStart":[{"hooks":[{"command":"'%[1]s' hook subagent-start --host codex","timeout":5,"type":"command"}]}]}}`, filepath.Join(root, "bin", "issueops")), nil
+				return managedCodexHooksJSON(nativeTestBinary(root)), nil
 			default:
 				return nil, errors.New("unexpected read")
 			}
@@ -92,7 +97,7 @@ func TestNativeIntegrationOmoConfigAcceptsStableRootFromWorktree(t *testing.T) {
 	home := t.TempDir()
 	validator := testNativeValidator()
 	validator.ResolveStableNativeRoot = func(string) (string, error) { return stableRoot, nil }
-	expectedBinary := filepath.Join(stableRoot, "bin", "issueops")
+	expectedBinary := nativeTestBinary(stableRoot)
 	deps := nativeIntegrationValidationDeps{
 		Validator: validator,
 		readFile: func(path string) ([]byte, error) {
@@ -118,7 +123,7 @@ func TestNativeIntegrationOmpConfigAcceptsStableRootFromWorktree(t *testing.T) {
 	home := t.TempDir()
 	validator := testNativeValidator()
 	validator.ResolveStableNativeRoot = func(string) (string, error) { return stableRoot, nil }
-	expectedBinary := filepath.Join(stableRoot, "bin", "issueops")
+	expectedBinary := nativeTestBinary(stableRoot)
 	deps := nativeIntegrationValidationDeps{
 		Validator: validator,
 		readFile: func(path string) ([]byte, error) {
@@ -144,7 +149,7 @@ func TestNativeIntegrationOmpConfigRejectsOmoLifecycleModule(t *testing.T) {
 	root, home := t.TempDir(), t.TempDir()
 	validator := testNativeValidator()
 	validator.ResolveStableNativeRoot = func(string) (string, error) { return root, nil }
-	binary := filepath.Join(root, "bin", "issueops")
+	binary := nativeTestBinary(root)
 	deps := nativeIntegrationValidationDeps{Validator: validator, readFile: func(path string) ([]byte, error) {
 		switch path {
 		case filepath.Join(home, ".omp", "agent", "mcp.json"):
@@ -165,7 +170,7 @@ func TestNativeIntegrationOpencodeConfigChecksMCPServersAndPluginBytes(t *testin
 	root, configRoot := t.TempDir(), t.TempDir()
 	validator := testNativeValidator()
 	validator.ResolveStableNativeRoot = func(string) (string, error) { return root, nil }
-	binary := filepath.Join(root, "bin", "issueops")
+	binary := nativeTestBinary(root)
 	files := map[string]string{
 		filepath.Join(configRoot, "plugins", "issueops.js"): hostprotocol.OpencodeLifecyclePlugin(binary),
 	}
@@ -266,7 +271,7 @@ func TestValidateNativeIntegrationReportsStableRootResolutionError(t *testing.T)
 			case "config.toml":
 				return []byte("[mcp_servers.issueops]\n"), nil
 			case "hooks.json":
-				return fmt.Appendf(nil, `{"hooks":{"SessionStart":[{"hooks":[{"command":"'%[1]s' hook session-start --host codex","timeout":5,"type":"command"}]}],"SubagentStart":[{"hooks":[{"command":"'%[1]s' hook subagent-start --host codex","timeout":5,"type":"command"}]}]}}`, filepath.Join(root, "bin", "issueops")), nil
+				return managedCodexHooksJSON(nativeTestBinary(root)), nil
 			default:
 				return nil, errors.New("unexpected read")
 			}
@@ -281,90 +286,79 @@ func TestValidateNativeIntegrationReportsStableRootResolutionError(t *testing.T)
 }
 
 func TestHasThinCodexContextHooksPermitsThirdPartyLifecycleEvents(t *testing.T) {
+	source := testsupport.AbsPath("source", "bin", "issueops")
+	third := `{"type": "command", "command": "'/Users/example/.acme/agent-hooks/codex-hook.sh' observe", "timeout": 10}`
 	config := `{
 		"hooks": {
 			"SubagentStart": [
-				{"hooks": [{"type": "command", "command": "'/Users/example/.acme/agent-hooks/codex-hook.sh' observe", "timeout": 10}]},
-				{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook subagent-start --host codex", "timeout": 5}]}
+				` + hookGroupJSON(third) + `,
+				` + hookGroupJSON(managedHookHandler(source, "hook subagent-start --host codex")) + `
 			],
 			"SessionStart": [
-				{"hooks": [{"type": "command", "command": "'/Users/example/.acme/agent-hooks/codex-hook.sh' observe", "timeout": 10}]},
-				{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook session-start --host codex", "timeout": 5}]}
+				` + hookGroupJSON(third) + `,
+				` + hookGroupJSON(managedHookHandler(source, "hook session-start --host codex")) + `
 			],
-			"PreToolUse": [{"hooks": [{"type": "command", "command": "'/Users/example/.acme/agent-hooks/codex-hook.sh' observe", "timeout": 10}]}],
+			"PreToolUse": [` + hookGroupJSON(third) + `],
 			"UserPromptSubmit": [{"hooks": [{"type": "command", "command": "codegraph observe", "timeout": 10}]}],
 			"SubagentStop": [{"hooks": [{"type": "command", "command": "third-party stop", "timeout": 10}]}],
 			"PermissionRequest": [{"hooks": [{"type": "command", "command": "third-party permission", "timeout": 10}]}]
 		}
 	}`
-	if !(nativeIntegrationValidationDeps{Validator: testNativeValidator()}).hasThinCodexContextHooks(config, "/source/bin/issueops") {
+	if !(nativeIntegrationValidationDeps{Validator: testNativeValidator()}).hasThinCodexContextHooks(config, source) {
 		t.Fatal("third-party lifecycle hooks must not invalidate the managed context hook")
 	}
 }
 
 func TestHasThinCodexContextHooksRejectsRetiredManagedEvent(t *testing.T) {
+	source := testsupport.AbsPath("source", "bin", "issueops")
 	config := `{
 		"hooks": {
-			"SubagentStart": [{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook subagent-start --host codex", "timeout": 5}]}],
-			"SessionStart": [{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook session-start --host codex", "timeout": 5}]}],
-			"PreToolUse": [{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook pre-tool-use --host codex --enforce-worktree", "timeout": 5}]}]
+			"SubagentStart": [` + hookGroupJSON(managedHookHandler(source, "hook subagent-start --host codex")) + `],
+			"SessionStart": [` + hookGroupJSON(managedHookHandler(source, "hook session-start --host codex")) + `],
+			"PreToolUse": [` + hookGroupJSON(managedHookHandler(source, "hook pre-tool-use --host codex --enforce-worktree")) + `]
 		}
 	}`
-	if (nativeIntegrationValidationDeps{Validator: testNativeValidator()}).hasThinCodexContextHooks(config, "/source/bin/issueops") {
+	if (nativeIntegrationValidationDeps{Validator: testNativeValidator()}).hasThinCodexContextHooks(config, source) {
 		t.Fatal("retired issueops enforcement event must invalidate the managed context-hook surface")
 	}
 }
 
 func TestHasThinCodexContextHooksUsesCanonicalGroupsForManagedCommands(t *testing.T) {
+	source := testsupport.AbsPath("source", "bin", "issueops")
+	spaced := testsupport.AbsPath("source with spaces", "bin", "issueops")
+	other := testsupport.AbsPath("other", "bin", "issueops")
+	start := func(binary string) string {
+		return hookGroupJSON(managedHookHandler(binary, "hook session-start --host codex"))
+	}
+	subagent := func(binary string) string {
+		return hookGroupJSON(managedHookHandler(binary, "hook subagent-start --host codex"))
+	}
 	for name, config := range map[string]string{
-		"quoted canonical path with spaces": `{
-			"hooks": {
-				"SubagentStart": [{"hooks": [{"type": "command", "command": "'/source with spaces/bin/issueops' hook subagent-start --host codex", "timeout": 5}]}],
-				"SessionStart": [{"hooks": [{"type": "command", "command": "'/source with spaces/bin/issueops' hook session-start --host codex", "timeout": 5}]}]
-			}
-		}`,
-		"retired no-host event": `{
-			"hooks": {
-				"SubagentStart": [{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook subagent-start --host codex", "timeout": 5}]}],
-				"SessionStart": [{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook session-start --host codex", "timeout": 5}]}],
-				"UserPromptSubmit": [{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook user-prompt", "timeout": 5}]}]
-			}
-		}`,
-		"wrong host alongside required hooks": `{
-			"hooks": {
-				"SubagentStart": [{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook subagent-start --host codex", "timeout": 5}]}],
-				"SessionStart": [
-					{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook session-start --host codex", "timeout": 5}]},
-					{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook session-start --host claude", "timeout": 5}]}
-				]
-			}
-		}`,
-		"extra argument alongside required hooks": `{
-			"hooks": {
-				"SubagentStart": [{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook subagent-start --host codex", "timeout": 5}]}],
-				"SessionStart": [
-					{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook session-start --host codex", "timeout": 5}]},
-					{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook session-start --host codex --retired", "timeout": 5}]}
-				]
-			}
-		}`,
-		"wrong binary path": `{
-			"hooks": {
-				"SubagentStart": [{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook subagent-start --host codex", "timeout": 5}]}],
-				"SessionStart": [{"hooks": [{"type": "command", "command": "'/other/bin/issueops' hook session-start --host codex", "timeout": 5}]}]
-			}
-		}`,
-		"SessionStart without SubagentStart": `{
-			"hooks": {
-				"SessionStart": [{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook session-start --host codex", "timeout": 5}]}]
-			}
-		}`,
-		"malformed JSON": `{"hooks":`,
+		"quoted canonical path with spaces": `{"hooks": {"SubagentStart": [` + subagent(spaced) + `], "SessionStart": [` + start(spaced) + `]}}`,
+		"retired no-host event": `{"hooks": {
+			"SubagentStart": [` + subagent(source) + `],
+			"SessionStart": [` + start(source) + `],
+			"UserPromptSubmit": [` + hookGroupJSON(managedHookHandler(source, "hook user-prompt")) + `]
+		}}`,
+		"wrong host alongside required hooks": `{"hooks": {
+			"SubagentStart": [` + subagent(source) + `],
+			"SessionStart": [` + start(source) + `, ` + hookGroupJSON(managedHookHandler(source, "hook session-start --host claude")) + `]
+		}}`,
+		"extra argument alongside required hooks": `{"hooks": {
+			"SubagentStart": [` + subagent(source) + `],
+			"SessionStart": [` + start(source) + `, ` + hookGroupJSON(managedHookHandler(source, "hook session-start --host codex --retired")) + `]
+		}}`,
+		"wrong binary path": `{"hooks": {
+			"SubagentStart": [` + subagent(source) + `],
+			"SessionStart": [` + start(other) + `]
+		}}`,
+		"SessionStart without SubagentStart": `{"hooks": {"SessionStart": [` + start(source) + `]}}`,
+		"malformed JSON":                     `{"hooks":`,
 	} {
 		t.Run(name, func(t *testing.T) {
-			expectedBinary := "/source/bin/issueops"
+			expectedBinary := source
 			if name == "quoted canonical path with spaces" {
-				expectedBinary = "/source with spaces/bin/issueops"
+				expectedBinary = spaced
 				if !(nativeIntegrationValidationDeps{Validator: testNativeValidator()}).hasThinCodexContextHooks(config, expectedBinary) {
 					t.Fatal("quoted canonical path must validate")
 				}
@@ -375,6 +369,39 @@ func TestHasThinCodexContextHooksUsesCanonicalGroupsForManagedCommands(t *testin
 			}
 		})
 	}
+}
+
+// nativeTestBinary is the canonical harness binary under root on this OS.
+func nativeTestBinary(root string) string {
+	return filepath.Join(root, "bin", testsupport.ExecutableName("issueops"))
+}
+
+// managedCodexHooksJSON is the installed Codex hooks.json for binary.
+func managedCodexHooksJSON(binary string) []byte {
+	b, err := json.Marshal(codex.HooksConfig(binary))
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+
+// managedHookHandler renders one issueops-managed hook handler for binary the
+// way the Codex installer does: the shell form everywhere plus the PowerShell
+// commandWindows form on Windows.
+func managedHookHandler(binary, args string) string {
+	handler := map[string]any{"type": "command", "command": shelltoken.QuoteWord(binary) + " " + args, "timeout": 5}
+	if runtime.GOOS == "windows" {
+		handler["commandWindows"] = "& '" + strings.ReplaceAll(binary, "'", "''") + "' " + args
+	}
+	b, err := json.Marshal(handler)
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
+}
+
+func hookGroupJSON(handlers ...string) string {
+	return `{"hooks": [` + strings.Join(handlers, ",") + `]}`
 }
 
 func nativeIntegrationExpectedPaths(root, home string) map[string]bool {
@@ -436,7 +463,7 @@ func TestNativeIntegrationKeepsPreparedStableRoot(t *testing.T) {
 	prepare := func(root string) nativeIntegrationValidationDeps {
 		validator := testNativeValidator()
 		validator.ResolveStableNativeRoot = func(string) (string, error) { return root, nil }
-		binary := filepath.Join(root, "bin", "issueops")
+		binary := nativeTestBinary(root)
 		return (nativeIntegrationValidationDeps{Validator: validator, readFile: func(path string) ([]byte, error) {
 			switch path {
 			case filepath.Join(home, ".omo", "mcp.json"):

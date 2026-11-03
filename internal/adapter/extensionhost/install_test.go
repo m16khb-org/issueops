@@ -11,6 +11,7 @@ import (
 	"issueops/internal/adapter/hostprotocol"
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"issueops/internal/adapter/installutil"
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/port"
 )
 
@@ -86,13 +87,17 @@ func TestInstallerWritesNativeSurfaces(t *testing.T) {
 		}
 
 		projectMCP := readTestJSON(t, filepath.Join(req.Root, "."+host, "mcp.json"))
-		assertTestMCPServer(t, tc.spec, projectMCP, "issueops_project", "./bin/issueops", ".")
+		assertTestMCPServer(t, tc.spec, projectMCP, "issueops_project", "./bin/"+osfile.ExecutableName("issueops"), ".")
 
 		extension := readTestFile(t, filepath.Join(req.Home, tc.spec.ConfigRoot, "extensions", "issueops.js"))
 		if extension != tc.extension(req.BinPath) {
 			t.Fatal("installed lifecycle extension differs from canonical host protocol")
 		}
-		for _, token := range []string{`"--json"`, req.BinPath} {
+		encodedBin, err := json.Marshal(req.BinPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, token := range []string{`"--json"`, string(encodedBin)} {
 			if !strings.Contains(extension, token) {
 				t.Fatalf("%s lifecycle extension missing %q:\n%s", tc.spec.DisplayName, token, extension)
 			}
@@ -197,7 +202,7 @@ func TestTrackedTemplatesMatchGeneratedContent(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		expectedConfig, err := tc.installer().projectMCPConfig()
+		expectedConfig, err := tc.installer().projectMCPConfig("./bin/issueops")
 		if err != nil {
 			t.Fatal(err)
 		}

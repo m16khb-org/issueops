@@ -1,10 +1,12 @@
 package issueops
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
 	issueopscontract "issueops/internal/contract/issueops"
+	"issueops/internal/testsupport"
 )
 
 type covHandoffObservation = issueopscontract.IssueOpsHandoffDeliveryObservation
@@ -132,10 +134,12 @@ func TestCovHandoffValidateCmuxLauncherAndTargetIdentity(t *testing.T) {
 		{"machine identity invented", func(o *covHandoffObservation) { o.Launcher.MachineID = "machine-1" }, "cannot invent runtime, machine, or server identity"},
 		{"missing endpoint incarnation", func(o *covHandoffObservation) { o.Launcher.EndpointIncarnation = nil }, "socket endpoint incarnation is required"},
 		{"endpoint not unix socket", func(o *covHandoffObservation) { o.Launcher.EndpointIncarnation.Kind = "tcp" }, "socket endpoint incarnation is invalid"},
-		{"endpoint parent mismatch", func(o *covHandoffObservation) { o.Launcher.EndpointIncarnation.ParentPath = "/private/var" }, "socket endpoint incarnation is invalid"},
+		{"endpoint parent mismatch", func(o *covHandoffObservation) {
+			o.Launcher.EndpointIncarnation.ParentPath = testsupport.AbsPath("private", "var")
+		}, "socket endpoint incarnation is invalid"},
 		{"endpoint without inode", func(o *covHandoffObservation) { o.Launcher.EndpointIncarnation.Inode = 0 }, "socket endpoint incarnation is invalid"},
 		{"endpoint oversized path", func(o *covHandoffObservation) {
-			o.Launcher.EndpointIncarnation.Path = "/private/tmp/" + covHandoffLong()
+			o.Launcher.EndpointIncarnation.Path = filepath.Join(cmuxTestParent, covHandoffLong())
 		}, "socket endpoint incarnation is too large"},
 		{"endpoint socket mode too open", func(o *covHandoffObservation) { o.Launcher.EndpointIncarnation.Mode = 0o660 }, "socket endpoint permissions are unsafe"},
 		{"endpoint parent writable without sticky", func(o *covHandoffObservation) { o.Launcher.EndpointIncarnation.ParentMode = 0o777 }, "socket endpoint permissions are unsafe"},
@@ -582,7 +586,9 @@ func TestCovHandoffCmuxDigestAndNULValidation(t *testing.T) {
 }
 
 func TestCovHandoffCmuxCanonicalPromptPath(t *testing.T) {
-	const root = "/real/worktree"
+	sep := string(filepath.Separator)
+	root := testsupport.AbsPath("real", "worktree")
+	aliasWT := testsupport.AbsPath("alias", "wt")
 	for _, test := range []struct {
 		name    string
 		prompt  string
@@ -590,16 +596,16 @@ func TestCovHandoffCmuxCanonicalPromptPath(t *testing.T) {
 		want    string
 		wantErr string
 	}{
-		{"inside canonical root", "/real/worktree/.issueops/prompt.md", nil, "/real/worktree/.issueops/prompt.md", ""},
-		{"alias is rewritten to canonical root", "/alias/wt/.issueops/prompt.md", []string{"/alias/wt"}, "/real/worktree/.issueops/prompt.md", ""},
-		{"later alias is tried", "/b/wt/p.md", []string{"/a/wt", "/b/wt"}, "/real/worktree/p.md", ""},
+		{"inside canonical root", filepath.Join(root, ".issueops", "prompt.md"), nil, filepath.Join(root, ".issueops", "prompt.md"), ""},
+		{"alias is rewritten to canonical root", filepath.Join(aliasWT, ".issueops", "prompt.md"), []string{aliasWT}, filepath.Join(root, ".issueops", "prompt.md"), ""},
+		{"later alias is tried", filepath.Join(testsupport.AbsPath("b", "wt"), "p.md"), []string{testsupport.AbsPath("a", "wt"), testsupport.AbsPath("b", "wt")}, filepath.Join(root, "p.md"), ""},
 		{"relative path", "prompt.md", nil, "", "must be a clean path inside the canonical worktree"},
-		{"unclean path", "/real/worktree/a/../prompt.md", nil, "", "must be a clean path inside the canonical worktree"},
+		{"unclean path", root + sep + "a" + sep + ".." + sep + "prompt.md", nil, "", "must be a clean path inside the canonical worktree"},
 		{"root itself", root, nil, "", "must be inside the canonical worktree"},
-		{"outside root", "/elsewhere/prompt.md", nil, "", "must be inside the canonical worktree"},
-		{"sibling sharing a prefix", "/real/worktree-two/prompt.md", nil, "", "must be inside the canonical worktree"},
-		{"unclean alias is ignored", "/alias/wt/p.md", []string{"/alias/wt/"}, "", "must be inside the canonical worktree"},
-		{"relative alias is ignored", "/alias/wt/p.md", []string{"alias/wt"}, "", "must be inside the canonical worktree"},
+		{"outside root", testsupport.AbsPath("elsewhere", "prompt.md"), nil, "", "must be inside the canonical worktree"},
+		{"sibling sharing a prefix", filepath.Join(root+"-two", "prompt.md"), nil, "", "must be inside the canonical worktree"},
+		{"unclean alias is ignored", filepath.Join(aliasWT, "p.md"), []string{aliasWT + sep}, "", "must be inside the canonical worktree"},
+		{"relative alias is ignored", filepath.Join(aliasWT, "p.md"), []string{filepath.Join("alias", "wt")}, "", "must be inside the canonical worktree"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			got, err := CmuxCanonicalPromptPath(root, test.prompt, test.aliases...)
@@ -614,7 +620,7 @@ func TestCovHandoffCmuxCanonicalPromptPath(t *testing.T) {
 			}
 		})
 	}
-	if _, err := CmuxCanonicalPromptPath("relative/root", "/real/worktree/p.md"); err == nil {
+	if _, err := CmuxCanonicalPromptPath(filepath.Join("relative", "root"), filepath.Join(root, "p.md")); err == nil {
 		t.Fatal("non-absolute canonical root must not authorize any path")
 	}
 }

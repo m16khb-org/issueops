@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"issueops/internal/adapter/verification"
+	"issueops/internal/testsupport"
 )
 
 func evidenceRunner(root, label string, timeout time.Duration, stdin, name string, args ...string) contract.StepResult {
@@ -74,7 +75,7 @@ func TestBinaryDriftUsesRealDoctorObservation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bin := filepath.Join(t.TempDir(), "issueops")
+	bin := filepath.Join(t.TempDir(), testsupport.ExecutableName("issueops"))
 	cmd := exec.Command("go", "build", "-o", bin, "./cmd/issueops")
 	cmd.Dir = root
 	if out, err := cmd.CombinedOutput(); err != nil {
@@ -90,7 +91,7 @@ func TestBinaryDriftUsesRealDoctorObservation(t *testing.T) {
 				t.Fatal(err)
 			}
 			if mode != "missing" {
-				target := filepath.Join(fixture, "bin/issueops")
+				target := filepath.Join(fixture, "bin", testsupport.ExecutableName("issueops"))
 				writeEvidenceFixture(t, target, "fixture binary")
 				stamp := now.Add(time.Hour)
 				if mode == "stale" {

@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"issueops/internal/testsupport"
 )
 
 func TestResolveStableNativeRoot(t *testing.T) {
@@ -106,7 +108,7 @@ func TestDefaultNativeInstallRequestMapsLinkedWorktree(t *testing.T) {
 	if req.Root != source {
 		t.Fatalf("root = %q, want %q", req.Root, source)
 	}
-	wantBin := filepath.Join(source, "bin", "issueops")
+	wantBin := filepath.Join(source, "bin", testsupport.ExecutableName("issueops"))
 	if req.BinPath != wantBin {
 		t.Fatalf("bin path = %q, want %q", req.BinPath, wantBin)
 	}

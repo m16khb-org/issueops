@@ -5,9 +5,11 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/contract/processidentity"
 )
 
@@ -206,7 +208,7 @@ func TestWriteRecordReplacesAtomicallyWithOwnerOnlyMode(t *testing.T) {
 		t.Fatalf("replaced record = %+v, %v", got, err)
 	}
 	info, err := os.Stat(path)
-	if err != nil || info.Mode().Perm() != 0o600 {
+	if err != nil || osfile.Perm(path, info) != 0o600 {
 		t.Fatalf("mode = %v, %v", info.Mode(), err)
 	}
 	if _, err := os.Stat(path + ".tmp"); !os.IsNotExist(err) {
@@ -255,6 +257,11 @@ func TestReadBearerRejectsSymlinkAndUnreadableStateDir(t *testing.T) {
 	notDir := filepath.Join(t.TempDir(), "file")
 	if err := os.WriteFile(notDir, nil, 0o600); err != nil {
 		t.Fatal(err)
+	}
+	if runtime.GOOS == "windows" {
+		// A file used as a directory reports path-not-found on Windows, which
+		// counts as not-exist; an invalid file name is a different Lstat error.
+		notDir = filepath.Join(t.TempDir(), "bad?name")
 	}
 	if _, err := ReadBearer(notDir); err == nil {
 		t.Fatal("lstat failure other than not-exist was swallowed")

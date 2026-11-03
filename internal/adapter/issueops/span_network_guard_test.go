@@ -16,6 +16,7 @@ import (
 	branchapp "issueops/internal/application/issueopsbranch"
 	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
+	"issueops/internal/testsupport"
 
 	_ "modernc.org/sqlite"
 )
@@ -38,8 +39,18 @@ var networkGitSubcommands = map[string]bool{
 }
 
 func TestMain(m *testing.M) {
+	// Git for Windows defaults to core.autocrlf=true, which rewrites fixture
+	// files to CRLF on checkout and makes untouched LF fixtures look modified.
+	// Fixtures are LF; pin it off for every git the tests spawn.
+	_ = os.Setenv("GIT_CONFIG_COUNT", "1")
+	_ = os.Setenv("GIT_CONFIG_KEY_0", "core.autocrlf")
+	_ = os.Setenv("GIT_CONFIG_VALUE_0", "false")
 	if os.Getenv(fakeGitModeEnv) == "1" {
 		os.Exit(runFakeGit(os.Args[1:]))
+	}
+	if os.Getenv(sleeperModeEnv) == "1" {
+		time.Sleep(30 * time.Second)
+		os.Exit(0)
 	}
 	os.Exit(m.Run())
 }
@@ -114,10 +125,8 @@ func installSpanProbingGit(t *testing.T, stateRoot string, probeAll bool) string
 		t.Fatal(err)
 	}
 	bin := t.TempDir()
-	script := "#!/bin/sh\n" + fakeGitModeEnv + "=1 exec '" + testBinary + "' \"$@\"\n"
-	if err := os.WriteFile(filepath.Join(bin, "git"), []byte(script), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	script := "#!/bin/sh\n" + fakeGitModeEnv + "=1 exec '" + filepath.ToSlash(testBinary) + "' \"$@\"\n"
+	testsupport.WriteFakeCommand(t, bin, "git", script)
 	log := filepath.Join(t.TempDir(), "git-span.log")
 	t.Setenv(fakeGitRealEnv, realGit)
 	t.Setenv(fakeGitLockDBEnv, spanLockDBPath(t, stateRoot))

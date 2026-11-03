@@ -3,7 +3,6 @@ package github
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -14,9 +13,6 @@ import (
 // cleanup close-children이 부모 머지 증거 없이 정리해도 되는지 판정하려면 자식이
 // 원격에서 이미 닫혔는지를 알아야 한다(#129).
 func TestGitHubCloseChildPreviewObservesChildState(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake gh shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	repo := t.TempDir()
 	logPath := filepath.Join(repo, "gh.calls")
@@ -76,9 +72,6 @@ func TestGitHubCloseChildPreviewLeavesStateUnobservedWithoutGh(t *testing.T) {
 
 // 자식이 부모의 sub-issue가 아니면 preview는 계층 검증 실패로 남긴다.
 func TestGitHubCloseChildPreviewReportsHierarchyMissing(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake gh shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	writeFakeGh(t, binDir, `#!/bin/sh
 if [ "$1" = "api" ] && [ "$2" = "repos/acme/repo/issues/12/sub_issues" ]; then

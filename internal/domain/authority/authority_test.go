@@ -9,6 +9,7 @@ import (
 
 	contract "issueops/internal/contract/authority"
 	issueopscontract "issueops/internal/contract/issueops"
+	"issueops/internal/testsupport"
 )
 
 var issuedAt = time.Date(2026, 10, 2, 0, 0, 0, 0, time.UTC)
@@ -22,7 +23,8 @@ func testActor() contract.NativeActor {
 }
 
 func gitScope() contract.Scope {
-	return contract.Scope{WorkspaceRoot: "/repo.worktrees/a", CWD: "/repo.worktrees/a", SourceRoot: "/repo.worktrees/a", GitCommonDir: "/repo/.git"}
+	worktree := testsupport.AbsPath("repo.worktrees", "a")
+	return contract.Scope{WorkspaceRoot: worktree, CWD: worktree, SourceRoot: worktree, GitCommonDir: testsupport.AbsPath("repo", ".git")}
 }
 
 func testRecord(t *testing.T, token string) contract.Record {
@@ -111,7 +113,7 @@ func TestDecodeRecordValidatesGitCommonDirAndSessionProcessPID(t *testing.T) {
 		ok   bool
 	}{
 		"empty git common dir":    {func(r *contract.Record) { r.GitCommonDir = "" }, true},
-		"absolute git common dir": {func(r *contract.Record) { r.GitCommonDir = "/repo/.git" }, true},
+		"absolute git common dir": {func(r *contract.Record) { r.GitCommonDir = testsupport.AbsPath("repo", ".git") }, true},
 		"relative git common dir": {func(r *contract.Record) { r.GitCommonDir = "repo/.git" }, false},
 		"zero session pid":        {func(r *contract.Record) { r.Actor.SessionProcess.PID = 0 }, false},
 		"positive session pid":    {func(r *contract.Record) { r.Actor.SessionProcess.PID = 1 }, true},

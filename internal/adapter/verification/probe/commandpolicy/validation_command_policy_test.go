@@ -5,11 +5,12 @@ import (
 
 	"encoding/json"
 	"errors"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"issueops/internal/testsupport"
 
 	policy "issueops/internal/contract/policy"
 )
@@ -164,7 +165,6 @@ func policyStep(tLabel, command string, value any) selfverify.StepResult {
 
 func writeCommandPolicyFakeBinary(t *testing.T, dir string) string {
 	t.Helper()
-	path := filepath.Join(dir, "fake-harness")
 	allowed := mustMarshalCommandPolicyTest(t, policy.CommandPolicyEvaluation{OK: true, Allowed: true})
 	cwdOutside := mustMarshalCommandPolicyTest(t, policy.CommandPolicyEvaluation{OK: true, Allowed: false, DenyReasons: []string{"cwd_outside_workspace"}})
 	pathOutside := mustMarshalCommandPolicyTest(t, policy.CommandPolicyEvaluation{OK: true, Allowed: false, DenyReasons: []string{"path_outside_workspace"}})
@@ -178,10 +178,7 @@ func writeCommandPolicyFakeBinary(t *testing.T, dir string) string {
 		"  policy\\ fake-run*) printf '%s\\n' '" + fakeRun + "' ;;\n" +
 		"  *) echo \"unexpected fake harness args: $*\" >&2; exit 2 ;;\n" +
 		"esac\n"
-	if err := os.WriteFile(path, []byte(body), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	return path
+	return testsupport.WriteFakeCommand(t, dir, "fake-harness", body)
 }
 
 func mustMarshalCommandPolicyTest(t *testing.T, value any) string {

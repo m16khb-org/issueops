@@ -3,6 +3,7 @@ package issueopscycle
 import (
 	"context"
 	"errors"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -10,6 +11,7 @@ import (
 	gatescontract "issueops/internal/contract/gates"
 	model "issueops/internal/contract/issueops"
 	cycleport "issueops/internal/port/issueopscycle"
+	"issueops/internal/testsupport"
 )
 
 // phaseFlow is a hermetic PhaseStore around one in-memory record.
@@ -277,9 +279,11 @@ func (g *gateHarness) ports() cycleport.GateLedgerReadiness {
 }
 
 func TestStrictPRReadinessWithStateScopesLedgersToWorktreeAndIssue(t *testing.T) {
-	g := &gateHarness{discovered: []string{"/wt/.issueops/issues/5/gates.md", "/wt/.issueops/issues/9/gates.md"}, incomplete: true}
+	wt := testsupport.AbsPath("wt")
+	ledger5 := filepath.Join(wt, ".issueops", "issues", "5", "gates.md")
+	g := &gateHarness{discovered: []string{ledger5, filepath.Join(wt, ".issueops", "issues", "9", "gates.md")}, incomplete: true}
 	record := model.IssueOpsRecord{
-		ID: "io-1", Repo: "/repo", WorktreePath: "/wt",
+		ID: "io-1", Repo: "/repo", WorktreePath: wt,
 		BranchPrepare: &model.IssueOpsBranchPrepare{IssueURL: "https://github.com/o/r/issues/5"},
 	}
 	var baseSeen string
@@ -297,15 +301,16 @@ func TestStrictPRReadinessWithStateScopesLedgersToWorktreeAndIssue(t *testing.T)
 	if got.Ready || !reflect.DeepEqual(got.Missing, []string{"gates_incomplete:.issueops/issues/5/gates.md"}) {
 		t.Fatalf("got=%+v", got)
 	}
-	if len(g.checks) != 1 || g.checks[0].WorkspaceRoot != "/wt" || !reflect.DeepEqual(g.checks[0].Files, []string{"/wt/.issueops/issues/5/gates.md"}) {
+	if len(g.checks) != 1 || g.checks[0].WorkspaceRoot != wt || !reflect.DeepEqual(g.checks[0].Files, []string{ledger5}) {
 		t.Fatalf("checks=%+v (the issue 9 ledger must be skipped)", g.checks)
 	}
 }
 
 func TestStrictPRReadinessPrefersLinkedIssueNumberOverPreparedURL(t *testing.T) {
-	g := &gateHarness{discovered: []string{"/repo/.issueops/issues/5/gates.md", "/repo/.issueops/issues/7/gates.md"}, incomplete: true}
+	repo := testsupport.AbsPath("repo")
+	g := &gateHarness{discovered: []string{filepath.Join(repo, ".issueops", "issues", "5", "gates.md"), filepath.Join(repo, ".issueops", "issues", "7", "gates.md")}, incomplete: true}
 	record := model.IssueOpsRecord{
-		ID: "io-1", Repo: "/repo", IssueURL: "https://github.com/o/r/issues/7",
+		ID: "io-1", Repo: repo, IssueURL: "https://github.com/o/r/issues/7",
 		BranchPrepare: &model.IssueOpsBranchPrepare{IssueURL: "https://github.com/o/r/issues/5"},
 	}
 	service := GateService{BaseReadiness: func(string, model.IssueOpsRecord) model.IssueOpsReadiness { return readyReadiness() }, Ledger: g.ports()}

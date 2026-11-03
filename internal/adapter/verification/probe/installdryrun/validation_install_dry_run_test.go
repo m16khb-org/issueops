@@ -6,11 +6,13 @@ import (
 
 	"encoding/json"
 	"errors"
-	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
+
+	"issueops/internal/testsupport"
 )
 
 func TestValidateInstallDryRunSmokeWrapperUsesExecutableSurface(t *testing.T) {
@@ -67,6 +69,9 @@ func TestValidateInstallDryRunSmokeWithDepsCoversSuccessAndSetupFailures(t *test
 			}
 			if !slices.Contains(env, "HOME="+tempHome) || !slices.Contains(env, "CODEX_HOME="+filepath.Join(tempHome, ".codex")) || !slices.Contains(env, "ISSUEOPS_ROOT="+tempRoot) {
 				t.Fatalf("unexpected env: %v", env)
+			}
+			if runtime.GOOS == "windows" && !slices.Contains(env, "USERPROFILE="+tempHome) {
+				t.Fatalf("Windows install smoke must isolate USERPROFILE: %v", env)
 			}
 			command := strings.Join(append([]string{name}, args...), " ")
 			if command != "bin/issueops install --dry-run --project-local --json" {
@@ -200,15 +205,11 @@ func mustMarshalInstallDryRunTest(t *testing.T, value any) string {
 
 func writeInstallDryRunFakeBinary(t *testing.T, dir string) string {
 	t.Helper()
-	path := filepath.Join(dir, "fake-harness")
 	body := "#!/bin/sh\nset -eu\ncase \"$*\" in\n" +
 		"  \"install --dry-run --project-local --json\") printf '%s\\n' '" + mustMarshalInstallDryRunTest(t, validInstallDryRunResult()) + "' ;;\n" +
 		"  *) echo \"unexpected fake harness args: $*\" >&2; exit 2 ;;\n" +
 		"esac\n"
-	if err := os.WriteFile(path, []byte(body), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	return path
+	return testsupport.WriteFakeCommand(t, dir, "fake-harness", body)
 }
 
 func TestValidateInstallDryRunSmokeKeepsRunnerStepOnSuccess(t *testing.T) {

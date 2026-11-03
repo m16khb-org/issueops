@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -12,6 +13,9 @@ import (
 )
 
 func TestProbeAccessReturnsHostSpecificRelaunchWithoutWorktreeMutation(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("windows has no POSIX mode bits: chmod 000 cannot deny the owning user access to a directory")
+	}
 	repo := initAccessRepo(t)
 	base := repo + ".worktrees"
 	if err := os.Mkdir(base, 0o700); err != nil {

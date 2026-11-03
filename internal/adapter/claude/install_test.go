@@ -29,18 +29,24 @@ func TestClaudeInstallerDefaultsToUserScopeOnly(t *testing.T) {
 		t.Fatalf("claude user skill link missing")
 	}
 	settings := readClaudeTestFile(t, filepath.Join(home, ".claude", "settings.json"))
-	for _, needle := range []string{"SessionStart", "hook session-start --host claude", "SubagentStart", "hook subagent-start --host claude", req.BinPath} {
+	commands := hookCommandLines(t, settings)
+	for _, needle := range []string{"SessionStart", "SubagentStart"} {
 		if !strings.Contains(settings, needle) {
 			t.Fatalf("claude settings missing %q:\n%s", needle, settings)
 		}
 	}
+	for _, needle := range []string{"hook session-start --host claude", "hook subagent-start --host claude", req.BinPath} {
+		if !strings.Contains(commands, needle) {
+			t.Fatalf("claude settings missing %q:\n%s", needle, settings)
+		}
+	}
 	for _, forbidden := range []string{"UserPromptSubmit", "PreToolUse", "PostToolUse", "PreCompact", "PostCompact", "Stop", "hook user-prompt", "hook pre-tool-use", "hook post-tool-use", "hook pre-compact", "hook post-compact", "hook stop", "--enforce-", "--relay-next-action-judgement"} {
-		if strings.Contains(settings, forbidden) {
+		if strings.Contains(settings, forbidden) || strings.Contains(commands, forbidden) {
 			t.Fatalf("claude settings must not contain default hook %q:\n%s", forbidden, settings)
 		}
 	}
 	mcp := readClaudeTestFile(t, filepath.Join(home, ".claude.json"))
-	if !strings.Contains(mcp, `"issueops"`) || !strings.Contains(mcp, req.BinPath) || !strings.Contains(mcp, `"ISSUEOPS_ROOT"`) {
+	if !strings.Contains(mcp, `"issueops"`) || !strings.Contains(mcp, jsonText(t, req.BinPath)) || !strings.Contains(mcp, `"ISSUEOPS_ROOT"`) {
 		t.Fatalf("claude user MCP config missing exact harness server:\n%s", mcp)
 	}
 	for _, path := range []string{filepath.Join(root, ".claude", "skills", "alpha"), filepath.Join(root, ".claude", "settings.json"), filepath.Join(root, ".mcp.json")} {

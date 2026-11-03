@@ -10,8 +10,10 @@ import (
 	"testing"
 	"unicode/utf8"
 
+	"issueops/internal/adapter/outbound/osfile"
 	auditcontract "issueops/internal/contract/audit"
 	issueopscontract "issueops/internal/contract/issueops"
+	"issueops/internal/testsupport"
 )
 
 func TestCommandWriterAppendsOwnerOnlyJSONLines(t *testing.T) {
@@ -23,11 +25,11 @@ func TestCommandWriterAppendsOwnerOnlyJSONLines(t *testing.T) {
 		}
 	}
 	dirInfo, err := os.Stat(filepath.Dir(path))
-	if err != nil || dirInfo.Mode().Perm() != 0o700 {
+	if err != nil || osfile.Perm(filepath.Dir(path), dirInfo) != 0o700 {
 		t.Fatalf("audit directory must be owner-only: %v %v", dirInfo, err)
 	}
 	fileInfo, err := os.Stat(path)
-	if err != nil || fileInfo.Mode().Perm() != 0o600 {
+	if err != nil || osfile.Perm(path, fileInfo) != 0o600 {
 		t.Fatalf("audit log must be owner-only: %v %v", fileInfo, err)
 	}
 	file, err := os.Open(path)
@@ -92,13 +94,13 @@ func TestCommandAuditLogPathResolvesRelativeAndHomeFallbacks(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("ISSUEOPS_AUDIT_LOG", "")
 	t.Setenv("ISSUEOPS_STATE_DIR", "")
-	t.Setenv("HOME", home)
+	testsupport.SetHome(t, home)
 	got, err = commandAuditLogPath()
 	if want := filepath.Join(home, ".local", "state", "issueops", "audit", "command-policy.jsonl"); err != nil || got != want {
 		t.Fatalf("home fallback=%q want %q err=%v", got, want, err)
 	}
 
-	t.Setenv("HOME", "")
+	testsupport.SetHome(t, "")
 	if got, err := commandAuditLogPath(); err == nil || got != "" || !strings.Contains(err.Error(), "resolve home for audit log") {
 		t.Fatalf("missing home must fail: %q %v", got, err)
 	}
@@ -187,12 +189,15 @@ func TestHandoffDeliveryStateRootPathCanonicalizesOnlyTrustedAliases(t *testing.
 	if _, err := handoffDeliveryStateRootPath("   "); err == nil {
 		t.Fatal("blank root accepted")
 	}
-	got, err := handoffDeliveryStateRootPath("  /opt/issueops/../issueops/state/ ")
-	if err != nil || got != "/opt/issueops/state" {
+	separator := string(filepath.Separator)
+	untrusted := testsupport.AbsPath("opt", "issueops") + separator + ".." + separator + "issueops" + separator + "state" + separator
+	got, err := handoffDeliveryStateRootPath("  " + untrusted + " ")
+	if want := testsupport.AbsPath("opt", "issueops", "state"); err != nil || got != want {
 		t.Fatalf("untrusted prefix must only be cleaned: %q %v", got, err)
 	}
 	if runtime.GOOS != "darwin" {
-		if got, err := handoffDeliveryStateRootPath("/tmp/state"); err != nil || got != "/tmp/state" {
+		tmpState := testsupport.AbsPath("tmp", "state")
+		if got, err := handoffDeliveryStateRootPath(tmpState); err != nil || got != tmpState {
 			t.Fatalf("no alias is trusted off darwin: %q %v", got, err)
 		}
 		return
@@ -361,7 +366,7 @@ func TestHandoffDeliveryReadTreatsMissingStateAsEmptyButNotUnsafeState(t *testin
 	if _, err := auditStoreForTest("relative").Read(); err == nil || !strings.Contains(err.Error(), "must be absolute") {
 		t.Fatalf("relative root: %v", err)
 	}
-	if _, err := auditStoreForTest("/").Read(); err == nil || !strings.Contains(err.Error(), "filesystem root") {
+	if _, err := auditStoreForTest(filepath.VolumeName(root) + string(filepath.Separator)).Read(); err == nil || !strings.Contains(err.Error(), "filesystem root") {
 		t.Fatalf("filesystem root: %v", err)
 	}
 	file := filepath.Join(root, "file")
@@ -383,9 +388,7 @@ func TestHandoffDeliveryAuditRejectsUnsafeAuditDirectoryAndLeafKinds(t *testing.
 		if err := os.Mkdir(auditDir, 0o755); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.Chmod(auditDir, 0o755); err != nil {
-			t.Fatal(err)
-		}
+		testsupport.MakePermissive(t, auditDir, 0o755)
 		store := auditStoreForTest(stateRoot)
 		if _, err := store.Read(); err == nil || !strings.Contains(err.Error(), "audit directory") {
 			t.Fatalf("read: %v", err)

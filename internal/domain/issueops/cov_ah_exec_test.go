@@ -1,10 +1,12 @@
 package issueops
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
 	issueopscontract "issueops/internal/contract/issueops"
+	"issueops/internal/testsupport"
 )
 
 func covExecActor() issueopscontract.NativeActor {
@@ -261,12 +263,14 @@ func TestGateLedgerRelativePath(t *testing.T) {
 }
 
 func TestScopeGateLedgersKeepsNonNumericAndEmptyIssueFolders(t *testing.T) {
+	root := testsupport.AbsPath("r")
+	issuesDir := filepath.Join(root, ".issueops", "issues") + string(filepath.Separator)
 	files := []string{
-		"/r/.issueops/issues//gates.md",
-		"/r/.issueops/issues/12a/gates.md",
-		"/r/.issueops/issues/99/gates.md",
+		issuesDir + string(filepath.Separator) + "gates.md",
+		issuesDir + "12a" + string(filepath.Separator) + "gates.md",
+		issuesDir + "99" + string(filepath.Separator) + "gates.md",
 	}
-	judged, skipped := ScopeGateLedgers("/r", files, "5")
+	judged, skipped := ScopeGateLedgers(root, files, "5")
 	if len(judged) != 2 || judged[0] != files[0] || judged[1] != files[1] {
 		t.Fatalf("empty and non-numeric folders must be judged: %v", judged)
 	}

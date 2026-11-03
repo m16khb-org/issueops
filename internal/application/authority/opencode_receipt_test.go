@@ -59,20 +59,20 @@ func TestVerifyNativeRequiresStandaloneOpencodeServer(t *testing.T) {
 			grants := &memoryGrants{records: map[string][]byte{}}
 			files := &memoryFiles{files: map[string]string{}}
 			if tc.noArguments {
-				service = New(grants, procs, files, newHarness().clock.Now, scopes{"/repo": repoScope}, &counterEntropy{})
+				service = New(grants, procs, files, newHarness().clock.Now, scopes{repoRoot: repoScope}, &counterEntropy{})
 			} else {
 				inspector := &argumentsTable{processTable: procs, args: map[int]struct {
 					startedAt string
 					fields    []string
 				}{receipt.PID: {startedAt: argsStartedAt, fields: strings.Fields(tc.args)}}}
-				service = New(grants, inspector, files, newHarness().clock.Now, scopes{"/repo": repoScope}, &counterEntropy{})
+				service = New(grants, inspector, files, newHarness().clock.Now, scopes{repoRoot: repoScope}, &counterEntropy{})
 			}
 			actor := model.NativeActor{
 				Host: tc.host, SessionID: "ses_1", SessionProcess: &receipt,
 				ProcessAncestry: []model.NativeProcessReceipt{receipt, {PID: 1, StartedAt: "init", Executable: "/sbin/launchd"}},
 			}
 			_, verifyErr := service.Verify(context.Background(), actor)
-			_, issueErr := service.Issue(context.Background(), contract.IssueRequest{WorkspaceRoot: "/repo", Actor: actor})
+			_, issueErr := service.Issue(context.Background(), contract.IssueRequest{WorkspaceRoot: repoRoot, Actor: actor})
 			for label, err := range map[string]error{"verify": verifyErr, "issue": issueErr} {
 				if tc.wantErr == "" {
 					if err != nil {

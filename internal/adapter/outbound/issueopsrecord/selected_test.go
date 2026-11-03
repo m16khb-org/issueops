@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"issueops/internal/adapter/outbound/sqlstore"
@@ -53,11 +54,24 @@ func TestReadSelectedPreservesCancellationAndStoreErrors(t *testing.T) {
 	if _, err := (Store{}).ReadSelected(ctx, t.TempDir(), "io-selected"); !errors.Is(err, context.Canceled) {
 		t.Fatalf("cancellation = %v", err)
 	}
-	root := filepath.Join(t.TempDir(), "not-a-directory")
-	if err := os.WriteFile(root, []byte("file"), 0o600); err != nil {
+	// A state root that is a regular file fails on Unix with ENOTDIR. Windows
+	// reports the same path as not existing (ERROR_PATH_NOT_FOUND), which
+	// ReadSelected correctly treats as an absent record.
+	if runtime.GOOS != "windows" {
+		root := filepath.Join(t.TempDir(), "not-a-directory")
+		if err := os.WriteFile(root, []byte("file"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := (Store{}).ReadSelected(t.Context(), root, "io-selected"); err == nil {
+			t.Fatal("a genuine store error must not become an invalid selection")
+		}
+	}
+	// A data database path that is a directory exists but cannot be opened.
+	root := t.TempDir()
+	if err := os.Mkdir(filepath.Join(root, "issueops.db"), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := (Store{}).ReadSelected(t.Context(), root, "io-selected"); err == nil {
-		t.Fatal("a genuine store error must not become an invalid selection")
+		t.Fatal("an unopenable data database must not become an invalid selection")
 	}
 }

@@ -8,6 +8,7 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 	shelltoken "issueops/internal/domain/shelltoken"
 	provenanceport "issueops/internal/port/issueopsprovenance"
+	"issueops/internal/testsupport"
 	"os"
 	"path/filepath"
 	"strings"
@@ -50,7 +51,7 @@ func TestGeneratedCommandRejectsStaleInstalledBinaryBeforeMutation(t *testing.T)
 	out, runErr := captureStdoutAndErrorForIssueOps(t, func() error {
 		return runIssueOpsForTest([]string{
 			"execution", "release", "--id", record.ID, "--generation", "7",
-			"--generated-by-executable", "/worktree/bin/issueops",
+			"--generated-by-executable", testsupport.AbsPath("worktree", "bin", "issueops"),
 			"--generated-by-sha256", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 			"--generated-for-generation", "7", "--json",
 		}, Dependencies{
@@ -59,7 +60,7 @@ func TestGeneratedCommandRejectsStaleInstalledBinaryBeforeMutation(t *testing.T)
 				return issueopscontract.ExecutionResult{}, nil
 			},
 			Provenance: issueOpsProvenanceObserverStub{evidence: provenanceport.Receipt{
-				ExecutablePath:   "/installed/bin/issueops",
+				ExecutablePath:   testsupport.AbsPath("installed", "bin", "issueops"),
 				ExecutableSHA256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
 			}},
 		})
@@ -100,7 +101,7 @@ func TestGeneratedCommandRunsExactObservedBinaryEnvelopeWithoutCallerRepair(t *t
 		t.Fatal(err)
 	}
 	evidence := commandparsecontract.GeneratedCommandProvenance{
-		ExecutablePath: "/worktree/bin/issueops", ExecutableSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", LeaseGeneration: 7,
+		ExecutablePath: testsupport.AbsPath("worktree", "bin", "issueops"), ExecutableSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", LeaseGeneration: 7,
 	}
 	command, err := commandparsecontract.BindGeneratedCommand(
 		"issueops execution release --id "+record.ID+" --generation 7 --json",
@@ -152,7 +153,7 @@ func TestGeneratedDelegatedChildBootstrapUsesParentExecutionProvenance(t *testin
 		t.Fatal(err)
 	}
 	evidence := commandparsecontract.GeneratedCommandProvenance{
-		ExecutablePath: "/worktree/bin/issueops", ExecutableSHA256: strings.Repeat("a", 64),
+		ExecutablePath: testsupport.AbsPath("worktree", "bin", "issueops"), ExecutableSHA256: strings.Repeat("a", 64),
 	}
 	args := []string{
 		"branch", "prepare", "--id", child.ID, "--provider", "github",
@@ -179,7 +180,7 @@ func TestGeneratedOwnerMutationRequiresActualProcessCWD(t *testing.T) {
 	repo := makeIssueOpsCLIRepoForTest(t, "generated-owner-process-cwd")
 	parent, actor := startIssueOpsCLIReadyDelegationParent(t, repo, "123-330-generated-owner-cwd")
 	evidence := commandparsecontract.GeneratedCommandProvenance{
-		ExecutablePath: "/worktree/bin/issueops", ExecutableSHA256: strings.Repeat("a", 64),
+		ExecutablePath: testsupport.AbsPath("worktree", "bin", "issueops"), ExecutableSHA256: strings.Repeat("a", 64),
 	}
 	args := withIssueOpsCLIActor([]string{
 		"child", "start", "--parent", parent.ID, "--branch", "330-generated-child",

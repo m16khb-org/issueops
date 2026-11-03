@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"issueops/internal/adapter/outbound/sqlstore"
+	"issueops/internal/testsupport"
 )
 
 func seedMaintainStore(t *testing.T, dir, id, value string) {
@@ -48,7 +49,10 @@ func TestStateMaintainDiscoversLoopAndProjectStores(t *testing.T) {
 		if root.Dir != want[i] {
 			t.Fatalf("root[%d]=%s want %s", i, root.Dir, want[i])
 		}
-		if !root.Checkpointed || root.WALBytesBefore == 0 || root.WALBytesAfter > 64 {
+		// Windows closes idle SQLite connections, which deletes the WAL, so
+		// only Unix leaves a WAL for maintenance to truncate.
+		walGrown := runtime.GOOS == "windows" || root.WALBytesBefore != 0
+		if !root.Checkpointed || !walGrown || root.WALBytesAfter > 64 {
 			t.Fatalf("root[%d] not checkpointed: %+v", i, root)
 		}
 	}
@@ -137,7 +141,15 @@ func TestStateMaintainReportsProjectDiscoveryErrors(t *testing.T) {
 	stateDir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
 	t.Setenv("ISSUEOPS_WORKER_DIR", "")
-	if err := os.WriteFile(filepath.Join(stateDir, "projects"), []byte("not a directory"), 0o600); err != nil {
+	projects := filepath.Join(stateDir, "projects")
+	if runtime.GOOS == "windows" {
+		// A regular file in place of the directory reads as not existing on
+		// Windows (ERROR_PATH_NOT_FOUND), so deny reads on a real directory.
+		if err := os.Mkdir(projects, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		testsupport.MakeUnreadable(t, projects, 0o700)
+	} else if err := os.WriteFile(projects, []byte("not a directory"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 

@@ -3,7 +3,9 @@ package issueopsapp
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -11,8 +13,23 @@ import (
 
 	"issueops/internal/adapter/outbound/sqlstore"
 	issueopsdomain "issueops/internal/domain/issueops"
+	"issueops/internal/testsupport"
 	"issueops/internal/testsupport/responsecontract"
 )
+
+// systemToolPath is the PATH value that keeps only the system tools a fixture
+// needs reachable: git on every OS, plus the POSIX tool directories on Unix.
+func systemToolPath(t *testing.T) string {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		git, err := exec.LookPath("git")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return filepath.Dir(git)
+	}
+	return "/usr/bin" + string(os.PathListSeparator) + "/bin"
+}
 
 func buildCLIResponseContractSnapshot(t *testing.T, replacements map[string]string, stateDir, workspaceDir, gitRepoDir string) map[string]any {
 	t.Helper()
@@ -91,7 +108,7 @@ func buildCLIResponseContractSnapshot(t *testing.T, replacements map[string]stri
 	addEvalSymlinkReplacement(t, replacements, orphanRepo, "$ORPHAN_REPO")
 	addEvalSymlinkReplacement(t, replacements, orphanWorktree, "$ORPHAN_WORKTREE")
 	ghBin := installFakeGitHubMergedPR(t)
-	t.Setenv("PATH", ghBin+string(os.PathListSeparator)+glabBin+string(os.PathListSeparator)+"/usr/bin"+string(os.PathListSeparator)+"/bin")
+	t.Setenv("PATH", ghBin+string(os.PathListSeparator)+glabBin+string(os.PathListSeparator)+systemToolPath(t))
 	orphanPreviewStdout := captureStdoutForContract(t, func() error {
 		return runIssueOps([]string{"cleanup", "orphan", "--id", "io-f4e347fe9827", "--repo", orphanRepo, "--worktree", orphanWorktree, "--branch", orphanBranch, "--provider", "github", "--kind", "pr", "--artifact-url", "https://github.com/example/repo/pull/42", "--json"})
 	})
@@ -277,9 +294,7 @@ esac
 printf '{"description":"contract issue body","web_url":"https://gitlab.example/group/project/-/issues/1"}'
 exit 0
 `
-	if err := os.WriteFile(filepath.Join(bin, "glab"), []byte(script), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	testsupport.WriteFakeCommand(t, bin, "glab", script)
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	return bin
 }
@@ -295,9 +310,7 @@ fi
 echo "unexpected gh call: $*" >&2
 exit 2
 `
-	if err := os.WriteFile(filepath.Join(bin, "gh"), []byte(script), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	testsupport.WriteFakeCommand(t, bin, "gh", script)
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	return bin
 }

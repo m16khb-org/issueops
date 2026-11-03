@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"issueops/internal/adapter/outbound/osfile"
 	model "issueops/internal/contract/gates"
 )
 
@@ -21,7 +22,7 @@ func TestGateMutationPreservesPrivateFileMode(t *testing.T) {
 		t.Fatal(err)
 	}
 	info, err := os.Stat(file)
-	if err != nil || info.Mode().Perm() != 0600 {
+	if err != nil || osfile.Perm(file, info) != 0600 {
 		t.Fatalf("mode=%v err=%v", info, err)
 	}
 }

@@ -76,7 +76,9 @@ func TestNextSelectedRepositoryFence(t *testing.T) {
 				}
 				return path
 			}
-			ports.CleanPath = func(path string) string { return strings.TrimPrefix(filepath.Clean(path), "/private") }
+			ports.CleanPath = func(path string) string {
+				return strings.TrimPrefix(filepath.ToSlash(filepath.Clean(path)), "/private")
+			}
 			ports.ReadSelected = func(context.Context, string, string) (issueopscontract.IssueOpsRecord, error) {
 				return issueopscontract.IssueOpsRecord{ID: "io-selected", Repo: scenario.repo, Invalid: scenario.invalid, Phase: issueopscontract.IssueOpsPhaseGrill}, nil
 			}

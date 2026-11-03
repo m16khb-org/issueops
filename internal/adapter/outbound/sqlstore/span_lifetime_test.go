@@ -23,6 +23,9 @@ func TestAcquiredSpanTransactionSurvivesRequestCancellation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The replacement pool must release idle handles like openSQLite's, or
+	// Windows cannot remove the state root when the test ends.
+	releaseIdleFileHandles(holder.span)
 	contender, err := newDB(holder.dir)
 	if err != nil {
 		t.Fatal(err)

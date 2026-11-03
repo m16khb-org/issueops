@@ -4,11 +4,14 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
+	"issueops/internal/adapter/outbound/osfile"
 	installcontract "issueops/internal/contract/install"
 	"issueops/internal/port"
+	"issueops/internal/testsupport"
 )
 
 func writeInstallFixtureFile(t *testing.T, path, body string, mode os.FileMode) {
@@ -19,31 +22,39 @@ func writeInstallFixtureFile(t *testing.T, path, body string, mode os.FileMode) 
 	if err := os.WriteFile(path, []byte(body), mode); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Chmod(path, mode); err != nil {
+	if mode&0o077 != 0 {
+		testsupport.MakePermissive(t, path, mode)
+	} else if err := os.Chmod(path, mode); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestCollectInstallHostPathsCleansPathsAndRejectsKindConflicts(t *testing.T) {
+	sep := string(filepath.Separator)
+	home := testsupport.AbsPath("h")
+	uncleanB := home + sep + "a" + sep + ".." + sep + "b.json"
+	cleanB := filepath.Join(home, "b.json")
+	skill := filepath.Join(home, "skills", "x")
 	paths, err := collectInstallHostPaths(port.NativeInstallResult{
-		Files: []port.InstallFile{{Path: "/h/a/../b.json"}, {Path: ""}, {Path: "/h/b.json"}},
-		Links: []port.InstallLink{{Path: "/h/skills/x"}, {Path: ""}},
+		Files: []port.InstallFile{{Path: uncleanB}, {Path: ""}, {Path: cleanB}},
+		Links: []port.InstallLink{{Path: skill}, {Path: ""}},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(paths) != 2 || paths["/h/b.json"] != installHostFile || paths["/h/skills/x"] != installHostLink {
+	if len(paths) != 2 || paths[cleanB] != installHostFile || paths[skill] != installHostLink {
 		t.Fatalf("paths = %v", paths)
 	}
+	conflict := filepath.Join(home, "x")
 	_, err = collectInstallHostPaths(port.NativeInstallResult{
-		Files: []port.InstallFile{{Path: "/h/x"}},
-		Links: []port.InstallLink{{Path: "/h/./x"}},
+		Files: []port.InstallFile{{Path: conflict}},
+		Links: []port.InstallLink{{Path: home + sep + "." + sep + "x"}},
 	})
-	if err == nil || !strings.Contains(err.Error(), "both file and symlink: /h/x") {
+	if err == nil || !strings.Contains(err.Error(), "both file and symlink: "+conflict) {
 		t.Fatalf("conflict err = %v", err)
 	}
 	if _, err := prepareInstallHostTransaction(port.NativeInstallResult{
-		Files: []port.InstallFile{{Path: "/h/x"}}, Links: []port.InstallLink{{Path: "/h/x"}},
+		Files: []port.InstallFile{{Path: conflict}}, Links: []port.InstallLink{{Path: conflict}},
 	}); err == nil {
 		t.Fatal("prepare must surface a path declared as both file and symlink")
 	}
@@ -82,7 +93,11 @@ func TestCaptureInstallHostSnapshotsRejectUnsafeExistingPaths(t *testing.T) {
 		t.Fatalf("dangling link snapshot = %+v, %v", snapshot, err)
 	}
 	snapshot, err = captureInstallHostPath(regular, installHostFile)
-	if err != nil || string(snapshot.content) != "x" || snapshot.mode.Perm() != 0o640 || snapshot.wasSymlink {
+	wantRegularPerm := os.FileMode(0o640)
+	if runtime.GOOS == "windows" {
+		wantRegularPerm = 0o666 // osfile.Perm renders a non-private Windows file as owner rw mirrored to group and other
+	}
+	if err != nil || string(snapshot.content) != "x" || snapshot.mode.Perm() != wantRegularPerm || snapshot.wasSymlink {
 		t.Fatalf("regular snapshot = %+v, %v", snapshot, err)
 	}
 	snapshot, err = captureInstallHostPath(filepath.Join(root, "new"), installHostFile)
@@ -99,7 +114,8 @@ func TestInstallHostRollbackRestoresEverythingTheInstallTouched(t *testing.T) {
 	if err := os.MkdirAll(filepath.Dir(linkOld), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink("/old/target", linkOld); err != nil {
+	oldTarget := testsupport.AbsPath("old", "target")
+	if err := os.Symlink(oldTarget, linkOld); err != nil {
 		t.Fatal(err)
 	}
 	created := filepath.Join(root, "fresh", "deep", "new.json")
@@ -131,10 +147,10 @@ func TestInstallHostRollbackRestoresEverythingTheInstallTouched(t *testing.T) {
 	if body, _ := os.ReadFile(existing); string(body) != "original" {
 		t.Fatalf("existing file content = %q", body)
 	}
-	if info, _ := os.Stat(existing); info.Mode().Perm() != 0o600 {
-		t.Fatalf("existing file mode = %v, want 0600", info.Mode().Perm())
+	if info, _ := os.Stat(existing); osfile.Perm(existing, info) != 0o600 {
+		t.Fatalf("existing file mode = %v, want 0600", osfile.Perm(existing, info))
 	}
-	if target, err := os.Readlink(linkOld); err != nil || target != "/old/target" {
+	if target, err := os.Readlink(linkOld); err != nil || target != oldTarget {
 		t.Fatalf("link target = %q, %v", target, err)
 	}
 	if _, err := os.Lstat(created); !os.IsNotExist(err) {
@@ -197,7 +213,8 @@ func TestInstallHostRollbackReportsParentThatBecameAFile(t *testing.T) {
 }
 
 func TestPathDepthCountsComponents(t *testing.T) {
-	for path, want := range map[string]int{"/": 0, ".": 0, "/a": 1, "/a/b/c": 3, "a/b": 2} {
+	sep := string(filepath.Separator)
+	for path, want := range map[string]int{sep: 0, ".": 0, sep + "a": 1, sep + filepath.Join("a", "b", "c"): 3, filepath.Join("a", "b"): 2} {
 		if got := pathDepth(path); got != want {
 			t.Errorf("pathDepth(%q) = %d, want %d", path, got, want)
 		}
@@ -228,130 +245,6 @@ func TestRemoveInstallDirectoryIfEmptyOnlyRemovesEmptyDirectories(t *testing.T) 
 	}
 }
 
-func TestPlanShellPathHonorsModeExistingPathAndExistingRCLine(t *testing.T) {
-	newReq := func(t *testing.T) port.NativeInstallRequest {
-		home := t.TempDir()
-		t.Setenv("SHELL", "/bin/zsh")
-		t.Setenv("PATH", "/usr/bin:/bin")
-		return port.NativeInstallRequest{Home: home, DryRun: true}
-	}
-	t.Run("manual and skip only add guidance", func(t *testing.T) {
-		for mode, want := range map[string]string{"manual": "path-mode=manual", "skip": "path-mode=skip"} {
-			req := newReq(t)
-			var result port.NativeInstallResult
-			if err := planShellPath(&result, req, mode); err != nil {
-				t.Fatal(err)
-			}
-			if len(result.Files) != 0 || len(result.Messages) != 1 || !strings.HasPrefix(result.Messages[0], want) {
-				t.Fatalf("%s: %+v", mode, result)
-			}
-		}
-	})
-	t.Run("local bin already on PATH changes nothing", func(t *testing.T) {
-		req := newReq(t)
-		t.Setenv("PATH", "/usr/bin:"+filepath.Join(req.Home, ".local", "bin", "."))
-		var result port.NativeInstallResult
-		if err := planShellPath(&result, req, "auto"); err != nil || len(result.Files)+len(result.Messages) != 0 {
-			t.Fatalf("result = %+v, %v", result, err)
-		}
-	})
-	t.Run("rc that already exports local bin changes nothing", func(t *testing.T) {
-		req := newReq(t)
-		writeInstallFixtureFile(t, filepath.Join(req.Home, ".zshrc"), "export PATH=\"$HOME/.local/bin:$PATH\"\n", 0o644)
-		var result port.NativeInstallResult
-		if err := planShellPath(&result, req, "auto"); err != nil || len(result.Files)+len(result.Messages) != 0 {
-			t.Fatalf("result = %+v, %v", result, err)
-		}
-	})
-	t.Run("dry run plans an rc edit without writing", func(t *testing.T) {
-		req := newReq(t)
-		var result port.NativeInstallResult
-		if err := planShellPath(&result, req, "auto"); err != nil {
-			t.Fatal(err)
-		}
-		rc := filepath.Join(req.Home, ".zshrc")
-		if len(result.Files) != 1 || result.Files[0].Path != rc || !result.Files[0].WouldWrite || !strings.HasPrefix(result.Messages[0], "dry-run: would add") {
-			t.Fatalf("result = %+v", result)
-		}
-		if _, err := os.Stat(rc); !os.IsNotExist(err) {
-			t.Fatal("dry-run must not create the rc file")
-		}
-	})
-	t.Run("apply appends the marker and export once", func(t *testing.T) {
-		req := newReq(t)
-		req.DryRun = false
-		var result port.NativeInstallResult
-		if err := planShellPath(&result, req, "auto"); err != nil {
-			t.Fatal(err)
-		}
-		body, _ := os.ReadFile(filepath.Join(req.Home, ".zshrc"))
-		if !strings.Contains(string(body), shellPathRCMarker) || len(result.Files) != 1 || !result.Files[0].Written || !strings.HasPrefix(result.Messages[0], "added ~/.local/bin") {
-			t.Fatalf("body=%q result=%+v", body, result)
-		}
-		var again port.NativeInstallResult
-		if err := planShellPath(&again, req, "auto"); err != nil || len(again.Files) != 0 {
-			t.Fatalf("a second run must find the marker and write nothing: %+v, %v", again, err)
-		}
-	})
-	t.Run("unwritable rc location is an error and records no file", func(t *testing.T) {
-		req := newReq(t)
-		req.DryRun = false
-		writeInstallFixtureFile(t, filepath.Join(req.Home, ".zshrc"), "", 0o644)
-		if err := os.Remove(filepath.Join(req.Home, ".zshrc")); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.Mkdir(filepath.Join(req.Home, ".zshrc"), 0o755); err != nil {
-			t.Fatal(err)
-		}
-		var result port.NativeInstallResult
-		if err := planShellPath(&result, req, "auto"); err == nil || len(result.Files) != 0 {
-			t.Fatalf("err = %v, files = %+v", err, result.Files)
-		}
-	})
-}
-
-func TestAppendShellPathLinePlanReportsUnwritableTargets(t *testing.T) {
-	root := t.TempDir()
-	blocker := filepath.Join(root, "blocker")
-	writeInstallFixtureFile(t, blocker, "x", 0o644)
-	if file, err := appendShellPathLinePlan(filepath.Join(blocker, "rc"), false); err == nil || file.Written {
-		t.Fatalf("mkdir through a file must fail: %+v, %v", file, err)
-	}
-	if file, err := appendShellPathLinePlan(root, false); err == nil || file.Written {
-		t.Fatalf("opening a directory for append must fail: %+v, %v", file, err)
-	}
-}
-
-func TestShellRCDetectionRecognizesEveryExportFormAndFallsBackToProfile(t *testing.T) {
-	home := t.TempDir()
-	rc := filepath.Join(home, "rc")
-	cases := map[string]bool{
-		shellPathRCMarker + "\n":                          true,
-		"export PATH=\"$HOME/.local/bin:$PATH\"\n":        true,
-		"export PATH=\"" + home + "/.local/bin:$PATH\"\n": true,
-		"export PATH=\"/other/bin:$PATH\"\n":              false,
-		"":                                                false,
-	}
-	for body, want := range cases {
-		writeInstallFixtureFile(t, rc, body, 0o644)
-		if got := shellRCAlreadyAddsLocalBin(rc, home); got != want {
-			t.Errorf("shellRCAlreadyAddsLocalBin(%q) = %v, want %v", body, got, want)
-		}
-	}
-	if shellRCAlreadyAddsLocalBin(filepath.Join(home, "absent"), home) {
-		t.Error("a missing rc cannot already contain the line")
-	}
-
-	t.Setenv("SHELL", "/usr/bin/zsh")
-	if got := preferredShellRC(home); got != filepath.Join(home, ".zshrc") {
-		t.Errorf("zsh rc = %q", got)
-	}
-	t.Setenv("SHELL", "/usr/bin/fish")
-	if got := preferredShellRC(home); got != filepath.Join(home, ".profile") {
-		t.Errorf("fish with no rc files falls back to .profile, got %q", got)
-	}
-}
-
 type managedPathFixture struct {
 	applyPlan installcontract.ManagedCommandPathPlan
 	applyErr  error
@@ -375,7 +268,7 @@ func (f *managedPathFixture) Finalize() (installcontract.ManagedCommandPathPlan,
 
 func TestInstallPathTransactionManagedCommandLifecycle(t *testing.T) {
 	home := t.TempDir()
-	command := filepath.Join(home, ".local", "bin", "issueops")
+	command := filepath.Join(home, ".local", "bin", testsupport.ExecutableName("issueops"))
 	writeInstallFixtureFile(t, command, "old binary", 0o755)
 	target := filepath.Join(t.TempDir(), "bin", "issueops")
 	managed := &managedPathFixture{applyPlan: installcontract.ManagedCommandPathPlan{Path: command, Target: target, Adopted: true}}
@@ -415,7 +308,7 @@ func TestInstallPathTransactionManagedCommandLifecycle(t *testing.T) {
 
 func TestInstallPathTransactionManagedApplyFailureKeepsAdoptionStateForRollback(t *testing.T) {
 	home := t.TempDir()
-	command := filepath.Join(home, ".local", "bin", "issueops")
+	command := filepath.Join(home, ".local", "bin", testsupport.ExecutableName("issueops"))
 	writeInstallFixtureFile(t, command, "old", 0o755)
 	boom := errors.New("swap failed")
 	managed := &managedPathFixture{applyPlan: installcontract.ManagedCommandPathPlan{Path: command, Adopted: true}, applyErr: boom}
@@ -448,7 +341,7 @@ func TestInstallPathTransactionManagedApplyFailureKeepsAdoptionStateForRollback(
 func TestPrepareInstallPathPlanPropagatesManagedPreflightAndStatFailures(t *testing.T) {
 	t.Run("managed preflight refusal still reports the plan", func(t *testing.T) {
 		home := t.TempDir()
-		writeInstallFixtureFile(t, filepath.Join(home, ".local", "bin", "issueops"), "old", 0o755)
+		writeInstallFixtureFile(t, filepath.Join(home, ".local", "bin", testsupport.ExecutableName("issueops")), "old", 0o755)
 		refusal := errors.New("refusing to adopt")
 		cli := testInstallCommand(t, Deps{})
 		cli.PrepareManagedCommandPathCandidate = func(string, string, string, bool, bool) (ManagedCommandPathTransaction, installcontract.ManagedCommandPathPlan, error) {
@@ -461,6 +354,9 @@ func TestPrepareInstallPathPlanPropagatesManagedPreflightAndStatFailures(t *test
 		}
 	})
 	t.Run("a file in place of the .local directory fails the stat", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("Lstat under a regular file reports path-not-found (not exist) on Windows, not a stat failure")
+		}
 		home := t.TempDir()
 		writeInstallFixtureFile(t, filepath.Join(home, ".local"), "x", 0o644)
 		var result port.NativeInstallResult
@@ -477,8 +373,8 @@ func TestInstallPathTransactionApplyReportsSymlinkFailureAndRollsBackRestoredLin
 	if err := os.MkdirAll(userBin, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	command := filepath.Join(userBin, "issueops")
-	if err := os.Symlink("/previous/issueops", command); err != nil {
+	command := filepath.Join(userBin, testsupport.ExecutableName("issueops"))
+	if err := os.Symlink(previousCommandTarget, command); err != nil {
 		t.Fatal(err)
 	}
 	target := filepath.Join(t.TempDir(), "issueops")
@@ -489,7 +385,7 @@ func TestInstallPathTransactionApplyReportsSymlinkFailureAndRollsBackRestoredLin
 		t.Fatal(err)
 	}
 	// a stray regular file named io makes the short shim step refuse after the command link moved
-	writeInstallFixtureFile(t, filepath.Join(userBin, "io"), "not ours", 0o755)
+	writeInstallFixtureFile(t, filepath.Join(userBin, testsupport.ExecutableName("io")), "not ours", 0o755)
 
 	if err := transaction.Apply(&result); err == nil || !strings.Contains(err.Error(), "refusing to replace existing io command") {
 		t.Fatalf("apply err = %v", err)
@@ -500,10 +396,10 @@ func TestInstallPathTransactionApplyReportsSymlinkFailureAndRollsBackRestoredLin
 	if err := transaction.Rollback(&result); err != nil {
 		t.Fatal(err)
 	}
-	if got, _ := os.Readlink(command); got != "/previous/issueops" {
+	if got, _ := os.Readlink(command); got != previousCommandTarget {
 		t.Fatalf("rollback must restore the previous link target, got %q", got)
 	}
-	if body, _ := os.ReadFile(filepath.Join(userBin, "io")); string(body) != "not ours" {
+	if body, _ := os.ReadFile(filepath.Join(userBin, testsupport.ExecutableName("io"))); string(body) != "not ours" {
 		t.Fatal("rollback must not touch a file it never created")
 	}
 }
@@ -517,11 +413,11 @@ func TestInstallPathTransactionFinalizeWithoutManagedCommandIsNoop(t *testing.T)
 
 func TestPrepareInstallPathPlanPlansRelinkOfExistingCommandSymlink(t *testing.T) {
 	home := t.TempDir()
-	command := filepath.Join(home, ".local", "bin", "issueops")
+	command := filepath.Join(home, ".local", "bin", testsupport.ExecutableName("issueops"))
 	if err := os.MkdirAll(filepath.Dir(command), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink("/previous/issueops", command); err != nil {
+	if err := os.Symlink(previousCommandTarget, command); err != nil {
 		t.Fatal(err)
 	}
 	target := filepath.Join(t.TempDir(), "issueops")
@@ -547,8 +443,8 @@ func TestInstallPathTransactionRollbackReportsFailureToRestorePreviousLink(t *te
 	if err := os.MkdirAll(userBin, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	command := filepath.Join(userBin, "issueops")
-	if err := os.Symlink("/previous/issueops", command); err != nil {
+	command := filepath.Join(userBin, testsupport.ExecutableName("issueops"))
+	if err := os.Symlink(previousCommandTarget, command); err != nil {
 		t.Fatal(err)
 	}
 	target := filepath.Join(t.TempDir(), "issueops")

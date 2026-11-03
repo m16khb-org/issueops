@@ -6,6 +6,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"issueops/internal/adapter/outbound/osfile"
+	"issueops/internal/testsupport"
 )
 
 type managedCommandFixture struct {
@@ -19,7 +22,7 @@ func newManagedTestCommandFixture(build func(string) error) (managedCommandFixtu
 	if err != nil {
 		return managedCommandFixture{}, nil, fmt.Errorf("create managed command fixture directory: %w", err)
 	}
-	source := filepath.Join(directory, "issueops")
+	source := filepath.Join(directory, testsupport.ExecutableName("issueops"))
 	if err := build(source); err != nil {
 		if cleanupErr := os.RemoveAll(directory); cleanupErr != nil {
 			return managedCommandFixture{}, nil, fmt.Errorf("build managed command fixture: %w; cleanup: %v", err, cleanupErr)
@@ -31,7 +34,7 @@ func newManagedTestCommandFixture(build func(string) error) (managedCommandFixtu
 		_ = os.RemoveAll(directory)
 		return managedCommandFixture{}, nil, fmt.Errorf("stat managed command fixture: %w", err)
 	}
-	if !info.Mode().IsRegular() || info.Mode().Perm()&0o111 == 0 {
+	if !info.Mode().IsRegular() || osfile.Perm(source, info)&0o111 == 0 {
 		_ = os.RemoveAll(directory)
 		return managedCommandFixture{}, nil, fmt.Errorf("validate managed command fixture mode: %v", info.Mode())
 	}

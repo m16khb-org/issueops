@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"issueops/internal/testsupport"
 )
 
 // 연결 워크트리에서 실행한 실제 바이너리가 local 설정을 메인 워크트리에 쓰고,
@@ -16,7 +18,7 @@ func TestLocalScopeFromLinkedWorktreeBinary(t *testing.T) {
 		t.Skip("builds the issueops binary")
 	}
 	root := t.TempDir()
-	binary := filepath.Join(root, "issueops")
+	binary := filepath.Join(root, testsupport.ExecutableName("issueops"))
 	build := exec.Command("go", "build", "-o", binary, "./cmd/issueops")
 	build.Dir = filepath.Join("..", "..", "..")
 	if out, err := build.CombinedOutput(); err != nil {
@@ -56,7 +58,7 @@ func TestLocalScopeFromLinkedWorktreeBinary(t *testing.T) {
 		return decoded
 	}
 	set := issueops("model", "set", "--scope", "local", "--host", "codex", "--role", "research", "--model", "gpt-6-luna", "--effort", "low", "--json")
-	if !strings.HasSuffix(set["path"].(string), "/main/.issueops/agent-models.local.json") || set["excluded"] != true {
+	if !strings.HasSuffix(set["path"].(string), string(filepath.Separator)+filepath.Join("main", ".issueops", "agent-models.local.json")) || set["excluded"] != true {
 		t.Fatalf("set = %v", set)
 	}
 	resolved := issueops("model", "resolve", "--host", "codex", "--role", "research", "--json")
@@ -75,10 +77,11 @@ func TestLocalScopeFromLinkedWorktreeBinary(t *testing.T) {
 func cleanEnv(root string) []string {
 	var env []string
 	for _, entry := range os.Environ() {
-		if strings.HasPrefix(entry, "GIT_") || strings.HasPrefix(entry, "HOME=") || strings.HasPrefix(entry, "XDG_CONFIG_HOME=") || strings.HasPrefix(entry, "ISSUEOPS_STATE_DIR=") || strings.HasPrefix(entry, "CODEX_HOME=") {
+		if strings.HasPrefix(entry, "GIT_") || strings.HasPrefix(entry, "HOME=") || strings.HasPrefix(entry, "USERPROFILE=") || strings.HasPrefix(entry, "XDG_CONFIG_HOME=") || strings.HasPrefix(entry, "ISSUEOPS_STATE_DIR=") || strings.HasPrefix(entry, "CODEX_HOME=") {
 			continue
 		}
 		env = append(env, entry)
 	}
-	return append(env, "HOME="+root, "XDG_CONFIG_HOME="+filepath.Join(root, "xdg"), "ISSUEOPS_STATE_DIR="+filepath.Join(root, "state"), "CODEX_HOME="+filepath.Join(root, "codex"))
+	// os.UserHomeDir reads USERPROFILE on Windows; it is inert elsewhere.
+	return append(env, "HOME="+root, "USERPROFILE="+root, "XDG_CONFIG_HOME="+filepath.Join(root, "xdg"), "ISSUEOPS_STATE_DIR="+filepath.Join(root, "state"), "CODEX_HOME="+filepath.Join(root, "codex"))
 }

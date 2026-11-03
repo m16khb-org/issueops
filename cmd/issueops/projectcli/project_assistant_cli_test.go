@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	commitsuggest "issueops/internal/contract/commitsuggest"
 	lintdiagnose "issueops/internal/contract/lintdiagnose"
+	"issueops/internal/testsupport"
 	"os/exec"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -52,7 +54,7 @@ func TestRunProjectLintDiagnose_printsSuccessText_whenCommandPasses(t *testing.T
 
 	// When
 	out := captureStatusVerifyStdout(t, func() error {
-		return runProjectLintDiagnose(testLintService(), []string{"--repo", repo, "--", "/bin/sh", "-c", "printf ok"})
+		return runProjectLintDiagnose(testLintService(), append([]string{"--repo", repo, "--"}, passingCommand(t)...))
 	})
 
 	// Then
@@ -67,7 +69,7 @@ func TestRunProjectLintDiagnose_printsSuccessJSON_whenJSONFlagIsSet(t *testing.T
 
 	// When
 	out := captureStatusVerifyStdout(t, func() error {
-		return runProjectLintDiagnose(testLintService(), []string{"--repo", repo, "--json", "--", "/bin/sh", "-c", "printf ok"})
+		return runProjectLintDiagnose(testLintService(), append([]string{"--repo", repo, "--json", "--"}, passingCommand(t)...))
 	})
 
 	// Then
@@ -91,6 +93,16 @@ func TestRunProjectLintDiagnose_rejectsMissingCommand(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "missing command to run") {
 		t.Fatalf("expected missing command error, got %v", err)
 	}
+}
+
+// passingCommand is a command argv that prints "ok" and exits 0. Windows has no
+// /bin/sh, so there the same shell script runs through a fake command shim.
+func passingCommand(t *testing.T) []string {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		return []string{testsupport.WriteFakeCommand(t, t.TempDir(), "printok", "#!/bin/sh\nprintf ok\n")}
+	}
+	return []string{"/bin/sh", "-c", "printf ok"}
 }
 
 func newProjectAssistantGitRepo(t *testing.T) string {

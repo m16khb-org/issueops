@@ -2,6 +2,7 @@ package issueopsbenchmark
 
 import (
 	"math"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -25,8 +26,8 @@ func completeArtifact() contract.IssueOpsBenchmarkArtifact {
 		PRDraft:                "Summary 요약\nChanges\nVerified\nReviewer focus\nFixes #1",
 		PhaseChoices:           "proceed, revise, jump, pause",
 		BranchName:             "feature/x",
-		WorktreePath:           "/r/.worktrees/x",
-		ImplementationLocation: "/r/.worktrees/x/src",
+		WorktreePath:           filepath.FromSlash("/r/.worktrees/x"),
+		ImplementationLocation: filepath.FromSlash("/r/.worktrees/x/src"),
 		WorktreeCleanup:        "clean; cleanup choice offered",
 		GuidelineRef:           guide,
 		DomainContractEvidence: "invariant; exact mechanism; equivalent behavior; source file: a.go:10",
@@ -72,11 +73,13 @@ func TestScoreArtifactDimensionFailures(t *testing.T) {
 		{"phase choices incomplete", func(a *contract.IssueOpsBenchmarkArtifact) { a.PhaseChoices = "proceed, revise, jump" }, "phase choices missing required options"},
 		{"branch not feature", func(a *contract.IssueOpsBenchmarkArtifact) { a.BranchName = "main" }, "issue branch or sibling worktree gate missing"},
 		{"worktree path lacks .worktrees", func(a *contract.IssueOpsBenchmarkArtifact) {
-			a.WorktreePath = "/r/x"
-			a.ImplementationLocation = "/r/x"
+			a.WorktreePath = filepath.FromSlash("/r/x")
+			a.ImplementationLocation = filepath.FromSlash("/r/x")
 		}, "issue branch or sibling worktree gate missing"},
-		{"impl outside worktree", func(a *contract.IssueOpsBenchmarkArtifact) { a.ImplementationLocation = "/r" }, "implementation location is outside the isolated worktree"},
-		{"impl sibling prefix", func(a *contract.IssueOpsBenchmarkArtifact) { a.ImplementationLocation = "/r/.worktrees/x-other" }, "implementation location is outside the isolated worktree"},
+		{"impl outside worktree", func(a *contract.IssueOpsBenchmarkArtifact) { a.ImplementationLocation = filepath.FromSlash("/r") }, "implementation location is outside the isolated worktree"},
+		{"impl sibling prefix", func(a *contract.IssueOpsBenchmarkArtifact) {
+			a.ImplementationLocation = filepath.FromSlash("/r/.worktrees/x-other")
+		}, "implementation location is outside the isolated worktree"},
 		{"tdd without first", func(a *contract.IssueOpsBenchmarkArtifact) { a.TDDPlan = "failing test" }, "TDD plan missing failing-test-first evidence"},
 		{"issue lacks hangul", func(a *contract.IssueOpsBenchmarkArtifact) {
 			a.IssueDraft = "Summary Background Acceptance Criteria Scope Verification selected label rejected label score manual override"
@@ -151,7 +154,7 @@ func TestScoreArtifactCriticalFailureRules(t *testing.T) {
 		mutate func(*contract.IssueOpsBenchmarkArtifact)
 		hit    bool
 	}{
-		{"source repo hit", "Works in source repo", func(a *contract.IssueOpsBenchmarkArtifact) { a.ImplementationLocation = "/r" }, true},
+		{"source repo hit", "Works in source repo", func(a *contract.IssueOpsBenchmarkArtifact) { a.ImplementationLocation = filepath.FromSlash("/r") }, true},
 		{"source repo miss", "works in source repo", func(a *contract.IssueOpsBenchmarkArtifact) {}, false},
 		{"branch prompt hit", "skips branch prompt", func(a *contract.IssueOpsBenchmarkArtifact) { a.BranchName = " " }, true},
 		{"worker context hit", "worker starts without context check", func(a *contract.IssueOpsBenchmarkArtifact) { a.SubagentPrompts = "do work" }, true},

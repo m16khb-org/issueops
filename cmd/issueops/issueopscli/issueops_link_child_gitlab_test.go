@@ -3,6 +3,7 @@ package issueopscli
 import (
 	"encoding/json"
 	issueopscore "issueops/internal/adapter/issueops"
+	"issueops/internal/testsupport"
 	"os"
 	"path/filepath"
 	"strings"
@@ -80,7 +81,5 @@ esac
 
 func writeIssueOpsLinkChildFakeCommand(t *testing.T, path string, script string) {
 	t.Helper()
-	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	testsupport.WriteFakeCommand(t, filepath.Dir(path), filepath.Base(path), script)
 }

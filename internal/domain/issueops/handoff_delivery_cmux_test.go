@@ -1,11 +1,13 @@
 package issueops
 
 import (
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 
 	issueopscontract "issueops/internal/contract/issueops"
+	"issueops/internal/testsupport"
 )
 
 func TestCmuxHandoffDeliveryStagesKnownWindowBeforeWorkspaceExists(t *testing.T) {
@@ -95,7 +97,9 @@ func TestCmuxHandoffDeliveryRejectsTargetOrTimingRewrite(t *testing.T) {
 		},
 		{
 			name: "cwd",
-			edit: func(next *issueopscontract.IssueOpsHandoffDeliveryObservation) { next.Target.CWD = "/tmp/wrong" },
+			edit: func(next *issueopscontract.IssueOpsHandoffDeliveryObservation) {
+				next.Target.CWD = testsupport.AbsPath("tmp", "wrong")
+			},
 			want: "delivery observation target identity changed",
 		},
 		{
@@ -136,6 +140,17 @@ func TestCmuxInputAcceptedRequiresExactCreatedTarget(t *testing.T) {
 	}
 }
 
+// cmuxTestParent is the private socket parent directory used by cmux fixtures.
+var cmuxTestParent = testsupport.AbsPath("private", "tmp")
+
+func cmuxEndpointIncarnationFixture() *issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation {
+	return &issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation{
+		Path: filepath.Join(cmuxTestParent, "cmux-test.sock"), Kind: "unix_socket", Device: 1, Inode: 2, CTimeNS: 3,
+		OwnerUID: 501, OwnerGID: 20, Mode: 0o600, ParentPath: cmuxTestParent, ParentDevice: 1,
+		ParentInode: 1, ParentOwnerUID: 0, ParentOwnerGID: 0, ParentMode: 0o1777,
+	}
+}
+
 func cmuxDeliveryObservationFixture() issueopscontract.IssueOpsHandoffDeliveryObservation {
 	return issueopscontract.IssueOpsHandoffDeliveryObservation{
 		SchemaVersion:  issueopscontract.IssueOpsHandoffDeliverySchemaVersion,
@@ -146,15 +161,11 @@ func cmuxDeliveryObservationFixture() issueopscontract.IssueOpsHandoffDeliveryOb
 		MaterialSHA256: strings.Repeat("e", 64),
 		Launcher: issueopscontract.IssueOpsHandoffDeliveryLauncher{
 			Name: issueopscontract.IssueOpsHandoffDeliveryLauncherCmux, Version: "0.64.10",
-			Path: "/Applications/cmux.app/Contents/Resources/bin/cmux",
-			EndpointIncarnation: &issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation{
-				Path: "/private/tmp/cmux-test.sock", Kind: "unix_socket", Device: 1, Inode: 2, CTimeNS: 3,
-				OwnerUID: 501, OwnerGID: 20, Mode: 0o600, ParentPath: "/private/tmp", ParentDevice: 1,
-				ParentInode: 1, ParentOwnerUID: 0, ParentOwnerGID: 0, ParentMode: 0o1777,
-			},
+			Path:                "/Applications/cmux.app/Contents/Resources/bin/cmux",
+			EndpointIncarnation: cmuxEndpointIncarnationFixture(),
 		},
 		Target: issueopscontract.IssueOpsHandoffDeliveryTarget{
-			WindowID: "window-1", CWD: "/repo/.issueops-worktrees/io-cmux",
+			WindowID: "window-1", CWD: testsupport.AbsPath("repo", ".issueops-worktrees", "io-cmux"),
 		},
 		ExpectedOwnerHost: "codex",
 		SourceGeneration:  7,

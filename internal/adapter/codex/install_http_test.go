@@ -2,6 +2,7 @@ package codex
 
 import (
 	install "issueops/internal/adapter/install"
+	"issueops/internal/adapter/outbound/osfile"
 	"os"
 	"path/filepath"
 	"strings"
@@ -42,8 +43,8 @@ func TestCodexHTTPInstallReplacesStdioEntryWithOwnerOnlyURLAndBearer(t *testing.
 		t.Fatalf("config =\n%s\nwant\n%s", raw, want)
 	}
 	info, err := os.Stat(configPath)
-	if err != nil || info.Mode().Perm() != 0o600 {
-		t.Fatalf("config mode = %v, %v", info.Mode().Perm(), err)
+	if err != nil || osfile.Perm(configPath, info) != 0o600 {
+		t.Fatalf("config mode = %v, %v", osfile.Perm(configPath, info), err)
 	}
 	if _, err := testInstaller().VerifyActivation(req); err != nil {
 		t.Fatalf("http activation readback: %v", err)

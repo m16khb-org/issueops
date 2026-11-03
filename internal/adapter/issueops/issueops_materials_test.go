@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -96,7 +97,11 @@ func TestPhaseTransitionWritesTrackedMaterials(t *testing.T) {
 	if trackedCopy(t, worktree, "13", "plan.md") != planBodyForTest() {
 		t.Fatalf("plan.md must copy the sealed plan")
 	}
-	if info, err := os.Stat(filepath.Join(worktree, ".issueops", "issues", "13", "plan.md")); err != nil || info.Mode().Perm() != 0o644 {
+	ordinary := os.FileMode(0o644)
+	if runtime.GOOS == "windows" {
+		ordinary = 0o666 // Go renders every writable Windows file as 0666
+	}
+	if info, err := os.Stat(filepath.Join(worktree, ".issueops", "issues", "13", "plan.md")); err != nil || info.Mode().Perm() != ordinary {
 		t.Fatalf("tracked copies are ordinary files: %v %v", info, err)
 	}
 	intent := trackedCopy(t, worktree, "13", "intent.md")

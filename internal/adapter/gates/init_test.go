@@ -45,7 +45,7 @@ func TestInitDefaultsToScopeNamespacedFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.File != filepath.Join(".issueops", "gates", "issue-42-merge-proof-gates.md") {
+	if result.File != ".issueops/gates/issue-42-merge-proof-gates.md" {
 		t.Fatalf("default file = %q, want namespaced gate path", result.File)
 	}
 	if _, err := os.Stat(result.File); err != nil {

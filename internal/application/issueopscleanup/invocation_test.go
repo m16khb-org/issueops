@@ -10,6 +10,7 @@ import (
 	model "issueops/internal/contract/issueops"
 	"issueops/internal/port"
 	provenanceport "issueops/internal/port/issueopsprovenance"
+	"issueops/internal/testsupport"
 )
 
 func TestFinishInvocationPreservesObservationOrderAndStopsBeforeEffects(t *testing.T) {
@@ -64,7 +65,7 @@ type invocationObserver struct {
 
 func (o invocationObserver) Observe(context.Context) (provenanceport.Receipt, error) {
 	*o.calls++
-	return provenanceport.Receipt{ExecutablePath: "/repo/bin/issueops", ExecutableSHA256: strings.Repeat("a", 64)}, o.err
+	return provenanceport.Receipt{ExecutablePath: testsupport.AbsPath("repo", "bin", testsupport.ExecutableName("issueops")), ExecutableSHA256: strings.Repeat("a", 64)}, o.err
 }
 func TestFinishInvocationKeepsInitialGenerationAndErrorPrecedence(t *testing.T) {
 	executorFailure := errors.New("executor refused")

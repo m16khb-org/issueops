@@ -11,6 +11,7 @@ import (
 
 	"issueops/internal/adapter/preflight"
 	model "issueops/internal/contract/issueops"
+	"issueops/internal/testsupport"
 )
 
 func TestCycleReadinessKeepsCapturedGitCapabilities(t *testing.T) {
@@ -62,9 +63,7 @@ func TestCycleReadinessSharesGitObservationsPerOperation(t *testing.T) {
 	bin := t.TempDir()
 	log := filepath.Join(bin, "commands")
 	script := "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$READINESS_GIT_LOG\"\nexec \"$READINESS_REAL_GIT\" \"$@\"\n"
-	if err := os.WriteFile(filepath.Join(bin, "git"), []byte(script), 0700); err != nil {
-		t.Fatal(err)
-	}
+	testsupport.WriteFakeCommand(t, bin, "git", script)
 	t.Setenv("READINESS_REAL_GIT", git)
 	t.Setenv("READINESS_GIT_LOG", log)
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))

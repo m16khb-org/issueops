@@ -36,15 +36,16 @@ func TestCodexInstallerWritesOnlyUserAndHarnessTemplatePaths(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(config), "[mcp_servers.issueops]") || !strings.Contains(string(config), req.BinPath) {
+	if !strings.Contains(string(config), "[mcp_servers.issueops]") || !strings.Contains(string(config), testDependencies().TOMLString(req.BinPath)) {
 		t.Fatalf("codex config missing harness block:\n%s", string(config))
 	}
 	hooks, err := os.ReadFile(filepath.Join(home, ".codex", "hooks.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
+	commands := hookShellCommands(t, string(hooks))
 	for _, subcommand := range []string{"hook session-start --host codex", "hook subagent-start --host codex"} {
-		if !strings.Contains(string(hooks), subcommand) || !strings.Contains(string(hooks), req.BinPath) {
+		if countContaining(commands, subcommand) == 0 || countContaining(commands, req.BinPath) == 0 {
 			t.Fatalf("codex hooks missing context-only command %q:\n%s", subcommand, string(hooks))
 		}
 	}
@@ -81,8 +82,9 @@ func TestCodexInstallerMergesLifecycleHooksIdempotently(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	commands := hookShellCommands(t, string(hooks))
 	for _, subcommand := range []string{"hook session-start --host codex", "hook subagent-start --host codex"} {
-		if count := strings.Count(string(hooks), subcommand); count != 1 {
+		if count := countContaining(commands, subcommand); count != 1 {
 			t.Fatalf("%s appears %d times, want 1:\n%s", subcommand, count, string(hooks))
 		}
 	}
@@ -186,7 +188,7 @@ func TestMergeHookConfigReplacesManagedContextGroupsInPlace(t *testing.T) {
 					}
 				}
 			}
-			if count := strings.Count(fmt.Sprint(got), "'/new/bin/issueops' hook session-start --host codex"); count != 1 {
+			if count := countContaining(shellCommandsIn(got), "'/new/bin/issueops' hook session-start --host codex"); count != 1 {
 				t.Fatalf("canonical managed group count = %d, want 1: %#v", count, got)
 			}
 		})
@@ -202,7 +204,7 @@ func TestMergeHookConfigKeepsThirdPartySubagentStartGroups(t *testing.T) {
 	if len(groups) != 2 || fmt.Sprint(groups[0]) != fmt.Sprint(acme) {
 		t.Fatalf("third-party SubagentStart group must stay first and unchanged: %#v", groups)
 	}
-	if count := strings.Count(fmt.Sprint(groups), "'/new/bin/issueops' hook subagent-start --host codex"); count != 1 {
+	if count := countContaining(shellCommandsIn(groups), "'/new/bin/issueops' hook subagent-start --host codex"); count != 1 {
 		t.Fatalf("managed SubagentStart group count = %d, want 1: %#v", count, groups)
 	}
 }

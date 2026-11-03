@@ -16,6 +16,7 @@ import (
 	app "issueops/internal/application/selfverify"
 	augmentcontract "issueops/internal/contract/selfaugment"
 	verify "issueops/internal/contract/selfverify"
+	"issueops/internal/testsupport"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -41,9 +42,7 @@ func TestSelfVerifyProductionWiringPreservesCommittedScopeFailure(t *testing.T) 
 	git("-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-qm", "Go change")
 	fake := t.TempDir()
 	// The real scoped collector and runner emit a deliberately oversized failed command log.
-	if err := os.WriteFile(filepath.Join(fake, "go"), []byte("#!/bin/sh\nhead -c 20000 /dev/zero | tr '\\000' x\nprintf 'scope-command-tail\\n'\nexit 7\n"), 0700); err != nil {
-		t.Fatal(err)
-	}
+	testsupport.WriteFakeCommand(t, fake, "go", "#!/bin/sh\nhead -c 20000 /dev/zero | tr '\\000' x\nprintf 'scope-command-tail\\n'\nexit 7\n")
 	t.Setenv("PATH", fake+string(os.PathListSeparator)+os.Getenv("PATH"))
 	deps := selfVerifyLoopDeps(root)
 	deps.StepDeps.ValidateHarnessInvariants = func(string) verify.StepResult { return verify.StepResult{OK: true} }

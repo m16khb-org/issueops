@@ -1,11 +1,11 @@
 package stateroundtrip
 
 import (
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
+
+	"issueops/internal/testsupport"
 )
 
 func TestValidateStateRoundtripWrapperUsesDefaultSurfaces(t *testing.T) {
@@ -40,15 +40,17 @@ base_key="` + baseKey + `"
 candidate_key="` + candidateKey + `"
 promoted_key="` + promotedKey + `"
 content="` + contentJSON + `"
-list_count_file="$ISSUEOPS_STATE_DIR/.list-count"
-history_count_file="$ISSUEOPS_STATE_DIR/.history-count"
+# JSON string values must not carry Windows backslashes.
+state_dir="$(printf '%s' "$ISSUEOPS_STATE_DIR" | tr '\\' '/')"
+list_count_file="$state_dir/.list-count"
+history_count_file="$state_dir/.history-count"
 case "$*" in
   state\ write*)
     case "$*" in
       *"--key $old_key"*) out_key="$old_key"; out_content="old state"; out_bytes=9 ;;
       *) out_key="$key"; out_content="$content"; out_bytes=31 ;;
     esac
-	printf '{"ok":true,"path":"%s/%s.json","record":{"schema_version":1,"key":"%s","content":"%s","updated_at":"2026-08-02T00:00:00Z","bytes":%s}}\n' "$ISSUEOPS_STATE_DIR" "$out_key" "$out_key" "$out_content" "$out_bytes"
+	printf '{"ok":true,"path":"%s/%s.json","record":{"schema_version":1,"key":"%s","content":"%s","updated_at":"2026-08-02T00:00:00Z","bytes":%s}}\n' "$state_dir" "$out_key" "$out_key" "$out_content" "$out_bytes"
     ;;
   state\ read*)
 	printf '{"ok":true,"record":{"schema_version":1,"key":"%s","content":"%s","updated_at":"2026-08-02T00:00:00Z","bytes":31}}\n' "$key" "$content"
@@ -109,11 +111,7 @@ case "$*" in
     ;;
 esac
 `
-	path := filepath.Join(dir, "fake-issueops")
-	if err := os.WriteFile(path, []byte(body), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	return path
+	return testsupport.WriteFakeCommand(t, dir, "fake-issueops", body)
 }
 
 func formatSeedForStateRoundtrip(seed int64) string {

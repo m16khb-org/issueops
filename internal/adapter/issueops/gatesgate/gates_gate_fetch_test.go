@@ -10,6 +10,7 @@ import (
 
 	"issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
+	"issueops/internal/testsupport"
 )
 
 // pr 진입은 upstream을 한 번만 fetch한다. core가 span 밖에서 fetch한 결과로 판정하므로
@@ -46,10 +47,8 @@ func installFetchCountingGit(t *testing.T) string {
 	}
 	bin := t.TempDir()
 	log := filepath.Join(t.TempDir(), "fetch.log")
-	script := "#!/bin/sh\ncase \"$1\" in fetch) echo fetch >> '" + log + "';; esac\nexec '" + realGit + "' \"$@\"\n"
-	if err := os.WriteFile(filepath.Join(bin, "git"), []byte(script), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	script := "#!/bin/sh\ncase \"$1\" in fetch) echo fetch >> '" + filepath.ToSlash(log) + "';; esac\nexec '" + filepath.ToSlash(realGit) + "' \"$@\"\n"
+	testsupport.WriteFakeCommand(t, bin, "git", script)
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	return log
 }

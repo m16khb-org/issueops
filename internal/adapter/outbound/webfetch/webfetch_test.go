@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -14,6 +12,7 @@ import (
 
 	webfetchcontract "issueops/internal/contract/webfetch"
 	webfetchdomain "issueops/internal/domain/webfetch"
+	"issueops/internal/testsupport"
 )
 
 func TestFetchRejectsUnsafeURLsBeforeNetwork(t *testing.T) {
@@ -383,10 +382,7 @@ func TestRunBenchmarkLiveRunsBaselineComparatorAsBlackBox(t *testing.T) {
 	}))
 	defer server.Close()
 
-	comparator := filepath.Join(t.TempDir(), "baseline-fetch")
-	if err := os.WriteFile(comparator, []byte("#!/bin/sh\nprintf '%s\\n' '{\"ok\":true,\"category\":\"strong_ok\"}'\n"), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	comparator := testsupport.WriteFakeCommand(t, t.TempDir(), "baseline-fetch", "#!/bin/sh\nprintf '%s\\n' '{\"ok\":true,\"category\":\"strong_ok\"}'\n")
 
 	result, err := RunBenchmark(context.Background(), webfetchcontract.BenchmarkRequest{
 		Live:                true,

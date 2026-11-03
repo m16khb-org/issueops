@@ -1127,7 +1127,7 @@ func forbiddenEdges(edges []dependencyEdge) []dependencyEdge {
 			(isAdapter(edge.importer) && isCore(edge.imported) && !isMigratedInboundAdapter(edge.importer)) ||
 			(isAdapter(edge.imported) && !isCompositionRoot(edge.importer) && !isSameCapabilityAdapter(edge.importer, edge.imported) &&
 				!isSharedStorageEngineEdge(edge.importer, edge.imported) && !isProcessLifetimeEdge(edge.importer, edge.imported) &&
-				!isGitExcludeEdge(edge.importer, edge.imported) && !isGitBinaryEdge(edge.imported)) {
+				!isGitExcludeEdge(edge.importer, edge.imported) && !isGitBinaryEdge(edge.imported) && !isOSPrimitiveEdge(edge.imported)) {
 			forbidden = append(forbidden, edge)
 		}
 	}
@@ -1269,6 +1269,13 @@ func isGitExcludeEdge(importer, imported string) bool {
 // spawns git may import it.
 func isGitBinaryEdge(imported string) bool {
 	return imported == "internal/adapter/outbound/gitbin"
+}
+
+// osfile and osprocess report OS file permission/identity and process facts
+// in one shape on every platform. They hold no policy and no state, so any
+// adapter that checks owner-only files or controls child processes may import them.
+func isOSPrimitiveEdge(imported string) bool {
+	return imported == "internal/adapter/outbound/osfile" || imported == "internal/adapter/outbound/osprocess"
 }
 
 func isInboundAdapter(path string) bool {

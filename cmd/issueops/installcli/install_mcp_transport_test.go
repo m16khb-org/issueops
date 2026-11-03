@@ -12,6 +12,7 @@ import (
 	"issueops/internal/contract/mcpservice"
 	"issueops/internal/port"
 	activationport "issueops/internal/port/nativeactivation"
+	"issueops/internal/testsupport"
 )
 
 type mcpServiceSetupFixture struct {
@@ -45,11 +46,13 @@ func transportCommand(t *testing.T, service *mcpServiceSetupFixture, seen *[]por
 		t.Fatal(err)
 	}
 	stableRoot := installCommandTestStableRoot(t, root)
-	t.Setenv("HOME", home)
+	testsupport.SetHome(t, home)
 	t.Setenv("CODEX_HOME", filepath.Join(home, ".codex"))
 	return testInstallCommand(t, Deps{
-		IssueOpsRoot:         func() string { return root },
-		ExecutablePath:       func() (string, error) { return filepath.Join(stableRoot, "bin", "issueops"), nil },
+		IssueOpsRoot: func() string { return root },
+		ExecutablePath: func() (string, error) {
+			return filepath.Join(stableRoot, "bin", testsupport.ExecutableName("issueops")), nil
+		},
 		NativeInstallRequest: install.DefaultNativeInstallRequest,
 		InstallNative: func(req port.NativeInstallRequest) (port.NativeInstallResult, error) {
 			*seen = append(*seen, req)
@@ -112,7 +115,7 @@ func TestInstallHTTPRefusesHostMergeWhenServiceIsNotReady(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "host MCP configs were not changed") {
 		t.Fatalf("err = %v", err)
 	}
-	if !reflect.DeepEqual(service.calls, []string{"prepare", "ensure:issueops"}) {
+	if !reflect.DeepEqual(service.calls, []string{"prepare", "ensure:" + testsupport.ExecutableName("issueops")}) {
 		t.Fatalf("seal service calls = %v", service.calls)
 	}
 	for _, req := range seen {

@@ -78,24 +78,24 @@ func TestSnapshotOmpAuthRefusesToOverwriteExistingDestination(t *testing.T) {
 
 func TestPrepareOmpEpisodeRejectsRelativePaths(t *testing.T) {
 	request := ompProbeRequest()
-	request.HarnessBinary = "/opt/bin/issueops"
+	request.HarnessBinary = fixturePath("opt", "bin", "issueops")
 	for name, tc := range map[string]struct {
 		root, result string
 		request      port.HostProbeRequest
 	}{
-		"relative root":   {"rel", "/r", request},
+		"relative root":   {"rel", fixturePath("r"), request},
 		"relative result": {t.TempDir(), "r", request},
-		"relative binary": {t.TempDir(), "/r", func() port.HostProbeRequest { r := request; r.HarnessBinary = "issueops"; return r }()},
+		"relative binary": {t.TempDir(), fixturePath("r"), func() port.HostProbeRequest { r := request; r.HarnessBinary = "issueops"; return r }()},
 	} {
 		if err := prepareOmpEpisode(tc.root, "ext", "tool", tc.request, tc.result); err == nil || err.Error() != "episode_path_invalid" {
 			t.Errorf("%s: err = %v", name, err)
 		}
 	}
 	root := t.TempDir()
-	if err := prepareOmpEpisode(root, "ext", "tool", request, "/r"); err != nil {
+	if err := prepareOmpEpisode(root, "ext", "tool", request, fixturePath("r")); err != nil {
 		t.Fatal(err)
 	}
-	if info, err := os.Stat(filepath.Join(root, "sessions")); err != nil || !info.IsDir() || info.Mode().Perm() != 0o700 {
+	if info, err := os.Stat(filepath.Join(root, "sessions")); err != nil || !info.IsDir() || filePerm(filepath.Join(root, "sessions"), info) != 0o700 {
 		t.Fatalf("sessions dir: %v %v", info, err)
 	}
 }

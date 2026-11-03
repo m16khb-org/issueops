@@ -6,13 +6,14 @@ import (
 	"testing"
 
 	provenanceport "issueops/internal/port/issueopsprovenance"
+	"issueops/internal/testsupport"
 )
 
 type stubProvenanceObserver struct{}
 
 func (stubProvenanceObserver) Observe(context.Context) (provenanceport.Receipt, error) {
 	return provenanceport.Receipt{
-		ExecutablePath: "/repo/bin/issueops", ExecutableSHA256: strings.Repeat("a", 64),
+		ExecutablePath: testsupport.AbsPath("repo", "bin", "issueops"), ExecutableSHA256: strings.Repeat("a", 64),
 	}, nil
 }
 

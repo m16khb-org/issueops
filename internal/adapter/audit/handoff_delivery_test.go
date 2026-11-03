@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"issueops/internal/adapter/outbound/osfile"
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
@@ -30,8 +31,8 @@ func TestAuditHandoffDeliveryObservationWritesBounded0600JSONL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info.Mode().Perm() != 0o600 {
-		t.Fatalf("audit log mode=%#o", info.Mode().Perm())
+	if osfile.Perm(logPath, info) != 0o600 {
+		t.Fatalf("audit log mode=%#o", osfile.Perm(logPath, info))
 	}
 	data, err := os.ReadFile(logPath)
 	if err != nil {

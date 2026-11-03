@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -73,9 +74,11 @@ func TestAppendFilesExistsTreatsOnlyNotExistAsAbsent(t *testing.T) {
 	if (AppendFiles{}).Exists(filepath.Join(dir, "absent.md")) {
 		t.Fatal("absent path must not exist")
 	}
-	// A path through a regular file fails with ENOTDIR, not ErrNotExist: the
-	// record name is then treated as taken so it is never overwritten.
-	if !(AppendFiles{}).Exists(filepath.Join(file, "child.md")) {
+	// A path through a regular file fails with ENOTDIR on Unix, not ErrNotExist:
+	// the record name is then treated as taken so it is never overwritten.
+	// Windows reports the same path as not-found (ERROR_PATH_NOT_FOUND), so
+	// there is no distinct non-ErrNotExist failure to observe there.
+	if runtime.GOOS != "windows" && !(AppendFiles{}).Exists(filepath.Join(file, "child.md")) {
 		t.Fatal("a stat failure other than not-exist must count as existing")
 	}
 }

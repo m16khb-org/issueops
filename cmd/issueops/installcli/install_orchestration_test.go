@@ -8,10 +8,13 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"testing"
 
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/port"
 	activationport "issueops/internal/port/nativeactivation"
+	"issueops/internal/testsupport"
 )
 
 const validTransitionID = "00112233445566778899aabbccddeeff"
@@ -149,7 +152,7 @@ func TestInstallOrchestrationRollsBackAndAbortsAfterHostFailure(t *testing.T) {
 	cli := installOrchestrationCommand(t, root, home, backend, installerFixture{err: errors.New("injected host failure")})
 
 	_, _, err := captureInstallCommandOutput(t, nil, func() error {
-		return cli.RunInstall([]string{"--adopt-command-file", "--path-mode=skip", "--json"})
+		return cli.RunInstall(adoptCommandArgs("--path-mode=skip", "--json"))
 	})
 	if err == nil {
 		t.Fatal("host failure was accepted")
@@ -174,7 +177,7 @@ func TestInstallOrchestrationRemovesNewCommandShimsAfterHostFailure(t *testing.T
 	if err == nil {
 		t.Fatal("host failure was accepted")
 	}
-	for _, path := range []string{command, filepath.Join(filepath.Dir(command), "io"), filepath.Join(home, ".local")} {
+	for _, path := range []string{command, filepath.Join(filepath.Dir(command), testsupport.ExecutableName("io")), filepath.Join(home, ".local")} {
 		if _, statErr := os.Lstat(path); !os.IsNotExist(statErr) {
 			t.Fatalf("new command path survived rollback: %s err=%v", path, statErr)
 		}
@@ -230,7 +233,7 @@ func TestInstallOrchestrationRestoresReplacedCommandSymlink(t *testing.T) {
 		t.Fatal("host failure was accepted")
 	}
 	assertInstallSymlinkTarget(t, command, oldTarget)
-	assertInstallSymlinkTarget(t, filepath.Join(filepath.Dir(command), "io"), command)
+	assertInstallSymlinkTarget(t, filepath.Join(filepath.Dir(command), testsupport.ExecutableName("io")), command)
 	if !reflect.DeepEqual(backend.calls, []string{"begin", "abort"}) {
 		t.Fatalf("activation calls=%v", backend.calls)
 	}
@@ -270,7 +273,7 @@ func TestInstallOrchestrationRestoresHostPathsAfterWriteFailure(t *testing.T) {
 	})
 
 	_, _, err := captureInstallCommandOutput(t, nil, func() error {
-		return cli.RunInstall([]string{"--adopt-command-file", "--path-mode=skip", "--json"})
+		return cli.RunInstall(adoptCommandArgs("--path-mode=skip", "--json"))
 	})
 	if err == nil {
 		t.Fatal("host write failure was accepted")
@@ -278,8 +281,8 @@ func TestInstallOrchestrationRestoresHostPathsAfterWriteFailure(t *testing.T) {
 	assertRegularCommandBytes(t, command, target)
 	body, readErr := os.ReadFile(existingFile)
 	info, statErr := os.Stat(existingFile)
-	if readErr != nil || statErr != nil || string(body) != "before\n" || info.Mode().Perm() != 0o600 {
-		t.Fatalf("existing Omo config was not restored: body=%q mode=%v readErr=%v statErr=%v", body, info.Mode(), readErr, statErr)
+	if readErr != nil || statErr != nil || string(body) != "before\n" || osfile.Perm(existingFile, info) != 0o600 {
+		t.Fatalf("existing Omo config was not restored: body=%q mode=%v readErr=%v statErr=%v", body, osfile.Perm(existingFile, info), readErr, statErr)
 	}
 	assertInstallSymlinkTarget(t, existingLink, oldTarget)
 	for _, path := range []string{newFile, newLink, filepath.Join(root, "configs"), filepath.Join(root, ".omo")} {
@@ -293,6 +296,9 @@ func TestInstallOrchestrationRestoresHostPathsAfterWriteFailure(t *testing.T) {
 }
 
 func TestInstallOrchestrationRestoresShellPathAfterSealFailure(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell rc PATH setup is a Unix shell concept; Windows edits the user Path in HKCU\\Environment, which tests must not write")
+	}
 	root, home, target, command := installOrchestrationFixture(t)
 	rcPath := filepath.Join(home, ".zshrc")
 	if err := os.WriteFile(rcPath, []byte("# before\n"), 0o600); err != nil {
@@ -304,7 +310,7 @@ func TestInstallOrchestrationRestoresShellPathAfterSealFailure(t *testing.T) {
 	cli := installOrchestrationCommand(t, root, home, backend, installerFixture{})
 
 	_, _, err := captureInstallCommandOutput(t, nil, func() error {
-		return cli.RunInstall([]string{"--adopt-command-file", "--path-mode=auto", "--json"})
+		return cli.RunInstall(adoptCommandArgs("--path-mode=auto", "--json"))
 	})
 	if err == nil {
 		t.Fatal("seal failure was accepted")
@@ -321,6 +327,9 @@ func TestInstallOrchestrationRestoresShellPathAfterSealFailure(t *testing.T) {
 }
 
 func TestInstallOrchestrationPreflightRefusalDoesNotBeginActivation(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the refusal needs a regular command file to adopt; Windows fixtures start from the command symlink and TestInstallCommandRefusesManagedRegularCommandWithoutApproval covers the refusal")
+	}
 	root, home, target, command := installOrchestrationFixture(t)
 	backend := &activationBackendFixture{}
 	installCalls := 0
@@ -341,7 +350,7 @@ func TestInstallOrchestrationHostPreflightFailureDoesNotBeginActivation(t *testi
 	cli := installOrchestrationCommand(t, root, home, backend, preflightFailureInstallerFixture{})
 
 	_, _, err := captureInstallCommandOutput(t, nil, func() error {
-		return cli.RunInstall([]string{"--adopt-command-file", "--path-mode=skip", "--json"})
+		return cli.RunInstall(adoptCommandArgs("--path-mode=skip", "--json"))
 	})
 	if err == nil || len(backend.calls) != 0 {
 		t.Fatalf("host preflight err=%v activation calls=%v", err, backend.calls)
@@ -350,6 +359,7 @@ func TestInstallOrchestrationHostPreflightFailureDoesNotBeginActivation(t *testi
 }
 
 func TestInstallOrchestrationExplicitSealPreflightFailureRequiresAbort(t *testing.T) {
+	skipWithoutCommandAdoption(t)
 	root, home, target, command := installOrchestrationFixture(t)
 	backend := &activationBackendFixture{}
 	cli := installOrchestrationCommand(t, root, home, backend, preflightFailureInstallerFixture{})
@@ -357,7 +367,7 @@ func TestInstallOrchestrationExplicitSealPreflightFailureRequiresAbort(t *testin
 	t.Setenv("ISSUEOPS_NATIVE_ACTIVATION_TRANSITION_ID", validTransitionID)
 
 	out, _, err := captureInstallCommandOutput(t, nil, func() error {
-		return cli.RunInstall([]string{"--adopt-command-file", "--path-mode=skip", "--json"})
+		return cli.RunInstall(adoptCommandArgs("--path-mode=skip", "--json"))
 	})
 	if err == nil {
 		t.Fatal("explicit seal preflight failure was accepted")
@@ -375,6 +385,7 @@ func TestInstallOrchestrationExplicitSealPreflightFailureRequiresAbort(t *testin
 }
 
 func TestInstallOrchestrationExplicitSealRollsBackAndLeavesAbortToCaller(t *testing.T) {
+	skipWithoutCommandAdoption(t)
 	root, home, target, command := installOrchestrationFixture(t)
 	backend := &activationBackendFixture{}
 	cli := installOrchestrationCommand(t, root, home, backend, installerFixture{err: errors.New("injected host failure")})
@@ -382,7 +393,7 @@ func TestInstallOrchestrationExplicitSealRollsBackAndLeavesAbortToCaller(t *test
 	t.Setenv("ISSUEOPS_NATIVE_ACTIVATION_TRANSITION_ID", validTransitionID)
 
 	out, _, err := captureInstallCommandOutput(t, nil, func() error {
-		return cli.RunInstall([]string{"--adopt-command-file", "--path-mode=skip", "--json"})
+		return cli.RunInstall(adoptCommandArgs("--path-mode=skip", "--json"))
 	})
 	if err == nil {
 		t.Fatal("host failure was accepted")
@@ -399,12 +410,13 @@ func TestInstallOrchestrationExplicitSealRollsBackAndLeavesAbortToCaller(t *test
 }
 
 func TestInstallOrchestrationFinalizesOnlyAfterSeal(t *testing.T) {
+	skipWithoutCommandAdoption(t)
 	root, home, target, command := installOrchestrationFixture(t)
 	backend := &activationBackendFixture{}
 	cli := installOrchestrationCommand(t, root, home, backend, installerFixture{})
 
 	out, _, err := captureInstallCommandOutput(t, nil, func() error {
-		return cli.RunInstall([]string{"--adopt-command-file", "--path-mode=skip", "--json"})
+		return cli.RunInstall(adoptCommandArgs("--path-mode=skip", "--json"))
 	})
 	if err != nil {
 		t.Fatalf("install failed: %v\n%s", err, out)
@@ -423,14 +435,25 @@ func installOrchestrationFixture(t *testing.T) (string, string, string, string) 
 	t.Helper()
 	root := t.TempDir()
 	home := t.TempDir()
-	target := filepath.Join(root, "bin", "issueops")
+	target := filepath.Join(root, "bin", testsupport.ExecutableName("issueops"))
 	if err := os.MkdirAll(filepath.Join(root, "skills", "fixture"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	buildManagedCommandAt(t, target)
-	command := filepath.Join(home, ".local", "bin", "issueops")
-	copyTestCommand(t, target, command)
-	if err := os.Symlink(command, filepath.Join(filepath.Dir(command), "io")); err != nil {
+	command := filepath.Join(home, ".local", "bin", testsupport.ExecutableName("issueops"))
+	if runtime.GOOS == "windows" {
+		// --adopt-command-file is refused on Windows, so start from the command
+		// symlink an earlier install leaves rather than a regular file to adopt.
+		if err := os.MkdirAll(filepath.Dir(command), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(target, command); err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		copyTestCommand(t, target, command)
+	}
+	if err := os.Symlink(command, filepath.Join(filepath.Dir(command), testsupport.ExecutableName("io"))); err != nil {
 		t.Fatal(err)
 	}
 	return root, home, target, command
@@ -438,12 +461,12 @@ func installOrchestrationFixture(t *testing.T) (string, string, string, string) 
 
 func installOrchestrationCommand(t *testing.T, root, home string, backend *activationBackendFixture, installer port.HostInstaller) Command {
 	t.Helper()
-	t.Setenv("HOME", home)
+	testsupport.SetHome(t, home)
 	t.Setenv("CODEX_HOME", filepath.Join(home, ".codex"))
 	t.Setenv("ISSUEOPS_ROOT", root)
 	t.Setenv("ISSUEOPS_NATIVE_ACTIVATION_STEP", "")
 	return testInstallCommand(t, Deps{
-		IssueOpsRoot: func() string { return root }, ExecutablePath: func() (string, error) { return filepath.Join(root, "bin", "issueops"), nil },
+		IssueOpsRoot: func() string { return root }, ExecutablePath: func() (string, error) { return filepath.Join(root, "bin", testsupport.ExecutableName("issueops")), nil },
 		ActivationBackend: backend,
 		ActivationReadback: func(port.NativeInstallRequest) activationport.ReadbackVerifier {
 			return activationReadbackFixture{}
@@ -457,6 +480,11 @@ func installOrchestrationCommand(t *testing.T, root, home string, backend *activ
 
 func assertRegularCommandBytes(t *testing.T, path, expected string) {
 	t.Helper()
+	if runtime.GOOS == "windows" {
+		// Windows never adopts a regular file: the command stays the managed symlink.
+		assertInstallSymlinkTarget(t, path, expected)
+		return
+	}
 	got, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)

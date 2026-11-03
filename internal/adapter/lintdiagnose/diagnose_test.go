@@ -2,6 +2,7 @@ package lintdiagnose
 
 import (
 	lintdiagnosecontract "issueops/internal/contract/lintdiagnose"
+	"issueops/internal/testsupport"
 	"strings"
 	"testing"
 )
@@ -11,7 +12,7 @@ func TestDiagnoseCommandRendersPromptForFailedCommand(t *testing.T) {
 
 	result, err := DiagnoseCommand(lintdiagnosecontract.LintDiagnoseRequest{
 		RepoRoot:    root,
-		CommandArgv: []string{"/bin/sh", "-c", "echo lint failed >&2; exit 2"},
+		CommandArgv: []string{testsupport.WriteFakeCommand(t, t.TempDir(), "lintfail", "#!/bin/sh\necho lint failed >&2\nexit 2\n")},
 	})
 	if err != nil {
 		t.Fatal(err)

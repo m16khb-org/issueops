@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	statusapp "issueops/internal/application/status"
+	"issueops/internal/testsupport"
 )
 
 func TestStatusInstancesKeepCapturedStoresAndInspectionContext(t *testing.T) {
@@ -19,7 +20,7 @@ func TestStatusInstancesKeepCapturedStoresAndInspectionContext(t *testing.T) {
 		if err := os.MkdirAll(home, 0700); err != nil {
 			t.Fatal(err)
 		}
-		t.Setenv("HOME", home)
+		testsupport.SetHome(t, home)
 		t.Setenv("ISSUEOPS_ROOT", roots[i])
 		t.Setenv("ISSUEOPS_STATE_DIR", filepath.Join(roots[i], "state"))
 		t.Setenv("ISSUEOPS_WORKER_DIR", filepath.Join(roots[i], "worker"))

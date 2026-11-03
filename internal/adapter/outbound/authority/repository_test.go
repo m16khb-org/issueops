@@ -15,15 +15,17 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 	domain "issueops/internal/domain/authority"
 	"issueops/internal/port"
+	"issueops/internal/testsupport"
 )
 
 func grantFixture(t *testing.T) contract.Record {
 	t.Helper()
-	scope := contract.Scope{WorkspaceRoot: "/repo", CWD: "/repo", SourceRoot: "/repo", GitCommonDir: "/repo/.git"}
+	repo := testsupport.AbsPath("repo")
+	scope := contract.Scope{WorkspaceRoot: repo, CWD: repo, SourceRoot: repo, GitCommonDir: filepath.Join(repo, ".git")}
 	actor := contract.NativeActor{
 		Host: "codex", SessionID: "session",
-		SessionProcess:  &issueopscontract.NativeProcessReceipt{PID: 42, StartedAt: "start", Executable: "/bin/codex"},
-		ProcessAncestry: []issueopscontract.NativeProcessReceipt{{PID: 1, StartedAt: "init", Executable: "/sbin/init"}},
+		SessionProcess:  &issueopscontract.NativeProcessReceipt{PID: 42, StartedAt: "start", Executable: testsupport.AbsPath("bin", "codex")},
+		ProcessAncestry: []issueopscontract.NativeProcessReceipt{{PID: 1, StartedAt: "init", Executable: testsupport.AbsPath("sbin", "init")}},
 	}
 	key := domain.Key(scope, actor)
 	return domain.NewRecord(key, scope, actor, domain.TokenDigest(domain.ComposeToken(key, "c2VjcmV0")), time.Date(2026, 10, 2, 0, 0, 0, 0, time.UTC))
@@ -39,7 +41,7 @@ func TestRepositoryPersistsGrantInStateRootWithoutAncestry(t *testing.T) {
 		t.Fatal("an unspanned read created state")
 	}
 	record := grantFixture(t)
-	record.Actor.ProcessAncestry = []issueopscontract.NativeProcessReceipt{{PID: 1, StartedAt: "init", Executable: "/sbin/init"}}
+	record.Actor.ProcessAncestry = []issueopscontract.NativeProcessReceipt{{PID: 1, StartedAt: "init", Executable: testsupport.AbsPath("sbin", "init")}}
 	var seen *contract.Record
 	if err := repository.Within(context.Background(), record.Key, func(current *contract.Record) (*contract.Record, error) {
 		seen = current

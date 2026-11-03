@@ -25,7 +25,7 @@ func TestRun_routesEverySubcommandToItsHandler(t *testing.T) {
 		"route-docs":     {[]string{"route-docs", "--repo", repo, "--task", "test"}, "] — "},
 		"append":         {[]string{"append", "--repo", repo, "--kind", "caution", "--title", "Dispatch", "--summary", "s"}, "appended caution in .issueops/cautions/"},
 		"bootstrap":      {[]string{"bootstrap", "--repo", repo, "--dry-run"}, "project docs would update"},
-		"lint-diagnose":  {[]string{"lint-diagnose", "--repo", repo, "--", "/bin/sh", "-c", "true"}, "No failure detected"},
+		"lint-diagnose":  {append([]string{"lint-diagnose", "--repo", repo, "--"}, passingCommand(t)...), "No failure detected"},
 		"commit-suggest": {[]string{"commit-suggest", "--repo", repo, "--json"}, `"executed": false`},
 	}
 	for name, tc := range cases {
@@ -228,7 +228,7 @@ func TestRunProjectCommitSuggest_failsForMissingRepo(t *testing.T) {
 }
 
 func TestRunProjectLintDiagnose_failsForMissingRepo(t *testing.T) {
-	err := runProjectLintDiagnose(testLintService(), []string{"--repo", filepath.Join(t.TempDir(), "absent"), "--", "/bin/sh", "-c", "true"})
+	err := runProjectLintDiagnose(testLintService(), append([]string{"--repo", filepath.Join(t.TempDir(), "absent"), "--"}, passingCommand(t)...))
 	if err == nil {
 		t.Fatal("expected an error for a missing repository")
 	}

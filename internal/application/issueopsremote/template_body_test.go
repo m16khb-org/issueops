@@ -1,6 +1,8 @@
 package issueopsremote
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -39,18 +41,21 @@ func TestTemplateScoreSummaryReadsJSONOrAuthoredText(t *testing.T) {
 func TestTemplateResolveRefusesBadInputsBeforeRendering(t *testing.T) {
 	resolver := NewTemplateBodyResolver(os.ReadFile)
 	for _, tc := range []struct {
-		name string
-		req  TemplateBodyRequest
-		want string
+		name     string
+		req      TemplateBodyRequest
+		want     string
+		notExist bool
 	}{
-		{"body and file", TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, Body: "a", BodyFile: "b"}, "mutually exclusive"},
-		{"confirm without issue template", TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, Confirm: true}, "--template is required"},
-		{"malformed field", TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, Fields: []string{"no-equals"}}, "key=value"},
-		{"missing score file", TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, ScoreFile: "/definitely/missing/score.json"}, "no such file"},
+		{"body and file", TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, Body: "a", BodyFile: "b"}, "mutually exclusive", false},
+		{"confirm without issue template", TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, Confirm: true}, "--template is required", false},
+		{"malformed field", TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, Fields: []string{"no-equals"}}, "key=value", false},
+		{"missing score file", TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, ScoreFile: "/definitely/missing/score.json"}, "missing/score.json", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if _, err := resolver.Resolve(tc.req); err == nil || !strings.Contains(err.Error(), tc.want) {
-				t.Fatalf("err = %v, want %q", err, tc.want)
+			_, err := resolver.Resolve(tc.req)
+			// The OS error text ("no such file" vs "cannot find the path") is not portable.
+			if err == nil || !strings.Contains(err.Error(), tc.want) || tc.notExist && !errors.Is(err, fs.ErrNotExist) {
+				t.Fatalf("err = %v, want %q (not exist: %v)", err, tc.want, tc.notExist)
 			}
 		})
 	}

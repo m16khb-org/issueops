@@ -6,11 +6,14 @@ import (
 	"testing"
 
 	model "issueops/internal/contract/issueops"
+	"issueops/internal/testsupport"
 )
+
+var layoutRepo = testsupport.AbsPath("work", "repo")
 
 func layoutRecord() model.IssueOpsRecord {
 	return model.IssueOpsRecord{
-		ID: "io-1", Repo: "/work/repo", IssueURL: "https://github.com/acme/repo/issues/7", Branch: "feat/x",
+		ID: "io-1", Repo: layoutRepo, IssueURL: "https://github.com/acme/repo/issues/7", Branch: "feat/x",
 		Phase: model.IssueOpsPhasePlan,
 		BranchPrepare: &model.IssueOpsBranchPrepare{
 			Provider: "github", IssueURL: "https://github.com/acme/repo/issues/7", Branch: "feat/x", BaseBranch: "main", BaseSHA: "abc123",
@@ -20,34 +23,38 @@ func layoutRecord() model.IssueOpsRecord {
 
 func TestDeriveWorkspaceLayoutDerivesCanonicalWorktreePaths(t *testing.T) {
 	record := layoutRecord()
+	worktrees := layoutRepo + ".worktrees"
+	epic := filepath.Join(worktrees, "epic-one")
 	layout, err := DeriveWorkspaceLayout(record)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := WorkspaceLayout{Root: filepath.Join("/work/repo.worktrees", "feat-x"), Branch: "feat/x", BaseBranch: "main", BaseHead: "abc123"}
+	want := WorkspaceLayout{Root: filepath.Join(worktrees, "feat-x"), Branch: "feat/x", BaseBranch: "main", BaseHead: "abc123"}
 	if layout != want {
 		t.Fatalf("layout=%+v want=%+v", layout, want)
 	}
 
+	sep := string(filepath.Separator)
 	record.BranchPrepare.BaseBranch = "epic/one"
-	record.BranchPrepare.ParentWorktree = "/work/repo.worktrees/../repo.worktrees/epic-one"
+	record.BranchPrepare.ParentWorktree = worktrees + sep + ".." + sep + "repo.worktrees" + sep + "epic-one"
 	layout, err = DeriveWorkspaceLayout(record)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if layout.ParentWorktree != "/work/repo.worktrees/epic-one" || layout.ExpectedParent != "/work/repo.worktrees/epic-one" {
+	if layout.ParentWorktree != epic || layout.ExpectedParent != epic {
 		t.Fatalf("explicit parent layout=%+v", layout)
 	}
-	record.BranchPrepare.ParentWorktree = "/elsewhere/epic-one"
+	elsewhere := testsupport.AbsPath("elsewhere", "epic-one")
+	record.BranchPrepare.ParentWorktree = elsewhere
 	layout, err = DeriveWorkspaceLayout(record)
-	if err != nil || layout.ParentWorktree != "/elsewhere/epic-one" || layout.ExpectedParent != "/work/repo.worktrees/epic-one" {
+	if err != nil || layout.ParentWorktree != elsewhere || layout.ExpectedParent != epic {
 		t.Fatalf("non-canonical parent must surface the expected one: %+v %v", layout, err)
 	}
 
 	record.BranchPrepare.ParentWorktree = ""
 	record.Delegation = &model.IssueOpsDelegationContract{ParentCycleID: "parent"}
 	layout, err = DeriveWorkspaceLayout(record)
-	if err != nil || layout.ParentWorktree != "/work/repo.worktrees/epic-one" || layout.ExpectedParent != "" {
+	if err != nil || layout.ParentWorktree != epic || layout.ExpectedParent != "" {
 		t.Fatalf("delegated cycle must derive its parent worktree: %+v %v", layout, err)
 	}
 	record.Delegation = &model.IssueOpsDelegationContract{ParentCycleID: "  "}

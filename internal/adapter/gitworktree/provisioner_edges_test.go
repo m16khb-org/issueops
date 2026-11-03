@@ -5,9 +5,11 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/adapter/preflight"
 	"issueops/internal/port"
 	"issueops/internal/testsupport"
@@ -177,8 +179,8 @@ func TestPrepareCreatesMissingBaseWithOwnerOnlyMode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info.Mode().Perm() != 0o700 {
-		t.Fatalf("created base mode = %v, want 0700", info.Mode().Perm())
+	if perm := osfile.Perm(repo+".worktrees", info); perm != 0o700 {
+		t.Fatalf("created base mode = %v, want 0700", perm)
 	}
 }
 
@@ -314,6 +316,9 @@ func TestProbeAccessRejectsUnknownHostOnlyWhenAccessIsDenied(t *testing.T) {
 
 func TestProbeAccessDeniesWhenBaseCannotBeCreatedUnderReadOnlyParent(t *testing.T) {
 	testsupport.IsolateGitConfig(t)
+	if runtime.GOOS == "windows" {
+		t.Skip("windows has no POSIX mode bits: chmod 0500 on the parent cannot deny the owning user directory creation")
+	}
 	if os.Geteuid() == 0 {
 		t.Skip("permission denial is not observable as root")
 	}
@@ -377,6 +382,9 @@ func TestEnsureProbeBaseReportsCreationOnlyForNewDirectories(t *testing.T) {
 func TestProbeDirectoryReadWriteFailsOnMissingOrUnwritableDirectory(t *testing.T) {
 	if err := probeDirectoryReadWrite(filepath.Join(t.TempDir(), "absent")); err == nil {
 		t.Fatal("missing directory must fail the probe")
+	}
+	if runtime.GOOS == "windows" {
+		t.Skip("windows has no POSIX mode bits: a read-only directory attribute does not stop file creation inside it")
 	}
 	if os.Geteuid() == 0 {
 		t.Skip("permission denial is not observable as root")

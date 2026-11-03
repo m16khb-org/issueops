@@ -8,7 +8,9 @@ import (
 	"strings"
 	"testing"
 
+	"issueops/internal/adapter/outbound/osfile"
 	authoritycontract "issueops/internal/contract/authority"
+	"issueops/internal/testsupport"
 )
 
 func TestRequestScopeResolvesOnlyFromRequestAndRecord(t *testing.T) {
@@ -66,16 +68,19 @@ func TestRequestScopeResolvesOnlyFromRequestAndRecord(t *testing.T) {
 }
 
 func TestScopedArgumentsRewriteRootsCWDAndRelativeFiles(t *testing.T) {
-	scope := authoritycontract.Scope{WorkspaceRoot: "/repo", CWD: "/repo/pkg"}
+	root := testsupport.AbsPath("repo")
+	pkg := filepath.Join(root, "pkg")
+	grant, abs, abs2 := testsupport.AbsPath("state", "grant"), testsupport.AbsPath("abs", "prompt.md"), testsupport.AbsPath("b.md")
+	scope := authoritycontract.Scope{WorkspaceRoot: root, CWD: pkg}
 	got := scopedArguments(map[string]any{
-		"authority_file": "/state/grant", "repo": ".", "diff_file": "change.diff", "prompt_file": "/abs/prompt.md", "files": []any{"a.md", "/b.md"},
+		"authority_file": grant, "repo": ".", "diff_file": "change.diff", "prompt_file": abs, "files": []any{"a.md", abs2},
 	}, toolAuthority{rootArgs: []string{"repo"}, pathArgs: []string{"diff_file", "prompt_file", "files"}}, scope)
 	if _, leaked := got["authority_file"]; leaked {
 		t.Fatal("authority_file reached the tool handler")
 	}
 	files := got["files"].([]any)
-	if got["repo"] != "/repo" || got["workspace_root"] != "/repo" || got["cwd"] != "/repo/pkg" ||
-		got["diff_file"] != "/repo/pkg/change.diff" || got["prompt_file"] != "/abs/prompt.md" || files[0] != "/repo/pkg/a.md" || files[1] != "/b.md" {
+	if got["repo"] != root || got["workspace_root"] != root || got["cwd"] != pkg ||
+		got["diff_file"] != filepath.Join(pkg, "change.diff") || got["prompt_file"] != abs || files[0] != filepath.Join(pkg, "a.md") || files[1] != abs2 {
 		t.Fatalf("scoped arguments = %v", got)
 	}
 }
@@ -93,13 +98,11 @@ func TestEnsureHTTPBearerIsOwnerOnlyStableAndRejectsUnsafeFiles(t *testing.T) {
 	path := filepath.Join(state, "mcp-http", "bearer")
 	for target, mode := range map[string]os.FileMode{path: 0o600, filepath.Dir(path): 0o700} {
 		info, err := os.Stat(target)
-		if err != nil || info.Mode().Perm() != mode {
-			t.Fatalf("%s mode=%v err=%v", target, info.Mode().Perm(), err)
+		if err != nil || osfile.Perm(target, info) != mode {
+			t.Fatalf("%s mode=%v err=%v", target, osfile.Perm(target, info), err)
 		}
 	}
-	if err := os.Chmod(path, 0o640); err != nil {
-		t.Fatal(err)
-	}
+	testsupport.MakePermissive(t, path, 0o640)
 	if _, err := EnsureHTTPBearer(state); !errors.Is(err, errHTTPBearerFile) {
 		t.Fatalf("group-readable bearer err=%v", err)
 	}

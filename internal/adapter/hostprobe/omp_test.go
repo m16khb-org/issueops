@@ -17,13 +17,14 @@ import (
 
 	"issueops/internal/adapter/hostprotocol"
 	"issueops/internal/port"
+	"issueops/internal/testsupport"
 )
 
 func TestOmpRunnerPreflightUsesNativeOmpAndRequiresExplicitModel(t *testing.T) {
 	t.Parallel()
 
 	process := &omoFakeProcess{run: func(_ context.Context, request CommandRequest) (CommandOutput, error) {
-		if !reflect.DeepEqual(request.Argv, []string{"/opt/bin/omp", "--version"}) {
+		if !reflect.DeepEqual(request.Argv, []string{fixturePath("opt", "bin", "omp"), "--version"}) {
 			t.Fatalf("argv = %#v", request.Argv)
 		}
 		home := environmentValue(t, request.Env, "HOME")
@@ -39,13 +40,13 @@ func TestOmpRunnerPreflightUsesNativeOmpAndRequiresExplicitModel(t *testing.T) {
 		}
 		return CommandOutput{Stdout: []byte("omp/18.8.4\n")}, nil
 	}}
-	runner := newTestOmpRunner("/opt/bin/issueops", hostprotocol.OmpLifecycleExtension("/opt/bin/issueops"), Dependencies{
+	runner := newTestOmpRunner(fixturePath("opt", "bin", "issueops"), hostprotocol.OmpLifecycleExtension(fixturePath("opt", "bin", "issueops")), Dependencies{
 		Process: process,
 		LookPath: func(name string) (string, error) {
 			if name != "omp" {
 				t.Fatalf("looked up %q, want native omp", name)
 			}
-			return "/opt/bin/omp", nil
+			return fixturePath("opt", "bin", "omp"), nil
 		},
 		Environ: func() []string {
 			return []string{"PATH=/opt/bin", "HOME=/private/home", "OPENAI_API_KEY=secret", "OMP_PROFILE=work"}
@@ -64,10 +65,10 @@ func TestOmpRunnerPreflightUsesNativeOmpAndRequiresExplicitModel(t *testing.T) {
 }
 
 func TestOmpRunnerPreflightBindsExactCanonicalLifecycleModule(t *testing.T) {
-	canonical := hostprotocol.OmpLifecycleExtension("/opt/bin/issueops")
+	canonical := hostprotocol.OmpLifecycleExtension(fixturePath("opt", "bin", "issueops"))
 	sources := map[string]string{
 		"unrelated module": "export default function issueops() {}\n",
-		"omo module":       hostprotocol.OmoLifecycleExtension("/opt/bin/issueops"),
+		"omo module":       hostprotocol.OmoLifecycleExtension(fixturePath("opt", "bin", "issueops")),
 	}
 	for name, mutation := range map[string][2]string{
 		"empty handler":      {"return runIssueopsLifecycle(pi, rule, ctx)", "return undefined"},
@@ -82,7 +83,7 @@ func TestOmpRunnerPreflightBindsExactCanonicalLifecycleModule(t *testing.T) {
 	}
 	for name, source := range sources {
 		t.Run(name, func(t *testing.T) {
-			runner := newTestOmpRunner("/opt/bin/issueops", source, Dependencies{
+			runner := newTestOmpRunner(fixturePath("opt", "bin", "issueops"), source, Dependencies{
 				Process: &omoFakeProcess{run: func(_ context.Context, _ CommandRequest) (CommandOutput, error) {
 					return CommandOutput{Stdout: []byte("omp/18.8.4\n")}, nil
 				}},
@@ -101,7 +102,7 @@ func TestOmpRunnerPreflightBindsExactCanonicalLifecycleModule(t *testing.T) {
 func TestOmpRunnerPreflightKeepsInstalledEvidenceWhenVersionProbeFails(t *testing.T) {
 	t.Parallel()
 
-	runner := newTestOmpRunner("/opt/bin/issueops", ompTestLifecycleExtension("/opt/bin/issueops"), Dependencies{
+	runner := newTestOmpRunner(fixturePath("opt", "bin", "issueops"), ompTestLifecycleExtension(fixturePath("opt", "bin", "issueops")), Dependencies{
 		Process: &omoFakeProcess{run: func(_ context.Context, _ CommandRequest) (CommandOutput, error) {
 			return CommandOutput{}, errors.New("version unavailable")
 		}},
@@ -117,7 +118,7 @@ func TestOmpRunnerPreflightKeepsInstalledEvidenceWhenVersionProbeFails(t *testin
 
 func TestOmpRunnerPreflightFailsClosedWhenPrivateRootCleanupFails(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "preflight")
-	runner := newTestOmpRunner("/opt/bin/issueops", ompTestLifecycleExtension("/opt/bin/issueops"), Dependencies{
+	runner := newTestOmpRunner(fixturePath("opt", "bin", "issueops"), ompTestLifecycleExtension(fixturePath("opt", "bin", "issueops")), Dependencies{
 		Process: &omoFakeProcess{run: func(_ context.Context, _ CommandRequest) (CommandOutput, error) {
 			return CommandOutput{Stdout: []byte("omp/18.8.4\n")}, nil
 		}},
@@ -206,17 +207,18 @@ func TestOmpRunnerRunUsesIsolatedNativeProbeAndCapturesEvidence(t *testing.T) {
 		if command.Cwd != episodeRoot || command.Timeout != EpisodeTimeout || !command.OmoJSONL {
 			t.Fatalf("command = %+v", command)
 		}
-		if !reflect.DeepEqual(command.Env, []string{
-			"HOME=" + filepath.Join(episodeRoot, "home"),
+		if !reflect.DeepEqual(command.Env, isolatedEnvWithHome(filepath.Join(episodeRoot, "home"),
 			"OMP_MCP_REQUIRE_READY=1",
 			"PATH=/test/bin",
-			"PI_CODING_AGENT_DIR=" + filepath.Join(episodeRoot, "agent"),
+			"PI_CODING_AGENT_DIR="+filepath.Join(episodeRoot, "agent"),
 			"USER=tester",
-		}) {
+		)) {
 			t.Fatalf("env = %#v", command.Env)
 		}
+		assertIsolatedHome(t, command.Env, filepath.Join(episodeRoot, "home"))
+		assertIsolatedHomeDirs(t, filepath.Join(episodeRoot, "home"))
 		wantArgv := []string{
-			"/test/bin/omp",
+			fixturePath("test", "bin", "omp"),
 			"--mode", "json", "--print",
 			"--model", request.Model,
 			"--system-prompt", omoProbeSystemPrompt,
@@ -232,7 +234,7 @@ func TestOmpRunnerRunUsesIsolatedNativeProbeAndCapturesEvidence(t *testing.T) {
 		}
 
 		rootInfo, err := os.Stat(episodeRoot)
-		if err != nil || rootInfo.Mode().Perm() != 0o700 {
+		if err != nil || filePerm(episodeRoot, rootInfo) != 0o700 {
 			t.Fatalf("episode root info=%v err=%v", rootInfo, err)
 		}
 		assertPrivateFileEquals(t, filepath.Join(episodeRoot, "issueops-lifecycle.js"), lifecycleSource)
@@ -251,7 +253,7 @@ func TestOmpRunnerRunUsesIsolatedNativeProbeAndCapturesEvidence(t *testing.T) {
 			if name != "omp" {
 				t.Fatalf("looked up %q", name)
 			}
-			return "/test/bin/omp", nil
+			return fixturePath("test", "bin", "omp"), nil
 		},
 		TempDir: func(_, pattern string) (string, error) {
 			if pattern != "issueops-conformance-omp-" {
@@ -484,15 +486,11 @@ func TestResolveOmpAuthAcceptsOnlyPrivateRegularStore(t *testing.T) {
 		t.Fatal(err)
 	}
 	writeOmpAuthStore(t, store)
-	if err := os.Chmod(store, 0o644); err != nil {
-		t.Fatal(err)
-	}
+	testsupport.MakePermissive(t, store, 0o644)
 	if _, err := resolveOmpAuth(deps); err == nil {
 		t.Fatal("group-readable credential store was accepted")
 	}
-	if err := os.Chmod(store, 0o600); err != nil {
-		t.Fatal(err)
-	}
+	makePrivate(t, store, 0o600)
 	if source, err := resolveOmpAuth(deps); err != nil || source != store {
 		t.Fatalf("private store = %q, %v", source, err)
 	}
@@ -566,7 +564,7 @@ func writeOmpAuthStore(t *testing.T, path string) {
 func assertOmpAuthSnapshot(t *testing.T, path string) {
 	t.Helper()
 	info, err := os.Lstat(path)
-	if err != nil || !info.Mode().IsRegular() || info.Mode().Perm() != 0o600 {
+	if err != nil || !info.Mode().IsRegular() || filePerm(path, info) != 0o600 {
 		t.Fatalf("auth snapshot info=%v err=%v", info, err)
 	}
 	db, err := sql.Open("sqlite", "file:"+path+"?mode=ro")
@@ -626,7 +624,7 @@ func assertOmpProbeProjectDoc(t *testing.T, root string) {
 func assertOmpProbeConfig(t *testing.T, path, harnessBinary, episodeRoot string, request port.HostProbeRequest) {
 	t.Helper()
 	info, err := os.Stat(path)
-	if err != nil || info.Mode().Perm() != 0o600 {
+	if err != nil || filePerm(path, info) != 0o600 {
 		t.Fatalf("config info=%v err=%v", info, err)
 	}
 	body, err := os.ReadFile(path)

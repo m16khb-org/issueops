@@ -2,9 +2,10 @@ package upstream
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 	"testing"
+
+	"issueops/internal/testsupport"
 )
 
 func TestClaudePluginHostInstallPluginUsesSupportedArguments(t *testing.T) {
@@ -21,9 +22,7 @@ if [ "$actual" != "$expected" ]; then
 	exit 64
 fi
 `
-	if err := os.WriteFile(binary, []byte(script), 0o700); err != nil {
-		t.Fatal(err)
-	}
+	binary = testsupport.WriteFakeCommand(t, filepath.Dir(binary), "claude", script)
 
 	host := ClaudePluginHost{Binary: binary}
 	if err := host.InstallPlugin(context.Background(), "eli5@claude-community"); err != nil {

@@ -11,14 +11,17 @@ import (
 	commitmodel "issueops/internal/contract/commitsuggest"
 	inspectmodel "issueops/internal/contract/inspect"
 	lintmodel "issueops/internal/contract/lintdiagnose"
+	"issueops/internal/testsupport"
 )
 
 func TestMCPAssistantServicesKeepCapturedRepositoryAndState(t *testing.T) {
+	catReadme := testsupport.WriteFakeCommand(t, t.TempDir(), "cat-readme", "#!/bin/sh\ncat \"$1\"\nexit 2\n")
 	roots := []string{makeGitRepoForContract(t), makeGitRepoForContract(t)}
 	deps := make([]mcpcli.MCPDependencies, 2)
 	states := []string{t.TempDir(), t.TempDir()}
 	for i, root := range roots {
 		t.Chdir(root)
+		t.Setenv("PWD", root)
 		t.Setenv("ISSUEOPS_ROOT", root)
 		t.Setenv("ISSUEOPS_STATE_DIR", states[i])
 		if err := os.WriteFile(filepath.Join(root, "README.md"), fmt.Appendf(nil, "instance-%d\n", i), 0600); err != nil {
@@ -26,7 +29,9 @@ func TestMCPAssistantServicesKeepCapturedRepositoryAndState(t *testing.T) {
 		}
 		deps[i] = issueOpsMCPDependencies()
 	}
-	t.Chdir(t.TempDir())
+	ambient := t.TempDir()
+	t.Chdir(ambient)
+	t.Setenv("PWD", ambient)
 	t.Setenv("ISSUEOPS_ROOT", t.TempDir())
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	for i, d := range deps {
@@ -41,7 +46,7 @@ func TestMCPAssistantServicesKeepCapturedRepositoryAndState(t *testing.T) {
 		if err != nil || !result.Executed || result.RepoRoot != roots[i] || !strings.Contains(result.Prompt, fmt.Sprintf("instance-%d", i)) {
 			t.Fatalf("instance %d commit=%+v err=%v", i, result, err)
 		}
-		lint, err := d.Lint.Diagnose(lintmodel.LintDiagnoseRequest{RepoRoot: ".", CommandArgv: []string{"/bin/sh", "-c", "cat README.md; exit 2"}})
+		lint, err := d.Lint.Diagnose(lintmodel.LintDiagnoseRequest{RepoRoot: ".", CommandArgv: []string{catReadme, "README.md"}})
 		if err != nil || !lint.Failed || !strings.Contains(lint.Prompt, fmt.Sprintf("instance-%d", i)) {
 			t.Fatalf("instance %d lint=%+v err=%v", i, lint, err)
 		}

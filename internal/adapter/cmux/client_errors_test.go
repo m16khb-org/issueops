@@ -41,7 +41,7 @@ func TestPreflightRejectsIncompleteRequestsBeforeAnyCommandOrObservation(t *test
 		{name: "no runner", client: Client{ObserveEndpoint: observer}, want: "dependencies"},
 		{name: "no observer", client: Client{Runner: &queueRunner{t: t}}, want: "dependencies"},
 		{name: "relative executable", mutate: func(r *cmuxcontract.PreflightRequest) { r.Executable = "cmux" }, want: "absolute clean"},
-		{name: "unclean executable", mutate: func(r *cmuxcontract.PreflightRequest) { r.Executable = "/Applications/../bin/cmux" }, want: "absolute clean"},
+		{name: "unclean executable", mutate: func(r *cmuxcontract.PreflightRequest) { r.Executable = uncleanPath(cmuxPath) }, want: "absolute clean"},
 		{name: "unsupported version", mutate: func(r *cmuxcontract.PreflightRequest) { r.ExpectedVersion = "0.64.9" }, want: "identity is incomplete"},
 		{name: "unsupported build", mutate: func(r *cmuxcontract.PreflightRequest) { r.ExpectedBuild = "cmux 0.64.10" }, want: "identity is incomplete"},
 		{name: "empty socket", mutate: func(r *cmuxcontract.PreflightRequest) { r.SocketPath = "" }, want: "identity is incomplete"},
@@ -124,12 +124,12 @@ func TestPreflightCommandFailuresNameTheFailingStep(t *testing.T) {
 		{name: "capabilities command fails", steps: []runnerStep{steps[0], steps[1], {args: []string{"capabilities"}, err: boom}}, want: "capabilities preflight failed"},
 		{name: "wrong protocol", steps: []runnerStep{steps[0], steps[1], {args: []string{"capabilities"}, stdout: strings.Replace(capabilitiesFixture(), "cmux-socket", "other", 1)}}, want: "identity is incomplete"},
 		{name: "wrong protocol version", steps: []runnerStep{steps[0], steps[1], {args: []string{"capabilities"}, stdout: strings.Replace(capabilitiesFixture(), `"version":2`, `"version":3`, 1)}}, want: "identity is incomplete"},
-		{name: "capabilities for other socket", steps: []runnerStep{steps[0], steps[1], {args: []string{"capabilities"}, stdout: strings.Replace(capabilitiesFixture(), socketPath, "/private/tmp/other.sock", 1)}}, want: "identity is incomplete"},
+		{name: "capabilities for other socket", steps: []runnerStep{steps[0], steps[1], {args: []string{"capabilities"}, stdout: strings.Replace(capabilitiesFixture(), jsonString(socketPath), jsonString(otherSocketPath), 1)}}, want: "identity is incomplete"},
 		{name: "missing access mode", steps: []runnerStep{steps[0], steps[1], {args: []string{"capabilities"}, stdout: strings.Replace(capabilitiesFixture(), `"passwordless"`, `""`, 1)}}, want: "identity is incomplete"},
 		{name: "duplicate method", steps: []runnerStep{steps[0], steps[1], {args: []string{"capabilities"}, stdout: strings.Replace(capabilitiesFixture(), `"system.ping"`, `"system.ping","system.ping"`, 1)}}, want: "duplicate method"},
 		{name: "identify command fails", steps: []runnerStep{steps[0], steps[1], steps[2], {args: steps[3].args, err: boom}}, want: "identify preflight failed"},
-		{name: "identify socket differs", steps: []runnerStep{steps[0], steps[1], steps[2], {args: steps[3].args, stdout: strings.Replace(identifyFixture(testWindow, "", ""), socketPath, "/private/tmp/other.sock", 1)}}, want: "window identity mismatch"},
-		{name: "identify has no focused window", steps: []runnerStep{steps[0], steps[1], steps[2], {args: steps[3].args, stdout: `{"socket_path":"` + socketPath + `","caller":null}`}}, want: "window identity mismatch"},
+		{name: "identify socket differs", steps: []runnerStep{steps[0], steps[1], steps[2], {args: steps[3].args, stdout: strings.Replace(identifyFixture(testWindow, "", ""), jsonString(socketPath), jsonString(otherSocketPath), 1)}}, want: "window identity mismatch"},
+		{name: "identify has no focused window", steps: []runnerStep{steps[0], steps[1], steps[2], {args: steps[3].args, stdout: `{"socket_path":` + jsonString(socketPath) + `,"caller":null}`}}, want: "window identity mismatch"},
 		{name: "identify leaks caller", steps: []runnerStep{steps[0], steps[1], steps[2], {args: steps[3].args, stdout: identifyFixture(testWindow, testWorkspace, testSurface)}}, want: "unexpectedly returned caller"},
 		{name: "identify malformed", steps: []runnerStep{steps[0], steps[1], steps[2], {args: steps[3].args, stdout: "not json"}}, want: "identify response is malformed"},
 	}
@@ -146,7 +146,7 @@ func TestPreflightCommandFailuresNameTheFailingStep(t *testing.T) {
 
 func createSteps(name string) []runnerStep {
 	return []runnerStep{
-		{args: []string{"new-workspace", "--name", name, "--cwd", "/repo/worktree", "--window", testWindow, "--focus", "false"}, stdout: "OK workspace:7\n"},
+		{args: []string{"new-workspace", "--name", name, "--cwd", worktreePath, "--window", testWindow, "--focus", "false"}, stdout: "OK workspace:7\n"},
 		{args: []string{"--json", "--id-format", "both", "list-workspaces", "--window", testWindow}, stdout: `{"workspaces":[{"id":"` + testWorkspace + `","ref":"workspace:7","title":"` + name + `"}]}`},
 		{args: []string{"--json", "--id-format", "uuids", "list-panes", "--window", testWindow, "--workspace", testWorkspace}, stdout: `{"panes":[{"id":"` + testPane + `","surface_count":1}]}`},
 		{args: []string{"--json", "--id-format", "uuids", "list-pane-surfaces", "--window", testWindow, "--workspace", testWorkspace, "--pane", testPane}, stdout: `{"surfaces":[{"id":"` + testSurface + `"}]}`},
@@ -158,13 +158,13 @@ func TestCreateWorkspaceRejectsInvalidRequestWithoutTouchingCmux(t *testing.T) {
 	for name, mutate := range map[string]func(*cmuxcontract.CreateRequest){
 		"non-uuid window": func(r *cmuxcontract.CreateRequest) { r.Preflight.WindowID = "w" },
 		"relative cwd":    func(r *cmuxcontract.CreateRequest) { r.CWD = "repo" },
-		"unclean cwd":     func(r *cmuxcontract.CreateRequest) { r.CWD = "/repo/../repo" },
+		"unclean cwd":     func(r *cmuxcontract.CreateRequest) { r.CWD = uncleanPath(worktreePath) },
 		"blank attempt":   func(r *cmuxcontract.CreateRequest) { r.AttemptID = "  " },
 	} {
 		t.Run(name, func(t *testing.T) {
 			runner := &queueRunner{t: t}
 			client := Client{Runner: runner, ObserveEndpoint: stableEndpointObserver, UID: 501}
-			request := cmuxcontract.CreateRequest{Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: "/repo/worktree"}
+			request := cmuxcontract.CreateRequest{Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: worktreePath}
 			mutate(&request)
 			_, err := client.CreateWorkspace(t.Context(), request)
 			var mutation *cmuxport.MutationError
@@ -180,7 +180,7 @@ func TestCreateWorkspaceRefusesBeforeCreateWhenEndpointAlreadyChanged(t *testing
 	moved := endpointFixture()
 	moved.Inode++
 	client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.IssueOpsHandoffDeliveryEndpointIncarnation, error) { return moved, nil }}
-	_, err := client.CreateWorkspace(t.Context(), cmuxcontract.CreateRequest{Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: "/repo/worktree"})
+	_, err := client.CreateWorkspace(t.Context(), cmuxcontract.CreateRequest{Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: worktreePath})
 	var mutation *cmuxport.MutationError
 	if err == nil || errors.As(err, &mutation) || len(runner.seen) != 0 {
 		t.Fatalf("err=%v commands=%d", err, len(runner.seen))
@@ -194,7 +194,7 @@ func TestCreateWorkspaceFailureThatNeverInvokedCmuxIsNotAmbiguous(t *testing.T) 
 	step.err = errors.New("fork failed")
 	step.invoked = false
 	client := Client{Runner: &queueRunner{t: t, steps: []runnerStep{step}}, ObserveEndpoint: stableEndpointObserver, UID: 501}
-	_, err := client.CreateWorkspace(t.Context(), cmuxcontract.CreateRequest{Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: "/repo/worktree"})
+	_, err := client.CreateWorkspace(t.Context(), cmuxcontract.CreateRequest{Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: worktreePath})
 	var mutation *cmuxport.MutationError
 	if !errors.As(err, &mutation) || mutation.Ambiguous || mutation.Phase != "workspace_create" {
 		t.Fatalf("err=%v mutation=%+v", err, mutation)
@@ -239,7 +239,7 @@ func TestCreateWorkspaceTargetResolutionFailuresAreAmbiguousAndStopImmediately(t
 			}
 			runner := &queueRunner{t: t, steps: steps}
 			client := Client{Runner: runner, ObserveEndpoint: stableEndpointObserver, UID: 501}
-			_, err := client.CreateWorkspace(t.Context(), cmuxcontract.CreateRequest{Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: "/repo/worktree"})
+			_, err := client.CreateWorkspace(t.Context(), cmuxcontract.CreateRequest{Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: worktreePath})
 			var mutation *cmuxport.MutationError
 			if !errors.As(err, &mutation) || !mutation.Ambiguous || mutation.Phase != test.phase || !strings.Contains(err.Error(), test.wantErr) {
 				t.Fatalf("err=%v mutation=%+v", err, mutation)
@@ -257,7 +257,7 @@ func TestCreateWorkspaceAcceptsUUIDHandleAndRecordsTimings(t *testing.T) {
 	steps[0].stdout = "OK " + testWorkspace + "\n"
 	steps[1].stdout = `{"workspaces":[{"id":"` + testWorkspace + `","ref":"workspace:7","title":"` + name + `"}]}`
 	client := Client{Runner: &queueRunner{t: t, steps: steps}, ObserveEndpoint: stableEndpointObserver, UID: 501}
-	created, err := client.CreateWorkspace(t.Context(), cmuxcontract.CreateRequest{Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: "/repo/worktree"})
+	created, err := client.CreateWorkspace(t.Context(), cmuxcontract.CreateRequest{Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: worktreePath})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -409,9 +409,10 @@ func TestExecRunnerCapturesOutputAndFiltersAmbientCmuxScope(t *testing.T) {
 	t.Setenv("CMUX_SOCKET", "/ambient.sock")
 	t.Setenv("CMUX_SOCKET_PATH", "/ambient-path.sock")
 	t.Setenv("ISSUEOPS_RUNNER_PASSTHROUGH", "kept")
+	executable, args := shellCommand(t, `printf '%s|%s|%s|%s|%s' "${CMUX_SOCKET_PATH-unset}" "${CMUX_WORKSPACE_ID-unset}" "${CMUX_SURFACE_ID-unset}" "${CMUX_SOCKET-unset}" "$ISSUEOPS_RUNNER_PASSTHROUGH"; printf warn >&2`)
 	output, err := ExecRunner{}.Run(t.Context(), CommandRequest{
-		Executable: "/bin/sh",
-		Args:       []string{"-c", `printf '%s|%s|%s|%s|%s' "${CMUX_SOCKET_PATH-unset}" "${CMUX_WORKSPACE_ID-unset}" "${CMUX_SURFACE_ID-unset}" "${CMUX_SOCKET-unset}" "$ISSUEOPS_RUNNER_PASSTHROUGH"; printf warn >&2`},
+		Executable: executable,
+		Args:       args,
 		Env:        map[string]string{"CMUX_SOCKET_PATH": "/explicit.sock", "CMUX_SOCKET": ""},
 		Timeout:    5 * time.Second,
 	})
@@ -434,14 +435,16 @@ func TestExecRunnerReportsFailureKindsWithInvocationState(t *testing.T) {
 		}
 	})
 	t.Run("non-zero exit keeps stderr in error and marks invoked", func(t *testing.T) {
-		output, err := ExecRunner{}.Run(t.Context(), CommandRequest{Executable: "/bin/sh", Args: []string{"-c", "printf 'denied \\n' >&2; printf partial; exit 3"}, Timeout: 5 * time.Second})
+		executable, args := shellCommand(t, "printf 'denied \\n' >&2; printf partial; exit 3")
+		output, err := ExecRunner{}.Run(t.Context(), CommandRequest{Executable: executable, Args: args, Timeout: 5 * time.Second})
 		if err == nil || !output.Invoked || !strings.Contains(err.Error(), "denied") || !strings.Contains(err.Error(), "exit status 3") || string(output.Stdout) != "partial" {
 			t.Fatalf("output=%+v err=%v", output, err)
 		}
 	})
 	t.Run("deadline kills a hung command", func(t *testing.T) {
 		started := time.Now()
-		output, err := ExecRunner{}.Run(t.Context(), CommandRequest{Executable: "/bin/sh", Args: []string{"-c", "exec sleep 30"}, Timeout: 100 * time.Millisecond})
+		executable, args := shellCommand(t, "exec sleep 30")
+		output, err := ExecRunner{}.Run(t.Context(), CommandRequest{Executable: executable, Args: args, Timeout: 100 * time.Millisecond})
 		if err == nil || !output.Invoked || time.Since(started) > 10*time.Second {
 			t.Fatalf("output=%+v err=%v elapsed=%s", output, err, time.Since(started))
 		}
@@ -451,8 +454,8 @@ func TestExecRunnerReportsFailureKindsWithInvocationState(t *testing.T) {
 		started := time.Now()
 		// The background sleep inherits stdout; without a group kill and
 		// WaitDelay, Wait blocks until it exits and then it writes the marker.
-		script := "(sleep 1; touch " + marker + ") & sleep 30"
-		output, err := ExecRunner{}.Run(t.Context(), CommandRequest{Executable: "/bin/sh", Args: []string{"-c", script}, Timeout: 100 * time.Millisecond})
+		executable, args := shellCommand(t, "(sleep 1; touch '"+filepath.ToSlash(marker)+"') & sleep 30")
+		output, err := ExecRunner{}.Run(t.Context(), CommandRequest{Executable: executable, Args: args, Timeout: 100 * time.Millisecond})
 		if err == nil || !output.Invoked || time.Since(started) > 2500*time.Millisecond {
 			t.Fatalf("output=%+v err=%v elapsed=%s", output, err, time.Since(started))
 		}
@@ -489,7 +492,7 @@ func TestCreateAndSendPropagateEndpointObservationFailureWithoutRunningCommands(
 	client := Client{Runner: runner, UID: 501, ObserveEndpoint: func(string, int) (issueops.IssueOpsHandoffDeliveryEndpointIncarnation, error) {
 		return issueops.IssueOpsHandoffDeliveryEndpointIncarnation{}, boom
 	}}
-	if _, err := client.CreateWorkspace(t.Context(), cmuxcontract.CreateRequest{Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: "/repo/worktree"}); !errors.Is(err, boom) {
+	if _, err := client.CreateWorkspace(t.Context(), cmuxcontract.CreateRequest{Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: worktreePath}); !errors.Is(err, boom) {
 		t.Fatalf("create err=%v", err)
 	}
 	if _, err := client.Send(t.Context(), cmuxcontract.SendRequest{Created: createdFixture(), Command: "run"}); !errors.Is(err, boom) {
@@ -506,7 +509,8 @@ func TestExecRunnerCapsOutputAtOneMiBAndFails(t *testing.T) {
 		"stderr": "exec head -c 1100000 /dev/zero >&2",
 	} {
 		t.Run(name, func(t *testing.T) {
-			output, err := ExecRunner{}.Run(t.Context(), CommandRequest{Executable: "/bin/sh", Args: []string{"-c", script}, Timeout: 10 * time.Second})
+			executable, args := shellCommand(t, script)
+			output, err := ExecRunner{}.Run(t.Context(), CommandRequest{Executable: executable, Args: args, Timeout: 10 * time.Second})
 			if err == nil || !strings.Contains(err.Error(), "exceeded 1 MiB") || !output.Invoked {
 				t.Fatalf("invoked=%v err=%v", output.Invoked, err)
 			}

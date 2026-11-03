@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -14,9 +13,6 @@ import (
 )
 
 func TestGitHubCompletionSectionUsesDomainBudgetAndMerge(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("POSIX provider fixture")
-	}
 	for _, exhausted := range []bool{false, true} {
 		name := "preserve authored bytes and report"
 		if exhausted {

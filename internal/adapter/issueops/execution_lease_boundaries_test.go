@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -140,7 +141,13 @@ func TestLeaseWorkspaceSnapshotRefusesUnreadableIndexButToleratesMissingOne(t *t
 		t.Fatal(err)
 	}
 	snap, err := g.snapshot()
-	if err == nil || !strings.Contains(err.Error(), "is a directory") || snap != "" {
+	wantRead := "is a directory"
+	if runtime.GOOS == "windows" {
+		// Windows reports reading a directory as "Incorrect function."; the
+		// error still names the index it could not read.
+		wantRead = g.index
+	}
+	if err == nil || !strings.Contains(err.Error(), wantRead) || snap != "" {
 		t.Fatalf("directory index snapshot = %q, %v; want the read error", snap, err)
 	}
 }
@@ -305,10 +312,20 @@ func TestReplacementCleanupReportsAResidueThatCannotBeRemoved(t *testing.T) {
 		t.Fatal(err)
 	}
 	dir := filepath.Dir(token)
-	if err := os.Chmod(dir, 0o500); err != nil {
-		t.Fatal(err)
+	if runtime.GOOS == "windows" {
+		// Windows ignores directory permission bits; a file held open without
+		// FILE_SHARE_DELETE is what makes its removal fail.
+		held, err := os.Open(token)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = held.Close() })
+	} else {
+		if err := os.Chmod(dir, 0o500); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
 	}
-	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
 
 	err := (ReplacementArtifacts{}).Cleanup(record)
 	if err == nil || !strings.Contains(err.Error(), "clean uncommitted replacement residue") {

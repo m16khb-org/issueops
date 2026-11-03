@@ -71,9 +71,17 @@ func runGitForContract(t *testing.T, dir string, args ...string) {
 
 func addEvalSymlinkReplacement(t *testing.T, replacements map[string]string, path, token string) {
 	t.Helper()
+	// Git reports paths slash-separated on every OS, so a path with backslashes
+	// also needs its slash form replaced; on Unix both forms are identical.
+	if slash := filepath.ToSlash(path); slash != path {
+		replacements[slash] = token
+	}
 	eval, err := filepath.EvalSymlinks(path)
 	if err == nil && eval != "" {
 		replacements[eval] = token
+		if slash := filepath.ToSlash(eval); slash != eval {
+			replacements[slash] = token
+		}
 	}
 }
 

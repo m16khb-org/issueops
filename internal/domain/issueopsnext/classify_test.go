@@ -1,6 +1,7 @@
 package issueopsnext
 
 import (
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -9,6 +10,7 @@ import (
 	issueopsnextcontract "issueops/internal/contract/issueopsnext"
 	reviewcontract "issueops/internal/contract/issueopsreview"
 	issueopsdomain "issueops/internal/domain/issueops"
+	"issueops/internal/testsupport"
 )
 
 func defaultCompletion(phase issueopsnextcontract.Phase) Readiness {
@@ -497,9 +499,11 @@ func TestClassifyPlanPathNamesTheSealedPlan(t *testing.T) {
 	if got := classifyTemplate(in).NextCommand; got != OwnerCommand("io-test", "plan_path")+" --json" {
 		t.Fatalf("without artifact_dir: %q", got)
 	}
-	in.Record.Execution.Workspace.Root = "/repo.worktrees/9-x"
+	root := testsupport.AbsPath("repo.worktrees", "9-x")
+	in.Record.Execution.Workspace.Root = root
 	in.Record.Execution.Workspace.ArtifactDir = ".issueops/issues/9/artifact"
-	if got := classifyTemplate(in).NextCommand; got != "issueops link-plan --id io-test --plan-path '/repo.worktrees/9-x/.issueops/issues/9/artifact/plan.md' $RECORD_ACTOR_FLAGS --json" {
+	plan := filepath.Join(root, ".issueops", "issues", "9", "artifact", "plan.md")
+	if got := classifyTemplate(in).NextCommand; got != "issueops link-plan --id io-test --plan-path '"+plan+"' $RECORD_ACTOR_FLAGS --json" {
 		t.Fatalf("with artifact_dir: %q", got)
 	}
 }

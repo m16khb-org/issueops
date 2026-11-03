@@ -58,7 +58,7 @@ func TestVerifyActivationRejectsClaudeWorktreeHookTarget(t *testing.T) {
 		t.Fatal(err)
 	}
 	stale := filepath.Join(filepath.Dir(root), "source.worktrees", "completed", "bin", "issueops")
-	raw = []byte(strings.ReplaceAll(string(raw), req.BinPath, stale))
+	raw = []byte(strings.ReplaceAll(string(raw), jsonText(t, req.BinPath), jsonText(t, stale)))
 	if err := os.WriteFile(hooksPath, raw, 0o600); err != nil {
 		t.Fatal(err)
 	}

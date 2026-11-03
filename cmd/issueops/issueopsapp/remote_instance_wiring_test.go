@@ -6,13 +6,35 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"issueops/cmd/issueops/issueopscli"
 	adapter "issueops/internal/adapter/issueops"
 	model "issueops/internal/contract/issueops"
 	"issueops/internal/port"
+	"issueops/internal/testsupport"
 )
+
+// gitOnlyPath returns a PATH value from which only git is reachable.
+func gitOnlyPath(t *testing.T) string {
+	t.Helper()
+	gitBin, err := exec.LookPath("git")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if runtime.GOOS == "windows" {
+		// Git for Windows locates its exec path relative to the real
+		// executable, so a copy or link elsewhere cannot run; its own directory
+		// holds no provider CLI.
+		return filepath.Dir(gitBin)
+	}
+	gitOnly := t.TempDir()
+	if err := os.Symlink(gitBin, filepath.Join(gitOnly, "git")); err != nil {
+		t.Fatal(err)
+	}
+	return gitOnly
+}
 
 func TestRemoteCLIInstancesKeepCapturedState(t *testing.T) {
 	roots := []string{t.TempDir(), t.TempDir(), t.TempDir()}
@@ -31,15 +53,7 @@ func TestRemoteCLIInstancesKeepCapturedState(t *testing.T) {
 	}
 	t.Setenv("ISSUEOPS_STATE_DIR", roots[2])
 	// Only git stays reachable: the preview reads origin, never the provider CLI.
-	gitBin, err := exec.LookPath("git")
-	if err != nil {
-		t.Fatal(err)
-	}
-	gitOnly := t.TempDir()
-	if err := os.Symlink(gitBin, filepath.Join(gitOnly, "git")); err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv("PATH", gitOnly)
+	t.Setenv("PATH", gitOnlyPath(t))
 	for _, i := range []int{0, 1, 0} {
 		raw := captureStdoutForContract(t, func() error {
 			return issueopscli.RunIssueOpsWithDependencies([]string{"remote", "create-issue", "--id", records[i].ID, "--provider", "github", "--title", "Preview", "--body", "Body", "--label", "bug", "--assignee", "test", "--json"}, deps[i])
@@ -87,9 +101,7 @@ if [ "$1" = "api" ] && [ "$2" = "repos/acme/repo/issues/1234/sub_issues" ]; then
 fi
 exit 2
 `
-	if err := os.WriteFile(filepath.Join(bin, "gh"), []byte(script), 0700); err != nil {
-		t.Fatal(err)
-	}
+	testsupport.WriteFakeCommand(t, bin, "gh", script)
 	t.Setenv("PATH", bin)
 	deps := issueOpsCLIDependencies()
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())

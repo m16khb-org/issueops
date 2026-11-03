@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -74,9 +75,16 @@ func TestReseedWorkspaceSnapshotFingerprintTracksEveryWorkspaceChannel(t *testin
 		t.Fatal(err)
 	}
 	record("untracked content")
-	if err := os.Chmod(filepath.Join(root, "new.txt"), 0o700); err != nil {
+	// Windows has no execute bit; its only file mode bit is the read-only attribute.
+	changed := os.FileMode(0o700)
+	if runtime.GOOS == "windows" {
+		changed = 0o400
+	}
+	path := filepath.Join(root, "new.txt")
+	if err := os.Chmod(path, changed); err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() { _ = os.Chmod(path, 0o600) })
 	record("untracked mode")
 	reseedInventoryGit(t, root, "commit", "--message", "second")
 	record("new head")

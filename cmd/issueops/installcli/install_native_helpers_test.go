@@ -1,11 +1,11 @@
 package installcli
 
 import (
-	installdomain "issueops/internal/domain/install"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	installdomain "issueops/internal/domain/install"
 
 	"issueops/internal/port"
 )
@@ -52,7 +52,7 @@ func TestPrintInstallNativeResultCoversDryRunAndProjectLocalModes(t *testing.T) 
 	for _, want := range []string{
 		"Installed issueops native integrations:",
 		"- mode: user/global + explicit project-local",
-		"- Project-local Claude MCP config: /repo/harness/.mcp.json",
+		"- Project-local Claude MCP config: " + filepath.Join(result.Root, ".mcp.json"),
 	} {
 		if !strings.Contains(installedOut, want) {
 			t.Fatalf("installed output missing %q:\n%s", want, installedOut)
@@ -60,47 +60,6 @@ func TestPrintInstallNativeResultCoversDryRunAndProjectLocalModes(t *testing.T) 
 	}
 	if strings.Contains(installedOut, "Project-local Claude skills") {
 		t.Fatalf("project-local install must not advertise repo-local skill links:\n%s", installedOut)
-	}
-}
-
-func TestPreferredShellRCAndAppendShellPathLinePlan(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("SHELL", "/bin/bash")
-	if got := preferredShellRC(home); got != filepath.Join(home, ".bashrc") {
-		t.Fatalf("bash shell rc = %q", got)
-	}
-
-	t.Setenv("SHELL", "/bin/unknown")
-	zshrc := filepath.Join(home, ".zshrc")
-	if err := os.WriteFile(zshrc, []byte("# existing\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if got := preferredShellRC(home); got != zshrc {
-		t.Fatalf("existing zsh rc = %q", got)
-	}
-
-	dryRunFile, err := appendShellPathLinePlan(filepath.Join(home, ".profile"), true)
-	if err != nil {
-		t.Fatalf("dry-run append path failed: %v", err)
-	}
-	if !dryRunFile.WouldWrite || dryRunFile.Written || dryRunFile.Kind != "shell_path_rc" {
-		t.Fatalf("unexpected dry-run shell path file: %#v", dryRunFile)
-	}
-
-	rcPath := filepath.Join(home, "nested", ".profile")
-	writtenFile, err := appendShellPathLinePlan(rcPath, false)
-	if err != nil {
-		t.Fatalf("append path failed: %v", err)
-	}
-	if !writtenFile.Written || writtenFile.WouldWrite {
-		t.Fatalf("unexpected written shell path file: %#v", writtenFile)
-	}
-	body, err := os.ReadFile(rcPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(string(body), ShellPathRCMarker) || !shellRCAlreadyAddsLocalBin(rcPath, home) {
-		t.Fatalf("shell rc did not contain local bin marker:\n%s", string(body))
 	}
 }
 

@@ -433,7 +433,6 @@
       "symbols": [
         "func Command.planInstallCommandPath",
         "func Command.prepareInstallPathPlanFromCandidate",
-        "func appendShellPathLinePlan",
         "func ensureShortCommandShimPlan",
         "func installPathDirectoryExists",
         "func installPathTransaction.Apply",
@@ -448,9 +447,28 @@
         "func localBinInPath",
         "func managedCommandPathResult",
         "func planShellPath",
-        "func preferredShellRC",
-        "func shellRCAlreadyAddsLocalBin",
         "type installPathTransaction"
+      ]
+    },
+    {
+      "path": "cmd/issueops/installcli/install_native_path_unix.go",
+      "owner": "inbound",
+      "task": "T11",
+      "symbols": [
+        "func addLocalBinToPath",
+        "func appendShellPathLinePlan",
+        "func preferredShellRC",
+        "func shellRCAlreadyAddsLocalBin"
+      ]
+    },
+    {
+      "path": "cmd/issueops/installcli/install_native_path_windows.go",
+      "owner": "inbound",
+      "task": "T11",
+      "symbols": [
+        "func addLocalBinToPath",
+        "func broadcastEnvironmentChange",
+        "func userPathContains"
       ]
     },
     {
@@ -1569,7 +1587,6 @@
         "func output",
         "func parse",
         "func printText",
-        "func processCommandLine",
         "func recordActorFlags",
         "func repeatedString.Set",
         "func repeatedString.String",
@@ -1616,6 +1633,22 @@
         "func bindExecutionErrorNextCommand",
         "func bindExecutionNextCommand",
         "func executionNextCommand"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopscli/executioncmd/process_command_line_unix.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func processCommandLine"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopscli/executioncmd/process_command_line_windows.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func processCommandLine"
       ]
     },
     {
@@ -3020,6 +3053,23 @@
       ]
     },
     {
+      "path": "internal/adapter/audit/handoff_delivery_file_windows.go",
+      "owner": "adapter",
+      "task": "T09",
+      "symbols": [
+        "func closePinnedHandoffDelivery",
+        "func openHandoffDeliveryAudit",
+        "func openHandoffDeliveryAuditLeafWindows",
+        "func pinHandoffDeliveryEntry",
+        "func pinHandoffDeliveryStateRoot",
+        "func realHandoffDeliveryEntry",
+        "func validateHandoffDeliveryWindowsEntry",
+        "func verifyPinnedHandoffDeliveryEntry",
+        "type handoffDeliveryAuditMode",
+        "type pinnedHandoffDeliveryEntry"
+      ]
+    },
+    {
       "path": "internal/adapter/audit/handoff_delivery_path.go",
       "owner": "adapter",
       "task": "T09",
@@ -3136,10 +3186,12 @@
       "task": "T20",
       "symbols": [
         "func Installer.claudeSettingsConfig",
+        "func Installer.claudeSettingsConfigFor",
         "func Installer.mergeClaudeHookConfig",
         "func Installer.writeClaudeSettings",
-        "func claudeHookCommand",
+        "func claudeHookArgs",
         "func claudeHookGroup",
+        "func claudeHookHandler",
         "func claudeLifecycleHookSpecs",
         "type claudeLifecycleHookSpec"
       ]
@@ -3228,6 +3280,16 @@
         "func SameEndpoint",
         "func ValidateEndpoint",
         "func permissionMode"
+      ]
+    },
+    {
+      "path": "internal/adapter/cmux/platform_windows.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func configureProcessGroup",
+        "func fileIdentity",
+        "func readPromptPlatform"
       ]
     },
     {
@@ -3358,10 +3420,12 @@
         "func Installer.mergeHookConfig",
         "func Installer.mergeHookEvent",
         "func Installer.writeCodexHooks",
-        "func codexHookCommand",
+        "func codexHookArgs",
         "func codexHookGroup",
+        "func codexHookHandler",
         "func codexLifecycleHookSpecs",
         "func hookGroupHasHooks",
+        "func hooksConfig",
         "func readCodexHooksConfig",
         "type codexLifecycleHookSpec"
       ]
@@ -3405,7 +3469,6 @@
       "task": "T15",
       "symbols": [
         "func CountGatewayFDsViaLsof",
-        "func MeasurePipeCapacity",
         "func ProbeGatewayHTTP",
         "func countGatewayFDsBatch",
         "func loopbackMCPEndpoints",
@@ -3432,6 +3495,22 @@
         "func ObserveProjectDocs",
         "func ObserveRuntimeState",
         "type Gateways"
+      ]
+    },
+    {
+      "path": "internal/adapter/doctor/pipe_capacity_unix.go",
+      "owner": "adapter",
+      "task": "T15",
+      "symbols": [
+        "func MeasurePipeCapacity"
+      ]
+    },
+    {
+      "path": "internal/adapter/doctor/pipe_capacity_windows.go",
+      "owner": "adapter",
+      "task": "T15",
+      "symbols": [
+        "func MeasurePipeCapacity"
       ]
     },
     {
@@ -3632,6 +3711,40 @@
       ]
     },
     {
+      "path": "internal/adapter/hostprobe/dir_sync_unix.go",
+      "owner": "adapter",
+      "task": "T15",
+      "symbols": [
+        "func syncDirectory"
+      ]
+    },
+    {
+      "path": "internal/adapter/hostprobe/dir_sync_windows.go",
+      "owner": "adapter",
+      "task": "T15",
+      "symbols": [
+        "func syncDirectory"
+      ]
+    },
+    {
+      "path": "internal/adapter/hostprobe/isolated_home_unix.go",
+      "owner": "adapter",
+      "task": "T15",
+      "symbols": [
+        "func isolatedHomeSubdirs",
+        "func withIsolatedHome"
+      ]
+    },
+    {
+      "path": "internal/adapter/hostprobe/isolated_home_windows.go",
+      "owner": "adapter",
+      "task": "T15",
+      "symbols": [
+        "func isolatedHomeSubdirs",
+        "func withIsolatedHome"
+      ]
+    },
+    {
       "path": "internal/adapter/hostprobe/omo.go",
       "owner": "adapter",
       "task": "T15",
@@ -3682,6 +3795,16 @@
         "func omoAuthSameInode",
         "func readOmoAuthFile",
         "func readOmoAuthOpened",
+        "func stableOmoAuthInfo"
+      ]
+    },
+    {
+      "path": "internal/adapter/hostprobe/omo_auth_windows.go",
+      "owner": "adapter",
+      "task": "T15",
+      "symbols": [
+        "func omoAuthInfoValid",
+        "func readOmoAuthFile",
         "func stableOmoAuthInfo"
       ]
     },
@@ -3771,6 +3894,16 @@
       ]
     },
     {
+      "path": "internal/adapter/hostprobe/process_group_windows.go",
+      "owner": "adapter",
+      "task": "T15",
+      "symbols": [
+        "func configureProcessGroup",
+        "func interruptProcessTree",
+        "func terminateProcessTree"
+      ]
+    },
+    {
       "path": "internal/adapter/hostprobe/run_finish.go",
       "owner": "adapter",
       "task": "T15",
@@ -3798,6 +3931,7 @@
         "func decodeStrictJSON",
         "func episodeRootFailureCode",
         "func failedResult",
+        "func hostHome",
         "func isHostAmbientEnvironment",
         "func isolatedHostEnv",
         "func jsonString",
@@ -4267,6 +4401,22 @@
       ]
     },
     {
+      "path": "internal/adapter/install/retired_state_pid_unix.go",
+      "owner": "adapter",
+      "task": "T11",
+      "symbols": [
+        "func legacyPIDAlive"
+      ]
+    },
+    {
+      "path": "internal/adapter/install/retired_state_pid_windows.go",
+      "owner": "adapter",
+      "task": "T11",
+      "symbols": [
+        "func legacyPIDAlive"
+      ]
+    },
+    {
       "path": "internal/adapter/install/skills.go",
       "owner": "adapter",
       "task": "T11",
@@ -4326,7 +4476,8 @@
         "type ManagedCommandPathTransaction",
         "type managedBuildInfo",
         "type managedCommandIdentity",
-        "type managedCommandPathDeps"
+        "type managedCommandPathDeps",
+        "type managedCommandStatFields"
       ]
     },
     {
@@ -4343,6 +4494,25 @@
       "task": "T20",
       "symbols": [
         "func exchangeManagedCommandPaths"
+      ]
+    },
+    {
+      "path": "internal/adapter/installutil/command_path_stat_unix.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func managedCommandAdoptionSupport",
+        "func managedCommandStat"
+      ]
+    },
+    {
+      "path": "internal/adapter/installutil/command_path_windows.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func exchangeManagedCommandPaths",
+        "func managedCommandAdoptionSupport",
+        "func managedCommandStat"
       ]
     },
     {
@@ -4363,7 +4533,7 @@
         "func HookGroupContainsAgentHarness",
         "func HookGroupContainsCommand",
         "func ValidateHookConfigForMerge",
-        "func isAgentHarnessHookCommand"
+        "func isAgentHarnessExecutable"
       ]
     },
     {
@@ -4373,6 +4543,7 @@
       "symbols": [
         "func HookTargetDriftMessages",
         "func hookCommandTarget",
+        "func hookEntryTarget",
         "func hookGroupTargets",
         "func hookTargets",
         "func shellCommandWord"
@@ -4621,6 +4792,22 @@
       ]
     },
     {
+      "path": "internal/adapter/issueops/cleanup_signal_unix.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
+        "func signalCleanupProcess"
+      ]
+    },
+    {
+      "path": "internal/adapter/issueops/cleanup_signal_windows.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
+        "func signalCleanupProcess"
+      ]
+    },
+    {
       "path": "internal/adapter/issueops/cleanup_status_environment.go",
       "owner": "adapter",
       "task": "T08",
@@ -4751,27 +4938,48 @@
       "symbols": [
         "func InspectNativeProcessReceipt",
         "func ObserveNativeProcessAncestry",
-        "func ObserveNativeProcessReceipt",
         "func inspectNativeProcessReceiptFromSnapshot",
         "func inspectWorkspaceProcesses",
-        "func inspectWorkspaceProcessesWithin",
         "func lsofFieldParser.consume",
         "func lsofFieldParser.occupyingProcess",
-        "func nativePIDAlive",
         "func nativeProcessAncestryFromSnapshot",
         "func nativeProcessAncestryPIDsFromSnapshot",
-        "func nativeProcessArguments",
-        "func observeNativeProcessSnapshot",
         "func parseNativeProcessSnapshot",
         "func parseNativeProcessStart",
         "func parseWorkspaceProcesses",
         "func parseWorkspaceProcessesWithPathPredicate",
         "func pathWithinResolved",
-        "func processField",
         "func processHasAncestorInSnapshot",
         "type lsofFieldParser",
         "type nativeProcessSnapshotEntry",
         "type workspaceProcess"
+      ]
+    },
+    {
+      "path": "internal/adapter/issueops/execution_process_unix.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func ObserveNativeProcessReceipt",
+        "func inspectWorkspaceProcessesWithin",
+        "func nativePIDAlive",
+        "func nativeProcessArguments",
+        "func observeNativeProcessSnapshot",
+        "func processField",
+        "func processTableArguments"
+      ]
+    },
+    {
+      "path": "internal/adapter/issueops/execution_process_windows.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func ObserveNativeProcessReceipt",
+        "func inspectWorkspaceProcessesWithin",
+        "func nativePIDAlive",
+        "func nativeProcessArguments",
+        "func observeNativeProcessSnapshot",
+        "func processTableArguments"
       ]
     },
     {
@@ -5484,6 +5692,7 @@
         "func Instance.Publish",
         "func Instance.Release",
         "func ReadBearer",
+        "func ServiceLogPath",
         "func httpDir",
         "func identityWriter.Flush",
         "func identityWriter.Unwrap",
@@ -5507,11 +5716,20 @@
       ]
     },
     {
+      "path": "internal/adapter/mcpservice/platform_windows.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func LockHolder",
+        "func ServiceLogWriter",
+        "func tryLock"
+      ]
+    },
+    {
       "path": "internal/adapter/mcpservice/server_log.go",
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func ServiceLogPath",
         "func ServiceLogWriter",
         "func cappedLogWriter.Write",
         "func cappedLogWriter.rotate",
@@ -5752,6 +5970,7 @@
         "func Files.Tracked",
         "func FullContent",
         "func Normalize",
+        "func repoRelative",
         "func splitLines"
       ]
     },
@@ -5788,6 +6007,18 @@
         "func closeFDs",
         "func privateEntry",
         "func writeCredential"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/authority/credential_files_windows.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func CredentialFiles.Prune",
+        "func CredentialFiles.Read",
+        "func CredentialFiles.Write",
+        "func CredentialFiles.grantDir",
+        "func privateEntry"
       ]
     },
     {
@@ -5990,10 +6221,26 @@
       "task": "T05",
       "symbols": [
         "func InspectNativeProcess",
+        "func parseProcessStart"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/issueopslease/process_unix.go",
+      "owner": "adapter",
+      "task": "T05",
+      "symbols": [
         "func observeReceipt",
-        "func parseProcessStart",
         "func pidAlive",
         "func processField"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/issueopslease/process_windows.go",
+      "owner": "adapter",
+      "task": "T05",
+      "symbols": [
+        "func observeReceipt",
+        "func pidAlive"
       ]
     },
     {
@@ -6323,6 +6570,87 @@
       ]
     },
     {
+      "path": "internal/adapter/outbound/osfile/osfile.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "type Identity"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/osfile/osfile_unix.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Chmod",
+        "func ExecutableName",
+        "func FileChmod",
+        "func FileIdentity",
+        "func Mkdir",
+        "func MkdirAll",
+        "func OpenFile",
+        "func PathIdentity",
+        "func Perm",
+        "func Replace",
+        "func WriteFile",
+        "func statIdentity"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/osfile/osfile_windows.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Chmod",
+        "func ExecutableName",
+        "func FileChmod",
+        "func FileIdentity",
+        "func Mkdir",
+        "func MkdirAll",
+        "func OpenFile",
+        "func PathIdentity",
+        "func Perm",
+        "func Replace",
+        "func WriteFile",
+        "func executableName",
+        "func handleIdentity",
+        "func openHandle",
+        "func ownerOnly",
+        "func ownerOnlyACL",
+        "func ownerOnlyDescriptor",
+        "func principalSet.trusted",
+        "func transientSharingError",
+        "type principalSet"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/osprocess/osprocess.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": []
+    },
+    {
+      "path": "internal/adapter/outbound/osprocess/osprocess_windows.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Alive",
+        "func CommandLine",
+        "func CurrentDirectory",
+        "func Identity",
+        "func KillTree",
+        "func Snapshot",
+        "func Terminate",
+        "func descendants",
+        "func readMemory",
+        "func readParameter",
+        "func running",
+        "func startTime",
+        "func terminate",
+        "type Entry"
+      ]
+    },
+    {
       "path": "internal/adapter/outbound/processlease/acquire_unix.go",
       "owner": "adapter",
       "task": "T08",
@@ -6331,8 +6659,20 @@
         "func AcquireShared",
         "func acquire",
         "func flockNonBlocking",
+        "func inherit",
         "func validateLockDirectory",
         "func validateLockFile"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/processlease/acquire_windows.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
+        "func Acquire",
+        "func AcquireShared",
+        "func acquire",
+        "func inherit"
       ]
     },
     {
@@ -6426,6 +6766,7 @@
         "func productionGoCandidate",
         "func productionGoFiles",
         "func regularSourcePath",
+        "func repoRelative",
         "func resolveSourceRoot",
         "func sourceGitOutput",
         "func walkSourceCandidates",
@@ -6515,6 +6856,22 @@
         "func WalkExisting",
         "func WalkExistingAfter",
         "func openExistingData"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/sqlstore/idle_handles_unix.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func releaseIdleFileHandles"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/sqlstore/idle_handles_windows.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func releaseIdleFileHandles"
       ]
     },
     {
@@ -6618,7 +6975,7 @@
       ]
     },
     {
-      "path": "internal/adapter/outbound/sqlstore/write_guard_unix.go",
+      "path": "internal/adapter/outbound/sqlstore/write_guard.go",
       "owner": "adapter",
       "task": "T08",
       "symbols": [
@@ -6749,6 +7106,22 @@
       ]
     },
     {
+      "path": "internal/adapter/policy/environment_unix.go",
+      "owner": "adapter",
+      "task": "T09",
+      "symbols": [
+        "func commandEnvironment"
+      ]
+    },
+    {
+      "path": "internal/adapter/policy/environment_windows.go",
+      "owner": "adapter",
+      "task": "T09",
+      "symbols": [
+        "func commandEnvironment"
+      ]
+    },
+    {
       "path": "internal/adapter/policy/policy_catalog.go",
       "owner": "adapter",
       "task": "T09",
@@ -6822,6 +7195,15 @@
       ]
     },
     {
+      "path": "internal/adapter/policy/process_group_windows.go",
+      "owner": "adapter",
+      "task": "T09",
+      "symbols": [
+        "func configureProcessGroup",
+        "func terminateProcessGroup"
+      ]
+    },
+    {
       "path": "internal/adapter/preflight/git.go",
       "owner": "adapter",
       "task": "T09",
@@ -6884,6 +7266,14 @@
       "symbols": [
         "func Inspector.Inspect",
         "func Inspector.processFieldWithCLocale"
+      ]
+    },
+    {
+      "path": "internal/adapter/processinspect/inspect_windows.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Inspector.Inspect"
       ]
     },
     {
@@ -7682,12 +8072,47 @@
         "func ParseMCPProxyProcessSnapshot",
         "func ProcessTable.Read",
         "func Runtime.CurrentPID",
-        "func Runtime.Install",
         "func Runtime.List",
         "func Runtime.SupportsOrphanTermination",
         "func Runtime.Terminate",
         "type ProcessTable",
         "type Runtime"
+      ]
+    },
+    {
+      "path": "internal/adapter/update/runtime_unix.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Runtime.Install",
+        "func Runtime.processRows"
+      ]
+    },
+    {
+      "path": "internal/adapter/update/runtime_windows.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Runtime.Install",
+        "func Runtime.processRows",
+        "func fileExists",
+        "func fileSHA256",
+        "func isTruthy",
+        "func nativeInstallRun.begin",
+        "func nativeInstallRun.buildAndSwap",
+        "func nativeInstallRun.cleanup",
+        "func nativeInstallRun.exec",
+        "func nativeInstallRun.install",
+        "func nativeInstallRun.log",
+        "func nativeInstallRun.mcpService",
+        "func nativeInstallRun.parseArgs",
+        "func nativeInstallRun.preflight",
+        "func nativeInstallRun.removeRetired",
+        "func nativeInstallRun.seal",
+        "func randomSuffix",
+        "func stableNativeRoot",
+        "func swapBinary",
+        "type nativeInstallRun"
       ]
     },
     {
@@ -8357,6 +8782,14 @@
     },
     {
       "path": "internal/adapter/worker/worker_pid_unix.go",
+      "owner": "adapter",
+      "task": "T14",
+      "symbols": [
+        "func isPIDAlive"
+      ]
+    },
+    {
+      "path": "internal/adapter/worker/worker_pid_windows.go",
       "owner": "adapter",
       "task": "T14",
       "symbols": [
@@ -14273,6 +14706,8 @@
       "task": "T20",
       "symbols": [
         "func NormalizePublicMaterialPaths",
+        "func drivePublicMaterialRoot",
+        "func drivePublicMaterialRoots",
         "func matchPublicMaterialRoot",
         "func publicMaterialRoots",
         "type publicMaterialRoot"
@@ -15918,6 +16353,7 @@
         "func Catalog.Snapshot",
         "func addSubcommands",
         "func addToSet",
+        "func commandBase",
         "func sortedKeys",
         "func sortedSubcommandCatalog",
         "func stringSet",
@@ -17661,6 +18097,16 @@
       ]
     },
     {
+      "path": "internal/testsupport/fakecmd/main.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func fail",
+        "func main",
+        "func run"
+      ]
+    },
+    {
       "path": "internal/testsupport/git_config.go",
       "owner": "inbound",
       "task": "T20",
@@ -17674,6 +18120,37 @@
       "task": "T20",
       "symbols": [
         "func ClearInheritedOperatorSwitches"
+      ]
+    },
+    {
+      "path": "internal/testsupport/permissive_unix.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func MakePermissive",
+        "func MakeUnreadable"
+      ]
+    },
+    {
+      "path": "internal/testsupport/permissive_windows.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func MakePermissive",
+        "func MakeUnreadable"
+      ]
+    },
+    {
+      "path": "internal/testsupport/platform.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func AbsPath",
+        "func ExecutableName",
+        "func SetHome",
+        "func WriteFakeCommand",
+        "func fakeCommandShim",
+        "func gitBash"
       ]
     },
     {

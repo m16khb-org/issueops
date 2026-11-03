@@ -11,6 +11,7 @@ import (
 	"issueops/internal/adapter/hostprotocol"
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"issueops/internal/adapter/installutil"
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/domain/nativehost"
 	"issueops/internal/port"
 )
@@ -132,7 +133,7 @@ func TestInstallerPreservesUserConfigAndPlugins(t *testing.T) {
 		t.Fatalf("skill link = %q, %v", resolved, err)
 	}
 	project := readJSON(t, filepath.Join(req.Root, ".opencode", "opencode.json"))
-	if got := server(t, project, "issueops_project"); !reflect.DeepEqual(got["command"], []any{"./bin/issueops", "mcp"}) {
+	if got := server(t, project, "issueops_project"); !reflect.DeepEqual(got["command"], []any{"./bin/" + osfile.ExecutableName("issueops"), "mcp"}) {
 		t.Fatalf("project entry = %+v", got)
 	}
 	for _, path := range []string{filepath.Join(req.Root, "configs", "opencode", "opencode.json"), filepath.Join(req.Root, "configs", "opencode", "issueops.js")} {
@@ -159,8 +160,8 @@ func TestInstallerHTTPEntryNarrowsModeAndKeepsSecretOutOfProject(t *testing.T) {
 		t.Fatalf("install = %+v, %v", result, err)
 	}
 	info, err := os.Stat(userConfig)
-	if err != nil || info.Mode().Perm() != 0o600 {
-		t.Fatalf("user config mode = %v, %v", info.Mode().Perm(), err)
+	if err != nil || osfile.Perm(userConfig, info) != 0o600 {
+		t.Fatalf("user config mode = %v, %v", osfile.Perm(userConfig, info), err)
 	}
 	want := map[string]any{
 		"type": "remote", "url": req.MCPURL, "oauth": false, "codemode": false,

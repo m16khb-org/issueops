@@ -16,7 +16,6 @@ import (
 func installFakeGHIssueForRemoteArtifactTest(t *testing.T) {
 	t.Helper()
 	bin := t.TempDir()
-	gh := filepath.Join(bin, "gh")
 	script := `#!/bin/sh
 case "$3" in
   *"/issues/1")
@@ -29,9 +28,7 @@ case "$3" in
     ;;
 esac
 `
-	if err := os.WriteFile(gh, []byte(script), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	writeFakeCommand(t, filepath.Join(bin, "gh"), script)
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 }
 

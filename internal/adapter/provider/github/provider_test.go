@@ -5,12 +5,12 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
 	completionmodel "issueops/internal/contract/issueops"
 	"issueops/internal/port"
+	"issueops/internal/testsupport"
 )
 
 func TestGitHubProviderName(t *testing.T) {
@@ -198,9 +198,6 @@ exit 2
 }
 
 func TestGitHubCreatePullRequestConfirmPassesDraftArgv(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake gh shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	repo := t.TempDir()
 	writeFakeGh(t, binDir, `#!/bin/sh
@@ -333,9 +330,6 @@ exit 2
 }
 
 func TestGitHubCreateChildConfirmCreatesAttachesAndVerifies(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake gh shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	repo := t.TempDir()
 	logPath := filepath.Join(repo, "gh.calls")
@@ -403,9 +397,6 @@ exit 2
 }
 
 func TestGitHubCreateChildUsesRESTWhenParentCapabilityUnsupported(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake gh shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	repo := t.TempDir()
 	logPath := filepath.Join(repo, "gh.calls")
@@ -475,9 +466,6 @@ exit 2
 }
 
 func TestGitHubCreateChildFailureAfterCreateIncludesChildURL(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake gh shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	repo := t.TempDir()
 	writeFakeGh(t, binDir, `#!/bin/sh
@@ -528,9 +516,6 @@ func TestGitHubCloseChildDryRunDoesNotExecute(t *testing.T) {
 }
 
 func TestGitHubCloseChildConfirmVerifiesHierarchyClosesAndRechecksState(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake gh shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	repo := t.TempDir()
 	logPath := filepath.Join(repo, "gh.calls")
@@ -582,9 +567,6 @@ exit 2
 }
 
 func TestGitHubCloseChildRejectsHierarchyMismatch(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake gh shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	writeFakeGh(t, binDir, `#!/bin/sh
 if [ "$1" = "api" ] && [ "$2" = "repos/acme/repo/issues/12/sub_issues" ]; then
@@ -638,14 +620,11 @@ func TestRunGhJSONReportsMissingCLI(t *testing.T) {
 }
 
 func TestRunGhJSONExecutesInRepoAndParsesOutput(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake gh shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	repo := t.TempDir()
 	logPath := filepath.Join(repo, "gh.args")
 	writeFakeGh(t, binDir, `#!/bin/sh
-printf '%s\n' "$PWD|$*" > gh.args
+printf '%s\n' "$(pwd -W 2>/dev/null || pwd)|$*" > gh.args
 printf 'https://github.com/o/r/issues/12\n'
 `)
 	t.Setenv("PATH", binDir)
@@ -661,15 +640,12 @@ printf 'https://github.com/o/r/issues/12\n'
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := repo + "|issue create --title Fix"; strings.TrimSpace(string(log)) != want {
+	if want := filepath.ToSlash(repo) + "|issue create --title Fix"; strings.TrimSpace(string(log)) != want {
 		t.Fatalf("logged command=%q, want %q", strings.TrimSpace(string(log)), want)
 	}
 }
 
 func TestRunGhJSONReportsExitStderr(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake gh shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	writeFakeGh(t, binDir, `#!/bin/sh
 echo "provider rejected request" >&2
@@ -703,9 +679,6 @@ func TestGitHubUpdateIssueBodySectionDryRun(t *testing.T) {
 }
 
 func TestGitHubUpdateIssueBodySectionConfirmMergesIdempotently(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake gh shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	repo := t.TempDir()
 	logPath := filepath.Join(repo, "gh.edit")
@@ -758,8 +731,5 @@ exit 2
 
 func writeFakeGh(t *testing.T, binDir, script string) {
 	t.Helper()
-	path := filepath.Join(binDir, "gh")
-	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	testsupport.WriteFakeCommand(t, binDir, "gh", script)
 }

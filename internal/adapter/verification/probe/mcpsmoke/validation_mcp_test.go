@@ -4,13 +4,13 @@ import (
 	"errors"
 	"fmt"
 	verifydomain "issueops/internal/domain/selfverify"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	selfverify "issueops/internal/contract/selfverify"
+	"issueops/internal/testsupport"
 )
 
 func TestMCPSmokeExpectedMarkers(t *testing.T) {
@@ -139,10 +139,7 @@ func TestRunSDKSmokeConnectFailureReportsStep(t *testing.T) {
 }
 
 func TestValidateMCPFailsWhenBinaryExitsWithoutServing(t *testing.T) {
-	script := filepath.Join(t.TempDir(), "fake")
-	if err := os.WriteFile(script, []byte("#!/bin/sh\necho oops >&2\nexit 3\n"), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	script := testsupport.WriteFakeCommand(t, t.TempDir(), "fake", "#!/bin/sh\necho oops >&2\nexit 3\n")
 	step := ValidateMCP(script, t.TempDir())
 	if step.OK || !strings.Contains(step.Error, "connect SDK MCP session") {
 		t.Fatalf("unexpected step: %+v", step)

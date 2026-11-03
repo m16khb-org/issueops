@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -27,9 +28,15 @@ func TestMain(m *testing.M) {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	if err := os.Setenv("HOME", home); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+	// os.UserHomeDir reads USERPROFILE on Windows, so HOME alone would leak the real profile.
+	for _, key := range []string{"HOME", "USERPROFILE"} {
+		if key == "USERPROFILE" && runtime.GOOS != "windows" {
+			continue
+		}
+		if err := os.Setenv(key, home); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	}
 	code := m.Run()
 	_ = os.RemoveAll(home)

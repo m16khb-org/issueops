@@ -10,13 +10,14 @@ import (
 	"issueops/internal/adapter/installutil"
 	upstream "issueops/internal/contract/upstream"
 	"issueops/internal/port"
+	"issueops/internal/testsupport"
 )
 
 func TestPreparedInstallTransactionsKeepTheirPathEffects(t *testing.T) {
 	var applied []string
 	makeTransaction := func(owner string) (*installPathTransaction, *port.NativeInstallResult, string) {
 		home, root := t.TempDir(), t.TempDir()
-		req := port.NativeInstallRequest{Home: home, BinPath: filepath.Join(root, "bin", "issueops")}
+		req := port.NativeInstallRequest{Home: home, BinPath: filepath.Join(root, "bin", testsupport.ExecutableName("issueops"))}
 		cli := testInstallCommand(t, Deps{})
 		cli.EnsureSymlinkPlan = func(target, path string, dry bool) (port.InstallLink, error) {
 			if !dry {
@@ -45,7 +46,7 @@ func TestPreparedInstallTransactionsKeepTheirPathEffects(t *testing.T) {
 		if err := entry.tx.Apply(entry.result); err != nil {
 			t.Fatal(err)
 		}
-		for _, name := range []string{"issueops", "io"} {
+		for _, name := range []string{testsupport.ExecutableName("issueops"), testsupport.ExecutableName("io")} {
 			if info, err := os.Lstat(filepath.Join(entry.home, ".local", "bin", name)); err != nil || info.Mode()&os.ModeSymlink == 0 {
 				t.Fatalf("missing %s link: %v", name, err)
 			}

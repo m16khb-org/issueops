@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -62,7 +63,7 @@ func TestRemoveRetiredStateDeletesOnlyAllowlistedEntries(t *testing.T) {
 }
 
 func TestRemoveRetiredStateKeepsDaemonWhileLegacyProcessIsAlive(t *testing.T) {
-	exited := exec.Command("true")
+	exited := exec.Command(os.Args[0], "-test.run=^$") // a portable child that exits at once
 	if err := exited.Run(); err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +78,12 @@ func TestRemoveRetiredStateKeepsDaemonWhileLegacyProcessIsAlive(t *testing.T) {
 		{name: "exited pid", pid: exited.Process.Pid},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			state, err := os.MkdirTemp("/tmp", "retired")
+			// Unix socket paths are short-limited, so avoid t.TempDir's long names.
+			shortTempRoot := "/tmp"
+			if runtime.GOOS == "windows" {
+				shortTempRoot = "" // os.TempDir is already short
+			}
+			state, err := os.MkdirTemp(shortTempRoot, "retired")
 			if err != nil {
 				t.Fatal(err)
 			}

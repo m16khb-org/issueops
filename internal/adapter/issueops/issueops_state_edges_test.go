@@ -12,6 +12,7 @@ import (
 	"issueops/internal/contract/issueops"
 	statecontract "issueops/internal/contract/state"
 	"issueops/internal/port"
+	"issueops/internal/testsupport"
 )
 
 func TestNormalizeIssueOpsIDRejectsUnsafeIDs(t *testing.T) {
@@ -125,11 +126,11 @@ func TestCleanupRecordStoreLoadRejections(t *testing.T) {
 
 func TestMaterialFilesResolveAndRelative(t *testing.T) {
 	var files MaterialFiles
-	root := filepath.Join(string(filepath.Separator), "w", "root")
+	root := testsupport.AbsPath("w", "root")
 	if got := files.Resolve(root, "a/../b.md"); got != filepath.Join(root, "b.md") {
 		t.Fatalf("relative Resolve = %q", got)
 	}
-	abs := filepath.Join(string(filepath.Separator), "elsewhere", "x.md")
+	abs := testsupport.AbsPath("elsewhere", "x.md")
 	if got := files.Resolve(root, abs); got != abs {
 		t.Fatalf("absolute Resolve = %q, want unchanged", got)
 	}

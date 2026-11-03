@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	model "issueops/internal/contract/issueops"
+	"issueops/internal/testsupport"
 )
 
 func TestPrepareRecordsProviderFallbackOrder(t *testing.T) {
@@ -90,17 +91,18 @@ func TestPreparePersistsExplicitParentWorktree(t *testing.T) {
 		IssueURL: "https://github.com/example/repo/issues/456",
 	})
 
+	parent := testsupport.AbsPath("repo", "example.worktrees", "117-umbrella")
 	record, err := prepareForTest(store.issueOpsStore(), t.TempDir(), "io-4", model.IssueOpsBranchPrepareRequest{
 		Provider:       "github",
 		IssueURL:       "https://github.com/example/repo/issues/456",
 		Branch:         "456-provider-linked-branch",
 		BaseBranch:     "117-umbrella",
-		ParentWorktree: "/repo/example.worktrees/117-umbrella",
+		ParentWorktree: parent,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := record.BranchPrepare.ParentWorktree; got != "/repo/example.worktrees/117-umbrella" {
+	if got := record.BranchPrepare.ParentWorktree; got != parent {
 		t.Fatalf("parent worktree = %q", got)
 	}
 }

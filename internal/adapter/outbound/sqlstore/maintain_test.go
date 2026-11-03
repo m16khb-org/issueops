@@ -1,12 +1,37 @@
 package sqlstore
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
+
+	"issueops/internal/adapter/outbound/osfile"
+	"issueops/internal/testsupport"
 )
+
+// keepSidecarsOpen holds one connection to the data database for the test.
+// SQLite deletes the -wal and -shm sidecars when the last connection closes,
+// and on Windows the pool closes every connection that returns to it, so
+// without this pin the sidecars these tests exercise would not exist.
+func keepSidecarsOpen(t *testing.T, d *DB) {
+	t.Helper()
+	if runtime.GOOS != "windows" {
+		return
+	}
+	conn, err := d.data.Conn(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { conn.Close() })
+	var tables int
+	if err := conn.QueryRowContext(context.Background(), "SELECT count(*) FROM sqlite_master").Scan(&tables); err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestMaintainTruncatesWAL(t *testing.T) {
 	dir := t.TempDir()
@@ -14,6 +39,7 @@ func TestMaintainTruncatesWAL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	keepSidecarsOpen(t, d)
 	// Grow the WAL well past its header with a few hundred row upserts.
 	payload := strings.Repeat("x", 4096)
 	for i := range 400 {
@@ -65,15 +91,14 @@ func TestMaintainRestoresPrivateSidecarPermissions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	keepSidecarsOpen(t, d)
 	if err := d.Put("perm", "k", []byte("v")); err != nil {
 		t.Fatal(err)
 	}
 	wal := filepath.Join(dir, "issueops.db-wal")
 	shm := filepath.Join(dir, "issueops.db-shm")
 	for _, p := range []string{wal, shm} {
-		if err := os.Chmod(p, 0o644); err != nil {
-			t.Fatalf("chmod %s: %v", p, err)
-		}
+		testsupport.MakePermissive(t, p, 0o644)
 	}
 
 	result, err := d.Maintain()
@@ -87,8 +112,8 @@ func TestMaintainRestoresPrivateSidecarPermissions(t *testing.T) {
 			// is acceptable for the permission contract.
 			continue
 		}
-		if info.Mode().Perm() != 0o600 {
-			t.Fatalf("%s mode=%v want 0600", p, info.Mode().Perm())
+		if got := osfile.Perm(p, info); got != 0o600 {
+			t.Fatalf("%s mode=%v want 0600", p, got)
 		}
 	}
 	if len(result.PermissionsFixed) == 0 {
@@ -122,8 +147,8 @@ func TestSidecarPermissionsUnderUmask(t *testing.T) {
 		if err != nil {
 			continue
 		}
-		if info.Mode().Perm() != 0o600 {
-			t.Fatalf("after maintain every store file must be 0600, got %s=%v", e.Name(), info.Mode().Perm())
+		if got := osfile.Perm(filepath.Join(dir, e.Name()), info); got != 0o600 {
+			t.Fatalf("after maintain every store file must be 0600, got %s=%v", e.Name(), got)
 		}
 	}
 }

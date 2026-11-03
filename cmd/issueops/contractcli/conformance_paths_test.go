@@ -8,9 +8,11 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
+	"issueops/internal/adapter/outbound/osfile"
 	mcpcontract "issueops/internal/contract/mcp"
 	tc "issueops/internal/contract/toolconformance"
 	"issueops/internal/testsupport"
@@ -216,13 +218,22 @@ func TestBaselineReportPropagatesBaselineAndDirectoryErrors(t *testing.T) {
 	if _, err := c.evaluateBaselineReport(); !errors.Is(err, boom) {
 		t.Fatalf("eval err=%v", err)
 	}
-	// A regressions path whose parent is a regular file is not "absent": it must surface.
+	// A regressions path that cannot be read is not "absent": it must surface. Unix provokes it
+	// with a path below a regular file (ENOTDIR). Windows maps that to not-found, so there the
+	// regressions directory itself is made unreadable.
 	root := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(root, "internal", "adapter"), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(root, "internal", "adapter", "toolconformance"), []byte("file"), 0o600); err != nil {
-		t.Fatal(err)
+	if runtime.GOOS == "windows" {
+		if err := os.MkdirAll(regressionDirectory(root), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		testsupport.MakeUnreadable(t, regressionDirectory(root), 0o700)
+	} else {
+		if err := os.MkdirAll(filepath.Join(root, "internal", "adapter"), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(root, "internal", "adapter", "toolconformance"), []byte("file"), 0o600); err != nil {
+			t.Fatal(err)
+		}
 	}
 	c = baselineConformance(root, func() (int, bool, error) { return 1, true, nil }, nil)
 	if _, err := c.evaluateBaselineReport(); err == nil {
@@ -363,7 +374,7 @@ func TestRunConformanceLiveStopsOnEachFailureBeforeOrAfterProcess(t *testing.T) 
 		}
 		return nil
 	})
-	if !strings.Contains(stdout, "gate=inconclusive") || !strings.Contains(stdout, filepath.Join(".issueops/evidence/tool-conformance", "inconclusive-run", "report.json")) {
+	if !strings.Contains(stdout, "gate=inconclusive") || !strings.Contains(stdout, ".issueops/evidence/tool-conformance/inconclusive-run/report.json") {
 		t.Fatalf("stdout=%q", stdout)
 	}
 	if _, err := os.Stat(filepath.Join(root, ".issueops/evidence/tool-conformance/inconclusive-run/report.json")); err != nil {
@@ -386,7 +397,7 @@ func TestRunConformanceLiveJSONPrintsReportWithEvidencePath(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &got); err != nil {
 		t.Fatalf("out=%q: %v", out, err)
 	}
-	if want := filepath.Join(".issueops/evidence/tool-conformance", "json-run", "report.json"); got.Evidence.ReportPath != want {
+	if want := ".issueops/evidence/tool-conformance/json-run/report.json"; got.Evidence.ReportPath != want {
 		t.Fatalf("report path=%q want %q", got.Evidence.ReportPath, want)
 	}
 	printErr := errors.New("print boom")
@@ -452,14 +463,14 @@ func TestPersistLiveReportWritesPrivateReportAndCandidateForAuthorizedHardening(
 		if err != nil {
 			t.Fatal(err)
 		}
-		if info.Mode().Perm() != 0o600 {
-			t.Fatalf("%s mode=%v", name, info.Mode().Perm())
+		if perm := osfile.Perm(filepath.Join(runDir, name), info); perm != 0o600 {
+			t.Fatalf("%s mode=%v", name, perm)
 		}
 	}
-	if info, _ := os.Stat(runDir); info.Mode().Perm() != 0o700 {
-		t.Fatalf("run dir mode=%v", info.Mode().Perm())
+	if info, _ := os.Stat(runDir); osfile.Perm(runDir, info) != 0o700 {
+		t.Fatalf("run dir mode=%v", osfile.Perm(runDir, info))
 	}
-	if want := filepath.Join(".issueops/evidence/tool-conformance/harden", "candidate-regression.json"); report.Evidence.CandidateRegressionPath != want {
+	if want := ".issueops/evidence/tool-conformance/harden/candidate-regression.json"; report.Evidence.CandidateRegressionPath != want {
 		t.Fatalf("candidate path=%q", report.Evidence.CandidateRegressionPath)
 	}
 	if want := "internal/adapter/toolconformance/testdata/regressions/codex-empty_object-0123456789ab.json"; report.Evidence.TrackedFixturePath != want {
@@ -581,8 +592,8 @@ func TestWritePrivateJSONFileCreatesPrivateAtomicFileAndReportsErrors(t *testing
 	if err != nil || string(data) != "{\n  \"a\": 1\n}\n" {
 		t.Fatalf("data=%q err=%v", data, err)
 	}
-	if info, _ := os.Stat(target); info.Mode().Perm() != 0o600 {
-		t.Fatalf("mode=%v", info.Mode().Perm())
+	if info, _ := os.Stat(target); osfile.Perm(target, info) != 0o600 {
+		t.Fatalf("mode=%v", osfile.Perm(target, info))
 	}
 	if err := writePrivateJSONFile(target, map[string]int{"a": 2}); err != nil {
 		t.Fatal(err)

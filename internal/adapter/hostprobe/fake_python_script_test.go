@@ -9,9 +9,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
+
+	"issueops/internal/testsupport"
 )
 
 type fakePythonTestFixture struct {
@@ -19,13 +22,13 @@ type fakePythonTestFixture struct {
 	tempDir    string
 	toolTrace  string
 	pythonPath string
+	bashEnv    string
 	path       string
 }
 
 func TestFakePythonScriptDirectlyExecutesGeneralStdin(t *testing.T) {
 	fixture := newFakePythonTestFixture(t)
-	realPython := filepath.Join(filepath.Dir(fixture.script), "real-python")
-	writeExecutable(t, realPython, `#!/usr/bin/env bash
+	realPython := testsupport.WriteFakeCommand(t, filepath.Dir(fixture.script), "real-python", `#!/usr/bin/env bash
 set -u
 payload=""
 IFS= read -r payload || true
@@ -40,6 +43,7 @@ exit 23
 	command.Env = environmentWithOverrides(map[string]string{
 		"FAKE_MARKER":     "direct-env",
 		"FAKE_SCENARIO":   "general",
+		"BASH_ENV":        fixture.bashEnv,
 		"FAKE_TOOL_TRACE": fixture.toolTrace,
 		"PATH":            fixture.path,
 		"REAL_PYTHON":     realPython,
@@ -71,8 +75,7 @@ exit 23
 func TestFakePythonScriptKeepsActivatedDigestRewriteAndCleanup(t *testing.T) {
 	fixture := newFakePythonTestFixture(t)
 	pythonTrace := filepath.Join(filepath.Dir(fixture.script), "python.log")
-	realPython := filepath.Join(filepath.Dir(fixture.script), "real-python")
-	writeExecutable(t, realPython, `#!/usr/bin/env bash
+	realPython := testsupport.WriteFakeCommand(t, filepath.Dir(fixture.script), "real-python", `#!/usr/bin/env bash
 set -euo pipefail
 printf 'python' >>"$FAKE_PYTHON_TRACE"
 for argument in "$@"; do printf '\t%s' "$argument" >>"$FAKE_PYTHON_TRACE"; done
@@ -90,6 +93,7 @@ exec "$ACTUAL_PYTHON" "$@"
 		"FAKE_MARKER":       "rewrite-env",
 		"FAKE_PYTHON_TRACE": pythonTrace,
 		"FAKE_SCENARIO":     "activated-digest-blank",
+		"BASH_ENV":          fixture.bashEnv,
 		"FAKE_TOOL_TRACE":   fixture.toolTrace,
 		"PATH":              fixture.path,
 		"REAL_PYTHON":       realPython,
@@ -102,7 +106,7 @@ exec "$ACTUAL_PYTHON" "$@"
 	if err := command.Run(); err != nil {
 		t.Fatalf("run activated digest fixture: %v\nstderr=%s", err, stderr.String())
 	}
-	if stdout.String() != "program:rewrite-env\n" || stderr.String() != "" {
+	if normalizeNewlines(stdout.String()) != "program:rewrite-env\n" || stderr.String() != "" {
 		t.Errorf("stdout=%q stderr=%q", stdout.String(), stderr.String())
 	}
 	var document struct {
@@ -137,6 +141,9 @@ exec "$ACTUAL_PYTHON" "$@"
 }
 
 func TestFakePythonScriptCancellationStopsGeneralPython(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows has no exec(2): the python3 stand-in is a native shim plus a bash process plus the interpreter, so cancelling the shim cannot stop the interpreter grandchild")
+	}
 	fixture := newFakePythonTestFixture(t)
 	started := filepath.Join(filepath.Dir(fixture.script), "started")
 	completed := filepath.Join(filepath.Dir(fixture.script), "completed")
@@ -194,18 +201,34 @@ func newFakePythonTestFixture(t *testing.T) fakePythonTestFixture {
 		t.Fatal(err)
 	}
 	toolTrace := filepath.Join(root, "tools.log")
-	for _, name := range []string{"mktemp", "sed", "rm"} {
-		realTool := mustLookPath(t, name)
-		wrapper := fmt.Sprintf("#!/usr/bin/env bash\nprintf '%%s\\n' %q >>\"$FAKE_TOOL_TRACE\"\nexec %q \"$@\"\n", name, realTool)
-		writeExecutable(t, filepath.Join(fakeBin, name), wrapper)
+	bashEnv := ""
+	if runtime.GOOS == "windows" {
+		// Git Bash puts /usr/bin ahead of PATH entries, so fake-bin cannot
+		// shadow the coreutils. Shell functions loaded through BASH_ENV
+		// record the same calls and then run the real tool.
+		var functions strings.Builder
+		for _, name := range []string{"mktemp", "sed", "rm"} {
+			fmt.Fprintf(&functions, "%s() { printf '%%s\\n' %s >>\"$FAKE_TOOL_TRACE\"; command %s \"$@\"; }\n", name, name, name)
+		}
+		bashEnvPath := filepath.Join(root, "trace-tools.bash")
+		if err := os.WriteFile(bashEnvPath, []byte(functions.String()), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		bashEnv = filepath.ToSlash(bashEnvPath)
+	} else {
+		for _, name := range []string{"mktemp", "sed", "rm"} {
+			realTool := mustLookPath(t, name)
+			wrapper := fmt.Sprintf("#!/usr/bin/env bash\nprintf '%%s\\n' %q >>\"$FAKE_TOOL_TRACE\"\nexec %q \"$@\"\n", name, realTool)
+			testsupport.WriteFakeCommand(t, fakeBin, name, wrapper)
+		}
 	}
-	script := filepath.Join(root, "python3")
-	writeExecutable(t, script, fakePythonScript)
+	script := testsupport.WriteFakeCommand(t, root, "python3", fakePythonScript)
 	return fakePythonTestFixture{
 		script:     script,
 		tempDir:    tempDir,
 		toolTrace:  toolTrace,
-		pythonPath: mustLookPath(t, "python3"),
+		bashEnv:    bashEnv,
+		pythonPath: lookRealPython3(t),
 		path:       fakeBin + string(os.PathListSeparator) + os.Getenv("PATH"),
 	}
 }
@@ -245,5 +268,48 @@ func assertDirectoryEmpty(t *testing.T, path string) {
 	}
 	if len(entries) != 0 {
 		t.Errorf("temporary directory contains %v", entries)
+	}
+}
+
+// normalizeNewlines maps CRLF to LF. A native Windows Python translates "\n"
+// to "\r\n" on stdout; POSIX shells and Unix Python never do.
+func normalizeNewlines(text string) string {
+	return strings.ReplaceAll(text, "\r\n", "\n")
+}
+
+// lookRealPython3 returns a working CPython 3 interpreter. On Windows python3
+// is often the Microsoft Store stub that cannot run code, so working
+// interpreters are probed (python3, then python) and the test skips when none
+// exists.
+func lookRealPython3(t *testing.T) string {
+	t.Helper()
+	if runtime.GOOS != "windows" {
+		return mustLookPath(t, "python3")
+	}
+	for _, name := range []string{"python3", "python"} {
+		path, err := exec.LookPath(name)
+		if err != nil {
+			continue
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		err = exec.CommandContext(ctx, path, "-c", "import sys; sys.exit(0 if sys.version_info[0] == 3 else 1)").Run()
+		cancel()
+		if err == nil {
+			return path
+		}
+	}
+	t.Skip("python3 is not installed")
+	return ""
+}
+
+// skipChildHostSmokeScriptOnWindows skips tests that run
+// scripts/verify-child-host-smoke.sh end to end. That operator script is
+// POSIX-only by design: it requires POSIX absolute paths already canonical
+// under CPython's realpath, 0700/0600 mode bits, and CPython's POSIX-only
+// resource, subprocess preexec_fn, os.fchmod and directory-fsync APIs.
+func skipChildHostSmokeScriptOnWindows(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("scripts/verify-child-host-smoke.sh is POSIX-only: it needs POSIX absolute canonical paths, 0700/0600 mode bits, and CPython's POSIX-only resource/preexec_fn/os.fchmod APIs")
 	}
 }

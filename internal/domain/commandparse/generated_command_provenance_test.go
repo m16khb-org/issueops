@@ -4,11 +4,12 @@ import (
 	"testing"
 
 	commandparsecontract "issueops/internal/contract/commandparse"
+	"issueops/internal/testsupport"
 )
 
 func TestValidateGeneratedCommandInvocation(t *testing.T) {
 	expected := commandparsecontract.GeneratedCommandProvenance{
-		ExecutablePath:   "/worktree/bin/issueops",
+		ExecutablePath:   testsupport.AbsPath("worktree", "bin", testsupport.ExecutableName("issueops")),
 		ExecutableSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 		LeaseGeneration:  7,
 	}
@@ -21,7 +22,7 @@ func TestValidateGeneratedCommandInvocation(t *testing.T) {
 		{name: "matched", observed: expected, durable: 7},
 		{name: "stale generation", observed: expected, durable: 8, wantCode: "generated_command_generation_mismatch"},
 		{name: "stale binary", observed: commandparsecontract.GeneratedCommandProvenance{
-			ExecutablePath: "/installed/bin/issueops", ExecutableSHA256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", LeaseGeneration: 7,
+			ExecutablePath: testsupport.AbsPath("installed", "bin", testsupport.ExecutableName("issueops")), ExecutableSHA256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", LeaseGeneration: 7,
 		}, durable: 7, wantCode: "generated_command_binary_provenance_mismatch"},
 	} {
 		t.Run(test.name, func(t *testing.T) {

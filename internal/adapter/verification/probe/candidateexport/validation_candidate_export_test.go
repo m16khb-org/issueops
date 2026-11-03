@@ -6,11 +6,11 @@ import (
 
 	"encoding/json"
 	"errors"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"issueops/internal/testsupport"
 
 	statecontract "issueops/internal/contract/state"
 )
@@ -173,7 +173,6 @@ func mustMarshalCandidateExportTest(t *testing.T, value any) string {
 
 func writeCandidateExportFakeBinary(t *testing.T, dir, key string) string {
 	t.Helper()
-	path := filepath.Join(dir, "fake-harness")
 	export := validCandidateExportResult(key)
 	snapshot := validCandidateExportSnapshot(export)
 	state := statecontract.StateResult{OK: true, Record: statecontract.RecordEnvelope{Content: mustMarshalCandidateExportTest(t, snapshot)}}
@@ -182,8 +181,5 @@ func writeCandidateExportFakeBinary(t *testing.T, dir, key string) string {
 		"  \"state read --key " + key + " --json\") printf '%s\\n' '" + mustMarshalCandidateExportTest(t, state) + "' ;;\n" +
 		"  *) echo \"unexpected fake harness args: $*\" >&2; exit 2 ;;\n" +
 		"esac\n"
-	if err := os.WriteFile(path, []byte(body), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	return path
+	return testsupport.WriteFakeCommand(t, dir, "fake-harness", body)
 }

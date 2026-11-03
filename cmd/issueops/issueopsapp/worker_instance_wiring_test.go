@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -90,18 +92,32 @@ func TestWorkerMCPInstancesKeepSameIDInSeparateStores(t *testing.T) {
 func TestWorkerCLIKeepsCapturedRelativeStateAndDefaultCWD(t *testing.T) {
 	base := t.TempDir()
 	t.Chdir(base)
+	t.Setenv("PWD", base)
 	t.Setenv("ISSUEOPS_WORKER_DIR", "")
 	t.Setenv("ISSUEOPS_STATE_DIR", "relative-state")
 	if err := os.WriteFile("note.txt", []byte("captured cwd\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	command := newWorkerCommand()
+	if runtime.GOOS == "windows" {
+		// Windows ships no cat; Git for Windows' coreutils stand in for it.
+		gitBin, err := exec.LookPath("git")
+		if err != nil {
+			t.Skipf("windows needs Git for Windows coreutils for cat: %v", err)
+		}
+		coreutils := filepath.Join(filepath.Dir(filepath.Dir(gitBin)), "usr", "bin")
+		if _, err := os.Stat(filepath.Join(coreutils, "cat.exe")); err != nil {
+			t.Skipf("windows needs Git for Windows coreutils for cat: %v", err)
+		}
+		t.Setenv("PATH", os.Getenv("PATH")+string(os.PathListSeparator)+coreutils)
+	}
 	expectedDB := filepath.Join(base, "relative-state", "worker", "issueops.db")
 	if _, err := os.Stat(expectedDB); !os.IsNotExist(err) {
 		t.Fatalf("construction wrote state: %v", err)
 	}
 	other := t.TempDir()
 	t.Chdir(other)
+	t.Setenv("PWD", other)
 	wrong := filepath.Join(other, "wrong-worker")
 	t.Setenv("ISSUEOPS_WORKER_DIR", wrong)
 	raw := captureStdoutForContract(t, func() error { return command.Run([]string{"run", "--read-only", "--json", "--", "cat", "note.txt"}) })

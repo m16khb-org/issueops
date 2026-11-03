@@ -2,6 +2,7 @@ package nativeactivation
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -12,7 +13,11 @@ import (
 	"issueops/internal/adapter/outbound/sqlstore"
 	"issueops/internal/port"
 	activationport "issueops/internal/port/nativeactivation"
+	"issueops/internal/testsupport"
 )
+
+// binaryName is the canonical harness binary file name on this OS.
+var binaryName = testsupport.ExecutableName("issueops")
 
 type fixture struct {
 	root, issueOpsRoot, binDir, target string
@@ -26,7 +31,7 @@ func newFixture(t *testing.T) fixture {
 	}
 	f := fixture{root: root, issueOpsRoot: filepath.Join(root, "issueops")}
 	f.binDir = filepath.Join(f.issueOpsRoot, "bin")
-	f.target = filepath.Join(f.binDir, "issueops")
+	f.target = filepath.Join(f.binDir, binaryName)
 	if err := os.MkdirAll(f.binDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -89,12 +94,12 @@ func TestValidatePathsRejectsEachNonCanonicalPathWithItsOwnMessage(t *testing.T)
 	}{
 		"empty state root":        {"", f.issueOpsRoot, f.target, pathsErr},
 		"relative issueops root":  {f.root, "issueops", f.target, pathsErr},
-		"unclean target":          {f.root, f.issueOpsRoot, f.binDir + "/../bin/issueops", pathsErr},
+		"unclean target":          {f.root, f.issueOpsRoot, f.binDir + "/../bin/" + binaryName, pathsErr},
 		"trailing slash state":    {f.root + "/", f.issueOpsRoot, f.target, pathsErr},
-		"missing harness root":    {f.root, filepath.Join(f.root, "absent"), filepath.Join(f.root, "absent", "bin", "issueops"), "native activation harness root must be a physical directory"},
-		"harness root is a file":  {f.root, f.target, filepath.Join(f.target, "bin", "issueops"), "native activation harness root must be a physical directory"},
-		"target outside bin":      {f.root, f.issueOpsRoot, filepath.Join(f.issueOpsRoot, "issueops"), "native activation target must be the canonical harness binary"},
-		"target in other harness": {f.root, f.issueOpsRoot, filepath.Join(f.root, "bin", "issueops"), "native activation target must be the canonical harness binary"},
+		"missing harness root":    {f.root, filepath.Join(f.root, "absent"), filepath.Join(f.root, "absent", "bin", binaryName), "native activation harness root must be a physical directory"},
+		"harness root is a file":  {f.root, f.target, filepath.Join(f.target, "bin", binaryName), "native activation harness root must be a physical directory"},
+		"target outside bin":      {f.root, f.issueOpsRoot, filepath.Join(f.issueOpsRoot, binaryName), "native activation target must be the canonical harness binary"},
+		"target in other harness": {f.root, f.issueOpsRoot, filepath.Join(f.root, "bin", binaryName), "native activation target must be the canonical harness binary"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			wantError(t, validatePaths(tc.state, tc.issueOps, tc.target), tc.want)
@@ -118,7 +123,7 @@ func TestValidatePathsRejectsSymlinkedHarnessRootAndTarget(t *testing.T) {
 	if err := os.Symlink(f.issueOpsRoot, link); err != nil {
 		t.Fatal(err)
 	}
-	wantError(t, validatePaths(f.root, link, filepath.Join(link, "bin", "issueops")), "native activation harness root must be a physical directory")
+	wantError(t, validatePaths(f.root, link, filepath.Join(link, "bin", binaryName)), "native activation harness root must be a physical directory")
 
 	elsewhere := filepath.Join(f.root, "elsewhere")
 	if err := os.WriteFile(elsewhere, []byte("x"), 0o700); err != nil {
@@ -205,8 +210,8 @@ func TestBeginRejectsCandidatesOutsideTargetOrSameDirectoryStage(t *testing.T) {
 	if err := os.MkdirAll(otherDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	foreign := filepath.Join(otherDir, ".issueops.activate-x")
-	unrelated := filepath.Join(f.binDir, "random-binary")
+	foreign := filepath.Join(otherDir, testsupport.ExecutableName(".issueops.activate-x"))
+	unrelated := filepath.Join(f.binDir, testsupport.ExecutableName("random-binary"))
 	for _, path := range []string{foreign, unrelated} {
 		if err := os.WriteFile(path, []byte("x"), 0o700); err != nil {
 			t.Fatal(err)
@@ -278,7 +283,7 @@ func TestSealAndAbortRejectInvalidPathsBeforeInspectingBinary(t *testing.T) {
 		return f.target, nil
 	}
 	request := f.seal(validID)
-	request.TargetBinary = filepath.Join(f.issueOpsRoot, "issueops")
+	request.TargetBinary = filepath.Join(f.issueOpsRoot, binaryName)
 	_, err := backend.Seal(context.Background(), request)
 	wantError(t, err, "native activation target must be the canonical harness binary")
 	abort := f.abort(validID)
@@ -289,7 +294,7 @@ func TestSealAndAbortRejectInvalidPathsBeforeInspectingBinary(t *testing.T) {
 
 func TestSealMustRunFromCanonicalTargetNotStagedBinary(t *testing.T) {
 	f := newFixture(t)
-	stage := filepath.Join(f.binDir, ".issueops.activate-seal")
+	stage := filepath.Join(f.binDir, testsupport.ExecutableName(".issueops.activate-seal"))
 	if err := os.WriteFile(stage, []byte("candidate"), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -416,6 +421,15 @@ func TestSealAndAbortRejectUndecodableStoredRecords(t *testing.T) {
 	}
 }
 
+func jsonString(t *testing.T, value string) string {
+	t.Helper()
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(encoded)
+}
+
 func TestSealRefusesPendingRecordFromAnotherStateRootOrWithoutStartTime(t *testing.T) {
 	f := newFixture(t)
 	backend := testBackend(f.target)
@@ -425,7 +439,7 @@ func TestSealRefusesPendingRecordFromAnotherStateRootOrWithoutStartTime(t *testi
 	}
 	stored, _ := f.get(t, pendingID)
 	for name, tampered := range map[string]string{
-		"foreign state root": strings.Replace(stored, `"state_root":"`+f.root+`"`, `"state_root":"/elsewhere"`, 1),
+		"foreign state root": strings.Replace(stored, `"state_root":`+jsonString(t, f.root), `"state_root":"/elsewhere"`, 1),
 		"missing start time": stored[:strings.Index(stored, `"started_at"`)] + `"started_at":""}`,
 		"older schema":       strings.Replace(stored, `"schema_version":1`, `"schema_version":0`, 1),
 	} {
@@ -527,7 +541,7 @@ func TestBinaryIdentityRejectsUnsafeFiles(t *testing.T) {
 	_, err = binaryIdentityFromPath(directory)
 	wantError(t, err, notExecutable)
 
-	exe := filepath.Join(root, "exe")
+	exe := filepath.Join(root, testsupport.ExecutableName("exe"))
 	if err := os.WriteFile(exe, []byte("x"), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -547,7 +561,7 @@ func TestBinaryIdentityRejectsUnsafeFiles(t *testing.T) {
 
 func TestBinaryIdentityReportsContentHashModeAndPhysicalIdentity(t *testing.T) {
 	root := t.TempDir()
-	path := filepath.Join(root, "bin")
+	path := filepath.Join(root, testsupport.ExecutableName("bin"))
 	if err := os.WriteFile(path, []byte("abc"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -563,7 +577,7 @@ func TestBinaryIdentityReportsContentHashModeAndPhysicalIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	physical, _ := physicalIdentity(info)
+	physical, _ := physicalIdentity(path, nil, info)
 	if identity.SHA256 != abcSHA256 || identity.Size != 3 || identity.Mode != uint32(info.Mode()) ||
 		identity.Inode != physical.inode || identity.Device != physical.device || identity.Executable != path {
 		t.Fatalf("identity = %+v", identity)
@@ -572,7 +586,7 @@ func TestBinaryIdentityReportsContentHashModeAndPhysicalIdentity(t *testing.T) {
 
 func TestHashStableBinaryRejectsIdentityMismatchAndMissingFile(t *testing.T) {
 	root := t.TempDir()
-	path := filepath.Join(root, "bin")
+	path := filepath.Join(root, testsupport.ExecutableName("bin"))
 	if err := os.WriteFile(path, []byte("abc"), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -580,7 +594,7 @@ func TestHashStableBinaryRejectsIdentityMismatchAndMissingFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	physical, _ := physicalIdentity(info)
+	physical, _ := physicalIdentity(path, nil, info)
 	if _, err := hashStableBinary(path, info, physical); err != nil {
 		t.Fatalf("stable file rejected: %v", err)
 	}

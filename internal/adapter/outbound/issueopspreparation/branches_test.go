@@ -87,7 +87,8 @@ func TestRepositoryLoadDerivesClaimTokenPathFromExecutionWorkspace(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	pattern := regexp.MustCompile(`^` + regexp.QuoteMeta(filepath.Join(commit.Workspace.Root, ".issueops", "state", "issueops-v1")) + `/[0-9a-f]{16}/lease-1\.token$`)
+	sep := regexp.QuoteMeta(string(filepath.Separator))
+	pattern := regexp.MustCompile(`^` + regexp.QuoteMeta(filepath.Join(commit.Workspace.Root, ".issueops", "state", "issueops-v1")) + sep + `[0-9a-f]{16}` + sep + `lease-1\.token$`)
 	if !pattern.MatchString(after.ClaimTokenPath) {
 		t.Fatalf("claim token path=%q", after.ClaimTokenPath)
 	}
@@ -273,7 +274,13 @@ func TestEnsureRootUnclaimedNormalizesRelativeRootAgainstWorkingDirectory(t *tes
 	if err != nil {
 		t.Fatal(err)
 	}
-	relative, err := filepath.Rel(cwd, commit.Workspace.Root)
+	// A rooted fixture path has no volume on Windows; Abs puts it on the
+	// working directory's volume so a relative spelling exists.
+	root, err := filepath.Abs(commit.Workspace.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	relative, err := filepath.Rel(cwd, root)
 	if err != nil || filepath.IsAbs(relative) {
 		t.Fatalf("no relative spelling of %s from %s: %v", commit.Workspace.Root, cwd, err)
 	}

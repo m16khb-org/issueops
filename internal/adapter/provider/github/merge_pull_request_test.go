@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -45,13 +44,10 @@ func TestGitHubMergeStateFoldsCheckRollup(t *testing.T) {
 // The merge is pinned to the completed head and never deletes the branch,
 // bypasses protection, or schedules an auto-merge.
 func TestGitHubMergePullRequestPinsHeadAfterReady(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake gh shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	log := filepath.Join(t.TempDir(), "gh.log")
 	writeFakeGh(t, binDir, `#!/bin/sh
-echo "$*" >> `+log+`
+echo "$*" >> `+filepath.ToSlash(log)+`
 case "$1 $2" in
 "pr view") echo '{"url":"`+ghMergeTestURL+`","state":"MERGED","headRefOid":"abc","mergeCommit":{"oid":"def"},"statusCheckRollup":[]}' ;;
 esac

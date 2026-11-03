@@ -10,8 +10,12 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"runtime"
 	"sort"
+	"strings"
 	"testing"
+
+	"issueops/internal/testsupport"
 )
 
 var updateGolden = flag.Bool("update", false, "update golden files")
@@ -26,7 +30,7 @@ func TestResponseContractsGolden(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
 	t.Setenv("ISSUEOPS_AUDIT_LOG", auditLog)
 	t.Setenv("ISSUEOPS_WORKER_DIR", workerDir)
-	t.Setenv("HOME", homeDir)
+	testsupport.SetHome(t, homeDir)
 	t.Setenv("CODEX_HOME", filepath.Join(homeDir, ".codex"))
 	// The opencode config root follows XDG_CONFIG_HOME; keep it under $HOME.
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(homeDir, ".config"))
@@ -120,6 +124,21 @@ const issueOpsStateKeyGoldenPlaceholder = "$ISSUEOPS_STATE_KEY"
 
 var issueOpsStateKeyPattern = regexp.MustCompile(`/issueops-v1/[0-9a-f]{16}/`)
 
+var placeholderPathPattern = regexp.MustCompile(`\$[A-Z][A-Z0-9_]*[^\s"'\\]*(?:\\[^\s"']+)+`)
+
+// slashPlaceholderPaths renders a path rooted at a golden placeholder with
+// slashes and the canonical binary without its .exe suffix so the golden is
+// OS-neutral; windows paths otherwise keep backslashes and bin\issueops.exe.
+func slashPlaceholderPaths(value string) string {
+	if runtime.GOOS != "windows" {
+		return value
+	}
+	value = placeholderPathPattern.ReplaceAllStringFunc(value, func(match string) string {
+		return strings.ReplaceAll(match, `\`, "/")
+	})
+	return strings.ReplaceAll(value, "/bin/issueops.exe", "/bin/issueops")
+}
+
 // IssueOps lifecycle ID에서 파생한 state key는 fixture마다 달라지므로 경로의
 // 구조만 golden에 남긴다. 실제 CLI 응답은 치환하지 않는다.
 func normalizeIssueOpsStateKeysForGolden(value any) any {
@@ -137,7 +156,7 @@ func normalizeIssueOpsStateKeysForGolden(value any) any {
 		}
 		return out
 	case string:
-		return issueOpsStateKeyPattern.ReplaceAllStringFunc(typed, func(string) string {
+		return issueOpsStateKeyPattern.ReplaceAllStringFunc(slashPlaceholderPaths(typed), func(string) string {
 			return "/issueops-v1/" + issueOpsStateKeyGoldenPlaceholder + "/"
 		})
 	default:

@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
 	completionmodel "issueops/internal/contract/issueops"
 	"issueops/internal/port"
+	"issueops/internal/testsupport"
 )
 
 func TestGitLabProviderName(t *testing.T) {
@@ -275,9 +275,6 @@ exit 0
 }
 
 func TestGitLabCreateMRConfirmPassesDraftArgv(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake glab shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	repo := t.TempDir()
 	writeFakeGlab(t, binDir, `#!/bin/sh
@@ -380,9 +377,6 @@ exit 2
 }
 
 func TestGitLabCreateChildConfirmCreatesAttachesAndVerifies(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake glab shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	repo := t.TempDir()
 	logPath := filepath.Join(repo, "glab.calls")
@@ -458,9 +452,6 @@ exit 2
 }
 
 func TestGitLabCreateChildFailureAfterCreateIncludesChildURL(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake glab shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	repo := t.TempDir()
 	writeFakeGlab(t, binDir, `#!/bin/sh
@@ -504,9 +495,6 @@ exit 2
 }
 
 func TestGitLabCreateChildGraphQLFailureDoesNotFallbackToIssue(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake glab shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	repo := t.TempDir()
 	logPath := filepath.Join(repo, "glab.calls")
@@ -556,9 +544,6 @@ func TestGitLabCloseChildDryRunDoesNotExecute(t *testing.T) {
 }
 
 func TestGitLabCloseChildConfirmVerifiesHierarchyClosesAndRechecksState(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake glab shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	repo := t.TempDir()
 	logPath := filepath.Join(repo, "glab.calls")
@@ -612,9 +597,6 @@ exit 2
 }
 
 func TestGitLabCloseChildAlreadyClosedSkipsMutation(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake glab shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	repo := t.TempDir()
 	logPath := filepath.Join(repo, "glab.calls")
@@ -700,9 +682,6 @@ func TestRunGlabJSONReportsMissingCLI(t *testing.T) {
 }
 
 func TestRunGlabHelpersRespectCanceledContext(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake glab shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	writeFakeGlab(t, binDir, `#!/bin/sh
 printf '{}'
@@ -720,9 +699,6 @@ printf '{}'
 }
 
 func TestRunGlabHelpersAcceptGitLabSizedReadbacks(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake glab shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	writeFakeGlab(t, binDir, `#!/bin/sh
 printf '{"padding":"'
@@ -748,14 +724,11 @@ printf '"}'
 }
 
 func TestRunGlabJSONExecutesInRepoAndParsesOutput(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake glab shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	repo := t.TempDir()
 	logPath := filepath.Join(repo, "glab.args")
 	writeFakeGlab(t, binDir, `#!/bin/sh
-printf '%s\n' "$PWD|$*" > glab.args
+printf '%s\n' "$(pwd -W 2>/dev/null || pwd)|$*" > glab.args
 printf 'https://gitlab.com/g/p/-/issues/9\n'
 `)
 	t.Setenv("PATH", binDir)
@@ -771,15 +744,12 @@ printf 'https://gitlab.com/g/p/-/issues/9\n'
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := repo + "|issue create --title Fix"; strings.TrimSpace(string(log)) != want {
+	if want := filepath.ToSlash(repo) + "|issue create --title Fix"; strings.TrimSpace(string(log)) != want {
 		t.Fatalf("logged command=%q, want %q", strings.TrimSpace(string(log)), want)
 	}
 }
 
 func TestRunGlabMRJSONExecutesAndReportsStderr(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake glab shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	writeFakeGlab(t, binDir, `#!/bin/sh
 if [ "$1" = "mr" ]; then
@@ -825,9 +795,6 @@ func TestGitLabUpdateIssueBodySectionDryRun(t *testing.T) {
 }
 
 func TestGitLabUpdateIssueBodySectionConfirmMergesIdempotently(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake glab shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	repo := t.TempDir()
 	logPath := filepath.Join(repo, "glab.put")
@@ -879,10 +846,7 @@ exit 0
 
 func writeFakeGlab(t *testing.T, binDir, script string) {
 	t.Helper()
-	path := filepath.Join(binDir, "glab")
-	if err := os.WriteFile(path, []byte(injectWorkItemSchemaGuard(script)), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	testsupport.WriteFakeCommand(t, binDir, "glab", injectWorkItemSchemaGuard(script))
 }
 
 // injectWorkItemSchemaGuard makes the fake glab reject the selection sets a real

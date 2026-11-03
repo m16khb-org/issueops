@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -251,7 +252,18 @@ func TestPioneerManifestMissingFileYieldsEmptyCountsButUnreadableFails(t *testin
 	}
 }
 
+// skipWithoutENOTDIR skips tests that need a path below a regular file to fail
+// with something other than "not exist". Windows reports that case as
+// ERROR_PATH_NOT_FOUND, which Go maps to fs.ErrNotExist.
+func skipWithoutENOTDIR(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows reports a path below a regular file as not existing (ERROR_PATH_NOT_FOUND), not ENOTDIR")
+	}
+}
+
 func TestCollectPioneerCoveragePropagatesStatErrors(t *testing.T) {
+	skipWithoutENOTDIR(t)
 	root := t.TempDir()
 	// A regular file where a directory is expected makes Lstat fail with
 	// something other than "not exist".
@@ -262,6 +274,7 @@ func TestCollectPioneerCoveragePropagatesStatErrors(t *testing.T) {
 }
 
 func TestRegularFileExistsDistinguishesFileDirectoryAndMissing(t *testing.T) {
+	skipWithoutENOTDIR(t)
 	dir := t.TempDir()
 	file := filepath.Join(dir, "f")
 	writeQualityTestFile(t, file, "x")

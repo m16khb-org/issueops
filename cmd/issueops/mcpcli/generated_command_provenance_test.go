@@ -11,7 +11,10 @@ import (
 
 	issueopscontract "issueops/internal/contract/issueops"
 	provenanceport "issueops/internal/port/issueopsprovenance"
+	"issueops/internal/testsupport"
 )
+
+var mcpProvenanceBinary = testsupport.AbsPath("repo", "bin", testsupport.ExecutableName("issueops"))
 
 type mcpProvenanceObserverStub struct {
 	evidence provenanceport.Receipt
@@ -28,7 +31,7 @@ func TestBindMCPIssueOpsExecutionNextCommandMatchesCLIContract(t *testing.T) {
 		NextCommand: "issueops execution claim --id io-1 --generation 5",
 	}
 	bound, err := bindMCPIssueOpsExecutionNextCommand(raw, mcpProvenanceObserverStub{evidence: provenanceport.Receipt{
-		ExecutablePath: "/repo/bin/issueops", ExecutableSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		ExecutablePath: mcpProvenanceBinary, ExecutableSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 	}})
 	if err != nil {
 		t.Fatal(err)
@@ -41,7 +44,7 @@ func TestBindMCPIssueOpsExecutionNextCommandMatchesCLIContract(t *testing.T) {
 
 func TestMCPIssueOpsExecutionHandlerBindsBaseSyncRequiredErrorNextCommand(t *testing.T) {
 	observer := mcpProvenanceObserverStub{evidence: provenanceport.Receipt{
-		ExecutablePath: "/repo/bin/issueops", ExecutableSHA256: strings.Repeat("a", 64),
+		ExecutablePath: mcpProvenanceBinary, ExecutableSHA256: strings.Repeat("a", 64),
 	}}
 	outcome := handleMCPIssueOpsExecutionWithDependencies(map[string]any{
 		"action": "claim", "id": "io-aaaaaaaaaaaa", "generation": float64(7),
@@ -57,7 +60,7 @@ func TestMCPIssueOpsExecutionHandlerBindsBaseSyncRequiredErrorNextCommand(t *tes
 	payload, ok := outcome.Payload.(map[string]any)
 	next, _ := payload["next_command"].(string)
 	if !ok || !outcome.IsError ||
-		!strings.HasPrefix(next, "'/repo/bin/issueops'") ||
+		!strings.HasPrefix(next, "'"+mcpProvenanceBinary+"'") ||
 		!strings.Contains(next, "--generated-for-generation 7") ||
 		!strings.Contains(next, "--generated-by-sha256 "+strings.Repeat("a", 64)) {
 		t.Fatalf("MCP typed error outcome=%#v", outcome)
@@ -87,7 +90,7 @@ func TestMCPIssueOpsExecutionTypedErrorObservationFailureHasNoUnboundFallback(t 
 
 func TestMCPIssueOpsExecutionHandlerBindsGeneratedNextCommand(t *testing.T) {
 	observer := mcpProvenanceObserverStub{evidence: provenanceport.Receipt{
-		ExecutablePath: "/repo/bin/issueops", ExecutableSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		ExecutablePath: mcpProvenanceBinary, ExecutableSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 	}}
 	outcome := handleMCPIssueOpsExecutionWithDependencies(map[string]any{
 		"action": "claim", "id": "io-aaaaaaaaaaaa", "generation": float64(5),
@@ -163,7 +166,7 @@ func TestMCPIssueOpsExecutionHandlerMissingObserverHasNoUnboundPayload(t *testin
 
 func TestBindMCPIssueOpsExecutionNextCommandCoversEveryCommandBearingResult(t *testing.T) {
 	observer := mcpProvenanceObserverStub{evidence: provenanceport.Receipt{
-		ExecutablePath: "/repo/bin/issueops", ExecutableSHA256: strings.Repeat("a", 64),
+		ExecutablePath: mcpProvenanceBinary, ExecutableSHA256: strings.Repeat("a", 64),
 	}}
 	tests := []struct {
 		name       string
@@ -203,7 +206,7 @@ func TestBindMCPIssueOpsExecutionNextCommandCoversEveryCommandBearingResult(t *t
 				t.Fatal(err)
 			}
 			command := test.command(bound)
-			if !strings.HasPrefix(command, "'/repo/bin/issueops'") || !strings.Contains(command, "--generated-for-generation "+fmt.Sprint(test.generation)) {
+			if !strings.HasPrefix(command, "'"+mcpProvenanceBinary+"'") || !strings.Contains(command, "--generated-for-generation "+fmt.Sprint(test.generation)) {
 				t.Fatalf("bound command = %q", command)
 			}
 		})

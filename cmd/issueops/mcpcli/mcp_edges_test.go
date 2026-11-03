@@ -16,6 +16,7 @@ import (
 	authoritycontract "issueops/internal/contract/authority"
 	mcpcontract "issueops/internal/contract/mcp"
 	authoritydomain "issueops/internal/domain/authority"
+	"issueops/internal/testsupport"
 )
 
 func TestValidateHTTPAddressAcceptsOnlyLiteralLoopbackWithPort(t *testing.T) {
@@ -79,9 +80,7 @@ func TestEnsureHTTPBearerRejectsRelativeStateDirAndLooseDirectory(t *testing.T) 
 	if err := os.Mkdir(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Chmod(dir, 0o755); err != nil {
-		t.Fatal(err)
-	}
+	testsupport.MakePermissive(t, dir, 0o755)
 	if _, err := EnsureHTTPBearer(state); err == nil || !strings.Contains(err.Error(), "owner-only directory") {
 		t.Fatalf("group-readable state dir err=%v", err)
 	}

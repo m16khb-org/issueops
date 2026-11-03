@@ -2,14 +2,13 @@ package issueopsapp
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"issueops/cmd/issueops/issueopscli"
 	adapter "issueops/internal/adapter/issueops"
 	model "issueops/internal/contract/issueops"
+	"issueops/internal/testsupport"
 )
 
 func TestRemoteVerificationWiringProtectsChildLink(t *testing.T) {
@@ -24,10 +23,7 @@ func TestRemoteVerificationWiringProtectsChildLink(t *testing.T) {
 		t.Fatal(err)
 	}
 	bin := t.TempDir()
-	gh := filepath.Join(bin, "gh")
-	if err := os.WriteFile(gh, []byte("#!/bin/sh\necho 'HTTP 404: not found' >&2\nexit 1\n"), 0700); err != nil {
-		t.Fatal(err)
-	}
+	testsupport.WriteFakeCommand(t, bin, "gh", "#!/bin/sh\necho 'HTTP 404: not found' >&2\nexit 1\n")
 	t.Setenv("PATH", bin)
 	deps := issueOpsCLIDependencies()
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
@@ -41,9 +37,7 @@ func TestRemoteVerificationWiringProtectsChildLink(t *testing.T) {
 	if err != nil || len(stored.IssueLinks) != 0 {
 		t.Fatalf("link written after failed verification: %+v err=%v", stored.IssueLinks, err)
 	}
-	if err := os.WriteFile(gh, []byte("#!/bin/sh\n[ \"$*\" = 'issue view https://github.com/acme/repo/issues/34 --json url,state,title' ] || exit 2\nprintf '{}\\n'\n"), 0700); err != nil {
-		t.Fatal(err)
-	}
+	testsupport.WriteFakeCommand(t, bin, "gh", "#!/bin/sh\n[ \"$*\" = 'issue view https://github.com/acme/repo/issues/34 --json url,state,title' ] || exit 2\nprintf '{}\\n'\n")
 	captureStdoutForContract(t, func() error { return issueopscli.RunIssueOpsWithDependencies(args, deps) })
 	stored, err = adapter.ReadIssueOps(root, record.ID)
 	if err != nil || len(stored.IssueLinks) != 1 || stored.IssueLinks[0].URL != "https://github.com/acme/repo/issues/34" {

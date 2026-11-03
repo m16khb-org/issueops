@@ -1,16 +1,20 @@
 package issueops
 
 import (
+	"path/filepath"
 	"reflect"
 	"testing"
+
+	"issueops/internal/testsupport"
 )
 
 func TestScopeGateLedgersJudgesOwnAndAnonymousPaths(t *testing.T) {
-	root := "/repo"
+	root := testsupport.AbsPath("repo")
+	issues := filepath.Join(root, ".issueops", "issues")
 	files := []string{
-		"/repo/.issueops/issues/21/gates.md", "/repo/.issueops/issues/021/gates.md",
-		"/repo/.issueops/issues/_unnumbered/gates.md", "/repo/.issueops/gates/cleanup.md",
-		"/repo/.issueops/issues/248/gates.md",
+		filepath.Join(issues, "21", "gates.md"), filepath.Join(issues, "021", "gates.md"),
+		filepath.Join(issues, "_unnumbered", "gates.md"), filepath.Join(root, ".issueops", "gates", "cleanup.md"),
+		filepath.Join(issues, "248", "gates.md"),
 	}
 	judged, skipped := ScopeGateLedgers(root, files, "21")
 	if want := []string{files[0], files[2], files[3]}; !reflect.DeepEqual(judged, want) {

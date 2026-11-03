@@ -13,16 +13,18 @@ import (
 	"issueops/cmd/issueops/issueopscli/executioncmd"
 	"issueops/internal/adapter/issueops"
 	basesyncoutbound "issueops/internal/adapter/outbound/issueopsbasesync"
+	"issueops/internal/adapter/outbound/osfile"
 	model "issueops/internal/contract/issueops"
 	"issueops/internal/port"
 	provenanceport "issueops/internal/port/issueopsprovenance"
+	"issueops/internal/testsupport"
 )
 
 type reseedProvenanceObserver struct{}
 
 func (reseedProvenanceObserver) Observe(context.Context) (provenanceport.Receipt, error) {
 	return provenanceport.Receipt{
-		ExecutablePath: "/repo/bin/issueops", ExecutableSHA256: strings.Repeat("a", 64),
+		ExecutablePath: testsupport.AbsPath("repo", "bin", "issueops"), ExecutableSHA256: strings.Repeat("a", 64),
 	}, nil
 }
 
@@ -74,7 +76,7 @@ func TestExecutionReseedCLIDogfoodDirect(t *testing.T) {
 	if !result.OK || result.Action != model.ExecutionReplaceReseed || result.Execution.Lease.Generation != 2 || result.Execution.Lease.Status != model.LeaseStatusClaimable || result.ClaimTokenPath == "" {
 		t.Fatalf("CLI reseed result=%+v", result)
 	}
-	if info, err := os.Stat(result.ClaimTokenPath); err != nil || info.Mode().Perm() != 0o600 {
+	if info, err := os.Stat(result.ClaimTokenPath); err != nil || osfile.Perm(result.ClaimTokenPath, info) != 0o600 {
 		t.Fatalf("new token info=%v err=%v", info, err)
 	}
 	if _, err := os.Stat(oldToken); !os.IsNotExist(err) {

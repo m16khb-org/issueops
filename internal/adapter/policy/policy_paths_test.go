@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	policycontract "issueops/internal/contract/policy"
+	"issueops/internal/testsupport"
 )
 
 func TestCommandObserverPreservesSuppliedAuditLogIDAndGeneratesMissingOne(t *testing.T) {
@@ -59,7 +60,7 @@ func TestCommandPolicyHomeShorthandResolvesAgainstHome(t *testing.T) {
 	if err := os.MkdirAll(home, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("HOME", home)
+	testsupport.SetHome(t, home)
 	eval := func(arg string) policycontract.CommandPolicyEvaluation {
 		return evaluateCommandPolicy(policycontract.CommandPolicyRequest{
 			WorkspaceRoot: root, CWD: root, Argv: []string{"cat", arg}, Timeout: "30s",

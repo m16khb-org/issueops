@@ -101,7 +101,7 @@ func (h *opencodeHarness) runner(t *testing.T) OpencodeRunner {
 			if name != "opencode" {
 				t.Fatalf("looked up %q", name)
 			}
-			return "/test/bin/opencode", nil
+			return fixturePath("test", "bin", "opencode"), nil
 		},
 		TempDir: func(_, pattern string) (string, error) {
 			if pattern != "issueops-conformance-opencode-" {
@@ -150,7 +150,8 @@ func TestOpencodeRunnerBuildsIsolatedEnvWithoutUserSessionIDs(t *testing.T) {
 		names = append(names, name)
 	}
 	slices.Sort(names)
-	want := []string{"ANTHROPIC_API_KEY", "HOME", "OPENCODE_DISABLE_AUTOUPDATE", "OPENCODE_DISABLE_CLAUDE_CODE", "OPENCODE_DISABLE_MODELS_FETCH", "OPENCODE_PASSWORD", "PATH", "PWD", "TERM", "USER", "XDG_CACHE_HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME"}
+	want := append([]string{"ANTHROPIC_API_KEY", "HOME", "OPENCODE_DISABLE_AUTOUPDATE", "OPENCODE_DISABLE_CLAUDE_CODE", "OPENCODE_DISABLE_MODELS_FETCH", "OPENCODE_PASSWORD", "PATH", "PWD", "TERM", "USER", "XDG_CACHE_HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME"}, isolatedHomeEnvNames()...)
+	slices.Sort(want)
 	if !reflect.DeepEqual(names, want) {
 		t.Fatalf("env names = %q, want %q", names, want)
 	}
@@ -159,6 +160,7 @@ func TestOpencodeRunnerBuildsIsolatedEnvWithoutUserSessionIDs(t *testing.T) {
 			t.Fatalf("%s = %q", name, got)
 		}
 	}
+	assertIsolatedHome(t, h.run.Env, filepath.Join(h.root, "home"))
 	password := environmentValue(t, h.run.Env, "OPENCODE_PASSWORD")
 	if password == "user-password" || len(password) < 32 {
 		t.Fatalf("server password = %q", password)
@@ -229,7 +231,7 @@ func TestOpencodeRunnerWarmsMCPBeforeRun(t *testing.T) {
 				t.Fatalf("server cwd = %q env PWD = %q", h.server.Cwd, environmentValue(t, h.server.Env, "PWD"))
 			}
 			if tc.wantCode == "" {
-				if !slices.Equal(h.run.Argv, []string{"/test/bin/opencode", "run", "--server", h.run.Argv[3], "--model", "opencode/deepseek-v4.1-flash-free", "--format", "json"}) ||
+				if !slices.Equal(h.run.Argv, []string{fixturePath("test", "bin", "opencode"), "run", "--server", h.run.Argv[3], "--model", "opencode/deepseek-v4.1-flash-free", "--format", "json"}) ||
 					!strings.HasPrefix(h.run.Argv[3], "http://127.0.0.1:") || h.run.Cwd != h.server.Cwd {
 					t.Fatalf("run = %+v", h.run)
 				}

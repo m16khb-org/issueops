@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -13,17 +14,10 @@ import (
 	"issueops/internal/testsupport"
 )
 
-// fakeClaude writes an executable sh script and returns its path.
+// fakeClaude installs an sh script as the claude command and returns its path.
 func fakeClaude(t *testing.T, script string) string {
 	t.Helper()
-	binary := filepath.Join(t.TempDir(), "claude")
-	if err := os.WriteFile(binary, []byte("#!/bin/sh\n"+script), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chmod(binary, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	return binary
+	return testsupport.WriteFakeCommand(t, t.TempDir(), "claude", "#!/bin/sh\n"+script)
 }
 
 func TestClaudePluginHostBinaryDefaultsToClaudeWhenBlank(t *testing.T) {
@@ -156,6 +150,9 @@ func TestReadConfigPropagatesNonMissingReadErrors(t *testing.T) {
 }
 
 func TestInstalledSkillsPropagatesNonMissingReadErrors(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows reports a directory read of a regular file as not existing (ERROR_PATH_NOT_FOUND), not ENOTDIR")
+	}
 	file := filepath.Join(t.TempDir(), "skills")
 	writeFile(t, file, "not a directory")
 	if _, err := (GitSkillStore{SkillsDir: file, CacheDir: t.TempDir()}).InstalledSkills(); err == nil {

@@ -247,7 +247,7 @@ func TestResolveNativeActorRejectsUnobservableAndInvalidObservations(t *testing.
 				}
 				return ""
 			},
-			Getwd: func() (string, error) { return "/work", nil },
+			Getwd: func() (string, error) { return testsupport.AbsPath("work"), nil },
 			PID:   func() int { return 1 },
 			ObserveAncestry: func(int) ([]model.NativeProcessReceipt, error) {
 				return []model.NativeProcessReceipt{{PID: 1, Executable: "issueops"}, {PID: 2, Executable: "/opt/codex"}}, nil
@@ -293,9 +293,12 @@ func TestResolveNativeActorRejectsUnobservableAndInvalidObservations(t *testing.
 	}
 	// Surrounding whitespace and dot segments are normalized into a clean absolute cwd.
 	obs := good()
-	obs.Getwd = func() (string, error) { return " /work/./sub/.. ", nil }
+	sep := string(filepath.Separator)
+	obs.Getwd = func() (string, error) {
+		return " " + testsupport.AbsPath("work") + sep + "." + sep + "sub" + sep + ".. ", nil
+	}
 	_, cwd, err := resolveNativeActor("claim", flags, visited, obs)
-	if err != nil || cwd != "/work" {
+	if err != nil || cwd != testsupport.AbsPath("work") {
 		t.Fatalf("cwd=%q err=%v", cwd, err)
 	}
 }
@@ -570,7 +573,8 @@ func TestRepeatedStringAccumulatesInOrder(t *testing.T) {
 }
 
 func TestExecutionNextCommandBindsResultAndSkipsUnleasedAndUnknown(t *testing.T) {
-	observer := provenanceObserverStub{evidence: provenanceport.Receipt{ExecutablePath: "/repo/bin/issueops", ExecutableSHA256: strings.Repeat("c", 64)}}
+	binary := testsupport.AbsPath("repo", "bin", testsupport.ExecutableName("issueops"))
+	observer := provenanceObserverStub{evidence: provenanceport.Receipt{ExecutablePath: binary, ExecutableSHA256: strings.Repeat("c", 64)}}
 	leased := model.Execution{Lease: model.WriteLease{Generation: 8}}
 	bound, err := bindExecutionNextCommand(model.ExecutionResult{Execution: leased, NextCommand: "issueops execution release --id io-1 --generation 8"}, observer)
 	if err != nil {
@@ -580,7 +584,7 @@ func TestExecutionNextCommandBindsResultAndSkipsUnleasedAndUnknown(t *testing.T)
 	if !ok {
 		t.Fatalf("type %T", bound)
 	}
-	if !strings.HasPrefix(result.NextCommand, "'/repo/bin/issueops'") || !strings.Contains(result.NextCommand, "--generated-for-generation 8") {
+	if !strings.HasPrefix(result.NextCommand, "'"+binary+"'") || !strings.Contains(result.NextCommand, "--generated-for-generation 8") {
 		t.Fatalf("command=%q", result.NextCommand)
 	}
 	// Without a lease generation or a command nothing is bound, even with no observer.

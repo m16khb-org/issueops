@@ -8,6 +8,7 @@ import (
 
 	"issueops/internal/port"
 	activationport "issueops/internal/port/nativeactivation"
+	"issueops/internal/testsupport"
 )
 
 // runInstallStub builds a Command whose installer must never run: every case
@@ -16,13 +17,13 @@ func runInstallStub(t *testing.T, mutate func(root string, deps *Deps)) Command 
 	t.Helper()
 	root := t.TempDir()
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	testsupport.SetHome(t, home)
 	t.Setenv("CODEX_HOME", "")
 	t.Setenv("ISSUEOPS_NATIVE_ACTIVATION_STEP", "")
 	t.Setenv("ISSUEOPS_NATIVE_ACTIVATION_TRANSITION_ID", "")
 	deps := Deps{
 		IssueOpsRoot:   func() string { return root },
-		ExecutablePath: func() (string, error) { return filepath.Join(root, "bin", "issueops"), nil },
+		ExecutablePath: func() (string, error) { return filepath.Join(root, "bin", testsupport.ExecutableName("issueops")), nil },
 		NativeInstallRequest: func(root, home, codexHome, binPath string) port.NativeInstallRequest {
 			return port.NativeInstallRequest{Root: root, Home: home, CodexHome: codexHome, BinPath: binPath}
 		},
@@ -48,7 +49,7 @@ func TestRunInstallRejectsBadConfigurationBeforeTouchingHosts(t *testing.T) {
 		wantErr string
 	}{
 		{name: "unknown flag", args: []string{"--no-such-flag"}, wantErr: "no-such-flag"},
-		{name: "no home directory", args: []string{"--dry-run"}, env: map[string]string{"HOME": ""}, wantErr: "determine user home directory"},
+		{name: "no home directory", args: []string{"--dry-run"}, env: map[string]string{"HOME": "", "USERPROFILE": ""}, wantErr: "determine user home directory"},
 		{name: "invalid path mode", args: []string{"--dry-run", "--path-mode=sometimes"}, wantErr: `invalid --path-mode "sometimes"`},
 		{name: "invalid mcp transport", args: []string{"--dry-run", "--mcp-transport=smoke"}, wantErr: `invalid --mcp-transport "smoke"`},
 		{name: "http without service setup", args: []string{"--dry-run", "--mcp-transport=http"}, wantErr: "mcp http service setup is not configured"},
@@ -145,7 +146,7 @@ func TestExecuteInstallReportsActivationTransitionsInTextAndJSON(t *testing.T) {
 	}{
 		{"abort text", "abort", []string{"--path-mode=skip"}, []string{"native activation transition " + validTransitionID + " aborted"}, []string{"abort"}},
 		{"abort json", "abort", []string{"--path-mode=skip", "--json"}, []string{`"aborted": true`, validTransitionID}, []string{"abort"}},
-		{"begin text", "begin", []string{"--path-mode=skip", "--adopt-command-file"}, []string{"native activation candidate " + hashFixture('a') + " is pending as transition " + validTransitionID}, []string{"begin"}},
+		{"begin text", "begin", adoptCommandArgs("--path-mode=skip"), []string{"native activation candidate " + hashFixture('a') + " is pending as transition " + validTransitionID}, []string{"begin"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -193,10 +194,11 @@ func TestOutputInstallResultAlwaysReturnsTheInstallError(t *testing.T) {
 }
 
 func TestInstallEffectsRemoveRetiredStateAppendsMessagesForTheStateDirectory(t *testing.T) {
+	stateDir := testsupport.AbsPath("state")
 	var gotDir string
 	var gotDry bool
 	effects := installTransactionEffects{command: Command{Deps: Deps{
-		StateRoot: filepath.Join("/state", "issueops"),
+		StateRoot: filepath.Join(stateDir, "issueops"),
 		RemoveRetiredState: func(dir string, dry bool) []string {
 			gotDir, gotDry = dir, dry
 			return []string{"removed a", "removed b"}
@@ -206,7 +208,7 @@ func TestInstallEffectsRemoveRetiredStateAppendsMessagesForTheStateDirectory(t *
 
 	effects.RemoveRetiredState(&result, true)
 
-	if gotDir != "/state" || !gotDry || strings.Join(result.Messages, "|") != "existing|removed a|removed b" {
+	if gotDir != stateDir || !gotDry || strings.Join(result.Messages, "|") != "existing|removed a|removed b" {
 		t.Fatalf("dir=%q dry=%v messages=%v", gotDir, gotDry, result.Messages)
 	}
 	unconfigured := installTransactionEffects{command: Command{}}

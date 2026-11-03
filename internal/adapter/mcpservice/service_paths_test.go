@@ -13,6 +13,7 @@ import (
 
 	"issueops/internal/contract/mcpservice"
 	"issueops/internal/contract/processidentity"
+	"issueops/internal/testsupport"
 )
 
 // serviceWithRun routes supervisor commands through hook first; a hook that
@@ -89,9 +90,7 @@ func TestProbeAcceptsPlainJSONResponseAndReturnsIdentityHeaders(t *testing.T) {
 func TestProbeFailsWithoutAnInstalledOrSafeBearer(t *testing.T) {
 	w := newFakeWorld(t)
 	path := filepath.Join(httpDir(w.stateDir), bearerFileName)
-	if err := os.Chmod(path, 0o644); err != nil {
-		t.Fatal(err)
-	}
+	testsupport.MakePermissive(t, path, 0o644)
 	if _, _, err := w.service(w.address).probe(t.Context()); err == nil || !strings.Contains(err.Error(), "owner-only") {
 		t.Fatalf("shared bearer probe error = %v", err)
 	}

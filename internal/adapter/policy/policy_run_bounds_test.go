@@ -145,7 +145,13 @@ func TestCommandExecutorPreservesExitAndStartFailure(t *testing.T) {
 		}
 	}
 	result := (CommandExecutor{}).Execute(policycontract.CommandPolicyRequest{Argv: []string{filepath.Join(t.TempDir(), "missing")}}, time.Second)
-	if result.Err == nil || result.ExitCode != 1 || result.TimedOut || !strings.HasPrefix(result.Stderr, "command did not start: ") {
+	// A missing absolute path fails in exec.Command's path lookup on Windows
+	// (exec.ErrNotFound, 127) and at fork on Unix (a PathError, 1).
+	wantExit := 1
+	if runtime.GOOS == "windows" {
+		wantExit = 127
+	}
+	if result.Err == nil || result.ExitCode != wantExit || result.TimedOut || !strings.HasPrefix(result.Stderr, "command did not start: ") {
 		t.Fatalf("start failure: %+v", result)
 	}
 	// A command name not on PATH (a typo in a gate CHECK) reads like sh: 127.
@@ -243,7 +249,13 @@ func TestPolicyRunActualOutputAndTimeoutContracts(t *testing.T) {
 
 func TestCommandExecutorRejectsExpiredDeadlineBeforeStart(t *testing.T) {
 	request := policycontract.CommandPolicyRequest{Argv: []string{filepath.Join(t.TempDir(), "missing")}}
-	result := (CommandExecutor{}).Execute(request, time.Nanosecond)
+	expired := time.Nanosecond
+	if runtime.GOOS == "windows" {
+		// The Windows clock is too coarse for a 1ns timeout to have expired
+		// by the time the executor checks it; a negative timeout always has.
+		expired = -time.Nanosecond
+	}
+	result := (CommandExecutor{}).Execute(request, expired)
 	// Deadline wins before Start can return the missing executable's PathError.
 	if !result.TimedOut || !errors.Is(result.Err, context.DeadlineExceeded) {
 		t.Fatalf("expired start boundary: timeout=%v error=%v", result.TimedOut, result.Err)

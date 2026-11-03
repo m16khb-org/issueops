@@ -3,6 +3,7 @@ package mcpservice
 import (
 	"context"
 	"errors"
+	"path/filepath"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -21,7 +22,7 @@ func TestUnitsRunAbsoluteBinaryWithExplicitRootAndState(t *testing.T) {
 			t.Fatalf("plist missing %q:\n%s", want, plist)
 		}
 	}
-	if got := (launchd{label: "io.issueops.mcp", home: "/Users/u"}).unitPath(); got != "/Users/u/Library/LaunchAgents/io.issueops.mcp.plist" {
+	if got := (launchd{label: "io.issueops.mcp", home: "/Users/u"}).unitPath(); got != filepath.Join("/Users/u", "Library", "LaunchAgents", "io.issueops.mcp.plist") {
 		t.Fatalf("launchd unit path = %s", got)
 	}
 	unit := systemd{unit: "issueops-mcp.service", home: "/home/u"}.renderUnit(spec)
@@ -34,7 +35,7 @@ func TestUnitsRunAbsoluteBinaryWithExplicitRootAndState(t *testing.T) {
 			t.Fatalf("systemd unit missing %q:\n%s", want, unit)
 		}
 	}
-	if got := (systemd{unit: "issueops-mcp.service", home: "/home/u"}).unitPath(); got != "/home/u/.config/systemd/user/issueops-mcp.service" {
+	if got := (systemd{unit: "issueops-mcp.service", home: "/home/u"}).unitPath(); got != filepath.Join("/home/u", ".config", "systemd", "user", "issueops-mcp.service") {
 		t.Fatalf("systemd unit path = %s", got)
 	}
 }
@@ -64,7 +65,7 @@ func TestLoadFailureNamesTheCommandAndItsOutput(t *testing.T) {
 		{"systemd", func(run Runner) supervisor { return systemd{run: run, unit: "issueops-mcp.service", home: "/home/u"} }, "systemctl --user daemon-reload"},
 		{"launchd", func(run Runner) supervisor {
 			return launchd{run: run, label: "io.issueops.mcp", uid: 501, home: "/Users/u"}
-		}, "launchctl bootstrap gui/501 /Users/u/Library/LaunchAgents/io.issueops.mcp.plist"},
+		}, "launchctl bootstrap gui/501 " + filepath.Join("/Users/u", "Library", "LaunchAgents", "io.issueops.mcp.plist")},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			run := func(_ context.Context, name string, args ...string) ([]byte, error) {

@@ -3,8 +3,11 @@ package installutil
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
+
+	"issueops/internal/testsupport"
 )
 
 func TestShellCommandWordParsesQuotingAndEscapes(t *testing.T) {
@@ -81,7 +84,28 @@ func TestPruneStaleSkillLinksHandlesRelativeTargetsAndDryRun(t *testing.T) {
 	}
 }
 
+func skipIfDirPermissionsNotEnforced(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("a Windows directory ACL set through mode bits does not stop its owner from listing, creating in, or removing from it")
+	}
+	if os.Geteuid() == 0 {
+		t.Skip("directory permission failures are not enforced for root")
+	}
+}
+
+func lockDir(t *testing.T, dir string) {
+	t.Helper()
+	if err := os.Chmod(dir, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
+}
+
 func TestPruneStaleSkillLinksReportsUnreadableDestRoot(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("os.ReadDir on a regular file reports no error on Windows")
+	}
 	file := filepath.Join(t.TempDir(), "notadir")
 	if err := os.WriteFile(file, nil, 0o600); err != nil {
 		t.Fatal(err)
@@ -93,7 +117,7 @@ func TestPruneStaleSkillLinksReportsUnreadableDestRoot(t *testing.T) {
 }
 
 func TestPruneStaleSkillLinksReportsRemovalFailure(t *testing.T) {
-	skipIfRoot(t)
+	skipIfDirPermissionsNotEnforced(t)
 	root := t.TempDir()
 	dest := filepath.Join(root, "dest")
 	if err := os.Mkdir(dest, 0o755); err != nil {
@@ -112,14 +136,15 @@ func TestPruneStaleSkillLinksReportsRemovalFailure(t *testing.T) {
 func TestEnsureSymlinkPlanDryRunReportsRetargetWithoutTouchingLink(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "link")
-	if err := os.Symlink("/old", path); err != nil {
+	oldTarget := testsupport.AbsPath("old")
+	if err := os.Symlink(oldTarget, path); err != nil {
 		t.Fatal(err)
 	}
-	link, err := EnsureSymlinkPlan("/new", path, true)
+	link, err := EnsureSymlinkPlan(testsupport.AbsPath("new"), path, true)
 	if err != nil || !link.WouldCreate || link.Created {
 		t.Fatalf("link=%+v err=%v", link, err)
 	}
-	if actual, _ := os.Readlink(path); actual != "/old" {
+	if actual, _ := os.Readlink(path); actual != oldTarget {
 		t.Fatalf("dry run changed link to %q", actual)
 	}
 }
@@ -136,7 +161,7 @@ func TestEnsureSymlinkPlanReportsStatFailure(t *testing.T) {
 }
 
 func TestEnsureSymlinkPlanReportsDirectoryCreationFailure(t *testing.T) {
-	skipIfRoot(t)
+	skipIfDirPermissionsNotEnforced(t)
 	parent := t.TempDir()
 	lockDir(t, parent)
 	link, err := EnsureSymlinkPlan("/t", filepath.Join(parent, "sub", "link"), false)
@@ -157,7 +182,7 @@ func TestWriteTextPlanReportsReadFailureUnlessDryRun(t *testing.T) {
 }
 
 func TestWriteTextPlanReportsDirectoryCreationFailure(t *testing.T) {
-	skipIfRoot(t)
+	skipIfDirPermissionsNotEnforced(t)
 	parent := t.TempDir()
 	lockDir(t, parent)
 	file, err := WriteTextPlan(filepath.Join(parent, "sub", "config"), "config", "x", 0o600, false)

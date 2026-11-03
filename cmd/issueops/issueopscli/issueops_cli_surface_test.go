@@ -19,6 +19,7 @@ import (
 	issueopsroutingcontract "issueops/internal/contract/issueopsrouting"
 	issueopsstatuscontract "issueops/internal/contract/issueopsstatus"
 	provenanceport "issueops/internal/port/issueopsprovenance"
+	"issueops/internal/testsupport"
 )
 
 // stubRuntimeCommand wires only the supplied runtime hooks; any other hook is nil
@@ -656,7 +657,7 @@ func TestGeneratedInvocationFailsClosedBeforeObservation(t *testing.T) {
 	cli := stubRuntimeCommand(IssueOpsCLIDeps{
 		ReadIssueOps: func(_, id string) (issueopscontract.IssueOpsRecord, error) { return record, readErr },
 	})
-	envelope := generatedEnvelope("/bin/issueops", sha, 2)
+	envelope := generatedEnvelope(testsupport.AbsPath("bin", "issueops"), sha, 2)
 	base := []string{"phase", "--to", "plan"}
 
 	// No envelope: the invocation is not generated and passes through untouched.
@@ -697,13 +698,13 @@ func TestGeneratedInvocationFailsClosedBeforeObservation(t *testing.T) {
 		t.Fatalf("observer failure: %v", err)
 	}
 	// A matching observation is admitted, and the envelope is stripped from the args.
-	observer := issueOpsProvenanceObserverStub{evidence: provenanceport.Receipt{ExecutablePath: "/bin/issueops", ExecutableSHA256: sha}}
+	observer := issueOpsProvenanceObserverStub{evidence: provenanceport.Receipt{ExecutablePath: testsupport.AbsPath("bin", "issueops"), ExecutableSHA256: sha}}
 	clean, generated, err = cli.prepareGeneratedCommandInvocation(withID, Dependencies{Provenance: observer})
 	if err != nil || !generated || len(clean) != 5 {
 		t.Fatalf("matching observation: clean=%v generated=%v err=%v", clean, generated, err)
 	}
 	// The same binary under a stale lease generation is refused.
-	stale := append(append([]string{"phase", "--id", "c1"}, base[1:]...), generatedEnvelope("/bin/issueops", sha, 1)...)
+	stale := append(append([]string{"phase", "--id", "c1"}, base[1:]...), generatedEnvelope(testsupport.AbsPath("bin", "issueops"), sha, 1)...)
 	if _, _, err := cli.prepareGeneratedCommandInvocation(stale, Dependencies{Provenance: observer}); err == nil {
 		t.Fatal("stale lease generation must be refused")
 	}

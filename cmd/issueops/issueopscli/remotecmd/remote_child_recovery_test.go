@@ -10,8 +10,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
+
+	"issueops/internal/testsupport"
 )
 
 func childCLIRecoveryFixture(t *testing.T, provider string) (model.IssueOpsRecord, []string) {
@@ -28,19 +31,54 @@ func childCLIRecoveryFixture(t *testing.T, provider string) (model.IssueOpsRecor
 			t.Fatal(err)
 		}
 	}
-	python, err := exec.LookPath("python3")
-	if err != nil {
-		t.Fatal(err)
-	}
+	python := childCLIPython(t)
 	bin := t.TempDir()
 	for _, name := range []string{"gh", "glab"} {
-		if err := os.WriteFile(filepath.Join(bin, name), []byte("#!"+python+"\n"+childCLIFake), 0o755); err != nil {
-			t.Fatal(err)
-		}
+		installChildCLIFake(t, bin, name, python)
 	}
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	t.Setenv("CHILD_PARENT", record.IssueURL)
 	return record, []string{"create-child", "--id", record.ID, "--title", "Child", "--body", readableChildBody, "--label", "bug", "--assignee", "octocat", "--confirm", "--json"}
+}
+
+// childCLIPython finds a working Python interpreter. Windows ships a python3
+// alias that only opens the Store, so each candidate must actually run.
+func childCLIPython(t *testing.T) string {
+	t.Helper()
+	candidates := []string{"python3"}
+	if runtime.GOOS == "windows" {
+		candidates = append(candidates, "python")
+	}
+	for _, name := range candidates {
+		path, err := exec.LookPath(name)
+		if err != nil {
+			continue
+		}
+		if runtime.GOOS == "windows" && exec.Command(path, "-c", "import json").Run() != nil {
+			continue
+		}
+		return path
+	}
+	t.Fatalf("no working python interpreter among %v", candidates)
+	return ""
+}
+
+// installChildCLIFake installs childCLIFake as the command name in bin. Unix runs
+// it through its shebang; Windows runs the Python source from a shell shim, which
+// tells the script where the shim lives so the fault can disable it.
+func installChildCLIFake(t *testing.T, bin, name, python string) {
+	t.Helper()
+	if runtime.GOOS != "windows" {
+		if err := os.WriteFile(filepath.Join(bin, name), []byte("#!"+python+"\n"+childCLIFake), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+	source := filepath.Join(bin, name+".py")
+	if err := os.WriteFile(source, []byte(childCLIFake), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	testsupport.WriteFakeCommand(t, bin, name, "#!/bin/sh\nCHILD_FAKE_SH=\"$0\" exec '"+python+"' '"+source+"' \"$@\"\n")
 }
 
 func TestChildCLIImplicitResponseLossExplicitChildAndRestartReplay(t *testing.T) {
@@ -225,7 +263,9 @@ if 'workItemCreate(' in q:
  row=create(title,body,False)
  print(json.dumps(dict(data=dict(workItemCreate=dict(workItem=item(row),errors=[])))))
  if os.environ.get('CHILD_FAULT')=='follow-up-start':
-  pathlib.Path(sys.argv[0]).write_text('#!/missing-issueops-test-interpreter\n')
+  fake=os.environ.get('CHILD_FAKE_SH')
+  if fake: os.replace(fake[:-3]+'.exe',fake[:-3]+'.exe.off')
+  else: pathlib.Path(sys.argv[0]).write_text('#!/missing-issueops-test-interpreter\n')
   sys.exit(0)
  sys.exit(1 if os.environ.get('CHILD_FAULT') else 0)
 if 'childRecoverySearch' in q: output(dict(data=dict(project=dict(workItems=dict(nodes=[item(r) for r in rows if field('marker') in r['body']],pageInfo=dict(hasNextPage=False))))))
@@ -247,14 +287,26 @@ func TestChildCLIFollowUpStartFailurePersistsKnownURL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	original, err := os.ReadFile(executable)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// The fault rewrites this file and the test restores it below, so it must be
+	// The fault disables this executable and the test restores it below, so it must be
 	// the fixture's fake, never a real glab found later on PATH.
-	if !strings.HasSuffix(string(original), childCLIFake) {
-		t.Fatalf("glab resolved to %s, not the fixture fake; refusing to modify it", executable)
+	var restore func() error
+	if runtime.GOOS == "windows" {
+		// The fake is a shim next to its Python source; the fault renames the shim
+		// away so the next start fails, and the test renames it back.
+		source, readErr := os.ReadFile(strings.TrimSuffix(executable, ".exe") + ".py")
+		if readErr != nil || !strings.HasSuffix(string(source), childCLIFake) {
+			t.Fatalf("glab resolved to %s, not the fixture fake; refusing to modify it (%v)", executable, readErr)
+		}
+		restore = func() error { return os.Rename(executable+".off", executable) }
+	} else {
+		original, readErr := os.ReadFile(executable)
+		if readErr != nil {
+			t.Fatal(readErr)
+		}
+		if !strings.HasSuffix(string(original), childCLIFake) {
+			t.Fatalf("glab resolved to %s, not the fixture fake; refusing to modify it", executable)
+		}
+		restore = func() error { return os.WriteFile(executable, original, 0o755) }
 	}
 	t.Setenv("CHILD_FAULT", "follow-up-start")
 	var failure app.ChildCreateResult
@@ -271,7 +323,7 @@ func TestChildCLIFollowUpStartFailurePersistsKnownURL(t *testing.T) {
 	if op.CanonicalURL != failure.ChildURL || op.Status == model.IssueCreateIntentNotInvoked {
 		t.Fatalf("lost durable receipt: %+v error=%v", op, err)
 	}
-	if err = os.WriteFile(executable, original, 0o755); err != nil {
+	if err = restore(); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("CHILD_FAULT", "")

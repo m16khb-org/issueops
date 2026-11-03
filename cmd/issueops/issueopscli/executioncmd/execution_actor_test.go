@@ -8,6 +8,7 @@ import (
 
 	model "issueops/internal/contract/issueops"
 	"issueops/internal/port"
+	"issueops/internal/testsupport"
 )
 
 func TestExecutionReplaceCLIInvokesExecutionWithObservedActor(t *testing.T) {
@@ -26,7 +27,7 @@ func TestExecutionReplaceCLIInvokesExecutionWithObservedActor(t *testing.T) {
 			}
 			return ""
 		},
-		Getwd: func() (string, error) { return "/repo.worktrees/parent", nil },
+		Getwd: func() (string, error) { return testsupport.AbsPath("repo.worktrees", "parent"), nil },
 		PID:   func() int { return 101 },
 		ObserveAncestry: func(int) ([]model.NativeProcessReceipt, error) {
 			return []model.NativeProcessReceipt{
@@ -51,7 +52,7 @@ func TestExecutionReplaceCLIInvokesExecutionWithObservedActor(t *testing.T) {
 	}
 	if got.Actor.Host != "codex" || got.Actor.SessionID != "codex-session" ||
 		got.Actor.SessionProcess == nil || got.Actor.SessionProcess.PID != 42 ||
-		got.CWD != "/repo.worktrees/parent" {
+		got.CWD != testsupport.AbsPath("repo.worktrees", "parent") {
 		t.Fatalf("observed replace request=%+v", got)
 	}
 }
@@ -69,7 +70,7 @@ func TestResolveNativeActorObservesNativeIdentityWhenActorFlagsAreAbsent(t *test
 			}
 			return ""
 		},
-		Getwd: func() (string, error) { return "/repo.worktrees/replace", nil },
+		Getwd: func() (string, error) { return testsupport.AbsPath("repo.worktrees", "replace"), nil },
 		PID:   func() int { return 101 },
 		ObserveAncestry: func(int) ([]model.NativeProcessReceipt, error) {
 			return ancestry, nil
@@ -78,7 +79,7 @@ func TestResolveNativeActorObservesNativeIdentityWhenActorFlagsAreAbsent(t *test
 	if err != nil {
 		t.Fatal(err)
 	}
-	if actor.Host != "codex" || actor.SessionID != "codex-session" || cwd != "/repo.worktrees/replace" {
+	if actor.Host != "codex" || actor.SessionID != "codex-session" || cwd != testsupport.AbsPath("repo.worktrees", "replace") {
 		t.Fatalf("resolved actor=%+v cwd=%q", actor, cwd)
 	}
 	if actor.SessionProcess == nil || actor.SessionProcess.PID != 42 || len(actor.ProcessAncestry) != 1 {
@@ -90,7 +91,7 @@ func TestResolveNativeActorPreservesCompleteExplicitFlags(t *testing.T) {
 	args := []string{
 		"--host", "claude", "--session-id", "claude-session", "--agent-id", "worker-1",
 		"--session-pid", "42", "--session-started-at", "2026-08-01T00:00:00Z",
-		"--session-executable", "/opt/claude/bin/claude", "--cwd", "/repo.worktrees/replace",
+		"--session-executable", "/opt/claude/bin/claude", "--cwd", testsupport.AbsPath("repo.worktrees", "replace"),
 	}
 	flags, visited := actorFlagsForTest(t, args)
 	actor, cwd, err := resolveNativeActor("replace", flags, visited, nativeActorObservation{
@@ -100,7 +101,7 @@ func TestResolveNativeActorPreservesCompleteExplicitFlags(t *testing.T) {
 		t.Fatal(err)
 	}
 	if actor.Host != "claude" || actor.SessionID != "claude-session" || actor.AgentID != "worker-1" ||
-		actor.SessionProcess == nil || actor.SessionProcess.PID != 42 || cwd != "/repo.worktrees/replace" {
+		actor.SessionProcess == nil || actor.SessionProcess.PID != 42 || cwd != testsupport.AbsPath("repo.worktrees", "replace") {
 		t.Fatalf("explicit actor=%+v cwd=%q", actor, cwd)
 	}
 }

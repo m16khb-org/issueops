@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -17,16 +18,29 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
 	cmuxport "issueops/internal/port/cmux"
+	"issueops/internal/testsupport"
+)
+
+var (
+	cmuxPath   = testsupport.AbsPath("Applications", "cmux.app", "Contents", "Resources", "bin", "cmux")
+	socketPath = testsupport.AbsPath("private", "tmp", "cmux-test.sock")
 )
 
 const (
-	cmuxPath      = "/Applications/cmux.app/Contents/Resources/bin/cmux"
-	socketPath    = "/private/tmp/cmux-test.sock"
 	testWindow    = "11111111-1111-4111-8111-111111111111"
 	testWorkspace = "22222222-2222-4222-8222-222222222222"
 	testPane      = "33333333-3333-4333-8333-333333333333"
 	testSurface   = "44444444-4444-4444-8444-444444444444"
 )
+
+// skipWithoutCmuxPlatform skips tests that read the sealed prompt through the
+// cmux platform layer, which windows refuses outright.
+func skipWithoutCmuxPlatform(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("cmux is not supported on windows: it is a macOS/Linux Unix-socket app and the platform layer refuses the prompt read")
+	}
+}
 
 func TestCmuxHandoffStagesBeforeCreateAndEnrichesOneNonAuthoritativeLineage(t *testing.T) {
 	stateRoot := t.TempDir()
@@ -52,6 +66,12 @@ func TestCmuxHandoffStagesBeforeCreateAndEnrichesOneNonAuthoritativeLineage(t *t
 			return process, nil
 		},
 	})
+	if runtime.GOOS == "windows" {
+		if err == nil || !strings.Contains(err.Error(), "cmux is not supported on windows") || fake.createCalls != 0 || fake.sendCalls != 0 {
+			t.Fatalf("windows must refuse the cmux handoff before any cmux call: err=%v create=%d send=%d", err, fake.createCalls, fake.sendCalls)
+		}
+		return
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,6 +172,7 @@ func TestCmuxHandoffRejectsRequestCWDBeforeAnyCmuxCall(t *testing.T) {
 }
 
 func TestCmuxHandoffRevalidatesDurableRecordImmediatelyBeforePreflight(t *testing.T) {
+	skipWithoutCmuxPlatform(t)
 	stateRoot := t.TempDir()
 	record := seedReleasedDirectHandoffRecord(t, stateRoot)
 	promptPath, promptDigest := writeCmuxPromptFixture(t, record.WorktreePath)
@@ -180,6 +201,7 @@ func TestCmuxHandoffRevalidatesDurableRecordImmediatelyBeforePreflight(t *testin
 }
 
 func TestCmuxHandoffRevalidatesDurableWorktreeAfterPreflightBeforeCreate(t *testing.T) {
+	skipWithoutCmuxPlatform(t)
 	stateRoot := t.TempDir()
 	record := seedReleasedDirectHandoffRecord(t, stateRoot)
 	promptPath, promptDigest := writeCmuxPromptFixture(t, record.WorktreePath)
@@ -207,6 +229,7 @@ func TestCmuxHandoffRevalidatesDurableWorktreeAfterPreflightBeforeCreate(t *test
 }
 
 func TestCmuxHandoffRejectsCanonicalRootReplacementAfterCreateBeforeSend(t *testing.T) {
+	skipWithoutCmuxPlatform(t)
 	stateRoot := t.TempDir()
 	record := seedReleasedDirectHandoffRecord(t, stateRoot)
 	promptPath, promptDigest := writeCmuxPromptFixture(t, record.WorktreePath)
@@ -240,6 +263,7 @@ func TestCmuxHandoffRejectsCanonicalRootReplacementAfterCreateBeforeSend(t *test
 }
 
 func TestCmuxHandoffRejectsPromptAbovePortableSingleArgumentBoundBeforePreflight(t *testing.T) {
+	skipWithoutCmuxPlatform(t)
 	const promptLimit = 64 << 10
 	stateRoot := t.TempDir()
 	record := seedReleasedDirectHandoffRecord(t, stateRoot)
@@ -317,6 +341,7 @@ func TestCmuxHandoffRejectsSecondAttemptForGenerationBeforeAnyCmuxCall(t *testin
 }
 
 func TestCmuxHandoffRejectsPromptThroughSymlinkedParentBeforePreflight(t *testing.T) {
+	skipWithoutCmuxPlatform(t)
 	stateRoot := t.TempDir()
 	record := seedReleasedDirectHandoffRecord(t, stateRoot)
 	external := t.TempDir()
@@ -345,6 +370,7 @@ func TestCmuxHandoffRejectsPromptThroughSymlinkedParentBeforePreflight(t *testin
 }
 
 func TestCmuxHandoffRejectsNULPromptBeforePreflight(t *testing.T) {
+	skipWithoutCmuxPlatform(t)
 	stateRoot := t.TempDir()
 	record := seedReleasedDirectHandoffRecord(t, stateRoot)
 	value := []byte("sealed\x00prompt")
@@ -368,6 +394,7 @@ func TestCmuxHandoffRejectsNULPromptBeforePreflight(t *testing.T) {
 }
 
 func TestCmuxHandoffIncompleteCreatedTargetAuditsExistingLineage(t *testing.T) {
+	skipWithoutCmuxPlatform(t)
 	stateRoot := t.TempDir()
 	record := seedReleasedDirectHandoffRecord(t, stateRoot)
 	promptPath, promptDigest := writeCmuxPromptFixture(t, record.WorktreePath)
@@ -393,6 +420,7 @@ func TestCmuxHandoffIncompleteCreatedTargetAuditsExistingLineage(t *testing.T) {
 }
 
 func TestCmuxHandoffCreateAndSendAmbiguityNeverRetries(t *testing.T) {
+	skipWithoutCmuxPlatform(t)
 	for _, phase := range []string{"workspace_create", "target_resolve", "input_send"} {
 		t.Run(phase, func(t *testing.T) {
 			stateRoot := t.TempDir()
@@ -437,6 +465,7 @@ func TestCmuxHandoffCreateAndSendAmbiguityNeverRetries(t *testing.T) {
 }
 
 func TestCmuxHandoffNonAmbiguousMutationFailureIsNotAcceptedResponseLost(t *testing.T) {
+	skipWithoutCmuxPlatform(t)
 	stateRoot := t.TempDir()
 	record := seedReleasedDirectHandoffRecord(t, stateRoot)
 	promptPath, promptDigest := writeCmuxPromptFixture(t, record.WorktreePath)
@@ -462,6 +491,7 @@ func TestCmuxHandoffNonAmbiguousMutationFailureIsNotAcceptedResponseLost(t *test
 }
 
 func TestCmuxHandoffSurfacesCleanupFailureAfterAcceptedInput(t *testing.T) {
+	skipWithoutCmuxPlatform(t)
 	stateRoot := t.TempDir()
 	record := seedReleasedDirectHandoffRecord(t, stateRoot)
 	promptPath, promptDigest := writeCmuxPromptFixture(t, record.WorktreePath)
@@ -490,6 +520,7 @@ func TestCmuxHandoffSurfacesCleanupFailureAfterAcceptedInput(t *testing.T) {
 }
 
 func TestCmuxHandoffPostCreateFailuresStayInLineageAndPreserveRecovery(t *testing.T) {
+	skipWithoutCmuxPlatform(t)
 	for _, test := range []struct {
 		name       string
 		prepareErr error
@@ -647,7 +678,7 @@ func cmuxCreatedFixture() cmuxcontract.CreatedWorkspace {
 func cmuxEndpointFixture() *issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation {
 	return &issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation{
 		Path: socketPath, Kind: "unix_socket", Device: 1, Inode: 2, CTimeNS: 3,
-		OwnerUID: 501, OwnerGID: 20, Mode: 0o600, ParentPath: "/private/tmp", ParentDevice: 1,
+		OwnerUID: 501, OwnerGID: 20, Mode: 0o600, ParentPath: filepath.Dir(socketPath), ParentDevice: 1,
 		ParentInode: 4, ParentOwnerUID: 0, ParentOwnerGID: 0, ParentMode: 0o1777,
 	}
 }

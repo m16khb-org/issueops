@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/port"
 )
 
@@ -40,7 +41,7 @@ func TestInstallerWritesNativeAgySurfaces(t *testing.T) {
 	}
 
 	projectMCP := readAgyTestJSON(t, filepath.Join(req.Root, ".agents", "mcp_config.json"))
-	assertAgyTestMCPServer(t, projectMCP, "issueops_project", "./bin/issueops", ".")
+	assertAgyTestMCPServer(t, projectMCP, "issueops_project", "./bin/"+osfile.ExecutableName("issueops"), ".")
 
 	templatePath := filepath.Join(req.Root, "configs", "agy", "mcp_config.json")
 	if _, err := os.Stat(templatePath); err != nil {

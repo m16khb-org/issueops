@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 )
@@ -12,13 +11,10 @@ import (
 // Renaming a draft MR keeps its Draft: prefix (clearing it is mark-ready),
 // and the returned title has the prefix removed.
 func TestGitLabRetitleKeepsTheDraftPrefix(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake glab shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	log := filepath.Join(t.TempDir(), "glab.log")
 	writeFakeGlab(t, binDir, `#!/bin/sh
-echo "$*" >> `+log+`
+echo "$*" >> `+filepath.ToSlash(log)+`
 case "$*" in
 *"--method PUT"*) echo '{"title":"Draft: feat: new name"}'; exit 0 ;;
 esac
@@ -42,13 +38,10 @@ echo '{"web_url":"`+glMergeTestURL+`","title":"Draft: old","state":"opened","dra
 // would otherwise draft a ready MR), and an issue title keeps a leading
 // "Draft:" in its readback.
 func TestGitLabRetitleRefusesADraftMarkerAndKeepsIssueTitles(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake glab shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	log := filepath.Join(t.TempDir(), "glab.log")
 	writeFakeGlab(t, binDir, `#!/bin/sh
-echo "$*" >> `+log+`
+echo "$*" >> `+filepath.ToSlash(log)+`
 echo '{"title":"Draft: plan notes"}'
 `)
 	t.Setenv("PATH", binDir)

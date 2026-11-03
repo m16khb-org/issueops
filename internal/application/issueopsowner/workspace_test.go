@@ -3,10 +3,19 @@ package issueopsowner
 import (
 	"encoding/json"
 	"errors"
-	model "issueops/internal/contract/issueops"
-	prep "issueops/internal/contract/issueopspreparation"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	model "issueops/internal/contract/issueops"
+	prep "issueops/internal/contract/issueopspreparation"
+	"issueops/internal/testsupport"
+)
+
+var (
+	ownerSource = testsupport.AbsPath("source")
+	ownerParent = filepath.Join(ownerSource+".worktrees", "feature-parent")
+	ownerRoot   = filepath.Join(ownerSource+".worktrees", "feature-one")
 )
 
 type workspaceFiles struct {
@@ -23,7 +32,7 @@ func (f *workspaceFiles) Materialize(record model.IssueOpsRecord) (map[string]st
 }
 
 func ownerRecord() model.IssueOpsRecord {
-	return model.IssueOpsRecord{ID: "io-owner", Repo: "/source", IssueURL: "https://github.com/acme/repo/issues/480", Branch: "feature/one"}
+	return model.IssueOpsRecord{ID: "io-owner", Repo: ownerSource, IssueURL: "https://github.com/acme/repo/issues/480", Branch: "feature/one"}
 }
 
 func rawSnapshot(t *testing.T, record model.IssueOpsRecord) prep.Snapshot {
@@ -42,7 +51,7 @@ func TestWorkspaceResolutionPreservesValidationBeforePathObservation(t *testing.
 		want                       string
 		calls                      int
 	}{
-		{name: "canonical parent", branch: "feature/one", base: "feature/parent", parent: "/source.worktrees/feature-parent", match: true, calls: 1},
+		{name: "canonical parent", branch: "feature/one", base: "feature/parent", parent: ownerParent, match: true, calls: 1},
 		{name: "derived parent", branch: "feature/one", base: "feature/parent", delegated: true, match: true},
 		{name: "wrong parent", branch: "feature/one", base: "main", parent: "/elsewhere", want: "does not match canonical parent", calls: 1},
 		{name: "invalid branch", branch: "..", base: "main", parent: "/elsewhere", want: "execution branch is invalid"},
@@ -63,7 +72,7 @@ func TestWorkspaceResolutionPreservesValidationBeforePathObservation(t *testing.
 					t.Fatalf("expected %q got %v", tc.want, err)
 				}
 			} else {
-				if err != nil || got.Root != "/source.worktrees/feature-one" || got.ParentWorktree != "/source.worktrees/feature-parent" || !got.Confirm {
+				if err != nil || got.Root != ownerRoot || got.ParentWorktree != ownerParent || !got.Confirm {
 					t.Fatalf("workspace: %+v %v", got, err)
 				}
 			}

@@ -3,7 +3,7 @@ package gitlab
 import (
 	"context"
 	"os"
-	"runtime"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -37,9 +37,6 @@ func TestGitLabCloseMergeRequestRejectsMalformedURL(t *testing.T) {
 }
 
 func TestGitLabCloseMergeRequestLeavesAMergedRequestAlone(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake glab shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	writeFakeGlab(t, binDir, `#!/bin/sh
 case "$*" in
@@ -61,15 +58,12 @@ esac
 }
 
 func TestGitLabCloseMergeRequestClosesAndVerifies(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake glab shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
-	marker := binDir + "/closed.marker"
+	marker := filepath.Join(binDir, "closed.marker")
 	writeFakeGlab(t, binDir, `#!/bin/sh
 case "$*" in
-*"--method PUT"*) : > `+marker+`; echo '{"state":"closed"}' ;;
-*) if [ -f `+marker+` ]; then echo '{"state":"closed"}'; else echo '{"state":"opened"}'; fi ;;
+*"--method PUT"*) : > `+filepath.ToSlash(marker)+`; echo '{"state":"closed"}' ;;
+*) if [ -f `+filepath.ToSlash(marker)+` ]; then echo '{"state":"closed"}'; else echo '{"state":"opened"}'; fi ;;
 esac
 `)
 	t.Setenv("PATH", binDir)
@@ -89,9 +83,6 @@ esac
 }
 
 func TestGitLabCloseMergeRequestAlreadyClosedShortCircuits(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake glab shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	writeFakeGlab(t, binDir, `#!/bin/sh
 case "$*" in

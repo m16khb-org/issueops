@@ -1,3 +1,5 @@
+//go:build darwin || linux
+
 package installutil
 
 import (
@@ -42,19 +44,6 @@ func (f commandFixture) apply(t *testing.T) *ManagedCommandPathTransaction {
 		t.Fatal(err)
 	}
 	return transaction
-}
-
-func skipIfRoot(t *testing.T) {
-	t.Helper()
-	if os.Geteuid() == 0 {
-		t.Skip("directory permission failures are not enforced for root")
-	}
-}
-
-func lockDir(t *testing.T, dir string) {
-	t.Helper()
-	mustChmod(t, dir, 0o500)
-	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
 }
 
 func TestPrepareManagedCommandPathRejectsUnusableDependenciesAndInputs(t *testing.T) {
@@ -276,7 +265,7 @@ func TestManagedCommandPathApplyReportsRestoreFailuresAfterConcurrentReplacement
 }
 
 func TestManagedCommandPathApplyKeepsDisplacedCommandWhenCleanupFailsAndRollbackRemovesIt(t *testing.T) {
-	skipIfRoot(t)
+	skipIfDirPermissionsNotEnforced(t)
 	f := newCommandFixture(t)
 	real := f.deps.exchangePaths
 	calls := 0
@@ -453,7 +442,7 @@ func TestManagedCommandPathRollbackReportsRecoveryFailures(t *testing.T) {
 
 func TestManagedCommandPathRollbackSurfacesCleanupFailures(t *testing.T) {
 	t.Run("displaced symlink cannot be removed", func(t *testing.T) {
-		skipIfRoot(t)
+		skipIfDirPermissionsNotEnforced(t)
 		f := newCommandFixture(t)
 		transaction := f.apply(t)
 		real := transaction.deps.exchangePaths
@@ -495,7 +484,7 @@ func TestManagedCommandPathRollbackSurfacesCleanupFailures(t *testing.T) {
 		assertRegularCommand(t, f.command, "old", 0o751)
 	})
 	t.Run("backup cannot be removed", func(t *testing.T) {
-		skipIfRoot(t)
+		skipIfDirPermissionsNotEnforced(t)
 		f := newCommandFixture(t)
 		transaction := f.apply(t)
 		transaction.deps.syncDir = func(string) error { lockDir(t, f.root); return nil }
@@ -505,7 +494,7 @@ func TestManagedCommandPathRollbackSurfacesCleanupFailures(t *testing.T) {
 		}
 	})
 	t.Run("retained displaced command cannot be removed", func(t *testing.T) {
-		skipIfRoot(t)
+		skipIfDirPermissionsNotEnforced(t)
 		f := newCommandFixture(t)
 		transaction := f.apply(t)
 		transaction.displaced = filepath.Join(f.root, "retained")

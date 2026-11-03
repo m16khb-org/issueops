@@ -2,6 +2,7 @@ package guard
 
 import (
 	guardcontract "issueops/internal/contract/guard"
+	"issueops/internal/testsupport"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,6 +15,7 @@ func TestGuardTargetFilesUsesExplicitRelevantFiles(t *testing.T) {
 			"README.md",
 			"../outside.go",
 			filepath.Join(string(filepath.Separator), "tmp", "abs.go"),
+			testsupport.AbsPath("tmp", "abs.go"),
 			"internal/core/foo.go",
 		},
 	})

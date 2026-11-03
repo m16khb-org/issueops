@@ -417,15 +417,31 @@ func TestProjectBootstrapSkillPinsSafetyContract(t *testing.T) {
 	})
 }
 
+// workingPython returns an interpreter that actually runs Python 3. The name
+// python3 alone is not enough: Windows ships a python3.exe Microsoft Store stub
+// that exits 9009 without running anything, while the real interpreter is
+// installed as python. Skips when none of the candidates works.
+func workingPython(t *testing.T) string {
+	t.Helper()
+	for _, name := range []string{"python3", "python"} {
+		path, err := exec.LookPath(name)
+		if err != nil {
+			continue
+		}
+		if out, err := exec.Command(path, "--version").Output(); err == nil && strings.HasPrefix(string(out), "Python 3") {
+			return path
+		}
+	}
+	t.Skip("python3 not available")
+	return ""
+}
+
 // TestAllSkillsFrontmatterValidates closes the gap where only a handful of
 // skills were pinned by phrase: it runs scripts/validate-skill.py over every
 // directory under skills/ so every SKILL.md's frontmatter is validated on each
 // `go test` run (including CI's `go test ./...`).
 func TestAllSkillsFrontmatterValidates(t *testing.T) {
-	python, err := exec.LookPath("python3")
-	if err != nil {
-		t.Skipf("python3 not available: %v", err)
-	}
+	python := workingPython(t)
 	repoRoot := filepath.Join("..", "..", "..")
 	validator := filepath.Join(repoRoot, "scripts", "validate-skill.py")
 	if _, err := os.Stat(validator); err != nil {
@@ -457,10 +473,7 @@ func TestAllSkillsFrontmatterValidates(t *testing.T) {
 }
 
 func TestAllSkillShellFencesValidate(t *testing.T) {
-	python, err := exec.LookPath("python3")
-	if err != nil {
-		t.Skipf("python3 not available: %v", err)
-	}
+	python := workingPython(t)
 	repoRoot := filepath.Join("..", "..", "..")
 	validator := filepath.Join(repoRoot, "scripts", "verify-skill-shell.py")
 	skillsDir := filepath.Join(repoRoot, "skills")

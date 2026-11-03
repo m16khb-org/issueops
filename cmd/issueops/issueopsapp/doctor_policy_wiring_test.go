@@ -11,11 +11,12 @@ import (
 
 	doctorcontract "issueops/internal/contract/doctor"
 	bootstrapcontract "issueops/internal/contract/projectbootstrap"
+	"issueops/internal/testsupport"
 )
 
 func TestDoctorCLIAppliesDomainFindingsWithoutWriting(t *testing.T) {
 	root, home, state, harness := t.TempDir(), t.TempDir(), t.TempDir(), t.TempDir()
-	t.Setenv("HOME", home)
+	testsupport.SetHome(t, home)
 	t.Setenv("ISSUEOPS_ROOT", harness)
 	t.Setenv("ISSUEOPS_STATE_DIR", state)
 	if _, err := newProjectBootstrapService(root).Run(bootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: root, Write: true}); err != nil {
@@ -26,13 +27,14 @@ func TestDoctorCLIAppliesDomainFindingsWithoutWriting(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	for path, content := range map[string]string{filepath.Join(home, ".codex", "hooks.json"): "{}", filepath.Join(root, ".issueops", "STATE.md"): "# Shared JSONL schema", filepath.Join(harness, "bin", "issueops"): "fixture binary", filepath.Join(harness, "internal", "example.go"): "package fixture"} {
+	for path, content := range map[string]string{filepath.Join(home, ".codex", "hooks.json"): "{}", filepath.Join(root, ".issueops", "STATE.md"): "# Shared JSONL schema", filepath.Join(harness, "bin", testsupport.ExecutableName("issueops")): "fixture binary", filepath.Join(harness, "internal", "example.go"): "package fixture"} {
 		if err := os.WriteFile(path, []byte(content), 0600); err != nil {
 			t.Fatal(err)
 		}
 	}
 	old := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
-	for path, stamp := range map[string]time.Time{filepath.Join(harness, "bin", "issueops"): old, filepath.Join(harness, "internal", "example.go"): old.Add(2 * time.Second)} {
+	binary := filepath.Join(harness, "bin", testsupport.ExecutableName("issueops"))
+	for path, stamp := range map[string]time.Time{binary: old, filepath.Join(harness, "internal", "example.go"): old.Add(2 * time.Second)} {
 		if err := os.Chtimes(path, stamp, stamp); err != nil {
 			t.Fatal(err)
 		}

@@ -392,7 +392,7 @@ func assertChildSmokeObservation(t *testing.T, result port.HostProbeResult, path
 		t.Fatalf("observation retained native transcript: %s", data)
 	}
 	info, err := os.Stat(path)
-	if err != nil || info.Mode().Perm() != 0o600 {
+	if err != nil || filePerm(path, info) != 0o600 {
 		t.Fatalf("observation mode=%v err=%v", info, err)
 	}
 }
@@ -549,6 +549,7 @@ func TestChildHostSmokeForwardsManagedCommandAdoptionOnlyAfterConfirmation(t *te
 
 func runChildHostSmokeFixture(t *testing.T, fixture childSmokeFixture) childSmokeRun {
 	t.Helper()
+	skipChildHostSmokeScriptOnWindows(t)
 	root := t.TempDir()
 	root, err := filepath.EvalSymlinks(root)
 	if err != nil {
@@ -868,13 +869,16 @@ chmod 0700 "$output"
 
 const fakePythonScript = `#!/usr/bin/env bash
 set -euo pipefail
-if [[ "${1:-}" != - || "${FAKE_SCENARIO:-}" != activated-digest-blank || "${3:-}" != */activated.json ]]; then
+if [[ "${1:-}" != - || "${FAKE_SCENARIO:-}" != activated-digest-blank || "${3:-}" != *[/\\]activated.json ]]; then
   exec "$REAL_PYTHON" "$@"
 fi
 program="$(mktemp)"
 trap 'rm -f "$program"' EXIT
 sed -n '1,$p' >"$program"
-"$REAL_PYTHON" "$program" "${@:2}"
+# A native interpreter (Windows) cannot open MSYS paths; cygpath only exists there.
+native_program="$program"
+if command -v cygpath >/dev/null 2>&1; then native_program="$(cygpath -m "$program")"; fi
+"$REAL_PYTHON" "$native_program" "${@:2}"
 "$REAL_PYTHON" - "$3" <<'PY'
 import json
 import sys

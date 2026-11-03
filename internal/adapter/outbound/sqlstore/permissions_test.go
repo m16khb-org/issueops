@@ -5,10 +5,14 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"sort"
 	"strings"
 	"syscall"
 	"testing"
+
+	"issueops/internal/adapter/outbound/osfile"
+	"issueops/internal/testsupport"
 )
 
 func TestEnsurePrivateRootCreatesMissingParents(t *testing.T) {
@@ -25,6 +29,7 @@ func TestEnsurePrivateRootPreservesNonDirectoryError(t *testing.T) {
 	if err := os.WriteFile(root, []byte("unchanged"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	testsupport.MakePermissive(t, root, 0o644)
 	err := ensurePrivateRoot(root)
 	var pathErr *os.PathError
 	if !errors.As(err, &pathErr) || pathErr.Op != "mkdir" || pathErr.Path != root || !errors.Is(err, syscall.ENOTDIR) {
@@ -38,6 +43,7 @@ func TestOpenRepairsPermissiveRootAndKnownFiles(t *testing.T) {
 	if err := os.Mkdir(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
+	testsupport.MakePermissive(t, dir, 0o755)
 	d, err := Open(dir)
 	if err != nil {
 		t.Fatal(err)
@@ -51,13 +57,10 @@ func TestOpenRepairsPermissiveRootAndKnownFiles(t *testing.T) {
 	if err := os.WriteFile(unrelated, []byte("leave me"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Chmod(dir, 0o755); err != nil {
-		t.Fatal(err)
-	}
+	testsupport.MakePermissive(t, unrelated, 0o644)
+	testsupport.MakePermissive(t, dir, 0o755)
 	for _, path := range existingKnownSQLiteFiles(t, dir) {
-		if err := os.Chmod(path, 0o644); err != nil {
-			t.Fatalf("chmod %s: %v", path, err)
-		}
+		testsupport.MakePermissive(t, path, 0o644)
 	}
 
 	again, err := Open(dir)
@@ -80,6 +83,7 @@ func TestOpenRejectsSymlinkRootWithoutChangingTarget(t *testing.T) {
 	if err := os.Mkdir(target, 0o755); err != nil {
 		t.Fatal(err)
 	}
+	testsupport.MakePermissive(t, target, 0o755)
 	root := filepath.Join(parent, "root")
 	if err := os.Symlink(target, root); err != nil {
 		t.Fatal(err)
@@ -99,6 +103,7 @@ func TestOpenRejectsSymlinkKnownFileWithoutChangingTarget(t *testing.T) {
 	if err := os.WriteFile(target, []byte("target"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	testsupport.MakePermissive(t, target, 0o644)
 	if err := os.Symlink(target, filepath.Join(dir, dataDBFile)); err != nil {
 		t.Fatal(err)
 	}
@@ -143,11 +148,10 @@ func TestMaintainUsesExactPermissionRepair(t *testing.T) {
 	if err := os.WriteFile(unrelated, []byte("leave me"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	testsupport.MakePermissive(t, unrelated, 0o644)
 	var wantFixed []string
 	for _, path := range existingKnownSQLiteFiles(t, dir) {
-		if err := os.Chmod(path, 0o644); err != nil {
-			t.Fatal(err)
-		}
+		testsupport.MakePermissive(t, path, 0o644)
 		wantFixed = append(wantFixed, filepath.Base(path))
 	}
 	sort.Strings(wantFixed)
@@ -189,7 +193,17 @@ func assertMode(t *testing.T, path string, want os.FileMode) {
 	if err != nil {
 		t.Fatalf("lstat %s: %v", path, err)
 	}
-	if got := info.Mode().Perm(); got != want {
-		t.Fatalf("%s mode=%#o want=%#o", path, got, want)
+	if got := osfile.Perm(path, info); got != osPerm(want) {
+		t.Fatalf("%s mode=%#o want=%#o", path, got, osPerm(want))
 	}
+}
+
+// osPerm renders a Unix mode as osfile.Perm reports it. Windows has no
+// separate group or other bits: a non-private object mirrors its owner bits.
+func osPerm(unix os.FileMode) os.FileMode {
+	if runtime.GOOS != "windows" || unix&0o077 == 0 {
+		return unix
+	}
+	owner := unix & 0o700
+	return owner | owner>>3 | owner>>6
 }

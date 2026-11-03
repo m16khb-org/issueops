@@ -13,6 +13,7 @@ import (
 	shelltoken "issueops/internal/domain/shelltoken"
 	"issueops/internal/port"
 	provenanceport "issueops/internal/port/issueopsprovenance"
+	"issueops/internal/testsupport"
 	"os"
 	"path/filepath"
 	"strings"
@@ -30,7 +31,7 @@ func TestCleanupFinishPreviewEmitsBoundFinishCommand(t *testing.T) {
 	var printed any
 	deps := cleanupStatusDeps(nil)
 	deps.Provenance = cleanupProvenanceObserverStub{evidence: provenanceport.Receipt{
-		ExecutablePath: "/repo/bin/issueops", ExecutableSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		ExecutablePath: testsupport.AbsPath("repo", "bin", "issueops"), ExecutableSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 	}}
 	deps.PrintJSON = func(value any) error {
 		printed = value
@@ -59,7 +60,7 @@ func (s cleanupProvenanceObserverStub) Observe(context.Context) (provenanceport.
 
 func TestBindCleanupNextCommandCoversPreviewAndFinish(t *testing.T) {
 	observer := cleanupProvenanceObserverStub{evidence: provenanceport.Receipt{
-		ExecutablePath: "/repo/bin/issueops", ExecutableSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		ExecutablePath: testsupport.AbsPath("repo", "bin", "issueops"), ExecutableSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 	}}
 	commands := map[string]string{
 		"preview": "issueops cleanup finish --id io-1 --preview --json",

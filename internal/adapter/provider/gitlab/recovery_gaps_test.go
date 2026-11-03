@@ -33,7 +33,6 @@ func gapHierarchy(parentURL string) string {
 // installRecoveryGlab serves lookupJSON for the child lookup and logs every call.
 func installRecoveryGlab(t *testing.T, lookupJSON, attachJSON, parentJSON string) (repo string) {
 	t.Helper()
-	skipOnWindows(t)
 	binDir := t.TempDir()
 	repo = t.TempDir()
 	writeFakeGlab(t, binDir, `#!/bin/sh
@@ -196,7 +195,6 @@ func TestGitLabAttachChildPropagatesReadFailureWithoutMutating(t *testing.T) {
 }
 
 func TestGitLabFindChildCreateCandidatesFiltersByMarkerAndFlagsTruncation(t *testing.T) {
-	skipOnWindows(t)
 	binDir, repo := t.TempDir(), t.TempDir()
 	writeFakeGlab(t, binDir, `#!/bin/sh
 printf '%s\n' "$*" >> glab.calls
@@ -233,7 +231,6 @@ func TestGitLabFindChildCreateCandidatesRejectsInvalidRequestsAndGraphQLErrors(t
 			t.Fatalf("req %+v error = %v", req, err)
 		}
 	}
-	skipOnWindows(t)
 	binDir := t.TempDir()
 	writeFakeGlab(t, binDir, "#!/bin/sh\nprintf '%s' '{\"errors\":[{\"message\":\"rate limited\"}]}'\n")
 	t.Setenv("PATH", binDir)
@@ -246,7 +243,6 @@ func TestGitLabFindChildCreateCandidatesRejectsInvalidRequestsAndGraphQLErrors(t
 }
 
 func TestGitLabFindIssueCreateCandidatesFiltersByMarkerAndOmitsDefaultHostname(t *testing.T) {
-	skipOnWindows(t)
 	binDir, repo := t.TempDir(), t.TempDir()
 	writeFakeGlab(t, binDir, `#!/bin/sh
 printf '%s\n' "$*" >> glab.calls
@@ -269,7 +265,6 @@ printf '%s' '[{"web_url":"https://gitlab.com/acme/repo/-/issues/1","title":"hit"
 }
 
 func TestGitLabFindIssueCreateCandidatesPassesSelfHostedHostAndFlagsFullPage(t *testing.T) {
-	skipOnWindows(t)
 	binDir, repo := t.TempDir(), t.TempDir()
 	writeFakeGlab(t, binDir, `#!/bin/sh
 printf '%s\n' "$*" >> glab.calls
@@ -308,7 +303,6 @@ func TestGitLabFindIssueCreateCandidatesRejectsBadRequestsAndResponses(t *testin
 			t.Fatalf("req %+v error = %v", req, err)
 		}
 	}
-	skipOnWindows(t)
 	for name, script := range map[string]string{
 		"malformed json": "#!/bin/sh\nprintf 'not json'\n",
 		"glab failure":   "#!/bin/sh\necho boom >&2\nexit 1\n",
@@ -328,7 +322,6 @@ func TestGitLabFindIssueCreateCandidatesRejectsBadRequestsAndResponses(t *testin
 }
 
 func TestGitLabFindChildCreateCandidatesFlagsTruncationAtFullPageWithoutNextPage(t *testing.T) {
-	skipOnWindows(t)
 	for _, tt := range []struct {
 		nodes int
 		want  bool

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"issueops/internal/adapter/outbound/osfile"
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
@@ -50,7 +51,7 @@ func TestMaterializeStagedArtifactsSealsDerivedIntent(t *testing.T) {
 	}
 	path := filepath.Join(worktree, filepath.FromSlash(app.OwnerArtifactDir(record)), "intent.md")
 	info, err := os.Lstat(path)
-	if err != nil || !info.Mode().IsRegular() || info.Mode().Perm() != 0o600 {
+	if err != nil || !info.Mode().IsRegular() || osfile.Perm(path, info) != 0o600 {
 		t.Fatalf("intent artifact must be a 0600 regular file: info=%v err=%v", info, err)
 	}
 	content, err := os.ReadFile(path)

@@ -4,6 +4,7 @@ import (
 	issueops "issueops/internal/contract/issueops"
 
 	"context"
+	"encoding/json"
 	"errors"
 	"reflect"
 	"strings"
@@ -12,6 +13,7 @@ import (
 
 	cmuxcontract "issueops/internal/contract/cmux"
 	cmuxport "issueops/internal/port/cmux"
+	"issueops/internal/testsupport"
 )
 
 const (
@@ -19,9 +21,26 @@ const (
 	testWorkspace = "22222222-2222-4222-8222-222222222222"
 	testPane      = "33333333-3333-4333-8333-333333333333"
 	testSurface   = "44444444-4444-4444-8444-444444444444"
-	cmuxPath      = "/Applications/cmux.app/Contents/Resources/bin/cmux"
-	socketPath    = "/private/tmp/cmux-test.sock"
 )
+
+// The cmux paths are synthetic fixtures that are never touched on disk, so
+// they are built per OS to stay absolute and clean for filepath.IsAbs.
+var (
+	cmuxPath        = testsupport.AbsPath("Applications", "cmux.app", "Contents", "Resources", "bin", "cmux")
+	socketPath      = testsupport.AbsPath("private", "tmp", "cmux-test.sock")
+	otherSocketPath = testsupport.AbsPath("private", "tmp", "other.sock")
+	worktreePath    = testsupport.AbsPath("repo", "worktree")
+)
+
+// jsonString renders value as a JSON string literal so fixtures embedding OS
+// paths stay valid JSON when the path contains backslashes.
+func jsonString(value string) string {
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		panic(err)
+	}
+	return string(encoded)
+}
 
 func TestPreflightUsesBoundedReadOnlyCmuxCommandsAndExactObservedIdentity(t *testing.T) {
 	runner := &queueRunner{t: t, steps: []runnerStep{
@@ -112,7 +131,7 @@ func TestPreflightRejectsOtherBuildAndTrailingVersionJunk(t *testing.T) {
 func TestCreateWorkspaceResolvesOneExactWorkspaceSurfaceWithoutFocusDefaults(t *testing.T) {
 	name := workspaceName("attempt-1")
 	runner := &queueRunner{t: t, steps: []runnerStep{
-		{args: []string{"new-workspace", "--name", name, "--cwd", "/repo/worktree", "--window", testWindow, "--focus", "false"}, stdout: "OK workspace:7\n"},
+		{args: []string{"new-workspace", "--name", name, "--cwd", worktreePath, "--window", testWindow, "--focus", "false"}, stdout: "OK workspace:7\n"},
 		{args: []string{"--json", "--id-format", "both", "list-workspaces", "--window", testWindow}, stdout: `{"workspaces":[{"id":"` + testWorkspace + `","ref":"workspace:7","title":"` + name + `"}]}`},
 		{args: []string{"--json", "--id-format", "uuids", "list-panes", "--window", testWindow, "--workspace", testWorkspace}, stdout: `{"panes":[{"id":"` + testPane + `","surface_count":1}]}`},
 		{args: []string{"--json", "--id-format", "uuids", "list-pane-surfaces", "--window", testWindow, "--workspace", testWorkspace, "--pane", testPane}, stdout: `{"surfaces":[{"id":"` + testSurface + `"}]}`},
@@ -120,12 +139,12 @@ func TestCreateWorkspaceResolvesOneExactWorkspaceSurfaceWithoutFocusDefaults(t *
 	}}
 	client := Client{Runner: runner, ObserveEndpoint: stableEndpointObserver, UID: 501}
 	created, err := client.CreateWorkspace(context.Background(), cmuxcontract.CreateRequest{
-		Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: "/repo/worktree",
+		Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: worktreePath,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if created.WindowID != testWindow || created.WorkspaceID != testWorkspace || created.PaneID != testPane || created.SurfaceID != testSurface || created.CWD != "/repo/worktree" {
+	if created.WindowID != testWindow || created.WorkspaceID != testWorkspace || created.PaneID != testPane || created.SurfaceID != testSurface || created.CWD != worktreePath {
 		t.Fatalf("created=%+v", created)
 	}
 }
@@ -133,12 +152,12 @@ func TestCreateWorkspaceResolvesOneExactWorkspaceSurfaceWithoutFocusDefaults(t *
 func TestCreateWorkspaceRejectsReturnedWorkspaceRefMismatchAsAmbiguous(t *testing.T) {
 	name := workspaceName("attempt-1")
 	runner := &queueRunner{t: t, steps: []runnerStep{
-		{args: []string{"new-workspace", "--name", name, "--cwd", "/repo/worktree", "--window", testWindow, "--focus", "false"}, stdout: "OK workspace:9\n"},
+		{args: []string{"new-workspace", "--name", name, "--cwd", worktreePath, "--window", testWindow, "--focus", "false"}, stdout: "OK workspace:9\n"},
 		{args: []string{"--json", "--id-format", "both", "list-workspaces", "--window", testWindow}, stdout: `{"workspaces":[{"id":"` + testWorkspace + `","ref":"workspace:7","title":"` + name + `"}]}`},
 	}}
 	client := Client{Runner: runner, ObserveEndpoint: stableEndpointObserver, UID: 501}
 	_, err := client.CreateWorkspace(context.Background(), cmuxcontract.CreateRequest{
-		Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: "/repo/worktree",
+		Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: worktreePath,
 	})
 	var mutation *cmuxport.MutationError
 	if !errors.As(err, &mutation) || !mutation.Ambiguous || mutation.Phase != "target_resolve" || len(runner.seen) != 2 {
@@ -177,9 +196,9 @@ func TestSendTargetsExactSurfaceOnceAndTreatsResponseLossAsAmbiguous(t *testing.
 
 func TestCreateWorkspaceResponseLossAndEndpointRestartNeverRetry(t *testing.T) {
 	t.Run("create response loss", func(t *testing.T) {
-		runner := &queueRunner{t: t, steps: []runnerStep{{args: []string{"new-workspace", "--name", workspaceName("attempt-1"), "--cwd", "/repo/worktree", "--window", testWindow, "--focus", "false"}, invoked: true, err: errors.New("EOF")}}}
+		runner := &queueRunner{t: t, steps: []runnerStep{{args: []string{"new-workspace", "--name", workspaceName("attempt-1"), "--cwd", worktreePath, "--window", testWindow, "--focus", "false"}, invoked: true, err: errors.New("EOF")}}}
 		client := Client{Runner: runner, ObserveEndpoint: stableEndpointObserver, UID: 501}
-		_, err := client.CreateWorkspace(context.Background(), cmuxcontract.CreateRequest{Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: "/repo/worktree"})
+		_, err := client.CreateWorkspace(context.Background(), cmuxcontract.CreateRequest{Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: worktreePath})
 		var mutation *cmuxport.MutationError
 		if !errors.As(err, &mutation) || !mutation.Ambiguous || len(runner.seen) != 1 {
 			t.Fatalf("error=%v calls=%d", err, len(runner.seen))
@@ -189,7 +208,7 @@ func TestCreateWorkspaceResponseLossAndEndpointRestartNeverRetry(t *testing.T) {
 	t.Run("endpoint restart after create", func(t *testing.T) {
 		name := workspaceName("attempt-1")
 		runner := &queueRunner{t: t, steps: []runnerStep{
-			{args: []string{"new-workspace", "--name", name, "--cwd", "/repo/worktree", "--window", testWindow, "--focus", "false"}, stdout: "OK workspace:7\n"},
+			{args: []string{"new-workspace", "--name", name, "--cwd", worktreePath, "--window", testWindow, "--focus", "false"}, stdout: "OK workspace:7\n"},
 			{args: []string{"--json", "--id-format", "both", "list-workspaces", "--window", testWindow}, stdout: `{"workspaces":[{"id":"` + testWorkspace + `","ref":"workspace:7","title":"` + name + `"}]}`},
 			{args: []string{"--json", "--id-format", "uuids", "list-panes", "--window", testWindow, "--workspace", testWorkspace}, stdout: `{"panes":[{"id":"` + testPane + `","surface_count":1}]}`},
 			{args: []string{"--json", "--id-format", "uuids", "list-pane-surfaces", "--window", testWindow, "--workspace", testWorkspace, "--pane", testPane}, stdout: `{"surfaces":[{"id":"` + testSurface + `"}]}`},
@@ -205,7 +224,7 @@ func TestCreateWorkspaceResponseLossAndEndpointRestartNeverRetry(t *testing.T) {
 			return endpoint, nil
 		}
 		client := Client{Runner: runner, ObserveEndpoint: observer, UID: 501}
-		_, err := client.CreateWorkspace(context.Background(), cmuxcontract.CreateRequest{Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: "/repo/worktree"})
+		_, err := client.CreateWorkspace(context.Background(), cmuxcontract.CreateRequest{Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: worktreePath})
 		var mutation *cmuxport.MutationError
 		if !errors.As(err, &mutation) || !mutation.Ambiguous || !strings.Contains(err.Error(), "endpoint incarnation changed") {
 			t.Fatalf("error=%v", err)
@@ -251,11 +270,11 @@ func preflightFixture() cmuxcontract.PreflightResult {
 }
 
 func createdFixture() cmuxcontract.CreatedWorkspace {
-	return cmuxcontract.CreatedWorkspace{Preflight: preflightFixture(), WindowID: testWindow, WorkspaceID: testWorkspace, PaneID: testPane, SurfaceID: testSurface, CWD: "/repo/worktree"}
+	return cmuxcontract.CreatedWorkspace{Preflight: preflightFixture(), WindowID: testWindow, WorkspaceID: testWorkspace, PaneID: testPane, SurfaceID: testSurface, CWD: worktreePath}
 }
 
 func capabilitiesFixture() string {
-	return `{"protocol":"cmux-socket","version":2,"socket_path":"` + socketPath + `","access_mode":"passwordless","methods":["system.ping","system.capabilities","system.identify","workspace.create","workspace.list","pane.list","pane.surfaces","surface.send_text"]}`
+	return `{"protocol":"cmux-socket","version":2,"socket_path":` + jsonString(socketPath) + `,"access_mode":"passwordless","methods":["system.ping","system.capabilities","system.identify","workspace.create","workspace.list","pane.list","pane.surfaces","surface.send_text"]}`
 }
 
 func identifyFixture(windowID, workspaceID, surfaceID string) string {
@@ -263,7 +282,7 @@ func identifyFixture(windowID, workspaceID, surfaceID string) string {
 	if workspaceID != "" {
 		caller = `{"workspace_id":"` + workspaceID + `","surface_id":"` + surfaceID + `"}`
 	}
-	return `{"socket_path":"` + socketPath + `","focused":{"window_id":"` + windowID + `"},"caller":` + caller + `}`
+	return `{"socket_path":` + jsonString(socketPath) + `,"focused":{"window_id":"` + windowID + `"},"caller":` + caller + `}`
 }
 
 func sendArgs(command string) []string {

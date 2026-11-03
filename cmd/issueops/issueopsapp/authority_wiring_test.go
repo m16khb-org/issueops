@@ -169,7 +169,7 @@ func TestMCPAuthorizeRejectsSessionOutsideObservedAncestry(t *testing.T) {
 
 func liveFixtureReceipt(t *testing.T) model.NativeProcessReceipt {
 	t.Helper()
-	receipt, err := issueopscore.ObserveNativeProcessReceipt(1)
+	receipt, err := issueopscore.ObserveNativeProcessReceipt(os.Getpid())
 	if err != nil {
 		t.Fatalf("observe live fixture receipt: %v", err)
 	}

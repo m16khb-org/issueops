@@ -1,14 +1,16 @@
 package gates
 
 import (
-	model "issueops/internal/contract/gates"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	model "issueops/internal/contract/gates"
 )
 
 func TestInitAdmissionAndSpecRenderingPreserveOrder(t *testing.T) {
 	req, result, err := PrepareInit(model.InitRequest{Scope: " 한글 scope ", Gates: []string{"G1: proof | CHECK: printf ok | EXPECT: ok"}})
-	if err != nil || req.Scope != "한글 scope" || result.File != ".issueops/gates/한글-scope.md" {
+	if err != nil || req.Scope != "한글 scope" || result.File != ".issueops/gates/한글-scope.md" || req.File != filepath.Join(".issueops", "gates", "한글-scope.md") {
 		t.Fatalf("req=%+v result=%+v err=%v", req, result, err)
 	}
 	body, err := RenderInitialLedger(req)

@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"issueops/internal/testsupport"
 )
 
 func TestVerifyIssueOpsChildIssueLiveRoutesGithubAndUnknownHosts(t *testing.T) {
@@ -146,7 +148,5 @@ exit 1
 
 func writeFakeCommand(t *testing.T, path string, script string) {
 	t.Helper()
-	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	testsupport.WriteFakeCommand(t, filepath.Dir(path), filepath.Base(path), script)
 }

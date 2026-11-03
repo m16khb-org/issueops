@@ -429,16 +429,17 @@ def check_syntax(block: ShellBlock) -> Violation | None:
             "shell-unavailable",
             f"{shell_name} is required to syntax-check this fence",
         )
+    # Bytes, not text mode: text mode writes "\r\n" to the pipe on Windows,
+    # and bash then reads every line ending as part of the script.
     result = subprocess.run(
         [executable, "-n"],
-        input=DOCUMENTED_PLACEHOLDER.sub("PLACEHOLDER", block.content),
-        text=True,
+        input=DOCUMENTED_PLACEHOLDER.sub("PLACEHOLDER", block.content).encode("utf-8"),
         capture_output=True,
         check=False,
     )
     if result.returncode == 0:
         return None
-    detail = result.stderr.strip().splitlines()
+    detail = result.stderr.decode("utf-8", errors="replace").strip().splitlines()
     message = detail[-1] if detail else f"{shell_name} syntax check failed"
     return Violation(block.path, block.line, "syntax", message)
 

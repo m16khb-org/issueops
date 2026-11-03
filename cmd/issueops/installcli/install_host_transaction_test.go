@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/port"
 )
 
@@ -88,8 +89,8 @@ func TestInstallHostTransactionRestoresManagedFileSymlinkReferent(t *testing.T) 
 	}
 	body, err := os.ReadFile(target)
 	info, statErr := os.Stat(target)
-	if err != nil || statErr != nil || string(body) != "before\n" || info.Mode().Perm() != 0o600 {
-		t.Fatalf("managed file referent was not restored: body=%q mode=%v readErr=%v statErr=%v", body, info.Mode(), err, statErr)
+	if err != nil || statErr != nil || string(body) != "before\n" || osfile.Perm(target, info) != 0o600 {
+		t.Fatalf("managed file referent was not restored: body=%q mode=%v readErr=%v statErr=%v", body, osfile.Perm(target, info), err, statErr)
 	}
 }
 

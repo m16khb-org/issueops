@@ -7,6 +7,7 @@ import (
 
 	model "issueops/internal/contract/issueops"
 	"issueops/internal/port"
+	"issueops/internal/testsupport"
 )
 
 func TestClaimRejectsAmbiguousCurrentAndFileTokenSelectors(t *testing.T) {
@@ -41,7 +42,7 @@ func TestClaimWithoutActorFlagsUsesNativeReceipt(t *testing.T) {
 			}
 			return ""
 		},
-		Getwd: func() (string, error) { return "/repo.worktrees/direct", nil },
+		Getwd: func() (string, error) { return testsupport.AbsPath("repo.worktrees", "direct"), nil },
 		PID:   func() int { return 101 },
 		ObserveAncestry: func(int) ([]model.NativeProcessReceipt, error) {
 			return []model.NativeProcessReceipt{
@@ -63,7 +64,7 @@ func TestClaimWithoutActorFlagsUsesNativeReceipt(t *testing.T) {
 	}
 	if got.Actor.Host != "codex" || got.Actor.SessionID != "codex-session" ||
 		got.Actor.SessionProcess == nil || got.Actor.SessionProcess.PID != 42 ||
-		got.CWD != "/repo.worktrees/direct" {
+		got.CWD != testsupport.AbsPath("repo.worktrees", "direct") {
 		t.Fatalf("claim request=%+v", got)
 	}
 }
@@ -82,7 +83,7 @@ func TestClaimWithoutActorFlagsUsesOmoNativeReceipt(t *testing.T) {
 			}
 			return ""
 		},
-		Getwd: func() (string, error) { return "/repo.worktrees/direct", nil },
+		Getwd: func() (string, error) { return testsupport.AbsPath("repo.worktrees", "direct"), nil },
 		PID:   func() int { return 101 },
 		ObserveAncestry: func(int) ([]model.NativeProcessReceipt, error) {
 			return []model.NativeProcessReceipt{
@@ -104,7 +105,7 @@ func TestClaimWithoutActorFlagsUsesOmoNativeReceipt(t *testing.T) {
 	}
 	if got.Actor.Host != "omo" || got.Actor.SessionID != "omo-session" ||
 		got.Actor.SessionProcess == nil || got.Actor.SessionProcess.PID != 42 ||
-		got.CWD != "/repo.worktrees/direct" {
+		got.CWD != testsupport.AbsPath("repo.worktrees", "direct") {
 		t.Fatalf("claim request=%+v", got)
 	}
 }

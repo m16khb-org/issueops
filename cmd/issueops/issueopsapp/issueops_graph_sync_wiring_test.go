@@ -12,6 +12,7 @@ import (
 	core "issueops/internal/adapter/issueops"
 	"issueops/internal/adapter/outbound/sqlstore"
 	model "issueops/internal/contract/issueops"
+	"issueops/internal/testsupport"
 )
 
 func TestGraphSyncCompositionPreservesPreviewAndProviderContracts(t *testing.T) {
@@ -24,9 +25,7 @@ func TestGraphSyncCompositionPreservesPreviewAndProviderContracts(t *testing.T) 
 				code = "#!/bin/sh\nprintf 'unavailable' >&2\nexit 2\n"
 			}
 			for _, tool := range []string{"gh", "glab"} {
-				if err := os.WriteFile(filepath.Join(bin, tool), []byte(code), 0700); err != nil {
-					t.Fatal(err)
-				}
+				testsupport.WriteFakeCommand(t, bin, tool, code)
 			}
 			t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 			t.Setenv("GRAPH_BODY_FILE", bodyFile)

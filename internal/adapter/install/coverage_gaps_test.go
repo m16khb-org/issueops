@@ -3,14 +3,20 @@ package install
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"runtime/debug"
 	"strconv"
 	"strings"
 	"testing"
+
+	"issueops/internal/testsupport"
 )
 
-func skipIfRoot(t *testing.T) {
+func skipIfDirPermissionsNotEnforced(t *testing.T) {
 	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("a Windows directory ACL set through mode bits does not stop its owner from listing or removing entries")
+	}
 	if os.Geteuid() == 0 {
 		t.Skip("permission checks do not apply to root")
 	}
@@ -60,8 +66,10 @@ func TestResolveStableNativeRootRejectsUnusableRoots(t *testing.T) {
 
 	fileRoot := filepath.Join(base, "file")
 	mustWrite(t, fileRoot, "x")
-	if _, err := ResolveStableNativeRoot(fileRoot); err == nil || !strings.Contains(err.Error(), "resolve native install root") {
-		t.Fatalf("file root error = %v", err)
+	if runtime.GOOS != "windows" { // Lstat under a regular file reports "not a directory" on Unix but "path not found" (not exist) on Windows
+		if _, err := ResolveStableNativeRoot(fileRoot); err == nil || !strings.Contains(err.Error(), "resolve native install root") {
+			t.Fatalf("file root error = %v", err)
+		}
 	}
 
 	linkRoot := filepath.Join(base, "linkroot")
@@ -207,14 +215,14 @@ func TestDefaultNativeInstallRequestDefaults(t *testing.T) {
 		mustMkdir(t, root)
 		mustWrite(t, filepath.Join(root, ".git"), "garbage\n")
 		req := DefaultNativeInstallRequest(root, t.TempDir(), "", "")
-		if req.Root != root || req.BinPath != filepath.Join(root, "bin", "issueops") {
+		if req.Root != root || req.BinPath != filepath.Join(root, "bin", testsupport.ExecutableName("issueops")) {
 			t.Fatalf("request = %+v", req)
 		}
 	})
 
 	t.Run("empty home uses the user home directory and explicit codex home wins", func(t *testing.T) {
 		home := t.TempDir()
-		t.Setenv("HOME", home)
+		testsupport.SetHome(t, home)
 		root := filepath.Join(t.TempDir(), "src")
 		mustMkdir(t, root)
 		req := DefaultNativeInstallRequest(root, "", "", "")
@@ -318,7 +326,7 @@ func TestRemoveRetiredStateIgnoresUnusableDaemonPidRecords(t *testing.T) {
 }
 
 func TestRemoveRetiredStateReportsFilesystemFailuresAsMessages(t *testing.T) {
-	skipIfRoot(t)
+	skipIfDirPermissionsNotEnforced(t)
 	t.Run("state dir not searchable", func(t *testing.T) {
 		state := t.TempDir()
 		writeRetiredFixture(t, filepath.Join(state, "hook-metrics.jsonl"), "x")

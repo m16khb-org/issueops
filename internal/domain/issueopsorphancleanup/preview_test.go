@@ -1,6 +1,7 @@
 package issueopsorphancleanup
 
 import (
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -80,7 +81,7 @@ func TestInspectInventoryReadiesARecordlessMergedWorktree(t *testing.T) {
 	if !result.Ready || len(result.Missing) != 0 {
 		t.Fatalf("clean orphan should be ready, missing=%v", result.Missing)
 	}
-	if result.RecoveryHead != orphanHead || result.RecoveryPath != "/wt/orphan-recovery-"+orphanHead[:12] {
+	if result.RecoveryHead != orphanHead || result.RecoveryPath != filepath.FromSlash("/wt/orphan-recovery-"+orphanHead[:12]) {
 		t.Fatalf("recovery = %s %s", result.RecoveryHead, result.RecoveryPath)
 	}
 }

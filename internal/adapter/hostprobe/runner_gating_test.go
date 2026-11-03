@@ -173,15 +173,11 @@ func TestResolveOmoAuthRejectsRelativeLocationsAndLooseFiles(t *testing.T) {
 	if err != nil || !snapshot.present || string(snapshot.data) != `{"k":1}` {
 		t.Fatalf("private auth: %+v %v", snapshot, err)
 	}
-	if err := os.Chmod(auth, 0o644); err != nil {
-		t.Fatal(err)
-	}
+	makePermissive(t, auth, 0o644)
 	if _, err := resolveOmoAuth(env(map[string]string{"OMO_CODING_AGENT_DIR": dir})); err == nil || err.Error() != "omo_auth_invalid" {
 		t.Fatalf("world-readable auth err = %v", err)
 	}
-	if err := os.Chmod(auth, 0o600); err != nil {
-		t.Fatal(err)
-	}
+	makePrivate(t, auth, 0o600)
 	if err := os.WriteFile(auth, []byte(strings.Repeat("x", MaxOutputBytes+1)), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -221,10 +217,11 @@ func TestResolveCodexSourceHome(t *testing.T) {
 	deps := func(values map[string]string) Dependencies {
 		return Dependencies{Getenv: func(name string) string { return values[name] }}
 	}
-	if got, err := resolveCodexSourceHome(deps(map[string]string{"CODEX_HOME": " /x/codex ", "HOME": "/h"})); err != nil || got != "/x/codex" {
+	codexHome, home := fixturePath("x", "codex"), fixturePath("h")
+	if got, err := resolveCodexSourceHome(deps(map[string]string{"CODEX_HOME": " " + codexHome + " ", "HOME": home})); err != nil || got != codexHome {
 		t.Fatalf("CODEX_HOME = %q, %v", got, err)
 	}
-	if got, err := resolveCodexSourceHome(deps(map[string]string{"HOME": "/h"})); err != nil || got != "/h/.codex" {
+	if got, err := resolveCodexSourceHome(deps(map[string]string{"HOME": home})); err != nil || got != filepath.Join(home, ".codex") {
 		t.Fatalf("HOME fallback = %q, %v", got, err)
 	}
 	for name, values := range map[string]map[string]string{
@@ -264,7 +261,8 @@ func TestPrepareCodexLiveHomeWritesQuotedSessionStartHookAndLinksAuth(t *testing
 		}
 		return ""
 	}})
-	home, err := prepareCodexLiveHome(root, "/opt/it's/issueops", "/tmp/obs.json", deps)
+	binary, observation := fixturePath("opt", "it's", "issueops"), fixturePath("tmp", "obs.json")
+	home, err := prepareCodexLiveHome(root, binary, observation, deps)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -288,13 +286,14 @@ func TestPrepareCodexLiveHomeWritesQuotedSessionStartHookAndLinksAuth(t *testing
 		t.Fatalf("doc = %s", data)
 	}
 	hook := hooks[0].Hooks[0]
-	want := "/usr/bin/env ISSUEOPS_CHILD_SMOKE_HOOKS=1 ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE='/tmp/obs.json' '/opt/it'\"'\"'s/issueops' hook session-start --host codex"
+	quote := func(value string) string { return "'" + strings.ReplaceAll(value, "'", `'"'"'`) + "'" }
+	want := "/usr/bin/env ISSUEOPS_CHILD_SMOKE_HOOKS=1 ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE=" + quote(observation) + " " + quote(binary) + " hook session-start --host codex"
 	if hook.Type != "command" || hook.Timeout != 5 || hook.Command != want {
 		t.Fatalf("hook = %+v\nwant command %s", hook, want)
 	}
 	info, _ := os.Stat(filepath.Join(home, "hooks.json"))
-	if info.Mode().Perm() != 0o600 {
-		t.Fatalf("hooks.json mode = %v", info.Mode().Perm())
+	if filePerm(filepath.Join(home, "hooks.json"), info) != 0o600 {
+		t.Fatalf("hooks.json mode = %v", filePerm(filepath.Join(home, "hooks.json"), info))
 	}
 }
 
@@ -311,9 +310,7 @@ func TestLinkCodexSmokeAuthPolicy(t *testing.T) {
 	if err := os.WriteFile(auth, []byte("{}"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Chmod(auth, 0o644); err != nil {
-		t.Fatal(err)
-	}
+	makePermissive(t, auth, 0o644)
 	if err := linkCodexSmokeAuth(runtimeHome, source); err == nil || err.Error() != "codex_auth_invalid" {
 		t.Fatalf("loose auth err = %v", err)
 	}
@@ -524,15 +521,11 @@ func TestObserveRecordedHookEventsFileRules(t *testing.T) {
 	if err := os.WriteFile(marker, []byte(`{"event":"SessionStart","model":"m"}`+"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Chmod(marker, 0o644); err != nil {
-		t.Fatal(err)
-	}
+	makePermissive(t, marker, 0o644)
 	if _, err := observeRecordedHookEvents(obs); err == nil || err.Error() != "hook_observation_invalid" {
 		t.Fatalf("loose-mode marker err = %v", err)
 	}
-	if err := os.Chmod(marker, 0o600); err != nil {
-		t.Fatal(err)
-	}
+	makePrivate(t, marker, 0o600)
 	got, err = observeRecordedHookEvents(obs)
 	if err != nil || !got.SessionStartObserved || got.Model != "m" {
 		t.Fatalf("valid marker: %+v %v", got, err)
@@ -618,12 +611,12 @@ func TestWritePrivateFileCreatesPrivateParents(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, p := range []string{filepath.Dir(filepath.Dir(path)), filepath.Dir(path)} {
-		if info, _ := os.Stat(p); info.Mode().Perm() != 0o700 {
-			t.Errorf("%s mode = %v", p, info.Mode().Perm())
+		if info, _ := os.Stat(p); filePerm(p, info) != 0o700 {
+			t.Errorf("%s mode = %v", p, filePerm(p, info))
 		}
 	}
-	if info, _ := os.Stat(path); info.Mode().Perm() != 0o600 {
-		t.Errorf("file mode = %v", info.Mode().Perm())
+	if info, _ := os.Stat(path); filePerm(path, info) != 0o600 {
+		t.Errorf("file mode = %v", filePerm(path, info))
 	}
 	blocker := filepath.Join(t.TempDir(), "file")
 	if err := os.WriteFile(blocker, nil, 0o600); err != nil {

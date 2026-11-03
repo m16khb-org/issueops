@@ -10,6 +10,24 @@ import (
 	"testing"
 )
 
+// workingPythonName returns the name of a command that runs Python 3. python3
+// alone is not enough: Windows ships a python3.exe Microsoft Store stub that
+// exits 9009 without running anything, while the real interpreter is python.
+func workingPythonName(t *testing.T) string {
+	t.Helper()
+	for _, name := range []string{"python3", "python"} {
+		path, err := exec.LookPath(name)
+		if err != nil {
+			continue
+		}
+		if out, err := exec.Command(path, "--version").Output(); err == nil && strings.HasPrefix(string(out), "Python 3") {
+			return name
+		}
+	}
+	t.Skip("python3 not available")
+	return ""
+}
+
 func writeTestGateFile(t *testing.T, dir, name, content string) string {
 	t.Helper()
 	path := filepath.Join(dir, name)
@@ -241,11 +259,9 @@ func TestCheckAllowsQuotedShellCharacters(t *testing.T) {
 }
 
 func TestCheckRequiresExitZeroEvenWhenExpectMatches(t *testing.T) {
-	if _, err := exec.LookPath("python3"); err != nil {
-		t.Skip("python3 not available")
-	}
+	python := workingPythonName(t)
 	dir := t.TempDir()
-	path := writeTestGateFile(t, dir, "GATES.md", "- [ ] G1: output matches but the command failed\n  CHECK: python3 -c \"print('ok'); raise SystemExit(1)\"\n  EXPECT: ok\n  EVIDENCE: pending\n")
+	path := writeTestGateFile(t, dir, "GATES.md", "- [ ] G1: output matches but the command failed\n  CHECK: "+python+" -c \"print('ok'); raise SystemExit(1)\"\n  EXPECT: ok\n  EVIDENCE: pending\n")
 	result, err := Check(gatescontract.CheckRequest{WorkspaceRoot: dir, CWD: dir, Files: []string{path}, WriteAllowed: true, EnvAllowlist: []string{"PATH", "HOME"}})
 	if err != nil {
 		t.Fatalf("Check returned error: %v", err)

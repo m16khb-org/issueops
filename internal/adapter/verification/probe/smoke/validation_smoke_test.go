@@ -4,7 +4,6 @@ import (
 	selfverify "issueops/internal/contract/selfverify"
 
 	"encoding/json"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -13,6 +12,7 @@ import (
 	docs "issueops/internal/contract/docs"
 	inspect "issueops/internal/contract/inspect"
 	inspectcontract "issueops/internal/contract/inspect"
+	"issueops/internal/testsupport"
 )
 
 func TestValidateInspectWithDepsCoversCommandAndContractBranches(t *testing.T) {
@@ -138,7 +138,6 @@ func TestValidateSmokeWrappersUseExecutableSurface(t *testing.T) {
 
 func writeValidationSmokeFakeBinary(t *testing.T, dir, root string) string {
 	t.Helper()
-	path := filepath.Join(dir, "fake-harness")
 	inspect, err := json.Marshal(inspect.InspectInfo{
 		OK:     true,
 		Skills: []inspectcontract.SkillInfo{{Name: "self-verify", HasSkillMD: true}},
@@ -166,10 +165,7 @@ func writeValidationSmokeFakeBinary(t *testing.T, dir, root string) string {
 		"  \"docs --json\") printf '%s\\n' '" + string(docs) + "' ;;\n" +
 		"  *) echo \"unexpected fake harness args: $*\" >&2; exit 2 ;;\n" +
 		"esac\n"
-	if err := os.WriteFile(path, []byte(body), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	return path
+	return testsupport.WriteFakeCommand(t, dir, "fake-harness", body)
 }
 
 func TestValidateDocsIndexWithDepsCoversCommandAndContractBranches(t *testing.T) {
@@ -241,7 +237,7 @@ func TestValidateInspectMasksRootAndHomePathsBeforeRetiredNameCheck(t *testing.T
 		})
 	}
 	t.Run("root", func(t *testing.T) {
-		t.Setenv("HOME", t.TempDir())
+		testsupport.SetHome(t, t.TempDir())
 		root := filepath.Join(t.TempDir(), retired+"-root")
 		if step := run(root, inspect.InspectInfo{IssueOpsRoot: root}); !step.OK {
 			t.Fatalf("root path should be masked, got %+v", step)
@@ -252,7 +248,7 @@ func TestValidateInspectMasksRootAndHomePathsBeforeRetiredNameCheck(t *testing.T
 	})
 	t.Run("home", func(t *testing.T) {
 		home := filepath.Join(t.TempDir(), retired+"-home")
-		t.Setenv("HOME", home)
+		testsupport.SetHome(t, home)
 		root := t.TempDir()
 		if step := run(root, inspect.InspectInfo{TargetRepo: filepath.Join(home, "repo")}); !step.OK {
 			t.Fatalf("home path should be masked, got %+v", step)

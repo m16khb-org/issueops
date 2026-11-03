@@ -3,7 +3,6 @@ package gitlab
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -14,9 +13,6 @@ import (
 // 현재 원격 상태를 관측한다. cleanup close-children이 부모 머지 증거 없이
 // 정리해도 되는지 판정하는 근거다(#129).
 func TestGitLabCloseChildPreviewObservesChildState(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake glab shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	repo := t.TempDir()
 	logPath := filepath.Join(repo, "glab.calls")

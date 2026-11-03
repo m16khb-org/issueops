@@ -10,8 +10,19 @@ import (
 	"strings"
 	"testing"
 
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/testsupport"
 )
+
+// hookJSONString renders value as a JSON string literal, escaping Windows path
+// separators that raw concatenation would leave as invalid escapes.
+func hookJSONString(value string) string {
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		panic(err)
+	}
+	return string(encoded)
+}
 
 func hookTempRepoWithDoc(t *testing.T) string {
 	t.Helper()
@@ -67,7 +78,7 @@ func hookAdditionalContext(obj map[string]any) string {
 func TestRunHookSessionStartInjectsCatalogClaude(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := hookTempRepoWithDoc(t)
-	obj := runHookCapture(t, `{"cwd":"`+repo+`","source":"startup"}`, func() error { return runHook([]string{"session-start", "--host", "claude"}) })
+	obj := runHookCapture(t, `{"cwd":`+hookJSONString(repo)+`,"source":"startup"}`, func() error { return runHook([]string{"session-start", "--host", "claude"}) })
 	if hso, _ := obj["hookSpecificOutput"].(map[string]any); hso["hookEventName"] != "SessionStart" {
 		t.Fatalf("SessionStart must name its event: %+v", obj)
 	}
@@ -88,7 +99,7 @@ func TestRunHookSessionStartRecordsBoundedLiveProbeEvidence(t *testing.T) {
 	t.Setenv("ISSUEOPS_CHILD_SMOKE_HOOKS", "1")
 	t.Setenv("ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE", observationPath)
 	repo := hookTempRepoWithDoc(t)
-	runHookCapture(t, `{"cwd":"`+repo+`","hook_event_name":"SessionStart","model":"gpt-6-sol","permission_mode":"never","session_id":"session"}`, func() error {
+	runHookCapture(t, `{"cwd":`+hookJSONString(repo)+`,"hook_event_name":"SessionStart","model":"gpt-6-sol","permission_mode":"never","session_id":"session"}`, func() error {
 		return runHook([]string{"session-start", "--host", "codex"})
 	})
 
@@ -104,7 +115,7 @@ func TestRunHookSessionStartRecordsBoundedLiveProbeEvidence(t *testing.T) {
 		t.Fatalf("probe evidence = %#v", got)
 	}
 	info, err := os.Stat(observationPath + ".hooks")
-	if err != nil || info.Mode().Perm() != 0o600 {
+	if err != nil || osfile.Perm(observationPath+".hooks", info) != 0o600 {
 		t.Fatalf("probe evidence mode = %v err=%v", info, err)
 	}
 }
@@ -116,7 +127,7 @@ func TestRunHookSessionStartInjectsCatalogOnCompactSource(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := hookTempRepoWithDoc(t)
 	for _, source := range []string{"compact", "resume", "clear"} {
-		obj := runHookCapture(t, `{"cwd":"`+repo+`","source":"`+source+`"}`, func() error { return runHook([]string{"session-start", "--host", "claude"}) })
+		obj := runHookCapture(t, `{"cwd":`+hookJSONString(repo)+`,"source":`+hookJSONString(source)+`}`, func() error { return runHook([]string{"session-start", "--host", "claude"}) })
 		if ctx := hookAdditionalContext(obj); !strings.Contains(ctx, "Project docs under .issueops/") {
 			t.Fatalf("source %s must re-establish the catalog: %+v", source, obj)
 		}
@@ -126,8 +137,8 @@ func TestRunHookSessionStartInjectsCatalogOnCompactSource(t *testing.T) {
 func TestRunHookSessionStartCodexGetsTheClaudeModelTextWithoutSystemMessage(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := hookTempRepoWithDoc(t)
-	codex := runHookCapture(t, `{"cwd":"`+repo+`","source":"startup"}`, func() error { return runHook([]string{"session-start", "--host", "codex"}) })
-	claude := runHookCapture(t, `{"cwd":"`+repo+`","source":"startup"}`, func() error { return runHook([]string{"session-start", "--host", "claude"}) })
+	codex := runHookCapture(t, `{"cwd":`+hookJSONString(repo)+`,"source":"startup"}`, func() error { return runHook([]string{"session-start", "--host", "codex"}) })
+	claude := runHookCapture(t, `{"cwd":`+hookJSONString(repo)+`,"source":"startup"}`, func() error { return runHook([]string{"session-start", "--host", "claude"}) })
 	if _, ok := codex["systemMessage"]; ok {
 		t.Fatalf("Codex SessionStart must omit systemMessage: %+v", codex)
 	}
@@ -141,7 +152,7 @@ func TestRunHookContextEventsEmitNoopWithoutProjectDocs(t *testing.T) {
 	repo := t.TempDir()
 	for _, host := range []string{"codex", "claude"} {
 		for _, event := range []string{"session-start", "subagent-start", "post-compact"} {
-			obj := runHookCapture(t, `{"cwd":"`+repo+`","source":"startup"}`, func() error { return runHook([]string{event, "--host", host}) })
+			obj := runHookCapture(t, `{"cwd":`+hookJSONString(repo)+`,"source":"startup"}`, func() error { return runHook([]string{event, "--host", host}) })
 			if len(obj) != 0 {
 				t.Fatalf("%s/%s without docs must be an empty object, got %+v", host, event, obj)
 			}
@@ -157,7 +168,7 @@ func TestRunHookPostCompactCarriesOnlyUserFacingCatalog(t *testing.T) {
 		if host != "" {
 			args = append(args, "--host", host)
 		}
-		obj := runHookCapture(t, `{"cwd":"`+repo+`","trigger":"auto"}`, func() error { return runHook(args) })
+		obj := runHookCapture(t, `{"cwd":`+hookJSONString(repo)+`,"trigger":"auto"}`, func() error { return runHook(args) })
 		if _, ok := obj["hookSpecificOutput"]; ok {
 			t.Fatalf("PostCompact must not emit hookSpecificOutput (%q): %+v", host, obj)
 		}
@@ -171,7 +182,7 @@ func TestRunHookJSONOutputUsesSnakeCaseFields(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := hookTempRepoWithDoc(t)
 	for _, event := range []string{"session-start", "post-compact"} {
-		obj := runHookCapture(t, `{"cwd":"`+repo+`"}`, func() error { return runHook([]string{event, "--json"}) })
+		obj := runHookCapture(t, `{"cwd":`+hookJSONString(repo)+`}`, func() error { return runHook([]string{event, "--json"}) })
 		if obj["should_inject"] != true {
 			t.Fatalf("%s --json must expose should_inject: %+v", event, obj)
 		}
@@ -192,7 +203,7 @@ func TestRunHookContextEventsAcrossIsolatedWorktreesDoNotCreateHarnessState(t *t
 	for _, host := range []string{"codex", "claude"} {
 		for _, repo := range []string{hookTempRepoWithDoc(t), hookTempRepoWithDoc(t)} {
 			for _, event := range []string{"session-start", "subagent-start", "post-compact"} {
-				runHookCapture(t, `{"cwd":"`+repo+`","source":"startup"}`, func() error {
+				runHookCapture(t, `{"cwd":`+hookJSONString(repo)+`,"source":"startup"}`, func() error {
 					return runHook([]string{event, "--host", host})
 				})
 			}
@@ -214,7 +225,7 @@ func TestDisableHooksTurnsContextEventIntoSilentNoop(t *testing.T) {
 	t.Setenv("ISSUEOPS_DISABLE_HOOKS", "1")
 	repo := hookTempRepoWithDoc(t)
 	for _, event := range []string{"session-start", "subagent-start"} {
-		out := runHookRawCapture(t, `{"cwd":"`+repo+`","source":"startup","agent_type":"general-purpose"}`, func() error {
+		out := runHookRawCapture(t, `{"cwd":`+hookJSONString(repo)+`,"source":"startup","agent_type":"general-purpose"}`, func() error {
 			return runHook([]string{event, "--host", "claude"})
 		})
 		if strings.TrimSpace(out) != "" {
@@ -229,8 +240,8 @@ func TestRunHookSubagentStartInjectsTheSessionCatalogWithoutANotice(t *testing.T
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := hookTempRepoWithDoc(t)
 	for _, tc := range []struct{ host, agentType string }{{"claude", "general-purpose"}, {"codex", "worker"}, {"claude", ""}} {
-		session := runHookCapture(t, `{"cwd":"`+repo+`","source":"startup"}`, func() error { return runHook([]string{"session-start", "--host", tc.host}) })
-		obj := runHookCapture(t, `{"cwd":"`+repo+`","agent_type":"`+tc.agentType+`"}`, func() error { return runHook([]string{"subagent-start", "--host", tc.host}) })
+		session := runHookCapture(t, `{"cwd":`+hookJSONString(repo)+`,"source":"startup"}`, func() error { return runHook([]string{"session-start", "--host", tc.host}) })
+		obj := runHookCapture(t, `{"cwd":`+hookJSONString(repo)+`,"agent_type":`+hookJSONString(tc.agentType)+`}`, func() error { return runHook([]string{"subagent-start", "--host", tc.host}) })
 		if hso, _ := obj["hookSpecificOutput"].(map[string]any); hso["hookEventName"] != "SubagentStart" {
 			t.Fatalf("%s SubagentStart must name its event: %+v", tc.host, obj)
 		}
@@ -247,7 +258,7 @@ func TestRunHookSubagentStartSkipsExploreAndForkAgents(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := hookTempRepoWithDoc(t)
 	for _, agentType := range []string{"Explore", "explorer", "FORK", " fork "} {
-		obj := runHookCapture(t, `{"cwd":"`+repo+`","agent_type":"`+agentType+`"}`, func() error { return runHook([]string{"subagent-start", "--host", "claude"}) })
+		obj := runHookCapture(t, `{"cwd":`+hookJSONString(repo)+`,"agent_type":`+hookJSONString(agentType)+`}`, func() error { return runHook([]string{"subagent-start", "--host", "claude"}) })
 		if len(obj) != 0 {
 			t.Fatalf("agent %q must get an empty object, got %+v", agentType, obj)
 		}
@@ -288,7 +299,7 @@ func TestRunHookClaudeLiveProbeWithoutModel(t *testing.T) {
 	t.Setenv("ISSUEOPS_CHILD_SMOKE_HOOKS", "1")
 	t.Setenv("ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE", path)
 	repo := hookTempRepoWithDoc(t)
-	runHookCapture(t, `{"cwd":"`+repo+`","hook_event_name":"SessionStart","source":"startup"}`, func() error { return runHook([]string{"session-start", "--host", "claude"}) })
+	runHookCapture(t, `{"cwd":`+hookJSONString(repo)+`,"hook_event_name":"SessionStart","source":"startup"}`, func() error { return runHook([]string{"session-start", "--host", "claude"}) })
 	data, err := os.ReadFile(path + ".hooks")
 	if err != nil {
 		t.Fatal(err)

@@ -44,6 +44,8 @@ func TestPublicMaterialPathsRoots(t *testing.T) {
 		{"empty", "", "", "/home/synthetic/x", "/home/synthetic/x"},
 		{"two homes", "/home/one/repo", "/Users/two/worktree", "/home/one/.config /Users/two/.config", "$HOME/.config $HOME/.config"},
 		{"trailing slash", "/home/synthetic/repo/", "", "/home/synthetic/repo/a", "$SOURCE_ROOT/a"},
+		{"windows roots in both separator forms", `C:\Users\synthetic\repo`, `C:\Users\synthetic\repo.worktrees\527`, `C:\Users\synthetic\repo.worktrees\527\a.go C:/Users/synthetic/repo/b.go 'C:\Users\synthetic\.config' https://example.test/C:\Users\synthetic\repo`, `$WORKTREE\a.go $SOURCE_ROOT/b.go '$HOME\.config' https://example.test/C:\Users\synthetic\repo`},
+		{"windows trailing separator", `D:\work\repo\`, "", `D:\work\repo\x D:\work\repository`, `$SOURCE_ROOT\x D:\work\repository`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := string(NormalizePublicMaterialPaths([]byte(tc.input), tc.source, tc.worktree)); got != tc.want {

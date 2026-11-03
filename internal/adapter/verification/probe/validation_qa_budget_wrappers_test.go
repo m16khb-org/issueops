@@ -2,9 +2,9 @@ package probe
 
 import (
 	selfaugment "issueops/internal/contract/selfaugment"
+	"issueops/internal/testsupport"
 
 	"encoding/json"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -61,11 +61,7 @@ case "$*" in
     ;;
 esac
 `
-	path := filepath.Join(dir, "fake-issueops")
-	if err := os.WriteFile(path, []byte(body), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	return path
+	return testsupport.WriteFakeCommand(t, dir, "fake-issueops", body)
 }
 
 func validStepBudgetWrapperCompareResult() selfaugment.SelfAugmentCompareResult {

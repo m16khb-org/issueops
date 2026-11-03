@@ -9,12 +9,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"runtime"
 	"sort"
 	"strings"
-	"syscall"
 	"testing"
 
 	install "issueops/internal/adapter/install"
+	"issueops/internal/adapter/outbound/osfile"
 
 	"issueops/internal/port"
 )
@@ -72,7 +74,7 @@ func TestNativeInstallAdapterContractMatrix(t *testing.T) {
 			root := t.TempDir()
 			home := t.TempDir()
 			codexHome := filepath.Join(home, ".codex")
-			binPath := filepath.Join(root, "bin", "issueops")
+			binPath := filepath.Join(root, "bin", osfile.ExecutableName("issueops"))
 			writeContractSkill(t, root, "beta")
 			writeContractSkill(t, root, "alpha")
 			writeContractSkill(t, root, "codex-only", "codex")
@@ -100,7 +102,7 @@ func TestNativeInstallDryRunDoesNotWrite(t *testing.T) {
 	root := t.TempDir()
 	home := t.TempDir()
 	codexHome := filepath.Join(home, ".codex")
-	binPath := filepath.Join(root, "bin", "issueops")
+	binPath := filepath.Join(root, "bin", osfile.ExecutableName("issueops"))
 	writeContractSkill(t, root, "alpha")
 
 	req := install.DefaultNativeInstallRequest(root, home, codexHome, binPath)
@@ -194,6 +196,7 @@ func TestInstallNativeScriptBindsStagedCandidateBeforeReplacement(t *testing.T) 
 }
 
 func TestInstallNativeScriptRefusesRegularCommandBeforeActivationBegin(t *testing.T) {
+	skipInstallScriptOnWindows(t)
 	issueOpsRoot := t.TempDir()
 	home := t.TempDir()
 	binDir := filepath.Join(issueOpsRoot, "bin")
@@ -295,6 +298,7 @@ esac
 }
 
 func TestInstallNativeScriptSupportsEmptyActivationArguments(t *testing.T) {
+	skipInstallScriptOnWindows(t)
 	issueOpsRoot := t.TempDir()
 	home := t.TempDir()
 	binDir := filepath.Join(issueOpsRoot, "bin")
@@ -378,6 +382,7 @@ func TestInstallNativeScriptForwardsAdoptionAndOwnsExactTransitionCleanup(t *tes
 }
 
 func TestNativeInstallAndChildSmokeScriptsHaveValidBashSyntax(t *testing.T) {
+	skipInstallScriptOnWindows(t)
 	for _, path := range []string{
 		filepath.Join("..", "..", "scripts", "install-native.sh"),
 		filepath.Join("..", "..", "scripts", "verify-child-host-smoke.sh"),
@@ -461,6 +466,7 @@ func TestInstallNativeScriptExcludesRemovedProxyCompanion(t *testing.T) {
 }
 
 func TestInstallNativeScriptActivatesLinkedWorktreeBuildAtStableSource(t *testing.T) {
+	skipInstallScriptOnWindows(t)
 	base := t.TempDir()
 	source := filepath.Join(base, "source")
 	worktree := filepath.Join(base, "source.worktrees", "feature")
@@ -590,11 +596,11 @@ func installScriptTestInode(t *testing.T, path string) uint64 {
 	if err != nil {
 		t.Fatal(err)
 	}
-	stat, ok := info.Sys().(*syscall.Stat_t)
+	stat, ok := osfile.PathIdentity(path, info)
 	if !ok {
 		t.Fatalf("stat identity unavailable for %s", path)
 	}
-	return uint64(stat.Ino)
+	return stat.Inode
 }
 
 func withoutInstallScriptTestEnv(environment []string, names ...string) []string {
@@ -735,7 +741,7 @@ func assertInstallContractSemantics(t *testing.T, req port.NativeInstallRequest,
 	}
 	claudeSettings := readFile(t, filepath.Join(req.Home, ".claude", "settings.json"))
 	for _, needle := range []string{"SessionStart", req.BinPath, "hook session-start --host claude", "SubagentStart", "hook subagent-start --host claude"} {
-		if !strings.Contains(claudeSettings, needle) {
+		if !containsPathAware(claudeSettings, needle) {
 			t.Fatalf("Claude settings missing lifecycle hook %q:\n%s", needle, claudeSettings)
 		}
 	}
@@ -746,13 +752,13 @@ func assertInstallContractSemantics(t *testing.T, req port.NativeInstallRequest,
 	}
 	codexConfig := readFile(t, filepath.Join(req.CodexHome, "config.toml"))
 	for _, needle := range []string{"[mcp_servers.issueops]", req.BinPath, req.Root} {
-		if !strings.Contains(codexConfig, needle) {
+		if !containsPathAware(codexConfig, needle) {
 			t.Fatalf("Codex config missing %q:\n%s", needle, codexConfig)
 		}
 	}
 	codexHooks := readFile(t, filepath.Join(req.CodexHome, "hooks.json"))
 	for _, needle := range []string{"SessionStart", "hook session-start --host codex", "SubagentStart", "hook subagent-start --host codex"} {
-		if !strings.Contains(codexHooks, needle) {
+		if !containsPathAware(codexHooks, needle) {
 			t.Fatalf("Codex hooks missing lifecycle hook %q:\n%s", needle, codexHooks)
 		}
 	}
@@ -763,7 +769,7 @@ func assertInstallContractSemantics(t *testing.T, req port.NativeInstallRequest,
 	}
 	omoMCP := readFile(t, filepath.Join(req.Home, ".omo", "mcp.json"))
 	for _, needle := range []string{`"issueops"`, req.BinPath, req.Root} {
-		if !strings.Contains(omoMCP, needle) {
+		if !containsPathAware(omoMCP, needle) {
 			t.Fatalf("Omo MCP config missing %q:\n%s", needle, omoMCP)
 		}
 	}
@@ -773,7 +779,7 @@ func assertInstallContractSemantics(t *testing.T, req port.NativeInstallRequest,
 	}
 	ompMCP := readFile(t, filepath.Join(req.Home, ".omp", "agent", "mcp.json"))
 	for _, needle := range []string{`"issueops"`, req.BinPath, req.Root} {
-		if !strings.Contains(ompMCP, needle) {
+		if !containsPathAware(ompMCP, needle) {
 			t.Fatalf("omp MCP config missing %q:\n%s", needle, ompMCP)
 		}
 	}
@@ -783,7 +789,7 @@ func assertInstallContractSemantics(t *testing.T, req port.NativeInstallRequest,
 	}
 	agyMCP := readFile(t, filepath.Join(req.Home, ".gemini", "config", "mcp_config.json"))
 	for _, needle := range []string{`"issueops"`, req.BinPath, req.Root} {
-		if !strings.Contains(agyMCP, needle) {
+		if !containsPathAware(agyMCP, needle) {
 			t.Fatalf("agy MCP config missing %q:\n%s", needle, agyMCP)
 		}
 	}
@@ -887,24 +893,46 @@ func linkResolvesUnderRootSkills(linkPath, root string) bool {
 	return err == nil && rel != "." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) && rel != ".."
 }
 
+// installContractPlaceholderPath matches a placeholder followed by path
+// segments, whichever separator (or JSON-escaped separator) joins them.
+var installContractPlaceholderPath = regexp.MustCompile(`\$(?:CODEX_HOME|HOME|ROOT|BIN)(?:(?:\\\\|\\|/)[A-Za-z0-9_.\-]+)+`)
+
+var installContractSeparators = strings.NewReplacer(`\\`, "/", `\`, "/")
+
 func normalizeInstallContractString(value string, req port.NativeInstallRequest) string {
-	replacements := map[string]string{
-		req.CodexHome: "$CODEX_HOME",
-		req.Home:      "$HOME",
-		req.Root:      "$ROOT",
-		req.BinPath:   "$BIN",
+	replacements := map[string]string{}
+	for from, placeholder := range map[string]string{req.CodexHome: "$CODEX_HOME", req.Home: "$HOME", req.Root: "$ROOT", req.BinPath: "$BIN"} {
+		if from == "" {
+			continue
+		}
+		// Windows paths also appear JSON/TOML-escaped or slash-separated inside configs.
+		replacements[from] = placeholder
+		replacements[strings.ReplaceAll(from, `\`, `\\`)] = placeholder
+		replacements[filepath.ToSlash(from)] = placeholder
 	}
 	keys := make([]string, 0, len(replacements))
 	for from := range replacements {
-		if from != "" {
-			keys = append(keys, from)
-		}
+		keys = append(keys, from)
 	}
 	sort.Slice(keys, func(i, j int) bool { return len(keys[i]) > len(keys[j]) })
 	for _, from := range keys {
 		value = strings.ReplaceAll(value, from, replacements[from])
 	}
-	return value
+	if filepath.Separator != '/' {
+		value = installContractPlaceholderPath.ReplaceAllStringFunc(value, installContractSeparators.Replace)
+	}
+	// Project templates reference the relative harness binary by its OS file name.
+	return strings.ReplaceAll(value, "./bin/"+osfile.ExecutableName("issueops"), "./bin/issueops")
+}
+
+// adapterContractGoldenName selects the golden file for this OS. Windows
+// renders hook commands differently (structured args, commandWindows), so it
+// has its own golden next to the Unix one.
+func adapterContractGoldenName(name string) string {
+	if runtime.GOOS == "windows" {
+		return strings.TrimSuffix(name, ".golden.json") + ".windows.golden.json"
+	}
+	return name
 }
 
 func assertAdapterContractGolden(t *testing.T, name string, value any) {
@@ -914,7 +942,7 @@ func assertAdapterContractGolden(t *testing.T, name string, value any) {
 		t.Fatal(err)
 	}
 	b = append(b, '\n')
-	path := filepath.Join("testdata", name)
+	path := filepath.Join("testdata", adapterContractGoldenName(name))
 	if *updateAdapterContractGolden {
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 			t.Fatal(err)
@@ -950,4 +978,42 @@ func sha256Hex(value string) string {
 func exists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
+}
+
+// containsPathAware reports whether text holds needle verbatim or as a
+// JSON/TOML-escaped string, which is how Windows paths appear inside configs.
+// A "hook <event> --host <host>" needle also matches the structured form
+// Windows hooks use, where those words are consecutive "args" elements.
+func containsPathAware(text, needle string) bool {
+	if strings.Contains(text, needle) {
+		return true
+	}
+	escaped, err := json.Marshal(needle)
+	if err != nil {
+		return false
+	}
+	if strings.Contains(text, strings.Trim(string(escaped), `"`)) {
+		return true
+	}
+	if !strings.HasPrefix(needle, "hook ") {
+		return false
+	}
+	var document any
+	if json.Unmarshal([]byte(text), &document) != nil {
+		return false
+	}
+	compact, err := json.Marshal(document)
+	if err != nil {
+		return false
+	}
+	return strings.Contains(string(compact), `"`+strings.Join(strings.Fields(needle), `","`)+`"`)
+}
+
+// skipInstallScriptOnWindows skips tests that run scripts/install-native.sh.
+// Windows installs through the Go update runtime, never through this bash script.
+func skipInstallScriptOnWindows(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("scripts/install-native.sh is the Unix install path; Windows installs through the Go update runtime")
+	}
 }

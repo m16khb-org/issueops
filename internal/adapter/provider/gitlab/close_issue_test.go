@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -25,18 +24,15 @@ func TestGitLabCloseIssuePreviewKeepsHostname(t *testing.T) {
 }
 
 func TestGitLabCloseIssueClosesAndVerifiesWithHostname(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake glab shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	log := filepath.Join(binDir, "calls.log")
 	closedMarker := filepath.Join(binDir, "closed.marker")
 	// 1번째 조회: opened → close PUT(마커 생성) → 2번째 조회: closed.
 	writeFakeGlab(t, binDir, `#!/bin/sh
-echo "$*" >> `+log+`
+echo "$*" >> `+filepath.ToSlash(log)+`
 case "$*" in
-*"--method PUT"*) : > `+closedMarker+`; echo '{"state":"closed"}' ;;
-*) if [ -f `+closedMarker+` ]; then echo '{"state":"closed"}'; else echo '{"state":"opened"}'; fi ;;
+*"--method PUT"*) : > `+filepath.ToSlash(closedMarker)+`; echo '{"state":"closed"}' ;;
+*) if [ -f `+filepath.ToSlash(closedMarker)+` ]; then echo '{"state":"closed"}'; else echo '{"state":"opened"}'; fi ;;
 esac
 `)
 	t.Setenv("PATH", binDir)
@@ -68,18 +64,15 @@ esac
 // /-/work_items/:iid로 돌려주고 레코드는 그 값을 그대로 봉인한다. close-issue는 그 URL을 issues/:iid REST
 // endpoint로 해석해야 한다 — 경로 표식은 identity가 아니다.
 func TestGitLabCloseIssueAcceptsWorkItemsIssueURL(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake glab shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	log := filepath.Join(binDir, "calls.log")
 	closedMarker := filepath.Join(binDir, "closed.marker")
 	// fail-closed fake: issues/105 endpoint 이외의 호출은 실패한다.
 	writeFakeGlab(t, binDir, `#!/bin/sh
-echo "$*" >> `+log+`
+echo "$*" >> `+filepath.ToSlash(log)+`
 case "$*" in
-"api projects/acme%2Frepo/issues/105 --hostname gitlab.example.com --method PUT -f state_event=close") : > `+closedMarker+`; echo '{"state":"closed"}' ;;
-"api projects/acme%2Frepo/issues/105 --hostname gitlab.example.com") if [ -f `+closedMarker+` ]; then echo '{"state":"closed"}'; else echo '{"state":"opened"}'; fi ;;
+"api projects/acme%2Frepo/issues/105 --hostname gitlab.example.com --method PUT -f state_event=close") : > `+filepath.ToSlash(closedMarker)+`; echo '{"state":"closed"}' ;;
+"api projects/acme%2Frepo/issues/105 --hostname gitlab.example.com") if [ -f `+filepath.ToSlash(closedMarker)+` ]; then echo '{"state":"closed"}'; else echo '{"state":"opened"}'; fi ;;
 *) echo "unexpected glab call: $*" >&2; exit 1 ;;
 esac
 `)

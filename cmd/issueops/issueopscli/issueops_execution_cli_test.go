@@ -32,6 +32,8 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 
 	provenanceport "issueops/internal/port/issueopsprovenance"
+
+	"issueops/internal/testsupport"
 )
 
 func TestIssueOpsExecutionDepsPropagatePublicationReconcileWithoutInvocation(t *testing.T) {
@@ -74,7 +76,7 @@ func TestIssueOpsExecutionPrepareCLIAndStatusShareSchemaProjection(t *testing.T)
 	deps := Dependencies{
 		Prepare: executionCLIPrepareHandler(t),
 		Provenance: issueOpsProvenanceObserverStub{evidence: provenanceport.Receipt{
-			ExecutablePath: "/repo/bin/issueops", ExecutableSHA256: strings.Repeat("e", 64),
+			ExecutablePath: testsupport.AbsPath("repo", "bin", "issueops"), ExecutableSHA256: strings.Repeat("e", 64),
 		}},
 	}
 
@@ -130,7 +132,7 @@ func TestIssueOpsExecutionStatusProjectsActorFreeClaimCommand(t *testing.T) {
 	}
 
 	deps := Dependencies{Provenance: issueOpsProvenanceObserverStub{evidence: provenanceport.Receipt{
-		ExecutablePath: "/repo/bin/issueops", ExecutableSHA256: strings.Repeat("e", 64),
+		ExecutablePath: testsupport.AbsPath("repo", "bin", "issueops"), ExecutableSHA256: strings.Repeat("e", 64),
 	}}}
 	statusJSON := captureStdoutForContract(t, func() error {
 		return runIssueOpsForTest([]string{"execution", "status", "--id", id, "--json"}, deps)

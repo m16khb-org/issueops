@@ -11,11 +11,27 @@ import (
 	cmux "issueops/internal/contract/cmux"
 	model "issueops/internal/contract/issueops"
 	port "issueops/internal/port/cmux"
+	"issueops/internal/testsupport"
+)
+
+// Synthetic, never-touched absolute paths: built per OS so the domain's
+// filepath.IsAbs checks accept them on Windows too.
+var (
+	workspaceRoot   = testsupport.AbsPath("workspace")
+	promptFile      = testsupport.AbsPath("workspace", "prompt")
+	elsewhereRoot   = testsupport.AbsPath("elsewhere")
+	parentRoot      = testsupport.AbsPath("parent")
+	otherRoot       = testsupport.AbsPath("other")
+	socketFixture   = testsupport.AbsPath("sock")
+	cmuxExecutable  = testsupport.AbsPath("bin", "cmux")
+	codexExecutable = testsupport.AbsPath("codex")
+	artifactRoot    = testsupport.AbsPath("artifacts")
+	recoveryDir     = testsupport.AbsPath("recovery")
 )
 
 type testDirectory struct{ closed int }
 
-func (*testDirectory) Path() string                      { return "/workspace" }
+func (*testDirectory) Path() string                      { return workspaceRoot }
 func (*testDirectory) SamePath(string) bool              { return true }
 func (d *testDirectory) Pin() (port.DirectoryPin, error) { return d, nil }
 func (*testDirectory) Matches(port.Directory) bool       { return true }
@@ -31,7 +47,7 @@ func (*testClient) Preflight(context.Context, cmux.PreflightRequest) (cmux.Prefl
 }
 func (c *testClient) CreateWorkspace(context.Context, cmux.CreateRequest) (cmux.CreatedWorkspace, error) {
 	c.create++
-	return cmux.CreatedWorkspace{WorkspaceID: "workspace", SurfaceID: "surface", CWD: "/workspace"}, c.createErr
+	return cmux.CreatedWorkspace{WorkspaceID: "workspace", SurfaceID: "surface", CWD: workspaceRoot}, c.createErr
 }
 func (c *testClient) Send(context.Context, cmux.SendRequest) (cmux.SendReceipt, error) {
 	c.send++
@@ -39,13 +55,13 @@ func (c *testClient) Send(context.Context, cmux.SendRequest) (cmux.SendReceipt, 
 }
 
 func releasedRecord() model.IssueOpsRecord {
-	return model.IssueOpsRecord{ID: "cycle", WorktreePath: "/workspace", Execution: &model.Execution{Workspace: model.Workspace{Root: "/workspace"}, Lease: model.WriteLease{Status: model.LeaseStatusReleased, Generation: 2}}}
+	return model.IssueOpsRecord{ID: "cycle", WorktreePath: workspaceRoot, Execution: &model.Execution{Workspace: model.Workspace{Root: workspaceRoot}, Lease: model.WriteLease{Status: model.LeaseStatusReleased, Generation: 2}}}
 }
 func rootEnvironment(d *testDirectory) port.RootEnvironment {
 	return port.RootEnvironment{
 		Read:      func(string, string) (model.IssueOpsRecord, error) { return releasedRecord(), nil },
 		Directory: func(string) (port.Directory, error) { return d, nil },
-		Getwd:     func() (string, error) { return "/workspace", nil }, GitTop: func(s string) (string, error) { return s, nil },
+		Getwd:     func() (string, error) { return workspaceRoot, nil }, GitTop: func(s string) (string, error) { return s, nil },
 	}
 }
 func TestHandoffFailureStopsEffectsAndPreservesRecovery(t *testing.T) {
@@ -70,7 +86,7 @@ func TestHandoffFailureStopsEffectsAndPreservesRecovery(t *testing.T) {
 			client := &testClient{createErr: tc.createErr, sendErr: tc.sendErr}
 			awaited, cleaned := 0, 0
 			var observations []model.IssueOpsHandoffDeliveryObservation
-			service := Service{Client: client, Roots: rootEnvironment(dir), Now: func() time.Time { return time.Unix(0, 0) }, ArtifactRoot: "/artifacts",
+			service := Service{Client: client, Roots: rootEnvironment(dir), Now: func() time.Time { return time.Unix(0, 0) }, ArtifactRoot: artifactRoot,
 				ReadAudit: func() ([]model.IssueOpsHandoffDeliveryObservation, error) { return nil, nil },
 				Observe: func(_ model.IssueOpsRecord, o model.IssueOpsHandoffDeliveryObservation) (audit.HandoffDeliveryAuditRecord, error) {
 					if tc.stageFail {
@@ -81,22 +97,22 @@ func TestHandoffFailureStopsEffectsAndPreservesRecovery(t *testing.T) {
 				},
 				ReadPrompt: func(string, string, string) ([]byte, error) { return []byte("prompt"), nil }, SamePath: func(string, string) bool { return true }, ValidateHostExecutable: func(string) error { return nil }, ValidateHostProfile: func(string, string, string, string) error { return nil },
 				Prepare: func(cmux.ArtifactRequest) (cmux.PreparedLauncher, error) {
-					return cmux.PreparedLauncher{Directory: "/recovery", Command: "launch"}, nil
+					return cmux.PreparedLauncher{Directory: recoveryDir, Command: "launch"}, nil
 				},
 				AwaitReceipt: func(context.Context, cmux.PreparedLauncher, cmux.BootstrapExpectation) (model.NativeProcessReceipt, error) {
 					awaited++
-					return model.NativeProcessReceipt{PID: 42, Executable: "/codex"}, tc.receiptErr
+					return model.NativeProcessReceipt{PID: 42, Executable: codexExecutable}, tc.receiptErr
 				},
 				Cleanup: func(cmux.PreparedLauncher) error { cleaned++; return tc.cleanupErr },
 			}
-			result, err := service.Handoff(context.Background(), "state", model.ExecutionCmuxHandoffRequest{ID: "cycle", Generation: 2, CWD: "/workspace", PromptFile: "/workspace/prompt", MaterialSHA256: strings.Repeat("b", 64)})
+			result, err := service.Handoff(context.Background(), "state", model.ExecutionCmuxHandoffRequest{ID: "cycle", Generation: 2, CWD: workspaceRoot, PromptFile: promptFile, MaterialSHA256: strings.Repeat("b", 64)})
 			if result.Status != tc.wantStatus || result.OK != tc.wantOK || (err != nil) != tc.wantError || client.create != tc.wantCreate || client.send != tc.wantSend || awaited != tc.wantAwait || cleaned != tc.wantCleanup || dir.closed != 1 {
 				t.Fatalf("result=%+v err=%v effects=%d,%d,%d,%d closed=%d", result, err, client.create, client.send, awaited, cleaned, dir.closed)
 			}
 			if result.NativeTurnObserved || result.OwnerClaimed {
 				t.Fatalf("transport promoted authority: %+v", result)
 			}
-			if tc.wantSend == 1 && (tc.sendErr != nil || tc.receiptErr != nil || tc.cleanupErr != nil) && result.RecoveryArtifactDir != "/recovery" {
+			if tc.wantSend == 1 && (tc.sendErr != nil || tc.receiptErr != nil || tc.cleanupErr != nil) && result.RecoveryArtifactDir != recoveryDir {
 				t.Fatalf("lost recovery: %+v", result)
 			}
 			if tc.createErr != nil || tc.sendErr != nil {

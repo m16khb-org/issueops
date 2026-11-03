@@ -151,7 +151,7 @@ func TestProcessLifetimePrimitiveHasNarrowConsumers(t *testing.T) {
 		}
 	}
 	for _, edge := range loadProductionEdges(t) {
-		if edge.importer == primitive && strings.HasPrefix(edge.imported, "internal/") {
+		if edge.importer == primitive && strings.HasPrefix(edge.imported, "internal/") && !isOSPrimitiveEdge(edge.imported) {
 			t.Errorf("process lifetime primitive depends on project capability: %s", formatEdge(edge))
 		}
 	}

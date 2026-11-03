@@ -8,6 +8,7 @@ import (
 
 	"issueops/internal/adapter/hostprotocol"
 	hookcontract "issueops/internal/contract/hookprompt"
+	"issueops/internal/testsupport"
 )
 
 func liveProbeDir(t *testing.T, perm os.FileMode) string {
@@ -16,7 +17,9 @@ func liveProbeDir(t *testing.T, perm os.FileMode) string {
 	if err := os.Mkdir(dir, perm); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Chmod(dir, perm); err != nil {
+	if perm&0o077 != 0 {
+		testsupport.MakePermissive(t, dir, perm)
+	} else if err := os.Chmod(dir, perm); err != nil {
 		t.Fatal(err)
 	}
 	return dir

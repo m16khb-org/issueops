@@ -1,11 +1,13 @@
 package gates
 
 import (
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 
 	model "issueops/internal/contract/gates"
+	"issueops/internal/testsupport"
 )
 
 func TestNormalizeCheckFillsRootCWDAndTimeout(t *testing.T) {
@@ -26,9 +28,11 @@ func TestNormalizeCheckFillsRootCWDAndTimeout(t *testing.T) {
 // A relative --file names a ledger under --cwd (where discovery looks), not
 // under the process cwd; absolute files and a request without a cwd are kept.
 func TestNormalizeCheckResolvesRelativeFilesUnderCWD(t *testing.T) {
-	files := []string{".issueops/issues/7/gates.md", "/abs/gates.md"}
-	got := NormalizeCheck(model.CheckRequest{CWD: "/wt", Files: files})
-	if !reflect.DeepEqual(got.Files, []string{"/wt/.issueops/issues/7/gates.md", "/abs/gates.md"}) {
+	abs := testsupport.AbsPath("abs", "gates.md")
+	wt := testsupport.AbsPath("wt")
+	files := []string{".issueops/issues/7/gates.md", abs}
+	got := NormalizeCheck(model.CheckRequest{CWD: wt, Files: files})
+	if !reflect.DeepEqual(got.Files, []string{filepath.Join(wt, ".issueops", "issues", "7", "gates.md"), abs}) {
 		t.Fatalf("files = %q", got.Files)
 	}
 	if files[0] != ".issueops/issues/7/gates.md" {

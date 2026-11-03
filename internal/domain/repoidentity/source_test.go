@@ -2,6 +2,8 @@ package repoidentity
 
 import (
 	"testing"
+
+	"issueops/internal/testsupport"
 )
 
 func TestSourceRootMapsGitCommonDirToPrimaryCheckout(t *testing.T) {
@@ -23,32 +25,32 @@ func TestSourceRootMapsGitCommonDirToPrimaryCheckout(t *testing.T) {
 		},
 		{
 			name: "empty common dir returns cleaned caller path",
-			path: "/tmp/workspace/repo",
-			want: "/tmp/workspace/repo",
+			path: testsupport.AbsPath("tmp", "workspace", "repo"),
+			want: testsupport.AbsPath("tmp", "workspace", "repo"),
 		},
 		{
 			name:      "absolute git common dir maps to checkout dir",
-			path:      "/tmp/worktree",
-			commonDir: "/tmp/primary/repo/.git",
-			want:      "/tmp/primary/repo",
+			path:      testsupport.AbsPath("tmp", "worktree"),
+			commonDir: testsupport.AbsPath("tmp", "primary", "repo", ".git"),
+			want:      testsupport.AbsPath("tmp", "primary", "repo"),
 		},
 		{
 			name:      "common dir without .git base keeps caller path",
-			path:      "/var/folders/worktree",
-			commonDir: "/private/var/folders/primary",
-			want:      "/var/folders/worktree",
+			path:      testsupport.AbsPath("var", "folders", "worktree"),
+			commonDir: testsupport.AbsPath("private", "var", "folders", "primary"),
+			want:      testsupport.AbsPath("var", "folders", "worktree"),
 		},
 		{
 			name:      "dot git suffix directory is not treated as git dir",
-			path:      "/tmp/workspace/repo",
-			commonDir: "/tmp/workspace/repo/my.git",
-			want:      "/tmp/workspace/repo",
+			path:      testsupport.AbsPath("tmp", "workspace", "repo"),
+			commonDir: testsupport.AbsPath("tmp", "workspace", "repo", "my.git"),
+			want:      testsupport.AbsPath("tmp", "workspace", "repo"),
 		},
 		{
 			name:      "relative common dir joins caller path",
-			path:      "/var/folders/worktree",
+			path:      testsupport.AbsPath("var", "folders", "worktree"),
 			commonDir: ".git",
-			want:      "/var/folders/worktree",
+			want:      testsupport.AbsPath("var", "folders", "worktree"),
 		},
 	}
 

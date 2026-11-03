@@ -3,20 +3,24 @@ package issueops
 import (
 	"path/filepath"
 	"testing"
+
+	"issueops/internal/testsupport"
 )
 
 func TestCycleIdentitiesKeepTheirGitObserver(t *testing.T) {
 	original := GitCmd
 	t.Cleanup(func() { GitCmd = original })
-	GitCmd = func(string, ...string) (int, string, string) { return 0, "/first/.git", "" }
-	first := CycleStartIdentity{RunGit: GitCmd}
-	GitCmd = func(string, ...string) (int, string, string) { return 0, "/second/.git", "" }
-	second := CycleStartIdentity{RunGit: GitCmd}
-	if got := first.CanonicalRepo("/worktree"); got != "/first" {
-		t.Fatalf("first identity=%q want /first", got)
+	worktree := testsupport.AbsPath("worktree")
+	first, second := testsupport.AbsPath("first"), testsupport.AbsPath("second")
+	GitCmd = func(string, ...string) (int, string, string) { return 0, filepath.Join(first, ".git"), "" }
+	firstIdentity := CycleStartIdentity{RunGit: GitCmd}
+	GitCmd = func(string, ...string) (int, string, string) { return 0, filepath.Join(second, ".git"), "" }
+	secondIdentity := CycleStartIdentity{RunGit: GitCmd}
+	if got := firstIdentity.CanonicalRepo(worktree); got != first {
+		t.Fatalf("first identity=%q want %s", got, first)
 	}
-	if got := second.CanonicalRepo("/worktree"); got != "/second" {
-		t.Fatalf("second identity=%q want /second", got)
+	if got := secondIdentity.CanonicalRepo(worktree); got != second {
+		t.Fatalf("second identity=%q want %s", got, second)
 	}
 }
 

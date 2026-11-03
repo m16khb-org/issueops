@@ -9,7 +9,16 @@ import (
 
 	issueopscontract "issueops/internal/contract/issueops"
 	provenanceport "issueops/internal/port/issueopsprovenance"
+	"issueops/internal/testsupport"
 )
+
+// provenanceBinary is the synthetic observed binary path; quoted is its POSIX
+// single-quoted rendering at the head of a generated command.
+func provenanceBinary(suffix string) string {
+	return testsupport.AbsPath("repo", "bin", testsupport.ExecutableName("issueops"+suffix))
+}
+
+func quotedProvenanceBinary(suffix string) string { return "'" + provenanceBinary(suffix) + "'" }
 
 type provenanceObserverStub struct {
 	evidence provenanceport.Receipt
@@ -27,7 +36,7 @@ type countingProvenanceObserver struct {
 func (s *countingProvenanceObserver) Observe(context.Context) (provenanceport.Receipt, error) {
 	s.calls++
 	return provenanceport.Receipt{
-		ExecutablePath:   fmt.Sprintf("/repo/bin/issueops-%d", s.calls),
+		ExecutablePath:   provenanceBinary(fmt.Sprintf("-%d", s.calls)),
 		ExecutableSHA256: strings.Repeat(fmt.Sprint(s.calls), 64),
 	}, nil
 }
@@ -38,7 +47,7 @@ func TestBindExecutionNextCommandUsesObservedBinaryAndResultGeneration(t *testin
 		NextCommand: "issueops execution claim --id io-1 --generation 7 --claim-current-token",
 	}
 	bound, err := bindExecutionNextCommand(raw, provenanceObserverStub{evidence: provenanceport.Receipt{
-		ExecutablePath: "/repo/bin/issueops", ExecutableSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		ExecutablePath: provenanceBinary(""), ExecutableSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 	}})
 	if err != nil {
 		t.Fatal(err)
@@ -64,7 +73,7 @@ func TestBindExecutionSyncBaseBindsConflictAbortWithSameProvenance(t *testing.T)
 	}
 	result := bound.(issueopscontract.ExecutionSyncBaseResult)
 	for name, command := range map[string]string{"next_command": result.NextCommand, "abort_command": result.AbortCommand} {
-		if !strings.HasPrefix(command, "'/repo/bin/issueops-1'") ||
+		if !strings.HasPrefix(command, quotedProvenanceBinary("-1")) ||
 			!strings.Contains(command, "--generated-for-generation 7") ||
 			!strings.Contains(command, "--generated-by-sha256 "+strings.Repeat("1", 64)) {
 			t.Fatalf("%s is not bound to the shared observation: %q", name, command)
@@ -77,7 +86,7 @@ func TestBindExecutionSyncBaseBindsConflictAbortWithSameProvenance(t *testing.T)
 
 func TestOutputBindsBaseSyncRequiredTypedErrorCommand(t *testing.T) {
 	observer := provenanceObserverStub{evidence: provenanceport.Receipt{
-		ExecutablePath: "/repo/bin/issueops", ExecutableSHA256: strings.Repeat("a", 64),
+		ExecutablePath: provenanceBinary(""), ExecutableSHA256: strings.Repeat("a", 64),
 	}}
 	err := output(nil, true, issueopscontract.NewBaseSyncRequiredError("io-1", 7), Deps{
 		Provenance: observer,
@@ -87,7 +96,7 @@ func TestOutputBindsBaseSyncRequiredTypedErrorCommand(t *testing.T) {
 	if !errors.As(err, &typed) {
 		t.Fatalf("error type=%T error=%v", err, err)
 	}
-	if !strings.HasPrefix(typed.NextCommand, "'/repo/bin/issueops'") ||
+	if !strings.HasPrefix(typed.NextCommand, quotedProvenanceBinary("")) ||
 		!strings.Contains(typed.NextCommand, "--generated-for-generation 7") ||
 		!strings.Contains(typed.NextCommand, "--generated-by-sha256 "+strings.Repeat("a", 64)) {
 		t.Fatalf("typed error next_command is unbound: %q", typed.NextCommand)
@@ -149,7 +158,7 @@ func TestBindExecutionNextCommandMissingObserverHasNoFallback(t *testing.T) {
 
 func TestBindExecutionNextCommandCoversEveryCommandBearingResult(t *testing.T) {
 	observer := provenanceObserverStub{evidence: provenanceport.Receipt{
-		ExecutablePath: "/repo/bin/issueops", ExecutableSHA256: strings.Repeat("a", 64),
+		ExecutablePath: provenanceBinary(""), ExecutableSHA256: strings.Repeat("a", 64),
 	}}
 	tests := []struct {
 		name       string
@@ -181,7 +190,7 @@ func TestBindExecutionNextCommandCoversEveryCommandBearingResult(t *testing.T) {
 				t.Fatal(err)
 			}
 			command := test.command(bound)
-			if !strings.HasPrefix(command, "'/repo/bin/issueops'") || !strings.Contains(command, "--generated-for-generation "+fmt.Sprint(test.generation)) {
+			if !strings.HasPrefix(command, quotedProvenanceBinary("")) || !strings.Contains(command, "--generated-for-generation "+fmt.Sprint(test.generation)) {
 				t.Fatalf("bound command = %q", command)
 			}
 		})
@@ -242,7 +251,7 @@ func TestBindExecutionPrepareBindsOnceTheLeaseExists(t *testing.T) {
 		Execution:   &issueopscontract.Execution{Lease: issueopscontract.WriteLease{Generation: 3}},
 		NextCommand: "issueops execution claim --id io-1 --generation 3",
 	}, provenanceObserverStub{evidence: provenanceport.Receipt{
-		ExecutablePath: "/repo/bin/issueops", ExecutableSHA256: strings.Repeat("b", 64),
+		ExecutablePath: provenanceBinary(""), ExecutableSHA256: strings.Repeat("b", 64),
 	}})
 	if err != nil {
 		t.Fatal(err)

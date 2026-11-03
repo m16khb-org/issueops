@@ -2,7 +2,6 @@ package github
 
 import (
 	"context"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -37,9 +36,6 @@ func TestGitHubClosePullRequestRejectsMalformedURL(t *testing.T) {
 // 머지된 PR은 닫지 않는다. abandon 게이트가 미머지만 통과시키지만, provider가
 // 최종 판단자이므로 여기서도 mutation 없이 사실만 돌려준다.
 func TestGitHubClosePullRequestLeavesAMergedPullRequestAlone(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake gh shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	writeFakeGh(t, binDir, `#!/bin/sh
 case "$1 $2" in
@@ -61,9 +57,6 @@ esac
 }
 
 func TestGitHubClosePullRequestAlreadyClosedShortCircuits(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake gh shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	writeFakeGh(t, binDir, `#!/bin/sh
 case "$1 $2" in
@@ -85,9 +78,6 @@ esac
 }
 
 func TestGitHubClosePullRequestVerifiesReadbackState(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake gh shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	// close는 성공하지만 readback이 여전히 OPEN이면 검증 실패로 에러여야 한다.
 	writeFakeGh(t, binDir, `#!/bin/sh

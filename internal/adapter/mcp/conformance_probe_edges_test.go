@@ -10,6 +10,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"issueops/internal/adapter/outbound/osfile"
 	mcpcontract "issueops/internal/contract/mcp"
 	fixturecontract "issueops/internal/contract/toolconformance"
 )
@@ -285,7 +286,7 @@ func TestWritePrivateJSONRejectsBadInputAndReplacesExistingFile(t *testing.T) {
 	if err != nil || string(data) != `{"n":2}` {
 		t.Fatalf("data=%q err=%v", data, err)
 	}
-	if info, err := os.Stat(target); err != nil || info.Mode().Perm() != 0o600 {
+	if info, err := os.Stat(target); err != nil || osfile.Perm(target, info) != 0o600 {
 		t.Fatalf("mode=%v err=%v", info, err)
 	}
 	entries, err := os.ReadDir(filepath.Dir(target))

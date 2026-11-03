@@ -21,7 +21,7 @@ func TestValidateHarnessInvariantsCoversHealthyMissingAndRetiredHits(t *testing.
 		t.Fatal(err)
 	}
 	missing := ValidateHarnessInvariants(missingRoot)
-	if missing.OK || !strings.Contains(missing.Error, "missing .issueops/COMMIT_POLICY.md") {
+	if missing.OK || !strings.Contains(missing.Error, "missing "+filepath.Join(".issueops", "COMMIT_POLICY.md")) {
 		t.Fatalf("expected missing doc invariant, got %+v", missing)
 	}
 

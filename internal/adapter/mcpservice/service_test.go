@@ -16,6 +16,7 @@ import (
 
 	"issueops/internal/contract/mcpservice"
 	"issueops/internal/contract/processidentity"
+	"issueops/internal/testsupport"
 )
 
 const testBearer = "test-bearer-value"
@@ -433,9 +434,11 @@ func TestReadBearerIsReadOnlyAndRejectsSharedFiles(t *testing.T) {
 	if err := os.MkdirAll(httpDir(state), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(httpDir(state), bearerFileName), []byte("x"), 0o644); err != nil {
+	bearerPath := filepath.Join(httpDir(state), bearerFileName)
+	if err := os.WriteFile(bearerPath, []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	testsupport.MakePermissive(t, bearerPath, 0o644)
 	if _, err := ReadBearer(state); err == nil {
 		t.Fatal("group-readable bearer accepted")
 	}

@@ -2,6 +2,7 @@ package policy
 
 import (
 	policydomain "issueops/internal/contract/policy"
+	"issueops/internal/testsupport"
 	"os"
 	"path/filepath"
 	"testing"
@@ -55,7 +56,7 @@ func TestCommandPolicyDeniesPathArgsOutsideWorkspace(t *testing.T) {
 	if err := os.WriteFile(outsideFile, []byte("outside"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("HOME", outside)
+	testsupport.SetHome(t, outside)
 	link := filepath.Join(inside, "outside-link")
 	if err := os.Symlink(outside, link); err != nil {
 		t.Fatal(err)

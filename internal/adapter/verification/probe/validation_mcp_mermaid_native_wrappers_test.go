@@ -6,6 +6,7 @@ import (
 	"issueops/internal/adapter/verification/probe/qagate"
 	selfverify "issueops/internal/contract/selfverify"
 
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,13 +15,15 @@ import (
 	"testing"
 	"time"
 
+	"issueops/internal/adapter/codex"
 	"issueops/internal/adapter/hostprotocol"
+	"issueops/internal/testsupport"
 )
 
 func TestValidationMCPMermaidNativeWrappersUseDefaultSurfaces(t *testing.T) {
 	root := t.TempDir()
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	testsupport.SetHome(t, home)
 	writeNativeIntegrationFixture(t, root, home)
 
 	mcpDeps := mcpsmoke.MCPValidationDeps{
@@ -91,6 +94,7 @@ func TestForbiddenNameHitsSkipsRuntimeStateDirs(t *testing.T) {
 
 func writeNativeIntegrationFixture(t *testing.T, root, home string) {
 	t.Helper()
+	binary := filepath.Join(root, "bin", testsupport.ExecutableName("issueops"))
 	for _, path := range []string{
 		filepath.Join(root, "configs", "codex", "mcp.config.toml"),
 		filepath.Join(root, "configs", "codex", "hooks.json"),
@@ -111,13 +115,17 @@ func writeNativeIntegrationFixture(t *testing.T, root, home string) {
 		writeFileForWrapperTest(t, path, "ok\n")
 	}
 	writeFileForWrapperTest(t, filepath.Join(home, ".codex", "config.toml"), "[mcp_servers.issueops]\ncommand = \"issueops\"\n")
-	writeFileForWrapperTest(t, filepath.Join(home, ".codex", "hooks.json"), fmt.Sprintf(`{"hooks":{"SessionStart":[{"hooks":[{"command":"'%[1]s' hook session-start --host codex","timeout":5,"type":"command"}]}],"SubagentStart":[{"hooks":[{"command":"'%[1]s' hook subagent-start --host codex","timeout":5,"type":"command"}]}]}}`, filepath.Join(root, "bin", "issueops")))
-	writeFileForWrapperTest(t, filepath.Join(home, ".omo", "mcp.json"), fmt.Sprintf(`{"mcpServers":{"issueops":{"command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, filepath.Join(root, "bin", "issueops"), root))
-	writeFileForWrapperTest(t, filepath.Join(home, ".omo", "extensions", "issueops.js"), hostprotocol.OmoLifecycleExtension(filepath.Join(root, "bin", "issueops")))
-	writeFileForWrapperTest(t, filepath.Join(home, ".omp", "agent", "mcp.json"), fmt.Sprintf(`{"mcpServers":{"issueops":{"type":"stdio","command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, filepath.Join(root, "bin", "issueops"), root))
-	writeFileForWrapperTest(t, filepath.Join(home, ".omp", "agent", "extensions", "issueops.js"), hostprotocol.OmpLifecycleExtension(filepath.Join(root, "bin", "issueops")))
-	writeFileForWrapperTest(t, filepath.Join(home, ".config", "opencode", "opencode.json"), fmt.Sprintf(`{"mcp":{"servers":{"issueops":{"type":"local","command":[%q,"mcp"],"environment":{"ISSUEOPS_ROOT":%q},"codemode":false}}}}`, filepath.Join(root, "bin", "issueops"), root))
-	writeFileForWrapperTest(t, filepath.Join(home, ".config", "opencode", "plugins", "issueops.js"), hostprotocol.OpencodeLifecyclePlugin(filepath.Join(root, "bin", "issueops")))
+	hooks, err := json.Marshal(codex.HooksConfig(binary))
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeFileForWrapperTest(t, filepath.Join(home, ".codex", "hooks.json"), string(hooks))
+	writeFileForWrapperTest(t, filepath.Join(home, ".omo", "mcp.json"), fmt.Sprintf(`{"mcpServers":{"issueops":{"command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, binary, root))
+	writeFileForWrapperTest(t, filepath.Join(home, ".omo", "extensions", "issueops.js"), hostprotocol.OmoLifecycleExtension(binary))
+	writeFileForWrapperTest(t, filepath.Join(home, ".omp", "agent", "mcp.json"), fmt.Sprintf(`{"mcpServers":{"issueops":{"type":"stdio","command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, binary, root))
+	writeFileForWrapperTest(t, filepath.Join(home, ".omp", "agent", "extensions", "issueops.js"), hostprotocol.OmpLifecycleExtension(binary))
+	writeFileForWrapperTest(t, filepath.Join(home, ".config", "opencode", "opencode.json"), fmt.Sprintf(`{"mcp":{"servers":{"issueops":{"type":"local","command":[%q,"mcp"],"environment":{"ISSUEOPS_ROOT":%q},"codemode":false}}}}`, binary, root))
+	writeFileForWrapperTest(t, filepath.Join(home, ".config", "opencode", "plugins", "issueops.js"), hostprotocol.OpencodeLifecyclePlugin(binary))
 }
 
 func writeFileForWrapperTest(t *testing.T, path, body string) {

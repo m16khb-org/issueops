@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	projectdocdomain "issueops/internal/domain/projectdoc"
+	"issueops/internal/testsupport"
 	"os"
 	"path/filepath"
 	"strings"
@@ -233,9 +234,7 @@ func TestDiscoverReportsOversizeAndUnreadable(t *testing.T) {
 	repo := t.TempDir()
 	writeProjectDoc(t, repo, "a-oversize.md", strings.Repeat("x", projectDocCatalogMaxFileBytes+1))
 	writeProjectDoc(t, repo, "a-unreadable.md", "# Hidden\n")
-	if err := os.Chmod(filepath.Join(repo, ".issueops", "a-unreadable.md"), 0); err != nil {
-		t.Fatal(err)
-	}
+	testsupport.MakeUnreadable(t, filepath.Join(repo, ".issueops", "a-unreadable.md"), 0o644)
 	writeProjectDoc(t, repo, "b-ok.md", "# Ok\n")
 
 	catalog, omissions, stats := DiscoverProjectDocsReport(repo)
@@ -258,14 +257,7 @@ func TestDiscoverReportsUnreadableDirectory(t *testing.T) {
 	repo := t.TempDir()
 	writeProjectDoc(t, repo, "NOTE.md", "# Hidden\n")
 	dir := filepath.Join(repo, ".issueops")
-	if err := os.Chmod(dir, 0); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() {
-		if err := os.Chmod(dir, 0o755); err != nil {
-			t.Error(err)
-		}
-	})
+	testsupport.MakeUnreadable(t, dir, 0o755)
 
 	_, omissions, _ := DiscoverProjectDocsReport(repo)
 	if !omissions.ScanTruncated {

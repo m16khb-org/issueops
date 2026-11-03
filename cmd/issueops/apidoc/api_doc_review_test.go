@@ -131,7 +131,7 @@ func TestAPIDocAllModeUsesTrackedCandidateContent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(content, "--- FILE: src/users/users.controller.ts ---") || !strings.Contains(content, "UsersController") {
+	if !strings.Contains(content, "--- FILE: "+filepath.Join("src", "users", "users.controller.ts")+" ---") || !strings.Contains(content, "UsersController") {
 		t.Fatalf("all mode content missing controller: %s", content)
 	}
 }

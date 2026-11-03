@@ -8,7 +8,10 @@ import (
 
 	commandparsecontract "issueops/internal/contract/commandparse"
 	provenanceport "issueops/internal/port/issueopsprovenance"
+	"issueops/internal/testsupport"
 )
+
+var testBinary = testsupport.AbsPath("repo", "bin", testsupport.ExecutableName("issueops"))
 
 type stubObserver struct {
 	receipt provenanceport.Receipt
@@ -24,7 +27,7 @@ func (s stubObserver) Observe(context.Context) (provenanceport.Receipt, error) {
 // 명령에 증거를 바인딩해야 한다.
 func TestBindManyObservesAndBindsAllNonEmptyCommands(t *testing.T) {
 	observer := stubObserver{receipt: provenanceport.Receipt{
-		ExecutablePath: "/repo/bin/issueops", ExecutableSHA256: strings.Repeat("a", 64),
+		ExecutablePath: testBinary, ExecutableSHA256: strings.Repeat("a", 64),
 	}}
 	bound, err := BindMany(context.Background(), []string{"issueops status --id io-1", "", "issueops list"}, 3, observer)
 	if err != nil {
@@ -37,7 +40,7 @@ func TestBindManyObservesAndBindsAllNonEmptyCommands(t *testing.T) {
 		if !strings.Contains(command, "issueops") || !strings.Contains(command, "--generated-for-generation 3") {
 			t.Fatalf("command not bound with provenance: %q", command)
 		}
-		if !strings.Contains(command, "/repo/bin/issueops") {
+		if !strings.Contains(command, testBinary) {
 			t.Fatalf("bound command must carry the observed executable path: %q", command)
 		}
 	}

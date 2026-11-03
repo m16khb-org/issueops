@@ -3,6 +3,7 @@ package issueopscmux
 import (
 	"context"
 	"errors"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -12,6 +13,7 @@ import (
 	model "issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
 	port "issueops/internal/port/cmux"
+	"issueops/internal/testsupport"
 )
 
 // fakeDir is a configurable canonical-worktree identity.
@@ -43,13 +45,13 @@ func fenceEnv(dir *fakeDir) port.RootEnvironment {
 	return port.RootEnvironment{
 		Read:      func(string, string) (model.IssueOpsRecord, error) { return releasedRecord(), nil },
 		Directory: func(string) (port.Directory, error) { return dir, nil },
-		Getwd:     func() (string, error) { return "/workspace", nil },
+		Getwd:     func() (string, error) { return workspaceRoot, nil },
 		GitTop:    func(path string) (string, error) { return path, nil },
 	}
 }
 
 func fenceRequest() model.ExecutionCmuxHandoffRequest {
-	return model.ExecutionCmuxHandoffRequest{ID: "cycle", Generation: 2, CWD: "/workspace"}
+	return model.ExecutionCmuxHandoffRequest{ID: "cycle", Generation: 2, CWD: workspaceRoot}
 }
 
 func TestOpenRootFenceRejectsEachIdentityMismatchWithItsOwnReason(t *testing.T) {
@@ -89,19 +91,19 @@ func TestOpenRootFenceRejectsEachIdentityMismatchWithItsOwnReason(t *testing.T) 
 		{
 			name: "durable worktree path is another directory",
 			mutate: func(_ *port.RootEnvironment, dir *fakeDir) {
-				dir.sameAs = func(other string) bool { return other != "/workspace" }
+				dir.sameAs = func(other string) bool { return other != workspaceRoot }
 			},
 			want: "durable worktree is not the canonical worktree",
 		},
 		{
 			name:    "request cwd is another directory",
-			request: func(r *model.ExecutionCmuxHandoffRequest) { r.CWD = "/elsewhere" },
+			request: func(r *model.ExecutionCmuxHandoffRequest) { r.CWD = elsewhereRoot },
 			want:    "request cwd is not the canonical worktree",
 		},
 		{
 			name: "process cwd is another directory",
 			mutate: func(env *port.RootEnvironment, _ *fakeDir) {
-				env.Getwd = func() (string, error) { return "/elsewhere", nil }
+				env.Getwd = func() (string, error) { return elsewhereRoot, nil }
 			},
 			want: "process cwd is not the canonical worktree",
 		},
@@ -115,7 +117,7 @@ func TestOpenRootFenceRejectsEachIdentityMismatchWithItsOwnReason(t *testing.T) 
 		{
 			name: "git top is a different directory",
 			mutate: func(env *port.RootEnvironment, _ *fakeDir) {
-				env.GitTop = func(string) (string, error) { return "/parent", nil }
+				env.GitTop = func(string) (string, error) { return parentRoot, nil }
 			},
 			want: "cwd is not the canonical Git worktree",
 		},
@@ -133,7 +135,7 @@ func TestOpenRootFenceRejectsEachIdentityMismatchWithItsOwnReason(t *testing.T) 
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			dir := &fakeDir{path: "/workspace"}
+			dir := &fakeDir{path: workspaceRoot}
 			env := fenceEnv(dir)
 			request := fenceRequest()
 			if tc.mutate != nil {
@@ -172,12 +174,12 @@ func TestRootFenceCheckDetectsDriftAfterOpen(t *testing.T) {
 		},
 		{
 			name:  "workspace root rewritten",
-			drift: func(record *model.IssueOpsRecord, _ *fakeDir) { record.Execution.Workspace.Root = "/other" },
+			drift: func(record *model.IssueOpsRecord, _ *fakeDir) { record.Execution.Workspace.Root = otherRoot },
 			want:  "durable worktree path changed",
 		},
 		{
 			name:  "worktree path rewritten",
-			drift: func(record *model.IssueOpsRecord, _ *fakeDir) { record.WorktreePath = "/other" },
+			drift: func(record *model.IssueOpsRecord, _ *fakeDir) { record.WorktreePath = otherRoot },
 			want:  "durable worktree path changed",
 		},
 		{
@@ -194,7 +196,7 @@ func TestRootFenceCheckDetectsDriftAfterOpen(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			dir := &fakeDir{path: "/workspace"}
+			dir := &fakeDir{path: workspaceRoot}
 			env := fenceEnv(dir)
 			drifted := false
 			env.Read = func(string, string) (model.IssueOpsRecord, error) {
@@ -261,7 +263,7 @@ type harnessClient struct {
 func (c *harnessClient) Preflight(_ context.Context, request cmux.PreflightRequest) (cmux.PreflightResult, error) {
 	c.h.preflightCalls++
 	c.preflightedSocket = request.SocketPath
-	return cmux.PreflightResult{Build: "build-7", Executable: "/bin/cmux"}, c.preflightErr
+	return cmux.PreflightResult{Build: "build-7", Executable: cmuxExecutable}, c.preflightErr
 }
 
 func (c *harnessClient) CreateWorkspace(_ context.Context, request cmux.CreateRequest) (cmux.CreatedWorkspace, error) {
@@ -278,12 +280,12 @@ func (c *harnessClient) Send(_ context.Context, request cmux.SendRequest) (cmux.
 
 func newHarness() *handoffHarness {
 	h := &handoffHarness{
-		dir:     &fakeDir{path: "/workspace"},
-		created: cmux.CreatedWorkspace{WorkspaceID: "ws", SurfaceID: "sf", CWD: "/workspace"},
+		dir:     &fakeDir{path: workspaceRoot},
+		created: cmux.CreatedWorkspace{WorkspaceID: "ws", SurfaceID: "sf", CWD: workspaceRoot},
 		request: model.ExecutionCmuxHandoffRequest{
-			ID: "cycle", Generation: 2, CWD: "/workspace", PromptFile: "/workspace/prompt",
+			ID: "cycle", Generation: 2, CWD: workspaceRoot, PromptFile: promptFile,
 			PromptSHA256: strings.Repeat("a", 64), MaterialSHA256: strings.Repeat("b", 64),
-			Host: "codex", HostExecutable: "/codex", Model: "m", Effort: "high", SocketPath: "/sock",
+			Host: "codex", HostExecutable: codexExecutable, Model: "m", Effort: "high", SocketPath: socketFixture,
 		},
 		samePath: func(string, string) bool { return true },
 	}
@@ -297,7 +299,7 @@ func newHarness() *handoffHarness {
 		return releasedRecord(), nil
 	}
 	h.service = Service{
-		Client: h.client, Roots: env, ArtifactRoot: "/artifacts",
+		Client: h.client, Roots: env, ArtifactRoot: artifactRoot,
 		Now:       func() time.Time { return time.Unix(100, 0) },
 		SamePath:  func(a, b string) bool { return h.samePath(a, b) },
 		ReadAudit: func() ([]model.IssueOpsHandoffDeliveryObservation, error) { return h.existing, h.readAuditErr },
@@ -321,11 +323,11 @@ func newHarness() *handoffHarness {
 		ValidateHostProfile:    func(string, string, string, string) error { return h.profileErr },
 		Prepare: func(cmux.ArtifactRequest) (cmux.PreparedLauncher, error) {
 			h.prepared++
-			return cmux.PreparedLauncher{Directory: "/recovery", Command: "launch"}, h.prepareErr
+			return cmux.PreparedLauncher{Directory: recoveryDir, Command: "launch"}, h.prepareErr
 		},
 		AwaitReceipt: func(context.Context, cmux.PreparedLauncher, cmux.BootstrapExpectation) (model.NativeProcessReceipt, error) {
 			h.awaited++
-			return model.NativeProcessReceipt{PID: 42, StartedAt: "t0", Executable: "/codex"}, h.receiptErr
+			return model.NativeProcessReceipt{PID: 42, StartedAt: "t0", Executable: codexExecutable}, h.receiptErr
 		},
 		Cleanup: func(cmux.PreparedLauncher) error { h.cleaned++; return h.cleanupErr },
 	}
@@ -355,8 +357,10 @@ func TestHandoffRejectsBeforeAnyExternalCall(t *testing.T) {
 				CallStaged: model.IssueOpsHandoffDeliveryState{Status: model.IssueOpsHandoffDeliveryStateObserved},
 			}}
 		}, "generation already has a staged attempt"},
-		{"prompt outside the worktree", func(h *handoffHarness) { h.request.PromptFile = "/tmp/prompt" }, "prompt file must be inside the canonical worktree"},
-		{"prompt path not clean", func(h *handoffHarness) { h.request.PromptFile = "/workspace/../etc/prompt" }, "clean path"},
+		{"prompt outside the worktree", func(h *handoffHarness) { h.request.PromptFile = testsupport.AbsPath("tmp", "prompt") }, "prompt file must be inside the canonical worktree"},
+		{"prompt path not clean", func(h *handoffHarness) {
+			h.request.PromptFile = workspaceRoot + string(filepath.Separator) + ".." + string(filepath.Separator) + "etc" + string(filepath.Separator) + "prompt"
+		}, "clean path"},
 		{"prompt unreadable", func(h *handoffHarness) { h.promptErr = errors.New("prompt digest mismatch") }, "prompt digest mismatch"},
 		{"material digest malformed", func(h *handoffHarness) { h.request.MaterialSHA256 = strings.Repeat("B", 64) }, "material digest is invalid"},
 		{"host executable rejected", func(h *handoffHarness) { h.execErr = errors.New("host binary untrusted") }, "host binary untrusted"},
@@ -417,7 +421,7 @@ func TestHandoffPreflightFailureReportsUnavailableWithoutStaging(t *testing.T) {
 	if h.observeCalls != 0 || h.client.create != 0 {
 		t.Fatalf("an unavailable cmux must leave no audit or workspace: observe=%d create=%d", h.observeCalls, h.client.create)
 	}
-	if h.client.preflightedSocket != "/sock" {
+	if h.client.preflightedSocket != socketFixture {
 		t.Fatalf("preflight must target the requested socket, got %q", h.client.preflightedSocket)
 	}
 	if h.dir.closed != 1 {
@@ -439,7 +443,7 @@ func TestHandoffFenceDriftStopsTheNextEffect(t *testing.T) {
 	}{
 		{"before preflight", 3, "rejected", 0, 0, 0, "", 0},
 		{"before workspace creation", 4, "staged", 1, 0, 0, "", 1},
-		{"before sending the launcher", 5, "pre_send_failed", 1, 1, 0, "/recovery", 3},
+		{"before sending the launcher", 5, "pre_send_failed", 1, 1, 0, recoveryDir, 3},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			h := newHarness()
@@ -558,7 +562,7 @@ func TestHandoffRecordsCreatedTargetAndTimingBeforeSending(t *testing.T) {
 	if staged.CallStaged.Status != model.IssueOpsHandoffDeliveryStateObserved || staged.InputAccepted.Status == model.IssueOpsHandoffDeliveryStateObserved {
 		t.Fatalf("first audit must stage the call before any input: %+v", staged)
 	}
-	if staged.Launcher.Version != "build-7" || staged.Launcher.Path != "/bin/cmux" || staged.Timing.PreflightMS < 1 {
+	if staged.Launcher.Version != "build-7" || staged.Launcher.Path != cmuxExecutable || staged.Timing.PreflightMS < 1 {
 		t.Fatalf("staged launcher/timing = %+v / %+v", staged.Launcher, staged.Timing)
 	}
 	created := h.observations[1]
@@ -566,16 +570,16 @@ func TestHandoffRecordsCreatedTargetAndTimingBeforeSending(t *testing.T) {
 		t.Fatalf("created target/timing not audited: %+v / %+v", created.Target, created.Timing)
 	}
 	final := h.observations[len(h.observations)-1]
-	if final.Target.Process == nil || final.Target.Process.PID != 42 || final.Target.ProcessIncarnation != "42:t0:/codex" {
+	if final.Target.Process == nil || final.Target.Process.PID != 42 || final.Target.ProcessIncarnation != "42:t0:"+codexExecutable {
 		t.Fatalf("receiver process not audited: %+v", final.Target)
 	}
 	if final.Timing.ReceiverReceiptMS < 1 {
 		t.Fatalf("receiver receipt timing must be at least 1ms, got %d", final.Timing.ReceiverReceiptMS)
 	}
-	if len(h.promptReads) != 1 || h.promptReads[0] != "/workspace/prompt" {
+	if len(h.promptReads) != 1 || h.promptReads[0] != promptFile {
 		t.Fatalf("prompt must be read once from the canonical path: %v", h.promptReads)
 	}
-	if h.client.createdCWD != "/workspace" || h.client.sentCommand != "launch" {
+	if h.client.createdCWD != workspaceRoot || h.client.sentCommand != "launch" {
 		t.Fatalf("create cwd=%q sent=%q", h.client.createdCWD, h.client.sentCommand)
 	}
 }
@@ -629,7 +633,7 @@ func TestHandoffSendOutcomes(t *testing.T) {
 			if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
 				t.Fatalf("err = %v, want %q", err, tc.wantErr)
 			}
-			if result.Status != tc.wantStatus || result.OK || result.InputAccepted || result.RecoveryArtifactDir != "/recovery" {
+			if result.Status != tc.wantStatus || result.OK || result.InputAccepted || result.RecoveryArtifactDir != recoveryDir {
 				t.Fatalf("result = %+v", result)
 			}
 			if h.awaited != 0 || h.cleaned != 0 {
@@ -651,7 +655,7 @@ func TestHandoffAuditFailureAfterAcceptedInputStillReportsAcceptance(t *testing.
 	if err == nil || !strings.Contains(err.Error(), "audit write failed") {
 		t.Fatalf("err = %v", err)
 	}
-	if result.Status != "input_accepted" || !result.InputAccepted || result.RecoveryArtifactDir != "/recovery" {
+	if result.Status != "input_accepted" || !result.InputAccepted || result.RecoveryArtifactDir != recoveryDir {
 		t.Fatalf("input was delivered, so the result must say so and keep recovery: %+v", result)
 	}
 	if h.awaited != 0 || h.cleaned != 0 {
@@ -680,7 +684,7 @@ func TestHandoffFinalAuditFailureKeepsRecoveryArtifact(t *testing.T) {
 			if err == nil || !strings.Contains(err.Error(), "audit write failed") {
 				t.Fatalf("err = %v", err)
 			}
-			if result.Status != tc.wantStatus || !result.InputAccepted || result.RecoveryArtifactDir != "/recovery" {
+			if result.Status != tc.wantStatus || !result.InputAccepted || result.RecoveryArtifactDir != recoveryDir {
 				t.Fatalf("result = %+v", result)
 			}
 			if h.cleaned != tc.wantCleaned {
@@ -696,7 +700,7 @@ func TestHandoffReceiverUnverifiedLeavesProcessUnrecorded(t *testing.T) {
 
 	result, err := h.run(t)
 
-	if err != nil || !result.OK || result.Status != "input_accepted_receiver_unverified" || result.RecoveryArtifactDir != "/recovery" {
+	if err != nil || !result.OK || result.Status != "input_accepted_receiver_unverified" || result.RecoveryArtifactDir != recoveryDir {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
 	if result.Target.Process != nil || result.Target.ProcessIncarnation != "" {

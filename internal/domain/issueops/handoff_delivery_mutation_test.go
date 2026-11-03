@@ -1,10 +1,12 @@
 package issueops
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
 	issueopscontract "issueops/internal/contract/issueops"
+	"issueops/internal/testsupport"
 )
 
 // handoffMutPadTimestamp lengthens an RFC 3339 UTC timestamp to exactly length bytes with fractional-second zeros.
@@ -136,8 +138,10 @@ func TestValidateHandoffDeliveryObservationStateStatusAtLimitIsInvalidNotTooLarg
 }
 
 func TestValidateHandoffDeliveryObservationCmuxEndpoint(t *testing.T) {
-	const parent = "/private/tmp"
-	pathOfLength := func(n int) string { return parent + "/" + strings.Repeat("s", n-len(parent)-1) }
+	parent := cmuxTestParent
+	pathOfLength := func(n int) string {
+		return parent + string(filepath.Separator) + strings.Repeat("s", n-len(parent)-1)
+	}
 	t.Run("socket path at limit is valid", func(t *testing.T) {
 		observation := cmuxDeliveryObservationFixture()
 		observation.Launcher.EndpointIncarnation.Path = pathOfLength(handoffDeliveryFieldLimit)
@@ -184,7 +188,7 @@ func TestValidateHandoffDeliveryObservationHerdrNativeReceiptIsValid(t *testing.
 func TestMergeHandoffDeliveryObservationKeepsKnownWindowAndCWDWhenNextOmitsThem(t *testing.T) {
 	current := deliveryObservationFixture()
 	current.Target.WindowID = "window-1"
-	current.Target.CWD = "/repo/worktree"
+	current.Target.CWD = testsupport.AbsPath("repo", "worktree")
 	next := current
 	next.Target.WindowID = ""
 	next.Target.CWD = ""
@@ -193,17 +197,17 @@ func TestMergeHandoffDeliveryObservationKeepsKnownWindowAndCWDWhenNextOmitsThem(
 	if !decision.Accepted {
 		t.Fatalf("merge rejected: %+v", decision)
 	}
-	if merged.Target.WindowID != "window-1" || merged.Target.CWD != "/repo/worktree" {
+	if merged.Target.WindowID != "window-1" || merged.Target.CWD != testsupport.AbsPath("repo", "worktree") {
 		t.Fatalf("known target identity was dropped: %+v", merged.Target)
 	}
 
 	current = deliveryObservationFixture()
 	next = current
 	next.Target.WindowID = "window-2"
-	next.Target.CWD = "/repo/other"
+	next.Target.CWD = testsupport.AbsPath("repo", "other")
 	next.UpdatedAt = "2026-09-20T10:06:00Z"
 	merged, decision = MergeHandoffDeliveryObservation(current, next)
-	if !decision.Accepted || merged.Target.WindowID != "window-2" || merged.Target.CWD != "/repo/other" {
+	if !decision.Accepted || merged.Target.WindowID != "window-2" || merged.Target.CWD != testsupport.AbsPath("repo", "other") {
 		t.Fatalf("missing target identity was not filled: decision=%+v target=%+v", decision, merged.Target)
 	}
 }

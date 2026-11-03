@@ -7,8 +7,10 @@ import (
 	"strings"
 	"testing"
 
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/adapter/outbound/sqlstore"
 	"issueops/internal/port"
+	"issueops/internal/testsupport"
 )
 
 func TestReadLoopRefusesNonCurrentSchema(t *testing.T) {
@@ -40,13 +42,22 @@ func TestRepoGateSummaryDoesNotRepairExistingLoopStore(t *testing.T) {
 		filepath.Join(testLoopStateRoot(), "issueops.db"),
 		filepath.Join(testLoopStateRoot(), "issueops.lock.db"),
 	}
+	// want is what osfile.Perm reports for the permissive fixture: exactly the
+	// requested mode on Unix, and its Windows rendering (0666/0777) there.
+	want := make([]os.FileMode, len(paths))
 	for index, path := range paths {
 		mode := os.FileMode(0o644)
 		if index == 0 {
 			mode = 0o755
 		}
-		if err := os.Chmod(path, mode); err != nil {
+		testsupport.MakePermissive(t, path, mode)
+		info, err := os.Stat(path)
+		if err != nil {
 			t.Fatal(err)
+		}
+		want[index] = osfile.Perm(path, info)
+		if want[index]&0o077 == 0 {
+			t.Fatalf("fixture %s is still private: %o", path, want[index])
 		}
 	}
 
@@ -55,16 +66,12 @@ func TestRepoGateSummaryDoesNotRepairExistingLoopStore(t *testing.T) {
 		t.Fatalf("loop summary=%#v warnings=%#v", summary, warnings)
 	}
 	for index, path := range paths {
-		want := os.FileMode(0o644)
-		if index == 0 {
-			want = 0o755
-		}
 		info, err := os.Stat(path)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got := info.Mode().Perm(); got != want {
-			t.Fatalf("loop diagnostic repaired %s mode to %o, want unchanged %o", path, got, want)
+		if got := osfile.Perm(path, info); got != want[index] {
+			t.Fatalf("loop diagnostic repaired %s mode to %o, want unchanged %o", path, got, want[index])
 		}
 	}
 }

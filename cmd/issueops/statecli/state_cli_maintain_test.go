@@ -3,6 +3,7 @@ package statecli
 import (
 	"context"
 	"encoding/json"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -47,7 +48,7 @@ func TestRunStateMaintainReportsRoots(t *testing.T) {
 		t.Fatalf("expected 2 skipped roots (worker, loop), got %+v", result)
 	}
 	for _, root := range result.Skipped {
-		if !strings.HasSuffix(root, "/worker") && !strings.HasSuffix(root, "/loop") {
+		if base := filepath.Base(root); base != "worker" && base != "loop" {
 			t.Fatalf("unexpected skipped root %q in %+v", root, result)
 		}
 	}

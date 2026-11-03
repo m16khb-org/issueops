@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"issueops/internal/adapter/outbound/osfile"
 	fixturecontract "issueops/internal/contract/toolconformance"
 	fixturedomain "issueops/internal/domain/toolconformance"
 
@@ -26,10 +27,10 @@ func TestConformanceProbeWritesPrivateAtomicCapture(t *testing.T) {
 	if err := writeCapture(path, capture); err != nil {
 		t.Fatal(err)
 	}
-	if info, err := os.Stat(dir); err != nil || info.Mode().Perm() != 0o700 {
+	if info, err := os.Stat(dir); err != nil || osfile.Perm(dir, info) != 0o700 {
 		t.Fatalf("dir=%v err=%v", info, err)
 	}
-	if info, err := os.Stat(path); err != nil || info.Mode().Perm() != 0o600 {
+	if info, err := os.Stat(path); err != nil || osfile.Perm(path, info) != 0o600 {
 		t.Fatalf("file=%v err=%v", info, err)
 	}
 	var got ConformanceCapture
@@ -123,10 +124,10 @@ func TestConformanceProbeSDKRoundTripCapturesOnlyRenamedProbe(t *testing.T) {
 	if !sameJSON(capture.CanonicalArguments, want) {
 		t.Fatalf("canonical=%#v want=%#v", capture.CanonicalArguments, want)
 	}
-	if info, err := os.Stat(filepath.Dir(path)); err != nil || info.Mode().Perm() != 0o700 {
+	if info, err := os.Stat(filepath.Dir(path)); err != nil || osfile.Perm(filepath.Dir(path), info) != 0o700 {
 		t.Fatalf("dir=%v err=%v", info, err)
 	}
-	if info, err := os.Stat(path); err != nil || info.Mode().Perm() != 0o600 {
+	if info, err := os.Stat(path); err != nil || osfile.Perm(path, info) != 0o600 {
 		t.Fatalf("file=%v err=%v", info, err)
 	}
 }

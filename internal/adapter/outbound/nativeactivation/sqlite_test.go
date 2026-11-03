@@ -9,6 +9,7 @@ import (
 	"issueops/internal/adapter/outbound/sqlstore"
 	"issueops/internal/port"
 	activationport "issueops/internal/port/nativeactivation"
+	"issueops/internal/testsupport"
 )
 
 func testBackend(executable string) Backend {
@@ -23,7 +24,7 @@ func TestBackendPersistsAndIdempotentlySealsCurrentActivation(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(issueOpsRoot, "bin"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(issueOpsRoot, "bin", "issueops")
+	target := filepath.Join(issueOpsRoot, "bin", binaryName)
 	if err := os.WriteFile(target, []byte("current"), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -53,8 +54,8 @@ func TestBackendSealsStagedCandidateAfterAtomicRename(t *testing.T) {
 	if err := os.MkdirAll(binDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	stage := filepath.Join(binDir, ".issueops.activate-test")
-	target := filepath.Join(binDir, "issueops")
+	stage := filepath.Join(binDir, testsupport.ExecutableName(".issueops.activate-test"))
+	target := filepath.Join(binDir, binaryName)
 	if err := os.WriteFile(stage, []byte("candidate"), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +84,7 @@ func TestBackendRejectsBinaryDriftBetweenBeginAndSeal(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(issueOpsRoot, "bin"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(issueOpsRoot, "bin", "issueops")
+	target := filepath.Join(issueOpsRoot, "bin", binaryName)
 	if err := os.WriteFile(target, []byte("before"), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +107,7 @@ func TestBackendAbortDeletesOnlyExactPendingTransition(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(issueOpsRoot, "bin"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(issueOpsRoot, "bin", "issueops")
+	target := filepath.Join(issueOpsRoot, "bin", binaryName)
 	if err := os.WriteFile(target, []byte("candidate"), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -141,7 +142,7 @@ func TestBackendBeginInvalidatesPriorSealedReceipt(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(issueOpsRoot, "bin"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(issueOpsRoot, "bin", "issueops")
+	target := filepath.Join(issueOpsRoot, "bin", binaryName)
 	if err := os.WriteFile(target, []byte("candidate"), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -171,7 +172,7 @@ func TestBackendRejectsNonCanonicalTarget(t *testing.T) {
 	if err := os.MkdirAll(issueOpsRoot, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	target := filepath.Join(issueOpsRoot, "issueops")
+	target := filepath.Join(issueOpsRoot, binaryName)
 	if err := os.WriteFile(target, []byte("current"), 0o700); err != nil {
 		t.Fatal(err)
 	}

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	inspectcontract "issueops/internal/contract/inspect"
+	"issueops/internal/testsupport"
 )
 
 const (
@@ -634,10 +635,7 @@ func TestCommandHostVersionRejectsUnknownHostsAndMissingBinaries(t *testing.T) {
 func TestCommandHostVersionReadsVersionFromAllowedBinary(t *testing.T) {
 	bin := t.TempDir()
 	for name, banner := range map[string]string{"codex": "codex-cli 9.8.7", "omp": "omp/9.8.7"} {
-		writeTestFile(t, filepath.Join(bin, name), "#!/bin/sh\necho '"+banner+"'\n")
-		if err := os.Chmod(filepath.Join(bin, name), 0o755); err != nil {
-			t.Fatal(err)
-		}
+		testsupport.WriteFakeCommand(t, bin, name, "#!/bin/sh\necho '"+banner+"'\n")
 	}
 	t.Setenv("PATH", bin)
 

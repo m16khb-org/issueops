@@ -2,14 +2,24 @@ package issueops
 
 import (
 	"context"
+	"os"
 	"os/exec"
+	"runtime"
 	"slices"
 	"testing"
 	"time"
 )
 
+// sleeperModeEnv makes the test binary (TestMain) sleep instead of running
+// tests, a long-lived child with a chosen argv[0] where /bin/sleep is absent.
+const sleeperModeEnv = "ISSUEOPS_TEST_SLEEPER"
+
 func TestNativeProcessInspectorOpencodeArgumentsMatchStartIdentity(t *testing.T) {
 	cmd := exec.Command("/bin/sleep", "30")
+	if runtime.GOOS == "windows" {
+		cmd = exec.Command(os.Args[0], "30")
+		cmd.Env = append(os.Environ(), sleeperModeEnv+"=1")
+	}
 	cmd.Args = []string{"/opt/test/bin/opencode", "30"}
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)

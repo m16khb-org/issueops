@@ -5,11 +5,13 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"issueops/internal/adapter/installutil"
+	"issueops/internal/adapter/outbound/osfile"
 	"issueops/internal/port"
 )
 
@@ -105,8 +107,20 @@ func TestHostJSONAdapterMatrix(t *testing.T) {
 				}
 				for file, mode := range map[string]os.FileMode{path: 0o600, filepath.Join(req.Root, host.projectPath): 0o644} {
 					info, err := os.Stat(file)
-					if err != nil || info.Mode().Perm() != mode {
-						t.Fatalf("file=%s mode=%o info=%v err=%v", file, mode, info, err)
+					if err != nil {
+						t.Fatalf("file=%s err=%v", file, err)
+					}
+					perm := osfile.Perm(file, info)
+					// Windows renders ACLs as Unix-like bits: a non-private file is
+					// owner-readable/writable and inherits the owner-only TMP ACL.
+					if runtime.GOOS == "windows" && mode != 0o600 {
+						if perm&0o600 != 0o600 {
+							t.Fatalf("file=%s perm=%o want owner read/write info=%v", file, perm, info)
+						}
+						continue
+					}
+					if perm != mode {
+						t.Fatalf("file=%s mode=%o perm=%o info=%v", file, mode, perm, info)
 					}
 				}
 				evidence, err := host.installer.VerifyActivation(req)

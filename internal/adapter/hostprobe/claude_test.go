@@ -113,8 +113,8 @@ func TestClaudeRunnerRunUsesOnePrivateProbeConfig(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if rootInfo.Mode().Perm() != 0o700 {
-				t.Fatalf("root mode=%#o want 0700", rootInfo.Mode().Perm())
+			if filePerm(episodeRoot, rootInfo) != 0o700 {
+				t.Fatalf("root mode=%#o want 0700", filePerm(episodeRoot, rootInfo))
 			}
 
 			configPath := argumentValue(t, command.Argv, "--mcp-config")
@@ -122,8 +122,8 @@ func TestClaudeRunnerRunUsesOnePrivateProbeConfig(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if configInfo.Mode().Perm() != 0o600 {
-				t.Fatalf("config mode=%#o want 0600", configInfo.Mode().Perm())
+			if filePerm(configPath, configInfo) != 0o600 {
+				t.Fatalf("config mode=%#o want 0600", filePerm(configPath, configInfo))
 			}
 			configData, err := os.ReadFile(configPath)
 			if err != nil {

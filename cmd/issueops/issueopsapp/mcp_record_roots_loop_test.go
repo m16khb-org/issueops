@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"issueops/cmd/issueops/mcpcli"
@@ -14,6 +15,9 @@ import (
 )
 
 func TestMCPRecordRootsLoopLookupReadsExistingRecordOnly(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("windows forbids removing the process working directory, so the removed-cwd scenario cannot exist")
+	}
 	stateDir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
 	repo := gitRepoForHTTPTest(t)

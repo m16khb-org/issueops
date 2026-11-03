@@ -9,13 +9,15 @@ import (
 
 	issueopscontract "issueops/internal/contract/issueops"
 	corehealth "issueops/internal/domain/operationalhealth"
+	"issueops/internal/testsupport"
 )
 
 func TestCycleFromRecordProjectsExecution(t *testing.T) {
+	worktree := testsupport.AbsPath("repo.worktrees", "69-v1")
 	record := issueopscontract.IssueOpsRecord{
-		ID: "io-v1", Repo: "/repo", Branch: "69-v1", Phase: issueopscontract.IssueOpsPhaseImplement,
+		ID: "io-v1", Repo: testsupport.AbsPath("repo"), Branch: "69-v1", Phase: issueopscontract.IssueOpsPhaseImplement,
 		Execution: &issueopscontract.Execution{
-			Workspace: issueopscontract.Workspace{Root: "/repo.worktrees/69-v1"},
+			Workspace: issueopscontract.Workspace{Root: worktree},
 			Lease: issueopscontract.WriteLease{
 				Generation: 3, Status: issueopscontract.LeaseStatusActive,
 				Holder: &issueopscontract.NativeActor{Host: "codex", SessionID: "session-v1", AgentID: "agent-v1", SessionProcess: &issueopscontract.NativeProcessReceipt{
@@ -35,7 +37,7 @@ func TestCycleFromRecordProjectsExecution(t *testing.T) {
 	}
 	if cycle.HolderHost != "codex" || cycle.HolderSessionID != "session-v1" || cycle.HolderAgentID != "agent-v1" ||
 		cycle.HolderPID != 123 || cycle.HolderStartedAt != "2026-07-22T00:00:00Z" || cycle.HolderExecutable != "/opt/../opt/codex" || cycle.HolderProcessStatus != operationalhealthcontract.ProcessStatusLive ||
-		cycle.WorktreePath != "/repo.worktrees/69-v1" {
+		cycle.WorktreePath != worktree {
 		t.Fatalf("holder/workspace projection = %#v", cycle)
 	}
 }

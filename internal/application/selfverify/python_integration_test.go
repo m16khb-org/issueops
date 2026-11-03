@@ -16,14 +16,7 @@ import (
 )
 
 func TestPythonDiscoveryRuntimeAndEarlyFailure(t *testing.T) {
-	python, err := exec.LookPath("python3")
-	if err != nil {
-		t.Fatal(err)
-	}
-	python, err = filepath.Abs(python)
-	if err != nil {
-		t.Fatal(err)
-	}
+	python := requirePython3(t)
 	for _, mode := range []string{"pass", "fail", "missing", "unsupported"} {
 		t.Run(mode, func(t *testing.T) {
 			root := t.TempDir()
@@ -42,10 +35,7 @@ func TestPythonDiscoveryRuntimeAndEarlyFailure(t *testing.T) {
 				tools := t.TempDir()
 				if mode == "unsupported" {
 					// Execute the real runtime-check source with a controlled unsupported version.
-					shim := "#!" + python + "\nimport sys\nsys.version_info=(3,9,0)\nsys.version='3.9.0 fixture'\nexec(sys.argv[2])\n"
-					if err := os.WriteFile(filepath.Join(tools, "python3"), []byte(shim), 0700); err != nil {
-						t.Fatal(err)
-					}
+					writeUnsupportedPython3(t, tools, python)
 				}
 				t.Setenv("PATH", tools)
 			}

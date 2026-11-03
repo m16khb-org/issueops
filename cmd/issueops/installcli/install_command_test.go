@@ -7,11 +7,13 @@ import (
 	activationport "issueops/internal/port/nativeactivation"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
 
 	"issueops/internal/port"
+	"issueops/internal/testsupport"
 )
 
 func TestInstallCommandDryRunJSONDispatches(t *testing.T) {
@@ -50,7 +52,7 @@ func TestInstallCommandDryRunAllowsSelfVerifyBinaryOutsideIssueOpsRoot(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("HOME", home)
+	testsupport.SetHome(t, home)
 	t.Setenv("CODEX_HOME", filepath.Join(home, ".codex"))
 	t.Setenv("ISSUEOPS_ROOT", root)
 	cli := testInstallCommand(t, Deps{
@@ -88,11 +90,18 @@ func TestInstallCommandDryRunAutoPathModePlansShimAndShellRC(t *testing.T) {
 	home := t.TempDir()
 	_, root := installCommandFixture(t, home)
 	result := runInstallDryRunJSON(t, home, "auto")
-	if !hasInstallLink(result.Links, filepath.Join(home, ".local", "bin", "issueops"), filepath.Join(root, "bin", "issueops"), true) {
+	if !hasInstallLink(result.Links, filepath.Join(home, ".local", "bin", testsupport.ExecutableName("issueops")), filepath.Join(root, "bin", testsupport.ExecutableName("issueops")), true) {
 		t.Fatalf("auto path mode did not plan command shim link: %+v", result.Links)
 	}
-	if !hasInstallLink(result.Links, filepath.Join(home, ".local", "bin", "io"), filepath.Join(home, ".local", "bin", "issueops"), true) {
+	if !hasInstallLink(result.Links, filepath.Join(home, ".local", "bin", testsupport.ExecutableName("io")), filepath.Join(home, ".local", "bin", testsupport.ExecutableName("issueops")), true) {
 		t.Fatalf("auto path mode did not plan io command shim: %+v", result.Links)
+	}
+	if runtime.GOOS == "windows" {
+		// Windows has no shell rc: the user Path in HKCU\Environment is the PATH target.
+		if hasInstallFileKind(result.Files, "shell_path_rc") || !messagesContain(result.Messages, `to the user Path in HKCU\Environment`) {
+			t.Fatalf("auto path mode did not plan the user Path update: files=%+v messages=%+v", result.Files, result.Messages)
+		}
+		return
 	}
 	if !hasInstallFile(result.Files, filepath.Join(home, ".zshrc"), "shell_path_rc", true) {
 		t.Fatalf("auto path mode did not plan shell rc PATH write: %+v", result.Files)
@@ -103,16 +112,16 @@ func TestInstallCommandDryRunManualPathModePlansShimWithoutShellRC(t *testing.T)
 	home := t.TempDir()
 	_, root := installCommandFixture(t, home)
 	result := runInstallDryRunJSON(t, home, "manual")
-	if !hasInstallLink(result.Links, filepath.Join(home, ".local", "bin", "issueops"), filepath.Join(root, "bin", "issueops"), true) {
+	if !hasInstallLink(result.Links, filepath.Join(home, ".local", "bin", testsupport.ExecutableName("issueops")), filepath.Join(root, "bin", testsupport.ExecutableName("issueops")), true) {
 		t.Fatalf("manual path mode did not plan command shim link: %+v", result.Links)
 	}
-	if !hasInstallLink(result.Links, filepath.Join(home, ".local", "bin", "io"), filepath.Join(home, ".local", "bin", "issueops"), true) {
+	if !hasInstallLink(result.Links, filepath.Join(home, ".local", "bin", testsupport.ExecutableName("io")), filepath.Join(home, ".local", "bin", testsupport.ExecutableName("issueops")), true) {
 		t.Fatalf("manual path mode did not plan io command shim: %+v", result.Links)
 	}
 	if hasInstallFileKind(result.Files, "shell_path_rc") {
 		t.Fatalf("manual path mode unexpectedly planned shell rc write: %+v", result.Files)
 	}
-	if !messagesContain(result.Messages, `export PATH="$HOME/.local/bin:$PATH"`) {
+	if !messagesContain(result.Messages, manualLocalBinPathHint) {
 		t.Fatalf("manual path mode did not include PATH export guidance: %+v", result.Messages)
 	}
 }
@@ -141,7 +150,7 @@ func TestInstallCommandInteractiveDryRunSelectsProjectLocalAndManualPathMode(t *
 	if hasInstallFileKind(result.Files, "shell_path_rc") {
 		t.Fatalf("manual path mode unexpectedly planned shell rc write: %+v", result.Files)
 	}
-	if !messagesContain(result.Messages, `export PATH="$HOME/.local/bin:$PATH"`) {
+	if !messagesContain(result.Messages, manualLocalBinPathHint) {
 		t.Fatalf("manual path mode did not include PATH export guidance: %+v", result.Messages)
 	}
 }
@@ -191,10 +200,10 @@ func TestInstallCommandDryRunSkipPathModeDoesNotPlanShellRC(t *testing.T) {
 	home := t.TempDir()
 	_, root := installCommandFixture(t, home)
 	result := runInstallDryRunJSON(t, home, "skip")
-	if !hasInstallLink(result.Links, filepath.Join(home, ".local", "bin", "issueops"), filepath.Join(root, "bin", "issueops"), true) {
+	if !hasInstallLink(result.Links, filepath.Join(home, ".local", "bin", testsupport.ExecutableName("issueops")), filepath.Join(root, "bin", testsupport.ExecutableName("issueops")), true) {
 		t.Fatalf("skip path mode did not plan command shim link: %+v", result.Links)
 	}
-	if !hasInstallLink(result.Links, filepath.Join(home, ".local", "bin", "io"), filepath.Join(home, ".local", "bin", "issueops"), true) {
+	if !hasInstallLink(result.Links, filepath.Join(home, ".local", "bin", testsupport.ExecutableName("io")), filepath.Join(home, ".local", "bin", testsupport.ExecutableName("issueops")), true) {
 		t.Fatalf("skip path mode did not plan io command shim: %+v", result.Links)
 	}
 	if hasInstallFileKind(result.Files, "shell_path_rc") {
@@ -205,8 +214,8 @@ func TestInstallCommandDryRunSkipPathModeDoesNotPlanShellRC(t *testing.T) {
 func TestInstallCommandShortShimKeepsMatchingLink(t *testing.T) {
 	home := t.TempDir()
 	installCommandFixture(t, home)
-	canonical := filepath.Join(home, ".local", "bin", "issueops")
-	short := filepath.Join(home, ".local", "bin", "io")
+	canonical := filepath.Join(home, ".local", "bin", testsupport.ExecutableName("issueops"))
+	short := filepath.Join(home, ".local", "bin", testsupport.ExecutableName("io"))
 	if err := os.MkdirAll(filepath.Dir(short), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -223,7 +232,7 @@ func TestInstallCommandShortShimKeepsMatchingLink(t *testing.T) {
 func TestInstallCommandShortShimRefusesExistingFile(t *testing.T) {
 	home := t.TempDir()
 	cli, _ := installCommandFixture(t, home)
-	short := filepath.Join(home, ".local", "bin", "io")
+	short := filepath.Join(home, ".local", "bin", testsupport.ExecutableName("io"))
 	if err := os.MkdirAll(filepath.Dir(short), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -246,7 +255,7 @@ func TestInstallCommandShortShimRefusesExistingFile(t *testing.T) {
 func TestInstallCommandShortShimRefusesUnrelatedSymlink(t *testing.T) {
 	home := t.TempDir()
 	cli, _ := installCommandFixture(t, home)
-	short := filepath.Join(home, ".local", "bin", "io")
+	short := filepath.Join(home, ".local", "bin", testsupport.ExecutableName("io"))
 	if err := os.MkdirAll(filepath.Dir(short), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -273,7 +282,7 @@ func TestInstallCommandShortShimRefusesUnrelatedSymlink(t *testing.T) {
 func TestInstallCommandRefusesManagedRegularCommandWithoutApproval(t *testing.T) {
 	home := t.TempDir()
 	target := buildManagedTestCommand(t)
-	command := filepath.Join(home, ".local", "bin", "issueops")
+	command := filepath.Join(home, ".local", "bin", testsupport.ExecutableName("issueops"))
 	copyTestCommand(t, target, command)
 	want, err := os.ReadFile(command)
 	if err != nil {
@@ -291,9 +300,10 @@ func TestInstallCommandRefusesManagedRegularCommandWithoutApproval(t *testing.T)
 }
 
 func TestInstallCommandApprovedDryRunReportsManagedAdoptionWithoutWriting(t *testing.T) {
+	skipWithoutCommandAdoption(t)
 	home := t.TempDir()
 	target := buildManagedTestCommand(t)
-	command := filepath.Join(home, ".local", "bin", "issueops")
+	command := filepath.Join(home, ".local", "bin", testsupport.ExecutableName("issueops"))
 	copyTestCommand(t, target, command)
 	wantInfo, err := os.Lstat(command)
 	if err != nil {
@@ -318,14 +328,15 @@ func TestInstallCommandApprovedDryRunReportsManagedAdoptionWithoutWriting(t *tes
 
 func TestInstallCommandApprovedDryRunValidatesStagedCandidate(t *testing.T) {
 	assertManagedCommandFixtureContract(t)
+	skipWithoutCommandAdoption(t)
 
 	home := t.TempDir()
 	root := t.TempDir()
-	target := filepath.Join(root, "bin", "issueops")
+	target := filepath.Join(root, "bin", testsupport.ExecutableName("issueops"))
 	buildManagedCommandAt(t, target)
-	candidate := filepath.Join(filepath.Dir(target), ".issueops.activate-test")
+	candidate := filepath.Join(filepath.Dir(target), testsupport.ExecutableName(".issueops.activate-test"))
 	copyTestCommand(t, target, candidate)
-	command := filepath.Join(home, ".local", "bin", "issueops")
+	command := filepath.Join(home, ".local", "bin", testsupport.ExecutableName("issueops"))
 	copyTestCommand(t, candidate, command)
 	if err := os.WriteFile(target, []byte("not a managed Go binary"), 0o755); err != nil {
 		t.Fatal(err)
@@ -345,7 +356,7 @@ func TestInstallCommandApprovedDryRunValidatesStagedCandidate(t *testing.T) {
 
 func buildManagedTestCommand(t *testing.T) string {
 	t.Helper()
-	target := filepath.Join(t.TempDir(), "issueops")
+	target := filepath.Join(t.TempDir(), testsupport.ExecutableName("issueops"))
 	buildManagedCommandAt(t, target)
 	return target
 }

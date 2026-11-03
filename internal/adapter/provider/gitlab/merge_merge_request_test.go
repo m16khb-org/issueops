@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -43,20 +42,17 @@ func TestGitLabMergeStateMapsPipelineAndMergeStatus(t *testing.T) {
 // Ready clears the title prefix, and the merge pins the head with auto-merge
 // and source-branch removal explicitly off.
 func TestGitLabMergeRequestClearsDraftAndPinsHead(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake glab shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	dir := t.TempDir()
 	log := filepath.Join(dir, "glab.log")
 	merged := filepath.Join(dir, "merged")
 	writeFakeGlab(t, binDir, `#!/bin/sh
-echo "$*" >> `+log+`
+echo "$*" >> `+filepath.ToSlash(log)+`
 case "$*" in
-*"/merge --hostname"*) : > `+merged+`; echo '{}'; exit 0 ;;
+*"/merge --hostname"*) : > `+filepath.ToSlash(merged)+`; echo '{}'; exit 0 ;;
 *"--method PUT"*) echo '{}'; exit 0 ;;
 esac
-if [ -f `+merged+` ]; then echo '{"web_url":"`+glMergeTestURL+`","state":"merged","sha":"abc","squash_commit_sha":"def"}'; exit 0; fi
+if [ -f `+filepath.ToSlash(merged)+` ]; then echo '{"web_url":"`+glMergeTestURL+`","state":"merged","sha":"abc","squash_commit_sha":"def"}'; exit 0; fi
 echo '{"web_url":"`+glMergeTestURL+`","title":"Draft: fix login","state":"opened","draft":true,"sha":"abc"}'
 `)
 	t.Setenv("PATH", binDir)

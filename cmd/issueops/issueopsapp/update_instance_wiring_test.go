@@ -16,6 +16,9 @@ import (
 )
 
 func TestUpdateRootCommandsKeepCapturedContext(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("windows runs the Go installer counterpart instead of install-native.sh and reads the MCP process table through osprocess instead of ps; the requested-root working directory is covered by updatecli update_root_windows_test.go")
+	}
 	if os.Getenv("ISSUEOPS_UPDATE_TEST_CHILD") != "1" {
 		exe, err := os.Executable()
 		if err != nil {

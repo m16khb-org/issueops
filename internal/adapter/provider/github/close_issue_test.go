@@ -2,7 +2,6 @@ package github
 
 import (
 	"context"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -23,9 +22,6 @@ func TestGitHubCloseIssuePreview(t *testing.T) {
 }
 
 func TestGitHubCloseIssueAlreadyClosedShortCircuits(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake gh shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	writeFakeGh(t, binDir, `#!/bin/sh
 case "$1 $2" in
@@ -49,9 +45,6 @@ esac
 // The preview reads the state: an issue another step closed is not reported
 // as closed:false with a close command (QA: two cycles on one issue).
 func TestGitHubCloseIssuePreviewReportsAnAlreadyClosedIssue(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake gh shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	writeFakeGh(t, binDir, `#!/bin/sh
 case "$1 $2" in
@@ -67,9 +60,6 @@ esac
 }
 
 func TestGitHubCloseIssueVerifiesReadbackState(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake gh shell script is POSIX-only")
-	}
 	binDir := t.TempDir()
 	// close는 성공하지만 readback이 여전히 OPEN → 검증 실패로 에러여야 한다.
 	writeFakeGh(t, binDir, `#!/bin/sh

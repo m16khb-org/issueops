@@ -10,6 +10,7 @@ import (
 
 	"issueops/internal/adapter/outbound/sqlstore"
 	issueopscontract "issueops/internal/contract/issueops"
+	"issueops/internal/testsupport"
 )
 
 func TestRepositoryListsAndStrictlyReadsRecords(t *testing.T) {
@@ -99,13 +100,14 @@ func TestRepositoryListIDsAndReadUnchecked(t *testing.T) {
 }
 
 func TestCleanPathNormalize(t *testing.T) {
+	sep := string(filepath.Separator)
 	cases := []struct {
 		in   string
 		want string
 	}{
 		{"", ""},
 		{"  ", ""},
-		{"/repo//worktrees/x/", "/repo/worktrees/x"},
+		{testsupport.AbsPath("repo") + sep + sep + "worktrees" + sep + "x" + sep, testsupport.AbsPath("repo", "worktrees", "x")},
 	}
 	for _, tc := range cases {
 		if got := (CleanPath{}).Normalize(tc.in); got != tc.want {
@@ -113,8 +115,8 @@ func TestCleanPathNormalize(t *testing.T) {
 		}
 	}
 	// 상대 경로는 절대 경로로 정규화된다(프로세스 cwd 기준).
-	rel := (CleanPath{}).Normalize("relative/path")
-	if !filepath.IsAbs(rel) || !strings.HasSuffix(rel, "relative/path") {
+	rel := (CleanPath{}).Normalize(filepath.Join("relative", "path"))
+	if !filepath.IsAbs(rel) || !strings.HasSuffix(rel, filepath.Join("relative", "path")) {
 		t.Fatalf("relative normalization = %q", rel)
 	}
 }

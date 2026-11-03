@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"issueops/internal/testsupport"
 )
 
 func runnerMutClaudeStream(userExtra string) string {
@@ -19,7 +21,8 @@ func TestExecRunnerOutputExactlyAtBoundIsNotTruncated(t *testing.T) {
 	if err := os.WriteFile(path, []byte(strings.Repeat("x", MaxOutputBytes)), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	got, err := (ExecRunner{}).Run(context.Background(), CommandRequest{Argv: []string{"/bin/cat", path}})
+	cat := testsupport.WriteFakeCommand(t, t.TempDir(), "cat", "#!/bin/sh\ncat \"$1\"\n")
+	got, err := (ExecRunner{}).Run(context.Background(), CommandRequest{Argv: []string{cat, path}})
 	if err != nil || got.StdoutTruncated || len(got.Stdout) != MaxOutputBytes {
 		t.Fatalf("bytes=%d truncated=%t err=%v", len(got.Stdout), got.StdoutTruncated, err)
 	}
