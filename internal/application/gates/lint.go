@@ -19,46 +19,67 @@ func (service Service) Lint(req model.LintRequest) (model.LintResult, error) {
 		WorkspaceRoot: req.WorkspaceRoot, CWD: req.CWD, TimeoutSeconds: req.TimeoutSeconds,
 		EnvAllowlist: req.EnvAllowlist, WriteAllowed: req.WriteAllowed, NetworkAllowed: req.NetworkAllowed,
 	})
-	var candidates []domain.LintCandidate
-	var warnings, unparsedLines []string
+	var collected lintCollection
 	for _, spec := range req.Gates {
-		candidates = append(candidates, domain.LintSpecCandidate("spec", spec))
+		collected.candidates = append(collected.candidates, domain.LintSpecCandidate("spec", spec))
 	}
 	if plan := strings.TrimSpace(req.PlanFile); plan != "" {
 		data, err := service.Store.Read(plan)
 		if err != nil {
 			return model.LintResult{SchemaVersion: model.SchemaVersion}, err
 		}
-		found, unparsed := domain.PlanLintCandidates(plan, string(data))
-		candidates = append(candidates, found...)
-		if len(unparsed) > 0 {
-			warnings = append(warnings, domain.UnparsedWarning(plan, unparsed))
-			for _, line := range unparsed {
-				unparsedLines = append(unparsedLines, plan+":"+strconv.Itoa(line))
-			}
-		}
-		if len(found) == 0 {
-			warnings = append(warnings, plan+": no gates found; a plan without linted gates proves nothing")
-		}
+		collected.addPlan(plan, string(data))
 	}
 	for _, file := range req.Files {
 		data, err := service.Store.Read(file)
 		if err != nil {
 			return model.LintResult{SchemaVersion: model.SchemaVersion}, err
 		}
-		found := domain.LedgerLintCandidates(file, string(data))
-		candidates = append(candidates, found...)
-		warnings = append(warnings, domain.LedgerFormatWarnings(file, domain.Parse(string(data)))...)
-		if len(found) == 0 {
-			// QA: a hand-written ledger without the checkbox form linted clean
-			// with zero gates, and check would then have nothing to run.
-			warnings = append(warnings, file+": no ledger gates found; a ledger gate is \"- [ ] G1: outcome\" with indented CHECK:/EXPECT: lines (gates init writes this form)")
-			_, unparsed := domain.PlanLintCandidates(file, string(data))
-			for _, line := range unparsed {
-				unparsedLines = append(unparsedLines, file+":"+strconv.Itoa(line))
-			}
-		}
+		collected.addLedger(file, string(data))
 	}
+	results := service.lintCandidates(check, collected.candidates)
+	return domain.SummarizeLint(results, collected.unparsedLines, collected.warnings), nil
+}
+
+// lintCollection는 Lint가 읽은 입력에서 모은 후보와 경고를 입력 순서대로 쌓는다.
+type lintCollection struct {
+	candidates    []domain.LintCandidate
+	warnings      []string
+	unparsedLines []string
+}
+
+func (c *lintCollection) addPlan(plan, data string) {
+	found, unparsed := domain.PlanLintCandidates(plan, data)
+	c.candidates = append(c.candidates, found...)
+	if len(unparsed) > 0 {
+		c.warnings = append(c.warnings, domain.UnparsedWarning(plan, unparsed))
+		c.addUnparsedLines(plan, unparsed)
+	}
+	if len(found) == 0 {
+		c.warnings = append(c.warnings, plan+": no gates found; a plan without linted gates proves nothing")
+	}
+}
+
+func (c *lintCollection) addLedger(file, data string) {
+	found := domain.LedgerLintCandidates(file, data)
+	c.candidates = append(c.candidates, found...)
+	c.warnings = append(c.warnings, domain.LedgerFormatWarnings(file, domain.Parse(data))...)
+	if len(found) == 0 {
+		// QA: a hand-written ledger without the checkbox form linted clean
+		// with zero gates, and check would then have nothing to run.
+		c.warnings = append(c.warnings, file+": no ledger gates found; a ledger gate is \"- [ ] G1: outcome\" with indented CHECK:/EXPECT: lines (gates init writes this form)")
+		_, unparsed := domain.PlanLintCandidates(file, data)
+		c.addUnparsedLines(file, unparsed)
+	}
+}
+
+func (c *lintCollection) addUnparsedLines(source string, lines []int) {
+	for _, line := range lines {
+		c.unparsedLines = append(c.unparsedLines, source+":"+strconv.Itoa(line))
+	}
+}
+
+func (service Service) lintCandidates(check model.CheckRequest, candidates []domain.LintCandidate) []model.LintGate {
 	results := make([]model.LintGate, 0, len(candidates))
 	for _, candidate := range candidates {
 		result, argv := domain.LintStatic(candidate)
@@ -69,7 +90,7 @@ func (service Service) Lint(req model.LintRequest) (model.LintResult, error) {
 		}
 		results = append(results, result)
 	}
-	return domain.SummarizeLint(results, unparsedLines, warnings), nil
+	return results
 }
 
 // PolicyEvaluate는 실행 없이 command policy 판정만 하는 함수다.

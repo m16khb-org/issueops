@@ -385,28 +385,44 @@ func stripTOMLComment(line string) string {
 	return line
 }
 
+type bracketScanner struct {
+	depth   int
+	quote   byte
+	escaped bool
+}
+
 func bracketDepth(text string) int {
-	depth := 0
-	var quote byte
-	escaped := false
+	var scanner bracketScanner
 	for i := range len(text) {
-		c := text[i]
-		switch {
-		case quote == '"' && escaped:
-			escaped = false
-		case quote == '"' && c == '\\':
-			escaped = true
-		case quote != 0 && c == quote:
-			quote = 0
-		case quote == 0 && (c == '"' || c == '\''):
-			quote = c
-		case quote == 0 && (c == '[' || c == '{'):
-			depth++
-		case quote == 0 && (c == ']' || c == '}'):
-			depth--
-		}
+		scanner.step(text[i])
 	}
-	return depth
+	return scanner.depth
+}
+
+func (scanner *bracketScanner) step(c byte) {
+	if scanner.quote != 0 {
+		scanner.stepQuoted(c)
+		return
+	}
+	switch c {
+	case '"', '\'':
+		scanner.quote = c
+	case '[', '{':
+		scanner.depth++
+	case ']', '}':
+		scanner.depth--
+	}
+}
+
+func (scanner *bracketScanner) stepQuoted(c byte) {
+	switch {
+	case scanner.quote == '"' && scanner.escaped:
+		scanner.escaped = false
+	case scanner.quote == '"' && c == '\\':
+		scanner.escaped = true
+	case c == scanner.quote:
+		scanner.quote = 0
+	}
 }
 
 func parseTOMLValue(text string) (any, error) {

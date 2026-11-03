@@ -1557,6 +1557,7 @@
         "func execute",
         "func executionGeneration",
         "func executionWhoamiResult",
+        "func fillSyncBaseActorFlags",
         "func isHelp",
         "func nativeHostProcess",
         "func nativeHostProcessExecutable",
@@ -1568,6 +1569,7 @@
         "func recordActorFlags",
         "func repeatedString.Set",
         "func repeatedString.String",
+        "func requireSyncBaseProcessCWD",
         "func resolveNativeActor",
         "func reusableNativeProcessAncestry",
         "func reusableNativeProcessAncestryWith",
@@ -1583,6 +1585,7 @@
         "func runWhoami",
         "func sameExistingExecutionPath",
         "func shellQuoteClaimValue",
+        "func syncBaseMode",
         "func visitedFlagNames",
         "type Deps",
         "type ExecutionWhoamiResult",
@@ -1644,12 +1647,14 @@
         "func Command.runCleanupLinkedBranch",
         "func Command.runCleanupRemoteBranch",
         "func Command.runCleanupStatus",
+        "func checkOrphanCleanupAvailable",
         "func printCleanupAbandonRemoteEffects",
         "func printCleanupError",
         "func printCleanupFinishError",
         "func printCleanupLinkedBranchResult",
         "func printOrphanCleanupResult",
         "func runOrphanCleanup",
+        "func validateOrphanCleanupFlags",
         "type Deps"
       ]
     },
@@ -1819,6 +1824,7 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
+        "func checkIssueOpsListRepo",
         "func command.runIssueOpsArtifact",
         "func command.runIssueOpsArtifactStage",
         "func command.runIssueOpsArtifactUnstage",
@@ -1844,8 +1850,10 @@
         "func command.runIssueOpsSchemaEvidence",
         "func command.runIssueOpsStart",
         "func command.runIssueOpsStatus",
+        "func issueOpsListFlags",
         "func parseExpectedRouting",
         "func printIssueOpsChildValue",
+        "func printIssueOpsList",
         "type phaseResponse"
       ]
     },
@@ -1949,7 +1957,9 @@
       "symbols": [
         "func Command.runRemoteComment",
         "func confirmCommand",
-        "func needsShellQuote"
+        "func needsShellQuote",
+        "func printRemoteCommentResult",
+        "func remoteCommentText"
       ]
     },
     {
@@ -4033,6 +4043,8 @@
       "task": "T20",
       "symbols": [
         "func bracketDepth",
+        "func bracketScanner.step",
+        "func bracketScanner.stepQuoted",
         "func codexIssueOpsTableParser.consumeKeyValue",
         "func codexIssueOpsTableParser.enterHeader",
         "func configReadError.Error",
@@ -4056,6 +4068,7 @@
         "func tomlReader.scalar",
         "func tomlReader.skipSpace",
         "func tomlReader.value",
+        "type bracketScanner",
         "type codexIssueOpsTableParser",
         "type configReadError",
         "type hostEntry",
@@ -4758,6 +4771,9 @@
       "symbols": [
         "func ListLeaseHolderIndexes",
         "func activeLeaseIndexMutation",
+        "func decodeLeaseHolderIndexRow",
+        "func leaseHolderHostKnown",
+        "func leaseHolderIndexFieldsValid",
         "func leaseHolderIndexKey",
         "func leaseIndexDeleteMutation",
         "func persistExecutionTransition",
@@ -8379,7 +8395,12 @@
       "task": "T10",
       "symbols": [
         "func Service.Lint",
-        "type PolicyEvaluate"
+        "func Service.lintCandidates",
+        "func lintCollection.addLedger",
+        "func lintCollection.addPlan",
+        "func lintCollection.addUnparsedLines",
+        "type PolicyEvaluate",
+        "type lintCollection"
       ]
     },
     {
@@ -9422,7 +9443,9 @@
       "owner": "application",
       "task": "T20",
       "symbols": [
-        "func Service.nextSelected"
+        "func Service.nextSelected",
+        "func invalidSelectionResult",
+        "func scanRootConflict"
       ]
     },
     {
@@ -9435,9 +9458,13 @@
         "func Service.applyReviewModel",
         "func Service.applyReviewTier",
         "func Service.buildInput",
+        "func Service.dependenciesMissing",
         "func activeCount",
         "func actorIdentity",
+        "func ambiguousResult",
         "func applyDecision",
+        "func applyExecutionState",
+        "func applyStagedArtifacts",
         "func childGateMissing",
         "func cleanPath",
         "func commandKind",
@@ -9448,6 +9475,8 @@
         "func markInvalidSelection",
         "func matchOne",
         "func needsLocalReadiness",
+        "func noSelectionResult",
+        "func outsideRepository",
         "func placeholder",
         "func recordEntry",
         "func requestedCycleID",
@@ -9572,6 +9601,7 @@
         "func ReconcileService.adopt",
         "func ReconcileService.failed",
         "func ReconcileService.preserve",
+        "func ReconcileService.reconcileFacts",
         "func ReconcileService.retry",
         "func reconciledResult",
         "type CrashSettlement",
@@ -10131,7 +10161,9 @@
       "symbols": [
         "func RecordProjectDocsReview",
         "func normalizeReviewedDocuments",
-        "func normalizeUpdatedDocuments"
+        "func normalizeUpdatedDocuments",
+        "func projectDocsReviewPlan.commit",
+        "type projectDocsReviewPlan"
       ]
     },
     {
@@ -14278,7 +14310,11 @@
       "task": "T05",
       "symbols": [
         "func ValidateCWD",
-        "func ValidateHolder"
+        "func ValidateHolder",
+        "func actorMismatch",
+        "func holderRequiredError",
+        "func noActiveLeaseError",
+        "func verifiedMatchesHolder"
       ]
     },
     {
@@ -15762,6 +15798,7 @@
         "func goFlagName",
         "func hasExactArgument",
         "func longFlagName",
+        "func scanGitConfigArgs",
         "func shortCluster",
         "func writeCapableArguments"
       ]
@@ -16474,6 +16511,8 @@
         "func SplitCommandTokens",
         "func doubleQuoteEscape",
         "func isShellBlank",
+        "func startsExpansion",
+        "func toggleQuote",
         "func tokenSplitter.consume",
         "func tokenSplitter.consumeQuoted",
         "func tokenSplitter.flush",

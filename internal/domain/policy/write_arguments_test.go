@@ -271,3 +271,58 @@ func TestWorkspaceOverridesDoNotUnlockWriteArguments(t *testing.T) {
 		t.Fatalf("find -delete classification=%+v", got)
 	}
 }
+
+func TestGitConfigWritesTable(t *testing.T) {
+	for _, tc := range []struct {
+		args []string
+		want bool
+	}{
+		{nil, true},
+		{[]string{"get", "--unset"}, true},
+		{[]string{"GET", "user.name"}, false},
+		{[]string{"List"}, false},
+		{[]string{"SET", "k", "v"}, true},
+		{[]string{"user.name"}, false},
+		{[]string{"user.name", "v"}, true},
+		{[]string{"--get", "user.name"}, false},
+		{[]string{"--get-regexp", "user\\..*"}, false},
+		{[]string{"--get-urlmatch", "http", "https://x"}, false},
+		{[]string{"--get-color", "color.ui"}, false},
+		{[]string{"--get-colorbool", "color.ui"}, false},
+		{[]string{"--list"}, false},
+		{[]string{"-l"}, false},
+		{[]string{"-lz"}, false},
+		{[]string{"--file=x.cfg", "--get", "k"}, false},
+		{[]string{"--file", "x.cfg", "--get", "k"}, false},
+		{[]string{"--blob", "HEAD:x", "k"}, false},
+		{[]string{"--type", "int", "k"}, false},
+		{[]string{"--type=int", "k"}, false},
+		{[]string{"--default", "d", "--get", "k"}, false},
+		{[]string{"--comment", "c", "k"}, false},
+		{[]string{"--comment", "c", "k", "v"}, true},
+		{[]string{"-f", "x.cfg", "k"}, false},
+		{[]string{"-f", "--get", "k", "v"}, true},
+		{[]string{"-lf", "x.cfg"}, false},
+		{[]string{"-fl", "k"}, false},
+		{[]string{"-f"}, true},
+		{[]string{"--file"}, true},
+		{[]string{"--"}, true},
+		{[]string{"--", "k"}, false},
+		{[]string{"--", "k", "v"}, true},
+		{[]string{"--get", "--", "k", "v"}, false},
+		{[]string{"-x", "k"}, false},
+		{[]string{"k", "--get"}, true},
+		{[]string{"k", "--", "v"}, true},
+		{[]string{"-"}, false},
+		{[]string{"--=x", "k"}, false},
+		{[]string{"--ed"}, true},
+		{[]string{"-e"}, true},
+		{[]string{"-ne"}, true},
+		{[]string{"--get", "--ed"}, true},
+		{[]string{"--list", "--", "--edit"}, false},
+	} {
+		if got := gitConfigWrites(tc.args); got != tc.want {
+			t.Errorf("gitConfigWrites(%q) = %v, want %v", tc.args, got, tc.want)
+		}
+	}
+}

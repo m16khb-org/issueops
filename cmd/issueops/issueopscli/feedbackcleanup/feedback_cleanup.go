@@ -193,11 +193,8 @@ func runOrphanCleanup(args []string, deps Deps) error {
 	if help, err := deps.ParseFlags(fs, args); help || err != nil {
 		return err
 	}
-	if *confirm && !*apply {
-		return fmt.Errorf("orphan cleanup --confirm requires --apply")
-	}
-	if strings.TrimSpace(*fingerprint) != "" && !*apply {
-		return fmt.Errorf("orphan cleanup --fingerprint requires --apply")
+	if err := validateOrphanCleanupFlags(*apply, *confirm, *fingerprint); err != nil {
+		return err
 	}
 	request := orphancontract.Request{
 		ID:           *id,
@@ -210,22 +207,14 @@ func runOrphanCleanup(args []string, deps Deps) error {
 			URL:      *artifactURL,
 		},
 	}
-	var (
-		result orphancontract.Result
-		err    error
-	)
+	if err := checkOrphanCleanupAvailable(*apply, *confirm, deps); err != nil {
+		return err
+	}
+	var result orphancontract.Result
+	var err error
 	if *apply {
-		if !*confirm {
-			return fmt.Errorf("orphan cleanup apply requires --confirm")
-		}
-		if deps.OrphanApply == nil {
-			return fmt.Errorf("orphan cleanup apply is unavailable")
-		}
 		result, err = deps.OrphanApply(context.Background(), request, orphancontract.ApplyRequest{Confirm: *confirm, Fingerprint: *fingerprint})
 	} else {
-		if deps.OrphanPreview == nil {
-			return fmt.Errorf("orphan cleanup preview is unavailable")
-		}
 		result, err = deps.OrphanPreview(context.Background(), request)
 	}
 	// A request refused before preview has no lists; keep them [] (not null).
@@ -246,6 +235,34 @@ func runOrphanCleanup(args []string, deps Deps) error {
 	}
 	printOrphanCleanupResult(result)
 	return err
+}
+
+func validateOrphanCleanupFlags(apply, confirm bool, fingerprint string) error {
+	if confirm && !apply {
+		return fmt.Errorf("orphan cleanup --confirm requires --apply")
+	}
+	if strings.TrimSpace(fingerprint) != "" && !apply {
+		return fmt.Errorf("orphan cleanup --fingerprint requires --apply")
+	}
+	return nil
+}
+
+// checkOrphanCleanupAvailable refuses an unconfirmed apply and a mode whose
+// dependency is not wired, before any port call.
+func checkOrphanCleanupAvailable(apply, confirm bool, deps Deps) error {
+	if apply {
+		if !confirm {
+			return fmt.Errorf("orphan cleanup apply requires --confirm")
+		}
+		if deps.OrphanApply == nil {
+			return fmt.Errorf("orphan cleanup apply is unavailable")
+		}
+		return nil
+	}
+	if deps.OrphanPreview == nil {
+		return fmt.Errorf("orphan cleanup preview is unavailable")
+	}
+	return nil
 }
 
 func printOrphanCleanupResult(result orphancontract.Result) {

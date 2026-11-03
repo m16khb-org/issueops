@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"issueops/cmd/issueops/jsonout"
+	issueopscontract "issueops/internal/contract/issueops"
 	"issueops/internal/domain/shelltoken"
 )
 
@@ -23,16 +24,9 @@ func (command Command) runRemoteComment(args []string, deps Deps) error {
 	if help, err := parseFlags(fs, args); help || err != nil {
 		return err
 	}
-	text := *body
-	if strings.TrimSpace(*bodyFile) != "" {
-		if strings.TrimSpace(*body) != "" {
-			return deps.printErrorResult(*jsonOut, fmt.Errorf("pass either --body or --body-file, not both"))
-		}
-		data, err := os.ReadFile(*bodyFile)
-		if err != nil {
-			return deps.printErrorResult(*jsonOut, err)
-		}
-		text = string(data)
+	text, err := remoteCommentText(*body, *bodyFile)
+	if err != nil {
+		return deps.printErrorResult(*jsonOut, err)
 	}
 	result, err := command.Operations.CommentRemote(context.Background(), command.Operations.IssueOpsStateRoot(), *id, *on, text, *expectedSHA, *confirm)
 	if result.TargetURL == "" {
@@ -45,7 +39,26 @@ func (command Command) runRemoteComment(args []string, deps Deps) error {
 		}
 		result.NextCommand = confirmCommand("comment", confirmArgs)
 	}
-	if *jsonOut {
+	return printRemoteCommentResult(result, err, *jsonOut, deps)
+}
+
+// remoteCommentText resolves the comment text from --body or --body-file.
+func remoteCommentText(body, bodyFile string) (string, error) {
+	if strings.TrimSpace(bodyFile) == "" {
+		return body, nil
+	}
+	if strings.TrimSpace(body) != "" {
+		return "", fmt.Errorf("pass either --body or --body-file, not both")
+	}
+	data, err := os.ReadFile(bodyFile)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func printRemoteCommentResult(result issueopscontract.RemoteCommentResult, err error, jsonOut bool, deps Deps) error {
+	if jsonOut {
 		if err != nil {
 			if printErr := deps.printJSON(jsonout.WithError(result, err)); printErr != nil {
 				return printErr

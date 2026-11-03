@@ -134,32 +134,37 @@ func gitBranchWrites(args []string) bool {
 // take the next argument as a file name (`git config -f --get k v` sets k).
 func gitConfigWrites(args []string) bool {
 	writeLong := []string{"--add", "--unset", "--unset-all", "--replace-all", "--rename-section", "--remove-section", "--edit"}
+	subcommand := ""
 	if len(args) > 0 {
-		switch strings.ToLower(args[0]) {
-		case "set", "unset", "rename-section", "remove-section", "edit":
-			return true
-		}
+		subcommand = strings.ToLower(args[0])
+	}
+	switch subcommand {
+	case "set", "unset", "rename-section", "remove-section", "edit":
+		return true
 	}
 	if gitHasFlag(args, writeLong, "e") {
 		return true
 	}
-	if len(args) > 0 {
-		switch strings.ToLower(args[0]) {
-		case "get", "list":
-			return false
-		}
+	switch subcommand {
+	case "get", "list":
+		return false
 	}
+	read, operands := scanGitConfigArgs(args)
+	return !read && operands != 1
+}
+
+// scanGitConfigArgs reports whether args select a read mode and how many
+// operands follow the options (0 when the scan ends without reaching one).
+func scanGitConfigArgs(args []string) (read bool, operands int) {
 	readLong := map[string]bool{
 		"--get": true, "--get-all": true, "--get-regexp": true, "--get-urlmatch": true,
 		"--get-color": true, "--get-colorbool": true, "--list": true,
 	}
 	valueLong := map[string]bool{"--file": true, "--blob": true, "--type": true, "--default": true, "--comment": true}
-	read, operands := false, 0
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		if arg == "--" {
-			operands = len(args) - i - 1
-			break
+			return read, len(args) - i - 1
 		}
 		if name, ok := longFlagName(arg); ok {
 			read = read || readLong[name]
@@ -177,10 +182,9 @@ func gitConfigWrites(args []string) bool {
 		}
 		// The first operand ends option parsing: every later argument is an
 		// operand, flag-shaped or not.
-		operands = len(args) - i
-		break
+		return read, len(args) - i
 	}
-	return !read && operands != 1
+	return read, 0
 }
 
 func goArgumentsWrite(subcommand string, args []string) bool {

@@ -47,19 +47,7 @@ func (s *ReconcileService) Reconcile(ctx context.Context, id string) (contract.R
 		return s.failed(ctx, intent, "remote_reconcile_ambiguous", attempted, cause)
 	}
 
-	facts := domain.ReconcileFacts{
-		CandidateCount:    len(inventory.Candidates),
-		AuthoritativeZero: inventory.AuthoritativeZero,
-		Invocation:        intent.InvocationState,
-		RetryCount:        intent.RetryCount,
-	}
-	// A known URL with an empty authoritative list is contradictory evidence:
-	// keep the intent rather than retry (security review 2026-10-25).
-	if s.settled != nil && facts.AuthoritativeZero && facts.CandidateCount == 0 && facts.Invocation != contract.InvocationNotInvokedProven && strings.TrimSpace(intent.KnownURL) == "" {
-		// An observation error leaves the intent preserved (fail closed).
-		settled, settleErr := s.settled(ctx, intent)
-		facts.CrashSettled = settled && settleErr == nil
-	}
+	facts := s.reconcileFacts(ctx, intent, inventory)
 	decision, err := domain.DecideReconcile(facts)
 	if err != nil {
 		return s.failed(ctx, intent, "remote_reconcile_ambiguous", attempted, err)
@@ -75,6 +63,23 @@ func (s *ReconcileService) Reconcile(ctx context.Context, id string) (contract.R
 	default:
 		return s.failed(ctx, intent, "remote_reconcile_ambiguous", attempted, fmt.Errorf("unsupported publication reconcile action %q", decision.Action))
 	}
+}
+
+func (s *ReconcileService) reconcileFacts(ctx context.Context, intent contract.Intent, inventory contract.Inventory) domain.ReconcileFacts {
+	facts := domain.ReconcileFacts{
+		CandidateCount:    len(inventory.Candidates),
+		AuthoritativeZero: inventory.AuthoritativeZero,
+		Invocation:        intent.InvocationState,
+		RetryCount:        intent.RetryCount,
+	}
+	// A known URL with an empty authoritative list is contradictory evidence:
+	// keep the intent rather than retry (security review 2026-10-25).
+	if s.settled != nil && facts.AuthoritativeZero && facts.CandidateCount == 0 && facts.Invocation != contract.InvocationNotInvokedProven && strings.TrimSpace(intent.KnownURL) == "" {
+		// An observation error leaves the intent preserved (fail closed).
+		settled, settleErr := s.settled(ctx, intent)
+		facts.CrashSettled = settled && settleErr == nil
+	}
+	return facts
 }
 
 func (s *ReconcileService) adopt(ctx context.Context, intent contract.Intent, candidate contract.Candidate, attempted bool) (contract.ReconcileResult, error) {

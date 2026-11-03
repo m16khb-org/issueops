@@ -31,25 +31,45 @@ func ListLeaseHolderIndexes(stateRoot string) ([]issueopscontract.LeaseHolderInd
 	}
 	result := make([]issueopscontract.LeaseHolderIndex, 0, len(rows))
 	for _, row := range rows {
-		var index issueopscontract.LeaseHolderIndex
-		if err := json.Unmarshal(row.Data, &index); err != nil {
-			return nil, fmt.Errorf("decode active lease-holder index %s: %w", row.ID, err)
+		index, err := decodeLeaseHolderIndexRow(row)
+		if err != nil {
+			return nil, err
 		}
-		if index.SchemaVersion != issueops.IssueOpsSchemaVersion || index.Generation == 0 || strings.TrimSpace(index.LifecycleID) == "" ||
-			(index.Host != "codex" && index.Host != "claude" && index.Host != "omo" && index.Host != "omp" && index.Host != "opencode") || strings.TrimSpace(index.SessionID) == "" {
-			return nil, fmt.Errorf("active lease-holder index %s is invalid", row.ID)
-		}
-		if _, err := normalizeIssueOpsID(index.LifecycleID); err != nil {
-			return nil, fmt.Errorf("active lease-holder index %s lifecycle identity is invalid: %w", row.ID, err)
-		}
-		actor := issueops.NativeActor{Host: index.Host, SessionID: index.SessionID, AgentID: index.AgentID}
-		if expected := leaseHolderIndexKey(actor); row.ID != expected {
-			return nil, fmt.Errorf("active lease-holder index %s key does not match its actor identity", row.ID)
-		}
-		index.Key = row.ID
 		result = append(result, index)
 	}
 	return result, nil
+}
+
+func decodeLeaseHolderIndexRow(row port.RecordRow) (issueopscontract.LeaseHolderIndex, error) {
+	var index issueopscontract.LeaseHolderIndex
+	if err := json.Unmarshal(row.Data, &index); err != nil {
+		return index, fmt.Errorf("decode active lease-holder index %s: %w", row.ID, err)
+	}
+	if !leaseHolderIndexFieldsValid(index) {
+		return index, fmt.Errorf("active lease-holder index %s is invalid", row.ID)
+	}
+	if _, err := normalizeIssueOpsID(index.LifecycleID); err != nil {
+		return index, fmt.Errorf("active lease-holder index %s lifecycle identity is invalid: %w", row.ID, err)
+	}
+	actor := issueops.NativeActor{Host: index.Host, SessionID: index.SessionID, AgentID: index.AgentID}
+	if expected := leaseHolderIndexKey(actor); row.ID != expected {
+		return index, fmt.Errorf("active lease-holder index %s key does not match its actor identity", row.ID)
+	}
+	index.Key = row.ID
+	return index, nil
+}
+
+func leaseHolderIndexFieldsValid(index issueopscontract.LeaseHolderIndex) bool {
+	return index.SchemaVersion == issueops.IssueOpsSchemaVersion && index.Generation != 0 && strings.TrimSpace(index.LifecycleID) != "" &&
+		leaseHolderHostKnown(index.Host) && strings.TrimSpace(index.SessionID) != ""
+}
+
+func leaseHolderHostKnown(host string) bool {
+	switch host {
+	case "codex", "claude", "omo", "omp", "opencode":
+		return true
+	}
+	return false
 }
 
 func persistExecutionTransition(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, previousHolder *issueops.NativeActor) (issueops.IssueOpsRecord, error) {

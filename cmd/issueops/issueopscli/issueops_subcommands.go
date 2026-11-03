@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	issueopscontract "issueops/internal/contract/issueops"
+	issueopsinventorycontract "issueops/internal/contract/issueopsinventory"
 	issueopsroutingcontract "issueops/internal/contract/issueopsrouting"
 )
 
@@ -605,17 +606,31 @@ func (cli command) runIssueOpsList(args []string) error {
 	if err != nil {
 		return err
 	}
-	if repoPath := strings.TrimSpace(*repo); repoPath != "" && len(result.Entries) == 0 {
-		// Probe: a mistyped --repo answered an empty list, which reads as
-		// "no cycles here". A deleted repository that still has cycles keeps
-		// listing them, so only an empty answer for a missing path refuses.
-		if _, statErr := os.Stat(repoPath); errors.Is(statErr, os.ErrNotExist) {
-			return fmt.Errorf("--repo %s does not exist; pass the repository root (git rev-parse --show-toplevel), or omit --repo to list every cycle", repoPath)
-		}
+	if err := checkIssueOpsListRepo(*repo, len(result.Entries)); err != nil {
+		return err
 	}
 	if *jsonOut {
 		return printJSON(result)
 	}
+	printIssueOpsList(result)
+	return nil
+}
+
+func checkIssueOpsListRepo(repo string, entries int) error {
+	repoPath := strings.TrimSpace(repo)
+	if repoPath == "" || entries != 0 {
+		return nil
+	}
+	// Probe: a mistyped --repo answered an empty list, which reads as
+	// "no cycles here". A deleted repository that still has cycles keeps
+	// listing them, so only an empty answer for a missing path refuses.
+	if _, statErr := os.Stat(repoPath); errors.Is(statErr, os.ErrNotExist) {
+		return fmt.Errorf("--repo %s does not exist; pass the repository root (git rev-parse --show-toplevel), or omit --repo to list every cycle", repoPath)
+	}
+	return nil
+}
+
+func printIssueOpsList(result issueopsinventorycontract.ListResult) {
 	fmt.Printf(
 		"cycles: %d (scanned %d records, unreadable %d at %s)\n",
 		len(result.Entries),
@@ -624,29 +639,32 @@ func (cli command) runIssueOpsList(args []string) error {
 		result.GeneratedAt,
 	)
 	for _, entry := range result.Entries {
-		flags := ""
-		if entry.Claimable {
-			flags += " [claimable]"
-		}
-		if entry.CleanupCandidate {
-			flags += " [cleanup]"
-		}
-		if entry.CompletionUnreflected {
-			flags += " [unreflected]"
-		}
-		if entry.PendingKind != "" {
-			flags += " [pending:" + entry.PendingKind + "]"
-		}
-		if entry.FailureCode != "" {
-			flags += " [failed:" + entry.FailureCode + "]"
-		}
-		if entry.CleanupFailureStep != "" {
-			flags += " [cleanup-failed:" + entry.CleanupFailureStep + "]"
-		}
-		if entry.IssueCreateStatus != "" {
-			flags += " [issue-create:" + entry.IssueCreateStatus + "]"
-		}
-		fmt.Printf("- %s %s phase=%s lease=%s%s\n", entry.ID, entry.Branch, entry.Phase, entry.LeaseStatus, flags)
+		fmt.Printf("- %s %s phase=%s lease=%s%s\n", entry.ID, entry.Branch, entry.Phase, entry.LeaseStatus, issueOpsListFlags(entry))
 	}
-	return nil
+}
+
+func issueOpsListFlags(entry issueopsinventorycontract.ListEntry) string {
+	flags := ""
+	if entry.Claimable {
+		flags += " [claimable]"
+	}
+	if entry.CleanupCandidate {
+		flags += " [cleanup]"
+	}
+	if entry.CompletionUnreflected {
+		flags += " [unreflected]"
+	}
+	if entry.PendingKind != "" {
+		flags += " [pending:" + entry.PendingKind + "]"
+	}
+	if entry.FailureCode != "" {
+		flags += " [failed:" + entry.FailureCode + "]"
+	}
+	if entry.CleanupFailureStep != "" {
+		flags += " [cleanup-failed:" + entry.CleanupFailureStep + "]"
+	}
+	if entry.IssueCreateStatus != "" {
+		flags += " [issue-create:" + entry.IssueCreateStatus + "]"
+	}
+	return flags
 }
