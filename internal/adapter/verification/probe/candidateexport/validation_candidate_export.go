@@ -28,17 +28,13 @@ type CandidateExportValidationDeps struct {
 
 func (deps CandidateExportValidationDeps) withDefaults() CandidateExportValidationDeps {
 	if deps.MakeTempState == nil {
-		deps.MakeTempState = func(seed int64) (string, error) {
-			return os.MkdirTemp("", fmt.Sprintf("issueops-candidates-%d-*", seed))
-		}
+		deps.MakeTempState = verification.SeededTempState("issueops-candidates")
 	}
 	if deps.RemoveAll == nil {
 		deps.RemoveAll = os.RemoveAll
 	}
 	if deps.Run == nil {
-		deps.Run = func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) verifycontract.StepResult {
-			return verification.RunEnv(dir, label, timeout, stdin, env, commandOutputBudgetBytes, name, args...)
-		}
+		deps.Run = verification.BudgetedRunEnv(commandOutputBudgetBytes)
 	}
 	return deps
 }

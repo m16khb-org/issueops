@@ -8188,8 +8188,10 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
+        "func BudgetedRunEnv",
         "func Run",
-        "func RunEnv"
+        "func RunEnv",
+        "func SeededTempState"
       ]
     },
     {
@@ -10649,6 +10651,7 @@
       "task": "T18",
       "symbols": [
         "func SavePlan",
+        "func SaveStateSnapshot",
         "type SavePlanDeps"
       ]
     },

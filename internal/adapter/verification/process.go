@@ -2,6 +2,7 @@ package verification
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -13,6 +14,22 @@ import (
 
 func Run(dir, label string, timeout time.Duration, stdin string, outputBudget int, name string, args ...string) contract.StepResult {
 	return RunEnv(dir, label, timeout, stdin, nil, outputBudget, name, args...)
+}
+
+// BudgetedRunEnv is RunEnv with a fixed output budget, in the shape the
+// probes inject as their default command runner.
+func BudgetedRunEnv(outputBudget int) func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) contract.StepResult {
+	return func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) contract.StepResult {
+		return RunEnv(dir, label, timeout, stdin, env, outputBudget, name, args...)
+	}
+}
+
+// SeededTempState makes a probe's temporary state directory named after the
+// probe and the run seed: <prefix>-<seed>-*.
+func SeededTempState(prefix string) func(seed int64) (string, error) {
+	return func(seed int64) (string, error) {
+		return os.MkdirTemp("", fmt.Sprintf("%s-%d-*", prefix, seed))
+	}
 }
 
 func RunEnv(dir, label string, timeout time.Duration, stdin string, env []string, outputBudget int, name string, args ...string) contract.StepResult {
