@@ -119,6 +119,10 @@ func ObserveNativeIntegrations(home string) doctordomain.NativeObservation {
 	return observation
 }
 
+// ObserveBinaryDrift compares bin/issueops with the newest production Go
+// source under cmd/ and internal/. Test files and testdata are not compiled
+// into the binary, so they neither make it stale nor cost an lstat each; the
+// walk uses directory entries and stats only the production .go files.
 func ObserveBinaryDrift(root string) doctordomain.BinaryObservation {
 	observation := doctordomain.BinaryObservation{Root: root}
 	if root == "" {
@@ -133,11 +137,22 @@ func ObserveBinaryDrift(root string) doctordomain.BinaryObservation {
 	observation.BuiltAt = info.ModTime()
 	observation.LatestSource = observation.BuiltAt
 	for _, directory := range []string{filepath.Join(root, "cmd"), filepath.Join(root, "internal")} {
-		_ = filepath.Walk(directory, func(path string, info os.FileInfo, err error) error {
-			if err != nil || info.IsDir() || !strings.HasSuffix(info.Name(), ".go") {
+		_ = filepath.WalkDir(directory, func(path string, entry fs.DirEntry, err error) error {
+			if err != nil {
 				return nil
 			}
-			if info.ModTime().After(observation.LatestSource) {
+			name := entry.Name()
+			if entry.IsDir() {
+				if name == "testdata" {
+					return fs.SkipDir
+				}
+				return nil
+			}
+			if !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+				return nil
+			}
+			info, err := entry.Info()
+			if err == nil && info.ModTime().After(observation.LatestSource) {
 				observation.LatestSource = info.ModTime()
 			}
 			return nil

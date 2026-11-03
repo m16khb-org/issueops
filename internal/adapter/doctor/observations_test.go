@@ -108,13 +108,21 @@ func TestObserveBinaryDriftTracksNewestGoSourceAgainstBinary(t *testing.T) {
 	newest := filepath.Join(root, "internal", "x", "x.go")
 	writeFileForTest(t, newest, "package x")
 	setTime(newest, built.Add(2*time.Hour))
-	// Only .go files count: a newer non-Go file and a newer .go file outside cmd/ and internal/ are ignored.
+	// Only production .go files count: a newer non-Go file, a newer .go file
+	// outside cmd/ and internal/, a newer _test.go, and newer testdata Go are
+	// not compiled into the binary and are ignored.
 	notGo := filepath.Join(root, "internal", "x", "notes.txt")
 	writeFileForTest(t, notGo, "n")
 	setTime(notGo, built.Add(9*time.Hour))
 	outside := filepath.Join(root, "scripts", "tool.go")
 	writeFileForTest(t, outside, "package scripts")
 	setTime(outside, built.Add(9*time.Hour))
+	testFile := filepath.Join(root, "internal", "x", "x_test.go")
+	writeFileForTest(t, testFile, "package x")
+	setTime(testFile, built.Add(9*time.Hour))
+	fixture := filepath.Join(root, "internal", "x", "testdata", "fixture.go")
+	writeFileForTest(t, fixture, "package fixture")
+	setTime(fixture, built.Add(9*time.Hour))
 	got = ObserveBinaryDrift(root)
 	if !got.LatestSource.Equal(built.Add(2 * time.Hour)) {
 		t.Fatalf("LatestSource = %v, want the newest .go under cmd/ and internal/", got.LatestSource)
