@@ -56,43 +56,53 @@ func (cli command) runIssueOpsStatus(args []string) error {
 	return printIssueOpsRecord(issueopscontract.StatusView(record), *jsonOut, err)
 }
 
-func (cli command) runIssueOpsLinkIssue(args []string) error {
-	fs := flag.NewFlagSet("issueops link-issue", flag.ContinueOnError)
+// issueOpsLinkSpec describes a `link-*` subcommand that takes one string value
+// next to --id and the actor flags and records it through one runtime call.
+type issueOpsLinkSpec struct {
+	name     string
+	flagName string
+	usage    string
+	link     func(stateRoot, id, value string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
+}
+
+func (cli command) runIssueOpsLinkValue(args []string, spec issueOpsLinkSpec) error {
+	fs := flag.NewFlagSet(spec.name, flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
 	actor := cli.addIssueOpsActorFlags(fs)
-	issueURL := fs.String("issue-url", "", "GitHub/GitLab issue URL")
+	value := fs.String(spec.flagName, "", spec.usage)
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
 	}
-	record, err := cli.Runtime.LinkIssueOpsIssueWithActor(cli.Runtime.IssueOpsStateRoot(), *id, *issueURL, actor.actor())
+	record, err := spec.link(cli.Runtime.IssueOpsStateRoot(), *id, *value, actor.actor())
 	return printIssueOpsResult(record, *jsonOut, err)
+}
+
+func (cli command) runIssueOpsLinkIssue(args []string) error {
+	return cli.runIssueOpsLinkValue(args, issueOpsLinkSpec{
+		name:     "issueops link-issue",
+		flagName: "issue-url",
+		usage:    "GitHub/GitLab issue URL",
+		link:     cli.Runtime.LinkIssueOpsIssueWithActor,
+	})
 }
 
 func (cli command) runIssueOpsLinkPlan(args []string) error {
-	fs := flag.NewFlagSet("issueops link-plan", flag.ContinueOnError)
-	id := fs.String("id", "", "issueops id")
-	actor := cli.addIssueOpsActorFlags(fs)
-	planPath := fs.String("plan-path", "", "issue-driven plan path")
-	jsonOut := fs.Bool("json", false, "print JSON")
-	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
-		return err
-	}
-	record, err := cli.Runtime.LinkIssueOpsPlanWithActor(cli.Runtime.IssueOpsStateRoot(), *id, *planPath, actor.actor())
-	return printIssueOpsResult(record, *jsonOut, err)
+	return cli.runIssueOpsLinkValue(args, issueOpsLinkSpec{
+		name:     "issueops link-plan",
+		flagName: "plan-path",
+		usage:    "issue-driven plan path",
+		link:     cli.Runtime.LinkIssueOpsPlanWithActor,
+	})
 }
 
 func (cli command) runIssueOpsLinkWorktree(args []string) error {
-	fs := flag.NewFlagSet("issueops link-worktree", flag.ContinueOnError)
-	id := fs.String("id", "", "issueops id")
-	actor := cli.addIssueOpsActorFlags(fs)
-	worktreePath := fs.String("worktree-path", "", "issue-driven worktree path")
-	jsonOut := fs.Bool("json", false, "print JSON")
-	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
-		return err
-	}
-	record, err := cli.Runtime.LinkIssueOpsWorktreeWithActor(cli.Runtime.IssueOpsStateRoot(), *id, *worktreePath, actor.actor())
-	return printIssueOpsResult(record, *jsonOut, err)
+	return cli.runIssueOpsLinkValue(args, issueOpsLinkSpec{
+		name:     "issueops link-worktree",
+		flagName: "worktree-path",
+		usage:    "issue-driven worktree path",
+		link:     cli.Runtime.LinkIssueOpsWorktreeWithActor,
+	})
 }
 
 func (cli command) runIssueOpsLinkChild(args []string) error {
@@ -221,32 +231,32 @@ func (cli command) runIssueOpsChildAccept(args []string) error {
 	return printIssueOpsChildValue(result, *jsonOut, err)
 }
 
-func (cli command) runIssueOpsChildReject(args []string) error {
-	fs := flag.NewFlagSet("issueops child reject", flag.ContinueOnError)
+// runIssueOpsChildReason는 child reject와 child drop이 공유한다. 둘 다 parent/child
+// id와 사유 하나를 받아 runtime 호출 한 번으로 처리한다.
+func (cli command) runIssueOpsChildReason(args []string, name, reasonUsage string, apply func(parentID, childID, reason string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildValidationResult, error)) error {
+	fs := flag.NewFlagSet(name, flag.ContinueOnError)
 	parentID := fs.String("parent", "", "parent issueops id")
 	actor := cli.addIssueOpsActorFlags(fs)
 	childID := fs.String("child", "", "child issueops id")
-	reason := fs.String("reason", "", "rejection reason")
+	reason := fs.String("reason", "", reasonUsage)
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
 	}
-	result, err := cli.Runtime.RejectIssueOpsChildWithActor(cli.Runtime.IssueOpsStateRoot(), *parentID, *childID, *reason, nil, actor.actor())
+	result, err := apply(*parentID, *childID, *reason, actor.actor())
 	return printIssueOpsChildValue(result, *jsonOut, err)
 }
 
+func (cli command) runIssueOpsChildReject(args []string) error {
+	return cli.runIssueOpsChildReason(args, "issueops child reject", "rejection reason", func(parentID, childID, reason string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildValidationResult, error) {
+		return cli.Runtime.RejectIssueOpsChildWithActor(cli.Runtime.IssueOpsStateRoot(), parentID, childID, reason, nil, actor)
+	})
+}
+
 func (cli command) runIssueOpsChildDrop(args []string) error {
-	fs := flag.NewFlagSet("issueops child drop", flag.ContinueOnError)
-	parentID := fs.String("parent", "", "parent issueops id")
-	actor := cli.addIssueOpsActorFlags(fs)
-	childID := fs.String("child", "", "child issueops id")
-	reason := fs.String("reason", "", "drop reason")
-	jsonOut := fs.Bool("json", false, "print JSON")
-	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
-		return err
-	}
-	result, err := cli.Runtime.DropIssueOpsChildWithActor(cli.Runtime.IssueOpsStateRoot(), *parentID, *childID, *reason, actor.actor())
-	return printIssueOpsChildValue(result, *jsonOut, err)
+	return cli.runIssueOpsChildReason(args, "issueops child drop", "drop reason", func(parentID, childID, reason string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildValidationResult, error) {
+		return cli.Runtime.DropIssueOpsChildWithActor(cli.Runtime.IssueOpsStateRoot(), parentID, childID, reason, actor)
+	})
 }
 
 func printIssueOpsChildValue(value any, jsonOut bool, err error) error {

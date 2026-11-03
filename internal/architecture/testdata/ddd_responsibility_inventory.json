@@ -1837,6 +1837,7 @@
         "func command.runIssueOpsChild",
         "func command.runIssueOpsChildAccept",
         "func command.runIssueOpsChildDrop",
+        "func command.runIssueOpsChildReason",
         "func command.runIssueOpsChildReject",
         "func command.runIssueOpsChildStart",
         "func command.runIssueOpsChildStatus",
@@ -1845,6 +1846,7 @@
         "func command.runIssueOpsLinkIssue",
         "func command.runIssueOpsLinkPlan",
         "func command.runIssueOpsLinkRelated",
+        "func command.runIssueOpsLinkValue",
         "func command.runIssueOpsLinkWorktree",
         "func command.runIssueOpsList",
         "func command.runIssueOpsPRReadiness",
@@ -1860,6 +1862,7 @@
         "func parseExpectedRouting",
         "func printIssueOpsChildValue",
         "func printIssueOpsList",
+        "type issueOpsLinkSpec",
         "type phaseResponse"
       ]
     },
@@ -2034,6 +2037,20 @@
       "task": "T20",
       "symbols": [
         "func Command.runRemoteMilestone"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopscli/remotecmd/remote_preview.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func listPreviewView",
+        "func repeatedValueFlag",
+        "func runPreviewCommand",
+        "func stringValueFlag",
+        "func valuePreviewView",
+        "type previewSpec",
+        "type previewView"
       ]
     },
     {
@@ -5178,6 +5195,7 @@
       "symbols": [
         "func HoldPublicationCreate",
         "func PublicationCrashSettlement",
+        "func holdCreateLock",
         "func publicationCreateInFlight",
         "func publicationLockKey"
       ]
@@ -7123,6 +7141,14 @@
       "task": "T20",
       "symbols": [
         "func createdArtifactNumber"
+      ]
+    },
+    {
+      "path": "internal/adapter/provider/github/edit_add.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func addEdit"
       ]
     },
     {

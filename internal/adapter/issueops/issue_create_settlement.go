@@ -2,7 +2,6 @@ package issueops
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -27,15 +26,9 @@ func issueCreateLockKey(repo, title string) string {
 // lock means another create of the same issue is running and the call is
 // refused before the provider is invoked.
 func HoldIssueCreate(ctx context.Context, stateRoot, repo, title string) (context.Context, func(), error) {
-	// The lock does not wait; cancellation stays the provider call's to report.
-	lease, err := processlease.Acquire(context.WithoutCancel(ctx), filepath.Join(stateRoot, issueCreateLockDirectory), issueCreateLockKey(repo, title))
-	if errors.Is(err, processlease.ErrBusy) {
-		return ctx, func() {}, &port.IssueProviderCreateError{Invoked: false, Err: fmt.Errorf("another create of issue %q is still running", title)}
-	}
-	if err != nil {
-		return ctx, func() {}, &port.IssueProviderCreateError{Invoked: false, Err: fmt.Errorf("issue create lifetime lock: %w", err)}
-	}
-	return lease.Context(ctx), func() { _ = lease.Close() }, nil
+	return holdCreateLock(ctx, filepath.Join(stateRoot, issueCreateLockDirectory), issueCreateLockKey(repo, title), "issue create lifetime lock", func() error {
+		return fmt.Errorf("another create of issue %q is still running", title)
+	})
 }
 
 // IssueCreateCrashSettlement proves that a pending issue create whose caller

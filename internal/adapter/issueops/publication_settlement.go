@@ -29,13 +29,22 @@ func publicationLockKey(repo, head string) string {
 // another create for the head is running: the call is refused before the
 // provider is invoked.
 func HoldPublicationCreate(ctx context.Context, stateRoot, repo, head string) (context.Context, func(), error) {
+	return holdCreateLock(ctx, filepath.Join(stateRoot, publicationLockDirectory), publicationLockKey(repo, head), "publication create lifetime lock", func() error {
+		return fmt.Errorf("another PR/MR create for head %s is still running", head)
+	})
+}
+
+// holdCreateLock acquires the non-waiting create lifetime lock under dir and
+// maps a busy lock (busy) or an acquisition failure (lockLabel) to a provider
+// create error that records the provider was never invoked.
+func holdCreateLock(ctx context.Context, dir, key, lockLabel string, busy func() error) (context.Context, func(), error) {
 	// The lock does not wait; cancellation stays the provider call's to report.
-	lease, err := processlease.Acquire(context.WithoutCancel(ctx), filepath.Join(stateRoot, publicationLockDirectory), publicationLockKey(repo, head))
+	lease, err := processlease.Acquire(context.WithoutCancel(ctx), dir, key)
 	if errors.Is(err, processlease.ErrBusy) {
-		return ctx, func() {}, &port.IssueProviderCreateError{Invoked: false, Err: fmt.Errorf("another PR/MR create for head %s is still running", head)}
+		return ctx, func() {}, &port.IssueProviderCreateError{Invoked: false, Err: busy()}
 	}
 	if err != nil {
-		return ctx, func() {}, &port.IssueProviderCreateError{Invoked: false, Err: fmt.Errorf("publication create lifetime lock: %w", err)}
+		return ctx, func() {}, &port.IssueProviderCreateError{Invoked: false, Err: fmt.Errorf("%s: %w", lockLabel, err)}
 	}
 	return lease.Context(ctx), func() { _ = lease.Close() }, nil
 }
