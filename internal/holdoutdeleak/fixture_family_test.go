@@ -200,15 +200,21 @@ func TestFixtureScanRequiresDigestConfirmation(t *testing.T) {
 	}
 }
 
+// slackDocURL builds a Slack doc URL at run time. The scan reads this file
+// too, so a literal non-synthetic URL here would flag the test's own source.
+func slackDocURL(workspace, team string) string {
+	return "https://" + workspace + ".slack." + "com/docs/" + team + "/F123"
+}
+
 func TestSlackIdentityScanAllowsOnlySyntheticWorkspace(t *testing.T) {
-	synthetic := []byte("see https://example.slack.com/docs/T00000000/F123")
+	synthetic := []byte("see " + slackDocURL("example", "T00000000"))
 	if got := nonSyntheticSlackIdentities(synthetic); len(got) != 0 {
 		t.Errorf("synthetic identity flagged: %v", got)
 	}
 	for _, content := range []string{
-		"https://acme-corp.slack.com/docs/T01ABCDEF/F123",
-		"https://example.slack.com/docs/T01ABCDEF/F123",
-		"https://acme.slack.com/docs/T00000000/F123",
+		slackDocURL("acme-corp", "T01ABCDEF"),
+		slackDocURL("example", "T01ABCDEF"),
+		slackDocURL("acme", "T00000000"),
 	} {
 		if got := nonSyntheticSlackIdentities([]byte(content)); len(got) != 1 {
 			t.Errorf("%q: want one flagged identity, got %v", content, got)

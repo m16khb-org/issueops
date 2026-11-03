@@ -191,7 +191,7 @@ No-input guard: not applicable (whole-repo baseline, 1,421 non-test Go files)
 
 - **MCP 401**: 서비스 로그의 POST 12,133건 중 1,807건(14.9%)이 401입니다. 10월 6~8일, 15~16일, 11월 2~3일에 몰렸고, 서비스 `ready` 23회 중 15회 뒤에 401 연속 구간이 이어집니다. `cmd/issueops/mcpcli/mcp_http.go:93`은 `status=401 duration_ms=0`만 남겨서, 헤더 누락인지 토큰 불일치인지 구분할 수 없습니다.
 - **정체 사이클**
-  - 실제 사이클 9건은 모두 `api-servers` 저장소에 있고, 완료는 2건입니다.
+  - 실제 사이클 9건은 모두 다른 업무 저장소 하나에 있고, 완료는 2건입니다.
   - 3건은 `glab issue create failed: ERROR 404 Not Found`로 3주째 `invoked_unknown` 상태입니다. `next`는 `remote reconcile-issue`를 안내하지만, 레코드의 `failure` 필드만으로는 404 원인을 알 수 없습니다.
   - 4건은 2026-09-18~28 이후 plan 단계에 멈춰 있습니다.
 - **호스트 신원 모호성**: 서브에이전트 환경에서는 `PI_SESSION_ID`와 `ISSUEOPS_OMP_SESSION_ID`가 서로 다른 값으로 함께 설정됩니다. 그래서 `next`가 "native session identity is unavailable"을 경고합니다. lease와 claim 신원에 걸린 문제이므로, 고칠 때 보안 검토가 필요합니다.
@@ -306,7 +306,7 @@ No-input guard: not applicable (whole-repo baseline, 1,421 non-test Go files)
 |17|`git log --since=120.days`|커밋 유형, churn, fix 핫스팟|git 이력|High|
 |18|`gh issue list`, `gh pr list`|이슈·PR 추세|GitHub 데이터|High|
 |19|`~/.local/state/issueops/mcp-http/server.log`|MCP 401 분포|로컬 로그|Medium|
-|20|`issueops list --json`, `review-metrics --repo …/api-servers --json`|실제 사이클|실행 출력|Medium|
+|20|`issueops list --json`, `review-metrics --repo <업무 저장소> --json`|실제 사이클|실행 출력|Medium|
 |21|`.issueops/PROJECT_AUDIT.md`|선행 감사 결과(CP2, CP3, `branch_candidate_functions`)|저장소 문서|High|
 |22|`.issueops/adr/2026-09-30-ddd-responsibility-ownership-across-the-harness.md`|인벤토리 규칙|ADR|High|
 |23|`.issueops/cautions/2026-08-26-ci-gofmt-gate-local-battery-drift.md`, `2026-10-15-linux-exec-text-file-busy.md`, `2026-10-08-parallel-tests-and-non-blocking-flock-leases.md`|CI와 테스트 불안정 기록|caution|High|
