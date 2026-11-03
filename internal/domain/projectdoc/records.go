@@ -38,50 +38,106 @@ func IsRecordFile(name string) bool {
 // section or a "**결정:**" line), so older records are matched on what they
 // decided and not on the title alone.
 func ParseRecord(rel, content string) Record {
-	record := Record{Rel: rel}
-	description := ""
-	var decision strings.Builder
-	inDecision := false
+	p := &recordParser{record: Record{Rel: rel}}
+	for line := range strings.Lines(content) {
+		p.feed(strings.TrimSpace(line))
+	}
+	return p.finish()
+}
+
+// recordParser holds the line-by-line state ParseRecord accumulates.
+type recordParser struct {
+	record      Record
+	description string
+	decision    strings.Builder
+	inDecision  bool
 	// inDecisionLine keeps a one-line decision marker open across its wrapped lines, up to
 	// a blank line or the next list item, bold label, or heading.
-	inDecisionLine := false
-	for line := range strings.Lines(content) {
-		line = strings.TrimSpace(line)
-		continued := inDecisionLine && line != "" && !strings.HasPrefix(line, "- ") &&
-			!strings.HasPrefix(line, "**") && !strings.HasPrefix(line, "#")
-		inDecisionLine = false
-		switch {
-		case continued:
-			inDecisionLine = true
-			if utf8.RuneCountInString(decision.String()) < decisionFallbackRunes {
-				decision.WriteString(" " + line)
-			}
-		case record.Title == "" && strings.HasPrefix(line, "# "):
-			record.Title = stripLeadingDate(strings.TrimSpace(line[2:]))
-		case record.Summary == "" && strings.HasPrefix(line, "- Summary:"):
-			record.Summary = strings.TrimSpace(strings.TrimPrefix(line, "- Summary:"))
-		case record.Source == "" && strings.HasPrefix(line, "- Source:"):
-			record.Source = strings.TrimSpace(strings.TrimPrefix(line, "- Source:"))
-		case description == "" && strings.HasPrefix(line, "description:"):
-			description = strings.TrimSpace(strings.TrimPrefix(line, "description:"))
-		case strings.HasPrefix(line, "## "):
-			heading := strings.ToLower(strings.TrimSpace(line[3:]))
-			inDecision = decision.Len() == 0 && (strings.HasPrefix(heading, "decision") || strings.HasPrefix(heading, "결정") || heading == "summary")
-		case decision.Len() == 0 && decisionLineRe().MatchString(line):
-			decision.WriteString(decisionLineRe().FindStringSubmatch(line)[1])
-			inDecisionLine = true
-		case inDecision && line != "" && utf8.RuneCountInString(decision.String()) < decisionFallbackRunes:
-			decision.WriteString(line + " ")
-		}
-	}
+	inDecisionLine bool
+}
+
+// feed consumes one trimmed line. The first matching rule wins, in this order:
+// a wrapped decision line, a record field, a "## " heading, a one-line decision
+// marker, and a line inside a decision section.
+func (p *recordParser) feed(line string) {
+	continued := p.continuesDecisionLine(line)
+	p.inDecisionLine = false
 	switch {
-	case record.Summary != "":
-	case description != "":
-		record.Summary = description
-	default:
-		record.Summary = truncateRunes(strings.TrimSpace(decision.String()), decisionFallbackRunes)
+	case continued:
+		p.inDecisionLine = true
+		if p.decisionRoom() {
+			p.decision.WriteString(" " + line)
+		}
+	case p.takeField(line):
+	case strings.HasPrefix(line, "## "):
+		p.inDecision = p.opensDecisionSection(strings.ToLower(strings.TrimSpace(line[3:])))
+	case p.takeDecisionLine(line):
+	case p.inDecision && line != "" && p.decisionRoom():
+		p.decision.WriteString(line + " ")
 	}
-	return record
+}
+
+// continuesDecisionLine reports whether line wraps the open one-line decision marker.
+func (p *recordParser) continuesDecisionLine(line string) bool {
+	return p.inDecisionLine && line != "" && !strings.HasPrefix(line, "- ") &&
+		!strings.HasPrefix(line, "**") && !strings.HasPrefix(line, "#")
+}
+
+// decisionRoom reports whether the decision text is still below the fallback bound.
+func (p *recordParser) decisionRoom() bool {
+	return utf8.RuneCountInString(p.decision.String()) < decisionFallbackRunes
+}
+
+// opensDecisionSection reports whether a lowercased "## " heading starts the
+// decision section, which only counts while no decision has been collected.
+func (p *recordParser) opensDecisionSection(heading string) bool {
+	return p.decision.Len() == 0 && (strings.HasPrefix(heading, "decision") || strings.HasPrefix(heading, "결정") || heading == "summary")
+}
+
+// takeField records the first H1, "- Summary:", "- Source:", and
+// "description:" lines and reports whether line was one of them.
+func (p *recordParser) takeField(line string) bool {
+	switch {
+	case p.record.Title == "" && strings.HasPrefix(line, "# "):
+		p.record.Title = stripLeadingDate(strings.TrimSpace(line[2:]))
+	case p.record.Summary == "" && strings.HasPrefix(line, "- Summary:"):
+		p.record.Summary = strings.TrimSpace(strings.TrimPrefix(line, "- Summary:"))
+	case p.record.Source == "" && strings.HasPrefix(line, "- Source:"):
+		p.record.Source = strings.TrimSpace(strings.TrimPrefix(line, "- Source:"))
+	case p.description == "" && strings.HasPrefix(line, "description:"):
+		p.description = strings.TrimSpace(strings.TrimPrefix(line, "description:"))
+	default:
+		return false
+	}
+	return true
+}
+
+// takeDecisionLine starts the decision text from a one-line decision marker
+// when no decision has been collected yet, and reports whether it did.
+func (p *recordParser) takeDecisionLine(line string) bool {
+	if p.decision.Len() != 0 {
+		return false
+	}
+	match := decisionLineRe().FindStringSubmatch(line)
+	if match == nil {
+		return false
+	}
+	p.decision.WriteString(match[1])
+	p.inDecisionLine = true
+	return true
+}
+
+// finish settles the summary: the Summary line, else the frontmatter
+// description, else the start of the decision.
+func (p *recordParser) finish() Record {
+	switch {
+	case p.record.Summary != "":
+	case p.description != "":
+		p.record.Summary = p.description
+	default:
+		p.record.Summary = truncateRunes(strings.TrimSpace(p.decision.String()), decisionFallbackRunes)
+	}
+	return p.record
 }
 
 // decisionLineRe is a one-line decision marker: "**결정:** text", "**결정: text**",

@@ -47,7 +47,8 @@ func (s TemplateBodyResolver) Resolve(req TemplateBodyRequest) (ResolvedTemplate
 		return ResolvedTemplateBody{}, err
 	}
 	template := strings.TrimSpace(req.Template)
-	if template == "" && req.Confirm && req.Kind == artifacttemplate.IssueOpsArtifactIssue {
+	templateMissing := template == "" && req.Kind == artifacttemplate.IssueOpsArtifactIssue
+	if templateMissing && req.Confirm {
 		return ResolvedTemplateBody{}, fmt.Errorf("--template is required with --confirm: pass bug, feature, proposal, or implementation_task")
 	}
 	fields, err := artifacttemplate.ParseFieldAssignments(req.Fields)
@@ -58,33 +59,9 @@ func (s TemplateBodyResolver) Resolve(req TemplateBodyRequest) (ResolvedTemplate
 	if err != nil {
 		return ResolvedTemplateBody{}, err
 	}
-	input := artifacttemplate.IssueOpsTemplateInput{
-		Kind:         req.Kind,
-		Template:     artifacttemplate.IssueOpsTemplateKind(template),
-		Provider:     req.Provider,
-		Title:        req.Title,
-		Body:         body,
-		Fields:       fields,
-		ScoreSummary: scoreSummary,
-	}
-	result := artifacttemplate.Render(input)
-	if body == "" && len(fields) == 0 {
-		// Nothing was authored: judge the empty body instead of publishing an
-		// empty skeleton. The skeleton belongs to render-template.
-		result.Body = ""
-	}
-	var inputErrors []string
-	for _, code := range result.Validation.Critical {
-		if !readabilityDeferredCodes[code] {
-			inputErrors = append(inputErrors, code)
-		}
-	}
-	if len(inputErrors) > 0 {
-		if choice := artifacttemplate.ChoiceError(string(req.Kind), template); choice != nil {
-			// Probe: --template bogus answered the bare code.
-			return ResolvedTemplateBody{}, fmt.Errorf("template validation failed: %s: %w", strings.Join(inputErrors, ","), choice)
-		}
-		return ResolvedTemplateBody{}, fmt.Errorf("template validation failed: %s", strings.Join(inputErrors, ","))
+	result := renderTemplateBody(req, template, body, fields, scoreSummary)
+	if inputErrors := blockingInputErrors(result.Validation.Critical); len(inputErrors) > 0 {
+		return ResolvedTemplateBody{}, templateValidationError(req.Kind, template, inputErrors)
 	}
 	resolved := ResolvedTemplateBody{
 		Body: result.Body,
@@ -96,7 +73,7 @@ func (s TemplateBodyResolver) Resolve(req TemplateBodyRequest) (ResolvedTemplate
 			Fields:   fields,
 		}),
 	}
-	if template == "" && req.Kind == artifacttemplate.IssueOpsArtifactIssue {
+	if templateMissing {
 		// Without a template the preview cannot check the sections the
 		// confirmed request will require, so a clean preview would be a
 		// false pass: say so where the preview reports readability.
@@ -110,6 +87,43 @@ func (s TemplateBodyResolver) Resolve(req TemplateBodyRequest) (ResolvedTemplate
 		return resolved, artifactreadability.RefusalError(resolved.Readability)
 	}
 	return resolved, nil
+}
+
+func renderTemplateBody(req TemplateBodyRequest, template, body string, fields map[string]string, scoreSummary string) artifacttemplate.IssueOpsTemplateResult {
+	result := artifacttemplate.Render(artifacttemplate.IssueOpsTemplateInput{
+		Kind:         req.Kind,
+		Template:     artifacttemplate.IssueOpsTemplateKind(template),
+		Provider:     req.Provider,
+		Title:        req.Title,
+		Body:         body,
+		Fields:       fields,
+		ScoreSummary: scoreSummary,
+	})
+	if body == "" && len(fields) == 0 {
+		// Nothing was authored: judge the empty body instead of publishing an
+		// empty skeleton. The skeleton belongs to render-template.
+		result.Body = ""
+	}
+	return result
+}
+
+// blockingInputErrors drops the codes the readability check judges instead.
+func blockingInputErrors(critical []string) []string {
+	var inputErrors []string
+	for _, code := range critical {
+		if !readabilityDeferredCodes[code] {
+			inputErrors = append(inputErrors, code)
+		}
+	}
+	return inputErrors
+}
+
+func templateValidationError(kind artifacttemplate.IssueOpsArtifactKind, template string, inputErrors []string) error {
+	if choice := artifacttemplate.ChoiceError(string(kind), template); choice != nil {
+		// Probe: --template bogus answered the bare code.
+		return fmt.Errorf("template validation failed: %s: %w", strings.Join(inputErrors, ","), choice)
+	}
+	return fmt.Errorf("template validation failed: %s", strings.Join(inputErrors, ","))
 }
 
 func (s TemplateBodyResolver) ScoreSummary(path string) (string, error) {

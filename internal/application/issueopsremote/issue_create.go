@@ -56,53 +56,22 @@ func (s *IssueCreator) Create(ctx context.Context, cmd IssueCreateCommand) (Issu
 	if err != nil {
 		return result, err
 	}
-	if err := domain.ValidateIssueCreateTitle(cmd.Title); err != nil {
-		return result, err
-	}
-	if err := remote.ValidateProviderTitleLength("issue", cmd.Title); err != nil {
-		return result, err
-	}
-	providerName, err := s.resolveProviderName(cmd, record)
+	providerName, provider, err := s.resolveProvider(cmd, record)
 	if err != nil {
 		return result, err
 	}
-	provider, err := s.environment.Resolve(providerName)
-	if err != nil {
-		return result, err
-	}
-	resolved, err := s.bodies.Resolve(TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, Template: cmd.Template, Provider: providerName, Title: cmd.Title, Body: cmd.Body, BodyFile: cmd.BodyFile, Fields: cmd.Fields, ScoreFile: cmd.ScoreFile, Confirm: cmd.Confirm})
+	resolved, err := s.resolveCreateBody(cmd, providerName, labels, assignees)
+	result.Readability = resolved.Readability
 	if err != nil {
 		return result, err
 	}
 	body := resolved.Body
-	result.Readability = resolved.Readability
-	if err := validateCreateInputs(cmd, body, labels, assignees); err != nil {
-		return result, err
-	}
-	if err := remote.ValidateProviderBodyLength(providerName, "issue", body); err != nil {
-		return result, err
-	}
-	authority := ""
-	if cmd.Confirm {
-		authority, body, err = s.beginConfirmedIntent(record, providerName, cmd.Title, labels, assignees, body)
-		if err != nil {
-			return result, err
-		}
-	} else if _, err = s.environment.ProjectAuthority(record.Repo, providerName); err != nil {
-		// The confirmed request resolves the same authority before it creates
-		// anything; a preview that would pass and then fail at --confirm
-		// hides the one problem the preview exists to show.
-		return result, err
-	}
-	invokeContext := ctx
-	if !cmd.Confirm {
-		invokeContext = context.Background()
-	}
-	result.IssueProviderCreateIssueResult, err = provider(invokeContext, port.IssueProviderCreateIssueRequest{Repo: record.Repo, ProjectKey: authority, Title: cmd.Title, Body: body, Labels: labels, Assignees: assignees, Confirm: cmd.Confirm})
+	authority, body, err := s.createAuthority(record, cmd, providerName, labels, assignees, body)
 	if err != nil {
-		if cmd.Confirm {
-			err = s.recordCreateFailure(record.ID, result.URL, err)
-		}
+		return result, err
+	}
+	result.IssueProviderCreateIssueResult, err = s.invokeProvider(ctx, provider, record, cmd, authority, body, labels, assignees)
+	if err != nil {
 		return result, err
 	}
 	result.Provider = providerName
@@ -114,6 +83,65 @@ func (s *IssueCreator) Create(ctx context.Context, cmd IssueCreateCommand) (Issu
 		}
 	}
 	return result, nil
+}
+
+// resolveProvider validates the title and resolves the provider name and its create invoker.
+func (s *IssueCreator) resolveProvider(cmd IssueCreateCommand, record model.IssueOpsRecord) (string, IssueCreateInvoker, error) {
+	if err := domain.ValidateIssueCreateTitle(cmd.Title); err != nil {
+		return "", nil, err
+	}
+	if err := remote.ValidateProviderTitleLength("issue", cmd.Title); err != nil {
+		return "", nil, err
+	}
+	providerName, err := s.resolveProviderName(cmd, record)
+	if err != nil {
+		return "", nil, err
+	}
+	provider, err := s.environment.Resolve(providerName)
+	if err != nil {
+		return "", nil, err
+	}
+	return providerName, provider, nil
+}
+
+// resolveCreateBody renders the body and validates it with the create inputs.
+// The readability report is returned with a validation error so the caller can
+// still show it; a body-resolution error carries none.
+func (s *IssueCreator) resolveCreateBody(cmd IssueCreateCommand, providerName string, labels, assignees []string) (ResolvedTemplateBody, error) {
+	resolved, err := s.bodies.Resolve(TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, Template: cmd.Template, Provider: providerName, Title: cmd.Title, Body: cmd.Body, BodyFile: cmd.BodyFile, Fields: cmd.Fields, ScoreFile: cmd.ScoreFile, Confirm: cmd.Confirm})
+	if err != nil {
+		return ResolvedTemplateBody{}, err
+	}
+	if err := validateCreateInputs(cmd, resolved.Body, labels, assignees); err != nil {
+		return resolved, err
+	}
+	return resolved, remote.ValidateProviderBodyLength(providerName, "issue", resolved.Body)
+}
+
+// createAuthority begins the durable intent on confirm; a preview only checks
+// that the project authority resolves.
+func (s *IssueCreator) createAuthority(record model.IssueOpsRecord, cmd IssueCreateCommand, providerName string, labels, assignees []string, body string) (string, string, error) {
+	if cmd.Confirm {
+		return s.beginConfirmedIntent(record, providerName, cmd.Title, labels, assignees, body)
+	}
+	// The confirmed request resolves the same authority before it creates
+	// anything; a preview that would pass and then fail at --confirm
+	// hides the one problem the preview exists to show.
+	_, err := s.environment.ProjectAuthority(record.Repo, providerName)
+	return "", body, err
+}
+
+// invokeProvider calls the provider and records a confirmed create failure.
+func (s *IssueCreator) invokeProvider(ctx context.Context, provider IssueCreateInvoker, record model.IssueOpsRecord, cmd IssueCreateCommand, authority, body string, labels, assignees []string) (port.IssueProviderCreateIssueResult, error) {
+	invokeContext := ctx
+	if !cmd.Confirm {
+		invokeContext = context.Background()
+	}
+	created, err := provider(invokeContext, port.IssueProviderCreateIssueRequest{Repo: record.Repo, ProjectKey: authority, Title: cmd.Title, Body: body, Labels: labels, Assignees: assignees, Confirm: cmd.Confirm})
+	if err != nil && cmd.Confirm {
+		err = s.recordCreateFailure(record.ID, created.URL, err)
+	}
+	return created, err
 }
 
 func validateCreateInputs(cmd IssueCreateCommand, body string, labels, assignees []string) error {
