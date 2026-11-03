@@ -28,7 +28,7 @@ issueops project bootstrap --repo /path/to/repo --sync
 
 `./install.sh` computes the checkout root, builds `bin/issueops` when needed, and then runs `issueops install`. In a real terminal with no arguments it enters the interactive installer. Non-interactive automation can pass explicit flags such as `--dry-run --json`.
 
-`install` owns environment setup. Normal users should not export `ISSUEOPS_ROOT` manually; the installer writes it into Codex, Claude, Omo, omp, and opencode MCP configuration. `CODEX_HOME` is honored when already set and otherwise defaults to `~/.codex`; Omo uses its native flat-layout `~/.omo` root; omp uses `~/.omp/agent`; opencode uses `$XDG_CONFIG_HOME/opencode` when `XDG_CONFIG_HOME` is absolute and `~/.config/opencode` otherwise. PATH setup is selected with `--path-mode=auto|manual|skip`. Every mode plans or writes the canonical `~/.local/bin/issueops` shim and the managed `~/.local/bin/io -> ~/.local/bin/issueops` shorthand; `manual` and `skip` only omit shell rc changes. The default `auto` mode also adds a shell rc PATH line when needed.
+`install` owns environment setup. Normal users should not export `ISSUEOPS_ROOT` manually; the installer writes it into Codex, Claude, Omo, omp, and opencode MCP configuration. `CODEX_HOME` is honored when already set and otherwise defaults to `~/.codex`; Omo uses its native flat-layout `~/.omo` root; omp uses `~/.omp/agent`; opencode uses `$XDG_CONFIG_HOME/opencode` when `XDG_CONFIG_HOME` is absolute and `~/.config/opencode` otherwise. PATH setup is selected with `--path-mode=auto|manual|skip`. Every mode plans or writes the canonical `~/.local/bin/issueops` shim and the managed `~/.local/bin/io -> ~/.local/bin/issueops` shorthand; `manual` and `skip` only omit shell rc changes. The default `auto` mode also adds a shell rc PATH line when needed. Windows differences (`.exe` names, user `Path` registry, stdio-only MCP) are in [Windows](#windows).
 
 Each install/update refreshes user skill links for all five first-party hosts,
 managed MCP registration, and the host lifecycle context surface. It also prunes
@@ -144,10 +144,33 @@ Release build matrix smoke:
 scripts/release-build-matrix.sh
 ```
 
-The default release matrix cross-builds `darwin/arm64`, `darwin/amd64`, `linux/amd64`, and `linux/arm64` with `CGO_ENABLED=0`.
+The default release matrix cross-builds `darwin/arm64`, `darwin/amd64`, `linux/amd64`, `linux/arm64`, and `windows/amd64` (as `issueops-windows-amd64.exe`) with `CGO_ENABLED=0`.
 
 ## Project `--sync`
 
 `issueops project bootstrap --sync` refreshes target repo `AGENTS.md` routing block, `.issueops/*.md`, and user-state repo profile metadata from current evidence.
 
 Use low-level `scripts/install-native.sh` and `install-native` directly only for automation or focused installer debugging.
+
+## Windows
+
+Windows 10/11 x64 is a native install target. Requirements, all from their own official installers:
+
+- Go matching `go.mod` (`winget install GoLang.Go`).
+- Git for Windows, which also provides the bash that runs `./install.sh`.
+- Developer Mode (Settings > System > For developers) or an elevated shell, because skill links and the `issueops.exe`/`io.exe` command shims are symlinks.
+
+First run from Git Bash in the checkout: `./install.sh`. It builds `bin\issueops.exe` and runs `issueops install`. From PowerShell or cmd the equivalent is `go build -o bin\issueops.exe ./cmd/issueops` followed by `bin\issueops.exe install`.
+
+Differences from darwin/linux, all made in the Windows build files:
+
+- The binary and shims carry `.exe`: `bin\issueops.exe`, `%USERPROFILE%\.local\bin\issueops.exe`, and `io.exe -> issueops.exe`. Host MCP configs and lifecycle extensions point at `bin\issueops.exe`.
+- `--path-mode=auto` appends `%USERPROFILE%\.local\bin` to the user `Path` in `HKCU\Environment` and broadcasts the change; terminals opened afterwards see `issueops` and `io`. `manual` and `skip` leave the registry alone.
+- The default MCP transport is `stdio`. Windows has no launchd/systemd supervisor, so `--mcp-transport=http` and `issueops mcp service ...` fail with `supervisor_unsupported`.
+- Codex hooks keep the shell-form `command` and add `commandWindows` (`& 'C:\...\issueops.exe' hook ...`) because Codex runs Windows hooks in PowerShell. Claude hooks use the exec form (`command` = the `.exe`, `args` = `["hook", ...]`), which runs the same under Git Bash and PowerShell. The tracked `configs/` templates stay in the OS-neutral shell form.
+- `io update` does not run `scripts/install-native.sh`; the Windows update runtime performs the same build, `--dry-run` preflight, activation begin, binary swap, and seal steps in Go. A running `bin\issueops.exe` (for example a host's stdio MCP server) cannot be overwritten, so the swap renames it to `bin\.issueops.retired-*.exe`; the next update removes retired copies that are no longer running.
+- Owner-only state (`0600`/`0700` on Unix) is an owner-only protected DACL: the current user, SYSTEM, and Administrators. A state root under a directory whose ACL grants other principals is re-protected when issueops creates it.
+- `--adopt-command-file` is refused: Windows has no atomic two-path exchange. Move a regular `issueops.exe` out of `%USERPROFILE%\.local\bin` and run install again.
+- cmux handoff is unavailable (cmux is a macOS/Linux app on a Unix socket).
+
+The repository's `.gitattributes` keeps LF on checkout, so Git for Windows' default `core.autocrlf=true` does not break bash scripts, golden files, or generated templates.

@@ -141,6 +141,18 @@ CI도 `RUNNER_TEMP`의 환경을 사용하여 checkout이나 사용자 홈을 �
 이는 저장소 테스트 환경 준비이며 CLI/MCP의 운영 의존성이나 native 설치기의
 자동 설치 항목이 아니다.
 
+### OS 중립 fixture (Windows)
+
+`go test ./...`는 darwin·linux·windows에서 모두 통과해야 한다. fixture는 `internal/testsupport`의 helper로 OS 차이를 흡수한다.
+
+- 디스크에 만들지 않는 절대경로 fixture는 `testsupport.AbsPath(...)`를 쓴다. `/repo/...` 문자열은 Windows에서 절대경로가 아니다.
+- fake `gh`·`glab`·`git` 같은 명령은 `testsupport.WriteFakeCommand(t, dir, name, "#!/bin/sh\n...")`로 설치한다. Windows에서는 Git for Windows bash가 스크립트를 실행하는 `name.exe` shim이 생기고, argv(따옴표·`@{u}`·glob·줄바꿈 포함), stdin, 종료 코드가 그대로 전달된다. 스크립트에는 shebang을 둔다.
+- 홈 격리는 `testsupport.SetHome`을 쓴다(Windows는 `USERPROFILE`도 바꾼다).
+- owner-only 단언은 `osfile.Perm(path, info)`로 한다. 공개 권한이나 읽기 불가 fixture는 `testsupport.MakePermissive`, `testsupport.MakeUnreadable`로 만든다. `os.Chmod`는 Windows에서 읽기 전용 속성만 바꾼다.
+- 경로를 이어 붙여 JSON·TOML을 만들지 않는다(`json.Marshal`, `TOMLString`).
+- Windows 의미가 실제로 다른 경우에만 skip하거나 build tag로 제한하고, 이유를 skip 메시지에 적는다. 예: 사용 중인 cwd 삭제, 파일 아래 경로가 `ENOTDIR`가 아닌 not-exist로 보고됨, cmux(Unix socket 앱), `--adopt-command-file`, `scripts/*.sh` 실행 테스트.
+- Windows 테스트는 owner-only ACL을 가진 `TMP`/`TEMP`에서 돌린다. 사용자 프로필 밖의 `TMP`가 다른 principal에게 상속 ACE를 주면 owner-only 검사가 실패한다.
+
 ## Contract / Golden tests
 
 다음 항목은 golden test 대상으로 삼는다.

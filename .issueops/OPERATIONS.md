@@ -81,7 +81,8 @@ Skill-quality scorecards and dogfood evaluations are research records under
    path as `authority_file` plus `workspace_root`/`cwd`. The token itself is
    never printed. `--mcp-transport=stdio` keeps the previous `issueops mcp`
    stdio entry, which serves inside the host session's own process. agy always
-   uses stdio. Service limits: the unit passes only `ISSUEOPS_ROOT` and
+   uses stdio, and so does Windows, which has no supervisor
+   ([install.md#windows](operations/install.md#windows)). Service limits: the unit passes only `ISSUEOPS_ROOT` and
    `ISSUEOPS_STATE_DIR`. HTTP `harness_inspect` therefore sees the supervisor's
    default `HOME`/`PATH` and no `CODEX_HOME`, and may report
    `host_version_unobservable`. The SDK also advertises `idempotentHint:false`
