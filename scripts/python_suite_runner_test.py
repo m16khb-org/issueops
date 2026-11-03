@@ -81,6 +81,49 @@ def test_context():
                 self.assertIn(evidence, result.stderr)
                 self.assertEqual((root / "skills/beta/executed").read_text(), "yes")
                 self.assertEqual((root / "root-executed").read_text(), "once\n")
+                self.assertIn("Python suites failed: skill alpha", result.stderr)
+
+    def test_import_failures_name_the_missing_module_and_the_requirements_file(self):
+        cases = [
+            ("skill module import", "skills/alpha/tests/test_result.py",
+             "import missing_fixture_dependency\n", "skill alpha"),
+            ("skill test-time import", "skills/alpha/tests/test_result.py",
+             "def test_result():\n    import missing_fixture_dependency\n", "skill alpha"),
+            ("root module import", "scripts/missing_import_test.py",
+             "import missing_fixture_dependency\n", "root scripts suite"),
+        ]
+        for name, path, body, suite in cases:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                self.root_suite(root)
+                self.write(root, path, body)
+                result = self.run_runner(root)
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                lines = [line for line in result.stderr.splitlines() if line.startswith("precondition failed:")]
+                self.assertEqual(len(lines), 1, result.stderr)
+                self.assertIn(suite, lines[0])
+                self.assertIn("missing_fixture_dependency", lines[0])
+                self.assertIn("scripts/python_test_requirements.txt", lines[0])
+                self.assertIn("Python 3.13", lines[0])
+                self.assertIn(".issueops/testing/unit-and-contract.md", lines[0])
+                self.assertIn("Python suites failed:", result.stderr)
+
+    def test_non_import_failures_do_not_claim_a_missing_precondition(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.root_suite(root)
+            self.write(root, "skills/alpha/tests/test_result.py", "def test_result():\n    assert False\n")
+            result = self.run_runner(root)
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertNotIn("precondition failed", result.stderr)
+
+    def test_success_prints_no_failed_suite_list(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.root_suite(root)
+            result = self.run_runner(root)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertNotIn("Python suites failed", result.stderr)
 
     def test_empty_skills_are_not_empty_discovery_success(self):
         with tempfile.TemporaryDirectory() as directory:
