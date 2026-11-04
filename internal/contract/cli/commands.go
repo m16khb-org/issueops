@@ -33,8 +33,8 @@ func RootCommands() []Command {
 		{Name: "web-fetch", Description: "fetch public web pages with resilient validation and run deterministic web-fetch benchmarks"},
 		{Name: "self-verify", Description: "run harness verification gates"},
 		{Name: "self-augment", Description: "plan self-augmentation candidates and lessons"},
-		{Name: "mcp", Description: "serve the MCP stdio proxy and clean up proxy processes"},
-		{Name: "model", Description: "show, set, and resolve per-role agent models for claude and codex"},
+		{Name: "mcp", Description: "serve MCP over stdio or shared HTTP, manage the HTTP service, authorize callers, and clean up proxy processes"},
+		{Name: "model", Description: "show, set, unset, and resolve per-role agent models for claude, codex, omo, omp, and opencode"},
 		{Name: "version", Description: "print issueops version"},
 	}
 	return commands

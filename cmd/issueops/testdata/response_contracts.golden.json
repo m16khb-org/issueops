@@ -273,11 +273,11 @@
           "name": "self-augment"
         },
         {
-          "description": "serve the MCP stdio proxy and clean up proxy processes",
+          "description": "serve MCP over stdio or shared HTTP, manage the HTTP service, authorize callers, and clean up proxy processes",
           "name": "mcp"
         },
         {
-          "description": "show, set, and resolve per-role agent models for claude and codex",
+          "description": "show, set, unset, and resolve per-role agent models for claude, codex, omo, omp, and opencode",
           "name": "model"
         },
         {
@@ -429,7 +429,7 @@
           "name": "status"
         }
       ],
-      "hash": "cc9dc1f93f884f93fc2e57602905a12b55578e96668afe8fc401951a4f3bcad9",
+      "hash": "690aa5a84cf5fcf5eff8e79dfc939582730b6dbb6abe4e05e18eed29e403d5bb",
       "mcp_tools": [
         "api_doc_review",
         "api_doc_static_check",
@@ -4655,11 +4655,11 @@
                 "name": "self-augment"
               },
               {
-                "description": "serve the MCP stdio proxy and clean up proxy processes",
+                "description": "serve MCP over stdio or shared HTTP, manage the HTTP service, authorize callers, and clean up proxy processes",
                 "name": "mcp"
               },
               {
-                "description": "show, set, and resolve per-role agent models for claude and codex",
+                "description": "show, set, unset, and resolve per-role agent models for claude, codex, omo, omp, and opencode",
                 "name": "model"
               },
               {
@@ -4811,7 +4811,7 @@
                 "name": "status"
               }
             ],
-            "hash": "cc9dc1f93f884f93fc2e57602905a12b55578e96668afe8fc401951a4f3bcad9",
+            "hash": "690aa5a84cf5fcf5eff8e79dfc939582730b6dbb6abe4e05e18eed29e403d5bb",
             "mcp_tools": [
               "api_doc_review",
               "api_doc_static_check",
