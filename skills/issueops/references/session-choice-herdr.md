@@ -250,3 +250,21 @@ IssueOps lease를 소유하지 않는다. 실제 Herdr 호출 전후에는 위
 명령 계약은 설치된 `herdr-app commands`, `herdr-app --skill`, `hc --skill`, `hc <command> --help`로
 확인한다. Herdr 앱의 space·tab·terminal ID는 실행 위치 식별자이지 IssueOps actor가 아니다.
 
+
+## worktree 정리 뒤 Herdr 화면 닫기
+
+`issueops cleanup finish`나 `cleanup abandon`의 apply가 `worktree_removed: true`를 돌려준 뒤에만 이 절을
+실행한다. 정리를 실행한 세션이 Herdr 세션이 아니면(판별은 [세션 인계](session-choice.md)의 env 규칙과 같다)
+건너뛰고, 보고에 "Herdr 화면은 확인하지 않았다"고 적는다. apply는 worktree 안의 terminal 프로세스를
+종료하지만 Herdr의 space나 workspace는 지우지 않는다. 그대로 두면 지운 폴더를 가리키는 빈 space가
+목록에 남는다. 이 절의 실패는 정리 결과를 바꾸지 않으며, 실패하면 보고에만 적는다.
+
+- Herdr 앱: `herdr-app ls`에서 `folder`가 지운 worktree 경로(symlink를 해석한 절대경로)와 같은 space를
+  찾는다. 있으면 `herdr-app do space.close --id "$SPACE_ID"`를 `confirmed` 없이 한 번 실행한다. 그 space에
+  worktree 밖에서 일하는 terminal이 남아 있을 수 있으므로, 닫을지는 창이 사람에게 묻게 둔다. 다시
+  `herdr-app ls`로 닫혔는지 남아 있는지 확인해 보고한다.
+- Herdr 터미널: `herdr workspace list`에서 `worktree.checkout_path`가 지운 worktree 경로와 같은 workspace를
+  찾는다. `herdr pane list --workspace "$WORKSPACE_ID"`의 각 pane을 `herdr pane process-info`로 확인해
+  살아 있는 프로세스가 하나도 없을 때만 `herdr workspace close "$WORKSPACE_ID"`를 실행한다. 살아 있는
+  프로세스가 있으면 닫지 않고 workspace ID와 프로세스를 보고한다. `herdr worktree remove`는 checkout을
+  지우는 명령이므로 쓰지 않는다.

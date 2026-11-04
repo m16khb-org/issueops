@@ -171,6 +171,8 @@ remote-branch`는 여기서 쓰지 않는다. 두 명령 모두 머지 증적을
 - 폐기: `issueops status --id "$ISSUEOPS_ID" --json`이 record 없음을
   돌려준다. `git worktree list`에 그 경로가 없고 `git show-ref --verify
   refs/heads/<branch>`가 실패한다.
+- 워크트리를 지웠다면 [Herdr 화면 닫기](../issueops/references/session-choice-herdr.md#worktree-정리-뒤-herdr-화면-닫기)
+  절차로 그 worktree의 Herdr space나 workspace를 닫고 결과를 보고한다.
 - 원격 효과를 골랐다면 apply 결과의 `remote_effects`, `pr_closed`, `issue_closed`,
   `remote_branch_deleted`가 고른 것과 일치하는지 확인한다.
 - 부분 실패로 멈췄으면 record가 남아 있고 `cleanup_abandon_failure.step`이 어디서

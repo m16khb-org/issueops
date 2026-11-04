@@ -34,7 +34,9 @@ recording belongs to this stage. `quality inspect` is not a semantic skill runne
 
 1. Prefer the supplied ID/`$ISSUEOPS_ID`; otherwise `issueops list --repo "$PWD" --json`.
    Ask which ID only if zero or multiple plausible cycles remain.
-2. Run from the record's source repository, never the worktree being removed.
+2. Run from the record's source repository, never the worktree being removed. A session
+   started inside the worktree (for example the Herdr space opened for implementation) is a
+   requester occupant even after `cd`; run cleanup from a session opened in the source repository.
 3. Require `done`, a released execution lease, and provider-verified merged PR/MR.
    `execution complete` owns done/release; this skill never records completion.
 4. Linked child tasks must already have verified close evidence.
@@ -274,8 +276,10 @@ git show-ref --verify --quiet "refs/heads/$BRANCH"
 
 The removed worktree path must be absent, and `show-ref` must exit `1`.
 5. Re-read the remote issue with the provider and require a closed state.
-6. Report the issue URL, removed worktree, removed local branch, remote issue
-   state, and explicitly state that the remote branch was untouched.
+6. If the worktree was removed, close its Herdr space or workspace per
+   [Herdr close after cleanup](../issueops/references/session-choice-herdr.md#worktree-정리-뒤-herdr-화면-닫기).
+7. Report the issue URL, removed worktree, removed local branch, remote issue
+   state, the Herdr view result, and explicitly state that the remote branch was untouched.
 
 On partial failure report `failed_step` and `next_command`; recover only through the retained
 record and the worktree-aware rules above. Do not improvise or report partial work as complete.
