@@ -48,7 +48,7 @@ issueops gates init --file "$WORKTREE/.issueops/issues/$ISSUE/gates.md" --scope 
   `EXPECT: 0`). 빈 EXPECT는 종료 코드만 본다. `sh -c`는 정책이 거부하고, 문법 검사 `sh -n FILE`은 허용한다.
 - EXPECT는 stdout과 stderr를 합친 출력과 맞춘다. unittest처럼 결과를 stderr로 쓰는 명령도 `EXPECT: OK`로 확인된다.
 - EXPECT는 부분 문자열이 아니다. 세 형식 중 하나여야 통과한다(`internal/domain/gates/evaluate.go`
-  `ExpectMatches`): 출력의 어느 한 **줄 전체**가 EXPECT와 같거나, 어느 한 줄이 EXPECT로
+  `expectMatches`): 출력의 어느 한 **줄 전체**가 EXPECT와 같거나, 어느 한 줄이 EXPECT로
   **시작하고 바로 뒤가 공백·탭**이거나(`EXPECT: ok`가 `ok  	issueops/...` 줄에 맞는 이유),
   `/정규식/` 형식(`/Skill is valid/`, `/^ok\s/m`처럼 `i`·`m`·`s` 플래그 가능)이 출력에
   매치돼야 한다. `grep -n`처럼 줄 앞에 번호가 붙는 출력은 정규식 형식으로 쓴다. 바로 뒤가 구두점이면

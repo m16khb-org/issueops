@@ -71,11 +71,11 @@ func TestEnsureExcludeIdempotent(t *testing.T) {
 	}
 	first, err := ensureExcluded(local.CommonDir)
 	if err != nil || !first {
-		t.Fatalf("first EnsureExcluded = %v, %v", first, err)
+		t.Fatalf("first ensureExcluded = %v, %v", first, err)
 	}
 	second, err := ensureExcluded(local.CommonDir)
 	if err != nil || second {
-		t.Fatalf("second EnsureExcluded = %v, %v", second, err)
+		t.Fatalf("second ensureExcluded = %v, %v", second, err)
 	}
 	data, _ := os.ReadFile(filepath.Join(local.CommonDir, "info", "exclude"))
 	if strings.Count(string(data), excludeLine) != 1 {

@@ -9,14 +9,14 @@ import (
 
 func TestJoinErrors(t *testing.T) {
 	if err := joinErrors(nil); err != nil {
-		t.Fatalf("JoinErrors(nil) = %v", err)
+		t.Fatalf("joinErrors(nil) = %v", err)
 	}
 	if err := joinErrors([]error{nil, nil}); err != nil {
-		t.Fatalf("JoinErrors(all-nil) = %v", err)
+		t.Fatalf("joinErrors(all-nil) = %v", err)
 	}
 	err := joinErrors([]error{errors.New("one"), nil, errors.New("two")})
 	if err == nil || err.Error() != "one; two" {
-		t.Fatalf("JoinErrors = %v", err)
+		t.Fatalf("joinErrors = %v", err)
 	}
 }
 

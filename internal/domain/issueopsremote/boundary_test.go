@@ -52,7 +52,7 @@ func TestPrepareCreateRequestSizeLimitsAreInclusive(t *testing.T) {
 
 func TestIssueNumberAcceptsEveryDigit(t *testing.T) {
 	if got := issueNumber("https://github.com/a/b/issues/0123456789"); got != "0123456789" {
-		t.Fatalf("IssueNumber=%q", got)
+		t.Fatalf("issueNumber=%q", got)
 	}
 }
 

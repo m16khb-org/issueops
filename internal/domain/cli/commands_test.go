@@ -8,7 +8,7 @@ func TestLifecycleCommandAdmissionAndUsageKeys(t *testing.T) {
 		allowed bool
 	}{{"start", true}, {"child", true}, {"execution", true}, {"", false}, {"START", false}, {"start ", false}, {"inspect", false}, {"--help", false}} {
 		if got := isLifecycleCommand(tc.name); got != tc.allowed {
-			t.Errorf("IsLifecycleCommand(%q)=%v", tc.name, got)
+			t.Errorf("isLifecycleCommand(%q)=%v", tc.name, got)
 		}
 	}
 	for line, want := range map[string]string{

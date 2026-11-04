@@ -15,7 +15,7 @@ func TestMateriallyDifferentIntent(t *testing.T) {
 		{"add login feature for all users", "add login feature for all users", false},
 	} {
 		if got := materiallyDifferentIntent(test.raw, test.interpreted); got != test.want {
-			t.Errorf("MateriallyDifferentIntent(%q, %q) = %v, want %v", test.raw, test.interpreted, got, test.want)
+			t.Errorf("materiallyDifferentIntent(%q, %q) = %v, want %v", test.raw, test.interpreted, got, test.want)
 		}
 	}
 }

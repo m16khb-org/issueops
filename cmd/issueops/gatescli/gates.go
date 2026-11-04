@@ -53,7 +53,7 @@ type Dependencies struct {
 	Lint    func(gatescontract.LintRequest) (gatescontract.LintResult, error)
 }
 
-// LintError는 lint가 문제를 찾은 상태의 종료 오류이다(exit 1).
+// lintError는 lint가 문제를 찾은 상태의 종료 오류이다(exit 1).
 type lintError struct {
 	Gates    int
 	Unparsed int

@@ -174,7 +174,7 @@ func TestValidProjectKey(t *testing.T) {
 		"github.com/acme\nrepo":        false,
 	} {
 		if got := validProjectKey(key); got != want {
-			t.Errorf("ValidProjectKey(%q)=%v want %v", key, got, want)
+			t.Errorf("validProjectKey(%q)=%v want %v", key, got, want)
 		}
 	}
 }
@@ -269,7 +269,7 @@ func TestIssueNumberAndArtifactPaths(t *testing.T) {
 		"://bad":                                    "",
 	} {
 		if got := issueNumber(url); got != want {
-			t.Errorf("IssueNumber(%q)=%q want %q", url, got, want)
+			t.Errorf("issueNumber(%q)=%q want %q", url, got, want)
 		}
 	}
 	if got := IssueArtifactDir("https://github.com/a/b/issues/42"); got != ".issueops/issues/42/artifact" {

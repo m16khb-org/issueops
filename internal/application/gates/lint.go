@@ -93,5 +93,5 @@ func (service Service) lintCandidates(check model.CheckRequest, candidates []dom
 	return results
 }
 
-// PolicyEvaluate는 실행 없이 command policy 판정만 하는 함수다.
+// policyEvaluate는 실행 없이 command policy 판정만 하는 함수다.
 type policyEvaluate func(policy.CommandPolicyRequest) policy.CommandPolicyEvaluation

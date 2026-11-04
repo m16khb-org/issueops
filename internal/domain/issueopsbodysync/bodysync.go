@@ -113,7 +113,7 @@ func ManagedRegions(live string) []contract.Region {
 	return regions
 }
 
-// Merge splices the managed regions of the live body onto the proposed body.
+// merge splices the managed regions of the live body onto the proposed body.
 //
 // The proposal owns the authored content and nothing else: a proposal that
 // already carries a managed marker is refused, because hand-authored managed

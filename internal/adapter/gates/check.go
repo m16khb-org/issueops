@@ -55,7 +55,7 @@ type Clock struct{}
 // Now returns the current local time.
 func (Clock) Now() time.Time { return time.Now() }
 
-// IssueFolderDir은 이슈 번호별 산출물 폴더의 상대 경로다(#480). 게이트
+// issueFolderDir은 이슈 번호별 산출물 폴더의 상대 경로다(#480). 게이트
 // 원장은 그 안의 gates.md 하나다.
 const issueFolderDir = ".issueops/issues"
 

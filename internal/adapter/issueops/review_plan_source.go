@@ -50,7 +50,7 @@ func (ReviewArchitectureSource) Document(stateRoot string, record model.Record) 
 	return string(content), err
 }
 
-// SealedDigest는 봉인된 architecture 파일의 sha256이다. 파일이 없거나 비면 오류다.
+// sealedDigest는 봉인된 architecture 파일의 sha256이다. 파일이 없거나 비면 오류다.
 func (source ReviewArchitectureSource) sealedDigest(record model.Record) (string, error) {
 	if record.Execution == nil {
 		return "", errors.New("architecture is sealed only after execution prepare")

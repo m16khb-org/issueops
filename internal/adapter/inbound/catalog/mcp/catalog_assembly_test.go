@@ -61,7 +61,7 @@ func TestDispatchMapCoversAllCatalogTools(t *testing.T) {
 	// Every tool in the catalog must appear in dispatchMap.
 	for _, tool := range allTools {
 		if _, ok := dm[tool.Name]; !ok {
-			t.Errorf("tool %q missing from DispatchMap", tool.Name)
+			t.Errorf("tool %q missing from dispatchMap", tool.Name)
 		}
 	}
 
@@ -84,7 +84,7 @@ func TestDispatchMapCoversAllCatalogTools(t *testing.T) {
 
 	// No duplicate tool names in dispatchMap (map guarantees this, but verify).
 	if len(dm) < len(allTools) {
-		t.Errorf("DispatchMap has %d entries but catalog has %d tools; some tools may be missing or duplicates may exist", len(dm), len(allTools))
+		t.Errorf("dispatchMap has %d entries but catalog has %d tools; some tools may be missing or duplicates may exist", len(dm), len(allTools))
 	}
 }
 

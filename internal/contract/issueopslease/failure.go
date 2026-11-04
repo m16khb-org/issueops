@@ -8,7 +8,7 @@ import (
 // ErrExecutionNotPrepared 변수는 record에 execution v1이 아직 준비되지 않았음을 나타내는 sentinel 오류다.
 var ErrExecutionNotPrepared = errors.New("IssueOps execution v1 is not prepared")
 
-// FailureCode는 persisted JSON과 저장소 경계에서만 생기는 실패를 구분한다.
+// failureCode는 persisted JSON과 저장소 경계에서만 생기는 실패를 구분한다.
 // lease 권한과 canonical CWD는 순수 domain 전이가 소유한다.
 type failureCode string
 

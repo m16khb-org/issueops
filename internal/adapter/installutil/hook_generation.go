@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// HookGenerationReader는 한 바이너리의 빌드 세대를 짧은 표기로 돌려준다.
+// hookGenerationReader는 한 바이너리의 빌드 세대를 짧은 표기로 돌려준다.
 // 관측하지 못하면 빈 문자열이다 — 모르는 것을 불일치로 승격하면 정상 설치가
 // 고칠 수 없는 경고로 뒤덮인다.
 type hookGenerationReader func(path string) string
@@ -45,7 +45,7 @@ func HookTargetGenerationMessages(config map[string]any, host, expected, running
 	return messages
 }
 
-// HookGenerationRecoveryCommand는 두 호스트를 같은 세대로 맞추는 정확한 명령
+// hookGenerationRecoveryCommand는 두 호스트를 같은 세대로 맞추는 정확한 명령
 // 순서다. 문장이 아니라 실행 가능한 형태로 준다 — 교착 상태의 사용자에게
 // 필요한 것은 설명이 아니라 다음 명령이다.
 func hookGenerationRecoveryCommand(target string) string {

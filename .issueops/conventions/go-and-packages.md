@@ -16,7 +16,7 @@
 - 파일명은 snake_case를 사용한다.
 - Go 패키지명은 짧은 소문자 단어를 사용한다.
 - package clause는 디렉터리 이름과 같다(`internal/domain/issueopsremote`는 `package issueopsremote`). import할 때 별칭은 같은 파일에서 이름이 겹칠 때만 둔다.
-- exported 이름은 패키지 이름을 되풀이하지 않는다(`issueops.Record`이지 `issueops.IssueOpsRecord`가 아니다). 접두어를 떼면 기존 이름과 겹치는 경우에는 뜻이 다른 쪽에 `New...`나 `...Draft`처럼 이름을 더한다.
+- exported 이름은 패키지 이름을 되풀이하지 않는다(`issueops.Record`처럼 패키지 이름 뒤에서 읽히는 이름을 쓴다). 접두어를 떼면 기존 이름과 겹치는 경우에는 뜻이 다른 쪽에 `New...`나 `...Draft`처럼 이름을 더한다.
 - exported 식별자와 패키지에는 문서 주석을 둔다. 주석은 식별자 이름과 공백으로 시작하는 완전한 문장이고, 시그니처만으로 알 수 없는 책임·에러·불변식을 적는다. 패키지 주석(`// Package name ...`)은 패키지마다 한 파일에만 둔다. 한국어 주석도 `// Name 함수는 ...`처럼 이름 뒤에 공백을 둔다.
 - 대소문자만 다른 이름 쌍(`Run`/`run`, `Apply`/`apply`)을 한 패키지에 두지 않는다. 한 줄 위임만 하는 쌍은 하나로 합치고, 다른 일을 하면 비공개 쪽 이름에 역할을 드러낸다.
 - 같은 패키지가 만든 에러는 문자열이 아니라 sentinel과 `errors.Is`로 비교한다. 외부 명령 시작 실패처럼 원인을 감싼 에러는 `Unwrap`으로 원인을 돌려준다.

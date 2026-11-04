@@ -128,7 +128,7 @@ func Render(ledger Ledger) string {
 	return strings.Join(ledger.Lines, "\n")
 }
 
-// MarkPass는 게이트의 체크박스를 [x]로 바꾸고 EVIDENCE 라인에 증거를 기록한다.
+// markPass는 게이트의 체크박스를 [x]로 바꾸고 EVIDENCE 라인에 증거를 기록한다.
 // EVIDENCE 라인이 없던 게이트는 그 게이트의 CHECK/EXPECT 라인 뒤에 삽입한다 — unlazy
 // gate-check.mjs는 이 경우 증거 라인을 만들지 않아 "checked but evidence pending"
 // 상태가 파일에 남지만, 하네스는 checked+evidence 불변식을 파일까지 유지한다.
@@ -158,7 +158,7 @@ func markPass(ledger *Ledger, gateIndex int, evidence string) {
 	gate.Evidence = evidence
 }
 
-// AppendAbandon은 파일의 마지막 비어 있지 않은 라인 뒤에 ABANDON 라인을
+// appendAbandon은 파일의 마지막 비어 있지 않은 라인 뒤에 ABANDON 라인을
 // 추가한다. 파일 끝 newline은 보존한다.
 func appendAbandon(ledger *Ledger, gateID, reason string) {
 	insertAt := len(ledger.Lines)

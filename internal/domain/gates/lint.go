@@ -175,7 +175,7 @@ func lintRegexExpect(expect string, compileErr error) (problem, warning string) 
 	case compileErr != nil:
 		return fmt.Sprintf("EXPECT regex does not compile (RE2), so it never matches: %v", compileErr), ""
 	case strings.Contains(expect, `\n\z`):
-		// DecideCheck trims trailing newlines before matching.
+		// decideCheck trims trailing newlines before matching.
 		return `EXPECT regex requires a newline before \z, but output is matched with trailing newlines trimmed, so it never matches; drop the \n before \z`, ""
 	case strings.HasPrefix(expect, "/^") && !strings.HasSuffix(expect, "$/") && !strings.Contains(expect[strings.LastIndex(expect, "/"):], "m"):
 		// Rust QA: /^test result: ok/ never matched; cargo prints the summary

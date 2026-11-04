@@ -90,10 +90,10 @@ func TestObserveOmoStreamAcceptsExactlyMaxOutputBytes(t *testing.T) {
 	}
 	exact := base + strings.Repeat(" ", maxOutputBytes-len(base))
 	if _, err := observeOmoStream([]byte(exact), target); err != nil {
-		t.Fatalf("stream of exactly MaxOutputBytes rejected: %v", err)
+		t.Fatalf("stream of exactly maxOutputBytes rejected: %v", err)
 	}
 	if _, err := observeOmoStream([]byte(exact+" "), target); err == nil {
-		t.Fatal("stream over MaxOutputBytes accepted")
+		t.Fatal("stream over maxOutputBytes accepted")
 	}
 }
 

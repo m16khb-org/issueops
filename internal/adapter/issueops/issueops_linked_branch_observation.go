@@ -114,7 +114,7 @@ func githubIssueSelector(issueURL string) (string, string, string, error) {
 	return owner, repo, number, nil
 }
 
-// ProviderCLIRunner는 provider CLI 한 번의 실행이다. 주입점으로 두어 테스트가
+// providerCLIRunner는 provider CLI 한 번의 실행이다. 주입점으로 두어 테스트가
 // 실제 네트워크 없이 응답 모양을 고정할 수 있게 한다.
 type providerCLIRunner func(ctx context.Context, name string, args ...string) (string, error)
 

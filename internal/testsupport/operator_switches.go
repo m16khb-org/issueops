@@ -2,7 +2,7 @@ package testsupport
 
 import "os"
 
-// OperatorSwitches는 운영자가 셸에 켜 두는 harness 환경 스위치다. 프로덕션에서는
+// operatorSwitches는 운영자가 셸에 켜 두는 harness 환경 스위치다. 프로덕션에서는
 // 정상 기능이지만 테스트 진입점에서는 오염원이다 — 상속된 값이 hook 동작을 바꿔
 // 버려서, 같은 코드가 CI(변수 없음)와 dogfood 셸(변수 있음)에서 다른 결론을 낸다.
 var operatorSwitches = []string{

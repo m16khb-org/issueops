@@ -19,7 +19,7 @@ const (
 	stateAbandoned       = "abandoned"
 )
 
-// ExpectMatches는 EXPECT 값이 명령 출력(stdout+stderr 결합)과 일치하는지 판정한다.
+// expectMatches는 EXPECT 값이 명령 출력(stdout+stderr 결합)과 일치하는지 판정한다.
 // 리터럴은 줄 단위로 본다: 어느 한 줄(trim)이 EXPECT와 같거나 EXPECT 뒤에 공백/탭이
 // 오면 일치다(`ok  \tpkg` 같은 go test 줄은 통과, `docs-ok: error: …` 같은 에러 줄은
 // 불일치 — #484). 줄 중간 부분일치가 필요하면 `/pattern/flags` 정규식을 쓴다(unlazy
@@ -67,7 +67,7 @@ func expectRegex(expect string) (re *regexp.Regexp, isRegex bool, err error) {
 	return re, true, err
 }
 
-// EvidenceTail은 증거로 기록할 결정적 출력 꼬리를 만든다. unlazy처럼 비어 있지
+// evidenceTail은 증거로 기록할 결정적 출력 꼬리를 만든다. unlazy처럼 비어 있지
 // 않은 라인의 마지막 2개를 " | "로 잇고 limit 문자로 자른다.
 func evidenceTail(output string, limit int) string {
 	if limit <= 0 {
@@ -90,14 +90,14 @@ func evidenceTail(output string, limit int) string {
 	return joined
 }
 
-// EvidencePending는 증거가 아직 기록되지 않았다는 unlazy 판정이다.
+// evidencePending는 증거가 아직 기록되지 않았다는 unlazy 판정이다.
 // EVIDENCE가 없거나 대소문자 구분 없이 "pending"이면 pending이다.
 func evidencePending(evidence string) bool {
 	evidence = strings.TrimSpace(evidence)
 	return evidence == "" || strings.EqualFold(evidence, "pending")
 }
 
-// State는 게이트 하나의 현재 상태를 판정한다.
+// state는 게이트 하나의 현재 상태를 판정한다.
 func state(gate Gate) string {
 	if gate.Abandoned {
 		return stateAbandoned
@@ -111,7 +111,7 @@ func state(gate Gate) string {
 	return stateMet
 }
 
-// Summary는 게이트 모음의 충족 요약이다. Complete는 unlazy와 같이
+// summary는 게이트 모음의 충족 요약이다. Complete는 unlazy와 같이
 // 미충족(unchecked + evidence_pending)이 0개인지로 판정한다. ABANDON은 해결로
 // 센다 — 모두 포기한 파일도 complete다.
 type summary struct {

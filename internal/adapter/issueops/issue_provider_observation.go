@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// InferProviderFromRepoRemotes는 저장소의 remote URL을 관측해 provider를 단일
+// inferProviderFromRepoRemotes는 저장소의 remote URL을 관측해 provider를 단일
 // 판별한다. record가 provider를 모를 때만 쓰이며, 최초 이슈 생성의 bootstrap
 // 순환을 끊는 경로다(#300).
 //

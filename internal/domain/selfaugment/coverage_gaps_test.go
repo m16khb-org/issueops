@@ -335,7 +335,7 @@ func TestRecentLessonWindowBoundaries(t *testing.T) {
 	}
 	for in, want := range cases {
 		if got := recentLesson(in, now); got != want {
-			t.Fatalf("RecentLesson(%q)=%v want %v", in, got, want)
+			t.Fatalf("recentLesson(%q)=%v want %v", in, got, want)
 		}
 	}
 }

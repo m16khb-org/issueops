@@ -23,7 +23,8 @@ IMPORT = re.compile(r'^\s*(?:import\s+)?(?:([A-Za-z_][A-Za-z0-9_]*|\.)\s+)?"([^"
 
 
 def main():
-    files = subprocess.run(["git", "ls-files", "*.go"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.split()
+    listed = subprocess.run(["git", "ls-files", "--cached", "--others", "--exclude-standard", "*.go"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.split()
+    files = sorted({p for p in listed if (ROOT / p).is_file()})
     problems = []
     aliases = {path: set() for path in PACKAGES}
     for rel in files:

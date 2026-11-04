@@ -71,8 +71,9 @@ def go_text_spans(src):
 
 
 def tracked(*patterns):
-    out = subprocess.run(["git", "ls-files", "--", *patterns], cwd=ROOT, capture_output=True, text=True, check=True)
-    return [p for p in out.stdout.splitlines() if p]
+    # Tracked or new files that exist now: a file deleted in the worktree stays in the index until the commit.
+    out = subprocess.run(["git", "ls-files", "--cached", "--others", "--exclude-standard", "--", *patterns], cwd=ROOT, capture_output=True, text=True, check=True)
+    return sorted({p for p in out.stdout.splitlines() if p and (ROOT / p).is_file()})
 
 
 def main():

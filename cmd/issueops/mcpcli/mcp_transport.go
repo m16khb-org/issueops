@@ -4,7 +4,6 @@ package mcpcli
 
 import (
 	"context"
-	"io"
 	"os"
 	"os/signal"
 	"syscall"
@@ -23,8 +22,4 @@ func RunMCPWithDependencies(deps MCPDependencies) error {
 	defer stop()
 	defer context.AfterFunc(ctx, stop)()
 	return ServeMCPStreamContextWithDependencies(ctx, os.Stdin, os.Stdout, os.Stderr, deps)
-}
-
-func serveMCPStreamWithDependencies(input io.Reader, output io.Writer, diagnostics io.Writer, deps MCPDependencies) error {
-	return ServeMCPStreamContextWithDependencies(context.Background(), input, output, diagnostics, deps)
 }

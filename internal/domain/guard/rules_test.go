@@ -59,7 +59,7 @@ func TestAllowsFixtureURLAcceptsOnlyReservedHosts(t *testing.T) {
 	}
 	for raw, want := range cases {
 		if got := allowsFixtureURL(raw); got != want {
-			t.Errorf("AllowsFixtureURL(%q) = %v, want %v", raw, got, want)
+			t.Errorf("allowsFixtureURL(%q) = %v, want %v", raw, got, want)
 		}
 	}
 }
@@ -86,10 +86,10 @@ func TestDedupeFindingsKeepsFirstOfIdenticalKeysAndDistinctLines(t *testing.T) {
 	otherSeverity.Severity = "block"
 	got := dedupeFindings([]guardcontract.Finding{first, dup, otherLine, otherSeverity})
 	if len(got) != 3 || got[0].Message != "first" || got[1].Line != 4 || got[2].Severity != "block" {
-		t.Fatalf("DedupeFindings = %+v", got)
+		t.Fatalf("dedupeFindings = %+v", got)
 	}
 	if empty := dedupeFindings(nil); empty == nil || len(empty) != 0 {
-		t.Fatalf("DedupeFindings(nil) = %#v, want empty non-nil slice", empty)
+		t.Fatalf("dedupeFindings(nil) = %#v, want empty non-nil slice", empty)
 	}
 }
 
@@ -297,7 +297,7 @@ func TestExecutableTestSourcePathRequiresCodeExtensionAndTestName(t *testing.T) 
 	}
 	for path, want := range cases {
 		if got := executableTestSourcePath(path); got != want {
-			t.Errorf("ExecutableTestSourcePath(%q) = %v, want %v", path, got, want)
+			t.Errorf("executableTestSourcePath(%q) = %v, want %v", path, got, want)
 		}
 	}
 }

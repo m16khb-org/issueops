@@ -93,7 +93,7 @@ func TestIssueOpsLifecycleIDFlagRoutesDelegationToParent(t *testing.T) {
 	}
 	for _, tc := range cases {
 		if got := issueOpsLifecycleIDFlag(tc.path); got != tc.want {
-			t.Fatalf("IssueOpsLifecycleIDFlag(%q)=%q want %q", tc.path, got, tc.want)
+			t.Fatalf("issueOpsLifecycleIDFlag(%q)=%q want %q", tc.path, got, tc.want)
 		}
 	}
 }

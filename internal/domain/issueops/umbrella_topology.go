@@ -7,7 +7,7 @@ import (
 	"issueops/internal/contract/issueops"
 )
 
-// UmbrellaBranchGateReason은 우산 사이클이 provider-native 자식 작업 항목을 만들
+// umbrellaBranchGateReason은 우산 사이클이 provider-native 자식 작업 항목을 만들
 // 준비가 되지 않은 이유를 돌려준다. 빈 문자열이면 통과다.
 //
 // 왜 이 게이트가 필요한가: 자식 PR의 base를 검사하는 가드

@@ -83,7 +83,7 @@ _None. All triaged P1/P2 items are resolved or accepted-with-rationale below._
 | P1 | Project state | Init race condition | `0800fca` + `a56d5e8`; now `internal/application/lifecycle/service.go:64` (exclusive create, then adopt the winner's profile on `fs.ErrExist`) and `createJSONAtomic` (`internal/adapter/lifecycle/lifecycle_project_state_store.go:101`) |
 | CP1 | Command policy | Hardcoded catalog | resolved 2026-07-02; `.issueops/policy.json` loaded per root at `internal/adapter/policy/policy_catalog.go:26` |
 | M1 | MCP proxy | Dual transport code paths | `034bda93`; one go-sdk path, `ServeMCPStreamContextWithDependencies` (`cmd/issueops/mcpcli/mcp_sdk_server.go:304`), serves every stream |
-| M2 | MCP proxy | Tool catalog drift | `b8f2f11`; `DispatchMap` derived from the catalog (`internal/adapter/inbound/catalog/mcp/catalog.go:45`), pinned by `TestDispatchMapCoversAllCatalogTools` |
+| M2 | MCP proxy | Tool catalog drift | `b8f2f11`; `dispatchMap` derived from the catalog (`internal/adapter/inbound/catalog/mcp/catalog.go:45`), pinned by `TestDispatchMapCoversAllCatalogTools` |
 
 ### Closed by removal — excluded from the count
 

@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// NativeBuildGeneration은 한 바이너리의 빌드 세대를 식별한다. 경로가 같아도
+// nativeBuildGeneration은 한 바이너리의 빌드 세대를 식별한다. 경로가 같아도
 // 파일이 교체됐으면 세대가 달라지고, 실행 중인 프로세스는 교체 이전 세대를
 // 계속 쓴다.
 type nativeBuildGeneration struct {
@@ -39,7 +39,7 @@ func (g nativeBuildGeneration) String() string {
 	return revision
 }
 
-// RunningBuildGeneration은 지금 실행 중인 프로세스의 빌드 세대를 돌려준다.
+// runningBuildGeneration은 지금 실행 중인 프로세스의 빌드 세대를 돌려준다.
 func runningBuildGeneration() nativeBuildGeneration {
 	info, ok := debug.ReadBuildInfo()
 	if !ok {
@@ -48,7 +48,7 @@ func runningBuildGeneration() nativeBuildGeneration {
 	return buildGenerationFromSettings(info.Settings)
 }
 
-// FileBuildGeneration은 디스크에 있는 바이너리의 빌드 세대를 읽는다.
+// fileBuildGeneration은 디스크에 있는 바이너리의 빌드 세대를 읽는다.
 // 읽지 못하면 빈 세대를 돌려주고, 호출부는 그것을 비교 대상에서 제외한다.
 func fileBuildGeneration(path string) nativeBuildGeneration {
 	info, err := buildinfo.ReadFile(strings.TrimSpace(path))

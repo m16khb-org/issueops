@@ -10,7 +10,7 @@ import (
 	"issueops/internal/domain/issueopsremote"
 )
 
-// ContextFiles는 workspace 해석과 봉인 아티팩트 materialize가 쓰는 파일 관측이다.
+// contextFiles는 workspace 해석과 봉인 아티팩트 materialize가 쓰는 파일 관측이다.
 type contextFiles interface {
 	SamePath(string, string) bool
 	Materialize(model.Record) (map[string]string, error)

@@ -74,7 +74,7 @@ func (service *Service) Prune(
 			if err := service.repository.DeleteIfUnchanged(ctx, stateRoot, id, record); err != nil {
 				noteDeleteFailure(&result, id)
 				result.Error = errIncomplete.Error()
-				return result, fmt.Errorf("%w: delete %s: %v", errIncomplete, id, err) //nolint:errorlint // callers classify on ErrIncomplete alone; the delete failure is diagnostic text
+				return result, fmt.Errorf("%w: delete %s: %v", errIncomplete, id, err) //nolint:errorlint // callers classify on errIncomplete alone; the delete failure is diagnostic text
 			}
 		}
 		result.Pruned = append(result.Pruned, id)

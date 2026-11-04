@@ -20,7 +20,7 @@ func linkPlanCommand(record issueopsnextcontract.Record) string {
 	return "issueops link-plan --id " + record.ID + " --plan-path " + shelltoken.QuoteWord(plan) + " $RECORD_ACTOR_FLAGS"
 }
 
-// OwnerCommand는 readiness가 돌려준 missing 키 하나를 그 상태를 소유한 명령으로
+// ownerCommand는 readiness가 돌려준 missing 키 하나를 그 상태를 소유한 명령으로
 // 옮긴다. 이 함수가 그 대응의 유일한 소유자다 — 같은 표를 스킬 문서에도 두면
 // 한쪽만 낡는다.
 //

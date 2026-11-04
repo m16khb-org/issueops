@@ -66,11 +66,11 @@ func TestFullContentRejectsEscapesAndTerminatesEveryFileWithNewline(t *testing.T
 	}
 	want := "\n--- FILE: a.ts ---\nno newline\n" + "\n--- FILE: " + filepath.Join("sub", "b.ts") + " ---\nwith newline\n" + "\n--- FILE: empty.ts ---\n\n"
 	if got != want {
-		t.Fatalf("FullContent =\n%q\nwant\n%q", got, want)
+		t.Fatalf("fullContent =\n%q\nwant\n%q", got, want)
 	}
 	for _, unsafe := range []string{"..", "../x.ts", "/etc/passwd", "a/../../x.ts"} {
 		if _, err := fullContent(repo, []string{unsafe}); err == nil || !strings.Contains(err.Error(), "unsafe file path") {
-			t.Errorf("FullContent(%q) error = %v, want unsafe file path", unsafe, err)
+			t.Errorf("fullContent(%q) error = %v, want unsafe file path", unsafe, err)
 		}
 	}
 	if _, err := fullContent(repo, []string{"absent.ts"}); err == nil {

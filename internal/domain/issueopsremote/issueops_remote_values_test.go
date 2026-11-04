@@ -19,7 +19,7 @@ func TestSplitURLPath(t *testing.T) {
 	for _, tt := range tests {
 		got := splitURLPath(tt.path)
 		if !stringSlicesEqual(got, tt.want) {
-			t.Errorf("SplitURLPath(%q) = %v, want %v", tt.path, got, tt.want)
+			t.Errorf("splitURLPath(%q) = %v, want %v", tt.path, got, tt.want)
 		}
 	}
 }
@@ -58,7 +58,7 @@ func TestInvalidAssignee(t *testing.T) {
 	for _, tt := range tests {
 		got := invalidAssignee(tt.values)
 		if got != tt.expected {
-			t.Errorf("InvalidAssignee(%v) = %q, want %q", tt.values, got, tt.expected)
+			t.Errorf("invalidAssignee(%v) = %q, want %q", tt.values, got, tt.expected)
 		}
 	}
 }
@@ -115,7 +115,7 @@ func TestIssueNumber(t *testing.T) {
 	for _, tt := range tests {
 		got := issueNumber(tt.url)
 		if got != tt.want {
-			t.Errorf("IssueNumber(%q) = %q, want %q", tt.url, got, tt.want)
+			t.Errorf("issueNumber(%q) = %q, want %q", tt.url, got, tt.want)
 		}
 	}
 }

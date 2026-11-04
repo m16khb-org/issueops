@@ -173,7 +173,7 @@ func TestRecordSlugNormalizesAndFallsBack(t *testing.T) {
 		"a/b  c":             "a-b-c",
 	} {
 		if got := recordSlug(title); got != want {
-			t.Errorf("RecordSlug(%q) = %q, want %q", title, got, want)
+			t.Errorf("recordSlug(%q) = %q, want %q", title, got, want)
 		}
 	}
 	if got := recordSlug(strings.Repeat("a", 100)); len(got) != 60 {
@@ -192,7 +192,7 @@ func TestIsFamilyDocRel(t *testing.T) {
 		".issueops/adrenaline/overview.md": false,
 	} {
 		if got := isFamilyDocRel(rel); got != want {
-			t.Errorf("IsFamilyDocRel(%q) = %v, want %v", rel, got, want)
+			t.Errorf("isFamilyDocRel(%q) = %v, want %v", rel, got, want)
 		}
 	}
 }

@@ -102,7 +102,7 @@ func TestServiceReportsUnreadableRecordsAndContinues(t *testing.T) {
 	result, err := service.Prune(context.Background(), "/state", 30*24*time.Hour, false)
 
 	if !errors.Is(err, errIncomplete) {
-		t.Fatalf("error = %v, want ErrIncomplete", err)
+		t.Fatalf("error = %v, want errIncomplete", err)
 	}
 	if result.OK {
 		t.Fatal("retention with unreadable records must not report OK")
@@ -143,7 +143,7 @@ func TestServiceBoundsUnreadableDiagnosticsWithoutStoppingPrune(t *testing.T) {
 
 	result, err := NewService(repository, fixedClock{now: now}).Prune(context.Background(), "/state", 30*24*time.Hour, false)
 	if !errors.Is(err, errIncomplete) {
-		t.Fatalf("error = %v, want ErrIncomplete", err)
+		t.Fatalf("error = %v, want errIncomplete", err)
 	}
 	if result.ReadErrors != unreadableReportLimit+5 ||
 		len(result.Unreadable) != unreadableReportLimit ||
