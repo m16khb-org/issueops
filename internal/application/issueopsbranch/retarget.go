@@ -11,6 +11,8 @@ import (
 	domain "issueops/internal/domain/issueops"
 )
 
+// Retargeter moves a prepared cycle's remote artifact onto a different base
+// branch after checking the observed remote target and origin branch.
 type Retargeter struct {
 	Records       CycleRecords
 	Authority     cycleapp.MutationAuthority

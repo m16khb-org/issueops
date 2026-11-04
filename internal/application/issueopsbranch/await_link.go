@@ -21,6 +21,11 @@ type LinkAwaiter struct {
 	Now                   func() time.Time
 }
 
+// Await waits until the sealed branch of cycle req.ID is linked to its issue
+// on the provider, polling ObserveLinkedBranches until the timeout. It returns
+// immediately when the link is already verified, and fails fast on a mismatched
+// identity or a provider NOT_FOUND readback. It never records verification;
+// the result carries the next command to do that.
 func (s LinkAwaiter) Await(ctx context.Context, req issueopscontract.AwaitBranchLinkRequest) (issueopscontract.AwaitBranchLinkResult, error) {
 	record, err := s.Load(req.ID)
 	if err != nil {

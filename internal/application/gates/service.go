@@ -1,3 +1,5 @@
+// Package gates 패키지는 gates 원장(ledger)의 init·check·lint·abandon 유스케이스를 조율하는 application 계층이다.
+// 원장 파싱과 판정 규칙은 domain/gates에, 파일 접근과 CHECK 명령 실행은 주입된 포트에 맡긴다.
 package gates
 
 import (
@@ -8,6 +10,8 @@ import (
 	gatesdomain "issueops/internal/domain/gates"
 )
 
+// LedgerStore 인터페이스는 Service가 원장 파일을 찾고 읽고 쓰는 데 쓰는 저장소 포트다.
+// WritePreservingMode는 기존 파일 권한을 바꾸지 않고 내용만 교체한다.
 type LedgerStore interface {
 	ExistsFile(file string) bool
 	Create(file string, data []byte) error
@@ -16,21 +20,26 @@ type LedgerStore interface {
 	WritePreservingMode(file string, data []byte) error
 }
 
-type Runner interface {
+type runner interface {
 	Run(root, cwd string, request gatescontract.CheckRequest, gate gatesdomain.Gate) gatesdomain.CheckOutcome
 }
 
-type Clock interface{ Now() time.Time }
+type clock interface{ Now() time.Time }
 
+// Service 타입은 gates 원장 유스케이스(Init·Check·Lint·Abandon)를 제공한다.
+// Store는 원장 파일 접근, Runner는 CHECK 실행, Clock은 보고서 시각을 맡는다.
 type Service struct {
 	Store  LedgerStore
-	Runner Runner
-	Clock  Clock
+	Runner runner
+	Clock  clock
 	// Evaluate는 Lint가 CHECK를 실행하지 않고 command policy 판정만 볼 때 쓴다.
 	// nil이면 Lint는 정책 판정을 건너뛴다.
-	Evaluate PolicyEvaluate
+	Evaluate policyEvaluate
 }
 
+// Check 메서드는 요청한 원장(없으면 cwd에서 탐색한 원장)의 각 게이트를 평가하고 결과를 모은다.
+// StatusOnly가 아니면 CHECK가 있고 실행 대상인 게이트만 실행하고, 상태가 바뀐 원장은 다시 쓴다.
+// 원장 파일을 하나도 찾지 못하면 ErrNoGateFiles를 감싼 에러를 돌려준다.
 func (service Service) Check(request gatescontract.CheckRequest) (gatescontract.CheckResult, error) {
 	request = gatesdomain.NormalizeCheck(request)
 	root, cwd := request.WorkspaceRoot, request.CWD

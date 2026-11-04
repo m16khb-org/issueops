@@ -1,5 +1,6 @@
 package state
 
+// Result is the outcome of a state read or write for a single record in StateDir; Path is set when the record lives in a file.
 type Result struct {
 	OK       bool           `json:"ok"`
 	StateDir string         `json:"state_dir"`
@@ -7,6 +8,7 @@ type Result struct {
 	Record   RecordEnvelope `json:"record"`
 }
 
+// ListEntry is the metadata of one stored record without its content.
 type ListEntry struct {
 	Key           string `json:"key"`
 	UpdatedAt     string `json:"updated_at"`
@@ -14,6 +16,7 @@ type ListEntry struct {
 	SchemaVersion int    `json:"schema_version"`
 }
 
+// ListResult is the outcome of listing records: the sorted keys and their metadata.
 type ListResult struct {
 	OK       bool        `json:"ok"`
 	StateDir string      `json:"state_dir"`
@@ -21,6 +24,7 @@ type ListResult struct {
 	Records  []ListEntry `json:"records"`
 }
 
+// PruneResult is the outcome of pruning records older than MaxAge. Without Confirm it is a DryRun: Pruned lists what would be deleted and DeletedKeys stays empty of real deletions.
 type PruneResult struct {
 	OK          bool        `json:"ok"`
 	StateDir    string      `json:"state_dir"`
@@ -34,6 +38,7 @@ type PruneResult struct {
 	Kept        []ListEntry `json:"kept"`
 }
 
+// DoctorIssue is one problem found while checking the state store, identified by Code and Severity and located by Path and optional Key.
 type DoctorIssue struct {
 	Path     string `json:"path"`
 	Key      string `json:"key,omitempty"`
@@ -42,6 +47,7 @@ type DoctorIssue struct {
 	Message  string `json:"message"`
 }
 
+// DoctorResult is the outcome of a state store health check: how many records were checked, which are valid, and the Issues found. Healthy is true when there are none.
 type DoctorResult struct {
 	OK        bool          `json:"ok"`
 	Healthy   bool          `json:"healthy"`
@@ -52,6 +58,7 @@ type DoctorResult struct {
 	Issues    []DoctorIssue `json:"issues"`
 }
 
+// StoreMaintainResult reports the maintenance of one store root: the WAL size before and after truncation, whether a checkpoint ran, and the files whose permissions were corrected.
 type StoreMaintainResult struct {
 	Dir              string   `json:"dir"`
 	WALBytesBefore   int64    `json:"wal_bytes_before"`
@@ -60,6 +67,7 @@ type StoreMaintainResult struct {
 	PermissionsFixed []string `json:"permissions_fixed,omitempty"`
 }
 
+// MaintainResult is the outcome of maintaining every existing store root; Skipped names roots that have no store.
 type MaintainResult struct {
 	OK      bool                  `json:"ok"`
 	Roots   []StoreMaintainResult `json:"roots"`

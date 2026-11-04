@@ -12,8 +12,12 @@ var secretPathRe = sync.OnceValue(func() *regexp.Regexp {
 	return regexp.MustCompile(`(?i)(^|/)(\.env(\.|$)|id_rsa|id_dsa|id_ecdsa|id_ed25519|.*\.pem$|.*\.key$|.*\.p12$|.*\.pfx$|.*credentials.*|.*secret.*)`)
 })
 
+// SecretLikePath reports whether rel looks like a secret or credential file, such as .env, private keys,
+// certificates, or names containing credentials or secret.
 func SecretLikePath(rel string) bool { return secretPathRe().MatchString(filepath.ToSlash(rel)) }
 
+// RelevantPath reports whether the guard should read rel: secret-like paths, testdata, Dockerfiles, and
+// files with a known source, config, or documentation extension.
 func RelevantPath(rel string) bool {
 	if SecretLikePath(rel) {
 		return true
@@ -30,12 +34,12 @@ func RelevantPath(rel string) bool {
 	}
 }
 
-func TestPath(rel string) bool {
+func testPath(rel string) bool {
 	p := strings.ToLower(filepath.ToSlash(rel))
 	return strings.Contains(p, "test") || strings.Contains(p, "spec") || strings.Contains(p, "fixture") || strings.Contains(p, "golden")
 }
 
-func ExecutableTestSourcePath(rel string) bool {
+func executableTestSourcePath(rel string) bool {
 	p := strings.ToLower(filepath.ToSlash(rel))
 	if strings.Contains(p, "testdata/") || strings.Contains(p, ".golden.") || strings.Contains(p, "/fixtures/") || strings.Contains(p, "/fixture/") {
 		return false
@@ -49,7 +53,7 @@ func ExecutableTestSourcePath(rel string) bool {
 	}
 }
 
-func AllowsFixtureURL(raw string) bool {
+func allowsFixtureURL(raw string) bool {
 	parsed, err := url.Parse(raw)
 	if err != nil {
 		return false
@@ -65,9 +69,11 @@ func AllowsFixtureURL(raw string) bool {
 		(host == "github.com" && strings.HasPrefix(path, "/example/"))
 }
 
+// SourcePath reports whether rel is production source code: it has a known source extension and is not a
+// test, .issueops document, or docs file.
 func SourcePath(rel string) bool {
 	p := strings.ToLower(filepath.ToSlash(rel))
-	if TestPath(p) || strings.HasPrefix(p, ".issueops/") || strings.HasPrefix(p, "docs/") {
+	if testPath(p) || strings.HasPrefix(p, ".issueops/") || strings.HasPrefix(p, "docs/") {
 		return false
 	}
 	ext := strings.ToLower(filepath.Ext(p))
@@ -79,7 +85,7 @@ func SourcePath(rel string) bool {
 	}
 }
 
-func ContractSurfacePath(rel string) bool {
+func contractSurfacePath(rel string) bool {
 	p := filepath.ToSlash(rel)
 	return strings.HasPrefix(p, "cmd/issueops/") || strings.HasPrefix(p, "internal/adapter/") || strings.HasPrefix(p, "internal/core/")
 }

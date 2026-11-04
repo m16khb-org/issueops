@@ -10,24 +10,31 @@ import (
 	domain "issueops/internal/domain/issueops"
 )
 
-type FinishEnvironment interface {
+type finishEnvironment interface {
 	Git(string, ...string) (int, string)
 	Directory(string) (bool, error)
 	SamePath(string, string) bool
 	PathWithin(string, string) bool
 }
 
+// FinishWorkspaceObservation lists the processes occupying a worktree and the
+// receipts that bind them to the preview.
 type FinishWorkspaceObservation struct {
 	Occupants []model.CleanupWorkspaceProcess
 	Receipts  []model.NativeProcessReceipt
 }
 
+// FinishPreviewer builds the read-only finish inventory and preview result
+// from git, workspace and artifact observations without mutating anything.
 type FinishPreviewer struct {
-	Environment     FinishEnvironment
+	Environment     finishEnvironment
 	Workspace       func(context.Context, model.Record, string) (FinishWorkspaceObservation, []string)
 	ObserveArtifact func(context.Context, string) (domain.ArtifactObservation, error)
 }
 
+// Plan observes the worktree, branch and remote refs and returns the finish
+// inventory with the domain-built preview. A superseding artifact is verified
+// only when the merge was not already observed.
 func (s FinishPreviewer) Plan(ctx context.Context, record model.Record, req model.CleanupFinishRequest) (model.CleanupFinishInventory, model.CleanupFinishResult) {
 	inventory := domain.CleanupFinishTargets(record)
 	var facts domain.CleanupFinishObservation

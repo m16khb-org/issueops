@@ -1,3 +1,7 @@
+// Package issueopspreparation prepares an IssueOps cycle for execution: it plans
+// and provisions the cycle's direct Git worktree, materializes sealed artifacts,
+// and commits the execution record with its first active lease. It is an
+// application-layer use case that reaches storage and Git through ports.
 package issueopspreparation
 
 import (
@@ -13,17 +17,26 @@ import (
 	preparationdomain "issueops/internal/domain/issueopspreparation"
 )
 
+// Service orchestrates cycle preparation over the injected repository, clock,
+// worktree provisioner, and evidence materializer.
 type Service struct {
 	repository Repository
-	clock      Clock
-	direct     DirectWorkspace
-	evidence   PreparationEvidence
+	clock      clock
+	direct     directWorkspace
+	evidence   preparationEvidence
 }
 
-func NewService(repository Repository, clock Clock, direct DirectWorkspace, evidence PreparationEvidence) *Service {
+// NewService returns a Service over the given ports. Prepare reports an error for
+// any dependency it needs that is nil.
+func NewService(repository Repository, clock clock, direct directWorkspace, evidence preparationEvidence) *Service {
 	return &Service{repository: repository, clock: clock, direct: direct, evidence: evidence}
 }
 
+// Prepare previews, or with command.Confirm performs, execution preparation for
+// command.ID. A cycle that is already prepared yields its existing result or a
+// recovery error naming the next command; otherwise it provisions the worktree,
+// materializes artifacts, and commits the execution with an active lease for the
+// command's actor. A preview changes neither the repository nor the worktree.
 func (service *Service) Prepare(ctx context.Context, command preparationcontract.Command) (preparationcontract.Result, error) {
 	if service.repository == nil {
 		return failedResult(command.ID), fmt.Errorf("preparation repository is unavailable")

@@ -1,3 +1,7 @@
+// Package selfaugment is the application layer of the self-augmentation loop: it
+// builds improvement plans from repository signals and recorded lessons, saves
+// plan, lesson and baseline checkpoints, and reads, compares and prunes the
+// self-verification history, all through injected state functions.
 package selfaugment
 
 import (
@@ -11,6 +15,8 @@ import (
 	port "issueops/internal/port/selfaugment"
 )
 
+// Planner builds self-augmentation plans. Its fields are the injected plan
+// repository, docs index, skill lister, state accessors and clock.
 type Planner struct {
 	Repository     port.PlanRepository
 	DocsIndex      func(string, string) docscontract.IndexResult
@@ -20,6 +26,10 @@ type Planner struct {
 	Now            func() time.Time
 }
 
+// Plan builds the self-augmentation plan for the repository at root. Missing
+// GENIUS_THINK.md or an unreadable skill list become warnings, not errors. The
+// candidates are weighted by the severe lessons still active, and the plan is
+// stamped with the root, the genius-think path and the generation time (UTC).
 func (planner Planner) Plan(req contract.PlanRequest, root, version string) contract.PlanResult {
 	geniusPath, geniusText, err := planner.Repository.ReadGeniusThink(root)
 	warnings := []string{}
@@ -47,6 +57,9 @@ func (planner Planner) Plan(req contract.PlanRequest, root, version string) cont
 	return result
 }
 
+// SelfVerificationPassed reports whether the latest saved self-verification
+// snapshot succeeded, is eligible for termination, and was produced under the
+// current verification contract (same name, version and hash).
 func (planner Planner) SelfVerificationPassed() bool {
 	snapshot, err := (SnapshotStore{ReadState: planner.StateRead}).Read("self-verify-latest")
 	current := verifydomain.ContractValue()

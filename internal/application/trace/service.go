@@ -1,3 +1,5 @@
+// Package trace is the application service that analyzes agent execution
+// traces and reports findings with failure causes.
 package trace
 
 import (
@@ -10,19 +12,24 @@ import (
 	tracecontract "issueops/internal/contract/trace"
 )
 
-const AnalysisKind = "trace_analysis"
+const analysisKind = "trace_analysis"
 
-type Effects interface {
+type effects interface {
 	Load(input, format string) (source string, body []byte, truncated bool, err error)
 	Decode(body []byte, format string) tracedomain.Input
 }
 
-type Service struct{ Effects Effects }
+// Service analyzes agent execution traces. Effects supplies trace loading and decoding.
+type Service struct{ Effects effects }
 
+// Analyze loads the trace named by req.Input, decodes it in req.InputFormat
+// (default issueops), and returns the classified findings. It returns an error
+// for empty input, an unsupported format, or an unreadable trace; the partial
+// result then carries warnings.
 func (service Service) Analyze(req tracecontract.AnalyzeRequest) (tracecontract.AnalyzeResult, error) {
 	input := strings.TrimSpace(req.Input)
 	result := tracecontract.AnalyzeResult{
-		OK: false, Kind: AnalysisKind, Input: input,
+		OK: false, Kind: analysisKind, Input: input,
 		TraceTypes: []string{}, Findings: []tracecontract.AnalysisFinding{}, Warnings: []string{},
 	}
 	if input == "" {

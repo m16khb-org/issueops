@@ -38,7 +38,7 @@ func TestExecRunnerAcceptsOutputOfExactlyOneMiB(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			executable, args := shellCommand(t, script)
-			output, err := ExecRunner{}.Run(t.Context(), CommandRequest{Executable: executable, Args: args, Timeout: 10 * time.Second})
+			output, err := ExecRunner{}.Run(t.Context(), commandRequest{Executable: executable, Args: args, Timeout: 10 * time.Second})
 			if err != nil {
 				t.Fatalf("exact-limit output rejected: %v", err)
 			}

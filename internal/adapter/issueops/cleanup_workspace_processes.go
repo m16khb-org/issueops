@@ -11,7 +11,7 @@ import (
 	"issueops/internal/port"
 )
 
-// CleanupProcessDeps는 cleanup이 워크트리 점유 프로세스를 관측하고 종료하는
+// CleanupProcessDeps 타입은 cleanup이 워크트리 점유 프로세스를 관측하고 종료하는
 // 표면이다. nil 필드는 기본 구현(점유 관측+프로세스 스냅샷 join,
 // signalCleanupProcess, time.Sleep, os.Getpid)을 쓴다.
 type CleanupProcessDeps struct {

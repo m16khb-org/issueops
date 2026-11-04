@@ -1,13 +1,20 @@
 // issueops 실행 API의 요청·결과·핸들러 계약이다. 값을 만들어내는 쪽은 I/O를
 // 하지만 읽고 전달하는 쪽은 그 구현을 알 필요가 없다.
+
 package issueops
 
 import (
 	"context"
 )
 
+// ExecutionReleaseHandler runs execution release for the cycle with the given ID.
 type ExecutionReleaseHandler func(context.Context, string, ExecutionReleaseRequest) (ExecutionResult, error)
+
+// ExecutionCompleteHandler runs execution complete for the cycle with the given ID.
 type ExecutionCompleteHandler func(context.Context, string, ExecutionCompleteRequest) (ExecutionResult, error)
+
+// RemotePullRequestReconcileHandler settles an interrupted PR/MR create for the
+// cycle with the given ID.
 type RemotePullRequestReconcileHandler func(context.Context, string, ExecutionReconcileRequest) (ExecutionReconcileResult, error)
 
 // ExecutionCompleteRequest is the transport DTO consumed by the current
@@ -23,12 +30,18 @@ type ExecutionCompleteRequest struct {
 	RemoteArtifactURL      string      `json:"remote_artifact_url"`
 	Confirm                bool        `json:"confirm"`
 }
+
+// ExecutionResult is the common answer of an execution action: the resulting
+// Execution state and the command to run next.
 type ExecutionResult struct {
 	OK          bool      `json:"ok"`
 	ID          string    `json:"id"`
 	Execution   Execution `json:"execution"`
 	NextCommand string    `json:"next_command,omitempty"`
 }
+
+// ExecutionClaimRequest asks the actor to claim the write lease at Generation,
+// authenticating with the claim token file or the current token.
 type ExecutionClaimRequest struct {
 	ID                string      `json:"id"`
 	Generation        uint64      `json:"generation"`
@@ -37,12 +50,18 @@ type ExecutionClaimRequest struct {
 	TokenFile         string      `json:"claim_token_file,omitempty"`
 	ClaimCurrentToken bool        `json:"claim_current_token,omitempty"`
 }
+
+// ExecutionReleaseRequest asks the lease holder at Generation to release it.
 type ExecutionReleaseRequest struct {
 	ID         string      `json:"id"`
 	Generation uint64      `json:"generation"`
 	Actor      NativeActor `json:"actor"`
 	CWD        string      `json:"cwd"`
 }
+
+// ExecutionReplaceResult is the answer of a lease replace: the resulting
+// Execution, the fingerprints the approval was bound to, and where the new claim
+// token was written.
 type ExecutionReplaceResult struct {
 	OK                    bool      `json:"ok"`
 	ID                    string    `json:"id"`
@@ -54,12 +73,17 @@ type ExecutionReplaceResult struct {
 	NextCommand           string    `json:"next_command,omitempty"`
 }
 
+// ExecutionPrepareRequest asks to create (or, without Confirm, preview) the
+// isolated execution workspace for the cycle.
 type ExecutionPrepareRequest struct {
 	ID      string      `json:"id"`
 	Actor   NativeActor `json:"actor"`
 	CWD     string      `json:"cwd"`
 	Confirm bool        `json:"confirm,omitempty"`
 }
+
+// ExecutionPrepareResult is the answer of execution prepare: the Workspace and,
+// once applied, the Execution and the path of the written claim token.
 type ExecutionPrepareResult struct {
 	OK             bool       `json:"ok"`
 	ID             string     `json:"id"`
@@ -69,6 +93,9 @@ type ExecutionPrepareResult struct {
 	ClaimTokenPath string     `json:"claim_token_path,omitempty"`
 	NextCommand    string     `json:"next_command,omitempty"`
 }
+
+// ExecutionReconcileRequest asks to settle a pending ExternalIntent. Snapshot is
+// the in-process record the caller already loaded and is never serialized.
 type ExecutionReconcileRequest struct {
 	ID       string      `json:"id"`
 	Preview  bool        `json:"preview,omitempty"`
@@ -77,6 +104,9 @@ type ExecutionReconcileRequest struct {
 	CWD      string      `json:"cwd"`
 	Snapshot *Record     `json:"-"`
 }
+
+// ExecutionReconcileResult is the answer of reconciling a pending intent: the
+// outcome Code, the Execution afterwards, and whether external state was read.
 type ExecutionReconcileResult struct {
 	OK         bool            `json:"ok"`
 	ID         string          `json:"id"`
@@ -97,6 +127,9 @@ type ExecutionReconcileResult struct {
 	// back.
 	NextCommand string `json:"next_command,omitempty"`
 }
+
+// RemotePullRequestRequest carries everything needed to create the cycle's PR/MR
+// (title, body, head, base, labels, assignees) bound to ExpectedGeneration.
 type RemotePullRequestRequest struct {
 	ID                 string      `json:"id"`
 	Provider           string      `json:"provider"`
@@ -111,6 +144,10 @@ type RemotePullRequestRequest struct {
 	CWD                string      `json:"cwd"`
 	Confirm            bool        `json:"confirm"`
 }
+
+// ExecutionSyncBaseRequest asks to sync the cycle's branch with its base.
+// Mode selects apply, finalize or abort; Fingerprint binds a confirm to the
+// preview it approves.
 type ExecutionSyncBaseRequest struct {
 	ID                   string      `json:"id"`
 	Mode                 string      `json:"mode"`
@@ -121,12 +158,15 @@ type ExecutionSyncBaseRequest struct {
 	Fingerprint          string      `json:"fingerprint,omitempty"`
 }
 
-// ExecutionSyncBaseDeps는 Git 표면 하나만 주입점으로 연다. fetch·merge-tree·
+// ExecutionSyncBaseDeps 타입은 Git 표면 하나만 주입점으로 연다. fetch·merge-tree·
 // merge·commit·push가 전부 이 함수를 지나므로 테스트가 순서와 인자를 전수
 // 검증할 수 있고, 비대화 env 계약과 timeout도 한 곳에서 강제된다.
 type ExecutionSyncBaseDeps struct {
 	Git func(ctx context.Context, dir string, args ...string) (int, string)
 }
+
+// ExecutionSyncBaseResult is the answer of a sync-base call: the observed branch
+// and base state, what was merged or pushed, and the command to retry or abort.
 type ExecutionSyncBaseResult struct {
 	OK                  bool     `json:"ok"`
 	ID                  string   `json:"id"`

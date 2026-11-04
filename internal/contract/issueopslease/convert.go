@@ -8,7 +8,7 @@ import issueopscontract "issueops/internal/contract/issueops"
 // TestExecutionToIssueOpsCopiesEveryField에서만 일어난다. nil과 빈 slice는 JSON
 // 출력이 다르므로(`verification`은 omitempty가 아니다) 구분을 그대로 보존한다.
 
-// ToIssueOps는 execution을 production DTO로 옮긴다. slice와 pointer는 복사해
+// ToIssueOps 메서드는 execution을 production DTO로 옮긴다. slice와 pointer는 복사해
 // 호출자가 결과를 바꿔도 원본이 바뀌지 않는다.
 func (execution Execution) ToIssueOps() issueopscontract.Execution {
 	result := issueopscontract.Execution{
@@ -54,7 +54,7 @@ func (execution Execution) ToIssueOps() issueopscontract.Execution {
 	return result
 }
 
-// ToIssueOps는 workspace를 production DTO로 옮긴다. ArtifactDir을 포함한 모든
+// ToIssueOps 메서드는 workspace를 production DTO로 옮긴다. ArtifactDir을 포함한 모든
 // field를 옮긴다.
 func (workspace Workspace) ToIssueOps() issueopscontract.Workspace {
 	return issueopscontract.Workspace{

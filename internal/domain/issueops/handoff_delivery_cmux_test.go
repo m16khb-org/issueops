@@ -42,7 +42,7 @@ func TestCmuxHandoffDeliveryMonotonicallyEnrichesExactTargetAndTiming(t *testing
 	}
 	created.Receipt = issueopscontract.HandoffDeliveryReceipt{Location: "audit/cmux/create.json", Digest: strings.Repeat("b", 64)}
 
-	resolved, decision := MergeHandoffDeliveryObservation(staged, created)
+	resolved, decision := mergeHandoffDeliveryObservation(staged, created)
 	if !decision.Accepted {
 		t.Fatalf("workspace enrichment rejected: %+v", decision)
 	}
@@ -59,7 +59,7 @@ func TestCmuxHandoffDeliveryMonotonicallyEnrichesExactTargetAndTiming(t *testing
 	}
 	accepted.Receipt = issueopscontract.HandoffDeliveryReceipt{Location: "audit/cmux/input.json", Digest: strings.Repeat("c", 64)}
 
-	merged, decision := MergeHandoffDeliveryObservation(resolved, accepted)
+	merged, decision := mergeHandoffDeliveryObservation(resolved, accepted)
 	if !decision.Accepted {
 		t.Fatalf("input receipt must remain non-authoritative: %+v", decision)
 	}
@@ -123,7 +123,7 @@ func TestCmuxHandoffDeliveryRejectsTargetOrTimingRewrite(t *testing.T) {
 			endpoint := *base.Launcher.EndpointIncarnation
 			next.Launcher.EndpointIncarnation = &endpoint
 			test.edit(&next)
-			_, decision := MergeHandoffDeliveryObservation(base, next)
+			_, decision := mergeHandoffDeliveryObservation(base, next)
 			if decision.Accepted || !reflect.DeepEqual(decision.RejectReasons, []string{test.want}) {
 				t.Fatalf("decision=%+v", decision)
 			}

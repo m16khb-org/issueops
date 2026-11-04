@@ -7,9 +7,8 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
-// ReviewMetricsForRecord는 record 하나에서 적대 리뷰 지표를 파생한다. 읽기
-// 전용이며 record를 바꾸지 않는다. 파싱할 수 없는 시각은 그 항목만 건너뛰고
-// warning으로 남긴다 — 지표 하나가 깨졌다고 사이클 전체를 버리면 측정 자체가
+// ReviewMetricsForRecord 함수는 record 하나에서 적대 리뷰 지표를 파생한다. 읽기 전용이며 record를 바꾸지
+// 않는다. 파싱할 수 없는 시각은 그 항목만 건너뛰고 warning으로 남긴다. 지표 하나가 깨졌다고 사이클 전체를 버리면 측정 자체가
 // 불가능해진다.
 func ReviewMetricsForRecord(record issueopscontract.Record) (issueopscontract.ReviewMetricsCycle, []string) {
 	cycle := issueopscontract.ReviewMetricsCycle{
@@ -40,8 +39,8 @@ func ReviewMetricsForRecord(record issueopscontract.Record) (issueopscontract.Re
 	return cycle, warnings
 }
 
-// CycleOutcomeForRecord는 cleanup이 record를 지우기 직전에 남길 지표 요약을
-// 만든다. 파싱하지 못한 시각은 ReviewMetricsForRecord처럼 그 항목만 빠진다.
+// CycleOutcomeForRecord 함수는 cleanup이 record를 지우기 직전에 남길 지표 요약을 만든다. 파싱하지 못한
+// 시각은 ReviewMetricsForRecord처럼 그 항목만 빠진다.
 func CycleOutcomeForRecord(record issueopscontract.Record, outcome, retainedAt string) issueopscontract.CycleOutcome {
 	metrics, _ := ReviewMetricsForRecord(record)
 	metrics.Outcome = outcome
@@ -106,7 +105,8 @@ func stageDurations(record issueopscontract.Record) (map[string]float64, []strin
 	return durations, warnings
 }
 
-// AggregateReviewMetrics는 사이클 목록을 가로지르는 요약을 만든다.
+// AggregateReviewMetrics 함수는 사이클 목록을 가로지르는 요약을 만든다. 리뷰를 받은 사이클 수, 평균 라운드 수,
+// revise와 stop 판정의 비율을 계산한다.
 func AggregateReviewMetrics(cycles []issueopscontract.ReviewMetricsCycle) issueopscontract.ReviewMetricsAggregate {
 	aggregate := issueopscontract.ReviewMetricsAggregate{Cycles: len(cycles)}
 	totalRounds, totalVerdicts, revise, stop := 0, 0, 0, 0

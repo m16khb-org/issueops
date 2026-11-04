@@ -83,12 +83,12 @@ func TestValidateStableNativeRuntime(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "source")
 	mustMkdir(t, filepath.Join(root, ".git"))
 	canonical := filepath.Join(root, "bin", "issueops")
-	if err := ValidateStableNativeRuntime(root, canonical); err != nil {
+	if err := validateStableNativeRuntime(root, canonical); err != nil {
 		t.Fatalf("canonical runtime rejected: %v", err)
 	}
 
 	external := filepath.Join(filepath.Dir(root), "source.worktrees", "completed", "bin", "issueops")
-	if err := ValidateStableNativeRuntime(root, external); err == nil || !strings.Contains(err.Error(), canonical) {
+	if err := validateStableNativeRuntime(root, external); err == nil || !strings.Contains(err.Error(), canonical) {
 		t.Fatalf("error = %v, want expected canonical runtime %q", err, canonical)
 	}
 }

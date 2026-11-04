@@ -7,7 +7,7 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
-func ValidateIssueCreateIntentInvariants(intent issueopscontract.IssueCreateIntent) error {
+func validateIssueCreateIntentInvariants(intent issueopscontract.IssueCreateIntent) error {
 	if intent.Status == issueopscontract.IssueCreateIntentCompleted && strings.TrimSpace(intent.CanonicalURL) == "" {
 		return fmt.Errorf("completed issue create intent requires canonical_url")
 	}

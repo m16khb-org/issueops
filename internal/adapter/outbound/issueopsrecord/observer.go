@@ -16,6 +16,10 @@ import (
 
 const defaultSlowSpanThreshold = 100 * time.Millisecond
 
+// SpanObservation is one record-store span as an observer sees it: operation,
+// outcome, lock contention and wait/hold times, the callback and commit phases,
+// and the trace correlation active when the span started. Durations are
+// milliseconds. Phase durations overlap, so do not add them.
 type SpanObservation struct {
 	Event       string `json:"event"`
 	GeneratedAt string `json:"generated_at"`
@@ -37,12 +41,15 @@ type SpanObservation struct {
 	TraceFlags     string `json:"trace_flags,omitempty"`
 }
 
+// Observer receives a SpanObservation for each record-store span.
 type Observer interface {
 	Observe(SpanObservation)
 }
 
+// ObserverFunc adapts an ordinary function to Observer.
 type ObserverFunc func(SpanObservation)
 
+// Observe calls observe with observation.
 func (observe ObserverFunc) Observe(observation SpanObservation) {
 	observe(observation)
 }
@@ -53,6 +60,10 @@ type jsonLineObserver struct {
 	mutex         sync.Mutex
 }
 
+// NewJSONLineObserver returns an Observer that writes one JSON line per span to
+// writer. Fast, uncontended spans are dropped; slowThreshold (default 100ms when
+// not positive) separates fast from slow. Writes are serialized, and a failed
+// write is reported on stderr unless writer is stderr itself.
 func NewJSONLineObserver(writer io.Writer, slowThreshold time.Duration) Observer {
 	if slowThreshold <= 0 {
 		slowThreshold = defaultSlowSpanThreshold

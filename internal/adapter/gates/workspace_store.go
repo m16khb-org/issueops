@@ -16,6 +16,8 @@ type WorkspaceFileStore struct {
 	CWD  string
 }
 
+// Discover lists the gate ledger files under cwd inside the workspace root,
+// in the same order as DiscoverGateFiles. It fails when cwd escapes the root.
 func (s WorkspaceFileStore) Discover(cwd string) ([]string, error) {
 	dir, err := s.name(cwd)
 	if err != nil {
@@ -38,6 +40,8 @@ func (s WorkspaceFileStore) Read(file string) ([]byte, error) {
 	return data, err
 }
 
+// ExistsFile reports whether file resolves inside the workspace root and is
+// not a directory; any confinement or stat failure reports false.
 func (s WorkspaceFileStore) ExistsFile(file string) bool {
 	exists := false
 	_ = s.within(file, func(root *os.Root, name string) error {
@@ -48,6 +52,8 @@ func (s WorkspaceFileStore) ExistsFile(file string) bool {
 	return exists
 }
 
+// Create writes data to file with mode 0644, creating missing parent
+// directories (0755) inside the workspace root.
 func (s WorkspaceFileStore) Create(file string, data []byte) error {
 	return s.within(file, func(root *os.Root, name string) error {
 		if dir := filepath.Dir(name); dir != "." {
@@ -59,6 +65,8 @@ func (s WorkspaceFileStore) Create(file string, data []byte) error {
 	})
 }
 
+// WritePreservingMode overwrites file with data and keeps its existing
+// permission bits, defaulting to 0644 when the file does not exist yet.
 func (s WorkspaceFileStore) WritePreservingMode(file string, data []byte) error {
 	return s.within(file, func(root *os.Root, name string) error {
 		mode := os.FileMode(0o644)

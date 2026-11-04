@@ -166,11 +166,11 @@ func statPromptLeafBeforeRead(leafFD int, expectedUID uint32, afterOpen func()) 
 }
 
 func readBoundedPromptLeaf(file *os.File) ([]byte, error) {
-	value, err := io.ReadAll(io.LimitReader(file, MaximumPromptBytes+1))
+	value, err := io.ReadAll(io.LimitReader(file, maximumPromptBytes+1))
 	if err != nil {
 		return nil, err
 	}
-	if len(value) > MaximumPromptBytes {
+	if len(value) > maximumPromptBytes {
 		return nil, fmt.Errorf("cmux prompt file exceeds the safe maximum")
 	}
 	return value, nil
@@ -183,7 +183,7 @@ func validatePromptLeafStat(stat unix.Stat_t, expectedUID uint32) error {
 	if stat.Uid != expectedUID {
 		return fmt.Errorf("cmux prompt leaf owner must match the current effective uid")
 	}
-	if stat.Size > MaximumPromptBytes {
+	if stat.Size > maximumPromptBytes {
 		return fmt.Errorf("cmux prompt file exceeds the safe maximum")
 	}
 	return nil

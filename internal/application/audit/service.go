@@ -1,3 +1,5 @@
+// Package audit is the application service that records command policy
+// evaluations in the harness audit log without executing the command.
 package audit
 
 import (
@@ -7,23 +9,29 @@ import (
 	policycontract "issueops/internal/contract/policy"
 )
 
-type PolicyEvaluator interface {
+type policyEvaluator interface {
 	Evaluate(policycontract.CommandPolicyRequest) policycontract.CommandPolicyEvaluation
 }
 
-type Writer interface {
+type writer interface {
 	Path() (string, error)
 	Append(string, auditcontract.CommandAuditRecord) error
 }
 
-type Clock interface{ Now() time.Time }
+type clock interface{ Now() time.Time }
 
+// Service evaluates command policy requests and appends each evaluation to the
+// audit log. Evaluator, Writer and Clock are all required.
 type Service struct {
-	Evaluator PolicyEvaluator
-	Writer    Writer
-	Clock     Clock
+	Evaluator policyEvaluator
+	Writer    writer
+	Clock     clock
 }
 
+// Audit evaluates request under the command policy and appends the redacted
+// result to the audit log, returning the record with the log path filled in.
+// The record is returned even when the policy denies the command; an error is
+// returned only when the log path or the append fails.
 func (service Service) Audit(request policycontract.CommandPolicyRequest) (auditcontract.CommandAuditRecord, error) {
 	evaluation := service.Evaluator.Evaluate(request)
 	record := auditcontract.CommandAuditRecord{

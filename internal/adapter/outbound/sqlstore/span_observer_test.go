@@ -335,7 +335,7 @@ func TestSpanCommitCoverage(t *testing.T) {
 			t.Fatalf("err=%v", err)
 		}
 		want := SpanObservation{
-			Outcome:        SpanOutcomeCanceled,
+			Outcome:        spanOutcomeCanceled,
 			Wait:           millis(4),
 			Commit:         new(time.Duration(0)),
 			Total:          millis(4),
@@ -375,7 +375,7 @@ func TestSpanCancelledContenderReportsUnacquired(t *testing.T) {
 		t.Fatalf("err=%v", err)
 	}
 	got := onlySpan(t, *observations)
-	if got.Outcome != SpanOutcomeCanceled || got.Acquired || got.Callback != nil ||
+	if got.Outcome != spanOutcomeCanceled || got.Acquired || got.Callback != nil ||
 		got.Hold != 0 || got.Wait != millis(5) || got.Total != millis(5) {
 		t.Fatalf("observation=%+v", got)
 	}

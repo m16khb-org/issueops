@@ -1,3 +1,5 @@
+// Package verifywork is the application service that verifies a unit of work
+// by combining git status, preflight, guard and command evidence into one result.
 package verifywork
 
 import (
@@ -9,6 +11,8 @@ import (
 	verifyworkdomain "issueops/internal/domain/verifywork"
 )
 
+// Service verifies a unit of work in a repository by gathering git status,
+// preflight, guard and optional command results. Every function field is required.
 type Service struct {
 	ResolveTarget  func(string) string
 	GitStatus      func(string) (string, error)
@@ -18,6 +22,10 @@ type Service struct {
 	ProjectSignals func(string) projectdocdomain.ProjectSignals
 }
 
+// Run gathers git status, preflight and guard results for repo (all changes
+// when all is true, otherwise staged ones), optionally runs argv under the
+// command policy with a 30s timeout, and returns the evidence-backed verdict.
+// Failures of the individual checks are reported in the result, not as errors.
 func (service Service) Run(repo string, all bool, argv []string) verifyworkcontract.Result {
 	root := service.ResolveTarget(repo)
 	status, err := service.GitStatus(root)

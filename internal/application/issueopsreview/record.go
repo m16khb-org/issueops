@@ -1,3 +1,7 @@
+// Package issueopsreview is the application layer that records review evidence on
+// an issueops record: architecture, domain, compatibility, devil's advocate,
+// project docs, schema and AI-slop-clean reviews, feedback, and plan regressions.
+// It validates requests through the review domain and persists through ports.
 package issueopsreview
 
 import (
@@ -10,6 +14,9 @@ import (
 	reviewport "issueops/internal/port/issueopsreview"
 )
 
+// RecordDevilsAdvocate validates req, binds the review to the digest of the
+// current plan and stores it on record id. It fails when the plan digest resolver
+// is missing or the review domain rejects the round.
 func RecordDevilsAdvocate(store reviewport.DevilsAdvocateStore, stateRoot, id string, req reviewcontract.DevilsAdvocateReviewRequest, recordedAt string) (model.Record, error) {
 	review, err := reviewdomain.ValidateReview(req, recordedAt)
 	if err != nil {
@@ -35,6 +42,9 @@ func RecordDevilsAdvocate(store reviewport.DevilsAdvocateStore, stateRoot, id st
 	return store.TouchWrite(stateRoot, record)
 }
 
+// RecordCompatibilityReview validates req and stores it on record id, advancing
+// the phase to compatibility review when it is earlier. It fails before the
+// plan and worktree are ready.
 func RecordCompatibilityReview(store reviewport.CompatibilityStore, stateRoot, id string, req reviewcontract.CompatibilityReviewRequest, recordedAt string) (model.Record, error) {
 	review, err := reviewdomain.ValidateCompatibilityReview(req, recordedAt)
 	if err != nil {

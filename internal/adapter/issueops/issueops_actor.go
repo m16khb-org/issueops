@@ -15,6 +15,8 @@ func validateExecutionMutation(ctx context.Context, record issueops.Record, acto
 	return cycleapp.NewMutationAuthority(samePath, verifier).Validate(ctx, record, actor)
 }
 
+// ValidateIssueOpsMutationActor loads cycle id and checks that actor may mutate it under
+// the current execution write lease. Records without a prepared execution accept any actor.
 func ValidateIssueOpsMutationActor(ctx context.Context, stateRoot, id string, actor issueops.Actor, verifier authorityport.ActorVerifier) error {
 	record, err := ReadIssueOps(stateRoot, id)
 	if err != nil {

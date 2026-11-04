@@ -1,3 +1,5 @@
+// Package shelltoken 패키지는 shell 명령 문자열을 토큰으로 나누고 quote 밖의
+// 제어 연산자와 확장을 판별하는 순수 규칙을 소유한다.
 package shelltoken
 
 import (
@@ -5,6 +7,8 @@ import (
 	"unicode"
 )
 
+// SplitCommandTokens 함수는 shell 명령 문자열을 quote와 backslash escape를 해석한
+// argv 토큰으로 나눈다. 빈 따옴표 값은 빈 문자열 토큰으로 남기며, 변수나 명령 치환은 확장하지 않는다.
 func SplitCommandTokens(command string) []string {
 	s := &tokenSplitter{runes: []rune(command), tokens: []string{}}
 	for ; s.i < len(s.runes); s.i++ {
@@ -85,7 +89,7 @@ func doubleQuoteEscape(r rune) rune {
 	}
 }
 
-// HasUnquotedControlOperator는 명령을 이어 붙일 수 있는 unquoted shell
+// HasUnquotedControlOperator 함수는 명령을 이어 붙일 수 있는 unquoted shell
 // 연산자를 보고한다.
 func HasUnquotedControlOperator(command string) bool {
 	var quote rune

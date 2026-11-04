@@ -1,3 +1,6 @@
+// Package authority is the application service that issues, verifies and
+// rotates the capability grants binding a caller's native process ancestry to a
+// repository scope.
 package authority
 
 import (
@@ -29,6 +32,8 @@ type Service struct {
 	entropy    io.Reader
 }
 
+// New returns a Service over the given grant repository, process inspector,
+// credential files, clock, workspace scope resolver and entropy source.
 func New(repository authorityport.Repository, inspector authorityport.ProcessInspector, files authorityport.CredentialFiles, now func() time.Time, scopes authorityport.ScopeResolver, entropy io.Reader) *Service {
 	return &Service{repository: repository, inspector: inspector, files: files, now: now, scopes: scopes, entropy: entropy}
 }
@@ -166,6 +171,9 @@ func (s *Service) Verify(ctx context.Context, actor model.NativeActor) (model.Ve
 	return capabilityActor(record), nil
 }
 
+// Check verifies that use carries a valid, unexpired capability for its
+// workspace scope and that the grant's session process is still alive. It reads
+// the grant through reader, which lets guard rechecks share a span's snapshot.
 func (s *Service) Check(ctx context.Context, use contract.Use, reader authorityport.RecordReader) error {
 	if err := ctx.Err(); err != nil {
 		return err

@@ -12,6 +12,8 @@ import (
 	"issueops/internal/port"
 )
 
+// ArmAbandon records the abandon attempt on the cleanup record guarded by the expected
+// snapshot revision. A lost compare-and-swap is reported as changed abandon authority.
 func (s CleanupRecordStore) ArmAbandon(ctx context.Context, expected model.CleanupSnapshot, attempt model.CleanupAttempt, failure model.CleanupAbandonFailure) (model.CleanupSnapshot, error) {
 	record, err := cleanupSnapshotRecord(expected, false)
 	if err != nil {
@@ -27,6 +29,9 @@ func (s CleanupRecordStore) ArmAbandon(ctx context.Context, expected model.Clean
 	}
 	return saved, err
 }
+
+// FailAbandon records an abandon failure on the cleanup record; drained says whether the
+// workspace processes were already stopped.
 func (s CleanupRecordStore) FailAbandon(ctx context.Context, expected model.CleanupSnapshot, failure model.CleanupAbandonFailure, drained bool) (model.CleanupSnapshot, error) {
 	record, err := cleanupOperationRecord(expected, model.CleanupOperationAbandon)
 	if err != nil {
@@ -34,6 +39,10 @@ func (s CleanupRecordStore) FailAbandon(ctx context.Context, expected model.Clea
 	}
 	return s.save(ctx, expected, domain.ApplyCleanupAbandonFailure(record, failure, drained))
 }
+
+// DeleteAbandoned atomically deletes the abandoned cycle record, its artifact stage and its
+// external-intent rows, and stores the retained outcome summary in the same transaction.
+// It returns the deleted intent row IDs and refuses rows owned by another lifecycle.
 func (s CleanupRecordStore) DeleteAbandoned(ctx context.Context, expected model.CleanupSnapshot, outcome model.CycleOutcome) ([]string, error) {
 	record, err := cleanupOperationRecord(expected, model.CleanupOperationAbandon)
 	if err != nil {

@@ -311,12 +311,12 @@ func TestDeletedHistoryRecommendation(t *testing.T) {
 
 func TestSevereLessonSeverity(t *testing.T) {
 	for _, s := range []string{"error", " Major ", "CRITICAL", "blocker"} {
-		if !SevereLessonSeverity(s) {
+		if !severeLessonSeverity(s) {
 			t.Fatalf("%q must be severe", s)
 		}
 	}
 	for _, s := range []string{"", "warning", "minor", "info"} {
-		if SevereLessonSeverity(s) {
+		if severeLessonSeverity(s) {
 			t.Fatalf("%q must not be severe", s)
 		}
 	}
@@ -334,7 +334,7 @@ func TestRecentLessonWindowBoundaries(t *testing.T) {
 		"":           false,
 	}
 	for in, want := range cases {
-		if got := RecentLesson(in, now); got != want {
+		if got := recentLesson(in, now); got != want {
 			t.Fatalf("RecentLesson(%q)=%v want %v", in, got, want)
 		}
 	}
@@ -560,13 +560,13 @@ func TestCompareStepRegressionsThresholds(t *testing.T) {
 }
 
 func TestValidateHistoryRetentionBoundaries(t *testing.T) {
-	if err := ValidateHistoryRetention(-1, false, false); err == nil {
+	if err := validateHistoryRetention(-1, false, false); err == nil {
 		t.Fatal("negative limit must fail")
 	}
-	if err := ValidateHistoryRetention(0, true, true); err == nil || !strings.Contains(err.Error(), "positive") {
+	if err := validateHistoryRetention(0, true, true); err == nil || !strings.Contains(err.Error(), "positive") {
 		t.Fatalf("err=%v", err)
 	}
-	if err := ValidateHistoryRetention(0, false, false); err != nil {
+	if err := validateHistoryRetention(0, false, false); err != nil {
 		t.Fatalf("zero limit without prune is allowed: %v", err)
 	}
 }

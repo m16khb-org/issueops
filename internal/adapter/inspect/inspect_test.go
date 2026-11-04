@@ -63,13 +63,13 @@ func TestCodexMCPConfiguredRequiresIssueopsServerTable(t *testing.T) {
 		}
 		return path
 	}
-	if !CodexMCPConfigured(write("yes.toml", "[mcp_servers.issueops]\nurl = \"x\"\n")) {
+	if !codexMCPConfigured(write("yes.toml", "[mcp_servers.issueops]\nurl = \"x\"\n")) {
 		t.Fatal("issueops table must be detected")
 	}
-	if CodexMCPConfigured(write("other.toml", "[mcp_servers.other]\n")) {
+	if codexMCPConfigured(write("other.toml", "[mcp_servers.other]\n")) {
 		t.Fatal("other server must not count")
 	}
-	if CodexMCPConfigured(filepath.Join(dir, "absent.toml")) {
+	if codexMCPConfigured(filepath.Join(dir, "absent.toml")) {
 		t.Fatal("missing file must not count")
 	}
 }

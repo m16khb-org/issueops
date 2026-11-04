@@ -7,6 +7,9 @@ import (
 	"issueops/cmd/issueops/cliflag"
 )
 
+// RunDocs implements `issueops docs [index]`: it lists the project documents
+// as text or, with --json, as the index result. --all also lists dated history
+// records that are otherwise summarized as an omitted count.
 func (command Command) RunDocs(args []string) error {
 	if len(args) > 0 && args[0] == "index" {
 		args = args[1:]

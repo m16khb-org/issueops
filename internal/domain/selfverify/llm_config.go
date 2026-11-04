@@ -5,8 +5,10 @@ import (
 	"strings"
 )
 
+// LLMEvalEnvName is the environment variable that enables the LLM evaluation and selects its mode.
 const LLMEvalEnvName = "ISSUEOPS_SELF_VERIFY_LLM_EVAL"
 
+// NormalizeLLMEvalMode trims and lowercases mode, defaulting an empty value to "advisory".
 func NormalizeLLMEvalMode(mode string) string {
 	mode = strings.TrimSpace(strings.ToLower(mode))
 	if mode == "" {
@@ -15,6 +17,7 @@ func NormalizeLLMEvalMode(mode string) string {
 	return mode
 }
 
+// ValidateLLMEvalMode returns an error unless the normalized mode is advisory or gate.
 func ValidateLLMEvalMode(mode string) error {
 	switch NormalizeLLMEvalMode(mode) {
 	case "advisory", "gate":
@@ -24,6 +27,8 @@ func ValidateLLMEvalMode(mode string) error {
 	}
 }
 
+// ParseLLMEvalEnv interprets the LLMEvalEnvName value. It returns whether the evaluation is enabled and its
+// mode (advisory or gate), or an error for an unrecognized value.
 func ParseLLMEvalEnv(value string) (bool, string, error) {
 	switch strings.TrimSpace(strings.ToLower(value)) {
 	case "", "0", "false", "no", "off", "disabled":

@@ -8,8 +8,11 @@ import (
 	"strings"
 )
 
+// IssueGraphPoster posts issue-graph comments through the provider CLI.
 type IssueGraphPoster struct{}
 
+// Post adds body as a comment (gh) or note (glab) on issueURL and returns the CLI output.
+// It fails when the CLI is not installed or exits non-zero.
 func (IssueGraphPoster) Post(ctx context.Context, provider, issueURL, body string) (string, error) {
 	tool, action, bodyFlag := "gh", "comment", "--body"
 	if provider == "gitlab" {

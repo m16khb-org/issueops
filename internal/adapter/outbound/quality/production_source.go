@@ -241,8 +241,8 @@ func regularSourcePath(root, relative string) (bool, error) {
 func sourceGitOutput(ctx context.Context, root string, limit int, args ...string) (string, error) {
 	command := exec.CommandContext(ctx, gitbin.Path(), args...)
 	command.Dir = root
-	stdout := NewBoundedQualityBuffer(limit)
-	stderr := NewBoundedQualityBuffer(64 * 1024)
+	stdout := newBoundedQualityBuffer(limit)
+	stderr := newBoundedQualityBuffer(64 * 1024)
 	command.Stdout = &stdout
 	command.Stderr = &stderr
 	err := command.Run()

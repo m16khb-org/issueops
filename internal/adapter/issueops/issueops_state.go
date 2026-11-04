@@ -1,3 +1,6 @@
+// Package issueops is the outbound adapter of the IssueOps cycle: it stores cycle records
+// and execution leases in the SQLite state, and implements the git, process, provider-CLI and
+// filesystem observations that the application layer consumes through the ports.
 package issueops
 
 import (
@@ -58,6 +61,9 @@ func recordNotFound(stateRoot, id string) error {
 	return fmt.Errorf("issueops record %s not found in state %s (ISSUEOPS_STATE_DIR selects the state); list cycles with `issueops list --json`: %w", id, stateRoot, fs.ErrNotExist)
 }
 
+// ReadIssueOps loads and validates the cycle record for id. A missing record wraps
+// fs.ErrNotExist; a row that fails to decode or validate returns an Invalid record with
+// the invalid-state error.
 func ReadIssueOps(stateRoot, id string) (issueops.Record, error) {
 	id, err := normalizeIssueOpsID(id)
 	if err != nil {
@@ -121,6 +127,8 @@ func VisitIssueOpsExisting(stateRoot string, visit func(id string, record issueo
 	return nil
 }
 
+// ScanReadableIssueOps returns every cycle record under stateRoot that decodes and validates.
+// Unreadable rows are skipped, and a missing state yields an empty list.
 func ScanReadableIssueOps(stateRoot string) ([]issueops.Record, error) {
 	records, _, err := scanIssueOpsRows(stateRoot)
 	return records, err

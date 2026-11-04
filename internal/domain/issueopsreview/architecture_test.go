@@ -51,7 +51,7 @@ func TestHasArchitectureReviewEvidence(t *testing.T) {
 		{[]string{""}, false},
 		{[]string{"code review done", "architecture review done"}, true},
 	} {
-		if got := HasArchitectureReviewEvidence(test.values); got != test.want {
+		if got := hasArchitectureReviewEvidence(test.values); got != test.want {
 			t.Errorf("HasArchitectureReviewEvidence(%v) = %v, want %v", test.values, got, test.want)
 		}
 	}

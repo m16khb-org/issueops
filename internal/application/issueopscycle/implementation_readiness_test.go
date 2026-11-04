@@ -18,7 +18,7 @@ func TestImplementationReadinessMissingObservesPathsBeforeReview(t *testing.T) {
 		LinkedPlanDigest:     func(model.Record) (string, error) { calls = append(calls, "digest"); return "", nil },
 	}
 	record := model.Record{Repo: "source", WorktreePath: "tree", PlanPath: "plan.md"}
-	missing := ImplementationReadinessMissing(record, true, observations)
+	missing := implementationReadinessMissing(record, true, observations)
 	wantCalls := []string{"worktree", "plan", "inside"}
 	if !reflect.DeepEqual(calls, wantCalls) {
 		t.Fatalf("observation order=%v, want %v", calls, wantCalls)

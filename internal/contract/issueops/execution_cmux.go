@@ -2,6 +2,10 @@ package issueops
 
 import "context"
 
+// ExecutionCmuxHandoffRequest asks to hand the execution lease at Generation
+// over to a new agent session launched through cmux. It pins the cmux build,
+// the host, and the SHA-256 of the prompt and materials so the delivery can be
+// verified afterwards.
 type ExecutionCmuxHandoffRequest struct {
 	ID             string `json:"id"`
 	Generation     uint64 `json:"generation"`
@@ -20,6 +24,9 @@ type ExecutionCmuxHandoffRequest struct {
 	MaterialSHA256 string `json:"material_sha256"`
 }
 
+// ExecutionCmuxHandoffResult reports a cmux handoff: where it was delivered, how
+// far delivery progressed (input accepted, native turn observed, owner claimed),
+// and the receipt behind that observation.
 type ExecutionCmuxHandoffResult struct {
 	OK                  bool                    `json:"ok"`
 	ID                  string                  `json:"id"`
@@ -35,4 +42,5 @@ type ExecutionCmuxHandoffResult struct {
 	ObservationReceipt  HandoffDeliveryReceipt  `json:"observation_receipt"`
 }
 
+// ExecutionCmuxHandoffHandler runs a cmux handoff for the cycle with the given ID.
 type ExecutionCmuxHandoffHandler func(context.Context, string, ExecutionCmuxHandoffRequest) (ExecutionCmuxHandoffResult, error)

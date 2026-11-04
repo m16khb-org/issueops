@@ -10,28 +10,35 @@ import (
 	"issueops/internal/port"
 )
 
-type ReviewReflectionStore interface {
-	IssueRecordReader
+type reviewReflectionStore interface {
+	issueRecordReader
 	RecordStore
 }
+
+// ReviewReflectionProvider 타입은 리뷰 결과 반영에 쓰는 provider 포트로, 이슈 본문 구역을 갱신한다.
 type ReviewReflectionProvider interface {
 	UpdateIssueBodySection(context.Context, port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error)
 }
-type ReviewProviderResolver func(string) (ReviewReflectionProvider, error)
+type reviewProviderResolver func(string) (ReviewReflectionProvider, error)
+
+// AncestryObserver 타입은 현재 프로세스의 조상 프로세스 영수증을 관찰해 행위자 증명에 쓰는 함수다.
 type AncestryObserver func() ([]model.NativeProcessReceipt, error)
 
+// ReviewReflectionService 타입은 devil's advocate 리뷰 결과를 이슈 본문 구역에 반영하고 반영 영수증을 기록에 남긴다.
 type ReviewReflectionService struct {
-	store     ReviewReflectionStore
-	authority Authority
-	resolve   ReviewProviderResolver
+	store     reviewReflectionStore
+	authority authority
+	resolve   reviewProviderResolver
 	observe   AncestryObserver
 	now       func() time.Time
 }
 
-func NewReviewReflectionService(store ReviewReflectionStore, authority Authority, resolve ReviewProviderResolver, observe AncestryObserver, now func() time.Time) *ReviewReflectionService {
+// NewReviewReflectionService 함수는 저장소, 권한 검사, provider 해석 함수, 조상 관찰기, 시계를 묶어 서비스를 만든다.
+func NewReviewReflectionService(store reviewReflectionStore, authority authority, resolve reviewProviderResolver, observe AncestryObserver, now func() time.Time) *ReviewReflectionService {
 	return &ReviewReflectionService{store: store, authority: authority, resolve: resolve, observe: observe, now: now}
 }
 
+// Reflect 메서드는 기록의 리뷰 결과를 provider 이슈 본문에 반영한다. 조상 프로세스를 관찰한 행위자로 권한을 확인하고, confirm이 성공하면 반영 영수증을 남긴다.
 func (s *ReviewReflectionService) Reflect(ctx context.Context, id, providerOverride string, confirm bool, actor model.Actor) (model.Record, port.IssueProviderUpdateIssueBodySectionResult, error) {
 	var result port.IssueProviderUpdateIssueBodySectionResult
 	record, err := s.store.Read(ctx, id)

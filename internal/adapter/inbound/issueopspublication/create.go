@@ -1,3 +1,5 @@
+// Package issueopspublication 패키지는 발행(publication) 애플리케이션 서비스를
+// issueops 계약의 PR/MR 생성·재조정 핸들러 함수로 노출하는 inbound 어댑터다.
 package issueopspublication
 
 import (
@@ -16,16 +18,18 @@ type createService interface {
 
 var _ createService = (*publicationapp.CreateService)(nil)
 
-type CreateHandler struct{ service createService }
+type createHandler struct{ service createService }
 
+// NewCreateHandler 함수는 PR/MR 생성 서비스를 execution 명령 핸들러 함수로 감싼다.
 // 반환 타입은 어댑터의 이름 붙은 핸들러 타입 대신 같은 시그니처를 직접 쓴다.
 // Go에서 두 형태는 할당 호환이므로 소비자는 그대로 동작하고, inbound 어댑터는
-// issueops 어댑터를 알 필요가 없어진다.
+// issueops 어댑터를 알 필요가 없어진다. service가 nil이면 핸들러는
+// ErrRemotePullRequestCreateHandlerUnavailable을 반환한다.
 func NewCreateHandler(service createService) func(context.Context, string, issueopscontract.RemotePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
-	return CreateHandler{service: service}.Handle
+	return createHandler{service: service}.Handle
 }
 
-func (h CreateHandler) Handle(ctx context.Context, _ string, request issueopscontract.RemotePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
+func (h createHandler) Handle(ctx context.Context, _ string, request issueopscontract.RemotePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 	if h.service == nil {
 		return executionissue.IssueProviderCreatePullRequestResult{}, issueopscontract.ErrRemotePullRequestCreateHandlerUnavailable
 	}

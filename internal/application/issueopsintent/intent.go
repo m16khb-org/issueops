@@ -1,3 +1,5 @@
+// Package issueopsintent is the application service that records the intent
+// contract and plan preparation of an IssueOps lifecycle record.
 package issueopsintent
 
 import (
@@ -9,6 +11,9 @@ import (
 	intentport "issueops/internal/port/issueopsintent"
 )
 
+// RecordIntent validates req, stores it as the intent contract of record id and
+// returns the updated record. It rejects secret-like values anywhere in the
+// rendered intent document and invalid intent classes.
 func RecordIntent(store intentport.Store, stateRoot, id string, req model.IntentRecordRequest) (model.Record, error) {
 	intent, err := intentdomain.PrepareIntent(intentdomain.IntentDraft{RawRequest: req.RawRequest, InterpretedIntent: req.InterpretedIntent, SuccessCriteria: req.SuccessCriteria, Constraints: req.Constraints, Ambiguities: req.Ambiguities, NonGoals: req.NonGoals})
 	if err != nil {

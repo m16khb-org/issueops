@@ -165,7 +165,7 @@ func TestBodySyncCommandRefusesBeforeOperationRuns(t *testing.T) {
 		name    string
 		id      string
 		input   BodySyncInput
-		resolve BodySyncResolver
+		resolve bodySyncResolver
 		observe AncestryObserver
 		check   func(error) bool
 	}{
@@ -323,7 +323,7 @@ func reviewedRecord() model.Record {
 	}
 }
 
-func newReviewService(store ReviewReflectionStore, auth Authority, provider ReviewReflectionProvider, now time.Time) *ReviewReflectionService {
+func newReviewService(store reviewReflectionStore, auth authority, provider ReviewReflectionProvider, now time.Time) *ReviewReflectionService {
 	return NewReviewReflectionService(store, auth, func(string) (ReviewReflectionProvider, error) { return provider, nil }, func() ([]model.NativeProcessReceipt, error) { return nil, nil }, func() time.Time { return now })
 }
 
@@ -386,7 +386,7 @@ func TestReviewReflectionRefusals(t *testing.T) {
 		id       string
 		record   model.Record
 		auth     error
-		resolve  ReviewProviderResolver
+		resolve  reviewProviderResolver
 		observe  AncestryObserver
 		provider *reviewProviderFake
 		want     string

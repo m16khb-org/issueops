@@ -13,19 +13,24 @@ import (
 	"issueops/internal/port"
 )
 
-type LockedRecords interface {
+type lockedRecords interface {
 	WithinLock(context.Context, string, func(context.Context) error) error
 	Load(string) (model.Record, error)
 	Save(context.Context, model.Record) (model.Record, error)
 }
 
+// ChildrenCloser closes the child task issues linked to a cycle record, using
+// merge evidence or already-closed observations as the authority for closing.
 type ChildrenCloser struct {
-	Records      LockedRecords
+	Records      lockedRecords
 	Provider     func(string) (port.IssueProvider, error)
 	VerifyMerged func(model.RemoteArtifactVerification) error
 	Now          func() time.Time
 }
 
+// Close previews or, when confirm is set, closes the record's child links.
+// requested asks for merge evidence verification before the lock. All work runs
+// inside the record lock; on confirm, closed links are saved as receipts.
 func (s ChildrenCloser) Close(ctx context.Context, id string, requested, confirm bool) (model.CloseChildrenResult, error) {
 	result := model.CloseChildrenResult{OK: false, ID: id}
 	req := model.CloseChildrenRequest{MergeEvidenceRequested: requested, Confirm: confirm}

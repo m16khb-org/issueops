@@ -1,3 +1,5 @@
+// Package issueopsnext 패키지는 `issueops next`가 읽기 전용 관측만으로 다음 단계를
+// 판정하는 application 계층 서비스를 제공한다. 어댑터는 Ports를 통해 주입받는다.
 package issueopsnext
 
 import (
@@ -16,14 +18,18 @@ import (
 	reviewdomain "issueops/internal/domain/issueopsreview"
 )
 
+// Service 타입은 Ports로 관측한 사이클 상태를 분류해 `issueops next`의 결과를 만든다.
 type Service struct {
 	ports Ports
 }
 
+// NewService 함수는 ports를 사용하는 Service를 만든다. Next를 호출하기 전에
+// ListCycles, ReadRecord, Completion, Now 포트가 채워져 있어야 한다.
 func NewService(ports Ports) *Service { return &Service{ports: ports} }
 
-// Next는 현재 단계를 판정한다. 읽기만 한다 — record를 쓰지 않고, fetch도
-// provider 호출도 하지 않는다.
+// Next 메서드는 현재 단계를 판정한다. 읽기만 한다. record를 쓰지 않고, fetch도
+// provider 호출도 하지 않는다. id가 비어 있으면 ISSUEOPS_ID를, 그것도 없으면
+// cwd의 worktree와 브랜치로 사이클을 고른다.
 func (service *Service) Next(ctx context.Context, stateRoot, cwd, id string) (issueopsnextcontract.Result, error) {
 	if service.dependenciesMissing() {
 		return issueopsnextcontract.Result{OK: false}, fmt.Errorf("issueops next dependencies are required")

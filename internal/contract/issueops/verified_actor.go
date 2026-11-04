@@ -1,5 +1,7 @@
 package issueops
 
+// The VerifiedBy* values name how a VerifiedActor was authenticated: by native
+// process ancestry, or by a capability token.
 const (
 	VerifiedByNativeAncestry = "native_ancestry"
 	VerifiedByCapability     = "capability"

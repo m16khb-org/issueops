@@ -8,7 +8,7 @@ import (
 	projectdocscontract "issueops/internal/contract/projectdocs"
 )
 
-func handleProjectMCPToolCall(call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
+func handleProjectMCPToolCall(call MCPToolCall, deps MCPDependencies) mcpToolOutcome {
 	switch call.Name {
 	case "harness_inspect":
 		return mcpToolPayload(deps.Inspect(argmap.String(call.Arguments, "repo"), argmap.String(call.Arguments, "host_receipts")))
@@ -29,7 +29,7 @@ func handleProjectMCPToolCall(call MCPToolCall, deps MCPDependencies) MCPToolOut
 	}
 }
 
-func handleProjectDocsMCPToolCall(call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
+func handleProjectDocsMCPToolCall(call MCPToolCall, deps MCPDependencies) mcpToolOutcome {
 	switch call.Name {
 	case "project_docs_route":
 		result, err := deps.ProjectDocs.Route(argmap.String(call.Arguments, "repo"), argmap.StringDefault(call.Arguments, "task", "general"))
@@ -45,20 +45,20 @@ func handleProjectDocsMCPToolCall(call MCPToolCall, deps MCPDependencies) MCPToo
 	case "project_docs_append":
 		return handleProjectDocsAppendTool(call, deps)
 	default:
-		return MCPToolOutcome{}
+		return mcpToolOutcome{}
 	}
 }
 
 // mcpPayloadOrFailure returns the result as the payload, or a protocol failure
 // carrying the error text when err is set.
-func mcpPayloadOrFailure(result any, err error, code int64, message string) MCPToolOutcome {
+func mcpPayloadOrFailure(result any, err error, code int64, message string) mcpToolOutcome {
 	if err != nil {
 		return mcpToolFailure(newProtocolError(code, message, err.Error()))
 	}
 	return mcpToolPayload(result)
 }
 
-func handleCommitPolicyTool(deps MCPDependencies) MCPToolOutcome {
+func handleCommitPolicyTool(deps MCPDependencies) mcpToolOutcome {
 	text, err := deps.Resources.ReadHarnessFile(".issueops", "COMMIT_POLICY.md")
 	if err != nil {
 		return mcpToolFailure(newProtocolError(-32000, "Cannot read commit policy", err.Error()))
@@ -66,7 +66,7 @@ func handleCommitPolicyTool(deps MCPDependencies) MCPToolOutcome {
 	return mcpToolDirect(TextResult(text))
 }
 
-func handleProjectDocsReviseTool(call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
+func handleProjectDocsReviseTool(call MCPToolCall, deps MCPDependencies) mcpToolOutcome {
 	result, err := deps.ProjectDocs.Revise(projectdocscontract.ReviseRequest{
 		RepoRoot:       argmap.String(call.Arguments, "repo"),
 		RelPath:        argmap.String(call.Arguments, "rel_path"),
@@ -79,7 +79,7 @@ func handleProjectDocsReviseTool(call MCPToolCall, deps MCPDependencies) MCPTool
 	return mcpPayloadOrFailure(result, err, -32602, "Project docs revise failed")
 }
 
-func handleProjectDocsAppendTool(call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
+func handleProjectDocsAppendTool(call MCPToolCall, deps MCPDependencies) mcpToolOutcome {
 	result, err := deps.ProjectDocs.Append(projectdocscontract.AppendRequest{
 		RepoRoot:     argmap.String(call.Arguments, "repo"),
 		Kind:         argmap.String(call.Arguments, "kind"),
@@ -96,7 +96,7 @@ func handleProjectDocsAppendTool(call MCPToolCall, deps MCPDependencies) MCPTool
 	return mcpPayloadOrFailure(result, err, -32602, "Project docs append failed")
 }
 
-func handleAPIDocReviewTool(call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
+func handleAPIDocReviewTool(call MCPToolCall, deps MCPDependencies) mcpToolOutcome {
 	result, err := deps.APIDoc.Reviewer.Review(apidoc.ReviewOptions{
 		Repo:       deps.resolveTarget(argmap.String(call.Arguments, "repo")),
 		Files:      argmap.StringSlice(call.Arguments, "files"),
@@ -112,7 +112,7 @@ func handleAPIDocReviewTool(call MCPToolCall, deps MCPDependencies) MCPToolOutco
 	return mcpToolPayload(result)
 }
 
-func handleAPIDocStaticCheckTool(call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
+func handleAPIDocStaticCheckTool(call MCPToolCall, deps MCPDependencies) mcpToolOutcome {
 	result, err := deps.APIDoc.Static.Check(apidoc.StaticOptions{
 		Repo:  deps.resolveTarget(argmap.String(call.Arguments, "repo")),
 		Files: argmap.StringSlice(call.Arguments, "files"),

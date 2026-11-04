@@ -1,13 +1,19 @@
+// Package issueopsreview defines the function-valued store ports that the issueops review use cases
+// (devil's advocate, compatibility, regress, project docs, AI slop clean, architecture) use to read and
+// write cycle records. Adapters supply the implementations; review policy stays in the application and domain layers.
 package issueopsreview
 
 import model "issueops/internal/contract/issueops"
 
+// DevilsAdvocateStore is the record access the devil's-advocate review needs: read a record, write it with its
+// timestamp touched, and compute the plan digest the review is bound to.
 type DevilsAdvocateStore struct {
 	Read       func(string, string) (model.Record, error)
 	TouchWrite func(string, model.Record) (model.Record, error)
 	PlanDigest func(string, model.Record) (string, error)
 }
 
+// CompatibilityStore is the record access the compatibility review needs, including readiness and phase ordering lookups.
 type CompatibilityStore struct {
 	Read       func(string, string) (model.Record, error)
 	TouchWrite func(string, model.Record) (model.Record, error)
@@ -15,6 +21,8 @@ type CompatibilityStore struct {
 	PhaseRank  func(model.Phase) int
 }
 
+// RegressStore is the record access the regress use case needs: reading a record, listing its active children,
+// writing with the timestamp touched, and the clock.
 type RegressStore struct {
 	Read           func(string, string) (model.Record, error)
 	ActiveChildren func(string, model.Record) ([]string, error)
@@ -32,6 +40,8 @@ type EvidenceReviewStore struct {
 	Now              func() string
 }
 
+// ProjectDocsReviewStore extends EvidenceReviewStore with the repository observations the project-docs review needs:
+// changed paths, the project root, and file and project-doc presence.
 type ProjectDocsReviewStore struct {
 	EvidenceReviewStore
 	ChangedPaths func(model.Record) []string
@@ -42,6 +52,7 @@ type ProjectDocsReviewStore struct {
 	ProjectDocsPresent func(string) bool
 }
 
+// ReviewMutationStore is the locked read-validate-write access used by reviews that mutate a record.
 type ReviewMutationStore struct {
 	WithLock         func(string, string, func() error) error
 	Read             func(string, string) (model.Record, error)
@@ -50,11 +61,13 @@ type ReviewMutationStore struct {
 	Now              func() string
 }
 
+// AISlopCleanStore extends ReviewMutationStore with Refresh, which re-seals the ai-slop-clean state of the record after evidence is recorded.
 type AISlopCleanStore struct {
 	ReviewMutationStore
 	Refresh func(string, model.Record) (model.Record, error)
 }
 
+// ArchitectureReviewStore is the record access the architecture review needs, including plan readiness and the document under review.
 type ArchitectureReviewStore struct {
 	Read          func(string, string) (model.Record, error)
 	PlanReadiness func(model.Record) model.Readiness

@@ -49,7 +49,7 @@ func TestIssueOpsExecutionSchemaOmitsRetiredFields(t *testing.T) {
 }
 
 func TestIssueOpsDispatchContainsNoRetiredTools(t *testing.T) {
-	dispatch := DispatchMap()
+	dispatch := dispatchMap()
 	if got := dispatch["issueops_execution"]; got != contract.DispatchIssueOps {
 		t.Fatalf("issueops_execution dispatch = %q", got)
 	}

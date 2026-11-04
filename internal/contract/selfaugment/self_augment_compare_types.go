@@ -1,5 +1,7 @@
 package selfaugment
 
+// CompareResult 타입은 기준선과 후보 체크포인트의 자기 검증 요약을 비교한 결과이다.
+// 소요 시간 증감, 단계 레이블 추가/누락, 회귀 항목과 경고를 담는다.
 type CompareResult struct {
 	OK                           bool                   `json:"ok"`
 	StateDir                     string                 `json:"state_dir"`
@@ -29,6 +31,7 @@ type CompareResult struct {
 	StepBudgetRegressions        []StepBudgetRegression `json:"step_budget_regressions"`
 }
 
+// SlowStepRegression 타입은 기준선 대비 후보에서 느려진 단계 하나의 소요 시간(밀리초)과 증감을 기록한다.
 type SlowStepRegression struct {
 	Label               string  `json:"label"`
 	BaselineDurationMS  int64   `json:"baseline_duration_ms"`
@@ -37,6 +40,7 @@ type SlowStepRegression struct {
 	DeltaPct            float64 `json:"delta_pct"`
 }
 
+// StepBudgetRegression 타입은 단계별 시간 예산 지표(Metric)가 기준선 대비 후보에서 악화된 항목을 기록한다.
 type StepBudgetRegression struct {
 	Label               string  `json:"label"`
 	Metric              string  `json:"metric"`

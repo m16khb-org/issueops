@@ -1,9 +1,12 @@
-// Package docs는 문서 색인 결과의 DTO를 소유한다.
+// Package docs 패키지는 문서 색인 결과의 DTO를 소유한다.
 //
 // application이 색인을 구성하고 adapter가 파일을 읽는다. 결과를 전달하고
 // 직렬화하는 쪽은 그 구현을 알 필요가 없다.
 package docs
 
+// IndexResult is the document index returned to callers: the documents found
+// under IssueOpsRoot, how many dated history records were left out, and when
+// the index was generated.
 type IndexResult struct {
 	OK           bool           `json:"ok"`
 	Version      string         `json:"version"`

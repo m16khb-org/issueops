@@ -488,7 +488,7 @@ func TestPlanningRecorderPropagatesLockedReadFailure(t *testing.T) {
 	}
 }
 
-// ---- Regress ----
+// ---- regress ----
 
 func TestRegressRejectsBlankReasonBeforeReadingAndPropagatesStoreFailures(t *testing.T) {
 	reads := 0
@@ -496,12 +496,12 @@ func TestRegressRejectsBlankReasonBeforeReadingAndPropagatesStoreFailures(t *tes
 	store := reviewport.RegressStore{
 		Read: func(string, string) (model.Record, error) { reads++; return model.Record{}, boom },
 	}
-	_, err := Regress(store, "s", "io", "   ")
+	_, err := regress(store, "s", "io", "   ")
 	wantErr(t, err, "regression reason is required")
 	if reads != 0 {
 		t.Fatal("blank reason must not read")
 	}
-	if _, err = Regress(store, "s", "io", "reason"); !errors.Is(err, boom) {
+	if _, err = regress(store, "s", "io", "reason"); !errors.Is(err, boom) {
 		t.Fatalf("err=%v", err)
 	}
 }
@@ -528,7 +528,7 @@ func TestRegressRefusesIneligiblePhaseAndVerdictWithoutChildLookup(t *testing.T)
 					return model.Record{}, nil
 				},
 			}
-			_, err := Regress(store, "s", "io", "reason")
+			_, err := regress(store, "s", "io", "reason")
 			wantErr(t, err, tc.want)
 		})
 	}

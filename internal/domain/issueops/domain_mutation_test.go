@@ -23,11 +23,11 @@ func TestValidateBranchAcceptsEveryDecimalDigitInIssueNumber(t *testing.T) {
 
 func TestChildDroppedReasonMinimumLengthIsInclusive(t *testing.T) {
 	entry := model.ChildStatusEntry{ValidationVerdict: "dropped", ValidationReason: "0123456789", ValidatedAt: "2026-01-01T00:00:00Z"}
-	if !ChildDropped(entry) {
+	if !childDropped(entry) {
 		t.Fatal("10-character reason must count as dropped")
 	}
 	entry.ValidationReason = "012345678"
-	if ChildDropped(entry) {
+	if childDropped(entry) {
 		t.Fatal("9-character reason must not count as dropped")
 	}
 }
@@ -150,7 +150,7 @@ func TestExecutionReadinessMissingRequiresActiveLeaseWithHolder(t *testing.T) {
 }
 
 func TestRenderDevilsAdvocateSectionOmitsFindingCountWhenNone(t *testing.T) {
-	got := RenderDevilsAdvocateSection(SectionInput{Rounds: []model.PlanReviewRound{
+	got := renderDevilsAdvocateSection(SectionInput{Rounds: []model.PlanReviewRound{
 		{Verdict: "stop", Findings: 2}, {Verdict: "stop", Findings: 0},
 	}})
 	if strings.Contains(got, "지적 0건") || !strings.Contains(got, "(지적 2건)") {
@@ -172,7 +172,7 @@ func TestSectionBudgetAndMergeHandleMarkerAtBodyStart(t *testing.T) {
 
 func TestRenderSectionCompletionBudgetIsInclusive(t *testing.T) {
 	req := SectionInput{Section: model.IssueBodySectionCompletion, Completion: &model.RemoteCompletionSection{ResultBody: "done"}}
-	section := RenderCompletionSection(*req.Completion)
+	section := renderCompletionSection(*req.Completion)
 	got, _, _, err := RenderSection(req, len(section))
 	if err != nil || got != section {
 		t.Fatalf("section at limit: %q err=%v", got, err)
@@ -216,11 +216,11 @@ func TestReviewMetricsNamesOneBasedRoundOfUnparseableTimestamp(t *testing.T) {
 // An inline plan review says so in the issue: readers otherwise take
 // "1차 통과" for an independent review.
 func TestRenderDevilsAdvocateSectionNamesAnInlineReview(t *testing.T) {
-	inline := RenderDevilsAdvocateSection(SectionInput{Verdict: "pass", Findings: []string{"a"}, ReviewerContext: "inline"})
+	inline := renderDevilsAdvocateSection(SectionInput{Verdict: "pass", Findings: []string{"a"}, ReviewerContext: "inline"})
 	if !strings.Contains(inline, "계획 검토: 1차 통과(의견 1건) (작성 세션이 직접 검토)") {
 		t.Fatalf("inline section: %q", inline)
 	}
-	if sub := RenderDevilsAdvocateSection(SectionInput{Verdict: "pass", ReviewerContext: "subagent"}); strings.Contains(sub, "작성 세션") {
+	if sub := renderDevilsAdvocateSection(SectionInput{Verdict: "pass", ReviewerContext: "subagent"}); strings.Contains(sub, "작성 세션") {
 		t.Fatalf("subagent section marked inline: %q", sub)
 	}
 }

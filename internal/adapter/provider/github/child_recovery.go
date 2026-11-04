@@ -10,10 +10,16 @@ import (
 	"strconv"
 )
 
+// FindChildCreateCandidates finds issues carrying the create marker; a child
+// is an ordinary issue, so it shares FindIssueCreateCandidates.
 func (p Provider) FindChildCreateCandidates(ctx context.Context, req port.IssueProviderFindIssueCreateCandidatesRequest) (port.IssueProviderFindIssueCreateCandidatesResult, error) {
 	return p.FindIssueCreateCandidates(ctx, req)
 }
 
+// ReadChild reads the child issue and its parent's sub-issue list and returns
+// a snapshot with TypeVerified (not a pull request) and HierarchyVerified
+// (listed under the parent). It fails when the URLs do not belong together or
+// the fetched identity does not match childURL.
 func (p Provider) ReadChild(ctx context.Context, repo, parentURL, childURL string) (port.ChildSnapshot, error) {
 	var result port.ChildSnapshot
 	if err := issueopsremote.ValidateChildMatchesParent(parentURL, childURL); err != nil {
@@ -57,6 +63,9 @@ func childReadAPI[T any](ctx context.Context, repo, endpoint string) (T, error) 
 	err = json.Unmarshal(out, &result)
 	return result, err
 }
+
+// AttachChild links childURL as a sub-issue of parentURL after checking the
+// fetched issue identity. It never replaces an existing different parent.
 func (p Provider) AttachChild(ctx context.Context, repo, parentURL, childURL string) error {
 	if err := issueopsremote.ValidateChildMatchesParent(parentURL, childURL); err != nil {
 		return err

@@ -8,6 +8,9 @@ import (
 	"issueops/internal/port"
 )
 
+// VerifyActivation checks that the installed user MCP entry and lifecycle
+// extension match the canonical managed content and returns the captured MCP and
+// hooks activation evidence. It fails when either file is missing or has drifted.
 func (installer Installer) VerifyActivation(req port.NativeInstallRequest) ([]port.NativeActivationEvidence, error) {
 	host := installer.spec.Host
 	configRoot := installer.configRoot(req.Home)

@@ -14,6 +14,8 @@ import (
 	"issueops/internal/domain/projectdoc"
 )
 
+// ObserveProjectDocs reports which of the required project documents are
+// missing from the project docs directory under root.
 func ObserveProjectDocs(root string) doctordomain.ProjectDocsObservation {
 	observation := doctordomain.ProjectDocsObservation{Directory: filepath.Join(root, projectdoc.ProjectDocsDir)}
 	for _, name := range projectdoc.Names() {
@@ -24,6 +26,9 @@ func ObserveProjectDocs(root string) doctordomain.ProjectDocsObservation {
 	return observation
 }
 
+// ObserveRuntimeState collects the runtime state paths that exist under root's
+// project docs directory and the content of STATE.md when it can be read.
+// Missing or unreadable entries are left empty, not reported as errors.
 func ObserveRuntimeState(root string) doctordomain.RuntimeStateObservation {
 	observation := doctordomain.RuntimeStateObservation{DocumentPath: filepath.Join(root, projectdoc.ProjectDocsDir, "STATE.md")}
 	for _, path := range []string{filepath.Join(root, projectdoc.ProjectDocsDir, "state"), filepath.Join(root, projectdoc.ProjectDocsDir, "state.schema.json")} {
@@ -49,6 +54,10 @@ type Gateways struct {
 	CountFDs func(context.Context, []int) map[int]GatewayFDResult
 }
 
+// Observe reads the loopback MCP gateway endpoints from home/.claude.json,
+// probes each endpoint, and counts the open FDs of each listener port. It
+// returns early with only Home set when home is empty and sets ConfigError when
+// the config cannot be read or parsed.
 func (gateways Gateways) Observe(ctx context.Context, home string) doctordomain.GatewayObservation {
 	observation := doctordomain.GatewayObservation{Home: home}
 	if home == "" {
@@ -110,6 +119,8 @@ func (gateways Gateways) countFDs(ctx context.Context, ports []int) []GatewayFDR
 	return results
 }
 
+// ObserveNativeIntegrations checks whether the Codex hooks file under home
+// exists. An empty home yields an observation with only Home set.
 func ObserveNativeIntegrations(home string) doctordomain.NativeObservation {
 	observation := doctordomain.NativeObservation{Home: home}
 	if home == "" {

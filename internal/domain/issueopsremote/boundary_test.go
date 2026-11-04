@@ -51,13 +51,13 @@ func TestPrepareCreateRequestSizeLimitsAreInclusive(t *testing.T) {
 }
 
 func TestIssueNumberAcceptsEveryDigit(t *testing.T) {
-	if got := IssueNumber("https://github.com/a/b/issues/0123456789"); got != "0123456789" {
+	if got := issueNumber("https://github.com/a/b/issues/0123456789"); got != "0123456789" {
 		t.Fatalf("IssueNumber=%q", got)
 	}
 }
 
 func TestValidProjectKeyAcceptsHostWithSingleSegment(t *testing.T) {
-	if !ValidProjectKey("github.com/acme") {
+	if !validProjectKey("github.com/acme") {
 		t.Fatal("host plus one path segment must be a valid project key")
 	}
 }

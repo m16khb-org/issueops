@@ -7,11 +7,14 @@ import (
 	projectdocdomain "issueops/internal/domain/projectdoc"
 )
 
+// ReadEffects is the file and clock access Read needs.
 type ReadEffects interface {
 	Read(path string) (string, bool, error)
 	Now() time.Time
 }
 
+// Read returns the content and SHA-256 of the document at path. A missing document is not an error:
+// the result has Exists false and a warning pointing at project bootstrap.
 func Read(root, rel, path string, effects ReadEffects) (projectdocscontract.ReadResult, error) {
 	result := projectdocscontract.ReadResult{
 		OK: true, Kind: "project_docs_read", RepoRoot: root, RelPath: rel, Path: path,

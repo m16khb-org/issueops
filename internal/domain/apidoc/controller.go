@@ -42,6 +42,9 @@ var bodyNamedRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompi
 
 var classDeclRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`\bclass\s+[A-Za-z_$]`) })
 
+// CheckNestController scans the text of a NestJS controller file and returns a violation for each route
+// method whose Swagger decorators (operation, parameters, body, responses) are missing or incomplete.
+// Only members at class-body depth are treated as routes.
 func CheckNestController(file, text string) []contract.Violation {
 	lines := strings.Split(text, "\n")
 	var violations []contract.Violation
@@ -183,6 +186,8 @@ func parenDepthDelta(line string) int {
 	return delta
 }
 
+// HasNestResponseStatus reports whether the route block documents an HTTP status through @ApiResponse,
+// @ApiResponses, or the 400/401 shortcut decorators. Numeric and named statuses (for example NOT_FOUND) both count.
 func HasNestResponseStatus(block string, status int) bool {
 	if status == 400 && strings.Contains(block, "@ApiBadRequestResponse") {
 		return true
@@ -229,6 +234,8 @@ func apiResponseDecoratorSpans(block string) []string {
 	return spans
 }
 
+// IsNestPrivateRoute reports whether a route needs authentication, judged from bearer auth, guard, and tier
+// decorators on the route or the file. A route marked @Public is never private.
 func IsNestPrivateRoute(block, fileText string) bool {
 	if strings.Contains(block, "@Public") {
 		return false

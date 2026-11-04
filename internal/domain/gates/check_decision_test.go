@@ -27,7 +27,7 @@ func TestDecideCheckRequiresExitZeroAndMatchingExpect(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := DecideCheck(tc.expect, "ok\n", "", tc.exit, tc.timedOut)
+			got := decideCheck(tc.expect, "ok\n", "", tc.exit, tc.timedOut)
 			if got.Passed != tc.wantPass || got.Error != tc.wantError || got.Evidence != "ok" {
 				t.Fatalf("decision = %+v", got)
 			}
@@ -36,7 +36,7 @@ func TestDecideCheckRequiresExitZeroAndMatchingExpect(t *testing.T) {
 }
 
 func TestDecideCheckJoinsOutputAndKeepsEvidenceTail(t *testing.T) {
-	got := DecideCheck("", "first\n", "second\n", 0, false)
+	got := decideCheck("", "first\n", "second\n", 0, false)
 	if !got.Passed || got.Evidence != "first | second" {
 		t.Fatalf("decision = %+v", got)
 	}
@@ -69,14 +69,14 @@ func TestCheckArgvRejectsLeadingEnvironmentAssignment(t *testing.T) {
 // A prefix followed by punctuation does not match; the refusal names the line
 // and the two forms that do.
 func TestDecideCheckNamesALinePrefixThatIsNotFollowedByABlank(t *testing.T) {
-	got := DecideCheck("PASS", "PASS: --lower rejects extra arguments\n", "", 0, false)
+	got := decideCheck("PASS", "PASS: --lower rejects extra arguments\n", "", 0, false)
 	want := `expect not matched: PASS: --lower rejects extra arguments (the line "PASS: --lower rejects extra arguments" starts with EXPECT but a prefix matches only when a space or tab follows; write the whole line or /^PASS/m)`
 	if got.Passed || got.Error != want {
 		t.Fatalf("decision = %+v", got)
 	}
 	// The suggested regex must match when the line is not the first one.
 	output := "running 1 test\ntest result: ok. 1 passed; 0 failed\n"
-	if !ExpectMatches(`/^test result: ok/m`, output) || DecideCheck("test result: ok", output, "", 0, false).Passed {
+	if !expectMatches(`/^test result: ok/m`, output) || decideCheck("test result: ok", output, "", 0, false).Passed {
 		t.Fatal("the suggested /^…/m form must match a later line")
 	}
 }
@@ -84,7 +84,7 @@ func TestDecideCheckNamesALinePrefixThatIsNotFollowedByABlank(t *testing.T) {
 // A literal found mid-line (grep -n prefixes the line number) does not match;
 // the refusal names the line and the regex form that does.
 func TestDecideCheckNamesALineThatContainsExpectMidLine(t *testing.T) {
-	got := DecideCheck("mod", "5:Operations: add, div, mod\n", "", 0, false)
+	got := decideCheck("mod", "5:Operations: add, div, mod\n", "", 0, false)
 	want := `expect not matched: 5:Operations: add, div, mod (the line "5:Operations: add, div, mod" contains EXPECT mid-line, but a literal EXPECT matches a whole line or a line prefix followed by a space; write /mod/ to match anywhere)`
 	if got.Passed || got.Error != want {
 		t.Fatalf("decision = %+v", got)
@@ -93,11 +93,11 @@ func TestDecideCheckNamesALineThatContainsExpectMidLine(t *testing.T) {
 
 // Probe: the summary after 32 KiB of output was cut, so EXPECT could not match.
 func TestDecideCheckNamesTruncatedOutput(t *testing.T) {
-	got := DecideCheck("ALL_PASS", "1111\n<truncated>\n9999\n", "", 0, false)
+	got := decideCheck("ALL_PASS", "1111\n<truncated>\n9999\n", "", 0, false)
 	if got.Passed || !strings.Contains(got.Error, "the output was truncated") {
 		t.Fatalf("decision = %+v", got)
 	}
-	if got := DecideCheck("ALL_PASS", "line mentioning <truncated> inside\n", "", 0, false); strings.Contains(got.Error, "was truncated") {
+	if got := decideCheck("ALL_PASS", "line mentioning <truncated> inside\n", "", 0, false); strings.Contains(got.Error, "was truncated") {
 		t.Fatalf("a literal marker mid-output is not truncation: %+v", got)
 	}
 }

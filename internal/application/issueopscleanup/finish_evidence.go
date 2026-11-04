@@ -11,6 +11,8 @@ import (
 	"issueops/internal/port"
 )
 
+// FinishEvidenceReader gathers the merge and issue-state evidence that
+// `cleanup finish` needs, through the provider and the merge verifier.
 type FinishEvidenceReader struct {
 	Provider          port.IssueProvider
 	VerifyMergedHead  func(model.RemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error)

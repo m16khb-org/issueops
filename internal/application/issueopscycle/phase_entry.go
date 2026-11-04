@@ -9,7 +9,7 @@ import (
 	cycleport "issueops/internal/port/issueopscycle"
 )
 
-func ValidatePhaseEntry(ready cycleport.PhaseEntryReadiness, record model.Record, phase model.Phase) error {
+func validatePhaseEntry(ready cycleport.PhaseEntryReadiness, record model.Record, phase model.Phase) error {
 	if err := cycledomain.ValidatePhaseProgression(record.Phase, phase); err != nil {
 		return err
 	}

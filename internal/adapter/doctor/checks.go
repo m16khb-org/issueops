@@ -1,3 +1,7 @@
+// Package doctor is the outbound adapter for issueops doctor: it observes the
+// local machine (project docs, runtime state, MCP gateways, native
+// integrations, binary drift) and hands the raw observations to the doctor
+// domain, which decides what is unhealthy.
 package doctor
 
 import (
@@ -79,6 +83,9 @@ func uniqueMCPGatewayPorts(endpoints []mcpGatewayEndpoint) []int {
 	return ports
 }
 
+// ProbeGatewayHTTP sends an MCP initialize request to target and returns nil
+// for any HTTP answer, whatever the status. An error means the gateway did not
+// answer at the transport level (refused, reset, or the 3-second timeout).
 func ProbeGatewayHTTP(ctx context.Context, target string) error {
 	body := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"issueops-doctor","version":"0"}}}`
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, target, strings.NewReader(body))

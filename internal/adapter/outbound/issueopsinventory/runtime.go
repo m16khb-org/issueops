@@ -1,3 +1,6 @@
+// Package issueopsinventory is the outbound adapter that backs the IssueOps cycle
+// inventory: it lists and scans stored cycle records, and supplies the clock and
+// repository path normalization the inventory needs.
 package issueopsinventory
 
 import (
@@ -10,10 +13,14 @@ import (
 	"issueops/internal/domain/repoidentity"
 )
 
+// SystemClock is the inventory clock backed by the system time.
 type SystemClock struct{}
 
+// Now returns the current time.
 func (SystemClock) Now() time.Time { return time.Now() }
 
+// CleanPath is the inventory path port: it normalizes and canonicalizes
+// repository paths.
 type CleanPath struct{}
 
 // Canonical is the absolute, cleaned, symlink-resolved form of path, so
@@ -47,6 +54,10 @@ func lexical(path string) string {
 	return filepath.Clean(clean)
 }
 
+// Normalize returns the absolute, cleaned identity of path. For a path inside a
+// git worktree it returns the source repository root so every worktree of one
+// repository shares an identity; outside git it returns the cleaned path. An
+// empty path yields an empty string.
 func (CleanPath) Normalize(path string) string {
 	clean := lexical(path)
 	if clean == "" {

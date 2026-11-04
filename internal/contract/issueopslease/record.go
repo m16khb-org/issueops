@@ -1,3 +1,6 @@
+// Package issueopslease 패키지는 execution lease가 읽고 쓰는 issueops record v1의 persisted shape를 정의한다.
+// 이 vertical은 lease가 typed로 다루는 execution sidecar만 해석하고 나머지 field는
+// 원문 그대로 보존하며, JSON 해석과 production DTO 변환만 맡는 contract 계층이다.
 package issueopslease
 
 import (
@@ -9,9 +12,11 @@ import (
 	statecontract "issueops/internal/contract/state"
 )
 
+// SchemaVersion 상수는 이 vertical이 읽고 쓰는 issueops record의 schema 버전이다.
+// Decode와 Encode는 이 값과 다른 record를 invalid로 거부한다.
 const SchemaVersion = 1
 
-// Record은 release가 변경하지 않는 v1 sidecar를 canonical DTO로 보존한다.
+// Record 타입은 release가 변경하지 않는 v1 sidecar를 canonical DTO로 보존한다.
 type Record struct {
 	OK                      bool                             `json:"ok"`
 	SchemaVersion           int                              `json:"schema_version"`
@@ -61,6 +66,7 @@ type Record struct {
 	UpdatedAt               string                           `json:"updated_at"`
 }
 
+// Execution 타입은 record의 execution 섹션 중 lease vertical이 typed로 다루는 workspace, lease, 완료·실패·sync-base sidecar다.
 type Execution struct {
 	Workspace          Workspace                `json:"workspace"`
 	Lease              Lease                    `json:"lease"`
@@ -72,6 +78,7 @@ type Execution struct {
 	SyncBaseEvents     []SyncBaseEvent          `json:"sync_base_events,omitempty"`
 }
 
+// Workspace 타입은 execution이 묶인 작업 worktree의 위치(source root, root, branch, base head, artifact 디렉터리)다.
 type Workspace struct {
 	SourceRoot     string `json:"source_root"`
 	Root           string `json:"root"`
@@ -81,6 +88,9 @@ type Workspace struct {
 	LinkedAt       string `json:"linked_at"`
 	ArtifactDir    string `json:"artifact_dir,omitempty"`
 }
+
+// Lease 타입은 execution 쓰기 권한의 generation, 상태, 보유자와 claim token 해시, 획득·반납·교체 시각이다.
+// 평문 claim token은 저장하지 않고 SHA-256만 보존한다.
 type Lease struct {
 	Generation        uint64 `json:"generation"`
 	Status            string `json:"status"`
@@ -91,19 +101,23 @@ type Lease struct {
 	ReplacedAt        string `json:"replaced_at,omitempty"`
 	ReplacementReason string `json:"replacement_reason,omitempty"`
 }
+
+// Actor 타입은 lease를 보유한 native 호스트 세션(host, session, agent)과 선택적 프로세스 영수증이다.
 type Actor struct {
 	Host           string          `json:"host"`
 	SessionID      string          `json:"session_id"`
 	AgentID        string          `json:"agent_id,omitempty"`
 	SessionProcess *ProcessReceipt `json:"session_process,omitempty"`
 }
+
+// ProcessReceipt 타입은 actor 세션 프로세스를 식별하는 PID, 시작 시각, 실행 파일 경로다.
 type ProcessReceipt struct {
 	PID        int    `json:"pid"`
 	StartedAt  string `json:"started_at"`
 	Executable string `json:"executable"`
 }
 
-// Decode는 persisted v1 JSON을 production record contract로 엄격하게 읽는다. 모르는
+// Decode 함수는 persisted v1 JSON을 production record contract로 엄격하게 읽는다. 모르는
 // field는 invalid로 거부해, 이 vertical이 모르는 field를 다시 쓰면서 버리지 않게
 // 한다. 그다음 production DTO로 canonical JSON을 만들어 Record로 옮긴다.
 // 업무 불변식은 outbound issueopsrecord codec이 domain을 통해 검사한다.
@@ -136,6 +150,8 @@ func Decode(id string, data []byte) (Record, error) {
 	return record, nil
 }
 
+// Encode 함수는 record를 들여쓰기 JSON으로 직렬화한다. OK를 true로 맞추고, SchemaVersion이 다르거나
+// cleanup attempt가 계약에 어긋나면 invalid state 오류를 돌려준다.
 func Encode(record Record) ([]byte, error) {
 	record.OK = true
 	if record.SchemaVersion != SchemaVersion {

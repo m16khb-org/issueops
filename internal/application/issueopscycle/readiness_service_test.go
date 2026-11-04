@@ -72,10 +72,10 @@ func TestReadinessPrefetchRejectsChangedRootWithoutAnotherFetch(t *testing.T) {
 	events := []string{}
 	ready, git := readinessForEffects(t, &locked, &events)
 	record := model.Record{Repo: "/repo", Branch: "feature", Phase: model.PhaseFeedback, Execution: &model.Execution{}}
-	fetched := ready.PrefetchUpstream(record)
+	fetched := ready.prefetchUpstream(record)
 	git.root = "/other"
 	locked = true
-	result := ready.StrictPRWithFetch("state", record, fetched)
+	result := ready.strictPRWithFetch("state", record, fetched)
 	if !strings.Contains(strings.Join(result.Missing, ","), "upstream_fetch") || !reflect.DeepEqual(events, []string{"fetch", "observe", "paths"}) {
 		t.Fatalf("changed root was not refused with bounded effects: missing=%v events=%v", result.Missing, events)
 	}
@@ -143,7 +143,7 @@ func TestStrictPRWithFetchMergesChildGateMissingAndWarnings(t *testing.T) {
 		return []string{"child_pr_open"}, []string{"child #4 still open"}
 	}
 	record := model.Record{Repo: "/repo", Branch: "feature", Phase: model.PhaseFeedback, Execution: &model.Execution{}}
-	got := ready.StrictPRWithFetch("state", record, ready.Git.Fetch)
+	got := ready.strictPRWithFetch("state", record, ready.Git.Fetch)
 	if got.Ready || !strings.Contains(strings.Join(got.Missing, ","), "child_pr_open") || !slices.Contains(got.Warnings, "child #4 still open") {
 		t.Fatalf("child gate not merged: %+v", got)
 	}

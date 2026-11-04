@@ -1,3 +1,6 @@
+// Package remoteparse parses git remote and provider URLs into structured
+// parts, including GitLab merge request and issue paths. It is a pure domain
+// package.
 package remoteparse
 
 import (
@@ -7,17 +10,26 @@ import (
 	"strings"
 )
 
+// GitLabMRPathParts is the project path and IID parsed from a GitLab merge
+// request URL path. Both are empty when the path is not a merge request.
 type GitLabMRPathParts struct {
 	Project string
 	IID     string
 }
 
+// GitLabIssuePathParts is the project path, IID, and kind ("issues" or
+// "work_items") parsed from a GitLab issue URL path. All are empty when the
+// path is not an issue.
 type GitLabIssuePathParts struct {
 	Project string
 	IID     string
 	Kind    string
 }
 
+// SplitGitLabMRPath parses an escaped GitLab URL path of the form
+// <project...>/-/merge_requests/<iid>. The project, which may be a nested
+// group path, is URL-unescaped. A missing marker or non-numeric IID returns
+// the zero value.
 func SplitGitLabMRPath(escapedPath string) GitLabMRPathParts {
 	trimmed := strings.Trim(path.Clean("/"+escapedPath), "/")
 	parts := strings.Split(trimmed, "/")
@@ -38,6 +50,10 @@ func SplitGitLabMRPath(escapedPath string) GitLabMRPathParts {
 	return GitLabMRPathParts{}
 }
 
+// SplitGitLabIssuePath parses an escaped GitLab URL path of the form
+// <project...>/-/issues/<iid> or <project...>/-/work_items/<iid>. The project
+// is URL-unescaped and Kind records which marker matched. A missing marker or
+// non-numeric IID returns the zero value.
 func SplitGitLabIssuePath(escapedPath string) GitLabIssuePathParts {
 	trimmed := strings.Trim(path.Clean("/"+escapedPath), "/")
 	parts := strings.Split(trimmed, "/")

@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+// LocalChangeObserver observes the local change set of a worktree through
+// Source: the changed paths and a content fingerprint.
 type LocalChangeObserver struct{ Source port.LocalChangeSource }
 
 // Observe reads paths and contents twice, allowing one retry for a concurrent update.

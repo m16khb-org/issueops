@@ -8,13 +8,13 @@ import (
 // 같고 dirty가 다른 두 빌드를 구분할 수 있어야 dogfood 빌드에서도 쓸모가 있다.
 func TestBuildGenerationStringNamesTheBuild(t *testing.T) {
 	for _, tc := range []struct {
-		generation NativeBuildGeneration
+		generation nativeBuildGeneration
 		want       string
 	}{
-		{NativeBuildGeneration{}, "unknown"},
-		{NativeBuildGeneration{Revision: "0c50f0c08ab822b719bc4951ba4cacbbdb11f81d"}, "0c50f0c08ab8"},
-		{NativeBuildGeneration{Revision: "0c50f0c08ab822b719bc4951ba4cacbbdb11f81d", Modified: true}, "0c50f0c08ab8+dirty"},
-		{NativeBuildGeneration{Revision: "short"}, "short"},
+		{nativeBuildGeneration{}, "unknown"},
+		{nativeBuildGeneration{Revision: "0c50f0c08ab822b719bc4951ba4cacbbdb11f81d"}, "0c50f0c08ab8"},
+		{nativeBuildGeneration{Revision: "0c50f0c08ab822b719bc4951ba4cacbbdb11f81d", Modified: true}, "0c50f0c08ab8+dirty"},
+		{nativeBuildGeneration{Revision: "short"}, "short"},
 	} {
 		if got := tc.generation.String(); got != tc.want {
 			t.Fatalf("String() = %q, want %q", got, tc.want)
@@ -25,7 +25,7 @@ func TestBuildGenerationStringNamesTheBuild(t *testing.T) {
 // TestRunningBuildGenerationIsObservable는 이 진단이 실제 빌드에서 동작하는지
 // 확인한다. 테스트 바이너리도 VCS 정보를 담으므로 관측 가능해야 한다.
 func TestRunningBuildGenerationIsObservable(t *testing.T) {
-	running := RunningBuildGeneration()
+	running := runningBuildGeneration()
 	if !running.Observed() {
 		t.Skip("이 빌드는 VCS 정보를 담지 않는다 (예: -buildvcs=false)")
 	}
@@ -38,7 +38,7 @@ func TestRunningBuildGenerationIsObservable(t *testing.T) {
 // 오류가 아니라 미관측으로 다루는지 고정한다.
 func TestFileBuildGenerationFailsQuietlyOnUnreadablePaths(t *testing.T) {
 	for _, path := range []string{"", "   ", "/nonexistent/issueops", t.TempDir()} {
-		if got := FileBuildGeneration(path); got.Observed() {
+		if got := fileBuildGeneration(path); got.Observed() {
 			t.Fatalf("읽을 수 없는 경로는 미관측이어야 한다: %q -> %+v", path, got)
 		}
 	}

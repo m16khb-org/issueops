@@ -21,7 +21,7 @@ func TestValidatePhaseEntryChecksPlanBeforeGrill(t *testing.T) {
 			return model.Readiness{Missing: []string{"domain_review"}}
 		},
 	}
-	err := ValidatePhaseEntry(store, model.Record{Phase: model.PhaseGrill}, model.PhasePlan)
+	err := validatePhaseEntry(store, model.Record{Phase: model.PhaseGrill}, model.PhasePlan)
 	if err == nil || !strings.Contains(err.Error(), "intent_contract") || !reflect.DeepEqual(calls, []string{"plan"}) {
 		t.Fatalf("err=%v calls=%v", err, calls)
 	}
@@ -30,7 +30,7 @@ func TestValidatePhaseEntryChecksPlanBeforeGrill(t *testing.T) {
 		return model.Readiness{Ready: true}
 	}
 	calls = nil
-	err = ValidatePhaseEntry(store, model.Record{Phase: model.PhaseGrill}, model.PhasePlan)
+	err = validatePhaseEntry(store, model.Record{Phase: model.PhaseGrill}, model.PhasePlan)
 	if err == nil || !strings.Contains(err.Error(), "grill incomplete: missing domain_review") || !reflect.DeepEqual(calls, []string{"plan", "grill"}) {
 		t.Fatalf("err=%v calls=%v", err, calls)
 	}
@@ -44,7 +44,7 @@ func TestValidatePhaseEntryUsesPrefetchedPRReadiness(t *testing.T) {
 			return model.Readiness{Missing: []string{"upstream_fetch"}}
 		},
 	}
-	err := ValidatePhaseEntry(store, model.Record{Phase: model.PhaseFeedback}, model.PhasePR)
+	err := validatePhaseEntry(store, model.Record{Phase: model.PhaseFeedback}, model.PhasePR)
 	if err == nil || !strings.Contains(err.Error(), "upstream_fetch") || calls != 1 {
 		t.Fatalf("err=%v calls=%d", err, calls)
 	}
@@ -58,7 +58,7 @@ func TestValidatePhaseEntryChecksRemoteArtifactBeforeCompletion(t *testing.T) {
 			return []string{"remote_artifact"}
 		},
 	}
-	err := ValidatePhaseEntry(store, model.Record{Phase: model.PhasePR}, model.PhaseDone)
+	err := validatePhaseEntry(store, model.Record{Phase: model.PhasePR}, model.PhaseDone)
 	if err == nil || !strings.Contains(err.Error(), "remote_artifact") || calls != 1 {
 		t.Fatalf("err=%v calls=%d", err, calls)
 	}

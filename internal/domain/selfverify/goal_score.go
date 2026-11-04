@@ -2,17 +2,22 @@ package selfverify
 
 import contract "issueops/internal/contract/selfverify"
 
+// Check is the outcome of one labeled step within a Run.
 type Check struct {
 	Label string
 	OK    bool
 }
 
+// Run records the checks of one self-verify iteration, identified by its 1-based Iteration and its Seed.
 type Run struct {
 	Iteration int
 	Seed      int64
 	Checks    []Check
 }
 
+// ScoreGoals scores each goal as the percentage of its labeled checks that passed across iterations
+// (or len(runs) when iterations is below 1). A goal passes when its score exceeds targetScore, and is
+// marked NotRun when none of its labels executed.
 func ScoreGoals(goals []contract.SelfVerificationGoalDefinition, runs []Run, iterations int, targetScore float64) []contract.SelfVerificationGoalScore {
 	scores := make([]contract.SelfVerificationGoalScore, 0, len(goals))
 	runCount := iterations

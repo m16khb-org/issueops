@@ -186,18 +186,18 @@ func TestTrackedMaterialsMissingDetectsLegacyCycles(t *testing.T) {
 	files := newMemoryMaterialFiles()
 	svc := TrackedMaterials{Files: files}
 	record := trackedRecord()
-	if svc.Missing(record) || svc.Warning(record) != "" {
+	if svc.missing(record) || svc.Warning(record) != "" {
 		t.Fatal("no sealed plan means nothing is missing")
 	}
 	files.files[trackedSealed+"/plan.md"] = []byte("plan")
-	if !svc.Missing(record) || svc.Warning(record) != TrackedMaterialsMissingWarning {
+	if !svc.missing(record) || svc.Warning(record) != trackedMaterialsMissingWarning {
 		t.Fatal("sealed plan without tracked copy must be reported")
 	}
 	files.files["/wt/.issueops/issues/7/plan.md"] = []byte("plan")
-	if svc.Missing(record) || svc.Warning(record) != "" {
+	if svc.missing(record) || svc.Warning(record) != "" {
 		t.Fatal("tracked copy present must clear the warning")
 	}
-	if svc.Missing(model.Record{}) {
+	if svc.missing(model.Record{}) {
 		t.Fatal("record without workspace cannot be missing copies")
 	}
 }

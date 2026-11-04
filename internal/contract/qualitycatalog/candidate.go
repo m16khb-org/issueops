@@ -1,5 +1,9 @@
+// Package qualitycatalog defines the DTOs of the quality candidate catalog and
+// how each candidate's change is verified. It sits in the contract layer.
 package qualitycatalog
 
+// Candidate is one ranked quality improvement. Score derives from Impact,
+// Feasibility, and Risk; VerifyWith names the external signals that prove it.
 type Candidate struct {
 	ID          string   `json:"id"`
 	Title       string   `json:"title"`

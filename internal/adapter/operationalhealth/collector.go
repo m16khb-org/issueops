@@ -1,3 +1,6 @@
+// Package operationalhealth is the outbound adapter that collects the operational health
+// snapshot of a repository: persisted IssueOps cycle ownership and lease holders, plus Git
+// inventory read through a GitRunner. Classification of the facts lives in the domain.
 package operationalhealth
 
 import (
@@ -18,18 +21,24 @@ import (
 	corehealth "issueops/internal/domain/operationalhealth"
 )
 
+// GitRunner runs one git command in repo and returns its standard output. Implementations
+// must be read-only; the collector uses it only for inventory queries.
 type GitRunner interface {
 	Run(context.Context, string, ...string) ([]byte, error)
 }
 
-type NativeProcessInspector func(issueopscontract.NativeProcessReceipt) (string, issueopscontract.NativeProcessReceipt, error)
+type nativeProcessInspector func(issueopscontract.NativeProcessReceipt) (string, issueopscontract.NativeProcessReceipt, error)
 
 const gitInventoryCommandTimeout = 15 * time.Second
 
+// ExecGitRunner is the GitRunner backed by the git binary. Each command runs with prompts
+// and optional locks disabled and is bounded by timeout (a default applies when it is not positive).
 type ExecGitRunner struct {
 	timeout time.Duration
 }
 
+// Run executes git with args in repo and returns its output. It fails when args is empty
+// or the command exceeds the timeout.
 func (runner ExecGitRunner) Run(ctx context.Context, repo string, args ...string) ([]byte, error) {
 	if len(args) == 0 {
 		return nil, fmt.Errorf("git arguments are required")
@@ -82,12 +91,17 @@ func canonicalInventoryPath(path string) string {
 	}
 }
 
+// Collector gathers the health Snapshot from IssueOps storage (IssueOps), Git (Git), and
+// native process identity checks (InspectNativeProcess).
 type Collector struct {
 	IssueOps             IssueOpsReader
 	Git                  GitRunner
-	InspectNativeProcess NativeProcessInspector
+	InspectNativeProcess nativeProcessInspector
 }
 
+// Collect returns the full snapshot for repo, including the remote-ref inventory. Facts
+// that cannot be read are recorded as problems in the snapshot instead of being returned
+// as errors; an empty repo path yields a repo_invalid problem.
 func (collector Collector) Collect(ctx context.Context, repo string) corehealth.Snapshot {
 	snapshot := corehealth.Snapshot{RepoRoot: canonicalInventoryPath(repo)}
 	if snapshot.RepoRoot == "" {
@@ -249,11 +263,11 @@ func (collector Collector) collectIssueOps(snapshot *corehealth.Snapshot) {
 	}
 }
 
-func cycleFromRecord(record issueopscontract.Record, inspect NativeProcessInspector) (operationalhealthcontract.Cycle, []operationalhealthcontract.InventoryProblem) {
+func cycleFromRecord(record issueopscontract.Record, inspect nativeProcessInspector) (operationalhealthcontract.Cycle, []operationalhealthcontract.InventoryProblem) {
 	return cycleFromRecordAt(record, inspect, time.Now().UTC())
 }
 
-func cycleFromRecordAt(record issueopscontract.Record, inspect NativeProcessInspector, now time.Time) (operationalhealthcontract.Cycle, []operationalhealthcontract.InventoryProblem) {
+func cycleFromRecordAt(record issueopscontract.Record, inspect nativeProcessInspector, now time.Time) (operationalhealthcontract.Cycle, []operationalhealthcontract.InventoryProblem) {
 	cycle := operationalhealthcontract.Cycle{
 		ID: strings.TrimSpace(record.ID), Repo: canonicalInventoryPath(record.Repo), Branch: strings.TrimSpace(record.Branch),
 		Phase:                     string(record.Phase),
@@ -293,7 +307,7 @@ func cycleFromRecordAt(record issueopscontract.Record, inspect NativeProcessInsp
 // applyCycleHolder copies the lease holder identity onto cycle and, for an
 // active lease with a session process receipt, observes that process. It
 // returns the problem raised when the probe fails.
-func applyCycleHolder(cycle *operationalhealthcontract.Cycle, execution *issueopscontract.Execution, inspect NativeProcessInspector) []operationalhealthcontract.InventoryProblem {
+func applyCycleHolder(cycle *operationalhealthcontract.Cycle, execution *issueopscontract.Execution, inspect nativeProcessInspector) []operationalhealthcontract.InventoryProblem {
 	holder := execution.Lease.Holder
 	if holder == nil {
 		return nil

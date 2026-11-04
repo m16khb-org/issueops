@@ -14,7 +14,7 @@ func TestUmbrellaBranchGateReasonRequiresPreparedBranch(t *testing.T) {
 		Branch:   "78-umbrella",
 		IssueURL: "https://github.com/acme/repo/issues/78",
 	}
-	reason := UmbrellaBranchGateReason(record)
+	reason := umbrellaBranchGateReason(record)
 	if reason == "" {
 		t.Fatal("umbrella cycle without branch_prepare must not be allowed to create child work items")
 	}
@@ -36,7 +36,7 @@ func TestUmbrellaBranchGateReasonRequiresBranchIdentity(t *testing.T) {
 			BaseBranch: "main",
 		},
 	}
-	if reason := UmbrellaBranchGateReason(record); reason == "" {
+	if reason := umbrellaBranchGateReason(record); reason == "" {
 		t.Fatal("branch_prepare recorded for a different branch must not satisfy the umbrella gate")
 	}
 }
@@ -54,7 +54,7 @@ func TestUmbrellaBranchGateReasonAcceptsPreparedUmbrella(t *testing.T) {
 			BaseBranch: "main",
 		},
 	}
-	if reason := UmbrellaBranchGateReason(record); reason != "" {
+	if reason := umbrellaBranchGateReason(record); reason != "" {
 		t.Fatalf("prepared umbrella branch must pass the gate, got %q", reason)
 	}
 }

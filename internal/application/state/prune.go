@@ -10,10 +10,15 @@ import (
 	stateport "issueops/internal/port/state"
 )
 
+// Prune removes (or, without confirm, only reports) every state record whose
+// UpdatedAt is older than maxAge. maxAge must be positive.
 func (service *Service) Prune(ctx context.Context, maxAge time.Duration, confirm bool) (statecontract.PruneResult, error) {
 	return service.pruneMatching(ctx, "", maxAge, 0, confirm)
 }
 
+// PrunePrefix is Prune restricted to keys that start with prefix; prefix is
+// required. A positive maxRecords also applies the retained-count policy of
+// statedomain.SelectPrune. Without confirm it is a dry run.
 func (service *Service) PrunePrefix(ctx context.Context, prefix string, maxAge time.Duration, maxRecords int, confirm bool) (statecontract.PruneResult, error) {
 	if prefix == "" {
 		return service.newPruneResult(maxAge, confirm), fmt.Errorf("prefix is required")

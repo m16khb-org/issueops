@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func NormalizeCause(cause string) string {
+func normalizeCause(cause string) string {
 	switch cause {
 	case "none", "model", "harness_environment", "transport", "contract_input", "unknown":
 		return cause
@@ -16,11 +16,13 @@ func NormalizeCause(cause string) string {
 	}
 }
 
+// NormalizeEvidence 함수는 증거 목록을 정규화한다. 알 수 없는 Cause는 unknown으로
+// 바꾸고 Code와 Source의 자유 서식 텍스트는 민감정보를 가려서 새 슬라이스로 돌려준다.
 func NormalizeEvidence(items []Evidence) []Evidence {
 	out := make([]Evidence, 0, len(items))
 	for _, item := range items {
 		out = append(out, Evidence{
-			Cause:  NormalizeCause(item.Cause),
+			Cause:  normalizeCause(item.Cause),
 			Code:   policy.RedactFreeform(item.Code),
 			Source: policy.RedactFreeform(item.Source),
 		})
@@ -57,7 +59,7 @@ func dedupeTraceFindings(findings []Finding) []Finding {
 	normalized := make([]Finding, 0, len(findings))
 	keys := make([]traceclassification.FindingKey, 0, len(findings))
 	for _, finding := range findings {
-		finding.FailureCause = NormalizeCause(finding.FailureCause)
+		finding.FailureCause = normalizeCause(finding.FailureCause)
 		finding.FailureCauseEvidence = NormalizeEvidence(finding.FailureCauseEvidence)
 		keys = append(keys, traceclassification.FindingKey{
 			Index: len(normalized), FailureClass: finding.FailureClass, FailureCause: finding.FailureCause,

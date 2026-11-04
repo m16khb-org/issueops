@@ -1,3 +1,7 @@
+// Package remotecmd implements the `issueops remote` CLI group: it parses flags,
+// routes subcommands (score, create-issue, create-pr, sync-*, merge-pr, comment,
+// label, ...) and renders results. Provider and state effects are injected through
+// Deps and RemoteDeps by the composition root.
 package remotecmd
 
 import (
@@ -18,6 +22,9 @@ import (
 	"issueops/internal/domain/issueopsremote"
 )
 
+// Deps carries the per-invocation printing, verification, and publication hooks
+// the remote subcommands call. Run falls back to the Command's own process
+// ancestry observer when ObserveProcessAncestry is nil.
 type Deps struct {
 	PrintJSON              func(any) error
 	PrintResult            func(issueopscontract.Record, bool, error) error
@@ -33,6 +40,10 @@ func (command Command) printRemoteUsage() {
 	fmt.Println(strings.TrimRight(command.Usage, "\n"))
 }
 
+// Run dispatches `issueops remote` args to a subcommand. Empty args or
+// --help/-h/help print the usage and return nil, and the legacy `remote-score`
+// spelling is treated as `score`. Unknown subcommands return an error that names
+// the closest known ones.
 func (command Command) Run(args []string, deps Deps) error {
 	if deps.ObserveProcessAncestry == nil {
 		deps.ObserveProcessAncestry = command.Operations.ObserveNativeProcessAncestry

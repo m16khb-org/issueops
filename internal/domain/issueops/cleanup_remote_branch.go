@@ -7,6 +7,11 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
+// CleanupRemoteBranchObservation supplies the provider and git facts for
+// remote branch cleanup: the merge verification of the artifact, any
+// superseding artifact, the identity check, the remote branch OID, and
+// whether the tip reached the base branch. Each read error stays distinct
+// from an absent value.
 type CleanupRemoteBranchObservation struct {
 	MergeConfigured        bool
 	Head                   model.CleanupRemoteBranchArtifactHead
@@ -21,6 +26,9 @@ type CleanupRemoteBranchObservation struct {
 	TipSupersededBy        string
 }
 
+// CleanupRemoteBranchTargets builds the local part of the remote-branch
+// inventory from record: the branch (the workspace branch wins) and the
+// remote artifact URL. Remote observations are filled in by the caller.
 func CleanupRemoteBranchTargets(record model.Record) model.CleanupRemoteBranchInventory {
 	inventory := model.CleanupRemoteBranchInventory{ID: record.ID, Repo: record.Repo, Branch: strings.TrimSpace(record.Branch)}
 	if record.Execution != nil {
@@ -34,13 +42,21 @@ func CleanupRemoteBranchTargets(record model.Record) model.CleanupRemoteBranchIn
 	return inventory
 }
 
-// A squash-merged head is safe even when Git cannot prove ancestry. Ancestry
-// and a verified superseding artifact are additional paths, not replacements.
+// CleanupRemoteBranchNeedsTipEvidence reports whether a present remote branch
+// needs extra proof that its tip was merged. A squash-merged head is safe
+// even when Git cannot prove ancestry, so tip evidence is needed only when
+// the merged head OID does not equal the remote tip. Ancestry and a verified
+// superseding artifact are additional paths, not replacements.
 func CleanupRemoteBranchNeedsTipEvidence(facts CleanupRemoteBranchObservation) bool {
 	return facts.RemoteError == nil && facts.RemoteOID != "" &&
 		!(facts.MergeConfigured && facts.MergeError == nil && strings.TrimSpace(facts.Head.HeadRefOID) != "" && strings.EqualFold(strings.TrimSpace(facts.Head.HeadRefOID), facts.RemoteOID))
 }
 
+// BuildCleanupRemoteBranchPreview evaluates every gate for deleting the
+// remote branch: record state, closed child tasks, artifact merge and head
+// match, remote identity, branch readability, and tip evidence. It returns
+// the inventory with remote observations filled in and a result whose Missing
+// lists the failed gates.
 func BuildCleanupRemoteBranchPreview(record model.Record, req model.CleanupRemoteBranchRequest, inventory model.CleanupRemoteBranchInventory, facts CleanupRemoteBranchObservation) (model.CleanupRemoteBranchInventory, model.CleanupRemoteBranchResult) {
 	result := model.CleanupRemoteBranchResult{OK: true, ID: record.ID, Preview: !req.Apply, Branch: inventory.Branch, Missing: []string{}}
 	missing := cleanupRemoteBranchRecordMissing([]string{}, record, inventory)
@@ -132,6 +148,9 @@ func cleanupRemoteBranchTipMissing(missing []string, result *model.CleanupRemote
 	return missing
 }
 
+// ValidateCleanupRemoteBranchApply requires --confirm and a request
+// fingerprint equal to the current preview fingerprint, so an apply cannot
+// run on stale preview data.
 func ValidateCleanupRemoteBranchApply(req model.CleanupRemoteBranchRequest, fingerprint string) error {
 	if !req.Confirm {
 		return fmt.Errorf("cleanup remote-branch --apply requires --confirm")

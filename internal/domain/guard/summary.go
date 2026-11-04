@@ -5,7 +5,7 @@ import (
 	guardcontract "issueops/internal/contract/guard"
 )
 
-func DedupeFindings(findings []guardcontract.Finding) []guardcontract.Finding {
+func dedupeFindings(findings []guardcontract.Finding) []guardcontract.Finding {
 	seen := map[string]bool{}
 	out := []guardcontract.Finding{}
 	for _, finding := range findings {
@@ -19,7 +19,7 @@ func DedupeFindings(findings []guardcontract.Finding) []guardcontract.Finding {
 	return out
 }
 
-func SeverityRank(severity string) int {
+func severityRank(severity string) int {
 	switch severity {
 	case "block":
 		return 0

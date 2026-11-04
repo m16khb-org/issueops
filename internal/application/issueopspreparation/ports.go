@@ -8,6 +8,9 @@ import (
 	preparationcontract "issueops/internal/contract/issueopspreparation"
 )
 
+// Repository is the storage port of the preparation use case: it loads the
+// cycle snapshot, guards workspace root and actor uniqueness, and commits the
+// prepared execution.
 type Repository interface {
 	Load(context.Context, string) (preparationcontract.Snapshot, error)
 	EnsureRootUnclaimed(context.Context, string, string) error
@@ -17,18 +20,21 @@ type Repository interface {
 	CommitDirect(context.Context, DirectCommit) (preparationcontract.Result, error)
 }
 
-type Clock interface{ Now() time.Time }
+type clock interface{ Now() time.Time }
 
-type DirectWorkspace interface {
+type directWorkspace interface {
 	ProbeAccess(context.Context, preparationcontract.WorkspaceRequest, string) (preparationcontract.AccessResult, error)
 	Prepare(context.Context, preparationcontract.WorkspaceRequest) (preparationcontract.WorkspaceReceipt, error)
 }
 
-type PreparationEvidence interface {
+type preparationEvidence interface {
 	Workspace(preparationcontract.Snapshot, bool) (preparationcontract.WorkspaceRequest, error)
 	MaterializeDirect(context.Context, preparationcontract.Snapshot, preparationcontract.WorkspaceReceipt) error
 }
 
+// DirectCommit carries everything CommitDirect persists for a confirmed
+// preparation: the snapshot it was derived from, the command, the provisioned
+// workspace, the artifact directory, and the link and claim timestamps.
 type DirectCommit struct {
 	Snapshot    preparationcontract.Snapshot
 	Command     preparationcontract.Command

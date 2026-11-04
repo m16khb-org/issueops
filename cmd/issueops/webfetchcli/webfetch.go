@@ -1,3 +1,5 @@
+// Package webfetchcli implements the `issueops web-fetch` subcommands (fetch
+// and benchmark) as an inbound CLI adapter over injected fetch operations.
 package webfetchcli
 
 import (
@@ -17,6 +19,8 @@ import (
 	webfetchcontract "issueops/internal/contract/webfetch"
 )
 
+// Deps injects the fetch and benchmark operations plus the output writer. A
+// nil Stdout discards output.
 type Deps struct {
 	Stdout                io.Writer
 	DeterministicFixtures func() []webfetchcontract.BenchmarkFixture
@@ -24,6 +28,8 @@ type Deps struct {
 	RunBenchmark          func(context.Context, webfetchcontract.BenchmarkRequest) (webfetchcontract.BenchmarkResult, error)
 }
 
+// RunWithDeps executes `issueops web-fetch` with deps. Help arguments print
+// usage; an unknown subcommand returns an error.
 func RunWithDeps(args []string, deps Deps) error {
 	if deps.Stdout == nil {
 		deps.Stdout = io.Discard

@@ -80,7 +80,7 @@ func TestValidateFormatReportsGofmtToolFailure(t *testing.T) {
 		ListTrackedGoFiles: func(context.Context, string) ([]string, error) { return []string{"a.go"}, nil },
 		ListUnformatted:    func(context.Context, string, []string) ([]string, error) { return nil, errors.New("gofmt crashed") },
 	})
-	if step.OK || step.Command != FormatCommand || !strings.Contains(step.Error, "gofmt -l: gofmt crashed") {
+	if step.OK || step.Command != formatCommand || !strings.Contains(step.Error, "gofmt -l: gofmt crashed") {
 		t.Fatalf("step = %+v", step)
 	}
 }

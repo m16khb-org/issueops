@@ -1,5 +1,7 @@
 package selfaugment
 
+// HistoryResult 타입은 저장된 자기 검증 요약 체크포인트 이력 조회 결과이다.
+// 읽은 항목, 읽지 못해 건너뛴 키, 보존 정책 평가 결과를 담는다.
 type HistoryResult struct {
 	OK           bool              `json:"ok"`
 	StateDir     string            `json:"state_dir"`
@@ -13,6 +15,8 @@ type HistoryResult struct {
 	Warnings     []string          `json:"warnings"`
 }
 
+// HistoryRetention 타입은 이력 체크포인트 보존 한도 평가 결과이다.
+// 보존할 키와 삭제 후보 키, 실제 삭제된 키, 정리 요청/확인 여부를 담는다.
 type HistoryRetention struct {
 	Enabled        bool     `json:"enabled"`
 	Limit          int      `json:"limit"`
@@ -26,12 +30,15 @@ type HistoryRetention struct {
 	Recommendation string   `json:"recommendation"`
 }
 
+// HistoryRetentionOptions 타입은 이력 보존 평가 옵션이다.
+// Limit은 남길 체크포인트 수, PruneRequested는 정리 요청 여부, Confirm은 실제 삭제 확인 여부이다.
 type HistoryRetentionOptions struct {
 	Limit          int
 	PruneRequested bool
 	Confirm        bool
 }
 
+// HistoryEntry 타입은 이력 조회에서 읽은 체크포인트 하나의 요약 행이다.
 type HistoryEntry struct {
 	Key          string     `json:"key"`
 	UpdatedAt    string     `json:"updated_at"`
@@ -48,6 +55,7 @@ type HistoryEntry struct {
 	SlowestSteps []SlowStep `json:"slowest_steps"`
 }
 
+// HistorySkipped 타입은 이력 조회 중 읽지 못해 건너뛴 체크포인트 키와 그 사유이다.
 type HistorySkipped struct {
 	Key    string `json:"key"`
 	Reason string `json:"reason"`

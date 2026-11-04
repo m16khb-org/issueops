@@ -12,14 +12,16 @@ import (
 	leasedomain "issueops/internal/domain/issueopslease"
 )
 
-type ReleaseHandler struct{ service *leaseapp.ReleaseService }
+type releaseHandler struct{ service *leaseapp.ReleaseService }
 
+// NewReleaseHandler adapts service to an execution release handler. The
+// handler fails with ErrReleaseHandlerUnavailable when service is nil.
 func NewReleaseHandler(service *leaseapp.ReleaseService) issueopscontract.ExecutionReleaseHandler {
-	handler := ReleaseHandler{service: service}
+	handler := releaseHandler{service: service}
 	return handler.Handle
 }
 
-func (h ReleaseHandler) Handle(ctx context.Context, _ string, request issueopscontract.ExecutionReleaseRequest) (issueopscontract.ExecutionResult, error) {
+func (h releaseHandler) Handle(ctx context.Context, _ string, request issueopscontract.ExecutionReleaseRequest) (issueopscontract.ExecutionResult, error) {
 	if h.service == nil {
 		return issueopscontract.ExecutionResult{ID: request.ID}, issueopscontract.ErrReleaseHandlerUnavailable
 	}

@@ -98,7 +98,7 @@ func TestReviseRejectsInvalidInputBeforeTouchingTheFile(t *testing.T) {
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			fake := &failingRevision{readErr: errEffect}
-			_, err := Revise(tc.request, "/repo", ".issueops/TESTING.md", "/repo/.issueops/TESTING.md", fake)
+			_, err := revise(tc.request, "/repo", ".issueops/TESTING.md", "/repo/.issueops/TESTING.md", fake)
 			if err == nil || !strings.Contains(err.Error(), tc.want) || errors.Is(err, errEffect) {
 				t.Fatalf("err=%v, want validation error %q before any read", err, tc.want)
 			}
@@ -108,16 +108,16 @@ func TestReviseRejectsInvalidInputBeforeTouchingTheFile(t *testing.T) {
 
 func TestRevisePropagatesReadAndWriteFailures(t *testing.T) {
 	request := projectdocscontract.ReviseRequest{Content: "# Doc", Summary: "why", Confirm: true}
-	if _, err := Revise(request, "/repo", ".issueops/TESTING.md", "/p", &failingRevision{readErr: errEffect}); !errors.Is(err, errEffect) {
+	if _, err := revise(request, "/repo", ".issueops/TESTING.md", "/p", &failingRevision{readErr: errEffect}); !errors.Is(err, errEffect) {
 		t.Fatalf("read err=%v", err)
 	}
 	fake := &failingRevision{writeErr: errEffect}
-	if _, err := Revise(request, "/repo", ".issueops/TESTING.md", "/p", fake); !errors.Is(err, errEffect) {
+	if _, err := revise(request, "/repo", ".issueops/TESTING.md", "/p", fake); !errors.Is(err, errEffect) {
 		t.Fatalf("write err=%v", err)
 	}
 	// A dry run must never reach the failing Write.
 	request.Confirm = false
-	if result, err := Revise(request, "/repo", ".issueops/TESTING.md", "/p", fake); err != nil || !result.DryRun {
+	if result, err := revise(request, "/repo", ".issueops/TESTING.md", "/p", fake); err != nil || !result.DryRun {
 		t.Fatalf("dry run result=%+v err=%v", result, err)
 	}
 }
@@ -167,7 +167,7 @@ func TestAppendReportsOverviewLinkFailureAsWarningAfterWritingRecord(t *testing.
 
 func TestRouteWarnsWhenRecordsCannotBeListedOrRead(t *testing.T) {
 	dir := &failingRoute{dirErr: fs.ErrPermission, routeEffects: routeEffects{existing: map[string]bool{"/repo/.issueops": true}}}
-	result := Route("/repo", "docker", dir)
+	result := route("/repo", "docker", dir)
 	// "docker" routes the default docs, so CONVENTIONS and TESTING module dirs are
 	// listed too. Every directory that cannot be listed is reported exactly once,
 	// including cautions/, which is both a record and a module directory.
@@ -189,12 +189,12 @@ func TestRouteWarnsWhenRecordsCannotBeListedOrRead(t *testing.T) {
 	// Sanity: the same record is routed when it can be read, so the absence
 	// below is caused by the read failure.
 	healthy := &failingRoute{routeEffects: file.routeEffects}
-	if routed := Route("/repo", "docker image build", healthy); !slices.ContainsFunc(routed.Docs, func(d projectdocscontract.ProjectDocRouteEntry) bool {
+	if routed := route("/repo", "docker image build", healthy); !slices.ContainsFunc(routed.Docs, func(d projectdocscontract.ProjectDocRouteEntry) bool {
 		return strings.Contains(d.RelPath, "2026-09-01-docker")
 	}) {
 		t.Fatalf("fixture record must match the task when readable: %+v", routed.Docs)
 	}
-	result = Route("/repo", "docker image build", file)
+	result = route("/repo", "docker image build", file)
 	if warnings := readWarnings(result.Warnings); len(warnings) != 1 || warnings[0] != "could not read record .issueops/adr/2026-09-01-docker.md: "+errEffect.Error() {
 		t.Fatalf("warnings=%v", result.Warnings)
 	}

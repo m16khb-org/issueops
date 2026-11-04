@@ -12,22 +12,27 @@ import (
 	"issueops/internal/port"
 )
 
+// CompletionProvider 타입은 완료 반영에 쓰는 provider 포트로, 이슈 본문 구역을 갱신하고 이슈를 닫는다.
 type CompletionProvider interface {
 	UpdateIssueBodySection(context.Context, port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error)
 	CloseIssue(context.Context, port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error)
 }
-type CompletionProviderResolver func(string) (CompletionProvider, error)
+type completionProviderResolver func(string) (CompletionProvider, error)
+
+// MergeVerifier 타입은 기록된 원격 아티팩트가 병합되었는지 확인하는 함수다.
 type MergeVerifier func(model.RemoteArtifactVerification) error
 
+// RemoteCompletionService 타입은 완료한 사이클의 결과를 이슈 본문에 반영하고 이슈를 닫은 뒤 영수증을 기록에 남긴다.
 type RemoteCompletionService struct {
-	records   IssueRecordReader
+	records   issueRecordReader
 	materials TrackedMaterials
 	receipts  CompletionReceipts
-	resolve   CompletionProviderResolver
+	resolve   completionProviderResolver
 	verify    MergeVerifier
 }
 
-func NewRemoteCompletionService(records IssueRecordReader, materials TrackedMaterials, receipts CompletionReceipts, resolve CompletionProviderResolver, verify MergeVerifier) *RemoteCompletionService {
+// NewRemoteCompletionService 함수는 기록 조회, 추적 자료, 영수증, provider 해석 함수, 병합 검증기를 묶어 서비스를 만든다.
+func NewRemoteCompletionService(records issueRecordReader, materials TrackedMaterials, receipts CompletionReceipts, resolve completionProviderResolver, verify MergeVerifier) *RemoteCompletionService {
 	return &RemoteCompletionService{records: records, materials: materials, receipts: receipts, resolve: resolve, verify: verify}
 }
 
@@ -59,6 +64,7 @@ func (s *RemoteCompletionService) prepare(ctx context.Context, id, providerOverr
 	return provider, nil
 }
 
+// Reflect 메서드는 완료 보고 본문을 가독성 검사해 이슈 본문의 완료 구역에 반영한다. confirm이면 본문이 필요하고 가독성 위반은 거부하며, 성공하면 반영 영수증을 기록한다.
 func (s *RemoteCompletionService) Reflect(ctx context.Context, id, providerOverride, resultBody string, confirm bool) (model.Record, port.IssueProviderUpdateIssueBodySectionResult, reportcontract.Report, error) {
 	var result port.IssueProviderUpdateIssueBodySectionResult
 	var report reportcontract.Report
@@ -78,8 +84,8 @@ func (s *RemoteCompletionService) Reflect(ctx context.Context, id, providerOverr
 		return model.Record{}, result, report, err
 	}
 	report = artifactreadability.Check(artifactreadability.Input{Kind: artifactreadability.KindCompletion, Body: resultBody})
-	if s.materials.Missing(record) {
-		report.Warnings = append(report.Warnings, reportcontract.Finding{Code: "tracked_materials_missing", Message: TrackedMaterialsMissingWarning})
+	if s.materials.missing(record) {
+		report.Warnings = append(report.Warnings, reportcontract.Finding{Code: "tracked_materials_missing", Message: trackedMaterialsMissingWarning})
 	}
 	if confirm && !report.OK {
 		return model.Record{}, result, report, artifactreadability.RefusalError(report)
@@ -93,10 +99,11 @@ func (s *RemoteCompletionService) Reflect(ctx context.Context, id, providerOverr
 	if !confirm || !result.Updated {
 		return record, result, report, nil
 	}
-	record, err = s.receipts.Reflected(ctx, id)
+	record, err = s.receipts.reflected(ctx, id)
 	return record, result, report, err
 }
 
+// Close 메서드는 완료한 사이클의 이슈를 닫는다. 이미 닫은 영수증이 있으면 미리보기는 provider를 부르지 않고, confirm이 성공하면 종료 영수증을 기록한다.
 func (s *RemoteCompletionService) Close(ctx context.Context, id, providerOverride string, confirm bool) (model.Record, port.IssueProviderCloseIssueResult, error) {
 	var result port.IssueProviderCloseIssueResult
 	provider, err := s.prepare(ctx, id, providerOverride)
@@ -123,7 +130,7 @@ func (s *RemoteCompletionService) Close(ctx context.Context, id, providerOverrid
 	if !confirm || !result.Closed {
 		return record, result, nil
 	}
-	record, err = s.receipts.Closed(ctx, id)
+	record, err = s.receipts.closed(ctx, id)
 	return record, result, err
 }
 

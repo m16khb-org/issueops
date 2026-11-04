@@ -7,7 +7,7 @@ import (
 	"issueops/internal/domain/guardpattern"
 )
 
-func FileFindings(rel, content string, existingSymbols map[string][]string) []guardcontract.Finding {
+func fileFindings(rel, content string, existingSymbols map[string][]string) []guardcontract.Finding {
 	findings := []guardcontract.Finding{}
 	immutablePrefixBuilder := strings.Contains(content, guardpattern.ImmutablePrefixMarker)
 	lines := strings.Split(content, "\n")
@@ -23,17 +23,17 @@ func FileFindings(rel, content string, existingSymbols map[string][]string) []gu
 				Evidence: strings.TrimSpace(line),
 			})
 		}
-		if ExecutableTestSourcePath(rel) {
+		if executableTestSourcePath(rel) {
 			findings = append(findings, testLineFindings(rel, line, lineNo)...)
 		}
 		if m := guardpattern.NewSymbol().FindStringSubmatch(line); len(m) == 2 {
 			symbol := m[1]
-			if reuseFinding, ok := ReuseFinding(rel, lineNo, symbol, existingSymbols); ok {
+			if reuseFinding, ok := reuseFinding(rel, lineNo, symbol, existingSymbols); ok {
 				findings = append(findings, reuseFinding)
 			}
 		}
 	}
-	if TestPath(rel) && len(content) > 200_000 {
+	if testPath(rel) && len(content) > 200_000 {
 		findings = append(findings, guardcontract.Finding{Severity: "warn", Rule: "large-test-fixture", File: rel, Message: "Large test files or fixtures can hide weak assertions; prefer small named fixtures."})
 	}
 	return findings
@@ -49,7 +49,7 @@ func testLineFindings(rel, line string, lineNo int) []guardcontract.Finding {
 		findings = append(findings, guardcontract.Finding{Severity: "block", Rule: "sleep-in-test", File: rel, Line: lineNo, Message: "Tests must not depend on wall-clock sleep; use deterministic synchronization or fake clocks.", Evidence: strings.TrimSpace(line)})
 	}
 	for _, url := range guardpattern.ExternalURL().FindAllString(line, -1) {
-		if !AllowsFixtureURL(url) {
+		if !allowsFixtureURL(url) {
 			findings = append(findings, guardcontract.Finding{Severity: "block", Rule: "real-external-service-in-test", File: rel, Line: lineNo, Message: "Tests must not depend on real external services.", Evidence: url})
 		}
 	}

@@ -1,3 +1,5 @@
+// Package issueopsauthorization provides the filesystem-backed path comparison
+// used by IssueOps authorization decisions; it is an outbound adapter.
 package issueopsauthorization
 
 import (
@@ -5,8 +7,11 @@ import (
 	"strings"
 )
 
+// CanonicalPaths compares paths by their canonical filesystem identity.
 type CanonicalPaths struct{}
 
+// Same reports whether left and right resolve to the same absolute path after
+// symlink evaluation. It returns false if either path cannot be canonicalized.
 func (CanonicalPaths) Same(left, right string) bool {
 	left, err := canonicalPath(left)
 	if err != nil {

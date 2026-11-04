@@ -8,6 +8,13 @@ import (
 	issueopscontract "issueops/internal/contract/issueopsbenchmark"
 )
 
+// ScoreArtifact scores artifact against fixture on every benchmark dimension
+// using deterministic checks; routingComplete states whether the recorded
+// routing trace met the fixture's expectation. A passed check scores 100 and
+// a failed one 0 with its failure recorded; dimensions a fixture does not
+// exercise are marked not applicable and excluded from the average and
+// minimum. The score passes only with no critical or deterministic failures
+// and a minimum of 100.
 func ScoreArtifact(fixture issueopscontract.Fixture, artifact issueopscontract.Artifact, routingComplete bool) issueopscontract.Score {
 	checks := issueOpsBenchmarkChecks(fixture, artifact, routingComplete)
 
@@ -40,7 +47,7 @@ func ScoreArtifact(fixture issueopscontract.Fixture, artifact issueopscontract.A
 			Evidence:  evidence,
 		})
 	}
-	score.AverageScore, score.MinimumScore = SummarizeDimensionScores(score.DimensionScores)
+	score.AverageScore, score.MinimumScore = summarizeDimensionScores(score.DimensionScores)
 	score.CriticalFailures = append(score.CriticalFailures, detectIssueOpsCriticalFailures(fixture, artifact, routingComplete)...)
 	score.Passed = len(score.CriticalFailures) == 0 && len(score.DeterministicFailures) == 0 && score.MinimumScore >= 100.0
 	score.OK = score.Passed

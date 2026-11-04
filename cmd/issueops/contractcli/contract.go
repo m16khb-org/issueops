@@ -18,6 +18,8 @@ import (
 	verifydomain "issueops/internal/domain/selfverify"
 )
 
+// CompatibilityContract is the printed CLI/MCP compatibility contract: its name, version, and hash, the CLI
+// commands, MCP tool names, and required response fields it covers, and any warnings found while building it.
 type CompatibilityContract struct {
 	OK             bool                  `json:"ok"`
 	Name           string                `json:"name"`
@@ -31,6 +33,8 @@ type CompatibilityContract struct {
 	Verification   []string              `json:"verification"`
 }
 
+// Run dispatches `issueops contract` subcommands (schema, check, conformance) for args.
+// Help requests return flag.ErrHelp.
 func Run(args []string, commands []clicontract.Command, tools []map[string]any, conformance *Conformance) error {
 	if len(args) == 0 {
 		contractUsage()
@@ -100,6 +104,9 @@ func runContractCheck(args []string, commands []clicontract.Command, tools []map
 	return fmt.Errorf("contract check failed")
 }
 
+// BuildCompatibilityContract assembles the compatibility contract from the CLI commands and MCP tools,
+// lists tool names in sorted order, and records a warning (and clears OK) when a required MCP tool is
+// missing or the issueops_* tool surface is not exactly issueops_execution.
 func BuildCompatibilityContract(commands []clicontract.Command, tools []map[string]any) CompatibilityContract {
 	toolNames := []string{}
 	for _, tool := range tools {

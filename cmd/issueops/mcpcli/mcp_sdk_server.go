@@ -53,7 +53,7 @@ func sdkServerOptionsWithLogger(logger *slog.Logger) *mcp.ServerOptions {
 
 func sdkToolHandlerWithContext(
 	catalog mcpcontract.Catalog,
-	groupHandler func(context.Context, MCPToolCall) MCPToolOutcome,
+	groupHandler func(context.Context, MCPToolCall) mcpToolOutcome,
 	toolName string,
 ) mcp.ToolHandler {
 	// Only structured tools have an output schema; compile it on first use so a
@@ -262,7 +262,7 @@ func registerAllTools(server *mcp.Server, deps MCPDependencies, transport server
 		if annotations, ok := toolMap["annotations"].(*mcpcontract.ToolAnnotations); ok {
 			sdkTool.Annotations = sdkToolAnnotations(annotations)
 		}
-		handler := sdkToolHandlerWithContext(deps.Catalog, func(ctx context.Context, call MCPToolCall) MCPToolOutcome {
+		handler := sdkToolHandlerWithContext(deps.Catalog, func(ctx context.Context, call MCPToolCall) mcpToolOutcome {
 			return dispatchMCPToolCall(ctx, call, deps, transport)
 		}, name)
 		if transport == transportHTTP {
@@ -285,45 +285,46 @@ func sdkToolAnnotations(annotations *mcpcontract.ToolAnnotations) *mcp.ToolAnnot
 	return out
 }
 
-func resolveHandlerGroup(deps MCPDependencies, name string) func(context.Context, MCPToolCall) MCPToolOutcome {
+func resolveHandlerGroup(deps MCPDependencies, name string) func(context.Context, MCPToolCall) mcpToolOutcome {
 	switch deps.Catalog.Dispatch[name] {
 	case mcpcontract.DispatchAssistantWorker:
-		return func(ctx context.Context, call MCPToolCall) MCPToolOutcome {
+		return func(ctx context.Context, call MCPToolCall) mcpToolOutcome {
 			return handleAssistantWorkerMCPToolCall(ctx, call, deps)
 		}
 	case mcpcontract.DispatchGates:
-		return func(_ context.Context, call MCPToolCall) MCPToolOutcome {
+		return func(_ context.Context, call MCPToolCall) mcpToolOutcome {
 			return handleGatesMCPToolCall(call, deps.Gates)
 		}
 	case mcpcontract.DispatchChannel:
-		return func(ctx context.Context, call MCPToolCall) MCPToolOutcome {
+		return func(ctx context.Context, call MCPToolCall) mcpToolOutcome {
 			return handleChannelMCPToolCall(ctx, call, deps.Channel)
 		}
 	case mcpcontract.DispatchLoop:
-		return func(ctx context.Context, call MCPToolCall) MCPToolOutcome {
+		return func(ctx context.Context, call MCPToolCall) mcpToolOutcome {
 			return handleLoopMCPToolCall(ctx, call, deps.Loop)
 		}
 	case mcpcontract.DispatchProject:
-		return func(_ context.Context, call MCPToolCall) MCPToolOutcome { return handleProjectMCPToolCall(call, deps) }
+		return func(_ context.Context, call MCPToolCall) mcpToolOutcome { return handleProjectMCPToolCall(call, deps) }
 	case mcpcontract.DispatchPolicyState:
-		return func(ctx context.Context, call MCPToolCall) MCPToolOutcome {
+		return func(ctx context.Context, call MCPToolCall) mcpToolOutcome {
 			return handlePolicyStateMCPToolCall(ctx, call, deps)
 		}
 	case mcpcontract.DispatchSelfLoop:
-		return func(ctx context.Context, call MCPToolCall) MCPToolOutcome {
+		return func(ctx context.Context, call MCPToolCall) mcpToolOutcome {
 			return handleSelfLoopMCPToolCall(ctx, call, deps)
 		}
 	case mcpcontract.DispatchIssueOps:
-		return func(ctx context.Context, call MCPToolCall) MCPToolOutcome {
+		return func(ctx context.Context, call MCPToolCall) mcpToolOutcome {
 			return handleIssueOpsMCPToolCallWithContext(ctx, call, deps)
 		}
 	default:
-		return func(_ context.Context, call MCPToolCall) MCPToolOutcome {
-			return MCPToolOutcome{Handled: true, Err: newProtocolError(-32602, "Unknown tool", call.Name)}
+		return func(_ context.Context, call MCPToolCall) mcpToolOutcome {
+			return mcpToolOutcome{Handled: true, Err: newProtocolError(-32602, "Unknown tool", call.Name)}
 		}
 	}
 }
 
+// HandleResourceRead 함수는 resources 패키지의 리소스 읽기 결과를 호출하고, 읽기 오류를 JSON-RPC 프로토콜 오류로 바꿔 돌려준다.
 func HandleResourceRead(params json.RawMessage, config resources.Config) (any, *jsonrpc.Error) {
 	result, readErr := resources.HandleResourceRead(params, config)
 	if readErr != nil {

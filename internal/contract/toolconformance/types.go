@@ -7,6 +7,8 @@ import (
 	"issueops/internal/contract/failurecause"
 )
 
+// FixtureManifestVersion and ReportSchemaVersion are the supported schema versions of the fixture manifest
+// and of the benchmark report. The remaining constants are the Classification values a tool call can receive.
 const (
 	FixtureManifestVersion        = 1
 	ReportSchemaVersion           = 2
@@ -22,42 +24,63 @@ const (
 	EnumMismatch                  = "enum_mismatch"
 )
 
+// ToolDescriptor is a tool as advertised to the model: its name and JSON input schema.
 type ToolDescriptor struct {
 	Name        string
 	InputSchema map[string]any
 }
+
+// Diagnostic describes one mismatch between a tool call and its schema: the JSON path, a stable code, and
+// the expected and actual values.
 type Diagnostic struct {
 	Path     string `json:"path"`
 	Code     string `json:"code"`
 	Expected string `json:"expected"`
 	Actual   string `json:"actual"`
 }
+
+// CallObservation is what the harness saw of a model's tool call: the raw argument bytes and how many
+// calls were made.
 type CallObservation struct {
 	RawArguments []byte
 	CallCount    int
 }
+
+// Classification is the verdict category for one tool call, such as ExactValid or UnknownKey.
 type Classification string
+
+// CaseResult is the outcome of checking one call: its Classification, whether the arguments are valid for the
+// advertised and canonical schemas, and the Diagnostics explaining any mismatch.
 type CaseResult struct {
 	Classification  Classification `json:"classification"`
 	AdvertisedValid bool           `json:"advertised_valid"`
 	CanonicalValid  bool           `json:"canonical_valid"`
 	Diagnostics     []Diagnostic   `json:"diagnostics"`
 }
+
+// BaselineCase is a fixed payload with the Classification it must produce, used to verify the classifier
+// itself before judging model output.
 type BaselineCase struct {
 	FixtureID              string         `json:"fixture_id"`
 	PayloadClass           string         `json:"payload_class"`
 	ExpectedClassification Classification `json:"expected_classification"`
 	Arguments              map[string]any `json:"arguments"`
 }
+
+// GateDecision is the benchmark's recommendation on whether schema hardening is warranted.
 type GateDecision string
 
+// EpisodeStatus says whether a benchmark episode ran to completion.
 type EpisodeStatus string
 
+// EpisodeCompleted and EpisodeIncomplete are the valid EpisodeStatus values.
 const (
 	EpisodeCompleted  EpisodeStatus = "completed"
 	EpisodeIncomplete EpisodeStatus = "incomplete"
 )
 
+// GateBaselinePassed and the following constants are the valid GateDecision values, from a passing
+// baseline through inconclusive or deferred outcomes to authorizing hardening.
 const (
 	GateBaselinePassed          GateDecision = "baseline_passed"
 	GateInconclusive            GateDecision = "inconclusive"
@@ -67,6 +90,8 @@ const (
 	GateUnreproducedObservation GateDecision = "unreproduced_observation"
 )
 
+// EpisodeReport records one live episode for a fixture: host and model identity, hook observations,
+// call count, the raw-argument hash, Classification, Diagnostics and the attributed failure cause.
 type EpisodeReport struct {
 	Status               EpisodeStatus           `json:"status"`
 	Host                 string                  `json:"host"`
@@ -100,6 +125,7 @@ type EpisodeReport struct {
 // HostStatus is the benchmark verdict for one host.
 type HostStatus string
 
+// HostStatusSupported and the following constants are the valid HostStatus values.
 const (
 	HostStatusSupported   HostStatus = "supported"
 	HostStatusUnsupported HostStatus = "unsupported"
@@ -107,6 +133,8 @@ const (
 	HostStatusNotRun      HostStatus = "not-run"
 )
 
+// HostEvidence lists what was established for a host: installation, preflight, mock-extension
+// verification and whether a live run was attempted and verified.
 type HostEvidence struct {
 	Installed             bool   `json:"installed"`
 	PreflightReady        bool   `json:"preflight_ready"`
@@ -116,6 +144,8 @@ type HostEvidence struct {
 	StatusReason          string `json:"status_reason,omitempty"`
 }
 
+// HostReport is the benchmark result for one host: its HostStatus, HostEvidence, model identity, attempt
+// counts and episode reports.
 type HostReport struct {
 	Status            HostStatus      `json:"status"`
 	Evidence          HostEvidence    `json:"evidence"`
@@ -128,6 +158,8 @@ type HostReport struct {
 	Cases             []EpisodeReport `json:"cases"`
 }
 
+// BenchmarkCounts aggregates episode outcomes across hosts, separating environment and transport failures
+// from model-attributable results counted in ModelDenominator.
 type BenchmarkCounts struct {
 	Attempts                 int `json:"attempts"`
 	Completed                int `json:"completed"`
@@ -139,6 +171,8 @@ type BenchmarkCounts struct {
 	SchemaDriftObservations  int `json:"schema_drift_observations"`
 }
 
+// GateReport is the GateDecision with the next reproduction target and the confirmed diagnostic signature
+// and its count, when any.
 type GateReport struct {
 	Decision               GateDecision `json:"decision"`
 	NextReproductionTarget string       `json:"next_reproduction_target,omitempty"`
@@ -146,12 +180,14 @@ type GateReport struct {
 	ConfirmedCount         int          `json:"confirmed_count,omitempty"`
 }
 
-type BenchmarkEvidence struct {
+type benchmarkEvidence struct {
 	ReportPath              string `json:"report_path,omitempty"`
 	CandidateRegressionPath string `json:"candidate_regression_path,omitempty"`
 	TrackedFixturePath      string `json:"tracked_fixture_path,omitempty"`
 }
 
+// BenchmarkReport is the top-level benchmark result: run identity, profile, aggregate counts, the gate
+// decision, per-host reports and warnings.
 type BenchmarkReport struct {
 	OK            bool              `json:"ok"`
 	SchemaVersion int               `json:"schema_version"`
@@ -163,9 +199,10 @@ type BenchmarkReport struct {
 	Gate          GateReport        `json:"gate"`
 	Hosts         []HostReport      `json:"hosts"`
 	Warnings      []string          `json:"warnings"`
-	Evidence      BenchmarkEvidence `json:"evidence"`
+	Evidence      benchmarkEvidence `json:"evidence"`
 }
 
+// ParseEpisodeStatus converts value to an EpisodeStatus, returning an error for an unknown status.
 func ParseEpisodeStatus(value string) (EpisodeStatus, error) {
 	switch EpisodeStatus(value) {
 	case EpisodeCompleted, EpisodeIncomplete:
@@ -175,6 +212,7 @@ func ParseEpisodeStatus(value string) (EpisodeStatus, error) {
 	}
 }
 
+// UnmarshalJSON decodes a JSON string into an EpisodeStatus and rejects unknown statuses.
 func (value *EpisodeStatus) UnmarshalJSON(data []byte) error {
 	var raw string
 	if err := json.Unmarshal(data, &raw); err != nil {
@@ -187,6 +225,8 @@ func (value *EpisodeStatus) UnmarshalJSON(data []byte) error {
 	*value = parsed
 	return nil
 }
+
+// ValidGateDecision reports whether value is a known GateDecision.
 func ValidGateDecision(value GateDecision) bool {
 	switch value {
 	case GateBaselinePassed, GateInconclusive, GateDeferHardening, GateNeedsReproduction, GateAuthorizeHardening, GateUnreproducedObservation:
@@ -195,6 +235,8 @@ func ValidGateDecision(value GateDecision) bool {
 		return false
 	}
 }
+
+// ParseClassification converts value to a Classification, returning an error for an unknown classification.
 func ParseClassification(value string) (Classification, error) {
 	switch value {
 	case ExactValid, ValidButSemanticallyDifferent, UnknownKey, CoercibleTypeDrift, NoncoercibleTypeDrift, InvalidJSON, NoCall, MultipleCalls, MissingRequired, EnumMismatch:
@@ -203,6 +245,8 @@ func ParseClassification(value string) (Classification, error) {
 		return "", fmt.Errorf("unknown classification %q", value)
 	}
 }
+
+// UnmarshalJSON decodes a JSON string into a Classification and rejects unknown values.
 func (value *Classification) UnmarshalJSON(data []byte) error {
 	var raw string
 	if err := json.Unmarshal(data, &raw); err != nil {
@@ -215,6 +259,8 @@ func (value *Classification) UnmarshalJSON(data []byte) error {
 	*value = parsed
 	return nil
 }
+
+// UnmarshalJSON decodes a JSON string into a GateDecision and rejects unknown decisions.
 func (value *GateDecision) UnmarshalJSON(data []byte) error {
 	var raw string
 	if err := json.Unmarshal(data, &raw); err != nil {
@@ -227,6 +273,8 @@ func (value *GateDecision) UnmarshalJSON(data []byte) error {
 	*value = parsed
 	return nil
 }
+
+// ParseGateDecision converts value to a GateDecision, returning an error for an unknown decision.
 func ParseGateDecision(value string) (GateDecision, error) {
 	decision := GateDecision(value)
 	if !ValidGateDecision(decision) {
@@ -235,6 +283,8 @@ func ParseGateDecision(value string) (GateDecision, error) {
 	return decision, nil
 }
 
+// Fixture ties a probe tool to the source tool and schema hash it derives from, with the arguments a
+// conforming call is expected to produce.
 type Fixture struct {
 	ID                string         `json:"id"`
 	ProbeTool         string         `json:"probe_tool"`
@@ -243,6 +293,8 @@ type Fixture struct {
 	ExpectedArguments map[string]any `json:"expected_arguments"`
 }
 
+// RegressionFixture is a confirmed, replayable failure: the canonical arguments and the classification,
+// diagnostics, handler call count and unchanged-state expectation that replaying them must reproduce.
 type RegressionFixture struct {
 	SchemaVersion               int            `json:"schema_version"`
 	FixtureID                   string         `json:"fixture_id"`
@@ -263,6 +315,8 @@ type RegressionFixture struct {
 	ExpectedStateUnchanged      bool           `json:"expected_state_unchanged"`
 }
 
+// ReplayResult is the outcome of replaying a RegressionFixture: classification, diagnostics, handler call
+// count, final result and the state hashes before and after the replay.
 type ReplayResult struct {
 	OK                  bool           `json:"ok"`
 	Classification      Classification `json:"classification"`

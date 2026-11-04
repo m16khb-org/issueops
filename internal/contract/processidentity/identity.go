@@ -1,3 +1,4 @@
+// Package processidentity holds the DTO that identifies one process lifetime.
 package processidentity
 
 // Identity is the OS observation that binds a recorded PID to one process

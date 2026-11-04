@@ -8,6 +8,9 @@ import (
 	"issueops/internal/domain/policy"
 )
 
+// ValidateCompatibilityReview validates a compatibility review request and builds the
+// record stamped with reviewedAt. Backward compatibility, side effects, verification,
+// and a rollback plan are required, and an approved review must list no blockers.
 func ValidateCompatibilityReview(req reviewcontract.CompatibilityReviewRequest, reviewedAt string) (reviewcontract.CompatibilityReview, error) {
 	backwardCompatibility, err := requiredReviewValues("backward_compatibility", req.BackwardCompatibility)
 	if err != nil {

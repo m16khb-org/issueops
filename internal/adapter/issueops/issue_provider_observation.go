@@ -12,7 +12,7 @@ import (
 // 순환을 끊는 경로다(#300).
 //
 // 관측은 여기(adapter)가, 판별 규칙은 domain이 소유한다.
-func InferProviderFromRepoRemotes(repo string) (string, error) {
+func inferProviderFromRepoRemotes(repo string) (string, error) {
 	code, out := defaultExecutionSyncBaseGit(context.Background(), repo, "remote", "-v")
 	if code != 0 {
 		return "", fmt.Errorf("cannot determine provider: repository remotes could not be observed; pass --provider github|gitlab")
@@ -27,7 +27,7 @@ func InferProviderFromRepoRemotes(repo string) (string, error) {
 	return issueopsremote.ProviderFromRemoteURLs(urls)
 }
 
-func ResolveProviderProjectAuthority(repo, provider string) (string, error) {
+func resolveProviderProjectAuthority(repo, provider string) (string, error) {
 	code, out := defaultExecutionSyncBaseGit(context.Background(), repo, "remote", "get-url", "origin")
 	if code != 0 {
 		return "", fmt.Errorf("cannot determine project authority from origin remote")

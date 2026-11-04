@@ -17,7 +17,7 @@ var (
 	})
 )
 
-// LedgerFormatWarnings는 원장에 적었지만 파서가 읽지 못하는 게이트 속성을 짚는다. 이런 게이트는
+// LedgerFormatWarnings 함수는 원장에 적었지만 파서가 읽지 못하는 게이트 속성을 짚는다. 이런 게이트는
 // 체크박스가 [x]여도 CHECK가 없거나 EVIDENCE가 pending으로 읽혀 met이 되지 않는다. 경고는
 // 왜 그런지(어디에 적어야 읽히는지)를 말해, 결과만 보고 원인을 추측하지 않게 한다.
 func LedgerFormatWarnings(file string, ledger Ledger) []string {

@@ -1,3 +1,8 @@
+// Package codex is the Codex host adapter: it plans and applies the Codex
+// user-level install (skill links, ~/.codex config.toml MCP block, lifecycle
+// hooks) and reads the result back as native activation evidence. It lives in
+// the adapter layer and receives its filesystem and hook helpers through
+// Dependencies.
 package codex
 
 import (
@@ -6,14 +11,22 @@ import (
 	"issueops/internal/port"
 )
 
+// Installer is the Codex implementation of port.HostInstaller. It holds only
+// the injected Dependencies and no state of its own.
 type Installer struct{ deps Dependencies }
 
+// NewInstaller returns an Installer that performs its filesystem and hook work through deps.
 func NewInstaller(deps Dependencies) Installer { return Installer{deps: deps} }
 
 var _ port.HostInstaller = Installer{}
 
+// Name returns the host name "codex" that selects this installer.
 func (Installer) Name() string { return "codex" }
 
+// Install plans (and, unless req.DryRun, writes) the Codex user skill links,
+// the global config.toml MCP block, the lifecycle hooks, and the repository
+// templates under configs/codex. Per-step errors are collected into the
+// returned HostInstallResult rather than aborting at the first failure.
 func (installer Installer) Install(req port.NativeInstallRequest) (port.HostInstallResult, error) {
 	plan := installer.deps.NewInstallPlan("codex", req.DryRun)
 

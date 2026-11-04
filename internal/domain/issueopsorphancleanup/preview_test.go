@@ -76,7 +76,7 @@ func TestValidGitOIDAcceptsOnlyFullSHA1OrSHA256Hex(t *testing.T) {
 func TestInspectInventoryReadiesARecordlessMergedWorktree(t *testing.T) {
 	request := orphanRequest()
 	result := ResultForRequest(request)
-	InspectInventory(&result, request, orphanSnapshot())
+	inspectInventory(&result, request, orphanSnapshot())
 	Finish(&result)
 	if !result.Ready || len(result.Missing) != 0 {
 		t.Fatalf("clean orphan should be ready, missing=%v", result.Missing)
@@ -103,7 +103,7 @@ func TestInspectInventoryReportsEachUnmetRequirement(t *testing.T) {
 			request, snapshot := orphanRequest(), orphanSnapshot()
 			mutate(&snapshot)
 			result := ResultForRequest(request)
-			InspectInventory(&result, request, snapshot)
+			inspectInventory(&result, request, snapshot)
 			Finish(&result)
 			if result.Ready || !slices.Contains(result.Missing, want) {
 				t.Fatalf("missing = %v, want %s", result.Missing, want)

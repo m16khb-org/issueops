@@ -20,6 +20,9 @@ import (
 
 var dependencyWiring sync.Once
 
+// RunRootCommand wires the harness dependencies once and runs the root
+// issueops command with args, returning the process exit code. Usage for a help
+// request is written to stdout.
 func RunRootCommand(args []string) int {
 	wireDependencies()
 	if rootcmd.HelpRequested(args) {

@@ -135,10 +135,10 @@ func TestSuccessfulSignalValue(t *testing.T) {
 
 func TestBoundedEvidenceTruncatesWithoutAliasing(t *testing.T) {
 	in := []string{"a", "b", "c"}
-	if got := BoundedEvidence(in, 3); !reflect.DeepEqual(got, in) {
+	if got := boundedEvidence(in, 3); !reflect.DeepEqual(got, in) {
 		t.Fatalf("got=%v", got)
 	}
-	got := BoundedEvidence(in, 2)
+	got := boundedEvidence(in, 2)
 	got[0] = "x"
 	if !reflect.DeepEqual(got[1:], []string{"b"}) || in[0] != "a" {
 		t.Fatalf("got=%v in=%v", got, in)

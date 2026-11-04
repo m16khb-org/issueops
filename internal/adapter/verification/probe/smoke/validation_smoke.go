@@ -1,3 +1,5 @@
+// Package smoke is the self-verification probe that runs the built binary's
+// inspect and docs commands and validates their JSON output.
 package smoke
 
 import (
@@ -31,6 +33,9 @@ func rejectTruncatedCapture(step verifycontract.StepResult) (verifycontract.Step
 
 type validationCommandRunner func(dir, label string, timeout time.Duration, stdin, name string, args ...string) verifycontract.StepResult
 
+// ValidateInspect runs `binary inspect --json` in root and validates that the
+// output parses as inspect.Info and satisfies the smoke expectations. A
+// truncated capture fails explicitly before JSON parsing.
 func ValidateInspect(binary, root string) verifycontract.StepResult {
 	return validateInspectWithDeps(binary, root, runCommandStep)
 }
@@ -57,6 +62,9 @@ func validateInspectWithDeps(binary, root string, run validationCommandRunner) v
 	return step
 }
 
+// ValidateDocsIndex runs `binary docs --json` in root and validates that the
+// output parses as docs.IndexResult and satisfies the smoke expectations. A
+// truncated capture fails explicitly before JSON parsing.
 func ValidateDocsIndex(binary, root string) verifycontract.StepResult {
 	return validateDocsIndexWithDeps(binary, root, runCommandStep)
 }

@@ -12,6 +12,8 @@ import (
 	domain "issueops/internal/domain/selfaugment"
 )
 
+// SnapshotStore reads and writes self-verification summary snapshots through
+// injected state accessors.
 type SnapshotStore struct {
 	ReadState    func(string) (statecontract.Result, error)
 	NormalizeKey func(string) (string, error)
@@ -50,6 +52,8 @@ func validateSnapshotFailureCause(key string, snapshot contract.StateSnapshot) e
 	return nil
 }
 
+// NormalizeSnapshotFailureCause recomputes the failure cause, reason and evidence
+// in snapshot's summary from its failed-step count and evidence, in place.
 func NormalizeSnapshotFailureCause(snapshot *contract.StateSnapshot) {
 	classified := failurecause.Classify(snapshot.Summary.FailedSteps > 0, snapshot.Summary.FailureCauseEvidence)
 	snapshot.Summary.FailureCause = classified.Cause

@@ -9,6 +9,8 @@ import (
 	domain "issueops/internal/domain/selfaugment"
 )
 
+// SaveLessonDeps supplies the root, candidate selection, clock, encoding, state
+// writer and pruning that SaveLesson uses.
 type SaveLessonDeps struct {
 	IssueOpsRoot    func() string
 	SelectCandidate func() *model.Candidate
@@ -19,6 +21,11 @@ type SaveLessonDeps struct {
 	Prune           func(string, time.Duration, int, bool) (state.PruneResult, error)
 }
 
+// SaveLesson records a lesson about a self-augmentation candidate and checkpoints
+// it in the state store. The candidate is the request's, or the selected one when
+// the request names none. Pruning old lessons afterwards is best effort and its
+// error is ignored; encode and write failures are returned and recorded in the
+// result's StateCheckpoint.
 func SaveLesson(req model.LessonRequest, deps SaveLessonDeps) (model.LessonResult, error) {
 	root := "."
 	if deps.IssueOpsRoot != nil {

@@ -7,13 +7,14 @@ import (
 	projectdocdomain "issueops/internal/domain/projectdoc"
 )
 
+// RevisionEffects is the file and clock access a revision needs.
 type RevisionEffects interface {
 	Read(path string) (string, bool, error)
 	Write(path, content string) error
 	Now() time.Time
 }
 
-func Revise(request projectdocscontract.ReviseRequest, root, rel, path string, effects RevisionEffects) (projectdocscontract.ReviseResult, error) {
+func revise(request projectdocscontract.ReviseRequest, root, rel, path string, effects RevisionEffects) (projectdocscontract.ReviseResult, error) {
 	input := projectdocdomain.RevisionInput{
 		Content: request.Content, ExpectedSHA256: request.ExpectedSHA256, Summary: request.Summary,
 		Evidence: request.Evidence, Confirm: request.Confirm,

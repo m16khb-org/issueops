@@ -15,7 +15,7 @@ func (store Store) ReadSelected(ctx context.Context, stateRoot, id string) (issu
 		return issueopscontract.Record{OK: false}, err
 	}
 	invalid := issueopscontract.Record{ID: id, Invalid: true}
-	if _, err := NormalizeID(id); err != nil {
+	if _, err := normalizeID(id); err != nil {
 		return invalid, nil
 	}
 	record, err := store.Read(ctx, stateRoot, id)

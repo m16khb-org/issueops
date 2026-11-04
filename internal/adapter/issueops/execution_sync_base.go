@@ -68,7 +68,7 @@ type executionSyncBaseInventory struct {
 	BaseFetchOutput string `json:"-"`
 }
 
-// VerifiedSyncExecutionBase는 게이트 10종을 fail-closed로 평가하고, 모드별 절차를
+// VerifiedSyncExecutionBase 함수는 게이트 10종을 fail-closed로 평가하고, 모드별 절차를
 // 실행한다. preview는 워크트리를 오염시키지 않는 관측 전용이며(merge-tree는
 // ODB에만 객체를 쓴다), 변형 3모드는 활성 holder 또는 generation이 일치하는
 // released current completion의 권위를 요구한다. 조립된 actor verifier에

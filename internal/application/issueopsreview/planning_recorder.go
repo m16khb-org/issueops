@@ -41,16 +41,24 @@ func (s PlanningRecorder) touchWrite(root string, record model.Record) (model.Re
 	record.UpdatedAt = s.Store.Now()
 	return s.Store.Write(root, record)
 }
+
+// Intent records the intent contract on record id under the lifecycle lock.
 func (s PlanningRecorder) Intent(root, id string, req model.IntentRecordRequest) (model.Record, error) {
 	return s.record(root, id, func() (model.Record, error) {
 		return intentapp.RecordIntent(intentport.Store{Read: s.Store.Read, TouchWrite: s.touchWrite, Now: s.Store.Now}, root, id, req)
 	})
 }
+
+// PlanPrep records the plan-preparation evidence on record id under the lifecycle lock.
 func (s PlanningRecorder) PlanPrep(root, id string, req model.PlanPrepRequest) (model.Record, error) {
 	return s.record(root, id, func() (model.Record, error) {
 		return intentapp.RecordPlanPrep(intentport.Store{Read: s.Store.Read, TouchWrite: s.touchWrite, Now: s.Store.Now}, root, id, req)
 	})
 }
+
+// Architecture records the architecture review on record id under the lifecycle
+// lock. A missing-evidence failure is rewritten into an error that tells the
+// caller which verification flag to add.
 func (s PlanningRecorder) Architecture(root, id string, req reviewcontract.ArchitectureReviewRequest) (model.Record, error) {
 	return s.record(root, id, func() (model.Record, error) {
 		record, err := RecordArchitectureReview(port.ArchitectureReviewStore{Read: s.Store.Read, TouchWrite: s.touchWrite, Now: s.Store.Now, PlanReadiness: s.PlanReadiness, Document: s.ArchitectureDocument}, root, id, req)
@@ -60,11 +68,18 @@ func (s PlanningRecorder) Architecture(root, id string, req reviewcontract.Archi
 		return record, err
 	})
 }
+
+// Compatibility records the compatibility review on record id under the
+// lifecycle lock, advancing the phase to compatibility review when it is earlier.
 func (s PlanningRecorder) Compatibility(root, id string, req reviewcontract.CompatibilityReviewRequest) (model.Record, error) {
 	return s.record(root, id, func() (model.Record, error) {
 		return RecordCompatibilityReview(port.CompatibilityStore{Read: s.Store.Read, TouchWrite: s.touchWrite, Ready: s.CompatibilityReadiness, PhaseRank: s.PhaseRank}, root, id, req, s.Store.Now())
 	})
 }
+
+// DevilsAdvocate records a devil's advocate round on record id under the
+// lifecycle lock. When the revise round cap is reached the error explains how to
+// stop, reflect and regress, or to waive the round.
 func (s PlanningRecorder) DevilsAdvocate(root, id string, req reviewcontract.DevilsAdvocateReviewRequest) (model.Record, error) {
 	return s.record(root, id, func() (model.Record, error) {
 		record, err := RecordDevilsAdvocate(port.DevilsAdvocateStore{Read: s.Store.Read, TouchWrite: s.touchWrite, PlanDigest: s.PlanDigest}, root, id, req, s.Store.Now())
@@ -77,12 +92,15 @@ func (s PlanningRecorder) DevilsAdvocate(root, id string, req reviewcontract.Dev
 	})
 }
 
+// Regress moves record id back to an earlier planning phase for the given reason.
+// The reason is normalized before the lock is taken, and the regression runs
+// under the lifecycle lock.
 func (s PlanningRecorder) Regress(root, id, reason string) (model.Record, error) {
 	reason, err := domain.NormalizeRegressionReason(reason)
 	if err != nil {
 		return model.Record{OK: false}, err
 	}
 	return s.record(root, id, func() (model.Record, error) {
-		return Regress(port.RegressStore{Read: s.Store.Read, ActiveChildren: s.ActiveChildren, TouchWrite: s.touchWrite, Now: s.Store.Now}, root, id, reason)
+		return regress(port.RegressStore{Read: s.Store.Read, ActiveChildren: s.ActiveChildren, TouchWrite: s.touchWrite, Now: s.Store.Now}, root, id, reason)
 	})
 }

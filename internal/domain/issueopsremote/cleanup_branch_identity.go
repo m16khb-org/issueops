@@ -5,6 +5,7 @@ import (
 	"strings"
 )
 
+// CleanupBranchArtifactProject returns the canonical project key of the remote artifact url for provider, accepting pull_request and merge_request as aliases of kind. It errors when the URL does not identify one project.
 func CleanupBranchArtifactProject(url, provider, kind string) (string, error) {
 	provider = strings.ToLower(strings.TrimSpace(provider))
 	switch strings.ToLower(strings.TrimSpace(kind)) {
@@ -22,6 +23,7 @@ func CleanupBranchArtifactProject(url, provider, kind string) (string, error) {
 	return key, nil
 }
 
+// ValidateCleanupBranchOrigin requires the git origin remote to belong to the same project (artifactKey) as the remote artifact, so branch cleanup targets the artifact's own project.
 func ValidateCleanupBranchOrigin(artifactKey, origin, provider string) error {
 	originKey, err := ProjectKeyFromGitRemoteURL(strings.TrimSpace(origin), strings.ToLower(strings.TrimSpace(provider)))
 	if err != nil {

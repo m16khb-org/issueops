@@ -43,7 +43,7 @@ func TestFileBuildGenerationReadsVCSSettingsFromBuiltBinary(t *testing.T) {
 	bin := filepath.Join(t.TempDir(), "fixture")
 	run("go", "build", "-buildvcs=true", "-o", bin, ".")
 
-	got := FileBuildGeneration(bin)
+	got := fileBuildGeneration(bin)
 	if got.Revision != revision || got.Modified {
 		t.Fatalf("clean build generation = %+v, want revision %s unmodified", got, revision)
 	}
@@ -51,7 +51,7 @@ func TestFileBuildGenerationReadsVCSSettingsFromBuiltBinary(t *testing.T) {
 	write("main.go", "package main\n\nfunc main() { _ = 1 }\n")
 	dirty := filepath.Join(t.TempDir(), "dirty")
 	run("go", "build", "-buildvcs=true", "-o", dirty, ".")
-	if got := FileBuildGeneration(dirty); got.Revision != revision || !got.Modified {
+	if got := fileBuildGeneration(dirty); got.Revision != revision || !got.Modified {
 		t.Fatalf("dirty build generation = %+v", got)
 	}
 }

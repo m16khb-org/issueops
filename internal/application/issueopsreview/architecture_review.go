@@ -10,6 +10,9 @@ import (
 	reviewport "issueops/internal/port/issueopsreview"
 )
 
+// RecordArchitectureReview validates req, binds it to the digest of the current
+// architecture document and stores it on record id. It fails when the intent
+// contract is not yet recorded or the architecture document resolver is missing.
 func RecordArchitectureReview(store reviewport.ArchitectureReviewStore, stateRoot, id string, req reviewcontract.ArchitectureReviewRequest) (model.Record, error) {
 	review, err := reviewdomain.PrepareArchitectureReview(req)
 	if err != nil {

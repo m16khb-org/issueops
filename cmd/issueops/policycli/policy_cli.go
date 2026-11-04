@@ -10,6 +10,8 @@ import (
 	policydomain "issueops/internal/contract/policy"
 )
 
+// Run dispatches `issueops policy` to check, fake-run, run, or audit. A missing
+// subcommand is an error, and help prints the usage and returns flag.ErrHelp.
 func (command Command) Run(args []string) error {
 	if len(args) == 0 {
 		policyUsage()
@@ -19,11 +21,11 @@ func (command Command) Run(args []string) error {
 	case "check":
 		return command.Check(args[1:])
 	case "fake-run":
-		return command.FakeRun(args[1:])
+		return command.fakeRun(args[1:])
 	case "run":
-		return command.RunReadOnly(args[1:])
+		return command.runReadOnly(args[1:])
 	case "audit":
-		return command.AuditPolicy(args[1:])
+		return command.auditPolicy(args[1:])
 	case "-h", "--help", "help":
 		policyUsage()
 		return flag.ErrHelp
@@ -41,6 +43,8 @@ func policyUsage() {
 `)
 }
 
+// Check evaluates the argv command policy for `issueops policy check` and prints
+// the evaluation as JSON or text. It never executes the command.
 func (command Command) Check(args []string) error {
 	req, jsonOut, err := command.ParseFlags("policy check", args)
 	if err != nil {
@@ -54,7 +58,7 @@ func (command Command) Check(args []string) error {
 	return nil
 }
 
-func (command Command) FakeRun(args []string) error {
+func (command Command) fakeRun(args []string) error {
 	req, jsonOut, err := command.ParseFlags("policy fake-run", args)
 	if err != nil {
 		return err
@@ -88,7 +92,7 @@ func reportedIf(jsonOut bool, err error) error {
 	return err
 }
 
-func (command Command) RunReadOnly(args []string) error {
+func (command Command) runReadOnly(args []string) error {
 	req, jsonOut, readOnly, err := command.ParseRunFlags(args)
 	if err != nil {
 		return err
@@ -119,7 +123,7 @@ func (command Command) RunReadOnly(args []string) error {
 	return nil
 }
 
-func (command Command) AuditPolicy(args []string) error {
+func (command Command) auditPolicy(args []string) error {
 	req, jsonOut, err := command.ParseFlags("policy audit", args)
 	if err != nil {
 		return err

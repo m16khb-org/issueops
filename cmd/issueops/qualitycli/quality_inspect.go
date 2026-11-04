@@ -13,8 +13,12 @@ import (
 	quality "issueops/internal/domain/quality"
 )
 
+// ErrQualityGateBlocked is wrapped by the error `quality inspect` returns when
+// the quality gate status is block.
 var ErrQualityGateBlocked = errors.New("quality gate blocked")
 
+// Run dispatches `issueops quality` subcommands. Only inspect and help are
+// supported; empty args and unknown subcommands return an error.
 func Run(args []string, deps Deps) error {
 	if deps.Output == nil {
 		deps.Output = os.Stdout
@@ -33,6 +37,10 @@ func Run(args []string, deps Deps) error {
 	}
 }
 
+// RunInspect runs `quality inspect`: it inspects the repository (flag or
+// positional path, default Deps.Root), optionally saves the code-SNR baseline or
+// reports the trend against it, and prints JSON or text. It returns an
+// ErrQualityGateBlocked-wrapped error when the gate blocks.
 func RunInspect(args []string, deps Deps) error {
 	fs := flag.NewFlagSet("quality inspect", flag.ContinueOnError)
 	repo := fs.String("repo", deps.Root, "target repository path")

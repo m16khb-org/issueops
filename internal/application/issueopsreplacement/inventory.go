@@ -1,3 +1,5 @@
+// Package issueopsreplacement 패키지는 실행 lease 교체(preview, revoke, finalize)를
+// 담당하는 애플리케이션 서비스다. 작업공간과 프로세스 상태의 지문을 떠서 교체 대상이 바뀌지 않았는지 검증한다.
 package issueopsreplacement
 
 import (

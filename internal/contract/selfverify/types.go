@@ -1,5 +1,11 @@
+// Package selfverify holds the wire contract of the self-verification loop:
+// step results, progress events, goal scores, coverage claims, failure
+// clusters, improvement candidates, and LLM evaluation options.
 package selfverify
 
+// SelfVerificationContract identifies the versioned self-verification output
+// contract: its name, version, stable hash, required fields, goal names, and
+// coverage claims.
 type SelfVerificationContract struct {
 	Name           string   `json:"name"`
 	Version        int      `json:"version"`
@@ -9,6 +15,8 @@ type SelfVerificationContract struct {
 	CoverageClaims []string `json:"coverage_claims"`
 }
 
+// SelfVerificationGoalScore is the score of one goal: the percentage of its
+// labeled checks that passed, compared with TargetScore.
 type SelfVerificationGoalScore struct {
 	Name           string   `json:"name"`
 	KoreanName     string   `json:"korean_name"`
@@ -24,6 +32,8 @@ type SelfVerificationGoalScore struct {
 	NotRun bool `json:"not_run"`
 }
 
+// SelfVerificationCoverage reports whether the evidence labels backing one
+// coverage claim all executed and passed, and which labels are missing.
 type SelfVerificationCoverage struct {
 	Claim          string   `json:"claim"`
 	EvidenceLabels []string `json:"evidence_labels"`
@@ -33,18 +43,24 @@ type SelfVerificationCoverage struct {
 	NotRun bool `json:"not_run"`
 }
 
+// SelfVerificationFailureCluster groups failures of one step across iterations,
+// listing the seeds that failed it and how many there were.
 type SelfVerificationFailureCluster struct {
 	Step  string  `json:"step"`
 	Seeds []int64 `json:"seeds"`
 	Count int     `json:"count"`
 }
 
+// SelfVerificationGoalDefinition defines a goal by name, Korean display name,
+// and the step labels whose results score it.
 type SelfVerificationGoalDefinition struct {
 	Name       string
 	KoreanName string
 	Labels     []string
 }
 
+// SelfVerificationCoverageDefinition defines a coverage claim and the step
+// labels that must pass to support it.
 type SelfVerificationCoverageDefinition struct {
 	Claim  string
 	Labels []string

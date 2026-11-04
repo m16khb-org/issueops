@@ -1,3 +1,8 @@
+// Package gitlab is the outbound issue-provider adapter for GitLab. It drives
+// the `glab` CLI and the GitLab REST and GraphQL APIs (issues, merge requests,
+// work-item children, labels, assignees, milestones, merges) behind the
+// port.IssueProvider interfaces, returning dry-run previews unless the request
+// is confirmed.
 package gitlab
 
 import (
@@ -46,10 +51,15 @@ var (
 
 var glabCapabilityVersionPattern = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`(?:^|\s)v?(\d+)\.(\d+)\.(\d+)(?:\s|$)`) })
 
+// NewProvider returns the stateless GitLab Provider.
 func NewProvider() Provider { return Provider{} }
 
+// Name returns the provider identifier "gitlab".
 func (Provider) Name() string { return "gitlab" }
 
+// CreateIssue creates an issue with `glab issue create`. Without Confirm it
+// only returns a dry-run preview; a confirmed create needs an exact project
+// authority and fails with a not-invoked IssueProviderCreateError otherwise.
 func (Provider) CreateIssue(ctx context.Context, req port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
 	title := strings.TrimSpace(req.Title)
 	if title == "" {
@@ -85,6 +95,10 @@ func (Provider) CreateIssue(ctx context.Context, req port.IssueProviderCreateIss
 	return runGlabJSONContext(ctx, args, req.Repo)
 }
 
+// FindIssueCreateCandidates searches the project's issues (up to 100, any
+// scope) for descriptions containing req.Marker, so a caller can reconcile an
+// issue create whose outcome is unknown. Truncated reports that the search hit
+// the limit. ProjectAuthority must be "<host>/<project path>".
 func (Provider) FindIssueCreateCandidates(ctx context.Context, req port.IssueProviderFindIssueCreateCandidatesRequest) (port.IssueProviderFindIssueCreateCandidatesResult, error) {
 	const searchLimit = 100
 	authority := strings.TrimSpace(req.ProjectAuthority)
@@ -121,6 +135,11 @@ func (Provider) FindIssueCreateCandidates(ctx context.Context, req port.IssuePro
 	}, nil
 }
 
+// CreatePullRequest creates a merge request with `glab mr create` and verifies
+// the result by readback. Without Confirm it returns a dry-run preview. A
+// custom web authority needs a proven glab >= 1.82.0. After a confirmed create
+// a non-canonical URL or a failed readback is an error that asks for
+// reconciliation, not a retry.
 func (Provider) CreatePullRequest(ctx context.Context, req port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 	title := strings.TrimSpace(req.Title)
 	if title == "" {
@@ -296,6 +315,10 @@ func compareGitLabMergeRequestAuthority(req port.IssueProviderCreatePullRequestR
 	return nil
 }
 
+// ReconcilePullRequest lists at most two merge requests whose source branch is
+// req.HeadBranch in the exact project and returns them as candidates with a
+// description hash. AuthoritativeZero is set only when the response is an
+// authoritative empty array; a null or oversized response is an error.
 func (Provider) ReconcilePullRequest(ctx context.Context, req port.IssueProviderReconcilePullRequestRequest) (port.IssueProviderReconcilePullRequestResult, error) {
 	projectURL, err := gitLabProjectURL(req.ProjectKey)
 	if err != nil || projectURL == "" {

@@ -348,14 +348,14 @@ func TestRenderSectionRejectsUnknownKindBeforeRendering(t *testing.T) {
 }
 
 func TestRenderDevilsAdvocateSectionFallsBackToCurrentVerdictWhenNoRounds(t *testing.T) {
-	section := RenderDevilsAdvocateSection(SectionInput{Verdict: "stop", Findings: []string{" 범위 불명 ", "", "/Users/me/x 에서"}})
+	section := renderDevilsAdvocateSection(SectionInput{Verdict: "stop", Findings: []string{" 범위 불명 ", "", "/Users/me/x 에서"}})
 	if !strings.Contains(section, "계획 검토: 1차 중단(지적 3건)\n") {
 		t.Fatalf("flow line missing: %s", section)
 	}
 	if !strings.Contains(section, "중단 이유:\n- 범위 불명\n- [로컬 경로 생략] 에서\n"+devilsAdvocateEndMarker) {
 		t.Fatalf("stop reasons: %s", section)
 	}
-	revise := RenderDevilsAdvocateSection(SectionInput{Verdict: "revise", Findings: []string{"hidden finding"}})
+	revise := renderDevilsAdvocateSection(SectionInput{Verdict: "revise", Findings: []string{"hidden finding"}})
 	if strings.Contains(revise, "hidden finding") || !strings.Contains(revise, "1차 수정 요청(지적 1건)") {
 		t.Fatalf("non-stop verdict leaks findings or loses counts: %s", revise)
 	}
@@ -643,7 +643,7 @@ func TestPlanReviewRoundsKeepsStopsBeforeARegress(t *testing.T) {
 	if !slices.Equal(got, want) {
 		t.Fatalf("rounds = %+v", got)
 	}
-	if line := RenderDevilsAdvocateSection(SectionInput{Verdict: "pass", Rounds: got}); !strings.Contains(line, "계획 검토: 1차 중단 → 계획 수정 → 2차 통과(의견 2건)") {
+	if line := renderDevilsAdvocateSection(SectionInput{Verdict: "pass", Rounds: got}); !strings.Contains(line, "계획 검토: 1차 중단 → 계획 수정 → 2차 통과(의견 2건)") {
 		t.Fatalf("section = %q", line)
 	}
 }

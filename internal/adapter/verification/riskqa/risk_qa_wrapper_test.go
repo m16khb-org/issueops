@@ -45,7 +45,7 @@ func TestCommittedOnlyGoScopeSelectsRaceAndVet(t *testing.T) {
 	writeFileForWrapperTest(t, filepath.Join(root, "internal", "adapter", "scope.go"), "package adapter\n")
 	runRiskQATestCommand(t, root, "git", "add", ".")
 	runRiskQATestCommand(t, root, "git", "-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-qm", "Go change")
-	plan := PlanWithScope(root, "HEAD~1")
+	plan := planWithScope(root, "HEAD~1")
 	if plan.Tier != "elevated" || !sameStringSlice(plan.Commands, []string{"go test -race ./... -count=1", "go vet ./..."}) {
 		t.Fatalf("committed Go change must select race and vet: %+v", plan)
 	}
@@ -237,7 +237,7 @@ func TestScopedPlanUnionPreservesNULPathsAndRenameSources(t *testing.T) {
 	writeFileForWrapperTest(t, filepath.Join(root, "unstaged.txt"), "unstaged\n")
 	writeFileForWrapperTest(t, filepath.Join(root, untracked), "untracked\n")
 	runRiskQATestCommand(t, root, "git", "mv", "internal/new.txt", "internal/renamed.txt")
-	plan := PlanWithScope(root, "HEAD~1")
+	plan := planWithScope(root, "HEAD~1")
 	for _, name := range append(committed, "internal/old.go", "internal/new.txt", "internal/renamed.txt", "staged.txt", "unstaged.txt", untracked) {
 		if !containsString(plan.ChangedPaths, name) {
 			t.Errorf("lost exact path %q: %#v", name, plan.ChangedPaths)
@@ -255,18 +255,18 @@ func TestScopedPlanUnionPreservesNULPathsAndRenameSources(t *testing.T) {
 func TestScopedPlanEmptyAndInvalidRefs(t *testing.T) {
 	root := t.TempDir()
 	runRiskQATestCommand(t, root, "git", "init", "-q")
-	if plan := PlanWithScope(root, "HEAD"); plan.Scope == nil || plan.Scope.Error == "" {
+	if plan := planWithScope(root, "HEAD"); plan.Scope == nil || plan.Scope.Error == "" {
 		t.Fatalf("unborn scope accepted: %+v", plan)
 	}
 	runRiskQATestCommand(t, root, "git", "-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "--allow-empty", "-qm", "base")
-	plan := PlanWithScope(root, "HEAD")
+	plan := planWithScope(root, "HEAD")
 	if plan.Scope == nil || plan.Scope.Error != "" || len(plan.Commands) != 0 || len(plan.ChangedPaths) != 0 || plan.Scope.BaseSHA != plan.Scope.HeadSHA {
 		t.Fatalf("valid empty scope: %+v", plan)
 	}
 	for _, ref := range []string{"absent-ref", "--all", "HEAD^{tree}", " "} {
 		t.Run(ref, func(t *testing.T) {
 			deps := defaultDeps()
-			deps.Plan = func(string) riskqacontract.TierPlan { return PlanWithScope(root, ref) }
+			deps.Plan = func(string) riskqacontract.TierPlan { return planWithScope(root, ref) }
 			deps.Run = func(string, string) selfverify.StepResult {
 				t.Fatal("invalid scope ran a command")
 				return selfverify.StepResult{}
@@ -296,7 +296,7 @@ func TestScopedPlanUsesTreeRangeAndPreservesObservationFailures(t *testing.T) {
 	runRiskQATestCommand(t, root, "git", "tag", "base-side")
 	runRiskQATestCommand(t, root, "git", "checkout", "-q", "--detach", "HEAD~1")
 	runRiskQATestCommand(t, root, "git", "-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "--allow-empty", "-qm", "head side")
-	plan := PlanWithScope(root, "base-side")
+	plan := planWithScope(root, "base-side")
 	if !containsString(plan.ChangedPaths, "internal/base-only.go") || plan.Tier != "elevated" {
 		t.Fatalf("tree range replaced by merge-base: %+v", plan)
 	}
@@ -306,7 +306,7 @@ func TestScopedPlanUsesTreeRangeAndPreservesObservationFailures(t *testing.T) {
 			script := "#!/bin/sh\ncase \"$3\" in rev-parse) printf 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\\n';; " + failure + ") exit 7;; diff|status) :;; *) exit 8;; esac\n"
 			testsupport.WriteFakeCommand(t, fake, "git", script)
 			t.Setenv("PATH", fake+string(os.PathListSeparator)+os.Getenv("PATH"))
-			plan := PlanWithScope(root, "base-side")
+			plan := planWithScope(root, "base-side")
 			if plan.Scope == nil || plan.Scope.Error == "" || len(plan.Scope.BaseSHA) != 40 || len(plan.Scope.HeadSHA) != 40 || riskqadomain.CoversFullGoTest(plan) {
 				t.Fatalf("observation failure accepted: %+v", plan)
 			}
@@ -322,7 +322,7 @@ func TestScopedPlanKeepsSingleCharacterUntrackedPath(t *testing.T) {
 	runRiskQATestCommand(t, root, "git", "add", ".")
 	runRiskQATestCommand(t, root, "git", "-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-qm", "base")
 	writeFileForWrapperTest(t, filepath.Join(root, "a"), "untracked\n")
-	plan := PlanWithScope(root, "HEAD")
+	plan := planWithScope(root, "HEAD")
 	if plan.Scope == nil || plan.Scope.Error != "" || !slices.Equal(plan.ChangedPaths, []string{"a"}) {
 		t.Fatalf("expected the one-character untracked path to be planned, got %+v", plan)
 	}

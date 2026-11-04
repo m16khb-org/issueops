@@ -25,10 +25,10 @@ func tryLock(f *os.File) error {
 
 var errLockHolderUnobservable = errors.New("windows does not report which process holds a file lock")
 
-// LockHolder serves the launchd and systemd supervisors, which Windows does
+// lockHolder serves the launchd and systemd supervisors, which Windows does
 // not have; Service stops at requireSupervisor first. A LockFileEx range has
 // no observable owner, so a present lock file is an error, not a guess.
-func LockHolder(path string) (int, error) {
+func lockHolder(path string) (int, error) {
 	if _, err := os.Lstat(path); errors.Is(err, os.ErrNotExist) {
 		return 0, nil
 	}

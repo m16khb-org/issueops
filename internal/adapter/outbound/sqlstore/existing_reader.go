@@ -13,7 +13,7 @@ import (
 	"issueops/internal/port"
 )
 
-// GetExisting은 state root, data 데이터베이스, span 데이터베이스, schema를
+// GetExisting 함수는 state root, data 데이터베이스, span 데이터베이스, schema를
 // 생성하지 않고 primary-key row 하나를 읽는다. read-only 연결은 SQLite
 // 경합에서 최대 existingReadBusyTimeout만 대기하므로, lifecycle-hook 조회는
 // 일시적 writer commit과 WAL checkpoint를 견디면서도 유한하게 끝난다.
@@ -34,7 +34,7 @@ func GetExisting(dir, bucket, id string) ([]byte, bool, error) {
 	return raw, true, nil
 }
 
-// ListExisting은 state 파일을 생성하거나 복구하지 않고 기존 data store에서
+// ListExisting 함수는 state 파일을 생성하거나 복구하지 않고 기존 data store에서
 // bucket의 ID를 반환한다. store가 없으면 fs.ErrNotExist를 반환한다.
 func ListExisting(dir, bucket string) ([]string, error) {
 	data, err := openExistingData(dir)
@@ -58,7 +58,7 @@ func ListExisting(dir, bucket string) ([]string, error) {
 	return ids, rows.Err()
 }
 
-// GetAllExisting은 state 파일을 생성하거나 복구하지 않고 기존 data store에서
+// GetAllExisting 함수는 state 파일을 생성하거나 복구하지 않고 기존 data store에서
 // bucket의 row를 반환한다. store가 없으면 fs.ErrNotExist를 반환한다.
 func GetAllExisting(dir, bucket string) ([]port.RecordRow, error) {
 	result := []port.RecordRow{}

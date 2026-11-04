@@ -162,7 +162,7 @@ func TestReadIndexTreatsMissingAsEmptyAndUnreadableAsFailure(t *testing.T) {
 	}
 }
 
-func fakeDiffGit(fail string) GitRaw {
+func fakeDiffGit(fail string) gitRaw {
 	return func(_ string, args ...string) (int, string, string) {
 		switch {
 		case args[0] == "diff" && args[1] == "--binary":

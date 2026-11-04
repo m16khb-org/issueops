@@ -9,6 +9,9 @@ import (
 	completioncontract "issueops/internal/contract/issueopscompletion"
 )
 
+// PrepareEvidence validates the caller-supplied completion inputs and returns the
+// trimmed verification entries. It requires confirm, at least one nonempty
+// verification entry, and an HTTPS remote artifact URL.
 func PrepareEvidence(confirm bool, values []string, remoteURL string) ([]string, error) {
 	if !confirm {
 		return nil, fmt.Errorf("execution complete requires confirm (--confirm; it records the completion and releases the lease, so check execution status first)")
@@ -23,6 +26,8 @@ func PrepareEvidence(confirm bool, values []string, remoteURL string) ([]string,
 	return verification, nil
 }
 
+// ValidatePrepared returns ErrExecutionNotPrepared when no execution lease has
+// been prepared.
 func ValidatePrepared(prepared bool) error {
 	if !prepared {
 		return completioncontract.ErrExecutionNotPrepared
@@ -30,6 +35,8 @@ func ValidatePrepared(prepared bool) error {
 	return nil
 }
 
+// ValidatePhase returns an error unless phase is pr, the only phase from which
+// execution completion is allowed.
 func ValidatePhase(phase string) error {
 	if phase != "pr" {
 		return fmt.Errorf("execution completion requires pr phase")
@@ -37,6 +44,8 @@ func ValidatePhase(phase string) error {
 	return nil
 }
 
+// ValidateFinalHead requires requested to be a full 40- or 64-hex commit SHA that
+// equals the canonical worktree HEAD observed, ignoring case.
 func ValidateFinalHead(requested, observed string) error {
 	if !validFullCommitSHA(requested) {
 		// QA: a short SHA read as "does not match" though it named HEAD.

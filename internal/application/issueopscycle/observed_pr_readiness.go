@@ -7,7 +7,7 @@ import (
 	cycledomain "issueops/internal/domain/issueops"
 )
 
-type ObservedPRFacts struct {
+type observedPRFacts struct {
 	CurrentFingerprint string
 	SchemaMissing      string
 	PlanExists         bool
@@ -15,7 +15,7 @@ type ObservedPRFacts struct {
 	WorktreeValid      bool
 }
 
-func ObservedPRReadinessMissing(record model.Record, facts ObservedPRFacts) []string {
+func observedPRReadinessMissing(record model.Record, facts observedPRFacts) []string {
 	missing := []string{}
 	// Local readiness includes absent/non-pass reviews. Only fingerprint staleness
 	// can be determined from the observed Git change set.

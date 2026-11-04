@@ -1,3 +1,6 @@
+// Package lifecycle is the outbound adapter that stores the project lifecycle
+// profile as JSON under the per-project state directory, using atomic writes, and
+// derives the lifecycle state paths from a project fingerprint.
 package lifecycle
 
 import (
@@ -12,17 +15,29 @@ import (
 	lifecycledomain "issueops/internal/domain/lifecycle"
 )
 
+// ProfileFiles reads and writes project lifecycle profiles. Normalize and
+// ObserveFingerprint are injected by the composition root; StateDir is the root
+// that holds the "projects/<repo id>" directories.
 type ProfileFiles struct {
 	Normalize          func(string) (string, error)
 	StateDir           string
 	ObserveFingerprint func(string) lifecyclecontract.ProjectFingerprint
 }
 
+// NormalizeRoot returns the canonical form of the repository root.
 func (files ProfileFiles) NormalizeRoot(root string) (string, error) { return files.Normalize(root) }
-func (files ProfileFiles) StateRoot() string                         { return files.StateDir }
+
+// StateRoot returns the state directory that holds all project lifecycle state.
+func (files ProfileFiles) StateRoot() string { return files.StateDir }
+
+// Fingerprint observes the identity fingerprint of the project at root.
 func (files ProfileFiles) Fingerprint(root string) lifecyclecontract.ProjectFingerprint {
 	return files.ObserveFingerprint(root)
 }
+
+// Paths returns the lifecycle state plan for root: the project state directory
+// named by the fingerprint's repo id and the profile, doc-upkeep queue, and
+// compact capsule file paths inside it. It does not touch the file system.
 func (files ProfileFiles) Paths(root string, projectFingerprint lifecyclecontract.ProjectFingerprint) lifecyclecontract.ProjectLifecycleStatePlan {
 	repoID := lifecycledomain.RepoID(projectFingerprint)
 	stateRoot := files.StateDir
@@ -41,16 +56,27 @@ func (files ProfileFiles) Paths(root string, projectFingerprint lifecyclecontrac
 		Warnings:        []string{},
 	}
 }
+
+// ReadProfile decodes the lifecycle profile stored at path.
 func (files ProfileFiles) ReadProfile(path string) (lifecyclecontract.ProjectLifecycleProfile, error) {
 	return readProjectLifecycleProfile(path)
 }
+
+// Mkdir creates path and any missing parents with owner-only permissions.
 func (files ProfileFiles) Mkdir(path string) error { return osfile.MkdirAll(path, 0o700) }
+
+// Create writes profile to path only if no file exists there. The content becomes
+// visible fully written, so a concurrent loser never reads a partial file.
 func (files ProfileFiles) Create(path string, profile lifecyclecontract.ProjectLifecycleProfile) error {
 	return createJSONAtomic(path, profile, 0o600)
 }
+
+// Write atomically replaces the profile stored at path with profile.
 func (files ProfileFiles) Write(path string, profile lifecyclecontract.ProjectLifecycleProfile) error {
 	return writeJSONAtomic(path, profile, 0o600)
 }
+
+// Now returns the current time.
 func (files ProfileFiles) Now() time.Time { return time.Now() }
 
 func readProjectLifecycleProfile(path string) (lifecyclecontract.ProjectLifecycleProfile, error) {

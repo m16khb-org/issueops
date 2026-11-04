@@ -12,20 +12,22 @@ import (
 	"issueops/internal/port"
 )
 
-type RetitleProviderResolver func(string) (port.IssueProviderRetitler, error)
+type retitleProviderResolver func(string) (port.IssueProviderRetitler, error)
 
 // RemoteRetitleService changes the title of the cycle's issue or PR/MR on
 // request. QA: asked to rename the MR, an agent found no issueops path, ran
 // `glab mr update --title` (exit 0, title unchanged) and then a raw API PUT.
 type RemoteRetitleService struct {
-	records IssueRecordReader
-	resolve RetitleProviderResolver
+	records issueRecordReader
+	resolve retitleProviderResolver
 }
 
-func NewRemoteRetitleService(records IssueRecordReader, resolve RetitleProviderResolver) *RemoteRetitleService {
+// NewRemoteRetitleService 함수는 기록 조회와 provider 해석 함수를 묶어 서비스를 만든다.
+func NewRemoteRetitleService(records issueRecordReader, resolve retitleProviderResolver) *RemoteRetitleService {
 	return &RemoteRetitleService{records: records, resolve: resolve}
 }
 
+// Retitle 메서드는 on(issue 또는 PR/MR)의 제목을 바꾼다. confirm이 false이면 미리보기만 하고, 확정하면 provider에 쓴 뒤 읽어 되돌려 확인한다.
 func (s *RemoteRetitleService) Retitle(ctx context.Context, id, on, title string, confirm bool) (model.RemoteRetitleResult, error) {
 	record, err := s.records.Read(ctx, id)
 	if err != nil {

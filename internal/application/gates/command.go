@@ -7,11 +7,15 @@ import (
 	domain "issueops/internal/domain/gates"
 )
 
+// CommandRunner 타입은 gate 하나의 CHECK 명령을 command policy로 평가한 뒤 실행하는 Runner 구현이다.
+// Evaluate와 Execute는 호출하는 쪽이 주입한다.
 type CommandRunner struct {
 	Evaluate func(policy.CommandPolicyRequest) policy.CommandPolicyEvaluation
 	Execute  func(policy.CommandPolicyRequest) policy.CommandRunResult
 }
 
+// Run 메서드는 gate.CheckCmd를 argv로 풀어 policy를 평가하고, 허용될 때만 실행해 CheckOutcome을 돌려준다.
+// argv를 풀 수 없거나 policy가 거부하면 명령을 실행하지 않고 그 사유를 담은 결과를 돌려준다.
 func (runner CommandRunner) Run(root, cwd string, req model.CheckRequest, gate domain.Gate) domain.CheckOutcome {
 	argv, checkError := domain.CheckArgv(gate.CheckCmd)
 	if checkError != "" {

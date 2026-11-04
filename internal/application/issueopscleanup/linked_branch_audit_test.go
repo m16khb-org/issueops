@@ -44,8 +44,8 @@ func auditRecord() model.Record {
 
 var auditResult = model.CleanupLinkedBranchResult{State: "deleted", StateReason: "merged", LinkedBranchID: "lb-1", LinkedCount: 1, RemoteRefOID: "oid", Fingerprint: "fp", Deleted: true}
 
-func auditRecorder(records *auditRecords) LinkedBranchAuditRecorder {
-	return LinkedBranchAuditRecorder{Records: records, Now: func() time.Time { return time.Date(2026, 9, 29, 3, 4, 5, 0, time.FixedZone("KST", 9*3600)) }}
+func auditRecorder(records *auditRecords) linkedBranchAuditRecorder {
+	return linkedBranchAuditRecorder{Records: records, Now: func() time.Time { return time.Date(2026, 9, 29, 3, 4, 5, 0, time.FixedZone("KST", 9*3600)) }}
 }
 
 func TestLinkedBranchAuditRecordsDispositionUnderLockOnLatestRecord(t *testing.T) {

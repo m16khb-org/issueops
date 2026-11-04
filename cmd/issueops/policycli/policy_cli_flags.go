@@ -8,6 +8,9 @@ import (
 	policy "issueops/internal/contract/policy"
 )
 
+// ParseFlags parses the shared policy flags for subcommand name and returns the
+// command policy request and whether JSON output was requested. The workspace
+// root defaults to Command.DefaultRoot and the working directory to the root.
 func (command Command) ParseFlags(name string, args []string) (policy.CommandPolicyRequest, bool, error) {
 	fs := flag.NewFlagSet(name, flag.ContinueOnError)
 	workspaceRoot := fs.String("workspace-root", "", "workspace root boundary")
@@ -44,6 +47,9 @@ func (command Command) ParseFlags(name string, args []string) (policy.CommandPol
 	return req, *jsonOut, nil
 }
 
+// ParseRunFlags parses the flags of `policy run` and returns the command policy
+// request, whether JSON output was requested, and the --read-only flag. Defaults
+// for root and working directory match ParseFlags.
 func (command Command) ParseRunFlags(args []string) (policy.CommandPolicyRequest, bool, bool, error) {
 	fs := flag.NewFlagSet("policy run", flag.ContinueOnError)
 	workspaceRoot := fs.String("workspace-root", "", "workspace root boundary")

@@ -1,9 +1,11 @@
+// Package webfetch defines the request, result, response validation and benchmark DTOs of the resilient public web fetch, together with its category and stop-reason constants.
 package webfetch
 
 import (
 	"time"
 )
 
+// CategoryStrongOK through CategoryUnknown classify a fetched response in Result.Category; only CategoryStrongOK counts as a trustworthy full-content success.
 const (
 	CategoryStrongOK     = "strong_ok"
 	CategoryWeakOK       = "weak_ok"
@@ -17,6 +19,7 @@ const (
 	CategoryUnknown      = "unknown"
 )
 
+// StopReasonAccepted through StopReasonError are the Result.StopReason values explaining why the fetch route search ended.
 const (
 	StopReasonAccepted       = "accepted"
 	StopReasonSafetyRejected = "safety_rejected"
@@ -28,6 +31,7 @@ const (
 	StopReasonError          = "error"
 )
 
+// Request describes one fetch: the URL, an overall Timeout, the MaxChars limit on returned content, and whether private-network targets are allowed.
 type Request struct {
 	URL                 string
 	Timeout             time.Duration
@@ -35,6 +39,7 @@ type Request struct {
 	AllowPrivateNetwork bool
 }
 
+// Result is the outcome of a fetch: the final URL, response Category, StopReason, extracted Content and metadata, plus the routes that were attempted and left untried. DurationMS is in milliseconds.
 type Result struct {
 	OK              bool           `json:"ok"`
 	URL             string         `json:"url"`
@@ -51,12 +56,14 @@ type Result struct {
 	DurationMS      int64          `json:"duration_ms"`
 }
 
+// RouteRecord is the status of one fetch route and, when it did not succeed, the reason.
 type RouteRecord struct {
 	ID     string `json:"id"`
 	Status string `json:"status"`
 	Reason string `json:"reason,omitempty"`
 }
 
+// ResponseValidationInput is the HTTP response (status, headers, body, URL) handed to response validation.
 type ResponseValidationInput struct {
 	StatusCode int
 	Header     map[string][]string
@@ -64,6 +71,7 @@ type ResponseValidationInput struct {
 	URL        string
 }
 
+// ResponseValidation is the verdict on one HTTP response: its Category and StopReason, whether it is a Strong success, and the extracted Content, Metadata and Warnings.
 type ResponseValidation struct {
 	Category   string
 	StopReason string
@@ -73,6 +81,7 @@ type ResponseValidation struct {
 	Warnings   []string
 }
 
+// BenchmarkRequest configures a benchmark run over Fixtures. Live runs hit the network only when Live and LiveOptIn are both set, and CompareCommand names the baseline to compare against.
 type BenchmarkRequest struct {
 	Fixtures            []BenchmarkFixture
 	Timeout             time.Duration
@@ -82,6 +91,7 @@ type BenchmarkRequest struct {
 	AllowPrivateNetwork bool
 }
 
+// BenchmarkFixture is one recorded response (status, headers, body) with the content snippets expected from it and flags for unsafe redirect and redirect loop cases.
 type BenchmarkFixture struct {
 	ID             string            `json:"id"`
 	URL            string            `json:"url,omitempty"`
@@ -94,6 +104,7 @@ type BenchmarkFixture struct {
 	RedirectLoop   bool              `json:"redirect_loop"`
 }
 
+// BenchmarkResult is the benchmark outcome: the overall Score, hard failures, safety pass rate, the count of responses falsely accepted as strong, per-fixture runs, per-dimension scores, and the live parity evaluation.
 type BenchmarkResult struct {
 	OK                  bool                  `json:"ok"`
 	Score               float64               `json:"score"`
@@ -108,6 +119,7 @@ type BenchmarkResult struct {
 	DimensionScores     map[string]float64    `json:"dimension_scores"`
 }
 
+// BenchmarkFixtureRun is the result of running one fixture, with its category, stop reason, failure message and latency in milliseconds.
 type BenchmarkFixtureRun struct {
 	ID         string `json:"id"`
 	OK         bool   `json:"ok"`
@@ -117,6 +129,7 @@ type BenchmarkFixtureRun struct {
 	LatencyMS  int64  `json:"latency_ms,omitempty"`
 }
 
+// LiveParityReport compares a live run against a baseline: success rate, category agreement, route count, p50 and p95 latencies in milliseconds, safety failures and false strong results.
 type LiveParityReport struct {
 	SuccessRate          float64  `json:"success_rate"`
 	CategoryAgreement    float64  `json:"category_agreement"`

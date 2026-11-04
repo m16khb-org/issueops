@@ -1,5 +1,8 @@
 package selfverify
 
+// ProgressEvent is one JSON progress line emitted while a self-verification
+// loop runs (loop, iteration, and step start/end events), carrying position,
+// timing in milliseconds, and outcome where known.
 type ProgressEvent struct {
 	Event       string `json:"event"`
 	LoopKind    string `json:"loop_kind,omitempty"`

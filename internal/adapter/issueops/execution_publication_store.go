@@ -12,6 +12,8 @@ import (
 	"issueops/internal/port"
 )
 
+// RemotePublicationStore persists remote publication intents and the cycle record in the
+// state under StateRoot.
 type RemotePublicationStore struct{ StateRoot string }
 
 // WithinTransaction keeps the caller's request values (authority guard, trace)
@@ -22,16 +24,25 @@ func (s RemotePublicationStore) WithinTransaction(ctx context.Context, id string
 func (s RemotePublicationStore) Read(_ context.Context, id string) (issueops.Record, error) {
 	return ReadIssueOps(s.StateRoot, id)
 }
+
+// RecordSnapshot returns a copy of the raw stored bytes of the cycle record id.
 func (s RemotePublicationStore) RecordSnapshot(_ context.Context, id string) (contract.RecordSnapshot, error) {
 	raw, err := readRemotePublicationRaw(s.StateRoot, issueOpsBucket, id)
 	return contract.RecordSnapshot{ID: id, Raw: raw}, err
 }
+
+// PayloadRaw returns a copy of the raw stored bytes of the external intent operationID.
 func (s RemotePublicationStore) PayloadRaw(_ context.Context, operationID string) ([]byte, error) {
 	return readRemotePublicationRaw(s.StateRoot, externalIntentBucket, operationID)
 }
+
+// DecodeSnapshot decodes the cycle record and payload captured in intent.
 func (s RemotePublicationStore) DecodeSnapshot(intent contract.Intent) (issueops.Record, contract.IntentPayload, error) {
 	return publicationIntentSnapshot(intent)
 }
+
+// Persist saves the record transition together with the intent write or delete in a
+// single transaction.
 func (s RemotePublicationStore) Persist(ctx context.Context, record issueops.Record, intent contract.IntentMutation) (issueops.Record, error) {
 	mutation := port.RecordMutation{Bucket: externalIntentBucket, ID: intent.OperationID, Delete: intent.Delete, RequireAbsent: intent.RequireAbsent}
 	if !intent.Delete {
@@ -44,6 +55,9 @@ func (s RemotePublicationStore) Persist(ctx context.Context, record issueops.Rec
 	return persistExecutionTransitionWithMutations(ctx, s.StateRoot, record, nil, []port.RecordMutation{mutation})
 }
 
+// ReadPayload reads and validates the stored external intent payload for operationID. A
+// missing row, undecodable JSON, or a payload with a foreign schema, operation ID,
+// generation, provider or kind is an error.
 func (s RemotePublicationStore) ReadPayload(_ context.Context, operationID string) (contract.IntentPayload, error) {
 	db, err := sqlstore.Open(s.StateRoot)
 	if err != nil {

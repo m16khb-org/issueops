@@ -7,6 +7,9 @@ import (
 	issueopsroutingcontract "issueops/internal/contract/issueopsrouting"
 )
 
+// Repository is the storage port for cycle records read and updated by the
+// routing service. Update runs the callback against the stored record and
+// persists the result only when the callback reports a change.
 type Repository interface {
 	Read(context.Context, string, string) (issueopsroutingcontract.Record, error)
 	Update(
@@ -17,10 +20,10 @@ type Repository interface {
 	) (issueopsroutingcontract.Record, error)
 }
 
-type Clock interface {
+type clock interface {
 	Now() time.Time
 }
 
-type PathMatcher interface {
+type pathMatcher interface {
 	Same(string, string) bool
 }

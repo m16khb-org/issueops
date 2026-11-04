@@ -12,10 +12,10 @@ func TestDecisionMatrix(t *testing.T) {
 		name      string
 		confirm   bool
 		execution *leasecontract.Execution
-		want      Code
+		want      code
 	}{
-		{name: "new preview", want: CodePreview},
-		{name: "new confirm", confirm: true, want: CodeApply},
+		{name: "new preview", want: codePreview},
+		{name: "new confirm", confirm: true, want: codeApply},
 		{name: "pending precedes writerless", confirm: true, execution: preparedExecution("claimable", false, true), want: CodePendingReconcile},
 		{name: "pending on preview", execution: preparedExecution("active", true, true), want: CodePendingReconcile},
 		{name: "existing active", confirm: true, execution: preparedExecution("active", true, false), want: CodeExisting},

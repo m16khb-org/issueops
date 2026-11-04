@@ -2,7 +2,7 @@ package commandparse
 
 import "strings"
 
-// RemotePullRequestCreate는 `gh pr create` / `glab mr create` argv에서 타겟
+// RemotePullRequestCreate 타입은 `gh pr create` / `glab mr create` argv에서 타겟
 // 브랜치 판정에 필요한 것만 뽑은 형태다. 원격 쓰기 전에 타겟이 준비된 부모
 // 작업 브랜치와 맞는지 보기 위한 입력이며, 그 비교 자체는 호출자가 한다.
 type RemotePullRequestCreate struct {
@@ -18,7 +18,7 @@ type RemotePullRequestCreate struct {
 	HasBaseFlag bool
 }
 
-// ParseRemotePullRequestCreate는 argv가 PR/MR 생성 명령일 때만 참을 돌려준다.
+// ParseRemotePullRequestCreate 함수는 argv가 PR/MR 생성 명령일 때만 참을 돌려준다.
 //
 // 생성이 아닌 하위 명령(view, list, merge 등)과 다른 CLI는 관심 밖이다.
 // 판정을 좁게 유지하는 이유는 이 파서의 소비자가 거부 사유를 만들기 때문이다.

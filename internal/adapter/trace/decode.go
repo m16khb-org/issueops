@@ -8,6 +8,10 @@ import (
 	"strings"
 )
 
+// Decode parses a trace input body according to format. An empty format or the
+// issueops format reads a JSON document or JSONL lines, a host format reads
+// host usage records, and any other format returns an incomplete input with
+// the unsupported_input_format warning.
 func (Source) Decode(body []byte, format string) tracedomain.Input {
 	switch {
 	case format == "" || format == tracecontract.InputFormatIssueOps:

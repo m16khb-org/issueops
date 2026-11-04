@@ -5,6 +5,8 @@ import (
 	review "issueops/internal/contract/issueopsreview"
 )
 
+// PRGitObservations is the git view the pr readiness checks use: the worktree root, head, branch, cleanliness,
+// upstream, fetch result, and the ancestry and base-branch relations of commits.
 type PRGitObservations interface {
 	Root(model.Record) string
 	Head(model.Record) string
@@ -22,6 +24,8 @@ type PRGitObservations interface {
 	Counts(string) string
 }
 
+// PhaseStore is the record store phase changes use: reading, locked read-modify-write, mutation validation,
+// writing, and the clock.
 type PhaseStore struct {
 	Read             func(string, string) (model.Record, error)
 	WithLock         func(string, string, func() error) error

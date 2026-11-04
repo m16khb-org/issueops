@@ -33,15 +33,15 @@ func TestIssueCreateInFlight(t *testing.T) {
 // One create of an issue at a time: the second is refused before invoking.
 func TestHoldIssueCreateRefusesASecondCreate(t *testing.T) {
 	root := t.TempDir()
-	_, release, err := HoldIssueCreate(context.Background(), root, "/repo", "Add dec function")
+	_, release, err := holdIssueCreate(context.Background(), root, "/repo", "Add dec function")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer release()
-	if _, _, err := HoldIssueCreate(context.Background(), root, "/repo", "Add dec function"); err == nil {
+	if _, _, err := holdIssueCreate(context.Background(), root, "/repo", "Add dec function"); err == nil {
 		t.Fatal("second create was not refused")
 	}
-	if _, other, err := HoldIssueCreate(context.Background(), root, "/repo", "Another issue"); err != nil {
+	if _, other, err := holdIssueCreate(context.Background(), root, "/repo", "Another issue"); err != nil {
 		t.Fatalf("another title must not be blocked: %v", err)
 	} else {
 		other()

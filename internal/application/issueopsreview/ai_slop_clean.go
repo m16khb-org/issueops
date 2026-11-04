@@ -10,6 +10,10 @@ import (
 	reviewport "issueops/internal/port/issueopsreview"
 )
 
+// RecordAISlopCleanEvidence stores the cleaned categories and verification
+// commands of the ai-slop-clean stage on record id under the record lock. The
+// write refreshes the record without a phase change when the stage was already
+// recorded and the phase is at or past ai-slop-clean; otherwise it stamps UpdatedAt.
 func RecordAISlopCleanEvidence(store reviewport.AISlopCleanStore, stateRoot, id string, categories, verification []string) (model.Record, error) {
 	var result model.Record
 	err := store.WithLock(stateRoot, id, func() error {

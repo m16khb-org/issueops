@@ -10,19 +10,23 @@ import (
 	"issueops/internal/domain/issueopsremote"
 )
 
-type RemoteBranchEnvironment interface {
+type remoteBranchEnvironment interface {
 	RemoteRef(context.Context, string, string) (string, error)
 	OriginURL(context.Context, string) (string, error)
 	TipReachedBase(context.Context, string, string, string) bool
 	Delete(context.Context, string, string, string) error
 }
 
+// RemoteBranchPreviewer observes the remote branch, merged-artifact and
+// superseding-artifact evidence needed to preview a remote-branch cleanup.
 type RemoteBranchPreviewer struct {
-	Environment          RemoteBranchEnvironment
+	Environment          remoteBranchEnvironment
 	VerifyMergedArtifact func(model.RemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error)
 	ObserveArtifact      func(context.Context, string) (domain.ArtifactObservation, error)
 }
 
+// Plan reads the remote branch OID and merge, supersede and identity evidence
+// and returns the inventory with the domain-built preview.
 func (s RemoteBranchPreviewer) Plan(ctx context.Context, record model.Record, req model.CleanupRemoteBranchRequest) (model.CleanupRemoteBranchInventory, model.CleanupRemoteBranchResult) {
 	inventory := domain.CleanupRemoteBranchTargets(record)
 	facts := domain.CleanupRemoteBranchObservation{MergeConfigured: s.VerifyMergedArtifact != nil}

@@ -20,8 +20,8 @@ import (
 
 const goodDigest = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
-func okOutcome() ReplayOutcome {
-	return ReplayOutcome{StateBeforeSHA256: goodDigest, StateAfterSHA256: goodDigest}
+func okOutcome() replayOutcome {
+	return replayOutcome{StateBeforeSHA256: goodDigest, StateAfterSHA256: goodDigest}
 }
 
 func TestNewConformanceDefaultsFailClosedWhenDependenciesAreMissing(t *testing.T) {
@@ -117,7 +117,7 @@ func TestReplayRegressionFixtureMapsOutcomeAndPropagatesFailures(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := ReplayOutcome{HandlerCalls: 2, StateBeforeSHA256: "a", StateAfterSHA256: "b", Classification: tc.UnknownKey, Diagnostics: diags, FinalResult: map[string]any{"k": "v"}}
+	want := replayOutcome{HandlerCalls: 2, StateBeforeSHA256: "a", StateAfterSHA256: "b", Classification: tc.UnknownKey, Diagnostics: diags, FinalResult: map[string]any{"k": "v"}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got=%+v want=%+v", got, want)
 	}
@@ -160,7 +160,7 @@ func TestEvaluateSyntheticBaselineComparesExpectedClassifications(t *testing.T) 
 	}
 }
 
-func baselineConformance(root string, eval func() (int, bool, error), replay func(context.Context, string, string) (ReplayOutcome, error)) *Conformance {
+func baselineConformance(root string, eval func() (int, bool, error), replay func(context.Context, string, string) (replayOutcome, error)) *Conformance {
 	return NewConformance(ConformanceDependencies{Root: func() string { return root }, EvaluateBaseline: eval, Replay: replay})
 }
 
@@ -179,19 +179,19 @@ func writeRegression(t *testing.T, root string, names ...string) {
 
 func TestBaselineReportFailsWhenAnyRegressionReplayIsUnsafe(t *testing.T) {
 	cases := map[string]struct {
-		outcome ReplayOutcome
+		outcome replayOutcome
 		err     error
 	}{
 		"replay error":       {err: errors.New("boom")},
-		"handler was called": {outcome: ReplayOutcome{HandlerCalls: 1, StateBeforeSHA256: goodDigest, StateAfterSHA256: goodDigest}},
-		"empty digest":       {outcome: ReplayOutcome{}},
-		"state changed":      {outcome: ReplayOutcome{StateBeforeSHA256: goodDigest, StateAfterSHA256: "other"}},
+		"handler was called": {outcome: replayOutcome{HandlerCalls: 1, StateBeforeSHA256: goodDigest, StateAfterSHA256: goodDigest}},
+		"empty digest":       {outcome: replayOutcome{}},
+		"state changed":      {outcome: replayOutcome{StateBeforeSHA256: goodDigest, StateAfterSHA256: "other"}},
 	}
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
 			root := t.TempDir()
 			writeRegression(t, root, "one.json")
-			c := baselineConformance(root, func() (int, bool, error) { return 4, true, nil }, func(context.Context, string, string) (ReplayOutcome, error) {
+			c := baselineConformance(root, func() (int, bool, error) { return 4, true, nil }, func(context.Context, string, string) (replayOutcome, error) {
 				return tt.outcome, tt.err
 			})
 			report, err := c.evaluateBaselineReport()
@@ -205,7 +205,7 @@ func TestBaselineReportFailsWhenAnyRegressionReplayIsUnsafe(t *testing.T) {
 	}
 	root := t.TempDir()
 	writeRegression(t, root, "one.json")
-	c := baselineConformance(root, func() (int, bool, error) { return 4, true, nil }, func(context.Context, string, string) (ReplayOutcome, error) { return okOutcome(), nil })
+	c := baselineConformance(root, func() (int, bool, error) { return 4, true, nil }, func(context.Context, string, string) (replayOutcome, error) { return okOutcome(), nil })
 	report, err := c.evaluateBaselineReport()
 	if err != nil || !report.OK || report.Gate.Decision != tc.GateBaselinePassed || report.CaseCount != 5 || report.Counts.Completed != 5 {
 		t.Fatalf("safe replay report=%+v err=%v", report, err)
@@ -670,8 +670,8 @@ func TestSourceSchemaReturnsNilForUnknownOrUncloneableSchemas(t *testing.T) {
 }
 
 func TestRunConformanceReplayReportsUnsafeOutcomesAndPrintsJSON(t *testing.T) {
-	newC := func(o ReplayOutcome, err error) *Conformance {
-		return NewConformance(ConformanceDependencies{Replay: func(context.Context, string, string) (ReplayOutcome, error) { return o, err }})
+	newC := func(o replayOutcome, err error) *Conformance {
+		return NewConformance(ConformanceDependencies{Replay: func(context.Context, string, string) (replayOutcome, error) { return o, err }})
 	}
 	if err := newC(okOutcome(), nil).runConformanceReplay([]string{"--nope"}); err == nil {
 		t.Fatal("unknown flag accepted")
@@ -680,10 +680,10 @@ func TestRunConformanceReplayReportsUnsafeOutcomesAndPrintsJSON(t *testing.T) {
 		t.Fatalf("missing fixture: %v", err)
 	}
 	boom := errors.New("replay boom")
-	if err := newC(ReplayOutcome{}, boom).runConformanceReplay([]string{"--fixture", "f"}); !errors.Is(err, boom) {
+	if err := newC(replayOutcome{}, boom).runConformanceReplay([]string{"--fixture", "f"}); !errors.Is(err, boom) {
 		t.Fatalf("err=%v", err)
 	}
-	for name, o := range map[string]ReplayOutcome{
+	for name, o := range map[string]replayOutcome{
 		"handler called": {HandlerCalls: 1, StateBeforeSHA256: goodDigest, StateAfterSHA256: goodDigest},
 		"empty digest":   {},
 		"state changed":  {StateBeforeSHA256: goodDigest, StateAfterSHA256: "x"},

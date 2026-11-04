@@ -7,6 +7,9 @@ import (
 	contract "issueops/internal/contract/selfaugment"
 )
 
+// PreparePromotion builds the initial promotion result for promoting snapshot fromKey to
+// baselineKey. It returns an error when either key is blank; the result is a dry run unless confirm
+// is set.
 func PreparePromotion(fromKey, baselineKey string, confirm bool, stateDir string) (contract.PromoteResult, error) {
 	result := contract.PromoteResult{
 		OK:          false,
@@ -25,6 +28,9 @@ func PreparePromotion(fromKey, baselineKey string, confirm bool, stateDir string
 	return result, nil
 }
 
+// ObservePromotionSource folds the source snapshot into result and decides whether promotion may
+// proceed. A dry run only reports whether the source passed the gate; a confirmed promotion of a
+// source that failed the gate is refused unless allowFailedSource is set.
 func ObservePromotionSource(result contract.PromoteResult, snapshot contract.StateSnapshot, allowFailedSource bool) (contract.PromoteResult, error) {
 	result.SnapshotGeneratedAt = snapshot.GeneratedAt
 	result.Summary = snapshot.Summary

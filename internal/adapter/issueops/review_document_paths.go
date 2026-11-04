@@ -9,12 +9,18 @@ import (
 	"strings"
 )
 
+// ReviewDocumentPaths resolves the repository-relative document paths that review checks use.
+// It holds no state.
 type ReviewDocumentPaths struct{}
 
+// Root returns the strict git root of the record workspace, or an empty string when none
+// resolves.
 func (ReviewDocumentPaths) Root(record model.Record) string {
 	return readinesspaths.StrictGitRoot(record)
 }
 
+// RelativePath returns path as a clean slash-separated path relative to root. It returns
+// an empty string for blank paths, absolute paths with no root, and paths that escape root.
 func (ReviewDocumentPaths) RelativePath(root, path string) string {
 	path = strings.TrimSpace(path)
 	if path == "" {
@@ -37,7 +43,7 @@ func (ReviewDocumentPaths) RelativePath(root, path string) string {
 	return path
 }
 
-// ProjectDocsPresent reports AGENTS.md or any markdown under .issueops/ other
+// ProjectDocsPresent reports whether the project has docs: AGENTS.md or any markdown under .issueops/ other
 // than cycle material (issues/, gates/). An empty root reports true so the
 // caller keeps requiring a reviewed doc it cannot disprove.
 func (ReviewDocumentPaths) ProjectDocsPresent(root string) bool {
@@ -68,6 +74,7 @@ func (ReviewDocumentPaths) ProjectDocsPresent(root string) bool {
 	return found
 }
 
+// FileExists reports whether relative names an existing regular file under root.
 func (ReviewDocumentPaths) FileExists(root, relative string) bool {
 	info, err := os.Stat(filepath.Join(root, filepath.FromSlash(relative)))
 	return err == nil && !info.IsDir()

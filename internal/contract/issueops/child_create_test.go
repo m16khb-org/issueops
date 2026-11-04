@@ -56,7 +56,7 @@ func TestValidateChildCreateOperationsRejectsInvalidOperation(t *testing.T) {
 		{"unknown origin", func(op *ChildCreateOperation) { op.Origin = "automatic" }, "invalid child create operation identity"},
 		{"blank parent url", func(op *ChildCreateOperation) { op.ParentURL = "  " }, "invalid child create operation identity"},
 		{"oversized parent url", func(op *ChildCreateOperation) {
-			op.ParentURL = strings.Repeat("u", MaxIssueCreateURLBytes+1)
+			op.ParentURL = strings.Repeat("u", maxIssueCreateURLBytes+1)
 		}, "invalid child create operation identity"},
 		{"short request digest", func(op *ChildCreateOperation) { op.RequestSHA256 = strings.Repeat("b", 63) }, "invalid child request digest"},
 		{"uppercase request digest", func(op *ChildCreateOperation) { op.RequestSHA256 = strings.Repeat("B", 64) }, "invalid child request digest"},

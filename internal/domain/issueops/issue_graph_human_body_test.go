@@ -17,7 +17,7 @@ func TestIssueGraphCommentIsKorean(t *testing.T) {
 			{Type: "child", URL: "https://github.com/acme/repo/issues/3"},
 		},
 	}
-	got := RenderIssueGraphComment(record)
+	got := renderIssueGraphComment(record)
 	for _, want := range []string{"## 관련 이슈\n", "- **선행 이슈**: https://github.com/acme/repo/issues/2 (선행 작업)", "- **하위 작업**: https://github.com/acme/repo/issues/3"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("comment missing %q:\n%s", want, got)

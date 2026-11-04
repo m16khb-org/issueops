@@ -1,3 +1,6 @@
+// Package hookcatalog implements the SessionStart hook that injects the static
+// project-doc catalog into the host. It is the command layer's hook handler and
+// receives all effects through Config.
 package hookcatalog
 
 import (
@@ -11,6 +14,9 @@ import (
 	hookcontract "issueops/internal/contract/hookprompt"
 )
 
+// Config carries the injected effects of the hook: building the catalog,
+// formatting host-specific hook output, resolving the target repository, and
+// printing JSON.
 type Config struct {
 	BuildCatalog  func(string) hookcontract.ProjectDocCatalogContext
 	FormatContext func(host, eventName, additionalContext, userView string) map[string]any

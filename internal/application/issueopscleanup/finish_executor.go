@@ -13,6 +13,10 @@ import (
 	"issueops/internal/port"
 )
 
+// FinishExecutor runs `cleanup finish`: it plans a preview, then on a
+// confirmed apply with a matching fingerprint stops workspace processes,
+// removes the worktree and branch, and finalizes the record. Collaborators are
+// injected as functions so each step stays fenced and testable.
 type FinishExecutor struct {
 	MaterialWarning func(model.Record) string
 	Records         port.CleanupFinishRecords
@@ -42,6 +46,10 @@ type finishRun struct {
 	drainer     *cleanupDrainer
 }
 
+// Run previews or applies a finish for req.ID under the cleanup lifetime.
+// Without req.Apply it returns the preview with a fingerprint and next command.
+// With Apply it validates confirmation and fingerprint, arms the record, runs
+// the steps, and preserves the record with a failure receipt on error.
 func (s FinishExecutor) Run(ctx context.Context, req model.CleanupFinishRequest) (model.CleanupFinishResult, error) {
 	failed := model.CleanupFinishResult{OK: false, ID: req.ID}
 	lifetime, err := s.Acquire(ctx, req.ID)

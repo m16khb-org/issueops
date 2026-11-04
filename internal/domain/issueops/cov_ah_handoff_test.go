@@ -187,10 +187,10 @@ func TestCovHandoffFoldRejectsUnkeyedAndInvalidObservations(t *testing.T) {
 	if decisions[2].Accepted || decisions[2].RejectReasons[0] != "unsupported delivery observation schema" {
 		t.Fatalf("invalid decision=%+v", decisions[2])
 	}
-	if got := HandoffDeliveryFoldKey(unkeyed); got != "" {
+	if got := handoffDeliveryFoldKey(unkeyed); got != "" {
 		t.Fatalf("blank lineage produced key %q", got)
 	}
-	if got := HandoffDeliveryFoldKey(valid); got != "io-delivery\x00lineage-1" {
+	if got := handoffDeliveryFoldKey(valid); got != "io-delivery\x00lineage-1" {
 		t.Fatalf("key=%q", got)
 	}
 }
@@ -228,7 +228,7 @@ func TestCovHandoffMergeRejectsIdentityDrift(t *testing.T) {
 				next.Target.BaselineWorkingSequence = &nextBaseline
 			}
 			test.edit(&next)
-			merged, decision := MergeHandoffDeliveryObservation(current, next)
+			merged, decision := mergeHandoffDeliveryObservation(current, next)
 			if decision.Accepted || len(decision.RejectReasons) != 1 || !strings.Contains(decision.RejectReasons[0], test.want) {
 				t.Fatalf("decision=%+v", decision)
 			}
@@ -244,13 +244,13 @@ func TestCovHandoffMergeRejectsDriftOnlyDetectedByLaterObservation(t *testing.T)
 		current := deliveryObservationFixture()
 		next := deliveryObservationFixture()
 		next.LineageID = "lineage-2"
-		_, decision := MergeHandoffDeliveryObservation(current, next)
+		_, decision := mergeHandoffDeliveryObservation(current, next)
 		if decision.Accepted || decision.RejectReasons[0] != "delivery observation lineage identity changed" {
 			t.Fatalf("lineage decision=%+v", decision)
 		}
 		next = deliveryObservationFixture()
 		next.LifecycleID = "io-other"
-		_, decision = MergeHandoffDeliveryObservation(current, next)
+		_, decision = mergeHandoffDeliveryObservation(current, next)
 		if decision.Accepted || decision.RejectReasons[0] != "delivery observation lifecycle identity changed" {
 			t.Fatalf("lifecycle decision=%+v", decision)
 		}
@@ -258,7 +258,7 @@ func TestCovHandoffMergeRejectsDriftOnlyDetectedByLaterObservation(t *testing.T)
 	t.Run("invalid current observation blocks merge", func(t *testing.T) {
 		current := deliveryObservationFixture()
 		current.SchemaVersion = 0
-		_, decision := MergeHandoffDeliveryObservation(current, deliveryObservationFixture())
+		_, decision := mergeHandoffDeliveryObservation(current, deliveryObservationFixture())
 		if decision.Accepted || decision.RejectReasons[0] != "unsupported delivery observation schema" {
 			t.Fatalf("decision=%+v", decision)
 		}
@@ -266,7 +266,7 @@ func TestCovHandoffMergeRejectsDriftOnlyDetectedByLaterObservation(t *testing.T)
 	t.Run("invalid next observation blocks merge", func(t *testing.T) {
 		next := deliveryObservationFixture()
 		next.Receipt.Digest = "bad"
-		_, decision := MergeHandoffDeliveryObservation(deliveryObservationFixture(), next)
+		_, decision := mergeHandoffDeliveryObservation(deliveryObservationFixture(), next)
 		if decision.Accepted || decision.RejectReasons[0] != "delivery observation receipt is invalid" {
 			t.Fatalf("decision=%+v", decision)
 		}
@@ -276,7 +276,7 @@ func TestCovHandoffMergeRejectsDriftOnlyDetectedByLaterObservation(t *testing.T)
 		current.Timing = &issueopscontract.HandoffDeliveryTiming{InputSendMS: 10}
 		next := deliveryObservationFixture()
 		next.Timing = &issueopscontract.HandoffDeliveryTiming{InputSendMS: 11}
-		_, decision := MergeHandoffDeliveryObservation(current, next)
+		_, decision := mergeHandoffDeliveryObservation(current, next)
 		if decision.Accepted || decision.RejectReasons[0] != "delivery observation timing changed" {
 			t.Fatalf("decision=%+v", decision)
 		}
@@ -285,7 +285,7 @@ func TestCovHandoffMergeRejectsDriftOnlyDetectedByLaterObservation(t *testing.T)
 		current := cmuxDeliveryObservationFixture()
 		next := cmuxDeliveryObservationFixture()
 		next.Target.WindowID = "window-2"
-		_, decision := MergeHandoffDeliveryObservation(current, next)
+		_, decision := mergeHandoffDeliveryObservation(current, next)
 		if decision.Accepted || decision.RejectReasons[0] != "delivery observation target identity changed" {
 			t.Fatalf("decision=%+v", decision)
 		}
@@ -307,7 +307,7 @@ func TestCovHandoffMergeAdoptsMissingTargetTimingReceiptAndOwner(t *testing.T) {
 	next.Receipt = issueopscontract.HandoffDeliveryReceipt{Location: "audit/herdr/receipt-2.json", Digest: strings.Repeat("f", 64)}
 	next.UpdatedAt = "2026-09-20T10:06:00Z"
 
-	merged, decision := MergeHandoffDeliveryObservation(current, next)
+	merged, decision := mergeHandoffDeliveryObservation(current, next)
 	if !decision.Accepted {
 		t.Fatalf("decision=%+v", decision)
 	}
@@ -342,7 +342,7 @@ func TestCovHandoffMergeFillsOnlyZeroTimingFields(t *testing.T) {
 	current.Timing = &issueopscontract.HandoffDeliveryTiming{PreflightMS: 1}
 	next := deliveryObservationFixture()
 	next.Timing = &issueopscontract.HandoffDeliveryTiming{PreflightMS: 1, WorkspaceCreateMS: 2, TargetResolveMS: 3, InputSendMS: 4, ReceiverReceiptMS: 5}
-	merged, decision := MergeHandoffDeliveryObservation(current, next)
+	merged, decision := mergeHandoffDeliveryObservation(current, next)
 	if !decision.Accepted {
 		t.Fatalf("decision=%+v", decision)
 	}
@@ -353,7 +353,7 @@ func TestCovHandoffMergeFillsOnlyZeroTimingFields(t *testing.T) {
 		t.Fatalf("merge mutated the current timing: %+v", *current.Timing)
 	}
 	// A later observation without timing must keep the established timing.
-	again, decision := MergeHandoffDeliveryObservation(merged, deliveryObservationFixture())
+	again, decision := mergeHandoffDeliveryObservation(merged, deliveryObservationFixture())
 	if !decision.Accepted || again.Timing == nil || again.Timing.ReceiverReceiptMS != 5 {
 		t.Fatalf("timing lost: %+v %+v", again.Timing, decision)
 	}
@@ -364,7 +364,7 @@ func TestCovHandoffMergeCmuxRawInputCannotProveNativeTurn(t *testing.T) {
 	next := cmuxDeliveryObservationFixture()
 	next.UpdatedAt = "2026-09-20T10:00:05Z"
 	next.NativeTurnObserved = deliveryStateAt(issueopscontract.HandoffDeliveryStateObserved, issueopscontract.HandoffDeliveryEvidenceNativeReceipt, "2026-09-20T10:00:03Z")
-	if _, decision := MergeHandoffDeliveryObservation(current, next); !decision.Accepted {
+	if _, decision := mergeHandoffDeliveryObservation(current, next); !decision.Accepted {
 		t.Fatalf("native receipt on cmux must merge: %+v", decision)
 	}
 }
@@ -375,11 +375,11 @@ func TestCovHandoffMergeOwnerClaimRequiresMatchingActor(t *testing.T) {
 	next.OwnerActor = nil
 	next.OwnerClaim.Actor = *current.OwnerActor
 	// next carries no owner actor of its own, so it is invalid on its own.
-	if _, decision := MergeHandoffDeliveryObservation(current, next); decision.Accepted {
+	if _, decision := mergeHandoffDeliveryObservation(current, next); decision.Accepted {
 		t.Fatalf("claim without owner actor accepted: %+v", decision)
 	}
 	next = covHandoffClaimedFixture()
-	merged, decision := MergeHandoffDeliveryObservation(current, next)
+	merged, decision := mergeHandoffDeliveryObservation(current, next)
 	if !decision.Accepted || !merged.OwnerClaim.Claimed || merged.OwnerClaimed.Status != issueopscontract.HandoffDeliveryStateObserved {
 		t.Fatalf("exact claim rejected: %+v %+v", merged.OwnerClaim, decision)
 	}
@@ -676,7 +676,7 @@ func TestCovHandoffMergeRejectsPaneRotationWithoutTerminalAndBaselineDrift(t *te
 	next := deliveryObservationFixture()
 	next.Target.TerminalID = ""
 	next.Target.PaneID = "pane-2"
-	_, decision := MergeHandoffDeliveryObservation(current, next)
+	_, decision := mergeHandoffDeliveryObservation(current, next)
 	if decision.Accepted || decision.RejectReasons[0] != "delivery observation process identity changed" {
 		t.Fatalf("pane rotation without a PTY identity accepted: %+v", decision)
 	}
@@ -686,7 +686,7 @@ func TestCovHandoffMergeRejectsPaneRotationWithoutTerminalAndBaselineDrift(t *te
 	current.Target.PromptGeneration, current.Target.BaselineWorkingSequence = &generation, &baseline
 	next = deliveryObservationFixture()
 	next.Target.PromptGeneration, next.Target.BaselineWorkingSequence = &generation, &otherBaseline
-	_, decision = MergeHandoffDeliveryObservation(current, next)
+	_, decision = mergeHandoffDeliveryObservation(current, next)
 	if decision.Accepted || decision.RejectReasons[0] != "delivery observation process identity changed" {
 		t.Fatalf("baseline drift accepted: %+v", decision)
 	}
@@ -694,7 +694,7 @@ func TestCovHandoffMergeRejectsPaneRotationWithoutTerminalAndBaselineDrift(t *te
 	// With a stable PTY the transient pane handle may rotate.
 	next = deliveryObservationFixture()
 	next.Target.PaneID = "pane-2"
-	merged, decision := MergeHandoffDeliveryObservation(deliveryObservationFixture(), next)
+	merged, decision := mergeHandoffDeliveryObservation(deliveryObservationFixture(), next)
 	if !decision.Accepted || merged.Target.PaneID != "pane-2" {
 		t.Fatalf("pane rotation on stable PTY rejected: %+v %+v", merged.Target, decision)
 	}
@@ -705,7 +705,7 @@ func TestCovHandoffMergeFillsZeroPreflightTimingAndAdoptsClaimOwner(t *testing.T
 	current.Timing = &issueopscontract.HandoffDeliveryTiming{InputSendMS: 1}
 	next := deliveryObservationFixture()
 	next.Timing = &issueopscontract.HandoffDeliveryTiming{PreflightMS: 3, InputSendMS: 1}
-	merged, decision := MergeHandoffDeliveryObservation(current, next)
+	merged, decision := mergeHandoffDeliveryObservation(current, next)
 	if !decision.Accepted || merged.Timing.PreflightMS != 3 || merged.Timing.InputSendMS != 1 {
 		t.Fatalf("timing=%+v decision=%+v", merged.Timing, decision)
 	}
@@ -713,7 +713,7 @@ func TestCovHandoffMergeFillsZeroPreflightTimingAndAdoptsClaimOwner(t *testing.T
 	ownerless := deliveryObservationFixture()
 	ownerless.OwnerActor = nil
 	claimed := covHandoffClaimedFixture()
-	merged, decision = MergeHandoffDeliveryObservation(ownerless, claimed)
+	merged, decision = mergeHandoffDeliveryObservation(ownerless, claimed)
 	if !decision.Accepted || merged.OwnerActor == nil || merged.OwnerActor.SessionID != "session-1" || !merged.OwnerClaim.Claimed {
 		t.Fatalf("claim by the next observation's owner rejected: %+v %+v", merged.OwnerActor, decision)
 	}

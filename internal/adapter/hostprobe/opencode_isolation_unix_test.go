@@ -39,7 +39,7 @@ func TestOpencodeRunnerNeverWritesUserHome(t *testing.T) {
 	roots := []string{filepath.Join(tempParent, "preflight"), filepath.Join(tempParent, "episode")}
 	nextRoot := 0
 	runner := NewOpencodeRunner(harness, opencodeTestPlugin(harness), Dependencies{
-		Process: ExecRunner{},
+		Process: execRunner{},
 		LookPath: func(name string) (string, error) {
 			if name != "opencode" {
 				t.Fatalf("looked up %q", name)

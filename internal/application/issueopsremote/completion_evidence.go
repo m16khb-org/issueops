@@ -8,23 +8,26 @@ import (
 	domain "issueops/internal/domain/issueops"
 )
 
+// CompletionReceipts 타입은 원격 완료(병합, 이슈 종료, 반영) 영수증을 기록에 남긴다.
 type CompletionReceipts struct {
 	store RecordStore
 	now   func() time.Time
 }
 
+// NewCompletionReceipts 함수는 저장소와 시계로 CompletionReceipts를 만든다.
 func NewCompletionReceipts(store RecordStore, now func() time.Time) CompletionReceipts {
 	return CompletionReceipts{store: store, now: now}
 }
 
-func (s CompletionReceipts) Reflected(ctx context.Context, id string) (model.Record, error) {
+func (s CompletionReceipts) reflected(ctx context.Context, id string) (model.Record, error) {
 	return s.update(ctx, id, domain.MarkRemoteCompletionReflected)
 }
 
-func (s CompletionReceipts) Closed(ctx context.Context, id string) (model.Record, error) {
+func (s CompletionReceipts) closed(ctx context.Context, id string) (model.Record, error) {
 	return s.update(ctx, id, domain.MarkRemoteIssueClosed)
 }
 
+// Merged 메서드는 원격 병합 영수증을 기록하고 갱신된 기록을 돌려준다.
 func (s CompletionReceipts) Merged(ctx context.Context, id string) (model.Record, error) {
 	return s.update(ctx, id, domain.MarkRemoteMerged)
 }

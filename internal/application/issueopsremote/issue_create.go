@@ -14,6 +14,7 @@ import (
 	"issueops/internal/port"
 )
 
+// IssueCreateCommand 타입은 이슈 생성 명령의 입력이다. Confirm이 false이면 미리보기만 하고 provider에 쓰지 않는다.
 type IssueCreateCommand struct {
 	ID        string
 	Provider  string
@@ -28,16 +29,19 @@ type IssueCreateCommand struct {
 	Confirm   bool
 }
 
+// IssueCreateInvoker 타입은 provider에 이슈 생성을 요청하는 함수다.
 type IssueCreateInvoker func(context.Context, port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error)
 
+// IssueCreationEnvironment 타입은 이슈 생성에 필요한 provider 추론, 프로젝트 권한 해석, 생성 함수 조회를 제공한다.
 type IssueCreationEnvironment interface {
 	InferProvider(string) (string, error)
 	ProjectAuthority(string, string) (string, error)
 	Resolve(string) (IssueCreateInvoker, error)
 }
 
+// IssueCreator 타입은 기록을 검증하고 본문을 해석해 이슈를 만든다. 확정 생성은 durable 의도 기록과 live 검증 영수증을 남긴다.
 type IssueCreator struct {
-	records     IssueRecordReader
+	records     issueRecordReader
 	environment IssueCreationEnvironment
 	bodies      TemplateBodyResolver
 	intents     *IssueCreateIntents
@@ -45,10 +49,12 @@ type IssueCreator struct {
 	now         func() time.Time
 }
 
-func NewIssueCreator(records IssueRecordReader, environment IssueCreationEnvironment, bodies TemplateBodyResolver, intents *IssueCreateIntents, verify IssueLiveVerifier, now func() time.Time) *IssueCreator {
+// NewIssueCreator 함수는 기록 조회, 환경, 본문 해석기, 의도 저장소, live 검증기, 시계를 묶어 IssueCreator를 만든다.
+func NewIssueCreator(records issueRecordReader, environment IssueCreationEnvironment, bodies TemplateBodyResolver, intents *IssueCreateIntents, verify IssueLiveVerifier, now func() time.Time) *IssueCreator {
 	return &IssueCreator{records: records, environment: environment, bodies: bodies, intents: intents, verify: verify, now: now}
 }
 
+// Create 메서드는 제목·본문·메타데이터를 검증하고 provider를 호출해 이슈를 만든다. 확정 생성이면 생성된 이슈를 live 검증한 뒤 의도를 완료하고, 실패는 의도에 남긴다.
 func (s *IssueCreator) Create(ctx context.Context, cmd IssueCreateCommand) (IssueCreateResult, error) {
 	var result IssueCreateResult
 	labels, assignees := issueopsremote.CleanValues(cmd.Labels), issueopsremote.CleanValues(cmd.Assignees)
@@ -108,7 +114,7 @@ func (s *IssueCreator) resolveProvider(cmd IssueCreateCommand, record model.Reco
 // The readability report is returned with a validation error so the caller can
 // still show it; a body-resolution error carries none.
 func (s *IssueCreator) resolveCreateBody(cmd IssueCreateCommand, providerName string, labels, assignees []string) (ResolvedTemplateBody, error) {
-	resolved, err := s.bodies.Resolve(TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, Template: cmd.Template, Provider: providerName, Title: cmd.Title, Body: cmd.Body, BodyFile: cmd.BodyFile, Fields: cmd.Fields, ScoreFile: cmd.ScoreFile, Confirm: cmd.Confirm})
+	resolved, err := s.bodies.Resolve(templateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, Template: cmd.Template, Provider: providerName, Title: cmd.Title, Body: cmd.Body, BodyFile: cmd.BodyFile, Fields: cmd.Fields, ScoreFile: cmd.ScoreFile, Confirm: cmd.Confirm})
 	if err != nil {
 		return ResolvedTemplateBody{}, err
 	}

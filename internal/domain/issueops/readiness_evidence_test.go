@@ -8,22 +8,22 @@ import (
 )
 
 func TestSplitDecisionMissing(t *testing.T) {
-	if got := SplitDecisionMissing(issueopscontract.Record{}); !slices.Equal(got, []string{"split_decision"}) {
+	if got := splitDecisionMissing(issueopscontract.Record{}); !slices.Equal(got, []string{"split_decision"}) {
 		t.Fatalf("empty record = %v", got)
 	}
-	if got := SplitDecisionMissing(issueopscontract.Record{Decisions: []issueopscontract.Decision{{Kind: " Scope "}}}); len(got) != 0 {
+	if got := splitDecisionMissing(issueopscontract.Record{Decisions: []issueopscontract.Decision{{Kind: " Scope "}}}); len(got) != 0 {
 		t.Fatalf("scope decision = %v", got)
 	}
-	if got := SplitDecisionMissing(issueopscontract.Record{IssueLinks: []issueopscontract.IssueLink{{Type: "Child"}}}); len(got) != 0 {
+	if got := splitDecisionMissing(issueopscontract.Record{IssueLinks: []issueopscontract.IssueLink{{Type: "Child"}}}); len(got) != 0 {
 		t.Fatalf("child link = %v", got)
 	}
 }
 
 func TestDomainReviewMissing(t *testing.T) {
-	if got := DomainReviewMissing(issueopscontract.Record{}); !slices.Equal(got, []string{"domain_review"}) {
+	if got := domainReviewMissing(issueopscontract.Record{}); !slices.Equal(got, []string{"domain_review"}) {
 		t.Fatalf("empty record = %v", got)
 	}
-	if got := DomainReviewMissing(issueopscontract.Record{DomainReview: &issueopscontract.DomainReview{ReviewedAt: "now"}}); len(got) != 0 {
+	if got := domainReviewMissing(issueopscontract.Record{DomainReview: &issueopscontract.DomainReview{ReviewedAt: "now"}}); len(got) != 0 {
 		t.Fatalf("reviewed record = %v", got)
 	}
 }

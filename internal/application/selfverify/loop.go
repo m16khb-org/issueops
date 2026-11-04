@@ -1,3 +1,7 @@
+// Package selfverify is the application layer of the self-verification loop: it runs the planned QA
+// steps in order, summarizes their results into goal scores and failure classification, optionally
+// applies the LLM evaluation gate, and saves summaries and candidate exports to state. Process,
+// filesystem and state access is injected through the Deps structs.
 package selfverify
 
 import (
@@ -10,14 +14,19 @@ import (
 	selfverifydomain "issueops/internal/domain/selfverify"
 )
 
+// ErrSelfVerificationGateFailed is wrapped by the error ExecuteLoop returns when a planned step
+// fails.
 var ErrSelfVerificationGateFailed = errors.New("self-verification quality gate failed")
 
+// ProgressReporter receives structured progress events as the loop starts, runs steps and ends.
 type ProgressReporter interface {
 	SetStarted(time.Time)
 	Emit(selfverifycontract.ProgressEvent)
 	EmitStepEnd(string, int, int, int64, int, int, selfverifycontract.StepResult)
 }
 
+// LoopRequest configures one ExecuteLoop run: the base ref and seed, the target score, verbose
+// printing, an optional progress reporter, and whether to keep running steps after a failure.
 type LoopRequest struct {
 	BaseRef         string
 	BaseSeed        int64
@@ -27,6 +36,8 @@ type LoopRequest struct {
 	CollectAllSteps bool
 }
 
+// LoopDeps injects the root lookup, step dependencies, printing, summarizing, temp directory
+// handling and clock that ExecuteLoop uses.
 type LoopDeps struct {
 	IssueOpsRoot   func() string
 	StepDeps       StepDeps
@@ -40,6 +51,8 @@ type LoopDeps struct {
 	Now            func() time.Time
 }
 
+// NewLoopResult returns the empty result of a self-verification loop with its identity fields and
+// the loop contract text filled in.
 func NewLoopResult(iterations int, baseSeed int64, targetScore float64, root string) selfaugmentcontract.Result {
 	return selfaugmentcontract.Result{
 		LoopKind:     "self_verification",
@@ -61,6 +74,10 @@ func NewLoopResult(iterations int, baseSeed int64, targetScore float64, root str
 	}
 }
 
+// ExecuteLoop runs one deterministic self-verification evidence pass: it builds the planned steps
+// against a temporary binary, runs them in order, and summarizes the outcome. A failed step returns
+// the result together with an error wrapping ErrSelfVerificationGateFailed; later steps still run
+// when CollectAllSteps is set, but termination is not granted.
 func ExecuteLoop(request LoopRequest, deps LoopDeps) (selfaugmentcontract.Result, error) {
 	const iterations = 1
 	started := deps.Now()

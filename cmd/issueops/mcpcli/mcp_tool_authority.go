@@ -30,8 +30,10 @@ const (
 	toolScopeWorkspace
 )
 
+// RecordKind 타입은 workspace 루트를 요청 인자 대신 저장된 기록에서 찾을 때 그 기록의 종류를 나타낸다.
 type RecordKind string
 
+// RecordIssueOps 상수와 RecordLoop 상수는 "id" 인자가 가리키는 기록이 issueops 실행 기록인지 loop 기록인지 구분한다.
 const (
 	recordNone     RecordKind = ""
 	RecordIssueOps RecordKind = "issueops"

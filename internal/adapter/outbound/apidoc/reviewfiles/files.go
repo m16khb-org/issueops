@@ -10,6 +10,9 @@ import (
 	domain "issueops/internal/domain/apidoc"
 )
 
+// ExtraPrompt returns the extra review prompt text: the contents of promptFile
+// when set, otherwise the repository's .issueops/OPEN_API_SPEC.md, otherwise an
+// empty string. An unreadable promptFile is an error; a missing spec is not.
 func ExtraPrompt(repo, promptFile string) (string, error) {
 	if promptFile != "" {
 		b, err := os.ReadFile(promptFile)
@@ -24,6 +27,8 @@ func ExtraPrompt(repo, promptFile string) (string, error) {
 	return "", nil
 }
 
+// Diff returns the review diff for files: the contents of diffFile when set,
+// otherwise the staged diff (git diff --cached). A non-zero git exit is an error.
 func (f Files) Diff(repo string, files []string, diffFile string) (string, error) {
 	if diffFile != "" {
 		b, err := os.ReadFile(diffFile)
@@ -37,14 +42,17 @@ func (f Files) Diff(repo string, files []string, diffFile string) (string, error
 	return out, nil
 }
 
+// Input returns the text handed to the reviewer. With all set and no diffFile it
+// is the full content of every file; otherwise it is the Diff. Paths that escape
+// the repository are rejected.
 func (f Files) Input(repo string, files []string, diffFile string, all bool) (string, error) {
 	if all && diffFile == "" {
-		return FullContent(repo, files)
+		return fullContent(repo, files)
 	}
 	return f.Diff(repo, files, diffFile)
 }
 
-func FullContent(repo string, files []string) (string, error) {
+func fullContent(repo string, files []string) (string, error) {
 	var b strings.Builder
 	for _, file := range files {
 		clean := filepath.Clean(file)
@@ -73,6 +81,8 @@ func repoRelative(clean string) bool {
 	return !filepath.IsAbs(clean) && filepath.VolumeName(clean) == "" && !strings.HasPrefix(clean, string(filepath.Separator))
 }
 
+// Staged returns the normalized, sorted staged candidate files (added, copied,
+// modified, renamed). It returns nil when git fails.
 func (f Files) Staged(repo string) []string {
 	code, out, _ := f.GitCmd(repo, "diff", "--cached", "--name-only", "--diff-filter=ACMR", "--")
 	if code != 0 {
@@ -81,6 +91,8 @@ func (f Files) Staged(repo string) []string {
 	return Normalize(repo, splitLines(out))
 }
 
+// Tracked returns the sorted git-tracked files that are API documentation
+// candidates. It returns nil when git fails.
 func (f Files) Tracked(repo string) []string {
 	code, out, _ := f.GitCmd(repo, "ls-files")
 	if code != 0 {
@@ -98,6 +110,9 @@ func (f Files) Tracked(repo string) []string {
 	return files
 }
 
+// Normalize trims, filters to candidate files, converts absolute paths to
+// repo-relative slash paths, and returns the de-duplicated result sorted. Paths
+// outside the repository are dropped.
 func Normalize(repo string, files []string) []string {
 	var out []string
 	seen := map[string]bool{}

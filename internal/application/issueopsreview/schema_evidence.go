@@ -9,6 +9,10 @@ import (
 	reviewport "issueops/internal/port/issueopsreview"
 )
 
+// RecordSchemaEvidence stores the schema evidence of record id: measurements and
+// sources, or an explicit waiver with a rationale. The evidence is bound to the
+// local change fingerprint observed before the lock and is rejected when the
+// change set moved by commit time.
 func RecordSchemaEvidence(store reviewport.EvidenceReviewStore, stateRoot, id string, req model.SchemaEvidenceRequest) (model.Record, error) {
 	measurements := cleanReviewValues(req.Measurements)
 	sources := cleanReviewValues(req.Sources)

@@ -68,7 +68,7 @@ func TestValidateNativeIntegrationWithDepsCoversSuccessAndMissingPaths(t *testin
 				return nil, errors.New("unexpected read")
 			}
 		},
-		duplicateWarningFixture: ClaudeMCPDuplicateWarningFixture,
+		duplicateWarningFixture: claudeMCPDuplicateWarningFixture,
 	}
 
 	step := validateNativeIntegrationWithDeps(root, deps)
@@ -276,7 +276,7 @@ func TestValidateNativeIntegrationReportsStableRootResolutionError(t *testing.T)
 				return nil, errors.New("unexpected read")
 			}
 		},
-		duplicateWarningFixture: ClaudeMCPDuplicateWarningFixture,
+		duplicateWarningFixture: claudeMCPDuplicateWarningFixture,
 	}
 
 	step := validateNativeIntegrationWithDeps(root, deps)
@@ -443,7 +443,7 @@ func TestValidateNativeIntegrationWithDepsCoversHomeFailure(t *testing.T) {
 }
 
 func TestDetectClaudeMCPDuplicateWarnings(t *testing.T) {
-	warnings := DetectClaudeMCPDuplicateWarnings(ClaudeMCPDuplicateWarningFixture())
+	warnings := detectClaudeMCPDuplicateWarnings(claudeMCPDuplicateWarningFixture())
 	if len(warnings) != 1 {
 		t.Fatalf("expected one duplicate warning, got %+v", warnings)
 	}
@@ -453,7 +453,7 @@ func TestDetectClaudeMCPDuplicateWarnings(t *testing.T) {
 	if len(warnings[0].Suggestions) != 1 || !strings.Contains(warnings[0].Suggestions[0], "claude mcp remove issueops") {
 		t.Fatalf("duplicate warning suggestion missing: %+v", warnings[0].Suggestions)
 	}
-	if got := DetectClaudeMCPDuplicateWarnings("issueops: ./bin/issueops mcp - ✓ Connected\n"); len(got) != 0 {
+	if got := detectClaudeMCPDuplicateWarnings("issueops: ./bin/issueops mcp - ✓ Connected\n"); len(got) != 0 {
 		t.Fatalf("non-conflicting output produced warnings: %+v", got)
 	}
 }
@@ -492,11 +492,11 @@ func TestNativeIntegrationKeepsPreparedStableRoot(t *testing.T) {
 }
 
 func TestDetectClaudeMCPDuplicateWarningsIgnoresSuggestionWithoutPrecedingWarning(t *testing.T) {
-	got := DetectClaudeMCPDuplicateWarnings("   Suggestion: remove it\n")
+	got := detectClaudeMCPDuplicateWarnings("   Suggestion: remove it\n")
 	if len(got) != 0 {
 		t.Fatalf("orphan suggestion produced warnings: %+v", got)
 	}
-	got = DetectClaudeMCPDuplicateWarnings("   Suggestion: orphan\n" + ClaudeMCPDuplicateWarningFixture())
+	got = detectClaudeMCPDuplicateWarnings("   Suggestion: orphan\n" + claudeMCPDuplicateWarningFixture())
 	if len(got) != 1 || len(got[0].Suggestions) != 1 || strings.Contains(got[0].Suggestions[0], "orphan") {
 		t.Fatalf("orphan suggestion attached to a warning: %+v", got)
 	}

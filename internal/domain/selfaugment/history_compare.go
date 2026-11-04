@@ -7,6 +7,10 @@ import (
 	contract "issueops/internal/contract/selfaugment"
 )
 
+// CompareSnapshots diffs two self-verification summary snapshots and returns the regressions and
+// warnings of candidate relative to baseline: status, goal score, failed steps, elapsed time, step
+// labels and per-step durations. maxElapsedRegressionPct is the tolerated percentage growth; the
+// returned result is always OK and sets Regressed when any regression was found.
 func CompareSnapshots(baselineKey, candidateKey string, maxElapsedRegressionPct float64, baseline, candidate contract.StateSnapshot, stateDir string) contract.CompareResult {
 	result := NewCompareResult(baselineKey, candidateKey, maxElapsedRegressionPct, stateDir)
 	result.BaselineSummary = baseline.Summary
@@ -92,6 +96,8 @@ func compareStepDurations(result *contract.CompareResult, baseline, candidate co
 	}
 }
 
+// NewCompareResult returns an empty, not-yet-OK CompareResult carrying the request fields, with
+// every list initialized to a non-nil empty slice so it encodes as [] in JSON.
 func NewCompareResult(baselineKey, candidateKey string, maxElapsedRegressionPct float64, stateDir string) contract.CompareResult {
 	return contract.CompareResult{
 		OK:                      false,

@@ -9,6 +9,9 @@ import (
 	reviewport "issueops/internal/port/issueopsreview"
 )
 
+// RecordDomainReview validates req (a model-fit statement and terminology are
+// required) and stores it as the domain review of record id, stamping ReviewedAt
+// and UpdatedAt under the record lock.
 func RecordDomainReview(store reviewport.ReviewMutationStore, stateRoot, id string, req model.DomainReviewRequest) (model.Record, error) {
 	var modelFit string
 	var terminology []string

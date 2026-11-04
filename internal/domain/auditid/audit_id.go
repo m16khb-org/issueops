@@ -1,3 +1,4 @@
+// Package auditid generates identifiers for command audit records.
 package auditid
 
 import (
@@ -10,6 +11,9 @@ import (
 
 var sequence atomic.Uint64
 
+// Generate returns a unique audit id of the form
+// audit-<UTC timestamp>-<process sequence>-<FNV-32a hash of workspaceRoot,
+// cwd, and argv>. The sequence is process-wide and safe for concurrent use.
 func Generate(workspaceRoot, cwd string, argv []string) string {
 	h := fnv.New32a()
 	_, _ = h.Write([]byte(workspaceRoot))

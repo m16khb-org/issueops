@@ -14,6 +14,10 @@ import (
 	tracecontract "issueops/internal/contract/trace"
 )
 
+// RunTrace dispatches `issueops trace` to its subcommands: analyze, which
+// turns trace input into recurring-failure findings, and handoff-delivery,
+// which records a manual handoff delivery observation. It prints usage when
+// the subcommand is missing and returns flag.ErrHelp for help flags.
 func (command Command) RunTrace(args []string) error {
 	if len(args) == 0 {
 		traceUsage()

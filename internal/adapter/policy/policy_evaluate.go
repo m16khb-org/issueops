@@ -1,3 +1,4 @@
+// Package policy is the outbound adapter of the command policy: it observes the file system, runs allowed read-only commands under a timeout in their own process group, and reads policy overrides. The decisions themselves come from the application and domain policy packages.
 package policy
 
 import (
@@ -11,16 +12,20 @@ import (
 	"issueops/internal/domain/auditid"
 )
 
+// Evaluator runs command policy requests by wiring the file system observer, override loader, executor and clock into the policy application service.
 type Evaluator struct {
 	lookup policyapp.PreparedBaseBranchLookup
 }
 
+// NewEvaluator returns an Evaluator that resolves prepared base branches through lookup.
 func NewEvaluator(lookup policyapp.PreparedBaseBranchLookup) Evaluator {
 	return Evaluator{lookup: lookup}
 }
 
+// CommandObserver gathers the file system facts (directory checks, workspace containment, paths outside the root) a command policy decision needs.
 type CommandObserver struct{}
 
+// Observe resolves the workspace root and cwd to absolute paths and records whether they are directories, whether cwd is inside the root, and whether argv references paths outside it. It generates an audit log ID when the request has none.
 func (observer CommandObserver) Observe(req policycontract.CommandPolicyRequest) policyapp.Observation {
 	root := absOrOriginal(req.WorkspaceRoot)
 	cwd := absOrOriginal(req.CWD)

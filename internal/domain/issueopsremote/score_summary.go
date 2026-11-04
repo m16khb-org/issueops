@@ -5,6 +5,7 @@ import (
 	"strings"
 )
 
+// RenderScoreSummary renders result as a multi-line Korean summary: the threshold, then the selected and rejected issues and labels with their scores.
 func RenderScoreSummary(result ScoringResult) string {
 	parts := []string{fmt.Sprintf("threshold %.2f", result.Threshold)}
 	if len(result.SelectedRelatedIssues) > 0 {

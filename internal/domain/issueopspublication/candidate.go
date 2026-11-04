@@ -9,12 +9,13 @@ import (
 	contract "issueops/internal/contract/issueopspublication"
 )
 
+// BodySHA256 함수는 body의 SHA-256 다이제스트를 16진수 문자열로 반환한다. 후보 본문 비교에 쓴다.
 func BodySHA256(body string) string {
 	sum := sha256.Sum256([]byte(body))
 	return hex.EncodeToString(sum[:])
 }
 
-func CandidateTitle(candidate contract.Candidate) string {
+func candidateTitle(candidate contract.Candidate) string {
 	title := strings.TrimSpace(candidate.Title)
 	if !candidate.Draft {
 		return title
@@ -27,7 +28,7 @@ func CandidateTitle(candidate contract.Candidate) string {
 	return title
 }
 
-func CandidateDraftMatches(candidate contract.Candidate, expectedDraft bool) bool {
+func candidateDraftMatches(candidate contract.Candidate, expectedDraft bool) bool {
 	if candidate.Draft == expectedDraft {
 		return true
 	}
@@ -42,6 +43,9 @@ func CandidateDraftMatches(candidate contract.Candidate, expectedDraft bool) boo
 	}
 }
 
+// ValidateCandidate 함수는 후보가 지속된 요청과 정확히 일치하는지 검사한다.
+// 프로젝트, 브랜치, 헤드 SHA, 제목, 본문, 초안 여부, 라벨, 담당자가 모두 같아야 하며,
+// knownURL이 있으면 후보 URL도 같아야 한다. 하나라도 다르면 오류를 반환한다.
 func ValidateCandidate(request contract.ProviderCreateRequest, candidate contract.Candidate, knownURL string) error {
 	if !candidateLocationMatches(request, candidate) || !candidateContentMatches(request, candidate) {
 		return fmt.Errorf("remote reconcile candidate does not match the exact durable intent")
@@ -61,8 +65,8 @@ func candidateLocationMatches(request contract.ProviderCreateRequest, candidate 
 
 // candidateContentMatches는 후보의 제목, 본문, 초안 여부, 라벨, 담당자가 요청과 같은지 검사한다.
 func candidateContentMatches(request contract.ProviderCreateRequest, candidate contract.Candidate) bool {
-	return CandidateTitle(candidate) == request.Title &&
-		strings.TrimSpace(candidate.BodySHA256) == BodySHA256(request.Body) && CandidateDraftMatches(candidate, request.Draft) &&
+	return candidateTitle(candidate) == request.Title &&
+		strings.TrimSpace(candidate.BodySHA256) == BodySHA256(request.Body) && candidateDraftMatches(candidate, request.Draft) &&
 		sameCanonicalSet(candidate.Labels, request.Labels) && sameCanonicalSet(candidate.Assignees, request.Assignees)
 }
 

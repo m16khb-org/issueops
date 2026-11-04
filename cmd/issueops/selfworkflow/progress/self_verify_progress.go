@@ -1,3 +1,6 @@
+// Package progress reports self-verify progress as JSON Lines events on a writer
+// so a long run shows which step it is in and what last succeeded. It is part
+// of the cmd layer's self workflow.
 package progress
 
 import (
@@ -10,6 +13,10 @@ import (
 	"time"
 )
 
+// NewSelfVerifyProgressReporter returns a reporter for mode. An empty mode or
+// "none" returns a nil reporter, which every method accepts and treats as
+// disabled; "jsonl" writes one JSON event per line to writer (io.Discard when
+// nil); any other mode is an error.
 func NewSelfVerifyProgressReporter(mode string, writer io.Writer) (*SelfVerifyProgressReporter, error) {
 	mode = strings.TrimSpace(strings.ToLower(mode))
 	if mode == "" || mode == "none" {
@@ -24,6 +31,9 @@ func NewSelfVerifyProgressReporter(mode string, writer io.Writer) (*SelfVerifyPr
 	return &SelfVerifyProgressReporter{mode: mode, writer: writer, started: time.Now()}, nil
 }
 
+// Emit writes event as one JSON line. A zero ElapsedMS is filled from the time
+// since the reporter started and an empty LastSuccess from the last successful
+// step. A nil reporter does nothing.
 func (r *SelfVerifyProgressReporter) Emit(event selfverify.ProgressEvent) {
 	if r == nil || r.mode == "" {
 		return
@@ -42,6 +52,9 @@ func (r *SelfVerifyProgressReporter) Emit(event selfverify.ProgressEvent) {
 	fmt.Fprintln(r.writer, string(b))
 }
 
+// EmitStepEnd writes a step_end event for step with its loop position and
+// duration, then remembers the step as the last success when it passed. A nil
+// reporter does nothing.
 func (r *SelfVerifyProgressReporter) EmitStepEnd(loopKind string, iteration, iterations int, seed int64, stepIndex, stepCount int, step selfverify.StepResult) {
 	if r == nil {
 		return
@@ -70,6 +83,8 @@ func (r *SelfVerifyProgressReporter) EmitStepEnd(loopKind string, iteration, ite
 	}
 }
 
+// SetStarted sets the instant that elapsed time is measured from, replacing the
+// time the reporter was created. A nil reporter does nothing.
 func (r *SelfVerifyProgressReporter) SetStarted(started time.Time) {
 	if r == nil {
 		return

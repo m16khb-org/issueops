@@ -7,6 +7,8 @@ import (
 	contract "issueops/internal/contract/selfaugment"
 )
 
+// SummaryStep is the per-step input to SummarizeSteps: outcome and wall time, with Reused marking a
+// step satisfied by earlier evidence that must not count toward duration stats.
 type SummaryStep struct {
 	Label      string
 	OK         bool
@@ -14,12 +16,17 @@ type SummaryStep struct {
 	DurationMS int64
 }
 
+// SummaryRun groups the steps executed in one iteration together with its iteration number and
+// seed.
 type SummaryRun struct {
 	Iteration int
 	Seed      int64
 	Steps     []SummaryStep
 }
 
+// SummarizeSteps aggregates runs into a Summary: step totals, the first failure, ordered step
+// labels, the five slowest executed steps, and per-label duration stats with reuse counts. Goal
+// scores and termination eligibility are filled later by FinalizeSummary.
 func SummarizeSteps(runs []SummaryRun, targetScore float64) contract.Summary {
 	summary := contract.Summary{
 		TotalRuns:         len(runs),
@@ -72,6 +79,9 @@ func SummarizeSteps(runs []SummaryRun, targetScore float64) contract.Summary {
 	return summary
 }
 
+// FinalizeSummary derives MinimumGoalScore and TerminationEligible on summary from its goal scores.
+// Termination is eligible only when runOK is true and every goal passed; the minimum is zero when
+// there are no goals.
 func FinalizeSummary(summary *contract.Summary, runOK bool) {
 	summary.MinimumGoalScore = 100
 	if len(summary.GoalScores) == 0 {

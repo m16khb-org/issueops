@@ -1,3 +1,5 @@
+// Package hookprompt renders the user-facing views of the project document
+// catalog that host lifecycle hooks inject.
 package hookprompt
 
 import (

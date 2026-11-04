@@ -9,6 +9,11 @@ import (
 	contract "issueops/internal/contract/issueopsbenchmark"
 )
 
+// EvaluateAutoresearchGate decides whether an autoresearch candidate is kept.
+// It collects discard reasons: missing id, hypothesis, target dimensions or
+// edit surface, a failing or regressed candidate run, changed paths outside
+// the declared edit surface, and regressions on the targeted dimensions. The
+// candidate is kept only when there are no reasons.
 func EvaluateAutoresearchGate(req contract.IssueOpsAutoresearchGateRequest) contract.IssueOpsAutoresearchGateResult {
 	compare := CompareRuns(req.BaselineRun, req.CandidateRun)
 	result := contract.IssueOpsAutoresearchGateResult{

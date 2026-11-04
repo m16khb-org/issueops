@@ -9,9 +9,9 @@ import (
 	issueopsinventorycontract "issueops/internal/contract/issueopsinventory"
 )
 
-// Ports는 `issueops next`가 필요로 하는 관측이다. 전부 읽기 전용이며, 함수
-// 타입으로 두어 composition root가 현행 어댑터 함수를 그대로 꽂는다. 이
-// 패키지는 어댑터를 import하지 않는다.
+// Ports 타입은 `issueops next`가 필요로 하는 관측을 모은 것이다. 전부 읽기
+// 전용이며, 함수 타입으로 두어 composition root가 현행 어댑터 함수를 그대로
+// 꽂는다. 이 패키지는 어댑터를 import하지 않는다.
 type Ports struct {
 	ListCycles func(ctx context.Context, stateRoot, repo string) (issueopsinventorycontract.ListResult, error)
 	ReadRecord func(stateRoot, id string) (issueopscontract.Record, error)

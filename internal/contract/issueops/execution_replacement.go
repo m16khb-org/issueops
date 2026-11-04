@@ -1,5 +1,9 @@
 package issueops
 
+// ExecutionReplaceRequest asks to replace the holder of the write lease.
+// Action selects the step (preview, revoke, finalize-preview, finalize or
+// reseed); ExpectedGeneration and the fingerprints bind the step to the state
+// that was previewed.
 type ExecutionReplaceRequest struct {
 	ID                    string      `json:"id"`
 	Action                string      `json:"action"`
@@ -13,6 +17,8 @@ type ExecutionReplaceRequest struct {
 	Confirm               bool        `json:"confirm,omitempty"`
 }
 
+// ReplacementWorkspaceProcess is one process observed holding a file in the
+// workspace being replaced: its PID, command, file descriptor, access mode and path.
 type ReplacementWorkspaceProcess struct {
 	PID     int
 	Command string

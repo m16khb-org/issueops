@@ -7,10 +7,14 @@ import (
 	"issueops/internal/adapter/outbound/issueopsrecord"
 )
 
+// Repository adapts the issueops record Store to the decision service's
+// repository port.
 type Repository struct {
 	Store issueopsrecord.Store
 }
 
+// Update applies mutate to the record with id under the store's update guard. The
+// mutation is persisted only when mutate returns no error.
 func (repository Repository) Update(
 	ctx context.Context,
 	stateRoot string,

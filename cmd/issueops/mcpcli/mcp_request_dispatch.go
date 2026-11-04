@@ -17,7 +17,7 @@ const (
 	transportHTTP
 )
 
-func dispatchMCPToolCall(ctx context.Context, call MCPToolCall, deps MCPDependencies, transport serverTransport) MCPToolOutcome {
+func dispatchMCPToolCall(ctx context.Context, call MCPToolCall, deps MCPDependencies, transport serverTransport) mcpToolOutcome {
 	spec := mcpToolAuthorities[call.Name]
 	if !requiresCapability(spec, call.Arguments, transport) {
 		return resolveHandlerGroup(deps, call.Name)(ctx, call)

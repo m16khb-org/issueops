@@ -1,4 +1,4 @@
-// Package worker는 worker capability의 DTO를 소유한다.
+// Package worker 패키지는 worker capability의 DTO를 소유한다.
 //
 // 값을 만들어내는 쪽은 I/O를 하지만, 결과를 읽고 전달하는 쪽은 그 구현을
 // 알 필요가 없다.
@@ -6,6 +6,8 @@ package worker
 
 import policycontract "issueops/internal/contract/policy"
 
+// Job is the persisted record of one local worker job. Command is an argv run
+// without a shell; Result is set once the command has finished.
 type Job struct {
 	OK           bool                             `json:"ok"`
 	ID           string                           `json:"id"`
@@ -36,6 +38,7 @@ type QueueStats struct {
 	Depth     int `json:"depth"`
 }
 
+// ListResult is a listing of worker jobs rooted at WorkerDir.
 type ListResult struct {
 	OK        bool   `json:"ok"`
 	WorkerDir string `json:"worker_dir"`
@@ -46,6 +49,7 @@ type ListResult struct {
 	Queue *QueueStats `json:"queue,omitempty"`
 }
 
+// Worker job statuses. Queued and running are non-terminal; the rest are final.
 const (
 	StatusQueued    = "queued"
 	StatusRunning   = "running"

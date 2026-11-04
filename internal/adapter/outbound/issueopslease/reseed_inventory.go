@@ -16,14 +16,18 @@ import (
 	leasedomain "issueops/internal/domain/issueopslease"
 )
 
+// ReseedInventory 타입은 reseed 직전 lease와 작업공간의 상태를 하나의 다이제스트로 관측한다.
 type ReseedInventory struct {
 	inspect leaseapp.ProcessInspector
 }
 
+// NewReseedInventory 함수는 holder 프로세스 조사에 inspect를 쓰는 ReseedInventory를 만든다.
 func NewReseedInventory(inspect leaseapp.ProcessInspector) *ReseedInventory {
 	return &ReseedInventory{inspect: inspect}
 }
 
+// Observe 메서드는 lease 상태, holder 프로세스 상태, 요청자, 작업공간 스냅샷을 묶은 SHA-256 다이제스트를 반환한다.
+// 다이제스트가 달라지면 관측 이후 상태가 바뀐 것이다. execution이나 프로세스 조사기가 없으면 오류를 반환한다.
 func (a *ReseedInventory) Observe(ctx context.Context, record leasecontract.Record, requester leasedomain.Actor) (string, error) {
 	if a == nil || a.inspect == nil || record.Execution == nil {
 		return "", fmt.Errorf("reseed inventory requires an execution and process inspector")

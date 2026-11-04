@@ -13,6 +13,7 @@ type Service struct {
 	Appending     AppendEffects
 }
 
+// Read returns the document at rel under the normalized root; see the Read function.
 func (service Service) Read(root, rel string) (docscontract.ReadResult, error) {
 	root, err := service.NormalizeRoot(root)
 	if err != nil {
@@ -25,6 +26,8 @@ func (service Service) Read(root, rel string) (docscontract.ReadResult, error) {
 	return Read(root, rel, service.Routing.Path(root, rel), service.Revision)
 }
 
+// Revise replaces one project document after validating the request and its expected hash.
+// Without confirmation it only plans the change.
 func (service Service) Revise(request docscontract.ReviseRequest) (docscontract.ReviseResult, error) {
 	root, err := service.NormalizeRoot(request.RepoRoot)
 	if err != nil {
@@ -34,17 +37,20 @@ func (service Service) Revise(request docscontract.ReviseRequest) (docscontract.
 	if err != nil {
 		return docscontract.ReviseResult{}, err
 	}
-	return Revise(request, root, rel, service.Routing.Path(root, rel), service.Revision)
+	return revise(request, root, rel, service.Routing.Path(root, rel), service.Revision)
 }
 
+// Route returns the project documents and dated records a task should read before work starts.
+// It only reads; missing docs are reported as warnings.
 func (service Service) Route(root, task string) (docscontract.RouteResult, error) {
 	root, err := service.NormalizeRoot(root)
 	if err != nil {
 		return docscontract.RouteResult{}, err
 	}
-	return Route(root, task, service.Routing), nil
+	return route(root, task, service.Routing), nil
 }
 
+// Append writes one new dated caution or ADR record and links it from the family overview.
 func (service Service) Append(request docscontract.AppendRequest) (docscontract.AppendResult, error) {
 	root, err := service.NormalizeRoot(request.RepoRoot)
 	if err != nil {

@@ -1,3 +1,5 @@
+// Package issueopsprovenance is the outbound adapter that observes the
+// provenance (path and digest) of the running generated command executable.
 package issueopsprovenance
 
 import (
@@ -16,6 +18,8 @@ type executableObserver struct {
 	executable func() (string, error)
 }
 
+// NewExecutableObserver returns an Observer that reports the symlink-resolved
+// absolute path and SHA-256 of the currently running executable.
 func NewExecutableObserver() provenanceport.Observer {
 	return &executableObserver{executable: os.Executable}
 }

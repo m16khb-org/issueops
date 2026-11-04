@@ -14,9 +14,9 @@ import (
 
 // Reasons a declared entry is skipped rather than installed.
 const (
-	ReasonPluginAlreadyInstalled = "already installed on the host"
-	ReasonSkillAlreadyInstalled  = "already present in the host skill directory"
-	ReasonPluginHostUnavailable  = "host plugin CLI is unavailable"
+	reasonPluginAlreadyInstalled = "already installed on the host"
+	reasonSkillAlreadyInstalled  = "already present in the host skill directory"
+	reasonPluginHostUnavailable  = "host plugin CLI is unavailable"
 )
 
 var skillNamePattern = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`) })
@@ -52,10 +52,10 @@ func buildPlan(cfg upstreamcontract.Config, observed upstreamcontract.Observed, 
 		switch {
 		case installedPlugins[entry.ID()]:
 			item.Action = upstreamcontract.ActionSkip
-			item.Reason = ReasonPluginAlreadyInstalled
+			item.Reason = reasonPluginAlreadyInstalled
 		case !pluginHostAvailable:
 			item.Action = upstreamcontract.ActionSkip
-			item.Reason = ReasonPluginHostUnavailable
+			item.Reason = reasonPluginHostUnavailable
 		default:
 			item.AddMarketplace = !marketplaces[entry.Marketplace]
 		}
@@ -70,7 +70,7 @@ func buildPlan(cfg upstreamcontract.Config, observed upstreamcontract.Observed, 
 		item := upstreamcontract.PlanItem{Kind: upstreamcontract.KindSkill, Name: entry.Name, Action: upstreamcontract.ActionInstall, Skill: &entry}
 		if installedSkills[entry.Name] {
 			item.Action = upstreamcontract.ActionSkip
-			item.Reason = ReasonSkillAlreadyInstalled
+			item.Reason = reasonSkillAlreadyInstalled
 		}
 		items = append(items, item)
 	}

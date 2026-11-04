@@ -1,3 +1,6 @@
+// Package gitworktree holds the pure policy for canonical cycle worktrees:
+// required identity values, location rules, existing-worktree identity checks,
+// and the branch sources to try. It performs no git I/O and sits in the domain layer.
 package gitworktree
 
 import "fmt"
@@ -10,6 +13,8 @@ func ValidateRequired(lifecycleID, source, root, branch, baseHead string) error 
 	return nil
 }
 
+// ValidateLocation requires the canonical worktree root to live under the
+// sibling "<source>.worktrees" directory and to differ from the source root.
 func ValidateLocation(source, root, parent string) error {
 	if parent != source+".worktrees" {
 		return fmt.Errorf("canonical worktree must use the sibling .worktrees base")
@@ -20,6 +25,9 @@ func ValidateLocation(source, root, parent string) error {
 	return nil
 }
 
+// ValidateExistingIdentity checks that an already existing canonical worktree
+// is the same root, is on branch, and has actualHead equal to the sealed
+// baseHead. The errors tell the caller how to recover.
 func ValidateExistingIdentity(sameRoot bool, actualBranch, branch, actualHead, baseHead string) error {
 	if !sameRoot {
 		return fmt.Errorf("existing canonical worktree identity does not match branch and base_head")
@@ -42,6 +50,8 @@ type BranchCandidate struct {
 	CreateBranch bool
 }
 
+// BranchCandidates lists, in the order to try, where branch can come from: the
+// local branch, origin, upstream, and finally a new branch at baseHead.
 func BranchCandidates(branch, baseHead string) []BranchCandidate {
 	return []BranchCandidate{
 		{Ref: "refs/heads/" + branch, StartPoint: branch},

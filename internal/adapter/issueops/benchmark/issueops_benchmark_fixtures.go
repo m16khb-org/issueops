@@ -11,6 +11,8 @@ import (
 	"strings"
 )
 
+// LoadFixtures 메서드는 dir 바로 아래의 *.json 파일을 fixture로 읽어 검증한 뒤 돌려준다.
+// 하위 디렉터리는 탐색하지 않으며, dir이 비어 있거나 파싱·검증에 실패한 파일이 있으면 에러를 돌려준다.
 func (Files) LoadFixtures(dir string) ([]issueopscontract.Fixture, error) {
 	dir = strings.TrimSpace(dir)
 	if dir == "" {

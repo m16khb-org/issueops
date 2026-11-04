@@ -1,3 +1,6 @@
+// Package augmentcmd implements the `issueops self-augment` command: it plans
+// improvement cycles, optionally saves the plan, and routes the lesson, verify,
+// history, compare, and promote subcommands to their runners.
 package augmentcmd
 
 import (
@@ -12,6 +15,9 @@ import (
 	augmentdomain "issueops/internal/domain/selfaugment"
 )
 
+// Deps injects the planning, persistence, and output behavior of Run. Nil
+// fields fall back to defaults that either write to stdout or fail with a
+// "dependency is required" error.
 type Deps struct {
 	Output              io.Writer
 	RunLesson           func([]string) error
@@ -23,6 +29,9 @@ type Deps struct {
 	DefaultTargetScore  float64
 }
 
+// Run executes `issueops self-augment`. The lesson, verify, history, compare,
+// and promote subcommands are forwarded to their runners; otherwise it plans
+// --cycles cycles against --target-score, optionally saving with --save-state.
 func Run(args []string, deps Deps) error {
 	deps = deps.withDefaults()
 	if len(args) > 0 {

@@ -29,6 +29,8 @@ func (h ClaudePluginHost) Available() bool {
 	return err == nil
 }
 
+// InstalledPlugins returns the IDs of the plugins installed in Claude Code, from
+// `claude plugin list --json`.
 func (h ClaudePluginHost) InstalledPlugins(ctx context.Context) ([]string, error) {
 	out, err := h.run(ctx, "plugin", "list", "--json")
 	if err != nil {
@@ -37,6 +39,8 @@ func (h ClaudePluginHost) InstalledPlugins(ctx context.Context) ([]string, error
 	return parsePluginIDs(out)
 }
 
+// Marketplaces returns the names of the configured plugin marketplaces, from
+// `claude plugin marketplace list --json`.
 func (h ClaudePluginHost) Marketplaces(ctx context.Context) ([]string, error) {
 	out, err := h.run(ctx, "plugin", "marketplace", "list", "--json")
 	if err != nil {
@@ -45,11 +49,14 @@ func (h ClaudePluginHost) Marketplaces(ctx context.Context) ([]string, error) {
 	return parseMarketplaceNames(out)
 }
 
+// AddMarketplace registers the marketplace at source with `claude plugin
+// marketplace add`.
 func (h ClaudePluginHost) AddMarketplace(ctx context.Context, source string) error {
 	_, err := h.run(ctx, "plugin", "marketplace", "add", source)
 	return err
 }
 
+// InstallPlugin installs plugin id at user scope with `claude plugin install`.
 func (h ClaudePluginHost) InstallPlugin(ctx context.Context, id string) error {
 	_, err := h.run(ctx, "plugin", "install", id, "--scope", "user")
 	return err

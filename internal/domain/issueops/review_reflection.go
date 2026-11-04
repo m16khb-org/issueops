@@ -7,6 +7,8 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
+// ValidateReviewReflection requires devil-advocate findings to reflect and a
+// linked issue to reflect them into.
 func ValidateReviewReflection(record model.Record) error {
 	review := record.DevilsAdvocateReview
 	if review == nil || len(review.Findings) == 0 {
@@ -18,6 +20,8 @@ func ValidateReviewReflection(record model.Record) error {
 	return nil
 }
 
+// ValidateReviewReflectionStamp fails when the devil-advocate review
+// disappeared between validation and the reflect stamp.
 func ValidateReviewReflectionStamp(record model.Record) error {
 	if record.DevilsAdvocateReview == nil {
 		return fmt.Errorf("devil's-advocate review disappeared before reflect stamp")

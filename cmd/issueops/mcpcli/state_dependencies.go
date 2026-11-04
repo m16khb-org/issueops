@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// StateDependencies는 서버별 state application 연산이다.
+// StateDependencies 타입은 서버별 state application 연산이다.
 type StateDependencies struct {
 	Doctor   func() (statecontract.DoctorResult, error)
 	List     func() (statecontract.ListResult, error)

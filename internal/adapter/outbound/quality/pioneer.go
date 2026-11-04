@@ -15,6 +15,9 @@ import (
 	"issueops/internal/domain/pioneerskill"
 )
 
+// CollectPioneerCoverage counts, for every pioneer skill, the benchmark fixtures,
+// reproduction tasks, and evaluation manifest cases present under root. A
+// malformed manifest is an error; a missing manifest counts as zero observed.
 func CollectPioneerCoverage(root string) (contract.PioneerCoverage, error) {
 	names := pioneerskill.Names()
 	benchmarkObserved := make([]string, 0, len(names))

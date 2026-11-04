@@ -30,7 +30,7 @@ func TestValidateChildCreationReportsFirstMissingRequirement(t *testing.T) {
 		want      string
 	}{
 		{"unlinked", model.Record{IssueURL: " "}, "t", []string{"l"}, []string{"a"}, "cannot create child before linked parent issue"},
-		{"umbrella gate", unbranched, "t", []string{"l"}, []string{"a"}, UmbrellaBranchGateReason(unbranched)},
+		{"umbrella gate", unbranched, "t", []string{"l"}, []string{"a"}, umbrellaBranchGateReason(unbranched)},
 		{"title", preparedUmbrella, "  ", []string{"l"}, []string{"a"}, "child title is required"},
 		{"labels", preparedUmbrella, "t", nil, []string{"a"}, "at least one child label is required"},
 		{"assignees", preparedUmbrella, "t", []string{"l"}, nil, "at least one child assignee is required"},
@@ -271,24 +271,24 @@ func TestBeginChildOperationRetriesNotInvokedOperation(t *testing.T) {
 func TestValidateChildOperationAuthorityTracksParentAndExecutionBinding(t *testing.T) {
 	record := model.Record{IssueURL: childParentURL}
 	op := sealedChild(t, record, opA, dig("d1"))
-	if err := ValidateChildOperationAuthority(record, op); err != nil {
+	if err := validateChildOperationAuthority(record, op); err != nil {
 		t.Fatalf("unbound op: %v", err)
 	}
 	moved := record
 	moved.IssueURL = "https://github.com/Org/Repo/issues/5"
-	if err := ValidateChildOperationAuthority(moved, op); err == nil || err.Error() != "child operation parent/project changed" {
+	if err := validateChildOperationAuthority(moved, op); err == nil || err.Error() != "child operation parent/project changed" {
 		t.Fatalf("parent moved = %v", err)
 	}
 	stale := op
 	stale.Generation = 3
-	if err := ValidateChildOperationAuthority(record, stale); err == nil || err.Error() != "child operation authority changed" {
+	if err := validateChildOperationAuthority(record, stale); err == nil || err.Error() != "child operation authority changed" {
 		t.Fatalf("generation without execution = %v", err)
 	}
 	withExec := record
 	withExec.Execution = &model.Execution{}
 	withExec.Execution.Lease.Generation = 2
 	withExec.Execution.Workspace.Root = "/w"
-	if err := ValidateChildOperationAuthority(withExec, op); err == nil || !strings.Contains(err.Error(), "explicit reconcile required") {
+	if err := validateChildOperationAuthority(withExec, op); err == nil || !strings.Contains(err.Error(), "explicit reconcile required") {
 		t.Fatalf("rebound execution = %v", err)
 	}
 
@@ -302,7 +302,7 @@ func TestValidateChildOperationAuthorityTracksParentAndExecutionBinding(t *testi
 	if got.Generation != 2 || got.CWD != "/w" {
 		t.Fatalf("rebind = %+v", got)
 	}
-	if err := ValidateChildOperationAuthority(rebound, got); err != nil {
+	if err := validateChildOperationAuthority(rebound, got); err != nil {
 		t.Fatalf("authority after rebind: %v", err)
 	}
 	if _, err := RebindChildOperation(withExec, "missing"); err == nil || err.Error() != "child operation not found" {

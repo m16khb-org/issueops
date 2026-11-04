@@ -1,3 +1,7 @@
+// Package issueopsrecord is the outbound adapter that persists issueops cycle
+// records in the sqlstore: it encodes and decodes records with their invariants,
+// reads, scans, updates and deletes them under the store's lock, and emits
+// span observations for lock waits and commits.
 package issueopsrecord
 
 import (
@@ -13,6 +17,10 @@ import (
 	issueopsdomain "issueops/internal/domain/issueops"
 )
 
+// Decode parses persisted record JSON for id. Unknown fields, trailing data, a
+// different id or schema version, and records that violate the contract or domain
+// invariants are all rejected with statecontract.ErrInvalidState and an
+// invalid-marked record.
 func Decode(id string, data []byte) (issueopscontract.Record, error) {
 	invalid := issueopscontract.Record{
 		OK:            false,
@@ -20,7 +28,7 @@ func Decode(id string, data []byte) (issueopscontract.Record, error) {
 		Invalid:       true,
 		InvalidReason: statecontract.ErrInvalidState.Error(),
 	}
-	normalizedID, err := NormalizeID(id)
+	normalizedID, err := normalizeID(id)
 	if err != nil || normalizedID != id {
 		return invalid, statecontract.ErrInvalidState
 	}
@@ -46,8 +54,11 @@ func Decode(id string, data []byte) (issueopscontract.Record, error) {
 	return record, nil
 }
 
+// Encode validates record against the contract and domain invariants and returns
+// its indented JSON with OK set to true. An invalid id is reported as such; any
+// other violation returns statecontract.ErrInvalidState.
 func Encode(record issueopscontract.Record) ([]byte, error) {
-	if _, err := NormalizeID(record.ID); err != nil {
+	if _, err := normalizeID(record.ID); err != nil {
 		return nil, err
 	}
 	if err := issueopscontract.ValidateRecord(record); err != nil {
@@ -60,7 +71,7 @@ func Encode(record issueopscontract.Record) ([]byte, error) {
 	return json.MarshalIndent(record, "", "  ")
 }
 
-func NormalizeID(id string) (string, error) {
+func normalizeID(id string) (string, error) {
 	id = strings.TrimSpace(id)
 	if id == "" {
 		// Probe: `status --json` without --id said only "id is required".

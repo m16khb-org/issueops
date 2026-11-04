@@ -1,6 +1,6 @@
 package cli
 
-// IssueOpsUsageCatalog는 `issueops` 명령 usage 줄의 **유일한 원본**이다.
+// IssueOpsUsageCatalog 상수는 `issueops` 명령 usage 줄의 **유일한 원본**이다.
 //
 // 전에는 같은 줄이 두 곳에 있었다 — 여기의 최상위 축약 카탈로그와
 // `cmd/issueops/issueopscli`의 전체 목록. 한쪽 누락은 parity 테스트가 잡았지만
@@ -101,7 +101,7 @@ const IssueOpsUsageCatalog = `  issueops start --repo PATH [--branch NAME | --ne
   issueops benchmark reliability [--outcomes PATH] [--alpha N] [--json]
   issueops benchmark consensus [--samples PATH] [--json]`
 
-// IssueOpsActorFlagLegend는 두 usage 출력이 공유하는 actor 축약 정의다. 축약을 쓰는
+// IssueOpsActorFlagLegend 상수는 두 usage 출력이 공유하는 actor 축약 정의다. 축약을 쓰는
 // 출력은 같은 출력 안에서 그것을 정의해야 한다(#184).
 const IssueOpsActorFlagLegend = `RECORD_ACTOR_FLAGS: --host codex|claude|omo|omp|opencode --session-id ID [--agent-id ID] --cwd PATH [--session-pid PID --session-started-at RFC3339 --session-executable PATH]
 ACTOR_FLAGS: --host codex|claude|omo|omp|opencode --session-id ID [--agent-id ID] --session-pid PID --session-started-at RFC3339 --session-executable PATH --cwd PATH

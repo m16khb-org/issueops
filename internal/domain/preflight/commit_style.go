@@ -1,3 +1,6 @@
+// Package preflight holds the pure rules behind git preflight: parsing git
+// status output, deriving warnings, and summarizing commit style. It performs
+// no I/O and sits in the domain layer.
 package preflight
 
 import (

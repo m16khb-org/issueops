@@ -7,6 +7,10 @@ import (
 	"issueops/cmd/issueops/cliflag"
 )
 
+// RunPreflight implements `issueops preflight [TARGET]`: it runs the git
+// preflight check for TARGET (default Command.DefaultTarget) and prints the
+// result as JSON in every mode. It fails when no preflight observer is
+// configured.
 func (command Command) RunPreflight(args []string) error {
 	fs := flag.NewFlagSet("preflight", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", true, "print JSON")

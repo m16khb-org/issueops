@@ -10,6 +10,10 @@ import (
 	reviewport "issueops/internal/port/issueopsreview"
 )
 
+// RecordProjectDocsReview stores the project docs review of record id. Paths are
+// observed before the lifecycle lock and committed under it, and the commit is
+// rejected when the record, actor, phase or local change set moved in between.
+// A no-change verdict needs reviewed docs unless the worktree has no project doc.
 func RecordProjectDocsReview(store reviewport.ProjectDocsReviewStore, stateRoot, id string, req model.ProjectDocsReviewRequest) (model.Record, error) {
 	verdict := strings.ToLower(strings.TrimSpace(req.Verdict))
 	docs := cleanReviewValues(req.Docs)

@@ -6,6 +6,9 @@ import (
 	intentport "issueops/internal/port/issueopsintent"
 )
 
+// RecordPlanPrep validates the plan preparation items in req (prior decisions,
+// related issues, web research, codebase survey), stores them on record id and
+// returns the updated record.
 func RecordPlanPrep(store intentport.Store, stateRoot, id string, req model.PlanPrepRequest) (model.Record, error) {
 	decisions, err := planPrepRecordItem("decisions", req.PriorDecisions)
 	if err != nil {

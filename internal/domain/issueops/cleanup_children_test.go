@@ -31,7 +31,7 @@ func TestChildCleanupEvidenceNeverBypassesUnmergedArtifact(t *testing.T) {
 		t.Fatalf("unmerged parent accepted: %s %v", basis, err)
 	}
 	basis, err = ChildCleanupEvidenceBasis(record, true)
-	if err != nil || basis != ChildCleanupParentMergeVerified {
+	if err != nil || basis != childCleanupParentMergeVerified {
 		t.Fatalf("merged parent rejected: %s %v", basis, err)
 	}
 	record.RemoteArtifact = nil

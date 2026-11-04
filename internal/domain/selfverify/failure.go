@@ -6,8 +6,11 @@ import (
 	"sort"
 )
 
+// ClassifyFailure classifies the failure pattern across completed runs and clusters failing seeds by step.
+// It returns the class, a human-readable reason and the clusters; all are empty when failedSteps is 0.
+// Classes are unknown, intermittent, single_failure_observation, deterministic and mixed.
 func ClassifyFailure(failedSteps, totalRuns int, runs []Run) (string, string, []contract.SelfVerificationFailureCluster) {
-	clusters := FailureClusters(runs)
+	clusters := failureClusters(runs)
 	if failedSteps == 0 {
 		return "", "", nil
 	}
@@ -26,7 +29,7 @@ func ClassifyFailure(failedSteps, totalRuns int, runs []Run) (string, string, []
 	return "mixed", "multiple failure steps were observed across completed seeds", clusters
 }
 
-func FailureClusters(runs []Run) []contract.SelfVerificationFailureCluster {
+func failureClusters(runs []Run) []contract.SelfVerificationFailureCluster {
 	byStep := map[string][]int64{}
 	for _, run := range runs {
 		for _, step := range run.Checks {

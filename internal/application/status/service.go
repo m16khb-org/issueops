@@ -1,3 +1,5 @@
+// Package status is the application service that assembles the harness status
+// report from inspect, doctor, state, worker and self-verify observations.
 package status
 
 import (
@@ -14,6 +16,9 @@ import (
 	"strings"
 )
 
+// Service builds the harness status report by combining inspect, doctor, state
+// and worker observations with the latest self-verify record. Every function
+// field is required.
 type Service struct {
 	Home, IssueOpsRoot, Version string
 	Inspect                     func(string) inspectcontract.Info
@@ -24,6 +29,9 @@ type Service struct {
 	ResolveTarget               func(string) string
 }
 
+// Run observes the harness for repo and returns the status result. Failures of
+// the individual observations are folded into the result's warnings and OK
+// flag by the status domain rather than returned as errors.
 func (service Service) Run(ctx context.Context, repo string) statuscontract.Result {
 	inspect := service.Inspect(repo)
 	doctor, doctorErr := service.Doctor(ctx, doctorcontract.HarnessDoctorRequest{

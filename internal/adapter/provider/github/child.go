@@ -21,6 +21,11 @@ func (t githubChildTarget) subIssuesPath() string {
 	return "repos/" + t.owner + "/" + t.repoName + "/issues/" + t.parentNumber + "/sub_issues"
 }
 
+// CreateChild creates a child issue under req.ParentIssueURL with
+// `gh issue create`, links it as a sub-issue (via --parent when the installed
+// gh supports it) and verifies hierarchy, labels and assignees by readback.
+// Without Confirm it returns a dry-run preview. Once the child exists, later
+// failures return the child URL so the caller can recover.
 func (Provider) CreateChild(ctx context.Context, req port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 	title := strings.TrimSpace(req.Title)
 	if title == "" {
@@ -149,6 +154,11 @@ func verifyCreatedGitHubChild(ctx context.Context, req port.IssueProviderCreateC
 	}, nil
 }
 
+// CloseChild closes a child issue after verifying through the parent's
+// sub-issues that it belongs to the parent, then reads the state back. The
+// child must live in the same repository as the parent. Without Confirm it
+// returns a read-only preview; closing an already closed child is a no-op
+// reported as AlreadyClosed.
 func (Provider) CloseChild(ctx context.Context, req port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
 	owner, repoName, parentNumber, err := parseGitHubIssueURL(req.ParentIssueURL)
 	if err != nil {

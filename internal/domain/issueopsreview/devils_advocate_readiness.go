@@ -7,16 +7,24 @@ import (
 	issueopsdomain "issueops/internal/domain/issueops"
 )
 
-func DevilsAdvocateDigestExempt(review reviewcontract.DevilsAdvocateReview) bool {
+func devilsAdvocateDigestExempt(review reviewcontract.DevilsAdvocateReview) bool {
 	return review.ReviewerPattern == issueopsdomain.ParentReviewPattern
 }
 
+// DevilsAdvocatePlanDigestRequired reports whether the review is bound to a plan
+// digest that must still match the linked plan. It is false for a missing or
+// unrecorded review, a delegated review inherited from the parent, or a review that
+// carries no digest.
 func DevilsAdvocatePlanDigestRequired(review *reviewcontract.DevilsAdvocateReview, checkPlanBinding, hasLinkedPlan bool) bool {
 	return review != nil && strings.TrimSpace(review.RecordedAt) != "" &&
-		checkPlanBinding && hasLinkedPlan && !DevilsAdvocateDigestExempt(*review) &&
+		checkPlanBinding && hasLinkedPlan && !devilsAdvocateDigestExempt(*review) &&
 		strings.TrimSpace(review.ReviewedPlanDigest) != ""
 }
 
+// DevilsAdvocateReviewMissing returns the gate keys a devil's-advocate review still
+// lacks: devils_advocate_review for a missing, stop, or unwaived revise verdict, and
+// devils_advocate_review_stale when the reviewed plan digest no longer matches
+// currentDigest.
 func DevilsAdvocateReviewMissing(review *reviewcontract.DevilsAdvocateReview, checkPlanBinding, hasLinkedPlan bool, currentDigest string, digestErr error) []string {
 	if review == nil || strings.TrimSpace(review.RecordedAt) == "" {
 		return []string{"devils_advocate_review"}
@@ -25,7 +33,7 @@ func DevilsAdvocateReviewMissing(review *reviewcontract.DevilsAdvocateReview, ch
 	if (review.Verdict == "stop" || review.Verdict == "revise") && !review.Waived {
 		missing = append(missing, "devils_advocate_review")
 	}
-	if checkPlanBinding && hasLinkedPlan && !DevilsAdvocateDigestExempt(*review) {
+	if checkPlanBinding && hasLinkedPlan && !devilsAdvocateDigestExempt(*review) {
 		if strings.TrimSpace(review.ReviewedPlanDigest) == "" || digestErr != nil || !strings.EqualFold(currentDigest, review.ReviewedPlanDigest) {
 			missing = append(missing, "devils_advocate_review_stale")
 		}

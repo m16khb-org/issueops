@@ -1,3 +1,7 @@
+// Package github is the outbound issue-provider adapter for GitHub. It drives
+// the `gh` CLI (issues, pull requests, child issues, labels, assignees,
+// milestones, merges) behind the port.IssueProvider interfaces, returning
+// dry-run previews unless the request is confirmed.
 package github
 
 import (
@@ -44,10 +48,16 @@ var (
 	_ port.IssueProviderChildHierarchyVerifier = Provider{}
 )
 
+// NewProvider returns the stateless GitHub Provider.
 func NewProvider() Provider { return Provider{} }
 
+// Name returns the provider identifier "github".
 func (Provider) Name() string { return "github" }
 
+// CreateIssue creates an issue with `gh issue create`. Without Confirm it only
+// returns a dry-run preview. A confirmed create whose output has no canonical
+// issue number fails with an invoked IssueProviderCreateError, because the
+// remote mutation already happened and must be reconciled, not retried.
 func (Provider) CreateIssue(ctx context.Context, req port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
 	title := strings.TrimSpace(req.Title)
 	if title == "" {
@@ -103,6 +113,10 @@ func (Provider) CreateIssue(ctx context.Context, req port.IssueProviderCreateIss
 	}, nil
 }
 
+// FindIssueCreateCandidates lists issues (any state, up to 100) whose body
+// contains req.Marker, so a caller can reconcile an issue create whose outcome
+// is unknown. Truncated reports that the search hit the limit. It requires an
+// exact project authority and a non-empty marker.
 func (Provider) FindIssueCreateCandidates(ctx context.Context, req port.IssueProviderFindIssueCreateCandidatesRequest) (port.IssueProviderFindIssueCreateCandidatesResult, error) {
 	const searchLimit = 100
 	authority := strings.TrimSpace(req.ProjectAuthority)
@@ -135,6 +149,10 @@ func (Provider) FindIssueCreateCandidates(ctx context.Context, req port.IssuePro
 	}, nil
 }
 
+// CreatePullRequest creates a pull request with `gh pr create` and verifies
+// the result by readback. Without Confirm it returns a dry-run preview. After
+// a confirmed create, a missing or non-canonical URL, a failed readback or a
+// missing PR number is an error that asks for reconciliation, not a retry.
 func (Provider) CreatePullRequest(ctx context.Context, req port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 	title := strings.TrimSpace(req.Title)
 	if title == "" {
@@ -387,6 +405,10 @@ func githubReadbackAssignees(ctx context.Context, repo string, requested []strin
 	return resolved, nil
 }
 
+// ReconcilePullRequest lists at most two PRs for req.HeadBranch in the exact
+// project and returns them as candidates with a body hash. AuthoritativeZero
+// is set only when the response is an authoritative empty array; a null or
+// oversized response is an error.
 func (Provider) ReconcilePullRequest(ctx context.Context, req port.IssueProviderReconcilePullRequestRequest) (port.IssueProviderReconcilePullRequestResult, error) {
 	selector, err := githubProjectSelector(req.ProjectKey)
 	if err != nil || selector == "" {
@@ -481,6 +503,10 @@ func runGhAPIJSON[T any](ctx context.Context, repo string, args []string, kind s
 // section budget is computed against the merged body, not the section alone.
 const gitHubIssueBodyLimit = 60000
 
+// UpdateIssueBodySection renders one managed section and merges it into the
+// issue body with `gh issue edit`, keeping the merged body under GitHub's
+// size limit. Without Confirm it validates the payload offline and returns a
+// dry-run preview.
 func (Provider) UpdateIssueBodySection(ctx context.Context, req port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
 	issueURL := strings.TrimSpace(req.IssueURL)
 	if issueURL == "" {

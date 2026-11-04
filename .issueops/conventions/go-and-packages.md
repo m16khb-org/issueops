@@ -15,6 +15,13 @@
 - Go module 이름은 repo 원격이 확정되면 `issueops`를 현재 로컬 module 이름으로 사용한다.
 - 파일명은 snake_case를 사용한다.
 - Go 패키지명은 짧은 소문자 단어를 사용한다.
+- package clause는 디렉터리 이름과 같다(`internal/domain/issueopsremote`는 `package issueopsremote`). import할 때 별칭은 같은 파일에서 이름이 겹칠 때만 둔다.
+- exported 이름은 패키지 이름을 되풀이하지 않는다(`issueops.Record`이지 `issueops.IssueOpsRecord`가 아니다). 접두어를 떼면 기존 이름과 겹치는 경우에는 뜻이 다른 쪽에 `New...`나 `...Draft`처럼 이름을 더한다.
+- exported 식별자와 패키지에는 문서 주석을 둔다. 주석은 식별자 이름과 공백으로 시작하는 완전한 문장이고, 시그니처만으로 알 수 없는 책임·에러·불변식을 적는다. 패키지 주석(`// Package name ...`)은 패키지마다 한 파일에만 둔다. 한국어 주석도 `// Name 함수는 ...`처럼 이름 뒤에 공백을 둔다.
+- 대소문자만 다른 이름 쌍(`Run`/`run`, `Apply`/`apply`)을 한 패키지에 두지 않는다. 한 줄 위임만 하는 쌍은 하나로 합치고, 다른 일을 하면 비공개 쪽 이름에 역할을 드러낸다.
+- 같은 패키지가 만든 에러는 문자열이 아니라 sentinel과 `errors.Is`로 비교한다. 외부 명령 시작 실패처럼 원인을 감싼 에러는 `Unwrap`으로 원인을 돌려준다.
+- provider port(`port.IssueProvider`)와 외부 명령·HTTP 호출은 첫 인자로 `context.Context`를 받아 `exec.CommandContext`·`http.NewRequestWithContext`에 넘긴다. 호출자의 취소가 외부 명령까지 닿아야 한다.
+- 이 규칙은 revive·staticcheck(ST)를 켠 측정 설정(`.issueops/issues/572/effective-go-lint.yml`, `golangci-lint run -c <설정> ./...`)으로 확인한다. 이 린터는 `.golangci.yml`에 켜지 않는다(`../testing/unit-and-contract.md`).
 - 테스트 파일은 대상 파일 가까이에 `*_test.go`로 둔다.
 - CLI 명령의 들여쓴 JSON 출력은 leaf 패키지 `cmd/issueops/jsonout`(`Print`, `PrintTo`)을 쓴다. 명령 패키지마다 `json.Encoder`를 다시 만들지 않는다.
 - 파일이 없는지 판정할 때는 `errors.Is(err, fs.ErrNotExist)`를 쓴다. `os.IsNotExist`는 `%w`로 감싼 에러를 풀지 못한다(#550에서 production 호출을 모두 바꿨다).

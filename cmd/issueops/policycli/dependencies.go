@@ -1,3 +1,6 @@
+// Package policycli implements the `issueops policy` CLI group: check, fake-run,
+// run --read-only, and audit for argv command policy. It parses flags and prints
+// results; evaluation lives in the policy and audit application services.
 package policycli
 
 import (

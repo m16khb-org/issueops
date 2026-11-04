@@ -8,8 +8,13 @@ import (
 	"strings"
 )
 
+// URLValidator is the URL safety policy: it parses the URL and rejects hosts that
+// resolve to unsafe addresses. Resolver performs the DNS lookups.
 type URLValidator struct{ Resolver port.Resolver }
 
+// Validate parses raw and, unless the host is an IP literal, resolves it and
+// refuses any unsafe address (private ranges only when allowPrivate is set). It
+// returns the normalized URL string.
 func (v URLValidator) Validate(ctx context.Context, raw string, allowPrivate bool) (string, error) {
 	parsed, err := domain.ParseFetchURL(raw, allowPrivate)
 	if err != nil {

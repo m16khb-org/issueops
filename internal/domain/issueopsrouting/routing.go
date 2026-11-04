@@ -1,3 +1,5 @@
+// Package issueopsrouting scores whether a cycle followed the expected skill
+// routing and maintains its bounded routing trace. It is a pure domain package.
 package issueopsrouting
 
 import (
@@ -8,8 +10,10 @@ import (
 	issueopsroutingcontract "issueops/internal/contract/issueopsrouting"
 )
 
-const MaxTraceEntries = 500
+const maxTraceEntries = 500
 
+// NewEntry builds a routing trace entry stamped with at in UTC. phase and
+// skill are trimmed, must be non-empty, and may be at most 64 bytes each.
 func NewEntry(phase, skill string, at time.Time) (issueopsroutingcontract.Entry, error) {
 	phase = strings.TrimSpace(phase)
 	skill = strings.TrimSpace(skill)
@@ -31,6 +35,9 @@ func NewEntry(phase, skill string, at time.Time) (issueopsroutingcontract.Entry,
 	}, nil
 }
 
+// Append adds entry to the record's routing trace and stamps UpdatedAt. A
+// phase and skill pair already in the trace (case-insensitive) is a no-op that
+// returns changed false. A full trace (500 entries) is an error.
 func Append(
 	record issueopsroutingcontract.Record,
 	entry issueopsroutingcontract.Entry,
@@ -41,10 +48,10 @@ func Append(
 			return record, false, nil
 		}
 	}
-	if len(record.RoutingTrace) >= MaxTraceEntries {
+	if len(record.RoutingTrace) >= maxTraceEntries {
 		return issueopsroutingcontract.Record{OK: false}, false, fmt.Errorf(
 			"routing trace is full (%d entries)",
-			MaxTraceEntries,
+			maxTraceEntries,
 		)
 	}
 	record.RoutingTrace = append(record.RoutingTrace, entry)
@@ -53,6 +60,8 @@ func Append(
 	return record, true, nil
 }
 
+// ScoreRecord checks the record's routing trace against expected pairs and
+// reports the pairs it lacks. Phase and skill compare case-insensitively.
 func ScoreRecord(
 	record issueopsroutingcontract.Record,
 	expected []issueopsroutingcontract.Expected,
@@ -66,6 +75,8 @@ func ScoreRecord(
 	return issueopsroutingcontract.Result{OK: len(missing) == 0, Missing: missing}
 }
 
+// Score checks observed phase and skill pairs against expected pairs and
+// reports the missing ones. OK is true when nothing is missing.
 func Score(
 	expected []issueopsroutingcontract.Expected,
 	observed []issueopsroutingcontract.Expected,

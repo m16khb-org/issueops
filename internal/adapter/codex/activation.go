@@ -9,6 +9,11 @@ import (
 	"issueops/internal/port"
 )
 
+// VerifyActivation reads back ~/.codex/config.toml and hooks.json under
+// req.CodexHome and returns one NativeActivationEvidence each for the MCP
+// block and the hooks. It fails when config.toml does not contain exactly one
+// canonical issueops MCP server block (ending the file) or when the hooks do
+// not match the expected hook configuration.
 func (installer Installer) VerifyActivation(req port.NativeInstallRequest) ([]port.NativeActivationEvidence, error) {
 	configPath := filepath.Join(req.CodexHome, "config.toml")
 	config, err := os.ReadFile(configPath)

@@ -23,7 +23,7 @@ func TestAdapterOwnedToolsHaveWriteSemantics(t *testing.T) {
 }
 
 func TestToolMapsPreserveDescriptorShape(t *testing.T) {
-	tools := ToolMaps([]contract.Tool{
+	tools := toolMaps([]contract.Tool{
 		{
 			Name:        "example_tool",
 			Description: "Example tool.",
@@ -50,7 +50,7 @@ func TestToolMapsPreserveDescriptorShape(t *testing.T) {
 }
 
 func TestDispatchMapCoversAllCatalogTools(t *testing.T) {
-	dm := DispatchMap()
+	dm := dispatchMap()
 
 	// Collect every tool from all catalog functions.
 	allTools := collectAllCatalogTools()
@@ -58,14 +58,14 @@ func TestDispatchMapCoversAllCatalogTools(t *testing.T) {
 		t.Fatal("expected non-empty tool catalog")
 	}
 
-	// Every tool in the catalog must appear in DispatchMap.
+	// Every tool in the catalog must appear in dispatchMap.
 	for _, tool := range allTools {
 		if _, ok := dm[tool.Name]; !ok {
 			t.Errorf("tool %q missing from DispatchMap", tool.Name)
 		}
 	}
 
-	// Every entry in DispatchMap must have a valid group.
+	// Every entry in dispatchMap must have a valid group.
 	validGroups := map[contract.DispatchGroup]bool{
 		contract.DispatchProject:         true,
 		contract.DispatchPolicyState:     true,
@@ -82,14 +82,14 @@ func TestDispatchMapCoversAllCatalogTools(t *testing.T) {
 		}
 	}
 
-	// No duplicate tool names in DispatchMap (map guarantees this, but verify).
+	// No duplicate tool names in dispatchMap (map guarantees this, but verify).
 	if len(dm) < len(allTools) {
 		t.Errorf("DispatchMap has %d entries but catalog has %d tools; some tools may be missing or duplicates may exist", len(dm), len(allTools))
 	}
 }
 
 func TestDispatchMapHasNoUnknownGroup(t *testing.T) {
-	dm := DispatchMap()
+	dm := dispatchMap()
 	valid := map[contract.DispatchGroup]bool{
 		contract.DispatchProject: true, contract.DispatchPolicyState: true, contract.DispatchIssueOps: true, contract.DispatchLoop: true,
 		contract.DispatchGates: true, contract.DispatchChannel: true, contract.DispatchAssistantWorker: true, contract.DispatchSelfLoop: true,
@@ -108,7 +108,7 @@ func TestCatalogOmitsRetiredPoolTools(t *testing.T) {
 			t.Fatalf("retired MCP tool must be removed: %s", tool.Name)
 		}
 	}
-	for name := range DispatchMap() {
+	for name := range dispatchMap() {
 		if strings.HasPrefix(name, retiredPrefix) {
 			t.Fatalf("retired MCP dispatch route must be removed: %s", name)
 		}
@@ -127,7 +127,7 @@ func collectAllCatalogTools() []contract.Tool {
 }
 
 func TestResourceMapsPreserveDescriptorShape(t *testing.T) {
-	resources := ResourceMaps([]contract.Resource{
+	resources := resourceMaps([]contract.Resource{
 		{
 			URI:         "issueops://example",
 			Name:        "Example",

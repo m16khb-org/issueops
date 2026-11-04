@@ -6,6 +6,8 @@ import (
 	contract "issueops/internal/contract/selfaugment"
 )
 
+// NewPlanSnapshot converts result into its schema-version-1 state snapshot, recording open and
+// satisfied candidate IDs and stamping generatedAt in RFC 3339 form.
 func NewPlanSnapshot(result contract.PlanResult, generatedAt time.Time) contract.PlanStateSnapshot {
 	return contract.PlanStateSnapshot{
 		SchemaVersion:         1,
@@ -27,6 +29,8 @@ func NewPlanSnapshot(result contract.PlanResult, generatedAt time.Time) contract
 	}
 }
 
+// CandidateIDsByStatus returns the IDs of candidates whose Status equals status, in input order, as
+// a non-nil slice.
 func CandidateIDsByStatus(candidates []contract.Candidate, status string) []string {
 	ids := []string{}
 	for _, candidate := range candidates {

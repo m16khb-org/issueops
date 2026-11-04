@@ -1,3 +1,6 @@
+// Package commitsuggest drafts commit message suggestions from a git diff. It
+// is an application-layer service that reads the diff through an effects port
+// and builds the prompt for the host agent.
 package commitsuggest
 
 import (
@@ -5,6 +8,9 @@ import (
 	"issueops/internal/domain/prompt"
 )
 
+// BuildPrompt returns the structured prompt that asks a model to draft one
+// Conventional + Lore Hybrid commit message for diff, with the response schema
+// attached.
 func BuildPrompt(diff string) string {
 	return prompt.BuildStructuredPrompt(prompt.StructuredPromptSpec{
 		Identity:  "You are an expert Git assistant.",

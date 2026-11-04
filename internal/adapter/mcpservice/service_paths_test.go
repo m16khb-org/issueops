@@ -45,8 +45,8 @@ func TestProbeRejectsResponsesThatDoNotProveAnIssueopsServer(t *testing.T) {
 		{name: "json body that does not decode", status: 200, ctype: "application/json", body: "<html>", want: "decode initialize response"},
 		{name: "event stream with garbage data", status: 200, ctype: "text/event-stream", body: "data: nope\n\n", want: "decode initialize response"},
 		{name: "event stream without a data line", status: 200, ctype: "text/event-stream", body: "event: ping\n\n", want: "decode initialize response"},
-		{name: "missing pid header", status: 200, ctype: "application/json", body: okBody, want: HeaderPID},
-		{name: "non-numeric pid header", status: 200, ctype: "application/json", body: okBody, headers: map[string]string{HeaderPID: "abc"}, want: HeaderPID},
+		{name: "missing pid header", status: 200, ctype: "application/json", body: okBody, want: headerPID},
+		{name: "non-numeric pid header", status: 200, ctype: "application/json", body: okBody, headers: map[string]string{headerPID: "abc"}, want: headerPID},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
@@ -75,8 +75,8 @@ func TestProbeRejectsResponsesThatDoNotProveAnIssueopsServer(t *testing.T) {
 func TestProbeAcceptsPlainJSONResponseAndReturnsIdentityHeaders(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 		rw.Header().Set("Content-Type", "application/json")
-		rw.Header().Set(HeaderPID, "321")
-		rw.Header().Set(HeaderBuildID, "build-x")
+		rw.Header().Set(headerPID, "321")
+		rw.Header().Set(headerBuildID, "build-x")
 		_, _ = rw.Write([]byte(`{"result":{"serverInfo":{"name":"issueops"}}}`))
 	}))
 	defer server.Close()
@@ -107,11 +107,11 @@ func TestStatusReportsUnreadableLockAsStateUnreadable(t *testing.T) {
 	service := w.service(w.address)
 	service.cfg.LockHolder = func(string) (int, error) { return 0, os.ErrPermission }
 	status, err := service.Status(t.Context())
-	if !errors.Is(err, os.ErrPermission) || status.ErrorCode != CodeStateUnreadable || status.OK {
+	if !errors.Is(err, os.ErrPermission) || status.ErrorCode != codeStateUnreadable || status.OK {
 		t.Fatalf("status=%+v err=%v", status, err)
 	}
 	start, err := service.Start(t.Context())
-	if err == nil || start.ErrorCode != CodeStateUnreadable || countCommands(w.commands, "launchctl bootstrap") != 0 {
+	if err == nil || start.ErrorCode != codeStateUnreadable || countCommands(w.commands, "launchctl bootstrap") != 0 {
 		t.Fatalf("start status=%+v err=%v commands=%v", start, err, w.commands)
 	}
 }
@@ -120,19 +120,19 @@ func TestStatusReportsMismatchWhenRecordIsMissingOrUnreadableForALockHolder(t *t
 	w := newFakeWorld(t)
 	w.holder = 4242
 	status, err := w.service(w.address).Status(t.Context())
-	if err == nil || status.Status != mcpservice.StatusConflict || status.ErrorCode != CodeIdentityMismatch || status.PID != 4242 || !strings.Contains(err.Error(), "instance record unavailable") {
+	if err == nil || status.Status != mcpservice.StatusConflict || status.ErrorCode != codeIdentityMismatch || status.PID != 4242 || !strings.Contains(err.Error(), "instance record unavailable") {
 		t.Fatalf("no record: status=%+v err=%v", status, err)
 	}
 	w.serve(4243, w.buildID())
 	w.holder = 4242
 	status, err = w.service(w.address).Status(t.Context())
-	if err == nil || status.ErrorCode != CodeIdentityMismatch || !strings.Contains(err.Error(), "record pid 4243") {
+	if err == nil || status.ErrorCode != codeIdentityMismatch || !strings.Contains(err.Error(), "record pid 4243") {
 		t.Fatalf("pid differs: status=%+v err=%v", status, err)
 	}
 	w.holder = 4243
 	delete(w.identities, 4243)
 	status, err = w.service(w.address).Status(t.Context())
-	if err == nil || status.ErrorCode != CodeIdentityMismatch || !strings.Contains(err.Error(), "process identity unavailable") {
+	if err == nil || status.ErrorCode != codeIdentityMismatch || !strings.Contains(err.Error(), "process identity unavailable") {
 		t.Fatalf("no identity: status=%+v err=%v", status, err)
 	}
 }
@@ -141,7 +141,7 @@ func TestStartRefusesToReplaceRunningServiceOfAnotherBuild(t *testing.T) {
 	w := newFakeWorld(t)
 	w.serve(4242, "previous-build")
 	status, err := w.service(w.address).Start(t.Context())
-	if err == nil || status.ErrorCode != CodeBuildMismatch || status.Status != mcpservice.StatusRunning || status.PID != 4242 {
+	if err == nil || status.ErrorCode != codeBuildMismatch || status.Status != mcpservice.StatusRunning || status.PID != 4242 {
 		t.Fatalf("status=%+v err=%v", status, err)
 	}
 	if len(w.commands) != 0 {
@@ -155,7 +155,7 @@ func TestStartReportsMissingBinaryWithoutObservingOrLoading(t *testing.T) {
 	service.cfg.Binary = filepath.Join(t.TempDir(), "gone")
 	service.cfg.LockHolder = func(string) (int, error) { t.Error("observed before the binary check"); return 0, nil }
 	status, err := service.Start(t.Context())
-	if err == nil || status.ErrorCode != CodeBuildMismatch || !strings.Contains(err.Error(), "read service binary") || len(w.commands) != 0 {
+	if err == nil || status.ErrorCode != codeBuildMismatch || !strings.Contains(err.Error(), "read service binary") || len(w.commands) != 0 {
 		t.Fatalf("status=%+v err=%v commands=%v", status, err, w.commands)
 	}
 }
@@ -165,7 +165,7 @@ func TestStartDoesNotLoadOverConflictOrSilentHolder(t *testing.T) {
 	w.serve(4242, w.buildID())
 	w.identities[4242] = processidentity.Identity{StartTime: "reused", Executable: w.binary}
 	status, err := w.service(w.address).Start(t.Context())
-	if err == nil || status.Status != mcpservice.StatusConflict || status.ErrorCode != CodeIdentityMismatch {
+	if err == nil || status.Status != mcpservice.StatusConflict || status.ErrorCode != codeIdentityMismatch {
 		t.Fatalf("conflict: status=%+v err=%v", status, err)
 	}
 
@@ -173,7 +173,7 @@ func TestStartDoesNotLoadOverConflictOrSilentHolder(t *testing.T) {
 	silent.serve(4242, silent.buildID())
 	silent.serving = nil
 	status, err = silent.service(silent.address).Start(t.Context())
-	if err == nil || status.Status != mcpservice.StatusStale || status.ErrorCode != CodeNotReady {
+	if err == nil || status.Status != mcpservice.StatusStale || status.ErrorCode != codeNotReady {
 		t.Fatalf("silent holder: status=%+v err=%v", status, err)
 	}
 	if len(w.commands)+len(silent.commands) != 0 {
@@ -188,7 +188,7 @@ func TestStartCannotClearStaleRecordItCannotRemove(t *testing.T) {
 		t.Fatal(err)
 	}
 	status, err := w.service(w.address).Start(t.Context())
-	if err == nil || status.ErrorCode != CodeStateUnreadable || status.Status != mcpservice.StatusStale || countCommands(w.commands, "launchctl bootstrap") != 0 {
+	if err == nil || status.ErrorCode != codeStateUnreadable || status.Status != mcpservice.StatusStale || countCommands(w.commands, "launchctl bootstrap") != 0 {
 		t.Fatalf("status=%+v err=%v commands=%v", status, err, w.commands)
 	}
 }
@@ -203,13 +203,13 @@ func TestStartReportsEachLoadStageFailureWithItsCode(t *testing.T) {
 		wantCode string
 		wantErr  string
 	}{
-		{name: "credential", bearer: boom, wantCode: CodeCredentialFailed, wantErr: "prepare mcp http credential"},
+		{name: "credential", bearer: boom, wantCode: codeCredentialFailed, wantErr: "prepare mcp http credential"},
 		{name: "supervisor state unparsable", hook: func(args []string) ([]byte, error, bool) {
 			if args[0] == "print" {
 				return []byte("pid = x\n"), nil, true
 			}
 			return nil, nil, false
-		}, wantCode: CodeSupervisorFailed, wantErr: "parse launchd pid"},
+		}, wantCode: codeSupervisorFailed, wantErr: "parse launchd pid"},
 		{name: "idle job cannot be unloaded", loaded: true, hook: func(args []string) ([]byte, error, bool) {
 			switch args[0] {
 			case "print":
@@ -218,13 +218,13 @@ func TestStartReportsEachLoadStageFailureWithItsCode(t *testing.T) {
 				return nil, boom, true
 			}
 			return nil, nil, false
-		}, wantCode: CodeSupervisorFailed, wantErr: "unload idle mcp service job"},
+		}, wantCode: codeSupervisorFailed, wantErr: "unload idle mcp service job"},
 		{name: "bootstrap refused", hook: func(args []string) ([]byte, error, bool) {
 			if args[0] == "bootstrap" {
 				return []byte("Bootstrap failed: 5"), boom, true
 			}
 			return nil, nil, false
-		}, wantCode: CodeSupervisorFailed, wantErr: "Bootstrap failed: 5"},
+		}, wantCode: codeSupervisorFailed, wantErr: "Bootstrap failed: 5"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			w := newFakeWorld(t)
@@ -250,7 +250,7 @@ func TestStartUnloadsIdleJobBeforeLoadingAndRejectsWrongBuildAfterLoad(t *testin
 	w.loaded = true
 	w.onLoad = func() { w.serve(5150, "unexpected-build") }
 	status, err := w.service(w.address).Start(t.Context())
-	if err == nil || status.ErrorCode != CodeBuildMismatch || status.Status != mcpservice.StatusRunning {
+	if err == nil || status.ErrorCode != codeBuildMismatch || status.Status != mcpservice.StatusRunning {
 		t.Fatalf("status=%+v err=%v", status, err)
 	}
 	var verbs []string
@@ -286,7 +286,7 @@ func TestStopReportsSupervisorFailuresWhileUnloadingIdleJob(t *testing.T) {
 		}
 		return nil, nil, false
 	}).Stop(t.Context())
-	if err == nil || status.ErrorCode != CodeSupervisorFailed || status.Status != mcpservice.StatusStopped {
+	if err == nil || status.ErrorCode != codeSupervisorFailed || status.Status != mcpservice.StatusStopped {
 		t.Fatalf("print failure: status=%+v err=%v", status, err)
 	}
 	status, err = w.serviceWithRun(w.address, func(args []string) ([]byte, error, bool) {
@@ -298,7 +298,7 @@ func TestStopReportsSupervisorFailuresWhileUnloadingIdleJob(t *testing.T) {
 		}
 		return nil, nil, false
 	}).Stop(t.Context())
-	if !errors.Is(err, boom) || status.ErrorCode != CodeSupervisorFailed {
+	if !errors.Is(err, boom) || status.ErrorCode != codeSupervisorFailed {
 		t.Fatalf("bootout failure: status=%+v err=%v", status, err)
 	}
 }
@@ -327,7 +327,7 @@ func TestStopCannotClearStaleRecordItCannotRemove(t *testing.T) {
 		t.Fatal(err)
 	}
 	status, err := w.service(w.address).Stop(t.Context())
-	if err == nil || status.ErrorCode != CodeStateUnreadable || countCommands(w.commands, "launchctl bootout") != 0 {
+	if err == nil || status.ErrorCode != codeStateUnreadable || countCommands(w.commands, "launchctl bootout") != 0 {
 		t.Fatalf("status=%+v err=%v commands=%v", status, err, w.commands)
 	}
 }
@@ -338,7 +338,7 @@ func TestStopRefusesConflictingOrUnverifiedInstanceWithoutUnloading(t *testing.T
 	w.serve(4242, w.buildID())
 	w.identities[4242] = processidentity.Identity{StartTime: "reused", Executable: w.binary}
 	status, err := w.service(w.address).Stop(t.Context())
-	if err == nil || status.Status != mcpservice.StatusConflict || status.ErrorCode != CodeIdentityMismatch {
+	if err == nil || status.Status != mcpservice.StatusConflict || status.ErrorCode != codeIdentityMismatch {
 		t.Fatalf("status=%+v err=%v", status, err)
 	}
 	if countCommands(w.commands, "launchctl bootout") != 0 {
@@ -350,7 +350,7 @@ func TestStopRefusesConflictingOrUnverifiedInstanceWithoutUnloading(t *testing.T
 	silent.serve(4242, silent.buildID())
 	silent.serving = nil
 	status, err = silent.service(silent.address).Stop(t.Context())
-	if err == nil || status.Status != mcpservice.StatusStale || status.ErrorCode != CodeNotReady || countCommands(silent.commands, "launchctl bootout") != 0 {
+	if err == nil || status.Status != mcpservice.StatusStale || status.ErrorCode != codeNotReady || countCommands(silent.commands, "launchctl bootout") != 0 {
 		t.Fatalf("unverified: status=%+v err=%v commands=%v", status, err, silent.commands)
 	}
 }
@@ -365,7 +365,7 @@ func TestStopFailsWhenSupervisorStateOrUnloadFails(t *testing.T) {
 		}
 		return nil, nil, false
 	}).Stop(t.Context())
-	if err == nil || status.ErrorCode != CodeSupervisorFailed || status.Status != mcpservice.StatusRunning {
+	if err == nil || status.ErrorCode != codeSupervisorFailed || status.Status != mcpservice.StatusRunning {
 		t.Fatalf("supervised failure: status=%+v err=%v", status, err)
 	}
 	status, err = w.serviceWithRun(w.address, func(args []string) ([]byte, error, bool) {
@@ -377,7 +377,7 @@ func TestStopFailsWhenSupervisorStateOrUnloadFails(t *testing.T) {
 		}
 		return nil, nil, false
 	}).Stop(t.Context())
-	if !errors.Is(err, boom) || !strings.Contains(err.Error(), "unload mcp service job") || status.ErrorCode != CodeSupervisorFailed {
+	if !errors.Is(err, boom) || !strings.Contains(err.Error(), "unload mcp service job") || status.ErrorCode != codeSupervisorFailed {
 		t.Fatalf("unload failure: status=%+v err=%v", status, err)
 	}
 	if _, statErr := os.Stat(filepath.Join(httpDir(w.stateDir), recordFileName)); statErr != nil {
@@ -398,7 +398,7 @@ func TestStopReportsTimeoutWhenHolderNeverReleasesTheLock(t *testing.T) {
 		}
 		return nil, nil, false
 	}).Stop(t.Context())
-	if !errors.Is(err, context.DeadlineExceeded) || status.ErrorCode != CodeStopTimeout || status.Status != mcpservice.StatusRunning {
+	if !errors.Is(err, context.DeadlineExceeded) || status.ErrorCode != codeStopTimeout || status.Status != mcpservice.StatusRunning {
 		t.Fatalf("status=%+v err=%v", status, err)
 	}
 	if _, statErr := os.Stat(filepath.Join(httpDir(w.stateDir), recordFileName)); statErr != nil {
@@ -420,7 +420,7 @@ func TestStopReportsLockReadFailureWhileWaitingForRelease(t *testing.T) {
 		return 0, os.ErrPermission
 	}
 	status, err := service.Stop(t.Context())
-	if !errors.Is(err, os.ErrPermission) || status.ErrorCode != CodeStateUnreadable {
+	if !errors.Is(err, os.ErrPermission) || status.ErrorCode != codeStateUnreadable {
 		t.Fatalf("status=%+v err=%v", status, err)
 	}
 }
@@ -453,13 +453,13 @@ func TestStopKeepsRecordPublishedByASuccessor(t *testing.T) {
 func TestEnsureRunningRefusesOtherBinaryAndPropagatesStopFailure(t *testing.T) {
 	w := newFakeWorld(t)
 	status, err := w.service(w.address).EnsureRunning(t.Context(), filepath.Join(t.TempDir(), "other"))
-	if err == nil || status.ErrorCode != CodeBuildMismatch || len(w.commands) != 0 {
+	if err == nil || status.ErrorCode != codeBuildMismatch || len(w.commands) != 0 {
 		t.Fatalf("other binary: status=%+v err=%v commands=%v", status, err, w.commands)
 	}
 	// An older build that the supervisor does not own is neither stopped nor replaced.
 	w.serve(4242, "previous-build")
 	status, err = w.service(w.address).EnsureRunning(t.Context(), w.binary)
-	if err == nil || status.ErrorCode != CodeNotSupervised || countCommands(w.commands, "launchctl bootstrap") != 0 {
+	if err == nil || status.ErrorCode != codeNotSupervised || countCommands(w.commands, "launchctl bootstrap") != 0 {
 		t.Fatalf("unowned older build: status=%+v err=%v commands=%v", status, err, w.commands)
 	}
 }
@@ -468,7 +468,7 @@ func TestEnsureRunningReturnsStartErrorsOtherThanBuildMismatch(t *testing.T) {
 	w := newFakeWorld(t)
 	occupyAddress(t, w.address)
 	status, err := w.service(w.address).EnsureRunning(t.Context(), w.binary)
-	if err == nil || status.ErrorCode != CodePortInUse || countCommands(w.commands, "launchctl bootout") != 0 {
+	if err == nil || status.ErrorCode != codePortInUse || countCommands(w.commands, "launchctl bootout") != 0 {
 		t.Fatalf("status=%+v err=%v commands=%v", status, err, w.commands)
 	}
 }
@@ -486,7 +486,7 @@ func TestPrepareReportsEachSetupFailure(t *testing.T) {
 	t.Run("log file cannot be opened", func(t *testing.T) {
 		w := newFakeWorld(t)
 		service := w.service(w.address)
-		if err := os.MkdirAll(ServiceLogPath(w.stateDir), 0o700); err != nil {
+		if err := os.MkdirAll(serviceLogPath(w.stateDir), 0o700); err != nil {
 			t.Fatal(err)
 		}
 		if _, err := service.Prepare(t.Context()); err == nil || !strings.Contains(err.Error(), "prepare mcp http log") {
@@ -573,8 +573,8 @@ func TestProbeAcceptsEventStreamDataLinesLargerThanTheInitialBuffer(t *testing.T
 	padding := strings.Repeat("x", 100*1024)
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 		rw.Header().Set("Content-Type", "text/event-stream")
-		rw.Header().Set(HeaderPID, "321")
-		rw.Header().Set(HeaderBuildID, "build-x")
+		rw.Header().Set(headerPID, "321")
+		rw.Header().Set(headerBuildID, "build-x")
 		_, _ = rw.Write([]byte(`data: {"result":{"serverInfo":{"name":"issueops"},"pad":"` + padding + "\"}}\n\n"))
 	}))
 	defer server.Close()

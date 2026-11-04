@@ -18,6 +18,11 @@ const handoffDeliveryFieldLimit = 1024
 
 const handoffDeliveryManualLineagePrefix = "manual-direct:"
 
+// ValidateHandoffDeliveryObservation checks that a delivery observation is
+// well-formed: identifiers, digests, timestamps, receipt, launcher, target,
+// timing, every delivery state with its evidence, owner and claim
+// consistency, and at least one observed evidence state. Fields are
+// length-bounded; the first violation is returned.
 func ValidateHandoffDeliveryObservation(observation issueopscontract.HandoffDeliveryObservation) error {
 	if err := validateHandoffDeliveryEnvelope(observation); err != nil {
 		return err
@@ -159,11 +164,16 @@ func validateHandoffDeliveryOwnerIdentity(observation issueopscontract.HandoffDe
 	return fmt.Errorf("delivery observation expected owner host is invalid")
 }
 
+// FoldHandoffDeliveryObservations merges observations of the same lifecycle
+// and lineage into one observation per key. A first observation must
+// validate; later ones must keep the identity and may only add evidence. It
+// returns the folded map and one decision per input, in input order; a
+// rejected observation leaves the folded value unchanged.
 func FoldHandoffDeliveryObservations(observations []issueopscontract.HandoffDeliveryObservation) (map[string]issueopscontract.HandoffDeliveryObservation, []issueopscontract.HandoffDeliveryDecision) {
 	folded := map[string]issueopscontract.HandoffDeliveryObservation{}
 	decisions := []issueopscontract.HandoffDeliveryDecision{}
 	for _, observation := range observations {
-		key := HandoffDeliveryFoldKey(observation)
+		key := handoffDeliveryFoldKey(observation)
 		if key == "" {
 			decisions = append(decisions, handoffDeliveryReject("delivery observation lineage identity is required"))
 			continue
@@ -178,7 +188,7 @@ func FoldHandoffDeliveryObservations(observations []issueopscontract.HandoffDeli
 			decisions = append(decisions, issueopscontract.HandoffDeliveryDecision{Accepted: true})
 			continue
 		}
-		merged, decision := MergeHandoffDeliveryObservation(current, observation)
+		merged, decision := mergeHandoffDeliveryObservation(current, observation)
 		decisions = append(decisions, decision)
 		if decision.Accepted {
 			folded[key] = merged
@@ -187,7 +197,7 @@ func FoldHandoffDeliveryObservations(observations []issueopscontract.HandoffDeli
 	return folded, decisions
 }
 
-func HandoffDeliveryFoldKey(observation issueopscontract.HandoffDeliveryObservation) string {
+func handoffDeliveryFoldKey(observation issueopscontract.HandoffDeliveryObservation) string {
 	lifecycleID := strings.TrimSpace(observation.LifecycleID)
 	lineageID := strings.TrimSpace(observation.LineageID)
 	if lifecycleID == "" || lineageID == "" {
@@ -196,7 +206,7 @@ func HandoffDeliveryFoldKey(observation issueopscontract.HandoffDeliveryObservat
 	return lifecycleID + "\x00" + lineageID
 }
 
-func MergeHandoffDeliveryObservation(current, next issueopscontract.HandoffDeliveryObservation) (issueopscontract.HandoffDeliveryObservation, issueopscontract.HandoffDeliveryDecision) {
+func mergeHandoffDeliveryObservation(current, next issueopscontract.HandoffDeliveryObservation) (issueopscontract.HandoffDeliveryObservation, issueopscontract.HandoffDeliveryDecision) {
 	if reason := handoffDeliveryMergeRejection(current, next); reason != "" {
 		return current, handoffDeliveryReject(reason)
 	}

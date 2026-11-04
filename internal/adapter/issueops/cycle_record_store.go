@@ -13,16 +13,21 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
+// CycleRecordStore reads and writes cycle records in the SQLite state under StateRoot.
 type CycleRecordStore struct{ StateRoot string }
 
+// WithinLock runs fn while holding the per-cycle lock for id.
 func (s CycleRecordStore) WithinLock(ctx context.Context, id string, fn func(context.Context) error) error {
 	return withIssueOpsLock(ctx, s.StateRoot, id, fn)
 }
 
+// Load reads the cycle record for id.
 func (s CycleRecordStore) Load(id string) (model.Record, error) {
 	return ReadIssueOps(s.StateRoot, id)
 }
 
+// Save writes record with a compare-and-apply against the currently stored row and returns
+// the stored form. A record that carries a cleanup attempt is refused.
 func (s CycleRecordStore) Save(ctx context.Context, record model.Record) (model.Record, error) {
 	return writeIssueOps(ctx, s.StateRoot, record)
 }
@@ -60,10 +65,14 @@ func (s CycleRecordStore) Done(id string) bool {
 	return err == nil && record.Phase == model.PhaseDone
 }
 
+// CycleStartIdentity derives cycle identities at start. RunGit receives the directory and
+// git arguments and returns exit code, stdout and stderr; nil disables git lookups.
 type CycleStartIdentity struct {
 	RunGit func(string, ...string) (int, string, string)
 }
 
+// CanonicalRepo maps repo to the source repository root, so every linked worktree of one
+// repository yields the same path. Without git or on failure it returns the cleaned absolute path.
 func (identity CycleStartIdentity) CanonicalRepo(repo string) string {
 	clean := pathutil.CleanAbsPath(repo)
 	if identity.RunGit == nil {
@@ -75,15 +84,19 @@ func (identity CycleStartIdentity) CanonicalRepo(repo string) string {
 	}
 	return repoidentity.SourceRoot(clean, commonDir)
 }
+
+// StableID returns the deterministic cycle ID for repo and branch.
 func (CycleStartIdentity) StableID(repo, branch string) string { return newIssueOpsID(repo, branch) }
 
-// SuccessorID is the n-th stable ID for repo and branch; n=0 is StableID.
+// SuccessorID returns the n-th stable ID for repo and branch; n=0 is StableID.
 func (CycleStartIdentity) SuccessorID(repo, branch string, n int) string {
 	if n == 0 {
 		return newIssueOpsID(repo, branch)
 	}
 	return newIssueOpsID(repo, branch+"\x00"+strconv.Itoa(n))
 }
+
+// IndependentID returns a fresh cycle ID for repo that is not derived from a branch.
 func (CycleStartIdentity) IndependentID(repo string) (string, error) {
 	return newIndependentIssueOpsID(repo)
 }

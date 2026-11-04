@@ -10,12 +10,13 @@ import (
 
 var scpRemotePattern = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^[^@/:]+@([^/:[\]]+):(.+)$`) })
 
+// ValidateChildMatchesParent requires a child issue URL to be a numeric issue or work item in the same provider project as the parent. A parent whose provider is unrecognised imposes no constraint.
 func ValidateChildMatchesParent(parentURL, childURL string) error {
 	provider := ProviderFromURL(parentURL)
 	if provider == "" {
 		return nil
 	}
-	if IssueNumber(childURL) == "" {
+	if issueNumber(childURL) == "" {
 		return fmt.Errorf("child issue url must be a numeric %s issue or work item URL", provider)
 	}
 	parentKey := ProjectKey(parentURL, provider, "issue")
@@ -29,13 +30,14 @@ func ValidateChildMatchesParent(parentURL, childURL string) error {
 	return nil
 }
 
+// ProjectKey returns the canonical "host/path" project key of an https issue, PR, or MR URL for provider and kind (issue, pr, mr). It returns "" when the URL is not canonical or does not match that provider's item path.
 func ProjectKey(rawURL, provider, kind string) string {
 	parsed, err := url.Parse(strings.TrimSpace(rawURL))
 	if err != nil || !isCanonicalWebURL(parsed) {
 		return ""
 	}
 	host := normalizedWebHost(parsed)
-	parts := SplitURLPath(strings.ToLower(parsed.EscapedPath()))
+	parts := splitURLPath(strings.ToLower(parsed.EscapedPath()))
 	switch provider + ":" + kind {
 	case "github:issue":
 		if !isGitHubItemPath(parts, "issues") {
@@ -82,6 +84,7 @@ func isGitLabItemPath(parts []string, hostname string, kindOK func(string) bool)
 
 func isGitLabMergeRequestPath(segment string) bool { return segment == "merge_requests" }
 
+// ProjectKeyFromGitRemoteURL derives the project key from an HTTPS, SSH, or SCP-style git remote URL, trimming ".git". It errors on credentials in the URL, unsupported syntax, or a path that does not identify one project of provider.
 func ProjectKeyFromGitRemoteURL(rawURL, provider string) (string, error) {
 	rawURL = strings.TrimSpace(rawURL)
 	if rawURL == "" || strings.ContainsAny(rawURL, "\x00\r\n\t ") {
@@ -92,7 +95,7 @@ func ProjectKeyFromGitRemoteURL(rawURL, provider string) (string, error) {
 		return "", err
 	}
 	remotePath = strings.TrimSuffix(strings.Trim(remotePath, "/"), ".git")
-	parts := SplitURLPath(strings.ToLower(remotePath))
+	parts := splitURLPath(strings.ToLower(remotePath))
 	if provider == "github" {
 		if len(parts) != 2 {
 			return "", fmt.Errorf("git remote URL does not identify one GitHub project")
@@ -150,6 +153,7 @@ func normalizedWebHost(parsed *url.URL) string {
 	return host
 }
 
+// ProviderFromURL infers github or gitlab from an issue URL. It returns "" when the provider is unknown.
 func ProviderFromURL(issueURL string) string {
 	parsed, err := url.Parse(strings.TrimSpace(issueURL))
 	if err != nil {
@@ -165,7 +169,7 @@ func ProviderFromURL(issueURL string) string {
 	}
 	return ""
 }
-func IssueNumber(issueURL string) string {
+func issueNumber(issueURL string) string {
 	parsed, err := url.Parse(strings.TrimSpace(issueURL))
 	if err != nil {
 		return ""
@@ -189,20 +193,20 @@ func isGitLabIssueLikePath(part string) bool {
 	return part == "issues" || part == "work_items"
 }
 
-// TrackedMaterialNames are the tracked copies of the implementation materials
+// trackedMaterialNames are the tracked copies of the implementation materials
 // that phase transitions write next to gates.md in .issueops/issues/<n>/
 // (#513). They are derived from the sealed plan and the record.
-var TrackedMaterialNames = []string{"plan.md", "intent.md", "spec.md", "architecture.md", "plan-review.md"}
+var trackedMaterialNames = []string{"plan.md", "intent.md", "spec.md", "architecture.md", "plan-review.md"}
 
 // IsTrackedMaterialPath reports whether relPath (worktree-relative, slash or
 // OS separators) is one of issueURL's tracked material copies.
 func IsTrackedMaterialPath(issueURL, relPath string) bool {
-	n := IssueNumber(issueURL)
+	n := issueNumber(issueURL)
 	if n == "" {
 		return false
 	}
 	relPath = strings.ReplaceAll(relPath, "\\", "/")
-	for _, name := range TrackedMaterialNames {
+	for _, name := range trackedMaterialNames {
 		if relPath == ".issueops/issues/"+n+"/"+name {
 			return true
 		}
@@ -210,11 +214,11 @@ func IsTrackedMaterialPath(issueURL, relPath string) bool {
 	return false
 }
 
-// VerificationReportName is the cycle's verification report under
+// verificationReportName is the cycle's verification report under
 // .issueops/issues/<n>/. Verify, docs, and complete all write to it after the
 // clean seal, so it is a process record rather than part of the reviewed
 // change: counting it made every report edit stale the seals and reviews.
-const VerificationReportName = "verified-execution-report.md"
+const verificationReportName = "verified-execution-report.md"
 
 // IsVerificationReportPath reports whether relPath (worktree-relative) is a
 // cycle's report, .issueops/issues/<n>/verified-execution-report.md.
@@ -224,14 +228,14 @@ func IsVerificationReportPath(relPath string) bool {
 		return false
 	}
 	n, name, ok := strings.Cut(rest, "/")
-	return ok && n != "" && name == VerificationReportName
+	return ok && n != "" && name == verificationReportName
 }
 
-// IssueArtifactDir은 linked issue URL로 결정하는 봉인 아티팩트 디렉터리
+// IssueArtifactDir 함수는 linked issue URL로 결정하는 봉인 아티팩트 디렉터리
 // (워크트리 상대, slash)다: `.issueops/issues/<n>/artifact`. 번호를 알 수
 // 없으면 빈 문자열이며, execution prepare는 그 경우를 거부한다(#482).
 func IssueArtifactDir(issueURL string) string {
-	if n := IssueNumber(issueURL); n != "" {
+	if n := issueNumber(issueURL); n != "" {
 		return ".issueops/issues/" + n + "/artifact"
 	}
 	return ""

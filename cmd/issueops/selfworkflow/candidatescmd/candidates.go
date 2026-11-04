@@ -1,3 +1,5 @@
+// Package candidatescmd implements the `issueops self-verify candidates`
+// command, which exports the improvement candidate curriculum.
 package candidatescmd
 
 import (
@@ -10,12 +12,15 @@ import (
 	domain "issueops/internal/domain/selfverify"
 )
 
+// Deps injects candidate export, snapshot persistence, and JSON output for Run.
 type Deps struct {
 	Export    func() contract.SelfVerificationCandidateExportResult
 	Save      func(result *contract.SelfVerificationCandidateExportResult, key string) error
 	PrintJSON func(any) error
 }
 
+// Run parses the candidates flags, exports the candidate list, optionally
+// saves it under --state-key, and prints JSON or a text list.
 func Run(args []string, deps Deps) error {
 	fs := flag.NewFlagSet("self-verify candidates", flag.ContinueOnError)
 	saveState := fs.Bool("save-state", false, "save candidate export snapshot to issueops state")

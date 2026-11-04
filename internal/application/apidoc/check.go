@@ -1,3 +1,6 @@
+// Package apidoc is the application layer for API documentation gates: a
+// deterministic static check of NestJS controllers and DTOs followed by a
+// host-agent review of the documentation diff.
 package apidoc
 
 import (
@@ -11,6 +14,9 @@ type Service struct {
 	Reviewer ReviewService
 }
 
+// Check runs the static check and, only when it passes, the host-agent review.
+// A failed static check short-circuits with a skipped passing review and an
+// error; otherwise the review's error is returned with the combined result.
 func (s Service) Check(staticOptions StaticOptions, reviewOptions ReviewOptions) (contract.CheckResult, error) {
 	staticResult, staticErr := s.Static.Check(staticOptions)
 	if staticErr != nil || !staticResult.OK {

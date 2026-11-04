@@ -1,15 +1,19 @@
+// Package nativeintegration is the self-verification probe that validates the
+// installed native host integrations (Codex, Claude, Omo, Omp, opencode):
+// skills, hook and lifecycle configs, and the Claude duplicate-MCP warning
+// parsing.
 package nativeintegration
 
 import "strings"
 
-type ClaudeMCPDuplicateWarning struct {
+type claudeMCPDuplicateWarning struct {
 	Server      string   `json:"server"`
 	Message     string   `json:"message"`
 	Suggestions []string `json:"suggestions"`
 }
 
-func DetectClaudeMCPDuplicateWarnings(output string) []ClaudeMCPDuplicateWarning {
-	warnings := []ClaudeMCPDuplicateWarning{}
+func detectClaudeMCPDuplicateWarnings(output string) []claudeMCPDuplicateWarning {
+	warnings := []claudeMCPDuplicateWarning{}
 	current := -1
 	for line := range strings.SplitSeq(output, "\n") {
 		trimmed := strings.TrimSpace(strings.TrimPrefix(line, "└"))
@@ -22,7 +26,7 @@ func DetectClaudeMCPDuplicateWarnings(output string) []ClaudeMCPDuplicateWarning
 					server = name
 				}
 			}
-			warnings = append(warnings, ClaudeMCPDuplicateWarning{
+			warnings = append(warnings, claudeMCPDuplicateWarning{
 				Server:      server,
 				Message:     strings.TrimSpace(trimmed),
 				Suggestions: []string{},
@@ -38,7 +42,7 @@ func DetectClaudeMCPDuplicateWarnings(output string) []ClaudeMCPDuplicateWarning
 	return warnings
 }
 
-func ClaudeMCPDuplicateWarningFixture() string {
+func claudeMCPDuplicateWarningFixture() string {
 	return `MCP Config Diagnostics
 
 For help configuring MCP servers, see: https://code.claude.com/docs/en/mcp

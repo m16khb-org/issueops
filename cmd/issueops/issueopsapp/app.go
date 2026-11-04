@@ -1,3 +1,5 @@
+// Package issueopsapp is the composition root of the issueops CLI: it wires the
+// application services, adapters and CLI packages together and runs the root command.
 package issueopsapp
 
 import (

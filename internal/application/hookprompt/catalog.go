@@ -1,3 +1,5 @@
+// Package hookprompt is the application layer that prepares the project
+// document catalog injected into host hook prompts.
 package hookprompt
 
 import (
@@ -21,6 +23,9 @@ type CatalogService struct {
 	FormatUserOmission    func(projectdoc.CatalogOmissions) string
 }
 
+// Build returns the hook prompt context for repo: the compact and user views
+// of its project documents plus any discovery omissions. ShouldInject is false
+// when no documents were found.
 func (s CatalogService) Build(repo string) hookcontract.ProjectDocCatalogContext {
 	docs, omissions, _ := s.DiscoverReport(repo)
 	var omitted *projectdoc.CatalogOmissions

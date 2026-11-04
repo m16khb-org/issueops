@@ -10,14 +10,19 @@ import (
 	"issueops/internal/port"
 )
 
-type StatusEnvironment interface {
+type statusEnvironment interface {
 	DirectoryExists(string) bool
 	Git(string, ...string) (int, string, string)
 	GitOutput(string, ...string) string
 }
 
-type StructuralStatus struct{ Environment StatusEnvironment }
+// StructuralStatus derives cleanup status from git facts observed in the
+// record's worktree.
+type StructuralStatus struct{ Environment statusEnvironment }
 
+// ForRecord observes the record's worktree, current branch and first remote
+// and returns the domain-built cleanup status. A missing worktree yields a
+// status without git facts.
 func (s StructuralStatus) ForRecord(record model.Record, req model.CleanupStatusRequest) model.CleanupStatus {
 	var facts domain.CleanupStatusObservation
 	worktree := strings.TrimSpace(record.WorktreePath)
@@ -40,18 +45,23 @@ func (s StructuralStatus) ForRecord(record model.Record, req model.CleanupStatus
 	return domain.BuildCleanupStatus(record, req, facts)
 }
 
-type StatusRecords interface {
+type statusRecords interface {
 	Load(string) (model.Record, error)
 }
 
+// StatusService answers `cleanup status`, using the structural status unless
+// merge readback is needed, in which case it reuses the finish preview.
 type StatusService struct {
-	Records          StatusRecords
+	Records          statusRecords
 	Structural       StructuralStatus
 	Provider         func(string) (port.IssueProvider, error)
 	CurrentDirectory func() (string, error)
 	PreviewFinish    func(context.Context, model.CleanupFinishRequest, port.IssueProvider) (model.CleanupFinishResult, error)
 }
 
+// Status returns the cleanup status for id. When merge readback is needed it
+// resolves the provider and current directory and merges in the finish preview
+// result; errors are returned only when the preview gave no usable gates.
 func (s StatusService) Status(ctx context.Context, id string, mergedRequested bool) (model.CleanupStatus, error) {
 	record, err := s.Records.Load(id)
 	failed := model.CleanupStatus{OK: false, ID: id}

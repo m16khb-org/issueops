@@ -101,7 +101,7 @@ func TestServiceReportsUnreadableRecordsAndContinues(t *testing.T) {
 
 	result, err := service.Prune(context.Background(), "/state", 30*24*time.Hour, false)
 
-	if !errors.Is(err, ErrIncomplete) {
+	if !errors.Is(err, errIncomplete) {
 		t.Fatalf("error = %v, want ErrIncomplete", err)
 	}
 	if result.OK {
@@ -142,7 +142,7 @@ func TestServiceBoundsUnreadableDiagnosticsWithoutStoppingPrune(t *testing.T) {
 	}
 
 	result, err := NewService(repository, fixedClock{now: now}).Prune(context.Background(), "/state", 30*24*time.Hour, false)
-	if !errors.Is(err, ErrIncomplete) {
+	if !errors.Is(err, errIncomplete) {
 		t.Fatalf("error = %v, want ErrIncomplete", err)
 	}
 	if result.ReadErrors != unreadableReportLimit+5 ||
@@ -176,11 +176,11 @@ func TestServiceReturnsPartialReceiptWhenLaterDeleteFails(t *testing.T) {
 		true,
 	)
 
-	if !errors.Is(err, ErrIncomplete) {
+	if !errors.Is(err, errIncomplete) {
 		t.Fatalf("error = %v", err)
 	}
 	if result.OK ||
-		result.Error != ErrIncomplete.Error() ||
+		result.Error != errIncomplete.Error() ||
 		result.DeleteErrors != 1 ||
 		len(result.Pruned) != 1 || result.Pruned[0] != "old" ||
 		len(result.Failed) != 1 || result.Failed[0] != "later" ||

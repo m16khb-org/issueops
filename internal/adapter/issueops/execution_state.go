@@ -18,7 +18,7 @@ import (
 
 var leaseHolderBucket = fmt.Sprintf("lease_holder_v%d", issueops.SchemaVersion)
 
-// ListLeaseHolderIndexes는 state를 생성하거나 복구하지 않고 reverse index를
+// ListLeaseHolderIndexes 함수는 state를 생성하거나 복구하지 않고 reverse index를
 // 읽는다. 모든 row는 content에서 파생한 key와 대조해 검증한다.
 func ListLeaseHolderIndexes(stateRoot string) ([]issueops.LeaseHolderIndex, error) {
 	rows, err := sqlstore.GetAllExisting(stateRoot, leaseHolderBucket)

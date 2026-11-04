@@ -160,18 +160,18 @@ func TestCleanupLauncherRemovesDirectoryAndIgnoresBlankPath(t *testing.T) {
 
 func TestReadBootstrapReceiptParsesAllFieldsAndRejectsMalformedFiles(t *testing.T) {
 	dir := canonicalTempDir(t)
-	want := BootstrapReceipt{Status: "ok", CWD: "/w", WindowID: testWindow, WorkspaceID: testWorkspace, SurfaceID: testSurface, SocketPath: socketPath,
+	want := bootstrapReceipt{Status: "ok", CWD: "/w", WindowID: testWindow, WorkspaceID: testWorkspace, SurfaceID: testSurface, SocketPath: socketPath,
 		HostExecutable: "/h", PromptSHA256: strings.Repeat("a", 64), MaterialSHA256: strings.Repeat("b", 64), HostArgvSHA256: strings.Repeat("c", 64)}
 	good := filepath.Join(dir, "good")
 	want.PID = 77
 	if err := os.WriteFile(good, receiptBytes(want, "77"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	got, err := ReadBootstrapReceipt(good)
+	got, err := readBootstrapReceipt(good)
 	if err != nil || got != want {
 		t.Fatalf("got=%+v err=%v", got, err)
 	}
-	if _, err := ReadBootstrapReceipt(filepath.Join(dir, "missing")); !errors.Is(err, os.ErrNotExist) {
+	if _, err := readBootstrapReceipt(filepath.Join(dir, "missing")); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("missing receipt err=%v", err)
 	}
 	for name, data := range map[string][]byte{
@@ -188,7 +188,7 @@ func TestReadBootstrapReceiptParsesAllFieldsAndRejectsMalformedFiles(t *testing.
 			if err := os.WriteFile(path, data, 0o600); err != nil {
 				t.Fatal(err)
 			}
-			if receipt, err := ReadBootstrapReceipt(path); err == nil {
+			if receipt, err := readBootstrapReceipt(path); err == nil {
 				t.Fatalf("accepted %+v", receipt)
 			}
 		})
@@ -203,11 +203,11 @@ func TestValidateBootstrapReceiptRejectsMissingObserverIncompleteProcessAndSymli
 	observe := func(p issueopscontract.NativeProcessReceipt) func(int) (issueopscontract.NativeProcessReceipt, error) {
 		return func(int) (issueopscontract.NativeProcessReceipt, error) { return p, nil }
 	}
-	if _, err := ValidateBootstrapReceipt(receipt, expected, nil); err == nil || !strings.Contains(err.Error(), "observer is unavailable") {
+	if _, err := validateBootstrapReceipt(receipt, expected, nil); err == nil || !strings.Contains(err.Error(), "observer is unavailable") {
 		t.Fatalf("nil observer err=%v", err)
 	}
 	boom := errors.New("no such process")
-	if _, err := ValidateBootstrapReceipt(receipt, expected, func(int) (issueopscontract.NativeProcessReceipt, error) {
+	if _, err := validateBootstrapReceipt(receipt, expected, func(int) (issueopscontract.NativeProcessReceipt, error) {
 		return issueopscontract.NativeProcessReceipt{}, boom
 	}); !errors.Is(err, boom) {
 		t.Fatalf("observer error not propagated: %v", err)
@@ -223,25 +223,25 @@ func TestValidateBootstrapReceiptRejectsMissingObserverIncompleteProcessAndSymli
 		t.Run(name, func(t *testing.T) {
 			p := process
 			mutate(&p)
-			if _, err := ValidateBootstrapReceipt(receipt, expected, observe(p)); err == nil {
+			if _, err := validateBootstrapReceipt(receipt, expected, observe(p)); err == nil {
 				t.Fatal("accepted mismatching process")
 			}
 		})
 	}
 	t.Run("host-side mismatches", func(t *testing.T) {
-		for name, mutate := range map[string]func(*BootstrapReceipt, *cmuxcontract.BootstrapExpectation){
-			"status not ok":   func(r *BootstrapReceipt, _ *cmuxcontract.BootstrapExpectation) { r.Status = "identity_mismatch" },
-			"workspace":       func(r *BootstrapReceipt, _ *cmuxcontract.BootstrapExpectation) { r.WorkspaceID = "x" },
-			"surface":         func(r *BootstrapReceipt, _ *cmuxcontract.BootstrapExpectation) { r.SurfaceID = "x" },
-			"socket":          func(r *BootstrapReceipt, _ *cmuxcontract.BootstrapExpectation) { r.SocketPath = "/x" },
-			"window":          func(r *BootstrapReceipt, _ *cmuxcontract.BootstrapExpectation) { r.WindowID = "other" },
-			"host":            func(r *BootstrapReceipt, _ *cmuxcontract.BootstrapExpectation) { r.HostExecutable = "/x" },
-			"prompt digest":   func(r *BootstrapReceipt, _ *cmuxcontract.BootstrapExpectation) { r.PromptSHA256 = "x" },
-			"material digest": func(r *BootstrapReceipt, _ *cmuxcontract.BootstrapExpectation) { r.MaterialSHA256 = "x" },
-			"expected argv empty": func(r *BootstrapReceipt, e *cmuxcontract.BootstrapExpectation) {
+		for name, mutate := range map[string]func(*bootstrapReceipt, *cmuxcontract.BootstrapExpectation){
+			"status not ok":   func(r *bootstrapReceipt, _ *cmuxcontract.BootstrapExpectation) { r.Status = "identity_mismatch" },
+			"workspace":       func(r *bootstrapReceipt, _ *cmuxcontract.BootstrapExpectation) { r.WorkspaceID = "x" },
+			"surface":         func(r *bootstrapReceipt, _ *cmuxcontract.BootstrapExpectation) { r.SurfaceID = "x" },
+			"socket":          func(r *bootstrapReceipt, _ *cmuxcontract.BootstrapExpectation) { r.SocketPath = "/x" },
+			"window":          func(r *bootstrapReceipt, _ *cmuxcontract.BootstrapExpectation) { r.WindowID = "other" },
+			"host":            func(r *bootstrapReceipt, _ *cmuxcontract.BootstrapExpectation) { r.HostExecutable = "/x" },
+			"prompt digest":   func(r *bootstrapReceipt, _ *cmuxcontract.BootstrapExpectation) { r.PromptSHA256 = "x" },
+			"material digest": func(r *bootstrapReceipt, _ *cmuxcontract.BootstrapExpectation) { r.MaterialSHA256 = "x" },
+			"expected argv empty": func(r *bootstrapReceipt, e *cmuxcontract.BootstrapExpectation) {
 				e.HostArgvSHA256, r.HostArgvSHA256 = "", ""
 			},
-			"expected argv upper": func(r *BootstrapReceipt, e *cmuxcontract.BootstrapExpectation) {
+			"expected argv upper": func(r *bootstrapReceipt, e *cmuxcontract.BootstrapExpectation) {
 				e.HostArgvSHA256 = strings.Repeat("C", 64)
 				r.HostArgvSHA256 = e.HostArgvSHA256
 			},
@@ -249,7 +249,7 @@ func TestValidateBootstrapReceiptRejectsMissingObserverIncompleteProcessAndSymli
 			t.Run(name, func(t *testing.T) {
 				r, e := receipt, expected
 				mutate(&r, &e)
-				_, err := ValidateBootstrapReceipt(r, e, observe(process))
+				_, err := validateBootstrapReceipt(r, e, observe(process))
 				if err == nil || !strings.Contains(err.Error(), "identity mismatch") {
 					t.Fatalf("err=%v", err)
 				}
@@ -270,7 +270,7 @@ func TestValidateBootstrapReceiptRejectsMissingObserverIncompleteProcessAndSymli
 		e.HostExecutable, r.HostExecutable = alias, alias
 		p := process
 		p.Executable = real
-		if _, err := ValidateBootstrapReceipt(r, e, observe(p)); err != nil {
+		if _, err := validateBootstrapReceipt(r, e, observe(p)); err != nil {
 			t.Fatalf("symlink alias rejected: %v", err)
 		}
 	})
@@ -375,7 +375,7 @@ func TestValidateEndpointRejectsEachIncompleteOrUnsafeField(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			endpoint := base
 			test.mutate(&endpoint)
-			if err := ValidateEndpoint(endpoint, base.Path, uid); err == nil || !strings.Contains(err.Error(), test.want) {
+			if err := validateEndpoint(endpoint, base.Path, uid); err == nil || !strings.Contains(err.Error(), test.want) {
 				t.Fatalf("err=%v want %q", err, test.want)
 			}
 		})
@@ -383,7 +383,7 @@ func TestValidateEndpointRejectsEachIncompleteOrUnsafeField(t *testing.T) {
 	own := base
 	own.ParentOwnerUID = base.OwnerUID
 	own.ParentMode = 0o700
-	if err := ValidateEndpoint(own, base.Path, uid); err != nil {
+	if err := validateEndpoint(own, base.Path, uid); err != nil {
 		t.Fatalf("user-owned private parent rejected: %v", err)
 	}
 }

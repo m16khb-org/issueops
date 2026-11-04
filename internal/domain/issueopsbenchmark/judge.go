@@ -7,6 +7,10 @@ import (
 	contract "issueops/internal/contract/issueopsbenchmark"
 )
 
+// ValidateJudgeMetadata checks the provenance of a judge map and returns its
+// trimmed source run ID. The map must name a source run and a provenance
+// label, and the source must differ from scoredRunID so a run cannot judge
+// itself.
 func ValidateJudgeMetadata(judge contract.IssueOpsJudgeMap, scoredRunID string) (string, error) {
 	sourceID := strings.TrimSpace(judge.SourceRunID)
 	if sourceID == "" {

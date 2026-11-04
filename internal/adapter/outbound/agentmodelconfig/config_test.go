@@ -17,10 +17,10 @@ func TestGlobalPath(t *testing.T) {
 	xdg := testsupport.AbsPath("xdg")
 	home := testsupport.AbsPath("home", "u")
 	env := map[string]string{"XDG_CONFIG_HOME": xdg}
-	if got, want := GlobalPath(func(k string) string { return env[k] }, home), filepath.Join(xdg, "issueops", "agent-models.json"); got != want {
+	if got, want := globalPath(func(k string) string { return env[k] }, home), filepath.Join(xdg, "issueops", "agent-models.json"); got != want {
 		t.Fatalf("GlobalPath = %s, want %s", got, want)
 	}
-	if got, want := GlobalPath(func(string) string { return "" }, home), filepath.Join(home, ".config", "issueops", "agent-models.json"); got != want {
+	if got, want := globalPath(func(string) string { return "" }, home), filepath.Join(home, ".config", "issueops", "agent-models.json"); got != want {
 		t.Fatalf("GlobalPath fallback = %s, want %s", got, want)
 	}
 }
@@ -69,11 +69,11 @@ func TestEnsureExcludeIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	first, err := EnsureExcluded(local.CommonDir)
+	first, err := ensureExcluded(local.CommonDir)
 	if err != nil || !first {
 		t.Fatalf("first EnsureExcluded = %v, %v", first, err)
 	}
-	second, err := EnsureExcluded(local.CommonDir)
+	second, err := ensureExcluded(local.CommonDir)
 	if err != nil || second {
 		t.Fatalf("second EnsureExcluded = %v, %v", second, err)
 	}

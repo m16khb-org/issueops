@@ -45,7 +45,7 @@ func TestArchitectureReviewStaleMissingReadsSealedDigestOnlyWhenNeeded(t *testin
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			reads = 0
-			got := ArchitectureReviewStaleMissing(tc.record, tc.check, tc.resolve)
+			got := architectureReviewStaleMissing(tc.record, tc.check, tc.resolve)
 			if !reflect.DeepEqual(got, tc.want) || reads != tc.reads {
 				t.Fatalf("missing=%v reads=%d, want %v reads=%d", got, reads, tc.want, tc.reads)
 			}

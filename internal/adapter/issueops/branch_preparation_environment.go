@@ -8,14 +8,20 @@ import (
 	"issueops/internal/domain/issueopsremote"
 )
 
+// BranchPreparationEnvironment supplies the git and path observations that branch
+// preparation needs. RunGit receives the repository directory and git arguments and
+// returns exit code, stdout and stderr.
 type BranchPreparationEnvironment struct {
 	RunGit func(string, ...string) (int, string, string)
 }
 
+// CleanParentPath returns the cleaned path and whether the original path is absolute.
 func (e BranchPreparationEnvironment) CleanParentPath(path string) (string, bool) {
 	return filepath.Clean(path), filepath.IsAbs(path)
 }
 
+// ResolveBaseCommit resolves revision to a commit OID in repo. It fails with a dedicated
+// message when the repository has no commits yet, and when git returns an empty OID.
 func (e BranchPreparationEnvironment) ResolveBaseCommit(repo, revision string) (string, error) {
 	code, stdout, stderr := e.RunGit(repo, "rev-parse", "--verify", "--end-of-options", strings.TrimSpace(revision)+"^{commit}")
 	if code != 0 {
@@ -46,6 +52,8 @@ func (e BranchPreparationEnvironment) IsAncestor(repo, ancestor, descendant stri
 	}
 }
 
+// ObserveCodeProjectKey derives the provider project key from the origin remote URL of repo.
+// It fails when no git adapter is configured or origin cannot be read.
 func (e BranchPreparationEnvironment) ObserveCodeProjectKey(repo, provider string) (string, error) {
 	if e.RunGit == nil {
 		return "", fmt.Errorf("git command adapter is unavailable")

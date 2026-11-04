@@ -14,8 +14,10 @@ import (
 	policydomain "issueops/internal/domain/policy"
 )
 
+// OverrideLoader reads the optional per-repository command policy overrides from .issueops/policy.json.
 type OverrideLoader struct{}
 
+// Load returns the overrides parsed from repoRoot/.issueops/policy.json. A missing file yields an empty snapshot; a read or parse failure yields a snapshot carrying only a Warning.
 func (OverrideLoader) Load(repoRoot string) policyapp.OverrideSnapshot {
 	overrides, err := readPolicyOverrides(repoRoot)
 	if err != nil {

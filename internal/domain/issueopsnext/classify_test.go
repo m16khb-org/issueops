@@ -336,7 +336,7 @@ func TestOwnerCommandCoversGateMap(t *testing.T) {
 		"worktree_clean", "upstream", "upstream_fetch", "upstream_synced", "branch_match",
 	}
 	for _, key := range keys {
-		command := OwnerCommand("io-test", key)
+		command := ownerCommand("io-test", key)
 		if strings.TrimSpace(command) == "" {
 			t.Fatalf("missing owner command for %q", key)
 		}
@@ -344,7 +344,7 @@ func TestOwnerCommandCoversGateMap(t *testing.T) {
 			t.Fatalf("owner command for %q must be an issueops command, got %q", key, command)
 		}
 	}
-	if got := OwnerCommand("io-test", "who_knows"); got != "issueops status --id io-test --json" {
+	if got := ownerCommand("io-test", "who_knows"); got != "issueops status --id io-test --json" {
 		t.Fatalf("an unknown gate must fall back to status, got %q", got)
 	}
 }
@@ -357,7 +357,7 @@ func TestRecordOwnerCommandsCarryActorFlagPlaceholder(t *testing.T) {
 		"implementation_review", "project_docs_review", "schema_evidence",
 		"feedback_classification", "feedback_resolution", "contract_feedback_issue_update", "remote_artifact",
 	} {
-		command := OwnerCommand("io-test", key)
+		command := ownerCommand("io-test", key)
 		if !strings.HasSuffix(command, " $RECORD_ACTOR_FLAGS") {
 			t.Errorf("%s: %q lacks $RECORD_ACTOR_FLAGS", key, command)
 		}
@@ -460,7 +460,7 @@ func TestClassifyBranchPrepareCommandDependsOnPhase(t *testing.T) {
 	if grill.Stage.Key != "prepare" || strings.Contains(grill.NextCommand, "--to grill") {
 		t.Fatalf("grill with issue must not re-advance to grill, got %s %q", grill.Stage.Key, grill.NextCommand)
 	}
-	if grill.NextCommand != fillBranchPrepareIssue(OwnerCommand("io-test", "branch_prepare"), "https://github.com/acme/repo/issues/12")+" --json" {
+	if grill.NextCommand != fillBranchPrepareIssue(ownerCommand("io-test", "branch_prepare"), "https://github.com/acme/repo/issues/12")+" --json" {
 		t.Fatalf("grill next command %q want owner command for branch_prepare", grill.NextCommand)
 	}
 	if len(grill.Missing) != 1 || grill.Missing[0] != "branch_prepare" {
@@ -479,7 +479,7 @@ func TestClassifyUnverifiedBranchLinkStaysInPrepare(t *testing.T) {
 	}
 	plan := classifyTemplate(unverified(withIssue(baseRecord(issueopsnextcontract.PhasePlan))))
 	if plan.Stage.Key != "prepare" || len(plan.Missing) != 1 || plan.Missing[0] != "branch_link_verified" ||
-		plan.NextCommand != fillBranchPrepareIssue(OwnerCommand("io-test", "branch_link_verified"), "https://github.com/acme/repo/issues/12")+" --json" || !strings.Contains(plan.NextCommand, " --link-verified ") {
+		plan.NextCommand != fillBranchPrepareIssue(ownerCommand("io-test", "branch_link_verified"), "https://github.com/acme/repo/issues/12")+" --json" || !strings.Contains(plan.NextCommand, " --link-verified ") {
 		t.Fatalf("plan with unverified link: %s %v %q", plan.Stage.Key, plan.Missing, plan.NextCommand)
 	}
 	holder := classifyTemplate(withSelfHolder(unverified(withIssue(baseRecord(issueopsnextcontract.PhasePlan)))))
@@ -496,7 +496,7 @@ func TestClassifyUnverifiedBranchLinkStaysInPrepare(t *testing.T) {
 // plan_path step names that file instead of a <PATH> the agent must hunt for.
 func TestClassifyPlanPathNamesTheSealedPlan(t *testing.T) {
 	in := withSelfHolder(withBranch(withIssue(baseRecord(issueopsnextcontract.PhasePlan))))
-	if got := classifyTemplate(in).NextCommand; got != OwnerCommand("io-test", "plan_path")+" --json" {
+	if got := classifyTemplate(in).NextCommand; got != ownerCommand("io-test", "plan_path")+" --json" {
 		t.Fatalf("without artifact_dir: %q", got)
 	}
 	root := testsupport.AbsPath("repo.worktrees", "9-x")
@@ -583,7 +583,7 @@ func TestClassifyIssueStageFallsBackToIntentContractWithoutMissingGates(t *testi
 	if got.Stage.Key != "issue" {
 		t.Fatalf("stage %s want issue", got.Stage.Key)
 	}
-	if got.NextCommand != OwnerCommand("io-test", "intent_contract")+" --json" {
+	if got.NextCommand != ownerCommand("io-test", "intent_contract")+" --json" {
 		t.Fatalf("next command %q want owner command for intent_contract", got.NextCommand)
 	}
 }
@@ -719,7 +719,7 @@ func TestClassifyPRRefreshSequenceAfterAMovedHead(t *testing.T) {
 		stage, cmd string
 	}{
 		{pr("new", "ai_slop_clean_stale", "implementation_review_stale"), "clean", "issueops phase --id io-test --to ai-slop-clean $RECORD_ACTOR_FLAGS --json"},
-		{pr("new", "implementation_review_stale"), "verify", OwnerCommand("io-test", "implementation_review_stale") + " --json"},
+		{pr("new", "implementation_review_stale"), "verify", ownerCommand("io-test", "implementation_review_stale") + " --json"},
 		{pr("new"), "commit-push", "issueops phase --id io-test --to pr $RECORD_ACTOR_FLAGS --json"},
 		{pr("old"), "pr.create", ""},
 	}

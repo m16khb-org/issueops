@@ -13,10 +13,10 @@ func TestFeedbackCompletionMissingMapsPersistedFeedback(t *testing.T) {
 		{Classification: "question", Resolution: ""},
 	}}
 	want := []string{"contract_feedback_issue_update", "feedback_resolution"}
-	if got := FeedbackCompletionMissing(record); !reflect.DeepEqual(got, want) {
+	if got := feedbackCompletionMissing(record); !reflect.DeepEqual(got, want) {
 		t.Fatalf("missing=%v, want %v", got, want)
 	}
-	if !HasUnresolvedContractFeedback(record) {
+	if !hasUnresolvedContractFeedback(record) {
 		t.Fatal("contract change should require issue update")
 	}
 }

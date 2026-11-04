@@ -9,9 +9,9 @@ import (
 	"issueops/internal/port"
 )
 
-// WorkspaceProcessControl observes OS identity and sends signals. Signal errors
+// workspaceProcessControl observes OS identity and sends signals. Signal errors
 // are resolved by subsequent occupancy observations, preserving the stop contract.
-type WorkspaceProcessControl interface {
+type workspaceProcessControl interface {
 	Observe(string) (port.CleanupWorkspaceOccupancy, error)
 	RequesterPID() int
 	Hangup(int)
@@ -20,7 +20,8 @@ type WorkspaceProcessControl interface {
 	Wait(time.Duration)
 }
 
-type WorkspaceProcessStopper struct{ Processes WorkspaceProcessControl }
+// WorkspaceProcessStopper terminates the processes occupying a worktree.
+type WorkspaceProcessStopper struct{ Processes workspaceProcessControl }
 
 const (
 	cleanupStopGracePeriod  = 5 * time.Second
@@ -28,6 +29,9 @@ const (
 	cleanupStopPollInterval = 250 * time.Millisecond
 )
 
+// Stop terminates the previewed occupants with HUP/TERM, escalates survivors
+// to KILL, and returns the stopped targets. It fails if any process still
+// occupies root afterwards or the occupancy cannot be observed.
 func (s WorkspaceProcessStopper) Stop(root string, preview []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, error) {
 	occupancy, err := s.Processes.Observe(root)
 	if err != nil {

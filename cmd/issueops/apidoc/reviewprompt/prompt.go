@@ -1,3 +1,5 @@
+// Package reviewprompt builds the API documentation review prompt and its JSON
+// result schema for the pre-commit reviewer agent.
 package reviewprompt
 
 import (
@@ -5,6 +7,9 @@ import (
 	"strings"
 )
 
+// Build renders the structured review prompt for the given files and diff.
+// extraPrompt adds project-specific instructions and evidence, when not blank,
+// adds the extracted business logic error contract section.
 func Build(files []string, diff, extraPrompt, evidence string) string {
 	data := []prompt.DataSection{
 		{Title: "Additional Project-Specific Instructions", Content: strings.TrimSpace(extraPrompt)},
@@ -57,6 +62,8 @@ func Build(files []string, diff, extraPrompt, evidence string) string {
 	})
 }
 
+// Schema returns the JSON schema the reviewer's answer must match: a pass or
+// fail verdict, a summary, and findings with file, line, severity, and message.
 func Schema() map[string]any {
 	return map[string]any{"type": "object", "additionalProperties": false, "required": []string{"verdict", "summary", "findings"}, "properties": map[string]any{
 		"verdict": map[string]any{"type": "string", "enum": []string{"pass", "fail"}},

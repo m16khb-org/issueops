@@ -1,3 +1,6 @@
+// Package lifecycle implements project lifecycle state resolution and
+// initialization through injected effects, delegating profile rules to the
+// lifecycle domain. It sits in the application layer.
 package lifecycle
 
 import (
@@ -10,7 +13,7 @@ import (
 	lifecycledomain "issueops/internal/domain/lifecycle"
 )
 
-type Effects interface {
+type effects interface {
 	NormalizeRoot(string) (string, error)
 	StateRoot() string
 	Fingerprint(string) lifecyclecontract.ProjectFingerprint
@@ -22,11 +25,16 @@ type Effects interface {
 	Now() time.Time
 }
 
+// Service resolves and initializes the per-project lifecycle state at the
+// SchemaVersion it carries.
 type Service struct {
-	Effects       Effects
+	Effects       effects
 	SchemaVersion int
 }
 
+// Resolve computes the lifecycle state plan for repoRoot without writing. A
+// missing project.json yields the plan as is, and an unreadable one adds the
+// project_json_read_error warning; only root normalization failure returns an error.
 func (service Service) Resolve(repoRoot string) (lifecyclecontract.ProjectLifecycleStatePlan, error) {
 	root, err := service.Effects.NormalizeRoot(repoRoot)
 	if err != nil {
@@ -45,6 +53,10 @@ func (service Service) Resolve(repoRoot string) (lifecyclecontract.ProjectLifecy
 	return lifecycledomain.ResolveProfile(plan, profile, service.SchemaVersion), nil
 }
 
+// Init resolves the plan and, when confirm is true, creates or rewrites
+// project.json with the optional first metadata profile. It does nothing
+// without confirm or when an existing profile has an invalid namespace. If a
+// concurrent session created the profile first, that profile stays authoritative.
 func (service Service) Init(repoRoot string, confirm bool, metadata ...projectdoccontract.ProjectProfile) (lifecyclecontract.ProjectLifecycleStatePlan, error) {
 	plan, err := service.Resolve(repoRoot)
 	if err != nil || !confirm || (plan.Exists && !plan.NamespaceValid) {

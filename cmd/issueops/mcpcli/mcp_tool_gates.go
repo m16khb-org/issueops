@@ -8,7 +8,7 @@ import (
 	gatescontract "issueops/internal/contract/gates"
 )
 
-var gatesMCPHandlers = map[string]func(map[string]any, gatesapp.Service) MCPToolOutcome{
+var gatesMCPHandlers = map[string]func(map[string]any, gatesapp.Service) mcpToolOutcome{
 	"gates_check":   handleMCPGatesCheck,
 	"gates_status":  handleMCPGatesStatus,
 	"gates_report":  handleMCPGatesReport,
@@ -17,15 +17,15 @@ var gatesMCPHandlers = map[string]func(map[string]any, gatesapp.Service) MCPTool
 	"gates_lint":    handleMCPGatesLint,
 }
 
-func handleGatesMCPToolCall(call MCPToolCall, service gatesapp.Service) MCPToolOutcome {
+func handleGatesMCPToolCall(call MCPToolCall, service gatesapp.Service) mcpToolOutcome {
 	handler, ok := gatesMCPHandlers[call.Name]
 	if !ok {
-		return MCPToolOutcome{}
+		return mcpToolOutcome{}
 	}
 	return handler(call.Arguments, service)
 }
 
-func gatesMCPOutcome(payload any, err error, message string) MCPToolOutcome {
+func gatesMCPOutcome(payload any, err error, message string) mcpToolOutcome {
 	if err != nil {
 		return mcpToolErrorPayload(map[string]any{
 			"ok":    false,
@@ -53,28 +53,28 @@ func gatesBaseCheckRequest(args map[string]any) gatescontract.CheckRequest {
 	}
 }
 
-func handleMCPGatesCheck(args map[string]any, service gatesapp.Service) MCPToolOutcome {
+func handleMCPGatesCheck(args map[string]any, service gatesapp.Service) mcpToolOutcome {
 	req := gatesBaseCheckRequest(args)
 	req.TimeoutSeconds = argmap.Int(args, "timeout_seconds", 0)
 	result, err := service.Check(req)
 	return gatesMCPOutcome(result, err, "Gates check failed")
 }
 
-func handleMCPGatesStatus(args map[string]any, service gatesapp.Service) MCPToolOutcome {
+func handleMCPGatesStatus(args map[string]any, service gatesapp.Service) mcpToolOutcome {
 	req := gatesBaseCheckRequest(args)
 	req.StatusOnly = true
 	result, err := service.Check(req)
 	return gatesMCPOutcome(result, err, "Gates status failed")
 }
 
-func handleMCPGatesReport(args map[string]any, service gatesapp.Service) MCPToolOutcome {
+func handleMCPGatesReport(args map[string]any, service gatesapp.Service) mcpToolOutcome {
 	req := gatesBaseCheckRequest(args)
 	req.StatusOnly = true
 	result, err := service.Check(req)
 	return gatesMCPOutcome(result, err, "Gates report failed")
 }
 
-func handleMCPGatesAbandon(args map[string]any, service gatesapp.Service) MCPToolOutcome {
+func handleMCPGatesAbandon(args map[string]any, service gatesapp.Service) mcpToolOutcome {
 	result, err := service.Abandon(gatescontract.AbandonRequest{
 		File:   argmap.String(args, "file"),
 		GateID: argmap.String(args, "gate_id"),
@@ -83,7 +83,7 @@ func handleMCPGatesAbandon(args map[string]any, service gatesapp.Service) MCPToo
 	return gatesMCPOutcome(result, err, "Gates abandon failed")
 }
 
-func handleMCPGatesInit(args map[string]any, service gatesapp.Service) MCPToolOutcome {
+func handleMCPGatesInit(args map[string]any, service gatesapp.Service) mcpToolOutcome {
 	result, err := service.Init(gatescontract.InitRequest{
 		File:  argmap.String(args, "file"),
 		Scope: argmap.String(args, "scope"),
@@ -92,7 +92,7 @@ func handleMCPGatesInit(args map[string]any, service gatesapp.Service) MCPToolOu
 	return gatesMCPOutcome(result, err, "Gates init failed")
 }
 
-func handleMCPGatesLint(args map[string]any, service gatesapp.Service) MCPToolOutcome {
+func handleMCPGatesLint(args map[string]any, service gatesapp.Service) mcpToolOutcome {
 	base := gatesBaseCheckRequest(args)
 	result, err := service.Lint(gatescontract.LintRequest{
 		WorkspaceRoot: base.WorkspaceRoot, CWD: base.CWD, Files: base.Files,

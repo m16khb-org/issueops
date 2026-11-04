@@ -103,7 +103,7 @@ func TestReadRejectsStoredRecordThatFailsDecoding(t *testing.T) {
 
 func TestDecodeRecordRejectsMalformedEnvelopes(t *testing.T) {
 	valid := `{"schema_version":` + strconv.Itoa(statecontract.SchemaVersion) + `,"key":"k","content":"ab","updated_at":"2026-01-01T00:00:00Z","bytes":2}`
-	if record, err := DecodeRecord("k", []byte(valid)); err != nil || record.Content != "ab" {
+	if record, err := decodeRecord("k", []byte(valid)); err != nil || record.Content != "ab" {
 		t.Fatalf("baseline valid envelope rejected: %+v, %v", record, err)
 	}
 	cases := map[string]struct {
@@ -117,7 +117,7 @@ func TestDecodeRecordRejectsMalformedEnvelopes(t *testing.T) {
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			record, err := DecodeRecord(tc.key, []byte(tc.data))
+			record, err := decodeRecord(tc.key, []byte(tc.data))
 			if !errors.Is(err, statecontract.ErrInvalidState) || record != (statecontract.RecordEnvelope{}) {
 				t.Fatalf("DecodeRecord = %+v, %v; want zero record and ErrInvalidState", record, err)
 			}

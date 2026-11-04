@@ -8,6 +8,9 @@ import (
 	reviewport "issueops/internal/port/issueopsreview"
 )
 
+// NewReviewMutationStore builds the store that review mutations write through: every write
+// runs under the per-cycle lock, is validated against actor and the execution write lease, and
+// stamps the UTC time as RFC 3339.
 func NewReviewMutationStore(actor *issueops.Actor) reviewport.ReviewMutationStore {
 	return reviewport.ReviewMutationStore{
 		WithLock: func(root, cycleID string, fn func() error) error {

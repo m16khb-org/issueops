@@ -18,7 +18,7 @@ func covAbandonReceipt(step string) *model.CleanupAbandonFailure {
 	}
 }
 
-var covAbandonEvidence = CleanupAbandonFailureEvidence{SameWorktree: true, SealMatches: true}
+var covAbandonEvidence = cleanupAbandonFailureEvidence{SameWorktree: true, SealMatches: true}
 
 func TestCleanupAbandonRemoteFlagsAndPreviewCommand(t *testing.T) {
 	if got := CleanupAbandonRemoteFlags(model.CleanupAbandonRequest{}); got != "" {
@@ -39,7 +39,7 @@ func TestCleanupAbandonRemoteFlagsAndPreviewCommand(t *testing.T) {
 }
 
 func TestCleanupAbandonFailureInventoryMatchesNilReceiptAlwaysMatches(t *testing.T) {
-	if !CleanupAbandonFailureInventoryMatches(model.Record{}, model.CleanupAbandonInventory{Branch: "x"}, CleanupAbandonFailureEvidence{}) {
+	if !cleanupAbandonFailureInventoryMatches(model.Record{}, model.CleanupAbandonInventory{Branch: "x"}, cleanupAbandonFailureEvidence{}) {
 		t.Fatal("no receipt must not block")
 	}
 }
@@ -59,7 +59,7 @@ func TestCleanupAbandonFailureInventoryMatchesRejectsMalformedReceipt(t *testing
 		t.Run(name, func(t *testing.T) {
 			failure := covAbandonReceipt("record_delete")
 			mutate(failure)
-			if CleanupAbandonFailureInventoryMatches(model.Record{CleanupAbandonFailure: failure}, inv, covAbandonEvidence) {
+			if cleanupAbandonFailureInventoryMatches(model.Record{CleanupAbandonFailure: failure}, inv, covAbandonEvidence) {
 				t.Fatal("malformed receipt accepted")
 			}
 		})
@@ -103,7 +103,7 @@ func TestCleanupAbandonFailureInventoryMatchesByStep(t *testing.T) {
 			failure := covAbandonReceipt(tc.step)
 			failure.WorktreeHead, failure.BranchOID = tc.orig.worktree, tc.orig.branch
 			record := model.Record{CleanupAbandonFailure: failure}
-			if got := CleanupAbandonFailureInventoryMatches(record, inv(tc.now), covAbandonEvidence); got != tc.wantFits {
+			if got := cleanupAbandonFailureInventoryMatches(record, inv(tc.now), covAbandonEvidence); got != tc.wantFits {
 				t.Fatalf("got %t want %t", got, tc.wantFits)
 			}
 		})
@@ -117,36 +117,36 @@ func TestCleanupAbandonPartialBranchRetry(t *testing.T) {
 		return model.Record{CleanupAbandonFailure: failure}, model.CleanupAbandonInventory{Branch: "task", BranchOID: "h"}
 	}
 	record, inv := base()
-	if !CleanupAbandonPartialBranchRetry(record, inv, covAbandonEvidence) {
+	if !cleanupAbandonPartialBranchRetry(record, inv, covAbandonEvidence) {
 		t.Fatal("branch-only residue after worktree removal must be retryable")
 	}
 	record.CleanupAbandonFailure.Step = "applying"
-	if !CleanupAbandonPartialBranchRetry(record, inv, covAbandonEvidence) {
+	if !cleanupAbandonPartialBranchRetry(record, inv, covAbandonEvidence) {
 		t.Fatal("applying step must be retryable")
 	}
-	for name, mutate := range map[string]func(*model.Record, *model.CleanupAbandonInventory, *CleanupAbandonFailureEvidence){
-		"no receipt": func(r *model.Record, _ *model.CleanupAbandonInventory, _ *CleanupAbandonFailureEvidence) {
+	for name, mutate := range map[string]func(*model.Record, *model.CleanupAbandonInventory, *cleanupAbandonFailureEvidence){
+		"no receipt": func(r *model.Record, _ *model.CleanupAbandonInventory, _ *cleanupAbandonFailureEvidence) {
 			r.CleanupAbandonFailure = nil
 		},
-		"worktree present": func(_ *model.Record, i *model.CleanupAbandonInventory, _ *CleanupAbandonFailureEvidence) {
+		"worktree present": func(_ *model.Record, i *model.CleanupAbandonInventory, _ *cleanupAbandonFailureEvidence) {
 			i.WorktreePresent = true
 		},
-		"branch absent": func(_ *model.Record, i *model.CleanupAbandonInventory, _ *CleanupAbandonFailureEvidence) {
+		"branch absent": func(_ *model.Record, i *model.CleanupAbandonInventory, _ *cleanupAbandonFailureEvidence) {
 			i.BranchOID = ""
 		},
-		"other step": func(r *model.Record, _ *model.CleanupAbandonInventory, _ *CleanupAbandonFailureEvidence) {
+		"other step": func(r *model.Record, _ *model.CleanupAbandonInventory, _ *cleanupAbandonFailureEvidence) {
 			r.CleanupAbandonFailure.Step = "record_delete"
 		},
-		"different worktree": func(_ *model.Record, _ *model.CleanupAbandonInventory, e *CleanupAbandonFailureEvidence) {
+		"different worktree": func(_ *model.Record, _ *model.CleanupAbandonInventory, e *cleanupAbandonFailureEvidence) {
 			e.SameWorktree = false
 		},
-		"branch renamed": func(_ *model.Record, i *model.CleanupAbandonInventory, _ *CleanupAbandonFailureEvidence) {
+		"branch renamed": func(_ *model.Record, i *model.CleanupAbandonInventory, _ *cleanupAbandonFailureEvidence) {
 			i.Branch = "other"
 		},
-		"oid moved": func(_ *model.Record, i *model.CleanupAbandonInventory, _ *CleanupAbandonFailureEvidence) {
+		"oid moved": func(_ *model.Record, i *model.CleanupAbandonInventory, _ *cleanupAbandonFailureEvidence) {
 			i.BranchOID = "m"
 		},
-		"recorded head differs": func(r *model.Record, _ *model.CleanupAbandonInventory, _ *CleanupAbandonFailureEvidence) {
+		"recorded head differs": func(r *model.Record, _ *model.CleanupAbandonInventory, _ *cleanupAbandonFailureEvidence) {
 			r.CleanupAbandonFailure.WorktreeHead = "other"
 		},
 	} {
@@ -154,7 +154,7 @@ func TestCleanupAbandonPartialBranchRetry(t *testing.T) {
 			record, inv := base()
 			ev := covAbandonEvidence
 			mutate(&record, &inv, &ev)
-			if CleanupAbandonPartialBranchRetry(record, inv, ev) {
+			if cleanupAbandonPartialBranchRetry(record, inv, ev) {
 				t.Fatal("must not be a partial branch retry")
 			}
 		})
@@ -223,10 +223,10 @@ func TestCleanupAbandonUnresolvedChildren(t *testing.T) {
 }
 
 func TestValidateCleanupAbandonReason(t *testing.T) {
-	if err := ValidateCleanupAbandonReason("  duplicate of #12  "); err != nil {
+	if err := validateCleanupAbandonReason("  duplicate of #12  "); err != nil {
 		t.Fatalf("plain reason rejected: %v", err)
 	}
-	if err := ValidateCleanupAbandonReason(strings.Repeat("a", CleanupAbandonReasonLimit)); err != nil {
+	if err := validateCleanupAbandonReason(strings.Repeat("a", CleanupAbandonReasonLimit)); err != nil {
 		t.Fatalf("limit-sized reason rejected: %v", err)
 	}
 	for name, reason := range map[string]string{
@@ -244,15 +244,15 @@ func TestValidateCleanupAbandonReason(t *testing.T) {
 		"tilde":        "~root",
 		"glob":         "a*b",
 	} {
-		if err := ValidateCleanupAbandonReason(reason); err == nil {
+		if err := validateCleanupAbandonReason(reason); err == nil {
 			t.Errorf("%s: reason %q accepted", name, reason)
 		}
 	}
-	err := ValidateCleanupAbandonReason("a;b")
+	err := validateCleanupAbandonReason("a;b")
 	if err == nil || !strings.Contains(err.Error(), "';'") {
 		t.Fatalf("error must name the offending rune: %v", err)
 	}
-	if err := ValidateCleanupAbandonReason("a\tb"); err == nil || !strings.Contains(err.Error(), "control") {
+	if err := validateCleanupAbandonReason("a\tb"); err == nil || !strings.Contains(err.Error(), "control") {
 		t.Fatalf("tab inside is a control char: %v", err)
 	}
 }

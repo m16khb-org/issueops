@@ -5,12 +5,12 @@ import "os"
 // OperatorSwitches는 운영자가 셸에 켜 두는 harness 환경 스위치다. 프로덕션에서는
 // 정상 기능이지만 테스트 진입점에서는 오염원이다 — 상속된 값이 hook 동작을 바꿔
 // 버려서, 같은 코드가 CI(변수 없음)와 dogfood 셸(변수 있음)에서 다른 결론을 낸다.
-var OperatorSwitches = []string{
+var operatorSwitches = []string{
 	"ISSUEOPS_DISABLE_HOOKS",
 	"ISSUEOPS_SELF_VERIFY_LLM_EVAL",
 }
 
-// ClearInheritedOperatorSwitches는 상속된 운영자 환경 스위치를 제거하고, 실제로
+// ClearInheritedOperatorSwitches 함수는 상속된 운영자 환경 스위치를 제거하고, 실제로
 // 제거된 변수의 이름을 돌려준다.
 //
 // 개별 테스트가 아니라 패키지 진입점(TestMain)에서 한 번 부르는 것이 계약이다.
@@ -22,7 +22,7 @@ var OperatorSwitches = []string{
 // 시점의 상속값만 지우므로 그 의도를 침범하지 않는다.
 func ClearInheritedOperatorSwitches() []string {
 	cleared := []string{}
-	for _, name := range OperatorSwitches {
+	for _, name := range operatorSwitches {
 		if _, present := os.LookupEnv(name); !present {
 			continue
 		}

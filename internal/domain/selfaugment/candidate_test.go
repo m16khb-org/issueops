@@ -12,8 +12,8 @@ func TestCandidateSelectionPrioritizesOpenThenScoreAndID(t *testing.T) {
 		{ID: "b", Status: contract.CandidateStatusOpen, Score: 80},
 		{ID: "a", Status: contract.CandidateStatusOpen, Score: 80},
 	}
-	PrioritizeCandidates(candidates)
-	selected := SelectedCandidate(candidates)
+	prioritizeCandidates(candidates)
+	selected := selectedCandidate(candidates)
 	if selected == nil || selected.ID != "a" || candidates[2].ID != "satisfied" {
 		t.Fatalf("priority=%+v selected=%+v", candidates, selected)
 	}
@@ -29,7 +29,7 @@ func TestCandidateSatisfactionAndExclusiveGoal(t *testing.T) {
 	if candidate.Status != contract.CandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
 		t.Fatalf("candidate=%+v", candidate)
 	}
-	if GoalPassed(95, 95) || !GoalPassed(96, 95) || AllGoalsPassed(nil) {
+	if goalPassed(95, 95) || !goalPassed(96, 95) || AllGoalsPassed(nil) {
 		t.Fatal("exclusive score gate changed")
 	}
 }

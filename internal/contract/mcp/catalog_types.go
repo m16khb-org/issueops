@@ -18,6 +18,7 @@ type ToolAnnotations struct {
 	OpenWorldHint   *bool `json:"openWorldHint,omitempty"`
 }
 
+// Resource is one MCP resource entry (URI, display name, description, MIME type) advertised in resources/list.
 type Resource struct {
 	URI         string `json:"uri"`
 	Name        string `json:"name"`
@@ -29,6 +30,7 @@ type Resource struct {
 // The MCP server uses this to route tool calls to the correct handler.
 type DispatchGroup string
 
+// DispatchProject through DispatchSelfLoop are the DispatchGroup values that route a tool call to its handler group.
 const (
 	DispatchProject         DispatchGroup = "project"
 	DispatchPolicyState     DispatchGroup = "policy_state"

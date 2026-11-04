@@ -1,14 +1,21 @@
+// Package prompt renders structured prompts for host agents from a fixed
+// section layout (identity, objective, phases, inputs, rules, output contract,
+// checklist, data). It is pure text assembly in the domain layer.
 package prompt
 
 import (
 	"strings"
 )
 
+// DataSection is a titled block of free-form data appended to a prompt. A
+// section with a blank Title is skipped.
 type DataSection struct {
 	Title   string
 	Content string
 }
 
+// StructuredPromptSpec describes one prompt. Empty fields and blank list items
+// are omitted from the rendered output.
 type StructuredPromptSpec struct {
 	Identity              string
 	Objective             string
@@ -30,6 +37,8 @@ const (
 	headingVerificationChecklist = "## Verification Checklist"
 )
 
+// BuildStructuredPrompt renders spec as markdown sections in a fixed order and
+// returns the text trimmed with one trailing newline.
 func BuildStructuredPrompt(spec StructuredPromptSpec) string {
 	var b strings.Builder
 	writePromptSection(&b, headingIdentity, spec.Identity)

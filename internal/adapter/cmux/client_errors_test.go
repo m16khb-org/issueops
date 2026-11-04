@@ -410,7 +410,7 @@ func TestExecRunnerCapturesOutputAndFiltersAmbientCmuxScope(t *testing.T) {
 	t.Setenv("CMUX_SOCKET_PATH", "/ambient-path.sock")
 	t.Setenv("ISSUEOPS_RUNNER_PASSTHROUGH", "kept")
 	executable, args := shellCommand(t, `printf '%s|%s|%s|%s|%s' "${CMUX_SOCKET_PATH-unset}" "${CMUX_WORKSPACE_ID-unset}" "${CMUX_SURFACE_ID-unset}" "${CMUX_SOCKET-unset}" "$ISSUEOPS_RUNNER_PASSTHROUGH"; printf warn >&2`)
-	output, err := ExecRunner{}.Run(t.Context(), CommandRequest{
+	output, err := ExecRunner{}.Run(t.Context(), commandRequest{
 		Executable: executable,
 		Args:       args,
 		Env:        map[string]string{"CMUX_SOCKET_PATH": "/explicit.sock", "CMUX_SOCKET": ""},
@@ -429,14 +429,14 @@ func TestExecRunnerCapturesOutputAndFiltersAmbientCmuxScope(t *testing.T) {
 
 func TestExecRunnerReportsFailureKindsWithInvocationState(t *testing.T) {
 	t.Run("missing executable was never invoked", func(t *testing.T) {
-		output, err := ExecRunner{}.Run(t.Context(), CommandRequest{Executable: "/nonexistent/cmux", Timeout: time.Second})
+		output, err := ExecRunner{}.Run(t.Context(), commandRequest{Executable: "/nonexistent/cmux", Timeout: time.Second})
 		if err == nil || output.Invoked {
 			t.Fatalf("output=%+v err=%v", output, err)
 		}
 	})
 	t.Run("non-zero exit keeps stderr in error and marks invoked", func(t *testing.T) {
 		executable, args := shellCommand(t, "printf 'denied \\n' >&2; printf partial; exit 3")
-		output, err := ExecRunner{}.Run(t.Context(), CommandRequest{Executable: executable, Args: args, Timeout: 5 * time.Second})
+		output, err := ExecRunner{}.Run(t.Context(), commandRequest{Executable: executable, Args: args, Timeout: 5 * time.Second})
 		if err == nil || !output.Invoked || !strings.Contains(err.Error(), "denied") || !strings.Contains(err.Error(), "exit status 3") || string(output.Stdout) != "partial" {
 			t.Fatalf("output=%+v err=%v", output, err)
 		}
@@ -444,7 +444,7 @@ func TestExecRunnerReportsFailureKindsWithInvocationState(t *testing.T) {
 	t.Run("deadline kills a hung command", func(t *testing.T) {
 		started := time.Now()
 		executable, args := shellCommand(t, "exec sleep 30")
-		output, err := ExecRunner{}.Run(t.Context(), CommandRequest{Executable: executable, Args: args, Timeout: 100 * time.Millisecond})
+		output, err := ExecRunner{}.Run(t.Context(), commandRequest{Executable: executable, Args: args, Timeout: 100 * time.Millisecond})
 		if err == nil || !output.Invoked || time.Since(started) > 10*time.Second {
 			t.Fatalf("output=%+v err=%v elapsed=%s", output, err, time.Since(started))
 		}
@@ -455,7 +455,7 @@ func TestExecRunnerReportsFailureKindsWithInvocationState(t *testing.T) {
 		// The background sleep inherits stdout; without a group kill and
 		// WaitDelay, Wait blocks until it exits and then it writes the marker.
 		executable, args := shellCommand(t, "(sleep 1; touch '"+filepath.ToSlash(marker)+"') & sleep 30")
-		output, err := ExecRunner{}.Run(t.Context(), CommandRequest{Executable: executable, Args: args, Timeout: 100 * time.Millisecond})
+		output, err := ExecRunner{}.Run(t.Context(), commandRequest{Executable: executable, Args: args, Timeout: 100 * time.Millisecond})
 		if err == nil || !output.Invoked || time.Since(started) > 2500*time.Millisecond {
 			t.Fatalf("output=%+v err=%v elapsed=%s", output, err, time.Since(started))
 		}
@@ -510,7 +510,7 @@ func TestExecRunnerCapsOutputAtOneMiBAndFails(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			executable, args := shellCommand(t, script)
-			output, err := ExecRunner{}.Run(t.Context(), CommandRequest{Executable: executable, Args: args, Timeout: 10 * time.Second})
+			output, err := ExecRunner{}.Run(t.Context(), commandRequest{Executable: executable, Args: args, Timeout: 10 * time.Second})
 			if err == nil || !strings.Contains(err.Error(), "exceeded 1 MiB") || !output.Invoked {
 				t.Fatalf("invoked=%v err=%v", output.Invoked, err)
 			}

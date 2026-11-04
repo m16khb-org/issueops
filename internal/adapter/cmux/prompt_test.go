@@ -58,7 +58,7 @@ func TestReadPromptUsesOneNoFollowHandleAndRejectsUnsafeBytes(t *testing.T) {
 	t.Run("oversize", func(t *testing.T) {
 		root := canonicalTempDir(t)
 		path := filepath.Join(root, "prompt")
-		value := []byte(strings.Repeat("x", MaximumPromptBytes+1))
+		value := []byte(strings.Repeat("x", maximumPromptBytes+1))
 		if err := os.WriteFile(path, value, 0o600); err != nil {
 			t.Fatal(err)
 		}

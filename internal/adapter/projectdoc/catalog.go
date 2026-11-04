@@ -1,3 +1,6 @@
+// Package projectdoc is the filesystem adapter for project documents: it
+// discovers and summarizes the .issueops document catalog of a repository
+// (bounded header reads) and classifies planned doc writes.
 package projectdoc
 
 import (

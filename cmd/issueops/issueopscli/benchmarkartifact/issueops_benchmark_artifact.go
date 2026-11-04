@@ -1,3 +1,5 @@
+// Package benchmarkartifact renders the expected IssueOps benchmark artifact
+// from a benchmark fixture for the CLI and MCP benchmark commands.
 package benchmarkartifact
 
 import (
@@ -5,6 +7,9 @@ import (
 	"strings"
 )
 
+// FromFixture builds the deterministic benchmark artifact (issue draft, plan,
+// tasks, TDD, subagents and PR sections) that a fixture's expectations describe.
+// It performs no I/O.
 func FromFixture(fixture benchmark.Fixture) benchmark.Artifact {
 	const guideline = "skills/issueops-create-issue/SKILL.md; skills/issueops-create-pr/SKILL.md"
 	issueNumber := "1"

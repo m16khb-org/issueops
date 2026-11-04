@@ -1,4 +1,4 @@
-// Package issueopslinkedbranch는 issue linked-branch 관측을 분류하는 순수
+// Package issueopslinkedbranch 패키지는 issue linked-branch 관측을 분류하는 순수
 // 규칙이다. GitHub `createLinkedBranch`는 오류 없이 `ref:null`을 돌려줄 수
 // 있고(#306, #304에서 실측), 그때 남는 레코드는 이름이 없어 브랜치 이름으로
 // 지목할 수 없다. 무엇을 지울 수 있는지 판정하는 규칙을 I/O에서 분리해 둔다.
@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// Node는 이슈에 붙어 있는 linked-branch 레코드 하나다.
+// Node 타입은 이슈에 붙어 있는 linked-branch 레코드 하나다.
 type Node struct {
 	// ID는 GraphQL node id다. ref가 없는 고아를 지목할 수 있는 유일한 좌표다.
 	ID string
@@ -19,10 +19,10 @@ type Node struct {
 	RefOID string
 }
 
-// RefNull은 이 레코드가 브랜치 없이 남았는지 보고한다.
+// RefNull 메서드는 이 레코드가 브랜치 없이 남았는지 보고한다.
 func (n Node) RefNull() bool { return strings.TrimSpace(n.RefName) == "" }
 
-// Observation은 한 시점의 전체 관측이다. 이슈의 linked-branch 목록과, 그
+// Observation 타입은 한 시점의 전체 관측이다. 이슈의 linked-branch 목록과, 그
 // lifecycle이 요청했던 브랜치의 원격 ref를 **같은 시점에** 읽어야 한다 —
 // 서로 다른 시점의 관측을 섞으면 수렴 중인 상태를 고아로 오판한다.
 type Observation struct {
@@ -37,25 +37,25 @@ type Observation struct {
 	RemoteOID string
 }
 
-// State는 관측의 분류다. 삭제가 허용되는 상태는 StateOrphan 하나뿐이다.
+// State 타입은 관측의 분류다. 삭제가 허용되는 상태는 StateOrphan 하나뿐이다.
 type State string
 
 const (
-	// StateAbsent는 linked-branch 레코드가 아예 없는 상태다. 정리할 것이 없다.
+	// StateAbsent 상수는 linked-branch 레코드가 아예 없는 상태다. 정리할 것이 없다.
 	StateAbsent State = "absent"
-	// StateHealthy는 요청한 이름과 봉인된 base로 정상 생성된 상태다.
+	// StateHealthy 상수는 요청한 이름과 봉인된 base로 정상 생성된 상태다.
 	StateHealthy State = "healthy"
-	// StateOrphan은 ref가 null인 레코드만 남은 부분 성공이다.
+	// StateOrphan 상수는 ref가 null인 레코드만 남은 부분 성공이다.
 	StateOrphan State = "orphan_ref_null"
-	// StateMismatched는 ref는 있으나 이름이나 OID가 봉인값과 다른 상태다.
+	// StateMismatched 상수는 ref는 있으나 이름이나 OID가 봉인값과 다른 상태다.
 	// 정리 대상이 아니다 — 우리가 만든 것이 아닐 수 있다.
 	StateMismatched State = "mismatched"
-	// StateAmbiguous는 판정 근거가 부족하거나 서로 어긋나는 상태다.
+	// StateAmbiguous 상수는 판정 근거가 부족하거나 서로 어긋나는 상태다.
 	// fail-closed의 기본값이다.
 	StateAmbiguous State = "ambiguous"
 )
 
-// Classify는 관측을 분류하고, 고아일 때 지울 대상 노드와 근거를 함께 돌려준다.
+// Classify 함수는 관측을 분류하고, 고아일 때 지울 대상 노드와 근거를 함께 돌려준다.
 //
 // 어느 분기에서도 "아마 이것일 것"으로 노드를 고르지 않는다. ref가 없는
 // 레코드는 이름이 없으므로 후보가 둘 이상이면 우리 것을 구분할 방법이 없고,
@@ -123,7 +123,7 @@ func classifyNamedLink(observation Observation) (State, Node, string, bool) {
 	return "", Node{}, "", false
 }
 
-// Deletable은 이 상태에서 typed 삭제가 허용되는지 보고한다.
+// Deletable 함수는 이 상태에서 typed 삭제가 허용되는지 보고한다.
 func Deletable(state State) bool { return state == StateOrphan }
 
 func remoteDescription(oid string) string {

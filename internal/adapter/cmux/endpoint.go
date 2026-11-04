@@ -9,6 +9,11 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
+// ObserveEndpoint inspects the cmux Unix socket at path and returns its
+// incarnation: device, inode, ctime, owner and mode of the socket and its
+// parent directory. The path must be absolute and clean, neither it nor its
+// parent may be a symlink, the socket must be mode 0600 owned by expectedUID,
+// and the parent must not be writable by others.
 func ObserveEndpoint(path string, expectedUID int) (issueopscontract.HandoffDeliveryEndpointIncarnation, error) {
 	if !filepath.IsAbs(path) || filepath.Clean(path) != path {
 		return issueopscontract.HandoffDeliveryEndpointIncarnation{}, fmt.Errorf("cmux socket path must be absolute and clean")
@@ -45,13 +50,13 @@ func ObserveEndpoint(path string, expectedUID int) (issueopscontract.HandoffDeli
 		ParentDevice: parentDevice, ParentInode: parentInode, ParentOwnerUID: parentUID,
 		ParentOwnerGID: parentGID, ParentMode: permissionMode(parent.Mode()),
 	}
-	if err := ValidateEndpoint(endpoint, path, expectedUID); err != nil {
+	if err := validateEndpoint(endpoint, path, expectedUID); err != nil {
 		return issueopscontract.HandoffDeliveryEndpointIncarnation{}, err
 	}
 	return endpoint, nil
 }
 
-func ValidateEndpoint(endpoint issueopscontract.HandoffDeliveryEndpointIncarnation, expectedPath string, expectedUID int) error {
+func validateEndpoint(endpoint issueopscontract.HandoffDeliveryEndpointIncarnation, expectedPath string, expectedUID int) error {
 	if endpoint.Path != expectedPath || endpoint.Kind != "unix_socket" || endpoint.Inode == 0 || endpoint.CTimeNS <= 0 || endpoint.ParentInode == 0 {
 		return fmt.Errorf("cmux socket endpoint identity is incomplete")
 	}
@@ -70,7 +75,7 @@ func ValidateEndpoint(endpoint issueopscontract.HandoffDeliveryEndpointIncarnati
 	return nil
 }
 
-func SameEndpoint(left, right issueopscontract.HandoffDeliveryEndpointIncarnation) bool {
+func sameEndpoint(left, right issueopscontract.HandoffDeliveryEndpointIncarnation) bool {
 	return reflect.DeepEqual(left, right)
 }
 

@@ -1,3 +1,6 @@
+// Package docs is the application layer that lists and indexes the project
+// documents an agent should read, delegating filesystem and Git access to the
+// docs port.
 package docs
 
 import (
@@ -11,6 +14,9 @@ import (
 	"time"
 )
 
+// Service builds the document index list: it asks the Observer for candidate
+// documents and Git tracking data and applies the domain selection rules. Now
+// supplies the clock for index timestamps.
 type Service struct {
 	Observer docsport.Observer
 	Now      func() time.Time

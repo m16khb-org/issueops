@@ -1,9 +1,12 @@
-// Package preflight는 preflight capability의 DTO를 소유한다.
+// Package preflight 패키지는 preflight capability의 DTO를 소유한다.
 //
 // 값을 만들어내는 쪽은 I/O를 하지만, 결과를 읽고 전달하는 쪽은 그 구현을
 // 알 필요가 없다.
 package preflight
 
+// Result 타입은 읽기 전용 git preflight 결과다. OK가 false이면 Error와 Path, Detail이
+// 실패 원인을 설명하고, 그 외 필드는 저장소 상태 관측값이다. Upstream, Ahead,
+// Behind는 upstream이 없으면 null이다.
 type Result struct {
 	OK               bool           `json:"ok"`
 	Error            string         `json:"error,omitempty"`
@@ -28,11 +31,13 @@ type Result struct {
 	Warnings         []string       `json:"warnings"`
 }
 
+// RemoteInfo 타입은 git remote 하나의 이름과 URL이다.
 type RemoteInfo struct {
 	Name string `json:"name"`
 	URL  string `json:"url"`
 }
 
+// CommitInfo 타입은 최근 커밋 하나의 SHA와 제목이다.
 type CommitInfo struct {
 	SHA     string `json:"sha"`
 	Subject string `json:"subject"`

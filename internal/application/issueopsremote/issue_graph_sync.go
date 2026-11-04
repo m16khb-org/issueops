@@ -6,19 +6,22 @@ import (
 	domain "issueops/internal/domain/issueops"
 )
 
-type IssueGraphPoster interface {
+type issueGraphPoster interface {
 	Post(ctx context.Context, provider, issueURL, body string) (string, error)
 }
 
+// IssueGraphSyncService 타입은 기록의 이슈 그래프 링크를 provider의 이슈에 댓글로 동기화한다.
 type IssueGraphSyncService struct {
-	records IssueRecordReader
-	poster  IssueGraphPoster
+	records issueRecordReader
+	poster  issueGraphPoster
 }
 
-func NewIssueGraphSyncService(records IssueRecordReader, poster IssueGraphPoster) *IssueGraphSyncService {
+// NewIssueGraphSyncService 함수는 기록 조회와 댓글 게시기를 묶어 서비스를 만든다.
+func NewIssueGraphSyncService(records issueRecordReader, poster issueGraphPoster) *IssueGraphSyncService {
 	return &IssueGraphSyncService{records: records, poster: poster}
 }
 
+// Sync 메서드는 동기화 계획을 세워 미리보기/변경 없음이면 그 결과를, 아니면 댓글을 게시하고 URL을 담은 결과를 돌려준다.
 func (s *IssueGraphSyncService) Sync(ctx context.Context, id string, confirm bool) (map[string]any, error) {
 	record, err := s.records.Read(ctx, id)
 	if err != nil {

@@ -10,6 +10,8 @@ import (
 	basesyncport "issueops/internal/port/issueopsbasesync"
 )
 
+// Service 타입은 실행 lease 교체를 수행한다. 필드는 기록, 작업공간, 프로세스 관찰,
+// 산출물, base sync 점검, 행위자 검증을 주입받는 의존성이다. Verifier는 필수다.
 type Service struct {
 	Records          port.ReplacementRecords
 	Workspace        port.ReplacementWorkspace
@@ -22,6 +24,9 @@ type Service struct {
 	Now              func() string
 }
 
+// Run 메서드는 호출자를 검증한 뒤 req.Action(preview, finalize-preview, revoke,
+// finalize)에 맞는 교체 단계를 실행한다. revoke와 finalize는 req.Confirm이 있어야 하며,
+// 알 수 없는 action은 오류다.
 func (s Service) Run(ctx context.Context, req issueops.ExecutionReplaceRequest) (issueops.ExecutionReplaceResult, error) {
 	if s.Verifier == nil {
 		return issueops.ExecutionReplaceResult{OK: false, ID: req.ID, Action: req.Action}, fmt.Errorf("execution replace actor verifier is required")

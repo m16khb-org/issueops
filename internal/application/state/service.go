@@ -1,3 +1,6 @@
+// Package state is the application-layer service for the keyed JSON state
+// store: write, read, list, delete, prune, diagnose and maintain records,
+// with all storage reached through the ports in internal/port/state.
 package state
 
 import (
@@ -19,6 +22,8 @@ import (
 
 const stateBucket = "state"
 
+// Dependencies are the injected collaborators of Service: state directory and
+// path resolution, store opening, existing-record reading and the clock.
 type Dependencies struct {
 	StateDir        func() string
 	StatePath       func(dir, key string) string
@@ -27,10 +32,12 @@ type Dependencies struct {
 	Now             func() time.Time
 }
 
+// Service implements the state record operations over a stateport.Store.
 type Service struct {
 	dependencies Dependencies
 }
 
+// NewService returns a Service that uses dependencies for all I/O and time.
 func NewService(dependencies Dependencies) *Service {
 	return &Service{dependencies: dependencies}
 }
@@ -86,14 +93,14 @@ func (service *Service) readIn(dir, key string) (statecontract.Result, error) {
 	if err != nil || !ok {
 		return statecontract.Result{OK: false, StateDir: dir, Path: path}, fmt.Errorf("state key %q not found; list keys with `issueops state list --json`: %w", key, fs.ErrNotExist)
 	}
-	record, err := DecodeRecord(key, raw)
+	record, err := decodeRecord(key, raw)
 	if err != nil {
 		return statecontract.Result{OK: false, StateDir: dir, Path: path}, err
 	}
 	return statecontract.Result{OK: true, StateDir: dir, Path: path, Record: record}, nil
 }
 
-func DecodeRecord(key string, data []byte) (statecontract.RecordEnvelope, error) {
+func decodeRecord(key string, data []byte) (statecontract.RecordEnvelope, error) {
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 	var record statecontract.RecordEnvelope
@@ -110,6 +117,8 @@ func DecodeRecord(key string, data []byte) (statecontract.RecordEnvelope, error)
 	return record, nil
 }
 
+// List returns every readable record in the state store sorted by key.
+// Records with invalid keys or that fail to decode are skipped, not reported.
 func (service *Service) List() (statecontract.ListResult, error) {
 	dir := service.stateDir()
 	store, err := service.dependencies.OpenStore(dir)
@@ -144,6 +153,9 @@ func (service *Service) List() (statecontract.ListResult, error) {
 	return statecontract.ListResult{OK: true, StateDir: dir, Keys: listKeys, Records: records}, nil
 }
 
+// WriteRecord persists a prebuilt record envelope under key in dir and returns
+// the state file path. It fails if record.Key is set and differs from key, or
+// if the record does not validate.
 func (service *Service) WriteRecord(ctx context.Context, dir, key string, record statecontract.RecordEnvelope) (string, error) {
 	key, err := statepath.NormalizeKey(key)
 	if err != nil {
@@ -183,6 +195,8 @@ func (service *Service) persistRecord(ctx context.Context, store stateport.Store
 	return path, nil
 }
 
+// Delete removes the record stored under key from the default state
+// directory.
 func (service *Service) Delete(ctx context.Context, key string) error {
 	key, err := statepath.NormalizeKey(key)
 	if err != nil {
@@ -200,6 +214,8 @@ func (service *Service) Delete(ctx context.Context, key string) error {
 	})
 }
 
+// WithKeyLock validates key and runs fn inside the store's span for dir, so fn
+// observes and mutates the store under the store's own transaction guard.
 func (service *Service) WithKeyLock(ctx context.Context, dir, key string, fn func(context.Context) error) error {
 	if _, err := statepath.NormalizeKey(key); err != nil {
 		return err

@@ -306,7 +306,7 @@ func TestCovBranchChildSealBindsExecutionAuthority(t *testing.T) {
 	if op.Generation != 4 || op.CWD != "/w" || op.Holder == nil || op.Holder.SessionID != "s" {
 		t.Fatalf("authority not bound: %+v", op)
 	}
-	if err := ValidateChildOperationAuthority(record, op); err != nil {
+	if err := validateChildOperationAuthority(record, op); err != nil {
 		t.Fatalf("bound op rejected by its own record: %v", err)
 	}
 	// 생성 권한이 없는 generation 0 실행은 holder 없이 봉인할 수 없다.
@@ -318,11 +318,11 @@ func TestCovBranchChildSealBindsExecutionAuthority(t *testing.T) {
 	// 다른 generation으로 바뀐 실행은 reconcile을 요구한다.
 	moved := record
 	moved.Execution = covBranchChildExecution(5, "/w")
-	if err := ValidateChildOperationAuthority(moved, op); err == nil || !strings.Contains(err.Error(), "explicit reconcile required") {
+	if err := validateChildOperationAuthority(moved, op); err == nil || !strings.Contains(err.Error(), "explicit reconcile required") {
 		t.Fatalf("moved generation = %v", err)
 	}
 	moved.Execution = covBranchChildExecution(4, "/elsewhere")
-	if err := ValidateChildOperationAuthority(moved, op); err == nil || !strings.Contains(err.Error(), "explicit reconcile required") {
+	if err := validateChildOperationAuthority(moved, op); err == nil || !strings.Contains(err.Error(), "explicit reconcile required") {
 		t.Fatalf("moved root = %v", err)
 	}
 }
@@ -473,27 +473,27 @@ func TestCovBranchChildChangeTierSurfaces(t *testing.T) {
 		paths []string
 		want  ChangeTier
 	}{
-		{[]string{"api/service.proto"}, ChangeTierContract},
-		{[]string{"testdata/x.golden.json"}, ChangeTierContract},
-		{[]string{"docs/OpenAPI.yaml"}, ChangeTierContract},
-		{[]string{"web/swagger.json"}, ChangeTierContract},
-		{[]string{"internal/contract/x.go"}, ChangeTierContract},
-		{[]string{"README"}, ChangeTierDocsOnly},
-		{[]string{"src/Readme.txt", "notes/a.md"}, ChangeTierDocsOnly},
-		{[]string{"skills/x/SKILL.txt"}, ChangeTierDocsOnly},
+		{[]string{"api/service.proto"}, changeTierContract},
+		{[]string{"testdata/x.golden.json"}, changeTierContract},
+		{[]string{"docs/OpenAPI.yaml"}, changeTierContract},
+		{[]string{"web/swagger.json"}, changeTierContract},
+		{[]string{"internal/contract/x.go"}, changeTierContract},
+		{[]string{"README"}, changeTierDocsOnly},
+		{[]string{"src/Readme.txt", "notes/a.md"}, changeTierDocsOnly},
+		{[]string{"skills/x/SKILL.txt"}, changeTierDocsOnly},
 		{[]string{"README", "main.go"}, ChangeTierDefault},
-		{[]string{"  ", ""}, ChangeTierDocsOnly},
-		{[]string{"internal\\auth\\x.go", "README.md"}, ChangeTierSchemaAuth},
+		{[]string{"  ", ""}, changeTierDocsOnly},
+		{[]string{"internal\\auth\\x.go", "README.md"}, changeTierSchemaAuth},
 	}
 	for _, tc := range cases {
 		if got := ClassifyChangeTier(tc.paths); got != tc.want {
 			t.Errorf("%v = %v, want %v", tc.paths, got, tc.want)
 		}
 	}
-	if PathIsFrontendChange("  ") || PathIsFrontendChange("") {
+	if pathIsFrontendChange("  ") || pathIsFrontendChange("") {
 		t.Fatal("blank path is not a frontend change")
 	}
-	if !PathIsFrontendChange("  SRC\\App.TSX ") {
+	if !pathIsFrontendChange("  SRC\\App.TSX ") {
 		t.Fatal("normalized tsx path should be frontend")
 	}
 }

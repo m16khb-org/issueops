@@ -24,10 +24,15 @@ import (
 // the flock semantics the lifetime needs: an exclusive lease opens for write
 // and shares nothing; a shared lease opens read-only and shares only reads.
 
+// Acquire opens the lock file for key in directory exclusively (write access, no sharing)
+// and returns the lease. It returns ErrBusy when another handle holds the file, and fails
+// if ctx is done, either argument is blank, or the directory or file is not private.
 func Acquire(ctx context.Context, directory, key string) (*Lease, error) {
 	return acquireLease(ctx, directory, key, true)
 }
 
+// AcquireShared opens the lock file for key in directory read-only, sharing only reads,
+// and returns a SharedLease that cannot provide context or drainage.
 func AcquireShared(ctx context.Context, directory, key string) (*SharedLease, error) {
 	lease, err := acquireLease(ctx, directory, key, false)
 	if err != nil {

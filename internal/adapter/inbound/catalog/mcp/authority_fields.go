@@ -1,3 +1,6 @@
+// Package mcp builds the inbound MCP tool catalog: the advertised tools/list
+// entries, resources, and the tool-name to dispatch-group routing table, plus
+// the request authority fields workspace-scoped tools accept.
 package mcp
 
 import "maps"

@@ -9,6 +9,10 @@ import (
 	guardcontract "issueops/internal/contract/guard"
 )
 
+// RunGuard dispatches `issueops guard`. The only subcommand is check, which
+// guards staged files by default, explicit files, or all relevant files with
+// --all; it prints findings and returns the guard's error so the exit status
+// reflects blocking findings.
 func (command Command) RunGuard(args []string) error {
 	if len(args) == 0 {
 		guardUsage()

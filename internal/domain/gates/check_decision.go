@@ -8,6 +8,9 @@ import (
 	"issueops/internal/domain/shelltoken"
 )
 
+// CheckArgv 함수는 게이트 CHECK 문자열을 셸 없이 실행할 argv로 나눈다.
+// 셸 제어 연산자, 셸 확장, 환경변수 대입으로 시작하는 문자열처럼 argv 실행이 그대로 해석하지 못하는 경우에는
+// argv 대신 이유를 설명하는 메시지를 돌려준다. 성공하면 메시지는 빈 문자열이다.
 func CheckArgv(check string) ([]string, string) {
 	if shelltoken.HasUnquotedControlOperator(check) {
 		return nil, "CHECK contains shell syntax that argv execution does not honor (&&, ||, |, ;, 2>&1): put the sequence in a script file and run that file directly, or use python3 -c (sh -c and bash -c are refused)"
@@ -28,20 +31,22 @@ func CheckArgv(check string) ([]string, string) {
 
 var envNameRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
+// ShouldRun 함수는 게이트의 CHECK를 실행해야 하는지 알려 준다.
+// 체크되지 않았거나 체크되었어도 EVIDENCE가 아직 pending이면 true이다.
 func ShouldRun(gate Gate) bool {
-	return !gate.Checked || EvidencePending(gate.Evidence)
+	return !gate.Checked || evidencePending(gate.Evidence)
 }
 
-type CheckDecision struct {
+type checkDecision struct {
 	Passed   bool
 	Evidence string
 	Error    string
 }
 
-func DecideCheck(expect, stdout, stderr string, exitCode int, timedOut bool) CheckDecision {
+func decideCheck(expect, stdout, stderr string, exitCode int, timedOut bool) checkDecision {
 	output := combinedOutput(stdout, stderr)
-	evidence := EvidenceTail(output, 200)
-	decision := CheckDecision{Evidence: evidence}
+	evidence := evidenceTail(output, 200)
+	decision := checkDecision{Evidence: evidence}
 	switch {
 	case timedOut:
 		// A slow but valid CHECK only needs a longer limit; the bare message
@@ -49,14 +54,14 @@ func DecideCheck(expect, stdout, stderr string, exitCode int, timedOut bool) Che
 		decision.Error = "check timed out: " + evidence + " (if the command is legitimately slow, rerun gates check with a larger --timeout-seconds (MCP timeout_seconds); default 120)"
 	case exitCode != 0:
 		decision.Error = fmt.Sprintf("exit code %d: %s", exitCode, evidence)
-	case strings.TrimSpace(expect) != "" && !ExpectMatches(expect, output):
+	case strings.TrimSpace(expect) != "" && !expectMatches(expect, output):
 		decision.Error = "expect not matched: " + evidence + expectMismatchHint(expect, output, stdout, stderr)
 	default:
 		decision.Passed = true
 		// QA: EXPECT /--- PASS: TestReverse/ passed with evidence "PASS | ok
 		// pkg 0.079s": a reader of the ledger could not see what matched.
 		if line, ok := matchedLine(expect, output); ok && !strings.Contains(evidence, line) {
-			decision.Evidence = EvidenceTail(line+"\n"+evidence, 200)
+			decision.Evidence = evidenceTail(line+"\n"+evidence, 200)
 		}
 	}
 	return decision
@@ -144,7 +149,7 @@ func matchedLine(expect, output string) (string, bool) {
 		return line, line != ""
 	}
 	for line := range strings.SplitSeq(output, "\n") {
-		if line = strings.TrimSpace(line); ExpectMatches(expect, line) {
+		if line = strings.TrimSpace(line); expectMatches(expect, line) {
 			return line, true
 		}
 	}

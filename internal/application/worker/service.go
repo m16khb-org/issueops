@@ -1,3 +1,6 @@
+// Package worker is the application layer for no-shell local worker jobs: it enqueues,
+// runs read-only commands, cancels, lists, and repairs jobs. State transitions live in the
+// worker domain; filesystem, locking, clock, and process effects come in through Effects.
 package worker
 
 import (
@@ -11,6 +14,8 @@ import (
 	workerdomain "issueops/internal/domain/worker"
 )
 
+// Effects is the set of side effects Service needs: the job directory, per-job locking,
+// job persistence, the clock, process identity and liveness, and command execution.
 type Effects interface {
 	Dir() (string, error)
 	EnsureDir(string) error
@@ -24,8 +29,11 @@ type Effects interface {
 	PIDAlive(int) bool
 }
 
+// Service implements the worker job use cases on top of Effects.
 type Service struct{ Effects Effects }
 
+// Enqueue validates kind, redacts payload, and writes a new queued job under its lock.
+// On failure it returns the job built so far (or a not-OK job) with the error.
 func (service Service) Enqueue(ctx context.Context, kind, payload string) (workercontract.Job, error) {
 	kind, err := workerdomain.NormalizeKind(kind)
 	if err != nil {
@@ -47,6 +55,8 @@ func (service Service) Enqueue(ctx context.Context, kind, payload string) (worke
 	return job, service.Effects.WithLock(ctx, dir, id, func(spanCtx context.Context) error { return service.Effects.Write(spanCtx, job) })
 }
 
+// Cancel marks the job id cancelled under its lock. Cancelling an already cancelled job is
+// a no-op; other illegal transitions are returned as errors.
 func (service Service) Cancel(ctx context.Context, id string) (workercontract.Job, error) {
 	dir, err := service.Effects.Dir()
 	if err != nil {
@@ -72,6 +82,9 @@ func (service Service) Cancel(ctx context.Context, id string) (workercontract.Jo
 	return job, err
 }
 
+// RunReadOnly enqueues a job, marks it running with the current PID, runs the command
+// request through Effects.Run, and records the result. The result is recorded even if ctx
+// is cancelled while the command runs, so the job never stays running under a live PID.
 func (service Service) RunReadOnly(ctx context.Context, kind, payload string, request policycontract.CommandPolicyRequest) (workercontract.Job, error) {
 	job, err := service.Enqueue(ctx, kind, payload)
 	if err != nil {
@@ -118,6 +131,8 @@ func (service Service) RunReadOnly(ctx context.Context, kind, payload string, re
 	return job, nil
 }
 
+// DetectStuck finds running jobs whose recorded PID is no longer alive and marks them
+// stuck under their lock. It returns the jobs it rewrote, newest first.
 func (service Service) DetectStuck(ctx context.Context) (workercontract.ListResult, error) {
 	dir, err := service.Effects.Dir()
 	if err != nil {
@@ -168,10 +183,13 @@ func (service Service) markStuckLocked(ctx context.Context, dir, id string) (wor
 	return job, lockErr == nil && fixed
 }
 
+// Read returns the stored job with the given id.
 func (service Service) Read(id string) (workercontract.Job, error) {
 	return service.Effects.Read(id)
 }
 
+// List returns every readable job, newest first, together with queue statistics.
+// Jobs that cannot be read are skipped.
 func (service Service) List() (workercontract.ListResult, error) {
 	dir, err := service.Effects.Dir()
 	if err != nil {

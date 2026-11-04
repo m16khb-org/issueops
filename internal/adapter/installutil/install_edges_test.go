@@ -65,14 +65,14 @@ func TestPruneStaleSkillLinksHandlesRelativeTargetsAndDryRun(t *testing.T) {
 	if err := os.Symlink("../../skills/gone", filepath.Join(dest, "gone")); err != nil {
 		t.Fatal(err)
 	}
-	links, errs := PruneStaleSkillLinks(root, dest, true)
+	links, errs := pruneStaleSkillLinks(root, dest, true)
 	if len(errs) != 0 || len(links) != 1 || links[0].Path != filepath.Join(dest, "gone") || !links[0].WouldRemove || links[0].Removed {
 		t.Fatalf("dry run links=%+v errs=%v", links, errs)
 	}
 	if _, err := os.Lstat(filepath.Join(dest, "gone")); err != nil {
 		t.Fatalf("dry run removed the link: %v", err)
 	}
-	links, errs = PruneStaleSkillLinks(root, dest, false)
+	links, errs = pruneStaleSkillLinks(root, dest, false)
 	if len(errs) != 0 || len(links) != 1 || !links[0].Removed || links[0].WouldRemove {
 		t.Fatalf("links=%+v errs=%v", links, errs)
 	}
@@ -110,7 +110,7 @@ func TestPruneStaleSkillLinksReportsUnreadableDestRoot(t *testing.T) {
 	if err := os.WriteFile(file, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	links, errs := PruneStaleSkillLinks(t.TempDir(), file, false)
+	links, errs := pruneStaleSkillLinks(t.TempDir(), file, false)
 	if len(links) != 0 || len(errs) != 1 {
 		t.Fatalf("links=%+v errs=%v", links, errs)
 	}
@@ -127,7 +127,7 @@ func TestPruneStaleSkillLinksReportsRemovalFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 	lockDir(t, dest)
-	links, errs := PruneStaleSkillLinks(root, dest, false)
+	links, errs := pruneStaleSkillLinks(root, dest, false)
 	if len(links) != 0 || len(errs) != 1 {
 		t.Fatalf("links=%+v errs=%v", links, errs)
 	}
@@ -196,7 +196,7 @@ func TestPlanSkillLinksCollectsPerSkillErrorsAndContinues(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dest, "blocked"), []byte("regular"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	links, errs := PlanSkillLinks(root, dest, []string{"blocked", "fresh"}, false)
+	links, errs := planSkillLinks(root, dest, []string{"blocked", "fresh"}, false)
 	if len(links) != 2 || len(errs) != 1 || !strings.Contains(errs[0].Error(), "refusing to replace non-symlink path") {
 		t.Fatalf("links=%+v errs=%v", links, errs)
 	}

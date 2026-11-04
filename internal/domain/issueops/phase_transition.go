@@ -6,6 +6,10 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
+// ApplyPhaseTransition moves record to phase and stamps the evidence that
+// phase needs: the ai-slop-clean time, head, and fingerprint, or the pr head.
+// It also seeds the problem entry of the phase ledger from the creation time
+// and stamps the forward transition with the completed artifacts.
 func ApplyPhaseTransition(record model.Record, phase model.Phase, now, head, fingerprint string, completedArtifacts []string) model.Record {
 	previous := record.Phase
 	record.Phase = phase

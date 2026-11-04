@@ -36,10 +36,9 @@ func trackedMaterialsDir(record issueops.Record) string {
 	return strings.TrimSuffix(dir, "/artifact")
 }
 
-// writeTrackedMaterials refreshes the tracked copies from the current plan
-// and record. Copies are derived: identical content is left alone, different
-// content is overwritten. Failures are reported as warnings; the caller's
-// phase transition does not depend on them.
+// Write 메서드는 현재 계획과 기록에서 추적 사본을 갱신한다. 사본은 파생물이라
+// 내용이 같으면 두고 다르면 덮어쓴다. 실패는 경고로 보고하며,
+// 호출자의 phase 전이는 이 결과에 의존하지 않는다.
 func (s TrackedMaterials) Write(record issueops.Record) issueops.TrackedMaterials {
 	var out issueops.TrackedMaterials
 	if record.Execution == nil || strings.TrimSpace(record.Execution.Workspace.Root) == "" {
@@ -141,7 +140,7 @@ func (s TrackedMaterials) planSource(record issueops.Record, root string) (strin
 // trackedMaterialsMissing reports a cycle whose sealed plan exists but whose
 // tracked plan copy does not: a cycle that entered implement before tracked
 // copies existed. It reads only the local worktree.
-func (s TrackedMaterials) Missing(record issueops.Record) bool {
+func (s TrackedMaterials) missing(record issueops.Record) bool {
 	if record.Execution == nil || strings.TrimSpace(record.Execution.Workspace.Root) == "" {
 		return false
 	}
@@ -158,11 +157,11 @@ func (s TrackedMaterials) Missing(record issueops.Record) bool {
 	return errors.Is(err, fs.ErrNotExist)
 }
 
-const TrackedMaterialsMissingWarning = "tracked_materials_missing: the sealed plan has no tracked copy in .issueops/issues/<n>/; this cycle entered implement before tracked copies existed"
+const trackedMaterialsMissingWarning = "tracked_materials_missing: the sealed plan has no tracked copy in .issueops/issues/<n>/; this cycle entered implement before tracked copies existed"
 
-// MaterialFiles provides filesystem observations and writes; the service owns
+// materialFiles provides filesystem observations and writes; the service owns
 // which materials are copied and how failures are reported.
-type MaterialFiles interface {
+type materialFiles interface {
 	Join(...string) string
 	Parent(string) string
 	Resolve(string, string) string
@@ -175,11 +174,14 @@ type MaterialFiles interface {
 	// Ignored reports whether the repository at root ignores rel.
 	Ignored(root, rel string) bool
 }
-type TrackedMaterials struct{ Files MaterialFiles }
 
+// TrackedMaterials 타입은 사이클 계획·의도·명세 자료를 작업 트리의 추적 폴더에 사본으로 두는 서비스다.
+type TrackedMaterials struct{ Files materialFiles }
+
+// Warning 메서드는 추적 사본이 빠졌으면 경고 문구를, 아니면 빈 문자열을 돌려준다. 로컬 작업 트리만 읽는다.
 func (s TrackedMaterials) Warning(record issueops.Record) string {
-	if s.Missing(record) {
-		return TrackedMaterialsMissingWarning
+	if s.missing(record) {
+		return trackedMaterialsMissingWarning
 	}
 	return ""
 }

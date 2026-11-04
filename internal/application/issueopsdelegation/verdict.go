@@ -13,18 +13,25 @@ import (
 	domain "issueops/internal/domain/issueops"
 )
 
+// Validator records the parent's verdict (accepted, rejected, dropped) on a
+// delegated child cycle.
 type Validator struct {
 	Records   branchapp.CycleRecords
 	Authority cycleapp.MutationAuthority
 	Now       func() time.Time
 }
 
+// Accept marks the child as accepted by the parent, attaching evidence.
 func (s Validator) Accept(ctx context.Context, parentID, childID string, evidence []string, actor *model.Actor) (model.ChildValidationResult, error) {
 	return s.validate(ctx, parentID, childID, "accepted", "", evidence, actor)
 }
+
+// Reject marks the child as rejected by the parent with a reason and evidence.
 func (s Validator) Reject(ctx context.Context, parentID, childID, reason string, evidence []string, actor *model.Actor) (model.ChildValidationResult, error) {
 	return s.validate(ctx, parentID, childID, "rejected", reason, evidence, actor)
 }
+
+// Drop marks the child as dropped by the parent with a reason, without evidence.
 func (s Validator) Drop(ctx context.Context, parentID, childID, reason string, actor *model.Actor) (model.ChildValidationResult, error) {
 	return s.validate(ctx, parentID, childID, "dropped", reason, nil, actor)
 }

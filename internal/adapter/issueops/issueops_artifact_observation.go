@@ -11,7 +11,7 @@ import (
 	"issueops/internal/domain/issueopsremote"
 )
 
-// ObserveRemoteArtifact는 원격 artifact의 현재 상태를 provider CLI로 읽는다.
+// ObserveRemoteArtifact 함수는 원격 artifact의 현재 상태를 provider CLI로 읽는다.
 // replacement 증거 검증의 유일한 관측 경로다(#283).
 //
 // 읽기 전용이며 mutation 인자를 쓰지 않는다. 관측에 실패하면 오류를 돌려주고,

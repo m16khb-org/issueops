@@ -1,3 +1,6 @@
+// Package looprun is the adapter that persists loop runs in the
+// "loop" bucket of the state database, with loop ID normalization, schema
+// version checks, and a transactional lock around loop mutations.
 package looprun
 
 import (
@@ -16,6 +19,9 @@ import (
 
 const loopBucket = "loop"
 
+// Store reads and writes loop runs under Directory. OpenDatabase opens the
+// read-write state database; GetExisting and GetAllExisting read it without
+// creating or repairing the store.
 type Store struct {
 	Directory      string
 	OpenDatabase   func(string) (StateDatabase, error)

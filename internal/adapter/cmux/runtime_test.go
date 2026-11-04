@@ -224,18 +224,18 @@ func TestCmuxShellProcessRecognizesInteractiveShellsOnly(t *testing.T) {
 	}
 }
 
-func receiptBytes(r BootstrapReceipt, pid string) []byte {
+func receiptBytes(r bootstrapReceipt, pid string) []byte {
 	fields := []string{"1", r.Status, pid, r.CWD, r.WindowID, r.WorkspaceID, r.SurfaceID, r.SocketPath, r.HostExecutable, r.PromptSHA256, r.MaterialSHA256, r.HostArgvSHA256}
 	return []byte(strings.Join(fields, "\x00") + "\x00")
 }
 
-func bootstrapFixture(t *testing.T) (cmuxcontract.PreparedLauncher, cmuxcontract.BootstrapExpectation, BootstrapReceipt) {
+func bootstrapFixture(t *testing.T) (cmuxcontract.PreparedLauncher, cmuxcontract.BootstrapExpectation, bootstrapReceipt) {
 	t.Helper()
 	expected := cmuxcontract.BootstrapExpectation{
 		CWD: worktreePath, WindowID: testWindow, WorkspaceID: testWorkspace, SurfaceID: testSurface, SocketPath: socketPath,
 		HostExecutable: testsupport.AbsPath("opt", "native", "codex"), HostArgvSHA256: strings.Repeat("c", 64), PromptSHA256: strings.Repeat("a", 64), MaterialSHA256: strings.Repeat("b", 64),
 	}
-	receipt := BootstrapReceipt{Status: "ok", CWD: expected.CWD, WindowID: expected.WindowID, WorkspaceID: expected.WorkspaceID, SurfaceID: expected.SurfaceID,
+	receipt := bootstrapReceipt{Status: "ok", CWD: expected.CWD, WindowID: expected.WindowID, WorkspaceID: expected.WorkspaceID, SurfaceID: expected.SurfaceID,
 		SocketPath: expected.SocketPath, HostExecutable: expected.HostExecutable, PromptSHA256: expected.PromptSHA256, MaterialSHA256: expected.MaterialSHA256, HostArgvSHA256: expected.HostArgvSHA256}
 	return cmuxcontract.PreparedLauncher{ReceiptPath: filepath.Join(canonicalTempDir(t), "bootstrap.receipt")}, expected, receipt
 }

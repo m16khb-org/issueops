@@ -2,6 +2,8 @@ package issueopscycle
 
 import model "issueops/internal/contract/issueops"
 
+// ReadinessObservations are the filesystem and digest observations that readiness checks use to validate a
+// cycle's worktree, plan, and sealed architecture document.
 type ReadinessObservations struct {
 	WorktreePathValid    func(string) bool
 	PlanPathExists       func(root, path string) bool

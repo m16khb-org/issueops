@@ -9,6 +9,10 @@ import (
 	"issueops/internal/port"
 )
 
+// PushRequest carries what PushAndRecord needs to push Branch from Root and
+// record the sync-base event: lifecycle ID, mode, base branch and OID, the
+// merge commit, the number of conflicted files, and the acting identity and
+// timestamp of the event.
 type PushRequest struct {
 	ID            string
 	Root          string
@@ -22,6 +26,8 @@ type PushRequest struct {
 	At            string
 }
 
+// PushResult reports whether the branch was pushed, whether the push must be
+// retried, and which step (push or record_event) failed.
 type PushResult struct {
 	Pushed            bool
 	PushRetryRequired bool

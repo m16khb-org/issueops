@@ -1,3 +1,7 @@
+// Package issueopslease is the application layer for the execution lease
+// lifecycle: claim, release, and reseed. Services verify the caller through
+// the authority port, ask the domain package for the transition decision, and
+// persist the result through the repository ports defined here.
 package issueopslease
 
 import (
@@ -8,6 +12,9 @@ import (
 	authorityport "issueops/internal/port/authority"
 )
 
+// ClaimRequest asks to claim lease ID at Generation for Actor. Exactly one
+// claim token source is required: TokenFile, or ClaimCurrentToken to use the
+// token stored for the cycle. CWD must be inside the cycle's canonical root.
 type ClaimRequest struct {
 	ID                string
 	Generation        uint64
@@ -18,22 +25,30 @@ type ClaimRequest struct {
 	ClaimCurrentToken bool
 }
 
+// ClaimResult reports a claim. On success OK is true and Execution is the
+// execution projection saved in the same transaction; on failure only ID is set.
 type ClaimResult struct {
 	OK        bool
 	ID        string
 	Execution leasecontract.Execution
 }
 
+// ClaimService claims execution leases. It verifies the actor, then delegates
+// the atomic claim to its repository.
 type ClaimService struct {
-	repository ClaimRepository
-	clock      Clock
+	repository claimRepository
+	clock      clock
 	verifier   authorityport.ActorVerifier
 }
 
-func NewClaimService(repository ClaimRepository, clock Clock, verifier authorityport.ActorVerifier) *ClaimService {
+// NewClaimService returns a ClaimService that persists through repository, reads time from clock, and verifies callers with verifier.
+func NewClaimService(repository claimRepository, clock clock, verifier authorityport.ActorVerifier) *ClaimService {
 	return &ClaimService{repository: repository, clock: clock, verifier: verifier}
 }
 
+// Claim verifies the actor named in request and claims the lease through the
+// repository. It returns a failed result carrying request.ID and the error
+// when verification or the claim is rejected.
 func (s *ClaimService) Claim(ctx context.Context, request ClaimRequest) (ClaimResult, error) {
 	actor, err := resolveActor(ctx, request.Actor, request.Ancestry, s.verifier)
 	if err != nil {

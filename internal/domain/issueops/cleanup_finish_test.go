@@ -59,7 +59,7 @@ func TestClassifyMergedBaseRetarget(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := ClassifyCleanupMergedBase(tc.prepared, tc.observed, tc.defaultBranch, tc.preparedRemotePresent, tc.observed_)
+			got := classifyCleanupMergedBase(tc.prepared, tc.observed, tc.defaultBranch, tc.preparedRemotePresent, tc.observed_)
 			if strings.Join(got, ",") != strings.Join(tc.want, ",") {
 				t.Fatalf("classifyMergedBase = %v, want %v", got, tc.want)
 			}

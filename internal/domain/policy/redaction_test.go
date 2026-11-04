@@ -31,7 +31,7 @@ func TestRedactFreeformRedactsKnownBareTokenFormats(t *testing.T) {
 	}
 }
 
-// CleanEnvAllowlist/ValidEnvName/RedactArgv는 감사 로그 env allowlist와 argv
+// CleanEnvAllowlist/validEnvName/RedactArgv는 감사 로그 env allowlist와 argv
 // redaction의 진입 규칙이다.
 func TestCleanEnvAllowlistTrimsSortsDedupesNothing(t *testing.T) {
 	got := CleanEnvAllowlist([]string{" PATH ", "", "HOME", "PATH", "  "})
@@ -46,12 +46,12 @@ func TestCleanEnvAllowlistTrimsSortsDedupesNothing(t *testing.T) {
 
 func TestValidEnvName(t *testing.T) {
 	for _, ok := range []string{"PATH", "HOME", "_FOO", "a", "A_1_b"} {
-		if !ValidEnvName(ok) {
+		if !validEnvName(ok) {
 			t.Fatalf("%q must be a valid env name", ok)
 		}
 	}
 	for _, bad := range []string{"", "1PATH", "-FOO", "FO O", "FOO-BAR", "한글"} {
-		if ValidEnvName(bad) {
+		if validEnvName(bad) {
 			t.Fatalf("%q must be invalid", bad)
 		}
 	}

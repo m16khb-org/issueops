@@ -5,6 +5,8 @@ import (
 	"strings"
 )
 
+// LLMEvalGateReasons returns the reasons the LLM evaluation blocks the gate: not ok, score below
+// targetScore, or reported blockers. It returns nil unless mode is "gate".
 func LLMEvalGateReasons(mode string, ok bool, score, targetScore float64, blockers []string) []string {
 	if mode != "gate" {
 		return nil

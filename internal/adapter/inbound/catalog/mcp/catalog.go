@@ -10,7 +10,7 @@ type catalogSection struct {
 
 // catalogSections is the single ordered source of truth for the MCP tool
 // catalog. Both the advertised tools/list (AdvertisedTools) and the
-// name->handler routing table (DispatchMap) derive from this slice, so adding a
+// name->handler routing table (dispatchMap) derive from this slice, so adding a
 // tool means editing exactly one catalog function referenced here. The
 // advertised order matches the stable mcp_tools.golden.json snapshot.
 func catalogSections() []catalogSection {
@@ -39,10 +39,10 @@ func AdvertisedTools() []contract.Tool {
 	return out
 }
 
-// DispatchMap returns a map from every MCP tool name to its handler group.
+// dispatchMap returns a map from every MCP tool name to its handler group.
 // It derives from catalogSections so routing can never drift from the catalog:
 // adding a tool to a section makes it both routable and listed.
-func DispatchMap() map[string]contract.DispatchGroup {
+func dispatchMap() map[string]contract.DispatchGroup {
 	out := make(map[string]contract.DispatchGroup)
 	for _, s := range catalogSections() {
 		for _, t := range s.tools() {
@@ -52,7 +52,7 @@ func DispatchMap() map[string]contract.DispatchGroup {
 	return out
 }
 
-func ToolMaps(tools []contract.Tool) []map[string]any {
+func toolMaps(tools []contract.Tool) []map[string]any {
 	out := make([]map[string]any, 0, len(tools))
 	for _, tool := range tools {
 		toolMap := map[string]any{
@@ -71,7 +71,7 @@ func ToolMaps(tools []contract.Tool) []map[string]any {
 	return out
 }
 
-func ResourceMaps(resources []contract.Resource) []map[string]any {
+func resourceMaps(resources []contract.Resource) []map[string]any {
 	out := make([]map[string]any, 0, len(resources))
 	for _, resource := range resources {
 		out = append(out, map[string]any{
@@ -84,6 +84,8 @@ func ResourceMaps(resources []contract.Resource) []map[string]any {
 	return out
 }
 
+// Build assembles the full MCP catalog (advertised tools with authority
+// fields, resources, and the dispatch routing table) from the shared sections.
 func Build() contract.Catalog {
-	return contract.Catalog{Tools: withAuthorityFields(ToolMaps(AdvertisedTools())), Resources: ResourceMaps(contract.Resources()), Dispatch: DispatchMap()}
+	return contract.Catalog{Tools: withAuthorityFields(toolMaps(AdvertisedTools())), Resources: resourceMaps(contract.Resources()), Dispatch: dispatchMap()}
 }

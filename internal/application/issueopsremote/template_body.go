@@ -11,13 +11,15 @@ import (
 	"issueops/internal/domain/issueopsremote"
 )
 
+// TemplateBodyResolver 타입은 직접 입력, 본문 파일, 템플릿으로 생성 명령의 본문을 만든다.
 type TemplateBodyResolver struct{ readFile func(string) ([]byte, error) }
 
+// NewTemplateBodyResolver 함수는 본문·점수 파일을 읽는 함수로 TemplateBodyResolver를 만든다.
 func NewTemplateBodyResolver(readFile func(string) ([]byte, error)) TemplateBodyResolver {
 	return TemplateBodyResolver{readFile: readFile}
 }
 
-type TemplateBodyRequest struct {
+type templateBodyRequest struct {
 	Kind      artifacttemplate.IssueOpsArtifactKind
 	Template  string
 	Provider  string
@@ -36,13 +38,12 @@ type ResolvedTemplateBody struct {
 	Readability reportcontract.Report
 }
 
-// resolveTemplateBody renders the body against its contract and always runs
-// the readability check. A preview reports the findings; a confirm refuses
-// any critical finding before anything is sealed or sent to the provider.
-// create-issue has four templates, so its confirm must name one; create-child
-// and create-pr fall back to their single template.
-func (s TemplateBodyResolver) Resolve(req TemplateBodyRequest) (ResolvedTemplateBody, error) {
-	body, err := s.ReadBody(req.Body, req.BodyFile)
+// Resolve 메서드는 본문을 계약에 맞춰 렌더링하고 항상 가독성 검사를 실행한다.
+// 미리보기는 발견 사항을 보고하고, confirm은 critical 발견이 있으면 봉인하거나 provider에 보내기 전에 거부한다.
+// create-issue는 템플릿이 네 개라 confirm에서 하나를 지정해야 하고,
+// create-child와 create-pr는 단일 템플릿을 기본으로 쓴다.
+func (s TemplateBodyResolver) Resolve(req templateBodyRequest) (ResolvedTemplateBody, error) {
+	body, err := s.readBody(req.Body, req.BodyFile)
 	if err != nil {
 		return ResolvedTemplateBody{}, err
 	}
@@ -89,7 +90,7 @@ func (s TemplateBodyResolver) Resolve(req TemplateBodyRequest) (ResolvedTemplate
 	return resolved, nil
 }
 
-func renderTemplateBody(req TemplateBodyRequest, template, body string, fields map[string]string, scoreSummary string) artifacttemplate.IssueOpsTemplateResult {
+func renderTemplateBody(req templateBodyRequest, template, body string, fields map[string]string, scoreSummary string) artifacttemplate.IssueOpsTemplateResult {
 	result := artifacttemplate.Render(artifacttemplate.IssueOpsTemplateInput{
 		Kind:         req.Kind,
 		Template:     artifacttemplate.IssueOpsTemplateKind(template),
@@ -126,6 +127,7 @@ func templateValidationError(kind artifacttemplate.IssueOpsArtifactKind, templat
 	return fmt.Errorf("template validation failed: %s", strings.Join(inputErrors, ","))
 }
 
+// ScoreSummary 메서드는 점수 파일을 읽어 요약 문자열로 만든다. 경로가 비면 빈 문자열이고, JSON이 아니면 파일 내용을 그대로 쓴다.
 func (s TemplateBodyResolver) ScoreSummary(path string) (string, error) {
 	path = strings.TrimSpace(path)
 	if path == "" {
@@ -151,7 +153,7 @@ func firstNonEmpty(values ...string) string {
 	return ""
 }
 
-func (s TemplateBodyResolver) ReadBody(body, bodyFile string) (string, error) {
+func (s TemplateBodyResolver) readBody(body, bodyFile string) (string, error) {
 	body = strings.TrimSpace(body)
 	bodyFile = strings.TrimSpace(bodyFile)
 	if body != "" && bodyFile != "" {

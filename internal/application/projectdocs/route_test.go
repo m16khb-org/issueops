@@ -32,7 +32,7 @@ func (fake *routeEffects) ReadFile(path string) (string, error) { return fake.fi
 
 func TestRouteAddsExistingFamilyDetailAndMissingDocsWarning(t *testing.T) {
 	fake := &routeEffects{existing: map[string]bool{"/repo/.issueops/architecture/overview.md": true}}
-	result := Route("/repo", "  REFACTOR  ", fake)
+	result := route("/repo", "  REFACTOR  ", fake)
 	if result.Task != "refactor" || len(result.Warnings) != 1 || !strings.Contains(result.Warnings[0], "project docs are missing") {
 		t.Fatalf("route=%+v", result)
 	}
@@ -57,7 +57,7 @@ func TestRouteReturnsRecordsSharingTermsWithKoreanTask(t *testing.T) {
 			"/repo/.issueops/adr/2026-09-01-auth.md":       "# Auth tokens\n\n- Summary: Tokens rotate.\n",
 		},
 	}
-	result := Route("/repo", "운영 서버에 docker compose로 재배포하고 이미지를 빌드한다", fake)
+	result := route("/repo", "운영 서버에 docker compose로 재배포하고 이미지를 빌드한다", fake)
 	var records []string
 	for _, doc := range result.Docs {
 		if strings.HasPrefix(doc.RelPath, ".issueops/cautions/") || strings.HasPrefix(doc.RelPath, ".issueops/adr/") {
@@ -85,7 +85,7 @@ func readWarnings(warnings []string) []string {
 // skips it instead of trying to read it; present docs are not.
 func TestRouteWarnsAboutRoutedDocsTheRepoLacks(t *testing.T) {
 	fake := &routeEffects{existing: map[string]bool{"/repo/.issueops": true, "/repo/AGENTS.md": true}}
-	result := Route("/repo", "cleanup the merged branch", fake)
+	result := route("/repo", "cleanup the merged branch", fake)
 	var absent []string
 	for _, doc := range result.Docs {
 		if !doc.Exists && doc.RelPath != ".issueops/VCS.md" {

@@ -1,3 +1,5 @@
+// Package mcpsmoke runs the MCP smoke check of the self-verification loop
+// against a built issueops binary. It is an adapter-layer verification probe.
 package mcpsmoke
 
 import (
@@ -6,10 +8,16 @@ import (
 	"time"
 )
 
+// ValidateMCP runs the MCP smoke check of binary under root with real
+// temp-dir and SDK smoke dependencies.
 func ValidateMCP(binary, root string) selfverify.StepResult {
 	return ValidateMCPWithDeps(binary, root, MCPValidationDeps{})
 }
 
+// ValidateMCPWithDeps runs the MCP smoke check of binary under root, with a
+// throwaway ISSUEOPS_STATE_DIR, a 30 second SDK smoke run, and the MCP smoke
+// contract check. Nil fields in deps fall back to the real implementations.
+// Output is trimmed to the aggregate output budget.
 func ValidateMCPWithDeps(binary, root string, deps MCPValidationDeps) selfverify.StepResult {
 	deps = deps.withDefaults()
 	tempState, err := deps.MkdirTemp("", "issueops-mcp-state-*")
@@ -23,7 +31,7 @@ func ValidateMCPWithDeps(binary, root string, deps MCPValidationDeps) selfverify
 	if !step.OK {
 		return step
 	}
-	ValidateMCPSmokeContract(&step)
+	validateMCPSmokeContract(&step)
 	step.Stdout, step.StdoutTruncated, step.StdoutBytes = verifydomain.TailWithBudget(step.Stdout, aggregateOutputBudgetBytes)
 	return step
 }

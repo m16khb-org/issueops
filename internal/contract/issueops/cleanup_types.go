@@ -1,5 +1,6 @@
 // cleanup 요청·결과 DTO다. 정리를 수행하는 쪽은 I/O를 하지만 요청을 만들고
 // 결과를 읽는 쪽은 그 구현을 알 필요가 없다.
+
 package issueops
 
 // Actor identifies the native host session that is authorized to make
@@ -14,7 +15,7 @@ type Actor struct {
 	NativeProcessAncestry []NativeProcessReceipt `json:"-"`
 }
 
-// CleanupAbandonRequest는 폐기된 비-done 사이클의 로컬 worktree, branch,
+// CleanupAbandonRequest 타입은 폐기된 비-done 사이클의 로컬 worktree, branch,
 // record 수명 종료(issue #106, #293)의 입력이다.
 //
 // 이 경로는 cleanup finish와 두 가지 축에서 다르다.
@@ -50,7 +51,7 @@ type CleanupAbandonRequest struct {
 	DeleteRemoteBranch bool
 }
 
-// CleanupFinishRequest는 record-backed 머지 후 정리(설계 v5 WS3)의 입력이다.
+// CleanupFinishRequest 타입은 record-backed 머지 후 정리(설계 v5 WS3)의 입력이다.
 // Merged/CompletionReflected/IssueClosed는 caller가 원격 readback으로 검증한
 // 값이며, readback 실패는 caller에서 fail-closed로 끝난다(값이 오지 않는다).
 type CleanupFinishRequest struct {
@@ -80,7 +81,7 @@ type CleanupFinishRequest struct {
 	Fingerprint      string
 }
 
-// CleanupRemoteBranchRequest는 머지 검증된 사이클의 원격 브랜치를 typed 경로로
+// CleanupRemoteBranchRequest 타입은 머지 검증된 사이클의 원격 브랜치를 typed 경로로
 // 삭제하는 입력이다(이슈 #116). cleanup 명령군 순서는
 // status → close-children → remote-branch → finish다.
 //
@@ -98,6 +99,8 @@ type CleanupRemoteBranchRequest struct {
 	Fingerprint  string
 }
 
+// CleanupAbandonResult 타입은 폐기 정리(cleanup abandon)의 preview 또는 apply 결과다.
+// 관측한 로컬·원격 상태와 실행한 효과, 삭제된 레코드 전문을 한 응답에 담는다.
 type CleanupAbandonResult struct {
 	OK      bool     `json:"ok"`
 	ID      string   `json:"id"`
@@ -149,6 +152,9 @@ type CleanupAbandonResult struct {
 	// apply 직전까지의 변경분이 어디에도 남지 않는다.
 	Record *Record `json:"record,omitempty"`
 }
+
+// CleanupFinishResult 타입은 머지 후 정리(cleanup finish)의 preview 또는 apply 결과다.
+// 게이트 통과 근거(대체 artifact, 재타깃 base, 남긴 원격 브랜치)와 실패 단계를 담는다.
 type CleanupFinishResult struct {
 	OK              bool     `json:"ok"`
 	ID              string   `json:"id"`
@@ -191,7 +197,7 @@ type CleanupFinishResult struct {
 	KeptRemoteBranch *CleanupKeptRemoteBranch `json:"kept_remote_branch,omitempty"`
 }
 
-// CleanupKeptRemoteBranch는 finish가 남기고 간 원격 브랜치의 관측 결과다.
+// CleanupKeptRemoteBranch 타입은 finish가 남기고 간 원격 브랜치의 관측 결과다.
 // finish는 레코드를 지우고 typed 삭제 경로(cleanup remote-branch)는 레코드를
 // 읽어 동작하므로, 이 값과 ④' 감사 라인이 그 브랜치를 다시 찾을 유일한 흔적이다.
 type CleanupKeptRemoteBranch struct {
@@ -203,14 +209,14 @@ type CleanupKeptRemoteBranch struct {
 }
 
 const (
-	// CleanupKeptRemoteBranchPresent는 원격 브랜치를 실제로 관측했고 남겨 둔 상태다.
+	// CleanupKeptRemoteBranchPresent 상수는 원격 브랜치를 실제로 관측했고 남겨 둔 상태다.
 	CleanupKeptRemoteBranchPresent = "present"
-	// CleanupKeptRemoteBranchUnreadable는 원격을 읽지 못해 잔존 여부를 확정하지
+	// CleanupKeptRemoteBranchUnreadable 상수는 원격을 읽지 못해 잔존 여부를 확정하지
 	// 못한 상태다. 남기기로 한 이상 잔존과 같게 다룬다.
 	CleanupKeptRemoteBranchUnreadable = "unreadable"
 )
 
-// CleanupRetargetedBase는 부모 브랜치가 머지·삭제되어 provider가 PR을 기본
+// CleanupRetargetedBase 타입은 부모 브랜치가 머지·삭제되어 provider가 PR을 기본
 // 브랜치로 재타깃한 정상 흐름의 관측 근거다(#490).
 type CleanupRetargetedBase struct {
 	PreparedBase             string `json:"prepared_base"`
@@ -218,6 +224,9 @@ type CleanupRetargetedBase struct {
 	DefaultBranch            string `json:"default_branch"`
 	PreparedBaseRemoteAbsent bool   `json:"prepared_base_remote_absent"`
 }
+
+// CleanupRemoteBranchResult 타입은 원격 브랜치 삭제(cleanup remote-branch)의
+// preview 또는 apply 결과다. 게이트 ⑩을 통과시킨 근거와 삭제 여부를 담는다.
 type CleanupRemoteBranchResult struct {
 	OK                  bool     `json:"ok"`
 	ID                  string   `json:"id"`
@@ -249,7 +258,7 @@ type CleanupRemoteBranchResult struct {
 	SupersedeError string `json:"supersede_error,omitempty"`
 }
 
-// CleanupLinkedBranchRequest는 `createLinkedBranch`가 남긴 ref-null 고아
+// CleanupLinkedBranchRequest 타입은 `createLinkedBranch`가 남긴 ref-null 고아
 // 레코드를 typed 경로로 정리하는 입력이다(#306 AC-04).
 //
 // 지울 대상을 사용자가 지정하지 않는다는 점이 이 표면의 핵심이다. ref가 없는
@@ -263,7 +272,7 @@ type CleanupLinkedBranchRequest struct {
 	Fingerprint string
 }
 
-// CleanupLinkedBranchResult는 관측·분류·처분을 한 응답에 담는다.
+// CleanupLinkedBranchResult 타입은 관측·분류·처분을 한 응답에 담는다.
 type CleanupLinkedBranchResult struct {
 	OK      bool     `json:"ok"`
 	ID      string   `json:"id"`
@@ -295,7 +304,7 @@ type CleanupLinkedBranchResult struct {
 	NextCommand   string `json:"next_command,omitempty"`
 }
 
-// AwaitBranchLinkRequest는 coordinator가 만들 linked branch가 나타날 때까지
+// AwaitBranchLinkRequest 타입은 coordinator가 만들 linked branch가 나타날 때까지
 // 경계 있게 기다리는 읽기 전용 요청이다(#319).
 type AwaitBranchLinkRequest struct {
 	ID string
@@ -303,7 +312,7 @@ type AwaitBranchLinkRequest struct {
 	Timeout string
 }
 
-// AwaitBranchLinkResult는 대기 결과와 그 근거가 된 관측이다.
+// AwaitBranchLinkResult 타입은 대기 결과와 그 근거가 된 관측이다.
 type AwaitBranchLinkResult struct {
 	OK      bool     `json:"ok"`
 	ID      string   `json:"id"`
@@ -326,7 +335,7 @@ type AwaitBranchLinkResult struct {
 	NextCommand    string `json:"next_command,omitempty"`
 }
 
-// CleanupWorkspaceProcess는 cleanup preview가 관측한 워크트리 점유 프로세스 하나다.
+// CleanupWorkspaceProcess 타입은 cleanup preview가 관측한 워크트리 점유 프로세스 하나다.
 // receipt(pid·시작 시각·실행 파일)는 apply에서 PID 재사용을 배제하고, Descendants와
 // Collateral(워크트리를 점유하지 않는 자손 수)은 공유 서버처럼 자손이 많은
 // 점유자를 apply 전에 알아보게 한다(#477).

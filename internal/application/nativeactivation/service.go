@@ -1,3 +1,7 @@
+// Package nativeactivation is the application service for the native
+// activation transition (begin, seal, abort). It validates requests, checks the
+// readback evidence and the backend's answers, and shapes the public result;
+// persistence sits behind the Backend port.
 package nativeactivation
 
 import (
@@ -9,15 +13,22 @@ import (
 	activationport "issueops/internal/port/nativeactivation"
 )
 
+// Service runs the native activation transitions on top of a Backend and a
+// ReadbackVerifier. Begin and Abort need only the backend; Seal also needs the
+// verifier.
 type Service struct {
 	backend  activationport.Backend
 	readback activationport.ReadbackVerifier
 }
 
+// NewService returns a Service over backend and readback.
 func NewService(backend activationport.Backend, readback activationport.ReadbackVerifier) *Service {
 	return &Service{backend: backend, readback: readback}
 }
 
+// Begin starts a pending activation for request. The request must not carry a
+// transition ID; the backend assigns it. The backend's result must describe the
+// same roots and binary and report a pending, unsealed activation.
 func (service *Service) Begin(ctx context.Context, request activationcontract.Request) (activationcontract.Result, error) {
 	if service == nil || service.backend == nil {
 		return activationcontract.Result{}, fmt.Errorf("native activation backend is required")
@@ -38,6 +49,10 @@ func (service *Service) Begin(ctx context.Context, request activationcontract.Re
 	return publicResult(result, activationport.Readback{}), nil
 }
 
+// Seal verifies the installed host integrations through the readback verifier
+// and seals the pending activation that request.TransitionID names. The
+// evidence is put in canonical order before it reaches the backend, and the
+// backend's result must report a sealed receipt.
 func (service *Service) Seal(ctx context.Context, request activationcontract.Request) (activationcontract.Result, error) {
 	if service == nil || service.backend == nil || service.readback == nil {
 		return activationcontract.Result{}, fmt.Errorf("native activation dependencies are required")
@@ -71,6 +86,9 @@ func (service *Service) Seal(ctx context.Context, request activationcontract.Req
 	return publicResult(result, readback), nil
 }
 
+// Abort cancels the pending activation that request.TransitionID names. It
+// fails when the backend does not confirm that the transition was aborted and
+// left neither a pending nor a sealed record.
 func (service *Service) Abort(ctx context.Context, request activationcontract.Request) (activationcontract.Result, error) {
 	if service == nil || service.backend == nil {
 		return activationcontract.Result{}, fmt.Errorf("native activation backend is required")

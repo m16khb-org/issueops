@@ -10,6 +10,11 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
+// ValidateManualHandoffDeliveryObservation checks an observation recorded for
+// a manual handoff. It must belong to the released execution generation of
+// record, use the isolated manual-direct attempt and lineage namespace, come
+// from Herdr or cmux, and carry no owner claim evidence, which only the
+// claiming session may add.
 func ValidateManualHandoffDeliveryObservation(record issueopscontract.Record, observation issueopscontract.HandoffDeliveryObservation) error {
 	if !manualHandoffReleasedDirectGeneration(record, observation) {
 		return fmt.Errorf("manual handoff delivery observation requires the exact released direct execution generation")
@@ -41,6 +46,10 @@ func manualHandoffHasOwnerClaimEvidence(observation issueopscontract.HandoffDeli
 		claim.Actor.SessionProcess != nil || len(claim.Actor.ProcessAncestry) != 0
 }
 
+// ManualCmuxHandoffIDs derives the attempt ID and lineage ID of a manual cmux
+// handoff from the cycle ID, source generation, window, and prompt and
+// material digests. Both are deterministic, so the same request always maps
+// to the same lineage.
 func ManualCmuxHandoffIDs(request issueopscontract.ExecutionCmuxHandoffRequest) (string, string) {
 	identity := strings.Join([]string{request.ID, strconv.FormatUint(request.Generation, 10), request.WindowID, request.PromptSHA256, request.MaterialSHA256}, "\x00")
 	sum := sha256.Sum256([]byte(identity))

@@ -1,3 +1,6 @@
+// Package issueopscycle 패키지는 IssueOps 사이클의 phase 전이와 준비 상태(readiness) 판정을 조율하는 응용 계층이다.
+// 도메인 규칙은 domain 계층의 판정 함수에, 저장소·git 관찰은 port 인터페이스에 두고 이 패키지가 둘을 이어
+// phase 진입 검증, 봉인 갱신, PR 게이트, 변경 권한 검사를 수행한다.
 package issueopscycle
 
 import (
@@ -10,6 +13,7 @@ import (
 	cycleport "issueops/internal/port/issueopscycle"
 )
 
+// PhaseService 타입은 사이클 phase 전이를 잠금 안에서 수행한다. 진입 준비 상태를 검증하고 봉인(head, fingerprint)을 찍어 기록과 추적 자료를 갱신한다.
 type PhaseService struct {
 	Store          cycleport.PhaseStore
 	WriteMaterials func(issueops.Record) issueops.TrackedMaterials
@@ -21,16 +25,23 @@ func (s PhaseService) touchWrite(root string, record issueops.Record) (issueops.
 	record.UpdatedAt = s.Store.Now()
 	return s.Store.Write(root, record)
 }
+
+// Refresh 메서드는 ai-slop-clean 준비 상태를 확인한 뒤 현재 head와 지문으로 봉인을 다시 찍어 기록한다.
 func (s PhaseService) Refresh(root string, record issueops.Record) (issueops.Record, error) {
-	return RefreshAISlopClean(cycleport.AISlopCleanRefreshStore{Readiness: s.Readiness.AISlopClean, Now: s.Store.Now, Head: s.Transitions.Head, Fingerprint: s.Transitions.Fingerprint, TouchWrite: s.touchWrite}, root, record)
-}
-func ProblemReadiness(record issueops.Record) issueops.Readiness {
-	return ReadinessFromMissing(record, issueopsdomain.IntentMissing(record))
-}
-func GrillReadiness(record issueops.Record) issueops.Readiness {
-	return ReadinessFromMissing(record, issueopsdomain.GrillReadinessMissing(record))
+	return refreshAISlopClean(cycleport.AISlopCleanRefreshStore{Readiness: s.Readiness.AISlopClean, Now: s.Store.Now, Head: s.Transitions.Head, Fingerprint: s.Transitions.Fingerprint, TouchWrite: s.touchWrite}, root, record)
 }
 
+// ProblemReadiness 함수는 기록의 문제 정의(intent)에서 빠진 항목으로 준비 상태를 만든다.
+func ProblemReadiness(record issueops.Record) issueops.Readiness {
+	return readinessFromMissing(record, issueopsdomain.IntentMissing(record))
+}
+
+// GrillReadiness 함수는 grill 단계에서 빠진 항목으로 준비 상태를 만든다.
+func GrillReadiness(record issueops.Record) issueops.Readiness {
+	return readinessFromMissing(record, issueopsdomain.GrillReadinessMissing(record))
+}
+
+// AdvanceReport 메서드는 기록을 to phase로 전이하고 갱신된 기록과 추적 자료 보고를 돌려준다. pr 진입이면 잠금 밖에서 upstream fetch를 미리 하고, 잠금 안에서 권한과 진입 준비 상태를 검증한다.
 func (s PhaseService) AdvanceReport(stateRoot, id, to string) (issueops.Record, issueops.TrackedMaterials, error) {
 	var materials issueops.TrackedMaterials
 	upstream, err := s.prefetchForPhase(stateRoot, id, to)
@@ -68,7 +79,7 @@ func (s PhaseService) prefetchForPhase(stateRoot, id, to string) (func(string) r
 	if err := s.Store.ValidateMutation(record); err != nil {
 		return nil, err
 	}
-	return s.Readiness.PrefetchUpstream(record), nil
+	return s.Readiness.prefetchUpstream(record), nil
 }
 
 func (s PhaseService) advanceLocked(stateRoot, id, to string, upstream func(string) review.UpstreamFetch) (issueops.Record, issueops.TrackedMaterials, error) {
@@ -100,13 +111,13 @@ func (s PhaseService) advanceLocked(stateRoot, id, to string, upstream func(stri
 		}
 		return record, materials, err
 	}
-	if err := ValidatePhaseEntry(s.entryReadiness(stateRoot, upstream), record, phase); err != nil {
+	if err := validatePhaseEntry(s.entryReadiness(stateRoot, upstream), record, phase); err != nil {
 		return issueops.Record{OK: false}, materials, err
 	}
 	if (phase == issueops.PhaseImplement || phase == issueops.PhaseAISlopClean) && s.WriteMaterials != nil {
 		materials = s.WriteMaterials(record)
 	}
-	record = ApplyPhaseTransition(cycleport.PhaseTransitionObservations{
+	record = applyPhaseTransition(cycleport.PhaseTransitionObservations{
 		Now:         s.Store.Now,
 		Head:        s.Transitions.Head,
 		Fingerprint: s.Transitions.Fingerprint,
@@ -124,7 +135,7 @@ func (s PhaseService) resealSamePhase(stateRoot string, record issueops.Record, 
 	case issueops.PhasePR:
 		// pr 안에서 코드를 고치고 정리·문서·검증 봉인을 새 head로 다시 받은 뒤의 재봉인이다.
 		// pr 진입과 같은 strict 판정을 통과해야 completion이 비교할 pr_head가 바뀐다.
-		if err := ValidatePhaseEntry(s.entryReadiness(stateRoot, upstream), record, phase); err != nil {
+		if err := validatePhaseEntry(s.entryReadiness(stateRoot, upstream), record, phase); err != nil {
 			return issueops.Record{OK: false}, err
 		}
 		record.PRHead = s.Transitions.Head(record)
@@ -150,7 +161,7 @@ func (s PhaseService) entryReadiness(stateRoot string, upstream func(string) rev
 					return review.UpstreamFetch{Root: gitRoot, Failed: true, Stderr: "upstream was not fetched before the pr transition; retry the command"}
 				}
 			}
-			return s.Readiness.StrictPRWithFetch(stateRoot, record, upstream)
+			return s.Readiness.strictPRWithFetch(stateRoot, record, upstream)
 		},
 		RemoteArtifactMissing: issueopsdomain.RemoteArtifactMissing,
 	}

@@ -1,3 +1,5 @@
+// Package issueopsrouting exposes the routing application service as a set of
+// handler functions (Handlers) for the CLI and MCP layers; it is an inbound adapter.
 package issueopsrouting
 
 import (
@@ -8,6 +10,9 @@ import (
 	issueopsroutingcontract "issueops/internal/contract/issueopsrouting"
 )
 
+// Handlers bundles the routing record and score calls as function fields for
+// the CLI/MCP layers. Record stores the skill chosen for a phase; Score compares
+// recorded choices with the expected ones.
 type Handlers struct {
 	Record func(
 		string,
@@ -23,6 +28,8 @@ type Handlers struct {
 	) (issueopsroutingcontract.Result, int, error)
 }
 
+// NewHandlers wires the routing application service into Handlers. Every call
+// runs the service under context.Background().
 func NewHandlers(service *issueopsroutingapplication.Service) Handlers {
 	return Handlers{
 		Record: func(

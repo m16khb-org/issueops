@@ -10,6 +10,9 @@ import (
 	"strings"
 )
 
+// ComputeCodeSNR scans production Go files under root and returns the counts of
+// signal lines (code) and noise lines (blank, comment, or structural-only) with
+// the signal ratio rounded to four decimals.
 func ComputeCodeSNR(root string) (contract.SNRResult, error) {
 	var signal, noise int
 	paths, scanErrors := productionGoFiles(root)

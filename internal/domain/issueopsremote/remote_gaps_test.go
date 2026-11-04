@@ -173,7 +173,7 @@ func TestValidProjectKey(t *testing.T) {
 		"github.com/acme#x":            false,
 		"github.com/acme\nrepo":        false,
 	} {
-		if got := ValidProjectKey(key); got != want {
+		if got := validProjectKey(key); got != want {
 			t.Errorf("ValidProjectKey(%q)=%v want %v", key, got, want)
 		}
 	}
@@ -268,7 +268,7 @@ func TestIssueNumberAndArtifactPaths(t *testing.T) {
 		"https://github.com/a/b/pull/3":             "",
 		"://bad":                                    "",
 	} {
-		if got := IssueNumber(url); got != want {
+		if got := issueNumber(url); got != want {
 			t.Errorf("IssueNumber(%q)=%q want %q", url, got, want)
 		}
 	}
@@ -279,7 +279,7 @@ func TestIssueNumberAndArtifactPaths(t *testing.T) {
 		t.Fatalf("numberless issue must have no artifact dir, got %q", got)
 	}
 	const issue = "https://github.com/a/b/issues/42"
-	for _, name := range TrackedMaterialNames {
+	for _, name := range trackedMaterialNames {
 		for _, p := range []string{".issueops/issues/42/" + name, `.issueops\issues\42\` + name} {
 			if !IsTrackedMaterialPath(issue, p) {
 				t.Errorf("%q should be tracked", p)
@@ -313,7 +313,7 @@ func TestRenderIssueOpsRemoteJudgePrompt(t *testing.T) {
 			t.Errorf("prompt missing %q", want)
 		}
 	}
-	plain, err := RenderIssueOpsRemoteLLMJudgePrompt(req)
+	plain, err := renderIssueOpsRemoteLLMJudgePrompt(req)
 	if err != nil || plain != res.Prompt {
 		t.Fatalf("plain prompt differs from wrapped prompt (err=%v)", err)
 	}
@@ -327,7 +327,7 @@ func TestRenderIssueOpsRemoteJudgePromptRejectsUnmarshalableScore(t *testing.T) 
 		Issue:           ArtifactDraft{Title: "t"},
 		IssueCandidates: []IssueCandidate{{ID: "1", Score: &nan}},
 	}}
-	if p, err := RenderIssueOpsRemoteLLMJudgePrompt(req); err == nil || p != "" {
+	if p, err := renderIssueOpsRemoteLLMJudgePrompt(req); err == nil || p != "" {
 		t.Fatalf("llm prompt=(%q,%v)", p, err)
 	}
 	if res, err := RenderIssueOpsRemoteJudgePrompt(req); err == nil || res.OK || res.Prompt != "" {

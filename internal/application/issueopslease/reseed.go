@@ -14,6 +14,11 @@ import (
 	basesyncport "issueops/internal/port/issueopsbasesync"
 )
 
+// ReseedRequest asks to replace the lease of cycle ID. ExpectedGeneration is
+// the lease generation the caller observed, CompletionGeneration optionally
+// selects the completion being reopened, InventoryFingerprint pins the
+// replacement inventory the caller reviewed, and Reason is recorded. Confirm
+// must be true for the reseed to run.
 type ReseedRequest struct {
 	ID                   string
 	ExpectedGeneration   uint64
@@ -26,6 +31,8 @@ type ReseedRequest struct {
 	Confirm              bool
 }
 
+// ReseedResult reports a reseed. On success OK is true with the Receipt of the
+// prepared replacement artifacts and the saved Execution; on failure only ID is set.
 type ReseedResult struct {
 	OK        bool
 	ID        string
@@ -33,21 +40,30 @@ type ReseedResult struct {
 	Execution leasecontract.Execution
 }
 
+// ReseedService replaces an execution lease with a new generation while the
+// cycle's fence is held. It coordinates actor verification, the inventory and
+// base-sync checks, artifact preparation, and the repository commit.
 type ReseedService struct {
-	fence      ReseedFence
+	fence      reseedFence
 	repository ReseedRepository
-	inventory  ReseedInventory
+	inventory  reseedInventory
 	baseSync   basesyncport.Inspector
-	artifacts  ReseedArtifacts
-	clock      Clock
+	artifacts  reseedArtifacts
+	clock      clock
 	verifier   authorityport.ActorVerifier
-	paths      CanonicalPathMatcher
+	paths      canonicalPathMatcher
 }
 
-func NewReseedService(fence ReseedFence, repository ReseedRepository, inventory ReseedInventory, baseSync basesyncport.Inspector, artifacts ReseedArtifacts, clock Clock, verifier authorityport.ActorVerifier, paths CanonicalPathMatcher) *ReseedService {
+// NewReseedService returns a ReseedService wired to the given fence, repository, inventory, base-sync inspector, artifact store, clock, verifier, and path matcher. Reseed returns an error when a required dependency is nil.
+func NewReseedService(fence reseedFence, repository ReseedRepository, inventory reseedInventory, baseSync basesyncport.Inspector, artifacts reseedArtifacts, clock clock, verifier authorityport.ActorVerifier, paths canonicalPathMatcher) *ReseedService {
 	return &ReseedService{fence: fence, repository: repository, inventory: inventory, baseSync: baseSync, artifacts: artifacts, clock: clock, verifier: verifier, paths: paths}
 }
 
+// Reseed replaces the lease of request.ID under the cycle fence. It requires
+// Confirm, a current lease generation, a fresh replacement inventory, and a
+// completed base when the execution already completed. On a failed commit the
+// prepared artifacts are rolled back. The error is returned with a result that
+// carries only request.ID.
 func (s *ReseedService) Reseed(ctx context.Context, request ReseedRequest) (ReseedResult, error) {
 	if s.fence == nil || s.repository == nil || s.inventory == nil || s.baseSync == nil || s.artifacts == nil || s.clock == nil || s.paths == nil {
 		return ReseedResult{ID: request.ID}, fmt.Errorf("reseed service dependencies are required")

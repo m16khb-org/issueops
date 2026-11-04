@@ -1,3 +1,5 @@
+// Package issueopsretention adapts the issueops retention application service
+// to the plain function handlers used by inbound CLI and MCP entry points.
 package issueopsretention
 
 import (
@@ -8,6 +10,9 @@ import (
 	issueopsretentioncontract "issueops/internal/contract/issueopsretention"
 )
 
+// NewPruneHandler adapts the retention service to a function that prunes
+// cycle records older than maxAge under stateRoot; deletion only happens when
+// confirm is true.
 func NewPruneHandler(service *issueopsretentionapplication.Service) func(
 	string,
 	time.Duration,

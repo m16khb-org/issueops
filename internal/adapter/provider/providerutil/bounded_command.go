@@ -1,3 +1,6 @@
+// Package providerutil holds the command runners and string helpers shared by the
+// issue provider adapters: bounded subprocess execution with timeouts and output
+// caps, dry-run previews, and trimmed string-set comparison.
 package providerutil
 
 import (
@@ -20,15 +23,23 @@ const (
 	providerDiagnosticLimit = 4096
 )
 
+// RunBoundedReadbackContext runs name in repo with a 15 second timeout and a
+// 256 KiB stdout cap and returns its stdout. It fails when the command cannot
+// start, exits non-zero, times out, or writes more than the cap.
 func RunBoundedReadbackContext(ctx context.Context, repo, name string, args ...string) ([]byte, error) {
 	stdout, _, err := runBoundedCommandContext(ctx, repo, name, args, providerReadbackTimeout, providerReadbackLimit)
 	return stdout, err
 }
 
+// RunBoundedMutationContext runs a state-changing command with a 60 second
+// timeout and a 256 KiB stdout cap. invoked reports whether the process started,
+// so a caller can tell a failure that left no side effect from one that may have.
 func RunBoundedMutationContext(ctx context.Context, repo, name string, args ...string) (stdout []byte, invoked bool, err error) {
 	return runBoundedCommandContext(ctx, repo, name, args, providerMutationTimeout, providerReadbackLimit)
 }
 
+// RunBoundedMutationWithOutputLimitContext behaves like RunBoundedMutationContext
+// but caps stdout at outputLimit bytes instead of the default 256 KiB.
 func RunBoundedMutationWithOutputLimitContext(ctx context.Context, repo, name string, outputLimit int, args ...string) (stdout []byte, invoked bool, err error) {
 	return runBoundedCommandContext(ctx, repo, name, args, providerMutationTimeout, outputLimit)
 }

@@ -11,10 +11,10 @@ type skillInstallConfig struct {
 	Hosts []string `json:"hosts"`
 }
 
-// SkillEnabledForHost returns whether a shared skill should be installed for a
+// skillEnabledForHost returns whether a shared skill should be installed for a
 // host. Missing or empty config keeps the historical default: install for every
 // host.
-func SkillEnabledForHost(root, skillName, host string) bool {
+func skillEnabledForHost(root, skillName, host string) bool {
 	path := filepath.Join(root, "skills", skillName, "install.json")
 	b, err := os.ReadFile(path)
 	if err != nil {
@@ -31,7 +31,7 @@ func SkillEnabledForHost(root, skillName, host string) bool {
 // install.json host filter while preserving input order.
 func SkillNamesForHost(root string, skillNames []string, host string) (enabled []string, skipped []string) {
 	for _, skillName := range skillNames {
-		if SkillEnabledForHost(root, skillName, host) {
+		if skillEnabledForHost(root, skillName, host) {
 			enabled = append(enabled, skillName)
 		} else {
 			skipped = append(skipped, skillName)

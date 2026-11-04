@@ -11,6 +11,10 @@ func PlanPrepGateApplies(record model.Record) bool {
 	return record.Intent != nil && !strings.EqualFold(strings.TrimSpace(record.Intent.IntentClass), "trivial")
 }
 
+// PlanPrepMissing lists the plan-prep items still not satisfied: prior
+// decisions, related issues, web research, and codebase survey. An item
+// counts when it has usable evidence or a waive reason; a nil prep misses all
+// four.
 func PlanPrepMissing(prep *model.PlanPrep) []string {
 	if prep == nil {
 		return []string{"plan_prep_decisions", "plan_prep_related_issues", "plan_prep_web_research", "plan_prep_codebase_survey"}

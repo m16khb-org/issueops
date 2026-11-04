@@ -15,6 +15,9 @@ type repoSignalRule struct {
 	apply func(root string, signals *contract.RepoSignals)
 }
 
+// CollectSignals builds the RepoSignals for root: it records the indexed doc count, the
+// installed skills, and whether GENIUS_THINK content exists, then applies every signal
+// rule that probes the repository's code and docs.
 func (repo Repository) CollectSignals(root string, docsIndexed int, skills []string, geniusText string) contract.RepoSignals {
 	signals := contract.RepoSignals{
 		DocsIndexed:         docsIndexed,

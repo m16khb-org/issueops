@@ -198,7 +198,7 @@ func TestSpanCommitChecksCancellationBeforeCommit(t *testing.T) {
 		t.Fatalf("canceled write left row found=%v err=%v", found, getErr)
 	}
 	got := onlySpan(t, *observations)
-	if got.Outcome != SpanOutcomeCanceled || got.CommitCount != 0 ||
+	if got.Outcome != spanOutcomeCanceled || got.CommitCount != 0 ||
 		got.Commit == nil || *got.Commit != 0 || got.CommitCoverage != SpanCommitCoverageComplete {
 		t.Fatalf("pre-commit cancellation still called Commit: %+v", got)
 	}
@@ -223,7 +223,7 @@ func TestSpanCancellationAfterCommitKeepsData(t *testing.T) {
 		t.Fatalf("post-commit cancellation lost data found=%v err=%v", found, getErr)
 	}
 	got := onlySpan(t, *observations)
-	if got.Outcome != SpanOutcomeCanceled || got.CommitCount != 1 || got.CommitCoverage != SpanCommitCoverageComplete {
+	if got.Outcome != spanOutcomeCanceled || got.CommitCount != 1 || got.CommitCoverage != SpanCommitCoverageComplete {
 		t.Fatalf("observation=%+v", got)
 	}
 }

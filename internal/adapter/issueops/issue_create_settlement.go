@@ -20,10 +20,10 @@ func issueCreateLockKey(repo, title string) string {
 	return strings.TrimSpace(repo) + "\x00" + strings.TrimSpace(title)
 }
 
-// HoldIssueCreate takes the issue create lifetime lock for repo/title; a held
+// holdIssueCreate takes the issue create lifetime lock for repo/title; a held
 // lock means another create of the same issue is running and the call is
 // refused before the provider is invoked.
-func HoldIssueCreate(ctx context.Context, stateRoot, repo, title string) (context.Context, func(), error) {
+func holdIssueCreate(ctx context.Context, stateRoot, repo, title string) (context.Context, func(), error) {
 	return holdCreateLock(ctx, filepath.Join(stateRoot, issueCreateLockDirectory), issueCreateLockKey(repo, title), "issue create lifetime lock", func() error {
 		return fmt.Errorf("another create of issue %q is still running", title)
 	})
@@ -129,12 +129,14 @@ type LockedChildCreator struct {
 	StateRoot string
 }
 
+// CreateChild creates the child through Inner. A confirmed create first takes the
+// issue-create lifetime lock and fails, without invoking the provider, when StateRoot is empty.
 func (c LockedChildCreator) CreateChild(ctx context.Context, req port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 	if req.Confirm {
 		if c.StateRoot == "" {
 			return port.IssueProviderCreateChildResult{OK: false}, &port.IssueProviderCreateError{Invoked: false, Err: fmt.Errorf("child create needs the state root for its lifetime lock")}
 		}
-		held, release, err := HoldIssueCreate(ctx, c.StateRoot, req.Repo, req.Title)
+		held, release, err := holdIssueCreate(ctx, c.StateRoot, req.Repo, req.Title)
 		if err != nil {
 			return port.IssueProviderCreateChildResult{OK: false}, err
 		}

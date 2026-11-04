@@ -1,3 +1,6 @@
+// Package state is the outbound adapter that binds the state application service
+// to the process state directory and the shared SQLite store, and provides the
+// doctor and store-maintenance operations over it.
 package state
 
 import (
@@ -13,6 +16,9 @@ import (
 	statecontract "issueops/internal/contract/state"
 )
 
+// Doctor inspects the state directory dir and its SQLite records and returns a
+// health report. A missing directory or store is reported as empty; read
+// failures return a failed result together with the error.
 func Doctor(dir string) (statecontract.DoctorResult, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {

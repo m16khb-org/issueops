@@ -9,16 +9,23 @@ import (
 	issueopsinventorydomain "issueops/internal/domain/issueopsinventory"
 )
 
+// Service lists lifecycle cycles. Construct it with NewService.
 type Service struct {
 	repository Repository
-	clock      Clock
+	clock      clock
 	paths      PathNormalizer
 }
 
-func NewService(repository Repository, clock Clock, paths PathNormalizer) *Service {
+// NewService returns a Service using repository, clock, and the path normalizer.
+// ListCycles fails if any is nil.
+func NewService(repository Repository, clock clock, paths PathNormalizer) *Service {
 	return &Service{repository: repository, clock: clock, paths: paths}
 }
 
+// ListCycles scans the records under stateRoot and returns an entry for each one
+// whose repo matches repo, or every record when repo is empty. Unreadable records
+// are reported in the result's diagnostics and counted in ScannedRecords, not
+// returned as an error.
 func (service *Service) ListCycles(
 	ctx context.Context,
 	stateRoot string,

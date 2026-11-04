@@ -42,14 +42,14 @@ func TestTemplateResolveRefusesBadInputsBeforeRendering(t *testing.T) {
 	resolver := NewTemplateBodyResolver(os.ReadFile)
 	for _, tc := range []struct {
 		name     string
-		req      TemplateBodyRequest
+		req      templateBodyRequest
 		want     string
 		notExist bool
 	}{
-		{"body and file", TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, Body: "a", BodyFile: "b"}, "mutually exclusive", false},
-		{"confirm without issue template", TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, Confirm: true}, "--template is required", false},
-		{"malformed field", TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, Fields: []string{"no-equals"}}, "key=value", false},
-		{"missing score file", TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, ScoreFile: "/definitely/missing/score.json"}, "missing/score.json", true},
+		{"body and file", templateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, Body: "a", BodyFile: "b"}, "mutually exclusive", false},
+		{"confirm without issue template", templateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, Confirm: true}, "--template is required", false},
+		{"malformed field", templateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, Fields: []string{"no-equals"}}, "key=value", false},
+		{"missing score file", templateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, ScoreFile: "/definitely/missing/score.json"}, "missing/score.json", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := resolver.Resolve(tc.req)
@@ -63,7 +63,7 @@ func TestTemplateResolveRefusesBadInputsBeforeRendering(t *testing.T) {
 
 func TestTemplateResolveEmptyIssuePreviewReportsFindingsButConfirmRefuses(t *testing.T) {
 	resolver := NewTemplateBodyResolver(os.ReadFile)
-	req := TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, Template: "implementation_task", Title: "제목"}
+	req := templateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, Template: "implementation_task", Title: "제목"}
 	preview, err := resolver.Resolve(req)
 	if err != nil || preview.Body != "" || preview.Readability.OK {
 		t.Fatalf("an empty authored body is judged as empty, not replaced by the skeleton: %+v err=%v", preview, err)
@@ -79,11 +79,11 @@ func TestTemplateResolveEmptyIssuePreviewReportsFindingsButConfirmRefuses(t *tes
 // then --confirm refused for the template and its required sections.
 func TestTemplateResolveUntemplatedIssuePreviewIsNotAPass(t *testing.T) {
 	resolver := NewTemplateBodyResolver(os.ReadFile)
-	preview, err := resolver.Resolve(TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, Title: "제목", Body: "## 요약\n\n짧은 요약입니다.\n"})
+	preview, err := resolver.Resolve(templateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, Title: "제목", Body: "## 요약\n\n짧은 요약입니다.\n"})
 	if err != nil || preview.Readability.OK || len(preview.Readability.Critical) == 0 || preview.Readability.Critical[len(preview.Readability.Critical)-1].Code != "template_missing" {
 		t.Fatalf("preview = %+v err=%v", preview.Readability, err)
 	}
-	child, err := resolver.Resolve(TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactChild, Title: "제목", Body: "## 요약\n\n짧은 요약입니다.\n"})
+	child, err := resolver.Resolve(templateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactChild, Title: "제목", Body: "## 요약\n\n짧은 요약입니다.\n"})
 	for _, finding := range child.Readability.Critical {
 		if err != nil || finding.Code == "template_missing" {
 			t.Fatalf("child kinds have a single template: %+v err=%v", child.Readability, err)

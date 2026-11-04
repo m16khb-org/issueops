@@ -8,6 +8,8 @@ import (
 	"issueops/cmd/issueops/cliflag"
 )
 
+// Run 함수는 `issueops state`의 하위 명령을 args[0]으로 골라 실행한다. 하위 명령이
+// 없으면 usage를 출력하고 오류를 돌려주며, 도움말 인자는 flag.ErrHelp를 돌려준다.
 func Run(deps Dependencies, args []string) error {
 	if len(args) == 0 {
 		stateUsage()

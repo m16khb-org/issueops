@@ -9,20 +9,20 @@ import (
 	channelcontract "issueops/internal/contract/channel"
 )
 
-var channelMCPHandlers = map[string]func(context.Context, map[string]any, channelapp.Service) MCPToolOutcome{
+var channelMCPHandlers = map[string]func(context.Context, map[string]any, channelapp.Service) mcpToolOutcome{
 	"channel_send": handleMCPChannelSend,
 	"channel_recv": handleMCPChannelRecv,
 }
 
-func handleChannelMCPToolCall(ctx context.Context, call MCPToolCall, service channelapp.Service) MCPToolOutcome {
+func handleChannelMCPToolCall(ctx context.Context, call MCPToolCall, service channelapp.Service) mcpToolOutcome {
 	handler, ok := channelMCPHandlers[call.Name]
 	if !ok {
-		return MCPToolOutcome{}
+		return mcpToolOutcome{}
 	}
 	return handler(ctx, call.Arguments, service)
 }
 
-func channelMCPOutcome(payload any, err error, message string) MCPToolOutcome {
+func channelMCPOutcome(payload any, err error, message string) mcpToolOutcome {
 	if err != nil {
 		return mcpToolErrorPayload(map[string]any{
 			"ok":    false,
@@ -32,7 +32,7 @@ func channelMCPOutcome(payload any, err error, message string) MCPToolOutcome {
 	return mcpToolPayload(payload)
 }
 
-func handleMCPChannelSend(_ context.Context, args map[string]any, service channelapp.Service) MCPToolOutcome {
+func handleMCPChannelSend(_ context.Context, args map[string]any, service channelapp.Service) mcpToolOutcome {
 	result, err := service.Send(channelcontract.SendRequest{
 		Channel: argmap.String(args, "channel"),
 		From:    argmap.String(args, "from"),
@@ -42,7 +42,7 @@ func handleMCPChannelSend(_ context.Context, args map[string]any, service channe
 	return channelMCPOutcome(result, err, "Channel send failed")
 }
 
-func handleMCPChannelRecv(ctx context.Context, args map[string]any, service channelapp.Service) MCPToolOutcome {
+func handleMCPChannelRecv(ctx context.Context, args map[string]any, service channelapp.Service) mcpToolOutcome {
 	result, err := service.Recv(ctx, channelcontract.RecvRequest{
 		Channel:        argmap.String(args, "channel"),
 		SinceID:        argmap.String(args, "since_id"),

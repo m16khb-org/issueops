@@ -12,6 +12,8 @@ import (
 	domain "issueops/internal/domain/selfaugment"
 )
 
+// HistoryService reads, compares and prunes saved self-verification summary
+// snapshots through the injected state functions.
 type HistoryService struct {
 	StateDir func() string
 	List     func() (state.ListResult, error)
@@ -19,6 +21,10 @@ type HistoryService struct {
 	Delete   func(context.Context, string) error
 }
 
+// History lists the saved summary snapshots whose key starts with prefix, newest
+// first, returning at most limit entries (0 means no limit). Unreadable or
+// unusable records are reported as skipped. When retention.Limit is positive,
+// entries beyond that limit are planned for pruning, and deleted only when pruning is both requested and confirmed.
 func (service HistoryService) History(ctx context.Context, prefix string, limit int, retention contract.HistoryRetentionOptions) (contract.HistoryResult, error) {
 	result := contract.HistoryResult{
 		OK:       false,
@@ -61,6 +67,9 @@ func (service HistoryService) History(ctx context.Context, prefix string, limit 
 	return result, nil
 }
 
+// ApplyRetention plans retention over result's entries and records it in
+// result.Retention. Candidate keys are deleted only when pruning is both
+// requested and confirmed, and each key is read before it is deleted.
 func (service HistoryService) ApplyRetention(ctx context.Context, result *contract.HistoryResult, options contract.HistoryRetentionOptions) error {
 	keys := make([]string, 0, len(result.Entries))
 	for _, entry := range result.Entries {
@@ -98,6 +107,9 @@ func (service HistoryService) ApplyRetention(ctx context.Context, result *contra
 	return nil
 }
 
+// Compare reads the baseline and candidate summary snapshots and compares them.
+// A regression is reported when the candidate's elapsed time grows by more than
+// maxElapsedRegressionPct percent. Invalid keys or unreadable snapshots return an error.
 func (service HistoryService) Compare(baselineKey, candidateKey string, maxElapsedRegressionPct float64) (contract.CompareResult, error) {
 	result := domain.NewCompareResult(baselineKey, candidateKey, maxElapsedRegressionPct, service.StateDir())
 	if err := domain.ValidateComparisonRequest(baselineKey, candidateKey, maxElapsedRegressionPct); err != nil {

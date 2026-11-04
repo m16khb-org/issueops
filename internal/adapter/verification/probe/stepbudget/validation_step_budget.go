@@ -1,3 +1,5 @@
+// Package stepbudget is the self-verification probe that checks the self-verify
+// step budget comparison against fixed baseline and candidate snapshots.
 package stepbudget
 
 import (
@@ -18,14 +20,17 @@ import (
 const aggregateOutputBudgetBytes = 8 * 1024
 const commandOutputBudgetBytes = 32 * 1024
 
-type CommandRunner func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) verifycontract.StepResult
-type SnapshotWriter func(dir, key string, snapshot augmentcontract.StateSnapshot) error
+type commandRunner func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) verifycontract.StepResult
+type snapshotWriter func(dir, key string, snapshot augmentcontract.StateSnapshot) error
 
+// ValidationDeps holds the injectable side effects of the step budget baseline
+// check. WriteSnapshot is required; MakeTempState, RemoveAll and Run default to
+// real implementations.
 type ValidationDeps struct {
 	MakeTempState func(seed int64) (string, error)
 	RemoveAll     func(path string) error
-	WriteSnapshot SnapshotWriter
-	Run           CommandRunner
+	WriteSnapshot snapshotWriter
+	Run           commandRunner
 }
 
 func (deps ValidationDeps) withDefaults() ValidationDeps {
@@ -41,6 +46,10 @@ func (deps ValidationDeps) withDefaults() ValidationDeps {
 	return deps
 }
 
+// ValidateStepBudgetBaselineWithDeps writes baseline and candidate self-verify
+// snapshots into a temporary state directory seeded by seed, runs
+// `binary self-verify compare` over them, and validates the comparison result.
+// It fails when deps.WriteSnapshot is nil.
 func ValidateStepBudgetBaselineWithDeps(binary, root string, seed int64, deps ValidationDeps) verifycontract.StepResult {
 	deps = deps.withDefaults()
 	if deps.WriteSnapshot == nil {
@@ -54,7 +63,7 @@ func ValidateStepBudgetBaselineWithDeps(binary, root string, seed int64, deps Va
 	defer func() { _ = deps.RemoveAll(tempState) }()
 	baselineKey := fmt.Sprintf("self-verify-budget-baseline-%d", seed)
 	candidateKey := fmt.Sprintf("self-verify-budget-candidate-%d", seed)
-	baselineSummary, candidateSummary := BaselineSummaries(seed)
+	baselineSummary, candidateSummary := baselineSummaries(seed)
 	for _, fixture := range []struct {
 		key     string
 		summary augmentcontract.Summary
@@ -62,7 +71,7 @@ func ValidateStepBudgetBaselineWithDeps(binary, root string, seed int64, deps Va
 		{key: baselineKey, summary: baselineSummary},
 		{key: candidateKey, summary: candidateSummary},
 	} {
-		if err := deps.WriteSnapshot(tempState, fixture.key, StateSnapshot(root, seed, fixture.summary)); err != nil {
+		if err := deps.WriteSnapshot(tempState, fixture.key, stateSnapshot(root, seed, fixture.summary)); err != nil {
 			return verifydomain.FailedStep("step budget baseline", err)
 		}
 	}
@@ -78,7 +87,7 @@ func ValidateStepBudgetBaselineWithDeps(binary, root string, seed int64, deps Va
 	if err := json.Unmarshal([]byte(compareStep.Stdout), &result); err != nil {
 		return verifydomain.AssertionStepWithOutput("step budget baseline", time.Since(started).Milliseconds(), []string{err.Error()}, stdoutParts, commands, aggregateOutputBudgetBytes)
 	}
-	errs := ValidationErrors(result)
+	errs := validationErrors(result)
 	if len(errs) > 0 {
 		return verifydomain.AssertionStepWithOutput("step budget baseline", time.Since(started).Milliseconds(), errs, stdoutParts, commands, aggregateOutputBudgetBytes)
 	}
@@ -94,7 +103,7 @@ func ValidateStepBudgetBaselineWithDeps(binary, root string, seed int64, deps Va
 	}
 }
 
-func BaselineSummaries(seed int64) (augmentcontract.Summary, augmentcontract.Summary) {
+func baselineSummaries(seed int64) (augmentcontract.Summary, augmentcontract.Summary) {
 	baselineSummary := augmentcontract.Summary{
 		TotalRuns:   10,
 		TotalSteps:  20,
@@ -116,7 +125,7 @@ func BaselineSummaries(seed int64) (augmentcontract.Summary, augmentcontract.Sum
 	return baselineSummary, candidateSummary
 }
 
-func StateSnapshot(root string, seed int64, summary augmentcontract.Summary) augmentcontract.StateSnapshot {
+func stateSnapshot(root string, seed int64, summary augmentcontract.Summary) augmentcontract.StateSnapshot {
 	return augmentcontract.StateSnapshot{
 		SchemaVersion: 1,
 		Kind:          augmentdomain.SelfVerificationSummaryKind,
@@ -133,7 +142,7 @@ func StateSnapshot(root string, seed int64, summary augmentcontract.Summary) aug
 	}
 }
 
-func ValidationErrors(result augmentcontract.CompareResult) []string {
+func validationErrors(result augmentcontract.CompareResult) []string {
 	errs := []string{}
 	if !result.OK || !result.Regressed {
 		errs = append(errs, "step budget compare did not report a regression")

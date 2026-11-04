@@ -3,6 +3,7 @@ package policy
 import policydomain "issueops/internal/domain/policy"
 import policycontract "issueops/internal/contract/policy"
 
+// CommandPolicySummary returns the JSON-ready description of the command policy: modes, timeouts, required fields, default denials, read-only examples, catalog and tiers.
 func CommandPolicySummary() map[string]any {
 	return map[string]any{
 		"ok":                    true,

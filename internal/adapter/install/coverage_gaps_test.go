@@ -28,7 +28,7 @@ func TestBuildGenerationFromSettingsReadsRevisionAndDirtyFlag(t *testing.T) {
 		{Key: "vcs.revision", Value: "  abc123  "},
 		{Key: "vcs.modified", Value: " true "},
 	})
-	if got != (NativeBuildGeneration{Revision: "abc123", Modified: true}) {
+	if got != (nativeBuildGeneration{Revision: "abc123", Modified: true}) {
 		t.Fatalf("generation = %+v", got)
 	}
 	clean := buildGenerationFromSettings([]debug.BuildSetting{{Key: "vcs.revision", Value: "abc"}, {Key: "vcs.modified", Value: "false"}})
@@ -41,16 +41,16 @@ func TestBuildGenerationFromSettingsReadsRevisionAndDirtyFlag(t *testing.T) {
 }
 
 func TestGenerationStringsStayEmptyUnlessObserved(t *testing.T) {
-	if got := observedGenerationString(NativeBuildGeneration{}); got != "" {
+	if got := observedGenerationString(nativeBuildGeneration{}); got != "" {
 		t.Fatalf("unobserved = %q, want empty", got)
 	}
-	if got := observedGenerationString(NativeBuildGeneration{Revision: "0123456789abcdef", Modified: true}); got != "0123456789ab+dirty" {
+	if got := observedGenerationString(nativeBuildGeneration{Revision: "0123456789abcdef", Modified: true}); got != "0123456789ab+dirty" {
 		t.Fatalf("observed = %q", got)
 	}
 	if got := FileBuildGenerationString(filepath.Join(t.TempDir(), "missing")); got != "" {
 		t.Fatalf("unreadable file = %q, want empty", got)
 	}
-	if got, want := RunningBuildGenerationString(), observedGenerationString(RunningBuildGeneration()); got != want {
+	if got, want := RunningBuildGenerationString(), observedGenerationString(runningBuildGeneration()); got != want {
 		t.Fatalf("running string = %q, want %q", got, want)
 	}
 }
@@ -168,7 +168,7 @@ func TestValidateStableNativeRuntimeBoundaries(t *testing.T) {
 		"the parent of the root":               base,
 		"empty path":                           "",
 	} {
-		if err := ValidateStableNativeRuntime(root, bin); err == nil || !strings.Contains(err.Error(), "stay inside the stable source root") {
+		if err := validateStableNativeRuntime(root, bin); err == nil || !strings.Contains(err.Error(), "stay inside the stable source root") {
 			t.Errorf("%s: error = %v", name, err)
 		}
 	}
@@ -176,7 +176,7 @@ func TestValidateStableNativeRuntimeBoundaries(t *testing.T) {
 		"the root itself":      root,
 		"a nested custom path": filepath.Join(root, "tools", "nested", "issueops"),
 	} {
-		if err := ValidateStableNativeRuntime(root, bin); err != nil {
+		if err := validateStableNativeRuntime(root, bin); err != nil {
 			t.Errorf("%s rejected: %v", name, err)
 		}
 	}
@@ -184,7 +184,7 @@ func TestValidateStableNativeRuntimeBoundaries(t *testing.T) {
 	badRoot := filepath.Join(base, "bad")
 	mustMkdir(t, badRoot)
 	mustWrite(t, filepath.Join(badRoot, ".git"), "garbage\n")
-	if err := ValidateStableNativeRuntime(badRoot, filepath.Join(badRoot, "bin", "issueops")); err == nil || !strings.Contains(err.Error(), "gitdir metadata is malformed") {
+	if err := validateStableNativeRuntime(badRoot, filepath.Join(badRoot, "bin", "issueops")); err == nil || !strings.Contains(err.Error(), "gitdir metadata is malformed") {
 		t.Fatalf("unresolvable root must surface its resolution error: %v", err)
 	}
 }

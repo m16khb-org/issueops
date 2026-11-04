@@ -1,3 +1,5 @@
+// Package judgement holds the domain rules for host-agent judgement prompts
+// and for strictly decoding their structured JSON results.
 package judgement
 
 import (
@@ -13,6 +15,9 @@ import (
 	"issueops/internal/domain/prompt"
 )
 
+// BuildJSONSchemaSection renders the prompt section instructing the host agent
+// to answer with exactly one JSON object. Non-empty fieldTypes become schema
+// bullet lines and a non-empty example is appended after them.
 func BuildJSONSchemaSection(example string, fieldTypes []string) prompt.DataSection {
 	lines := []string{
 		"Return exactly one JSON object matching this response schema.",

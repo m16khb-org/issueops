@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// ValidateArtifactURL requires artifactURL to be a canonical HTTPS pull request (github) or merge request (gitlab) URL for provider and kind.
 func ValidateArtifactURL(artifactURL, provider, kind string) error {
 	if artifactURL == "" {
 		return fmt.Errorf("remote artifact url is required")
@@ -18,7 +19,7 @@ func ValidateArtifactURL(artifactURL, provider, kind string) error {
 		return fmt.Errorf("remote artifact url must be a canonical HTTPS URL")
 	}
 	hostname := strings.ToLower(parsed.Hostname())
-	parts := SplitURLPath(strings.ToLower(parsed.EscapedPath()))
+	parts := splitURLPath(strings.ToLower(parsed.EscapedPath()))
 	switch provider + ":" + kind {
 	case "github:pr":
 		if !isGitHubItemPath(parts, "pull") {
@@ -34,10 +35,10 @@ func ValidateArtifactURL(artifactURL, provider, kind string) error {
 	return nil
 }
 
-// ValidProjectKey reports whether a caller-supplied project key has the shape
+// validProjectKey reports whether a caller-supplied project key has the shape
 // ProjectKey produces: a lowercase host followed by at least one path segment,
 // with no scheme, whitespace, or control characters.
-func ValidProjectKey(key string) bool {
+func validProjectKey(key string) bool {
 	key = strings.TrimSpace(key)
 	if key == "" || key != strings.ToLower(key) || strings.ContainsAny(key, "\x00\r\n\t :?#") {
 		return false
@@ -45,7 +46,7 @@ func ValidProjectKey(key string) bool {
 	if strings.HasPrefix(key, "/") || strings.HasSuffix(key, "/") || strings.Contains(key, "//") {
 		return false
 	}
-	parts := SplitURLPath(key)
+	parts := splitURLPath(key)
 	if len(parts) < 2 {
 		return false
 	}

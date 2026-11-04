@@ -9,6 +9,9 @@ import (
 	doctordomain "issueops/internal/domain/doctor"
 )
 
+// Effects groups the side-effecting lookups the doctor service needs. The
+// composition root fills every field; the service never touches the filesystem,
+// clock, or processes directly.
 type Effects struct {
 	NormalizeRoot      func(string) (string, error)
 	StateDir           func() string
@@ -24,6 +27,7 @@ type Effects struct {
 	Now                func() time.Time
 }
 
+// Service runs the harness doctor using its Effects.
 type Service struct{ Effects Effects }
 
 func severityRank(severity string) int {

@@ -7,12 +7,19 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
+// IssueGraphSyncPlan is the decision for syncing the issue graph to the
+// remote issue: a dry-run preview, a no-op, or the provider, URL, and comment
+// body to publish, with the number of links it covers.
 type IssueGraphSyncPlan struct {
 	Preview, Noop                bool
 	Provider, URL, Body, Message string
 	LinkCount                    int
 }
 
+// PlanIssueGraphSync decides how to sync the issue links of record to its
+// remote issue. Without confirm it returns a dry-run preview. With confirm it
+// requires an issue URL and a GitHub or GitLab provider, returns a no-op when
+// there are no links, and otherwise returns the rendered comment body.
 func PlanIssueGraphSync(record model.Record, confirm bool) (IssueGraphSyncPlan, error) {
 	if !confirm {
 		return IssueGraphSyncPlan{Preview: true, LinkCount: len(record.IssueLinks), Message: fmt.Sprintf("[dry-run] would sync %d issue graph links to remote issue %s", len(record.IssueLinks), record.IssueURL)}, nil
@@ -31,7 +38,7 @@ func PlanIssueGraphSync(record model.Record, confirm bool) (IssueGraphSyncPlan, 
 	if provider != "github" && provider != "gitlab" {
 		return IssueGraphSyncPlan{}, fmt.Errorf("sync not supported for provider %q", provider)
 	}
-	rendered := RenderIssueGraphComment(record)
+	rendered := renderIssueGraphComment(record)
 	count := 0
 	for line := range strings.SplitSeq(rendered, "\n") {
 		if strings.HasPrefix(strings.TrimSpace(line), "- **") {
@@ -41,9 +48,9 @@ func PlanIssueGraphSync(record model.Record, confirm bool) (IssueGraphSyncPlan, 
 	return IssueGraphSyncPlan{Provider: provider, URL: url, Body: rendered, LinkCount: count}, nil
 }
 
-// RenderIssueGraphComment lists the cycle's typed issue links for readers of
+// renderIssueGraphComment lists the cycle's typed issue links for readers of
 // the parent issue, in Korean and without harness values (#513).
-func RenderIssueGraphComment(record model.Record) string {
+func renderIssueGraphComment(record model.Record) string {
 	var body strings.Builder
 	body.WriteString("## 관련 이슈\n\n")
 	for _, link := range record.IssueLinks {

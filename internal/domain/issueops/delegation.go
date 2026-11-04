@@ -8,6 +8,10 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
+// ChildStartMissingPreconditions lists the gates that block starting a child
+// cycle: the parent is in implement with approved architecture,
+// compatibility, and devil-advocate reviews, it is not itself a child, and
+// the child branch differs from the parent branch.
 func ChildStartMissingPreconditions(parent model.Record, req model.ChildStartRequest) []string {
 	var missing []string
 	if parent.Phase != model.PhaseImplement {
@@ -43,6 +47,11 @@ func parentDevilsAdvocateMissing(parent model.Record) bool {
 // plan and architecture were not reviewed, so the digest gates do not apply.
 const ParentReviewPattern = "delegated-parent-review"
 
+// BuildDelegatedProfile fills child with the delegation contract and the
+// inherited planning state from parent: intent, domain review, waived plan
+// preparation, a scope decision, the issue URL (falling back to the parent),
+// and approved copies of the parent architecture and compatibility reviews.
+// It returns the changed child record.
 func BuildDelegatedProfile(parent, child model.Record, req model.ChildStartRequest, now string) model.Record {
 	taskScope := strings.TrimSpace(req.TaskScope)
 	acceptance := cleanDelegationValues(req.AcceptanceCriteria)
@@ -117,7 +126,7 @@ func BuildDelegatedProfile(parent, child model.Record, req model.ChildStartReque
 	return child
 }
 
-func NewChildReference(child model.Record, req model.ChildStartRequest, now string) model.ChildCycleRef {
+func newChildReference(child model.Record, req model.ChildStartRequest, now string) model.ChildCycleRef {
 	return model.ChildCycleRef{
 		CycleID:       child.ID,
 		Branch:        child.Branch,
@@ -138,6 +147,8 @@ func cleanDelegationValues(values []string) []string {
 	return out
 }
 
+// PrepareChildStart trims the child start request and requires parent_id,
+// branch, task_scope, and at least one acceptance criterion.
 func PrepareChildStart(req model.ChildStartRequest) (model.ChildStartRequest, error) {
 	req.ParentID = strings.TrimSpace(req.ParentID)
 	if req.ParentID == "" {
@@ -160,6 +171,8 @@ func PrepareChildStart(req model.ChildStartRequest) (model.ChildStartRequest, er
 	return req, nil
 }
 
+// ValidateChildMutation rejects changes to a child while a cleanup attempt or
+// an abandon apply is in progress.
 func ValidateChildMutation(child model.Record) error {
 	if err := RequireNoCleanupAttempt(child.CleanupAttempt); err != nil {
 		return err
@@ -170,8 +183,11 @@ func ValidateChildMutation(child model.Record) error {
 	return nil
 }
 
+// RegisterChildReference adds a reference to child on parent. When the parent
+// already indexes the child, the entry is replaced only if the child record
+// is newer; the bool reports whether the parent index changed.
 func RegisterChildReference(parent, child model.Record, req model.ChildStartRequest, now string) (model.Record, model.ChildCycleRef, bool) {
-	ref := NewChildReference(child, req, now)
+	ref := newChildReference(child, req, now)
 	for i, existing := range parent.ChildCycles {
 		if existing.CycleID != ref.CycleID {
 			continue

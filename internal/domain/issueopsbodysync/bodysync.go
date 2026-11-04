@@ -36,11 +36,11 @@ const (
 	completionStart     = "<!-- issueops:completion:start -->"
 	completionEnd       = "<!-- issueops:completion:end -->"
 
-	// RegionDevilsAdvocate, RegionCompletion and RegionIssueCreate name the
+	// regionDevilsAdvocate, RegionCompletion and regionIssueCreate name the
 	// managed regions in preview output and durable evidence.
-	RegionDevilsAdvocate = "issueops:devils-advocate"
+	regionDevilsAdvocate = "issueops:devils-advocate"
 	RegionCompletion     = "issueops:completion"
-	RegionIssueCreate    = "issueops:issue-create"
+	regionIssueCreate    = "issueops:issue-create"
 )
 
 // issueCreateMarker matches the durable marker that reconcile-issue uses to
@@ -79,7 +79,7 @@ func ManagedRegions(live string) []contract.Region {
 	for _, delimited := range []struct {
 		name, start, end string
 	}{
-		{RegionDevilsAdvocate, devilsAdvocateStart, devilsAdvocateEnd},
+		{regionDevilsAdvocate, devilsAdvocateStart, devilsAdvocateEnd},
 		{RegionCompletion, completionStart, completionEnd},
 	} {
 		s := strings.Index(live, delimited.start)
@@ -98,7 +98,7 @@ func ManagedRegions(live string) []contract.Region {
 	if at := issueCreateMarker().FindStringIndex(live); at != nil {
 		found = append(found, located{
 			at:     at[0],
-			region: contract.Region{Name: RegionIssueCreate, Block: live[at[0]:at[1]]},
+			region: contract.Region{Name: regionIssueCreate, Block: live[at[0]:at[1]]},
 		})
 	}
 	for i := 1; i < len(found); i++ {
@@ -118,7 +118,7 @@ func ManagedRegions(live string) []contract.Region {
 // The proposal owns the authored content and nothing else: a proposal that
 // already carries a managed marker is refused, because hand-authored managed
 // blocks would duplicate or contradict the ones the harness maintains.
-func Merge(live, proposed string) (string, []contract.Region, error) {
+func merge(live, proposed string) (string, []contract.Region, error) {
 	if err := ValidateProposal(proposed); err != nil {
 		return "", nil, err
 	}
@@ -153,13 +153,13 @@ func containsManagedMarker(body string) bool {
 	return issueCreateMarker().MatchString(body)
 }
 
-// ClassifyDrift compares the body the harness last recorded, the body living on
+// classifyDrift compares the body the harness last recorded, the body living on
 // the provider, and the body a write would produce.
 //
 // A recorded digest that no longer matches the provider means somebody edited
 // the artifact outside the harness, and that verdict outranks staleness: the
 // operator has to see the outside edit before anything overwrites it.
-func ClassifyDrift(recordedSHA, liveSHA, mergedSHA string) contract.Drift {
+func classifyDrift(recordedSHA, liveSHA, mergedSHA string) contract.Drift {
 	recordedSHA = strings.TrimSpace(recordedSHA)
 	if recordedSHA != "" && recordedSHA != liveSHA {
 		return contract.DriftRemoteEdited
@@ -173,7 +173,7 @@ func ClassifyDrift(recordedSHA, liveSHA, mergedSHA string) contract.Drift {
 // BuildPlan is the single comparison both preview and confirm run, so the body
 // an operator reviews is byte-identical to the body a confirm would write.
 func BuildPlan(recordedSHA, live, proposed string) (contract.Plan, error) {
-	merged, regions, err := Merge(live, proposed)
+	merged, regions, err := merge(live, proposed)
 	if err != nil {
 		return contract.Plan{}, err
 	}
@@ -188,7 +188,7 @@ func BuildPlan(recordedSHA, live, proposed string) (contract.Plan, error) {
 		// recorded write (plan review, completion): not an outside edit.
 		recorded = plan.RemoteBodySHA256
 	}
-	plan.Drift = ClassifyDrift(recorded, plan.RemoteBodySHA256, plan.MergedBodySHA256)
+	plan.Drift = classifyDrift(recorded, plan.RemoteBodySHA256, plan.MergedBodySHA256)
 	for _, region := range regions {
 		plan.PreservedSections = append(plan.PreservedSections, region.Name)
 	}
@@ -200,7 +200,7 @@ func BuildPlan(recordedSHA, live, proposed string) (contract.Plan, error) {
 // published body the baseline digest covers.
 func withoutHarnessSections(live string, regions []contract.Region) string {
 	for _, region := range regions {
-		if region.Name != RegionIssueCreate {
+		if region.Name != regionIssueCreate {
 			live = strings.Replace(live, region.Block, "", 1)
 		}
 	}

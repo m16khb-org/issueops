@@ -5,6 +5,9 @@ import (
 	"strings"
 )
 
+// ValidateUpdatedDocumentPath checks a doc listed as updated: relative is its
+// worktree-relative path (empty means outside the worktree), and changed says whether
+// it is in the current change set.
 func ValidateUpdatedDocumentPath(input, relative string, changed bool) error {
 	if relative == "" {
 		return fmt.Errorf("project docs review path %q must be inside the worktree", input)
@@ -15,6 +18,9 @@ func ValidateUpdatedDocumentPath(input, relative string, changed bool) error {
 	return nil
 }
 
+// ValidateReviewedDocumentPath checks a doc listed as reviewed: it must be inside the
+// worktree, be AGENTS.md or under .issueops/, not be cycle material, and rootAvailable
+// must be true so existence can be verified.
 func ValidateReviewedDocumentPath(input, relative string, rootAvailable bool) error {
 	if relative == "" {
 		return fmt.Errorf("project docs review reviewed path %q must be inside the worktree", input)
@@ -34,6 +40,7 @@ func ValidateReviewedDocumentPath(input, relative string, rootAvailable bool) er
 	return nil
 }
 
+// ValidateReviewedDocumentExists rejects a reviewed doc path that is not an existing file.
 func ValidateReviewedDocumentExists(relative string, exists bool) error {
 	if !exists {
 		return fmt.Errorf("project docs review reviewed path %s does not exist as a file", relative)

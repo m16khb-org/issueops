@@ -47,6 +47,9 @@ type ompMCPServer struct {
 	Cwd     string   `json:"cwd"`
 }
 
+// NewOmpRunner returns an OmpRunner that serves the probe through harnessBinary and loads lifecycleExtension in the session.
+// canonicalExtension maps the extension path to its canonical form for validation.
+// Nil members of deps are replaced by the real process, clock, and filesystem implementations.
 func NewOmpRunner(harnessBinary, lifecycleExtension string, deps Dependencies, canonicalExtension func(string) string) OmpRunner {
 	return OmpRunner{canonicalExtension: canonicalExtension,
 		harnessBinary:      harnessBinary,
@@ -55,8 +58,10 @@ func NewOmpRunner(harnessBinary, lifecycleExtension string, deps Dependencies, c
 	}
 }
 
+// Name returns the host name, "omp", used in reports and evidence sources.
 func (OmpRunner) Name() string { return "omp" }
 
+// Preflight reports whether the omp executable is installed, its auth can be copied, and a version probe succeeds in an isolated environment.
 func (r OmpRunner) Preflight(ctx context.Context, request port.HostProbeRequest) (result port.HostProbePreflight) {
 	result = port.HostProbePreflight{
 		Host:           r.Name(),
@@ -101,10 +106,10 @@ func (r OmpRunner) Preflight(ctx context.Context, request port.HostProbeRequest)
 		result.Code = "auth_copy_failed"
 		return result
 	}
-	output, err := r.deps.Process.Run(ctx, CommandRequest{
+	output, err := r.deps.Process.Run(ctx, commandRequest{
 		Argv:    []string{executable, "--version"},
 		Env:     isolatedOmpEnv(r.deps, root),
-		Timeout: VersionTimeout,
+		Timeout: versionTimeout,
 	})
 	if err != nil || output.ExitCode != 0 {
 		result.Cause = "harness_environment"
@@ -147,6 +152,8 @@ func (r OmpRunner) resolveExecutable() (string, error) {
 	return executable, nil
 }
 
+// Run executes one probe episode in a private temporary root with a snapshot of the omp auth database and returns the observed call as a HostProbeResult.
+// Environment failures become failed results with a cause and code, not errors, and the private root is removed afterwards.
 func (r OmpRunner) Run(ctx context.Context, request port.HostProbeRequest) (result port.HostProbeResult) {
 	started := r.deps.Now()
 	targetTool, code := r.precheckRun(request)
@@ -186,11 +193,11 @@ func (r OmpRunner) Run(ctx context.Context, request port.HostProbeRequest) (resu
 	if err := prepareOmpEpisode(root, r.lifecycleExtension, targetTool, request, resultPath); err != nil {
 		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "episode_prepare_failed")
 	}
-	output, err := r.deps.Process.Run(ctx, CommandRequest{
+	output, err := r.deps.Process.Run(ctx, commandRequest{
 		Cwd:     root,
 		Argv:    ompArgv(executable, root, request),
 		Env:     isolatedOmpEnv(r.deps, root),
-		Timeout: EpisodeTimeout,
+		Timeout: episodeTimeout,
 		// omp emits the same pi agent event stream as Omo.
 		OmoJSONL: true,
 	})

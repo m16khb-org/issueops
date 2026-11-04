@@ -72,7 +72,7 @@ func TestStrictPRWithFetchAppliesChildGateWhenEitherMissingOrWarningsExist(t *te
 			locked, events := false, []string{}
 			ready, _ := readinessForEffects(t, &locked, &events)
 			ready.ChildMissing = func(string, model.Record) ([]string, []string) { return tc.missing, tc.warnings }
-			got := ready.StrictPRWithFetch("state", feedbackRecord(), ready.Git.Fetch)
+			got := ready.strictPRWithFetch("state", feedbackRecord(), ready.Git.Fetch)
 			if slices.Contains(got.Missing, "child_pr_open") != tc.wantMissing || slices.Contains(got.Warnings, "child #4 still open") != tc.wantWarnings {
 				t.Fatalf("missing=%v warnings=%v", got.Missing, got.Warnings)
 			}

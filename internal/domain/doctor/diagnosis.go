@@ -1,3 +1,8 @@
+// Package doctor is the domain layer of the harness doctor: it turns plain
+// observations of the repository and host (docs, runtime state, loops, pipe
+// capacity, MCP gateways, native hooks, binary freshness) into health checks
+// and issues with suggested fixes. It performs no I/O; adapters gather the
+// observations.
 package doctor
 
 import (
@@ -8,9 +13,16 @@ import (
 	contract "issueops/internal/contract/doctor"
 )
 
+// PipeCapacityWarningThreshold is the system pipe buffer size in bytes below
+// which doctor reports the pipe capacity as degraded.
 const PipeCapacityWarningThreshold = 8192
+
+// MCPGatewayFDWarningThreshold is the open file descriptor count at or above
+// which doctor warns that a loopback MCP gateway is under fd pressure.
 const MCPGatewayFDWarningThreshold = 512
 
+// Evaluate converts observation into checks and issues. The pipe and gateway
+// sections are skipped when their observation is nil.
 func Evaluate(observation Observations) Findings {
 	result := Findings{}
 	evaluateProjectDocs(&result, observation.Root, observation.ProjectDocs)
@@ -27,6 +39,8 @@ func Evaluate(observation Observations) Findings {
 	return result
 }
 
+// Healthy reports whether every check is healthy and no issue has error or
+// warning severity.
 func Healthy(checks []contract.HarnessDoctorCheck, issues []contract.HarnessDoctorIssue) bool {
 	for _, check := range checks {
 		if !check.Healthy {
@@ -152,6 +166,10 @@ func evaluateBinary(result *Findings, observation BinaryObservation) {
 	}
 }
 
+// EvaluateLifecycle reports the state of the repo-scoped project lifecycle
+// namespace for root. failed marks that resolving the plan itself failed,
+// which yields a single error issue; otherwise a missing or fingerprint-
+// mismatched namespace yields a warning or error with a fix command.
 func EvaluateLifecycle(root string, plan contract.ProjectLifecycleStatePlan, failed bool) Findings {
 	result := Findings{}
 	if failed {
@@ -174,6 +192,8 @@ func shellQuote(value string) string {
 	return "'" + strings.ReplaceAll(value, "'", "'\\''") + "'"
 }
 
+// IsUnexpectedStateArtifact reports whether an issue code names a stray file
+// or directory found in state storage.
 func IsUnexpectedStateArtifact(code string) bool {
 	return code == "unexpected_file" || code == "unexpected_directory"
 }

@@ -47,7 +47,7 @@ func TestExecutePreservesScopeWithOversizedSuccessAndFailureLogs(t *testing.T) {
 					return selfverify.StepResult{OK: ok, Command: "go vet ./...", Label: "vet", Error: "diagnostic", Stdout: strings.Repeat("x", 20000) + "output-end", Stderr: "stderr evidence"}
 				},
 			})
-			if step.OK != ok || !step.StdoutTruncated || len(step.Stdout) > AggregateOutputBudgetBytes || step.StdoutBytes <= AggregateOutputBudgetBytes {
+			if step.OK != ok || !step.StdoutTruncated || len(step.Stdout) > aggregateOutputBudgetBytes || step.StdoutBytes <= aggregateOutputBudgetBytes {
 				t.Fatalf("budget metadata: %+v", step)
 			}
 			for _, want := range []string{scope.BaseSHA, scope.HeadSHA, "output-end"} {
@@ -73,7 +73,7 @@ func TestExecuteScopeFailureSurvivesOversizedPlanAndCannotClaimSuccess(t *testin
 			return selfverify.StepResult{}
 		},
 	})
-	if step.OK || step.Error != "range unavailable" || !strings.Contains(step.Stdout, `"error":"range unavailable"`) || !step.StdoutTruncated || len(step.Stdout) > AggregateOutputBudgetBytes {
+	if step.OK || step.Error != "range unavailable" || !strings.Contains(step.Stdout, `"error":"range unavailable"`) || !step.StdoutTruncated || len(step.Stdout) > aggregateOutputBudgetBytes {
 		t.Fatalf("scope failure lost: %+v", step)
 	}
 }

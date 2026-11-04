@@ -7,6 +7,8 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
+// ValidateIssueReconcileIntent requires an issue create intent that is not
+// completed yet.
 func ValidateIssueReconcileIntent(intent *model.IssueCreateIntent) error {
 	if intent == nil {
 		return fmt.Errorf("no issue create intent to reconcile")
@@ -17,6 +19,8 @@ func ValidateIssueReconcileIntent(intent *model.IssueCreateIntent) error {
 	return nil
 }
 
+// ValidateIssueReconcileSearch requires the provider search for a created
+// issue to be complete and to find exactly one live candidate.
 func ValidateIssueReconcileSearch(truncated bool, count int) error {
 	if truncated {
 		return fmt.Errorf("create reconciliation search was truncated; uniqueness is indeterminate")
@@ -27,6 +31,9 @@ func ValidateIssueReconcileSearch(truncated bool, count int) error {
 	return nil
 }
 
+// ValidateIssueReconcileCandidate checks that a found issue is the one the
+// intent sealed: the project authority, the title, and the SHA-256 of the
+// body must all match.
 func ValidateIssueReconcileCandidate(intent model.IssueCreateIntent, authority, title, body string) error {
 	if authority == "" || authority != intent.ProjectAuthority {
 		return fmt.Errorf("issue create reconciliation candidate authority %q does not match sealed authority %q", authority, intent.ProjectAuthority)

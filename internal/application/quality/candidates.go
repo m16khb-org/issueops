@@ -6,6 +6,8 @@ import (
 	domain "issueops/internal/domain/qualitycatalog"
 )
 
+// CandidatesForPlan returns the quality-catalog candidates with the status and score of
+// the self-augment plan candidates applied on top of the catalog defaults.
 func CandidatesForPlan(plan []contract.Candidate) []catalog.Candidate {
 	projected := make([]catalog.Candidate, len(plan))
 	for i, candidate := range plan {

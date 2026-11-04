@@ -24,6 +24,10 @@ func ValidateCleanupOperationAccess(record model.Record, operation model.Cleanup
 	return nil
 }
 
+// ArmCleanup records attempt as the active cleanup attempt of record. It
+// validates the attempt, requires that no other cleanup operation owns the
+// cycle, blocks non-abandon operations while an abandon apply is in progress,
+// and rejects a reused attempt token.
 func ArmCleanup(record model.Record, attempt model.CleanupAttempt) (model.Record, error) {
 	if err := model.ValidateCleanupAttempt(&attempt); err != nil {
 		return record, err
@@ -42,6 +46,9 @@ func ArmCleanup(record model.Record, attempt model.CleanupAttempt) (model.Record
 	return record, nil
 }
 
+// ValidateCleanupOwner fails unless the record still holds exactly the
+// expected cleanup attempt with a non-empty token, so a stale executor cannot
+// continue.
 func ValidateCleanupOwner(record model.Record, expected model.CleanupAttempt) error {
 	if expected.Token == "" || record.CleanupAttempt == nil || *record.CleanupAttempt != expected {
 		return fmt.Errorf("cleanup attempt ownership changed")
@@ -49,6 +56,8 @@ func ValidateCleanupOwner(record model.Record, expected model.CleanupAttempt) er
 	return nil
 }
 
+// ReleaseCleanupAttempt clears the cleanup attempt of record and stamps now
+// as the update time.
 func ReleaseCleanupAttempt(record model.Record, now string) model.Record {
 	record.CleanupAttempt = nil
 	record.UpdatedAt = now

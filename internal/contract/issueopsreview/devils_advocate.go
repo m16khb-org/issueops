@@ -17,6 +17,8 @@ type DevilsAdvocateReview struct {
 	IssueReflectedAt   string                `json:"issue_reflected_at,omitempty"`
 }
 
+// DevilsAdvocateRound 타입은 재기록으로 대체된 이전 devil's advocate 검토
+// 기록이다.
 type DevilsAdvocateRound struct {
 	Verdict            string   `json:"verdict"`
 	Findings           []string `json:"findings,omitempty"`
@@ -30,6 +32,9 @@ type DevilsAdvocateRound struct {
 	RecordedAt         string   `json:"recorded_at"`
 }
 
+// DevilsAdvocateReviewRequest 타입은 devil's advocate 검토를 기록하려는
+// 호출자가 넘기는 입력이다. Reviewer* 필드는 검토를 실제로 수행한 호스트,
+// 모델, 노력 수준을 남기는 감사용 필드다.
 type DevilsAdvocateReviewRequest struct {
 	Verdict         string
 	Findings        []string

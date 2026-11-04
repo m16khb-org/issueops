@@ -1,3 +1,6 @@
+// Package gitworktree creates and verifies the canonical git worktree of an
+// issueops execution. It is an adapter-layer package that shells out to git
+// through injected functions.
 package gitworktree
 
 import (
@@ -14,11 +17,18 @@ import (
 	"issueops/internal/port"
 )
 
+// Provisioner prepares the canonical git worktree for an execution by running
+// git through GitCmd (exit code, stdout, stderr) and GitOut (stdout, empty on
+// failure).
 type Provisioner struct {
 	GitCmd func(string, ...string) (int, string, string)
 	GitOut func(string, ...string) string
 }
 
+// ProbeAccess checks that the canonical worktree base directory can be created
+// and written, removing a base it created for the probe. When access is denied
+// the result carries a relaunch command for host, which must be a supported
+// native actor host.
 func (p Provisioner) ProbeAccess(ctx context.Context, req port.ExecutionWorkspaceRequest, host string) (port.ExecutionWorkspaceAccessResult, error) {
 	if err := ctx.Err(); err != nil {
 		return port.ExecutionWorkspaceAccessResult{}, err
@@ -46,6 +56,11 @@ func (p Provisioner) ProbeAccess(ctx context.Context, req port.ExecutionWorkspac
 	}, nil
 }
 
+// Prepare validates req and reports or creates the canonical worktree. An
+// existing worktree is checked against the expected branch and base head and
+// returned. Without req.Confirm nothing is created. With it, Prepare runs
+// `git worktree add` and rolls the worktree back, and a branch it created, if
+// the new worktree fails verification.
 func (p Provisioner) Prepare(ctx context.Context, req port.ExecutionWorkspaceRequest) (port.ExecutionWorkspaceReceipt, error) {
 	if err := ctx.Err(); err != nil {
 		return port.ExecutionWorkspaceReceipt{}, err

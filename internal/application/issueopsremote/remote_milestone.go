@@ -11,21 +11,23 @@ import (
 	"issueops/internal/port"
 )
 
-type MilestoneProviderResolver func(string) (port.IssueProviderMilestoneSetter, error)
+type milestoneProviderResolver func(string) (port.IssueProviderMilestoneSetter, error)
 
 // RemoteMilestoneService puts the cycle's issue or PR/MR on an existing
 // milestone on request. QA: asked to file an issue under milestone v1.1, an
 // agent ran raw `gh issue edit --milestone`. The milestone must already exist;
 // the provider refuses an unknown title and nothing is created.
 type RemoteMilestoneService struct {
-	records IssueRecordReader
-	resolve MilestoneProviderResolver
+	records issueRecordReader
+	resolve milestoneProviderResolver
 }
 
-func NewRemoteMilestoneService(records IssueRecordReader, resolve MilestoneProviderResolver) *RemoteMilestoneService {
+// NewRemoteMilestoneService 함수는 기록 조회와 provider 해석 함수를 묶어 서비스를 만든다.
+func NewRemoteMilestoneService(records issueRecordReader, resolve milestoneProviderResolver) *RemoteMilestoneService {
 	return &RemoteMilestoneService{records: records, resolve: resolve}
 }
 
+// SetMilestone 메서드는 on(issue 또는 PR/MR)을 이미 있는 마일스톤에 올린다. confirm이 false이면 미리보기만 한다.
 func (s *RemoteMilestoneService) SetMilestone(ctx context.Context, id, on, title string, confirm bool) (model.RemoteMilestoneResult, error) {
 	record, err := s.records.Read(ctx, id)
 	if err != nil {

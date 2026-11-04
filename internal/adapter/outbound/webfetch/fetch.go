@@ -21,6 +21,9 @@ type netHTTPClient struct {
 	client *http.Client
 }
 
+// NewHTTPClient 함수는 client의 복제본을 감싸 webfetchport.HTTPClient로 돌려준다. 복제본은
+// 리다이렉트를 따라가지 않고 마지막 응답을 그대로 돌려주므로, 리다이렉트 검증은 호출자가
+// 한다. 응답 본문은 호출자가 닫는다.
 func NewHTTPClient(client *http.Client) webfetchport.HTTPClient {
 	return netHTTPClient{client: cloneNoRedirectClient(client)}
 }
@@ -44,6 +47,9 @@ func (client netHTTPClient) Do(ctx context.Context, request webfetchport.HTTPReq
 	}, nil
 }
 
+// ParseRetryAfter 함수는 Retry-After 헤더 값을 대기 시간으로 바꾼다. 초 단위 정수와 HTTP
+// 날짜를 받아들이고, 비어 있거나 해석할 수 없으면 0을 돌려준다. 날짜가 과거이면 음수일 수
+// 있다.
 func ParseRetryAfter(value string) time.Duration {
 	value = strings.TrimSpace(value)
 	if value == "" {

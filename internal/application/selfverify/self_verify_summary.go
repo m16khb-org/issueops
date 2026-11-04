@@ -8,6 +8,9 @@ import (
 	domain "issueops/internal/domain/selfverify"
 )
 
+// SummarizeSelfVerification builds the Summary for result: step statistics, goal scores, coverage,
+// rerun commands and failure class for a failed run, and the failure cause from the failed steps'
+// evidence. It also finalizes minimum goal score and termination eligibility.
 func SummarizeSelfVerification(result augment.Result, targetScore float64) augment.Summary {
 	runs := make([]augmentdomain.SummaryRun, 0, len(result.Runs))
 	for _, run := range result.Runs {

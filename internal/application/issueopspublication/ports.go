@@ -6,10 +6,12 @@ import (
 	contract "issueops/internal/contract/issueopspublication"
 )
 
-type Preparer interface {
+type preparer interface {
 	Prepare(context.Context, contract.CreateCommand) (contract.PreparedCreate, error)
 }
 
+// Repository is the durable journal of publication intents: it begins an intent before the provider call,
+// records failures and completions afterward, and exposes the latest snapshot for reconcile and reporting.
 type Repository interface {
 	BeginCreate(context.Context, contract.PreparedCreate) (contract.Intent, error)
 	LoadIntent(context.Context, string) (contract.Intent, error)
@@ -20,12 +22,14 @@ type Repository interface {
 	Latest(context.Context, string) (contract.RecordSnapshot, error)
 }
 
+// Provider is the remote issue/PR host. Create performs the single remote create and reports whether the
+// invocation happened; Inspect lists remote candidates for an intent so reconcile can adopt one.
 type Provider interface {
 	Create(context.Context, string, contract.ProviderCreateRequest) (contract.ProviderCreateResult, contract.InvocationState, error)
 	Inspect(context.Context, contract.Intent) (contract.Inventory, bool, error)
 }
 
-type Verifier interface {
+type verifier interface {
 	VerifyCandidate(context.Context, contract.Intent, contract.Candidate) error
 	VerifyLive(context.Context, contract.Intent, string) error
 }

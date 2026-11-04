@@ -7,6 +7,8 @@ import (
 	installdomain "issueops/internal/domain/install"
 )
 
+// ListSkillNames returns the normalized names of the skills under root/skills; a directory counts only when it
+// contains a SKILL.md. It fails when the skills directory cannot be read.
 func ListSkillNames(root string) ([]string, error) {
 	entries, err := os.ReadDir(filepath.Join(root, "skills"))
 	if err != nil {

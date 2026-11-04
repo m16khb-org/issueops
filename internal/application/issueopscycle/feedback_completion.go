@@ -5,11 +5,11 @@ import (
 	reviewdomain "issueops/internal/domain/issueopsreview"
 )
 
-func FeedbackCompletionMissing(record model.Record) []string {
+func feedbackCompletionMissing(record model.Record) []string {
 	return reviewdomain.FeedbackCompletionMissing(feedbackSnapshots(record))
 }
 
-func HasUnresolvedContractFeedback(record model.Record) bool {
+func hasUnresolvedContractFeedback(record model.Record) bool {
 	return reviewdomain.HasUnresolvedContractFeedback(feedbackSnapshots(record))
 }
 

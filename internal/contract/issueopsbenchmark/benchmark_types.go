@@ -1,5 +1,7 @@
 package issueopsbenchmark
 
+// Artifact 타입은 benchmark 한 번의 실행(SUT)이 만들어낸 산출물 묶음이다.
+// 각 필드는 scorer가 fixture의 기대값과 비교하는 단계별 텍스트 증거다.
 type Artifact struct {
 	ProblemSummary         string `json:"problem_summary,omitempty"`
 	IssueDraft             string `json:"issue_draft,omitempty"`
@@ -27,6 +29,8 @@ type Artifact struct {
 	RoutingTrace []SkillRouting `json:"routing_trace,omitempty"`
 }
 
+// Fixture 타입은 benchmark 한 건의 입력과 기대값이다. 사용자 프롬프트와 repo
+// 맥락, 단계별 기대 키워드, 반드시 피해야 하는 치명적 실패를 담는다.
 type Fixture struct {
 	ID                      string         `json:"id"`
 	Title                   string         `json:"title"`

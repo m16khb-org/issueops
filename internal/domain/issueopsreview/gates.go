@@ -8,6 +8,9 @@ import (
 	issueopsdomain "issueops/internal/domain/issueops"
 )
 
+// ImplementationReviewMissing returns the gate key blocking implementation review, or
+// "" when it passes. No execution lease means no gate; otherwise the review must be
+// present, pass, and match currentFingerprint when one is known.
 func ImplementationReviewMissing(executionPresent bool, review reviewcontract.ReviewGateEvidence, currentFingerprint string) string {
 	if !executionPresent {
 		return ""
@@ -24,6 +27,8 @@ func ImplementationReviewMissing(executionPresent bool, review reviewcontract.Re
 	return ""
 }
 
+// ProjectDocsReviewMissing returns the gate key for a missing or stale project docs
+// review, or "" when it is present and matches currentFingerprint.
 func ProjectDocsReviewMissing(review reviewcontract.ReviewGateEvidence, currentFingerprint string) string {
 	if !review.Present {
 		return "project_docs_review"
@@ -34,6 +39,9 @@ func ProjectDocsReviewMissing(review reviewcontract.ReviewGateEvidence, currentF
 	return ""
 }
 
+// SchemaEvidenceMissing returns the gate key for missing or stale schema evidence, or
+// "" when satisfied. It applies only when the change touches schema; evidence needs
+// measurements and sources, or a waiver with a rationale.
 func SchemaEvidenceMissing(touchesSchema bool, evidence reviewcontract.SchemaGateEvidence, currentFingerprint string) string {
 	if !touchesSchema {
 		return ""
@@ -54,6 +62,7 @@ func SchemaEvidenceMissing(touchesSchema bool, evidence reviewcontract.SchemaGat
 	return ""
 }
 
+// ChangeSetTouchesSchema reports whether any changed path is a schema change.
 func ChangeSetTouchesSchema(changed []string) bool {
 	return slices.ContainsFunc(changed, issueopsdomain.PathIsSchemaChange)
 }

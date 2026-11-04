@@ -28,6 +28,11 @@ func VerifyHookActivation(path string, expected map[string]any) (string, error) 
 	return VerifyHookConfigActivation(actual, expected)
 }
 
+// VerifyHookConfigActivation checks the parsed installed hook config actual
+// against the expected catalog and returns the semantic SHA-256 of expected.
+// Every expected event must be present and carry exactly one canonical
+// issueops group; issueops groups on unexpected events are rejected, while
+// unrelated third-party hook groups are ignored.
 func VerifyHookConfigActivation(actual, expected map[string]any) (string, error) {
 	expectedHooks, ok := expected["hooks"].(map[string]any)
 	if !ok || len(expectedHooks) == 0 {
@@ -81,6 +86,8 @@ func verifyInstalledHookEvent(event string, groupsValue any, expectedHooks map[s
 	return nil
 }
 
+// SemanticSHA256 returns the hex SHA-256 of the JSON encoding of value. Map
+// keys marshal in sorted order, so equal structures hash equally.
 func SemanticSHA256(value any) (string, error) {
 	raw, err := json.Marshal(value)
 	if err != nil {
@@ -90,6 +97,10 @@ func SemanticSHA256(value any) (string, error) {
 	return hex.EncodeToString(sum[:]), nil
 }
 
+// CaptureNativeActivationEvidence reads the regular file at path once and
+// returns its SHA-256, mode, size and device/inode identity together with the
+// given host, surface and semanticSHA256. It fails if the file's identity
+// changes between the lstat and the open read.
 func CaptureNativeActivationEvidence(host, surface, path, semanticSHA256 string) (port.NativeActivationEvidence, error) {
 	path, err := filepath.Abs(path)
 	if err != nil {

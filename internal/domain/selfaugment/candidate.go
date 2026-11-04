@@ -1,7 +1,14 @@
+// Package selfaugment holds the pure domain rules of the self-augmentation and self-verification
+// loops: the candidate catalog and its scoring, goal and plan evaluation, lesson capture, summary
+// building, and history comparison and retention. It performs no I/O; application services supply
+// facts and persist the results.
 package selfaugment
 
 import contract "issueops/internal/contract/selfaugment"
 
+// MarkSatisfiedCandidate flips candidate to satisfied when signals prove the rule registered for
+// its ID holds. It records the evidence, zeroes the score so planners skip it, and appends a WhyNow
+// note; candidates without a matching rule or evidence are left untouched.
 func MarkSatisfiedCandidate(candidate *contract.Candidate, signals contract.RepoSignals) {
 	var evidence []string
 	for _, rule := range candidateSatisfactionRules() {
@@ -132,6 +139,8 @@ func evidenceWhen(ok bool, evidence ...string) []string {
 	return evidence
 }
 
+// CandidateScore returns the weighted priority of c on a 0-100 scale: impact 38%, feasibility 30%,
+// novelty 20% and inverse risk 12%, clamped to that range.
 func CandidateScore(c contract.Candidate) float64 {
 	score := c.Impact*0.38 + c.Feasibility*0.30 + c.Novelty*0.20 + (100-c.Risk)*0.12
 	if score > 100 {

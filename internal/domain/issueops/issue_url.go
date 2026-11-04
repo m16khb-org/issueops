@@ -6,6 +6,9 @@ import (
 	"strings"
 )
 
+// ValidateIssueURL requires an http(s) issue URL without a query or anchor
+// that points at an issue, not a pull or merge request, and whose issue
+// number is numeric.
 func ValidateIssueURL(issueURL string) error {
 	if issueURL == "" {
 		return fmt.Errorf("issue_url is required")

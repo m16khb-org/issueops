@@ -1,3 +1,6 @@
+// Package channel is the application service for session-to-session message
+// channels: it appends messages and receives them, optionally waiting until one
+// arrives or a timeout passes. Storage, ids, and time are injected effects.
 package channel
 
 import (
@@ -10,12 +13,13 @@ import (
 	channeldomain "issueops/internal/domain/channel"
 )
 
+// Writer appends messages to the channel store and prunes old ones.
 type Writer interface {
 	Write(channelcontract.Message) error
 	PruneBefore(time.Time) error
 }
 
-type Effects interface {
+type effects interface {
 	Open() (Writer, error)
 	NewID() string
 	Now() time.Time
@@ -25,8 +29,12 @@ type Effects interface {
 	MessagesAfter(ctx context.Context, since string) ([]channelcontract.Message, error)
 }
 
-type Service struct{ Effects Effects }
+// Service sends and receives channel messages through Effects.
+type Service struct{ Effects effects }
 
+// Send validates req, stores a new message, and returns it in the result. Errors
+// are also copied into result.Error. Pruning expired messages is best effort and
+// does not fail the send.
 func (service Service) Send(req channelcontract.SendRequest) (channelcontract.SendResult, error) {
 	req, err := channeldomain.NormalizeSend(req)
 	result := channelcontract.SendResult{SchemaVersion: channelcontract.SchemaVersion, Channel: req.Channel}
@@ -53,6 +61,10 @@ func (service Service) Send(req channelcontract.SendRequest) (channelcontract.Se
 	return result, nil
 }
 
+// Recv returns the stored messages after req's cursor. Without Wait it returns
+// what exists immediately. With Wait it polls until a message arrives or the
+// timeout elapses, in which case the result is OK with TimedOut set. Errors are
+// also copied into result.Error.
 func (service Service) Recv(ctx context.Context, req channelcontract.RecvRequest) (channelcontract.RecvResult, error) {
 	req, err := channeldomain.NormalizeRecv(req)
 	result := channelcontract.RecvResult{SchemaVersion: channelcontract.SchemaVersion, Channel: req.Channel, Messages: []channelcontract.Message{}}

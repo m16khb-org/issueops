@@ -5,6 +5,9 @@ import (
 	"strings"
 )
 
+// PathCandidates returns the path-like values inside one command argument: the
+// argument itself, or the value of a --flag=value form. URLs and remote
+// (user@host:path) forms are not paths and yield nil.
 func PathCandidates(arg string) []string {
 	arg = strings.TrimSpace(arg)
 	if arg == "" || looksLikeRemoteOrURL(arg) {

@@ -1,3 +1,9 @@
+// Package issueops holds the pure domain policy of an IssueOps cycle: phase
+// progression and readiness gates, branch and worktree preparation, execution
+// lease validation and replacement, child cycle delegation, and cleanup
+// previews. It depends only on the contract model and does no I/O: callers in
+// the application layer pass in observations (git, filesystem, provider) and
+// apply the returned records, missing-gate lists, and commands.
 package issueops
 
 import (
@@ -12,6 +18,9 @@ type CyclePathMatch struct {
 	Repository, Worktree bool
 }
 
+// SelectUmbrellaCycle returns the first open cycle whose repository matched
+// and that links childIssueURL as a child issue. Done cycles, non-repository
+// matches, and a blank URL yield false.
 func SelectUmbrellaCycle(matches []CyclePathMatch, childIssueURL string) (model.Record, bool) {
 	childIssueURL = strings.TrimSpace(childIssueURL)
 	if childIssueURL == "" {
@@ -31,8 +40,10 @@ func SelectUmbrellaCycle(matches []CyclePathMatch, childIssueURL string) (model.
 	return model.Record{}, false
 }
 
-// A linked worktree is more specific than a shared source checkout. Preserve
-// scan order when several records match the source repository.
+// SelectWorkspaceCycle returns the open cycle that owns the current
+// workspace. A linked worktree is more specific than a shared source
+// checkout, so a worktree match wins; otherwise the first repository match in
+// scan order is used. Done cycles are skipped.
 func SelectWorkspaceCycle(matches []CyclePathMatch) (model.Record, bool) {
 	var repoMatch model.Record
 	repoMatched := false
@@ -50,6 +61,9 @@ func SelectWorkspaceCycle(matches []CyclePathMatch) (model.Record, bool) {
 	return repoMatch, repoMatched
 }
 
+// PreparedCycleBase returns the trimmed base branch sealed by branch prepare.
+// The bool is false when the record has no preparation or its base branch is
+// blank.
 func PreparedCycleBase(record model.Record) (string, bool) {
 	if record.BranchPrepare == nil {
 		return "", false

@@ -1,5 +1,6 @@
 package trace
 
+// Input formats accepted by trace analysis; InputFormatIssueOps is the harness's own trace and the rest are host transcript formats.
 const (
 	InputFormatIssueOps     = "issueops"
 	InputFormatClaudeJSON   = "claude-stream"
@@ -9,11 +10,14 @@ const (
 	InputFormatOpencodeJSON = "opencode-json"
 )
 
+// Size limits for host transcript input: HostInputMaxBytes caps the whole input and HostLineMaxBytes a single line.
 const (
 	HostInputMaxBytes = 16 << 20
 	HostLineMaxBytes  = 1 << 20
 )
 
+// Usage report vocabularies: how completely the host reported usage (coverage), whether a sample is final,
+// whether counts are per-interval or running totals (temporality), and the basis of any cost figure.
 const (
 	UsageCoverageComplete = "complete"
 	UsageCoveragePartial  = "partial"

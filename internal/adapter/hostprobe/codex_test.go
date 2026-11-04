@@ -18,11 +18,11 @@ import (
 )
 
 type codexFakeProcess struct {
-	requests []CommandRequest
-	run      func(context.Context, CommandRequest) (CommandOutput, error)
+	requests []commandRequest
+	run      func(context.Context, commandRequest) (CommandOutput, error)
 }
 
-func (f *codexFakeProcess) Run(ctx context.Context, request CommandRequest) (CommandOutput, error) {
+func (f *codexFakeProcess) Run(ctx context.Context, request commandRequest) (CommandOutput, error) {
 	request.Argv = append([]string(nil), request.Argv...)
 	request.Env = append([]string(nil), request.Env...)
 	f.requests = append(f.requests, request)
@@ -35,7 +35,7 @@ func (f *codexFakeProcess) Run(ctx context.Context, request CommandRequest) (Com
 func TestCodexRunnerPreflightUsesSharedExecutableCheck(t *testing.T) {
 	t.Parallel()
 
-	process := &codexFakeProcess{run: func(_ context.Context, request CommandRequest) (CommandOutput, error) {
+	process := &codexFakeProcess{run: func(_ context.Context, request commandRequest) (CommandOutput, error) {
 		want := []string{"/opt/bin/codex", "--version"}
 		if !reflect.DeepEqual(request.Argv, want) {
 			t.Errorf("argv = %#v, want %#v", request.Argv, want)
@@ -84,7 +84,7 @@ func TestCodexRunnerRunUsesIsolatedProbe(t *testing.T) {
 	}
 	codexBinary := filepath.Join(parent, "codex")
 	var episodeRoot string
-	process := &codexFakeProcess{run: func(_ context.Context, request CommandRequest) (CommandOutput, error) {
+	process := &codexFakeProcess{run: func(_ context.Context, request commandRequest) (CommandOutput, error) {
 		episodeRoot = request.Cwd
 		if request.Cwd == parent || !strings.HasPrefix(filepath.Base(request.Cwd), "issueops-conformance-codex-") {
 			t.Errorf("cwd = %q, want a fresh Codex episode root", request.Cwd)
@@ -133,8 +133,8 @@ func TestCodexRunnerRunUsesIsolatedProbe(t *testing.T) {
 		if runtimeHome != filepath.Join(request.Cwd, "codex-home") || environmentValue(t, request.Env, "ISSUEOPS_CHILD_SMOKE_HOOKS") != "1" || environmentValue(t, request.Env, "PATH") != "/opt/bin" {
 			t.Errorf("env = %#v", request.Env)
 		}
-		if request.Timeout != EpisodeTimeout {
-			t.Errorf("timeout = %s, want %s", request.Timeout, EpisodeTimeout)
+		if request.Timeout != episodeTimeout {
+			t.Errorf("timeout = %s, want %s", request.Timeout, episodeTimeout)
 		}
 		if countCodexProbeOverrides(request.Argv) != 3 {
 			t.Errorf("probe overrides = %d, want 3", countCodexProbeOverrides(request.Argv))
@@ -188,7 +188,7 @@ func TestCodexRunnerNormalLiveCollectsCanonicalRuntimeEvidenceWithoutActivatedHo
 	request.HostVersion = "codex 1.2.3"
 	var episodeRoot string
 	now := time.Unix(100, 0)
-	process := &codexFakeProcess{run: func(_ context.Context, command CommandRequest) (CommandOutput, error) {
+	process := &codexFakeProcess{run: func(_ context.Context, command commandRequest) (CommandOutput, error) {
 		episodeRoot = command.Cwd
 		observationPath := environmentValue(t, command.Env, "ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE")
 		runtimeHome := environmentValue(t, command.Env, "CODEX_HOME")
@@ -253,7 +253,7 @@ func TestCodexRunnerCleanupFailureSuppressesSuccessfulEpisode(t *testing.T) {
 			}
 			return errors.New("sensitive cleanup detail")
 		},
-		Process: &codexFakeProcess{run: func(_ context.Context, command CommandRequest) (CommandOutput, error) {
+		Process: &codexFakeProcess{run: func(_ context.Context, command commandRequest) (CommandOutput, error) {
 			writeCodexCapture(t, filepath.Join(command.Cwd, "result.json"), request.RunToken)
 			writeChildSmokeHookMarkers(t, environmentValue(t, command.Env, "ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE"), request.Model)
 			return CommandOutput{Stdout: codexSuccessfulStream(request.Model)}, nil
@@ -292,7 +292,7 @@ func TestCodexRunnerRunModelSelection(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			parent := t.TempDir()
-			process := &codexFakeProcess{run: func(_ context.Context, request CommandRequest) (CommandOutput, error) {
+			process := &codexFakeProcess{run: func(_ context.Context, request commandRequest) (CommandOutput, error) {
 				observedModel := test.model
 				if observedModel == "" || observedModel == "default" {
 					observedModel = "gpt-default"

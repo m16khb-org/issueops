@@ -169,7 +169,7 @@ func mcpProjectPayloadText(t *testing.T, payload any) string {
 	return b
 }
 
-func textFromMCPToolOutcome(outcome MCPToolOutcome) (string, error) {
+func textFromMCPToolOutcome(outcome mcpToolOutcome) (string, error) {
 	b, err := jsonMarshalIndentForMCPProjectTest(outcome.Payload)
 	if err != nil {
 		return "", err

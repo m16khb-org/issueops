@@ -5,13 +5,17 @@ import (
 	domain "issueops/internal/domain/lintdiagnose"
 )
 
-type Effects interface {
+type effects interface {
 	NormalizeRoot(string) (string, error)
 	Run(root string, argv []string) (output string, exitCode int, failed bool)
 }
 
-type Service struct{ Effects Effects }
+// Service diagnoses failing commands using its Effects.
+type Service struct{ Effects effects }
 
+// Diagnose validates and runs req.CommandArgv in the normalized repo root. A
+// passing command returns without a prompt; a failing one carries the prompt
+// built from the output tail, and the host agent produces the actual diagnosis.
 func (service Service) Diagnose(req lintdiagnosecontract.Request) (lintdiagnosecontract.Result, error) {
 	root, err := service.Effects.NormalizeRoot(req.RepoRoot)
 	if err != nil {

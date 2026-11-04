@@ -8,9 +8,9 @@ import (
 	reviewport "issueops/internal/port/issueopsreview"
 )
 
-// Regress runs inside the caller's existing cycle lock and persists the entire
+// regress runs inside the caller's existing cycle lock and persists the entire
 // backward transition only after both cycle and child preconditions pass.
-func Regress(store reviewport.RegressStore, stateRoot, id, reason string) (model.Record, error) {
+func regress(store reviewport.RegressStore, stateRoot, id, reason string) (model.Record, error) {
 	reason, err := reviewdomain.NormalizeRegressionReason(reason)
 	if err != nil {
 		return model.Record{OK: false}, err

@@ -13,11 +13,13 @@ import (
 
 const nativeProcessProbeTimeout = 3 * time.Second
 
+// Native process statuses reported by InspectNativeProcessReceipt: live, dead, or an
+// identity mismatch when the PID now belongs to a different process.
 const (
 	NativeProcessStatusLive             = "live"
 	NativeProcessStatusDead             = "dead"
 	NativeProcessStatusIdentityMismatch = "identity-mismatch"
-	NativeProcessStatusUnknown          = "unknown"
+	nativeProcessStatusUnknown          = "unknown"
 )
 
 type workspaceProcess struct {
@@ -33,7 +35,7 @@ type nativeProcessSnapshotEntry struct {
 	Receipt   issueops.NativeProcessReceipt
 }
 
-// ObserveNativeProcessAncestry는 운영체제 프로세스 테이블 snapshot 하나를
+// ObserveNativeProcessAncestry 함수는 운영체제 프로세스 테이블 snapshot 하나를
 // 캡처해 pid와 그 뒤로 각 부모를 반환한다. 단일 snapshot은 hook이 durable
 // lease holder의 자손인지 판단하는 동안 PID/start/executable tuple을 내부적으로
 // 일관되게 유지한다.
@@ -126,10 +128,13 @@ func parseNativeProcessStart(value string) (time.Time, error) {
 	return time.Time{}, fmt.Errorf("invalid process start identity %q", value)
 }
 
+// InspectNativeProcessReceipt reports whether the process named by receipt is still the same
+// live process. It returns NativeProcessStatusLive with the freshly observed receipt, or Dead
+// or IdentityMismatch with an empty one; an unreadable identity is an error with unknown status.
 func InspectNativeProcessReceipt(receipt issueops.NativeProcessReceipt) (string, issueops.NativeProcessReceipt, error) {
 	alive, err := nativePIDAlive(receipt.PID)
 	if err != nil {
-		return NativeProcessStatusUnknown, issueops.NativeProcessReceipt{}, fmt.Errorf("inspect native process identity: %w", err)
+		return nativeProcessStatusUnknown, issueops.NativeProcessReceipt{}, fmt.Errorf("inspect native process identity: %w", err)
 	}
 	if !alive {
 		return NativeProcessStatusDead, issueops.NativeProcessReceipt{}, nil
@@ -140,7 +145,7 @@ func InspectNativeProcessReceipt(receipt issueops.NativeProcessReceipt) (string,
 		if retryErr == nil && !alive {
 			return NativeProcessStatusDead, issueops.NativeProcessReceipt{}, nil
 		}
-		return NativeProcessStatusUnknown, issueops.NativeProcessReceipt{}, fmt.Errorf("inspect live native process identity: %w", err)
+		return nativeProcessStatusUnknown, issueops.NativeProcessReceipt{}, fmt.Errorf("inspect live native process identity: %w", err)
 	}
 	if observed.StartedAt != receipt.StartedAt || observed.Executable != receipt.Executable {
 		return NativeProcessStatusIdentityMismatch, observed, nil
@@ -156,12 +161,12 @@ func inspectNativeProcessReceiptFromSnapshot(
 	if !ok {
 		alive, err := nativePIDAlive(receipt.PID)
 		if err != nil {
-			return NativeProcessStatusUnknown, issueops.NativeProcessReceipt{}, err
+			return nativeProcessStatusUnknown, issueops.NativeProcessReceipt{}, err
 		}
 		if !alive {
 			return NativeProcessStatusDead, issueops.NativeProcessReceipt{}, nil
 		}
-		return NativeProcessStatusUnknown, issueops.NativeProcessReceipt{},
+		return nativeProcessStatusUnknown, issueops.NativeProcessReceipt{},
 			fmt.Errorf("inspect live native process identity: pid %d is absent from process snapshot", receipt.PID)
 	}
 	observed := entry.Receipt

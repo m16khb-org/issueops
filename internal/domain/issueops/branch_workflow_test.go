@@ -208,7 +208,7 @@ func TestValidateRetargetArtifactDetectsConcurrentChange(t *testing.T) {
 	}
 	changed := model.RemoteArtifactVerification{URL: "u", Labels: []string{"b"}}
 	for name, observed := range map[string]*model.RemoteArtifactVerification{"nil": nil, "changed": &changed} {
-		if err := ValidateRetargetArtifact(observed, current); !errors.Is(err, ErrRetargetObservationStale) {
+		if err := ValidateRetargetArtifact(observed, current); !errors.Is(err, errRetargetObservationStale) {
 			t.Errorf("%s: %v", name, err)
 		}
 	}
@@ -246,7 +246,7 @@ func TestValidateRetargetOriginPrecedence(t *testing.T) {
 		switch {
 		case err == nil:
 			t.Errorf("%s: nil error", tc.name)
-		case tc.stale && !errors.Is(err, ErrRetargetObservationStale):
+		case tc.stale && !errors.Is(err, errRetargetObservationStale):
 			t.Errorf("%s: not stale: %v", tc.name, err)
 		case tc.cause != nil && !errors.Is(err, tc.cause):
 			t.Errorf("%s: cause lost: %v", tc.name, err)

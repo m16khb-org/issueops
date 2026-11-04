@@ -15,6 +15,8 @@ import (
 	"issueops/internal/port"
 )
 
+// RemoteBranchCleaner deletes the remote branch of a merged or superseded
+// cycle through preview, then apply under a cleanup attempt and lifetime.
 type RemoteBranchCleaner struct {
 	Records    port.CleanupRemoteBranchRecords
 	Acquire    func(context.Context, string) (CleanupLifetime, error)
@@ -23,6 +25,9 @@ type RemoteBranchCleaner struct {
 	Now        func() time.Time
 }
 
+// Run previews or applies a remote-branch cleanup for req.ID. An already
+// absent branch is idempotent; a present one is deleted with a lease on its
+// OID, and the attempt is released on every exit path.
 func (s RemoteBranchCleaner) Run(ctx context.Context, req model.CleanupRemoteBranchRequest) (model.CleanupRemoteBranchResult, error) {
 	failed := model.CleanupRemoteBranchResult{OK: false, ID: req.ID}
 	lifetime, err := s.Acquire(ctx, req.ID)

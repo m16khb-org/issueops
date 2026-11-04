@@ -15,6 +15,8 @@ import (
 	issueopsstatuscontract "issueops/internal/contract/issueopsstatus"
 )
 
+// Deps 타입은 IssueOps 하위 명령이 쓰는 상태 저장소 연산을 함수 필드로 모은다.
+// 테스트와 composition root가 구현을 바꿔 끼운다.
 type Deps struct {
 	AcceptIssueOpsChildWithActor                func(stateRoot, parentID, childID string, evidence []string, actor issueopscontract.Actor) (issueopscontract.ChildValidationResult, error)
 	AddIssueOpsDecisionWithActor                func(stateRoot, id string, req issueopsdecisioncontract.Request, actor issueopscontract.Actor) (issueopscontract.Record, error)

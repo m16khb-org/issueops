@@ -6,13 +6,16 @@ import (
 	contract "issueops/internal/contract/issueopsbenchmark"
 )
 
+// FinalizeRun fills the derived fields of result from its scores: fixture and
+// critical failure counts, average and minimum score, and OK, which holds only
+// when there are no critical failures and every score passed.
 func FinalizeRun(result contract.RunResult) contract.RunResult {
 	result.FixtureCount = len(result.Scores)
 	result.CriticalFailureCount = 0
 	for _, score := range result.Scores {
 		result.CriticalFailureCount += len(score.CriticalFailures)
 	}
-	result.AverageScore, result.MinimumScore = SummarizeRunScores(result.Scores)
+	result.AverageScore, result.MinimumScore = summarizeRunScores(result.Scores)
 	result.OK = result.CriticalFailureCount == 0
 	for _, score := range result.Scores {
 		if !score.Passed {
@@ -23,6 +26,10 @@ func FinalizeRun(result contract.RunResult) contract.RunResult {
 	return result
 }
 
+// MergeScoreWithJudge combines a deterministic score with a judge score. For
+// each applicable dimension the lower of the two scores wins and the evidence
+// is joined; judge failures and critical failures are appended, a judge with
+// no dimension scores adds a failure, and Passed is recomputed.
 func MergeScoreWithJudge(deterministic, judge contract.Score) contract.Score {
 	merged := deterministic
 	judgeByDimension := make(map[string]contract.IssueOpsDimensionScore)
@@ -49,7 +56,7 @@ func MergeScoreWithJudge(deterministic, judge contract.Score) contract.Score {
 	if len(judge.DimensionScores) == 0 {
 		merged.JudgeFailures = append(merged.JudgeFailures, "judge returned no dimension scores")
 	}
-	merged.AverageScore, merged.MinimumScore = SummarizeDimensionScores(merged.DimensionScores)
+	merged.AverageScore, merged.MinimumScore = summarizeDimensionScores(merged.DimensionScores)
 	merged.Passed = len(merged.CriticalFailures) == 0 && len(merged.DeterministicFailures) == 0 && len(merged.JudgeFailures) == 0 && merged.MinimumScore >= 100.0
 	merged.OK = merged.Passed
 	return merged

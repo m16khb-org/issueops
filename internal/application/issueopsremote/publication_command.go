@@ -12,16 +12,19 @@ import (
 	"issueops/internal/domain/policy"
 )
 
+// PublicationInput 타입은 PR/MR 생성 요청에 본문 파일, 템플릿, 점수 파일, 필드 입력을 더한 값이다.
 type PublicationInput struct {
 	Request                       model.RemotePullRequestRequest
 	BodyFile, Template, ScoreFile string
 	Fields                        []string
 }
 
+// PublicationInvoker 타입은 PR/MR 생성 요청을 실제로 처리하는 핸들러 함수다.
 type PublicationInvoker func(context.Context, model.RemotePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error)
 
+// PublicationCommandService 타입은 PR/MR 생성 요청의 기본값과 본문을 해석·검증해 게시 핸들러에 넘긴다. 미리보기에서는 경고를 모은다.
 type PublicationCommandService struct {
-	records   IssueRecordReader
+	records   issueRecordReader
 	bodies    TemplateBodyResolver
 	observe   AncestryObserver
 	normalize func(context.Context, model.NativeActor) (model.NativeActor, error)
@@ -46,10 +49,12 @@ func (s *PublicationCommandService) WithRepoTemplates(read func(string) ([]byte,
 	return s
 }
 
-func NewPublicationCommandService(records IssueRecordReader, bodies TemplateBodyResolver, observe AncestryObserver, normalize func(context.Context, model.NativeActor) (model.NativeActor, error), publish PublicationInvoker) *PublicationCommandService {
+// NewPublicationCommandService 함수는 기록 조회, 본문 해석기, 조상 관찰기, 행위자 정규화 함수, 게시 핸들러를 묶어 서비스를 만든다.
+func NewPublicationCommandService(records issueRecordReader, bodies TemplateBodyResolver, observe AncestryObserver, normalize func(context.Context, model.NativeActor) (model.NativeActor, error), publish PublicationInvoker) *PublicationCommandService {
 	return &PublicationCommandService{records: records, bodies: bodies, observe: observe, normalize: normalize, publish: publish}
 }
 
+// Create 메서드는 요청을 검증해 PR/MR을 만든다. 미리보기는 연결 이슈·템플릿 경고를 결과에 담고, 확정은 조상 프로세스를 관찰해 행위자를 정규화한 뒤 게시 핸들러를 호출한다.
 func (s *PublicationCommandService) Create(ctx context.Context, input PublicationInput) (PublicationResult, error) {
 	var result PublicationResult
 	req := input.Request
@@ -62,7 +67,7 @@ func (s *PublicationCommandService) Create(ctx context.Context, input Publicatio
 	if err != nil {
 		return result, err
 	}
-	resolved, err := s.bodies.Resolve(TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactPR, Template: input.Template, Provider: req.Provider, Title: req.Title, Body: req.Body, BodyFile: input.BodyFile, Fields: input.Fields, ScoreFile: input.ScoreFile, Confirm: req.Confirm})
+	resolved, err := s.bodies.Resolve(templateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactPR, Template: input.Template, Provider: req.Provider, Title: req.Title, Body: req.Body, BodyFile: input.BodyFile, Fields: input.Fields, ScoreFile: input.ScoreFile, Confirm: req.Confirm})
 	if err != nil {
 		return result, err
 	}

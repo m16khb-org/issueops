@@ -1,3 +1,6 @@
+// Package inspect is the adapter that observes the local harness installation:
+// skills, docs, and the Codex, Claude, and other host integration and receipt
+// state that the harness inspect result reports.
 package inspect
 
 import (
@@ -11,6 +14,8 @@ import (
 	"time"
 )
 
+// Observer gathers the install and integration facts for the harness inspect
+// result. Its function and path fields are seams for effects and tests.
 type Observer struct {
 	ListDocs func(string) []string
 	// Now와 HostVersion은 결정적 테스트를 위한 seam이다. 비어 있으면 time.Now이고
@@ -24,6 +29,9 @@ type Observer struct {
 	OpencodeConfigRoot func(home string) string
 }
 
+// Inspect returns the harness install Info for root: skills, docs, Codex and
+// Claude skill and MCP status, and per-host integration. The docs listing runs
+// concurrently with the other observations.
 func (observer Observer) Inspect(root, target, home, version, skillName string, options inspectcontract.Options) inspectcontract.Info {
 	codexSkill := filepath.Join(home, ".codex", "skills", skillName)
 	claudeSkill := filepath.Join(home, ".claude", "skills", skillName)
@@ -47,13 +55,13 @@ func (observer Observer) Inspect(root, target, home, version, skillName string, 
 		Docs:         docs,
 		Integration: inspectcontract.IntegrationStatus{
 			CodexSkillPath:         codexSkill,
-			CodexSkillInstalled:    Exists(filepath.Join(codexSkill, "SKILL.md")),
-			CodexMCPConfigured:     CodexMCPConfigured(filepath.Join(home, ".codex", "config.toml")),
+			CodexSkillInstalled:    exists(filepath.Join(codexSkill, "SKILL.md")),
+			CodexMCPConfigured:     codexMCPConfigured(filepath.Join(home, ".codex", "config.toml")),
 			ClaudeSkillPath:        claudeSkill,
-			ClaudeSkillInstalled:   Exists(filepath.Join(claudeSkill, "SKILL.md")),
+			ClaudeSkillInstalled:   exists(filepath.Join(claudeSkill, "SKILL.md")),
 			ProjectClaudeSkillPath: projectClaudeSkill,
-			ProjectClaudeSkill:     Exists(filepath.Join(projectClaudeSkill, "SKILL.md")),
-			ProjectClaudeMCPConfig: Exists(filepath.Join(root, ".mcp.json")),
+			ProjectClaudeSkill:     exists(filepath.Join(projectClaudeSkill, "SKILL.md")),
+			ProjectClaudeMCPConfig: exists(filepath.Join(root, ".mcp.json")),
 			MCPBinaryPath:          mcpBinary,
 			Hosts:                  hosts,
 		},
@@ -61,6 +69,9 @@ func (observer Observer) Inspect(root, target, home, version, skillName string, 
 	}
 }
 
+// ListSkills returns the skill directories under root/skills sorted by name, with
+// whether each has a SKILL.md and an agents/openai.yaml. It returns nil when the
+// skills directory cannot be read.
 func ListSkills(root, skillName string) []inspectcontract.SkillInfo {
 	dir := filepath.Join(root, "skills")
 	entries, err := os.ReadDir(dir)
@@ -76,8 +87,8 @@ func ListSkills(root, skillName string) []inspectcontract.SkillInfo {
 		s := inspectcontract.SkillInfo{
 			Name:       e.Name(),
 			Path:       p,
-			HasSkillMD: Exists(filepath.Join(p, "SKILL.md")),
-			HasOpenAI:  Exists(filepath.Join(p, "agents", "openai.yaml")),
+			HasSkillMD: exists(filepath.Join(p, "SKILL.md")),
+			HasOpenAI:  exists(filepath.Join(p, "agents", "openai.yaml")),
 		}
 		out = append(out, s)
 	}
@@ -85,12 +96,12 @@ func ListSkills(root, skillName string) []inspectcontract.SkillInfo {
 	return out
 }
 
-func CodexMCPConfigured(path string) bool {
+func codexMCPConfigured(path string) bool {
 	b, err := os.ReadFile(path)
 	return err == nil && strings.Contains(string(b), "[mcp_servers.issueops]")
 }
 
-func Exists(path string) bool {
+func exists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }

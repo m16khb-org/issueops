@@ -1,3 +1,5 @@
+// Package invariants is the self-verification probe that checks structural
+// harness invariants of a repository: required files, skill shape and retired names.
 package invariants
 
 import (
@@ -13,6 +15,9 @@ import (
 
 const skillName = "atomic-commit-push"
 
+// ValidateHarnessInvariants checks that the repository at root still has the
+// required harness files, a well-formed atomic-commit-push skill, and no retired
+// name hits. It returns an assertion step listing every problem found.
 func ValidateHarnessInvariants(root string) verifycontract.StepResult {
 	started := time.Now()
 	errs := []string{}

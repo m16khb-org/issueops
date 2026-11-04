@@ -12,6 +12,9 @@ import (
 
 const regressionFixtureLimit = 64 << 10
 
+// ReadRegression reads the regression fixture at path. The file is limited to
+// 64 KiB, unknown fields are rejected, and trailing JSON after the fixture is an
+// error.
 func (FixtureFiles) ReadRegression(path string) (contract.RegressionFixture, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -37,15 +40,22 @@ func (FixtureFiles) ReadRegression(path string) (contract.RegressionFixture, err
 	return fixture, nil
 }
 
+// InitializeState creates dir (mode 0700) when missing and writes data as its
+// state.json.
 func (files FixtureFiles) InitializeState(dir string, data []byte) error {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
 	return files.WriteState(dir, data)
 }
+
+// WriteState writes data to dir/state.json with mode 0600, replacing any previous
+// content.
 func (FixtureFiles) WriteState(dir string, data []byte) error {
 	return os.WriteFile(filepath.Join(dir, "state.json"), data, 0o600)
 }
+
+// ReadState returns the raw bytes of dir/state.json.
 func (FixtureFiles) ReadState(dir string) ([]byte, error) {
 	return os.ReadFile(filepath.Join(dir, "state.json"))
 }

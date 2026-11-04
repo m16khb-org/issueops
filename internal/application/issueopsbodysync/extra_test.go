@@ -119,7 +119,7 @@ func issueSync(sha string) issueops.RemoteBodySync {
 	return issueops.RemoteBodySync{Kind: "issue", URL: syncIssueURL, ToSHA256: sha, SyncedAt: "2026-10-01T00:00:00Z"}
 }
 
-func newScripted(record issueops.Record, provider *scriptedProvider, authority Authority) (*Service, *failingRepository) {
+func newScripted(record issueops.Record, provider *scriptedProvider, authority authority) (*Service, *failingRepository) {
 	repository := &failingRepository{fakeRepository: fakeRepository{record: record}}
 	return NewService(repository, provider, authority, syncNow), repository
 }
@@ -500,7 +500,7 @@ func TestSyncConfirmBaselineWriteFailuresKeepTheVerifiedResult(t *testing.T) {
 	cmd.ExpectedBodySHA256 = liveSHA
 	tests := []struct {
 		name      string
-		authority Authority
+		authority authority
 		updateErr error
 	}{
 		{"repository update fails", allowAll{}, errBoom},

@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	// AwaitBranchLinkInterval은 재관측 간격이다. provider readback은 네트워크
-	// 호출이므로 촘촘히 돌면 rate limit에 닿는다.
+	// AwaitBranchLinkInterval 상수는 재관측 간격이다. provider readback은 네트워크 호출이므로 촘촘히
+	// 돌면 rate limit에 닿는다.
 	AwaitBranchLinkInterval = 15 * time.Second
 	// awaitBranchLinkDefaultTimeout은 coordinator가 createLinkedBranch를
 	// 수행하는 데 걸릴 만한 시간이다. 무한 대기는 owner를 영원히 붙잡는다.
@@ -20,6 +20,10 @@ const (
 	awaitBranchLinkMaxTimeout = 30 * time.Minute
 )
 
+// AwaitBranchLinkGates lists the reasons await-link cannot run or cannot be
+// trusted: the linked-branch observation was unavailable, the record has no
+// preparation, the provider is not GitHub, or the issue URL, branch, or
+// sealed base SHA is blank. An empty result means the wait may proceed.
 func AwaitBranchLinkGates(record issueopscontract.Record, observationAvailable bool) []string {
 	var missing []string
 	if !observationAvailable {
@@ -45,6 +49,9 @@ func AwaitBranchLinkGates(record issueopscontract.Record, observationAvailable b
 	return missing
 }
 
+// AwaitBranchLinkTimeout parses the --timeout flag of branch await-link. A
+// blank value selects the default timeout; a value that is not a Go duration
+// or lies outside (0, 30m] is an error.
 func AwaitBranchLinkTimeout(raw string) (time.Duration, error) {
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" {

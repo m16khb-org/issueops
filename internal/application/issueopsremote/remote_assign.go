@@ -11,21 +11,23 @@ import (
 	"issueops/internal/port"
 )
 
-type AssignProviderResolver func(string) (port.IssueProviderAssigner, error)
+type assignProviderResolver func(string) (port.IssueProviderAssigner, error)
 
 // RemoteAssignService adds user-requested assignees to the cycle's issue or
 // PR/MR. QA: asked to add an assignee, an agent ran raw `gh issue edit
 // --add-assignee`. Assignees are only added; the verified artifact names its
 // assignee, and removing one is not something a request to "add" implies.
 type RemoteAssignService struct {
-	records IssueRecordReader
-	resolve AssignProviderResolver
+	records issueRecordReader
+	resolve assignProviderResolver
 }
 
-func NewRemoteAssignService(records IssueRecordReader, resolve AssignProviderResolver) *RemoteAssignService {
+// NewRemoteAssignService 함수는 기록 조회와 provider 해석 함수를 묶어 서비스를 만든다.
+func NewRemoteAssignService(records issueRecordReader, resolve assignProviderResolver) *RemoteAssignService {
 	return &RemoteAssignService{records: records, resolve: resolve}
 }
 
+// AddAssignees 메서드는 on(issue 또는 PR/MR)에 담당자를 추가한다. confirm이 false이면 미리보기만 하고, 확정하면 provider에 쓴 뒤 읽어 되돌려 확인한다.
 func (s *RemoteAssignService) AddAssignees(ctx context.Context, id, on string, users []string, confirm bool) (model.RemoteAssignResult, error) {
 	record, err := s.records.Read(ctx, id)
 	if err != nil {

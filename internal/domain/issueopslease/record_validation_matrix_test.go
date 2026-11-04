@@ -148,30 +148,30 @@ func TestValidatePersistedSidecarsChecksCompletionRelativeToLease(t *testing.T) 
 	record := directExecutionFixture()
 	execution := record.Execution
 	execution.Completion = &leasecontract.Completion{}
-	if err := ValidatePersistedSidecars(*execution); err == nil || !strings.Contains(err.Error(), "execution completion is incomplete") {
+	if err := validatePersistedSidecars(*execution); err == nil || !strings.Contains(err.Error(), "execution completion is incomplete") {
 		t.Fatalf("empty completion: %v", err)
 	}
 	completion := completionFixture(3)
 	execution.Completion = &completion
-	if err := ValidatePersistedSidecars(*execution); err != nil {
+	if err := validatePersistedSidecars(*execution); err != nil {
 		t.Fatalf("completion at the lease generation: %v", err)
 	}
 	completion.Generation = 4
-	if err := ValidatePersistedSidecars(*execution); err == nil || !strings.Contains(err.Error(), "exceeds the lease generation") {
+	if err := validatePersistedSidecars(*execution); err == nil || !strings.Contains(err.Error(), "exceeds the lease generation") {
 		t.Fatalf("completion beyond the lease generation: %v", err)
 	}
 	completion = completionFixture(3)
 	completion.Verification = []string{"go test", " "}
-	if err := ValidatePersistedSidecars(*execution); err == nil || !strings.Contains(err.Error(), "verification must be nonempty") {
+	if err := validatePersistedSidecars(*execution); err == nil || !strings.Contains(err.Error(), "verification must be nonempty") {
 		t.Fatalf("blank verification evidence: %v", err)
 	}
 	completion = completionFixture(3)
 	completion.FinalHead = strings.Repeat("a", 41)
-	if err := ValidatePersistedSidecars(*execution); err == nil || !strings.Contains(err.Error(), "execution completion is incomplete") {
+	if err := validatePersistedSidecars(*execution); err == nil || !strings.Contains(err.Error(), "execution completion is incomplete") {
 		t.Fatalf("final head of 41 hex characters: %v", err)
 	}
 	completion.FinalHead = strings.Repeat("b", 64)
-	if err := ValidatePersistedSidecars(*execution); err != nil {
+	if err := validatePersistedSidecars(*execution); err != nil {
 		t.Fatalf("64-character final head: %v", err)
 	}
 }
@@ -226,7 +226,7 @@ func TestValidatePersistedSidecarsChecksSyncBaseResolution(t *testing.T) {
 		}
 		return execution
 	}
-	if err := ValidatePersistedSidecars(fixture()); err != nil {
+	if err := validatePersistedSidecars(fixture()); err != nil {
 		t.Fatalf("valid resolution: %v", err)
 	}
 	const invalid = "execution sync-base resolution is invalid"
@@ -258,7 +258,7 @@ func TestValidatePersistedSidecarsChecksSyncBaseResolution(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			execution := fixture()
 			test.mutate(&execution)
-			err := ValidatePersistedSidecars(execution)
+			err := validatePersistedSidecars(execution)
 			if err == nil || !strings.Contains(err.Error(), test.want) {
 				t.Fatalf("error = %v, want containing %q", err, test.want)
 			}
@@ -289,7 +289,7 @@ func TestValidatePersistedSidecarsChecksSyncBaseEvents(t *testing.T) {
 			bad := event()
 			test.mutate(&bad)
 			execution.SyncBaseEvents = []leasecontract.SyncBaseEvent{event(), bad}
-			err := ValidatePersistedSidecars(execution)
+			err := validatePersistedSidecars(execution)
 			if err == nil || !strings.Contains(err.Error(), test.want) {
 				t.Fatalf("error = %v, want containing %q", err, test.want)
 			}
@@ -299,7 +299,7 @@ func TestValidatePersistedSidecarsChecksSyncBaseEvents(t *testing.T) {
 	finalize := event()
 	finalize.Mode, finalize.ConflictFiles = "finalize", 3
 	execution.SyncBaseEvents = []leasecontract.SyncBaseEvent{event(), finalize}
-	if err := ValidatePersistedSidecars(execution); err != nil {
+	if err := validatePersistedSidecars(execution); err != nil {
 		t.Fatalf("valid events: %v", err)
 	}
 }

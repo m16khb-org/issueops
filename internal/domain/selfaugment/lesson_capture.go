@@ -8,8 +8,13 @@ import (
 	model "issueops/internal/contract/selfaugment"
 )
 
+// LessonStateKeyPrefix is the state key prefix under which self-augmentation lessons are stored.
 const LessonStateKeyPrefix = "self-augment-lesson-"
+
+// LessonStateMaxAge is how long a stored lesson remains eligible for retention.
 const LessonStateMaxAge = 30 * 24 * time.Hour
+
+// LessonStateMaxRecords caps how many lesson records are kept in state.
 const LessonStateMaxRecords = 10000
 
 const selfAugmentLessonCandidateIDMaxLen = 96
@@ -32,6 +37,9 @@ func validateLessonCandidateID(candidateID string) error {
 	return nil
 }
 
+// PrepareLesson validates a lesson request and returns the normalized result: candidateID must be a
+// lowercase slug, lesson and next action are required, and source and severity default to
+// "self-augment" and "info". Failures return a not-OK result alongside the error.
 func PrepareLesson(req model.LessonRequest, root, candidateID string) (model.LessonResult, error) {
 	if candidateID == "" {
 		return model.LessonResult{OK: false, Kind: model.SelfAugmentationLessonKind, LoopKind: "self_augmentation", KoreanName: model.SelfAugmentationKoreanName, IssueOpsRoot: root}, fmt.Errorf("candidate is required: pass --candidate ID (an existing curriculum candidate or a slug for dogfooding findings such as issueops-whoami-record-flags) because no selected open candidate is available")
@@ -64,6 +72,9 @@ func PrepareLesson(req model.LessonRequest, root, candidateID string) (model.Les
 	}, nil
 }
 
+// LessonSnapshot converts result into its state snapshot and returns it with the state key to
+// write. A blank stateKey is replaced by a generated key whose nanosecond suffix keeps back-to-back
+// lessons from colliding.
 func LessonSnapshot(result model.LessonResult, stateKey string, now time.Time) (model.LessonStateSnapshot, string) {
 	key := strings.TrimSpace(stateKey)
 	if key == "" {
@@ -88,6 +99,8 @@ func LessonSnapshot(result model.LessonResult, stateKey string, now time.Time) (
 	return snapshot, key
 }
 
+// StateKeySlug lowercases s and collapses every run of characters outside [a-z0-9] into a single
+// hyphen, trimming hyphens at both ends. It returns "lesson" when nothing remains.
 func StateKeySlug(s string) string {
 	s = strings.ToLower(strings.TrimSpace(s))
 	var b strings.Builder

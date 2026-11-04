@@ -2,6 +2,8 @@ package selfaugment
 
 import contract "issueops/internal/contract/selfaugment"
 
+// ResearchInfluences returns the research systems (Reflexion, Self-Refine, Voyager and others) that
+// shaped the loop design, each with its source link and the idea adopted.
 func ResearchInfluences() []contract.Influence {
 	return []contract.Influence{
 		{Name: "Reflexion", Source: "https://arxiv.org/abs/2303.11366", Adopted: "scalar/test feedback is converted into reusable verbal lessons between cycles"},

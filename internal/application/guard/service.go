@@ -1,3 +1,6 @@
+// Package guard implements the guard check use case: it reads the target files
+// through a source port and delegates secret and duplicate-symbol analysis to
+// the guard domain. It sits in the application layer.
 package guard
 
 import (
@@ -7,15 +10,19 @@ import (
 	guarddomain "issueops/internal/domain/guard"
 )
 
-type Source interface {
+type source interface {
 	ResolveRoot(string) string
 	TargetFiles(string, guardcontract.CheckRequest) []string
 	ExistingSymbols(string, []string) map[string][]string
 	ReadFile(root, rel string, staged bool) (string, bool)
 }
 
-type Service struct{ Source Source }
+// Service runs guard checks against the files its Source resolves.
+type Service struct{ Source source }
 
+// Check scans the files selected by request and returns the analysis result.
+// Secret-like paths are reported without reading their content, and requested
+// files that were not scanned are listed in Warnings.
 func (service Service) Check(request guardcontract.CheckRequest) guardcontract.CheckResult {
 	root := service.Source.ResolveRoot(request.RepoRoot)
 	files := service.Source.TargetFiles(root, request)
@@ -56,6 +63,8 @@ func skippedFileWarnings(requested, checked []string) []string {
 	return []string{"not checked: " + strings.Join(skipped, ", ") + " (guard reads repo-relative source, config, and docs files plus secret-like paths; other extensions, absolute paths, and paths outside the repo are skipped)"}
 }
 
+// CheckForCommand runs Check and also returns a blocking error when the result
+// has blocking findings, so CLI callers can map it to a non-zero exit.
 func (service Service) CheckForCommand(request guardcontract.CheckRequest) (guardcontract.CheckResult, error) {
 	result := service.Check(request)
 	return result, guarddomain.BlockingError(result)

@@ -12,21 +12,23 @@ import (
 	"issueops/internal/port"
 )
 
-type LabelProviderResolver func(string) (port.IssueProviderLabeler, error)
+type labelProviderResolver func(string) (port.IssueProviderLabeler, error)
 
 // RemoteLabelService adds user-requested labels to the cycle's issue or
 // PR/MR. QA: asked to add a label, one agent stopped (no issueops path) and
 // another ran raw `gh issue|pr edit --add-label` without readback. Labels are
 // only added; removing one could drop a label the verified artifact needs.
 type RemoteLabelService struct {
-	records IssueRecordReader
-	resolve LabelProviderResolver
+	records issueRecordReader
+	resolve labelProviderResolver
 }
 
-func NewRemoteLabelService(records IssueRecordReader, resolve LabelProviderResolver) *RemoteLabelService {
+// NewRemoteLabelService 함수는 기록 조회와 provider 해석 함수를 묶어 서비스를 만든다.
+func NewRemoteLabelService(records issueRecordReader, resolve labelProviderResolver) *RemoteLabelService {
 	return &RemoteLabelService{records: records, resolve: resolve}
 }
 
+// AddLabels 메서드는 on(issue 또는 PR/MR)에 라벨을 추가한다. 비밀로 보이는 라벨은 거부하고, 확정하면 provider에 쓴 뒤 읽어 되돌려 확인한다.
 func (s *RemoteLabelService) AddLabels(ctx context.Context, id, on string, labels []string, confirm bool) (model.RemoteLabelResult, error) {
 	record, err := s.records.Read(ctx, id)
 	if err != nil {

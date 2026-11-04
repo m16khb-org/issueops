@@ -76,7 +76,7 @@ func (w *fakeWorld) closeEndpoint() {
 }
 
 func (w *fakeWorld) buildID() string {
-	id, err := BuildID(w.binary)
+	id, err := buildID(w.binary)
 	if err != nil {
 		w.t.Fatal(err)
 	}
@@ -213,7 +213,7 @@ func TestStatusReportsPortConflictInsteadOfAnotherPort(t *testing.T) {
 	address := w.address
 	occupyAddress(t, address)
 	status, err := w.service(address).Status(t.Context())
-	if err == nil || status.Status != mcpservice.StatusConflict || status.ErrorCode != CodePortInUse || status.URL != "http://"+address+"/mcp" {
+	if err == nil || status.Status != mcpservice.StatusConflict || status.ErrorCode != codePortInUse || status.URL != "http://"+address+"/mcp" {
 		t.Fatalf("status=%+v err=%v", status, err)
 	}
 }
@@ -224,7 +224,7 @@ func TestStatusReportsStaleRecordWhenNoProcessHoldsTheLock(t *testing.T) {
 	w.holder = 0
 	w.closeEndpoint()
 	status, err := w.service(w.address).Status(t.Context())
-	if err == nil || status.Status != mcpservice.StatusStale || status.ErrorCode != CodeStaleRecord || status.PID != 4242 {
+	if err == nil || status.Status != mcpservice.StatusStale || status.ErrorCode != codeStaleRecord || status.PID != 4242 {
 		t.Fatalf("status=%+v err=%v", status, err)
 	}
 }
@@ -240,7 +240,7 @@ func TestStatusRunningRequiresIdentityAndAuthenticatedResponse(t *testing.T) {
 
 	w.identities[4242] = processidentity.Identity{StartTime: "2026-10-02T09:00:00Z", Executable: w.binary}
 	status, err = w.service(address).Status(t.Context())
-	if err == nil || status.Status != mcpservice.StatusConflict || status.ErrorCode != CodeIdentityMismatch {
+	if err == nil || status.Status != mcpservice.StatusConflict || status.ErrorCode != codeIdentityMismatch {
 		t.Fatalf("reused pid with a different start time: status=%+v err=%v", status, err)
 	}
 }
@@ -253,7 +253,7 @@ func TestStatusRejectsAnswerFromADifferentProcess(t *testing.T) {
 	impostor.PID = 999
 	w.serving = &impostor
 	status, err := w.service(address).Status(t.Context())
-	if err == nil || status.Status != mcpservice.StatusConflict || status.ErrorCode != CodeIdentityMismatch {
+	if err == nil || status.Status != mcpservice.StatusConflict || status.ErrorCode != codeIdentityMismatch {
 		t.Fatalf("status=%+v err=%v", status, err)
 	}
 }
@@ -266,7 +266,7 @@ func TestStatusTreatsSilentLockHolderAsNotReadyAndStopRefuses(t *testing.T) {
 	w.loaded = true
 	service := w.service(address)
 	status, err := service.Status(t.Context())
-	if err == nil || status.Status != mcpservice.StatusStale || status.ErrorCode != CodeNotReady || status.PID != 4242 {
+	if err == nil || status.Status != mcpservice.StatusStale || status.ErrorCode != codeNotReady || status.PID != 4242 {
 		t.Fatalf("status=%+v err=%v", status, err)
 	}
 	if _, err := service.Stop(t.Context()); err == nil {
@@ -307,7 +307,7 @@ func TestStartFailsAsConflictWhenPortIsTakenAndNeverLoads(t *testing.T) {
 	address := w.address
 	occupyAddress(t, address)
 	status, err := w.service(address).Start(t.Context())
-	if err == nil || status.Status != mcpservice.StatusConflict || status.ErrorCode != CodePortInUse {
+	if err == nil || status.Status != mcpservice.StatusConflict || status.ErrorCode != codePortInUse {
 		t.Fatalf("status=%+v err=%v", status, err)
 	}
 	if countCommands(w.commands, "launchctl bootstrap") != 0 {
@@ -333,7 +333,7 @@ func TestStartTimesOutUnloadsAndReportsReadinessFailure(t *testing.T) {
 	w := newFakeWorld(t)
 	address := freeAddress(t)
 	status, err := w.service(address).Start(t.Context())
-	if err == nil || status.ErrorCode != CodeReadinessTimeout || status.OK {
+	if err == nil || status.ErrorCode != codeReadinessTimeout || status.OK {
 		t.Fatalf("status=%+v err=%v", status, err)
 	}
 	if countCommands(w.commands, "launchctl bootout gui/501/io.issueops.test") != 1 {
@@ -360,7 +360,7 @@ func TestStopRefusesForegroundInstanceTheSupervisorDoesNotOwn(t *testing.T) {
 	address := w.address
 	w.serve(5150, w.buildID())
 	status, err := w.service(address).Stop(t.Context())
-	if err == nil || status.ErrorCode != CodeNotSupervised || status.Status != mcpservice.StatusRunning {
+	if err == nil || status.ErrorCode != codeNotSupervised || status.Status != mcpservice.StatusRunning {
 		t.Fatalf("status=%+v err=%v", status, err)
 	}
 	if countCommands(w.commands, "launchctl bootout") != 0 {
@@ -388,13 +388,13 @@ func TestUnsupportedOrMissingSupervisorIsAnExplicitServiceError(t *testing.T) {
 	service := w.service(freeAddress(t))
 	service.supervisor = nil
 	status, err := service.Start(t.Context())
-	if err == nil || status.ErrorCode != CodeSupervisorUnsupported || status.Status != "" {
+	if err == nil || status.ErrorCode != codeSupervisorUnsupported || status.Status != "" {
 		t.Fatalf("status=%+v err=%v", status, err)
 	}
 	missing := w.service(freeAddress(t))
 	missing.cfg.LookPath = func(string) (string, error) { return "", errors.New("not found") }
 	status, err = missing.Status(t.Context())
-	if err == nil || status.ErrorCode != CodeSupervisorUnavailable {
+	if err == nil || status.ErrorCode != codeSupervisorUnavailable {
 		t.Fatalf("status=%+v err=%v", status, err)
 	}
 }
@@ -411,14 +411,14 @@ func TestIdentityHeadersOnlyOnSuccessfulResponses(t *testing.T) {
 	}), record)
 	denied := httptest.NewRecorder()
 	handler.ServeHTTP(denied, httptest.NewRequest(http.MethodPost, "/mcp", nil))
-	if denied.Code != http.StatusUnauthorized || denied.Header().Get(HeaderPID) != "" || denied.Header().Get(HeaderBuildID) != "" {
+	if denied.Code != http.StatusUnauthorized || denied.Header().Get(headerPID) != "" || denied.Header().Get(headerBuildID) != "" {
 		t.Fatalf("denied response leaked identity: %d %v", denied.Code, denied.Header())
 	}
 	request := httptest.NewRequest(http.MethodPost, "/mcp", nil)
 	request.Header.Set("Authorization", "Bearer x")
 	allowed := httptest.NewRecorder()
 	handler.ServeHTTP(allowed, request)
-	if !allowed.Flushed || allowed.Body.String() != "body" || allowed.Header().Get(HeaderPID) != "7" || allowed.Header().Get(HeaderBuildID) != "abc" {
+	if !allowed.Flushed || allowed.Body.String() != "body" || allowed.Header().Get(headerPID) != "7" || allowed.Header().Get(headerBuildID) != "abc" {
 		t.Fatalf("allowed response headers = %v flushed=%v", allowed.Header(), allowed.Flushed)
 	}
 }
@@ -548,7 +548,7 @@ func TestStartReportsUnitPathRefusalAsSupervisorFailed(t *testing.T) {
 		LockHolder:   func(string) (int, error) { return 0, nil },
 	})
 	status, err := service.Start(t.Context())
-	if err == nil || status.Status != mcpservice.StatusStopped || status.ErrorCode != CodeSupervisorFailed || bearerCalls != 0 {
+	if err == nil || status.Status != mcpservice.StatusStopped || status.ErrorCode != codeSupervisorFailed || bearerCalls != 0 {
 		t.Fatalf("status=%+v err=%v bearer calls=%d", status, err, bearerCalls)
 	}
 }

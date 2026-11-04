@@ -49,7 +49,7 @@ func TestBenchmarkCompletionEnforcesHardFailuresAndSafety(t *testing.T) {
 		t.Fatalf("available baseline lost: %+v", result)
 	}
 	result.HardFailures = make([]string, 11)
-	if ScoreBenchmark(result) != 0 {
+	if scoreBenchmark(result) != 0 {
 		t.Fatal("score went below zero")
 	}
 }

@@ -2,6 +2,8 @@ package gates
 
 import "sort"
 
+// SortIssueFolders 함수는 이슈 폴더 이름을 제자리에서 정렬한다.
+// 숫자로만 된 이름은 숫자 크기순으로 앞에 두고, 나머지는 그 뒤에 사전순으로 둔다.
 func SortIssueFolders(names []string) {
 	sort.SliceStable(names, func(i, j int) bool {
 		ni, oki := gateIssueFolderNumber(names[i])

@@ -1,3 +1,5 @@
+// Package branchinstructions 패키지는 issueops 사이클의 브랜치 준비 단계에서
+// GitHub·GitLab provider별 브랜치 생성 안내(BranchPrepareStep)를 만드는 어댑터다.
 package branchinstructions
 
 import (
@@ -6,7 +8,7 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-// Steps는 provider별 브랜치 생성 안내를 만든다.
+// Steps 함수는 provider별 브랜치 생성 안내를 만든다. 알 수 없는 provider에는 nil을 돌려준다.
 //
 // baseSHA는 두 provider 모두에서 새 브랜치의 base를 못박는 데 쓴다. 비어 있으면
 // base 브랜치 이름으로 떨어지고, 그 경우 provider가 **그 시점** 브랜치 HEAD를

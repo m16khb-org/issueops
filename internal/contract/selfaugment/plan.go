@@ -1,15 +1,19 @@
 package selfaugment
 
+// PlanRequest 타입은 자가 증강 계획 요청 입력이다. Cycles는 계획할 반복 횟수, TargetScore는 목표 점수이다.
 type PlanRequest struct {
 	Cycles      int     `json:"cycles"`
 	TargetScore float64 `json:"target_score"`
 }
 
+// SelfAugmentationPlanKind 상수는 계획 결과/스냅샷의 Kind 값이고, SelfAugmentationLessonKind 상수는 교훈 결과/스냅샷의 Kind 값이다.
 const (
 	SelfAugmentationPlanKind   = "self_augmentation_plan"
 	SelfAugmentationLessonKind = "self_augmentation_lesson"
 )
 
+// PlanResult 타입은 자가 증강 계획 결과 DTO이다.
+// 목표, 후보 목록, 선택된 후보, 실행 프로토콜과 검증 게이트, 저장소 신호를 담는다.
 type PlanResult struct {
 	OK                  bool             `json:"ok"`
 	LoopKind            string           `json:"loop_kind"`
@@ -33,12 +37,14 @@ type PlanResult struct {
 	StateCheckpoint     *StateCheckpoint `json:"state_checkpoint,omitempty"`
 }
 
+// Influence 타입은 계획에 반영한 외부 연구/기법 한 건과 그중 채택한 내용을 기록한다.
 type Influence struct {
 	Name    string `json:"name"`
 	Source  string `json:"source"`
 	Adopted string `json:"adopted"`
 }
 
+// LessonRequest 타입은 자가 증강 중 얻은 교훈을 상태 저장소에 남기라는 요청이다.
 type LessonRequest struct {
 	CandidateID string `json:"candidate_id"`
 	Lesson      string `json:"lesson"`
@@ -48,6 +54,7 @@ type LessonRequest struct {
 	StateKey    string `json:"state_key"`
 }
 
+// LessonResult 타입은 교훈 기록 요청의 결과 DTO이다. 기록된 교훈 내용과 상태 체크포인트 정보를 담는다.
 type LessonResult struct {
 	OK              bool             `json:"ok"`
 	Kind            string           `json:"kind"`
@@ -63,6 +70,7 @@ type LessonResult struct {
 	StateCheckpoint *StateCheckpoint `json:"state_checkpoint,omitempty"`
 }
 
+// LessonStateSnapshot 타입은 교훈 기록 결과 중 상태 저장소에 체크포인트로 남기는 스냅샷이다.
 type LessonStateSnapshot struct {
 	SchemaVersion int    `json:"schema_version"`
 	Kind          string `json:"kind"`
@@ -78,6 +86,8 @@ type LessonStateSnapshot struct {
 	GeneratedAt   string `json:"generated_at"`
 }
 
+// PlanStateSnapshot 타입은 계획 결과 중 상태 저장소에 체크포인트로 남기는 스냅샷이다.
+// 후보 전체 대신 선택된 후보와 열린/충족된 후보 ID 목록만 보존한다.
 type PlanStateSnapshot struct {
 	SchemaVersion         int         `json:"schema_version"`
 	Kind                  string      `json:"kind"`

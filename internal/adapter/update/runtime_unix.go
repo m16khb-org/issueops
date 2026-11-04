@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 )
 
+// Install runs scripts/install-native.sh under root with args, forwarding the runtime's
+// environment and standard streams. It fails if the script is missing or exits non-zero.
 func (r Runtime) Install(root string, args []string) error {
 	script := filepath.Join(root, "scripts", "install-native.sh")
 	if _, err := os.Stat(script); err != nil {

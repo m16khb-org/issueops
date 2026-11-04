@@ -15,6 +15,7 @@ import (
 	contract "issueops/internal/contract/authority"
 )
 
+// TTL is how long an issued grant stays valid after its IssuedAt time.
 const TTL = 12 * time.Hour
 
 const (
@@ -30,10 +31,12 @@ type Error struct {
 
 func (e *Error) Error() string { return e.Code + ": " + e.Reason }
 
+// Required returns an authority Error with the "required" code: no grant was presented.
 func Required(reason string) error {
 	return &Error{Code: contract.CodeRequired, Reason: reason}
 }
 
+// Invalid returns an authority Error with the "invalid" code: a grant was presented but rejected.
 func Invalid(reason string) error {
 	return &Error{Code: contract.CodeInvalid, Reason: reason}
 }
@@ -67,10 +70,14 @@ func Key(scope contract.Scope, actor contract.NativeActor) string {
 	return hex.EncodeToString(sum[:])
 }
 
+// ValidKey reports whether value is a lowercase hexadecimal SHA-256 grant key.
 func ValidKey(value string) bool { return isLowerHex(value, sha256.Size*2) }
 
+// ComposeToken joins a grant key and its secret into the "key.secret" bearer token.
 func ComposeToken(key, secret string) string { return key + "." + secret }
 
+// TokenKey extracts the grant key from a "key.secret" token. ok is false when the token
+// is malformed: the key is not a valid key or the secret is empty or contains separators.
 func TokenKey(token string) (string, bool) {
 	key, secret, ok := strings.Cut(token, ".")
 	if !ok || !ValidKey(key) || secret == "" || strings.ContainsAny(secret, ".\x00\r\n\t ") {
@@ -79,11 +86,14 @@ func TokenKey(token string) (string, bool) {
 	return key, true
 }
 
+// TokenDigest returns the hex SHA-256 of token, which is what a grant stores instead of the secret.
 func TokenDigest(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])
 }
 
+// NewRecord builds the grant Record for key, scope, and actor. The actor is normalized
+// without process ancestry, and the record expires TTL after issuedAt (taken in UTC).
 func NewRecord(key string, scope contract.Scope, actor contract.NativeActor, tokenDigest string, issuedAt time.Time) contract.Record {
 	issuedAt = issuedAt.UTC()
 	return contract.Record{
@@ -181,15 +191,15 @@ func Check(record contract.Record, token string, scope contract.Scope, now time.
 	if !now.Before(expires) {
 		return Invalid("authority credential expired")
 	}
-	if !ScopeAllows(record, scope) {
+	if !scopeAllows(record, scope) {
 		return Invalid("request workspace is outside the authorized repository scope")
 	}
 	return nil
 }
 
-// ScopeAllows admits every worktree sharing the Git common-dir, or only paths
+// scopeAllows admits every worktree sharing the Git common-dir, or only paths
 // inside the bounded source root for a non-Git grant.
-func ScopeAllows(record contract.Record, scope contract.Scope) bool {
+func scopeAllows(record contract.Record, scope contract.Scope) bool {
 	if record.GitCommonDir != "" {
 		return scope.GitCommonDir == record.GitCommonDir
 	}

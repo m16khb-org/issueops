@@ -7,12 +7,14 @@ import (
 	contract "issueops/internal/contract/issueopsbodysync"
 )
 
+// TargetSnapshot is the cycle's linked issue URL and verified PR/MR artifact URL and kind that a sync target is resolved against.
 type TargetSnapshot struct {
 	IssueURL     string
 	ArtifactURL  string
 	ArtifactKind string
 }
 
+// ResolveTarget maps a sync command to the artifact kind and URL to edit. An issue command targets the cycle issue, or a child when a different URL is given. A PR command must match the cycle's verified artifact and returns its PR or MR kind. It errors when the needed link or artifact is missing or the kind is unsupported.
 func ResolveTarget(snapshot TargetSnapshot, command contract.Command) (kind, url string, err error) {
 	requested := strings.TrimSpace(command.URL)
 	switch command.Kind {
@@ -21,7 +23,7 @@ func ResolveTarget(snapshot TargetSnapshot, command contract.Command) (kind, url
 		if parent == "" {
 			return "", "", fmt.Errorf("cannot sync an issue body before the cycle has a linked issue")
 		}
-		if requested == "" || SameArtifactURL(requested, parent) {
+		if requested == "" || sameArtifactURL(requested, parent) {
 			return contract.KindIssue, parent, nil
 		}
 		return contract.KindChild, requested, nil
@@ -30,7 +32,7 @@ func ResolveTarget(snapshot TargetSnapshot, command contract.Command) (kind, url
 		if artifact == "" {
 			return "", "", fmt.Errorf("cannot sync a PR/MR body before the cycle has a verified remote artifact")
 		}
-		if requested != "" && !SameArtifactURL(requested, artifact) {
+		if requested != "" && !sameArtifactURL(requested, artifact) {
 			return "", "", fmt.Errorf("--url %s is not this cycle's verified artifact (%s)", requested, snapshot.ArtifactURL)
 		}
 		resolved := strings.TrimSpace(snapshot.ArtifactKind)
@@ -42,11 +44,12 @@ func ResolveTarget(snapshot TargetSnapshot, command contract.Command) (kind, url
 	return "", "", fmt.Errorf("unsupported body sync kind %q (want %s|%s)", command.Kind, contract.KindIssue, contract.KindPR)
 }
 
+// IsPublicationKind reports whether kind is a PR or an MR.
 func IsPublicationKind(kind string) bool {
 	return kind == contract.KindPR || kind == contract.KindMR
 }
 
-func SameArtifactURL(left, right string) bool {
+func sameArtifactURL(left, right string) bool {
 	normalize := func(raw string) string {
 		trimmed := strings.TrimRight(strings.TrimSpace(raw), "/")
 		return strings.Replace(trimmed, "/-/work_items/", "/-/issues/", 1)
@@ -54,6 +57,7 @@ func SameArtifactURL(left, right string) bool {
 	return normalize(left) == normalize(right)
 }
 
+// ValidateGeneration rejects a sync made without a prepared execution lease or with a lease generation that differs from the expected one; an expected generation of 0 is always stale.
 func ValidateGeneration(prepared bool, current, expected uint64) error {
 	if !prepared {
 		return fmt.Errorf("cannot sync a PR/MR body without an execution lease")
@@ -75,6 +79,7 @@ func PostCompletion(phase, leaseStatus string, completed bool) bool {
 	return phase == "done" && leaseStatus == "released" && completed
 }
 
+// RejectClosedPublication rejects rewriting a PR or MR body unless its observed state is open, opened or locked; an empty state is also rejected. Other kinds always pass.
 func RejectClosedPublication(kind, state string) error {
 	if !IsPublicationKind(kind) {
 		return nil

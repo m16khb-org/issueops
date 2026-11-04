@@ -25,6 +25,8 @@ func inferProjectVCS(root string) projectdoccontract.ProjectVCSProfile {
 	return projectdoc.ClassifyVCS(origin, err == nil)
 }
 
+// ReadGitOriginURL returns the url of the [remote "origin"] section in
+// root/.git/config, or "" when the config is unreadable or has no origin url.
 func ReadGitOriginURL(root string) string {
 	b, err := os.ReadFile(filepath.Join(root, ".git", "config"))
 	if err != nil {

@@ -46,7 +46,7 @@ func TestEnsureWorkspaceStateHidesTokensInLinkedWorktrees(t *testing.T) {
 		t.Fatalf("token still visible: %q", status)
 	}
 	exclude, err := os.ReadFile(filepath.Join(repo, ".git", "info", "exclude"))
-	if err != nil || strings.Count(string(exclude), WorkspaceStateLine+"\n") != 1 {
+	if err != nil || strings.Count(string(exclude), workspaceStateLine+"\n") != 1 {
 		t.Fatalf("exclude must hold the line once: %q %v", exclude, err)
 	}
 }

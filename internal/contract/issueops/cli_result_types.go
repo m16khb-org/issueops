@@ -1,7 +1,8 @@
 // IssueOps CLI가 읽는 구현 검토 DTO다.
+
 package issueops
 
-// IssueOpsImplementationReviewRequest는 구현 diff에 대한 architecture-review 리뷰 기록이다.
+// ImplementationReviewRequest 타입은 구현 diff에 대한 architecture-review 리뷰 기록이다.
 type ImplementationReviewRequest struct {
 	Verdict         string
 	Findings        []string
@@ -12,7 +13,7 @@ type ImplementationReviewRequest struct {
 	ReviewerContext string // subagent | inline, like the plan reviews (audit only)
 }
 
-// IssueOpsProjectDocsReviewRequest는 publication 직전 project-doc 반영 판정이다.
+// ProjectDocsReviewRequest 타입은 publication 직전 project-doc 반영 판정이다.
 type ProjectDocsReviewRequest struct {
 	Verdict      string
 	Docs         []string
@@ -20,7 +21,7 @@ type ProjectDocsReviewRequest struct {
 	Evidence     []string
 }
 
-// IssueOpsSchemaEvidenceRequest는 스키마 변경 사이클의 실측 근거 기록이다.
+// SchemaEvidenceRequest 타입은 스키마 변경 사이클의 실측 근거 기록이다.
 type SchemaEvidenceRequest struct {
 	Measurements    []string
 	Sources         []string
@@ -79,17 +80,18 @@ func StatusView(record Record) Record {
 	return record
 }
 
-// 아키텍처 검토 증거 예시 문구는 CLI 도움말과 어댑터가 함께 쓰는 어휘다.
+// ArchitectureReviewEvidenceExample 상수는 아키텍처 검토 증거 예시 문구이며,
+// CLI 도움말과 어댑터가 함께 쓰는 어휘다.
 const ArchitectureReviewEvidenceExample = "architecture review checked alternatives and risks"
 
 // IDFormatHint follows an id that is not a cycle id: what one looks like and
 // where to find it, for callers (an MCP-only agent) that guessed one.
 const IDFormatHint = "cycle ids look like io-1a2b3c4d5e6f; find them with `issueops next --json` or `issueops list --repo PATH --json`"
 
-// IssueOpsReviewMetricsCycle는 사이클 하나의 적대 리뷰 지표 파생값이다. 살아
+// ReviewMetricsCycle 타입은 사이클 하나의 적대 리뷰 지표 파생값이다. 살아
 // 있는 record에서는 그 record가 이미 들고 있는 원자료(devil's-advocate
 // history, regress 이벤트, phase ledger)의 읽기 전용 projection이다. Outcome이
-// 있으면 cleanup이 record를 지우며 남긴 IssueOpsCycleOutcome에서 읽은 값이다.
+// 있으면 cleanup이 record를 지우며 남긴 CycleOutcome에서 읽은 값이다.
 type ReviewMetricsCycle struct {
 	ID                          string             `json:"id"`
 	Phase                       string             `json:"phase,omitempty"`
@@ -102,7 +104,7 @@ type ReviewMetricsCycle struct {
 	ReviewRoundGapsSeconds      []float64          `json:"review_round_gaps_seconds,omitempty"`
 }
 
-// IssueOpsCycleOutcomeSchemaVersion은 보존된 사이클 결과 row의 현재 쓰기 버전이다.
+// CycleOutcomeSchemaVersion 상수는 보존된 사이클 결과 row의 현재 쓰기 버전이다.
 const CycleOutcomeSchemaVersion = 1
 
 // cleanup이 record를 지울 때 남기는 사이클 결과 종류.
@@ -111,7 +113,7 @@ const (
 	CycleOutcomeAbandoned = "abandoned"
 )
 
-// IssueOpsCycleOutcome은 cleanup finish·abandon이 record를 지우는 같은
+// CycleOutcome 타입은 cleanup finish·abandon이 record를 지우는 같은
 // 트랜잭션에서 남기는 지표 요약이다. record 원문이 아니라 review-metrics가
 // 파생하는 수치와 판정만 담으므로, record가 사라진 뒤에도 하네스 단계별 효과를
 // 사이클을 가로질러 비교할 수 있다.
@@ -124,7 +126,7 @@ type CycleOutcome struct {
 	Metrics       ReviewMetricsCycle `json:"metrics"`
 }
 
-// IssueOpsReviewMetricsAggregate는 여러 사이클을 가로지르는 요약이다. 평균
+// ReviewMetricsAggregate 타입은 여러 사이클을 가로지르는 요약이다. 평균
 // 라운드 수는 리뷰가 있는 사이클만으로 계산한다 — 리뷰가 없는 사이클의 0은
 // "라운드가 0회"가 아니라 "측정 대상이 아님"이기 때문이다.
 type ReviewMetricsAggregate struct {
@@ -135,7 +137,7 @@ type ReviewMetricsAggregate struct {
 	StopRatio      float64 `json:"stop_ratio"`
 }
 
-// IssueOpsReviewMetricsResult는 `issueops review-metrics`의 응답이다.
+// ReviewMetricsResult 타입은 `issueops review-metrics`의 응답이다.
 type ReviewMetricsResult struct {
 	OK     bool                 `json:"ok"`
 	Cycles []ReviewMetricsCycle `json:"cycles"`

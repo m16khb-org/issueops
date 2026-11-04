@@ -11,17 +11,24 @@ import (
 	authorityport "issueops/internal/port/authority"
 )
 
+// Service adds decisions to lifecycle records. Construct it with NewService.
 type Service struct {
 	repository Repository
-	clock      Clock
-	paths      PathMatcher
+	clock      clock
+	paths      pathMatcher
 	verifier   authorityport.ActorVerifier
 }
 
-func NewService(repository Repository, clock Clock, paths PathMatcher, verifier authorityport.ActorVerifier) *Service {
+// NewService returns a Service using repository, clock, the path matcher, and the
+// actor verifier for holder authorization. Add fails if repository, clock, or
+// path matcher is nil.
+func NewService(repository Repository, clock clock, paths pathMatcher, verifier authorityport.ActorVerifier) *Service {
 	return &Service{repository: repository, clock: clock, paths: paths, verifier: verifier}
 }
 
+// Add builds a decision from request, stamped with the service clock, and appends
+// it to the record with id after confirming that actor holds the cycle. The
+// record is not changed when the request or authorization is rejected.
 func (service *Service) Add(
 	ctx context.Context,
 	stateRoot string,

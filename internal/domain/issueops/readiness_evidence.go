@@ -6,7 +6,7 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
-func SplitDecisionMissing(record issueopscontract.Record) []string {
+func splitDecisionMissing(record issueopscontract.Record) []string {
 	for _, link := range record.IssueLinks {
 		switch strings.ToLower(strings.TrimSpace(link.Type)) {
 		case "child", "splits-from":
@@ -21,13 +21,16 @@ func SplitDecisionMissing(record issueopscontract.Record) []string {
 	return []string{"split_decision"}
 }
 
-func DomainReviewMissing(record issueopscontract.Record) []string {
+func domainReviewMissing(record issueopscontract.Record) []string {
 	if record.DomainReview == nil || strings.TrimSpace(record.DomainReview.ReviewedAt) == "" {
 		return []string{"domain_review"}
 	}
 	return nil
 }
 
+// TargetBranchMatchMissing returns target_branch_match when the verified
+// remote artifact targets a branch other than the prepared base branch. It
+// returns nil when either record is absent or the base is blank.
 func TargetBranchMatchMissing(record issueopscontract.Record) []string {
 	if record.RemoteArtifact == nil || record.BranchPrepare == nil {
 		return nil

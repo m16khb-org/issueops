@@ -92,8 +92,8 @@ func TestPlanReportsPluginHostUnavailableAsSkip(t *testing.T) {
 		t.Fatalf("plan items = %d, want 2: %#v", len(items), items)
 	}
 	assertItem(t, items[0], upstreamcontract.KindPlugin, "eli5@claude-community", upstreamcontract.ActionSkip)
-	if items[0].Reason != ReasonPluginHostUnavailable {
-		t.Fatalf("reason = %q, want %q", items[0].Reason, ReasonPluginHostUnavailable)
+	if items[0].Reason != reasonPluginHostUnavailable {
+		t.Fatalf("reason = %q, want %q", items[0].Reason, reasonPluginHostUnavailable)
 	}
 	assertItem(t, items[1], upstreamcontract.KindSkill, "cua-driver", upstreamcontract.ActionInstall)
 }

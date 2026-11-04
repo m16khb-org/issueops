@@ -6,6 +6,9 @@ import (
 	"issueops/internal/port"
 )
 
+// Dependencies are the install-plan and JSON config helpers the opencode
+// installer needs. The composition root supplies them so this package does not
+// import the shared install machinery.
 type Dependencies struct {
 	CaptureNativeActivationEvidence func(host, surface, path, semanticSHA256 string) (port.NativeActivationEvidence, error)
 	MCPCatalogSHA256                func() (string, error)

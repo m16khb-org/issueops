@@ -1,5 +1,6 @@
 package projectdoc
 
+// ProjectDocsDir is the repository-relative directory that holds the project documents.
 const ProjectDocsDir = ".issueops"
 
 var requiredProjectDocNames = []string{
@@ -18,10 +19,13 @@ var requiredProjectDocNames = []string{
 
 var optionalProjectDocNames = []string{"VCS.md", "DESIGN.md"}
 
+// AgentsStartMarker opens the issueops-managed block inside AGENTS.md.
 const AgentsStartMarker = "<!-- ISSUEOPS:START -->"
 
+// AgentsEndMarker closes the issueops-managed block inside AGENTS.md.
 const AgentsEndMarker = "<!-- ISSUEOPS:END -->"
 
+// BehavioralGuidelines is the generic agent behavior guidance text bootstrap writes into AGENTS.md.
 const BehavioralGuidelines = `# AGENTS.md
 
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
@@ -89,6 +93,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
 `
 
+// SolidDesignPatternGuidance is the SOLID, YAGNI, and KISS guidance text bootstrap includes in generated project docs.
 const SolidDesignPatternGuidance = `## SOLID / Design Pattern guidance
 
 Apply SOLID, YAGNI, and KISS together. SOLID does not mean adding interfaces and layers by default; it means clarifying responsibility and dependency direction only where a real axis of change exists. Use a design pattern only when the name explains the problem and reduces maintenance cost.
@@ -114,6 +119,7 @@ Apply SOLID, YAGNI, and KISS together. SOLID does not mean adding interfaces and
 - If a pattern turns a 50-line solution into a 200-line structure, revert and simplify.
 `
 
+// EngineeringStandardsChecklist is the checklist text that tells the enrichment pass which engineering-standards topics to confirm against repository evidence before documenting them.
 const EngineeringStandardsChecklist = `## Engineering standards checklist
 
 Standard topics the enrichment pass must evaluate against repository
@@ -135,15 +141,17 @@ Rules:
 - Omit or mark unconfirmed topics as "Unknown / not confirmed"; do not paste generic advice.
 `
 
+// Names returns a copy of the required project document file names; callers may modify the result.
 func Names() []string {
 	return append([]string(nil), requiredProjectDocNames...)
 }
 
+// OptionalProjectDocNames returns a copy of the optional project document file names, which are rendered only when their condition holds.
 func OptionalProjectDocNames() []string {
 	return append([]string(nil), optionalProjectDocNames...)
 }
 
-func AllowedProjectDocNames() []string {
+func allowedProjectDocNames() []string {
 	out := Names()
 	return append(out, optionalProjectDocNames...)
 }

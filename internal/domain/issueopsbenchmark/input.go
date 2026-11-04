@@ -7,6 +7,8 @@ import (
 	contract "issueops/internal/contract/issueopsbenchmark"
 )
 
+// ValidateFixture reports the first missing required field of f: id, title,
+// user_prompt, repo_context or critical_failures.
 func ValidateFixture(f contract.Fixture) error {
 	if strings.TrimSpace(f.ID) == "" {
 		return fmt.Errorf("id is required")
@@ -26,6 +28,8 @@ func ValidateFixture(f contract.Fixture) error {
 	return nil
 }
 
+// ValidateJudgeScore rejects a host-agent judge score that carries no
+// dimension scores.
 func ValidateJudgeScore(score contract.Score) error {
 	if len(score.DimensionScores) == 0 {
 		return fmt.Errorf("issueops benchmark host-agent judge output missing dimension_scores")

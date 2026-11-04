@@ -13,16 +13,19 @@ import (
 	authorityport "issueops/internal/port/authority"
 )
 
+// CreatePreparation 타입은 PR/MR 생성 명령을 검증해 provider 요청과 적격 조건으로 이루어진 준비 결과로 바꾼다.
 type CreatePreparation struct {
 	observer  PreparationObserver
-	authority Authority
+	authority authority
 	verifier  authorityport.ActorVerifier
 }
 
-func NewCreatePreparation(observer PreparationObserver, authority Authority, verifier authorityport.ActorVerifier) *CreatePreparation {
+// NewCreatePreparation 함수는 관찰기, 권한 검사, 행위자 검증기를 묶어 CreatePreparation을 만든다.
+func NewCreatePreparation(observer PreparationObserver, authority authority, verifier authorityport.ActorVerifier) *CreatePreparation {
 	return &CreatePreparation{observer: observer, authority: authority, verifier: verifier}
 }
 
+// Prepare 메서드는 명령을 기록과 대조해 생성 권한, 브랜치 권한, 제목·본문을 검증하고 PreparedCreate를 돌려준다. Confirm이면 행위자·권한·대기 상태·리뷰 증거와 HEAD도 확인한다.
 func (s *CreatePreparation) Prepare(ctx context.Context, command contract.CreateCommand) (contract.PreparedCreate, error) {
 	if command.Confirm {
 		actor, err := normalizePublicationActor(ctx, command.Actor, s.verifier)

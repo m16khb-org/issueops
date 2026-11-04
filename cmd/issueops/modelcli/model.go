@@ -47,6 +47,10 @@ Precedence per field: flag > local > global > built-in default.
 Exit codes: 0 ok, 1 settings file or git error, 2 usage error.
 `
 
+// Run executes `issueops model` with args (show, set, unset or resolve),
+// writing to deps.Stdout. A missing subcommand or a help request prints the
+// usage text and returns nil; an unknown subcommand returns a UsageError, and
+// a subcommand's flag help also prints the usage text.
 func Run(deps Dependencies, args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
 		fmt.Fprint(deps.Stdout, usage)

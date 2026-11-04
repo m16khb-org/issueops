@@ -1,3 +1,8 @@
+// Package installcli implements the issueops install command: it parses the
+// install flags, plans the native host, MCP transport, command path and skill
+// link changes, and applies them as one rollback-protected transaction with
+// activation readback. All adapters are injected through Deps by the
+// composition root.
 package installcli
 
 import (
@@ -13,6 +18,10 @@ import (
 // Command keeps one installation configuration through all transaction phases.
 type Command struct{ Deps }
 
+// Deps holds the injected collaborators of the install command: state and
+// issueops root lookup, symlink and managed command planning, the native host
+// installer and activation backend, upstream sync, retired-state cleanup, and
+// the MCP transport defaults. SyncUpstream may be nil to skip upstream sync.
 type Deps struct {
 	StateRoot                          string
 	EnsureSymlinkPlan                  func(target, path string, dryRun bool) (port.InstallLink, error)
@@ -45,7 +54,7 @@ type Deps struct {
 	// DefaultMCPTransport applies when --mcp-transport is omitted; empty means stdio.
 	DefaultMCPTransport string
 	MCPURL              string
-	MCPService          MCPServiceSetup
+	MCPService          mcpServiceSetup
 }
 
 var printJSON = jsonout.Print

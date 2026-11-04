@@ -27,7 +27,7 @@ func TestValidateFormatUsesTrackedFilesAndFailsOnUnformatted(t *testing.T) {
 			return []string{"b.go"}, nil
 		},
 	})
-	if step.OK || step.Label != FormatLabel || step.Command != FormatCommand || !strings.Contains(step.Error, "b.go") || called != 2 {
+	if step.OK || step.Label != formatLabel || step.Command != formatCommand || !strings.Contains(step.Error, "b.go") || called != 2 {
 		t.Fatalf("step=%+v calls=%d", step, called)
 	}
 }
@@ -51,7 +51,7 @@ func TestValidateFormatFailsClosedWithoutFilesOrTooling(t *testing.T) {
 					return nil, nil
 				},
 			})
-			if step.OK || step.Command != FormatCommand || !strings.Contains(step.Error, tc.want) {
+			if step.OK || step.Command != formatCommand || !strings.Contains(step.Error, tc.want) {
 				t.Fatalf("step=%+v", step)
 			}
 		})

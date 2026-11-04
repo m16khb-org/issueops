@@ -7,6 +7,9 @@ import (
 	"strings"
 )
 
+// ParseFetchURL parses raw into a fetchable http or https URL. It rejects
+// other schemes, userinfo, a missing host, and hosts IsUnsafeHost blocks
+// (private hosts pass only when allowPrivate is set).
 func ParseFetchURL(raw string, allowPrivate bool) (*url.URL, error) {
 	u, err := url.Parse(strings.TrimSpace(raw))
 	if err != nil {
@@ -28,6 +31,10 @@ func ParseFetchURL(raw string, allowPrivate bool) (*url.URL, error) {
 	return u, nil
 }
 
+// IsUnsafeHost reports whether host must not be fetched: cloud metadata
+// (169.254.169.254) and reserved ranges are always unsafe, while localhost and
+// loopback, private and link-local addresses are unsafe unless allowPrivate is
+// set. Names other than localhost are not resolved and count as safe.
 func IsUnsafeHost(host string, allowPrivate bool) bool {
 	lower := strings.ToLower(strings.Trim(host, "[]"))
 	if lower == "localhost" || strings.HasSuffix(lower, ".localhost") {
@@ -101,6 +108,7 @@ func isReservedIP(ip netip.Addr) bool {
 	return false
 }
 
+// IsIPAddress reports whether host is an IP literal without a zone.
 func IsIPAddress(host string) bool { return parseIPAddress(host).IsValid() }
 func parseIPAddress(host string) netip.Addr {
 	address, err := netip.ParseAddr(host)

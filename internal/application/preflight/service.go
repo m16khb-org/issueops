@@ -1,3 +1,6 @@
+// Package preflight inspects a git repository before an atomic commit and
+// reports its state. It is an application-layer service that gets git facts
+// through the Observer port.
 package preflight
 
 import (
@@ -5,6 +8,9 @@ import (
 	preflightdomain "issueops/internal/domain/preflight"
 )
 
+// Observation holds the raw git facts an Observer collected for one target
+// path. GitOK is false when the target is not a git repository, in which case
+// ErrorDetail carries the reason and the other fields are unset.
 type Observation struct {
 	GitOK            bool
 	ErrorDetail      string
@@ -23,12 +29,19 @@ type Observation struct {
 	CommitPolicyPath string
 }
 
+// Observer collects the git facts for target. issueOpsRoot locates the project
+// commit policy used for style hints.
 type Observer interface {
 	Observe(target, issueOpsRoot string) Observation
 }
 
+// Service turns git observations into the preflight result.
 type Service struct{ Observer Observer }
 
+// Check observes target and returns the preflight result: repository state,
+// staged/unstaged/untracked files, secret-like paths, and commit style hints.
+// A non-git target yields a not_git_repo result with empty lists. List fields
+// are never nil.
 func (service Service) Check(target, issueOpsRoot string) preflightcontract.Result {
 	facts := service.Observer.Observe(target, issueOpsRoot)
 	if !facts.GitOK {

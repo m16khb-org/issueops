@@ -9,17 +9,17 @@ import (
 
 func TestValidateEndpointRejectsOwnerAndIncarnationMismatch(t *testing.T) {
 	endpoint := endpointFixture()
-	if err := ValidateEndpoint(endpoint, endpoint.Path, int(endpoint.OwnerUID)); err != nil {
+	if err := validateEndpoint(endpoint, endpoint.Path, int(endpoint.OwnerUID)); err != nil {
 		t.Fatal(err)
 	}
 	wrongOwner := endpoint
 	wrongOwner.OwnerUID++
-	if err := ValidateEndpoint(wrongOwner, endpoint.Path, int(endpoint.OwnerUID)); err == nil || !strings.Contains(err.Error(), "owner") {
+	if err := validateEndpoint(wrongOwner, endpoint.Path, int(endpoint.OwnerUID)); err == nil || !strings.Contains(err.Error(), "owner") {
 		t.Fatalf("wrong owner error=%v", err)
 	}
 	changed := endpoint
 	changed.Inode++
-	if SameEndpoint(endpoint, changed) {
+	if sameEndpoint(endpoint, changed) {
 		t.Fatalf("changed endpoint treated as same: before=%+v after=%+v", endpoint, changed)
 	}
 }

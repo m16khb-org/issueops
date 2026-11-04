@@ -12,6 +12,9 @@ import (
 	"issueops/internal/port"
 )
 
+// ReadIssueSnapshot reads the description, web URL and state of req.URL with
+// `glab api` and returns them tagged with Source "glab_cli". It fails when the
+// returned web URL does not identify the same issue as the request.
 func (Provider) ReadIssueSnapshot(ctx context.Context, req executionissue.SnapshotRequest) (executionissue.Snapshot, error) {
 	if err := ctx.Err(); err != nil {
 		return executionissue.Snapshot{}, err

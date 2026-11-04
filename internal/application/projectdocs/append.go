@@ -1,3 +1,6 @@
+// Package projectdocs is the application layer for .issueops project documents: reading a document with its hash,
+// revising it under a hash check, routing a task to the documents it should read, and appending dated
+// records. File and clock access is injected through the effects interfaces.
 package projectdocs
 
 import (
@@ -10,6 +13,8 @@ import (
 	projectdocdomain "issueops/internal/domain/projectdoc"
 )
 
+// AppendEffects is the file system and clock access Append needs: path joining, existence checks, directory
+// creation, writes, adding a line to an overview file, and rendering the record body.
 type AppendEffects interface {
 	Path(root, rel string) string
 	Exists(path string) bool
@@ -21,6 +26,9 @@ type AppendEffects interface {
 	Now() time.Time
 }
 
+// Append writes one dated caution or ADR record under the family's module directory and links it from the
+// family overview. A numeric suffix keeps the file name unique when the same slug already exists that day.
+// Linking is best effort: a failure becomes a warning because the record is already written.
 func Append(root string, request projectdocscontract.AppendRequest, effects AppendEffects) (projectdocscontract.AppendResult, error) {
 	plan, err := projectdocdomain.PlanAppend(projectdocdomain.AppendInput{Kind: request.Kind, Title: request.Title, Summary: request.Summary})
 	if err != nil {

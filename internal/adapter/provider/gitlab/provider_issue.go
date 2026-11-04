@@ -13,6 +13,10 @@ import (
 	"issueops/internal/port"
 )
 
+// UpdateIssueBodySection renders one managed section and merges it into the
+// issue description with `glab api` (PUT), keeping the merged description
+// under GitLab's size limit. Without Confirm it validates the payload offline
+// and returns a dry-run preview.
 func (Provider) UpdateIssueBodySection(ctx context.Context, req port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
 	hostname, projectPath, iid, err := parseGitLabIssueURL(req.IssueURL)
 	if err != nil {

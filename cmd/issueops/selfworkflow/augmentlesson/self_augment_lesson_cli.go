@@ -1,3 +1,5 @@
+// Package augmentlesson implements the `issueops self-augment lesson`
+// command, which saves a Reflexion-style lesson as a state checkpoint.
 package augmentlesson
 
 import (
@@ -8,11 +10,14 @@ import (
 	contract "issueops/internal/contract/selfaugment"
 )
 
+// Deps injects the lesson persistence and JSON output used by Run.
 type Deps struct {
 	Save      func(contract.LessonRequest) (contract.LessonResult, error)
 	PrintJSON func(any) error
 }
 
+// Run parses the lesson flags, saves the lesson through Deps.Save, and prints
+// the result as JSON or a one-line summary.
 func Run(args []string, deps Deps) error {
 	fs := flag.NewFlagSet("self-augment lesson", flag.ContinueOnError)
 	candidateID := fs.String("candidate", "", "candidate id this lesson belongs to; defaults to the current selected open candidate")

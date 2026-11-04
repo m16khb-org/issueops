@@ -10,10 +10,15 @@ import (
 	updateapp "issueops/internal/application/update"
 )
 
+// CleanupCommand runs `issueops mcp cleanup`, which finds stale MCP proxy
+// processes through Effects.
 type CleanupCommand struct{ Effects updateapp.MCPProxyEffects }
 
 var printJSON = jsonout.Print
 
+// Run parses --dry-run, --apply, and --json and cleans up MCP proxy processes.
+// It previews only unless --apply is given, rejects both flags together and any
+// positional argument, and reports a failure as JSON when --json is set.
 func (command CleanupCommand) Run(args []string) error {
 	fs := flag.NewFlagSet("mcp cleanup", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)

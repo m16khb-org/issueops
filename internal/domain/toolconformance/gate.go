@@ -6,6 +6,7 @@ import (
 	contract "issueops/internal/contract/toolconformance"
 )
 
+// SelectedPair identifies a host and fixture the benchmark gate must have enough completed episodes for.
 type SelectedPair struct {
 	Host      string
 	FixtureID string
@@ -18,6 +19,10 @@ type signatureCount struct {
 	Count     int
 }
 
+// DecideGate turns a benchmark report into a hardening decision.
+// It is inconclusive until every selected pair has at least target completed episodes.
+// A drift signature seen twice authorizes hardening; no drift defers it; otherwise it asks for reproduction,
+// or records an unreproduced observation once target reaches 20.
 func DecideGate(report contract.BenchmarkReport, selected []SelectedPair, target int) contract.GateReport {
 	for _, pair := range selected {
 		if completedForPair(report, pair.Host, pair.FixtureID) < target {
@@ -70,6 +75,7 @@ func orderedDriftSignatures(report contract.BenchmarkReport) []*signatureCount {
 	return ordered
 }
 
+// SchemaDriftClassification reports whether classification is a schema-drift outcome that counts toward the hardening gate.
 func SchemaDriftClassification(classification contract.Classification) bool {
 	switch classification {
 	case contract.UnknownKey, contract.CoercibleTypeDrift, contract.NoncoercibleTypeDrift,

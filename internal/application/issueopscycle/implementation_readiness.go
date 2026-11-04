@@ -8,15 +8,15 @@ import (
 	cycleport "issueops/internal/port/issueopscycle"
 )
 
-func CompatibilityReadinessMissing(record model.Record, observations cycleport.ReadinessObservations) []string {
-	missing := BaseImplementationMissing(record)
+func compatibilityReadinessMissing(record model.Record, observations cycleport.ReadinessObservations) []string {
+	missing := baseImplementationMissing(record)
 	return append(missing, worktreePlanMissing(record, observations)...)
 }
 
-func ImplementationReadinessMissing(record model.Record, checkPlanBinding bool, observations cycleport.ReadinessObservations) []string {
-	missing := CompatibilityReadinessMissing(record, observations)
+func implementationReadinessMissing(record model.Record, checkPlanBinding bool, observations cycleport.ReadinessObservations) []string {
+	missing := compatibilityReadinessMissing(record, observations)
 	missing = append(missing, CompatibilityReviewMissing(record)...)
-	missing = append(missing, ArchitectureReviewStaleMissing(record, checkPlanBinding, observations.SealedArchitectureDigest)...)
+	missing = append(missing, architectureReviewStaleMissing(record, checkPlanBinding, observations.SealedArchitectureDigest)...)
 	missing = append(missing, DevilsAdvocateReviewMissing(record, checkPlanBinding, observations.LinkedPlanDigest)...)
 	workspaceMatches := false
 	if record.Execution != nil {

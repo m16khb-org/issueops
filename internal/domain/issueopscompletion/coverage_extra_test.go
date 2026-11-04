@@ -10,13 +10,13 @@ import (
 
 func TestDenialExposesCodeAndCause(t *testing.T) {
 	err := ValidateActive(Snapshot{Phase: "plan"}, completioncontract.Command{}, true)
-	if CodeOf(err) != DenyPhase {
+	if CodeOf(err) != denyPhase {
 		t.Fatalf("code = %q", CodeOf(err))
 	}
 	if err.Error() != "execution completion requires pr phase" {
 		t.Fatalf("Error() = %q", err.Error())
 	}
-	denial, ok := errors.AsType[*Denial](err)
+	denial, ok := errors.AsType[*denial](err)
 	if !ok || denial.Unwrap() == nil || denial.Unwrap().Error() != err.Error() {
 		t.Fatalf("Unwrap must expose the cause: %v", denial)
 	}

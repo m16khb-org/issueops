@@ -10,7 +10,7 @@ func TestDecideReconcile(t *testing.T) {
 	tests := []struct {
 		name   string
 		facts  ReconcileFacts
-		action Action
+		action action
 		reason string
 	}{
 		{name: "one candidate", facts: ReconcileFacts{CandidateCount: 1}, action: ActionAdopt},
@@ -94,7 +94,7 @@ func TestDecideRetryOutcome(t *testing.T) {
 		facts RetryOutcomeFacts
 		want  RetryOutcome
 	}{
-		{name: "successful call advances to verification", facts: RetryOutcomeFacts{Invocation: contract.InvocationUnknown}, want: RetryOutcomeVerify},
+		{name: "successful call advances to verification", facts: RetryOutcomeFacts{Invocation: contract.InvocationUnknown}, want: retryOutcomeVerify},
 		{name: "proven non-invocation is terminal", facts: RetryOutcomeFacts{Invocation: contract.InvocationNotInvokedProven, CallFailed: true}, want: RetryOutcomeTerminalNotInvoked},
 		{name: "unknown failure preserves retry", facts: RetryOutcomeFacts{Invocation: contract.InvocationUnknown, CallFailed: true}, want: RetryOutcomePreserve},
 	}

@@ -1,4 +1,4 @@
-// Package channelcli는 세션 간 메시지 채널 CLI의 flag 해석과 출력을 소유한다.
+// Package channelcli 패키지는 세션 간 메시지 채널 CLI의 flag 해석과 출력을 소유한다.
 // 저장소 조립은 composition root가 하고(Dependencies), 여기서는 메시지 형식을
 // 모른다.
 package channelcli
@@ -16,17 +16,19 @@ import (
 	channelcontract "issueops/internal/contract/channel"
 )
 
-// Dependencies는 channel CLI가 필요한 연산을 함수로 받는다.
+// Dependencies 타입은 channel CLI가 필요한 연산을 함수로 받는다.
 type Dependencies struct {
 	Send func(channelcontract.SendRequest) (channelcontract.SendResult, error)
 	Recv func(context.Context, channelcontract.RecvRequest) (channelcontract.RecvResult, error)
 }
 
-// TimedOutError는 recv --wait가 시간 안에 메시지를 못 본 종료 오류이다(exit 1).
+// TimedOutError 타입은 recv --wait가 시간 안에 메시지를 못 본 종료 오류이다(exit 1).
 type TimedOutError struct{}
 
 func (TimedOutError) Error() string { return "wait timed out with no new messages" }
 
+// Run 함수는 channel 하위 명령(send, recv)을 args에서 골라 실행한다.
+// 인자가 없거나 도움말 요청이면 사용법을 stderr에 출력하고 nil을 반환하며, 알 수 없는 하위 명령이면 오류를 반환한다.
 func Run(deps Dependencies, args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
 		channelUsage()

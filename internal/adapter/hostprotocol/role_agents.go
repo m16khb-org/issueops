@@ -42,9 +42,9 @@ var roleAgentText = map[modelcontract.Role]struct{ description, prompt string }{
 // roleAgentName is the agent name a host sees for role.
 func roleAgentName(role modelcontract.Role) string { return "issueops-" + string(role) }
 
-// ClaudeAgentsJSON renders the claude --agents object. Agents without a
+// claudeAgentsJSON renders the claude --agents object. Agents without a
 // model are skipped.
-func ClaudeAgentsJSON(agents []RoleAgent) (string, error) {
+func claudeAgentsJSON(agents []RoleAgent) (string, error) {
 	type definition struct {
 		Description string `json:"description"`
 		Prompt      string `json:"prompt"`
@@ -71,8 +71,8 @@ func ClaudeAgentsJSON(agents []RoleAgent) (string, error) {
 	return strings.TrimSuffix(out.String(), "\n"), nil
 }
 
-// CodexRoleFile renders the Codex agent role file for agent.
-func CodexRoleFile(agent RoleAgent) (string, error) {
+// codexRoleFile renders the Codex agent role file for agent.
+func codexRoleFile(agent RoleAgent) (string, error) {
 	text, ok := roleAgentText[agent.Role]
 	if !ok {
 		return "", fmt.Errorf("role %q is not an injectable sub-agent", agent.Role)
@@ -97,7 +97,7 @@ func RoleAgentArgs(host string, agents []RoleAgent, writeRoleFile func(content s
 	}
 	switch host {
 	case "claude":
-		definitions, err := ClaudeAgentsJSON(agents)
+		definitions, err := claudeAgentsJSON(agents)
 		if err != nil {
 			return nil, err
 		}
@@ -108,7 +108,7 @@ func RoleAgentArgs(host string, agents []RoleAgent, writeRoleFile func(content s
 			if agent.Model == "" {
 				continue
 			}
-			content, err := CodexRoleFile(agent)
+			content, err := codexRoleFile(agent)
 			if err != nil {
 				return nil, err
 			}

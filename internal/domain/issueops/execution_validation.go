@@ -10,6 +10,10 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
+// ValidateExecution checks the structural invariants of an execution record:
+// workspace and write lease, pending external intent, completion and
+// completion history, failure, and sync-base resolution and events. It reads
+// only the record; the first violated invariant is returned.
 func ValidateExecution(execution issueopscontract.Execution) error {
 	if err := validateExecutionCore(execution); err != nil {
 		return err

@@ -111,12 +111,12 @@ func TestServiceRunNormalizesRootBeforeBootstrapping(t *testing.T) {
 
 func TestBootstrapPropagatesLifecycleFailureAndKeepsItsWarnings(t *testing.T) {
 	fake := &memEffects{initErr: errDisk, rendered: map[string]string{"AGENTS.md": "agents"}}
-	if _, err := Bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo", Write: true}, fake); !errors.Is(err, errDisk) || len(fake.writes) != 0 {
+	if _, err := bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo", Write: true}, fake); !errors.Is(err, errDisk) || len(fake.writes) != 0 {
 		t.Fatalf("err=%v writes=%v", err, fake.writes)
 	}
 
 	fake = &memEffects{lifecycle: lifecyclecontract.ProjectLifecycleStatePlan{Warnings: []string{"state drift"}}}
-	result, err := Bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo"}, fake)
+	result, err := bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo"}, fake)
 	if err != nil || len(result.Warnings) < 2 || result.Warnings[0] != "state drift" ||
 		!strings.HasPrefix(result.Warnings[len(result.Warnings)-1], "dry_run_only:") || !result.DryRun {
 		t.Fatalf("warnings=%v dryRun=%v err=%v", result.Warnings, result.DryRun, err)
@@ -140,7 +140,7 @@ func TestBootstrapDryRunPlansEverythingButWritesNothing(t *testing.T) {
 		".issueops/CONSTITUTION.md":       "",
 		".issueops/architecture/notes.md": "ignored",
 	}}
-	result, err := Bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo"}, fake)
+	result, err := bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo"}, fake)
 	if err != nil || len(fake.writes) != 0 {
 		t.Fatalf("writes=%v err=%v", fake.writes, err)
 	}
@@ -172,7 +172,7 @@ func TestBootstrapWriteCreatesMissingFamilyModulesAndManifest(t *testing.T) {
 	fake := &memEffects{rendered: map[string]string{
 		".issueops/adr/overview.md": "adr module",
 	}}
-	result, err := Bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo", Write: true}, fake)
+	result, err := bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo", Write: true}, fake)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -188,7 +188,7 @@ func TestBootstrapWriteCreatesMissingFamilyModulesAndManifest(t *testing.T) {
 	if !slices.ContainsFunc(result.Warnings, func(w string) bool { return strings.HasPrefix(w, "commit_before_cycles:") }) {
 		t.Errorf("warnings = %v, want commit_before_cycles", result.Warnings)
 	}
-	again, err := Bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo", Write: true}, fake)
+	again, err := bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo", Write: true}, fake)
 	if err != nil || slices.ContainsFunc(again.Warnings, func(w string) bool { return strings.HasPrefix(w, "commit_before_cycles:") }) {
 		t.Errorf("a run that creates nothing must not warn: %v %v", again.Warnings, err)
 	}
@@ -203,7 +203,7 @@ func TestBootstrapPreservesExistingFamilyDocsEvenWithSync(t *testing.T) {
 			"/repo/.issueops/documentation/manifest.json": "{\"budgets\":1}",
 		},
 	}
-	result, err := Bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo", Write: true, Sync: true}, fake)
+	result, err := bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo", Write: true, Sync: true}, fake)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -230,7 +230,7 @@ func TestBootstrapManifestPreservedWarningNeedsWriteAndSync(t *testing.T) {
 		"write without sync": {RepoRoot: "/repo", Write: true},
 		"sync without write": {RepoRoot: "/repo", Sync: true},
 	} {
-		result, err := Bootstrap(request, &memEffects{files: files()})
+		result, err := bootstrap(request, &memEffects{files: files()})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -238,7 +238,7 @@ func TestBootstrapManifestPreservedWarningNeedsWriteAndSync(t *testing.T) {
 			t.Errorf("%s: unexpected manifest_preserved warning %v", name, result.Warnings)
 		}
 	}
-	result, _ := Bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo", Write: true, Sync: true}, &memEffects{})
+	result, _ := bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo", Write: true, Sync: true}, &memEffects{})
 	if slices.ContainsFunc(result.Warnings, func(w string) bool { return strings.HasPrefix(w, "manifest_preserved:") }) {
 		t.Errorf("a manifest created by this run is not preserved: %v", result.Warnings)
 	}
@@ -259,7 +259,7 @@ func TestBootstrapWarnsAboutSyncOnceForSeveralExistingNonFamilyDocs(t *testing.T
 		rendered: map[string]string{".issueops/TECH_STACK.md": "new", ".issueops/VCS.md": "new"},
 		files:    map[string]string{"/repo/.issueops/TECH_STACK.md": "old", "/repo/.issueops/VCS.md": "old"},
 	}
-	result, err := Bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo", Write: true}, fake)
+	result, err := bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo", Write: true}, fake)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -278,7 +278,7 @@ func TestBootstrapDoesNotSuggestSyncForPreservedFamilyRootsOrCreates(t *testing.
 		rendered: map[string]string{".issueops/ADR.md": "new root", ".issueops/VCS.md": "new"},
 		files:    map[string]string{"/repo/.issueops/ADR.md": "curated"},
 	}
-	result, err := Bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo", Write: true}, fake)
+	result, err := bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo", Write: true}, fake)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -302,7 +302,7 @@ func TestBootstrapStopsAtFirstWriteFailure(t *testing.T) {
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			fake := &memEffects{failWrite: tc.fail, rendered: tc.rendered}
-			if _, err := Bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo", Write: true}, fake); !errors.Is(err, errDisk) || len(fake.writes) != 0 {
+			if _, err := bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo", Write: true}, fake); !errors.Is(err, errDisk) || len(fake.writes) != 0 {
 				t.Fatalf("err=%v writes=%v: nothing may be written after the first failure", err, fake.writes)
 			}
 		})
@@ -317,7 +317,7 @@ func TestBootstrapWriteBackfillsMissingMetaFrontmatterOnExistingDocs(t *testing.
 			"/repo/.issueops/VCS.md":        projectdoc.EnsureMetaFrontmatter("VCS.md", "# VCS\n"),
 		},
 	}
-	if _, err := Bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo", Write: true}, fake); err != nil {
+	if _, err := bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo", Write: true}, fake); err != nil {
 		t.Fatal(err)
 	}
 	want := projectdoc.EnsureMetaFrontmatter("TECH_STACK.md", "# Stack\n\nGo.\n")
@@ -330,7 +330,7 @@ func TestBootstrapWriteBackfillsMissingMetaFrontmatterOnExistingDocs(t *testing.
 
 	// A dry run must not backfill.
 	dry := &memEffects{files: map[string]string{"/repo/.issueops/TECH_STACK.md": "# Stack\n"}}
-	if _, err := Bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo"}, dry); err != nil || len(dry.writes) != 0 {
+	if _, err := bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo"}, dry); err != nil || len(dry.writes) != 0 {
 		t.Fatalf("dry-run writes=%v err=%v", dry.writes, err)
 	}
 }
@@ -340,7 +340,7 @@ func TestBootstrapFrontmatterBackfillStopsOnWriteFailure(t *testing.T) {
 		failWrite: "/repo/.issueops/TECH_STACK.md",
 		files:     map[string]string{"/repo/.issueops/TECH_STACK.md": "# Stack\n"},
 	}
-	if _, err := Bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo", Write: true}, fake); !errors.Is(err, errDisk) {
+	if _, err := bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: "/repo", Write: true}, fake); !errors.Is(err, errDisk) {
 		t.Fatalf("err=%v", err)
 	}
 }

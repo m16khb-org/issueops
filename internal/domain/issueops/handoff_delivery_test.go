@@ -60,7 +60,7 @@ func TestMergeHandoffDeliveryObservationBindsEveryMutableIdentity(t *testing.T) 
 		t.Run(test.name, func(t *testing.T) {
 			next := base
 			test.edit(&next)
-			_, decision := MergeHandoffDeliveryObservation(base, next)
+			_, decision := mergeHandoffDeliveryObservation(base, next)
 			if decision.Accepted || !reflect.DeepEqual(decision.RejectReasons, []string{test.want}) {
 				t.Fatalf("decision=%+v", decision)
 			}
@@ -75,7 +75,7 @@ func TestMergeHandoffDeliveryObservationKeepsStatesIndependentAndNonAuthoritativ
 
 	turnOnly := base
 	turnOnly.NativeTurnObserved = deliveryState(issueopscontract.HandoffDeliveryStateObserved, issueopscontract.HandoffDeliveryEvidenceNativeReceipt)
-	merged, decision := MergeHandoffDeliveryObservation(base, turnOnly)
+	merged, decision := mergeHandoffDeliveryObservation(base, turnOnly)
 	if !decision.Accepted {
 		t.Fatalf("turn observation must be evidence only: %+v", decision)
 	}
@@ -93,7 +93,7 @@ func TestMergeHandoffDeliveryObservationKeepsStatesIndependentAndNonAuthoritativ
 		Actor:      *merged.OwnerActor,
 		ClaimedAt:  "2026-09-20T10:02:00Z",
 	}
-	claimed, decision := MergeHandoffDeliveryObservation(merged, exactClaim)
+	claimed, decision := mergeHandoffDeliveryObservation(merged, exactClaim)
 	if !decision.Accepted {
 		t.Fatalf("claim observation must not grant authority or retry: %+v", decision)
 	}
@@ -108,7 +108,7 @@ func TestMergeHandoffDeliveryObservationRejectsBlindRetryAndInexactClaims(t *tes
 
 	blindRetry := base
 	blindRetry.Request.DurableID = "retry-1"
-	_, decision := MergeHandoffDeliveryObservation(base, blindRetry)
+	_, decision := mergeHandoffDeliveryObservation(base, blindRetry)
 	if decision.Accepted || !reflect.DeepEqual(decision.RejectReasons, []string{"delivery observation request identity changed"}) {
 		t.Fatalf("blind retry decision=%+v", decision)
 	}
@@ -127,7 +127,7 @@ func TestMergeHandoffDeliveryObservationRejectsBlindRetryAndInexactClaims(t *tes
 	inputFromCmux := cmuxBase
 	inputFromCmux.InputAccepted = deliveryState(issueopscontract.HandoffDeliveryStateObserved, issueopscontract.HandoffDeliveryEvidenceRawInput)
 	inputFromCmux.NativeTurnObserved = deliveryState(issueopscontract.HandoffDeliveryStateObserved, issueopscontract.HandoffDeliveryEvidenceRawInput)
-	_, decision = MergeHandoffDeliveryObservation(cmuxBase, inputFromCmux)
+	_, decision = mergeHandoffDeliveryObservation(cmuxBase, inputFromCmux)
 	if decision.Accepted || !reflect.DeepEqual(decision.RejectReasons, []string{"delivery observation native_turn_observed evidence is invalid"}) {
 		t.Fatalf("cmux raw input cannot promote a turn: %+v", decision)
 	}
@@ -144,7 +144,7 @@ func TestMergeHandoffDeliveryObservationRejectsBlindRetryAndInexactClaims(t *tes
 		},
 		ClaimedAt: "2026-09-20T10:03:00Z",
 	}
-	_, decision = MergeHandoffDeliveryObservation(base, wrongOwner)
+	_, decision = mergeHandoffDeliveryObservation(base, wrongOwner)
 	if decision.Accepted || !reflect.DeepEqual(decision.RejectReasons, []string{"delivery owner claim identity mismatch"}) {
 		t.Fatalf("wrong owner decision=%+v", decision)
 	}
@@ -185,7 +185,7 @@ func TestMergeHandoffDeliveryObservationModeSpecificRecoveryEvidence(t *testing.
 		t.Run(test.name, func(t *testing.T) {
 			base := test.base()
 			update := test.update(base)
-			merged, decision := MergeHandoffDeliveryObservation(base, update)
+			merged, decision := mergeHandoffDeliveryObservation(base, update)
 			if test.wantOK {
 				if !decision.Accepted {
 					t.Fatalf("decision=%+v", decision)
@@ -295,7 +295,7 @@ func TestFoldHandoffDeliveryObservationsReadsAppendOnlyEvidence(t *testing.T) {
 	if !reflect.DeepEqual(decisions[2].RejectReasons, []string{"delivery observation prompt digest changed"}) {
 		t.Fatalf("stale decision=%+v", decisions[2])
 	}
-	if got := folded[HandoffDeliveryFoldKey(first)]; got.InputAccepted.Status != issueopscontract.HandoffDeliveryStateObserved {
+	if got := folded[handoffDeliveryFoldKey(first)]; got.InputAccepted.Status != issueopscontract.HandoffDeliveryStateObserved {
 		t.Fatalf("folded=%+v", got)
 	}
 }
@@ -305,7 +305,7 @@ func TestHandoffDeliveryObservationUsesDurableRequestForRetryWithoutRetryAuthori
 	next := current
 	next.Ambiguous = deliveryState(issueopscontract.HandoffDeliveryStateObserved, issueopscontract.HandoffDeliveryEvidenceAcceptedResponseLost)
 
-	merged, decision := MergeHandoffDeliveryObservation(current, next)
+	merged, decision := mergeHandoffDeliveryObservation(current, next)
 	if !decision.Accepted {
 		t.Fatalf("retry identity must be evidence only: %+v", decision)
 	}
@@ -318,7 +318,7 @@ func TestHandoffDeliveryRetryCannotChangeDurableRequest(t *testing.T) {
 	current := deliveryObservationFixture()
 	next := current
 	next.Request.DurableID = "retry-request-2"
-	_, decision := MergeHandoffDeliveryObservation(current, next)
+	_, decision := mergeHandoffDeliveryObservation(current, next)
 	if decision.Accepted || !reflect.DeepEqual(decision.RejectReasons, []string{"delivery observation request identity changed"}) {
 		t.Fatalf("decision=%+v", decision)
 	}
@@ -334,18 +334,18 @@ func TestHandoffDeliveryExactClaimIsIdempotentAndOtherOwnerRejected(t *testing.T
 		Actor:      *base.OwnerActor,
 		ClaimedAt:  "2026-09-20T10:02:00Z",
 	}
-	merged, decision := MergeHandoffDeliveryObservation(base, claimed)
+	merged, decision := mergeHandoffDeliveryObservation(base, claimed)
 	if !decision.Accepted {
 		t.Fatalf("exact claim observation must be evidence only: %+v", decision)
 	}
-	_, decision = MergeHandoffDeliveryObservation(merged, claimed)
+	_, decision = mergeHandoffDeliveryObservation(merged, claimed)
 	if !decision.Accepted {
 		t.Fatalf("duplicate exact claim should be idempotent evidence: %+v", decision)
 	}
 
 	other := claimed
 	other.OwnerClaim.Actor.SessionID = "other-session"
-	_, decision = MergeHandoffDeliveryObservation(merged, other)
+	_, decision = mergeHandoffDeliveryObservation(merged, other)
 	if decision.Accepted || !reflect.DeepEqual(decision.RejectReasons, []string{"delivery owner claim identity mismatch"}) {
 		t.Fatalf("different owner decision=%+v", decision)
 	}
@@ -496,7 +496,7 @@ func TestMergeHandoffDeliveryObservationRejectsBackwardUpdateTimestamp(t *testin
 	next := current
 	next.UpdatedAt = "2026-09-20T10:00:30Z"
 	next.Ambiguous.ObservedAt = "2026-09-20T10:00:20Z"
-	_, decision := MergeHandoffDeliveryObservation(current, next)
+	_, decision := mergeHandoffDeliveryObservation(current, next)
 	if decision.Accepted || !reflect.DeepEqual(decision.RejectReasons, []string{"delivery observation update timestamp moved backward"}) {
 		t.Fatalf("decision=%+v", decision)
 	}
@@ -506,7 +506,7 @@ func TestMergeHandoffDeliveryObservationBindsCreatedAtAndOwnerActor(t *testing.T
 	current := deliveryObservationFixture()
 	changedCreated := current
 	changedCreated.CreatedAt = "2026-09-20T10:00:02Z"
-	_, decision := MergeHandoffDeliveryObservation(current, changedCreated)
+	_, decision := mergeHandoffDeliveryObservation(current, changedCreated)
 	if decision.Accepted || !reflect.DeepEqual(decision.RejectReasons, []string{"delivery observation created timestamp changed"}) {
 		t.Fatalf("created decision=%+v", decision)
 	}
@@ -515,7 +515,7 @@ func TestMergeHandoffDeliveryObservationBindsCreatedAtAndOwnerActor(t *testing.T
 	owner := *current.OwnerActor
 	owner.SessionID = "other-session"
 	changedOwner.OwnerActor = &owner
-	_, decision = MergeHandoffDeliveryObservation(current, changedOwner)
+	_, decision = mergeHandoffDeliveryObservation(current, changedOwner)
 	if decision.Accepted || !reflect.DeepEqual(decision.RejectReasons, []string{"delivery observation owner identity changed"}) {
 		t.Fatalf("owner decision=%+v", decision)
 	}

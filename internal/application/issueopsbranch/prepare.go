@@ -1,3 +1,8 @@
+// Package issueopsbranch is the application layer for the branch phase of an
+// issueops cycle: starting a cycle, linking issues, plans and worktrees to it,
+// sealing the branch identity (prepare), retargeting its base, and awaiting
+// the provider's linked-branch confirmation. Each use case mutates a cycle
+// record under the cycle lock through injected ports.
 package issueopsbranch
 
 import (
@@ -12,6 +17,9 @@ import (
 	"issueops/internal/domain/issueopsremote"
 )
 
+// Preparer seals the branch identity of a cycle: issue URL, branch, base
+// branch and base commit. Collaborators are injected so the use case stays
+// free of git and provider code.
 type Preparer struct {
 	Records           CycleRecords
 	Authority         cycleapp.MutationAuthority
@@ -26,6 +34,10 @@ type Preparer struct {
 	Now                   func() time.Time
 }
 
+// Prepare validates req against the cycle, resolves the base commit, and
+// saves the sealed branch preparation with its provider steps under the cycle
+// lock. It refuses to change a sealed preparation or a base the worktree
+// branch cannot reach.
 func (s Preparer) Prepare(ctx context.Context, id string, req model.BranchPrepareRequest, actor *model.Actor) (model.Record, error) {
 	var result model.Record
 	err := s.Records.WithinLock(ctx, id, func(spanCtx context.Context) error {

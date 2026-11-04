@@ -6,14 +6,16 @@ import (
 	"strings"
 )
 
-// ChangeTier는 변경 집합의 성격이다. 리뷰 범위와 reviewer effort를 여기에
-// 비례시켜 작은 변경이 큰 변경과 같은 비용을 내지 않게 한다.
+// ChangeTier 타입은 변경 집합의 성격이다. 리뷰 범위와 reviewer effort를 여기에 비례시켜 작은 변경이 큰 변경과
+// 같은 비용을 내지 않게 한다.
 type ChangeTier string
 
+// 변경 티어 상수는 ClassifyChangeTier가 돌려주는 값이다. ChangeTierDefault가 특별한 신호가 없는 기본
+// 티어이고, 나머지 값은 같은 패키지 안에서만 비교한다.
 const (
-	ChangeTierDocsOnly   ChangeTier = "docs-only"
-	ChangeTierContract   ChangeTier = "contract"
-	ChangeTierSchemaAuth ChangeTier = "schema-auth"
+	changeTierDocsOnly   ChangeTier = "docs-only"
+	changeTierContract   ChangeTier = "contract"
+	changeTierSchemaAuth ChangeTier = "schema-auth"
 	ChangeTierDefault    ChangeTier = "default"
 )
 
@@ -47,7 +49,7 @@ var frontendPathSegments = map[string]bool{
 // docsPathPrefixes는 운영 문서와 스킬이다.
 var docsPathPrefixes = []string{".issueops/", "skills/", "docs/"}
 
-// PathIsSchemaChange는 확실한 스키마 신호만 인정한다. 오탐이 나면 DB 없는
+// PathIsSchemaChange 함수는 경로가 스키마 변경인지 판단한다. 확실한 스키마 신호만 인정한다. 오탐이 나면 DB 없는
 // 사이클까지 게이트가 켜지므로, 판단이 갈리는 패턴은 일부러 뺀다.
 func PathIsSchemaChange(rel string) bool {
 	rel = normalizeChangePath(rel)
@@ -70,11 +72,10 @@ func PathIsSchemaChange(rel string) bool {
 	return false
 }
 
-// PathIsFrontendChange는 그 경로가 사람이 보는 화면을 바꾸는지 본다. 티어와
-// 독립인 QA 라우팅 힌트이며 위험 순위를 바꾸지 않는다. `.html` 테스트 픽스처처럼
-// 화면이 아닌 파일도 잡히는 오탐이 있는데, 오탐의 비용은 QA를 `Not Run`으로
+// pathIsFrontendChange는 그 경로가 사람이 보는 화면을 바꾸는지 본다. 티어와 독립인 QA 라우팅 힌트이며 위험 순위를
+// 바꾸지 않는다. `.html` 테스트 픽스처처럼 화면이 아닌 파일도 잡히는 오탐이 있는데, 오탐의 비용은 QA를 `Not Run`으로
 // 적는 한 줄이라 좁게 잡아 누락을 늘리는 쪽보다 낫다.
-func PathIsFrontendChange(rel string) bool {
+func pathIsFrontendChange(rel string) bool {
 	rel = normalizeChangePath(rel)
 	if rel == "" {
 		return false
@@ -90,14 +91,14 @@ func PathIsFrontendChange(rel string) bool {
 	return false
 }
 
-// HasFrontendChange는 변경 집합에 화면 변경이 하나라도 있는지 본다.
+// HasFrontendChange 함수는 변경 집합에 화면 변경이 하나라도 있는지 본다.
 func HasFrontendChange(paths []string) bool {
-	return slices.ContainsFunc(paths, PathIsFrontendChange)
+	return slices.ContainsFunc(paths, pathIsFrontendChange)
 }
 
-// ClassifyChangeTier는 변경 집합 하나를 티어로 바꾼다. 우선순위는
-// schema-auth > contract > docs-only > default다. 위험이 높은 신호가 하나라도
-// 있으면 그 티어가 이기고, docs-only는 전부가 문서일 때만 성립한다.
+// ClassifyChangeTier 함수는 변경 집합 하나를 티어로 바꾼다. 우선순위는 schema-auth > contract >
+// docs-only > default다. 위험이 높은 신호가 하나라도 있으면 그 티어가 이기고, docs-only는 전부가 문서일 때만
+// 성립한다.
 func ClassifyChangeTier(paths []string) ChangeTier {
 	if len(paths) == 0 {
 		return ChangeTierDefault
@@ -109,7 +110,7 @@ func ClassifyChangeTier(paths []string) ChangeTier {
 			continue
 		}
 		if PathIsSchemaChange(rel) || pathTouchesAuth(rel) {
-			return ChangeTierSchemaAuth
+			return changeTierSchemaAuth
 		}
 		if pathIsContractSurface(rel) {
 			anyContract = true
@@ -120,22 +121,21 @@ func ClassifyChangeTier(paths []string) ChangeTier {
 	}
 	switch {
 	case anyContract:
-		return ChangeTierContract
+		return changeTierContract
 	case allDocs:
-		return ChangeTierDocsOnly
+		return changeTierDocsOnly
 	default:
 		return ChangeTierDefault
 	}
 }
 
-// ReviewLensesForTier는 그 티어에서 적용할 코드베이스 존중 렌즈를 돌려준다.
-// 병렬 리뷰 허용 여부는 여기 담지 않는다 — 그 판단은 issueops-verify 스킬
-// 문장이 단독으로 소유한다.
+// ReviewLensesForTier 함수는 그 티어에서 적용할 코드베이스 존중 렌즈를 돌려준다. 병렬 리뷰 허용 여부는 여기 담지
+// 않는다. 그 판단은 issueops-verify 스킬 문장이 단독으로 소유한다.
 func ReviewLensesForTier(tier ChangeTier) []string {
 	switch tier {
-	case ChangeTierDocsOnly:
+	case changeTierDocsOnly:
 		return []string{"side-effect"}
-	case ChangeTierContract:
+	case changeTierContract:
 		return []string{"compat", "reuse", "perf", "side-effect"}
 	default:
 		return []string{"reuse", "perf", "compat", "side-effect"}

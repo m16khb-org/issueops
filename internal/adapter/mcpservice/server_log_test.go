@@ -64,7 +64,7 @@ func TestServiceLogWriterWrapsOnlyTheServiceLog(t *testing.T) {
 	if writer := serviceLogWriterAt(nil, other, path, 16); writer != other {
 		t.Fatalf("unrelated stderr wrapped %T", writer)
 	}
-	if got := ServiceLogPath("/state"); !strings.HasSuffix(got, filepath.Join("mcp-http", "server.log")) {
+	if got := serviceLogPath("/state"); !strings.HasSuffix(got, filepath.Join("mcp-http", "server.log")) {
 		t.Fatalf("service log path = %q", got)
 	}
 }
@@ -74,7 +74,7 @@ func TestServiceLogWriterWrapsStderrPointedAtTheStateDirLog(t *testing.T) {
 	if err := os.MkdirAll(httpDir(state), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	stderr := openServiceLogForTest(t, ServiceLogPath(state), 0)
+	stderr := openServiceLogForTest(t, serviceLogPath(state), 0)
 	if _, ok := ServiceLogWriter(nil, stderr, state).(*cappedLogWriter); !ok {
 		t.Fatal("stderr redirected to the service log was not capped")
 	}

@@ -29,8 +29,8 @@ func TestCleanupAbandonRemoteRetryRequiresUnchangedLocalInventory(t *testing.T) 
 					inventory.BranchOID = "old"
 				}
 				record := model.Record{CleanupAbandonFailure: failure}
-				evidence := CleanupAbandonFailureEvidence{SameWorktree: true, SealMatches: true}
-				if !CleanupAbandonFailureInventoryMatches(record, inventory, evidence) {
+				evidence := cleanupAbandonFailureEvidence{SameWorktree: true, SealMatches: true}
+				if !cleanupAbandonFailureInventoryMatches(record, inventory, evidence) {
 					t.Fatal("unchanged inventory must be retryable")
 				}
 				for _, change := range []struct {
@@ -56,13 +56,13 @@ func TestCleanupAbandonRemoteRetryRequiresUnchangedLocalInventory(t *testing.T) 
 					t.Run(change.name, func(t *testing.T) {
 						next := inventory
 						change.mutate(&next)
-						if CleanupAbandonFailureInventoryMatches(record, next, evidence) {
+						if cleanupAbandonFailureInventoryMatches(record, next, evidence) {
 							t.Fatal("changed local inventory accepted")
 						}
 					})
 				}
-				for _, bad := range []CleanupAbandonFailureEvidence{{SameWorktree: false, SealMatches: true}, {SameWorktree: true, SealMatches: false}} {
-					if CleanupAbandonFailureInventoryMatches(record, inventory, bad) {
+				for _, bad := range []cleanupAbandonFailureEvidence{{SameWorktree: false, SealMatches: true}, {SameWorktree: true, SealMatches: false}} {
+					if cleanupAbandonFailureInventoryMatches(record, inventory, bad) {
 						t.Fatal("invalid receipt evidence accepted")
 					}
 				}

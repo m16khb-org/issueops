@@ -9,7 +9,7 @@ import (
 	domain "issueops/internal/domain/gates"
 )
 
-// Lint는 게이트를 실행하지 않고 gates init·check가 거부하거나 met으로 만들 수 없는
+// Lint 메서드는 게이트를 실행하지 않고 gates init·check가 거부하거나 met으로 만들 수 없는
 // 형식을 찾는다. CHECK는 gates check와 같은 정책 요청으로 평가만 한다.
 func (service Service) Lint(req model.LintRequest) (model.LintResult, error) {
 	if len(req.Gates) == 0 && strings.TrimSpace(req.PlanFile) == "" && len(req.Files) == 0 {
@@ -94,4 +94,4 @@ func (service Service) lintCandidates(check model.CheckRequest, candidates []dom
 }
 
 // PolicyEvaluate는 실행 없이 command policy 판정만 하는 함수다.
-type PolicyEvaluate func(policy.CommandPolicyRequest) policy.CommandPolicyEvaluation
+type policyEvaluate func(policy.CommandPolicyRequest) policy.CommandPolicyEvaluation

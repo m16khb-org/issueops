@@ -319,11 +319,11 @@ func TestEncodeRejectsInvalidID(t *testing.T) {
 }
 
 func TestNormalizeIDTrimsWhitespaceAndRejectsBackslash(t *testing.T) {
-	id, err := NormalizeID("  io-padded \n")
+	id, err := normalizeID("  io-padded \n")
 	if err != nil || id != "io-padded" {
 		t.Fatalf("id=%q err=%v", id, err)
 	}
-	if _, err := NormalizeID(`io-a\b`); err == nil {
+	if _, err := normalizeID(`io-a\b`); err == nil {
 		t.Fatal("backslash id accepted")
 	}
 }

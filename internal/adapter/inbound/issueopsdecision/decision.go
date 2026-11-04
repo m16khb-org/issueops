@@ -1,3 +1,5 @@
+// Package issueopsdecision adapts the decision recording application service
+// to the function-valued handlers the CLI and MCP layers call. It is an inbound adapter.
 package issueopsdecision
 
 import (
@@ -8,6 +10,8 @@ import (
 	issueopsdecisioncontract "issueops/internal/contract/issueopsdecision"
 )
 
+// Handlers exposes decision recording with and without a native actor. Add
+// records without actor verification; AddWithActor passes the actor to the service.
 type Handlers struct {
 	Add func(
 		string,
@@ -22,6 +26,8 @@ type Handlers struct {
 	) (issueopscontract.Record, error)
 }
 
+// NewHandlers binds Add and AddWithActor to service, calling it with a
+// background context.
 func NewHandlers(service *issueopsdecisionapplication.Service) Handlers {
 	return Handlers{
 		Add: func(

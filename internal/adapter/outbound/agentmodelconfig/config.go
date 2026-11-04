@@ -30,9 +30,9 @@ const (
 	excludeLine = "/" + localRelPath
 )
 
-// GlobalPath follows XDG: $XDG_CONFIG_HOME/issueops/agent-models.json, or
+// globalPath follows XDG: $XDG_CONFIG_HOME/issueops/agent-models.json, or
 // ~/.config/issueops/agent-models.json when the variable is empty.
-func GlobalPath(getenv func(string) string, home string) string {
+func globalPath(getenv func(string) string, home string) string {
 	base := strings.TrimSpace(getenv("XDG_CONFIG_HOME"))
 	if base == "" {
 		base = filepath.Join(home, ".config")
@@ -114,14 +114,14 @@ func WriteLocal(local Local, cfg contract.Config) (excluded bool, err error) {
 	if local.Path == "" {
 		return false, fmt.Errorf("local settings need a git repository")
 	}
-	if excluded, err = EnsureExcluded(local.CommonDir); err != nil {
+	if excluded, err = ensureExcluded(local.CommonDir); err != nil {
 		return false, err
 	}
 	return excluded, Write(local.Path, cfg)
 }
 
-// EnsureExcluded appends excludeLine to <common-dir>/info/exclude once.
-func EnsureExcluded(commonDir string) (bool, error) {
+// ensureExcluded appends excludeLine to <common-dir>/info/exclude once.
+func ensureExcluded(commonDir string) (bool, error) {
 	return gitexclude.Ensure(commonDir, excludeLine)
 }
 
@@ -213,7 +213,7 @@ type Files struct {
 // Load reads the global file and, inside a git repository, the
 // main-worktree local file.
 func Load(ctx context.Context, repo string, getenv func(string) string, home string) (Files, error) {
-	files := Files{GlobalPath: GlobalPath(getenv, home)}
+	files := Files{GlobalPath: globalPath(getenv, home)}
 	local, err := LocalPath(ctx, repo)
 	if err != nil {
 		return Files{}, err

@@ -9,8 +9,11 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
+// ReviewPlanSource reads plan material for review: the linked plan digest and the staged
+// plans. It holds no state.
 type ReviewPlanSource struct{}
 
+// LinkedDigest returns the content digest of the plan file linked to record.
 func (ReviewPlanSource) LinkedDigest(record model.Record) (string, error) {
 	identity, err := readLinkedPlanIdentity(record)
 	if err != nil {
@@ -19,14 +22,15 @@ func (ReviewPlanSource) LinkedDigest(record model.Record) (string, error) {
 	return identity.Digest, nil
 }
 
+// StagedPlans returns the staged plan artifacts of cycle id, keyed by artifact name.
 func (ReviewPlanSource) StagedPlans(stateRoot, id string) (map[string]string, error) {
 	return readStagedArtifacts(stateRoot, id)
 }
 
-// ReviewArchitectureSource는 architecture review가 묶이는 문서를 읽는다.
+// ReviewArchitectureSource 타입은 architecture review가 묶이는 문서를 읽는다.
 type ReviewArchitectureSource struct{}
 
-// Document는 실행 전에는 스테이징한 architecture를, 실행 뒤에는 봉인 파일을 읽는다.
+// Document 메서드는 실행 전에는 스테이징한 architecture를, 실행 뒤에는 봉인 파일을 읽는다.
 // 문서가 없으면 빈 문자열과 nil 오류를 돌려주고, 그 판정은 domain이 한다.
 func (ReviewArchitectureSource) Document(stateRoot string, record model.Record) (string, error) {
 	if record.Execution == nil {
@@ -47,7 +51,7 @@ func (ReviewArchitectureSource) Document(stateRoot string, record model.Record) 
 }
 
 // SealedDigest는 봉인된 architecture 파일의 sha256이다. 파일이 없거나 비면 오류다.
-func (source ReviewArchitectureSource) SealedDigest(record model.Record) (string, error) {
+func (source ReviewArchitectureSource) sealedDigest(record model.Record) (string, error) {
 	if record.Execution == nil {
 		return "", errors.New("architecture is sealed only after execution prepare")
 	}

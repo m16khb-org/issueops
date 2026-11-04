@@ -6,6 +6,8 @@ import (
 	domain "issueops/internal/domain/selfverify"
 )
 
+// MapGoalScores scores the self-verification goals against the steps that ran in result and
+// targetScore.
 func MapGoalScores(result augment.Result, targetScore float64) []verify.SelfVerificationGoalScore {
 	return domain.ScoreGoals(domain.GoalDefinitions(), projectRuns(result), result.Iterations, targetScore)
 }

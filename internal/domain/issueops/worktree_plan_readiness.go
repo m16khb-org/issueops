@@ -6,6 +6,8 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
+// PlanExistenceRoot returns the directory a plan path is resolved against:
+// the linked worktree, or the repository when no worktree is linked.
 func PlanExistenceRoot(record model.Record) string {
 	if worktree := strings.TrimSpace(record.WorktreePath); worktree != "" {
 		return worktree
@@ -13,6 +15,9 @@ func PlanExistenceRoot(record model.Record) string {
 	return strings.TrimSpace(record.Repo)
 }
 
+// WorktreePlanReadinessMissing lists the unmet worktree and plan gates: a
+// linked and valid worktree, an existing plan when one is linked, and a plan
+// inside the worktree. The caller supplies the filesystem observations.
 func WorktreePlanReadinessMissing(record model.Record, worktreeValid, planExists, planInWorktree bool) []string {
 	missing := []string{}
 	if strings.TrimSpace(record.WorktreePath) == "" {

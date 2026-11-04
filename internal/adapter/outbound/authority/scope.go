@@ -22,6 +22,9 @@ type ScopeResolver struct{ Git string }
 
 var _ authorityport.ScopeResolver = ScopeResolver{}
 
+// Resolve canonicalizes workspaceRoot and cwd into a Scope. An empty cwd
+// defaults to workspaceRoot. It fails when cwd is outside workspaceRoot or when
+// workspaceRoot is outside its Git work tree.
 func (r ScopeResolver) Resolve(ctx context.Context, workspaceRoot, cwd string) (contract.Scope, error) {
 	if err := ctx.Err(); err != nil {
 		return contract.Scope{}, err

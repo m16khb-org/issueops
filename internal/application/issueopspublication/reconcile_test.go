@@ -430,7 +430,7 @@ func assertReconcileFailure(t *testing.T, result contract.ReconcileResult, err e
 func TestReconcileCrashSettlementUnlocksTheSingleRetry(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
-		settled CrashSettlement
+		settled crashSettlement
 		creates int
 		code    string
 	}{

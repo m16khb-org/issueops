@@ -39,13 +39,13 @@ func TestConformanceBaselineRunsRegressionFixturesInDeterministicOrderAndAllowsA
 	var calls []string
 	runtime := newTestConformance(ConformanceDependencies{
 		Root: func() string { return root },
-		Replay: func(_ context.Context, fixturePath, stateDir string) (ReplayOutcome, error) {
+		Replay: func(_ context.Context, fixturePath, stateDir string) (replayOutcome, error) {
 			calls = append(calls, filepath.Base(fixturePath))
 			if err := os.WriteFile(filepath.Join(stateDir, "state.json"), []byte("unchanged"), 0o600); err != nil {
-				return ReplayOutcome{}, err
+				return replayOutcome{}, err
 			}
 			digest := sha256.Sum256([]byte("unchanged"))
-			return ReplayOutcome{HandlerCalls: 0, StateBeforeSHA256: fmt.Sprintf("%x", digest), StateAfterSHA256: fmt.Sprintf("%x", digest)}, nil
+			return replayOutcome{HandlerCalls: 0, StateBeforeSHA256: fmt.Sprintf("%x", digest), StateAfterSHA256: fmt.Sprintf("%x", digest)}, nil
 		},
 	})
 	if err := runtime.runConformanceBaseline(nil); err != nil {
@@ -69,17 +69,17 @@ func TestConformanceBaselineRunsRegressionFixturesInDeterministicOrderAndAllowsA
 func TestConformanceReplayUsesFakeHandlerAndUnchangedTemporaryStateDigest(t *testing.T) {
 	called := 0
 	runtime := newTestConformance(ConformanceDependencies{
-		Replay: func(_ context.Context, fixturePath, stateDir string) (ReplayOutcome, error) {
+		Replay: func(_ context.Context, fixturePath, stateDir string) (replayOutcome, error) {
 			called++
 			if filepath.Base(fixturePath) != "fixture.json" {
-				return ReplayOutcome{}, fmt.Errorf("unexpected fixture %s", fixturePath)
+				return replayOutcome{}, fmt.Errorf("unexpected fixture %s", fixturePath)
 			}
 			state := []byte("stable state")
 			if err := os.WriteFile(filepath.Join(stateDir, "state.json"), state, 0o600); err != nil {
-				return ReplayOutcome{}, err
+				return replayOutcome{}, err
 			}
 			digest := sha256.Sum256(state)
-			return ReplayOutcome{HandlerCalls: 0, StateBeforeSHA256: fmt.Sprintf("%x", digest), StateAfterSHA256: fmt.Sprintf("%x", digest)}, nil
+			return replayOutcome{HandlerCalls: 0, StateBeforeSHA256: fmt.Sprintf("%x", digest), StateAfterSHA256: fmt.Sprintf("%x", digest)}, nil
 		},
 	})
 	if err := runtime.runConformanceReplay([]string{"--fixture", "fixture.json", "--json"}); err != nil {

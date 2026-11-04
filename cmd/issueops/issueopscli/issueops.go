@@ -1,3 +1,6 @@
+// Package issueopscli 패키지는 issueops 명령줄의 IssueOps 하위 명령을 해석하고 실행한다.
+// 플래그를 읽어 주입된 핸들러를 호출하고 결과를 출력하며, 상태 저장소와 provider에는
+// Dependencies로만 접근한다. cmd 계층이다.
 package issueopscli
 
 import (

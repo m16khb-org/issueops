@@ -24,7 +24,7 @@ func TestRefreshAISlopCleanRejectsBeforeObservingOrWriting(t *testing.T) {
 			return rec, nil
 		},
 	}
-	_, err := RefreshAISlopClean(store, "state", model.Record{ID: "io-1"})
+	_, err := refreshAISlopClean(store, "state", model.Record{ID: "io-1"})
 	if err == nil || !strings.Contains(err.Error(), "implementation_changes") || !reflect.DeepEqual(events, []string{"readiness"}) {
 		t.Fatalf("err=%v events=%v", err, events)
 	}
@@ -45,7 +45,7 @@ func TestRefreshAISlopCleanObservesThenWrites(t *testing.T) {
 			return rec, nil
 		},
 	}
-	record, err := RefreshAISlopClean(store, "state", model.Record{ID: "io-1", Phase: model.PhaseFeedback})
+	record, err := refreshAISlopClean(store, "state", model.Record{ID: "io-1", Phase: model.PhaseFeedback})
 	if err != nil || !reflect.DeepEqual(events, []string{"readiness", "clock", "head", "fingerprint", "write"}) ||
 		record.Phase != model.PhaseFeedback || record.AISlopCleanAt != "2026-09-28T00:00:00Z" ||
 		record.AISlopCleanHead != "head-1" || record.AISlopCleanFingerprint != "fingerprint-1" {

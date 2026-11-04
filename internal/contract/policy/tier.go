@@ -1,5 +1,6 @@
 package policy
 
+// Tier names, from the least to the most privileged envelope.
 const (
 	TierReadOnly       = "read_only"
 	TierWorkspaceWrite = "workspace_write"
@@ -7,6 +8,7 @@ const (
 	TierShellException = "shell_exception"
 )
 
+// Request is the capability flags a caller asks for; domain ResolveTier maps it to a Tier.
 type Request struct {
 	WriteAllowed   bool
 	NetworkAllowed bool

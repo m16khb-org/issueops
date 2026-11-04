@@ -1,3 +1,7 @@
+// Package mcpservice is the outbound adapter that runs the IssueOps MCP HTTP
+// server as a per-user background service under launchd (darwin) or systemd
+// --user (linux), and guards it with a single-instance lock and an identity
+// record so status, start, and stop can prove which process answers.
 package mcpservice
 
 import (
@@ -26,12 +30,15 @@ const (
 
 	// Identity headers ride only on successful (authenticated) responses so a
 	// readiness probe can prove which process answers on the fixed port.
-	HeaderPID     = "Issueops-Mcp-Pid"
-	HeaderBuildID = "Issueops-Mcp-Build-Id"
+	headerPID     = "Issueops-Mcp-Pid"
+	headerBuildID = "Issueops-Mcp-Build-Id"
 )
 
-var ErrInstanceConflict = errors.New("another issueops mcp http instance holds the service lock (conflict)")
+var errInstanceConflict = errors.New("another issueops mcp http instance holds the service lock (conflict)")
 
+// Record is the identity of the running MCP HTTP server, persisted as server.json
+// in the state directory: process id and start time, executable, and the build id
+// of that executable.
 type Record struct {
 	SchemaVersion int    `json:"schema_version"`
 	PID           int    `json:"pid"`
@@ -40,6 +47,8 @@ type Record struct {
 	BuildID       string `json:"build_id"`
 }
 
+// Instance is a held single-instance lock for the MCP HTTP server together with
+// the identity record it published. Release gives both up.
 type Instance struct {
 	lock       *os.File
 	recordPath string
@@ -48,9 +57,9 @@ type Instance struct {
 
 func httpDir(stateDir string) string { return filepath.Join(stateDir, httpStateDirName) }
 
-// ServiceLogPath is the file the launchd and systemd units append the server's
+// serviceLogPath is the file the launchd and systemd units append the server's
 // stdout and stderr to.
-func ServiceLogPath(stateDir string) string { return filepath.Join(httpDir(stateDir), "server.log") }
+func serviceLogPath(stateDir string) string { return filepath.Join(httpDir(stateDir), "server.log") }
 
 // AcquireInstance takes the non-blocking OS lock. It never waits: a held lock
 // is a conflict, not something to retry on another port.
@@ -66,20 +75,23 @@ func AcquireInstance(stateDir string) (*Instance, error) {
 	if err := tryLock(lock); err != nil {
 		_ = lock.Close()
 		if errors.Is(err, errLockHeld) {
-			return nil, ErrInstanceConflict
+			return nil, errInstanceConflict
 		}
 		return nil, fmt.Errorf("lock mcp http instance: %w", err)
 	}
 	return &Instance{lock: lock, recordPath: filepath.Join(dir, recordFileName)}, nil
 }
 
+// Publish inspects the current process, computes the build id of executable, and
+// writes the resulting Record to the state directory. It returns the record and
+// remembers it for Release.
 func (instance *Instance) Publish(inspect func(int) (processidentity.Identity, error), executable string) (Record, error) {
 	pid := os.Getpid()
 	identity, err := inspect(pid)
 	if err != nil {
 		return Record{}, fmt.Errorf("inspect mcp http process: %w", err)
 	}
-	buildID, err := BuildID(executable)
+	buildID, err := buildID(executable)
 	if err != nil {
 		return Record{}, fmt.Errorf("mcp http build id: %w", err)
 	}
@@ -91,6 +103,8 @@ func (instance *Instance) Publish(inspect func(int) (processidentity.Identity, e
 	return record, nil
 }
 
+// Release removes the identity record if it still belongs to this process and
+// then drops the instance lock.
 func (instance *Instance) Release() error {
 	if instance.record.PID != 0 {
 		if current, err := readRecord(instance.recordPath); err == nil && current.PID == instance.record.PID {
@@ -119,8 +133,8 @@ func (w *identityWriter) WriteHeader(status int) {
 	if !w.wrote {
 		w.wrote = true
 		if status >= 200 && status < 300 {
-			w.Header().Set(HeaderPID, w.pid)
-			w.Header().Set(HeaderBuildID, w.buildID)
+			w.Header().Set(headerPID, w.pid)
+			w.Header().Set(headerBuildID, w.buildID)
 		}
 	}
 	w.ResponseWriter.WriteHeader(status)
@@ -144,7 +158,7 @@ func (w *identityWriter) Flush() {
 
 func (w *identityWriter) Unwrap() http.ResponseWriter { return w.ResponseWriter }
 
-func BuildID(path string) (string, error) {
+func buildID(path string) (string, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return "", err

@@ -43,7 +43,7 @@ func TestHookTargetGenerationStaysQuietWhenItCannotJudge(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
 		running string
-		read    HookGenerationReader
+		read    hookGenerationReader
 	}{
 		{"reader 없음", "aaaaaaaaaaaa", nil},
 		{"실행 세대 미관측", "", func(string) string { return "bbbbbbbbbbbb" }},

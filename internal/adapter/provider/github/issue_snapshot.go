@@ -11,6 +11,9 @@ import (
 	"issueops/internal/port"
 )
 
+// ReadIssueSnapshot reads the URL, body and state of req.URL with
+// `gh issue view`. It fails when the URL is empty or the returned URL differs
+// from the requested one.
 func (Provider) ReadIssueSnapshot(ctx context.Context, req executionissue.SnapshotRequest) (executionissue.Snapshot, error) {
 	if err := ctx.Err(); err != nil {
 		return executionissue.Snapshot{}, err

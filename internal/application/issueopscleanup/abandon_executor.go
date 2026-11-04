@@ -13,6 +13,10 @@ import (
 	"issueops/internal/port"
 )
 
+// AbandonExecutor runs `cleanup abandon`: it plans a preview, then on a
+// confirmed apply with a matching fingerprint closes remote artifacts, stops
+// workspace processes, removes the worktree and branch, and deletes the record.
+// Every collaborator is injected as a function so the steps stay fenced and testable.
 type AbandonExecutor struct {
 	Records    port.CleanupAbandonRecords
 	Acquire    func(context.Context, string) (CleanupLifetime, error)
@@ -43,6 +47,10 @@ type abandonRun struct {
 	drainer     *cleanupDrainer
 }
 
+// Run previews or applies an abandon for req.ID under the cleanup lifetime.
+// Without req.Apply it returns the preview with a fingerprint and the next
+// command. With Apply it requires req.Confirm and a matching fingerprint, arms
+// the failure receipt, executes the steps, and preserves the record on any failure.
 func (s AbandonExecutor) Run(ctx context.Context, req model.CleanupAbandonRequest) (model.CleanupAbandonResult, error) {
 	failed := model.CleanupAbandonResult{OK: false, ID: req.ID}
 	lifetime, err := s.Acquire(ctx, req.ID)
@@ -131,7 +139,7 @@ func (r *abandonRun) plan(failed model.CleanupAbandonResult) (model.CleanupAband
 		}
 		return result, err
 	}
-	fingerprint, err := CleanupAbandonFingerprint(inventory)
+	fingerprint, err := cleanupAbandonFingerprint(inventory)
 	if err != nil {
 		return failed, err
 	}

@@ -5,6 +5,8 @@ import (
 	"strconv"
 )
 
+// RerunCommands returns copy-paste commands to reproduce a failure: the targeted command for failedStep
+// when one is known, followed by the full self-verify rerun for baseSeed and targetScore.
 func RerunCommands(failedStep string, baseSeed int64, targetScore float64) []string {
 	commands := []string{}
 	if command, ok := StepRerunCommand(failedStep); ok {
@@ -41,11 +43,14 @@ var selfVerifyStepRerunCommands = map[string]string{
 	"harness invariants":     "go test ./cmd/issueops -run Test -count=1",
 }
 
+// StepRerunCommand returns the shell command that reruns the step with label, and false when the label
+// has no known command.
 func StepRerunCommand(label string) (string, bool) {
 	command, ok := selfVerifyStepRerunCommands[label]
 	return command, ok
 }
 
+// FormatScore formats score without a fractional part when it is a whole number.
 func FormatScore(score float64) string {
 	if score == float64(int64(score)) {
 		return strconv.FormatInt(int64(score), 10)

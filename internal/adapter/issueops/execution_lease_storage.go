@@ -16,11 +16,16 @@ import (
 	"issueops/internal/contract/issueops"
 )
 
+// LeaseWorkspaceSnapshot fingerprints a canonical worktree for lease decisions. GitCmd runs
+// git with trimmed output; GitCmdRaw runs git without trimming, for byte-exact diffs.
 type LeaseWorkspaceSnapshot struct {
 	GitCmd    func(string, ...string) (int, string, string)
 	GitCmdRaw func(string, ...string) (int, string, string)
 }
 
+// Snapshot returns a digest of the worktree identity (root, branch, HEAD, git common dir),
+// index and tracked, staged and untracked changes. An absent root yields a path-bound
+// absence digest; a symlink, file or Git mismatch is an error.
 func (reader LeaseWorkspaceSnapshot) Snapshot(workspace issueops.Workspace) (string, error) {
 	info, err := os.Lstat(workspace.Root)
 	if errors.Is(err, os.ErrNotExist) {

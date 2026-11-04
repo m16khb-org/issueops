@@ -8,6 +8,9 @@ import (
 
 const stepBudgetMinRegressionMS int64 = 25
 
+// CompareSlowestStepRegressions reports labels whose slowest observed duration grew by more than
+// maxRegressionPct from baseline to candidate. Labels absent from baseline or with a non-positive
+// baseline are ignored; the result is ordered by descending growth, then label.
 func CompareSlowestStepRegressions(baseline, candidate []contract.SlowStep, maxRegressionPct float64) []contract.SlowStepRegression {
 	baselineByLabel := MaxSlowStepDurationByLabel(baseline)
 	candidateByLabel := MaxSlowStepDurationByLabel(candidate)
@@ -42,6 +45,9 @@ func CompareSlowestStepRegressions(baseline, candidate []contract.SlowStep, maxR
 	return regressions
 }
 
+// CompareStepBudgetRegressions reports labels whose p95 duration grew by more than maxRegressionPct
+// and at least 25 ms from baseline to candidate. Labels without a positive baseline p95 are
+// ignored; the result is ordered by descending growth, then label.
 func CompareStepBudgetRegressions(baseline, candidate []contract.StepDurationStat, maxRegressionPct float64) []contract.StepBudgetRegression {
 	baselineByLabel := StepDurationStatByLabel(baseline)
 	candidateByLabel := StepDurationStatByLabel(candidate)
@@ -82,6 +88,7 @@ func CompareStepBudgetRegressions(baseline, candidate []contract.StepDurationSta
 	return regressions
 }
 
+// MissingStrings returns the sorted entries of want that are absent from have.
 func MissingStrings(want, have []string) []string {
 	haveSet := map[string]bool{}
 	for _, item := range have {

@@ -6,6 +6,9 @@ import (
 	"strings"
 )
 
+// SanitizeURL returns raw with any userinfo replaced by a placeholder so
+// credentials never reach logs or output; an unparsable raw is returned
+// trimmed.
 func SanitizeURL(raw string) string {
 	parsed, err := url.Parse(strings.TrimSpace(raw))
 	if err != nil {
@@ -17,6 +20,8 @@ func SanitizeURL(raw string) string {
 	return parsed.String()
 }
 
+// ResolveRedirect resolves the Location header value against the request URL
+// base and returns the absolute target.
 func ResolveRedirect(base, location string) (string, error) {
 	parsedBase, err := url.Parse(base)
 	if err != nil {
@@ -29,6 +34,8 @@ func ResolveRedirect(base, location string) (string, error) {
 	return parsedBase.ResolveReference(reference).String(), nil
 }
 
+// IsRedirect reports whether status is an HTTP redirect code the fetcher
+// follows (301, 302, 303, 307 or 308).
 func IsRedirect(status int) bool {
 	return status == 301 || status == 302 || status == 303 || status == 307 || status == 308
 }

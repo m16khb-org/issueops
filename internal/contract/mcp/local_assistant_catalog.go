@@ -1,5 +1,6 @@
 package mcp
 
+// LocalAssistantTools returns the commit_suggest, lint_diagnose and web_fetch_resilient tools that assist the host agent locally.
 func LocalAssistantTools() []Tool {
 	return []Tool{
 		{

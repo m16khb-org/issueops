@@ -14,7 +14,7 @@ import (
 func linkPlanCommand(record issueopsnextcontract.Record) string {
 	execution := record.Execution
 	if execution == nil || strings.TrimSpace(execution.Workspace.Root) == "" || strings.TrimSpace(execution.Workspace.ArtifactDir) == "" {
-		return OwnerCommand(record.ID, "plan_path")
+		return ownerCommand(record.ID, "plan_path")
 	}
 	plan := filepath.Join(execution.Workspace.Root, filepath.FromSlash(execution.Workspace.ArtifactDir), "plan.md")
 	return "issueops link-plan --id " + record.ID + " --plan-path " + shelltoken.QuoteWord(plan) + " $RECORD_ACTOR_FLAGS"
@@ -26,7 +26,7 @@ func linkPlanCommand(record issueopsnextcontract.Record) string {
 //
 // 반환 문자열의 `<...>`는 사람이 채울 자리표시자이며, 그 존재가 곧
 // next_command_kind=template이다. 알 수 없는 키는 추측하지 않고 status로 보낸다.
-func OwnerCommand(id, missingKey string) string {
+func ownerCommand(id, missingKey string) string {
 	key := strings.TrimSpace(missingKey)
 	for _, lookup := range ownerCommandLookups {
 		if command, ok := lookup(id, key); ok {

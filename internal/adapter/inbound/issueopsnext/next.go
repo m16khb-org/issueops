@@ -1,3 +1,5 @@
+// Package issueopsnext adapts the issueops next-stage application service to
+// the plain function handlers used by inbound CLI and MCP entry points.
 package issueopsnext
 
 import (
@@ -7,6 +9,8 @@ import (
 	issueopsnextcontract "issueops/internal/contract/issueopsnext"
 )
 
+// NewNextHandler adapts the next-stage service to a function that resolves the
+// next issueops stage for the cycle id, using stateRoot and cwd for lookup.
 func NewNextHandler(service *issueopsnextapplication.Service) func(
 	string,
 	string,

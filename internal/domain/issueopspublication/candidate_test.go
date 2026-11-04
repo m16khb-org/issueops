@@ -41,7 +41,7 @@ func TestCandidateDraftIdentityKeepsSettledArtifacts(t *testing.T) {
 		{contract.Candidate{Title: "Ship the fix", Draft: true}, "Ship the fix"},
 		{contract.Candidate{Title: "Draft: Ship the fix"}, "Draft: Ship the fix"},
 	} {
-		if got := CandidateTitle(test.candidate); got != test.want {
+		if got := candidateTitle(test.candidate); got != test.want {
 			t.Fatalf("candidate title = %q, want %q", got, test.want)
 		}
 	}
@@ -57,7 +57,7 @@ func TestCandidateDraftIdentityKeepsSettledArtifacts(t *testing.T) {
 		{contract.Candidate{Draft: true, State: "merged"}, false, false},
 		{contract.Candidate{}, true, false},
 	} {
-		if got := CandidateDraftMatches(test.candidate, test.expected); got != test.want {
+		if got := candidateDraftMatches(test.candidate, test.expected); got != test.want {
 			t.Fatalf("draft match = %v, want %v for %+v", got, test.want, test.candidate)
 		}
 	}

@@ -63,12 +63,12 @@ func TestApplyAttemptAndStopPreserveTransitionAndInput(t *testing.T) {
 
 func TestIncompleteOnlyForUnfinishedLoop(t *testing.T) {
 	for _, status := range []string{"active", "exhausted"} {
-		if !Incomplete(loopcontract.LoopRun{Status: status}) {
+		if !incomplete(loopcontract.LoopRun{Status: status}) {
 			t.Fatalf("%s loop must block completion", status)
 		}
 	}
 	for _, status := range []string{"succeeded", "stopped"} {
-		if Incomplete(loopcontract.LoopRun{Status: status}) {
+		if incomplete(loopcontract.LoopRun{Status: status}) {
 			t.Fatalf("%s loop must not block completion", status)
 		}
 	}

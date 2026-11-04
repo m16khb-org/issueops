@@ -14,6 +14,9 @@ import (
 	reconciledomain "issueops/internal/domain/issueopsreconcile"
 )
 
+// Reconcile 메서드는 기록된 pending 외부 의도를 미리보기(req.Preview)하거나
+// 확정(req.Confirm)해 재조정한다. 둘 중 정확히 하나만 지정해야 한다.
+// pending이 없으면 Reconciled 결과를 바로 돌려주고, 확정 시에는 호출자의 실행 권한을 검증한 뒤 경로별 핸들러로 넘긴다.
 func (s Service) Reconcile(ctx context.Context, stateRoot string, req issueops.ExecutionReconcileRequest, deps issueopsport.ExecutionReconcileDependencies) (issueops.ExecutionReconcileResult, error) {
 	if req.Preview == req.Confirm {
 		return issueops.ExecutionReconcileResult{OK: false, ID: req.ID}, fmt.Errorf("execution reconcile requires exactly one of preview or confirm (--preview, then the --confirm it returns)")

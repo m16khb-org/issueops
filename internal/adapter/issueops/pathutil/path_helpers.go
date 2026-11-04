@@ -1,3 +1,5 @@
+// Package pathutil provides filesystem path and git state helpers for the
+// issueops adapters. They read files directly and never run git.
 package pathutil
 
 import (
@@ -6,6 +8,9 @@ import (
 	"strings"
 )
 
+// CleanAbsPath trims path, makes it absolute against the working directory, and
+// cleans it. A blank path returns "". If the working directory cannot be
+// resolved the cleaned relative path is returned.
 func CleanAbsPath(path string) string {
 	p := strings.TrimSpace(path)
 	if p == "" {
@@ -21,6 +26,8 @@ func CleanAbsPath(path string) string {
 	return filepath.Clean(p)
 }
 
+// PathWithin reports whether path equals root or lies beneath it, after both
+// are made absolute and cleaned. Blank inputs never match.
 func PathWithin(path, root string) bool {
 	p := CleanAbsPath(path)
 	r := CleanAbsPath(root)
@@ -78,6 +85,8 @@ func GitOperationInProgress(repo string) string {
 	return ""
 }
 
+// GitBranchFromHead returns the branch a checkout has checked out, read from
+// its HEAD file without running git. A detached HEAD or unreadable repo returns "".
 func GitBranchFromHead(repo string) string {
 	dir := gitDir(repo)
 	if dir == "" {

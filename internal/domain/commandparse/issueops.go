@@ -1,3 +1,7 @@
+// Package commandparse 패키지는 에이전트가 실행하려는 명령 argv를 정확히
+// 파싱하는 domain 규칙을 소유한다. `issueops …` 명령의 subcommand path와 flag
+// 검증, PR/MR 생성 명령 판정, 생성된 명령의 provenance 검증을 담으며 파일
+// 시스템이나 프로세스에는 접근하지 않는다.
 package commandparse
 
 import (
@@ -6,7 +10,7 @@ import (
 	commandparsecontract "issueops/internal/contract/commandparse"
 )
 
-// ExactIssueOpsCommand은 파싱된 정확한 `issueops …` 명령이다.
+// ExactIssueOpsCommand 타입은 파싱된 정확한 `issueops …` 명령이다.
 // subcommand path, 전체 token slice, 그리고 flag가 시작되는 인덱스를 담는다.
 type ExactIssueOpsCommand struct {
 	Path   string
@@ -72,7 +76,7 @@ func ExactIssueOpsOwnerMutation(command ExactIssueOpsCommand) (map[string][]stri
 			return nil, false
 		}
 	}
-	idFlag := IssueOpsLifecycleIDFlag(command.Path)
+	idFlag := issueOpsLifecycleIDFlag(command.Path)
 	for _, name := range []string{idFlag, "--host", "--session-id", "--cwd"} {
 		values := flags[name]
 		if len(values) != 1 || strings.TrimSpace(values[0]) == "" {
@@ -82,16 +86,16 @@ func ExactIssueOpsOwnerMutation(command ExactIssueOpsCommand) (map[string][]stri
 	return flags, true
 }
 
-// IssueOpsLifecycleIDFlag identifies the durable lifecycle selected by a
+// issueOpsLifecycleIDFlag identifies the durable lifecycle selected by a
 // parsed command. Delegation commands address their parent lifecycle.
-func IssueOpsLifecycleIDFlag(path string) string {
+func issueOpsLifecycleIDFlag(path string) string {
 	if strings.HasPrefix(path, "child ") {
 		return "--parent"
 	}
 	return "--id"
 }
 
-// ExactFlags는 ExactIssueOpsCommand의 flag를 value/boolean/repeatable spec에
+// ExactFlags 함수는 ExactIssueOpsCommand의 flag를 value/boolean/repeatable spec에
 // 대조해 검증하고 수집하며, 알 수 없는 flag, non-repeatable flag의 중복, 값이
 // 빠진 경우를 거부한다(fail closed).
 func ExactFlags(command ExactIssueOpsCommand, values, booleans, repeatable map[string]bool) (map[string][]string, bool) {
@@ -437,7 +441,7 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 	},
 }
 
-// IssueOpsCommandSpec은 정확한 issueops subcommand path에 대한 (values,
+// IssueOpsCommandSpec 함수는 정확한 issueops subcommand path에 대한 (values,
 // booleans, repeatable, ok) flag spec을 반환한다. 알 수 없는 path면 ok는 false다.
 func IssueOpsCommandSpec(path string) (map[string]bool, map[string]bool, map[string]bool, bool) {
 	spec, ok := issueOpsCommandSpecs[path]

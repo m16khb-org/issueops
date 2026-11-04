@@ -1,5 +1,6 @@
 package mcp
 
+// LoopTools returns the loop_start, loop_record_attempt, loop_status and loop_stop tools that manage a durable verify-until-done loop contract.
 func LoopTools() []Tool {
 	stringProp := func(description string) map[string]any {
 		return map[string]any{"type": "string", "description": description}

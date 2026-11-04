@@ -16,12 +16,17 @@ type CleanupAbandonObservation struct {
 	WorkspaceMissing                                                []string
 	Occupants                                                       []model.CleanupWorkspaceProcess
 	BranchObservable, RegistryObservable, BranchCheckedOutElsewhere bool
-	FailureEvidence                                                 CleanupAbandonFailureEvidence
+	FailureEvidence                                                 cleanupAbandonFailureEvidence
 	PendingIntentError                                              string
 	RemoteMissing, RemoteEffects                                    []string
 	RemoteArtifactState, IssueState                                 string
 }
 
+// BuildCleanupAbandonPreview evaluates every abandon gate against record, the
+// request, the local inventory, and the externally observed facts. It returns
+// the inventory (with the worktree head adjusted for a retried partial branch
+// delete) and a result whose Missing list holds the failed gates in check
+// order; OK is true only when none failed.
 func BuildCleanupAbandonPreview(record model.Record, req model.CleanupAbandonRequest, inventory model.CleanupAbandonInventory, observed CleanupAbandonObservation) (model.CleanupAbandonInventory, model.CleanupAbandonResult) {
 	b := &cleanupAbandonPreviewBuilder{record: &record, req: &req, inventory: inventory, observed: &observed}
 	b.result = model.CleanupAbandonResult{
@@ -80,7 +85,7 @@ func (b *cleanupAbandonPreviewBuilder) add(gate string) {
 }
 
 func (b *cleanupAbandonPreviewBuilder) checkReason() {
-	if err := ValidateCleanupAbandonReason(b.req.Reason); err != nil {
+	if err := validateCleanupAbandonReason(b.req.Reason); err != nil {
 		b.add("reason_required")
 		b.result.ReasonError = err.Error()
 	}
@@ -142,11 +147,11 @@ func (b *cleanupAbandonPreviewBuilder) checkBranchObservation() {
 }
 
 func (b *cleanupAbandonPreviewBuilder) checkFailureReceipt() {
-	receiptMatches := CleanupAbandonFailureInventoryMatches(*b.record, b.inventory, b.observed.FailureEvidence)
+	receiptMatches := cleanupAbandonFailureInventoryMatches(*b.record, b.inventory, b.observed.FailureEvidence)
 	if b.record.CleanupAbandonFailure != nil && !receiptMatches {
 		b.add("cleanup_failure_inventory")
 	}
-	if receiptMatches && CleanupAbandonPartialBranchRetry(*b.record, b.inventory, b.observed.FailureEvidence) {
+	if receiptMatches && cleanupAbandonPartialBranchRetry(*b.record, b.inventory, b.observed.FailureEvidence) {
 		b.inventory.WorktreeHead = b.record.CleanupAbandonFailure.WorktreeHead
 		b.result.WorktreeHead = b.inventory.WorktreeHead
 	}

@@ -9,6 +9,8 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
+// CleanupStatusObservation 타입은 cleanup status가 도메인 밖에서 관측한 사실이다. worktree 존재
+// 여부, `git status`와 원격 브랜치 점검의 종료 코드·출력·오류, 실제 체크아웃 브랜치를 담는다.
 type CleanupStatusObservation struct {
 	WorktreeExists bool
 	StatusCode     int
@@ -41,10 +43,15 @@ func cleanupStatusSortedValues(values []string) []string {
 	return slices.Compact(out)
 }
 
+// CleanupStatusNeedsMergeReadback 함수는 호출자가 merge 확인을 요청했고 사이클이 done이며 원격 산출물
+// 메타데이터가 모두 갖춰졌을 때만 참이다. 이때만 provider에서 merge 상태를 다시 읽을 가치가 있다.
 func CleanupStatusNeedsMergeReadback(record model.Record, requested bool) bool {
 	return requested && record.Phase == model.PhaseDone && len(RemoteArtifactMissing(record)) == 0
 }
 
+// WithCleanupFinishEvidence 함수는 이슈 본문, 이슈 상태, merge된 PR/MR 정보에서 cleanup
+// finish 요청의 증거 필드를 채운다. 본문에 완료 반영 시작 마커가 있으면 CompletionReflected, 상태가
+// closed이면 IssueClosed, 산출물의 base ref는 MergedBaseBranch가 된다.
 func WithCleanupFinishEvidence(req model.CleanupFinishRequest, body, state string, artifact model.CleanupRemoteBranchArtifactHead) model.CleanupFinishRequest {
 	req.CompletionReflected = strings.Contains(body, model.IssueBodyCompletionStartMarker)
 	req.IssueClosed = strings.EqualFold(strings.TrimSpace(state), "closed")
@@ -52,8 +59,11 @@ func WithCleanupFinishEvidence(req model.CleanupFinishRequest, body, state strin
 	return req
 }
 
+// CleanupStatusFromFinish 함수는 cleanup finish 미리보기 결과를 cleanup status 계약으로
+// 옮긴다. 구조 점검에서 얻은 원격 산출물 URL을 유지하고, 준비되었으면 finish 미리보기 명령을, 아니면 첫 미충족 항목의 해소
+// 명령을 NextCommand로 둔다.
 func CleanupStatusFromFinish(structural model.CleanupStatus, result model.CleanupFinishResult) model.CleanupStatus {
-	status := FinalizeCleanupStatus(model.CleanupStatus{
+	status := finalizeCleanupStatus(model.CleanupStatus{
 		OK: true, Ready: result.OK && len(result.Missing) == 0, ID: result.ID, Merged: true,
 		Missing:  append([]string(nil), result.Missing...),
 		Warnings: CleanupStatusWarnings(result), WorktreePath: result.WorktreePath, Branch: result.Branch,
@@ -70,6 +80,8 @@ func CleanupStatusFromFinish(structural model.CleanupStatus, result model.Cleanu
 	return status
 }
 
+// RemoteArtifactMissing 함수는 기록된 원격 산출물에서 비어 있는 필드(provider, kind, URL,
+// labels, assignees)를 정렬된 슬러그로 돌려준다. 산출물이 아예 없으면 `remote_artifact` 하나다.
 func RemoteArtifactMissing(record model.Record) []string {
 	if record.RemoteArtifact == nil {
 		return []string{"remote_artifact"}
@@ -93,6 +105,9 @@ func RemoteArtifactMissing(record model.Record) []string {
 	return cleanupStatusSortedValues(missing)
 }
 
+// BuildCleanupStatus 함수는 record의 구조와 관측된 worktree·브랜치 사실로 cleanup status를
+// 만든다. 미충족 항목은 PR 단계, 원격 산출물, merge 주장, 자식 작업 종료, worktree 경로·존재·청결, 브랜치 일치,
+// 원격 브랜치 점검 순서로 모으고 마지막에 정렬한다.
 func BuildCleanupStatus(record model.Record, req model.CleanupStatusRequest, facts CleanupStatusObservation) model.CleanupStatus {
 	status := model.CleanupStatus{
 		OK:           true,
@@ -120,17 +135,17 @@ func BuildCleanupStatus(record model.Record, req model.CleanupStatusRequest, fac
 	worktree := strings.TrimSpace(record.WorktreePath)
 	if worktree == "" {
 		status.Missing = append(status.Missing, "worktree_path")
-		return FinalizeCleanupStatus(status)
+		return finalizeCleanupStatus(status)
 	}
 	if !facts.WorktreeExists {
 		status.Missing = append(status.Missing, "worktree_exists")
-		return FinalizeCleanupStatus(status)
+		return finalizeCleanupStatus(status)
 	}
 	appendWorktreeStatusMissing(&status, facts)
 	actualBranch := strings.TrimSpace(facts.Branch)
 	appendBranchMissing(&status, record, actualBranch)
 	appendRemoteBranchMissing(&status, facts, actualBranch)
-	return FinalizeCleanupStatus(status)
+	return finalizeCleanupStatus(status)
 }
 
 // appendWorktreeStatusMissing는 `git status` 관측 결과를 missing/warnings에 반영한다.
@@ -197,10 +212,10 @@ func hasUnverifiedChildClose(record model.Record) bool {
 	return false
 }
 
-// FinalizeCleanupStatus applies the cleanup status contract's stable sorting, readiness, and
+// finalizeCleanupStatus applies the cleanup status contract's stable sorting, readiness, and
 // three-choice presentation to status assembled by either structural inspection
 // or the cleanup finish readiness oracle.
-func FinalizeCleanupStatus(status model.CleanupStatus) model.CleanupStatus {
+func finalizeCleanupStatus(status model.CleanupStatus) model.CleanupStatus {
 	status.Missing = cleanupStatusSortedValues(status.Missing)
 	status.Warnings = cleanupStatusSortedValues(status.Warnings)
 	status.Ready = len(status.Missing) == 0
@@ -220,6 +235,8 @@ func FinalizeCleanupStatus(status model.CleanupStatus) model.CleanupStatus {
 	return status
 }
 
+// CleanupStatusWarnings 함수는 cleanup finish 결과의 워크스페이스 점유 프로세스를
+// `pid:command:started_at` 경고로 옮기고, 요청자 자신이 점유 중인지에 따라 안내 문장을 덧붙인다.
 func CleanupStatusWarnings(result model.CleanupFinishResult) []string {
 	warnings := make([]string, 0, len(result.WorkspaceProcesses)+1)
 	for _, process := range result.WorkspaceProcesses {

@@ -11,18 +11,24 @@ import (
 	"issueops/internal/domain/issueopsremote"
 )
 
+// Linker records issue and relation links on a cycle under the cycle lock,
+// after the mutation authority has accepted the actor.
 type Linker struct {
 	Records   CycleRecords
 	Authority cycleapp.MutationAuthority
 	Now       func() time.Time
 }
 
+// Issue links the cycle to issueURL and returns the saved record.
 func (s Linker) Issue(ctx context.Context, id, issueURL string, actor *model.Actor) (model.Record, error) {
 	return s.mutate(ctx, id, actor, func(record model.Record) (model.Record, error) {
 		return domain.ApplyIssueLink(record, issueURL, s.Now().UTC().Format(time.RFC3339Nano))
 	})
 }
 
+// Child records childURL as a child issue of the cycle's linked issue. It
+// fails when the cycle has no valid parent issue or the child is on another
+// provider or outside the parent's project.
 func (s Linker) Child(ctx context.Context, id, childURL, title string, actor *model.Actor) (model.Record, error) {
 	return s.mutate(ctx, id, actor, func(record model.Record) (model.Record, error) {
 		u := strings.TrimSpace(childURL)
@@ -42,6 +48,8 @@ func (s Linker) Child(ctx context.Context, id, childURL, title string, actor *mo
 	})
 }
 
+// Related records relatedURL with the given linkType as a related issue of
+// the cycle, rejecting unknown link types and malformed URLs.
 func (s Linker) Related(ctx context.Context, id, linkType, relatedURL, title string, actor *model.Actor) (model.Record, error) {
 	return s.mutate(ctx, id, actor, func(record model.Record) (model.Record, error) {
 		lt, u := strings.TrimSpace(linkType), strings.TrimSpace(relatedURL)

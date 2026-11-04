@@ -45,7 +45,7 @@ func TestSDKDirectContentPreservesTextAndError(t *testing.T) {
 				}
 				server := initSDKServer(MCPDependencies{})
 				server.AddTool(&mcp.Tool{Name: "commit_policy", InputSchema: map[string]any{"type": "object"}},
-					sdkToolHandlerWithContext(mcpcatalog.Build(), func(context.Context, MCPToolCall) MCPToolOutcome {
+					sdkToolHandlerWithContext(mcpcatalog.Build(), func(context.Context, MCPToolCall) mcpToolOutcome {
 						return mcpToolDirect(map[string]any{"content": content, "isError": isError})
 					}, "commit_policy"))
 				serverTransport, clientTransport := mcp.NewInMemoryTransports()

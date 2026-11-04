@@ -29,10 +29,12 @@ import (
 // critical and enforces a length budget (devil's-advocate memo B).
 type Kind string
 
+// Body kinds the readability check understands. KindCompletion is the
+// free-form progress-report draft, which is checked without a template.
 const (
-	KindIssue      Kind = "issue"
-	KindChild      Kind = "child"
-	KindPR         Kind = "pr"
+	kindIssue      Kind = "issue"
+	kindChild      Kind = "child"
+	kindPR         Kind = "pr"
 	KindCompletion Kind = "completion"
 )
 
@@ -51,6 +53,8 @@ const (
 	maxEnglishRatio = 1.2
 )
 
+// Input is one body to check: its Kind, optional Template, Title, and Body,
+// plus optional Fields for field-level feedback.
 type Input struct {
 	Kind     Kind                                  `json:"kind"`
 	Template artifacttemplate.IssueOpsTemplateKind `json:"template,omitempty"`
@@ -223,11 +227,11 @@ func addSectionWarnings(report *reportcontract.Report, input Input, prose string
 func KindFor(kind artifacttemplate.IssueOpsArtifactKind) Kind {
 	switch kind {
 	case artifacttemplate.IssueOpsArtifactChild:
-		return KindChild
+		return kindChild
 	case artifacttemplate.IssueOpsArtifactPR:
-		return KindPR
+		return kindPR
 	default:
-		return KindIssue
+		return kindIssue
 	}
 }
 
@@ -247,9 +251,9 @@ func RefusalError(report reportcontract.Report) error {
 
 func templateKindFor(kind Kind) artifacttemplate.IssueOpsArtifactKind {
 	switch kind {
-	case KindChild:
+	case kindChild:
 		return artifacttemplate.IssueOpsArtifactChild
-	case KindPR:
+	case kindPR:
 		return artifacttemplate.IssueOpsArtifactPR
 	default:
 		return artifacttemplate.IssueOpsArtifactIssue

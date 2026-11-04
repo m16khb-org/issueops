@@ -5,6 +5,7 @@ import (
 	"strings"
 )
 
+// ScoreIssueOpsRemoteCandidates scores the related-issue and label candidates of req against the draft by token overlap and type keywords, and returns the selected and rejected sets ordered by score. The provider defaults to github and a non-positive threshold to 0.70; it errors for an unsupported provider, a threshold above 1, or an empty draft.
 func ScoreIssueOpsRemoteCandidates(req ScoringRequest) (ScoringResult, error) {
 	provider := strings.ToLower(strings.TrimSpace(firstNonEmpty(req.Provider, req.Issue.Provider)))
 	if provider == "" {

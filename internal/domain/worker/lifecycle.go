@@ -1,3 +1,6 @@
+// Package worker holds the pure lifecycle rules of local worker jobs: id and kind validation,
+// and the queued, running, finished, cancelled, and stuck transitions plus queue statistics.
+// It performs no I/O; persistence and process execution belong to the application and adapter layers.
 package worker
 
 import (
@@ -28,11 +31,13 @@ func validIDByte(c byte) bool {
 	return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '.' || c == '_' || c == '-'
 }
 
+// MakeID returns a job id derived from the kind, payload, and creation time, so the same inputs at the same instant yield the same id.
 func MakeID(kind, payload string, at time.Time) string {
 	sum := sha256.Sum256([]byte(kind + "\x00" + payload + "\x00" + at.Format(time.RFC3339Nano)))
 	return "job-" + at.Format("20060102T150405Z") + "-" + hex.EncodeToString(sum[:])[:12]
 }
 
+// NormalizeKind trims kind and rejects empty kinds, kinds with path separators, and kinds longer than 80 bytes.
 func NormalizeKind(kind string) (string, error) {
 	kind = strings.TrimSpace(kind)
 	if kind == "" {
@@ -44,6 +49,7 @@ func NormalizeKind(kind string) (string, error) {
 	return kind, nil
 }
 
+// NewQueued builds a queued, no-shell job record from the redacted payload; it fails when kind is invalid.
 func NewQueued(kind, redactedPayload, id, dir, timestamp string) (workercontract.Job, error) {
 	var err error
 	kind, err = NormalizeKind(kind)
@@ -57,6 +63,7 @@ func NewQueued(kind, redactedPayload, id, dir, timestamp string) (workercontract
 	}, nil
 }
 
+// Cancel marks a queued job cancelled. An already cancelled job is returned unchanged; any other status is an error.
 func Cancel(job workercontract.Job, timestamp string) (workercontract.Job, error) {
 	if job.Status == workercontract.StatusCancelled {
 		return job, nil
@@ -70,6 +77,8 @@ func Cancel(job workercontract.Job, timestamp string) (workercontract.Job, error
 	return job, nil
 }
 
+// Start moves a queued job to running, recording the command, PID, and start time.
+// It fails for any status other than queued.
 func Start(job workercontract.Job, command []string, pid int, startedAt, updatedAt string) (workercontract.Job, error) {
 	if job.Status != workercontract.StatusQueued {
 		return job, fmt.Errorf("worker job %s cannot run from status %s", job.ID, job.Status)
@@ -84,6 +93,7 @@ func Start(job workercontract.Job, command []string, pid int, startedAt, updated
 	return job, nil
 }
 
+// Finish moves a job to succeeded when ok and to failed otherwise, stamping timestamp.
 func Finish(job workercontract.Job, ok bool, timestamp string) workercontract.Job {
 	job.OK = ok
 	if ok {
@@ -95,6 +105,8 @@ func Finish(job workercontract.Job, ok bool, timestamp string) workercontract.Jo
 	return job
 }
 
+// MarkStuck fails a running job whose process is no longer alive and reports whether it changed the job.
+// Jobs that are not running, or whose process is alive, are returned unchanged.
 func MarkStuck(job workercontract.Job, alive bool, timestamp string) (workercontract.Job, bool) {
 	if job.Status != workercontract.StatusRunning || alive {
 		return job, false
@@ -107,6 +119,7 @@ func MarkStuck(job workercontract.Job, alive bool, timestamp string) (workercont
 	return job, true
 }
 
+// QueueStats counts jobs by status.
 func QueueStats(jobs []workercontract.Job) *workercontract.QueueStats {
 	stats := &workercontract.QueueStats{Total: len(jobs)}
 	for _, job := range jobs {

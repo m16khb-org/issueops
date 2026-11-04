@@ -1,3 +1,5 @@
+// Package mcp is the MCP server adapter, including the isolated conformance
+// probe server that captures a single tool call for schema conformance checks.
 package mcp
 
 import (
@@ -23,7 +25,7 @@ import (
 
 const conformanceRawLimit = 64 << 10
 
-type ConformanceCapture struct {
+type conformanceCapture struct {
 	FixtureID          string                                 `json:"fixture_id"`
 	CallCount          int                                    `json:"call_count"`
 	RawSHA256          string                                 `json:"raw_sha256"`
@@ -42,9 +44,9 @@ type conformanceProbe struct {
 	calls  int
 }
 
-// NewConformanceProbeServer constructs an isolated capture-only MCP server.
+// newConformanceProbeServer constructs an isolated capture-only MCP server.
 // It intentionally does not share the production catalog or dispatch path.
-func NewConformanceProbeServer(config mcpcontract.ConformanceProbeConfig) (*mcp.Server, error) {
+func newConformanceProbeServer(config mcpcontract.ConformanceProbeConfig) (*mcp.Server, error) {
 	schema, err := cloneSchema(config.Schema)
 	if err != nil {
 		return nil, err
@@ -84,8 +86,11 @@ func newConformanceProbe(config mcpcontract.ConformanceProbeConfig) (*conformanc
 	return &conformanceProbe{config: config}, nil
 }
 
+// ServeConformanceProbe runs the isolated capture-only MCP probe server over
+// input and output until the transport closes or ctx is cancelled. It fails
+// before serving when config is invalid.
 func ServeConformanceProbe(ctx context.Context, input io.Reader, output io.Writer, config mcpcontract.ConformanceProbeConfig) error {
-	server, err := NewConformanceProbeServer(config)
+	server, err := newConformanceProbeServer(config)
 	if err != nil {
 		return err
 	}
@@ -139,7 +144,7 @@ func captureCollisionCode(path, runToken string) string {
 	if err != nil {
 		return "result_collision"
 	}
-	var capture ConformanceCapture
+	var capture conformanceCapture
 	if err := json.Unmarshal(b, &capture); err != nil || capture.RunTokenSHA256 == "" {
 		return "result_collision"
 	}
@@ -154,9 +159,9 @@ func probeFailure(code string) *mcp.CallToolResult {
 	return &mcp.CallToolResult{IsError: true, Content: []mcp.Content{&mcp.TextContent{Text: string(body)}}}
 }
 
-func captureArguments(config mcpcontract.ConformanceProbeConfig, raw []byte) (ConformanceCapture, error) {
+func captureArguments(config mcpcontract.ConformanceProbeConfig, raw []byte) (conformanceCapture, error) {
 	if len(raw) > conformanceRawLimit {
-		return ConformanceCapture{}, fmt.Errorf("arguments_too_large")
+		return conformanceCapture{}, fmt.Errorf("arguments_too_large")
 	}
 	classified, err := toolconformancedomain.Classify(
 		toolconformancecontract.CallObservation{RawArguments: raw, CallCount: 1},
@@ -164,25 +169,25 @@ func captureArguments(config mcpcontract.ConformanceProbeConfig, raw []byte) (Co
 		config.ExpectedArguments,
 	)
 	if err != nil {
-		return ConformanceCapture{}, err
+		return conformanceCapture{}, err
 	}
 	var arguments any
 	if err := json.Unmarshal(raw, &arguments); err != nil {
-		return ConformanceCapture{}, fmt.Errorf("invalid_json")
+		return conformanceCapture{}, fmt.Errorf("invalid_json")
 	}
 	canonical, err := json.Marshal(arguments)
 	if err != nil {
-		return ConformanceCapture{}, err
+		return conformanceCapture{}, err
 	}
 	rawSum := sha256.Sum256(raw)
 	var canonicalValue any
 	if err := json.Unmarshal(canonical, &canonicalValue); err != nil {
-		return ConformanceCapture{}, err
+		return conformanceCapture{}, err
 	}
 	replacements := map[string]string{}
 	redactedArguments := redactArguments(canonicalValue, config.Schema, "", replacements)
 	diagnostics := redactDiagnosticPaths(classified.Diagnostics, replacements)
-	return ConformanceCapture{
+	return conformanceCapture{
 		FixtureID: config.FixtureID, RawSHA256: hex.EncodeToString(rawSum[:]),
 		CanonicalArguments: redactedArguments, SchemaSHA256: config.SchemaSHA,
 		RunTokenSHA256: sha256Hex([]byte(config.RunToken)), Classification: classified.Classification,
@@ -254,7 +259,7 @@ func sensitiveArgumentKey(key string) bool {
 	return false
 }
 
-func writeCapture(path string, capture ConformanceCapture) error {
+func writeCapture(path string, capture conformanceCapture) error {
 	if path == "" {
 		return fmt.Errorf("result_path_required")
 	}

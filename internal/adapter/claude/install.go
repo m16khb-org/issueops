@@ -7,14 +7,22 @@ import (
 	"issueops/internal/port"
 )
 
+// Installer installs issueops into the Claude Code host.
 type Installer struct{ deps Dependencies }
 
+// NewInstaller returns an Installer that uses deps for planning and file
+// writes.
 func NewInstaller(deps Dependencies) Installer { return Installer{deps: deps} }
 
 var _ port.HostInstaller = Installer{}
 
+// Name returns the host name, "claude".
 func (Installer) Name() string { return "claude" }
 
+// Install plans and applies the Claude native skill links, lifecycle hooks, and
+// MCP configs: user settings, the user MCP entry, the project templates, and,
+// with req.ProjectLocal, the project-local MCP config. With req.DryRun it only
+// plans and reports.
 func (installer Installer) Install(req port.NativeInstallRequest) (port.HostInstallResult, error) {
 	plan := installer.deps.NewInstallPlan("claude", req.DryRun)
 

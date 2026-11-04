@@ -26,9 +26,9 @@ func TestReadinessPublicOperationsCreateOneScope(t *testing.T) {
 		{"strict", func(s Readiness, r model.Record) { strictPRForTest(s, r) }},
 		{"state", func(s Readiness, r model.Record) { s.StrictPRWithState("state", r) }},
 		{"callback", func(s Readiness, r model.Record) {
-			s.StrictPRWithFetch("state", r, func(root string) review.UpstreamFetch { return review.UpstreamFetch{Root: root} })
+			s.strictPRWithFetch("state", r, func(root string) review.UpstreamFetch { return review.UpstreamFetch{Root: root} })
 		}},
-		{"prefetch", func(s Readiness, r model.Record) { s.PrefetchUpstream(r) }},
+		{"prefetch", func(s Readiness, r model.Record) { s.prefetchUpstream(r) }},
 	} {
 		t.Run(operation.name, func(t *testing.T) {
 			locked, events := false, []string{}

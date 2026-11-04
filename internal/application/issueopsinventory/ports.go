@@ -1,3 +1,5 @@
+// Package issueopsinventory is the application service that lists issueops
+// lifecycle cycles from the record store, optionally filtered by repository.
 package issueopsinventory
 
 import (
@@ -7,6 +9,9 @@ import (
 	issueopsinventorycontract "issueops/internal/contract/issueopsinventory"
 )
 
+// Repository scans every stored lifecycle record under a state root. ScanEach
+// calls the callback per readable record and returns diagnostics for unreadable
+// ones.
 type Repository interface {
 	ScanEach(
 		context.Context,
@@ -15,7 +20,7 @@ type Repository interface {
 	) ([]issueopsinventorycontract.RecordDiagnostic, error)
 }
 
-type Clock interface {
+type clock interface {
 	Now() time.Time
 }
 

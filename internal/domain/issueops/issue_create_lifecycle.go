@@ -8,6 +8,11 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
+// BeginIssueCreateIntent seals the intent to create an issue before the
+// provider call. It fails when the record already links an issue. A first
+// call stores a pending intent with a deterministic marker; a retry is
+// allowed only for a not-invoked intent with an identical request and
+// increments the attempt. Any other intent status requires reconcile.
 func BeginIssueCreateIntent(record model.Record, request model.IssueCreateIntentRequest) (model.Record, error) {
 	if strings.TrimSpace(record.IssueURL) != "" {
 		return record, fmt.Errorf("issueops record already links issue %s", record.IssueURL)
@@ -41,6 +46,10 @@ func BeginIssueCreateIntent(record model.Record, request model.IssueCreateIntent
 	return record, nil
 }
 
+// RecordIssueCreateOutcome records the observed outcome of an issue create
+// call on the sealed intent. The transition must be legal, and an observed
+// canonical URL must belong to the sealed project authority. A completed
+// intent cannot be changed.
 func RecordIssueCreateOutcome(record model.Record, outcome model.IssueCreateOutcome, projectAuthority string) (model.Record, error) {
 	if record.IssueCreateIntent == nil {
 		return record, fmt.Errorf("no pending issue create intent")
@@ -62,13 +71,17 @@ func RecordIssueCreateOutcome(record model.Record, outcome model.IssueCreateOutc
 	if err := model.ValidateIssueCreateIntent(next); err != nil {
 		return record, err
 	}
-	if err := ValidateIssueCreateIntentInvariants(next); err != nil {
+	if err := validateIssueCreateIntentInvariants(next); err != nil {
 		return record, err
 	}
 	record.IssueCreateIntent = &next
 	return record, nil
 }
 
+// CompleteIssueCreateIntent finishes the intent with the created issue URL:
+// it validates the URL and the project authority, links the issue to the
+// record, and advances a record that now meets the plan readiness gates to
+// the plan phase. It fails for a not-invoked or already completed intent.
 func CompleteIssueCreateIntent(record model.Record, issueURL, completedAt, projectAuthority string) (model.Record, error) {
 	if record.IssueCreateIntent == nil {
 		return record, fmt.Errorf("no pending issue create intent")

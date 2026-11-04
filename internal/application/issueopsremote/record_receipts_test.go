@@ -36,16 +36,16 @@ const receiptStamp = "2026-01-01T18:04:05.000000006Z"
 func TestCompletionReceiptsStampUTCAndKeepEarliestClose(t *testing.T) {
 	store := &memoryRecordStore{}
 	receipts := NewCompletionReceipts(store, receiptClock)
-	got, err := receipts.Closed(t.Context(), "c")
+	got, err := receipts.closed(t.Context(), "c")
 	if err != nil || got.RemoteCompletion == nil || got.RemoteCompletion.IssueClosedAt != receiptStamp || got.UpdatedAt != receiptStamp {
 		t.Fatalf("closed=%+v err=%v", got, err)
 	}
 	later := NewCompletionReceipts(store, func() time.Time { return receiptClock().Add(time.Hour) })
-	got, err = later.Reflected(t.Context(), "c")
+	got, err = later.reflected(t.Context(), "c")
 	if err != nil || got.RemoteCompletion.ReflectedAt == "" || got.RemoteCompletion.IssueClosedAt != receiptStamp {
 		t.Fatalf("reflected must preserve the close receipt: %+v err=%v", got.RemoteCompletion, err)
 	}
-	got, err = later.Closed(t.Context(), "c")
+	got, err = later.closed(t.Context(), "c")
 	if err != nil || got.RemoteCompletion.IssueClosedAt != receiptStamp {
 		t.Fatalf("second close must not move the receipt: %+v err=%v", got.RemoteCompletion, err)
 	}
@@ -53,7 +53,7 @@ func TestCompletionReceiptsStampUTCAndKeepEarliestClose(t *testing.T) {
 
 func TestCompletionReceiptsReportStoreFailureAsNotOK(t *testing.T) {
 	boom := errors.New("store down")
-	got, err := NewCompletionReceipts(&memoryRecordStore{err: boom}, receiptClock).Reflected(t.Context(), "c")
+	got, err := NewCompletionReceipts(&memoryRecordStore{err: boom}, receiptClock).reflected(t.Context(), "c")
 	if !errors.Is(err, boom) || got.OK || got.RemoteCompletion != nil {
 		t.Fatalf("got=%+v err=%v", got, err)
 	}

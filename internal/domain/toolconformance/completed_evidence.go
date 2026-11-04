@@ -11,6 +11,8 @@ import (
 	failurecausedomain "issueops/internal/domain/failurecause"
 )
 
+// CompletedEpisodeExpectation is the identity a recorded completed episode must match:
+// host, host version, requested model, profile, fixture, and 1-based attempt number.
 type CompletedEpisodeExpectation struct {
 	Host           string
 	HostVersion    string
@@ -20,6 +22,7 @@ type CompletedEpisodeExpectation struct {
 	Attempt        int
 }
 
+// ValidEvidenceID reports whether value is the hex encoding of a SHA-256 digest (64 hex characters).
 func ValidEvidenceID(value string) bool {
 	if len(value) != sha256.Size*2 {
 		return false
@@ -28,6 +31,8 @@ func ValidEvidenceID(value string) bool {
 	return err == nil
 }
 
+// DiagnosticSignature returns the SHA-256 hex digest of the classification together with a copy of the diagnostics,
+// so identical drift outcomes can be counted as one signature.
 func DiagnosticSignature(classification contract.Classification, diagnostics []contract.Diagnostic) string {
 	value := struct {
 		Classification contract.Classification `json:"classification"`
@@ -38,6 +43,9 @@ func DiagnosticSignature(classification contract.Classification, diagnostics []c
 	return hex.EncodeToString(sum[:])
 }
 
+// ValidCompletedEpisode reports whether a recorded completed episode is internally consistent and matches expected.
+// It re-derives the failure cause from the episode's evidence and compares it with the recorded one,
+// so a hand-edited report fails validation.
 func ValidCompletedEpisode(episode contract.EpisodeReport, expected CompletedEpisodeExpectation) bool {
 	if !completedEpisodeIdentityMatches(episode, expected) ||
 		!completedEpisodeRunObserved(episode) ||

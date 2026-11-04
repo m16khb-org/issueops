@@ -8,10 +8,16 @@ import (
 	"issueops/internal/port"
 )
 
+// FinalizeRequest carries the push parameters used after a conflict-resolved
+// merge is committed.
 type FinalizeRequest struct {
 	Push PushRequest
 }
 
+// FinalizeResult reports the outcome of Finalize: remaining conflict files or
+// the Missing precondition when blocked, the merge commit, push state, and the
+// failed step. DirectError marks blocked-precondition errors that callers
+// report as-is rather than as a failed step.
 type FinalizeResult struct {
 	ConflictFiles     []string
 	Missing           string
@@ -23,6 +29,10 @@ type FinalizeResult struct {
 	DirectError       bool
 }
 
+// Finalize commits a conflict-resolved merge and pushes it via PushAndRecord.
+// It refuses while unmerged paths or conflict markers in the staged result
+// remain, then commits, reads HEAD, and records the sync event with the
+// conflict count observed before committing.
 func Finalize(ctx context.Context, request FinalizeRequest, effects port.BaseSyncFinalizeEffects) (FinalizeResult, error) {
 	if effects == nil {
 		return FinalizeResult{}, fmt.Errorf("base sync finalize effects are required")

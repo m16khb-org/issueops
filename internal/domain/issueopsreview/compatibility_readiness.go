@@ -6,6 +6,9 @@ import (
 	reviewcontract "issueops/internal/contract/issueopsreview"
 )
 
+// CompatibilityReviewMissing returns the gate keys a compatibility review still lacks.
+// A nil review yields compatibility_review alone; an unapproved review or one with
+// blockers keeps the gate closed.
 func CompatibilityReviewMissing(review *reviewcontract.CompatibilityReview) []string {
 	if review == nil {
 		return []string{"compatibility_review"}

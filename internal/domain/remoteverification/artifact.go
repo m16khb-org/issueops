@@ -1,3 +1,7 @@
+// Package remoteverification holds the domain rules for verifying remote
+// artifacts and child tasks: which provider and kind combinations are
+// supported, whether a fetched artifact matches the request, and whether a
+// GitLab child is a Task work item. Fetching itself happens in an adapter.
 package remoteverification
 
 import (
@@ -7,6 +11,10 @@ import (
 	"strings"
 )
 
+// ArtifactTarget normalizes provider, kind, and url into a verification Target.
+// Kind aliases pull_request and merge_request become pr and mr. Only github:pr
+// and gitlab:mr are accepted, plus issues unless mergeOnly is set; anything else
+// is an error.
 func ArtifactTarget(provider, kind, url string, mergeOnly bool) (model.Target, error) {
 	provider = strings.ToLower(strings.TrimSpace(provider))
 	kind = strings.ToLower(strings.TrimSpace(kind))
@@ -29,6 +37,10 @@ func ArtifactTarget(provider, kind, url string, mergeOnly bool) (model.Target, e
 	}
 	return model.Target{}, fmt.Errorf("unsupported remote artifact verification: %s:%s", provider, kind)
 }
+
+// ValidateArtifact checks that the fetched artifact has the requested url
+// (ignoring a trailing slash) and carries every required label and assignee,
+// compared case-insensitively. It returns the first mismatch as an error.
 func ValidateArtifact(url string, labels, assignees []string, artifact model.Artifact) error {
 	if strings.TrimSuffix(strings.TrimSpace(artifact.URL), "/") != strings.TrimSuffix(strings.TrimSpace(url), "/") {
 		return fmt.Errorf(
@@ -42,6 +54,7 @@ func ValidateArtifact(url string, labels, assignees []string, artifact model.Art
 	return requireRemoteValues("assignee", assignees, artifact.Assignees)
 }
 
+// RequireMerged returns an error naming url when the remote artifact is not verified merged.
 func RequireMerged(url string, merged bool) error {
 	if !merged {
 		return fmt.Errorf("remote artifact is not verified merged: %s", url)

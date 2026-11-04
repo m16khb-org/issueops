@@ -33,7 +33,7 @@ func TestNewConformanceProbeRejectsIncompleteConfigWithSpecificReason(t *testing
 			if _, err := newConformanceProbe(config); err == nil || err.Error() != tc.want {
 				t.Fatalf("err=%v want %q", err, tc.want)
 			}
-			if _, err := NewConformanceProbeServer(config); err == nil || err.Error() != tc.want {
+			if _, err := newConformanceProbeServer(config); err == nil || err.Error() != tc.want {
 				t.Fatalf("server err=%v want %q", err, tc.want)
 			}
 			err := ServeConformanceProbe(t.Context(), strings.NewReader(""), &strings.Builder{}, config)
@@ -50,12 +50,12 @@ func TestNewConformanceProbeServerRejectsUnserializableSchemaOrExpectedArguments
 
 	withSchema := config
 	withSchema.Schema = bad
-	if _, err := NewConformanceProbeServer(withSchema); err == nil {
+	if _, err := newConformanceProbeServer(withSchema); err == nil {
 		t.Fatal("unserializable schema accepted")
 	}
 	withExpected := config
 	withExpected.ExpectedArguments = bad
-	if _, err := NewConformanceProbeServer(withExpected); err == nil {
+	if _, err := newConformanceProbeServer(withExpected); err == nil {
 		t.Fatal("unserializable expected arguments accepted")
 	}
 }
@@ -219,7 +219,7 @@ func TestWriteCaptureFailsWhenParentIsNotADirectory(t *testing.T) {
 	if err := os.WriteFile(blocker, []byte("x"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := writeCapture(filepath.Join(blocker, "capture.json"), ConformanceCapture{}); err == nil {
+	if err := writeCapture(filepath.Join(blocker, "capture.json"), conformanceCapture{}); err == nil {
 		t.Fatal("capture written beneath a regular file")
 	}
 }

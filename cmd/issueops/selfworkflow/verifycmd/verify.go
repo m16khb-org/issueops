@@ -1,3 +1,6 @@
+// Package verifycmd implements the `issueops self-verify` command: it runs the
+// verification gates, optionally applies the host-agent LLM evaluation, saves
+// the summary, and reports progress.
 package verifycmd
 
 import (
@@ -17,6 +20,10 @@ import (
 	model "issueops/internal/contract/selfaugment"
 )
 
+// Deps injects the environment lookup, progress reporting, verification run,
+// LLM evaluation, persistence, and JSON output used by Run. Nil fields use
+// defaults that read the process environment or fail with a "dependency is
+// required" error.
 type Deps struct {
 	LookupEnv           func(string) (string, bool)
 	ProgressWriter      io.Writer
@@ -27,6 +34,9 @@ type Deps struct {
 	PrintJSON           func(any) error
 }
 
+// Run executes `issueops self-verify` with the parsed flags. Under --json the
+// summary is printed even when the gate fails, and the failure is reported
+// alongside it.
 func Run(args []string, deps Deps) error {
 	deps = deps.withDefaults()
 	fs := flag.NewFlagSet("self-verify", flag.ContinueOnError)

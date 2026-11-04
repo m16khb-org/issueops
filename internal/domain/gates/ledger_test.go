@@ -104,7 +104,7 @@ func TestRenderRoundTripPreservesBytes(t *testing.T) {
 func TestMarkPassFlipsCheckboxAndWritesEvidence(t *testing.T) {
 	text := "- [ ] G1: outcome\n  CHECK: true\n  EVIDENCE: pending\n"
 	ledger := Parse(text)
-	MarkPass(&ledger, 0, "3/3 tiers ok")
+	markPass(&ledger, 0, "3/3 tiers ok")
 	if ledger.Lines[0] != "- [x] G1: outcome" {
 		t.Fatalf("checkbox not flipped: %q", ledger.Lines[0])
 	}
@@ -119,7 +119,7 @@ func TestMarkPassFlipsCheckboxAndWritesEvidence(t *testing.T) {
 func TestMarkPassInsertsEvidenceLineWhenMissing(t *testing.T) {
 	text := "- [ ] G1: outcome\n  CHECK: true\n\n- [ ] G2: second\n"
 	ledger := Parse(text)
-	MarkPass(&ledger, 0, "ok")
+	markPass(&ledger, 0, "ok")
 	rendered := Render(ledger)
 	// EVIDENCE follows the gate's CHECK/EXPECT lines (QA: it had landed above CHECK).
 	if !strings.Contains(rendered, "- [x] G1: outcome\n  CHECK: true\n  EVIDENCE: ok\n") {
@@ -128,7 +128,7 @@ func TestMarkPassInsertsEvidenceLineWhenMissing(t *testing.T) {
 	if ledger.Gates[1].CheckboxLine != 4 {
 		t.Fatalf("later gate checkbox index not reindexed: %+v", ledger.Gates[1])
 	}
-	MarkPass(&ledger, 1, "second ok")
+	markPass(&ledger, 1, "second ok")
 	if !strings.Contains(Render(ledger), "- [x] G2: second\n  EVIDENCE: second ok\n") {
 		t.Fatalf("second gate pass not rendered:\n%s", Render(ledger))
 	}
@@ -136,7 +136,7 @@ func TestMarkPassInsertsEvidenceLineWhenMissing(t *testing.T) {
 
 func TestAppendAbandonRecordsLine(t *testing.T) {
 	ledger := Parse("- [ ] G1: outcome\n  EVIDENCE: pending\n")
-	AppendAbandon(&ledger, "G1", "needs live credentials")
+	appendAbandon(&ledger, "G1", "needs live credentials")
 	rendered := Render(ledger)
 	if !strings.Contains(rendered, "ABANDON: G1 needs live credentials\n") {
 		t.Fatalf("abandon line missing:\n%s", rendered)
@@ -165,7 +165,7 @@ func TestParseIgnoresAttributeLinesBeforeAnyGate(t *testing.T) {
 
 func TestAppendAbandonOnlyBlankLinesInsertsAtTop(t *testing.T) {
 	ledger := Parse("\n\n")
-	AppendAbandon(&ledger, "G1", " r ")
+	appendAbandon(&ledger, "G1", " r ")
 	if got := Render(ledger); got != "ABANDON: G1 r\n\n\n" {
 		t.Fatalf("got %q", got)
 	}
@@ -173,7 +173,7 @@ func TestAppendAbandonOnlyBlankLinesInsertsAtTop(t *testing.T) {
 
 func TestAppendAbandonKeepsMissingEvidenceLineUnset(t *testing.T) {
 	ledger := Parse("- [ ] G1: a\n")
-	AppendAbandon(&ledger, "G1", "r")
+	appendAbandon(&ledger, "G1", "r")
 	if ledger.Gates[0].EvidenceLine != -1 {
 		t.Fatalf("EvidenceLine=%d, want -1", ledger.Gates[0].EvidenceLine)
 	}

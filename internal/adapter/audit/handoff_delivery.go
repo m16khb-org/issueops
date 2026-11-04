@@ -64,6 +64,9 @@ func (handle *handoffDeliveryAuditHandle) VerifyPath() error {
 	return handle.verifyPath()
 }
 
+// Append redacts observation, validates it and appends it as a digest-stamped audit record to
+// audit/handoff-delivery.jsonl under the state root, under the store's key lock. It returns the written
+// record, whose observation carries the receipt (location and digest) of the stored entry.
 func (store HandoffDeliveryStore) Append(observation issueopscontract.HandoffDeliveryObservation) (auditcontract.HandoffDeliveryAuditRecord, error) {
 	auditLogID := auditid.Generate(observation.LifecycleID, observation.AttemptID, []string{observation.PromptSHA256, observation.Launcher.Name})
 	observation = redactedHandoffDeliveryObservation(observation)
@@ -94,6 +97,9 @@ func (store HandoffDeliveryStore) Read() ([]issueopscontract.HandoffDeliveryObse
 	return store.ReadFor("", "")
 }
 
+// ReadFor returns the stored observations for the lifecycleID and lineageID pair, in log order; an empty
+// lifecycleID returns all of them. A missing log yields no observations. Corrupt records that affect the
+// requested scope, a truncated tail, or a replaced audit path produce an error.
 func (store HandoffDeliveryStore) ReadFor(lifecycleID, lineageID string) ([]issueopscontract.HandoffDeliveryObservation, error) {
 	observations := []issueopscontract.HandoffDeliveryObservation{}
 	ctx, cancel := context.WithTimeout(context.Background(), handoffDeliveryAuditTimeout)

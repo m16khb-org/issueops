@@ -7,6 +7,9 @@ import (
 	"sort"
 )
 
+// PrepareManifest validates a fixture manifest against the live tool descriptors and returns deep-copied fixtures sorted by ID with its baseline cases.
+// It fails on an unsupported manifest version, a baseline set that is not exactly ten known fixtures,
+// a source tool missing from descriptors, or a recorded schema hash that no longer matches the tool's input schema.
 func PrepareManifest(d contract.FixtureManifest, descriptors []contract.ToolDescriptor) ([]contract.Fixture, []contract.BaselineCase, error) {
 	if d.SchemaVersion != contract.FixtureManifestVersion {
 		return nil, nil, fmt.Errorf("unsupported fixture manifest version %d", d.SchemaVersion)

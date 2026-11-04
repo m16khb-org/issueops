@@ -15,7 +15,7 @@ import (
 	"issueops/internal/contract/issueops"
 )
 
-// ObserveNativeProcessReceipt는 PID 재사용을 방지하는 데 쓰는 운영체제
+// ObserveNativeProcessReceipt 함수는 PID 재사용을 방지하는 데 쓰는 운영체제
 // identity를 읽는다. Windows는 ps lstart와 같은 초 단위 생성 시각과 전체
 // image 경로를 쓴다.
 func ObserveNativeProcessReceipt(pid int) (issueops.NativeProcessReceipt, error) {

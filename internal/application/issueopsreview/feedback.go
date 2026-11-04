@@ -9,6 +9,9 @@ import (
 	reviewport "issueops/internal/port/issueopsreview"
 )
 
+// AddFeedback appends a classified feedback item to record id and advances the
+// phase as the review domain dictates. source and body are required and
+// classification must be a known feedback classification.
 func AddFeedback(store reviewport.ReviewMutationStore, stateRoot, id, source, body, classification string) (model.Record, error) {
 	return mutateReviewRecord(store, stateRoot, id, func() error {
 		source = strings.TrimSpace(source)
@@ -37,6 +40,8 @@ func AddFeedback(store reviewport.ReviewMutationStore, stateRoot, id, source, bo
 	})
 }
 
+// MarkContractFeedbackIssueUpdated stamps IssueUpdatedAt on every contract_change
+// feedback item still awaiting a remote issue update. It fails when no item needs one.
 func MarkContractFeedbackIssueUpdated(store reviewport.ReviewMutationStore, stateRoot, id string) (model.Record, error) {
 	return mutateReviewRecord(store, stateRoot, id, nil, func(record *model.Record) error {
 		now := store.Now()
@@ -55,6 +60,9 @@ func MarkContractFeedbackIssueUpdated(store reviewport.ReviewMutationStore, stat
 	})
 }
 
+// ResolveFeedback sets the resolution of the feedback item at index on record id.
+// The resolution must be a known non-empty value and index must be within the
+// recorded feedback.
 func ResolveFeedback(store reviewport.ReviewMutationStore, stateRoot, id string, index int, resolution string) (model.Record, error) {
 	return mutateReviewRecord(store, stateRoot, id, func() error {
 		resolution = strings.ToLower(strings.TrimSpace(resolution))

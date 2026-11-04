@@ -29,7 +29,7 @@ type failingWorkerDirEffects struct {
 
 func (e failingWorkerDirEffects) Dir() (string, error) { return "", e.err }
 
-func requireProtocolFailure(t *testing.T, outcome MCPToolOutcome, code int64, message string) {
+func requireProtocolFailure(t *testing.T, outcome mcpToolOutcome, code int64, message string) {
 	t.Helper()
 	if !outcome.Handled || outcome.Err == nil || outcome.Err.Code != code || outcome.Err.Message != message {
 		t.Fatalf("outcome = %#v, want handled error code %d message %q", outcome, code, message)

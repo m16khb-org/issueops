@@ -108,7 +108,7 @@ func TestInspectorFailsClosedWhenObservationIsUnavailable(t *testing.T) {
 
 func TestInspectorRequiresRunner(t *testing.T) {
 	_, err := NewInspector(nil).Observe(context.Background(), basesyncport.Request{Worktree: "/worktree", BaseBranch: "main"})
-	if !errors.Is(err, ErrGitRunnerRequired) {
+	if !errors.Is(err, errGitRunnerRequired) {
 		t.Fatalf("error=%v", err)
 	}
 }

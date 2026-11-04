@@ -1,3 +1,5 @@
+// Package issueopsauthorization holds the domain rules that decide whether a
+// caller is the holder of an issueops execution write lease.
 package issueopsauthorization
 
 import (

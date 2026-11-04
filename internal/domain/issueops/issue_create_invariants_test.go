@@ -22,7 +22,7 @@ func TestValidateIssueCreateIntentInvariants(t *testing.T) {
 		{"failed missing reason", issueopscontract.IssueCreateIntentVerificationFailed, "", "", "issue create intent status verification_failed requires failure"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			err := ValidateIssueCreateIntentInvariants(issueopscontract.IssueCreateIntent{
+			err := validateIssueCreateIntentInvariants(issueopscontract.IssueCreateIntent{
 				Status: test.status, CanonicalURL: test.url, Failure: test.failure,
 			})
 			if got := errorText(err); got != test.wantError {

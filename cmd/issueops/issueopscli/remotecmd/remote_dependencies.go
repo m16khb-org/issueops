@@ -16,6 +16,11 @@ type Command struct {
 	Operations RemoteDeps
 	Usage      string
 }
+
+// RemoteDeps lists the remote-provider operations the subcommands invoke: child
+// create/reconcile, artifact verification, issue and PR close/merge/ready,
+// comment/label/retitle/assign/milestone writes, and process ancestry
+// observation. The composition root fills each field from the application layer.
 type RemoteDeps struct {
 	ReconcileChild               func(context.Context, string, remoteapp.ChildReconcileCommand, remoteapp.AncestryObserver) (issueopscontract.ChildReconcileResult, error)
 	CreateChild                  func(context.Context, string, remoteapp.ChildCreateCommand, remoteapp.AncestryObserver) (remoteapp.ChildCreateResult, error)

@@ -7,6 +7,9 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
+// ValidatePreparationNames checks the branch and base_branch flags of branch
+// prepare: both are required, the branch must satisfy ValidateBranch, and the
+// base must be a valid git ref name that does not start with a dash.
 func ValidatePreparationNames(branch, base string) error {
 	if branch == "" {
 		return fmt.Errorf("branch is required (--branch <issue number>-<slug>)")
@@ -27,6 +30,9 @@ func ValidatePreparationNames(branch, base string) error {
 	return nil
 }
 
+// ValidatePreparationParentPath fails when the parent_worktree path is not
+// absolute. The caller resolves absoluteness because the domain layer does no
+// filesystem or path work.
 func ValidatePreparationParentPath(absolute bool) error {
 	if !absolute {
 		return fmt.Errorf("parent_worktree must be an absolute path")
@@ -50,6 +56,10 @@ func AdoptPreparedBranch(record model.Record, issueURL, branch string) (model.Re
 	return record, nil
 }
 
+// ValidatePreparationUmbrella requires a child cycle to fork from and merge
+// into its umbrella cycle branch. It passes when the umbrella has no branch
+// or base already equals it, and otherwise returns an error naming the branch
+// to use.
 func ValidatePreparationUmbrella(umbrella model.Record, branch, base string) error {
 	expected := strings.TrimSpace(umbrella.Branch)
 	if expected == "" || expected == strings.TrimSpace(base) {
@@ -59,6 +69,10 @@ func ValidatePreparationUmbrella(umbrella model.Record, branch, base string) err
 		"base_branch %q 대신 %s로 다시 준비하라", strings.TrimSpace(branch), umbrella.ID, expected, strings.TrimSpace(base), expected)
 }
 
+// ApplyBranchPreparation returns record with a new BranchPrepare built from
+// req, the resolved codeProject key, and the recorded steps. It stamps
+// createdAt on the preparation and updatedAt on the record, replacing any
+// earlier preparation.
 func ApplyBranchPreparation(record model.Record, req model.BranchPrepareRequest, codeProject string, steps []model.BranchPrepareStep, createdAt, updatedAt string) model.Record {
 	record.BranchPrepare = &model.BranchPrepare{
 		Provider: req.Provider, IssueURL: req.IssueURL, Branch: req.Branch, BaseBranch: req.BaseBranch,

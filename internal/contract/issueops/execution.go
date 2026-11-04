@@ -1,11 +1,17 @@
 package issueops
 
+// SchemaVersion is the current schema version of the Execution records and the
+// versioned execution API payloads in this package.
 const (
 	SchemaVersion = 1
 )
 
+// LeaseStatus is the lifecycle state of a WriteLease.
 type LeaseStatus string
 
+// The LeaseStatus values: a lease is claimable until a holder claims it, active
+// while held, revoking while its holder is being replaced, and released once
+// the holder has finished or been dropped.
 const (
 	LeaseStatusClaimable LeaseStatus = "claimable"
 	LeaseStatusActive    LeaseStatus = "active"
@@ -13,6 +19,9 @@ const (
 	LeaseStatusReleased  LeaseStatus = "released"
 )
 
+// Execution is the cycle's execution state: its isolated Workspace, the single
+// WriteLease that authorizes mutation, any pending external intent, and the
+// completion, failure and base-sync evidence sealed so far.
 type Execution struct {
 	Workspace          Workspace                    `json:"workspace"`
 	Lease              WriteLease                   `json:"lease"`
@@ -29,6 +38,8 @@ type Execution struct {
 	SyncBaseEvents []ExecutionSyncBaseEvent `json:"sync_base_events,omitempty"`
 }
 
+// Workspace is the isolated worktree that execution runs in, with the source
+// checkout it was linked from and the base head it started at.
 type Workspace struct {
 	SourceRoot     string `json:"source_root"`
 	Root           string `json:"root"`
@@ -42,6 +53,9 @@ type Workspace struct {
 	ArtifactDir string `json:"artifact_dir,omitempty"`
 }
 
+// WriteLease is the single write authority over a cycle's execution. Generation
+// increases on each claim or replacement so a stale holder can be recognized and
+// refused; the claim token is stored only as a digest.
 type WriteLease struct {
 	Generation        uint64       `json:"generation"`
 	Status            LeaseStatus  `json:"status"`
@@ -53,6 +67,8 @@ type WriteLease struct {
 	ReplacementReason string       `json:"replacement_reason,omitempty"`
 }
 
+// NativeActor identifies the host session (and optional agent) that holds a
+// WriteLease, together with the process receipt that proves the session is live.
 type NativeActor struct {
 	Host           string                `json:"host"`
 	SessionID      string                `json:"session_id"`
@@ -63,12 +79,17 @@ type NativeActor struct {
 	ProcessAncestry []NativeProcessReceipt `json:"-"`
 }
 
+// NativeProcessReceipt identifies one OS process by PID, start time and
+// executable, so a recycled PID cannot be mistaken for the original process.
 type NativeProcessReceipt struct {
 	PID        int    `json:"pid"`
 	StartedAt  string `json:"started_at"`
 	Executable string `json:"executable"`
 }
 
+// ExternalIntent is the marker recorded before an irreversible remote mutation
+// starts, so an interrupted attempt can be found and reconciled instead of
+// repeated.
 type ExternalIntent struct {
 	OperationID string `json:"operation_id"`
 	Kind        string `json:"kind"`
@@ -76,6 +97,8 @@ type ExternalIntent struct {
 	StartedAt   string `json:"started_at"`
 }
 
+// ExecutionCompletion is the sealed evidence that execution finished: the final
+// head, the verification report and commands, and the remote artifact URL.
 type ExecutionCompletion struct {
 	Generation             uint64   `json:"generation,omitempty"`
 	FinalHead              string   `json:"final_head"`
@@ -85,6 +108,8 @@ type ExecutionCompletion struct {
 	CompletedAt            string   `json:"completed_at"`
 }
 
+// ExecutionCompletionHistory preserves a previous ExecutionCompletion that was
+// reopened, with the lease generation, the reason and when it was reopened.
 type ExecutionCompletionHistory struct {
 	Generation uint64              `json:"generation"`
 	Completion ExecutionCompletion `json:"completion"`
@@ -92,6 +117,8 @@ type ExecutionCompletionHistory struct {
 	ReopenedAt string              `json:"reopened_at"`
 }
 
+// ExecutionFailure records the last execution failure by stable Code, with the
+// pending operation it belongs to when there was one.
 type ExecutionFailure struct {
 	OperationID string `json:"operation_id,omitempty"`
 	Code        string `json:"code"`
@@ -99,12 +126,14 @@ type ExecutionFailure struct {
 	At          string `json:"at"`
 }
 
+// The ExecutionSyncBaseEvent modes: apply performs the base merge and finalize
+// seals the pushed result.
 const (
 	ExecutionSyncBaseEventApply    = "apply"
 	ExecutionSyncBaseEventFinalize = "finalize"
 )
 
-// ExecutionSyncBaseEvent는 성공한 sync-base 변형 1회의 증거다. abort는
+// ExecutionSyncBaseEvent 타입은 성공한 sync-base 변형 1회의 증거다. abort는
 // 되돌림이므로 이벤트를 남기지 않는다(설계 v2 — apply/finalize 성공 시에만 append).
 type ExecutionSyncBaseEvent struct {
 	Mode          string `json:"mode"` // apply | finalize

@@ -271,12 +271,12 @@ func TestChildRecoveryCommandQuotesArgumentsAndIncludesActorOnlyWhenIdentified(t
 		{"only first actor used", []model.Actor{{Host: "codex", SessionID: "s", CWD: "/w"}, {Host: "claude", SessionID: "x", CWD: "/x"}}, base + " --host 'codex' --session-id 's' --cwd '/w' --confirm --json"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := ChildRecoveryCommand("io-1", "op-1", tc.actors...); got != tc.want {
+			if got := childRecoveryCommand("io-1", "op-1", tc.actors...); got != tc.want {
 				t.Fatalf("command=%q want %q", got, tc.want)
 			}
 		})
 	}
-	if got := ChildRecoveryCommand("a'b", "op", model.Actor{Host: "h", SessionID: "s", CWD: "/it's"}); !strings.Contains(got, `--id 'a'"'"'b'`) || !strings.Contains(got, `--cwd '/it'"'"'s'`) {
+	if got := childRecoveryCommand("a'b", "op", model.Actor{Host: "h", SessionID: "s", CWD: "/it's"}); !strings.Contains(got, `--id 'a'"'"'b'`) || !strings.Contains(got, `--cwd '/it'"'"'s'`) {
 		t.Fatalf("embedded quotes not escaped: %q", got)
 	}
 }

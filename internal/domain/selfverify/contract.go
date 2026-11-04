@@ -1,3 +1,6 @@
+// Package selfverify holds the domain rules of the self-verification loop: the step plan, goal scoring,
+// failure classification, output budgeting, rerun recipes and the summary contract. It is pure logic
+// over the DTOs in internal/contract/selfverify and performs no process or filesystem I/O.
 package selfverify
 
 import (
@@ -7,6 +10,8 @@ import (
 	contract "issueops/internal/contract/selfverify"
 )
 
+// ContractValue builds the self_verification_summary contract: its version, required fields, goals and
+// coverage claims, plus a SHA-256 hash of that content so schema drift is detectable.
 func ContractValue() contract.SelfVerificationContract {
 	contract := contract.SelfVerificationContract{
 		Name:    "self_verification_summary",
@@ -47,6 +52,7 @@ func ContractValue() contract.SelfVerificationContract {
 	return contract
 }
 
+// GoalDefinitions returns the scored goals and the step labels that provide evidence for each goal.
 func GoalDefinitions() []contract.SelfVerificationGoalDefinition {
 	return []contract.SelfVerificationGoalDefinition{
 		{Name: "test_suite", KoreanName: "테스트 스위트", Labels: []string{"go test", "contract golden tests", "Python script tests", "Go test match guard"}},
@@ -65,6 +71,8 @@ func GoalDefinitions() []contract.SelfVerificationGoalDefinition {
 	}
 }
 
+// CoverageDefinitions returns the claims the summary must back with evidence and the step labels that
+// support each claim.
 func CoverageDefinitions() []contract.SelfVerificationCoverageDefinition {
 	return []contract.SelfVerificationCoverageDefinition{
 		{Claim: "core repository invariants", Labels: []string{"harness invariants"}},
@@ -90,6 +98,8 @@ func CoverageDefinitions() []contract.SelfVerificationCoverageDefinition {
 	}
 }
 
+// CoverageForLabels reports, for every coverage definition, whether all of its labels appear in
+// stepLabels. It also returns a gap description for each claim that is missing labels.
 func CoverageForLabels(stepLabels []string) ([]contract.SelfVerificationCoverage, []string) {
 	labelSet := map[string]bool{}
 	for _, label := range stepLabels {

@@ -99,7 +99,7 @@ func TestCommandTimeoutParsing(t *testing.T) {
 		want   time.Duration
 		wantOK bool
 	}{
-		{"", DefaultCommandTimeout, false}, // omitted: displayed as default but invalid until the adapter supplies it
+		{"", defaultCommandTimeout, false}, // omitted: displayed as default but invalid until the adapter supplies it
 		{"90s", 90 * time.Second, true},
 		{"1h30m", 90 * time.Minute, true},
 		{"soon", 0, false},

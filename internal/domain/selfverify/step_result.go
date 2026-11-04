@@ -6,6 +6,9 @@ import (
 	contract "issueops/internal/contract/selfverify"
 )
 
+// CombineFailedStep builds a failed StepResult for label from a failed child step. It joins the commands
+// and stdout parts (tailed to outputBudget), keeps the child's stderr, and prefixes the error with the
+// child's label.
 func CombineFailedStep(label string, durationMS int64, child contract.StepResult, stdoutParts, commands []string, outputBudget int) contract.StepResult {
 	stdoutText, stdoutTruncated, stdoutBytes := TailWithBudget(strings.Join(stdoutParts, "\n"), outputBudget)
 	step := contract.StepResult{

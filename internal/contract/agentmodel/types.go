@@ -4,6 +4,7 @@ package agentmodel
 // Role names the purpose an IssueOps session or sub-agent runs for.
 type Role string
 
+// Roles an agent model can be configured for.
 const (
 	RoleImplement      Role = "implement"
 	RoleChildImplement Role = "child-implement"

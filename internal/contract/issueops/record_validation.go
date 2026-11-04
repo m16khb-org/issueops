@@ -148,6 +148,8 @@ func validateRecordIssueCreateIntent(record *Record) error {
 	return ValidateIssueCreateIntent(*record.IssueCreateIntent)
 }
 
+// KnownFeedbackClassification reports whether classification is an accepted
+// intake classification; the empty string (unclassified) is accepted.
 func KnownFeedbackClassification(classification string) bool {
 	switch classification {
 	case "",
@@ -165,6 +167,8 @@ func KnownFeedbackClassification(classification string) bool {
 	}
 }
 
+// KnownFeedbackResolution reports whether resolution is an accepted feedback
+// resolution; the empty string (unresolved) is accepted.
 func KnownFeedbackResolution(resolution string) bool {
 	switch resolution {
 	case "", "valid-defect", "question-answered", "noise-dismissed":

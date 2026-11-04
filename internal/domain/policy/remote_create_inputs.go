@@ -6,6 +6,10 @@ import (
 	"strings"
 )
 
+// ValidateRemoteCreateInputs rejects an issue or PR creation request whose title,
+// body, labels or assignees contain secret-like content. The error names the
+// field and the offending line and rule but never the value; kind labels the
+// object being created in the message.
 func ValidateRemoteCreateInputs(kind, title, body string, labels, assignees []string) error {
 	values := []struct {
 		field string

@@ -16,21 +16,25 @@ import (
 
 var bucket = fmt.Sprintf("issueops_v%d", issueopscontract.SchemaVersion)
 
+// Store reads and writes issueops cycle records in the sqlstore under stateRoot.
+// Scope prefixes the operation names reported to Observer, which may be nil.
 type Store struct {
 	Scope    string
 	Observer Observer
 }
 
+// ScanDiagnostic reports a stored row that Scan skipped: the row ID and a code
+// (invalid_state when it failed to decode).
 type ScanDiagnostic struct {
 	ID   string
 	Code string
 }
 
-type Mutation func(
+type mutation func(
 	issueopscontract.Record,
 ) (issueopscontract.Record, bool, error)
 
-type RelatedMutation func(
+type relatedMutation func(
 	issueopscontract.Record,
 	[]byte,
 	bool,
@@ -44,7 +48,7 @@ func (Store) Read(
 	if err := ctx.Err(); err != nil {
 		return issueopscontract.Record{OK: false, ID: id}, err
 	}
-	id, err := NormalizeID(id)
+	id, err := normalizeID(id)
 	if err != nil {
 		return issueopscontract.Record{OK: false}, err
 	}
@@ -99,6 +103,8 @@ func retiredOutcome(data []byte, ok bool, err error) string {
 	return issueopsdomain.RetiredCycleNote(outcome)
 }
 
+// ListIDs returns the IDs of all stored records. A state root without a store
+// yields an empty list.
 func (Store) ListIDs(ctx context.Context, stateRoot string) ([]string, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -110,6 +116,8 @@ func (Store) ListIDs(ctx context.Context, stateRoot string) ([]string, error) {
 	return ids, err
 }
 
+// Scan decodes every stored record, returning them with a diagnostic for each row
+// that could not be decoded. It holds all records in memory; use ScanEach to stream.
 func (Store) Scan(
 	ctx context.Context,
 	stateRoot string,
@@ -125,6 +133,9 @@ func (Store) Scan(
 	return records, diagnostics, nil
 }
 
+// ScanEach decodes every stored record and passes each to visit, stopping at the
+// first error visit returns. Rows that fail to decode are skipped and reported
+// in the returned diagnostics. A state root without a store yields no diagnostics.
 func (Store) ScanEach(
 	ctx context.Context,
 	stateRoot string,
@@ -156,11 +167,15 @@ func (Store) ScanEach(
 	return diagnostics, nil
 }
 
+// Update reads record id under the store lock, applies mutate and writes the
+// result. mutate reports whether it changed anything; an unchanged record is not
+// written. A record with a cleanup attempt in progress, or an abandon apply in
+// progress, is refused. The returned record has OK set only on success.
 func (store Store) Update(
 	ctx context.Context,
 	stateRoot string,
 	id string,
-	mutate Mutation,
+	mutate mutation,
 ) (issueopscontract.Record, error) {
 	id, database, err := open(ctx, stateRoot, id)
 	if err != nil {
@@ -194,12 +209,15 @@ func (store Store) Update(
 	return result, nil
 }
 
+// UpdateRelated reads record id and the row of relatedBucket with the same id
+// under the store lock, then applies mutate to them and writes or deletes the
+// related row according to mutate's result. The record itself is never written.
 func (store Store) UpdateRelated(
 	ctx context.Context,
 	stateRoot string,
 	id string,
 	relatedBucket string,
-	mutate RelatedMutation,
+	mutate relatedMutation,
 ) (issueopscontract.Record, error) {
 	id, database, err := open(ctx, stateRoot, id)
 	if err != nil {
@@ -236,6 +254,7 @@ func (store Store) UpdateRelated(
 	return result, nil
 }
 
+// ReadRelated returns the raw row stored under id in relatedBucket and whether it exists.
 func (Store) ReadRelated(
 	ctx context.Context,
 	stateRoot string,
@@ -245,13 +264,17 @@ func (Store) ReadRelated(
 	if err := ctx.Err(); err != nil {
 		return nil, false, err
 	}
-	id, err := NormalizeID(id)
+	id, err := normalizeID(id)
 	if err != nil {
 		return nil, false, err
 	}
 	return sqlstore.GetExisting(stateRoot, relatedBucket, id)
 }
 
+// Delete removes record id and its rows in relatedBuckets in one atomic commit,
+// inside the same serialization gate as Update so an open update cannot recreate
+// a related row afterwards. A missing record is not an error; a record with a
+// cleanup attempt in progress is refused.
 func (store Store) Delete(
 	ctx context.Context,
 	stateRoot string,
@@ -261,7 +284,7 @@ func (store Store) Delete(
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	id, err := NormalizeID(id)
+	id, err := normalizeID(id)
 	if err != nil {
 		return err
 	}
@@ -300,6 +323,10 @@ func (store Store) Delete(
 	})
 }
 
+// DeleteIfUnchanged removes record id and its rows in relatedBuckets only when the
+// stored record still equals expected, so a concurrent change aborts the delete.
+// It runs inside the same serialization gate as Update and refuses an expected
+// record with a cleanup attempt in progress.
 func (store Store) DeleteIfUnchanged(
 	ctx context.Context,
 	stateRoot string,
@@ -310,7 +337,7 @@ func (store Store) DeleteIfUnchanged(
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	id, err := NormalizeID(id)
+	id, err := normalizeID(id)
 	if err != nil {
 		return err
 	}
@@ -345,7 +372,7 @@ func open(ctx context.Context, stateRoot, id string) (string, *sqlstore.DB, erro
 	if err := ctx.Err(); err != nil {
 		return id, nil, err
 	}
-	id, err := NormalizeID(id)
+	id, err := normalizeID(id)
 	if err != nil {
 		return id, nil, err
 	}

@@ -50,7 +50,7 @@ func TestBootstrapPreservesCuratedDocsWithoutSync(t *testing.T) {
 	root := "/repo"
 	path := root + "/.issueops/TECH_STACK.md"
 	fake := &bootstrapEffects{existing: map[string]bool{path: true}}
-	result, err := Bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: root, Write: true}, fake)
+	result, err := bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: root, Write: true}, fake)
 	if err != nil || !result.OK {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
@@ -60,7 +60,7 @@ func TestBootstrapPreservesCuratedDocsWithoutSync(t *testing.T) {
 		}
 	}
 	fake.writes = nil
-	_, err = Bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: root, Write: true, Sync: true}, fake)
+	_, err = bootstrap(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: root, Write: true, Sync: true}, fake)
 	if err != nil {
 		t.Fatal(err)
 	}

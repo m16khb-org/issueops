@@ -1,3 +1,5 @@
+// Package installdryrun is the self-verification probe that smoke-tests the
+// installer's dry-run mode against isolated temporary directories.
 package installdryrun
 
 import (
@@ -14,6 +16,10 @@ const aggregateOutputBudgetBytes = 8 * 1024
 const commandOutputBudgetBytes = 32 * 1024
 const skillName = "atomic-commit-push"
 
+// Validate smoke-tests `install --dry-run --project-local --json` of the built
+// binary with an isolated temporary HOME and ISSUEOPS_ROOT (seeded by seed)
+// containing one skill, and checks the result reports planned writes and links
+// without writing anything. Failures are reported in the returned StepResult.
 func Validate(binary, root string, seed int64) verifycontract.StepResult {
 	return validateInstallDryRunSmokeWithDeps(binary, root, seed, installDryRunValidationDeps{})
 }

@@ -23,6 +23,8 @@ var diagnosticURLPattern = sync.OnceValue(func() *regexp.Regexp { return regexp.
 
 const maxBoundedDiagnosticBytes = 4096
 
+// CleanEnvAllowlist trims the allowlist names, drops empty ones and returns them
+// sorted. The result is never nil.
 func CleanEnvAllowlist(items []string) []string {
 	out := []string{}
 	for _, item := range items {
@@ -35,7 +37,7 @@ func CleanEnvAllowlist(items []string) []string {
 	return out
 }
 
-func ValidEnvName(name string) bool {
+func validEnvName(name string) bool {
 	if name == "" {
 		return false
 	}
@@ -58,6 +60,8 @@ func validEnvNameRune(r rune, first bool) bool {
 	return false
 }
 
+// RedactArgv returns a copy of argv in which every secret-like argument is replaced
+// with "<redacted>".
 func RedactArgv(argv []string) []string {
 	out := make([]string, len(argv))
 	for i, arg := range argv {
@@ -66,6 +70,8 @@ func RedactArgv(argv []string) []string {
 	return out
 }
 
+// RedactFreeform returns "<redacted>" when s looks like a secret (see SecretLikeArg)
+// and s unchanged otherwise.
 func RedactFreeform(s string) string {
 	if SecretLikeArg(s) {
 		return "<redacted>"
@@ -73,6 +79,8 @@ func RedactFreeform(s string) string {
 	return s
 }
 
+// RedactDiagnostic redacts s as RedactFreeform does and, when s is not a secret as a
+// whole, also replaces any http(s) URL inside it with [REDACTED_URL].
 func RedactDiagnostic(s string) string {
 	if redacted := RedactFreeform(s); redacted != s {
 		return redacted
@@ -80,6 +88,8 @@ func RedactDiagnostic(s string) string {
 	return diagnosticURLPattern().ReplaceAllString(s, "[REDACTED_URL]")
 }
 
+// BoundedDiagnostic redacts and trims value, then truncates it to limit bytes and
+// appends "...[truncated]". A limit that is not positive or exceeds 4096 bytes falls back to 4096.
 func BoundedDiagnostic(value string, limit int) string {
 	if limit <= 0 || limit > maxBoundedDiagnosticBytes {
 		limit = maxBoundedDiagnosticBytes
@@ -91,6 +101,9 @@ func BoundedDiagnostic(value string, limit int) string {
 	return value
 }
 
+// SecretLikeArg reports whether arg looks like a credential: a key=value
+// assignment such as token= or password=, a bearer header, a known provider
+// token format, or a credential-like file path.
 func SecretLikeArg(arg string) bool {
 	return secretArgRe().MatchString(arg) || knownTokenRe().MatchString(arg) || secretPathRe().MatchString(filepath.ToSlash(arg))
 }

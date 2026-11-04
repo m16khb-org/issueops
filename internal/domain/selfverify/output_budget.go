@@ -5,6 +5,9 @@ import (
 	"unicode/utf8"
 )
 
+// TailWithBudget keeps the tail of s within limit bytes, prefixing a truncation marker when bytes were
+// omitted. It returns the text, whether it was truncated, and the original byte length.
+// A non-positive limit drops all output.
 func TailWithBudget(s string, limit int) (string, bool, int) {
 	return tailWithOriginalBytes(s, len(s), limit)
 }

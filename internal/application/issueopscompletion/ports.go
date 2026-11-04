@@ -7,17 +7,23 @@ import (
 	completioncontract "issueops/internal/contract/issueopscompletion"
 )
 
+// RecordTransition computes the next record from the current one. The bool reports whether the
+// record changed and must be persisted; returning false leaves the stored record untouched.
 type RecordTransition func(completioncontract.RecordSnapshot) (completioncontract.RecordSnapshot, bool, error)
 
+// RepositoryResult is the state a Repository returns after Update: the stored record and its execution.
 type RepositoryResult struct {
 	Record    completioncontract.RecordSnapshot
 	Execution completioncontract.Execution
 }
 
+// Repository persists cycle records for completion.
 type Repository interface {
 	Update(context.Context, string, RecordTransition) (RepositoryResult, error)
 }
 
+// Environment exposes the filesystem and git observations completion needs: canonical path comparison,
+// the current HEAD of a worktree, verification report resolution, and changed-path listing.
 type Environment interface {
 	PathsMatch(string, string) bool
 	CurrentHead(context.Context, string) (string, error)
@@ -27,8 +33,8 @@ type Environment interface {
 	ChangedPathsSince(ctx context.Context, root, from, to, report string) ([]string, error)
 }
 
-type Clock interface{ Now() time.Time }
+type clock interface{ Now() time.Time }
 
-// ActorVerifier proves the caller (native ancestry or a bound capability) and
+// actorVerifier proves the caller (native ancestry or a bound capability) and
 // returns its verified identity. It never decides holder or generation.
-type ActorVerifier func(context.Context, completioncontract.Actor, []completioncontract.ProcessReceipt) (completioncontract.Actor, error)
+type actorVerifier func(context.Context, completioncontract.Actor, []completioncontract.ProcessReceipt) (completioncontract.Actor, error)

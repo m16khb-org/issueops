@@ -67,7 +67,7 @@ func TestComputeReliabilityAggregates(t *testing.T) {
 	if a.Successes != 2 || a.Trials != 2 || a.PassAt1 != 1 || a.IntervalHigh != 1 || a.IntervalLow >= 1 {
 		t.Fatalf("%+v", a)
 	}
-	if b.Successes != 1 || b.PassAt1 != 0.5 || !(b.IntervalLow > 0 && b.IntervalHigh < 1) || b.IntervalWidth != Round4(b.IntervalHigh-b.IntervalLow) {
+	if b.Successes != 1 || b.PassAt1 != 0.5 || !(b.IntervalLow > 0 && b.IntervalHigh < 1) || b.IntervalWidth != round4(b.IntervalHigh-b.IntervalLow) {
 		t.Fatalf("%+v", b)
 	}
 	want := []contract.PassPowKPoint{{K: 1, PassPowK: 0.75}, {K: 2, PassPowK: 0.5}}
@@ -106,15 +106,15 @@ func TestPassPowK(t *testing.T) {
 
 func TestClopperPearson(t *testing.T) {
 	lo, hi, err := ClopperPearson(0, 1, 0.05)
-	if err != nil || lo != 0 || !approx(Round4(hi), 0.975) {
+	if err != nil || lo != 0 || !approx(round4(hi), 0.975) {
 		t.Fatalf("0/1: %v %v %v", lo, hi, err)
 	}
 	lo, hi, err = ClopperPearson(1, 1, 0.05)
-	if err != nil || hi != 1 || !approx(Round4(lo), 0.025) {
+	if err != nil || hi != 1 || !approx(round4(lo), 0.025) {
 		t.Fatalf("1/1: %v %v %v", lo, hi, err)
 	}
 	lo, hi, err = ClopperPearson(5, 10, 0.05)
-	if err != nil || !approx(Round4(lo), 0.1871) || !approx(Round4(hi), 0.8129) {
+	if err != nil || !approx(round4(lo), 0.1871) || !approx(round4(hi), 0.8129) {
 		t.Fatalf("5/10: %v %v %v", lo, hi, err)
 	}
 	if lo, hi, err := ClopperPearson(0, MaxReliabilityTrials, 0.05); err != nil || lo != 0 || hi <= 0 || hi >= 1 {
@@ -157,7 +157,7 @@ func TestScoreSpreadAndRound4(t *testing.T) {
 	if lo, hi, w := ScoreSpread([]float64{3, 9, -1, 4}); lo != -1 || hi != 9 || w != 10 {
 		t.Fatalf("%v %v %v", lo, hi, w)
 	}
-	if Round4(0.123456) != 0.1235 || Round4(0.12344) != 0.1234 {
+	if round4(0.123456) != 0.1235 || round4(0.12344) != 0.1234 {
 		t.Fatal("Round4")
 	}
 }

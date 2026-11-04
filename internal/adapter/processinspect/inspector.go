@@ -1,3 +1,6 @@
+// Package processinspect observes the identity (start time and executable) of
+// a running process by PID, using /proc on Linux, the process handle on Windows
+// and ps elsewhere. It is an adapter for the process identity contract.
 package processinspect
 
 import (

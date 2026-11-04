@@ -7,7 +7,7 @@ import (
 	cycleport "issueops/internal/port/issueopscycle"
 )
 
-func ApplyPhaseTransition(observations cycleport.PhaseTransitionObservations, record model.Record, phase model.Phase) model.Record {
+func applyPhaseTransition(observations cycleport.PhaseTransitionObservations, record model.Record, phase model.Phase) model.Record {
 	now := observations.Now()
 	head, fingerprint := "", ""
 	switch phase {

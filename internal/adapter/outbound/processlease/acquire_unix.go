@@ -15,10 +15,15 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// Acquire takes the exclusive non-blocking flock lease for key in directory. It returns
+// ErrBusy when another holder owns the lock, and fails if ctx is already done, either
+// argument is blank, or the lock directory or file is not private to the current user.
 func Acquire(ctx context.Context, directory, key string) (*Lease, error) {
 	return acquireLease(ctx, directory, key, unix.LOCK_EX)
 }
 
+// AcquireShared takes a shared non-blocking flock lease for key in directory. Unlike
+// Acquire it returns a SharedLease that cannot provide context or drainage.
 func AcquireShared(ctx context.Context, directory, key string) (*SharedLease, error) {
 	lease, err := acquireLease(ctx, directory, key, unix.LOCK_SH)
 	if err != nil {

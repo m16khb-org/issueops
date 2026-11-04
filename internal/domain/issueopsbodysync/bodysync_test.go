@@ -44,7 +44,7 @@ func TestMergePreservesEveryManagedRegion(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			merged, preserved, err := Merge(tt.live, "## 문제\n새 본문\n")
+			merged, preserved, err := merge(tt.live, "## 문제\n새 본문\n")
 			if err != nil {
 				t.Fatalf("merge: %v", err)
 			}
@@ -72,11 +72,11 @@ func TestMergePreservesEveryManagedRegion(t *testing.T) {
 func TestMergeIsIdempotent(t *testing.T) {
 	live := createMarker + "\n\n## 문제\n옛 본문\n\n" + completionBlock + "\n"
 	proposed := "## 문제\n새 본문\n"
-	once, _, err := Merge(live, proposed)
+	once, _, err := merge(live, proposed)
 	if err != nil {
 		t.Fatalf("first merge: %v", err)
 	}
-	twice, _, err := Merge(once, proposed)
+	twice, _, err := merge(once, proposed)
 	if err != nil {
 		t.Fatalf("second merge: %v", err)
 	}
@@ -98,7 +98,7 @@ func TestMergeRejectsUnusableProposals(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, _, err := Merge("## 문제\n옛 본문\n", tt.proposed)
+			_, _, err := merge("## 문제\n옛 본문\n", tt.proposed)
 			if err == nil {
 				t.Fatalf("expected a refusal for %s", tt.name)
 			}
@@ -124,7 +124,7 @@ func TestClassifyDrift(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := ClassifyDrift(tt.recorded, tt.live, tt.merged); got != tt.want {
+			if got := classifyDrift(tt.recorded, tt.live, tt.merged); got != tt.want {
 				t.Fatalf("drift = %q, want %q", got, tt.want)
 			}
 		})

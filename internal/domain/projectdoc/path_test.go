@@ -8,7 +8,7 @@ func TestOptionalVCSProjectDocIsAllowedButNotRequired(t *testing.T) {
 	if containsProjectDocName(Names(), "VCS.md") {
 		t.Fatal("VCS.md must not become a required project doc")
 	}
-	if !containsProjectDocName(AllowedProjectDocNames(), "VCS.md") {
+	if !containsProjectDocName(allowedProjectDocNames(), "VCS.md") {
 		t.Fatal("VCS.md must be readable and writable on demand")
 	}
 	if got, err := NormalizeRelPath(".issueops/VCS.md"); err != nil || got != ".issueops/VCS.md" {

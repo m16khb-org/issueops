@@ -15,23 +15,30 @@ import (
 	reviewdomain "issueops/internal/domain/issueopsreview"
 )
 
-type ChildRecords interface {
+type childRecords interface {
 	WithinLock(context.Context, string, func(context.Context) error) error
 	Load(string) (model.Record, error)
 	SavePair(context.Context, model.Record, model.Record) (model.Record, model.Record, error)
 }
-type ChildIdentity interface {
+type childIdentity interface {
 	CanonicalRepo(string) string
 	StableID(string, string) string
 }
+
+// ChildStarter creates or updates a delegated child cycle record under a
+// parent and links the child issue, all with the parent's mutation authority.
 type ChildStarter struct {
-	Records   ChildRecords
-	Identity  ChildIdentity
+	Records   childRecords
+	Identity  childIdentity
 	Authority cycleapp.MutationAuthority
 	Links     branchapp.Linker
 	Now       func() time.Time
 }
 
+// Start validates the request, then under the parent's lock saves the child and
+// parent records together. When the request names a child issue URL it also
+// links it to the parent; a link failure other than "already linked" is
+// reported as ChildLinkWarning instead of an error.
 func (s ChildStarter) Start(ctx context.Context, req model.ChildStartRequest, actor *model.Actor) (model.ChildStartResult, error) {
 	req, err := domain.PrepareChildStart(req)
 	if err != nil {

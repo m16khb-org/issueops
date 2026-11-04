@@ -1,3 +1,7 @@
+// Package policy holds the pure command-policy rules: the command catalog and its
+// classification, the allow/deny decision over observed facts, the capability tier,
+// and secret redaction. It does no filesystem or process access; adapters observe
+// the facts and this domain layer decides.
 package policy
 
 import (
@@ -8,6 +12,9 @@ import (
 	policycontract "issueops/internal/contract/policy"
 )
 
+// Catalog is the set of shell interpreters, network commands, write commands and
+// read-only commands (with per-command subcommand sets) that Classify consults.
+// Build one with BuiltinCatalog and extend it with Apply.
 type Catalog struct {
 	shellInterpreters   map[string]bool
 	networkCommands     map[string]bool
@@ -18,6 +25,8 @@ type Catalog struct {
 	readOnlySubcommands map[string]map[string]bool
 }
 
+// CommandClassification is what Classify concluded about one argv: whether it
+// runs a shell interpreter, uses the network, writes, or is on the read-only allowlist.
 type CommandClassification struct {
 	ShellCommand    bool
 	UsesNetwork     bool
@@ -25,6 +34,8 @@ type CommandClassification struct {
 	ReadOnlyAllowed bool
 }
 
+// CatalogSnapshot is a deterministic, sorted copy of a Catalog for reporting.
+// It shares no maps or slices with the Catalog it came from.
 type CatalogSnapshot struct {
 	ShellInterpreters   []string
 	NetworkCommands     []string
@@ -35,6 +46,8 @@ type CatalogSnapshot struct {
 	ReadOnlySubcommands map[string][]string
 }
 
+// BuiltinCatalog returns a new Catalog holding the built-in command lists. Each call
+// builds fresh maps, so Apply on one result never affects another.
 func BuiltinCatalog() Catalog {
 	return Catalog{
 		shellInterpreters: stringSet("sh", "bash", "zsh", "fish", "dash", "ksh", "cmd", "powershell", "pwsh"),
@@ -55,6 +68,8 @@ func BuiltinCatalog() Catalog {
 	}
 }
 
+// Apply adds the additional commands and subcommands named in overrides to the
+// catalog. It only adds entries and never removes a built-in one; the catalog's maps are mutated in place.
 func (catalog *Catalog) Apply(overrides policycontract.Overrides) {
 	addToSet(catalog.shellInterpreters, overrides.AdditionalShellInterpreters)
 	addToSet(catalog.networkCommands, overrides.AdditionalNetworkCommands)
@@ -80,6 +95,9 @@ func addSubcommands(catalog map[string]map[string]bool, additions map[string][]s
 	}
 }
 
+// Classify reports how the catalog classifies argv. It matches argv[0] by its
+// lowercase base name without a Windows executable extension and the first
+// argument as a subcommand. An empty argv yields the zero classification.
 func (catalog Catalog) Classify(argv []string) CommandClassification {
 	if len(argv) == 0 {
 		return CommandClassification{}
@@ -123,6 +141,8 @@ func syntaxCheckOnly(argv []string) bool {
 	return file != "" && !strings.HasPrefix(file, "-") && !strings.HasPrefix(file, "+")
 }
 
+// Snapshot returns the catalog contents as sorted slices, so the same catalog
+// always renders the same report.
 func (catalog Catalog) Snapshot() CatalogSnapshot {
 	return CatalogSnapshot{
 		ShellInterpreters:   sortedKeys(catalog.shellInterpreters),

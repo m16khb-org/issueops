@@ -9,6 +9,10 @@ import (
 	completioncontract "issueops/internal/contract/issueopscompletion"
 )
 
+// ValidateArtifact 함수는 기록에 남은 검증된 원격 산출물(PR 또는 MR)이 완료
+// 조건을 만족하는지 검사한다. 검증 시각과 대상 브랜치, provider와 종류의 일치,
+// 정규 HTTPS URL, 연결된 이슈와 같은 프로젝트, 정규화된 label과 assignee,
+// 요청한 URL과의 일치를 확인하고 처음 어긋난 항목을 오류로 돌려준다.
 func ValidateArtifact(record completioncontract.RecordSnapshot, requestedURL string) error {
 	artifact := record.Artifact
 	if err := validateArtifactVerified(record, artifact); err != nil {

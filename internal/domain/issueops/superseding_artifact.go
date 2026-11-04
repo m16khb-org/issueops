@@ -6,9 +6,8 @@ import (
 	"strings"
 )
 
-// ArtifactObservation은 cleanup 판정에 쓰이는 원격 artifact의 관측값이다.
-// provider readback이 채우며, 관측하지 못한 값은 빈 채로 남아 fail-closed의
-// 근거가 된다.
+// ArtifactObservation 타입은 cleanup 판정에 쓰이는 원격 artifact의 관측값이다. provider
+// readback이 채우며, 관측하지 못한 값은 빈 채로 남아 fail-closed의 근거가 된다.
 type ArtifactObservation struct {
 	// URL은 canonical artifact URL이다.
 	URL string
@@ -22,7 +21,7 @@ type ArtifactObservation struct {
 	Body string
 }
 
-// ValidateSupersedingArtifact는 replacement artifact가 original을 대체했다고
+// ValidateSupersedingArtifact 함수는 replacement artifact가 original을 대체했다고
 // 인정할 수 있는지 판정한다.
 //
 // 왜 필요한가: 완료된 record가 가리키는 원래 PR이 closed-unmerged이고, 후속

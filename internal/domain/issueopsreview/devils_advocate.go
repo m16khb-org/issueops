@@ -1,3 +1,8 @@
+// Package issueopsreview holds the pure domain rules for IssueOps review gates:
+// architecture, compatibility, devil's-advocate, implementation, project docs, and
+// schema reviews, plus feedback completion and regression. It validates review
+// requests, builds records, and reports missing gate keys without any I/O; callers
+// in the application layer supply the observed state.
 package issueopsreview
 
 import (
@@ -67,6 +72,8 @@ func cleanReviewValues(values []string) []string {
 	return out
 }
 
+// ReviseRoundCapError is returned by ApplyReview when the plan phase already holds the
+// maximum number of unwaived revise rounds. Count is the number found.
 type ReviseRoundCapError struct{ Count int }
 
 func (e *ReviseRoundCapError) Error() string { return "revise round cap reached" }

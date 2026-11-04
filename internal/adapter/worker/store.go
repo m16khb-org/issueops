@@ -78,6 +78,9 @@ func (store Store) Write(ctx context.Context, job workercontract.Job) error {
 	return db.Apply(ctx, []port.RecordMutation{{Bucket: workerBucket, ID: job.ID, Data: append(b, '\n')}})
 }
 
+// ResolveDirectory returns the worker store directory: ISSUEOPS_WORKER_DIR made
+// absolute when set, otherwise the "worker" subdirectory of ISSUEOPS_STATE_DIR or
+// the default per-user state directory.
 func ResolveDirectory() (string, error) {
 	if dir := os.Getenv("ISSUEOPS_WORKER_DIR"); dir != "" {
 		return filepath.Abs(dir)

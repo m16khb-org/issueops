@@ -142,7 +142,7 @@ func TestAbandonExecutorPreviewReportsFingerprintCommandWithoutArming(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	want, _ := CleanupAbandonFingerprint(*f.inventory)
+	want, _ := cleanupAbandonFingerprint(*f.inventory)
 	if result.Fingerprint != want || result.Record == nil || result.RecordDeleted {
 		t.Fatalf("result=%+v", result)
 	}

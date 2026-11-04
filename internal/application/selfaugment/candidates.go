@@ -6,6 +6,9 @@ import (
 	domain "issueops/internal/domain/selfaugment"
 )
 
+// Candidates returns the improvement candidates for signals: the quality
+// catalog's candidate specs combined by the selfaugment domain. Slices in the
+// result are copies, so callers may modify them.
 func Candidates(signals contract.RepoSignals) []contract.Candidate {
 	specs := qualitycatalog.CandidateSpecs()
 	qualityCandidates := make([]contract.Candidate, 0, len(specs))

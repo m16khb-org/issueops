@@ -6,7 +6,7 @@ import (
 	"issueops/internal/domain/judgement"
 )
 
-func RenderIssueOpsRemoteLLMJudgePrompt(req LLMJudgeRequest) (string, error) {
+func renderIssueOpsRemoteLLMJudgePrompt(req LLMJudgeRequest) (string, error) {
 	prompt, err := buildIssueOpsRemoteLLMJudgePrompt(req.Request)
 	if err != nil {
 		return "", err
@@ -14,8 +14,9 @@ func RenderIssueOpsRemoteLLMJudgePrompt(req LLMJudgeRequest) (string, error) {
 	return prompt, nil
 }
 
+// RenderIssueOpsRemoteJudgePrompt builds the host-agent judge prompt for req and marks it as a read-only background_join that must finish before remote_artifact_write.
 func RenderIssueOpsRemoteJudgePrompt(req LLMJudgeRequest) (JudgePromptResult, error) {
-	prompt, err := RenderIssueOpsRemoteLLMJudgePrompt(req)
+	prompt, err := renderIssueOpsRemoteLLMJudgePrompt(req)
 	if err != nil {
 		return JudgePromptResult{}, err
 	}
@@ -28,6 +29,7 @@ func RenderIssueOpsRemoteJudgePrompt(req LLMJudgeRequest) (JudgePromptResult, er
 	}, nil
 }
 
+// DecodeIssueOpsRemoteJudgeJSON strictly decodes the host agent's scoring JSON, which must be ok, background_join, read_only, and joined before remote_artifact_write, and returns it normalized (no nil slices).
 func DecodeIssueOpsRemoteJudgeJSON(out []byte) (ScoringResult, error) {
 	result, err := decodeStrictIssueOpsRemoteScoringResult(out)
 	if err != nil {

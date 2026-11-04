@@ -1,3 +1,6 @@
+// Package issueopsstatus builds the `issueops status` result by reading a
+// stored cycle record and projecting it. It is an application-layer service
+// that depends on storage and projection only through ports.
 package issueopsstatus
 
 import (
@@ -6,10 +9,11 @@ import (
 	issueopsstatuscontract "issueops/internal/contract/issueopsstatus"
 )
 
+// Repository reads the stored issueops record for a cycle ID.
 type Repository interface {
 	Read(context.Context, string, string) (issueopsstatuscontract.Record, error)
 }
 
-type Projector interface {
+type projector interface {
 	Project(issueopsstatuscontract.Record) issueopsstatuscontract.Record
 }

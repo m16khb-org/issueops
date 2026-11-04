@@ -14,17 +14,24 @@ import (
 	"issueops/internal/port"
 )
 
+// Service 타입은 원격 산출물 본문 동기화를 수행한다. 레코드 저장소, provider,
+// 권한 검사, 시계를 주입받는다.
 type Service struct {
 	repository Repository
 	provider   Provider
-	authority  Authority
+	authority  authority
 	now        func() time.Time
 }
 
-func NewService(repository Repository, provider Provider, authority Authority, now func() time.Time) *Service {
+// NewService 함수는 저장소, provider, 권한 검사, 시계(now)를 묶은 Service를 만든다.
+func NewService(repository Repository, provider Provider, authority authority, now func() time.Time) *Service {
 	return &Service{repository: repository, provider: provider, authority: authority, now: now}
 }
 
+// Sync 메서드는 id 레코드가 가리키는 원격 산출물 본문을 cmd.ProposedBody와 병합한다.
+// cmd.Confirm이 없으면 원격을 바꾸지 않고 병합 미리보기만 돌려주고, 있으면 병합 본문을
+// 원격에 쓴 뒤 읽어 되돌려 확인하고 새 기준선을 레코드에 기록한다. 실패하면 OK=false
+// 레코드와 오류를 돌려준다.
 func (s *Service) Sync(ctx context.Context, id string, cmd bodysynccontract.Command, actor issueops.Actor) (issueops.Record, bodysynccontract.Result, error) {
 	// 쓸 수 없는 본문은 원격을 읽기 전에 거부한다. provider 왕복은 공짜가 아니다.
 	if err := bodysync.ValidateProposal(cmd.ProposedBody); err != nil {

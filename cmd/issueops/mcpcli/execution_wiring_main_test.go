@@ -13,6 +13,6 @@ func testExecutionDeps() ExecutionDeps {
 	return ExecutionDeps{ExecuteExecution: testExecutionService().Execute, ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry, IssueOpsStateRoot: func() string { return root }}
 }
 
-func handleMCPIssueOpsExecutionWithDependencies(args map[string]any, deps MCPDependencies) MCPToolOutcome {
+func handleMCPIssueOpsExecutionWithDependencies(args map[string]any, deps MCPDependencies) mcpToolOutcome {
 	return handleMCPIssueOpsExecutionWithContext(context.Background(), args, deps)
 }

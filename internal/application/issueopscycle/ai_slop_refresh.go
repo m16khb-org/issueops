@@ -8,7 +8,7 @@ import (
 	cycleport "issueops/internal/port/issueopscycle"
 )
 
-func RefreshAISlopClean(store cycleport.AISlopCleanRefreshStore, stateRoot string, record model.Record) (model.Record, error) {
+func refreshAISlopClean(store cycleport.AISlopCleanRefreshStore, stateRoot string, record model.Record) (model.Record, error) {
 	if ready := store.Readiness(record); !ready.Ready {
 		return model.Record{OK: false}, fmt.Errorf("cannot refresh ai-slop-clean phase: missing %s", strings.Join(ready.Missing, ", "))
 	}

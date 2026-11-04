@@ -68,7 +68,7 @@ func callSDKTool(t *testing.T, params json.RawMessage, deps MCPDependencies) (an
 func historyServiceForTest() augmentapp.HistoryService {
 	return augmentapp.HistoryService{StateDir: statestore.Dir, List: statestore.NewService().List, Read: statestore.NewService().Read, Delete: statestore.NewService().Delete}
 }
-func testHandleSelfLoopMCPToolCall(call MCPToolCall) MCPToolOutcome {
+func testHandleSelfLoopMCPToolCall(call MCPToolCall) mcpToolOutcome {
 	return handleSelfLoopMCPToolCall(context.Background(), call, MCPDependencies{SelfHistory: historyServiceForTest(), SelfState: selfStateForTest(), SelfPlanning: planningForTest(IssueOpsRoot(), statestore.Dir(), Version)})
 }
 

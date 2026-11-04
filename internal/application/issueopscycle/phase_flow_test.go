@@ -356,7 +356,7 @@ func TestAdvancePhaseReportGuardsPRThenAdvances(t *testing.T) {
 	}
 }
 
-// ---- ValidatePhaseEntry branches ----
+// ---- validatePhaseEntry branches ----
 
 func notReady(keys ...string) func(model.Record) model.Readiness {
 	return func(model.Record) model.Readiness { return model.Readiness{Missing: keys} }
@@ -378,7 +378,7 @@ func TestValidatePhaseEntryNamesTheProbeThatBlocksEachPhase(t *testing.T) {
 		{model.PhaseCompatibilityReview, model.PhaseImplement, "cannot enter implement phase: missing impl_gap"},
 		{model.PhaseImplement, model.PhaseAISlopClean, "cannot enter ai-slop-clean phase: missing clean_gap"},
 	} {
-		err := ValidatePhaseEntry(ready, model.Record{Phase: tc.from}, tc.to)
+		err := validatePhaseEntry(ready, model.Record{Phase: tc.from}, tc.to)
 		if err == nil || err.Error() != tc.want {
 			t.Fatalf("%s→%s: err=%v want %q", tc.from, tc.to, err, tc.want)
 		}
@@ -391,17 +391,17 @@ func TestValidatePhaseEntryRejectsProgressionErrorsBeforeAnyProbe(t *testing.T) 
 		probed = true
 		return readyReadiness()
 	}}
-	if err := ValidatePhaseEntry(ready, model.Record{Phase: model.PhasePlan}, model.PhaseGrill); err == nil || probed {
+	if err := validatePhaseEntry(ready, model.Record{Phase: model.PhasePlan}, model.PhaseGrill); err == nil || probed {
 		t.Fatalf("backward move: err=%v probed=%v", err, probed)
 	}
 }
 
 func TestValidatePhaseEntryFeedbackRequiresAISlopCleanStamp(t *testing.T) {
-	err := ValidatePhaseEntry(cycleport.PhaseEntryReadiness{}, model.Record{Phase: model.PhaseAISlopClean, AISlopCleanAt: "  "}, model.PhaseFeedback)
+	err := validatePhaseEntry(cycleport.PhaseEntryReadiness{}, model.Record{Phase: model.PhaseAISlopClean, AISlopCleanAt: "  "}, model.PhaseFeedback)
 	if err == nil || !strings.Contains(err.Error(), "cannot enter feedback phase before ai-slop-clean phase") {
 		t.Fatalf("err=%v", err)
 	}
-	if err := ValidatePhaseEntry(cycleport.PhaseEntryReadiness{}, model.Record{Phase: model.PhaseAISlopClean, AISlopCleanAt: "t"}, model.PhaseFeedback); err != nil {
+	if err := validatePhaseEntry(cycleport.PhaseEntryReadiness{}, model.Record{Phase: model.PhaseAISlopClean, AISlopCleanAt: "t"}, model.PhaseFeedback); err != nil {
 		t.Fatalf("stamped record refused: %v", err)
 	}
 }
@@ -409,7 +409,7 @@ func TestValidatePhaseEntryFeedbackRequiresAISlopCleanStamp(t *testing.T) {
 func TestValidatePhaseEntryDoneRequiresPRPhaseThenArtifactThenReleasedCompletion(t *testing.T) {
 	ready := cycleport.PhaseEntryReadiness{RemoteArtifactMissing: func(model.Record) []string { return nil }}
 	record := model.Record{Phase: model.PhaseFeedback}
-	if err := ValidatePhaseEntry(ready, record, model.PhaseDone); err == nil || !strings.Contains(err.Error(), "before pr phase") {
+	if err := validatePhaseEntry(ready, record, model.PhaseDone); err == nil || !strings.Contains(err.Error(), "before pr phase") {
 		t.Fatalf("from feedback: %v", err)
 	}
 	record.Phase = model.PhasePR
@@ -419,17 +419,17 @@ func TestValidatePhaseEntryDoneRequiresPRPhaseThenArtifactThenReleasedCompletion
 		{Completion: &model.ExecutionCompletion{Generation: 1}, Lease: model.WriteLease{Status: model.LeaseStatusActive}},
 	} {
 		record.Execution = execution
-		if err := ValidatePhaseEntry(ready, record, model.PhaseDone); err == nil || !strings.Contains(err.Error(), "before issueops execution completion") {
+		if err := validatePhaseEntry(ready, record, model.PhaseDone); err == nil || !strings.Contains(err.Error(), "before issueops execution completion") {
 			t.Fatalf("execution=%+v err=%v", execution, err)
 		}
 	}
 	record.Execution = &model.Execution{Completion: &model.ExecutionCompletion{Generation: 1}, Lease: model.WriteLease{Status: model.LeaseStatusReleased}}
-	if err := ValidatePhaseEntry(ready, record, model.PhaseDone); err != nil {
+	if err := validatePhaseEntry(ready, record, model.PhaseDone); err != nil {
 		t.Fatalf("completed released execution refused: %v", err)
 	}
 }
 
-// ---- PhaseCompletion remaining routes ----
+// ---- phaseCompletion remaining routes ----
 
 func TestPhaseCompletionRoutesEachPhaseToItsOwnSource(t *testing.T) {
 	calls := []string{}
@@ -444,24 +444,24 @@ func TestPhaseCompletionRoutesEachPhaseToItsOwnSource(t *testing.T) {
 		},
 	}
 	record := model.Record{}
-	if got := PhaseCompletion(record, model.PhaseImplement, observations); !reflect.DeepEqual(got.Missing, []string{"from_clean_probe"}) || !reflect.DeepEqual(calls, []string{"clean"}) {
+	if got := phaseCompletion(record, model.PhaseImplement, observations); !reflect.DeepEqual(got.Missing, []string{"from_clean_probe"}) || !reflect.DeepEqual(calls, []string{"clean"}) {
 		t.Fatalf("implement completion=%+v calls=%v", got, calls)
 	}
-	if got := PhaseCompletion(record, model.PhaseAISlopClean, observations); got.Ready ||
+	if got := phaseCompletion(record, model.PhaseAISlopClean, observations); got.Ready ||
 		!reflect.DeepEqual(got.Missing, []string{"ai_slop_clean_at", "ai_slop_clean_fingerprint", "ai_slop_clean_head", "cleanup_evidence", "verification_evidence"}) {
 		t.Fatalf("ai-slop-clean completion=%+v", got)
 	}
-	if got := PhaseCompletion(record, model.PhaseGrill, observations); got.Ready || !reflect.DeepEqual(got.Missing, []string{"branch", "domain_review", "issue_url", "split_decision"}) {
+	if got := phaseCompletion(record, model.PhaseGrill, observations); got.Ready || !reflect.DeepEqual(got.Missing, []string{"branch", "domain_review", "issue_url", "split_decision"}) {
 		t.Fatalf("grill completion=%+v", got)
 	}
-	if got := PhaseCompletion(record, model.PhaseCompatibilityReview, observations); got.Ready || !reflect.DeepEqual(got.Missing, []string{"compatibility_review"}) {
+	if got := phaseCompletion(record, model.PhaseCompatibilityReview, observations); got.Ready || !reflect.DeepEqual(got.Missing, []string{"compatibility_review"}) {
 		t.Fatalf("compatibility completion=%+v", got)
 	}
-	if got := PhaseCompletion(record, model.PhaseFeedback, observations); !got.Ready || len(got.Missing) != 0 {
+	if got := phaseCompletion(record, model.PhaseFeedback, observations); !got.Ready || len(got.Missing) != 0 {
 		t.Fatalf("feedback with no items must be complete: %+v", got)
 	}
 	unresolved := model.Record{Feedback: []model.FeedbackItem{{Classification: "contract_change"}}}
-	if got := PhaseCompletion(unresolved, model.PhaseFeedback, observations); got.Ready || !reflect.DeepEqual(got.Missing, []string{"contract_feedback_issue_update", "feedback_resolution"}) {
+	if got := phaseCompletion(unresolved, model.PhaseFeedback, observations); got.Ready || !reflect.DeepEqual(got.Missing, []string{"contract_feedback_issue_update", "feedback_resolution"}) {
 		t.Fatalf("unresolved contract feedback must block: %+v", got)
 	}
 	if !reflect.DeepEqual(calls, []string{"clean"}) {
@@ -479,17 +479,17 @@ func TestPhaseCompletionPRMergesLocalMissingWithRemoteArtifactAndTargetBranch(t 
 			URL: "https://example/pr/1", TargetBranch: "develop",
 		},
 	}
-	got := PhaseCompletion(record, model.PhasePR, observations)
+	got := phaseCompletion(record, model.PhasePR, observations)
 	if got.Ready || !reflect.DeepEqual(got.Missing, []string{"a_local", "target_branch_match", "z_local"}) {
 		t.Fatalf("got=%+v", got)
 	}
 	record.RemoteArtifact = nil
-	got = PhaseCompletion(record, model.PhasePR, observations)
+	got = phaseCompletion(record, model.PhasePR, observations)
 	if !reflect.DeepEqual(got.Missing, []string{"a_local", "remote_artifact", "z_local"}) {
 		t.Fatalf("got=%+v", got)
 	}
 	// A ready local probe with a complete remote artifact stays ready.
-	ok := PhaseCompletion(model.Record{RemoteArtifact: &model.RemoteArtifactVerification{URL: "u"}},
+	ok := phaseCompletion(model.Record{RemoteArtifact: &model.RemoteArtifactVerification{URL: "u"}},
 		model.PhasePR,
 		cycleport.PhaseCompletionReadiness{PR: func(model.Record) model.Readiness { return readyReadiness() }})
 	if !ok.Ready || len(ok.Missing) != 0 {
@@ -498,7 +498,7 @@ func TestPhaseCompletionPRMergesLocalMissingWithRemoteArtifactAndTargetBranch(t 
 }
 
 func TestPhaseCompletionUnknownPhaseIsNeverReady(t *testing.T) {
-	got := PhaseCompletion(model.Record{}, model.Phase("bogus"), cycleport.PhaseCompletionReadiness{})
+	got := phaseCompletion(model.Record{}, model.Phase("bogus"), cycleport.PhaseCompletionReadiness{})
 	if got.Ready || !got.OK || !reflect.DeepEqual(got.Missing, []string{"unknown_phase"}) {
 		t.Fatalf("got=%+v", got)
 	}

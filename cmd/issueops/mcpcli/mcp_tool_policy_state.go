@@ -24,14 +24,14 @@ func commandPolicyRequestFromArgs(args map[string]any) policydomain.CommandPolic
 }
 
 // mcpToolResult는 err가 없으면 결과를 payload로, 있으면 주어진 코드와 메시지의 실패로 변환한다.
-func mcpToolResult(result any, err error, code int64, message string) MCPToolOutcome {
+func mcpToolResult(result any, err error, code int64, message string) mcpToolOutcome {
 	if err != nil {
 		return mcpToolFailure(newProtocolError(code, message, err.Error()))
 	}
 	return mcpToolPayload(result)
 }
 
-func handlePolicyStateMCPToolCall(ctx context.Context, call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
+func handlePolicyStateMCPToolCall(ctx context.Context, call MCPToolCall, deps MCPDependencies) mcpToolOutcome {
 	state := deps.State
 	switch call.Name {
 	case "command_policy_check":
@@ -64,6 +64,6 @@ func handlePolicyStateMCPToolCall(ctx context.Context, call MCPToolCall, deps MC
 		result, err := state.Maintain()
 		return mcpToolResult(result, err, -32000, "State maintain failed")
 	default:
-		return MCPToolOutcome{}
+		return mcpToolOutcome{}
 	}
 }

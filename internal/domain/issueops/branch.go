@@ -5,6 +5,9 @@ import (
 	"strings"
 )
 
+// ValidateBranch rejects a branch name that git would refuse or that does not
+// start with the issue number followed by a hyphen and a slug. A blank branch
+// is valid because a cycle may not have one yet.
 func ValidateBranch(branch string) error {
 	branch = strings.TrimSpace(branch)
 	if branch == "" {

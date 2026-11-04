@@ -1,3 +1,5 @@
+// Package preflightfuzz 패키지는 self-verify의 preflight fuzz 검증 probe다.
+// 실제 git fixture를 만들어 preflight 명령의 end-to-end 계약을 검사한다.
 package preflightfuzz
 
 import (
@@ -15,10 +17,14 @@ import (
 
 const commandOutputBudgetBytes = 32 * 1024
 
+// Validator 타입은 preflight fuzz 검증이 쓰는 git 실행기를 주입받는다.
+// Git은 dir에서 git 인자를 실행하고 종료 코드, stdout, stderr를 반환해야 한다.
 type Validator struct {
 	Git func(string, ...string) (int, string, string)
 }
 
+// Validate 메서드는 임시 git 저장소에 seed로 정해지는 비밀 파일을 만들고
+// 빌드된 binary의 preflight 명령 출력이 계약을 지키는지 확인해 StepResult로 반환한다.
 func (v Validator) Validate(binary, root string, seed int64) verifycontract.StepResult {
 	return validatePreflightFuzzWithDeps(binary, root, seed, preflightFuzzValidationDeps{git: v.Git})
 }

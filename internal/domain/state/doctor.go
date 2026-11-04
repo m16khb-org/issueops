@@ -1,3 +1,5 @@
+// Package state holds the pure rules for state records: record validation and
+// the state directory doctor. It is a domain package.
 package state
 
 import (
@@ -9,12 +11,15 @@ import (
 	statecontract "issueops/internal/contract/state"
 )
 
+// DoctorEntry is one directory entry found in the state directory.
 type DoctorEntry struct {
 	Name  string
 	Path  string
 	IsDir bool
 }
 
+// DoctorRecord is one stored state record read for the doctor, with flags for
+// an invalid key or an invalid record body.
 type DoctorRecord struct {
 	Key           string
 	Path          string
@@ -23,6 +28,10 @@ type DoctorRecord struct {
 	InvalidRecord bool
 }
 
+// InspectDoctor reports on a state directory: unexpected or retired entries
+// become warnings, invalid keys or records become errors, and valid records
+// are listed. Output is sorted for determinism, and Healthy is true only when
+// there are no issues.
 func InspectDoctor(dir string, entries []DoctorEntry, rows []DoctorRecord) statecontract.DoctorResult {
 	result := statecontract.DoctorResult{
 		OK: false, Healthy: false, StateDir: dir,

@@ -7,6 +7,11 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
+// PRGitFacts carries the git observations behind PR readiness: whether the
+// repository root and git worktree were found, the fingerprint and branch
+// checks, worktree cleanliness, the state of the base ref (advanced,
+// rewritten, or missing), and the upstream sync and fetch results. The caller
+// gathers them; the domain only judges them.
 type PRGitFacts struct {
 	RootAvailable       bool
 	GitWorktree         bool
@@ -27,6 +32,9 @@ type PRGitFacts struct {
 	UpstreamCounts string
 }
 
+// PRGitReadiness judges PR readiness from git facts. It returns the missing
+// gates and the warnings, which include base drift, upstream divergence with
+// the safe next step, and any recorded source-misdirect warnings.
 func PRGitReadiness(record model.Record, facts PRGitFacts) ([]string, []string) {
 	missing := []string{}
 	warnings := []string{}

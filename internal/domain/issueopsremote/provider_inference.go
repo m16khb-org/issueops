@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// ProviderFromRemoteURLs는 저장소 remote URL 집합에서 VCS provider를 단일
+// ProviderFromRemoteURLs 함수는 저장소 remote URL 집합에서 VCS provider를 단일
 // 판별한다.
 //
 // 왜 필요한가: `remote create-issue`는 최초 원격 이슈를 만드는 명령인데

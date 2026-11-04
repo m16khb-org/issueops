@@ -347,7 +347,7 @@ func TestSummarizeDimensionScores(t *testing.T) {
 		{"first is min", []contract.IssueOpsDimensionScore{{Score: 10}, {Score: 90}}, 50, 10},
 	}
 	for _, c := range cases {
-		avg, min := SummarizeDimensionScores(c.in)
+		avg, min := summarizeDimensionScores(c.in)
 		if !approx(avg, c.avg) || !approx(min, c.min) {
 			t.Errorf("%s: %v %v", c.name, avg, min)
 		}
@@ -355,10 +355,10 @@ func TestSummarizeDimensionScores(t *testing.T) {
 }
 
 func TestSummarizeRunScores(t *testing.T) {
-	if a, m := SummarizeRunScores(nil); a != 0 || m != 0 {
+	if a, m := summarizeRunScores(nil); a != 0 || m != 0 {
 		t.Fatal("empty")
 	}
-	a, m := SummarizeRunScores([]contract.Score{
+	a, m := summarizeRunScores([]contract.Score{
 		{AverageScore: 100, MinimumScore: 100}, {AverageScore: 60, MinimumScore: 20}, {AverageScore: 80, MinimumScore: 80},
 	})
 	if !approx(a, 80) || !approx(m, 20) {

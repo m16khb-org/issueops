@@ -7,11 +7,14 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
-// HandoffDeliveryClaimObservable은 claim 결과가 활성 holder를 가진 성공 결과일 때만 true다.
+// HandoffDeliveryClaimObservable 함수는 claim 결과가 활성 holder를 가진 성공 결과일 때만 true다.
 func HandoffDeliveryClaimObservable(result issueopscontract.ExecutionResult) bool {
 	return result.OK && result.Execution.Lease.Status == issueopscontract.LeaseStatusActive && result.Execution.Lease.Holder != nil
 }
 
+// OwnerClaimHandoffDeliveryObservation 함수는 claim 결과가 관측 가능할 때 직전 generation의
+// manual handoff 관찰에 owner claim을 기록한 사본을 돌려준다. 관측할 수 없거나 후보가 없으면 nil이고, 후보가
+// 둘 이상이거나 증거가 유효하지 않으면 오류다.
 func OwnerClaimHandoffDeliveryObservation(result issueopscontract.ExecutionResult, observations []issueopscontract.HandoffDeliveryObservation) (*issueopscontract.HandoffDeliveryObservation, error) {
 	if !HandoffDeliveryClaimObservable(result) {
 		return nil, nil

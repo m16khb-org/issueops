@@ -25,7 +25,7 @@ func TestIntentTransitionsPreserveOriginalRequest(t *testing.T) {
 
 func TestIntentCheckpointsRejectStaleOperationAndPayload(t *testing.T) {
 	payload := contract.IntentPayload{OperationID: "op", Generation: 1}
-	for _, checkpoint := range []IntentCheckpoint{CheckpointRetry, CheckpointFailure, CheckpointReceipt, CheckpointNotInvoked} {
+	for _, checkpoint := range []intentCheckpoint{CheckpointRetry, CheckpointFailure, CheckpointReceipt, CheckpointNotInvoked} {
 		if err := ValidatePendingIntent(PendingIntentFacts{Prepared: true, Pending: true, OperationID: "other", ExpectedOperationID: "op"}, checkpoint); err == nil || !strings.Contains(err.Error(), string(checkpoint)) {
 			t.Fatalf("checkpoint %s: %v", checkpoint, err)
 		}

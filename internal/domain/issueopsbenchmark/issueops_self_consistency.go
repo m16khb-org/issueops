@@ -69,12 +69,12 @@ func ConsensusJudgeVerdict(samples []contract.JudgeSample) (contract.ConsensusVe
 	return contract.ConsensusVerdict{
 		Samples:            len(samples),
 		MajorityPassed:     majorityPassed,
-		PassAgreement:      Round4(float64(agree) / float64(len(samples))),
-		MedianAverageScore: Round4(medianFloat(avgScores)),
-		ScoreMin:           Round4(lo),
-		ScoreMax:           Round4(hi),
-		ScoreSpread:        Round4(spread),
-		SampleVariance:     Round4(sampleVariance(avgScores)),
+		PassAgreement:      round4(float64(agree) / float64(len(samples))),
+		MedianAverageScore: round4(medianFloat(avgScores)),
+		ScoreMin:           round4(lo),
+		ScoreMax:           round4(hi),
+		ScoreSpread:        round4(spread),
+		SampleVariance:     round4(sampleVariance(avgScores)),
 		Provenance:         provenance,
 		Caveat:             consensusCaveat,
 	}, nil

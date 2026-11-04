@@ -11,11 +11,14 @@ import (
 	verifydomain "issueops/internal/domain/selfverify"
 )
 
+// ValidateWorkerLifecycle enqueues a smoke worker job (payload seeded with seed) in
+// a temporary worker directory, then runs status, cancel, and list. It verifies
+// that each command succeeded and the job was queued as no-shell.
 func ValidateWorkerLifecycle(binary, root string, seed int64) selfverify.StepResult {
-	return ValidateWorkerLifecycleWithDeps(binary, root, seed, ValidationDeps{})
+	return validateWorkerLifecycleWithDeps(binary, root, seed, validationDeps{})
 }
 
-func ValidateWorkerLifecycleWithDeps(binary, root string, seed int64, deps ValidationDeps) selfverify.StepResult {
+func validateWorkerLifecycleWithDeps(binary, root string, seed int64, deps validationDeps) selfverify.StepResult {
 	deps = deps.withDefaults()
 	workerDir, err := deps.MkdirTemp("", "issueops-worker-*")
 	if err != nil {

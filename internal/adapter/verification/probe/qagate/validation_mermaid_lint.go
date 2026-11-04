@@ -9,6 +9,9 @@ import (
 
 var mermaidUnquotedBracketTextRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`\[[^"\]]`) })
 
+// LintMermaidBlocks returns style errors for every mermaid fenced block in text,
+// labeled with relPath and the line number. Blocks marked with
+// harness:mermaid-lint ignore are skipped.
 func LintMermaidBlocks(relPath, text string) []string {
 	errs := []string{}
 	lines := strings.Split(text, "\n")

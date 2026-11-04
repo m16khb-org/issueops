@@ -8,6 +8,10 @@ import (
 	"issueops/internal/port"
 )
 
+// ApplyRequest describes one sync-base run: the push parameters, the
+// work-branch OID used for conflict prediction, whether the base must be
+// merged at all, and whether the lifecycle is released (so conflicts are
+// recorded as a pending resolution).
 type ApplyRequest struct {
 	Push        PushRequest
 	WorkOID     string
@@ -15,6 +19,9 @@ type ApplyRequest struct {
 	Released    bool
 }
 
+// ApplyResult reports the outcome of Apply: conflicting files and whether the
+// run paused on them, whether a merge happened or is still in progress, the
+// resulting merge commit, push state, and the step that failed.
 type ApplyResult struct {
 	ConflictFiles     []string
 	ConflictPaused    bool
@@ -26,6 +33,11 @@ type ApplyResult struct {
 	FailedStep        string
 }
 
+// Apply merges the base branch when needed, then pushes and records the sync
+// event via PushAndRecord. On merge conflicts it leaves the merge in progress,
+// records the conflicting files as a resolution for released lifecycles, and
+// returns with ConflictPaused set and no error. A failure to record the
+// resolution aborts the merge again.
 func Apply(ctx context.Context, request ApplyRequest, effects port.BaseSyncApplyEffects) (ApplyResult, error) {
 	if effects == nil {
 		return ApplyResult{}, fmt.Errorf("base sync apply effects are required")

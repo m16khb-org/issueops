@@ -1,3 +1,5 @@
+// Package issueopsdecision is the application service that appends decisions to an
+// issueops lifecycle record under holder authorization.
 package issueopsdecision
 
 import (
@@ -6,6 +8,8 @@ import (
 	"time"
 )
 
+// Repository persists a lifecycle record update. Update applies the mutation to the
+// record with the given state root and id and stores the result.
 type Repository interface {
 	Update(
 		context.Context,
@@ -15,10 +19,10 @@ type Repository interface {
 	) (issueopscontract.Record, error)
 }
 
-type Clock interface {
+type clock interface {
 	Now() time.Time
 }
 
-type PathMatcher interface {
+type pathMatcher interface {
 	Same(string, string) bool
 }

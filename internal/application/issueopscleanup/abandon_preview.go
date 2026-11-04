@@ -10,11 +10,14 @@ import (
 	"issueops/internal/port"
 )
 
+// AbandonWorktreeObservation is what an abandon environment reports about a
+// local worktree: whether it is the canonical linked worktree, clean, and
+// whether its HEAD could be read, plus the branch and HEAD it is on.
 type AbandonWorktreeObservation struct {
 	Canonical, Clean, HeadObservable bool
 	Branch, Head                     string
 }
-type AbandonEnvironment interface {
+type abandonEnvironment interface {
 	Directory(string) (bool, error)
 	SamePath(string, string) bool
 	SameLinkedPath(string, string) bool
@@ -23,13 +26,18 @@ type AbandonEnvironment interface {
 	BranchCheckoutPath(context.Context, string, string) (string, error)
 }
 
+// AbandonPreviewer builds the read-only abandon inventory and preview result
+// from local git, workspace and remote observations without mutating anything.
 type AbandonPreviewer struct {
-	Environment AbandonEnvironment
+	Environment abandonEnvironment
 	ReadChild   func(string) (model.Record, error)
 	Workspace   func(context.Context, model.Record, string) (FinishWorkspaceObservation, []string)
 	Remote      AbandonRemoteObserver
 }
 
+// Plan observes the record's worktree, branch, workspace occupants, children
+// and remote artifacts, then returns the inventory and the domain-built
+// preview result, whose Missing list names the unmet gates.
 func (s AbandonPreviewer) Plan(ctx context.Context, record model.Record, req model.CleanupAbandonRequest, provider port.IssueProvider) (model.CleanupAbandonInventory, model.CleanupAbandonResult) {
 	inventory := domain.CleanupAbandonTargets(record)
 	inventory.RecordSHA = CleanupAbandonRecordSHA(record)
@@ -76,6 +84,8 @@ func (s AbandonPreviewer) Plan(ctx context.Context, record model.Record, req mod
 	return domain.BuildCleanupAbandonPreview(record, req, inventory, observed)
 }
 
+// ResolvedChildren reports, per child cycle ID, whether the child record could
+// be read and is resolved. Child cycles that cannot be read are omitted.
 func (s AbandonPreviewer) ResolvedChildren(record model.Record) map[string]bool {
 	children := []model.Record{}
 	for _, child := range record.ChildCycles {

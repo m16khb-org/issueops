@@ -1,3 +1,5 @@
+// Package issueopsbasesync is the git-backed outbound adapter that observes whether
+// a cycle worktree still contains its base branch for the base-sync check.
 package issueopsbasesync
 
 import (
@@ -13,21 +15,29 @@ import (
 	basesyncport "issueops/internal/port/issueopsbasesync"
 )
 
-var ErrGitRunnerRequired = errors.New("base sync git runner is required")
+var errGitRunnerRequired = errors.New("base sync git runner is required")
 
-type GitRunner func(context.Context, string, ...string) (int, string, string, error)
+type gitRunner func(context.Context, string, ...string) (int, string, string, error)
 
+// Inspector implements the base-sync port by running git in the cycle worktree
+// through an injected runner.
 type Inspector struct {
-	run GitRunner
+	run gitRunner
 }
 
-func NewInspector(run GitRunner) *Inspector {
+// NewInspector returns an Inspector that runs git through run, such as RunGit.
+// Observe fails if run is nil.
+func NewInspector(run gitRunner) *Inspector {
 	return &Inspector{run: run}
 }
 
+// Observe fetches request.BaseBranch from origin in request.Worktree and returns
+// the base and HEAD object IDs, with SyncRequired set when the base tip is not an
+// ancestor of HEAD. It errors on missing worktree or base branch, git failures,
+// or an unexpected merge-base exit code.
 func (i *Inspector) Observe(ctx context.Context, request basesyncport.Request) (basesyncport.Receipt, error) {
 	if i == nil || i.run == nil {
-		return basesyncport.Receipt{}, ErrGitRunnerRequired
+		return basesyncport.Receipt{}, errGitRunnerRequired
 	}
 	worktree := strings.TrimSpace(request.Worktree)
 	if worktree == "" {
@@ -85,6 +95,9 @@ func (i *Inspector) requireOutput(ctx context.Context, worktree, step string, ar
 	return value, nil
 }
 
+// RunGit runs git with args in dir with terminal prompts disabled. It returns the
+// exit code, stdout, and stderr; a non-zero exit is reported through the code, and
+// the error is non-nil only when git could not be run.
 func RunGit(ctx context.Context, dir string, args ...string) (int, string, string, error) {
 	command := exec.CommandContext(ctx, gitbin.Path(), args...)
 	command.Dir = dir

@@ -14,7 +14,7 @@ func TestLocalPRReadinessMissingPreservesOrderedRecordGates(t *testing.T) {
 		PlanInLinkedWorktree: func(model.Record) bool { return true },
 	}
 	want := []string{"issue_url", "branch", "branch_prepare", "intent_contract", "architecture_review", "plan_path", "worktree_path", "ai_slop_clean", "project_docs_review"}
-	if got := LocalPRReadinessMissing(model.Record{}, observations); !reflect.DeepEqual(got, want) {
+	if got := localPRReadinessMissing(model.Record{}, observations); !reflect.DeepEqual(got, want) {
 		t.Fatalf("missing=%v, want %v", got, want)
 	}
 }
@@ -43,7 +43,7 @@ func TestLocalPRReadinessMissingReportsPlanAndFeedbackDefects(t *testing.T) {
 		PlanPathExists:       func(root, path string) bool { rootSeen, pathSeen = root, path; return false },
 		PlanInLinkedWorktree: func(model.Record) bool { return false },
 	}
-	got := LocalPRReadinessMissing(record, observations)
+	got := localPRReadinessMissing(record, observations)
 	for _, want := range []string{"plan_exists", "plan_in_worktree", "contract_feedback_issue_update"} {
 		if !slices.Contains(got, want) {
 			t.Fatalf("missing %q from %v", want, got)

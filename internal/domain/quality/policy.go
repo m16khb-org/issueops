@@ -12,6 +12,10 @@ import (
 	contract "issueops/internal/contract/quality"
 )
 
+// AddQualityCollectorFailure records a collector failure on result: it appends
+// warning to Warnings and to the blocking quality-collector-error finding
+// (created at the front when absent), and sets the collection to error, health to
+// unknown and the gate to block.
 func AddQualityCollectorFailure(result *contract.InspectResult, warning string) {
 	result.Warnings = append(result.Warnings, warning)
 	found := false
@@ -39,6 +43,9 @@ func AddQualityCollectorFailure(result *contract.InspectResult, warning string) 
 	result.GateStatus = contract.GateStatusBlock
 }
 
+// AddSNRRegressionFinding appends the blocking code-snr-regression finding for
+// the drop from baseline to current and moves health to needs-attention and the
+// gate to block.
 func AddSNRRegressionFinding(result *contract.InspectResult, baseline, current float64) {
 	result.Findings = append(result.Findings, contract.Finding{
 		ID:            "code-snr-regression",
@@ -53,6 +60,8 @@ func AddSNRRegressionFinding(result *contract.InspectResult, baseline, current f
 	result.GateStatus = contract.GateStatusBlock
 }
 
+// SuccessfulSignalValue returns the value of the signal with the given id and
+// whether that signal reported status "ok". An absent signal yields 0 and false.
 func SuccessfulSignalValue(signals []contract.Signal, id string) (float64, bool) {
 	for _, signal := range signals {
 		if signal.ID == id {
@@ -62,6 +71,10 @@ func SuccessfulSignalValue(signals []contract.Signal, id string) (float64, bool)
 	return 0, false
 }
 
+// CollectQualityFindings builds the findings for the collected evidence in a fixed
+// order: collector errors, pioneer skill coverage, pioneer isolated evaluation,
+// low coverage, high branch counts, and open audit items. Evidence that is
+// clean produces no finding.
 func CollectQualityFindings(
 	warnings []string,
 	lowCoverage []contract.CoveragePackage,
@@ -149,7 +162,7 @@ func appendLowCoverageFinding(findings []contract.Finding, lowCoverage []contrac
 		ID:            "low-coverage-packages",
 		Severity:      "p2",
 		Title:         "Packages remain below the coverage observation threshold",
-		Evidence:      BoundedEvidence(CoverageEvidence(lowCoverage), 50),
+		Evidence:      boundedEvidence(CoverageEvidence(lowCoverage), 50),
 		Remediation:   "Add behavior-focused boundary tests to the highest-risk packages before promotion.",
 		VerifyCommand: "go test -cover ./... -count=1",
 	})
@@ -199,13 +212,16 @@ func appendAuditFinding(findings []contract.Finding, auditItems []contract.Audit
 	})
 }
 
-func BoundedEvidence(evidence []string, limit int) []string {
+func boundedEvidence(evidence []string, limit int) []string {
 	if len(evidence) <= limit {
 		return evidence
 	}
 	return append([]string(nil), evidence[:limit]...)
 }
 
+// Statuses returns the collection, health and gate statuses for warnings and
+// findings. Any warning means error/unknown/block; otherwise findings yield
+// needs-attention, blocking when any finding blocks and report-only when none does.
 func Statuses(warnings []string, findings []contract.Finding) (string, string, string) {
 	if len(warnings) > 0 {
 		return contract.CollectionStatusError, contract.HealthStatusUnknown, contract.GateStatusBlock
@@ -221,6 +237,8 @@ func Statuses(warnings []string, findings []contract.Finding) (string, string, s
 	return contract.CollectionStatusOK, contract.HealthStatusNeedsAttention, contract.GateStatusReportOnly
 }
 
+// ParseCoveragePackages extracts from `go test -cover` output the packages whose
+// coverage is below threshold, sorted by coverage and then package name.
 func ParseCoveragePackages(output string, threshold float64) []contract.CoveragePackage {
 	var packages []contract.CoveragePackage
 	for line := range strings.SplitSeq(output, "\n") {
@@ -284,6 +302,7 @@ func FailedTestPackages(output string, limit int) ([]string, int) {
 	return packages, omitted
 }
 
+// StatusForCount returns "needs_attention" when count is positive and "ok" otherwise.
 func StatusForCount(count int) string {
 	if count > 0 {
 		return "needs_attention"
@@ -291,6 +310,8 @@ func StatusForCount(count int) string {
 	return "ok"
 }
 
+// StatusForCollector returns "error" when the collector failed with err and
+// fallback otherwise.
 func StatusForCollector(err error, fallback string) string {
 	if err != nil {
 		return "error"
@@ -298,6 +319,9 @@ func StatusForCollector(err error, fallback string) string {
 	return fallback
 }
 
+// PioneerIsolatedStatus classifies the fresh-context pioneer evaluation: "unknown"
+// when nothing is expected, "needs_attention" when observations are missing or
+// any case failed or is blocked, and "ok" otherwise.
 func PioneerIsolatedStatus(coverage contract.PioneerCoverage) string {
 	if coverage.IsolatedExpected == 0 {
 		return "unknown"
@@ -310,6 +334,8 @@ func PioneerIsolatedStatus(coverage contract.PioneerCoverage) string {
 	return "ok"
 }
 
+// PioneerIsolatedEvidence renders the isolated pioneer evaluation counts as
+// finding evidence, with a note that the fixtures are not hidden holdouts.
 func PioneerIsolatedEvidence(coverage contract.PioneerCoverage) []string {
 	return []string{
 		fmt.Sprintf(
@@ -325,6 +351,7 @@ func PioneerIsolatedEvidence(coverage contract.PioneerCoverage) []string {
 	}
 }
 
+// FirstQualityWarning returns the first warning as an error, or nil when there are none.
 func FirstQualityWarning(warnings []string) error {
 	if len(warnings) == 0 {
 		return nil
@@ -332,6 +359,8 @@ func FirstQualityWarning(warnings []string) error {
 	return errors.New(warnings[0])
 }
 
+// CoverageEvidence renders one "package coverage%" line per package, or the
+// `go test -cover ./...` command when there are none.
 func CoverageEvidence(packages []contract.CoveragePackage) []string {
 	evidence := []string{}
 	for _, pkg := range packages {
@@ -343,6 +372,8 @@ func CoverageEvidence(packages []contract.CoveragePackage) []string {
 	return evidence
 }
 
+// BranchEvidence renders up to 10 lines for functions whose branch count exceeds
+// threshold, or a scan description when none does.
 func BranchEvidence(functions []contract.BranchFunction, threshold int) []string {
 	evidence := []string{}
 	for _, fn := range functions {
@@ -360,6 +391,8 @@ func BranchEvidence(functions []contract.BranchFunction, threshold int) []string
 	return evidence
 }
 
+// AuditEvidence renders one "ID priority title" line per audit item, or the audit
+// document path when there are none.
 func AuditEvidence(items []contract.AuditItem) []string {
 	evidence := []string{}
 	for _, item := range items {
@@ -371,6 +404,8 @@ func AuditEvidence(items []contract.AuditItem) []string {
 	return evidence
 }
 
+// SNREvidence renders the signal, noise and total line counts of snr, with a note
+// on what the ratio measures.
 func SNREvidence(snr contract.SNRResult) []string {
 	return []string{
 		fmt.Sprintf("signal=%d noise=%d total=%d lines", snr.SignalLines, snr.NoiseLines, snr.TotalLines),
@@ -378,6 +413,8 @@ func SNREvidence(snr contract.SNRResult) []string {
 	}
 }
 
+// SNRStructuralOnly reports whether line is non-empty and made only of the
+// structural characters { } ( ) and comma, which count as noise.
 func SNRStructuralOnly(line string) bool {
 	for _, r := range line {
 		switch r {
@@ -389,10 +426,12 @@ func SNRStructuralOnly(line string) bool {
 	return line != ""
 }
 
+// ValidSNRRatio reports whether ratio is a finite number in [0, 1].
 func ValidSNRRatio(ratio float64) bool {
 	return !math.IsNaN(ratio) && !math.IsInf(ratio, 0) && ratio >= 0 && ratio <= 1
 }
 
+// SNRRegressed reports whether current fell below baseline by more than 0.01.
 func SNRRegressed(baseline, current float64) bool {
 	return current < baseline-0.01
 }

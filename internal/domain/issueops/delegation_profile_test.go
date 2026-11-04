@@ -85,7 +85,7 @@ func TestBuildDelegatedProfileInheritsParentState(t *testing.T) {
 func TestParentRefProjectsChildReference(t *testing.T) {
 	child := model.Record{ID: "io-child", Branch: "6001-child"}
 	req := model.ChildStartRequest{Branch: "6001-child", Title: "  child one  ", ChildIssueURL: " https://example.com/i/6001 "}
-	ref := NewChildReference(child, req, "now")
+	ref := newChildReference(child, req, "now")
 	if ref.CycleID != "io-child" || ref.Branch != "6001-child" || ref.Title != "child one" ||
 		ref.ChildIssueURL != "https://example.com/i/6001" || ref.CreatedAt != "now" {
 		t.Fatalf("parent ref wrong: %#v", ref)

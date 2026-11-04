@@ -51,6 +51,9 @@ type NativeInstallResult struct {
 	AbortRequired bool                      `json:"abort_required,omitempty"`
 }
 
+// ManagedCommandPathResult reports what the install did, or would do in a dry run, to the managed
+// command path link: its target, backup, adoption of an existing command, and commit or rollback
+// state.
 type ManagedCommandPathResult struct {
 	Path              string `json:"path"`
 	Target            string `json:"target"`

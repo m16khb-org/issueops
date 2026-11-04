@@ -136,7 +136,7 @@ func TestRemoteCompletionPrepareRefusals(t *testing.T) {
 		name     string
 		id       string
 		record   model.Record
-		resolve  CompletionProviderResolver
+		resolve  completionProviderResolver
 		verify   MergeVerifier
 		noVerify bool
 		override string

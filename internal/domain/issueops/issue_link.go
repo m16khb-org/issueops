@@ -8,6 +8,9 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
+// ApplyIssueLink links the issue URL to record after validating it, advances
+// a record that now meets the plan readiness gates to the plan phase, and
+// stamps now as the update time. On error it returns an empty record.
 func ApplyIssueLink(record model.Record, issueURL, now string) (model.Record, error) {
 	issueURL = strings.TrimSpace(issueURL)
 	if err := ValidateIssueURL(issueURL); err != nil {
@@ -21,6 +24,9 @@ func ApplyIssueLink(record model.Record, issueURL, now string) (model.Record, er
 	return record, nil
 }
 
+// ValidateRelatedLinkType accepts the relation types of a related-issue link:
+// depends-on, blocks, supersedes, follows-up, duplicates, splits-from, and
+// implements. The child type is handled by the child commands.
 func ValidateRelatedLinkType(linkType string) error {
 	switch linkType {
 	case "depends-on", "blocks", "supersedes", "follows-up", "duplicates", "splits-from", "implements":
@@ -30,6 +36,8 @@ func ValidateRelatedLinkType(linkType string) error {
 	}
 }
 
+// ValidateRelationURL validates an issue URL given in the named field, so the
+// error message names the flag the caller used.
 func ValidateRelationURL(issueURL, field string) error {
 	if err := ValidateIssueURL(issueURL); err != nil {
 		return fmt.Errorf("%s %s", field, strings.TrimPrefix(err.Error(), "issue_url "))
@@ -37,6 +45,8 @@ func ValidateRelationURL(issueURL, field string) error {
 	return nil
 }
 
+// ValidateChildLinkParent requires the parent record to have a linked issue
+// before a child can be linked.
 func ValidateChildLinkParent(record model.Record) error {
 	if strings.TrimSpace(record.IssueURL) == "" {
 		return fmt.Errorf("cannot link child before linked parent issue")
@@ -48,6 +58,10 @@ func ValidateChildLinkParent(record model.Record) error {
 // the record; callers that only ensure the link treat it as done.
 var ErrChildIssueAlreadyLinked = errors.New("child issue already linked")
 
+// AppendIssueRelation appends link to the record issue links, stamping its
+// creation time and the record update time. A link with the same type and URL
+// already present is an error; for child links the error wraps
+// ErrChildIssueAlreadyLinked. On error it returns an empty record.
 func AppendIssueRelation(record model.Record, link model.IssueLink, now string) (model.Record, error) {
 	for _, existing := range record.IssueLinks {
 		if existing.Type == link.Type && existing.URL == link.URL {

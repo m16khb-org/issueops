@@ -15,6 +15,7 @@ import (
 	"issueops/internal/port"
 )
 
+// ChildCreateCommand 타입은 부모 이슈 아래 자식 이슈를 만드는 명령의 입력이다. Confirm이 false이면 미리보기만 한다.
 type ChildCreateCommand struct {
 	ID, Provider, Title, Body, BodyFile, Template, ScoreFile string
 	OperationID                                              string
@@ -23,12 +24,14 @@ type ChildCreateCommand struct {
 	Actor                                                    model.Actor
 }
 
+// ChildProvider 타입은 provider에 자식 이슈를 만드는 포트다.
 type ChildProvider interface {
 	CreateChild(context.Context, port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error)
 }
 
+// ChildCreator 타입은 부모 기록을 검증하고 본문을 해석해 자식 이슈를 만든다. 확정 생성은 durable 의도 기록을 거쳐 재시도 안전하다.
 type ChildCreator struct {
-	Records        IssueRecordReader
+	Records        issueRecordReader
 	Resolve        func(string) (ChildProvider, error)
 	Bodies         TemplateBodyResolver
 	Authorize      func(context.Context, string, model.Actor) error
@@ -46,6 +49,7 @@ type childCreatePlan struct {
 	assignees    []string
 }
 
+// Create 메서드는 자식 이슈 생성을 준비·권한 확인·실행하고 결과를 돌려준다. 오류가 있으면 result.OK는 false다.
 func (s ChildCreator) Create(ctx context.Context, cmd ChildCreateCommand, observe AncestryObserver) (result ChildCreateResult, resultErr error) {
 	defer func() {
 		if resultErr != nil {
@@ -114,7 +118,7 @@ func (s ChildCreator) prepareChildCreate(ctx context.Context, cmd ChildCreateCom
 	if err != nil {
 		return plan, err
 	}
-	resolved, err := s.Bodies.Resolve(TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactChild, Template: cmd.Template, Provider: plan.providerName, Title: cmd.Title, Body: cmd.Body, BodyFile: cmd.BodyFile, Fields: cmd.Fields, ScoreFile: cmd.ScoreFile, Confirm: cmd.Confirm})
+	resolved, err := s.Bodies.Resolve(templateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactChild, Template: cmd.Template, Provider: plan.providerName, Title: cmd.Title, Body: cmd.Body, BodyFile: cmd.BodyFile, Fields: cmd.Fields, ScoreFile: cmd.ScoreFile, Confirm: cmd.Confirm})
 	if err != nil {
 		return plan, err
 	}
@@ -155,7 +159,7 @@ func (s ChildCreator) beginConfirmedCreate(ctx context.Context, cmd ChildCreateC
 	operation, invoke, err := s.Intents.Begin(ctx, record.ID, operation, strings.TrimSpace(cmd.OperationID), actor)
 	result.OperationID = operation.OperationID
 	result.ChildURL = operation.CanonicalURL
-	result.RecoveryCommand = ChildRecoveryCommand(record.ID, operation.OperationID, actor)
+	result.RecoveryCommand = childRecoveryCommand(record.ID, operation.OperationID, actor)
 	if err != nil {
 		return operation, "", false, err
 	}
@@ -167,7 +171,7 @@ func (s ChildCreator) beginConfirmedCreate(ctx context.Context, cmd ChildCreateC
 	body := strings.TrimSpace(plan.body) + "\n\n" + operation.Marker
 	if fmt.Sprintf("%x", sha256.Sum256([]byte(body))) != operation.BodySHA256 {
 		err = fmt.Errorf("selected child operation body digest mismatch")
-		return operation, "", false, errors.Join(err, s.Intents.Outcome(context.WithoutCancel(ctx), record.ID, operation.OperationID, model.IssueCreateIntentNotInvoked, "", issueopsremote.IssueCreateFailure(err), actor))
+		return operation, "", false, errors.Join(err, s.Intents.outcome(context.WithoutCancel(ctx), record.ID, operation.OperationID, model.IssueCreateIntentNotInvoked, "", issueopsremote.IssueCreateFailure(err), actor))
 	}
 	return operation, body, true, nil
 }
@@ -195,21 +199,21 @@ func (s ChildCreator) sealChildOperation(record model.Record, cmd ChildCreateCom
 // recordCreateChildFailure는 provider 생성 실패를 durable 저장소에 기록하고 두 오류를 합친다.
 func (s ChildCreator) recordCreateChildFailure(ctx context.Context, record model.Record, operation model.ChildCreateOperation, actor model.Actor, childURL string, err error) error {
 	createErr, typed := errors.AsType[*port.IssueProviderCreateError](err)
-	return errors.Join(err, s.Intents.Outcome(context.WithoutCancel(ctx), record.ID, operation.OperationID, domain.ClassifyIssueCreateFailure(typed && !createErr.Invoked && childURL == "", childURL), childURL, issueopsremote.IssueCreateFailure(err), actor))
+	return errors.Join(err, s.Intents.outcome(context.WithoutCancel(ctx), record.ID, operation.OperationID, domain.ClassifyIssueCreateFailure(typed && !createErr.Invoked && childURL == "", childURL), childURL, issueopsremote.IssueCreateFailure(err), actor))
 }
 
 // finalizeCreatedChild는 생성된 자식의 계층을 검증하고 완료 영수증을 기록한다. 실패는 outcome으로 남긴다.
 func (s ChildCreator) finalizeCreatedChild(ctx context.Context, record model.Record, operation model.ChildCreateOperation, actor model.Actor, childURL string, hierarchyVerified bool) error {
 	if err := domain.ValidateCreatedChild(hierarchyVerified, childURL); err != nil {
-		return errors.Join(err, s.Intents.Outcome(context.WithoutCancel(ctx), record.ID, operation.OperationID, model.IssueCreateIntentVerificationFailed, childURL, issueopsremote.IssueCreateFailure(err), actor))
+		return errors.Join(err, s.Intents.outcome(context.WithoutCancel(ctx), record.ID, operation.OperationID, model.IssueCreateIntentVerificationFailed, childURL, issueopsremote.IssueCreateFailure(err), actor))
 	}
 	if err := s.Intents.Complete(context.WithoutCancel(ctx), record, operation, childURL, actor, false); err != nil {
-		return errors.Join(err, s.Intents.Outcome(context.WithoutCancel(ctx), record.ID, operation.OperationID, model.IssueCreateIntentReceiptFailed, childURL, issueopsremote.IssueCreateFailure(err), actor))
+		return errors.Join(err, s.Intents.outcome(context.WithoutCancel(ctx), record.ID, operation.OperationID, model.IssueCreateIntentReceiptFailed, childURL, issueopsremote.IssueCreateFailure(err), actor))
 	}
 	return nil
 }
 
-func ChildRecoveryCommand(id, operation string, actors ...model.Actor) string {
+func childRecoveryCommand(id, operation string, actors ...model.Actor) string {
 	quote := func(value string) string { return "'" + strings.ReplaceAll(value, "'", "'\"'\"'") + "'" }
 	command := "issueops remote reconcile-child --id " + quote(id) + " --operation-id " + quote(operation)
 	if len(actors) > 0 && actors[0].Host != "" {

@@ -1,3 +1,5 @@
+// Package commandpolicy is the self-verification probe that smoke-tests the
+// command policy checks of the built binary without executing real commands.
 package commandpolicy
 
 import (
@@ -51,6 +53,10 @@ func (deps commandPolicyValidationDeps) withDefaults() commandPolicyValidationDe
 	return deps
 }
 
+// Validate smoke-tests the command policy surface of the built binary: it runs
+// the policy checks against a temporary workspace and an outside directory,
+// and fails if the fake run executed a command (marker file created).
+// Failures are reported in the returned StepResult rather than as an error.
 func Validate(binary, root string) verifycontract.StepResult {
 	return validateCommandPolicyWithDeps(binary, root, commandPolicyValidationDeps{})
 }

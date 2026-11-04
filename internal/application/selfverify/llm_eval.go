@@ -7,11 +7,15 @@ import (
 	domain "issueops/internal/domain/selfverify"
 )
 
+// LLMEvalDeps injects the evidence-packet builder and the error bounding used by ApplyLLMEval.
 type LLMEvalDeps struct {
 	BuildPrompt func(augment.Result) (string, int, error)
 	BoundError  func(string, error, string) string
 }
 
+// ApplyLLMEval attaches the LLM evaluation section to result when opts.Enabled. It only renders the
+// read-only evaluator prompt and never contacts an external model, so in gate mode the result fails
+// the gate; an invalid mode returns an error.
 func ApplyLLMEval(result augment.Result, opts verify.LLMEvalOptions, deps LLMEvalDeps) (augment.Result, error) {
 	if !opts.Enabled {
 		return result, nil

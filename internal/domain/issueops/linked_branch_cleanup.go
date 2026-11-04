@@ -7,8 +7,9 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
-// LinkedBranchCleanupGates는 관측 이전에 확정할 수 있는 전제만 본다. 외부
-// 호출을 하기 전에 막을 수 있는 것은 여기서 막는다.
+// LinkedBranchCleanupGates 함수는 관측 이전에 확정할 수 있는 전제만 본다. 외부 호출을 하기 전에 막을 수 있는
+// 것은 여기서 막는다. 관측·삭제 가능 여부, branch prepare 기록, GitHub provider, 이슈 URL, 브랜치,
+// sealed base, 저장소 이름이 빠지면 해당 게이트 이름을 돌려준다.
 func LinkedBranchCleanupGates(record issueopscontract.Record, canObserve, canDelete bool) []string {
 	var missing []string
 	if !canObserve {
@@ -41,6 +42,9 @@ func LinkedBranchCleanupGates(record issueopscontract.Record, canObserve, canDel
 	return missing
 }
 
+// ValidateLinkedBranchCleanupApply 함수는 apply 요청이 --confirm을 갖췄고 fingerprint가
+// 현재 preview와 같은지 확인한다. 실패하면 게이트 이름(`confirm` 또는 `stale_fingerprint`)과 오류를 함께
+// 돌려준다.
 func ValidateLinkedBranchCleanupApply(req issueopscontract.CleanupLinkedBranchRequest, fingerprint string) (string, error) {
 	if !req.Confirm {
 		return "confirm", fmt.Errorf("cleanup linked-branch --apply requires --confirm")

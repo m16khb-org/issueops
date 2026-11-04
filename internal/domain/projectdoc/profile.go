@@ -8,6 +8,10 @@ import (
 	projectdoccontract "issueops/internal/contract/projectdoc"
 )
 
+// BuildProfile assembles the project profile from scanned signals, the VCS
+// classification, and detected frameworks and project types. Evidence collects
+// manifest files found in the scan plus observedEvidence, deduplicated; the
+// framework, project type, and evidence lists are sorted.
 func BuildProfile(signals ProjectSignals, vcs projectdoccontract.ProjectVCSProfile, frameworks []string, monorepo bool, projectTypes, observedEvidence []string) projectdoccontract.ProjectProfile {
 	profile := projectdoccontract.ProjectProfile{
 		VCS: vcs, Languages: append([]string{}, signals.Languages...), PackageManagers: append([]string{}, signals.PackageManagers...),
@@ -35,6 +39,10 @@ func BuildProfile(signals ProjectSignals, vcs projectdoccontract.ProjectVCSProfi
 	return profile
 }
 
+// ClassifyVCS derives the VCS provider and hosting kind from the origin remote
+// URL. An empty origin means a local git repository when hasGit is true and no
+// VCS otherwise; known hosts map to managed hosting and other hosts to
+// self-hosted, with the provider guessed from the host name.
 func ClassifyVCS(origin string, hasGit bool) projectdoccontract.ProjectVCSProfile {
 	if origin == "" {
 		if hasGit {
@@ -68,6 +76,8 @@ func ClassifyVCS(origin string, hasGit bool) projectdoccontract.ProjectVCSProfil
 	return projectdoccontract.ProjectVCSProfile{Provider: provider, Hosting: hosting, RemoteHost: host, RemoteName: "origin"}
 }
 
+// RemoteHost returns the lowercase host of a git remote given as a URL or as
+// scp-style user@host:path, or "" when none can be found.
 func RemoteHost(remote string) string {
 	remote = strings.TrimSpace(remote)
 	if remote == "" {

@@ -2,6 +2,9 @@ package selfaugment
 
 import contract "issueops/internal/contract/selfaugment"
 
+// Candidates returns the self-augmentation candidate catalog followed by qualityCandidates. Every
+// entry starts open with a default verification kind and a computed score, and is then marked
+// satisfied when signals already prove it.
 func Candidates(signals contract.RepoSignals, qualityCandidates []contract.Candidate) []contract.Candidate {
 	base := []contract.Candidate{
 		{

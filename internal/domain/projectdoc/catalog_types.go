@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// CatalogEntry is one discovered project document in the catalog: its path relative to the repository root, its title, and its frontmatter description when present.
 type CatalogEntry struct {
 	RelPath     string `json:"rel_path"`
 	Title       string `json:"title"`
@@ -35,6 +36,7 @@ type CatalogStats struct {
 	DirBatches  int
 }
 
+// Any reports whether the discovery pass omitted anything at all.
 func (o CatalogOmissions) Any() bool {
 	return o != CatalogOmissions{}
 }
@@ -57,6 +59,7 @@ func (o CatalogOmissions) Summary() string {
 	return strings.Join(parts, " ")
 }
 
+// SHA256Hex returns the lowercase hexadecimal SHA-256 digest of content, the identity used for expected_sha256 checks on project docs.
 func SHA256Hex(content string) string {
 	sum := sha256.Sum256([]byte(content))
 	return hex.EncodeToString(sum[:])

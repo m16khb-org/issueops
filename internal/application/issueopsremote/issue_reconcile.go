@@ -12,33 +12,36 @@ import (
 	"issueops/internal/port"
 )
 
-type IssueRecordReader interface {
+type issueRecordReader interface {
 	Read(context.Context, string) (model.Record, error)
 }
 
+// IssueCandidateSource 타입은 marker로 provider에서 이슈 생성 후보를 찾는 포트다.
 type IssueCandidateSource interface {
 	Find(context.Context, string, port.IssueProviderFindIssueCreateCandidatesRequest) (port.IssueProviderFindIssueCreateCandidatesResult, error)
 }
 
+// IssueLiveVerifier 타입은 채택할 이슈가 provider에 실제로 있고 요청과 일치하는지 확인하는 함수다.
 type IssueLiveVerifier func(context.Context, model.RemoteArtifactVerificationRequest) error
 
+// IssueReconciler 타입은 중단된 이슈 생성 의도를 provider 후보와 대조해 채택하거나, 정착한 중단 생성을 해제한다.
 type IssueReconciler struct {
-	records    IssueRecordReader
+	records    issueRecordReader
 	candidates IssueCandidateSource
 	intents    *IssueCreateIntents
 	verify     IssueLiveVerifier
 	now        func() time.Time
-	settled    IssueCreateSettlement
+	settled    issueCreateSettlement
 }
 
-// IssueCreateSettlement proves that a pending issue create whose caller died
+// issueCreateSettlement proves that a pending issue create whose caller died
 // created nothing and can no longer create anything.
-type IssueCreateSettlement func(context.Context, model.Record) (bool, error)
+type issueCreateSettlement func(context.Context, model.Record) (bool, error)
 
 // WithCrashSettlement lets a reconcile that finds no candidate for a pending
 // create (its caller died inside the provider call) release the intent for a
 // retry once the settlement proves nothing was or will be created.
-func (s *IssueReconciler) WithCrashSettlement(settled IssueCreateSettlement) *IssueReconciler {
+func (s *IssueReconciler) WithCrashSettlement(settled issueCreateSettlement) *IssueReconciler {
 	s.settled = settled
 	return s
 }
@@ -47,10 +50,12 @@ func (s *IssueReconciler) WithCrashSettlement(settled IssueCreateSettlement) *Is
 // not_invoked status lets the same create-issue run again.
 const issueCreateCrashReleased = "the create-issue caller died before the provider created the issue; settled: no candidate, no create running, quiet period passed"
 
-func NewIssueReconciler(records IssueRecordReader, candidates IssueCandidateSource, intents *IssueCreateIntents, verify IssueLiveVerifier, now func() time.Time) *IssueReconciler {
+// NewIssueReconciler 함수는 기록 조회, 후보 검색기, 의도 저장소, live 검증기, 시계를 묶어 IssueReconciler를 만든다.
+func NewIssueReconciler(records issueRecordReader, candidates IssueCandidateSource, intents *IssueCreateIntents, verify IssueLiveVerifier, now func() time.Time) *IssueReconciler {
 	return &IssueReconciler{records: records, candidates: candidates, intents: intents, verify: verify, now: now}
 }
 
+// Reconcile 메서드는 의도의 marker로 후보를 찾아 단일 후보를 채택한다. confirm이 false이면 채택 예정만 보고하고, 후보가 없고 정착한 중단이면 의도를 해제한다.
 func (s *IssueReconciler) Reconcile(ctx context.Context, id string, confirm bool) (model.IssueCreateReconcileResult, error) {
 	var result model.IssueCreateReconcileResult
 	record, err := s.records.Read(ctx, id)
@@ -140,7 +145,7 @@ func (s *IssueReconciler) releaseCrashedCreate(ctx context.Context, record model
 		result.NextCommand = "issueops remote reconcile-issue --id " + record.ID + " --confirm --json"
 		return result, nil
 	}
-	updated, err := s.intents.ReleaseCrashed(ctx, record.ID, *record.IssueCreateIntent, model.IssueCreateOutcome{Status: model.IssueCreateIntentNotInvoked, Failure: issueCreateCrashReleased, ObservedAt: s.now().UTC().Format(time.RFC3339Nano)})
+	updated, err := s.intents.releaseCrashed(ctx, record.ID, *record.IssueCreateIntent, model.IssueCreateOutcome{Status: model.IssueCreateIntentNotInvoked, Failure: issueCreateCrashReleased, ObservedAt: s.now().UTC().Format(time.RFC3339Nano)})
 	if err != nil {
 		return result, err
 	}

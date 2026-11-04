@@ -9,6 +9,8 @@ import (
 	selfaugmentdomain "issueops/internal/domain/selfaugment"
 )
 
+// SaveSummaryDeps injects the clock, snapshot encoder, state writer and state directory lookup used
+// by SaveSummary.
 type SaveSummaryDeps struct {
 	Now      func() time.Time
 	Encode   func(selfaugmentcontract.StateSnapshot) ([]byte, error)
@@ -16,6 +18,9 @@ type SaveSummaryDeps struct {
 	StateDir func() string
 }
 
+// SaveSummary writes the result summary to state as a snapshot under key (default
+// self-verify-latest) and records the outcome in result.StateCheckpoint. It classifies the failure
+// cause as the snapshot store does so the stored snapshot passes read validation.
 func SaveSummary(result *selfaugmentcontract.Result, key string, deps SaveSummaryDeps) error {
 	if key == "" {
 		key = "self-verify-latest"

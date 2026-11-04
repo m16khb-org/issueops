@@ -7,11 +7,14 @@ import (
 	selfverifydomain "issueops/internal/domain/selfverify"
 )
 
+// PlannedStep is one self-verification step: its label and the function that runs it.
 type PlannedStep struct {
 	Label string
 	Run   func() contract.StepResult
 }
 
+// RiskQAEvidence is the outcome of the risk-based QA tier. CoversFullGoTest reports that it already
+// ran the whole Go suite, letting the plain go test step be reused.
 type RiskQAEvidence struct {
 	Step             contract.StepResult
 	CoversFullGoTest bool
@@ -34,6 +37,8 @@ os.execv(sys.executable, [sys.executable] + sys.argv[1:])
 
 const selfVerifyGoTestTimeout = 10 * time.Minute
 
+// StepDeps injects the command runner and every validation that PlannedSteps wires into steps. Each
+// field is called with the binary path and root, and sometimes the seed, as its signature shows.
 type StepDeps struct {
 	IssueOpsRoot                  func() string
 	RunCommandStep                func(string, string, time.Duration, string, string, ...string) contract.StepResult
@@ -61,6 +66,9 @@ type StepDeps struct {
 	ValidateQAGate                func(string) contract.StepResult
 }
 
+// PlannedSteps returns the self-verification steps for root in the order defined by the domain
+// plan. goTestStep records the go test result so the contract golden step can reuse it. It panics
+// when an implementation is missing for a domain step, or the reverse.
 func PlannedSteps(root string, tempBin string, seed int64, goTestStep *contract.StepResult, deps StepDeps) []PlannedStep {
 	var riskQAEvidence RiskQAEvidence
 	planned := []PlannedStep{
@@ -140,6 +148,9 @@ func PlannedSteps(root string, tempBin string, seed int64, goTestStep *contract.
 	return ordered
 }
 
+// CachedContractGoldenStep returns the contract golden test step. When the full go test run passed
+// it is reused; otherwise the golden tests run on their own and must show passing evidence for
+// every required test and package.
 func CachedContractGoldenStep(goTestStep contract.StepResult, deps StepDeps) contract.StepResult {
 	if selfverifydomain.ReuseFullTestAsGolden(goTestStep.OK) {
 		return contract.StepResult{

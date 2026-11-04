@@ -15,11 +15,11 @@ import (
 	"issueops/internal/adapter/outbound/gitbin"
 )
 
-// WorkspaceStateLine excludes the runtime state issueops keeps inside a
+// workspaceStateLine excludes the runtime state issueops keeps inside a
 // worktree (lease claim tokens). It is "ignored workspace state": without it a
 // target repository that does not list .issueops/state/ in .gitignore shows the
 // token as untracked, and every worktree_clean gate fails on harness output.
-const WorkspaceStateLine = "/.issueops/state/"
+const workspaceStateLine = "/.issueops/state/"
 
 // Ensure appends line to <commonDir>/info/exclude once and reports whether it
 // was added now.
@@ -54,6 +54,6 @@ func EnsureWorkspaceState(worktree string) error {
 	if err != nil {
 		return fmt.Errorf("resolve git common dir for %s: %w", worktree, err)
 	}
-	_, err = Ensure(strings.TrimSpace(string(out)), WorkspaceStateLine)
+	_, err = Ensure(strings.TrimSpace(string(out)), workspaceStateLine)
 	return err
 }

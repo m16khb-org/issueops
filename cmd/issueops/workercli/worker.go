@@ -13,6 +13,7 @@ import (
 	workercontract "issueops/internal/contract/worker"
 )
 
+// Run dispatches `issueops worker` subcommands: enqueue, run, status, list, cleanup-stuck, and cancel.
 func (command Command) Run(args []string) error {
 	if len(args) == 0 {
 		workerUsage()
@@ -144,6 +145,8 @@ func readOnlyOutcome(job workercontract.Job, jsonOut bool) error {
 	return failure
 }
 
+// RunReadOnly runs `worker run`: it executes an argv-only read-only job and prints the resulting job record.
+// It returns an error when the job did not finish successfully.
 func (command Command) RunReadOnly(args []string) error {
 	opts, err := parseReadOnlyOptions(args)
 	if err != nil {

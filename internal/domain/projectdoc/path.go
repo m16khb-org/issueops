@@ -20,6 +20,10 @@ func PrefixedKnownProjectDocNames() []string {
 	return out
 }
 
+// NormalizeRelPath converts a user-supplied document path into a slash-separated
+// path under ProjectDocsDir. It accepts the known required and optional document
+// names and family module documents, and returns an error for an empty path or
+// any other target.
 func NormalizeRelPath(relPath string) (string, error) {
 	rel := filepath.ToSlash(strings.TrimSpace(relPath))
 	rel = strings.TrimPrefix(rel, "./")
@@ -29,7 +33,7 @@ func NormalizeRelPath(relPath string) (string, error) {
 	if after, ok := strings.CutPrefix(rel, ProjectDocsDir+"/"); ok {
 		rel = after
 	}
-	names := AllowedProjectDocNames()
+	names := allowedProjectDocNames()
 	allowed := map[string]bool{}
 	for _, name := range names {
 		allowed[name] = true
@@ -45,6 +49,7 @@ func NormalizeRelPath(relPath string) (string, error) {
 	return filepath.ToSlash(filepath.Join(ProjectDocsDir, rel)), nil
 }
 
+// NonEmptyStrings returns the trimmed items that are not blank, in order. The result is never nil.
 func NonEmptyStrings(items []string) []string {
 	out := []string{}
 	for _, item := range items {
@@ -55,6 +60,7 @@ func NonEmptyStrings(items []string) []string {
 	return out
 }
 
+// AppendUnique appends v to items unless items already contains it.
 func AppendUnique(items []string, v string) []string {
 	if slices.Contains(items, v) {
 		return items

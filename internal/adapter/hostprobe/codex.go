@@ -23,6 +23,8 @@ type CodexRunner struct {
 	deps          Dependencies
 }
 
+// NewCodexRunner returns a CodexRunner that serves the probe through harnessBinary.
+// Nil members of deps are replaced by the real process, clock, and filesystem implementations.
 func NewCodexRunner(harnessBinary string, deps Dependencies) CodexRunner {
 	return CodexRunner{
 		harnessBinary: harnessBinary,
@@ -32,14 +34,19 @@ func NewCodexRunner(harnessBinary string, deps Dependencies) CodexRunner {
 
 var _ port.HostProbeRunner = CodexRunner{}
 
+// Name returns the host name, "codex", used in reports and evidence sources.
 func (r CodexRunner) Name() string {
 	return "codex"
 }
 
+// Preflight reports whether the codex executable is installed and answers a version probe with an isolated CODEX_HOME.
 func (r CodexRunner) Preflight(ctx context.Context, request port.HostProbeRequest) port.HostProbePreflight {
 	return preflight(ctx, r.deps, r.Name(), "codex", request, isolatedHostEnv(r.deps, "CODEX_HOME"))
 }
 
+// Run executes one probe episode in a private temporary root with an isolated Codex home and returns the observed call as a HostProbeResult.
+// Environment failures such as a missing harness binary or executable become failed results with a cause and code, not errors,
+// and the private root is removed afterwards.
 func (r CodexRunner) Run(ctx context.Context, request port.HostProbeRequest) (result port.HostProbeResult) {
 	started := r.deps.Now()
 	if r.harnessBinary == "" {
@@ -89,11 +96,11 @@ func (r CodexRunner) Run(ctx context.Context, request port.HostProbeRequest) (re
 		}
 	}
 	environment = replaceEnvironmentValue(environment, "CODEX_HOME", runtimeCodexHome)
-	output, err := r.deps.Process.Run(ctx, CommandRequest{
+	output, err := r.deps.Process.Run(ctx, commandRequest{
 		Cwd:     root,
 		Argv:    argv,
 		Env:     environment,
-		Timeout: EpisodeTimeout,
+		Timeout: episodeTimeout,
 	})
 	return hookEpisodeFinish{
 		name: r.Name(), request: request, started: started, deps: r.deps,

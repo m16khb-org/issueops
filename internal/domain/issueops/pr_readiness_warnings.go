@@ -2,6 +2,8 @@ package issueops
 
 import model "issueops/internal/contract/issueops"
 
+// PRReadinessWarnings returns non-blocking PR warnings: the cycle has no
+// decision records or no issue graph links.
 func PRReadinessWarnings(record model.Record) []string {
 	var warnings []string
 	if len(record.Decisions) == 0 {

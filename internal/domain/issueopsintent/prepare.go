@@ -6,6 +6,9 @@ import (
 	"strings"
 )
 
+// IntentDraft is the intent contract before and after normalization: the raw
+// request, its interpretation, and the success criteria, constraints,
+// ambiguities, and non-goals that qualify it.
 type IntentDraft struct {
 	RawRequest, InterpretedIntent                       string
 	SuccessCriteria, Constraints, Ambiguities, NonGoals []string
@@ -24,7 +27,7 @@ func PrepareIntent(req IntentDraft) (*IntentDraft, error) {
 	if interpretedIntent == rawRequest {
 		return nil, fmt.Errorf("interpreted_intent must differ from raw_request")
 	}
-	if !MateriallyDifferentIntent(rawRequest, interpretedIntent) {
+	if !materiallyDifferentIntent(rawRequest, interpretedIntent) {
 		return nil, fmt.Errorf("interpreted_intent must materially differ from raw_request")
 	}
 	successCriteria := CleanTextValues(req.SuccessCriteria)

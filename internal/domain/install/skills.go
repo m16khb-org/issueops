@@ -5,6 +5,7 @@ import (
 	"strings"
 )
 
+// NormalizeSkillNames trims the names, drops blanks and duplicates, and returns them sorted.
 func NormalizeSkillNames(names []string) []string {
 	seen := map[string]bool{}
 	out := make([]string, 0, len(names))

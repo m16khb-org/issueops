@@ -269,7 +269,7 @@ func TestRunGoTestCoverageServesExactFingerprintFromCacheAndInvalidatesOnChange(
 			t.Errorf("execute dir = %s", dir)
 		}
 		deadline, ok := ctx.Deadline()
-		if !ok || time.Until(deadline) <= 0 || time.Until(deadline) > CoverageCommandTimeout {
+		if !ok || time.Until(deadline) <= 0 || time.Until(deadline) > coverageCommandTimeout {
 			t.Errorf("execute ctx deadline = %v ok=%v", deadline, ok)
 		}
 		return coverageSampleOutput, nil
@@ -461,7 +461,7 @@ func TestExecuteGoTestCoverageReportsDeadline(t *testing.T) {
 }
 
 func TestBoundedQualityBufferAcrossWrites(t *testing.T) {
-	buffer := NewBoundedQualityBuffer(5)
+	buffer := newBoundedQualityBuffer(5)
 	for _, chunk := range []string{"ab", "cd", "ef", "gh"} {
 		if n, err := buffer.Write([]byte(chunk)); err != nil || n != len(chunk) {
 			t.Fatalf("write %q = %d, %v", chunk, n, err)
@@ -470,7 +470,7 @@ func TestBoundedQualityBufferAcrossWrites(t *testing.T) {
 	if buffer.String() != "abcde" || !buffer.Truncated() {
 		t.Fatalf("got %q truncated=%v", buffer.String(), buffer.Truncated())
 	}
-	exact := NewBoundedQualityBuffer(3)
+	exact := newBoundedQualityBuffer(3)
 	_, _ = exact.Write([]byte("abc"))
 	if exact.Truncated() || exact.String() != "abc" {
 		t.Fatalf("exact fit: %q truncated=%v", exact.String(), exact.Truncated())

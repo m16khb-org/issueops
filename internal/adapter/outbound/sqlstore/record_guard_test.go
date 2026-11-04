@@ -94,7 +94,7 @@ func TestWithRecordGuardBindsAfterLockAndFeedsCallback(t *testing.T) {
 	if binds != 1 || writeChecks != 1 {
 		t.Fatalf("span binds=%d write rechecks=%d want=1/1; other-root spans must not bind", binds, writeChecks)
 	}
-	if len(*observations) != 3 || (*observations)[0].Outcome != SpanOutcomeNested {
+	if len(*observations) != 3 || (*observations)[0].Outcome != spanOutcomeNested {
 		t.Fatalf("observations=%+v want rejected same-root, nested root, outer", *observations)
 	}
 	if outer := (*observations)[2]; outer.CommitCount != 1 || outer.CommitCoverage != SpanCommitCoverageComplete {

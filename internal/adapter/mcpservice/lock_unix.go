@@ -22,10 +22,10 @@ func tryLock(f *os.File) error {
 	return err
 }
 
-// LockHolder reports the PID holding the instance lock via F_GETLK, which
+// lockHolder reports the PID holding the instance lock via F_GETLK, which
 // observes without acquiring, so a status probe never races a starting server.
 // A process can not observe its own fcntl lock this way.
-func LockHolder(path string) (int, error) {
+func lockHolder(path string) (int, error) {
 	f, err := os.OpenFile(path, os.O_RDWR, 0)
 	if errors.Is(err, fs.ErrNotExist) {
 		return 0, nil

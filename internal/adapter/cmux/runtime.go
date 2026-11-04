@@ -21,6 +21,9 @@ type directory struct {
 	identity os.FileInfo
 }
 
+// ObserveDirectory resolves path, which must be absolute and clean, to a
+// directory and records its identity so later calls can tell whether the same
+// directory is still at that path.
 func ObserveDirectory(path string) (port.Directory, error) {
 	root, identity, err := cmuxCanonicalDirectory(path)
 	if err != nil {
@@ -73,6 +76,8 @@ func cmuxCanonicalDirectory(path string) (string, os.FileInfo, error) {
 	return filepath.Clean(resolved), identity, nil
 }
 
+// ValidateHostExecutable checks that path is an absolute clean path to an
+// executable regular file.
 func ValidateHostExecutable(path string) error {
 	if !filepath.IsAbs(path) || filepath.Clean(path) != path {
 		return fmt.Errorf("native host executable must be an absolute clean path")
@@ -84,6 +89,8 @@ func ValidateHostExecutable(path string) error {
 	return nil
 }
 
+// GitTop returns the git toplevel directory of root, giving git three seconds
+// to answer.
 func GitTop(root string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -91,15 +98,19 @@ func GitTop(root string) (string, error) {
 	return strings.TrimSpace(string(output)), err
 }
 
+// AwaitBootstrapReceipt polls the receipt file of prepared every 25ms for up
+// to three seconds until the receiver process has written a valid receipt that
+// matches expected and is no longer a bare shell. observe looks up a process by
+// pid. It fails on an invalid final receipt, context cancellation or timeout.
 func AwaitBootstrapReceipt(ctx context.Context, prepared cmuxcontract.PreparedLauncher, expected cmuxcontract.BootstrapExpectation, observe func(int) (issueopscontract.NativeProcessReceipt, error)) (issueopscontract.NativeProcessReceipt, error) {
 	timer := time.NewTimer(3 * time.Second)
 	defer timer.Stop()
 	ticker := time.NewTicker(25 * time.Millisecond)
 	defer ticker.Stop()
 	for {
-		receipt, err := ReadBootstrapReceipt(prepared.ReceiptPath)
+		receipt, err := readBootstrapReceipt(prepared.ReceiptPath)
 		if err == nil {
-			process, validationErr := ValidateBootstrapReceipt(receipt, expected, observe)
+			process, validationErr := validateBootstrapReceipt(receipt, expected, observe)
 			if validationErr == nil && !cmuxShellProcess(process.Executable) {
 				return process, nil
 			}
@@ -124,6 +135,8 @@ func cmuxShellProcess(executable string) bool {
 	return base == "sh" || base == "bash" || base == "zsh" || base == "dash"
 }
 
+// SamePath reports whether left and right resolve, through symlinks, to the
+// same path. Either failing to resolve counts as different.
 func SamePath(left, right string) bool {
 	leftResolved, leftErr := filepath.EvalSymlinks(filepath.Clean(left))
 	rightResolved, rightErr := filepath.EvalSymlinks(filepath.Clean(right))

@@ -12,6 +12,8 @@ import (
 	"time"
 )
 
+// Inspect returns the start time and canonical executable path of pid, read
+// through ps under the C locale. It fails for non-positive pids or when ps fails.
 func (observer Inspector) Inspect(pid int) (contract.Identity, error) {
 	if pid <= 0 {
 		return contract.Identity{}, fmt.Errorf("pid must be positive")

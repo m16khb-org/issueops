@@ -35,12 +35,12 @@ func SectionMarkers(section string) (start, end string, err error) {
 	return "", "", fmt.Errorf("unsupported issue body section %q (want %s|%s)", section, completionmodel.IssueBodySectionDevilsAdvocate, completionmodel.IssueBodySectionCompletion)
 }
 
-// RenderDevilsAdvocateSection builds the delimited plan-review region: one
+// renderDevilsAdvocateSection builds the delimited plan-review region: one
 // flow line over every round ("1차 수정 요청(지적 3건) → 계획 수정 → 2차
 // 통과"), and the stop reasons when the current verdict is a stop. Finding
 // text for other verdicts stays in the record and in plan-review.md. The
 // delimiters let MergeManagedSection replace the block in place on re-runs.
-func RenderDevilsAdvocateSection(req SectionInput) string {
+func renderDevilsAdvocateSection(req SectionInput) string {
 	var b strings.Builder
 	b.WriteString(devilsAdvocateStartMarker + "\n## 계획 검토\n\n")
 	rounds := req.Rounds
@@ -83,17 +83,16 @@ func RenderDevilsAdvocateSection(req SectionInput) string {
 	return b.String()
 }
 
-// RenderCompletionSection builds the delimited progress-report region: the
+// renderCompletionSection builds the delimited progress-report region: the
 // markers, a "## 진행 결과" heading, and the written result. Nothing is
 // truncated; a result over the body budget fails in RenderSection instead.
-func RenderCompletionSection(c completionmodel.RemoteCompletionSection) string {
+func renderCompletionSection(c completionmodel.RemoteCompletionSection) string {
 	return completionmodel.IssueBodyCompletionStartMarker + "\n## 진행 결과\n\n" + strings.TrimSpace(c.ResultBody) + "\n" + completionEndMarker
 }
 
-// SectionBudget은 병합 결과가 provider 본문 한도를 지키도록 섹션에 배정
-// 가능한 바이트 예산을 계산한다: 한도 - (기존 본문 길이 - 교체될 기존 블록
-// 길이). 렌더·절단을 섹션 단독 길이에만 적용하면 병합 결과가 한도를 넘을
-// 수 있다(C3-F1).
+// SectionBudget 함수는 병합 결과가 provider 본문 한도를 지키도록 섹션에 배정 가능한 바이트 예산을 계산한다: 한도 -
+// (기존 본문 길이 - 교체될 기존 블록 길이). 렌더·절단을 섹션 단독 길이에만 적용하면 병합 결과가 한도를 넘을 수
+// 있다(C3-F1). limit이 0 이하이면 0이고, 계산 결과가 0 이하이면 강제 절단 경로로 보내기 위해 1을 돌려준다.
 func SectionBudget(body string, limit int, startMarker, endMarker string) int {
 	if limit <= 0 {
 		return 0
@@ -138,12 +137,12 @@ func RenderSection(req SectionInput, limit int) (section, startMarker, endMarker
 	}
 	switch req.Section {
 	case completionmodel.IssueBodySectionDevilsAdvocate:
-		return RenderDevilsAdvocateSection(req), startMarker, endMarker, nil
+		return renderDevilsAdvocateSection(req), startMarker, endMarker, nil
 	case completionmodel.IssueBodySectionCompletion:
 		if req.Completion == nil {
 			return "", "", "", fmt.Errorf("completion payload is required for the completion section")
 		}
-		section = RenderCompletionSection(*req.Completion)
+		section = renderCompletionSection(*req.Completion)
 		// 원고를 잘라 밀어넣지 않는다. 한도를 넘으면 원고를 줄이라고 실패한다(C3-F1).
 		if limit > 0 && len(section) > limit {
 			return "", "", "", fmt.Errorf("completion section exceeds the body budget (%d > %d); shorten the progress report", len(section), limit)

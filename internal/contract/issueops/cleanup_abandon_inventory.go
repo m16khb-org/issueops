@@ -1,6 +1,6 @@
 package issueops
 
-// CleanupAbandonInventory는 fingerprint 입력이 되는 현재 관측 상태다.
+// CleanupAbandonInventory 타입은 fingerprint 입력이 되는 현재 관측 상태다.
 // cleanupFinishInventory와 달리 원격 completion 권한을 다루지 않고, 레코드가
 // 지목한 로컬 worktree와 branch의 삭제 권한만 봉인한다.
 type CleanupAbandonInventory struct {

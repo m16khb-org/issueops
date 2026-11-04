@@ -27,18 +27,18 @@ func TestValidateIssueCreateIntentRejectsUnboundedDurableFields(t *testing.T) {
 		mutate func(*IssueCreateIntent)
 	}{
 		{"title", func(intent *IssueCreateIntent) {
-			intent.Title = strings.Repeat("t", MaxIssueCreateTitleBytes+1)
+			intent.Title = strings.Repeat("t", maxIssueCreateTitleBytes+1)
 		}},
 		{"failure", func(intent *IssueCreateIntent) {
-			intent.Failure = strings.Repeat("f", MaxIssueCreateFailureBytes+1)
+			intent.Failure = strings.Repeat("f", maxIssueCreateFailureBytes+1)
 		}},
 		{"canonical URL", func(intent *IssueCreateIntent) {
 			intent.Status = IssueCreateIntentVerificationFailed
-			intent.CanonicalURL = "https://github.com/acme/repo/issues/" + strings.Repeat("1", MaxIssueCreateURLBytes)
+			intent.CanonicalURL = "https://github.com/acme/repo/issues/" + strings.Repeat("1", maxIssueCreateURLBytes)
 		}},
-		{"labels", func(intent *IssueCreateIntent) { intent.Labels = make([]string, MaxIssueCreateValues+1) }},
+		{"labels", func(intent *IssueCreateIntent) { intent.Labels = make([]string, maxIssueCreateValues+1) }},
 		{"label value", func(intent *IssueCreateIntent) {
-			intent.Labels = []string{strings.Repeat("l", MaxIssueCreateValueBytes+1)}
+			intent.Labels = []string{strings.Repeat("l", maxIssueCreateValueBytes+1)}
 		}},
 	}
 	for _, test := range tests {
@@ -85,10 +85,10 @@ func TestValidateIssueCreateIntentRejectsInvalidIdentityAndStatus(t *testing.T) 
 		{"uppercase body digest", func(i *IssueCreateIntent) { i.BodySHA256 = strings.Repeat("A", 64) }, "body_sha256 must be lowercase hexadecimal"},
 		{"provider", func(i *IssueCreateIntent) { i.Provider = "bitbucket" }, "provider is invalid"},
 		{"project authority size", func(i *IssueCreateIntent) {
-			i.ProjectAuthority = strings.Repeat("p", MaxIssueCreateAuthorityBytes+1)
+			i.ProjectAuthority = strings.Repeat("p", maxIssueCreateAuthorityBytes+1)
 		}, "project_authority exceeds"},
 		{"timestamp size", func(i *IssueCreateIntent) { i.StartedAt = strings.Repeat("t", 65) }, "timestamps exceed 64 bytes"},
-		{"assignee count", func(i *IssueCreateIntent) { i.Assignees = make([]string, MaxIssueCreateValues+1) }, "assignees exceeds"},
+		{"assignee count", func(i *IssueCreateIntent) { i.Assignees = make([]string, maxIssueCreateValues+1) }, "assignees exceeds"},
 		{"marker mismatch", func(i *IssueCreateIntent) { i.Marker = "<!-- issueops:issue-create:other -->" }, "marker does not match operation_id"},
 		{"attempt zero", func(i *IssueCreateIntent) { i.Attempt = 0 }, "attempt must be positive"},
 		{"unknown status", func(i *IssueCreateIntent) { i.Status = "exploded" }, `unsupported issue create intent status "exploded"`},

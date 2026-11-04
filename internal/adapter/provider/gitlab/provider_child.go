@@ -23,6 +23,10 @@ import (
 // that the provider itself accepts.
 const gitLabCommandOutputLimit = 2 * 1024 * 1024
 
+// CreateChild creates a child work item under req.ParentIssueURL, attaches it
+// to the parent hierarchy, and verifies parent, labels and assignees by
+// readback. Without Confirm it returns a dry-run preview. Once the child
+// exists, later failures return the child URL so the caller can recover.
 func (Provider) CreateChild(ctx context.Context, req port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 	title := strings.TrimSpace(req.Title)
 	if title == "" {
@@ -170,6 +174,11 @@ func gitlabAssigneeUsernamesFromRequest(assignees []string) []string {
 	return usernames
 }
 
+// CloseChild closes a child work item after verifying through the parent's
+// hierarchy that it belongs to the parent, then reads the state back. The
+// child must live in the same project as the parent. Without Confirm it
+// returns a read-only preview; closing an already closed child is reported as
+// AlreadyClosed.
 func (Provider) CloseChild(ctx context.Context, req port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
 	hostname, projectPath, parentIID, childIID, err := parseGitLabCloseChildTarget(req)
 	if err != nil {

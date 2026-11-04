@@ -39,7 +39,7 @@ func TestExecRunnerTimeoutKillsAndReapsUnixDescendant(t *testing.T) {
 	root := t.TempDir()
 	pidPath := filepath.Join(root, "descendant.pid")
 	script := "sleep 30 & child=$!; printf '%s' \"$child\" >\"$1\"; wait"
-	_, err := (ExecRunner{}).Run(context.Background(), CommandRequest{
+	_, err := (execRunner{}).Run(context.Background(), commandRequest{
 		Cwd: root, Argv: []string{"/bin/sh", "-c", script, "sh", pidPath},
 		Env: []string{"PATH=/usr/bin:/bin"}, Timeout: 100 * time.Millisecond,
 	})
@@ -73,7 +73,7 @@ func TestExecRunnerBoundsWaitWhenGroupTerminationDoesNotStopProcess(t *testing.T
 	killProcessGroup = func(int, syscall.Signal) error { return nil }
 
 	started := time.Now()
-	_, err := (ExecRunner{}).Run(context.Background(), CommandRequest{
+	_, err := (execRunner{}).Run(context.Background(), commandRequest{
 		Argv: []string{"/bin/sleep", "3"}, Timeout: 50 * time.Millisecond,
 	})
 	if err == nil || err.Error() != "command_timeout" {
@@ -93,7 +93,7 @@ func TestExecRunnerProjectsLongOmoStreamWithoutLosingToolEvidence(t *testing.T) 
 	if err := os.WriteFile(path, []byte(stream), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	output, err := (ExecRunner{}).Run(context.Background(), CommandRequest{Argv: []string{"/bin/cat", path}, OmoJSONL: true})
+	output, err := (execRunner{}).Run(context.Background(), commandRequest{Argv: []string{"/bin/cat", path}, OmoJSONL: true})
 	if err != nil || output.StdoutTruncated {
 		t.Fatalf("truncated=%t err=%v", output.StdoutTruncated, err)
 	}
@@ -105,11 +105,11 @@ func TestExecRunnerProjectsLongOmoStreamWithoutLosingToolEvidence(t *testing.T) 
 
 func TestExecRunnerEnforcesOutputBound(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "output")
-	if err := os.WriteFile(path, []byte(strings.Repeat("x", MaxOutputBytes+1)), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte(strings.Repeat("x", maxOutputBytes+1)), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	got, err := (ExecRunner{}).Run(context.Background(), CommandRequest{Argv: []string{"/bin/cat", path}})
-	if err == nil || !got.StdoutTruncated || len(got.Stdout) > MaxOutputBytes {
+	got, err := (execRunner{}).Run(context.Background(), commandRequest{Argv: []string{"/bin/cat", path}})
+	if err == nil || !got.StdoutTruncated || len(got.Stdout) > maxOutputBytes {
 		t.Fatalf("bytes=%d truncated=%t err=%v", len(got.Stdout), got.StdoutTruncated, err)
 	}
 }

@@ -14,6 +14,9 @@ import (
 	port "issueops/internal/port/cmux"
 )
 
+// Service runs cmux handoffs. Its fields inject the cmux client, root
+// environment, clock, audit access, launcher preparation and path/host
+// validation so the handoff can be exercised without real external calls.
 type Service struct {
 	Client                 port.Client
 	Roots                  port.RootEnvironment
@@ -50,6 +53,11 @@ type handoffRun struct {
 	prepared    cmuxcontract.PreparedLauncher
 }
 
+// Handoff creates a cmux workspace for the execution named by request and
+// delivers its launcher, running the validation, preflight, staging, creation,
+// preparation, send and receipt phases in order. On failure it returns the
+// result recorded so far (status "rejected" unless a later phase updated it)
+// with the error.
 func (deps Service) Handoff(ctx context.Context, stateRoot string, request issueopscontract.ExecutionCmuxHandoffRequest) (issueopscontract.ExecutionCmuxHandoffResult, error) {
 	result := issueopscontract.ExecutionCmuxHandoffResult{ID: request.ID, Generation: request.Generation, Status: "rejected"}
 	if deps.Client == nil || deps.Now == nil || deps.Roots.GitTop == nil || deps.ValidateHostExecutable == nil {

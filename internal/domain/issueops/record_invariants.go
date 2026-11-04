@@ -26,7 +26,7 @@ func ValidateRecordInvariants(record issueopscontract.Record) error {
 		}
 	}
 	if record.IssueCreateIntent != nil {
-		if err := ValidateIssueCreateIntentInvariants(*record.IssueCreateIntent); err != nil {
+		if err := validateIssueCreateIntentInvariants(*record.IssueCreateIntent); err != nil {
 			return err
 		}
 	}
@@ -39,7 +39,7 @@ func ValidateRecordInvariants(record issueopscontract.Record) error {
 }
 
 func validateChildCreateOperationInvariants(op issueopscontract.ChildCreateOperation) error {
-	if err := ValidateIssueCreateIntentInvariants(op.IssueCreateIntent); err != nil {
+	if err := validateIssueCreateIntentInvariants(op.IssueCreateIntent); err != nil {
 		return err
 	}
 	project, err := childProjectAuthority(op.ParentURL, op.Provider)

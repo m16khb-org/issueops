@@ -1,3 +1,6 @@
+// Package issueopscmux is the application service that hands an IssueOps
+// execution off to a new cmux workspace: it validates the released root,
+// stages and audits the external calls, and confirms the launcher receipt.
 package issueopscmux
 
 import (

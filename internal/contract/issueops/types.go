@@ -1,7 +1,13 @@
+// Package issueops defines the IssueOps cycle contract: the durable Record and
+// the request/result DTOs, execution lease, cleanup, remote-artifact and handoff
+// vocabulary that the domain, application and adapter layers exchange. It holds
+// data shapes and their validation only and performs no I/O, so every layer can
+// depend on it without depending on each other.
 package issueops
 
 import reviewcontract "issueops/internal/contract/issueopsreview"
 
+// StartRequest asks to start (or resume) the cycle for Repo on Branch.
 type StartRequest struct {
 	Repo   string `json:"repo"`
 	Branch string `json:"branch,omitempty"`
@@ -9,6 +15,8 @@ type StartRequest struct {
 	New bool `json:"new,omitempty"`
 }
 
+// FeedbackItem is one piece of intake feedback attached to a cycle, with the
+// timestamps needed to detect that the source issue changed after it was read.
 type FeedbackItem struct {
 	Source         string `json:"source"`
 	Body           string `json:"body"`
@@ -20,6 +28,8 @@ type FeedbackItem struct {
 	Resolution string `json:"resolution,omitempty"`
 }
 
+// IssueLink is a remote issue-tracker artifact linked to a cycle, including the
+// close state the harness verified for it.
 type IssueLink struct {
 	Type            string `json:"type"`
 	URL             string `json:"url"`
@@ -31,6 +41,8 @@ type IssueLink struct {
 	CloseReason     string `json:"close_reason,omitempty"`
 }
 
+// BranchPrepareStep is one ordered provider instruction (tool call or command)
+// for creating the issue's linked branch.
 type BranchPrepareStep struct {
 	Order         int            `json:"order"`
 	Strategy      string         `json:"strategy"`
@@ -40,6 +52,8 @@ type BranchPrepareStep struct {
 	Description   string         `json:"description"`
 }
 
+// BranchPrepare is the sealed branch identity of a cycle: the issue, the linked
+// branch, its base, and the provider-verified link state.
 type BranchPrepare struct {
 	Provider        string `json:"provider"`
 	IssueURL        string `json:"issue_url"`
@@ -74,11 +88,15 @@ type BranchRetarget struct {
 	ObservedAt  string `json:"observed_at"`
 }
 
+// BranchRetargetRequest asks to move the cycle's recorded base branch to
+// BaseBranch for Reason; the new base must be read back from the remote artifact.
 type BranchRetargetRequest struct {
 	BaseBranch string
 	Reason     string
 }
 
+// BranchPrepareRequest carries the caller-supplied fields that become a
+// BranchPrepare when the branch identity is recorded.
 type BranchPrepareRequest struct {
 	Provider        string `json:"provider"`
 	IssueURL        string `json:"issue_url"`
@@ -112,6 +130,8 @@ type RemoteBodySync struct {
 	SyncedAt   string `json:"synced_at"`
 }
 
+// RemoteArtifactVerification records what the provider reported for the cycle's
+// PR/MR (labels, assignees, target branch) at VerifiedAt.
 type RemoteArtifactVerification struct {
 	Provider   string   `json:"provider"`
 	Kind       string   `json:"kind"`
@@ -124,6 +144,8 @@ type RemoteArtifactVerification struct {
 	TargetBranch string `json:"target_branch,omitempty"`
 }
 
+// RemoteArtifactVerificationRequest carries the provider readback to be stored
+// as a RemoteArtifactVerification.
 type RemoteArtifactVerificationRequest struct {
 	Provider     string
 	Kind         string
@@ -133,6 +155,8 @@ type RemoteArtifactVerificationRequest struct {
 	TargetBranch string
 }
 
+// IntentContract is the interpreted form of the user's request: what counts as
+// success, and the constraints, ambiguities and non-goals around it.
 type IntentContract struct {
 	RawRequest        string   `json:"raw_request"`
 	InterpretedIntent string   `json:"interpreted_intent"`
@@ -144,6 +168,7 @@ type IntentContract struct {
 	RecordedAt        string   `json:"recorded_at"`
 }
 
+// IntentRecordRequest carries the fields recorded as an IntentContract.
 type IntentRecordRequest struct {
 	RawRequest        string
 	InterpretedIntent string
@@ -154,6 +179,8 @@ type IntentRecordRequest struct {
 	IntentClass       string
 }
 
+// Decision is one recorded design or scope decision with its rationale,
+// alternatives and the artifacts it affects.
 type Decision struct {
 	Title              string   `json:"title"`
 	Body               string   `json:"body"`
@@ -165,6 +192,7 @@ type Decision struct {
 	CreatedAt          string   `json:"created_at"`
 }
 
+// DecisionRecordRequest carries the fields recorded as a Decision.
 type DecisionRecordRequest struct {
 	Title              string
 	Body               string
@@ -175,12 +203,16 @@ type DecisionRecordRequest struct {
 	AffectedArtifacts  []string
 }
 
+// PlanPrepItem is the outcome of one plan-preparation step: done with Evidence,
+// or waived with WaiveReason.
 type PlanPrepItem struct {
 	Status      string   `json:"status"`
 	Evidence    []string `json:"evidence,omitempty"`
 	WaiveReason string   `json:"waive_reason,omitempty"`
 }
 
+// PlanPrep records the four plan-preparation checks (prior decisions, related
+// issues, web research, codebase survey) completed before planning.
 type PlanPrep struct {
 	PriorDecisions PlanPrepItem `json:"prior_decisions"`
 	RelatedIssues  PlanPrepItem `json:"related_issues"`
@@ -189,11 +221,13 @@ type PlanPrep struct {
 	RecordedAt     string       `json:"recorded_at"`
 }
 
+// PlanPrepItemRequest carries the evidence or waiver for one plan-prep step.
 type PlanPrepItemRequest struct {
 	Evidence    []string
 	WaiveReason string
 }
 
+// PlanPrepRequest carries the four plan-prep step inputs recorded as a PlanPrep.
 type PlanPrepRequest struct {
 	PriorDecisions PlanPrepItemRequest
 	RelatedIssues  PlanPrepItemRequest
@@ -201,9 +235,13 @@ type PlanPrepRequest struct {
 	CodebaseSurvey PlanPrepItemRequest
 }
 
-// domain/issueops may import only this contract package, and its plan-review
-// rendering names these types, so they stay visible here.
+// DevilsAdvocateReview aliases the plan-review verdict defined in the review
+// contract. domain/issueops may import only this contract package, and its
+// plan-review rendering names this type, so it stays visible here.
 type DevilsAdvocateReview = reviewcontract.DevilsAdvocateReview
+
+// DevilsAdvocateRound aliases one adversarial round of a DevilsAdvocateReview,
+// re-exported here for the same import-boundary reason.
 type DevilsAdvocateRound = reviewcontract.DevilsAdvocateRound
 
 // DomainReview captures the grill-phase domain grilling outcome:
@@ -217,11 +255,7 @@ type DomainReview struct {
 	ReviewedAt        string   `json:"reviewed_at"`
 }
 
-// PhaseLedgerEntry records that a phase was entered and (optionally)
-// completed, plus which artifacts satisfied it. It is an index over existing
-// source-of-truth fields, not their replacement. The owning map's key is the
-// authoritative phase identity; Phase is a self-describing copy that must equal
-// its key.
+// DomainReviewRequest carries the fields recorded as a DomainReview.
 type DomainReviewRequest struct {
 	Terminology       []string
 	ModelFit          string
@@ -229,6 +263,11 @@ type DomainReviewRequest struct {
 	OpenUncertainties []string
 }
 
+// PhaseLedgerEntry records that a phase was entered and (optionally)
+// completed, plus which artifacts satisfied it. It is an index over existing
+// source-of-truth fields, not their replacement. The owning map's key is the
+// authoritative phase identity; Phase is a self-describing copy that must equal
+// its key.
 type PhaseLedgerEntry struct {
 	Phase       Phase    `json:"phase"`
 	EnteredAt   string   `json:"entered_at,omitempty"`
@@ -251,6 +290,8 @@ type RegressEvent struct {
 	At        string `json:"at"`
 }
 
+// DelegationContract is the scope a parent cycle hands to a child cycle: the
+// task, its acceptance criteria and the parent plan it derives from.
 type DelegationContract struct {
 	ParentCycleID      string   `json:"parent_cycle_id"`
 	TaskScope          string   `json:"task_scope"`
@@ -260,6 +301,8 @@ type DelegationContract struct {
 	DelegatedAt        string   `json:"delegated_at"`
 }
 
+// ChildCycleRef is the parent's reference to one child cycle, including the
+// parent's validation verdict on that child's work.
 type ChildCycleRef struct {
 	CycleID            string   `json:"cycle_id"`
 	Branch             string   `json:"branch"`
@@ -272,6 +315,7 @@ type ChildCycleRef struct {
 	ValidatedAt        string   `json:"validated_at,omitempty"`
 }
 
+// ChildStartRequest asks the parent ParentID to create a child cycle on Branch.
 type ChildStartRequest struct {
 	ParentID           string
 	Branch             string
@@ -282,6 +326,8 @@ type ChildStartRequest struct {
 	ChildIssueURL      string
 }
 
+// ChildStartResult is the outcome of starting a child: the created child Record
+// and the reference the parent stored for it.
 type ChildStartResult struct {
 	OK               bool          `json:"ok"`
 	ParentID         string        `json:"parent_id"`
@@ -291,6 +337,8 @@ type ChildStartResult struct {
 	ChildLinkWarning string        `json:"child_link_warning,omitempty"`
 }
 
+// ChildStatusEntry is one child's phase and validation state as seen from the
+// parent, with flags telling whether it came from the index, a scan, or neither.
 type ChildStatusEntry struct {
 	CycleID            string   `json:"cycle_id"`
 	Branch             string   `json:"branch,omitempty"`
@@ -309,6 +357,9 @@ type ChildStatusEntry struct {
 	Orphaned           bool     `json:"orphaned,omitempty"`
 }
 
+// ChildStatusResult lists a parent's children. Repaired and RepairAppended
+// report index entries re-added during the call; Orphaned lists children whose
+// parent no longer references them.
 type ChildStatusResult struct {
 	OK             bool               `json:"ok"`
 	ParentID       string             `json:"parent_id"`
@@ -318,6 +369,8 @@ type ChildStatusResult struct {
 	Orphaned       []string           `json:"orphaned,omitempty"`
 }
 
+// ChildValidationResult is the outcome of recording the parent's validation
+// verdict for a child cycle.
 type ChildValidationResult struct {
 	OK        bool          `json:"ok"`
 	ParentID  string        `json:"parent_id"`
@@ -325,6 +378,9 @@ type ChildValidationResult struct {
 	ParentRef ChildCycleRef `json:"parent_ref"`
 }
 
+// Record is the strict, versioned, durable state of one IssueOps cycle. It is
+// the single source of truth that every phase gate reads and every phase
+// transition writes; fields tagged json:"-" are in-memory load diagnostics.
 type Record struct {
 	OK                      bool                                `json:"ok"`
 	Invalid                 bool                                `json:"-"`
@@ -416,7 +472,7 @@ type ProjectDocsReview struct {
 	RecordedAt          string `json:"recorded_at"`
 }
 
-// IssueOpsSchemaEvidence는 스키마·마이그레이션·엔티티 변경이 변경 집합에
+// SchemaEvidence 타입은 스키마·마이그레이션·엔티티 변경이 변경 집합에
 // 들어 있을 때만 요구되는 실측 근거다. 인덱스 현황, row count처럼 실제
 // 데이터베이스에서 관찰한 값과 그 출처를 남긴다. 관찰이 불가능한 상황은
 // 근거를 적어 waive한다.
@@ -446,13 +502,15 @@ const (
 	CleanupFailureStepRemoteBranchDelete = "remote_branch_delete"
 )
 
+// CleanupFinishFailure records where a destructive cleanup apply stopped, so a
+// finish rerun can resume from Step.
 type CleanupFinishFailure struct {
 	Step    string `json:"step"`
 	Message string `json:"message"`
 	At      string `json:"at"`
 }
 
-// IssueOpsCleanupAbandonFailure는 부분 실패 뒤 같은 로컬 대상을 재시도할 수 있도록
+// CleanupAbandonFailure 타입은 부분 실패 뒤 같은 로컬 대상을 재시도할 수 있도록
 // 마지막으로 승인된 inventory를 봉인한다.
 type CleanupAbandonFailure struct {
 	Step            string `json:"step"`
@@ -486,6 +544,8 @@ type SkillRoutingEntry struct {
 	At    string `json:"at,omitempty"`
 }
 
+// Readiness reports whether a cycle may enter its next gate, with the Missing
+// requirements that block it and the heads/fingerprints the check compared.
 type Readiness struct {
 	OK                     bool     `json:"ok"`
 	Ready                  bool     `json:"ready"`
@@ -502,10 +562,14 @@ type Readiness struct {
 	Warnings               []string `json:"warnings,omitempty"`
 }
 
+// CleanupStatusRequest asks for cleanup readiness; Merged is true only when the
+// caller has read the remote merge back.
 type CleanupStatusRequest struct {
 	Merged bool `json:"merged"`
 }
 
+// CleanupStatus is the cleanup readiness report: what is missing, the choices
+// available, and the remote artifact the decision rests on.
 type CleanupStatus struct {
 	OK                bool     `json:"ok"`
 	Ready             bool     `json:"ready"`
@@ -522,6 +586,8 @@ type CleanupStatus struct {
 	NextCommand string `json:"next_command,omitempty"`
 }
 
+// CloseChildrenRequest asks to close a parent's child issues. Without Confirm
+// the call is a preview.
 type CloseChildrenRequest struct {
 	// Merged는 부모 PR/MR의 머지가 원격 readback으로 검증됐음을 뜻한다.
 	Merged bool `json:"merged"`
@@ -533,6 +599,7 @@ type CloseChildrenRequest struct {
 	Confirm                bool `json:"confirm"`
 }
 
+// CloseChildResult is the outcome (or preview) of closing one child issue.
 type CloseChildResult struct {
 	URL               string `json:"url"`
 	Provider          string `json:"provider,omitempty"`
@@ -544,6 +611,8 @@ type CloseChildResult struct {
 	Error             string `json:"error,omitempty"`
 }
 
+// CloseChildrenResult is the outcome of closing a parent's children, including
+// the evidence basis that let the gate pass.
 type CloseChildrenResult struct {
 	OK        bool   `json:"ok"`
 	ID        string `json:"id"`
@@ -560,6 +629,8 @@ type CloseChildrenResult struct {
 	Missing       []string           `json:"missing,omitempty"`
 }
 
+// LeaseHolderIndex is the index entry mapping a lifecycle to the session
+// holding its write lease, so a holder can be found without loading every record.
 type LeaseHolderIndex struct {
 	Key           string `json:"-"`
 	SchemaVersion int    `json:"schema_version"`
@@ -570,7 +641,7 @@ type LeaseHolderIndex struct {
 	AgentID       string `json:"agent_id,omitempty"`
 }
 
-// CleanupRemoteBranchArtifactHead는 머지 검증 readback이 함께 돌려주는 원격
+// CleanupRemoteBranchArtifactHead 타입은 머지 검증 readback이 함께 돌려주는 원격
 // PR/MR의 head ref 정체다. 게이트 ⑨(타 브랜치 PR 방어)와 ⑩(머지 후 push된
 // 커밋 유실 방지)이 이 두 값에만 의존한다.
 type CleanupRemoteBranchArtifactHead struct {
@@ -582,7 +653,7 @@ type CleanupRemoteBranchArtifactHead struct {
 	BaseRefName string
 }
 
-// IssueOpsLinkedBranchCleanup은 ref-null 고아 linked-branch 처분의 durable
+// LinkedBranchCleanup 타입은 ref-null 고아 linked-branch 처분의 durable
 // audit이다(#306 AC-06). 성공만이 아니라 거절도 남긴다 — 다음 사람이 "왜 아직
 // 안 지워졌나"를 처음부터 다시 조사하지 않게 하는 것이 이 기록의 목적이다.
 type LinkedBranchCleanup struct {

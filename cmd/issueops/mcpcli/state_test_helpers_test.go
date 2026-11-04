@@ -24,7 +24,7 @@ func publicStateForTest() StateDependencies {
 	doctor := func() (statecontract.DoctorResult, error) { return statestore.Doctor(statestore.Dir()) }
 	return StateDependencies{Write: service.Write, Read: service.Read, List: service.List, Prune: service.Prune, Doctor: doctor, Maintain: maintenance.Maintain}
 }
-func testHandlePolicyStateMCPToolCall(call MCPToolCall) MCPToolOutcome {
+func testHandlePolicyStateMCPToolCall(call MCPToolCall) mcpToolOutcome {
 	return handlePolicyStateMCPToolCall(context.Background(), call, MCPDependencies{Policy: testPolicyService(), Audit: testAuditService(), State: publicStateForTest()})
 }
 func resourceConfigForTest() resources.Config {

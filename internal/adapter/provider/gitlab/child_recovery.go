@@ -45,6 +45,9 @@ const gitlabRecoveryFields = `id iid webUrl title description workItemType { nam
 const gitlabChildLookupQuery = `query childRecovery($projectPath: ID!, $childIid: String!) { project(fullPath: $projectPath) { workItems(iid: $childIid, first: 2) { nodes { ` + gitlabRecoveryFields + ` } pageInfo { hasNextPage } } } }`
 const gitlabChildSearchQuery = `query childRecoverySearch($projectPath: ID!, $marker: String!) { project(fullPath: $projectPath) { workItems(search: $marker, in: [DESCRIPTION], first: 100) { nodes { ` + gitlabRecoveryFields + ` } pageInfo { hasNextPage } } } }`
 
+// FindChildCreateCandidates searches the project's work items by description
+// for req.Marker (GraphQL, first 100) so a child create with an unknown
+// outcome can be reconciled. Truncated reports that more pages exist.
 func (p Provider) FindChildCreateCandidates(ctx context.Context, req port.IssueProviderFindIssueCreateCandidatesRequest) (port.IssueProviderFindIssueCreateCandidatesResult, error) {
 	var result port.IssueProviderFindIssueCreateCandidatesResult
 	parts := strings.SplitN(req.ProjectAuthority, "/", 2)
@@ -89,6 +92,9 @@ func readGitlabRecoveryItem(ctx context.Context, repo, parentURL, childURL strin
 	return rows.Nodes[0], host, project, nil
 }
 
+// ReadChild reads the child work item and returns a snapshot with TypeVerified
+// (a Task) and HierarchyVerified (its parent is parentURL). It fails when the
+// child has a different or unobservable parent or has no hierarchy widget.
 func (p Provider) ReadChild(ctx context.Context, repo, parentURL, childURL string) (port.ChildSnapshot, error) {
 	var result port.ChildSnapshot
 	item, _, _, err := readGitlabRecoveryItem(ctx, repo, parentURL, childURL)
@@ -122,6 +128,10 @@ func (p Provider) ReadChild(ctx context.Context, repo, parentURL, childURL strin
 	}
 	return result, nil
 }
+
+// AttachChild makes childURL a hierarchy child of parentURL. It is a no-op
+// when ReadChild already verifies the hierarchy; a child with a different
+// parent is an error and is never moved.
 func (p Provider) AttachChild(ctx context.Context, repo, parentURL, childURL string) error {
 	snapshot, err := p.ReadChild(ctx, repo, parentURL, childURL)
 	if err != nil {

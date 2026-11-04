@@ -20,6 +20,7 @@ const maxRoutedRecords = 5
 // only summarizes; the module its table points to owns the detailed rule.
 const maxRoutedModules = 3
 
+// RouteEffects is the file and clock access routing needs: path resolution, existence checks, directory listing, and file reads.
 type RouteEffects interface {
 	Path(root, rel string) string
 	Exists(path string) bool
@@ -29,7 +30,7 @@ type RouteEffects interface {
 	Now() time.Time
 }
 
-func Route(root, task string, effects RouteEffects) projectdocscontract.RouteResult {
+func route(root, task string, effects RouteEffects) projectdocscontract.RouteResult {
 	normalizedTask := projectdocdomain.NormalizeRouteTask(task)
 	rels := projectdocdomain.RouteDocsForTask(normalizedTask)
 	entries := make([]projectdocscontract.ProjectDocRouteEntry, 0, len(rels)*2)
@@ -85,6 +86,7 @@ func absentRoutedDocs(entries []projectdocscontract.ProjectDocRouteEntry) []stri
 }
 
 // readModules loads the living modules (not dated records, not the overview)
+
 // of the routed index docs' families.
 func readModules(root string, families []projectdocdomain.DocFamily, effects RouteEffects) ([]projectdocdomain.Record, []string) {
 	var modules []projectdocdomain.Record

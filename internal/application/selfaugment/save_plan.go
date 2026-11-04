@@ -8,6 +8,8 @@ import (
 	domain "issueops/internal/domain/selfaugment"
 )
 
+// SavePlanDeps supplies the clock, encoder, state writer and state directory
+// SavePlan uses.
 type SavePlanDeps struct {
 	Now      func() time.Time
 	Encode   func(contract.PlanStateSnapshot) ([]byte, error)
@@ -15,6 +17,9 @@ type SavePlanDeps struct {
 	StateDir func() string
 }
 
+// SavePlan checkpoints result under key ("self-augment-latest" when key is empty)
+// and sets result.StateCheckpoint to the outcome. The returned error is the
+// encode or write failure, if any.
 func SavePlan(result *contract.PlanResult, key string, deps SavePlanDeps) error {
 	if key == "" {
 		key = "self-augment-latest"

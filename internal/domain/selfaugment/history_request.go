@@ -7,13 +7,17 @@ import (
 	contract "issueops/internal/contract/selfaugment"
 )
 
+// ValidateHistoryRequest rejects a negative limit and any inconsistent retention options (negative
+// retention limit, confirm without prune, prune without a positive limit).
 func ValidateHistoryRequest(limit int, retention contract.HistoryRetentionOptions) error {
 	if limit < 0 {
 		return fmt.Errorf("limit must be non-negative")
 	}
-	return ValidateHistoryRetention(retention.Limit, retention.PruneRequested, retention.Confirm)
+	return validateHistoryRetention(retention.Limit, retention.PruneRequested, retention.Confirm)
 }
 
+// ValidateComparisonRequest requires non-blank baseline and candidate keys and a non-negative
+// maxElapsedRegressionPct.
 func ValidateComparisonRequest(baselineKey, candidateKey string, maxElapsedRegressionPct float64) error {
 	if strings.TrimSpace(baselineKey) == "" {
 		return fmt.Errorf("baseline-key is required")
@@ -27,6 +31,9 @@ func ValidateComparisonRequest(baselineKey, candidateKey string, maxElapsedRegre
 	return nil
 }
 
+// HistorySnapshotDiagnostics classifies a stored snapshot for history listing. A non-empty
+// skipReason means the snapshot must be skipped (wrong kind or unsupported schema version); a
+// non-empty warning means it is listed but its generated_at is unparsable.
 func HistorySnapshotDiagnostics(key string, snapshot contract.StateSnapshot) (skipReason, warning string) {
 	if !IsSelfVerificationSummaryKind(snapshot.Kind) {
 		return "kind:" + snapshot.Kind, ""
@@ -40,6 +47,8 @@ func HistorySnapshotDiagnostics(key string, snapshot contract.StateSnapshot) (sk
 	return "", ""
 }
 
+// NewHistoryEntry projects snapshot into a history listing entry, replacing missing step labels and
+// slowest steps with empty slices.
 func NewHistoryEntry(snapshot contract.StateSnapshot) contract.HistoryEntry {
 	labels := snapshot.Summary.StepLabels
 	if labels == nil {

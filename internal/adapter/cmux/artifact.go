@@ -15,13 +15,13 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
-// MaximumPromptBytes keeps the prompt argv plus its terminating NUL below
+// maximumPromptBytes keeps the prompt argv plus its terminating NUL below
 // Linux MAX_ARG_STRLEN (32 pages, 128 KiB on 4 KiB-page systems) with a 2x
 // margin and remains portable to Darwin. ReadPrompt and PrepareLauncher must
 // enforce this one shared bound.
-const MaximumPromptBytes = 64 << 10
+const maximumPromptBytes = 64 << 10
 
-type BootstrapReceipt struct {
+type bootstrapReceipt struct {
 	Status         string
 	PID            int
 	CWD            string
@@ -35,6 +35,11 @@ type BootstrapReceipt struct {
 	HostArgvSHA256 string
 }
 
+// PrepareLauncher validates request and writes the private launcher
+// artifact (prompt, script and bootstrap receipt paths) under request.Root.
+// buildArgv constructs the native host argv from the artifact's file paths.
+// The returned PreparedLauncher carries the shell command to send to the
+// workspace; callers must remove it with CleanupLauncher.
 func PrepareLauncher(request cmuxcontract.ArtifactRequest, buildArgv func(string, string, string, string, string) ([]string, error)) (cmuxcontract.PreparedLauncher, error) {
 	if err := validateLauncherRequest(request); err != nil {
 		return cmuxcontract.PreparedLauncher{}, err
@@ -69,7 +74,7 @@ func launcherScopeValid(request cmuxcontract.ArtifactRequest) bool {
 }
 
 func launcherPromptDigestValid(request cmuxcontract.ArtifactRequest) bool {
-	return len(request.Prompt) <= MaximumPromptBytes && bytes.IndexByte(request.Prompt, 0) < 0 &&
+	return len(request.Prompt) <= maximumPromptBytes && bytes.IndexByte(request.Prompt, 0) < 0 &&
 		digest(request.Prompt) == request.PromptSHA256 && validDigest(request.MaterialSHA256)
 }
 
@@ -112,6 +117,8 @@ func writeLauncherArtifact(request cmuxcontract.ArtifactRequest, buildArgv func(
 	return prepared, nil
 }
 
+// CleanupLauncher removes the artifact directory of prepared. A launcher
+// without a directory is a no-op.
 func CleanupLauncher(prepared cmuxcontract.PreparedLauncher) error {
 	if strings.TrimSpace(prepared.Directory) == "" {
 		return nil
@@ -151,26 +158,26 @@ func launcherScript(request cmuxcontract.ArtifactRequest, prepared cmuxcontract.
 		command.String()
 }
 
-func ReadBootstrapReceipt(path string) (BootstrapReceipt, error) {
+func readBootstrapReceipt(path string) (bootstrapReceipt, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return BootstrapReceipt{}, err
+		return bootstrapReceipt{}, err
 	}
 	parts := splitReceipt(data)
 	if len(parts) != 12 || parts[0] != "1" {
-		return BootstrapReceipt{}, fmt.Errorf("cmux bootstrap receipt is malformed")
+		return bootstrapReceipt{}, fmt.Errorf("cmux bootstrap receipt is malformed")
 	}
 	pid, err := strconv.Atoi(parts[2])
 	if err != nil || pid <= 0 {
-		return BootstrapReceipt{}, fmt.Errorf("cmux bootstrap receipt pid is invalid")
+		return bootstrapReceipt{}, fmt.Errorf("cmux bootstrap receipt pid is invalid")
 	}
-	return BootstrapReceipt{
+	return bootstrapReceipt{
 		Status: parts[1], PID: pid, CWD: parts[3], WindowID: parts[4], WorkspaceID: parts[5], SurfaceID: parts[6], SocketPath: parts[7],
 		HostExecutable: parts[8], PromptSHA256: parts[9], MaterialSHA256: parts[10], HostArgvSHA256: parts[11],
 	}, nil
 }
 
-func ValidateBootstrapReceipt(receipt BootstrapReceipt, expected cmuxcontract.BootstrapExpectation, observe func(int) (issueopscontract.NativeProcessReceipt, error)) (issueopscontract.NativeProcessReceipt, error) {
+func validateBootstrapReceipt(receipt bootstrapReceipt, expected cmuxcontract.BootstrapExpectation, observe func(int) (issueopscontract.NativeProcessReceipt, error)) (issueopscontract.NativeProcessReceipt, error) {
 	if !bootstrapReceiptMatches(receipt, expected) {
 		return issueopscontract.NativeProcessReceipt{}, fmt.Errorf("cmux bootstrap receipt identity mismatch")
 	}
@@ -190,7 +197,7 @@ func ValidateBootstrapReceipt(receipt BootstrapReceipt, expected cmuxcontract.Bo
 	return process, nil
 }
 
-func bootstrapReceiptMatches(receipt BootstrapReceipt, expected cmuxcontract.BootstrapExpectation) bool {
+func bootstrapReceiptMatches(receipt bootstrapReceipt, expected cmuxcontract.BootstrapExpectation) bool {
 	return receipt.Status == "ok" && receipt.CWD == expected.CWD && receipt.WorkspaceID == expected.WorkspaceID &&
 		receipt.SurfaceID == expected.SurfaceID && receipt.SocketPath == expected.SocketPath &&
 		(receipt.WindowID == "" || receipt.WindowID == expected.WindowID) &&

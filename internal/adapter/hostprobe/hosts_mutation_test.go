@@ -29,7 +29,7 @@ func hostsMutRunOmoTool(t *testing.T, probeTool string) (string, port.HostProbeR
 	request := omoProbeRequest()
 	request.ProbeTool = probeTool
 	var toolsValue string
-	process := &omoFakeProcess{run: func(_ context.Context, command CommandRequest) (CommandOutput, error) {
+	process := &omoFakeProcess{run: func(_ context.Context, command commandRequest) (CommandOutput, error) {
 		index := slices.Index(command.Argv, "--tools")
 		if index < 0 || index+1 >= len(command.Argv) {
 			t.Fatalf("argv has no --tools value: %#v", command.Argv)
@@ -85,10 +85,10 @@ func TestObserveOmoStreamAcceptsExactlyMaxOutputBytes(t *testing.T) {
 	request := omoProbeRequest()
 	target := "mcp_issueops_probe_" + request.ProbeTool
 	base := string(omoSuccessfulStream(request, target))
-	if len(base) >= MaxOutputBytes {
+	if len(base) >= maxOutputBytes {
 		t.Skip("base stream too large to pad")
 	}
-	exact := base + strings.Repeat(" ", MaxOutputBytes-len(base))
+	exact := base + strings.Repeat(" ", maxOutputBytes-len(base))
 	if _, err := observeOmoStream([]byte(exact), target); err != nil {
 		t.Fatalf("stream of exactly MaxOutputBytes rejected: %v", err)
 	}
@@ -100,8 +100,8 @@ func TestObserveOmoStreamAcceptsExactlyMaxOutputBytes(t *testing.T) {
 func TestOmoOutputDropsDisplayEventOfExactlyMaxOutputBytes(t *testing.T) {
 	prefix := `{"type":"message_update","text":"`
 	suffix := `"}`
-	event := prefix + strings.Repeat("x", MaxOutputBytes-len(prefix)-len(suffix)) + suffix
-	output := &boundedBuffer{limit: MaxOutputBytes}
+	event := prefix + strings.Repeat("x", maxOutputBytes-len(prefix)-len(suffix)) + suffix
+	output := &boundedBuffer{limit: maxOutputBytes}
 	projection := &omoOutput{output: output}
 	if _, err := projection.Write([]byte(event + "\n" + `{"type":"unknown_event"}` + "\n")); err != nil {
 		t.Fatal(err)

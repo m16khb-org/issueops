@@ -10,6 +10,7 @@ import (
 	authorityport "issueops/internal/port/authority"
 )
 
+// ReleaseRequest asks to release lease ID at Generation. Actor and Ancestry identify the caller, and CWD must be inside the cycle's canonical root.
 type ReleaseRequest struct {
 	ID         string
 	Generation uint64
@@ -17,23 +18,30 @@ type ReleaseRequest struct {
 	Ancestry   []issueopslease.ProcessReceipt
 	CWD        string
 }
+
+// ReleaseResult reports a release. On success OK is true and Execution is the projection saved by the update; on failure only ID is set.
 type ReleaseResult struct {
 	OK        bool
 	ID        string
 	Execution leasecontract.Execution
 }
 
+// ReleaseService releases execution leases held by a verified actor.
 type ReleaseService struct {
 	repository Repository
-	clock      Clock
+	clock      clock
 	verifier   authorityport.ActorVerifier
-	paths      CanonicalPathMatcher
+	paths      canonicalPathMatcher
 }
 
-func NewReleaseService(repository Repository, clock Clock, verifier authorityport.ActorVerifier, paths CanonicalPathMatcher) *ReleaseService {
+// NewReleaseService returns a ReleaseService that updates through repository, reads time from clock, verifies callers with verifier, and matches working directories with paths.
+func NewReleaseService(repository Repository, clock clock, verifier authorityport.ActorVerifier, paths canonicalPathMatcher) *ReleaseService {
 	return &ReleaseService{repository: repository, clock: clock, verifier: verifier, paths: paths}
 }
 
+// Release verifies the actor, validates holder, generation, and canonical cwd
+// against the stored lease, and records the lease as released. It returns a
+// failed result carrying request.ID and the error when any step is rejected.
 func (s *ReleaseService) Release(ctx context.Context, request ReleaseRequest) (ReleaseResult, error) {
 	actor, err := resolveActor(ctx, request.Actor, request.Ancestry, s.verifier)
 	if err != nil {

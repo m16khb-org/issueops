@@ -7,6 +7,8 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
+// SelectChildren picks, by cycle ID, the records in the same repository whose
+// delegation names parent as the parent cycle.
 func SelectChildren(parent model.Record, records []model.Record) map[string]model.Record {
 	children := map[string]model.Record{}
 	for _, child := range records {
@@ -18,6 +20,9 @@ func SelectChildren(parent model.Record, records []model.Record) map[string]mode
 	return children
 }
 
+// RepairChildIndex appends a reference for every scanned child that parent
+// does not index yet and returns the updated record with the sorted IDs it
+// added. The parent is returned unchanged when nothing is missing.
 func RepairChildIndex(parent model.Record, scanned map[string]model.Record) (model.Record, []string) {
 	appended := []string{}
 	seen := map[string]bool{}
@@ -35,11 +40,17 @@ func RepairChildIndex(parent model.Record, scanned map[string]model.Record) (mod
 	}
 	parent.ChildCycles = append([]model.ChildCycleRef(nil), parent.ChildCycles...)
 	for _, id := range appended {
-		parent.ChildCycles = append(parent.ChildCycles, ParentRefFromChild(scanned[id]))
+		parent.ChildCycles = append(parent.ChildCycles, parentRefFromChild(scanned[id]))
 	}
 	return parent, appended
 }
 
+// BuildChildStatus merges the parent child index with the scanned child
+// records into a status result sorted by cycle ID. Indexed children without a
+// record are flagged orphaned unless a terminal cleanup receipt explains
+// their absence; scanned children missing from the index are listed with
+// Indexed false. When the parent is done, children still blocking the PR gate
+// are marked parent_closed.
 func BuildChildStatus(parent model.Record, scanned map[string]model.Record) model.ChildStatusResult {
 	result := model.ChildStatusResult{OK: true, ParentID: parent.ID}
 	seen := map[string]bool{}
@@ -69,7 +80,7 @@ func BuildChildStatus(parent model.Record, scanned map[string]model.Record) mode
 	})
 	if parent.Phase == model.PhaseDone {
 		for i := range result.Children {
-			if ChildPRGateKey(result.Children[i]) != "" {
+			if childPRGateKey(result.Children[i]) != "" {
 				result.Children[i].ParentClosedState = "parent_closed"
 			}
 		}
@@ -133,7 +144,7 @@ func mergeChildStatusRecord(entry *model.ChildStatusEntry, child model.Record) {
 	}
 }
 
-func ParentRefFromChild(child model.Record) model.ChildCycleRef {
+func parentRefFromChild(child model.Record) model.ChildCycleRef {
 	ref := model.ChildCycleRef{
 		CycleID:   child.ID,
 		Branch:    child.Branch,

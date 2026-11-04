@@ -9,14 +9,16 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
+// ErrCleanupOccupancyChanged 변수는 apply 시점의 워크스페이스 점유자가 preview receipt와 달라졌음을
+// 나타내는 오류다. 호출자는 errors.Is로 확인하고 preview를 다시 실행해야 한다.
 var ErrCleanupOccupancyChanged = errors.New("workspace occupancy changed since preview")
 
 func cleanupReceiptMatches(left, right model.CleanupWorkspaceProcess) bool {
 	return left.PID == right.PID && left.StartedAt == right.StartedAt && left.Executable == right.Executable
 }
 
-// CleanupStopTargets는 apply 시점 점유자 가운데 preview receipt에 결속된 것만
-// 신호 대상으로 확정한다. 요청자 자신·조상 pid가 점유 중이면 거부다.
+// CleanupStopTargets 함수는 apply 시점 점유자 가운데 preview receipt에 결속된 것만 신호 대상으로
+// 확정한다. 요청자 자신·조상 pid가 점유 중이면 거부다.
 func CleanupStopTargets(occupants []model.CleanupWorkspaceProcess, ancestry map[int][]int, selfPID int, preview []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, error) {
 	selfAncestry, ok := ancestry[selfPID]
 	if !ok {
@@ -67,6 +69,8 @@ func cleanupOccupantBound(occupant model.CleanupWorkspaceProcess, previewByPID, 
 	return false
 }
 
+// DescribeCleanupProcesses 함수는 프로세스 목록을 `pid:command`를 쉼표로 이은 한 줄로 만든다. 비어
+// 있으면 "(none)"이다.
 func DescribeCleanupProcesses(processes []model.CleanupWorkspaceProcess) string {
 	if len(processes) == 0 {
 		return "(none)"
@@ -78,6 +82,8 @@ func DescribeCleanupProcesses(processes []model.CleanupWorkspaceProcess) string 
 	return strings.Join(parts, ", ")
 }
 
+// RemainingCleanupProcesses 함수는 종료 대상 targets 중 여전히 같은 PID·시작 시각·실행 파일로
+// occupants에 남아 있는 것을 돌려준다.
 func RemainingCleanupProcesses(targets, occupants []model.CleanupWorkspaceProcess) []model.CleanupWorkspaceProcess {
 	current := make(map[int]model.CleanupWorkspaceProcess, len(occupants))
 	for _, occupant := range occupants {
@@ -92,6 +98,8 @@ func RemainingCleanupProcesses(targets, occupants []model.CleanupWorkspaceProces
 	return remaining
 }
 
+// CleanupRequesterOccupancyMissing 함수는 요청자 프로세스나 그 조상이 워크트리를 점유하는지 판정한다. 점유
+// 중이면 `requester_occupies_worktree`를 돌려주고, 요청자 조상을 관측하지 못하면 두 번째 반환값이 false다.
 func CleanupRequesterOccupancyMissing(occupants []model.CleanupWorkspaceProcess, ancestry map[int][]int, selfPID int) ([]string, bool) {
 	selfAncestry, ok := ancestry[selfPID]
 	if !ok {
@@ -109,6 +117,8 @@ func CleanupRequesterOccupancyMissing(occupants []model.CleanupWorkspaceProcess,
 	return []string{}, true
 }
 
+// CleanupOccupantReceipts 함수는 점유 프로세스를 PID 순으로 정렬한 receipt(PID, 시작 시각, 실행
+// 파일)로 바꾼다.
 func CleanupOccupantReceipts(occupants []model.CleanupWorkspaceProcess) []model.NativeProcessReceipt {
 	receipts := make([]model.NativeProcessReceipt, 0, len(occupants))
 	for _, occupant := range occupants {

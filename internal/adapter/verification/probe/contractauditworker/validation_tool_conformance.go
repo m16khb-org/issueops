@@ -11,11 +11,14 @@ import (
 	verifydomain "issueops/internal/domain/selfverify"
 )
 
+// ValidateToolConformance runs the contract conformance baseline and verifies that
+// it passed with at least 10 cases and a baseline_passed gate. Failures carry
+// contract-input failure evidence.
 func ValidateToolConformance(binary, root string) selfverify.StepResult {
-	return ValidateToolConformanceWithDeps(binary, root, ValidationDeps{})
+	return validateToolConformanceWithDeps(binary, root, validationDeps{})
 }
 
-func ValidateToolConformanceWithDeps(binary, root string, deps ValidationDeps) selfverify.StepResult {
+func validateToolConformanceWithDeps(binary, root string, deps validationDeps) selfverify.StepResult {
 	deps = deps.withDefaults()
 	step := deps.RunCommandStep(root, "tool contract conformance", 30*time.Second, "", binary, "contract", "conformance", "baseline", "--json")
 	if !step.OK {

@@ -193,7 +193,7 @@ func TestMergeHandoffDeliveryObservationKeepsKnownWindowAndCWDWhenNextOmitsThem(
 	next.Target.WindowID = ""
 	next.Target.CWD = ""
 	next.UpdatedAt = "2026-09-20T10:06:00Z"
-	merged, decision := MergeHandoffDeliveryObservation(current, next)
+	merged, decision := mergeHandoffDeliveryObservation(current, next)
 	if !decision.Accepted {
 		t.Fatalf("merge rejected: %+v", decision)
 	}
@@ -206,7 +206,7 @@ func TestMergeHandoffDeliveryObservationKeepsKnownWindowAndCWDWhenNextOmitsThem(
 	next.Target.WindowID = "window-2"
 	next.Target.CWD = testsupport.AbsPath("repo", "other")
 	next.UpdatedAt = "2026-09-20T10:06:00Z"
-	merged, decision = MergeHandoffDeliveryObservation(current, next)
+	merged, decision = mergeHandoffDeliveryObservation(current, next)
 	if !decision.Accepted || merged.Target.WindowID != "window-2" || merged.Target.CWD != testsupport.AbsPath("repo", "other") {
 		t.Fatalf("missing target identity was not filled: decision=%+v target=%+v", decision, merged.Target)
 	}

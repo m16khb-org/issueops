@@ -1,3 +1,7 @@
+// Package projectdocs is the adapter that inspects a repository on disk and
+// renders, appends, revises and routes the .issueops project documents and the
+// AGENTS.md routing block. It owns the filesystem effects behind the
+// projectdoc domain and the projectdocs contract use cases.
 package projectdocs
 
 import (
@@ -10,6 +14,10 @@ import (
 	projectdoc "issueops/internal/domain/projectdoc"
 )
 
+// AnalyzeProjectSignals scans root and returns the detected languages,
+// package managers, build/test/lint commands, existing agent docs, workflows
+// and inferred project profile. All list fields are non-nil so the bootstrap
+// plan JSON never carries null lists.
 func AnalyzeProjectSignals(root string) projectdoc.ProjectSignals {
 	files := listInterestingFiles(root)
 	// Lists start empty so the bootstrap plan JSON never carries null lists.

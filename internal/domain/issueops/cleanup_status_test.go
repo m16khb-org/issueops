@@ -71,7 +71,7 @@ func TestCleanupStatusRequiresStructuralAndRemoteEvidence(t *testing.T) {
 
 func TestFinalizeCleanupStatusDoesNotMutateInput(t *testing.T) {
 	values := []string{"b", "", "a", "b"}
-	got := FinalizeCleanupStatus(model.CleanupStatus{Missing: values, Warnings: values})
+	got := finalizeCleanupStatus(model.CleanupStatus{Missing: values, Warnings: values})
 	if !reflect.DeepEqual(got.Missing, []string{"a", "b"}) || !reflect.DeepEqual(got.Warnings, []string{"a", "b"}) {
 		t.Fatalf("finalize: %+v", got)
 	}

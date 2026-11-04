@@ -1,3 +1,5 @@
+// Package responsecontract normalizes volatile values in decoded JSON
+// responses so golden-file contract tests stay deterministic. It is test support.
 package responsecontract
 
 import (
@@ -9,6 +11,10 @@ import (
 	"time"
 )
 
+// NormalizeContractValue returns a copy of decoded JSON value in which volatile
+// content (timestamps, durations, byte counts and strings matching
+// replacements) is replaced by stable placeholders, so response contract
+// golden files compare deterministically.
 func NormalizeContractValue(value any, replacements map[string]string) any {
 	switch v := value.(type) {
 	case map[string]any:
@@ -219,6 +225,9 @@ func normalizeContractString(value string, replacements map[string]string) strin
 	return value
 }
 
+// NormalizeMCPTextJSON returns a copy of decoded JSON value in which every MCP
+// "text" field holding JSON is decoded into a "json" field normalized with
+// NormalizeContractValue. Other values are copied recursively unchanged.
 func NormalizeMCPTextJSON(value any, replacements map[string]string) any {
 	switch v := value.(type) {
 	case map[string]any:

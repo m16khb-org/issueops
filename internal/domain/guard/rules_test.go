@@ -58,7 +58,7 @@ func TestAllowsFixtureURLAcceptsOnlyReservedHosts(t *testing.T) {
 		"https://user@evil.test/example.com": false,
 	}
 	for raw, want := range cases {
-		if got := AllowsFixtureURL(raw); got != want {
+		if got := allowsFixtureURL(raw); got != want {
 			t.Errorf("AllowsFixtureURL(%q) = %v, want %v", raw, got, want)
 		}
 	}
@@ -67,11 +67,11 @@ func TestAllowsFixtureURLAcceptsOnlyReservedHosts(t *testing.T) {
 func TestSeverityRankOrdersBlockBeforeWarnBeforeReview(t *testing.T) {
 	order := []string{"block", "warn", "review", "info"}
 	for i := 1; i < len(order); i++ {
-		if SeverityRank(order[i-1]) >= SeverityRank(order[i]) {
-			t.Fatalf("rank(%s)=%d must be below rank(%s)=%d", order[i-1], SeverityRank(order[i-1]), order[i], SeverityRank(order[i]))
+		if severityRank(order[i-1]) >= severityRank(order[i]) {
+			t.Fatalf("rank(%s)=%d must be below rank(%s)=%d", order[i-1], severityRank(order[i-1]), order[i], severityRank(order[i]))
 		}
 	}
-	if SeverityRank("mystery") != SeverityRank("info") {
+	if severityRank("mystery") != severityRank("info") {
 		t.Fatal("unknown severities must rank with info (least severe)")
 	}
 }
@@ -84,11 +84,11 @@ func TestDedupeFindingsKeepsFirstOfIdenticalKeysAndDistinctLines(t *testing.T) {
 	otherLine.Line = 4
 	otherSeverity := first
 	otherSeverity.Severity = "block"
-	got := DedupeFindings([]guardcontract.Finding{first, dup, otherLine, otherSeverity})
+	got := dedupeFindings([]guardcontract.Finding{first, dup, otherLine, otherSeverity})
 	if len(got) != 3 || got[0].Message != "first" || got[1].Line != 4 || got[2].Severity != "block" {
 		t.Fatalf("DedupeFindings = %+v", got)
 	}
-	if empty := DedupeFindings(nil); empty == nil || len(empty) != 0 {
+	if empty := dedupeFindings(nil); empty == nil || len(empty) != 0 {
 		t.Fatalf("DedupeFindings(nil) = %#v, want empty non-nil slice", empty)
 	}
 }
@@ -226,24 +226,24 @@ func TestAnalyzeReportsReuseCandidateAsReviewWithoutBlocking(t *testing.T) {
 
 func TestFileFindingsFlagsNonDeterminismOnlyInImmutablePrefixBuilders(t *testing.T) {
 	builder := "// harness:immutable-prefix\nstamp := time.Now()\nok := time.Now() // volatile-ok\nid := uuid.New()\n"
-	got := FileFindings("pkg/ctx.go", builder, nil)
+	got := fileFindings("pkg/ctx.go", builder, nil)
 	if lines := ruleLines(got, "nondeterministic-context-serialization"); !slices.Equal(lines, []int{2, 4}) {
 		t.Fatalf("flagged lines = %v, want [2 4] (volatile-ok line exempt)", lines)
 	}
-	plain := FileFindings("pkg/ctx.go", "stamp := time.Now()\n", nil)
+	plain := fileFindings("pkg/ctx.go", "stamp := time.Now()\n", nil)
 	if len(plain) != 0 {
 		t.Fatalf("files without the marker are not checked: %+v", plain)
 	}
 }
 
 func TestFileFindingsLargeFixtureThresholdIsExclusive(t *testing.T) {
-	if got := FileFindings("testdata/big.json", strings.Repeat("a", 200_000), nil); hasRule(got, "large-test-fixture") {
+	if got := fileFindings("testdata/big.json", strings.Repeat("a", 200_000), nil); hasRule(got, "large-test-fixture") {
 		t.Fatalf("exactly 200000 bytes must not warn: %+v", got)
 	}
-	if got := FileFindings("testdata/big.json", strings.Repeat("a", 200_001), nil); !hasRule(got, "large-test-fixture") {
+	if got := fileFindings("testdata/big.json", strings.Repeat("a", 200_001), nil); !hasRule(got, "large-test-fixture") {
 		t.Fatal("200001 bytes in a test path must warn")
 	}
-	if got := FileFindings("pkg/big.go", strings.Repeat("a", 200_001), nil); hasRule(got, "large-test-fixture") {
+	if got := fileFindings("pkg/big.go", strings.Repeat("a", 200_001), nil); hasRule(got, "large-test-fixture") {
 		t.Fatal("non-test paths must not get the fixture warning")
 	}
 }
@@ -258,7 +258,7 @@ func TestFileFindingsAppliesTestHygieneRulesOnlyToExecutableTestSources(t *testi
 		"\tcupaloy.toMatchSnapshot(x)",
 		"\ttime.Sleep(time.Second)",
 	}, "\n")
-	got := FileFindings("pkg/svc_test.go", content, nil)
+	got := fileFindings("pkg/svc_test.go", content, nil)
 	for rule, wantLine := range map[string]int{
 		"ambiguous-test-name":           2,
 		"real-external-service-in-test": 3,
@@ -277,7 +277,7 @@ func TestFileFindingsAppliesTestHygieneRulesOnlyToExecutableTestSources(t *testi
 	}
 
 	for _, path := range []string{"pkg/testdata/svc_test.go", "pkg/fixtures/svc_test.go", "pkg/svc.go"} {
-		if got := FileFindings(path, content, nil); len(got) != 0 {
+		if got := fileFindings(path, content, nil); len(got) != 0 {
 			t.Errorf("%s is not an executable test source, got %+v", path, got)
 		}
 	}
@@ -296,7 +296,7 @@ func TestExecutableTestSourcePathRequiresCodeExtensionAndTestName(t *testing.T) 
 		"pkg/fixtures/foo_test.go": false,
 	}
 	for path, want := range cases {
-		if got := ExecutableTestSourcePath(path); got != want {
+		if got := executableTestSourcePath(path); got != want {
 			t.Errorf("ExecutableTestSourcePath(%q) = %v, want %v", path, got, want)
 		}
 	}
@@ -368,16 +368,16 @@ func TestReuseFindingRequiresKnownCandidates(t *testing.T) {
 		NormalizeSymbol("empty_slot"):    {},
 		"":                               {"z.go:Ab"},
 	}
-	if _, ok := ReuseFinding("x.go", 1, "BrandNewThing", existing); ok {
+	if _, ok := reuseFinding("x.go", 1, "BrandNewThing", existing); ok {
 		t.Fatal("unknown symbol must not produce a finding")
 	}
-	if _, ok := ReuseFinding("x.go", 1, "EmptySlot", existing); ok {
+	if _, ok := reuseFinding("x.go", 1, "EmptySlot", existing); ok {
 		t.Fatal("a key with no candidates must not produce a finding")
 	}
-	if _, ok := ReuseFinding("x.go", 1, "ab", existing); ok {
+	if _, ok := reuseFinding("x.go", 1, "ab", existing); ok {
 		t.Fatal("a symbol that normalizes to empty must not produce a finding")
 	}
-	finding, ok := ReuseFinding("x.go", 7, "LoadSettings", existing)
+	finding, ok := reuseFinding("x.go", 7, "LoadSettings", existing)
 	if !ok || finding.Severity != "review" || finding.File != "x.go" || finding.Line != 7 || finding.Evidence != "LoadSettings" {
 		t.Fatalf("finding = %+v ok=%v", finding, ok)
 	}
@@ -388,7 +388,7 @@ func TestReuseFindingRequiresKnownCandidates(t *testing.T) {
 
 func TestFileFindingsReportsEveryExternalURLOnALine(t *testing.T) {
 	line := `client.Get("https://api.stripe.com/v1"); client.Get("https://api.github.com/v3"); client.Get("https://example.com/ok")`
-	got := FileFindings("pkg/client_test.go", line+"\n", nil)
+	got := fileFindings("pkg/client_test.go", line+"\n", nil)
 	var evidence []string
 	for _, finding := range got {
 		if finding.Rule == "real-external-service-in-test" {

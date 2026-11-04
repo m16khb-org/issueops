@@ -1,3 +1,6 @@
+// Package lintdiagnose implements the lint diagnose use case: it runs a
+// command through an injected effect and, on failure, builds the host-agent
+// diagnosis prompt. It sits in the application layer.
 package lintdiagnose
 
 import (
@@ -7,6 +10,8 @@ import (
 	"issueops/internal/domain/prompt"
 )
 
+// BuildPrompt renders the structured diagnosis prompt for a command that failed
+// with exitCode, embedding logTail and the JSON response schema.
 func BuildPrompt(exitCode int, logTail string) string {
 	return prompt.BuildStructuredPrompt(prompt.StructuredPromptSpec{
 		Identity:  "You are a senior software development diagnoser.",

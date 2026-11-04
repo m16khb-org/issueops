@@ -67,7 +67,7 @@ func TestPreflightUsesBoundedReadOnlyCmuxCommandsAndExactObservedIdentity(t *tes
 	if err != nil {
 		t.Fatal(err)
 	}
-	if observations != 2 || result.Version != SupportedVersion || result.Build != SupportedBuildIdentity || result.WindowID != testWindow || !SameEndpoint(result.Endpoint, endpointFixture()) {
+	if observations != 2 || result.Version != SupportedVersion || result.Build != SupportedBuildIdentity || result.WindowID != testWindow || !sameEndpoint(result.Endpoint, endpointFixture()) {
 		t.Fatalf("preflight=%+v observations=%d", result, observations)
 	}
 	for _, request := range runner.seen {
@@ -243,10 +243,10 @@ type runnerStep struct {
 type queueRunner struct {
 	t     *testing.T
 	steps []runnerStep
-	seen  []CommandRequest
+	seen  []commandRequest
 }
 
-func (runner *queueRunner) Run(_ context.Context, request CommandRequest) (CommandOutput, error) {
+func (runner *queueRunner) Run(_ context.Context, request commandRequest) (CommandOutput, error) {
 	runner.t.Helper()
 	runner.seen = append(runner.seen, request)
 	if len(runner.steps) == 0 {

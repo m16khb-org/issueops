@@ -23,6 +23,9 @@ func isAlnum(c byte) bool {
 	return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9'
 }
 
+// NormalizeKey trims key and validates it as a state key: non-empty, at most
+// 128 characters of [A-Za-z0-9._-] starting with an alphanumeric, with no path
+// separators or "..". It returns the trimmed key or a descriptive error.
 func NormalizeKey(key string) (string, error) {
 	key = strings.TrimSpace(key)
 	if key == "" {

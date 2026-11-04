@@ -25,7 +25,7 @@ func TestRegressPersistsOneAuditedTransition(t *testing.T) {
 			return updated, nil
 		},
 	}
-	out, err := Regress(store, "state", record.ID, "  scope changed  ")
+	out, err := regress(store, "state", record.ID, "  scope changed  ")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +54,7 @@ func TestRegressRejectsActiveChildrenWithoutWriting(t *testing.T) {
 			return updated, nil
 		},
 	}
-	if _, err := Regress(store, "state", record.ID, "scope changed"); err == nil || writes != 0 {
+	if _, err := regress(store, "state", record.ID, "scope changed"); err == nil || writes != 0 {
 		t.Fatalf("active child regression = %v, writes=%d", err, writes)
 	}
 }
