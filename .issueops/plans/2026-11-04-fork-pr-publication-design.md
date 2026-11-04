@@ -1,7 +1,7 @@
 # 포크 head PR/MR 게시 지원 설계
 
 - 날짜: 2026-11-04
-- 상태: 설계 제안. 구현하지 않았고, 사용자가 아래 7장의 질문에 답하기 전에는 착수하지 않는다.
+- 상태: 0단계(관측 확인) 완료, 1~4단계 보류. 7장 질문 1~9는 권장 답으로 정했고, 10번(우선순위)은 보류로 정했다. 결정과 재개 조건은 7.1절에, 관측 결과는 부록 "0단계 관측 결과"에 있다.
 - 선행 문서: [2026-11-03 No enforcement hook for out-of-CLI actions](../adr/2026-11-03-no-enforcement-hook-for-out-of-cli-actions.md), [최적화·품질 후보 조사](../research/2026-11-03-optimization-quality-candidates.md)
 - 범위: `issueops remote create-pr`, `remote verify-artifact`, `execution reconcile`(PR/MR 생성 복구), 그리고 이 셋이 읽는 `branch prepare` 봉인 값
 
@@ -477,6 +477,17 @@ GitLab은 head 프로젝트의 문자열 경로와 숫자 ID가 모두 필요하
 9. 조직 소유 포크를 지원하는가? 권장: 1단계는 거부한다. 수요가 확인되면 REST `POST /repos/<base>/pulls`로 생성 경로를 바꾸는 별도 설계를 연다(5장 기각 대안).
 10. 이 작업의 우선순위는 어디인가? 빈도가 0.56%이므로 같은 저장소 경로의 안정성 작업보다 낮게 둘 수도 있다. 0단계만 먼저 하고 결과를 본 뒤 1단계 착수 여부를 정하는 순서를 권장한다.
 
+### 7.1 결정 (2026-11-04)
+
+사용자가 결정을 위임해 아래와 같이 정했다.
+
+- 질문 1~9: 각 질문의 권장 답을 그대로 채택한다.
+- 질문 10: 1단계 착수를 보류한다. 0단계 관측 결과가 설계를 뒤집지 않았고, 사용 빈도가 사이클 358개 중 2건(0.56%)이다. 1단계 하나만으로도 contract·domain·GitHub·GitLab 어댑터·CLI 다섯 계층을 바꾸고, 완료 조건에 권한이 다른 두 번째 계정으로 만든 포크 쌍의 실제 실행이 들어간다. 보류하는 동안 포크 PR은 2026-11-03 ADR의 경로(사용자 승인 → `decision add --kind scope` → `issueops-abandon`)를 따른다.
+- 재개 조건: 아래 중 하나가 생기면 1단계부터 착수한다.
+  - 30일 안에 `gh pr create`를 직접 실행한 사이클이 세 건 더 생긴다.
+  - 사용자가 포크 기여를 정기 작업으로 시작하겠다고 정한다.
+- 재개할 때 이 문서의 2·3·6장을 그대로 쓴다. 0단계 결과로 바뀐 사항은 부록 "0단계 관측 결과"의 "설계 반영" 열에 적었다.
+
 ## 부록: 적용한 문서 규칙
 
 이 설계가 직접 적용한 규칙과 읽은 파일이다.
@@ -508,3 +519,17 @@ GitLab은 head 프로젝트의 문자열 경로와 숫자 ID가 모두 필요하
 | 생성 수명 락 | `internal/adapter/issueops/publication_settlement.go:21-33` |
 | 라이브 검증 | `internal/application/remoteverification/verification.go:19-39`, `internal/adapter/outbound/remoteverification/fetch.go:16-55`, `:132-180`, `internal/domain/remoteverification/artifact.go:32-73` |
 | 프로젝트 권위와 `origin` 관측 | `internal/domain/issueopsremote/issueops_remote_url.go:64-86`, `branch_prepare.go:25-41`, `internal/adapter/issueops/branch_preparation_environment.go:49-58` |
+
+## 부록: 0단계 관측 결과
+
+2026-11-04에 읽기 전용 질의와 도구 소스 코드로 확인했다. 원격에 쓰는 동작은 실행하지 않았다. 대상은 공개 저장소 `cli/cli`와, 그 저장소에 열려 있는 외부 기여자의 포크 PR 한 건이다. 기여자 계정과 브랜치 이름은 이 문서에 적지 않고 `<owner>`, `<branch>`로 쓴다. 도구 버전은 gh 2.102.0과 glab 1.121.0이다.
+
+| 항목 | 확인 방법 | 결과 | 설계 반영 |
+|---|---|---|---|
+| 1. 라벨 권한 없이 `gh pr create --label` | gh v2.102.0 소스 `api/queries_pr.go` `CreatePullRequest`, `pkg/cmd/pr/create/create.go:1143-1150` | `createPullRequest` mutation이 PR을 먼저 만든다. 라벨·담당자·프로젝트·마일스톤은 그 뒤 `updatePullRequest`로 붙인다. 이 단계가 실패하면 PR URL을 stdout에 출력한 뒤 `pull request update failed:` 오류와 0이 아닌 종료 코드로 끝난다. | 4장의 "PR은 생겼는데 명령은 실패" 모호 상태가 실제로 생긴다. 2.7절의 preflight를 `BeginCreate` 앞에 두는 설계가 필요하다. |
+| 2. GraphQL 한 번으로 preflight | `gh api graphql` 한 번에 `base.viewerPermission`, `head.isFork`·`parent`·`ref(qualifiedName:)`, `pullRequests(headRefName:)` 조회 | 한 요청으로 모두 읽힌다. 협업자가 아닌 계정의 `viewerPermission`은 `READ`다. `pullRequests(headRefName:)`는 owner로 거르지 않으므로 `headRepositoryOwner.login`을 함께 읽어 비교해야 한다. | 2.7절 질의를 이 형태로 확정한다. |
+| 3. REST `head=` 필터 | `gh api -X GET repos/cli/cli/pulls -f head=<owner>:<branch> -f state=all` | `owner:branch`이면 서버가 정확히 거른다. 결과는 1건이고 `head.label`은 `<owner>:<branch>`, `head.repo.full_name`은 `<owner>/cli`다. 다른 owner를 주면 0건이다. owner 없이 브랜치만 주면 필터가 무시되어 30건(첫 페이지 전체)이 나온다. | 복구 목록은 반드시 `owner:branch`로 질의한다. owner가 빠진 질의의 0건을 권위 있는 0건으로 보면 안 된다. |
+| 4. `glab mr create --head` | `glab mr create --help` (1.121.0) | `-H --head`가 `OWNER/REPO`, 프로젝트 ID, 전체 URL을 받는다. 도움말 예시는 `--repo upstream/project --head your-namespace/project --source-branch ...`다. 이 플래그가 처음 들어간 버전은 확인하지 못했다. | 최소 버전은 1.121.0으로 둔다. 더 낮은 버전은 구현할 때 확인한다. |
+| 5. GitLab 권한 없는 메타데이터 | GitLab `app/services/issuable_base_service.rb` `filter_params` (master) | `set_merge_request_metadata` 권한이 없으면 담당자·기한·잠금 파라미터를 오류 없이 지운다. 라벨을 지우는 코드는 이 파일과 `merge_requests/base_service.rb`에서 찾지 못했다. | 담당자는 조용히 사라지므로 readback 비교가 필요하다. 라벨은 `[INFERENCE]`로 남기고 구현할 때 확인한다. |
+| 6. `createLinkedBranch`로 포크에 브랜치 만들기 | GraphQL 스키마 조회 `CreateLinkedBranchInput` | `repositoryId`의 설명은 "ID of the repository to create the branch in. Defaults to the issue repository."다. 다른 저장소를 지정할 수 있다. | 링크 게이트 면제가 필수는 아니다. 사용자 소유 이슈에 포크 저장소 브랜치를 링크하는 경로를 1단계에서 먼저 검토한다. |
+| 같은 head·base의 열린 PR 중복 | gh v2.102.0 `pkg/cmd/pr/create/create.go:527` | gh가 생성 전에 기존 PR을 찾고 `a pull request for branch ... into branch ... already exists` 오류로 멈춘다. | 4장의 중복 생성 위험은 gh 경로에서 한 겹 막혀 있다. 정산 argv 매칭 수정은 그대로 필요하다. |
