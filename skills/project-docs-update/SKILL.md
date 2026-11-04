@@ -62,7 +62,9 @@ by `project-docs-bootstrap`.
 records whose title, summary, or `Source:` line shares at least two terms with
 the task (Korean task words such as 배포·빌드·이미지 map to their English
 terms). Put the files and the operation you are about to touch in the task text
-so past lessons about them surface.
+so past lessons about them surface. Route finds a minority of relevant records
+(recall@5 0.178 against the records committed plans cited, 2026-11-04), so also
+grep `.issueops/cautions` and `.issueops/adr` for the subsystem you touch.
 
 Trigger this skill when a completed unit of work produced one of the left-side
 outcomes. Do not batch updates speculatively for hypothetical future work.

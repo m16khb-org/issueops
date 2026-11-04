@@ -21,7 +21,9 @@ const (
 	projectDocCatalogHeaderBytes = 8 * 1024
 	// projectDocCatalogUsage follows the catalog header in every host's model text.
 	projectDocCatalogUsage = "An index doc's module table names the file that owns each detailed rule; open that module, not just the index. " +
-		"When a decision applies a doc rule, quote the rule's sentence verbatim with the path of the file you read it in; a rule you cannot quote that way is not a doc rule."
+		"When a decision applies a doc rule, quote the rule's sentence verbatim with the path of the file you read it in; a rule you cannot quote that way is not a doc rule. " +
+		"Dated caution and ADR records are not listed here: once the task is clear, pass it to project_docs_route (CLI: issueops project route-docs --task) for candidates; " +
+		"it matches shared words only, so grep .issueops/cautions and .issueops/adr for the subsystem you change before relying on its answer."
 )
 
 // projectdocdomain.ProjectDocCatalogEntry describes one project doc in the working repo's
@@ -254,6 +256,9 @@ func buildProjectDocCatalogEntry(name, header string, truncated bool) (projectdo
 // document relevant. The usage line carries the two habits the qualitative
 // doc-injection evaluation found missing: following an index doc into the
 // module that owns the rule, and citing a rule only from a file actually opened.
+// It also points to project_docs_route for the dated records the catalog omits;
+// route matches shared words only (recall@5 0.178 on committed plan titles,
+// 2026-11-04), so the line pairs it with a grep of the record directories.
 // Returns "" when there is nothing to present.
 func FormatProjectDocCatalog(entries []projectdocdomain.ProjectDocCatalogEntry) string {
 	if len(entries) == 0 {
