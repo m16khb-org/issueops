@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -23,6 +24,8 @@ const (
 	httpMaxRequestBodyBytes = 4 << 20
 	httpShutdownDrain       = 10 * time.Second
 	httpReadHeaderTimeout   = 10 * time.Second
+	// httpClientHintMaxRunes bounds the client hint logged on a 401.
+	httpClientHintMaxRunes = 80
 	// No ReadTimeout or WriteTimeout: net/http cancels the request context
 	// when a connection read deadline expires mid-handler, and tool calls such
 	// as gates_check legitimately run for minutes. Hosts keep one connection
@@ -36,7 +39,8 @@ type HTTPOptions struct {
 	Address string
 	Bearer  string
 	// Logger receives allowlisted access events only: HTTP method and status,
-	// tool name, outcome, and duration. Nil discards them.
+	// tool name, outcome, and duration; a 401 adds the auth failure class and a
+	// bounded user agent. Nil discards them.
 	Logger *slog.Logger
 }
 
@@ -89,9 +93,12 @@ type httpGuard struct {
 func (g *httpGuard) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	started := time.Now()
 	recorder := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+	var diagnostics []any
 	defer func() {
-		g.access.Info("mcp_http_request", "method", r.Method, "status", recorder.status, "duration_ms", time.Since(started).Milliseconds())
+		attrs := append([]any{"method", r.Method, "status", recorder.status, "duration_ms", time.Since(started).Milliseconds()}, diagnostics...)
+		g.access.Info("mcp_http_request", attrs...)
 	}()
+	failure := g.authFailure(r.Header.Get("Authorization"))
 	switch {
 	case r.URL.Path != HTTPEndpointPath:
 		http.Error(recorder, "not found", http.StatusNotFound)
@@ -99,7 +106,10 @@ func (g *httpGuard) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(recorder, "forbidden host", http.StatusForbidden)
 	case r.Header.Get("Origin") != "" && r.Header.Get("Origin") != "http://"+g.address:
 		http.Error(recorder, "forbidden origin", http.StatusForbidden)
-	case !g.authorized(r.Header.Get("Authorization")):
+	case failure != "":
+		// Diagnostics never include the presented credential or any value
+		// derived from it; only the failure class and a bounded client hint.
+		diagnostics = []any{"auth", failure, "user_agent", sanitizeClientHint(r.UserAgent(), httpClientHintMaxRunes)}
 		recorder.Header().Set("WWW-Authenticate", `Bearer realm="issueops"`)
 		http.Error(recorder, "unauthorized", http.StatusUnauthorized)
 	default:
@@ -108,9 +118,46 @@ func (g *httpGuard) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (g *httpGuard) authorized(header string) bool {
+// Authorization failure classes logged on 401 responses.
+const (
+	authMissing   = "missing"
+	authMalformed = "malformed"
+	authMismatch  = "mismatch"
+)
+
+// authFailure returns "" when the header carries the installed bearer, else the
+// failure class. The token comparison stays constant-time.
+func (g *httpGuard) authFailure(header string) string {
+	if header == "" {
+		return authMissing
+	}
 	token, ok := strings.CutPrefix(header, "Bearer ")
-	return ok && subtle.ConstantTimeCompare([]byte(token), []byte(g.bearer)) == 1
+	if !ok || token == "" {
+		return authMalformed
+	}
+	if subtle.ConstantTimeCompare([]byte(token), []byte(g.bearer)) != 1 {
+		return authMismatch
+	}
+	return ""
+}
+
+// sanitizeClientHint makes a client-supplied header safe for one log field:
+// invalid UTF-8 and control characters are dropped and the result is cut to
+// maxRunes runes.
+func sanitizeClientHint(value string, maxRunes int) string {
+	var builder strings.Builder
+	count := 0
+	for _, char := range strings.ToValidUTF8(value, "") {
+		if unicode.IsControl(char) {
+			continue
+		}
+		if count == maxRunes {
+			break
+		}
+		builder.WriteRune(char)
+		count++
+	}
+	return builder.String()
 }
 
 type statusRecorder struct {
