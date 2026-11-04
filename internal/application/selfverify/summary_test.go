@@ -6,6 +6,7 @@ import (
 	augment "issueops/internal/contract/selfaugment"
 	verify "issueops/internal/contract/selfverify"
 	domain "issueops/internal/domain/selfverify"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -83,5 +84,70 @@ func TestSummaryComposesCoverageFailureEvidenceAndRecoveryHints(t *testing.T) {
 	empty := SummarizeSelfVerification(augment.SelfAugmentResult{}, 95)
 	if empty.MinimumGoalScore != 0 || empty.TerminationEligible || empty.TotalSteps != 0 || len(empty.CoverageGaps) == 0 {
 		t.Fatalf("empty evidence passed: %+v", empty)
+	}
+}
+
+func TestSummaryMarksStepsAndGoalsSkippedByFailFast(t *testing.T) {
+	// Given: fail-fast stopped at "Python script tests" (third planned step).
+	order := domain.StepOrder()
+	input := augment.SelfAugmentResult{Iterations: 1, BaseSeed: 100, Runs: []augment.SelfAugmentIteration{{Iteration: 1, Seed: 100, Steps: []verify.StepResult{
+		{Label: order[0], OK: true},
+		{Label: order[1], OK: true},
+		{Label: order[2], OK: false},
+	}}}}
+
+	// When
+	summary := SummarizeSelfVerification(input, 95)
+
+	// Then: the unexecuted plan is explicit and distinct from the failed step.
+	if summary.PlannedSteps != len(order) || summary.FailedStep != "Python script tests" || len(summary.NotRunSteps) != len(order)-3 || summary.NotRunSteps[0] != order[3] {
+		t.Fatalf("planned=%d failed=%q not_run=%v", summary.PlannedSteps, summary.FailedStep, summary.NotRunSteps)
+	}
+	if slices.Contains(summary.NotRunSteps, "Python script tests") {
+		t.Fatalf("a failed step is not a not-run step: %v", summary.NotRunSteps)
+	}
+	goals := map[string]verify.SelfVerificationGoalScore{}
+	for _, goal := range summary.GoalScores {
+		goals[goal.Name] = goal
+	}
+	// test_suite ran one of its checks (it failed) -> scored, not "not run"; build_release never ran.
+	if goals["test_suite"].NotRun || goals["format_parity"].NotRun || goals["format_parity"].Score != 100 {
+		t.Fatalf("executed goals: %+v", goals)
+	}
+	if !goals["build_release"].NotRun || goals["build_release"].Score != 0 || goals["build_release"].Passed {
+		t.Fatalf("skipped goal must keep score 0/passed false and add not_run: %+v", goals["build_release"])
+	}
+	coverage := map[string]verify.SelfVerificationCoverage{}
+	for _, item := range summary.Coverage {
+		coverage[item.Claim] = item
+	}
+	if !coverage["release build artifact"].NotRun || coverage["core repository invariants"].NotRun {
+		t.Fatalf("coverage markers: %+v", coverage)
+	}
+
+	data, err := json.Marshal(summary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"planned_steps":27`, `"not_run_steps":["Go test match guard"`, `"not_run":true`} {
+		if !strings.Contains(string(data), want) {
+			t.Fatalf("summary JSON lacks %s: %s", want, data)
+		}
+	}
+}
+
+func TestSummaryOfCompletePassReportsNoNotRunSteps(t *testing.T) {
+	steps := []verify.StepResult{}
+	for _, label := range domain.StepOrder() {
+		steps = append(steps, verify.StepResult{Label: label, OK: true})
+	}
+	summary := SummarizeSelfVerification(augment.SelfAugmentResult{OK: true, Iterations: 1, Runs: []augment.SelfAugmentIteration{{Iteration: 1, Steps: steps}}}, 95)
+	if summary.PlannedSteps != len(steps) || summary.NotRunSteps == nil || len(summary.NotRunSteps) != 0 {
+		t.Fatalf("planned=%d not_run=%#v", summary.PlannedSteps, summary.NotRunSteps)
+	}
+	for _, goal := range summary.GoalScores {
+		if goal.NotRun {
+			t.Fatalf("goal %s marked not run after a complete pass", goal.Name)
+		}
 	}
 }

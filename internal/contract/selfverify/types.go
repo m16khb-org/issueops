@@ -18,6 +18,10 @@ type SelfVerificationGoalScore struct {
 	EvidenceLabels []string `json:"evidence_labels"`
 	PassedChecks   int      `json:"passed_checks"`
 	TotalChecks    int      `json:"total_checks"`
+	// NotRun is true when none of the goal's checks executed (for example
+	// after fail-fast stopped the pass). Score 0 / Passed false then mean
+	// "no evidence", not "evidence failed".
+	NotRun bool `json:"not_run"`
 }
 
 type SelfVerificationCoverage struct {
@@ -25,6 +29,8 @@ type SelfVerificationCoverage struct {
 	EvidenceLabels []string `json:"evidence_labels"`
 	Covered        bool     `json:"covered"`
 	MissingLabels  []string `json:"missing_labels"`
+	// NotRun is true when none of the claim's evidence labels executed.
+	NotRun bool `json:"not_run"`
 }
 
 type SelfVerificationFailureCluster struct {

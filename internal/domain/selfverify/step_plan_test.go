@@ -17,3 +17,29 @@ func TestStepPlanReusesOnlySuccessfulFullSuiteEvidence(t *testing.T) {
 		t.Fatal("collect-all failure policy changed")
 	}
 }
+
+func TestNotRunStepsKeepsPlanOrderAndExcludesExecutedLabels(t *testing.T) {
+	order := StepOrder()
+	got := NotRunSteps([]string{order[0], order[1], "create temp workspace"})
+	if len(got) != len(order)-2 || got[0] != order[2] || got[len(got)-1] != order[len(order)-1] {
+		t.Fatalf("not run=%v", got)
+	}
+	if all := NotRunSteps(order); len(all) != 0 || all == nil {
+		t.Fatalf("fully executed plan must report an empty non-nil list: %#v", all)
+	}
+	if none := NotRunSteps(nil); len(none) != len(order) {
+		t.Fatalf("nothing executed must report the whole plan: %v", none)
+	}
+}
+
+func TestCoverageForLabelsMarksClaimsWithNoExecutedLabel(t *testing.T) {
+	coverage, _ := CoverageForLabels([]string{"go test"})
+	byClaim := map[string]bool{}
+	for _, item := range coverage {
+		byClaim[item.Claim] = item.NotRun
+	}
+	// test suite contract: one of four labels ran -> partially covered, not "not run".
+	if byClaim["test suite contract"] || !byClaim["release build artifact"] {
+		t.Fatalf("not_run by claim=%v", byClaim)
+	}
+}

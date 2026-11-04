@@ -10,7 +10,7 @@ import (
 func ContractValue() contract.SelfVerificationContract {
 	contract := contract.SelfVerificationContract{
 		Name:    "self_verification_summary",
-		Version: 8,
+		Version: 9,
 		RequiredFields: []string{
 			"total_runs",
 			"total_steps",
@@ -24,6 +24,8 @@ func ContractValue() contract.SelfVerificationContract {
 			"coverage",
 			"coverage_gaps",
 			"step_labels",
+			"planned_steps",
+			"not_run_steps",
 			"slowest_steps",
 			"step_duration_stats",
 			"failure_cause",
@@ -109,7 +111,25 @@ func CoverageForLabels(stepLabels []string) ([]contract.SelfVerificationCoverage
 				gaps = append(gaps, definition.Claim+": missing "+label)
 			}
 		}
+		item.NotRun = len(item.MissingLabels) == len(definition.Labels)
 		coverage = append(coverage, item)
 	}
 	return coverage, gaps
+}
+
+// NotRunSteps returns the planned step labels, in plan order, that never
+// executed. A fail-fast stop leaves the rest of the plan unexecuted; those
+// steps have no evidence, which differs from a step that ran and failed.
+func NotRunSteps(executedLabels []string) []string {
+	ran := make(map[string]bool, len(executedLabels))
+	for _, label := range executedLabels {
+		ran[label] = true
+	}
+	notRun := []string{}
+	for _, label := range stepOrder {
+		if !ran[label] {
+			notRun = append(notRun, label)
+		}
+	}
+	return notRun
 }

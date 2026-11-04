@@ -429,7 +429,7 @@
           "name": "status"
         }
       ],
-      "hash": "690aa5a84cf5fcf5eff8e79dfc939582730b6dbb6abe4e05e18eed29e403d5bb",
+      "hash": "4da9580eb4669be4e91018dc0bb81cab44dce995f582ec8530c7104cc1193a28",
       "mcp_tools": [
         "api_doc_review",
         "api_doc_static_check",
@@ -760,6 +760,8 @@
           "coverage",
           "coverage_gaps",
           "step_labels",
+          "planned_steps",
+          "not_run_steps",
           "slowest_steps",
           "step_duration_stats",
           "failure_cause",
@@ -3748,7 +3750,9 @@
         "failure_cause_reason": "no_failed_steps",
         "goal_scores": null,
         "minimum_goal_score": 0,
+        "not_run_steps": null,
         "passed_steps": 20,
+        "planned_steps": 0,
         "slowest_steps": [
           {
             "duration_ms": 1000,
@@ -3806,7 +3810,9 @@
         "failure_cause_reason": "no_failed_steps",
         "goal_scores": null,
         "minimum_goal_score": 0,
+        "not_run_steps": null,
         "passed_steps": 20,
+        "planned_steps": 0,
         "slowest_steps": [
           {
             "duration_ms": 1000,
@@ -3933,7 +3939,9 @@
         "failure_cause_reason": "no_failed_steps",
         "goal_scores": null,
         "minimum_goal_score": 0,
+        "not_run_steps": null,
         "passed_steps": 20,
+        "planned_steps": 0,
         "slowest_steps": [
           {
             "duration_ms": 1000,
@@ -4811,7 +4819,7 @@
                 "name": "status"
               }
             ],
-            "hash": "690aa5a84cf5fcf5eff8e79dfc939582730b6dbb6abe4e05e18eed29e403d5bb",
+            "hash": "4da9580eb4669be4e91018dc0bb81cab44dce995f582ec8530c7104cc1193a28",
             "mcp_tools": [
               "api_doc_review",
               "api_doc_static_check",
@@ -5142,6 +5150,8 @@
                 "coverage",
                 "coverage_gaps",
                 "step_labels",
+                "planned_steps",
+                "not_run_steps",
                 "slowest_steps",
                 "step_duration_stats",
                 "failure_cause",
@@ -7424,7 +7434,9 @@
               "failure_cause_reason": "no_failed_steps",
               "goal_scores": null,
               "minimum_goal_score": 0,
+              "not_run_steps": null,
               "passed_steps": 20,
+              "planned_steps": 0,
               "slowest_steps": [
                 {
                   "duration_ms": 1000,
@@ -7482,7 +7494,9 @@
               "failure_cause_reason": "no_failed_steps",
               "goal_scores": null,
               "minimum_goal_score": 0,
+              "not_run_steps": null,
               "passed_steps": 20,
+              "planned_steps": 0,
               "slowest_steps": [
                 {
                   "duration_ms": 1000,
@@ -7627,7 +7641,9 @@
               "failure_cause_reason": "no_failed_steps",
               "goal_scores": null,
               "minimum_goal_score": 0,
+              "not_run_steps": null,
               "passed_steps": 20,
+              "planned_steps": 0,
               "slowest_steps": [
                 {
                   "duration_ms": 1000,

@@ -44,3 +44,26 @@ func TestScoreGoalsGoalWithoutLabelsScoresZero(t *testing.T) {
 		t.Fatalf("scores=%+v", scores)
 	}
 }
+
+func TestScoreGoalsMarksGoalsWhoseChecksNeverRan(t *testing.T) {
+	goals := []contract.SelfVerificationGoalDefinition{
+		{Name: "failed", Labels: []string{"a"}},
+		{Name: "partial", Labels: []string{"a", "b"}},
+		{Name: "never", Labels: []string{"b", "c"}},
+		{Name: "empty"},
+	}
+	runs := []Run{{Iteration: 1, Checks: []Check{{Label: "a", OK: false}}}}
+	got := map[string]bool{}
+	for _, score := range ScoreGoals(goals, runs, 1, 95) {
+		got[score.Name] = score.NotRun
+		if score.Passed {
+			t.Fatalf("%s passed without passing checks: %+v", score.Name, score)
+		}
+	}
+	want := map[string]bool{"failed": false, "partial": false, "never": true, "empty": false}
+	for name, notRun := range want {
+		if got[name] != notRun {
+			t.Fatalf("%s not_run=%v, want %v (all=%v)", name, got[name], notRun, got)
+		}
+	}
+}

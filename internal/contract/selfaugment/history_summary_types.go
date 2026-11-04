@@ -28,6 +28,8 @@ type SelfAugmentSummary struct {
 	FailedSeed           int64                                               `json:"failed_seed,omitempty"`
 	FailedStep           string                                              `json:"failed_step,omitempty"`
 	StepLabels           []string                                            `json:"step_labels"`
+	PlannedSteps         int                                                 `json:"planned_steps"`
+	NotRunSteps          []string                                            `json:"not_run_steps"`
 	SlowestSteps         []SelfAugmentSlowStep                               `json:"slowest_steps"`
 	StepDurationStats    []SelfAugmentStepDurationStat                       `json:"step_duration_stats"`
 }

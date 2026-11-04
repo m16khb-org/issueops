@@ -22,6 +22,7 @@ func ScoreGoals(goals []contract.SelfVerificationGoalDefinition, runs []Run, ite
 	for _, goal := range goals {
 		passed := 0
 		total := 0
+		executed := 0
 		for iteration := 1; iteration <= runCount; iteration++ {
 			steps := map[string]bool{}
 			for _, run := range runs {
@@ -35,7 +36,11 @@ func ScoreGoals(goals []contract.SelfVerificationGoalDefinition, runs []Run, ite
 			}
 			for _, label := range goal.Labels {
 				total++
-				if steps[label] {
+				ok, ran := steps[label]
+				if ran {
+					executed++
+				}
+				if ok {
 					passed++
 				}
 			}
@@ -47,7 +52,7 @@ func ScoreGoals(goals []contract.SelfVerificationGoalDefinition, runs []Run, ite
 		scores = append(scores, contract.SelfVerificationGoalScore{
 			Name: goal.Name, KoreanName: goal.KoreanName, Score: score, TargetScore: targetScore,
 			Passed: score > targetScore, EvidenceLabels: append([]string{}, goal.Labels...),
-			PassedChecks: passed, TotalChecks: total,
+			PassedChecks: passed, TotalChecks: total, NotRun: total > 0 && executed == 0,
 		})
 	}
 	return scores

@@ -60,7 +60,7 @@ The single evidence pass includes at least these checks:
 | Concurrency isolation | parallel isolation | score > 95 |
 | Native integration | native integration | score > 95 |
 
-Use `summary.contract`, `summary.goal_scores`, `summary.coverage`, `summary.coverage_gaps`, failure `summary.failure_class`, `summary.failure_clusters`, `summary.rerun_commands`, `summary.minimum_goal_score`, and `summary.termination_eligible` as the decision surface. `--progress=jsonl` writes progress events to stderr without corrupting the final JSON summary on stdout.
+Use `summary.contract`, `summary.goal_scores`, `summary.coverage`, `summary.coverage_gaps`, failure `summary.failure_class`, `summary.failure_clusters`, `summary.rerun_commands`, `summary.minimum_goal_score`, and `summary.termination_eligible` as the decision surface. When fail-fast stops the pass early, `summary.not_run_steps` lists the planned steps that never executed (out of `summary.planned_steps`), and a goal or coverage claim with `not_run: true` had none of its checks executed: its score 0 / `passed: false` means "no evidence yet", not "evidence failed". Summaries saved before contract v9 lack these fields. `--progress=jsonl` writes progress events to stderr without corrupting the final JSON summary on stdout.
 
 ## 2. Self-augmentation loop
 

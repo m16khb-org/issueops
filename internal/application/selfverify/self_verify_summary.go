@@ -22,6 +22,8 @@ func SummarizeSelfVerification(result augment.SelfAugmentResult, targetScore flo
 	summary.FailureCauseEvidence = []failurecausecontract.Evidence{}
 	summary.GoalScores = MapGoalScores(result, targetScore)
 	summary.Coverage, summary.CoverageGaps = domain.CoverageForLabels(summary.StepLabels)
+	summary.PlannedSteps = len(domain.StepOrder())
+	summary.NotRunSteps = domain.NotRunSteps(summary.StepLabels)
 	if summary.FailedStep != "" {
 		summary.RerunCommands = domain.SelfVerifyRerunCommands(summary.FailedStep, result.BaseSeed, targetScore)
 		summary.FailureClass, summary.FailureClassReason, summary.FailureClusters = ClassifySelfVerificationFailure(result, summary)
